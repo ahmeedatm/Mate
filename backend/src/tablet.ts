@@ -23,7 +23,9 @@ export type TabletCommand =
   | { type: "document"; doc: TabletDoc | null }
   | { type: "focus"; action: (typeof FOCUS_ACTIONS)[number]; focusMinutes?: number; breakMinutes?: number }
   | { type: "noise"; kind: (typeof NOISES)[number]; volume?: number }
-  | { type: "screenshot" };
+  | { type: "screenshot" }
+  /** Appel entrant (src/calls.ts) : carte Répondre / Ignorer sur la tablette, retirée à `ended`. */
+  | { type: "call"; state: "ringing" | "ended"; app: string; caller: string | null; video: boolean };
 
 /** `received` : la tablette a répondu (même en échec, ex. message affiché mais pas lu faute de voix). */
 export type TabletResult = { ok: boolean; error?: string; data?: Record<string, unknown>; received?: boolean };

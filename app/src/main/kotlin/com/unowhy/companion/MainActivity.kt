@@ -15,6 +15,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.addCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -36,6 +37,7 @@ import com.unowhy.companion.remote.RemoteChannel
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.Link
+import com.unowhy.companion.ui.CallOverlay
 import com.unowhy.companion.ui.CameraFragment
 import com.unowhy.companion.ui.ComputerAdder
 import com.unowhy.companion.ui.ChatFragment
@@ -52,6 +54,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.Locale
 import com.unowhy.companion.ui.showImmersive
+import com.unowhy.companion.voice.VoiceControl
 
 /** Les écrans qui veulent les boutons de volume de la tablette (ex. le deck pilote le son de l'ordinateur). */
 interface VolumeKeyHandler {
@@ -96,6 +99,13 @@ class MainActivity : AppCompatActivity() {
     var link = Link(null, Link.State.NONE)
         private set
     private val hideBanner = Runnable { banner.visibility = View.GONE }
+    private lateinit var voice: VoiceControl
+    lateinit var callOverlay: CallOverlay
+        private set
+    /** Micro refusé hors kiosque (en kiosque, il est accordé d'office) : la commande repart une fois accepté. */
+    private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) voice.start() else showBanner(getString(R.string.voice_no_mic), 6)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppTheme.apply(this)
@@ -116,6 +126,16 @@ class MainActivity : AppCompatActivity() {
         }
         // Assistant : affiché seulement quand l'ordinateur actif a un vrai assistant (voir refreshAssistant).
         railItems.getValue(Mode.CHAT).view.visibility = View.GONE
+        // Commandes vocales : sous les modes, au-dessus de l'état de la tablette.
+        val rail = findViewById<LinearLayout>(R.id.rail)
+        val talk = layoutInflater.inflate(R.layout.item_rail, rail, false)
+        talk.findViewById<ImageView>(R.id.rail_icon).setImageResource(R.drawable.ic_mic)
+        talk.findViewById<TextView>(R.id.rail_label).setText(R.string.voice_button)
+        talk.contentDescription = getString(R.string.voice_button)
+        rail.addView(talk, rail.indexOfChild(bar) + 1)
+        voice = VoiceControl(this, talk, talk.findViewById(R.id.rail_icon))
+        callOverlay = CallOverlay(this)
+        findViewById<android.view.ViewGroup>(android.R.id.content).addView(callOverlay, android.view.ViewGroup.LayoutParams(-1, -1))
 
         setUpKeyboard()
 
@@ -345,6 +365,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         documentPanel.close()
         if (isFinishing) NoisePlayer.stop()
+        voice.release()
         super.onDestroy()
     }
 
@@ -423,9 +444,21 @@ class MainActivity : AppCompatActivity() {
         (supportFragmentManager.findFragmentByTag(Mode.DECK.name) as? DeckFragment)?.openMeetingPage()
     }
 
+    /** Appel entrant sur l'ordinateur (ordre `call`, voir CallOverlay). */
+    fun onCall(state: String, app: String, caller: String?, video: Boolean) = callOverlay.onCall(state, app, caller, video)
+
+    /** Deck sur la page de l'appli (Discord) : micro, sourdine, Quitter l'appel. */
+    fun showAppControls(app: String) {
+        show(Mode.DECK)
+        supportFragmentManager.executePendingTransactions()
+        (supportFragmentManager.findFragmentByTag(Mode.DECK.name) as? DeckFragment)?.openAppPage(app)
+    }
+
     fun closeDocument() {
         documentPanel.close()
     }
+
+    fun requestMicPermission() = micPermission.launch(android.Manifest.permission.RECORD_AUDIO)
 
     /** Écran de bienvenue (WiFi, installation, connexion), depuis un mode sans ordinateur. */
     fun showWelcome() = welcome.show()

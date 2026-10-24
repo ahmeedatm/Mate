@@ -73,7 +73,15 @@ La tablette n'ouvre aucun port. `remote/RemoteChannel.kt` garde une requête `PO
 
 `camera/DocCamera.kt` (Camera2) envoie du JPEG 720p à ~10 i/s à `POST /camera/frame` ; le compagnon garde la dernière image et la sert en MJPEG sur `http://127.0.0.1:3000/camera`, à projeter. « Envoyer une photo » : photo pleine taille dans le dossier Partage.
 
-### 7. Mises à jour de la tablette
+### 7. Commande vocale (bouton Parler)
+
+Pas d'IA : la reconnaissance est celle d'Android (`SpeechRecognizer`, servie par l'appli Google de l'image d'usine : en ligne, sans clé ni compte ; à ne pas désactiver dans la procédure de kiosque). La phrase est comprise **sur la tablette** par une liste de tournures (`voice/VoiceCommands.kt`) : modes, son et micro, musique, Focus, ambiance, fenêtres (comme l'onglet Ouvertes), tâches et journée, rappels, recherche, dictée (`POST /system/type`), appels ; puis toute touche du Deck par son nom, puis toute appli installée (`POST /apps/launch`). Les noms d'applis mal entendus sont rapprochés à l'oreille (prononciation approximative + distance d'édition, sur les 5 variantes du reconnaisseur : « en cabane launcher » → Ankama Launcher). `voice/VoiceControl.kt` écoute et exécute ; appui long = commande écrite (émulateur sans reconnaissance). Journal : `adb logcat -s Voice` (niveau info : la tablette jette le debug).
+
+### 8. Appels entrants (Windows)
+
+`calls.ts` lit le titre des fenêtres toutes les 2 s (« Appel entrant - Discord »), puis l'interface une fois pour le nom de l'appelant, et prévient la tablette par le canal `/tablet` (ordre `call`). `ui/CallOverlay.kt` : carte Répondre / Vidéo / Ignorer, qui appuient sur les vrais boutons (`/calls/answer`, `/calls/decline`, UI Automation) ; Répondre ouvre la page de l'appli dans le Deck ; « Appel manqué » sinon. Règles par appli dans `config/calls.json` (titre, appelant, noms des boutons) : une appli de plus = une capture pendant un vrai appel (`GET /deck/buttons?app=…&detail=true`). Discord seulement pour l'instant.
+
+### 9. Mises à jour de la tablette
 
 Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/updates/manifest.json` + APK). La tablette (`kiosk/Updater.kt`) télécharge et installe en silence (device owner) son propre APK ou le WebView ; `kiosk/UpdatedReceiver` la relance en kiosque après sa propre mise à jour. En production, ce serait l'infrastructure SQOOL (MDM/OTA).
 
@@ -92,6 +100,8 @@ Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/upda
 | `ui/ScreenMap.kt`, `WindowPicker.kt`, `OpenWindowsView.kt` | écrans et fenêtres de l'ordinateur |
 | `focus/` | `FocusTimer`, `NoisePlayer` (bruit généré), `Water` |
 | `audio/` | `Speaker` (synthèse vocale), `VoiceRecorder` |
+| `voice/` | commande vocale : `VoiceCommands` (phrases comprises, noms rapprochés à l'oreille), `VoiceControl` (écoute, exécution) |
+| `ui/CallOverlay.kt` | carte d'appel entrant |
 | `camera/DocCamera.kt` | caméra du visualiseur |
 | `device/` | batterie, signal, luminosité (atténuée la nuit) |
 | `kiosk/` | `Kiosk` (verrouillage, SQOOL masqué), `Updater`, `UpdatedReceiver`, `KioskAdminReceiver` |
@@ -110,6 +120,7 @@ Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/upda
 | `calendar.ts`, `accounts.ts`, `events.ts`, `meetings.ts`, `meeting-links.ts` | agenda et réunions |
 | `tasks.ts`, `jira.ts` | tâches et rappels |
 | `tablet.ts`, `mcp.ts` | canal vers la tablette, extension Claude |
+| `calls.ts` (+ `config/calls.json`) | appels entrants : surveillance des fenêtres, Répondre / Ignorer / Raccrocher |
 | `camera.ts`, `docs.ts` | visualiseur, dossier partagé |
 | `updates.ts` | mises à jour de la tablette |
 | `providers.ts` | Assistant : transcription et LLM (`MODE=mock` ou `live`) |

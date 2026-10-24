@@ -13,6 +13,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.CalendarEvent
@@ -48,7 +49,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         ellipsize = TextUtils.TruncateAt.END
         typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
     }
-    private val whenText = label(17f, R.attr.c_accent).apply { isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
+    private val whenText = label(17f, R.attr.c_hue_orange).apply { isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
     private val join = Button(context, null, 0, R.style.PrimaryButton).apply {
         setText(R.string.join_meeting)
         setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_videocam, 0, 0, 0)
@@ -62,7 +63,12 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         addView(whenText, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(2) })
     }
     override val view = LinearLayout(context).apply {
-        setBackgroundResource(R.drawable.card_accent_bg)
+        // Fond teinté de la couleur de l'agenda (orange), comme la pastille du titre.
+        background = GradientDrawable().apply {
+            cornerRadius = dp(20).toFloat()
+            setColor(ColorUtils.compositeColors(ColorUtils.setAlphaComponent(color(R.attr.c_hue_orange), 0x26), color(R.attr.c_surface)))
+            setStroke(dp(1), ColorUtils.setAlphaComponent(color(R.attr.c_hue_orange), 0x55))
+        }
         setPadding(dp(20), dp(16), dp(20), dp(16))
     }
     private var joinable: CalendarEvent? = null

@@ -1,0 +1,14 @@
+{
+  "_doc": "Appels entrants signalés sur la tablette (Windows). title : titre de fenêtre pendant la sonnerie (expression régulière) ; caller : élément de l'interface qui donne l'appelant (1er groupe) ; answer / video / decline / hangup : noms des boutons, en français et en anglais. Une appli de plus = une règle, après une capture pendant un vrai appel (GET /deck/buttons?app=…&detail=true).",
+  "rules": [
+    {
+      "app": "Discord",
+      "title": "^(Appel entrant|Incoming Call) - Discord$",
+      "caller": "^(?:Hyperlink|Link) : (.+?) \\((?:message privé|direct message)\\), (?:Appel entrant|Incoming Call)",
+      "answer": ["Se joindre à l'appel", "Join Call"],
+      "video": ["Rejoindre l'appel vidéo", "Join Video Call"],
+      "decline": ["Ignorer", "Ignore"],
+      "hangup": ["Déconnecter", "Disconnect"]
+    }
+  ]
+}

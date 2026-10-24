@@ -149,6 +149,10 @@ class RemoteChannel(private val activity: MainActivity) {
             null
         }
         "screenshot" -> screenshot()
+        "call" -> {
+            activity.onCall(command.getString("state"), command.getString("app"), command.optString("caller").takeIf { command.has("caller") && !command.isNull("caller") }, command.optBoolean("video"))
+            null
+        }
         else -> error("Ordre inconnu : $type (mettre à jour l'appli ?)")
     }
 

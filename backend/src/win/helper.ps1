@@ -265,7 +265,7 @@ function Get-Voice($req) {
   }
   $auto = [System.Windows.Automation.AutomationElement]
   $scope = [System.Windows.Automation.TreeScope]
-  $state = @{ found = $false; connected = $false; channel = $null; people = @(); muted = $null; deafened = $null; mic = $null; deaf = $null }
+  $state = @{ found = $false; connected = $false; streaming = $false; channel = $null; people = @(); muted = $null; deafened = $null; mic = $null; deaf = $null }
   foreach ($h in $req.windows) {
     $root = $auto::FromHandle([IntPtr][long]$h)
     if (-not $root) { continue }
@@ -275,6 +275,8 @@ function Get-Voice($req) {
       $name = ([string]$e.Current.Name).Trim()
       if (-not $name) { continue }
       $type = $e.Current.ControlType.ProgrammaticName -replace '^ControlType\.', ''
+      # Partage d'ecran en cours : bouton 'Arreter de streamer' (panneau vocal ou vue d'appel).
+      if ($type -eq 'Button' -and $name -match '^(Arr.ter de streamer|Stop Streaming)$') { $state.streaming = $true }
       switch ($phase) {
         'start' {
           if ($type -eq 'Group' -and $name -match '^(Statut et param|User (status|area|settings))') { $phase = 'panel'; $state.found = $true }
@@ -293,7 +295,8 @@ function Get-Voice($req) {
         }
         'people' {
           if ($type -eq 'Group') { $phase = 'done' }
-          elseif ($type -eq 'Button' -and $self -notcontains $name) { $state.people += $name }
+          # Boutons de la vue d'un stream (lecteur reduit, plein ecran, vignette) : pas des personnes.
+          elseif ($type -eq 'Button' -and $self -notcontains $name -and $name -notmatch '^(Passer en lecteur|Plein .cran|Vignette d|Pop ?out|Full ?screen|Call tile)') { $state.people += $name }
         }
       }
       if ($phase -eq 'done') { break }

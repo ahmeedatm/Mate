@@ -23,10 +23,10 @@ data class Identity(val id: String?, val name: String, val os: String, val auth:
 data class Pairing(val token: String, val id: String, val name: String, val os: String)
 
 /** `app` : nom de l'appli du Mac (tuile d'appli). */
-/** `whenState` : touche d'une page d'appli d'appel, montrée seulement en appel (`call`) ou hors appel (`idle`). */
+/** `whenState` : touche d'une page d'appli d'appel, montrée seulement en appel (`call`), hors appel (`idle`) ou pendant un partage d'écran (`streaming`). */
 data class DeckTile(val id: String, val label: String, val type: String, val glyph: String?, val color: String?, val app: String? = null, val whenState: String? = null)
 /** Appel en cours dans une appli (Discord) : salon, participants vus, micro et sourdine (null : inconnu). */
-data class VoiceState(val connected: Boolean, val channel: String?, val people: List<String>, val muted: Boolean?, val deafened: Boolean?)
+data class VoiceState(val connected: Boolean, val channel: String?, val people: List<String>, val muted: Boolean?, val deafened: Boolean?, val streaming: Boolean = false)
 /**
  * `editable` : page Perso (touches à programmer) ; `apps` : page d'applis que l'on complète ;
  * `meeting` : page Réunion, ouverte après « Rejoindre » sur l'Accueil ; `app` : page d'une appli (Discord…),
@@ -209,7 +209,7 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
         if (v == null || !v.optBoolean("found")) return@io null
         fun flag(key: String) = if (v.isNull(key)) null else v.optBoolean(key)
         val people = v.optJSONArray("people")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty()
-        VoiceState(v.optBoolean("connected"), v.optStringOrNull("channel"), people, flag("muted"), flag("deafened"))
+        VoiceState(v.optBoolean("connected"), v.optStringOrNull("channel"), people, flag("muted"), flag("deafened"), v.optBoolean("streaming"))
     }
 
     /** Retour au profil de base. */
@@ -240,6 +240,19 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
         val j = JSONObject(text(request("GET", "/deck/catalog")))
         fun list(key: String) = j.getJSONArray(key).let { a -> (0 until a.length()).map { a.getString(it) } }
         DeckCatalog(list("apps"), list("shortcuts"), list("displays"))
+    }
+
+    /** Lance une appli installée sur l'ordinateur (nom tel que dans `deckCatalog().apps`). */
+    suspend fun launchApp(name: String) = io { postJson("/apps/launch", JSONObject().put("name", name)); Unit }
+
+    /** Appel entrant (src/calls.ts) : appuie sur Répondre (ou Vidéo) / Ignorer dans l'appli. */
+    suspend fun answerCall(app: String, video: Boolean) = io { postJson("/calls/answer", JSONObject().put("app", app).put("video", video)); Unit }
+
+    suspend fun declineCall(app: String) = io { postJson("/calls/decline", JSONObject().put("app", app)); Unit }
+
+    /** Raccroche (`app`, sinon la première appli en appel) ; renvoie le nom de l'appli. */
+    suspend fun hangUp(app: String? = null): String = io {
+        JSONObject(postJson("/calls/hangup", JSONObject().apply { app?.let { put("app", it) } })).getString("app")
     }
 
     suspend fun persoKey(slot: Int): JSONObject? = io { JSONObject(text(request("GET", "/deck/keys/$slot"))).optJSONObject("key") }
@@ -436,6 +449,9 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
     suspend fun openCameraOnMac() = io { postJson("/camera/open", JSONObject()); Unit }
 
     /** Mac : ouvre le réglage Accessibilité, le compagnon déjà dans la liste. */
+    /** Dictée : texte collé dans l'appli au premier plan de l'ordinateur. */
+    suspend fun typeOnComputer(text: String) = io { postJson("/system/type", JSONObject().put("text", text)); Unit }
+
     suspend fun openAccessibility() = io { postJson("/system/accessibility", JSONObject()); Unit }
 
     /** Ouvre la page du compagnon sur l'ordinateur ; `section` : "agenda" pour y relier un agenda. */

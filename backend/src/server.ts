@@ -11,7 +11,7 @@ import {
   appIconFile, runAction, tileIcon,
 } from "./deck.ts";
 import {
-  accessibility, appAudio, browserPage, isAppRunning, listButtons, openAccessibility, canControl, focusWindow, getAudio, listApps, mediaControl, mediaSessions, mediaThumb, listDisplays, listOpenWindows, listShortcuts, listWindows, controlOpenWindow, openTarget, osName, placeWindow, setAudio, voiceState,
+  accessibility, appAudio, browserPage, isAppRunning, listButtons, openAccessibility, canControl, focusWindow, getAudio, launchApp, listApps, mediaControl, mediaSessions, mediaThumb, listDisplays, listOpenWindows, listShortcuts, listWindows, controlOpenWindow, openTarget, osName, placeWindow, setAudio, typeText, voiceState,
 } from "./os.ts";
 import type { Layout, OpenAction, WindowTarget } from "./screens.ts";
 import { keySchema, loadKeys, saveKey, SLOTS, type PersoKey } from "./perso.ts";
@@ -24,6 +24,7 @@ import { calendarSources, dayRange, getEvents, invalidateCalendar, linkedCalenda
 import { addEvent, deleteEvent, startEventReminders, updateEvent, type EventInput } from "./events.ts";
 import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvider, loginUrl } from "./accounts.ts";
 import { autoJoinEnabled, joinMeeting, setAutoJoin, startAutoJoin } from "./meetings.ts";
+import { answerCall, currentCall, declineCall, hangUp, startCallWatch } from "./calls.ts";
 import { addTask, deleteTask, listRecurring, listTasks, setTaskDone, startReminders, taskUrl } from "./tasks.ts";
 import { addViewer, CAMERA_STATUSES, cameraStatus, pushFrame, setCameraState, VIEWER_PAGE, type CameraStatus } from "./camera.ts";
 import { completeCommand, FOCUS_ACTIONS, MODES, NOISES, pollCommands, reportState, sendToTablet, tabletStatus, type TabletCommand } from "./tablet.ts";
@@ -77,6 +78,16 @@ app.post("/system/accessibility", async () => {
   await openAccessibility();
   return { ok: true };
 });
+
+/** Dictée de la tablette (« écris : … ») : texte collé dans l'appli au premier plan, comme l'étape `text` du deck. */
+app.post<{ Body: { text: string } }>(
+  "/system/type",
+  { schema: { body: { type: "object", required: ["text"], properties: { text: { type: "string", minLength: 1, maxLength: 2000 } } } } },
+  async (req) => {
+    await typeText(req.body.text);
+    return { ok: true };
+  },
+);
 
 // --- Appairage (voir src/pairing.ts) et page d'accueil locale
 
@@ -311,6 +322,17 @@ app.post<{ Body: { name: string } }>(
   async (req, reply) => {
     if (!(await listApps()).includes(req.body.name)) return reply.code(404).send({ error: "Appli introuvable sur l'ordinateur" });
     return { ok: true, id: await addDeckApp(req.body.name) };
+  },
+);
+
+/** Commande vocale « ouvre X » : appli installée qui n'est pas dans le deck. */
+app.post<{ Body: { name: string } }>(
+  "/apps/launch",
+  { schema: { body: { type: "object", required: ["name"], properties: { name: { type: "string", minLength: 1, maxLength: 200 } } } } },
+  async (req, reply) => {
+    if (!(await listApps()).includes(req.body.name)) return reply.code(404).send({ error: "Appli introuvable sur l'ordinateur" });
+    await launchApp(req.body.name);
+    return { ok: true };
   },
 );
 
@@ -859,7 +881,23 @@ app.post<{ Params: { id: string } }>("/tasks/:id/open", async (req, reply) => {
 const remind = async (text: string) => (await sendToTablet({ type: "message", text, speak: true, seconds: 120 })).received === true;
 startReminders(remind);
 startEventReminders(remind);
+// Appel entrant : prévenir la tablette sans attendre sa réponse (la sonnerie ne doit pas bloquer la surveillance).
+void startCallWatch((event) => void sendToTablet({ type: "call", ...event }, 30_000));
 if (canControl) startAutoJoin((text) => sendToTablet({ type: "message", text, seconds: 60 }));
+
+// --- Appels entrants (src/calls.ts) : la tablette répond, ignore ou raccroche en appuyant sur les boutons de l'appli
+
+const callBody = { type: "object", properties: { app: { type: "string", minLength: 1, maxLength: 100 }, video: { type: "boolean" } } };
+app.get("/calls/incoming", async () => ({ call: currentCall() }));
+app.post<{ Body: { app: string; video?: boolean } }>("/calls/answer", { schema: { body: { ...callBody, required: ["app"] } } }, async (req) => {
+  await answerCall(req.body.app, req.body.video);
+  return { ok: true };
+});
+app.post<{ Body: { app: string } }>("/calls/decline", { schema: { body: { ...callBody, required: ["app"] } } }, async (req) => {
+  await declineCall(req.body.app);
+  return { ok: true };
+});
+app.post<{ Body: { app?: string } }>("/calls/hangup", { schema: { body: callBody } }, async (req) => ({ ok: true, app: await hangUp(req.body.app) }));
 
 // --- Canal ordinateur → tablette (utilisé par le serveur MCP : Claude pilote la tablette, voir src/mcp.ts)
 
@@ -970,6 +1008,9 @@ app.post<{ Body: CommandBody }>(
       case "screenshot":
         command = { type: "screenshot" };
         break;
+      case "call":
+        // Envoyé seulement par la surveillance des appels (src/calls.ts).
+        return reply.code(400).send({ error: "Ordre réservé à l'ordinateur" });
     }
     const result = await sendToTablet(command, b.type === "screenshot" ? 30_000 : 15_000);
     return result.ok ? result : reply.code(502).send(result);

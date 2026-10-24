@@ -44,6 +44,7 @@
         { "label": "Sourdine (casque)", "glyph": "🎧", "action": { "type": "keys", "keys": "ctrl+shift+d", "app": "Discord" } },
         { "label": "Accepter l'appel", "glyph": "📞", "when": "idle", "action": { "type": "keys", "keys": "ctrl+return", "app": "Discord" } },
         { "label": "Refuser l'appel", "glyph": "✖️", "when": "idle", "action": { "type": "keys", "keys": "escape", "app": "Discord" } },
+        { "label": "Arrêter le partage", "glyph": "🛑", "when": "streaming", "action": { "type": "press", "app": "Discord", "names": ["Arrêter de streamer", "Stop Streaming"] } },
         { "label": "Quitter l'appel", "glyph": "📴", "when": "call", "action": { "type": "press", "app": "Discord", "names": ["Déconnecter", "Disconnect"] } }
       ]
     },

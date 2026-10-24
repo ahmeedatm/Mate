@@ -41,7 +41,7 @@ adb shell dpm set-device-owner com.unowhy.companion/.kiosk.KioskAdminReceiver
 adb shell am start -n com.unowhy.companion/.MainActivity
 ```
 
-5. Désactiver les applis inutiles (réversible : `pm enable`) :
+5. Désactiver les applis inutiles (réversible : `pm enable`). Garder l'appli Google (`com.google.android.googlequicksearchbox`) : elle fait la reconnaissance vocale du bouton Parler.
 
 ```bash
 for p in com.android.vending com.android.chrome com.android.calculator2 com.android.contacts \
@@ -49,7 +49,7 @@ for p in com.android.vending com.android.chrome com.android.calculator2 com.andr
   com.google.android.apps.docs com.google.android.apps.googleassistant com.google.android.apps.maps \
   com.google.android.apps.nbu.files com.google.android.apps.photos com.google.android.apps.tachyon \
   com.google.android.apps.youtube.music com.google.android.calendar com.google.android.deskclock \
-  com.google.android.gm com.google.android.googlequicksearchbox com.google.android.keep \
+  com.google.android.gm com.google.android.keep \
   com.google.android.videos com.google.android.youtube com.google.android.projection.gearhead \
   com.google.android.apps.wellbeing com.google.android.feedback; do
   adb shell pm disable-user --user 0 $p

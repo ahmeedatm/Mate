@@ -231,7 +231,8 @@ export async function pressButton(app: string, names: string[]): Promise<string 
 
 /** État vocal d'une appli d'appel (Discord) lu dans sa fenêtre ; `found` : faux si l'interface n'a pas été reconnue. */
 export type VoiceState = {
-  found: boolean; connected: boolean; channel: string | null; people: string[];
+  /** `streaming` : partage d'écran en cours (bouton « Arrêter de streamer »). */
+  found: boolean; connected: boolean; streaming: boolean; channel: string | null; people: string[];
   muted: boolean | null; deafened: boolean | null; mic: string | null; deaf: string | null;
 };
 

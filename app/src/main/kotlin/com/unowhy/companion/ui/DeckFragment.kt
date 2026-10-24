@@ -60,8 +60,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private var selectedTab = -1
     /** Un onglet est tenu (appui long) et déplacé dans la barre. */
     private var movingTab = false
-    /** Page Réunion demandée avant que le deck soit chargé. */
-    private var meetingPending = false
+    /** Page demandée avant que le deck soit chargé (Réunion, page d'une appli après un appel). */
+    private var pendingPage: ((DeckPage) -> Boolean)? = null
     /** Applis en appel (micro utilisé) → dernier moment où on l'a vu : leur page a un onglet. */
     /** Applis à page vues ouvertes (onglet) ou en appel, avec l'heure où on les a vues. */
     private var openApps: Map<String, Long> = emptyMap()
@@ -220,9 +220,10 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         voicePeople.setTextColor(themeColor(requireContext(), if (v.muted == true || v.deafened == true) R.attr.c_ko else R.attr.c_text_dim))
     }
 
-    /** Touche à montrer selon l'appel : `call` seulement en appel, `idle` seulement hors appel ; les autres toujours. */
+    /** Touche à montrer selon l'appel : `call` seulement en appel, `idle` hors appel, `streaming` pendant un partage d'écran. */
     private fun shownNow(tile: DeckTile) = when (tile.whenState) {
         "call" -> voice?.connected == true
+        "streaming" -> voice?.streaming == true
         "idle" -> voice?.connected != true
         else -> true
     }
@@ -241,9 +242,9 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 pages = client().deck()
-                if (meetingPending) {
-                    meetingPending = false
-                    pages.indexOfFirst { it.meeting }.takeIf { it >= 0 }?.let { pageIndex = it }
+                pendingPage?.let { wanted ->
+                    pendingPage = null
+                    pages.indexOfFirst(wanted).takeIf { it >= 0 }?.let { pageIndex = it }
                 }
                 pageIndex = pageIndex.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
                 status.visibility = View.GONE
@@ -262,9 +263,14 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     }
 
     /** Après « Rejoindre » sur l'Accueil : page Réunion (micro, caméra, raccrocher). */
-    fun openMeetingPage() {
-        val index = pages.indexOfFirst { it.meeting }
-        if (index >= 0) showPage(index) else meetingPending = true
+    fun openMeetingPage() = openPage { it.meeting }
+
+    /** Après avoir répondu à un appel : page de l'appli (micro, sourdine, Quitter l'appel). */
+    fun openAppPage(app: String) = openPage { !it.meeting && it.app.equals(app, ignoreCase = true) }
+
+    private fun openPage(wanted: (DeckPage) -> Boolean) {
+        val index = pages.indexOfFirst(wanted)
+        if (index >= 0) showPage(index) else pendingPage = wanted
     }
 
     /**

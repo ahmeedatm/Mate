@@ -34,8 +34,8 @@ export type Step =
 export type Action = Step | { type: "macro"; steps: Step[] };
 
 /** glyph : symbole affiché à la place de l'icône (emoji), utile pour les raccourcis. */
-/** when : page d'appli d'appel, touche montrée seulement en appel (`call`) ou hors appel (`idle`). */
-type TileConfig = { label: string; action: Action; icon?: string; glyph?: string; color?: string; when?: "call" | "idle" };
+/** when : page d'appli d'appel, touche montrée seulement en appel (`call`), hors appel (`idle`) ou pendant un partage d'écran (`streaming`). */
+type TileConfig = { label: string; action: Action; icon?: string; glyph?: string; color?: string; when?: "call" | "idle" | "streaming" };
 /** `apps` : page d'applis que l'on complète depuis la tablette (voir saveApps) ; `meeting` : page affichée
  * par la tablette après « Rejoindre » (micro, caméra, raccrocher) ; `app` : page d'une appli (Discord, Teams…),
  * montrée seulement si l'appli est dans la page Apps ; sur la tablette ce n'est pas un onglet : toucher l'appli
