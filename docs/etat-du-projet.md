@@ -104,3 +104,4 @@ Dofus Rétro (« Jouer » par un clic dans la fenêtre : perso, pas pour la dém
 | 99eb31c | Discord par UI Automation (appel, participants, Quitter), bascule d'ordinateur après 2 min, relecture légère |
 | 1cce5f2 | thèmes Nuit / Clair / Néon / Chaud, couleurs par fonction, animations |
 | 5b2ac89 | commande vocale (bouton Parler, noms d'applis rapprochés à l'oreille, dictée, fenêtres, tâches), appels entrants Discord, Arrêter le partage |
+| bf63b2b | paquets clients sans Node (node embarqué, `npm run package`), voix « sur l'écran de droite / de gauche / 2 » ; tests du 24/10 au soir (Spotify, Discord, voix, bascule) |
