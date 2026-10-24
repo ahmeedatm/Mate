@@ -2,10 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { randomBytes, randomUUID } from "node:crypto";
-import { adoptOldData, backendRoot, dataDir } from "./paths.ts";
+import { adoptOldData, backendRoot, dataDir, sharedDir } from "./paths.ts";
 
 export { backendRoot };
-const repoRoot = path.resolve(backendRoot, "..");
 adoptOldData();
 
 function expandHome(p: string) {
@@ -51,7 +50,7 @@ export const config = {
   computerId: identity.id,
   /** En écoute uniquement sur la machine (cas `adb reverse` en USB) ? */
   loopbackOnly,
-  docsDir: path.resolve(expandHome(process.env.DOCS_DIR || path.join(repoRoot, "shared"))),
+  docsDir: path.resolve(expandHome(process.env.DOCS_DIR || sharedDir())),
   icsUrls: (process.env.CALENDAR_ICS_URLS ?? "")
     .split(",")
     .map((s) => s.trim())

@@ -94,7 +94,6 @@ async function stage(platform: "windows" | "mac", sums: string): Promise<string>
   });
 
   for (const f of CONFIG) copy(path.join(backend, "config", f), path.join(dest, "config", f));
-  fs.mkdirSync(path.join(root, "shared"), { recursive: true });
 
   if (platform === "windows") {
     copy(path.join(repo, "Installer (Windows).cmd"), path.join(root, "Installer (Windows).cmd"));

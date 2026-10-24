@@ -1,11 +1,12 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * Dossiers du compagnon, sans effet de bord : partagés par le serveur (config.ts) et le lancement
- * automatique (scripts/service.ts). Dans le paquet, les deux sont regroupés dans dist/*.mjs.
+ * Dossiers du compagnon, partagés par le serveur (config.ts) et le lancement automatique (scripts/service.ts).
+ * Dans le paquet, les deux sont regroupés dans dist/*.mjs. Seul config.ts appelle les recopies d'un ancien paquet.
  */
 
 export const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -31,4 +32,33 @@ export function adoptOldData() {
   if (!packaged || process.env.DATA_DIR || old === dataDir) return;
   if (fs.existsSync(path.join(dataDir, "identity.json")) || !fs.existsSync(path.join(old, "identity.json"))) return;
   fs.cpSync(old, dataDir, { recursive: true, filter: (src) => path.basename(src) !== "service.pid" });
+}
+
+/** Documents de l'utilisateur (sous Windows, il peut avoir été déplacé, dans OneDrive par exemple). */
+function documentsDir() {
+  if (process.platform === "win32") {
+    try {
+      const out = execFileSync("reg", ["query", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders", "/v", "Personal"], { encoding: "utf8", windowsHide: true });
+      const dir = /Personal\s+REG_\w+\s+(.+)/.exec(out)?.[1]?.trim();
+      if (dir && fs.existsSync(dir)) return dir;
+    } catch {
+      // Clé absente : dossier habituel.
+    }
+  }
+  return path.join(os.homedir(), "Documents");
+}
+
+/**
+ * Dossier partagé avec la tablette : dans Documents pour le paquet (gardé d'une version à l'autre), à la racine du dépôt en dev.
+ * Pas « Compagnon Unowhy » : c'est le nom du dossier du zip, souvent extrait dans Documents.
+ */
+export function sharedDir(): string {
+  const old = path.resolve(backendRoot, "..", "shared");
+  if (!packaged) return old;
+  const dir = path.join(documentsDir(), "Partage tablette");
+  // Paquet plus ancien : documents dans le dossier extrait, recopiés une fois (l'original reste).
+  if (!fs.existsSync(dir) && fs.existsSync(old) && fs.readdirSync(old).length > 0) {
+    fs.cpSync(old, dir, { recursive: true });
+  }
+  return dir;
 }
