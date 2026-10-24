@@ -76,7 +76,7 @@ class WifiPicker(private val activity: Activity, private val scope: CoroutineSco
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener { scan() }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener { dialog.dismiss(); askHidden() }
         }
-        dialog.show()
+        dialog.showImmersive()
         scan()
     }
 
@@ -160,7 +160,7 @@ class WifiPicker(private val activity: Activity, private val scope: CoroutineSco
             .setView(form.root)
             .setPositiveButton(R.string.close, null)
             .create()
-        dialog.show()
+        dialog.showImmersive()
         scope.launch {
             val ok = runCatching { Wifi.connect(context, ssid, password, sae, hidden) }
             form.message.text = when {
@@ -181,7 +181,7 @@ class WifiPicker(private val activity: Activity, private val scope: CoroutineSco
                 Wifi.forget(context, ssid)
                 onChanged()
             }
-            .show()
+            .showImmersive()
     }
 
     private class Form(val root: View, val body: LinearLayout, val message: TextView)

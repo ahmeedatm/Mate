@@ -1,11 +1,13 @@
 package com.unowhy.companion.ui
 
+import android.app.Dialog
 import android.view.Gravity
 import android.view.WindowManager
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 /**
  * Affiche une boîte de dialogue de saisie en haut de l'écran : le clavier occupe la moitié basse de la tablette,
@@ -22,6 +24,27 @@ fun AlertDialog.showForTyping(input: EditText?, keyboard: Boolean = true) {
     }
     show()
     // Comme l'écran derrière : pas de barre d'état (sinon une bande noire vide en kiosque).
-    window?.let { WindowCompat.getInsetsController(it, it.decorView).hide(WindowInsetsCompat.Type.statusBars()) }
+    window?.let { WindowCompat.getInsetsController(it, it.decorView).hide(WindowInsetsCompat.Type.systemBars()) }
     if (keyboard) input?.requestFocus()
 }
+
+/**
+ * Affiche une boîte de dialogue sans barre d'état ni barre de navigation, comme l'écran derrière : sinon le kiosque
+ * les ferait réapparaître le temps de la boîte (et la flèche retour d'Android avec). La fenêtre n'est pas focusable
+ * pendant l'affichage, pour que les barres n'apparaissent même pas un instant.
+ */
+fun <T : Dialog> T.showImmersive(): T {
+    val window = window
+    window?.setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+    show()
+    window?.let {
+        WindowCompat.getInsetsController(it, it.decorView).apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.systemBars())
+        }
+        it.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+    }
+    return this
+}
+
+fun AlertDialog.Builder.showImmersive(): AlertDialog = create().showImmersive()

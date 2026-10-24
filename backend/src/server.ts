@@ -11,7 +11,7 @@ import {
   runAction, tileIcon,
 } from "./deck.ts";
 import {
-  appAudio, browserPage, isAppRunning, canControl, focusWindow, getAudio, listApps, mediaControl, mediaSessions, mediaThumb, listDisplays, listShortcuts, listWindows, openTarget, osName, placeWindow, setAudio,
+  accessibility, appAudio, browserPage, isAppRunning, listButtons, openAccessibility, canControl, focusWindow, getAudio, listApps, mediaControl, mediaSessions, mediaThumb, listDisplays, listShortcuts, listWindows, openTarget, osName, placeWindow, setAudio,
 } from "./os.ts";
 import type { Layout, WindowTarget } from "./screens.ts";
 import { keySchema, loadKeys, saveKey, SLOTS, type PersoKey } from "./perso.ts";
@@ -19,6 +19,7 @@ import { confirmPairing, identity, lanAddresses, PairingError, pendingCode, requ
 import { LOCAL_PAGE } from "./local-page.ts";
 import { listUpdates, updateFile } from "./updates.ts";
 import { docEntry, kindOf, listDocs, resolveDoc, savePhoto } from "./docs.ts";
+import { openMediaLink } from "./music.ts";
 import { calendarSources, dayRange, getEvents, invalidateCalendar, linkedCalendars, saveCalendarUrls, savedCalendarUrls, unlinkCalendar } from "./calendar.ts";
 import { addEvent, deleteEvent, startEventReminders, updateEvent, type EventInput } from "./events.ts";
 import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvider, loginUrl } from "./accounts.ts";
@@ -50,6 +51,7 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
   LOCAL_HOST.test(host ?? "") &&
   ((method === "GET" && /^\/(camera(\/stream|\/status)?|local\/status|oauth\/(microsoft|google)\/(start|callback))?(\?|$)/.test(url)) ||
     (method === "PUT" && url === "/local/calendar") ||
+    (method === "POST" && url === "/system/accessibility") ||
     (method === "DELETE" && /^\/local\/accounts\/(microsoft|google)$/.test(url)));
 /** Sans jeton : identité (la tablette reconnaît l'ordinateur) et appairage par code. */
 const PUBLIC = /^\/(health|pair\/request|pair\/confirm)(\?|$)/;
@@ -64,7 +66,17 @@ app.addHook("onRequest", async (req, reply) => {
 });
 
 /** `auth` : le jeton envoyé est le bon (la tablette sait s'il faut refaire l'appairage). */
-app.get("/health", async (req) => ({ ok: true, mode: config.mode, ...identity(), auth: authorized(req.headers.authorization) }));
+app.get("/health", async (req) => ({
+  ok: true, mode: config.mode, ...identity(), auth: authorized(req.headers.authorization),
+  // Mac : false = fenêtres et raccourcis bloqués tant que l'Accessibilité n'est pas accordée (la tablette prévient).
+  accessibility: await accessibility().catch(() => null),
+}));
+
+/** Ouvre sur le Mac le réglage Accessibilité (depuis la tablette, ou la page locale). */
+app.post("/system/accessibility", async () => {
+  await openAccessibility();
+  return { ok: true };
+});
 
 // --- Appairage (voir src/pairing.ts) et page d'accueil locale
 
@@ -107,6 +119,7 @@ app.get("/", async (_req, reply) => reply.type("text/html; charset=utf-8").send(
 
 app.get("/local/status", async () => ({
   ...identity(),
+  accessibility: await accessibility().catch(() => null),
   addresses: config.loopbackOnly ? ["127.0.0.1"] : lanAddresses(),
   tablet: tabletStatus().connected,
   pairing: pendingCode(),
@@ -235,6 +248,8 @@ app.post<{ Body: { id: string } }>(
       const info = await listWindows(tile.action.name).catch(() => undefined);
       if (info && info.windows.length > 1) return { ok: true, windows: info };
     }
+    // Page Média : l'appli du site si elle est installée, et la musique démarre seule.
+    if (tile.id.startsWith("l-") && tile.action.type === "url") return { ok: true, ...(await openMediaLink(tile.action.url)) };
     await runAction(tile.action);
     return { ok: true };
   },
@@ -298,6 +313,13 @@ app.get("/deck/live", { logLevel: "warn" }, async () => {
   ]);
   return { apps: apps.filter((_, i) => live[i]), open: apps.filter((_, i) => open[i] || live[i]) };
 });
+
+/** Boutons cliquables d'une appli ouverte (Windows) : de quoi écrire une étape « appuyer sur un bouton ». */
+app.get<{ Querystring: { app: string } }>(
+  "/deck/buttons",
+  { schema: { querystring: { type: "object", required: ["app"], properties: { app: { type: "string", minLength: 1, maxLength: 100 } } } } },
+  async (req) => listButtons(req.query.app),
+);
 
 /** Retour au profil de base. */
 app.delete("/deck/apps", async () => {
@@ -716,9 +738,10 @@ app.post<{ Body: { id: string } }>(
   "/calendar/join",
   { schema: { body: { type: "object", required: ["id"], properties: { id: { type: "string", maxLength: 500 } } } } },
   async (req, reply) => {
-    const event = await joinMeeting(req.body.id);
-    if (!event) return reply.code(404).send({ error: "Réunion sans lien Teams" });
-    return { ok: true, title: event.title };
+    const joined = await joinMeeting(req.body.id);
+    if (!joined) return reply.code(404).send({ error: "Cette réunion n'a pas de lien de visio" });
+    // `kind` : la tablette n'ouvre la page Réunion du deck (raccourcis Teams) que pour Teams.
+    return { ok: true, title: joined.event.title, kind: joined.kind ?? null };
   },
 );
 

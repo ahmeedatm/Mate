@@ -22,6 +22,7 @@ import com.unowhy.companion.ui.errorText
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import com.unowhy.companion.ui.showImmersive
 
 /**
  * Touches du deck choisies (1, 2 ou 4 selon la taille) : lancer Discord, une macro, couper le micro… sans passer par
@@ -150,7 +151,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                     host.save()
                     render()
                 }
-                .show()
+                .showImmersive()
         }
     }
 

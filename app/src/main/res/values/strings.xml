@@ -43,10 +43,10 @@
     <string name="no_events">Aucun événement</string>
     <string name="free_time">Le reste de la journée est libre</string>
     <string name="join_meeting">Rejoindre</string>
-    <string name="join_opened">Teams ouvert sur l\'ordinateur : %1$s</string>
-    <string name="settings_meetings">Réunions Teams</string>
+    <string name="join_opened">Réunion ouverte sur l\'ordinateur : %1$s</string>
+    <string name="settings_meetings">Réunions en ligne</string>
     <string name="autojoin">Rejoindre automatiquement 1 min avant</string>
-    <string name="autojoin_hint">L\'ordinateur ouvre Teams sur l\'écran d\'avant-réunion : micro et caméra restent à valider.</string>
+    <string name="autojoin_hint">L\'ordinateur ouvre la réunion (Teams, Meet, Zoom…) sur son écran d\'avant-réunion : micro et caméra restent à valider.</string>
     <string name="all_day">Journée</string>
     <string name="calendar_mock">Agenda d\'exemple</string>
 
@@ -436,6 +436,7 @@
     <string name="agenda_link">Relier Outlook / Google</string>
     <string name="calendars_title">Mes agendas</string>
     <string name="calendars_add">Relier un autre agenda</string>
+    <string name="calendars_add_first">Relier un agenda</string>
     <string name="calendars_hint">Agendas reliés à cet ordinateur. Ton agenda personnel, noté ici avec +, reste toujours.</string>
     <string name="calendars_none">Aucun agenda relié. Ton agenda personnel, noté ici avec +, s\'affiche quand même.</string>
     <string name="calendars_expired">connexion expirée, relie-le à nouveau</string>
@@ -503,7 +504,7 @@
     <string name="widget_clock">Horloge</string>
     <string name="widget_clock_desc">L\'heure et la date, en grand</string>
     <string name="widget_next">Prochain rendez-vous</string>
-    <string name="widget_next_desc">Et le bouton Rejoindre d\'une réunion Teams</string>
+    <string name="widget_next_desc">Et le bouton Rejoindre d\'une réunion en ligne</string>
     <string name="widget_agenda">Agenda</string>
     <string name="widget_agenda_desc">Aujourd\'hui et les 7 jours suivants</string>
     <string name="widget_tasks">Tâches</string>
@@ -544,4 +545,8 @@
     <string name="widget_note_desc">Un mot à garder sous les yeux</string>
     <string name="widget_note_empty">Touche pour écrire une note</string>
     <string name="widget_note_hint">Ta note</string>
+    <string name="deck_access_missing">Le Mac n\'a pas encore autorisé le compagnon : les fenêtres et les raccourcis ne marchent pas. Active « Accessibilité » pour lui sur le Mac.</string>
+    <string name="deck_access_open">Ouvrir le réglage sur le Mac</string>
+    <string name="deck_access_opened">Sur le Mac : active l\'interrupteur du compagnon, puis reviens ici.</string>
+    <string name="media_opened_app">Ouvert dans l\'appli %1$s</string>
 </resources>

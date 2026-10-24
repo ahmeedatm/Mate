@@ -48,6 +48,7 @@ import com.unowhy.companion.ui.WelcomeView
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.Locale
+import com.unowhy.companion.ui.showImmersive
 
 /** Les écrans qui veulent les boutons de volume de la tablette (ex. le deck pilote le son de l'ordinateur). */
 interface VolumeKeyHandler {
@@ -292,7 +293,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-            .show()
+            .showImmersive()
     }
 
     // Temps restant du Pomodoro à la place du libellé Focus, visible depuis n'importe quel écran.

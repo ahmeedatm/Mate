@@ -175,6 +175,69 @@ function Get-BrowserPage {
   @{ found = $false; clipboard = $clipboard }
 }
 
+# --- Boutons d'une fenetre (UI Automation) : le bouton Jouer d'un launcher de jeu, par son nom.
+# 'list' : noms des elements cliquables (lecture seule) ; 'invoke' : actionne le premier dont le nom est dans $req.names,
+# par son motif Invoke, sinon par un clic de souris au centre (les launchers Electron n'exposent pas toujours Invoke).
+
+function Initialize-Mouse {
+  if ('Companion.Mouse' -as [type]) { return }
+  Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+namespace Companion {
+  public static class Mouse {
+    [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
+    [DllImport("user32.dll")] static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
+    public static void Click(int x, int y) {
+      SetCursorPos(x, y);
+      mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero);
+      mouse_event(0x0004, 0, 0, 0, UIntPtr.Zero);
+    }
+  }
+}
+'@
+}
+
+function Invoke-Press($req) {
+  if (-not ('System.Windows.Automation.AutomationElement' -as [type])) {
+    Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+  }
+  $auto = [System.Windows.Automation.AutomationElement]
+  $scope = [System.Windows.Automation.TreeScope]
+  $wanted = @($req.names | ForEach-Object { ([string]$_).Trim().ToLowerInvariant() })
+  $seen = New-Object System.Collections.ArrayList
+  $total = 0
+  foreach ($h in $req.windows) {
+    $root = $auto::FromHandle([IntPtr][long]$h)
+    if (-not $root) { continue }
+    foreach ($e in $root.FindAll($scope::Descendants, [System.Windows.Automation.Condition]::TrueCondition)) {
+      $total++
+      $name = ([string]$e.Current.Name).Trim()
+      if (-not $name -or $name.Length -gt 40) { continue }
+      $type = $e.Current.ControlType.ProgrammaticName -replace '^ControlType\.', ''
+      if ($type -notin @('Button', 'Hyperlink', 'MenuItem', 'ListItem', 'Text', 'Group', 'Custom')) { continue }
+      if ($req.action -eq 'list') {
+        if ($seen.Count -lt 120) { [void]$seen.Add("$type : $name") }
+        continue
+      }
+      if ($wanted -notcontains $name.ToLowerInvariant()) { continue }
+      if ($e.Current.IsOffscreen -or -not $e.Current.IsEnabled) { continue }
+      $pattern = $null
+      if ($e.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$pattern)) {
+        $pattern.Invoke()
+        return @{ pressed = $name; how = 'invoke' }
+      }
+      $r = $e.Current.BoundingRectangle
+      if ($r.Width -le 0 -or $r.Height -le 0) { continue }
+      Initialize-Mouse
+      [Companion.Mouse]::Click([int]($r.X + $r.Width / 2), [int]($r.Y + $r.Height / 2))
+      return @{ pressed = $name; how = 'click' }
+    }
+  }
+  if ($req.action -eq 'list') { return @{ items = $seen; total = $total } }
+  @{ pressed = $null }
+}
+
 $stdout.WriteLine('@@{"ok":true,"result":"ready"}')
 while ($true) {
   $line = $stdin.ReadLine()
@@ -185,6 +248,11 @@ while ($true) {
     if ($req.op -eq 'browser') {
       $result = Get-BrowserPage
       $stdout.WriteLine('@@{"ok":true,"result":' + (ConvertTo-Json -Compress -InputObject $result) + '}')
+      continue
+    }
+    if ($req.op -eq 'press') {
+      $result = Invoke-Press $req
+      $stdout.WriteLine('@@{"ok":true,"result":' + (ConvertTo-Json -Compress -Depth 4 -InputObject $result) + '}')
       continue
     }
     if ($req.op -eq 'media') {

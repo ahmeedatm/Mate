@@ -44,13 +44,14 @@ class CalendarsDialog(
                     val calendars = BackendClient(context).linkedCalendars()
                     list.removeAllViews()
                     message.setText(if (calendars.isEmpty()) R.string.calendars_none else R.string.calendars_hint)
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setText(if (calendars.isEmpty()) R.string.calendars_add_first else R.string.calendars_add)
                     for (calendar in calendars) list.addView(row(list, calendar) { confirmUnlink(calendar) { dialog.dismiss() } })
                 } catch (e: Exception) {
                     message.text = context.errorText(e)
                 }
             }
         }
-        dialog.show()
+        dialog.showImmersive()
         load()
     }
 
@@ -80,10 +81,10 @@ class CalendarsDialog(
                         onChanged()
                         show()
                     } catch (e: Exception) {
-                        AlertDialog.Builder(context).setMessage(context.errorText(e)).setPositiveButton(R.string.close, null).show()
+                        AlertDialog.Builder(context).setMessage(context.errorText(e)).setPositiveButton(R.string.close, null).showImmersive()
                     }
                 }
             }
-            .show()
+            .showImmersive()
     }
 }

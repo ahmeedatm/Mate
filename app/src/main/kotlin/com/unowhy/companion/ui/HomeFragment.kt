@@ -343,7 +343,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             dialog.dismiss()
             place(type, col, row)
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
-        dialog.show()
+        dialog.showImmersive()
     }
 
     private fun galleryRow(type: WidgetType, onClick: () -> Unit): View {
@@ -471,7 +471,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
                 refreshAll()
             }
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
-        dialog.show()
+        dialog.showImmersive()
     }
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()

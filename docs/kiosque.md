@@ -15,7 +15,7 @@ adb shell settings put global animator_duration_scale 0
 adb shell settings put global stay_on_while_plugged_in 7
 ```
 
-⚠️ Garder l'appli **Caméra** du système activée : le bouton « Photo → Mac » l'utilise.
+L'appli **Caméra** du système n'est plus utilisée (le mode Caméra passe par Camera2) : elle peut être désactivée comme les autres.
 Ne pas désactiver Google Play Services / WebView sans tester.
 
 ## 2. Repartir d'une tablette propre (sans MDM SQOOL)
@@ -56,7 +56,7 @@ for p in com.android.vending com.android.chrome com.android.calculator2 com.andr
 done
 ```
 
-   Garder : Launcher3 (secours hors kiosque), la caméra MediaTek, Google TTS, Play Services, WebView.
+   Garder : Launcher3 (secours hors kiosque), Google TTS, Play Services, WebView.
 
 6. Brancher le WiFi seulement maintenant.
 
@@ -68,6 +68,7 @@ même si quelque chose tentait de réinstaller SQOOL, Android refuse. Android aj
 La carte **Kiosque** de Réglages est cachée au client : appui long sur le titre « Réglages », puis le
 **code technicien** (`4242` par défaut, `-PtechCode=…` à la compilation). Elle disparaît en quittant Réglages.
 Micro et caméra sont accordés d'office (`setPermissionGrantState`) : en kiosque, un refus serait sans retour.
+Heure et fuseau automatiques imposés à chaque passage en kiosque (`setGlobalSetting` AUTO_TIME / AUTO_TIME_ZONE) : une tablette sortie du stock a souvent une heure fausse.
 Après une mise à jour de l'appli (adb ou Réglages > Mises à jour), Android l'arrête et le verrouillage avec elle : `kiosk/UpdatedReceiver` (`MY_PACKAGE_REPLACED`) la relance aussitôt (kiosque revenu en ~4 s).
 Pas d'écran de verrouillage après une mise en veille (`setKeyguardDisabled`, rétabli par « Retirer le mode kiosque »).
 La barre d'état étant masquée, heure, WiFi et batterie sont dans la barre latérale ; luminosité et volume dans Réglages > Tablette.

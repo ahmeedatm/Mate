@@ -66,7 +66,7 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener { dialog.dismiss(); manual() }
             run()
         }
-        dialog.show()
+        dialog.showImmersive()
     }
 
     /** Adresse saisie : l'ordinateur n'est pas trouvé (autre réseau, diffusion bloquée, émulateur : 10.0.2.2). */

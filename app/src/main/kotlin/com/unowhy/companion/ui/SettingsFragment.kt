@@ -103,7 +103,7 @@ class SettingsFragment : Fragment() {
                 .setMessage(R.string.kiosk_remove_confirm)
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(R.string.confirm) { _, _ -> Kiosk.remove(requireActivity()); renderKiosk() }
-                .show()
+                .showImmersive()
         }
         renderKiosk()
         loadAutoJoin()
@@ -190,7 +190,7 @@ class SettingsFragment : Fragment() {
                 Computers.remove(requireContext(), c.id)
                 if (wasActive) main.onComputerChanged(Computers.active(requireContext())) else renderComputers()
             }
-            .show()
+            .showImmersive()
     }
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()

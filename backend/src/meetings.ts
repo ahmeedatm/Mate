@@ -2,11 +2,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { config } from "./config.ts";
 import { dayRange, getEvents, type CalendarEvent } from "./calendar.ts";
+import { meetingKind, type MeetingKind } from "./meeting-links.ts";
 import { openTarget } from "./os.ts";
 
-// Réunions Teams de l'agenda : bouton « Rejoindre » de la tablette et ouverture automatique
-// 1 minute avant (option, désactivée par défaut). Teams affiche d'abord son écran d'avant-réunion
-// (micro, caméra) : rien n'est diffusé sans un clic sur « Rejoindre maintenant ».
+// Réunions en ligne de l'agenda (Teams, Google Meet, Zoom, Webex) : bouton « Rejoindre » de la tablette et
+// ouverture automatique 1 minute avant (option, désactivée par défaut). Chaque service affiche d'abord son écran
+// d'avant-réunion (micro, caméra) : rien n'est diffusé sans un clic sur « Rejoindre ».
 
 const storeFile = path.join(config.dataDir, "meetings.json");
 const AUTO_JOIN_BEFORE_MS = 60_000;
@@ -24,27 +25,36 @@ export async function setAutoJoin(enabled: boolean) {
   await fs.writeFile(storeFile, JSON.stringify({ autoJoin: enabled }, null, 2) + "\n");
 }
 
-/** Ouvre la réunion dans l'appli Teams (lien msteams:), sinon dans le navigateur. */
-async function openTeams(url: string) {
-  const app = url.replace(/^https:\/\/teams\.microsoft\.com\//, "msteams:/");
-  if (app !== url) {
+/** Ouvre le lien dans l'appli du service si possible (Teams : msteams:, Zoom : zoommtg:), sinon dans le navigateur. */
+async function openMeeting(url: string) {
+  const app = appLink(url);
+  if (app) {
     try {
       await openTarget(app);
       return;
     } catch {
-      // Teams absent ou lien non pris en charge : le navigateur propose d'ouvrir Teams ou le web.
+      // Appli absente ou lien non pris en charge : le navigateur propose d'ouvrir l'appli ou la version web.
     }
   }
   await openTarget(url);
 }
 
+function appLink(url: string): string | undefined {
+  if (meetingKind(url) === "teams") return url.replace(/^https:\/\/teams\.microsoft\.com\//, "msteams:/");
+  const zoom = /^https:\/\/(?:[\w-]+\.)?zoom\.us\/j\/(\d+)(?:\?pwd=([\w.-]+))?/.exec(url);
+  if (zoom) return `zoommtg://zoom.us/join?confno=${zoom[1]}${zoom[2] ? `&pwd=${zoom[2]}` : ""}`;
+  return undefined;
+}
+
+const SERVICE_NAMES: Record<MeetingKind, string> = { teams: "Teams", meet: "Google Meet", zoom: "Zoom", webex: "Webex" };
+
 /** Rejoint une réunion du jour d'après son identifiant d'agenda. */
-export async function joinMeeting(id: string): Promise<CalendarEvent | undefined> {
+export async function joinMeeting(id: string): Promise<{ event: CalendarEvent; kind?: MeetingKind } | undefined> {
   const { events } = await getEvents(...dayRange(1));
   const event = events.find((e) => e.id === id);
   if (!event?.joinUrl) return undefined;
-  await openTeams(event.joinUrl);
-  return event;
+  await openMeeting(event.joinUrl);
+  return { event, kind: meetingKind(event.joinUrl) };
 }
 
 /** Toutes les 15 s : ouvre la réunion qui commence dans la minute, une fois, si l'option est cochée. */
@@ -60,8 +70,9 @@ export function startAutoJoin(notify: (text: string) => Promise<unknown>) {
     );
     if (!event || joined.has(String(event.startMs))) return;
     joined.add(String(event.startMs));
-    await openTeams(event.joinUrl!);
-    await notify(`Teams ouvert : ${event.title}`);
+    await openMeeting(event.joinUrl!);
+    const kind = meetingKind(event.joinUrl!);
+    await notify(`${kind ? SERVICE_NAMES[kind] : "Réunion"} ouvert : ${event.title}`);
   };
   setInterval(() => void tick().catch(() => undefined), 15_000);
 }

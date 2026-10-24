@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { backendRoot, config } from "./config.ts";
 import type { CalendarEvent } from "./calendar.ts";
+import { meetingLink } from "./meeting-links.ts";
 
 /**
  * Agenda par connexion au compte (Microsoft 365 / Outlook.com, Google), sans lien ICS à chercher.
@@ -180,8 +181,6 @@ async function accessToken(provider: Provider, stored: Stored): Promise<string> 
 
 // --- Événements
 
-const TEAMS_LINK = /https:\/\/teams\.(?:microsoft|live)\.com\/(?:l\/meetup-join|meet)\/[^\s<>"]+/;
-
 /** Événements de tous les comptes connectés entre `from` et `to` (récurrences dépliées par le fournisseur). */
 export async function accountEvents(from: Date, to: Date): Promise<CalendarEvent[]> {
   const accounts = await load();
@@ -233,7 +232,7 @@ async function microsoftEvents(token: string, from: Date, to: Date): Promise<Cal
         endMs: e.isAllDay ? localDay(e.end.dateTime) : Date.parse(e.end.dateTime + "Z"),
         allDay: e.isAllDay,
         free: e.showAs === "free",
-        joinUrl: e.onlineMeeting?.joinUrl ?? e.bodyPreview?.match(TEAMS_LINK)?.[0],
+        joinUrl: e.onlineMeeting?.joinUrl ?? meetingLink(e.bodyPreview, e.location?.displayName),
       });
     }
     url = json["@odata.nextLink"] as string | undefined;
@@ -267,7 +266,7 @@ async function googleEvents(token: string, from: Date, to: Date): Promise<Calend
         free: e.transparency === "transparent",
         joinUrl: e.hangoutLink
           ?? e.conferenceData?.entryPoints?.find((p) => p.entryPointType === "video")?.uri
-          ?? e.description?.match(TEAMS_LINK)?.[0],
+          ?? meetingLink(e.description, e.location),
       };
     });
 }

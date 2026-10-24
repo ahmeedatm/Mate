@@ -4,7 +4,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { config } from "./config.ts";
 import {
-  appIcon, canMedia, isInstalled, launchApp, listWindows, openTarget, placeWindow, runShortcut, sendKeys, sendMediaKey,
+  appIcon, canControl, canMedia, isInstalled, launchApp, listWindows, openTarget, placeWindow, runShortcut, sendKeys, sendMediaKey,
   systemCommand, typeText, type MediaCommand, type SystemCommand,
 } from "./os.ts";
 import type { Layout } from "./screens.ts";
@@ -127,7 +127,7 @@ export async function removeDeckLink(id: string) {
   await saveLinks((await loadLinks()).filter((l) => linkTileId(l.url) !== id));
 }
 
-// Appli qui donne un sens au bouton Rejoindre (nom du .app sur Mac, du menu Démarrer sur Windows).
+// Teams dans le deck (nom du .app sur Mac, du menu Démarrer sur Windows) : page Réunion après « Rejoindre ».
 const MEETING_APPS = /^(Microsoft )?Teams/i;
 
 /**
@@ -136,7 +136,10 @@ const MEETING_APPS = /^(Microsoft )?Teams/i;
  */
 export async function homeFeatures() {
   const names = (await deckApps(await loadConfig())).map((a) => a.name);
-  return { agenda: true, linked: await hasCalendar(), meetings: names.some((n) => MEETING_APPS.test(n)) };
+  // `meetings` : bouton Rejoindre et option d'ouverture automatique. Toute réunion avec un lien de visio s'ouvre
+  // (appli ou navigateur) ; `teams` : l'appli Teams est dans le deck (page Réunion et ses raccourcis).
+  const teams = names.some((n) => MEETING_APPS.test(n));
+  return { agenda: true, linked: await hasCalendar(), meetings: canControl, teams };
 }
 
 export async function loadDeck(): Promise<DeckPage[]> {

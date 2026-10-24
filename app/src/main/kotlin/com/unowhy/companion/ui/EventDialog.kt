@@ -117,10 +117,10 @@ class EventDialog(
             DatePickerDialog(context, { _, y, m, d -> day.set(y, m, d); render() },
                 day.get(Calendar.YEAR), day.get(Calendar.MONTH), day.get(Calendar.DAY_OF_MONTH)).apply {
                 datePicker.minDate = today.timeInMillis
-            }.show()
+            }.showImmersive()
         }
         timeButton.setOnClickListener {
-            TimePickerDialog(context, { _, h, m -> hour = h; minute = m; render() }, hour, minute, true).show()
+            TimePickerDialog(context, { _, h, m -> hour = h; minute = m; render() }, hour, minute, true).showImmersive()
         }
         allDay.setOnCheckedChangeListener { _, _ -> render() }
         reminderChips.forEach { (chip, minutes) -> chip.setOnClickListener { remindBefore = minutes; render() } }

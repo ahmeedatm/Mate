@@ -16,7 +16,8 @@ import java.util.UUID
 data class ChatMessage(val role: String, val content: String)
 
 /** Ce que l'ordinateur dit de lui (GET /health, sans jeton) ; `auth` : le jeton envoyé est accepté. */
-data class Identity(val id: String?, val name: String, val os: String, val auth: Boolean, val mode: String = "mock")
+/** `accessibility` : Mac seulement, false = fenêtres et raccourcis bloqués (autorisation à donner sur le Mac). */
+data class Identity(val id: String?, val name: String, val os: String, val auth: Boolean, val mode: String = "mock", val accessibility: Boolean? = null)
 
 /** Résultat de l'appairage par code : jeton à garder et identité de l'ordinateur. */
 data class Pairing(val token: String, val id: String, val name: String, val os: String)
@@ -42,11 +43,14 @@ data class DeckPage(
 /** Agenda relié à l'ordinateur (compte ou lien ICS, jamais le lien lui-même). */
 data class LinkedCalendar(val id: String, val label: String, val detail: String, val removable: Boolean, val expired: Boolean)
 
+data class TileResult(val windows: WindowsInfo?, val openedApp: String?)
+
 data class LiveApps(val open: List<String>, val live: List<String>)
 
 /** Cartes de l'Accueil selon les applis du deck : agenda (Outlook, Calendrier…), bouton Rejoindre (Teams). */
 /** `linked` : l'ordinateur a un agenda relié (lien ICS, compte) en plus de l'agenda personnel. */
-data class HomeFeatures(val agenda: Boolean = true, val meetings: Boolean = true, val linked: Boolean = true)
+/** `meetings` : Rejoindre (tout lien de visio) ; `teams` : Teams dans le deck, sa page Réunion après Rejoindre. */
+data class HomeFeatures(val agenda: Boolean = true, val meetings: Boolean = true, val linked: Boolean = true, val teams: Boolean = false)
 
 /** Choix proposés par l'éditeur de touche perso. */
 data class DeckCatalog(val apps: List<String>, val shortcuts: List<String>, val displays: List<String>)
@@ -120,7 +124,10 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
     /** Identité de l'ordinateur ; un ancien backend ne renvoie pas d'`id` (et refuse sans jeton : 401). */
     suspend fun identity(): Identity = io {
         val j = JSONObject(text(request("GET", "/health", timeoutMs = 5_000)))
-        Identity(j.optStringOrNull("id"), j.optString("name", "Ordinateur"), j.optString("os", "mac"), j.optBoolean("auth", true), j.optString("mode", "mock"))
+        Identity(
+            j.optStringOrNull("id"), j.optString("name", "Ordinateur"), j.optString("os", "mac"), j.optBoolean("auth", true), j.optString("mode", "mock"),
+            if (j.has("accessibility") && !j.isNull("accessibility")) j.getBoolean("accessibility") else null,
+        )
     }
 
     // --- Appairage : l'ordinateur affiche un code, la tablette le renvoie et reçoit le jeton.
@@ -171,7 +178,8 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
 
     suspend fun homeFeatures(): HomeFeatures = io {
         JSONObject(text(request("GET", "/deck/features"))).let {
-            HomeFeatures(it.optBoolean("agenda", true), it.optBoolean("meetings", true), it.optBoolean("linked", true))
+            // Ordinateur pas encore à jour (sans `teams`) : `meetings` y voulait dire « Teams dans le deck ».
+            HomeFeatures(it.optBoolean("agenda", true), it.optBoolean("meetings", true), it.optBoolean("linked", true), it.optBoolean("teams", it.optBoolean("meetings", true)))
         }
     }
 
@@ -224,8 +232,10 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
     suspend fun clearPersoKey(slot: Int) = io { text(request("DELETE", "/deck/keys/$slot")); Unit }
 
     /** Lance l'action d'une tuile ; renvoie les fenêtres si l'appli en a plusieurs (rien n'est alors activé). */
-    suspend fun runTile(id: String): WindowsInfo? = io {
-        JSONObject(postJson("/deck/run", JSONObject().put("id", id))).optJSONObject("windows")?.let(::parseWindows)
+    /** `windows` : appli à plusieurs fenêtres, à choisir ; `openedApp` : lien de la page Média ouvert dans son appli. */
+    suspend fun runTile(id: String): TileResult = io {
+        val json = JSONObject(postJson("/deck/run", JSONObject().put("id", id)))
+        TileResult(json.optJSONObject("windows")?.let(::parseWindows), json.optStringOrNull("app")?.takeIf { json.optString("opened") == "app" })
     }
 
     suspend fun windows(tileId: String): WindowsInfo = io { parseWindows(JSONObject(text(request("GET", "/deck/windows/" + encode(tileId))))) }
@@ -383,6 +393,9 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
     /** Ouvre la page du visualiseur dans le navigateur du Mac. */
     suspend fun openCameraOnMac() = io { postJson("/camera/open", JSONObject()); Unit }
 
+    /** Mac : ouvre le réglage Accessibilité, le compagnon déjà dans la liste. */
+    suspend fun openAccessibility() = io { postJson("/system/accessibility", JSONObject()); Unit }
+
     /** Ouvre la page du compagnon sur l'ordinateur ; `section` : "agenda" pour y relier un agenda. */
     suspend fun openLocalPage(section: String? = null) = io {
         postJson("/local/open", JSONObject().apply { if (section != null) put("section", section) }); Unit
@@ -430,7 +443,8 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
     suspend fun deleteEvent(id: String) = io { text(request("DELETE", "/calendar/events/" + encode(id))); Unit }
 
     /** Ouvre la réunion dans Teams sur le Mac. */
-    suspend fun joinMeeting(id: String) = io { postJson("/calendar/join", JSONObject().put("id", id)); Unit }
+    /** Ouvre la réunion sur l'ordinateur ; renvoie le service (teams, meet, zoom, webex) ou null. */
+    suspend fun joinMeeting(id: String): String? = io { JSONObject(postJson("/calendar/join", JSONObject().put("id", id))).optStringOrNull("kind") }
 
     /** Option « Rejoindre automatiquement 1 min avant », gardée sur le Mac (marche tablette éteinte). */
     suspend fun autoJoin(): Boolean = io { JSONObject(text(request("GET", "/calendar/autojoin"))).getBoolean("enabled") }

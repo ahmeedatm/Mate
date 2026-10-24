@@ -84,7 +84,7 @@ class TaskDialog(private val context: Context, private val onSave: (String, Stri
         }
         remind.setOnCheckedChangeListener { _, _ -> render() }
         timeButton.setOnClickListener {
-            TimePickerDialog(context, { _, h, m -> hour = h; minute = m; render() }, hour, minute, true).show()
+            TimePickerDialog(context, { _, h, m -> hour = h; minute = m; render() }, hour, minute, true).showImmersive()
         }
         render()
 

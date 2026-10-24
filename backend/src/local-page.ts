@@ -29,6 +29,7 @@ export const LOCAL_PAGE = `<!doctype html>
   details { margin-top: 8px; }
   /* Ouverte depuis la tablette (« Relier mon agenda ») : la carte Agenda est mise en avant. */
   .card.focus { border: 2px solid var(--accent); }
+  .card.warn { border: 2px solid var(--ko); }
   .account { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
   .account .grow { flex: 1; }
   .account button { margin-top: 0; }
@@ -41,6 +42,14 @@ export const LOCAL_PAGE = `<!doctype html>
 <main>
   <h1 id="name">Compagnon Unowhy</h1>
   <div class="dim" id="os"></div>
+
+  <!-- Mac sans l'autorisation Accessibilité : fenêtres et raccourcis du deck ne marchent pas encore. -->
+  <div class="card warn" id="access" hidden>
+    <b>Une autorisation manque sur ce Mac</b>
+    <div class="dim" style="margin-top:6px">Pour placer les fenêtres et envoyer les raccourcis du deck, autorise le compagnon dans
+      Réglages Système › Confidentialité et sécurité › <b>Accessibilité</b>, puis active l'interrupteur.</div>
+    <button id="accessopen" style="margin-top:12px">Ouvrir le réglage</button>
+  </div>
 
   <div class="card" id="pairing">
     <div>Code à saisir sur <b id="tablet">la tablette</b> :</div>
@@ -90,6 +99,7 @@ export const LOCAL_PAGE = `<!doctype html>
     try {
       const s = await (await fetch("/local/status")).json();
       document.getElementById("name").textContent = s.name;
+      document.getElementById("access").hidden = s.accessibility !== false;
       document.getElementById("os").textContent = "Compagnon prêt · " + (OS[s.os] || s.os);
       document.getElementById("addr").textContent = s.addresses.map((a) => a + ":" + s.port).join("  ·  ") || "aucune (pas de réseau)";
       document.getElementById("dot").className = "dot" + (s.tablet ? " on" : "");
@@ -177,6 +187,9 @@ export const LOCAL_PAGE = `<!doctype html>
       msg.textContent = "Compagnon injoignable";
     }
   }
+  document.getElementById("accessopen").onclick = async () => {
+    await fetch("/system/accessibility", { method: "POST" });
+  };
   document.getElementById("calsave").onclick = () => {
     const url = document.getElementById("calurl").value.trim();
     if (url) saveCalendar([url]);

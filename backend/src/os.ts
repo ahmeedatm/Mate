@@ -1,6 +1,7 @@
 import { execFileSync, spawn } from "node:child_process";
 import os from "node:os";
 import { osascript, run } from "./mac/run.ts";
+import * as macAccess from "./mac/access.ts";
 import * as macApps from "./mac/apps.ts";
 import * as macAudio from "./mac/audio.ts";
 import * as macBrowser from "./mac/browser.ts";
@@ -160,6 +161,28 @@ export async function isAppRunning(app: string): Promise<boolean> {
   if (isWindows) return (await win.appAudio(app)).running || (await win.listWindows(app)).running;
   if (isMac) return (await run("ps", ["-axo", "comm="])).split("\n").some((c) => c.includes(`/${app}.app/`));
   return false;
+}
+
+/** Mac : le compagnon a-t-il l'autorisation Accessibilité ? null ailleurs (rien à autoriser). */
+export async function accessibility(): Promise<boolean | null> {
+  return isMac ? macAccess.accessibilityTrusted() : null;
+}
+
+/** Mac : ouvre Réglages Système à la page Accessibilité, le compagnon déjà dans la liste. */
+export async function openAccessibility() {
+  if (isMac) return macAccess.openAccessibilitySettings();
+  unsupported();
+}
+
+/** Boutons d'une fenêtre d'appli (Windows) : lister leurs noms, en actionner un. */
+export function listButtons(app: string) {
+  if (isWindows) return win.listButtons(app);
+  unsupported();
+}
+
+export function pressButton(app: string, names: string[]) {
+  if (isWindows) return win.pressButton(app, names);
+  unsupported();
 }
 
 export function listDisplays() {

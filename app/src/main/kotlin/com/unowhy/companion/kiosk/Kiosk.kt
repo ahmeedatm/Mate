@@ -10,7 +10,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.UserManager
-import android.provider.MediaStore
+import android.provider.Settings
 import com.unowhy.companion.Prefs
 
 /**
@@ -59,11 +59,11 @@ object Kiosk {
         grantPermissions(activity)
         // Pas d'écran de verrouillage à faire glisser après une mise en veille (aucun code n'est défini).
         runCatching { dpm(activity).setKeyguardDisabled(admin(activity), true) }
+        autoTime(activity)
         if (suspended) return
         val dpm = dpm(activity)
-        // L'appli caméra du système doit être autorisée, sinon "Photo → Mac" est bloqué en lock task.
-        val camera = Intent(MediaStore.ACTION_IMAGE_CAPTURE).resolveActivity(activity.packageManager)?.packageName
-        dpm.setLockTaskPackages(admin(activity), listOfNotNull(activity.packageName, camera).toTypedArray())
+        // Seule l'appli elle-même : la caméra passe par Camera2 (mode Caméra), plus par l'appli photo du système.
+        dpm.setLockTaskPackages(admin(activity), arrayOf(activity.packageName))
         setHome(activity, true)
         if (!isLocked(activity)) activity.startLockTask()
     }
@@ -90,6 +90,16 @@ object Kiosk {
         for (restriction in APP_RESTRICTIONS) {
             if (locked) dpm.addUserRestriction(admin(context), restriction)
             else dpm.clearUserRestriction(admin(context), restriction)
+        }
+    }
+
+    /**
+     * Heure et fuseau donnés par le réseau : une tablette sortie du stock a souvent une heure fausse, et l'agenda,
+     * les rappels et l'atténuation de nuit en dépendent. Personne ne peut les régler en kiosque.
+     */
+    private fun autoTime(context: Context) {
+        for (setting in listOf(Settings.Global.AUTO_TIME, Settings.Global.AUTO_TIME_ZONE)) {
+            runCatching { dpm(context).setGlobalSetting(admin(context), setting, "1") }
         }
     }
 

@@ -37,6 +37,33 @@
                 android:src="@drawable/ic_refresh" />
         </LinearLayout>
 
+        <!-- Mac sans l'autorisation Accessibilité : fenêtres et raccourcis ne marchent pas, le bouton ouvre le réglage. -->
+        <LinearLayout
+            android:id="@+id/deck_access"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/card_warn_bg"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/deck_access_missing"
+                android:textColor="@color/text"
+                android:textSize="16sp" />
+
+            <Button
+                android:id="@+id/deck_access_open"
+                style="@style/PrimaryButton"
+                android:layout_marginStart="16dp"
+                android:text="@string/deck_access_open" />
+        </LinearLayout>
+
         <!-- Son et micro du Mac. Les boutons de volume de la tablette pilotent aussi le Mac dans ce mode. -->
         <com.unowhy.companion.ui.MacAudioView
             android:id="@+id/deck_audio"

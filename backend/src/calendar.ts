@@ -4,6 +4,7 @@ import ical, { type ParameterValue, type VEvent } from "node-ical";
 import { config } from "./config.ts";
 import { accountEvents, connectedAccounts, disconnect } from "./accounts.ts";
 import { localEvents } from "./events.ts";
+import { meetingLink } from "./meeting-links.ts";
 
 export type CalendarEvent = {
   /** UID de l'événement + début : distingue les occurrences d'une réunion récurrente. */
@@ -21,9 +22,6 @@ export type CalendarEvent = {
   localId?: string;
   remindBefore?: number;
 };
-
-// Lien « Rejoindre la réunion maintenant » d'Outlook : ancien format meetup-join ou nouveau meet/<numéro>.
-const TEAMS_LINK = /https:\/\/teams\.(?:microsoft|live)\.com\/(?:l\/meetup-join|meet)\/[^\s<>"]+/;
 
 const CACHE_MS = 5 * 60_000;
 let cache: { at: number; key: string; events: CalendarEvent[] } | undefined;
@@ -186,7 +184,7 @@ async function remoteEvents(from: Date, to: Date): Promise<{ source: Source; eve
           endMs: (instance.end ?? instance.start).getTime(),
           allDay: instance.isFullDay,
           free: instance.event.transparency === "TRANSPARENT",
-          joinUrl: text(instance.event.description).match(TEAMS_LINK)?.[0],
+          joinUrl: meetingLink(text(instance.event.description), text(instance.event.location)),
         });
       }
     }

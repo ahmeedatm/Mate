@@ -208,6 +208,30 @@ server.registerTool(
   ({ id, fait }) => attempt(async () => (await api("POST", `/tasks/${encodeURIComponent(id)}/done`, { done: fait }), text(fait ? "Tâche cochée." : "Tâche décochée."))),
 );
 
+server.registerTool(
+  "agenda_ajouter",
+  {
+    title: "Noter un rendez-vous",
+    description:
+      "Ajoute un rendez-vous à l'agenda personnel de la tablette (affiché sur l'Accueil avec les agendas reliés). " +
+      "`date` : AAAA-MM-JJ ; `heure` : HH:MM (absente = toute la journée) ; `rappel` : minutes avant pour que la tablette le dise à voix haute (0 = à l'heure).",
+    inputSchema: {
+      titre: z.string().min(1).max(200),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      heure: z.string().regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/).optional(),
+      rappel: z.number().int().min(0).max(1440).optional(),
+    },
+  },
+  ({ titre, date, heure, rappel }) =>
+    attempt(async () => {
+      // Heure locale de l'ordinateur (celle que montre la tablette).
+      const [y, m, d] = date.split("-").map(Number);
+      const [h, min] = (heure ?? "00:00").split(":").map(Number);
+      const startMs = new Date(y, m - 1, d, h, min).getTime();
+      return text(await api("POST", "/calendar/events", { title: titre, startMs, allDay: !heure, remindBefore: rappel ?? null }));
+    }),
+);
+
 // Étapes d'une touche perso : mêmes types que backend/src/perso.ts (le backend revalide).
 const STEP = z.discriminatedUnion("type", [
   z.object({ type: z.literal("app"), name: z.string().describe("Nom de l'appli : .app sur Mac, menu Démarrer sur Windows (ex. Visual Studio Code)") }),

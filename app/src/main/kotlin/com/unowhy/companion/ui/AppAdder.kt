@@ -174,7 +174,7 @@ class AppAdder @JvmOverloads constructor(
                     }
                 }
             }
-            .show()
+            .showImmersive()
     }
 
     private fun showError(e: Exception) {

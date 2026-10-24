@@ -171,9 +171,17 @@ function mediaAppName(app: string) {
   return known ? known[1] : app.replace(/\.exe$/i, "").replace(/_[a-z0-9]+!.*$/i, "").split(/[.\\]/).pop() || app;
 }
 
+const letters = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/**
+ * Lectures en cours, sans celles d'applis qui publient une session vide (Riot Client : « Riot Client », sans artiste
+ * ni durée) : Windows la met parfois en avant, et Play visait alors une appli qui ne joue rien.
+ */
 export async function mediaSessions(): Promise<MediaSession[]> {
   const raw = await call<Omit<MediaSession, "name">[]>("media", { action: "list" });
-  return raw.map((s) => ({ ...s, name: mediaAppName(s.app) }));
+  return raw
+    .map((s) => ({ ...s, name: mediaAppName(s.app) }))
+    .filter((s) => s.artist || s.durationMs !== null || (s.title && letters(s.title) !== letters(s.name)));
 }
 
 export async function mediaControl(action: MediaAction, app?: string, positionMs?: number) {
@@ -198,6 +206,27 @@ async function windowsCall(app: string, req: Record<string, unknown>): Promise<W
   const found = await requireApp(app);
   const raw = await call<RawWindows>("windows", { ...req, id: found.id, names: [app, found.name] });
   return { app, running: raw.running, windows: raw.windows, displays: labelDisplays(raw.displays) };
+}
+
+// --- Boutons d'une fenêtre (UI Automation) : « Jouer » d'un launcher de jeu, une macro qui appuie sur un bouton.
+
+async function appWindowHandles(app: string): Promise<number[]> {
+  return (await listWindows(app)).windows.filter((w) => !w.elsewhere).map((w) => w.index);
+}
+
+/** Noms des éléments cliquables des fenêtres de l'appli (pour trouver celui à actionner) ; `total` : éléments vus en tout. */
+export async function listButtons(app: string): Promise<{ buttons: string[]; total: number }> {
+  const windows = await appWindowHandles(app);
+  if (windows.length === 0) return { buttons: [], total: 0 };
+  const raw = await call<{ items?: string[]; total?: number }>("press", { action: "list", windows }, 20_000);
+  return { buttons: raw.items ?? [], total: raw.total ?? 0 };
+}
+
+/** Actionne le premier bouton de l'appli dont le nom est dans `names` ; null si aucun n'est (encore) là. */
+export async function pressButton(app: string, names: string[]): Promise<string | null> {
+  const windows = await appWindowHandles(app);
+  if (windows.length === 0) return null;
+  return (await call<{ pressed: string | null }>("press", { action: "invoke", windows, names }, 20_000)).pressed;
 }
 
 export async function listDisplays() {

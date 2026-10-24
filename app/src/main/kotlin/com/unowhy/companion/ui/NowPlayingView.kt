@@ -134,7 +134,8 @@ class NowPlayingView @JvmOverloads constructor(
     }
 
     private fun selected(): MediaSession? =
-        sessions.firstOrNull { it.app == chosenApp } ?: sessions.firstOrNull { it.current } ?: sessions.firstOrNull { it.playing } ?: sessions.firstOrNull()
+        // Ce qui joue avant ce que Windows met en avant : sa session « en cours » est parfois une appli muette.
+        sessions.firstOrNull { it.app == chosenApp } ?: sessions.firstOrNull { it.playing } ?: sessions.firstOrNull { it.current } ?: sessions.firstOrNull()
 
     private fun control(action: String, positionMs: Long? = null) {
         val app = selected()?.app ?: return

@@ -135,6 +135,6 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
             .setTitle(R.string.water_settings)
             .setView(box)
             .setPositiveButton(R.string.close, null)
-            .show()
+            .showImmersive()
     }
 }

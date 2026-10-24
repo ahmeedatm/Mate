@@ -34,6 +34,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private lateinit var tabs: LinearLayout
     private lateinit var grid: GridView
     private lateinit var status: TextView
+    private lateinit var access: View
     private lateinit var audio: MacAudioView
     private lateinit var appAudio: AppAudioView
     private lateinit var nowPlaying: NowPlayingView
@@ -107,6 +108,17 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             true
         }
         view.findViewById<ImageButton>(R.id.deck_refresh).setOnClickListener { IconCache.clear(); loadDeck() }
+        access = view.findViewById(R.id.deck_access)
+        view.findViewById<View>(R.id.deck_access_open).setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    client().openAccessibility()
+                    Toast.makeText(requireContext(), R.string.deck_access_opened, Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(requireContext(), requireContext().errorText(e), Toast.LENGTH_LONG).show()
+                }
+            }
+        }
 
         loadDeck()
     }
@@ -178,6 +190,11 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             }
         }
         audio.refresh()
+        // Relu à chaque retour sur le deck : le bandeau disparaît dès que l'autorisation est donnée sur le Mac.
+        viewLifecycleOwner.lifecycleScope.launch {
+            val missing = runCatching { client().identity().accessibility == false }.getOrDefault(false)
+            access.visibility = if (missing) View.VISIBLE else View.GONE
+        }
     }
 
     /** Après « Rejoindre » sur l'Accueil : page Réunion (micro, caméra, raccrocher). */
@@ -242,7 +259,9 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         tileView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                client().runTile(tile.id)?.let { picker.show(tile, it, removable = isAppsPage()) }
+                val result = client().runTile(tile.id)
+                result.windows?.let { picker.show(tile, it, removable = isAppsPage()) }
+                result.openedApp?.let { Toast.makeText(requireContext(), getString(R.string.media_opened_app, it), Toast.LENGTH_SHORT).show() }
                 // Un raccourci comme "Micro Teams" peut avoir changé l'état du son.
                 if (tile.type != "app") audio.refresh()
             } catch (e: Exception) {
@@ -325,7 +344,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                     }
                 }
             }
-            .show()
+            .showImmersive()
     }
 
     /** Applis de la page Apps : nom → identifiant de tuile. */

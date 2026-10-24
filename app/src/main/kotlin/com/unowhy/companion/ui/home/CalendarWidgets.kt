@@ -33,7 +33,8 @@ internal fun daysFrom(now: Long, ms: Long): Int {
 }
 
 /**
- * Prochain rendez-vous (ou la réunion touchée dans l'agenda), avec « Rejoindre » pour une réunion Teams à partir de
+ * Prochain rendez-vous (ou la réunion touchée dans l'agenda), avec « Rejoindre » pour une réunion en ligne (Teams,
+ * Meet, Zoom, Webex) à partir de
  * 15 min avant. Moyen : le bouton à droite du titre ; grand : en dessous.
  */
 class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
@@ -123,9 +124,10 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         host.scope.launch {
             val main = host.main
             try {
-                BackendClient(context).joinMeeting(event.id)
+                val kind = BackendClient(context).joinMeeting(event.id)
                 main?.showBanner(context.getString(R.string.join_opened, event.title), 6)
-                main?.showMeetingControls()
+                // Page Réunion du deck : raccourcis de Teams, inutiles pour Meet ou Zoom.
+                if (kind == "teams" && host.features.teams) main?.showMeetingControls()
             } catch (e: Exception) {
                 main?.showBanner(context.errorText(e), 6)
             }

@@ -120,7 +120,7 @@ class TasksCard @JvmOverloads constructor(
             }
             box.addView(row)
         }
-        dialog.show()
+        dialog.showImmersive()
     }
 
     private fun render(tasks: List<TaskItem>) {
