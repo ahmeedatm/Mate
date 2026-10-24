@@ -40,13 +40,13 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 | Extension Claude | serveur MCP `tablette` (modes, messages, tâches, agenda, captures…) |
 | Commande vocale | bouton Parler (reconnaissance Android, sans clé) : heure, ouvrir une appli même mal entendue (« ouvre Ankama Launcher »), modes, son, Focus, dictée (« écris … »), fenêtres (réduire, montrer, à gauche / à droite, « sur l'écran de droite / de gauche / 2 »), tâches (ajouter, lister, cocher), rappels (« rappelle-moi … dans 2 minutes »), agenda (« qu'est-ce que j'ai demain ») ; testé le 24/10 |
 | Appels entrants | Discord (Windows) : carte Répondre / Vidéo / Ignorer sur la tablette, annonce parlée, puis page Discord du Deck ; testé le 24/10 (appel privé reçu, Répondre) ; « Quitter l'appel » et « Arrêter le partage » testés ; appel de groupe privé lu (nom, participants, micro) |
+| Paquet Windows sans Node | zip de `npm run package` extrait dans Documents sur le PC, `.data` copié (appairage gardé), installeur : ancien compagnon arrêté, nouveau lancé, relancé seul après un redémarrage à distance (~9 s) ; testé le 24/10 |
 
 ## Fait mais pas encore testé en vrai
 
 - **Commande vocale** (24/10) : « ferme … », « cherche … », « raccroche », « arrête le partage » à la voix. La reconnaissance entend souvent « mais » pour « mets » et « de » pour « 2 » : acceptés. Pas de mot de réveil (bouton seulement). La carte d'appel cache le bouton Parler : « réponds » / « ignore » à la voix ne servent pas encore.
 - **Appels entrants** (24/10) : Vidéo, Ignorer, « Appel manqué » ; Discord en anglais ; Teams, WhatsApp, Zoom (une règle chacun dans `config/calls.json` après une capture pendant un vrai appel) ; Mac (pas fait).
 - Discord dans un salon de **serveur** (pas encore essayé : le test du 24/10 était un groupe privé, bien lu) : nom attendu « salon / serveur », liste des personnes, qui parle (illisible dans les appels privés et de groupe).
-- **Paquets sans Node** (24/10, `npm run package`, voir [developpement.md](developpement.md)) : testés sur le Mac seulement. À essayer sur le PC : extraire le zip Windows, copier le `.data` du compagnon actuel pour garder l'appairage, lancer l'installeur, vérifier une route Windows. Le changement de `helper.ts` (chemin de `helper.ps1`) n'est pas encore envoyé sur le PC.
 - Carte « Prochain rendez-vous » teintée orange (fond et heure) comme son titre : pas encore vue sur la tablette.
 
 - **Discord sans portail développeur** (24/10 soir ; « Quitter l'appel » et « Arrêter le partage » testés ensuite) : Discord expose son interface à UI Automation une fois l'accessibilité de Chromium demandée. `GET /deck/voice` lit le panneau vocal : appel ou salon, participants (vue d'appel privé), micro et sourdine. Page Discord : carte « En appel · … », touches selon l'état (`"when": "call" | "idle"` dans `deck.json`), « Quitter l'appel » = étape `press` (bouton « Déconnecter »). Plus de vert. PAS testé : salon d'un serveur (nom attendu « salon / serveur »), Discord en anglais. **Qui parle** : illisible dans un appel privé (ni nom ni classe ne change) ; à vérifier dans un salon de serveur (avatar marqué). Diagnostic : `GET /deck/buttons?app=Discord&detail=true` (éléments + classes HTML).
@@ -65,10 +65,9 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 ## À faire, dans l'ordre
 
 0. Bug des onglets du Deck (voir plus haut) s'il revient.
-1. **Paquet Windows sans Node** : l'essayer sur le PC (voir plus haut), une étape à la fois avec Eliot.
-2. **Discord** : un salon de serveur (nom, qui parle, personnes). Pas de RPC ni de portail développeur (décision d'Eliot : les clients ne doivent rien créer, pas de dépendance à une validation de Discord).
-3. **Voix et appels** : appels Teams / WhatsApp (captures pendant un vrai appel) ; idées : météo, réglages de la tablette à la voix. Réactiver l'appli Google sans adb : impossible (un device owner ne peut pas annuler `pm disable-user`), inutile car la procédure du kiosque la garde ; sans elle, Parler ouvre la commande écrite.
-4. Suite du paquet (choix du 24/10 : Node embarqué, zip + installeur actuel ; pas de NSIS ni d'appli .app pour l'instant) : icône pour rouvrir la page, règle du pare-feu Windows, dossier Partage dans Documents, mise à jour sans perdre `.data`.
+1. **Discord** : un salon de serveur (nom, qui parle, personnes). Pas de RPC ni de portail développeur (décision d'Eliot : les clients ne doivent rien créer, pas de dépendance à une validation de Discord).
+2. **Voix et appels** : appels Teams / WhatsApp (captures pendant un vrai appel) ; idées : météo, réglages de la tablette à la voix. Réactiver l'appli Google sans adb : impossible (un device owner ne peut pas annuler `pm disable-user`), inutile car la procédure du kiosque la garde ; sans elle, Parler ouvre la commande écrite.
+3. Suite du paquet (choix du 24/10 : Node embarqué, zip + installeur actuel ; pas de NSIS ni d'appli .app pour l'instant) : icône pour rouvrir la page, règle du pare-feu Windows, dossier Partage dans Documents, mise à jour sans perdre `.data` (le PC tourne maintenant depuis `Documents\Compagnon-Unowhy-PC` : le partage SMB pointe encore sur l'ancien dossier de dev).
 
 ## Décisions en attente
 
