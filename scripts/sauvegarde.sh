@@ -23,9 +23,15 @@ perso=""
 for f in backend/.env backend/.data backend/config/deck.json backend/config/tasks.json local.properties; do
   [ -e "$f" ] && perso="$perso $f"
 done
-if [ -n "$perso" ]; then
+# Compagnon installé par paquet sur ce Mac : ses données sont hors du dépôt (src/paths.ts).
+app="$HOME/Library/Application Support/UnowhyCompanion"
+if [ -n "$perso" ] || [ -d "$app" ]; then
   archive="$dest/unowhy-companion-donnees-perso-$day.tgz"
   # shellcheck disable=SC2086
-  tar czf "$archive" --exclude backend/.data/updates $perso
+  if [ -d "$app" ]; then
+    tar czf "$archive" --exclude backend/.data/updates $perso -C "$(dirname "$app")" UnowhyCompanion
+  else
+    tar czf "$archive" --exclude backend/.data/updates $perso
+  fi
   echo "Données perso (secrets, ne pas partager) : $archive"
 fi
