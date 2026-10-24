@@ -271,6 +271,8 @@ function Get-Voice($req) {
     if (-not $root) { continue }
     $phase = 'start'
     $self = @()
+    $tiles = @()
+    $tile = $null
     foreach ($e in $root.FindAll($scope::Descendants, [System.Windows.Automation.Condition]::TrueCondition)) {
       $name = ([string]$e.Current.Name).Trim()
       if (-not $name) { continue }
@@ -295,13 +297,23 @@ function Get-Voice($req) {
         }
         'people' {
           if ($type -eq 'Group') { $phase = 'done' }
-          # Boutons de la vue d'un stream (lecteur reduit, plein ecran, vignette) : pas des personnes.
-          elseif ($type -eq 'Button' -and $self -notcontains $name -and $name -notmatch '^(Passer en lecteur|Plein .cran|Vignette d|Pop ?out|Full ?screen|Call tile)') { $state.people += $name }
+          # Salon de serveur : une vignette par personne, 'Vignette d'appel, pseudo', puis l'image au nom affiche (secours si aucun autre nom).
+          elseif ($type -eq 'Button' -and $name -match '^(Vignette d.appel|Call tile), (.+)$') {
+            if ($tile) { $tiles += $tile }
+            $tile = if ($self -notcontains $Matches[2]) { $Matches[2] } else { $null }
+          }
+          elseif ($type -eq 'Image' -and $tile) { $tiles += $(if ($self -notcontains $name) { $name } else { $tile }); $tile = $null }
+          # Boutons de la vue d'un stream ou d'un salon vide (lecteur reduit, plein ecran, inviter, activite) : pas des personnes.
+          elseif ($type -eq 'Button' -and $self -notcontains $name -and $name -notmatch '^(Passer en lecteur|Plein .cran|Pop ?out|Full ?screen|Inviter|Invite|Choisis une Activit|Choose an Activity)') { $state.people += $name }
         }
       }
       if ($phase -eq 'done') { break }
     }
-    if ($state.found) { break }
+    if ($state.found) {
+      if ($tile) { $tiles += $tile }
+      if ($state.people.Count -eq 0) { $state.people = $tiles }
+      break
+    }
   }
   $state
 }
