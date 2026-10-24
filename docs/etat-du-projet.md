@@ -37,7 +37,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 | Média | touche Spotify : ouvre Spotify, la musique part seule, lecture en cours affichée ; testé le 24/10 |
 | Caméra | visualiseur à environ 10 images/s en WiFi, page `/camera` sur l'ordinateur, Figer, zoom, Arrêter |
 | Kiosque | lock task, SQOOL masqué, installations bloquées, relance après mise à jour, WiFi dans Réglages, mises à jour silencieuses (WebView 152 installé), heure et fuseau auto, état de la tablette (batterie, luminosité, atténuation de nuit), écran de bienvenue |
-| Extension Claude | serveur MCP `tablette` (modes, messages, tâches, agenda, captures…) |
+| Extension Claude | serveur MCP `tablette` (modes, messages, tâches, agenda, captures…), sur les données du paquet ; `tablette_etat` revérifié le 25/10 (la tablette doit piloter le Mac, sinon « non connectée ») |
 | Commande vocale | bouton Parler (reconnaissance Android, sans clé) : heure, ouvrir une appli même mal entendue (« ouvre Ankama Launcher »), modes, son, Focus, dictée (« écris … »), fenêtres (réduire, montrer, à gauche / à droite, « sur l'écran de droite / de gauche / 2 »), tâches (ajouter, lister, cocher), rappels (« rappelle-moi … dans 2 minutes »), agenda (« qu'est-ce que j'ai demain ») ; testé le 24/10 |
 | Appels entrants | Discord (Windows) : carte Répondre / Vidéo / Ignorer sur la tablette, annonce parlée, puis page Discord du Deck ; testé le 24/10 (appel privé reçu, Répondre) ; « Quitter l'appel » et « Arrêter le partage » testés ; appel de groupe privé lu (nom, participants, micro) |
 | Paquet Windows sans Node | zip de `npm run package` extrait dans Documents sur le PC, `.data` copié (appairage gardé), installeur : ancien compagnon arrêté, nouveau lancé, relancé seul après un redémarrage à distance (~9 s) ; testé le 24/10 |
@@ -55,7 +55,6 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 - **Ouvertes sur Mac** (25/10) : les fenêtres des autres bureaux (applis en plein écran, Spaces) apparaissent, « autre bureau » ; vu sur la tablette avec deux Chrome en plein écran, toucher = passer sur leur bureau. Fenêtres d'une même appli triées par titre (elles ne s'échangent plus). Triple toucher (Mac) = plein écran sur son bureau / en sortir : PAS testé. Lecture de la liste : 1,6 à 2,5 s au lieu de 0,7 s (à surveiller). Word (fenêtre hors des écrans) toujours absent.
 - **Caméra « Montrer sur l'ordi »** (25/10, testé sur la tablette) : la fenêtre de la caméra s'ouvre seule sur l'ordi au choix de l'usage (plus de bouton « Afficher sur l'ordi ») ; état « Ouverture sur l'ordi… » puis « En direct » ; bandeau « La fenêtre de la caméra est fermée sur l'ordi » + Rouvrir seulement si la page a été fermée (`GET /camera/status` → `viewers`, relu toutes les 2 s, 8 s laissées au navigateur).
 - **Onglets de la Page de l'ordi** (25/10, testé sur la tablette avec le Mac et le PC) : le bouton actualiser (ambigu) remplacé par « Onglets » : liste des onglets ouverts sur l'ordi, celui affiché sur l'ordi en tête ; toucher = l'afficher sur la tablette, rien ne bouge sur l'ordi. Mac : AppleScript (Safari, Chrome, Edge…). Windows : **extension de navigateur « Compagnon Unowhy »** (`backend/extension/`, dossier « Extension navigateur » du paquet, chargée en mode développeur dans Opera GX sur le PC) qui pousse ses onglets au compagnon en local ; elle donne aussi la page de devant (plus fiable qu'UI Automation). Essais écartés sur Windows : UI Automation (Opera GX n'expose rien même en simulant un lecteur d'écran), fichier de session Chromium (verrouillé tant que le navigateur tourne). Pas testé : Firefox, plusieurs navigateurs à la fois.
-- **Extension Claude** (25/10) : « Jeton invalide » expliqué : `mcp.ts` chargeait `backend/.env` (dev), dont le `COMPANION_TOKEN` passait avant le jeton du paquet (`identity.json`) ; ignoré quand `DATA_DIR` est donné. Outils `tablette` pas encore relancés (`/mcp`) pour vérifier.
 - Corbeille : correctif d'un affichage resté après un glisser annulé.
 - Boîtes de saisie (25/10, vu sur la tablette) : le clavier restait affiché après la fermeture (code d'appairage) et le premier appui sur un bouton était perdu (barres système rappelées). Fermeture du clavier encore un peu lente (animation d'Android).
 
@@ -72,8 +71,6 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 ## À faire, dans l'ordre
 
 0. Bug des onglets du Deck (voir plus haut) s'il revient.
-0. Extension Claude : reconnecter `tablette` (`/mcp`) et vérifier `tablette_etat` (correctif du jeton du 25/10).
-0. Extension de navigateur : en production, la publier (Chrome Web Store / Opera addons) et y mener depuis l'installeur ou la page locale ; Firefox (manifest à adapter).
 1. **Voix et appels** : appels Teams / WhatsApp (captures pendant un vrai appel, reporté par Eliot) ; idées : météo, réglages de la tablette à la voix. Réactiver l'appli Google sans adb : impossible (un device owner ne peut pas annuler `pm disable-user`), inutile car la procédure du kiosque la garde ; sans elle, Parler ouvre la commande écrite.
 2. **Paquet** : relance du compagnon Mac à l'ouverture de session (pas encore vue : le Mac n'avait pas redémarré depuis 44 jours ; `RunAtLoad` + `KeepAlive` vérifiés dans le LaunchAgent). Pas de NSIS ni d'appli .app pour l'instant.
 
@@ -92,6 +89,14 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 - Deck Mac de départ : c'est un profil de développeur (VS Code, iTerm…), à revoir pour un client.
 - Bluetooth (enceinte, casque) impossible à appairer en kiosque.
 - HTTP en clair sur le réseau local, protégé par le jeton. En production : HTTPS épinglé à l'appairage.
+
+## Pour la vente (pas nécessaire à la démo)
+
+- **Extension de navigateur** (bouton Onglets de « Page de l'ordi » sur Windows ; sur Mac, AppleScript suffit sauf Firefox). Aujourd'hui chargée en mode développeur, ce qui suffit pour la démo. Pour un client :
+  - **Publier** avec un compte Unowhy : Chrome Web Store (5 $ une fois ; couvre Chrome, Brave, Vivaldi, et Opera par son module « Installer des extensions Chrome »), Edge Add-ons (gratuit), addons.mozilla.org (gratuit, signature obligatoire). Hors boutique, Chrome refuse l'extension sur Windows.
+  - **Installeur** : clé de registre « extension externe » par navigateur (`HKCU\Software\Google\Chrome\Extensions\<id>`, idem Edge ; sur Mac, fichier `External Extensions/<id>.json`) : le navigateur propose l'extension au lancement suivant, le client clique « Activer ». Ne marche qu'avec une extension publiée.
+  - **Page locale et tablette** : carte « Extension du navigateur » (reçue ou non, lien vers la boutique) ; dans Onglets, phrase « Installe l'extension sur l'ordi » si rien n'arrive.
+  - **Firefox** : un seul manifeste pour les deux, en ajoutant `"background": {"scripts": ["background.js"]}` à côté de `service_worker` (Chrome l'ignore) et `browser_specific_settings.gecko.id` ; `chrome.*` marche tel quel.
 
 ## Idées notées, pas faites
 
