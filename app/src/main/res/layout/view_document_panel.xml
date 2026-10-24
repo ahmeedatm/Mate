@@ -28,13 +28,17 @@
             android:contentDescription="@string/doc_expand"
             android:src="@drawable/ic_fullscreen" />
 
-        <!-- Page web : reprendre la page ouverte dans le navigateur de l'ordinateur. -->
-        <ImageButton
-            android:id="@+id/doc_web_refresh"
-            style="@style/IconButton.Flat"
-            android:layout_marginStart="8dp"
-            android:contentDescription="@string/web_from_computer_reload"
-            android:src="@drawable/ic_refresh"
+        <!-- Page web : choisir un onglet ouvert sur l'ordinateur (en tête, celui qui y est affiché). -->
+        <Button
+            android:id="@+id/doc_web_tabs"
+            style="@style/ActionButton"
+            android:layout_height="44dp"
+            android:layout_marginStart="12dp"
+            android:drawableStart="@drawable/ic_tabs"
+            android:paddingStart="14dp"
+            android:paddingEnd="16dp"
+            android:text="@string/web_tabs"
+            android:textSize="15sp"
             android:visibility="gone" />
 
         <Button

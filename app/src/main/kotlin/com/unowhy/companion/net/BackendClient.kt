@@ -68,6 +68,10 @@ data class AppUpdate(
 /** Page ouverte dans le navigateur de l'ordinateur (le dernier utilisé). */
 data class WebPage(val url: String, val title: String)
 
+/** Onglet d'un navigateur de l'ordinateur ; `active` : affiché dans sa fenêtre. */
+data class BrowserTab(val id: String, val title: String, val url: String, val browser: String, val active: Boolean)
+data class BrowserTabs(val extension: Boolean, val tabs: List<BrowserTab>)
+
 /** x, y, w, h : place dans l'arrangement des écrans du Mac (points). */
 data class MacDisplay(val id: Int, val label: String, val main: Boolean, val x: Int, val y: Int, val w: Int, val h: Int)
 /**
@@ -389,6 +393,17 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
         JSONObject(text(request("GET", "/browser/page"))).let { WebPage(it.getString("url"), it.getString("title")) }
     }
 
+    /** `extension` false : ordinateur Windows sans l'extension du navigateur, la liste reste vide. */
+    suspend fun browserTabs(): BrowserTabs = io {
+        val json = JSONObject(text(request("GET", "/browser/tabs", timeoutMs = 10_000)))
+        val a = json.getJSONArray("tabs")
+        BrowserTabs(json.optBoolean("extension", true), (0 until a.length()).map { i ->
+            a.getJSONObject(i).let {
+                BrowserTab(it.getString("id"), it.optString("title"), it.getString("url"), it.optString("browser"), it.optBoolean("active"))
+            }
+        })
+    }
+
     suspend fun openUrlOnComputer(url: String) = io { postJson("/browser/open", JSONObject().put("url", url)); Unit }
 
     suspend fun updates(): List<AppUpdate> = io {
@@ -447,6 +462,11 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
 
     /** Ouvre la page du visualiseur dans le navigateur du Mac. */
     suspend fun openCameraOnMac() = io { postJson("/camera/open", JSONObject()); Unit }
+
+    /** Nombre de pages du visualiseur ouvertes sur l'ordinateur (flux MJPEG en cours). */
+    suspend fun cameraViewers(): Int = io {
+        JSONObject(text(request("GET", "/camera/status", timeoutMs = 5_000))).optInt("viewers")
+    }
 
     /** Mac : ouvre le réglage Accessibilité, le compagnon déjà dans la liste. */
     /** Dictée : texte collé dans l'appli au premier plan de l'ordinateur. */

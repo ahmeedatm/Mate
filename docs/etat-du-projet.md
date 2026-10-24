@@ -1,6 +1,6 @@
 # État du projet
 
-Mis à jour le 25/10/2026 (nuit, 3e session). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
+Mis à jour le 25/10/2026 (nuit, 4e session). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
 
 ## Pourquoi ce projet
 
@@ -53,7 +53,9 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 - **Discord sans portail développeur** (24/10 soir ; « Quitter l'appel » et « Arrêter le partage » testés ensuite) : Discord expose son interface à UI Automation une fois l'accessibilité de Chromium demandée. `GET /deck/voice` lit le panneau vocal : appel ou salon, participants (vue d'appel privé), micro et sourdine. Page Discord : carte « En appel · … », touches selon l'état (`"when": "call" | "idle"` dans `deck.json`), « Quitter l'appel » = étape `press` (bouton « Déconnecter »). Plus de vert. PAS testé : Discord en anglais. **Qui parle** : illisible partout (appel privé, groupe, salon de serveur : ni nom ni classe ne change pendant qu'une personne parle, vérifié le 25/10). Diagnostic : `GET /deck/buttons?app=Discord&detail=true` (éléments + classes HTML).
 - **Ouvertes sur Mac** (25/10) : les fenêtres des autres bureaux (applis en plein écran, Spaces) apparaissent, « autre bureau » ; vu sur la tablette avec deux Chrome en plein écran, toucher = passer sur leur bureau. Fenêtres d'une même appli triées par titre (elles ne s'échangent plus). Triple toucher (Mac) = plein écran sur son bureau / en sortir : PAS testé. Lecture de la liste : 1,6 à 2,5 s au lieu de 0,7 s (à surveiller). Word (fenêtre hors des écrans) toujours absent.
-- **Caméra** (25/10) : « Montrer une feuille » renommé « Montrer sur l'ordi », explication élargie (feuille, cahier, objet, téléphone… en réunion ou en appel). Pas revu sur la tablette. Depuis l'ordi : carte Page de l'ordi pas encore touchée sur le nouvel écran.
+- **Caméra « Montrer sur l'ordi »** (25/10, testé sur la tablette) : la fenêtre de la caméra s'ouvre seule sur l'ordi au choix de l'usage (plus de bouton « Afficher sur l'ordi ») ; état « Ouverture sur l'ordi… » puis « En direct » ; bandeau « La fenêtre de la caméra est fermée sur l'ordi » + Rouvrir seulement si la page a été fermée (`GET /camera/status` → `viewers`, relu toutes les 2 s, 8 s laissées au navigateur).
+- **Onglets de la Page de l'ordi** (25/10, testé sur la tablette avec le Mac et le PC) : le bouton actualiser (ambigu) remplacé par « Onglets » : liste des onglets ouverts sur l'ordi, celui affiché sur l'ordi en tête ; toucher = l'afficher sur la tablette, rien ne bouge sur l'ordi. Mac : AppleScript (Safari, Chrome, Edge…). Windows : **extension de navigateur « Compagnon Unowhy »** (`backend/extension/`, dossier « Extension navigateur » du paquet, chargée en mode développeur dans Opera GX sur le PC) qui pousse ses onglets au compagnon en local ; elle donne aussi la page de devant (plus fiable qu'UI Automation). Essais écartés sur Windows : UI Automation (Opera GX n'expose rien même en simulant un lecteur d'écran), fichier de session Chromium (verrouillé tant que le navigateur tourne). Pas testé : Firefox, plusieurs navigateurs à la fois.
+- **Extension Claude** (25/10) : « Jeton invalide » expliqué : `mcp.ts` chargeait `backend/.env` (dev), dont le `COMPANION_TOKEN` passait avant le jeton du paquet (`identity.json`) ; ignoré quand `DATA_DIR` est donné. Outils `tablette` pas encore relancés (`/mcp`) pour vérifier.
 - Corbeille : correctif d'un affichage resté après un glisser annulé.
 - Boîtes de saisie (25/10, vu sur la tablette) : le clavier restait affiché après la fermeture (code d'appairage) et le premier appui sur un bouton était perdu (barres système rappelées). Fermeture du clavier encore un peu lente (animation d'Android).
 
@@ -70,7 +72,8 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 ## À faire, dans l'ordre
 
 0. Bug des onglets du Deck (voir plus haut) s'il revient.
-0. Extension Claude : le 25/10 au soir, les outils `tablette` répondaient « Jeton invalide : appairer à nouveau la tablette » alors que la tablette était sur le Mac (captures faites par adb). Probablement le jeton lu par `mcp.ts` depuis le paquet ; à vérifier.
+0. Extension Claude : reconnecter `tablette` (`/mcp`) et vérifier `tablette_etat` (correctif du jeton du 25/10).
+0. Extension de navigateur : en production, la publier (Chrome Web Store / Opera addons) et y mener depuis l'installeur ou la page locale ; Firefox (manifest à adapter).
 1. **Voix et appels** : appels Teams / WhatsApp (captures pendant un vrai appel, reporté par Eliot) ; idées : météo, réglages de la tablette à la voix. Réactiver l'appli Google sans adb : impossible (un device owner ne peut pas annuler `pm disable-user`), inutile car la procédure du kiosque la garde ; sans elle, Parler ouvre la commande écrite.
 2. **Paquet** : relance du compagnon Mac à l'ouverture de session (pas encore vue : le Mac n'avait pas redémarré depuis 44 jours ; `RunAtLoad` + `KeepAlive` vérifiés dans le LaunchAgent). Pas de NSIS ni d'appli .app pour l'instant.
 

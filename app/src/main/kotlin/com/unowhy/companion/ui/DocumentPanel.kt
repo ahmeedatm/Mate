@@ -23,6 +23,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
+import com.unowhy.companion.net.BrowserTab
 import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.WebPage
 import kotlinx.coroutines.CoroutineScope
@@ -52,7 +53,7 @@ class DocumentPanel @JvmOverloads constructor(
     private val pager: View
     private val pageLabel: TextView
     private val content: FrameLayout
-    private val webRefresh: ImageButton
+    private val webTabs: Button
     private val expandButton: ImageButton
 
     /** Panneau en grand (le mode courant masqué) ; MainActivity masque ou remontre le mode. */
@@ -82,8 +83,8 @@ class DocumentPanel @JvmOverloads constructor(
         pager = findViewById(R.id.doc_pager)
         pageLabel = findViewById(R.id.doc_page)
         content = findViewById(R.id.doc_content)
-        webRefresh = findViewById(R.id.doc_web_refresh)
-        webRefresh.setOnClickListener { openComputerPage(expanded, expandButton.visibility == VISIBLE) }
+        webTabs = findViewById(R.id.doc_web_tabs)
+        webTabs.setOnClickListener { BrowserTabsDialog(context, scope, ::openTab).show() }
         expandButton = findViewById(R.id.doc_expand)
         expandButton.setOnClickListener { setExpanded(!expanded) }
 
@@ -157,7 +158,7 @@ class DocumentPanel @JvmOverloads constructor(
         entry = null
         visibility = VISIBLE
         setExpanded(expand, splittable)
-        webRefresh.visibility = VISIBLE
+        webTabs.visibility = VISIBLE
         title.setText(R.string.web_from_computer)
         showStatus(context.getString(R.string.loading))
         loadJob = scope.launch {
@@ -167,6 +168,12 @@ class DocumentPanel @JvmOverloads constructor(
                 showStatus(context.errorText(e))
             }
         }
+    }
+
+    /** Onglet choisi dans la liste « Onglets » : son adresse est déjà connue. */
+    private fun openTab(tab: BrowserTab) {
+        loadJob?.cancel()
+        showWeb(WebPage(tab.url, tab.title))
     }
 
     private fun showWeb(page: WebPage) {
@@ -215,7 +222,7 @@ class DocumentPanel @JvmOverloads constructor(
             it.destroy()
         }
         web = null
-        webRefresh.visibility = GONE
+        webTabs.visibility = GONE
         loadJob?.cancel()
         image.setImageDrawable(null)
         bitmap?.recycle()

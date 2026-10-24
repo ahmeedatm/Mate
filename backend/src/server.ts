@@ -11,7 +11,7 @@ import {
   appIconFile, runAction, tileIcon,
 } from "./deck.ts";
 import {
-  accessibility, appAudio, browserPage, isAppRunning, listButtons, openAccessibility, canControl, focusWindow, getAudio, launchApp, listApps, mediaControl, mediaSessions, mediaThumb, listDisplays, listOpenWindows, listShortcuts, listWindows, controlOpenWindow, openTarget, osName, placeWindow, setAudio, typeText, voiceState,
+  accessibility, appAudio, browserPage, browserTabs, isAppRunning, listButtons, openAccessibility, canControl, focusWindow, getAudio, launchApp, listApps, mediaControl, mediaSessions, mediaThumb, listDisplays, listOpenWindows, listShortcuts, listWindows, controlOpenWindow, openTarget, osName, placeWindow, setAudio, typeText, voiceState,
 } from "./os.ts";
 import type { Layout, OpenAction, WindowTarget } from "./screens.ts";
 import { keySchema, loadKeys, saveKey, SLOTS, type PersoKey } from "./perso.ts";
@@ -26,6 +26,7 @@ import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvi
 import { autoJoinEnabled, joinMeeting, setAutoJoin, startAutoJoin } from "./meetings.ts";
 import { answerCall, currentCall, declineCall, hangUp, startCallWatch } from "./calls.ts";
 import { addTask, deleteTask, listRecurring, listTasks, setTaskDone, startReminders, taskUrl } from "./tasks.ts";
+import { receiveTabs, type ExtensionReport } from "./browser-extension.ts";
 import { addViewer, CAMERA_STATUSES, cameraStatus, pushFrame, setCameraState, VIEWER_PAGE, type CameraStatus } from "./camera.ts";
 import { completeCommand, FOCUS_ACTIONS, MODES, NOISES, pollCommands, reportState, sendToTablet, tabletStatus, type TabletCommand } from "./tablet.ts";
 
@@ -53,6 +54,8 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
   ((method === "GET" && /^\/(camera(\/stream|\/status)?|local\/status|oauth\/(microsoft|google)\/(start|callback))?(\?|$)/.test(url)) ||
     (method === "PUT" && url === "/local/calendar") ||
     (method === "POST" && url === "/system/accessibility") ||
+    // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
+    (method === "POST" && url === "/browser/extension") ||
     (method === "DELETE" && /^\/local\/accounts\/(microsoft|google)$/.test(url)));
 /** Sans jeton : identité (la tablette reconnaît l'ordinateur) et appairage par code. */
 const PUBLIC = /^\/(health|pair\/request|pair\/confirm)(\?|$)/;
@@ -630,6 +633,56 @@ function webUrl(raw: string): string | undefined {
     return undefined;
   }
 }
+
+/** Onglets ouverts sur l'ordinateur (choix de la page sur la tablette), sans les pages internes (chrome://, about:…). */
+app.get("/browser/tabs", async () => {
+  const tabs = await browserTabs();
+  return {
+    // false : Windows sans l'extension du navigateur (la tablette explique comment l'ajouter).
+    extension: tabs !== undefined,
+    tabs: (tabs ?? [])
+      .map((tab) => ({ ...tab, url: webUrl(tab.url) }))
+      .filter((tab) => tab.url !== undefined)
+      .slice(0, 80),
+  };
+});
+
+/** Onglets envoyés par l'extension « Compagnon Unowhy » du navigateur (en local, sans jeton). */
+app.post<{ Body: ExtensionReport }>(
+  "/browser/extension",
+  {
+    logLevel: "warn",
+    schema: {
+      body: {
+        type: "object",
+        required: ["browser", "focusedAt", "focusedWindow", "tabs"],
+        properties: {
+          browser: { type: "string", maxLength: 40 },
+          focusedAt: { type: "number" },
+          focusedWindow: { type: ["number", "null"] },
+          tabs: {
+            type: "array",
+            maxItems: 500,
+            items: {
+              type: "object",
+              required: ["id", "window", "index", "url", "active"],
+              properties: {
+                id: { type: "number" }, window: { type: "number" }, index: { type: "number" },
+                title: { type: "string", maxLength: 1000 }, url: { type: "string", maxLength: 4000 }, active: { type: "boolean" },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  async (req, reply) => {
+    // Seule une extension (pas une page web ouverte sur l'ordinateur) peut annoncer des onglets.
+    if (!/^(chrome|moz)-extension:\/\//.test(req.headers.origin ?? "")) return reply.code(403).send({ error: "Réservé à l'extension du navigateur" });
+    receiveTabs(req.body);
+    return { ok: true };
+  },
+);
 
 app.get("/browser/page", async (req, reply) => {
   const page = await browserPage();

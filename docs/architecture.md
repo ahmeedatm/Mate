@@ -95,7 +95,7 @@ Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/upda
 | `Prefs.kt`, `Computers.kt` | préférences, liste des ordinateurs appairés |
 | `net/` | `BackendClient` (toutes les routes), `Connection` (bascule), `Discovery` (UDP), `Wifi` |
 | `remote/RemoteChannel.kt` | ordres reçus de l'ordinateur |
-| `ui/` | un fichier par écran ou composant : `HomeFragment`, `DeckFragment`, `ChatFragment`, `DocsFragment` (Depuis l'ordi : choix Fichiers / Page de l'ordi, puis la liste), `FocusFragment`, `CameraFragment`, `SettingsFragment`, `WelcomeView` (premier lancement), `DocumentPanel`, boîtes de dialogue (`TaskDialog`, `EventDialog`, `ComputerAdder`, `WifiPicker`…) |
+| `ui/` | un fichier par écran ou composant : `HomeFragment`, `DeckFragment`, `ChatFragment`, `DocsFragment` (Depuis l'ordi : choix Fichiers / Page de l'ordi, puis la liste ; `BrowserTabsDialog` : onglets de l'ordi), `FocusFragment`, `CameraFragment`, `SettingsFragment`, `WelcomeView` (premier lancement), `DocumentPanel`, boîtes de dialogue (`TaskDialog`, `EventDialog`, `ComputerAdder`, `WifiPicker`…) |
 | `ui/home/` | Accueil à widgets : `WidgetModel` (grille 4×4, tailles, modèles), `WidgetGrid` (placement, mode Modifier, pages), widgets |
 | `ui/ScreenMap.kt`, `WindowPicker.kt`, `OpenWindowsView.kt` | écrans et fenêtres de l'ordinateur |
 | `focus/` | `FocusTimer`, `NoisePlayer` (bruit généré), `Water` |

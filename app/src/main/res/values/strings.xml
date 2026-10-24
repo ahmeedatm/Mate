@@ -199,7 +199,13 @@
     <string name="web_from_computer">Page de l\'ordi</string>
     <string name="doc_expand">Agrandir</string>
     <string name="doc_shrink">Mettre à côté</string>
-    <string name="web_from_computer_reload">Reprendre la page ouverte sur l\'ordinateur</string>
+    <string name="web_tabs">Onglets</string>
+    <string name="web_tabs_title">Onglets ouverts sur l\'ordi</string>
+    <string name="web_tabs_hint">Touche un onglet pour l\'afficher ici.</string>
+    <string name="web_tabs_extension">Pour voir ici les onglets du PC, ajoute l\'extension « Compagnon Unowhy » à ton navigateur (dossier « Extension navigateur » du compagnon), puis touche un onglet sur le PC.</string>
+    <string name="web_tabs_none">Aucun onglet ouvert dans un navigateur de l\'ordi.</string>
+    <string name="web_tab_front">Affiché sur l\'ordi en ce moment</string>
+    <string name="web_tab_shown">Affiché dans sa fenêtre</string>
     <string name="page_x_of_y">%1$d / %2$d</string>
     <string name="previous">Page précédente</string>
     <string name="next">Page suivante</string>
@@ -220,8 +226,9 @@
     <string name="camera_back">Terminer</string>
     <string name="camera_take_photo">Prendre la photo</string>
     <string name="camera_photo_preview">Aperçu · rien n\'est envoyé avant la photo</string>
-    <string name="camera_show_on_mac">Afficher sur l\'ordi</string>
-    <string name="camera_opened">Visualiseur ouvert sur l\'ordinateur</string>
+    <string name="camera_show_on_mac">Rouvrir</string>
+    <string name="camera_window_closed">La fenêtre de la caméra est fermée sur l\'ordi</string>
+    <string name="camera_opening">Ouverture sur l\'ordi…</string>
     <string name="camera_freeze">Figer</string>
     <string name="camera_resume">Reprendre</string>
     <string name="camera_frozen_hint">Image figée sur l\'ordinateur</string>

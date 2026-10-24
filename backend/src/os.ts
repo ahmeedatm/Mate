@@ -5,6 +5,7 @@ import * as macAccess from "./mac/access.ts";
 import * as macApps from "./mac/apps.ts";
 import * as macAudio from "./mac/audio.ts";
 import * as macBrowser from "./mac/browser.ts";
+import { extensionFrontPage, extensionTabs } from "./browser-extension.ts";
 import * as macKeys from "./mac/keys.ts";
 import * as macWindows from "./mac/windows.ts";
 import * as win from "./win/index.ts";
@@ -146,7 +147,16 @@ export function mediaThumb(app: string, out: string) {
 /** Page ouverte dans le navigateur de l'ordinateur (le dernier utilisé), pour l'afficher sur la tablette. */
 export function browserPage() {
   if (isMac) return macBrowser.browserPage();
-  if (isWindows) return win.browserPage();
+  // Windows : l'extension du navigateur, si elle est installée, est plus fiable qu'UI Automation.
+  if (isWindows) return extensionFrontPage() ?? win.browserPage();
+  unsupported();
+}
+
+/** Onglets ouverts dans les navigateurs de l'ordinateur, pour choisir la page à afficher sur la tablette. */
+export function browserTabs() {
+  if (isMac) return macBrowser.browserTabs();
+  // Windows : envoyés par l'extension du navigateur ; undefined si elle n'est pas installée (ou le navigateur fermé).
+  if (isWindows) return extensionTabs();
   unsupported();
 }
 

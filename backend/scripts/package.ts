@@ -100,6 +100,8 @@ async function stage(platform: "windows" | "mac", sums: string): Promise<string>
     for (const f of ["helper.ps1", "native.cs"]) copy(path.join(backend, "src", "win", f), path.join(dest, "src", "win", f));
     for (const f of ["run-windows.ps1", "firewall-windows.ps1"]) copy(path.join(backend, "scripts", f), path.join(dest, "scripts", f));
     copy(path.join(backend, "assets", "compagnon.ico"), path.join(dest, "assets", "compagnon.ico"));
+    // Extension du navigateur (onglets sur la tablette) : à charger depuis ce dossier, mode développeur.
+    for (const f of fs.readdirSync(path.join(backend, "extension"))) copy(path.join(backend, "extension", f), path.join(root, "Extension navigateur", f));
     extract(await nodeArchive(sums, "-win-x64.zip"), "node.exe", path.join(dest, "node", "node.exe"));
   } else {
     copy(path.join(repo, "Installer (Mac).command"), path.join(root, "Installer (Mac).command"));

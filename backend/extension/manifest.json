@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Compagnon Unowhy",
+  "version": "1.0.0",
+  "description": "Montre sur la tablette Unowhy les onglets ouverts dans ce navigateur (Page de l'ordi). Rien ne quitte l'ordinateur.",
+  "permissions": ["tabs", "alarms", "storage"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": { "service_worker": "background.js" },
+  "icons": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" }
+}

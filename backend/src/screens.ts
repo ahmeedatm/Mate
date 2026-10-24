@@ -36,6 +36,9 @@ export type OpenWindows = { apps: OpenApp[]; displays: Display[] };
  * focus : mettre devant ; place : changer d'écran ou de moitié ; minimize : réduire ; zoom : agrandir, ou rendre sa taille ;
  * fullscreen (Mac) : plein écran sur son propre bureau, ou en sortir.
  */
+/** Onglet d'un navigateur de l'ordinateur (choix de la page sur la tablette) ; `active` : affiché dans sa fenêtre. */
+export type BrowserTab = { id: string; title: string; url: string; browser: string; active: boolean };
+
 export type OpenAction = "focus" | "place" | "minimize" | "zoom" | "fullscreen" | "close";
 
 /** keep : même place relative sur l'écran cible ; left/right : moitié d'écran ; max : tout l'écran utile. */

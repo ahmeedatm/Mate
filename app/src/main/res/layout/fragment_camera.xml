@@ -39,15 +39,8 @@
             android:textSize="16sp" />
 
         <Button
-            android:id="@+id/camera_show"
-            style="@style/ActionButton"
-            android:drawableStart="@drawable/ic_display"
-            android:text="@string/camera_show_on_mac" />
-
-        <Button
             android:id="@+id/camera_stop"
             style="@style/ActionButton"
-            android:layout_marginStart="12dp"
             android:drawableStart="@drawable/ic_back"
             android:text="@string/camera_back" />
     </LinearLayout>
@@ -198,6 +191,37 @@
             android:textColor="?attr/c_warn"
             android:textSize="16sp"
             android:visibility="gone" />
+
+        <!-- Montrer sur l'ordi : la fenêtre s'ouvre seule ; ce bandeau n'apparaît que si elle a été fermée. -->
+        <LinearLayout
+            android:id="@+id/camera_closed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/banner_bg"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="20dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="6dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/camera_window_closed"
+                android:textColor="?attr/c_text"
+                android:textSize="16sp" />
+
+            <Button
+                android:id="@+id/camera_show"
+                style="@style/ActionButton"
+                android:layout_marginStart="12dp"
+                android:drawableStart="@drawable/ic_display"
+                android:text="@string/camera_show_on_mac" />
+        </LinearLayout>
     </FrameLayout>
 
     <LinearLayout

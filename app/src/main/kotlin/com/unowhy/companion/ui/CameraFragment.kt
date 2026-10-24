@@ -38,8 +38,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Caméra, deux usages choisis à l'entrée du mode :
- * - montrer une feuille (visualiseur) : la tablette, tenue au-dessus d'une feuille, filme avec sa caméra arrière ;
- *   l'ordinateur rediffuse l'image sur sa page /camera, à projeter ;
+ * - montrer sur l'ordi (visualiseur) : la tablette filme avec sa caméra arrière (feuille, objet…) ; la page /camera
+ *   s'ouvre seule sur l'ordinateur, qui rediffuse l'image ; « Rouvrir » n'apparaît que si cette page a été fermée ;
  * - envoyer une photo : aperçu sans envoi, la photo pleine taille part dans le dossier « Partage tablette ».
  * La caméra ne tourne que quand un usage est choisi et le mode affiché.
  */
@@ -59,7 +59,7 @@ class CameraFragment : Fragment() {
     private lateinit var title: TextView
     private lateinit var controls: View
     private lateinit var choice: View
-    private lateinit var showButton: View
+    private lateinit var closedBanner: View
     private val zoomButtons = mutableListOf<Pair<Float, Button>>()
 
     private var camera: DocCamera? = null
@@ -72,6 +72,11 @@ class CameraFragment : Fragment() {
     private var purpose: Purpose? = null
     private var zoom = 1f
     private var rotation = 0
+    /** Page du visualiseur ouverte sur l'ordinateur : null tant qu'on ne sait pas (ouverture en cours). */
+    private var windowOpen: Boolean? = null
+    /** Dernière ouverture demandée : on laisse au navigateur le temps de se connecter avant de dire la page fermée. */
+    private var openedAt = 0L
+    private var ticks = 0
 
     // Lus depuis le fil de la caméra et le fil d'envoi.
     @Volatile private var frozen = false
@@ -85,6 +90,7 @@ class CameraFragment : Fragment() {
     private val ticker = object : Runnable {
         override fun run() {
             renderStatus(sentFrames.getAndSet(0))
+            if (ticks++ % 2 == 0) checkWindow()
             main.postDelayed(this, 1_000)
         }
     }
@@ -115,7 +121,7 @@ class CameraFragment : Fragment() {
         title = view.findViewById(R.id.camera_title)
         controls = view.findViewById(R.id.camera_controls)
         choice = view.findViewById(R.id.camera_choice)
-        showButton = view.findViewById(R.id.camera_show)
+        closedBanner = view.findViewById(R.id.camera_closed)
         view.findViewById<View>(R.id.camera_choose_show).setOnClickListener { choose(Purpose.SHOW) }
         view.findViewById<View>(R.id.camera_choose_photo).setOnClickListener { choose(Purpose.PHOTO) }
 
@@ -227,6 +233,11 @@ class CameraFragment : Fragment() {
         renderControls()
         renderStatus(null)
         main.postDelayed(ticker, 1_000)
+        // Montrer sur l'ordi : la fenêtre s'ouvre d'elle-même, sauf si elle l'est déjà (retour dans le mode).
+        if (purpose == Purpose.SHOW) lifecycleScope.launch {
+            val open = runCatching { backend.cameraViewers() > 0 }.getOrDefault(false)
+            if (camera === cam && !open) showOnMac() else if (camera === cam) setWindowOpen(true)
+        }
     }
 
     private fun stopCamera() {
@@ -330,14 +341,33 @@ class CameraFragment : Fragment() {
     }
 
     private fun showOnMac() {
+        openedAt = SystemClock.elapsedRealtime()
+        setWindowOpen(null)
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 BackendClient(requireContext()).openCameraOnMac()
-                Toast.makeText(requireContext(), R.string.camera_opened, Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
+                setWindowOpen(false)
                 Toast.makeText(requireContext(), requireContext().errorText(e), Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    /** Toutes les 2 s : la page du visualiseur est-elle encore ouverte sur l'ordinateur ? */
+    private fun checkWindow() {
+        val backend = client ?: return
+        if (purpose != Purpose.SHOW) return
+        lifecycleScope.launch {
+            val viewers = runCatching { backend.cameraViewers() }.getOrNull() ?: return@launch
+            if (viewers > 0) setWindowOpen(true)
+            else if (SystemClock.elapsedRealtime() - openedAt > OPEN_GRACE_MS) setWindowOpen(false)
+        }
+    }
+
+    private fun setWindowOpen(value: Boolean?) {
+        if (windowOpen == value) return
+        windowOpen = value
+        if (view != null) renderControls()
     }
 
     // --- Sens de l'image
@@ -392,6 +422,7 @@ class CameraFragment : Fragment() {
     private fun choose(next: Purpose?) {
         purpose = next
         frozen = false
+        windowOpen = null
         renderControls()
         sync()
     }
@@ -406,7 +437,7 @@ class CameraFragment : Fragment() {
         controls.visibility = if (purpose == null) View.INVISIBLE else View.VISIBLE
         stop.visibility = if (purpose == null) View.GONE else View.VISIBLE
         dot.visibility = if (purpose == null) View.INVISIBLE else View.VISIBLE
-        showButton.visibility = if (show) View.VISIBLE else View.GONE
+        closedBanner.visibility = if (show && camera != null && windowOpen == false) View.VISIBLE else View.GONE
         freeze.visibility = if (show) View.VISIBLE else View.GONE
         photo.setText(if (show) R.string.camera_photo else R.string.camera_take_photo)
         freeze.setText(if (frozen) R.string.camera_resume else R.string.camera_freeze)
@@ -429,6 +460,7 @@ class CameraFragment : Fragment() {
             !online -> getString(R.string.camera_offline) to R.attr.c_ko
             frozen -> getString(R.string.camera_frozen) to R.attr.c_warn
             fps == null -> getString(R.string.camera_starting) to R.attr.c_text_faint
+            windowOpen == null -> getString(R.string.camera_opening) to R.attr.c_text_faint
             else -> getString(R.string.camera_live, fps) to R.attr.c_ok
         }
         status.text = text
@@ -441,6 +473,7 @@ class CameraFragment : Fragment() {
         /** Une image sur deux de la caméra (25 à 30/s), soit environ 12/s : fluide, et la tablette garde du souffle. */
         private const val FRAME_INTERVAL_MS = 70L
         private const val RETRY_MS = 1_000L
+        private const val OPEN_GRACE_MS = 8_000L
         private const val PIPELINE = 2
         private val ZOOMS = listOf(1f, 1.5f, 2f, 3f)
     }

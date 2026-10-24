@@ -14,6 +14,8 @@ import { z } from "zod";
 // Lancée par Claude depuis n'importe quel dossier : on charge nous-mêmes backend/.env.
 const envFile = fileURLToPath(new URL("../.env", import.meta.url));
 if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
+// DATA_DIR (.mcp.json) = compagnon installé par paquet, sans .env : son jeton est celui de identity.json, pas celui du .env de dev.
+if (process.env.DATA_DIR) delete process.env.COMPANION_TOKEN;
 const { config } = await import("./config.ts");
 
 const baseUrl = `http://127.0.0.1:${config.port}`;
