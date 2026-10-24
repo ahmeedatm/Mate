@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Aucune politique demandée : le statut de device owner suffit pour le mode kiosque (lock task). -->
+<device-admin>
+    <uses-policies />
+</device-admin>

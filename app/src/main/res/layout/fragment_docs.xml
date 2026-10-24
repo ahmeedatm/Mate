@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/docs_up"
+            style="@style/IconButton"
+            android:contentDescription="@string/up"
+            android:src="@drawable/ic_back" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/docs_path"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="start"
+                android:fontFamily="sans-serif-medium"
+                android:singleLine="true"
+                android:textSize="22sp" />
+
+            <TextView
+                android:id="@+id/docs_count"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_dim"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/docs_refresh"
+            style="@style/IconButton.Flat"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:contentDescription="@string/refresh"
+            android:src="@drawable/ic_refresh" />
+
+        <!-- Page ouverte dans le navigateur de l'ordinateur, affichée dans le panneau de droite. -->
+        <Button
+            android:id="@+id/docs_web"
+            style="@style/ActionButton"
+            android:layout_marginEnd="12dp"
+            android:drawableStart="@drawable/ic_display"
+            android:text="@string/web_from_computer" />
+
+        <Button
+            android:id="@+id/docs_photo"
+            style="@style/PrimaryButton"
+            android:drawableStart="@drawable/ic_camera"
+            android:text="@string/take_photo" />
+    </LinearLayout>
+
+    <ListView
+        android:id="@+id/docs_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="20dp"
+        android:layout_weight="1"
+        android:divider="@android:color/transparent"
+        android:dividerHeight="8dp"
+        android:listSelector="@android:color/transparent"
+        android:scrollbars="none" />
+
+    <TextView
+        android:id="@+id/docs_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="16dp"
+        android:textColor="@color/text_dim"
+        android:visibility="gone" />
+</LinearLayout>

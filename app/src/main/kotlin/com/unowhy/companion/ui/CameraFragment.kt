@@ -1,0 +1,412 @@
+package com.unowhy.companion.ui
+
+import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.Matrix
+import android.graphics.SurfaceTexture
+import android.hardware.display.DisplayManager
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
+import android.view.LayoutInflater
+import android.view.Surface
+import android.view.TextureView
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import com.unowhy.companion.R
+import com.unowhy.companion.camera.DocCamera
+import com.unowhy.companion.net.BackendClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
+
+/**
+ * Visualiseur : la tablette, tenue à plat au-dessus d'une feuille, filme avec sa caméra arrière ;
+ * le Mac rediffuse l'image sur sa page /camera, à projeter. La caméra ne tourne que quand le mode est affiché.
+ */
+class CameraFragment : Fragment() {
+
+    private lateinit var preview: TextureView
+    private lateinit var frame: FrameLayout
+    private lateinit var dot: View
+    private lateinit var status: TextView
+    private lateinit var messageBox: View
+    private lateinit var message: TextView
+    private lateinit var illustration: View
+    private lateinit var action: Button
+    private lateinit var stop: Button
+    private lateinit var frozenHint: View
+    private lateinit var freeze: Button
+    private lateinit var photo: Button
+    private val zoomButtons = mutableListOf<Pair<Float, Button>>()
+
+    private var camera: DocCamera? = null
+    private var client: BackendClient? = null
+    private var sender: ExecutorService? = null
+    private var started = false
+    private var askedPermission = false
+    /** Arrêtée par le bouton Arrêter ; revenir dans le mode la rallume. */
+    private var stopped = false
+    private var zoom = 1f
+    private var rotation = 0
+
+    // Lus depuis le fil de la caméra et le fil d'envoi.
+    @Volatile private var frozen = false
+    @Volatile private var nextFrameAt = 0L
+    @Volatile private var online = true
+    /** Images compressées pas encore envoyées (au plus [PIPELINE]) : on compresse la suivante pendant l'envoi. */
+    private val inFlight = AtomicInteger()
+    private val sentFrames = AtomicInteger()
+
+    private val main = Handler(Looper.getMainLooper())
+    private val ticker = object : Runnable {
+        override fun run() {
+            renderStatus(sentFrames.getAndSet(0))
+            main.postDelayed(this, 1_000)
+        }
+    }
+
+    private val permission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { sync() }
+
+    private val displayListener = object : DisplayManager.DisplayListener {
+        override fun onDisplayChanged(displayId: Int) = updateRotation()
+        override fun onDisplayAdded(displayId: Int) = Unit
+        override fun onDisplayRemoved(displayId: Int) = Unit
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, state: Bundle?): View =
+        inflater.inflate(R.layout.fragment_camera, container, false)
+
+    override fun onViewCreated(view: View, state: Bundle?) {
+        preview = view.findViewById(R.id.camera_preview)
+        frame = view.findViewById(R.id.camera_frame)
+        dot = view.findViewById(R.id.camera_dot)
+        status = view.findViewById(R.id.camera_status)
+        messageBox = view.findViewById(R.id.camera_message_box)
+        message = view.findViewById(R.id.camera_message)
+        illustration = view.findViewById(R.id.camera_illustration)
+        action = view.findViewById(R.id.camera_action)
+        stop = view.findViewById(R.id.camera_stop)
+        frozenHint = view.findViewById(R.id.camera_frozen)
+        freeze = view.findViewById(R.id.camera_freeze)
+        photo = view.findViewById(R.id.camera_photo)
+
+        preview.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+            override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+                applyTransform()
+                sync()
+            }
+            override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) = applyTransform()
+            override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+                stopCamera()
+                return true
+            }
+            override fun onSurfaceTextureUpdated(surface: SurfaceTexture) = Unit
+        }
+        // L'aperçu garde le format 16:9 du flux, centré dans la place disponible.
+        frame.addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ -> fitPreview(right - left, bottom - top) }
+
+        stop.setOnClickListener {
+            stopped = true
+            sync()
+        }
+        freeze.setOnClickListener { setFrozen(!frozen) }
+        photo.setOnClickListener { takePhoto() }
+        view.findViewById<Button>(R.id.camera_show).setOnClickListener { showOnMac() }
+
+        val zooms = view.findViewById<LinearLayout>(R.id.camera_zooms)
+        val maxZoom = DocCamera.maxZoom(requireContext())
+        for (value in ZOOMS.filter { it <= maxZoom }) {
+            val button = Button(requireContext(), null, 0, R.style.Chip).apply {
+                text = getString(R.string.camera_zoom, if (value % 1f == 0f) value.toInt().toString() else value.toString().replace('.', ','))
+                setOnClickListener { setZoom(value) }
+            }
+            zooms.addView(button, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { marginEnd = dp(8) })
+            zoomButtons += value to button
+        }
+        renderControls()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        started = true
+        requireContext().getSystemService(DisplayManager::class.java).registerDisplayListener(displayListener, main)
+        sync()
+    }
+
+    override fun onStop() {
+        started = false
+        requireContext().getSystemService(DisplayManager::class.java).unregisterDisplayListener(displayListener)
+        sync()
+        super.onStop()
+    }
+
+    override fun onHiddenChanged(hidden: Boolean) {
+        if (!hidden) {
+            askedPermission = false
+            stopped = false
+        }
+        sync()
+    }
+
+    override fun onDestroyView() {
+        stopCamera()
+        super.onDestroyView()
+    }
+
+    private fun hasPermission() =
+        ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+
+    /** Allume la caméra quand le mode est à l'écran (et la permission accordée), l'éteint sinon. */
+    private fun sync() {
+        if (view == null) return
+        val visible = started && !isHidden
+        if (visible && stopped) {
+            stopCamera()
+            showMessage(getString(R.string.camera_stopped), R.string.camera_restart, sleeping = true) {
+                stopped = false
+                sync()
+            }
+            return
+        }
+        if (visible && !hasPermission()) {
+            showMessage(getString(R.string.camera_permission), R.string.camera_grant) { permission.launch(Manifest.permission.CAMERA) }
+            if (!askedPermission) {
+                askedPermission = true
+                permission.launch(Manifest.permission.CAMERA)
+            }
+            return
+        }
+        if (visible && preview.isAvailable) startCamera() else if (!visible) stopCamera()
+    }
+
+    private fun startCamera() {
+        if (camera != null) return
+        val texture = preview.surfaceTexture ?: return
+        val backend = BackendClient(requireContext())
+        val cam = DocCamera(requireContext(), ::wantFrame, ::sendFrame) { error -> main.post { if (camera != null) showMessage(error) } }
+        if (!cam.available) {
+            cam.close()
+            showMessage(getString(R.string.camera_unavailable))
+            return
+        }
+        client = backend
+        sender = Executors.newSingleThreadExecutor()
+        camera = cam
+        frozen = false
+        online = true
+        inFlight.set(0)
+        showMessage(null)
+        updateRotation(force = true)
+        cam.open(texture)
+        cam.setZoom(zoom)
+        renderControls()
+        renderStatus(null)
+        main.postDelayed(ticker, 1_000)
+    }
+
+    private fun stopCamera() {
+        val cam = camera ?: return
+        camera = null
+        cam.close()
+        sender?.shutdown()
+        sender = null
+        main.removeCallbacks(ticker)
+        postState("off")
+        if (view != null) {
+            renderControls()
+            renderStatus(null)
+        }
+    }
+
+    // --- Flux vers le Mac
+
+    /**
+     * Appelé par le fil de la caméra pour chaque image (25 à 30/s) : on saute celles que l'envoi ne pourrait pas suivre.
+     * L'intervalle part du début de la compression (≈ 50 ms sur la 4.2), pas de sa fin.
+     */
+    private fun wantFrame(): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        if (frozen || inFlight.get() >= PIPELINE || now < nextFrameAt) return false
+        nextFrameAt = now + FRAME_INTERVAL_MS
+        return true
+    }
+
+    private fun sendFrame(jpeg: ByteArray) {
+        val backend = client ?: return
+        val executor = sender ?: return
+        inFlight.incrementAndGet()
+        try {
+            executor.execute {
+                try {
+                    backend.sendFrame(jpeg)
+                    sentFrames.incrementAndGet()
+                    online = true
+                } catch (e: Exception) {
+                    online = false
+                    nextFrameAt = SystemClock.elapsedRealtime() + RETRY_MS
+                } finally {
+                    inFlight.decrementAndGet()
+                }
+            }
+        } catch (e: java.util.concurrent.RejectedExecutionException) {
+            inFlight.decrementAndGet() // caméra en cours d'arrêt
+        }
+    }
+
+    private fun postState(state: String) {
+        val backend = client ?: return
+        lifecycleScope.launch { runCatching { backend.cameraState(state, rotation) } }
+    }
+
+    private fun setFrozen(value: Boolean) {
+        frozen = value
+        renderControls()
+        renderStatus(null)
+        if (camera != null) postState(if (value) "frozen" else "live")
+    }
+
+    private fun setZoom(value: Float) {
+        zoom = value
+        camera?.setZoom(value)
+        renderControls()
+    }
+
+    private fun takePhoto() {
+        val cam = camera ?: return
+        val backend = client ?: return
+        photo.isEnabled = false
+        cam.takePhoto { jpeg ->
+            main.post {
+                if (jpeg == null || view == null) {
+                    if (view != null) Toast.makeText(requireContext(), R.string.camera_photo_failed, Toast.LENGTH_SHORT).show()
+                    photo.isEnabled = true
+                    return@post
+                }
+                val file = File(File(requireContext().cacheDir, "photos").apply { mkdirs() }, "visualiseur.jpg")
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        withContext(Dispatchers.IO) { file.writeBytes(jpeg) }
+                        val saved = backend.uploadPhoto(file)
+                        Toast.makeText(requireContext(), getString(R.string.camera_photo_sent, saved.substringAfterLast('/')), Toast.LENGTH_LONG).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(requireContext(), getString(R.string.error_prefix, e.message), Toast.LENGTH_LONG).show()
+                    } finally {
+                        photo.isEnabled = true
+                    }
+                }
+            }
+        }
+    }
+
+    private fun showOnMac() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                BackendClient(requireContext()).openCameraOnMac()
+                Toast.makeText(requireContext(), R.string.camera_opened, Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), getString(R.string.error_prefix, e.message), Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    // --- Sens de l'image
+
+    /** Rotation qui remet l'image du capteur à l'endroit pour le sens actuel de l'écran (tablette retournée = 180°). */
+    private fun updateRotation(force: Boolean = false) {
+        val cam = camera ?: return
+        val display = when (view?.display?.rotation) {
+            Surface.ROTATION_90 -> 90
+            Surface.ROTATION_180 -> 180
+            Surface.ROTATION_270 -> 270
+            else -> 0
+        }
+        val next = (cam.sensorOrientation - display + 360) % 360
+        if (next == rotation && !force) return
+        rotation = next
+        applyTransform()
+        postState(if (frozen) "frozen" else "live")
+    }
+
+    /** Seul le demi-tour est géré : la tablette est toujours en paysage. */
+    private fun applyTransform() {
+        val matrix = Matrix()
+        if (rotation == 180) matrix.postRotate(180f, preview.width / 2f, preview.height / 2f)
+        preview.setTransform(matrix)
+    }
+
+    private fun fitPreview(width: Int, height: Int) {
+        if (width == 0 || height == 0) return
+        val ratio = DocCamera.STREAM.width.toFloat() / DocCamera.STREAM.height
+        val w = minOf(width, (height * ratio).toInt())
+        val h = (w / ratio).toInt()
+        val params = preview.layoutParams as FrameLayout.LayoutParams
+        if (params.width == w && params.height == h) return
+        params.width = w
+        params.height = h
+        // Pas de nouvelle mise en page pendant celle en cours.
+        preview.post { preview.layoutParams = params }
+    }
+
+    // --- Affichage
+
+    /** Message au centre de l'aperçu, avec un bouton si `actionLabel` est donné ; null efface. `sleeping` : caméra endormie dessinée au-dessus. */
+    private fun showMessage(text: String?, actionLabel: Int? = null, sleeping: Boolean = false, onAction: (() -> Unit)? = null) {
+        message.text = text
+        illustration.visibility = if (sleeping) View.VISIBLE else View.GONE
+        messageBox.visibility = if (text == null) View.GONE else View.VISIBLE
+        action.visibility = if (actionLabel == null) View.GONE else View.VISIBLE
+        actionLabel?.let { action.setText(it) }
+        action.setOnClickListener { onAction?.invoke() }
+    }
+
+    private fun renderControls() {
+        freeze.setText(if (frozen) R.string.camera_resume else R.string.camera_freeze)
+        freeze.setCompoundDrawablesRelativeWithIntrinsicBounds(if (frozen) R.drawable.ic_play else R.drawable.ic_pause, 0, 0, 0)
+        frozenHint.visibility = if (frozen) View.VISIBLE else View.GONE
+        zoomButtons.forEach { (value, button) -> button.isSelected = value == zoom }
+        val ready = camera != null
+        // Caméra éteinte : la dernière image resterait affichée, comme si elle filmait encore.
+        preview.alpha = if (ready) 1f else 0f
+        freeze.isEnabled = ready
+        photo.isEnabled = ready
+        stop.isEnabled = ready
+    }
+
+    /** `fps` : images envoyées dans la dernière seconde, null au démarrage ou après un changement d'état. */
+    private fun renderStatus(fps: Int?) {
+        val (text, color) = when {
+            camera == null -> "" to R.color.text_faint
+            !online -> getString(R.string.camera_offline) to R.color.ko
+            frozen -> getString(R.string.camera_frozen) to R.color.warn
+            fps == null -> getString(R.string.camera_starting) to R.color.text_faint
+            else -> getString(R.string.camera_live, fps) to R.color.ok
+        }
+        status.text = text
+        dot.background.mutate().setTint(ContextCompat.getColor(requireContext(), color))
+    }
+
+    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+
+    companion object {
+        /** Une image sur deux de la caméra (25 à 30/s), soit environ 12/s : fluide, et la tablette garde du souffle. */
+        private const val FRAME_INTERVAL_MS = 70L
+        private const val RETRY_MS = 1_000L
+        private const val PIPELINE = 2
+        private val ZOOMS = listOf(1f, 1.5f, 2f, 3f)
+    }
+}

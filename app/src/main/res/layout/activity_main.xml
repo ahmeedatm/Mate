@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Barre de modes à gauche (tablette en paysage), écran du mode au centre,
+     panneau document à droite (masqué tant qu'aucun document n'est ouvert),
+     bandeau de message de l'ordinateur par-dessus. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal">
+
+    <LinearLayout
+        android:layout_width="96dp"
+        android:layout_height="match_parent"
+        android:background="@color/rail"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingTop="16dp"
+        android:paddingBottom="20dp">
+
+        <!-- Boutons de mode, ajoutés par MainActivity. -->
+        <LinearLayout
+            android:id="@+id/mode_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical" />
+
+        <!-- Ordinateur piloté et pastille de connexion ; toucher : changer d'ordinateur. -->
+        <LinearLayout
+            android:id="@+id/status"
+            android:layout_width="88dp"
+            android:layout_height="wrap_content"
+            android:background="@drawable/rail_item_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:orientation="vertical">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_link"
+                app:tint="@color/text_faint" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/status_dot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/dot" />
+
+                <TextView
+                    android:id="@+id/status_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxWidth="70dp"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:maxLines="2"
+                    android:textColor="@color/text_faint"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/mode_container"
+        android:defaultFocusHighlightEnabled="false"
+        tools:targetApi="o"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1" />
+
+    <com.unowhy.companion.ui.DocumentPanel
+        android:id="@+id/document_panel"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:visibility="gone" />
+</LinearLayout>
+
+    <TextView
+        android:id="@+id/remote_banner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginStart="120dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="24dp"
+        android:background="@drawable/banner_bg"
+        android:drawableStart="@drawable/ic_chat"
+        android:drawablePadding="16dp"
+        android:drawableTint="@color/accent"
+        android:elevation="12dp"
+        android:gravity="center_vertical"
+        android:paddingStart="24dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="28dp"
+        android:paddingBottom="20dp"
+        android:textColor="@color/text"
+        android:textSize="24sp"
+        android:visibility="gone" />
+</FrameLayout>

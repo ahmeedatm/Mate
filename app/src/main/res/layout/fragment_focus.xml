@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Une seule colonne centrée : tient aussi quand le panneau document occupe la moitié de l'écran. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <FrameLayout
+        android:layout_width="280dp"
+        android:layout_height="280dp">
+
+        <com.unowhy.companion.ui.ProgressRing
+            android:id="@+id/focus_ring"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/focus_phase"
+                style="@style/CardTitle" />
+
+            <TextView
+                android:id="@+id/focus_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-light"
+                android:includeFontPadding="false"
+                android:singleLine="true"
+                android:textSize="72sp" />
+
+            <TextView
+                android:id="@+id/focus_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/text_dim"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/focus_reset"
+            style="@style/IconButton"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:padding="15dp"
+            android:contentDescription="@string/focus_reset"
+            android:src="@drawable/ic_replay" />
+
+        <ImageButton
+            android:id="@+id/focus_start"
+            style="@style/IconButton.Primary"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_marginStart="28dp"
+            android:layout_marginEnd="28dp"
+            android:padding="22dp"
+            android:contentDescription="@string/focus_start"
+            android:src="@drawable/ic_play" />
+
+        <ImageButton
+            android:id="@+id/focus_skip"
+            style="@style/IconButton"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:padding="15dp"
+            android:contentDescription="@string/focus_skip"
+            android:src="@drawable/ic_skip" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/focus_presets"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:orientation="horizontal" />
+
+    <!-- Ambiance -->
+    <LinearLayout
+        style="@style/Card"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:orientation="vertical"
+        android:paddingTop="12dp"
+        android:paddingBottom="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_wave"
+                android:text="@string/ambiance" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:minWidth="16dp" />
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="@string/volume"
+                android:src="@drawable/ic_volume"
+                app:tint="@color/text_dim" />
+
+            <SeekBar
+                android:id="@+id/focus_volume"
+                style="@style/Slider"
+                android:layout_width="180dp"
+                android:max="100"
+                android:progress="50" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/focus_noises"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal" />
+    </LinearLayout>
+</LinearLayout>

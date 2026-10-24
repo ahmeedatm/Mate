@@ -1,0 +1,64 @@
+{
+  "pages": [
+    {
+      "title": "Apps",
+      "apps": true,
+      "tiles": [
+        { "label": "Teams", "action": { "type": "app", "name": "Microsoft Teams" } },
+        { "label": "Outlook", "action": { "type": "app", "name": "Outlook" } },
+        { "label": "Chrome", "action": { "type": "app", "name": "Google Chrome" } },
+        { "label": "Edge", "action": { "type": "app", "name": "Microsoft Edge" } },
+        { "label": "Firefox", "action": { "type": "app", "name": "Firefox" } },
+        { "label": "VS Code", "action": { "type": "app", "name": "Visual Studio Code" } },
+        { "label": "Discord", "action": { "type": "app", "name": "Discord" } },
+        { "label": "Steam", "action": { "type": "app", "name": "Steam" } },
+        { "label": "Spotify", "action": { "type": "app", "name": "Spotify" } },
+        { "label": "WhatsApp", "action": { "type": "app", "name": "WhatsApp" } },
+        { "label": "Word", "action": { "type": "app", "name": "Word" } },
+        { "label": "Excel", "action": { "type": "app", "name": "Excel" } }
+      ]
+    },
+    {
+      "title": "Média",
+      "media": true,
+      "tiles": []
+    },
+    {
+      "title": "Réunion",
+      "meeting": true,
+      "app": "Microsoft Teams",
+      "tiles": [
+        { "label": "Micro Teams", "glyph": "🎤", "action": { "type": "keys", "keys": "ctrl+shift+m", "app": "Microsoft Teams" } },
+        { "label": "Caméra Teams", "glyph": "📷", "action": { "type": "keys", "keys": "ctrl+shift+o", "app": "Microsoft Teams" } },
+        { "label": "Lever la main", "glyph": "✋", "action": { "type": "keys", "keys": "ctrl+shift+k", "app": "Microsoft Teams" } },
+        { "label": "Partager l'écran", "glyph": "🖥", "action": { "type": "keys", "keys": "ctrl+shift+e", "app": "Microsoft Teams" } },
+        { "label": "Raccrocher", "glyph": "📞", "color": "#C62828", "action": { "type": "keys", "keys": "ctrl+shift+h", "app": "Microsoft Teams" } }
+      ]
+    },
+    {
+      "title": "Discord",
+      "app": "Discord",
+      "tiles": [
+        { "label": "Discord", "action": { "type": "app", "name": "Discord" } },
+        { "label": "Micro Discord", "glyph": "🎤", "action": { "type": "keys", "keys": "ctrl+shift+m", "app": "Discord" } },
+        { "label": "Casque Discord", "glyph": "🎧", "action": { "type": "keys", "keys": "ctrl+shift+d", "app": "Discord" } },
+        { "label": "Décrocher", "glyph": "📞", "color": "#2E7D32", "action": { "type": "keys", "keys": "ctrl+return", "app": "Discord" } },
+        { "label": "Refuser l'appel", "glyph": "✖️", "action": { "type": "keys", "keys": "escape", "app": "Discord" } }
+      ]
+    },
+    {
+      "title": "Raccourcis",
+      "tiles": [
+        { "label": "Capture zone", "glyph": "✂️", "action": { "type": "keys", "keys": "win+shift+s" } },
+        { "label": "Écran → presse-papiers", "glyph": "📋", "action": { "type": "system", "command": "screenshot-clipboard" } },
+        { "label": "Vue des tâches", "glyph": "🗂", "action": { "type": "keys", "keys": "win+tab" } },
+        { "label": "Bureau", "glyph": "🖼", "action": { "type": "keys", "keys": "win+d" } },
+        { "label": "Barre de jeu", "glyph": "🎮", "action": { "type": "keys", "keys": "win+g" } },
+        { "label": "Rechercher", "glyph": "🔍", "action": { "type": "keys", "keys": "win+s" } },
+        { "label": "Mode sombre", "glyph": "🌙", "action": { "type": "system", "command": "toggle-dark-mode" } },
+        { "label": "Veille écran", "glyph": "💤", "action": { "type": "system", "command": "sleep-display" } },
+        { "label": "Verrouiller", "glyph": "🔒", "color": "#37474F", "action": { "type": "system", "command": "lock" } }
+      ]
+    }
+  ]
+}

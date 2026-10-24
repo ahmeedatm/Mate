@@ -1,0 +1,14 @@
+{
+  "daily": [
+    {
+      "id": "worklog",
+      "label": "Remplir le worklog Jira",
+      "days": [1, 2, 3, 4, 5],
+      "remindAt": "17:30",
+      "repeatMinutes": 30,
+      "remindUntil": "19:00",
+      "url": "https://<site>.atlassian.net/jira/...",
+      "jiraWorklogHours": 7
+    }
+  ]
+}

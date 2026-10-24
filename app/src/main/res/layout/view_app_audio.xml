@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Allumé quand l'appli joue du son (quelqu'un parle sur Discord). -->
+    <View
+        android:id="@+id/app_audio_dot"
+        android:layout_width="14dp"
+        android:layout_height="14dp"
+        android:layout_marginStart="8dp"
+        android:background="@drawable/dot" />
+
+    <LinearLayout
+        android:layout_width="150dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/app_audio_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/text"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/app_audio_state"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_dim"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/app_audio_mute"
+        style="@style/IconButton"
+        android:contentDescription="@string/app_audio_mute"
+        android:src="@drawable/ic_volume" />
+
+    <SeekBar
+        android:id="@+id/app_audio_volume"
+        style="@style/Slider"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:max="100" />
+
+    <TextView
+        android:id="@+id/app_audio_value"
+        android:layout_width="56dp"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:textColor="@color/text_dim"
+        android:textSize="15sp" />
+</merge>

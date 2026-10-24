@@ -1,0 +1,33 @@
+# OS / éditeurs
+.DS_Store
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+
+# Android / Gradle
+.gradle/
+.kotlin/
+build/
+local.properties
+captures/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Backend
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.log
+
+# Données perso du compagnon
+backend/.cache/
+backend/config/deck.json
+backend/config/tasks.json
+backend/.data/
+shared/*
+!shared/.gitkeep

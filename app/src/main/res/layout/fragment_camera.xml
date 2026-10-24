@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Visualiseur : aperçu de la caméra arrière (tablette tenue à plat au-dessus d'une feuille),
+     l'image part en direct sur le Mac. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/camera_title"
+            android:textSize="22sp" />
+
+        <View
+            android:id="@+id/camera_dot"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_marginStart="20dp"
+            android:background="@drawable/dot" />
+
+        <TextView
+            android:id="@+id/camera_status"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:singleLine="true"
+            android:textColor="@color/text_dim"
+            android:textSize="16sp" />
+
+        <Button
+            android:id="@+id/camera_show"
+            style="@style/ActionButton"
+            android:drawableStart="@drawable/ic_display"
+            android:text="@string/camera_show_on_mac" />
+
+        <Button
+            android:id="@+id/camera_stop"
+            style="@style/ActionButton"
+            android:layout_marginStart="12dp"
+            android:drawableStart="@drawable/ic_close"
+            android:text="@string/camera_stop" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/camera_frame"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:layout_weight="1">
+
+        <TextureView
+            android:id="@+id/camera_preview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center" />
+
+        <LinearLayout
+            android:id="@+id/camera_message_box"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:background="@drawable/card_bg"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="28dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/camera_illustration"
+                android:layout_width="200dp"
+                android:layout_height="160dp"
+                android:layout_marginBottom="16dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ill_camera_sleep"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/camera_message"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:maxWidth="480dp"
+                android:textColor="@color/text_dim"
+                android:textSize="18sp" />
+
+            <!-- Autoriser (permission refusée) ou Rallumer (caméra arrêtée). -->
+            <Button
+                android:id="@+id/camera_action"
+                style="@style/PrimaryButton"
+                android:layout_marginTop="16dp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/camera_frozen"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/banner_bg"
+            android:paddingStart="20dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="10dp"
+            android:text="@string/camera_frozen_hint"
+            android:textColor="@color/warn"
+            android:textSize="16sp"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/camera_freeze"
+            style="@style/PrimaryButton"
+            android:drawableStart="@drawable/ic_pause"
+            android:minWidth="150dp"
+            android:text="@string/camera_freeze" />
+
+        <!-- Pastilles de zoom, ajoutées par CameraFragment selon le zoom maximal de la caméra. -->
+        <LinearLayout
+            android:id="@+id/camera_zooms"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" />
+
+        <Button
+            android:id="@+id/camera_photo"
+            style="@style/ActionButton"
+            android:drawableStart="@drawable/ic_camera"
+            android:text="@string/camera_photo" />
+    </LinearLayout>
+</LinearLayout>

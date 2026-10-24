@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Onglets des pages du deck (générés depuis config/deck.json sur le Mac). -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <HorizontalScrollView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/deck_tabs"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+
+            <ImageButton
+                android:id="@+id/deck_refresh"
+                style="@style/IconButton.Flat"
+                android:layout_marginStart="8dp"
+                android:contentDescription="@string/refresh"
+                android:src="@drawable/ic_refresh" />
+        </LinearLayout>
+
+        <!-- Son et micro du Mac. Les boutons de volume de la tablette pilotent aussi le Mac dans ce mode. -->
+        <com.unowhy.companion.ui.MacAudioView
+            android:id="@+id/deck_audio"
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp" />
+
+        <!-- Page d'une appli (Discord…) : son de cette appli seule, et témoin quand quelqu'un parle. -->
+        <com.unowhy.companion.ui.AppAudioView
+            android:id="@+id/deck_app_audio"
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp" />
+
+        <!-- Page Média : ce qui joue sur l'ordinateur (YouTube, Twitch, Spotify…) et ses commandes. -->
+        <com.unowhy.companion.ui.NowPlayingView
+            android:id="@+id/deck_now_playing"
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="16dp" />
+
+        <GridView
+            android:id="@+id/deck_grid"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="16dp"
+            android:layout_weight="1"
+            android:columnWidth="136dp"
+            android:horizontalSpacing="14dp"
+            android:listSelector="@android:color/transparent"
+            android:numColumns="auto_fit"
+            android:scrollbars="none"
+            android:stretchMode="columnWidth"
+            android:verticalSpacing="14dp" />
+
+        <TextView
+            android:id="@+id/deck_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:padding="16dp"
+            android:textColor="@color/text_dim"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Fenêtres d'une appli (plusieurs fenêtres, ou appui long sur la tuile). -->
+    <com.unowhy.companion.ui.WindowPicker
+        android:id="@+id/deck_windows"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Ajout d'applis du Mac à la page Apps. -->
+    <com.unowhy.companion.ui.AppAdder
+        android:id="@+id/deck_adder"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Ajout de sites à la page Média. -->
+    <com.unowhy.companion.ui.LinkAdder
+        android:id="@+id/deck_links"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Programmation d'une touche de la page Perso. -->
+    <com.unowhy.companion.ui.KeyEditor
+        android:id="@+id/deck_editor"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+</FrameLayout>

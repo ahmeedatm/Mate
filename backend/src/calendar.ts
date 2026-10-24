@@ -1,0 +1,112 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import ical, { type ParameterValue, type VEvent } from "node-ical";
+import { config } from "./config.ts";
+
+export type CalendarEvent = {
+  /** UID de l'événement + début : distingue les occurrences d'une réunion récurrente. */
+  id: string;
+  title: string;
+  location: string;
+  startMs: number;
+  endMs: number;
+  allDay: boolean;
+  /** Marqué « Libre » dans Outlook (n'ouvre pas Teams automatiquement). */
+  free: boolean;
+  /** Lien de la réunion Teams, trouvé dans la description (gardé sur l'ordinateur). */
+  joinUrl?: string;
+};
+
+// Lien « Rejoindre la réunion maintenant » d'Outlook : ancien format meetup-join ou nouveau meet/<numéro>.
+const TEAMS_LINK = /https:\/\/teams\.(?:microsoft|live)\.com\/(?:l\/meetup-join|meet)\/[^\s<>"]+/;
+
+const CACHE_MS = 5 * 60_000;
+let cache: { at: number; key: string; events: CalendarEvent[] } | undefined;
+
+function text(value: ParameterValue | undefined): string {
+  if (value === undefined || value === null) return "";
+  return typeof value === "string" ? value : String((value as { val?: unknown }).val ?? "");
+}
+
+async function fetchIcs(source: string) {
+  return /^https?:\/\//i.test(source) ? ical.async.fromURL(source) : ical.sync.parseFile(source);
+}
+
+/** Du début du jour à la fin du `days`-ième jour (même plage pour la tablette et l'ordinateur : un seul cache). */
+export function dayRange(days: number): [Date, Date] {
+  const from = new Date();
+  from.setHours(0, 0, 0, 0);
+  return [from, new Date(from.getTime() + days * 86_400_000 - 1)];
+}
+
+// Liens d'agenda collés dans la page locale de l'ordinateur (http://127.0.0.1:3000/), en plus de CALENDAR_ICS_URLS.
+const savedFile = path.join(config.dataDir, "calendar.json");
+
+export async function savedCalendarUrls(): Promise<string[]> {
+  const raw = await fs.readFile(savedFile, "utf8").catch(() => undefined);
+  return raw ? ((JSON.parse(raw) as { urls?: string[] }).urls ?? []) : [];
+}
+
+export async function saveCalendarUrls(urls: string[]) {
+  await fs.mkdir(config.dataDir, { recursive: true });
+  await fs.writeFile(savedFile, JSON.stringify({ urls }, null, 2) + "\n", { mode: 0o600 });
+  cache = undefined;
+}
+
+/** Sources d'agenda de cet ordinateur ; "demo" donne l'agenda d'exemple. */
+export async function calendarSources(): Promise<string[]> {
+  return [...new Set([...config.icsUrls, ...(await savedCalendarUrls())])];
+}
+
+/** Événements entre `from` et `to`, récurrences dépliées. Sans source : aucun (agenda masqué sur la tablette). */
+export async function getEvents(from: Date, to: Date): Promise<{ source: "ics" | "mock" | "none"; events: CalendarEvent[] }> {
+  const sources = await calendarSources();
+  if (sources.length === 0) return { source: "none", events: [] };
+  if (sources.every((s) => s === "demo")) return { source: "mock", events: mockEvents(from) };
+
+  const key = `${sources.join(",")}|${from.getTime()}-${to.getTime()}`;
+  if (cache && cache.key === key && Date.now() - cache.at < CACHE_MS) return { source: "ics", events: cache.events };
+
+  const events: CalendarEvent[] = [];
+  for (const source of sources.filter((s) => s !== "demo")) {
+    const data = await fetchIcs(source);
+    for (const component of Object.values(data)) {
+      if (!component || component.type !== "VEVENT") continue;
+      const event = component as VEvent;
+      if (event.status === "CANCELLED") continue;
+      for (const instance of ical.expandRecurringEvent(event, { from, to, expandOngoing: true })) {
+        if (instance.event.status === "CANCELLED") continue;
+        const startMs = instance.start.getTime();
+        events.push({
+          id: `${instance.event.uid}@${startMs}`,
+          title: text(instance.summary) || "(sans titre)",
+          location: text(instance.event.location),
+          startMs,
+          endMs: (instance.end ?? instance.start).getTime(),
+          allDay: instance.isFullDay,
+          free: instance.event.transparency === "TRANSPARENT",
+          joinUrl: text(instance.event.description).match(TEAMS_LINK)?.[0],
+        });
+      }
+    }
+  }
+  events.sort((a, b) => a.startMs - b.startMs);
+  cache = { at: Date.now(), key, events };
+  return { source: "ics", events };
+}
+
+function mockEvents(day: Date): CalendarEvent[] {
+  const at = (h: number, m = 0) => {
+    const d = new Date(day);
+    d.setHours(h, m, 0, 0);
+    return d.getTime();
+  };
+  const teams = "https://teams.microsoft.com/l/meetup-join/exemple";
+  return [
+    { title: "Daily équipe", location: "Teams", startMs: at(9, 30), endMs: at(9, 45), joinUrl: teams },
+    { title: "Revue de tickets QA", location: "Salle Turing", startMs: at(11), endMs: at(12) },
+    { title: "Déjeuner", location: "", startMs: at(12, 30), endMs: at(13, 30) },
+    { title: "Point hackathon", location: "Teams", startMs: at(15), endMs: at(15, 30), joinUrl: teams },
+    { title: "Focus : tests de non-régression", location: "", startMs: at(16), endMs: at(18) },
+  ].map((e) => ({ ...e, id: `mock-${e.startMs}`, allDay: false, free: false }));
+}

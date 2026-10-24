@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Caméra endormie (visualiseur arrêté). Même dessin en SVG dans backend/src/camera.ts. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="160dp"
+    android:viewportWidth="200"
+    android:viewportHeight="160">
+    <!-- Ombre -->
+    <path android:fillColor="@color/surface_raised" android:pathData="M30,146 a62,6 0 1,0 124,0 a62,6 0 1,0 -124,0z" />
+    <!-- Viseur et corps -->
+    <path android:fillColor="@color/surface_pressed" android:pathData="M58,36 h30 a6,6 0 0 1 6,6 v12 h-42 v-12 a6,6 0 0 1 6,-6z" />
+    <path android:fillColor="@color/surface_pressed" android:pathData="M140,78 L170,60 L170,120 L140,102z" />
+    <path
+        android:fillColor="@color/surface_raised"
+        android:strokeColor="@color/surface_pressed"
+        android:strokeWidth="3"
+        android:pathData="M46,50 h78 a16,16 0 0 1 16,16 v48 a16,16 0 0 1 -16,16 h-78 a16,16 0 0 1 -16,-16 v-48 a16,16 0 0 1 16,-16z" />
+    <!-- Objectif, paupière fermée -->
+    <path
+        android:fillColor="@color/surface"
+        android:strokeColor="@color/text_faint"
+        android:strokeWidth="3"
+        android:pathData="M61,90 a24,24 0 1,0 48,0 a24,24 0 1,0 -48,0z" />
+    <path
+        android:strokeColor="@color/text_dim"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M72,90 Q85,101 98,90" />
+    <!-- Voyant éteint -->
+    <path android:fillColor="@color/text_faint" android:pathData="M118,66 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0z" />
+    <!-- z z Z -->
+    <path
+        android:strokeColor="@color/accent"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M132,40 h8 l-8,9 h8" />
+    <path
+        android:strokeColor="@color/accent"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M148,22 h12 l-12,14 h12" />
+    <path
+        android:strokeColor="@color/accent"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M170,2 h16 l-16,18 h16" />
+</vector>

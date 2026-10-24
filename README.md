@@ -1,0 +1,206 @@
+# Unowhy Companion
+
+Compagnon de bureau pour tablettes Unowhy 4.2 (Android 10), posé à côté de l'ordinateur (**Mac ou PC Windows**). La tablette est une interface légère ; le backend tourne sur l'ordinateur et sert à la fois d'agent de pilotage et de proxy vers l'IA. Une tablette peut connaître plusieurs ordinateurs (bureau, maison) et passe toute seule à celui qui répond.
+
+**Modes** : Accueil (tableau de bord : heure, prochain rendez-vous, agenda du jour, tâches, mini-Focus, son de l'ordinateur) · Deck (lancer des applis et raccourcis, fenêtres et écrans, macros, son et micro de l'ordinateur ; les boutons de volume de la tablette pilotent l'ordinateur) · Assistant (chat + micro, réponses lues à voix haute) · Docs (dossier partagé de l'ordinateur, PDF/images/texte ouverts dans un panneau latéral, photo → ordinateur) · Focus (Pomodoro + bruit blanc/rose/brun générés, le minuteur reste visible dans la barre) · Réglages. Les tâches (quotidiennes comme le worklog Jira, avec rappel parlé, et ponctuelles) sont sur l'Accueil, le nombre restant en pastille sur son icône. Le bouton Retour ne quitte jamais l'appli.
+
+```
+app/      Appli Android (Kotlin, vues XML, minSdk 24)
+backend/  Agent de l'ordinateur + proxy (Node/TypeScript, Fastify) ; src/mac/ et src/win/ : pilotage par système
+docs/     Specs tablette, kiosque
+```
+
+## Installation (Mac ou Windows)
+
+Sur chaque ordinateur à piloter (une fois) :
+
+1. Installer **Node.js 22 ou plus** (version LTS sur [nodejs.org](https://nodejs.org/fr/download)).
+2. Récupérer ce dossier, puis double-cliquer **`Installer (Mac).command`** ou **`Installer (Windows).cmd`**.
+   Le compagnon démarre et se relancera tout seul à chaque ouverture de session : plus de terminal à garder ouvert.
+3. La page **http://127.0.0.1:3000/** s'ouvre : adresse de l'ordinateur, code d'appairage, agenda.
+4. Autorisations, une fois :
+   - **Mac** : Réglages Système > Confidentialité et sécurité > **Accessibilité** > ajouter `node` (le Finder l'affiche) pour les raccourcis, macros et fenêtres.
+   - **Windows** : accepter la demande du **pare-feu** pour Node.js sur les réseaux **privés** ; le WiFi doit être en profil « Privé ».
+
+Sur la tablette : **Réglages > Ordinateurs > Ajouter un ordinateur**, toucher l'ordinateur trouvé sur le WiFi, saisir le code à 6 chiffres affiché sur l'ordinateur. C'est tout : le jeton arrive avec le code. Ordinateur introuvable (autre réseau, diffusion bloquée) : « Saisir l'adresse » avec celle de la page.
+
+**Plusieurs ordinateurs** (bureau le jour, maison le soir) : appairer chacun une fois. La tablette pilote l'ordinateur en gras ; quand il ne répond plus, elle cherche les autres ordinateurs enregistrés et bascule sur celui qui répond (bandeau « Connecté à … »), et retrouve un ordinateur dont l'adresse IP a changé. Changer à la main : toucher le nom de l'ordinateur en bas de la barre latérale, ou Réglages. ✎ pour renommer (« Mac du bureau », « PC maison »). Chaque ordinateur garde ses propres données : agenda, tâches, deck, touches perso, applis et écrans (lus en direct). Le deck de départ ne montre que les applis installées sur cet ordinateur.
+
+**Agenda** : sur la page http://127.0.0.1:3000/ de l'ordinateur, coller le lien ICS de l'agenda (Outlook, Google Agenda, iCloud : marche à suivre sur la page). Sans agenda, les cartes Agenda et Prochain rendez-vous sont masquées sur la tablette.
+
+| | Commande (dans `backend/`) |
+|---|---|
+| État | `npm run service:status` |
+| Arrêter (pour `npm run dev`) | `npm run service:stop` |
+| Redémarrer | `npm run service:start` |
+| Retirer le lancement automatique | `npm run service:uninstall` |
+
+Journal : `~/Library/Logs/UnowhyCompanion/` (Mac), `%LOCALAPPDATA%\UnowhyCompanion\` (Windows).
+
+### Windows : ce qui change
+
+Le pilotage passe par un processus PowerShell résident (`backend/src/win/helper.ps1` + `native.cs`, Windows PowerShell 5.1 fourni avec Windows 10/11 : rien à installer).
+
+- **Applis** : celles du menu Démarrer (classiques et du Store), noms tels qu'affichés (« Outlook », « Microsoft Teams »).
+- **Raccourcis** : `cmd+…` est envoyé comme **Ctrl+…** (les touches perso écrites sur Mac restent utilisables) ; `win` = touche Windows (`win+shift+s`, `win+tab`). Le deck de départ est `config/deck.example.windows.json`.
+- **Fenêtres et écrans** : mêmes gestes (moitiés, agrandir, changer d'écran) ; les bureaux virtuels masqués ne sont pas listés.
+- **Son** : volume et sourdine de la sortie par défaut, sourdine du micro par défaut.
+- Pas de « Raccourci Apple » (appli Raccourcis de macOS). `Win+L` est remplacé par l'action système « Verrouiller ».
+- **Pas encore testé sur un vrai PC** : à valider (voir la liste en bas du README).
+
+## Prérequis
+
+- JDK 17+ (testé avec 21), Android SDK (`compileSdk 36`), adb
+- Node 22+
+- `local.properties` à la racine : `sdk.dir=/Users/<toi>/Library/Android/sdk` (non versionné)
+
+## Backend
+
+Pour développer (le service doit être arrêté : `npm run service:stop`) :
+
+```bash
+cd backend
+npm install
+npm run dev               # http://0.0.0.0:3000, rechargement auto ; .env facultatif (voir .env.example)
+```
+
+Test rapide :
+
+```bash
+curl localhost:3000/health
+curl -X POST localhost:3000/chat -H 'content-type: application/json' \
+  -d '{"messages":[{"role":"user","content":"Salut"}]}'
+curl -F "audio=@voice.m4a;type=audio/mp4" localhost:3000/transcribe
+```
+
+### Personnaliser le deck
+
+Copier `backend/config/deck.example.json` (Mac) ou `deck.example.windows.json` (Windows) en `backend/config/deck.json` (non versionné) et l'éditer : pris en compte sans redémarrer (bouton ⟳ sur la tablette). Types d'action :
+
+Chaque tuile accepte aussi `glyph` (un emoji affiché à la place de l'icône) et `color` (fond, ex. `#C62828`).
+
+| type | exemple |
+|---|---|
+| `app` | `{ "type": "app", "name": "Microsoft Teams" }` |
+| `keys` | `{ "type": "keys", "keys": "cmd+shift+m", "app": "Microsoft Teams" }` (`app` : activée avant ; Windows : cmd = Ctrl, `win` = touche Windows) |
+| `shortcut` | `{ "type": "shortcut", "name": "Ne pas déranger" }` (appli Raccourcis de macOS, Mac seulement) |
+| `url` | `{ "type": "url", "url": "https://..." }` |
+| `media` | `play-pause`, `next`, `previous` |
+| `system` | `sleep-display`, `toggle-dark-mode`, `screenshot-clipboard`, `lock` |
+| `text` | `{ "type": "text", "text": "Bonjour," }` (collé dans l'appli au premier plan) |
+| `wait` | `{ "type": "wait", "ms": 500 }` |
+| `window` | `{ "type": "window", "app": "Visual Studio Code", "display": "BenQ GW2480", "layout": "max" }` (`layout` : `keep`, `left`, `right`, `max` ; `display` : libellé d'écran, "Mac" pour l'écran intégré) |
+| `macro` | `{ "type": "macro", "steps": [ …étapes ci-dessus… ] }` |
+
+La tablette n'envoie qu'un identifiant de tuile : seules les actions écrites dans ce fichier et dans les touches perso sont exécutables.
+
+**Fenêtres et écrans** : toucher une appli qui a plusieurs fenêtres (ex. VS Code) ouvre la liste de ses fenêtres au lieu de l'activer ; appui long sur une tuile d'appli pour l'ouvrir dans tous les cas. Chaque fenêtre peut être mise devant, envoyée sur un autre écran (pastilles affichées dès que deux écrans sont branchés) ou calée sur une moitié d'écran / agrandie. Seules les fenêtres du bureau (Space) courant sont visibles.
+
+**Page Perso** : 14 touches vides à programmer depuis la tablette (toucher une touche libre, appui long pour modifier) ou par Claude (outils `deck_touche_*`). Une étape = raccourci simple, plusieurs = macro. Stockées dans `backend/.data/keys.json`. Attention : programmer une touche depuis la tablette revient à pouvoir taper n'importe quoi sur l'ordinateur ; le jeton obtenu à l'appairage (code affiché sur l'ordinateur) reste la seule protection.
+
+**Autorisations macOS** (Réglages Système > Confidentialité et sécurité) : les actions `keys`, `media`, `text` et tout ce qui touche aux fenêtres demandent **Accessibilité** pour `node` (service automatique), ou pour l'appli qui lance `npm run dev` (Terminal, iTerm ou VS Code). Après une mise à jour de Node, macOS peut redemander l'autorisation. `toggle-dark-mode` demande l'autorisation **Automatisation** (popup au premier usage).
+
+### Agenda et documents
+
+- Agenda : lien ICS collé dans la page http://127.0.0.1:3000/ de l'ordinateur (gardé dans `backend/.data/calendar.json`), ou `CALENDAR_ICS_URLS` dans `.env`. Sans lien, pas d'agenda ; `demo` donne l'agenda d'exemple.
+- Réunions Teams : bouton « Rejoindre » sur le prochain rendez-vous de l'Accueil (15 min avant jusqu'à la fin), lien pris dans la description ICS et ouvert dans l'appli Teams de l'ordinateur (écran d'avant-réunion). Option dans Réglages : rejoindre automatiquement 1 min avant (désactivée par défaut, gardée dans `backend/.data/meetings.json`, ignore les réunions « Libre »).
+- Documents : `DOCS_DIR` dans `.env` (défaut : `shared/` à la racine du repo). Les photos de la tablette arrivent dans `Photos tablette/`.
+
+### Visualiseur (mode Caméra)
+
+La tablette, tenue à plat à environ 30 cm au-dessus d'une feuille (écran vers le haut), filme avec sa caméra arrière ; l'ordinateur affiche l'image sur **http://127.0.0.1:3000/camera** (bouton « Afficher sur l'ordi » de la tablette), à envoyer sur le vidéoprojecteur. Sur la page : Pivoter (R) si le support met la tablette à l'envers, Plein écran (F).
+
+- Flux : JPEG 720p, environ 10 images/s mesurées sur la 4.2 en WiFi. Seule la dernière image est gardée, un spectateur lent saute des images.
+- Sur la tablette : Figer (l'image de l'ordinateur s'arrête, l'aperçu continue), zoom 1× à 3× (recadrage du capteur 5 Mpx, plus net qu'un agrandissement), Photo HD (5 Mpx dans `Photos tablette/`), Arrêter. La caméra s'éteint aussi en quittant le mode.
+- Sans jeton, la page n'est lisible que depuis l'ordinateur lui-même (`/camera`, `/camera/stream`, `/camera/status` en GET local) ; l'envoi d'images demande le jeton comme le reste.
+
+### Tâches et rappels
+
+Copier `backend/config/tasks.example.json` en `backend/config/tasks.json` (non versionné ; sans ce fichier, pas de tâche quotidienne). Chaque tâche quotidienne accepte :
+
+| champ | rôle |
+|---|---|
+| `days` | jours (1 = lundi … 7 = dimanche), défaut : tous |
+| `remindAt`, `repeatMinutes`, `remindUntil` | rappel parlé sur la tablette à partir de `remindAt`, répété jusqu'à ce que ce soit fait (au plus tard `remindUntil`, défaut 19:00) |
+| `url` | page ouverte sur l'ordinateur par le bouton « Ouvrir sur l'ordi » |
+| `jiraWorklogHours` | cochée toute seule quand ce temps est saisi dans Jira (nécessite `JIRA_SITE`, `JIRA_EMAIL`, `JIRA_API_TOKEN` dans `.env`) |
+
+Les tâches ponctuelles s'ajoutent depuis la tablette ou par Claude ; cochées, elles disparaissent le lendemain. L'état est stocké dans `backend/.data/` (non versionné). Un rappel n'est perdu que si la tablette reste injoignable jusqu'à `remindUntil` (écran éteint = appli en pause).
+
+### Extension Claude : piloter la tablette (MCP)
+
+Claude (Claude Code, Claude Desktop ou tout client MCP) peut piloter la tablette via l'ordinateur : changer d'écran, afficher ou dire un message, ouvrir un document du dossier partagé, lancer le Pomodoro ou un son d'ambiance, lister/ajouter/cocher des tâches, lire l'état, faire une capture d'écran.
+
+```
+Claude ──MCP (stdio)──▶ backend/src/mcp.ts ──HTTP──▶ backend (npm run dev) ◀──long-polling── tablette
+```
+
+La tablette n'expose aucun serveur : elle garde une requête ouverte vers le backend (`POST /tablet/poll`) et exécute les ordres reçus. Il faut donc que le backend tourne et que l'appli soit à l'écran.
+
+- **Claude Code** : le fichier `.mcp.json` à la racine déclare le serveur `tablette`. Ouvrir Claude Code dans le projet, accepter le serveur, vérifier avec `/mcp`.
+- **Claude Desktop** : dans `~/Library/Application Support/Claude/claude_desktop_config.json` :
+
+  ```json
+  { "mcpServers": { "tablette": {
+      "command": "/chemin/vers/unowhy-companion/backend/node_modules/.bin/tsx",
+      "args": ["/chemin/vers/unowhy-companion/backend/src/mcp.ts"] } } }
+  ```
+
+Exemple de demande : « Passe la tablette en Focus 50 minutes avec du bruit brun, puis affiche-moi une capture. »
+
+Test sans Claude : `curl -X POST localhost:3000/tablet/command -H 'content-type: application/json' -d '{"type":"message","text":"Salut","speak":true}'`, état avec `curl localhost:3000/tablet`.
+
+## Appli Android
+
+Sur la tablette : Paramètres > À propos > taper 7 fois sur « Numéro de build », puis Options développeurs > Débogage USB.
+
+```bash
+adb devices                              # la tablette doit apparaître en "device"
+./gradlew installDebug                   # build + installation
+adb reverse tcp:3000 tcp:3000            # la tablette joint le backend de l'ordinateur via USB
+adb shell am start -n com.unowhy.companion/.MainActivity
+```
+
+`adb reverse` est à relancer après chaque rebranchement du câble. En USB, ajouter l'ordinateur avec « Saisir l'adresse » : `127.0.0.1` (appairage par code comme en WiFi).
+
+En WiFi, rien à configurer au build : Réglages > Ordinateurs > Ajouter (voir Installation). Depuis l'**émulateur**, l'ordinateur hôte est `10.0.2.2` (« Saisir l'adresse », la recherche WiFi ne traverse pas l'émulateur).
+
+### Tester sans tablette (émulateur Android 10)
+
+Un émulateur `companion_api29` calqué sur la tablette (Android 10 sans services Google, 2 Go de RAM, 4 cœurs, 1280×800 à 160 dpi) est configuré ; `companion_api24` (Android 7.0) reste disponible. Les variables `ANDROID_*` du `~/.zshrc` pointent vers le mauvais dossier, d'où leur surcharge :
+
+```bash
+ANDROID_HOME=~/Library/Android/sdk ANDROID_SDK_ROOT=~/Library/Android/sdk ~/Library/Android/sdk/emulator/emulator -avd companion_api29 &
+./gradlew installDebug && adb reverse tcp:3000 tcp:3000
+```
+
+Autres commandes utiles :
+
+```bash
+./gradlew assembleDebug                  # APK dans app/build/outputs/apk/debug/
+adb logcat --pid=$(adb shell pidof com.unowhy.companion)   # logs de l'appli
+adb uninstall com.unowhy.companion
+```
+
+**Deux « ordinateurs » sur un même Mac** (tester la bascule) : `PORT=3011 DATA_DIR=/tmp/a COMPUTER_NAME="Mac du bureau" npx tsx src/server.ts` et un second avec un autre port et dossier ; les ajouter depuis l'émulateur par `10.0.2.2:3011`, puis arrêter l'actif.
+
+**Mode kiosque** : voir [docs/kiosque.md](docs/kiosque.md).
+
+> Le HTTP en clair n'est autorisé qu'en debug. En release, le backend doit être en HTTPS ; attention, Android 7.0 ne fait pas confiance aux certificats Let's Encrypt récents.
+
+## Phases
+
+1. ✅ Chat texte + micro vers le backend (mock), deck, agenda, documents, photo → ordinateur.
+2. Synthèse vocale ✅ (TextToSpeech d'Android) · mot de réveil : à faire · brancher le mode `live` (Claude + transcription) : à faire.
+3. ✅ Focus : Pomodoro + sons d'ambiance.
+
+## À tester sur un vrai PC Windows
+
+Le code Windows compile (vérifié avec PowerShell 7) mais n'a pas encore tourné sur Windows. À valider dans l'ordre :
+
+1. `Installer (Windows).cmd` : installation, page http://127.0.0.1:3000/, redémarrage de session (le compagnon revient seul).
+2. Appairage depuis la tablette (recherche WiFi, pare-feu en réseau privé).
+3. Deck : lancer une appli, raccourcis (`ctrl+…`, `win+…`), touche Média, Texte, Mode sombre, Veille écran, Verrouiller.
+4. Son et micro de l'Accueil.
+5. Fenêtres : liste, premier plan, moitiés, agrandir, autre écran ; noms des écrans.
+6. Icônes des applis dans le deck.

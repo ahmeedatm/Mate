@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Companion</string>
+
+    <!-- Modes -->
+    <string name="mode_home">Accueil</string>
+    <string name="mode_deck">Deck</string>
+    <string name="mode_chat">Assistant</string>
+    <string name="mode_docs">Partage</string>
+    <string name="mode_focus">Focus</string>
+    <string name="mode_camera">Caméra</string>
+    <string name="mode_settings">Réglages</string>
+
+    <!-- Commun -->
+    <string name="error_prefix">Erreur : %1$s</string>
+    <string name="refresh">Actualiser</string>
+    <string name="close">Fermer</string>
+    <string name="offline">Ordinateur injoignable</string>
+    <string name="online">Connecté</string>
+    <string name="unauthorized">Jeton refusé : refaire l\'appairage dans Réglages</string>
+    <string name="no_computer">Aucun ordinateur : Réglages, Ajouter</string>
+    <string name="no_computer_short">Aucun</string>
+    <string name="computer_switched">Connecté à %1$s</string>
+
+    <!-- Accueil -->
+    <string name="greeting_morning">Bonjour</string>
+    <string name="greeting_afternoon">Bon après-midi</string>
+    <string name="greeting_evening">Bonsoir</string>
+    <string name="today">Agenda du jour</string>
+    <string name="next_label">Prochain rendez-vous</string>
+    <string name="chosen_label">Rendez-vous choisi</string>
+    <string name="in_minutes">dans %1$d min</string>
+    <string name="at_time">à %1$s</string>
+    <string name="now_until">En cours, jusqu\'à %1$s</string>
+    <string name="no_more_events">Plus rien aujourd\'hui</string>
+    <string name="no_events">Aucun événement</string>
+    <string name="free_time">Le reste de la journée est libre</string>
+    <string name="join_meeting">Rejoindre</string>
+    <string name="join_opened">Teams ouvert sur l\'ordinateur : %1$s</string>
+    <string name="settings_meetings">Réunions Teams</string>
+    <string name="autojoin">Rejoindre automatiquement 1 min avant</string>
+    <string name="autojoin_hint">L\'ordinateur ouvre Teams sur l\'écran d\'avant-réunion : micro et caméra restent à valider.</string>
+    <string name="all_day">Journée</string>
+    <string name="calendar_mock">Agenda d\'exemple</string>
+
+    <!-- Fenêtres et écrans de l'ordinateur (Deck : appli à plusieurs fenêtres, ou appui long) -->
+    <string name="windows_activate_app">Toute l\'appli</string>
+    <string name="windows_count">%1$d fenêtres</string>
+    <string name="windows_elsewhere">Autres bureaux</string>
+    <string name="windows_other_desktop">autre bureau</string>
+    <string name="windows_move_here">Sur cet écran</string>
+    <string name="screen_main">principal</string>
+    <string name="screen_secondary">secondaire</string>
+    <string name="windows_hint">Toucher une fenêtre : l\'afficher · la glisser sur un écran : l\'y mettre (bords : moitié, haut : agrandir) · glisser l\'icône : toute l\'appli</string>
+    <string name="windows_one">1 fenêtre</string>
+    <string name="windows_none">Aucune fenêtre ouverte sur ce bureau</string>
+    <string name="windows_not_running">Appli fermée</string>
+    <string name="windows_untitled">Sans titre</string>
+    <string name="windows_minimized">réduite</string>
+    <string name="windows_fullscreen">plein écran</string>
+    <string name="windows_left">Moitié gauche</string>
+    <string name="windows_right">Moitié droite</string>
+    <string name="windows_max">Agrandir</string>
+    <string name="windows_open">Ouvrir</string>
+
+    <!-- Touches perso (page Perso du deck) -->
+    <string name="key_title">Touche %1$d</string>
+    <string name="key_clear">Vider</string>
+    <string name="key_label_hint">Nom de la touche</string>
+    <string name="key_glyph_hint">Emoji</string>
+    <string name="key_steps">Étapes, dans l\'ordre</string>
+    <string name="key_steps_empty">Aucune étape. Choisis-en une à droite : une seule = raccourci, plusieurs = macro.</string>
+    <string name="key_step_line">%1$d. %2$s</string>
+    <string name="key_step_up">Monter l\'étape</string>
+    <string name="key_step_delete">Supprimer l\'étape</string>
+    <string name="key_add_step">Ajouter une étape</string>
+    <string name="key_add">Ajouter</string>
+    <string name="key_no_steps">Ajoute au moins une étape.</string>
+    <string name="key_empty_label">Libre</string>
+    <string name="step_app">Ouvrir une appli</string>
+    <string name="step_keys">Raccourci clavier</string>
+    <string name="step_text">Texte</string>
+    <string name="step_window">Fenêtre sur un écran</string>
+    <string name="step_url">Lien</string>
+    <string name="step_shortcut">Raccourci Apple</string>
+    <string name="step_media">Média</string>
+    <string name="step_system">Système</string>
+    <string name="step_wait">Pause</string>
+    <string name="step_app_filter">Chercher une appli</string>
+    <string name="step_key_hint">Touche : a, 5, return, f5…</string>
+    <string name="step_text_hint">Texte collé dans l\'appli au premier plan</string>
+    <string name="step_url_hint">https://…, msteams:…, vscode:…</string>
+    <string name="step_window_display">Écran</string>
+    <string name="step_window_layout">Disposition</string>
+    <string name="step_window_app">Appli</string>
+    <string name="step_window_current">écran actuel</string>
+    <string name="step_window_no_app">Choisis l\'appli à placer.</string>
+    <string name="step_shortcut_none">Aucun raccourci dans l\'appli Raccourcis de macOS.</string>
+    <string name="step_wait_value">%1$s s</string>
+    <string name="layout_keep">Même place</string>
+    <string name="media_play_pause">Lecture / pause</string>
+    <string name="media_next">Morceau suivant</string>
+    <string name="media_previous">Morceau précédent</string>
+    <string name="system_sleep">Veille de l\'écran</string>
+    <string name="system_dark">Mode sombre</string>
+    <string name="system_screenshot">Capture → presse-papiers</string>
+    <string name="system_lock">Verrouiller la session</string>
+    <string name="sum_app">Ouvrir %1$s</string>
+    <string name="sum_text">Taper « %1$s »</string>
+    <string name="sum_shortcut">Raccourci « %1$s »</string>
+    <string name="sum_wait">Attendre %1$s</string>
+    <string name="sum_window">%1$s → %2$s, %3$s</string>
+    <string name="deck_edit_hint">Appui long sur une touche pour la modifier</string>
+    <string name="deck_apps_hint">Appui long sur une appli : ses fenêtres, ou la retirer du deck</string>
+    <string name="apps_add_tile">Ajouter</string>
+    <string name="apps_add_title">Ajouter une appli de l\'ordinateur</string>
+    <string name="apps_reset">Profil de base</string>
+    <string name="apps_reset_confirm">Revenir aux applis du profil de base ? Tes ajouts et retraits seront perdus.</string>
+    <string name="apps_added">✓ %1$s · toucher pour retirer</string>
+    <string name="apps_added_status">%1$s ajoutée au deck</string>
+    <string name="apps_removed_status">%1$s retirée du deck</string>
+    <string name="apps_remove">Retirer</string>
+    <string name="deck_media_hint">Appui long sur un site pour le retirer</string>
+    <string name="links_add_title">Ajouter un site</string>
+    <string name="links_custom">Autre site</string>
+    <string name="links_name_hint">Nom (facultatif)</string>
+    <string name="links_url_hint">Adresse, ex. netflix.com</string>
+    <string name="links_add">Ajouter</string>
+    <string name="links_suggestions">Sites proposés</string>
+    <string name="links_url_missing">Tape l\'adresse du site</string>
+    <string name="links_added_status">%1$s ajouté à Média</string>
+    <string name="links_removed_status">%1$s retiré de Média</string>
+    <string name="links_remove_confirm">Retirer %1$s de la page Média ?</string>
+
+    <!-- Son de l'ordinateur (Accueil et Deck) -->
+    <string name="mac_volume">Son de l\'ordinateur</string>
+    <string name="mute_toggle">Couper ou rétablir le son de l\'ordinateur</string>
+    <string name="mic_toggle">Couper ou ouvrir le micro de l\'ordinateur</string>
+    <string name="muted">Coupé</string>
+    <string name="mic_on">Micro ouvert</string>
+    <string name="mic_off">Micro coupé</string>
+    <string name="percent">%1$d %%</string>
+    <string name="app_audio_mute">Couper ou rétablir le son de l\'appli</string>
+    <string name="app_audio_talking">Ça parle</string>
+    <string name="app_audio_silent">Silence</string>
+    <string name="app_audio_closed">Pas lancé</string>
+    <string name="app_audio_unknown">–</string>
+    <string name="media_empty">Rien en lecture</string>
+    <string name="media_empty_hint">Lance une vidéo YouTube ou Twitch, ou de la musique, sur l\'ordinateur</string>
+    <string name="media_playing">%1$s · En lecture</string>
+    <string name="media_paused">%1$s · En pause</string>
+    <string name="media_time">%1$s / %2$s</string>
+    <string name="volume_na">Volume non pilotable sur cette sortie</string>
+
+    <!-- Assistant -->
+    <string name="chat_hint">Écris un message…</string>
+    <string name="chat_empty_title">Que puis-je faire pour toi ?</string>
+    <string name="chat_empty_body">Écris une question, ou appuie sur le micro pour parler.</string>
+    <string name="send">Envoyer</string>
+    <string name="mic">Micro</string>
+    <string name="mic_stop">Arrêter l\'enregistrement</string>
+    <string name="thinking">…</string>
+    <string name="mic_permission_denied">Permission micro refusée</string>
+    <string name="voice_toggle">Lire les réponses à voix haute</string>
+
+    <!-- Documents -->
+    <string name="docs_root">Dossier partagé</string>
+    <string name="up">Remonter</string>
+    <string name="take_photo">Photo → ordi</string>
+    <string name="photo_sent">Photo envoyée sur l\'ordinateur</string>
+    <string name="no_camera">Aucune appli caméra disponible</string>
+    <string name="empty_folder">Dossier vide : dépose des fichiers dedans depuis l\'ordinateur</string>
+    <string name="open_on_mac">Ouvrir sur l\'ordi</string>
+    <string name="opened_on_mac">Ouvert sur l\'ordinateur</string>
+    <string name="web_from_computer">Page de l\'ordi</string>
+    <string name="doc_expand">Agrandir</string>
+    <string name="doc_shrink">Mettre à côté</string>
+    <string name="web_from_computer_reload">Reprendre la page ouverte sur l\'ordinateur</string>
+    <string name="page_x_of_y">%1$d / %2$d</string>
+    <string name="previous">Page précédente</string>
+    <string name="next">Page suivante</string>
+    <string name="unsupported_doc">Aperçu indisponible pour ce type de fichier</string>
+    <string name="loading">Chargement…</string>
+    <plurals name="items_count">
+        <item quantity="one">%1$d élément</item>
+        <item quantity="other">%1$d éléments</item>
+    </plurals>
+
+    <!-- Visualiseur (mode Caméra) -->
+    <string name="camera_title">Visualiseur</string>
+    <string name="camera_show_on_mac">Afficher sur l\'ordi</string>
+    <string name="camera_opened">Visualiseur ouvert sur l\'ordinateur</string>
+    <string name="camera_freeze">Figer</string>
+    <string name="camera_resume">Reprendre</string>
+    <string name="camera_frozen_hint">Image figée sur l\'ordinateur</string>
+    <string name="camera_photo">Photo HD → ordi</string>
+    <string name="camera_photo_sent">Photo enregistrée : %1$s</string>
+    <string name="camera_photo_failed">Photo impossible, réessaie</string>
+    <string name="camera_zoom">%1$s×</string>
+    <string name="camera_starting">Démarrage…</string>
+    <string name="camera_live">En direct sur l\'ordinateur · %1$d i/s</string>
+    <string name="camera_frozen">Image figée</string>
+    <string name="camera_offline">Ordinateur injoignable</string>
+    <string name="camera_permission">Autorise la caméra pour t\'en servir comme visualiseur.</string>
+    <string name="camera_grant">Autoriser</string>
+    <string name="camera_stop">Arrêter</string>
+    <string name="camera_stopped">Caméra en veille\nPlus rien n\'est envoyé à l\'ordinateur.</string>
+    <string name="camera_restart">Rallumer</string>
+    <string name="camera_unavailable">Pas de caméra arrière sur cette tablette</string>
+
+    <!-- Focus -->
+    <string name="focus_start">Démarrer</string>
+    <string name="focus_pause">Pause</string>
+    <string name="focus_resume">Reprendre</string>
+    <string name="focus_skip">Passer</string>
+    <string name="focus_reset">Réinitialiser</string>
+    <string name="focus_preset">%1$d / %2$d min</string>
+    <string name="focus_phase_work">Concentration</string>
+    <string name="focus_phase_break">Pause</string>
+    <string name="focus_count">Sessions terminées : %1$d</string>
+    <string name="focus_ready">Prêt à démarrer</string>
+    <string name="ambiance">Ambiance</string>
+    <string name="volume">Volume</string>
+    <string name="noise_brown">Brun</string>
+    <string name="noise_pink">Pluie</string>
+    <string name="noise_white">Blanc</string>
+    <string name="noise_off">Silence</string>
+    <string name="noise_playing">Son : %1$s</string>
+
+    <!-- Tâches (carte de l'Accueil) -->
+    <string name="tasks_today">Tâches du jour</string>
+    <string name="tasks_left">%1$d à faire</string>
+    <string name="tasks_all_done">Tout est fait</string>
+    <string name="tasks_empty">Rien à faire pour l\'instant</string>
+    <string name="task_hint">Nouvelle tâche…</string>
+    <string name="add">Ajouter</string>
+    <string name="delete">Supprimer</string>
+    <string name="task_daily">Chaque jour</string>
+
+    <!-- Réglages -->
+    <string name="save">Enregistrer</string>
+    <string name="computers_title">Ordinateurs</string>
+    <string name="computers_manage">Gérer</string>
+    <string name="computers_hint">La tablette pilote l\'ordinateur en gras. S\'il ne répond plus (changement de lieu), elle passe toute seule à un autre ordinateur enregistré qui répond. Chaque ordinateur garde son agenda, ses tâches et son deck. Toucher un ordinateur pour le piloter, ✎ pour le renommer.</string>
+    <string name="computers_empty">Aucun ordinateur. Installe le compagnon sur l\'ordinateur (voir le README), sur le même WiFi que la tablette, puis touche Ajouter.</string>
+    <string name="computer_add">Ajouter un ordinateur</string>
+    <string name="computer_add_manual">Saisir l\'adresse</string>
+    <string name="computer_search_again">Rechercher</string>
+    <string name="computer_searching">Recherche sur le WiFi…</string>
+    <string name="computer_none_found">Aucun ordinateur trouvé. Le compagnon doit tourner sur l\'ordinateur (sa page : http://127.0.0.1:3000) et les deux appareils être sur le même WiFi. Sinon, saisis son adresse.</string>
+    <string name="computer_pick">Toucher l\'ordinateur à ajouter :</string>
+    <string name="computer_known">déjà enregistré</string>
+    <string name="computer_manual_hint">Adresse affichée sur la page du compagnon, sur l\'ordinateur (http://127.0.0.1:3000). Exemple : 192.168.1.20</string>
+    <string name="computer_address_hint">192.168.1.20</string>
+    <string name="computer_connect">Se connecter</string>
+    <string name="computer_connecting">Connexion…</string>
+    <string name="computer_unreachable">Pas de compagnon à %1$s : vérifie l\'adresse, et qu\'il tourne sur l\'ordinateur.</string>
+    <string name="computer_pair_title">Appairer %1$s</string>
+    <string name="computer_requesting">Demande d\'un code à %1$s…</string>
+    <string name="computer_code_prompt">Saisis le code à 6 chiffres affiché sur %1$s.</string>
+    <string name="computer_code_hint">000000</string>
+    <string name="computer_code_short">Le code a 6 chiffres.</string>
+    <string name="computer_checking">Vérification…</string>
+    <string name="computer_new_code">Nouveau code</string>
+    <string name="computer_pair">Valider</string>
+    <string name="computer_lost">Ordinateur injoignable, réessaie.</string>
+    <string name="computer_online">connecté</string>
+    <string name="computer_offline">injoignable</string>
+    <string name="computer_unauthorized">jeton refusé, toucher pour réappairer</string>
+    <string name="computer_rename">Renommer</string>
+    <string name="computer_name_hint">Nom (ex. Mac du bureau, PC maison)</string>
+    <string name="computer_forget">Oublier</string>
+    <string name="computer_forget_confirm">Oublier %1$s ? Pour le piloter de nouveau, il faudra refaire l\'appairage.</string>
+    <string name="tablet_name">Tablette %1$s</string>
+    <string name="os_mac">macOS</string>
+    <string name="os_windows">Windows</string>
+    <string name="wifi_title">WiFi</string>
+    <string name="wifi_choose">Choisir un réseau</string>
+    <string name="wifi_current">Connecté à %1$s</string>
+    <string name="wifi_current_unnamed">Connecté au WiFi</string>
+    <string name="wifi_off">Pas de réseau WiFi</string>
+    <string name="wifi_refresh">Actualiser</string>
+    <string name="wifi_other">Autre réseau</string>
+    <string name="wifi_other_hint">Réseau masqué : tape son nom exact.</string>
+    <string name="wifi_searching">Recherche des réseaux…</string>
+    <string name="wifi_hint">Touche un réseau pour t\'y connecter. Appui long sur un réseau enregistré pour l\'oublier.</string>
+    <string name="wifi_none">Aucun réseau trouvé. Touche Actualiser.</string>
+    <string name="wifi_no_location">La tablette ne peut pas lister les réseaux (localisation coupée). Utilise Autre réseau.</string>
+    <string name="wifi_connected">✓ Connecté</string>
+    <string name="wifi_saved">Enregistré</string>
+    <string name="wifi_secure">Protégé</string>
+    <string name="wifi_open">Ouvert</string>
+    <string-array name="wifi_levels">
+        <item>Signal faible</item>
+        <item>Signal moyen</item>
+        <item>Bon signal</item>
+        <item>Excellent signal</item>
+    </string-array>
+    <string name="wifi_password_for">Mot de passe de %1$s</string>
+    <string name="wifi_password">Mot de passe</string>
+    <string name="wifi_password_optional">Mot de passe (vide si ouvert)</string>
+    <string name="wifi_password_short">Le mot de passe fait au moins 8 caractères.</string>
+    <string name="wifi_show_password">Afficher le mot de passe</string>
+    <string name="wifi_name">Nom du réseau</string>
+    <string name="wifi_name_missing">Tape le nom du réseau.</string>
+    <string name="wifi_connect">Se connecter</string>
+    <string name="wifi_connecting">Connexion à %1$s…</string>
+    <string name="wifi_done">Connecté à %1$s.</string>
+    <string name="wifi_failed_password">Pas de connexion à %1$s : vérifie le mot de passe. La tablette reste sur son réseau précédent.</string>
+    <string name="wifi_failed">Pas de connexion à %1$s (trop loin ?). La tablette reste sur son réseau précédent.</string>
+    <string name="wifi_forget">Oublier</string>
+    <string name="wifi_forget_confirm">Oublier le réseau %1$s ? Il faudra retaper son mot de passe.</string>
+    <string name="updates_title">Mises à jour</string>
+    <string name="updates_check">Rechercher</string>
+    <string name="updates_hint">Le moteur web et le Companion se mettent à jour depuis le serveur Unowhy (simulé par l\'ordinateur), sans quitter le kiosque.</string>
+    <string name="updates_checking">Recherche des mises à jour…</string>
+    <string name="updates_none">Aucune mise à jour annoncée.</string>
+    <string name="updates_row">%1$s · %2$s → %3$s</string>
+    <string name="updates_row_current">%1$s · %2$s · à jour</string>
+    <string name="updates_install">Mettre à jour</string>
+    <string name="updates_downloading">Téléchargement %1$d %%</string>
+    <string name="updates_installing">Installation…</string>
+    <string name="updates_done">✓ Installé</string>
+    <string name="updates_failed">Échec · Réessayer</string>
+    <string name="updates_cancelled">Téléchargement annulé : rien n\'a été installé.</string>
+    <string name="updates_committed">Android installe la mise à jour : environ %1$d min sur cette tablette. Ça ne s\'annule plus.</string>
+    <string name="updates_eta">Encore environ %1$s de téléchargement.</string>
+    <string name="duration_seconds">%1$d s</string>
+    <string name="duration_minutes">%1$d min</string>
+    <string name="updates_downloading_short">Téléchargement…</string>
+    <string name="updates_not_installed">absent</string>
+    <string name="kiosk_title">Mode kiosque</string>
+    <string name="kiosk_off">Inactif. Voir docs/kiosque.md pour l\'activer (device owner).</string>
+    <string name="kiosk_on">Actif : l\'appli est verrouillée à l\'écran et sert d\'écran d\'accueil.</string>
+    <string name="kiosk_paused">Suspendu jusqu\'au prochain redémarrage de l\'appli.</string>
+    <string name="kiosk_allow_installs">Autoriser les installations</string>
+    <string name="kiosk_allow_installs_hint">Pour mettre à jour l\'appli par adb. Désactivé, aucune appli ne peut s\'installer (le MDM ne peut pas revenir).</string>
+    <string name="kiosk_exit">Quitter le kiosque</string>
+    <string name="kiosk_remove">Retirer le mode kiosque</string>
+    <string name="kiosk_remove_confirm">L\'appli ne sera plus device owner. Pour réactiver le kiosque, il faudra refaire la commande adb (et peut-être réinitialiser la tablette). Continuer ?</string>
+    <string name="cancel">Annuler</string>
+    <string name="confirm">Confirmer</string>
+</resources>

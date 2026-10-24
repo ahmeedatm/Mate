@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Champ des formulaires construits dans le code (KeyEditor) : gonflé depuis le XML pour garder
+     les réglages par défaut d'un EditText (focus, curseur), qu'un constructeur avec style perdrait. -->
+<EditText xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Input"
+    android:gravity="center_vertical|start"
+    android:importantForAutofill="no" />

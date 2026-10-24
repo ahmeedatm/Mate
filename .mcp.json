@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "tablette": {
+      "command": "backend/node_modules/.bin/tsx",
+      "args": ["backend/src/mcp.ts"]
+    }
+  }
+}

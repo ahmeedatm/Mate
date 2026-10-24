@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/mode_settings"
+            android:textSize="28sp" />
+
+        <!-- Ordinateurs appairés (bureau, maison…) : celui que la tablette pilote, les autres en relais. -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_display"
+                android:text="@string/computers_title" />
+
+            <TextView
+                android:id="@+id/settings_computers_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/computers_hint"
+                android:textColor="@color/text_dim"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:id="@+id/settings_computers"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/settings_add_computer"
+                    style="@style/PrimaryButton"
+                    android:drawableStart="@drawable/ic_add"
+                    android:text="@string/computer_add" />
+
+                <Button
+                    android:id="@+id/settings_add_manual"
+                    style="@style/ActionButton"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/computer_add_manual" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- WiFi : en kiosque, Paramètres d'Android est inaccessible. -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/CardTitle"
+                    android:drawableStart="@drawable/ic_wifi"
+                    android:text="@string/wifi_title" />
+
+                <TextView
+                    android:id="@+id/settings_wifi_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/settings_wifi"
+                style="@style/ActionButton"
+                android:text="@string/wifi_choose" />
+        </LinearLayout>
+
+        <!-- Mises à jour (moteur web, Companion) depuis le « serveur Unowhy » simulé par l'ordinateur. -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    style="@style/CardTitle"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_refresh"
+                    android:text="@string/updates_title" />
+
+                <Button
+                    android:id="@+id/settings_updates_check"
+                    style="@style/ActionButton"
+                    android:text="@string/updates_check" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/settings_updates_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/updates_hint"
+                android:textColor="@color/text_dim"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:id="@+id/settings_updates"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
+
+        <!-- Réunions Teams de l'agenda -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_videocam"
+                android:text="@string/settings_meetings" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_autojoin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/autojoin"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/settings_autojoin_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/autojoin_hint"
+                android:textColor="@color/text_dim"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- Kiosque -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_lock"
+                android:text="@string/kiosk_title" />
+
+            <TextView
+                android:id="@+id/settings_kiosk_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textSize="16sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_allow_installs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/kiosk_allow_installs"
+                android:textSize="16sp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/settings_allow_installs_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/kiosk_allow_installs_hint"
+                android:textColor="@color/text_dim"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/settings_kiosk_actions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <Button android:id="@+id/settings_kiosk_exit" style="@style/ActionButton" android:text="@string/kiosk_exit" />
+
+                <Button
+                    android:id="@+id/settings_kiosk_remove"
+                    style="@style/ActionButton"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/kiosk_remove"
+                    android:textColor="@color/ko" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>
