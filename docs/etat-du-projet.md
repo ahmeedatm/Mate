@@ -1,6 +1,6 @@
 # État du projet
 
-Mis à jour le 25/10/2026. À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
+Mis à jour le 25/10/2026 (nuit). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
 
 ## Pourquoi ce projet
 
@@ -43,6 +43,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 | Paquet Windows sans Node | zip de `npm run package` extrait dans Documents sur le PC, `.data` copié (appairage gardé), installeur : ancien compagnon arrêté, nouveau lancé, relancé seul après un redémarrage à distance (~9 s) ; testé le 24/10 |
 | Icône | « compagnon » (bulle souriante, dégradé violet → turquoise, `backend/assets/compagnon.svg`) : raccourci du PC (`.ico`) et appli de la tablette (icône adaptative, `drawable/ic_launcher*`) ; raccourci vu sur le PC le 25/10 |
 | Discord, salon de serveur | carte « En appel · salon / serveur », personnes par leur nom affiché (vignettes de l'appel, soi exclu) ; testé le 25/10 avec une autre personne. Qui parle : illisible |
+| Paquet Mac sans Node | zip installé comme un client neuf le 25/10 : lancement automatique (launchd), données dans `~/Library/Application Support/UnowhyCompanion`, Partage dans `~/Documents/Partage tablette`, raccourci `.webloc`, Accessibilité au node du paquet, appairage (l'ancien Mac remplacé sur la tablette, sans doublon). Le Mac d'Eliot tourne désormais depuis le paquet (`~/Documents/Compagnon-Unowhy-Mac`) |
 
 ## Fait mais pas encore testé en vrai
 
@@ -52,6 +53,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 - **Discord sans portail développeur** (24/10 soir ; « Quitter l'appel » et « Arrêter le partage » testés ensuite) : Discord expose son interface à UI Automation une fois l'accessibilité de Chromium demandée. `GET /deck/voice` lit le panneau vocal : appel ou salon, participants (vue d'appel privé), micro et sourdine. Page Discord : carte « En appel · … », touches selon l'état (`"when": "call" | "idle"` dans `deck.json`), « Quitter l'appel » = étape `press` (bouton « Déconnecter »). Plus de vert. PAS testé : Discord en anglais. **Qui parle** : illisible partout (appel privé, groupe, salon de serveur : ni nom ni classe ne change pendant qu'une personne parle, vérifié le 25/10). Diagnostic : `GET /deck/buttons?app=Discord&detail=true` (éléments + classes HTML).
 - Corbeille : correctif d'un affichage resté après un glisser annulé.
+- Boîtes de saisie (25/10, vu sur la tablette) : le clavier restait affiché après la fermeture (code d'appairage) et le premier appui sur un bouton était perdu (barres système rappelées). Fermeture du clavier encore un peu lente (animation d'Android).
 
 - **Deck et Ouvertes** (24/10 soir, testés sur la tablette avec le PC) : onglets déplacés par appui long puis glisser (ordre gardé par ordinateur), balayage entre onglets, écrans agrandis, corbeille dans la bande du bas (garder 0,9 s puis lâcher, « Miam ! » + son). Bug vu une fois, pas reproduit : au démarrage, l'onglet Discord recouvrait Perso (revenu en déplaçant Discord) ; noter ce qui précède s'il revient.
 - Installeur Windows corrigé (24/10 soir) : la boucle de relance ne démarrait pas depuis l'installeur (PowerShell lancé en `detached` par Node) → lancée par `start` comme à l'ouverture de session ; arrêt limité à `powershell.exe` (un numéro de processus réutilisé pouvait tuer un autre programme). Vérifié sur le PC de test : installation, puis redémarrage à distance (revenu en ~9 s). Cause de l'arrêt du compagnon à 18h49 inconnue (pas d'erreur au journal, Bitdefender n'a rien signalé).
@@ -66,8 +68,8 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 ## À faire, dans l'ordre
 
 0. Bug des onglets du Deck (voir plus haut) s'il revient.
-1. **Voix et appels** : appels Teams / WhatsApp (captures pendant un vrai appel) ; idées : météo, réglages de la tablette à la voix. Réactiver l'appli Google sans adb : impossible (un device owner ne peut pas annuler `pm disable-user`), inutile car la procédure du kiosque la garde ; sans elle, Parler ouvre la commande écrite.
-2. **Paquet sur Mac** : réessayer le zip Mac avec les changements du 25/10 (données dans `~/Library/Application Support/UnowhyCompanion`, Partage dans `~/Documents/Partage tablette` : macOS peut demander à node l'accès à Documents ; raccourci `.webloc` sur le Bureau). Fait le 25/10 sur le PC : données et Partage hors du dossier extrait (mise à jour sans perdre l'appairage), pare-feu Windows par l'installeur (Bitdefender laissait déjà passer : blocage réel pas vérifié), raccourci « Compagnon Unowhy » avec l'icône. Le PC tourne depuis `Documents\Compagnon-Unowhy-PC`, mis à jour depuis le Mac par le partage `Compagnon`. Pas de NSIS ni d'appli .app pour l'instant.
+1. **Voix et appels** : appels Teams / WhatsApp (captures pendant un vrai appel, reporté par Eliot) ; idées : météo, réglages de la tablette à la voix. Réactiver l'appli Google sans adb : impossible (un device owner ne peut pas annuler `pm disable-user`), inutile car la procédure du kiosque la garde ; sans elle, Parler ouvre la commande écrite.
+2. **Paquet** : relance du compagnon Mac à l'ouverture de session (pas encore vue). Pas de NSIS ni d'appli .app pour l'instant.
 
 ## Décisions en attente
 
@@ -105,3 +107,4 @@ Dofus Rétro (« Jouer » par un clic dans la fenêtre : perso, pas pour la dém
 | 5b2ac89 | commande vocale (bouton Parler, noms d'applis rapprochés à l'oreille, dictée, fenêtres, tâches), appels entrants Discord, Arrêter le partage |
 | bf63b2b | paquets clients sans Node (node embarqué, `npm run package`), voix « sur l'écran de droite / de gauche / 2 » ; tests du 24/10 au soir (Spotify, Discord, voix, bascule) |
 | 69c7081 → 2a2bd04 | paquet Windows testé sur le PC (installeur réparé), Discord salon de serveur, données et Partage du paquet hors du dossier extrait (`Documents\Partage tablette`), pare-feu Windows, raccourci et icône du compagnon (PC + tablette) |
+| après 955bb58 | paquet Mac testé comme un client neuf (le Mac tourne depuis le paquet), clavier et premier appui des boîtes de saisie, MCP sur les données du paquet |

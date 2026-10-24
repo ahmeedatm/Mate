@@ -2,7 +2,10 @@
   "mcpServers": {
     "tablette": {
       "command": "backend/node_modules/.bin/tsx",
-      "args": ["backend/src/mcp.ts"]
+      "args": ["backend/src/mcp.ts"],
+      "env": {
+        "DATA_DIR": "${HOME}/Library/Application Support/UnowhyCompanion"
+      }
     }
   }
 }

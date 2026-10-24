@@ -23,8 +23,14 @@ fun AlertDialog.showForTyping(input: EditText?, keyboard: Boolean = true) {
         setSoftInputMode(state or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
     }
     show()
-    // Comme l'écran derrière : pas de barre d'état (sinon une bande noire vide en kiosque).
-    window?.let { WindowCompat.getInsetsController(it, it.decorView).hide(WindowInsetsCompat.Type.systemBars()) }
+    // Comme l'écran derrière : pas de barre d'état (sinon une bande noire vide en kiosque). Barres rendues par un
+    // balayage seulement : par défaut (Android 10), le premier toucher les rappelle et n'atteint pas la boîte.
+    window?.let {
+        WindowCompat.getInsetsController(it, it.decorView).apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.systemBars())
+        }
+    }
     if (keyboard) input?.requestFocus()
 }
 

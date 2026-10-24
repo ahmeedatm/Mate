@@ -83,17 +83,27 @@ adb -s <série> install -r app/build/outputs/apk/debug/app-debug.apk   # un appa
 
 **Captures de la tablette** : `adb exec-out screencap -p > capture.png`. Une capture noire veut dire que l'écran est éteint : l'appli est alors en pause et n'écoute plus l'ordinateur.
 
-## Mettre à jour le compagnon d'un PC Windows à distance
+## Mettre à jour les ordinateurs de test (installés par paquet)
 
-Si le dossier du compagnon du PC est partagé sur le réseau (SMB) et monté sur le Mac :
+Le PC d'Eliot et le Mac tournent depuis le paquet (pas depuis le dépôt). D'abord `cd backend && npm run package` : le dossier `dist/<windows|mac>/Compagnon Unowhy/` est le contenu du zip.
+
+**PC Windows**, par le partage SMB `Compagnon` (= dossier `Documents\Compagnon-Unowhy-PC\Compagnon Unowhy` du PC) monté sur le Mac :
 
 ```bash
-rsync -rt --exclude node_modules --exclude .data --exclude .cache --exclude ".env" --exclude ".env.bak*" \
-  --exclude config/tasks.json --exclude config/deck.json --exclude .DS_Store --exclude "*.log" backend/ /Volumes/backend/
+rsync -rt --exclude node --exclude .data --exclude .DS_Store "dist/windows/Compagnon Unowhy/" <partage monté>/
 curl -X POST -H "Authorization: Bearer <jeton du PC>" -H "Content-Type: application/json" -d '{}' http://<ip-du-pc>:3000/companion/restart
 ```
 
-Le compagnon redémarre seul en ~8 s. Vérifier ensuite une route Windows (`/system/media`) : une erreur de compilation de `native.cs` casse tout le pilotage (HTTP 500), et on ne peut pas compiler le C# sur le Mac. Si `package.json` change, il faut lancer `npm install` sur le PC.
+Le compagnon redémarre seul en ~9 s. Vérifier ensuite une route Windows (`/system/media`, `/windows/open`) : une erreur de compilation de `native.cs` casse tout le pilotage (HTTP 500), et on ne peut pas compiler le C# sur le Mac.
+
+**Mac** (dossier `~/Documents/Compagnon-Unowhy-Mac/Compagnon Unowhy`, service launchd `com.unowhy.companion`) :
+
+```bash
+rsync -rt --exclude node --exclude .DS_Store "dist/mac/Compagnon Unowhy/" ~/Documents/Compagnon-Unowhy-Mac/"Compagnon Unowhy"/
+launchctl kickstart -k gui/$(id -u)/com.unowhy.companion
+```
+
+Garder le même dossier : l'Accessibilité est accordée au chemin du `node` du paquet. `config/tasks.json` (worklog) est dans le dossier du paquet, rsync ne l'efface pas. Journal : `~/Library/Logs/UnowhyCompanion/backend.log`. `npm run dev` ne peut pas tourner en même temps (port 3000, le service redémarre seul) : pour revenir au dev, `node/darwin-arm64/node dist/service.mjs uninstall` dans le paquet, puis appairer de nouveau (identité du dev dans `backend/.data`). Le serveur MCP `tablette` lit le jeton du paquet (`DATA_DIR` dans `.mcp.json`).
 
 ## Fabriquer les paquets clients (sans Node à installer)
 
@@ -106,7 +116,7 @@ Les installeurs prennent `backend/node/…` s'il existe (sans `npm install`), si
 
 Données d'un ordinateur installé par paquet : hors du dossier extrait, dans `%LOCALAPPDATA%\UnowhyCompanion\data` (Windows) ou `~/Library/Application Support/UnowhyCompanion` (Mac) (`src/paths.ts`). Mettre à jour = extraire le nouveau zip n'importe où et relancer son installeur : l'identité est gardée, la tablette retrouve l'ordinateur. Le dossier Partage du paquet est `Documents\Partage tablette` (Documents lu dans le registre sous Windows, OneDrive compris). Un paquet plus ancien gardait `backend/.data` et `shared/` dans le dossier extrait : ils sont recopiés une fois au premier lancement (les originaux restent). Sur Mac, l'autorisation Accessibilité est donnée au node du paquet. Sur Windows, l'installeur ouvre le pare-feu au `node.exe` du paquet (`scripts/firewall-windows.ps1`, règle « Compagnon Unowhy », réseaux privés, accord administrateur seulement si la règle manque ou vise un autre dossier).
 
-Testé sur le Mac (serveur et service regroupés, node embarqué). Pas encore essayé sur un PC Windows.
+Testés sur un vrai PC Windows (installeur, données hors du dossier, Partage, raccourci, relance après un redémarrage) et sur un vrai Mac le 25/10 (client neuf : installeur, Application Support, Partage dans Documents, raccourci `.webloc`, Accessibilité donnée au node du paquet, appairage ; pas encore vu : relance à l'ouverture de session). Sur un Mac avec oh-my-zsh, sa question de mise à jour avale le début de la commande du `.command` : répondre à la question, puis relancer.
 
 ## Pièges connus
 

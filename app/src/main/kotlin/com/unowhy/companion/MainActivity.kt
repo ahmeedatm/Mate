@@ -371,7 +371,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) hideSystemBars()
+        if (!hasFocus) return
+        hideSystemBars()
+        // Boîte de saisie fermée clavier ouvert (code d'appairage…) : Android le laisse sur l'écran, sans champ, et
+        // rien ne le ferme en kiosque. Après coup (post) : le clavier n'est rattaché à cette fenêtre qu'ensuite.
+        window.decorView.post {
+            if (currentFocus !is EditText) {
+                getSystemService(InputMethodManager::class.java).hideSoftInputFromWindow(window.decorView.windowToken, 0)
+            }
+        }
     }
 
     /**
