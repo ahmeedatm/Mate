@@ -1,8 +1,8 @@
 import { canMedia, isInstalled, launchApp, mediaControl, mediaSessions, openTarget } from "./os.ts";
 
 /**
- * Touches de la page Média : un site qui a son appli de bureau installée (Spotify, Deezer, YouTube Music installé
- * depuis le navigateur, Netflix…) ouvre l'appli plutôt que le site. Pour la musique, la lecture démarre ensuite
+ * Touches de la page Média : un site qui a son appli de bureau installée (Spotify, Deezer, Netflix…) ouvre
+ * l'appli plutôt que le site. Pour la musique, la lecture démarre ensuite
  * toute seule : un onglet tout juste ouvert n'a rien à lire et le navigateur bloque le son sans geste de
  * l'utilisateur, alors l'ordinateur relance la lecture par les contrôles multimédias de Windows dès qu'elle apparaît.
  */
@@ -17,8 +17,9 @@ type Service = {
 
 const SERVICES: Service[] = [
   { host: /(^|\.)spotify\.com$/i, apps: ["Spotify"], music: true },
-  // « Titres aimés » : la page d'accueil de YouTube Music ne joue rien.
-  { host: /^music\.youtube\.com$/i, apps: ["YouTube Music"], music: true, playUrl: "https://music.youtube.com/watch?list=LM" },
+  // « Titres aimés » : la page d'accueil de YouTube Music ne joue rien. Pas son appli, installée depuis un navigateur :
+  // elle s'ouvrirait sur l'accueil ; le navigateur, connecté au même compte, ouvre directement l'adresse qui joue.
+  { host: /^music\.youtube\.com$/i, apps: [], music: true, playUrl: "https://music.youtube.com/watch?list=LM" },
   { host: /(^|\.)deezer\.com$/i, apps: ["Deezer"], music: true },
   { host: /(^|\.)soundcloud\.com$/i, apps: [], music: true },
   { host: /(^|\.)netflix\.com$/i, apps: ["Netflix"] },

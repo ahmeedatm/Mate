@@ -8,12 +8,12 @@ import { config } from "./config.ts";
 import { liveProviders, mockProviders, type ChatMessage } from "./providers.ts";
 import {
   addDeckApp, addDeckLink, deckLinks, findTile, homeFeatures, LINK_SUGGESTIONS, loadDeck, removeDeckApp, removeDeckLink, resetDeckApps,
-  runAction, tileIcon,
+  appIconFile, runAction, tileIcon,
 } from "./deck.ts";
 import {
-  accessibility, appAudio, browserPage, isAppRunning, listButtons, openAccessibility, canControl, focusWindow, getAudio, listApps, mediaControl, mediaSessions, mediaThumb, listDisplays, listShortcuts, listWindows, openTarget, osName, placeWindow, setAudio,
+  accessibility, appAudio, browserPage, isAppRunning, listButtons, openAccessibility, canControl, focusWindow, getAudio, listApps, mediaControl, mediaSessions, mediaThumb, listDisplays, listOpenWindows, listShortcuts, listWindows, controlOpenWindow, openTarget, osName, placeWindow, setAudio,
 } from "./os.ts";
-import type { Layout, WindowTarget } from "./screens.ts";
+import type { Layout, OpenAction, WindowTarget } from "./screens.ts";
 import { keySchema, loadKeys, saveKey, SLOTS, type PersoKey } from "./perso.ts";
 import { confirmPairing, identity, lanAddresses, PairingError, pendingCode, requestPairing, startDiscovery } from "./pairing.ts";
 import { LOCAL_PAGE } from "./local-page.ts";
@@ -237,6 +237,53 @@ app.get<{ Params: { id: string } }>("/deck/icon/:id", async (req, reply) => {
   return reply.type("image/png").send(createReadStream(icon));
 });
 
+const windowTarget = {
+  type: "object",
+  required: ["index", "title"],
+  // Mac : index 0 = fenêtre d'un autre bureau (menu Fenêtre), retrouvée par son titre. Windows : handle.
+  properties: { index: { type: "integer", minimum: 0 }, title: { type: "string", maxLength: 500 } },
+};
+
+// --- Vue « Ouvertes » : toutes les applis ouvertes sur l'ordinateur et l'écran de chacune de leurs fenêtres.
+
+app.get("/windows/open", async () => listOpenWindows());
+
+app.get<{ Querystring: { name: string } }>(
+  "/windows/icon",
+  { schema: { querystring: { type: "object", required: ["name"], properties: { name: { type: "string", minLength: 1, maxLength: 200 } } } } },
+  async (req, reply) => {
+    const icon = await appIconFile(req.query.name);
+    if (!icon) return reply.code(404).send({ error: "Pas d'icône" });
+    reply.header("Cache-Control", "max-age=86400");
+    return reply.type("image/png").send(createReadStream(icon));
+  },
+);
+
+app.post<{ Body: { key: string; action: OpenAction; window: WindowTarget; display?: number; layout?: Layout } }>(
+  "/windows/open",
+  {
+    schema: {
+      body: {
+        type: "object",
+        required: ["key", "action", "window"],
+        additionalProperties: false,
+        properties: {
+          key: { type: "string", maxLength: 1000 },
+          action: { enum: ["focus", "place", "minimize", "zoom"] },
+          window: windowTarget,
+          display: { type: "integer" },
+          layout: { enum: ["keep", "left", "right", "max"] },
+        },
+      },
+    },
+  },
+  async (req) => {
+    const { key, action, window, display, layout } = req.body;
+    await controlOpenWindow(key, window, action, action === "place" ? { display, layout: layout ?? "keep" } : undefined);
+    return listOpenWindows();
+  },
+);
+
 app.post<{ Body: { id: string } }>(
   "/deck/run",
   { schema: { body: { type: "object", required: ["id"], properties: { id: { type: "string", maxLength: 20 } } } } },
@@ -365,13 +412,6 @@ app.get<{ Params: { id: string } }>("/deck/windows/:id", async (req, reply) => {
   if (!name) return reply.code(404).send({ error: "Pas une tuile d'appli" });
   return listWindows(name);
 });
-
-const windowTarget = {
-  type: "object",
-  required: ["index", "title"],
-  // Mac : index 0 = fenêtre d'un autre bureau (menu Fenêtre), retrouvée par son titre. Windows : handle.
-  properties: { index: { type: "integer", minimum: 0 }, title: { type: "string", maxLength: 500 } },
-};
 
 app.post<{ Params: { id: string }; Body: { action: "focus" | "place"; window?: WindowTarget; display?: number; layout?: Layout } }>(
   "/deck/windows/:id",

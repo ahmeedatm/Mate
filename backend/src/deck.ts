@@ -259,12 +259,19 @@ export async function tileIcon(tile: Tile): Promise<string | undefined> {
   const site = appName ? undefined : urlOf(tile.action);
   if (!appName && !site) return undefined;
 
-  const key = appName ?? "url:" + site!.origin;
+  return appName ? appIconFile(appName) : cachedIcon("url:" + site!.origin, (out) => siteIcon(site!, out));
+}
+
+/** Icône d'une appli de l'ordinateur (tuile, vue « Ouvertes »), gardée en cache. */
+export function appIconFile(name: string) {
+  return cachedIcon(name, (out) => appIcon(name, out));
+}
+
+async function cachedIcon(key: string, make: (out: string) => Promise<boolean>): Promise<string | undefined> {
   const cached = path.join(config.cacheDir, "icons", createHash("sha1").update(key).digest("hex") + ".png");
   if (existsSync(cached)) return cached;
-
   await fs.mkdir(path.dirname(cached), { recursive: true });
-  const ok = appName ? await appIcon(appName, cached).catch(() => false) : await siteIcon(site!, cached).catch(() => false);
+  const ok = await make(cached).catch(() => false);
   return ok && existsSync(cached) ? cached : undefined;
 }
 

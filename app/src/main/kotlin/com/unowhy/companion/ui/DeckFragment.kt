@@ -39,12 +39,15 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private lateinit var appAudio: AppAudioView
     private lateinit var nowPlaying: NowPlayingView
     private lateinit var picker: WindowPicker
+    private lateinit var openWindows: OpenWindowsView
     private lateinit var editor: KeyEditor
     private lateinit var adder: AppAdder
     private lateinit var linkAdder: LinkAdder
 
     private var pages: List<DeckPage> = emptyList()
     private var pageIndex = 0
+    /** Onglet « Ouvertes » affiché (toutes les fenêtres de l'ordinateur) à la place de la page `pageIndex`. */
+    private var showingOpen = false
     /** Page Réunion demandée avant que le deck soit chargé. */
     private var meetingPending = false
     /** Applis en appel (micro utilisé) → dernier moment où on l'a vu : leur page a un onglet. */
@@ -72,6 +75,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         nowPlaying.attach(viewLifecycleOwner.lifecycleScope)
         picker = view.findViewById(R.id.deck_windows)
         picker.attach(viewLifecycleOwner.lifecycleScope) { loadDeck() }
+        openWindows = view.findViewById(R.id.deck_open)
+        openWindows.attach(viewLifecycleOwner.lifecycleScope)
         editor = view.findViewById(R.id.deck_editor)
         editor.attach(viewLifecycleOwner.lifecycleScope) { loadDeck() }
         adder = view.findViewById(R.id.deck_adder)
@@ -143,6 +148,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private fun setLiveViewsActive(active: Boolean) {
         appAudio.setActive(active)
         nowPlaying.setActive(active)
+        openWindows.setActive(active && showingOpen)
         livePoll?.cancel()
         if (active) livePoll = viewLifecycleOwner.lifecycleScope.launch {
             while (isActive) {
@@ -183,7 +189,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                 }
                 pageIndex = pageIndex.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
                 status.visibility = View.GONE
-                showPage(pageIndex)
+                if (showingOpen) showOpen() else showPage(pageIndex)
             } catch (e: Exception) {
                 status.text = requireContext().errorText(e)
                 status.visibility = View.VISIBLE
@@ -217,15 +223,34 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         }
         val shown = pages.indices.filter { pages[it].app == null } + live +
             listOf(pageIndex).filter { pages.getOrNull(it)?.app != null && it !in live }
-        for (index in shown) {
-            val page = pages[index]
+        fun addTab(title: String, selected: Boolean, onClick: () -> Unit) {
             val tab = Button(requireContext(), null, 0, R.style.Chip).apply {
-                text = page.title
-                isSelected = index == pageIndex
-                setOnClickListener { showPage(index) }
+                text = title
+                isSelected = selected
+                setOnClickListener { onClick() }
             }
             tabs.addView(tab, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { marginEnd = dp(8) })
         }
+        // « Ouvertes » juste après Apps (en premier sans page Apps) : toutes les applis ouvertes, pas seulement les choisies.
+        val openAfter = shown.indexOfFirst { pages[it].apps }
+        if (openAfter < 0) addTab(getString(R.string.deck_open_tab), showingOpen, ::showOpen)
+        shown.forEachIndexed { i, index ->
+            addTab(pages[index].title, !showingOpen && index == pageIndex) { showPage(index) }
+            if (i == openAfter) addTab(getString(R.string.deck_open_tab), showingOpen, ::showOpen)
+        }
+    }
+
+    /** Onglet « Ouvertes » : les touches et les barres de son laissent la place au schéma des écrans. */
+    private fun showOpen() {
+        showingOpen = true
+        grid.visibility = View.GONE
+        status.setText(R.string.deck_open_hint)
+        status.visibility = View.VISIBLE
+        renderTabs()
+        audio.visibility = View.GONE
+        appAudio.bind(null)
+        nowPlaying.bind(false)
+        openWindows.setActive(isResumed && !isHidden)
     }
 
     /** Page de l'appli d'une tuile (Discord, Teams), -1 si elle n'en a pas. */
@@ -234,6 +259,11 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
 
     private fun showPage(index: Int) {
         pageIndex = index
+        if (showingOpen) {
+            showingOpen = false
+            openWindows.setActive(false)
+            grid.visibility = View.VISIBLE
+        }
         val page = pages.getOrNull(index)
         // Pages Apps et Média : tuile « Ajouter » en dernier (applis de l'ordinateur, sites).
         adapter.tiles = page?.tiles.orEmpty() +

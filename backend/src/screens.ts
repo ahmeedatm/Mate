@@ -16,9 +16,24 @@ export type AppWindow = {
   display: number | null;
   /** Sur un autre bureau (Spaces, plein écran caché) : connue par le menu Fenêtre, sans position. */
   elsewhere: boolean;
+  /** Vue « Ouvertes » : fenêtre au premier plan de l'ordinateur ; agrandie (Mac : remplit l'écran, ou plein écran). */
+  front?: boolean;
+  maximized?: boolean;
 };
 
 export type WindowsInfo = { app: string; running: boolean; windows: AppWindow[]; displays: Display[] };
+
+/**
+ * Vue « Ouvertes » : une appli et ses fenêtres. `key` désigne l'appli pour la piloter (Mac : identifiant de bundle ;
+ * Windows : chemin du programme, les fenêtres y étant désignées par leur handle) ; `name` : son nom, qui sert aussi
+ * à trouver son icône (menu Démarrer, dossier Applications), absent si l'appli n'y est pas.
+ */
+export type OpenApp = { key: string; name: string; windows: AppWindow[] };
+
+export type OpenWindows = { apps: OpenApp[]; displays: Display[] };
+
+/** focus : mettre devant ; place : changer d'écran ou de moitié ; minimize : réduire ; zoom : agrandir, ou rendre sa taille. */
+export type OpenAction = "focus" | "place" | "minimize" | "zoom";
 
 /** keep : même place relative sur l'écran cible ; left/right : moitié d'écran ; max : tout l'écran utile. */
 export type Layout = "keep" | "left" | "right" | "max";

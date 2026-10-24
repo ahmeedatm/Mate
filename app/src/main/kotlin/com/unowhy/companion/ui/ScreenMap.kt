@@ -1,11 +1,15 @@
 package com.unowhy.companion.ui
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.DragEvent
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -14,6 +18,8 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.unowhy.companion.R
 import com.unowhy.companion.net.MacDisplay
+import kotlin.math.abs
+import kotlin.math.hypot
 
 /**
  * Écrans du Mac à l'échelle, placés comme dans les réglages Moniteurs ; chaque écran liste ses fenêtres.
@@ -34,9 +40,15 @@ class ScreenMap @JvmOverloads constructor(
 
     /** Remplace les écrans ; `cards` donne les vues de fenêtres à afficher dans chacun. */
     fun setScreens(displays: List<MacDisplay>, cards: (MacDisplay) -> List<View>) {
+        // La liste relue en boucle (vue « Ouvertes ») ne doit pas ramener chaque écran en haut.
+        val scrolled = (0 until childCount).mapNotNull { getChildAt(it) as? Pane }.associate { it.screen.id to it.scroll.scrollY }
         this.displays = displays
         removeAllViews()
-        displays.forEach { d -> addView(Pane(d).apply { cards(d).forEach(::addCard) }) }
+        displays.forEach { d ->
+            val pane = Pane(d).apply { cards(d).forEach(::addCard) }
+            addView(pane)
+            scrolled[d.id]?.let { y -> pane.scroll.post { pane.scroll.scrollTo(0, y) } }
+        }
     }
 
     override fun onMeasure(widthSpec: Int, heightSpec: Int) {
@@ -86,6 +98,7 @@ class ScreenMap @JvmOverloads constructor(
     /** Un écran : nom, fenêtres (défilables), et aperçu de la place prise pendant un glisser. */
     private inner class Pane(val screen: MacDisplay) : FrameLayout(context) {
         private val cards = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        val scroll = ScrollView(context)
         private val preview = View(context).apply {
             background = rounded(R.color.accent_soft, dp(8)).apply { setStroke(dp(2), color(R.color.accent)) }
             visibility = GONE
@@ -125,7 +138,7 @@ class ScreenMap @JvmOverloads constructor(
                 maxLines = 1
             }, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
             content.addView(header)
-            content.addView(ScrollView(context).apply {
+            content.addView(scroll.apply {
                 isVerticalScrollBarEnabled = false
                 addView(cards)
             }, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
@@ -214,5 +227,77 @@ class ScreenMap @JvmOverloads constructor(
     private companion object {
         /** Part de la largeur (ou de la hauteur, en haut) qui déclenche une moitié d'écran ou l'agrandissement. */
         const val EDGE = 0.22f
+    }
+}
+
+/**
+ * Fenêtre d'un ScreenMap. Toucher : `onTap` (attendu un instant si `onDoubleTap` est donné). Glisser-déposer `payload` vers un écran (vue glissée estompée, passée à
+ * `onDragStarted`) : en bougeant le doigt de côté, ou après un appui maintenu (écrans l'un au-dessus de l'autre) ;
+ * un mouvement vertical laisse défiler la liste de l'écran.
+ */
+@SuppressLint("ClickableViewAccessibility")
+fun View.dragToScreens(
+    payload: Any, canDrag: () -> Boolean, onDragStarted: (View) -> Unit, onDoubleTap: (() -> Unit)? = null, onTap: () -> Unit,
+) {
+    val slop = ViewConfiguration.get(context).scaledTouchSlop
+    var downX = 0f
+    var downY = 0f
+    var moved = false
+    var dragging = false
+    fun startDrag(v: View) {
+        dragging = true
+        v.isPressed = false
+        v.parent.requestDisallowInterceptTouchEvent(true)
+        if (canDrag() && v.startDragAndDrop(null, View.DragShadowBuilder(v), payload, 0)) {
+            v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            onDragStarted(v)
+            v.alpha = 0.35f
+        }
+    }
+    val hold = Runnable { if (!moved && !dragging) startDrag(this) }
+    var pendingTap: Runnable? = null
+    fun tapped(v: View) {
+        val first = pendingTap
+        when {
+            onDoubleTap == null -> onTap()
+            first != null -> {
+                v.removeCallbacks(first)
+                pendingTap = null
+                onDoubleTap()
+            }
+            else -> Runnable { pendingTap = null; onTap() }.also {
+                pendingTap = it
+                v.postDelayed(it, ViewConfiguration.getDoubleTapTimeout().toLong())
+            }
+        }
+    }
+    setOnTouchListener { v, e ->
+        when (e.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                downX = e.x
+                downY = e.y
+                moved = false
+                dragging = false
+                v.isPressed = true
+                v.postDelayed(hold, ViewConfiguration.getLongPressTimeout().toLong())
+            }
+            MotionEvent.ACTION_MOVE -> if (!moved && !dragging && hypot(e.x - downX, e.y - downY) > slop) {
+                moved = true
+                v.isPressed = false
+                v.removeCallbacks(hold)
+                // De côté : glisser vers un écran. Vers le haut ou le bas : la liste de l'écran défile (elle prend le geste).
+                if (abs(e.x - downX) > abs(e.y - downY)) startDrag(v)
+            }
+            MotionEvent.ACTION_UP -> {
+                v.isPressed = false
+                v.removeCallbacks(hold)
+                if (!moved && !dragging) tapped(v)
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                v.isPressed = false
+                v.removeCallbacks(hold)
+            }
+        }
+        true
     }
 }

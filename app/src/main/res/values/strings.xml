@@ -127,6 +127,10 @@
     <string name="apps_added_status">%1$s ajoutée au deck</string>
     <string name="apps_removed_status">%1$s retirée du deck</string>
     <string name="apps_remove">Retirer</string>
+    <string name="deck_open_tab">Ouvertes</string>
+    <string name="deck_open_hint">Toucher : afficher ou réduire · deux fois : agrandir ou rendre sa taille · glisser de côté : changer d\'écran (bords : moitié, haut : agrandir)</string>
+    <string name="open_loading">Lecture des fenêtres de l\'ordinateur…</string>
+    <string name="open_none">Aucune fenêtre ouverte sur l\'ordinateur</string>
     <string name="deck_media_hint">Appui long sur un site pour le retirer</string>
     <string name="links_add_title">Ajouter un site</string>
     <string name="links_custom">Autre site</string>

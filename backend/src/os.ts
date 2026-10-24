@@ -8,7 +8,7 @@ import * as macBrowser from "./mac/browser.ts";
 import * as macKeys from "./mac/keys.ts";
 import * as macWindows from "./mac/windows.ts";
 import * as win from "./win/index.ts";
-import type { Layout, WindowTarget } from "./screens.ts";
+import type { Layout, OpenAction, WindowTarget } from "./screens.ts";
 
 /**
  * Pilotage de l'ordinateur, une seule interface pour macOS (src/mac/) et Windows (src/win/).
@@ -208,6 +208,20 @@ export function focusWindow(app: string, window?: WindowTarget) {
 export function placeWindow(app: string, opts: { window?: WindowTarget; display?: number; layout: Layout }) {
   if (isMac) return macWindows.placeWindow(app, opts);
   if (isWindows) return win.placeWindow(app, opts);
+  unsupported();
+}
+
+/** Vue « Ouvertes » de la tablette : toutes les applis qui ont une fenêtre, avec l'écran de chacune. */
+export function listOpenWindows() {
+  if (isMac) return macWindows.listOpenWindows();
+  if (isWindows) return win.listOpenWindows();
+  unsupported();
+}
+
+/** Pilote une fenêtre de la vue « Ouvertes » ; `key` : celle de son appli dans la liste ; `opts` pour `place`. */
+export function controlOpenWindow(key: string, window: WindowTarget, action: OpenAction, opts?: { display?: number; layout: Layout }) {
+  if (isMac) return macWindows.controlOpenWindow(key, window, action, opts);
+  if (isWindows) return win.controlOpenWindow(key, window, action, opts);
   unsupported();
 }
 

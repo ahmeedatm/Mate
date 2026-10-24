@@ -1,13 +1,10 @@
 package com.unowhy.companion.ui
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.ContextWrapper
 import android.util.AttributeSet
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
-import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.FrameLayout
@@ -24,7 +21,6 @@ import com.unowhy.companion.net.MacWindow
 import com.unowhy.companion.net.WindowsInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlin.math.hypot
 
 /**
  * Fenêtres d'une appli du Mac, par-dessus le deck, rangées dans un schéma des écrans (ScreenMap).
@@ -228,41 +224,8 @@ class WindowPicker @JvmOverloads constructor(
         return card
     }
 
-    /**
-     * Toucher : `onTap` ; bouger le doigt au-delà du seuil : glisser-déposer vers un écran du schéma.
-     * Le parent (défilement d'un écran) ne doit pas voler le geste dès qu'il commence sur une fenêtre.
-     */
-    @SuppressLint("ClickableViewAccessibility")
     private fun draggable(view: View, drag: Drag, onTap: () -> Unit) {
-        val slop = ViewConfiguration.get(context).scaledTouchSlop
-        var downX = 0f
-        var downY = 0f
-        var dragging = false
-        view.setOnTouchListener { v, e ->
-            when (e.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    downX = e.x
-                    downY = e.y
-                    dragging = false
-                    v.isPressed = true
-                    v.parent.requestDisallowInterceptTouchEvent(true)
-                }
-                MotionEvent.ACTION_MOVE -> if (!dragging && hypot(e.x - downX, e.y - downY) > slop) {
-                    dragging = true
-                    v.isPressed = false
-                    if (info?.running == true && v.startDragAndDrop(null, View.DragShadowBuilder(v), drag, 0)) {
-                        dragged = v
-                        v.alpha = 0.35f
-                    }
-                }
-                MotionEvent.ACTION_UP -> {
-                    v.isPressed = false
-                    if (!dragging) onTap()
-                }
-                MotionEvent.ACTION_CANCEL -> v.isPressed = false
-            }
-            true
-        }
+        view.dragToScreens(drag, canDrag = { info?.running == true }, onDragStarted = { dragged = it }, onTap = onTap)
     }
 
     private fun showError(e: Exception) {

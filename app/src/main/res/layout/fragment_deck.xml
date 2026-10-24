@@ -108,6 +108,14 @@
             android:stretchMode="columnWidth"
             android:verticalSpacing="14dp" />
 
+        <!-- Onglet « Ouvertes » : toutes les fenêtres de l'ordinateur sur le schéma de ses écrans (à la place des touches). -->
+        <com.unowhy.companion.ui.OpenWindowsView
+            android:id="@+id/deck_open"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="16dp"
+            android:layout_weight="1" />
+
         <TextView
             android:id="@+id/deck_status"
             android:layout_width="match_parent"

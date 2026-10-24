@@ -12,11 +12,20 @@ object IconCache {
 
     fun peek(id: String): Bitmap? = bitmaps.get(id)
 
-    suspend fun load(client: BackendClient, id: String): Bitmap? {
+    suspend fun load(client: BackendClient, id: String): Bitmap? = load(id) { client.tileIcon(id) }
+
+    /** Icône d'une appli d'après son nom (vue « Ouvertes »). */
+    suspend fun loadApp(client: BackendClient, name: String): Bitmap? = load(appKey(name)) { client.appIcon(name) }
+
+    fun peekApp(name: String): Bitmap? = peek(appKey(name))
+
+    private fun appKey(name: String) = "app:$name"
+
+    private suspend fun load(id: String, fetch: suspend () -> ByteArray?): Bitmap? {
         bitmaps.get(id)?.let { return it }
         if (id in missing) return null
         // Erreur réseau : on réessaiera plus tard. 404 : l'appli n'a pas d'icône, inutile de redemander.
-        val bytes = try { client.tileIcon(id) } catch (e: Exception) { return null }
+        val bytes = try { fetch() } catch (e: Exception) { return null }
         if (bytes == null) { missing += id; return null }
         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
         bitmaps.put(id, bitmap)

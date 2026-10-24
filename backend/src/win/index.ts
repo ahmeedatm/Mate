@@ -1,5 +1,5 @@
 import { call } from "./helper.ts";
-import { labelDisplays, type AppWindow, type Layout, type RawScreen, type WindowsInfo, type WindowTarget } from "../screens.ts";
+import { labelDisplays, type AppWindow, type Layout, type OpenAction, type OpenApp, type OpenWindows, type RawScreen, type WindowsInfo, type WindowTarget } from "../screens.ts";
 import type { AudioState } from "../mac/audio.ts";
 
 /**
@@ -243,6 +243,30 @@ export function focusWindow(app: string, window?: WindowTarget) {
 
 export function placeWindow(app: string, opts: { window?: WindowTarget; display?: number; layout: Layout }) {
   return windowsCall(app, { action: "place", hwnd: opts.window?.index, display: opts.display, layout: opts.layout });
+}
+
+// --- Vue « Ouvertes » : toutes les fenêtres, groupées par appli (la plus en avant d'abord).
+
+type RawOpen = { windows: (AppWindow & { app: string; exe: string })[]; displays: RawScreen[] };
+
+function groupOpen(raw: RawOpen): OpenWindows {
+  const apps = new Map<string, OpenApp>();
+  for (const { app, exe, ...window } of raw.windows) {
+    const key = `${app}\u0000${exe}`;
+    const group = apps.get(key) ?? { key: exe, name: app, windows: [] };
+    group.windows.push(window);
+    apps.set(key, group);
+  }
+  return { apps: [...apps.values()], displays: labelDisplays(raw.displays) };
+}
+
+export async function listOpenWindows() {
+  return groupOpen(await call<RawOpen>("allwindows", { action: "list" }));
+}
+
+/** Les fenêtres sont désignées par leur handle : `key` (programme) ne sert pas. */
+export async function controlOpenWindow(_key: string, window: WindowTarget, action: OpenAction, opts?: { display?: number; layout: Layout }) {
+  await call("allwindows", { action, hwnd: window.index, ...opts });
 }
 
 // --- Système

@@ -67,12 +67,19 @@ data class WebPage(val url: String, val title: String)
 
 /** x, y, w, h : place dans l'arrangement des écrans du Mac (points). */
 data class MacDisplay(val id: Int, val label: String, val main: Boolean, val x: Int, val y: Int, val w: Int, val h: Int)
-/** `elsewhere` : sur un autre bureau du Mac, sans écran connu (`index` 0, retrouvée par son titre). */
+/**
+ * `elsewhere` : sur un autre bureau du Mac, sans écran connu (`index` 0, retrouvée par son titre).
+ * `front`, `maximized` (vue « Ouvertes ») : au premier plan de l'ordinateur, agrandie.
+ */
 data class MacWindow(
     val index: Int, val title: String, val minimized: Boolean, val fullscreen: Boolean, val display: Int?,
-    val elsewhere: Boolean = false,
+    val elsewhere: Boolean = false, val front: Boolean = false, val maximized: Boolean = false,
 )
 data class WindowsInfo(val running: Boolean, val windows: List<MacWindow>, val displays: List<MacDisplay>)
+
+/** Vue « Ouvertes » : une appli de l'ordinateur et ses fenêtres ; `key` la désigne pour la piloter. */
+data class OpenApp(val key: String, val name: String, val windows: List<MacWindow>)
+data class OpenWindows(val apps: List<OpenApp>, val displays: List<MacDisplay>)
 
 data class AudioState(val output: Int?, val muted: Boolean, val input: Int, val micMuted: Boolean)
 
@@ -250,6 +257,29 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
         display?.let { body.put("display", it) }
         layout?.let { body.put("layout", it) }
         parseWindows(JSONObject(postJson("/deck/windows/" + encode(tileId), body)))
+    }
+
+    // Vue « Ouvertes » : toutes les applis ouvertes sur l'ordinateur et l'écran de leurs fenêtres.
+
+    suspend fun openWindows(): OpenWindows = io { parseOpenWindows(JSONObject(text(request("GET", "/windows/open", timeoutMs = 20_000)))) }
+
+    /**
+     * `action` : focus (mettre devant), place (sur l'écran `display`, disposition `layout`), minimize (réduire) ou
+     * zoom (agrandir, ou rendre sa taille) ; renvoie la liste à jour.
+     */
+    suspend fun openWindowAction(app: OpenApp, window: MacWindow, action: String, display: Int? = null, layout: String? = null): OpenWindows = io {
+        val body = JSONObject()
+            .put("key", app.key)
+            .put("action", action)
+            .put("window", JSONObject().put("index", window.index).put("title", window.title))
+        display?.let { body.put("display", it) }
+        layout?.let { body.put("layout", it) }
+        parseOpenWindows(JSONObject(postJson("/windows/open", body)))
+    }
+
+    /** Icône PNG d'une appli de l'ordinateur d'après son nom, ou null si elle n'en a pas. */
+    suspend fun appIcon(name: String): ByteArray? = io {
+        try { bytes(request("GET", "/windows/icon?name=" + encode(name))) } catch (e: HttpException) { if (e.code == 404) null else throw e }
     }
 
     /** Icône PNG d'une tuile, ou null si l'appli n'en a pas. */
@@ -519,25 +549,34 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
 
     private fun encode(value: String) = URLEncoder.encode(value, "UTF-8")
 
-    private fun parseWindows(j: JSONObject): WindowsInfo {
-        val windows = j.getJSONArray("windows")
-        val displays = j.getJSONArray("displays")
-        return WindowsInfo(
-            j.getBoolean("running"),
-            (0 until windows.length()).map { i ->
-                val w = windows.getJSONObject(i)
-                MacWindow(
-                    w.getInt("index"), w.getString("title"), w.getBoolean("minimized"), w.getBoolean("fullscreen"),
-                    if (w.isNull("display")) null else w.getInt("display"), w.optBoolean("elsewhere"),
-                )
+    private fun parseWindows(j: JSONObject) =
+        WindowsInfo(j.getBoolean("running"), parseWindowList(j.getJSONArray("windows")), parseDisplays(j.getJSONArray("displays")))
+
+    private fun parseOpenWindows(j: JSONObject): OpenWindows {
+        val apps = j.getJSONArray("apps")
+        return OpenWindows(
+            (0 until apps.length()).map { i ->
+                val a = apps.getJSONObject(i)
+                OpenApp(a.getString("key"), a.getString("name"), parseWindowList(a.getJSONArray("windows")))
             },
-            (0 until displays.length()).map { i ->
-                val d = displays.getJSONObject(i)
-                MacDisplay(
-                    d.getInt("id"), d.getString("label"), d.getBoolean("main"),
-                    d.optInt("x"), d.optInt("y"), d.optInt("w", 1920), d.optInt("h", 1080),
-                )
-            },
+            parseDisplays(j.getJSONArray("displays")),
+        )
+    }
+
+    private fun parseWindowList(windows: JSONArray) = (0 until windows.length()).map { i ->
+        val w = windows.getJSONObject(i)
+        MacWindow(
+            w.getInt("index"), w.getString("title"), w.getBoolean("minimized"), w.getBoolean("fullscreen"),
+            if (w.isNull("display")) null else w.getInt("display"), w.optBoolean("elsewhere"),
+            w.optBoolean("front"), w.optBoolean("maximized"),
+        )
+    }
+
+    private fun parseDisplays(displays: JSONArray) = (0 until displays.length()).map { i ->
+        val d = displays.getJSONObject(i)
+        MacDisplay(
+            d.getInt("id"), d.getString("label"), d.getBoolean("main"),
+            d.optInt("x"), d.optInt("y"), d.optInt("w", 1920), d.optInt("h", 1080),
         )
     }
 

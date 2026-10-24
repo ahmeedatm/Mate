@@ -63,6 +63,7 @@ namespace Companion
                 case "open": Open(Str(req, "target")); return true;
                 case "icon": return AppIcon(Str(req, "id"), Str(req, "out"), Int(req, "size", 96));
                 case "windows": return WindowsOp(req);
+                case "allwindows": return AllWindows(req);
                 case "keys": PressKeys(IntList(req, "mods"), Int(req, "vk", 0), Str(req, "ch")); return true;
                 case "text": TypeText(Str(req, "text")); return true;
                 case "audio": return Audio(req);
@@ -624,18 +625,29 @@ namespace Companion
                 wins = mine();
             }
 
-            var windows = new List<object>();
-            foreach (var w in wins)
-            {
-                var d = new Dictionary<string, object>();
-                d["index"] = w.H.ToInt64();
-                d["title"] = w.Title;
-                d["minimized"] = IsIconic(w.H);
-                d["fullscreen"] = false;
-                d["display"] = ScreenOf(w.H, screens).Id;
-                d["elsewhere"] = false;
-                windows.Add(d);
-            }
+            var res = new Dictionary<string, object>();
+            res["running"] = wins.Count > 0;
+            res["windows"] = wins.Select(w => (object)Describe(w, screens)).ToList();
+            res["displays"] = DisplaysOf(screens);
+            return res;
+        }
+
+        static Dictionary<string, object> Describe(Win w, List<ScreenInfo> screens)
+        {
+            var d = new Dictionary<string, object>();
+            d["index"] = w.H.ToInt64();
+            d["title"] = w.Title;
+            d["minimized"] = IsIconic(w.H);
+            d["fullscreen"] = false;
+            d["display"] = ScreenOf(w.H, screens).Id;
+            d["elsewhere"] = false;
+            d["front"] = w.H == GetForegroundWindow();
+            d["maximized"] = IsZoomed(w.H);
+            return d;
+        }
+
+        static List<object> DisplaysOf(List<ScreenInfo> screens)
+        {
             var displays = new List<object>();
             foreach (var s in screens)
             {
@@ -652,10 +664,100 @@ namespace Companion
                 d["frame"] = f;
                 displays.Add(d);
             }
+            return displays;
+        }
+
+        // --- Vue « Ouvertes » : toutes les fenêtres, chacune avec l'appli du menu Démarrer qui l'a ouverte.
+
+        /** Appli du menu Démarrer (nom) et de quoi reconnaître ses fenêtres ; relu toutes les 5 minutes. */
+        static List<KeyValuePair<string, AppMatch>> startMatches;
+        static DateTime startMatchesAt;
+
+        static List<KeyValuePair<string, AppMatch>> StartMatches()
+        {
+            if (startMatches != null && DateTime.UtcNow - startMatchesAt < TimeSpan.FromMinutes(5)) return startMatches;
+            var list = new List<KeyValuePair<string, AppMatch>>();
+            foreach (Dictionary<string, object> a in Apps())
+            {
+                string name = Convert.ToString(a["name"]), id = Convert.ToString(a["id"]);
+                // Pas les liens web ni les désinstalleurs (même filtre que win/index.ts).
+                if (name.Length == 0 || id.Length == 0 || Regex.IsMatch(id, "^https?:", RegexOptions.IgnoreCase)) continue;
+                if (Regex.IsMatch(name, "uninstall|désinstall|readme|lisez-moi|documentation|release notes|notes de version|^aide|^help", RegexOptions.IgnoreCase)) continue;
+                list.Add(new KeyValuePair<string, AppMatch>(name, MatchFor(id, new List<string>())));
+            }
+            startMatches = list;
+            startMatchesAt = DateTime.UtcNow;
+            return list;
+        }
+
+        /**
+         * Nom de l'appli d'une fenêtre : d'abord par identifiant (une appli web installée depuis un navigateur a le sien,
+         * distinct du navigateur), puis par programme, dossier Squirrel ou paquet ; null si elle n'est pas dans le menu Démarrer.
+         */
+        static string StartAppOf(string aumid, string exe, List<KeyValuePair<string, AppMatch>> apps)
+        {
+            if (aumid != null) foreach (var a in apps) if (string.Equals(a.Value.Aumid, aumid, StringComparison.OrdinalIgnoreCase)) return a.Key;
+            if (exe == null) return null;
+            string lower = exe.ToLowerInvariant();
+            foreach (var a in apps) if (a.Value.Exe != null && string.Equals(a.Value.Exe, exe, StringComparison.OrdinalIgnoreCase)) return a.Key;
+            foreach (var a in apps) if (a.Value.Folder != null && exe.StartsWith(a.Value.Folder, StringComparison.OrdinalIgnoreCase)) return a.Key;
+            foreach (var a in apps)
+                if (a.Value.Package != null && lower.Contains("\\windowsapps\\" + a.Value.Package + "_") && lower.Contains("__" + a.Value.Publisher)) return a.Key;
+            return null;
+        }
+
+        /**
+         * Liste (action "list") ou pilote une fenêtre désignée par son handle (`hwnd`) : "focus", "place", "minimize"
+         * (réduire) ou "zoom" (agrandir, ou rendre sa taille à une fenêtre agrandie).
+         * Chaque fenêtre porte `app` (nom de l'appli du menu Démarrer, ou description du programme) et `exe`.
+         */
+        static object AllWindows(Dictionary<string, object> req)
+        {
+            string action = Str(req, "action") ?? "list";
+            var screens = Screens();
+            if (action != "list")
+            {
+                long hwnd = Has(req, "hwnd") ? Convert.ToInt64(req["hwnd"]) : 0;
+                var target = TopWindows().FirstOrDefault(w => w.H.ToInt64() == hwnd);
+                if (target == null) throw new Exception("Fenêtre introuvable");
+                if (action == "minimize") ShowWindow(target.H, 6); // SW_MINIMIZE
+                else
+                {
+                    if (action == "place") Place(target.H, screens, Int(req, "display", -1), Str(req, "layout") ?? "keep");
+                    // SW_RESTORE si agrandie (ou réduite), sinon SW_MAXIMIZE.
+                    if (action == "zoom") ShowWindow(target.H, IsZoomed(target.H) ? 9 : 3);
+                    Focus(target.H);
+                }
+                Thread.Sleep(150);
+            }
+            var apps = StartMatches();
+            var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var windows = new List<object>();
+            foreach (var w in TopWindows())
+            {
+                string exe = ExePath(w.Pid);
+                string aumid = Aumid(w.H);
+                string key = aumid ?? exe ?? "";
+                string name;
+                if (!names.TryGetValue(key, out name))
+                {
+                    name = StartAppOf(aumid, exe, apps);
+                    if (name == null && exe != null)
+                    {
+                        try { var vi = FileVersionInfo.GetVersionInfo(exe); name = vi.FileDescription; if (string.IsNullOrWhiteSpace(name)) name = vi.ProductName; }
+                        catch (Exception) { }
+                        if (string.IsNullOrWhiteSpace(name)) name = Path.GetFileNameWithoutExtension(exe);
+                    }
+                    names[key] = name = name ?? w.Title;
+                }
+                var d = Describe(w, screens);
+                d["app"] = name;
+                d["exe"] = exe ?? "";
+                windows.Add(d);
+            }
             var res = new Dictionary<string, object>();
-            res["running"] = wins.Count > 0;
             res["windows"] = windows;
-            res["displays"] = displays;
+            res["displays"] = DisplaysOf(screens);
             return res;
         }
 

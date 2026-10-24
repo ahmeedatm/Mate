@@ -1,6 +1,6 @@
 import { run, osascript } from "./run.ts";
 import { findAppBundle } from "./apps.ts";
-import { labelDisplays, type AppWindow, type Layout, type RawScreen, type WindowsInfo, type WindowTarget } from "../screens.ts";
+import { labelDisplays, type AppWindow, type Layout, type OpenAction, type OpenApp, type OpenWindows, type RawScreen, type WindowsInfo, type WindowTarget } from "../screens.ts";
 
 export type { AppWindow, Display, Layout, WindowsInfo, WindowTarget } from "../screens.ts";
 
@@ -208,11 +208,61 @@ function focus(proc, w) {
   w.actions.byName('AXRaise').perform();
 }
 
+// frontProc : l'appli est au premier plan (sa fenêtre principale est alors celle de devant).
+function describe(all, e, frontProc) {
+  const pos = e.w.position(), size = e.w.size();
+  const s = screenOf(all, pos, size);
+  const fullscreen = !!attr(e.w, 'AXFullScreen');
+  const minimized = !!attr(e.w, 'AXMinimized');
+  return {
+    index: e.index, title: e.w.name() || '', minimized: minimized, fullscreen: fullscreen, display: s ? s.id : null, elsewhere: false,
+    front: frontProc && !minimized && !!attr(e.w, 'AXMain'), maximized: fullscreen || (!!s && layoutOf(pos, size, s.visible) === 'max'),
+  };
+}
+
+// Agrandie (remplit l'écran) : ramenée aux deux tiers de l'écran, centrée (macOS ne garde pas la taille d'avant) ; sinon agrandie.
+function zoom(w, all) {
+  if (attr(w, 'AXMinimized')) w.attributes.byName('AXMinimized').value = false;
+  if (attr(w, 'AXFullScreen')) { leaveFullscreen(w); return; }
+  const pos = w.position(), size = w.size();
+  const s = screenOf(all, pos, size) || all[0];
+  const v = s.visible;
+  if (layoutOf(pos, size, v) !== 'max') { place(w, all, s.id, 'max'); return; }
+  const width = Math.round(v.w * 2 / 3), height = Math.round(v.h * 2 / 3);
+  const x = Math.round(v.x + (v.w - width) / 2), y = Math.round(v.y + (v.h - height) / 2);
+  w.position = [x, y];
+  w.size = [width, height];
+  w.position = [x, y];
+}
+
+function displaysOf(all) {
+  return all.map((s) => ({ id: s.id, name: s.name, builtin: s.builtin, main: s.main, frame: s.frame }));
+}
+
+// Vue « Ouvertes » : toutes les applis qui ont une fenêtre sur les bureaux affichés. Pas le menu Fenêtre
+// (autres bureaux) : le lire pour chaque appli prendrait plusieurs secondes.
+function allApps(se, all) {
+  const apps = [];
+  se.applicationProcesses.whose({ backgroundOnly: false })().forEach((p) => {
+    let list;
+    try { list = windowsOf(p); } catch (e) { return; }
+    if (!list.length) return;
+    // Nom de l'appli (Visual Studio Code), pas celui du processus (Code) : il sert à retrouver son icône.
+    let name;
+    try { name = String(p.applicationFile().name()).replace(/[.]app$/, ''); } catch (e) { name = p.name(); }
+    // Sans identifiant de bundle (émulateur…) : désignée par son processus.
+    const front = p.frontmost();
+    apps.push({ key: p.bundleIdentifier() || 'pid:' + p.unixId(), name: name, front: front, windows: list.map((e) => describe(all, e, front)) });
+  });
+  return apps;
+}
+
 function run(argv) {
   const req = JSON.parse(argv[0]);
   const all = screens();
   const se = Application('System Events');
-  const procs = se.applicationProcesses.whose({ bundleIdentifier: req.bundleId })();
+  if (req.op === 'all') return JSON.stringify({ apps: allApps(se, all), displays: displaysOf(all) });
+  const procs = req.pid ? se.applicationProcesses.whose({ unixId: req.pid })() : se.applicationProcesses.whose({ bundleIdentifier: req.bundleId })();
   const proc = procs[0];
 
   if (proc && req.op !== 'list') {
@@ -221,7 +271,9 @@ function run(argv) {
     if (req.window && !targets.length) targets = [reach(proc, all, req.window.title)].filter(Boolean);
     if (req.window && !targets.length) throw new Error('Fenêtre introuvable');
     if (req.op === 'place') targets.forEach((e) => place(e.w, all, req.display, req.layout));
-    if (targets.length) {
+    if (req.op === 'zoom' && targets.length) zoom(targets[0].w, all);
+    if (req.op === 'minimize') targets.forEach((e) => { e.w.attributes.byName('AXMinimized').value = true; });
+    else if (targets.length) {
       const title = targets[0].w.name();
       focus(proc, targets[0].w);
       // Écran occupé par une appli plein écran : macOS range la fenêtre sur le bureau caché derrière,
@@ -232,17 +284,14 @@ function run(argv) {
   }
 
   const list = proc ? windowsOf(proc) : [];
-  const windows = list.map((e) => {
-    const s = screenOf(all, e.w.position(), e.w.size());
-    return { index: e.index, title: e.w.name() || '', minimized: !!attr(e.w, 'AXMinimized'), fullscreen: !!attr(e.w, 'AXFullScreen'), display: s ? s.id : null, elsewhere: false };
-  });
+  const windows = list.map((e) => describe(all, e, !!proc && proc.frontmost()));
   if (proc) elsewhereWindows(proc, list, all).forEach((e) => {
     windows.push({ index: 0, title: e.title, minimized: false, fullscreen: false, display: e.display, elsewhere: true });
   });
   return JSON.stringify({
     running: !!proc,
     windows: windows,
-    displays: all.map((s) => ({ id: s.id, name: s.name, builtin: s.builtin, main: s.main, frame: s.frame })),
+    displays: displaysOf(all),
   });
 }`;
 
@@ -258,9 +307,11 @@ async function bundleId(app: string): Promise<string> {
   return id;
 }
 
-async function call(app: string, req: Record<string, unknown>): Promise<WindowsInfo> {
-  const id = app ? await bundleId(app) : "";
-  const raw = await osascript(SCRIPT, [JSON.stringify({ ...req, bundleId: id })], "JavaScript");
+/** `id` : identifiant de l'appli déjà connu (vue « Ouvertes »), sinon tiré du nom. */
+async function call(app: string, req: Record<string, unknown>, id?: string): Promise<WindowsInfo> {
+  id ??= app ? await bundleId(app) : "";
+  const pid = id.startsWith("pid:") ? Number(id.slice(4)) : undefined;
+  const raw = await osascript(SCRIPT, [JSON.stringify({ ...req, ...(pid ? { pid } : { bundleId: id }) })], "JavaScript");
   const parsed = JSON.parse(raw) as { running: boolean; windows: AppWindow[]; displays: RawScreen[] };
   return { app, running: parsed.running, windows: parsed.windows, displays: labelDisplays(parsed.displays) };
 }
@@ -282,4 +333,18 @@ export function focusWindow(app: string, window?: WindowTarget) {
 /** Déplace une fenêtre (ou toutes) vers un écran et/ou une moitié d'écran, puis la met au premier plan. */
 export function placeWindow(app: string, opts: { window?: WindowTarget; display?: number; layout: Layout }) {
   return call(app, { op: "place", ...opts });
+}
+
+/** Toutes les applis qui ont une fenêtre affichée (vue « Ouvertes »), la plus en avant d'abord ; `key` : identifiant de bundle. */
+export async function listOpenWindows(): Promise<OpenWindows> {
+  const raw = await osascript(SCRIPT, [JSON.stringify({ op: "all" })], "JavaScript");
+  const parsed = JSON.parse(raw) as { apps: (OpenApp & { front: boolean })[]; displays: RawScreen[] };
+  const apps = parsed.apps.sort((a, b) => Number(b.front) - Number(a.front)).map(({ front: _, ...app }) => app);
+  return { apps, displays: labelDisplays(parsed.displays) };
+}
+
+/** Pilote une fenêtre de la vue « Ouvertes », désignée par l'identifiant de son appli. */
+export async function controlOpenWindow(key: string, window: WindowTarget, action: OpenAction, opts?: { display?: number; layout: Layout }) {
+  if (!key) throw new Error("Fenêtre introuvable");
+  await call("", { op: action, window, ...opts }, key);
 }
