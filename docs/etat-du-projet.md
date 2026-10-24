@@ -66,7 +66,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 0. Bug des onglets du Deck (voir plus haut) s'il revient.
 1. **Voix et appels** : appels Teams / WhatsApp (captures pendant un vrai appel) ; idées : météo, réglages de la tablette à la voix. Réactiver l'appli Google sans adb : impossible (un device owner ne peut pas annuler `pm disable-user`), inutile car la procédure du kiosque la garde ; sans elle, Parler ouvre la commande écrite.
-2. Suite du paquet (choix du 24/10 : Node embarqué, zip + installeur actuel ; pas de NSIS ni d'appli .app pour l'instant) : icône pour rouvrir la page, règle du pare-feu Windows. Fait le 25/10 : données du paquet hors du dossier extrait (mise à jour sans perdre l'appairage) et dossier Partage dans `Documents\Partage tablette`, testés sur le PC ; le PC tourne depuis `Documents\Compagnon-Unowhy-PC`, mis à jour depuis le Mac par le partage `Compagnon`.
+2. Suite du paquet (choix du 24/10 : Node embarqué, zip + installeur actuel ; pas de NSIS ni d'appli .app pour l'instant) : icône pour rouvrir la page. Fait le 25/10 : données du paquet hors du dossier extrait (mise à jour sans perdre l'appairage) et dossier Partage dans `Documents\Partage tablette`, testés sur le PC ; règle du pare-feu Windows posée par l'installeur (accord administrateur une fois, réseaux privés), installeur relancé sans erreur sur le PC (Bitdefender y laissait déjà passer Documents : blocage réel pas vérifié) ; le PC tourne depuis `Documents\Compagnon-Unowhy-PC`, mis à jour depuis le Mac par le partage `Compagnon`.
 
 ## Décisions en attente
 

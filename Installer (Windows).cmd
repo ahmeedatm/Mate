@@ -20,6 +20,9 @@ exit /b 0
 
 :embedded
 if not exist "%BACKEND%\node\node.exe" goto :nonodeexe
+echo Autorisation dans le pare-feu de Windows (accepte la demande d'administrateur)...
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%BACKEND%\scripts\firewall-windows.ps1"
+if errorlevel 1 echo Pare-feu non regle : si la tablette ne trouve pas ce PC, relance ce fichier et accepte la demande.
 echo Installation...
 "%BACKEND%\node\node.exe" --env-file-if-exists=.env "%BACKEND%\dist\service.mjs" install || goto :fail
 echo.
