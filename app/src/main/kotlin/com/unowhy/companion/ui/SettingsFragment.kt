@@ -1,13 +1,20 @@
 package com.unowhy.companion.ui
 
 import android.graphics.Typeface
+import android.media.AudioManager
+import android.os.BatteryManager
+import android.provider.Settings
+import android.text.InputType
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
+import android.widget.EditText
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SwitchCompat
@@ -16,10 +23,13 @@ import androidx.core.widget.ImageViewCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.unowhy.companion.Computer
+import com.unowhy.companion.BuildConfig
 import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
+import com.unowhy.companion.device.Screen
+import com.unowhy.companion.device.Tablet
 import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.kiosk.Updater
 import com.unowhy.companion.net.AppUpdate
@@ -30,14 +40,22 @@ import kotlinx.coroutines.launch
 
 class SettingsFragment : Fragment() {
 
+    private lateinit var kioskCard: View
     private lateinit var kioskStatus: TextView
     private lateinit var kioskActions: View
     private lateinit var allowInstalls: SwitchCompat
     private lateinit var allowInstallsHint: View
+    private lateinit var meetingsCard: View
     private lateinit var autoJoin: SwitchCompat
     private lateinit var autoJoinHint: TextView
     private lateinit var computers: LinearLayout
     private lateinit var wifiStatus: TextView
+    private lateinit var battery: TextView
+    private lateinit var batteryHint: TextView
+    private lateinit var brightness: SeekBar
+    private lateinit var volume: SeekBar
+    private lateinit var nightDim: SwitchCompat
+    private lateinit var tabletInfo: TextView
     private lateinit var updatesStatus: TextView
     private lateinit var updates: LinearLayout
     private var installing = false
@@ -52,10 +70,13 @@ class SettingsFragment : Fragment() {
         computers = view.findViewById(R.id.settings_computers)
         view.findViewById<Button>(R.id.settings_add_computer).setOnClickListener { adder.search() }
         view.findViewById<Button>(R.id.settings_add_manual).setOnClickListener { adder.manual() }
+        kioskCard = view.findViewById(R.id.settings_kiosk_card)
+        view.findViewById<View>(R.id.settings_title).setOnLongClickListener { askTechCode(); true }
         kioskStatus = view.findViewById(R.id.settings_kiosk_status)
         kioskActions = view.findViewById(R.id.settings_kiosk_actions)
         allowInstalls = view.findViewById(R.id.settings_allow_installs)
         allowInstallsHint = view.findViewById(R.id.settings_allow_installs_hint)
+        meetingsCard = view.findViewById(R.id.settings_meetings_card)
         autoJoin = view.findViewById(R.id.settings_autojoin)
         autoJoinHint = view.findViewById(R.id.settings_autojoin_hint)
         wifiStatus = view.findViewById(R.id.settings_wifi_status)
@@ -63,6 +84,13 @@ class SettingsFragment : Fragment() {
         updatesStatus = view.findViewById(R.id.settings_updates_status)
         updates = view.findViewById(R.id.settings_updates)
         view.findViewById<Button>(R.id.settings_updates_check).setOnClickListener { checkUpdates() }
+        battery = view.findViewById(R.id.settings_battery)
+        batteryHint = view.findViewById(R.id.settings_battery_hint)
+        brightness = view.findViewById(R.id.settings_brightness)
+        volume = view.findViewById(R.id.settings_volume)
+        nightDim = view.findViewById(R.id.settings_night_dim)
+        tabletInfo = view.findViewById(R.id.settings_tablet_info)
+        setUpTablet()
         renderComputers()
         renderWifi()
 
@@ -82,9 +110,12 @@ class SettingsFragment : Fragment() {
     }
 
     override fun onHiddenChanged(hidden: Boolean) {
+        // Carte Kiosque : seulement le temps de la visite du technicien.
+        if (hidden) kioskCard.visibility = View.GONE
         if (!hidden) {
             renderComputers()
             renderWifi()
+            renderTablet()
             renderKiosk()
             loadAutoJoin()
         }
@@ -105,7 +136,7 @@ class SettingsFragment : Fragment() {
         val all = Computers.all(ctx)
         if (all.isEmpty()) {
             computers.addView(TextView(ctx).apply {
-                setText(R.string.computers_empty)
+                text = getString(R.string.computers_empty, BuildConfig.INSTALL_URL)
                 textSize = 16f
                 setPadding(0, dp(8), 0, 0)
             })
@@ -165,20 +196,27 @@ class SettingsFragment : Fragment() {
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 
     /** L'option vit sur l'ordinateur : c'est lui qui ouvre Teams, même tablette en veille. */
+    /** Carte Réunions Teams : seulement avec un ordinateur qui a Teams (sinon l'option ne sert à rien). */
     private fun loadAutoJoin() {
         if (Computers.active(requireContext()) == null) {
-            autoJoin.isEnabled = false
-            autoJoinHint.setText(R.string.no_computer)
+            meetingsCard.visibility = View.GONE
             return
         }
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                showAutoJoin(BackendClient(requireContext()).autoJoin())
+                val client = BackendClient(requireContext())
+                if (!client.homeFeatures().meetings) {
+                    meetingsCard.visibility = View.GONE
+                    return@launch
+                }
+                meetingsCard.visibility = View.VISIBLE
+                showAutoJoin(client.autoJoin())
                 autoJoin.isEnabled = true
                 autoJoinHint.setText(R.string.autojoin_hint)
             } catch (e: Exception) {
+                // Ordinateur injoignable : la carte reste telle quelle (affichée si elle l'était).
                 autoJoin.isEnabled = false
-                autoJoinHint.text = getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName)
+                autoJoinHint.text = requireContext().errorText(e)
             }
         }
     }
@@ -197,7 +235,7 @@ class SettingsFragment : Fragment() {
                 autoJoinHint.setText(R.string.autojoin_hint)
             } catch (e: Exception) {
                 showAutoJoin(!enabled)
-                autoJoinHint.text = getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName)
+                autoJoinHint.text = requireContext().errorText(e)
             }
         }
     }
@@ -209,6 +247,77 @@ class SettingsFragment : Fragment() {
             name.isEmpty() -> getString(R.string.wifi_current_unnamed)
             else -> getString(R.string.wifi_current, name)
         }
+    }
+
+    // --- Tablette : luminosité, volume, batterie (cachés par le kiosque)
+
+    private fun setUpTablet() {
+        val ctx = requireContext()
+        brightness.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
+                if (!fromUser) return
+                Prefs.setBrightness(ctx, (progress / 100f).coerceAtLeast(Screen.MIN_LEVEL))
+                Screen.apply(requireActivity())
+            }
+            override fun onStartTrackingTouch(bar: SeekBar) = Unit
+            override fun onStopTrackingTouch(bar: SeekBar) = Unit
+        })
+        val audio = ctx.getSystemService(AudioManager::class.java)
+        volume.max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        volume.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
+                if (fromUser) audio.setStreamVolume(AudioManager.STREAM_MUSIC, progress, 0)
+            }
+            override fun onStartTrackingTouch(bar: SeekBar) = Unit
+            // Petit son de contrôle au lâcher : on entend le niveau choisi.
+            override fun onStopTrackingTouch(bar: SeekBar) = audio.playSoundEffect(AudioManager.FX_KEY_CLICK, 1f)
+        })
+        nightDim.setOnCheckedChangeListener { _, checked ->
+            Prefs.setNightDim(ctx, checked)
+            Screen.apply(requireActivity())
+        }
+        renderTablet()
+    }
+
+    private fun renderTablet() {
+        val ctx = requireContext()
+        Tablet.battery(ctx)?.let(::onBattery)
+        val chosen = Prefs.brightness(ctx)
+        // Pas encore réglée ici : position de la luminosité du système (0 à 255).
+        brightness.progress = if (chosen >= 0) (chosen * 100).toInt()
+        else Settings.System.getInt(ctx.contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128) * 100 / 255
+        volume.progress = ctx.getSystemService(AudioManager::class.java).getStreamVolume(AudioManager.STREAM_MUSIC)
+        nightDim.isChecked = Prefs.nightDim(ctx)
+        tabletInfo.text = getString(
+            R.string.tablet_info, BuildConfig.VERSION_NAME, Tablet.ipAddress() ?: getString(R.string.tablet_no_address), android.os.Build.MODEL,
+        )
+    }
+
+    /** Batterie changée (MainActivity, barre latérale) : détail à jour si les Réglages sont affichés. */
+    fun onBattery(state: Tablet.Battery) {
+        if (view == null) return
+        val plug = when (state.plug) {
+            BatteryManager.BATTERY_PLUGGED_AC -> getString(R.string.tablet_plug_ac)
+            BatteryManager.BATTERY_PLUGGED_USB -> getString(R.string.tablet_plug_usb)
+            else -> getString(R.string.tablet_plug_other)
+        }
+        battery.text = if (state.charging) getString(R.string.tablet_battery_charging, state.level, plug)
+        else getString(R.string.tablet_battery_discharging, state.level)
+        battery.setTextColor(ContextCompat.getColor(requireContext(), if (state.low) R.color.ko else R.color.text))
+        val health = when (state.health) {
+            BatteryManager.BATTERY_HEALTH_OVERHEAT -> getString(R.string.tablet_health_overheat)
+            BatteryManager.BATTERY_HEALTH_DEAD -> getString(R.string.tablet_health_dead)
+            BatteryManager.BATTERY_HEALTH_COLD -> getString(R.string.tablet_health_cold)
+            else -> getString(R.string.tablet_health_other)
+        }
+        val hint = when {
+            state.healthIssue -> getString(R.string.tablet_battery_health, health)
+            state.plug == BatteryManager.BATTERY_PLUGGED_USB -> getString(R.string.tablet_battery_slow)
+            else -> null
+        }
+        batteryHint.text = hint
+        batteryHint.setTextColor(ContextCompat.getColor(requireContext(), if (state.healthIssue) R.color.warn else R.color.text_dim))
+        batteryHint.visibility = if (hint == null) View.GONE else View.VISIBLE
     }
 
     // --- Mises à jour
@@ -223,7 +332,7 @@ class SettingsFragment : Fragment() {
                 updatesStatus.setText(if (found.isEmpty()) R.string.updates_none else R.string.updates_hint)
                 for ((update, info) in found) updates.addView(updateRow(update, info))
             } catch (e: Exception) {
-                updatesStatus.text = getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName)
+                updatesStatus.text = requireContext().errorText(e)
             }
         }
     }
@@ -314,7 +423,7 @@ class SettingsFragment : Fragment() {
                 if (view != null) updatesStatus.setText(R.string.updates_cancelled)
             } catch (e: Exception) {
                 showResult(button, bar, ok = false)
-                if (view != null) updatesStatus.text = getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName)
+                if (view != null) updatesStatus.text = requireContext().errorText(e)
             } finally {
                 cancel.visibility = View.GONE
                 installing = false
@@ -342,6 +451,32 @@ class SettingsFragment : Fragment() {
         button.backgroundTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(button.context, if (ok) R.color.ok else R.color.ko))
         button.setText(if (ok) R.string.updates_done else R.string.updates_failed)
         button.isEnabled = !ok
+    }
+
+    /** Code technicien : montre la carte Kiosque (quitter, retirer, autoriser les installations). */
+    private fun askTechCode() {
+        val ctx = requireContext()
+        val input = (layoutInflater.inflate(R.layout.item_input, null, false) as EditText).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        }
+        val box = android.widget.FrameLayout(ctx).apply { setPadding(dp(24), dp(8), dp(24), 0); addView(input) }
+        val dialog = AlertDialog.Builder(ctx)
+            .setTitle(R.string.tech_code_title)
+            .setView(box)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.confirm, null)
+            .create()
+        dialog.showForTyping(input)
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            if (input.text.toString() == BuildConfig.TECH_CODE) {
+                dialog.dismiss()
+                kioskCard.visibility = View.VISIBLE
+                renderKiosk()
+            } else {
+                input.setText("")
+                input.error = getString(R.string.tech_code_wrong)
+            }
+        }
     }
 
     private fun renderKiosk() {

@@ -7,6 +7,12 @@ plugins {
 // Surchargeable : ./gradlew installDebug -PbackendUrl=http://192.168.1.42:3000
 val backendUrl = (findProperty("backendUrl") as String?) ?: "http://127.0.0.1:3000"
 
+// Code technicien (appui long sur le titre de Réglages) : montre la carte Kiosque. -PtechCode=… pour le changer.
+val techCode = (findProperty("techCode") as String?) ?: "4242"
+
+// Adresse courte du logiciel de l'ordinateur, affichée au premier lancement (à taper dans le navigateur de l'ordinateur).
+val installUrl = (findProperty("installUrl") as String?) ?: "unowhy.com/compagnon"
+
 android {
     namespace = "com.unowhy.companion"
     compileSdk = 36
@@ -18,6 +24,8 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         buildConfigField("String", "DEFAULT_BACKEND_URL", "\"$backendUrl\"")
+        buildConfigField("String", "TECH_CODE", "\"$techCode\"")
+        buildConfigField("String", "INSTALL_URL", "\"$installUrl\"")
     }
 
     buildFeatures {

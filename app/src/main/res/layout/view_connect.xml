@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sans ordinateur : à la place d'un mode qui en a besoin (MainActivity) ou dans l'Accueil.
+     Le texte propre au mode (connect_text) est mis par le code ; le bouton ouvre l'écran de bienvenue. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="32dp">
+
+    <ImageView
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_display"
+        app:tint="@color/text_faint" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="center"
+        android:text="@string/connect_title"
+        android:textSize="26sp" />
+
+    <TextView
+        android:id="@+id/connect_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:maxWidth="520dp"
+        android:textColor="@color/text_dim"
+        android:textSize="18sp" />
+
+    <Button
+        android:id="@+id/connect_button"
+        style="@style/PrimaryButton"
+        android:layout_marginTop="24dp"
+        android:drawableStart="@drawable/ic_link"
+        android:text="@string/connect_button" />
+</LinearLayout>

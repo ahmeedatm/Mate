@@ -141,7 +141,7 @@ class WindowPicker @JvmOverloads constructor(
             try {
                 BackendClient(context).call(id)
             } catch (e: Exception) {
-                activity()?.showBanner(context.getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName), 6)
+                activity()?.showBanner(context.errorText(e), 6)
             }
         }
     }
@@ -266,7 +266,7 @@ class WindowPicker @JvmOverloads constructor(
     }
 
     private fun showError(e: Exception) {
-        status.text = context.getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName)
+        status.text = context.errorText(e)
         status.visibility = VISIBLE
     }
 

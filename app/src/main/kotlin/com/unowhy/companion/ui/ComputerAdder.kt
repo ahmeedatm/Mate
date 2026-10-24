@@ -211,7 +211,7 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
     }
 
     private fun reason(e: Exception): String = when (e) {
-        is BackendClient.HttpException -> (e.message ?: "").replace(Regex("^HTTP \\d+ "), "")
+        is BackendClient.HttpException -> e.reason
         else -> context.getString(R.string.computer_lost)
     }
 
@@ -241,11 +241,7 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
         return row
     }
 
-    private fun showWithKeyboard(dialog: AlertDialog, input: EditText) {
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
-        dialog.show()
-        input.requestFocus()
-    }
+    private fun showWithKeyboard(dialog: AlertDialog, input: EditText) = dialog.showForTyping(input)
 
     companion object {
         fun osLabel(context: Context, os: String): String? = when (os) {

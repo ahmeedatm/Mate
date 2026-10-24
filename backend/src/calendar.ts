@@ -2,6 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import ical, { type ParameterValue, type VEvent } from "node-ical";
 import { config } from "./config.ts";
+import { accountEvents, connectedAccounts } from "./accounts.ts";
+import { localEvents } from "./events.ts";
 
 export type CalendarEvent = {
   /** UID de l'événement + début : distingue les occurrences d'une réunion récurrente. */
@@ -15,6 +17,9 @@ export type CalendarEvent = {
   free: boolean;
   /** Lien de la réunion Teams, trouvé dans la description (gardé sur l'ordinateur). */
   joinUrl?: string;
+  /** Événement de l'agenda personnel (src/events.ts) : modifiable depuis la tablette. */
+  localId?: string;
+  remindBefore?: number;
 };
 
 // Lien « Rejoindre la réunion maintenant » d'Outlook : ancien format meetup-join ou nouveau meet/<numéro>.
@@ -53,23 +58,76 @@ export async function saveCalendarUrls(urls: string[]) {
   cache = undefined;
 }
 
+/** Compte connecté ou déconnecté : l'agenda est relu tout de suite. */
+export function invalidateCalendar() {
+  cache = undefined;
+}
+
+/** Cet ordinateur a un agenda : lien ICS ou compte connecté (Microsoft, Google). */
+export async function hasCalendar(): Promise<boolean> {
+  return (await calendarSources()).length > 0 || (await connectedAccounts()).length > 0;
+}
+
 /** Sources d'agenda de cet ordinateur ; "demo" donne l'agenda d'exemple. */
 export async function calendarSources(): Promise<string[]> {
   return [...new Set([...config.icsUrls, ...(await savedCalendarUrls())])];
 }
 
-/** Événements entre `from` et `to`, récurrences dépliées. Sans source : aucun (agenda masqué sur la tablette). */
-export async function getEvents(from: Date, to: Date): Promise<{ source: "ics" | "mock" | "none"; events: CalendarEvent[] }> {
-  const sources = await calendarSources();
-  if (sources.length === 0) return { source: "none", events: [] };
-  if (sources.every((s) => s === "demo")) return { source: "mock", events: mockEvents(from) };
+type Source = "ics" | "mock" | "none" | "local";
 
-  const key = `${sources.join(",")}|${from.getTime()}-${to.getTime()}`;
+/**
+ * Événements entre `from` et `to` : agendas reliés (liens ICS, comptes) puis agenda personnel de la tablette.
+ * `error` : agenda relié injoignable (l'agenda personnel s'affiche quand même).
+ */
+export async function getEvents(from: Date, to: Date): Promise<{ source: Source; events: CalendarEvent[]; error?: string }> {
+  const local = await localEvents(from, to);
+  let remote: { source: Source; events: CalendarEvent[] };
+  try {
+    remote = await remoteEvents(from, to);
+  } catch (e) {
+    if (!local.length) throw e;
+    return { source: "local", events: local, error: (e as Error).message };
+  }
+  if (!local.length) return remote;
+  const events = [...remote.events, ...local].sort((a, b) => a.startMs - b.startMs);
+  return { source: remote.source === "none" ? "local" : remote.source, events };
+}
+
+/**
+ * Agendas reliés entre `from` et `to`, récurrences dépliées : liens ICS et comptes connectés. Une source en échec
+ * n'empêche pas les autres ; tout en échec : l'erreur remonte.
+ */
+async function remoteEvents(from: Date, to: Date): Promise<{ source: Source; events: CalendarEvent[] }> {
+  const sources = await calendarSources();
+  const accounts = await connectedAccounts();
+  if (sources.length === 0 && accounts.length === 0) return { source: "none", events: [] };
+  if (accounts.length === 0 && sources.every((s) => s === "demo")) return { source: "mock", events: mockEvents(from) };
+
+  const key = `${sources.join(",")}|${accounts.map((a) => a.email + a.expired).join(",")}|${from.getTime()}-${to.getTime()}`;
   if (cache && cache.key === key && Date.now() - cache.at < CACHE_MS) return { source: "ics", events: cache.events };
 
   const events: CalendarEvent[] = [];
+  const errors: Error[] = accounts
+    .filter((a) => a.expired)
+    .map((a) => new Error(`Compte ${a.label} à reconnecter (page du compagnon sur l'ordinateur)`));
+  let read = 0;
+  if (accounts.some((a) => !a.expired)) {
+    try {
+      events.push(...(await accountEvents(from, to)));
+      read++;
+    } catch (e) {
+      errors.push(e as Error);
+    }
+  }
   for (const source of sources.filter((s) => s !== "demo")) {
-    const data = await fetchIcs(source);
+    let data;
+    try {
+      data = await fetchIcs(source);
+      read++;
+    } catch (e) {
+      errors.push(e as Error);
+      continue;
+    }
     for (const component of Object.values(data)) {
       if (!component || component.type !== "VEVENT") continue;
       const event = component as VEvent;
@@ -90,6 +148,7 @@ export async function getEvents(from: Date, to: Date): Promise<{ source: "ics" |
       }
     }
   }
+  if (read === 0 && errors.length) throw errors[0];
   events.sort((a, b) => a.startMs - b.startMs);
   cache = { at: Date.now(), key, events };
   return { source: "ics", events };

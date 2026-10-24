@@ -22,11 +22,11 @@ Sur chaque ordinateur à piloter (une fois) :
    - **Mac** : Réglages Système > Confidentialité et sécurité > **Accessibilité** > ajouter `node` (le Finder l'affiche) pour les raccourcis, macros et fenêtres.
    - **Windows** : accepter la demande du **pare-feu** pour Node.js sur les réseaux **privés** ; le WiFi doit être en profil « Privé ».
 
-Sur la tablette : **Réglages > Ordinateurs > Ajouter un ordinateur**, toucher l'ordinateur trouvé sur le WiFi, saisir le code à 6 chiffres affiché sur l'ordinateur. C'est tout : le jeton arrive avec le code. Ordinateur introuvable (autre réseau, diffusion bloquée) : « Saisir l'adresse » avec celle de la page.
+Sur la tablette : au premier lancement, l'écran **Bienvenue** guide en trois étapes (WiFi, adresse du logiciel à ouvrir sur l'ordinateur — `INSTALL_URL`, `-PinstallUrl=…` —, ordinateurs trouvés sur le WiFi). Ensuite : **Réglages > Ordinateurs > Ajouter un ordinateur**, toucher l'ordinateur trouvé sur le WiFi, saisir le code à 6 chiffres affiché sur l'ordinateur. C'est tout : le jeton arrive avec le code. Ordinateur introuvable (autre réseau, diffusion bloquée) : « Saisir l'adresse » avec celle de la page.
 
 **Plusieurs ordinateurs** (bureau le jour, maison le soir) : appairer chacun une fois. La tablette pilote l'ordinateur en gras ; quand il ne répond plus, elle cherche les autres ordinateurs enregistrés et bascule sur celui qui répond (bandeau « Connecté à … »), et retrouve un ordinateur dont l'adresse IP a changé. Changer à la main : toucher le nom de l'ordinateur en bas de la barre latérale, ou Réglages. ✎ pour renommer (« Mac du bureau », « PC maison »). Chaque ordinateur garde ses propres données : agenda, tâches, deck, touches perso, applis et écrans (lus en direct). Le deck de départ ne montre que les applis installées sur cet ordinateur.
 
-**Agenda** : sur la page http://127.0.0.1:3000/ de l'ordinateur, coller le lien ICS de l'agenda (Outlook, Google Agenda, iCloud : marche à suivre sur la page). Sans agenda, les cartes Agenda et Prochain rendez-vous sont masquées sur la tablette.
+**Agenda** : sur la page http://127.0.0.1:3000/ de l'ordinateur, « Se connecter avec Microsoft / Google » (appli à enregistrer une fois par Unowhy : `docs/agenda-comptes.md`), ou coller le lien ICS de l'agenda (Outlook, Google Agenda, iCloud : marche à suivre sur la page). Sans agenda, les cartes Agenda et Prochain rendez-vous sont masquées sur la tablette.
 
 | | Commande (dans `backend/`) |
 |---|---|
@@ -115,6 +115,8 @@ La tablette, tenue à plat à environ 30 cm au-dessus d'une feuille (écran vers
 - Sans jeton, la page n'est lisible que depuis l'ordinateur lui-même (`/camera`, `/camera/stream`, `/camera/status` en GET local) ; l'envoi d'images demande le jeton comme le reste.
 
 ### Tâches et rappels
+
+Depuis la tablette : « Nouvelle tâche » + pour une tâche simple ; ⏰ pour la répéter (tous les jours, lun–ven, jours choisis) et/ou être rappelé à voix haute à une heure ; 🔁 liste toutes les tâches récurrentes (même celles qui ne tombent pas aujourd'hui) pour les supprimer. Elles sont gardées sur l'ordinateur (`backend/.data/tasks.json`). Pour aller plus loin (lien à ouvrir, coche par Jira), le fichier ci-dessous :
 
 Copier `backend/config/tasks.example.json` en `backend/config/tasks.json` (non versionné ; sans ce fichier, pas de tâche quotidienne). Chaque tâche quotidienne accepte :
 

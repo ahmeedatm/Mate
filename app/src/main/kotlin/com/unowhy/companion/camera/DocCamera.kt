@@ -15,6 +15,7 @@ import android.media.Image
 import android.media.ImageReader
 import android.os.Handler
 import android.os.HandlerThread
+import android.util.Log
 import android.util.Range
 import android.util.Size
 import android.view.Surface
@@ -103,7 +104,7 @@ class DocCamera(
                     }
                 }, handler)
             } catch (e: Exception) {
-                onFailure(e.message ?: e.javaClass.simpleName)
+                fail(e)
             }
         }
     }
@@ -171,8 +172,14 @@ class DocCamera(
                 override fun onConfigureFailed(failed: CameraCaptureSession) = onFailure("Configuration de la caméra refusée")
             }, handler)
         } catch (e: Exception) {
-            onFailure(e.message ?: e.javaClass.simpleName)
+            fail(e)
         }
+    }
+
+    /** Détail technique dans le journal, phrase simple à l'écran. */
+    private fun fail(e: Exception) {
+        Log.w("DocCamera", "Caméra", e)
+        onFailure("Caméra indisponible : quitte le mode Caméra et reviens")
     }
 
     private fun startPreview() {
@@ -188,7 +195,7 @@ class DocCamera(
             }
             current.setRepeatingRequest(request.build(), null, handler)
         } catch (e: Exception) {
-            onFailure(e.message ?: e.javaClass.simpleName)
+            fail(e)
         }
     }
 

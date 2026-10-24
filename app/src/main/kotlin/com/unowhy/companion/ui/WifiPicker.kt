@@ -165,7 +165,7 @@ class WifiPicker(private val activity: Activity, private val scope: CoroutineSco
             val ok = runCatching { Wifi.connect(context, ssid, password, sae, hidden) }
             form.message.text = when {
                 ok.getOrNull() == true -> context.getString(R.string.wifi_done, ssid)
-                ok.isFailure -> context.getString(R.string.error_prefix, ok.exceptionOrNull()?.message)
+                ok.isFailure -> context.errorText(ok.exceptionOrNull())
                 password != null -> context.getString(R.string.wifi_failed_password, ssid)
                 else -> context.getString(R.string.wifi_failed, ssid)
             }
@@ -222,9 +222,5 @@ class WifiPicker(private val activity: Activity, private val scope: CoroutineSco
         }
     }
 
-    private fun showWithKeyboard(dialog: AlertDialog, input: EditText) {
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
-        dialog.show()
-        input.requestFocus()
-    }
+    private fun showWithKeyboard(dialog: AlertDialog, input: EditText) = dialog.showForTyping(input)
 }

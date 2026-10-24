@@ -16,7 +16,7 @@ import java.util.UUID
 data class ChatMessage(val role: String, val content: String)
 
 /** Ce que l'ordinateur dit de lui (GET /health, sans jeton) ; `auth` : le jeton envoyé est accepté. */
-data class Identity(val id: String?, val name: String, val os: String, val auth: Boolean)
+data class Identity(val id: String?, val name: String, val os: String, val auth: Boolean, val mode: String = "mock")
 
 /** Résultat de l'appairage par code : jeton à garder et identité de l'ordinateur. */
 data class Pairing(val token: String, val id: String, val name: String, val os: String)
@@ -40,7 +40,8 @@ data class DeckPage(
 )
 
 /** Cartes de l'Accueil selon les applis du deck : agenda (Outlook, Calendrier…), bouton Rejoindre (Teams). */
-data class HomeFeatures(val agenda: Boolean = true, val meetings: Boolean = true)
+/** `linked` : l'ordinateur a un agenda relié (lien ICS, compte) en plus de l'agenda personnel. */
+data class HomeFeatures(val agenda: Boolean = true, val meetings: Boolean = true, val linked: Boolean = true)
 
 /** Choix proposés par l'éditeur de touche perso. */
 data class DeckCatalog(val apps: List<String>, val shortcuts: List<String>, val displays: List<String>)
@@ -88,13 +89,20 @@ data class TaskItem(
     val id: String, val label: String, val daily: Boolean, val done: Boolean,
     /** Cochée par Jira : pas décochable à la main. */
     val auto: Boolean, val detail: String?, val hasUrl: Boolean,
+    /** « Lun–ven · 17:30 », « Rappel à 15:00 » ; `deletable` : pas une tâche du fichier de l'ordinateur. */
+    val schedule: String? = null, val deletable: Boolean = !daily,
 )
 
-/** `joinable` : réunion Teams, le Mac sait l'ouvrir (le lien reste sur le Mac). */
+/**
+ * `joinable` : réunion Teams, l'ordinateur sait l'ouvrir (le lien reste sur l'ordinateur).
+ * `localId` : événement de l'agenda personnel (modifiable depuis la tablette), `remindBefore` : son rappel en minutes.
+ */
 data class CalendarEvent(
     val id: String, val title: String, val location: String, val startMs: Long, val endMs: Long, val allDay: Boolean,
-    val joinable: Boolean,
+    val joinable: Boolean, val localId: String? = null, val remindBefore: Int? = null,
 )
+
+data class CalendarDays(val source: String, val events: List<CalendarEvent>, val error: String?)
 
 /**
  * Client HTTP du backend (agent sur le Mac). HttpURLConnection + org.json, inclus dans Android,
@@ -107,7 +115,7 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
     /** Identité de l'ordinateur ; un ancien backend ne renvoie pas d'`id` (et refuse sans jeton : 401). */
     suspend fun identity(): Identity = io {
         val j = JSONObject(text(request("GET", "/health", timeoutMs = 5_000)))
-        Identity(j.optStringOrNull("id"), j.optString("name", "Mac"), j.optString("os", "mac"), j.optBoolean("auth", true))
+        Identity(j.optStringOrNull("id"), j.optString("name", "Ordinateur"), j.optString("os", "mac"), j.optBoolean("auth", true), j.optString("mode", "mock"))
     }
 
     // --- Appairage : l'ordinateur affiche un code, la tablette le renvoie et reçoit le jeton.
@@ -157,7 +165,9 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
     suspend fun removeDeckApp(tileId: String) = io { text(request("DELETE", "/deck/apps/" + encode(tileId))); Unit }
 
     suspend fun homeFeatures(): HomeFeatures = io {
-        JSONObject(text(request("GET", "/deck/features"))).let { HomeFeatures(it.optBoolean("agenda", true), it.optBoolean("meetings", true)) }
+        JSONObject(text(request("GET", "/deck/features"))).let {
+            HomeFeatures(it.optBoolean("agenda", true), it.optBoolean("meetings", true), it.optBoolean("linked", true))
+        }
     }
 
     /** Applis des pages d'appli (Discord, Teams) en appel en ce moment : elles ont un onglet tant que dure l'appel. */
@@ -364,19 +374,41 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
     /** Ouvre la page du visualiseur dans le navigateur du Mac. */
     suspend fun openCameraOnMac() = io { postJson("/camera/open", JSONObject()); Unit }
 
+    /** Ouvre la page du compagnon sur l'ordinateur ; `section` : "agenda" pour y relier un agenda. */
+    suspend fun openLocalPage(section: String? = null) = io {
+        postJson("/local/open", JSONObject().apply { if (section != null) put("section", section) }); Unit
+    }
+
     // --- Agenda
 
-    suspend fun calendar(days: Int = 1): Pair<String, List<CalendarEvent>> = io {
+    /** Événements des `days` prochains jours ; `error` : agenda relié injoignable (l'agenda personnel est là quand même). */
+    suspend fun calendar(days: Int = 1): CalendarDays = io {
         val json = JSONObject(text(request("GET", "/calendar?days=$days")))
         val events = json.getJSONArray("events")
-        json.getString("source") to (0 until events.length()).map { i ->
-            val e = events.getJSONObject(i)
-            CalendarEvent(
-                e.optString("id"), e.getString("title"), e.optString("location"), e.getLong("startMs"), e.getLong("endMs"),
-                e.getBoolean("allDay"), e.optBoolean("joinable"),
-            )
-        }
+        CalendarDays(
+            json.getString("source"),
+            (0 until events.length()).map { i ->
+                val e = events.getJSONObject(i)
+                CalendarEvent(
+                    e.optString("id"), e.getString("title"), e.optString("location"), e.getLong("startMs"), e.getLong("endMs"),
+                    e.getBoolean("allDay"), e.optBoolean("joinable"), e.optStringOrNull("localId"),
+                    if (e.isNull("remindBefore") || !e.has("remindBefore")) null else e.getInt("remindBefore"),
+                )
+            },
+            json.optStringOrNull("error"),
+        )
     }
+
+    /** Agenda personnel : `id` null = nouvel événement ; `remindBefore` en minutes (0 = à l'heure), null = pas de rappel. */
+    suspend fun saveEvent(id: String?, title: String, startMs: Long, allDay: Boolean, remindBefore: Int?) = io {
+        val body = JSONObject().put("title", title).put("startMs", startMs).put("allDay", allDay)
+            .put("remindBefore", remindBefore ?: JSONObject.NULL)
+        if (id == null) postJson("/calendar/events", body)
+        else text(request("PUT", "/calendar/events/" + encode(id), body.toString().toByteArray(), "application/json; charset=utf-8"))
+        Unit
+    }
+
+    suspend fun deleteEvent(id: String) = io { text(request("DELETE", "/calendar/events/" + encode(id))); Unit }
 
     /** Ouvre la réunion dans Teams sur le Mac. */
     suspend fun joinMeeting(id: String) = io { postJson("/calendar/join", JSONObject().put("id", id)); Unit }
@@ -393,17 +425,34 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
 
     /** `refresh` : force une nouvelle lecture de Jira (sinon gardée 5 min sur le Mac). */
     suspend fun tasks(refresh: Boolean = false): List<TaskItem> = io {
-        val tasks = JSONObject(text(request("GET", "/tasks" + if (refresh) "?refresh=1" else ""))).getJSONArray("tasks")
-        (0 until tasks.length()).map { i ->
-            val t = tasks.getJSONObject(i)
-            TaskItem(
-                t.getString("id"), t.getString("label"), t.getString("kind") == "daily", t.getBoolean("done"),
-                t.getBoolean("auto"), t.optStringOrNull("detail"), t.getBoolean("hasUrl"),
-            )
-        }
+        parseTasks(JSONObject(text(request("GET", "/tasks" + if (refresh) "?refresh=1" else ""))).getJSONArray("tasks"))
     }
 
-    suspend fun addTask(label: String) = io { postJson("/tasks", JSONObject().put("label", label)); Unit }
+    /** Toutes les tâches récurrentes, même celles qui ne tombent pas aujourd'hui. */
+    suspend fun recurringTasks(): List<TaskItem> = io {
+        parseTasks(JSONObject(text(request("GET", "/tasks/recurring"))).getJSONArray("tasks"))
+    }
+
+    private fun parseTasks(tasks: JSONArray) = (0 until tasks.length()).map { i ->
+        val t = tasks.getJSONObject(i)
+        val daily = t.getString("kind") == "daily"
+        TaskItem(
+            t.getString("id"), t.getString("label"), daily, t.getBoolean("done"),
+            t.getBoolean("auto"), t.optStringOrNull("detail"), t.getBoolean("hasUrl"),
+            t.optStringOrNull("schedule"), t.optBoolean("deletable", !daily),
+        )
+    }
+
+    /**
+     * Nouvelle tâche ; `days` (1 = lundi) : récurrente ; `remindAt` ("HH:MM") : rappel parlé.
+     * Renvoie sa fréquence lisible (« Lun–ven · 17:30 »), ou null pour une tâche simple.
+     */
+    suspend fun addTask(label: String, remindAt: String? = null, days: List<Int>? = null): String? = io {
+        val body = JSONObject().put("label", label)
+        if (remindAt != null) body.put("remindAt", remindAt)
+        if (!days.isNullOrEmpty()) body.put("days", JSONArray(days))
+        JSONObject(postJson("/tasks", body)).optStringOrNull("schedule")
+    }
 
     suspend fun setTaskDone(id: String, done: Boolean) = io { postJson("/tasks/${encode(id)}/done", JSONObject().put("done", done)); Unit }
 
@@ -428,7 +477,8 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
 
     // --- Plomberie HTTP
 
-    class HttpException(val code: Int, message: String) : IOException(message)
+    /** `reason` : message de l'ordinateur, rédigé pour être affiché (voir ui/errorText). */
+    class HttpException(val code: Int, val reason: String) : IOException("HTTP $code $reason".trim())
 
     private suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }
 
@@ -507,7 +557,7 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
             conn.disconnect()
             // Fastify : { error: "Internal Server Error", message: <la vraie raison> } ; nos erreurs : { error }.
             val message = runCatching { JSONObject(error).let { it.optString("message").ifEmpty { it.optString("error") } } }.getOrNull()
-            throw HttpException(code, "HTTP $code ${message ?: error.take(200)}".trim())
+            throw HttpException(code, message ?: error.take(200))
         }
         return conn
     }

@@ -1,5 +1,6 @@
 package com.unowhy.companion.kiosk
 
+import android.Manifest
 import android.app.Activity
 import android.app.ActivityManager
 import android.app.admin.DevicePolicyManager
@@ -28,6 +29,12 @@ object Kiosk {
     /** Agent de provisionnement SQOOL (dans l'image : réinstalle le MDM) et MDM : masqués tant que l'appli est device owner. */
     private val HIDDEN_PACKAGES = listOf("com.unowhy.sqoolota", "com.hisqool.devicemanager")
 
+    /**
+     * Accordées d'office : en kiosque, Paramètres est inaccessible, un refus (« Ne plus demander ») serait sans retour.
+     * La localisation est accordée par Wifi (exigée pour lister les réseaux).
+     */
+    private val GRANTED_PERMISSIONS = listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA)
+
     /** "Quitter le kiosque" : suspendu jusqu'au prochain démarrage de l'appli. */
     var suspended = false
         private set
@@ -49,6 +56,9 @@ object Kiosk {
         // Le blocage des installations reste actif même kiosque suspendu.
         lockApps(activity, !Prefs.allowInstalls(activity))
         hideSqool(activity, true)
+        grantPermissions(activity)
+        // Pas d'écran de verrouillage à faire glisser après une mise en veille (aucun code n'est défini).
+        runCatching { dpm(activity).setKeyguardDisabled(admin(activity), true) }
         if (suspended) return
         val dpm = dpm(activity)
         // L'appli caméra du système doit être autorisée, sinon "Photo → Mac" est bloqué en lock task.
@@ -69,6 +79,7 @@ object Kiosk {
         setHome(activity, false)
         lockApps(activity, false)
         hideSqool(activity, false)
+        runCatching { dpm(activity).setKeyguardDisabled(admin(activity), false) }
         dpm(activity).clearDeviceOwnerApp(activity.packageName)
     }
 
@@ -79,6 +90,15 @@ object Kiosk {
         for (restriction in APP_RESTRICTIONS) {
             if (locked) dpm.addUserRestriction(admin(context), restriction)
             else dpm.clearUserRestriction(admin(context), restriction)
+        }
+    }
+
+    private fun grantPermissions(context: Context) {
+        val dpm = dpm(context)
+        for (permission in GRANTED_PERMISSIONS) {
+            runCatching {
+                dpm.setPermissionGrantState(admin(context), context.packageName, permission, DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED)
+            }
         }
     }
 

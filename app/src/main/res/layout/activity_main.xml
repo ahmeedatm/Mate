@@ -14,6 +14,7 @@
     android:orientation="horizontal">
 
     <LinearLayout
+        android:id="@+id/rail"
         android:layout_width="96dp"
         android:layout_height="match_parent"
         android:background="@color/rail"
@@ -29,6 +30,18 @@
             android:layout_height="0dp"
             android:layout_weight="1"
             android:orientation="vertical" />
+
+        <!-- Heure, WiFi, batterie de la tablette (barre d'état masquée en kiosque) ; toucher : Réglages. -->
+        <com.unowhy.companion.ui.TabletStatusView
+            android:id="@+id/tablet_status"
+            android:layout_width="88dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/rail_item_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp" />
 
         <!-- Ordinateur piloté et pastille de connexion ; toucher : changer d'ordinateur. -->
         <LinearLayout
@@ -78,15 +91,29 @@
         </LinearLayout>
     </LinearLayout>
 
+    <!-- Écran du mode ; par-dessus, « Aucun ordinateur connecté » pour les modes qui en ont besoin. -->
     <FrameLayout
-        android:id="@+id/mode_container"
-        android:defaultFocusHighlightEnabled="false"
-        tools:targetApi="o"
-        android:focusable="true"
-        android:focusableInTouchMode="true"
+        android:id="@+id/mode_area"
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_weight="1" />
+        android:layout_weight="1">
+
+        <FrameLayout
+            android:id="@+id/mode_container"
+            android:defaultFocusHighlightEnabled="false"
+            tools:targetApi="o"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <include
+            android:id="@+id/no_computer"
+            layout="@layout/view_connect"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+    </FrameLayout>
 
     <com.unowhy.companion.ui.DocumentPanel
         android:id="@+id/document_panel"
@@ -95,6 +122,13 @@
         android:layout_weight="1"
         android:visibility="gone" />
 </LinearLayout>
+
+    <!-- Premier lancement : tant qu'aucun ordinateur n'est appairé. -->
+    <com.unowhy.companion.ui.WelcomeView
+        android:id="@+id/welcome"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/remote_banner"

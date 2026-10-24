@@ -1,0 +1,5 @@
+{
+  "_comment": "Identifiants PUBLICS des applis enregistrées par Unowhy (connexion à l'agenda, voir docs/agenda-comptes.md). Vide : bouton masqué, lien ICS seulement.",
+  "microsoft": { "clientId": "" },
+  "google": { "clientId": "", "clientSecret": "" }
+}

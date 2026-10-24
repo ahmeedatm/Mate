@@ -27,6 +27,14 @@ export const LOCAL_PAGE = `<!doctype html>
   button { font: inherit; padding: 8px 16px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; margin-top: 10px; cursor: pointer; }
   button.ghost { background: transparent; color: var(--dim); border: 1px solid var(--dim); margin-left: 8px; }
   details { margin-top: 8px; }
+  /* Ouverte depuis la tablette (« Relier mon agenda ») : la carte Agenda est mise en avant. */
+  .card.focus { border: 2px solid var(--accent); }
+  .account { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .account .grow { flex: 1; }
+  .account button { margin-top: 0; }
+  a.button { display: inline-block; font: inherit; padding: 10px 18px; border-radius: 10px; background: var(--accent); color: #fff;
+    text-decoration: none; margin: 10px 8px 0 0; }
+  .ok { color: var(--ok); } .ko { color: var(--ko); }
 </style>
 </head>
 <body>
@@ -55,18 +63,24 @@ export const LOCAL_PAGE = `<!doctype html>
     <div class="dim" style="margin-top:8px">Ordinateur absent de la liste : « Saisir l'adresse » avec l'adresse ci-dessus.</div>
   </div>
 
-  <div class="card">
+  <div class="card" id="agenda">
     <b>Agenda de cet ordinateur</b>
     <div class="dim" id="calstate">…</div>
-    <input id="calurl" placeholder="Lien ICS (https://… ou webcal://…)" autocomplete="off">
-    <button id="calsave">Enregistrer</button><button class="ghost" id="calclear">Retirer</button>
-    <div id="calmsg" class="dim" style="margin-top:8px"></div>
-    <details class="dim">
-      <summary>Où trouver le lien ICS ?</summary>
-      <b>Outlook</b> (outlook.office.com) : Paramètres › Calendrier › Calendriers partagés › Publier un calendrier, choisir
-      « Peut afficher tous les détails », Publier, puis copier le lien <b>ICS</b>.<br>
-      <b>Google Agenda</b> : Paramètres › (ton agenda) › Intégrer l'agenda › Adresse secrète au format iCal.<br>
-      <b>iCloud</b> : app Calendrier › clic droit sur l'agenda › Partager › Agenda public, copier le lien webcal://.
+    <!-- Comptes connectés et boutons « Se connecter avec … » (si l'appli est enregistrée, voir src/accounts.ts). -->
+    <div id="accounts"></div>
+    <div id="accountmsg" class="dim" style="margin-top:8px"></div>
+    <details id="ics" style="margin-top:12px">
+      <summary id="icssummary">Lien ICS de ton agenda</summary>
+      <input id="calurl" placeholder="Lien ICS (https://… ou webcal://…)" autocomplete="off">
+      <button id="calsave">Enregistrer</button><button class="ghost" id="calclear">Retirer</button>
+      <div id="calmsg" class="dim" style="margin-top:8px"></div>
+      <details class="dim" id="icshelp">
+        <summary>Où trouver le lien ICS ?</summary>
+        <b>Outlook</b> (outlook.office.com) : Paramètres › Calendrier › Calendriers partagés › Publier un calendrier, choisir
+        « Peut afficher tous les détails », Publier, puis copier le lien <b>ICS</b>.<br>
+        <b>Google Agenda</b> : Paramètres › (ton agenda) › Intégrer l'agenda › Adresse secrète au format iCal.<br>
+        <b>iCloud</b> : app Calendrier › clic droit sur l'agenda › Partager › Agenda public, copier le lien webcal://.
+      </details>
     </details>
   </div>
 </main>
@@ -80,9 +94,10 @@ export const LOCAL_PAGE = `<!doctype html>
       document.getElementById("addr").textContent = s.addresses.map((a) => a + ":" + s.port).join("  ·  ") || "aucune (pas de réseau)";
       document.getElementById("dot").className = "dot" + (s.tablet ? " on" : "");
       document.getElementById("state").textContent = s.tablet ? "Tablette connectée" : "Tablette non connectée";
-      const c = s.calendar, n = c.env + c.saved.length;
-      document.getElementById("calstate").textContent = n === 0 ? "Aucun agenda : la carte Agenda est masquée sur la tablette."
+      const c = s.calendar, n = c.env + c.saved.length + c.accounts.length;
+      document.getElementById("calstate").textContent = n === 0 ? "Aucun agenda : la tablette propose de le relier."
         : (c.saved.length ? "Lien enregistré : " + c.saved.join(", ") : "") + (c.env ? (c.saved.length ? " · " : "") + c.env + " lien(s) dans .env" : "");
+      renderAccounts(c);
       const p = s.pairing;
       document.getElementById("pairing").style.display = p ? "block" : "none";
       if (p) {
@@ -93,6 +108,60 @@ export const LOCAL_PAGE = `<!doctype html>
       document.getElementById("os").textContent = "Compagnon arrêté";
     }
   }
+  // Comptes : reconstruits seulement s'ils changent (la page se rafraîchit toutes les 1,5 s).
+  let accountsKey = "", firstRender = true;
+  function renderAccounts(c) {
+    const key = JSON.stringify([c.accounts, c.providers]);
+    if (key !== accountsKey) {
+      accountsKey = key;
+      const box = document.getElementById("accounts");
+      box.replaceChildren();
+      for (const a of c.accounts) {
+        const row = document.createElement("div");
+        row.className = "account";
+        const label = document.createElement("span");
+        label.className = "grow";
+        label.innerHTML = a.expired ? '<span class="ko">⚠</span> ' : '<span class="ok">✓</span> ';
+        label.append(a.label + " · " + a.email + (a.expired ? " (à reconnecter)" : ""));
+        const off = document.createElement("button");
+        off.className = "ghost";
+        off.textContent = "Déconnecter";
+        off.onclick = async () => { await fetch("/local/accounts/" + a.provider, { method: "DELETE" }); refresh(); };
+        row.append(label);
+        if (a.expired) row.append(connectLink(a.provider, "Reconnecter"));
+        row.append(off);
+        box.append(row);
+      }
+      for (const p of c.providers) {
+        if (!c.accounts.some((a) => a.provider === p.provider)) box.append(connectLink(p.provider, "Se connecter avec " + p.label));
+      }
+      // Avec un compte possible, le lien ICS devient la solution de repli.
+      document.getElementById("icssummary").textContent = c.providers.length ? "Autre agenda : lien ICS" : "Lien ICS de ton agenda";
+    }
+    if (firstRender) {
+      firstRender = false;
+      if (!c.providers.length) document.getElementById("ics").open = true;
+      if (new URLSearchParams(location.search).get("section") === "agenda" && !c.providers.length) {
+        document.getElementById("icshelp").open = true;
+        document.getElementById("calurl").focus();
+      }
+    }
+  }
+  function connectLink(provider, text) {
+    const link = document.createElement("a");
+    link.className = "button";
+    link.href = "/oauth/" + provider + "/start";
+    link.textContent = text;
+    return link;
+  }
+  const ACCOUNT_MSG = {
+    ok: "✓ Compte connecté : l'agenda arrive sur la tablette dans la minute.",
+    refused: "Connexion annulée.",
+    error: "La connexion a échoué. Réessaie ; sinon colle un lien ICS ci-dessous.",
+  };
+  const accountResult = new URLSearchParams(location.search).get("account");
+  if (ACCOUNT_MSG[accountResult]) document.getElementById("accountmsg").textContent = ACCOUNT_MSG[accountResult];
+
   async function saveCalendar(urls) {
     const msg = document.getElementById("calmsg");
     msg.textContent = "Vérification…";
@@ -113,6 +182,11 @@ export const LOCAL_PAGE = `<!doctype html>
     if (url) saveCalendar([url]);
   };
   document.getElementById("calclear").onclick = () => saveCalendar([]);
+  if (new URLSearchParams(location.search).get("section") === "agenda") {
+    const card = document.getElementById("agenda");
+    card.classList.add("focus");
+    card.scrollIntoView({ block: "center" });
+  }
   refresh();
   setInterval(refresh, 1500);
 </script>

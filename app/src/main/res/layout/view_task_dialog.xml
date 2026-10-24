@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nouvelle tâche avec options (TaskDialog) : répétition et rappel parlé. Défilable : le clavier prend la moitié de l'écran. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="24dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="24dp">
+
+    <include
+        android:id="@+id/task_dialog_label"
+        layout="@layout/item_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <TextView
+        style="@style/CardTitle"
+        android:layout_marginTop="20dp"
+        android:drawableStart="@drawable/ic_repeat"
+        android:text="@string/task_repeat" />
+
+    <LinearLayout
+        android:id="@+id/task_dialog_repeat"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+
+        <Button style="@style/Chip" android:text="@string/task_repeat_once" />
+        <Button style="@style/Chip" android:layout_marginStart="8dp" android:text="@string/task_repeat_daily" />
+        <Button style="@style/Chip" android:layout_marginStart="8dp" android:text="@string/task_repeat_weekdays" />
+        <Button style="@style/Chip" android:layout_marginStart="8dp" android:text="@string/task_repeat_custom" />
+    </LinearLayout>
+
+    <!-- Jours choisis : lundi … dimanche. -->
+    <LinearLayout
+        android:id="@+id/task_dialog_days"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal"
+        android:visibility="gone" />
+
+    <TextView
+        style="@style/CardTitle"
+        android:layout_marginTop="20dp"
+        android:drawableStart="@drawable/ic_alarm"
+        android:text="@string/task_reminder" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/task_dialog_remind"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:minHeight="48dp"
+            android:text="@string/task_reminder_switch"
+            android:textSize="16sp" />
+
+        <Button
+            android:id="@+id/task_dialog_time"
+            style="@style/ActionButton"
+            android:layout_marginStart="12dp"
+            android:enabled="false"
+            android:textSize="20sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/task_dialog_hint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/text_dim"
+        android:textSize="14sp" />
+</LinearLayout>
+</ScrollView>

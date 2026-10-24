@@ -4,7 +4,8 @@ import { execFile } from "node:child_process";
 export function run(cmd: string, args: string[], timeoutMs = 10_000): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(cmd, args, { timeout: timeoutMs }, (err, stdout, stderr) => {
-      if (err) reject(new Error((stderr || err.message).trim()));
+      // `technical` : texte brut de la commande, gardé dans le journal plutôt que montré sur la tablette (server.ts).
+      if (err) reject(Object.assign(new Error((stderr || err.message).trim()), { technical: true }));
       else resolve(stdout.trim());
     });
   });

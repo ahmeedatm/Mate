@@ -304,7 +304,7 @@ class CameraFragment : Fragment() {
                         val saved = backend.uploadPhoto(file)
                         Toast.makeText(requireContext(), getString(R.string.camera_photo_sent, saved.substringAfterLast('/')), Toast.LENGTH_LONG).show()
                     } catch (e: Exception) {
-                        Toast.makeText(requireContext(), getString(R.string.error_prefix, e.message), Toast.LENGTH_LONG).show()
+                        Toast.makeText(requireContext(), requireContext().errorText(e), Toast.LENGTH_LONG).show()
                     } finally {
                         photo.isEnabled = true
                     }
@@ -319,7 +319,7 @@ class CameraFragment : Fragment() {
                 BackendClient(requireContext()).openCameraOnMac()
                 Toast.makeText(requireContext(), R.string.camera_opened, Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), getString(R.string.error_prefix, e.message), Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), requireContext().errorText(e), Toast.LENGTH_LONG).show()
             }
         }
     }

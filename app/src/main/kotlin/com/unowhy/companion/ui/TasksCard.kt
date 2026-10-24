@@ -3,16 +3,14 @@ package com.unowhy.companion.ui
 import android.content.Context
 import android.graphics.Paint
 import android.util.AttributeSet
-import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
-import android.view.inputmethod.EditorInfo
 import android.widget.CheckBox
-import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
@@ -21,8 +19,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
- * Carte « Tâches du jour » de l'Accueil, stockées sur le Mac : quotidiennes (config/tasks.json,
- * ex. le worklog Jira, cochée toute seule quand la journée est saisie) et ponctuelles (ajoutées ici ou par Claude).
+ * Carte « Tâches du jour » de l'Accueil, stockées sur l'ordinateur : récurrentes (créées ici avec ⏰, ou dans
+ * config/tasks.json comme le worklog Jira, cochée toute seule quand la journée est saisie) et ponctuelles (ici ou
+ * par Claude), avec rappel parlé. 🔁 : toutes les récurrentes, même celles qui ne tombent pas aujourd'hui.
  */
 class TasksCard @JvmOverloads constructor(
     context: Context,
@@ -32,7 +31,7 @@ class TasksCard @JvmOverloads constructor(
     private val list: LinearLayout
     private val count: TextView
     private val status: TextView
-    private val input: EditText
+    private val input: TextView
 
     private lateinit var scope: CoroutineScope
     private var onPending: (Int) -> Unit = {}
@@ -44,12 +43,12 @@ class TasksCard @JvmOverloads constructor(
         count = findViewById(R.id.tasks_count)
         status = findViewById(R.id.tasks_status)
         input = findViewById(R.id.tasks_input)
-        findViewById<ImageButton>(R.id.tasks_add).setOnClickListener { add() }
+        // Champ et + : fenêtre de tâche en haut de l'écran, au-dessus du clavier (texte, puis répétition et rappel).
+        val newTask = View.OnClickListener { TaskDialog(context) { label, remindAt, days -> add(label, remindAt, days) }.show("") }
+        input.setOnClickListener(newTask)
+        findViewById<ImageButton>(R.id.tasks_add).setOnClickListener(newTask)
+        findViewById<ImageButton>(R.id.tasks_recurring).setOnClickListener { showRecurring() }
         findViewById<ImageButton>(R.id.tasks_refresh).setOnClickListener { launch { load(refresh = true) } }
-        input.setOnEditorActionListener { _, actionId, event ->
-            val hardwareEnter = event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN
-            if (actionId == EditorInfo.IME_ACTION_DONE || hardwareEnter) { add(); true } else false
-        }
     }
 
     /** [onPending] reçoit le nombre de tâches non faites (badge de la barre latérale). */
@@ -64,7 +63,7 @@ class TasksCard @JvmOverloads constructor(
         } catch (e: Exception) {
             list.removeAllViews()
             count.text = ""
-            showStatus(context.getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName))
+            showStatus(context.errorText(e))
         }
     }
 
@@ -75,19 +74,53 @@ class TasksCard @JvmOverloads constructor(
             try {
                 block()
             } catch (e: Exception) {
-                Toast.makeText(context, context.getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName), Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.errorText(e), Toast.LENGTH_LONG).show()
             }
         }
     }
 
-    private fun add() {
-        val label = input.text.toString().trim()
-        if (label.isEmpty()) return
-        input.text.clear()
+    private fun add(label: String, remindAt: String?, days: List<Int>?) {
         launch {
-            client().addTask(label)
+            val schedule = client().addTask(label, remindAt, days)
+            // Une tâche « lun–ven » créée un samedi n'apparaît pas aujourd'hui : on dit qu'elle est bien enregistrée.
+            if (schedule != null) Toast.makeText(context, context.getString(R.string.task_added, schedule), Toast.LENGTH_LONG).show()
             load()
         }
+    }
+
+    /** Liste de toutes les tâches récurrentes, avec ✕ pour supprimer celles créées depuis la tablette. */
+    private fun showRecurring() = launch {
+        val tasks = client().recurringTasks()
+        val box = LinearLayout(context).apply {
+            orientation = VERTICAL
+            val pad = (24 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad / 3, pad, 0)
+        }
+        val dialog = AlertDialog.Builder(context)
+            .setTitle(R.string.tasks_recurring)
+            .setView(box)
+            .setPositiveButton(R.string.close, null)
+            .create()
+        if (tasks.isEmpty()) box.addView(TextView(context).apply { setText(R.string.tasks_recurring_empty); textSize = 16f })
+        for (task in tasks) {
+            val row = LayoutInflater.from(context).inflate(R.layout.item_task, box, false)
+            row.findViewById<TextView>(R.id.task_label).text = task.label
+            row.findViewById<TextView>(R.id.task_detail).text = task.schedule
+            row.findViewById<CheckBox>(R.id.task_check).visibility = View.GONE
+            row.findViewById<ImageButton>(R.id.task_open).visibility = View.GONE
+            row.findViewById<ImageButton>(R.id.task_delete).apply {
+                visibility = if (task.deletable) View.VISIBLE else View.GONE
+                setOnClickListener {
+                    launch {
+                        client().deleteTask(task.id)
+                        box.removeView(row)
+                        load()
+                    }
+                }
+            }
+            box.addView(row)
+        }
+        dialog.show()
     }
 
     private fun render(tasks: List<TaskItem>) {
@@ -113,7 +146,7 @@ class TasksCard @JvmOverloads constructor(
             else label.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
 
             val detail = row.findViewById<TextView>(R.id.task_detail)
-            detail.text = task.detail ?: if (task.daily) context.getString(R.string.task_daily) else ""
+            detail.text = task.detail ?: task.schedule ?: if (task.daily) context.getString(R.string.task_daily) else ""
             detail.visibility = if (detail.text.isEmpty()) View.GONE else View.VISIBLE
 
             row.findViewById<CheckBox>(R.id.task_check).apply {
@@ -136,7 +169,7 @@ class TasksCard @JvmOverloads constructor(
                 }
             }
             row.findViewById<ImageButton>(R.id.task_delete).apply {
-                visibility = if (task.daily) View.GONE else View.VISIBLE
+                visibility = if (task.deletable) View.VISIBLE else View.GONE
                 setOnClickListener {
                     launch {
                         client().deleteTask(task.id)

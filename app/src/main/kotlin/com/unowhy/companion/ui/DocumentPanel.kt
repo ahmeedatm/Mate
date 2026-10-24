@@ -99,7 +99,7 @@ class DocumentPanel @JvmOverloads constructor(
                 val message = runCatching {
                     if (url != null) BackendClient(context).openUrlOnComputer(url) else BackendClient(context).openOnMac(current!!.path)
                 }
-                    .fold({ context.getString(R.string.opened_on_mac) }, { context.getString(R.string.error_prefix, it.message) })
+                    .fold({ context.getString(R.string.opened_on_mac) }, { context.errorText(it) })
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
         }
@@ -146,7 +146,7 @@ class DocumentPanel @JvmOverloads constructor(
                     else -> showStatus(context.getString(R.string.unsupported_doc))
                 }
             } catch (e: Exception) {
-                showStatus(context.getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName))
+                showStatus(context.errorText(e))
             }
         }
     }
@@ -164,7 +164,7 @@ class DocumentPanel @JvmOverloads constructor(
             try {
                 showWeb(BackendClient(context).browserPage())
             } catch (e: Exception) {
-                showStatus(context.getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName))
+                showStatus(context.errorText(e))
             }
         }
     }

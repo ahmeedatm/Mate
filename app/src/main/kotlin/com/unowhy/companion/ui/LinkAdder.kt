@@ -171,7 +171,7 @@ class LinkAdder @JvmOverloads constructor(
     }
 
     private fun showError(e: Exception) {
-        status.text = context.getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName)
+        status.text = context.errorText(e)
         status.visibility = VISIBLE
     }
 

@@ -9,7 +9,7 @@ import {
 } from "./os.ts";
 import type { Layout } from "./screens.ts";
 import { loadKeys, loadLinks, loadSavedApps, saveApps, saveLinks, type DeckApp, type DeckLink } from "./perso.ts";
-import { calendarSources } from "./calendar.ts";
+import { hasCalendar } from "./calendar.ts";
 
 /**
  * Étapes possibles d'une tuile. La tablette n'envoie qu'un identifiant de tuile : seules les actions
@@ -131,12 +131,12 @@ export async function removeDeckLink(id: string) {
 const MEETING_APPS = /^(Microsoft )?Teams/i;
 
 /**
- * Cartes de l'Accueil selon cet ordinateur : agenda s'il en a un (lien ICS), bouton Rejoindre si Teams
- * est dans la page Apps.
+ * Cartes de l'Accueil selon cet ordinateur : agenda toujours (agenda personnel rempli depuis la tablette), `linked` s'il
+ * a aussi un agenda relié (lien ICS, compte), bouton Rejoindre si Teams est dans la page Apps.
  */
 export async function homeFeatures() {
   const names = (await deckApps(await loadConfig())).map((a) => a.name);
-  return { agenda: (await calendarSources()).length > 0, meetings: names.some((n) => MEETING_APPS.test(n)) };
+  return { agenda: true, linked: await hasCalendar(), meetings: names.some((n) => MEETING_APPS.test(n)) };
 }
 
 export async function loadDeck(): Promise<DeckPage[]> {

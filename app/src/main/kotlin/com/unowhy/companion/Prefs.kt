@@ -7,6 +7,8 @@ object Prefs {
     private const val FILE = "companion"
     private const val KEY_SPEAK = "speak_replies"
     private const val KEY_ALLOW_INSTALLS = "allow_installs"
+    private const val KEY_BRIGHTNESS = "brightness"
+    private const val KEY_NIGHT_DIM = "night_dim"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -19,6 +21,20 @@ object Prefs {
 
     fun setSpeakReplies(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_SPEAK, value).apply()
+    }
+
+    /** Luminosité de l'écran choisie dans Réglages (0,05 à 1) ; -1 : celle du système. */
+    fun brightness(context: Context): Float = prefs(context).getFloat(KEY_BRIGHTNESS, -1f)
+
+    fun setBrightness(context: Context, value: Float) {
+        prefs(context).edit().putFloat(KEY_BRIGHTNESS, value).apply()
+    }
+
+    /** Écran atténué la nuit (il reste allumé en permanence). Activé par défaut. */
+    fun nightDim(context: Context): Boolean = prefs(context).getBoolean(KEY_NIGHT_DIM, true)
+
+    fun setNightDim(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_NIGHT_DIM, value).apply()
     }
 
     /** Kiosque : installations permises (mise à jour de l'appli par adb). Bloquées par défaut. */

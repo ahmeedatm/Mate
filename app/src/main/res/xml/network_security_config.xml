@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Release : HTTPS uniquement. -->
+<!-- HTTP en clair autorisé : le backend de l'ordinateur est joint en http://<IP du réseau local>:3000
+     (une plage d'adresses ne peut pas s'écrire ici). Ce qui protège l'ordinateur : le jeton donné à l'appairage. -->
 <network-security-config>
-    <base-config cleartextTrafficPermitted="false" />
+    <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

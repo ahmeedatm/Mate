@@ -23,10 +23,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.unowhy.companion.audio.Speaker
+import com.unowhy.companion.device.Screen
+import com.unowhy.companion.device.Tablet
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
+import com.unowhy.companion.focus.Water
 import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.remote.RemoteChannel
+import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.Link
 import com.unowhy.companion.ui.CameraFragment
@@ -39,6 +43,8 @@ import com.unowhy.companion.ui.HomeFragment
 import com.unowhy.companion.ui.FocusFragment
 import com.unowhy.companion.ui.IconCache
 import com.unowhy.companion.ui.SettingsFragment
+import com.unowhy.companion.ui.TabletStatusView
+import com.unowhy.companion.ui.WelcomeView
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -51,14 +57,17 @@ interface VolumeKeyHandler {
 /** Unique Activity : plein écran, écran toujours allumé, un Fragment par mode + panneau document. */
 class MainActivity : AppCompatActivity() {
 
-    /** Les tâches sont sur l'Accueil : l'ancien mode "tasks" (ordinateur, extension Claude) y mène. */
-    private enum class Mode(val icon: Int, val label: Int) {
+    /**
+     * Les tâches sont sur l'Accueil : l'ancien mode "tasks" (ordinateur, extension Claude) y mène.
+     * `connect` : sans ordinateur, le mode est remplacé par « Aucun ordinateur connecté » et ce texte.
+     */
+    private enum class Mode(val icon: Int, val label: Int, val connect: Int? = null) {
         HOME(R.drawable.ic_home, R.string.mode_home),
-        DECK(R.drawable.ic_deck, R.string.mode_deck),
-        CHAT(R.drawable.ic_chat, R.string.mode_chat),
-        DOCS(R.drawable.ic_folder, R.string.mode_docs),
+        DECK(R.drawable.ic_deck, R.string.mode_deck, R.string.connect_deck),
+        CHAT(R.drawable.ic_chat, R.string.mode_chat, R.string.connect_chat),
+        DOCS(R.drawable.ic_folder, R.string.mode_docs, R.string.connect_docs),
         FOCUS(R.drawable.ic_timer, R.string.mode_focus),
-        CAMERA(R.drawable.ic_videocam, R.string.mode_camera),
+        CAMERA(R.drawable.ic_videocam, R.string.mode_camera, R.string.connect_camera),
         SETTINGS(R.drawable.ic_settings, R.string.mode_settings),
     }
 
@@ -71,6 +80,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var statusDot: View
     private lateinit var statusName: TextView
     private lateinit var banner: TextView
+    private lateinit var welcome: WelcomeView
+    private lateinit var noComputer: View
+    /** Ordinateur dont on a déjà demandé s'il a un vrai assistant (mode live). */
+    private var assistantCheckedFor: String? = null
+    /** Bandeau « batterie faible » déjà montré (de nouveau après une recharge). */
+    private var lowBatteryWarned = false
     private var channel: Job? = null
     private val computerDialogs by lazy { ComputerAdder(this, lifecycleScope) { onComputerChanged(it) } }
     /** Dernier état de la liaison, repris par les Réglages et le sélecteur d'ordinateur. */
@@ -94,6 +109,10 @@ class MainActivity : AppCompatActivity() {
             bar.addView(view)
             railItems[mode] = RailItem(view, label, view.findViewById(R.id.rail_badge))
         }
+        // Assistant : affiché seulement quand l'ordinateur actif a un vrai assistant (voir refreshAssistant).
+        railItems.getValue(Mode.CHAT).view.visibility = View.GONE
+
+        setUpKeyboard()
 
         @Suppress("DEPRECATION") // seul moyen fiable d'être prévenu sur API 24
         window.decorView.setOnSystemUiVisibilityChangeListener { flags ->
@@ -106,25 +125,44 @@ class MainActivity : AppCompatActivity() {
         documentPanel = findViewById(R.id.document_panel)
         documentPanel.attach(lifecycleScope)
         documentPanel.onExpandedChanged = { expanded ->
-            findViewById<View>(R.id.mode_container).visibility = if (expanded) View.GONE else View.VISIBLE
+            findViewById<View>(R.id.mode_area).visibility = if (expanded) View.GONE else View.VISIBLE
         }
         statusDot = findViewById(R.id.status_dot)
         statusName = findViewById(R.id.status_name)
         findViewById<View>(R.id.status).setOnClickListener { showComputerPicker() }
+        findViewById<TabletStatusView>(R.id.tablet_status).apply {
+            setOnClickListener { show(Mode.SETTINGS) }
+            onMinute = {
+                Screen.apply(this@MainActivity)
+                remindWater()
+            }
+            onBattery = ::onBattery
+        }
         banner = findViewById(R.id.remote_banner)
         banner.setOnClickListener { hideBanner.run() }
+        noComputer = findViewById(R.id.no_computer)
+        noComputer.findViewById<View>(R.id.connect_button).setOnClickListener { showWelcome() }
+        welcome = findViewById(R.id.welcome)
+        welcome.attach(this) { computer ->
+            welcome.hide()
+            onComputerChanged(computer)
+            show(Mode.HOME)
+            showBanner(getString(R.string.welcome_done, computer.name), 6)
+        }
 
         // Retour ne quitte jamais l'appli : il ferme le document ouvert, sinon ramène à l'accueil.
         onBackPressedDispatcher.addCallback(this) {
             when {
+                welcome.visibility == View.VISIBLE -> Unit
                 documentPanel.visibility == View.VISIBLE -> documentPanel.close()
                 current != Mode.HOME -> show(Mode.HOME)
             }
         }
 
         val restored = savedInstanceState?.getString(STATE_MODE)?.let { runCatching { Mode.valueOf(it) }.getOrNull() }
-        // Premier lancement : aucun ordinateur, on commence par l'appairage.
-        show(restored ?: if (Computers.all(this).isEmpty()) Mode.SETTINGS else Mode.HOME)
+        show(restored ?: Mode.HOME)
+        // Premier lancement (ou plus aucun ordinateur) : écran de bienvenue.
+        if (savedInstanceState == null && Computers.all(this).isEmpty()) welcome.show()
         showLink(Link(Computers.active(this), Link.State.OFFLINE))
         startChannel()
     }
@@ -160,7 +198,31 @@ class MainActivity : AppCompatActivity() {
             Link.State.NONE -> R.string.no_computer
         }
         findViewById<View>(R.id.status).contentDescription = getString(state)
+        refreshAssistant(link)
         (supportFragmentManager.findFragmentByTag(Mode.SETTINGS.name) as? SettingsFragment)?.onLinkChanged()
+    }
+
+    /**
+     * Mode Assistant seulement si l'ordinateur actif a un vrai assistant (`mode: live`) : en `mock`, il ne répondrait
+     * que des phrases factices. Demandé une fois par ordinateur, dès qu'il répond.
+     */
+    private fun refreshAssistant(link: Link) {
+        val computer = link.computer
+        if (computer == null) {
+            assistantCheckedFor = null
+            return setAssistantAvailable(false)
+        }
+        if (link.state != Link.State.ONLINE || assistantCheckedFor == computer.id) return
+        assistantCheckedFor = computer.id
+        lifecycleScope.launch {
+            val live = runCatching { BackendClient(this@MainActivity).identity().mode == "live" }.getOrDefault(false)
+            setAssistantAvailable(live)
+        }
+    }
+
+    private fun setAssistantAvailable(available: Boolean) {
+        railItems.getValue(Mode.CHAT).view.visibility = if (available) View.VISIBLE else View.GONE
+        if (!available && current == Mode.CHAT) show(Mode.HOME)
     }
 
     /** Ordinateur actif renommé : nom à jour dans la barre latérale. */
@@ -172,6 +234,7 @@ class MainActivity : AppCompatActivity() {
      */
     fun onComputerChanged(computer: Computer?, automatic: Boolean = false) {
         IconCache.clear()
+        assistantCheckedFor = null
         documentPanel.close()
         val fm = supportFragmentManager
         val tx = fm.beginTransaction()
@@ -183,10 +246,31 @@ class MainActivity : AppCompatActivity() {
         if (automatic && computer != null) showBanner(getString(R.string.computer_switched, computer.name), 6)
     }
 
+    /**
+     * Clavier. Par défaut l'écran ne bouge pas quand il s'ouvre (adjustNothing) : les fenêtres de saisie s'affichent
+     * au-dessus de lui (showForTyping) sans tasser l'Accueil derrière. Pour un champ de l'écran lui-même (Assistant,
+     * recherche d'applis, éditeur de touches), l'écran se réduit au-dessus du clavier et la barre latérale se cache,
+     * plutôt que d'être coupée.
+     */
+    private fun setUpKeyboard() {
+        val rail = findViewById<View>(R.id.rail)
+        val content = findViewById<View>(android.R.id.content)
+        window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, focused ->
+            window.setSoftInputMode(
+                if (focused is EditText) WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE else WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING,
+            )
+        }
+        content.viewTreeObserver.addOnGlobalLayoutListener {
+            val keyboard = content.height in 1 until window.decorView.height - (150 * resources.displayMetrics.density).toInt()
+            val visibility = if (keyboard) View.GONE else View.VISIBLE
+            if (rail.visibility != visibility) rail.visibility = visibility
+        }
+    }
+
     /** Toucher la pastille de connexion : changer d'ordinateur (ou renommer l'actif) sans passer par les Réglages. */
     private fun showComputerPicker() {
         val computers = Computers.all(this)
-        if (computers.isEmpty()) return show(Mode.SETTINGS)
+        if (computers.isEmpty()) return showWelcome()
         val current = Computers.active(this)
         val active = current?.id
         val labels = computers.map { (if (it.id == active) "✓  " else "     ") + it.name }.toTypedArray()
@@ -231,6 +315,21 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Kiosk.enter(this)
+        Screen.apply(this)
+    }
+
+    /** « Pense à boire » (carte Eau de l'Accueil) : bandeau et voix, sur la tablette, ordinateur éteint compris. */
+    private fun remindWater() {
+        if (!Water.reminderDue(this)) return
+        val state = Water.state(this)
+        showBanner(getString(R.string.water_remind_banner, state.glasses, state.goal), 30)
+        Speaker.speak(getString(R.string.water_remind_text))
+    }
+
+    private fun onBattery(state: Tablet.Battery) {
+        if (state.low && !lowBatteryWarned) showBanner(getString(R.string.tablet_battery_low, state.level), 10)
+        lowBatteryWarned = state.low || (lowBatteryWarned && !state.charging)
+        (supportFragmentManager.findFragmentByTag(Mode.SETTINGS.name) as? SettingsFragment)?.onBattery(state)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -254,6 +353,7 @@ class MainActivity : AppCompatActivity() {
      * les barres système sont masquées, il n'y a pas de bouton Retour visible pour le faire.
      */
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_DOWN) Screen.touched(this)
         val focused = currentFocus
         if (event.action == MotionEvent.ACTION_DOWN && focused is EditText) {
             val zone = Rect()
@@ -305,7 +405,9 @@ class MainActivity : AppCompatActivity() {
         get() = documentPanel.currentPath
 
     fun showMode(name: String) {
-        show(if (name == "tasks") Mode.HOME else Mode.valueOf(name.uppercase(Locale.ROOT)))
+        val mode = if (name == "tasks") Mode.HOME else Mode.valueOf(name.uppercase(Locale.ROOT))
+        // Assistant masqué (pas de vrai assistant sur cet ordinateur) : l'Accueil à la place.
+        show(if (mode == Mode.CHAT && railItems.getValue(Mode.CHAT).view.visibility != View.VISIBLE) Mode.HOME else mode)
     }
 
     /** Deck sur sa page Réunion, pour couper le micro ou raccrocher sans chercher. */
@@ -319,6 +421,9 @@ class MainActivity : AppCompatActivity() {
     fun closeDocument() {
         documentPanel.close()
     }
+
+    /** Écran de bienvenue (WiFi, installation, connexion), depuis un mode sans ordinateur. */
+    fun showWelcome() = welcome.show()
 
     /** Bandeau en haut de l'écran, par-dessus le mode courant ; un toucher le ferme. */
     fun showBanner(text: String, seconds: Int) {
@@ -350,13 +455,25 @@ class MainActivity : AppCompatActivity() {
         }
         current = mode
         val fm = supportFragmentManager
+        // Un écran ajouté juste avant (ex. recréé par onComputerChanged) doit exister pour être masqué.
+        fm.executePendingTransactions()
         val tx = fm.beginTransaction()
         fm.fragments.forEach { tx.hide(it) }
+        // Sans ordinateur, un mode qui en a besoin n'est pas créé (caméra, requêtes) : renderNoComputer le remplace.
+        val needsComputer = mode.connect != null && Computers.all(this).isEmpty()
         val existing = fm.findFragmentByTag(mode.name)
-        if (existing != null) tx.show(existing) else tx.add(R.id.mode_container, create(mode), mode.name)
+        if (existing != null) tx.show(existing) else if (!needsComputer) tx.add(R.id.mode_container, create(mode), mode.name)
         tx.commit()
 
         railItems.forEach { (m, item) -> item.view.isSelected = m == mode }
+        renderNoComputer()
+    }
+
+    /** Modes qui ont besoin de l'ordinateur : « Aucun ordinateur connecté » par-dessus, tant qu'il n'y en a pas. */
+    private fun renderNoComputer() {
+        val text = current.connect?.takeIf { Computers.all(this).isEmpty() }
+        noComputer.visibility = if (text != null) View.VISIBLE else View.GONE
+        if (text != null) noComputer.findViewById<TextView>(R.id.connect_text).setText(text)
     }
 
     private fun create(mode: Mode): Fragment = when (mode) {

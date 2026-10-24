@@ -48,7 +48,7 @@ object Updater {
      * `committed` : le fichier est confié à Android, on ne peut plus annuler. Annulable (coroutine) jusque-là.
      */
     suspend fun install(context: Context, update: AppUpdate, progress: (Int) -> Unit, committed: () -> Unit = {}) {
-        if (!Kiosk.isDeviceOwner(context)) throw IllegalStateException("Le Companion n'est pas propriétaire de l'appareil (kiosque)")
+        if (!Kiosk.isDeviceOwner(context)) throw IllegalStateException("Mises à jour possibles seulement quand la tablette est en mode kiosque")
         val app = context.applicationContext
         val file = File(app.cacheDir, "updates").apply { mkdirs() }.resolve("update.apk")
         try {

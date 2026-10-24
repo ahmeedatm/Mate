@@ -12,7 +12,14 @@
     <string name="mode_settings">Réglages</string>
 
     <!-- Commun -->
-    <string name="error_prefix">Erreur : %1$s</string>
+    <string name="error_no_computer">Aucun ordinateur connecté : Réglages › Ordinateurs › Ajouter.</string>
+    <string name="error_unreachable">%1$s ne répond pas : vérifie qu\'il est allumé, pas en veille, et sur le même WiFi que la tablette.</string>
+    <string name="error_reauth">%1$s ne reconnaît plus la tablette : Réglages › Ordinateurs, puis l\'ajouter à nouveau.</string>
+    <string name="error_computer">L\'ordinateur n\'a pas pu le faire.</string>
+    <string name="error_bad_reply">Réponse inattendue de l\'ordinateur : mets à jour le compagnon sur l\'ordinateur.</string>
+    <string name="error_cancelled">Annulé.</string>
+    <string name="error_generic">Un problème est survenu. Réessaie.</string>
+    <string name="computer_generic">L\'ordinateur</string>
     <string name="refresh">Actualiser</string>
     <string name="close">Fermer</string>
     <string name="offline">Ordinateur injoignable</string>
@@ -26,7 +33,7 @@
     <string name="greeting_morning">Bonjour</string>
     <string name="greeting_afternoon">Bon après-midi</string>
     <string name="greeting_evening">Bonsoir</string>
-    <string name="today">Agenda du jour</string>
+    <string name="today">Agenda</string>
     <string name="next_label">Prochain rendez-vous</string>
     <string name="chosen_label">Rendez-vous choisi</string>
     <string name="in_minutes">dans %1$d min</string>
@@ -236,21 +243,47 @@
     <string name="add">Ajouter</string>
     <string name="delete">Supprimer</string>
     <string name="task_daily">Chaque jour</string>
+    <string name="task_new">Nouvelle tâche</string>
+    <string name="task_options">Répéter ou rappeler</string>
+    <string name="task_repeat">Répéter</string>
+    <string name="task_repeat_once">Une fois</string>
+    <string name="task_repeat_daily">Tous les jours</string>
+    <string name="task_repeat_weekdays">Lun – ven</string>
+    <string name="task_repeat_custom">Jours choisis</string>
+    <string-array name="task_day_letters">
+        <item>L</item>
+        <item>M</item>
+        <item>M</item>
+        <item>J</item>
+        <item>V</item>
+        <item>S</item>
+        <item>D</item>
+    </string-array>
+    <string name="task_reminder">Rappel</string>
+    <string name="task_reminder_switch">Me le rappeler à voix haute</string>
+    <string name="task_reminder_none">Sans rappel, la tâche s\'affiche simplement dans la liste.</string>
+    <string name="task_reminder_once">La tablette le dit à cette heure (demain si l\'heure est passée).</string>
+    <string name="task_reminder_repeat">La tablette le dit à cette heure, puis toutes les 30 min pendant 2 h tant que ce n\'est pas coché.</string>
+    <string name="task_label_missing">Écris la tâche</string>
+    <string name="task_days_missing">Choisis au moins un jour.</string>
+    <string name="task_added">Ajoutée : %1$s</string>
+    <string name="tasks_recurring">Tâches récurrentes</string>
+    <string name="tasks_recurring_empty">Aucune tâche récurrente. Pour en créer une : bouton ⏰ à côté de « Nouvelle tâche ».</string>
 
     <!-- Réglages -->
     <string name="save">Enregistrer</string>
     <string name="computers_title">Ordinateurs</string>
     <string name="computers_manage">Gérer</string>
     <string name="computers_hint">La tablette pilote l\'ordinateur en gras. S\'il ne répond plus (changement de lieu), elle passe toute seule à un autre ordinateur enregistré qui répond. Chaque ordinateur garde son agenda, ses tâches et son deck. Toucher un ordinateur pour le piloter, ✎ pour le renommer.</string>
-    <string name="computers_empty">Aucun ordinateur. Installe le compagnon sur l\'ordinateur (voir le README), sur le même WiFi que la tablette, puis touche Ajouter.</string>
+    <string name="computers_empty">Aucun ordinateur. Installe le compagnon sur l\'ordinateur (adresse : %1$s), sur le même WiFi que la tablette, puis touche Ajouter.</string>
     <string name="computer_add">Ajouter un ordinateur</string>
     <string name="computer_add_manual">Saisir l\'adresse</string>
     <string name="computer_search_again">Rechercher</string>
     <string name="computer_searching">Recherche sur le WiFi…</string>
-    <string name="computer_none_found">Aucun ordinateur trouvé. Le compagnon doit tourner sur l\'ordinateur (sa page : http://127.0.0.1:3000) et les deux appareils être sur le même WiFi. Sinon, saisis son adresse.</string>
+    <string name="computer_none_found">Aucun ordinateur trouvé. Le compagnon doit être installé sur l\'ordinateur, et les deux appareils sur le même WiFi. Sinon, saisis son adresse.</string>
     <string name="computer_pick">Toucher l\'ordinateur à ajouter :</string>
     <string name="computer_known">déjà enregistré</string>
-    <string name="computer_manual_hint">Adresse affichée sur la page du compagnon, sur l\'ordinateur (http://127.0.0.1:3000). Exemple : 192.168.1.20</string>
+    <string name="computer_manual_hint">Adresse affichée sur l\'ordinateur, dans la page du compagnon ouverte à l\'installation. Exemple : 192.168.1.20</string>
     <string name="computer_address_hint">192.168.1.20</string>
     <string name="computer_connect">Se connecter</string>
     <string name="computer_connecting">Connexion…</string>
@@ -312,7 +345,7 @@
     <string name="wifi_forget_confirm">Oublier le réseau %1$s ? Il faudra retaper son mot de passe.</string>
     <string name="updates_title">Mises à jour</string>
     <string name="updates_check">Rechercher</string>
-    <string name="updates_hint">Le moteur web et le Companion se mettent à jour depuis le serveur Unowhy (simulé par l\'ordinateur), sans quitter le kiosque.</string>
+    <string name="updates_hint">Le moteur web et le Companion se mettent à jour depuis le serveur Unowhy, sans quitter le kiosque.</string>
     <string name="updates_checking">Recherche des mises à jour…</string>
     <string name="updates_none">Aucune mise à jour annoncée.</string>
     <string name="updates_row">%1$s · %2$s → %3$s</string>
@@ -330,7 +363,94 @@
     <string name="updates_downloading_short">Téléchargement…</string>
     <string name="updates_not_installed">absent</string>
     <string name="kiosk_title">Mode kiosque</string>
-    <string name="kiosk_off">Inactif. Voir docs/kiosque.md pour l\'activer (device owner).</string>
+    <string name="kiosk_off">Inactif : la tablette n\'a pas été préparée en kiosque (docs/kiosque.md).</string>
+    <!-- Premier lancement (WelcomeView) et écrans sans ordinateur -->
+    <string name="welcome_title">Bienvenue</string>
+    <string name="welcome_subtitle">Trois étapes, et la tablette pilote ton ordinateur.</string>
+    <string name="welcome_wifi_title">Le WiFi</string>
+    <string name="welcome_wifi_text">Connecte la tablette au WiFi de la maison ou du bureau, le même que celui de l\'ordinateur.</string>
+    <string name="welcome_install_title">Sur l\'ordinateur</string>
+    <string name="welcome_install_text">Ouvre cette adresse dans le navigateur de l\'ordinateur et lance l\'installation :</string>
+    <string name="welcome_install_os">Mac ou PC Windows</string>
+    <string name="welcome_connect_title">Connecter</string>
+    <string name="welcome_connect_text">Ton ordinateur apparaît ici dès que le compagnon est installé. Touche-le, puis saisis le code qu\'il affiche.</string>
+    <string name="welcome_searching">Recherche sur le WiFi…</string>
+    <string name="welcome_need_wifi">Connecte d\'abord le WiFi (étape 1).</string>
+    <string name="welcome_tap">Toucher pour connecter</string>
+    <string name="welcome_manual">Saisir son adresse</string>
+    <string name="welcome_later">Plus tard</string>
+    <string name="welcome_done">Connecté à %1$s</string>
+    <string name="connect_title">Aucun ordinateur connecté</string>
+    <string name="connect_button">Connecter mon ordinateur</string>
+    <string name="connect_home">L\'agenda, les tâches et le son de ton ordinateur s\'afficheront ici.</string>
+    <string name="connect_deck">Le Deck lance les applis et les raccourcis de ton ordinateur.</string>
+    <string name="connect_chat">L\'assistant passe par ton ordinateur.</string>
+    <string name="connect_docs">Partage affiche les documents et la page web de ton ordinateur.</string>
+    <string name="connect_camera">Le visualiseur montre sur l\'écran de ton ordinateur ce que filme la tablette.</string>
+    <!-- Tablette : état caché par le kiosque (barre latérale, Réglages) -->
+    <string name="event_new">Nouvel événement</string>
+    <string name="event_edit">Modifier l\'événement</string>
+    <string name="event_title_hint">Quoi ? (ex. Appeler le plombier)</string>
+    <string name="event_title_missing">Écris ce que tu dois faire</string>
+    <string name="event_day">Quand</string>
+    <string name="event_today">Aujourd\'hui</string>
+    <string name="event_tomorrow">Demain</string>
+    <string name="event_other_day">Autre date…</string>
+    <string name="event_time">Heure</string>
+    <string name="event_all_day">Toute la journée</string>
+    <string name="event_reminder">Rappel à voix haute</string>
+    <string name="event_reminder_none">Aucun</string>
+    <string name="event_reminder_at">À l\'heure</string>
+    <string name="event_reminder_15">15 min avant</string>
+    <string name="event_reminder_60">1 h avant</string>
+    <string name="event_reminder_detail">Rappel %1$s</string>
+    <string name="event_delete">Supprimer</string>
+    <string name="event_saved">Noté : %1$s</string>
+    <string name="agenda_nothing_today">Rien aujourd\'hui</string>
+    <string name="agenda_empty">Rien de prévu. Touche + pour noter un rendez-vous.</string>
+    <string name="next_none">Rien de prévu</string>
+    <string name="next_none_hint">Note un rendez-vous avec + dans l\'agenda</string>
+    <string name="tomorrow_at">demain à %1$s</string>
+    <string name="day_at">%1$s à %2$s</string>
+    <string name="water_title">Eau</string>
+    <string name="water_count">%1$d / %2$d verres</string>
+    <string name="water_done">%1$d / %2$d verres ✓</string>
+    <string name="water_plus">J\'ai bu un verre</string>
+    <string name="water_minus">Enlever un verre</string>
+    <string name="water_settings">Eau</string>
+    <string name="water_goal">Objectif par jour</string>
+    <string name="water_goal_value">%1$d verres</string>
+    <string name="water_reminder">Me rappeler de boire (9 h – 20 h)</string>
+    <string name="water_interval">Rappel toutes les</string>
+    <string name="water_interval_30">30 min</string>
+    <string name="water_interval_60">1 h</string>
+    <string name="water_interval_120">2 h</string>
+    <string name="water_remind_text">Pense à boire un verre d\'eau.</string>
+    <string name="water_remind_banner">💧 Pense à boire un verre d\'eau (%1$d / %2$d)</string>
+    <string name="agenda_link">Relier Outlook / Google</string>
+    <string name="agenda_setup_opened">Page ouverte sur l\'ordinateur : connecte ton agenda.</string>
+    <string name="tablet_title">Tablette</string>
+    <string name="tablet_battery_state">Batterie de la tablette : %1$d %%</string>
+    <string name="tablet_battery_charging">Batterie : %1$d %% · en charge (%2$s)</string>
+    <string name="tablet_battery_discharging">Batterie : %1$d %% · sur batterie</string>
+    <string name="tablet_plug_ac">secteur</string>
+    <string name="tablet_plug_usb">USB</string>
+    <string name="tablet_plug_other">branchée</string>
+    <string name="tablet_battery_slow">Branchée sur un port USB d\'ordinateur : la charge est lente, un chargeur secteur est plus sûr.</string>
+    <string name="tablet_battery_health">État de la batterie : %1$s. Garde la tablette branchée.</string>
+    <string name="tablet_health_overheat">trop chaude</string>
+    <string name="tablet_health_dead">usée</string>
+    <string name="tablet_health_cold">trop froide</string>
+    <string name="tablet_health_other">anomalie</string>
+    <string name="tablet_battery_low">Batterie faible (%1$d %%) : branche la tablette.</string>
+    <string name="tablet_brightness">Luminosité de l\'écran</string>
+    <string name="tablet_volume">Volume de la tablette (voix, sons d\'ambiance)</string>
+    <string name="tablet_night_dim">Atténuer l\'écran la nuit (22 h – 7 h)</string>
+    <string name="tablet_night_dim_hint">L\'écran reste allumé en permanence ; la nuit il baisse au minimum, un toucher le rallume.</string>
+    <string name="tablet_info">Version %1$s · Adresse %2$s · %3$s</string>
+    <string name="tablet_no_address">aucune</string>
+    <string name="tech_code_title">Code technicien</string>
+    <string name="tech_code_wrong">Code incorrect</string>
     <string name="kiosk_on">Actif : l\'appli est verrouillée à l\'écran et sert d\'écran d\'accueil.</string>
     <string name="kiosk_paused">Suspendu jusqu\'au prochain redémarrage de l\'appli.</string>
     <string name="kiosk_allow_installs">Autoriser les installations</string>

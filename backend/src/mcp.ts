@@ -185,10 +185,17 @@ server.registerTool(
   "tache_ajouter",
   {
     title: "Ajouter une tâche",
-    description: "Ajoute une tâche ponctuelle à la liste de la tablette (elle disparaît le lendemain une fois cochée).",
-    inputSchema: { texte: z.string().min(1).max(200) },
+    description:
+      "Ajoute une tâche à la liste de la tablette. Sans `jours` : ponctuelle (disparaît le lendemain une fois cochée). " +
+      "`jours` (1 = lundi … 7 = dimanche) : récurrente ces jours-là. `rappel` (\"HH:MM\") : la tablette le dit à voix haute " +
+      "à cette heure (récurrente : puis toutes les 30 min pendant 2 h tant que ce n'est pas coché).",
+    inputSchema: {
+      texte: z.string().min(1).max(200),
+      jours: z.array(z.number().int().min(1).max(7)).max(7).optional(),
+      rappel: z.string().regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/).optional(),
+    },
   },
-  ({ texte }) => attempt(async () => text(await api("POST", "/tasks", { label: texte }))),
+  ({ texte, jours, rappel }) => attempt(async () => text(await api("POST", "/tasks", { label: texte, days: jours, remindAt: rappel }))),
 );
 
 server.registerTool(

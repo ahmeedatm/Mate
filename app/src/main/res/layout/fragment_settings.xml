@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -9,7 +10,9 @@
         android:orientation="vertical"
         android:padding="24dp">
 
+        <!-- Appui long : code technicien, qui montre la carte Kiosque. -->
         <TextView
+            android:id="@+id/settings_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="sans-serif-medium"
@@ -100,6 +103,106 @@
                 android:text="@string/wifi_choose" />
         </LinearLayout>
 
+        <!-- Tablette : ce que le kiosque cache (batterie, luminosité, volume, version, adresse). -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_tablet"
+                android:text="@string/tablet_title" />
+
+            <TextView
+                android:id="@+id/settings_battery"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/settings_battery_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_dim"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:contentDescription="@string/tablet_brightness"
+                    android:src="@drawable/ic_brightness"
+                    app:tint="@color/text_dim" />
+
+                <SeekBar
+                    android:id="@+id/settings_brightness"
+                    style="@style/Slider"
+                    android:layout_width="0dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/tablet_brightness"
+                    android:max="100" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:contentDescription="@string/tablet_volume"
+                    android:src="@drawable/ic_volume"
+                    app:tint="@color/text_dim" />
+
+                <SeekBar
+                    android:id="@+id/settings_volume"
+                    style="@style/Slider"
+                    android:layout_width="0dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:contentDescription="@string/tablet_volume" />
+            </LinearLayout>
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_night_dim"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:minHeight="48dp"
+                android:text="@string/tablet_night_dim"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/tablet_night_dim_hint"
+                android:textColor="@color/text_dim"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/settings_tablet_info"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:textColor="@color/text_faint"
+                android:textIsSelectable="false"
+                android:textSize="13sp" />
+        </LinearLayout>
+
         <!-- Mises à jour (moteur web, Companion) depuis le « serveur Unowhy » simulé par l'ordinateur. -->
         <LinearLayout
             style="@style/Card"
@@ -143,9 +246,11 @@
                 android:orientation="vertical" />
         </LinearLayout>
 
-        <!-- Réunions Teams de l'agenda -->
+        <!-- Réunions Teams de l'agenda : seulement si l'ordinateur a Teams dans sa page Apps. -->
         <LinearLayout
+            android:id="@+id/settings_meetings_card"
             style="@style/Card"
+            android:visibility="gone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
@@ -174,9 +279,11 @@
                 android:textSize="14sp" />
         </LinearLayout>
 
-        <!-- Kiosque -->
+        <!-- Kiosque : réservé au technicien (code), un client ne doit pas pouvoir en sortir ni le retirer. -->
         <LinearLayout
+            android:id="@+id/settings_kiosk_card"
             style="@style/Card"
+            android:visibility="gone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"

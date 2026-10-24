@@ -8,6 +8,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.wifi.SupplicantState
 import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
@@ -55,11 +57,16 @@ object Wifi {
     fun locationOn(context: Context) =
         Settings.Secure.getInt(context.contentResolver, Settings.Secure.LOCATION_MODE, Settings.Secure.LOCATION_MODE_OFF) != Settings.Secure.LOCATION_MODE_OFF
 
-    /** Nom du réseau actuel ; "" si connecté sans pouvoir lire le nom (localisation coupée) ; null si pas de WiFi. */
+    /**
+     * Nom du réseau actuel ; "" si connecté sans pouvoir lire le nom (localisation coupée) ; null si pas de WiFi.
+     * Connexion lue par ConnectivityManager : sans la localisation, WifiManager répond « pas de réseau » (networkId -1).
+     */
     fun current(context: Context): String? {
-        val info = manager(context).connectionInfo ?: return null
-        if (info.networkId == -1 || info.supplicantState != SupplicantState.COMPLETED) return null
-        return info.ssid.removeSurrounding("\"").takeUnless { it == WifiManager.UNKNOWN_SSID.removeSurrounding("\"") || it == "<unknown ssid>" } ?: ""
+        val connectivity = context.getSystemService(ConnectivityManager::class.java)
+        val caps = connectivity.activeNetwork?.let { connectivity.getNetworkCapabilities(it) }
+        if (caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) != true) return null
+        val ssid = manager(context).connectionInfo?.ssid?.removeSurrounding("\"")
+        return ssid?.takeUnless { it == WifiManager.UNKNOWN_SSID.removeSurrounding("\"") || it == "<unknown ssid>" } ?: ""
     }
 
     /** Réseaux autour (un par nom, le meilleur signal), du plus fort au plus faible. Lance une recherche et l'attend (10 s au plus). */

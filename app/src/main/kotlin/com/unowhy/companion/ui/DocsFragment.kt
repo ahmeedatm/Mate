@@ -95,7 +95,7 @@ class DocsFragment : Fragment() {
                 adapter.addAll(listing.entries)
                 showStatus(if (listing.entries.isEmpty()) getString(R.string.empty_folder) else null)
             } catch (e: Exception) {
-                showStatus(getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName))
+                showStatus(requireContext().errorText(e))
             }
         }
     }
@@ -129,7 +129,7 @@ class DocsFragment : Fragment() {
                 (activity as? MainActivity)?.openDocument(DocEntry(saved.substringAfterLast('/'), saved, "image", file.length(), System.currentTimeMillis()))
                 load(dir)
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), getString(R.string.error_prefix, e.message), Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), requireContext().errorText(e), Toast.LENGTH_LONG).show()
             }
         }
     }

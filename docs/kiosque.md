@@ -65,13 +65,22 @@ inactifs, insensibles à « Réinitialiser les préférences des applis ») et *
 compris (restrictions `no_install_apps`, `no_install_unknown_sources`, `no_uninstall_apps`) :
 même si quelque chose tentait de réinstaller SQOOL, Android refuse. Android ajoute aussi
 `no_add_managed_profile` (pas de profil professionnel, donc pas de MDM par ce biais).
-Pour mettre l'appli à jour : **Réglages > Autoriser les installations**, `./gradlew installDebug`,
+La carte **Kiosque** de Réglages est cachée au client : appui long sur le titre « Réglages », puis le
+**code technicien** (`4242` par défaut, `-PtechCode=…` à la compilation). Elle disparaît en quittant Réglages.
+Micro et caméra sont accordés d'office (`setPermissionGrantState`) : en kiosque, un refus serait sans retour.
+Après une mise à jour de l'appli (adb ou Réglages > Mises à jour), Android l'arrête et le verrouillage avec elle : `kiosk/UpdatedReceiver` (`MY_PACKAGE_REPLACED`) la relance aussitôt (kiosque revenu en ~4 s).
+Pas d'écran de verrouillage après une mise en veille (`setKeyguardDisabled`, rétabli par « Retirer le mode kiosque »).
+La barre d'état étant masquée, heure, WiFi et batterie sont dans la barre latérale ; luminosité et volume dans Réglages > Tablette.
+
+Pour mettre l'appli à jour : **Réglages > (code technicien) > Autoriser les installations**, `./gradlew installDebug`,
 puis désactiver l'interrupteur (le réglage survit au redémarrage de l'appli).
 
 Au prochain lancement, l'appli se verrouille à l'écran (lock task) et devient l'écran d'accueil.
 Rien ne se passe tant que la commande `dpm set-device-owner` n'a pas été lancée.
 
 ## 3. En sortir
+
+Carte Kiosque (code technicien, voir plus haut) :
 
 - **Réglages > Quitter le kiosque** : déverrouille jusqu'au prochain démarrage de l'appli.
 - **Réglages > Retirer le mode kiosque** : lève le blocage des installations et retire le statut device owner (à refaire via adb ensuite).

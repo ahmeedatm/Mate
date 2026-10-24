@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Premier lancement (WelcomeView) : les trois étapes visibles d'un coup, de gauche à droite. -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="48dp"
+        android:paddingTop="40dp"
+        android:paddingEnd="48dp"
+        android:paddingBottom="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-light"
+            android:text="@string/welcome_title"
+            android:textSize="44sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/welcome_subtitle"
+            android:textColor="@color/text_dim"
+            android:textSize="20sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="32dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <!-- 1. WiFi -->
+            <LinearLayout
+                style="@style/Card"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/welcome_step_wifi"
+                    style="@style/WelcomeStep"
+                    android:text="1" />
+
+                <TextView
+                    style="@style/WelcomeStepTitle"
+                    android:text="@string/welcome_wifi_title" />
+
+                <TextView
+                    style="@style/WelcomeStepText"
+                    android:text="@string/welcome_wifi_text" />
+
+                <TextView
+                    android:id="@+id/welcome_wifi_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:drawableStart="@drawable/ic_wifi"
+                    android:drawablePadding="10dp"
+                    android:gravity="center_vertical"
+                    android:textSize="18sp" />
+
+                <Space
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <Button
+                    android:id="@+id/welcome_wifi"
+                    style="@style/ActionButton"
+                    android:text="@string/wifi_choose" />
+            </LinearLayout>
+
+            <!-- 2. Installer sur l'ordinateur -->
+            <LinearLayout
+                style="@style/Card"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="20dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/welcome_step_install"
+                    style="@style/WelcomeStep"
+                    android:text="2" />
+
+                <TextView
+                    style="@style/WelcomeStepTitle"
+                    android:text="@string/welcome_install_title" />
+
+                <TextView
+                    style="@style/WelcomeStepText"
+                    android:text="@string/welcome_install_text" />
+
+                <TextView
+                    android:id="@+id/welcome_install_url"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:background="@drawable/input_bg"
+                    android:fontFamily="monospace"
+                    android:gravity="center"
+                    android:paddingTop="18dp"
+                    android:paddingBottom="18dp"
+                    android:textColor="@color/accent"
+                    android:textIsSelectable="false"
+                    android:textSize="24sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center"
+                    android:text="@string/welcome_install_os"
+                    android:textColor="@color/text_dim"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <!-- 3. Connecter : ordinateurs trouvés sur le WiFi -->
+            <LinearLayout
+                style="@style/Card"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="20dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/welcome_step_connect"
+                    style="@style/WelcomeStep"
+                    android:text="3" />
+
+                <TextView
+                    style="@style/WelcomeStepTitle"
+                    android:text="@string/welcome_connect_title" />
+
+                <TextView
+                    style="@style/WelcomeStepText"
+                    android:text="@string/welcome_connect_text" />
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_weight="1">
+
+                    <LinearLayout
+                        android:id="@+id/welcome_found"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </ScrollView>
+
+                <TextView
+                    android:id="@+id/welcome_search_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:textColor="@color/text_dim"
+                    android:textSize="16sp" />
+
+                <Button
+                    android:id="@+id/welcome_manual"
+                    style="@style/ActionButton"
+                    android:text="@string/welcome_manual" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/welcome_later"
+            style="@style/ActionButton"
+            android:layout_gravity="end"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/flat_bg"
+            android:text="@string/welcome_later"
+            android:textColor="@color/text_dim" />
+    </LinearLayout>
+</merge>

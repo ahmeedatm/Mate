@@ -160,7 +160,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                 status.visibility = View.GONE
                 showPage(pageIndex)
             } catch (e: Exception) {
-                status.text = getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName)
+                status.text = requireContext().errorText(e)
                 status.visibility = View.VISIBLE
             }
         }
@@ -227,7 +227,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                 // Un raccourci comme "Micro Teams" peut avoir changé l'état du son.
                 if (tile.type != "app") audio.refresh()
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), getString(R.string.error_prefix, e.message), Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), requireContext().errorText(e), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -302,7 +302,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                         IconCache.forget(tile.id)
                         loadDeck()
                     } catch (e: Exception) {
-                        Toast.makeText(requireContext(), getString(R.string.error_prefix, e.message), Toast.LENGTH_LONG).show()
+                        Toast.makeText(requireContext(), requireContext().errorText(e), Toast.LENGTH_LONG).show()
                     }
                 }
             }

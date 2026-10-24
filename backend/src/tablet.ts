@@ -25,7 +25,8 @@ export type TabletCommand =
   | { type: "noise"; kind: (typeof NOISES)[number]; volume?: number }
   | { type: "screenshot" };
 
-export type TabletResult = { ok: boolean; error?: string; data?: Record<string, unknown> };
+/** `received` : la tablette a répondu (même en échec, ex. message affiché mais pas lu faute de voix). */
+export type TabletResult = { ok: boolean; error?: string; data?: Record<string, unknown>; received?: boolean };
 
 type Queued = { id: string; command: TabletCommand };
 
@@ -105,6 +106,6 @@ export function completeCommand(id: string, result: TabletResult): boolean {
   clearTimeout(waiting.timer);
   inflight.delete(id);
   drop(id);
-  waiting.resolve(result);
+  waiting.resolve({ ...result, received: true });
   return true;
 }

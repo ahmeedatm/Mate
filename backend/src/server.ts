@@ -19,9 +19,11 @@ import { confirmPairing, identity, lanAddresses, PairingError, pendingCode, requ
 import { LOCAL_PAGE } from "./local-page.ts";
 import { listUpdates, updateFile } from "./updates.ts";
 import { docEntry, kindOf, listDocs, resolveDoc, savePhoto } from "./docs.ts";
-import { calendarSources, dayRange, getEvents, saveCalendarUrls, savedCalendarUrls } from "./calendar.ts";
+import { calendarSources, dayRange, getEvents, invalidateCalendar, saveCalendarUrls, savedCalendarUrls } from "./calendar.ts";
+import { addEvent, deleteEvent, startEventReminders, updateEvent, type EventInput } from "./events.ts";
+import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvider, loginUrl } from "./accounts.ts";
 import { autoJoinEnabled, joinMeeting, setAutoJoin, startAutoJoin } from "./meetings.ts";
-import { addTask, deleteTask, listTasks, setTaskDone, startReminders, taskUrl } from "./tasks.ts";
+import { addTask, deleteTask, listRecurring, listTasks, setTaskDone, startReminders, taskUrl } from "./tasks.ts";
 import { addViewer, CAMERA_STATUSES, cameraStatus, pushFrame, setCameraState, VIEWER_PAGE, type CameraStatus } from "./camera.ts";
 import { completeCommand, FOCUS_ACTIONS, MODES, NOISES, pollCommands, reportState, sendToTablet, tabletStatus, type TabletCommand } from "./tablet.ts";
 
@@ -37,13 +39,18 @@ await app.register(multipart, { limits: { fileSize: 20 * 1024 * 1024, files: 1 }
 
 const expectedAuth = config.token ? Buffer.from(`Bearer ${config.token}`) : undefined;
 const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+/** Nom demandé par le navigateur : un site qui ferait pointer son domaine vers 127.0.0.1 (DNS rebinding) est refusé. */
+const LOCAL_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
 /**
  * Pages ouvertes dans le navigateur de l'ordinateur (visualiseur, page d'accueil avec le code d'appairage) :
  * pas de jeton possible, lecture seule et en local.
  */
-const isLocalPage = (method: string, url: string, ip: string) =>
+const isLocalPage = (method: string, url: string, ip: string, host: string | undefined) =>
   LOOPBACK.has(ip) &&
-  ((method === "GET" && /^\/(camera(\/stream|\/status)?|local\/status)?(\?|$)/.test(url)) || (method === "PUT" && url === "/local/calendar"));
+  LOCAL_HOST.test(host ?? "") &&
+  ((method === "GET" && /^\/(camera(\/stream|\/status)?|local\/status|oauth\/(microsoft|google)\/(start|callback))?(\?|$)/.test(url)) ||
+    (method === "PUT" && url === "/local/calendar") ||
+    (method === "DELETE" && /^\/local\/accounts\/(microsoft|google)$/.test(url)));
 /** Sans jeton : identité (la tablette reconnaît l'ordinateur) et appairage par code. */
 const PUBLIC = /^\/(health|pair\/request|pair\/confirm)(\?|$)/;
 const authorized = (header: string | undefined) => {
@@ -52,7 +59,7 @@ const authorized = (header: string | undefined) => {
   return given.length === expectedAuth.length && timingSafeEqual(given, expectedAuth);
 };
 app.addHook("onRequest", async (req, reply) => {
-  if (PUBLIC.test(req.url) || isLocalPage(req.method, req.url, req.ip)) return;
+  if (PUBLIC.test(req.url) || isLocalPage(req.method, req.url, req.ip, req.headers.host)) return;
   if (!authorized(req.headers.authorization)) return reply.code(401).send({ error: "Jeton invalide : appairer à nouveau la tablette" });
 });
 
@@ -61,8 +68,18 @@ app.get("/health", async (req) => ({ ok: true, mode: config.mode, ...identity(),
 
 // --- Appairage (voir src/pairing.ts) et page d'accueil locale
 
-app.setErrorHandler((err, _req, reply) => {
+/**
+ * Erreurs montrées sur la tablette : nos messages (en français) passent tels quels ; le texte technique
+ * (sortie d'osascript, erreur système de Node, requête mal formée) reste dans le journal de l'ordinateur.
+ */
+app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validation?: unknown; technical?: boolean }, req, reply) => {
   if (err instanceof PairingError) return reply.code(err.statusCode).send({ error: err.message });
+  if (err.validation) return reply.code(400).send({ error: "Demande invalide : mets à jour l'appli de la tablette" });
+  const status = err.statusCode && err.statusCode >= 400 ? err.statusCode : 500;
+  if (status >= 500 && (err.technical || (typeof err.code === "string" && /^E[A-Z]/.test(err.code)))) {
+    req.log.error(err);
+    return reply.code(status).send({ error: "L'ordinateur n'a pas pu le faire (détail dans son journal)" });
+  }
   reply.send(err);
 });
 
@@ -97,6 +114,8 @@ app.get("/local/status", async () => ({
   calendar: {
     env: config.icsUrls.length,
     saved: (await savedCalendarUrls()).map((u) => (u === "demo" ? "agenda d'exemple" : URL.parse(u)?.host ?? "lien invalide")),
+    accounts: await connectedAccounts(),
+    providers: await availableProviders(),
   },
 }));
 
@@ -596,6 +615,53 @@ app.get("/camera/stream", async (_req, reply) => {
   addViewer(reply.raw);
 });
 
+// Connexion d'un compte d'agenda (src/accounts.ts), depuis la page locale : le navigateur de l'ordinateur part chez
+// Microsoft ou Google et revient sur /oauth/…/callback (adresse déclarée telle quelle dans l'appli enregistrée).
+app.get<{ Params: { provider: string } }>("/oauth/:provider/start", async (req, reply) => {
+  if (!isProvider(req.params.provider) || !(await availableProviders()).some((p) => p.provider === req.params.provider)) {
+    return reply.code(404).send({ error: "Connexion non disponible pour ce compte" });
+  }
+  // Microsoft : localhost (seule adresse de retour http acceptée) ; Google : 127.0.0.1 (recommandé pour les applis de bureau).
+  const host = req.params.provider === "microsoft" ? "localhost" : "127.0.0.1";
+  return reply.redirect(await loginUrl(req.params.provider, `http://${host}:${config.port}/oauth/${req.params.provider}/callback`));
+});
+
+app.get<{ Params: { provider: string }; Querystring: { code?: string; state?: string; error?: string; error_description?: string } }>(
+  "/oauth/:provider/callback",
+  async (req, reply) => {
+    const back = (result: string) => reply.redirect(`http://127.0.0.1:${config.port}/?section=agenda&account=${encodeURIComponent(result)}`);
+    if (req.query.error || !req.query.code || !req.query.state) {
+      req.log.warn(`Connexion refusée : ${req.query.error} ${req.query.error_description ?? ""}`);
+      return back(req.query.error === "access_denied" ? "refused" : "error");
+    }
+    try {
+      await finishLogin(req.query.state, req.query.code);
+      invalidateCalendar();
+      return back("ok");
+    } catch (e) {
+      req.log.error(e);
+      return back("error");
+    }
+  },
+);
+
+app.delete<{ Params: { provider: string } }>("/local/accounts/:provider", async (req, reply) => {
+  if (!isProvider(req.params.provider)) return reply.code(404).send({ error: "Compte inconnu" });
+  await disconnect(req.params.provider);
+  invalidateCalendar();
+  return { ok: true };
+});
+
+/** Ouvre la page du compagnon sur l'ordinateur, depuis la tablette (« Relier mon agenda » de l'Accueil). */
+app.post<{ Body: { section?: "agenda" } }>(
+  "/local/open",
+  { schema: { body: { type: "object", additionalProperties: false, properties: { section: { enum: ["agenda"] } } } } },
+  async (req) => {
+    await openTarget(`http://127.0.0.1:${config.port}/${req.body?.section ? `?section=${req.body.section}` : ""}`);
+    return { ok: true };
+  },
+);
+
 /** Ouvre la page du visualiseur dans le navigateur de l'ordinateur (à envoyer ensuite sur le vidéoprojecteur). */
 app.post("/camera/open", async () => {
   await openTarget(`http://127.0.0.1:${config.port}/camera`);
@@ -606,10 +672,34 @@ app.post("/camera/open", async () => {
 
 app.get<{ Querystring: { days?: string } }>("/calendar", async (req) => {
   const days = Math.min(Math.max(Number.parseInt(req.query.days ?? "1", 10) || 1, 1), 14);
-  const { source, events } = await getEvents(...dayRange(days));
+  const { source, events, error } = await getEvents(...dayRange(days));
   // Le lien Teams reste sur l'ordinateur : la tablette demande à rejoindre par identifiant.
-  return { source, events: events.map(({ joinUrl, ...e }) => ({ ...e, joinable: !!joinUrl })) };
+  return { source, error, events: events.map(({ joinUrl, ...e }) => ({ ...e, joinable: !!joinUrl })) };
 });
+
+// Agenda personnel (src/events.ts) : rendez-vous notés depuis la tablette.
+const eventSchema = {
+  type: "object",
+  required: ["title", "startMs", "allDay"],
+  additionalProperties: false,
+  properties: {
+    title: { type: "string", minLength: 1, maxLength: 200 },
+    startMs: { type: "integer" },
+    endMs: { type: "integer" },
+    allDay: { type: "boolean" },
+    remindBefore: { type: ["integer", "null"], minimum: 0, maximum: 1440 },
+  },
+};
+
+app.post<{ Body: EventInput }>("/calendar/events", { schema: { body: eventSchema } }, async (req) => addEvent(req.body));
+
+app.put<{ Params: { id: string }; Body: EventInput }>("/calendar/events/:id", { schema: { body: eventSchema } }, async (req, reply) =>
+  (await updateEvent(req.params.id, req.body)) ?? reply.code(404).send({ error: "Événement introuvable" }),
+);
+
+app.delete<{ Params: { id: string } }>("/calendar/events/:id", async (req, reply) =>
+  (await deleteEvent(req.params.id)) ? { ok: true } : reply.code(404).send({ error: "Événement introuvable" }),
+);
 
 app.post<{ Body: { id: string } }>(
   "/calendar/join",
@@ -636,10 +726,25 @@ app.put<{ Body: { enabled: boolean } }>(
 
 app.get<{ Querystring: { refresh?: string } }>("/tasks", async (req) => ({ tasks: await listTasks(req.query.refresh === "1") }));
 
-app.post<{ Body: { label: string } }>(
+app.get("/tasks/recurring", async () => ({ tasks: await listRecurring() }));
+
+/** `days` : récurrente ces jours-là (1 = lundi) ; `remindAt` : rappel parlé à cette heure ("HH:MM"). */
+app.post<{ Body: { label: string; remindAt?: string; days?: number[] } }>(
   "/tasks",
-  { schema: { body: { type: "object", required: ["label"], properties: { label: { type: "string", minLength: 1, maxLength: 200 } } } } },
-  async (req) => addTask(req.body.label),
+  {
+    schema: {
+      body: {
+        type: "object",
+        required: ["label"],
+        properties: {
+          label: { type: "string", minLength: 1, maxLength: 200 },
+          remindAt: { type: "string", pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$" },
+          days: { type: "array", maxItems: 7, items: { type: "integer", minimum: 1, maximum: 7 } },
+        },
+      },
+    },
+  },
+  async (req) => addTask(req.body.label, { remindAt: req.body.remindAt, days: req.body.days }),
 );
 
 app.post<{ Params: { id: string }; Body: { done: boolean } }>(
@@ -649,7 +754,7 @@ app.post<{ Params: { id: string }; Body: { done: boolean } }>(
 );
 
 app.delete<{ Params: { id: string } }>("/tasks/:id", async (req, reply) =>
-  (await deleteTask(req.params.id)) ? { ok: true } : reply.code(404).send({ error: "Tâche inconnue (ou tâche quotidienne)" }),
+  (await deleteTask(req.params.id)) ? { ok: true } : reply.code(404).send({ error: "Tâche inconnue (ou définie dans le fichier de l'ordinateur)" }),
 );
 
 app.post<{ Params: { id: string } }>("/tasks/:id/open", async (req, reply) => {
@@ -659,7 +764,10 @@ app.post<{ Params: { id: string } }>("/tasks/:id/open", async (req, reply) => {
   return { ok: true };
 });
 
-startReminders(async (text) => (await sendToTablet({ type: "message", text, speak: true, seconds: 120 })).ok);
+// Rappel reçu dès que la tablette l'a affiché, même sans voix française : sinon il serait renvoyé chaque minute.
+const remind = async (text: string) => (await sendToTablet({ type: "message", text, speak: true, seconds: 120 })).received === true;
+startReminders(remind);
+startEventReminders(remind);
 if (canControl) startAutoJoin((text) => sendToTablet({ type: "message", text, seconds: 60 }));
 
 // --- Canal ordinateur → tablette (utilisé par le serveur MCP : Claude pilote la tablette, voir src/mcp.ts)

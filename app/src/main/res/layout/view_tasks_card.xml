@@ -23,6 +23,15 @@
             android:textSize="14sp" />
 
         <ImageButton
+            android:id="@+id/tasks_recurring"
+            style="@style/IconButton.Flat"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="9dp"
+            android:contentDescription="@string/tasks_recurring"
+            android:src="@drawable/ic_repeat" />
+
+        <ImageButton
             android:id="@+id/tasks_refresh"
             style="@style/IconButton.Flat"
             android:layout_width="40dp"
@@ -61,16 +70,19 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <EditText
+        <!-- Ouvre la fenêtre de tâche (texte, répétition, rappel) : pas de clavier dans la carte, qui ferait défiler l'Accueil. -->
+        <TextView
             android:id="@+id/tasks_input"
             style="@style/Input"
             android:layout_width="0dp"
             android:layout_marginEnd="10dp"
             android:layout_weight="1"
-            android:hint="@string/task_hint"
-            android:imeOptions="actionDone"
-            android:inputType="textCapSentences"
-            android:maxLength="200" />
+            android:background="@drawable/input_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:text="@string/task_hint"
+            android:textColor="@color/text_faint" />
 
         <ImageButton
             android:id="@+id/tasks_add"

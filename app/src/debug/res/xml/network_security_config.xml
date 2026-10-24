@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Debug : HTTP en clair autorisé pour joindre le backend local (adb reverse ou WiFi). -->
-<network-security-config>
-    <base-config cleartextTrafficPermitted="true" />
-</network-security-config>

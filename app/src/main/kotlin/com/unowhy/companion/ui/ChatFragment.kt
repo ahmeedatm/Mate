@@ -101,7 +101,7 @@ class ChatFragment : Fragment() {
                 speak(reply)
             } catch (e: Exception) {
                 history.removeAt(history.lastIndex)
-                pending.text = getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName)
+                pending.text = requireContext().errorText(e)
             } finally {
                 setBusy(false)
                 scrollToBottom()
@@ -124,7 +124,7 @@ class ChatFragment : Fragment() {
             renderMic(recording = true)
         } catch (e: Exception) {
             recorder.release()
-            addBubble(getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName), fromUser = false)
+            addBubble(requireContext().errorText(e), fromUser = false)
         }
     }
 
@@ -140,7 +140,7 @@ class ChatFragment : Fragment() {
                 if (text.isNotBlank()) submit(text)
             } catch (e: Exception) {
                 setBusy(false)
-                addBubble(getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName), fromUser = false)
+                addBubble(requireContext().errorText(e), fromUser = false)
             }
         }
     }

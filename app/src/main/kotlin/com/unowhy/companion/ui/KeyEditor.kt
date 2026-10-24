@@ -189,7 +189,7 @@ class KeyEditor @JvmOverloads constructor(
         }
     }
 
-    private fun showError(e: Exception) = showError(context.getString(R.string.error_prefix, e.message ?: e.javaClass.simpleName))
+    private fun showError(e: Exception) = showError(context.errorText(e))
 
     private fun showError(message: String) {
         status.text = message
