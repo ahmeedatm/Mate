@@ -1,6 +1,6 @@
 # État du projet
 
-Mis à jour le 24/10/2026. À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
+Mis à jour le 25/10/2026. À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
 
 ## Pourquoi ce projet
 
@@ -67,7 +67,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 0. Bug des onglets du Deck (voir plus haut) s'il revient.
 1. **Voix et appels** : appels Teams / WhatsApp (captures pendant un vrai appel) ; idées : météo, réglages de la tablette à la voix. Réactiver l'appli Google sans adb : impossible (un device owner ne peut pas annuler `pm disable-user`), inutile car la procédure du kiosque la garde ; sans elle, Parler ouvre la commande écrite.
-2. Suite du paquet (choix du 24/10 : Node embarqué, zip + installeur actuel ; pas de NSIS ni d'appli .app pour l'instant) : raccourci « Compagnon Unowhy » vers la page (Bureau + menu Démarrer, icône du compagnon) fait le 25/10, testé sur le PC ; Mac : `.webloc` sur le Bureau, pas encore essayé. Fait le 25/10 : données du paquet hors du dossier extrait (mise à jour sans perdre l'appairage) et dossier Partage dans `Documents\Partage tablette`, testés sur le PC ; règle du pare-feu Windows posée par l'installeur (accord administrateur une fois, réseaux privés), installeur relancé sans erreur sur le PC (Bitdefender y laissait déjà passer Documents : blocage réel pas vérifié) ; le PC tourne depuis `Documents\Compagnon-Unowhy-PC`, mis à jour depuis le Mac par le partage `Compagnon`.
+2. **Paquet sur Mac** : réessayer le zip Mac avec les changements du 25/10 (données dans `~/Library/Application Support/UnowhyCompanion`, Partage dans `~/Documents/Partage tablette` : macOS peut demander à node l'accès à Documents ; raccourci `.webloc` sur le Bureau). Fait le 25/10 sur le PC : données et Partage hors du dossier extrait (mise à jour sans perdre l'appairage), pare-feu Windows par l'installeur (Bitdefender laissait déjà passer : blocage réel pas vérifié), raccourci « Compagnon Unowhy » avec l'icône. Le PC tourne depuis `Documents\Compagnon-Unowhy-PC`, mis à jour depuis le Mac par le partage `Compagnon`. Pas de NSIS ni d'appli .app pour l'instant.
 
 ## Décisions en attente
 
@@ -104,3 +104,4 @@ Dofus Rétro (« Jouer » par un clic dans la fenêtre : perso, pas pour la dém
 | 1cce5f2 | thèmes Nuit / Clair / Néon / Chaud, couleurs par fonction, animations |
 | 5b2ac89 | commande vocale (bouton Parler, noms d'applis rapprochés à l'oreille, dictée, fenêtres, tâches), appels entrants Discord, Arrêter le partage |
 | bf63b2b | paquets clients sans Node (node embarqué, `npm run package`), voix « sur l'écran de droite / de gauche / 2 » ; tests du 24/10 au soir (Spotify, Discord, voix, bascule) |
+| 69c7081 → 2a2bd04 | paquet Windows testé sur le PC (installeur réparé), Discord salon de serveur, données et Partage du paquet hors du dossier extrait (`Documents\Partage tablette`), pare-feu Windows, raccourci et icône du compagnon (PC + tablette) |
