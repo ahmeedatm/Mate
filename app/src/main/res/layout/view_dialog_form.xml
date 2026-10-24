@@ -18,7 +18,7 @@
             android:id="@+id/dialog_message"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/text_dim"
+            android:textColor="?attr/c_text_dim"
             android:textSize="16sp" />
     </LinearLayout>
 </ScrollView>

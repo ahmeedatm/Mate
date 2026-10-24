@@ -424,15 +424,15 @@ class CameraFragment : Fragment() {
     /** `fps` : images envoyées dans la dernière seconde, null au démarrage ou après un changement d'état. */
     private fun renderStatus(fps: Int?) {
         val (text, color) = when {
-            camera == null -> "" to R.color.text_faint
-            purpose == Purpose.PHOTO -> getString(R.string.camera_photo_preview) to R.color.text_faint
-            !online -> getString(R.string.camera_offline) to R.color.ko
-            frozen -> getString(R.string.camera_frozen) to R.color.warn
-            fps == null -> getString(R.string.camera_starting) to R.color.text_faint
-            else -> getString(R.string.camera_live, fps) to R.color.ok
+            camera == null -> "" to R.attr.c_text_faint
+            purpose == Purpose.PHOTO -> getString(R.string.camera_photo_preview) to R.attr.c_text_faint
+            !online -> getString(R.string.camera_offline) to R.attr.c_ko
+            frozen -> getString(R.string.camera_frozen) to R.attr.c_warn
+            fps == null -> getString(R.string.camera_starting) to R.attr.c_text_faint
+            else -> getString(R.string.camera_live, fps) to R.attr.c_ok
         }
         status.text = text
-        dot.background.mutate().setTint(ContextCompat.getColor(requireContext(), color))
+        dot.background.mutate().setTint(themeColor(requireContext(), color))
     }
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()

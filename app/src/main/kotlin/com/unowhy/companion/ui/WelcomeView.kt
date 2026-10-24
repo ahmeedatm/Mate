@@ -43,7 +43,7 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
     init {
         LayoutInflater.from(context).inflate(R.layout.view_welcome, this, true)
-        setBackgroundColor(ContextCompat.getColor(context, R.color.bg))
+        setBackgroundColor(themeColor(context, R.attr.c_bg))
         // Rien ne doit passer à l'écran du dessous.
         isClickable = true
         wifiStep = findViewById(R.id.welcome_step_wifi)
@@ -121,7 +121,7 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
             name.isEmpty() -> context.getString(R.string.wifi_current_unnamed)
             else -> context.getString(R.string.wifi_current, name)
         }
-        val color = ContextCompat.getColor(context, if (name == null) R.color.text_dim else R.color.ok)
+        val color = themeColor(context, if (name == null) R.attr.c_text_dim else R.attr.c_ok)
         wifiStatus.setTextColor(color)
         wifiStatus.compoundDrawablesRelative[0]?.mutate()?.setTint(color)
         markStep(wifiStep, "1", done = name != null)
@@ -130,8 +130,8 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     /** Étape faite : pastille verte avec ✓ à la place du numéro. */
     private fun markStep(step: TextView, number: String, done: Boolean) {
         step.text = if (done) "✓" else number
-        val color = ContextCompat.getColor(context, if (done) R.color.ok else R.color.accent)
+        val color = themeColor(context, if (done) R.attr.c_ok else R.attr.c_accent)
         step.setTextColor(color)
-        step.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, if (done) R.color.ok_soft else R.color.accent_soft))
+        step.backgroundTintList = ColorStateList.valueOf(themeColor(context, if (done) R.attr.c_ok_soft else R.attr.c_accent_soft))
     }
 }

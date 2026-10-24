@@ -217,7 +217,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         )
         voicePeople.text = parts.joinToString(" · ")
         voicePeople.visibility = if (parts.isEmpty()) View.GONE else View.VISIBLE
-        voicePeople.setTextColor(ContextCompat.getColor(requireContext(), if (v.muted == true || v.deafened == true) R.color.ko else R.color.text_dim))
+        voicePeople.setTextColor(themeColor(requireContext(), if (v.muted == true || v.deafened == true) R.attr.c_ko else R.attr.c_text_dim))
     }
 
     /** Touche à montrer selon l'appel : `call` seulement en appel, `idle` seulement hors appel ; les autres toujours. */
@@ -513,11 +513,13 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             if (tile.type == "empty" || tile.type == ADD) {
                 if (tile.type == "empty") view.findViewById<TextView>(R.id.tile_label).setText(R.string.key_empty_label)
                 initial.text = "+"
+                Look.plainInitial(initial, R.attr.c_accent)
                 initial.visibility = View.VISIBLE
                 icon.setImageBitmap(null)
                 return view
             }
 
+            Look.tintInitial(initial, tile.label)
             if (tile.glyph != null) {
                 initial.text = tile.glyph
                 initial.visibility = View.VISIBLE

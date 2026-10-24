@@ -1,5 +1,6 @@
 package com.unowhy.companion.ui.home
 
+import com.unowhy.companion.ui.themeColor
 import android.content.Context
 import android.graphics.Typeface
 import android.text.InputType
@@ -27,6 +28,8 @@ import com.unowhy.companion.ui.MacAudioView
 import com.unowhy.companion.ui.NowPlayingView
 import com.unowhy.companion.ui.ProgressRing
 import com.unowhy.companion.ui.TasksCard
+import com.unowhy.companion.ui.Look
+import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.WaterCard
 import com.unowhy.companion.ui.label
 import com.unowhy.companion.ui.showForTyping
@@ -69,7 +72,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     open fun showSettings() = Unit
 
     protected fun dp(value: Int) = (value * context.resources.displayMetrics.density).toInt()
-    protected fun color(id: Int) = ContextCompat.getColor(context, id)
+    protected fun color(id: Int) = themeColor(context, id)
 
     /** Carte de fond commune (même style que les cartes de l'application). */
     protected fun <T : View> T.asCard(padding: Int = 20): T = apply {
@@ -77,12 +80,12 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
         setPadding(dp(padding), dp(padding), dp(padding), dp(padding))
     }
 
-    protected fun cardTitle(text: Int, icon: Int) = TextView(context, null, 0, R.style.CardTitle).apply {
+    protected fun cardTitle(text: Int, icon: Int) = TitleView(context).apply {
         setText(text)
-        setCompoundDrawablesRelativeWithIntrinsicBounds(icon, 0, 0, 0)
+        setIcon(icon)
     }
 
-    protected fun label(size: Float, colorId: Int = R.color.text, light: Boolean = false) = TextView(context).apply {
+    protected fun label(size: Float, colorId: Int = R.attr.c_text, light: Boolean = false) = TextView(context).apply {
         textSize = size
         setTextColor(color(colorId))
         if (light) typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
@@ -110,15 +113,15 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
 
 /** Heure, salutation et date ; grand chiffre lisible de loin. */
 class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val greeting = label(20f, R.color.text_dim)
+    private val greeting = label(20f, R.attr.c_text_dim)
     private val clock = TextClock(context).apply {
         format12Hour = "HH:mm"
         format24Hour = "HH:mm"
         includeFontPadding = false
-        setTextColor(color(R.color.text))
+        setTextColor(color(R.attr.c_text))
         typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
     }
-    private val date = label(22f, R.color.text_dim)
+    private val date = label(22f, R.attr.c_text_dim)
     private val side = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
     override val view = LinearLayout(context).asCard(24)
 
@@ -173,6 +176,8 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private val toggle = view.findViewById<ImageButton>(R.id.widget_focus_toggle)
     private val focusListener: (FocusTimer.State) -> Unit = { render() }
     private val noiseListener: () -> Unit = { render() }
+    private var active = false
+    private var pulse: android.animation.ValueAnimator? = null
 
     init {
         view.setOnClickListener { host.main?.showMode("focus") }
@@ -185,6 +190,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 
     override fun setActive(active: Boolean) {
+        this.active = active
         if (active) {
             FocusTimer.observe(focusListener)
             NoisePlayer.observe(noiseListener)
@@ -192,6 +198,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             FocusTimer.unobserve(focusListener)
             NoisePlayer.unobserve(noiseListener)
         }
+        render()
     }
 
     override fun onMinute() = render()
@@ -202,12 +209,18 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         val active = state.running || state.remainingMs < state.durationMs
         time.text = FocusTimer.format(state.remainingMs)
         ring.progress = (state.durationMs - state.remainingMs).toFloat() / state.durationMs.coerceAtLeast(1)
-        ring.color = color(if (focus) R.color.accent else R.color.ok)
+        ring.color = color(if (focus) R.attr.c_hue_red else R.attr.c_hue_green)
         val phase = context.getString(if (!active) R.string.focus_ready else if (focus) R.string.focus_phase_work else R.string.focus_phase_break)
         val noise = NoisePlayer.kind?.takeIf { NoisePlayer.playing }
         detail.text = if (noise == null) phase else "$phase · " + context.getString(R.string.noise_playing, context.getString(noise.label))
         toggle.setImageResource(if (state.running) R.drawable.ic_pause else R.drawable.ic_play)
         toggle.contentDescription = context.getString(if (state.running) R.string.focus_pause else R.string.focus_start)
+        // Le bouton bat doucement pendant le chrono (seulement à l'écran).
+        if (state.running && active && pulse == null) pulse = Look.pulse(toggle)
+        if ((!state.running || !active) && pulse != null) {
+            Look.stop(pulse, toggle)
+            pulse = null
+        }
     }
 }
 
@@ -251,7 +264,7 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             addView(playing, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         } else {
             addView(cardTitle(R.string.widget_media, R.drawable.ic_play))
-            addView(label(16f, R.color.text_dim).apply { setText(R.string.widget_media_windows_only); setPadding(0, dp(8), 0, 0) })
+            addView(label(16f, R.attr.c_text_dim).apply { setText(R.string.widget_media_windows_only); setPadding(0, dp(8), 0, 0) })
         }
     }
 
@@ -290,7 +303,7 @@ class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun render() {
         val note = placed.config.optString("text")
         text.text = note.ifBlank { context.getString(R.string.widget_note_empty) }
-        text.setTextColor(color(if (note.isBlank()) R.color.text_faint else R.color.text))
+        text.setTextColor(color(if (note.isBlank()) R.attr.c_text_faint else R.attr.c_text))
     }
 
     override fun showSettings() {
@@ -324,9 +337,9 @@ class ConnectWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         gravity = Gravity.CENTER
         addView(ImageView(context).apply {
             setImageResource(placed.type.icon)
-            setColorFilter(color(R.color.text_faint))
+            setColorFilter(color(R.attr.c_text_faint))
         }, LinearLayout.LayoutParams(dp(32), dp(32)))
-        addView(label(16f, R.color.text_dim).apply {
+        addView(label(16f, R.attr.c_text_dim).apply {
             text = context.getString(R.string.widget_needs_computer, context.getString(placed.type.title))
             gravity = Gravity.CENTER
             setPadding(0, dp(8), 0, dp(8))

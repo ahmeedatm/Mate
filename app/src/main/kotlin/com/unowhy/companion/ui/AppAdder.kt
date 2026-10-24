@@ -119,7 +119,7 @@ class AppAdder @JvmOverloads constructor(
         gravity = Gravity.CENTER_VERTICAL
         setBackgroundResource(R.drawable.row_bg)
         setPadding(dp(16), 0, dp(16), 0)
-        if (added) setTextColor(ContextCompat.getColor(context, R.color.accent))
+        if (added) setTextColor(themeColor(context, R.attr.c_accent))
         setOnClickListener {
             dismissKeyboard()
             if (added) remove(name) else add(name)

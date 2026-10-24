@@ -475,6 +475,11 @@
     <string name="tablet_volume">Volume de la tablette (voix, sons d\'ambiance)</string>
     <string name="tablet_night_dim">Atténuer l\'écran la nuit (22 h – 7 h)</string>
     <string name="tablet_night_dim_hint">L\'écran reste allumé en permanence ; la nuit il baisse au minimum, un toucher le rallume.</string>
+    <string name="theme_title">Thème</string>
+    <string name="theme_nuit">Nuit</string>
+    <string name="theme_clair">Clair</string>
+    <string name="theme_neon">Néon</string>
+    <string name="theme_chaud">Chaud</string>
     <string name="tablet_info">Version %1$s · Adresse %2$s · %3$s</string>
     <string name="tablet_no_address">aucune</string>
     <string name="tech_code_title">Code technicien</string>

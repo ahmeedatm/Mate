@@ -91,9 +91,9 @@ class TabletStatusView @JvmOverloads constructor(context: Context, attrs: Attrib
         val signal = Tablet.wifiLevel(context)
         wifi.setImageResource(if (signal == null) R.drawable.ic_wifi_off else R.drawable.ic_wifi)
         tint(wifi, when {
-            signal == null -> R.color.ko
-            signal <= 1 -> R.color.warn
-            else -> R.color.text_dim
+            signal == null -> R.attr.c_ko
+            signal <= 1 -> R.attr.c_warn
+            else -> R.attr.c_text_dim
         })
         wifi.contentDescription = context.getString(if (signal == null) R.string.wifi_off else R.string.wifi_current_unnamed)
     }
@@ -107,17 +107,17 @@ class TabletStatusView @JvmOverloads constructor(context: Context, attrs: Attrib
             },
         )
         val color = when {
-            state.low -> R.color.ko
-            state.charging -> R.color.ok
-            else -> R.color.text_dim
+            state.low -> R.attr.c_ko
+            state.charging -> R.attr.c_ok
+            else -> R.attr.c_text_dim
         }
         tint(battery, color)
-        level.setTextColor(ContextCompat.getColor(context, color))
+        level.setTextColor(themeColor(context, color))
         level.text = context.getString(R.string.percent, state.level)
         contentDescription = context.getString(R.string.tablet_battery_state, state.level)
         onBattery(state)
     }
 
     private fun tint(view: ImageView, color: Int) =
-        ImageViewCompat.setImageTintList(view, ColorStateList.valueOf(ContextCompat.getColor(context, color)))
+        ImageViewCompat.setImageTintList(view, ColorStateList.valueOf(themeColor(context, color)))
 }

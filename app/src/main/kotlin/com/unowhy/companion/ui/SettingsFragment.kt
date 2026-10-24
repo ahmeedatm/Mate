@@ -91,6 +91,7 @@ class SettingsFragment : Fragment() {
         nightDim = view.findViewById(R.id.settings_night_dim)
         tabletInfo = view.findViewById(R.id.settings_tablet_info)
         setUpTablet()
+        setUpThemes(view.findViewById(R.id.settings_themes))
         renderComputers()
         renderWifi()
 
@@ -152,7 +153,7 @@ class SettingsFragment : Fragment() {
             name.setTypeface(null, if (isActive) Typeface.BOLD else Typeface.NORMAL)
             ImageViewCompat.setImageTintList(
                 row.findViewById<ImageView>(R.id.computer_icon),
-                ContextCompat.getColorStateList(ctx, if (isActive) R.color.accent else R.color.text_dim),
+                themeColorList(ctx, if (isActive) R.attr.c_accent else R.attr.c_text_dim),
             )
             val state = if (isActive) getString(stateLabel(link.state)) else null
             row.findViewById<TextView>(R.id.computer_meta).text =
@@ -251,6 +252,30 @@ class SettingsFragment : Fragment() {
 
     // --- Tablette : luminosité, volume, batterie (cachés par le kiosque)
 
+    /** Une pastille par thème, avec sa couleur ; en choisir un recrée l'activité (les écrans se redessinent). */
+    private fun setUpThemes(row: LinearLayout) {
+        val current = AppTheme.current(requireContext())
+        for (theme in AppTheme.entries) {
+            val chip = Button(requireContext(), null, 0, R.style.Chip).apply {
+                setText(theme.label)
+                isSelected = theme == current
+                compoundDrawablePadding = dp(10)
+                setCompoundDrawablesRelative(
+                    ContextCompat.getDrawable(context, R.drawable.dot)!!.mutate().also {
+                        it.setTint(theme.swatch)
+                        it.setBounds(0, 0, dp(14), dp(14))
+                    }, null, null, null,
+                )
+                setOnClickListener {
+                    if (theme == current) return@setOnClickListener
+                    Prefs.setTheme(context, theme.name)
+                    requireActivity().recreate()
+                }
+            }
+            row.addView(chip, LinearLayout.LayoutParams(0, dp(48), 1f).apply { if (row.childCount > 0) marginStart = dp(10) })
+        }
+    }
+
     private fun setUpTablet() {
         val ctx = requireContext()
         brightness.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -303,7 +328,7 @@ class SettingsFragment : Fragment() {
         }
         battery.text = if (state.charging) getString(R.string.tablet_battery_charging, state.level, plug)
         else getString(R.string.tablet_battery_discharging, state.level)
-        battery.setTextColor(ContextCompat.getColor(requireContext(), if (state.low) R.color.ko else R.color.text))
+        battery.setTextColor(themeColor(requireContext(), if (state.low) R.attr.c_ko else R.attr.c_text))
         val health = when (state.health) {
             BatteryManager.BATTERY_HEALTH_OVERHEAT -> getString(R.string.tablet_health_overheat)
             BatteryManager.BATTERY_HEALTH_DEAD -> getString(R.string.tablet_health_dead)
@@ -316,7 +341,7 @@ class SettingsFragment : Fragment() {
             else -> null
         }
         batteryHint.text = hint
-        batteryHint.setTextColor(ContextCompat.getColor(requireContext(), if (state.healthIssue) R.color.warn else R.color.text_dim))
+        batteryHint.setTextColor(themeColor(requireContext(), if (state.healthIssue) R.attr.c_warn else R.attr.c_text_dim))
         batteryHint.visibility = if (hint == null) View.GONE else View.VISIBLE
     }
 
@@ -448,7 +473,7 @@ class SettingsFragment : Fragment() {
     /** Vert si c'est installé, rouge en cas d'échec (le bouton permet alors de réessayer). */
     private fun showResult(button: Button, bar: android.widget.ProgressBar, ok: Boolean) {
         bar.visibility = View.GONE
-        button.backgroundTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(button.context, if (ok) R.color.ok else R.color.ko))
+        button.backgroundTintList = android.content.res.ColorStateList.valueOf(themeColor(button.context, if (ok) R.attr.c_ok else R.attr.c_ko))
         button.setText(if (ok) R.string.updates_done else R.string.updates_failed)
         button.isEnabled = !ok
     }

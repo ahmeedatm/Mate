@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Couleurs du thème (valeurs dans palettes.xml) : dans les vues, ?attr/c_… ; dans le code, themeColor(context, R.attr.c_…). -->
+    <attr name="c_bg" format="color" />
+    <attr name="c_rail" format="color" />
+    <attr name="c_surface" format="color" />
+    <attr name="c_surface_raised" format="color" />
+    <attr name="c_surface_pressed" format="color" />
+    <attr name="c_stroke" format="color" />
+    <attr name="c_accent" format="color" />
+    <attr name="c_accent_soft" format="color" />
+    <attr name="c_on_accent" format="color" />
+    <attr name="c_text" format="color" />
+    <attr name="c_text_dim" format="color" />
+    <attr name="c_text_faint" format="color" />
+    <attr name="c_bubble_user" format="color" />
+    <attr name="c_bubble_bot" format="color" />
+    <attr name="c_recording" format="color" />
+    <attr name="c_ok" format="color" />
+    <attr name="c_ok_soft" format="color" />
+    <attr name="c_ko" format="color" />
+    <attr name="c_ko_soft" format="color" />
+    <attr name="c_warn" format="color" />
+    <attr name="c_paper" format="color" />
+    <!-- Teintes des fonctions (pastilles des titres, tuiles d'applis) : ui/Look.kt. -->
+    <attr name="c_hue_orange" format="color" />
+    <attr name="c_hue_green" format="color" />
+    <attr name="c_hue_cyan" format="color" />
+    <attr name="c_hue_violet" format="color" />
+    <attr name="c_hue_red" format="color" />
+    <attr name="c_hue_pink" format="color" />
+    <attr name="c_hue_yellow" format="color" />
+    <attr name="c_hue_blue" format="color" />
+</resources>

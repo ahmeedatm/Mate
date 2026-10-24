@@ -37,7 +37,10 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         LayoutInflater.from(context).inflate(R.layout.view_water_card, this, true)
         count = findViewById(R.id.water_count)
         gauge = findViewById(R.id.water_gauge)
-        findViewById<View>(R.id.water_plus).setOnClickListener { Water.add(context, 1) }
+        findViewById<View>(R.id.water_plus).setOnClickListener {
+            Water.add(context, 1)
+            Look.pop(count)
+        }
         findViewById<View>(R.id.water_minus).setOnClickListener { Water.add(context, -1) }
         findViewById<View>(R.id.water_header).setOnClickListener { showSettings() }
     }
@@ -65,18 +68,18 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
             },
             state.glasses, state.goal,
         )
-        count.setTextColor(ContextCompat.getColor(context, if (done) R.color.ok else R.color.text))
+        count.setTextColor(themeColor(context, if (done) R.attr.c_ok else R.attr.c_text))
         gauge.removeAllViews()
         val gap = (3 * resources.displayMetrics.density).toInt()
         for (i in 0 until state.goal) {
             val color = when {
-                i >= state.glasses -> R.color.surface_raised
-                done -> R.color.ok
-                else -> R.color.accent
+                i >= state.glasses -> R.attr.c_surface_raised
+                done -> R.attr.c_ok
+                else -> R.attr.c_hue_cyan
             }
             gauge.addView(View(context).apply {
                 background = GradientDrawable().apply {
-                    setColor(ContextCompat.getColor(context, color))
+                    setColor(themeColor(context, color))
                     cornerRadius = 6 * resources.displayMetrics.density
                 }
             }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { if (i > 0) marginStart = gap })
@@ -92,7 +95,7 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         val box = LinearLayout(context).apply { orientation = VERTICAL; setPadding(pad, pad / 3, pad, 0) }
         val inflater = LayoutInflater.from(context)
 
-        fun title(text: Int) = TextView(context, null, 0, R.style.CardTitle).apply {
+        fun title(text: Int) = TitleView(context).apply {
             setText(text)
             setPadding(0, pad / 2, 0, pad / 3)
         }

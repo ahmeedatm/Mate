@@ -38,7 +38,7 @@
             android:id="@+id/task_detail"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/text_dim"
+            android:textColor="?attr/c_text_dim"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -50,7 +50,7 @@
         android:padding="11dp"
         android:contentDescription="@string/open_on_mac"
         android:src="@drawable/ic_open"
-        app:tint="@color/accent" />
+        app:tint="?attr/c_accent" />
 
     <ImageButton
         android:id="@+id/task_delete"

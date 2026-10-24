@@ -1,5 +1,7 @@
 package com.unowhy.companion.ui.home
 
+import com.unowhy.companion.ui.themeColor
+import com.unowhy.companion.ui.TitleView
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
@@ -38,16 +40,15 @@ internal fun daysFrom(now: Long, ms: Long): Int {
  * 15 min avant. Moyen : le bouton à droite du titre ; grand : en dessous.
  */
 class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val labelView = TextView(context, null, 0, R.style.CardTitle).apply {
-        setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_event, 0, 0, 0)
-        compoundDrawableTintList = ContextCompat.getColorStateList(context, R.color.accent)
-        setTextColor(color(R.color.accent))
+    private val labelView = TitleView(context).apply {
+        setIcon(R.drawable.ic_event)
+        setTextColor(color(R.attr.c_hue_orange))
     }
     private val title = label(22f).apply {
         ellipsize = TextUtils.TruncateAt.END
         typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
     }
-    private val whenText = label(17f, R.color.accent).apply { isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
+    private val whenText = label(17f, R.attr.c_accent).apply { isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
     private val join = Button(context, null, 0, R.style.PrimaryButton).apply {
         setText(R.string.join_meeting)
         setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_videocam, 0, 0, 0)
@@ -175,7 +176,7 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
                 textSize = 13f
                 isAllCaps = true
                 letterSpacing = 0.08f
-                setTextColor(color(R.color.text_dim))
+                setTextColor(color(R.attr.c_text_dim))
                 setPadding(dp(4), dp(14), 0, dp(4))
             })
             for (event in dayEvents) list.addView(row(event, now), LinearLayout.LayoutParams(
@@ -187,7 +188,7 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
     private fun note(text: Int) = TextView(context).apply {
         setText(text)
         textSize = 16f
-        setTextColor(color(R.color.text_dim))
+        setTextColor(color(R.attr.c_text_dim))
         setPadding(dp(4), dp(12), 0, dp(4))
     }
 
@@ -195,17 +196,17 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         val past = !event.allDay && event.endMs <= now
         val ongoing = !event.allDay && event.startMs <= now && now < event.endMs
         val main = color(when {
-            ongoing -> R.color.accent
-            past -> R.color.text_faint
-            else -> R.color.text
+            ongoing -> R.attr.c_accent
+            past -> R.attr.c_text_faint
+            else -> R.attr.c_text
         })
         val chosen = event.id == host.chosenId
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(12), dp(10), dp(12), dp(10))
             if (ongoing || chosen) background = GradientDrawable().apply {
-                setColor(color(R.color.accent_soft))
-                if (chosen) setStroke(dp(2), color(R.color.accent))
+                setColor(color(R.attr.c_accent_soft))
+                if (chosen) setStroke(dp(2), color(R.attr.c_accent))
                 cornerRadius = dp(14).toFloat()
             }
             when {
@@ -227,7 +228,7 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         if (!event.allDay) hours.addView(TextView(context).apply {
             text = timeFormat.format(Date(event.endMs))
             textSize = 13f
-            setTextColor(color(R.color.text_faint))
+            setTextColor(color(R.attr.c_text_faint))
         })
         row.addView(hours, LinearLayout.LayoutParams(dp(76), ViewGroup.LayoutParams.WRAP_CONTENT))
 
@@ -240,7 +241,7 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         details.addView(TextView(context).apply {
             text = event.title
             textSize = 17f
-            setTextColor(if (past) main else color(R.color.text))
+            setTextColor(if (past) main else color(R.attr.c_text))
         })
         val reminder = event.remindBefore?.let {
             context.getString(R.string.event_reminder_detail, context.getString(when (it) {
@@ -253,7 +254,7 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         if (sub.isNotEmpty()) details.addView(TextView(context).apply {
             text = sub
             textSize = 13f
-            setTextColor(color(R.color.text_dim))
+            setTextColor(color(R.attr.c_text_dim))
         })
         row.addView(details, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         return row

@@ -42,7 +42,7 @@
                 android:importantForAccessibility="no"
                 android:padding="20dp"
                 android:src="@drawable/ic_chat"
-                app:tint="@color/accent" />
+                app:tint="?attr/c_accent" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -58,7 +58,7 @@
                 android:layout_marginTop="8dp"
                 android:gravity="center"
                 android:text="@string/chat_empty_body"
-                android:textColor="@color/text_dim"
+                android:textColor="?attr/c_text_dim"
                 android:textSize="17sp" />
         </LinearLayout>
     </FrameLayout>

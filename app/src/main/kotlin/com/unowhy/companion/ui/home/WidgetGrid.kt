@@ -1,5 +1,6 @@
 package com.unowhy.companion.ui.home
 
+import com.unowhy.companion.ui.themeColor
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.DashPathEffect
@@ -53,7 +54,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         set(value) { if (field != value) { field = value; requestLayout() } }
 
     private val density = resources.displayMetrics.density
-    private val gap = dp(16)
+    private val gap = dp(20)
     private val narrowRowHeight = dp(176)
     private var cellW = 0
     private var cellH = 0
@@ -69,17 +70,17 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         style = Paint.Style.STROKE
         strokeWidth = 2 * density
         pathEffect = DashPathEffect(floatArrayOf(10 * density, 8 * density), 0f)
-        color = ContextCompat.getColor(context, R.color.stroke)
+        color = themeColor(context, R.attr.c_stroke)
     }
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; isFakeBoldText = true }
     private val removeIcon = ContextCompat.getDrawable(context, R.drawable.ic_close)!!.mutate()
     private val settingsIcon = ContextCompat.getDrawable(context, R.drawable.ic_settings)!!.mutate()
-    private val accent = ContextCompat.getColor(context, R.color.accent)
-    private val raised = ContextCompat.getColor(context, R.color.surface_raised)
-    private val ko = ContextCompat.getColor(context, R.color.ko)
-    private val textColor = ContextCompat.getColor(context, R.color.text)
-    private val faint = ContextCompat.getColor(context, R.color.text_faint)
+    private val accent = themeColor(context, R.attr.c_accent)
+    private val raised = themeColor(context, R.attr.c_surface_raised)
+    private val ko = themeColor(context, R.attr.c_ko)
+    private val textColor = themeColor(context, R.attr.c_text)
+    private val faint = themeColor(context, R.attr.c_text_faint)
 
     init {
         setWillNotDraw(false)

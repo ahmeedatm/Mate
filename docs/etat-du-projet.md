@@ -32,6 +32,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 | Deck | Apps (ajout/retrait depuis la tablette), raccourcis, Perso (touches et macros éditées sur la tablette), pages d'appli (Discord, Réunion), Média (Windows : lecture en cours, sites choisis, YouTube Music), **Ouvertes** (toutes les fenêtres sur le schéma des écrans : toucher, réduire, agrandir, changer d'écran, défiler), fenêtres d'une appli (appui long), son et micro |
 | Partage | dossier partagé, documents à côté de chaque mode, « Page de l'ordi » (page du navigateur de l'ordinateur dans la tablette) |
 | Focus | Pomodoro, ambiance qui suit le chrono |
+| Apparence | 4 thèmes (Nuit, Clair, Néon, Chaud) choisis dans Réglages ; une couleur par fonction (pastilles des titres, tuiles d'applis aux couleurs des marques) ; animations légères (appui, changement de mode, widgets, météo, Focus, eau), fluides sur la tablette |
 | Caméra | visualiseur à environ 10 images/s en WiFi, page `/camera` sur l'ordinateur, Figer, zoom, Arrêter |
 | Kiosque | lock task, SQOOL masqué, installations bloquées, relance après mise à jour, WiFi dans Réglages, mises à jour silencieuses (WebView 152 installé), heure et fuseau auto, état de la tablette (batterie, luminosité, atténuation de nuit), écran de bienvenue |
 | Extension Claude | serveur MCP `tablette` (modes, messages, tâches, agenda, captures…) |
@@ -57,7 +58,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 0. Bug des onglets du Deck (voir plus haut) s'il revient.
 1. **Discord** : tester « Quitter l'appel » et un salon de serveur (nom, qui parle). Pas de RPC ni de portail développeur (décision d'Eliot : les clients ne doivent rien créer, pas de dépendance à une validation de Discord).
 2. **Spotify** : toucher la touche (s'ouvre ? la musique part ?).
-3. **Thèmes** (lot 5).
+3. ~~Thèmes (lot 5)~~ : fait le 24/10. Détail possible : fond de la carte « Prochain rendez-vous » encore teinte d'accent (titre orange).
 4. **Logiciel de l'ordinateur sans Node** : Node embarqué + lanceur Swift sur Mac, installeur NSIS sur Windows. Choix en attente. Avec : icône pour rouvrir la page, règle du pare-feu Windows, dossier Partage dans Documents.
 
 ## Décisions en attente
@@ -92,3 +93,4 @@ Dofus Rétro (« Jouer » par un clic dans la fenêtre : perso, pas pour la dém
 | a37912b | balayage des onglets, écrans agrandis et corbeille dans Ouvertes, documentation |
 | ca0ae6b | onglets déplaçables, corbeille en bande du bas avec son, installeur Windows réparé |
 | 99eb31c | Discord par UI Automation (appel, participants, Quitter), bascule d'ordinateur après 2 min, relecture légère |
+| (ce commit) | thèmes Nuit / Clair / Néon / Chaud, couleurs par fonction, animations |

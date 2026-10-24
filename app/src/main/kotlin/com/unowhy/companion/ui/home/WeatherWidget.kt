@@ -1,5 +1,6 @@
 package com.unowhy.companion.ui.home
 
+import com.unowhy.companion.ui.Look
 import android.content.Context
 import android.os.SystemClock
 import android.view.Gravity
@@ -31,8 +32,8 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     private val emoji = label(44f)
     private val temp = label(40f, light = true)
     private val sky = label(17f).apply { maxLines = 2 }
-    private val range = label(15f, R.color.text_dim).apply { isSingleLine = true }
-    private val city = label(14f, R.color.text_faint).apply { isSingleLine = true }
+    private val range = label(15f, R.attr.c_text_dim).apply { isSingleLine = true }
+    private val city = label(14f, R.attr.c_text_faint).apply { isSingleLine = true }
     private val details = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         addView(sky)
@@ -50,9 +51,19 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     }
 
     private var fetchedAt = 0L
+    private var floating: android.animation.ValueAnimator? = null
     private var current: Forecast? = null
 
     override val hasSettings get() = true
+
+    /** L'emoji du temps flotte doucement tant que la page est à l'écran. */
+    override fun setActive(active: Boolean) {
+        if (active && floating == null) floating = Look.float(emoji)
+        if (!active) {
+            Look.stop(floating, emoji)
+            floating = null
+        }
+    }
 
     override fun applySize() {
         val small = placed.size == WidgetSize.S
@@ -120,14 +131,14 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
             val query = input.text.toString().trim()
             if (query.length < 2) return
             results.removeAllViews()
-            results.addView(label(15f, R.color.text_dim).apply { setText(R.string.loading); setPadding(0, dp(12), 0, 0) })
+            results.addView(label(15f, R.attr.c_text_dim).apply { setText(R.string.loading); setPadding(0, dp(12), 0, 0) })
             host.scope.launch {
                 val places = runCatching { geocode(query) }.getOrNull()
                 // Clavier fermé : il cacherait la liste des villes.
                 hideKeyboard(input)
                 results.removeAllViews()
                 if (places.isNullOrEmpty()) {
-                    results.addView(label(15f, R.color.text_dim).apply {
+                    results.addView(label(15f, R.attr.c_text_dim).apply {
                         setText(if (places == null) R.string.widget_weather_offline else R.string.widget_weather_none)
                         setPadding(0, dp(12), 0, 0)
                     })
@@ -136,7 +147,7 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
                 for (place in places) results.addView(TextView(context).apply {
                     text = place.label
                     textSize = 17f
-                    setTextColor(color(R.color.text))
+                    setTextColor(color(R.attr.c_text))
                     setBackgroundResource(R.drawable.row_bg)
                     setPadding(dp(16), dp(12), dp(16), dp(12))
                     setOnClickListener {

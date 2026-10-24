@@ -18,6 +18,8 @@ import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DeckTile
 import com.unowhy.companion.ui.IconCache
+import com.unowhy.companion.ui.Look
+import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.errorText
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -50,8 +52,8 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                 setBackgroundResource(R.drawable.tile_empty_bg)
                 gravity = Gravity.CENTER
                 orientation = LinearLayout.VERTICAL
-                addView(label(30f, R.color.text_faint).apply { text = "+"; gravity = Gravity.CENTER })
-                addView(label(16f, R.color.text_dim).apply { setText(R.string.widget_keys_choose); gravity = Gravity.CENTER })
+                addView(label(30f, R.attr.c_text_faint).apply { text = "+"; gravity = Gravity.CENTER })
+                addView(label(16f, R.attr.c_text_dim).apply { setText(R.string.widget_keys_choose); gravity = Gravity.CENTER })
                 setOnClickListener { showSettings() }
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             return
@@ -78,6 +80,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         view.findViewById<TextView>(R.id.tile_label).text = key.optString("label")
         key.optString("color").takeIf { it.isNotBlank() }?.let { runCatching { Color.parseColor(it) }.getOrNull() }?.let { view.background.mutate().setTint(it) }
         val glyph = key.optString("glyph").takeIf { it.isNotBlank() }
+        Look.tintInitial(initial, key.optString("label"))
         if (glyph != null) {
             initial.text = glyph
         } else {
@@ -111,7 +114,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             val selected = chosen().map { it.getString("id") }.toMutableList()
             val box = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(24), dp(4), dp(24), dp(8)) }
             val boxes = mutableListOf<Pair<CheckBox, DeckTile>>()
-            val hint = label(15f, R.color.text_dim).apply { setPadding(0, 0, 0, dp(8)) }
+            val hint = label(15f, R.attr.c_text_dim).apply { setPadding(0, 0, 0, dp(8)) }
             box.addView(hint)
             fun update() {
                 hint.text = context.getString(R.string.widget_keys_hint, selected.size, MAX_KEYS)
@@ -120,7 +123,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             for (page in pages) {
                 val tiles = page.tiles.filter { it.type != "empty" }
                 if (tiles.isEmpty()) continue
-                box.addView(TextView(context, null, 0, R.style.CardTitle).apply { text = page.title; setPadding(0, dp(12), 0, dp(4)) })
+                box.addView(TitleView(context).apply { text = page.title; setPadding(0, dp(12), 0, dp(4)) })
                 for (tile in tiles) {
                     val check = CheckBox(context).apply {
                         text = listOfNotNull(tile.glyph, tile.label).joinToString("  ")

@@ -10,6 +10,7 @@ object Prefs {
     private const val KEY_BRIGHTNESS = "brightness"
     private const val KEY_NIGHT_DIM = "night_dim"
     private const val KEY_DECK_TABS = "deck_tabs_"
+    private const val KEY_THEME = "theme"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -51,5 +52,12 @@ object Prefs {
 
     fun setDeckTabOrder(context: Context, keys: List<String>) {
         prefs(context).edit().putString(KEY_DECK_TABS + Computers.active(context)?.id.orEmpty(), keys.joinToString("\n")).apply()
+    }
+
+    /** Thème choisi dans Réglages (nom d'AppTheme) ; null : Nuit. */
+    fun theme(context: Context): String? = prefs(context).getString(KEY_THEME, null)
+
+    fun setTheme(context: Context, value: String) {
+        prefs(context).edit().putString(KEY_THEME, value).apply()
     }
 }

@@ -27,7 +27,7 @@
             android:layout_marginTop="20dp"
             android:orientation="vertical">
 
-            <TextView
+            <com.unowhy.companion.ui.TitleView
                 style="@style/CardTitle"
                 android:drawableStart="@drawable/ic_display"
                 android:text="@string/computers_title" />
@@ -38,7 +38,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:text="@string/computers_hint"
-                android:textColor="@color/text_dim"
+                android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
 
             <LinearLayout
@@ -84,7 +84,7 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
+                <com.unowhy.companion.ui.TitleView
                     style="@style/CardTitle"
                     android:drawableStart="@drawable/ic_wifi"
                     android:text="@string/wifi_title" />
@@ -103,6 +103,27 @@
                 android:text="@string/wifi_choose" />
         </LinearLayout>
 
+        <!-- Thème : ambiances prédéfinies (ui/Themes.kt), pastilles ajoutées par SettingsFragment. -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <com.unowhy.companion.ui.TitleView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_palette"
+                android:text="@string/theme_title" />
+
+            <LinearLayout
+                android:id="@+id/settings_themes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:orientation="horizontal" />
+        </LinearLayout>
+
         <!-- Tablette : ce que le kiosque cache (batterie, luminosité, volume, version, adresse). -->
         <LinearLayout
             style="@style/Card"
@@ -111,7 +132,7 @@
             android:layout_marginTop="16dp"
             android:orientation="vertical">
 
-            <TextView
+            <com.unowhy.companion.ui.TitleView
                 style="@style/CardTitle"
                 android:drawableStart="@drawable/ic_tablet"
                 android:text="@string/tablet_title" />
@@ -127,7 +148,7 @@
                 android:id="@+id/settings_battery_hint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/text_dim"
+                android:textColor="?attr/c_text_dim"
                 android:textSize="14sp"
                 android:visibility="gone" />
 
@@ -143,7 +164,7 @@
                     android:layout_height="24dp"
                     android:contentDescription="@string/tablet_brightness"
                     android:src="@drawable/ic_brightness"
-                    app:tint="@color/text_dim" />
+                    app:tint="?attr/c_text_dim" />
 
                 <SeekBar
                     android:id="@+id/settings_brightness"
@@ -166,7 +187,7 @@
                     android:layout_height="24dp"
                     android:contentDescription="@string/tablet_volume"
                     android:src="@drawable/ic_volume"
-                    app:tint="@color/text_dim" />
+                    app:tint="?attr/c_text_dim" />
 
                 <SeekBar
                     android:id="@+id/settings_volume"
@@ -190,7 +211,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/tablet_night_dim_hint"
-                android:textColor="@color/text_dim"
+                android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
 
             <TextView
@@ -198,7 +219,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:textColor="@color/text_faint"
+                android:textColor="?attr/c_text_faint"
                 android:textIsSelectable="false"
                 android:textSize="13sp" />
         </LinearLayout>
@@ -217,7 +238,7 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <TextView
+                <com.unowhy.companion.ui.TitleView
                     style="@style/CardTitle"
                     android:layout_width="0dp"
                     android:layout_weight="1"
@@ -236,7 +257,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:text="@string/updates_hint"
-                android:textColor="@color/text_dim"
+                android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
 
             <LinearLayout
@@ -256,7 +277,7 @@
             android:layout_marginTop="16dp"
             android:orientation="vertical">
 
-            <TextView
+            <com.unowhy.companion.ui.TitleView
                 style="@style/CardTitle"
                 android:drawableStart="@drawable/ic_videocam"
                 android:text="@string/settings_meetings" />
@@ -275,7 +296,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/autojoin_hint"
-                android:textColor="@color/text_dim"
+                android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
         </LinearLayout>
 
@@ -289,7 +310,7 @@
             android:layout_marginTop="16dp"
             android:orientation="vertical">
 
-            <TextView
+            <com.unowhy.companion.ui.TitleView
                 style="@style/CardTitle"
                 android:drawableStart="@drawable/ic_lock"
                 android:text="@string/kiosk_title" />
@@ -316,7 +337,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/kiosk_allow_installs_hint"
-                android:textColor="@color/text_dim"
+                android:textColor="?attr/c_text_dim"
                 android:textSize="14sp"
                 android:visibility="gone" />
 
@@ -335,7 +356,7 @@
                     style="@style/ActionButton"
                     android:layout_marginStart="12dp"
                     android:text="@string/kiosk_remove"
-                    android:textColor="@color/ko" />
+                    android:textColor="?attr/c_ko" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

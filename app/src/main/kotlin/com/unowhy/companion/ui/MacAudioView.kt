@@ -95,7 +95,7 @@ class MacAudioView @JvmOverloads constructor(
     /** Coupé = icône rouge sur fond rouge pâle, pour le voir de loin. */
     private fun style(button: ImageButton, icon: Int, alert: Boolean) {
         button.setImageResource(icon)
-        ImageViewCompat.setImageTintList(button, ColorStateList.valueOf(ContextCompat.getColor(context, if (alert) R.color.ko else R.color.text)))
-        ViewCompat.setBackgroundTintList(button, if (alert) ColorStateList.valueOf(ContextCompat.getColor(context, R.color.ko_soft)) else null)
+        ImageViewCompat.setImageTintList(button, ColorStateList.valueOf(themeColor(context, if (alert) R.attr.c_ko else R.attr.c_text)))
+        ViewCompat.setBackgroundTintList(button, if (alert) ColorStateList.valueOf(themeColor(context, R.attr.c_ko_soft)) else null)
     }
 }

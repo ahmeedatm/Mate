@@ -87,7 +87,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:textColor="@color/ko"
+            android:textColor="?attr/c_ko"
             android:textSize="15sp"
             android:visibility="gone" />
 
@@ -105,7 +105,7 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
+                <com.unowhy.companion.ui.TitleView
                     style="@style/CardTitle"
                     android:text="@string/key_steps" />
 
@@ -132,7 +132,7 @@
                 android:layout_weight="1.3"
                 android:orientation="vertical">
 
-                <TextView
+                <com.unowhy.companion.ui.TitleView
                     style="@style/CardTitle"
                     android:text="@string/key_add_step" />
 

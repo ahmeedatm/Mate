@@ -106,7 +106,7 @@ class FocusFragment : Fragment() {
 
     private fun render(state: FocusTimer.State) {
         val focus = state.phase == FocusTimer.Phase.FOCUS
-        val color = ContextCompat.getColor(requireContext(), if (focus) R.color.accent else R.color.ok)
+        val color = themeColor(requireContext(), if (focus) R.attr.c_accent else R.attr.c_ok)
         phase.setText(if (focus) R.string.focus_phase_work else R.string.focus_phase_break)
         phase.setTextColor(color)
         time.text = FocusTimer.format(state.remainingMs)

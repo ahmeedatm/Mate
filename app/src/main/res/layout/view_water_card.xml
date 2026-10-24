@@ -17,12 +17,11 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <TextView
+            <com.unowhy.companion.ui.TitleView
                 style="@style/CardTitle"
                 android:drawableStart="@drawable/ic_water"
-                android:drawableTint="@color/accent"
                 android:text="@string/water_title"
-                android:textColor="@color/accent" />
+                android:textColor="?attr/c_hue_cyan" />
 
             <TextView
                 android:id="@+id/water_count"
@@ -45,6 +44,7 @@
             android:id="@+id/water_plus"
             style="@style/IconButton.Primary"
             android:layout_width="48dp"
+            android:backgroundTint="?attr/c_hue_cyan"
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:padding="13dp"

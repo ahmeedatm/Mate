@@ -37,7 +37,7 @@
                 android:id="@+id/docs_count"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/text_dim"
+                android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
         </LinearLayout>
 
@@ -74,6 +74,6 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:padding="16dp"
-        android:textColor="@color/text_dim"
+        android:textColor="?attr/c_text_dim"
         android:visibility="gone" />
 </LinearLayout>

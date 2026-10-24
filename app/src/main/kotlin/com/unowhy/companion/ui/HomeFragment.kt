@@ -106,7 +106,10 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         super.onStart()
         started = true
         activate()
-        if (!isHidden) startLoop()
+        if (!isHidden) {
+            startLoop()
+            animateIn()
+        }
     }
 
     override fun onStop() {
@@ -120,8 +123,17 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         if (hidden) {
             if (grid.editing) endEdit(keep = true)
             loop?.cancel()
-        } else startLoop()
+        } else {
+            startLoop()
+            animateIn()
+        }
         activate()
+    }
+
+    /** Les widgets de la page arrivent l'un après l'autre, de haut en bas puis de gauche à droite. */
+    private fun animateIn() {
+        widgets.keys.filter { it.page == page }.sortedWith(compareBy({ it.row }, { it.col }))
+            .forEachIndexed { i, placed -> widgets[placed]?.let { Look.enter(it.view, i) } }
     }
 
     // --- Widgets
@@ -285,7 +297,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             dots.addView(View(requireContext()).apply {
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
-                    setColor(ContextCompat.getColor(context, if (i == page) R.color.accent else R.color.text_faint))
+                    setColor(themeColor(context, if (i == page) R.attr.c_accent else R.attr.c_text_faint))
                 }
                 setOnClickListener { showPage(i) }
             }, LinearLayout.LayoutParams(dp(12), dp(12)).apply { marginStart = dp(8); marginEnd = dp(8) })
@@ -355,20 +367,20 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             setPadding(dp(16), dp(12), dp(16), dp(12))
             addView(ImageView(ctx).apply {
                 setImageResource(type.icon)
-                setColorFilter(ContextCompat.getColor(ctx, R.color.accent))
+                setColorFilter(themeColor(ctx, R.attr.c_accent))
             }, LinearLayout.LayoutParams(dp(28), dp(28)))
             addView(LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
                 addView(TextView(ctx).apply {
                     setText(type.title)
                     textSize = 18f
-                    setTextColor(ContextCompat.getColor(ctx, R.color.text))
+                    setTextColor(themeColor(ctx, R.attr.c_text))
                 })
                 addView(TextView(ctx).apply {
                     val sizes = type.sizes.joinToString(", ") { getString(it.label).lowercase() }
                     text = getString(R.string.home_gallery_detail, getString(type.description), sizes)
                     textSize = 14f
-                    setTextColor(ContextCompat.getColor(ctx, R.color.text_dim))
+                    setTextColor(themeColor(ctx, R.attr.c_text_dim))
                 })
             }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(16) })
             setOnClickListener { onClick() }
@@ -460,8 +472,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             orientation = LinearLayout.VERTICAL
             setBackgroundResource(R.drawable.row_bg)
             setPadding(dp(16), dp(12), dp(16), dp(12))
-            addView(TextView(ctx).apply { setText(template.title); textSize = 18f; setTextColor(ContextCompat.getColor(ctx, R.color.text)) })
-            addView(TextView(ctx).apply { setText(template.description); textSize = 14f; setTextColor(ContextCompat.getColor(ctx, R.color.text_dim)) })
+            addView(TextView(ctx).apply { setText(template.title); textSize = 18f; setTextColor(themeColor(ctx, R.attr.c_text)) })
+            addView(TextView(ctx).apply { setText(template.description); textSize = 14f; setTextColor(themeColor(ctx, R.attr.c_text_dim)) })
             setOnClickListener {
                 dialog.dismiss()
                 // Le modèle remplace l'accueil ; « Annuler » ramène celui d'avant.

@@ -14,7 +14,7 @@
         android:layout_height="72dp"
         android:importantForAccessibility="no"
         android:src="@drawable/ic_display"
-        app:tint="@color/text_faint" />
+        app:tint="?attr/c_text_faint" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -32,7 +32,7 @@
         android:layout_marginTop="8dp"
         android:gravity="center"
         android:maxWidth="520dp"
-        android:textColor="@color/text_dim"
+        android:textColor="?attr/c_text_dim"
         android:textSize="18sp" />
 
     <Button

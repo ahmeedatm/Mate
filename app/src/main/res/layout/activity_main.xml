@@ -17,7 +17,7 @@
         android:id="@+id/rail"
         android:layout_width="96dp"
         android:layout_height="match_parent"
-        android:background="@color/rail"
+        android:background="?attr/c_rail"
         android:gravity="center_horizontal"
         android:orientation="vertical"
         android:paddingTop="16dp"
@@ -61,7 +61,7 @@
                 android:layout_height="22dp"
                 android:importantForAccessibility="no"
                 android:src="@drawable/ic_link"
-                app:tint="@color/text_faint" />
+                app:tint="?attr/c_text_faint" />
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -85,7 +85,7 @@
                     android:ellipsize="end"
                     android:gravity="center"
                     android:maxLines="2"
-                    android:textColor="@color/text_faint"
+                    android:textColor="?attr/c_text_faint"
                     android:textSize="11sp" />
             </LinearLayout>
         </LinearLayout>
@@ -141,14 +141,14 @@
         android:background="@drawable/banner_bg"
         android:drawableStart="@drawable/ic_chat"
         android:drawablePadding="16dp"
-        android:drawableTint="@color/accent"
+        android:drawableTint="?attr/c_accent"
         android:elevation="12dp"
         android:gravity="center_vertical"
         android:paddingStart="24dp"
         android:paddingTop="20dp"
         android:paddingEnd="28dp"
         android:paddingBottom="20dp"
-        android:textColor="@color/text"
+        android:textColor="?attr/c_text"
         android:textSize="24sp"
         android:visibility="gone" />
 </FrameLayout>

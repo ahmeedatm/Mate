@@ -8,7 +8,7 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <TextView
+        <com.unowhy.companion.ui.TitleView
             style="@style/CardTitle"
             android:drawableStart="@drawable/ic_tasks"
             android:text="@string/tasks_today" />
@@ -19,7 +19,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_weight="1"
-            android:textColor="@color/text_dim"
+            android:textColor="?attr/c_text_dim"
             android:textSize="14sp" />
 
         <ImageButton
@@ -60,7 +60,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:padding="12dp"
-        android:textColor="@color/text_dim"
+        android:textColor="?attr/c_text_dim"
         android:visibility="gone" />
 
     <LinearLayout
@@ -82,7 +82,7 @@
             android:focusable="true"
             android:gravity="center_vertical"
             android:text="@string/task_hint"
-            android:textColor="@color/text_faint" />
+            android:textColor="?attr/c_text_faint" />
 
         <ImageButton
             android:id="@+id/tasks_add"

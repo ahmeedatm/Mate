@@ -8,7 +8,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:text="@string/mac_volume"
-        android:textColor="@color/text"
+        android:textColor="?attr/c_text"
         android:textSize="17sp"
         android:textStyle="bold"
         android:visibility="gone" />
@@ -31,7 +31,7 @@
         android:layout_width="56dp"
         android:layout_height="wrap_content"
         android:gravity="end"
-        android:textColor="@color/text_dim"
+        android:textColor="?attr/c_text_dim"
         android:textSize="15sp" />
 
     <ImageButton

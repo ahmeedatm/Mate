@@ -95,7 +95,7 @@ Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/upda
 | `camera/DocCamera.kt` | caméra du visualiseur |
 | `device/` | batterie, signal, luminosité (atténuée la nuit) |
 | `kiosk/` | `Kiosk` (verrouillage, SQOOL masqué), `Updater`, `UpdatedReceiver`, `KioskAdminReceiver` |
-| `res/values/strings.xml` | tous les textes (français) ; `colors.xml`, `themes.xml` pour le style |
+| `res/values/strings.xml` | tous les textes (français) ; `attrs.xml` + `palettes.xml` (couleurs des 4 thèmes), `themes.xml` pour le style ; `ui/Themes.kt`, `ui/Look.kt` |
 
 ### Ordinateur : `backend/src/`
 

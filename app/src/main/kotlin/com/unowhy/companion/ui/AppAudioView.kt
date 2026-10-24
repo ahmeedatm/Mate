@@ -135,8 +135,8 @@ class AppAudioView @JvmOverloads constructor(
                 else -> R.string.app_audio_silent
             },
         )
-        stateText.setTextColor(ContextCompat.getColor(context, if (talking) R.color.accent else R.color.text_dim))
-        ViewCompat.setBackgroundTintList(dot, ColorStateList.valueOf(ContextCompat.getColor(context, if (talking) R.color.accent else R.color.text_faint)))
+        stateText.setTextColor(themeColor(context, if (talking) R.attr.c_accent else R.attr.c_text_dim))
+        ViewCompat.setBackgroundTintList(dot, ColorStateList.valueOf(themeColor(context, if (talking) R.attr.c_accent else R.attr.c_text_faint)))
 
         volume.isEnabled = running
         mute.isEnabled = running
@@ -148,8 +148,8 @@ class AppAudioView @JvmOverloads constructor(
         }
         val muted = running && audio!!.muted
         mute.setImageResource(if (muted) R.drawable.ic_volume_off else R.drawable.ic_volume)
-        ImageViewCompat.setImageTintList(mute, ColorStateList.valueOf(ContextCompat.getColor(context, if (muted) R.color.ko else R.color.text)))
-        ViewCompat.setBackgroundTintList(mute, if (muted) ColorStateList.valueOf(ContextCompat.getColor(context, R.color.ko_soft)) else null)
+        ImageViewCompat.setImageTintList(mute, ColorStateList.valueOf(themeColor(context, if (muted) R.attr.c_ko else R.attr.c_text)))
+        ViewCompat.setBackgroundTintList(mute, if (muted) ColorStateList.valueOf(themeColor(context, R.attr.c_ko_soft)) else null)
     }
 
     private companion object {

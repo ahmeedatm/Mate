@@ -35,8 +35,8 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
     private val bin = LinearLayout(context)
     private val icon = ImageView(context)
     private val label = TextView(context)
-    private val fill = ClipDrawable(rounded(R.color.ko_soft), Gravity.START, ClipDrawable.HORIZONTAL)
-    private val frame = rounded(R.color.surface)
+    private val fill = ClipDrawable(rounded(R.attr.c_ko_soft), Gravity.START, ClipDrawable.HORIZONTAL)
+    private val frame = rounded(R.attr.c_surface)
     private var armed = false
     private var wobble: Animator? = null
     /** Retour aux instructions après un glisser ; annulé si un autre glisser commence avant. */
@@ -56,7 +56,7 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
         hint.apply {
             setText(R.string.deck_open_hint)
             textSize = 15f
-            setTextColor(color(R.color.text_dim))
+            setTextColor(color(R.attr.c_text_dim))
             gravity = Gravity.CENTER
             setPadding(dp(16), 0, dp(16), 0)
         }
@@ -84,7 +84,7 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
             DragEvent.ACTION_DRAG_STARTED -> { removeCallbacks(backToHint); reset(); show(dragging = true) }
             DragEvent.ACTION_DRAG_ENTERED -> {
                 label.setText(R.string.trash_hold)
-                tint(R.color.ko)
+                tint(R.attr.c_ko)
                 icon.animate().scaleX(1.15f).scaleY(1.15f).setDuration(150).start()
                 arming.start()
             }
@@ -137,7 +137,7 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
         icon.scaleX = 1f
         icon.scaleY = 1f
         label.setText(R.string.trash_idle)
-        tint(R.color.text_dim)
+        tint(R.attr.c_text_dim)
     }
 
     private fun stopWobble() {
@@ -158,7 +158,7 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
         cornerRadius = dp(16).toFloat()
     }
 
-    private fun color(res: Int) = ContextCompat.getColor(context, res)
+    private fun color(res: Int) = themeColor(context, res)
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 

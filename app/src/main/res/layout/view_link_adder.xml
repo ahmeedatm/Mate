@@ -36,7 +36,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:text="@string/links_custom"
-            android:textColor="@color/text_dim"
+            android:textColor="?attr/c_text_dim"
             android:textSize="15sp" />
 
         <LinearLayout
@@ -81,7 +81,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:textColor="@color/text_dim"
+            android:textColor="?attr/c_text_dim"
             android:textSize="15sp"
             android:visibility="gone" />
 
@@ -90,7 +90,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="@string/links_suggestions"
-            android:textColor="@color/text_dim"
+            android:textColor="?attr/c_text_dim"
             android:textSize="15sp" />
 
         <ScrollView

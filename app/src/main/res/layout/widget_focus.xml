@@ -30,7 +30,7 @@
             android:layout_gravity="center"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_timer"
-            app:tint="@color/text_dim" />
+            app:tint="?attr/c_text_dim" />
     </FrameLayout>
 
     <LinearLayout
@@ -54,13 +54,14 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:singleLine="true"
-            android:textColor="@color/text_dim"
+            android:textColor="?attr/c_text_dim"
             android:textSize="14sp" />
     </LinearLayout>
 
     <ImageButton
         android:id="@+id/widget_focus_toggle"
         style="@style/IconButton.Primary"
+        android:backgroundTint="?attr/c_hue_red"
         android:contentDescription="@string/focus_start"
         android:src="@drawable/ic_play" />
 </LinearLayout>

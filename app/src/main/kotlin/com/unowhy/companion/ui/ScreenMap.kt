@@ -107,12 +107,12 @@ class ScreenMap @JvmOverloads constructor(
         private val cards = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         val scroll = ScrollView(context)
         private val preview = View(context).apply {
-            background = rounded(R.color.accent_soft, dp(8)).apply { setStroke(dp(2), color(R.color.accent)) }
+            background = rounded(R.attr.c_accent_soft, dp(8)).apply { setStroke(dp(2), color(R.attr.c_accent)) }
             visibility = GONE
         }
         private val previewLabel = TextView(context).apply {
             textSize = 15f
-            setTextColor(color(R.color.accent))
+            setTextColor(color(R.attr.c_accent))
             gravity = Gravity.CENTER
             visibility = GONE
         }
@@ -133,14 +133,14 @@ class ScreenMap @JvmOverloads constructor(
             header.addView(TextView(context).apply {
                 text = screen.label
                 textSize = 14f
-                setTextColor(color(R.color.text))
+                setTextColor(color(R.attr.c_text))
                 maxLines = 1
             })
             header.addView(TextView(context).apply {
                 setText(if (screen.main) R.string.screen_main else R.string.screen_secondary)
                 textSize = 12f
-                setTextColor(color(if (screen.main) R.color.accent else R.color.text_dim))
-                background = rounded(if (screen.main) R.color.accent_soft else R.color.surface_raised, dp(8))
+                setTextColor(color(if (screen.main) R.attr.c_accent else R.attr.c_text_dim))
+                background = rounded(if (screen.main) R.attr.c_accent_soft else R.attr.c_surface_raised, dp(8))
                 setPadding(dp(8), dp(2), dp(8), dp(2))
                 maxLines = 1
             }, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
@@ -217,8 +217,8 @@ class ScreenMap @JvmOverloads constructor(
             background = frameBackground(highlight = false)
         }
 
-        private fun frameBackground(highlight: Boolean) = rounded(R.color.bg, dp(12)).apply {
-            setStroke(dp(2), color(if (highlight) R.color.accent else R.color.stroke))
+        private fun frameBackground(highlight: Boolean) = rounded(R.attr.c_bg, dp(12)).apply {
+            setStroke(dp(2), color(if (highlight) R.attr.c_accent else R.attr.c_stroke))
         }
     }
 
@@ -227,7 +227,7 @@ class ScreenMap @JvmOverloads constructor(
         cornerRadius = radius.toFloat()
     }
 
-    private fun color(res: Int) = ContextCompat.getColor(context, res)
+    private fun color(res: Int) = themeColor(context, res)
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 

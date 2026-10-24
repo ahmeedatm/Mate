@@ -131,7 +131,7 @@ class TasksCard @JvmOverloads constructor(
             pending == 0 -> context.getString(R.string.tasks_all_done)
             else -> context.getString(R.string.tasks_left, pending)
         }
-        count.setTextColor(ContextCompat.getColor(context, if (pending > 0) R.color.warn else R.color.ok))
+        count.setTextColor(themeColor(context, if (pending > 0) R.attr.c_warn else R.attr.c_ok))
         showStatus(if (tasks.isEmpty()) context.getString(R.string.tasks_empty) else null)
 
         list.removeAllViews()
@@ -141,7 +141,7 @@ class TasksCard @JvmOverloads constructor(
             val row = inflater.inflate(R.layout.item_task, list, false)
             val label = row.findViewById<TextView>(R.id.task_label)
             label.text = task.label
-            label.setTextColor(ContextCompat.getColor(context, if (task.done) R.color.text_faint else R.color.text))
+            label.setTextColor(themeColor(context, if (task.done) R.attr.c_text_faint else R.attr.c_text))
             label.paintFlags = if (task.done) label.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
             else label.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
 

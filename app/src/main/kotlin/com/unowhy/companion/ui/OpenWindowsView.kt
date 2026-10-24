@@ -55,7 +55,7 @@ class OpenWindowsView @JvmOverloads constructor(
         visibility = GONE
         status.apply {
             textSize = 15f
-            setTextColor(color(R.color.text_dim))
+            setTextColor(color(R.attr.c_text_dim))
             gravity = Gravity.CENTER
             setPadding(0, dp(8), 0, dp(8))
             visibility = GONE
@@ -193,7 +193,7 @@ class OpenWindowsView @JvmOverloads constructor(
         status.visibility = VISIBLE
     }
 
-    private fun color(res: Int) = ContextCompat.getColor(context, res)
+    private fun color(res: Int) = themeColor(context, res)
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 

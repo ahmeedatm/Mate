@@ -101,13 +101,13 @@ class DocsFragment : Fragment() {
             val view = convertView ?: layoutInflater.inflate(R.layout.item_doc, parent, false)
             val entry = getItem(position)!!
             val (icon, color) = when (entry.kind) {
-                "dir" -> R.drawable.ic_folder to R.color.accent
-                "pdf" -> R.drawable.ic_doc to R.color.ko
-                "image" -> R.drawable.ic_image to R.color.ok
-                "text" -> R.drawable.ic_doc to R.color.text_dim
-                else -> R.drawable.ic_file to R.color.text_faint
+                "dir" -> R.drawable.ic_folder to R.attr.c_accent
+                "pdf" -> R.drawable.ic_doc to R.attr.c_ko
+                "image" -> R.drawable.ic_image to R.attr.c_ok
+                "text" -> R.drawable.ic_doc to R.attr.c_text_dim
+                else -> R.drawable.ic_file to R.attr.c_text_faint
             }
-            val tint = ContextCompat.getColor(context, color)
+            val tint = themeColor(context, color)
             view.findViewById<ImageView>(R.id.doc_icon).apply {
                 setImageResource(icon)
                 ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(tint))

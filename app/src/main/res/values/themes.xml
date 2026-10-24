@@ -1,14 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Companion" parent="Theme.AppCompat.NoActionBar">
-        <item name="colorPrimary">@color/accent</item>
-        <item name="colorAccent">@color/accent</item>
-        <item name="colorControlNormal">@color/text_dim</item>
-        <item name="colorControlActivated">@color/accent</item>
-        <item name="android:windowBackground">@color/bg</item>
-        <item name="android:textColorPrimary">@color/text</item>
-        <item name="android:textColor">@color/text</item>
-        <item name="android:textColorHint">@color/text_faint</item>
+    <style name="Theme.Companion" parent="Palette.Nuit">
+        <item name="colorPrimary">?attr/c_accent</item>
+        <item name="colorAccent">?attr/c_accent</item>
+        <item name="colorControlNormal">?attr/c_text_dim</item>
+        <item name="colorControlActivated">?attr/c_accent</item>
+        <item name="android:windowBackground">?attr/c_bg</item>
+        <item name="android:textColorPrimary">?attr/c_text</item>
+        <item name="android:textColor">?attr/c_text</item>
+        <item name="android:textColorHint">?attr/c_text_faint</item>
+        <!-- Pas d'animations de fenêtre : la tablette est lente. -->
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
+    <!-- Même thème sur fond clair (dialogues et champs de saisie d'AppCompat en version claire). -->
+    <style name="Theme.CompanionLight" parent="Palette.Clair">
+        <item name="colorPrimary">?attr/c_accent</item>
+        <item name="colorAccent">?attr/c_accent</item>
+        <item name="colorControlNormal">?attr/c_text_dim</item>
+        <item name="colorControlActivated">?attr/c_accent</item>
+        <item name="android:windowBackground">?attr/c_bg</item>
+        <item name="android:textColorPrimary">?attr/c_text</item>
+        <item name="android:textColor">?attr/c_text</item>
+        <item name="android:textColorHint">?attr/c_text_faint</item>
         <!-- Pas d'animations de fenêtre : la tablette est lente. -->
         <item name="android:windowAnimationStyle">@null</item>
     </style>
@@ -27,13 +41,13 @@
         <item name="android:drawablePadding">10dp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textSize">16sp</item>
-        <item name="android:stateListAnimator">@null</item>
+        <item name="android:stateListAnimator">@animator/press</item>
     </style>
 
     <style name="PrimaryButton" parent="ActionButton">
         <item name="android:background">@drawable/button_primary_bg</item>
-        <item name="android:textColor">@color/on_accent</item>
-        <item name="android:drawableTint">@color/on_accent</item>
+        <item name="android:textColor">?attr/c_on_accent</item>
+        <item name="android:drawableTint">?attr/c_on_accent</item>
         <item name="android:fontFamily">sans-serif-medium</item>
     </style>
 
@@ -49,7 +63,7 @@
         <item name="android:textColor">@color/chip_text</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textSize">15sp</item>
-        <item name="android:stateListAnimator">@null</item>
+        <item name="android:stateListAnimator">@animator/press</item>
     </style>
 
     <!-- Bouton rond à icône. -->
@@ -59,13 +73,14 @@
         <item name="android:background">@drawable/round_bg</item>
         <item name="android:padding">12dp</item>
         <item name="android:scaleType">fitCenter</item>
-        <item name="tint">@color/text</item>
+        <item name="android:stateListAnimator">@animator/press</item>
+        <item name="tint">?attr/c_text</item>
     </style>
 
     <!-- Bouton à icône sans fond (barres d'outils, lignes de liste). -->
     <style name="IconButton.Flat">
         <item name="android:background">@drawable/flat_bg</item>
-        <item name="tint">@color/text_dim</item>
+        <item name="tint">?attr/c_text_dim</item>
     </style>
 
     <style name="IconButton.Primary">
@@ -73,7 +88,7 @@
         <item name="android:layout_height">56dp</item>
         <item name="android:padding">15dp</item>
         <item name="android:background">@drawable/round_primary_bg</item>
-        <item name="tint">@color/on_accent</item>
+        <item name="tint">?attr/c_on_accent</item>
     </style>
 
     <!-- Cartes et textes -->
@@ -87,10 +102,9 @@
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:gravity">center_vertical</item>
-        <item name="android:drawablePadding">10dp</item>
-        <item name="android:drawableTint">@color/text_dim</item>
+        <item name="android:drawablePadding">12dp</item>
         <item name="android:fontFamily">sans-serif-medium</item>
-        <item name="android:textColor">@color/text_dim</item>
+        <item name="android:textColor">?attr/c_text_dim</item>
         <item name="android:textSize">13sp</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:letterSpacing">0.1</item>
@@ -105,7 +119,7 @@
         <item name="android:background">@drawable/step_bg</item>
         <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:gravity">center</item>
-        <item name="android:textColor">@color/accent</item>
+        <item name="android:textColor">?attr/c_accent</item>
         <item name="android:textSize">20sp</item>
     </style>
 
@@ -121,7 +135,7 @@
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">8dp</item>
-        <item name="android:textColor">@color/text_dim</item>
+        <item name="android:textColor">?attr/c_text_dim</item>
         <item name="android:textSize">17sp</item>
     </style>
 
@@ -132,15 +146,15 @@
         <item name="android:background">@drawable/input_bg</item>
         <item name="android:paddingStart">20dp</item>
         <item name="android:paddingEnd">20dp</item>
-        <item name="android:textColor">@color/text</item>
-        <item name="android:textColorHint">@color/text_faint</item>
+        <item name="android:textColor">?attr/c_text</item>
+        <item name="android:textColorHint">?attr/c_text_faint</item>
         <item name="android:textSize">17sp</item>
     </style>
 
     <style name="Slider">
         <item name="android:layout_height">48dp</item>
-        <item name="android:progressTint">@color/accent</item>
-        <item name="android:thumbTint">@color/accent</item>
-        <item name="android:progressBackgroundTint">@color/text_faint</item>
+        <item name="android:progressTint">?attr/c_accent</item>
+        <item name="android:thumbTint">?attr/c_accent</item>
+        <item name="android:progressBackgroundTint">?attr/c_text_faint</item>
     </style>
 </resources>

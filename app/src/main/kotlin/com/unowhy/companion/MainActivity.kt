@@ -1,5 +1,8 @@
 package com.unowhy.companion
 
+import com.unowhy.companion.ui.AppTheme
+import com.unowhy.companion.ui.Look
+import com.unowhy.companion.ui.themeColor
 import android.graphics.Rect
 import android.os.Bundle
 import android.view.KeyEvent
@@ -95,6 +98,7 @@ class MainActivity : AppCompatActivity() {
     private val hideBanner = Runnable { banner.visibility = View.GONE }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppTheme.apply(this)
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContentView(R.layout.activity_main)
@@ -186,11 +190,11 @@ class MainActivity : AppCompatActivity() {
     private fun showLink(link: Link) {
         this.link = link
         val color = when (link.state) {
-            Link.State.ONLINE -> R.color.ok
-            Link.State.UNAUTHORIZED -> R.color.warn
-            else -> R.color.ko
+            Link.State.ONLINE -> R.attr.c_ok
+            Link.State.UNAUTHORIZED -> R.attr.c_warn
+            else -> R.attr.c_ko
         }
-        statusDot.background.mutate().setTint(ContextCompat.getColor(this, color))
+        statusDot.background.mutate().setTint(themeColor(this, color))
         statusName.text = link.computer?.name ?: getString(R.string.no_computer_short)
         val state = when (link.state) {
             Link.State.ONLINE -> R.string.online
@@ -454,11 +458,13 @@ class MainActivity : AppCompatActivity() {
         if (::documentPanel.isInitialized && documentPanel.visibility == View.VISIBLE) {
             documentPanel.setExpanded(mode == Mode.DOCS, splittable = mode != Mode.DOCS)
         }
+        val changed = current != mode
         current = mode
         val fm = supportFragmentManager
         // Un écran ajouté juste avant (ex. recréé par onComputerChanged) doit exister pour être masqué.
         fm.executePendingTransactions()
         val tx = fm.beginTransaction()
+        if (changed) tx.setCustomAnimations(R.animator.mode_in, 0)
         fm.fragments.forEach { tx.hide(it) }
         // Sans ordinateur, un mode qui en a besoin n'est pas créé (caméra, requêtes) : renderNoComputer le remplace.
         val needsComputer = mode.connect != null && Computers.all(this).isEmpty()
@@ -467,6 +473,7 @@ class MainActivity : AppCompatActivity() {
         tx.commit()
 
         railItems.forEach { (m, item) -> item.view.isSelected = m == mode }
+        if (changed) railItems[mode]?.let { Look.pop(it.view.findViewById(R.id.rail_icon)) }
         renderNoComputer()
     }
 

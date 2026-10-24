@@ -15,7 +15,7 @@
         android:minHeight="40dp"
         android:orientation="horizontal">
 
-        <TextView
+        <com.unowhy.companion.ui.TitleView
             style="@style/CardTitle"
             android:drawableStart="@drawable/ic_event"
             android:text="@string/today" />
@@ -29,7 +29,7 @@
             android:ellipsize="end"
             android:gravity="end"
             android:singleLine="true"
-            android:textColor="@color/text_faint"
+            android:textColor="?attr/c_text_faint"
             android:textSize="12sp" />
 
         <!-- « Mes agendas » (délier, en relier un autre) ; sans agenda relié, lien vers la page de l'ordinateur. -->

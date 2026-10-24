@@ -18,7 +18,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
-    <TextView
+    <com.unowhy.companion.ui.TitleView
         style="@style/CardTitle"
         android:layout_marginTop="20dp"
         android:drawableStart="@drawable/ic_repeat"
@@ -46,7 +46,7 @@
         android:orientation="horizontal"
         android:visibility="gone" />
 
-    <TextView
+    <com.unowhy.companion.ui.TitleView
         style="@style/CardTitle"
         android:layout_marginTop="20dp"
         android:drawableStart="@drawable/ic_alarm"
@@ -81,7 +81,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:textColor="@color/text_dim"
+        android:textColor="?attr/c_text_dim"
         android:textSize="14sp" />
 </LinearLayout>
 </ScrollView>

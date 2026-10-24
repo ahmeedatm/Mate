@@ -98,7 +98,7 @@
             android:layout_height="match_parent"
             android:gravity="center"
             android:padding="24dp"
-            android:textColor="@color/text_dim"
+            android:textColor="?attr/c_text_dim"
             android:visibility="gone" />
     </FrameLayout>
 
@@ -128,7 +128,7 @@
             android:layout_marginEnd="24dp"
             android:minWidth="64dp"
             android:gravity="center"
-            android:textColor="@color/text_dim"
+            android:textColor="?attr/c_text_dim"
             android:textSize="16sp" />
 
         <ImageButton

@@ -21,12 +21,12 @@ class ProgressRing @JvmOverloads constructor(
 
     private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = ContextCompat.getColor(context, R.color.surface_raised)
+        color = themeColor(context, R.attr.c_surface_raised)
     }
     private val arc = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
-        color = ContextCompat.getColor(context, R.color.accent)
+        color = themeColor(context, R.attr.c_accent)
     }
 
     /** Entre 0 et 1. */

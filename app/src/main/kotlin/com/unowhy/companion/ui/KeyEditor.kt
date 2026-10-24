@@ -211,7 +211,7 @@ class KeyEditor @JvmOverloads constructor(
         if (steps.isEmpty()) {
             stepList.addView(TextView(context).apply {
                 setText(R.string.key_steps_empty)
-                setTextColor(ContextCompat.getColor(context, R.color.text_dim))
+                setTextColor(themeColor(context, R.attr.c_text_dim))
                 textSize = 15f
             })
             return
@@ -341,7 +341,7 @@ class KeyEditor @JvmOverloads constructor(
     // --- Petits éléments d'interface
 
     private fun note(text: Int) {
-        form.addView(TextView(context, null, 0, R.style.CardTitle).apply { setText(text) },
+        form.addView(TitleView(context).apply { setText(text) },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(14) })
     }
 
@@ -374,7 +374,7 @@ class KeyEditor @JvmOverloads constructor(
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundResource(R.drawable.row_bg)
             setPadding(dp(16), 0, dp(16), 0)
-            if (selected) setTextColor(ContextCompat.getColor(context, R.color.accent))
+            if (selected) setTextColor(themeColor(context, R.attr.c_accent))
             setOnClickListener { onClick() }
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)).apply { bottomMargin = dp(6) }
         }
@@ -421,7 +421,7 @@ class KeyEditor @JvmOverloads constructor(
         ImageButton(context, null, 0, R.style.IconButton_Flat).apply {
             setImageResource(icon)
             // `tint` du style n'est lu que par les vues AppCompat gonflées depuis le XML.
-            ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(ContextCompat.getColor(context, R.color.text_dim)))
+            ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(themeColor(context, R.attr.c_text_dim)))
             this.rotation = rotation
             contentDescription = context.getString(description)
             setOnClickListener { onClick() }
@@ -432,7 +432,7 @@ class KeyEditor @JvmOverloads constructor(
         val ring = android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.OVAL
             setColor(color)
-            setStroke(dp(3), ContextCompat.getColor(context, R.color.accent))
+            setStroke(dp(3), themeColor(context, R.attr.c_accent))
         }
         val plain = android.graphics.drawable.GradientDrawable().apply {
             shape = android.graphics.drawable.GradientDrawable.OVAL

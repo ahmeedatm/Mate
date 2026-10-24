@@ -35,7 +35,7 @@
             android:layout_marginStart="8dp"
             android:layout_weight="1"
             android:singleLine="true"
-            android:textColor="@color/text_dim"
+            android:textColor="?attr/c_text_dim"
             android:textSize="16sp" />
 
         <Button
@@ -93,14 +93,14 @@
                     android:layout_height="64dp"
                     android:importantForAccessibility="no"
                     android:src="@drawable/ic_display"
-                    android:tint="@color/accent" />
+                    android:tint="?attr/c_accent" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:text="@string/camera_choose_show"
-                    android:textColor="@color/text"
+                    android:textColor="?attr/c_text"
                     android:textSize="22sp"
                     android:textStyle="bold" />
 
@@ -110,7 +110,7 @@
                     android:layout_marginTop="10dp"
                     android:gravity="center"
                     android:text="@string/camera_choose_show_hint"
-                    android:textColor="@color/text_dim"
+                    android:textColor="?attr/c_text_dim"
                     android:textSize="16sp" />
             </LinearLayout>
 
@@ -133,14 +133,14 @@
                     android:layout_height="64dp"
                     android:importantForAccessibility="no"
                     android:src="@drawable/ic_camera"
-                    android:tint="@color/accent" />
+                    android:tint="?attr/c_accent" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:text="@string/camera_choose_photo"
-                    android:textColor="@color/text"
+                    android:textColor="?attr/c_text"
                     android:textSize="22sp"
                     android:textStyle="bold" />
 
@@ -150,7 +150,7 @@
                     android:layout_marginTop="10dp"
                     android:gravity="center"
                     android:text="@string/camera_choose_photo_hint"
-                    android:textColor="@color/text_dim"
+                    android:textColor="?attr/c_text_dim"
                     android:textSize="16sp" />
             </LinearLayout>
         </LinearLayout>
@@ -172,7 +172,7 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:maxWidth="480dp"
-                android:textColor="@color/text_dim"
+                android:textColor="?attr/c_text_dim"
                 android:textSize="18sp" />
 
             <!-- Autoriser (permission refusée). -->
@@ -195,7 +195,7 @@
             android:paddingEnd="20dp"
             android:paddingBottom="10dp"
             android:text="@string/camera_frozen_hint"
-            android:textColor="@color/warn"
+            android:textColor="?attr/c_warn"
             android:textSize="16sp"
             android:visibility="gone" />
     </FrameLayout>

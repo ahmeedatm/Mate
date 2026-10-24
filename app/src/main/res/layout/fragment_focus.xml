@@ -24,7 +24,7 @@
             android:gravity="center"
             android:orientation="vertical">
 
-            <TextView
+            <com.unowhy.companion.ui.TitleView
                 android:id="@+id/focus_phase"
                 style="@style/CardTitle" />
 
@@ -42,7 +42,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:textColor="@color/text_dim"
+                android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
         </LinearLayout>
     </FrameLayout>
@@ -108,7 +108,7 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <TextView
+            <com.unowhy.companion.ui.TitleView
                 style="@style/CardTitle"
                 android:drawableStart="@drawable/ic_wave"
                 android:text="@string/ambiance" />

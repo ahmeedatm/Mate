@@ -20,7 +20,7 @@
         android:layout_height="28dp"
         android:importantForAccessibility="no"
         android:src="@drawable/ic_display"
-        app:tint="@color/text_dim" />
+        app:tint="?attr/c_text_dim" />
 
     <LinearLayout
         android:layout_width="0dp"
@@ -42,7 +42,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:textColor="@color/text_dim"
+            android:textColor="?attr/c_text_dim"
             android:textSize="13sp" />
     </LinearLayout>
 

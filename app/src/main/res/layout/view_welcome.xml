@@ -24,7 +24,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="@string/welcome_subtitle"
-            android:textColor="@color/text_dim"
+            android:textColor="?attr/c_text_dim"
             android:textSize="20sp" />
 
         <LinearLayout
@@ -108,7 +108,7 @@
                     android:gravity="center"
                     android:paddingTop="18dp"
                     android:paddingBottom="18dp"
-                    android:textColor="@color/accent"
+                    android:textColor="?attr/c_accent"
                     android:textIsSelectable="false"
                     android:textSize="24sp" />
 
@@ -118,7 +118,7 @@
                     android:layout_marginTop="10dp"
                     android:gravity="center"
                     android:text="@string/welcome_install_os"
-                    android:textColor="@color/text_dim"
+                    android:textColor="?attr/c_text_dim"
                     android:textSize="16sp" />
             </LinearLayout>
 
@@ -162,7 +162,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
-                    android:textColor="@color/text_dim"
+                    android:textColor="?attr/c_text_dim"
                     android:textSize="16sp" />
 
                 <Button
@@ -179,6 +179,6 @@
             android:layout_marginTop="16dp"
             android:background="@drawable/flat_bg"
             android:text="@string/welcome_later"
-            android:textColor="@color/text_dim" />
+            android:textColor="?attr/c_text_dim" />
     </LinearLayout>
 </merge>

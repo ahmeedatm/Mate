@@ -41,7 +41,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:textColor="@color/text_dim"
+            android:textColor="?attr/c_text_dim"
             android:textSize="13sp" />
     </LinearLayout>
 
@@ -51,5 +51,5 @@
         android:layout_height="24dp"
         android:importantForAccessibility="no"
         android:src="@drawable/ic_chevron_right"
-        app:tint="@color/text_faint" />
+        app:tint="?attr/c_text_faint" />
 </LinearLayout>

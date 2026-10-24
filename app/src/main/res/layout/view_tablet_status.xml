@@ -8,7 +8,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontFamily="sans-serif-medium"
-        android:textColor="@color/text"
+        android:textColor="?attr/c_text"
         android:textSize="18sp" />
 
     <LinearLayout
@@ -24,7 +24,7 @@
             android:layout_height="16dp"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_wifi"
-            app:tint="@color/text_dim" />
+            app:tint="?attr/c_text_dim" />
 
         <ImageView
             android:id="@+id/tablet_battery"
@@ -33,14 +33,14 @@
             android:layout_marginStart="6dp"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_battery"
-            app:tint="@color/text_dim" />
+            app:tint="?attr/c_text_dim" />
 
         <TextView
             android:id="@+id/tablet_battery_level"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="1dp"
-            android:textColor="@color/text_dim"
+            android:textColor="?attr/c_text_dim"
             android:textSize="12sp" />
     </LinearLayout>
 </merge>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_enabled="false"><shape android:shape="oval"><solid android:color="@color/surface" /></shape></item>
-    <item android:state_pressed="true"><shape android:shape="oval"><solid android:color="@color/surface_pressed" /><stroke android:width="2dp" android:color="@color/accent" /></shape></item>
-    <item><shape android:shape="oval"><solid android:color="@color/surface_raised" /></shape></item>
+    <item android:state_enabled="false"><shape android:shape="oval"><solid android:color="?attr/c_surface" /></shape></item>
+    <item android:state_pressed="true"><shape android:shape="oval"><solid android:color="?attr/c_surface_pressed" /><stroke android:width="2dp" android:color="?attr/c_accent" /></shape></item>
+    <item><shape android:shape="oval"><solid android:color="?attr/c_surface_raised" /></shape></item>
 </selector>

@@ -148,15 +148,15 @@ class ChatFragment : Fragment() {
     private fun renderVoice() {
         val on = Prefs.speakReplies(requireContext())
         voice.setImageResource(if (on) R.drawable.ic_volume else R.drawable.ic_volume_off)
-        ImageViewCompat.setImageTintList(voice, ColorStateList.valueOf(ContextCompat.getColor(requireContext(), if (on) R.color.accent else R.color.text_faint)))
+        ImageViewCompat.setImageTintList(voice, ColorStateList.valueOf(themeColor(requireContext(), if (on) R.attr.c_accent else R.attr.c_text_faint)))
     }
 
     /** En enregistrement : bouton rouge plein, icône stop. */
     private fun renderMic(recording: Boolean) {
         val ctx = requireContext()
         mic.contentDescription = getString(if (recording) R.string.mic_stop else R.string.mic)
-        ImageViewCompat.setImageTintList(mic, ColorStateList.valueOf(ContextCompat.getColor(ctx, if (recording) R.color.on_accent else R.color.text)))
-        ViewCompat.setBackgroundTintList(mic, if (recording) ColorStateList.valueOf(ContextCompat.getColor(ctx, R.color.recording)) else null)
+        ImageViewCompat.setImageTintList(mic, ColorStateList.valueOf(themeColor(ctx, if (recording) R.attr.c_on_accent else R.attr.c_text)))
+        ViewCompat.setBackgroundTintList(mic, if (recording) ColorStateList.valueOf(themeColor(ctx, R.attr.c_recording)) else null)
     }
 
     private fun speak(text: String) {
@@ -176,10 +176,10 @@ class ChatFragment : Fragment() {
             this.text = text
             textSize = 18f
             setLineSpacing(0f, 1.15f)
-            setTextColor(ContextCompat.getColor(ctx, R.color.text))
+            setTextColor(themeColor(ctx, R.attr.c_text))
             setBackgroundResource(R.drawable.bubble)
             background.mutate().setTint(
-                ContextCompat.getColor(ctx, if (fromUser) R.color.bubble_user else R.color.bubble_bot)
+                themeColor(ctx, if (fromUser) R.attr.c_bubble_user else R.attr.c_bubble_bot)
             )
             setPadding((18 * dp).toInt(), (12 * dp).toInt(), (18 * dp).toInt(), (12 * dp).toInt())
             // Bulles sur les trois quarts de la largeur au plus, comme une messagerie.
