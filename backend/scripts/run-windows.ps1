@@ -2,14 +2,17 @@
 # Installe par `npm run service:install` (entree "Executer" de la session, voir scripts/service.ts).
 param(
   [Parameter(Mandatory = $true)][string]$Node,
-  [Parameter(Mandatory = $true)][string]$LogDir
+  [Parameter(Mandatory = $true)][string]$LogDir,
+  # Donnees du compagnon (paquet : hors du dossier extrait) ; absent dans les anciennes cles Run.
+  [string]$DataDir = ''
 )
 
 $backend = Split-Path -Parent $PSScriptRoot
 Set-Location $backend
-New-Item -ItemType Directory -Force -Path $LogDir, (Join-Path $backend '.data') | Out-Null
+if (-not $DataDir) { $DataDir = Join-Path $backend '.data' }
+New-Item -ItemType Directory -Force -Path $LogDir, $DataDir | Out-Null
 # PID de cette boucle : `npm run service:stop` l'arrete avec node (taskkill /T).
-Set-Content -Path (Join-Path $backend '.data\service.pid') -Value $PID
+Set-Content -Path (Join-Path $DataDir 'service.pid') -Value $PID
 
 # Paquet client : serveur regroupe dans dist\server.mjs ; sinon les sources, par tsx.
 $entry = if (Test-Path (Join-Path $backend 'dist\server.mjs')) { @('--env-file-if-exists=.env', 'dist/server.mjs') } else { @('--env-file-if-exists=.env', '--import', 'tsx', 'src/server.ts') }

@@ -104,7 +104,7 @@ Sur le Mac, dans `backend/` : `npm run package` (`scripts/package.ts`). Résulta
 
 Les installeurs prennent `backend/node/…` s'il existe (sans `npm install`), sinon le Node du système comme avant ; `run-windows.ps1` et `service.ts` lancent `dist/server.mjs` s'il existe, sinon `src/server.ts` par tsx. Commandes du service dans un paquet : `node\node.exe dist\service.mjs status|stop|start|uninstall` (Windows), `node/darwin-arm64/node dist/service.mjs …` (Mac).
 
-Mettre à jour un ordinateur installé par paquet : extraire le nouveau zip **au même endroit** en remplaçant les fichiers (`.data` garde l'identité : sinon la tablette voit un nouvel ordinateur), puis relancer l'installeur. Sur Mac, l'autorisation Accessibilité est donnée au node du paquet.
+Données d'un ordinateur installé par paquet : hors du dossier extrait, dans `%LOCALAPPDATA%\UnowhyCompanion\data` (Windows) ou `~/Library/Application Support/UnowhyCompanion` (Mac) (`src/paths.ts`). Mettre à jour = extraire le nouveau zip n'importe où et relancer son installeur : l'identité est gardée, la tablette retrouve l'ordinateur. Un paquet plus ancien gardait `backend/.data` à côté du serveur : il est recopié une fois au premier lancement (l'original reste). Sur Mac, l'autorisation Accessibilité est donnée au node du paquet.
 
 Testé sur le Mac (serveur et service regroupés, node embarqué). Pas encore essayé sur un PC Windows.
 

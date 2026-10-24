@@ -2,7 +2,7 @@ import { execFile, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { backendRoot as backend, dataDir, packaged as bundled } from "../src/paths.ts";
 
 /**
  * Lancement automatique du backend à l'ouverture de session, sans terminal :
@@ -16,7 +16,6 @@ import { fileURLToPath } from "node:url";
  *   npm run service:uninstall   retire le lancement automatique
  */
 
-const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const port = Number(process.env.PORT ?? 3000);
 const LABEL = "com.unowhy.companion";
 const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
@@ -28,10 +27,11 @@ const plist = path.join(os.homedir(), "Library", "LaunchAgents", `${LABEL}.plist
 const logDir = isWindows
   ? path.join(process.env.LOCALAPPDATA ?? os.homedir(), "UnowhyCompanion")
   : path.join(os.homedir(), "Library", "Logs", "UnowhyCompanion");
-const pidFile = path.join(backend, ".data", "service.pid");
+const pidFile = path.join(dataDir, "service.pid");
+// Boucle lancée avant les données hors du dossier du paquet (ou en dev) : PID noté dans backend/.data.
+const pidFiles = [...new Set([pidFile, path.join(backend, ".data", "service.pid")])];
 
 // Paquet client (scripts/package.ts) : ce script et le serveur sont regroupés dans dist/, avec un node embarqué.
-const bundled = import.meta.url.endsWith(".mjs");
 // Arguments de node : un seul processus (pas de surveillance des fichiers comme `npm run dev`).
 const NODE_ARGS = bundled ? ["--env-file-if-exists=.env", "dist/server.mjs"] : ["--env-file-if-exists=.env", "--import", "tsx", "src/server.ts"];
 
@@ -136,7 +136,7 @@ ${args}
 /** Ligne de commande de la boucle (run-windows.ps1), la même dans la clé Run et au démarrage par l'installeur. */
 function windowsCommand(node: string) {
   const script = path.join(backend, "scripts", "run-windows.ps1");
-  const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", script, "-Node", node, "-LogDir", logDir];
+  const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", script, "-Node", node, "-LogDir", logDir, "-DataDir", dataDir];
   const quote = (a: string) => (/[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a);
   return ["powershell.exe", ...args].map(quote).join(" ");
 }
@@ -153,9 +153,11 @@ function winStart(node: string) {
 
 /** Arrête la boucle notée dans service.pid, seulement si c'est bien un PowerShell : le numéro a pu être redonné à un autre programme. */
 async function winStop() {
-  const pid = fs.existsSync(pidFile) ? fs.readFileSync(pidFile, "utf8").trim() : "";
-  if (/^\d+$/.test(pid)) await sh("taskkill", ["/F", "/T", "/FI", `PID eq ${pid}`, "/FI", "IMAGENAME eq powershell.exe"]);
-  fs.rmSync(pidFile, { force: true });
+  for (const file of pidFiles) {
+    const pid = fs.existsSync(file) ? fs.readFileSync(file, "utf8").trim() : "";
+    if (/^\d+$/.test(pid)) await sh("taskkill", ["/F", "/T", "/FI", `PID eq ${pid}`, "/FI", "IMAGENAME eq powershell.exe"]);
+    fs.rmSync(file, { force: true });
+  }
 }
 
 async function winInstall() {
@@ -173,7 +175,7 @@ async function winInstall() {
 
 async function install() {
   if (!isMac && !isWindows) throw new Error("Lancement automatique prévu pour macOS et Windows seulement");
-  const running = isMac ? (await sh("launchctl", ["print", `gui/${uid()}/${LABEL}`])).ok : fs.existsSync(pidFile);
+  const running = isMac ? (await sh("launchctl", ["print", `gui/${uid()}/${LABEL}`])).ok : pidFiles.some((f) => fs.existsSync(f));
   if (!running && (await health())) {
     throw new Error(`Un compagnon tourne déjà sur le port ${port} (npm run dev ?) : l'arrêter (Ctrl+C) puis relancer l'installation.`);
   }

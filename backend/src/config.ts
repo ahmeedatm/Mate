@@ -2,12 +2,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { randomBytes, randomUUID } from "node:crypto";
-import { fileURLToPath } from "node:url";
+import { adoptOldData, backendRoot, dataDir } from "./paths.ts";
 
-export const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+export { backendRoot };
 const repoRoot = path.resolve(backendRoot, "..");
-// DATA_DIR : autre dossier de données (tests : deux « ordinateurs » sur la même machine).
-const dataDir = path.resolve(process.env.DATA_DIR || path.join(backendRoot, ".data"));
+adoptOldData();
 
 function expandHome(p: string) {
   return p.startsWith("~/") || p.startsWith("~\\") ? path.join(os.homedir(), p.slice(2)) : p;
