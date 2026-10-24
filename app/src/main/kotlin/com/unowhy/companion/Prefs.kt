@@ -9,6 +9,7 @@ object Prefs {
     private const val KEY_ALLOW_INSTALLS = "allow_installs"
     private const val KEY_BRIGHTNESS = "brightness"
     private const val KEY_NIGHT_DIM = "night_dim"
+    private const val KEY_DECK_TABS = "deck_tabs_"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -42,5 +43,13 @@ object Prefs {
 
     fun setAllowInstalls(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_ALLOW_INSTALLS, value).apply()
+    }
+
+    /** Ordre des onglets du Deck choisi sur la tablette, propre à chaque ordinateur (clés d'onglets, voir DeckFragment). */
+    fun deckTabOrder(context: Context): List<String> =
+        prefs(context).getString(KEY_DECK_TABS + Computers.active(context)?.id.orEmpty(), null)?.split('\n').orEmpty()
+
+    fun setDeckTabOrder(context: Context, keys: List<String>) {
+        prefs(context).edit().putString(KEY_DECK_TABS + Computers.active(context)?.id.orEmpty(), keys.joinToString("\n")).apply()
     }
 }

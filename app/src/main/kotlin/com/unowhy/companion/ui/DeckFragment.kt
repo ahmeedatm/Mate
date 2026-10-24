@@ -21,6 +21,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.VolumeKeyHandler
 import com.unowhy.companion.net.BackendClient
@@ -55,6 +56,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     /** Onglets dans l'ordre affiché (pour le balayage) et celui qui est sélectionné. */
     private var tabActions: List<() -> Unit> = emptyList()
     private var selectedTab = -1
+    /** Un onglet est tenu (appui long) et déplacé dans la barre. */
+    private var movingTab = false
     /** Page Réunion demandée avant que le deck soit chargé. */
     private var meetingPending = false
     /** Applis en appel (micro utilisé) → dernier moment où on l'a vu : leur page a un onglet. */
@@ -225,6 +228,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
      * on l'ouvre en touchant l'appli, et une pastille à son nom s'ajoute au bout tant qu'elle est affichée.
      */
     private fun renderTabs() {
+        // Un onglet est en train d'être déplacé : la barre sera refaite au lâcher.
+        if (movingTab) return
         tabs.removeAllViews()
         val actions = mutableListOf<() -> Unit>()
         selectedTab = -1
@@ -235,27 +240,105 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         }
         val shown = pages.indices.filter { pages[it].app == null } + live +
             listOf(pageIndex).filter { pages.getOrNull(it)?.app != null && it !in live }
-        fun addTab(title: String, selected: Boolean, onClick: () -> Unit) {
-            val tab = Button(requireContext(), null, 0, R.style.Chip).apply {
-                text = title
-                isSelected = selected
-                setOnClickListener { onClick() }
-            }
-            tabs.addView(tab, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { marginEnd = dp(8) })
-            if (selected) selectedTab = actions.size
-            actions += onClick
-        }
-        // « Ouvertes » juste après Apps (en premier sans page Apps) : toutes les applis ouvertes, pas seulement les choisies.
+        class Tab(val key: String, val title: String, val selected: Boolean, val onClick: () -> Unit)
+        val entries = mutableListOf<Tab>()
+        fun openTab() = Tab(OPEN_TAB, getString(R.string.deck_open_tab), showingOpen, ::showOpen)
+        // Par défaut, « Ouvertes » juste après Apps (en premier sans page Apps) : toutes les applis ouvertes, pas seulement les choisies.
         val openAfter = shown.indexOfFirst { pages[it].apps }
-        if (openAfter < 0) addTab(getString(R.string.deck_open_tab), showingOpen, ::showOpen)
+        if (openAfter < 0) entries += openTab()
         shown.forEachIndexed { i, index ->
-            addTab(pages[index].title, !showingOpen && index == pageIndex) { showPage(index) }
-            if (i == openAfter) addTab(getString(R.string.deck_open_tab), showingOpen, ::showOpen)
+            entries += Tab(PAGE_TAB + pages[index].title, pages[index].title, !showingOpen && index == pageIndex) { showPage(index) }
+            if (i == openAfter) entries += openTab()
+        }
+        // Ordre choisi en déplaçant les onglets ; un onglet jamais placé (page d'appli qui apparaît) garde sa place relative, à la fin.
+        val order = Prefs.deckTabOrder(requireContext())
+        val sorted = entries.withIndex().sortedBy { (i, t) -> order.indexOf(t.key).takeIf { it >= 0 } ?: (order.size + i) }.map { it.value }
+        sorted.forEach { t ->
+            val tab = Button(requireContext(), null, 0, R.style.Chip).apply {
+                text = t.title
+                tag = t.key
+                isSelected = t.selected
+                setOnClickListener { t.onClick() }
+            }
+            moveOnLongPress(tab)
+            tabs.addView(tab, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { marginEnd = dp(8) })
+            if (t.selected) selectedTab = actions.size
+            actions += t.onClick
         }
         tabActions = actions
         // Onglet choisi par balayage : on fait défiler la barre jusqu'à lui.
         tabs.getChildAt(selectedTab)?.let { tab ->
             tabs.post { (tabs.parent as HorizontalScrollView).smoothScrollTo((tab.left - dp(48)).coerceAtLeast(0), 0) }
+        }
+    }
+
+    /**
+     * Appui long sur un onglet : il se soulève et suit le doigt dans la barre ; les autres se poussent à son passage.
+     * Lâché, l'ordre est gardé pour cet ordinateur. La barre ne défile pas pendant ce temps.
+     */
+    private fun moveOnLongPress(tab: View) {
+        var lastRawX = 0f
+        var grabRawX = 0f
+        var from = 0
+        var to = 0
+        var step = 0
+        tab.setOnLongClickListener { v ->
+            movingTab = true
+            grabRawX = lastRawX
+            from = tabs.indexOfChild(v)
+            to = from
+            step = v.width + dp(8)
+            v.isPressed = false
+            v.parent.requestDisallowInterceptTouchEvent(true)
+            v.animate().scaleX(1.12f).scaleY(1.12f).alpha(0.9f).setDuration(120).start()
+            v.elevation = dp(8).toFloat()
+            v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            true
+        }
+        // On ne retire pas l'onglet de la barre pendant le geste (Android l'annulerait) : il suit le doigt et les autres
+        // s'écartent ; le nouvel ordre n'est appliqué qu'au lâcher.
+        tab.setOnTouchListener { v, e ->
+            lastRawX = e.rawX
+            if (!movingTab) return@setOnTouchListener false
+            when (e.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    // Bloqué aux bords de la partie visible de la barre : à gauche le début, à droite juste avant le bouton ⟳
+                    // (sinon il passe dessous ou sort de l'écran).
+                    val bar = tabs.parent as HorizontalScrollView
+                    val minLeft = maxOf(0, bar.scrollX)
+                    val maxRight = bar.scrollX + bar.width
+                    v.translationX = (e.rawX - grabRawX).coerceIn((minLeft - v.left).toFloat(), (maxRight - v.right).toFloat().coerceAtLeast((minLeft - v.left).toFloat()))
+                    val center = v.left + v.translationX + v.width / 2f
+                    to = (0 until tabs.childCount).count { i ->
+                        val other = tabs.getChildAt(i)
+                        other != v && other.left + other.width / 2f < center
+                    }
+                    for (i in 0 until tabs.childCount) {
+                        val other = tabs.getChildAt(i)
+                        if (other == v) continue
+                        val shift = when {
+                            from < to && i in from + 1..to -> -step
+                            from > to && i in to until from -> step
+                            else -> 0
+                        }.toFloat()
+                        if (other.getTag(R.id.deck_tabs) != shift) {
+                            other.setTag(R.id.deck_tabs, shift)
+                            other.animate().translationX(shift).setDuration(120).start()
+                        }
+                    }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    val keys = (0 until tabs.childCount).map { tabs.getChildAt(it).tag as String }.toMutableList()
+                    keys.add(to, keys.removeAt(from))
+                    Prefs.setDeckTabOrder(requireContext(), keys)
+                    movingTab = false
+                    v.isPressed = false
+                    v.elevation = 0f
+                    v.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(120).start()
+                    renderTabs()
+                }
+            }
+            true
         }
     }
 
@@ -293,8 +376,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private fun showOpen() {
         showingOpen = true
         grid.visibility = View.GONE
-        status.setText(R.string.deck_open_hint)
-        status.visibility = View.VISIBLE
+        // Les instructions sont dans la bande du bas d'« Ouvertes », qui devient la corbeille pendant un glisser.
+        status.visibility = View.GONE
         renderTabs()
         audio.visibility = View.GONE
         appAudio.bind(null)
@@ -440,6 +523,9 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         const val ADD = "add"
         const val LIVE_POLL_MS = 4_000L
         const val LIVE_HOLD_MS = 20_000L
+        /** Clés des onglets (ordre gardé dans Prefs) : « Ouvertes », et une page par son titre. */
+        const val OPEN_TAB = "open"
+        const val PAGE_TAB = "page:"
         /** Distance de côté qui change d'onglet. */
         const val SWIPE_DP = 80
     }

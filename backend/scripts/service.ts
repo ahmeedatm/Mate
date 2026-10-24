@@ -131,28 +131,35 @@ ${args}
 
 // --- Windows
 
+/** Ligne de commande de la boucle (run-windows.ps1), la même dans la clé Run et au démarrage par l'installeur. */
 function windowsCommand(node: string) {
   const script = path.join(backend, "scripts", "run-windows.ps1");
-  return { script, args: ["-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", script, "-Node", node, "-LogDir", logDir] };
+  const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", script, "-Node", node, "-LogDir", logDir];
+  const quote = (a: string) => (/[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a);
+  return ["powershell.exe", ...args].map(quote).join(" ");
 }
 
+/**
+ * Lance la boucle comme à l'ouverture de session : `start` de cmd, qui la détache vraiment de ce processus.
+ * (Un PowerShell lancé directement en `detached` par Node ne démarrait pas le script sur le PC de test.)
+ */
 function winStart(node: string) {
-  const { args } = windowsCommand(node);
-  spawn("powershell.exe", args, { detached: true, stdio: "ignore", windowsHide: true }).unref();
+  spawn("cmd.exe", ["/d", "/s", "/c", `"start "" /min ${windowsCommand(node)}"`], {
+    detached: true, stdio: "ignore", windowsHide: true, windowsVerbatimArguments: true,
+  }).unref();
 }
 
+/** Arrête la boucle notée dans service.pid, seulement si c'est bien un PowerShell : le numéro a pu être redonné à un autre programme. */
 async function winStop() {
   const pid = fs.existsSync(pidFile) ? fs.readFileSync(pidFile, "utf8").trim() : "";
-  if (/^\d+$/.test(pid)) await sh("taskkill", ["/PID", pid, "/T", "/F"]);
+  if (/^\d+$/.test(pid)) await sh("taskkill", ["/F", "/T", "/FI", `PID eq ${pid}`, "/FI", "IMAGENAME eq powershell.exe"]);
   fs.rmSync(pidFile, { force: true });
 }
 
 async function winInstall() {
   const node = nodePath();
   fs.mkdirSync(logDir, { recursive: true });
-  const { args } = windowsCommand(node);
-  const quote = (a: string) => (/[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a);
-  const command = ["powershell.exe", ...args].map(quote).join(" ");
+  const command = windowsCommand(node);
   const added = await sh("reg", ["add", RUN_KEY, "/v", RUN_VALUE, "/t", "REG_SZ", "/d", command, "/f"]);
   if (!added.ok) throw new Error(`Registre : ${added.out}`);
   await winStop();

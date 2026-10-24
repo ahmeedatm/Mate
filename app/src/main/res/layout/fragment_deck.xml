@@ -16,10 +16,12 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
+            <!-- fillViewport : la rangée d'onglets prend toute la largeur, un onglet déplacé n'est pas coupé après le dernier. -->
             <HorizontalScrollView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:fillViewport="true"
                 android:scrollbars="none">
 
                 <LinearLayout

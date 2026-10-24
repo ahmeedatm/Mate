@@ -128,11 +128,12 @@
     <string name="apps_removed_status">%1$s retirée du deck</string>
     <string name="apps_remove">Retirer</string>
     <string name="deck_open_tab">Ouvertes</string>
-    <string name="deck_open_hint">Toucher : afficher ou réduire · deux fois : agrandir ou rendre sa taille · glisser de côté : changer d\'écran (bords : moitié, haut : agrandir) ou fermer (corbeille)</string>
+    <string name="deck_open_hint">Toucher : afficher ou réduire · deux fois : agrandir ou rendre sa taille · glisser de côté : changer d\'écran (bords : moitié, haut : agrandir) ou la fermer dans la corbeille</string>
     <string name="open_loading">Lecture des fenêtres de l\'ordinateur…</string>
     <string name="trash_idle">Fermer : garder la fenêtre ici</string>
     <string name="trash_hold">Garde-la ici…</string>
     <string name="trash_release">Lâche pour fermer</string>
+    <string name="trash_done">Miam !</string>
     <string name="open_none">Aucune fenêtre ouverte sur l\'ordinateur</string>
     <string name="deck_media_hint">Appui long sur un site pour le retirer</string>
     <string name="links_add_title">Ajouter un site</string>

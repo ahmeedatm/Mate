@@ -38,7 +38,8 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 ## Fait mais pas encore testé en vrai
 
-- **Ouvertes** (24/10 soir) : balayage entre les onglets du Deck, écrans agrandis, **corbeille** (fermer une fenêtre). Le PC Windows doit d'abord recevoir le compagnon à jour.
+- **Deck et Ouvertes** (24/10 soir, testés sur la tablette avec le PC) : onglets déplacés par appui long puis glisser (ordre gardé par ordinateur), balayage entre onglets, écrans agrandis, corbeille dans la bande du bas (garder 0,9 s puis lâcher, « Miam ! » + son). Bug vu une fois, pas reproduit : au démarrage, l'onglet Discord recouvrait Perso (revenu en déplaçant Discord) ; noter ce qui précède s'il revient.
+- Installeur Windows corrigé (24/10 soir) : la boucle de relance ne démarrait pas depuis l'installeur (PowerShell lancé en `detached` par Node) → lancée par `start` comme à l'ouverture de session ; arrêt limité à `powershell.exe` (un numéro de processus réutilisé pouvait tuer un autre programme). Vérifié sur le PC de test : installation, puis redémarrage à distance (revenu en ~9 s). Cause de l'arrêt du compagnon à 18h49 inconnue (pas d'erreur au journal, Bitdefender n'a rien signalé).
 - Photo réelle en mode « Envoyer une photo ». Sur l'émulateur, la caméra plante.
 - Toucher Discord fermé (doit le lancer). « Ouvrir Discord » quand Discord est réduit dans la zone de notification.
 - Accueil sans ordinateur (`ConnectWidget`). Widget Touches sur Windows. Conflit entre l'appui long d'un widget et le mode Modifier.
@@ -50,6 +51,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 ## À faire, dans l'ordre
 
+0. Bug des onglets du Deck (voir plus haut) s'il revient.
 1. **Spotify** sur la page Média : ajouter la touche, tester la lecture.
 2. **Dofus Rétro** : UI Automation ne voit rien dans la fenêtre. Le bouton « Jouer » demande un clic à une position dans la fenêtre. Il faut savoir ce qui s'ouvre quand on touche « Dofus 1 ».
 3. Relecture du code du 24/10 (widgets, musique, Discord, Ouvertes), si demandée.
@@ -86,4 +88,5 @@ Mot de réveil · Focus ↔ Ne pas déranger de l'ordinateur · presse-papiers p
 | 3cf10e9 | Accueil à widgets, Discord, Focus, Caméra, Mes agendas |
 | f0d1d4c | musique, Rejoindre multi-services, Accessibilité Mac, finitions kiosque |
 | 638818b | onglet Ouvertes, YouTube Music |
-| (suivant) | balayage des onglets, écrans agrandis et corbeille dans Ouvertes, documentation |
+| a37912b | balayage des onglets, écrans agrandis et corbeille dans Ouvertes, documentation |
+| (suivant) | onglets déplaçables, corbeille en bande du bas avec son, installeur Windows réparé |

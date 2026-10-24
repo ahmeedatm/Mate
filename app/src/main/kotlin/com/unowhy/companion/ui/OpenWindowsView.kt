@@ -6,7 +6,6 @@ import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -38,7 +37,7 @@ class OpenWindowsView @JvmOverloads constructor(
     private class Drag(val app: OpenApp, val window: MacWindow)
 
     private val map = ScreenMap(context).apply { stretch = true }
-    /** Corbeille par-dessus le bas des écrans, seulement pendant un glisser : y garder une fenêtre la ferme. */
+    /** Bande du bas : instructions, ou corbeille pendant un glisser (y garder une fenêtre la ferme). */
     private val trash = TrashZone(context) { payload -> (payload as? Drag)?.let(::close) }
     private val elsewhere = HorizontalScrollView(context)
     private val elsewhereList = LinearLayout(context)
@@ -62,17 +61,14 @@ class OpenWindowsView @JvmOverloads constructor(
             visibility = GONE
         }
         addView(status, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        val mapArea = FrameLayout(context)
-        mapArea.addView(map, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-        mapArea.addView(trash, FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, dp(64), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
-            .apply { bottomMargin = dp(12) })
-        addView(mapArea, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+        addView(map, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         // Hors des écrans : fenêtres d'un autre bureau du Mac dont l'écran est inconnu.
         elsewhereList.orientation = HORIZONTAL
         elsewhere.isHorizontalScrollBarEnabled = false
         elsewhere.addView(elsewhereList)
         elsewhere.visibility = GONE
         addView(elsewhere, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+        addView(trash, LayoutParams(LayoutParams.MATCH_PARENT, dp(84)).apply { topMargin = dp(12) })
 
         map.onDrop = { payload, display, layout -> (payload as? Drag)?.let { drop(it, display, layout) } }
         map.onDragEnded = {
