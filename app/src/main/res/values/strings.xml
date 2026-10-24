@@ -6,7 +6,7 @@
     <string name="mode_home">Accueil</string>
     <string name="mode_deck">Deck</string>
     <string name="mode_chat">Assistant</string>
-    <string name="mode_docs">Partage</string>
+    <string name="mode_docs">Ordi</string>
     <string name="mode_focus">Focus</string>
     <string name="mode_camera">Caméra</string>
     <string name="mode_settings">Réglages</string>
@@ -184,8 +184,13 @@
     <string name="mic_permission_denied">Permission micro refusée</string>
     <string name="voice_toggle">Lire les réponses à voix haute</string>
 
-    <!-- Documents -->
+    <!-- Depuis l'ordi (ancien Partage) -->
     <string name="docs_root">Dossier partagé</string>
+    <string name="docs_title">Depuis l\'ordi</string>
+    <string name="docs_subtitle">Ce qui est sur ton ordinateur, affiché sur la tablette</string>
+    <string name="docs_choose_files">Fichiers de l\'ordi</string>
+    <string name="docs_choose_files_hint">Les documents, PDF et images rangés dans le dossier « Partage tablette » de l\'ordi (dans Documents). Touche un fichier pour l\'ouvrir en grand ; dans les autres modes, il reste affiché à côté.</string>
+    <string name="docs_choose_web_hint">La page ouverte dans le navigateur de l\'ordi s\'affiche sur la tablette : une recette, un tuto, une doc, un guide de jeu… à garder sous les yeux pendant que tu travailles ou que tu joues.</string>
     <string name="docs_count_free">%1$s · Tablette : %2$s libres</string>
     <string name="up">Remonter</string>
     <string name="empty_folder">Dossier vide : dépose des fichiers dedans depuis l\'ordinateur</string>
@@ -206,12 +211,12 @@
     </plurals>
 
     <!-- Visualiseur (mode Caméra) -->
-    <string name="camera_title_show">Montrer une feuille</string>
+    <string name="camera_title_show">Montrer sur l\'ordi</string>
     <string name="camera_title_photo">Photo pour l\'ordi</string>
-    <string name="camera_choose_show">Montrer une feuille</string>
-    <string name="camera_choose_show_hint">Tiens la tablette au-dessus d\'une feuille ou d\'un objet : l\'image s\'affiche en direct sur l\'écran de l\'ordi, à projeter ou à partager en réunion.</string>
+    <string name="camera_choose_show">Montrer sur l\'ordi</string>
+    <string name="camera_choose_show_hint">La tablette devient la caméra de l\'ordi : une feuille, un cahier, un objet, un montage, ton téléphone… Ce qu\'elle filme s\'affiche en direct sur l\'écran de l\'ordi, à projeter, à montrer en réunion ou à partager en appel.</string>
     <string name="camera_choose_photo">Envoyer une photo</string>
-    <string name="camera_choose_photo_hint">Prends une photo avec la tablette : elle arrive dans le dossier Partage de l\'ordi, prête à être utilisée.</string>
+    <string name="camera_choose_photo_hint">Prends une photo avec la tablette : elle arrive dans le dossier « Partage tablette » de l\'ordi, prête à être utilisée.</string>
     <string name="camera_back">Terminer</string>
     <string name="camera_take_photo">Prendre la photo</string>
     <string name="camera_photo_preview">Aperçu · rien n\'est envoyé avant la photo</string>
@@ -402,7 +407,7 @@
     <string name="connect_button">Connecter mon ordinateur</string>
     <string name="connect_deck">Le Deck lance les applis et les raccourcis de ton ordinateur.</string>
     <string name="connect_chat">L\'assistant passe par ton ordinateur.</string>
-    <string name="connect_docs">Partage affiche les documents et la page web de ton ordinateur.</string>
+    <string name="connect_docs">Depuis l\'ordi affiche les fichiers et la page web de ton ordinateur.</string>
     <string name="connect_camera">Le visualiseur montre sur l\'écran de ton ordinateur ce que filme la tablette.</string>
     <!-- Tablette : état caché par le kiosque (barre latérale, Réglages) -->
     <string name="event_new">Nouvel événement</string>

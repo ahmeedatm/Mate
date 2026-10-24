@@ -1,6 +1,6 @@
 # État du projet
 
-Mis à jour le 25/10/2026 (nuit, 2e session). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
+Mis à jour le 25/10/2026 (nuit, 3e session). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
 
 ## Pourquoi ce projet
 
@@ -30,7 +30,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 | Agenda | lien ICS (Outlook), agenda personnel noté depuis la tablette avec rappel parlé, « Mes agendas » |
 | Tâches | ponctuelles, récurrentes (jours + rappel parlé), quotidiennes par fichier (worklog Jira) |
 | Deck | Apps (ajout/retrait depuis la tablette), raccourcis, Perso (touches et macros éditées sur la tablette), pages d'appli (Discord, Réunion), Média (Windows : lecture en cours, sites choisis, YouTube Music), **Ouvertes** (toutes les fenêtres sur le schéma des écrans : toucher, réduire, agrandir, changer d'écran, défiler), fenêtres d'une appli (appui long), son et micro |
-| Partage | dossier partagé, documents à côté de chaque mode, « Page de l'ordi » (page du navigateur de l'ordinateur dans la tablette) |
+| Depuis l'ordi (ex-Partage, « Ordi » dans la barre) | écran de choix expliqué (Fichiers de l'ordi / Page de l'ordi), dossier partagé, documents à côté de chaque mode, « Page de l'ordi » (page du navigateur de l'ordinateur dans la tablette) ; écran de choix et liste vus sur la tablette le 25/10 |
 | Focus | Pomodoro, ambiance qui suit le chrono |
 | Apparence | 4 thèmes (Nuit, Clair, Néon, Chaud) choisis dans Réglages ; une couleur par fonction (pastilles des titres, tuiles d'applis aux couleurs des marques) ; animations légères (appui, changement de mode, widgets, météo, Focus, eau), fluides sur la tablette |
 | Bascule d'ordinateur | redémarrage du compagnon du PC (revenu en 8 s) : la tablette reste sur le PC, plus de bascule vers le Mac ; testé le 24/10 |
@@ -53,6 +53,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 - **Discord sans portail développeur** (24/10 soir ; « Quitter l'appel » et « Arrêter le partage » testés ensuite) : Discord expose son interface à UI Automation une fois l'accessibilité de Chromium demandée. `GET /deck/voice` lit le panneau vocal : appel ou salon, participants (vue d'appel privé), micro et sourdine. Page Discord : carte « En appel · … », touches selon l'état (`"when": "call" | "idle"` dans `deck.json`), « Quitter l'appel » = étape `press` (bouton « Déconnecter »). Plus de vert. PAS testé : Discord en anglais. **Qui parle** : illisible partout (appel privé, groupe, salon de serveur : ni nom ni classe ne change pendant qu'une personne parle, vérifié le 25/10). Diagnostic : `GET /deck/buttons?app=Discord&detail=true` (éléments + classes HTML).
 - **Ouvertes sur Mac** (25/10) : les fenêtres des autres bureaux (applis en plein écran, Spaces) apparaissent, « autre bureau » ; vu sur la tablette avec deux Chrome en plein écran, toucher = passer sur leur bureau. Fenêtres d'une même appli triées par titre (elles ne s'échangent plus). Triple toucher (Mac) = plein écran sur son bureau / en sortir : PAS testé. Lecture de la liste : 1,6 à 2,5 s au lieu de 0,7 s (à surveiller). Word (fenêtre hors des écrans) toujours absent.
+- **Caméra** (25/10) : « Montrer une feuille » renommé « Montrer sur l'ordi », explication élargie (feuille, cahier, objet, téléphone… en réunion ou en appel). Pas revu sur la tablette. Depuis l'ordi : carte Page de l'ordi pas encore touchée sur le nouvel écran.
 - Corbeille : correctif d'un affichage resté après un glisser annulé.
 - Boîtes de saisie (25/10, vu sur la tablette) : le clavier restait affiché après la fermeture (code d'appairage) et le premier appui sur un bouton était perdu (barres système rappelées). Fermeture du clavier encore un peu lente (animation d'Android).
 
@@ -69,6 +70,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 ## À faire, dans l'ordre
 
 0. Bug des onglets du Deck (voir plus haut) s'il revient.
+0. Extension Claude : le 25/10 au soir, les outils `tablette` répondaient « Jeton invalide : appairer à nouveau la tablette » alors que la tablette était sur le Mac (captures faites par adb). Probablement le jeton lu par `mcp.ts` depuis le paquet ; à vérifier.
 1. **Voix et appels** : appels Teams / WhatsApp (captures pendant un vrai appel, reporté par Eliot) ; idées : météo, réglages de la tablette à la voix. Réactiver l'appli Google sans adb : impossible (un device owner ne peut pas annuler `pm disable-user`), inutile car la procédure du kiosque la garde ; sans elle, Parler ouvre la commande écrite.
 2. **Paquet** : relance du compagnon Mac à l'ouverture de session (pas encore vue : le Mac n'avait pas redémarré depuis 44 jours ; `RunAtLoad` + `KeepAlive` vérifiés dans le LaunchAgent). Pas de NSIS ni d'appli .app pour l'instant.
 
@@ -110,3 +112,4 @@ Dofus Rétro (« Jouer » par un clic dans la fenêtre : perso, pas pour la dém
 | 69c7081 → 2a2bd04 | paquet Windows testé sur le PC (installeur réparé), Discord salon de serveur, données et Partage du paquet hors du dossier extrait (`Documents\Partage tablette`), pare-feu Windows, raccourci et icône du compagnon (PC + tablette) |
 | après 955bb58 | paquet Mac testé comme un client neuf (le Mac tourne depuis le paquet), clavier et premier appui des boîtes de saisie, MCP sur les données du paquet |
 | après f45797e | Ouvertes sur Mac : autres bureaux et plein écran, fenêtres triées par titre, triple toucher = plein écran |
+| après fb94e2d | Partage renommé « Depuis l'ordi » avec écran de choix expliqué, Caméra « Montrer sur l'ordi » |

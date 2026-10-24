@@ -49,7 +49,7 @@ object VoiceCommands {
 
     private val MODES = mapOf(
         "accueil" to "home", "agenda" to "home", "deck" to "deck", "raccourcis" to "deck", "touches" to "deck",
-        "partage" to "docs", "documents" to "docs", "focus" to "focus", "pomodoro" to "focus", "camera" to "camera",
+        "partage" to "docs", "documents" to "docs", "fichiers" to "docs", "focus" to "focus", "pomodoro" to "focus", "camera" to "camera",
         "visualiseur" to "camera", "reglages" to "settings", "parametres" to "settings", "assistant" to "chat",
     )
     private val OPEN_MODE = Regex("^(ouvre|ouvrir|va|aller|affiche|afficher|montre|montrer|retour|reviens|retourne)( (sur|dans|a|au|aux|vers))? (.+)$")

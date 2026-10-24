@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Caméra : d'abord un choix (montrer une feuille sur l'écran de l'ordi, ou envoyer une photo à l'ordi),
+<!-- Caméra : d'abord un choix (montrer quelque chose sur l'écran de l'ordi, ou envoyer une photo à l'ordi),
      puis l'aperçu de la caméra arrière avec les commandes de l'usage choisi. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"

@@ -418,7 +418,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Ouvre un document de l'ordinateur dans le panneau latéral, à côté du mode courant. */
     /**
-     * Dans Partage : en grand, sans vue partagée (la liste des fichiers à côté ne sert à rien). Envoyé par l'ordinateur
+     * Dans Depuis l'ordi : en grand, sans vue partagée (la liste des fichiers à côté ne sert à rien). Envoyé par l'ordinateur
      * pendant un autre mode (Assistant, Accueil…) : à côté, pour garder les deux sous les yeux.
      */
     fun openDocument(entry: DocEntry) {
@@ -495,7 +495,7 @@ class MainActivity : AppCompatActivity() {
     private fun show(mode: Mode) {
         // Le champ d'un écran masqué garderait sinon le clavier (et la saisie) par-dessus le nouvel écran.
         hideKeyboard()
-        // Document ouvert : en grand dans Partage ; ailleurs à côté, pour laisser voir le mode choisi.
+        // Document ouvert : en grand dans Depuis l'ordi ; ailleurs à côté, pour laisser voir le mode choisi.
         if (::documentPanel.isInitialized && documentPanel.visibility == View.VISIBLE) {
             documentPanel.setExpanded(mode == Mode.DOCS, splittable = mode != Mode.DOCS)
         }

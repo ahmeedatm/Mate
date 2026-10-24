@@ -2,7 +2,7 @@
 
 Compagnon de bureau pour tablettes Unowhy 4.2 (Android 10), posé à côté de l'ordinateur (**Mac ou PC Windows**). La tablette est une interface légère ; le backend tourne sur l'ordinateur et sert à la fois d'agent de pilotage et de proxy vers l'IA. Une tablette peut connaître plusieurs ordinateurs (bureau, maison) et passe toute seule à celui qui répond.
 
-**Modes** : Accueil (widgets à disposer : heure, météo, agenda, tâches, eau, Focus, son de l'ordinateur) · Deck (applis, raccourcis, touches perso et macros, Média, toutes les fenêtres ouvertes sur le schéma des écrans, son et micro ; les boutons de volume de la tablette pilotent l'ordinateur) · Assistant (chat + micro, affiché quand l'IA est branchée) · Partage (dossier partagé, page web de l'ordinateur) · Focus (Pomodoro + ambiance) · Caméra (visualiseur de documents, photo → ordinateur) · Réglages. La tablette tourne en kiosque : le bouton Retour ne quitte jamais l'appli.
+**Modes** : Accueil (widgets à disposer : heure, météo, agenda, tâches, eau, Focus, son de l'ordinateur) · Deck (applis, raccourcis, touches perso et macros, Média, toutes les fenêtres ouvertes sur le schéma des écrans, son et micro ; les boutons de volume de la tablette pilotent l'ordinateur) · Assistant (chat + micro, affiché quand l'IA est branchée) · Depuis l'ordi (« Ordi » dans la barre : fichiers du dossier partagé, page web de l'ordinateur) · Focus (Pomodoro + ambiance) · Caméra (visualiseur de documents, photo → ordinateur) · Réglages. La tablette tourne en kiosque : le bouton Retour ne quitte jamais l'appli.
 
 ```
 app/      Appli Android (Kotlin, vues XML, minSdk 24)

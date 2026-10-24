@@ -24,7 +24,7 @@ Pas de serveur dans le cloud : chaque ordinateur a son compagnon, la tablette pa
 
 ### La tablette (`app/`)
 
-- **Une seule Activity** (`MainActivity`) plein écran, barre latérale à gauche (modes, heure, WiFi, batterie, nom de l'ordinateur), un **Fragment par mode** : Accueil, Deck, Assistant, Partage, Focus, Caméra, Réglages. Les fragments sont créés une fois et cachés/montrés ; ils sont recréés quand on change d'ordinateur (`onComputerChanged`).
+- **Une seule Activity** (`MainActivity`) plein écran, barre latérale à gauche (modes, heure, WiFi, batterie, nom de l'ordinateur), un **Fragment par mode** : Accueil, Deck, Assistant, Depuis l'ordi, Focus, Caméra, Réglages. Les fragments sont créés une fois et cachés/montrés ; ils sont recréés quand on change d'ordinateur (`onComputerChanged`).
 - **Panneau document** (`DocumentPanel`) à droite : document du dossier partagé ou page web de l'ordinateur, à côté de n'importe quel mode ou en grand.
 - **Kiosque** : l'appli est *device owner* (installée sur une tablette réinitialisée, voir [kiosque.md](kiosque.md)). Elle verrouille l'écran sur elle-même (lock task), masque l'agent SQOOL, bloque les installations, s'installe elle-même ses mises à jour et règle le WiFi.
 - Vues XML, pas de Compose ; dépendances : appcompat, lifecycle, coroutines. HTTP par `HttpURLConnection` + `org.json`. Tout doit rester léger (MT8167, 2 Go de RAM).
@@ -95,7 +95,7 @@ Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/upda
 | `Prefs.kt`, `Computers.kt` | préférences, liste des ordinateurs appairés |
 | `net/` | `BackendClient` (toutes les routes), `Connection` (bascule), `Discovery` (UDP), `Wifi` |
 | `remote/RemoteChannel.kt` | ordres reçus de l'ordinateur |
-| `ui/` | un fichier par écran ou composant : `HomeFragment`, `DeckFragment`, `ChatFragment`, `DocsFragment` (Partage), `FocusFragment`, `CameraFragment`, `SettingsFragment`, `WelcomeView` (premier lancement), `DocumentPanel`, boîtes de dialogue (`TaskDialog`, `EventDialog`, `ComputerAdder`, `WifiPicker`…) |
+| `ui/` | un fichier par écran ou composant : `HomeFragment`, `DeckFragment`, `ChatFragment`, `DocsFragment` (Depuis l'ordi : choix Fichiers / Page de l'ordi, puis la liste), `FocusFragment`, `CameraFragment`, `SettingsFragment`, `WelcomeView` (premier lancement), `DocumentPanel`, boîtes de dialogue (`TaskDialog`, `EventDialog`, `ComputerAdder`, `WifiPicker`…) |
 | `ui/home/` | Accueil à widgets : `WidgetModel` (grille 4×4, tailles, modèles), `WidgetGrid` (placement, mode Modifier, pages), widgets |
 | `ui/ScreenMap.kt`, `WindowPicker.kt`, `OpenWindowsView.kt` | écrans et fenêtres de l'ordinateur |
 | `focus/` | `FocusTimer`, `NoisePlayer` (bruit généré), `Water` |

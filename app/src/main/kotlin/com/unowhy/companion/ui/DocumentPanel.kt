@@ -115,7 +115,7 @@ class DocumentPanel @JvmOverloads constructor(
 
     /**
      * En grand (le mode courant masqué) ou à côté : choisi par MainActivity selon le mode. `splittable` : bouton pour
-     * passer de l'un à l'autre ; absent dans Partage, où la liste des fichiers à côté ne sert à rien.
+     * passer de l'un à l'autre ; absent dans Depuis l'ordi, où la liste des fichiers à côté ne sert à rien.
      */
     fun setExpanded(value: Boolean, splittable: Boolean = true) {
         expanded = value

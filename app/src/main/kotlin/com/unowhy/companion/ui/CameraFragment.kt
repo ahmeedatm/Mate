@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * Caméra, deux usages choisis à l'entrée du mode :
  * - montrer une feuille (visualiseur) : la tablette, tenue au-dessus d'une feuille, filme avec sa caméra arrière ;
  *   l'ordinateur rediffuse l'image sur sa page /camera, à projeter ;
- * - envoyer une photo : aperçu sans envoi, la photo pleine taille part dans le dossier Partage.
+ * - envoyer une photo : aperçu sans envoi, la photo pleine taille part dans le dossier « Partage tablette ».
  * La caméra ne tourne que quand un usage est choisi et le mode affiché.
  */
 class CameraFragment : Fragment() {
@@ -315,7 +315,7 @@ class CameraFragment : Fragment() {
                         withContext(Dispatchers.IO) { file.writeBytes(jpeg) }
                         val saved = backend.uploadPhoto(file)
                         Toast.makeText(requireContext(), getString(R.string.camera_photo_sent, saved.substringAfterLast('/')), Toast.LENGTH_LONG).show()
-                        // Photo pour l'ordi : on la montre à côté, comme dans Partage.
+                        // Photo pour l'ordi : on la montre à côté, comme dans Depuis l'ordi.
                         if (purpose == Purpose.PHOTO) (activity as? MainActivity)?.openDocument(
                             DocEntry(saved.substringAfterLast('/'), saved, "image", jpeg.size.toLong(), System.currentTimeMillis()),
                         )

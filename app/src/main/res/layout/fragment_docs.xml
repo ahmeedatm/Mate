@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Depuis l'ordi : d'abord un choix (fichiers du dossier partagé, ou page ouverte dans le navigateur de l'ordi),
+     comme dans Caméra, puis la liste des fichiers. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -9,18 +11,19 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
+        android:minHeight="48dp"
         android:orientation="horizontal">
 
         <ImageButton
             android:id="@+id/docs_up"
             style="@style/IconButton"
+            android:layout_marginEnd="16dp"
             android:contentDescription="@string/up"
             android:src="@drawable/ic_back" />
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
             android:layout_weight="1"
             android:orientation="vertical">
 
@@ -31,6 +34,7 @@
                 android:ellipsize="start"
                 android:fontFamily="sans-serif-medium"
                 android:singleLine="true"
+                android:text="@string/docs_title"
                 android:textSize="22sp" />
 
             <TextView
@@ -49,31 +53,133 @@
             android:contentDescription="@string/refresh"
             android:src="@drawable/ic_refresh" />
 
-        <!-- Page ouverte dans le navigateur de l'ordinateur, affichée dans le panneau de droite. -->
         <Button
-            android:id="@+id/docs_web"
+            android:id="@+id/docs_back"
             style="@style/ActionButton"
-            android:drawableStart="@drawable/ic_display"
-            android:text="@string/web_from_computer" />
+            android:drawableStart="@drawable/ic_back"
+            android:text="@string/camera_back" />
     </LinearLayout>
 
-    <ListView
-        android:id="@+id/docs_list"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="20dp"
-        android:layout_weight="1"
-        android:divider="@android:color/transparent"
-        android:dividerHeight="8dp"
-        android:listSelector="@android:color/transparent"
-        android:scrollbars="none" />
+        android:layout_weight="1">
 
-    <TextView
-        android:id="@+id/docs_status"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:padding="16dp"
-        android:textColor="?attr/c_text_dim"
-        android:visibility="gone" />
+        <!-- Écran de départ : les deux usages, expliqués. -->
+        <LinearLayout
+            android:id="@+id/docs_choice"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/docs_choose_files"
+                style="@style/Card"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?android:attr/selectableItemBackground"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:padding="28dp">
+
+                <ImageView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_folder"
+                    android:tint="?attr/c_accent" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/docs_choose_files"
+                    android:textColor="?attr/c_text"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center"
+                    android:text="@string/docs_choose_files_hint"
+                    android:textColor="?attr/c_text_dim"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/docs_choose_web"
+                style="@style/Card"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?android:attr/selectableItemBackground"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:padding="28dp">
+
+                <ImageView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_display"
+                    android:tint="?attr/c_accent" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/web_from_computer"
+                    android:textColor="?attr/c_text"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center"
+                    android:text="@string/docs_choose_web_hint"
+                    android:textColor="?attr/c_text_dim"
+                    android:textSize="16sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/docs_files"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <ListView
+                android:id="@+id/docs_list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:divider="@android:color/transparent"
+                android:dividerHeight="8dp"
+                android:listSelector="@android:color/transparent"
+                android:scrollbars="none" />
+
+            <TextView
+                android:id="@+id/docs_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:padding="16dp"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="16sp"
+                android:visibility="gone" />
+        </FrameLayout>
+    </FrameLayout>
 </LinearLayout>
