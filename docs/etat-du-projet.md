@@ -102,4 +102,4 @@ Dofus Rétro (« Jouer » par un clic dans la fenêtre : perso, pas pour la dém
 | ca0ae6b | onglets déplaçables, corbeille en bande du bas avec son, installeur Windows réparé |
 | 99eb31c | Discord par UI Automation (appel, participants, Quitter), bascule d'ordinateur après 2 min, relecture légère |
 | 1cce5f2 | thèmes Nuit / Clair / Néon / Chaud, couleurs par fonction, animations |
-| (ce commit) | commande vocale (bouton Parler, noms d'applis rapprochés à l'oreille, dictée, fenêtres, tâches), appels entrants Discord, Arrêter le partage |
+| 5b2ac89 | commande vocale (bouton Parler, noms d'applis rapprochés à l'oreille, dictée, fenêtres, tâches), appels entrants Discord, Arrêter le partage |
