@@ -5,11 +5,14 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.BaseAdapter
 import android.widget.Button
 import android.widget.GridView
+import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.ImageButton
 import android.widget.LinearLayout
@@ -27,6 +30,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /** Deck façon Stream Deck : tuiles d'applis et de raccourcis du Mac, son et micro du Mac. */
 class DeckFragment : Fragment(), VolumeKeyHandler {
@@ -48,6 +52,9 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private var pageIndex = 0
     /** Onglet « Ouvertes » affiché (toutes les fenêtres de l'ordinateur) à la place de la page `pageIndex`. */
     private var showingOpen = false
+    /** Onglets dans l'ordre affiché (pour le balayage) et celui qui est sélectionné. */
+    private var tabActions: List<() -> Unit> = emptyList()
+    private var selectedTab = -1
     /** Page Réunion demandée avant que le deck soit chargé. */
     private var meetingPending = false
     /** Applis en appel (micro utilisé) → dernier moment où on l'a vu : leur page a un onglet. */
@@ -77,6 +84,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         picker.attach(viewLifecycleOwner.lifecycleScope) { loadDeck() }
         openWindows = view.findViewById(R.id.deck_open)
         openWindows.attach(viewLifecycleOwner.lifecycleScope)
+        // Dans « Ouvertes », glisser une fenêtre de côté la déplace : le balayage ne part que des espaces entre les écrans.
+        swipeTabs(openWindows)
         editor = view.findViewById(R.id.deck_editor)
         editor.attach(viewLifecycleOwner.lifecycleScope) { loadDeck() }
         adder = view.findViewById(R.id.deck_adder)
@@ -85,6 +94,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         linkAdder.attach(viewLifecycleOwner.lifecycleScope) { loadDeck() }
 
         grid.adapter = adapter
+        swipeTabs(grid)
         grid.setOnItemClickListener { _, tileView, position, _ ->
             val tile = adapter.getItem(position)
             when (tile.type) {
@@ -216,6 +226,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
      */
     private fun renderTabs() {
         tabs.removeAllViews()
+        val actions = mutableListOf<() -> Unit>()
+        selectedTab = -1
         fun seen(map: Map<String, Long>, app: String) = map.keys.any { it.equals(app, ignoreCase = true) }
         val live = pages.indices.filter { i ->
             val app = pages[i].app ?: return@filter false
@@ -230,6 +242,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                 setOnClickListener { onClick() }
             }
             tabs.addView(tab, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { marginEnd = dp(8) })
+            if (selected) selectedTab = actions.size
+            actions += onClick
         }
         // « Ouvertes » juste après Apps (en premier sans page Apps) : toutes les applis ouvertes, pas seulement les choisies.
         val openAfter = shown.indexOfFirst { pages[it].apps }
@@ -237,6 +251,41 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         shown.forEachIndexed { i, index ->
             addTab(pages[index].title, !showingOpen && index == pageIndex) { showPage(index) }
             if (i == openAfter) addTab(getString(R.string.deck_open_tab), showingOpen, ::showOpen)
+        }
+        tabActions = actions
+        // Onglet choisi par balayage : on fait défiler la barre jusqu'à lui.
+        tabs.getChildAt(selectedTab)?.let { tab ->
+            tabs.post { (tabs.parent as HorizontalScrollView).smoothScrollTo((tab.left - dp(48)).coerceAtLeast(0), 0) }
+        }
+    }
+
+    /**
+     * Balayer la grille de côté passe à l'onglet voisin. Le geste est retiré à la grille dès qu'il part de côté,
+     * pour qu'elle n'ouvre pas la tuile ni son appui long ; vers le haut ou le bas, elle défile comme avant.
+     */
+    private fun swipeTabs(view: View) {
+        val slop = ViewConfiguration.get(requireContext()).scaledTouchSlop * 2
+        var downX = 0f
+        var downY = 0f
+        var swiping = false
+        view.setOnTouchListener { v, e ->
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> { downX = e.rawX; downY = e.rawY; swiping = false }
+                MotionEvent.ACTION_MOVE -> if (!swiping) {
+                    val dx = e.rawX - downX
+                    if (abs(dx) > slop && abs(dx) > abs(e.rawY - downY) * 1.5f) {
+                        swiping = true
+                        val cancel = MotionEvent.obtain(e).apply { action = MotionEvent.ACTION_CANCEL }
+                        v.onTouchEvent(cancel)
+                        cancel.recycle()
+                    }
+                }
+                MotionEvent.ACTION_UP -> if (swiping) {
+                    val dx = e.rawX - downX
+                    if (abs(dx) > dp(SWIPE_DP)) tabActions.getOrNull(selectedTab + if (dx < 0) 1 else -1)?.invoke()
+                }
+            }
+            swiping
         }
     }
 
@@ -391,5 +440,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         const val ADD = "add"
         const val LIVE_POLL_MS = 4_000L
         const val LIVE_HOLD_MS = 20_000L
+        /** Distance de côté qui change d'onglet. */
+        const val SWIPE_DP = 80
     }
 }

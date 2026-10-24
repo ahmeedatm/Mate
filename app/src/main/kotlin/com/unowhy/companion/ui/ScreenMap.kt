@@ -35,6 +35,9 @@ class ScreenMap @JvmOverloads constructor(
     var onDrop: (payload: Any?, display: MacDisplay, layout: String) -> Unit = { _, _, _ -> }
     var onDragEnded: () -> Unit = {}
 
+    /** Étire les écrans pour remplir la vue (vue « Ouvertes » : des listes de fenêtres, la forme exacte compte peu). */
+    var stretch = false
+
     private var displays: List<MacDisplay> = emptyList()
     private val gap = dp(12)
 
@@ -74,25 +77,29 @@ class ScreenMap @JvmOverloads constructor(
     }
 
     /** Échelle et décalage qui centrent l'arrangement des écrans dans la vue. */
-    private inner class Frame(val scale: Float, val minX: Int, val minY: Int, val dx: Float, val dy: Float) {
+    private inner class Frame(val scaleX: Float, val scaleY: Float, val minX: Int, val minY: Int, val dx: Float, val dy: Float) {
         fun rect(d: MacDisplay): IntArray {
-            val left = dx + (d.x - minX) * scale
-            val top = dy + (d.y - minY) * scale
+            val left = dx + (d.x - minX) * scaleX
+            val top = dy + (d.y - minY) * scaleY
             return intArrayOf(
                 (left + gap / 2).toInt(), (top + gap / 2).toInt(),
-                (left + d.w * scale - gap / 2).toInt(), (top + d.h * scale - gap / 2).toInt(),
+                (left + d.w * scaleX - gap / 2).toInt(), (top + d.h * scaleY - gap / 2).toInt(),
             )
         }
     }
 
     private fun frame(width: Int, height: Int): Frame {
-        if (displays.isEmpty()) return Frame(1f, 0, 0, 0f, 0f)
+        if (displays.isEmpty()) return Frame(1f, 1f, 0, 0, 0f, 0f)
         val minX = displays.minOf { it.x }
         val minY = displays.minOf { it.y }
         val spanW = (displays.maxOf { it.x + it.w } - minX).coerceAtLeast(1)
         val spanH = (displays.maxOf { it.y + it.h } - minY).coerceAtLeast(1)
-        val scale = minOf(width.toFloat() / spanW, height.toFloat() / spanH)
-        return Frame(scale, minX, minY, (width - spanW * scale) / 2, (height - spanH * scale) / 2)
+        val fitX = width.toFloat() / spanW
+        val fitY = height.toFloat() / spanH
+        // Étirés, mais pas au point qu'un écran devienne une bande : 3 fois plus haut (ou large) au plus.
+        val scaleX = if (stretch) minOf(fitX, fitY * MAX_STRETCH) else minOf(fitX, fitY)
+        val scaleY = if (stretch) minOf(fitY, fitX * MAX_STRETCH) else scaleX
+        return Frame(scaleX, scaleY, minX, minY, (width - spanW * scaleX) / 2, (height - spanH * scaleY) / 2)
     }
 
     /** Un écran : nom, fenêtres (défilables), et aperçu de la place prise pendant un glisser. */
@@ -227,6 +234,7 @@ class ScreenMap @JvmOverloads constructor(
     private companion object {
         /** Part de la largeur (ou de la hauteur, en haut) qui déclenche une moitié d'écran ou l'agrandissement. */
         const val EDGE = 0.22f
+        const val MAX_STRETCH = 3f
     }
 }
 

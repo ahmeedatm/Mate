@@ -2,13 +2,22 @@
 
 Compagnon de bureau pour tablettes Unowhy 4.2 (Android 10), posé à côté de l'ordinateur (**Mac ou PC Windows**). La tablette est une interface légère ; le backend tourne sur l'ordinateur et sert à la fois d'agent de pilotage et de proxy vers l'IA. Une tablette peut connaître plusieurs ordinateurs (bureau, maison) et passe toute seule à celui qui répond.
 
-**Modes** : Accueil (tableau de bord : heure, prochain rendez-vous, agenda du jour, tâches, mini-Focus, son de l'ordinateur) · Deck (lancer des applis et raccourcis, fenêtres et écrans, macros, son et micro de l'ordinateur ; les boutons de volume de la tablette pilotent l'ordinateur) · Assistant (chat + micro, réponses lues à voix haute) · Docs (dossier partagé de l'ordinateur, PDF/images/texte ouverts dans un panneau latéral, photo → ordinateur) · Focus (Pomodoro + bruit blanc/rose/brun générés, le minuteur reste visible dans la barre) · Réglages. Les tâches (quotidiennes comme le worklog Jira, avec rappel parlé, et ponctuelles) sont sur l'Accueil, le nombre restant en pastille sur son icône. Le bouton Retour ne quitte jamais l'appli.
+**Modes** : Accueil (widgets à disposer : heure, météo, agenda, tâches, eau, Focus, son de l'ordinateur) · Deck (applis, raccourcis, touches perso et macros, Média, toutes les fenêtres ouvertes sur le schéma des écrans, son et micro ; les boutons de volume de la tablette pilotent l'ordinateur) · Assistant (chat + micro, affiché quand l'IA est branchée) · Partage (dossier partagé, page web de l'ordinateur) · Focus (Pomodoro + ambiance) · Caméra (visualiseur de documents, photo → ordinateur) · Réglages. La tablette tourne en kiosque : le bouton Retour ne quitte jamais l'appli.
 
 ```
 app/      Appli Android (Kotlin, vues XML, minSdk 24)
 backend/  Agent de l'ordinateur + proxy (Node/TypeScript, Fastify) ; src/mac/ et src/win/ : pilotage par système
-docs/     Specs tablette, kiosque
+docs/     Fonctionnement, état du projet, développement, tablette, kiosque
+scripts/  Sauvegarde (bundle git + données perso)
 ```
+
+**Documentation** :
+[comment ça marche](docs/architecture.md) ·
+[état du projet](docs/etat-du-projet.md) (fait, pas testé, à faire) ·
+[travailler dessus et sauvegarder](docs/developpement.md) ·
+[la tablette 4.2](docs/tablette-4.2.md) ·
+[kiosque](docs/kiosque.md) ·
+[agenda par compte Microsoft/Google](docs/agenda-comptes.md)
 
 ## Installation (Mac ou Windows)
 
@@ -46,7 +55,7 @@ Le pilotage passe par un processus PowerShell résident (`backend/src/win/helper
 - **Fenêtres et écrans** : mêmes gestes (moitiés, agrandir, changer d'écran) ; les bureaux virtuels masqués ne sont pas listés.
 - **Son** : volume et sourdine de la sortie par défaut, sourdine du micro par défaut.
 - Pas de « Raccourci Apple » (appli Raccourcis de macOS). `Win+L` est remplacé par l'action système « Verrouiller ».
-- **Pas encore testé sur un vrai PC** : à valider (voir la liste en bas du README).
+- Testé sur un vrai PC Windows (lancement automatique, deck, fenêtres, son, Média, Discord).
 
 ## Prérequis
 
@@ -188,21 +197,8 @@ adb uninstall com.unowhy.companion
 
 **Mode kiosque** : voir [docs/kiosque.md](docs/kiosque.md).
 
-> Le HTTP en clair n'est autorisé qu'en debug. En release, le backend doit être en HTTPS ; attention, Android 7.0 ne fait pas confiance aux certificats Let's Encrypt récents.
+> Le HTTP en clair est autorisé en debug et en release (`res/xml/network_security_config.xml`) : réseau local, protégé par le jeton d'appairage. En production : HTTPS épinglé à l'appairage.
 
-## Phases
+## Où en est le projet
 
-1. ✅ Chat texte + micro vers le backend (mock), deck, agenda, documents, photo → ordinateur.
-2. Synthèse vocale ✅ (TextToSpeech d'Android) · mot de réveil : à faire · brancher le mode `live` (Claude + transcription) : à faire.
-3. ✅ Focus : Pomodoro + sons d'ambiance.
-
-## À tester sur un vrai PC Windows
-
-Le code Windows compile (vérifié avec PowerShell 7) mais n'a pas encore tourné sur Windows. À valider dans l'ordre :
-
-1. `Installer (Windows).cmd` : installation, page http://127.0.0.1:3000/, redémarrage de session (le compagnon revient seul).
-2. Appairage depuis la tablette (recherche WiFi, pare-feu en réseau privé).
-3. Deck : lancer une appli, raccourcis (`ctrl+…`, `win+…`), touche Média, Texte, Mode sombre, Veille écran, Verrouiller.
-4. Son et micro de l'Accueil.
-5. Fenêtres : liste, premier plan, moitiés, agrandir, autre écran ; noms des écrans.
-6. Icônes des applis dans le deck.
+Voir [docs/etat-du-projet.md](docs/etat-du-projet.md) : ce qui marche, ce qui n'a pas été testé, la suite, et ce qu'il faut faire avant une démo.

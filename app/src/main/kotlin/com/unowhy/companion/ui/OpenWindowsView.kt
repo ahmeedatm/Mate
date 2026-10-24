@@ -6,6 +6,7 @@ import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -36,7 +37,9 @@ class OpenWindowsView @JvmOverloads constructor(
 
     private class Drag(val app: OpenApp, val window: MacWindow)
 
-    private val map = ScreenMap(context)
+    private val map = ScreenMap(context).apply { stretch = true }
+    /** Corbeille par-dessus le bas des écrans, seulement pendant un glisser : y garder une fenêtre la ferme. */
+    private val trash = TrashZone(context) { payload -> (payload as? Drag)?.let(::close) }
     private val elsewhere = HorizontalScrollView(context)
     private val elsewhereList = LinearLayout(context)
     private val status = TextView(context)
@@ -59,7 +62,11 @@ class OpenWindowsView @JvmOverloads constructor(
             visibility = GONE
         }
         addView(status, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        addView(map, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+        val mapArea = FrameLayout(context)
+        mapArea.addView(map, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        mapArea.addView(trash, FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, dp(64), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+            .apply { bottomMargin = dp(12) })
+        addView(mapArea, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         // Hors des écrans : fenêtres d'un autre bureau du Mac dont l'écran est inconnu.
         elsewhereList.orientation = HORIZONTAL
         elsewhere.isHorizontalScrollBarEnabled = false
@@ -126,6 +133,15 @@ class OpenWindowsView @JvmOverloads constructor(
             if (a != drag.app) a else a.copy(windows = a.windows.map { if (it == w) moved else it })
         }))
         act(rollback = current) { openWindowAction(drag.app, w, "place", display = display.id, layout = layout) }
+    }
+
+    /** Fenêtre lâchée dans la corbeille : fermée comme par sa croix (l'appli peut demander d'enregistrer). */
+    private fun close(drag: Drag) {
+        val current = shown ?: return
+        render(current.copy(apps = current.apps.mapNotNull { a ->
+            if (a != drag.app) a else a.copy(windows = a.windows - drag.window).takeIf { it.windows.isNotEmpty() }
+        }))
+        act(rollback = current) { openWindowAction(drag.app, drag.window, "close") }
     }
 
     private fun render(data: OpenWindows) {

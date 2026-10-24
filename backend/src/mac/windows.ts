@@ -221,6 +221,14 @@ function describe(all, e, frontProc) {
 }
 
 // Agrandie (remplit l'écran) : ramenée aux deux tiers de l'écran, centrée (macOS ne garde pas la taille d'avant) ; sinon agrandie.
+/** Comme un clic sur le bouton rouge : l'appli peut demander d'enregistrer. */
+function closeWindow(w) {
+  const close = w.buttons.whose({ subrole: 'AXCloseButton' })();
+  if (!close.length) throw new Error("Cette fenêtre ne peut pas être fermée d’ici");
+  close[0].click();
+  delay(0.3);
+}
+
 function zoom(w, all) {
   if (attr(w, 'AXMinimized')) w.attributes.byName('AXMinimized').value = false;
   if (attr(w, 'AXFullScreen')) { leaveFullscreen(w); return; }
@@ -273,6 +281,7 @@ function run(argv) {
     if (req.op === 'place') targets.forEach((e) => place(e.w, all, req.display, req.layout));
     if (req.op === 'zoom' && targets.length) zoom(targets[0].w, all);
     if (req.op === 'minimize') targets.forEach((e) => { e.w.attributes.byName('AXMinimized').value = true; });
+    else if (req.op === 'close') targets.forEach((e) => closeWindow(e.w));
     else if (targets.length) {
       const title = targets[0].w.name();
       focus(proc, targets[0].w);

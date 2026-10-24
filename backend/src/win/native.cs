@@ -708,7 +708,8 @@ namespace Companion
 
         /**
          * Liste (action "list") ou pilote une fenêtre désignée par son handle (`hwnd`) : "focus", "place", "minimize"
-         * (réduire) ou "zoom" (agrandir, ou rendre sa taille à une fenêtre agrandie).
+         * (réduire), "zoom" (agrandir, ou rendre sa taille à une fenêtre agrandie) ou "close" (comme sa croix : WM_CLOSE,
+         * l'appli peut demander d'enregistrer).
          * Chaque fenêtre porte `app` (nom de l'appli du menu Démarrer, ou description du programme) et `exe`.
          */
         static object AllWindows(Dictionary<string, object> req)
@@ -721,6 +722,7 @@ namespace Companion
                 var target = TopWindows().FirstOrDefault(w => w.H.ToInt64() == hwnd);
                 if (target == null) throw new Exception("Fenêtre introuvable");
                 if (action == "minimize") ShowWindow(target.H, 6); // SW_MINIMIZE
+                else if (action == "close") { PostMessage(target.H, 0x0010, IntPtr.Zero, IntPtr.Zero); Thread.Sleep(350); } // WM_CLOSE
                 else
                 {
                     if (action == "place") Place(target.H, screens, Int(req, "display", -1), Str(req, "layout") ?? "keep");

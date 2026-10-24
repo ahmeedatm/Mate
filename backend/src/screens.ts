@@ -33,7 +33,7 @@ export type OpenApp = { key: string; name: string; windows: AppWindow[] };
 export type OpenWindows = { apps: OpenApp[]; displays: Display[] };
 
 /** focus : mettre devant ; place : changer d'écran ou de moitié ; minimize : réduire ; zoom : agrandir, ou rendre sa taille. */
-export type OpenAction = "focus" | "place" | "minimize" | "zoom";
+export type OpenAction = "focus" | "place" | "minimize" | "zoom" | "close";
 
 /** keep : même place relative sur l'écran cible ; left/right : moitié d'écran ; max : tout l'écran utile. */
 export type Layout = "keep" | "left" | "right" | "max";
