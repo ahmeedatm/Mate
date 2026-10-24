@@ -34,18 +34,21 @@ export function adoptOldData() {
   fs.cpSync(old, dataDir, { recursive: true, filter: (src) => path.basename(src) !== "service.pid" });
 }
 
-/** Documents de l'utilisateur (sous Windows, il peut avoir été déplacé, dans OneDrive par exemple). */
-function documentsDir() {
+/**
+ * Dossier de l'utilisateur (Personal = Documents, Desktop = Bureau, Programs = menu Démarrer) : sous Windows,
+ * lu dans le registre car il peut avoir été déplacé (OneDrive par exemple).
+ */
+export function userFolder(kind: "Personal" | "Desktop" | "Programs", fallback: string): string {
   if (process.platform === "win32") {
     try {
-      const out = execFileSync("reg", ["query", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders", "/v", "Personal"], { encoding: "utf8", windowsHide: true });
-      const dir = /Personal\s+REG_\w+\s+(.+)/.exec(out)?.[1]?.trim();
+      const out = execFileSync("reg", ["query", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders", "/v", kind], { encoding: "utf8", windowsHide: true });
+      const dir = new RegExp(`${kind}\\s+REG_\\w+\\s+(.+)`).exec(out)?.[1]?.trim();
       if (dir && fs.existsSync(dir)) return dir;
     } catch {
       // Clé absente : dossier habituel.
     }
   }
-  return path.join(os.homedir(), "Documents");
+  return fallback;
 }
 
 /**
@@ -55,7 +58,7 @@ function documentsDir() {
 export function sharedDir(): string {
   const old = path.resolve(backendRoot, "..", "shared");
   if (!packaged) return old;
-  const dir = path.join(documentsDir(), "Partage tablette");
+  const dir = path.join(userFolder("Personal", path.join(os.homedir(), "Documents")), "Partage tablette");
   // Paquet plus ancien : documents dans le dossier extrait, recopiés une fois (l'original reste).
   if (!fs.existsSync(dir) && fs.existsSync(old) && fs.readdirSync(old).length > 0) {
     fs.cpSync(old, dir, { recursive: true });

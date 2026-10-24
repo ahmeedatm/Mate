@@ -2,7 +2,7 @@ import { execFile, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { backendRoot as backend, dataDir, packaged as bundled } from "../src/paths.ts";
+import { backendRoot as backend, dataDir, packaged as bundled, userFolder } from "../src/paths.ts";
 
 /**
  * Lancement automatique du backend à l'ouverture de session, sans terminal :
@@ -171,6 +171,36 @@ async function winInstall() {
   return node;
 }
 
+// --- Raccourcis vers la page de l'ordinateur (adresse, code d'appairage, agenda)
+
+const SHORTCUT = "Compagnon Unowhy";
+
+function shortcutFiles(): string[] {
+  const home = os.homedir();
+  if (isMac) return [path.join(home, "Desktop", `${SHORTCUT}.webloc`)];
+  const programs = path.join(process.env.APPDATA ?? path.join(home, "AppData", "Roaming"), "Microsoft", "Windows", "Start Menu", "Programs");
+  return [
+    path.join(userFolder("Desktop", path.join(home, "Desktop")), `${SHORTCUT}.url`),
+    path.join(userFolder("Programs", programs), `${SHORTCUT}.url`),
+  ];
+}
+
+/** Bureau (et menu Démarrer sous Windows) ; un échec ne bloque pas l'installation. */
+function addShortcuts(page: string) {
+  // Icône du compagnon (assets/compagnon.svg, rendue en .ico multi-tailles) ; sinon celle du navigateur.
+  const icon = path.join(backend, "assets", "compagnon.ico");
+  const body = isMac
+    ? `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>URL</key><string>${xml(page)}</string></dict></plist>\n`
+    : `[InternetShortcut]\r\nURL=${page}\r\n` + (fs.existsSync(icon) ? `IconFile=${icon}\r\nIconIndex=0\r\n` : "");
+  for (const file of shortcutFiles()) {
+    try {
+      fs.writeFileSync(file, body);
+    } catch {
+      // Dossier protégé ou absent : la page reste à l'adresse affichée.
+    }
+  }
+}
+
 // --- Commandes
 
 async function install() {
@@ -199,13 +229,15 @@ async function install() {
     await sh("open", ["-R", node]);
   } else {
     console.log(
-      "\nSi le pare-feu Windows demande l'accès réseau pour Node.js, cocher « Réseaux privés » et Autoriser :\n" +
-        "sans cela la tablette ne trouve pas l'ordinateur. Le WiFi doit être en profil « Privé ».",
+      "\nSi la tablette ne trouve pas l'ordinateur : le WiFi de l'ordinateur doit être en profil « Privé »\n" +
+        "(le pare-feu n'est ouvert que pour les réseaux privés).",
     );
   }
   const page = `http://127.0.0.1:${port}/`;
+  addShortcuts(page);
   await sh(isMac ? "open" : "explorer.exe", [page]);
   console.log(`\nPage d'aide (adresse, code d'appairage, agenda) : ${page}`);
+  console.log(`Pour la rouvrir : raccourci « ${SHORTCUT} » sur le Bureau${isWindows ? " et dans le menu Démarrer" : ""}.`);
 }
 
 async function uninstall() {
@@ -216,6 +248,7 @@ async function uninstall() {
     await winStop();
     await sh("reg", ["delete", RUN_KEY, "/v", RUN_VALUE, "/f"]);
   }
+  for (const file of shortcutFiles()) fs.rmSync(file, { force: true });
   console.log("Lancement automatique retiré.");
 }
 

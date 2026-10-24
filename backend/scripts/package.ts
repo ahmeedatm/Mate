@@ -99,6 +99,7 @@ async function stage(platform: "windows" | "mac", sums: string): Promise<string>
     copy(path.join(repo, "Installer (Windows).cmd"), path.join(root, "Installer (Windows).cmd"));
     for (const f of ["helper.ps1", "native.cs"]) copy(path.join(backend, "src", "win", f), path.join(dest, "src", "win", f));
     for (const f of ["run-windows.ps1", "firewall-windows.ps1"]) copy(path.join(backend, "scripts", f), path.join(dest, "scripts", f));
+    copy(path.join(backend, "assets", "compagnon.ico"), path.join(dest, "assets", "compagnon.ico"));
     extract(await nodeArchive(sums, "-win-x64.zip"), "node.exe", path.join(dest, "node", "node.exe"));
   } else {
     copy(path.join(repo, "Installer (Mac).command"), path.join(root, "Installer (Mac).command"));
