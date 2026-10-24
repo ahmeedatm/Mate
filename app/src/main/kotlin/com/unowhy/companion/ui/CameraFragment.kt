@@ -23,9 +23,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.unowhy.companion.MainActivity
 import com.unowhy.companion.R
 import com.unowhy.companion.camera.DocCamera
 import com.unowhy.companion.net.BackendClient
+import com.unowhy.companion.net.DocEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -35,8 +37,11 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Visualiseur : la tablette, tenue à plat au-dessus d'une feuille, filme avec sa caméra arrière ;
- * le Mac rediffuse l'image sur sa page /camera, à projeter. La caméra ne tourne que quand le mode est affiché.
+ * Caméra, deux usages choisis à l'entrée du mode :
+ * - montrer une feuille (visualiseur) : la tablette, tenue au-dessus d'une feuille, filme avec sa caméra arrière ;
+ *   l'ordinateur rediffuse l'image sur sa page /camera, à projeter ;
+ * - envoyer une photo : aperçu sans envoi, la photo pleine taille part dans le dossier Partage.
+ * La caméra ne tourne que quand un usage est choisi et le mode affiché.
  */
 class CameraFragment : Fragment() {
 
@@ -46,12 +51,15 @@ class CameraFragment : Fragment() {
     private lateinit var status: TextView
     private lateinit var messageBox: View
     private lateinit var message: TextView
-    private lateinit var illustration: View
     private lateinit var action: Button
     private lateinit var stop: Button
     private lateinit var frozenHint: View
     private lateinit var freeze: Button
     private lateinit var photo: Button
+    private lateinit var title: TextView
+    private lateinit var controls: View
+    private lateinit var choice: View
+    private lateinit var showButton: View
     private val zoomButtons = mutableListOf<Pair<Float, Button>>()
 
     private var camera: DocCamera? = null
@@ -59,8 +67,9 @@ class CameraFragment : Fragment() {
     private var sender: ExecutorService? = null
     private var started = false
     private var askedPermission = false
-    /** Arrêtée par le bouton Arrêter ; revenir dans le mode la rallume. */
-    private var stopped = false
+    private enum class Purpose { SHOW, PHOTO }
+    /** null : écran de choix, caméra éteinte. Revenir dans le mode ramène au choix. */
+    private var purpose: Purpose? = null
     private var zoom = 1f
     private var rotation = 0
 
@@ -98,12 +107,17 @@ class CameraFragment : Fragment() {
         status = view.findViewById(R.id.camera_status)
         messageBox = view.findViewById(R.id.camera_message_box)
         message = view.findViewById(R.id.camera_message)
-        illustration = view.findViewById(R.id.camera_illustration)
         action = view.findViewById(R.id.camera_action)
         stop = view.findViewById(R.id.camera_stop)
         frozenHint = view.findViewById(R.id.camera_frozen)
         freeze = view.findViewById(R.id.camera_freeze)
         photo = view.findViewById(R.id.camera_photo)
+        title = view.findViewById(R.id.camera_title)
+        controls = view.findViewById(R.id.camera_controls)
+        choice = view.findViewById(R.id.camera_choice)
+        showButton = view.findViewById(R.id.camera_show)
+        view.findViewById<View>(R.id.camera_choose_show).setOnClickListener { choose(Purpose.SHOW) }
+        view.findViewById<View>(R.id.camera_choose_photo).setOnClickListener { choose(Purpose.PHOTO) }
 
         preview.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
@@ -120,10 +134,7 @@ class CameraFragment : Fragment() {
         // L'aperçu garde le format 16:9 du flux, centré dans la place disponible.
         frame.addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ -> fitPreview(right - left, bottom - top) }
 
-        stop.setOnClickListener {
-            stopped = true
-            sync()
-        }
+        stop.setOnClickListener { choose(null) }
         freeze.setOnClickListener { setFrozen(!frozen) }
         photo.setOnClickListener { takePhoto() }
         view.findViewById<Button>(R.id.camera_show).setOnClickListener { showOnMac() }
@@ -158,7 +169,8 @@ class CameraFragment : Fragment() {
     override fun onHiddenChanged(hidden: Boolean) {
         if (!hidden) {
             askedPermission = false
-            stopped = false
+            purpose = null
+            renderControls()
         }
         sync()
     }
@@ -175,12 +187,10 @@ class CameraFragment : Fragment() {
     private fun sync() {
         if (view == null) return
         val visible = started && !isHidden
-        if (visible && stopped) {
+        choice.visibility = if (purpose == null) View.VISIBLE else View.GONE
+        if (purpose == null) {
             stopCamera()
-            showMessage(getString(R.string.camera_stopped), R.string.camera_restart, sleeping = true) {
-                stopped = false
-                sync()
-            }
+            showMessage(null)
             return
         }
         if (visible && !hasPermission()) {
@@ -241,7 +251,7 @@ class CameraFragment : Fragment() {
      */
     private fun wantFrame(): Boolean {
         val now = SystemClock.elapsedRealtime()
-        if (frozen || inFlight.get() >= PIPELINE || now < nextFrameAt) return false
+        if (purpose != Purpose.SHOW || frozen || inFlight.get() >= PIPELINE || now < nextFrameAt) return false
         nextFrameAt = now + FRAME_INTERVAL_MS
         return true
     }
@@ -270,6 +280,8 @@ class CameraFragment : Fragment() {
 
     private fun postState(state: String) {
         val backend = client ?: return
+        // Photo : l'ordinateur n'a pas d'image en direct à annoncer.
+        if (purpose != Purpose.SHOW && state != "off") return
         lifecycleScope.launch { runCatching { backend.cameraState(state, rotation) } }
     }
 
@@ -303,6 +315,10 @@ class CameraFragment : Fragment() {
                         withContext(Dispatchers.IO) { file.writeBytes(jpeg) }
                         val saved = backend.uploadPhoto(file)
                         Toast.makeText(requireContext(), getString(R.string.camera_photo_sent, saved.substringAfterLast('/')), Toast.LENGTH_LONG).show()
+                        // Photo pour l'ordi : on la montre à côté, comme dans Partage.
+                        if (purpose == Purpose.PHOTO) (activity as? MainActivity)?.openDocument(
+                            DocEntry(saved.substringAfterLast('/'), saved, "image", jpeg.size.toLong(), System.currentTimeMillis()),
+                        )
                     } catch (e: Exception) {
                         Toast.makeText(requireContext(), requireContext().errorText(e), Toast.LENGTH_LONG).show()
                     } finally {
@@ -364,17 +380,35 @@ class CameraFragment : Fragment() {
 
     // --- Affichage
 
-    /** Message au centre de l'aperçu, avec un bouton si `actionLabel` est donné ; null efface. `sleeping` : caméra endormie dessinée au-dessus. */
-    private fun showMessage(text: String?, actionLabel: Int? = null, sleeping: Boolean = false, onAction: (() -> Unit)? = null) {
+    /** Message au centre de l'aperçu, avec un bouton si `actionLabel` est donné ; null efface. */
+    private fun showMessage(text: String?, actionLabel: Int? = null, onAction: (() -> Unit)? = null) {
         message.text = text
-        illustration.visibility = if (sleeping) View.VISIBLE else View.GONE
         messageBox.visibility = if (text == null) View.GONE else View.VISIBLE
         action.visibility = if (actionLabel == null) View.GONE else View.VISIBLE
         actionLabel?.let { action.setText(it) }
         action.setOnClickListener { onAction?.invoke() }
     }
 
+    private fun choose(next: Purpose?) {
+        purpose = next
+        frozen = false
+        renderControls()
+        sync()
+    }
+
     private fun renderControls() {
+        val show = purpose == Purpose.SHOW
+        title.setText(when (purpose) {
+            Purpose.SHOW -> R.string.camera_title_show
+            Purpose.PHOTO -> R.string.camera_title_photo
+            null -> R.string.mode_camera
+        })
+        controls.visibility = if (purpose == null) View.INVISIBLE else View.VISIBLE
+        stop.visibility = if (purpose == null) View.GONE else View.VISIBLE
+        dot.visibility = if (purpose == null) View.INVISIBLE else View.VISIBLE
+        showButton.visibility = if (show) View.VISIBLE else View.GONE
+        freeze.visibility = if (show) View.VISIBLE else View.GONE
+        photo.setText(if (show) R.string.camera_photo else R.string.camera_take_photo)
         freeze.setText(if (frozen) R.string.camera_resume else R.string.camera_freeze)
         freeze.setCompoundDrawablesRelativeWithIntrinsicBounds(if (frozen) R.drawable.ic_play else R.drawable.ic_pause, 0, 0, 0)
         frozenHint.visibility = if (frozen) View.VISIBLE else View.GONE
@@ -391,6 +425,7 @@ class CameraFragment : Fragment() {
     private fun renderStatus(fps: Int?) {
         val (text, color) = when {
             camera == null -> "" to R.color.text_faint
+            purpose == Purpose.PHOTO -> getString(R.string.camera_photo_preview) to R.color.text_faint
             !online -> getString(R.string.camera_offline) to R.color.ko
             frozen -> getString(R.string.camera_frozen) to R.color.warn
             fps == null -> getString(R.string.camera_starting) to R.color.text_faint

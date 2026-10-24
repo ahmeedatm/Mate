@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <merge xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Nom de la barre dans le Deck, à côté de celle d'une appli (Discord) : alignée sur elle. Masqué sur l'Accueil (titre de carte). -->
+    <TextView
+        android:id="@+id/audio_label"
+        android:layout_width="178dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:text="@string/mac_volume"
+        android:textColor="@color/text"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
     <ImageButton
         android:id="@+id/audio_mute"
         style="@style/IconButton"

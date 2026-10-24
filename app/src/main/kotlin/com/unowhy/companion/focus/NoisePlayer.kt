@@ -15,10 +15,17 @@ object NoisePlayer {
 
     private const val SAMPLE_RATE = 22_050
 
+    /** Ambiance choisie (null : aucune). Elle peut être choisie sans jouer : coupée, ou chrono en pause. */
     @Volatile var kind: Kind? = null
         private set
     @Volatile var volume = 0.5f
         private set
+    /** Bouton haut-parleur de Focus. */
+    @Volatile var muted = false
+        private set
+    /** Chrono mis en pause après avoir été lancé : l'ambiance attend qu'il reprenne. */
+    private var heldByTimer = false
+    @Volatile private var playingKind: Kind? = null
     private var thread: Thread? = null
     private val listeners = mutableSetOf<() -> Unit>()
 
@@ -31,19 +38,32 @@ object NoisePlayer {
         listeners -= listener
     }
 
+    /** Ce qu'on entend vraiment. */
+    val playing: Boolean
+        get() = kind != null && !muted && !heldByTimer
+
+    /** Choisir une ambiance la fait entendre tout de suite, même chrono arrêté. */
     fun play(newKind: Kind) {
-        stopThread()
         kind = newKind
-        thread = Thread({ loop(newKind) }, "noise").apply {
-            priority = Thread.MAX_PRIORITY
-            start()
-        }
-        notifyListeners()
+        muted = false
+        heldByTimer = false
+        sync()
     }
 
     fun stop() {
-        stopThread()
-        notifyListeners()
+        kind = null
+        sync()
+    }
+
+    fun setMuted(value: Boolean) {
+        muted = value
+        sync()
+    }
+
+    /** Appelé par [FocusTimer] quand il démarre ou s'arrête. */
+    internal fun followTimer(running: Boolean) {
+        heldByTimer = !running
+        sync()
     }
 
     fun setVolume(value: Float) {
@@ -53,8 +73,23 @@ object NoisePlayer {
         notifyListeners()
     }
 
+    private fun sync() {
+        val target = kind.takeIf { playing }
+        if (target != playingKind) {
+            stopThread()
+            if (target != null) {
+                playingKind = target
+                thread = Thread({ loop(target) }, "noise").apply {
+                    priority = Thread.MAX_PRIORITY
+                    start()
+                }
+            }
+        }
+        notifyListeners()
+    }
+
     private fun stopThread() {
-        kind = null
+        playingKind = null
         thread?.interrupt()
         thread?.join(500)
         thread = null
@@ -80,7 +115,7 @@ object NoisePlayer {
 
         try {
             track.play()
-            while (!Thread.currentThread().isInterrupted && kind == target) {
+            while (!Thread.currentThread().isInterrupted && playingKind == target) {
                 for (i in buffer.indices) {
                     val white = random.nextFloat() * 2f - 1f
                     val sample = when (target) {

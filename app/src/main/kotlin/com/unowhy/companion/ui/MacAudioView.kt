@@ -5,6 +5,7 @@ import android.content.res.ColorStateList
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.SeekBar
@@ -30,6 +31,11 @@ class MacAudioView @JvmOverloads constructor(
     private val mic: ImageButton
 
     private lateinit var scope: CoroutineScope
+
+    /** Dans le Deck : nom de la barre, pour la distinguer de celle d'une appli. */
+    fun showLabel() {
+        findViewById<View>(R.id.audio_label).visibility = VISIBLE
+    }
     private var state: AudioState? = null
 
     init {

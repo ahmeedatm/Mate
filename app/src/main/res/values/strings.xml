@@ -148,9 +148,10 @@
     <string name="mic_off">Micro coupé</string>
     <string name="percent">%1$d %%</string>
     <string name="app_audio_mute">Couper ou rétablir le son de l\'appli</string>
-    <string name="app_audio_talking">Ça parle</string>
-    <string name="app_audio_silent">Silence</string>
-    <string name="app_audio_closed">Pas lancé</string>
+    <string name="app_audio_title">Son de %1$s</string>
+    <string name="app_audio_talking">Quelqu\'un parle</string>
+    <string name="app_audio_silent">Personne ne parle</string>
+    <string name="app_audio_closed">Fermé sur l\'ordi</string>
     <string name="app_audio_unknown">–</string>
     <string name="media_empty">Rien en lecture</string>
     <string name="media_empty_hint">Lance une vidéo YouTube ou Twitch, ou de la musique, sur l\'ordinateur</string>
@@ -172,10 +173,8 @@
 
     <!-- Documents -->
     <string name="docs_root">Dossier partagé</string>
+    <string name="docs_count_free">%1$s · Tablette : %2$s libres</string>
     <string name="up">Remonter</string>
-    <string name="take_photo">Photo → ordi</string>
-    <string name="photo_sent">Photo envoyée sur l\'ordinateur</string>
-    <string name="no_camera">Aucune appli caméra disponible</string>
     <string name="empty_folder">Dossier vide : dépose des fichiers dedans depuis l\'ordinateur</string>
     <string name="open_on_mac">Ouvrir sur l\'ordi</string>
     <string name="opened_on_mac">Ouvert sur l\'ordinateur</string>
@@ -194,13 +193,21 @@
     </plurals>
 
     <!-- Visualiseur (mode Caméra) -->
-    <string name="camera_title">Visualiseur</string>
+    <string name="camera_title_show">Montrer une feuille</string>
+    <string name="camera_title_photo">Photo pour l\'ordi</string>
+    <string name="camera_choose_show">Montrer une feuille</string>
+    <string name="camera_choose_show_hint">Tiens la tablette au-dessus d\'une feuille ou d\'un objet : l\'image s\'affiche en direct sur l\'écran de l\'ordi, à projeter ou à partager en réunion.</string>
+    <string name="camera_choose_photo">Envoyer une photo</string>
+    <string name="camera_choose_photo_hint">Prends une photo avec la tablette : elle arrive dans le dossier Partage de l\'ordi, prête à être utilisée.</string>
+    <string name="camera_back">Terminer</string>
+    <string name="camera_take_photo">Prendre la photo</string>
+    <string name="camera_photo_preview">Aperçu · rien n\'est envoyé avant la photo</string>
     <string name="camera_show_on_mac">Afficher sur l\'ordi</string>
     <string name="camera_opened">Visualiseur ouvert sur l\'ordinateur</string>
     <string name="camera_freeze">Figer</string>
     <string name="camera_resume">Reprendre</string>
     <string name="camera_frozen_hint">Image figée sur l\'ordinateur</string>
-    <string name="camera_photo">Photo HD → ordi</string>
+    <string name="camera_photo">Photo → ordi</string>
     <string name="camera_photo_sent">Photo enregistrée : %1$s</string>
     <string name="camera_photo_failed">Photo impossible, réessaie</string>
     <string name="camera_zoom">%1$s×</string>
@@ -210,9 +217,6 @@
     <string name="camera_offline">Ordinateur injoignable</string>
     <string name="camera_permission">Autorise la caméra pour t\'en servir comme visualiseur.</string>
     <string name="camera_grant">Autoriser</string>
-    <string name="camera_stop">Arrêter</string>
-    <string name="camera_stopped">Caméra en veille\nPlus rien n\'est envoyé à l\'ordinateur.</string>
-    <string name="camera_restart">Rallumer</string>
     <string name="camera_unavailable">Pas de caméra arrière sur cette tablette</string>
 
     <!-- Focus -->
@@ -231,7 +235,8 @@
     <string name="noise_brown">Brun</string>
     <string name="noise_pink">Pluie</string>
     <string name="noise_white">Blanc</string>
-    <string name="noise_off">Silence</string>
+    <string name="noise_mute">Couper l\'ambiance</string>
+    <string name="noise_unmute">Remettre l\'ambiance</string>
     <string name="noise_playing">Son : %1$s</string>
 
     <!-- Tâches (carte de l'Accueil) -->
@@ -382,7 +387,6 @@
     <string name="welcome_done">Connecté à %1$s</string>
     <string name="connect_title">Aucun ordinateur connecté</string>
     <string name="connect_button">Connecter mon ordinateur</string>
-    <string name="connect_home">L\'agenda, les tâches et le son de ton ordinateur s\'afficheront ici.</string>
     <string name="connect_deck">Le Deck lance les applis et les raccourcis de ton ordinateur.</string>
     <string name="connect_chat">L\'assistant passe par ton ordinateur.</string>
     <string name="connect_docs">Partage affiche les documents et la page web de ton ordinateur.</string>
@@ -414,6 +418,8 @@
     <string name="day_at">%1$s à %2$s</string>
     <string name="water_title">Eau</string>
     <string name="water_count">%1$d / %2$d verres</string>
+    <string name="water_count_short">%1$d / %2$d</string>
+    <string name="water_done_short">%1$d / %2$d ✓</string>
     <string name="water_done">%1$d / %2$d verres ✓</string>
     <string name="water_plus">J\'ai bu un verre</string>
     <string name="water_minus">Enlever un verre</string>
@@ -428,6 +434,15 @@
     <string name="water_remind_text">Pense à boire un verre d\'eau.</string>
     <string name="water_remind_banner">💧 Pense à boire un verre d\'eau (%1$d / %2$d)</string>
     <string name="agenda_link">Relier Outlook / Google</string>
+    <string name="calendars_title">Mes agendas</string>
+    <string name="calendars_add">Relier un autre agenda</string>
+    <string name="calendars_hint">Agendas reliés à cet ordinateur. Ton agenda personnel, noté ici avec +, reste toujours.</string>
+    <string name="calendars_none">Aucun agenda relié. Ton agenda personnel, noté ici avec +, s\'affiche quand même.</string>
+    <string name="calendars_expired">connexion expirée, relie-le à nouveau</string>
+    <string name="calendars_tap_unlink">toucher pour délier</string>
+    <string name="calendars_unlink">Délier</string>
+    <string name="calendars_unlink_title">Délier %1$s ?</string>
+    <string name="calendars_unlink_message">Ses rendez-vous ne s\'afficheront plus sur la tablette. Tu pourras le relier à nouveau depuis « Relier un autre agenda ».</string>
     <string name="agenda_setup_opened">Page ouverte sur l\'ordinateur : connecte ton agenda.</string>
     <string name="tablet_title">Tablette</string>
     <string name="tablet_battery_state">Batterie de la tablette : %1$d %%</string>
@@ -460,4 +475,73 @@
     <string name="kiosk_remove_confirm">L\'appli ne sera plus device owner. Pour réactiver le kiosque, il faudra refaire la commande adb (et peut-être réinitialiser la tablette). Continuer ?</string>
     <string name="cancel">Annuler</string>
     <string name="confirm">Confirmer</string>
+
+    <!-- Accueil à widgets -->
+    <string name="home_edit_hint">Glisse un widget pour le déplacer, touche + pour en ajouter.</string>
+    <string name="home_edit_add">Ajouter</string>
+    <string name="home_edit_templates">Modèles</string>
+    <string name="home_edit_page">Nouvelle page</string>
+    <string name="home_edit_done">Terminé</string>
+    <string name="home_gallery_title">Ajouter un widget</string>
+    <string name="home_gallery_detail">%1$s · %2$s</string>
+    <string name="home_no_room">Plus de place sur cette page : retire ou réduis un widget, ou ajoute une page.</string>
+    <string name="home_no_room_size">Pas assez de place autour pour une autre taille : déplace ou retire un widget voisin.</string>
+    <string name="home_templates_title">Choisir un modèle</string>
+    <string name="template_work">Travail</string>
+    <string name="template_work_desc">Heure, agenda, prochain rendez-vous, tâches, Focus et eau.</string>
+    <string name="template_home">Maison / Jeu</string>
+    <string name="template_home_desc">Heure, météo, son de l\'ordi, touches du deck, lecture en cours, Focus et eau.</string>
+    <string name="template_standby">Veille</string>
+    <string name="template_standby_desc">Très grande heure, prochain rendez-vous, Focus et eau : lisible de loin.</string>
+    <string name="widget_size_s">Petit</string>
+    <string name="widget_size_m">Moyen</string>
+    <string name="widget_size_l">Grand</string>
+    <string name="widget_size_t">Colonne</string>
+    <string name="widget_size_w">Bandeau</string>
+    <string name="widget_size_xl">Très grand</string>
+    <string name="widget_needs_computer">%1$s : connecte ton ordinateur</string>
+    <string name="widget_clock">Horloge</string>
+    <string name="widget_clock_desc">L\'heure et la date, en grand</string>
+    <string name="widget_next">Prochain rendez-vous</string>
+    <string name="widget_next_desc">Et le bouton Rejoindre d\'une réunion Teams</string>
+    <string name="widget_agenda">Agenda</string>
+    <string name="widget_agenda_desc">Aujourd\'hui et les 7 jours suivants</string>
+    <string name="widget_tasks">Tâches</string>
+    <string name="widget_tasks_desc">Les tâches du jour et leurs rappels</string>
+    <string name="widget_focus">Focus</string>
+    <string name="widget_focus_desc">Le minuteur Pomodoro</string>
+    <string name="widget_water">Eau</string>
+    <string name="widget_water_desc">Les verres bus aujourd\'hui</string>
+    <string name="widget_audio">Son de l\'ordinateur</string>
+    <string name="widget_audio_desc">Volume et micro de l\'ordi</string>
+    <string name="widget_media">Lecture en cours</string>
+    <string name="widget_media_desc">Musique ou vidéo de l\'ordi, avec ses commandes</string>
+    <string name="widget_media_windows_only">Disponible avec un PC Windows.</string>
+    <string name="widget_keys">Touches du deck</string>
+    <string name="widget_keys_desc">1 à 4 touches du Deck, à portée de main</string>
+    <string name="widget_keys_choose">Choisir les touches</string>
+    <string name="widget_keys_hint">%1$d touche(s) choisie(s) sur %2$d au plus. Un petit widget montre la première, un moyen les deux premières.</string>
+    <string name="widget_weather">Météo</string>
+    <string name="widget_weather_desc">Le temps qu\'il fait dans ta ville</string>
+    <string name="widget_weather_choose">Choisir ma ville</string>
+    <string name="widget_weather_temp">%1$d°</string>
+    <string name="widget_weather_range">min %1$d° · max %2$d°</string>
+    <string name="widget_weather_city_hint">Ville (ex. Paris)</string>
+    <string name="widget_weather_search">Chercher</string>
+    <string name="widget_weather_offline">Pas d\'accès à Internet : vérifie le WiFi de la tablette.</string>
+    <string name="widget_weather_none">Aucune ville trouvée.</string>
+    <string name="sky_clear">Ciel dégagé</string>
+    <string name="sky_partly">Quelques nuages</string>
+    <string name="sky_cloudy">Couvert</string>
+    <string name="sky_fog">Brouillard</string>
+    <string name="sky_drizzle">Bruine</string>
+    <string name="sky_rain">Pluie</string>
+    <string name="sky_snow">Neige</string>
+    <string name="sky_showers">Averses</string>
+    <string name="sky_storm">Orage</string>
+    <string name="sky_unknown">Météo</string>
+    <string name="widget_note">Note</string>
+    <string name="widget_note_desc">Un mot à garder sous les yeux</string>
+    <string name="widget_note_empty">Touche pour écrire une note</string>
+    <string name="widget_note_hint">Ta note</string>
 </resources>

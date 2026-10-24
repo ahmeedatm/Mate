@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget Agenda (AgendaWidget) : aujourd'hui et les 7 jours suivants, « Mes agendas », + = noter un rendez-vous. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/widget_agenda"
+    style="@style/Card"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:minHeight="40dp"
+        android:orientation="horizontal">
+
+        <TextView
+            style="@style/CardTitle"
+            android:drawableStart="@drawable/ic_event"
+            android:text="@string/today" />
+
+        <TextView
+            android:id="@+id/widget_source"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:gravity="end"
+            android:singleLine="true"
+            android:textColor="@color/text_faint"
+            android:textSize="12sp" />
+
+        <!-- « Mes agendas » (délier, en relier un autre) ; sans agenda relié, lien vers la page de l'ordinateur. -->
+        <Button
+            android:id="@+id/widget_agenda_link"
+            style="@style/Chip"
+            android:layout_height="36dp"
+            android:layout_marginStart="8dp"
+            android:text="@string/agenda_link"
+            android:textSize="13sp" />
+
+        <ImageButton
+            android:id="@+id/widget_agenda_add"
+            style="@style/IconButton.Flat"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="4dp"
+            android:padding="8dp"
+            android:contentDescription="@string/event_new"
+            android:src="@drawable/ic_add" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:id="@+id/widget_events"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+</LinearLayout>

@@ -482,6 +482,7 @@ namespace Companion
         {
             public string Aumid;
             public string Exe;
+            public string Folder;
             public string Package;
             public string Publisher;
             public List<string> Names = new List<string>();
@@ -521,6 +522,10 @@ namespace Companion
                     // ses fenêtres n'ont pas cet identifiant, on les reconnaît au programme visé par le raccourci.
                     string target = LinkTarget(id);
                     if (target != null && target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) m.Exe = target;
+                    // Appli installée par Squirrel (Discord, Slack…) : le raccourci vise un lanceur (Discord\Discord.exe ou
+                    // Update.exe), la fenêtre appartient à Discord\app-1.0.x\Discord.exe. Tout le dossier compte.
+                    string dir = m.Exe != null ? Path.GetDirectoryName(m.Exe) : null;
+                    if (dir != null && File.Exists(Path.Combine(dir, "Update.exe"))) m.Folder = dir.TrimEnd('\\') + "\\";
                 }
             }
             return m;
@@ -576,6 +581,7 @@ namespace Companion
             if (path == null) return false;
             string lower = path.ToLowerInvariant();
             if (m.Exe != null && string.Equals(path, m.Exe, StringComparison.OrdinalIgnoreCase)) return true;
+            if (m.Folder != null && path.StartsWith(m.Folder, StringComparison.OrdinalIgnoreCase)) return true;
             if (m.Package != null && lower.Contains("\\windowsapps\\" + m.Package + "_") && lower.Contains("__" + m.Publisher)) return true;
             // Une autre appli empaquetée ou au chemin connu : pas de repli sur le nom.
             if (m.Package != null || m.Exe != null) return false;

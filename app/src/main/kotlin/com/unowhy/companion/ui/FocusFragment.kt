@@ -35,7 +35,8 @@ class FocusFragment : Fragment() {
     private lateinit var start: ImageButton
     private lateinit var volume: SeekBar
     private val presetButtons = mutableListOf<Pair<Int, Button>>()
-    private val noiseButtons = mutableMapOf<NoisePlayer.Kind?, Button>()
+    private val noiseButtons = mutableMapOf<NoisePlayer.Kind, Button>()
+    private lateinit var mute: ImageButton
 
     private val listener: (FocusTimer.State) -> Unit = { render(it) }
     private val noiseListener: () -> Unit = { renderNoise() }
@@ -61,13 +62,16 @@ class FocusFragment : Fragment() {
         }
 
         val noises = view.findViewById<LinearLayout>(R.id.focus_noises)
-        for (kind in listOf(NoisePlayer.Kind.BROWN, NoisePlayer.Kind.PINK, NoisePlayer.Kind.WHITE, null)) {
-            val button = chip(getString(kind?.label ?: R.string.noise_off)) {
-                if (kind == null) NoisePlayer.stop() else NoisePlayer.play(kind)
+        // Toucher l'ambiance choisie l'arrête ; le haut-parleur la coupe sans la perdre.
+        for (kind in listOf(NoisePlayer.Kind.BROWN, NoisePlayer.Kind.PINK, NoisePlayer.Kind.WHITE)) {
+            val button = chip(getString(kind.label)) {
+                if (NoisePlayer.kind == kind) NoisePlayer.stop() else NoisePlayer.play(kind)
             }
             noises.addView(button, chipParams())
             noiseButtons[kind] = button
         }
+        mute = view.findViewById(R.id.focus_mute)
+        mute.setOnClickListener { NoisePlayer.setMuted(!NoisePlayer.muted) }
         volume = view.findViewById(R.id.focus_volume)
         volume.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar, value: Int, fromUser: Boolean) {
@@ -116,6 +120,11 @@ class FocusFragment : Fragment() {
 
     private fun renderNoise() {
         noiseButtons.forEach { (kind, button) -> button.isSelected = kind == NoisePlayer.kind }
+        val chosen = NoisePlayer.kind != null
+        mute.isEnabled = chosen
+        mute.alpha = if (chosen) 1f else 0.4f
+        mute.setImageResource(if (NoisePlayer.muted) R.drawable.ic_volume_off else R.drawable.ic_volume)
+        mute.contentDescription = getString(if (NoisePlayer.muted) R.string.noise_unmute else R.string.noise_mute)
         volume.progress = Math.round(NoisePlayer.volume * 100)
     }
 

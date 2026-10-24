@@ -1,11 +1,9 @@
 package com.unowhy.companion.ui
 
-import android.Manifest
-import android.content.ActivityNotFoundException
-import android.content.pm.PackageManager
 import android.content.res.ColorStateList
-import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
+import android.os.StatFs
 import android.text.format.DateUtils
 import android.text.format.Formatter
 import android.view.LayoutInflater
@@ -17,10 +15,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ListView
 import android.widget.TextView
-import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import androidx.core.graphics.ColorUtils
 import androidx.core.widget.ImageViewCompat
 import androidx.fragment.app.Fragment
@@ -30,7 +25,6 @@ import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DocEntry
 import kotlinx.coroutines.launch
-import java.io.File
 
 /** Documents : parcourt le dossier partagé du Mac ; un fichier s'ouvre dans le panneau latéral. */
 class DocsFragment : Fragment() {
@@ -43,16 +37,6 @@ class DocsFragment : Fragment() {
     private lateinit var adapter: DocAdapter
 
     private var dir = ""
-    private var photoFile: File? = null
-
-    private val takePicture = registerForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
-        val file = photoFile
-        if (saved && file != null && file.length() > 0) uploadPhoto(file)
-    }
-
-    private val cameraPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) takePhoto()
-    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, state: Bundle?): View =
         inflater.inflate(R.layout.fragment_docs, container, false)
@@ -72,7 +56,6 @@ class DocsFragment : Fragment() {
         }
         up.setOnClickListener { load(dir.substringBeforeLast('/', "")) }
         view.findViewById<ImageButton>(R.id.docs_refresh).setOnClickListener { load(dir) }
-        view.findViewById<Button>(R.id.docs_photo).setOnClickListener { takePhoto() }
         view.findViewById<Button>(R.id.docs_web).setOnClickListener { (requireActivity() as MainActivity).openComputerPage() }
 
         load("")
@@ -90,7 +73,11 @@ class DocsFragment : Fragment() {
                 path.text = if (dir.isEmpty()) getString(R.string.docs_root) else dir
                 up.isEnabled = dir.isNotEmpty()
                 up.alpha = if (dir.isEmpty()) 0.4f else 1f
-                count.text = resources.getQuantityString(R.plurals.items_count, listing.entries.size, listing.entries.size)
+                count.text = getString(
+                    R.string.docs_count_free,
+                    resources.getQuantityString(R.plurals.items_count, listing.entries.size, listing.entries.size),
+                    tabletFreeSpace(),
+                )
                 adapter.clear()
                 adapter.addAll(listing.entries)
                 showStatus(if (listing.entries.isEmpty()) getString(R.string.empty_folder) else null)
@@ -105,34 +92,9 @@ class DocsFragment : Fragment() {
         status.visibility = if (message == null) View.GONE else View.VISIBLE
     }
 
-    private fun takePhoto() {
-        val ctx = requireContext()
-        if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            cameraPermission.launch(Manifest.permission.CAMERA)
-            return
-        }
-        val file = File(File(ctx.cacheDir, "photos").apply { mkdirs() }, "photo.jpg")
-        photoFile = file
-        val uri: Uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", file)
-        try {
-            takePicture.launch(uri)
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(ctx, R.string.no_camera, Toast.LENGTH_LONG).show()
-        }
-    }
-
-    private fun uploadPhoto(file: File) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                val saved = BackendClient(requireContext()).uploadPhoto(file)
-                Toast.makeText(requireContext(), R.string.photo_sent, Toast.LENGTH_SHORT).show()
-                (activity as? MainActivity)?.openDocument(DocEntry(saved.substringAfterLast('/'), saved, "image", file.length(), System.currentTimeMillis()))
-                load(dir)
-            } catch (e: Exception) {
-                Toast.makeText(requireContext(), requireContext().errorText(e), Toast.LENGTH_LONG).show()
-            }
-        }
-    }
+    /** Place libre sur la tablette (documents ouverts, photos en attente) : « 5,2 Go ». */
+    private fun tabletFreeSpace(): String =
+        Formatter.formatShortFileSize(requireContext(), StatFs(Environment.getDataDirectory().path).availableBytes)
 
     private inner class DocAdapter : ArrayAdapter<DocEntry>(requireContext(), 0) {
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {

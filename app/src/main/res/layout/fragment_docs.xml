@@ -53,15 +53,8 @@
         <Button
             android:id="@+id/docs_web"
             style="@style/ActionButton"
-            android:layout_marginEnd="12dp"
             android:drawableStart="@drawable/ic_display"
             android:text="@string/web_from_computer" />
-
-        <Button
-            android:id="@+id/docs_photo"
-            style="@style/PrimaryButton"
-            android:drawableStart="@drawable/ic_camera"
-            android:text="@string/take_photo" />
     </LinearLayout>
 
     <ListView

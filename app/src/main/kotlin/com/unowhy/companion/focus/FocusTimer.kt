@@ -114,8 +114,15 @@ object FocusTimer {
         }
     }
 
+    private var wasRunning = false
+
     private fun notifyListeners() {
         val s = state
+        // L'ambiance suit le chrono : en pause (ou entre deux phases), elle se tait ; elle reprend avec lui.
+        if (s.running != wasRunning) {
+            wasRunning = s.running
+            NoisePlayer.followTimer(s.running)
+        }
         listeners.toList().forEach { it(s) }
     }
 

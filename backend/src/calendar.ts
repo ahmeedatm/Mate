@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import ical, { type ParameterValue, type VEvent } from "node-ical";
 import { config } from "./config.ts";
-import { accountEvents, connectedAccounts } from "./accounts.ts";
+import { accountEvents, connectedAccounts, disconnect } from "./accounts.ts";
 import { localEvents } from "./events.ts";
 
 export type CalendarEvent = {
@@ -71,6 +71,49 @@ export async function hasCalendar(): Promise<boolean> {
 /** Sources d'agenda de cet ordinateur ; "demo" donne l'agenda d'exemple. */
 export async function calendarSources(): Promise<string[]> {
   return [...new Set([...config.icsUrls, ...(await savedCalendarUrls())])];
+}
+
+/** Agenda relié, vu depuis la tablette : jamais le lien ICS lui-même (il donne accès à l'agenda). */
+export type LinkedCalendar = { id: string; kind: "microsoft" | "google" | "ics"; label: string; detail: string; removable: boolean; expired: boolean };
+
+/** Nom lisible d'un lien ICS d'après son hôte. */
+function icsLabel(url: string): string {
+  if (url === "demo") return "Agenda d'exemple";
+  const host = URL.parse(url)?.host ?? "";
+  if (/outlook|office365|live\.com/i.test(host)) return "Outlook";
+  if (/google/i.test(host)) return "Google Agenda";
+  if (/icloud/i.test(host)) return "Agenda iCloud";
+  return host || "Lien d'agenda";
+}
+
+export async function linkedCalendars(): Promise<LinkedCalendar[]> {
+  const accounts = (await connectedAccounts()).map((a): LinkedCalendar => ({
+    id: a.provider, kind: a.provider, label: a.label, detail: a.email, removable: true, expired: a.expired,
+  }));
+  // Liens du fichier .env (développeur) : affichés, pas retirables depuis la tablette.
+  const env = config.icsUrls.map((u, i): LinkedCalendar => ({
+    id: `env-${i}`, kind: "ics", label: icsLabel(u), detail: "Lien ICS (réglage de l'ordinateur)", removable: false, expired: false,
+  }));
+  const saved = (await savedCalendarUrls()).map((u, i): LinkedCalendar => ({
+    id: `ics-${i}`, kind: "ics", label: icsLabel(u), detail: u === "demo" ? "Exemple" : "Lien ICS", removable: true, expired: false,
+  }));
+  return [...accounts, ...env, ...saved];
+}
+
+/** Retire un agenda relié (compte ou lien ICS collé). Faux : rien à retirer sous cet identifiant. */
+export async function unlinkCalendar(id: string): Promise<boolean> {
+  if (id === "microsoft" || id === "google") {
+    if (!(await connectedAccounts()).some((a) => a.provider === id)) return false;
+    await disconnect(id);
+  } else {
+    const index = /^ics-(\d+)$/.exec(id)?.[1];
+    const urls = await savedCalendarUrls();
+    if (index === undefined || Number(index) >= urls.length) return false;
+    urls.splice(Number(index), 1);
+    await saveCalendarUrls(urls);
+  }
+  cache = undefined;
+  return true;
 }
 
 type Source = "ics" | "mock" | "none" | "local";

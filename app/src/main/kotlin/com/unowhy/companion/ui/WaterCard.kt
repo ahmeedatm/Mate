@@ -24,6 +24,14 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
     private val gauge: LinearLayout
     private val listener: (Water.State) -> Unit = { render(it) }
 
+    /** Petit widget de l'Accueil : « 3 / 8 » sans « verres », pas de bouton − (corriger : réglages). */
+    var compact = false
+        set(value) {
+            field = value
+            findViewById<View>(R.id.water_minus).visibility = if (value) View.GONE else View.VISIBLE
+            refresh()
+        }
+
     init {
         orientation = VERTICAL
         LayoutInflater.from(context).inflate(R.layout.view_water_card, this, true)
@@ -50,7 +58,13 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
 
     private fun render(state: Water.State) {
         val done = state.glasses >= state.goal
-        count.text = context.getString(if (done) R.string.water_done else R.string.water_count, state.glasses, state.goal)
+        count.text = context.getString(
+            when {
+                compact -> if (done) R.string.water_done_short else R.string.water_count_short
+                else -> if (done) R.string.water_done else R.string.water_count
+            },
+            state.glasses, state.goal,
+        )
         count.setTextColor(ContextCompat.getColor(context, if (done) R.color.ok else R.color.text))
         gauge.removeAllViews()
         val gap = (3 * resources.displayMetrics.density).toInt()

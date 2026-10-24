@@ -47,7 +47,11 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     /** Page Réunion demandée avant que le deck soit chargé. */
     private var meetingPending = false
     /** Applis en appel (micro utilisé) → dernier moment où on l'a vu : leur page a un onglet. */
+    /** Applis à page vues ouvertes (onglet) ou en appel, avec l'heure où on les a vues. */
+    private var openApps: Map<String, Long> = emptyMap()
     private var liveApps: Map<String, Long> = emptyMap()
+    /** Ouverture de l'ordinateur pas encore lue : on ne sait pas si l'appli tourne. */
+    private var openKnown = false
     private var livePoll: Job? = null
     private val adapter = TileAdapter()
 
@@ -60,6 +64,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         status = view.findViewById(R.id.deck_status)
         audio = view.findViewById(R.id.deck_audio)
         audio.attach(viewLifecycleOwner.lifecycleScope)
+        audio.showLabel()
         appAudio = view.findViewById(R.id.deck_app_audio)
         appAudio.attach(viewLifecycleOwner.lifecycleScope)
         nowPlaying = view.findViewById(R.id.deck_now_playing)
@@ -80,9 +85,12 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                 "empty" -> editor.show(slotOf(tile))
                 ADD -> if (isMediaPage()) linkAdder.show() else adder.show(currentApps())
                 else -> {
-                    // Appli qui a sa page (Discord) : on y va sans la lancer ; sur sa page, la tuile la lance.
+                    // Appli qui a sa page (Discord) : on y va, en la lançant si elle est fermée ; sur sa page, la tuile la met devant.
                     val appPage = appPageOf(tile)
-                    if (appPage >= 0 && appPage != pageIndex) showPage(appPage) else runTile(tileView, tile)
+                    if (appPage >= 0 && appPage != pageIndex) {
+                        if (!isOpen(tile.app)) runTile(tileView, tile)
+                        showPage(appPage)
+                    } else runTile(tileView, tile)
                 }
             }
         }
@@ -132,14 +140,19 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         }
     }
 
-    /** L'onglet reste un moment après la fin du micro : pas de clignotement si Discord le coupe un instant. */
+    /** L'onglet reste un moment après la fermeture ou la fin du micro : pas de clignotement si Discord le coupe un instant. */
     private suspend fun refreshLiveApps() {
         val seen = runCatching { client().liveApps() }.getOrNull() ?: return
         val now = SystemClock.uptimeMillis()
-        val before = liveApps.keys
-        liveApps = (liveApps + seen.associateWith { now }).filterValues { now - it < LIVE_HOLD_MS }
-        if (liveApps.keys != before && pages.isNotEmpty()) renderTabs()
+        val before = openApps.keys to liveApps.keys
+        openApps = (openApps + seen.open.associateWith { now }).filterValues { now - it < LIVE_HOLD_MS }
+        liveApps = (liveApps + seen.live.associateWith { now }).filterValues { now - it < LIVE_HOLD_MS }
+        openKnown = true
+        if ((openApps.keys to liveApps.keys) != before && pages.isNotEmpty()) renderTabs()
     }
+
+    /** Fermée = on la lance en ouvrant sa page ; dans le doute (pas encore lu), on la lance aussi. */
+    private fun isOpen(app: String?) = openKnown && app != null && openApps.keys.any { it.equals(app, ignoreCase = true) }
 
     override fun onVolumeKey(up: Boolean): Boolean {
         audio.nudge(up)
@@ -174,13 +187,17 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     }
 
     /**
-     * Onglets : les pages sans appli, puis celles des applis en appel (Discord, Teams). Hors appel, la page d'une
-     * appli n'a pas d'onglet : on l'ouvre en touchant l'appli, et une pastille à son nom s'ajoute au bout tant
-     * qu'elle est affichée.
+     * Onglets : les pages sans appli, puis celles des applis ouvertes sur l'ordinateur (Discord) ou en appel (Réunion :
+     * seulement pendant l'appel, Teams restant ouvert toute la journée). Sinon la page d'une appli n'a pas d'onglet :
+     * on l'ouvre en touchant l'appli, et une pastille à son nom s'ajoute au bout tant qu'elle est affichée.
      */
     private fun renderTabs() {
         tabs.removeAllViews()
-        val live = pages.indices.filter { i -> pages[i].app?.let { app -> liveApps.keys.any { it.equals(app, ignoreCase = true) } } == true }
+        fun seen(map: Map<String, Long>, app: String) = map.keys.any { it.equals(app, ignoreCase = true) }
+        val live = pages.indices.filter { i ->
+            val app = pages[i].app ?: return@filter false
+            seen(liveApps, app) || (!pages[i].meeting && seen(openApps, app))
+        }
         val shown = pages.indices.filter { pages[it].app == null } + live +
             listOf(pageIndex).filter { pages.getOrNull(it)?.app != null && it !in live }
         for (index in shown) {
@@ -215,6 +232,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             status.visibility = View.GONE
         }
         renderTabs()
+        // Son de l'ordinateur : utile pour un média ou une appli (Discord), pas pour des raccourcis.
+        audio.visibility = if (page?.media == true || page?.app != null) View.VISIBLE else View.GONE
         appAudio.bind(page?.app)
         nowPlaying.bind(page?.media == true)
     }

@@ -39,6 +39,11 @@ data class DeckPage(
     val media: Boolean = false,
 )
 
+/** Agenda relié à l'ordinateur (compte ou lien ICS, jamais le lien lui-même). */
+data class LinkedCalendar(val id: String, val label: String, val detail: String, val removable: Boolean, val expired: Boolean)
+
+data class LiveApps(val open: List<String>, val live: List<String>)
+
 /** Cartes de l'Accueil selon les applis du deck : agenda (Outlook, Calendrier…), bouton Rejoindre (Teams). */
 /** `linked` : l'ordinateur a un agenda relié (lien ICS, compte) en plus de l'agenda personnel. */
 data class HomeFeatures(val agenda: Boolean = true, val meetings: Boolean = true, val linked: Boolean = true)
@@ -171,9 +176,13 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
     }
 
     /** Applis des pages d'appli (Discord, Teams) en appel en ce moment : elles ont un onglet tant que dure l'appel. */
-    suspend fun liveApps(): List<String> = io {
-        val apps = JSONObject(text(request("GET", "/deck/live", timeoutMs = 10_000))).getJSONArray("apps")
-        (0 until apps.length()).map { apps.getString(it) }
+    /** Applis à page (Discord, Teams) ouvertes sur l'ordinateur, et celles en appel (micro utilisé). */
+    suspend fun liveApps(): LiveApps = io {
+        val json = JSONObject(text(request("GET", "/deck/live", timeoutMs = 10_000)))
+        fun names(key: String) = json.optJSONArray(key)?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty()
+        val live = names("apps")
+        // Ordinateur pas encore à jour (sans `open`) : seulement les applis en appel.
+        LiveApps(open = if (json.has("open")) names("open") else live, live = live)
     }
 
     /** Retour au profil de base. */
@@ -380,6 +389,16 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
     }
 
     // --- Agenda
+
+    suspend fun linkedCalendars(): List<LinkedCalendar> = io {
+        val list = JSONObject(text(request("GET", "/calendar/linked"))).getJSONArray("calendars")
+        (0 until list.length()).map { i ->
+            val c = list.getJSONObject(i)
+            LinkedCalendar(c.getString("id"), c.getString("label"), c.optString("detail"), c.optBoolean("removable"), c.optBoolean("expired"))
+        }
+    }
+
+    suspend fun unlinkCalendar(id: String) = io { text(request("DELETE", "/calendar/linked/" + encode(id))); Unit }
 
     /** Événements des `days` prochains jours ; `error` : agenda relié injoignable (l'agenda personnel est là quand même). */
     suspend fun calendar(days: Int = 1): CalendarDays = io {

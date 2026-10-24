@@ -11,7 +11,7 @@ import {
   runAction, tileIcon,
 } from "./deck.ts";
 import {
-  appAudio, browserPage, canControl, focusWindow, getAudio, listApps, mediaControl, mediaSessions, mediaThumb, listDisplays, listShortcuts, listWindows, openTarget, osName, placeWindow, setAudio,
+  appAudio, browserPage, isAppRunning, canControl, focusWindow, getAudio, listApps, mediaControl, mediaSessions, mediaThumb, listDisplays, listShortcuts, listWindows, openTarget, osName, placeWindow, setAudio,
 } from "./os.ts";
 import type { Layout, WindowTarget } from "./screens.ts";
 import { keySchema, loadKeys, saveKey, SLOTS, type PersoKey } from "./perso.ts";
@@ -19,7 +19,7 @@ import { confirmPairing, identity, lanAddresses, PairingError, pendingCode, requ
 import { LOCAL_PAGE } from "./local-page.ts";
 import { listUpdates, updateFile } from "./updates.ts";
 import { docEntry, kindOf, listDocs, resolveDoc, savePhoto } from "./docs.ts";
-import { calendarSources, dayRange, getEvents, invalidateCalendar, saveCalendarUrls, savedCalendarUrls } from "./calendar.ts";
+import { calendarSources, dayRange, getEvents, invalidateCalendar, linkedCalendars, saveCalendarUrls, savedCalendarUrls, unlinkCalendar } from "./calendar.ts";
 import { addEvent, deleteEvent, startEventReminders, updateEvent, type EventInput } from "./events.ts";
 import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvider, loginUrl } from "./accounts.ts";
 import { autoJoinEnabled, joinMeeting, setAutoJoin, startAutoJoin } from "./meetings.ts";
@@ -291,9 +291,12 @@ app.get("/deck/features", () => homeFeatures());
 // Applis des pages d'appli (Discord, Teams) en appel en ce moment (micro utilisé) : la tablette leur donne un onglet.
 app.get("/deck/live", { logLevel: "warn" }, async () => {
   const apps = [...new Set((await loadDeck()).flatMap((p) => (p.app ? [p.app] : [])))];
-  // Mac : pas de lecture des sessions audio, aucune appli n'est signalée en appel.
-  const live = await Promise.all(apps.map((a) => (async () => (await appAudio(a))?.capturing === true)().catch(() => false)));
-  return { apps: apps.filter((_, i) => live[i]) };
+  // `open` : l'appli tourne (onglet affiché) ; `apps` : elle utilise le micro, donc en appel (Windows seulement).
+  const [open, live] = await Promise.all([
+    Promise.all(apps.map((a) => isAppRunning(a).catch(() => false))),
+    Promise.all(apps.map((a) => (async () => (await appAudio(a))?.capturing === true)().catch(() => false))),
+  ]);
+  return { apps: apps.filter((_, i) => live[i]), open: apps.filter((_, i) => open[i] || live[i]) };
 });
 
 /** Retour au profil de base. */
@@ -649,6 +652,14 @@ app.delete<{ Params: { provider: string } }>("/local/accounts/:provider", async 
   if (!isProvider(req.params.provider)) return reply.code(404).send({ error: "Compte inconnu" });
   await disconnect(req.params.provider);
   invalidateCalendar();
+  return { ok: true };
+});
+
+/** Agendas reliés à cet ordinateur, pour la tablette (Accueil > Mes agendas) : voir et délier sans aller sur l'ordinateur. */
+app.get("/calendar/linked", async () => ({ calendars: await linkedCalendars() }));
+
+app.delete<{ Params: { id: string } }>("/calendar/linked/:id", async (req, reply) => {
+  if (!(await unlinkCalendar(req.params.id))) return reply.code(404).send({ error: "Cet agenda n'est plus relié" });
   return { ok: true };
 });
 

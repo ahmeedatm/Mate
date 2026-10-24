@@ -83,7 +83,7 @@ class AppAudioView @JvmOverloads constructor(
         this.app = app
         state = null
         loudAt = 0
-        name.text = app.orEmpty()
+        name.text = app?.let { context.getString(R.string.app_audio_title, it) }.orEmpty()
         visibility = if (app != null) VISIBLE else GONE
         render(null)
         restart()

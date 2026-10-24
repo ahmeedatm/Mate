@@ -1,300 +1,88 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Tableau de bord : heure, prochain rendez-vous, Focus, son du Mac à gauche ; agenda et tâches à droite.
-     Quand le panneau document réduit la largeur, HomeFragment empile les deux colonnes (défilement). -->
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/home_scroll"
+<!-- Accueil à widgets (HomeFragment, WidgetGrid) : appui long = mode Modifier, avec sa barre en haut ;
+     points des pages en bas quand il y en a plusieurs. Panneau document ouvert : 2 colonnes, la page défile. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:orientation="vertical">
 
     <LinearLayout
-        android:id="@+id/home_root"
+        android:id="@+id/home_edit_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:baselineAligned="false"
+        android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="24dp">
+        android:paddingStart="24dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="24dp"
+        android:visibility="gone">
 
-        <LinearLayout
-            android:id="@+id/home_left"
+        <TextView
             android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_marginEnd="20dp"
-            android:layout_weight="5"
-            android:orientation="vertical">
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/home_edit_hint"
+            android:textColor="@color/text_dim"
+            android:textSize="15sp" />
 
-            <TextView
-                android:id="@+id/home_greeting"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:textColor="@color/text_dim"
-                android:textSize="20sp" />
+        <Button
+            android:id="@+id/home_edit_add"
+            style="@style/ActionButton"
+            android:drawableStart="@drawable/ic_add"
+            android:text="@string/home_edit_add" />
 
-            <TextClock
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-light"
-                android:format12Hour="HH:mm"
-                android:format24Hour="HH:mm"
-                android:includeFontPadding="false"
-                android:textSize="120sp" />
+        <Button
+            android:id="@+id/home_edit_templates"
+            style="@style/ActionButton"
+            android:layout_marginStart="8dp"
+            android:drawableStart="@drawable/ic_widgets"
+            android:text="@string/home_edit_templates" />
 
-            <TextView
-                android:id="@+id/home_date"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:layout_marginTop="4dp"
-                android:textColor="@color/text_dim"
-                android:textSize="22sp" />
+        <Button
+            android:id="@+id/home_edit_page"
+            style="@style/ActionButton"
+            android:layout_marginStart="8dp"
+            android:text="@string/home_edit_page" />
 
-            <Space
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:minHeight="20dp" />
+        <Button
+            android:id="@+id/home_edit_cancel"
+            style="@style/ActionButton"
+            android:layout_marginStart="8dp"
+            android:text="@string/cancel" />
 
-            <!-- Eau : verres du jour et rappel de boire (sur la tablette, sans l'ordinateur). -->
-            <com.unowhy.companion.ui.WaterCard
-                android:id="@+id/home_water"
-                style="@style/Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:paddingTop="12dp"
-                android:paddingBottom="16dp" />
-
-            <!-- Prochain rendez-vous (masqué, comme l'agenda, sans appli d'agenda dans le deck) -->
-            <LinearLayout
-                android:id="@+id/home_next"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/card_accent_bg"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:id="@+id/home_next_label"
-                    style="@style/CardTitle"
-                    android:drawableStart="@drawable/ic_event"
-                    android:drawableTint="@color/accent"
-                    android:text="@string/next_label"
-                    android:textColor="@color/accent" />
-
-                <TextView
-                    android:id="@+id/home_next_title"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:ellipsize="end"
-                    android:fontFamily="sans-serif-medium"
-                    android:maxLines="2"
-                    android:textSize="22sp" />
-
-                <TextView
-                    android:id="@+id/home_next_when"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:ellipsize="end"
-                    android:singleLine="true"
-                    android:textColor="@color/accent"
-                    android:textSize="17sp" />
-
-                <!-- Réunion Teams qui commence bientôt (ou en cours) : l'ouvre sur le Mac. -->
-                <Button
-                    android:id="@+id/home_join"
-                    style="@style/PrimaryButton"
-                    android:layout_marginTop="14dp"
-                    android:drawableStart="@drawable/ic_videocam"
-                    android:text="@string/join_meeting"
-                    android:visibility="gone" />
-            </LinearLayout>
-
-            <!-- Focus : un toucher ouvre le mode Focus, le bouton démarre / met en pause. -->
-            <LinearLayout
-                android:id="@+id/home_focus"
-                style="@style/Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/tile_bg"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingTop="16dp"
-                android:paddingBottom="16dp">
-
-                <FrameLayout
-                    android:layout_width="60dp"
-                    android:layout_height="60dp">
-
-                    <com.unowhy.companion.ui.ProgressRing
-                        android:id="@+id/home_focus_ring"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent" />
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_gravity="center"
-                        android:importantForAccessibility="no"
-                        android:src="@drawable/ic_timer"
-                        app:tint="@color/text_dim" />
-                </FrameLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="18dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/home_focus_time"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-light"
-                        android:includeFontPadding="false"
-                        android:textSize="34sp" />
-
-                    <TextView
-                        android:id="@+id/home_focus_detail"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:singleLine="true"
-                        android:textColor="@color/text_dim"
-                        android:textSize="14sp" />
-                </LinearLayout>
-
-                <ImageButton
-                    android:id="@+id/home_focus_toggle"
-                    style="@style/IconButton.Primary"
-                    android:contentDescription="@string/focus_start"
-                    android:src="@drawable/ic_play" />
-            </LinearLayout>
-
-            <!-- Son du Mac -->
-            <LinearLayout
-                android:id="@+id/home_audio_card"
-                style="@style/Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:orientation="vertical"
-                android:paddingTop="16dp"
-                android:paddingBottom="12dp">
-
-                <TextView
-                    style="@style/CardTitle"
-                    android:drawableStart="@drawable/ic_volume"
-                    android:text="@string/mac_volume" />
-
-                <com.unowhy.companion.ui.MacAudioView
-                    android:id="@+id/home_audio"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/home_right"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="6"
-            android:orientation="vertical">
-
-            <LinearLayout
-                android:id="@+id/home_agenda"
-                style="@style/Card"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:minHeight="40dp"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        style="@style/CardTitle"
-                        android:drawableStart="@drawable/ic_event"
-                        android:text="@string/today" />
-
-                    <TextView
-                        android:id="@+id/home_source"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:ellipsize="end"
-                        android:gravity="end"
-                        android:singleLine="true"
-                        android:textColor="@color/text_faint"
-                        android:textSize="12sp" />
-
-                    <!-- Pas d'agenda relié : lien vers la page de l'ordinateur (Outlook, Google, ICS). -->
-                    <Button
-                        android:id="@+id/home_agenda_link"
-                        style="@style/Chip"
-                        android:layout_height="36dp"
-                        android:layout_marginStart="8dp"
-                        android:text="@string/agenda_link"
-                        android:textSize="13sp"
-                        android:visibility="gone" />
-
-                    <ImageButton
-                        android:id="@+id/home_agenda_add"
-                        style="@style/IconButton.Flat"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:layout_marginStart="4dp"
-                        android:padding="8dp"
-                        android:contentDescription="@string/event_new"
-                        android:src="@drawable/ic_add" />
-                </LinearLayout>
-
-                <ScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_marginTop="8dp"
-                    android:layout_weight="1">
-
-                    <LinearLayout
-                        android:id="@+id/home_events"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical" />
-                </ScrollView>
-            </LinearLayout>
-
-            <com.unowhy.companion.ui.TasksCard
-                android:id="@+id/home_tasks"
-                style="@style/Card"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_marginTop="16dp"
-                android:layout_weight="1" />
-
-            <!-- Sans ordinateur : à la place de l'agenda et des tâches. -->
-            <FrameLayout
-                android:id="@+id/home_connect"
-                style="@style/Card"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:visibility="gone">
-
-                <include layout="@layout/view_connect" />
-            </FrameLayout>
-        </LinearLayout>
+        <Button
+            android:id="@+id/home_edit_done"
+            style="@style/PrimaryButton"
+            android:layout_marginStart="8dp"
+            android:text="@string/home_edit_done" />
     </LinearLayout>
-</ScrollView>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <ScrollView
+            android:id="@+id/home_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+
+            <com.unowhy.companion.ui.home.WidgetGrid
+                android:id="@+id/home_grid"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="24dp" />
+        </ScrollView>
+
+        <!-- Une pastille par page, dans la marge du bas de la grille ; toucher = aller à la page. -->
+        <LinearLayout
+            android:id="@+id/home_dots"
+            android:layout_width="wrap_content"
+            android:layout_height="24dp"
+            android:layout_gravity="bottom|center_horizontal"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:visibility="gone" />
+    </FrameLayout>
+</LinearLayout>

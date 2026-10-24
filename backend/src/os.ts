@@ -155,6 +155,13 @@ export function appAudio(app: string, change: { volume?: number; muted?: boolean
   unsupported();
 }
 
+/** L'appli tourne, même sans fenêtre (Discord réduit dans la zone de notification). */
+export async function isAppRunning(app: string): Promise<boolean> {
+  if (isWindows) return (await win.appAudio(app)).running || (await win.listWindows(app)).running;
+  if (isMac) return (await run("ps", ["-axo", "comm="])).split("\n").some((c) => c.includes(`/${app}.app/`));
+  return false;
+}
+
 export function listDisplays() {
   if (isMac) return macWindows.listDisplays();
   if (isWindows) return win.listDisplays();
