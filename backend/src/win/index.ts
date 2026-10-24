@@ -215,10 +215,10 @@ async function appWindowHandles(app: string): Promise<number[]> {
 }
 
 /** Noms des éléments cliquables des fenêtres de l'appli (pour trouver celui à actionner) ; `total` : éléments vus en tout. */
-export async function listButtons(app: string): Promise<{ buttons: string[]; total: number }> {
+export async function listButtons(app: string, detail = false): Promise<{ buttons: string[]; total: number }> {
   const windows = await appWindowHandles(app);
   if (windows.length === 0) return { buttons: [], total: 0 };
-  const raw = await call<{ items?: string[]; total?: number }>("press", { action: "list", windows }, 20_000);
+  const raw = await call<{ items?: string[]; total?: number }>("press", { action: "list", windows, detail }, 20_000);
   return { buttons: raw.items ?? [], total: raw.total ?? 0 };
 }
 
@@ -227,6 +227,18 @@ export async function pressButton(app: string, names: string[]): Promise<string 
   const windows = await appWindowHandles(app);
   if (windows.length === 0) return null;
   return (await call<{ pressed: string | null }>("press", { action: "invoke", windows, names }, 20_000)).pressed;
+}
+
+/** État vocal d'une appli d'appel (Discord) lu dans sa fenêtre ; `found` : faux si l'interface n'a pas été reconnue. */
+export type VoiceState = {
+  found: boolean; connected: boolean; channel: string | null; people: string[];
+  muted: boolean | null; deafened: boolean | null; mic: string | null; deaf: string | null;
+};
+
+export async function voiceState(app: string): Promise<VoiceState | null> {
+  const windows = await appWindowHandles(app);
+  if (windows.length === 0) return null;
+  return call<VoiceState>("voice", { windows }, 10_000);
 }
 
 export async function listDisplays() {

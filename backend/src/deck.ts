@@ -4,7 +4,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { config } from "./config.ts";
 import {
-  appIcon, canControl, canMedia, isInstalled, launchApp, listWindows, openTarget, placeWindow, runShortcut, sendKeys, sendMediaKey,
+  appIcon, canControl, canMedia, isInstalled, launchApp, listWindows, openTarget, placeWindow, pressButton, runShortcut, sendKeys, sendMediaKey,
   systemCommand, typeText, type MediaCommand, type SystemCommand,
 } from "./os.ts";
 import type { Layout } from "./screens.ts";
@@ -25,6 +25,8 @@ export type Step =
   /** Colle un texte dans l'appli au premier plan. */
   | { type: "text"; text: string }
   | { type: "wait"; ms: number }
+  /** Appuie sur un bouton de la fenêtre de l'appli (UI Automation, Windows), le premier trouvé parmi `names`. */
+  | { type: "press"; app: string; names: string[] }
   /** Place les fenêtres d'une appli (lancée si besoin) ; `display` : libellé d'écran ("Mac", nom du moniteur). */
   | { type: "window"; app: string; display?: string; layout?: Layout };
 
@@ -32,7 +34,8 @@ export type Step =
 export type Action = Step | { type: "macro"; steps: Step[] };
 
 /** glyph : symbole affiché à la place de l'icône (emoji), utile pour les raccourcis. */
-type TileConfig = { label: string; action: Action; icon?: string; glyph?: string; color?: string };
+/** when : page d'appli d'appel, touche montrée seulement en appel (`call`) ou hors appel (`idle`). */
+type TileConfig = { label: string; action: Action; icon?: string; glyph?: string; color?: string; when?: "call" | "idle" };
 /** `apps` : page d'applis que l'on complète depuis la tablette (voir saveApps) ; `meeting` : page affichée
  * par la tablette après « Rejoindre » (micro, caméra, raccrocher) ; `app` : page d'une appli (Discord, Teams…),
  * montrée seulement si l'appli est dans la page Apps ; sur la tablette ce n'est pas un onglet : toucher l'appli
@@ -211,6 +214,9 @@ export async function runAction(action: Action): Promise<unknown> {
       return typeText(action.text);
     case "wait":
       return sleep(Math.min(action.ms, 10_000));
+    case "press":
+      if (!(await pressButton(action.app, action.names))) throw new Error(`Bouton introuvable dans ${action.app}`);
+      return;
     case "window":
       return placeAppWindows(action.app, action.display, action.layout ?? "keep");
     case "system":

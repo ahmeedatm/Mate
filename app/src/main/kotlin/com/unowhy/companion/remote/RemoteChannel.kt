@@ -44,6 +44,8 @@ class RemoteChannel(private val activity: MainActivity) {
     suspend fun run(onStatus: (Link) -> Unit, onSwitched: (Computer) -> Unit) {
         var online = false
         var lastResolve = 0L
+        /** Début de la coupure en cours (0 : en ligne) : on ne change d'ordinateur qu'après [SWITCH_AFTER_MS]. */
+        var offlineSince = 0L
         while (true) {
             val computer = Computers.active(activity)
             if (computer == null) {
@@ -61,6 +63,7 @@ class RemoteChannel(private val activity: MainActivity) {
                         Connection.Probe.Mismatch -> throw IOException("Un autre ordinateur répond à cette adresse")
                     }
                     online = true
+                    offlineSince = 0L
                 }
                 client.poll(state())
             } catch (e: CancellationException) {
@@ -74,9 +77,11 @@ class RemoteChannel(private val activity: MainActivity) {
                     continue
                 }
                 onStatus(Link(computer, Link.State.OFFLINE))
+                if (offlineSince == 0L) offlineSince = SystemClock.elapsedRealtime()
                 if (SystemClock.elapsedRealtime() - lastResolve > RESOLVE_EVERY_MS || lastResolve == 0L) {
                     lastResolve = SystemClock.elapsedRealtime()
-                    val found = Connection.resolve(activity)
+                    // Coupure courte (ordinateur qui redémarre, WiFi qui décroche) : on attend l'actif, peut-être à une nouvelle adresse.
+                    val found = Connection.resolve(activity, allowSwitch = SystemClock.elapsedRealtime() - offlineSince > SWITCH_AFTER_MS)
                     if (found != null && found.id != computer.id) {
                         onSwitched(found)
                         return
@@ -194,5 +199,7 @@ class RemoteChannel(private val activity: MainActivity) {
     private companion object {
         /** Recherche d'un ordinateur joignable au plus toutes les 15 s quand l'actif ne répond pas. */
         const val RESOLVE_EVERY_MS = 15_000L
+        /** Injoignable depuis plus longtemps : un autre ordinateur qui répond prend le relais (rentré à la maison). */
+        const val SWITCH_AFTER_MS = 120_000L
     }
 }

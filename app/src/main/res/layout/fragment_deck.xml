@@ -86,6 +86,38 @@
             android:paddingTop="10dp"
             android:paddingBottom="10dp" />
 
+        <!-- Page d'une appli d'appel (Discord, Windows) : salon ou appel en cours et participants. -->
+        <LinearLayout
+            android:id="@+id/deck_voice"
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/deck_voice_channel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/text"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/deck_voice_people"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/text_dim"
+                android:textSize="14sp" />
+        </LinearLayout>
+
         <!-- Page Média : ce qui joue sur l'ordinateur (YouTube, Twitch, Spotify…) et ses commandes. -->
         <com.unowhy.companion.ui.NowPlayingView
             android:id="@+id/deck_now_playing"

@@ -63,7 +63,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * Navigateur : seulement un titre nouveau, pour ne pas reprendre une vidéo restée en pause dans un autre onglet.
  */
 async function startWhenReady(app: string | undefined, before: string[]) {
-  const target = app ? new RegExp(app.split(/\s+/)[0], "i") : BROWSERS;
+  const target = app ? new RegExp(app.split(/\s+/)[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : BROWSERS;
   for (let i = 0; i < 20; i++) {
     await sleep(1500);
     const sessions = await mediaSessions().catch(() => []);

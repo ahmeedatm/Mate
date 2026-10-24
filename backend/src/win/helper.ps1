@@ -213,11 +213,20 @@ function Invoke-Press($req) {
     foreach ($e in $root.FindAll($scope::Descendants, [System.Windows.Automation.Condition]::TrueCondition)) {
       $total++
       $name = ([string]$e.Current.Name).Trim()
+      # Diagnostic : tous les elements avec leur classe (Chromium y met la classe HTML).
+      if ($req.detail) {
+        $cls = [string]$e.Current.ClassName
+        if (($name -or $cls) -and $seen.Count -lt 3000) {
+          $type = $e.Current.ControlType.ProgrammaticName -replace '^ControlType\.', ''
+          [void]$seen.Add("$type : $name : $cls")
+        }
+        continue
+      }
       if (-not $name -or $name.Length -gt 40) { continue }
       $type = $e.Current.ControlType.ProgrammaticName -replace '^ControlType\.', ''
       if ($type -notin @('Button', 'Hyperlink', 'MenuItem', 'ListItem', 'Text', 'Group', 'Custom')) { continue }
       if ($req.action -eq 'list') {
-        if ($seen.Count -lt 120) { [void]$seen.Add("$type : $name") }
+        if ($seen.Count -lt 1500) { [void]$seen.Add("$type : $name") }
         continue
       }
       if ($wanted -notcontains $name.ToLowerInvariant()) { continue }
@@ -238,6 +247,62 @@ function Invoke-Press($req) {
   @{ pressed = $null }
 }
 
+# --- Etat vocal de Discord (UI Automation : Chromium expose son interface une fois l'accessibilite demandee).
+# Panneau du bas a gauche : "Voix connectee" + lien du salon/appel, boutons micro et sourdine ; vue de l'appel :
+# "Deconnecter" puis un bouton par participant. Noms en francais ou en anglais (pas d'accents ici : fichier lu en ANSI).
+
+function Get-ToggleState($e) {
+  $pattern = $null
+  if ($e.TryGetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern, [ref]$pattern)) {
+    return [string]$pattern.Current.ToggleState -eq 'On'
+  }
+  $null
+}
+
+function Get-Voice($req) {
+  if (-not ('System.Windows.Automation.AutomationElement' -as [type])) {
+    Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+  }
+  $auto = [System.Windows.Automation.AutomationElement]
+  $scope = [System.Windows.Automation.TreeScope]
+  $state = @{ found = $false; connected = $false; channel = $null; people = @(); muted = $null; deafened = $null; mic = $null; deaf = $null }
+  foreach ($h in $req.windows) {
+    $root = $auto::FromHandle([IntPtr][long]$h)
+    if (-not $root) { continue }
+    $phase = 'start'
+    $self = @()
+    foreach ($e in $root.FindAll($scope::Descendants, [System.Windows.Automation.Condition]::TrueCondition)) {
+      $name = ([string]$e.Current.Name).Trim()
+      if (-not $name) { continue }
+      $type = $e.Current.ControlType.ProgrammaticName -replace '^ControlType\.', ''
+      switch ($phase) {
+        'start' {
+          if ($type -eq 'Group' -and $name -match '^(Statut et param|User (status|area|settings))') { $phase = 'panel'; $state.found = $true }
+        }
+        'panel' {
+          if ($name -match 'Voix connect|Voice connected') { $state.connected = $true; $phase = 'channel' }
+          elseif ($type -eq 'Text') { $self += $name }
+          elseif ($type -eq 'Button' -and $name -match '^(Rendre muet|R.activer|Mute|Unmute)') { $state.mic = $name; $state.muted = Get-ToggleState $e }
+          elseif ($type -eq 'Button' -and $name -match 'sourdine|deafen') { $state.deaf = $name; $state.deafened = Get-ToggleState $e; $phase = 'call' }
+        }
+        'channel' {
+          if ($type -eq 'Hyperlink') { $state.channel = $name; $phase = 'panel' }
+        }
+        'call' {
+          if ($type -eq 'Button' -and $name -match '^(D.connecter|Disconnect)$') { $phase = 'people' }
+        }
+        'people' {
+          if ($type -eq 'Group') { $phase = 'done' }
+          elseif ($type -eq 'Button' -and $self -notcontains $name) { $state.people += $name }
+        }
+      }
+      if ($phase -eq 'done') { break }
+    }
+    if ($state.found) { break }
+  }
+  $state
+}
+
 $stdout.WriteLine('@@{"ok":true,"result":"ready"}')
 while ($true) {
   $line = $stdin.ReadLine()
@@ -252,6 +317,11 @@ while ($true) {
     }
     if ($req.op -eq 'press') {
       $result = Invoke-Press $req
+      $stdout.WriteLine('@@{"ok":true,"result":' + (ConvertTo-Json -Compress -Depth 4 -InputObject $result) + '}')
+      continue
+    }
+    if ($req.op -eq 'voice') {
+      $result = Get-Voice $req
       $stdout.WriteLine('@@{"ok":true,"result":' + (ConvertTo-Json -Compress -Depth 4 -InputObject $result) + '}')
       continue
     }

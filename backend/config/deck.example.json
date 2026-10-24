@@ -37,8 +37,8 @@
         { "label": "Ouvrir Discord", "action": { "type": "app", "name": "Discord" } },
         { "label": "Couper mon micro", "glyph": "🎤", "action": { "type": "keys", "keys": "cmd+shift+m", "app": "Discord" } },
         { "label": "Sourdine (casque)", "glyph": "🎧", "action": { "type": "keys", "keys": "cmd+shift+d", "app": "Discord" } },
-        { "label": "Accepter l'appel", "glyph": "📞", "color": "#2E7D32", "action": { "type": "keys", "keys": "cmd+return", "app": "Discord" } },
-        { "label": "Refuser l'appel", "glyph": "✖️", "action": { "type": "keys", "keys": "escape", "app": "Discord" } }
+        { "label": "Accepter l'appel", "glyph": "📞", "when": "idle", "action": { "type": "keys", "keys": "cmd+return", "app": "Discord" } },
+        { "label": "Refuser l'appel", "glyph": "✖️", "when": "idle", "action": { "type": "keys", "keys": "escape", "app": "Discord" } }
       ]
     },
     {

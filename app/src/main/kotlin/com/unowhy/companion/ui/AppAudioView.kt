@@ -135,8 +135,8 @@ class AppAudioView @JvmOverloads constructor(
                 else -> R.string.app_audio_silent
             },
         )
-        stateText.setTextColor(ContextCompat.getColor(context, if (talking) R.color.ok else R.color.text_dim))
-        ViewCompat.setBackgroundTintList(dot, ColorStateList.valueOf(ContextCompat.getColor(context, if (talking) R.color.ok else R.color.text_faint)))
+        stateText.setTextColor(ContextCompat.getColor(context, if (talking) R.color.accent else R.color.text_dim))
+        ViewCompat.setBackgroundTintList(dot, ColorStateList.valueOf(ContextCompat.getColor(context, if (talking) R.color.accent else R.color.text_faint)))
 
         volume.isEnabled = running
         mute.isEnabled = running

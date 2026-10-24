@@ -38,12 +38,15 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 ## Fait mais pas encore testé en vrai
 
+- **Discord sans portail développeur** (24/10 soir, testé avec un appel de groupe sur le PC) : Discord expose son interface à UI Automation une fois l'accessibilité de Chromium demandée. `GET /deck/voice` lit le panneau vocal : appel ou salon, participants (vue d'appel privé), micro et sourdine. Page Discord : carte « En appel · … », touches selon l'état (`"when": "call" | "idle"` dans `deck.json`), « Quitter l'appel » = étape `press` (bouton « Déconnecter »). Plus de vert. PAS testé : « Quitter l'appel » en vrai, salon d'un serveur (nom attendu « salon / serveur »), Discord en anglais. **Qui parle** : illisible dans un appel privé (ni nom ni classe ne change) ; à vérifier dans un salon de serveur (avatar marqué). Diagnostic : `GET /deck/buttons?app=Discord&detail=true` (éléments + classes HTML).
+- **Bascule d'ordinateur patiente** (24/10 soir) : l'actif injoignable depuis moins de 2 min est seulement recherché (nouvelle adresse) ; au-delà, un autre ordinateur prend le relais. Pas encore vu en vrai (prochain redémarrage du compagnon).
+- Touche Spotify ajoutée à la page Média du PC (pas encore touchée). Corbeille : correctif d'un affichage resté après un glisser annulé.
+
 - **Deck et Ouvertes** (24/10 soir, testés sur la tablette avec le PC) : onglets déplacés par appui long puis glisser (ordre gardé par ordinateur), balayage entre onglets, écrans agrandis, corbeille dans la bande du bas (garder 0,9 s puis lâcher, « Miam ! » + son). Bug vu une fois, pas reproduit : au démarrage, l'onglet Discord recouvrait Perso (revenu en déplaçant Discord) ; noter ce qui précède s'il revient.
 - Installeur Windows corrigé (24/10 soir) : la boucle de relance ne démarrait pas depuis l'installeur (PowerShell lancé en `detached` par Node) → lancée par `start` comme à l'ouverture de session ; arrêt limité à `powershell.exe` (un numéro de processus réutilisé pouvait tuer un autre programme). Vérifié sur le PC de test : installation, puis redémarrage à distance (revenu en ~9 s). Cause de l'arrêt du compagnon à 18h49 inconnue (pas d'erreur au journal, Bitdefender n'a rien signalé).
 - Photo réelle en mode « Envoyer une photo ». Sur l'émulateur, la caméra plante.
 - Toucher Discord fermé (doit le lancer). « Ouvrir Discord » quand Discord est réduit dans la zone de notification.
 - Accueil sans ordinateur (`ConnectWidget`). Widget Touches sur Windows. Conflit entre l'appui long d'un widget et le mode Modifier.
-- Spotify sur la page Média (pas encore de touche Spotify).
 - Comptes Microsoft/Google pour l'agenda : le code est prêt, mais il faut enregistrer l'appli (Azure bloqué pour le compte Unowhy ; message préparé pour l'informatique). Voir [agenda-comptes.md](agenda-comptes.md).
 - Coche automatique du worklog par Jira (il faut remplir les identifiants dans `.env`).
 - Clavier dans KeyEditor, LinkAdder, WiFi et code d'appairage ; atténuation de nuit réelle ; rappels avec la vraie voix ; option « rejoindre automatiquement ».
@@ -52,12 +55,10 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 ## À faire, dans l'ordre
 
 0. Bug des onglets du Deck (voir plus haut) s'il revient.
-1. **Spotify** sur la page Média : ajouter la touche, tester la lecture.
-2. **Dofus Rétro** : UI Automation ne voit rien dans la fenêtre. Le bouton « Jouer » demande un clic à une position dans la fenêtre. Il faut savoir ce qui s'ouvre quand on touche « Dofus 1 ».
-3. Relecture du code du 24/10 (widgets, musique, Discord, Ouvertes), si demandée.
-4. **Discord, lot 2** : nom du salon, Quitter, volume par personne, état du micro. Il faut une appli créée sur discord.com/developers (RPC, 50 testeurs sans approbation).
-5. **Thèmes** (lot 5).
-6. **Logiciel de l'ordinateur sans Node** : Node embarqué + lanceur Swift sur Mac, installeur NSIS sur Windows. Choix en attente. Avec : icône pour rouvrir la page, règle du pare-feu Windows, dossier Partage dans Documents.
+1. **Discord** : tester « Quitter l'appel » et un salon de serveur (nom, qui parle). Pas de RPC ni de portail développeur (décision d'Eliot : les clients ne doivent rien créer, pas de dépendance à une validation de Discord).
+2. **Spotify** : toucher la touche (s'ouvre ? la musique part ?).
+3. **Thèmes** (lot 5).
+4. **Logiciel de l'ordinateur sans Node** : Node embarqué + lanceur Swift sur Mac, installeur NSIS sur Windows. Choix en attente. Avec : icône pour rouvrir la page, règle du pare-feu Windows, dossier Partage dans Documents.
 
 ## Décisions en attente
 
@@ -77,7 +78,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 ## Idées notées, pas faites
 
-Mot de réveil · Focus ↔ Ne pas déranger de l'ordinateur · presse-papiers partagé · empêcher la veille de l'ordinateur · extension de navigateur pour « Page de l'ordi » · bouton « Éteindre l'écran » · webcam USB (UVC, à demander à l'équipe firmware) · noms de programmes bruts sous Windows quand l'appli n'est pas au menu Démarrer · fenêtre de devant mise en avant dans Ouvertes.
+Dofus Rétro (« Jouer » par un clic dans la fenêtre : perso, pas pour la démo) · mettre en commun `dp()` (15 copies) · réglage « ne jamais changer d'ordinateur » · Mot de réveil · Focus ↔ Ne pas déranger de l'ordinateur · presse-papiers partagé · empêcher la veille de l'ordinateur · extension de navigateur pour « Page de l'ordi » · bouton « Éteindre l'écran » · webcam USB (UVC, à demander à l'équipe firmware) · noms de programmes bruts sous Windows quand l'appli n'est pas au menu Démarrer · fenêtre de devant mise en avant dans Ouvertes.
 
 ## Historique
 
@@ -89,4 +90,5 @@ Mot de réveil · Focus ↔ Ne pas déranger de l'ordinateur · presse-papiers p
 | f0d1d4c | musique, Rejoindre multi-services, Accessibilité Mac, finitions kiosque |
 | 638818b | onglet Ouvertes, YouTube Music |
 | a37912b | balayage des onglets, écrans agrandis et corbeille dans Ouvertes, documentation |
-| (suivant) | onglets déplaçables, corbeille en bande du bas avec son, installeur Windows réparé |
+| ca0ae6b | onglets déplaçables, corbeille en bande du bas avec son, installeur Windows réparé |
+| (suivant) | Discord par UI Automation (appel, participants, Quitter), bascule d'ordinateur après 2 min, relecture légère |

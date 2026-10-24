@@ -40,8 +40,11 @@ object Connection {
         return if (identity.auth) Probe.Ok(current) else Probe.Unauthorized
     }
 
-    /** Ordinateur à piloter maintenant (devenu actif), ou null si aucun ne répond. */
-    suspend fun resolve(context: Context): Computer? = coroutineScope {
+    /**
+     * Ordinateur à piloter maintenant (devenu actif), ou null si aucun ne répond.
+     * `allowSwitch` faux : seulement l'actif (à son adresse, ou à la nouvelle trouvée sur le WiFi).
+     */
+    suspend fun resolve(context: Context, allowSwitch: Boolean = true): Computer? = coroutineScope {
         if (Computers.all(context).isEmpty()) return@coroutineScope null
         // Adresses à jour d'après le WiFi (DHCP : l'IP d'un ordinateur change d'un jour à l'autre).
         val found = runCatching { Discovery.find() }.getOrDefault(emptyList())
@@ -49,7 +52,7 @@ object Connection {
             Computers.all(context).firstOrNull { it.id == f.id && it.url != f.url }?.let { Computers.save(context, it.copy(url = f.url)) }
         }
         val activeId = Computers.active(context)?.id
-        val candidates = Computers.all(context).sortedByDescending { if (it.id == activeId) Long.MAX_VALUE else it.lastUsedMs }
+        val candidates = Computers.all(context).filter { allowSwitch || it.id == activeId }.sortedByDescending { if (it.id == activeId) Long.MAX_VALUE else it.lastUsedMs }
         val probes = candidates.map { c -> async { runCatching { probe(context, c, connectTimeoutMs = 2_000) }.getOrNull() } }.awaitAll()
         val ok = probes.filterIsInstance<Probe.Ok>().firstOrNull()?.computer ?: return@coroutineScope null
         Computers.setActive(context, ok.id)

@@ -19,12 +19,14 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.VolumeKeyHandler
 import com.unowhy.companion.net.BackendClient
+import com.unowhy.companion.net.VoiceState
 import com.unowhy.companion.net.DeckPage
 import com.unowhy.companion.net.DeckTile
 import kotlinx.coroutines.Job
@@ -67,6 +69,12 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     /** Ouverture de l'ordinateur pas encore lue : on ne sait pas si l'appli tourne. */
     private var openKnown = false
     private var livePoll: Job? = null
+    /** Appel en cours dans l'appli de la page affichée (Discord) ; null : pas d'appli, ou état illisible. */
+    private var voice: VoiceState? = null
+    private var voiceApp: String? = null
+    private lateinit var voiceCard: View
+    private lateinit var voiceChannel: TextView
+    private lateinit var voicePeople: TextView
     private val adapter = TileAdapter()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, state: Bundle?): View =
@@ -81,6 +89,9 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         audio.showLabel()
         appAudio = view.findViewById(R.id.deck_app_audio)
         appAudio.attach(viewLifecycleOwner.lifecycleScope)
+        voiceCard = view.findViewById(R.id.deck_voice)
+        voiceChannel = view.findViewById(R.id.deck_voice_channel)
+        voicePeople = view.findViewById(R.id.deck_voice_people)
         nowPlaying = view.findViewById(R.id.deck_now_playing)
         nowPlaying.attach(viewLifecycleOwner.lifecycleScope)
         picker = view.findViewById(R.id.deck_windows)
@@ -166,6 +177,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         if (active) livePoll = viewLifecycleOwner.lifecycleScope.launch {
             while (isActive) {
                 refreshLiveApps()
+                refreshVoice()
                 delay(LIVE_POLL_MS)
             }
         }
@@ -180,6 +192,39 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         liveApps = (liveApps + seen.live.associateWith { now }).filterValues { now - it < LIVE_HOLD_MS }
         openKnown = true
         if ((openApps.keys to liveApps.keys) != before && pages.isNotEmpty()) renderTabs()
+    }
+
+    /** Page d'une appli d'appel : relit l'appel, et refait les touches si on entre ou sort d'un appel. */
+    private suspend fun refreshVoice() {
+        val app = pages.getOrNull(pageIndex)?.app?.takeUnless { showingOpen }
+        val state = app?.let { runCatching { client().voice(it) }.getOrNull() }
+        if (app != pages.getOrNull(pageIndex)?.app || showingOpen) return
+        val changed = state?.connected != voice?.connected
+        voice = state
+        renderVoice()
+        if (changed) showPage(pageIndex)
+    }
+
+    private fun renderVoice() {
+        val v = voice?.takeIf { it.connected }
+        voiceCard.visibility = if (v == null) View.GONE else View.VISIBLE
+        if (v == null) return
+        voiceChannel.text = getString(R.string.deck_voice_channel, v.channel ?: pages.getOrNull(pageIndex)?.app.orEmpty())
+        val parts = listOfNotNull(
+            v.people.takeIf { it.isNotEmpty() }?.let { getString(R.string.deck_voice_with, it.joinToString(", ")) },
+            getString(R.string.deck_voice_mic_off).takeIf { v.muted == true },
+            getString(R.string.deck_voice_deafened).takeIf { v.deafened == true },
+        )
+        voicePeople.text = parts.joinToString(" · ")
+        voicePeople.visibility = if (parts.isEmpty()) View.GONE else View.VISIBLE
+        voicePeople.setTextColor(ContextCompat.getColor(requireContext(), if (v.muted == true || v.deafened == true) R.color.ko else R.color.text_dim))
+    }
+
+    /** Touche à montrer selon l'appel : `call` seulement en appel, `idle` seulement hors appel ; les autres toujours. */
+    private fun shownNow(tile: DeckTile) = when (tile.whenState) {
+        "call" -> voice?.connected == true
+        "idle" -> voice?.connected != true
+        else -> true
     }
 
     /** Fermée = on la lance en ouvrant sa page ; dans le doute (pas encore lu), on la lance aussi. */
@@ -380,6 +425,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         status.visibility = View.GONE
         renderTabs()
         audio.visibility = View.GONE
+        voiceCard.visibility = View.GONE
         appAudio.bind(null)
         nowPlaying.bind(false)
         openWindows.setActive(isResumed && !isHidden)
@@ -398,7 +444,14 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         }
         val page = pages.getOrNull(index)
         // Pages Apps et Média : tuile « Ajouter » en dernier (applis de l'ordinateur, sites).
-        adapter.tiles = page?.tiles.orEmpty() +
+        // Autre appli (ou page sans appli) : l'appel lu ne vaut plus ; celui de la nouvelle appli est lu tout de suite.
+        if (page?.app != voiceApp) {
+            voice = null
+            voiceApp = page?.app
+            if (page?.app != null) viewLifecycleOwner.lifecycleScope.launch { refreshVoice() }
+        }
+        renderVoice()
+        adapter.tiles = page?.tiles.orEmpty().filter(::shownNow) +
             listOfNotNull(DeckTile(ADD, getString(R.string.apps_add_tile), ADD, null, null).takeIf { page?.apps == true || page?.media == true })
         if (page?.editable == true || page?.apps == true || (page?.media == true && page.tiles.isNotEmpty())) {
             status.setText(when {
@@ -426,6 +479,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                 result.openedApp?.let { Toast.makeText(requireContext(), getString(R.string.media_opened_app, it), Toast.LENGTH_SHORT).show() }
                 // Un raccourci comme "Micro Teams" peut avoir changé l'état du son.
                 if (tile.type != "app") audio.refresh()
+                // « Quitter l'appel », micro… : l'état de l'appel change, on le relit sans attendre la boucle.
+                if (pages.getOrNull(pageIndex)?.app != null) { delay(VOICE_AFTER_MS); refreshVoice() }
             } catch (e: Exception) {
                 Toast.makeText(requireContext(), requireContext().errorText(e), Toast.LENGTH_LONG).show()
             }
@@ -528,5 +583,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         const val PAGE_TAB = "page:"
         /** Distance de côté qui change d'onglet. */
         const val SWIPE_DP = 80
+        /** Laisser l'appli réagir à une touche avant de relire l'appel. */
+        const val VOICE_AFTER_MS = 700L
     }
 }

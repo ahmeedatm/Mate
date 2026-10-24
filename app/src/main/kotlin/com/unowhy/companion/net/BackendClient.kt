@@ -23,7 +23,10 @@ data class Identity(val id: String?, val name: String, val os: String, val auth:
 data class Pairing(val token: String, val id: String, val name: String, val os: String)
 
 /** `app` : nom de l'appli du Mac (tuile d'appli). */
-data class DeckTile(val id: String, val label: String, val type: String, val glyph: String?, val color: String?, val app: String? = null)
+/** `whenState` : touche d'une page d'appli d'appel, montrée seulement en appel (`call`) ou hors appel (`idle`). */
+data class DeckTile(val id: String, val label: String, val type: String, val glyph: String?, val color: String?, val app: String? = null, val whenState: String? = null)
+/** Appel en cours dans une appli (Discord) : salon, participants vus, micro et sourdine (null : inconnu). */
+data class VoiceState(val connected: Boolean, val channel: String?, val people: List<String>, val muted: Boolean?, val deafened: Boolean?)
 /**
  * `editable` : page Perso (touches à programmer) ; `apps` : page d'applis que l'on complète ;
  * `meeting` : page Réunion, ouverte après « Rejoindre » sur l'Accueil ; `app` : page d'une appli (Discord…),
@@ -171,7 +174,7 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
             val tiles = p.getJSONArray("tiles")
             DeckPage(p.getString("title"), (0 until tiles.length()).map { j ->
                 val t = tiles.getJSONObject(j)
-                DeckTile(t.getString("id"), t.getString("label"), t.getString("type"), t.optStringOrNull("glyph"), t.optStringOrNull("color"), t.optStringOrNull("app"))
+                DeckTile(t.getString("id"), t.getString("label"), t.getString("type"), t.optStringOrNull("glyph"), t.optStringOrNull("color"), t.optStringOrNull("app"), t.optStringOrNull("when"))
             }, p.optBoolean("editable"), p.optBoolean("apps"), p.optBoolean("meeting"), p.optStringOrNull("app"), p.optBoolean("media"))
         }
     }
@@ -198,6 +201,15 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
         val live = names("apps")
         // Ordinateur pas encore à jour (sans `open`) : seulement les applis en appel.
         LiveApps(open = if (json.has("open")) names("open") else live, live = live)
+    }
+
+    /** État de l'appel dans l'appli ; null si l'ordinateur ne sait pas le lire (Mac, appli fermée, ancienne version). */
+    suspend fun voice(app: String): VoiceState? = io {
+        val v = JSONObject(text(request("GET", "/deck/voice?app=" + encode(app), timeoutMs = 10_000))).optJSONObject("voice")
+        if (v == null || !v.optBoolean("found")) return@io null
+        fun flag(key: String) = if (v.isNull(key)) null else v.optBoolean(key)
+        val people = v.optJSONArray("people")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty()
+        VoiceState(v.optBoolean("connected"), v.optStringOrNull("channel"), people, flag("muted"), flag("deafened"))
     }
 
     /** Retour au profil de base. */

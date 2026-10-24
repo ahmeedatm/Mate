@@ -39,6 +39,8 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
     private val frame = rounded(R.color.surface)
     private var armed = false
     private var wobble: Animator? = null
+    /** Retour aux instructions après un glisser ; annulé si un autre glisser commence avant. */
+    private val backToHint = Runnable { show(dragging = false) }
     private val arming = ValueAnimator.ofInt(0, MAX_LEVEL).apply {
         duration = ARM_MS
         addUpdateListener { fill.level = it.animatedValue as Int }
@@ -79,7 +81,7 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
 
     private fun onDrag(event: DragEvent): Boolean {
         when (event.action) {
-            DragEvent.ACTION_DRAG_STARTED -> { reset(); show(dragging = true) }
+            DragEvent.ACTION_DRAG_STARTED -> { removeCallbacks(backToHint); reset(); show(dragging = true) }
             DragEvent.ACTION_DRAG_ENTERED -> {
                 label.setText(R.string.trash_hold)
                 tint(R.color.ko)
@@ -91,7 +93,8 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
                 if (armed) swallow(event.localState) else reset()
             }
             // Après « Miam ! », on laisse voir la corbeille un instant avant de remettre les instructions.
-            DragEvent.ACTION_DRAG_ENDED -> postDelayed({ if (!armed) show(dragging = false) }, if (label.text == context.getString(R.string.trash_done)) DONE_MS else 0)
+            // (Toujours : un glisser annulé pendant que la corbeille tremble la laissait affichée.)
+            DragEvent.ACTION_DRAG_ENDED -> postDelayed(backToHint, if (label.text == context.getString(R.string.trash_done)) DONE_MS else 0)
         }
         return true
     }

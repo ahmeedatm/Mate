@@ -159,6 +159,10 @@
     <string name="app_audio_title">Son de %1$s</string>
     <string name="app_audio_talking">Quelqu\'un parle</string>
     <string name="app_audio_silent">Personne ne parle</string>
+    <string name="deck_voice_channel">En appel · %1$s</string>
+    <string name="deck_voice_with">Avec %1$s</string>
+    <string name="deck_voice_mic_off">Ton micro est coupé</string>
+    <string name="deck_voice_deafened">Sourdine</string>
     <string name="app_audio_closed">Fermé sur l\'ordi</string>
     <string name="app_audio_unknown">–</string>
     <string name="media_empty">Rien en lecture</string>

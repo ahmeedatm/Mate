@@ -175,14 +175,19 @@ export async function openAccessibility() {
 }
 
 /** Boutons d'une fenêtre d'appli (Windows) : lister leurs noms, en actionner un. */
-export function listButtons(app: string) {
-  if (isWindows) return win.listButtons(app);
+export function listButtons(app: string, detail = false) {
+  if (isWindows) return win.listButtons(app, detail);
   unsupported();
 }
 
 export function pressButton(app: string, names: string[]) {
   if (isWindows) return win.pressButton(app, names);
   unsupported();
+}
+
+/** État vocal de Discord (salon, participants, micro) : Windows seulement, null ailleurs ou appli fermée. */
+export async function voiceState(app: string) {
+  return isWindows ? win.voiceState(app) : null;
 }
 
 export function listDisplays() {

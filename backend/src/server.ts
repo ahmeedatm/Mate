@@ -11,7 +11,7 @@ import {
   appIconFile, runAction, tileIcon,
 } from "./deck.ts";
 import {
-  accessibility, appAudio, browserPage, isAppRunning, listButtons, openAccessibility, canControl, focusWindow, getAudio, listApps, mediaControl, mediaSessions, mediaThumb, listDisplays, listOpenWindows, listShortcuts, listWindows, controlOpenWindow, openTarget, osName, placeWindow, setAudio,
+  accessibility, appAudio, browserPage, isAppRunning, listButtons, openAccessibility, canControl, focusWindow, getAudio, listApps, mediaControl, mediaSessions, mediaThumb, listDisplays, listOpenWindows, listShortcuts, listWindows, controlOpenWindow, openTarget, osName, placeWindow, setAudio, voiceState,
 } from "./os.ts";
 import type { Layout, OpenAction, WindowTarget } from "./screens.ts";
 import { keySchema, loadKeys, saveKey, SLOTS, type PersoKey } from "./perso.ts";
@@ -221,6 +221,7 @@ app.get("/deck", async () => {
               type: t.action.type,
               glyph: t.glyph ?? null,
               color: t.color ?? null,
+              when: t.when ?? null,
               // Nom de l'appli (page Apps : liste des applis déjà ajoutées).
               app: t.action.type === "app" ? t.action.name : null,
             },
@@ -362,10 +363,26 @@ app.get("/deck/live", { logLevel: "warn" }, async () => {
 });
 
 /** Boutons cliquables d'une appli ouverte (Windows) : de quoi écrire une étape « appuyer sur un bouton ». */
-app.get<{ Querystring: { app: string } }>(
+app.get<{ Querystring: { app: string; detail?: boolean } }>(
   "/deck/buttons",
-  { schema: { querystring: { type: "object", required: ["app"], properties: { app: { type: "string", minLength: 1, maxLength: 100 } } } } },
-  async (req) => listButtons(req.query.app),
+  {
+    schema: {
+      querystring: {
+        type: "object",
+        required: ["app"],
+        // detail : diagnostic, tous les éléments avec leur classe.
+        properties: { app: { type: "string", minLength: 1, maxLength: 100 }, detail: { type: "boolean" } },
+      },
+    },
+  },
+  async (req) => listButtons(req.query.app, req.query.detail === true),
+);
+
+/** Page d'une appli d'appel (Discord) : salon ou appel en cours, participants, micro ; null si illisible (Mac, fermée). */
+app.get<{ Querystring: { app: string } }>(
+  "/deck/voice",
+  { logLevel: "warn", schema: { querystring: { type: "object", required: ["app"], properties: { app: { type: "string", minLength: 1, maxLength: 100 } } } } },
+  async (req) => ({ voice: (await voiceState(req.query.app).catch(() => null)) ?? null }),
 );
 
 /** Retour au profil de base. */
