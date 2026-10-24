@@ -93,4 +93,4 @@ Dofus Rétro (« Jouer » par un clic dans la fenêtre : perso, pas pour la dém
 | a37912b | balayage des onglets, écrans agrandis et corbeille dans Ouvertes, documentation |
 | ca0ae6b | onglets déplaçables, corbeille en bande du bas avec son, installeur Windows réparé |
 | 99eb31c | Discord par UI Automation (appel, participants, Quitter), bascule d'ordinateur après 2 min, relecture légère |
-| (ce commit) | thèmes Nuit / Clair / Néon / Chaud, couleurs par fonction, animations |
+| 1cce5f2 | thèmes Nuit / Clair / Néon / Chaud, couleurs par fonction, animations |
