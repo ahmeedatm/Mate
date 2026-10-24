@@ -129,6 +129,7 @@
     <string name="apps_remove">Retirer</string>
     <string name="deck_open_tab">Ouvertes</string>
     <string name="deck_open_hint">Toucher : afficher ou réduire · deux fois : agrandir ou rendre sa taille · glisser de côté : changer d\'écran (bords : moitié, haut : agrandir) ou la fermer dans la corbeille</string>
+    <string name="deck_open_hint_mac">Toucher : afficher ou réduire · deux fois : remplir l\'écran ou rendre sa taille · trois fois : plein écran · glisser de côté : changer d\'écran ou la fermer dans la corbeille</string>
     <string name="open_loading">Lecture des fenêtres de l\'ordinateur…</string>
     <string name="trash_idle">Fermer : garder la fenêtre ici</string>
     <string name="trash_hold">Garde-la ici…</string>

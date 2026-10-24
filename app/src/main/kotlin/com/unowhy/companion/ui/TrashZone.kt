@@ -19,6 +19,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import com.unowhy.companion.Computers
 import com.unowhy.companion.R
 import com.unowhy.companion.audio.Crunch
 
@@ -54,7 +55,7 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
 
     init {
         hint.apply {
-            setText(R.string.deck_open_hint)
+            setText(if (Computers.active(context)?.os == "mac") R.string.deck_open_hint_mac else R.string.deck_open_hint)
             textSize = 15f
             setTextColor(color(R.attr.c_text_dim))
             gravity = Gravity.CENTER

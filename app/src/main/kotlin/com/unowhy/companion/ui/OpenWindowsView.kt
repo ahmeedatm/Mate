@@ -11,6 +11,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import com.unowhy.companion.Computers
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.MacDisplay
@@ -146,8 +147,9 @@ class OpenWindowsView @JvmOverloads constructor(
         // Même état qu'avant : on ne reconstruit pas (le défilement de chaque écran reste où il est).
         if (data == shown) return
         shown = data
-        // Par nom d'appli, pas de la plus en avant à la plus en arrière : la liste ne bouge pas quand on touche une fenêtre.
-        val windows = data.apps.sortedBy { it.name.lowercase() }.flatMap { a -> a.windows.map { a to it } }
+        // Par nom d'appli puis par titre, pas de la plus en avant à la plus en arrière : la liste ne bouge pas quand on
+        // touche une fenêtre ou qu'on change de bureau.
+        val windows = data.apps.sortedBy { it.name.lowercase() }.flatMap { a -> a.windows.sortedBy { it.title.lowercase() }.map { a to it } }
         map.setScreens(data.displays) { d -> windows.filter { it.second.display == d.id }.map { (a, w) -> card(a, w) } }
         val away = windows.filter { (_, w) -> data.displays.none { it.id == w.display } }
         elsewhereList.removeAllViews()
@@ -181,6 +183,11 @@ class OpenWindowsView @JvmOverloads constructor(
                 card.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 act(rollback = null) { openWindowAction(app, w, "zoom") }
             },
+            // Mac : plein écran sur son propre bureau (bouton vert), à part de « remplir l'écran ».
+            onTripleTap = {
+                card.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                act(rollback = null) { openWindowAction(app, w, "fullscreen") }
+            }.takeIf { Computers.active(context)?.os == "mac" },
         ) {
             card.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             act(rollback = null) { openWindowAction(app, w, if (w.front && !w.minimized) "minimize" else "focus") }

@@ -281,7 +281,7 @@ app.post<{ Body: { key: string; action: OpenAction; window: WindowTarget; displa
         additionalProperties: false,
         properties: {
           key: { type: "string", maxLength: 1000 },
-          action: { enum: ["focus", "place", "minimize", "zoom", "close"] },
+          action: { enum: ["focus", "place", "minimize", "zoom", "fullscreen", "close"] },
           window: windowTarget,
           display: { type: "integer" },
           layout: { enum: ["keep", "left", "right", "max"] },

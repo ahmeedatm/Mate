@@ -279,7 +279,8 @@ export async function listOpenWindows() {
 
 /** Les fenêtres sont désignées par leur handle : `key` (programme) ne sert pas. */
 export async function controlOpenWindow(_key: string, window: WindowTarget, action: OpenAction, opts?: { display?: number; layout: Layout }) {
-  await call("allwindows", { action, hwnd: window.index, ...opts });
+  // Pas de plein écran à part sous Windows : agrandir.
+  await call("allwindows", { action: action === "fullscreen" ? "zoom" : action, hwnd: window.index, ...opts });
 }
 
 // --- Système

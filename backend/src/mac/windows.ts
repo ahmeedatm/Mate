@@ -45,8 +45,19 @@ function suffix(title) {
   return String(title || '').split(' — ').pop();
 }
 
+// Le menu Fenêtre peut donner un titre plus court que l'Accessibilité (Chrome : « Page » contre
+// « Page - Google Chrome – Profil ») ou coupé par « … ».
+function sameTitle(ax, menu) {
+  ax = String(ax || ''); menu = String(menu || '');
+  if (ax === menu) return true;
+  if (!menu) return false;
+  if (ax.startsWith(menu + ' ')) return true;
+  return menu.endsWith('…') && menu.length > 1 && ax.startsWith(menu.slice(0, -1));
+}
+
 function find(list, target) {
-  const named = list.filter((e) => e.w.name() === target.title);
+  let named = list.filter((e) => e.w.name() === target.title);
+  if (!named.length) named = list.filter((e) => sameTitle(e.w.name(), target.title));
   return named.find((e) => e.index === target.index) || named[0] ||
     list.find((e) => e.index === target.index && target.index > 0) ||
     list.find((e) => suffix(e.w.name()) === suffix(target.title));
@@ -76,7 +87,7 @@ function menuWindows(proc, axTitles) {
       if (!cmd) section.push({ title: titles[k], item: items[k] });
     }
     // Pas une liste de fenêtres si aucune des fenêtres visibles n'y figure.
-    if (axTitles.length && !section.some((e) => axTitles.includes(e.title))) return [];
+    if (axTitles.length && !section.some((e) => axTitles.some((t) => sameTitle(t, e.title)))) return [];
     return section;
   } catch (e) {
     return [];
@@ -88,16 +99,20 @@ function menuWindows(proc, axTitles) {
  * demande l'autorisation Enregistrement de l'écran), null si la liste est illisible.
  */
 function cgWindows(proc) {
+  const byPid = cgAll();
+  return byPid && (byPid[proc.unixId()] || []);
+}
+
+/** Même chose pour toutes les applis en un seul appel (vue « Ouvertes ») : { pid: fenêtres }. */
+function cgAll() {
   try {
-    const pid = proc.unixId();
-    const out = [];
+    const out = {};
     ObjC.castRefToObject($.CGWindowListCopyWindowInfo($.kCGWindowListOptionAll | $.kCGWindowListExcludeDesktopElements, 0)).js.forEach((d) => {
-      if (ObjC.unwrap(d.objectForKey('kCGWindowOwnerPID')) !== pid) return;
       const o = ObjC.deepUnwrap(d);
       const b = o.kCGWindowBounds;
       // Couche 0 et assez grande : pas les barres d'outils ni les fenêtres techniques.
       if (o.kCGWindowLayer !== 0 || b.Width < 200 || b.Height < 200) return;
-      out.push({ pos: [b.X, b.Y], size: [b.Width, b.Height], name: o.kCGWindowName || null });
+      (out[o.kCGWindowOwnerPID] = out[o.kCGWindowOwnerPID] || []).push({ pos: [b.X, b.Y], size: [b.Width, b.Height], name: o.kCGWindowName || null });
     });
     return out;
   } catch (e) {
@@ -113,15 +128,14 @@ function sameFrame(a, pos, size) {
  * Fenêtres des autres bureaux (derrière une fenêtre plein écran, Spaces) : entrées du menu absentes
  * de l'Accessibilité, avec leur écran quand le serveur de fenêtres permet de le savoir.
  */
-function elsewhereWindows(proc, list, all) {
+function elsewhereWindows(proc, list, all, cg = cgWindows(proc)) {
   const left = list.map((e) => e.w.name() || '');
   let away = menuWindows(proc, left).filter((e) => {
-    const at = left.indexOf(e.title);
+    const at = left.findIndex((t) => sameTitle(t, e.title));
     if (at < 0) return true;
     left.splice(at, 1);
     return false;
   });
-  const cg = cgWindows(proc);
   if (!cg) return away.map((e) => ({ title: e.title, item: e.item, display: null }));
   const spare = cg.filter((c) => !list.some((e) => sameFrame(c, e.w.position(), e.w.size())));
   // Pas plus d'entrées que de fenêtres réelles cachées : le reste du menu, ce sont des commandes.
@@ -146,7 +160,7 @@ function reach(proc, all, title) {
   // Le passage d'un bureau à l'autre est animé : la fenêtre n'apparaît qu'au bout d'une à deux secondes.
   for (let i = 0; i < 25; i++) {
     delay(0.15);
-    const found = windowsOf(proc).find((e) => e.w.name() === entry.title);
+    const found = windowsOf(proc).find((e) => sameTitle(e.w.name(), entry.title));
     if (found) return found;
   }
   return undefined;
@@ -243,24 +257,41 @@ function zoom(w, all) {
   w.position = [x, y];
 }
 
+/** Plein écran macOS (bouton vert) : la fenêtre passe sur son propre bureau ; en sortir la ramène. */
+function toggleFullscreen(proc, w) {
+  if (attr(w, 'AXFullScreen')) { leaveFullscreen(w); return; }
+  if (attr(w, 'AXMinimized')) w.attributes.byName('AXMinimized').value = false;
+  focus(proc, w);
+  w.attributes.byName('AXFullScreen').value = true;
+}
+
 function displaysOf(all) {
   return all.map((s) => ({ id: s.id, name: s.name, builtin: s.builtin, main: s.main, frame: s.frame }));
 }
 
-// Vue « Ouvertes » : toutes les applis qui ont une fenêtre sur les bureaux affichés. Pas le menu Fenêtre
-// (autres bureaux) : le lire pour chaque appli prendrait plusieurs secondes.
+// Vue « Ouvertes » : toutes les applis qui ont une fenêtre, y compris sur les autres bureaux (plein
+// écran…). Le menu Fenêtre est lent à lire : seulement pour les applis dont le serveur de fenêtres
+// connaît une fenêtre que l'Accessibilité ne voit pas.
 function allApps(se, all) {
   const apps = [];
+  const cg = cgAll();
   se.applicationProcesses.whose({ backgroundOnly: false })().forEach((p) => {
-    let list;
+    let list, away = [];
     try { list = windowsOf(p); } catch (e) { return; }
-    if (!list.length) return;
+    try {
+      const mine = cg ? cg[p.unixId()] || [] : [];
+      const frames = list.map((e) => ({ pos: e.w.position(), size: e.w.size() }));
+      if (mine.some((c) => !frames.some((f) => sameFrame(c, f.pos, f.size)))) away = elsewhereWindows(p, list, all, mine);
+    } catch (e) {}
+    if (!list.length && !away.length) return;
     // Nom de l'appli (Visual Studio Code), pas celui du processus (Code) : il sert à retrouver son icône.
     let name;
     try { name = String(p.applicationFile().name()).replace(/[.]app$/, ''); } catch (e) { name = p.name(); }
     // Sans identifiant de bundle (émulateur…) : désignée par son processus.
     const front = p.frontmost();
-    apps.push({ key: p.bundleIdentifier() || 'pid:' + p.unixId(), name: name, front: front, windows: list.map((e) => describe(all, e, front)) });
+    apps.push({ key: p.bundleIdentifier() || 'pid:' + p.unixId(), name: name, front: front, windows: list.map((e) => describe(all, e, front)).concat(away.map((e) => ({
+      index: 0, title: e.title, minimized: false, fullscreen: false, display: e.display, elsewhere: true, front: false, maximized: false,
+    }))) });
   });
   return apps;
 }
@@ -282,6 +313,7 @@ function run(argv) {
     if (req.op === 'zoom' && targets.length) zoom(targets[0].w, all);
     if (req.op === 'minimize') targets.forEach((e) => { e.w.attributes.byName('AXMinimized').value = true; });
     else if (req.op === 'close') targets.forEach((e) => closeWindow(e.w));
+    else if (req.op === 'fullscreen') { if (targets.length) toggleFullscreen(proc, targets[0].w); }
     else if (targets.length) {
       const title = targets[0].w.name();
       focus(proc, targets[0].w);

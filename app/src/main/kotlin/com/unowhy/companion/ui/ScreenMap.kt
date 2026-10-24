@@ -239,13 +239,15 @@ class ScreenMap @JvmOverloads constructor(
 }
 
 /**
- * Fenêtre d'un ScreenMap. Toucher : `onTap` (attendu un instant si `onDoubleTap` est donné). Glisser-déposer `payload` vers un écran (vue glissée estompée, passée à
+ * Fenêtre d'un ScreenMap. Toucher : `onTap` (attendu un instant si `onDoubleTap` est donné ; de même pour le double
+ * toucher si `onTripleTap` est donné). Glisser-déposer `payload` vers un écran (vue glissée estompée, passée à
  * `onDragStarted`) : en bougeant le doigt de côté, ou après un appui maintenu (écrans l'un au-dessus de l'autre) ;
  * un mouvement vertical laisse défiler la liste de l'écran.
  */
 @SuppressLint("ClickableViewAccessibility")
 fun View.dragToScreens(
-    payload: Any, canDrag: () -> Boolean, onDragStarted: (View) -> Unit, onDoubleTap: (() -> Unit)? = null, onTap: () -> Unit,
+    payload: Any, canDrag: () -> Boolean, onDragStarted: (View) -> Unit, onDoubleTap: (() -> Unit)? = null,
+    onTripleTap: (() -> Unit)? = null, onTap: () -> Unit,
 ) {
     val slop = ViewConfiguration.get(context).scaledTouchSlop
     var downX = 0f
@@ -264,20 +266,28 @@ fun View.dragToScreens(
     }
     val hold = Runnable { if (!moved && !dragging) startDrag(this) }
     var pendingTap: Runnable? = null
-    fun tapped(v: View) {
-        val first = pendingTap
-        when {
-            onDoubleTap == null -> onTap()
-            first != null -> {
-                v.removeCallbacks(first)
-                pendingTap = null
-                onDoubleTap()
-            }
-            else -> Runnable { pendingTap = null; onTap() }.also {
-                pendingTap = it
-                v.postDelayed(it, ViewConfiguration.getDoubleTapTimeout().toLong())
-            }
+    var taps = 0
+    fun fire(count: Int) {
+        pendingTap = null
+        taps = 0
+        when (count) {
+            1 -> onTap()
+            2 -> onDoubleTap?.invoke()
+            else -> onTripleTap?.invoke()
         }
+    }
+    // Chaque toucher attend le suivant, sauf le dernier geste possible (double sans triple, triple).
+    fun tapped(v: View) {
+        pendingTap?.let(v::removeCallbacks)
+        taps++
+        val last = when {
+            onDoubleTap == null -> 1
+            onTripleTap == null -> 2
+            else -> 3
+        }
+        if (taps >= last) return fire(taps)
+        val count = taps
+        pendingTap = Runnable { fire(count) }.also { v.postDelayed(it, ViewConfiguration.getDoubleTapTimeout().toLong()) }
     }
     setOnTouchListener { v, e ->
         when (e.actionMasked) {
