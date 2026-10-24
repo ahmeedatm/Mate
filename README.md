@@ -23,7 +23,7 @@ scripts/  Sauvegarde (bundle git + données perso)
 
 Sur chaque ordinateur à piloter (une fois) :
 
-1. Installer **Node.js 22 ou plus** (version LTS sur [nodejs.org](https://nodejs.org/fr/download)).
+1. Installer **Node.js 22 ou plus** (version LTS sur [nodejs.org](https://nodejs.org/fr/download)). Inutile avec un paquet `Compagnon-Unowhy-Windows.zip` / `-Mac.zip` (`npm run package`, voir [développement](docs/developpement.md)) : Node y est embarqué ; extraire le zip, puis passer à l'étape 2 dans le dossier « Compagnon Unowhy ».
 2. Récupérer ce dossier, puis double-cliquer **`Installer (Mac).command`** ou **`Installer (Windows).cmd`**.
    Le compagnon démarre et se relancera tout seul à chaque ouverture de session : plus de terminal à garder ouvert.
 3. La page **http://127.0.0.1:3000/** s'ouvre : adresse de l'ordinateur, code d'appairage, agenda.

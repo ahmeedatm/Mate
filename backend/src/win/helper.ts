@@ -3,7 +3,7 @@ import { createInterface } from "node:readline";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { backendRoot } from "../config.ts";
 
 /**
  * Processus PowerShell résident (helper.ps1) qui exécute le code natif de native.cs : lancer un
@@ -11,7 +11,8 @@ import { fileURLToPath } from "node:url";
  * Une requête à la fois, réponses dans l'ordre ; relancé au besoin s'il meurt ou ne répond plus.
  */
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
+// Depuis la racine du backend : le paquet client tourne sur un seul fichier (dist/server.mjs).
+const HERE = path.join(backendRoot, "src", "win");
 /** Fichiers lus par PowerShell : helper.ps1 et native.cs (qu'il compile). */
 const FILES = ["helper.ps1", "native.cs"];
 /**

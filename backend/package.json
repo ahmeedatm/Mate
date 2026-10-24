@@ -15,7 +15,8 @@
     "service:uninstall": "tsx --env-file-if-exists=.env scripts/service.ts uninstall",
     "service:start": "tsx --env-file-if-exists=.env scripts/service.ts start",
     "service:stop": "tsx --env-file-if-exists=.env scripts/service.ts stop",
-    "service:status": "tsx --env-file-if-exists=.env scripts/service.ts status"
+    "service:status": "tsx --env-file-if-exists=.env scripts/service.ts status",
+    "package": "tsx scripts/package.ts"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.6",
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "@types/node": "^22",
+    "esbuild": "^0.28.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }

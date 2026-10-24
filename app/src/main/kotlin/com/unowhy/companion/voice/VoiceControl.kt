@@ -306,8 +306,11 @@ class VoiceControl(private val activity: MainActivity, private val button: View,
                 val display = when (command.display) {
                     null -> here
                     0 -> screens.firstOrNull { it.id != here }?.id ?: return Answer(text(R.string.voice_win_one_screen), speak = true)
+                    -1 -> screens.last().id
+                    -2 -> screens[screens.size / 2].id
                     else -> screens.getOrNull(command.display - 1)?.id ?: return Answer(text(R.string.voice_win_no_screen, command.display), speak = true)
                 }
+                if (command.display != null && display == here) return Answer(text(R.string.voice_win_same_screen, app.name), speak = true)
                 client.openWindowAction(app, window, "place", display, command.layout ?: "keep")
             }
             else -> client.openWindowAction(app, window, command.action)

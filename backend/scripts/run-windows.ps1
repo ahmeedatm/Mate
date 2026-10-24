@@ -11,10 +11,13 @@ New-Item -ItemType Directory -Force -Path $LogDir, (Join-Path $backend '.data') 
 # PID de cette boucle : `npm run service:stop` l'arrete avec node (taskkill /T).
 Set-Content -Path (Join-Path $backend '.data\service.pid') -Value $PID
 
+# Paquet client : serveur regroupe dans dist\server.mjs ; sinon les sources, par tsx.
+$entry = if (Test-Path (Join-Path $backend 'dist\server.mjs')) { @('--env-file-if-exists=.env', 'dist/server.mjs') } else { @('--env-file-if-exists=.env', '--import', 'tsx', 'src/server.ts') }
+
 while ($true) {
   $out = Join-Path $LogDir 'backend.log'
   $err = Join-Path $LogDir 'backend-erreurs.log'
-  Start-Process -FilePath $Node -ArgumentList '--env-file-if-exists=.env', '--import', 'tsx', 'src/server.ts' `
+  Start-Process -FilePath $Node -ArgumentList $entry `
     -WorkingDirectory $backend -NoNewWindow -Wait -RedirectStandardOutput $out -RedirectStandardError $err
   Start-Sleep -Seconds 10
 }

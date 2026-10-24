@@ -30,8 +30,10 @@ const logDir = isWindows
   : path.join(os.homedir(), "Library", "Logs", "UnowhyCompanion");
 const pidFile = path.join(backend, ".data", "service.pid");
 
+// Paquet client (scripts/package.ts) : ce script et le serveur sont regroupés dans dist/, avec un node embarqué.
+const bundled = import.meta.url.endsWith(".mjs");
 // Arguments de node : un seul processus (pas de surveillance des fichiers comme `npm run dev`).
-const NODE_ARGS = ["--env-file-if-exists=.env", "--import", "tsx", "src/server.ts"];
+const NODE_ARGS = bundled ? ["--env-file-if-exists=.env", "dist/server.mjs"] : ["--env-file-if-exists=.env", "--import", "tsx", "src/server.ts"];
 
 function sh(cmd: string, args: string[]): Promise<{ ok: boolean; out: string }> {
   return new Promise((resolve) => {

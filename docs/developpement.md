@@ -95,6 +95,19 @@ curl -X POST -H "Authorization: Bearer <jeton du PC>" -H "Content-Type: applicat
 
 Le compagnon redémarre seul en ~8 s. Vérifier ensuite une route Windows (`/system/media`) : une erreur de compilation de `native.cs` casse tout le pilotage (HTTP 500), et on ne peut pas compiler le C# sur le Mac. Si `package.json` change, il faut lancer `npm install` sur le PC.
 
+## Fabriquer les paquets clients (sans Node à installer)
+
+Sur le Mac, dans `backend/` : `npm run package` (`scripts/package.ts`). Résultat dans `dist/` à la racine (ignoré par git) :
+
+- `Compagnon-Unowhy-Windows.zip` (~34 Mo) et `Compagnon-Unowhy-Mac.zip` (~76 Mo, node Apple Silicon et Intel) ;
+- dans chaque zip, un dossier « Compagnon Unowhy » : l'installeur à double-cliquer, `backend/dist/server.mjs` et `service.mjs` (sources regroupées par esbuild), `backend/config` (sans `deck.json` ni `tasks.json`), `helper.ps1`/`native.cs` et `run-windows.ps1` pour Windows, et le node officiel de nodejs.org (ligne 22, téléchargé une fois dans `backend/.cache/node`, vérifié par SHA-256).
+
+Les installeurs prennent `backend/node/…` s'il existe (sans `npm install`), sinon le Node du système comme avant ; `run-windows.ps1` et `service.ts` lancent `dist/server.mjs` s'il existe, sinon `src/server.ts` par tsx. Commandes du service dans un paquet : `node\node.exe dist\service.mjs status|stop|start|uninstall` (Windows), `node/darwin-arm64/node dist/service.mjs …` (Mac).
+
+Mettre à jour un ordinateur installé par paquet : extraire le nouveau zip **au même endroit** en remplaçant les fichiers (`.data` garde l'identité : sinon la tablette voit un nouvel ordinateur), puis relancer l'installeur. Sur Mac, l'autorisation Accessibilité est donnée au node du paquet.
+
+Testé sur le Mac (serveur et service regroupés, node embarqué). Pas encore essayé sur un PC Windows.
+
 ## Pièges connus
 
 - **C# 5 seulement** dans `native.cs` (`out` est un mot réservé ; pas de déclaration en double : la classe `Native` est unique). WinRT est inaccessible depuis le C# d'Add-Type : on passe par `helper.ps1`, sans accents dans ses chaînes (fichier lu en ANSI).

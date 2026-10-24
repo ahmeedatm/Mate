@@ -622,6 +622,7 @@
     <string name="voice_win_place">%1$s déplacé</string>
     <string name="voice_win_none">« %1$s » n\'est pas ouvert sur l\'ordinateur.</string>
     <string name="voice_win_no_front">Aucune fenêtre au premier plan.</string>
+    <string name="voice_win_same_screen">%1$s est déjà sur cet écran.</string>
     <string name="voice_win_one_screen">L\'ordinateur n\'a qu\'un écran.</string>
     <string name="voice_win_no_screen">Pas d\'écran %1$d.</string>
     <string name="voice_no_tasks">Rien à faire aujourd\'hui.</string>

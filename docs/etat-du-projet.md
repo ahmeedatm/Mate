@@ -33,22 +33,24 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 | Partage | dossier partagé, documents à côté de chaque mode, « Page de l'ordi » (page du navigateur de l'ordinateur dans la tablette) |
 | Focus | Pomodoro, ambiance qui suit le chrono |
 | Apparence | 4 thèmes (Nuit, Clair, Néon, Chaud) choisis dans Réglages ; une couleur par fonction (pastilles des titres, tuiles d'applis aux couleurs des marques) ; animations légères (appui, changement de mode, widgets, météo, Focus, eau), fluides sur la tablette |
+| Bascule d'ordinateur | redémarrage du compagnon du PC (revenu en 8 s) : la tablette reste sur le PC, plus de bascule vers le Mac ; testé le 24/10 |
+| Média | touche Spotify : ouvre Spotify, la musique part seule, lecture en cours affichée ; testé le 24/10 |
 | Caméra | visualiseur à environ 10 images/s en WiFi, page `/camera` sur l'ordinateur, Figer, zoom, Arrêter |
 | Kiosque | lock task, SQOOL masqué, installations bloquées, relance après mise à jour, WiFi dans Réglages, mises à jour silencieuses (WebView 152 installé), heure et fuseau auto, état de la tablette (batterie, luminosité, atténuation de nuit), écran de bienvenue |
 | Extension Claude | serveur MCP `tablette` (modes, messages, tâches, agenda, captures…) |
-| Commande vocale | bouton Parler (reconnaissance Android, sans clé) : heure, ouvrir une appli même mal entendue (« ouvre Ankama Launcher »), modes, son, Focus… ; testé le 24/10 |
-| Appels entrants | Discord (Windows) : carte Répondre / Vidéo / Ignorer sur la tablette, annonce parlée, puis page Discord du Deck ; testé le 24/10 (appel privé reçu, Répondre) ; touche « Arrêter le partage » pendant un stream (état lu, touche pas encore touchée) |
+| Commande vocale | bouton Parler (reconnaissance Android, sans clé) : heure, ouvrir une appli même mal entendue (« ouvre Ankama Launcher »), modes, son, Focus, dictée (« écris … »), fenêtres (réduire, montrer, à gauche / à droite, « sur l'écran de droite / de gauche / 2 »), tâches (ajouter, lister, cocher), rappels (« rappelle-moi … dans 2 minutes »), agenda (« qu'est-ce que j'ai demain ») ; testé le 24/10 |
+| Appels entrants | Discord (Windows) : carte Répondre / Vidéo / Ignorer sur la tablette, annonce parlée, puis page Discord du Deck ; testé le 24/10 (appel privé reçu, Répondre) ; « Quitter l'appel » et « Arrêter le partage » testés ; appel de groupe privé lu (nom, participants, micro) |
 
 ## Fait mais pas encore testé en vrai
 
-- **Commande vocale** (24/10) : dictée « écris … » (collée dans l'appli de devant, sans doute par le presse-papiers), fenêtres (« réduis Chrome », « mets Discord à gauche / sur l'autre écran », « ferme … »), « quelles tâches aujourd'hui », « coche … », « qu'est-ce que j'ai aujourd'hui / demain », « rappelle-moi de … à 15 h / dans 10 minutes », « cherche … », « raccroche », « arrête le partage ». Pas de mot de réveil (bouton seulement). La carte d'appel cache le bouton Parler : « réponds » / « ignore » à la voix ne servent pas encore.
+- **Commande vocale** (24/10) : « ferme … », « cherche … », « raccroche », « arrête le partage » à la voix. La reconnaissance entend souvent « mais » pour « mets » et « de » pour « 2 » : acceptés. Pas de mot de réveil (bouton seulement). La carte d'appel cache le bouton Parler : « réponds » / « ignore » à la voix ne servent pas encore.
 - **Appels entrants** (24/10) : Vidéo, Ignorer, « Appel manqué » ; Discord en anglais ; Teams, WhatsApp, Zoom (une règle chacun dans `config/calls.json` après une capture pendant un vrai appel) ; Mac (pas fait).
-- Discord dans un salon de serveur : la liste des personnes est vide (les boutons du stream en sont retirés, les vrais participants ne sont pas lus).
+- Discord dans un salon de **serveur** (pas encore essayé : le test du 24/10 était un groupe privé, bien lu) : nom attendu « salon / serveur », liste des personnes, qui parle (illisible dans les appels privés et de groupe).
+- **Paquets sans Node** (24/10, `npm run package`, voir [developpement.md](developpement.md)) : testés sur le Mac seulement. À essayer sur le PC : extraire le zip Windows, copier le `.data` du compagnon actuel pour garder l'appairage, lancer l'installeur, vérifier une route Windows. Le changement de `helper.ts` (chemin de `helper.ps1`) n'est pas encore envoyé sur le PC.
 - Carte « Prochain rendez-vous » teintée orange (fond et heure) comme son titre : pas encore vue sur la tablette.
 
-- **Discord sans portail développeur** (24/10 soir, testé avec un appel de groupe sur le PC) : Discord expose son interface à UI Automation une fois l'accessibilité de Chromium demandée. `GET /deck/voice` lit le panneau vocal : appel ou salon, participants (vue d'appel privé), micro et sourdine. Page Discord : carte « En appel · … », touches selon l'état (`"when": "call" | "idle"` dans `deck.json`), « Quitter l'appel » = étape `press` (bouton « Déconnecter »). Plus de vert. PAS testé : « Quitter l'appel » en vrai, salon d'un serveur (nom attendu « salon / serveur »), Discord en anglais. **Qui parle** : illisible dans un appel privé (ni nom ni classe ne change) ; à vérifier dans un salon de serveur (avatar marqué). Diagnostic : `GET /deck/buttons?app=Discord&detail=true` (éléments + classes HTML).
-- **Bascule d'ordinateur patiente** (24/10 soir) : l'actif injoignable depuis moins de 2 min est seulement recherché (nouvelle adresse) ; au-delà, un autre ordinateur prend le relais. Pas encore vu en vrai (prochain redémarrage du compagnon).
-- Touche Spotify ajoutée à la page Média du PC (pas encore touchée). Corbeille : correctif d'un affichage resté après un glisser annulé.
+- **Discord sans portail développeur** (24/10 soir ; « Quitter l'appel » et « Arrêter le partage » testés ensuite) : Discord expose son interface à UI Automation une fois l'accessibilité de Chromium demandée. `GET /deck/voice` lit le panneau vocal : appel ou salon, participants (vue d'appel privé), micro et sourdine. Page Discord : carte « En appel · … », touches selon l'état (`"when": "call" | "idle"` dans `deck.json`), « Quitter l'appel » = étape `press` (bouton « Déconnecter »). Plus de vert. PAS testé : salon d'un serveur (nom attendu « salon / serveur »), Discord en anglais. **Qui parle** : illisible dans un appel privé (ni nom ni classe ne change) ; à vérifier dans un salon de serveur (avatar marqué). Diagnostic : `GET /deck/buttons?app=Discord&detail=true` (éléments + classes HTML).
+- Corbeille : correctif d'un affichage resté après un glisser annulé.
 
 - **Deck et Ouvertes** (24/10 soir, testés sur la tablette avec le PC) : onglets déplacés par appui long puis glisser (ordre gardé par ordinateur), balayage entre onglets, écrans agrandis, corbeille dans la bande du bas (garder 0,9 s puis lâcher, « Miam ! » + son). Bug vu une fois, pas reproduit : au démarrage, l'onglet Discord recouvrait Perso (revenu en déplaçant Discord) ; noter ce qui précède s'il revient.
 - Installeur Windows corrigé (24/10 soir) : la boucle de relance ne démarrait pas depuis l'installeur (PowerShell lancé en `detached` par Node) → lancée par `start` comme à l'ouverture de session ; arrêt limité à `powershell.exe` (un numéro de processus réutilisé pouvait tuer un autre programme). Vérifié sur le PC de test : installation, puis redémarrage à distance (revenu en ~9 s). Cause de l'arrêt du compagnon à 18h49 inconnue (pas d'erreur au journal, Bitdefender n'a rien signalé).
@@ -63,11 +65,10 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 ## À faire, dans l'ordre
 
 0. Bug des onglets du Deck (voir plus haut) s'il revient.
-1. **Discord** : tester « Quitter l'appel » et un salon de serveur (nom, qui parle, liste des personnes vide). Pas de RPC ni de portail développeur (décision d'Eliot : les clients ne doivent rien créer, pas de dépendance à une validation de Discord).
-2. **Spotify** : toucher la touche (s'ouvre ? la musique part ?).
-3. ~~Thèmes (lot 5)~~ : fait le 24/10 (carte « Prochain rendez-vous » corrigée, à voir).
-3b. **Voix et appels** : appels Teams / WhatsApp (captures), faire réactiver l'appli Google par Companion (tablette neuve sans adb), idées : météo, réglages de la tablette à la voix.
-4. **Logiciel de l'ordinateur sans Node** : Node embarqué + lanceur Swift sur Mac, installeur NSIS sur Windows. Choix en attente. Avec : icône pour rouvrir la page, règle du pare-feu Windows, dossier Partage dans Documents.
+1. **Paquet Windows sans Node** : l'essayer sur le PC (voir plus haut), une étape à la fois avec Eliot.
+2. **Discord** : un salon de serveur (nom, qui parle, personnes). Pas de RPC ni de portail développeur (décision d'Eliot : les clients ne doivent rien créer, pas de dépendance à une validation de Discord).
+3. **Voix et appels** : appels Teams / WhatsApp (captures pendant un vrai appel) ; idées : météo, réglages de la tablette à la voix. Réactiver l'appli Google sans adb : impossible (un device owner ne peut pas annuler `pm disable-user`), inutile car la procédure du kiosque la garde ; sans elle, Parler ouvre la commande écrite.
+4. Suite du paquet (choix du 24/10 : Node embarqué, zip + installeur actuel ; pas de NSIS ni d'appli .app pour l'instant) : icône pour rouvrir la page, règle du pare-feu Windows, dossier Partage dans Documents, mise à jour sans perdre `.data`.
 
 ## Décisions en attente
 

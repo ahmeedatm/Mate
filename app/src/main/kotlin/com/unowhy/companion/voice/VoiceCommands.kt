@@ -56,6 +56,8 @@ object VoiceCommands {
     private val TILE_VERBS = Regex("^(ouvre|ouvrir|lance|lancer|demarre|demarrer|appuie sur|appuyer sur|touche|toucher|active|activer|fais|faire|mets|mettre)\\b ?")
     private val FILLER = setOf("fenetre", "fenetres", "appli", "application", "ca", "cette", "ce", "sur", "a")
     private val ARTICLES = setOf("le", "la", "les", "l", "un", "une", "des", "du", "de", "d", "mon", "ma", "mes")
+    /** « l'écran 2 » est souvent entendu « l'écran de ». */
+    private val SCREEN_NUMBERS = mapOf("un" to 1, "une" to 1, "deux" to 2, "de" to 2, "trois" to 3, "quatre" to 4)
     private val TASK = Regex("^(?:ajoute|ajouter|note|noter|nouvelle|cree|creer)(?: une)? (?:tache|a faire)(?: :)? (.+)$")
     private val TASK_ORIGINAL = Regex("^\\s*\\S+(?:\\s+une)?\\s+(?:t[âa]che|[àa] faire)\\s*:?\\s*", RegexOption.IGNORE_CASE)
 
@@ -154,14 +156,19 @@ object VoiceCommands {
     private fun window(t: String, tiles: List<DeckTile>): VoiceCommand? {
         // « réduis le son », « ferme le micro » : pas des fenêtres.
         if (Regex("\\b(son|volume|micro|musique|ambiance|focus|bruit)\\b").containsMatchIn(t)) return null
-        Regex("^(?:mets|met|deplace|place|envoie|bouge) (.*?) ?(a gauche|a droite|en grand|en plein ecran|sur l autre ecran|sur l ecran (\\d))$").find(t)?.let { m ->
+        Regex("^(?:mets|met|mais|mes|deplace|place|envoie|bouge) (.*?) ?(a gauche|a droite|en grand|en plein ecran|sur l autre ecran|sur l ecran (\\d|un|une|deux|de|trois|quatre)|sur l ecran (?:de |du |d |a )?(gauche|droite|droit|milieu))$").find(t)?.let { m ->
             val target = m.groupValues[1]
             return when (val where = m.groupValues[2]) {
                 "a gauche" -> VoiceCommand.Window("place", target, layout = "left")
                 "a droite" -> VoiceCommand.Window("place", target, layout = "right")
                 "en grand", "en plein ecran" -> VoiceCommand.Window("max", target)
                 "sur l autre ecran" -> VoiceCommand.Window("place", target, display = 0)
-                else -> VoiceCommand.Window("place", target, display = where.takeLast(1).toInt())
+                // Écrans rangés de gauche à droite : 1 = le plus à gauche, -1 = le plus à droite, -2 = celui du milieu.
+                else -> if (m.groupValues[4].isNotEmpty()) VoiceCommand.Window("place", target, display = when (m.groupValues[4]) {
+                    "gauche" -> 1
+                    "milieu" -> -2
+                    else -> -1
+                }) else VoiceCommand.Window("place", target, display = SCREEN_NUMBERS[m.groupValues[3]] ?: m.groupValues[3].toInt())
             }
         }
         Regex("^(reduis|reduire|reduit|minimise|minimiser|cache|cacher) ?(.*)$").find(t)?.let { return VoiceCommand.Window("minimize", it.groupValues[2]) }
@@ -275,7 +282,7 @@ object VoiceCommands {
 
     /** « ouvre en cabane » → « en cabane » : l'appli ou la fenêtre désignée par une variante entendue. */
     fun target(text: String): String? =
-        Regex("^(?:ouvre|ouvrir|lance|lancer|demarre|demarrer|reduis|reduire|agrandis|agrandir|ferme|fermer|montre|affiche|passe sur|va sur|mets|deplace) (.+?)(?: a gauche| a droite| en grand| sur l autre ecran| sur l ecran \\d)?$")
+        Regex("^(?:ouvre|ouvrir|lance|lancer|demarre|demarrer|reduis|reduire|agrandis|agrandir|ferme|fermer|montre|affiche|passe sur|va sur|mets|mais|mes|deplace) (.+?)(?: a gauche| a droite| en grand| sur l autre ecran| sur l ecran (?:\\d|un|une|deux|de|trois|quatre)| sur l ecran (?:de |du |d |a )?(?:gauche|droite|droit|milieu))?$")
             .find(normalize(text))?.groupValues?.get(1)
 
     fun words(text: String) = normalize(text).split(" ").filter { it.isNotEmpty() && it !in ARTICLES && it !in FILLER }

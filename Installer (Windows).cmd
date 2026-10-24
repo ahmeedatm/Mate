@@ -4,8 +4,17 @@ rem a chaque ouverture de session (voir backend\scripts\service.ts). Relancer ce
 chcp 65001 >nul
 if not exist "%~dp0backend\package.json" goto :nobackend
 cd /d "%~dp0backend" || goto :fail
+rem Paquet client (npm run package) : node embarque, serveur deja regroupe dans dist.
+if exist "node\node.exe" goto :embedded
 
-where node >nul 2>nul || goto :nonode
+where node >nul 2>nul || goto :embedded
+echo Installation...
+"node\node.exe" --env-file-if-exists=.env dist\service.mjs install || goto :fail
+echo.
+pause
+exit /b 0
+
+:nonode
 node -e "process.exit(+process.versions.node.split('.')[0] >= 22 ? 0 : 1)" || goto :nonode
 
 echo Installation des dependances...
