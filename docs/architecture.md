@@ -11,7 +11,7 @@ Une tablette Unowhy 4.2 (Android 10, lente) posée à côté de l'ordinateur ser
 │ Appli Android Kotlin, en kiosque            │  WiFi      │ Node 22 + Fastify, port 3000                          │
 │ MainActivity + un Fragment par mode         │ ─HTTP────▶ │ server.ts : routes, jeton                             │
 │ BackendClient (HttpURLConnection)           │  + jeton   │ deck.ts → os.ts ─┬─ mac/ (osascript, JXA)             │
-│ RemoteChannel (long-polling) ◀──────────────│─ ordres ── │ tablet.ts (file   └─ win/ (PowerShell résident + C#)  │
+│ RemoteChannel (long-polling) ◀──────────────│─ ordres ── │ tablet.ts (file   └─ win/ (UnowhyHelper.exe, C#)      │
 │ Discovery (UDP) ◀──────── diffusion ────────│─ UDP ───── │   d'ordres)        calendar, tasks, events, camera…   │
 └─────────────────────────────────────────────┘            │ .data/ : données de cet ordinateur                   │
         │ Open-Meteo (météo, sans clé)                     └───────────────────────────────────────────────────────┘
@@ -31,11 +31,11 @@ Pas de serveur dans le cloud : chaque ordinateur a son compagnon, la tablette pa
 
 ### Le compagnon de l'ordinateur (`backend/`)
 
-- **Node 22, TypeScript lancé par `tsx`** (pas de compilation), **Fastify**. Démarre seul à l'ouverture de session (`scripts/service.ts` : LaunchAgent sur Mac, clé Run + `scripts/run-windows.ps1` sur Windows).
+- **Node 22, TypeScript lancé par `tsx`** (pas de compilation), **Fastify**. Démarre seul à l'ouverture de session (`scripts/service.ts` : LaunchAgent sur Mac, clé Run + lanceur sans fenêtre `src/win/UnowhyCompanion.exe` sur Windows).
 - **`server.ts`** déclare toutes les routes (contrat de l'API) et vérifie le jeton `Authorization: Bearer`. Sans jeton : `/health`, `/pair/*`, la page locale `GET /` (seulement depuis l'ordinateur).
 - **`os.ts`** est le seul point d'entrée vers le système : il appelle `mac/` ou `win/` selon l'OS. Ajouter une action système = l'écrire dans les deux.
   - **Mac** (`src/mac/`) : `osascript` en AppleScript ou JXA. Frappes en CGEvent (System Events refuse les saisies), fenêtres par l'Accessibilité + NSScreen + CoreGraphics. Demande l'autorisation Accessibilité.
-  - **Windows** (`src/win/`) : un **Windows PowerShell 5.1 résident** (`helper.ps1`) qui compile `native.cs` (C# 5 : fenêtres, son, frappes, UI Automation) et lit les contrôles multimédias WinRT. `helper.ts` lui envoie des commandes JSON ligne par ligne. Les deux fichiers sont copiés dans `%LOCALAPPDATA%\UnowhyCompanion\helper` avant lancement pour ne pas verrouiller les originaux.
+  - **Windows** (`src/win/`) : un **programme résident `UnowhyHelper.exe`** (C# .NET Framework 4.8, compilé d'avance : `native.cs` pour fenêtres, son, frappes ; `helper/Program.cs` pour l'UI Automation ; `helper/Media.cs` pour les contrôles multimédias WinRT). `helper.ts` lui envoie des commandes JSON ligne par ligne. L'exe est copié dans `%LOCALAPPDATA%\UnowhyCompanion\helper` avant lancement pour ne pas verrouiller l'original. Pas de PowerShell : un script qui compile du C# de frappes à la volée était classé malveillant par Bitdefender.
 - **`.data/`** (non versionné) : tout ce qui est propre à cet ordinateur (voir « Où sont les données »).
 
 ## Les flux principaux
@@ -139,7 +139,7 @@ Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/upda
 ## Ajouter une fonction : les recettes
 
 - **Nouvelle route** : la déclarer dans `server.ts` (avec son schéma), l'appeler dans `BackendClient.kt`. Erreur pour l'utilisateur = `throw new Error("phrase en français")`.
-- **Nouvelle action système** : l'ajouter à `os.ts`, l'écrire dans `mac/` **et** `win/` (C# 5 seulement dans `native.cs`, pas d'accents dans `helper.ps1`).
+- **Nouvelle action système** : l'ajouter à `os.ts`, l'écrire dans `mac/` **et** `win/` (C# 7.3 dans `win/helper/` et `native.cs`, puis `npm run build:helper`).
 - **Nouvelle étape de touche** : type dans `deck.ts` (`runAction`), et dans `KeyEditor` si elle se règle depuis la tablette.
 - **Nouvel ordre vers la tablette** : type dans `tablet.ts` + schéma dans `server.ts` + outil dans `mcp.ts` + branche dans `RemoteChannel.execute`.
 - **Nouveau widget d'Accueil** : le déclarer dans `WidgetModel`, le construire dans `HomeWidgets` (ou un fichier dédié de `ui/home/`).

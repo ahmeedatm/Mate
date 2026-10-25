@@ -6,21 +6,18 @@ import path from "node:path";
 import { backendRoot } from "../config.ts";
 
 /**
- * Processus PowerShell résident (helper.ps1) qui exécute le code natif de native.cs : lancer un
- * PowerShell par action prendrait 1 à 2 s (démarrage + compilation), trop lent pour un deck.
+ * Pilote Windows résident (UnowhyHelper.exe, compilé depuis helper/ et native.cs par `npm run build:helper`) :
+ * un processus par action serait trop lent pour un deck. Un exe compilé d'avance et pas PowerShell : Bitdefender
+ * classait le script et sa compilation à l'exécution en cmd:Heur.BZC.PZQ.Boxter.
  * Une requête à la fois, réponses dans l'ordre ; relancé au besoin s'il meurt ou ne répond plus.
  */
 
 // Depuis la racine du backend : le paquet client tourne sur un seul fichier (dist/server.mjs).
 const HERE = path.join(backendRoot, "src", "win");
-/** Fichiers lus par PowerShell : helper.ps1 et native.cs (qu'il compile). */
-const FILES = ["helper.ps1", "native.cs"];
-/**
- * Dossier fixe des copies (pas le dossier temporaire) : un antivirus (Bitdefender) met en quarantaine un script
- * PowerShell apparu dans Temp, et un chemin fixe permet de lui ajouter une exception une fois pour toutes.
- */
+const EXE = "UnowhyHelper.exe";
+/** Dossier fixe des copies (pas le dossier temporaire, où un antivirus se méfie d'un programme apparu). */
 const RUN_ROOT = path.join(process.env.LOCALAPPDATA ?? os.tmpdir(), "UnowhyCompanion", "helper");
-const STARTUP_TIMEOUT_MS = 60_000; // première compilation sur un PC lent
+const STARTUP_TIMEOUT_MS = 30_000;
 const REQUEST_TIMEOUT_MS = 30_000;
 
 type Reply = { ok: boolean; result?: unknown; error?: string; fatal?: boolean };
@@ -53,23 +50,19 @@ function next(timeoutMs: number): Promise<Reply> {
 }
 
 function start(): Promise<void> {
-  // PowerShell tourne sur une copie : Windows interdit de remplacer un script en cours d'exécution, ce qui bloquait
-  // la mise à jour de helper.ps1 et native.cs tant que le compagnon tournait.
+  // L'exe tourne sur une copie : Windows interdit de remplacer un programme en cours d'exécution, ce qui bloquerait
+  // sa mise à jour tant que le compagnon tourne.
   fs.mkdirSync(RUN_ROOT, { recursive: true });
   const dir = fs.mkdtempSync(path.join(RUN_ROOT, "run-"));
-  for (const file of FILES) fs.copyFileSync(path.join(HERE, file), path.join(dir, file));
+  fs.copyFileSync(path.join(HERE, EXE), path.join(dir, EXE));
   runDir = dir;
-  const proc = spawn(
-    "powershell.exe",
-    ["-NoLogo", "-NoProfile", "-NonInteractive", "-STA", "-ExecutionPolicy", "Bypass", "-File", path.join(dir, "helper.ps1")],
-    { windowsHide: true },
-  );
+  const proc = spawn(path.join(dir, EXE), [], { windowsHide: true });
   child = proc;
   const stderr: string[] = [];
   proc.stderr.on("data", (d: Buffer) => stderr.push(d.toString()));
-  proc.on("error", (e) => stop(`PowerShell introuvable : ${e.message}`));
+  proc.on("error", (e) => stop(`Pilote Windows introuvable : ${e.message}`));
   proc.on("exit", () => {
-    if (child === proc) stop(`PowerShell s'est arrêté ${stderr.join("").trim().slice(0, 300)}`.trim());
+    if (child === proc) stop(`Le pilote Windows s'est arrêté ${stderr.join("").trim().slice(0, 300)}`.trim());
   });
   createInterface({ input: proc.stdout }).on("line", (line) => {
     if (!line.startsWith("@@")) return;
@@ -79,7 +72,7 @@ function start(): Promise<void> {
     try {
       waiter.resolve(JSON.parse(line.slice(2)) as Reply);
     } catch {
-      waiter.resolve({ ok: false, error: "Réponse illisible de PowerShell" });
+      waiter.resolve({ ok: false, error: "Réponse illisible du pilote Windows" });
     }
   });
   return next(STARTUP_TIMEOUT_MS).then((r) => {

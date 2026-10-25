@@ -1,6 +1,6 @@
-// Pilotage de Windows pour le compagnon : compilé une fois par helper.ps1 (Add-Type, Windows PowerShell 5.1),
-// appelé ligne par ligne par src/win/helper.ts. C# 5 seulement (compilateur du .NET Framework) : pas
-// d'interpolation de chaînes, pas de ?., pas de membres "=>".
+// Pilotage de Windows pour le compagnon : compilé dans UnowhyHelper.exe avec helper/ (npm run build:helper),
+// appelé ligne par ligne par src/win/helper.ts. Écrit en C# 5 (ancienne compilation par PowerShell) ; le projet
+// accepte maintenant C# 7.3.
 //
 // Requête : {"op": "...", ...} ; réponse : {"ok": true, "result": ...} ou {"ok": false, "error": "..."}.
 

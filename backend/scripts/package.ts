@@ -9,7 +9,7 @@ import { build } from "esbuild";
  * Paquets du logiciel de l'ordinateur, sans Node à installer : `npm run package` (sur le Mac).
  *
  * Chaque zip contient l'installeur à double-cliquer, le serveur regroupé en un fichier (dist/server.mjs, et
- * dist/service.mjs pour le lancement automatique), les fichiers lus à l'exécution (config, helper.ps1…) et
+ * dist/service.mjs pour le lancement automatique), les fichiers lus à l'exécution (config, UnowhyHelper.exe…) et
  * le node officiel de nodejs.org (signé par l'OpenJS Foundation), vérifié par sa somme SHA-256.
  *
  *   ../dist/Compagnon-Unowhy-Windows.zip   node.exe (x64)
@@ -97,8 +97,8 @@ async function stage(platform: "windows" | "mac", sums: string): Promise<string>
 
   if (platform === "windows") {
     copy(path.join(repo, "Installer (Windows).cmd"), path.join(root, "Installer (Windows).cmd"));
-    for (const f of ["helper.ps1", "native.cs"]) copy(path.join(backend, "src", "win", f), path.join(dest, "src", "win", f));
-    for (const f of ["run-windows.ps1", "firewall-windows.ps1"]) copy(path.join(backend, "scripts", f), path.join(dest, "scripts", f));
+    for (const f of ["UnowhyHelper.exe", "UnowhyCompanion.exe"]) copy(path.join(backend, "src", "win", f), path.join(dest, "src", "win", f));
+    copy(path.join(backend, "scripts", "firewall-windows.ps1"), path.join(dest, "scripts", "firewall-windows.ps1"));
     copy(path.join(backend, "assets", "compagnon.ico"), path.join(dest, "assets", "compagnon.ico"));
     // Extension du navigateur (onglets sur la tablette) : à charger depuis ce dossier, mode développeur.
     for (const f of fs.readdirSync(path.join(backend, "extension"))) copy(path.join(backend, "extension", f), path.join(root, "Extension navigateur", f));

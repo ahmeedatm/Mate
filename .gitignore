@@ -23,6 +23,8 @@ dist/
 .env.*
 !.env.example
 *.log
+backend/src/win/*/bin/
+backend/src/win/*/obj/
 
 # Données perso du compagnon
 backend/.cache/

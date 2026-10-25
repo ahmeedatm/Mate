@@ -3,7 +3,7 @@ rem Double-clic : installe le compagnon sur ce PC Windows. Il demarrera ensuite 
 rem a chaque ouverture de session (voir backend\scripts\service.ts). Relancer ce fichier pour mettre a jour.
 chcp 65001 >nul
 set "BACKEND=%~dp0backend"
-if not exist "%BACKEND%\scripts\run-windows.ps1" goto :nobackend
+if not exist "%BACKEND%\src\win\UnowhyCompanion.exe" goto :nobackend
 cd /d "%BACKEND%" || goto :fail
 rem Paquet client (npm run package) : node embarque, serveur deja regroupe dans dist.
 if exist "%BACKEND%\dist\server.mjs" goto :embedded

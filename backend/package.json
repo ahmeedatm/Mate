@@ -16,7 +16,8 @@
     "service:start": "tsx --env-file-if-exists=.env scripts/service.ts start",
     "service:stop": "tsx --env-file-if-exists=.env scripts/service.ts stop",
     "service:status": "tsx --env-file-if-exists=.env scripts/service.ts status",
-    "package": "tsx scripts/package.ts"
+    "package": "tsx scripts/package.ts",
+    "build:helper": "tsx scripts/build-helper.ts"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.6",

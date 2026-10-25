@@ -7,7 +7,8 @@ import { backendRoot as backend, dataDir, packaged as bundled, userFolder } from
 /**
  * Lancement automatique du backend à l'ouverture de session, sans terminal :
  * - macOS : agent launchd (~/Library/LaunchAgents), relancé s'il s'arrête ;
- * - Windows : entrée « Exécuter » de la session (HKCU\…\Run), PowerShell caché qui relance node.
+ * - Windows : entrée « Exécuter » de la session (HKCU\…\Run), lanceur sans fenêtre qui relance node
+ *   (src/win/UnowhyCompanion.exe : pas de PowerShell caché, que les antivirus bloquent).
  *
  *   npm run service:install     installe et démarre
  *   npm run service:stop        arrête (pour lancer `npm run dev` à la place)
@@ -133,17 +134,20 @@ ${args}
 
 // --- Windows
 
-/** Ligne de commande de la boucle (run-windows.ps1), la même dans la clé Run et au démarrage par l'installeur. */
+const LAUNCHER = "UnowhyCompanion.exe";
+
+/** Ligne de commande du lanceur, la même dans la clé Run et au démarrage par l'installeur. */
 function windowsCommand(node: string) {
-  const script = path.join(backend, "scripts", "run-windows.ps1");
-  const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", script, "-Node", node, "-LogDir", logDir, "-DataDir", dataDir];
+  const exe = path.join(backend, "src", "win", LAUNCHER);
+  const args = ["--node", node, "--backend", backend, "--logs", logDir, "--data", dataDir];
   const quote = (a: string) => (/[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a);
-  return ["powershell.exe", ...args].map(quote).join(" ");
+  return [exe, ...args].map(quote).join(" ");
 }
 
 /**
  * Lance la boucle comme à l'ouverture de session : `start` de cmd, qui la détache vraiment de ce processus.
  * (Un PowerShell lancé directement en `detached` par Node ne démarrait pas le script sur le PC de test.)
+ * `start` prend le premier argument entre guillemets pour un titre : d'où le titre vide.
  */
 function winStart(node: string) {
   spawn("cmd.exe", ["/d", "/s", "/c", `"start "" /min ${windowsCommand(node)}"`], {
@@ -151,11 +155,16 @@ function winStart(node: string) {
   }).unref();
 }
 
-/** Arrête la boucle notée dans service.pid, seulement si c'est bien un PowerShell : le numéro a pu être redonné à un autre programme. */
+/**
+ * Arrête la boucle notée dans service.pid, seulement si c'est bien le lanceur (ou le PowerShell des anciennes
+ * installations) : le numéro a pu être redonné à un autre programme.
+ */
 async function winStop() {
   for (const file of pidFiles) {
     const pid = fs.existsSync(file) ? fs.readFileSync(file, "utf8").trim() : "";
-    if (/^\d+$/.test(pid)) await sh("taskkill", ["/F", "/T", "/FI", `PID eq ${pid}`, "/FI", "IMAGENAME eq powershell.exe"]);
+    if (/^\d+$/.test(pid)) {
+      for (const image of [LAUNCHER, "powershell.exe"]) await sh("taskkill", ["/F", "/T", "/FI", `PID eq ${pid}`, "/FI", `IMAGENAME eq ${image}`]);
+    }
     fs.rmSync(file, { force: true });
   }
 }

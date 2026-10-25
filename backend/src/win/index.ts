@@ -189,7 +189,7 @@ export async function mediaControl(action: MediaAction, app?: string, positionMs
 }
 
 /** Vignette de ce qui joue (pochette, image de la vidéo) écrite dans `out`. */
-/** Page ouverte dans le navigateur au premier plan (le plus en avant des navigateurs) : voir helper.ps1. */
+/** Page ouverte dans le navigateur au premier plan (le plus en avant des navigateurs) : voir helper/Program.cs. */
 export function browserPage() {
   return call<{ found: boolean; url?: string; title?: string; browser?: string }>("browser");
 }
