@@ -1,6 +1,6 @@
 # État du projet
 
-Mis à jour le 25/10/2026 (nuit, 4e session). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
+Mis à jour le 25/10/2026 (5e session : MCP revérifié, extension de navigateur reportée à la vente, poste de dev installé sur le PC perso d'Eliot, sans changement du code). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
 
 ## Pourquoi ce projet
 
