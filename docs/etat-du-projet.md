@@ -73,7 +73,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 0. Bug des onglets du Deck (voir plus haut) s'il revient.
 1. **Voix et appels** : appels Teams / WhatsApp (captures pendant un vrai appel, reporté par Eliot) ; idées : météo, réglages de la tablette à la voix. Réactiver l'appli Google sans adb : impossible (un device owner ne peut pas annuler `pm disable-user`), inutile car la procédure du kiosque la garde ; sans elle, Parler ouvre la commande écrite.
-2. **Paquet** : relance du compagnon Mac à l'ouverture de session (pas encore vue : le Mac n'avait pas redémarré depuis 44 jours ; `RunAtLoad` + `KeepAlive` vérifiés dans le LaunchAgent). Pas de NSIS ni d'appli .app pour l'instant.
+2. **Paquet** : relance du compagnon Mac à l'ouverture de session : vue le 25/10 (Mac redémarré, compagnon relancé seul, Accessibilité gardée). Pas de NSIS ni d'appli .app pour l'instant.
 
 ## Décisions en attente
 
