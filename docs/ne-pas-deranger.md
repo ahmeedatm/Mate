@@ -6,11 +6,6 @@ Quand le chrono de concentration démarre sur la tablette (écran Focus, pastill
 
 Rien à installer. Le compagnon ouvre le centre de notifications (Win+N), bascule l'interrupteur Ne pas déranger et le referme : le panneau s'affiche environ une demi-seconde.
 
-## Mac : deux raccourcis à créer une fois
+## Mac
 
-macOS n'a pas de commande pour la concentration ; l'appli Raccourcis, si. Dans **Raccourcis**, créer :
-
-1. **Compagnon Ne pas déranger** : action « Définir la concentration » → **Activer** « Ne pas déranger » **jusqu'à ce que je le désactive**.
-2. **Compagnon Fin Ne pas déranger** : action « Définir la concentration » → **Désactiver** « Ne pas déranger ».
-
-Les noms doivent être exactement ceux-ci. Sans eux, la tablette n'affiche pas d'erreur : le Focus marche, sans Ne pas déranger. Vérifier : `shortcuts list` dans le Terminal.
+Rien à installer non plus. Le compagnon ouvre le Centre de contrôle, bascule Ne pas déranger dans le détail de la Concentration et le referme : le panneau s'affiche environ une seconde. Il utilise l'autorisation Accessibilité déjà demandée pour les fenêtres ; les éléments sont trouvés par leur identifiant, pas par leur texte, donc quelle que soit la langue du Mac (vérifié sur macOS 15). Si une autre concentration est déjà active (Travail, Sommeil…), il n'y touche pas.

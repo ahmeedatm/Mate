@@ -127,10 +127,10 @@ export function setAudio(change: { output?: number; outputDelta?: number; muted?
   unsupported();
 }
 
-/** Ne pas déranger de l'ordinateur. null : état inconnu (Mac : pas lisible). */
+/** Ne pas déranger de l'ordinateur. null : état inconnu. */
 export async function getDnd(): Promise<boolean | null> {
   if (isWindows) return win.getDnd();
-  if (isMac) return null;
+  if (isMac) return macDnd.getDnd();
   unsupported();
 }
 
