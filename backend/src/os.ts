@@ -5,6 +5,7 @@ import * as macAccess from "./mac/access.ts";
 import * as macApps from "./mac/apps.ts";
 import * as macAudio from "./mac/audio.ts";
 import * as macBrowser from "./mac/browser.ts";
+import * as macDnd from "./mac/dnd.ts";
 import { extensionFrontPage, extensionTabs } from "./browser-extension.ts";
 import * as macKeys from "./mac/keys.ts";
 import * as macWindows from "./mac/windows.ts";
@@ -123,6 +124,19 @@ export function getAudio() {
 export function setAudio(change: { output?: number; outputDelta?: number; muted?: boolean; micMuted?: boolean }) {
   if (isMac) return macAudio.setAudio(change);
   if (isWindows) return win.setAudio(change);
+  unsupported();
+}
+
+/** Ne pas déranger de l'ordinateur. null : état inconnu (Mac : pas lisible). */
+export async function getDnd(): Promise<boolean | null> {
+  if (isWindows) return win.getDnd();
+  if (isMac) return null;
+  unsupported();
+}
+
+export async function setDnd(on: boolean): Promise<boolean | null> {
+  if (isWindows) return win.setDnd(on);
+  if (isMac) return macDnd.setDnd(on);
   unsupported();
 }
 

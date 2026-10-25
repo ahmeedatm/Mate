@@ -11,7 +11,7 @@ import {
   appIconFile, runAction, tileIcon,
 } from "./deck.ts";
 import {
-  accessibility, appAudio, browserPage, browserTabs, isAppRunning, listButtons, openAccessibility, canControl, focusWindow, getAudio, launchApp, listApps, mediaControl, mediaSessions, mediaThumb, listDisplays, listOpenWindows, listShortcuts, listWindows, controlOpenWindow, openTarget, osName, placeWindow, setAudio, typeText, voiceState,
+  accessibility, appAudio, browserPage, browserTabs, isAppRunning, listButtons, openAccessibility, canControl, focusWindow, getAudio, getDnd, launchApp, listApps, mediaControl, mediaSessions, mediaThumb, listDisplays, listOpenWindows, listShortcuts, listWindows, controlOpenWindow, openTarget, osName, placeWindow, setAudio, typeText, voiceState,
 } from "./os.ts";
 import type { Layout, OpenAction, WindowTarget } from "./screens.ts";
 import { keySchema, loadKeys, saveKey, SLOTS, type PersoKey } from "./perso.ts";
@@ -25,6 +25,7 @@ import { addEvent, deleteEvent, startEventReminders, updateEvent, type EventInpu
 import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvider, loginUrl } from "./accounts.ts";
 import { autoJoinEnabled, joinMeeting, setAutoJoin, startAutoJoin } from "./meetings.ts";
 import { answerCall, currentCall, declineCall, hangUp, startCallWatch } from "./calls.ts";
+import { focusDnd } from "./dnd.ts";
 import { addTask, deleteTask, listRecurring, listTasks, setTaskDone, startReminders, taskUrl } from "./tasks.ts";
 import { receiveTabs, type ExtensionReport } from "./browser-extension.ts";
 import { addViewer, CAMERA_STATUSES, cameraStatus, pushFrame, setCameraState, VIEWER_PAGE, type CameraStatus } from "./camera.ts";
@@ -503,6 +504,24 @@ app.post<{ Body: { output?: number; outputDelta?: number; muted?: boolean; micMu
     },
   },
   async (req) => setAudio(req.body),
+);
+
+// Ne pas déranger de l'ordinateur pendant le Focus de la tablette (voir src/dnd.ts).
+app.get("/system/dnd", async () => ({ on: await getDnd() }));
+
+app.post<{ Body: { on: boolean; minutes?: number } }>(
+  "/system/dnd",
+  {
+    schema: {
+      body: {
+        type: "object",
+        additionalProperties: false,
+        required: ["on"],
+        properties: { on: { type: "boolean" }, minutes: { type: "integer", minimum: 1, maximum: 240 } },
+      },
+    },
+  },
+  async (req) => focusDnd(req.body.on, req.body.minutes),
 );
 
 // Son d'une appli (page du deck liée à une appli : Discord…). Lu en boucle par la tablette tant que la page est affichée.

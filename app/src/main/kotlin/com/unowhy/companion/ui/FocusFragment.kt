@@ -12,6 +12,8 @@ import android.widget.TextView
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.unowhy.companion.MainActivity
+import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
@@ -59,6 +61,16 @@ class FocusFragment : Fragment() {
             val button = chip(getString(R.string.focus_preset, focus, pause)) { FocusTimer.setPreset(focus, pause) }
             presets.addView(button, chipParams())
             presetButtons += focus to button
+        }
+
+        view.findViewById<Button>(R.id.focus_dnd).apply {
+            isSelected = Prefs.focusDnd(context)
+            setOnClickListener {
+                isSelected = !isSelected
+                Prefs.setFocusDnd(context, isSelected)
+                // Pris en compte tout de suite, même en pleine concentration.
+                (activity as? MainActivity)?.followFocusDnd(FocusTimer.state)
+            }
         }
 
         val noises = view.findViewById<LinearLayout>(R.id.focus_noises)

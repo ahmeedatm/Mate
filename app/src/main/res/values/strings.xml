@@ -251,6 +251,7 @@
     <string name="focus_skip">Passer</string>
     <string name="focus_reset">Réinitialiser</string>
     <string name="focus_preset">%1$d / %2$d min</string>
+    <string name="focus_dnd">Ne pas déranger sur l\'ordi</string>
     <string name="focus_phase_work">Concentration</string>
     <string name="focus_phase_break">Pause</string>
     <string name="focus_count">Sessions terminées : %1$d</string>

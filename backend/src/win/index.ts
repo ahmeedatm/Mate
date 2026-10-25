@@ -289,6 +289,16 @@ export async function systemCommand(command: "sleep-display" | "toggle-dark-mode
   await call("system", { command });
 }
 
+/** Ne pas déranger : lu dans les réglages, sans rien ouvrir (null : inconnu). */
+export async function getDnd(): Promise<boolean | null> {
+  return (await call<{ on: boolean | null }>("dnd", {})).on;
+}
+
+/** Bascule l'interrupteur du centre de notifications (affiché ~0,5 s), seulement si l'état doit changer. */
+export async function setDnd(on: boolean): Promise<boolean | null> {
+  return (await call<{ on: boolean | null }>("dnd", { on }, 10_000)).on;
+}
+
 /** Message au premier plan (code d'appairage), sans attendre qu'il soit fermé. */
 export async function alert(title: string, text: string) {
   await call("alert", { title, text });

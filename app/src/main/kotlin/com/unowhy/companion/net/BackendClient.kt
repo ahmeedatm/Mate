@@ -249,6 +249,11 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
     /** Lance une appli installée sur l'ordinateur (nom tel que dans `deckCatalog().apps`). */
     suspend fun launchApp(name: String) = io { postJson("/apps/launch", JSONObject().put("name", name)); Unit }
 
+    /** Ne pas déranger de l'ordinateur pendant le Focus (src/dnd.ts) ; `minutes` : temps restant, pour le minuteur de secours. */
+    suspend fun focusDnd(on: Boolean, minutes: Int) = io {
+        postJson("/system/dnd", JSONObject().put("on", on).put("minutes", minutes.coerceIn(1, 240))); Unit
+    }
+
     /** Appel entrant (src/calls.ts) : appuie sur Répondre (ou Vidéo) / Ignorer dans l'appli. */
     suspend fun answerCall(app: String, video: Boolean) = io { postJson("/calls/answer", JSONObject().put("app", app).put("video", video)); Unit }
 

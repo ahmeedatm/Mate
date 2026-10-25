@@ -318,6 +318,80 @@ function Get-Voice($req) {
   $state
 }
 
+# --- Ne pas deranger (Windows 11). Aucune voie invisible ne marche (verifie sur 26H2) : l'etat WNF des heures
+# calmes est ignore, la session de concentration (FocusSessionManager) est reservee par Microsoft, et le reglage
+# du CloudStore n'est que le reflet de l'etat (ecrit, il n'est pas applique). On bascule donc l'interrupteur du
+# centre de notifications (Win+N, AutomationId DoNotDisturbButton, motif Toggle) et on le referme : ~0,5 s a l'ecran.
+# Lecture sans rien ouvrir : le reflet du CloudStore (profil Unrestricted = desactive).
+
+$DndKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\CloudStore\Store\DefaultAccount\Current\default$windows.data.donotdisturb.quiethourssettings\windows.data.donotdisturb.quiethourssettings'
+
+function Get-DndState {
+  $data = (Get-ItemProperty -LiteralPath $DndKey -ErrorAction SilentlyContinue).Data
+  if (-not $data) { return $null }
+  $text = -join ($data | ForEach-Object { if ($_ -ge 0x20 -and $_ -lt 0x7f) { [char]$_ } })
+  if ($text -notmatch 'QuietHoursProfile\.([A-Za-z]+)') { return $null }
+  $Matches[1] -ne 'Unrestricted'
+}
+
+function Initialize-Keys {
+  if ('Companion.Keys' -as [type]) { return }
+  Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+namespace Companion {
+  public static class Keys {
+    [DllImport("user32.dll")] static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+    public static void Chord(params byte[] vks) {
+      foreach (var vk in vks) keybd_event(vk, 0, 0, UIntPtr.Zero);
+      for (int i = vks.Length - 1; i >= 0; i--) keybd_event(vks[i], 0, 2, UIntPtr.Zero);
+    }
+  }
+}
+'@
+}
+
+function Set-Dnd($req) {
+  $now = Get-DndState
+  if ($null -eq $req.on) { return @{ on = $now } }
+  $want = [bool]$req.on
+  if ($now -eq $want) { return @{ on = $want } }
+  if (-not ('System.Windows.Automation.AutomationElement' -as [type])) {
+    Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+  }
+  Initialize-Keys
+  $auto = [System.Windows.Automation.AutomationElement]
+  $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
+  $isButton = New-Object System.Windows.Automation.PropertyCondition -ArgumentList $auto::AutomationIdProperty, 'DoNotDisturbButton'
+  [Companion.Keys]::Chord(0x5B, 0x4E) # Win+N
+  $panel = $null
+  $button = $null
+  $clock = [Diagnostics.Stopwatch]::StartNew()
+  # Le panneau prend le focus : on remonte de l'element focalise jusqu'a sa fenetre.
+  while (-not $button -and $clock.ElapsedMilliseconds -lt 3000) {
+    Start-Sleep -Milliseconds 100
+    $w = $auto::FocusedElement
+    while ($w) {
+      $parent = $walker.GetParent($w)
+      if ($null -eq $parent -or $parent -eq $auto::RootElement) { break }
+      $w = $parent
+    }
+    if ($w -and $w.Current.ClassName -eq 'Windows.UI.Core.CoreWindow') {
+      $panel = $w
+      $button = $w.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $isButton)
+    }
+  }
+  try {
+    if (-not $button) { throw 'Bouton Ne pas deranger introuvable dans le centre de notifications' }
+    $toggle = $button.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+    if (([string]$toggle.Current.ToggleState -eq 'On') -ne $want) { $toggle.Toggle() }
+  } finally {
+    # Echap seulement si le panneau a bien pris le focus : sinon la touche irait a l'appli au premier plan (un jeu).
+    if ($panel) { Start-Sleep -Milliseconds 150; [Companion.Keys]::Chord(0x1B) }
+  }
+  @{ on = $want }
+}
+
 $stdout.WriteLine('@@{"ok":true,"result":"ready"}')
 while ($true) {
   $line = $stdin.ReadLine()
@@ -338,6 +412,11 @@ while ($true) {
     if ($req.op -eq 'voice') {
       $result = Get-Voice $req
       $stdout.WriteLine('@@{"ok":true,"result":' + (ConvertTo-Json -Compress -Depth 4 -InputObject $result) + '}')
+      continue
+    }
+    if ($req.op -eq 'dnd') {
+      $result = Set-Dnd $req
+      $stdout.WriteLine('@@{"ok":true,"result":' + (ConvertTo-Json -Compress -InputObject $result) + '}')
       continue
     }
     if ($req.op -eq 'media') {

@@ -325,6 +325,19 @@ class MainActivity : AppCompatActivity() {
         val label = railItems.getValue(Mode.FOCUS).label
         val active = state.running || state.remainingMs < state.durationMs
         label.text = if (active) FocusTimer.format(state.remainingMs) else getString(R.string.mode_focus)
+        followFocusDnd(state)
+    }
+
+    // Ne pas déranger sur l'ordinateur pendant la concentration (pas pendant la pause). L'ordinateur ne rend que
+    // ce qu'il a activé, et le rend seul si la tablette ne revient pas (backend/src/dnd.ts).
+    private var focusDnd: Boolean? = null
+
+    fun followFocusDnd(state: FocusTimer.State) {
+        val wanted = state.running && state.phase == FocusTimer.Phase.FOCUS && Prefs.focusDnd(this)
+        if (wanted == focusDnd || (focusDnd == null && !wanted)) return
+        focusDnd = wanted
+        val minutes = ((state.remainingMs + 59_999) / 60_000).toInt()
+        lifecycleScope.launch { runCatching { BackendClient(this@MainActivity).focusDnd(wanted, minutes) } }
     }
 
     override fun onStart() {

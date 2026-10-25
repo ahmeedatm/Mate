@@ -11,6 +11,7 @@ object Prefs {
     private const val KEY_NIGHT_DIM = "night_dim"
     private const val KEY_DECK_TABS = "deck_tabs_"
     private const val KEY_THEME = "theme"
+    private const val KEY_FOCUS_DND = "focus_dnd"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -37,6 +38,13 @@ object Prefs {
 
     fun setNightDim(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_NIGHT_DIM, value).apply()
+    }
+
+    /** Ne pas déranger sur l'ordinateur pendant la concentration du Focus. Activé par défaut. */
+    fun focusDnd(context: Context): Boolean = prefs(context).getBoolean(KEY_FOCUS_DND, true)
+
+    fun setFocusDnd(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_FOCUS_DND, value).apply()
     }
 
     /** Kiosque : installations permises (mise à jour de l'appli par adb). Bloquées par défaut. */

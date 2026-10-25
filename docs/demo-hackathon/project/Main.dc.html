@@ -1,0 +1,1201 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Démo Compagnon</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0D12}
+*{box-sizing:border-box}
+.card{background:var(--sf);border:1px solid var(--st);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0;min-height:0}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.dim{color:var(--dim)}
+.btn{font:inherit;font-size:14px;font-weight:600;border:0;border-radius:12px;min-height:44px;padding:0 16px;background:var(--sf2);color:var(--tx);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn:hover{filter:brightness(1.12)}
+.acc{background:var(--ac);color:var(--onac)}
+.ok{background:#5DD39E;color:#0C0F14}
+.ko{background:#FF6B6B;color:#0C0F14}
+.rb{font:inherit;width:62px;height:58px;border:0;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;font-weight:600}
+.pill{font:inherit;font-size:13px;font-weight:600;border:1px solid #242B36;border-radius:999px;height:38px;padding:0 13px;cursor:pointer;white-space:nowrap}
+.tab{font:inherit;font-size:13px;font-weight:600;border:0;border-radius:999px;height:36px;padding:0 16px;cursor:pointer}
+.tile{font:inherit;border:0;border-radius:14px;background:var(--sf);border:1px solid var(--st);color:var(--tx);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:600}
+.tile:hover{background:var(--sf2)}
+.ini{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff}
+.mwin{position:absolute;border-radius:4px;box-shadow:0 3px 10px rgba(0,0,0,.45);overflow:hidden;display:flex;flex-direction:column}
+.mbar{height:12px;flex:none;background:rgba(0,0,0,.22);display:flex;align-items:center;gap:3px;padding:0 5px;font-size:7px;font-weight:600}
+.d{width:4px;height:4px;border-radius:50%;background:#FF6B6B;flex:none}
+.ln{height:4px;border-radius:2px;background:#C9CFD8}
+.paper{background:#FFFFFF;color:#1A1F27;border-radius:3px;box-shadow:0 6px 20px rgba(0,0,0,.45);padding:8%;display:flex;flex-direction:column;gap:.5em}
+.pl{height:.35em;border-radius:.2em;background:#B9C0CB}
+@keyframes sway{0%{transform:translate(0,0) rotate(0deg)}30%{transform:translate(9px,-6px) rotate(1.2deg)}65%{transform:translate(-7px,4px) rotate(-1deg)}100%{transform:translate(0,0) rotate(0deg)}}
+@keyframes swaym{0%{transform:translate(0,0) rotate(0deg)}30%{transform:translate(4px,-3px) rotate(1.2deg)}65%{transform:translate(-3px,2px) rotate(-1deg)}100%{transform:translate(0,0) rotate(0deg)}}
+</style>
+</helmet>
+<div style="width:1600px;height:900px;overflow:hidden;font-family:Inter,system-ui,sans-serif;background:#0A0D12;color:#E9EDF2;--bg:#0C0F14;--rail:#11151B;--sf:#171C24;--sf2:#212833;--st:#242B36;--ac:#6CB4FF;--onac:#0C0F14;--tx:#E9EDF2;--dim:#8B95A5;display:flex;flex-direction:column">
+
+<header style="height:92px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:0 40px">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<div style="font-size:26px;font-weight:800;letter-spacing:-.01em">Compagnon Unowhy</div>
+<div style="font-size:14px;color:#8B95A5">La tablette Unowhy 4.2 devient l'accessoire du Mac et du PC</div>
+</div>
+<nav aria-label="Étapes de la démo" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="10">
+<button class="pill" style="{{s.style}}" onClick="{{s.go}}">{{s.label}}</button>
+</sc-for>
+<button class="btn acc" style="--ac:#6CB4FF;--onac:#0C0F14;margin-left:8px" onClick="{{next}}">Suivant
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+</button>
+<button class="btn" style="--sf2:#171C24;--tx:#8B95A5" onClick="{{reset}}" aria-label="Recommencer la démo">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v5h5"/></svg>
+</button>
+</nav>
+</header>
+
+<main style="flex:1;display:flex;gap:36px;padding:28px 40px 0;align-items:flex-start">
+
+<!-- TABLETTE -->
+<section aria-label="Tablette Unowhy 4.2" style="width:860px;flex:none;display:flex;flex-direction:column;align-items:center;gap:14px">
+<div style="width:860px;height:560px;background:#1B1E24;border-radius:32px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.55),inset 0 0 0 2px #2A2F38;position:relative">
+<div style="position:absolute;left:10px;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;background:#2E333D"></div>
+<div style="{{themeVars}};width:812px;height:512px;border-radius:6px;overflow:hidden;position:relative;background:var(--bg);color:var(--tx);display:flex">
+
+<sc-if value="{{isPair}}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:32px">
+<div style="font-size:34px;font-weight:800">Bienvenue</div>
+<div class="dim" style="font-size:16px">Reliez la tablette à votre ordinateur.</div>
+<sc-if value="{{pairFound}}" hint-placeholder-val="{{ true }}">
+<div class="card" style="width:440px;flex-direction:row;align-items:center;gap:14px">
+<div style="width:48px;height:48px;border-radius:12px;background:var(--sf2);display:flex;align-items:center;justify-content:center;color:var(--ac)">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16v10H4zM2 19h20"/></svg>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:2px">
+<div style="font-size:16px;font-weight:700">MacBook de l'équipe</div>
+<div class="dim" style="font-size:13px">Trouvé sur le WiFi · macOS</div>
+</div>
+<button class="btn acc" onClick="{{pairAdd}}">Ajouter</button>
+</div>
+</sc-if>
+<sc-if value="{{pairCode}}" hint-placeholder-val="{{ false }}">
+<div class="dim" style="font-size:15px">Tapez le code affiché sur le Mac</div>
+<div style="display:flex;gap:10px">
+<sc-for list="{{codeBoxes}}" as="b" hint-placeholder-count="6">
+<div style="width:52px;height:64px;border-radius:12px;background:var(--sf);border:2px solid var(--st);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800">{{b.d}}</div>
+</sc-for>
+</div>
+<sc-if value="{{codeEmpty}}" hint-placeholder-val="{{ true }}">
+<button class="btn" onClick="{{pairFill}}">Saisir le code</button>
+</sc-if>
+<sc-if value="{{codeFilled}}" hint-placeholder-val="{{ false }}">
+<button class="btn ok" onClick="{{pairConnect}}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>
+Connecter</button>
+</sc-if>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{paired}}" hint-placeholder-val="{{ false }}">
+<nav aria-label="Modes" style="width:78px;flex:none;background:var(--rail);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:2px">
+<button class="rb" style="{{r.home}}" onClick="{{goHome}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9H15v-6H9v6H3z"/></svg>Accueil</button>
+<button class="rb" style="{{r.deck}}" onClick="{{goDeck}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Deck</button>
+<button class="rb" style="{{r.ai}}" onClick="{{goAi}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M9 10h6"/></svg>Assistant</button>
+<button class="rb" style="{{r.docs}}" onClick="{{goDocs}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Ordi</button>
+<button class="rb" style="{{r.focus}}" onClick="{{goFocus}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>Focus</button>
+<button class="rb" style="{{r.cam}}" onClick="{{goCam}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Caméra</button>
+<button class="rb" style="{{r.set}}" onClick="{{goSet}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>Réglages</button>
+<div style="margin-top:auto;font-size:13px;font-weight:700;color:var(--dim)">09:41</div>
+</nav>
+
+<div style="flex:1;min-width:0;padding:16px;display:flex;flex-direction:column;gap:12px;position:relative">
+
+<!-- ACCUEIL -->
+<sc-if value="{{isHome}}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:12px">
+<div class="card">
+<div class="lbl">Aujourd'hui</div>
+<div style="font-size:58px;font-weight:800;line-height:1.05;margin-top:auto">09:41</div>
+<div class="dim" style="font-size:15px">Samedi 25 octobre</div>
+</div>
+<div class="card">
+<div class="lbl">Prochain rendez-vous</div>
+<div style="font-size:30px;font-weight:800;margin-top:6px">10:00</div>
+<div style="font-size:16px;font-weight:600">Point d'équipe</div>
+<div class="dim" style="font-size:13px">Teams · dans 19 min</div>
+<button class="btn acc" style="margin-top:auto" onClick="{{join}}">Rejoindre</button>
+</div>
+<div class="card">
+<div class="lbl">Météo</div>
+<div style="display:flex;align-items:center;gap:12px;margin-top:auto">
+<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#FFD166" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 2A3 3 0 0 0 7 18z"/></svg>
+<div style="font-size:48px;font-weight:800">14°</div>
+</div>
+<div class="dim" style="font-size:14px">Nuageux · max 17°, min 9°</div>
+</div>
+<div class="card" style="grid-column:span 2">
+<div class="lbl">Tâches</div>
+<sc-for list="{{tasks}}" as="t" hint-placeholder-count="3">
+<button onClick="{{t.toggle}}" style="font:inherit;background:transparent;border:0;color:var(--tx);display:flex;align-items:center;gap:12px;min-height:44px;padding:0;cursor:pointer;text-align:left">
+<span style="{{t.box}}">
+<sc-if value="{{t.done}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></sc-if>
+</span>
+<span style="{{t.txt}}">{{t.t}}</span>
+</button>
+</sc-for>
+</div>
+<div class="card">
+<div class="lbl">Focus</div>
+<div style="font-size:44px;font-weight:800;margin-top:auto;font-variant-numeric:tabular-nums">{{focusTime}}</div>
+<button class="btn acc" onClick="{{toggleFocus}}">{{focusLabel}}</button>
+</div>
+</div>
+</sc-if>
+
+<!-- DECK : onglets -->
+<sc-if value="{{isDeck}}" hint-placeholder-val="{{ false }}">
+<div role="tablist" aria-label="Pages du Deck" style="display:flex;gap:6px;flex:none">
+<sc-for list="{{deckTabs}}" as="d" hint-placeholder-count="5">
+<button class="tab" role="tab" style="{{d.style}}" onClick="{{d.go}}">{{d.name}}</button>
+</sc-for>
+</div>
+</sc-if>
+
+<!-- DECK : APPS -->
+<sc-if value="{{isApps}}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:10px">
+<sc-for list="{{apps}}" as="a" hint-placeholder-count="8">
+<button class="tile" onClick="{{a.launch}}">
+<span class="ini" style="{{a.bg}}">{{a.i}}</span>{{a.name}}
+</button>
+</sc-for>
+</div>
+<div class="card" style="flex:none;flex-direction:row;align-items:center;gap:12px;padding:10px 14px">
+<div style="font-size:14px;font-weight:700;white-space:nowrap">Son du Mac</div>
+<button class="btn" onClick="{{volDown}}" aria-label="Baisser le son">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+</button>
+<div style="flex:1;height:10px;border-radius:5px;background:var(--sf2);overflow:hidden"><div style="{{volBar}}"></div></div>
+<button class="btn" onClick="{{volUp}}" aria-label="Monter le son">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg>
+</button>
+<div style="width:48px;font-size:14px;font-weight:700;text-align:right">{{vol}} %</div>
+<button class="btn" style="{{macMicStyle}}" onClick="{{toggleMacMic}}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+{{macMicLabel}}</button>
+</div>
+</sc-if>
+
+<!-- DECK : OUVERTES -->
+<sc-if value="{{isWins}}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;align-items:flex-end;justify-content:center;gap:18px;padding-bottom:4px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div class="lbl">Écran en plus</div>
+<div style="width:380px;height:214px;border-radius:8px;background:#22324A;border:2px solid var(--st);position:relative;overflow:hidden">
+<sc-for list="{{winsA}}" as="w" hint-placeholder-count="2">
+<button style="{{w.tStyle}}" onClick="{{w.pick}}"><span>{{w.name}}</span><span style="font-weight:500;opacity:.8">{{w.title}}</span></button>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div class="lbl">MacBook</div>
+<div style="width:258px;height:161px;border-radius:8px;background:#2B3A55;border:2px solid var(--st);position:relative;overflow:hidden">
+<sc-for list="{{winsB}}" as="w" hint-placeholder-count="2">
+<button style="{{w.tStyle}}" onClick="{{w.pick}}"><span>{{w.name}}</span><span style="font-weight:500;opacity:.8">{{w.title}}</span></button>
+</sc-for>
+</div>
+</div>
+</div>
+<div style="display:flex;gap:10px;flex:none;align-items:center">
+<button class="btn" onClick="{{moveFront}}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h14l-4-4M20 15H6l4 4"/></svg>
+Autre écran</button>
+<button class="btn" onClick="{{reopenAll}}">Tout rouvrir</button>
+<div class="dim" style="font-size:13px;flex:1;text-align:right">{{frontInfo}}</div>
+</div>
+<button style="{{trashStyle}}" onClick="{{closeFront}}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+{{trashText}}</button>
+</sc-if>
+
+<!-- DECK : DISCORD -->
+<sc-if value="{{isDiscord}}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;gap:12px;min-height:0">
+<div class="card" style="flex:1;gap:10px">
+<div style="display:flex;align-items:center;gap:10px">
+<span class="ini" style="background:#5865F2;width:36px;height:36px;font-size:15px">D</span>
+<div style="font-size:17px;font-weight:700">Discord</div>
+</div>
+<sc-if value="{{callIdle}}" hint-placeholder-val="{{ true }}">
+<div class="dim" style="font-size:15px;line-height:1.45">Pas d'appel en cours. Quand quelqu'un appelle, la tablette sonne et affiche qui appelle.</div>
+<button class="btn acc" style="margin-top:auto;min-height:56px;font-size:16px" onClick="{{ring}}">Recevoir un appel (démo)</button>
+</sc-if>
+<sc-if value="{{callActive}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+<span style="width:10px;height:10px;border-radius:50%;background:#5DD39E"></span>
+<div style="font-size:16px;font-weight:700">En appel avec Camille</div>
+<div class="dim" style="margin-left:auto;font-size:16px;font-variant-numeric:tabular-nums">{{callTime}}</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:auto">
+<button class="btn" style="{{muteStyle}}" onClick="{{toggleMute}}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+{{muteLabel}}</button>
+<button class="btn" onClick="{{shareScreen}}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 13V7M9 10l3-3 3 3"/></svg>
+Partager l'écran</button>
+<button class="btn ko" style="grid-column:span 2;min-height:52px" onClick="{{hang}}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 15c5-5 13-5 18 0l-2.5 2.5-3-1.5v-2.5c-2-.7-5-.7-7 0V16l-3 1.5z"/></svg>
+Raccrocher</button>
+</div>
+</sc-if>
+<sc-if value="{{callEnded}}" hint-placeholder-val="{{ false }}">
+<div style="font-size:18px;font-weight:700;margin-top:6px">Appel terminé · {{callTime}}</div>
+<button class="btn" style="margin-top:auto" onClick="{{ring}}">Rejouer l'appel</button>
+</sc-if>
+</div>
+<div class="card" style="width:220px;flex:none">
+<div class="lbl">Touches</div>
+<button class="btn" style="justify-content:flex-start" onClick="{{discordChan}}">Salon #général</button>
+<button class="btn" style="justify-content:flex-start" onClick="{{discordDm}}">Messages privés</button>
+<button class="btn" style="justify-content:flex-start" onClick="{{shareScreen}}">Partage d'écran</button>
+<button class="btn" style="justify-content:flex-start;color:var(--dim)" onClick="{{quitDiscord}}">Quitter Discord (démo)</button>
+<div class="dim" style="font-size:12px;margin-top:auto;line-height:1.4">Page affichée seulement quand Discord est ouvert sur le Mac.</div>
+</div>
+</div>
+</sc-if>
+
+<!-- DECK : MÉDIA -->
+<sc-if value="{{isMedia}}" hint-placeholder-val="{{ false }}">
+<div class="card" style="flex:none;flex-direction:row;align-items:center;gap:18px;padding:14px 18px">
+<div style="{{coverStyle}}">
+<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+<div class="lbl">Lecture en cours · Spotify sur le Mac</div>
+<div style="font-size:22px;font-weight:800">{{trackTitle}}</div>
+<div class="dim" style="font-size:15px">{{trackArtist}}</div>
+<div style="height:6px;border-radius:3px;background:var(--sf2);overflow:hidden;margin-top:4px"><div style="{{progBar}}"></div></div>
+</div>
+<div style="display:flex;gap:8px;align-items:center">
+<button class="btn" onClick="{{prevTrack}}" aria-label="Morceau précédent">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>
+</button>
+<button class="btn acc" style="width:64px;height:64px;border-radius:50%" onClick="{{togglePlay}}" aria-label="{{playLabel}}">
+<sc-if value="{{playing}}" hint-placeholder-val="{{ true }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></sc-if>
+<sc-if value="{{paused}}" hint-placeholder-val="{{ false }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></sc-if>
+</button>
+<button class="btn" onClick="{{nextTrack}}" aria-label="Morceau suivant">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>
+</button>
+</div>
+</div>
+<div class="card" style="flex:1;gap:10px">
+<div class="lbl">Mes sites</div>
+<div style="flex:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px">
+<sc-for list="{{sites}}" as="x" hint-placeholder-count="4">
+<button class="tile" style="{{x.style}}" onClick="{{x.open}}"><span class="ini" style="{{x.bg}}">{{x.i}}</span>{{x.name}}</button>
+</sc-for>
+<button class="tile" onClick="{{addSite}}" style="border-style:dashed;color:var(--dim)">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+Ajouter</button>
+</div>
+</div>
+<div class="card" style="flex:none;flex-direction:row;align-items:center;gap:12px;padding:10px 14px">
+<div style="font-size:14px;font-weight:700;white-space:nowrap">Son du Mac</div>
+<button class="btn" onClick="{{volDown}}" aria-label="Baisser le son"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+<div style="flex:1;height:10px;border-radius:5px;background:var(--sf2);overflow:hidden"><div style="{{volBar}}"></div></div>
+<button class="btn" onClick="{{volUp}}" aria-label="Monter le son"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button>
+<div style="width:48px;font-size:14px;font-weight:700;text-align:right">{{vol}} %</div>
+</div>
+</sc-if>
+
+<!-- DECK : RACCOURCIS -->
+<sc-if value="{{isRacc}}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:10px;min-height:0">
+<sc-for list="{{raccs}}" as="k" hint-placeholder-count="8">
+<button class="tile" style="{{k.style}}" onClick="{{k.run}}">
+<span style="font-size:15px;font-weight:700;text-align:center;padding:0 6px">{{k.name}}</span>
+<span style="font-size:13px;font-weight:700;padding:4px 10px;border-radius:8px;background:var(--sf2);color:var(--dim);border:1px solid var(--st)">{{k.k}}</span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+
+<!-- DECK : DISCORD FERMÉ -->
+<sc-if value="{{isDiscordOff}}" hint-placeholder-val="{{ false }}">
+<div class="card" style="flex:1;align-items:center;justify-content:center;gap:14px;text-align:center">
+<span class="ini" style="background:var(--sf2);color:var(--dim);width:72px;height:72px;font-size:30px;border-radius:20px">D</span>
+<div style="font-size:22px;font-weight:800">Discord n'est pas ouvert sur le Mac</div>
+<div class="dim" style="font-size:15px;line-height:1.5;max-width:460px">Le Compagnon regarde quelles applis tournent sur l'ordinateur. La page Discord n'apparaît dans le Deck que quand Discord est ouvert.</div>
+<button class="btn acc" style="min-height:52px;font-size:16px;margin-top:6px" onClick="{{openDiscord}}">Lancer Discord sur le Mac</button>
+</div>
+</sc-if>
+
+<!-- DECK : PERSO -->
+<sc-if value="{{isPerso}}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:10px;min-height:0">
+<sc-for list="{{keys}}" as="k" hint-placeholder-count="5">
+<button class="tile" style="{{k.style}}" onClick="{{k.run}}">
+<span class="ini" style="{{k.bg}}">{{k.i}}</span>
+<span>{{k.name}}</span>
+<span class="dim" style="font-size:12px;font-weight:500">{{k.sub}}</span>
+</button>
+</sc-for>
+<button class="tile" onClick="{{newKey}}" style="border-style:dashed;color:var(--dim)">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+Nouvelle touche</button>
+</div>
+<div class="card" style="flex:none;min-height:86px;justify-content:center">
+<sc-if value="{{macroOn}}" hint-placeholder-val="{{ false }}">
+<div style="font-size:14px;font-weight:700">{{macroTitle}}</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<sc-for list="{{macroSteps}}" as="m" hint-placeholder-count="4">
+<div style="{{m.style}}">{{m.t}}</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{macroOff}}" hint-placeholder-val="{{ true }}">
+<div class="dim" style="font-size:15px;line-height:1.45">Une touche peut faire une seule action ou en enchaîner plusieurs : c'est une macro. On les crée depuis la tablette.</div>
+</sc-if>
+</div>
+</sc-if>
+
+<!-- ASSISTANT -->
+<sc-if value="{{isAi}}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;justify-content:flex-end;min-height:0">
+<div style="align-self:flex-start;max-width:70%;background:var(--sf2);border-radius:16px 16px 16px 4px;padding:12px 16px;font-size:16px;line-height:1.45">Bonjour ! Demande-moi ce que tu veux, à l'écrit ou à voix haute.</div>
+<sc-if value="{{chatAsked}}" hint-placeholder-val="{{ false }}">
+<div style="align-self:flex-end;max-width:70%;background:var(--ac);color:var(--onac);border-radius:16px 16px 4px 16px;padding:12px 16px;font-size:16px;font-weight:600">Qu'est-ce que j'ai cet après-midi ?</div>
+</sc-if>
+<sc-if value="{{chatTyping}}" hint-placeholder-val="{{ false }}">
+<div class="dim" style="align-self:flex-start;background:var(--sf2);border-radius:16px;padding:12px 18px;font-size:20px;letter-spacing:.2em">• • •</div>
+</sc-if>
+<sc-if value="{{chatAnswered}}" hint-placeholder-val="{{ false }}">
+<div style="align-self:flex-start;max-width:78%;background:var(--sf2);border-radius:16px 16px 16px 4px;padding:12px 16px;font-size:16px;line-height:1.5">À 14 h, la revue du budget 2027 avec l'équipe, sur Teams. Il te reste deux tâches : valider le budget et saisir ton worklog. Je te le rappelle à 13 h 50 ?</div>
+</sc-if>
+<div style="display:flex;gap:10px;flex:none;margin-top:6px">
+<button onClick="{{ask}}" style="font:inherit;flex:1;min-height:52px;border-radius:14px;border:1px solid var(--st);background:var(--sf);color:var(--dim);text-align:left;padding:0 16px;font-size:15px;cursor:pointer">Qu'est-ce que j'ai cet après-midi ?</button>
+<button class="btn acc" style="min-height:52px;width:120px" onClick="{{ask}}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+Parler</button>
+</div>
+</div>
+</sc-if>
+
+<!-- DEPUIS L'ORDI -->
+<sc-if value="{{isDocs}}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{docsChoice}}" hint-placeholder-val="{{ true }}">
+<div style="font-size:20px;font-weight:700">Depuis l'ordi</div>
+<div style="flex:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+<button class="tile" style="align-items:flex-start;justify-content:flex-end;padding:22px;gap:6px;text-align:left" onClick="{{openFiles}}">
+<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FFA05C" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h6l2 2h10v11H3z"/></svg>
+<span style="font-size:20px;font-weight:700;margin-top:auto">Fichiers de l'ordi</span>
+<span class="dim" style="font-size:14px;font-weight:500">Le dossier partagé du Mac, lu sur la tablette.</span>
+</button>
+<button class="tile" style="align-items:flex-start;justify-content:flex-end;padding:22px;gap:6px;text-align:left" onClick="{{openPage}}">
+<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4FD1E8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>
+<span style="font-size:20px;font-weight:700;margin-top:auto">Page de l'ordi</span>
+<span class="dim" style="font-size:14px;font-weight:500">La page ouverte dans le navigateur du Mac.</span>
+</button>
+</div>
+<div class="dim" style="font-size:13px">Espace libre sur la tablette : 9,8 Go</div>
+</sc-if>
+<sc-if value="{{docsFiles}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:10px;flex:none">
+<button class="btn" onClick="{{docsBack}}">Retour</button>
+<div style="font-size:17px;font-weight:700">Fichiers de l'ordi</div>
+</div>
+<div style="flex:1;display:flex;gap:12px;min-height:0">
+<div style="width:250px;display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{files}}" as="f" hint-placeholder-count="3">
+<button onClick="{{f.pick}}" style="{{f.style}}"><span style="font-weight:700">{{f.name}}</span><span class="dim" style="font-size:12px">{{f.kind}}</span></button>
+</sc-for>
+</div>
+<div class="card" style="flex:1;gap:10px">
+<div style="font-size:16px;font-weight:700">{{fileName}}</div>
+<div style="flex:1;background:#FFFFFF;border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:8px">
+<div style="height:12px;width:55%;border-radius:3px;background:#1A1F27"></div>
+<div class="ln" style="width:95%"></div><div class="ln" style="width:88%"></div><div class="ln" style="width:92%"></div>
+<div style="height:60px;border-radius:4px;background:#DCE6F5;margin:6px 0"></div>
+<div class="ln" style="width:90%"></div><div class="ln" style="width:70%"></div>
+</div>
+<button class="btn acc" onClick="{{openOnMac}}">Ouvrir sur le Mac</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{docsPage}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:10px;flex:none">
+<button class="btn" onClick="{{docsBack}}">Retour</button>
+<div style="font-size:17px;font-weight:700">Page de l'ordi</div>
+<div class="dim" style="font-size:13px;margin-left:auto">Ouverte sur le Mac à l'instant</div>
+</div>
+<div style="flex:1;background:#FFFFFF;color:#1A1F27;border-radius:12px;padding:22px 26px;display:flex;flex-direction:column;gap:10px;overflow:hidden">
+<div style="font-size:12px;color:#5A6472;font-weight:600">Blog de l'équipe · 4 min de lecture</div>
+<div style="font-size:24px;font-weight:800;line-height:1.2">Bien préparer une réunion en 5 étapes</div>
+<div style="height:90px;border-radius:8px;background:#DCE6F5"></div>
+<div style="font-size:14px;line-height:1.6;color:#3A424E">Une bonne réunion commence avant la réunion : un objectif clair, une liste courte de participants, et un ordre du jour envoyé la veille.</div>
+</div>
+</sc-if>
+</sc-if>
+
+<!-- FOCUS -->
+<sc-if value="{{isFocus}}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;gap:12px;min-height:0">
+<div class="card" style="flex:1.3;align-items:center;justify-content:center;gap:14px">
+<div class="lbl">Concentration · 25 min</div>
+<div style="font-size:96px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums">{{focusTime}}</div>
+<div style="display:flex;gap:10px">
+<button class="btn acc" style="min-width:150px;min-height:52px;font-size:16px" onClick="{{toggleFocus}}">{{focusLabel}}</button>
+<button class="btn" style="min-height:52px" onClick="{{resetFocus}}">Remettre à zéro</button>
+</div>
+<button onClick="{{toggleFocusDnd}}" style="{{dndChipStyle}}" aria-pressed="{{dndPressed}}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+Ne pas déranger sur l'ordi</button>
+</div>
+<div class="card" style="flex:1;gap:10px">
+<div class="lbl">Ambiance</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+<sc-for list="{{ambiences}}" as="m" hint-placeholder-count="4">
+<button onClick="{{m.pick}}" style="{{m.style}}">{{m.name}}</button>
+</sc-for>
+</div>
+<div class="dim" style="font-size:14px;line-height:1.45;margin-top:auto">{{ambInfo}}</div>
+</div>
+</div>
+</sc-if>
+
+<!-- CAMÉRA -->
+<sc-if value="{{isCam}}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{camChoice}}" hint-placeholder-val="{{ true }}">
+<div style="font-size:20px;font-weight:700">Caméra</div>
+<div style="flex:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+<button class="tile" style="align-items:flex-start;justify-content:flex-end;padding:22px;gap:6px;text-align:left" onClick="{{camLive}}">
+<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#B18CFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><circle cx="12" cy="10" r="2.5"/></svg>
+<span style="font-size:20px;font-weight:700;margin-top:auto">Montrer sur l'ordi</span>
+<span class="dim" style="font-size:14px;font-weight:500">La tablette filme, le Mac affiche en grand.</span>
+</button>
+<button class="tile" style="align-items:flex-start;justify-content:flex-end;padding:22px;gap:6px;text-align:left" onClick="{{camPhoto}}">
+<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FF7EB6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+<span style="font-size:20px;font-weight:700;margin-top:auto">Envoyer une photo</span>
+<span class="dim" style="font-size:14px;font-weight:500">Pleine taille, dans le dossier Partage tablette.</span>
+</button>
+</div>
+</sc-if>
+<sc-if value="{{camOn}}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;border-radius:12px;background:#4A3B2E;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative">
+<div style="{{tabSway}}">
+<div style="{{paperStyle}}">
+<div class="paper" style="width:100%;height:100%;font-size:15px">
+<div style="font-weight:800">Exercice 3 · Les fractions</div>
+<div class="pl" style="width:92%"></div><div class="pl" style="width:84%"></div><div class="pl" style="width:88%"></div>
+<svg viewBox="0 0 40 40" style="width:34%;margin-top:.4em" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="none" stroke="#1A1F27" stroke-width="1.6"/><path d="M20 3v34M3 20h17" stroke="#1A1F27" stroke-width="1.6"/><path d="M20 20V3a17 17 0 0 1 17 17z" fill="#6CB4FF" opacity=".5"/></svg>
+<div class="pl" style="width:60%"></div>
+</div>
+</div>
+</div>
+<div style="{{camBadge}}">{{camBadgeText}}</div>
+</div>
+<div style="display:flex;gap:10px;flex:none">
+<sc-if value="{{camIsLive}}" hint-placeholder-val="{{ true }}">
+<button class="btn" onClick="{{toggleFreeze}}">{{freezeLabel}}</button>
+<button class="btn" onClick="{{toggleZoom}}">{{zoomLabel}}</button>
+</sc-if>
+<sc-if value="{{camIsPhoto}}" hint-placeholder-val="{{ false }}">
+<button class="btn acc" onClick="{{takePhoto}}">Prendre et envoyer</button>
+</sc-if>
+<button class="btn" style="margin-left:auto" onClick="{{camStop}}">Arrêter</button>
+</div>
+</sc-if>
+</sc-if>
+
+<!-- RÉGLAGES -->
+<sc-if value="{{isSet}}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:12px">
+<div class="card">
+<div class="lbl">Thème</div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:auto">
+<sc-for list="{{themes}}" as="th" hint-placeholder-count="4">
+<button onClick="{{th.pick}}" style="{{th.style}}"><span style="{{th.sw}}"></span>{{th.name}}</button>
+</sc-for>
+</div>
+</div>
+<div class="card">
+<div class="lbl">Mises à jour</div>
+<div style="font-size:16px;font-weight:700;margin-top:4px">{{updTitle}}</div>
+<div class="dim" style="font-size:13px">{{updSub}}</div>
+<div style="height:8px;border-radius:4px;background:var(--sf2);overflow:hidden;margin-top:auto"><div style="{{updBar}}"></div></div>
+<button class="btn" style="{{updBtnStyle}}" onClick="{{updAction}}">{{updBtn}}</button>
+</div>
+<div class="card">
+<div class="lbl">Tablette</div>
+<div style="font-size:15px;display:flex;flex-direction:column;gap:8px;margin-top:6px">
+<div style="display:flex;justify-content:space-between"><span class="dim">Batterie</span><span style="font-weight:600">100 % · branchée</span></div>
+<div style="display:flex;justify-content:space-between"><span class="dim">WiFi</span><span style="font-weight:600">Bureau · excellent</span></div>
+<div style="display:flex;justify-content:space-between"><span class="dim">Écran</span><span style="font-weight:600">Atténué de 22 h à 7 h</span></div>
+<div style="display:flex;justify-content:space-between"><span class="dim">Mode</span><span style="font-weight:600">Kiosque</span></div>
+</div>
+</div>
+<div class="card">
+<div class="lbl">Ordinateurs</div>
+<div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+<span style="width:10px;height:10px;border-radius:50%;background:#5DD39E"></span>
+<div style="font-size:15px;font-weight:700">MacBook de l'équipe</div>
+<div class="dim" style="font-size:13px;margin-left:auto">actif</div>
+</div>
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:10px;height:10px;border-radius:50%;background:var(--dim)"></span>
+<div style="font-size:15px">PC de la maison</div>
+<div class="dim" style="font-size:13px;margin-left:auto">Windows</div>
+</div>
+<button class="btn" style="margin-top:auto" onClick="{{addComputer}}">Ajouter un ordinateur</button>
+</div>
+</div>
+</sc-if>
+
+</div>
+</sc-if>
+
+<sc-if value="{{ringing}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:rgba(5,7,10,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:50">
+<div style="width:110px;height:110px;border-radius:50%;background:#5865F2;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:800;color:#fff;box-shadow:0 0 0 12px rgba(88,101,242,.25),0 0 0 26px rgba(88,101,242,.12)">C</div>
+<div style="font-size:32px;font-weight:800;color:#E9EDF2;margin-top:14px">Camille</div>
+<div style="font-size:16px;color:#8B95A5">Appel Discord entrant</div>
+<div style="display:flex;gap:24px;margin-top:18px">
+<button class="btn ko" style="min-width:170px;min-height:60px;font-size:17px" onClick="{{decline}}">Refuser</button>
+<button class="btn ok" style="min-width:170px;min-height:60px;font-size:17px" onClick="{{answer}}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>
+Décrocher</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:var(--tx);color:var(--bg);font-size:14px;font-weight:600;padding:10px 18px;border-radius:999px;white-space:nowrap;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.4)">{{toast}}</div>
+</sc-if>
+
+</div>
+</div>
+<div style="font-size:13px;color:#8B95A5">Tablette Unowhy 4.2 · 10,1 pouces · Android 10 · en mode kiosque</div>
+</section>
+
+<!-- MAC + ÉCRAN EN PLUS -->
+<section aria-label="Le Mac et son écran en plus" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;align-items:flex-end;gap:14px">
+
+<div style="display:flex;flex-direction:column;align-items:center">
+<div style="width:400px;height:230px;background:#15171B;border-radius:8px;padding:6px;box-shadow:0 12px 40px rgba(0,0,0,.5),inset 0 0 0 1px #2A2F38">
+<div style="width:388px;height:218px;background:{{wallA}};transition:background .4s;border-radius:2px;position:relative;overflow:hidden;color:#E9EDF2">
+<div style="position:absolute;left:0;right:0;top:0;height:12px;background:rgba(10,13,18,.7);display:flex;align-items:center;justify-content:space-between;padding:0 6px;font-size:7px;font-weight:600;z-index:30"><span>Finder   Fichier   Édition   Présentation</span><span>{{macMenu}}</span></div>
+
+<sc-if value="{{extPair}}" hint-placeholder-val="{{ true }}">
+<div class="mwin" style="left:12%;top:14%;width:76%;height:68%;background:#F5F7FA;color:#1A1F27">
+<div class="mbar" style="background:#E3E7ED"><span class="d"></span><span class="d" style="background:#F5B85C"></span><span class="d" style="background:#5DD39E"></span><span style="margin-left:6px;color:#5A6472">localhost:3000 · Compagnon Unowhy</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+<div style="font-size:10px;font-weight:800">Compagnon Unowhy</div>
+<div style="font-size:7px;color:#5A6472">Code pour la tablette</div>
+<div style="font-size:26px;font-weight:800;letter-spacing:.12em">482 913</div>
+<div style="font-size:6px;color:#5A6472">Tablette et Mac sur le même WiFi</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{extDesk}}" hint-placeholder-val="{{ false }}">
+<div class="mwin" style="left:10%;top:15%;width:62%;height:62%;background:#F5F7FA;color:#1A1F27">
+<div class="mbar" style="background:#E3E7ED"><span class="d"></span><span class="d" style="background:#F5B85C"></span><span class="d" style="background:#5DD39E"></span><span style="margin-left:6px;color:#5A6472">Rapport T3 · Chrome</span></div>
+<div style="flex:1;padding:8px;display:flex;flex-direction:column;gap:4px"><div style="height:6px;width:50%;background:#1A1F27;border-radius:2px"></div><div class="ln" style="width:94%"></div><div class="ln" style="width:86%"></div><div style="flex:1;background:#DCE6F5;border-radius:2px"></div><div class="ln" style="width:70%"></div></div>
+</div>
+<div class="mwin" style="left:58%;top:30%;width:34%;height:46%;background:#1E1E1E">
+<div class="mbar"><span class="d"></span><span class="d" style="background:#F5B85C"></span><span class="d" style="background:#5DD39E"></span><span style="margin-left:6px">Notes</span></div>
+<div style="flex:1;padding:6px;display:flex;flex-direction:column;gap:4px"><div class="ln" style="width:80%;background:#555"></div><div class="ln" style="width:60%;background:#555"></div><div class="ln" style="width:70%;background:#555"></div></div>
+</div>
+</sc-if>
+
+<sc-if value="{{extTeams}}" hint-placeholder-val="{{ false }}">
+<div class="mwin" style="left:8%;top:12%;width:84%;height:72%;background:#292A3E">
+<div class="mbar" style="background:#5B5FC7"><span class="d"></span><span class="d" style="background:#F5B85C"></span><span class="d" style="background:#5DD39E"></span><span style="margin-left:6px">Teams · Point d'équipe</span></div>
+<div style="flex:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:6px">
+<div style="background:#3C3E5A;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px">Léa</div>
+<div style="background:#3C3E5A;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px">Karim</div>
+<div style="background:#3C3E5A;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px;outline:1px solid #5DD39E">Vous</div>
+</div>
+<div style="font-size:7px;text-align:center;padding-bottom:5px;color:#B9BCE8">Réunion rejointe depuis la tablette</div>
+</div>
+</sc-if>
+
+<sc-if value="{{extApp}}" hint-placeholder-val="{{ false }}">
+<div style="{{launchedWin}}">
+<div class="mbar"><span class="d"></span><span class="d" style="background:#F5B85C"></span><span class="d" style="background:#5DD39E"></span><span style="margin-left:6px">{{launchedName}}</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px">
+<div style="font-size:20px;font-weight:800">{{launchedName}}</div>
+<div style="font-size:7px;opacity:.85">Ouvert depuis la tablette</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{extWins}}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{winsA}}" as="w" hint-placeholder-count="2">
+<div style="{{w.mStyle}}"><div>{{w.name}}</div><div style="font-weight:500;opacity:.8">{{w.title}}</div></div>
+</sc-for>
+</sc-if>
+
+<sc-if value="{{extDiscord}}" hint-placeholder-val="{{ false }}">
+<div class="mwin" style="left:6%;top:11%;width:88%;height:74%;background:#313338">
+<div class="mbar" style="background:#1E1F22"><span class="d"></span><span class="d" style="background:#F5B85C"></span><span class="d" style="background:#5DD39E"></span><span style="margin-left:6px">Discord</span></div>
+<div style="flex:1;display:flex;min-height:0">
+<div style="width:22%;background:#2B2D31;padding:5px;display:flex;flex-direction:column;gap:3px;font-size:6px;color:#B5BAC1"><div># général</div><div># projets</div><div># détente</div></div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:6px">
+<sc-if value="{{callActive}}" hint-placeholder-val="{{ false }}">
+<div style="width:42%;height:70%;background:#5865F2;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">Camille</div>
+<div style="width:42%;height:70%;background:#404249;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:9px;font-weight:700">Vous<span style="{{macMuteBadge}}">micro coupé</span></div>
+</sc-if>
+<sc-if value="{{callNotActive}}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:5px;width:100%;font-size:7px;color:#DBDEE1"><div><b>Léa</b>  On se fait un appel à 11 h ?</div><div><b>Karim</b>  Ok pour moi</div><div style="color:#949BA4">{{discordStatus}}</div></div>
+</sc-if>
+</div>
+</div>
+</div>
+<sc-if value="{{ringing}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;right:6px;top:16px;width:120px;background:rgba(40,44,52,.95);border-radius:5px;padding:5px 7px;font-size:7px;z-index:40;box-shadow:0 3px 10px rgba(0,0,0,.5)"><b>Discord</b><br>Camille vous appelle…</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{extMedia}}" hint-placeholder-val="{{ false }}">
+<div class="mwin" style="left:10%;top:13%;width:80%;height:72%;background:#121212">
+<div class="mbar" style="background:#000000"><span class="d"></span><span class="d" style="background:#F5B85C"></span><span class="d" style="background:#5DD39E"></span><span style="margin-left:6px">Spotify</span></div>
+<div style="flex:1;display:flex;align-items:center;gap:12px;padding:10px 14px">
+<div style="{{macCover}}"></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:3px;min-width:0">
+<div style="font-size:11px;font-weight:800">{{trackTitle}}</div>
+<div style="font-size:7px;color:#B3B3B3">{{trackArtist}}</div>
+<div style="height:3px;border-radius:2px;background:#404040;overflow:hidden;margin-top:4px"><div style="{{macProg}}"></div></div>
+<div style="font-size:7px;color:#1DB954;font-weight:700;margin-top:2px">{{macPlayState}}</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{extSite}}" hint-placeholder-val="{{ false }}">
+<div class="mwin" style="left:8%;top:12%;width:84%;height:74%;background:#FFFFFF;color:#1A1F27">
+<div class="mbar" style="background:#E3E7ED"><span class="d"></span><span class="d" style="background:#F5B85C"></span><span class="d" style="background:#5DD39E"></span><span style="margin-left:6px;color:#5A6472">Chrome · {{siteName}}</span></div>
+<div style="{{siteHead}}">{{siteName}}</div>
+<div style="flex:1;padding:6px 10px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px"><div style="background:#DCE6F5;border-radius:2px"></div><div style="background:#DCE6F5;border-radius:2px"></div><div style="background:#DCE6F5;border-radius:2px"></div></div>
+</div>
+</sc-if>
+
+<sc-if value="{{extShot}}" hint-placeholder-val="{{ false }}">
+<div class="mwin" style="left:10%;top:15%;width:62%;height:62%;background:#F5F7FA;color:#1A1F27">
+<div class="mbar" style="background:#E3E7ED"><span class="d"></span><span class="d" style="background:#F5B85C"></span><span class="d" style="background:#5DD39E"></span><span style="margin-left:6px;color:#5A6472">Rapport T3 · Chrome</span></div>
+<div style="flex:1;padding:8px;display:flex;flex-direction:column;gap:4px"><div style="height:6px;width:50%;background:#1A1F27;border-radius:2px"></div><div class="ln" style="width:94%"></div><div style="flex:1;background:#DCE6F5;border-radius:2px"></div></div>
+</div>
+<div style="position:absolute;right:8px;bottom:26px;width:110px;background:rgba(40,44,52,.95);border-radius:5px;padding:5px 7px;font-size:7px;z-index:40"><b>Capture d'écran</b><br>Enregistrée dans Partage tablette</div>
+</sc-if>
+
+<sc-if value="{{extMission}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:0;right:0;top:12px;bottom:0;background:rgba(0,0,0,.35);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:16px 30px 30px">
+<div style="background:#4A6FA5;border-radius:3px;font-size:7px;font-weight:700;padding:3px 5px">Chrome</div>
+<div style="background:#E9E5DC;color:#1A1F27;border-radius:3px;font-size:7px;font-weight:700;padding:3px 5px">Notion</div>
+<div style="background:#1E1E1E;border-radius:3px;font-size:7px;font-weight:700;padding:3px 5px">Notes</div>
+<div style="background:#1DB954;color:#0C0F14;border-radius:3px;font-size:7px;font-weight:700;padding:3px 5px">Spotify</div>
+</div>
+</sc-if>
+
+<sc-if value="{{extSpot}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:20%;top:30%;width:60%;z-index:36;background:rgba(236,239,243,.97);color:#1A1F27;border-radius:7px;box-shadow:0 6px 20px rgba(0,0,0,.5);overflow:hidden">
+<div style="padding:7px 9px;font-size:10px;display:flex;align-items:center;gap:6px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#5A6472" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Recherche Spotlight</div>
+<div style="border-top:1px solid #D0D5DD;padding:4px 9px;font-size:7px;color:#5A6472">Rapport T3.pdf · Budget 2027.xlsx · Notes</div>
+</div>
+</sc-if>
+
+<sc-if value="{{dndBanner}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;right:6px;top:16px;z-index:40;display:flex;align-items:center;gap:5px;background:rgba(40,44,52,.95);border-radius:6px;padding:5px 8px;font-size:7px;box-shadow:0 3px 10px rgba(0,0,0,.5)">
+<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#B18CFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+<span><b>Ne pas déranger</b><br>Activé par la tablette · Focus</span>
+</div>
+</sc-if>
+
+<sc-if value="{{extDark}}" hint-placeholder-val="{{ false }}">
+<div style="{{darkStyle}}">
+<div style="font-size:26px;font-weight:800">{{darkBig}}</div>
+<div style="font-size:8px;opacity:.8">{{darkSmall}}</div>
+</div>
+</sc-if>
+
+<sc-if value="{{extFile}}" hint-placeholder-val="{{ false }}">
+<div class="mwin" style="left:18%;top:10%;width:64%;height:78%;background:#F5F7FA;color:#1A1F27">
+<div class="mbar" style="background:#E3E7ED"><span class="d"></span><span class="d" style="background:#F5B85C"></span><span class="d" style="background:#5DD39E"></span><span style="margin-left:6px;color:#5A6472">Aperçu · {{fileName}}</span></div>
+<div style="flex:1;padding:8px 12px;display:flex;flex-direction:column;gap:4px"><div style="height:6px;width:55%;background:#1A1F27;border-radius:2px"></div><div class="ln" style="width:95%"></div><div class="ln" style="width:88%"></div><div style="height:30px;background:#DCE6F5;border-radius:2px"></div><div class="ln" style="width:90%"></div><div class="ln" style="width:70%"></div></div>
+</div>
+</sc-if>
+
+<sc-if value="{{extSafari}}" hint-placeholder-val="{{ false }}">
+<div class="mwin" style="left:8%;top:12%;width:84%;height:74%;background:#FFFFFF;color:#1A1F27">
+<div class="mbar" style="background:#E3E7ED"><span class="d"></span><span class="d" style="background:#F5B85C"></span><span class="d" style="background:#5DD39E"></span><span style="margin-left:6px;color:#5A6472">Safari · Bien préparer une réunion</span></div>
+<div style="flex:1;padding:8px 14px;display:flex;flex-direction:column;gap:4px"><div style="font-size:10px;font-weight:800">Bien préparer une réunion en 5 étapes</div><div style="height:34px;background:#DCE6F5;border-radius:3px"></div><div class="ln" style="width:94%"></div><div class="ln" style="width:80%"></div></div>
+</div>
+</sc-if>
+
+<sc-if value="{{extCamera}}" hint-placeholder-val="{{ false }}">
+<div class="mwin" style="left:3%;top:9%;width:94%;height:80%;background:#0B0D10">
+<div class="mbar" style="background:#1E2229"><span class="d"></span><span class="d" style="background:#F5B85C"></span><span class="d" style="background:#5DD39E"></span><span style="margin-left:6px">localhost:3000/camera · Visualiseur</span></div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">
+<div style="{{macSway}}">
+<div style="{{macPaperStyle}}">
+<div class="paper" style="width:100%;height:100%;font-size:6px">
+<div style="font-weight:800">Exercice 3 · Les fractions</div>
+<div class="pl" style="width:92%"></div><div class="pl" style="width:84%"></div><div class="pl" style="width:88%"></div>
+<svg viewBox="0 0 40 40" style="width:34%;margin-top:.4em" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="none" stroke="#1A1F27" stroke-width="1.6"/><path d="M20 3v34M3 20h17" stroke="#1A1F27" stroke-width="1.6"/><path d="M20 20V3a17 17 0 0 1 17 17z" fill="#6CB4FF" opacity=".5"/></svg>
+<div class="pl" style="width:60%"></div>
+</div>
+</div>
+</div>
+<div style="{{macBadge}}">{{camBadgeText}}</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{extPhoto}}" hint-placeholder-val="{{ false }}">
+<div class="mwin" style="left:14%;top:13%;width:72%;height:72%;background:#2A2D33">
+<div class="mbar" style="background:#1E2229"><span class="d"></span><span class="d" style="background:#F5B85C"></span><span class="d" style="background:#5DD39E"></span><span style="margin-left:6px">Partage tablette</span></div>
+<div style="flex:1;display:flex;align-items:center;gap:14px;padding:10px 16px">
+<div style="width:62px;height:82px"><div class="paper" style="width:100%;height:100%;font-size:4px"><div style="font-weight:800">Exercice 3</div><div class="pl" style="width:92%"></div><div class="pl" style="width:84%"></div><div class="pl" style="width:70%"></div></div></div>
+<div style="display:flex;flex-direction:column;gap:3px;font-size:8px"><b>photo-0941.jpg</b><span style="color:#8B95A5">5 Mpx · à l'instant</span></div>
+</div>
+</div>
+</sc-if>
+
+<div style="position:absolute;left:50%;bottom:4px;transform:translateX(-50%);height:16px;padding:0 5px;border-radius:5px;background:rgba(255,255,255,.18);display:flex;align-items:center;gap:3px;z-index:30">
+<span style="width:10px;height:10px;border-radius:3px;background:#3D9BE9"></span><span style="width:10px;height:10px;border-radius:3px;background:#2F80ED"></span><span style="width:10px;height:10px;border-radius:3px;background:#4A6FA5"></span><span style="width:10px;height:10px;border-radius:3px;background:#1DB954"></span><span style="width:10px;height:10px;border-radius:3px;background:#5865F2"></span><span style="width:10px;height:10px;border-radius:3px;background:#5B5FC7"></span><span style="width:10px;height:10px;border-radius:3px;background:#E9E5DC"></span>
+</div>
+</div>
+</div>
+<div style="width:18px;height:34px;background:#24272D"></div>
+<div style="width:120px;height:8px;border-radius:4px;background:#2A2E35"></div>
+<div style="font-size:12px;color:#8B95A5;margin-top:8px">Écran en plus</div>
+</div>
+
+<div style="display:flex;flex-direction:column;align-items:center">
+<div style="width:190px;height:122px;background:#15171B;border-radius:8px 8px 2px 2px;padding:6px 8px 7px;box-shadow:inset 0 0 0 1px #2A2F38">
+<div style="width:174px;height:109px;background:{{wallB}};transition:background .4s;border-radius:2px;position:relative;overflow:hidden;color:#E9EDF2">
+<div style="position:absolute;left:0;right:0;top:0;height:8px;background:rgba(10,13,18,.7);z-index:30"></div>
+<sc-if value="{{extWins}}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{winsB}}" as="w" hint-placeholder-count="2">
+<div style="{{w.mStyle}}"><div>{{w.name}}</div></div>
+</sc-for>
+</sc-if>
+<sc-if value="{{extDark}}" hint-placeholder-val="{{ false }}">
+<div style="{{darkStyle}}"><div style="font-size:12px;font-weight:800">{{darkBig}}</div></div>
+</sc-if>
+<sc-if value="{{lapDefault}}" hint-placeholder-val="{{ true }}">
+<div class="mwin" style="left:10%;top:16%;width:80%;height:70%;background:#F5F7FA;color:#1A1F27">
+<div class="mbar" style="height:9px;font-size:5px;background:#E3E7ED;color:#5A6472">Mail · Boîte de réception</div>
+<div style="flex:1;padding:4px;display:flex;flex-direction:column;gap:3px"><div class="ln" style="width:90%;height:3px"></div><div class="ln" style="width:75%;height:3px"></div><div class="ln" style="width:85%;height:3px"></div><div class="ln" style="width:60%;height:3px"></div></div>
+</div>
+</sc-if>
+</div>
+</div>
+<div style="width:224px;height:8px;border-radius:0 0 8px 8px;background:#2A2E35"></div>
+<div style="font-size:12px;color:#8B95A5;margin-top:8px">MacBook</div>
+</div>
+
+</div>
+
+<div class="card" style="--sf:#171C24;--st:#242B36;gap:12px;padding:24px 26px">
+<div class="lbl" style="color:#6CB4FF">Étape {{stepNum}} sur 10 · {{stepTab}}</div>
+<div style="font-size:30px;font-weight:800;line-height:1.15;letter-spacing:-.01em">{{capTitle}}</div>
+<div style="font-size:18px;line-height:1.5;color:#C3CAD5">{{capBody}}</div>
+<div style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;color:#FFD166;margin-top:4px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11V5a2 2 0 0 1 4 0v5l5 1a2 2 0 0 1 1.6 2.3L19 18a3 3 0 0 1-3 3h-4a4 4 0 0 1-3.2-1.6L6 15.5a1.6 1.6 0 0 1 2.4-2z"/></svg>
+{{capHint}}</div>
+</div>
+</section>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+var STEPS = [
+  { name: 'Connexion', tab: 'Appairage', t: 'Branchée, elle trouve le Mac', b: "Sur le même WiFi, la tablette trouve l'ordinateur toute seule. Un code à 6 chiffres affiché sur le Mac, et c'est appairé. Aucun réglage, aucun câble.", h: 'Touchez Ajouter, puis Saisir le code et Connecter.' },
+  { name: 'Accueil', tab: 'Accueil', t: "L'Accueil : la journée d'un coup d'œil", b: "Heure, prochain rendez-vous, tâches, météo, Focus. Des widgets qu'on dispose comme on veut, avec des modèles Travail, Maison ou Veille.", h: 'Cochez une tâche, lancez le Focus, touchez Rejoindre.' },
+  { name: 'Apps', tab: 'Deck · Apps', t: 'Le Deck : un Stream Deck pour tout le monde', b: "Les applis du Mac en un toucher, le son et le micro de l'ordinateur sous la main. Les touches viennent des applis installées.", h: "Touchez une appli : elle s'ouvre sur l'écran du Mac." },
+  { name: 'Fenêtres', tab: 'Deck · Ouvertes', t: 'Toutes les fenêtres, tous les écrans', b: 'Le MacBook et son écran en plus, vus d’en haut. On met une fenêtre devant, on la change d’écran, on la jette à la corbeille.', h: 'Touchez une fenêtre, puis « Autre écran » ou la corbeille.' },
+  { name: 'Appels', tab: 'Deck · Discord', t: 'Les appels, sans chercher la fenêtre', b: 'La page Discord n’apparaît que si le Compagnon voit Discord ouvert sur le Mac. Un appel arrive : on décroche, on coupe le micro et on raccroche depuis la tablette.', h: 'Lancez Discord : sa page apparaît. Puis « Recevoir un appel ».' },
+  { name: 'Assistant', tab: 'Assistant', t: "L'assistant qui connaît votre journée", b: "On parle ou on écrit, l'IA répond à l'écran et à voix haute. Toute l'intelligence est dans le cloud : la tablette reste légère.", h: 'Touchez la question ou Parler.' },
+  { name: 'Ordi', tab: "Depuis l'ordi", t: 'Les documents du Mac, à côté', b: 'Les fichiers du dossier partagé et la page ouverte dans le navigateur du Mac, lus sur la tablette pendant qu’on travaille sur l’écran.', h: 'Choisissez Fichiers de l’ordi ou Page de l’ordi.' },
+  { name: 'Focus', tab: 'Focus', t: 'Focus : concentré, sans être dérangé', b: 'Un minuteur de concentration, des sons d’ambiance qui suivent le chrono, et le Mac passe en Ne pas déranger le temps de la séance. Pause : les notifications reviennent.', h: 'Lancez le chrono et regardez la barre de menus du Mac.' },
+  { name: 'Caméra', tab: 'Caméra', t: 'La caméra devient un visualiseur', b: 'On pose une feuille sous la tablette : elle s’affiche en grand sur le Mac, donc au vidéoprojecteur. Ou on envoie une photo dans un dossier.', h: 'Touchez « Montrer sur l’ordi » ou « Envoyer une photo ».' },
+  { name: 'Réglages', tab: 'Réglages', t: 'Réglages et mises à jour, depuis la tablette', b: 'Thèmes, WiFi, ordinateurs appairés. Les mises à jour s’installent toutes seules, même en mode kiosque.', h: 'Changez de thème, puis touchez Rechercher.' }
+];
+var APPS = [
+  { id: 'chrome', name: 'Chrome', c: '#4A6FA5' }, { id: 'safari', name: 'Safari', c: '#2F80ED' },
+  { id: 'spotify', name: 'Spotify', c: '#1DB954' }, { id: 'discord', name: 'Discord', c: '#5865F2' },
+  { id: 'teams', name: 'Teams', c: '#5B5FC7' }, { id: 'notion', name: 'Notion', c: '#3A3A3A' },
+  { id: 'vscode', name: 'VS Code', c: '#2A7BD4' }, { id: 'finder', name: 'Finder', c: '#3D9BE9' }
+];
+var THEMES = {
+  nuit: { name: 'Nuit', bg: '#0C0F14', rail: '#11151B', sf: '#171C24', sf2: '#212833', st: '#242B36', ac: '#6CB4FF', onac: '#0C0F14', tx: '#E9EDF2', dim: '#8B95A5' },
+  clair: { name: 'Clair', bg: '#F2F4F7', rail: '#E8ECF1', sf: '#FFFFFF', sf2: '#EDF0F4', st: '#DDE2E9', ac: '#1F6FEB', onac: '#FFFFFF', tx: '#141A22', dim: '#566070' },
+  neon: { name: 'Néon', bg: '#0A0612', rail: '#110A1C', sf: '#181026', sf2: '#241838', st: '#2E2045', ac: '#FF5CD6', onac: '#0A0612', tx: '#F3EEFF', dim: '#A497C0' },
+  chaud: { name: 'Chaud', bg: '#15100C', rail: '#1B1510', sf: '#231B15', sf2: '#2F251D', st: '#3A2E24', ac: '#FFA05C', onac: '#15100C', tx: '#F5ECE3', dim: '#B3A595' }
+};
+var FILES = [
+  { name: 'Rapport T3.pdf', kind: 'PDF · 2,4 Mo' },
+  { name: 'Budget 2027.xlsx', kind: 'Tableur · 380 Ko' },
+  { name: 'Ordre du jour.docx', kind: 'Texte · 64 Ko' }
+];
+var AMB = ['Pluie', 'Café', 'Forêt', 'Vagues'];
+var SUBCAP = {
+  media: { tab: 'Deck · Média', t: 'Média : la musique sous la main', b: 'Le morceau en cours sur le Mac, lu dans les contrôles du système : Spotify, YouTube, Deezer… Et les sites favoris à un toucher.', h: 'Pause, morceau suivant, ou touchez un site.' },
+  perso: { tab: 'Deck · Perso', t: 'Perso : vos touches et vos macros', b: 'Chacun crée ses touches depuis la tablette. Une touche peut enchaîner plusieurs actions sur le Mac : c’est une macro.', h: 'Touchez « Mode réunion » et regardez le Mac.' }
+};
+SUBCAP.racc = { tab: 'Deck · Raccourcis', t: 'Raccourcis : les gestes du Mac en un toucher', b: 'Capture, Spotlight, Mission Control, mode sombre, verrouillage : les raccourcis clavier qu’on oublie, rangés sur des touches.', h: 'Touchez Spotlight ou Mode sombre et regardez le Mac.' };
+var RACC = [
+  { id: 'capture', name: 'Capture zone', k: '⌘ ⇧ 4', ext: 'shot' },
+  { id: 'spot', name: 'Spotlight', k: '⌘ Espace', ext: 'spot' },
+  { id: 'mission', name: 'Mission Control', k: '⌃ ↑', ext: 'mission' },
+  { id: 'dark', name: 'Mode sombre', k: 'Système', ext: null },
+  { id: 'play', name: 'Lecture / Pause', k: 'Média', ext: null },
+  { id: 'sleep', name: 'Veille écran', k: 'Système', ext: 'sleep' },
+  { id: 'lock', name: 'Verrouiller', k: '⌃ ⌘ Q', ext: 'lock' },
+  { id: 'clip', name: 'Écran → presse-papiers', k: '⌃ ⌘ ⇧ 3', ext: null }
+];
+var TRACKS = [
+  { t: 'Focus Flow', a: 'Lofi Studio', c: '#1DB954' },
+  { t: 'Rainy Window', a: 'Chill Beats', c: '#B18CFF' },
+  { t: 'Morning Run', a: 'Indie Pop', c: '#FFA05C' }
+];
+var SITES = [
+  { name: 'YouTube', c: '#E5322D' }, { name: 'Deezer', c: '#A238FF' },
+  { name: 'Twitch', c: '#9146FF' }, { name: 'Radio', c: '#2A7BD4' }
+];
+var KEYS = [
+  { id: 'reunion', name: 'Mode réunion', c: '#5B5FC7', steps: ['Son à 20 %', 'Ne pas déranger', 'Ouvre Teams', 'Coupe le micro'], fx: { vol: 20, macMic: false, dnd: true, persoExt: 'teams' } },
+  { id: 'jeu', name: 'Mode jeu', c: '#5865F2', steps: ['Ouvre Discord', 'Playlist Jeu', 'Ne pas déranger'], fx: { launched: 'discord', discordOpen: true, playing: true, dnd: true, persoExt: 'app' } },
+  { id: 'dossiers', name: 'Mes dossiers', c: '#4FD1E8', steps: ['Ouvre le Finder', 'Va dans Partage tablette'], fx: { persoExt: 'photo' } },
+  { id: 'fin', name: 'Fin de journée', c: '#FFA05C', steps: ['Enregistre les tâches', 'Coupe la musique', 'Mac en veille'], fx: { playing: false, dnd: false, persoExt: 'sleep' } }
+];
+var SLOTS = [{ l: 5, t: 12, w: 60, h: 62 }, { l: 32, t: 30, w: 62, h: 62 }, { l: 14, t: 44, w: 50, h: 50 }];
+
+function initState() {
+  return {
+    step: 0, pairStage: 'found', toast: '',
+    tasks: [false, false, false], focusRun: false, focusSecs: 1500, amb: null, teamsOpen: false,
+    launched: null, vol: 60, macMic: true,
+    wins: [
+      { id: 'chrome', name: 'Chrome', title: 'Rapport T3', screen: 0, c: '#4A6FA5', tc: '#FFFFFF', closed: false },
+      { id: 'notion', name: 'Notion', title: 'Plan du projet', screen: 0, c: '#E9E5DC', tc: '#1A1F27', closed: false },
+      { id: 'mail', name: 'Mail', title: 'Boîte de réception', screen: 1, c: '#2F80ED', tc: '#FFFFFF', closed: false },
+      { id: 'spotify', name: 'Spotify', title: 'Focus Flow', screen: 1, c: '#1DB954', tc: '#0C0F14', closed: false }
+    ],
+    front: null, miam: false,
+    call: 'idle', muted: false, secs: 0,
+    chat: 0, docs: 'choice', file: 0, fileOnMac: false,
+    cam: 'choice', frozen: false, zoom: false, photoSent: false,
+    theme: 'nuit', upd: 0,
+    deckSub: null, playing: true, track: 0, prog: 18, site: null,
+    macro: null, macroDone: 0, persoExt: null, dnd: false,
+    raccExt: null, macDark: true, discordOpen: false, focusDnd: true
+  };
+}
+function mmss(n) { return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0'); }
+
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = initState(); }
+  componentDidMount() {
+    this.t1 = setInterval(() => this.tick(), 1000);
+    this.t2 = setInterval(() => this.fast(), 120);
+  }
+  componentWillUnmount() { clearInterval(this.t1); clearInterval(this.t2); clearTimeout(this.tt); }
+  tick() {
+    var s = this.state, u = {};
+    if (s.call === 'active') u.secs = s.secs + 1;
+    if (s.focusRun && s.focusSecs > 0) u.focusSecs = s.focusSecs - 1;
+    if (s.playing) { if (s.prog >= 100) { u.prog = 0; u.track = (s.track + 1) % TRACKS.length; } else u.prog = s.prog + 2; }
+    if (Object.keys(u).length) this.setState(u);
+  }
+  fast() {
+    var s = this.state;
+    if (s.upd > 0 && s.upd < 100) this.setState({ upd: Math.min(100, s.upd + 2) });
+  }
+  flash(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this.tt);
+    this.tt = setTimeout(() => this.setState({ toast: '' }), 2600);
+  }
+  go(i) { this.setState({ step: i, toast: '', deckSub: null }); }
+  runKey(k) {
+    if (this.state.macro) return;
+    this.setState({ macro: k.id, macroDone: 0 });
+    k.steps.forEach((st, i) => setTimeout(() => this.setState({ macroDone: i + 1 }), 600 * (i + 1)));
+    setTimeout(() => this.setState(Object.assign({}, k.fx)), 600 * k.steps.length);
+    setTimeout(() => this.setState({ macro: null, macroDone: 0 }), 600 * k.steps.length + 1800);
+  }
+  frontWin() { var f = this.state.front; return this.state.wins.find((w) => w.id === f && !w.closed); }
+
+  renderVals() {
+    var s = this.state, step = s.step, sub = (step >= 2 && step <= 4) ? s.deckSub : null;
+    var cap = sub ? SUBCAP[sub] : STEPS[step];
+    var tr = TRACKS[s.track], km = KEYS.find((k) => k.id === s.macro);
+    var th = THEMES[s.theme];
+    var themeVars = '--bg:' + th.bg + ';--rail:' + th.rail + ';--sf:' + th.sf + ';--sf2:' + th.sf2 + ';--st:' + th.st + ';--ac:' + th.ac + ';--onac:' + th.onac + ';--tx:' + th.tx + ';--dim:' + th.dim;
+    var railOn = 'background:var(--sf2);color:var(--ac)', railOff = 'background:transparent;color:var(--dim)';
+    var rs = function (on) { return on ? railOn : railOff; };
+
+    var mkWins = (k) => s.wins.filter((w) => !w.closed && w.screen === k).map((w, i) => {
+      var p = SLOTS[i % 3], f = w.id === s.front;
+      var closing = f && s.miam;
+      var pos = 'position:absolute;left:' + p.l + '%;top:' + p.t + '%;width:' + p.w + '%;height:' + p.h + '%;z-index:' + (f ? 20 : i + 1) + ';background:' + w.c + ';color:' + w.tc + ';box-sizing:border-box;overflow:hidden;' + (closing ? 'opacity:.35;transform:scale(.9);' : '') + 'transition:all .25s;';
+      return {
+        name: w.name, title: w.title,
+        tStyle: pos + 'border-radius:6px;border:' + (f ? '3px solid var(--ac)' : '1px solid rgba(0,0,0,.35)') + ';padding:6px 8px;font:inherit;font-size:12px;font-weight:700;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px;align-items:flex-start;box-shadow:0 4px 12px rgba(0,0,0,.35)',
+        mStyle: pos + 'border-radius:3px;padding:2px 4px;font-size:' + (k === 0 ? 8 : 6) + 'px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.45);outline:' + (f ? '1.5px solid #FFFFFF' : 'none'),
+        pick: () => this.setState({ front: w.id })
+      };
+    });
+    var fw = this.frontWin();
+
+    var la = APPS.find((a) => a.id === s.launched);
+    var ext = 'desk';
+    if (step === 0) ext = 'pair';
+    else if (step === 1) ext = s.teamsOpen ? 'teams' : 'desk';
+    else if (sub === 'media') ext = s.site ? 'site' : 'media';
+    else if (sub === 'perso') ext = s.persoExt || 'desk';
+    else if (sub === 'racc') ext = s.raccExt || 'desk';
+    else if (step === 2) ext = la ? 'app' : 'desk';
+    else if (step === 3) ext = 'wins';
+    else if (step === 4) ext = s.discordOpen ? 'discord' : 'desk';
+    else if (step === 6) ext = s.fileOnMac ? 'file' : 'safari';
+    else if (step === 8) ext = s.cam === 'live' ? 'camera' : (s.photoSent ? 'photo' : 'desk');
+
+    var updTitle = 'Compagnon 2.3 · à jour', updSub = 'Dernière recherche : hier', updBtn = 'Rechercher', updBtnStyle = '';
+    if (s.upd === -1) { updTitle = 'Compagnon 2.4 disponible'; updSub = 'Nouveau : moteur web à jour, widget Eau'; updBtn = 'Mettre à jour'; updBtnStyle = 'background:var(--ac);color:var(--onac)'; }
+    else if (s.upd > 0 && s.upd < 100) { updTitle = 'Installation… ' + s.upd + ' %'; updSub = 'La tablette reste utilisable'; updBtn = 'Patientez'; }
+    else if (s.upd >= 100) { updTitle = 'Compagnon 2.4 · installé'; updSub = 'Installé en silence, sans redémarrer'; updBtn = 'Installé'; updBtnStyle = 'background:#5DD39E;color:#0C0F14'; }
+
+    var camBadgeText = s.cam === 'photo' ? 'Aperçu' : (s.frozen ? 'Image figée' : 'En direct');
+
+    return {
+      themeVars: themeVars,
+      steps: STEPS.map((st, i) => ({
+        label: (i + 1) + ' ' + st.name,
+        style: i === step ? 'background:#6CB4FF;color:#0C0F14;border-color:#6CB4FF' : (i < step ? 'background:#171C24;color:#E9EDF2' : 'background:transparent;color:#8B95A5'),
+        go: () => this.go(i)
+      })),
+      next: () => this.go((step + 1) % STEPS.length),
+      reset: () => { clearTimeout(this.tt); this.setState(initState()); },
+      stepNum: step + 1, stepTab: cap.tab, capTitle: cap.t, capBody: cap.b, capHint: cap.h,
+
+      isPair: step === 0, paired: step > 0,
+      pairFound: s.pairStage === 'found', pairCode: s.pairStage !== 'found',
+      codeEmpty: s.pairStage === 'code', codeFilled: s.pairStage === 'filled',
+      codeBoxes: '482913'.split('').map((d) => ({ d: s.pairStage === 'filled' ? d : '' })),
+      pairAdd: () => this.setState({ pairStage: 'code' }),
+      pairFill: () => this.setState({ pairStage: 'filled' }),
+      pairConnect: () => { this.go(1); this.flash('Connecté au MacBook de l’équipe'); },
+
+      r: { home: rs(step === 1), deck: rs(step >= 2 && step <= 4), ai: rs(step === 5), docs: rs(step === 6), focus: rs(step === 7), cam: rs(step === 8), set: rs(step === 9) },
+      goHome: () => this.go(1), goDeck: () => this.go(2), goAi: () => this.go(5), goDocs: () => this.go(6),
+      goFocus: () => this.go(7), goCam: () => this.go(8), goSet: () => this.go(9),
+
+      isHome: step === 1,
+      tasks: ['Envoyer le rapport T3', 'Valider le budget 2027', 'Saisir le worklog Jira'].map((t, i) => {
+        var d = s.tasks[i];
+        return {
+          t: t, done: d,
+          box: 'width:26px;height:26px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;' + (d ? 'background:var(--ac);color:var(--onac)' : 'border:2px solid var(--dim)'),
+          txt: 'font-size:16px;' + (d ? 'text-decoration:line-through;color:var(--dim)' : ''),
+          toggle: () => { var a = s.tasks.slice(); a[i] = !a[i]; this.setState({ tasks: a }); if (a[i]) this.flash('Tâche faite'); }
+        };
+      }),
+      join: () => { this.setState({ teamsOpen: true }); this.flash('Teams rejoint la réunion sur le Mac'); },
+      focusTime: mmss(s.focusSecs), focusLabel: s.focusRun ? 'Pause' : 'Démarrer',
+      toggleFocus: () => {
+        this.setState({ focusRun: !s.focusRun });
+        if (s.focusDnd) this.flash(s.focusRun ? 'Pause : les notifications du Mac reviennent' : 'Le Mac passe en Ne pas déranger');
+      },
+      toggleFocusDnd: () => {
+        this.setState({ focusDnd: !s.focusDnd });
+        if (s.focusRun) this.flash(s.focusDnd ? 'Notifications du Mac rétablies' : 'Le Mac passe en Ne pas déranger');
+      },
+      dndPressed: s.focusDnd ? 'true' : 'false',
+      dndChipStyle: 'font:inherit;font-size:14px;font-weight:600;min-height:44px;padding:0 16px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;border:2px solid ' + (s.focusDnd ? 'var(--ac)' : 'var(--st)') + ';background:' + (s.focusDnd ? 'var(--sf2)' : 'transparent') + ';color:' + (s.focusDnd ? 'var(--ac)' : 'var(--dim)'),
+      dndBanner: step === 7 && s.focusRun && s.focusDnd,
+      resetFocus: () => this.setState({ focusRun: false, focusSecs: 1500 }),
+
+      isDeck: step >= 2 && step <= 4, isApps: step === 2 && !sub, isWins: step === 3 && !sub,
+      isDiscord: step === 4 && !sub && s.discordOpen, isDiscordOff: step === 4 && !sub && !s.discordOpen,
+      isMedia: sub === 'media', isPerso: sub === 'perso', isRacc: sub === 'racc',
+      openDiscord: () => { this.setState({ discordOpen: true, launched: 'discord' }); this.flash('Discord détecté sur le Mac : sa page apparaît'); },
+      quitDiscord: () => { this.setState({ discordOpen: false, call: 'idle', launched: s.launched === 'discord' ? null : s.launched }); this.flash('Discord fermé : sa page disparaît du Deck'); },
+      raccs: RACC.map((k) => ({
+        name: k.name, k: k.k,
+        style: (k.ext && s.raccExt === k.ext) || (k.id === 'dark' && !s.macDark) ? 'border-color:var(--ac);background:var(--sf2)' : '',
+        run: () => {
+          if (k.id === 'dark') { this.setState({ macDark: !s.macDark, raccExt: null }); this.flash(s.macDark ? 'Mac en mode clair' : 'Mac en mode sombre'); return; }
+          if (k.id === 'play') { this.setState({ playing: !s.playing }); this.flash(s.playing ? 'Musique en pause' : 'Musique relancée'); return; }
+          if (k.id === 'clip') { this.flash('Capture copiée dans le presse-papiers du Mac'); return; }
+          this.setState({ raccExt: s.raccExt === k.ext ? null : k.ext });
+          this.flash(k.name + ' sur le Mac (' + k.k + ')');
+        }
+      })),
+      extMission: ext === 'mission', extSpot: ext === 'spot',
+      wallA: s.macDark ? '#22324A' : '#9DB6D3', wallB: s.macDark ? '#2B3A55' : '#A9C0DA',
+      deckTabs: [['Apps', 2], ['Ouvertes', 3], ['Média', 'media'], ['Raccourcis', 'racc'], ['Discord', 4], ['Perso', 'perso']].filter((d) => d[0] !== 'Discord' || s.discordOpen).map((d) => {
+        var on = typeof d[1] === 'string' ? sub === d[1] : (!sub && d[1] === step);
+        return {
+          name: d[0],
+          style: on ? 'background:var(--ac);color:var(--onac)' : 'background:var(--sf);color:var(--tx)',
+          go: () => { if (typeof d[1] === 'string') this.setState({ deckSub: d[1], toast: '' }); else this.go(d[1]); }
+        };
+      }),
+      coverStyle: 'width:110px;height:110px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;background:' + tr.c,
+      trackTitle: tr.t, trackArtist: tr.a, playing: s.playing, paused: !s.playing,
+      playLabel: s.playing ? 'Pause' : 'Lecture',
+      progBar: 'height:100%;background:var(--ac);width:' + s.prog + '%;transition:width .9s linear',
+      togglePlay: () => this.setState({ playing: !s.playing, site: null }),
+      nextTrack: () => this.setState({ track: (s.track + 1) % TRACKS.length, prog: 0, playing: true, site: null }),
+      prevTrack: () => this.setState({ track: (s.track + TRACKS.length - 1) % TRACKS.length, prog: 0, playing: true, site: null }),
+      sites: SITES.map((x) => ({
+        name: x.name, i: x.name.charAt(0), bg: 'background:' + x.c,
+        style: s.site === x.name ? 'border-color:var(--ac);background:var(--sf2)' : '',
+        open: () => { this.setState({ site: x.name, playing: false }); this.flash(x.name + ' s’ouvre sur le Mac'); }
+      })),
+      addSite: () => this.flash('Ajouter un site : choisir dans les suggestions ou taper l’adresse'),
+      macCover: 'width:64px;height:64px;border-radius:4px;flex:none;background:' + tr.c,
+      macProg: 'height:100%;background:#1DB954;width:' + s.prog + '%;transition:width .9s linear',
+      macPlayState: s.playing ? 'Lecture' : 'En pause',
+      siteName: s.site || '',
+      siteHead: 'height:26px;flex:none;display:flex;align-items:center;padding:0 10px;font-size:11px;font-weight:800;color:#FFFFFF;background:' + ((SITES.find((x) => x.name === s.site) || {}).c || '#333'),
+      keys: KEYS.map((k) => ({
+        name: k.name, i: k.name.charAt(0), bg: 'background:' + k.c,
+        sub: k.steps.length > 1 ? 'Macro · ' + k.steps.length + ' étapes' : 'Une action',
+        style: s.macro === k.id ? 'border-color:var(--ac);background:var(--sf2)' : '',
+        run: () => this.runKey(k)
+      })),
+      newKey: () => this.flash('Nouvelle touche : choisir une action, puis en ajouter d’autres'),
+      macroOn: !!km, macroOff: !km,
+      macroTitle: km ? (s.macroDone >= km.steps.length ? km.name + ' : fait' : km.name + ' en cours…') : '',
+      macroSteps: km ? km.steps.map((t, i) => ({
+        t: t,
+        style: 'font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;transition:all .2s;' + (i < s.macroDone ? 'background:#5DD39E;color:#0C0F14' : 'background:var(--sf2);color:var(--dim)')
+      })) : [],
+      extMedia: ext === 'media', extSite: ext === 'site', extShot: ext === 'shot',
+      extDark: ext === 'sleep' || ext === 'lock',
+      darkStyle: 'position:absolute;inset:0;z-index:35;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#E9EDF2;background:' + (ext === 'sleep' ? '#000000' : '#1A2333'),
+      darkBig: ext === 'sleep' ? 'Veille' : '09:41', darkSmall: ext === 'sleep' ? 'Bonne soirée' : 'Verrouillé depuis la tablette',
+      apps: APPS.map((a) => ({
+        name: a.name, i: a.name.charAt(0), bg: 'background:' + a.c,
+        launch: () => {
+          this.setState(a.id === 'discord' ? { launched: a.id, discordOpen: true } : { launched: a.id });
+          this.flash(a.id === 'discord' && !s.discordOpen ? 'Discord s’ouvre : sa page apparaît dans le Deck' : a.name + ' s’ouvre sur le Mac');
+        }
+      })),
+      vol: s.vol, volBar: 'height:100%;border-radius:5px;background:var(--ac);width:' + s.vol + '%;transition:width .2s',
+      volDown: () => this.setState({ vol: Math.max(0, s.vol - 10) }),
+      volUp: () => this.setState({ vol: Math.min(100, s.vol + 10) }),
+      macMicLabel: s.macMic ? 'Micro ouvert' : 'Micro coupé',
+      macMicStyle: s.macMic ? '' : 'background:#FF6B6B;color:#0C0F14',
+      toggleMacMic: () => this.setState({ macMic: !s.macMic }),
+
+      winsA: mkWins(0), winsB: mkWins(1),
+      frontInfo: fw ? fw.name + ' est devant' : 'Touchez une fenêtre pour la mettre devant',
+      moveFront: () => {
+        if (!fw) { this.flash('Touchez d’abord une fenêtre'); return; }
+        this.setState({ wins: s.wins.map((w) => w.id === fw.id ? Object.assign({}, w, { screen: 1 - w.screen }) : w) });
+      },
+      closeFront: () => {
+        if (!fw) { this.flash('Touchez d’abord une fenêtre'); return; }
+        this.setState({ miam: true });
+        setTimeout(() => this.setState({ miam: false, front: null, wins: this.state.wins.map((w) => w.id === fw.id ? Object.assign({}, w, { closed: true }) : w) }), 900);
+      },
+      reopenAll: () => this.setState({ wins: initState().wins, front: null }),
+      trashStyle: 'font:inherit;flex:none;height:46px;border-radius:12px;border:2px dashed ' + (s.miam ? '#FF6B6B' : 'var(--st)') + ';background:' + (s.miam ? '#FF6B6B' : 'transparent') + ';color:' + (s.miam ? '#0C0F14' : 'var(--dim)') + ';display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s',
+      trashText: s.miam ? 'Miam !' : 'Corbeille : fermer la fenêtre devant',
+
+      ringing: s.call === 'ringing', callIdle: s.call === 'idle' || s.call === 'ringing', callActive: s.call === 'active', callEnded: s.call === 'ended',
+      callNotActive: s.call !== 'active',
+      callTime: mmss(s.secs),
+      ring: () => this.setState({ call: 'ringing', secs: 0, muted: false }),
+      answer: () => { this.setState({ call: 'active', secs: 0 }); },
+      decline: () => { this.setState({ call: 'idle' }); this.flash('Appel refusé'); },
+      hang: () => this.setState({ call: 'ended' }),
+      muteLabel: s.muted ? 'Micro coupé' : 'Couper le micro',
+      muteStyle: s.muted ? 'background:#FF6B6B;color:#0C0F14' : '',
+      toggleMute: () => this.setState({ muted: !s.muted }),
+      shareScreen: () => this.flash('Partage d’écran lancé sur le Mac'),
+      macMuteBadge: s.muted ? 'font-size:6px;background:#FF6B6B;color:#0C0F14;padding:1px 4px;border-radius:4px' : 'display:none',
+      discordStatus: s.call === 'ended' ? 'Appel terminé · ' + mmss(s.secs) : 'Aucun appel en cours',
+
+      isAi: step === 5, chatAsked: s.chat >= 1, chatTyping: s.chat === 1, chatAnswered: s.chat === 2,
+      ask: () => { if (s.chat) return; this.setState({ chat: 1 }); setTimeout(() => this.setState({ chat: 2 }), 1300); },
+
+      isDocs: step === 6, docsChoice: s.docs === 'choice', docsFiles: s.docs === 'files', docsPage: s.docs === 'page',
+      openFiles: () => this.setState({ docs: 'files' }), openPage: () => this.setState({ docs: 'page' }),
+      docsBack: () => this.setState({ docs: 'choice' }),
+      files: FILES.map((f, i) => ({
+        name: f.name, kind: f.kind,
+        style: 'font:inherit;color:var(--tx);text-align:left;cursor:pointer;min-height:56px;padding:8px 12px;border-radius:12px;display:flex;flex-direction:column;gap:2px;font-size:14px;border:2px solid ' + (i === s.file ? 'var(--ac)' : 'var(--st)') + ';background:' + (i === s.file ? 'var(--sf2)' : 'var(--sf)'),
+        pick: () => this.setState({ file: i, fileOnMac: false })
+      })),
+      fileName: FILES[s.file].name,
+      openOnMac: () => { this.setState({ fileOnMac: true }); this.flash(FILES[s.file].name + ' ouvert sur le Mac'); },
+
+      isFocus: step === 7,
+      ambiences: AMB.map((m) => ({
+        name: m,
+        style: 'font:inherit;min-height:56px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;border:2px solid ' + (s.amb === m ? 'var(--ac)' : 'var(--st)') + ';background:' + (s.amb === m ? 'var(--sf2)' : 'var(--sf)') + ';color:' + (s.amb === m ? 'var(--ac)' : 'var(--tx)'),
+        pick: () => this.setState({ amb: s.amb === m ? null : m })
+      })),
+      ambInfo: !s.amb ? 'Choisissez un son pour accompagner la concentration.' : (s.focusRun ? 'Ambiance « ' + s.amb + ' » en cours, elle suit le chrono.' : 'Ambiance « ' + s.amb + ' » prête : elle démarre avec le chrono.'),
+
+      isCam: step === 8, camChoice: s.cam === 'choice', camOn: s.cam !== 'choice',
+      camIsLive: s.cam === 'live', camIsPhoto: s.cam === 'photo',
+      camLive: () => { this.setState({ cam: 'live', frozen: false, zoom: false }); this.flash('Le visualiseur s’ouvre sur le Mac'); },
+      camPhoto: () => this.setState({ cam: 'photo', zoom: false, frozen: false }),
+      camStop: () => this.setState({ cam: 'choice' }),
+      takePhoto: () => { this.setState({ cam: 'choice', photoSent: true }); this.flash('Photo envoyée dans « Partage tablette »'); },
+      toggleFreeze: () => { this.setState({ frozen: !s.frozen }); this.flash(s.frozen ? 'Le Mac affiche de nouveau le direct' : 'Image figée sur le Mac : la feuille peut bouger'); },
+      tabSway: s.cam === 'live' ? 'animation:sway 2.6s ease-in-out infinite' : '',
+      macSway: s.cam === 'live' && !s.frozen ? 'animation:swaym 2.6s ease-in-out infinite' : '',
+      macBadge: 'position:absolute;left:6px;top:5px;font-size:7px;font-weight:700;padding:1px 5px;border-radius:6px;' + (s.frozen ? 'background:#E9EDF2;color:#0C0F14' : 'background:#FF6B6B;color:#0C0F14'),
+      discordChan: () => this.flash('Discord ouvre le salon #général sur le Mac'),
+      discordDm: () => this.flash('Discord ouvre les messages privés sur le Mac'),
+      addComputer: () => this.flash('Recherche sur le WiFi… PC de la maison trouvé'),
+      toggleZoom: () => this.setState({ zoom: !s.zoom }),
+      freezeLabel: s.frozen ? 'Reprendre' : 'Figer', zoomLabel: s.zoom ? 'Zoom ×1' : 'Zoom ×2',
+      paperStyle: 'width:230px;height:300px;transform:rotate(-2deg) scale(' + (s.zoom ? 1.55 : 1) + ');transition:transform .3s',
+      macPaperStyle: 'width:96px;height:125px;transform:rotate(-2deg) scale(' + (s.zoom ? 1.55 : 1) + ');transition:transform .3s',
+      camBadge: 'position:absolute;left:12px;top:12px;font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px;' + (s.frozen || s.cam === 'photo' ? 'background:var(--sf2);color:var(--tx)' : 'background:#FF6B6B;color:#0C0F14'),
+      camBadgeText: camBadgeText,
+
+      isSet: step === 9,
+      themes: Object.keys(THEMES).map((k) => ({
+        name: THEMES[k].name,
+        style: 'font:inherit;color:var(--tx);cursor:pointer;min-height:76px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;background:var(--sf2);border:2px solid ' + (s.theme === k ? 'var(--ac)' : 'transparent'),
+        sw: 'width:34px;height:22px;border-radius:6px;background:' + THEMES[k].bg + ';box-shadow:inset -14px 0 0 ' + THEMES[k].ac + ',0 0 0 1px rgba(128,128,128,.4)',
+        pick: () => this.setState({ theme: k })
+      })),
+      updTitle: updTitle, updSub: updSub, updBtn: updBtn, updBtnStyle: updBtnStyle,
+      updBar: 'height:100%;background:' + (s.upd >= 100 ? '#5DD39E' : 'var(--ac)') + ';width:' + (s.upd > 0 ? s.upd : 0) + '%',
+      updAction: () => {
+        if (s.upd === 0) { this.setState({ upd: -1 }); }
+        else if (s.upd === -1) { this.setState({ upd: 1 }); }
+      },
+
+      hasToast: !!s.toast, toast: s.toast,
+
+      macMenu: (s.dnd || (s.focusRun && s.focusDnd) ? 'Ne pas déranger    ' : '') + (s.focusRun ?'Focus ' + mmss(s.focusSecs) + '    ' : '') + 'Son ' + s.vol + ' %    Sam. 09:41',
+      extPair: ext === 'pair', extDesk: ext === 'desk', extTeams: ext === 'teams', extApp: ext === 'app',
+      extWins: ext === 'wins', extDiscord: ext === 'discord', extFile: ext === 'file', extSafari: ext === 'safari',
+      extCamera: ext === 'camera', extPhoto: ext === 'photo', lapDefault: ext !== 'wins',
+      launchedName: la ? la.name : '',
+      launchedWin: 'position:absolute;left:14%;top:14%;width:72%;height:70%;border-radius:4px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 3px 12px rgba(0,0,0,.5);color:#FFFFFF;background:' + (la ? la.c : '#333')
+    };
+  }
+}
+</script>
+</body>
+</html>
