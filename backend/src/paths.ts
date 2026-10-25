@@ -20,8 +20,10 @@ function appDataDir() {
     : path.join(os.homedir(), "Library", "Application Support", "UnowhyCompanion");
 }
 
-// DATA_DIR : autre dossier de données (tests : deux « ordinateurs » sur la même machine).
-export const dataDir = path.resolve(process.env.DATA_DIR || (packaged ? appDataDir() : path.join(backendRoot, ".data")));
+// DATA_DIR : autre dossier de données (tests : deux « ordinateurs » sur la même machine) ; « paquet » = celles du
+// paquet installé, sur Mac comme sur Windows (serveur MCP lancé depuis le dépôt, .mcp.json).
+const envDataDir = process.env.DATA_DIR === "paquet" ? appDataDir() : process.env.DATA_DIR;
+export const dataDir = path.resolve(envDataDir || (packaged ? appDataDir() : path.join(backendRoot, ".data")));
 
 /**
  * Paquet installé avant les données hors du dossier (.data à côté du serveur) : on les recopie une fois,
