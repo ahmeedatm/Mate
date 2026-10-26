@@ -17,8 +17,10 @@ param(
   [string] $Logs = "install-logs"
 )
 $ErrorActionPreference = "Stop"
+# Chemin absolu depuis le dossier courant de PowerShell ([IO.Path]::GetFullPath part de celui du processus en 5.1).
+function Full([string] $p) { $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($p) }
 $Name = "UnowhyCompanionCI"
-$Root = [IO.Path]::GetFullPath($Root)
+$Root = Full $Root
 $pkg = Join-Path $Root "Compagnon Unowhy"
 $backend = Join-Path $pkg "backend"
 $node = Join-Path $backend "node\node.exe"
@@ -63,9 +65,9 @@ if ($Nettoyage) {
 }
 
 if (-not $Zip) { throw "-Zip <paquet Windows> attendu (ou -Nettoyage)" }
-$Zip = [IO.Path]::GetFullPath($Zip)
-$Junit = [IO.Path]::GetFullPath($Junit)
-$Logs = [IO.Path]::GetFullPath($Logs)
+$Zip = Full $Zip
+$Junit = Full $Junit
+$Logs = Full $Logs
 $sanity = Join-Path $PSScriptRoot "sanity.ts"
 $sanityCode = 0
 try {
