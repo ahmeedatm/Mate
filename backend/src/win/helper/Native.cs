@@ -14,7 +14,7 @@ namespace Companion
 {
     public static partial class Native
     {
-        static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
+        internal static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
 
         public static void Init()
         {
@@ -57,13 +57,13 @@ namespace Companion
                 case "appaudio": return AppAudio(req);
                 case "system": SystemCommand(Str(req, "command")); return true;
                 case "alert": Alert(Str(req, "title"), Str(req, "text")); return true;
-                default: throw new ArgumentException("Opération inconnue : " + op);
+                default: return Program.Dispatch(op, req);
             }
         }
 
         // --- Lecture des requêtes
 
-        static string Str(Dictionary<string, object> d, string key)
+        internal static string Str(Dictionary<string, object> d, string key)
         {
             object v;
             return d.TryGetValue(key, out v) && v != null ? Convert.ToString(v) : null;

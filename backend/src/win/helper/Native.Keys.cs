@@ -10,7 +10,7 @@ namespace Companion
     {
         // --- Clavier
 
-        [DllImport("user32.dll")] static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+        [DllImport("user32.dll")] internal static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
         [DllImport("user32.dll")] static extern uint MapVirtualKey(uint code, uint type);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern short VkKeyScanEx(char ch, IntPtr hkl);
         [DllImport("user32.dll")] static extern IntPtr GetKeyboardLayout(uint thread);

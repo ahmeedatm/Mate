@@ -13,7 +13,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Web.Script.Serialization;
 using System.Windows.Automation;
 using Microsoft.Win32;
 
@@ -21,8 +20,6 @@ namespace Companion
 {
     static class Program
     {
-        static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue };
-
         // STA : presse-papiers (secours de la page du navigateur).
         [STAThread]
         static int Main()
@@ -36,7 +33,7 @@ namespace Companion
             }
             catch (Exception e)
             {
-                stdout.WriteLine("@@" + Json.Serialize(new Dictionary<string, object> { { "ok", false }, { "fatal", true }, { "error", e.Message } }));
+                stdout.WriteLine("@@" + Native.Json.Serialize(new Dictionary<string, object> { { "ok", false }, { "fatal", true }, { "error", e.Message } }));
                 return 1;
             }
             stdout.WriteLine("@@{\"ok\":true,\"result\":\"ready\"}");
@@ -44,44 +41,26 @@ namespace Companion
             while ((line = stdin.ReadLine()) != null)
             {
                 if (line.Trim().Length == 0) continue;
-                stdout.WriteLine("@@" + Handle(line));
+                stdout.WriteLine("@@" + Native.Handle(line));
             }
             return 0;
         }
 
-        static string Handle(string line)
+        /** Opérations d'UI Automation et de lecture en cours, appelées par Native.Dispatch pour celles qu'il ne connaît pas. */
+        internal static object Dispatch(string op, Dictionary<string, object> req)
         {
-            var res = new Dictionary<string, object>();
-            try
+            switch (op)
             {
-                var req = Json.Deserialize<Dictionary<string, object>>(line);
-                switch (Str(req, "op"))
-                {
-                    case "browser": res["result"] = BrowserPage(); break;
-                    case "press": res["result"] = Press(req); break;
-                    case "voice": res["result"] = Voice(req); break;
-                    case "dnd": res["result"] = SetDnd(req); break;
-                    case "media": res["result"] = Media.Invoke(req); break;
-                    default: return Native.Handle(line);
-                }
-                res["ok"] = true;
+                case "browser": return BrowserPage();
+                case "press": return Press(req);
+                case "voice": return Voice(req);
+                case "dnd": return SetDnd(req);
+                case "media": return Media.Invoke(req);
+                default: throw new ArgumentException("Opération inconnue : " + op);
             }
-            catch (Exception e)
-            {
-                while (e.InnerException != null) e = e.InnerException;
-                res["ok"] = false;
-                res["error"] = e.Message;
-            }
-            return Json.Serialize(res);
         }
 
         // --- Lecture des requêtes
-
-        internal static string Str(Dictionary<string, object> d, string key)
-        {
-            object v;
-            return d.TryGetValue(key, out v) && v != null ? Convert.ToString(v) : null;
-        }
 
         internal static bool Bool(Dictionary<string, object> d, string key)
         {
@@ -160,7 +139,6 @@ namespace Companion
 
         [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
         [DllImport("user32.dll")] static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
-        [DllImport("user32.dll")] static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
 
         static readonly string[] PressTypes = { "Button", "Hyperlink", "MenuItem", "ListItem", "Text", "Group", "Custom" };
 
@@ -179,7 +157,7 @@ namespace Companion
         {
             var wanted = new HashSet<string>(List(req, "names").Select(n => Convert.ToString(n).Trim().ToLowerInvariant()));
             var detail = Bool(req, "detail");
-            var listing = Str(req, "action") == "list";
+            var listing = Native.Str(req, "action") == "list";
             var seen = new List<string>();
             var total = 0;
             foreach (var root in WindowRoots(req))
@@ -324,8 +302,8 @@ namespace Companion
 
         static void Chord(params byte[] vks)
         {
-            foreach (var vk in vks) keybd_event(vk, 0, 0, UIntPtr.Zero);
-            for (int i = vks.Length - 1; i >= 0; i--) keybd_event(vks[i], 0, 2, UIntPtr.Zero);
+            foreach (var vk in vks) Native.keybd_event(vk, 0, 0, UIntPtr.Zero);
+            for (int i = vks.Length - 1; i >= 0; i--) Native.keybd_event(vks[i], 0, 2, UIntPtr.Zero);
         }
 
         static object SetDnd(Dictionary<string, object> req)
