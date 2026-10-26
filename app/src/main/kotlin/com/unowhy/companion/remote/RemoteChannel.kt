@@ -125,22 +125,7 @@ class RemoteChannel(private val activity: MainActivity) {
             )
             null
         }
-        "focus" -> {
-            if (command.has("focusMinutes") || command.has("breakMinutes")) {
-                FocusTimer.setPreset(
-                    command.optInt("focusMinutes", FocusTimer.focusMinutes),
-                    command.optInt("breakMinutes", FocusTimer.breakMinutes),
-                )
-            }
-            val running = FocusTimer.state.running
-            when (command.getString("action")) {
-                "start" -> if (!running) FocusTimer.toggle()
-                "pause" -> if (running) FocusTimer.toggle()
-                "reset" -> FocusTimer.reset()
-                "skip" -> FocusTimer.skip()
-            }
-            focusState()
-        }
+        "focus" -> focusCommand(command)
         "noise" -> {
             if (command.has("volume")) NoisePlayer.setVolume(command.getDouble("volume").toFloat())
             when (val kind = command.getString("kind")) {
@@ -176,17 +161,6 @@ class RemoteChannel(private val activity: MainActivity) {
         return JSONObject().put("jpeg", jpeg).put("width", root.width).put("height", root.height)
     }
 
-    private fun focusState(): JSONObject {
-        val s = FocusTimer.state
-        return JSONObject()
-            .put("phase", if (s.phase == FocusTimer.Phase.FOCUS) "focus" else "pause")
-            .put("running", s.running)
-            .put("remaining", FocusTimer.format(s.remainingMs))
-            .put("focusMinutes", FocusTimer.focusMinutes)
-            .put("breakMinutes", FocusTimer.breakMinutes)
-            .put("completed", s.completed)
-    }
-
     /** Ce que Claude voit avec l'outil tablette_etat. */
     private fun state(): JSONObject {
         val metrics = activity.resources.displayMetrics
@@ -207,4 +181,33 @@ class RemoteChannel(private val activity: MainActivity) {
         /** Injoignable depuis plus longtemps : un autre ordinateur qui répond prend le relais (rentré à la maison). */
         const val SWITCH_AFTER_MS = 120_000L
     }
+}
+
+/** Ordre `focus` : préréglage, puis start / pause / reset / skip du minuteur ; renvoie son état. */
+internal fun focusCommand(command: JSONObject): JSONObject {
+    if (command.has("focusMinutes") || command.has("breakMinutes")) {
+        FocusTimer.setPreset(
+            command.optInt("focusMinutes", FocusTimer.focusMinutes),
+            command.optInt("breakMinutes", FocusTimer.breakMinutes),
+        )
+    }
+    val running = FocusTimer.state.running
+    when (command.getString("action")) {
+        "start" -> if (!running) FocusTimer.toggle()
+        "pause" -> if (running) FocusTimer.toggle()
+        "reset" -> FocusTimer.reset()
+        "skip" -> FocusTimer.skip()
+    }
+    return focusState()
+}
+
+internal fun focusState(): JSONObject {
+    val s = FocusTimer.state
+    return JSONObject()
+        .put("phase", if (s.phase == FocusTimer.Phase.FOCUS) "focus" else "pause")
+        .put("running", s.running)
+        .put("remaining", FocusTimer.format(s.remainingMs))
+        .put("focusMinutes", FocusTimer.focusMinutes)
+        .put("breakMinutes", FocusTimer.breakMinutes)
+        .put("completed", s.completed)
 }

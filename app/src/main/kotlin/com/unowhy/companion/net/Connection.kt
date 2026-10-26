@@ -43,11 +43,16 @@ object Connection {
     /**
      * Ordinateur à piloter maintenant (devenu actif), ou null si aucun ne répond.
      * `allowSwitch` faux : seulement l'actif (à son adresse, ou à la nouvelle trouvée sur le WiFi).
+     * `discover` : recherche sur le WiFi, remplacée dans les tests.
      */
-    suspend fun resolve(context: Context, allowSwitch: Boolean = true): Computer? = coroutineScope {
+    suspend fun resolve(
+        context: Context,
+        allowSwitch: Boolean = true,
+        discover: suspend () -> List<FoundComputer> = { Discovery.find() },
+    ): Computer? = coroutineScope {
         if (Computers.all(context).isEmpty()) return@coroutineScope null
         // Adresses à jour d'après le WiFi (DHCP : l'IP d'un ordinateur change d'un jour à l'autre).
-        val found = runCatching { Discovery.find() }.getOrDefault(emptyList())
+        val found = runCatching { discover() }.getOrDefault(emptyList())
         for (f in found) {
             Computers.all(context).firstOrNull { it.id == f.id && it.url != f.url }?.let { Computers.save(context, it.copy(url = f.url)) }
         }
