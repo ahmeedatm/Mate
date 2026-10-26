@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import fs from "node:fs";
 import http from "node:http";
+import os from "node:os";
+import path from "node:path";
 import { after, before, describe, it } from "node:test";
 import { startServer, TOKEN, type TestServer } from "./server.ts";
 
@@ -168,6 +173,42 @@ describe("pages locales", () => {
       }).on("error", reject);
     });
     assert.equal(status, 401);
+  });
+});
+
+describe("mises à jour de la tablette", () => {
+  /** Fichiers d'une release GitLab (APK + entrée .json), puis `npm run updates:add`. */
+  function addRelease(version: string, versionCode: number) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-release-"));
+    const file = `companion-${version}.apk`;
+    fs.writeFileSync(path.join(dir, file), `apk ${version}`);
+    const entry = path.join(dir, `companion-${version}.json`);
+    fs.writeFileSync(entry, JSON.stringify({ package: "com.unowhy.companion", label: "Companion", versionCode, versionName: version, file }));
+    execFileSync(process.execPath, ["--import", "tsx", "scripts/updates.ts", "add", entry], {
+      cwd: path.resolve(import.meta.dirname, ".."),
+      env: { ...process.env, DATA_DIR: server.dataDir },
+    });
+  }
+
+  it("annonce la version ajoutée depuis une release, sans toucher aux autres paquets", async () => {
+    const dir = path.join(server.dataDir, "updates");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "webview.apk"), "webview");
+    const webview = { package: "com.google.android.webview", label: "Navigateur web", versionCode: 1, versionName: "1", file: "webview.apk" };
+    fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ updates: [webview] }));
+
+    addRelease("1.2.3", 10203);
+    addRelease("1.2.4", 10204);
+
+    const { json } = await server.call("GET", "/updates");
+    assert.deepEqual(json.updates.map((u: any) => u.package), ["com.google.android.webview", "com.unowhy.companion"]);
+    const companion = json.updates[1];
+    assert.equal(companion.versionCode, 10204);
+    assert.equal(companion.sha256, createHash("sha256").update("apk 1.2.4").digest("hex"));
+    assert.equal(fs.existsSync(path.join(dir, "companion-1.2.3.apk")), false, "ancienne version retirée");
+
+    const res = await fetch(`${server.url}/updates/file/companion-1.2.4.apk`, { headers: { authorization: `Bearer ${TOKEN}` } });
+    assert.equal(await res.text(), "apk 1.2.4");
   });
 });
 

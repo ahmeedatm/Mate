@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
 /**
- * Paquets du logiciel de l'ordinateur, sans Node à installer : `npm run package` (sur le Mac).
+ * Paquets du logiciel de l'ordinateur, sans Node à installer : `npm run package` (Mac ou Linux, dont la CI).
  *
  * Chaque zip contient l'installeur à double-cliquer, le serveur regroupé en un fichier (dist/server.mjs, et
  * dist/service.mjs pour le lancement automatique), les fichiers lus à l'exécution (config, UnowhyHelper.exe…) et
@@ -14,6 +14,7 @@ import { build } from "esbuild";
  *
  *   ../dist/Compagnon-Unowhy-Windows.zip   node.exe (x64)
  *   ../dist/Compagnon-Unowhy-Mac.zip       node pour Apple Silicon et Intel, choisi par l'installeur
+ * `npm run package -- windows` ou `-- mac` : une seule des deux.
  */
 
 // Version figée (celle de latest-v22.x au 26/10/2026) : deux paquets faits à des dates différentes embarquent le même node.
@@ -111,18 +112,21 @@ async function stage(platform: "windows" | "mac", sums: string): Promise<string>
     }
   }
 
-  // ditto : zip lisible par l'Explorateur de Windows et le Finder, droits d'exécution gardés, sans __MACOSX.
+  // zip (Info-ZIP) : lisible par l'Explorateur de Windows et le Finder, droits d'exécution gardés, sans __MACOSX.
   const zip = path.join(out, `Compagnon-Unowhy-${platform === "windows" ? "Windows" : "Mac"}.zip`);
   fs.rmSync(zip, { force: true });
-  execFileSync("ditto", ["-c", "-k", "--norsrc", "--keepParent", root, zip]);
+  execFileSync("zip", ["-r", "-q", zip, FOLDER, "-x", "*.DS_Store"], { cwd: path.join(out, platform) });
   return zip;
 }
 
 async function main() {
-  if (process.platform !== "darwin") throw new Error("À lancer sur le Mac (ditto, unzip, tar)");
+  if (process.platform === "win32") throw new Error("À lancer sur le Mac ou sous Linux (zip, unzip, tar)");
   const sums = (await download(`https://nodejs.org/dist/${NODE_VERSION}/SHASUMS256.txt`)).toString("utf8");
   console.log(`Node : ${sums.match(/node-(v[\d.]+)-/)?.[1] ?? "?"}`);
-  for (const platform of ["windows", "mac"] as const) {
+  // Un job CI par plateforme : artefacts sous la limite de 100 Mo de GitLab.
+  const only = process.argv[2];
+  if (only && only !== "windows" && only !== "mac") throw new Error(`Plateforme « ${only} » : windows ou mac`);
+  for (const platform of (["windows", "mac"] as const).filter((p) => !only || p === only)) {
     const zip = await stage(platform, sums);
     console.log(`✓ ${path.relative(repo, zip)} (${Math.round(fs.statSync(zip).size / 1e6)} Mo)`);
   }
