@@ -48,6 +48,14 @@ default:
 .files-install-windows: &files-install-windows
   - backend/src/win/**/*
   - "Installer (Windows).cmd"
+# Pilote Windows et lanceur (C#) : sources, SDK, icône, fins de ligne.
+.files-helper-windows: &files-helper-windows
+  - backend/src/win/**/*
+  - backend/global.json
+  - backend/assets/compagnon.ico
+  - backend/qa/build-helper-windows.ps1
+  - .gitattributes
+  - .gitlab-ci.yml
 
 # En MR : seulement si la zone a bougé. Ailleurs (main, tag, nuit) : toujours.
 .zone-backend:
@@ -66,6 +74,11 @@ default:
       changes: *files-install-common
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes: *files-install-windows
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+.zone-helper-windows:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: *files-helper-windows
     - if: $CI_PIPELINE_SOURCE != "merge_request_event"
 
 # Toujours là : une MR qui ne touche aucune zone (docs) a quand même un pipeline, sans lequel elle ne fusionne pas.
@@ -280,6 +293,21 @@ install-windows:
     reports:
       junit: sanity-windows.xml
     expire_in: 1 week
+
+# Pilote et lanceur recompilés sur le même PC (sans session de bureau requise) : échoue si le C# ne compile pas
+# ou si les exe commités ne sont plus ceux des sources (backend/qa/build-helper-windows.ps1). SDK .NET de
+# backend/global.json installé dans .dotnet-ci/ du dossier du job, gardé d'un job à l'autre : rien sur le poste.
+helper-windows:
+  extends: .zone-helper-windows
+  stage: test
+  tags: [local-runner]
+  image: null
+  needs: []
+  variables:
+    GIT_DEPTH: 1
+    GIT_CLEAN_FLAGS: -ffdx -e .dotnet-ci/
+  script:
+    - '& backend\qa\build-helper-windows.ps1 -Work .dotnet-ci'
 
 # APK release signé, version = tag. Clé : variables protégées et masquées, visibles seulement des tags protégés (v*).
 # Publie aussi l'entrée du « serveur Unowhy » (companion-X.Y.Z.json), lue par `npm run updates:add`.

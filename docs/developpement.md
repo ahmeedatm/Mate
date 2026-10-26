@@ -87,7 +87,7 @@ adb -s <série> install -r app/build/outputs/apk/debug/app-debug.apk   # un appa
 
 `main` est protégée : on n'y pousse plus directement. Une branche par changement (`feat/…`, `fix/…`, `docs/…`, `ci/…`), puis une MR vers `main`. Elle se fusionne quand le pipeline est vert et les discussions résolues.
 
-Le pipeline (`.gitlab-ci.yml`) tourne sur le runner Linux, sauf `install-mac` (Mac, section suivante) et `install-windows` (PC Windows de QA) :
+Le pipeline (`.gitlab-ci.yml`) tourne sur le runner Linux, sauf `install-mac` (Mac, section suivante), `install-windows` et `helper-windows` (PC Windows de QA) :
 
 | Job | Vérifie |
 |---|---|
@@ -97,6 +97,7 @@ Le pipeline (`.gitlab-ci.yml`) tourne sur le runner Linux, sauf `install-mac` (M
 | `android-emulateur` | tests instrumentés (`app/src/androidTest/`, Espresso) sur un émulateur Android 10 sans services Google, 1280×800 à 160 dpi ; artefacts : rapport JUnit, capture de l'écran de bienvenue |
 | `package-windows`, `package-mac` | paquets de l'ordinateur (`npm run package -- windows|mac`), utilisés par les tests d'installation et la release |
 | `install-windows` | paquet Windows installé sur un vrai PC : installeur silencieux, lancement automatique, sanity, pilote, désinstallation (`backend/qa/install-windows.ps1`) |
+| `helper-windows` | pilote et lanceur C# recompilés sur Windows : échoue si le C# ne compile pas ou si les exe du dépôt ne sont plus ceux des sources (`backend/qa/build-helper-windows.ps1`) |
 | `zones` | rien : garde un pipeline aux MR qui ne touchent aucune zone (sans pipeline, la MR ne fusionne pas) |
 
 **Ciblage par zone.** En MR, un job ne tourne que si sa zone a bougé (`rules:changes`, ancres `.files-*` en tête du fichier). Sur `main`, sur un tag et la nuit, tout tourne. Toucher `.gitlab-ci.yml` relance tout.
@@ -106,6 +107,7 @@ Le pipeline (`.gitlab-ci.yml`) tourne sur le runner Linux, sauf `install-mac` (M
 | backend | `backend/**` | `backend`, `e2e` |
 | android | `app/**`, `*.gradle*`, `gradle/**`, `gradlew*`, `scripts/test-android.sh` | `android`, `android-emulateur` |
 | installation Windows | `backend/scripts/**`, `backend/src/os.ts`, `backend/src/paths.ts`, `backend/package-lock.json`, `backend/qa/**`, `backend/src/win/**`, `Installer (Windows).cmd` | `package-windows`, `install-windows` |
+| pilote Windows | `backend/src/win/**`, `backend/global.json`, `backend/assets/compagnon.ico`, `backend/qa/build-helper-windows.ps1`, `.gitattributes` | `helper-windows` |
 | installation Mac | liste propre au job (`backend/src/mac/**`, `service.ts`, `package.ts`, `os.ts`, `paths.ts`…) | `install-mac` (manuel sur les autres MR) ; `package-mac` ne tourne qu'hors MR, `install-mac` fabriquant son paquet |
 
 **Nuit** : pipeline programmé n° 282 sur `main`, chaque nuit à 3 h (heure de Paris), qui lance tout (Settings > CI/CD > Pipeline schedules, ou `glab api projects/efreifer%2Funowhy-companion/pipeline_schedules`). Le `workflow` accepte `CI_PIPELINE_SOURCE == "schedule"`. `install-mac` et `install-windows` demandent alors le Mac et le PC de QA allumés, session ouverte.
@@ -117,6 +119,8 @@ node qa/sanity.ts --url http://127.0.0.1:3000 --token <jeton> --os mac --junit s
 ```
 
 **`install-windows`** : runner 976 « Local QA runner » (tag `local-runner`), le PC Windows de QA, exécuteur shell PowerShell, avec une vraie session de bureau : il faut que le PC soit allumé et la session ouverte, sinon le job attend. Le PC sert aussi aux tests UEM : instance de test comme pour `install-mac` (port 3917, `HOST=127.0.0.1`, `DATA_DIR`, `COMPANION_LOG_DIR`, `LOCALAPPDATA` pour les copies du pilote, valeur `UnowhyCompanionCI` de la clé Run par `COMPANION_LABEL`, `COMPANION_HEADLESS=1` : ni boîte, ni page, ni raccourci, tout sous `%TEMP%\compagnon-ci`), et `-Nettoyage` (before_script et after_script, même après un échec) désinstalle et supprime ce dossier. Un compagnon déjà installé sur le PC n'est pas touché. L'installeur a un mode non interactif, `"Installer (Windows).cmd" /silencieux` : ni pause, ni pare-feu, ni demande d'administrateur ; le double-clic ne change pas. À la main sur un PC : `powershell -ExecutionPolicy Bypass -File backend\qa\install-windows.ps1 -Zip <zip>`. Journaux du lanceur et du serveur dans les artefacts (`install-logs/`), résultat de la sanity dans l'onglet Tests.
+
+**`helper-windows`** : même PC que `install-windows`, sans besoin de session de bureau. Installe le SDK .NET de `backend/global.json` (version exacte) dans `.dotnet-ci/` du dossier du job, gardé d'un job à l'autre (`GIT_CLEAN_FLAGS`) ; NuGet et réglages du SDK y restent aussi : rien n'est installé sur le poste. Compile `src/win/helper` et `src/win/launcher`, copie les exe sur ceux du dépôt, puis `git diff --exit-code`. Les exe sont reproductibles (même octets d'une machine et d'un dossier à l'autre) tant qu'ils sont compilés avec ce SDK : pas de SHA du commit dans la version (`IncludeSourceRevisionInInformationalVersion`), sources en LF partout (`.gitattributes`). Job rouge « exe du dépôt différents des sources » : `npm run build:helper` dans `backend/`, puis commiter les exe. À la main sur un PC : `powershell -ExecutionPolicy Bypass -File backend\qa\build-helper-windows.ps1`.
 
 Le runner Windows partagé « HiSqool Windows » (473) n'est pas utilisé : Docker Windows Server 2019 sans bureau (Server Core), le dossier Applications du shell y manque, donc le pilote ne liste ni applis ni fenêtres.
 
@@ -234,7 +238,7 @@ Testés sur un vrai PC Windows (installeur, données hors du dossier, Partage, r
 
 ## Pièges connus
 
-- **Pilote Windows** : C# 7.3, .NET Framework 4.8 (`src/win/helper/`, lanceur dans `src/win/launcher/`), compilé par `npm run build:helper` avec le SDK .NET 8 figé par `backend/global.json` (sur le Mac : `~/.dotnet`, installé par le script officiel `dotnet-install.sh --channel 8.0`). `npm run package` embarque la version de node fixée dans `scripts/package.ts` (`NODE_VERSION`) : la changer à la main pour mettre node à jour. Les exe compilés sont gardés dans le dépôt : recompiler après toute modification du C#. Jamais de PowerShell lancé par le compagnon (antivirus).
+- **Pilote Windows** : C# 7.3, .NET Framework 4.8 (`src/win/helper/`, lanceur dans `src/win/launcher/`), compilé par `npm run build:helper` avec le SDK .NET 8 figé par `backend/global.json` (sur le Mac : `~/.dotnet`, installé par le script officiel `dotnet-install.sh --version <version de global.json>`). `helper-windows` vérifie en CI que les exe du dépôt correspondent aux sources. `npm run package` embarque la version de node fixée dans `scripts/package.ts` (`NODE_VERSION`) : la changer à la main pour mettre node à jour. Les exe compilés sont gardés dans le dépôt : recompiler après toute modification du C#. Jamais de PowerShell lancé par le compagnon (antivirus).
 - **Mac** : le compagnon a besoin de l'Accessibilité (pour `node`, ou pour le terminal qui lance `npm run dev`). Sans elle : raccourcis, fenêtres et macros échouent (bandeau sur le Deck).
 - Redémarrer le compagnon actif fait basculer la tablette sur un autre ordinateur qui répond. Il faut ensuite revenir à la main (nom en bas de la barre latérale).
 - Le compagnon lancé depuis une session (terminal, éditeur) meurt avec elle. La tablette affiche alors l'ordinateur en rouge et « Aucun événement ».
