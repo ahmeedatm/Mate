@@ -87,16 +87,40 @@ adb -s <série> install -r app/build/outputs/apk/debug/app-debug.apk   # un appa
 
 `main` est protégée : on n'y pousse plus directement. Une branche par changement (`feat/…`, `fix/…`, `docs/…`, `ci/…`), puis une MR vers `main`. Elle se fusionne quand le pipeline est vert et les discussions résolues.
 
-Le pipeline (`.gitlab-ci.yml`, runner Linux) lance quatre jobs en parallèle :
+Le pipeline (`.gitlab-ci.yml`) tourne sur le runner Linux, sauf `install-mac` (Mac, section suivante) et `install-windows` (PC Windows de QA) :
 
 | Job | Vérifie |
 |---|---|
-| `backend` | `npm run lint` (format prettier, puis typecheck), puis `npm test` : tests unitaires et d'intégration (`backend/test/`), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP ; le pilotage de l'ordinateur y est simulé (voir plus bas) |
+| `backend` | `npm run lint` (format prettier, puis typecheck), puis `npm test` : tests unitaires et d'intégration (`backend/test/`), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP ; le pilotage de l'ordinateur y est simulé (voir plus bas). Comprend la sanity (`test/sanity.test.ts`) |
 | `e2e` | pages web du backend dans Chromium (Playwright, `backend/e2e/`) : page locale (adresse, code d'appairage, lien ICS), visualiseur `/camera`, retours d'erreur de `/oauth/:provider/callback`. Même serveur que les tests d'intégration. Artefacts : `e2e-results/junit.xml` et traces des tests en échec |
 | `android` | style Kotlin (`ktlintCheck`), tests JVM (`app/src/test/` : `Computers`, `Prefs`, `Connection` contre de petits serveurs HTTP locaux, `FocusTimer`, `Water`, ordre `focus`, modes, widgets, commande vocale ; contexte simulé `FakeContext`), lint Android, APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
 | `android-emulateur` | tests instrumentés (`app/src/androidTest/`, Espresso) sur un émulateur Android 10 sans services Google, 1280×800 à 160 dpi ; artefacts : rapport JUnit, capture de l'écran de bienvenue |
+| `package-windows`, `package-mac` | paquets de l'ordinateur (`npm run package -- windows|mac`), utilisés par les tests d'installation et la release |
+| `install-windows` | paquet Windows installé sur un vrai PC : installeur silencieux, lancement automatique, sanity, pilote, désinstallation (`backend/qa/install-windows.ps1`) |
+| `zones` | rien : garde un pipeline aux MR qui ne touchent aucune zone (sans pipeline, la MR ne fusionne pas) |
 
-Sur un tag `vX.Y.Z`, trois jobs de plus construisent et publient la release (section suivante).
+**Ciblage par zone.** En MR, un job ne tourne que si sa zone a bougé (`rules:changes`, ancres `.files-*` en tête du fichier). Sur `main`, sur un tag et la nuit, tout tourne. Toucher `.gitlab-ci.yml` relance tout.
+
+| Zone | Fichiers | Jobs |
+|---|---|---|
+| backend | `backend/**` | `backend`, `e2e` |
+| android | `app/**`, `*.gradle*`, `gradle/**`, `gradlew*`, `scripts/test-android.sh` | `android`, `android-emulateur` |
+| installation Windows | `backend/scripts/**`, `backend/src/os.ts`, `backend/src/paths.ts`, `backend/package-lock.json`, `backend/qa/**`, `backend/src/win/**`, `Installer (Windows).cmd` | `package-windows`, `install-windows` |
+| installation Mac | liste propre au job (`backend/src/mac/**`, `service.ts`, `package.ts`, `os.ts`, `paths.ts`…) | `install-mac` (manuel sur les autres MR) ; `package-mac` ne tourne qu'hors MR, `install-mac` fabriquant son paquet |
+
+**Nuit** : pipeline programmé n° 282 sur `main`, chaque nuit à 3 h (heure de Paris), qui lance tout (Settings > CI/CD > Pipeline schedules, ou `glab api projects/efreifer%2Funowhy-companion/pipeline_schedules`). Le `workflow` accepte `CI_PIPELINE_SOURCE == "schedule"`. `install-mac` et `install-windows` demandent alors le Mac et le PC de QA allumés, session ouverte.
+
+**Sanity** (`backend/qa/sanity.ts`) : un contrôle par feature contre un compagnon réel déjà démarré : santé et identité, appairage par code (sans boîte avec `COMPANION_HEADLESS=1` ou `NO_ALERT=1`), deck et deck de départ filtré aux applis installées, son, fenêtres ouvertes, refus d'un `.exe` par `/docs/open`, tâches, agenda personnel, agenda ICS (fichier servi en local, seulement si aucun agenda n'est relié), `/camera`, page locale. Réponse attendue selon le système : 501 pour le pilotage hors Mac et Windows. Ce qu'il crée est retiré à la fin. Sans dépendance : le node du paquet le lance tel quel.
+
+```sh
+node qa/sanity.ts --url http://127.0.0.1:3000 --token <jeton> --os mac --junit sanity.xml
+```
+
+**`install-windows`** : runner 976 « Local QA runner » (tag `local-runner`), le PC Windows de QA, exécuteur shell PowerShell, avec une vraie session de bureau : il faut que le PC soit allumé et la session ouverte, sinon le job attend. Le PC sert aussi aux tests UEM : instance de test comme pour `install-mac` (port 3917, `HOST=127.0.0.1`, `DATA_DIR`, `COMPANION_LOG_DIR`, `LOCALAPPDATA` pour les copies du pilote, valeur `UnowhyCompanionCI` de la clé Run par `COMPANION_LABEL`, `COMPANION_HEADLESS=1` : ni boîte, ni page, ni raccourci, tout sous `%TEMP%\compagnon-ci`), et `-Nettoyage` (before_script et after_script, même après un échec) désinstalle et supprime ce dossier. Un compagnon déjà installé sur le PC n'est pas touché. L'installeur a un mode non interactif, `"Installer (Windows).cmd" /silencieux` : ni pause, ni pare-feu, ni demande d'administrateur ; le double-clic ne change pas. À la main sur un PC : `powershell -ExecutionPolicy Bypass -File backend\qa\install-windows.ps1 -Zip <zip>`. Journaux du lanceur et du serveur dans les artefacts (`install-logs/`), résultat de la sanity dans l'onglet Tests.
+
+Le runner Windows partagé « HiSqool Windows » (473) n'est pas utilisé : Docker Windows Server 2019 sans bureau (Server Core), le dossier Applications du shell y manque, donc le pilote ne liste ni applis ni fenêtres.
+
+Sur un tag `vX.Y.Z`, `android-release` et `release` construisent et publient la release (section suivante).
 
 ### Installation sur Mac (`install-mac`)
 
@@ -104,7 +128,7 @@ Job sur le runner Mac (tag `macos`, exécuteur shell, Mac d'un développeur où 
 
 Isolation du vrai compagnon : agent `com.unowhy.companion.ci-<job>`, port `41000 + job % 1000` en `HOST=127.0.0.1`, `DATA_DIR`, `DOCS_DIR` et journal (`COMPANION_LOG_DIR`) dans le dossier du job. `COMPANION_HEADLESS=1` : ni dialogue d'appairage, ni page ou Réglages ouverts, ni raccourci sur le Bureau. Le vrai compagnon (agent `com.unowhy.companion`, plist, port 3000, identité) est relevé avant et après : une différence fait échouer le job. Le script ne lit jamais `~/Desktop`, `~/Documents`… : macOS (TCC) bloque le runner en attendant une autorisation, et le job reste suspendu.
 
-Obligatoire seulement sur les MR qui touchent `backend/src/mac/`, `os.ts`, `paths.ts`, `scripts/service.ts`, `scripts/package.ts`, `package-lock.json`, l'installeur Mac ou le script (Mac éteint = job en attente, la MR aussi). Sur les autres MR : bouton manuel, sans bloquer. En local : `cd backend && npm run package -- mac && cd .. && backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip`.
+Obligatoire seulement sur les MR qui touchent `backend/src/mac/`, `os.ts`, `paths.ts`, `scripts/service.ts`, `scripts/package.ts`, `package-lock.json`, l'installeur Mac ou le script (Mac éteint = job en attente, la MR aussi). Sur les autres MR : bouton manuel, sans bloquer. Sur `main`, un tag et la nuit : lancé d'office. En local : `cd backend && npm run package -- mac && cd .. && backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip`.
 
 L'installeur, lancé sans terminal (stdin non interactif), ne fait pas de pause et rend le code de sortie de l'installation ; au double-clic, rien ne change.
 
@@ -130,7 +154,7 @@ Le tag de l'image du job `e2e` suit la version exacte de `@playwright/test` (`ba
 
 **Pilotage simulé dans les tests** : `backend/test/fake-os.ts` remplace `src/os.ts` (hook de résolution `test/fake-os-hook.ts`) ; aucun test ne lance d'appli, n'envoie de touches ni n'ouvre de fenêtre. Il note chaque action (`calls`) et répond selon un scénario (`state` : applis installées, fenêtres, boutons, Ne pas déranger, échecs). Serveur de `test/server.ts` : toujours simulé (`startServer({ os: "windows" })` pour Windows), scénario par `server.setOs(...)`, actions par `server.osCalls()`. Test unitaire d'un module qui pilote l'ordinateur : `import "./fake-os-hook.ts"` en tête, puis le module en import dynamique (`await import("../src/deck.ts")`). Un export ajouté à `os.ts` doit l'être aussi au faux, sinon les tests échouent au chargement.
 
-Ce que la CI ne voit pas : le pilotage réel du Mac et de Windows (simulé dans les tests ; `install-mac` ne teste que l'installation), l'appli sur la vraie tablette (perfs, kiosque, micro, caméra). Ils restent testés à la main (case « Testé sur » de la MR).
+Ce que la CI ne voit pas : le pilotage réel du Mac (simulé dans les tests ; `install-mac` ne teste que l'installation), les actions qui changent l'ordinateur (lancer une appli, déplacer une fenêtre, régler le son : `install-windows` ne fait que lire), l'appli sur la vraie tablette (perfs, kiosque, micro, caméra). Ils restent testés à la main (case « Testé sur » de la MR).
 
 ### Tests instrumentés (émulateur)
 
@@ -150,7 +174,7 @@ Un tag `vX.Y.Z` posé sur `main` lance les mêmes tests, puis :
 
 | Job | Produit |
 |---|---|
-| `package` | `Compagnon-Unowhy-Windows.zip` et `Compagnon-Unowhy-Mac.zip` (`npm run package -- windows` ou `mac` sur le runner Linux, un job par plateforme : artefacts sous 100 Mo) |
+| `package-windows`, `package-mac` | `Compagnon-Unowhy-Windows.zip` et `Compagnon-Unowhy-Mac.zip` (`npm run package -- windows` ou `mac` sur le runner Linux, un job par plateforme : artefacts sous 100 Mo) |
 | `android-release` | `companion-X.Y.Z.apk` signé, et `companion-X.Y.Z.json` : son entrée pour le « serveur Unowhy » |
 | `release` | release GitLab du tag, fichiers déposés dans le registre de paquets du projet (`glab release create`, jeton du job) |
 
