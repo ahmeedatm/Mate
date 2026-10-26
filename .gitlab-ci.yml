@@ -301,7 +301,7 @@ helper-windows:
   extends: .zone-helper-windows
   stage: test
   tags: [windows, docker]
-  image: mcr.microsoft.com/dotnet/sdk:8.0.427-windowsservercore-ltsc2019@sha256:2af66369a314ab0334ee8dfd6a67bc15485a51754087bc3bfc9427a35c84c0d8
+  image: mcr.microsoft.com/dotnet/sdk:8.0.427-windowsservercore-ltsc2019@sha256:3c439035c6dd8087f43a034da64271af7e41e552b059cacc33ad23a164988b60
   needs: []
   variables:
     GIT_DEPTH: 1
