@@ -54,7 +54,8 @@ export const config = {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
-  deckFile: path.join(backendRoot, "config", "deck.json"),
+  /** Deck de cet ordinateur ; DECK_FILE pour un autre fichier (deck de test de l'émulateur). */
+  deckFile: process.env.DECK_FILE ? path.resolve(process.env.DECK_FILE) : path.join(backendRoot, "config", "deck.json"),
   /** Deck de départ adapté à l'ordinateur (applis et raccourcis de macOS ou de Windows). */
   deckExampleFile: path.join(backendRoot, "config", platform === "windows" ? "deck.example.windows.json" : "deck.example.json"),
   cacheDir: path.join(backendRoot, ".cache"),
