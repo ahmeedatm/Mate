@@ -56,7 +56,7 @@ Ne jamais mettre de clé ou de jeton dans un fichier versionné, ni sur la table
 Puis :
 
 ```bash
-cd backend && npm install && npm run typecheck && npm test
+cd backend && npm install && npm run lint && npm test
 cd .. && ./gradlew assembleDebug
 ```
 
@@ -91,9 +91,9 @@ Le pipeline (`.gitlab-ci.yml`) tourne sur le runner Linux, sauf `install-mac` (M
 
 | Job | Vérifie |
 |---|---|
-| `backend` | `npm run typecheck`, puis `npm test` : tests d'intégration (`backend/test/`), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP. Comprend la sanity (`test/sanity.test.ts`, pilotage : 501 attendu) |
+| `backend` | `npm run lint` (format prettier, puis typecheck), puis `npm test` : tests unitaires et d'intégration (`backend/test/`), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP ; le pilotage de l'ordinateur y est simulé (voir plus bas). Comprend la sanity (`test/sanity.test.ts`) |
 | `e2e` | pages web du backend dans Chromium (Playwright, `backend/e2e/`) : page locale (adresse, code d'appairage, lien ICS), visualiseur `/camera`, retours d'erreur de `/oauth/:provider/callback`. Même serveur que les tests d'intégration. Artefacts : `e2e-results/junit.xml` et traces des tests en échec |
-| `android` | tests JVM (`app/src/test/`), lint, APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
+| `android` | style Kotlin (`ktlintCheck`), tests JVM (`app/src/test/`), lint Android, APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
 | `android-emulateur` | tests instrumentés (`app/src/androidTest/`, Espresso) sur un émulateur Android 10 sans services Google, 1280×800 à 160 dpi ; artefacts : rapport JUnit, capture de l'écran de bienvenue |
 | `package-windows`, `package-mac` | paquets de l'ordinateur (`npm run package -- windows|mac`), utilisés par les tests d'installation et la release |
 | `install-windows` | paquet Windows installé sur un vrai PC : installeur silencieux, lancement automatique, sanity, pilote, désinstallation (`backend/qa/install-windows.ps1`) |
@@ -132,7 +132,16 @@ Obligatoire seulement sur les MR qui touchent `backend/src/mac/`, `os.ts`, `path
 
 L'installeur, lancé sans terminal (stdin non interactif), ne fait pas de pause et rend le code de sortie de l'installation ; au double-clic, rien ne change.
 
-Avant de pousser : `cd backend && npm run typecheck && npm test`, et `./gradlew testDebugUnitTest lintDebug`. Si l'écran ou un parcours change : `scripts/test-android.sh`.
+Avant de pousser : `cd backend && npm run lint && npm test`, et `./gradlew ktlintCheck testDebugUnitTest lintDebug`. Si l'écran ou un parcours change : `scripts/test-android.sh`.
+
+**Format et style** (bloquants en CI) :
+
+| | Corriger | Vérifier (CI) | Règles |
+|---|---|---|---|
+| Backend | `cd backend && npm run format` | `npm run lint` = `format:check` + `typecheck` | `backend/.prettierrc.json` (lignes de 140), `.prettierignore` ; `tsconfig.json` refuse variables, imports et paramètres inutilisés |
+| Android | `./gradlew ktlintFormat` | `./gradlew ktlintCheck` | `.editorconfig` : ktlint (style IntelliJ) sans les règles qui coupent les lignes ; tâches dans `build.gradle.kts` (sans plugin) |
+
+Pas d'eslint : typescript-eslint ne prend pas encore TypeScript 7. Un paramètre inutilisé mais imposé par une signature se préfixe par `_`. Si `ktlintFormat` échoue sur `MaxPermSize`, c'est `~/.gradle/gradle.properties` : retirer l'option (Java 8) ou lancer avec `-Dorg.gradle.jvmargs=-Xmx2048m`.
 
 Tests Playwright (page web touchée : `src/local-page.ts`, `src/camera.ts`, routes OAuth) : `cd backend && npm run test:e2e`, après un `npx playwright install chromium` la première fois. Sans navigateur installé, dans l'image du job :
 
@@ -143,7 +152,9 @@ docker run --rm -e CI=true -v "$PWD":/w -v /w/backend/node_modules -w /w/backend
 
 Le tag de l'image du job `e2e` suit la version exacte de `@playwright/test` (`backend/package.json`) : changer les deux ensemble (et le digest). Trace d'un échec : `npx playwright show-trace e2e-results/traces/<test>/trace.zip`.
 
-Ce que la CI ne voit pas : les actions qui changent l'ordinateur (lancer une appli, déplacer une fenêtre, régler le son : la sanity ne fait que lire), le pilotage réel du Mac (`install-mac` ne teste que l'installation), l'appli sur la vraie tablette (perfs, kiosque, micro, caméra). Ils restent testés à la main (case « Testé sur » de la MR).
+**Pilotage simulé dans les tests** : `backend/test/fake-os.ts` remplace `src/os.ts` (hook de résolution `test/fake-os-hook.ts`) ; aucun test ne lance d'appli, n'envoie de touches ni n'ouvre de fenêtre. Il note chaque action (`calls`) et répond selon un scénario (`state` : applis installées, fenêtres, boutons, Ne pas déranger, échecs). Serveur de `test/server.ts` : toujours simulé (`startServer({ os: "windows" })` pour Windows), scénario par `server.setOs(...)`, actions par `server.osCalls()`. Test unitaire d'un module qui pilote l'ordinateur : `import "./fake-os-hook.ts"` en tête, puis le module en import dynamique (`await import("../src/deck.ts")`). Un export ajouté à `os.ts` doit l'être aussi au faux, sinon les tests échouent au chargement.
+
+Ce que la CI ne voit pas : le pilotage réel du Mac (simulé dans les tests ; `install-mac` ne teste que l'installation), les actions qui changent l'ordinateur (lancer une appli, déplacer une fenêtre, régler le son : `install-windows` ne fait que lire), l'appli sur la vraie tablette (perfs, kiosque, micro, caméra). Ils restent testés à la main (case « Testé sur » de la MR).
 
 ### Tests instrumentés (émulateur)
 

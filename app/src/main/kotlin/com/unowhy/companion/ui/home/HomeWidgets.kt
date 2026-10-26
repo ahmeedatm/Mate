@@ -1,7 +1,5 @@
 package com.unowhy.companion.ui.home
 
-import com.unowhy.companion.ui.dp
-import com.unowhy.companion.ui.themeColor
 import android.content.Context
 import android.graphics.Typeface
 import android.text.InputType
@@ -26,14 +24,16 @@ import com.unowhy.companion.focus.NoisePlayer
 import com.unowhy.companion.net.CalendarEvent
 import com.unowhy.companion.net.HomeFeatures
 import com.unowhy.companion.ui.ComputerAudioView
+import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.NowPlayingView
 import com.unowhy.companion.ui.ProgressRing
 import com.unowhy.companion.ui.TasksCard
-import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.WaterCard
+import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.label
 import com.unowhy.companion.ui.showForTyping
+import com.unowhy.companion.ui.themeColor
 import kotlinx.coroutines.CoroutineScope
 import java.text.SimpleDateFormat
 import java.util.Calendar

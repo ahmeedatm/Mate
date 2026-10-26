@@ -48,8 +48,12 @@ export default async function browserRoutes(app: FastifyInstance) {
                 type: "object",
                 required: ["id", "window", "index", "url", "active"],
                 properties: {
-                  id: { type: "number" }, window: { type: "number" }, index: { type: "number" },
-                  title: { type: "string", maxLength: 1000 }, url: { type: "string", maxLength: 4000 }, active: { type: "boolean" },
+                  id: { type: "number" },
+                  window: { type: "number" },
+                  index: { type: "number" },
+                  title: { type: "string", maxLength: 1000 },
+                  url: { type: "string", maxLength: 4000 },
+                  active: { type: "boolean" },
                 },
               },
             },
@@ -59,7 +63,8 @@ export default async function browserRoutes(app: FastifyInstance) {
     },
     async (req, reply) => {
       // Seule une extension (pas une page web ouverte sur l'ordinateur) peut annoncer des onglets.
-      if (!/^(chrome|moz)-extension:\/\//.test(req.headers.origin ?? "")) return reply.code(403).send({ error: "Réservé à l'extension du navigateur" });
+      if (!/^(chrome|moz)-extension:\/\//.test(req.headers.origin ?? ""))
+        return reply.code(403).send({ error: "Réservé à l'extension du navigateur" });
       receiveTabs(req.body);
       return { ok: true };
     },
@@ -74,15 +79,19 @@ export default async function browserRoutes(app: FastifyInstance) {
       if (clipboard?.startsWith("error")) req.log.warn({ clipboard }, "presse-papiers illisible");
       const copy = osName === "mac" ? "⌘L puis ⌘C" : "Ctrl+L puis Ctrl+C";
       return reply.code(404).send({
-        error: clipboard === "not-url"
-          ? `Le lien copié n'est pas une adresse web : dans le navigateur de l'ordinateur, fais ${copy} et réessaie`
-          : `Adresse illisible : dans le navigateur de l'ordinateur, copie l'adresse (${copy}) et réessaie`,
+        error:
+          clipboard === "not-url"
+            ? `Le lien copié n'est pas une adresse web : dans le navigateur de l'ordinateur, fais ${copy} et réessaie`
+            : `Adresse illisible : dans le navigateur de l'ordinateur, copie l'adresse (${copy}) et réessaie`,
         clipboard: clipboard?.startsWith("error") ? "error" : clipboard,
       });
     }
     // Titre de fenêtre Windows : « Page - Opera », « Page - Personnel - Microsoft Edge », « Page — Mozilla Firefox ».
     const title = (page.title ?? "")
-      .replace(/\s+[-—–]\s+(?:[^-—–]+\s+[-—–]\s+)?(?:Google Chrome|Microsoft\u200b?\s*Edge|Opera(?: GX)?|Brave|Vivaldi|Mozilla Firefox)\s*$/i, "")
+      .replace(
+        /\s+[-—–]\s+(?:[^-—–]+\s+[-—–]\s+)?(?:Google Chrome|Microsoft\u200b?\s*Edge|Opera(?: GX)?|Brave|Vivaldi|Mozilla Firefox)\s*$/i,
+        "",
+      )
       .trim();
     return { url, title: title || new URL(url).hostname, browser: page.browser ?? null };
   });

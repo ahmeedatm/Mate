@@ -23,7 +23,9 @@ for (let i = 0; i < windows.count; i++) {
 for (const name of Object.keys(BROWSERS)) if (!order.includes(name)) order.push(name);
 `;
 
-const SCRIPT = BROWSER_ORDER + `
+const SCRIPT =
+  BROWSER_ORDER +
+  `
 let page = { found: false };
 for (const name of order) {
   const app = Application(name);
@@ -53,7 +55,9 @@ export async function browserPage(): Promise<{ found: boolean; url?: string; tit
  * Onglets ouverts dans les navigateurs (choix de la page sur la tablette), du navigateur le plus en avant au plus en
  * arrière, fenêtre par fenêtre. `active` : onglet affiché dans sa fenêtre. Rien ne bouge à l'écran.
  */
-const TABS_SCRIPT = BROWSER_ORDER + `
+const TABS_SCRIPT =
+  BROWSER_ORDER +
+  `
 const tabs = [];
 for (const name of order) {
   let app;

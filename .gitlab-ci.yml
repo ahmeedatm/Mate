@@ -95,7 +95,8 @@ backend:
   extends: [.node, .zone-backend]
   stage: test
   script:
-    - npm run typecheck
+    # Format (prettier --check) puis typecheck.
+    - npm run lint
     # Tests d'intégration : le vrai serveur démarre avec un dossier de données vide.
     - node --import tsx --test --test-reporter=spec --test-reporter-destination=stdout
       --test-reporter=junit --test-reporter-destination=junit.xml "test/**/*.test.ts"
@@ -150,7 +151,7 @@ android:
   extends: [.android, .zone-android]
   stage: test
   script:
-    - ./gradlew --no-daemon --console=plain testDebugUnitTest lintDebug assembleDebug
+    - ./gradlew --no-daemon --console=plain ktlintCheck testDebugUnitTest lintDebug assembleDebug
   artifacts:
     when: always
     name: companion-debug-$CI_COMMIT_SHORT_SHA

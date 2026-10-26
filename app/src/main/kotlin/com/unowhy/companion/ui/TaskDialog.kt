@@ -2,9 +2,9 @@ package com.unowhy.companion.ui
 
 import android.app.TimePickerDialog
 import android.content.Context
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
-import android.text.InputType
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager

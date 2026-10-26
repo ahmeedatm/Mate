@@ -4,8 +4,22 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { config } from "./config.ts";
 import {
-  appIcon, canControl, canMedia, isInstalled, launchApp, listWindows, openTarget, placeWindow, pressButton, runShortcut, sendKeys, sendMediaKey,
-  systemCommand, typeText, type MediaCommand, type SystemCommand,
+  appIcon,
+  canControl,
+  canMedia,
+  isInstalled,
+  launchApp,
+  listWindows,
+  openTarget,
+  placeWindow,
+  pressButton,
+  runShortcut,
+  sendKeys,
+  sendMediaKey,
+  systemCommand,
+  typeText,
+  type MediaCommand,
+  type SystemCommand,
 } from "./os.ts";
 import type { Layout } from "./screens.ts";
 import { loadKeys, loadLinks, loadSavedApps, saveApps, saveLinks, type DeckApp, type DeckLink } from "./perso.ts";
@@ -47,7 +61,12 @@ type DeckConfig = { pages: { title: string; apps?: boolean; meeting?: boolean; a
 export type Tile = TileConfig & { id: string };
 /** `empty` : emplacement libre de la page Perso. */
 export type DeckPage = {
-  title: string; editable?: boolean; apps?: boolean; meeting?: boolean; app?: string; media?: boolean;
+  title: string;
+  editable?: boolean;
+  apps?: boolean;
+  meeting?: boolean;
+  app?: string;
+  media?: boolean;
   tiles: (Tile | { id: string; empty: true })[];
 };
 
@@ -65,8 +84,9 @@ const appTileId = (name: string) => "a-" + createHash("sha1").update(name).diges
 async function deckApps(deck: DeckConfig): Promise<DeckApp[]> {
   const saved = await loadSavedApps();
   if (saved) return saved;
-  const base = (deck.pages.find((p) => p.apps)?.tiles ?? [])
-    .flatMap((t) => (t.action.type === "app" ? [{ label: t.label, name: t.action.name }] : []));
+  const base = (deck.pages.find((p) => p.apps)?.tiles ?? []).flatMap((t) =>
+    t.action.type === "app" ? [{ label: t.label, name: t.action.name }] : [],
+  );
   const present = await Promise.all(base.map((a) => isInstalled(a.name).catch(() => true)));
   return base.filter((_, i) => present[i]);
 }
@@ -155,20 +175,25 @@ export async function loadDeck(): Promise<DeckPage[]> {
   // Page Média (`media` : lecture en cours au-dessus des touches) seulement si l'ordinateur sait la lire.
   const present = deck.pages.map((page) => (!page.app || names.has(page.app.toLowerCase())) && (!page.media || canMedia));
   const links = await deckLinks();
-  const pages = deck.pages.map((page, p): DeckPage =>
-    page.apps
-      ? {
-          title: page.title,
-          apps: true,
-          tiles: apps.map((a) => ({ label: a.label, action: { type: "app", name: a.name }, id: appTileId(a.name) })),
-        }
-      : page.media
-      ? { title: page.title, media: true, tiles: links.map((l) => ({ label: l.label, action: { type: "url", url: l.url }, id: l.id })) }
-      : {
-          title: page.title, meeting: page.meeting, app: page.app, media: page.media,
-          tiles: page.tiles.map((tile, t) => ({ ...tile, id: `${p}-${t}` })),
-        },
-  ).filter((_, p) => present[p]);
+  const pages = deck.pages
+    .map((page, p): DeckPage =>
+      page.apps
+        ? {
+            title: page.title,
+            apps: true,
+            tiles: apps.map((a) => ({ label: a.label, action: { type: "app", name: a.name }, id: appTileId(a.name) })),
+          }
+        : page.media
+          ? { title: page.title, media: true, tiles: links.map((l) => ({ label: l.label, action: { type: "url", url: l.url }, id: l.id })) }
+          : {
+              title: page.title,
+              meeting: page.meeting,
+              app: page.app,
+              media: page.media,
+              tiles: page.tiles.map((tile, t) => ({ ...tile, id: `${p}-${t}` })),
+            },
+    )
+    .filter((_, p) => present[p]);
   const keys = await loadKeys();
   pages.push({
     title: "Perso",
@@ -248,11 +273,16 @@ async function placeAppWindows(app: string, displayLabel: string | undefined, la
 /** Appli dont l'icône représente l'action (la première appli citée, pour une macro). */
 function appOf(action: Action): string | undefined {
   switch (action.type) {
-    case "app": return action.name;
-    case "keys": return action.app;
-    case "window": return action.app;
-    case "macro": return action.steps.map(appOf).find(Boolean);
-    default: return undefined;
+    case "app":
+      return action.name;
+    case "keys":
+      return action.app;
+    case "window":
+      return action.app;
+    case "macro":
+      return action.steps.map(appOf).find(Boolean);
+    default:
+      return undefined;
   }
 }
 
@@ -325,7 +355,12 @@ async function siteIcon(site: URL, out: string): Promise<boolean> {
       declared.push({ url: new URL(href, page.url).href, size: size || (rel.includes("apple") ? 180 : 0) });
     }
     if (manifest) {
-      const icons = (JSON.parse((await get(manifest, TEXT_MAX_BYTES)).data.toString("utf8")) as { icons?: { src?: string; sizes?: string; type?: string }[] }).icons ?? [];
+      const icons =
+        (
+          JSON.parse((await get(manifest, TEXT_MAX_BYTES)).data.toString("utf8")) as {
+            icons?: { src?: string; sizes?: string; type?: string }[];
+          }
+        ).icons ?? [];
       for (const icon of icons) {
         if (!icon.src || /svg/i.test(icon.type ?? "") || /\.(svg|ico)(\?|$)/i.test(icon.src)) continue;
         declared.push({ url: new URL(icon.src, manifest).href, size: Number(icon.sizes?.match(/(\d+)x\d+/i)?.[1] ?? 0) });

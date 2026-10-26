@@ -14,10 +14,46 @@ const SCHEMES: Record<string, RegExp> = {
 
 /** Fichiers qui s'exécutent à l'ouverture (Windows : ShellExecute ; Mac : `open`), dossier Partage compris. */
 const EXECUTABLE = new Set([
-  ".exe", ".com", ".scr", ".pif", ".bat", ".cmd", ".ps1", ".psm1", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh",
-  ".hta", ".msi", ".msp", ".msc", ".cpl", ".reg", ".lnk", ".url", ".jar", ".appx", ".msix", ".application",
-  ".app", ".command", ".tool", ".sh", ".bash", ".zsh", ".pkg", ".mpkg", ".workflow", ".scpt", ".scptd", ".action",
-  ".terminal", ".dmg",
+  ".exe",
+  ".com",
+  ".scr",
+  ".pif",
+  ".bat",
+  ".cmd",
+  ".ps1",
+  ".psm1",
+  ".vbs",
+  ".vbe",
+  ".js",
+  ".jse",
+  ".wsf",
+  ".wsh",
+  ".hta",
+  ".msi",
+  ".msp",
+  ".msc",
+  ".cpl",
+  ".reg",
+  ".lnk",
+  ".url",
+  ".jar",
+  ".appx",
+  ".msix",
+  ".application",
+  ".app",
+  ".command",
+  ".tool",
+  ".sh",
+  ".bash",
+  ".zsh",
+  ".pkg",
+  ".mpkg",
+  ".workflow",
+  ".scpt",
+  ".scptd",
+  ".action",
+  ".terminal",
+  ".dmg",
 ]);
 
 export type OpenPlatform = "mac" | "windows";
@@ -37,7 +73,8 @@ export function checkOpenTarget(target: string, platform: OpenPlatform): void {
   }
   const p = platform === "windows" ? path.win32 : path.posix;
   // Chemin absolu seulement : un nom nu (« calc ») serait cherché dans le PATH ; un chemin réseau (\\hôte\…) est refusé.
-  if (!p.isAbsolute(target) || (platform === "windows" && /^[\\/]{2}/.test(target))) refuse("Cible non autorisée : chemin absolu local attendu");
+  if (!p.isAbsolute(target) || (platform === "windows" && /^[\\/]{2}/.test(target)))
+    refuse("Cible non autorisée : chemin absolu local attendu");
   // Windows ignore les points et espaces de fin (« a.exe. ») ; un dossier `.app` finit par « / » parfois.
   const name = target.replace(/[\\/\s.]+$/, "");
   if (EXECUTABLE.has(p.extname(name).toLowerCase())) refuse("Ouverture refusée : ce fichier est un programme ou un script");

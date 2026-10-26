@@ -61,9 +61,7 @@ export function startAutoJoin(notify: (text: string) => Promise<unknown>) {
     const now = Date.now();
     const { events } = await getEvents(...dayRange(1));
     // Deux réunions au même moment : seule la première est ouverte.
-    const event = events.find(
-      (e) => e.joinUrl && !e.allDay && !e.free && e.startMs - AUTO_JOIN_BEFORE_MS <= now && now < e.startMs,
-    );
+    const event = events.find((e) => e.joinUrl && !e.allDay && !e.free && e.startMs - AUTO_JOIN_BEFORE_MS <= now && now < e.startMs);
     if (!event || joined.has(String(event.startMs))) return;
     joined.add(String(event.startMs));
     await openMeeting(event.joinUrl!);

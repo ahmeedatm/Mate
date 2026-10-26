@@ -3,15 +3,15 @@ package com.unowhy.companion.ui
 import android.graphics.Typeface
 import android.media.AudioManager
 import android.os.BatteryManager
+import android.os.Bundle
 import android.provider.Settings
 import android.text.InputType
-import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.EditText
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.SeekBar
@@ -22,8 +22,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.widget.ImageViewCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.unowhy.companion.Computer
 import com.unowhy.companion.BuildConfig
+import com.unowhy.companion.Computer
 import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.Prefs

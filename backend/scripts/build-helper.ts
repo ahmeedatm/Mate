@@ -18,7 +18,10 @@ function dotnet(): string {
   return fs.existsSync(home) ? home : "dotnet";
 }
 
-for (const [dir, exe] of [["helper", "UnowhyHelper.exe"], ["launcher", "UnowhyCompanion.exe"]]) {
+for (const [dir, exe] of [
+  ["helper", "UnowhyHelper.exe"],
+  ["launcher", "UnowhyCompanion.exe"],
+]) {
   const project = path.join(backend, "src", "win", dir);
   const out = path.join(project, "bin", "Release");
   execFileSync(dotnet(), ["build", project, "-c", "Release", "-o", out, "--nologo"], {

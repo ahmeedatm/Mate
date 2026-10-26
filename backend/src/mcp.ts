@@ -25,7 +25,9 @@ async function api(method: "GET" | "POST" | "PUT" | "DELETE", path: string, body
   if (config.token) headers.authorization = `Bearer ${config.token}`;
   if (body) headers["content-type"] = "application/json";
   const res = await fetch(baseUrl + path, { method, headers, body: body && JSON.stringify(body) }).catch(() => {
-    throw new Error(`Backend du compagnon injoignable sur ${baseUrl} : lancer \`npm run service:install\` (ou \`npm run dev\`) dans backend/`);
+    throw new Error(
+      `Backend du compagnon injoignable sur ${baseUrl} : lancer \`npm run service:install\` (ou \`npm run dev\`) dans backend/`,
+    );
   });
   const json = (await res.json().catch(() => ({}))) as Record<string, any>;
   // Erreurs Fastify : { error: "Bad Request", message: <la vraie raison> } ; les nôtres : { error }.
@@ -131,7 +133,8 @@ server.registerTool(
   "tablette_document",
   {
     title: "Ouvrir ou fermer un document",
-    description: "Ouvre un fichier du dossier partagé (PDF, image, texte) dans le panneau de droite de la tablette. Sans chemin : ferme le panneau.",
+    description:
+      "Ouvre un fichier du dossier partagé (PDF, image, texte) dans le panneau de droite de la tablette. Sans chemin : ferme le panneau.",
     inputSchema: { chemin: z.string().optional().describe("Chemin relatif renvoyé par docs_lister") },
   },
   ({ chemin }) =>
@@ -189,12 +192,15 @@ server.registerTool(
     title: "Ajouter une tâche",
     description:
       "Ajoute une tâche à la liste de la tablette. Sans `jours` : ponctuelle (disparaît le lendemain une fois cochée). " +
-      "`jours` (1 = lundi … 7 = dimanche) : récurrente ces jours-là. `rappel` (\"HH:MM\") : la tablette le dit à voix haute " +
+      '`jours` (1 = lundi … 7 = dimanche) : récurrente ces jours-là. `rappel` ("HH:MM") : la tablette le dit à voix haute ' +
       "à cette heure (récurrente : puis toutes les 30 min pendant 2 h tant que ce n'est pas coché).",
     inputSchema: {
       texte: z.string().min(1).max(200),
       jours: z.array(z.number().int().min(1).max(7)).max(7).optional(),
-      rappel: z.string().regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/).optional(),
+      rappel: z
+        .string()
+        .regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/)
+        .optional(),
     },
   },
   ({ texte, jours, rappel }) => attempt(async () => text(await api("POST", "/tasks", { label: texte, days: jours, remindAt: rappel }))),
@@ -207,7 +213,13 @@ server.registerTool(
     description: "Coche (ou décoche) une tâche par son id (voir taches_lister).",
     inputSchema: { id: z.string(), fait: z.boolean().default(true) },
   },
-  ({ id, fait }) => attempt(async () => (await api("POST", `/tasks/${encodeURIComponent(id)}/done`, { done: fait }), text(fait ? "Tâche cochée." : "Tâche décochée."))),
+  ({ id, fait }) =>
+    attempt(
+      async () => (
+        await api("POST", `/tasks/${encodeURIComponent(id)}/done`, { done: fait }),
+        text(fait ? "Tâche cochée." : "Tâche décochée.")
+      ),
+    ),
 );
 
 server.registerTool(
@@ -220,7 +232,10 @@ server.registerTool(
     inputSchema: {
       titre: z.string().min(1).max(200),
       date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      heure: z.string().regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/).optional(),
+      heure: z
+        .string()
+        .regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/)
+        .optional(),
       rappel: z.number().int().min(0).max(1440).optional(),
     },
   },
@@ -236,8 +251,15 @@ server.registerTool(
 
 // Étapes d'une touche perso : mêmes types que backend/src/perso.ts (le backend revalide).
 const STEP = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("app"), name: z.string().describe("Nom de l'appli : .app sur Mac, menu Démarrer sur Windows (ex. Visual Studio Code)") }),
-  z.object({ type: z.literal("keys"), keys: z.string().describe("Raccourci, ex. cmd+shift+m, ctrl+up, f5, return (sur Windows cmd = Ctrl, win = touche Windows)"), app: z.string().optional().describe("Appli à mettre devant avant") }),
+  z.object({
+    type: z.literal("app"),
+    name: z.string().describe("Nom de l'appli : .app sur Mac, menu Démarrer sur Windows (ex. Visual Studio Code)"),
+  }),
+  z.object({
+    type: z.literal("keys"),
+    keys: z.string().describe("Raccourci, ex. cmd+shift+m, ctrl+up, f5, return (sur Windows cmd = Ctrl, win = touche Windows)"),
+    app: z.string().optional().describe("Appli à mettre devant avant"),
+  }),
   z.object({ type: z.literal("text"), text: z.string().max(4000).describe("Texte collé dans l'appli au premier plan") }),
   z.object({ type: z.literal("url"), url: z.string().describe("http(s), mailto, msteams, slack, vscode, x-apple…") }),
   z.object({ type: z.literal("shortcut"), name: z.string().describe("Raccourci de l'appli Raccourcis (Mac seulement)") }),
@@ -248,7 +270,10 @@ const STEP = z.discriminatedUnion("type", [
     type: z.literal("window"),
     app: z.string(),
     display: z.string().optional().describe("Libellé d'écran (voir deck_touches_lister), sinon l'écran actuel"),
-    layout: z.enum(["keep", "left", "right", "max"]).optional().describe("keep : même place relative ; left/right : moitié ; max : agrandie"),
+    layout: z
+      .enum(["keep", "left", "right", "max"])
+      .optional()
+      .describe("keep : même place relative ; left/right : moitié ; max : agrandie"),
   }),
 ]);
 
@@ -256,7 +281,8 @@ server.registerTool(
   "deck_touches_lister",
   {
     title: "Touches perso du deck",
-    description: "Liste les touches de la page Perso du deck (numéros 1 à 14, vides comprises), les écrans de l'ordinateur, son système et les raccourcis Apple disponibles (Mac).",
+    description:
+      "Liste les touches de la page Perso du deck (numéros 1 à 14, vides comprises), les écrans de l'ordinateur, son système et les raccourcis Apple disponibles (Mac).",
     annotations: { readOnlyHint: true },
   },
   () =>
@@ -264,7 +290,10 @@ server.registerTool(
       const [{ pages }, catalog] = await Promise.all([api("GET", "/deck"), api("GET", "/deck/catalog")]);
       const perso = pages.find((p: { editable: boolean }) => p.editable);
       const keys = await Promise.all(
-        perso.tiles.map(async (_: unknown, i: number) => ({ numero: i + 1, ...((await api("GET", `/deck/keys/${i}`)).key ?? { vide: true }) })),
+        perso.tiles.map(async (_: unknown, i: number) => ({
+          numero: i + 1,
+          ...((await api("GET", `/deck/keys/${i}`)).key ?? { vide: true }),
+        })),
       );
       return text({ systeme: catalog.os, touches: keys, ecrans: catalog.displays, raccourcis_apple: catalog.shortcuts });
     }),
@@ -281,7 +310,10 @@ server.registerTool(
       numero: z.number().int().min(1).max(14),
       libelle: z.string().min(1).max(40).describe("Court : lu de loin sur la tablette"),
       symbole: z.string().max(8).optional().describe("Emoji affiché à la place de l'icône d'appli"),
-      couleur: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+      couleur: z
+        .string()
+        .regex(/^#[0-9A-Fa-f]{6}$/)
+        .optional(),
       etapes: z.array(STEP).min(1).max(20),
     },
   },

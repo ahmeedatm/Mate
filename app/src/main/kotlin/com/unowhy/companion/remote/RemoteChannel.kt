@@ -2,8 +2,8 @@ package com.unowhy.companion.remote
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.util.Base64
 import android.os.SystemClock
+import android.util.Base64
 import com.unowhy.companion.BuildConfig
 import com.unowhy.companion.Computer
 import com.unowhy.companion.Computers
@@ -12,9 +12,9 @@ import com.unowhy.companion.audio.Speaker
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
 import com.unowhy.companion.net.BackendClient
-import com.unowhy.companion.net.HttpException
 import com.unowhy.companion.net.Connection
 import com.unowhy.companion.net.DocEntry
+import com.unowhy.companion.net.HttpException
 import com.unowhy.companion.net.Link
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers

@@ -1,6 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import { docEntry } from "../docs.ts";
-import { completeCommand, FOCUS_ACTIONS, MODES, NOISES, pollCommands, reportState, sendToTablet, tabletStatus, type TabletCommand } from "../tablet.ts";
+import {
+  completeCommand,
+  FOCUS_ACTIONS,
+  MODES,
+  NOISES,
+  pollCommands,
+  reportState,
+  sendToTablet,
+  tabletStatus,
+  type TabletCommand,
+} from "../tablet.ts";
 
 /** Canal ordinateur → tablette (utilisé par le serveur MCP : Claude pilote la tablette, voir src/mcp.ts). */
 export default async function tabletRoutes(app: FastifyInstance) {

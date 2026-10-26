@@ -1,5 +1,15 @@
 import { call } from "./helper.ts";
-import { labelDisplays, type AppWindow, type Layout, type OpenAction, type OpenApp, type OpenWindows, type RawScreen, type WindowsInfo, type WindowTarget } from "../screens.ts";
+import {
+  labelDisplays,
+  type AppWindow,
+  type Layout,
+  type OpenAction,
+  type OpenApp,
+  type OpenWindows,
+  type RawScreen,
+  type WindowsInfo,
+  type WindowTarget,
+} from "../screens.ts";
 import { parseCombo, planAudio, sortedNames } from "../driver-common.ts";
 import type { AudioChange, AudioState, MediaCommand, SystemCommand } from "../screens.ts";
 
@@ -24,7 +34,11 @@ async function startApps(force = false): Promise<StartApp[]> {
   return apps;
 }
 
-const simple = (s: string) => s.toLowerCase().replace(/^microsoft\s+/, "").trim();
+const simple = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/^microsoft\s+/, "")
+    .trim();
 
 function pick(apps: StartApp[], name: string): StartApp | undefined {
   const n = name.toLowerCase();
@@ -80,15 +94,40 @@ export async function appIcon(name: string, out: string): Promise<boolean> {
 
 const MODIFIERS: Record<string, number> = {
   // Les raccourcis écrits pour Mac (cmd+…) deviennent Ctrl+… : même sens dans la plupart des applis.
-  cmd: 0x11, command: 0x11, ctrl: 0x11, control: 0x11,
-  shift: 0x10, alt: 0x12, option: 0x12,
-  win: 0x5b, windows: 0x5b, super: 0x5b, meta: 0x5b,
+  cmd: 0x11,
+  command: 0x11,
+  ctrl: 0x11,
+  control: 0x11,
+  shift: 0x10,
+  alt: 0x12,
+  option: 0x12,
+  win: 0x5b,
+  windows: 0x5b,
+  super: 0x5b,
+  meta: 0x5b,
 };
 
 const KEY_CODES: Record<string, number> = {
-  return: 0x0d, enter: 0x0d, tab: 0x09, space: 0x20, delete: 0x08, backspace: 0x08, del: 0x2e, forwarddelete: 0x2e,
-  esc: 0x1b, escape: 0x1b, left: 0x25, up: 0x26, right: 0x27, down: 0x28,
-  home: 0x24, end: 0x23, pageup: 0x21, pagedown: 0x22, insert: 0x2d, printscreen: 0x2c,
+  return: 0x0d,
+  enter: 0x0d,
+  tab: 0x09,
+  space: 0x20,
+  delete: 0x08,
+  backspace: 0x08,
+  del: 0x2e,
+  forwarddelete: 0x2e,
+  esc: 0x1b,
+  escape: 0x1b,
+  left: 0x25,
+  up: 0x26,
+  right: 0x27,
+  down: 0x28,
+  home: 0x24,
+  end: 0x23,
+  pageup: 0x21,
+  pagedown: 0x22,
+  insert: 0x2d,
+  printscreen: 0x2c,
   ...Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`f${i + 1}`, 0x70 + i])),
 };
 
@@ -141,21 +180,44 @@ export async function appAudio(app: string, change: { volume?: number; muted?: b
 
 /** `app` : identifiant Windows de l'appli qui joue (navigateur, Spotify…) ; `name` : son nom lisible. */
 export type MediaSession = {
-  app: string; name: string; current: boolean; title: string; artist: string; album: string; hasThumb: boolean;
-  status: string; canPlayPause: boolean; canNext: boolean; canPrevious: boolean; canSeek: boolean;
-  positionMs: number | null; durationMs: number | null;
+  app: string;
+  name: string;
+  current: boolean;
+  title: string;
+  artist: string;
+  album: string;
+  hasThumb: boolean;
+  status: string;
+  canPlayPause: boolean;
+  canNext: boolean;
+  canPrevious: boolean;
+  canSeek: boolean;
+  positionMs: number | null;
+  durationMs: number | null;
 };
 export type MediaAction = "play-pause" | "next" | "previous" | "seek";
 
 const MEDIA_APPS: [RegExp, string][] = [
-  [/chrome/i, "Chrome"], [/msedge/i, "Edge"], [/firefox|308046B0AF4A39CB/i, "Firefox"], [/opera/i, "Opera"],
-  [/brave/i, "Brave"], [/spotify/i, "Spotify"], [/vlc/i, "VLC"], [/zunemusic|music\.ui/i, "Lecteur multimédia"],
+  [/chrome/i, "Chrome"],
+  [/msedge/i, "Edge"],
+  [/firefox|308046B0AF4A39CB/i, "Firefox"],
+  [/opera/i, "Opera"],
+  [/brave/i, "Brave"],
+  [/spotify/i, "Spotify"],
+  [/vlc/i, "VLC"],
+  [/zunemusic|music\.ui/i, "Lecteur multimédia"],
 ];
 
 function mediaAppName(app: string) {
   const known = MEDIA_APPS.find(([re]) => re.test(app));
   // "Spotify.exe", "Editeur.Appli_abc123!App" : le nom de l'exécutable ou du paquet.
-  return known ? known[1] : app.replace(/\.exe$/i, "").replace(/_[a-z0-9]+!.*$/i, "").split(/[.\\]/).pop() || app;
+  return known
+    ? known[1]
+    : app
+        .replace(/\.exe$/i, "")
+        .replace(/_[a-z0-9]+!.*$/i, "")
+        .split(/[.\\]/)
+        .pop() || app;
 }
 
 const letters = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -219,8 +281,15 @@ export async function pressButton(app: string, names: string[]): Promise<string 
 /** État vocal d'une appli d'appel (Discord) lu dans sa fenêtre ; `found` : faux si l'interface n'a pas été reconnue. */
 export type VoiceState = {
   /** `streaming` : partage d'écran en cours (bouton « Arrêter de streamer »). */
-  found: boolean; connected: boolean; streaming: boolean; channel: string | null; people: string[];
-  muted: boolean | null; deafened: boolean | null; mic: string | null; deaf: string | null;
+  found: boolean;
+  connected: boolean;
+  streaming: boolean;
+  channel: string | null;
+  people: string[];
+  muted: boolean | null;
+  deafened: boolean | null;
+  mic: string | null;
+  deaf: string | null;
 };
 
 export async function voiceState(app: string): Promise<VoiceState | null> {
@@ -265,7 +334,12 @@ export async function listOpenWindows() {
 }
 
 /** Les fenêtres sont désignées par leur handle : `key` (programme) ne sert pas. */
-export async function controlOpenWindow(_key: string, window: WindowTarget, action: OpenAction, opts?: { display?: number; layout: Layout }) {
+export async function controlOpenWindow(
+  _key: string,
+  window: WindowTarget,
+  action: OpenAction,
+  opts?: { display?: number; layout: Layout },
+) {
   // Pas de plein écran à part sous Windows : agrandir.
   await call("allwindows", { action: action === "fullscreen" ? "zoom" : action, hwnd: window.index, ...opts });
 }
