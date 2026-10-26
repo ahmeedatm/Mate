@@ -5,7 +5,6 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import { config } from "./config.ts";
-import { liveProviders, mockProviders, type ChatMessage } from "./providers.ts";
 import {
   addDeckApp, addDeckLink, deckLinks, findTile, homeFeatures, LINK_SUGGESTIONS, loadDeck, removeDeckApp, removeDeckLink, resetDeckApps,
   appIconFile, runAction, tileIcon,
@@ -37,7 +36,6 @@ if (!config.loopbackOnly && !config.token) {
   process.exit(1);
 }
 
-const providers = config.mode === "live" ? liveProviders : mockProviders;
 const app = Fastify({ logger: { level: "info" } });
 await app.register(multipart, { limits: { fileSize: 20 * 1024 * 1024, files: 1 } });
 
@@ -72,7 +70,7 @@ app.addHook("onRequest", async (req, reply) => {
 
 /** `auth` : le jeton envoyé est le bon (la tablette sait s'il faut refaire l'appairage). */
 app.get("/health", async (req) => ({
-  ok: true, mode: config.mode, ...identity(), auth: authorized(req.headers.authorization),
+  ok: true, ...identity(), auth: authorized(req.headers.authorization),
   // Mac : false = fenêtres et raccourcis bloqués tant que l'Accessibilité n'est pas accordée (la tablette prévient).
   accessibility: await accessibility().catch(() => null),
 }));
@@ -171,43 +169,6 @@ app.put<{ Body: { urls: string[] } }>(
     return { sources: sources.length, ...check };
   },
 );
-
-// --- Assistant IA
-
-app.post<{ Body: { messages: ChatMessage[] } }>(
-  "/chat",
-  {
-    schema: {
-      body: {
-        type: "object",
-        required: ["messages"],
-        properties: {
-          messages: {
-            type: "array",
-            minItems: 1,
-            maxItems: 100,
-            items: {
-              type: "object",
-              required: ["role", "content"],
-              properties: {
-                role: { enum: ["user", "assistant"] },
-                content: { type: "string", maxLength: 8000 },
-              },
-            },
-          },
-        },
-      },
-    },
-  },
-  async (req) => ({ reply: await providers.chat(req.body.messages) }),
-);
-
-app.post("/transcribe", async (req, reply) => {
-  const file = await req.file();
-  if (!file) return reply.code(400).send({ error: "Champ multipart 'audio' manquant" });
-  const audio = await file.toBuffer();
-  return { text: await providers.transcribe(audio, file.mimetype) };
-});
 
 // --- Pilotage de l'ordinateur (deck d'applis et de raccourcis, son, micro)
 

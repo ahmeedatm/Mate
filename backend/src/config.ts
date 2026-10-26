@@ -42,7 +42,6 @@ const token = envToken !== undefined && envToken.trim() === "" && loopbackOnly ?
 const platform = process.platform === "win32" ? "windows" : "mac";
 
 export const config = {
-  mode: process.env.MODE === "live" ? ("live" as const) : ("mock" as const),
   host,
   port: Number(process.env.PORT ?? 3000),
   token,

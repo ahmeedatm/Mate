@@ -38,7 +38,7 @@ Plus tard, pour publier : `git remote add origin <url>` puis `git push -u origin
 | Fichier | Rôle | Sans lui |
 |---|---|---|
 | `local.properties` | `sdk.dir=/Users/<toi>/Library/Android/sdk` | le build Android ne trouve pas le SDK |
-| `backend/.env` | réglages et secrets (liste dans `backend/.env.example` : `PORT`, `HOST`, `MODE`, `COMPUTER_NAME`, `DOCS_DIR`, `CALENDAR_ICS_URLS`, `ANTHROPIC_API_KEY`, `JIRA_*`…) | valeurs par défaut, sans IA ni Jira |
+| `backend/.env` | réglages et secrets (liste dans `backend/.env.example` : `PORT`, `HOST`, `COMPUTER_NAME`, `DOCS_DIR`, `CALENDAR_ICS_URLS`, `JIRA_*`…) | valeurs par défaut, sans Jira |
 | `backend/.data/` | données de cet ordinateur : identité et jeton, agendas, tâches, touches, applis, sites | recréé vide : il faut appairer la tablette à nouveau |
 | `backend/config/deck.json` | deck de cet ordinateur | créé depuis `deck.example*.json` |
 | `backend/config/tasks.json` | tâches quotidiennes | pas de tâche quotidienne |
@@ -91,7 +91,7 @@ Le pipeline (`.gitlab-ci.yml`, runner Linux) lance deux jobs en parallèle :
 
 | Job | Vérifie |
 |---|---|
-| `backend` | `npm run typecheck`, puis `npm test` : tests d'intégration (`backend/test/`), le vrai serveur démarre en `MODE=mock` avec un dossier de données vide et répond à de vraies requêtes HTTP |
+| `backend` | `npm run typecheck`, puis `npm test` : tests d'intégration (`backend/test/`), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP |
 | `android` | tests JVM (`app/src/test/`), lint, APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
 
 Avant de pousser : `cd backend && npm run typecheck && npm test`, et `./gradlew testDebugUnitTest lintDebug`.

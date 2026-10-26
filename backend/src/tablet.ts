@@ -11,7 +11,7 @@ import { randomUUID } from "node:crypto";
  * est renvoyé au poll suivant, et la tablette ignore les identifiants déjà exécutés.
  */
 
-export const MODES = ["home", "deck", "chat", "docs", "focus", "camera", "tasks", "settings"] as const;
+export const MODES = ["home", "deck", "docs", "focus", "camera", "tasks", "settings"] as const;
 export const NOISES = ["brown", "pink", "white", "off"] as const;
 export const FOCUS_ACTIONS = ["start", "pause", "reset", "skip"] as const;
 

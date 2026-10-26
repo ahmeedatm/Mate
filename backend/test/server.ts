@@ -27,7 +27,7 @@ function freePort(): Promise<number> {
   });
 }
 
-/** Lance le vrai serveur (MODE=mock, USB seulement) avec un dossier de données vide. */
+/** Lance le vrai serveur (USB seulement) avec un dossier de données vide. */
 export async function startServer(): Promise<TestServer> {
   const port = await freePort();
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-test-"));
@@ -38,7 +38,6 @@ export async function startServer(): Promise<TestServer> {
     cwd: backendDir,
     env: {
       ...process.env,
-      MODE: "mock",
       HOST: "127.0.0.1",
       PORT: String(port),
       COMPANION_TOKEN: TOKEN,

@@ -2,10 +2,9 @@ package com.unowhy.companion
 
 import android.content.Context
 
-/** Réglages locaux : ordinateur piloté (voir Computers) et lecture des réponses à voix haute. Aucune clé d'API ici. */
+/** Réglages locaux : ordinateur piloté (voir Computers), luminosité, thème, kiosque. Aucune clé d'API ici. */
 object Prefs {
     private const val FILE = "companion"
-    private const val KEY_SPEAK = "speak_replies"
     private const val KEY_ALLOW_INSTALLS = "allow_installs"
     private const val KEY_BRIGHTNESS = "brightness"
     private const val KEY_NIGHT_DIM = "night_dim"
@@ -19,12 +18,6 @@ object Prefs {
     fun backendUrl(context: Context): String = Computers.active(context)?.url ?: BuildConfig.DEFAULT_BACKEND_URL
 
     fun token(context: Context): String = Computers.active(context)?.token.orEmpty()
-
-    fun speakReplies(context: Context): Boolean = prefs(context).getBoolean(KEY_SPEAK, true)
-
-    fun setSpeakReplies(context: Context, value: Boolean) {
-        prefs(context).edit().putBoolean(KEY_SPEAK, value).apply()
-    }
 
     /** Luminosité de l'écran choisie dans Réglages (0,05 à 1) ; -1 : celle du système. */
     fun brightness(context: Context): Float = prefs(context).getFloat(KEY_BRIGHTNESS, -1f)

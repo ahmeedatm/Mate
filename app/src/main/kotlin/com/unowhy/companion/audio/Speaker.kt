@@ -6,7 +6,7 @@ import java.util.Locale
 
 /**
  * Synthèse vocale intégrée à Android (hors ligne, gratuite, sans dépendance), partagée par
- * l'assistant et les messages envoyés depuis le Mac. Un seul moteur pour toute l'appli.
+ * les messages envoyés depuis le Mac et la commande vocale. Un seul moteur pour toute l'appli.
  */
 object Speaker {
 

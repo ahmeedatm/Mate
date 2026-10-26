@@ -31,7 +31,7 @@ backend:
     - npm ci --prefer-offline --no-audit --no-fund
   script:
     - npm run typecheck
-    # Tests d'intégration : le vrai serveur démarre en MODE=mock avec un dossier de données vide.
+    # Tests d'intégration : le vrai serveur démarre avec un dossier de données vide.
     - node --import tsx --test --test-reporter=spec --test-reporter-destination=stdout
       --test-reporter=junit --test-reporter-destination=junit.xml "test/**/*.test.ts"
   artifacts:

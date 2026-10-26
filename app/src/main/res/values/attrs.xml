@@ -13,9 +13,6 @@
     <attr name="c_text" format="color" />
     <attr name="c_text_dim" format="color" />
     <attr name="c_text_faint" format="color" />
-    <attr name="c_bubble_user" format="color" />
-    <attr name="c_bubble_bot" format="color" />
-    <attr name="c_recording" format="color" />
     <attr name="c_ok" format="color" />
     <attr name="c_ok_soft" format="color" />
     <attr name="c_ko" format="color" />

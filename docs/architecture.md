@@ -18,13 +18,13 @@ Une tablette Unowhy 4.2 (Android 10, lente) posée à côté de l'ordinateur ser
         ▼                                                     ▲ mcp.ts (Claude Code / Desktop) relaie vers /tablet/command
 ```
 
-Pas de serveur dans le cloud : chaque ordinateur a son compagnon, la tablette parle directement à celui qu'elle pilote. La seule chose prévue dans le cloud, c'est l'IA de l'Assistant (`MODE=live`, pas encore branché) et le serveur de mises à jour (simulé par le compagnon pour la démo).
+Pas de serveur dans le cloud : chaque ordinateur a son compagnon, la tablette parle directement à celui qu'elle pilote. La seule chose prévue dans le cloud, c'est le serveur de mises à jour (simulé par le compagnon pour la démo). Pas d'IA : l'Assistant IA a été retiré le 26/10/2026.
 
 ## Les deux programmes
 
 ### La tablette (`app/`)
 
-- **Une seule Activity** (`MainActivity`) plein écran, barre latérale à gauche (modes, heure, WiFi, batterie, nom de l'ordinateur), un **Fragment par mode** : Accueil, Deck, Assistant, Depuis l'ordi, Focus, Caméra, Réglages. Les fragments sont créés une fois et cachés/montrés ; ils sont recréés quand on change d'ordinateur (`onComputerChanged`).
+- **Une seule Activity** (`MainActivity`) plein écran, barre latérale à gauche (modes, heure, WiFi, batterie, nom de l'ordinateur), un **Fragment par mode** : Accueil, Deck, Depuis l'ordi, Focus, Caméra, Réglages. Les fragments sont créés une fois et cachés/montrés ; ils sont recréés quand on change d'ordinateur (`onComputerChanged`).
 - **Panneau document** (`DocumentPanel`) à droite : document du dossier partagé ou page web de l'ordinateur, à côté de n'importe quel mode ou en grand.
 - **Kiosque** : l'appli est *device owner* (installée sur une tablette réinitialisée, voir [kiosque.md](kiosque.md)). Elle verrouille l'écran sur elle-même (lock task), masque l'agent SQOOL, bloque les installations, s'installe elle-même ses mises à jour et règle le WiFi.
 - Vues XML, pas de Compose ; dépendances : appcompat, lifecycle, coroutines. HTTP par `HttpURLConnection` + `org.json`. Tout doit rester léger (MT8167, 2 Go de RAM).
@@ -95,11 +95,11 @@ Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/upda
 | `Prefs.kt`, `Computers.kt` | préférences, liste des ordinateurs appairés |
 | `net/` | `BackendClient` (toutes les routes), `Connection` (bascule), `Discovery` (UDP), `Wifi` |
 | `remote/RemoteChannel.kt` | ordres reçus de l'ordinateur |
-| `ui/` | un fichier par écran ou composant : `HomeFragment`, `DeckFragment`, `ChatFragment`, `DocsFragment` (Depuis l'ordi : choix Fichiers / Page de l'ordi, puis la liste ; `BrowserTabsDialog` : onglets de l'ordi), `FocusFragment`, `CameraFragment`, `SettingsFragment`, `WelcomeView` (premier lancement), `DocumentPanel`, boîtes de dialogue (`TaskDialog`, `EventDialog`, `ComputerAdder`, `WifiPicker`…) |
+| `ui/` | un fichier par écran ou composant : `HomeFragment`, `DeckFragment`, `DocsFragment` (Depuis l'ordi : choix Fichiers / Page de l'ordi, puis la liste ; `BrowserTabsDialog` : onglets de l'ordi), `FocusFragment`, `CameraFragment`, `SettingsFragment`, `WelcomeView` (premier lancement), `DocumentPanel`, boîtes de dialogue (`TaskDialog`, `EventDialog`, `ComputerAdder`, `WifiPicker`…) |
 | `ui/home/` | Accueil à widgets : `WidgetModel` (grille 4×4, tailles, modèles), `WidgetGrid` (placement, mode Modifier, pages), widgets |
 | `ui/ScreenMap.kt`, `WindowPicker.kt`, `OpenWindowsView.kt` | écrans et fenêtres de l'ordinateur |
 | `focus/` | `FocusTimer`, `NoisePlayer` (bruit généré), `Water` |
-| `audio/` | `Speaker` (synthèse vocale), `VoiceRecorder` |
+| `audio/` | `Speaker` (synthèse vocale) |
 | `voice/` | commande vocale : `VoiceCommands` (phrases comprises, noms rapprochés à l'oreille), `VoiceControl` (écoute, exécution) |
 | `ui/CallOverlay.kt` | carte d'appel entrant |
 | `camera/DocCamera.kt` | caméra du visualiseur |
@@ -123,7 +123,6 @@ Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/upda
 | `calls.ts` (+ `config/calls.json`) | appels entrants : surveillance des fenêtres, Répondre / Ignorer / Raccrocher |
 | `camera.ts`, `docs.ts` | visualiseur, dossier partagé |
 | `updates.ts` | mises à jour de la tablette |
-| `providers.ts` | Assistant : transcription et LLM (`MODE=mock` ou `live`) |
 
 ## Où sont les données
 
