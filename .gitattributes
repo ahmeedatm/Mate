@@ -1,0 +1,7 @@
+# Pilote Windows : sources en LF partout (y compris un checkout Windows en autocrlf), l'exe compilé en dépend
+# et le job helper-windows le compare à celui du dépôt.
+backend/src/win/**/*.cs text eol=lf
+backend/src/win/**/*.csproj text eol=lf
+backend/src/win/**/*.manifest text eol=lf
+*.exe binary
+*.ico binary
