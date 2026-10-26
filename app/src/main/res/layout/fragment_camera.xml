@@ -220,7 +220,7 @@
                 style="@style/ActionButton"
                 android:layout_marginStart="12dp"
                 android:drawableStart="@drawable/ic_display"
-                android:text="@string/camera_show_on_mac" />
+                android:text="@string/camera_show_on_computer" />
         </LinearLayout>
     </FrameLayout>
 

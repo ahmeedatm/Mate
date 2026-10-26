@@ -25,7 +25,7 @@ import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
 import com.unowhy.companion.net.CalendarEvent
 import com.unowhy.companion.net.HomeFeatures
-import com.unowhy.companion.ui.MacAudioView
+import com.unowhy.companion.ui.ComputerAudioView
 import com.unowhy.companion.ui.NowPlayingView
 import com.unowhy.companion.ui.ProgressRing
 import com.unowhy.companion.ui.TasksCard
@@ -241,11 +241,11 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
 /** Son et micro de l'ordinateur. */
 class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val audio = MacAudioView(context).apply { attach(host.scope) }
+    private val audio = ComputerAudioView(context).apply { attach(host.scope) }
     override val view = LinearLayout(context).asCard(16).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
-        addView(cardTitle(R.string.mac_volume, R.drawable.ic_volume))
+        addView(cardTitle(R.string.computer_volume, R.drawable.ic_volume))
         addView(audio, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
     }
 

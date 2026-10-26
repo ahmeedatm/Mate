@@ -144,7 +144,7 @@
     <string name="links_remove_confirm">Retirer %1$s de la page Média ?</string>
 
     <!-- Son de l'ordinateur (Accueil et Deck) -->
-    <string name="mac_volume">Son de l\'ordinateur</string>
+    <string name="computer_volume">Son de l\'ordinateur</string>
     <string name="mute_toggle">Couper ou rétablir le son de l\'ordinateur</string>
     <string name="mic_toggle">Couper ou ouvrir le micro de l\'ordinateur</string>
     <string name="muted">Coupé</string>
@@ -177,8 +177,8 @@
     <string name="docs_count_free">%1$s · Tablette : %2$s libres</string>
     <string name="up">Remonter</string>
     <string name="empty_folder">Dossier vide : dépose des fichiers dedans depuis l\'ordinateur</string>
-    <string name="open_on_mac">Ouvrir sur l\'ordi</string>
-    <string name="opened_on_mac">Ouvert sur l\'ordinateur</string>
+    <string name="open_on_computer">Ouvrir sur l\'ordi</string>
+    <string name="opened_on_computer">Ouvert sur l\'ordinateur</string>
     <string name="web_from_computer">Page de l\'ordi</string>
     <string name="doc_expand">Agrandir</string>
     <string name="doc_shrink">Mettre à côté</string>
@@ -209,7 +209,7 @@
     <string name="camera_back">Terminer</string>
     <string name="camera_take_photo">Prendre la photo</string>
     <string name="camera_photo_preview">Aperçu · rien n\'est envoyé avant la photo</string>
-    <string name="camera_show_on_mac">Rouvrir</string>
+    <string name="camera_show_on_computer">Rouvrir</string>
     <string name="camera_window_closed">La fenêtre de la caméra est fermée sur l\'ordi</string>
     <string name="camera_opening">Ouverture sur l\'ordi…</string>
     <string name="camera_freeze">Figer</string>

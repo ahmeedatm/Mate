@@ -91,16 +91,16 @@ class DocumentPanel @JvmOverloads constructor(
         findViewById<View>(R.id.doc_close).setOnClickListener { close() }
         findViewById<View>(R.id.doc_prev).setOnClickListener { showPage(pageIndex - 1) }
         findViewById<View>(R.id.doc_next).setOnClickListener { showPage(pageIndex + 1) }
-        findViewById<Button>(R.id.doc_open_mac).setOnClickListener {
+        findViewById<Button>(R.id.doc_open_computer).setOnClickListener {
             val current = entry
             // Page web : celle où l'on est arrivé sur la tablette, rouverte dans le navigateur de l'ordinateur.
             val url = web?.url?.takeIf { current == null }
             if (current == null && url == null) return@setOnClickListener
             scope.launch {
                 val message = runCatching {
-                    if (url != null) BackendClient(context).docs.openUrlOnComputer(url) else BackendClient(context).docs.openOnMac(current!!.path)
+                    if (url != null) BackendClient(context).docs.openUrlOnComputer(url) else BackendClient(context).docs.openOnComputer(current!!.path)
                 }
-                    .fold({ context.getString(R.string.opened_on_mac) }, { context.errorText(it) })
+                    .fold({ context.getString(R.string.opened_on_computer) }, { context.errorText(it) })
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
         }

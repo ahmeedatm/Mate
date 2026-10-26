@@ -143,7 +143,7 @@ class CameraFragment : Fragment() {
         stop.setOnClickListener { choose(null) }
         freeze.setOnClickListener { setFrozen(!frozen) }
         photo.setOnClickListener { takePhoto() }
-        view.findViewById<Button>(R.id.camera_show).setOnClickListener { showOnMac() }
+        view.findViewById<Button>(R.id.camera_show).setOnClickListener { showOnComputer() }
 
         val zooms = view.findViewById<LinearLayout>(R.id.camera_zooms)
         val maxZoom = DocCamera.maxZoom(requireContext())
@@ -236,7 +236,7 @@ class CameraFragment : Fragment() {
         // Montrer sur l'ordi : la fenêtre s'ouvre d'elle-même, sauf si elle l'est déjà (retour dans le mode).
         if (purpose == Purpose.SHOW) lifecycleScope.launch {
             val open = runCatching { backend.camera.viewers() > 0 }.getOrDefault(false)
-            if (camera === cam && !open) showOnMac() else if (camera === cam) setWindowOpen(true)
+            if (camera === cam && !open) showOnComputer() else if (camera === cam) setWindowOpen(true)
         }
     }
 
@@ -340,12 +340,12 @@ class CameraFragment : Fragment() {
         }
     }
 
-    private fun showOnMac() {
+    private fun showOnComputer() {
         openedAt = SystemClock.elapsedRealtime()
         setWindowOpen(null)
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                BackendClient(requireContext()).camera.openCameraOnMac()
+                BackendClient(requireContext()).camera.openOnComputer()
             } catch (e: Exception) {
                 setWindowOpen(false)
                 toastError(e)

@@ -42,14 +42,14 @@
             android:visibility="gone" />
 
         <Button
-            android:id="@+id/doc_open_mac"
+            android:id="@+id/doc_open_computer"
             style="@style/ActionButton"
             android:layout_height="44dp"
             android:layout_marginStart="12dp"
             android:drawableStart="@drawable/ic_open"
             android:paddingStart="14dp"
             android:paddingEnd="16dp"
-            android:text="@string/open_on_mac"
+            android:text="@string/open_on_computer"
             android:textSize="15sp" />
 
         <ImageButton

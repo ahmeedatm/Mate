@@ -17,7 +17,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.unowhy.companion.R
-import com.unowhy.companion.net.MacDisplay
+import com.unowhy.companion.net.ComputerDisplay
 import kotlin.math.abs
 import kotlin.math.hypot
 
@@ -32,17 +32,17 @@ class ScreenMap @JvmOverloads constructor(
 ) : ViewGroup(context, attrs) {
 
     /** `layout` : keep, left, right ou max (comme placeWindow côté Mac). */
-    var onDrop: (payload: Any?, display: MacDisplay, layout: String) -> Unit = { _, _, _ -> }
+    var onDrop: (payload: Any?, display: ComputerDisplay, layout: String) -> Unit = { _, _, _ -> }
     var onDragEnded: () -> Unit = {}
 
     /** Étire les écrans pour remplir la vue (vue « Ouvertes » : des listes de fenêtres, la forme exacte compte peu). */
     var stretch = false
 
-    private var displays: List<MacDisplay> = emptyList()
+    private var displays: List<ComputerDisplay> = emptyList()
     private val gap = dp(12)
 
     /** Remplace les écrans ; `cards` donne les vues de fenêtres à afficher dans chacun. */
-    fun setScreens(displays: List<MacDisplay>, cards: (MacDisplay) -> List<View>) {
+    fun setScreens(displays: List<ComputerDisplay>, cards: (ComputerDisplay) -> List<View>) {
         // La liste relue en boucle (vue « Ouvertes ») ne doit pas ramener chaque écran en haut.
         val scrolled = (0 until childCount).mapNotNull { getChildAt(it) as? Pane }.associate { it.screen.id to it.scroll.scrollY }
         this.displays = displays
@@ -78,7 +78,7 @@ class ScreenMap @JvmOverloads constructor(
 
     /** Échelle et décalage qui centrent l'arrangement des écrans dans la vue. */
     private inner class Frame(val scaleX: Float, val scaleY: Float, val minX: Int, val minY: Int, val dx: Float, val dy: Float) {
-        fun rect(d: MacDisplay): IntArray {
+        fun rect(d: ComputerDisplay): IntArray {
             val left = dx + (d.x - minX) * scaleX
             val top = dy + (d.y - minY) * scaleY
             return intArrayOf(
@@ -103,7 +103,7 @@ class ScreenMap @JvmOverloads constructor(
     }
 
     /** Un écran : nom, fenêtres (défilables), et aperçu de la place prise pendant un glisser. */
-    private inner class Pane(val screen: MacDisplay) : FrameLayout(context) {
+    private inner class Pane(val screen: ComputerDisplay) : FrameLayout(context) {
         private val cards = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         val scroll = ScrollView(context)
         private val preview = View(context).apply {
