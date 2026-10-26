@@ -26,6 +26,7 @@ import { autoJoinEnabled, joinMeeting, setAutoJoin, startAutoJoin } from "./meet
 import { answerCall, declineCall, hangUp, startCallWatch } from "./calls.ts";
 import { focusDnd } from "./dnd.ts";
 import tabletRoutes from "./routes/tablet.ts";
+import callRoutes from "./routes/calls.ts";
 import { setLogger } from "./log.ts";
 import { addTask, deleteTask, listRecurring, listTasks, setTaskDone, startReminders, taskUrl } from "./tasks.ts";
 import { receiveTabs, type ExtensionReport } from "./browser-extension.ts";
@@ -99,6 +100,7 @@ app.addContentTypeParser("image/jpeg", { parseAs: "buffer", bodyLimit: 2 * 1024 
 // --- Routes, par domaine (src/routes/)
 
 app.register(tabletRoutes);
+app.register(callRoutes);
 // @@PLUGINS
 
 /** `auth` : le jeton envoyé est le bon (la tablette sait s'il faut refaire l'appairage). */
@@ -925,19 +927,6 @@ startEventReminders(remind);
 // Appel entrant : prévenir la tablette sans attendre sa réponse (la sonnerie ne doit pas bloquer la surveillance).
 void startCallWatch((event) => void sendToTablet({ type: "call", ...event }, 30_000));
 if (canControl) startAutoJoin((text) => sendToTablet({ type: "message", text, seconds: 60 }));
-
-// --- Appels entrants (src/calls.ts) : la tablette répond, ignore ou raccroche en appuyant sur les boutons de l'appli
-
-const callBody = { type: "object", properties: { app: { type: "string", minLength: 1, maxLength: 100 }, video: { type: "boolean" } } };
-app.post<{ Body: { app: string; video?: boolean } }>("/calls/answer", { schema: { body: { ...callBody, required: ["app"] } } }, async (req) => {
-  await answerCall(req.body.app, req.body.video);
-  return { ok: true };
-});
-app.post<{ Body: { app: string } }>("/calls/decline", { schema: { body: { ...callBody, required: ["app"] } } }, async (req) => {
-  await declineCall(req.body.app);
-  return { ok: true };
-});
-app.post<{ Body: { app?: string } }>("/calls/hangup", { schema: { body: callBody } }, async (req) => ({ ok: true, app: await hangUp(req.body.app) }));
 
 await app.listen({ port: config.port, host: config.host });
 startDiscovery((msg) => app.log.warn(msg));
