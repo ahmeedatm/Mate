@@ -87,14 +87,24 @@ adb -s <série> install -r app/build/outputs/apk/debug/app-debug.apk   # un appa
 
 `main` est protégée : on n'y pousse plus directement. Une branche par changement (`feat/…`, `fix/…`, `docs/…`, `ci/…`), puis une MR vers `main`. Elle se fusionne quand le pipeline est vert et les discussions résolues.
 
-Le pipeline (`.gitlab-ci.yml`, runner Linux) lance deux jobs en parallèle :
+Le pipeline (`.gitlab-ci.yml`, runner Linux) lance trois jobs en parallèle :
 
 | Job | Vérifie |
 |---|---|
 | `backend` | `npm run typecheck`, puis `npm test` : tests d'intégration (`backend/test/`), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP |
+| `e2e` | pages web du backend dans Chromium (Playwright, `backend/e2e/`) : page locale (adresse, code d'appairage, lien ICS), visualiseur `/camera`, retours d'erreur de `/oauth/:provider/callback`. Même serveur que les tests d'intégration. Artefacts : `e2e-results/junit.xml` et traces des tests en échec |
 | `android` | tests JVM (`app/src/test/`), lint, APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
 
 Avant de pousser : `cd backend && npm run typecheck && npm test`, et `./gradlew testDebugUnitTest lintDebug`.
+
+Tests Playwright (page web touchée : `src/local-page.ts`, `src/camera.ts`, routes OAuth) : `cd backend && npm run test:e2e`, après un `npx playwright install chromium` la première fois. Sans navigateur installé, dans l'image du job :
+
+```sh
+docker run --rm -e CI=true -v "$PWD":/w -v /w/backend/node_modules -w /w/backend \
+  mcr.microsoft.com/playwright:v1.64.1-noble bash -c 'npm ci && npm run test:e2e'
+```
+
+Le tag de l'image du job `e2e` suit la version exacte de `@playwright/test` (`backend/package.json`) : changer les deux ensemble (et le digest). Trace d'un échec : `npx playwright show-trace e2e-results/traces/<test>/trace.zip`.
 
 Ce que la CI ne voit pas : le pilotage réel du Mac et de Windows (sur Linux, le deck répond 501), l'appli sur la tablette. Ils restent testés à la main (case « Testé sur » de la MR).
 
