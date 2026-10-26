@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 /**
  * Compile le pilote Windows (src/win/helper/) et le lanceur (src/win/launcher/), C# .NET Framework 4.8, en
  * src/win/UnowhyHelper.exe et src/win/UnowhyCompanion.exe, depuis le Mac ou Windows. Demande le SDK .NET 8
- * (`dotnet` dans le PATH ou dans ~/.dotnet). Les exe sont gardés dans le dépôt : le compagnon et le paquet s'en
+ * (`dotnet` dans le PATH ou dans ~/.dotnet), figé par backend/global.json (lancé depuis backend/). Les exe sont gardés dans le dépôt : le compagnon et le paquet s'en
  * servent sans SDK.
  */
 
@@ -22,6 +22,7 @@ for (const [dir, exe] of [["helper", "UnowhyHelper.exe"], ["launcher", "UnowhyCo
   const project = path.join(backend, "src", "win", dir);
   const out = path.join(project, "bin", "Release");
   execFileSync(dotnet(), ["build", project, "-c", "Release", "-o", out, "--nologo"], {
+    cwd: backend,
     stdio: "inherit",
     env: { ...process.env, DOTNET_CLI_TELEMETRY_OPTOUT: "1", DOTNET_NOLOGO: "1" },
   });

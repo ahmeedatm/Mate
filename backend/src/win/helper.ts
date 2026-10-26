@@ -7,8 +7,8 @@ import { backendRoot } from "../config.ts";
 
 /**
  * Pilote Windows résident (UnowhyHelper.exe, compilé depuis helper/ et native.cs par `npm run build:helper`) :
- * un processus par action serait trop lent pour un deck. Un exe compilé d'avance et pas PowerShell : Bitdefender
- * classait le script et sa compilation à l'exécution en cmd:Heur.BZC.PZQ.Boxter.
+ * un processus par action serait trop lent pour un deck. Un exe compilé d'avance et pas PowerShell, que les
+ * antivirus bloquent.
  * Une requête à la fois, réponses dans l'ordre ; relancé au besoin s'il meurt ou ne répond plus.
  */
 
@@ -49,10 +49,23 @@ function next(timeoutMs: number): Promise<Reply> {
   });
 }
 
+/** Copies laissées par un serveur mort sans `stop()` ; celle d'un pilote encore vivant reste (Windows refuse de supprimer l'exe en cours). */
+function purgeOldRuns() {
+  for (const name of fs.readdirSync(RUN_ROOT)) {
+    if (!name.startsWith("run-")) continue;
+    try {
+      fs.rmSync(path.join(RUN_ROOT, name), { recursive: true, force: true });
+    } catch {
+      // En cours d'utilisation : retentée au prochain démarrage.
+    }
+  }
+}
+
 function start(): Promise<void> {
   // L'exe tourne sur une copie : Windows interdit de remplacer un programme en cours d'exécution, ce qui bloquerait
   // sa mise à jour tant que le compagnon tourne.
   fs.mkdirSync(RUN_ROOT, { recursive: true });
+  purgeOldRuns();
   const dir = fs.mkdtempSync(path.join(RUN_ROOT, "run-"));
   fs.copyFileSync(path.join(HERE, EXE), path.join(dir, EXE));
   runDir = dir;

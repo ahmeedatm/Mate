@@ -1,6 +1,6 @@
 // Lance le backend du compagnon sous Windows et le relance s'il s'arrête (POST /companion/restart, plantage).
-// Entrée « Exécuter » de la session (voir scripts/service.ts). Programme sans fenêtre : remplace run-windows.ps1,
-// un PowerShell caché lancé au démarrage que les antivirus prennent pour un logiciel malveillant.
+// Entrée « Exécuter » de la session (voir scripts/service.ts). Programme sans fenêtre : pas de PowerShell caché,
+// que les antivirus prennent pour un logiciel malveillant.
 //
 // UnowhyCompanion.exe --node <node.exe> --backend <dossier backend> --logs <dossier> --data <dossier>
 
@@ -50,8 +50,8 @@ namespace Companion
                 RedirectStandardError = true,
             };
             using (var process = Process.Start(info))
-            using (var output = File.Create(Path.Combine(logs, "backend.log")))
-            using (var errors = File.Create(Path.Combine(logs, "backend-erreurs.log")))
+            using (var output = OpenLog(logs, "backend.log"))
+            using (var errors = OpenLog(logs, "backend-erreurs.log"))
             {
                 var copies = new[]
                 {
@@ -61,6 +61,22 @@ namespace Companion
                 process.WaitForExit();
                 foreach (var copy in copies) copy.Join();
             }
+        }
+
+        // Journal gardé d'une relance à l'autre (la cause d'un plantage reste lisible) : au-delà de 5 Mo, l'ancien passe en .1.
+        static FileStream OpenLog(string logs, string name)
+        {
+            var path = Path.Combine(logs, name);
+            if (File.Exists(path) && new FileInfo(path).Length > 5 * 1024 * 1024)
+            {
+                File.Delete(path + ".1");
+                File.Move(path, path + ".1");
+            }
+            var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read);
+            var mark = System.Text.Encoding.UTF8.GetBytes("--- démarrage " + DateTime.Now + Environment.NewLine);
+            stream.Write(mark, 0, mark.Length);
+            stream.Flush();
+            return stream;
         }
 
         // Journal écrit au fil de l'eau (lisible pendant que le compagnon tourne).

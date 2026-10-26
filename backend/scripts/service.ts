@@ -146,7 +146,6 @@ function windowsCommand(node: string) {
 
 /**
  * Lance la boucle comme à l'ouverture de session : `start` de cmd, qui la détache vraiment de ce processus.
- * (Un PowerShell lancé directement en `detached` par Node ne démarrait pas le script sur le PC de test.)
  * `start` prend le premier argument entre guillemets pour un titre : d'où le titre vide.
  */
 function winStart(node: string) {
@@ -157,7 +156,7 @@ function winStart(node: string) {
 
 /**
  * Arrête la boucle notée dans service.pid, seulement si c'est bien le lanceur (ou le PowerShell des anciennes
- * installations) : le numéro a pu être redonné à un autre programme.
+ * installations, à retirer quand il n'en reste plus) : le numéro a pu être redonné à un autre programme.
  */
 async function winStop() {
   for (const file of pidFiles) {

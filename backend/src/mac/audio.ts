@@ -1,12 +1,6 @@
+import { planAudio } from "../driver-common.ts";
+import type { AudioChange, AudioState } from "../screens.ts";
 import { osascript } from "./run.ts";
-
-export type AudioState = {
-  /** null quand la sortie ne se pilote pas (ex. certaines sorties HDMI / DisplayLink). */
-  output: number | null;
-  muted: boolean;
-  input: number;
-  micMuted: boolean;
-};
 
 // Volume micro mémorisé pour pouvoir le rétablir après un "couper le micro".
 let micRestoreLevel = 75;
@@ -26,22 +20,10 @@ export async function getAudio(): Promise<AudioState> {
   };
 }
 
-export async function setAudio(change: {
-  output?: number;
-  outputDelta?: number;
-  muted?: boolean;
-  micMuted?: boolean;
-}): Promise<AudioState> {
+export async function setAudio(change: AudioChange): Promise<AudioState> {
   const current = await getAudio();
-  const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
-
-  let output: number | undefined;
-  if (change.output !== undefined) output = clamp(change.output);
-  else if (change.outputDelta !== undefined && current.output !== null) output = clamp(current.output + change.outputDelta);
+  const { output, muted } = planAudio(change, current);
   if (output !== undefined) await osascript("on run argv\nset volume output volume (item 1 of argv as integer)\nend run", [String(output)]);
-
-  // Monter le volume réactive le son, comme les touches du clavier.
-  const muted = change.muted ?? (output !== undefined && output > 0 && current.muted ? false : undefined);
   if (muted !== undefined) await osascript(`set volume ${muted ? "with" : "without"} output muted`);
 
   if (change.micMuted !== undefined && change.micMuted !== current.micMuted) {

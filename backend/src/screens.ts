@@ -60,3 +60,19 @@ export function labelDisplays(raw: RawScreen[]): Display[] {
     return { id: s.id, label: twins ? `${base[i]} ${rank}` : base[i], main: s.main, ...s.frame };
   });
 }
+
+// --- Son, touches multimédia et commandes système : mêmes formes sur Mac (src/mac/) et Windows (src/win/).
+
+export type AudioState = {
+  /** null quand la sortie ne se pilote pas (ex. certaines sorties HDMI / DisplayLink). */
+  output: number | null;
+  muted: boolean;
+  input: number;
+  micMuted: boolean;
+};
+
+export type AudioChange = { output?: number; outputDelta?: number; muted?: boolean; micMuted?: boolean };
+
+export type MediaCommand = "play-pause" | "next" | "previous";
+
+export type SystemCommand = "sleep-display" | "toggle-dark-mode" | "screenshot-clipboard" | "lock";

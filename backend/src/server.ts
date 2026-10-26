@@ -581,8 +581,8 @@ app.get<{ Querystring: { path: string } }>("/docs/file", async (req, reply) => {
 
 /**
  * Redémarre le compagnon après une mise à jour de ses fichiers : le lancement automatique (boucle de
- * scripts/run-windows.ps1, LaunchAgent sur Mac) le relance quelques secondes plus tard. Sous `npm run dev`, tsx watch
- * attend un changement de fichier avant de relancer.
+ * lanceur UnowhyCompanion.exe sur Windows, LaunchAgent sur Mac) le relance quelques secondes plus tard. Sous
+ * `npm run dev`, tsx watch attend un changement de fichier avant de relancer.
  */
 app.post("/companion/restart", async (req) => {
   req.log.info("redémarrage demandé");

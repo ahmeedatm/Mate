@@ -1,6 +1,6 @@
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import os from "node:os";
-import { osascript, run } from "./mac/run.ts";
+import { run } from "./mac/run.ts";
 import * as macAccess from "./mac/access.ts";
 import * as macApps from "./mac/apps.ts";
 import * as macAudio from "./mac/audio.ts";
@@ -9,9 +9,11 @@ import * as macCalls from "./mac/calls.ts";
 import * as macDnd from "./mac/dnd.ts";
 import { extensionFrontPage, extensionTabs } from "./browser-extension.ts";
 import * as macKeys from "./mac/keys.ts";
+import * as macSystem from "./mac/system.ts";
 import * as macWindows from "./mac/windows.ts";
 import * as win from "./win/index.ts";
-import type { Layout, OpenAction, WindowTarget } from "./screens.ts";
+import { checkOpenTarget } from "./open-guard.ts";
+import type { AudioChange, Layout, MediaCommand, OpenAction, SystemCommand, WindowTarget } from "./screens.ts";
 
 /**
  * Pilotage de l'ordinateur, une seule interface pour macOS (src/mac/) et Windows (src/win/).
@@ -25,9 +27,7 @@ export const isWindows = process.platform === "win32";
 export const canControl = isMac || isWindows;
 export const osName = isMac ? "mac" : isWindows ? "windows" : "other";
 
-export type SystemCommand = "sleep-display" | "toggle-dark-mode" | "screenshot-clipboard" | "lock";
-export type MediaCommand = "play-pause" | "next" | "previous";
-export type { AudioState } from "./mac/audio.ts";
+export type { AudioState, MediaCommand, SystemCommand } from "./screens.ts";
 
 function unsupported(): never {
   throw Object.assign(new Error("Pilotage disponible sur macOS et Windows seulement"), { statusCode: 501 });
@@ -50,11 +50,12 @@ export function computerName(): string {
   return os.hostname().replace(/\.local$/, "");
 }
 
-/** Ouvre un lien (https, msteams…) ou un fichier avec l'appli associée. */
+/** Ouvre un lien (https, msteams…), un document ou un dossier avec l'appli associée ; jamais un programme ni un script (open-guard.ts). */
 export async function openTarget(target: string) {
+  if (!canControl) unsupported();
+  checkOpenTarget(target, isMac ? "mac" : "windows");
   if (isMac) return void (await run("open", [target]));
-  if (isWindows) return win.openTarget(target);
-  unsupported();
+  return win.openTarget(target);
 }
 
 /** Met l'appli au premier plan, en la lançant si besoin. */
@@ -70,13 +71,10 @@ export async function listApps(): Promise<string[]> {
   return [];
 }
 
-/** Applis installées, gardées 5 min : le profil de base du deck ne montre que celles-là. */
-let installed: { at: number; names: Set<string> } | undefined;
+/** Applis installées : le profil de base du deck ne montre que celles-là. */
 export async function isInstalled(name: string): Promise<boolean> {
   if (isWindows) return win.isInstalled(name);
-  if (!isMac) return false;
-  if (!installed || Date.now() - installed.at > 5 * 60_000) installed = { at: Date.now(), names: new Set(await macApps.listApps()) };
-  return installed.names.has(name);
+  return isMac ? macApps.isInstalled(name) : false;
 }
 
 /** Écrit l'icône PNG (96 px) de l'appli dans `out` ; false si elle n'en a pas. */
@@ -93,7 +91,7 @@ export async function listShortcuts(): Promise<string[]> {
 
 export async function runShortcut(name: string) {
   if (!isMac) throw new Error("Les raccourcis Apple n'existent que sur Mac");
-  await run("shortcuts", ["run", name], 30_000);
+  await run("shortcuts", ["run", "--", name], 30_000);
 }
 
 /** Raccourci au format "cmd+shift+m" (sur Windows, cmd = Ctrl ; win = touche Windows). */
@@ -122,7 +120,7 @@ export function getAudio() {
   unsupported();
 }
 
-export function setAudio(change: { output?: number; outputDelta?: number; muted?: boolean; micMuted?: boolean }) {
+export function setAudio(change: AudioChange) {
   if (isMac) return macAudio.setAudio(change);
   if (isWindows) return win.setAudio(change);
   unsupported();
@@ -187,19 +185,13 @@ export function appAudio(app: string, change: { volume?: number; muted?: boolean
  */
 export async function isAppInCall(app: string): Promise<boolean> {
   if (isWindows) return (await win.appAudio(app)).capturing;
-  if (isMac) {
-    if (!(await isAppRunning(app))) return false;
-    const call = await macCalls.callState(app).catch(() => null);
-    return call?.found ? call.connected : macAudio.micInUse();
-  }
-  return false;
+  return isMac ? macSystem.isAppInCall(app) : false;
 }
 
 /** L'appli tourne, même sans fenêtre (Discord réduit dans la zone de notification). */
 export async function isAppRunning(app: string): Promise<boolean> {
   if (isWindows) return (await win.appAudio(app)).running || (await win.listWindows(app)).running;
-  if (isMac) return (await run("ps", ["-axo", "comm="])).split("\n").some((c) => c.includes(`/${app}.app/`));
-  return false;
+  return isMac ? macSystem.isAppRunning(app) : false;
 }
 
 /** Mac : le compagnon a-t-il l'autorisation Accessibilité ? null ailleurs (rien à autoriser). */
@@ -274,29 +266,12 @@ export function controlOpenWindow(key: string, window: WindowTarget, action: Ope
 
 export async function systemCommand(command: SystemCommand) {
   if (isWindows) return win.systemCommand(command);
-  if (!isMac) unsupported();
-  switch (command) {
-    case "sleep-display":
-      return void (await run("pmset", ["displaysleepnow"]));
-    case "toggle-dark-mode":
-      return void (await osascript('tell application "System Events" to tell appearance preferences to set dark mode to not dark mode'));
-    case "screenshot-clipboard":
-      // Raccourci système plutôt que `screencapture` : ce dernier exige l'autorisation
-      // Enregistrement de l'écran, sans laquelle il ne capture que le fond d'écran.
-      return macKeys.sendKeys("cmd+ctrl+shift+3");
-    case "lock":
-      return macKeys.sendKeys("ctrl+cmd+q");
-  }
+  if (isMac) return macSystem.systemCommand(command);
+  unsupported();
 }
 
 /** Message bien visible sur l'ordinateur (code d'appairage), sans attendre qu'il soit fermé. */
 export async function alert(title: string, text: string) {
   if (isWindows) return win.alert(title, text);
-  if (!isMac) return;
-  // Processus détaché : la boîte reste affichée sans bloquer le serveur, et se ferme seule après 2 min.
-  const script = `on run argv
-activate
-display dialog (item 2 of argv) with title (item 1 of argv) buttons {"OK"} default button 1 giving up after 120
-end run`;
-  spawn("osascript", ["-e", script, title, text], { detached: true, stdio: "ignore" }).unref();
+  if (isMac) macSystem.alert(title, text);
 }

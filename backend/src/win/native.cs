@@ -1,6 +1,5 @@
 // Pilotage de Windows pour le compagnon : compilé dans UnowhyHelper.exe avec helper/ (npm run build:helper),
-// appelé ligne par ligne par src/win/helper.ts. Écrit en C# 5 (ancienne compilation par PowerShell) ; le projet
-// accepte maintenant C# 7.3.
+// appelé ligne par ligne par src/win/helper.ts. Écrit en C# 7.3.
 //
 // Requête : {"op": "...", ...} ; réponse : {"ok": true, "result": ...} ou {"ok": false, "error": "..."}.
 
@@ -57,7 +56,6 @@ namespace Companion
         {
             switch (op)
             {
-                case "ping": return true;
                 case "apps": return Apps();
                 case "launch": Process.Start("explorer.exe", "\"shell:AppsFolder\\" + Str(req, "id") + "\""); return true;
                 case "open": Open(Str(req, "target")); return true;

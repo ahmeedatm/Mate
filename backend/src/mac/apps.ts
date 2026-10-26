@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { sortedNames } from "../driver-common.ts";
 import { run } from "./run.ts";
 
 const APP_DIRS = ["/Applications", "/System/Applications", "/System/Applications/Utilities", "/Applications/Utilities"];
@@ -21,7 +22,14 @@ export async function listApps(): Promise<string[]> {
     .filter((p) => p.endsWith(".app") && !p.slice(0, -4).includes(".app/") && !p.includes("/Library/"))
     .map((p) => path.basename(p, ".app"))
     .filter((n) => !/uninstall|url handler/i.test(n));
-  return [...new Set(names)].sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
+  return sortedNames(names);
+}
+
+/** Applis installées, gardées 5 min : le profil de base du deck ne montre que celles-là. */
+let installed: { at: number; names: Set<string> } | undefined;
+export async function isInstalled(name: string): Promise<boolean> {
+  if (!installed || Date.now() - installed.at > 5 * 60_000) installed = { at: Date.now(), names: new Set(await listApps()) };
+  return installed.names.has(name);
 }
 
 /** Raccourcis de l'appli Raccourcis (macOS 12+). */
