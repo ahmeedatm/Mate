@@ -40,11 +40,14 @@ type ClientConfig = { clientId: string; clientSecret?: string };
 
 /** Identifiants des applis enregistrées (config/accounts.json, livré avec le logiciel ; .env pour tester). */
 async function client(provider: Provider): Promise<ClientConfig | undefined> {
-  const file = await readJson<Partial<Record<Provider, ClientConfig>>>(path.join(backendRoot, "config", "accounts.json"), () => ({}), { quarantine: false });
+  const file = await readJson<Partial<Record<Provider, ClientConfig>>>(path.join(backendRoot, "config", "accounts.json"), () => ({}), {
+    quarantine: false,
+  });
   const fromFile = file[provider];
-  const env = provider === "microsoft"
-    ? { clientId: process.env.MICROSOFT_CLIENT_ID }
-    : { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET };
+  const env =
+    provider === "microsoft"
+      ? { clientId: process.env.MICROSOFT_CLIENT_ID }
+      : { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET };
   const clientId = env.clientId?.trim() || fromFile?.clientId?.trim();
   if (!clientId) return undefined;
   return { clientId, clientSecret: env.clientSecret?.trim() || fromFile?.clientSecret?.trim() || undefined };
@@ -75,7 +78,10 @@ function edit<R = void>(change: (accounts: Partial<Record<Provider, Stored>>) =>
 export async function connectedAccounts(): Promise<{ provider: Provider; label: string; email: string; expired: boolean }[]> {
   const accounts = await load();
   return (Object.keys(accounts) as Provider[]).map((p) => ({
-    provider: p, label: PROVIDERS[p].label, email: accounts[p]!.email, expired: !!accounts[p]!.expired,
+    provider: p,
+    label: PROVIDERS[p].label,
+    email: accounts[p]!.email,
+    expired: !!accounts[p]!.expired,
   }));
 }
 
@@ -119,7 +125,10 @@ export async function finishLogin(state: string, code: string): Promise<{ provid
   if (!login || login.expires < Date.now()) throw new Error("Connexion expirée : recommence depuis la page du compagnon");
   const app = (await client(login.provider))!;
   const tokens = await tokenRequest(login.provider, app, {
-    grant_type: "authorization_code", code, redirect_uri: login.redirectUri, code_verifier: login.verifier,
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: login.redirectUri,
+    code_verifier: login.verifier,
   });
   if (!tokens.refresh_token) throw new Error("Le compte n'a pas donné d'accès durable : recommence");
   const email = emailFromIdToken(tokens.id_token) ?? PROVIDERS[login.provider].label;
@@ -203,16 +212,29 @@ const localDay = (date: string) => {
 };
 
 type GraphEvent = {
-  iCalUId: string; subject?: string; isAllDay: boolean; isCancelled: boolean; showAs?: string;
-  start: { dateTime: string }; end: { dateTime: string }; location?: { displayName?: string };
-  onlineMeeting?: { joinUrl?: string } | null; bodyPreview?: string;
+  iCalUId: string;
+  subject?: string;
+  isAllDay: boolean;
+  isCancelled: boolean;
+  showAs?: string;
+  start: { dateTime: string };
+  end: { dateTime: string };
+  location?: { displayName?: string };
+  onlineMeeting?: { joinUrl?: string } | null;
+  bodyPreview?: string;
 };
 
 async function microsoftEvents(token: string, from: Date, to: Date): Promise<CalendarEvent[]> {
   const select = "iCalUId,subject,isAllDay,isCancelled,showAs,start,end,location,onlineMeeting,bodyPreview";
-  let url: string | undefined = "https://graph.microsoft.com/v1.0/me/calendarView?" + new URLSearchParams({
-    startDateTime: from.toISOString(), endDateTime: to.toISOString(), $select: select, $top: "100", $orderby: "start/dateTime",
-  });
+  let url: string | undefined =
+    "https://graph.microsoft.com/v1.0/me/calendarView?" +
+    new URLSearchParams({
+      startDateTime: from.toISOString(),
+      endDateTime: to.toISOString(),
+      $select: select,
+      $top: "100",
+      $orderby: "start/dateTime",
+    });
   const events: CalendarEvent[] = [];
   // Heures en UTC (Prefer) : converties ensuite dans le fuseau de l'ordinateur.
   for (let page = 0; url && page < 5; page++) {
@@ -237,15 +259,29 @@ async function microsoftEvents(token: string, from: Date, to: Date): Promise<Cal
 }
 
 type GoogleEvent = {
-  id: string; iCalUID?: string; status?: string; summary?: string; location?: string; description?: string; transparency?: string;
-  start: { dateTime?: string; date?: string }; end: { dateTime?: string; date?: string };
-  hangoutLink?: string; conferenceData?: { entryPoints?: { entryPointType: string; uri: string }[] };
+  id: string;
+  iCalUID?: string;
+  status?: string;
+  summary?: string;
+  location?: string;
+  description?: string;
+  transparency?: string;
+  start: { dateTime?: string; date?: string };
+  end: { dateTime?: string; date?: string };
+  hangoutLink?: string;
+  conferenceData?: { entryPoints?: { entryPointType: string; uri: string }[] };
 };
 
 async function googleEvents(token: string, from: Date, to: Date): Promise<CalendarEvent[]> {
-  const url = "https://www.googleapis.com/calendar/v3/calendars/primary/events?" + new URLSearchParams({
-    timeMin: from.toISOString(), timeMax: to.toISOString(), singleEvents: "true", orderBy: "startTime", maxResults: "250",
-  });
+  const url =
+    "https://www.googleapis.com/calendar/v3/calendars/primary/events?" +
+    new URLSearchParams({
+      timeMin: from.toISOString(),
+      timeMax: to.toISOString(),
+      singleEvents: "true",
+      orderBy: "startTime",
+      maxResults: "250",
+    });
   const json = await getJson(url, token);
   return (json.items as GoogleEvent[])
     .filter((e) => e.status !== "cancelled")
@@ -260,9 +296,10 @@ async function googleEvents(token: string, from: Date, to: Date): Promise<Calend
         endMs: allDay ? localDay(e.end.date!) : Date.parse(e.end.dateTime!),
         allDay,
         free: e.transparency === "transparent",
-        joinUrl: e.hangoutLink
-          ?? e.conferenceData?.entryPoints?.find((p) => p.entryPointType === "video")?.uri
-          ?? meetingLink(e.description, e.location),
+        joinUrl:
+          e.hangoutLink ??
+          e.conferenceData?.entryPoints?.find((p) => p.entryPointType === "video")?.uri ??
+          meetingLink(e.description, e.location),
       };
     });
 }

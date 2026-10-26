@@ -9,7 +9,8 @@ let cached: { value: boolean; at: number } | undefined;
 
 export async function accessibilityTrusted(): Promise<boolean> {
   if (cached && Date.now() - cached.at < 10_000) return cached.value;
-  const value = (await osascript('ObjC.import("ApplicationServices"); $.AXIsProcessTrusted()', [], "JavaScript").catch(() => "false")) === "true";
+  const value =
+    (await osascript('ObjC.import("ApplicationServices"); $.AXIsProcessTrusted()', [], "JavaScript").catch(() => "false")) === "true";
   cached = { value, at: Date.now() };
   return value;
 }

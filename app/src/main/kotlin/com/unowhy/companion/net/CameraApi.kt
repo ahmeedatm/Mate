@@ -16,7 +16,7 @@ class CameraApi(private val http: Http) {
     }
 
     /** Ouvre la page du visualiseur dans le navigateur du Mac. */
-    suspend fun openCameraOnMac() = http.io { http.postJson("/camera/open", JSONObject()); Unit }
+    suspend fun openOnComputer() = http.io { http.postJson("/camera/open", JSONObject()); Unit }
 
     /** Nombre de pages du visualiseur ouvertes sur l'ordinateur (flux MJPEG en cours). */
     suspend fun viewers(): Int = http.io {

@@ -6,7 +6,9 @@ import { confirmPairing, identity, requestPairing } from "../pairing.ts";
 export default async function pairingRoutes(app: FastifyInstance, opts: { authorized: (header: string | undefined) => boolean }) {
   /** `auth` : le jeton envoyé est le bon (la tablette sait s'il faut refaire l'appairage). */
   app.get("/health", async (req) => ({
-    ok: true, ...identity(), auth: opts.authorized(req.headers.authorization),
+    ok: true,
+    ...identity(),
+    auth: opts.authorized(req.headers.authorization),
     // Mac : false = fenêtres et raccourcis bloqués tant que l'Accessibilité n'est pas accordée (la tablette prévient).
     accessibility: await accessibility().catch(() => null),
   }));

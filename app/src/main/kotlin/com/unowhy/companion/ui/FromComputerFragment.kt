@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
  * Depuis l'ordi : d'abord un choix expliqué (fichiers du dossier partagé, ou page du navigateur de l'ordi),
  * puis la liste des fichiers ; un fichier s'ouvre dans le panneau latéral.
  */
-class DocsFragment : Fragment() {
+class FromComputerFragment : Fragment() {
 
     private lateinit var list: ListView
     private lateinit var path: TextView
@@ -48,7 +48,7 @@ class DocsFragment : Fragment() {
     private var browsing = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, state: Bundle?): View =
-        inflater.inflate(R.layout.fragment_docs, container, false)
+        inflater.inflate(R.layout.fragment_from_computer, container, false)
 
     override fun onViewCreated(view: View, state: Bundle?) {
         list = view.findViewById(R.id.docs_list)
@@ -148,7 +148,7 @@ class DocsFragment : Fragment() {
             val meta = view.findViewById<TextView>(R.id.doc_meta)
             meta.text = if (entry.kind == "dir") "" else
                 Formatter.formatShortFileSize(context, entry.size) + " · " +
-                DateUtils.getRelativeTimeSpanString(entry.mtimeMs, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
+                    DateUtils.getRelativeTimeSpanString(entry.mtimeMs, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
             meta.visibility = if (meta.text.isEmpty()) View.GONE else View.VISIBLE
             return view
         }

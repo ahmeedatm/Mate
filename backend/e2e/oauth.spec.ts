@@ -4,7 +4,12 @@ import { expect, test } from "./fixtures.ts";
 test.describe("retour OAuth /oauth/:provider/callback", () => {
   const cases = [
     { name: "connexion annulée par l'utilisateur", query: "error=access_denied", result: "refused", message: "Connexion annulée." },
-    { name: "erreur du fournisseur", query: "error=server_error&error_description=boom", result: "error", message: /^La connexion a échoué/ },
+    {
+      name: "erreur du fournisseur",
+      query: "error=server_error&error_description=boom",
+      result: "error",
+      message: /^La connexion a échoué/,
+    },
     { name: "code absent", query: "state=abc", result: "error", message: /^La connexion a échoué/ },
     { name: "state inconnu ou expiré", query: "code=abc&state=inconnu", result: "error", message: /^La connexion a échoué/ },
   ];

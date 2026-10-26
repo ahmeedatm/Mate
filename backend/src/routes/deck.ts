@@ -1,11 +1,33 @@
 import { createReadStream } from "node:fs";
 import type { FastifyInstance } from "fastify";
 import {
-  addDeckApp, addDeckLink, deckLinks, findTile, homeFeatures, LINK_SUGGESTIONS, loadDeck, removeDeckApp, removeDeckLink, resetDeckApps, runAction, tileIcon,
+  addDeckApp,
+  addDeckLink,
+  deckLinks,
+  findTile,
+  homeFeatures,
+  LINK_SUGGESTIONS,
+  loadDeck,
+  removeDeckApp,
+  removeDeckLink,
+  resetDeckApps,
+  runAction,
+  tileIcon,
 } from "../deck.ts";
 import { openMediaLink } from "../music.ts";
 import {
-  focusWindow, isAppInCall, isAppRunning, launchApp, listApps, listButtons, listDisplays, listShortcuts, listWindows, osName, placeWindow, voiceState,
+  focusWindow,
+  isAppInCall,
+  isAppRunning,
+  launchApp,
+  listApps,
+  listButtons,
+  listDisplays,
+  listShortcuts,
+  listWindows,
+  osName,
+  placeWindow,
+  voiceState,
 } from "../os.ts";
 import { keySchema, loadKeys, saveKey, SLOTS, type PersoKey } from "../perso.ts";
 import type { Layout, WindowTarget } from "../screens.ts";
@@ -157,7 +179,10 @@ export default async function deckRoutes(app: FastifyInstance) {
   /** Page d'une appli d'appel (Discord) : salon ou appel en cours, participants, micro ; null si illisible (Mac, fermée). */
   app.get<{ Querystring: { app: string } }>(
     "/deck/voice",
-    { logLevel: "warn", schema: { querystring: { type: "object", required: ["app"], properties: { app: { type: "string", minLength: 1, maxLength: 100 } } } } },
+    {
+      logLevel: "warn",
+      schema: { querystring: { type: "object", required: ["app"], properties: { app: { type: "string", minLength: 1, maxLength: 100 } } } },
+    },
     async (req) => ({ voice: (await voiceState(req.query.app).catch(() => null)) ?? null }),
   );
 
@@ -173,7 +198,13 @@ export default async function deckRoutes(app: FastifyInstance) {
 
   /** De quoi remplir l'éditeur de touche : applis installées, raccourcis Apple (Mac), écrans. */
   app.get("/deck/catalog", async () => {
-    const [apps, shortcuts, displays] = await Promise.all([listApps(), listShortcuts(), Promise.resolve().then(listDisplays).catch(() => [])]);
+    const [apps, shortcuts, displays] = await Promise.all([
+      listApps(),
+      listShortcuts(),
+      Promise.resolve()
+        .then(listDisplays)
+        .catch(() => []),
+    ]);
     return { os: osName, apps, shortcuts, displays: displays.map((d) => d.label) };
   });
 

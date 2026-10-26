@@ -67,7 +67,7 @@
         </LinearLayout>
 
         <!-- Son et micro du Mac. Les boutons de volume de la tablette pilotent aussi le Mac dans ce mode. -->
-        <com.unowhy.companion.ui.MacAudioView
+        <com.unowhy.companion.ui.ComputerAudioView
             android:id="@+id/deck_audio"
             style="@style/Card"
             android:layout_width="match_parent"

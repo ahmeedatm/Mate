@@ -15,10 +15,10 @@ import android.widget.TextView
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
-import com.unowhy.companion.net.WindowsApi
+import com.unowhy.companion.net.ComputerDisplay
+import com.unowhy.companion.net.ComputerWindow
 import com.unowhy.companion.net.DeckTile
-import com.unowhy.companion.net.MacDisplay
-import com.unowhy.companion.net.MacWindow
+import com.unowhy.companion.net.WindowsApi
 import com.unowhy.companion.net.WindowsInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -36,7 +36,7 @@ class WindowPicker @JvmOverloads constructor(
 ) : FrameLayout(context, attrs) {
 
     /** Ce qui est glissé : une fenêtre, ou toute l'appli (`window` null). */
-    private class Drag(val window: MacWindow?)
+    private class Drag(val window: ComputerWindow?)
 
     private val icon: ImageView
     private val title: TextView
@@ -172,7 +172,7 @@ class WindowPicker @JvmOverloads constructor(
      * Fenêtre (ou appli) déposée sur un écran. Le schéma change tout de suite, le Mac confirme ensuite :
      * le glisser reste fluide même quand l'Accessibilité met une seconde à répondre.
      */
-    private fun drop(window: MacWindow?, display: MacDisplay, layout: String) {
+    private fun drop(window: ComputerWindow?, display: ComputerDisplay, layout: String) {
         val current = info ?: return
         if (window != null && !window.elsewhere && window.display == display.id && layout == "keep") return
         val moved = current.windows.map { w ->
@@ -209,7 +209,7 @@ class WindowPicker @JvmOverloads constructor(
         elsewhere.visibility = if (away.isEmpty()) GONE else VISIBLE
     }
 
-    private fun card(w: MacWindow): View {
+    private fun card(w: ComputerWindow): View {
         val card = LayoutInflater.from(context).inflate(R.layout.item_window, this, false)
         card.findViewById<TextView>(R.id.window_title).text = w.title.ifBlank { context.getString(R.string.windows_untitled) }
         val meta = listOfNotNull(

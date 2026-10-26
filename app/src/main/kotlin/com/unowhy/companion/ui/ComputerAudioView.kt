@@ -21,7 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /** Son et micro du Mac : bouton muet, curseur de volume, bouton micro. Utilisé par l'Accueil et le Deck. */
-class MacAudioView @JvmOverloads constructor(
+class ComputerAudioView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
 ) : LinearLayout(context, attrs) {
@@ -42,7 +42,7 @@ class MacAudioView @JvmOverloads constructor(
     init {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        LayoutInflater.from(context).inflate(R.layout.view_mac_audio, this, true)
+        LayoutInflater.from(context).inflate(R.layout.view_computer_audio, this, true)
         mute = findViewById(R.id.audio_mute)
         volume = findViewById(R.id.audio_volume)
         value = findViewById(R.id.audio_value)

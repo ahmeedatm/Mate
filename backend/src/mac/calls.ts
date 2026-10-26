@@ -73,8 +73,13 @@ const MIC_OFF = /^(Activer|Réactiver|Rétablir) (le )?micro|^Unmute\b/i;
 const SHARING = /^Arrêter (le partage|la présentation)|^Stop (sharing|presenting)/i;
 
 export type CallState = {
-  found: boolean; connected: boolean; streaming: boolean; channel: string | null; people: string[];
-  muted: boolean | null; deafened: boolean | null;
+  found: boolean;
+  connected: boolean;
+  streaming: boolean;
+  channel: string | null;
+  people: string[];
+  muted: boolean | null;
+  deafened: boolean | null;
 };
 
 // /deck/live et /deck/voice lisent la même chose à quelques ms d'écart : une lecture sert aux deux.
@@ -93,9 +98,15 @@ async function readCall(app: string): Promise<CallState | null> {
   const raw = JSON.parse(await osascript(SCRIPT, [app], "JavaScript")) as { windows: { title: string; buttons: string[] }[] } | null;
   if (!raw) return null;
   const call = raw.windows.find((w) => w.buttons.some((b) => LEAVE.test(b)));
-  if (!call) return { found: raw.windows.length > 0, connected: false, streaming: false, channel: null, people: [], muted: null, deafened: null };
+  if (!call)
+    return { found: raw.windows.length > 0, connected: false, streaming: false, channel: null, people: [], muted: null, deafened: null };
   // « Affichage compact de réunion | Ahmed ATMANE » → « Ahmed ATMANE ».
-  const channel = call.title.replace(/\s*\|\s*Microsoft Teams$/i, "").split(" | ").pop()?.trim() || null;
+  const channel =
+    call.title
+      .replace(/\s*\|\s*Microsoft Teams$/i, "")
+      .split(" | ")
+      .pop()
+      ?.trim() || null;
   const muted = call.buttons.some((b) => MIC_OFF.test(b)) ? true : call.buttons.some((b) => MIC_ON.test(b)) ? false : null;
   return { found: true, connected: true, streaming: call.buttons.some((b) => SHARING.test(b)), channel, people: [], muted, deafened: null };
 }

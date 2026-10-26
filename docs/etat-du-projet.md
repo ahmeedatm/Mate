@@ -53,6 +53,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 - **Commande vocale** (24/10) : « ferme … », « cherche … », « raccroche », « arrête le partage » à la voix. La reconnaissance entend souvent « mais » pour « mets » et « de » pour « 2 » : acceptés. Pas de mot de réveil (bouton seulement). La carte d'appel cache le bouton Parler : « réponds » / « ignore » à la voix ne servent pas encore.
 - **Appels entrants** (24/10) : Vidéo, Ignorer, « Appel manqué » ; Discord en anglais ; Teams, WhatsApp, Zoom (une règle chacun dans `config/calls.json` après une capture pendant un vrai appel) ; Mac (pas fait).
 - **Tests Playwright des pages web** (26/10) : job CI `e2e` (page locale, visualiseur, retour OAuth), 18 tests verts dans l'image du job en local (arm64 et amd64). Pas encore passé sur le runner GitLab.
+- **Format et style vérifiés en CI** (26/10) : prettier (`npm run lint` du backend, avec variables et paramètres inutilisés refusés par `tsc`) et ktlint (`./gradlew ktlintCheck`, sans plugin), règles calées sur le style existant. Pas d'eslint tant que typescript-eslint ne prend pas TypeScript 7.
 - Carte « Prochain rendez-vous » teintée orange (fond et heure) comme son titre : pas encore vue sur la tablette.
 
 - **Discord sans portail développeur** (24/10 soir ; « Quitter l'appel » et « Arrêter le partage » testés ensuite) : Discord expose son interface à UI Automation une fois l'accessibilité de Chromium demandée. `GET /deck/voice` lit le panneau vocal : appel ou salon, participants (vue d'appel privé), micro et sourdine. Page Discord : carte « En appel · … », touches selon l'état (`"when": "call" | "idle"` dans `deck.json`), « Quitter l'appel » = étape `press` (bouton « Déconnecter »). Plus de vert. PAS testé : Discord en anglais. **Qui parle** : illisible partout (appel privé, groupe, salon de serveur : ni nom ni classe ne change pendant qu'une personne parle, vérifié le 25/10). Diagnostic : `GET /deck/buttons?app=Discord&detail=true` (éléments + classes HTML).
@@ -133,3 +134,4 @@ Dofus Rétro (« Jouer » par un clic dans la fenêtre : perso, pas pour la dém
 | après fb94e2d | Partage renommé « Depuis l'ordi » avec écran de choix expliqué, Caméra « Montrer sur l'ordi » |
 | après 00ee201 | tests Playwright des pages web du backend (`backend/e2e/`), job CI `e2e` |
 | après 12da92f | release sur tag `vX.Y.Z` : paquets et APK signé construits par la CI, release GitLab, `npm run updates:add` pour le « serveur Unowhy » |
+| après a53cc32 | format et style vérifiés en CI : prettier (backend), ktlint (Android) |

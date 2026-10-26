@@ -1,7 +1,5 @@
 package com.unowhy.companion.ui.home
 
-import com.unowhy.companion.ui.themeColor
-import com.unowhy.companion.ui.TitleView
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
@@ -17,7 +15,9 @@ import androidx.core.graphics.ColorUtils
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.CalendarEvent
+import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.errorText
+import com.unowhy.companion.ui.themeColor
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar

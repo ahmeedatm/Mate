@@ -1,6 +1,16 @@
 import { run, osascript } from "./run.ts";
 import { findAppBundle } from "./apps.ts";
-import { labelDisplays, type AppWindow, type Layout, type OpenAction, type OpenApp, type OpenWindows, type RawScreen, type WindowsInfo, type WindowTarget } from "../screens.ts";
+import {
+  labelDisplays,
+  type AppWindow,
+  type Layout,
+  type OpenAction,
+  type OpenApp,
+  type OpenWindows,
+  type RawScreen,
+  type WindowsInfo,
+  type WindowTarget,
+} from "../screens.ts";
 
 export type { AppWindow, Display, Layout, WindowsInfo, WindowTarget } from "../screens.ts";
 
@@ -385,7 +395,12 @@ export async function listOpenWindows(): Promise<OpenWindows> {
 }
 
 /** Pilote une fenêtre de la vue « Ouvertes », désignée par l'identifiant de son appli. */
-export async function controlOpenWindow(key: string, window: WindowTarget, action: OpenAction, opts?: { display?: number; layout: Layout }) {
+export async function controlOpenWindow(
+  key: string,
+  window: WindowTarget,
+  action: OpenAction,
+  opts?: { display?: number; layout: Layout },
+) {
   if (!key) throw new Error("Fenêtre introuvable");
   await call("", { op: action, window, ...opts }, key);
 }

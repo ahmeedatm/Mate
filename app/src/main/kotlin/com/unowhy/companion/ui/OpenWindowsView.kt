@@ -14,11 +14,11 @@ import androidx.core.content.ContextCompat
 import com.unowhy.companion.Computers
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
-import com.unowhy.companion.net.WindowsApi
-import com.unowhy.companion.net.MacDisplay
-import com.unowhy.companion.net.MacWindow
+import com.unowhy.companion.net.ComputerDisplay
+import com.unowhy.companion.net.ComputerWindow
 import com.unowhy.companion.net.OpenApp
 import com.unowhy.companion.net.OpenWindows
+import com.unowhy.companion.net.WindowsApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -36,7 +36,7 @@ class OpenWindowsView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
 ) : LinearLayout(context, attrs) {
 
-    private class Drag(val app: OpenApp, val window: MacWindow)
+    private class Drag(val app: OpenApp, val window: ComputerWindow)
 
     private val map = ScreenMap(context).apply { stretch = true }
     /** Bande du bas : instructions, ou corbeille pendant un glisser (y garder une fenêtre la ferme). */
@@ -122,7 +122,7 @@ class OpenWindowsView @JvmOverloads constructor(
     }
 
     /** Fenêtre déposée sur un écran : le schéma change tout de suite, l'ordinateur confirme ensuite. */
-    private fun drop(drag: Drag, display: MacDisplay, layout: String) {
+    private fun drop(drag: Drag, display: ComputerDisplay, layout: String) {
         val current = shown ?: return
         val w = drag.window
         if (!w.elsewhere && w.display == display.id && layout == "keep") return
@@ -160,7 +160,7 @@ class OpenWindowsView @JvmOverloads constructor(
         elsewhere.visibility = if (away.isEmpty()) GONE else VISIBLE
     }
 
-    private fun card(app: OpenApp, w: MacWindow): View {
+    private fun card(app: OpenApp, w: ComputerWindow): View {
         val card = LayoutInflater.from(context).inflate(R.layout.item_open_window, this, false)
         val icon = card.findViewById<ImageView>(R.id.open_icon)
         fun showIcon(bitmap: android.graphics.Bitmap) {

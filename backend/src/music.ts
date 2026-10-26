@@ -47,7 +47,11 @@ export async function openMediaLink(url: string): Promise<{ opened: "app" | "sit
   const before = canMedia && service?.music ? await mediaSessions().catch(() => []) : [];
   if (app) await launchApp(app);
   else await openTarget(service?.playUrl ?? url);
-  if (canMedia && service?.music) void startWhenReady(app, before.map((s) => `${s.app}\u0000${s.title}`));
+  if (canMedia && service?.music)
+    void startWhenReady(
+      app,
+      before.map((s) => `${s.app}\u0000${s.title}`),
+    );
   return app ? { opened: "app", app } : { opened: "site" };
 }
 

@@ -48,7 +48,13 @@ export type Layout = "keep" | "left" | "right" | "max";
 export type WindowTarget = { index: number; title: string };
 
 /** Écran tel que lu par le script de la plateforme, avant libellé. */
-export type RawScreen = { id: number; name: string; builtin: boolean; main: boolean; frame: { x: number; y: number; w: number; h: number } };
+export type RawScreen = {
+  id: number;
+  name: string;
+  builtin: boolean;
+  main: boolean;
+  frame: { x: number; y: number; w: number; h: number };
+};
 
 /** Libellés courts, lisibles de loin : "Mac" pour l'écran intégré d'un Mac, sinon le nom du moniteur. */
 export function labelDisplays(raw: RawScreen[]): Display[] {
