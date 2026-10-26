@@ -90,8 +90,8 @@ object NoisePlayer {
 
     private fun stopThread() {
         playingKind = null
+        // Sans join (appelé depuis le fil principal) : l'ancien fil sort seul à la fin de son tampon (isInterrupted).
         thread?.interrupt()
-        thread?.join(500)
         thread = null
     }
 

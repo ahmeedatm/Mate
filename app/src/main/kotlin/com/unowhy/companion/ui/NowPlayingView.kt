@@ -241,8 +241,6 @@ class NowPlayingView @JvmOverloads constructor(
         return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
     }
 
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
-
     private companion object {
         const val POLL_MS = 1_000L
     }

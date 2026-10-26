@@ -112,7 +112,7 @@ class DocsFragment : Fragment() {
                 adapter.addAll(listing.entries)
                 showStatus(if (listing.entries.isEmpty()) getString(R.string.empty_folder) else null)
             } catch (e: Exception) {
-                if (browsing) showStatus(requireContext().errorText(e))
+                if (browsing) showStatus(errorText(e))
             }
         }
     }

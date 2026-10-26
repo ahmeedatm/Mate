@@ -331,7 +331,7 @@ class CameraFragment : Fragment() {
                             DocEntry(saved.substringAfterLast('/'), saved, "image", jpeg.size.toLong(), System.currentTimeMillis()),
                         )
                     } catch (e: Exception) {
-                        Toast.makeText(requireContext(), requireContext().errorText(e), Toast.LENGTH_LONG).show()
+                        toastError(e)
                     } finally {
                         photo.isEnabled = true
                     }
@@ -348,7 +348,7 @@ class CameraFragment : Fragment() {
                 BackendClient(requireContext()).openCameraOnMac()
             } catch (e: Exception) {
                 setWindowOpen(false)
-                Toast.makeText(requireContext(), requireContext().errorText(e), Toast.LENGTH_LONG).show()
+                toastError(e)
             }
         }
     }
@@ -466,8 +466,6 @@ class CameraFragment : Fragment() {
         status.text = text
         dot.background.mutate().setTint(themeColor(requireContext(), color))
     }
-
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 
     companion object {
         /** Une image sur deux de la caméra (25 à 30/s), soit environ 12/s : fluide, et la tablette garde du souffle. */

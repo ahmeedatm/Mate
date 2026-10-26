@@ -15,6 +15,8 @@ import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.provider.Settings
+import com.unowhy.companion.R
+import com.unowhy.companion.UserFacingException
 import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.kiosk.KioskAdminReceiver
 import kotlinx.coroutines.CompletableDeferred
@@ -130,7 +132,7 @@ object Wifi {
                     else -> { allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK); preSharedKey = "\"$password\"" }
                 }
             }
-            wifi.addNetwork(config).also { if (it == -1) throw IllegalStateException("Android a refusé ce réseau") }
+            wifi.addNetwork(config).also { if (it == -1) throw UserFacingException(R.string.wifi_refused) }
         }
         // `true` : on ne tente que ce réseau (les autres sont mis de côté le temps de l'essai).
         wifi.enableNetwork(id, true)

@@ -161,8 +161,6 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
 
     private fun color(res: Int) = themeColor(context, res)
 
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
-
     private companion object {
         /** Temps à garder la fenêtre sur la corbeille avant que le lâcher la ferme. */
         const val ARM_MS = 900L

@@ -17,7 +17,6 @@
     <string name="error_reauth">%1$s ne reconnaît plus la tablette : Réglages › Ordinateurs, puis l\'ajouter à nouveau.</string>
     <string name="error_computer">L\'ordinateur n\'a pas pu le faire.</string>
     <string name="error_bad_reply">Réponse inattendue de l\'ordinateur : mets à jour le compagnon sur l\'ordinateur.</string>
-    <string name="error_cancelled">Annulé.</string>
     <string name="error_generic">Un problème est survenu. Réessaie.</string>
     <string name="computer_generic">L\'ordinateur</string>
     <string name="refresh">Actualiser</string>
@@ -39,9 +38,6 @@
     <string name="in_minutes">dans %1$d min</string>
     <string name="at_time">à %1$s</string>
     <string name="now_until">En cours, jusqu\'à %1$s</string>
-    <string name="no_more_events">Plus rien aujourd\'hui</string>
-    <string name="no_events">Aucun événement</string>
-    <string name="free_time">Le reste de la journée est libre</string>
     <string name="join_meeting">Rejoindre</string>
     <string name="join_opened">Réunion ouverte sur l\'ordinateur : %1$s</string>
     <string name="settings_meetings">Réunions en ligne</string>
@@ -171,7 +167,6 @@
     <string name="media_playing">%1$s · En lecture</string>
     <string name="media_paused">%1$s · En pause</string>
     <string name="media_time">%1$s / %2$s</string>
-    <string name="volume_na">Volume non pilotable sur cette sortie</string>
 
     <!-- Assistant -->
     <string name="chat_hint">Écris un message…</string>
@@ -247,7 +242,6 @@
     <!-- Focus -->
     <string name="focus_start">Démarrer</string>
     <string name="focus_pause">Pause</string>
-    <string name="focus_resume">Reprendre</string>
     <string name="focus_skip">Passer</string>
     <string name="focus_reset">Réinitialiser</string>
     <string name="focus_preset">%1$d / %2$d min</string>
@@ -257,7 +251,6 @@
     <string name="focus_count">Sessions terminées : %1$d</string>
     <string name="focus_ready">Prêt à démarrer</string>
     <string name="ambiance">Ambiance</string>
-    <string name="volume">Volume</string>
     <string name="noise_brown">Brun</string>
     <string name="noise_pink">Pluie</string>
     <string name="noise_white">Blanc</string>
@@ -275,7 +268,6 @@
     <string name="delete">Supprimer</string>
     <string name="task_daily">Chaque jour</string>
     <string name="task_new">Nouvelle tâche</string>
-    <string name="task_options">Répéter ou rappeler</string>
     <string name="task_repeat">Répéter</string>
     <string name="task_repeat_once">Une fois</string>
     <string name="task_repeat_daily">Tous les jours</string>
@@ -385,6 +377,16 @@
     <string name="updates_downloading">Téléchargement %1$d %%</string>
     <string name="updates_installing">Installation…</string>
     <string name="updates_done">✓ Installé</string>
+    <string name="update_needs_kiosk">Mises à jour possibles seulement quand la tablette est en mode kiosque.</string>
+    <string name="update_file_corrupt">Fichier abîmé ou modifié : empreinte différente, installation annulée.</string>
+    <string name="update_unfinished">Android n\'a pas fini l\'installation : réessaie plus tard.</string>
+    <string name="update_needs_confirmation">Android demande une confirmation : installation annulée.</string>
+    <string name="update_install_failed">Échec de l\'installation (code %1$d).</string>
+    <string name="wifi_refused">Android a refusé ce réseau.</string>
+    <string name="camera_busy">Caméra prise par une autre appli</string>
+    <string name="camera_error">Caméra indisponible (erreur %1$d)</string>
+    <string name="camera_config_refused">Configuration de la caméra refusée</string>
+    <string name="camera_failed">Caméra indisponible : quitte le mode Caméra et reviens</string>
     <string name="updates_failed">Échec · Réessayer</string>
     <string name="updates_cancelled">Téléchargement annulé : rien n\'a été installé.</string>
     <string name="updates_committed">Android installe la mise à jour : environ %1$d min sur cette tablette. Ça ne s\'annule plus.</string>

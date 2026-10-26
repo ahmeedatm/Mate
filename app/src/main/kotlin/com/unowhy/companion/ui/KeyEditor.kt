@@ -14,7 +14,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -149,11 +148,6 @@ class KeyEditor @JvmOverloads constructor(
         dismissKeyboard()
         visibility = GONE
         slot = -1
-    }
-
-    private fun dismissKeyboard() {
-        context.getSystemService(InputMethodManager::class.java).hideSoftInputFromWindow(windowToken, 0)
-        requestFocus()
     }
 
     private fun save() {
@@ -466,8 +460,6 @@ class KeyEditor @JvmOverloads constructor(
         }
         else -> step.toString()
     }
-
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 
     private companion object {
         val COLORS = listOf(null, "#C62828", "#EF6C00", "#2E7D32", "#1565C0", "#6A1B9A", "#37474F")

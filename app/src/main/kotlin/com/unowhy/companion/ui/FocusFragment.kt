@@ -139,6 +139,4 @@ class FocusFragment : Fragment() {
         mute.contentDescription = getString(if (NoisePlayer.muted) R.string.noise_unmute else R.string.noise_mute)
         volume.progress = Math.round(NoisePlayer.volume * 100)
     }
-
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 }

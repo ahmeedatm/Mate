@@ -8,7 +8,6 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -84,18 +83,13 @@ class LinkAdder @JvmOverloads constructor(
         visibility = GONE
     }
 
-    private fun dismissKeyboard() {
-        context.getSystemService(InputMethodManager::class.java).hideSoftInputFromWindow(windowToken, 0)
-        requestFocus()
-    }
-
     private fun reload() {
         scope.launch {
             try {
                 BackendClient(context).deckLinks().let { links = it.links; suggestions = it.suggestions }
                 render()
             } catch (e: Exception) {
-                showError(e)
+                status.showError(e)
             }
         }
     }
@@ -145,7 +139,7 @@ class LinkAdder @JvmOverloads constructor(
                 then()
                 changed(context.getString(R.string.links_added_status, label ?: address))
             } catch (e: Exception) {
-                showError(e)
+                status.showError(e)
             }
         }
     }
@@ -158,7 +152,7 @@ class LinkAdder @JvmOverloads constructor(
                 IconCache.forget(id)
                 changed(context.getString(R.string.links_removed_status, link.label))
             } catch (e: Exception) {
-                showError(e)
+                status.showError(e)
             }
         }
     }
@@ -169,11 +163,4 @@ class LinkAdder @JvmOverloads constructor(
         reload()
         onChanged()
     }
-
-    private fun showError(e: Exception) {
-        status.text = context.errorText(e)
-        status.visibility = VISIBLE
-    }
-
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 }

@@ -10,7 +10,6 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -89,7 +88,7 @@ class AppAdder @JvmOverloads constructor(
                 apps = BackendClient(context).deckCatalog().apps
                 render()
             } catch (e: Exception) {
-                showError(e)
+                status.showError(e)
             }
         }
     }
@@ -98,11 +97,6 @@ class AppAdder @JvmOverloads constructor(
         // Un champ masqué garderait le clavier ouvert (pas de bouton Retour sur la tablette).
         dismissKeyboard()
         visibility = GONE
-    }
-
-    private fun dismissKeyboard() {
-        context.getSystemService(InputMethodManager::class.java).hideSoftInputFromWindow(windowToken, 0)
-        requestFocus()
     }
 
     private fun render() {
@@ -133,7 +127,7 @@ class AppAdder @JvmOverloads constructor(
                 present = present + (name to BackendClient(context).addDeckApp(name))
                 changed(context.getString(R.string.apps_added_status, name))
             } catch (e: Exception) {
-                showError(e)
+                status.showError(e)
             }
         }
     }
@@ -147,7 +141,7 @@ class AppAdder @JvmOverloads constructor(
                 present = present - name
                 changed(context.getString(R.string.apps_removed_status, name))
             } catch (e: Exception) {
-                showError(e)
+                status.showError(e)
             }
         }
     }
@@ -170,17 +164,10 @@ class AppAdder @JvmOverloads constructor(
                         hide()
                         onChanged()
                     } catch (e: Exception) {
-                        showError(e)
+                        status.showError(e)
                     }
                 }
             }
             .showImmersive()
     }
-
-    private fun showError(e: Exception) {
-        status.text = context.errorText(e)
-        status.visibility = VISIBLE
-    }
-
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 }

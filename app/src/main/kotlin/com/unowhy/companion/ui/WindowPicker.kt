@@ -121,7 +121,7 @@ class WindowPicker @JvmOverloads constructor(
                 hide()
                 onRemoved()
             } catch (e: Exception) {
-                showError(e)
+                status.showError(e)
             }
         }
     }
@@ -162,7 +162,7 @@ class WindowPicker @JvmOverloads constructor(
                 if (tile?.id != id) return@launch
                 // Déplacement refusé : on remet les fenêtres où elles étaient.
                 rollback?.let(::render)
-                showError(e)
+                status.showError(e)
             }
         }
     }
@@ -227,11 +227,4 @@ class WindowPicker @JvmOverloads constructor(
     private fun draggable(view: View, drag: Drag, onTap: () -> Unit) {
         view.dragToScreens(drag, canDrag = { info?.running == true }, onDragStarted = { dragged = it }, onTap = onTap)
     }
-
-    private fun showError(e: Exception) {
-        status.text = context.errorText(e)
-        status.visibility = VISIBLE
-    }
-
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 }

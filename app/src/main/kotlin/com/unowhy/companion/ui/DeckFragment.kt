@@ -144,7 +144,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                     client().openAccessibility()
                     Toast.makeText(requireContext(), R.string.deck_access_opened, Toast.LENGTH_LONG).show()
                 } catch (e: Exception) {
-                    Toast.makeText(requireContext(), requireContext().errorText(e), Toast.LENGTH_LONG).show()
+                    toastError(e)
                 }
             }
         }
@@ -257,7 +257,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                 status.visibility = View.GONE
                 if (showingOpen) showOpen() else showPage(pageIndex)
             } catch (e: Exception) {
-                status.text = requireContext().errorText(e)
+                status.text = errorText(e)
                 status.visibility = View.VISIBLE
             }
         }
@@ -495,7 +495,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                 // « Quitter l'appel », micro… : l'état de l'appel change, on le relit sans attendre la boucle.
                 if (pages.getOrNull(pageIndex)?.app != null) { delay(VOICE_AFTER_MS); refreshVoice() }
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), requireContext().errorText(e), Toast.LENGTH_LONG).show()
+                toastError(e)
             }
         }
     }
@@ -572,7 +572,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                         IconCache.forget(tile.id)
                         loadDeck()
                     } catch (e: Exception) {
-                        Toast.makeText(requireContext(), requireContext().errorText(e), Toast.LENGTH_LONG).show()
+                        toastError(e)
                     }
                 }
             }
@@ -585,8 +585,6 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
 
     /** Numéro d'emplacement d'une touche perso (tuile "k-<slot>"). */
     private fun slotOf(tile: DeckTile) = tile.id.removePrefix("k-").toInt()
-
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 
     private companion object {
         /** Tuile « Ajouter » des pages Apps et Média (créée sur la tablette, inconnue de l'ordinateur). */

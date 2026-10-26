@@ -34,7 +34,6 @@ class CallOverlay(private val activity: MainActivity) : FrameLayout(activity) {
     private var announced = false
     private var pulse: ValueAnimator? = null
 
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
     private fun color(attr: Int) = themeColor(context, attr)
 
     private val badge = ImageView(context).apply {

@@ -22,6 +22,7 @@
     <attr name="c_ko_soft" format="color" />
     <attr name="c_warn" format="color" />
     <attr name="c_paper" format="color" />
+    <attr name="c_scrim" format="color" />
     <!-- Teintes des fonctions (pastilles des titres, tuiles d'applis) : ui/Look.kt. -->
     <attr name="c_hue_orange" format="color" />
     <attr name="c_hue_green" format="color" />

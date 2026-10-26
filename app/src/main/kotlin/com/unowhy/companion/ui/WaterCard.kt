@@ -70,7 +70,7 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         )
         count.setTextColor(themeColor(context, if (done) R.attr.c_ok else R.attr.c_text))
         gauge.removeAllViews()
-        val gap = (3 * resources.displayMetrics.density).toInt()
+        val gap = dp(3)
         for (i in 0 until state.goal) {
             val color = when {
                 i >= state.glasses -> R.attr.c_surface_raised
@@ -91,7 +91,7 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         val state = Water.state(context)
         var goal = state.goal
         var interval = state.intervalMinutes
-        val pad = (24 * resources.displayMetrics.density).toInt()
+        val pad = dp(24)
         val box = LinearLayout(context).apply { orientation = VERTICAL; setPadding(pad, pad / 3, pad, 0) }
         val inflater = LayoutInflater.from(context)
 
@@ -108,7 +108,7 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
             setText(R.string.water_reminder)
             textSize = 16f
             isChecked = state.reminder
-            minHeight = (48 * resources.displayMetrics.density).toInt()
+            minHeight = dp(48)
         }
         val intervalTitle = title(R.string.water_interval)
         val intervalRow = LinearLayout(context)

@@ -1,5 +1,6 @@
 package com.unowhy.companion.ui.home
 
+import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.themeColor
 import android.content.Context
 import android.graphics.Canvas
@@ -87,8 +88,6 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         removeIcon.setTint(textColor)
         settingsIcon.setTint(textColor)
     }
-
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 
     private fun placedOf(child: View) = child.tag as? Placed
 
