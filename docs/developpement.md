@@ -91,9 +91,9 @@ Le pipeline (`.gitlab-ci.yml`) tourne sur le runner Linux, sauf `install-mac` (M
 
 | Job | Vérifie |
 |---|---|
-| `backend` | `npm run lint` (format prettier, puis typecheck), puis `npm test` : tests d'intégration (`backend/test/`), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP. Comprend la sanity (`test/sanity.test.ts`, pilotage : 501 attendu) |
+| `backend` | `npm run lint` (format prettier, puis typecheck), puis `npm test` : tests unitaires et d'intégration (`backend/test/`), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP ; le pilotage de l'ordinateur y est simulé (voir plus bas). Comprend la sanity (`test/sanity.test.ts`) |
 | `e2e` | pages web du backend dans Chromium (Playwright, `backend/e2e/`) : page locale (adresse, code d'appairage, lien ICS), visualiseur `/camera`, retours d'erreur de `/oauth/:provider/callback`. Même serveur que les tests d'intégration. Artefacts : `e2e-results/junit.xml` et traces des tests en échec |
-| `android` | style Kotlin (`ktlintCheck`), tests JVM (`app/src/test/`), lint Android, APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
+| `android` | style Kotlin (`ktlintCheck`), tests JVM (`app/src/test/` : `Computers`, `Prefs`, `Connection` contre de petits serveurs HTTP locaux, `FocusTimer`, `Water`, ordre `focus`, modes, widgets, commande vocale ; contexte simulé `FakeContext`), lint Android, APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
 | `android-emulateur` | tests instrumentés (`app/src/androidTest/`, Espresso) sur un émulateur Android 10 sans services Google, 1280×800 à 160 dpi ; artefacts : rapport JUnit, capture de l'écran de bienvenue |
 | `package-windows`, `package-mac` | paquets de l'ordinateur (`npm run package -- windows|mac`), utilisés par les tests d'installation et la release |
 | `install-windows` | paquet Windows installé sur un vrai PC : installeur silencieux, lancement automatique, sanity, pilote, désinstallation (`backend/qa/install-windows.ps1`) |
@@ -122,7 +122,7 @@ node qa/sanity.ts --url http://127.0.0.1:3000 --token <jeton> --os mac --junit s
 
 **`helper-windows`** : runner Windows partagé « HiSqool Windows » (473, tags `windows`, `docker`), image `mcr.microsoft.com/dotnet/sdk:<version>-windowsservercore-ltsc2019` au SDK exact de `backend/global.json` (les monter ensemble, digest compris). Compile `src/win/helper` et `src/win/launcher`, copie les exe sur ceux du dépôt, puis `git diff --exit-code`. Les exe sont reproductibles (mêmes octets d'une machine et d'un dossier à l'autre) tant qu'ils sont compilés avec ce SDK : pas de SHA du commit dans la version (`IncludeSourceRevisionInInformationalVersion`), sources en LF partout (`.gitattributes`). Job rouge « exe du dépôt différents des sources » : `npm run build:helper` dans `backend/`, puis commiter les exe. À la main sur un PC : `powershell -ExecutionPolicy Bypass -File backend\qa\build-helper-windows.ps1` (installe le SDK dans `.dotnet-ci/` s'il manque, rien sur le poste).
 
-Le runner Windows partagé « HiSqool Windows » (473) ne sert qu'à compiler : Docker Windows Server 2019 sans bureau (Server Core), le dossier Applications du shell y manque, donc le pilote ne liste ni applis ni fenêtres. Le runner 976 n'accepte que les refs protégées (`access_level: ref_protected`) : il ne prend pas les jobs des pipelines de MR.
+Le runner Windows partagé « HiSqool Windows » (473) ne sert qu'à compiler : Docker Windows Server 2019 sans bureau (Server Core), le dossier Applications du shell y manque, donc le pilote ne liste ni applis ni fenêtres. Le runner 976 n'accepte que les refs protégées (`access_level: ref_protected`) : les branches `ci/*` sont protégées pour qu'il prenne les jobs de leurs MR.
 
 Sur un tag `vX.Y.Z`, `android-release` et `release` construisent et publient la release (section suivante).
 
@@ -156,11 +156,13 @@ docker run --rm -e CI=true -v "$PWD":/w -v /w/backend/node_modules -w /w/backend
 
 Le tag de l'image du job `e2e` suit la version exacte de `@playwright/test` (`backend/package.json`) : changer les deux ensemble (et le digest). Trace d'un échec : `npx playwright show-trace e2e-results/traces/<test>/trace.zip`.
 
-Ce que la CI ne voit pas : les actions qui changent l'ordinateur (lancer une appli, déplacer une fenêtre, régler le son : la sanity ne fait que lire), le pilotage réel du Mac (`install-mac` ne teste que l'installation), l'appli sur la vraie tablette (perfs, kiosque, micro, caméra). Ils restent testés à la main (case « Testé sur » de la MR).
+**Pilotage simulé dans les tests** : `backend/test/fake-os.ts` remplace `src/os.ts` (hook de résolution `test/fake-os-hook.ts`) ; aucun test ne lance d'appli, n'envoie de touches ni n'ouvre de fenêtre. Il note chaque action (`calls`) et répond selon un scénario (`state` : applis installées, fenêtres, boutons, Ne pas déranger, échecs). Serveur de `test/server.ts` : toujours simulé (`startServer({ os: "windows" })` pour Windows), scénario par `server.setOs(...)`, actions par `server.osCalls()`. Test unitaire d'un module qui pilote l'ordinateur : `import "./fake-os-hook.ts"` en tête, puis le module en import dynamique (`await import("../src/deck.ts")`). Un export ajouté à `os.ts` doit l'être aussi au faux, sinon les tests échouent au chargement.
+
+Ce que la CI ne voit pas : le pilotage réel du Mac (simulé dans les tests ; `install-mac` ne teste que l'installation), les actions qui changent l'ordinateur (lancer une appli, déplacer une fenêtre, régler le son : `install-windows` ne fait que lire), l'appli sur la vraie tablette (perfs, kiosque, micro, caméra). Ils restent testés à la main (case « Testé sur » de la MR).
 
 ### Tests instrumentés (émulateur)
 
-Espresso, dans `app/src/androidTest/` : le test tourne dans l'appli, peut effacer ses préférences avant de la lancer, et attend seul que l'écran soit stable. Premier parcours : `WelcomeTest` (lancement sans ordinateur, écran de bienvenue, « Plus tard », Deck → « Connecter » ramène à la bienvenue). Noms de tests en camelCase : D8 refuse les espaces dans les noms de méthode sous API 30.
+Espresso, dans `app/src/androidTest/` : le test tourne dans l'appli, peut effacer ses préférences avant de la lancer, et attend seul que l'écran soit stable. Premier parcours : `WelcomeTest` (lancement sans ordinateur, écran de bienvenue, « Plus tard », Deck → « Connecter » ramène à la bienvenue) ; `HomeTest` (ordinateur appairé mais éteint : pas de bienvenue, widgets Focus et Eau utilisables) ; `ErrorsTest` (phrases de `errorText`, qui a besoin des vraies ressources). Préférences vidées par `edit().clear().commit()`, pas en supprimant les fichiers : un `apply()` du test précédent n'est peut-être pas encore sur le disque. Noms de tests en camelCase : D8 refuse les espaces dans les noms de méthode sous API 30.
 
 `scripts/test-android.sh [--window]` fait tout : AVD dédié `companion_test_api29` (port 5580, effacé à chaque lancement ; `companion_api29` n'est pas touché), compilation, installation, tests, capture `app/build/test-android/bienvenue.png`, arrêt de l'émulateur. Sortie non nulle si un test échoue.
 
