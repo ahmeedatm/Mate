@@ -45,9 +45,9 @@ class DeckTest {
 
     @Before
     fun appairer() {
-        File(context.applicationInfo.dataDir, "shared_prefs").list()?.forEach {
-            context.deleteSharedPreferences(it.removeSuffix(".xml"))
-        }
+        // clear() sur l'instance en mémoire : un apply() du test précédent pas encore écrit réécrirait un fichier supprimé.
+        val files = File(context.applicationInfo.dataDir, "shared_prefs").list().orEmpty().map { it.removeSuffix(".xml") }
+        (files + "companion").toSet().forEach { context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit() }
         TestBackend.reset()
         TestBackend.pair(context)
     }

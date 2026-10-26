@@ -12,7 +12,9 @@ import { fileURLToPath } from "node:url";
 import { startServer, type TestServer } from "./server.ts";
 
 if (process.platform === "darwin" || process.platform === "win32") {
-  console.error("Linux seulement : ici les touches du deck piloteraient cet ordinateur (sur Mac, scripts/test-android.sh passe par Docker).");
+  console.error(
+    "Linux seulement : ici les touches du deck piloteraient cet ordinateur (sur Mac, scripts/test-android.sh passe par Docker).",
+  );
   process.exit(1);
 }
 
@@ -39,16 +41,14 @@ async function stop() {
 
 /** Touches reçues par le backend (POST /deck/run), dans l'ordre : identifiants de tuiles. */
 function runs() {
-  return (pastLog + (server?.output().slice(skip) ?? ""))
-    .split("\n")
-    .flatMap((line) => {
-      try {
-        const entry = JSON.parse(line);
-        return entry.msg === "Touche du deck" ? [entry.tile as string] : [];
-      } catch {
-        return [];
-      }
-    });
+  return (pastLog + (server?.output().slice(skip) ?? "")).split("\n").flatMap((line) => {
+    try {
+      const entry = JSON.parse(line);
+      return entry.msg === "Touche du deck" ? [entry.tile as string] : [];
+    } catch {
+      return [];
+    }
+  });
 }
 
 const routes: Record<string, () => Promise<unknown>> = {
