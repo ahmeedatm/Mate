@@ -26,10 +26,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="../native.cs" Link="native.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Reference Include="System.Drawing" />
     <Reference Include="System.Management" />
     <Reference Include="System.Web.Extensions" />

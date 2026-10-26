@@ -48,7 +48,7 @@ Journal : `~/Library/Logs/UnowhyCompanion/` (Mac), `%LOCALAPPDATA%\UnowhyCompani
 
 ### Windows : ce qui change
 
-Le pilotage passe par un programme résident (`backend/src/win/UnowhyHelper.exe`, .NET Framework 4.8 fourni avec Windows 10/11 : rien à installer), compilé depuis `helper/` et `native.cs` par `npm run build:helper` (SDK .NET 8).
+Le pilotage passe par un programme résident (`backend/src/win/UnowhyHelper.exe`, .NET Framework 4.8 fourni avec Windows 10/11 : rien à installer), compilé depuis `helper/` par `npm run build:helper` (SDK .NET 8).
 
 - **Applis** : celles du menu Démarrer (classiques et du Store), noms tels qu'affichés (« Outlook », « Microsoft Teams »).
 - **Raccourcis** : `cmd+…` est envoyé comme **Ctrl+…** (les touches perso écrites sur Mac restent utilisables) ; `win` = touche Windows (`win+shift+s`, `win+tab`). Le deck de départ est `config/deck.example.windows.json`.

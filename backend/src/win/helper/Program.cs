@@ -1,6 +1,6 @@
 // Processus résident du backend sous Windows (lancé par src/win/helper.ts) : exécute une requête JSON par ligne
 // lue sur stdin. Chaque réponse est une ligne "@@{...}" sur stdout (le préfixe permet d'ignorer toute autre sortie).
-// Les opérations d'UI Automation sont ici, le reste du pilotage dans native.cs, la lecture en cours dans Media.cs.
+// Les opérations d'UI Automation sont ici, le reste du pilotage dans Native*.cs, la lecture en cours dans Media.cs.
 // Exe compilé d'avance, sans PowerShell (les antivirus s'en méfient).
 
 using System;

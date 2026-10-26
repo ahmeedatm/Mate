@@ -6,7 +6,7 @@ import type { AudioChange, AudioState, MediaCommand, SystemCommand } from "../sc
 /**
  * Pilotage de Windows (10 et 11), mêmes fonctions que les modules de src/mac/ : voir src/os.ts.
  * Les applis sont celles du menu Démarrer (applis classiques et du Store), lancées par leur
- * identifiant (AppUserModelID) ; le code natif est dans native.cs.
+ * identifiant (AppUserModelID) ; le code natif est dans helper/Native*.cs.
  */
 
 type StartApp = { name: string; id: string };
