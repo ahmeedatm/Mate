@@ -49,12 +49,11 @@ object Water {
 
     /**
      * À appeler chaque minute : true s'il faut rappeler de boire maintenant (le rappel est alors compté comme fait).
-     * Premier passage de la journée : le compte part de [FROM_HOUR] h, pas de la veille.
+     * Premier passage de la journée : le compte part de [FROM_HOUR] h, pas de la veille. `now` : heure actuelle (tests).
      */
-    fun reminderDue(context: Context): Boolean {
+    fun reminderDue(context: Context, now: Calendar = Calendar.getInstance()): Boolean {
         val s = state(context)
         if (!s.reminder || s.glasses >= s.goal) return false
-        val now = Calendar.getInstance()
         val hour = now.get(Calendar.HOUR_OF_DAY)
         if (hour < FROM_HOUR || hour >= UNTIL_HOUR) return false
         val dayStart = (now.clone() as Calendar).apply { set(Calendar.HOUR_OF_DAY, FROM_HOUR); set(Calendar.MINUTE, 0) }.timeInMillis

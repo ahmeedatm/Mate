@@ -16,16 +16,17 @@ import { backendRoot as backend, dataDir, packaged as bundled, userFolder } from
  *   npm run service:status      état
  *   npm run service:uninstall   retire le lancement automatique
  *
- * Instance de test à côté du vrai compagnon (CI, job install-mac) : COMPANION_LABEL (autre agent launchd, qui garde
- * PORT, HOST, DATA_DIR, DOCS_DIR et COMPANION_HEADLESS), COMPANION_LOG_DIR, et COMPANION_HEADLESS=1 : ni fenêtre,
- * ni page ouverte, ni raccourci sur le Bureau.
+ * Instance de test à côté du vrai compagnon (CI, jobs install-mac et install-windows) : COMPANION_LABEL (autre agent
+ * launchd, qui garde PORT, HOST, DATA_DIR, DOCS_DIR et COMPANION_HEADLESS ; sous Windows, autre valeur de la clé Run),
+ * COMPANION_LOG_DIR, et COMPANION_HEADLESS=1 : ni fenêtre, ni page ouverte, ni raccourci sur le Bureau.
  */
 
 const port = Number(process.env.PORT ?? 3000);
 const LABEL = process.env.COMPANION_LABEL || "com.unowhy.companion";
 const headless = process.env.COMPANION_HEADLESS === "1";
 const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-const RUN_VALUE = "UnowhyCompanion";
+// Instance de test (job install-windows) : sa propre valeur dans la clé Run, celle du vrai compagnon n'est pas touchée.
+const RUN_VALUE = process.env.COMPANION_LABEL || "UnowhyCompanion";
 const isMac = process.platform === "darwin";
 const isWindows = process.platform === "win32";
 
