@@ -1,0 +1,82 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Accueil · console</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1280px;height:800px;overflow:hidden}
+body{display:flex;background:var(--bg);color:var(--text);font-family:var(--body)}
+.ic{width:24px;height:24px;fill:currentColor}.ic.s{width:16px;height:16px}
+.rail{width:96px;display:flex;flex-direction:column;align-items:center;padding:14px 0;background:var(--rail)}
+.status{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--dim);margin-bottom:18px}
+.rail nav{display:flex;flex-direction:column;gap:6px;flex:1}
+.nav,.talk{width:76px;height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;color:var(--dim)}
+.grid{flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:var(--gap);padding:var(--gap)}
+.w{background:var(--surface);padding:18px;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.clock{grid-column:1/3}.weather{grid-column:3}.water{grid-column:4}
+.agenda{grid-column:1/3;grid-row:2/4}.tasks{grid-column:3;grid-row:2/4}.focus{grid-column:4;grid-row:2/4}
+.keys{grid-column:1/3}.audio{grid-column:3/5}
+h3{display:flex;align-items:center;gap:10px;font:var(--title);margin-bottom:12px}
+h3 .more{margin-left:auto;font:400 13px var(--body);color:var(--dim)}
+.badge{width:30px;height:30px;padding:6px;border-radius:50%;fill:currentColor;flex:none}
+.h-y{color:var(--h-y)}.h-c{color:var(--h-c)}.h-o{color:var(--h-o)}.h-g{color:var(--h-g)}.h-r{color:var(--h-r)}.h-b{color:var(--h-b)}.h-v{color:var(--h-v)}
+.big{font:var(--clock)}.date{font-size:20px;color:var(--dim)}.next{margin-top:auto;font-size:15px;color:var(--accent)}
+.num{font:var(--num)}.num em{font-style:normal;color:var(--dim);font-size:.55em}small{color:var(--dim);font-size:14px}
+.dots{display:flex;gap:6px;margin-top:auto}.dots i{flex:1;height:8px;background:var(--raised)}.dots i.f{background:var(--h-c)}
+.agenda ul,.tasks ul{list-style:none;display:flex;flex-direction:column;gap:10px}
+.agenda li{display:flex;gap:14px;align-items:flex-start;padding:10px 12px;background:var(--raised)}
+.agenda time{font:var(--mono);color:var(--h-o);min-width:52px}.agenda b{display:block;font-size:17px}
+.primary{margin-top:auto;align-self:flex-start;display:flex;align-items:center;gap:8px;border:0;padding:12px 20px;font:600 16px var(--body);background:var(--accent);color:var(--on-accent)}
+.primary .ic{width:20px;height:20px}
+.tasks li{display:flex;gap:12px;align-items:center;font-size:16px}
+.tasks li i{width:22px;height:22px;border:2px solid var(--stroke2);flex:none}
+.tasks li.done{color:var(--faint);text-decoration:line-through}.tasks li.done i{background:var(--h-g);border-color:var(--h-g)}
+.ring{position:relative;width:150px;height:150px;margin:6px auto}.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:8}.ring .track{stroke:var(--raised)}.ring .arc{stroke:var(--h-r);stroke-dasharray:327;stroke-dashoffset:110;stroke-linecap:round}
+.ring .t{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:var(--num2)}
+.row{display:flex;gap:8px;justify-content:center;margin-top:auto}
+.chip{padding:8px 14px;font-size:14px;background:var(--raised);color:var(--dim)}.chip.on{background:var(--accent-soft);color:var(--accent)}
+.krow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;flex:1}
+.key{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:var(--raised);font-size:13px;color:var(--dim)}
+.key b{font:700 22px var(--head)}
+.k0 b{color:var(--h-v)}.k1 b{color:var(--h-g)}.k2 b{color:var(--h-b)}.k3 b{color:var(--h-v)}
+.np{display:flex;align-items:center;gap:14px}.np b{display:block;font-size:17px}
+.cover{width:52px;height:52px;background:linear-gradient(135deg,var(--h-v),var(--h-c))}
+.pbtn{margin-left:auto;width:44px;height:44px;padding:10px;background:var(--accent);color:var(--on-accent);border-radius:50%}
+.slider{margin-top:auto;height:8px;background:var(--raised)}.slider i{display:block;height:100%;background:var(--h-v)}
+
+:root{--bg:#090B10;--rail:#06080C;--surface:#12161F;--raised:#1B212D;--stroke:#232A38;--stroke2:#3A4456;
+--text:#EEF2F8;--dim:#8B95A8;--faint:#4F586A;--accent:#3DDBFF;--accent-soft:#3DDBFF22;--on-accent:#04121A;
+--h-y:#FFD166;--h-c:#3DDBFF;--h-o:#FF9F45;--h-g:#3CF0A0;--h-r:#FF4F6D;--h-b:#5AA8FF;--h-v:#B06BFF;
+--gap:12px;--head:'Space Grotesk';--body:'Space Grotesk',sans-serif;
+--title:600 15px var(--body);--clock:700 96px/1 'Space Grotesk';--num:700 48px/1.1 'Space Grotesk';
+--num2:700 34px 'JetBrains Mono';--mono:500 15px 'JetBrains Mono'}
+.w{border:1px solid var(--stroke);border-radius:14px}
+h3{text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--dim)}
+.badge{border-radius:8px;background:currentColor;background:color-mix(in srgb,currentColor 16%,transparent)}
+.agenda li,.chip,.dots i,.slider,.cover{border-radius:8px}.primary{border-radius:10px}
+.nav{border-radius:12px}.nav.on{background:var(--raised);color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.talk{border-radius:16px;color:var(--accent);background:var(--accent-soft)}
+.key{border-radius:12px;border:1px solid var(--stroke);background:linear-gradient(180deg,#202736,#151A24);position:relative}
+.key::after{content:"";position:absolute;left:18%;right:18%;bottom:6px;height:3px;border-radius:2px;background:currentColor;opacity:.0}
+.k0{box-shadow:0 0 0 1px #B06BFF66,0 0 18px #B06BFF33}.k0::after{opacity:1;color:#B06BFF}
+.tasks li i{border-radius:6px}
+.clock .big{letter-spacing:-.02em}
+</style></head><body>
+<aside class="rail">
+  <div class="status"><span class="clock-s">14:07</span><svg class="ic s" viewBox="0 0 24 24"><path d="M12 21 1 9a15.5 15.5 0 0 1 22 0z" opacity=".9"/></svg><svg class="ic s" viewBox="0 0 24 24"><path d="M7 4h3V2h4v2h3v18H7z"/></svg></div>
+  <nav><div class="nav on"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3 3 10v11h6v-6h6v6h6V10z"/></svg><span>Accueil</span></div><div class="nav"><svg class="ic" viewBox="0 0 24 24"><path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z"/></svg><span>Deck</span></div><div class="nav"><svg class="ic" viewBox="0 0 24 24"><path d="M3 4h18v12H3zm6 14h6v2H9z"/></svg><span>Ordi</span></div><div class="nav"><svg class="ic" viewBox="0 0 24 24"><path d="M9 1h6v2H9zm3 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm1 8V8h-2v6h5v-1z"/></svg><span>Focus</span></div><div class="nav"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h3l2-2h6l2 2h3v13H4zm8 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg><span>Caméra</span></div><div class="nav"><svg class="ic" viewBox="0 0 24 24"><path d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7 7 0 0 0-1.7-1L15 3h-4l-.4 2.7a7 7 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7 7 0 0 0 1.7 1L11 21h4l.4-2.7a7 7 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg><span>Réglages</span></div></nav>
+  <div class="talk"><svg class="ic" viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg><span>Parler</span></div>
+</aside>
+<main class="grid">
+  <section class="w clock"><div class="big">14:07</div><div class="date">lundi 26 octobre</div><div class="next">Prochain : Démo tablette à 14:30</div></section>
+  <section class="w weather"><h3><svg class="badge h-y" viewBox="0 0 24 24"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM11 1h2v3h-2zm0 19h2v3h-2zM1 11h3v2H1zm19 0h3v2h-3z"/></svg><span>Météo</span></h3><div class="num">14°</div><small>Paris · éclaircies</small></section>
+  <section class="w water"><h3><svg class="badge h-c" viewBox="0 0 24 24"><path d="M12 2s-7 7.6-7 12.5a7 7 0 0 0 14 0C19 9.6 12 2 12 2z"/></svg><span>Eau</span></h3><div class="num">5<em>/8</em></div><div class="dots"><i class=f></i><i class=f></i><i class=f></i><i class=f></i><i class=f></i><i></i><i></i><i></i></div></section>
+  <section class="w agenda"><h3><svg class="badge h-o" viewBox="0 0 24 24"><path d="M7 2h2v2h6V2h2v2h3v17H4V4h3zm-1 7v10h12V9z"/></svg><span>Agenda</span><small class="more">7 jours</small></h3><ul><li><time>10:00</time><div><b>Daily hackathon</b><small>Teams · 15 min</small></div></li><li><time>14:30</time><div><b>Démo tablette</b><small>Salle Lumière</small></div></li><li><time>17:00</time><div><b>Point Eliot</b><small>Teams · 30 min</small></div></li></ul><button class="primary"><svg class="ic" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Rejoindre</button></section>
+  <section class="w tasks"><h3><svg class="badge h-g" viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg><span>Tâches</span></h3><ul><li class="done"><i></i>Relire la MR caméra</li><li class=""><i></i>Worklog Jira</li><li class=""><i></i>Appeler Eliot</li><li class=""><i></i>Préparer la démo</li></ul></section>
+  <section class="w focus"><h3><svg class="badge h-r" viewBox="0 0 24 24"><path d="M9 1h6v2H9zm3 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm1 8V8h-2v6h5v-1z"/></svg><span>Focus</span></h3>
+    <div class="ring"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="52"/><circle class="arc" cx="60" cy="60" r="52"/></svg><div class="t">18:42</div></div>
+    <div class="row"><span class="chip on">Pluie</span><span class="chip">Café</span></div></section>
+  <section class="w keys"><h3><svg class="badge h-b" viewBox="0 0 24 24"><path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z"/></svg><span>Touches</span></h3><div class="krow"><div class="key k0"><b>T</b><span>Teams</span></div><div class="key k1"><b>S</b><span>Spotify</span></div><div class="key k2"><b>C</b><span>Code</span></div><div class="key k3"><b>D</b><span>Discord</span></div></div></section>
+  <section class="w audio"><h3><svg class="badge h-v" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4z"/></svg><span>Son de l'ordi</span></h3>
+    <div class="np"><div class="cover"></div><div><b>Lo-fi beats</b><small>Spotify</small></div><svg class="ic pbtn" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+    <div class="slider"><i style="width:62%"></i></div></section>
+</main></body></html>
