@@ -19,6 +19,7 @@ captures/
 # Backend
 node_modules/
 dist/
+backend/e2e-results/
 .env
 .env.*
 !.env.example
