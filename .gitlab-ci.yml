@@ -307,6 +307,13 @@ helper-windows:
     GIT_DEPTH: 1
   script:
     - '& backend\qa\build-helper-windows.ps1 -Work .dotnet-ci'
+  # Exe recompilés, à commiter si le job échoue sur leur comparaison.
+  artifacts:
+    when: on_failure
+    name: helper-windows-$CI_COMMIT_SHORT_SHA
+    paths:
+      - backend/src/win/*.exe
+    expire_in: 1 week
 
 # APK release signé, version = tag. Clé : variables protégées et masquées, visibles seulement des tags protégés (v*).
 # Publie aussi l'entrée du « serveur Unowhy » (companion-X.Y.Z.json), lue par `npm run updates:add`.

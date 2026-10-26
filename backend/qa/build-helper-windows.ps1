@@ -12,7 +12,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $backend = Split-Path -Parent $PSScriptRoot
-$Work = [IO.Path]::GetFullPath($Work)
+$Work = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Work)
 $sdkDir = Join-Path $Work "sdk"
 $dotnet = Join-Path $sdkDir "dotnet.exe"
 
