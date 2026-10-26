@@ -87,15 +87,40 @@ adb -s <série> install -r app/build/outputs/apk/debug/app-debug.apk   # un appa
 
 `main` est protégée : on n'y pousse plus directement. Une branche par changement (`feat/…`, `fix/…`, `docs/…`, `ci/…`), puis une MR vers `main`. Elle se fusionne quand le pipeline est vert et les discussions résolues.
 
-Le pipeline (`.gitlab-ci.yml`, runner Linux) lance trois jobs en parallèle :
+Le pipeline (`.gitlab-ci.yml`) tourne sur le runner Linux, sauf `install-windows` (PC Windows de QA) :
 
 | Job | Vérifie |
 |---|---|
-| `backend` | `npm run typecheck`, puis `npm test` : tests d'intégration (`backend/test/`), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP |
+| `backend` | `npm run typecheck`, puis `npm test` : tests d'intégration (`backend/test/`), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP. Comprend la sanity (`test/sanity.test.ts`, pilotage : 501 attendu) |
 | `e2e` | pages web du backend dans Chromium (Playwright, `backend/e2e/`) : page locale (adresse, code d'appairage, lien ICS), visualiseur `/camera`, retours d'erreur de `/oauth/:provider/callback`. Même serveur que les tests d'intégration. Artefacts : `e2e-results/junit.xml` et traces des tests en échec |
 | `android` | tests JVM (`app/src/test/`), lint, APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
+| `package-windows`, `package-mac` | paquets de l'ordinateur (`npm run package -- windows|mac`), utilisés par les tests d'installation et la release |
+| `install-windows` | paquet Windows installé sur un vrai PC : installeur silencieux, lancement automatique, sanity, pilote, désinstallation (`backend/qa/install-windows.ps1`) |
+| `zones` | rien : garde un pipeline aux MR qui ne touchent aucune zone (sans pipeline, la MR ne fusionne pas) |
 
-Sur un tag `vX.Y.Z`, trois jobs de plus construisent et publient la release (section suivante).
+**Ciblage par zone.** En MR, un job ne tourne que si sa zone a bougé (`rules:changes`, ancres `.files-*` en tête du fichier). Sur `main`, sur un tag et la nuit, tout tourne. Toucher `.gitlab-ci.yml` relance tout.
+
+| Zone | Fichiers | Jobs |
+|---|---|---|
+| backend | `backend/**` | `backend`, `e2e` |
+| android | `app/**`, `*.gradle*`, `gradle/**`, `gradlew*` | `android` |
+| installation (commun) | `backend/scripts/**`, `backend/src/os.ts`, `backend/qa/**` | les deux ci-dessous |
+| installation Windows | `backend/src/win/**`, `Installer (Windows).cmd` | `package-windows`, `install-windows` |
+| installation Mac | `backend/src/mac/**`, `Installer (Mac).command` | `package-mac` (et `install-mac`) |
+
+**Nuit** : pipeline programmé n° 282 sur `main`, chaque nuit à 3 h (heure de Paris), qui lance tout (Settings > CI/CD > Pipeline schedules, ou `glab api projects/efreifer%2Funowhy-companion/pipeline_schedules`). Le `workflow` accepte `CI_PIPELINE_SOURCE == "schedule"`.
+
+**Sanity** (`backend/qa/sanity.ts`) : un contrôle par feature contre un compagnon réel déjà démarré : santé et identité, appairage par code (sans boîte si le compagnon tourne avec `COMPANION_NO_DIALOG=1`), deck et deck de départ filtré aux applis installées, son, fenêtres ouvertes, refus d'un `.exe` par `/docs/open`, tâches, agenda personnel, agenda ICS (fichier servi en local, seulement si aucun agenda n'est relié), `/camera`, page locale. Réponse attendue selon le système : 501 pour le pilotage hors Mac et Windows. Ce qu'il crée est retiré à la fin. Sans dépendance : le node du paquet le lance tel quel.
+
+```sh
+node qa/sanity.ts --url http://127.0.0.1:3000 --token <jeton> --os mac --junit sanity.xml
+```
+
+**`install-windows`** : runner 976 « Local QA runner » (tag `local-runner`), le PC Windows de QA, exécuteur shell PowerShell, avec une vraie session de bureau : il faut que le PC soit allumé et la session ouverte, sinon le job attend. Le PC sert aussi aux tests UEM : tout est propre au test (port 3917, `HOST=127.0.0.1`, `DATA_DIR`, `LOCALAPPDATA`, clé Run et raccourcis `UnowhyCompanionCI` par `COMPANION_SERVICE_NAME`, sous `%TEMP%\compagnon-ci`), et `-Nettoyage` (before_script et after_script, même après un échec) désinstalle et supprime ce dossier. Un compagnon déjà installé sur le PC n'est pas touché. L'installeur a un mode non interactif, `"Installer (Windows).cmd" /silencieux` : ni pause, ni pare-feu, ni demande d'administrateur, ni page ouverte (`COMPANION_SILENT=1` pour `service.ts`) ; le double-clic ne change pas. À la main sur un PC : `powershell -ExecutionPolicy Bypass -File backend\qa\install-windows.ps1 -Zip <zip>`. Journaux du lanceur et du serveur dans les artefacts (`install-logs/`), résultat de la sanity dans l'onglet Tests.
+
+Le runner Windows partagé « HiSqool Windows » (473) n'est pas utilisé : Docker Windows Server 2019 sans bureau (Server Core), le dossier Applications du shell y manque, donc le pilote ne liste ni applis ni fenêtres.
+
+Sur un tag `vX.Y.Z`, `android-release` et `release` construisent et publient la release (section suivante).
 
 Avant de pousser : `cd backend && npm run typecheck && npm test`, et `./gradlew testDebugUnitTest lintDebug`.
 
@@ -108,7 +133,7 @@ docker run --rm -e CI=true -v "$PWD":/w -v /w/backend/node_modules -w /w/backend
 
 Le tag de l'image du job `e2e` suit la version exacte de `@playwright/test` (`backend/package.json`) : changer les deux ensemble (et le digest). Trace d'un échec : `npx playwright show-trace e2e-results/traces/<test>/trace.zip`.
 
-Ce que la CI ne voit pas : le pilotage réel du Mac et de Windows (sur Linux, le deck répond 501), l'appli sur la tablette. Ils restent testés à la main (case « Testé sur » de la MR).
+Ce que la CI ne voit pas : le pilotage réel du Mac (en attendant `install-mac`), les actions qui changent l'ordinateur (lancer une appli, déplacer une fenêtre, régler le son : la sanity ne fait que lire), l'appli sur la tablette. Ils restent testés à la main (case « Testé sur » de la MR).
 
 Lint : les erreurs déjà présentes sont figées dans `app/lint-baseline.xml`, seules les nouvelles font échouer le job. Après en avoir corrigé, `./gradlew updateLintBaseline`.
 
@@ -118,7 +143,7 @@ Un tag `vX.Y.Z` posé sur `main` lance les mêmes tests, puis :
 
 | Job | Produit |
 |---|---|
-| `package` | `Compagnon-Unowhy-Windows.zip` et `Compagnon-Unowhy-Mac.zip` (`npm run package -- windows` ou `mac` sur le runner Linux, un job par plateforme : artefacts sous 100 Mo) |
+| `package-windows`, `package-mac` | `Compagnon-Unowhy-Windows.zip` et `Compagnon-Unowhy-Mac.zip` (`npm run package -- windows` ou `mac` sur le runner Linux, un job par plateforme : artefacts sous 100 Mo) |
 | `android-release` | `companion-X.Y.Z.apk` signé, et `companion-X.Y.Z.json` : son entrée pour le « serveur Unowhy » |
 | `release` | release GitLab du tag, fichiers déposés dans le registre de paquets du projet (`glab release create`, jeton du job) |
 
