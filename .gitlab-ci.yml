@@ -48,6 +48,14 @@ default:
 .files-install-windows: &files-install-windows
   - backend/src/win/**/*
   - "Installer (Windows).cmd"
+# Pilote Windows et lanceur (C#) : sources, SDK, icône, fins de ligne.
+.files-helper-windows: &files-helper-windows
+  - backend/src/win/**/*
+  - backend/global.json
+  - backend/assets/compagnon.ico
+  - backend/qa/build-helper-windows.ps1
+  - .gitattributes
+  - .gitlab-ci.yml
 
 # En MR : seulement si la zone a bougé. Ailleurs (main, tag, nuit) : toujours.
 .zone-backend:
@@ -66,6 +74,11 @@ default:
       changes: *files-install-common
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes: *files-install-windows
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+.zone-helper-windows:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: *files-helper-windows
     - if: $CI_PIPELINE_SOURCE != "merge_request_event"
 
 # Toujours là : une MR qui ne touche aucune zone (docs) a quand même un pipeline, sans lequel elle ne fusionne pas.
@@ -280,6 +293,29 @@ install-windows:
       - install-logs/
     reports:
       junit: sanity-windows.xml
+    expire_in: 1 week
+
+# Pilote et lanceur recompilés sous Windows : échoue si le C# ne compile pas ou si les exe commités ne sont plus
+# ceux des sources (backend/qa/build-helper-windows.ps1). Runner partagé « HiSqool Windows » (Docker, Server Core,
+# sans bureau : suffit pour compiler) ; image au SDK exact de backend/global.json, à monter ensemble.
+helper-windows:
+  extends: .zone-helper-windows
+  stage: test
+  tags: [windows, docker]
+  image: mcr.microsoft.com/dotnet/sdk:8.0.427-windowsservercore-ltsc2019@sha256:3c439035c6dd8087f43a034da64271af7e41e552b059cacc33ad23a164988b60
+  needs: []
+  variables:
+    GIT_DEPTH: 1
+    # Clone neuf : un dossier réutilisé garde les fins de ligne d'un checkout antérieur au .gitattributes.
+    GIT_STRATEGY: clone
+  script:
+    - '& backend\qa\build-helper-windows.ps1 -Work .dotnet-ci'
+  # Exe recompilés, à commiter si le job échoue sur leur comparaison.
+  artifacts:
+    when: on_failure
+    name: helper-windows-$CI_COMMIT_SHORT_SHA
+    paths:
+      - backend/src/win/*.exe
     expire_in: 1 week
 
 # APK release signé, version = tag. Clé : variables protégées et masquées, visibles seulement des tags protégés (v*).
