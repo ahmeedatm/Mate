@@ -3,6 +3,7 @@ import { createReadStream } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { config } from "./config.ts";
+import { readJson } from "./store.ts";
 
 /**
  * « Serveur Unowhy » de mises à jour, simulé par le backend pour la démo du hackathon : la tablette (device owner)
@@ -32,10 +33,10 @@ async function fingerprint(file: string) {
 }
 
 async function manifest(): Promise<Update[]> {
-  const raw = await fs.readFile(path.join(dir, "manifest.json"), "utf8").catch(() => undefined);
-  if (!raw) return [];
+  // Écrit à la main : un fichier abîmé est signalé, jamais déplacé.
+  const manifest = await readJson<{ updates?: Update[] }>(path.join(dir, "manifest.json"), () => ({}), { quarantine: false });
   // Nom de fichier simple seulement : pas de chemin qui sortirait du dossier.
-  return ((JSON.parse(raw) as { updates?: Update[] }).updates ?? []).filter((u) => u.file && path.basename(u.file) === u.file);
+  return (manifest.updates ?? []).filter((u) => u.file && path.basename(u.file) === u.file);
 }
 
 export async function listUpdates() {

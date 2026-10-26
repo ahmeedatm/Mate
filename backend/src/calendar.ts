@@ -1,10 +1,10 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import ical, { type ParameterValue, type VEvent } from "node-ical";
 import { config } from "./config.ts";
 import { accountEvents, connectedAccounts, disconnect } from "./accounts.ts";
 import { localEvents } from "./events.ts";
 import { meetingLink } from "./meeting-links.ts";
+import { readJson, writeJson } from "./store.ts";
 
 export type CalendarEvent = {
   /** UID de l'événement + début : distingue les occurrences d'une réunion récurrente. */
@@ -24,7 +24,8 @@ export type CalendarEvent = {
 };
 
 const CACHE_MS = 5 * 60_000;
-let cache: { at: number; key: string; events: CalendarEvent[] } | undefined;
+/** Une entrée par plage demandée (la tablette alterne 1, 2 et 7 jours, l'ouverture automatique 1 jour toutes les 15 s). */
+const cache = new Map<string, { at: number; events: CalendarEvent[] }>();
 
 function text(value: ParameterValue | undefined): string {
   if (value === undefined || value === null) return "";
@@ -46,19 +47,17 @@ export function dayRange(days: number): [Date, Date] {
 const savedFile = path.join(config.dataDir, "calendar.json");
 
 export async function savedCalendarUrls(): Promise<string[]> {
-  const raw = await fs.readFile(savedFile, "utf8").catch(() => undefined);
-  return raw ? ((JSON.parse(raw) as { urls?: string[] }).urls ?? []) : [];
+  return (await readJson<{ urls?: string[] }>(savedFile, () => ({}))).urls ?? [];
 }
 
 export async function saveCalendarUrls(urls: string[]) {
-  await fs.mkdir(config.dataDir, { recursive: true });
-  await fs.writeFile(savedFile, JSON.stringify({ urls }, null, 2) + "\n", { mode: 0o600 });
-  cache = undefined;
+  await writeJson(savedFile, { urls }, { mode: 0o600 });
+  cache.clear();
 }
 
 /** Compte connecté ou déconnecté : l'agenda est relu tout de suite. */
 export function invalidateCalendar() {
-  cache = undefined;
+  cache.clear();
 }
 
 /** Cet ordinateur a un agenda : lien ICS ou compte connecté (Microsoft, Google). */
@@ -110,7 +109,7 @@ export async function unlinkCalendar(id: string): Promise<boolean> {
     urls.splice(Number(index), 1);
     await saveCalendarUrls(urls);
   }
-  cache = undefined;
+  cache.clear();
   return true;
 }
 
@@ -145,7 +144,8 @@ async function remoteEvents(from: Date, to: Date): Promise<{ source: Source; eve
   if (accounts.length === 0 && sources.every((s) => s === "demo")) return { source: "mock", events: mockEvents(from) };
 
   const key = `${sources.join(",")}|${accounts.map((a) => a.email + a.expired).join(",")}|${from.getTime()}-${to.getTime()}`;
-  if (cache && cache.key === key && Date.now() - cache.at < CACHE_MS) return { source: "ics", events: cache.events };
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.at < CACHE_MS) return { source: "ics", events: cached.events };
 
   const events: CalendarEvent[] = [];
   const errors: Error[] = accounts
@@ -191,7 +191,8 @@ async function remoteEvents(from: Date, to: Date): Promise<{ source: Source; eve
   }
   if (read === 0 && errors.length) throw errors[0];
   events.sort((a, b) => a.startMs - b.startMs);
-  cache = { at: Date.now(), key, events };
+  for (const [k, entry] of cache) if (Date.now() - entry.at >= CACHE_MS) cache.delete(k);
+  cache.set(key, { at: Date.now(), events });
   return { source: "ics", events };
 }
 

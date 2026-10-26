@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { backendRoot } from "./config.ts";
+import { logFailure } from "./log.ts";
 import { isWindows, listButtons, listWindows, pressButton } from "./os.ts";
 
 /**
@@ -87,7 +88,7 @@ export async function startCallWatch(notify: (event: CallEvent) => void) {
       busy = false;
     }
   };
-  setInterval(() => void tick().catch(() => undefined), 2_000);
+  setInterval(() => void tick().catch((e) => logFailure("Surveillance des appels", e)), 2_000);
 }
 
 async function press(app: string, kind: "answer" | "video" | "decline" | "hangup") {

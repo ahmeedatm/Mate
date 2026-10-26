@@ -10,6 +10,7 @@ import {
 import type { Layout } from "./screens.ts";
 import { loadKeys, loadLinks, loadSavedApps, saveApps, saveLinks, type DeckApp, type DeckLink } from "./perso.ts";
 import { hasCalendar } from "./calendar.ts";
+import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
 
 /**
  * Étapes possibles d'une tuile. La tablette n'envoie qu'un identifiant de tuile : seules les actions
@@ -293,6 +294,9 @@ function urlOf(action: Action): URL | undefined {
   }
 }
 
+/** Plafonds de téléchargement : page ou manifeste, image. */
+const TEXT_MAX_BYTES = 1_000_000;
+const IMAGE_MAX_BYTES = 2_000_000;
 const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
 
 /**
@@ -302,11 +306,13 @@ const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
  * sous 48 px (Arte : 16 px partout), pas d'icône : la tablette affiche l'initiale plutôt qu'une image floue.
  */
 async function siteIcon(site: URL, out: string): Promise<boolean> {
+  // Site du réseau local : pas d'icône (et son nom n'est pas transmis au service d'icônes de Google).
+  await assertPublicUrl(site);
   const declared: { url: string; size: number }[] = [];
-  const get = (url: string | URL) => fetch(url, { headers: { "user-agent": BROWSER_UA }, signal: AbortSignal.timeout(8000) });
+  const get = (url: string | URL, maxBytes: number) => fetchPublic(url, { maxBytes, headers: { "user-agent": BROWSER_UA } });
   try {
-    const page = await get(site);
-    const html = (await page.text()).slice(0, 1_000_000);
+    const page = await get(site, TEXT_MAX_BYTES);
+    const html = page.data.toString("utf8");
     let manifest: string | undefined;
     for (const tag of html.match(/<link\b[^>]*>/gi) ?? []) {
       const attr = (name: string) => tag.match(new RegExp(`\\b${name}\\s*=\\s*["']?([^"'\\s>]+(?:\\s[^"'>=]+)*)`, "i"))?.[1];
@@ -319,7 +325,7 @@ async function siteIcon(site: URL, out: string): Promise<boolean> {
       declared.push({ url: new URL(href, page.url).href, size: size || (rel.includes("apple") ? 180 : 0) });
     }
     if (manifest) {
-      const icons = ((await (await get(manifest)).json()) as { icons?: { src?: string; sizes?: string; type?: string }[] }).icons ?? [];
+      const icons = (JSON.parse((await get(manifest, TEXT_MAX_BYTES)).data.toString("utf8")) as { icons?: { src?: string; sizes?: string; type?: string }[] }).icons ?? [];
       for (const icon of icons) {
         if (!icon.src || /svg/i.test(icon.type ?? "") || /\.(svg|ico)(\?|$)/i.test(icon.src)) continue;
         declared.push({ url: new URL(icon.src, manifest).href, size: Number(icon.sizes?.match(/(\d+)x\d+/i)?.[1] ?? 0) });
@@ -339,8 +345,8 @@ async function siteIcon(site: URL, out: string): Promise<boolean> {
 
   let best: { data: Buffer; width: number } | undefined;
   for (const url of [...new Set(candidates)]) {
-    const data = await get(url)
-      .then(async (r) => (r.ok ? Buffer.from(await r.arrayBuffer()) : undefined))
+    const data = await get(url, IMAGE_MAX_BYTES)
+      .then((r) => (r.ok && !r.truncated ? r.data : undefined))
       .catch(() => undefined);
     const width = data && imageWidth(data);
     if (!data || width === undefined || width > 1024) continue;

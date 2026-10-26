@@ -1,9 +1,10 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { config } from "./config.ts";
 import { dayRange, getEvents, type CalendarEvent } from "./calendar.ts";
 import { meetingKind, type MeetingKind } from "./meeting-links.ts";
+import { logFailure } from "./log.ts";
 import { openTarget } from "./os.ts";
+import { readJson, writeJson } from "./store.ts";
 
 // Réunions en ligne de l'agenda (Teams, Google Meet, Zoom, Webex) : bouton « Rejoindre » de la tablette et
 // ouverture automatique 1 minute avant (option, désactivée par défaut). Chaque service affiche d'abord son écran
@@ -13,16 +14,11 @@ const storeFile = path.join(config.dataDir, "meetings.json");
 const AUTO_JOIN_BEFORE_MS = 60_000;
 
 export async function autoJoinEnabled(): Promise<boolean> {
-  try {
-    return JSON.parse(await fs.readFile(storeFile, "utf8")).autoJoin === true;
-  } catch {
-    return false;
-  }
+  return (await readJson<{ autoJoin?: boolean }>(storeFile, () => ({}))).autoJoin === true;
 }
 
 export async function setAutoJoin(enabled: boolean) {
-  await fs.mkdir(config.dataDir, { recursive: true });
-  await fs.writeFile(storeFile, JSON.stringify({ autoJoin: enabled }, null, 2) + "\n");
+  await writeJson(storeFile, { autoJoin: enabled });
 }
 
 /** Ouvre le lien dans l'appli du service si possible (Teams : msteams:, Zoom : zoommtg:), sinon dans le navigateur. */
@@ -74,5 +70,5 @@ export function startAutoJoin(notify: (text: string) => Promise<unknown>) {
     const kind = meetingKind(event.joinUrl!);
     await notify(`${kind ? SERVICE_NAMES[kind] : "Réunion"} ouvert : ${event.title}`);
   };
-  setInterval(() => void tick().catch(() => undefined), 15_000);
+  setInterval(() => void tick().catch((e) => logFailure("Ouverture automatique des réunions", e)), 15_000);
 }

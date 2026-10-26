@@ -25,6 +25,7 @@ import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvi
 import { autoJoinEnabled, joinMeeting, setAutoJoin, startAutoJoin } from "./meetings.ts";
 import { answerCall, currentCall, declineCall, hangUp, startCallWatch } from "./calls.ts";
 import { focusDnd } from "./dnd.ts";
+import { setLogger } from "./log.ts";
 import { addTask, deleteTask, listRecurring, listTasks, setTaskDone, startReminders, taskUrl } from "./tasks.ts";
 import { receiveTabs, type ExtensionReport } from "./browser-extension.ts";
 import { addViewer, CAMERA_STATUSES, cameraStatus, pushFrame, setCameraState, VIEWER_PAGE, type CameraStatus } from "./camera.ts";
@@ -37,6 +38,7 @@ if (!config.loopbackOnly && !config.token) {
 }
 
 const app = Fastify({ logger: { level: "info" } });
+setLogger({ warn: (msg) => app.log.warn(msg) });
 await app.register(multipart, { limits: { fileSize: 20 * 1024 * 1024, files: 1 } });
 
 const expectedAuth = config.token ? Buffer.from(`Bearer ${config.token}`) : undefined;
@@ -111,7 +113,7 @@ app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validat
 app.post<{ Body: { tablet?: string } }>(
   "/pair/request",
   { schema: { body: { type: "object", properties: { tablet: { type: "string", maxLength: 100 } } } } },
-  async (req) => requestPairing(req.body?.tablet || "tablette"),
+  async (req) => requestPairing(req.body?.tablet || "tablette", req.ip),
 );
 
 app.post<{ Body: { request: string; code: string } }>(

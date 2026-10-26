@@ -40,11 +40,6 @@ async function installedApp(service: Service | undefined) {
   return undefined;
 }
 
-/** Appli qui s'ouvrira pour ce lien, si elle est installée (affichée sur la tablette). */
-export async function linkApp(url: string) {
-  return installedApp(serviceOf(url));
-}
-
 /** Ouvre un lien de la page Média : l'appli si elle est installée, sinon le site ; puis la musique démarre. */
 export async function openMediaLink(url: string): Promise<{ opened: "app" | "site"; app?: string }> {
   const service = serviceOf(url);

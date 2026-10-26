@@ -1,7 +1,8 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { config } from "./config.ts";
+import { logFailure } from "./log.ts";
 import { getDnd, setDnd } from "./os.ts";
+import { readJson, writeJson } from "./store.ts";
 
 /**
  * Ne pas déranger de l'ordinateur pendant le Focus de la tablette : activé quand le chrono de concentration
@@ -13,16 +14,11 @@ const storeFile = path.join(config.dataDir, "dnd.json");
 let safety: NodeJS.Timeout | undefined;
 
 async function isOurs(): Promise<boolean> {
-  try {
-    return JSON.parse(await fs.readFile(storeFile, "utf8")).ours === true;
-  } catch {
-    return false;
-  }
+  return (await readJson<{ ours?: boolean }>(storeFile, () => ({}))).ours === true;
 }
 
 async function setOurs(ours: boolean) {
-  await fs.mkdir(config.dataDir, { recursive: true });
-  await fs.writeFile(storeFile, JSON.stringify({ ours }));
+  await writeJson(storeFile, { ours });
 }
 
 /** `minutes` : temps restant du chrono, pour le minuteur de secours. */
@@ -35,7 +31,7 @@ export async function focusDnd(on: boolean, minutes = 60): Promise<{ on: boolean
       await setDnd(true);
       await setOurs(true);
     }
-    safety = setTimeout(() => void focusDnd(false).catch(() => undefined), (minutes + 2) * 60_000);
+    safety = setTimeout(() => void focusDnd(false).catch((e) => logFailure("Fin du Ne pas déranger", e)), (minutes + 2) * 60_000);
     return { on: true };
   }
   if (await isOurs()) {
