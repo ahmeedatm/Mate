@@ -1,0 +1,22 @@
+root = true
+
+# ktlint (./gradlew ktlintCheck) : style IntelliJ, sans les règles qui couperaient les lignes
+# ou les instructions courtes (le code garde ses lignes longues et ses `if (…) return` sur une ligne).
+[*.{kt,kts}]
+indent_style = space
+indent_size = 4
+ktlint_code_style = intellij_idea
+ktlint_standard_argument-list-wrapping = disabled
+ktlint_standard_blank-line-between-when-conditions = disabled
+ktlint_standard_class-signature = disabled
+ktlint_standard_function-signature = disabled
+ktlint_standard_kdoc = disabled
+ktlint_standard_multiline-if-else = disabled
+ktlint_standard_multiline-loop = disabled
+ktlint_standard_parameter-list-wrapping = disabled
+ktlint_standard_spacing-between-declarations-with-annotations = disabled
+ktlint_standard_spacing-between-declarations-with-comments = disabled
+ktlint_standard_statement-wrapping = disabled
+ktlint_standard_trailing-comma-on-call-site = disabled
+ktlint_standard_trailing-comma-on-declaration-site = disabled
+ktlint_standard_wrapping = disabled
