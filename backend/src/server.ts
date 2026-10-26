@@ -37,6 +37,7 @@ import localRoutes from "./routes/local.ts";
 import windowRoutes from "./routes/windows.ts";
 import deckRoutes from "./routes/deck.ts";
 import pairingRoutes from "./routes/pairing.ts";
+import systemRoutes from "./routes/system.ts";
 import { setLogger } from "./log.ts";
 import { addTask, deleteTask, listRecurring, listTasks, setTaskDone, startReminders, taskUrl } from "./tasks.ts";
 import { receiveTabs, type ExtensionReport } from "./browser-extension.ts";
@@ -121,142 +122,8 @@ app.register(localRoutes);
 app.register(windowRoutes);
 app.register(deckRoutes);
 app.register(pairingRoutes, { authorized });
+app.register(systemRoutes);
 // @@PLUGINS
-
-/** Ouvre sur le Mac le réglage Accessibilité (depuis la tablette, ou la page locale). */
-app.post("/system/accessibility", async () => {
-  await openAccessibility();
-  return { ok: true };
-});
-
-/** Dictée de la tablette (« écris : … ») : texte collé dans l'appli au premier plan, comme l'étape `text` du deck. */
-app.post<{ Body: { text: string } }>(
-  "/system/type",
-  { schema: { body: { type: "object", required: ["text"], properties: { text: { type: "string", minLength: 1, maxLength: 2000 } } } } },
-  async (req) => {
-    await typeText(req.body.text);
-    return { ok: true };
-  },
-);
-
-app.get("/system/audio", async () => getAudio());
-
-app.post<{ Body: { output?: number; outputDelta?: number; muted?: boolean; micMuted?: boolean } }>(
-  "/system/audio",
-  {
-    schema: {
-      body: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          output: { type: "integer", minimum: 0, maximum: 100 },
-          outputDelta: { type: "integer", minimum: -100, maximum: 100 },
-          muted: { type: "boolean" },
-          micMuted: { type: "boolean" },
-        },
-      },
-    },
-  },
-  async (req) => setAudio(req.body),
-);
-
-// Ne pas déranger de l'ordinateur pendant le Focus de la tablette (voir src/dnd.ts).
-app.get("/system/dnd", async () => ({ on: await getDnd() }));
-
-app.post<{ Body: { on: boolean; minutes?: number } }>(
-  "/system/dnd",
-  {
-    schema: {
-      body: {
-        type: "object",
-        additionalProperties: false,
-        required: ["on"],
-        properties: { on: { type: "boolean" }, minutes: { type: "integer", minimum: 1, maximum: 240 } },
-      },
-    },
-  },
-  async (req) => focusDnd(req.body.on, req.body.minutes),
-);
-
-// Son d'une appli (page du deck liée à une appli : Discord…). Lu en boucle par la tablette tant que la page est affichée.
-const appName = { type: "string", minLength: 1, maxLength: 100 } as const;
-
-app.get<{ Querystring: { name: string } }>(
-  "/system/audio/app",
-  { logLevel: "warn", schema: { querystring: { type: "object", required: ["name"], properties: { name: appName } } } },
-  async (req) => appAudio(req.query.name),
-);
-
-app.post<{ Body: { name: string; volume?: number; muted?: boolean } }>(
-  "/system/audio/app",
-  {
-    schema: {
-      body: {
-        type: "object",
-        required: ["name"],
-        additionalProperties: false,
-        properties: { name: appName, volume: { type: "integer", minimum: 0, maximum: 100 }, muted: { type: "boolean" } },
-      },
-    },
-  },
-  async (req) => appAudio(req.body.name, { volume: req.body.volume, muted: req.body.muted }),
-);
-
-// Lecture en cours (YouTube, Twitch, Spotify… : contrôles multimédias de Windows). Relue chaque seconde par la
-// tablette tant que la page Média est affichée.
-app.get("/system/media", { logLevel: "warn" }, async () => {
-  const sessions = (await mediaSessions()) ?? [];
-  // `thumb` : clé de la vignette, change avec le morceau ou la vidéo (la tablette ne la recharge qu'alors).
-  return {
-    sessions: sessions.map((s) => ({
-      ...s,
-      thumb: s.hasThumb ? createHash("sha1").update(`${s.app}|${s.title}|${s.artist}`).digest("hex").slice(0, 16) : null,
-    })),
-  };
-});
-
-app.post<{ Body: { action: "play-pause" | "next" | "previous" | "seek"; app?: string; positionMs?: number } }>(
-  "/system/media",
-  {
-    schema: {
-      body: {
-        type: "object",
-        required: ["action"],
-        additionalProperties: false,
-        properties: {
-          action: { enum: ["play-pause", "next", "previous", "seek"] },
-          app: { type: "string", maxLength: 200 },
-          positionMs: { type: "integer", minimum: 0 },
-        },
-      },
-    },
-  },
-  async (req) => ({ ok: await mediaControl(req.body.action, req.body.app, req.body.positionMs) }),
-);
-
-app.get<{ Querystring: { app: string; key: string } }>(
-  "/system/media/thumb",
-  {
-    logLevel: "warn",
-    schema: {
-      querystring: {
-        type: "object",
-        required: ["app", "key"],
-        properties: { app: { type: "string", maxLength: 200 }, key: { type: "string", pattern: "^[0-9a-f]{16}$" } },
-      },
-    },
-  },
-  async (req, reply) => {
-    const file = path.join(config.cacheDir, "media", req.query.key);
-    if (!existsSync(file)) {
-      await fs.mkdir(path.dirname(file), { recursive: true });
-      if (!(await mediaThumb(req.query.app, file))) return reply.code(404).send({ error: "Pas de vignette" });
-    }
-    const data = await fs.readFile(file);
-    const type = data[0] === 0x89 ? "image/png" : data[0] === 0xff ? "image/jpeg" : "application/octet-stream";
-    return reply.type(type).send(data);
-  },
-);
 
 // Rappel reçu dès que la tablette l'a affiché, même sans voix française : sinon il serait renvoyé chaque minute.
 const remind = async (text: string) => (await sendToTablet({ type: "message", text, speak: true, seconds: 120 })).received === true;
