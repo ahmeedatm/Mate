@@ -270,8 +270,12 @@ export async function systemCommand(command: SystemCommand) {
   unsupported();
 }
 
-/** Message bien visible sur l'ordinateur (code d'appairage), sans attendre qu'il soit fermé. */
+/**
+ * Message bien visible sur l'ordinateur (code d'appairage), sans attendre qu'il soit fermé.
+ * COMPANION_NO_DIALOG=1 (CI, sans bureau) : pas de boîte, le code reste dans le journal et sur la page locale.
+ */
 export async function alert(title: string, text: string) {
+  if (process.env.COMPANION_NO_DIALOG === "1") return;
   if (isWindows) return win.alert(title, text);
   if (isMac) macSystem.alert(title, text);
 }

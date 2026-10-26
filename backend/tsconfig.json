@@ -9,5 +9,5 @@
     "allowImportingTsExtensions": true,
     "types": ["node"]
   },
-  "include": ["src", "scripts", "test", "e2e", "playwright.config.ts"]
+  "include": ["src", "scripts", "qa", "test", "e2e", "playwright.config.ts"]
 }
