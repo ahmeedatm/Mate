@@ -30,6 +30,7 @@ import callRoutes from "./routes/calls.ts";
 import taskRoutes from "./routes/tasks.ts";
 import calendarRoutes from "./routes/calendar.ts";
 import updateRoutes from "./routes/updates.ts";
+import docRoutes from "./routes/docs.ts";
 import { setLogger } from "./log.ts";
 import { addTask, deleteTask, listRecurring, listTasks, setTaskDone, startReminders, taskUrl } from "./tasks.ts";
 import { receiveTabs, type ExtensionReport } from "./browser-extension.ts";
@@ -107,6 +108,7 @@ app.register(callRoutes);
 app.register(taskRoutes);
 app.register(calendarRoutes);
 app.register(updateRoutes);
+app.register(docRoutes);
 // @@PLUGINS
 
 /** `auth` : le jeton envoyé est le bon (la tablette sait s'il faut refaire l'appairage). */
@@ -583,20 +585,6 @@ app.get<{ Querystring: { app: string; key: string } }>(
   },
 );
 
-// --- Documents partagés (dossier DOCS_DIR sur l'ordinateur)
-
-app.get<{ Querystring: { dir?: string } }>("/docs", async (req) => listDocs(req.query.dir ?? ""));
-
-app.get<{ Querystring: { path: string } }>("/docs/file", async (req, reply) => {
-  const full = resolveDoc(req.query.path ?? "");
-  const stat = await fs.stat(full).catch(() => undefined);
-  if (!stat?.isFile()) return reply.code(404).send({ error: "Fichier introuvable" });
-  const types = { pdf: "application/pdf", image: "image/*", text: "text/plain; charset=utf-8" } as const;
-  const kind = kindOf(full);
-  reply.header("Content-Length", stat.size);
-  return reply.type(kind in types ? types[kind as keyof typeof types] : "application/octet-stream").send(createReadStream(full));
-});
-
 // --- Page web du navigateur de l'ordinateur, affichée sur la tablette (tutos à côté d'un jeu)
 
 /** Adresse web lisible : la barre d'adresse de Chrome cache souvent « https:// ». Autre protocole : refusé. */
@@ -692,22 +680,6 @@ app.post<{ Body: { url: string } }>(
     return { ok: true };
   },
 );
-
-app.post<{ Body: { path: string } }>(
-  "/docs/open",
-  { schema: { body: { type: "object", required: ["path"], properties: { path: { type: "string" } } } } },
-  async (req) => {
-    await openTarget(resolveDoc(req.body.path));
-    return { ok: true };
-  },
-);
-
-app.post("/docs/upload", async (req, reply) => {
-  const file = await req.file();
-  if (!file) return reply.code(400).send({ error: "Champ multipart 'photo' manquant" });
-  const ext = file.mimetype === "image/png" ? ".png" : ".jpg";
-  return { path: await savePhoto(await file.toBuffer(), ext) };
-});
 
 // --- Visualiseur (caméra de la tablette au-dessus d'une feuille, image projetée depuis l'ordinateur)
 
