@@ -37,6 +37,13 @@ default:
   - gradlew*
   - scripts/test-android.sh
   - .gitlab-ci.yml
+# Backend du Deck sur émulateur (android-emulateur) : serveur, faux pilotage, deck de test.
+.files-deck-backend: &files-deck-backend
+  - backend/src/**/*
+  - backend/test/server.ts
+  - backend/test/fake-os*.ts
+  - backend/test/deck-emulateur.*
+  - backend/package-lock.json
 # Installation : pilote, lancement automatique, paquets, installeurs, aiguillage par système, sanity.
 .files-install-common: &files-install-common
   - backend/scripts/**/*
@@ -212,8 +219,14 @@ install-mac:
 # Tests instrumentés (app/src/androidTest/) sur un émulateur Android 10 sans services Google, 1280×800.
 # Le runner Kubernetes partagé expose /dev/kvm (pod privilégié) : démarrage en ~25 s. Même script qu'en local.
 android-emulateur:
-  extends: [.android, .zone-android]
+  extends: .android
   stage: test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: *files-android
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: *files-deck-backend
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
   timeout: 30m
   cache:
     policy: pull
