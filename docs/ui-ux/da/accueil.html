@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Cadran · Accueil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500&display=block">
+<style>
+/* Tokens : rôles Material 3 (tons HCT) calculés depuis la charte Unowhy, voir docs/ui-ux/da/tokens.md */
+:root {
+  --bg: #FAF2F1;            /* surfaceContainerLow  N96 */
+  --tile: #FFFFFF;          /* surfaceContainerLowest N100 */
+  --tile-high: #EEE6E6;     /* surfaceContainerHigh N92 */
+  --tile-highest: #E9E1E0;  /* surfaceContainerHighest N90 */
+  --ink: #1E1B1B;           /* onSurface N10 */
+  --ink-2: #4D4545;         /* onSurfaceVariant NV30 */
+  --ink-3: #7E7575;         /* outline NV50 */
+  --line: #D0C4C3;          /* outlineVariant NV80 */
+  --now: #CA0538;           /* rouge cardinal Unowhy */
+  --now-soft: #FFDADA;      /* R90 */
+  --on-now: #FFFFFF;
+  --ok: #31685A;            /* vert Unowhy G40 */
+  --state: 30, 27, 27;      /* calque d'état M3 : couleur onSurface */
+  --r-tile: 32px; --pad: 24px; --gap: 16px;
+}
+body.nuit {
+  --bg: #100D0D; --tile: #221F1F; --tile-high: #282525; --tile-highest: #2F2B2B;
+  --ink: #E9E1E0; --ink-2: #D0C4C3; --ink-3: #998E8E; --line: #4D4545;
+  --now: #FF5165; --now-soft: #680018; --on-now: #2A0006; --ok: #9AD2C1; --state: 233, 225, 224;
+}
+body.fondu, body.fondu * { transition: background-color 1.6s cubic-bezier(.2,0,0,1), color 1.6s cubic-bezier(.2,0,0,1), fill 1.6s cubic-bezier(.2,0,0,1), stroke 1.6s cubic-bezier(.2,0,0,1), border-color 1.6s cubic-bezier(.2,0,0,1) !important; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1280px; height: 800px; overflow: hidden; }
+body { display: flex; background: var(--bg); color: var(--ink); font: 400 15px/1.4 Outfit, sans-serif; -webkit-font-smoothing: antialiased; }
+body.legende { height: 864px; flex-wrap: wrap; }
+.num { font-feature-settings: "tnum"; }
+svg.i { width: 24px; height: 24px; fill: currentColor; flex: none; }
+.sq { corner-shape: squircle; }
+
+/* Barre latérale : NavigationRail M3 (indicateur 56 × 32) */
+.rail { width: 88px; height: 800px; display: flex; flex-direction: column; align-items: center; padding: 20px 0 24px; }
+.etat { display: flex; gap: 6px; color: var(--ink-2); margin-bottom: 28px; }
+.etat svg.i { width: 18px; height: 18px; }
+.rail nav { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+.dest { display: flex; flex-direction: column; align-items: center; gap: 4px; font: 500 12px/16px Outfit; color: var(--ink-2); }
+.ind { width: 56px; height: 32px; border-radius: 16px; display: grid; place-items: center; }
+.dest.on { color: var(--ink); }
+.dest.on .ind { background: var(--tile-highest); }
+.parler { width: 56px; height: 56px; border-radius: 28px; display: grid; place-items: center; background: var(--ink); color: var(--bg); }
+
+/* Zone principale */
+main { width: 1192px; height: 800px; padding: 28px 32px 32px 16px; display: flex; flex-direction: column; }
+
+/* Héros : posé sur le fond, sans carte */
+.heros { display: flex; justify-content: space-between; align-items: flex-start; height: 236px; }
+.horloge { font: 300 184px/1 Outfit; letter-spacing: -0.035em; margin-left: -10px; display: flex; height: 176px; }
+.horloge .sep { width: .26em; text-align: center; transform: translateY(-.06em); }
+.case { position: relative; display: inline-block; width: .56em; height: 1em; overflow: hidden; }
+.case > span { position: absolute; inset: 0; text-align: center; will-change: transform, opacity; }
+.date { font: 400 26px/32px Outfit; color: var(--ink-2); margin-top: 6px; }
+.ensuite { font: 400 17px/24px Outfit; color: var(--ink-2); margin-top: 6px; display: flex; gap: 6px; }
+.ensuite b { font-weight: 500; color: var(--ink); }
+.ensuite .rouge { color: var(--now); font-weight: 500; display: inline-flex; gap: .25em; }
+.compte { display: inline-flex; height: 24px; vertical-align: top; }
+.compte .case { width: .58em; height: 24px; }
+
+.compl { display: flex; gap: 40px; padding-top: 22px; }
+.co { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.co .v { font: 300 52px/56px Outfit; letter-spacing: -.02em; display: flex; align-items: center; gap: 10px; }
+.co .v svg.i { width: 32px; height: 32px; color: var(--ink-2); }
+.co .l { font: 400 14px/20px Outfit; color: var(--ink-2); }
+.verres { display: flex; gap: 5px; height: 56px; align-items: center; }
+.verres i { width: 8px; height: 30px; border-radius: 4px; background: var(--line); }
+.verres i.p { background: var(--ok); }
+
+/* La ligne du jour */
+.jour { position: relative; height: 92px; margin: 4px 0 20px; }
+.piste { position: absolute; left: 0; right: 0; top: 46px; height: 2px; background: var(--line); border-radius: 1px; }
+.passe { position: absolute; left: 0; top: 46px; height: 2px; background: var(--ink-3); border-radius: 1px; transform-origin: 0 50%; }
+.heures span { position: absolute; white-space: nowrap; top: 72px; transform: translateX(-50%); font: 500 12px/16px Outfit; color: var(--ink-3); }
+.ev { position: absolute; top: 12px; height: 40px; font: 500 13px/16px Outfit; color: var(--ink-2); white-space: nowrap; }
+.ev::after { content: ""; position: absolute; left: 0; right: 0; top: 30px; height: 8px; border-radius: 4px; background: var(--ink-3); }
+.ev.fini { color: var(--ink-3); }
+.ev.fini::after { background: var(--line); }
+.ev.suiv { color: var(--now); }
+.ev.suiv::after { background: var(--now); }
+.mainten { position: absolute; top: 0; width: 0; height: 92px; }
+.mainten .trait { position: absolute; left: -1px; top: 22px; width: 2px; height: 48px; border-radius: 1px; background: var(--now); }
+.mainten .pt { position: absolute; left: -6px; top: 41px; width: 12px; height: 12px; border-radius: 6px; background: var(--now); box-shadow: 0 0 0 3px var(--bg); }
+.mainten .onde { position: absolute; left: -6px; top: 41px; width: 12px; height: 12px; border-radius: 6px; border: 2px solid var(--now); opacity: 0; }
+
+/* Tuiles */
+.tuiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--gap); flex: 1; }
+.t { position: relative; background: var(--tile); border-radius: var(--r-tile); padding: var(--pad); display: flex; flex-direction: column; overflow: hidden; will-change: transform; }
+.t::after, .touche::after, .bouton::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: rgba(var(--state), 0); pointer-events: none; transition: background-color 90ms linear; }
+.presse::after { background: rgba(var(--state), .10) !important; }
+.tete { display: flex; justify-content: space-between; align-items: baseline; font: 500 15px/20px Outfit; color: var(--ink-2); margin-bottom: 16px; }
+.tete .num { color: var(--ink-3); font-weight: 400; }
+
+.prochain .h { font: 300 44px/48px Outfit; letter-spacing: -.02em; }
+.prochain .n { font: 500 18px/24px Outfit; margin-top: 6px; }
+.prochain .s { font: 400 14px/20px Outfit; color: var(--ink-2); }
+.bouton { position: relative; margin-top: 18px; align-self: flex-start; height: 44px; padding: 0 20px 0 14px; border-radius: 22px; display: flex; align-items: center; gap: 8px; background: var(--now); color: var(--on-now); font: 500 15px/20px Outfit; }
+.bouton svg.i { width: 20px; height: 20px; }
+.apres { margin-top: auto; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+.apres div { display: flex; gap: 12px; font: 400 15px/20px Outfit; }
+.apres .num { color: var(--ink-2); min-width: 44px; }
+
+.taches { list-style: none; display: flex; flex-direction: column; position: relative; }
+.taches li { display: flex; align-items: center; gap: 12px; height: 44px; font: 400 16px/20px Outfit; position: relative; will-change: transform; }
+.coche { width: 24px; height: 24px; border-radius: 12px; box-shadow: inset 0 0 0 1.5px var(--ink-3); display: grid; place-items: center; flex: none; }
+.coche svg { width: 16px; height: 16px; fill: none; stroke: var(--on-now); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.coche path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+li.faite .coche { background: var(--ok); box-shadow: none; }
+li.faite .coche svg { stroke: var(--tile); }
+li.faite .coche path { stroke-dashoffset: 0; }
+.libelle { position: relative; }
+.barre { position: absolute; left: 0; right: 0; top: 50%; height: 1.5px; background: var(--ink-3); transform: scaleX(0); transform-origin: 0 50%; }
+li.faite .libelle { color: var(--ink-3); }
+li.faite .barre { transform: scaleX(1); }
+.ajout { color: var(--ink-3); }
+.ajout .coche { box-shadow: none; }
+.ajout .coche svg.i { width: 22px; height: 22px; fill: currentColor; stroke: none; }
+
+.focus { align-items: center; }
+.focus .tete { align-self: stretch; }
+.cadran { position: relative; width: 176px; height: 176px; margin-top: 2px; }
+.cadran svg { width: 176px; height: 176px; }
+.cadran line { stroke: var(--line); stroke-width: 3.5; stroke-linecap: round; }
+.cadran line.r { stroke: var(--now); }
+.cadran .c { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.cadran .c b { font: 300 40px/44px Outfit; letter-spacing: -.02em; }
+.cadran .c small { font: 400 13px/16px Outfit; color: var(--ink-2); }
+.cmd { margin-top: auto; display: flex; gap: 10px; }
+.rond { position: relative; height: 44px; min-width: 44px; padding: 0 14px; border-radius: 22px; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--tile-high); color: var(--ink); font: 500 14px/20px Outfit; }
+.rond svg.i { width: 20px; height: 20px; }
+
+.touches { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
+.touche { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 400 13px/16px Outfit; color: var(--ink-2); border-radius: 18px; will-change: transform; }
+.app { position: relative; width: 60px; height: 60px; border-radius: 22px; display: grid; place-items: center; }
+.app svg { width: 32px; height: 32px; }
+body.nuit .app { box-shadow: inset 0 0 0 1px var(--line); }
+.app .live { position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; border-radius: 7px; background: var(--now); box-shadow: 0 0 0 3px var(--tile); }
+
+/* Légende de démonstration (hors interface) */
+.leg { display: none; }
+body.legende .leg { display: flex; width: 1280px; height: 64px; align-items: center; justify-content: center; background: #0B0B0B; color: #EDEDED; font: 400 18px Outfit; letter-spacing: .01em; }
+.leg span { opacity: 0; transition: opacity .25s; }
+.leg span.vu { opacity: 1; }
+</style>
+</head>
+<body>
+<aside class="rail">
+  <div class="etat"><svg class="i" viewBox="0 -960 960 960"><path d="M480-120q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29Zm0-440q75 0 142.5 24T745-470q20 15 20.5 39.5T748-388q-17 17-42 17.5T661-384q-38-26-84-41t-97-15q-51 0-97 15t-84 41q-20 14-45 13t-42-18q-17-18-17-42.5t20-39.5q55-42 122.5-65.5T480-560Zm0-240q125 0 235.5 41T914-643q20 17 21 42t-17 43q-17 17-42 17.5T831-556q-72-59-161.5-91.5T480-680q-100 0-189.5 32.5T129-556q-20 16-45 15.5T42-558q-18-18-17-43t21-42q88-75 198.5-116T480-800Z"/></svg><svg class="i" viewBox="0 -960 960 960"><path d="M320-80q-17 0-28.5-11.5T280-120v-640q0-17 11.5-28.5T320-800h80v-40q0-17 11.5-28.5T440-880h80q17 0 28.5 11.5T560-840v40h80q17 0 28.5 11.5T680-760v640q0 17-11.5 28.5T640-80H320Z"/></svg></div>
+  <nav>
+    <div class="dest on"><div class="ind"><svg class="i" viewBox="0 -960 960 960"><path d="M160-200v-360q0-19 8.5-36t23.5-28l240-180q21-16 48-16t48 16l240 180q15 11 23.5 28t8.5 36v360q0 33-23.5 56.5T720-120H600q-17 0-28.5-11.5T560-160v-200q0-17-11.5-28.5T520-400h-80q-17 0-28.5 11.5T400-360v200q0 17-11.5 28.5T360-120H240q-33 0-56.5-23.5T160-200Z"/></svg></div>Accueil</div>
+    <div class="dest"><div class="ind"><svg class="i" viewBox="0 -960 960 960"><path d="M200-520q-33 0-56.5-23.5T120-600v-160q0-33 23.5-56.5T200-840h160q33 0 56.5 23.5T440-760v160q0 33-23.5 56.5T360-520H200Zm0 400q-33 0-56.5-23.5T120-200v-160q0-33 23.5-56.5T200-440h160q33 0 56.5 23.5T440-360v160q0 33-23.5 56.5T360-120H200Zm400-400q-33 0-56.5-23.5T520-600v-160q0-33 23.5-56.5T600-840h160q33 0 56.5 23.5T840-760v160q0 33-23.5 56.5T760-520H600Zm0 400q-33 0-56.5-23.5T520-200v-160q0-33 23.5-56.5T600-440h160q33 0 56.5 23.5T840-360v160q0 33-23.5 56.5T760-120H600ZM200-600h160v-160H200v160Zm400 0h160v-160H600v160Zm0 400h160v-160H600v160Zm-400 0h160v-160H200v160Zm400-400Zm0 240Zm-240 0Zm0-240Z"/></svg></div>Deck</div>
+    <div class="dest"><div class="ind"><svg class="i" viewBox="0 -960 960 960"><path d="M80-120q-17 0-28.5-11.5T40-160q0-17 11.5-28.5T80-200h800q17 0 28.5 11.5T920-160q0 17-11.5 28.5T880-120H80Zm80-120q-33 0-56.5-23.5T80-320v-440q0-33 23.5-56.5T160-840h640q33 0 56.5 23.5T880-760v440q0 33-23.5 56.5T800-240H160Zm0-80h640v-440H160v440Zm0 0v-440 440Z"/></svg></div>Ordi</div>
+    <div class="dest"><div class="ind"><svg class="i" viewBox="0 -960 960 960"><path d="M400-840q-17 0-28.5-11.5T360-880q0-17 11.5-28.5T400-920h160q17 0 28.5 11.5T600-880q0 17-11.5 28.5T560-840H400Zm80 440q17 0 28.5-11.5T520-440v-160q0-17-11.5-28.5T480-640q-17 0-28.5 11.5T440-600v160q0 17 11.5 28.5T480-400Zm0 320q-74 0-139.5-28.5T226-186q-49-49-77.5-114.5T120-440q0-74 28.5-139.5T226-694q49-49 114.5-77.5T480-800q62 0 119 20t107 58l28-28q11-11 28-11t28 11q11 11 11 28t-11 28l-28 28q38 50 58 107t20 119q0 74-28.5 139.5T734-186q-49 49-114.5 77.5T480-80Zm0-80q116 0 198-82t82-198q0-116-82-198t-198-82q-116 0-198 82t-82 198q0 116 82 198t198 82Zm0-280Z"/></svg></div>Focus</div>
+    <div class="dest"><div class="ind"><svg class="i" viewBox="0 -960 960 960"><path d="M480-260q75 0 127.5-52.5T660-440q0-75-52.5-127.5T480-620q-75 0-127.5 52.5T300-440q0 75 52.5 127.5T480-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM160-120q-33 0-56.5-23.5T80-200v-480q0-33 23.5-56.5T160-760h126l50-54q11-12 26.5-19t32.5-7h170q17 0 32.5 7t26.5 19l50 54h126q33 0 56.5 23.5T880-680v480q0 33-23.5 56.5T800-120H160Zm0-80h640v-480H638l-73-80H395l-73 80H160v480Zm320-240Z"/></svg></div>Caméra</div>
+    <div class="dest"><div class="ind"><svg class="i" viewBox="0 -960 960 960"><path d="M433-80q-27 0-46.5-18T363-142l-9-66q-13-5-24.5-12T307-235l-62 26q-25 11-50 2t-39-32l-47-82q-14-23-8-49t27-43l53-40q-1-7-1-13.5v-27q0-6.5 1-13.5l-53-40q-21-17-27-43t8-49l47-82q14-23 39-32t50 2l62 26q11-8 23-15t24-12l9-66q4-26 23.5-44t46.5-18h94q27 0 46.5 18t23.5 44l9 66q13 5 24.5 12t22.5 15l62-26q25-11 50-2t39 32l47 82q14 23 8 49t-27 43l-53 40q1 7 1 13.5v27q0 6.5-2 13.5l53 40q21 17 27 43t-8 49l-48 82q-14 23-39 32t-50-2l-60-26q-11 8-23 15t-24 12l-9 66q-4 26-23.5 44T527-80h-94Zm7-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/></svg></div>Réglages</div>
+  </nav>
+  <div class="parler" aria-label="Parler"><svg class="i" viewBox="0 -960 960 960"><path d="M480-400q-50 0-85-35t-35-85v-240q0-50 35-85t85-35q50 0 85 35t35 85v240q0 50-35 85t-85 35Zm-40 240v-83q-92-13-157.5-78T203-479q-2-17 9-29t28-12q17 0 28.5 11.5T284-480q14 70 69.5 115T480-320q72 0 127-45.5T676-480q4-17 15.5-28.5T720-520q17 0 28 12t9 29q-14 91-79 157t-158 79v83q0 17-11.5 28.5T480-120q-17 0-28.5-11.5T440-160Z"/></svg></div>
+</aside>
+
+<main>
+  <section class="heros">
+    <div>
+      <div class="horloge num" id="horloge"></div>
+      <div class="date">Lundi 26 octobre</div>
+      <div class="ensuite"><span>Ensuite</span><b>Démo tablette</b><span class="rouge num">dans <span class="compte" id="compte"></span> min</span></div>
+    </div>
+    <div class="compl">
+      <div class="co"><div class="v num"><svg class="i" viewBox="0 -960 960 960"><path d="M480-760q-17 0-28.5-11.5T440-800v-80q0-17 11.5-28.5T480-920q17 0 28.5 11.5T520-880v80q0 17-11.5 28.5T480-760Zm198 82q-11-11-11-28t11-28l56-57q12-12 28.5-12t28.5 12q11 11 11 28t-11 28l-57 57q-11 11-28 11t-28-11Zm122 238q-17 0-28.5-11.5T760-480q0-17 11.5-28.5T800-520h80q17 0 28.5 11.5T920-480q0 17-11.5 28.5T880-440h-80Zm-66 271-56-57q-11-11-11-28t11-28q11-11 28-11t28 11l57 56q12 12 12 28.5T791-169q-12 12-28.5 12T734-169ZM226-678l-57-57q-11-11-11-28t11-28q12-12 28.5-12t28.5 12l56 57q11 11 11 28t-11 28q-11 11-28 11t-28-11Zm14 478h180q25 0 42.5-17.5T480-260q0-25-17-42.5T421-320h-51l-20-48q-14-33-44-52.5T240-440q-50 0-85 35t-35 85q0 50 35 85t85 35Zm0 80q-83 0-141.5-58.5T40-320q0-83 58.5-141.5T240-520q60 0 109.5 32.5T423-400q58 0 97.5 43T560-254q-2 57-42.5 95.5T420-120H240Zm320-134q-5-20-10-39t-10-39q45-19 72.5-59t27.5-89q0-66-47-113t-113-47q-60 0-105 39t-53 99q-20-5-41-9t-41-9q14-88 82.5-144T480-720q100 0 170 70t70 170q0 77-44 138.5T560-254Zm-79-226Z"/></svg>14°</div><div class="l">Éclaircies, 17° max</div></div>
+      <div class="co"><div class="verres"><i class="p"></i><i class="p"></i><i class="p"></i><i class="p"></i><i class="p"></i><i></i><i></i><i></i></div><div class="l">5 verres sur 8</div></div>
+    </div>
+  </section>
+
+  <section class="jour" id="jour">
+    <div class="piste"></div>
+    <div class="passe" id="passe"></div>
+    <div class="heures" id="heures"></div>
+    <div class="ev fini" data-de="9.5" data-a="10.5">Daily</div>
+    <div class="ev fini" data-de="12" data-a="13.25">Déjeuner</div>
+    <div class="ev suiv" data-de="14.5" data-a="15.5">Démo tablette</div>
+    <div class="ev" data-de="17" data-a="18">Point Eliot</div>
+    <div class="mainten" id="mainten"><div class="onde" id="onde"></div><div class="trait"></div><div class="pt"></div></div>
+  </section>
+
+  <section class="tuiles">
+    <article class="t prochain">
+      <div class="tete"><span>Agenda</span><span class="num">3 aujourd'hui</span></div>
+      <div class="h num">14:30</div>
+      <div class="n">Démo tablette</div>
+      <div class="s">Teams · 1 h</div>
+      <div class="bouton" id="rejoindre"><svg class="i" viewBox="0 -960 960 960"><path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h480q33 0 56.5 23.5T720-720v180l126-126q10-10 22-5t12 19v344q0 14-12 19t-22-5L720-420v180q0 33-23.5 56.5T640-160H160Z"/></svg>Rejoindre</div>
+      <div class="apres">
+        <div><span class="num">17:00</span>Point Eliot</div>
+        <div><span class="num" style="min-width:44px">Mar.</span>Daily 9:30</div>
+      </div>
+    </article>
+
+    <article class="t">
+      <div class="tete"><span>Tâches</span><span class="num" id="reste">3 restantes</span></div>
+      <ul class="taches" id="taches">
+        <li id="t1"><span class="coche"><svg viewBox="0 0 24 24"><path pathLength="1" d="M6 12.5l4 4 8-9"/></svg></span><span class="libelle">Relire la MR caméra<i class="barre"></i></span></li>
+        <li><span class="coche"><svg viewBox="0 0 24 24"><path pathLength="1" d="M6 12.5l4 4 8-9"/></svg></span><span class="libelle">Worklog Jira<i class="barre"></i></span></li>
+        <li><span class="coche"><svg viewBox="0 0 24 24"><path pathLength="1" d="M6 12.5l4 4 8-9"/></svg></span><span class="libelle">Appeler Eliot<i class="barre"></i></span></li>
+        <li class="faite"><span class="coche"><svg viewBox="0 0 24 24"><path pathLength="1" d="M6 12.5l4 4 8-9"/></svg></span><span class="libelle">Préparer la démo<i class="barre"></i></span></li>
+        <li class="ajout"><span class="coche"><svg class="i" viewBox="0 -960 960 960"><path d="M440-440H240q-17 0-28.5-11.5T200-480q0-17 11.5-28.5T240-520h200v-200q0-17 11.5-28.5T480-760q17 0 28.5 11.5T520-720v200h200q17 0 28.5 11.5T760-480q0 17-11.5 28.5T720-440H520v200q0 17-11.5 28.5T480-200q-17 0-28.5-11.5T440-240v-200Z"/></svg></span><span class="libelle">Nouvelle tâche</span></li>
+      </ul>
+    </article>
+
+    <article class="t focus">
+      <div class="tete"><span>Focus</span><span class="num">2 sur 4</span></div>
+      <div class="cadran">
+        <svg viewBox="0 0 176 176" id="graduations"></svg>
+        <div class="c"><b class="num" id="chrono">18:05</b><small>concentration</small></div>
+      </div>
+      <div class="cmd"><div class="rond" id="pause"><svg class="i" viewBox="0 -960 960 960"><path d="M640-200q-33 0-56.5-23.5T560-280v-400q0-33 23.5-56.5T640-760q33 0 56.5 23.5T720-680v400q0 33-23.5 56.5T640-200Zm-320 0q-33 0-56.5-23.5T240-280v-400q0-33 23.5-56.5T320-760q33 0 56.5 23.5T400-680v400q0 33-23.5 56.5T320-200Z"/></svg></div><div class="rond"><svg class="i" viewBox="0 -960 960 960"><path d="M558-84q-15 8-30.5 2.5T504-102l-60-120q-8-15-2.5-30.5T462-276q15-8 30.5-2.5T516-258l60 120q8 15 2.5 30.5T558-84Zm240 0q-15 8-30.5 2.5T744-102l-60-120q-8-15-2.5-30.5T702-276q15-8 30.5-2.5T756-258l60 120q8 15 2.5 30.5T798-84Zm-480 0q-15 8-30.5 2.5T264-102l-60-120q-8-15-2.5-30.5T222-276q15-8 30.5-2.5T276-258l60 120q8 15 2.5 30.5T318-84Zm-18-236q-91 0-155.5-64.5T80-540q0-83 55-145t136-73q32-57 87.5-89.5T480-880q90 0 156.5 57.5T717-679q69 6 116 57t47 122q0 75-52.5 127.5T700-320H300Zm0-80h400q42 0 71-29t29-71q0-42-29-71t-71-29h-60v-40q0-66-47-113t-113-47q-48 0-87.5 26T333-704l-10 24h-25q-57 2-97.5 42.5T160-540q0 58 41 99t99 41Zm180-200Z"/></svg>Pluie</div></div>
+    </article>
+
+    <article class="t">
+      <div class="tete"><span>Touches</span></div>
+      <div class="touches">
+        <div class="touche"><div class="app sq" style="background:#121212"><svg viewBox="0 0 24 24" aria-label="Spotify"><path fill="#1ED760" d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg></div>Spotify</div>
+        <div class="touche" id="discord"><div class="app sq" style="background:#5865F2"><svg viewBox="0 0 24 24" aria-label="Discord"><path fill="#FFFFFF" d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg><span class="live"></span></div>Discord</div>
+        <div class="touche"><div class="app sq" style="background:#FFFFFF;box-shadow:inset 0 0 0 1px var(--line)"><svg viewBox="0 0 24 24" aria-label="YouTube"><path fill="#FF0000" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></div>YouTube</div>
+        <div class="touche"><div class="app sq" style="background:#171A21"><svg viewBox="0 0 24 24" aria-label="Steam"><path fill="#FFFFFF" d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z"/></svg></div>Steam</div>
+        <div class="touche"><div class="app sq" style="background:#9146FF"><svg viewBox="0 0 24 24" aria-label="Twitch"><path fill="#FFFFFF" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg></div>Twitch</div>
+        <div class="touche"><div class="app sq" style="background:#FFFFFF;box-shadow:inset 0 0 0 1px var(--line)"><svg viewBox="0 0 24 24" aria-label="Notion"><path fill="#000000" d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/></svg></div>Notion</div>
+      </div>
+    </article>
+  </section>
+</main>
+<div class="leg" id="leg"><span id="legt"></span></div>
+
+<script>
+// Ressorts : jetons M3 Expressive, schéma standard (amortissement, raideur), voir tokens.md
+const M = {
+  spatialFast:    { z: 0.9, k: 1400 },
+  spatialDefault: { z: 0.9, k: 700 },
+  spatialSlow:    { z: 0.9, k: 300 },
+  effectsFast:    { z: 1,   k: 3800 },
+  effectsDefault: { z: 1,   k: 1600 },
+  effectsSlow:    { z: 1,   k: 800 },
+};
+const reduit = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const etat = new WeakMap();
+function val(el, cle, defaut) { const s = etat.get(el) || {}; return cle in s ? s[cle] : defaut; }
+function poser(el, cle, v) {
+  const s = etat.get(el) || {}; s[cle] = v; etat.set(el, s);
+  const tx = s.tx ?? 0, ty = s.ty ?? 0, sc = s.sc ?? 1, sx = s.sx ?? 1;
+  el.style.transform = `translate(${tx}px, ${ty}px) scale(${sc * sx}, ${sc})`;
+  if ('o' in s) el.style.opacity = s.o;
+}
+// Ressort amorti (masse 1), intégré par petits pas : même modèle que SpringForce d'AndroidX.
+function ressort(el, cle, vers, jeton, fin) {
+  const s = etat.get(el) || {}; const id = (s['_' + cle] || 0) + 1; s['_' + cle] = id; etat.set(el, s);
+  const def = cle === 'sc' || cle === 'sx' || cle === 'o' ? 1 : 0;
+  let x = val(el, cle, def), v = s['v' + cle] || 0, avant = performance.now();
+  if (reduit) { poser(el, cle, vers); fin && fin(); return; }
+  const c = 2 * jeton.z * Math.sqrt(jeton.k), seuil = Math.max(0.002, Math.abs(vers - x) * 0.002);
+  function pas(t) {
+    if ((etat.get(el) || {})['_' + cle] !== id) return;
+    const dt = Math.min(0.05, (t - avant) / 1000); avant = t;
+    const n = Math.max(1, Math.ceil(dt / 0.002)), h = dt / n;
+    for (let i = 0; i < n; i++) { const a = -jeton.k * (x - vers) - c * v; v += a * h; x += v * h; }
+    const st = etat.get(el); st['v' + cle] = v;
+    if (Math.abs(x - vers) < seuil && Math.abs(v) < seuil * 10) { st['v' + cle] = 0; poser(el, cle, vers); fin && fin(); return; }
+    poser(el, cle, x); requestAnimationFrame(pas);
+  }
+  requestAnimationFrame(pas);
+}
+const attendre = ms => new Promise(r => setTimeout(r, ms));
+
+// Chiffres qui basculent : seuls les chiffres qui changent bougent.
+function rouleau(conteneur, texte, anime) {
+  const cases = [...conteneur.querySelectorAll('.case, .compte-c')];
+  const h = conteneur.querySelector('.case, .compte-c')?.offsetHeight || 0;
+  [...texte].forEach((ch, i) => {
+    const c = cases[i]; if (!c) return;
+    const ancien = c.lastElementChild;
+    if (ancien && ancien.textContent === ch) return;
+    const nouveau = document.createElement('span'); nouveau.textContent = ch; c.appendChild(nouveau);
+    if (!anime || !ancien) { if (ancien) ancien.remove(); return; }
+    const d = h * 0.62;
+    poser(nouveau, 'ty', d); poser(nouveau, 'o', 0);
+    setTimeout(() => {
+      ressort(nouveau, 'ty', 0, M.spatialDefault); ressort(nouveau, 'o', 1, M.effectsDefault);
+      ressort(ancien, 'ty', -d, M.spatialFast); ressort(ancien, 'o', 0, M.effectsFast, () => ancien.remove());
+    }, i * 30);
+  });
+}
+function construireHorloge(texte) {
+  const hz = document.getElementById('horloge'); hz.innerHTML = '';
+  [...texte].forEach(ch => {
+    if (ch === ':') { const s = document.createElement('span'); s.className = 'sep'; s.textContent = ':'; hz.appendChild(s); return; }
+    const c = document.createElement('span'); c.className = 'case'; const g = document.createElement('span'); g.textContent = ch; c.appendChild(g); hz.appendChild(c);
+  });
+}
+function horloge(texte, anime) {
+  const hz = document.getElementById('horloge');
+  const chiffres = texte.replace(':', '');
+  const cases = hz.querySelectorAll('.case');
+  [...chiffres].forEach((ch, i) => {
+    const fakeParent = { querySelectorAll: () => [cases[i]], querySelector: () => cases[i] };
+    rouleau(fakeParent, ch, anime);
+  });
+}
+function compte(n, anime) {
+  const c = document.getElementById('compte'), t = String(n).padStart(2, '\u2007');
+  if (!c.children.length) { c.innerHTML = [...t].map(ch => `<span class="case"><span>${ch}</span></span>`).join(''); return; }
+  [...c.children].forEach((k, i) => rouleau({ querySelectorAll: () => [k], querySelector: () => k }, t[i], anime));
+}
+
+// Ligne du jour : 8 h → 20 h
+const jour = document.getElementById('jour'), L = jour.offsetWidth;
+const x = h => (h - 8) / 12 * L;
+document.getElementById('heures').innerHTML = [8, 10, 12, 14, 16, 18, 20].map(h => `<span style="left:${x(h)}px">${h} h</span>`).join('');
+const hs = document.querySelectorAll('.heures span'); hs[0].style.transform = 'none'; hs[hs.length - 1].style.transform = 'translateX(-100%)';
+document.querySelectorAll('.ev').forEach(e => { e.style.left = x(+e.dataset.de) + 'px'; e.style.width = (x(+e.dataset.a) - x(+e.dataset.de) - 4) + 'px'; });
+let minutes = 14 * 60 + 7;
+const passe = document.getElementById('passe'), mainten = document.getElementById('mainten');
+function placerMaintenant(anime) {
+  const px = x(minutes / 60);
+  passe.style.width = px + 'px';
+  if (anime) ressort(mainten, 'tx', px, M.spatialDefault); else poser(mainten, 'tx', px);
+}
+
+// Cadran du Focus : une graduation par minute de la séance (25)
+const grad = document.getElementById('graduations');
+let reste = 18 * 60 + 5;
+grad.innerHTML = Array.from({ length: 25 }, (_, i) => {
+  const a = (i / 25) * 2 * Math.PI - Math.PI / 2, r1 = 76, r2 = 86;
+  return `<line x1="${88 + r1 * Math.cos(a)}" y1="${88 + r1 * Math.sin(a)}" x2="${88 + r2 * Math.cos(a)}" y2="${88 + r2 * Math.sin(a)}"/>`;
+}).join('');
+const lignes = [...grad.querySelectorAll('line')];
+function graduations() { const n = Math.ceil(reste / 60); lignes.forEach((l, i) => l.classList.toggle('r', i >= 25 - n)); }
+function chrono() { document.getElementById('chrono').textContent = `${String(Math.floor(reste / 60)).padStart(2, '0')}:${String(reste % 60).padStart(2, '0')}`; }
+
+// Le battement de la minute : tout ce qui dépend de l'heure avance d'un seul geste.
+function battement() {
+  minutes++;
+  const hh = String(Math.floor(minutes / 60)).padStart(2, '0'), mm = String(minutes % 60).padStart(2, '0');
+  horloge(hh + ':' + mm, true);
+  compte(14 * 60 + 30 - minutes, true);
+  placerMaintenant(true);
+  const onde = document.getElementById('onde');
+  poser(onde, 'sc', 1); poser(onde, 'o', 0.9);
+  ressort(onde, 'sc', 3.2, M.effectsSlow); ressort(onde, 'o', 0, M.effectsSlow);
+}
+
+// Appui : légère pression (spatial fast) + calque d'état M3 à 10 %.
+function presser(el) { el.classList.add('presse'); ressort(el, 'sc', 0.96, M.spatialFast); }
+function relacher(el) { el.classList.remove('presse'); ressort(el, 'sc', 1, M.spatialFast); }
+document.querySelectorAll('.t, .touche, .bouton, .rond').forEach(el => {
+  el.addEventListener('pointerdown', e => { e.stopPropagation(); presser(el); });
+  ['pointerup', 'pointerleave'].forEach(t => el.addEventListener(t, () => relacher(el)));
+});
+
+// Cocher : le trait se dessine, la ligne se barre, puis la tâche descend sous les autres.
+function cocher(li) {
+  const p = li.querySelector('.coche path'), b = li.querySelector('.barre'), ul = li.parentElement;
+  li.classList.add('faite');
+  p.style.strokeDashoffset = 1; poser(b, 'sx', 0);
+  ressort(p, 'dash', 0, M.effectsDefault);
+  const anim = () => { const s = etat.get(p); p.style.strokeDashoffset = s.dash ?? 1; if ((s.dash ?? 1) > 0.001) requestAnimationFrame(anim); };
+  etat.set(p, { dash: 1 }); requestAnimationFrame(anim);
+  ressort(b, 'sx', 1, M.spatialFast);
+  document.getElementById('reste').textContent = '2 restantes';
+  setTimeout(() => {
+    const items = [...ul.children], avant = new Map(items.map(e => [e, e.getBoundingClientRect().top]));
+    ul.insertBefore(li, ul.querySelector('.ajout'));
+    items.forEach((e, i) => {
+      const d = avant.get(e) - e.getBoundingClientRect().top; if (!d) return;
+      poser(e, 'ty', d); setTimeout(() => ressort(e, 'ty', 0, M.spatialDefault), e === li ? 0 : 20 * i);
+    });
+  }, 650);
+}
+document.querySelectorAll('.taches li:not(.ajout)').forEach(li => li.querySelector('.coche').addEventListener('click', () => li.classList.contains('faite') || cocher(li)));
+
+// Arrivée de l'écran : le jour se dessine jusqu'à maintenant, puis les tuiles montent.
+function arrivee() {
+  poser(passe, 'sx', 0); ressort(passe, 'sx', 1, M.spatialSlow);
+  const evs = document.querySelectorAll('.ev');
+  evs.forEach((e, i) => { poser(e, 'o', 0); setTimeout(() => ressort(e, 'o', 1, M.effectsDefault), 120 + i * 60); });
+  poser(mainten, 'o', 0); setTimeout(() => ressort(mainten, 'o', 1, M.effectsDefault), 450);
+  document.querySelectorAll('.t').forEach((t, i) => { poser(t, 'ty', 24); poser(t, 'o', 0); setTimeout(() => { ressort(t, 'ty', 0, M.spatialDefault); ressort(t, 'o', 1, M.effectsDefault); }, 160 + i * 50); });
+  const h = document.querySelector('.heros'); poser(h, 'o', 0); poser(h, 'ty', -8); ressort(h, 'o', 1, M.effectsDefault); ressort(h, 'ty', 0, M.spatialDefault);
+}
+function nuit(oui) {
+  document.body.classList.add('fondu'); document.body.classList.toggle('nuit', oui);
+  setTimeout(() => document.body.classList.remove('fondu'), 1700);
+}
+
+// Démarrage
+construireHorloge('14:07'); compte(23, false); placerMaintenant(false); graduations(); chrono();
+const q = new URLSearchParams(location.search);
+if (q.get('theme') === 'nuit') document.body.classList.add('nuit');
+let tictac = setInterval(() => { reste--; chrono(); if (reste % 60 === 59) { graduations(); } }, 1000);
+if (q.has('fige')) clearInterval(tictac);
+
+async function legende(t) { const l = document.getElementById('legt'); l.classList.remove('vu'); await attendre(260); l.textContent = t; l.classList.add('vu'); }
+async function demo() {
+  if (q.has('legende')) document.body.classList.add('legende');
+  await document.fonts.ready; await attendre(400);
+  legende("Arrivée : le jour se dessine jusqu'à maintenant"); arrivee(); await attendre(2600);
+  legende('Appui : pression et calque d’état'); const d = document.getElementById('discord'); presser(d); await attendre(220); relacher(d); await attendre(500);
+  const r = document.getElementById('rejoindre'); presser(r); await attendre(200); relacher(r); await attendre(1300);
+  legende('Cocher : le trait se dessine, la tâche descend'); cocher(document.getElementById('t1')); await attendre(2400);
+  legende('Le battement de la minute : 14:07 → 14:08'); await attendre(500); battement(); await attendre(2400);
+  legende('Deux chiffres changent : 14:08 → 14:09 → 14:10'); battement(); await attendre(1600); minutes = 14 * 60 + 9; battement(); await attendre(2400);
+  legende('Au coucher du soleil, le bureau passe en nuit'); await attendre(300); nuit(true); await attendre(3000);
+  legende('La nuit, seul le rouge signale le présent'); battement(); await attendre(3000);
+}
+if (q.has('demo')) demo();
+</script>
+</body>
+</html>

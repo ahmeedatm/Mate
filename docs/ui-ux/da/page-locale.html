@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<title>Compagnon Unowhy</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500&display=block">
+<style>
+:root { --bg:#FAF2F1; --tile:#FFFFFF; --tile-high:#EEE6E6; --ink:#1E1B1B; --ink-2:#4D4545; --ink-3:#7E7575; --line:#D0C4C3; --now:#CA0538; --on-now:#FFFFFF; --ok:#31685A; }
+body.nuit { --bg:#100D0D; --tile:#221F1F; --tile-high:#282525; --ink:#E9E1E0; --ink-2:#D0C4C3; --ink-3:#998E8E; --line:#4D4545; --now:#FF5165; --on-now:#2A0006; --ok:#9AD2C1; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--ink); font: 400 16px/1.5 Outfit, sans-serif; -webkit-font-smoothing: antialiased; }
+.num { font-feature-settings: "tnum"; }
+.page { width: 720px; margin: 0 auto; padding: 48px 0 64px; }
+header { display: flex; align-items: center; gap: 16px; margin-bottom: 40px; }
+header img { width: 56px; height: 56px; }
+header h1 { font: 500 28px/34px Outfit; letter-spacing: -.01em; }
+header p { color: var(--ink-2); font-size: 15px; }
+.code { background: var(--tile); border-radius: 32px; padding: 32px 36px 28px; }
+.code .l { color: var(--ink-2); font-size: 15px; }
+.code .v { font: 300 96px/1 Outfit; letter-spacing: .04em; margin: 14px 0 22px; }
+.minuteur { position: relative; height: 2px; background: var(--line); border-radius: 1px; }
+.minuteur i { position: absolute; left: 0; top: 0; height: 2px; width: 62%; background: var(--ink-3); border-radius: 1px; }
+.minuteur b { position: absolute; left: 62%; top: -5px; width: 12px; height: 12px; margin-left: -6px; border-radius: 6px; background: var(--now); box-shadow: 0 0 0 3px var(--tile); }
+.code .s { display: flex; justify-content: space-between; margin-top: 12px; color: var(--ink-3); font-size: 14px; }
+.liste { margin-top: 16px; background: var(--tile); border-radius: 32px; overflow: hidden; }
+.ligne { display: flex; align-items: center; gap: 16px; padding: 18px 28px; min-height: 64px; }
+.ligne + .ligne { border-top: 1px solid var(--line); margin-left: 28px; padding-left: 0; }
+.ligne .t { flex: 1; }
+.ligne .d { color: var(--ink-2); font-size: 15px; }
+.pastille { width: 10px; height: 10px; border-radius: 5px; background: var(--ok); flex: none; }
+code { font: 500 15px Outfit; font-feature-settings: "tnum"; color: var(--ink); background: var(--tile-high); padding: 4px 10px; border-radius: 8px; }
+h2 { font: 500 15px/20px Outfit; color: var(--ink-2); margin: 36px 0 10px 28px; }
+.champ { display: flex; gap: 10px; padding: 18px 20px 20px 28px; }
+.champ input { flex: 1; height: 48px; border-radius: 24px; border: 0; background: var(--bg); color: var(--ink); font: 400 15px Outfit; padding: 0 20px; outline: 1px solid var(--line); }
+.btn { height: 48px; padding: 0 22px; border-radius: 24px; border: 0; font: 500 15px Outfit; background: var(--ink); color: var(--bg); }
+.btn.sec { background: var(--tile-high); color: var(--ink); }
+ol { padding: 4px 28px 22px 48px; color: var(--ink-2); font-size: 15px; }
+ol li { padding: 4px 0; }
+ol b { color: var(--ink); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header><img src="icone.svg" alt=""><div><h1>Compagnon Unowhy</h1><p>MacBook d'Ahmed</p></div></header>
+
+  <section class="code">
+    <div class="l">Code à saisir sur la tablette</div>
+    <div class="v num">482 913</div>
+    <div class="minuteur"><i></i><b></b></div>
+    <div class="s num"><span>Valable encore 1 min 15</span><span>Tablette d'Eliot</span></div>
+  </section>
+
+  <section class="liste">
+    <div class="ligne"><span class="t">Tablette d&apos;Eliot</span><span class="d">connectée il y a 2 min</span><span class="pastille"></span></div>
+    <div class="ligne"><span class="t">Adresse de cet ordinateur</span><code>192.168.1.24:8787</code></div>
+  </section>
+
+  <h2>Agenda de cet ordinateur</h2>
+  <section class="liste">
+    <div class="champ"><input value="https://outlook.office365.com/owa/calendar/…/calendar.ics"><button class="btn">Enregistrer</button><button class="btn sec">Retirer</button></div>
+  </section>
+
+  <h2>Connecter une autre tablette</h2>
+  <section class="liste">
+    <ol>
+      <li>Tablette et ordinateur sur le même WiFi.</li>
+      <li>Sur la tablette : <b>Réglages › Ordinateurs › Ajouter</b>, puis toucher cet ordinateur.</li>
+      <li>Saisir le code affiché plus haut.</li>
+    </ol>
+  </section>
+</div>
+<script>if (new URLSearchParams(location.search).get('theme') === 'nuit') document.body.classList.add('nuit');</script>
+</body>
+</html>
