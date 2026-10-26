@@ -15,6 +15,7 @@ workflow:
 stages:
   - test
   - build
+  - install
   - release
 
 default:
@@ -192,6 +193,31 @@ package-mac:
   extends: [.package, .zone-install-mac]
   variables:
     PLATFORM: mac
+
+# Paquet Windows installé sur un vrai PC (runner « Local QA runner », shell PowerShell, session de bureau ouverte) :
+# installeur silencieux, lancement automatique, sanity, pilote, désinstallation. Tout est propre au test
+# (backend/qa/install-windows.ps1) ; after_script nettoie même après un échec : le PC sert aussi aux tests UEM.
+install-windows:
+  extends: .zone-install-windows
+  stage: install
+  tags: [local-runner]
+  image: null
+  needs: [package-windows]
+  variables:
+    GIT_DEPTH: 1
+  before_script:
+    - '& backend\qa\install-windows.ps1 -Nettoyage'
+  script:
+    - '& backend\qa\install-windows.ps1 -Zip dist\Compagnon-Unowhy-Windows.zip -Junit sanity-windows.xml -Logs install-logs'
+  after_script:
+    - '& backend\qa\install-windows.ps1 -Nettoyage'
+  artifacts:
+    when: always
+    paths:
+      - install-logs/
+    reports:
+      junit: sanity-windows.xml
+    expire_in: 1 week
 
 # APK release signé, version = tag. Clé : variables protégées et masquées, visibles seulement des tags protégés (v*).
 # Publie aussi l'entrée du « serveur Unowhy » (companion-X.Y.Z.json), lue par `npm run updates:add`.
