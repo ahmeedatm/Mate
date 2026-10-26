@@ -13,6 +13,15 @@ val techCode = (findProperty("techCode") as String?) ?: "4242"
 // Adresse courte du logiciel de l'ordinateur, affichée au premier lancement (à taper dans le navigateur de l'ordinateur).
 val installUrl = (findProperty("installUrl") as String?) ?: "unowhy.com/compagnon"
 
+// Version : celle du tag vX.Y.Z en CI (-PappVersion=X.Y.Z). versionCode = X × 10000 + Y × 100 + Z, toujours croissant.
+val appVersion = (findProperty("appVersion") as String?) ?: "0.1.0"
+val appVersionCode = Regex("""(\d+)\.(\d{1,2})\.(\d{1,2})""").matchEntire(appVersion)
+    ?.destructured?.let { (x, y, z) -> x.toInt() * 10000 + y.toInt() * 100 + z.toInt() }
+    ?: throw GradleException("appVersion « $appVersion » : attendu X.Y.Z, Y et Z inférieurs à 100")
+
+// Clé de signature release, jamais dans le dépôt : fichier PKCS12 et mot de passe donnés par l'environnement (CI).
+val releaseKeystore = providers.environmentVariable("RELEASE_KEYSTORE").orNull
+
 android {
     namespace = "com.unowhy.companion"
     compileSdk = 36
@@ -21,8 +30,8 @@ android {
         applicationId = "com.unowhy.companion"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode
+        versionName = appVersion
         buildConfigField("String", "DEFAULT_BACKEND_URL", "\"$backendUrl\"")
         buildConfigField("String", "TECH_CODE", "\"$techCode\"")
         buildConfigField("String", "INSTALL_URL", "\"$installUrl\"")
@@ -33,8 +42,19 @@ android {
         buildConfig = true
     }
 
+    signingConfigs {
+        if (releaseKeystore != null) create("release") {
+            storeFile = file(releaseKeystore)
+            storePassword = providers.environmentVariable("RELEASE_KEYSTORE_PASSWORD").get()
+            keyAlias = "companion"
+            keyPassword = storePassword
+        }
+    }
+
     buildTypes {
         release {
+            // Sans clé (poste de dev) : APK release non signé.
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))

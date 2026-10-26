@@ -1,5 +1,6 @@
 # CI : sur chaque MR et sur main. Rien n'arrive sur main sans pipeline vert (voir docs/developpement.md).
 # Le pilotage réel du Mac et de Windows ne tourne pas ici (runner Linux) : il reste vérifié à la main.
+# Tag vX.Y.Z : mêmes tests, puis paquets de l'ordinateur, APK signé et release GitLab.
 
 workflow:
   rules:
@@ -11,12 +12,18 @@ workflow:
 
 stages:
   - test
+  - build
+  - release
 
 default:
   interruptible: true
 
-backend:
-  stage: test
+# Jobs de release : seulement sur un tag de version.
+.release-tag:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+
+.node:
   image: node:22.22-bookworm-slim
   variables:
     npm_config_cache: $CI_PROJECT_DIR/.npm
@@ -29,6 +36,10 @@ backend:
   before_script:
     - cd backend
     - npm ci --prefer-offline --no-audit --no-fund
+
+backend:
+  extends: .node
+  stage: test
   script:
     - npm run typecheck
     # Tests d'intégration : le vrai serveur démarre avec un dossier de données vide.
@@ -67,8 +78,7 @@ e2e:
       junit: backend/e2e-results/junit.xml
     expire_in: 1 week
 
-android:
-  stage: test
+.android:
   image: ghcr.io/cirruslabs/android-sdk:36@sha256:f9b3ea9ed2b5fc9522adae82c7b4622ab7aa54207ef532c8e615a347dca08f31
   variables:
     GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle-home
@@ -80,6 +90,10 @@ android:
     paths:
       - .gradle-home/caches/
       - .gradle-home/wrapper/
+
+android:
+  extends: .android
+  stage: test
   script:
     - ./gradlew --no-daemon --console=plain testDebugUnitTest lintDebug assembleDebug
   artifacts:
@@ -95,19 +109,10 @@ android:
 # Tests instrumentés (app/src/androidTest/) sur un émulateur Android 10 sans services Google, 1280×800.
 # Le runner Kubernetes partagé expose /dev/kvm (pod privilégié) : démarrage en ~25 s. Même script qu'en local.
 android-emulateur:
+  extends: .android
   stage: test
-  image: ghcr.io/cirruslabs/android-sdk:36@sha256:f9b3ea9ed2b5fc9522adae82c7b4622ab7aa54207ef532c8e615a347dca08f31
   timeout: 30m
-  variables:
-    GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle-home
   cache:
-    key:
-      files:
-        - gradle/wrapper/gradle-wrapper.properties
-        - app/build.gradle.kts
-    paths:
-      - .gradle-home/caches/
-      - .gradle-home/wrapper/
     policy: pull
   script:
     - scripts/test-android.sh
@@ -119,3 +124,60 @@ android-emulateur:
     reports:
       junit: app/build/outputs/androidTest-results/connected/debug/*.xml
     expire_in: 2 weeks
+
+# Paquets de l'ordinateur (Windows et Mac, node embarqué) : backend/scripts/package.ts.
+package:
+  extends: [.node, .release-tag]
+  stage: build
+  dependencies: []
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends zip unzip > /dev/null
+    - !reference [.node, before_script]
+  # Une plateforme par job : les deux zips ensemble dépassent la limite d'artefacts par défaut (100 Mo).
+  parallel:
+    matrix:
+      - PLATFORM: [windows, mac]
+  script:
+    - npm run package -- $PLATFORM
+  artifacts:
+    paths:
+      - dist/*.zip
+    expire_in: 1 week
+
+# APK release signé, version = tag. Clé : variables protégées et masquées, visibles seulement des tags protégés (v*).
+# Publie aussi l'entrée du « serveur Unowhy » (companion-X.Y.Z.json), lue par `npm run updates:add`.
+android-release:
+  extends: [.android, .release-tag]
+  stage: build
+  dependencies: []
+  script:
+    - test -n "$RELEASE_KEYSTORE_BASE64" -a -n "$RELEASE_KEYSTORE_PASSWORD"
+      || { echo "Clé de signature absente (variables RELEASE_KEYSTORE_*, tag protégé v*)"; exit 1; }
+    - VERSION=${CI_COMMIT_TAG#v}
+    - echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > /tmp/release.p12
+    - RELEASE_KEYSTORE=/tmp/release.p12 ./gradlew --no-daemon --console=plain assembleRelease -PappVersion=$VERSION
+    - mkdir -p dist && cp app/build/outputs/apk/release/app-release.apk dist/companion-$VERSION.apk
+    - $ANDROID_HOME/build-tools/36.0.0/apksigner verify --print-certs dist/companion-$VERSION.apk
+    - CODE=$($ANDROID_HOME/build-tools/36.0.0/aapt2 dump badging dist/companion-$VERSION.apk | sed -n "1s/.*versionCode='\([0-9]*\)'.*/\1/p")
+    - jq -n --arg v "$VERSION" --argjson c "$CODE" --arg f "companion-$VERSION.apk"
+      '{package:"com.unowhy.companion", label:"Companion", versionCode:$c, versionName:$v, file:$f}'
+      > dist/companion-$VERSION.json
+    - cat dist/companion-$VERSION.json
+  artifacts:
+    paths:
+      - dist/companion-*
+    expire_in: 1 week
+
+# Release GitLab : fichiers déposés dans le registre de paquets générique du projet, jeton du job.
+release:
+  extends: .release-tag
+  stage: release
+  image: registry.gitlab.com/gitlab-org/cli:v1.124.0@sha256:f6837b5aea075ca297281b554556d2fc4f8fb291ace6b48286790790dce622cd
+  needs: [package, android-release]
+  variables:
+    GLAB_ENABLE_CI_AUTOLOGIN: "true"
+  script:
+    - >-
+      glab release create "$CI_COMMIT_TAG" dist/* --use-package-registry --ref "$CI_COMMIT_SHA"
+      --name "Compagnon $CI_COMMIT_TAG"
+      --notes "Paquets de l'ordinateur (Windows, Mac) et APK de la tablette. Mise à jour de la tablette par le « serveur Unowhy » : docs/developpement.md, section Release."

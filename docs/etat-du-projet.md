@@ -94,7 +94,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 - **Maquette cliquable du pitch** (25/10, faite sur le PC) : tablette 4.2 + MacBook + écran en plus, 10 étapes onglet par onglet (Connexion, Accueil, Deck : Apps, Ouvertes, Média, Raccourcis, Discord seulement s'il est ouvert, Perso ; Assistant, Ordi, Focus avec Ne pas déranger, Caméra, Réglages), à projeter en partage d'écran si la démo en direct échoue ou pour la présentation. Artefact claude.ai du compte du PC, sources dans `docs/demo-hackathon/project/` (type Design : `Main.dc.html` + `canvas.json`) (déroulé de 10 min proposé : problème 1 min, démo 4 min, marché, offre et prix, time to market, demande au jury).
 
 - **Désactiver « Autoriser les installations »** sur la tablette (Réglages > code technicien). Activé pendant le développement, il laisse aussi le Play Store se mettre à jour.
-- APK release **non signé** (pas de `signingConfig`).
+- **Release sur tag** (26/10) : un tag `vX.Y.Z` construit les paquets de l'ordinateur et l'APK release signé, et publie une release GitLab ([developpement.md](developpement.md), section Release). Reste à faire une fois sur GitLab : créer la clé, les variables `RELEASE_KEYSTORE_*` et protéger les tags `v*` ; aucun tag poussé encore. Les tablettes en APK debug devront refaire le kiosque pour passer à l'APK signé (autre clé).
 - Préparation des tablettes en usine : réinitialisation hors ligne, device owner, langue, heure ([kiosque.md](kiosque.md)).
 - Deck Mac de départ : c'est un profil de développeur (VS Code, iTerm…), à revoir pour un client.
 - Bluetooth (enceinte, casque) impossible à appairer en kiosque.
@@ -132,3 +132,4 @@ Dofus Rétro (« Jouer » par un clic dans la fenêtre : perso, pas pour la dém
 | après f45797e | Ouvertes sur Mac : autres bureaux et plein écran, fenêtres triées par titre, triple toucher = plein écran |
 | après fb94e2d | Partage renommé « Depuis l'ordi » avec écran de choix expliqué, Caméra « Montrer sur l'ordi » |
 | après 00ee201 | tests Playwright des pages web du backend (`backend/e2e/`), job CI `e2e` |
+| après 12da92f | release sur tag `vX.Y.Z` : paquets et APK signé construits par la CI, release GitLab, `npm run updates:add` pour le « serveur Unowhy » |
