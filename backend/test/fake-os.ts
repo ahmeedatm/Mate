@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { checkOpenTarget } from "../src/open-guard.ts";
 import type { AudioChange, Display, Layout, MediaCommand, OpenAction, SystemCommand, WindowsInfo, WindowTarget } from "../src/screens.ts";
 
 /**
@@ -59,6 +60,11 @@ export const canMedia = isWindows;
 
 export type { AudioState, MediaCommand, SystemCommand } from "../src/screens.ts";
 
+// Comme src/os.ts : hors Mac et Windows, le pilotage répond 501.
+function unsupported(): never {
+  throw Object.assign(new Error("Pilotage disponible sur macOS et Windows seulement"), { statusCode: 501 });
+}
+
 const display: Display = { id: 1, label: "Écran", main: true, x: 0, y: 0, w: 1920, h: 1080 };
 
 export function computerName() {
@@ -66,6 +72,9 @@ export function computerName() {
 }
 
 export async function openTarget(target: string) {
+  if (!canControl) unsupported();
+  // Vraie garde (src/open-guard.ts) : un programme ou un script est refusé avant toute ouverture.
+  checkOpenTarget(target, isMac ? "mac" : "windows");
   record("openTarget", target);
 }
 
@@ -210,6 +219,7 @@ export async function placeWindow(app: string, opts: { window?: WindowTarget; di
 }
 
 export async function listOpenWindows() {
+  if (!canControl) unsupported();
   return { apps: [], displays: [display] };
 }
 
