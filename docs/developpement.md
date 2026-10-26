@@ -56,7 +56,7 @@ Ne jamais mettre de clé ou de jeton dans un fichier versionné, ni sur la table
 Puis :
 
 ```bash
-cd backend && npm install && npm run typecheck
+cd backend && npm install && npm run typecheck && npm test
 cd .. && ./gradlew assembleDebug
 ```
 
@@ -82,6 +82,23 @@ adb -s <série> install -r app/build/outputs/apk/debug/app-debug.apk   # un appa
 **Émulateur** `companion_api29` (Android 10, 1280×800, sans services Google) : l'ordinateur hôte y est `10.0.2.2` (« Saisir l'adresse »). La recherche WiFi ne traverse pas l'émulateur, son DNS peut être en panne (météo) et sa caméra plante. On teste sur la vraie tablette dès que possible : l'émulateur ne reflète pas les performances.
 
 **Captures de la tablette** : `adb exec-out screencap -p > capture.png`. Une capture noire veut dire que l'écran est éteint : l'appli est alors en pause et n'écoute plus l'ordinateur.
+
+## Branches, MR et CI
+
+`main` est protégée : on n'y pousse plus directement. Une branche par changement (`feat/…`, `fix/…`, `docs/…`, `ci/…`), puis une MR vers `main`. Elle se fusionne quand le pipeline est vert et les discussions résolues.
+
+Le pipeline (`.gitlab-ci.yml`, runner Linux) lance deux jobs en parallèle :
+
+| Job | Vérifie |
+|---|---|
+| `backend` | `npm run typecheck`, puis `npm test` : tests d'intégration (`backend/test/`), le vrai serveur démarre en `MODE=mock` avec un dossier de données vide et répond à de vraies requêtes HTTP |
+| `android` | tests JVM (`app/src/test/`), lint, APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
+
+Avant de pousser : `cd backend && npm run typecheck && npm test`, et `./gradlew testDebugUnitTest lintDebug`.
+
+Ce que la CI ne voit pas : le pilotage réel du Mac et de Windows (sur Linux, le deck répond 501), l'appli sur la tablette. Ils restent testés à la main (case « Testé sur » de la MR).
+
+Lint : les erreurs déjà présentes sont figées dans `app/lint-baseline.xml`, seules les nouvelles font échouer le job. Après en avoir corrigé, `./gradlew updateLintBaseline`.
 
 ## Mettre à jour les ordinateurs de test (installés par paquet)
 
