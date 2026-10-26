@@ -1,11 +1,11 @@
-﻿# Pilote Windows et lanceur recompilés sur Windows (job helper-windows, runner local-runner, ou à la main) :
+﻿# Pilote Windows et lanceur recompilés sur Windows (job helper-windows ou à la main) :
 # échoue si le C# ne compile pas, ou si src/win/UnowhyHelper.exe et src/win/UnowhyCompanion.exe ne sont plus ceux
 # que donnent les sources (C# modifié sans `npm run build:helper`, ou compilé avec un autre SDK que global.json).
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File backend\qa\build-helper-windows.ps1
 #
-# Le PC sert à d'autres tests : SDK .NET, paquets NuGet et réglages du SDK restent dans -Work (dossier du job),
-# rien n'est installé sur le poste ni ajouté au PATH.
+# SDK .NET : celui du PATH s'il a la version de global.json (image du job), sinon installé dans -Work. Paquets NuGet
+# et réglages du SDK restent aussi dans -Work : rien n'est installé sur le poste ni ajouté au PATH.
 # Windows PowerShell 5.1 ou PowerShell 7.
 param(
   [string] $Work = (Join-Path (Get-Location) ".dotnet-ci")
@@ -30,7 +30,12 @@ function Fail([string] $message) { Write-Host "ÉCHEC : $message" -ForegroundCol
 
 $version = (Get-Content (Join-Path $backend "global.json") -Raw | ConvertFrom-Json).sdk.version
 Step "SDK .NET $version"
-if (-not ((Test-Path $dotnet) -and (& $dotnet --list-sdks | Select-String -SimpleMatch "$version "))) {
+function HasSdk([string] $exe) {
+  return [bool]((Get-Command $exe -ErrorAction SilentlyContinue) -and (& $exe --list-sdks | Select-String -SimpleMatch "$version "))
+}
+if (HasSdk "dotnet") {
+  $dotnet = "dotnet"   # image du job ou SDK déjà installé
+} elseif (-not (HasSdk $dotnet)) {
   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
   New-Item -ItemType Directory -Force $Work | Out-Null
   $installer = Join-Path $Work "dotnet-install.ps1"
@@ -52,7 +57,7 @@ try {
   }
 
   Step "Exe du dépôt comparés aux sources"
-  git diff --stat --exit-code -- src/win/UnowhyHelper.exe src/win/UnowhyCompanion.exe
+  git -c safe.directory=* diff --stat --exit-code -- src/win/UnowhyHelper.exe src/win/UnowhyCompanion.exe
   if ($LASTEXITCODE) {
     Fail "exe du dépôt différents des sources : lancer npm run build:helper (dans backend/, SDK $version) et commiter les exe"
   }

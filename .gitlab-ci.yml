@@ -294,18 +294,17 @@ install-windows:
       junit: sanity-windows.xml
     expire_in: 1 week
 
-# Pilote et lanceur recompilés sur le même PC (sans session de bureau requise) : échoue si le C# ne compile pas
-# ou si les exe commités ne sont plus ceux des sources (backend/qa/build-helper-windows.ps1). SDK .NET de
-# backend/global.json installé dans .dotnet-ci/ du dossier du job, gardé d'un job à l'autre : rien sur le poste.
+# Pilote et lanceur recompilés sous Windows : échoue si le C# ne compile pas ou si les exe commités ne sont plus
+# ceux des sources (backend/qa/build-helper-windows.ps1). Runner partagé « HiSqool Windows » (Docker, Server Core,
+# sans bureau : suffit pour compiler) ; image au SDK exact de backend/global.json, à monter ensemble.
 helper-windows:
   extends: .zone-helper-windows
   stage: test
-  tags: [local-runner]
-  image: null
+  tags: [windows, docker]
+  image: mcr.microsoft.com/dotnet/sdk:8.0.427-windowsservercore-ltsc2019@sha256:2af66369a314ab0334ee8dfd6a67bc15485a51754087bc3bfc9427a35c84c0d8
   needs: []
   variables:
     GIT_DEPTH: 1
-    GIT_CLEAN_FLAGS: -ffdx -e .dotnet-ci/
   script:
     - '& backend\qa\build-helper-windows.ps1 -Work .dotnet-ci'
 
