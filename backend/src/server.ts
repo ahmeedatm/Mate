@@ -1,48 +1,28 @@
-import { createReadStream, existsSync } from "node:fs";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { createHash, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import { config } from "./config.ts";
-import {
-  addDeckApp, addDeckLink, deckLinks, findTile, homeFeatures, LINK_SUGGESTIONS, loadDeck, removeDeckApp, removeDeckLink, resetDeckApps,
-  appIconFile, runAction, tileIcon,
-} from "./deck.ts";
-import {
-  accessibility, appAudio, browserPage, browserTabs, isAppInCall, isAppRunning, listButtons, openAccessibility, canControl, focusWindow, getAudio, getDnd, launchApp, listApps, mediaControl, mediaSessions, mediaThumb, listDisplays, listOpenWindows, listShortcuts, listWindows, controlOpenWindow, openTarget, osName, placeWindow, setAudio, typeText, voiceState,
-} from "./os.ts";
-import type { Layout, OpenAction, WindowTarget } from "./screens.ts";
-import { keySchema, loadKeys, saveKey, SLOTS, type PersoKey } from "./perso.ts";
-import { confirmPairing, identity, lanAddresses, PairingError, pendingCode, requestPairing, startDiscovery } from "./pairing.ts";
-import { LOCAL_PAGE } from "./local-page.ts";
-import { listUpdates, updateFile } from "./updates.ts";
-import { docEntry, kindOf, listDocs, resolveDoc, savePhoto } from "./docs.ts";
-import { openMediaLink } from "./music.ts";
-import { calendarSources, dayRange, getEvents, invalidateCalendar, linkedCalendars, saveCalendarUrls, savedCalendarUrls, unlinkCalendar } from "./calendar.ts";
-import { addEvent, deleteEvent, startEventReminders, updateEvent, type EventInput } from "./events.ts";
-import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvider, loginUrl } from "./accounts.ts";
-import { autoJoinEnabled, joinMeeting, setAutoJoin, startAutoJoin } from "./meetings.ts";
-import { answerCall, declineCall, hangUp, startCallWatch } from "./calls.ts";
-import { focusDnd } from "./dnd.ts";
-import tabletRoutes from "./routes/tablet.ts";
-import callRoutes from "./routes/calls.ts";
-import taskRoutes from "./routes/tasks.ts";
-import calendarRoutes from "./routes/calendar.ts";
-import updateRoutes from "./routes/updates.ts";
-import docRoutes from "./routes/docs.ts";
+import { startCallWatch } from "./calls.ts";
+import { startEventReminders } from "./events.ts";
+import { setLogger } from "./log.ts";
+import { startAutoJoin } from "./meetings.ts";
+import { canControl, osName } from "./os.ts";
+import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
+import { sendToTablet } from "./tablet.ts";
+import { startReminders } from "./tasks.ts";
 import browserRoutes from "./routes/browser.ts";
+import calendarRoutes from "./routes/calendar.ts";
+import callRoutes from "./routes/calls.ts";
 import cameraRoutes from "./routes/camera.ts";
-import localRoutes from "./routes/local.ts";
-import windowRoutes from "./routes/windows.ts";
 import deckRoutes from "./routes/deck.ts";
+import docRoutes from "./routes/docs.ts";
+import localRoutes from "./routes/local.ts";
 import pairingRoutes from "./routes/pairing.ts";
 import systemRoutes from "./routes/system.ts";
-import { setLogger } from "./log.ts";
-import { addTask, deleteTask, listRecurring, listTasks, setTaskDone, startReminders, taskUrl } from "./tasks.ts";
-import { receiveTabs, type ExtensionReport } from "./browser-extension.ts";
-import { addViewer, CAMERA_STATUSES, cameraStatus, pushFrame, setCameraState, VIEWER_PAGE, type CameraStatus } from "./camera.ts";
-import { completeCommand, FOCUS_ACTIONS, MODES, NOISES, pollCommands, reportState, sendToTablet, tabletStatus, type TabletCommand } from "./tablet.ts";
+import tabletRoutes from "./routes/tablet.ts";
+import taskRoutes from "./routes/tasks.ts";
+import updateRoutes from "./routes/updates.ts";
+import windowRoutes from "./routes/windows.ts";
 
 // Ce serveur pilote l'ordinateur : hors loopback (USB + adb reverse), un jeton est obligatoire.
 if (!config.loopbackOnly && !config.token) {
@@ -108,22 +88,23 @@ app.addHook("preHandler", async (req, reply) => {
 // Images du visualiseur (POST /camera/frame).
 app.addContentTypeParser("image/jpeg", { parseAs: "buffer", bodyLimit: 2 * 1024 * 1024 }, (_req, body, done) => done(null, body));
 
-// --- Routes, par domaine (src/routes/)
+// --- Routes, une par domaine dans src/routes/ (les hooks ci-dessus valent pour toutes)
 
-app.register(tabletRoutes);
-app.register(callRoutes);
-app.register(taskRoutes);
-app.register(calendarRoutes);
-app.register(updateRoutes);
+app.register(pairingRoutes, { authorized });
+app.register(localRoutes);
+app.register(deckRoutes);
+app.register(windowRoutes);
+app.register(systemRoutes);
 app.register(docRoutes);
+app.register(updateRoutes);
 app.register(browserRoutes);
 app.register(cameraRoutes);
-app.register(localRoutes);
-app.register(windowRoutes);
-app.register(deckRoutes);
-app.register(pairingRoutes, { authorized });
-app.register(systemRoutes);
-// @@PLUGINS
+app.register(calendarRoutes);
+app.register(taskRoutes);
+app.register(callRoutes);
+app.register(tabletRoutes);
+
+// --- Tâches de fond
 
 // Rappel reçu dès que la tablette l'a affiché, même sans voix française : sinon il serait renvoyé chaque minute.
 const remind = async (text: string) => (await sendToTablet({ type: "message", text, speak: true, seconds: 120 })).received === true;
