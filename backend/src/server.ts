@@ -27,6 +27,7 @@ import { answerCall, declineCall, hangUp, startCallWatch } from "./calls.ts";
 import { focusDnd } from "./dnd.ts";
 import tabletRoutes from "./routes/tablet.ts";
 import callRoutes from "./routes/calls.ts";
+import taskRoutes from "./routes/tasks.ts";
 import { setLogger } from "./log.ts";
 import { addTask, deleteTask, listRecurring, listTasks, setTaskDone, startReminders, taskUrl } from "./tasks.ts";
 import { receiveTabs, type ExtensionReport } from "./browser-extension.ts";
@@ -101,6 +102,7 @@ app.addContentTypeParser("image/jpeg", { parseAs: "buffer", bodyLimit: 2 * 1024 
 
 app.register(tabletRoutes);
 app.register(callRoutes);
+app.register(taskRoutes);
 // @@PLUGINS
 
 /** `auth` : le jeton envoyé est le bon (la tablette sait s'il faut refaire l'appairage). */
@@ -877,48 +879,6 @@ app.put<{ Body: { enabled: boolean } }>(
     return { enabled: req.body.enabled };
   },
 );
-
-// --- Tâches (quotidiennes dans config/tasks.json, ponctuelles ajoutées par la tablette ou Claude)
-
-app.get<{ Querystring: { refresh?: string } }>("/tasks", async (req) => ({ tasks: await listTasks(req.query.refresh === "1") }));
-
-app.get("/tasks/recurring", async () => ({ tasks: await listRecurring() }));
-
-/** `days` : récurrente ces jours-là (1 = lundi) ; `remindAt` : rappel parlé à cette heure ("HH:MM"). */
-app.post<{ Body: { label: string; remindAt?: string; days?: number[] } }>(
-  "/tasks",
-  {
-    schema: {
-      body: {
-        type: "object",
-        required: ["label"],
-        properties: {
-          label: { type: "string", minLength: 1, maxLength: 200 },
-          remindAt: { type: "string", pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$" },
-          days: { type: "array", maxItems: 7, items: { type: "integer", minimum: 1, maximum: 7 } },
-        },
-      },
-    },
-  },
-  async (req) => addTask(req.body.label, { remindAt: req.body.remindAt, days: req.body.days }),
-);
-
-app.post<{ Params: { id: string }; Body: { done: boolean } }>(
-  "/tasks/:id/done",
-  { schema: { body: { type: "object", required: ["done"], properties: { done: { type: "boolean" } } } } },
-  async (req, reply) => ((await setTaskDone(req.params.id, req.body.done)) ? { ok: true } : reply.code(404).send({ error: "Tâche inconnue" })),
-);
-
-app.delete<{ Params: { id: string } }>("/tasks/:id", async (req, reply) =>
-  (await deleteTask(req.params.id)) ? { ok: true } : reply.code(404).send({ error: "Tâche inconnue (ou définie dans le fichier de l'ordinateur)" }),
-);
-
-app.post<{ Params: { id: string } }>("/tasks/:id/open", async (req, reply) => {
-  const url = await taskUrl(req.params.id);
-  if (!url) return reply.code(404).send({ error: "Pas de lien pour cette tâche" });
-  await runAction({ type: "url", url });
-  return { ok: true };
-});
 
 // Rappel reçu dès que la tablette l'a affiché, même sans voix française : sinon il serait renvoyé chaque minute.
 const remind = async (text: string) => (await sendToTablet({ type: "message", text, speak: true, seconds: 120 })).received === true;
