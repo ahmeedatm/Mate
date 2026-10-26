@@ -116,13 +116,14 @@ export async function runSanity(opts: { url: string; token: string; os?: Os }): 
       name: "deck et deck de départ filtré",
       run: async () => {
         const deck = await call("GET", "/deck");
-        if (!controlled()) return expectStatus(deck, 501, "/deck");
         expectStatus(deck, 200, "/deck");
         const pages: { title: string; apps: boolean; editable: boolean; tiles: { app: string | null }[] }[] = deck.json.pages;
         expect(
           pages.some((p) => p.editable && p.title === "Perso"),
           "page Perso absente",
         );
+        // Sans pilotage, le deck se lit mais ce qui touche à l'ordinateur répond 501.
+        if (!controlled()) return expectStatus(await call("GET", "/deck/catalog"), 501, "/deck/catalog");
         const catalog = await call("GET", "/deck/catalog");
         expectStatus(catalog, 200, "/deck/catalog");
         const installed = (catalog.json.apps as string[]).map((a) => a.toLowerCase());
