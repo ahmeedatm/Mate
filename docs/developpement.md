@@ -94,7 +94,7 @@ Le pipeline (`.gitlab-ci.yml`, runner Linux) lance quatre jobs en parallèle :
 | `backend` | `npm run lint` (format prettier, puis typecheck), puis `npm test` : tests d'intégration (`backend/test/`), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP |
 | `e2e` | pages web du backend dans Chromium (Playwright, `backend/e2e/`) : page locale (adresse, code d'appairage, lien ICS), visualiseur `/camera`, retours d'erreur de `/oauth/:provider/callback`. Même serveur que les tests d'intégration. Artefacts : `e2e-results/junit.xml` et traces des tests en échec |
 | `android` | style Kotlin (`ktlintCheck`), tests JVM (`app/src/test/`), lint Android, APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
-| `android-emulateur` | tests instrumentés (`app/src/androidTest/`, Espresso) sur un émulateur Android 10 sans services Google, 1280×800 à 160 dpi ; artefacts : rapport JUnit, capture de l'écran de bienvenue |
+| `android-emulateur` | tests instrumentés (`app/src/androidTest/`, Espresso) sur un émulateur Android 10 sans services Google, 1280×800 à 160 dpi ; dont le Deck contre un vrai backend Linux ; artefacts : rapport JUnit, journal du backend, capture de l'écran de bienvenue |
 
 Sur un tag `vX.Y.Z`, trois jobs de plus construisent et publient la release (section suivante).
 
@@ -128,17 +128,23 @@ docker run --rm -e CI=true -v "$PWD":/w -v /w/backend/node_modules -w /w/backend
 
 Le tag de l'image du job `e2e` suit la version exacte de `@playwright/test` (`backend/package.json`) : changer les deux ensemble (et le digest). Trace d'un échec : `npx playwright show-trace e2e-results/traces/<test>/trace.zip`.
 
-Ce que la CI ne voit pas : le pilotage réel du Mac et de Windows (sur Linux, le deck répond 501 ; `install-mac` ne teste que l'installation), l'appli sur la vraie tablette (perfs, kiosque, micro, caméra). Ils restent testés à la main (case « Testé sur » de la MR).
+Ce que la CI ne voit pas : le pilotage réel du Mac et de Windows (sur Linux, le deck s'affiche mais toucher une touche répond 501 ; `install-mac` ne teste que l'installation), l'appli sur la vraie tablette (perfs, kiosque, micro, caméra). Ils restent testés à la main (case « Testé sur » de la MR).
 
 ### Tests instrumentés (émulateur)
 
-Espresso, dans `app/src/androidTest/` : le test tourne dans l'appli, peut effacer ses préférences avant de la lancer, et attend seul que l'écran soit stable. Premier parcours : `WelcomeTest` (lancement sans ordinateur, écran de bienvenue, « Plus tard », Deck → « Connecter » ramène à la bienvenue). Noms de tests en camelCase : D8 refuse les espaces dans les noms de méthode sous API 30.
+Espresso, dans `app/src/androidTest/` : le test tourne dans l'appli, peut effacer ses préférences avant de la lancer, et attend seul que l'écran soit stable. Parcours : `WelcomeTest` (lancement sans ordinateur, écran de bienvenue, « Plus tard », Deck → « Connecter » ramène à la bienvenue), `DeckTest` (ci-dessous). Noms de tests en camelCase : D8 refuse les espaces dans les noms de méthode sous API 30.
 
 `scripts/test-android.sh [--window]` fait tout : AVD dédié `companion_test_api29` (port 5580, effacé à chaque lancement ; `companion_api29` n'est pas touché), compilation, installation, tests, capture `app/build/test-android/bienvenue.png`, arrêt de l'émulateur. Sortie non nulle si un test échoue.
 
 - **Mac Apple Silicon** : émulateur natif (Hypervisor.framework) et image `android-29;default;arm64-v8a`, téléchargés au premier lancement (~800 Mo, empreintes vérifiées) dans `~/Library/Android/sdk`. Sans JDK, les APK sont compilés dans l'image Docker de la CI et les tests lancés par `am instrument`. Avec un JDK : `./gradlew connectedDebugAndroidTest`. L'émulateur ne peut pas tourner dans Docker sur le Mac : pas de KVM (pas de virtualisation imbriquée sur M1).
 - **CI** : même script, image `x86_64` par `sdkmanager`. Le runner Kubernetes partagé expose `/dev/kvm` (pod privilégié, vérifié le 26/10/2026 : `emulator -accel-check` → « KVM is installed and usable », boot en ~25 s). Si ce runner change de configuration, le job échoue avec « /dev/kvm absent » : il faudra alors un runner dédié avec KVM, taggé.
 - Sur le WiFi du bureau, l'émulateur local peut trouver un vrai compagnon (recherche UDP) : les tests n'en dépendent pas.
+- `EMULATOR_PORT=5590 scripts/test-android.sh` : second lancement en parallèle (autre worktree), avec son AVD et son cache Gradle. Le backend du Deck (ports 3910, 3911) reste unique : un seul `DeckTest` à la fois.
+
+**Deck contre un vrai backend** (`DeckTest`) : le script démarre `backend/test/deck-emulateur.ts` pendant le boot de l'émulateur. Vrai serveur, deck de test `backend/test/deck-emulateur.json` (`DECK_FILE`), jeton `jeton-de-test`, données dans un dossier temporaire ; l'émulateur le joint sur `10.0.2.2:3910`. Le port 3911 sert aux tests : `POST /reset` (touches perso vides), `/stop` et `/start` (perte du backend), `GET /runs` (tuiles reçues par le backend, lues dans son journal). Les tests appairent sans dialogue : ils lisent `/health` et enregistrent l'ordinateur (`Computers.save`) avant de lancer l'appli. Scénarios : onglets et touches, toucher et balayage, refus 501 affiché en français, touche perso créée avec l'éditeur puis relue après relance, backend arrêté puis revenu.
+
+- Le backend tourne **toujours sous Linux** : toucher une touche y répond 501, rien n'est piloté. `deck-emulateur.ts` refuse de démarrer sur macOS et Windows. Sur Mac, le script le lance dans Docker (`node:22.22-bookworm-slim`, Docker Desktop requis) ; en CI, directement, avec le node de nodejs.org (version de `backend/scripts/package.ts`, somme SHA-256 vérifiée) si l'image n'en a pas.
+- Journal du backend : `app/build/test-android/backend.log`. Le lancer seul (Linux) : `cd backend && node --import tsx test/deck-emulateur.ts`.
 
 Lint : les erreurs déjà présentes sont figées dans `app/lint-baseline.xml`, seules les nouvelles font échouer le job. Après en avoir corrigé, `./gradlew updateLintBaseline`.
 
