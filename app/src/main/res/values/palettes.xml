@@ -22,6 +22,7 @@
         <item name="c_ko_soft">#29FF6B6B</item>
         <item name="c_warn">#FFF5B85C</item>
         <item name="c_paper">#FFFFFFFF</item>
+        <item name="c_scrim">#B3000000</item>
         <item name="c_hue_orange">#FFFFA05C</item>
         <item name="c_hue_green">#FF5DD39E</item>
         <item name="c_hue_cyan">#FF4FD1E8</item>
@@ -51,6 +52,7 @@
         <item name="c_ko_soft">#24E5484D</item>
         <item name="c_warn">#FFD3841A</item>
         <item name="c_paper">#FFFFFFFF</item>
+        <item name="c_scrim">#B3000000</item>
         <item name="c_hue_orange">#FFE8710A</item>
         <item name="c_hue_green">#FF1E9E5A</item>
         <item name="c_hue_cyan">#FF0897B4</item>
@@ -80,6 +82,7 @@
         <item name="c_ko_soft">#2EFF4D8D</item>
         <item name="c_warn">#FFFFC94D</item>
         <item name="c_paper">#FFFFFFFF</item>
+        <item name="c_scrim">#B3000000</item>
         <item name="c_hue_orange">#FFFF9F45</item>
         <item name="c_hue_green">#FF3DF5B0</item>
         <item name="c_hue_cyan">#FF35E0FF</item>
@@ -109,6 +112,7 @@
         <item name="c_ko_soft">#29FF6B5B</item>
         <item name="c_warn">#FFFFC857</item>
         <item name="c_paper">#FFFFFFFF</item>
+        <item name="c_scrim">#B3000000</item>
         <item name="c_hue_orange">#FFFFA94D</item>
         <item name="c_hue_green">#FFA8D672</item>
         <item name="c_hue_cyan">#FF6CC7C0</item>

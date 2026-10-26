@@ -194,8 +194,6 @@ class SettingsFragment : Fragment() {
             .showImmersive()
     }
 
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
-
     /** L'option vit sur l'ordinateur : c'est lui qui ouvre Teams, même tablette en veille. */
     /** Carte Réunions Teams : seulement avec un ordinateur qui a Teams (sinon l'option ne sert à rien). */
     private fun loadAutoJoin() {
@@ -217,7 +215,7 @@ class SettingsFragment : Fragment() {
             } catch (e: Exception) {
                 // Ordinateur injoignable : la carte reste telle quelle (affichée si elle l'était).
                 autoJoin.isEnabled = false
-                autoJoinHint.text = requireContext().errorText(e)
+                autoJoinHint.text = errorText(e)
             }
         }
     }
@@ -236,7 +234,7 @@ class SettingsFragment : Fragment() {
                 autoJoinHint.setText(R.string.autojoin_hint)
             } catch (e: Exception) {
                 showAutoJoin(!enabled)
-                autoJoinHint.text = requireContext().errorText(e)
+                autoJoinHint.text = errorText(e)
             }
         }
     }
@@ -357,7 +355,7 @@ class SettingsFragment : Fragment() {
                 updatesStatus.setText(if (found.isEmpty()) R.string.updates_none else R.string.updates_hint)
                 for ((update, info) in found) updates.addView(updateRow(update, info))
             } catch (e: Exception) {
-                updatesStatus.text = requireContext().errorText(e)
+                updatesStatus.text = errorText(e)
             }
         }
     }
@@ -414,6 +412,8 @@ class SettingsFragment : Fragment() {
         cancel.visibility = View.VISIBLE
         val started = android.os.SystemClock.elapsedRealtime()
         // Le fragment peut disparaître pendant l'installation : la portée de l'activité la mène à son terme.
+        // Elle ne touche alors ni au fragment (plus de contexte) ni à ses vues : `ctx` pour les textes, `showing()` pour les vues.
+        val showing = { isAdded && view != null }
         val job = main.lifecycleScope.launch {
             try {
                 Updater.install(ctx, update, progress = { percent ->
@@ -426,29 +426,29 @@ class SettingsFragment : Fragment() {
                             bar.progress = percent
                             button.text = ctx.getString(R.string.updates_downloading, percent)
                             // Temps restant d'après la vitesse mesurée depuis le début (affiché à partir de 3 %).
-                            if (percent >= 3 && view != null) {
+                            if (percent >= 3 && showing()) {
                                 val elapsed = android.os.SystemClock.elapsedRealtime() - started
-                                updatesStatus.text = getString(R.string.updates_eta, duration(elapsed * (100 - percent) / percent))
+                                updatesStatus.text = ctx.getString(R.string.updates_eta, duration(elapsed * (100 - percent) / percent))
                             }
                         }
                     }
                 }, committed = {
                     cancel.post {
                         cancel.visibility = View.GONE
-                        if (view != null) updatesStatus.text = getString(R.string.updates_committed, installMinutes(update))
+                        if (showing()) updatesStatus.text = ctx.getString(R.string.updates_committed, installMinutes(update))
                     }
                 })
                 showResult(button, bar, ok = true)
-                if (view != null) updatesStatus.setText(R.string.updates_hint)
+                if (showing()) updatesStatus.setText(R.string.updates_hint)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // Annulé : retour à l'état de départ, rien d'installé.
                 bar.visibility = View.GONE
                 button.isEnabled = true
                 button.setText(R.string.updates_install)
-                if (view != null) updatesStatus.setText(R.string.updates_cancelled)
+                if (showing()) updatesStatus.setText(R.string.updates_cancelled)
             } catch (e: Exception) {
                 showResult(button, bar, ok = false)
-                if (view != null) updatesStatus.text = requireContext().errorText(e)
+                if (showing()) updatesStatus.text = ctx.errorText(e)
             } finally {
                 cancel.visibility = View.GONE
                 installing = false

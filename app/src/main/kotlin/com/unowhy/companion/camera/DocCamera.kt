@@ -19,6 +19,7 @@ import android.util.Log
 import android.util.Range
 import android.util.Size
 import android.view.Surface
+import com.unowhy.companion.R
 import java.io.ByteArrayOutputStream
 
 /**
@@ -36,6 +37,7 @@ class DocCamera(
     private val onFrame: (ByteArray) -> Unit,
     private val onFailure: (String) -> Unit,
 ) {
+    private val appContext = context.applicationContext
     private val manager = context.getSystemService(CameraManager::class.java)
     private val thread = HandlerThread("doc-camera").apply { start() }
     private val handler = Handler(thread.looper)
@@ -72,7 +74,7 @@ class DocCamera(
     /** Ouvre la caméra ; l'aperçu s'affiche sur [preview]. La permission CAMERA doit être accordée. */
     @SuppressLint("MissingPermission")
     fun open(preview: SurfaceTexture) {
-        val id = cameraId ?: return onFailure("Pas de caméra arrière")
+        val id = cameraId ?: return onFailure(appContext.getString(R.string.camera_unavailable))
         handler.post {
             if (closed) return@post
             preview.setDefaultBufferSize(STREAM.width, STREAM.height)
@@ -95,12 +97,12 @@ class DocCamera(
                     override fun onDisconnected(camera: CameraDevice) {
                         camera.close()
                         device = null
-                        onFailure("Caméra prise par une autre appli")
+                        onFailure(appContext.getString(R.string.camera_busy))
                     }
                     override fun onError(camera: CameraDevice, error: Int) {
                         camera.close()
                         device = null
-                        onFailure("Caméra indisponible (erreur $error)")
+                        onFailure(appContext.getString(R.string.camera_error, error))
                     }
                 }, handler)
             } catch (e: Exception) {
@@ -169,7 +171,7 @@ class DocCamera(
                     session = created
                     startPreview()
                 }
-                override fun onConfigureFailed(failed: CameraCaptureSession) = onFailure("Configuration de la caméra refusée")
+                override fun onConfigureFailed(failed: CameraCaptureSession) = onFailure(appContext.getString(R.string.camera_config_refused))
             }, handler)
         } catch (e: Exception) {
             fail(e)
@@ -179,7 +181,7 @@ class DocCamera(
     /** Détail technique dans le journal, phrase simple à l'écran. */
     private fun fail(e: Exception) {
         Log.w("DocCamera", "Caméra", e)
-        onFailure("Caméra indisponible : quitte le mode Caméra et reviens")
+        onFailure(appContext.getString(R.string.camera_failed))
     }
 
     private fun startPreview() {

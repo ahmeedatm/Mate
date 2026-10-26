@@ -92,14 +92,14 @@ class WifiPicker(private val activity: Activity, private val scope: CoroutineSco
         row.setOnClickListener { onClick() }
         // Appui long sur un réseau enregistré : l'oublier (mot de passe changé, ancien réseau).
         if (network.saved) row.setOnLongClickListener { forget(network.ssid); true }
-        (row.layoutParams as? LinearLayout.LayoutParams)?.topMargin = (8 * context.resources.displayMetrics.density).toInt()
+        (row.layoutParams as? LinearLayout.LayoutParams)?.topMargin = context.dp(8)
         return row
     }
 
     private fun askPassword(network: Wifi.Network) {
         val form = form()
         form.message.text = context.getString(R.string.wifi_password_for, network.ssid)
-        val password = input(form.body, R.string.wifi_password, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
+        val password = context.inputField(form.body, R.string.wifi_password, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
         showPasswordToggle(form.body, password)
         val dialog = AlertDialog.Builder(context)
             .setTitle(network.ssid)
@@ -125,9 +125,9 @@ class WifiPicker(private val activity: Activity, private val scope: CoroutineSco
     private fun askHidden() {
         val form = form()
         form.message.setText(R.string.wifi_other_hint)
-        val name = input(form.body, R.string.wifi_name, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS)
+        val name = context.inputField(form.body, R.string.wifi_name, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS)
         name.imeOptions = EditorInfo.IME_ACTION_NEXT
-        val password = input(form.body, R.string.wifi_password_optional, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
+        val password = context.inputField(form.body, R.string.wifi_password_optional, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
         showPasswordToggle(form.body, password)
         val dialog = AlertDialog.Builder(context)
             .setTitle(R.string.wifi_other)
@@ -189,18 +189,6 @@ class WifiPicker(private val activity: Activity, private val scope: CoroutineSco
     private fun form(): Form {
         val root = LayoutInflater.from(context).inflate(R.layout.view_dialog_form, null)
         return Form(root, root.findViewById(R.id.dialog_body), root.findViewById(R.id.dialog_message))
-    }
-
-    /** Champ gonflé depuis item_input.xml (un EditText construit avec un style perd focus et curseur). */
-    private fun input(parent: LinearLayout, hint: Int, type: Int): EditText {
-        val input = LayoutInflater.from(context).inflate(R.layout.item_input, parent, false) as EditText
-        input.setHint(hint)
-        input.inputType = type
-        input.imeOptions = EditorInfo.IME_ACTION_DONE
-        parent.addView(input, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = (16 * context.resources.displayMetrics.density).toInt()
-        })
-        return input
     }
 
     /** Mot de passe lisible sur demande : une clé WiFi se tape mal à l'aveugle. */

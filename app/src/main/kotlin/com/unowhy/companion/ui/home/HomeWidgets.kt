@@ -1,5 +1,6 @@
 package com.unowhy.companion.ui.home
 
+import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.themeColor
 import android.content.Context
 import android.graphics.Typeface
@@ -70,9 +71,8 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     open fun setActive(active: Boolean) = Unit
     open val hasSettings: Boolean get() = false
     open fun showSettings() = Unit
-
-    protected fun dp(value: Int) = (value * context.resources.displayMetrics.density).toInt()
     protected fun color(id: Int) = themeColor(context, id)
+    protected fun dp(value: Int) = context.dp(value)
 
     /** Carte de fond commune (même style que les cartes de l'application). */
     protected fun <T : View> T.asCard(padding: Int = 20): T = apply {

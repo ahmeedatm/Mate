@@ -2,6 +2,7 @@ package com.unowhy.companion
 
 import com.unowhy.companion.ui.AppTheme
 import com.unowhy.companion.ui.Look
+import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.themeColor
 import android.graphics.Rect
 import android.os.Bundle
@@ -254,7 +255,7 @@ class MainActivity : AppCompatActivity() {
             )
         }
         content.viewTreeObserver.addOnGlobalLayoutListener {
-            val keyboard = content.height in 1 until window.decorView.height - (150 * resources.displayMetrics.density).toInt()
+            val keyboard = content.height in 1 until window.decorView.height - dp(150)
             val visibility = if (keyboard) View.GONE else View.VISIBLE
             if (rail.visibility != visibility) rail.visibility = visibility
         }

@@ -2,8 +2,11 @@ package com.unowhy.companion.ui
 
 import android.content.Context
 import android.util.Log
+import android.widget.Toast
+import androidx.fragment.app.Fragment
 import com.unowhy.companion.Computers
 import com.unowhy.companion.R
+import com.unowhy.companion.UserFacingException
 import com.unowhy.companion.net.BackendClient
 import org.json.JSONException
 import java.io.IOException
@@ -12,8 +15,11 @@ import java.util.concurrent.CancellationException
 /**
  * Phrase à afficher pour une erreur : jamais de texte technique (anglais, nom d'exception) à l'écran,
  * le détail va dans le journal. Les messages de l'ordinateur sont déjà rédigés pour la tablette (server.ts).
+ *
+ * À appeler dans un `catch` de coroutine : l'annulation (vue ou fragment retiré) est relancée, pas affichée.
  */
 fun Context.errorText(e: Throwable?): String {
+    if (e is CancellationException) throw e
     Log.w("Companion", "Erreur affichée", e)
     val computer = Computers.active(this)
     return when (e) {
@@ -29,10 +35,20 @@ fun Context.errorText(e: Throwable?): String {
             if (computer == null) getString(R.string.error_no_computer)
             else getString(R.string.error_unreachable, computer.name)
         is JSONException -> getString(R.string.error_bad_reply)
-        // Annulation d'une coroutine (« Job was cancelled ») ou la nôtre (« Téléchargement annulé »).
-        is CancellationException -> e.message?.takeUnless { "cancel" in it } ?: getString(R.string.error_cancelled)
-        // Nos propres refus (mises à jour, WiFi) sont écrits en français.
-        is IllegalStateException, is SecurityException -> e.message?.takeIf { it.isNotBlank() } ?: getString(R.string.error_generic)
+        // Nos propres refus (mises à jour, WiFi) : phrase de strings.xml.
+        is UserFacingException -> getString(e.res, *e.args)
         else -> getString(R.string.error_generic)
     }
+}
+
+/** Comme [Context.errorText] pour un fragment : l'annulation est relancée avant de toucher au contexte, qui n'existe plus si le fragment est retiré. */
+fun Fragment.errorText(e: Throwable?): String {
+    if (e is CancellationException) throw e
+    return requireContext().errorText(e)
+}
+
+/** Toast d'erreur d'un fragment. Le texte est calculé d'abord : l'annulation est relancée avant tout accès au contexte. */
+fun Fragment.toastError(e: Throwable?) {
+    val text = errorText(e)
+    Toast.makeText(requireContext(), text, Toast.LENGTH_LONG).show()
 }

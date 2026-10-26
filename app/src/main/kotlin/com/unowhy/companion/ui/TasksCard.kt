@@ -93,7 +93,7 @@ class TasksCard @JvmOverloads constructor(
         val tasks = client().recurringTasks()
         val box = LinearLayout(context).apply {
             orientation = VERTICAL
-            val pad = (24 * resources.displayMetrics.density).toInt()
+            val pad = dp(24)
             setPadding(pad, pad / 3, pad, 0)
         }
         val dialog = AlertDialog.Builder(context)

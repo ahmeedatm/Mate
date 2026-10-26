@@ -73,7 +73,7 @@ class BrowserTabsDialog(
             },
         ).joinToString(" · ")
         row.setOnClickListener { onClick() }
-        (row.layoutParams as? LinearLayout.LayoutParams)?.topMargin = (8 * context.resources.displayMetrics.density).toInt()
+        (row.layoutParams as? LinearLayout.LayoutParams)?.topMargin = context.dp(8)
         return row
     }
 }

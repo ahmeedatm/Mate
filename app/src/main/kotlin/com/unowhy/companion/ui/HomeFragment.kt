@@ -208,7 +208,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             events = days.events
             calendarNote = days.error ?: if (days.source == "mock") getString(R.string.calendar_mock) else ""
         } catch (e: Exception) {
-            calendarNote = requireContext().errorText(e)
+            calendarNote = errorText(e)
         }
     }
 
@@ -271,7 +271,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
                 waitingLink = true
                 main?.showBanner(getString(R.string.agenda_setup_opened), 8)
             } catch (e: Exception) {
-                main?.showBanner(requireContext().errorText(e), 6)
+                main?.showBanner(errorText(e), 6)
             }
         }
     }
@@ -485,8 +485,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
         dialog.showImmersive()
     }
-
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 
     private companion object {
         /** Aujourd'hui et les 7 jours suivants : « mardi soir » se voit dès aujourd'hui. */

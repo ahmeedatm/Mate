@@ -106,7 +106,7 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
             row.findViewById<TextView>(R.id.window_meta).text =
                 listOfNotNull(ComputerAdder.osLabel(context, c.os), context.getString(R.string.welcome_tap)).joinToString(" · ")
             row.setOnClickListener { adder.pair(c.url, c.name) }
-            (row.layoutParams as? LinearLayout.LayoutParams)?.topMargin = (8 * resources.displayMetrics.density).toInt()
+            (row.layoutParams as? LinearLayout.LayoutParams)?.topMargin = dp(8)
             found.addView(row)
         }
         // Un ordinateur répond : le logiciel y est installé.

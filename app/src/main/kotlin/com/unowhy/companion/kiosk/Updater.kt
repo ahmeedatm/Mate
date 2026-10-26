@@ -9,8 +9,11 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.unowhy.companion.Prefs
+import com.unowhy.companion.R
+import com.unowhy.companion.UserFacingException
 import com.unowhy.companion.net.AppUpdate
 import com.unowhy.companion.net.BackendClient
 import kotlinx.coroutines.CancellationException
@@ -48,17 +51,17 @@ object Updater {
      * `committed` : le fichier est confié à Android, on ne peut plus annuler. Annulable (coroutine) jusque-là.
      */
     suspend fun install(context: Context, update: AppUpdate, progress: (Int) -> Unit, committed: () -> Unit = {}) {
-        if (!Kiosk.isDeviceOwner(context)) throw IllegalStateException("Mises à jour possibles seulement quand la tablette est en mode kiosque")
+        if (!Kiosk.isDeviceOwner(context)) throw UserFacingException(R.string.update_needs_kiosk)
         val app = context.applicationContext
         val file = File(app.cacheDir, "updates").apply { mkdirs() }.resolve("update.apk")
         try {
             // Le téléchargement est une boucle bloquante : l'annulation y est vérifiée à chaque pour cent.
             val job = currentCoroutineContext()[Job]
             val sha256 = BackendClient(app).downloadUpdate(update, file) { percent ->
-                if (job?.isActive == false) throw CancellationException("Téléchargement annulé")
+                if (job?.isActive == false) throw CancellationException("Download cancelled")
                 progress(percent)
             }
-            if (!sha256.equals(update.sha256, ignoreCase = true)) throw SecurityException("Fichier abîmé ou modifié : empreinte différente, installation annulée")
+            if (!sha256.equals(update.sha256, ignoreCase = true)) throw UserFacingException(R.string.update_file_corrupt)
             // Le blocage des installations s'applique aussi au device owner : levé le temps de l'installation.
             Kiosk.lockApps(app, false)
             try {
@@ -96,7 +99,7 @@ object Updater {
                         // Mutable : l'installateur y ajoute le résultat.
                         val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
                         val pending = PendingIntent.getBroadcast(context, id, Intent(action).setPackage(context.packageName), flags)
-                        currentCoroutineContext()[Job]?.let { if (!it.isActive) throw CancellationException("Installation annulée") }
+                        currentCoroutineContext()[Job]?.let { if (!it.isActive) throw CancellationException("Install cancelled") }
                         session.commit(pending.intentSender)
                     }
                 }
@@ -112,12 +115,15 @@ object Updater {
             if (intent == null) {
                 val info = installed(context, pkg)
                 if (info != null && versionCode(info) >= update.versionCode) return
-                throw IllegalStateException("Android n'a pas fini l'installation : réessaie plus tard")
+                throw UserFacingException(R.string.update_unfinished)
             }
             when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
                 PackageInstaller.STATUS_SUCCESS -> Unit
-                PackageInstaller.STATUS_PENDING_USER_ACTION -> throw IllegalStateException("Android demande une confirmation : installation annulée")
-                else -> throw IllegalStateException(intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "Échec de l'installation ($status)")
+                PackageInstaller.STATUS_PENDING_USER_ACTION -> throw UserFacingException(R.string.update_needs_confirmation)
+                else -> {
+                    Log.w("Updater", "Installation refusée ($status) : ${intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)}")
+                    throw UserFacingException(R.string.update_install_failed, status)
+                }
             }
         } finally {
             context.unregisterReceiver(receiver)

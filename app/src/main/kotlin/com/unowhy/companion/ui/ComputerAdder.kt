@@ -9,7 +9,6 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
-import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -73,7 +72,7 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
     fun manual() {
         val form = form()
         form.message.setText(R.string.computer_manual_hint)
-        val input = input(form.body, R.string.computer_address_hint, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
+        val input = context.inputField(form.body, R.string.computer_address_hint, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
         val dialog = AlertDialog.Builder(context)
             .setTitle(R.string.computer_add_manual)
             .setView(form.root)
@@ -108,7 +107,7 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
     /** Demande un code à l'ordinateur (il l'affiche), puis l'envoie : la réponse contient le jeton. */
     fun pair(url: String, name: String) {
         val form = form()
-        val input = input(form.body, R.string.computer_code_hint, InputType.TYPE_CLASS_NUMBER).apply {
+        val input = context.inputField(form.body, R.string.computer_code_hint, InputType.TYPE_CLASS_NUMBER).apply {
             textSize = 30f
             letterSpacing = 0.3f
             gravity = Gravity.CENTER
@@ -182,7 +181,7 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
     fun rename(computer: Computer, onRenamed: () -> Unit) {
         val form = form()
         form.message.visibility = View.GONE
-        val input = input(form.body, R.string.computer_name_hint, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)
+        val input = context.inputField(form.body, R.string.computer_name_hint, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)
         input.setText(computer.name)
         input.setSelectAllOnFocus(true)
         val dialog = AlertDialog.Builder(context)
@@ -220,24 +219,12 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
         return Form(root, root.findViewById(R.id.dialog_body), root.findViewById(R.id.dialog_message))
     }
 
-    /** Champ gonflé depuis item_input.xml (un EditText construit avec un style perd focus et curseur). */
-    private fun input(parent: LinearLayout, hint: Int, type: Int): EditText {
-        val input = LayoutInflater.from(context).inflate(R.layout.item_input, parent, false) as EditText
-        input.setHint(hint)
-        input.inputType = type
-        input.imeOptions = EditorInfo.IME_ACTION_DONE
-        parent.addView(input, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = (16 * context.resources.displayMetrics.density).toInt()
-        })
-        return input
-    }
-
     private fun row(parent: LinearLayout, title: String, meta: String, onClick: () -> Unit): View {
         val row = LayoutInflater.from(context).inflate(R.layout.item_window, parent, false)
         row.findViewById<TextView>(R.id.window_title).text = title
         row.findViewById<TextView>(R.id.window_meta).text = meta
         row.setOnClickListener { onClick() }
-        (row.layoutParams as? LinearLayout.LayoutParams)?.topMargin = (8 * context.resources.displayMetrics.density).toInt()
+        (row.layoutParams as? LinearLayout.LayoutParams)?.topMargin = context.dp(8)
         return row
     }
 

@@ -229,8 +229,6 @@ class ScreenMap @JvmOverloads constructor(
 
     private fun color(res: Int) = themeColor(context, res)
 
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
-
     private companion object {
         /** Part de la largeur (ou de la hauteur, en haut) qui déclenche une moitié d'écran ou l'agrandissement. */
         const val EDGE = 0.22f

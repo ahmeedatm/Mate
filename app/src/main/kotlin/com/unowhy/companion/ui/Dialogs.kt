@@ -1,13 +1,21 @@
 package com.unowhy.companion.ui
 
 import android.app.Dialog
+import android.content.Context
 import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
 import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.unowhy.companion.R
 
 /**
  * Affiche une boîte de dialogue de saisie en haut de l'écran : le clavier occupe la moitié basse de la tablette,
@@ -18,7 +26,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 fun AlertDialog.showForTyping(input: EditText?, keyboard: Boolean = true) {
     window?.apply {
         setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL)
-        attributes = attributes.apply { y = (24 * context.resources.displayMetrics.density).toInt() }
+        attributes = attributes.apply { y = context.dp(24) }
         val state = if (keyboard) WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE else WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
         setSoftInputMode(state or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
     }
@@ -54,3 +62,27 @@ fun <T : Dialog> T.showImmersive(): T {
 }
 
 fun AlertDialog.Builder.showImmersive(): AlertDialog = create().showImmersive()
+
+/** Ferme le clavier et retire le focus du champ en cours. */
+fun View.dismissKeyboard() {
+    context.getSystemService(InputMethodManager::class.java).hideSoftInputFromWindow(windowToken, 0)
+    requestFocus()
+}
+
+/** Affiche une erreur dans une ligne d'état (texte de [errorText]). */
+fun TextView.showError(e: Throwable) {
+    text = context.errorText(e)
+    visibility = View.VISIBLE
+}
+
+/** Champ gonflé depuis item_input.xml (un EditText construit avec un style perd focus et curseur), ajouté à `parent`. */
+fun Context.inputField(parent: LinearLayout, hint: Int, type: Int): EditText {
+    val input = LayoutInflater.from(this).inflate(R.layout.item_input, parent, false) as EditText
+    input.setHint(hint)
+    input.inputType = type
+    input.imeOptions = EditorInfo.IME_ACTION_DONE
+    parent.addView(input, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        topMargin = dp(16)
+    })
+    return input
+}

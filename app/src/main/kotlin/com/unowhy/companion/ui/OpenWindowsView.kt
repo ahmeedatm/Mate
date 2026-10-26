@@ -202,8 +202,6 @@ class OpenWindowsView @JvmOverloads constructor(
 
     private fun color(res: Int) = themeColor(context, res)
 
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
-
     private companion object {
         /** La liste du Mac prend près de 2 s à lire (Accessibilité) : pas plus souvent. */
         const val POLL_MS = 5_000L

@@ -110,8 +110,6 @@
         <item name="android:letterSpacing">0.1</item>
     </style>
 
-    <style name="SectionTitle" parent="CardTitle" />
-
     <!-- Écran de bienvenue : numéro, titre et texte de chaque étape. -->
     <style name="WelcomeStep">
         <item name="android:layout_width">44dp</item>
