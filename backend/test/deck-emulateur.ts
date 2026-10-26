@@ -1,7 +1,7 @@
 /**
  * Backend réel des tests du Deck sur émulateur (app/src/androidTest/.../DeckTest.kt), lancé par scripts/test-android.sh.
  * Deck de test (deck-emulateur.json), jeton connu, données dans un dossier temporaire.
- * Port 3910 : le backend. Port 3911 : pilotage par les tests (arrêt, redémarrage, touches reçues par le backend).
+ * DECK_PORT (3910) : le backend. DECK_CONTROL_PORT (3911) : pilotage par les tests (arrêt, redémarrage, touches reçues par le backend).
  * Pilotage simulé en système non pilotable (test/fake-os.ts, `os: "other"`) : toucher une touche répond 501 comme
  * sous Linux, et rien n'agit sur la machine, quel que soit son système.
  */
@@ -12,8 +12,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { startServer, type TestServer } from "./server.ts";
 
-const PORT = 3910;
-const CONTROL_PORT = 3911;
+// Ports choisis par scripts/test-android.sh (libres à chaque lancement), 3910 et 3911 lancé à la main.
+const PORT = Number(process.env.DECK_PORT || 3910);
+const CONTROL_PORT = Number(process.env.DECK_CONTROL_PORT || 3911);
 // L'émulateur joint la boucle locale de l'ordinateur hôte par 10.0.2.2.
 const host = "127.0.0.1";
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-deck-"));
