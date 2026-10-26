@@ -91,7 +91,7 @@ Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/upda
 
 | Où | Quoi |
 |---|---|
-| `MainActivity.kt` | barre latérale, modes, clavier, rappel Eau, changement d'ordinateur |
+| `MainActivity.kt` | câblage des modes (`Mode.kt`), panneau document, changement d'ordinateur ; barre latérale `ui/Rail`, clavier `ui/KeyboardControl`, bandeau `ui/Banner`, rappels Eau et batterie `ui/TabletAlerts`, Ne pas déranger `focus/FocusDnd`, canal `remote/RemoteLink` |
 | `Prefs.kt`, `Computers.kt` | préférences, liste des ordinateurs appairés |
 | `net/` | `BackendClient` (point d'accès : un client par domaine, `DeckApi`, `WindowsApi`, `SystemApi`, `DocsApi`, `CalendarApi`, `TasksApi`, `CameraApi`, `UpdatesApi`, `TabletApi`, `PairingApi`), `Http` (plomberie, `HttpException`), `Connection` (bascule), `Discovery` (UDP), `Wifi` |
 | `remote/RemoteChannel.kt` | ordres reçus de l'ordinateur |
