@@ -23,11 +23,12 @@
       "meeting": true,
       "app": "Microsoft Teams",
       "tiles": [
-        { "label": "Micro Teams", "glyph": "🎤", "action": { "type": "keys", "keys": "cmd+shift+m", "app": "Microsoft Teams" } },
-        { "label": "Caméra Teams", "glyph": "📷", "action": { "type": "keys", "keys": "cmd+shift+o", "app": "Microsoft Teams" } },
-        { "label": "Lever la main", "glyph": "✋", "action": { "type": "keys", "keys": "cmd+shift+k", "app": "Microsoft Teams" } },
-        { "label": "Partager l'écran", "glyph": "🖥", "action": { "type": "keys", "keys": "cmd+shift+e", "app": "Microsoft Teams" } },
-        { "label": "Raccrocher", "glyph": "📞", "color": "#C62828", "action": { "type": "keys", "keys": "cmd+shift+h", "app": "Microsoft Teams" } }
+        { "label": "Micro", "glyph": "🎤", "when": "call", "action": { "type": "press", "app": "Microsoft Teams", "names": ["Couper le micro", "Activer le micro", "Réactiver le micro", "Mute", "Unmute"] } },
+        { "label": "Caméra", "glyph": "📷", "when": "call", "action": { "type": "press", "app": "Microsoft Teams", "names": ["Activer la caméra", "Désactiver la caméra", "Turn camera on", "Turn camera off"] } },
+        { "label": "Partager l'écran", "glyph": "🖥", "when": "call", "action": { "type": "press", "app": "Microsoft Teams", "names": ["Partager", "Share"] } },
+        { "label": "Arrêter le partage", "glyph": "🛑", "when": "streaming", "action": { "type": "press", "app": "Microsoft Teams", "names": ["Arrêter le partage", "Arrêter la présentation", "Stop sharing", "Stop presenting"] } },
+        { "label": "Lever la main", "glyph": "✋", "when": "call", "action": { "type": "keys", "keys": "cmd+shift+k", "app": "Microsoft Teams" } },
+        { "label": "Quitter l'appel", "glyph": "📴", "color": "#C62828", "when": "call", "action": { "type": "press", "app": "Microsoft Teams", "names": ["Quitter", "Raccrocher", "Leave", "Hang up"] } }
       ]
     },
     {

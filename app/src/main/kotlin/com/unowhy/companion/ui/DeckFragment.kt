@@ -191,6 +191,13 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         openApps = (openApps + seen.open.associateWith { now }).filterValues { now - it < LIVE_HOLD_MS }
         liveApps = (liveApps + seen.live.associateWith { now }).filterValues { now - it < LIVE_HOLD_MS }
         openKnown = true
+        // Fin de l'appel sur la page Réunion : elle n'a plus rien à montrer, retour à la première page.
+        val page = pages.getOrNull(pageIndex)
+        fun live(keys: Set<String>) = keys.any { it.equals(page?.app, ignoreCase = true) }
+        if (page?.meeting == true && !showingOpen && live(before.second) && !live(liveApps.keys)) {
+            showPage(0)
+            return
+        }
         if ((openApps.keys to liveApps.keys) != before && pages.isNotEmpty()) renderTabs()
     }
 

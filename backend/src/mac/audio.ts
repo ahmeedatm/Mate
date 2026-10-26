@@ -51,3 +51,17 @@ export async function setAudio(change: {
   }
   return getAudio();
 }
+
+/** Un micro du Mac est-il utilisé par une appli (en appel) ? macOS ne dit pas laquelle. */
+export async function micInUse(): Promise<boolean> {
+  const raw = await osascript(
+    `ObjC.import("AVFoundation");
+const ds = $.NSClassFromString("AVCaptureDevice").devicesWithMediaType("soun");
+let used = false;
+for (let i = 0; i < ds.count; i++) used = used || ds.objectAtIndex(i).inUseByAnotherApplication;
+String(used)`,
+    [],
+    "JavaScript",
+  );
+  return raw.trim() === "true";
+}

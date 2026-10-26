@@ -5,6 +5,7 @@ import * as macAccess from "./mac/access.ts";
 import * as macApps from "./mac/apps.ts";
 import * as macAudio from "./mac/audio.ts";
 import * as macBrowser from "./mac/browser.ts";
+import * as macCalls from "./mac/calls.ts";
 import * as macDnd from "./mac/dnd.ts";
 import { extensionFrontPage, extensionTabs } from "./browser-extension.ts";
 import * as macKeys from "./mac/keys.ts";
@@ -180,6 +181,20 @@ export function appAudio(app: string, change: { volume?: number; muted?: boolean
   unsupported();
 }
 
+/**
+ * L'appli est en appel : elle enregistre le micro (Windows) ; sur Mac, sa fenêtre d'appel est ouverte (Teams) ou,
+ * si sa fenêtre ne se lit pas, elle tourne et un micro est utilisé.
+ */
+export async function isAppInCall(app: string): Promise<boolean> {
+  if (isWindows) return (await win.appAudio(app)).capturing;
+  if (isMac) {
+    if (!(await isAppRunning(app))) return false;
+    const call = await macCalls.callState(app).catch(() => null);
+    return call?.found ? call.connected : macAudio.micInUse();
+  }
+  return false;
+}
+
 /** L'appli tourne, même sans fenêtre (Discord réduit dans la zone de notification). */
 export async function isAppRunning(app: string): Promise<boolean> {
   if (isWindows) return (await win.appAudio(app)).running || (await win.listWindows(app)).running;
@@ -198,7 +213,7 @@ export async function openAccessibility() {
   unsupported();
 }
 
-/** Boutons d'une fenêtre d'appli (Windows) : lister leurs noms, en actionner un. */
+/** Boutons d'une fenêtre d'appli : lister leurs noms (Windows), en actionner un (Windows, Mac). */
 export function listButtons(app: string, detail = false) {
   if (isWindows) return win.listButtons(app, detail);
   unsupported();
@@ -206,12 +221,15 @@ export function listButtons(app: string, detail = false) {
 
 export function pressButton(app: string, names: string[]) {
   if (isWindows) return win.pressButton(app, names);
+  if (isMac) return macCalls.pressButton(app, names);
   unsupported();
 }
 
-/** État vocal de Discord (salon, participants, micro) : Windows seulement, null ailleurs ou appli fermée. */
+/** Appel en cours (salon, participants, micro) : Discord sous Windows, Teams sur Mac ; null si appli fermée. */
 export async function voiceState(app: string) {
-  return isWindows ? win.voiceState(app) : null;
+  if (isWindows) return win.voiceState(app);
+  if (isMac && (await isAppRunning(app))) return macCalls.callState(app);
+  return null;
 }
 
 export function listDisplays() {
