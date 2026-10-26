@@ -19,6 +19,8 @@ interactif : [`accueil.html`](accueil.html) (`?demo&legende` rejoue la démonstr
 `?theme=nuit`, `?menu`, `?fige`). Tout réagit : poignée à glisser, menu, tuiles, touches, cases,
 verres d'eau, rendez-vous de la ligne du jour, pause du Focus.
 
+Pour la suite (activités en direct, calme, son, techniques) : [`plus-loin.md`](plus-loin.md).
+
 ## Les six principes
 
 1. **Une seule couleur vivante.** Le rouge cardinal d'Unowhy (`#CA0538`) veut dire « maintenant » :

@@ -146,6 +146,25 @@ body.nuit .app { box-shadow: inset 0 0 0 1px var(--line); }
 .app .live { position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; border-radius: 7px; background: var(--now); box-shadow: 0 0 0 3px var(--tile); }
 .touche .onde { left: 50%; top: 30px; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 22px; border-color: var(--ink-3); corner-shape: squircle; }
 
+/* En direct : ce qui se passe maintenant prend le haut de l'écran */
+.heros { position: relative; z-index: 2; }
+.heros > div:first-child { position: relative; flex: 1; }
+.horloge { transform-origin: 10px 0; will-change: transform; }
+#infos { will-change: opacity; }
+.direct { position: absolute; left: 0; top: 96px; right: 24px; }
+.direct > * { will-change: transform, opacity; }
+.etiquette { display: flex; align-items: center; gap: 8px; font: 500 15px/20px Outfit; color: var(--now); }
+.etiquette .pt { width: 8px; height: 8px; border-radius: 4px; background: var(--now); }
+.etiquette .compte, .etiquette .case { height: 20px; }
+.direct .titre { font: 300 44px/52px Outfit; letter-spacing: -.02em; }
+.direct .actions { display: flex; gap: 10px; margin-top: 12px; }
+.direct .rond.quitter { background: var(--now); color: var(--on-now); }
+#directFocus { display: flex; align-items: center; gap: 28px; top: 88px; }
+.mini { width: 140px; height: 140px; transform-origin: 0 0; flex: none; }
+.mini line { stroke-width: 4; }
+#directFocus .titre { font: 300 64px/68px Outfit; }
+#directFocus .s { font: 400 15px/20px Outfit; color: var(--ink-2); }
+
 /* Écran Focus */
 .ecran-focus { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 36px; }
 .grand { width: 460px; height: 460px; }
@@ -171,8 +190,17 @@ body.legende .leg { display: flex; position: absolute; left: 0; top: 800px; widt
     <section class="heros" id="heros">
       <div>
         <div class="horloge num" id="horloge"></div>
-        <div class="date">Lundi 26 octobre</div>
-        <div class="ensuite"><span>Ensuite</span><b>Démo tablette</b><span class="rouge num">dans <span class="compte" id="compte"></span> min</span></div>
+        <div id="infos"><div class="date">Lundi 26 octobre</div>
+        <div class="ensuite"><span>Ensuite</span><b>Démo tablette</b><span class="rouge num">dans <span class="compte" id="compte"></span> min</span></div></div>
+        <div class="direct" id="directReunion" hidden>
+          <div class="etiquette num"><i class="pt"></i>En cours depuis <span class="compte" id="depuis"></span> min · Teams</div>
+          <div class="titre">Démo tablette</div>
+          <div class="actions"><div class="rond" id="micro"><span class="bascule"><svg class="i" viewBox="0 -960 960 960"><path d="M480-400q-50 0-85-35t-35-85v-240q0-50 35-85t85-35q50 0 85 35t35 85v240q0 50-35 85t-85 35Zm-40 240v-83q-92-13-157.5-78T203-479q-2-17 9-29t28-12q17 0 28.5 11.5T284-480q14 70 69.5 115T480-320q72 0 127-45.5T676-480q4-17 15.5-28.5T720-520q17 0 28 12t9 29q-14 91-79 157t-158 79v83q0 17-11.5 28.5T480-120q-17 0-28.5-11.5T440-160Z"/></svg><svg class="i" viewBox="0 -960 960 960"><path d="M672-377q-14-8-18-24.5t4-30.5q7-11 11.5-23.5T676-481q4-17 15.5-28t28.5-11q17 0 28 12t9 29q-3 23-10.5 45T727-392q-8 14-24.5 18.5T672-377ZM532-542 383-691q-11-11-17-25.5t-6-30.5v-13q0-50 35-85t85-35q50 0 85 35t35 85v189q0 27-24.5 37.5T532-542Zm-92 382v-84q-92-12-157.5-77T203-479q-2-17 9-29t28-12q17 0 28.5 11.5T284-480q14 70 69.5 115T480-320q34 0 64.5-10.5T600-360l57 57q-29 23-63.5 38.5T520-244v84q0 17-11.5 28.5T480-120q-17 0-28.5-11.5T440-160Zm324 76L84-764q-11-11-11-28t11-28q11-11 28-11t28 11l680 680q11 11 11 28t-11 28q-11 11-28 11t-28-11Z"/></svg></span>Micro</div><div class="rond"><svg class="i" viewBox="0 -960 960 960"><path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h480q33 0 56.5 23.5T720-720v180l126-126q10-10 22-5t12 19v344q0 14-12 19t-22-5L720-420v180q0 33-23.5 56.5T640-160H160Z"/></svg>Caméra</div><div class="rond quitter" id="quitter"><svg class="i" viewBox="0 -960 960 960"><path d="M480-640q118 0 232.5 47.5T916-450q12 12 12 28t-12 28l-92 90q-11 11-25.5 12t-26.5-8l-116-88q-8-6-12-14t-4-18v-114q-38-12-78-19t-82-7q-42 0-82 7t-78 19v114q0 10-4 18t-12 14l-116 88q-12 9-26.5 8T136-304l-92-90q-12-12-12-28t12-28q88-95 203-142.5T480-640Z"/></svg>Quitter</div></div>
+        </div>
+        <div class="direct" id="directFocus" hidden>
+          <div class="cadran mini" id="miniCadran"><svg viewBox="0 0 176 176"></svg></div>
+          <div><div class="etiquette"><i class="pt"></i>Focus · séance 2 sur 4</div><div class="titre num chrono">18:05</div><div class="s">Pause à 14:55 · ambiance Pluie</div></div>
+        </div>
       </div>
       <div class="compl">
         <div class="co"><div class="v num"><svg class="i" viewBox="0 -960 960 960"><path d="M480-760q-17 0-28.5-11.5T440-800v-80q0-17 11.5-28.5T480-920q17 0 28.5 11.5T520-880v80q0 17-11.5 28.5T480-760Zm198 82q-11-11-11-28t11-28l56-57q12-12 28.5-12t28.5 12q11 11 11 28t-11 28l-57 57q-11 11-28 11t-28-11Zm122 238q-17 0-28.5-11.5T760-480q0-17 11.5-28.5T800-520h80q17 0 28.5 11.5T920-480q0 17-11.5 28.5T880-440h-80Zm-66 271-56-57q-11-11-11-28t11-28q11-11 28-11t28 11l57 56q12 12 12 28.5T791-169q-12 12-28.5 12T734-169ZM226-678l-57-57q-11-11-11-28t11-28q12-12 28.5-12t28.5 12l56 57q11 11 11 28t-11 28q-11 11-28 11t-28-11Zm14 478h180q25 0 42.5-17.5T480-260q0-25-17-42.5T421-320h-51l-20-48q-14-33-44-52.5T240-440q-50 0-85 35t-35 85q0 50 35 85t85 35Zm0 80q-83 0-141.5-58.5T40-320q0-83 58.5-141.5T240-520q60 0 109.5 32.5T423-400q58 0 97.5 43T560-254q-2 57-42.5 95.5T420-120H240Zm320-134q-5-20-10-39t-10-39q45-19 72.5-59t27.5-89q0-66-47-113t-113-47q-60 0-105 39t-53 99q-20-5-41-9t-41-9q14-88 82.5-144T480-720q100 0 170 70t70 170q0 77-44 138.5T560-254Zm-79-226Z"/></svg>14°</div><div class="l">Éclaircies, 17° max</div></div>
@@ -380,6 +408,7 @@ function graduer(svg, taille, r1, r2) {
 }
 graduer(document.querySelector('#petitCadran svg'), 176, 76, 86);
 graduer(document.querySelector('#grandCadran svg'), 460, 196, 222);
+graduer(document.querySelector('#miniCadran svg'), 176, 74, 86);
 const cadrans = [...document.querySelectorAll('.cadran svg')];
 function graduations(cascade) {
   const n = enPause ? 0 : Math.ceil(reste / 60);
@@ -406,8 +435,11 @@ document.querySelectorAll('.pause').forEach(p => p.addEventListener('click', pau
 function battement() {
   minutes++;
   horloge(`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`, true);
-  rouleau('compte', String(14 * 60 + 30 - minutes).padStart(2, ' '), true);
+  const avant = 14 * 60 + 30 - minutes;
+  if (avant > 0) rouleau('compte', String(avant).padStart(2, '\u2007'), true);
+  else if (!$('infos').dataset.suite) { $('infos').dataset.suite = 1; $('infos').querySelector('.ensuite').innerHTML = '<span>Ensuite</span><b>Point Eliot</b><span class="num">à 17:00</span>'; }
   placerMaintenant(true); onde($('onde'));
+  if (direct === 'directReunion') rouleau('depuis', String(minutes - minuteDebut), true);
 }
 
 // Appui : légère pression + calque d'état M3 à 10 %. Touche d'appli : une onde confirme l'action.
@@ -511,6 +543,45 @@ function repos(oui) {
 }
 document.addEventListener('pointerdown', () => auRepos && repos(false), true);
 
+// En direct : l'heure se replie dans le coin, ce qui se passe maintenant prend sa place.
+let direct = null, minuteDebut = 0;
+function voler(de, vers, fin) { // container transform maison : seule une transformation, calculée une fois (FLIP)
+  const a = de.getBoundingClientRect(), b = vers.getBoundingClientRect();
+  poser(vers, 'tx', a.left - b.left); poser(vers, 'ty', a.top - b.top); poser(vers, 'sc', a.width / b.width);
+  ressort(vers, 'tx', 0, M.spatialDefault); ressort(vers, 'ty', 0, M.spatialDefault); ressort(vers, 'sc', 1, M.spatialDefault, fin);
+}
+function enDirect(id) {
+  if (direct) return; direct = id; minuteDebut = minutes;
+  const d = $(id); d.hidden = false;
+  ressort($('horloge'), 'sc', 0.4, M.spatialDefault); ressort($('infos'), 'o', 0, M.effectsFast);
+  if (id === 'directReunion') { rouleau('depuis', '0', false); ressort($('rejoindre'), 'o', 0.35, M.effectsDefault); }
+  [...d.children].forEach((c, i) => {
+    if (c.id === 'miniCadran') { poser($('petitCadran'), 'o', 0); voler($('petitCadran'), c); return; }
+    poser(c, 'o', 0); poser(c, 'ty', 14);
+    setTimeout(() => { ressort(c, 'o', 1, M.effectsDefault); ressort(c, 'ty', 0, M.spatialDefault); }, 120 + i * 50);
+  });
+}
+function finDirect() {
+  if (!direct) return; const d = $(direct); direct = null; ressort($('rejoindre'), 'o', 1, M.effectsDefault);
+  const mini = d.querySelector('#miniCadran');
+  [...d.children].forEach(c => { if (c !== mini) { ressort(c, 'o', 0, M.effectsFast); ressort(c, 'ty', -8, M.spatialFast); } });
+  if (mini) {
+    const a = $('petitCadran').getBoundingClientRect(), b = mini.getBoundingClientRect();
+    ressort(mini, 'tx', a.left - b.left, M.spatialDefault); ressort(mini, 'ty', a.top - b.top, M.spatialDefault);
+    ressort(mini, 'sc', a.width / b.width, M.spatialDefault, () => { poser($('petitCadran'), 'o', 1); d.hidden = true; poser(mini, 'tx', 0); poser(mini, 'ty', 0); poser(mini, 'sc', 1); });
+  } else setTimeout(() => d.hidden = true, 260);
+  setTimeout(() => { ressort($('horloge'), 'sc', 1, M.spatialDefault); ressort($('infos'), 'o', 1, M.effectsDefault); }, 90);
+}
+let microCoupe = false;
+$('micro').addEventListener('click', () => {
+  microCoupe = !microCoupe; const [on, off] = $('micro').querySelector('.bascule').children, sort = microCoupe ? on : off, entre = microCoupe ? off : on;
+  ressort(sort, 'o', 0, M.effectsFast); ressort(sort, 'sc', 0.5, M.spatialFast); ressort(entre, 'o', 1, M.effectsDefault); ressort(entre, 'sc', 1, M.spatialFast);
+});
+$('quitter').addEventListener('click', finDirect);
+$('rejoindre').addEventListener('click', () => enDirect('directReunion'));
+$('petitCadran').addEventListener('click', () => enDirect('directFocus'));
+$('miniCadran').addEventListener('click', finDirect);
+
 function nuit(oui) { document.body.classList.add('fondu'); document.body.classList.toggle('nuit', oui); setTimeout(() => document.body.classList.remove('fondu'), 1700); }
 
 // Démarrage
@@ -555,7 +626,22 @@ async function demo() {
   legende('Au coucher du soleil, le bureau passe en nuit'); await attendre(300); nuit(true); await attendre(2800);
   legende('La nuit, seul le rouge signale le présent'); battement(); await attendre(2600);
 }
+async function demoDirect() {
+  if (q.has('legende')) document.body.classList.add('legende');
+  await document.fonts.ready; await attendre(400);
+  legende('Accueil'); arrivee(); await attendre(2200);
+  legende('14:29 : la réunion approche'); minutes = 14 * 60 + 28; battement(); await attendre(2000);
+  legende('14:30 : toucher Rejoindre'); battement(); await attendre(700); await toucher($('rejoindre')); await attendre(300);
+  legende('La réunion prend le haut de l\u2019écran, l\u2019heure se replie'); await attendre(2600);
+  legende('Couper le micro : l\u2019icône se transforme'); await toucher($('micro')); await attendre(1600);
+  legende('Le battement continue : en cours depuis 1 min'); battement(); await attendre(2200);
+  legende('Quitter : l\u2019heure reprend sa place'); await toucher($('quitter')); await attendre(2200);
+  legende('Toucher le cadran du Focus'); await toucher($('petitCadran')); await attendre(200);
+  legende('Il vole de sa tuile jusqu\u2019en haut de l\u2019écran'); await attendre(3200);
+  legende('Le toucher à nouveau : il retourne dans sa tuile'); await toucher($('miniCadran')); await attendre(2400);
+}
 if (q.has('demo')) demo();
+if (q.has('direct')) demoDirect();
 </script>
 </body>
 </html>
