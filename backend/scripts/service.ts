@@ -18,11 +18,16 @@ import { backendRoot as backend, dataDir, packaged as bundled, userFolder } from
  */
 
 const port = Number(process.env.PORT ?? 3000);
-const LABEL = "com.unowhy.companion";
+// COMPANION_SERVICE_NAME : lancement automatique et raccourcis sous un autre nom, pour un test sur un ordinateur
+// qui a déjà le compagnon (CI). Avec PORT et DATA_DIR, l'installation réelle n'est pas touchée.
+const serviceName = process.env.COMPANION_SERVICE_NAME?.trim();
+const LABEL = serviceName ? `com.unowhy.${serviceName}` : "com.unowhy.companion";
 const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-const RUN_VALUE = "UnowhyCompanion";
+const RUN_VALUE = serviceName || "UnowhyCompanion";
 const isMac = process.platform === "darwin";
 const isWindows = process.platform === "win32";
+/** Installeur lancé sans personne devant (CI, `/silencieux`) : n'ouvre ni réglage, ni Finder, ni navigateur. */
+const silent = process.env.COMPANION_SILENT === "1";
 
 const plist = path.join(os.homedir(), "Library", "LaunchAgents", `${LABEL}.plist`);
 const logDir = isWindows
@@ -181,7 +186,7 @@ async function winInstall() {
 
 // --- Raccourcis vers la page de l'ordinateur (adresse, code d'appairage, agenda)
 
-const SHORTCUT = "Compagnon Unowhy";
+const SHORTCUT = serviceName || "Compagnon Unowhy";
 
 function shortcutFiles(): string[] {
   const home = os.homedir();
@@ -233,8 +238,10 @@ async function install() {
         `  Réglages Système > Confidentialité et sécurité > Accessibilité > + > ${node}\n` +
         `  (le Finder s'ouvre sur node : le glisser dans la liste, puis l'activer)`,
     );
-    await sh("open", ["x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"]);
-    await sh("open", ["-R", node]);
+    if (!silent) {
+      await sh("open", ["x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"]);
+      await sh("open", ["-R", node]);
+    }
   } else {
     console.log(
       "\nSi la tablette ne trouve pas l'ordinateur : le WiFi de l'ordinateur doit être en profil « Privé »\n" +
@@ -243,7 +250,7 @@ async function install() {
   }
   const page = `http://127.0.0.1:${port}/`;
   addShortcuts(page);
-  await sh(isMac ? "open" : "explorer.exe", [page]);
+  if (!silent) await sh(isMac ? "open" : "explorer.exe", [page]);
   console.log(`\nPage d'aide (adresse, code d'appairage, agenda) : ${page}`);
   console.log(`Pour la rouvrir : raccourci « ${SHORTCUT} » sur le Bureau${isWindows ? " et dans le menu Démarrer" : ""}.`);
 }
