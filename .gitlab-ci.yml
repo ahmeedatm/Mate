@@ -261,7 +261,12 @@ package-mac:
 # installeur silencieux, lancement automatique, sanity, pilote, désinstallation. Tout est propre au test
 # (backend/qa/install-windows.ps1) ; after_script nettoie même après un échec : le PC sert aussi aux tests UEM.
 install-windows:
-  extends: .zone-install-windows
+  # Runner 976 en ref_protected : en MR, seulement depuis une branche ci/* (protégée), sinon le job attendrait
+  # sans fin et bloquerait la MR. Les autres MR de la zone le voient tourner sur main et la nuit.
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME !~ /^ci\//
+      when: never
+    - !reference [.zone-install-windows, rules]
   stage: install
   tags: [local-runner]
   image: null
