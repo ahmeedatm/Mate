@@ -1,0 +1,66 @@
+# CI : sur chaque MR et sur main. Rien n'arrive sur main sans pipeline vert (voir docs/developpement.md).
+# Le pilotage réel du Mac et de Windows ne tourne pas ici (runner Linux) : il reste vérifié à la main.
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+stages:
+  - test
+
+default:
+  interruptible: true
+
+backend:
+  stage: test
+  image: node:22.22-bookworm-slim
+  variables:
+    npm_config_cache: $CI_PROJECT_DIR/.npm
+  cache:
+    key:
+      files:
+        - backend/package-lock.json
+    paths:
+      - .npm/
+  before_script:
+    - cd backend
+    - npm ci --prefer-offline --no-audit --no-fund
+  script:
+    - npm run typecheck
+    # Tests d'intégration : le vrai serveur démarre en MODE=mock avec un dossier de données vide.
+    - node --import tsx --test --test-reporter=spec --test-reporter-destination=stdout
+      --test-reporter=junit --test-reporter-destination=junit.xml "test/**/*.test.ts"
+  artifacts:
+    when: always
+    reports:
+      junit: backend/junit.xml
+    expire_in: 1 week
+
+android:
+  stage: test
+  image: ghcr.io/cirruslabs/android-sdk:36@sha256:f9b3ea9ed2b5fc9522adae82c7b4622ab7aa54207ef532c8e615a347dca08f31
+  variables:
+    GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle-home
+  cache:
+    key:
+      files:
+        - gradle/wrapper/gradle-wrapper.properties
+        - app/build.gradle.kts
+    paths:
+      - .gradle-home/caches/
+      - .gradle-home/wrapper/
+  script:
+    - ./gradlew --no-daemon --console=plain testDebugUnitTest lintDebug assembleDebug
+  artifacts:
+    when: always
+    name: companion-debug-$CI_COMMIT_SHORT_SHA
+    paths:
+      - app/build/outputs/apk/debug/app-debug.apk
+      - app/build/reports/lint-results-debug.html
+    reports:
+      junit: app/build/test-results/testDebugUnitTest/*.xml
+    expire_in: 2 weeks

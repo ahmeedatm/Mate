@@ -51,6 +51,7 @@ Panneau domotique (Home Assistant), companion focus / Pomodoro, cadre photo / af
 - Une question à la fois si une info manque, plutôt que deviner.
 - Expliquer les choix en 1-2 phrases.
 - Ne rien commit sans demande explicite.
+- `main` protégée : tout passe par une branche et une MR, fusionnée seulement avec le pipeline vert (`.gitlab-ci.yml` : typecheck + tests d'intégration backend, tests JVM + lint + APK Android ; voir `docs/developpement.md`). Nouveau comportement backend = un test dans `backend/test/` ; logique pure Android = un test dans `app/src/test/`.
 
 ### Conventions du code
 - **Vision (Eliot)** : la tablette est un compagnon de l'ordinateur (Mac ou PC Windows ; bureau le jour, maison le soir : tâches, rappels, fenêtres/écrans et macros pour jouer). Deck façon Stream Deck (lancer/piloter les applis, son, micro), documents ouverts à côté des conversations, agenda affiché, caméra (photo → Mac), raccourcis. Tablette lente : tout doit rester léger ; elle passera en mode kiosque (docs/kiosque.md).
