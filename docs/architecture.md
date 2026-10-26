@@ -91,9 +91,9 @@ Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/upda
 
 | Où | Quoi |
 |---|---|
-| `MainActivity.kt` | barre latérale, modes, clavier, rappel Eau, changement d'ordinateur |
+| `MainActivity.kt` | câblage des modes (`Mode.kt`), panneau document, changement d'ordinateur ; barre latérale `ui/Rail`, clavier `ui/KeyboardControl`, bandeau `ui/Banner`, rappels Eau et batterie `ui/TabletAlerts`, Ne pas déranger `focus/FocusDnd`, canal `remote/RemoteLink` |
 | `Prefs.kt`, `Computers.kt` | préférences, liste des ordinateurs appairés |
-| `net/` | `BackendClient` (toutes les routes), `Connection` (bascule), `Discovery` (UDP), `Wifi` |
+| `net/` | `BackendClient` (point d'accès : un client par domaine, `DeckApi`, `WindowsApi`, `SystemApi`, `DocsApi`, `CalendarApi`, `TasksApi`, `CameraApi`, `UpdatesApi`, `TabletApi`, `PairingApi`), `Http` (plomberie, `HttpException`), `Connection` (bascule), `Discovery` (UDP), `Wifi` |
 | `remote/RemoteChannel.kt` | ordres reçus de l'ordinateur |
 | `ui/` | un fichier par écran ou composant : `HomeFragment`, `DeckFragment`, `DocsFragment` (Depuis l'ordi : choix Fichiers / Page de l'ordi, puis la liste ; `BrowserTabsDialog` : onglets de l'ordi), `FocusFragment`, `CameraFragment`, `SettingsFragment`, `WelcomeView` (premier lancement), `DocumentPanel`, boîtes de dialogue (`TaskDialog`, `EventDialog`, `ComputerAdder`, `WifiPicker`…) |
 | `ui/home/` | Accueil à widgets : `WidgetModel` (grille 4×4, tailles, modèles), `WidgetGrid` (placement, mode Modifier, pages), widgets |
@@ -138,7 +138,7 @@ Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/upda
 
 ## Ajouter une fonction : les recettes
 
-- **Nouvelle route** : la déclarer dans le plugin de son domaine sous `routes/` (avec son schéma ; nouveau plugin = `app.register` dans `server.ts`), l'appeler dans `BackendClient.kt`. Erreur pour l'utilisateur = `throw new Error("phrase en français")`.
+- **Nouvelle route** : la déclarer dans le plugin de son domaine sous `routes/` (avec son schéma ; nouveau plugin = `app.register` dans `server.ts`), l'appeler dans le client de son domaine (`net/*Api.kt`). Erreur pour l'utilisateur = `throw new Error("phrase en français")`.
 - **Nouvelle action système** : l'ajouter à `os.ts`, l'écrire dans `mac/` **et** `win/` (C# 7.3 dans `win/helper/`, `Native.<thème>.cs` pour le pilotage, puis `npm run build:helper`).
 - **Nouvelle étape de touche** : type dans `deck.ts` (`runAction`), et dans `KeyEditor` si elle se règle depuis la tablette.
 - **Nouvel ordre vers la tablette** : type dans `tablet.ts` + schéma dans `routes/tablet.ts` + outil dans `mcp.ts` + branche dans `RemoteChannel.execute`.

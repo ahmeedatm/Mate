@@ -16,6 +16,7 @@ import androidx.core.widget.ImageViewCompat
 import com.unowhy.companion.R
 import com.unowhy.companion.net.AudioState
 import com.unowhy.companion.net.BackendClient
+import com.unowhy.companion.net.SystemApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -69,9 +70,9 @@ class MacAudioView @JvmOverloads constructor(
     /** Boutons de volume de la tablette. */
     fun nudge(up: Boolean) = change { setAudio(outputDelta = if (up) 6 else -6) }
 
-    private fun change(call: suspend BackendClient.() -> AudioState) {
+    private fun change(call: suspend SystemApi.() -> AudioState) {
         scope.launch {
-            render(runCatching { BackendClient(context).call() }.getOrNull())
+            render(runCatching { BackendClient(context).system.call() }.getOrNull())
         }
     }
 

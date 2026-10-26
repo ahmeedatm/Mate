@@ -1140,8 +1140,8 @@
         errorLine1="        badge.text = count.toString()"
         errorLine2="                     ~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/companion/MainActivity.kt"
-            line="428"
+            file="src/main/kotlin/com/unowhy/companion/ui/Rail.kt"
+            line="60"
             column="22"/>
     </issue>
 

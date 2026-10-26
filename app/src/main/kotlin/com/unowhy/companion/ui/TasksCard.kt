@@ -59,7 +59,7 @@ class TasksCard @JvmOverloads constructor(
 
     suspend fun load(refresh: Boolean = false) {
         try {
-            render(client().tasks(refresh))
+            render(client().tasks.list(refresh))
         } catch (e: Exception) {
             list.removeAllViews()
             count.text = ""
@@ -81,7 +81,7 @@ class TasksCard @JvmOverloads constructor(
 
     private fun add(label: String, remindAt: String?, days: List<Int>?) {
         launch {
-            val schedule = client().addTask(label, remindAt, days)
+            val schedule = client().tasks.add(label, remindAt, days)
             // Une tâche « lun–ven » créée un samedi n'apparaît pas aujourd'hui : on dit qu'elle est bien enregistrée.
             if (schedule != null) Toast.makeText(context, context.getString(R.string.task_added, schedule), Toast.LENGTH_LONG).show()
             load()
@@ -90,7 +90,7 @@ class TasksCard @JvmOverloads constructor(
 
     /** Liste de toutes les tâches récurrentes, avec ✕ pour supprimer celles créées depuis la tablette. */
     private fun showRecurring() = launch {
-        val tasks = client().recurringTasks()
+        val tasks = client().tasks.recurring()
         val box = LinearLayout(context).apply {
             orientation = VERTICAL
             val pad = dp(24)
@@ -112,7 +112,7 @@ class TasksCard @JvmOverloads constructor(
                 visibility = if (task.deletable) View.VISIBLE else View.GONE
                 setOnClickListener {
                     launch {
-                        client().deleteTask(task.id)
+                        client().tasks.delete(task.id)
                         box.removeView(row)
                         load()
                     }
@@ -154,7 +154,7 @@ class TasksCard @JvmOverloads constructor(
                 isEnabled = !task.auto
                 setOnCheckedChangeListener { _, checked ->
                     launch {
-                        client().setTaskDone(task.id, checked)
+                        client().tasks.setDone(task.id, checked)
                         load()
                     }
                 }
@@ -163,7 +163,7 @@ class TasksCard @JvmOverloads constructor(
                 visibility = if (task.hasUrl) View.VISIBLE else View.GONE
                 setOnClickListener {
                     launch {
-                        client().openTaskOnMac(task.id)
+                        client().tasks.openTaskOnMac(task.id)
                         Toast.makeText(context, R.string.opened_on_mac, Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -172,7 +172,7 @@ class TasksCard @JvmOverloads constructor(
                 visibility = if (task.deletable) View.VISIBLE else View.GONE
                 setOnClickListener {
                     launch {
-                        client().deleteTask(task.id)
+                        client().tasks.delete(task.id)
                         load()
                     }
                 }

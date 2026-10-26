@@ -201,10 +201,10 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     private suspend fun fetchCalendar() {
         val client = BackendClient(requireContext())
-        runCatching { features = client.homeFeatures() }
+        runCatching { features = client.deck.homeFeatures() }
         if (features.linked) waitingLink = false
         try {
-            val days = client.calendar(AGENDA_DAYS)
+            val days = client.calendar.days(AGENDA_DAYS)
             events = days.events
             calendarNote = days.error ?: if (days.source == "mock") getString(R.string.calendar_mock) else ""
         } catch (e: Exception) {
@@ -230,7 +230,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         val save = { draft: EventDraft ->
             scope.launch {
                 try {
-                    BackendClient(ctx).saveEvent(localId, draft.title, draft.startMs, draft.allDay, draft.remindBefore)
+                    BackendClient(ctx).calendar.saveEvent(localId, draft.title, draft.startMs, draft.allDay, draft.remindBefore)
                     main?.showBanner(getString(R.string.event_saved, draft.title), 4)
                     fetchCalendar()
                     renderCalendar()
@@ -244,7 +244,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             {
                 scope.launch {
                     try {
-                        BackendClient(ctx).deleteEvent(it)
+                        BackendClient(ctx).calendar.deleteEvent(it)
                         fetchCalendar()
                         renderCalendar()
                     } catch (e: Exception) {
@@ -267,7 +267,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private fun openAgendaSetup() {
         scope.launch {
             try {
-                BackendClient(requireContext()).openLocalPage("agenda")
+                BackendClient(requireContext()).system.openLocalPage("agenda")
                 waitingLink = true
                 main?.showBanner(getString(R.string.agenda_setup_opened), 8)
             } catch (e: Exception) {

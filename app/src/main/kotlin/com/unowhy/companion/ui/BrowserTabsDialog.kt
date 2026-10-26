@@ -38,7 +38,7 @@ class BrowserTabsDialog(
         dialog.showImmersive()
         scope.launch {
             try {
-                val result = BackendClient(context).browserTabs()
+                val result = BackendClient(context).docs.browserTabs()
                 val tabs = result.tabs
                 // Le premier onglet affiché est celui du navigateur le plus en avant : la page qu'on regarde sur l'ordi.
                 val front = tabs.firstOrNull { it.active }

@@ -17,6 +17,8 @@ import androidx.core.widget.ImageViewCompat
 import com.unowhy.companion.R
 import com.unowhy.companion.net.AppAudio
 import com.unowhy.companion.net.BackendClient
+import com.unowhy.companion.net.SystemApi
+import com.unowhy.companion.net.HttpException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -102,8 +104,8 @@ class AppAudioView @JvmOverloads constructor(
         poll = scope.launch {
             while (isActive && app == current) {
                 try {
-                    render(BackendClient(context).appAudio(current))
-                } catch (e: BackendClient.HttpException) {
+                    render(BackendClient(context).system.appAudio(current))
+                } catch (e: HttpException) {
                     // 501 : l'ordinateur ne pilote pas le volume par appli (Mac).
                     if (e.code == 501) { visibility = GONE; return@launch }
                     render(null)
@@ -115,9 +117,9 @@ class AppAudioView @JvmOverloads constructor(
         }
     }
 
-    private fun change(call: suspend BackendClient.(String) -> AppAudio) {
+    private fun change(call: suspend SystemApi.(String) -> AppAudio) {
         val current = app ?: return
-        scope.launch { runCatching { BackendClient(context).call(current) }.getOrNull()?.let { render(it) } }
+        scope.launch { runCatching { BackendClient(context).system.call(current) }.getOrNull()?.let { render(it) } }
     }
 
     private fun render(audio: AppAudio?) {

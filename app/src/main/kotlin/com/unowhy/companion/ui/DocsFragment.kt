@@ -98,7 +98,7 @@ class DocsFragment : Fragment() {
     private fun load(target: String) {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val listing = BackendClient(requireContext()).docs(target)
+                val listing = BackendClient(requireContext()).docs.list(target)
                 if (!browsing) return@launch
                 dir = listing.dir
                 path.text = if (dir.isEmpty()) getString(R.string.docs_root) else dir

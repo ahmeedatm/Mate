@@ -45,6 +45,7 @@ export async function startServer(): Promise<TestServer> {
       DOCS_DIR: docsDir,
       COMPUTER_NAME: "Ordi de test",
       CALENDAR_ICS_URLS: "",
+      NO_ALERT: "1",
     },
     stdio: ["ignore", "pipe", "pipe"],
   });

@@ -98,7 +98,7 @@ class DocumentPanel @JvmOverloads constructor(
             if (current == null && url == null) return@setOnClickListener
             scope.launch {
                 val message = runCatching {
-                    if (url != null) BackendClient(context).openUrlOnComputer(url) else BackendClient(context).openOnMac(current!!.path)
+                    if (url != null) BackendClient(context).docs.openUrlOnComputer(url) else BackendClient(context).docs.openOnMac(current!!.path)
                 }
                     .fold({ context.getString(R.string.opened_on_mac) }, { context.errorText(it) })
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -139,7 +139,7 @@ class DocumentPanel @JvmOverloads constructor(
                 val dir = File(context.cacheDir, "docs").apply { mkdirs() }
                 dir.listFiles()?.forEach { it.delete() } // un seul document en cache à la fois
                 val file = File(dir, "doc-" + doc.name.replace(Regex("[^\\w.-]"), "_"))
-                BackendClient(context).downloadDoc(doc.path, file)
+                BackendClient(context).docs.downloadDoc(doc.path, file)
                 when (doc.kind) {
                     "pdf" -> openPdf(file)
                     "image" -> showImage(withContext(Dispatchers.IO) { decodeSampled(file, maxWidth()) })
@@ -163,7 +163,7 @@ class DocumentPanel @JvmOverloads constructor(
         showStatus(context.getString(R.string.loading))
         loadJob = scope.launch {
             try {
-                showWeb(BackendClient(context).browserPage())
+                showWeb(BackendClient(context).docs.browserPage())
             } catch (e: Exception) {
                 showStatus(context.errorText(e))
             }

@@ -17,6 +17,7 @@ import com.unowhy.companion.Computer
 import com.unowhy.companion.Computers
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
+import com.unowhy.companion.net.HttpException
 import com.unowhy.companion.net.Discovery
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -88,7 +89,7 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
                 form.message.setText(R.string.computer_connecting)
                 scope.launch {
                     try {
-                        val identity = BackendClient(url, connectTimeoutMs = 4_000).identity()
+                        val identity = BackendClient(url, connectTimeoutMs = 4_000).pairing.identity()
                         dialog.dismiss()
                         pair(url, identity.name)
                     } catch (e: Exception) {
@@ -130,7 +131,7 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
             form.message.text = context.getString(R.string.computer_requesting, name)
             scope.launch {
                 try {
-                    request = client.requestPairing(context.getString(R.string.tablet_name, Build.MODEL))
+                    request = client.pairing.requestPairing(context.getString(R.string.tablet_name, Build.MODEL))
                     input.setText("")
                     input.isEnabled = true
                     input.requestFocus()
@@ -150,7 +151,7 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
             busy = true
             scope.launch {
                 try {
-                    val p = client.confirmPairing(req, code)
+                    val p = client.pairing.confirmPairing(req, code)
                     // Déjà connu (nouvel appairage) : on garde le nom choisi sur la tablette.
                     val known = Computers.all(context).firstOrNull { it.id == p.id }
                     val computer = Computer(p.id, known?.name ?: p.name, url, p.token, p.os)
@@ -160,8 +161,8 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
                 } catch (e: Exception) {
                     form.message.text = reason(e)
                     // Code expiré ou trop d'essais : il faut en redemander un.
-                    if (e is BackendClient.HttpException && e.code != 403) request = null
-                    else if (e is BackendClient.HttpException) input.setText("")
+                    if (e is HttpException && e.code != 403) request = null
+                    else if (e is HttpException) input.setText("")
                 } finally {
                     busy = false
                 }
@@ -210,7 +211,7 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
     }
 
     private fun reason(e: Exception): String = when (e) {
-        is BackendClient.HttpException -> e.reason
+        is HttpException -> e.reason
         else -> context.getString(R.string.computer_lost)
     }
 
