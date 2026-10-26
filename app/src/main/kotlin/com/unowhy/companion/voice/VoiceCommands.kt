@@ -189,7 +189,8 @@ object VoiceCommands {
      * est repris du texte reconnu (accents, majuscules).
      */
     private fun remind(text: String, now: Calendar): VoiceCommand? {
-        val at = Regex("\\b(?:à|a) (\\d{1,2}) ?(?:h|heures?|:) ?(\\d{2})?\\b", RegexOption.IGNORE_CASE)
+        // (?<!\S) plutôt que \b : sur la JVM (tests), \b ne voit pas « à » comme une lettre.
+        val at = Regex("(?<!\\S)(?:à|a) (\\d{1,2}) ?(?:h|heures?|:) ?(\\d{2})?\\b", RegexOption.IGNORE_CASE)
         val delay = Regex("\\bdans (\\d+|une?) (minutes?|min|heures?|h)\\b", RegexOption.IGNORE_CASE)
         val time: String
         val rest: String

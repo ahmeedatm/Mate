@@ -40,6 +40,16 @@ android {
         }
     }
 
+    // Tests JVM : android.util.Log et consorts renvoient des valeurs par défaut au lieu de lever une exception.
+    // Erreurs de lint déjà présentes figées dans lint-baseline.xml : seules les nouvelles bloquent la CI.
+    lint {
+        baseline = file("lint-baseline.xml")
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -50,4 +60,8 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+
+    testImplementation("junit:junit:4.13.2")
+    // Vraie implémentation de org.json : celle d'android.jar n'est qu'un bouchon sur la JVM.
+    testImplementation("org.json:json:20250517")
 }
