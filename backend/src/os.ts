@@ -26,6 +26,8 @@ export const isWindows = process.platform === "win32";
 /** Le deck, le son et les fenêtres sont pilotables. */
 export const canControl = isMac || isWindows;
 export const osName = isMac ? "mac" : isWindows ? "windows" : "other";
+/** Instance de test (CI sur le Mac de quelqu'un) : rien ne s'affiche ni ne s'ouvre à l'écran. */
+const headless = process.env.COMPANION_HEADLESS === "1";
 
 export type { AudioState, MediaCommand, SystemCommand } from "./screens.ts";
 
@@ -54,6 +56,7 @@ export function computerName(): string {
 export async function openTarget(target: string) {
   if (!canControl) unsupported();
   checkOpenTarget(target, isMac ? "mac" : "windows");
+  if (headless) return;
   if (isMac) return void (await run("open", [target]));
   return win.openTarget(target);
 }
@@ -272,8 +275,8 @@ export async function systemCommand(command: SystemCommand) {
 
 /** Message bien visible sur l'ordinateur (code d'appairage), sans attendre qu'il soit fermé. */
 export async function alert(title: string, text: string) {
-  // Tests d'intégration : pas de boîte réelle à chaque appairage simulé.
-  if (process.env.NO_ALERT) return;
+  // Tests d'intégration et instance de test : pas de boîte réelle à chaque appairage.
+  if (process.env.NO_ALERT || headless) return;
   if (isWindows) return win.alert(title, text);
   if (isMac) macSystem.alert(title, text);
 }
