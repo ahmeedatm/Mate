@@ -5,7 +5,8 @@
 # données) est relevé avant et après : la moindre différence fait échouer le job.
 # Jamais de lecture dans ~/Desktop, ~/Documents… : macOS (TCC) y bloque le runner en attendant une autorisation.
 #
-#   backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip   installe le paquet, vérifie, désinstalle
+#   backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip [sanity.xml]
+#                                     installe le paquet, vérifie, sanity (backend/qa/sanity.ts), désinstalle
 #   backend/qa/install-mac.sh cleanup                             retire l'instance de test (after_script)
 set -euo pipefail
 
@@ -16,6 +17,7 @@ WORK=/tmp/companion-ci-$ID
 LABEL=$REAL_LABEL.ci-$ID
 PORT=$((41000 + ${ID//[!0-9]/0} % 1000))
 PLIST=~/Library/LaunchAgents/$LABEL.plist
+SANITY="$(cd "$(dirname "$0")" && pwd)/sanity.ts"
 APP="$WORK/install/Compagnon Unowhy"
 NODE="$APP/backend/node/darwin-$([[ $(uname -m) == arm64 ]] && echo arm64 || echo x64)/node"
 
@@ -50,7 +52,7 @@ wait_for() { # secondes, commande
 }
 
 run() {
-  local zip=${1:?chemin du zip Mac}
+  local zip=${1:?chemin du zip Mac} junit=${2:-sanity-mac.xml}
   [[ $LABEL != "$REAL_LABEL" && $PORT != "$REAL_PORT" ]] || fail "instance de test confondue avec le vrai compagnon"
   rm -rf "$WORK"; mkdir -p "$WORK"
   [[ -z $(listener "$PORT") ]] || fail "port $PORT déjà pris"
@@ -79,6 +81,11 @@ run() {
   wait_for 20 bash -c "curl -fsS --max-time 2 http://127.0.0.1:$PORT/health > /dev/null" || fail "ne répond plus après relance"
   echo "Relancé : pid $(listener "$PORT")"
 
+  step "Sanity"
+  local token sanity=0
+  token=$("$NODE" -p "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).token" "$DATA_DIR/identity.json")
+  "$NODE" "$SANITY" --url "http://127.0.0.1:$PORT" --token "$token" --os mac --junit "$junit" || sanity=$?
+
   step "Désinstallation"
   (cd "$APP/backend" && "$NODE" dist/service.mjs uninstall)
   [[ ! -e $PLIST ]] || fail "$PLIST toujours là"
@@ -87,7 +94,8 @@ run() {
 
   step "Vrai compagnon après le test"
   check_real
-  echo; echo "OK : installation, démarrage, relance et désinstallation"
+  ((sanity == 0)) || fail "sanity en échec (voir plus haut)"
+  echo; echo "OK : installation, démarrage, relance, sanity et désinstallation"
 }
 
 # Toujours lancé (after_script), même après un échec ou une annulation : ne touche qu'à l'instance de test.

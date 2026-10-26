@@ -18,6 +18,8 @@
     <ApplicationIcon>../../../assets/compagnon.ico</ApplicationIcon>
     <ApplicationManifest>../helper/app.manifest</ApplicationManifest>
     <DebugType>none</DebugType>
+    <!-- Pas de SHA du commit dans la version : l'exe ne dépend que des sources (comparé par le job windows). -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <SatelliteResourceLanguages>fr</SatelliteResourceLanguages>
   </PropertyGroup>
 </Project>

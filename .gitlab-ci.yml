@@ -55,6 +55,14 @@ default:
 .files-install-windows: &files-install-windows
   - backend/src/win/**/*
   - "Installer (Windows).cmd"
+# Pilote Windows et lanceur (C#) : sources, SDK, icône, fins de ligne.
+.files-helper-windows: &files-helper-windows
+  - backend/src/win/**/*
+  - backend/global.json
+  - backend/assets/compagnon.ico
+  - backend/qa/build-helper-windows.ps1
+  - .gitattributes
+  - .gitlab-ci.yml
 
 # En MR : seulement si la zone a bougé. Ailleurs (main, tag, nuit) : toujours.
 .zone-backend:
@@ -73,6 +81,11 @@ default:
       changes: *files-install-common
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes: *files-install-windows
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+.zone-helper-windows:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: *files-helper-windows
     - if: $CI_PIPELINE_SOURCE != "merge_request_event"
 
 # Toujours là : une MR qui ne touche aucune zone (docs) a quand même un pipeline, sans lequel elle ne fusionne pas.
@@ -195,6 +208,7 @@ install-mac:
         - backend/scripts/package.ts
         - backend/package-lock.json
         - backend/qa/install-mac.sh
+        - backend/qa/sanity.ts
         - Installer (Mac).command
       allow_failure: false
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -207,13 +221,15 @@ install-mac:
     - node --version
     - node -e 'process.exit(Number(+process.versions.node.split(".")[0] < 22))'
     - (cd backend && npm ci --prefer-offline --no-audit --no-fund && npm run package -- mac)
-    - backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip
+    - backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip sanity-mac.xml
   after_script:
     - backend/qa/install-mac.sh cleanup
   artifacts:
     when: always
     paths:
       - install-mac-backend.log
+    reports:
+      junit: sanity-mac.xml
     expire_in: 1 week
 
 # Tests instrumentés (app/src/androidTest/) sur un émulateur Android 10 sans services Google, 1280×800.
@@ -274,7 +290,12 @@ package-mac:
 # installeur silencieux, lancement automatique, sanity, pilote, désinstallation. Tout est propre au test
 # (backend/qa/install-windows.ps1) ; after_script nettoie même après un échec : le PC sert aussi aux tests UEM.
 install-windows:
-  extends: .zone-install-windows
+  # Runner 976 en ref_protected : en MR, seulement depuis une branche ci/* (protégée), sinon le job attendrait
+  # sans fin et bloquerait la MR. Les autres MR de la zone le voient tourner sur main et la nuit.
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME !~ /^ci\//
+      when: never
+    - !reference [.zone-install-windows, rules]
   stage: install
   tags: [local-runner]
   image: null
@@ -293,6 +314,29 @@ install-windows:
       - install-logs/
     reports:
       junit: sanity-windows.xml
+    expire_in: 1 week
+
+# Pilote et lanceur recompilés sous Windows : échoue si le C# ne compile pas ou si les exe commités ne sont plus
+# ceux des sources (backend/qa/build-helper-windows.ps1). Runner partagé « HiSqool Windows » (Docker, Server Core,
+# sans bureau : suffit pour compiler) ; image au SDK exact de backend/global.json, à monter ensemble.
+helper-windows:
+  extends: .zone-helper-windows
+  stage: test
+  tags: [windows, docker]
+  image: mcr.microsoft.com/dotnet/sdk:8.0.427-windowsservercore-ltsc2019@sha256:3c439035c6dd8087f43a034da64271af7e41e552b059cacc33ad23a164988b60
+  needs: []
+  variables:
+    GIT_DEPTH: 1
+    # Clone neuf : un dossier réutilisé garde les fins de ligne d'un checkout antérieur au .gitattributes.
+    GIT_STRATEGY: clone
+  script:
+    - '& backend\qa\build-helper-windows.ps1 -Work .dotnet-ci'
+  # Exe recompilés, à commiter si le job échoue sur leur comparaison.
+  artifacts:
+    when: on_failure
+    name: helper-windows-$CI_COMMIT_SHORT_SHA
+    paths:
+      - backend/src/win/*.exe
     expire_in: 1 week
 
 # APK release signé, version = tag. Clé : variables protégées et masquées, visibles seulement des tags protégés (v*).

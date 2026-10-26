@@ -76,6 +76,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os }): 
 
   let os: Os = opts.os ?? "other";
   let id = "";
+  let accessibility: boolean | null = null;
   const controlled = () => os !== "other";
   const stamp = `sanity-${Date.now()}`;
 
@@ -90,6 +91,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os }): 
         if (opts.os) expect(open.json.os === opts.os, `système annoncé « ${open.json.os} », attendu « ${opts.os} »`);
         os = open.json.os === "mac" || open.json.os === "windows" ? open.json.os : "other";
         id = open.json.id;
+        accessibility = open.json.accessibility ?? null;
         expect(typeof id === "string" && id.length > 0, "identifiant de l'ordinateur absent");
         expect((await call("GET", "/health")).json.auth === true, "le jeton donné n'est pas accepté");
         expectStatus(await call("GET", "/tasks", undefined, false), 401, "route protégée sans jeton");
@@ -147,6 +149,8 @@ export async function runSanity(opts: { url: string; token: string; os?: Os }): 
     {
       name: "fenêtres ouvertes",
       run: async () => {
+        // Mac sans Accessibilité (job install-mac) : System Events demanderait une autorisation à l'écran.
+        if (os === "mac" && accessibility === false) throw new Skip("Accessibilité non accordée");
         const open = await call("GET", "/windows/open");
         if (!controlled()) return expectStatus(open, 501, "/windows/open");
         expectStatus(open, 200, "/windows/open");

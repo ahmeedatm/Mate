@@ -20,6 +20,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <DebugType>none</DebugType>
+    <!-- Pas de SHA du commit dans la version : l'exe ne dépend que des sources (comparé par le job windows). -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <SatelliteResourceLanguages>fr</SatelliteResourceLanguages>
     <!-- Les dépendances WinRT sont des métadonnées (winmd) fournies par Windows : rien à copier à côté de l'exe. -->
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
