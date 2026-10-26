@@ -1,12 +1,11 @@
 @echo off
 rem Double-clic : installe le compagnon sur ce PC Windows. Il demarrera ensuite tout seul
 rem a chaque ouverture de session (voir backend\scripts\service.ts). Relancer ce fichier pour mettre a jour.
-rem "Installer (Windows).cmd" /silencieux : sans pause, sans pare-feu ni demande d'administrateur, sans ouvrir
-rem la page (CI). Le code de sortie dit si l'installation a reussi.
+rem "Installer (Windows).cmd" /silencieux : sans pause, sans pare-feu ni demande d'administrateur (CI).
+rem Le code de sortie dit si l'installation a reussi.
 chcp 65001 >nul
 set "SILENT="
 if /i "%~1"=="/silencieux" set "SILENT=1"
-if defined SILENT set "COMPANION_SILENT=1"
 set "BACKEND=%~dp0backend"
 if not exist "%BACKEND%\src\win\UnowhyCompanion.exe" goto :nobackend
 cd /d "%BACKEND%" || goto :fail

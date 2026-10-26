@@ -12,10 +12,10 @@ object IconCache {
 
     fun peek(id: String): Bitmap? = bitmaps.get(id)
 
-    suspend fun load(client: BackendClient, id: String): Bitmap? = load(id) { client.tileIcon(id) }
+    suspend fun load(client: BackendClient, id: String): Bitmap? = load(id) { client.deck.tileIcon(id) }
 
     /** Icône d'une appli d'après son nom (vue « Ouvertes »). */
-    suspend fun loadApp(client: BackendClient, name: String): Bitmap? = load(appKey(name)) { client.appIcon(name) }
+    suspend fun loadApp(client: BackendClient, name: String): Bitmap? = load(appKey(name)) { client.windows.appIcon(name) }
 
     fun peekApp(name: String): Bitmap? = peek(appKey(name))
 

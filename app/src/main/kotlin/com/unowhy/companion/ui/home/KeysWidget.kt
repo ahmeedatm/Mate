@@ -93,7 +93,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             host.scope.launch {
                 try {
-                    BackendClient(context).runTile(id)
+                    BackendClient(context).deck.runTile(id)
                 } catch (e: Exception) {
                     Toast.makeText(context, context.errorText(e), Toast.LENGTH_LONG).show()
                 }
@@ -106,7 +106,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     override fun showSettings() {
         host.scope.launch {
             val pages = try {
-                BackendClient(context).deck()
+                BackendClient(context).deck.pages()
             } catch (e: Exception) {
                 Toast.makeText(context, context.errorText(e), Toast.LENGTH_LONG).show()
                 return@launch

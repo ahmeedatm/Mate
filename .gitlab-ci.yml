@@ -35,19 +35,19 @@ default:
   - "*.gradle*"
   - gradle/**/*
   - gradlew*
+  - scripts/test-android.sh
   - .gitlab-ci.yml
 # Installation : pilote, lancement automatique, paquets, installeurs, aiguillage par système, sanity.
 .files-install-common: &files-install-common
   - backend/scripts/**/*
   - backend/src/os.ts
+  - backend/src/paths.ts
+  - backend/package-lock.json
   - backend/qa/**/*
   - .gitlab-ci.yml
 .files-install-windows: &files-install-windows
   - backend/src/win/**/*
   - "Installer (Windows).cmd"
-.files-install-mac: &files-install-mac
-  - backend/src/mac/**/*
-  - "Installer (Mac).command"
 
 # En MR : seulement si la zone a bougé. Ailleurs (main, tag, nuit) : toujours.
 .zone-backend:
@@ -66,13 +66,6 @@ default:
       changes: *files-install-common
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes: *files-install-windows
-    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
-.zone-install-mac:
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes: *files-install-common
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes: *files-install-mac
     - if: $CI_PIPELINE_SOURCE != "merge_request_event"
 
 # Toujours là : une MR qui ne touche aucune zone (docs) a quand même un pipeline, sans lequel elle ne fusionne pas.
@@ -168,6 +161,72 @@ android:
       junit: app/build/test-results/testDebugUnitTest/*.xml
     expire_in: 2 weeks
 
+# Installation du paquet Mac sur le Mac d'un développeur (runner shell, tag macos) : backend/qa/install-mac.sh.
+# Instance de test isolée de son vrai compagnon (agent, port, données à part), rien ne s'affiche à l'écran.
+# Obligatoire seulement si l'installation ou le pilotage du Mac ont bougé (Mac éteint = job en attente) ;
+# sur les autres MR, à lancer à la main.
+install-mac:
+  stage: test
+  tags: [macos]
+  needs: []
+  interruptible: true
+  variables:
+    npm_config_cache: $CI_PROJECT_DIR/.npm
+  cache:
+    key: install-mac
+    paths:
+      - .npm/
+      - backend/.cache/node/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - backend/src/mac/**/*
+        - backend/src/os.ts
+        - backend/src/paths.ts
+        - backend/scripts/service.ts
+        - backend/scripts/package.ts
+        - backend/package-lock.json
+        - backend/qa/install-mac.sh
+        - Installer (Mac).command
+      allow_failure: false
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+  script:
+    # node@18 passe avant dans le PATH du runner : celui de Homebrew (22 ou plus).
+    - export PATH="/opt/homebrew/bin:$PATH"
+    - node --version
+    - node -e 'process.exit(Number(+process.versions.node.split(".")[0] < 22))'
+    - (cd backend && npm ci --prefer-offline --no-audit --no-fund && npm run package -- mac)
+    - backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip
+  after_script:
+    - backend/qa/install-mac.sh cleanup
+  artifacts:
+    when: always
+    paths:
+      - install-mac-backend.log
+    expire_in: 1 week
+
+# Tests instrumentés (app/src/androidTest/) sur un émulateur Android 10 sans services Google, 1280×800.
+# Le runner Kubernetes partagé expose /dev/kvm (pod privilégié) : démarrage en ~25 s. Même script qu'en local.
+android-emulateur:
+  extends: [.android, .zone-android]
+  stage: test
+  timeout: 30m
+  cache:
+    policy: pull
+  script:
+    - scripts/test-android.sh
+  artifacts:
+    when: always
+    paths:
+      - app/build/test-android/
+      - app/build/reports/androidTests/
+    reports:
+      junit: app/build/outputs/androidTest-results/connected/debug/*.xml
+    expire_in: 2 weeks
+
 # Paquets de l'ordinateur (node embarqué) : backend/scripts/package.ts. Un job par plateforme : les deux zips
 # ensemble dépassent la limite d'artefacts par défaut (100 Mo). Consommés par les tests d'installation et la release.
 .package:
@@ -189,8 +248,11 @@ package-windows:
   variables:
     PLATFORM: windows
 
+# install-mac fabrique son propre paquet : celui-ci sert à la release (et tourne sur main et la nuit).
 package-mac:
-  extends: [.package, .zone-install-mac]
+  extends: .package
+  rules:
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
   variables:
     PLATFORM: mac
 

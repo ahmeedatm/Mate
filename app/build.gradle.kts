@@ -35,6 +35,7 @@ android {
         buildConfigField("String", "DEFAULT_BACKEND_URL", "\"$backendUrl\"")
         buildConfigField("String", "TECH_CODE", "\"$techCode\"")
         buildConfigField("String", "INSTALL_URL", "\"$installUrl\"")
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -66,8 +67,10 @@ android {
         baseline = file("lint-baseline.xml")
     }
 
+    // Tests instrumentés (app/src/androidTest/, émulateur API 29) : animations coupées, sinon Espresso attend les boucles.
     testOptions {
         unitTests.isReturnDefaultValues = true
+        animationsDisabled = true
     }
 
     compileOptions {
@@ -84,4 +87,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     // Vraie implémentation de org.json : celle d'android.jar n'est qu'un bouchon sur la JVM.
     testImplementation("org.json:json:20250517")
+
+    androidTestImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 }

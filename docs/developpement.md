@@ -87,13 +87,14 @@ adb -s <série> install -r app/build/outputs/apk/debug/app-debug.apk   # un appa
 
 `main` est protégée : on n'y pousse plus directement. Une branche par changement (`feat/…`, `fix/…`, `docs/…`, `ci/…`), puis une MR vers `main`. Elle se fusionne quand le pipeline est vert et les discussions résolues.
 
-Le pipeline (`.gitlab-ci.yml`) tourne sur le runner Linux, sauf `install-windows` (PC Windows de QA) :
+Le pipeline (`.gitlab-ci.yml`) tourne sur le runner Linux, sauf `install-mac` (Mac, section suivante) et `install-windows` (PC Windows de QA) :
 
 | Job | Vérifie |
 |---|---|
 | `backend` | `npm run typecheck`, puis `npm test` : tests d'intégration (`backend/test/`), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP. Comprend la sanity (`test/sanity.test.ts`, pilotage : 501 attendu) |
 | `e2e` | pages web du backend dans Chromium (Playwright, `backend/e2e/`) : page locale (adresse, code d'appairage, lien ICS), visualiseur `/camera`, retours d'erreur de `/oauth/:provider/callback`. Même serveur que les tests d'intégration. Artefacts : `e2e-results/junit.xml` et traces des tests en échec |
 | `android` | tests JVM (`app/src/test/`), lint, APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
+| `android-emulateur` | tests instrumentés (`app/src/androidTest/`, Espresso) sur un émulateur Android 10 sans services Google, 1280×800 à 160 dpi ; artefacts : rapport JUnit, capture de l'écran de bienvenue |
 | `package-windows`, `package-mac` | paquets de l'ordinateur (`npm run package -- windows|mac`), utilisés par les tests d'installation et la release |
 | `install-windows` | paquet Windows installé sur un vrai PC : installeur silencieux, lancement automatique, sanity, pilote, désinstallation (`backend/qa/install-windows.ps1`) |
 | `zones` | rien : garde un pipeline aux MR qui ne touchent aucune zone (sans pipeline, la MR ne fusionne pas) |
@@ -103,26 +104,35 @@ Le pipeline (`.gitlab-ci.yml`) tourne sur le runner Linux, sauf `install-windows
 | Zone | Fichiers | Jobs |
 |---|---|---|
 | backend | `backend/**` | `backend`, `e2e` |
-| android | `app/**`, `*.gradle*`, `gradle/**`, `gradlew*` | `android` |
-| installation (commun) | `backend/scripts/**`, `backend/src/os.ts`, `backend/qa/**` | les deux ci-dessous |
-| installation Windows | `backend/src/win/**`, `Installer (Windows).cmd` | `package-windows`, `install-windows` |
-| installation Mac | `backend/src/mac/**`, `Installer (Mac).command` | `package-mac` (et `install-mac`) |
+| android | `app/**`, `*.gradle*`, `gradle/**`, `gradlew*`, `scripts/test-android.sh` | `android`, `android-emulateur` |
+| installation Windows | `backend/scripts/**`, `backend/src/os.ts`, `backend/src/paths.ts`, `backend/package-lock.json`, `backend/qa/**`, `backend/src/win/**`, `Installer (Windows).cmd` | `package-windows`, `install-windows` |
+| installation Mac | liste propre au job (`backend/src/mac/**`, `service.ts`, `package.ts`, `os.ts`, `paths.ts`…) | `install-mac` (manuel sur les autres MR) ; `package-mac` ne tourne qu'hors MR, `install-mac` fabriquant son paquet |
 
-**Nuit** : pipeline programmé n° 282 sur `main`, chaque nuit à 3 h (heure de Paris), qui lance tout (Settings > CI/CD > Pipeline schedules, ou `glab api projects/efreifer%2Funowhy-companion/pipeline_schedules`). Le `workflow` accepte `CI_PIPELINE_SOURCE == "schedule"`.
+**Nuit** : pipeline programmé n° 282 sur `main`, chaque nuit à 3 h (heure de Paris), qui lance tout (Settings > CI/CD > Pipeline schedules, ou `glab api projects/efreifer%2Funowhy-companion/pipeline_schedules`). Le `workflow` accepte `CI_PIPELINE_SOURCE == "schedule"`. `install-mac` et `install-windows` demandent alors le Mac et le PC de QA allumés, session ouverte.
 
-**Sanity** (`backend/qa/sanity.ts`) : un contrôle par feature contre un compagnon réel déjà démarré : santé et identité, appairage par code (sans boîte si le compagnon tourne avec `COMPANION_NO_DIALOG=1`), deck et deck de départ filtré aux applis installées, son, fenêtres ouvertes, refus d'un `.exe` par `/docs/open`, tâches, agenda personnel, agenda ICS (fichier servi en local, seulement si aucun agenda n'est relié), `/camera`, page locale. Réponse attendue selon le système : 501 pour le pilotage hors Mac et Windows. Ce qu'il crée est retiré à la fin. Sans dépendance : le node du paquet le lance tel quel.
+**Sanity** (`backend/qa/sanity.ts`) : un contrôle par feature contre un compagnon réel déjà démarré : santé et identité, appairage par code (sans boîte avec `COMPANION_HEADLESS=1` ou `NO_ALERT=1`), deck et deck de départ filtré aux applis installées, son, fenêtres ouvertes, refus d'un `.exe` par `/docs/open`, tâches, agenda personnel, agenda ICS (fichier servi en local, seulement si aucun agenda n'est relié), `/camera`, page locale. Réponse attendue selon le système : 501 pour le pilotage hors Mac et Windows. Ce qu'il crée est retiré à la fin. Sans dépendance : le node du paquet le lance tel quel.
 
 ```sh
 node qa/sanity.ts --url http://127.0.0.1:3000 --token <jeton> --os mac --junit sanity.xml
 ```
 
-**`install-windows`** : runner 976 « Local QA runner » (tag `local-runner`), le PC Windows de QA, exécuteur shell PowerShell, avec une vraie session de bureau : il faut que le PC soit allumé et la session ouverte, sinon le job attend. Le PC sert aussi aux tests UEM : tout est propre au test (port 3917, `HOST=127.0.0.1`, `DATA_DIR`, `LOCALAPPDATA`, clé Run et raccourcis `UnowhyCompanionCI` par `COMPANION_SERVICE_NAME`, sous `%TEMP%\compagnon-ci`), et `-Nettoyage` (before_script et after_script, même après un échec) désinstalle et supprime ce dossier. Un compagnon déjà installé sur le PC n'est pas touché. L'installeur a un mode non interactif, `"Installer (Windows).cmd" /silencieux` : ni pause, ni pare-feu, ni demande d'administrateur, ni page ouverte (`COMPANION_SILENT=1` pour `service.ts`) ; le double-clic ne change pas. À la main sur un PC : `powershell -ExecutionPolicy Bypass -File backend\qa\install-windows.ps1 -Zip <zip>`. Journaux du lanceur et du serveur dans les artefacts (`install-logs/`), résultat de la sanity dans l'onglet Tests.
+**`install-windows`** : runner 976 « Local QA runner » (tag `local-runner`), le PC Windows de QA, exécuteur shell PowerShell, avec une vraie session de bureau : il faut que le PC soit allumé et la session ouverte, sinon le job attend. Le PC sert aussi aux tests UEM : instance de test comme pour `install-mac` (port 3917, `HOST=127.0.0.1`, `DATA_DIR`, `COMPANION_LOG_DIR`, `LOCALAPPDATA` pour les copies du pilote, valeur `UnowhyCompanionCI` de la clé Run par `COMPANION_LABEL`, `COMPANION_HEADLESS=1` : ni boîte, ni page, ni raccourci, tout sous `%TEMP%\compagnon-ci`), et `-Nettoyage` (before_script et after_script, même après un échec) désinstalle et supprime ce dossier. Un compagnon déjà installé sur le PC n'est pas touché. L'installeur a un mode non interactif, `"Installer (Windows).cmd" /silencieux` : ni pause, ni pare-feu, ni demande d'administrateur ; le double-clic ne change pas. À la main sur un PC : `powershell -ExecutionPolicy Bypass -File backend\qa\install-windows.ps1 -Zip <zip>`. Journaux du lanceur et du serveur dans les artefacts (`install-logs/`), résultat de la sanity dans l'onglet Tests.
 
 Le runner Windows partagé « HiSqool Windows » (473) n'est pas utilisé : Docker Windows Server 2019 sans bureau (Server Core), le dossier Applications du shell y manque, donc le pilote ne liste ni applis ni fenêtres.
 
 Sur un tag `vX.Y.Z`, `android-release` et `release` construisent et publient la release (section suivante).
 
-Avant de pousser : `cd backend && npm run typecheck && npm test`, et `./gradlew testDebugUnitTest lintDebug`.
+### Installation sur Mac (`install-mac`)
+
+Job sur le runner Mac (tag `macos`, exécuteur shell, Mac d'un développeur où tourne son vrai compagnon). Il construit le paquet Mac, le dézippe dans `/tmp/companion-ci-<job>`, lance `Installer (Mac).command`, vérifie l'agent launchd, `/health` (`accessibility: false` attendu : pas d'autorisation pour le node du job), la relance par launchd après un arrêt, puis la désinstallation. Script : `backend/qa/install-mac.sh run <zip>` (et `cleanup`, en `after_script`, même après un échec ou une annulation).
+
+Isolation du vrai compagnon : agent `com.unowhy.companion.ci-<job>`, port `41000 + job % 1000` en `HOST=127.0.0.1`, `DATA_DIR`, `DOCS_DIR` et journal (`COMPANION_LOG_DIR`) dans le dossier du job. `COMPANION_HEADLESS=1` : ni dialogue d'appairage, ni page ou Réglages ouverts, ni raccourci sur le Bureau. Le vrai compagnon (agent `com.unowhy.companion`, plist, port 3000, identité) est relevé avant et après : une différence fait échouer le job. Le script ne lit jamais `~/Desktop`, `~/Documents`… : macOS (TCC) bloque le runner en attendant une autorisation, et le job reste suspendu.
+
+Obligatoire seulement sur les MR qui touchent `backend/src/mac/`, `os.ts`, `paths.ts`, `scripts/service.ts`, `scripts/package.ts`, `package-lock.json`, l'installeur Mac ou le script (Mac éteint = job en attente, la MR aussi). Sur les autres MR : bouton manuel, sans bloquer. Sur `main`, un tag et la nuit : lancé d'office. En local : `cd backend && npm run package -- mac && cd .. && backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip`.
+
+L'installeur, lancé sans terminal (stdin non interactif), ne fait pas de pause et rend le code de sortie de l'installation ; au double-clic, rien ne change.
+
+Avant de pousser : `cd backend && npm run typecheck && npm test`, et `./gradlew testDebugUnitTest lintDebug`. Si l'écran ou un parcours change : `scripts/test-android.sh`.
 
 Tests Playwright (page web touchée : `src/local-page.ts`, `src/camera.ts`, routes OAuth) : `cd backend && npm run test:e2e`, après un `npx playwright install chromium` la première fois. Sans navigateur installé, dans l'image du job :
 
@@ -133,7 +143,17 @@ docker run --rm -e CI=true -v "$PWD":/w -v /w/backend/node_modules -w /w/backend
 
 Le tag de l'image du job `e2e` suit la version exacte de `@playwright/test` (`backend/package.json`) : changer les deux ensemble (et le digest). Trace d'un échec : `npx playwright show-trace e2e-results/traces/<test>/trace.zip`.
 
-Ce que la CI ne voit pas : le pilotage réel du Mac (en attendant `install-mac`), les actions qui changent l'ordinateur (lancer une appli, déplacer une fenêtre, régler le son : la sanity ne fait que lire), l'appli sur la tablette. Ils restent testés à la main (case « Testé sur » de la MR).
+Ce que la CI ne voit pas : les actions qui changent l'ordinateur (lancer une appli, déplacer une fenêtre, régler le son : la sanity ne fait que lire), le pilotage réel du Mac (`install-mac` ne teste que l'installation), l'appli sur la vraie tablette (perfs, kiosque, micro, caméra). Ils restent testés à la main (case « Testé sur » de la MR).
+
+### Tests instrumentés (émulateur)
+
+Espresso, dans `app/src/androidTest/` : le test tourne dans l'appli, peut effacer ses préférences avant de la lancer, et attend seul que l'écran soit stable. Premier parcours : `WelcomeTest` (lancement sans ordinateur, écran de bienvenue, « Plus tard », Deck → « Connecter » ramène à la bienvenue). Noms de tests en camelCase : D8 refuse les espaces dans les noms de méthode sous API 30.
+
+`scripts/test-android.sh [--window]` fait tout : AVD dédié `companion_test_api29` (port 5580, effacé à chaque lancement ; `companion_api29` n'est pas touché), compilation, installation, tests, capture `app/build/test-android/bienvenue.png`, arrêt de l'émulateur. Sortie non nulle si un test échoue.
+
+- **Mac Apple Silicon** : émulateur natif (Hypervisor.framework) et image `android-29;default;arm64-v8a`, téléchargés au premier lancement (~800 Mo, empreintes vérifiées) dans `~/Library/Android/sdk`. Sans JDK, les APK sont compilés dans l'image Docker de la CI et les tests lancés par `am instrument`. Avec un JDK : `./gradlew connectedDebugAndroidTest`. L'émulateur ne peut pas tourner dans Docker sur le Mac : pas de KVM (pas de virtualisation imbriquée sur M1).
+- **CI** : même script, image `x86_64` par `sdkmanager`. Le runner Kubernetes partagé expose `/dev/kvm` (pod privilégié, vérifié le 26/10/2026 : `emulator -accel-check` → « KVM is installed and usable », boot en ~25 s). Si ce runner change de configuration, le job échoue avec « /dev/kvm absent » : il faudra alors un runner dédié avec KVM, taggé.
+- Sur le WiFi du bureau, l'émulateur local peut trouver un vrai compagnon (recherche UDP) : les tests n'en dépendent pas.
 
 Lint : les erreurs déjà présentes sont figées dans `app/lint-baseline.xml`, seules les nouvelles font échouer le job. Après en avoir corrigé, `./gradlew updateLintBaseline`.
 

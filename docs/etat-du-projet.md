@@ -48,6 +48,8 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 ## Fait mais pas encore testé en vrai
 
+- **Tests instrumentés sur émulateur** (26/10) : Espresso (`app/src/androidTest/`), émulateur Android 10 sans services Google calqué sur la tablette, en local (`scripts/test-android.sh`, émulateur natif du Mac) et en CI (job `android-emulateur` : le runner Kubernetes partagé a KVM). Premier parcours : lancement sans ordinateur → bienvenue → « Plus tard » → Deck → « Connecter ». Espresso plutôt que Maestro : dans Gradle et l'image CI déjà là, rien à installer, préférences effacées depuis le test, synchronisation automatique ; Maestro (YAML, boîte noire) reste une piste pour un test de fumée sur la vraie tablette en kiosque. Pas couvert : kiosque (l'émulateur n'est pas device owner), appairage avec un vrai backend.
+
 - **Commande vocale** (24/10) : « ferme … », « cherche … », « raccroche », « arrête le partage » à la voix. La reconnaissance entend souvent « mais » pour « mets » et « de » pour « 2 » : acceptés. Pas de mot de réveil (bouton seulement). La carte d'appel cache le bouton Parler : « réponds » / « ignore » à la voix ne servent pas encore.
 - **Appels entrants** (24/10) : Vidéo, Ignorer, « Appel manqué » ; Discord en anglais ; Teams, WhatsApp, Zoom (une règle chacun dans `config/calls.json` après une capture pendant un vrai appel) ; Mac (pas fait).
 - **Tests Playwright des pages web** (26/10) : job CI `e2e` (page locale, visualiseur, retour OAuth), 18 tests verts dans l'image du job en local (arm64 et amd64). Pas encore passé sur le runner GitLab.

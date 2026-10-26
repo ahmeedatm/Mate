@@ -15,6 +15,7 @@ import android.widget.TextView
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
+import com.unowhy.companion.net.WindowsApi
 import com.unowhy.companion.net.DeckTile
 import com.unowhy.companion.net.MacDisplay
 import com.unowhy.companion.net.MacWindow
@@ -103,7 +104,7 @@ class WindowPicker @JvmOverloads constructor(
         visibility = VISIBLE
         if (known != null) render(known) else {
             render(null)
-            act { windows(it) }
+            act { ofTile(it) }
         }
     }
 
@@ -116,7 +117,7 @@ class WindowPicker @JvmOverloads constructor(
         val id = tile?.id ?: return
         scope.launch {
             try {
-                BackendClient(context).removeDeckApp(id)
+                BackendClient(context).deck.removeApp(id)
                 IconCache.forget(id)
                 hide()
                 onRemoved()
@@ -130,12 +131,12 @@ class WindowPicker @JvmOverloads constructor(
      * Mettre une fenêtre devant : le panneau se ferme tout de suite, le Mac suit (une à deux secondes
      * s'il change de bureau). Un échec s'affiche dans le bandeau, le panneau n'étant plus là.
      */
-    private fun dismissAndRun(call: suspend BackendClient.(tileId: String) -> WindowsInfo) {
+    private fun dismissAndRun(call: suspend WindowsApi.(tileId: String) -> WindowsInfo) {
         val id = tile?.id ?: return
         hide()
         scope.launch {
             try {
-                BackendClient(context).call(id)
+                BackendClient(context).windows.call(id)
             } catch (e: Exception) {
                 activity()?.showBanner(context.errorText(e), 6)
             }
@@ -152,11 +153,11 @@ class WindowPicker @JvmOverloads constructor(
     }
 
     /** Appelle le Mac puis affiche les fenêtres à jour. `rollback` : état à remettre en cas d'échec. */
-    private fun act(rollback: WindowsInfo? = null, call: suspend BackendClient.(tileId: String) -> WindowsInfo) {
+    private fun act(rollback: WindowsInfo? = null, call: suspend WindowsApi.(tileId: String) -> WindowsInfo) {
         val id = tile?.id ?: return
         scope.launch {
             try {
-                val result = BackendClient(context).call(id)
+                val result = BackendClient(context).windows.call(id)
                 if (tile?.id == id) render(result)
             } catch (e: Exception) {
                 if (tile?.id != id) return@launch

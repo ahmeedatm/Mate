@@ -15,22 +15,25 @@ import { backendRoot as backend, dataDir, packaged as bundled, userFolder } from
  *   npm run service:start       redémarre
  *   npm run service:status      état
  *   npm run service:uninstall   retire le lancement automatique
+ *
+ * Instance de test à côté du vrai compagnon (CI, jobs install-mac et install-windows) : COMPANION_LABEL (autre agent
+ * launchd, qui garde PORT, HOST, DATA_DIR, DOCS_DIR et COMPANION_HEADLESS ; sous Windows, autre valeur de la clé Run),
+ * COMPANION_LOG_DIR, et COMPANION_HEADLESS=1 : ni fenêtre, ni page ouverte, ni raccourci sur le Bureau.
  */
 
 const port = Number(process.env.PORT ?? 3000);
-// COMPANION_SERVICE_NAME : lancement automatique et raccourcis sous un autre nom, pour un test sur un ordinateur
-// qui a déjà le compagnon (CI). Avec PORT et DATA_DIR, l'installation réelle n'est pas touchée.
-const serviceName = process.env.COMPANION_SERVICE_NAME?.trim();
-const LABEL = serviceName ? `com.unowhy.${serviceName}` : "com.unowhy.companion";
+const LABEL = process.env.COMPANION_LABEL || "com.unowhy.companion";
+const headless = process.env.COMPANION_HEADLESS === "1";
 const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-const RUN_VALUE = serviceName || "UnowhyCompanion";
+// Instance de test (job install-windows) : sa propre valeur dans la clé Run, celle du vrai compagnon n'est pas touchée.
+const RUN_VALUE = process.env.COMPANION_LABEL || "UnowhyCompanion";
 const isMac = process.platform === "darwin";
 const isWindows = process.platform === "win32";
-/** Installeur lancé sans personne devant (CI, `/silencieux`) : n'ouvre ni réglage, ni Finder, ni navigateur. */
-const silent = process.env.COMPANION_SILENT === "1";
 
 const plist = path.join(os.homedir(), "Library", "LaunchAgents", `${LABEL}.plist`);
-const logDir = isWindows
+const logDir = process.env.COMPANION_LOG_DIR
+  ? path.resolve(process.env.COMPANION_LOG_DIR)
+  : isWindows
   ? path.join(process.env.LOCALAPPDATA ?? os.homedir(), "UnowhyCompanion")
   : path.join(os.homedir(), "Library", "Logs", "UnowhyCompanion");
 const pidFile = path.join(dataDir, "service.pid");
@@ -96,6 +99,11 @@ async function macInstall() {
   const args = [node, ...NODE_ARGS].map((a) => `    <string>${xml(a)}</string>`).join("\n");
   // PATH : osascript, open, mdfind… sont dans /usr/bin ; node peut être ailleurs (Homebrew, nvm).
   const envPath = [path.dirname(node), "/usr/local/bin", "/opt/homebrew/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"].join(":");
+  // Instance de test seulement : le vrai compagnon relit PORT, HOST… dans .env à chaque démarrage.
+  const passed = process.env.COMPANION_LABEL ? ["PORT", "HOST", "DATA_DIR", "DOCS_DIR", "COMPANION_HEADLESS"] : [];
+  const env = [["PATH", envPath], ...passed.filter((k) => process.env[k]).map((k) => [k, process.env[k] as string])]
+    .map(([k, v]) => `    <key>${k}</key>\n    <string>${xml(v)}</string>`)
+    .join("\n");
   fs.writeFileSync(
     plist,
     `<?xml version="1.0" encoding="UTF-8"?>
@@ -112,8 +120,7 @@ ${args}
   <string>${xml(backend)}</string>
   <key>EnvironmentVariables</key>
   <dict>
-    <key>PATH</key>
-    <string>${xml(envPath)}</string>
+${env}
   </dict>
   <key>RunAtLoad</key>
   <true/>
@@ -186,7 +193,7 @@ async function winInstall() {
 
 // --- Raccourcis vers la page de l'ordinateur (adresse, code d'appairage, agenda)
 
-const SHORTCUT = serviceName || "Compagnon Unowhy";
+const SHORTCUT = "Compagnon Unowhy";
 
 function shortcutFiles(): string[] {
   const home = os.homedir();
@@ -232,16 +239,15 @@ async function install() {
   }
   console.log(`\n✓ Compagnon prêt sur « ${h.name} ». Il démarrera tout seul à chaque ouverture de session.\n`);
   console.log("Sur la tablette : Réglages > Ordinateurs > Ajouter, puis saisir le code affiché ici.");
+  if (headless) return;
   if (isMac) {
     console.log(
       `\nPour les raccourcis, macros et fenêtres, macOS demande l'accès Accessibilité pour node :\n` +
         `  Réglages Système > Confidentialité et sécurité > Accessibilité > + > ${node}\n` +
         `  (le Finder s'ouvre sur node : le glisser dans la liste, puis l'activer)`,
     );
-    if (!silent) {
-      await sh("open", ["x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"]);
-      await sh("open", ["-R", node]);
-    }
+    await sh("open", ["x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"]);
+    await sh("open", ["-R", node]);
   } else {
     console.log(
       "\nSi la tablette ne trouve pas l'ordinateur : le WiFi de l'ordinateur doit être en profil « Privé »\n" +
@@ -250,7 +256,7 @@ async function install() {
   }
   const page = `http://127.0.0.1:${port}/`;
   addShortcuts(page);
-  if (!silent) await sh(isMac ? "open" : "explorer.exe", [page]);
+  await sh(isMac ? "open" : "explorer.exe", [page]);
   console.log(`\nPage d'aide (adresse, code d'appairage, agenda) : ${page}`);
   console.log(`Pour la rouvrir : raccourci « ${SHORTCUT} » sur le Bureau${isWindows ? " et dans le menu Démarrer" : ""}.`);
 }
@@ -263,7 +269,7 @@ async function uninstall() {
     await winStop();
     await sh("reg", ["delete", RUN_KEY, "/v", RUN_VALUE, "/f"]);
   }
-  for (const file of shortcutFiles()) fs.rmSync(file, { force: true });
+  if (!headless) for (const file of shortcutFiles()) fs.rmSync(file, { force: true });
   console.log("Lancement automatique retiré.");
 }
 

@@ -9,7 +9,7 @@ Une tablette Unowhy 4.2 (Android 10, lente) posée à côté de l'ordinateur ser
 ```
 ┌────────────── Tablette (app/) ──────────────┐            ┌──────── Ordinateur Mac ou Windows (backend/) ────────┐
 │ Appli Android Kotlin, en kiosque            │  WiFi      │ Node 22 + Fastify, port 3000                          │
-│ MainActivity + un Fragment par mode         │ ─HTTP────▶ │ server.ts : routes, jeton                             │
+│ MainActivity + un Fragment par mode         │ ─HTTP────▶ │ server.ts : jeton ; routes/ : routes par domaine      │
 │ BackendClient (HttpURLConnection)           │  + jeton   │ deck.ts → os.ts ─┬─ mac/ (osascript, JXA)             │
 │ RemoteChannel (long-polling) ◀──────────────│─ ordres ── │ tablet.ts (file   └─ win/ (UnowhyHelper.exe, C#)      │
 │ Discovery (UDP) ◀──────── diffusion ────────│─ UDP ───── │   d'ordres)        calendar, tasks, events, camera…   │
@@ -32,7 +32,7 @@ Pas de serveur dans le cloud : chaque ordinateur a son compagnon, la tablette pa
 ### Le compagnon de l'ordinateur (`backend/`)
 
 - **Node 22, TypeScript lancé par `tsx`** (pas de compilation), **Fastify**. Démarre seul à l'ouverture de session (`scripts/service.ts` : LaunchAgent sur Mac, clé Run + lanceur sans fenêtre `src/win/UnowhyCompanion.exe` sur Windows).
-- **`server.ts`** déclare toutes les routes (contrat de l'API) et vérifie le jeton `Authorization: Bearer`. Sans jeton : `/health`, `/pair/*`, la page locale `GET /` (seulement depuis l'ordinateur).
+- **`server.ts`** vérifie le jeton `Authorization: Bearer`, traduit les erreurs, enregistre les routes et lance les tâches de fond. Les routes (contrat de l'API) sont dans **`routes/`**, un plugin Fastify par domaine (`pairing.ts` pour `/health` et `/pair/*`, `local.ts`, `deck.ts`, `windows.ts`, `system.ts`, `docs.ts`, `browser.ts`, `camera.ts`, `calendar.ts`, `tasks.ts`, `calls.ts`, `tablet.ts`, `updates.ts`) ; les hooks posés dans `server.ts` valent pour tous. Sans jeton : `/health`, `/pair/*`, la page locale `GET /` (seulement depuis l'ordinateur).
 - **`os.ts`** est le seul point d'entrée vers le système : il appelle `mac/` ou `win/` selon l'OS. Ajouter une action système = l'écrire dans les deux.
   - **Mac** (`src/mac/`) : `osascript` en AppleScript ou JXA. Frappes en CGEvent (System Events refuse les saisies), fenêtres par l'Accessibilité + NSScreen + CoreGraphics. Demande l'autorisation Accessibilité.
   - **Windows** (`src/win/`) : un **programme résident `UnowhyHelper.exe`** (C# .NET Framework 4.8, compilé d'avance : `helper/Native*.cs` pour fenêtres, son, frappes, une classe partielle découpée par thème ; `helper/Program.cs` pour l'UI Automation ; `helper/Media.cs` pour les contrôles multimédias WinRT). `helper.ts` lui envoie des commandes JSON ligne par ligne. L'exe est copié dans `%LOCALAPPDATA%\UnowhyCompanion\helper` avant lancement pour ne pas verrouiller l'original. Pas de PowerShell : un script qui compile du C# de frappes à la volée était classé malveillant par Bitdefender.
@@ -91,9 +91,9 @@ Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/upda
 
 | Où | Quoi |
 |---|---|
-| `MainActivity.kt` | barre latérale, modes, clavier, rappel Eau, changement d'ordinateur |
+| `MainActivity.kt` | câblage des modes (`Mode.kt`), panneau document, changement d'ordinateur ; barre latérale `ui/Rail`, clavier `ui/KeyboardControl`, bandeau `ui/Banner`, rappels Eau et batterie `ui/TabletAlerts`, Ne pas déranger `focus/FocusDnd`, canal `remote/RemoteLink` |
 | `Prefs.kt`, `Computers.kt` | préférences, liste des ordinateurs appairés |
-| `net/` | `BackendClient` (toutes les routes), `Connection` (bascule), `Discovery` (UDP), `Wifi` |
+| `net/` | `BackendClient` (point d'accès : un client par domaine, `DeckApi`, `WindowsApi`, `SystemApi`, `DocsApi`, `CalendarApi`, `TasksApi`, `CameraApi`, `UpdatesApi`, `TabletApi`, `PairingApi`), `Http` (plomberie, `HttpException`), `Connection` (bascule), `Discovery` (UDP), `Wifi` |
 | `remote/RemoteChannel.kt` | ordres reçus de l'ordinateur |
 | `ui/` | un fichier par écran ou composant : `HomeFragment`, `DeckFragment`, `DocsFragment` (Depuis l'ordi : choix Fichiers / Page de l'ordi, puis la liste ; `BrowserTabsDialog` : onglets de l'ordi), `FocusFragment`, `CameraFragment`, `SettingsFragment`, `WelcomeView` (premier lancement), `DocumentPanel`, boîtes de dialogue (`TaskDialog`, `EventDialog`, `ComputerAdder`, `WifiPicker`…) |
 | `ui/home/` | Accueil à widgets : `WidgetModel` (grille 4×4, tailles, modèles), `WidgetGrid` (placement, mode Modifier, pages), widgets |
@@ -111,7 +111,8 @@ Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/upda
 
 | Fichier | Quoi |
 |---|---|
-| `server.ts` | toutes les routes, jeton, erreurs |
+| `server.ts` | démarrage, jeton, erreurs, enregistrement des plugins de routes |
+| `routes/` | routes de l'API, un plugin Fastify par domaine |
 | `config.ts` | variables d'environnement (`.env`) |
 | `pairing.ts` | identité, jeton, code d'appairage, découverte UDP |
 | `local-page.ts` | page `http://127.0.0.1:3000/` (adresse, code, agenda) |
@@ -137,10 +138,10 @@ Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/upda
 
 ## Ajouter une fonction : les recettes
 
-- **Nouvelle route** : la déclarer dans `server.ts` (avec son schéma), l'appeler dans `BackendClient.kt`. Erreur pour l'utilisateur = `throw new Error("phrase en français")`.
+- **Nouvelle route** : la déclarer dans le plugin de son domaine sous `routes/` (avec son schéma ; nouveau plugin = `app.register` dans `server.ts`), l'appeler dans le client de son domaine (`net/*Api.kt`). Erreur pour l'utilisateur = `throw new Error("phrase en français")`.
 - **Nouvelle action système** : l'ajouter à `os.ts`, l'écrire dans `mac/` **et** `win/` (C# 7.3 dans `win/helper/`, `Native.<thème>.cs` pour le pilotage, puis `npm run build:helper`).
 - **Nouvelle étape de touche** : type dans `deck.ts` (`runAction`), et dans `KeyEditor` si elle se règle depuis la tablette.
-- **Nouvel ordre vers la tablette** : type dans `tablet.ts` + schéma dans `server.ts` + outil dans `mcp.ts` + branche dans `RemoteChannel.execute`.
+- **Nouvel ordre vers la tablette** : type dans `tablet.ts` + schéma dans `routes/tablet.ts` + outil dans `mcp.ts` + branche dans `RemoteChannel.execute`.
 - **Nouveau widget d'Accueil** : le déclarer dans `WidgetModel`, le construire dans `HomeWidgets` (ou un fichier dédié de `ui/home/`).
 - **Nouveau texte** : `strings.xml`, en français, court (la tablette est lue de loin), « ordinateur » (« ordi » sur les boutons courts).
 

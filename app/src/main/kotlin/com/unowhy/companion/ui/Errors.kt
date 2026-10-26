@@ -7,7 +7,7 @@ import androidx.fragment.app.Fragment
 import com.unowhy.companion.Computers
 import com.unowhy.companion.R
 import com.unowhy.companion.UserFacingException
-import com.unowhy.companion.net.BackendClient
+import com.unowhy.companion.net.HttpException
 import org.json.JSONException
 import java.io.IOException
 import java.util.concurrent.CancellationException
@@ -23,7 +23,7 @@ fun Context.errorText(e: Throwable?): String {
     Log.w("Companion", "Erreur affichée", e)
     val computer = Computers.active(this)
     return when (e) {
-        is BackendClient.HttpException -> when {
+        is HttpException -> when {
             e.code == 401 -> getString(R.string.error_reauth, computer?.name ?: getString(R.string.computer_generic))
             // Route inconnue : le compagnon de l'ordinateur est plus ancien que l'appli.
             e.code == 404 && e.reason.startsWith("Route ") -> getString(R.string.error_bad_reply)

@@ -4,8 +4,9 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File backend\qa\install-windows.ps1 -Zip dist\Compagnon-Unowhy-Windows.zip
 #   powershell -NoProfile -ExecutionPolicy Bypass -File backend\qa\install-windows.ps1 -Nettoyage   (after_script)
 #
-# Le PC sert à d'autres tests : tout est propre au test (port, DATA_DIR, LOCALAPPDATA, clé Run et raccourcis
-# « UnowhyCompanionCI »), sous un seul dossier supprimé à la fin. Un compagnon déjà installé n'est pas touché.
+# Le PC sert à d'autres tests : tout est propre au test (port, DATA_DIR, journaux, LOCALAPPDATA, clé Run
+# « UnowhyCompanionCI »), sous un seul dossier supprimé à la fin, et rien ne s'affiche (COMPANION_HEADLESS).
+# Un compagnon déjà installé n'est pas touché.
 # Windows PowerShell 5.1 ou PowerShell 7. Script de CI : le compagnon, lui, ne lance jamais de PowerShell (antivirus).
 param(
   [string] $Zip,
@@ -29,19 +30,16 @@ $env:PORT = "$Port"
 $env:HOST = "127.0.0.1"            # pas d'écoute sur le réseau : pas de demande du pare-feu
 $env:DATA_DIR = Join-Path $Root "data"
 $env:DOCS_DIR = Join-Path $Root "partage"
-$env:LOCALAPPDATA = Join-Path $Root "localappdata"   # journaux du lanceur, copies du pilote
-$env:COMPANION_SERVICE_NAME = $Name
-$env:COMPANION_NO_DIALOG = "1"     # code d'appairage sur la page locale seulement, lu par la sanity
+$env:LOCALAPPDATA = Join-Path $Root "localappdata"   # copies du pilote
+$env:COMPANION_LOG_DIR = Join-Path $Root "logs"
+$env:COMPANION_LABEL = $Name       # valeur de la clé Run propre au test
+# Ni boîte du code d'appairage (lu sur la page locale par la sanity), ni page, ni raccourci, ni document ouvert.
+$env:COMPANION_HEADLESS = "1"
 New-Item -ItemType Directory -Force $env:LOCALAPPDATA | Out-Null
 
 function Step([string] $title) { Write-Host "`n== $title" }
 function Health { try { Invoke-RestMethod "$base/health" -TimeoutSec 3 } catch { $null } }
 function RunValue { (Get-ItemProperty $runKey -Name $Name -ErrorAction SilentlyContinue).$Name }
-function Shortcuts {
-  $desktop = [Environment]::GetFolderPath("Desktop")
-  $programs = Join-Path ([Environment]::GetFolderPath("Programs")) "$Name.url"
-  @((Join-Path $desktop "$Name.url"), $programs) | Where-Object { Test-Path $_ }
-}
 # Processus du test seulement : ceux qui tournent depuis le dossier du test.
 function Leftovers {
   @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($Root, "OrdinalIgnoreCase") })
@@ -59,9 +57,8 @@ if ($Nettoyage) {
   Leftovers | Stop-Process -Force -ErrorAction SilentlyContinue
   Start-Sleep -Seconds 1
   if (RunValue) { Remove-ItemProperty $runKey -Name $Name }
-  Shortcuts | Remove-Item -Force
   if (Test-Path $Root) { Remove-Item -Recurse -Force $Root }
-  Write-Host "Nettoyage : $Root, clé Run $Name et raccourcis retirés"
+  Write-Host "Nettoyage : $Root et clé Run $Name retirés"
   exit 0
 }
 
@@ -90,8 +87,6 @@ try {
   $run = RunValue
   if ($run -notlike "*UnowhyCompanion.exe*--backend*") { throw "clé Run $Name absente ou inattendue : $run" }
   "clé Run : $run"
-  if (@(Shortcuts).Count -eq 0) { throw "aucun raccourci $Name.url (Bureau, menu Démarrer)" }
-  "raccourcis : $((Shortcuts) -join ', ')"
 
   Step "Backend"
   $health = Health
@@ -121,13 +116,12 @@ try {
   $left = @(Leftovers)
   if ($left.Count) { throw "processus restants : $(($left | ForEach-Object { "$($_.Name) ($($_.Id))" }) -join ', ')" }
   if (RunValue) { throw "clé Run $Name encore présente" }
-  if (@(Shortcuts).Count) { throw "raccourcis restants : $((Shortcuts) -join ', ')" }
-  "lancement automatique, processus et raccourcis retirés"
+  "lancement automatique et processus retirés"
 
   if ($sanityCode -ne 0) { throw "sanity en échec (voir plus haut)" }
   Write-Host "`nInstallation Windows : OK"
 } finally {
   # Journaux du lanceur et du serveur, en artefacts du job.
   New-Item -ItemType Directory -Force $Logs | Out-Null
-  Get-ChildItem (Join-Path $env:LOCALAPPDATA "UnowhyCompanion") -Filter *.log -ErrorAction SilentlyContinue | Copy-Item -Destination $Logs
+  Get-ChildItem $env:COMPANION_LOG_DIR -Filter *.log -ErrorAction SilentlyContinue | Copy-Item -Destination $Logs
 }

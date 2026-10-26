@@ -85,7 +85,7 @@ class AppAdder @JvmOverloads constructor(
         render()
         if (apps == null) scope.launch {
             try {
-                apps = BackendClient(context).deckCatalog().apps
+                apps = BackendClient(context).deck.catalog().apps
                 render()
             } catch (e: Exception) {
                 status.showError(e)
@@ -124,7 +124,7 @@ class AppAdder @JvmOverloads constructor(
     private fun add(name: String) {
         scope.launch {
             try {
-                present = present + (name to BackendClient(context).addDeckApp(name))
+                present = present + (name to BackendClient(context).deck.addApp(name))
                 changed(context.getString(R.string.apps_added_status, name))
             } catch (e: Exception) {
                 status.showError(e)
@@ -136,7 +136,7 @@ class AppAdder @JvmOverloads constructor(
         val id = present[name] ?: return
         scope.launch {
             try {
-                BackendClient(context).removeDeckApp(id)
+                BackendClient(context).deck.removeApp(id)
                 IconCache.forget(id)
                 present = present - name
                 changed(context.getString(R.string.apps_removed_status, name))
@@ -160,7 +160,7 @@ class AppAdder @JvmOverloads constructor(
             .setPositiveButton(R.string.confirm) { _, _ ->
                 scope.launch {
                     try {
-                        BackendClient(context).resetDeckApps()
+                        BackendClient(context).deck.resetApps()
                         hide()
                         onChanged()
                     } catch (e: Exception) {

@@ -6,7 +6,7 @@
  *
  * Aucune dépendance (modules de Node seulement) : lancé tel quel par le node du paquet, sans `npm ci`.
  * Ce qu'il crée (tâche, rendez-vous, agenda ICS) est retiré à la fin ; un agenda déjà relié n'est pas touché.
- * Appairage sans boîte de dialogue : démarrer le compagnon avec COMPANION_NO_DIALOG=1.
+ * Appairage sans boîte de dialogue : compagnon démarré avec COMPANION_HEADLESS=1 (instance de test) ou NO_ALERT=1.
  */
 import fs from "node:fs";
 import http from "node:http";
