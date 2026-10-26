@@ -70,6 +70,31 @@ app.addHook("onRequest", async (req, reply) => {
   if (!authorized(req.headers.authorization)) return reply.code(401).send({ error: "Jeton invalide : appairer à nouveau la tablette" });
 });
 
+/**
+ * Erreurs montrées sur la tablette : nos messages (en français) passent tels quels ; le texte technique
+ * (sortie d'osascript, erreur système de Node, requête mal formée) reste dans le journal de l'ordinateur.
+ */
+app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validation?: unknown; technical?: boolean }, req, reply) => {
+  if (err instanceof PairingError) return reply.code(err.statusCode).send({ error: err.message });
+  if (err.validation) return reply.code(400).send({ error: "Demande invalide : mets à jour l'appli de la tablette" });
+  const status = err.statusCode && err.statusCode >= 400 ? err.statusCode : 500;
+  if (status >= 500 && (err.technical || (typeof err.code === "string" && /^E[A-Z]/.test(err.code)))) {
+    req.log.error(err);
+    return reply.code(status).send({ error: "L'ordinateur n'a pas pu le faire (détail dans son journal)" });
+  }
+  reply.send(err);
+});
+
+// Pilotage de l'ordinateur (deck d'applis et de raccourcis, son, micro) : macOS et Windows seulement.
+app.addHook("preHandler", async (req, reply) => {
+  if (!canControl && (req.url.startsWith("/deck") || req.url.startsWith("/system"))) {
+    return reply.code(501).send({ error: "Pilotage disponible sur macOS et Windows seulement" });
+  }
+});
+
+// Images du visualiseur (POST /camera/frame).
+app.addContentTypeParser("image/jpeg", { parseAs: "buffer", bodyLimit: 2 * 1024 * 1024 }, (_req, body, done) => done(null, body));
+
 /** `auth` : le jeton envoyé est le bon (la tablette sait s'il faut refaire l'appairage). */
 app.get("/health", async (req) => ({
   ok: true, ...identity(), auth: authorized(req.headers.authorization),
@@ -94,21 +119,6 @@ app.post<{ Body: { text: string } }>(
 );
 
 // --- Appairage (voir src/pairing.ts) et page d'accueil locale
-
-/**
- * Erreurs montrées sur la tablette : nos messages (en français) passent tels quels ; le texte technique
- * (sortie d'osascript, erreur système de Node, requête mal formée) reste dans le journal de l'ordinateur.
- */
-app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validation?: unknown; technical?: boolean }, req, reply) => {
-  if (err instanceof PairingError) return reply.code(err.statusCode).send({ error: err.message });
-  if (err.validation) return reply.code(400).send({ error: "Demande invalide : mets à jour l'appli de la tablette" });
-  const status = err.statusCode && err.statusCode >= 400 ? err.statusCode : 500;
-  if (status >= 500 && (err.technical || (typeof err.code === "string" && /^E[A-Z]/.test(err.code)))) {
-    req.log.error(err);
-    return reply.code(status).send({ error: "L'ordinateur n'a pas pu le faire (détail dans son journal)" });
-  }
-  reply.send(err);
-});
 
 app.post<{ Body: { tablet?: string } }>(
   "/pair/request",
@@ -171,14 +181,6 @@ app.put<{ Body: { urls: string[] } }>(
     return { sources: sources.length, ...check };
   },
 );
-
-// --- Pilotage de l'ordinateur (deck d'applis et de raccourcis, son, micro)
-
-app.addHook("preHandler", async (req, reply) => {
-  if (!canControl && (req.url.startsWith("/deck") || req.url.startsWith("/system"))) {
-    return reply.code(501).send({ error: "Pilotage disponible sur macOS et Windows seulement" });
-  }
-});
 
 app.get("/deck", async () => {
   const pages = await loadDeck();
@@ -717,8 +719,6 @@ app.post("/docs/upload", async (req, reply) => {
 });
 
 // --- Visualiseur (caméra de la tablette au-dessus d'une feuille, image projetée depuis l'ordinateur)
-
-app.addContentTypeParser("image/jpeg", { parseAs: "buffer", bodyLimit: 2 * 1024 * 1024 }, (_req, body, done) => done(null, body));
 
 app.post<{ Body: Buffer }>("/camera/frame", { logLevel: "warn" }, async (req, reply) => {
   if (!Buffer.isBuffer(req.body) || req.body.length === 0) return reply.code(415).send({ error: "Corps image/jpeg attendu" });
