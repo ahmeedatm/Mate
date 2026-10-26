@@ -30,7 +30,7 @@ class DocsApi(private val http: Http) {
         try { conn.inputStream.use { input -> dest.outputStream().use { input.copyTo(it) } } } finally { conn.disconnect() }
     }
 
-    suspend fun openOnMac(path: String) = http.io { http.postJson("/docs/open", JSONObject().put("path", path)); Unit }
+    suspend fun openOnComputer(path: String) = http.io { http.postJson("/docs/open", JSONObject().put("path", path)); Unit }
 
     /** Envoie une photo dans le dossier partagé du Mac ; renvoie son chemin relatif. */
     suspend fun uploadPhoto(photo: File): String = http.io {

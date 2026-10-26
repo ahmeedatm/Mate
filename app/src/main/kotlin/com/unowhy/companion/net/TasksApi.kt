@@ -39,7 +39,7 @@ class TasksApi(private val http: Http) {
 
     suspend fun delete(id: String) = http.io { http.delete("/tasks/" + http.encode(id)); Unit }
 
-    suspend fun openTaskOnMac(id: String) = http.io { http.postJson("/tasks/${http.encode(id)}/open", JSONObject()); Unit }
+    suspend fun openOnComputer(id: String) = http.io { http.postJson("/tasks/${http.encode(id)}/open", JSONObject()); Unit }
 
     private fun parseTasks(tasks: JSONArray) = (0 until tasks.length()).map { i ->
         val t = tasks.getJSONObject(i)

@@ -31,7 +31,7 @@ import com.unowhy.companion.ui.CallOverlay
 import com.unowhy.companion.ui.CameraFragment
 import com.unowhy.companion.ui.ComputerAdder
 import com.unowhy.companion.ui.DeckFragment
-import com.unowhy.companion.ui.DocsFragment
+import com.unowhy.companion.ui.FromComputerFragment
 import com.unowhy.companion.ui.DocumentPanel
 import com.unowhy.companion.ui.HomeFragment
 import com.unowhy.companion.ui.FocusFragment
@@ -42,7 +42,6 @@ import com.unowhy.companion.ui.SettingsFragment
 import com.unowhy.companion.ui.TabletAlerts
 import com.unowhy.companion.ui.TabletStatusView
 import com.unowhy.companion.ui.WelcomeView
-import java.util.Locale
 import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.voice.VoiceControl
 
@@ -134,7 +133,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val restored = savedInstanceState?.getString(STATE_MODE)?.let { runCatching { Mode.valueOf(it) }.getOrNull() }
+        val restored = savedInstanceState?.getString(STATE_MODE)?.let(Mode::of)
         show(restored ?: Mode.HOME)
         // Premier lancement (ou plus aucun ordinateur) : écran de bienvenue.
         if (savedInstanceState == null && Computers.all(this).isEmpty()) welcome.show()
@@ -227,7 +226,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putString(STATE_MODE, current.name)
+        outState.putString(STATE_MODE, current.tag)
     }
 
     override fun onDestroy() {
@@ -256,7 +255,7 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_VOLUME_DOWN -> false
             else -> return super.dispatchKeyEvent(event)
         }
-        val handler = supportFragmentManager.findFragmentByTag(current.name) as? VolumeKeyHandler
+        val handler = supportFragmentManager.findFragmentByTag(current.tag) as? VolumeKeyHandler
             ?: return super.dispatchKeyEvent(event)
         // On consomme aussi le relâchement pour que la tablette ne change pas son propre volume.
         return if (event.action == KeyEvent.ACTION_DOWN) handler.onVolumeKey(up) else true
@@ -271,25 +270,25 @@ class MainActivity : AppCompatActivity() {
      * pendant un autre mode (Accueil…) : à côté, pour garder les deux sous les yeux.
      */
     fun openDocument(entry: DocEntry) {
-        documentPanel.open(entry, expand = current == Mode.DOCS, splittable = current != Mode.DOCS)
+        documentPanel.open(entry, expand = current == Mode.COMPUTER, splittable = current != Mode.COMPUTER)
     }
 
     /** Affiche dans le panneau latéral la page ouverte dans le navigateur de l'ordinateur. */
     fun openComputerPage() {
-        documentPanel.openComputerPage(expand = current == Mode.DOCS, splittable = current != Mode.DOCS)
+        documentPanel.openComputerPage(expand = current == Mode.COMPUTER, splittable = current != Mode.COMPUTER)
     }
 
     // --- Utilisé par RemoteChannel (ordres de l'ordinateur)
 
     val modeName: String
-        get() = current.name.lowercase(Locale.ROOT)
+        get() = current.key
 
     val documentPath: String?
         get() = documentPanel.currentPath
 
     fun showMode(name: String) {
         // Nom inconnu (« tasks », ancien « chat ») : l'Accueil.
-        show(Mode.entries.firstOrNull { it.name.equals(name, ignoreCase = true) } ?: Mode.HOME)
+        show(Mode.of(name) ?: Mode.HOME)
     }
 
     /** Deck sur sa page Réunion, pour couper le micro ou raccrocher sans chercher. */
@@ -297,7 +296,7 @@ class MainActivity : AppCompatActivity() {
         show(Mode.DECK)
         // Le deck vient peut-être d'être créé : sa vue doit exister avant de choisir la page.
         supportFragmentManager.executePendingTransactions()
-        (supportFragmentManager.findFragmentByTag(Mode.DECK.name) as? DeckFragment)?.openMeetingPage()
+        (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.openMeetingPage()
     }
 
     /** Appel entrant sur l'ordinateur (ordre `call`, voir CallOverlay). */
@@ -307,7 +306,7 @@ class MainActivity : AppCompatActivity() {
     fun showAppControls(app: String) {
         show(Mode.DECK)
         supportFragmentManager.executePendingTransactions()
-        (supportFragmentManager.findFragmentByTag(Mode.DECK.name) as? DeckFragment)?.openAppPage(app)
+        (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.openAppPage(app)
     }
 
     fun closeDocument() {
@@ -322,7 +321,7 @@ class MainActivity : AppCompatActivity() {
     /** Bandeau en haut de l'écran, par-dessus le mode courant ; un toucher le ferme. */
     fun showBanner(text: String, seconds: Int) = banner.show(text, seconds)
 
-    private fun settings() = supportFragmentManager.findFragmentByTag(Mode.SETTINGS.name) as? SettingsFragment
+    private fun settings() = supportFragmentManager.findFragmentByTag(Mode.SETTINGS.tag) as? SettingsFragment
 
     private fun hideSystemBars() {
         val controller = WindowCompat.getInsetsController(window, window.decorView)
@@ -335,7 +334,7 @@ class MainActivity : AppCompatActivity() {
         keyboard.hide()
         // Document ouvert : en grand dans Depuis l'ordi ; ailleurs à côté, pour laisser voir le mode choisi.
         if (::documentPanel.isInitialized && documentPanel.visibility == View.VISIBLE) {
-            documentPanel.setExpanded(mode == Mode.DOCS, splittable = mode != Mode.DOCS)
+            documentPanel.setExpanded(mode == Mode.COMPUTER, splittable = mode != Mode.COMPUTER)
         }
         val changed = current != mode
         current = mode
@@ -347,8 +346,8 @@ class MainActivity : AppCompatActivity() {
         fm.fragments.forEach { tx.hide(it) }
         // Sans ordinateur, un mode qui en a besoin n'est pas créé (caméra, requêtes) : renderNoComputer le remplace.
         val needsComputer = mode.connect != null && Computers.all(this).isEmpty()
-        val existing = fm.findFragmentByTag(mode.name)
-        if (existing != null) tx.show(existing) else if (!needsComputer) tx.add(R.id.mode_container, create(mode), mode.name)
+        val existing = fm.findFragmentByTag(mode.tag)
+        if (existing != null) tx.show(existing) else if (!needsComputer) tx.add(R.id.mode_container, create(mode), mode.tag)
         tx.commit()
 
         rail.select(mode, changed)
@@ -365,7 +364,7 @@ class MainActivity : AppCompatActivity() {
     private fun create(mode: Mode): Fragment = when (mode) {
         Mode.HOME -> HomeFragment()
         Mode.DECK -> DeckFragment()
-        Mode.DOCS -> DocsFragment()
+        Mode.COMPUTER -> FromComputerFragment()
         Mode.FOCUS -> FocusFragment()
         Mode.CAMERA -> CameraFragment()
         Mode.SETTINGS -> SettingsFragment()
