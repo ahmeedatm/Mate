@@ -1,6 +1,6 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { config } from "./config.ts";
+import { readJson, removeJson, updateJson, writeJson } from "./store.ts";
 import type { Step } from "./deck.ts";
 
 /**
@@ -13,16 +13,16 @@ export const SLOTS = 14;
 const storeFile = path.join(config.dataDir, "keys.json");
 
 export async function loadKeys(): Promise<(PersoKey | null)[]> {
-  const raw = await fs.readFile(storeFile, "utf8").catch(() => undefined);
-  const saved = raw ? ((JSON.parse(raw) as { slots?: (PersoKey | null)[] }).slots ?? []) : [];
+  const saved = (await readJson<{ slots?: (PersoKey | null)[] }>(storeFile, () => ({}))).slots ?? [];
   return Array.from({ length: SLOTS }, (_, i) => saved[i] ?? null);
 }
 
 export async function saveKey(slot: number, key: PersoKey | null) {
-  const slots = await loadKeys();
-  slots[slot] = key;
-  await fs.mkdir(config.dataDir, { recursive: true });
-  await fs.writeFile(storeFile, JSON.stringify({ slots }, null, 2));
+  await updateJson<{ slots?: (PersoKey | null)[] }>(storeFile, () => ({}), (data) => {
+    const slots = Array.from({ length: SLOTS }, (_, i) => data.slots?.[i] ?? null);
+    slots[slot] = key;
+    data.slots = slots;
+  });
 }
 
 // Schéma JSON (validation Fastify) d'une touche : chaque type d'étape avec ses seuls champs.
@@ -72,15 +72,13 @@ const appsFile = path.join(config.dataDir, "apps.json");
 
 /** `undefined` : profil de base. */
 export async function loadSavedApps(): Promise<DeckApp[] | undefined> {
-  const raw = await fs.readFile(appsFile, "utf8").catch(() => undefined);
-  return raw ? (JSON.parse(raw) as { apps: DeckApp[] }).apps : undefined;
+  return (await readJson<{ apps?: DeckApp[] }>(appsFile, () => ({}))).apps;
 }
 
 /** `null` : retour au profil de base. */
 export async function saveApps(apps: DeckApp[] | null) {
-  if (!apps) return fs.rm(appsFile, { force: true });
-  await fs.mkdir(config.dataDir, { recursive: true });
-  await fs.writeFile(appsFile, JSON.stringify({ apps }, null, 2));
+  if (!apps) return removeJson(appsFile);
+  await writeJson(appsFile, { apps });
 }
 
 /** Page Média : sites ajoutés depuis la tablette (YouTube, Netflix…), vide au départ, dans .data/links.json. */
@@ -88,11 +86,9 @@ export type DeckLink = { label: string; url: string };
 const linksFile = path.join(config.dataDir, "links.json");
 
 export async function loadLinks(): Promise<DeckLink[]> {
-  const raw = await fs.readFile(linksFile, "utf8").catch(() => undefined);
-  return raw ? ((JSON.parse(raw) as { links?: DeckLink[] }).links ?? []) : [];
+  return (await readJson<{ links?: DeckLink[] }>(linksFile, () => ({}))).links ?? [];
 }
 
 export async function saveLinks(links: DeckLink[]) {
-  await fs.mkdir(config.dataDir, { recursive: true });
-  await fs.writeFile(linksFile, JSON.stringify({ links }, null, 2));
+  await writeJson(linksFile, { links });
 }

@@ -2,6 +2,7 @@ import dgram from "node:dgram";
 import os from "node:os";
 import { randomInt, randomUUID } from "node:crypto";
 import { config } from "./config.ts";
+import { logFailure } from "./log.ts";
 import { alert, computerName, osName } from "./os.ts";
 
 /**
@@ -10,7 +11,8 @@ import { alert, computerName, osName } from "./os.ts";
  *    chaque ordinateur du réseau répond avec son identité (id, nom, système, port).
  * 2. Code : la tablette demande un appairage, l'ordinateur affiche un code à 6 chiffres
  *    (boîte de dialogue et page http://127.0.0.1:3000/) ; la tablette l'envoie et reçoit le jeton.
- * Trois essais par code, deux minutes de validité, cinq demandes par tranche de cinq minutes.
+ * Trois essais par code, deux minutes de validité, cinq demandes par adresse et par tranche de cinq minutes.
+ * Un code encore valide n'est jamais remplacé : la même tablette retrouve sa demande, une autre adresse attend.
  */
 
 export const PROBE = "UNOWHY-COMPANION?";
@@ -45,9 +47,16 @@ export function startDiscovery(log: (msg: string) => void) {
   socket.bind(config.port, config.host === "0.0.0.0" || config.host === "::" ? undefined : config.host);
 }
 
-type Pending = { id: string; code: string; tablet: string; expires: number; attempts: number };
+type Pending = { id: string; code: string; tablet: string; ip: string; expires: number; attempts: number };
 let pending: Pending | undefined;
-const recent: number[] = [];
+/** Demandes récentes par adresse (sans compter les adresses qui n'ont plus rien de récent). */
+const recent = new Map<string, number[]>();
+
+/** Remet l'appairage à zéro (tests). */
+export function resetPairing() {
+  pending = undefined;
+  recent.clear();
+}
 
 export class PairingError extends Error {
   constructor(public statusCode: number, message: string) {
@@ -55,17 +64,32 @@ export class PairingError extends Error {
   }
 }
 
-/** Nouvelle demande : affiche le code sur l'ordinateur. Une seule demande à la fois (la dernière). */
-export function requestPairing(tablet: string) {
+const showCode = (text: string) => alert("Compagnon Unowhy", text);
+
+/**
+ * Demande d'appairage : affiche le code sur l'ordinateur. Une seule demande à la fois : tant que le code est valide,
+ * la même adresse retrouve la demande en cours (pas de second dialogue), une autre reçoit 409.
+ */
+export function requestPairing(tablet: string, ip: string, show: (text: string) => Promise<unknown> = showCode) {
   const now = Date.now();
-  while (recent.length && now - recent[0] > 5 * 60_000) recent.shift();
-  if (recent.length >= 5) throw new PairingError(429, "Trop de demandes, réessaie dans quelques minutes");
-  recent.push(now);
+  for (const [from, times] of recent) {
+    const fresh = times.filter((t) => now - t <= 5 * 60_000);
+    if (fresh.length) recent.set(from, fresh);
+    else recent.delete(from);
+  }
+  const mine = recent.get(ip) ?? [];
+  if (mine.length >= 5) throw new PairingError(429, "Trop de demandes, réessaie dans quelques minutes");
+  recent.set(ip, [...mine, now]);
+
+  if (pending && now < pending.expires) {
+    if (pending.ip !== ip) throw new PairingError(409, "Un appairage est déjà en cours sur cet ordinateur, réessaie dans quelques minutes");
+    return { request: pending.id, expiresInMs: pending.expires - now };
+  }
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
-  pending = { id: randomUUID(), code, tablet: tablet.slice(0, 60), expires: now + CODE_TTL_MS, attempts: 0 };
+  pending = { id: randomUUID(), code, tablet: tablet.slice(0, 60), ip, expires: now + CODE_TTL_MS, attempts: 0 };
   const spaced = `${code.slice(0, 3)} ${code.slice(3)}`;
   console.log(`\n  Code d'appairage pour ${pending.tablet} : ${spaced}\n`);
-  void alert("Compagnon Unowhy", `Code à saisir sur la tablette (${pending.tablet}) :\n\n${spaced}`).catch(() => undefined);
+  void show(`Code à saisir sur la tablette (${pending.tablet}) :\n\n${spaced}`).catch((e) => logFailure("Dialogue d'appairage", e));
   return { request: pending.id, expiresInMs: CODE_TTL_MS };
 }
 

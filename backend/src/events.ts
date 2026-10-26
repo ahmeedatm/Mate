@@ -1,7 +1,8 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { config } from "./config.ts";
+import { logFailure } from "./log.ts";
+import { readJson, updateJson } from "./store.ts";
 import type { CalendarEvent } from "./calendar.ts";
 
 /**
@@ -26,16 +27,22 @@ const storeFile = path.join(config.dataDir, "events.json");
 const KEEP_MS = 30 * 86_400_000;
 const DEFAULT_DURATION_MS = 60 * 60_000;
 
+type Store = { items?: LocalEvent[] };
+const emptyStore = (): Store => ({ items: [] });
+
 async function load(): Promise<LocalEvent[]> {
-  const raw = await fs.readFile(storeFile, "utf8").catch(() => undefined);
-  return raw ? ((JSON.parse(raw) as { items?: LocalEvent[] }).items ?? []) : [];
+  return (await readJson<Store>(storeFile, emptyStore)).items ?? [];
 }
 
-async function save(items: LocalEvent[]) {
-  // Les événements finis depuis plus d'un mois ne servent plus.
-  const keep = items.filter((e) => e.endMs > Date.now() - KEEP_MS).sort((a, b) => a.startMs - b.startMs);
-  await fs.mkdir(config.dataDir, { recursive: true });
-  await fs.writeFile(storeFile, JSON.stringify({ items: keep }, null, 2) + "\n");
+/** Relit le fichier, applique `change` à la liste, réécrit : une mise à jour faite pendant ce temps n'est pas perdue. */
+function edit<R>(change: (items: LocalEvent[]) => R): Promise<R> {
+  return updateJson<Store, R>(storeFile, emptyStore, (data) => {
+    const items = data.items ?? [];
+    const result = change(items);
+    // Les événements finis depuis plus d'un mois ne servent plus.
+    data.items = items.filter((e) => e.endMs > Date.now() - KEEP_MS).sort((a, b) => a.startMs - b.startMs);
+    return result;
+  });
 }
 
 /** Journée entière : de minuit au minuit suivant (heure de l'ordinateur) ; sinon une heure par défaut. */
@@ -55,29 +62,27 @@ function normalize(input: EventInput, id: string): LocalEvent {
 }
 
 export async function addEvent(input: EventInput): Promise<LocalEvent> {
-  const items = await load();
   const event = normalize(input, randomUUID().slice(0, 8));
-  items.push(event);
-  await save(items);
+  await edit((items) => void items.push(event));
   return event;
 }
 
 /** Renvoie undefined si l'événement n'existe pas. Le rappel est réarmé (nouvelle heure). */
 export async function updateEvent(id: string, input: EventInput): Promise<LocalEvent | undefined> {
-  const items = await load();
-  const i = items.findIndex((e) => e.id === id);
-  if (i < 0) return undefined;
-  items[i] = normalize(input, id);
-  await save(items);
-  return items[i];
+  return edit((items) => {
+    const i = items.findIndex((e) => e.id === id);
+    if (i < 0) return undefined;
+    items[i] = normalize(input, id);
+    return items[i];
+  });
 }
 
 export async function deleteEvent(id: string): Promise<boolean> {
-  const items = await load();
-  const left = items.filter((e) => e.id !== id);
-  if (left.length === items.length) return false;
-  await save(left);
-  return true;
+  return edit((items) => {
+    const i = items.findIndex((e) => e.id === id);
+    if (i >= 0) items.splice(i, 1);
+    return i >= 0;
+  });
 }
 
 /** Événements qui touchent [from, to], au format des autres agendas (`localId` : modifiable depuis la tablette). */
@@ -101,21 +106,25 @@ export async function localEvents(from: Date, to: Date): Promise<CalendarEvent[]
  * Chaque minute : rappel parlé des événements dont l'heure (moins `remindBefore`) est arrivée, une fois.
  * `notify` renvoie false si la tablette n'a pas reçu le rappel : réessayé à la minute suivante (pas après le début + 1 h).
  */
-export function startEventReminders(notify: (text: string) => Promise<boolean>) {
+export async function eventReminderTick(notify: (text: string) => Promise<boolean>) {
   const hhmm = (ms: number) => new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-  const tick = async () => {
-    const now = Date.now();
-    const items = await load();
-    const due = items.filter(
-      (e) => e.remindBefore != null && !e.remindedMs && e.startMs - e.remindBefore * 60_000 <= now && now < e.startMs + 60 * 60_000,
-    );
-    for (const e of due) {
-      const minutes = Math.round((e.startMs - now) / 60_000);
-      const text = minutes > 0 ? `Dans ${minutes} min : ${e.title}` : `${hhmm(e.startMs)} : ${e.title}`;
-      if (!(await notify(text))) continue;
-      e.remindedMs = now;
-      await save(items);
-    }
-  };
-  setInterval(() => void tick().catch(() => undefined), 30_000);
+  const now = Date.now();
+  const items = await load();
+  const due = items.filter(
+    (e) => e.remindBefore != null && !e.remindedMs && e.startMs - e.remindBefore * 60_000 <= now && now < e.startMs + 60 * 60_000,
+  );
+  for (const e of due) {
+    const minutes = Math.round((e.startMs - now) / 60_000);
+    const text = minutes > 0 ? `Dans ${minutes} min : ${e.title}` : `${hhmm(e.startMs)} : ${e.title}`;
+    if (!(await notify(text))) continue;
+    // Le fichier a pu changer pendant l'envoi : on le relit et on n'y marque que ce rappel.
+    await edit((current) => {
+      const item = current.find((x) => x.id === e.id);
+      if (item) item.remindedMs = now;
+    });
+  }
+}
+
+export function startEventReminders(notify: (text: string) => Promise<boolean>) {
+  setInterval(() => void eventReminderTick(notify).catch((e) => logFailure("Rappels d'agenda", e)), 30_000);
 }

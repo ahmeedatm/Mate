@@ -1,8 +1,9 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { backendRoot, config } from "./config.ts";
 import { jiraConfigured, worklogSecondsOn } from "./jira.ts";
+import { logFailure } from "./log.ts";
+import { readJson, updateJson } from "./store.ts";
 
 /**
  * Tâches : récurrentes (créées depuis la tablette, ou écrites dans config/tasks.json comme le worklog Jira) et
@@ -61,23 +62,27 @@ const minutesOf = (hhmm: string) => {
  * pas de tâche : config/tasks.example.json n'est qu'un modèle), puis celles créées depuis la tablette.
  */
 async function loadConfigDaily(): Promise<DailyTask[]> {
-  const raw = await fs.readFile(tasksFile, "utf8").catch(() => "{}");
-  return (JSON.parse(raw) as { daily?: DailyTask[] }).daily ?? [];
+  return (await readJson<{ daily?: DailyTask[] }>(tasksFile, () => ({}), { quarantine: false })).daily ?? [];
 }
 
 async function loadDaily(store?: Store): Promise<DailyTask[]> {
   return [...(await loadConfigDaily()), ...((store ?? (await loadStore())).recurring ?? [])];
 }
 
+const emptyStore = (): Store => ({ done: {}, items: [] });
+
 async function loadStore(): Promise<Store> {
-  const raw = await fs.readFile(storeFile, "utf8").catch(() => undefined);
-  return raw ? (JSON.parse(raw) as Store) : { done: {}, items: [] };
+  const store = await readJson<Partial<Store>>(storeFile, emptyStore);
+  return { ...store, done: store.done ?? {}, items: store.items ?? [] };
 }
 
-async function saveStore(store: Store) {
-  await fs.mkdir(config.dataDir, { recursive: true });
-  await fs.writeFile(storeFile, JSON.stringify(store, null, 2));
-}
+/** Relit le fichier, applique `change`, réécrit : une mise à jour faite pendant ce temps n'est pas perdue. */
+const editStore = <R>(change: (store: Store) => R | Promise<R>) =>
+  updateJson<Store, R>(storeFile, emptyStore, (store) => {
+    store.done ??= {};
+    store.items ??= [];
+    return change(store);
+  });
 
 const appliesToday = (t: DailyTask, now: Date) => !t.days || t.days.includes(now.getDay() || 7);
 
@@ -154,7 +159,6 @@ function viewOneOff(item: OneOffTask, now: Date): TaskView {
  * faite ; ponctuelle : une fois, aujourd'hui, ou demain si l'heure est passée).
  */
 export async function addTask(label: string, options: { remindAt?: string; days?: number[] } = {}): Promise<TaskView> {
-  const store = await loadStore();
   const now = new Date();
   const { remindAt, days } = options;
   if (days?.length) {
@@ -166,9 +170,8 @@ export async function addTask(label: string, options: { remindAt?: string; days?
       const until = Math.min(minutesOf(remindAt) + 120, 23 * 60 + 59);
       task.remindUntil = `${String(Math.floor(until / 60)).padStart(2, "0")}:${String(until % 60).padStart(2, "0")}`;
     }
-    (store.recurring ??= []).push(task);
-    await saveStore(store);
-    return viewDaily(task, store, now, false);
+    await editStore((s) => void (s.recurring ??= []).push(task));
+    return viewDaily(task, await loadStore(), now, false);
   }
   const item: OneOffTask = { id: randomUUID().slice(0, 8), label: label.trim(), createdMs: Date.now() };
   if (remindAt) {
@@ -177,18 +180,18 @@ export async function addTask(label: string, options: { remindAt?: string; days?
     if (at.getTime() <= now.getTime()) at.setDate(at.getDate() + 1);
     item.remindAtMs = at.getTime();
   }
-  store.items.push(item);
-  await saveStore(store);
+  await editStore((s) => void s.items.push(item));
   return viewOneOff(item, now);
 }
 
 /** Renvoie false si la tâche n'existe pas. */
 export async function setTaskDone(id: string, done: boolean): Promise<boolean> {
-  const store = await loadStore();
-  const item = store.items.find((i) => i.id === id);
-  if (item) {
-    item.doneMs = done ? Date.now() : undefined;
-  } else {
+  return editStore(async (store) => {
+    const item = store.items.find((i) => i.id === id);
+    if (item) {
+      item.doneMs = done ? Date.now() : undefined;
+      return true;
+    }
     if (!(await loadDaily(store)).some((t) => t.id === id)) return false;
     const day = isoDay(new Date());
     const ids = new Set(store.done[day] ?? []);
@@ -198,19 +201,17 @@ export async function setTaskDone(id: string, done: boolean): Promise<boolean> {
     const keep = isoDay(new Date(Date.now() - 7 * 86_400_000));
     store.done = Object.fromEntries(Object.entries(store.done).filter(([d]) => d >= keep));
     store.done[day] = [...ids];
-  }
-  await saveStore(store);
-  return true;
+    return true;
+  });
 }
 
 export async function deleteTask(id: string): Promise<boolean> {
-  const store = await loadStore();
-  const before = store.items.length + (store.recurring?.length ?? 0);
-  store.items = store.items.filter((i) => i.id !== id);
-  store.recurring = store.recurring?.filter((t) => t.id !== id);
-  if (store.items.length + (store.recurring?.length ?? 0) === before) return false;
-  await saveStore(store);
-  return true;
+  return editStore((store) => {
+    const before = store.items.length + (store.recurring?.length ?? 0);
+    store.items = store.items.filter((i) => i.id !== id);
+    store.recurring = store.recurring?.filter((t) => t.id !== id);
+    return store.items.length + (store.recurring?.length ?? 0) !== before;
+  });
 }
 
 /** Toutes les tâches récurrentes, même celles qui ne tombent pas aujourd'hui (pour les retrouver et les supprimer). */
@@ -230,29 +231,32 @@ export async function taskUrl(id: string): Promise<string | undefined> {
  * ponctuelle l'est une fois, à son heure.
  * `notify` renvoie false si la tablette n'a pas reçu le rappel : on réessaie à la minute suivante.
  */
+export async function reminderTick(notify: (text: string) => Promise<boolean>, last: Map<string, number>) {
+  const now = new Date();
+  const minute = now.getHours() * 60 + now.getMinutes();
+  const daily = await loadDaily().catch(() => [] as DailyTask[]);
+  for (const t of daily) {
+    if (!t.remindAt || !appliesToday(t, now)) continue;
+    if (minute < minutesOf(t.remindAt) || minute > minutesOf(t.remindUntil ?? "19:00")) continue;
+    const key = `${isoDay(now)}|${t.id}`;
+    const previous = last.get(key);
+    if (previous !== undefined && (!t.repeatMinutes || now.getTime() - previous < t.repeatMinutes * 60_000)) continue;
+    const view = await viewDaily(t, await loadStore(), now, false);
+    if (view.done) continue;
+    if (await notify(`À faire : ${t.label}`)) last.set(key, now.getTime());
+  }
+  const due = (await loadStore()).items.filter((i) => i.remindAtMs && !i.remindedMs && !i.doneMs && i.remindAtMs <= now.getTime());
+  for (const item of due) {
+    if (!(await notify(`Rappel : ${item.label}`))) continue;
+    // Le fichier a pu changer pendant l'envoi : on le relit et on n'y marque que ce rappel.
+    await editStore((store) => {
+      const current = store.items.find((i) => i.id === item.id);
+      if (current) current.remindedMs = now.getTime();
+    });
+  }
+}
+
 export function startReminders(notify: (text: string) => Promise<boolean>) {
   const last = new Map<string, number>(); // "jour|id" -> dernier rappel
-  const tick = async () => {
-    const now = new Date();
-    const minute = now.getHours() * 60 + now.getMinutes();
-    const daily = await loadDaily().catch(() => [] as DailyTask[]);
-    for (const t of daily) {
-      if (!t.remindAt || !appliesToday(t, now)) continue;
-      if (minute < minutesOf(t.remindAt) || minute > minutesOf(t.remindUntil ?? "19:00")) continue;
-      const key = `${isoDay(now)}|${t.id}`;
-      const previous = last.get(key);
-      if (previous !== undefined && (!t.repeatMinutes || now.getTime() - previous < t.repeatMinutes * 60_000)) continue;
-      const view = await viewDaily(t, await loadStore(), now, false);
-      if (view.done) continue;
-      if (await notify(`À faire : ${t.label}`)) last.set(key, now.getTime());
-    }
-    const store = await loadStore();
-    const due = store.items.filter((i) => i.remindAtMs && !i.remindedMs && !i.doneMs && i.remindAtMs <= now.getTime());
-    for (const item of due) {
-      if (!(await notify(`Rappel : ${item.label}`))) continue;
-      item.remindedMs = now.getTime();
-      await saveStore(store);
-    }
-  };
-  setInterval(() => void tick().catch(() => undefined), 60_000);
+  setInterval(() => void reminderTick(notify, last).catch((e) => logFailure("Rappels de tâches", e)), 60_000);
 }

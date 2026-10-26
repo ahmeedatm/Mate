@@ -1,9 +1,9 @@
 import { createHash, randomBytes } from "node:crypto";
-import fs from "node:fs/promises";
 import path from "node:path";
 import { backendRoot, config } from "./config.ts";
 import type { CalendarEvent } from "./calendar.ts";
 import { meetingLink } from "./meeting-links.ts";
+import { readJson, updateJson } from "./store.ts";
 
 /**
  * Agenda par connexion au compte (Microsoft 365 / Outlook.com, Google), sans lien ICS à chercher.
@@ -40,8 +40,8 @@ type ClientConfig = { clientId: string; clientSecret?: string };
 
 /** Identifiants des applis enregistrées (config/accounts.json, livré avec le logiciel ; .env pour tester). */
 async function client(provider: Provider): Promise<ClientConfig | undefined> {
-  const file = await fs.readFile(path.join(backendRoot, "config", "accounts.json"), "utf8").catch(() => "{}");
-  const fromFile = (JSON.parse(file) as Partial<Record<Provider, ClientConfig>>)[provider];
+  const file = await readJson<Partial<Record<Provider, ClientConfig>>>(path.join(backendRoot, "config", "accounts.json"), () => ({}), { quarantine: false });
+  const fromFile = file[provider];
   const env = provider === "microsoft"
     ? { clientId: process.env.MICROSOFT_CLIENT_ID }
     : { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET };
@@ -63,12 +63,12 @@ type Stored = { email: string; refreshToken: string; expired?: boolean };
 const storeFile = path.join(config.dataDir, "accounts.json");
 
 async function load(): Promise<Partial<Record<Provider, Stored>>> {
-  return JSON.parse(await fs.readFile(storeFile, "utf8").catch(() => "{}"));
+  return readJson<Partial<Record<Provider, Stored>>>(storeFile, () => ({}));
 }
 
-async function save(accounts: Partial<Record<Provider, Stored>>) {
-  await fs.mkdir(config.dataDir, { recursive: true });
-  await fs.writeFile(storeFile, JSON.stringify(accounts, null, 2) + "\n", { mode: 0o600 });
+/** Relit le fichier, applique `change`, réécrit : un renouvellement de jeton ne perd pas un autre changement. */
+function edit<R = void>(change: (accounts: Partial<Record<Provider, Stored>>) => R) {
+  return updateJson<Partial<Record<Provider, Stored>>, R>(storeFile, () => ({}), change, { mode: 0o600 });
 }
 
 /** `expired` : le compte a refusé le renouvellement (mot de passe changé, accès retiré) : se reconnecter. */
@@ -80,10 +80,8 @@ export async function connectedAccounts(): Promise<{ provider: Provider; label: 
 }
 
 export async function disconnect(provider: Provider) {
-  const accounts = await load();
-  delete accounts[provider];
   accessTokens.delete(provider);
-  await save(accounts);
+  await edit((accounts) => void delete accounts[provider]);
 }
 
 // --- Connexion
@@ -125,9 +123,7 @@ export async function finishLogin(state: string, code: string): Promise<{ provid
   });
   if (!tokens.refresh_token) throw new Error("Le compte n'a pas donné d'accès durable : recommence");
   const email = emailFromIdToken(tokens.id_token) ?? PROVIDERS[login.provider].label;
-  const accounts = await load();
-  accounts[login.provider] = { email, refreshToken: tokens.refresh_token };
-  await save(accounts);
+  await edit((accounts) => void (accounts[login.provider] = { email, refreshToken: tokens.refresh_token! }));
   accessTokens.set(login.provider, { token: tokens.access_token, expires: Date.now() + (tokens.expires_in - 60) * 1000 });
   return { provider: login.provider, email };
 }
@@ -164,16 +160,16 @@ async function accessToken(provider: Provider, stored: Stored): Promise<string> 
     accessTokens.set(provider, { token: tokens.access_token, expires: Date.now() + (tokens.expires_in - 60) * 1000 });
     // Microsoft renouvelle aussi le jeton de renouvellement : on garde le dernier.
     if (tokens.refresh_token && tokens.refresh_token !== stored.refreshToken) {
-      const accounts = await load();
-      if (accounts[provider]) accounts[provider]!.refreshToken = tokens.refresh_token;
-      await save(accounts);
+      await edit((accounts) => {
+        if (accounts[provider]) accounts[provider]!.refreshToken = tokens.refresh_token!;
+      });
     }
     return tokens.access_token;
   } catch (e) {
     if ((e as { oauthError?: string }).oauthError === "invalid_grant") {
-      const accounts = await load();
-      if (accounts[provider]) accounts[provider]!.expired = true;
-      await save(accounts);
+      await edit((accounts) => {
+        if (accounts[provider]) accounts[provider]!.expired = true;
+      });
     }
     throw e;
   }
