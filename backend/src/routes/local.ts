@@ -20,7 +20,7 @@ export default async function localRoutes(app: FastifyInstance) {
     // Hôtes seulement : un lien ICS publié donne accès à l'agenda, il ne s'affiche pas en entier.
     calendar: {
       env: config.icsUrls.length,
-      saved: (await savedCalendarUrls()).map((u) => (u === "demo" ? "agenda d'exemple" : URL.parse(u)?.host ?? "lien invalide")),
+      saved: (await savedCalendarUrls()).map((u) => (u === "demo" ? "agenda d'exemple" : (URL.parse(u)?.host ?? "lien invalide"))),
       accounts: await connectedAccounts(),
       providers: await availableProviders(),
     },
@@ -35,7 +35,9 @@ export default async function localRoutes(app: FastifyInstance) {
           type: "object",
           required: ["urls"],
           additionalProperties: false,
-          properties: { urls: { type: "array", maxItems: 5, items: { type: "string", pattern: "^(https?|webcal)://|^demo$", maxLength: 2000 } } },
+          properties: {
+            urls: { type: "array", maxItems: 5, items: { type: "string", pattern: "^(https?|webcal)://|^demo$", maxLength: 2000 } },
+          },
         },
       },
     },
@@ -65,7 +67,8 @@ export default async function localRoutes(app: FastifyInstance) {
   app.get<{ Params: { provider: string }; Querystring: { code?: string; state?: string; error?: string; error_description?: string } }>(
     "/oauth/:provider/callback",
     async (req, reply) => {
-      const back = (result: string) => reply.redirect(`http://127.0.0.1:${config.port}/?section=agenda&account=${encodeURIComponent(result)}`);
+      const back = (result: string) =>
+        reply.redirect(`http://127.0.0.1:${config.port}/?section=agenda&account=${encodeURIComponent(result)}`);
       if (req.query.error || !req.query.code || !req.query.state) {
         req.log.warn(`Connexion refusée : ${req.query.error} ${req.query.error_description ?? ""}`);
         return back(req.query.error === "access_denied" ? "refused" : "error");

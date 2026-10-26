@@ -28,7 +28,9 @@ export function extensionTabs(): BrowserTab[] | undefined {
   if (fresh.length === 0) return undefined;
   return fresh.flatMap((r) =>
     [...r.tabs]
-      .sort((a, b) => Number(b.window === r.focusedWindow) - Number(a.window === r.focusedWindow) || a.window - b.window || a.index - b.index)
+      .sort(
+        (a, b) => Number(b.window === r.focusedWindow) - Number(a.window === r.focusedWindow) || a.window - b.window || a.index - b.index,
+      )
       .map((t) => ({ id: `${r.browser}|${t.id}`, title: t.title, url: t.url, browser: r.browser, active: t.active })),
   );
 }

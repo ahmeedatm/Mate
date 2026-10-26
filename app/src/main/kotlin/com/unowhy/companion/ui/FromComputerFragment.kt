@@ -148,7 +148,7 @@ class FromComputerFragment : Fragment() {
             val meta = view.findViewById<TextView>(R.id.doc_meta)
             meta.text = if (entry.kind == "dir") "" else
                 Formatter.formatShortFileSize(context, entry.size) + " · " +
-                DateUtils.getRelativeTimeSpanString(entry.mtimeMs, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
+                    DateUtils.getRelativeTimeSpanString(entry.mtimeMs, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
             meta.visibility = if (meta.text.isEmpty()) View.GONE else View.VISIBLE
             return view
         }

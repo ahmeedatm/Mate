@@ -71,7 +71,14 @@ export async function calendarSources(): Promise<string[]> {
 }
 
 /** Agenda relié, vu depuis la tablette : jamais le lien ICS lui-même (il donne accès à l'agenda). */
-export type LinkedCalendar = { id: string; kind: "microsoft" | "google" | "ics"; label: string; detail: string; removable: boolean; expired: boolean };
+export type LinkedCalendar = {
+  id: string;
+  kind: "microsoft" | "google" | "ics";
+  label: string;
+  detail: string;
+  removable: boolean;
+  expired: boolean;
+};
 
 /** Nom lisible d'un lien ICS d'après son hôte. */
 function icsLabel(url: string): string {
@@ -85,14 +92,29 @@ function icsLabel(url: string): string {
 
 export async function linkedCalendars(): Promise<LinkedCalendar[]> {
   const accounts = (await connectedAccounts()).map((a): LinkedCalendar => ({
-    id: a.provider, kind: a.provider, label: a.label, detail: a.email, removable: true, expired: a.expired,
+    id: a.provider,
+    kind: a.provider,
+    label: a.label,
+    detail: a.email,
+    removable: true,
+    expired: a.expired,
   }));
   // Liens du fichier .env (développeur) : affichés, pas retirables depuis la tablette.
   const env = config.icsUrls.map((u, i): LinkedCalendar => ({
-    id: `env-${i}`, kind: "ics", label: icsLabel(u), detail: "Lien ICS (réglage de l'ordinateur)", removable: false, expired: false,
+    id: `env-${i}`,
+    kind: "ics",
+    label: icsLabel(u),
+    detail: "Lien ICS (réglage de l'ordinateur)",
+    removable: false,
+    expired: false,
   }));
   const saved = (await savedCalendarUrls()).map((u, i): LinkedCalendar => ({
-    id: `ics-${i}`, kind: "ics", label: icsLabel(u), detail: u === "demo" ? "Exemple" : "Lien ICS", removable: true, expired: false,
+    id: `ics-${i}`,
+    kind: "ics",
+    label: icsLabel(u),
+    detail: u === "demo" ? "Exemple" : "Lien ICS",
+    removable: true,
+    expired: false,
   }));
   return [...accounts, ...env, ...saved];
 }

@@ -29,8 +29,10 @@ export default async function calendarRoutes(app: FastifyInstance) {
 
   app.post<{ Body: EventInput }>("/calendar/events", { schema: { body: eventSchema } }, async (req) => addEvent(req.body));
 
-  app.put<{ Params: { id: string }; Body: EventInput }>("/calendar/events/:id", { schema: { body: eventSchema } }, async (req, reply) =>
-    (await updateEvent(req.params.id, req.body)) ?? reply.code(404).send({ error: "Événement introuvable" }),
+  app.put<{ Params: { id: string }; Body: EventInput }>(
+    "/calendar/events/:id",
+    { schema: { body: eventSchema } },
+    async (req, reply) => (await updateEvent(req.params.id, req.body)) ?? reply.code(404).send({ error: "Événement introuvable" }),
   );
 
   app.delete<{ Params: { id: string } }>("/calendar/events/:id", async (req, reply) =>

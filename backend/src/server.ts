@@ -116,6 +116,10 @@ if (canControl) startAutoJoin((text) => sendToTablet({ type: "message", text, se
 
 await app.listen({ port: config.port, host: config.host });
 startDiscovery((msg) => app.log.warn(msg));
-const where = config.loopbackOnly ? "USB seulement (adb reverse)" : `WiFi : ${lanAddresses().map((a) => `${a}:${config.port}`).join(", ")}`;
+const where = config.loopbackOnly
+  ? "USB seulement (adb reverse)"
+  : `WiFi : ${lanAddresses()
+      .map((a) => `${a}:${config.port}`)
+      .join(", ")}`;
 app.log.info(`Compagnon prêt sur « ${identity().name} » (${osName}), ${where}, documents dans ${config.docsDir}`);
 app.log.info(`Appairer une tablette : Réglages > Ordinateurs > Ajouter ; page d'aide : http://127.0.0.1:${config.port}/`);

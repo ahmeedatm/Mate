@@ -92,7 +92,9 @@ export function pollCommands(state: unknown, waitMs: number, signal: AbortSignal
     const timer = setTimeout(() => done([]), waitMs);
     waiter = done;
     // Tablette déconnectée pendant l'attente : on ne lui confie plus d'ordre.
-    signal.addEventListener("abort", () => { if (waiter === done) done([]); });
+    signal.addEventListener("abort", () => {
+      if (waiter === done) done([]);
+    });
   });
 }
 

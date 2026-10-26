@@ -18,7 +18,11 @@ export default async function windowRoutes(app: FastifyInstance) {
 
   app.get<{ Querystring: { name: string } }>(
     "/windows/icon",
-    { schema: { querystring: { type: "object", required: ["name"], properties: { name: { type: "string", minLength: 1, maxLength: 200 } } } } },
+    {
+      schema: {
+        querystring: { type: "object", required: ["name"], properties: { name: { type: "string", minLength: 1, maxLength: 200 } } },
+      },
+    },
     async (req, reply) => {
       const icon = await appIconFile(req.query.name);
       if (!icon) return reply.code(404).send({ error: "Pas d'icône" });

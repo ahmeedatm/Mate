@@ -1,6 +1,5 @@
 package com.unowhy.companion
 
-import com.unowhy.companion.ui.AppTheme
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -26,15 +25,16 @@ import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.Link
 import com.unowhy.companion.remote.RemoteLink
+import com.unowhy.companion.ui.AppTheme
 import com.unowhy.companion.ui.Banner
 import com.unowhy.companion.ui.CallOverlay
 import com.unowhy.companion.ui.CameraFragment
 import com.unowhy.companion.ui.ComputerAdder
 import com.unowhy.companion.ui.DeckFragment
-import com.unowhy.companion.ui.FromComputerFragment
 import com.unowhy.companion.ui.DocumentPanel
-import com.unowhy.companion.ui.HomeFragment
 import com.unowhy.companion.ui.FocusFragment
+import com.unowhy.companion.ui.FromComputerFragment
+import com.unowhy.companion.ui.HomeFragment
 import com.unowhy.companion.ui.IconCache
 import com.unowhy.companion.ui.KeyboardControl
 import com.unowhy.companion.ui.Rail
