@@ -3,14 +3,16 @@
 # services Google, 1280×800 à 160 dpi, 2 Go, 4 cœurs. Démarre l'émulateur, compile, installe, lance les tests, l'arrête.
 #
 # Usage : scripts/test-android.sh [--window]   (--window : voir l'émulateur pendant les tests)
-#         EMULATOR_PORT=5590 scripts/test-android.sh : second lancement en parallèle (autre worktree), AVD et cache Gradle à part.
 #
-# - AVD dédié companion_test_api29 sur le port 5580, effacé à chaque lancement : companion_api29 (dev) n'est pas touché.
+# Environnement jetable : chaque lancement a ses ports libres (émulateur, backend), son AVD dans un dossier temporaire
+# supprimé à la fin, et son backend aux données temporaires. Plusieurs lancements (worktrees) tournent en parallèle ;
+# companion_api29 (dev) n'est pas touché.
 # - Mac Apple Silicon : émulateur et image arm64 téléchargés au premier lancement (~800 Mo) dans le SDK.
 #   Linux (CI) : image x86_64 par sdkmanager, /dev/kvm obligatoire.
 # - Avec un JDK : ./gradlew connectedDebugAndroidTest (rapport JUnit). Sans : APK compilés dans l'image Docker
-#   de la CI, tests lancés par am instrument.
-# - Backend réel pour les tests du Deck (backend/test/deck-emulateur.ts, ports 3910 et 3911, joint par 10.0.2.2) :
+#   de la CI, tests lancés par am instrument, avec un cache Gradle propre au worktree (volume Docker, amorcé depuis
+#   companion-gradle s'il existe).
+# - Backend réel pour les tests du Deck (backend/test/deck-emulateur.ts, joint par 10.0.2.2, ports passés aux tests) :
 #   pilotage simulé sans contrôle (toucher une touche répond 501), rien n'agit sur la machine.
 #   node 22 du système, sinon (image Android de la CI) celui de nodejs.org (version de backend/scripts/package.ts).
 # Résultats, journal du backend et capture de l'écran de bienvenue dans app/build/test-android/.
@@ -19,15 +21,14 @@ cd "$(dirname "$0")/.."
 
 SDK=${ANDROID_HOME:-$HOME/Library/Android/sdk}
 export ANDROID_HOME=$SDK ANDROID_SDK_ROOT=$SDK
-PORT=${EMULATOR_PORT:-5580}
 AVD=companion_test_api29
-GRADLE_VOLUME=companion-gradle
-[ "$PORT" = 5580 ] || { AVD=${AVD}_$PORT; GRADLE_VOLUME=$GRADLE_VOLUME-$PORT; }
-SERIAL=emulator-$PORT
 OUT=app/build/test-android
 CI_IMAGE=ghcr.io/cirruslabs/android-sdk:36
-ADB="$SDK/platform-tools/adb -s $SERIAL"
+# Cache Gradle du build Docker : un par worktree (deux builds sur un même volume se bloquent sur ses verrous).
+GRADLE_VOLUME=companion-gradle-$(printf %s "$PWD" | shasum | cut -c1-8)
 BACKEND_PID=
+EMULATOR_PID=
+PORT= SERIAL= ADB= DECK_PORT= DECK_CONTROL_PORT=
 WINDOW=-no-window
 [ "${1:-}" = --window ] && WINDOW=
 
@@ -60,8 +61,33 @@ install_sdk() {
   }
 }
 
+# Ports libres : console de l'émulateur (paire paire/impaire entre 5554 et 5680, tirée au hasard), backend et son pilotage.
+pick_ports() {
+  read -r PORT DECK_PORT DECK_CONTROL_PORT < <(node -e '
+    const net = require("node:net");
+    const free = (p) => new Promise((ok) => {
+      const s = net.createServer().once("error", () => ok(0)).listen(p, "127.0.0.1", () => { const a = s.address().port; s.close(() => ok(a)); });
+    });
+    (async () => {
+      const pairs = [];
+      for (let p = 5554; p <= 5680; p += 2) pairs.push(p);
+      pairs.sort(() => Math.random() - 0.5);
+      let emu = 0;
+      for (const p of pairs) if ((await free(p)) && (await free(p + 1))) { emu = p; break; }
+      if (!emu) process.exit(1);
+      console.log(emu, await free(0), await free(0));
+    })();')
+  [ -n "$PORT" ] || { echo "Aucun port libre pour l'émulateur entre 5554 et 5681"; exit 1; }
+  SERIAL=emulator-$PORT
+  ADB="$SDK/platform-tools/adb -s $SERIAL"
+  export DECK_PORT DECK_CONTROL_PORT
+}
+
+# AVD dans un dossier temporaire, supprimé à la fin.
 create_avd() {
-  local home=${ANDROID_AVD_HOME:-$HOME/.android/avd}
+  export ANDROID_AVD_HOME
+  ANDROID_AVD_HOME=$(mktemp -d "${TMPDIR:-/tmp}/companion-avd.XXXXXX")
+  local home=$ANDROID_AVD_HOME
   mkdir -p "$home/$AVD.avd"
   printf 'avd.ini.encoding=UTF-8\npath=%s\ntarget=android-29\n' "$home/$AVD.avd" > "$home/$AVD.ini"
   cat > "$home/$AVD.avd/config.ini" <<EOF
@@ -97,7 +123,6 @@ ensure_node() {
 }
 
 start_backend() {
-  ensure_node
   (cd backend && npm ci --prefer-offline --no-audit --no-fund > /dev/null && exec node --import tsx test/deck-emulateur.ts) \
     > "$OUT/backend.log" 2>&1 &
   BACKEND_PID=$!
@@ -105,7 +130,7 @@ start_backend() {
 
 wait_backend() {
   local start=$SECONDS
-  until curl -sf http://127.0.0.1:3911/health > /dev/null; do
+  until curl -sf "http://127.0.0.1:$DECK_CONTROL_PORT/health" > /dev/null; do
     [ $((SECONDS - start)) -lt 120 ] || { echo "Le backend de test n'a pas démarré en 2 min (voir $OUT/backend.log)"; exit 1; }
     sleep 1
   done
@@ -113,8 +138,20 @@ wait_backend() {
 }
 
 cleanup() {
-  $ADB emu kill > /dev/null 2>&1 || true
   [ -z "$BACKEND_PID" ] || kill "$BACKEND_PID" 2> /dev/null || true
+  if [ -n "$EMULATOR_PID" ]; then
+    $ADB emu kill > /dev/null 2>&1 || kill "$EMULATOR_PID" 2> /dev/null || true
+    for _ in $(seq 1 20); do kill -0 "$EMULATOR_PID" 2> /dev/null || break; sleep 0.5; done
+  fi
+  [ -z "${ANDROID_AVD_HOME:-}" ] || rm -rf "$ANDROID_AVD_HOME"
+}
+
+# Premier build Docker du worktree : volume amorcé depuis le cache partagé (dépendances et Gradle déjà téléchargés).
+gradle_volume() {
+  docker volume inspect "$GRADLE_VOLUME" > /dev/null 2>&1 && return
+  docker volume create "$GRADLE_VOLUME" > /dev/null
+  docker volume inspect companion-gradle > /dev/null 2>&1 &&
+    docker run --rm -v companion-gradle:/from:ro -v "$GRADLE_VOLUME":/to $CI_IMAGE cp -a /from/. /to/ || true
 }
 
 boot() {
@@ -123,6 +160,7 @@ boot() {
   fi
   "$SDK/emulator/emulator" -avd $AVD -port $PORT $WINDOW -no-audio -no-boot-anim -no-snapshot -wipe-data \
     -gpu swiftshader_indirect > "$OUT/emulator.log" 2>&1 &
+  EMULATOR_PID=$!
   local start=$SECONDS
   $ADB wait-for-device
   until [ "$($ADB shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; do
@@ -137,6 +175,9 @@ boot() {
 
 mkdir -p "$OUT"
 trap cleanup EXIT
+ensure_node
+pick_ports
+echo "Émulateur $SERIAL, backend sur les ports $DECK_PORT (pilotage $DECK_CONTROL_PORT)"
 install_sdk
 create_avd
 # Backend lancé pendant le démarrage de l'émulateur.
@@ -146,13 +187,16 @@ wait_backend
 
 status=0
 if has_jdk; then
-  ANDROID_SERIAL=$SERIAL ./gradlew --console=plain connectedDebugAndroidTest || status=$?
+  ANDROID_SERIAL=$SERIAL ./gradlew --console=plain connectedDebugAndroidTest \
+    -Pandroid.testInstrumentationRunnerArguments.backendPort="$DECK_PORT" \
+    -Pandroid.testInstrumentationRunnerArguments.controlPort="$DECK_CONTROL_PORT" || status=$?
 else
+  gradle_volume
   docker run --rm --platform linux/amd64 -v "$PWD":/w -v $GRADLE_VOLUME:/gradle -e GRADLE_USER_HOME=/gradle -w /w \
     $CI_IMAGE ./gradlew --no-daemon --no-watch-fs --console=plain assembleDebug assembleDebugAndroidTest
   $ADB install -r -t app/build/outputs/apk/debug/app-debug.apk > /dev/null
   $ADB install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk > /dev/null
-  $ADB shell am instrument -w -r --no-window-animation \
+  $ADB shell am instrument -w -r --no-window-animation -e backendPort "$DECK_PORT" -e controlPort "$DECK_CONTROL_PORT" \
     com.unowhy.companion.test/androidx.test.runner.AndroidJUnitRunner | tr -d '\r' > "$OUT/instrument.txt"
   grep -E '^(OK|FAILURES|Tests run)' "$OUT/instrument.txt" || true
   grep -q '^OK (' "$OUT/instrument.txt" || { status=1; grep -A15 'INSTRUMENTATION_STATUS: stack=' "$OUT/instrument.txt" | head -40; }

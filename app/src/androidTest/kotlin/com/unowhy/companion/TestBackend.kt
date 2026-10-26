@@ -2,17 +2,20 @@ package com.unowhy.companion
 
 import android.content.Context
 import android.os.SystemClock
+import androidx.test.platform.app.InstrumentationRegistry
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
 /**
  * Backend réel des tests du Deck (backend/test/deck-emulateur.ts, lancé par scripts/test-android.sh) :
- * l'émulateur le joint par 10.0.2.2, l'adresse de l'ordinateur hôte. Port 3911 : arrêt, redémarrage, touches reçues.
+ * l'émulateur le joint par 10.0.2.2, l'adresse de l'ordinateur hôte. Port de pilotage : arrêt, redémarrage, touches reçues.
  */
 object TestBackend {
-    const val URL = "http://10.0.2.2:3910"
-    private const val CONTROL = "http://10.0.2.2:3911"
+    /** Ports libres choisis par le script à chaque lancement (arguments d'instrumentation), sinon ceux d'un lancement à la main. */
+    private val args = InstrumentationRegistry.getArguments()
+    private val url = "http://10.0.2.2:${args.getString("backendPort", "3910")}"
+    private val controlUrl = "http://10.0.2.2:${args.getString("controlPort", "3911")}"
     /** COMPANION_TOKEN du backend de test (backend/test/server.ts). */
     private const val TOKEN = "jeton-de-test"
 
@@ -27,15 +30,15 @@ object TestBackend {
     fun runs(): List<String> = JSONObject(control("GET", "/runs")).getJSONArray("runs").let { a -> (0 until a.length()).map { a.getString(it) } }
 
     /** Touche perso enregistrée par le backend, ou null. */
-    fun persoKey(slot: Int): JSONObject? = JSONObject(request("GET", "$URL/deck/keys/$slot", TOKEN)).optJSONObject("key")
+    fun persoKey(slot: Int): JSONObject? = JSONObject(request("GET", "$url/deck/keys/$slot", TOKEN)).optJSONObject("key")
 
     /** Appairage sans dialogue : l'ordinateur de test devient l'ordinateur actif, avec son vrai identifiant. */
     fun pair(context: Context) {
-        val health = JSONObject(request("GET", "$URL/health"))
-        Computers.save(context, Computer(health.getString("id"), health.getString("name"), URL, TOKEN, health.getString("os")), makeActive = true)
+        val health = JSONObject(request("GET", "$url/health"))
+        Computers.save(context, Computer(health.getString("id"), health.getString("name"), url, TOKEN, health.getString("os")), makeActive = true)
     }
 
-    private fun control(method: String, path: String) = request(method, CONTROL + path)
+    private fun control(method: String, path: String) = request(method, controlUrl + path)
 
     private fun request(method: String, url: String, token: String? = null): String {
         val conn = URL(url).openConnection() as HttpURLConnection
