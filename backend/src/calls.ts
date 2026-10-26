@@ -35,10 +35,6 @@ let ringing: CallEvent | null = null;
 /** Après Répondre / Ignorer, le titre peut rester une seconde : pas de nouvelle sonnerie pour cette appli. */
 const quietUntil = new Map<string, number>();
 
-export function currentCall() {
-  return ringing;
-}
-
 async function callerOf(rule: CallRule): Promise<string | null> {
   if (!rule.caller) return null;
   const pattern = new RegExp(rule.caller);

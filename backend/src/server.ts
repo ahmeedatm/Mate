@@ -23,7 +23,7 @@ import { calendarSources, dayRange, getEvents, invalidateCalendar, linkedCalenda
 import { addEvent, deleteEvent, startEventReminders, updateEvent, type EventInput } from "./events.ts";
 import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvider, loginUrl } from "./accounts.ts";
 import { autoJoinEnabled, joinMeeting, setAutoJoin, startAutoJoin } from "./meetings.ts";
-import { answerCall, currentCall, declineCall, hangUp, startCallWatch } from "./calls.ts";
+import { answerCall, declineCall, hangUp, startCallWatch } from "./calls.ts";
 import { focusDnd } from "./dnd.ts";
 import { addTask, deleteTask, listRecurring, listTasks, setTaskDone, startReminders, taskUrl } from "./tasks.ts";
 import { receiveTabs, type ExtensionReport } from "./browser-extension.ts";
@@ -921,7 +921,6 @@ if (canControl) startAutoJoin((text) => sendToTablet({ type: "message", text, se
 // --- Appels entrants (src/calls.ts) : la tablette répond, ignore ou raccroche en appuyant sur les boutons de l'appli
 
 const callBody = { type: "object", properties: { app: { type: "string", minLength: 1, maxLength: 100 }, video: { type: "boolean" } } };
-app.get("/calls/incoming", async () => ({ call: currentCall() }));
 app.post<{ Body: { app: string; video?: boolean } }>("/calls/answer", { schema: { body: { ...callBody, required: ["app"] } } }, async (req) => {
   await answerCall(req.body.app, req.body.video);
   return { ok: true };
