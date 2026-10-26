@@ -40,6 +40,33 @@ backend:
       junit: backend/junit.xml
     expire_in: 1 week
 
+# Pages web du backend (page locale, visualiseur /camera, retour OAuth) dans Chromium, même serveur que les tests d'intégration.
+# Tag de l'image = version exacte de @playwright/test dans backend/package.json : les monter ensemble.
+e2e:
+  stage: test
+  image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:47b510dd9230bf0b9bfc9b20102241e577ea7a99334ab4c3ca19f19770e9b8ea
+  variables:
+    npm_config_cache: $CI_PROJECT_DIR/.npm
+  cache:
+    key:
+      files:
+        - backend/package-lock.json
+    paths:
+      - .npm/
+  before_script:
+    - cd backend
+    - npm ci --prefer-offline --no-audit --no-fund
+  script:
+    - npm run test:e2e
+  artifacts:
+    when: always
+    # junit.xml + traces des tests en échec (npx playwright show-trace <trace.zip>).
+    paths:
+      - backend/e2e-results/
+    reports:
+      junit: backend/e2e-results/junit.xml
+    expire_in: 1 week
+
 android:
   stage: test
   image: ghcr.io/cirruslabs/android-sdk:36@sha256:f9b3ea9ed2b5fc9522adae82c7b4622ab7aa54207ef532c8e615a347dca08f31
