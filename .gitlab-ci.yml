@@ -201,6 +201,7 @@ install-mac:
         - backend/scripts/package.ts
         - backend/package-lock.json
         - backend/qa/install-mac.sh
+        - backend/qa/sanity.ts
         - Installer (Mac).command
       allow_failure: false
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -213,13 +214,15 @@ install-mac:
     - node --version
     - node -e 'process.exit(Number(+process.versions.node.split(".")[0] < 22))'
     - (cd backend && npm ci --prefer-offline --no-audit --no-fund && npm run package -- mac)
-    - backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip
+    - backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip sanity-mac.xml
   after_script:
     - backend/qa/install-mac.sh cleanup
   artifacts:
     when: always
     paths:
       - install-mac-backend.log
+    reports:
+      junit: sanity-mac.xml
     expire_in: 1 week
 
 # Tests instrumentés (app/src/androidTest/) sur un émulateur Android 10 sans services Google, 1280×800.
