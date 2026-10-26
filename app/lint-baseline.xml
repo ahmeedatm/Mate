@@ -194,7 +194,7 @@
         errorLine1="                    android:tint=&quot;?attr/c_accent&quot; />"
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/layout/fragment_docs.xml"
+            file="src/main/res/layout/fragment_from_computer.xml"
             line="96"
             column="21"/>
     </issue>
@@ -205,7 +205,7 @@
         errorLine1="                    android:tint=&quot;?attr/c_accent&quot; />"
         errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/res/layout/fragment_docs.xml"
+            file="src/main/res/layout/fragment_from_computer.xml"
             line="136"
             column="21"/>
     </issue>
@@ -425,7 +425,7 @@
         errorLine1="        &lt;LinearLayout"
         errorLine2="         ~~~~~~~~~~~~">
         <location
-            file="src/main/res/layout/fragment_docs.xml"
+            file="src/main/res/layout/fragment_from_computer.xml"
             line="70"
             column="10"/>
     </issue>

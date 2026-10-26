@@ -5,7 +5,7 @@
     <!-- Modes -->
     <string name="mode_home">Accueil</string>
     <string name="mode_deck">Deck</string>
-    <string name="mode_docs">Ordi</string>
+    <string name="mode_computer">Ordi</string>
     <string name="mode_focus">Focus</string>
     <string name="mode_camera">Caméra</string>
     <string name="mode_settings">Réglages</string>
@@ -404,7 +404,7 @@
     <string name="connect_title">Aucun ordinateur connecté</string>
     <string name="connect_button">Connecter mon ordinateur</string>
     <string name="connect_deck">Le Deck lance les applis et les raccourcis de ton ordinateur.</string>
-    <string name="connect_docs">Depuis l\'ordi affiche les fichiers et la page web de ton ordinateur.</string>
+    <string name="connect_computer">Depuis l\'ordi affiche les fichiers et la page web de ton ordinateur.</string>
     <string name="connect_camera">Le visualiseur montre sur l\'écran de ton ordinateur ce que filme la tablette.</string>
     <!-- Tablette : état caché par le kiosque (barre latérale, Réglages) -->
     <string name="event_new">Nouvel événement</string>
