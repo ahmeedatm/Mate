@@ -95,6 +95,8 @@ Le pipeline (`.gitlab-ci.yml`, runner Linux) lance trois jobs en parallèle :
 | `e2e` | pages web du backend dans Chromium (Playwright, `backend/e2e/`) : page locale (adresse, code d'appairage, lien ICS), visualiseur `/camera`, retours d'erreur de `/oauth/:provider/callback`. Même serveur que les tests d'intégration. Artefacts : `e2e-results/junit.xml` et traces des tests en échec |
 | `android` | tests JVM (`app/src/test/`), lint, APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
 
+Sur un tag `vX.Y.Z`, trois jobs de plus construisent et publient la release (section suivante).
+
 Avant de pousser : `cd backend && npm run typecheck && npm test`, et `./gradlew testDebugUnitTest lintDebug`.
 
 Tests Playwright (page web touchée : `src/local-page.ts`, `src/camera.ts`, routes OAuth) : `cd backend && npm run test:e2e`, après un `npx playwright install chromium` la première fois. Sans navigateur installé, dans l'image du job :
@@ -109,6 +111,42 @@ Le tag de l'image du job `e2e` suit la version exacte de `@playwright/test` (`ba
 Ce que la CI ne voit pas : le pilotage réel du Mac et de Windows (sur Linux, le deck répond 501), l'appli sur la tablette. Ils restent testés à la main (case « Testé sur » de la MR).
 
 Lint : les erreurs déjà présentes sont figées dans `app/lint-baseline.xml`, seules les nouvelles font échouer le job. Après en avoir corrigé, `./gradlew updateLintBaseline`.
+
+## Release (tag vX.Y.Z)
+
+Un tag `vX.Y.Z` posé sur `main` lance les mêmes tests, puis :
+
+| Job | Produit |
+|---|---|
+| `package` | `Compagnon-Unowhy-Windows.zip` et `Compagnon-Unowhy-Mac.zip` (`npm run package -- windows` ou `mac` sur le runner Linux, un job par plateforme : artefacts sous 100 Mo) |
+| `android-release` | `companion-X.Y.Z.apk` signé, et `companion-X.Y.Z.json` : son entrée pour le « serveur Unowhy » |
+| `release` | release GitLab du tag, fichiers déposés dans le registre de paquets du projet (`glab release create`, jeton du job) |
+
+```bash
+git tag v1.2.0 origin/main && git push origin v1.2.0
+```
+
+Version de l'appli : `versionName` = `X.Y.Z` du tag, `versionCode` = X × 10000 + Y × 100 + Z (Y et Z sous 100), donnés à Gradle par `-PappVersion=X.Y.Z`. Sans ce paramètre : `0.1.0` (code 100). La tablette n'installe une mise à jour que si son `versionCode` est plus grand : chaque tag doit être supérieur au précédent.
+
+**Clé de signature**, jamais dans le dépôt. Variables CI du projet, protégées et masquées : `RELEASE_KEYSTORE_BASE64` (fichier PKCS12 en base64, sur une ligne) et `RELEASE_KEYSTORE_PASSWORD` (mot de passe du fichier et de la clé, alias `companion`). Une variable protégée n'existe que pour une branche ou un tag protégé : protéger les tags `v*` (Settings > Repository > Protected tags), sinon `android-release` échoue (« Clé de signature absente »). Créer la clé une fois, puis la garder hors du dépôt (perdue = plus aucune mise à jour possible des tablettes) :
+
+```bash
+keytool -genkeypair -storetype PKCS12 -keystore companion-release.p12 -alias companion -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Unowhy Companion"
+base64 -i companion-release.p12 | tr -d '\n'   # valeur de RELEASE_KEYSTORE_BASE64
+```
+
+Sur un poste de dev, `./gradlew assembleRelease` sans `RELEASE_KEYSTORE` donne un APK release non signé. Avec : `RELEASE_KEYSTORE=chemin.p12 RELEASE_KEYSTORE_PASSWORD=… ./gradlew assembleRelease -PappVersion=1.2.0`.
+
+**Alimenter le « serveur Unowhy »** (mise à jour de la tablette depuis l'ordinateur) : télécharger de la release `companion-X.Y.Z.apk` et `companion-X.Y.Z.json` dans un même dossier, puis sur l'ordinateur, dans `backend/` :
+
+```bash
+npm run updates:add -- ~/Téléchargements/companion-1.2.0.json                  # données du dépôt (backend/.data)
+DATA_DIR=paquet npm run updates:add -- ~/Téléchargements/companion-1.2.0.json  # compagnon installé par paquet
+```
+
+`scripts/updates.ts` copie l'APK dans `<données>/updates/` et remplace la version précédente du Companion dans `manifest.json` ; les autres entrées (WebView) restent. La tablette la voit dans Réglages > Mises à jour.
+
+Changement de signature : Android refuse une mise à jour signée par une autre clé. Une tablette qui a reçu l'APK debug (adb, artefact du job `android`) n'acceptera l'APK de release qu'après désinstallation du Companion, donc, en kiosque, après avoir refait la procédure de [kiosque.md](kiosque.md) avec l'APK de release.
 
 ## Mettre à jour les ordinateurs de test (installés par paquet)
 
@@ -138,7 +176,7 @@ Garder le même dossier : l'Accessibilité est accordée au chemin du `node` du 
 
 ## Fabriquer les paquets clients (sans Node à installer)
 
-Sur le Mac, dans `backend/` : `npm run package` (`scripts/package.ts`). Résultat dans `dist/` à la racine (ignoré par git) :
+Sur le Mac (ou sous Linux, comme le job `package` d'une release ; `zip`, `unzip` et `tar` requis), dans `backend/` : `npm run package` (`scripts/package.ts`). Résultat dans `dist/` à la racine (ignoré par git) :
 
 - `Compagnon-Unowhy-Windows.zip` (~34 Mo) et `Compagnon-Unowhy-Mac.zip` (~76 Mo, node Apple Silicon et Intel) ;
 - dans chaque zip, un dossier « Compagnon Unowhy » : l'installeur à double-cliquer, `backend/dist/server.mjs` et `service.mjs` (sources regroupées par esbuild), `backend/config` (sans `deck.json` ni `tasks.json`), `UnowhyHelper.exe` et `UnowhyCompanion.exe` (lanceur) pour Windows, et le node officiel de nodejs.org (ligne 22, téléchargé une fois dans `backend/.cache/node`, vérifié par SHA-256).
