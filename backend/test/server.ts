@@ -13,8 +13,13 @@ export type TestServer = {
   dataDir: string;
   /** Requête avec le jeton ; `auth: false` pour l'envoyer sans. */
   call: (method: string, route: string, body?: unknown, auth?: boolean) => Promise<{ status: number; json: any }>;
+  /** Journal du serveur (une ligne JSON par événement). */
+  output: () => string;
   stop: () => Promise<void>;
 };
+
+/** `dataDir` donné : gardé à l'arrêt (redémarrage avec la même identité). `env` : variables en plus (DECK_FILE…). */
+export type ServerOptions = { port?: number; host?: string; dataDir?: string; env?: Record<string, string> };
 
 function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -27,10 +32,10 @@ function freePort(): Promise<number> {
   });
 }
 
-/** Lance le vrai serveur (USB seulement) avec un dossier de données vide. */
-export async function startServer(): Promise<TestServer> {
-  const port = await freePort();
-  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-test-"));
+/** Lance le vrai serveur (USB seulement par défaut) avec un dossier de données vide. */
+export async function startServer(options: ServerOptions = {}): Promise<TestServer> {
+  const port = options.port ?? (await freePort());
+  const dataDir = options.dataDir ?? fs.mkdtempSync(path.join(os.tmpdir(), "companion-test-"));
   const docsDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-docs-"));
   const url = `http://127.0.0.1:${port}`;
   let output = "";
@@ -38,7 +43,7 @@ export async function startServer(): Promise<TestServer> {
     cwd: backendDir,
     env: {
       ...process.env,
-      HOST: "127.0.0.1",
+      HOST: options.host ?? "127.0.0.1",
       PORT: String(port),
       COMPANION_TOKEN: TOKEN,
       DATA_DIR: dataDir,
@@ -46,6 +51,7 @@ export async function startServer(): Promise<TestServer> {
       COMPUTER_NAME: "Ordi de test",
       CALENDAR_ICS_URLS: "",
       NO_ALERT: "1",
+      ...options.env,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -88,8 +94,8 @@ export async function startServer(): Promise<TestServer> {
       child.kill();
       await exited;
     }
-    fs.rmSync(dataDir, { recursive: true, force: true });
+    if (!options.dataDir) fs.rmSync(dataDir, { recursive: true, force: true });
     fs.rmSync(docsDir, { recursive: true, force: true });
   };
-  return { url, dataDir, call, stop };
+  return { url, dataDir, call, output: () => output, stop };
 }
