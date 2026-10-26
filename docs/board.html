@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compagnon Unowhy : board des idées</title>
+<style>
+  :root {
+    --bg: #0f1218; --panel: #171b24; --line: #2a3040; --text: #e7eaf0; --muted: #8b93a7;
+    --done: #3ecf8e; --untested: #f5b942; --partial: #5aa9ff; --idea: #b28dff; --dropped: #6b7280; --decision: #ff6b8b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+  header { padding: 20px 24px 12px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 5; }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+  .tabs button, .chip { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 999px; padding: 6px 12px; cursor: pointer; font: inherit; }
+  .tabs button.on { background: var(--text); color: var(--bg); }
+  .chip { padding: 4px 10px; font-size: 12px; display: inline-flex; gap: 6px; align-items: center; }
+  .chip.off { opacity: .35; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+  input[type=search] { background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 6px 10px; font: inherit; min-width: 220px; }
+  select { background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 6px 8px; font: inherit; }
+  main { padding: 20px 24px 40px; }
+  .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-width: 110px; }
+  .stat b { font-size: 20px; display: block; }
+  .stat span { color: var(--muted); font-size: 12px; }
+
+  /* Mindmap */
+  #mindmap { position: relative; display: grid; grid-template-columns: 1fr auto 1fr; gap: 0 70px; align-items: center; min-height: 600px; }
+  #mindmap svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  .side { display: flex; flex-direction: column; gap: 18px; }
+  .side.left { align-items: flex-end; }
+  .center { background: var(--text); color: var(--bg); font-weight: 700; padding: 18px 22px; border-radius: 18px; text-align: center; max-width: 220px; z-index: 1; }
+  .center small { display: block; font-weight: 400; font-size: 12px; opacity: .7; margin-top: 4px; }
+  .branch { display: flex; gap: 12px; align-items: center; z-index: 1; }
+  .side.left .branch { flex-direction: row-reverse; }
+  .theme { border-radius: 12px; padding: 8px 12px; font-weight: 600; white-space: nowrap; cursor: pointer; border: 2px solid; background: var(--panel); }
+  .theme .n { font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 6px; }
+  .leaves { display: flex; flex-wrap: wrap; gap: 5px; max-width: 430px; }
+  .side.left .leaves { justify-content: flex-end; }
+  .leaf { font-size: 12px; padding: 3px 8px; border-radius: 6px; background: #1d2230; border-left: 3px solid; cursor: default; }
+  .branch.collapsed .leaves { display: none; }
+
+  /* Board */
+  #board { display: grid; grid-template-columns: repeat(6, minmax(220px, 1fr)); gap: 12px; overflow-x: auto; }
+  .col { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; min-height: 200px; }
+  .col h3 { margin: 2px 4px 10px; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+  .col h3 .c { color: var(--muted); font-weight: 400; margin-left: auto; }
+  .card { background: #1d2230; border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; margin-bottom: 8px; }
+  .card .t { font-weight: 600; font-size: 13px; }
+  .card .th { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .card .nt { font-size: 12px; color: #c3c9d6; margin-top: 4px; }
+
+  /* Listes */
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+  .box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .box h3 { margin: 0 0 10px; font-size: 15px; }
+  .box ul { margin: 0; padding-left: 18px; }
+  .box li { margin: 6px 0; }
+  .box li b { color: var(--text); }
+  .muted { color: var(--muted); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Compagnon de bureau Unowhy : board des idées</h1>
+  <div class="sub">Tablette Unowhy 4.2 qui pilote un ordinateur Mac ou Windows. Inventaire du 26/10/2026, tiré de la doc, du code et des commits.</div>
+  <div class="bar">
+    <div class="tabs" id="tabs">
+      <button data-v="mindmap" class="on">Mindmap</button>
+      <button data-v="board">Board</button>
+      <button data-v="doublons">Doublons</button>
+      <button data-v="decisions">Décisions ouvertes</button>
+    </div>
+    <input type="search" id="q" placeholder="Rechercher une idée…">
+    <select id="theme"><option value="">Tous les thèmes</option></select>
+  </div>
+  <div class="bar" id="legend"></div>
+</header>
+<main>
+  <div class="stats" id="stats"></div>
+  <section id="v-mindmap"><div id="mindmap"></div></section>
+  <section id="v-board" hidden><div id="board"></div></section>
+  <section id="v-doublons" hidden><div class="grid2" id="doublons"></div></section>
+  <section id="v-decisions" hidden><div class="grid2" id="decisions"></div></section>
+</main>
+<script>
+const STATUS = {
+  done:     { label: "Fait et testé",       color: "var(--done)" },
+  untested: { label: "Codé, à tester",      color: "var(--untested)" },
+  partial:  { label: "Partiel",             color: "var(--partial)" },
+  idea:     { label: "Idée",                color: "var(--idea)" },
+  decision: { label: "À décider",           color: "var(--decision)" },
+  dropped:  { label: "Abandonné",           color: "var(--dropped)" },
+};
+const T = "done", C = "untested", P = "partial", I = "idea", D = "decision", X = "dropped";
+
+// [nom, statut, note]
+const THEMES = [
+  { name: "Accueil et widgets", color: "#3ecf8e", items: [
+    ["Grille 4×4, 3 pages, 6 tailles", T],
+    ["Modèles Travail / Maison-Jeu / Veille", T],
+    ["Mode Modifier (appui long, glisser)", T, "conflit appui long widget / Modifier à tester"],
+    ["Heure et météo (Open-Meteo, sans clé)", T],
+    ["Agenda 8 jours, prochain rendez-vous", T],
+    ["Tâches, Eau, mini-Focus", T],
+    ["Son de l'ordinateur", T],
+    ["Widget Média", C],
+    ["Widget Touches", C, "à tester sur Windows"],
+    ["Widget Note", C, "non documenté"],
+    ["Accueil sans ordinateur", C],
+  ]},
+  { name: "Deck et médias", color: "#5aa9ff", items: [
+    ["Page Apps : ajouter, retirer", T],
+    ["Raccourcis, macros, actions", T],
+    ["Perso : 14 touches éditées sur la tablette", T],
+    ["Pages d'appli (Discord, Réunion)", T],
+    ["Onglets déplaçables, balayage", T],
+    ["Volume par appli", T],
+    ["Lecture en cours Windows (WinRT)", T],
+    ["YouTube Music", T],
+    ["Boutons volume de la tablette → ordi", C],
+    ["Actions système (veille écran, mode sombre, verrou, capture)", C],
+    ["Média sur Mac", C],
+    ["Boutons Pause / Suivant", C],
+    ["Sens du mode « Steam Deck » (média ou rétro-gaming)", D],
+    ["Dofus Rétro « Jouer »", I, "hors démo"],
+    ["Bluetooth (enceinte, casque)", X, "impossible en kiosque"],
+  ]},
+  { name: "Fenêtres et écrans", color: "#ffb86b", items: [
+    ["Onglet Ouvertes : schéma des écrans, gestes", T, "partiel sur Mac"],
+    ["Corbeille : garder 0,9 s pour fermer", T],
+    ["Écrans étirés (×3 max)", T],
+    ["Panneau par appli", T],
+    ["Autres bureaux et plein écran Mac", C],
+    ["Triple toucher = plein écran Mac", C],
+    ["Bureau précédent / suivant (Mac)", I],
+    ["Fenêtre de devant mise en avant", I],
+    ["Noms bruts des programmes Windows", I],
+    ["Word hors écrans, introuvable", D, "problème ouvert"],
+  ]},
+  { name: "Voix", color: "#b28dff", items: [
+    ["Commande vocale (bouton Parler)", T, "partiel"],
+    ["Dictée « écris … »", T],
+    ["Rappels parlés", T],
+    ["Commande écrite (appui long)", C],
+    ["Mot de réveil", I],
+    ["« Réponds / ignore » à la voix", I],
+    ["Météo et réglages à la voix", I],
+    ["Assistant IA (chat + micro)", X, "décidé le 26/10/2026 : retiré"],
+  ]},
+  { name: "Caméra et documents", color: "#ff6b8b", items: [
+    ["Montrer sur l'ordi (la tablette sert de caméra)", T],
+    ["Figer, zoom, pivoter, plein écran", T],
+    ["Fichiers de l'ordi / Page de l'ordi", T],
+    ["Onglets du navigateur", T],
+    ["Envoyer une photo", C],
+    ["Photo HD 5 Mpx", C],
+    ["Page de l'ordi sur Edge et Firefox", C],
+    ["Webcam USB", I, "à demander à l'équipe firmware"],
+    ["Cadre photo / affichage ambiant", I],
+    ["« Photo → ordi »", X, "remplacé par Envoyer une photo"],
+  ]},
+  { name: "Agenda, tâches, Focus", color: "#4dd4d4", items: [
+    ["Agenda par lien ICS", T],
+    ["Agenda personnel + rappel", T],
+    ["Mes agendas (voir, délier)", T],
+    ["Tâches ponctuelles et récurrentes", T],
+    ["Pomodoro + ambiance", T],
+    ["Ne pas déranger (Windows, Mac)", T],
+    ["Agenda Microsoft / Google (OAuth)", C, "bloqué : appli Azure non enregistrée"],
+    ["Worklog Jira coché tout seul", C],
+    ["Rejoindre 1 min avant", C],
+    ["« Ne jamais changer d'ordinateur »", I],
+  ]},
+  { name: "Appels et réunions", color: "#f5b942", items: [
+    ["Appels entrants Discord", T],
+    ["Discord en appel : carte, participants, micro", T],
+    ["Quitter l'appel, arrêter le partage", T],
+    ["Teams en appel sur Mac", T, "participants non lus"],
+    ["Rejoindre une réunion Teams", T],
+    ["Teams sur Windows", P],
+    ["Lever la main (Teams)", P],
+    ["Appels entrants Teams, WhatsApp, Zoom", C, "captures pendant un vrai appel"],
+    ["Rejoindre Meet, Zoom, Webex", C],
+    ["Appels entrants sur Mac", I],
+    ["Discord : qui parle", I, "bloqué, illisible"],
+    ["Discord par RPC", X, "décision d'Eliot"],
+  ]},
+  { name: "Ordinateurs et réseau", color: "#8bd450", items: [
+    ["Appairage : code à 6 chiffres, découverte WiFi", T],
+    ["Plusieurs ordinateurs, bascule après 2 min", T],
+    ["Redémarrage à distance", T],
+    ["Lancement automatique", T],
+    ["Paquets sans Node, installeurs", T],
+    ["Saisie manuelle de l'adresse", C],
+    ["Renommer un ordinateur", C],
+    ["Pare-feu Windows encore en PowerShell", P, "bloqué par l'antivirus"],
+    ["HTTPS épinglé à l'appairage", I, "production"],
+    ["Adresse de l'écran Bienvenue", D],
+  ]},
+  { name: "Kiosque et tablette", color: "#c0c7d6", items: [
+    ["Kiosque : SQOOL masqué, device owner", T],
+    ["Mises à jour silencieuses", T],
+    ["WiFi dans Réglages", T],
+    ["Batterie, luminosité, bandeau", T],
+    ["Annuler une mise à jour", C],
+    ["Atténuation 22 h – 7 h", C],
+    ["Réglages technicien", C],
+    ["Bouton « Éteindre l'écran »", I],
+    ["Play Store actif en kiosque ?", D],
+  ]},
+  { name: "Extension Claude (MCP)", color: "#e0a3ff", items: [
+    ["15 outils : tablette, tâches, agenda, deck, docs", T],
+    ["Ordres poussés vers la tablette", T],
+    ["Ordre « appel »", C],
+  ]},
+  { name: "Produit et vente", color: "#ff9f6b", items: [
+    ["Maquette cliquable du pitch", T],
+    ["Nom du projet", D],
+    ["Public cible : bureau, maison, école", D],
+    ["Publier l'extension navigateur", D],
+    ["Signer les exe et l'APK", I],
+    ["Installeur NSIS, appli .app", I],
+    ["Extension Firefox", I],
+    ["Panneau domotique (Home Assistant)", I],
+    ["Borne d'accueil / salle de réunion", I],
+    ["CAA pour élèves", I],
+    ["Console rétro-gaming", I],
+    ["Second écran de notifications", I],
+    ["Dock vendu avec le logiciel", I],
+  ]},
+];
+
+const DOUBLONS = [
+  ["Fenêtres", "Onglet Ouvertes et panneau par appli : deux écrans pour la même chose."],
+  ["Volume", "Boutons de la tablette, widget Son, barre Son du Deck."],
+  ["Média", "Widget Média de l'Accueil et page Média du Deck."],
+  ["Touches", "Widget Touches de l'Accueil et onglet Perso du Deck."],
+  ["Focus", "Mini-widget, écran Focus et outils Claude."],
+  ["Tâches", "Deux endroits de stockage : fichier de config et données de la tablette."],
+  ["Agenda", "Trois sources : lien ICS, connexion Microsoft/Google, agenda personnel."],
+  ["Teams", "Appel lu sur Mac, raccourcis sur Windows, réunions par l'agenda."],
+  ["Pilotage", "Tactile, voix et Claude : trois façons de donner un ordre."],
+  ["Bascule d'ordinateur", "La doc dit « plus de bascule », le code bascule après 2 min."],
+  ["Doc périmée", "README : « Photo → ordi » et l'action Raccourcis pour Ne pas déranger, tous deux remplacés."],
+];
+
+const DECISIONS = [
+  ["Nom du projet", "Toujours « Compagnon »."],
+  ["Public cible", "Bureau, maison, école, produit Unowhy ?"],
+  ["Mode « Steam Deck »", "Média et ambiance, ou rétro-gaming ?"],
+  ["Play Store en kiosque", "Actif ou bloqué ?"],
+  ["Agenda Microsoft / Google", "Enregistrer l'appli (Azure bloqué) ou rester sur l'ICS."],
+  ["Règles d'appels Teams / WhatsApp / Zoom", "Captures pendant un vrai appel à faire."],
+  ["Signature des exe", "Certificat Unowhy pour l'antivirus et la vente."],
+  ["Extension navigateur", "Publier (Chrome, Edge, Firefox) ou non."],
+  ["Sécurité en production", "HTTPS épinglé à l'appairage."],
+  ["Gestion de flotte", "MDM SQOOL ou mises à jour maison."],
+  ["Deck Mac de départ", "Profil développeur à revoir pour un client."],
+  ["Changement d'ordinateur", "Ajouter « ne jamais changer d'ordinateur » ?"],
+  ["Appels entrants (route inutilisée)", "Garder ou supprimer /calls/incoming."],
+  ["Code technicien", "4242 compilé dans l'APK : le garder ?"],
+];
+
+const ALL = THEMES.flatMap(t => t.items.map(([name, s, note]) => ({ name, s, note, theme: t.name, color: t.color })));
+const hidden = new Set();
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function visible(it) {
+  const q = $("#q").value.trim().toLowerCase();
+  const th = $("#theme").value;
+  if (hidden.has(it.s)) return false;
+  if (th && it.theme !== th) return false;
+  if (q && !(it.name + " " + (it.note || "") + " " + it.theme).toLowerCase().includes(q)) return false;
+  return true;
+}
+
+function renderLegend() {
+  $("#legend").innerHTML = Object.entries(STATUS).map(([k, v]) =>
+    `<span class="chip ${hidden.has(k) ? "off" : ""}" data-s="${k}"><span class="dot" style="background:${v.color}"></span>${v.label}</span>`).join("");
+  document.querySelectorAll("#legend .chip").forEach(c => c.onclick = () => {
+    hidden.has(c.dataset.s) ? hidden.delete(c.dataset.s) : hidden.add(c.dataset.s);
+    render();
+  });
+}
+
+function renderStats() {
+  const items = ALL.filter(visible);
+  $("#stats").innerHTML = `<div class="stat"><b>${items.length}</b><span>idées affichées</span></div>` +
+    Object.entries(STATUS).map(([k, v]) =>
+      `<div class="stat" style="border-color:${v.color}"><b>${items.filter(i => i.s === k).length}</b><span>${v.label}</span></div>`).join("");
+}
+
+function renderMindmap() {
+  const themes = THEMES.map(t => ({ ...t, shown: ALL.filter(i => i.theme === t.name && visible(i)) })).filter(t => t.shown.length);
+  // Coupure à la moitié des idées, pas des thèmes, pour équilibrer les deux côtés
+  const total = themes.reduce((n, t) => n + t.shown.length + 2, 0);
+  let half = 0;
+  for (let n = 0; half < themes.length - 1 && n + themes[half].shown.length / 2 < total / 2; half++) n += themes[half].shown.length + 2;
+  half = Math.max(1, half);
+  const branch = t => `<div class="branch" data-theme="${esc(t.name)}">
+      <div class="theme" style="border-color:${t.color}">${esc(t.name)}<span class="n">${t.shown.length}</span></div>
+      <div class="leaves">${t.shown.map(i => `<span class="leaf" style="border-color:${STATUS[i.s].color}" title="${esc(STATUS[i.s].label + (i.note ? " : " + i.note : ""))}">${esc(i.name)}</span>`).join("")}</div>
+    </div>`;
+  $("#mindmap").innerHTML = `<svg></svg>
+    <div class="side left">${themes.slice(0, half).map(branch).join("")}</div>
+    <div class="center">Compagnon de bureau<small>tablette → ordinateur</small></div>
+    <div class="side right">${themes.slice(half).map(branch).join("")}</div>`;
+  document.querySelectorAll("#mindmap .theme").forEach(el => el.onclick = () => {
+    el.parentElement.classList.toggle("collapsed");
+    drawLinks();
+  });
+  requestAnimationFrame(drawLinks);
+}
+
+function drawLinks() {
+  const root = $("#mindmap"), svg = root.querySelector("svg"), center = root.querySelector(".center");
+  if (!svg || !center) return;
+  const R = root.getBoundingClientRect(), c = center.getBoundingClientRect();
+  const paths = [];
+  root.querySelectorAll(".branch").forEach(b => {
+    const th = b.querySelector(".theme"), r = th.getBoundingClientRect();
+    const left = b.closest(".left") !== null;
+    const x1 = (left ? c.left : c.right) - R.left, y1 = c.top + c.height / 2 - R.top;
+    const x2 = (left ? r.right : r.left) - R.left, y2 = r.top + r.height / 2 - R.top;
+    const mx = (x1 + x2) / 2;
+    const color = th.style.borderColor;
+    paths.push(`<path d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}" stroke="${color}" stroke-width="2" fill="none" opacity=".7"/>`);
+  });
+  svg.innerHTML = paths.join("");
+}
+
+function renderBoard() {
+  $("#board").innerHTML = Object.entries(STATUS).filter(([k]) => !hidden.has(k)).map(([k, v]) => {
+    const items = ALL.filter(i => i.s === k && visible(i));
+    return `<div class="col"><h3><span class="dot" style="background:${v.color}"></span>${v.label}<span class="c">${items.length}</span></h3>
+      ${items.map(i => `<div class="card" style="border-left:3px solid ${i.color}">
+        <div class="t">${esc(i.name)}</div><div class="th">${esc(i.theme)}</div>${i.note ? `<div class="nt">${esc(i.note)}</div>` : ""}
+      </div>`).join("") || `<div class="muted">Rien ici.</div>`}</div>`;
+  }).join("");
+}
+
+function renderLists() {
+  const q = $("#q").value.trim().toLowerCase();
+  const list = (rows, title) => `<div class="box"><h3>${title}</h3><ul>${rows
+    .filter(([a, b]) => !q || (a + " " + b).toLowerCase().includes(q))
+    .map(([a, b]) => `<li><b>${esc(a)}</b> <span class="muted">: ${esc(b)}</span></li>`).join("")}</ul></div>`;
+  $("#doublons").innerHTML = list(DOUBLONS, "Fonctions qui se chevauchent");
+  $("#decisions").innerHTML = list(DECISIONS, "Questions à trancher");
+}
+
+function render() { renderLegend(); renderStats(); renderMindmap(); renderBoard(); renderLists(); }
+
+$("#theme").innerHTML += THEMES.map(t => `<option>${esc(t.name)}</option>`).join("");
+$("#q").oninput = render;
+$("#theme").onchange = render;
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll("main > section").forEach(s => s.hidden = s.id !== "v-" + b.dataset.v);
+  if (b.dataset.v === "mindmap") requestAnimationFrame(drawLinks);
+});
+window.addEventListener("resize", drawLinks);
+render();
+</script>
+</body>
+</html>
