@@ -5,7 +5,6 @@
     <!-- Modes -->
     <string name="mode_home">Accueil</string>
     <string name="mode_deck">Deck</string>
-    <string name="mode_chat">Assistant</string>
     <string name="mode_docs">Ordi</string>
     <string name="mode_focus">Focus</string>
     <string name="mode_camera">Caméra</string>
@@ -172,17 +171,6 @@
     <string name="media_paused">%1$s · En pause</string>
     <string name="media_time">%1$s / %2$s</string>
     <string name="volume_na">Volume non pilotable sur cette sortie</string>
-
-    <!-- Assistant -->
-    <string name="chat_hint">Écris un message…</string>
-    <string name="chat_empty_title">Que puis-je faire pour toi ?</string>
-    <string name="chat_empty_body">Écris une question, ou appuie sur le micro pour parler.</string>
-    <string name="send">Envoyer</string>
-    <string name="mic">Micro</string>
-    <string name="mic_stop">Arrêter l\'enregistrement</string>
-    <string name="thinking">…</string>
-    <string name="mic_permission_denied">Permission micro refusée</string>
-    <string name="voice_toggle">Lire les réponses à voix haute</string>
 
     <!-- Depuis l'ordi (ancien Partage) -->
     <string name="docs_root">Dossier partagé</string>
@@ -414,7 +402,6 @@
     <string name="connect_title">Aucun ordinateur connecté</string>
     <string name="connect_button">Connecter mon ordinateur</string>
     <string name="connect_deck">Le Deck lance les applis et les raccourcis de ton ordinateur.</string>
-    <string name="connect_chat">L\'assistant passe par ton ordinateur.</string>
     <string name="connect_docs">Depuis l\'ordi affiche les fichiers et la page web de ton ordinateur.</string>
     <string name="connect_camera">Le visualiseur montre sur l\'écran de ton ordinateur ce que filme la tablette.</string>
     <!-- Tablette : état caché par le kiosque (barre latérale, Réglages) -->

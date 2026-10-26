@@ -7,7 +7,7 @@ import java.util.Locale
 
 /** Ce qu'une phrase demande. Pas d'IA : une liste de tournures connues, puis les touches du Deck par leur nom. */
 sealed class VoiceCommand {
-    /** Nom d'un mode de MainActivity (home, deck, docs, focus, camera, settings, chat). */
+    /** Nom d'un mode de MainActivity (home, deck, docs, focus, camera, settings). */
     data class ShowMode(val mode: String) : VoiceCommand()
     data class Volume(val level: Int? = null, val delta: Int? = null) : VoiceCommand()
     data class Mute(val muted: Boolean) : VoiceCommand()
@@ -50,7 +50,7 @@ object VoiceCommands {
     private val MODES = mapOf(
         "accueil" to "home", "agenda" to "home", "deck" to "deck", "raccourcis" to "deck", "touches" to "deck",
         "partage" to "docs", "documents" to "docs", "fichiers" to "docs", "focus" to "focus", "pomodoro" to "focus", "camera" to "camera",
-        "visualiseur" to "camera", "reglages" to "settings", "parametres" to "settings", "assistant" to "chat",
+        "visualiseur" to "camera", "reglages" to "settings", "parametres" to "settings",
     )
     private val OPEN_MODE = Regex("^(ouvre|ouvrir|va|aller|affiche|afficher|montre|montrer|retour|reviens|retourne)( (sur|dans|a|au|aux|vers))? (.+)$")
     private val TILE_VERBS = Regex("^(ouvre|ouvrir|lance|lancer|demarre|demarrer|appuie sur|appuyer sur|touche|toucher|active|activer|fais|faire|mets|mettre)\\b ?")

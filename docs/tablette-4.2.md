@@ -60,5 +60,4 @@ Avec la caméra arrière à 30 cm au-dessus de la table, le champ couvre environ
 - [x] adb vérifié (fonctionne avec l'image SQOOL).
 - [ ] Micro, haut-parleur, voix française testés avec l'appli.
 - [x] Tablette sans MDM : réinitialisée le 23/10/2026, Companion device owner, SqoolOTA masqué, 24 applis désactivées (procédure dans `docs/kiosque.md`).
-- [ ] Fournisseur STT / LLM choisi, clés créées, budget fixé.
 - [ ] WiFi, câbles USB, enceinte Bluetooth, supports de tablette.

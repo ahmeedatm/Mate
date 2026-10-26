@@ -1,6 +1,6 @@
 # État du projet
 
-Mis à jour le 25/10/2026 (5e session : MCP revérifié, extension de navigateur reportée à la vente, poste de dev installé sur le PC perso d'Eliot, sans changement du code). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
+Mis à jour le 26/10/2026 (Assistant IA retiré ; avant, 5e session du 25/10 : MCP revérifié, extension de navigateur reportée à la vente, poste de dev installé sur le PC perso d'Eliot, sans changement du code). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
 
 ## Pourquoi ce projet
 
@@ -76,11 +76,14 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 1. **Voix et appels** : appels Teams / WhatsApp (captures pendant un vrai appel, reporté par Eliot) ; idées : météo, réglages de la tablette à la voix. Réactiver l'appli Google sans adb : impossible (un device owner ne peut pas annuler `pm disable-user`), inutile car la procédure du kiosque la garde ; sans elle, Parler ouvre la commande écrite.
 2. **Paquet** : relance du compagnon Mac à l'ouverture de session : vue le 25/10 (Mac redémarré, compagnon relancé seul, Accessibilité gardée). Pas de NSIS ni d'appli .app pour l'instant.
 
+## Décisions prises
+
+- **Plus d'Assistant IA** (26/10/2026) : jamais branché (`MODE=live` levait « pas encore implémenté »). Retirés : mode Assistant et `ChatFragment`, `POST /chat`, `POST /transcribe`, `providers.ts`, `MODE` et le champ `mode` de `/health`. La commande vocale (bouton Parler) et la synthèse vocale restent. La maquette cliquable du pitch montre encore une étape Assistant (non refaite).
+
 ## Décisions en attente
 
 - Nom du projet, public cible (bureau ou école).
 - Adresse provisoire de l'écran de bienvenue : `unowhy.com/compagnon` (`INSTALL_URL`), à revoir à la fin.
-- Fournisseur et budget de l'Assistant IA (`MODE=live` pas branché ; l'Assistant est masqué en `mock`).
 - Le Play Store reste-t-il actif en kiosque ?
 
 ## Avant de livrer ou de faire la démo

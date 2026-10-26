@@ -13,11 +13,9 @@ import java.net.URL
 import java.net.URLEncoder
 import java.util.UUID
 
-data class ChatMessage(val role: String, val content: String)
-
 /** Ce que l'ordinateur dit de lui (GET /health, sans jeton) ; `auth` : le jeton envoyé est accepté. */
 /** `accessibility` : Mac seulement, false = fenêtres et raccourcis bloqués (autorisation à donner sur le Mac). */
-data class Identity(val id: String?, val name: String, val os: String, val auth: Boolean, val mode: String = "mock", val accessibility: Boolean? = null)
+data class Identity(val id: String?, val name: String, val os: String, val auth: Boolean, val accessibility: Boolean? = null)
 
 /** Résultat de l'appairage par code : jeton à garder et identité de l'ordinateur. */
 data class Pairing(val token: String, val id: String, val name: String, val os: String)
@@ -139,7 +137,7 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
     suspend fun identity(): Identity = io {
         val j = JSONObject(text(request("GET", "/health", timeoutMs = 5_000)))
         Identity(
-            j.optStringOrNull("id"), j.optString("name", "Ordinateur"), j.optString("os", "mac"), j.optBoolean("auth", true), j.optString("mode", "mock"),
+            j.optStringOrNull("id"), j.optString("name", "Ordinateur"), j.optString("os", "mac"), j.optBoolean("auth", true),
             if (j.has("accessibility") && !j.isNull("accessibility")) j.getBoolean("accessibility") else null,
         )
     }
@@ -154,19 +152,6 @@ class BackendClient(private val baseUrl: String, private val token: String = "",
     suspend fun confirmPairing(request: String, code: String): Pairing = io {
         val j = JSONObject(postJson("/pair/confirm", JSONObject().put("request", request).put("code", code)))
         Pairing(j.getString("token"), j.getString("id"), j.getString("name"), j.optString("os"))
-    }
-
-    // --- Assistant
-
-    suspend fun chat(history: List<ChatMessage>): String = io {
-        val messages = JSONArray()
-        history.forEach { messages.put(JSONObject().put("role", it.role).put("content", it.content)) }
-        val body = JSONObject().put("messages", messages)
-        JSONObject(postJson("/chat", body)).getString("reply")
-    }
-
-    suspend fun transcribe(audio: File, mimeType: String): String = io {
-        JSONObject(postFile("/transcribe", "audio", audio, mimeType)).getString("text")
     }
 
     // --- Pilotage du Mac

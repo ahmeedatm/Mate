@@ -12,11 +12,10 @@ after(async () => {
 });
 
 describe("santé et jeton", () => {
-  it("/health répond sans jeton, en mode mock", async () => {
+  it("/health répond sans jeton", async () => {
     const { status, json } = await server.call("GET", "/health", undefined, false);
     assert.equal(status, 200);
     assert.equal(json.ok, true);
-    assert.equal(json.mode, "mock");
     assert.equal(json.name, "Ordi de test");
     assert.equal(json.auth, false);
   });
@@ -122,22 +121,6 @@ describe("agenda personnel", () => {
   it("refuse un rendez-vous sans titre", async () => {
     const { status } = await server.call("POST", "/calendar/events", { title: "", startMs: 0, allDay: true });
     assert.equal(status, 400);
-  });
-});
-
-describe("assistant (mock)", () => {
-  it("/chat renvoie une réponse qui cite le message", async () => {
-    const { status, json } = await server.call("POST", "/chat", { messages: [{ role: "user", content: "Bonjour" }] });
-    assert.equal(status, 200);
-    assert.match(json.reply, /Bonjour/);
-  });
-
-  it("/transcribe lit le fichier audio envoyé", async () => {
-    const form = new FormData();
-    form.append("audio", new Blob([new Uint8Array(2048)], { type: "audio/wav" }), "voix.wav");
-    const res = await fetch(`${server.url}/transcribe`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}` }, body: form });
-    assert.equal(res.status, 200);
-    assert.match((await res.json()).text, /2 Ko/);
   });
 });
 

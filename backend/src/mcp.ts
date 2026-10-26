@@ -54,12 +54,12 @@ const server = new McpServer(
     instructions:
       "Pilote la tablette Unowhy posée sur le bureau (compagnon de l'ordinateur, Mac ou PC Windows). Écran paysage 1280×800, " +
       "modes : accueil (tableau de bord : heure, prochain rendez-vous, agenda, tâches dont le worklog Jira, Focus, son de l'ordinateur), " +
-      "deck (raccourcis de l'ordinateur, page Perso de touches à affecter : deck_touche_*), assistant (chat), docs (dossier partagé de l'ordinateur), focus (Pomodoro, sons d'ambiance), camera (visualiseur : la caméra filme une feuille, image projetée depuis l'ordinateur sur /camera), réglages. Commencer par tablette_etat ; tablette_capture montre l'écran. " +
+      "deck (raccourcis de l'ordinateur, page Perso de touches à affecter : deck_touche_*), docs (dossier partagé de l'ordinateur), focus (Pomodoro, sons d'ambiance), camera (visualiseur : la caméra filme une feuille, image projetée depuis l'ordinateur sur /camera), réglages. Commencer par tablette_etat ; tablette_capture montre l'écran. " +
       "Textes affichés en français, courts : la tablette est lue de loin.",
   },
 );
 
-const MODES = { accueil: "home", deck: "deck", assistant: "chat", docs: "docs", focus: "focus", camera: "camera", reglages: "settings" } as const;
+const MODES = { accueil: "home", deck: "deck", docs: "docs", focus: "focus", camera: "camera", reglages: "settings" } as const;
 const FOCUS = { demarrer: "start", pause: "pause", reinitialiser: "reset", passer: "skip" } as const;
 const NOISES = { brun: "brown", rose: "pink", blanc: "white", silence: "off" } as const;
 const keys = <T extends object>(o: T) => Object.keys(o) as [keyof T & string, ...(keyof T & string)[]];

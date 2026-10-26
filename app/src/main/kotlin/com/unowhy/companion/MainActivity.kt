@@ -40,7 +40,6 @@ import com.unowhy.companion.net.Link
 import com.unowhy.companion.ui.CallOverlay
 import com.unowhy.companion.ui.CameraFragment
 import com.unowhy.companion.ui.ComputerAdder
-import com.unowhy.companion.ui.ChatFragment
 import com.unowhy.companion.ui.DeckFragment
 import com.unowhy.companion.ui.DocsFragment
 import com.unowhy.companion.ui.DocumentPanel
@@ -71,7 +70,6 @@ class MainActivity : AppCompatActivity() {
     private enum class Mode(val icon: Int, val label: Int, val connect: Int? = null) {
         HOME(R.drawable.ic_home, R.string.mode_home),
         DECK(R.drawable.ic_deck, R.string.mode_deck, R.string.connect_deck),
-        CHAT(R.drawable.ic_chat, R.string.mode_chat, R.string.connect_chat),
         DOCS(R.drawable.ic_folder, R.string.mode_docs, R.string.connect_docs),
         FOCUS(R.drawable.ic_timer, R.string.mode_focus),
         CAMERA(R.drawable.ic_videocam, R.string.mode_camera, R.string.connect_camera),
@@ -89,8 +87,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var banner: TextView
     private lateinit var welcome: WelcomeView
     private lateinit var noComputer: View
-    /** Ordinateur dont on a déjà demandé s'il a un vrai assistant (mode live). */
-    private var assistantCheckedFor: String? = null
     /** Bandeau « batterie faible » déjà montré (de nouveau après une recharge). */
     private var lowBatteryWarned = false
     private var channel: Job? = null
@@ -124,8 +120,6 @@ class MainActivity : AppCompatActivity() {
             bar.addView(view)
             railItems[mode] = RailItem(view, label, view.findViewById(R.id.rail_badge))
         }
-        // Assistant : affiché seulement quand l'ordinateur actif a un vrai assistant (voir refreshAssistant).
-        railItems.getValue(Mode.CHAT).view.visibility = View.GONE
         // Commandes vocales : sous les modes, au-dessus de l'état de la tablette.
         val rail = findViewById<LinearLayout>(R.id.rail)
         val talk = layoutInflater.inflate(R.layout.item_rail, rail, false)
@@ -223,31 +217,7 @@ class MainActivity : AppCompatActivity() {
             Link.State.NONE -> R.string.no_computer
         }
         findViewById<View>(R.id.status).contentDescription = getString(state)
-        refreshAssistant(link)
         (supportFragmentManager.findFragmentByTag(Mode.SETTINGS.name) as? SettingsFragment)?.onLinkChanged()
-    }
-
-    /**
-     * Mode Assistant seulement si l'ordinateur actif a un vrai assistant (`mode: live`) : en `mock`, il ne répondrait
-     * que des phrases factices. Demandé une fois par ordinateur, dès qu'il répond.
-     */
-    private fun refreshAssistant(link: Link) {
-        val computer = link.computer
-        if (computer == null) {
-            assistantCheckedFor = null
-            return setAssistantAvailable(false)
-        }
-        if (link.state != Link.State.ONLINE || assistantCheckedFor == computer.id) return
-        assistantCheckedFor = computer.id
-        lifecycleScope.launch {
-            val live = runCatching { BackendClient(this@MainActivity).identity().mode == "live" }.getOrDefault(false)
-            setAssistantAvailable(live)
-        }
-    }
-
-    private fun setAssistantAvailable(available: Boolean) {
-        railItems.getValue(Mode.CHAT).view.visibility = if (available) View.VISIBLE else View.GONE
-        if (!available && current == Mode.CHAT) show(Mode.HOME)
     }
 
     /** Ordinateur actif renommé : nom à jour dans la barre latérale. */
@@ -259,7 +229,6 @@ class MainActivity : AppCompatActivity() {
      */
     fun onComputerChanged(computer: Computer?, automatic: Boolean = false) {
         IconCache.clear()
-        assistantCheckedFor = null
         documentPanel.close()
         val fm = supportFragmentManager
         val tx = fm.beginTransaction()
@@ -273,8 +242,7 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Clavier. Par défaut l'écran ne bouge pas quand il s'ouvre (adjustNothing) : les fenêtres de saisie s'affichent
-     * au-dessus de lui (showForTyping) sans tasser l'Accueil derrière. Pour un champ de l'écran lui-même (Assistant,
-     * recherche d'applis, éditeur de touches), l'écran se réduit au-dessus du clavier et la barre latérale se cache,
+     * au-dessus de lui (showForTyping) sans tasser l'Accueil derrière. Pour un champ de l'écran lui-même (recherche d'applis, éditeur de touches), l'écran se réduit au-dessus du clavier et la barre latérale se cache,
      * plutôt que d'être coupée.
      */
     private fun setUpKeyboard() {
@@ -432,7 +400,7 @@ class MainActivity : AppCompatActivity() {
     /** Ouvre un document de l'ordinateur dans le panneau latéral, à côté du mode courant. */
     /**
      * Dans Depuis l'ordi : en grand, sans vue partagée (la liste des fichiers à côté ne sert à rien). Envoyé par l'ordinateur
-     * pendant un autre mode (Assistant, Accueil…) : à côté, pour garder les deux sous les yeux.
+     * pendant un autre mode (Accueil…) : à côté, pour garder les deux sous les yeux.
      */
     fun openDocument(entry: DocEntry) {
         documentPanel.open(entry, expand = current == Mode.DOCS, splittable = current != Mode.DOCS)
@@ -452,9 +420,8 @@ class MainActivity : AppCompatActivity() {
         get() = documentPanel.currentPath
 
     fun showMode(name: String) {
-        val mode = if (name == "tasks") Mode.HOME else Mode.valueOf(name.uppercase(Locale.ROOT))
-        // Assistant masqué (pas de vrai assistant sur cet ordinateur) : l'Accueil à la place.
-        show(if (mode == Mode.CHAT && railItems.getValue(Mode.CHAT).view.visibility != View.VISIBLE) Mode.HOME else mode)
+        // Nom inconnu (« tasks », ancien « chat ») : l'Accueil.
+        show(Mode.entries.firstOrNull { it.name.equals(name, ignoreCase = true) } ?: Mode.HOME)
     }
 
     /** Deck sur sa page Réunion, pour couper le micro ou raccrocher sans chercher. */
@@ -541,7 +508,6 @@ class MainActivity : AppCompatActivity() {
     private fun create(mode: Mode): Fragment = when (mode) {
         Mode.HOME -> HomeFragment()
         Mode.DECK -> DeckFragment()
-        Mode.CHAT -> ChatFragment()
         Mode.DOCS -> DocsFragment()
         Mode.FOCUS -> FocusFragment()
         Mode.CAMERA -> CameraFragment()

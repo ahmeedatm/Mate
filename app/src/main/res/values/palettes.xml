@@ -16,9 +16,6 @@
         <item name="c_text">#FFE9EDF2</item>
         <item name="c_text_dim">#FF8B95A5</item>
         <item name="c_text_faint">#FF566070</item>
-        <item name="c_bubble_user">#FF1D3A58</item>
-        <item name="c_bubble_bot">#FF1E2530</item>
-        <item name="c_recording">#FFFF6B6B</item>
         <item name="c_ok">#FF5DD39E</item>
         <item name="c_ok_soft">#245DD39E</item>
         <item name="c_ko">#FFFF6B6B</item>
@@ -48,9 +45,6 @@
         <item name="c_text">#FF141A22</item>
         <item name="c_text_dim">#FF5A6473</item>
         <item name="c_text_faint">#FF98A1AE</item>
-        <item name="c_bubble_user">#FFD5E5FB</item>
-        <item name="c_bubble_bot">#FFEDF0F4</item>
-        <item name="c_recording">#FFE5484D</item>
         <item name="c_ok">#FF1C9A61</item>
         <item name="c_ok_soft">#241C9A61</item>
         <item name="c_ko">#FFE5484D</item>
@@ -80,9 +74,6 @@
         <item name="c_text">#FFF2EDFF</item>
         <item name="c_text_dim">#FF9D93B9</item>
         <item name="c_text_faint">#FF605879</item>
-        <item name="c_bubble_user">#FF3B1F58</item>
-        <item name="c_bubble_bot">#FF1E1930</item>
-        <item name="c_recording">#FFFF4D8D</item>
         <item name="c_ok">#FF3DF5B0</item>
         <item name="c_ok_soft">#263DF5B0</item>
         <item name="c_ko">#FFFF4D8D</item>
@@ -112,9 +103,6 @@
         <item name="c_text">#FFF5EDE5</item>
         <item name="c_text_dim">#FFA8998A</item>
         <item name="c_text_faint">#FF6F6257</item>
-        <item name="c_bubble_user">#FF4A3320</item>
-        <item name="c_bubble_bot">#FF2D251F</item>
-        <item name="c_recording">#FFFF6B5B</item>
         <item name="c_ok">#FF8FD18A</item>
         <item name="c_ok_soft">#248FD18A</item>
         <item name="c_ko">#FFFF6B5B</item>
