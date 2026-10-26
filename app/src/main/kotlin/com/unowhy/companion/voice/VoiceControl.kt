@@ -23,7 +23,7 @@ import com.unowhy.companion.focus.NoisePlayer
 import com.unowhy.companion.focus.Water
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DeckTile
-import com.unowhy.companion.net.MacWindow
+import com.unowhy.companion.net.ComputerWindow
 import com.unowhy.companion.net.OpenApp
 import com.unowhy.companion.net.OpenWindows
 import com.unowhy.companion.ui.Look
@@ -296,7 +296,7 @@ class VoiceControl(private val activity: MainActivity, private val button: View,
     /** Variantes entendues de l'appli désignée (la phrase retenue d'abord). */
     private fun targets(said: String) = (listOf(said) + heard.mapNotNull { VoiceCommands.target(it) }).distinct()
 
-    private suspend fun act(client: BackendClient, command: VoiceCommand.Window, open: OpenWindows, target: Pair<OpenApp, MacWindow>): Answer {
+    private suspend fun act(client: BackendClient, command: VoiceCommand.Window, open: OpenWindows, target: Pair<OpenApp, ComputerWindow>): Answer {
         val (app, window) = target
         val screens = open.displays.sortedBy { it.x }
         val here = window.display ?: screens.firstOrNull { it.main }?.id

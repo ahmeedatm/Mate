@@ -42,7 +42,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private lateinit var grid: GridView
     private lateinit var status: TextView
     private lateinit var access: View
-    private lateinit var audio: MacAudioView
+    private lateinit var audio: ComputerAudioView
     private lateinit var appAudio: AppAudioView
     private lateinit var nowPlaying: NowPlayingView
     private lateinit var picker: WindowPicker

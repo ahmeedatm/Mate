@@ -10,7 +10,7 @@
     android:paddingStart="12dp"
     android:paddingEnd="12dp">
 
-    <!-- Icône du type de fichier sur un carré teinté (couleur choisie par DocsFragment). -->
+    <!-- Icône du type de fichier sur un carré teinté (couleur choisie par FromComputerFragment). -->
     <ImageView
         android:id="@+id/doc_icon"
         android:layout_width="48dp"

@@ -163,8 +163,8 @@ class TasksCard @JvmOverloads constructor(
                 visibility = if (task.hasUrl) View.VISIBLE else View.GONE
                 setOnClickListener {
                     launch {
-                        client().tasks.openTaskOnMac(task.id)
-                        Toast.makeText(context, R.string.opened_on_mac, Toast.LENGTH_SHORT).show()
+                        client().tasks.openOnComputer(task.id)
+                        Toast.makeText(context, R.string.opened_on_computer, Toast.LENGTH_SHORT).show()
                     }
                 }
             }
