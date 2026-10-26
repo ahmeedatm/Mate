@@ -1,5 +1,6 @@
-# CI : sur chaque MR et sur main. Rien n'arrive sur main sans pipeline vert (voir docs/developpement.md).
-# Le pilotage réel du Mac et de Windows ne tourne pas ici (runner Linux) : il reste vérifié à la main.
+# CI : sur chaque MR, sur main, sur les tags et chaque nuit (pipeline programmé). Rien n'arrive sur main sans pipeline vert.
+# En MR, seuls les jobs de la zone touchée tournent (rules:changes, voir docs/developpement.md, section CI) ;
+# sur main, sur un tag et la nuit, tout tourne.
 # Tag vX.Y.Z : mêmes tests, puis paquets de l'ordinateur, APK signé et release GitLab.
 
 workflow:
@@ -7,6 +8,7 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
+    - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_TAG
 
@@ -23,6 +25,64 @@ default:
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
 
+# Zones du dépôt. Changer la CI relance tout.
+.files-backend: &files-backend
+  - backend/**/*
+  - .gitlab-ci.yml
+.files-android: &files-android
+  - app/**/*
+  - "*.gradle*"
+  - gradle/**/*
+  - gradlew*
+  - .gitlab-ci.yml
+# Installation : pilote, lancement automatique, paquets, installeurs, aiguillage par système, sanity.
+.files-install-common: &files-install-common
+  - backend/scripts/**/*
+  - backend/src/os.ts
+  - backend/qa/**/*
+  - .gitlab-ci.yml
+.files-install-windows: &files-install-windows
+  - backend/src/win/**/*
+  - "Installer (Windows).cmd"
+.files-install-mac: &files-install-mac
+  - backend/src/mac/**/*
+  - "Installer (Mac).command"
+
+# En MR : seulement si la zone a bougé. Ailleurs (main, tag, nuit) : toujours.
+.zone-backend:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: *files-backend
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+.zone-android:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: *files-android
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+.zone-install-windows:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: *files-install-common
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: *files-install-windows
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+.zone-install-mac:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: *files-install-common
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: *files-install-mac
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+
+# Toujours là : une MR qui ne touche aucune zone (docs) a quand même un pipeline, sans lequel elle ne fusionne pas.
+zones:
+  stage: test
+  image: node:22.22-bookworm-slim
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - echo "Jobs lancés selon les zones touchées (docs/developpement.md, section CI)."
+
 .node:
   image: node:22.22-bookworm-slim
   variables:
@@ -38,7 +98,7 @@ default:
     - npm ci --prefer-offline --no-audit --no-fund
 
 backend:
-  extends: .node
+  extends: [.node, .zone-backend]
   stage: test
   script:
     - npm run typecheck
@@ -54,6 +114,7 @@ backend:
 # Pages web du backend (page locale, visualiseur /camera, retour OAuth) dans Chromium, même serveur que les tests d'intégration.
 # Tag de l'image = version exacte de @playwright/test dans backend/package.json : les monter ensemble.
 e2e:
+  extends: .zone-backend
   stage: test
   image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:47b510dd9230bf0b9bfc9b20102241e577ea7a99334ab4c3ca19f19770e9b8ea
   variables:
@@ -92,7 +153,7 @@ e2e:
       - .gradle-home/wrapper/
 
 android:
-  extends: .android
+  extends: [.android, .zone-android]
   stage: test
   script:
     - ./gradlew --no-daemon --console=plain testDebugUnitTest lintDebug assembleDebug
@@ -106,24 +167,31 @@ android:
       junit: app/build/test-results/testDebugUnitTest/*.xml
     expire_in: 2 weeks
 
-# Paquets de l'ordinateur (Windows et Mac, node embarqué) : backend/scripts/package.ts.
-package:
-  extends: [.node, .release-tag]
+# Paquets de l'ordinateur (node embarqué) : backend/scripts/package.ts. Un job par plateforme : les deux zips
+# ensemble dépassent la limite d'artefacts par défaut (100 Mo). Consommés par les tests d'installation et la release.
+.package:
+  extends: .node
   stage: build
   dependencies: []
   before_script:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends zip unzip > /dev/null
     - !reference [.node, before_script]
-  # Une plateforme par job : les deux zips ensemble dépassent la limite d'artefacts par défaut (100 Mo).
-  parallel:
-    matrix:
-      - PLATFORM: [windows, mac]
   script:
     - npm run package -- $PLATFORM
   artifacts:
     paths:
       - dist/*.zip
     expire_in: 1 week
+
+package-windows:
+  extends: [.package, .zone-install-windows]
+  variables:
+    PLATFORM: windows
+
+package-mac:
+  extends: [.package, .zone-install-mac]
+  variables:
+    PLATFORM: mac
 
 # APK release signé, version = tag. Clé : variables protégées et masquées, visibles seulement des tags protégés (v*).
 # Publie aussi l'entrée du « serveur Unowhy » (companion-X.Y.Z.json), lue par `npm run updates:add`.
@@ -154,7 +222,7 @@ release:
   extends: .release-tag
   stage: release
   image: registry.gitlab.com/gitlab-org/cli:v1.124.0@sha256:f6837b5aea075ca297281b554556d2fc4f8fb291ace6b48286790790dce622cd
-  needs: [package, android-release]
+  needs: [package-windows, package-mac, android-release]
   variables:
     GLAB_ENABLE_CI_AUTOLOGIN: "true"
   script:
