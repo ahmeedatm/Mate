@@ -11,8 +11,8 @@
 # - Avec un JDK : ./gradlew connectedDebugAndroidTest (rapport JUnit). Sans : APK compilés dans l'image Docker
 #   de la CI, tests lancés par am instrument.
 # - Backend réel pour les tests du Deck (backend/test/deck-emulateur.ts, ports 3910 et 3911, joint par 10.0.2.2) :
-#   toujours sous Linux, où toucher une touche répond 501 sans rien piloter. Mac : dans Docker (node:22).
-#   Linux (CI) : node du système s'il a 22 ou plus, sinon celui de nodejs.org (version de backend/scripts/package.ts).
+#   pilotage simulé sans contrôle (toucher une touche répond 501), rien n'agit sur la machine.
+#   node 22 du système, sinon (image Android de la CI) celui de nodejs.org (version de backend/scripts/package.ts).
 # Résultats, journal du backend et capture de l'écran de bienvenue dans app/build/test-android/.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -27,8 +27,6 @@ SERIAL=emulator-$PORT
 OUT=app/build/test-android
 CI_IMAGE=ghcr.io/cirruslabs/android-sdk:36
 ADB="$SDK/platform-tools/adb -s $SERIAL"
-NODE_IMAGE=node:22.22-bookworm-slim
-BACKEND_CONTAINER=companion-deck-backend
 BACKEND_PID=
 WINDOW=-no-window
 [ "${1:-}" = --window ] && WINDOW=
@@ -81,9 +79,10 @@ disk.dataPartition.size=2G
 EOF
 }
 
-# Linux sans node 22 (image Android de la CI) : node officiel, vérifié par sa somme SHA-256.
+# Sans node 22 (image Android de la CI, Linux) : node officiel, vérifié par sa somme SHA-256.
 ensure_node() {
-  node -e 'process.exit(+process.versions.node.split(".")[0] < 22)' 2>/dev/null && return
+  node -e 'process.exit(Number(+process.versions.node.split(".")[0] < 22))' 2>/dev/null && return
+  [ "$(uname -s)" = Linux ] || { echo "node 22 ou plus requis pour le backend de test"; exit 1; }
   local version arch name dir=$HOME/.cache/companion-node tmp
   version=$(sed -n 's/^const NODE_VERSION = "\(.*\)";/\1/p' backend/scripts/package.ts)
   case $(uname -m) in aarch64) arch=arm64 ;; *) arch=x64 ;; esac
@@ -98,17 +97,10 @@ ensure_node() {
 }
 
 start_backend() {
-  if [ "$(uname -s)" = Linux ]; then
-    ensure_node
-    (cd backend && npm ci --prefer-offline --no-audit --no-fund > /dev/null && exec node --import tsx test/deck-emulateur.ts) \
-      > "$OUT/backend.log" 2>&1 &
-    BACKEND_PID=$!
-  else
-    docker rm -f $BACKEND_CONTAINER > /dev/null 2>&1 || true
-    docker run -d --rm --name $BACKEND_CONTAINER -p 127.0.0.1:3910:3910 -p 127.0.0.1:3911:3911 -e HOST=0.0.0.0 \
-      -v "$PWD/backend":/w -v companion-deck-backend-modules:/w/node_modules -w /w $NODE_IMAGE \
-      sh -c 'npm ci --prefer-offline --no-audit --no-fund > /dev/null && exec node --import tsx test/deck-emulateur.ts' > /dev/null
-  fi
+  ensure_node
+  (cd backend && npm ci --prefer-offline --no-audit --no-fund > /dev/null && exec node --import tsx test/deck-emulateur.ts) \
+    > "$OUT/backend.log" 2>&1 &
+  BACKEND_PID=$!
 }
 
 wait_backend() {
@@ -122,12 +114,7 @@ wait_backend() {
 
 cleanup() {
   $ADB emu kill > /dev/null 2>&1 || true
-  if [ -n "$BACKEND_PID" ]; then
-    kill "$BACKEND_PID" 2> /dev/null || true
-  elif docker inspect $BACKEND_CONTAINER > /dev/null 2>&1; then
-    docker logs $BACKEND_CONTAINER > "$OUT/backend.log" 2>&1 || true
-    docker stop $BACKEND_CONTAINER > /dev/null 2>&1 || true
-  fi
+  [ -z "$BACKEND_PID" ] || kill "$BACKEND_PID" 2> /dev/null || true
 }
 
 boot() {

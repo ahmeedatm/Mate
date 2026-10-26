@@ -2,7 +2,8 @@
  * Backend réel des tests du Deck sur émulateur (app/src/androidTest/.../DeckTest.kt), lancé par scripts/test-android.sh.
  * Deck de test (deck-emulateur.json), jeton connu, données dans un dossier temporaire.
  * Port 3910 : le backend. Port 3911 : pilotage par les tests (arrêt, redémarrage, touches reçues par le backend).
- * Linux seulement : sur macOS et Windows, toucher une touche agirait vraiment sur cet ordinateur.
+ * Pilotage simulé en système non pilotable (test/fake-os.ts, `os: "other"`) : toucher une touche répond 501 comme
+ * sous Linux, et rien n'agit sur la machine, quel que soit son système.
  */
 import fs from "node:fs";
 import http from "node:http";
@@ -11,17 +12,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { startServer, type TestServer } from "./server.ts";
 
-if (process.platform === "darwin" || process.platform === "win32") {
-  console.error(
-    "Linux seulement : ici les touches du deck piloteraient cet ordinateur (sur Mac, scripts/test-android.sh passe par Docker).",
-  );
-  process.exit(1);
-}
-
 const PORT = 3910;
 const CONTROL_PORT = 3911;
-// 0.0.0.0 dans Docker (port publié vers l'émulateur du Mac) ; 127.0.0.1 en CI, l'émulateur le joint par 10.0.2.2.
-const host = process.env.HOST ?? "127.0.0.1";
+// L'émulateur joint la boucle locale de l'ordinateur hôte par 10.0.2.2.
+const host = "127.0.0.1";
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-deck-"));
 const env = { DECK_FILE: path.join(path.dirname(fileURLToPath(import.meta.url)), "deck-emulateur.json"), COMPUTER_NAME: "Ordi de test" };
 
@@ -30,9 +24,11 @@ let server: TestServer | undefined;
 let pastLog = "";
 let skip = 0;
 
-const start = async () => (server ??= await startServer({ port: PORT, host, dataDir, env }));
+const start = async () => (server ??= await startServer({ os: "other", port: PORT, dataDir, env }));
 async function stop() {
   if (!server) return;
+  // Journal du serveur arrêté : dans celui de ce script (app/build/test-android/backend.log).
+  process.stdout.write(server.output());
   pastLog += server.output().slice(skip);
   skip = 0;
   await server.stop();
