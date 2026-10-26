@@ -305,6 +305,8 @@ helper-windows:
   needs: []
   variables:
     GIT_DEPTH: 1
+    # Clone neuf : un dossier réutilisé garde les fins de ligne d'un checkout antérieur au .gitattributes.
+    GIT_STRATEGY: clone
   script:
     - '& backend\qa\build-helper-windows.ps1 -Work .dotnet-ci'
   # Exe recompilés, à commiter si le job échoue sur leur comparaison.
