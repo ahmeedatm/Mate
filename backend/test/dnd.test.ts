@@ -54,7 +54,9 @@ describe("Ne pas déranger pendant le Focus", () => {
     await new Promise((r) => setImmediate(r));
     assert.deepEqual(setDndCalls(), [true]);
     t.mock.timers.tick(60_000);
-    for (let i = 0; i < 20 && setDndCalls().length < 2; i++) await new Promise((r) => setImmediate(r));
+    // Fin du Ne pas déranger : lectures et écritures de fichier, jusqu'à 2 s réelles.
+    const deadline = performance.now() + 2_000;
+    while (setDndCalls().length < 2 && performance.now() < deadline) await new Promise((r) => setImmediate(r));
     assert.deepEqual(setDndCalls(), [true, false]);
     assert.equal(state.dnd, false);
   });

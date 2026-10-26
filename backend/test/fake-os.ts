@@ -49,10 +49,11 @@ function record(fn: string, ...args: unknown[]) {
   if (process.env.FAKE_OS_LOG) fs.appendFileSync(process.env.FAKE_OS_LOG, JSON.stringify({ fn, args }) + "\n");
 }
 
-const fakeOs = process.env.FAKE_OS === "windows" ? "windows" : "mac";
+// "other" : système non pilotable (Linux), le serveur répond 501 sur le deck.
+const fakeOs = process.env.FAKE_OS === "windows" || process.env.FAKE_OS === "other" ? process.env.FAKE_OS : "mac";
 export const isMac = fakeOs === "mac";
 export const isWindows = fakeOs === "windows";
-export const canControl = true;
+export const canControl = fakeOs !== "other";
 export const osName = fakeOs;
 export const canMedia = isWindows;
 

@@ -37,7 +37,7 @@ function freePort(): Promise<number> {
  * Lance le vrai serveur (USB seulement) avec un dossier de données vide. Le pilotage de l'ordinateur (src/os.ts)
  * est remplacé par test/fake-os.ts : aucun test ne lance d'appli ni n'envoie de touches ; `os` : système simulé.
  */
-export async function startServer(options: { os?: "mac" | "windows" } = {}): Promise<TestServer> {
+export async function startServer(options: { os?: "mac" | "windows" | "other" } = {}): Promise<TestServer> {
   const port = await freePort();
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-test-"));
   const docsDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-docs-"));
