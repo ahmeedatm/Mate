@@ -231,9 +231,13 @@ describe("mises à jour de la tablette", () => {
   });
 });
 
-describe("pilotage hors Mac et Windows", { skip: process.platform === "darwin" || process.platform === "win32" }, () => {
+describe("pilotage hors Mac et Windows", () => {
   it("répond 501 sur le deck", async () => {
-    const { status } = await server.call("GET", "/deck");
-    assert.equal(status, 501);
+    const linux = await startServer({ os: "other" });
+    try {
+      assert.equal((await linux.call("GET", "/deck")).status, 501);
+    } finally {
+      await linux.stop();
+    }
   });
 });
