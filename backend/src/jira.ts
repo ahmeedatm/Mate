@@ -4,7 +4,9 @@
  * Jeton : https://id.atlassian.com/manage-profile/security/api-tokens (droits du compte, lecture seule ici).
  */
 
-const site = process.env.JIRA_SITE?.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+const site = process.env.JIRA_SITE?.trim()
+  .replace(/^https?:\/\//, "")
+  .replace(/\/+$/, "");
 const email = process.env.JIRA_EMAIL?.trim();
 const token = process.env.JIRA_API_TOKEN?.trim();
 
@@ -29,8 +31,7 @@ async function jira<T>(path: string, init?: { method: "POST"; body: object }): P
   return (await res.json()) as T;
 }
 
-const isoDay = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 /** Secondes saisies le jour donné (heure locale de l'ordinateur). Résultat gardé 5 min sauf `force`. */
 export async function worklogSecondsOn(day: Date, force = false): Promise<number> {

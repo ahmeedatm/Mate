@@ -34,15 +34,17 @@ const plist = path.join(os.homedir(), "Library", "LaunchAgents", `${LABEL}.plist
 const logDir = process.env.COMPANION_LOG_DIR
   ? path.resolve(process.env.COMPANION_LOG_DIR)
   : isWindows
-  ? path.join(process.env.LOCALAPPDATA ?? os.homedir(), "UnowhyCompanion")
-  : path.join(os.homedir(), "Library", "Logs", "UnowhyCompanion");
+    ? path.join(process.env.LOCALAPPDATA ?? os.homedir(), "UnowhyCompanion")
+    : path.join(os.homedir(), "Library", "Logs", "UnowhyCompanion");
 const pidFile = path.join(dataDir, "service.pid");
 // Boucle lancée avant les données hors du dossier du paquet (ou en dev) : PID noté dans backend/.data.
 const pidFiles = [...new Set([pidFile, path.join(backend, ".data", "service.pid")])];
 
 // Paquet client (scripts/package.ts) : ce script et le serveur sont regroupés dans dist/, avec un node embarqué.
 // Arguments de node : un seul processus (pas de surveillance des fichiers comme `npm run dev`).
-const NODE_ARGS = bundled ? ["--env-file-if-exists=.env", "dist/server.mjs"] : ["--env-file-if-exists=.env", "--import", "tsx", "src/server.ts"];
+const NODE_ARGS = bundled
+  ? ["--env-file-if-exists=.env", "dist/server.mjs"]
+  : ["--env-file-if-exists=.env", "--import", "tsx", "src/server.ts"];
 
 function sh(cmd: string, args: string[]): Promise<{ ok: boolean; out: string }> {
   return new Promise((resolve) => {
@@ -162,7 +164,10 @@ function windowsCommand(node: string) {
  */
 function winStart(node: string) {
   spawn("cmd.exe", ["/d", "/s", "/c", `"start "" /min ${windowsCommand(node)}"`], {
-    detached: true, stdio: "ignore", windowsHide: true, windowsVerbatimArguments: true,
+    detached: true,
+    stdio: "ignore",
+    windowsHide: true,
+    windowsVerbatimArguments: true,
   }).unref();
 }
 
@@ -174,7 +179,8 @@ async function winStop() {
   for (const file of pidFiles) {
     const pid = fs.existsSync(file) ? fs.readFileSync(file, "utf8").trim() : "";
     if (/^\d+$/.test(pid)) {
-      for (const image of [LAUNCHER, "powershell.exe"]) await sh("taskkill", ["/F", "/T", "/FI", `PID eq ${pid}`, "/FI", `IMAGENAME eq ${image}`]);
+      for (const image of [LAUNCHER, "powershell.exe"])
+        await sh("taskkill", ["/F", "/T", "/FI", `PID eq ${pid}`, "/FI", `IMAGENAME eq ${image}`]);
     }
     fs.rmSync(file, { force: true });
   }
@@ -198,7 +204,13 @@ const SHORTCUT = "Compagnon Unowhy";
 function shortcutFiles(): string[] {
   const home = os.homedir();
   if (isMac) return [path.join(home, "Desktop", `${SHORTCUT}.webloc`)];
-  const programs = path.join(process.env.APPDATA ?? path.join(home, "AppData", "Roaming"), "Microsoft", "Windows", "Start Menu", "Programs");
+  const programs = path.join(
+    process.env.APPDATA ?? path.join(home, "AppData", "Roaming"),
+    "Microsoft",
+    "Windows",
+    "Start Menu",
+    "Programs",
+  );
   return [
     path.join(userFolder("Desktop", path.join(home, "Desktop")), `${SHORTCUT}.url`),
     path.join(userFolder("Programs", programs), `${SHORTCUT}.url`),

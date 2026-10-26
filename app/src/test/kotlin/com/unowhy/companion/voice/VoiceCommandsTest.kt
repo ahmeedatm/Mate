@@ -1,10 +1,10 @@
 package com.unowhy.companion.voice
 
 import com.unowhy.companion.net.DeckTile
-import java.util.Calendar
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.util.Calendar
 
 class VoiceCommandsTest {
 

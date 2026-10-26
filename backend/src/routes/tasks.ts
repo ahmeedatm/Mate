@@ -31,11 +31,14 @@ export default async function taskRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string }; Body: { done: boolean } }>(
     "/tasks/:id/done",
     { schema: { body: { type: "object", required: ["done"], properties: { done: { type: "boolean" } } } } },
-    async (req, reply) => ((await setTaskDone(req.params.id, req.body.done)) ? { ok: true } : reply.code(404).send({ error: "Tâche inconnue" })),
+    async (req, reply) =>
+      (await setTaskDone(req.params.id, req.body.done)) ? { ok: true } : reply.code(404).send({ error: "Tâche inconnue" }),
   );
 
   app.delete<{ Params: { id: string } }>("/tasks/:id", async (req, reply) =>
-    (await deleteTask(req.params.id)) ? { ok: true } : reply.code(404).send({ error: "Tâche inconnue (ou définie dans le fichier de l'ordinateur)" }),
+    (await deleteTask(req.params.id))
+      ? { ok: true }
+      : reply.code(404).send({ error: "Tâche inconnue (ou définie dans le fichier de l'ordinateur)" }),
   );
 
   app.post<{ Params: { id: string } }>("/tasks/:id/open", async (req, reply) => {

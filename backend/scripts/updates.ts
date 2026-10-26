@@ -18,7 +18,9 @@ function add(entryFile: string) {
   const dir = path.join(dataDir, "updates");
   const manifestFile = path.join(dir, "manifest.json");
   fs.mkdirSync(dir, { recursive: true });
-  const updates = fs.existsSync(manifestFile) ? ((JSON.parse(fs.readFileSync(manifestFile, "utf8")) as { updates?: Update[] }).updates ?? []) : [];
+  const updates = fs.existsSync(manifestFile)
+    ? ((JSON.parse(fs.readFileSync(manifestFile, "utf8")) as { updates?: Update[] }).updates ?? [])
+    : [];
 
   fs.copyFileSync(path.join(path.dirname(entryFile), entry.file), path.join(dir, entry.file));
   for (const old of updates) {

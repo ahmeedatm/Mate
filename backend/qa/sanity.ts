@@ -59,7 +59,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os }): 
     if (auth) headers.authorization = `Bearer ${opts.token}`;
     if (body !== undefined) headers["content-type"] = "application/json";
     const res = await fetch(base + route, {
-      method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(45_000),
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(45_000),
     });
     const text = await res.text();
     let json: any = text;
@@ -116,7 +119,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os }): 
         if (!controlled()) return expectStatus(deck, 501, "/deck");
         expectStatus(deck, 200, "/deck");
         const pages: { title: string; apps: boolean; editable: boolean; tiles: { app: string | null }[] }[] = deck.json.pages;
-        expect(pages.some((p) => p.editable && p.title === "Perso"), "page Perso absente");
+        expect(
+          pages.some((p) => p.editable && p.title === "Perso"),
+          "page Perso absente",
+        );
         const catalog = await call("GET", "/deck/catalog");
         expectStatus(catalog, 200, "/deck/catalog");
         const installed = (catalog.json.apps as string[]).map((a) => a.toLowerCase());
@@ -167,7 +173,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os }): 
         const taskId: string = added.json.id;
         try {
           const listed = await call("GET", "/tasks");
-          expect(listed.json.tasks.some((t: { id: string }) => t.id === taskId), "tâche créée absente de la liste");
+          expect(
+            listed.json.tasks.some((t: { id: string }) => t.id === taskId),
+            "tâche créée absente de la liste",
+          );
           expectStatus(await call("POST", `/tasks/${taskId}/done`, { done: true }), 200, "cocher la tâche");
           const after = await call("GET", "/tasks");
           expect(after.json.tasks.find((t: { id: string }) => t.id === taskId)?.done === true, "tâche cochée mais pas faite");
@@ -185,7 +194,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os }): 
         try {
           const cal = await call("GET", "/calendar?days=2");
           expectStatus(cal, 200, "/calendar");
-          expect(cal.json.events.some((e: { title: string }) => e.title === stamp), "rendez-vous absent de l'agenda");
+          expect(
+            cal.json.events.some((e: { title: string }) => e.title === stamp),
+            "rendez-vous absent de l'agenda",
+          );
         } finally {
           expectStatus(await call("DELETE", `/calendar/events/${added.json.id}`), 200, "supprimer le rendez-vous");
         }
@@ -205,7 +217,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os }): 
           expectStatus(put, 200, "PUT /local/calendar");
           expect(put.json.ok === true, `agenda ICS illisible : ${put.json.error}`);
           const cal = await call("GET", "/calendar?days=1");
-          expect(cal.json.events.some((e: { title: string }) => e.title === title), "événement du fichier ICS absent");
+          expect(
+            cal.json.events.some((e: { title: string }) => e.title === title),
+            "événement du fichier ICS absent",
+          );
         } finally {
           await call("PUT", "/local/calendar", { urls: [] });
           ics.close();

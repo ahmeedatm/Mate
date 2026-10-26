@@ -99,11 +99,13 @@ async function stage(platform: "windows" | "mac", sums: string): Promise<string>
 
   if (platform === "windows") {
     copy(path.join(repo, "Installer (Windows).cmd"), path.join(root, "Installer (Windows).cmd"));
-    for (const f of ["UnowhyHelper.exe", "UnowhyCompanion.exe"]) copy(path.join(backend, "src", "win", f), path.join(dest, "src", "win", f));
+    for (const f of ["UnowhyHelper.exe", "UnowhyCompanion.exe"])
+      copy(path.join(backend, "src", "win", f), path.join(dest, "src", "win", f));
     copy(path.join(backend, "scripts", "firewall-windows.ps1"), path.join(dest, "scripts", "firewall-windows.ps1"));
     copy(path.join(backend, "assets", "compagnon.ico"), path.join(dest, "assets", "compagnon.ico"));
     // Extension du navigateur (onglets sur la tablette) : à charger depuis ce dossier, mode développeur.
-    for (const f of fs.readdirSync(path.join(backend, "extension"))) copy(path.join(backend, "extension", f), path.join(root, "Extension navigateur", f));
+    for (const f of fs.readdirSync(path.join(backend, "extension")))
+      copy(path.join(backend, "extension", f), path.join(root, "Extension navigateur", f));
     extract(await nodeArchive(sums, "-win-x64.zip"), "node.exe", path.join(dest, "node", "node.exe"));
   } else {
     copy(path.join(repo, "Installer (Mac).command"), path.join(root, "Installer (Mac).command"));

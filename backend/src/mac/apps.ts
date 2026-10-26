@@ -9,7 +9,9 @@ const APP_DIRS = ["/Applications", "/System/Applications", "/System/Applications
 export async function findAppBundle(name: string): Promise<string | undefined> {
   const local = APP_DIRS.map((dir) => path.join(dir, `${name}.app`)).find((c) => existsSync(c));
   if (local) return local;
-  const found = await run("mdfind", [`kMDItemContentType == 'com.apple.application-bundle' && kMDItemFSName == '${name.replace(/'/g, "")}.app'`]).catch(() => "");
+  const found = await run("mdfind", [
+    `kMDItemContentType == 'com.apple.application-bundle' && kMDItemFSName == '${name.replace(/'/g, "")}.app'`,
+  ]).catch(() => "");
   return found.split("\n").find(Boolean);
 }
 
@@ -35,14 +37,25 @@ export async function isInstalled(name: string): Promise<boolean> {
 /** Raccourcis de l'appli Raccourcis (macOS 12+). */
 export async function listShortcuts(): Promise<string[]> {
   const out = await run("shortcuts", ["list"]).catch(() => "");
-  return out.split("\n").map((s) => s.trim()).filter(Boolean).sort((a, b) => a.localeCompare(b, "fr"));
+  return out
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, "fr"));
 }
 
 /** Icône de l'appli : extraite de son .icns, convertie en PNG 96 px dans `out`. */
 export async function appIcon(name: string, out: string): Promise<boolean> {
   const bundle = await findAppBundle(name);
   if (!bundle) return false;
-  const iconName = await run("plutil", ["-extract", "CFBundleIconFile", "raw", "-o", "-", path.join(bundle, "Contents", "Info.plist")]).catch(() => "");
+  const iconName = await run("plutil", [
+    "-extract",
+    "CFBundleIconFile",
+    "raw",
+    "-o",
+    "-",
+    path.join(bundle, "Contents", "Info.plist"),
+  ]).catch(() => "");
   if (!iconName) return false;
   const icns = path.join(bundle, "Contents", "Resources", iconName.endsWith(".icns") ? iconName : `${iconName}.icns`);
   if (!existsSync(icns)) return false;
