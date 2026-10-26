@@ -36,6 +36,7 @@ import cameraRoutes from "./routes/camera.ts";
 import localRoutes from "./routes/local.ts";
 import windowRoutes from "./routes/windows.ts";
 import deckRoutes from "./routes/deck.ts";
+import pairingRoutes from "./routes/pairing.ts";
 import { setLogger } from "./log.ts";
 import { addTask, deleteTask, listRecurring, listTasks, setTaskDone, startReminders, taskUrl } from "./tasks.ts";
 import { receiveTabs, type ExtensionReport } from "./browser-extension.ts";
@@ -119,14 +120,8 @@ app.register(cameraRoutes);
 app.register(localRoutes);
 app.register(windowRoutes);
 app.register(deckRoutes);
+app.register(pairingRoutes, { authorized });
 // @@PLUGINS
-
-/** `auth` : le jeton envoyé est le bon (la tablette sait s'il faut refaire l'appairage). */
-app.get("/health", async (req) => ({
-  ok: true, ...identity(), auth: authorized(req.headers.authorization),
-  // Mac : false = fenêtres et raccourcis bloqués tant que l'Accessibilité n'est pas accordée (la tablette prévient).
-  accessibility: await accessibility().catch(() => null),
-}));
 
 /** Ouvre sur le Mac le réglage Accessibilité (depuis la tablette, ou la page locale). */
 app.post("/system/accessibility", async () => {
@@ -142,28 +137,6 @@ app.post<{ Body: { text: string } }>(
     await typeText(req.body.text);
     return { ok: true };
   },
-);
-
-// --- Appairage (voir src/pairing.ts) et page d'accueil locale
-
-app.post<{ Body: { tablet?: string } }>(
-  "/pair/request",
-  { schema: { body: { type: "object", properties: { tablet: { type: "string", maxLength: 100 } } } } },
-  async (req) => requestPairing(req.body?.tablet || "tablette", req.ip),
-);
-
-app.post<{ Body: { request: string; code: string } }>(
-  "/pair/confirm",
-  {
-    schema: {
-      body: {
-        type: "object",
-        required: ["request", "code"],
-        properties: { request: { type: "string", maxLength: 100 }, code: { type: "string", maxLength: 20 } },
-      },
-    },
-  },
-  async (req) => confirmPairing(req.body.request, req.body.code),
 );
 
 app.get("/system/audio", async () => getAudio());
