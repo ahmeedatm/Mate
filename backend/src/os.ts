@@ -272,6 +272,8 @@ export async function systemCommand(command: SystemCommand) {
 
 /** Message bien visible sur l'ordinateur (code d'appairage), sans attendre qu'il soit fermé. */
 export async function alert(title: string, text: string) {
+  // Tests d'intégration : pas de boîte réelle à chaque appairage simulé.
+  if (process.env.NO_ALERT) return;
   if (isWindows) return win.alert(title, text);
   if (isMac) macSystem.alert(title, text);
 }
