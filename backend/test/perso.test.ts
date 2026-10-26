@@ -31,7 +31,10 @@ describe("touches perso : stockage", () => {
     await Promise.all(Array.from({ length: SLOTS }, (_, i) => saveKey(i, key(i))));
     await saveKey(5, null);
     const keys = await loadKeys();
-    assert.deepEqual(keys.map((k) => k?.label ?? null), Array.from({ length: SLOTS }, (_, i) => (i === 5 ? null : `T${i}`)));
+    assert.deepEqual(
+      keys.map((k) => k?.label ?? null),
+      Array.from({ length: SLOTS }, (_, i) => (i === 5 ? null : `T${i}`)),
+    );
   });
 });
 
@@ -52,7 +55,12 @@ describe("touches perso : routes", () => {
       label: "Réunion",
       glyph: "📅",
       color: "#3366CC",
-      steps: [{ type: "app", name: "Notes" }, { type: "wait", ms: 0 }, { type: "keys", keys: "cmd+n", app: "Notes" }, { type: "text", text: "Ordre du jour" }],
+      steps: [
+        { type: "app", name: "Notes" },
+        { type: "wait", ms: 0 },
+        { type: "keys", keys: "cmd+n", app: "Notes" },
+        { type: "text", text: "Ordre du jour" },
+      ],
     };
     assert.equal((await put(0, macro)).status, 200);
     assert.deepEqual((await server.call("GET", "/deck/keys/0")).json.key, macro);

@@ -109,7 +109,13 @@ export async function startServer(options: { os?: "mac" | "windows" | "other" } 
   };
   const setOs = (state: FakeState) => fs.writeFileSync(osState, JSON.stringify(state));
   const osCalls = (): FakeCall[] =>
-    fs.existsSync(osLog) ? fs.readFileSync(osLog, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : [];
+    fs.existsSync(osLog)
+      ? fs
+          .readFileSync(osLog, "utf8")
+          .split("\n")
+          .filter(Boolean)
+          .map((l) => JSON.parse(l))
+      : [];
   const clearOsCalls = () => fs.rmSync(osLog, { force: true });
   return { url, dataDir, call, setOs, osCalls, clearOsCalls, stop };
 }

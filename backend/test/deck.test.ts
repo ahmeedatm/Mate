@@ -19,7 +19,13 @@ const { saveKey } = await import("../src/perso.ts");
 // Deck lu par le serveur : config/deck.json s'il existe, sinon le deck de départ.
 const deckFile = existsSync(config.deckFile) ? config.deckFile : config.deckExampleFile;
 const deckConfig = JSON.parse(readFileSync(deckFile, "utf8")) as {
-  pages: { title: string; apps?: boolean; app?: string; media?: boolean; tiles: { label: string; action: { type: string; name?: string } }[] }[];
+  pages: {
+    title: string;
+    apps?: boolean;
+    app?: string;
+    media?: boolean;
+    tiles: { label: string; action: { type: string; name?: string } }[];
+  }[];
 };
 const baseApps = deckConfig.pages.find((p) => p.apps)!.tiles.map((t) => t.action.name!);
 const appTileId = (name: string) => "a-" + createHash("sha1").update(name).digest("hex").slice(0, 10);
@@ -60,14 +66,29 @@ describe("runAction", () => {
   it("enchaîne les étapes d'une macro dans l'ordre", async () => {
     await deck.runAction({
       type: "macro",
-      steps: [{ type: "keys", keys: "cmd+n" }, { type: "wait", ms: 1 }, { type: "text", text: "Compte rendu" }],
+      steps: [
+        { type: "keys", keys: "cmd+n" },
+        { type: "wait", ms: 1 },
+        { type: "text", text: "Compte rendu" },
+      ],
     });
-    assert.deepEqual(calls.map((c) => c.fn), ["sendKeys", "typeText"]);
+    assert.deepEqual(
+      calls.map((c) => c.fn),
+      ["sendKeys", "typeText"],
+    );
   });
 
   it("s'arrête à la première étape qui échoue", async () => {
     reset({ fail: ["sendKeys"] });
-    await assert.rejects(deck.runAction({ type: "macro", steps: [{ type: "keys", keys: "cmd+n" }, { type: "text", text: "jamais" }] }));
+    await assert.rejects(
+      deck.runAction({
+        type: "macro",
+        steps: [
+          { type: "keys", keys: "cmd+n" },
+          { type: "text", text: "jamais" },
+        ],
+      }),
+    );
     assert.deepEqual(calls, []);
   });
 
@@ -76,7 +97,10 @@ describe("runAction", () => {
       await assert.rejects(deck.runAction({ type: "url", url }), /Schéma d'URL non autorisé/);
     }
     await deck.runAction({ type: "url", url: "msteams://teams.microsoft.com/l/meetup-join/x" });
-    assert.deepEqual(calls.map((c) => c.args[0]), ["msteams://teams.microsoft.com/l/meetup-join/x"]);
+    assert.deepEqual(
+      calls.map((c) => c.args[0]),
+      ["msteams://teams.microsoft.com/l/meetup-join/x"],
+    );
   });
 
   it("appuie sur le premier bouton trouvé, erreur si aucun", async () => {
@@ -112,7 +136,10 @@ describe("loadDeck", () => {
   it("page Apps : profil de base réduit aux applis installées", async () => {
     reset({ installed: [baseApps[1], baseApps[0], "Autre appli"] });
     const apps = (await deck.loadDeck()).find((p) => p.apps)!;
-    assert.deepEqual(apps.tiles.map((t) => t.id), [appTileId(baseApps[0]), appTileId(baseApps[1])]);
+    assert.deepEqual(
+      apps.tiles.map((t) => t.id),
+      [appTileId(baseApps[0]), appTileId(baseApps[1])],
+    );
   });
 
   it("masque les pages d'appli absentes de la page Apps, sans changer les identifiants des autres tuiles", async () => {
@@ -133,16 +160,32 @@ describe("loadDeck", () => {
 
   it("page Perso en dernier : 14 emplacements, une étape seule ou une macro", async () => {
     await saveKey(2, { label: "Capture", steps: [{ type: "keys", keys: "cmd+shift+4" }] });
-    await saveKey(3, { label: "Réunion", color: "#112233", steps: [{ type: "app", name: "Notes" }, { type: "text", text: "Ordre du jour" }] });
+    await saveKey(3, {
+      label: "Réunion",
+      color: "#112233",
+      steps: [
+        { type: "app", name: "Notes" },
+        { type: "text", text: "Ordre du jour" },
+      ],
+    });
     const perso = (await deck.loadDeck()).at(-1)!;
     assert.equal(perso.title, "Perso");
     assert.equal(perso.editable, true);
     assert.equal(perso.tiles.length, 14);
     assert.deepEqual(perso.tiles[0], { id: "k-0", empty: true });
-    assert.deepEqual(perso.tiles[2], { id: "k-2", label: "Capture", glyph: undefined, color: undefined, action: { type: "keys", keys: "cmd+shift+4" } });
+    assert.deepEqual(perso.tiles[2], {
+      id: "k-2",
+      label: "Capture",
+      glyph: undefined,
+      color: undefined,
+      action: { type: "keys", keys: "cmd+shift+4" },
+    });
     assert.deepEqual((perso.tiles[3] as Tile).action, {
       type: "macro",
-      steps: [{ type: "app", name: "Notes" }, { type: "text", text: "Ordre du jour" }],
+      steps: [
+        { type: "app", name: "Notes" },
+        { type: "text", text: "Ordre du jour" },
+      ],
     });
     assert.equal((await deck.findTile("k-3"))?.label, "Réunion");
     assert.equal(await deck.findTile("k-0"), undefined, "un emplacement vide n'est pas une tuile");
@@ -155,11 +198,17 @@ describe("page Apps modifiée depuis la tablette", () => {
     const id = await deck.addDeckApp("Microsoft PowerPoint");
     assert.equal(await deck.addDeckApp("Microsoft PowerPoint"), id);
     let apps = (await deck.loadDeck()).find((p) => p.apps)!.tiles as Tile[];
-    assert.deepEqual(apps.map((t) => t.label), [deckConfig.pages.find((p) => p.apps)!.tiles[0].label, "PowerPoint"]);
+    assert.deepEqual(
+      apps.map((t) => t.label),
+      [deckConfig.pages.find((p) => p.apps)!.tiles[0].label, "PowerPoint"],
+    );
 
     await deck.removeDeckApp(id);
     apps = (await deck.loadDeck()).find((p) => p.apps)!.tiles as Tile[];
-    assert.deepEqual(apps.map((t) => t.id), [appTileId(baseApps[0])]);
+    assert.deepEqual(
+      apps.map((t) => t.id),
+      [appTileId(baseApps[0])],
+    );
   });
 
   it("retour au profil de base", async () => {
@@ -174,11 +223,14 @@ describe("page Média : sites", () => {
     await deck.addDeckLink("netflix.com");
     await deck.addDeckLink("https://www.youtube.com/");
     await deck.addDeckLink("https://music.youtube.com/watch?list=LM", "  Mes titres  ");
-    assert.deepEqual((await deck.deckLinks()).map(({ label, url }) => ({ label, url })), [
-      { label: "netflix.com", url: "https://netflix.com" },
-      { label: "youtube.com", url: "https://www.youtube.com" },
-      { label: "Mes titres", url: "https://music.youtube.com/watch?list=LM" },
-    ]);
+    assert.deepEqual(
+      (await deck.deckLinks()).map(({ label, url }) => ({ label, url })),
+      [
+        { label: "netflix.com", url: "https://netflix.com" },
+        { label: "youtube.com", url: "https://www.youtube.com" },
+        { label: "Mes titres", url: "https://music.youtube.com/watch?list=LM" },
+      ],
+    );
   });
 
   it("n'ajoute pas deux fois le même site, et le retire par son identifiant", async () => {

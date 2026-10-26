@@ -189,7 +189,12 @@ export async function listDisplays() {
 
 export async function listWindows(app: string): Promise<WindowsInfo> {
   const windows = (read().windows?.[app] ?? []).map((w, index) => ({
-    index, title: w.title, minimized: false, fullscreen: false, display: w.elsewhere ? null : display.id, elsewhere: w.elsewhere ?? false,
+    index,
+    title: w.title,
+    minimized: false,
+    fullscreen: false,
+    display: w.elsewhere ? null : display.id,
+    elsewhere: w.elsewhere ?? false,
   }));
   return { app, running: windows.length > 0, windows, displays: [display] };
 }
@@ -208,7 +213,12 @@ export async function listOpenWindows() {
   return { apps: [], displays: [display] };
 }
 
-export async function controlOpenWindow(key: string, window: WindowTarget, action: OpenAction, opts?: { display?: number; layout: Layout }) {
+export async function controlOpenWindow(
+  key: string,
+  window: WindowTarget,
+  action: OpenAction,
+  opts?: { display?: number; layout: Layout },
+) {
   record("controlOpenWindow", key, window, action, opts);
   return listOpenWindows();
 }

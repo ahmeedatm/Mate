@@ -23,22 +23,28 @@ describe("tâches récurrentes", () => {
     await addTask("Semaine", { days: [5, 4, 3, 2, 1, 1], remindAt: "08:00" });
     await addTask("Week-end", { days: [7, 6] });
     await addTask("Certains", { days: [5, 1, 3] });
-    assert.deepEqual((await mine()).map((t) => [t.label, t.schedule]), [
-      ["Tous", "Tous les jours"],
-      ["Semaine", "Lun–ven · 08:00"],
-      ["Week-end", "Week-end"],
-      ["Certains", "Lun, mer, ven"],
-    ]);
+    assert.deepEqual(
+      (await mine()).map((t) => [t.label, t.schedule]),
+      [
+        ["Tous", "Tous les jours"],
+        ["Semaine", "Lun–ven · 08:00"],
+        ["Week-end", "Week-end"],
+        ["Certains", "Lun, mer, ven"],
+      ],
+    );
   });
 
   it("rappel toutes les 30 min pendant 2 h, jamais après minuit", async () => {
     await addTask("Soir", { days: [1], remindAt: "22:45" });
     await addTask("Matin", { days: [1], remindAt: "09:10" });
     const stored = JSON.parse(await fs.readFile(file, "utf8")).recurring;
-    assert.deepEqual(stored.map((t: Record<string, unknown>) => [t.remindAt, t.repeatMinutes, t.remindUntil]), [
-      ["22:45", 30, "23:59"],
-      ["09:10", 30, "11:10"],
-    ]);
+    assert.deepEqual(
+      stored.map((t: Record<string, unknown>) => [t.remindAt, t.repeatMinutes, t.remindUntil]),
+      [
+        ["22:45", 30, "23:59"],
+        ["09:10", 30, "11:10"],
+      ],
+    );
   });
 
   it("n'apparaît dans la liste du jour que ses jours-là, mais reste dans la liste 🔁", async () => {
@@ -47,7 +53,10 @@ describe("tâches récurrentes", () => {
     const ids = (await listTasks()).map((t) => t.id);
     assert.ok(ids.includes(todayTask.id));
     assert.ok(!ids.includes(other.id));
-    assert.deepEqual((await mine()).map((t) => t.id), [todayTask.id, other.id]);
+    assert.deepEqual(
+      (await mine()).map((t) => t.id),
+      [todayTask.id, other.id],
+    );
   });
 
   it("cochée pour aujourd'hui seulement, décochable, supprimable", async () => {

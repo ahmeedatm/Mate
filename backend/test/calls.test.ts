@@ -67,7 +67,10 @@ describe("appels entrants", () => {
     state.buttons = { Discord: ["Rejoindre l'appel vidéo", "Ignorer"] };
     await answerCall("Discord", true);
     await declineCall("Discord");
-    assert.deepEqual(calls.map((c) => c.args[1]), ["Rejoindre l'appel vidéo", "Ignorer"]);
+    assert.deepEqual(
+      calls.map((c) => c.args[1]),
+      ["Rejoindre l'appel vidéo", "Ignorer"],
+    );
   });
 
   it("erreur claire si le bouton n'est plus là, ou pour une appli sans règle", async () => {

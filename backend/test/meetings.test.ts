@@ -68,22 +68,28 @@ describe("rejoindre une réunion", () => {
   it("Teams et Zoom : ouverts dans leur appli", async () => {
     assert.equal((await joinMeeting(await idOf("Daily")))?.kind, "teams");
     assert.equal((await joinMeeting(await idOf("Client")))?.kind, "zoom");
-    assert.deepEqual(calls.map((c) => c.args[0]), [
-      TEAMS.replace("https://teams.microsoft.com/", "msteams:/"),
-      "zoommtg://zoom.us/join?confno=123456789&pwd=Ab.c-1",
-    ]);
+    assert.deepEqual(
+      calls.map((c) => c.args[0]),
+      [TEAMS.replace("https://teams.microsoft.com/", "msteams:/"), "zoommtg://zoom.us/join?confno=123456789&pwd=Ab.c-1"],
+    );
   });
 
   it("appli absente : repli sur le navigateur", async () => {
     state.fail = ["openTarget msteams:"];
     await joinMeeting(await idOf("Daily"));
-    assert.deepEqual(calls.map((c) => c.args[0]), [TEAMS]);
+    assert.deepEqual(
+      calls.map((c) => c.args[0]),
+      [TEAMS],
+    );
   });
 
   it("Google Meet : directement dans le navigateur", async () => {
     const joined = await joinMeeting(await idOf("Atelier"));
     assert.equal(joined?.event.title, "Atelier");
-    assert.deepEqual(calls.map((c) => c.args[0]), [MEET]);
+    assert.deepEqual(
+      calls.map((c) => c.args[0]),
+      [MEET],
+    );
   });
 
   it("rien pour un événement sans lien ou inconnu", async () => {

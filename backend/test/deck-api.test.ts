@@ -35,7 +35,13 @@ describe("GET /deck", () => {
   it("page Apps : applis installées, avec leur nom", async () => {
     server.setOs({ installed: ["Notes", "Microsoft Word"] });
     const apps = (await pages()).find((p) => p.apps)!;
-    assert.deepEqual(apps.tiles.map((t) => [t.label, t.type, t.app]), [["Word", "app", "Microsoft Word"], ["Notes", "app", "Notes"]]);
+    assert.deepEqual(
+      apps.tiles.map((t) => [t.label, t.type, t.app]),
+      [
+        ["Word", "app", "Microsoft Word"],
+        ["Notes", "app", "Notes"],
+      ],
+    );
   });
 });
 
@@ -50,7 +56,10 @@ describe("POST /deck/run", () => {
   it("appli à plusieurs fenêtres : renvoie les fenêtres à choisir au lieu de l'activer", async () => {
     server.setOs({ installed: ["Notes"], windows: { Notes: [{ title: "Courses" }, { title: "Idées" }] } });
     const { json } = await server.call("POST", "/deck/run", { id: (await tileByLabel("Notes")).id });
-    assert.deepEqual(json.windows.windows.map((w: { title: string }) => w.title), ["Courses", "Idées"]);
+    assert.deepEqual(
+      json.windows.windows.map((w: { title: string }) => w.title),
+      ["Courses", "Idées"],
+    );
     assert.deepEqual(server.osCalls(), []);
   });
 
@@ -73,7 +82,10 @@ describe("page Apps depuis la tablette", () => {
     const added = await server.call("POST", "/deck/apps", { name: "Spotify" });
     assert.equal(added.status, 200);
     let apps = (await pages()).find((p) => p.apps)!;
-    assert.deepEqual(apps.tiles.map((t) => t.app), ["Notes", "Spotify"]);
+    assert.deepEqual(
+      apps.tiles.map((t) => t.app),
+      ["Notes", "Spotify"],
+    );
 
     await server.call("DELETE", `/deck/apps/${added.json.id}`);
     await server.call("DELETE", `/deck/apps/${apps.tiles[0].id}`);
@@ -82,7 +94,10 @@ describe("page Apps depuis la tablette", () => {
 
     await server.call("DELETE", "/deck/apps");
     apps = (await pages()).find((p) => p.apps)!;
-    assert.deepEqual(apps.tiles.map((t) => t.app), ["Notes"]);
+    assert.deepEqual(
+      apps.tiles.map((t) => t.app),
+      ["Notes"],
+    );
   });
 
   it("commande vocale « ouvre X » : seulement une appli installée", async () => {

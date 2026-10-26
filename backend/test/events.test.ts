@@ -59,7 +59,10 @@ describe("agenda personnel : saisie", () => {
     await fs.writeFile(file, JSON.stringify({ items: [{ id: "vieux", title: "Vieux", startMs: old, endMs: old + HOUR, allDay: false }] }));
     await addEvent({ title: "Après", startMs: Date.now() + 2 * HOUR, allDay: false });
     await addEvent({ title: "Avant", startMs: Date.now() + HOUR, allDay: false });
-    assert.deepEqual((await stored()).map((e) => e.title), ["Avant", "Après"]);
+    assert.deepEqual(
+      (await stored()).map((e) => e.title),
+      ["Avant", "Après"],
+    );
   });
 });
 
@@ -72,10 +75,20 @@ describe("agenda personnel : lecture", () => {
     await addEvent({ title: "Plus tard", startMs: now + 48 * HOUR, allDay: false });
 
     const events = await localEvents(new Date(now), new Date(now + 24 * HOUR));
-    assert.deepEqual(events.map((e) => e.title), ["Commencé", "Dedans"]);
+    assert.deepEqual(
+      events.map((e) => e.title),
+      ["Commencé", "Dedans"],
+    );
     assert.deepEqual(events[1], {
-      id: `local-${inside.id}@${inside.startMs}`, title: "Dedans", location: "", startMs: inside.startMs, endMs: inside.endMs,
-      allDay: false, free: false, localId: inside.id, remindBefore: 0,
+      id: `local-${inside.id}@${inside.startMs}`,
+      title: "Dedans",
+      location: "",
+      startMs: inside.startMs,
+      endMs: inside.endMs,
+      allDay: false,
+      free: false,
+      localId: inside.id,
+      remindBefore: 0,
     });
   });
 });
