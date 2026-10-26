@@ -139,7 +139,10 @@ install-mac:
       when: manual
       allow_failure: true
   script:
+    # node@18 passe avant dans le PATH du runner : celui de Homebrew (22 ou plus).
+    - export PATH="/opt/homebrew/bin:$PATH"
     - node --version
+    - node -e 'process.exit(Number(+process.versions.node.split(".")[0] < 22))'
     - (cd backend && npm ci --prefer-offline --no-audit --no-fund && npm run package -- mac)
     - backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip
   after_script:

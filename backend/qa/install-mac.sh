@@ -2,7 +2,8 @@
 # Test de l'installation sur Mac (job install-mac), sur le Mac d'un développeur où tourne son vrai compagnon.
 # Instance de test à part : agent launchd, port, données, journal et dossier d'installation propres au job,
 # rien d'affiché à l'écran (COMPANION_HEADLESS). Le vrai compagnon (agent com.unowhy.companion, port 3000,
-# données, raccourci du Bureau) est relevé avant et après : la moindre différence fait échouer le job.
+# données) est relevé avant et après : la moindre différence fait échouer le job.
+# Jamais de lecture dans ~/Desktop, ~/Documents… : macOS (TCC) y bloque le runner en attendant une autorisation.
 #
 #   backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip   installe le paquet, vérifie, désinstalle
 #   backend/qa/install-mac.sh cleanup                             retire l'instance de test (after_script)
@@ -34,7 +35,6 @@ real_state() {
   echo "plist : $(sha ~/Library/LaunchAgents/$REAL_LABEL.plist)"
   echo "port $REAL_PORT : pid $(listener $REAL_PORT), $(health $REAL_PORT | grep -o '"id":"[^"]*"' || echo 'pas de réponse')"
   echo "données : $(sha ~/Library/Application\ Support/UnowhyCompanion/identity.json)"
-  echo "raccourci : $(sha ~/Desktop/Compagnon\ Unowhy.webloc)"
 }
 
 check_real() {
