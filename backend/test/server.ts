@@ -19,7 +19,21 @@ export type TestServer = {
   /** Actions demandées au faux pilotage depuis le démarrage, ou depuis le dernier `clearOsCalls`. */
   osCalls: () => FakeCall[];
   clearOsCalls: () => void;
+  /** Journal du serveur (une ligne JSON par événement). */
+  output: () => string;
   stop: () => Promise<void>;
+};
+
+/**
+ * `os` : système simulé. `dataDir` donné : gardé à l'arrêt (redémarrage avec la même identité).
+ * `env` : variables en plus (DECK_FILE…).
+ */
+export type ServerOptions = {
+  os?: "mac" | "windows" | "other";
+  port?: number;
+  host?: string;
+  dataDir?: string;
+  env?: Record<string, string>;
 };
 
 function freePort(): Promise<number> {
@@ -34,12 +48,12 @@ function freePort(): Promise<number> {
 }
 
 /**
- * Lance le vrai serveur (USB seulement) avec un dossier de données vide. Le pilotage de l'ordinateur (src/os.ts)
+ * Lance le vrai serveur (USB seulement par défaut) avec un dossier de données vide. Le pilotage de l'ordinateur (src/os.ts)
  * est remplacé par test/fake-os.ts : aucun test ne lance d'appli ni n'envoie de touches ; `os` : système simulé.
  */
-export async function startServer(options: { os?: "mac" | "windows" | "other" } = {}): Promise<TestServer> {
-  const port = await freePort();
-  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-test-"));
+export async function startServer(options: ServerOptions = {}): Promise<TestServer> {
+  const port = options.port ?? (await freePort());
+  const dataDir = options.dataDir ?? fs.mkdtempSync(path.join(os.tmpdir(), "companion-test-"));
   const docsDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-docs-"));
   const fakeDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-os-"));
   const osState = path.join(fakeDir, "state.json");
@@ -50,7 +64,7 @@ export async function startServer(options: { os?: "mac" | "windows" | "other" } 
     cwd: backendDir,
     env: {
       ...process.env,
-      HOST: "127.0.0.1",
+      HOST: options.host ?? "127.0.0.1",
       PORT: String(port),
       COMPANION_TOKEN: TOKEN,
       DATA_DIR: dataDir,
@@ -61,6 +75,7 @@ export async function startServer(options: { os?: "mac" | "windows" | "other" } 
       FAKE_OS: options.os ?? "mac",
       FAKE_OS_STATE: osState,
       FAKE_OS_LOG: osLog,
+      ...options.env,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -103,7 +118,7 @@ export async function startServer(options: { os?: "mac" | "windows" | "other" } 
       child.kill();
       await exited;
     }
-    fs.rmSync(dataDir, { recursive: true, force: true });
+    if (!options.dataDir) fs.rmSync(dataDir, { recursive: true, force: true });
     fs.rmSync(docsDir, { recursive: true, force: true });
     fs.rmSync(fakeDir, { recursive: true, force: true });
   };
@@ -117,5 +132,5 @@ export async function startServer(options: { os?: "mac" | "windows" | "other" } 
           .map((l) => JSON.parse(l))
       : [];
   const clearOsCalls = () => fs.rmSync(osLog, { force: true });
-  return { url, dataDir, call, setOs, osCalls, clearOsCalls, stop };
+  return { url, dataDir, call, setOs, osCalls, clearOsCalls, output: () => output, stop };
 }
