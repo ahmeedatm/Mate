@@ -13,8 +13,8 @@ import android.widget.BaseAdapter
 import android.widget.Button
 import android.widget.GridView
 import android.widget.HorizontalScrollView
-import android.widget.ImageView
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -26,9 +26,9 @@ import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.VolumeKeyHandler
 import com.unowhy.companion.net.BackendClient
-import com.unowhy.companion.net.VoiceState
 import com.unowhy.companion.net.DeckPage
 import com.unowhy.companion.net.DeckTile
+import com.unowhy.companion.net.VoiceState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive

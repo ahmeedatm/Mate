@@ -1,7 +1,5 @@
 package com.unowhy.companion.ui.home
 
-import com.unowhy.companion.ui.dp
-import com.unowhy.companion.ui.themeColor
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.DashPathEffect
@@ -17,6 +15,8 @@ import android.view.ViewGroup
 import android.widget.SeekBar
 import androidx.core.content.ContextCompat
 import com.unowhy.companion.R
+import com.unowhy.companion.ui.dp
+import com.unowhy.companion.ui.themeColor
 import kotlin.math.abs
 import kotlin.math.roundToInt
 

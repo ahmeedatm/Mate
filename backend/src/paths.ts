@@ -43,7 +43,11 @@ export function adoptOldData() {
 export function userFolder(kind: "Personal" | "Desktop" | "Programs", fallback: string): string {
   if (process.platform === "win32") {
     try {
-      const out = execFileSync("reg", ["query", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders", "/v", kind], { encoding: "utf8", windowsHide: true });
+      const out = execFileSync(
+        "reg",
+        ["query", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders", "/v", kind],
+        { encoding: "utf8", windowsHide: true },
+      );
       const dir = new RegExp(`${kind}\\s+REG_\\w+\\s+(.+)`).exec(out)?.[1]?.trim();
       if (dir && fs.existsSync(dir)) return dir;
     } catch {

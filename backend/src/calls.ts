@@ -12,8 +12,13 @@ import { isWindows, listButtons, listWindows, pressButton } from "./os.ts";
  */
 
 type CallRule = {
-  app: string; title: string; caller?: string;
-  answer: string[]; video?: string[]; decline: string[]; hangup?: string[];
+  app: string;
+  title: string;
+  caller?: string;
+  answer: string[];
+  video?: string[];
+  decline: string[];
+  hangup?: string[];
 };
 
 export type CallEvent = { state: "ringing" | "ended"; app: string; caller: string | null; video: boolean };

@@ -1,6 +1,5 @@
 package com.unowhy.companion.ui.home
 
-import com.unowhy.companion.ui.Look
 import android.content.Context
 import android.os.SystemClock
 import android.view.Gravity
@@ -13,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import com.unowhy.companion.R
+import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.showForTyping
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

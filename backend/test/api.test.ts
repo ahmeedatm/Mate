@@ -62,7 +62,12 @@ describe("appairage", () => {
     const bad = await server.call("POST", "/pair/confirm", { request: req.json.request, code: wrong }, false);
     assert.equal(bad.status, 403);
 
-    const ok = await server.call("POST", "/pair/confirm", { request: req.json.request, code: `${code.slice(0, 3)} ${code.slice(3)}` }, false);
+    const ok = await server.call(
+      "POST",
+      "/pair/confirm",
+      { request: req.json.request, code: `${code.slice(0, 3)} ${code.slice(3)}` },
+      false,
+    );
     assert.equal(ok.status, 200);
     assert.equal(ok.json.token, TOKEN);
     assert.equal(ok.json.name, "Ordi de test");
@@ -167,10 +172,12 @@ describe("pages locales", () => {
     // fetch ne laisse pas changer l'en-tête Host : requête http brute.
     const status = await new Promise<number>((resolve, reject) => {
       const { port } = new URL(server.url);
-      http.get({ host: "127.0.0.1", port, path: "/local/status", headers: { host: `exemple.com:${port}` } }, (res) => {
-        res.resume();
-        resolve(res.statusCode ?? 0);
-      }).on("error", reject);
+      http
+        .get({ host: "127.0.0.1", port, path: "/local/status", headers: { host: `exemple.com:${port}` } }, (res) => {
+          res.resume();
+          resolve(res.statusCode ?? 0);
+        })
+        .on("error", reject);
     });
     assert.equal(status, 401);
   });
@@ -183,7 +190,10 @@ describe("mises à jour de la tablette", () => {
     const file = `companion-${version}.apk`;
     fs.writeFileSync(path.join(dir, file), `apk ${version}`);
     const entry = path.join(dir, `companion-${version}.json`);
-    fs.writeFileSync(entry, JSON.stringify({ package: "com.unowhy.companion", label: "Companion", versionCode, versionName: version, file }));
+    fs.writeFileSync(
+      entry,
+      JSON.stringify({ package: "com.unowhy.companion", label: "Companion", versionCode, versionName: version, file }),
+    );
     execFileSync(process.execPath, ["--import", "tsx", "scripts/updates.ts", "add", entry], {
       cwd: path.resolve(import.meta.dirname, ".."),
       env: { ...process.env, DATA_DIR: server.dataDir },
@@ -194,14 +204,23 @@ describe("mises à jour de la tablette", () => {
     const dir = path.join(server.dataDir, "updates");
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, "webview.apk"), "webview");
-    const webview = { package: "com.google.android.webview", label: "Navigateur web", versionCode: 1, versionName: "1", file: "webview.apk" };
+    const webview = {
+      package: "com.google.android.webview",
+      label: "Navigateur web",
+      versionCode: 1,
+      versionName: "1",
+      file: "webview.apk",
+    };
     fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ updates: [webview] }));
 
     addRelease("1.2.3", 10203);
     addRelease("1.2.4", 10204);
 
     const { json } = await server.call("GET", "/updates");
-    assert.deepEqual(json.updates.map((u: any) => u.package), ["com.google.android.webview", "com.unowhy.companion"]);
+    assert.deepEqual(
+      json.updates.map((u: any) => u.package),
+      ["com.google.android.webview", "com.unowhy.companion"],
+    );
     const companion = json.updates[1];
     assert.equal(companion.versionCode, 10204);
     assert.equal(companion.sha256, createHash("sha256").update("apk 1.2.4").digest("hex"));

@@ -6,8 +6,16 @@ export type DocKind = "dir" | "pdf" | "image" | "text" | "other";
 
 const KINDS: Record<string, DocKind> = {
   ".pdf": "pdf",
-  ".png": "image", ".jpg": "image", ".jpeg": "image", ".gif": "image", ".webp": "image",
-  ".txt": "text", ".md": "text", ".csv": "text", ".json": "text", ".log": "text",
+  ".png": "image",
+  ".jpg": "image",
+  ".jpeg": "image",
+  ".gif": "image",
+  ".webp": "image",
+  ".txt": "text",
+  ".md": "text",
+  ".csv": "text",
+  ".json": "text",
+  ".log": "text",
 };
 
 export const PHOTOS_DIR = "Photos tablette";

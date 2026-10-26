@@ -14,11 +14,11 @@ import androidx.core.content.ContextCompat
 import com.unowhy.companion.Computers
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
-import com.unowhy.companion.net.WindowsApi
 import com.unowhy.companion.net.ComputerDisplay
 import com.unowhy.companion.net.ComputerWindow
 import com.unowhy.companion.net.OpenApp
 import com.unowhy.companion.net.OpenWindows
+import com.unowhy.companion.net.WindowsApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

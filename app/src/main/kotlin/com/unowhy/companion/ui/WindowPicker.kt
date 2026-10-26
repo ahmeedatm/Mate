@@ -15,10 +15,10 @@ import android.widget.TextView
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
-import com.unowhy.companion.net.WindowsApi
-import com.unowhy.companion.net.DeckTile
 import com.unowhy.companion.net.ComputerDisplay
 import com.unowhy.companion.net.ComputerWindow
+import com.unowhy.companion.net.DeckTile
+import com.unowhy.companion.net.WindowsApi
 import com.unowhy.companion.net.WindowsInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
