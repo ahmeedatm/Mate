@@ -68,7 +68,7 @@
 <body>
 <header>
   <h1>Compagnon de bureau Unowhy : board des idées</h1>
-  <div class="sub">Tablette Unowhy 4.2 qui pilote un ordinateur Mac ou Windows. Inventaire du 26/10/2026, tiré de la doc, du code et des commits.</div>
+  <div class="sub">Tablette Unowhy 4.2 qui pilote un ordinateur Mac ou Windows. Inventaire tiré de la doc, du code et des commits. Mis à jour le 26/10/2026 après le grand nettoyage.</div>
   <div class="bar">
     <div class="tabs" id="tabs">
       <button data-v="mindmap" class="on">Mindmap</button>
@@ -210,7 +210,7 @@ const THEMES = [
     ["Batterie, luminosité, bandeau", T],
     ["Annuler une mise à jour", C],
     ["Atténuation 22 h – 7 h", C],
-    ["Réglages technicien", C],
+    ["Réglages technicien (code 4242)", C, "gardé : protège la carte Kiosque"],
     ["Bouton « Éteindre l'écran »", I],
     ["Play Store actif en kiosque ?", D],
   ]},
@@ -219,8 +219,13 @@ const THEMES = [
     ["Ordres poussés vers la tablette", T],
     ["Ordre « appel »", C],
   ]},
-  { name: "Produit et vente", color: "#ff9f6b", items: [
+  { name: "Produit, qualité, outillage", color: "#ff9f6b", items: [
     ["Maquette cliquable du pitch", T],
+    ["CI GitLab : typecheck, tests backend, tests JVM, lint, Playwright", T],
+    ["Nettoyage : Assistant retiré, données atomiques, garde d'ouverture, code mort", T, "MR !2 à !7, 26/10/2026"],
+    ["Découpage de server.ts, native.cs, BackendClient, MainActivity", P, "en cours"],
+    ["Renommage Mac* → Computer*", P, "en cours"],
+    ["Tests sur émulateur Android 10", P, "runner CI avec KVM à trouver"],
     ["Nom du projet", D],
     ["Public cible : bureau, maison, école", D],
     ["Publier l'extension navigateur", D],
@@ -246,8 +251,6 @@ const DOUBLONS = [
   ["Agenda", "Trois sources : lien ICS, connexion Microsoft/Google, agenda personnel."],
   ["Teams", "Appel lu sur Mac, raccourcis sur Windows, réunions par l'agenda."],
   ["Pilotage", "Tactile, voix et Claude : trois façons de donner un ordre."],
-  ["Bascule d'ordinateur", "La doc dit « plus de bascule », le code bascule après 2 min."],
-  ["Doc périmée", "README : « Photo → ordi » et l'action Raccourcis pour Ne pas déranger, tous deux remplacés."],
 ];
 
 const DECISIONS = [
@@ -263,8 +266,6 @@ const DECISIONS = [
   ["Gestion de flotte", "MDM SQOOL ou mises à jour maison."],
   ["Deck Mac de départ", "Profil développeur à revoir pour un client."],
   ["Changement d'ordinateur", "Ajouter « ne jamais changer d'ordinateur » ?"],
-  ["Appels entrants (route inutilisée)", "Garder ou supprimer /calls/incoming."],
-  ["Code technicien", "4242 compilé dans l'APK : le garder ?"],
 ];
 
 const ALL = THEMES.flatMap(t => t.items.map(([name, s, note]) => ({ name, s, note, theme: t.name, color: t.color })));
