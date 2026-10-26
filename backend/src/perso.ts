@@ -18,11 +18,15 @@ export async function loadKeys(): Promise<(PersoKey | null)[]> {
 }
 
 export async function saveKey(slot: number, key: PersoKey | null) {
-  await updateJson<{ slots?: (PersoKey | null)[] }>(storeFile, () => ({}), (data) => {
-    const slots = Array.from({ length: SLOTS }, (_, i) => data.slots?.[i] ?? null);
-    slots[slot] = key;
-    data.slots = slots;
-  });
+  await updateJson<{ slots?: (PersoKey | null)[] }>(
+    storeFile,
+    () => ({}),
+    (data) => {
+      const slots = Array.from({ length: SLOTS }, (_, i) => data.slots?.[i] ?? null);
+      slots[slot] = key;
+      data.slots = slots;
+    },
+  );
 }
 
 // Schéma JSON (validation Fastify) d'une touche : chaque type d'étape avec ses seuls champs.

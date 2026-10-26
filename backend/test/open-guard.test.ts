@@ -4,7 +4,11 @@ import { checkOpenTarget, type OpenPlatform } from "../src/open-guard.ts";
 
 const ok = (target: string, platform: OpenPlatform) => assert.doesNotThrow(() => checkOpenTarget(target, platform), target);
 const refused = (target: string, platform: OpenPlatform) =>
-  assert.throws(() => checkOpenTarget(target, platform), (e: Error & { statusCode?: number }) => e.statusCode === 400 && e.message.length > 0, target);
+  assert.throws(
+    () => checkOpenTarget(target, platform),
+    (e: Error & { statusCode?: number }) => e.statusCode === 400 && e.message.length > 0,
+    target,
+  );
 
 test("liens http(s), mailto et applis de réunion acceptés", () => {
   for (const p of ["mac", "windows"] as const) {

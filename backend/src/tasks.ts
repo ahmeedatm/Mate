@@ -50,8 +50,7 @@ export type TaskView = {
 const tasksFile = path.join(backendRoot, "config", "tasks.json");
 const storeFile = path.join(config.dataDir, "tasks.json");
 
-const isoDay = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const minutesOf = (hhmm: string) => {
   const [h, m] = hhmm.split(":").map(Number);
   return h * 60 + m;
@@ -93,8 +92,17 @@ const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.g
 function describeDays(t: DailyTask): string {
   const days = [...new Set(t.days ?? [1, 2, 3, 4, 5, 6, 7])].sort();
   const key = days.join("");
-  const text = key === "1234567" ? "Tous les jours" : key === "12345" ? "Lun–ven" : key === "67" ? "Week-end"
-    : days.map((d) => DAY_NAMES[d - 1]).join(", ").replace(/^./, (c) => c.toUpperCase());
+  const text =
+    key === "1234567"
+      ? "Tous les jours"
+      : key === "12345"
+        ? "Lun–ven"
+        : key === "67"
+          ? "Week-end"
+          : days
+              .map((d) => DAY_NAMES[d - 1])
+              .join(", ")
+              .replace(/^./, (c) => c.toUpperCase());
   return t.remindAt ? `${text} · ${t.remindAt}` : text;
 }
 
@@ -127,8 +135,16 @@ async function viewDaily(t: DailyTask, store: Store, now: Date, refresh: boolean
     }
   }
   return {
-    id: t.id, label: t.label, kind: "daily", done, auto, detail, hasUrl: Boolean(t.url), remindAt: t.remindAt ?? null,
-    schedule: describeDays(t), deletable,
+    id: t.id,
+    label: t.label,
+    kind: "daily",
+    done,
+    auto,
+    detail,
+    hasUrl: Boolean(t.url),
+    remindAt: t.remindAt ?? null,
+    schedule: describeDays(t),
+    deletable,
   };
 }
 
@@ -148,8 +164,16 @@ export async function listTasks(refresh = false): Promise<TaskView[]> {
 
 function viewOneOff(item: OneOffTask, now: Date): TaskView {
   return {
-    id: item.id, label: item.label, kind: "oneoff", done: Boolean(item.doneMs), auto: false, detail: null, hasUrl: false,
-    remindAt: item.remindAtMs ? hhmm(new Date(item.remindAtMs)) : null, schedule: describeReminder(item, now), deletable: true,
+    id: item.id,
+    label: item.label,
+    kind: "oneoff",
+    done: Boolean(item.doneMs),
+    auto: false,
+    detail: null,
+    hasUrl: false,
+    remindAt: item.remindAtMs ? hhmm(new Date(item.remindAtMs)) : null,
+    schedule: describeReminder(item, now),
+    deletable: true,
   };
 }
 

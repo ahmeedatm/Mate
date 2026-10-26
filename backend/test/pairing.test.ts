@@ -35,7 +35,10 @@ test("parcours normal : une demande, un dialogue, le bon code donne le jeton", (
 test("un code en attente valide n'est pas écrasé par une autre adresse", () => {
   const first = requestPairing("Tablette", "192.168.1.20", show);
   const code = pendingCode()!.code;
-  assert.equal(status(() => requestPairing("Intrus", "192.168.1.99", show)), 409);
+  assert.equal(
+    status(() => requestPairing("Intrus", "192.168.1.99", show)),
+    409,
+  );
   assert.equal(pendingCode()!.code, code);
   assert.equal(dialogs, 1);
   assert.ok(confirmPairing(first.request, code));
@@ -56,9 +59,15 @@ test("rafale depuis des adresses différentes : un seul dialogue", () => {
 test("la limite est par adresse : un abus n'empêche pas une autre tablette", () => {
   const spam = requestPairing("Spam", "10.0.0.5", show);
   for (let i = 0; i < 4; i++) requestPairing("Spam", "10.0.0.5", show);
-  assert.equal(status(() => requestPairing("Spam", "10.0.0.5", show)), 429);
+  assert.equal(
+    status(() => requestPairing("Spam", "10.0.0.5", show)),
+    429,
+  );
   // le code du spam est épuisé (3 mauvais essais) : la vraie tablette demande à son tour
   for (let i = 0; i < 3; i++) status(() => confirmPairing(spam.request, "xxxxxx"));
   assert.equal(pendingCode(), null);
-  assert.equal(status(() => requestPairing("Tablette", "192.168.1.20", show)), 200);
+  assert.equal(
+    status(() => requestPairing("Tablette", "192.168.1.20", show)),
+    200,
+  );
 });

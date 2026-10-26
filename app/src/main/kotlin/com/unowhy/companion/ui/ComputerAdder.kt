@@ -17,8 +17,8 @@ import com.unowhy.companion.Computer
 import com.unowhy.companion.Computers
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
-import com.unowhy.companion.net.HttpException
 import com.unowhy.companion.net.Discovery
+import com.unowhy.companion.net.HttpException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 

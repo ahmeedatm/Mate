@@ -40,7 +40,8 @@ export async function readJson<T>(file: string, fallback: () => T, { quarantine 
   try {
     raw = await fs.readFile(file, "utf8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") warn(`${path.basename(file)} illisible (${(e as Error).message}) : valeur par défaut`);
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT")
+      warn(`${path.basename(file)} illisible (${(e as Error).message}) : valeur par défaut`);
     return fallback();
   }
   try {
@@ -48,14 +49,15 @@ export async function readJson<T>(file: string, fallback: () => T, { quarantine 
     if (data === null || typeof data !== "object") throw new Error("pas un objet JSON");
     return data;
   } catch (e) {
-    warn(`${path.basename(file)} abîmé (${(e as Error).message}) : valeur par défaut${quarantine ? `, copie dans ${path.basename(file)}.bad` : ""}`);
+    warn(
+      `${path.basename(file)} abîmé (${(e as Error).message}) : valeur par défaut${quarantine ? `, copie dans ${path.basename(file)}.bad` : ""}`,
+    );
     if (quarantine) await fs.rename(file, file + ".bad").catch(() => undefined);
     return fallback();
   }
 }
 
-export const writeJson = (file: string, data: unknown, { mode }: { mode?: number } = {}) =>
-  serial(file, () => writeNow(file, data, mode));
+export const writeJson = (file: string, data: unknown, { mode }: { mode?: number } = {}) => serial(file, () => writeNow(file, data, mode));
 
 /** Relit, applique `change` (qui modifie `data` sur place), écrit ; en file avec les autres écritures du fichier. */
 export function updateJson<T, R = void>(

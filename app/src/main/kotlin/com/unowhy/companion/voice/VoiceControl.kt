@@ -22,8 +22,8 @@ import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
 import com.unowhy.companion.focus.Water
 import com.unowhy.companion.net.BackendClient
-import com.unowhy.companion.net.DeckTile
 import com.unowhy.companion.net.ComputerWindow
+import com.unowhy.companion.net.DeckTile
 import com.unowhy.companion.net.OpenApp
 import com.unowhy.companion.net.OpenWindows
 import com.unowhy.companion.ui.Look

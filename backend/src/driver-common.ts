@@ -14,7 +14,11 @@ export function planAudio(change: AudioChange, current: AudioState): { output?: 
 
 /** "cmd+shift+m" : la touche (dernier élément) et les modificateurs traduits par la table du système. */
 export function parseCombo<T>(combo: string, modifiers: Record<string, T>): { key: string; mods: T[] } {
-  const parts = combo.toLowerCase().split("+").map((p) => p.trim()).filter(Boolean);
+  const parts = combo
+    .toLowerCase()
+    .split("+")
+    .map((p) => p.trim())
+    .filter(Boolean);
   const key = parts.pop();
   if (!key) throw new Error(`Raccourci invalide : ${combo}`);
   const mods = parts.map((p) => {
