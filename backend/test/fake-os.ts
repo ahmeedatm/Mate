@@ -21,7 +21,7 @@ export type FakeState = {
   onLaunch?: Record<string, { title: string }[]>;
   /** Boutons de la fenêtre de chaque appli (listButtons, pressButton). */
   buttons?: Record<string, string[]>;
-  /** Fonctions qui échouent (« Appli absente »). */
+  /** Fonctions qui échouent (« Appli absente ») : `"sendKeys"`, ou `"openTarget msteams:"` pour un début de premier argument. */
   fail?: string[];
 };
 
@@ -41,7 +41,8 @@ function write(next: FakeState) {
 }
 
 function record(fn: string, ...args: unknown[]) {
-  if (read().fail?.includes(fn)) throw new Error(`${fn} a échoué (test)`);
+  const call = `${fn} ${args[0] ?? ""}`;
+  if (read().fail?.some((f) => f === fn || (f.includes(" ") && call.startsWith(f)))) throw new Error(`${fn} a échoué (test)`);
   // Arguments facultatifs absents : retirés, comme ils le seraient une fois passés en JSON.
   while (args.length && args.at(-1) === undefined) args.pop();
   calls.push({ fn, args });
