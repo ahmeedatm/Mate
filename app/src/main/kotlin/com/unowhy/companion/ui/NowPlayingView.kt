@@ -14,6 +14,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
+import com.unowhy.companion.net.HttpException
 import com.unowhy.companion.net.MediaSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -123,9 +124,9 @@ class NowPlayingView @JvmOverloads constructor(
 
     private suspend fun refresh() {
         try {
-            sessions = BackendClient(context).media()
+            sessions = BackendClient(context).system.media()
             render()
-        } catch (e: BackendClient.HttpException) {
+        } catch (e: HttpException) {
             // 501 : l'ordinateur ne sait pas lire la lecture en cours (Mac).
             if (e.code == 501) { visibility = GONE; poll?.cancel() }
         } catch (e: Exception) {
@@ -140,7 +141,7 @@ class NowPlayingView @JvmOverloads constructor(
     private fun control(action: String, positionMs: Long? = null) {
         val app = selected()?.app ?: return
         scope.launch {
-            runCatching { BackendClient(context).mediaControl(action, app, positionMs) }
+            runCatching { BackendClient(context).system.mediaControl(action, app, positionMs) }
             // Le temps que l'appli change de morceau.
             delay(400)
             refresh()
@@ -216,7 +217,7 @@ class NowPlayingView @JvmOverloads constructor(
         thumb.setImageBitmap(null)
         if (app == null || key == null) return
         scope.launch {
-            val bytes = runCatching { BackendClient(context).mediaThumb(app, key) }.getOrNull()
+            val bytes = runCatching { BackendClient(context).system.mediaThumb(app, key) }.getOrNull()
             val bitmap = bytes?.let { withContext(Dispatchers.Default) { decode(it) } }
             if (thumbKey != key) return@launch
             // Échec (ordinateur occupé, helper relancé) : réessayé à l'actualisation suivante.

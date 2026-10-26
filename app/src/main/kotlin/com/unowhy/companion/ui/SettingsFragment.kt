@@ -204,12 +204,12 @@ class SettingsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val client = BackendClient(requireContext())
-                if (!client.homeFeatures().meetings) {
+                if (!client.deck.homeFeatures().meetings) {
                     meetingsCard.visibility = View.GONE
                     return@launch
                 }
                 meetingsCard.visibility = View.VISIBLE
-                showAutoJoin(client.autoJoin())
+                showAutoJoin(client.calendar.autoJoin())
                 autoJoin.isEnabled = true
                 autoJoinHint.setText(R.string.autojoin_hint)
             } catch (e: Exception) {
@@ -230,7 +230,7 @@ class SettingsFragment : Fragment() {
     private fun saveAutoJoin(enabled: Boolean) {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                BackendClient(requireContext()).setAutoJoin(enabled)
+                BackendClient(requireContext()).calendar.setAutoJoin(enabled)
                 autoJoinHint.setText(R.string.autojoin_hint)
             } catch (e: Exception) {
                 showAutoJoin(!enabled)

@@ -86,7 +86,7 @@ class LinkAdder @JvmOverloads constructor(
     private fun reload() {
         scope.launch {
             try {
-                BackendClient(context).deckLinks().let { links = it.links; suggestions = it.suggestions }
+                BackendClient(context).deck.links().let { links = it.links; suggestions = it.suggestions }
                 render()
             } catch (e: Exception) {
                 status.showError(e)
@@ -135,7 +135,7 @@ class LinkAdder @JvmOverloads constructor(
     private fun add(address: String, label: String?, then: () -> Unit = {}) {
         scope.launch {
             try {
-                BackendClient(context).addDeckLink(address, label)
+                BackendClient(context).deck.addLink(address, label)
                 then()
                 changed(context.getString(R.string.links_added_status, label ?: address))
             } catch (e: Exception) {
@@ -148,7 +148,7 @@ class LinkAdder @JvmOverloads constructor(
         val id = link.id ?: return
         scope.launch {
             try {
-                BackendClient(context).removeDeckLink(id)
+                BackendClient(context).deck.removeLink(id)
                 IconCache.forget(id)
                 changed(context.getString(R.string.links_removed_status, link.label))
             } catch (e: Exception) {

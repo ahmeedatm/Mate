@@ -28,8 +28,8 @@ object Connection {
     /** Lève une exception si l'ordinateur ne répond pas. */
     suspend fun probe(context: Context, computer: Computer, connectTimeoutMs: Int = 5_000): Probe {
         val identity = try {
-            BackendClient(computer.url, computer.token, connectTimeoutMs).identity()
-        } catch (e: BackendClient.HttpException) {
+            BackendClient(computer.url, computer.token, connectTimeoutMs).pairing.identity()
+        } catch (e: HttpException) {
             if (e.code == 401) return Probe.Unauthorized else throw e
         }
         var current = computer
