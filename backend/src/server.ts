@@ -32,6 +32,7 @@ import calendarRoutes from "./routes/calendar.ts";
 import updateRoutes from "./routes/updates.ts";
 import docRoutes from "./routes/docs.ts";
 import browserRoutes from "./routes/browser.ts";
+import cameraRoutes from "./routes/camera.ts";
 import { setLogger } from "./log.ts";
 import { addTask, deleteTask, listRecurring, listTasks, setTaskDone, startReminders, taskUrl } from "./tasks.ts";
 import { receiveTabs, type ExtensionReport } from "./browser-extension.ts";
@@ -111,6 +112,7 @@ app.register(calendarRoutes);
 app.register(updateRoutes);
 app.register(docRoutes);
 app.register(browserRoutes);
+app.register(cameraRoutes);
 // @@PLUGINS
 
 /** `auth` : le jeton envoyé est le bon (la tablette sait s'il faut refaire l'appairage). */
@@ -587,42 +589,6 @@ app.get<{ Querystring: { app: string; key: string } }>(
   },
 );
 
-// --- Visualiseur (caméra de la tablette au-dessus d'une feuille, image projetée depuis l'ordinateur)
-
-app.post<{ Body: Buffer }>("/camera/frame", { logLevel: "warn" }, async (req, reply) => {
-  if (!Buffer.isBuffer(req.body) || req.body.length === 0) return reply.code(415).send({ error: "Corps image/jpeg attendu" });
-  pushFrame(req.body);
-  return { ok: true };
-});
-
-app.post<{ Body: { status: CameraStatus; rotation?: number } }>(
-  "/camera/state",
-  {
-    logLevel: "warn",
-    schema: {
-      body: {
-        type: "object",
-        required: ["status"],
-        additionalProperties: false,
-        properties: { status: { enum: CAMERA_STATUSES }, rotation: { enum: [0, 90, 180, 270] } },
-      },
-    },
-  },
-  async (req) => {
-    setCameraState(req.body.status, req.body.rotation);
-    return cameraStatus();
-  },
-);
-
-app.get("/camera/status", { logLevel: "warn" }, async () => cameraStatus());
-
-app.get("/camera", async (_req, reply) => reply.type("text/html; charset=utf-8").send(VIEWER_PAGE));
-
-app.get("/camera/stream", async (_req, reply) => {
-  reply.hijack();
-  addViewer(reply.raw);
-});
-
 // Connexion d'un compte d'agenda (src/accounts.ts), depuis la page locale : le navigateur de l'ordinateur part chez
 // Microsoft ou Google et revient sur /oauth/…/callback (adresse déclarée telle quelle dans l'appli enregistrée).
 app.get<{ Params: { provider: string } }>("/oauth/:provider/start", async (req, reply) => {
@@ -669,12 +635,6 @@ app.post<{ Body: { section?: "agenda" } }>(
     return { ok: true };
   },
 );
-
-/** Ouvre la page du visualiseur dans le navigateur de l'ordinateur (à envoyer ensuite sur le vidéoprojecteur). */
-app.post("/camera/open", async () => {
-  await openTarget(`http://127.0.0.1:${config.port}/camera`);
-  return { ok: true };
-});
 
 // Rappel reçu dès que la tablette l'a affiché, même sans voix française : sinon il serait renvoyé chaque minute.
 const remind = async (text: string) => (await sendToTablet({ type: "message", text, speak: true, seconds: 120 })).received === true;
