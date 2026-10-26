@@ -1,5 +1,6 @@
 # CI : sur chaque MR et sur main. Rien n'arrive sur main sans pipeline vert (voir docs/developpement.md).
-# Le pilotage réel du Mac et de Windows ne tourne pas ici (runner Linux) : il reste vérifié à la main.
+# Le pilotage réel du Mac et de Windows ne tourne pas sur le runner Linux : il reste vérifié à la main.
+# install-mac : installation du paquet sur le runner Mac (tag macos).
 # Tag vX.Y.Z : mêmes tests, puis paquets de l'ordinateur, APK signé et release GitLab.
 
 workflow:
@@ -105,6 +106,52 @@ android:
     reports:
       junit: app/build/test-results/testDebugUnitTest/*.xml
     expire_in: 2 weeks
+
+# Installation du paquet Mac sur le Mac d'un développeur (runner shell, tag macos) : backend/qa/install-mac.sh.
+# Instance de test isolée de son vrai compagnon (agent, port, données à part), rien ne s'affiche à l'écran.
+# Obligatoire seulement si l'installation ou le pilotage du Mac ont bougé (Mac éteint = job en attente) ;
+# sur les autres MR, à lancer à la main.
+install-mac:
+  stage: test
+  tags: [macos]
+  needs: []
+  interruptible: true
+  variables:
+    npm_config_cache: $CI_PROJECT_DIR/.npm
+  cache:
+    key: install-mac
+    paths:
+      - .npm/
+      - backend/.cache/node/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - backend/src/mac/**/*
+        - backend/src/os.ts
+        - backend/src/paths.ts
+        - backend/scripts/service.ts
+        - backend/scripts/package.ts
+        - backend/package-lock.json
+        - backend/qa/install-mac.sh
+        - Installer (Mac).command
+      allow_failure: false
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
+  script:
+    # node@18 passe avant dans le PATH du runner : celui de Homebrew (22 ou plus).
+    - export PATH="/opt/homebrew/bin:$PATH"
+    - node --version
+    - node -e 'process.exit(Number(+process.versions.node.split(".")[0] < 22))'
+    - (cd backend && npm ci --prefer-offline --no-audit --no-fund && npm run package -- mac)
+    - backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip
+  after_script:
+    - backend/qa/install-mac.sh cleanup
+  artifacts:
+    when: always
+    paths:
+      - install-mac-backend.log
+    expire_in: 1 week
 
 # Tests instrumentés (app/src/androidTest/) sur un émulateur Android 10 sans services Google, 1280×800.
 # Le runner Kubernetes partagé expose /dev/kvm (pod privilégié) : démarrage en ~25 s. Même script qu'en local.

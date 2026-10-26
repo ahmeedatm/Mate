@@ -98,6 +98,16 @@ Le pipeline (`.gitlab-ci.yml`, runner Linux) lance quatre jobs en parallèle :
 
 Sur un tag `vX.Y.Z`, trois jobs de plus construisent et publient la release (section suivante).
 
+### Installation sur Mac (`install-mac`)
+
+Job sur le runner Mac (tag `macos`, exécuteur shell, Mac d'un développeur où tourne son vrai compagnon). Il construit le paquet Mac, le dézippe dans `/tmp/companion-ci-<job>`, lance `Installer (Mac).command`, vérifie l'agent launchd, `/health` (`accessibility: false` attendu : pas d'autorisation pour le node du job), la relance par launchd après un arrêt, puis la désinstallation. Script : `backend/qa/install-mac.sh run <zip>` (et `cleanup`, en `after_script`, même après un échec ou une annulation).
+
+Isolation du vrai compagnon : agent `com.unowhy.companion.ci-<job>`, port `41000 + job % 1000` en `HOST=127.0.0.1`, `DATA_DIR`, `DOCS_DIR` et journal (`COMPANION_LOG_DIR`) dans le dossier du job. `COMPANION_HEADLESS=1` : ni dialogue d'appairage, ni page ou Réglages ouverts, ni raccourci sur le Bureau. Le vrai compagnon (agent `com.unowhy.companion`, plist, port 3000, identité) est relevé avant et après : une différence fait échouer le job. Le script ne lit jamais `~/Desktop`, `~/Documents`… : macOS (TCC) bloque le runner en attendant une autorisation, et le job reste suspendu.
+
+Obligatoire seulement sur les MR qui touchent `backend/src/mac/`, `os.ts`, `paths.ts`, `scripts/service.ts`, `scripts/package.ts`, `package-lock.json`, l'installeur Mac ou le script (Mac éteint = job en attente, la MR aussi). Sur les autres MR : bouton manuel, sans bloquer. En local : `cd backend && npm run package -- mac && cd .. && backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip`.
+
+L'installeur, lancé sans terminal (stdin non interactif), ne fait pas de pause et rend le code de sortie de l'installation ; au double-clic, rien ne change.
+
 Avant de pousser : `cd backend && npm run typecheck && npm test`, et `./gradlew testDebugUnitTest lintDebug`. Si l'écran ou un parcours change : `scripts/test-android.sh`.
 
 Tests Playwright (page web touchée : `src/local-page.ts`, `src/camera.ts`, routes OAuth) : `cd backend && npm run test:e2e`, après un `npx playwright install chromium` la première fois. Sans navigateur installé, dans l'image du job :
@@ -109,7 +119,7 @@ docker run --rm -e CI=true -v "$PWD":/w -v /w/backend/node_modules -w /w/backend
 
 Le tag de l'image du job `e2e` suit la version exacte de `@playwright/test` (`backend/package.json`) : changer les deux ensemble (et le digest). Trace d'un échec : `npx playwright show-trace e2e-results/traces/<test>/trace.zip`.
 
-Ce que la CI ne voit pas : le pilotage réel du Mac et de Windows (sur Linux, le deck répond 501), l'appli sur la vraie tablette (perfs, kiosque, micro, caméra). Ils restent testés à la main (case « Testé sur » de la MR).
+Ce que la CI ne voit pas : le pilotage réel du Mac et de Windows (sur Linux, le deck répond 501 ; `install-mac` ne teste que l'installation), l'appli sur la vraie tablette (perfs, kiosque, micro, caméra). Ils restent testés à la main (case « Testé sur » de la MR).
 
 ### Tests instrumentés (émulateur)
 
