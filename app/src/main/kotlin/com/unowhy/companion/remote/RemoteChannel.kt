@@ -12,6 +12,7 @@ import com.unowhy.companion.audio.Speaker
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
 import com.unowhy.companion.net.BackendClient
+import com.unowhy.companion.net.HttpException
 import com.unowhy.companion.net.Connection
 import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.Link
@@ -59,18 +60,18 @@ class RemoteChannel(private val activity: MainActivity) {
                 if (!online) {
                     when (val probe = Connection.probe(activity, computer)) {
                         is Connection.Probe.Ok -> onStatus(Link(probe.computer, Link.State.ONLINE))
-                        Connection.Probe.Unauthorized -> throw BackendClient.HttpException(401, "Jeton refusé")
+                        Connection.Probe.Unauthorized -> throw HttpException(401, "Jeton refusé")
                         Connection.Probe.Mismatch -> throw IOException("Un autre ordinateur répond à cette adresse")
                     }
                     online = true
                     offlineSince = 0L
                 }
-                client.poll(state())
+                client.tablet.poll(state())
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 online = false
-                if (e is BackendClient.HttpException && e.code == 401) {
+                if (e is HttpException && e.code == 401) {
                     // Jeton refusé (ordinateur réinstallé ?) : il faut refaire l'appairage, chercher ailleurs ne sert à rien.
                     onStatus(Link(computer, Link.State.UNAUTHORIZED))
                     delay(10_000)
@@ -101,7 +102,7 @@ class RemoteChannel(private val activity: MainActivity) {
                     JSONObject().put("ok", false).put("error", e.message ?: e.javaClass.simpleName)
                 }
                 recent[c.id] = result
-                runCatching { client.sendResult(c.id, result, state()) }
+                runCatching { client.tablet.sendResult(c.id, result, state()) }
             }
         }
     }

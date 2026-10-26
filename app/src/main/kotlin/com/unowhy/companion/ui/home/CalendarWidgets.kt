@@ -131,7 +131,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         host.scope.launch {
             val main = host.main
             try {
-                val kind = BackendClient(context).joinMeeting(event.id)
+                val kind = BackendClient(context).calendar.joinMeeting(event.id)
                 main?.showBanner(context.getString(R.string.join_opened, event.title), 6)
                 // Page Réunion du deck : raccourcis de Teams, inutiles pour Meet ou Zoom.
                 if (kind == "teams" && host.features.teams) main?.showMeetingControls()

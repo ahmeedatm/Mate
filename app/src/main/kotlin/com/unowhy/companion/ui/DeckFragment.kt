@@ -141,7 +141,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         view.findViewById<View>(R.id.deck_access_open).setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
                 try {
-                    client().openAccessibility()
+                    client().system.openAccessibility()
                     Toast.makeText(requireContext(), R.string.deck_access_opened, Toast.LENGTH_LONG).show()
                 } catch (e: Exception) {
                     toastError(e)
@@ -185,7 +185,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
 
     /** L'onglet reste un moment après la fermeture ou la fin du micro : pas de clignotement si Discord le coupe un instant. */
     private suspend fun refreshLiveApps() {
-        val seen = runCatching { client().liveApps() }.getOrNull() ?: return
+        val seen = runCatching { client().deck.liveApps() }.getOrNull() ?: return
         val now = SystemClock.uptimeMillis()
         val before = openApps.keys to liveApps.keys
         openApps = (openApps + seen.open.associateWith { now }).filterValues { now - it < LIVE_HOLD_MS }
@@ -204,7 +204,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     /** Page d'une appli d'appel : relit l'appel, et refait les touches si on entre ou sort d'un appel. */
     private suspend fun refreshVoice() {
         val app = pages.getOrNull(pageIndex)?.app?.takeUnless { showingOpen }
-        val state = app?.let { runCatching { client().voice(it) }.getOrNull() }
+        val state = app?.let { runCatching { client().deck.voice(it) }.getOrNull() }
         if (app != pages.getOrNull(pageIndex)?.app || showingOpen) return
         val changed = state?.connected != voice?.connected
         voice = state
@@ -248,7 +248,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private fun loadDeck() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                pages = client().deck()
+                pages = client().deck.pages()
                 pendingPage?.let { wanted ->
                     pendingPage = null
                     pages.indexOfFirst(wanted).takeIf { it >= 0 }?.let { pageIndex = it }
@@ -264,7 +264,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         audio.refresh()
         // Relu à chaque retour sur le deck : le bandeau disparaît dès que l'autorisation est donnée sur le Mac.
         viewLifecycleOwner.lifecycleScope.launch {
-            val missing = runCatching { client().identity().accessibility == false }.getOrDefault(false)
+            val missing = runCatching { client().pairing.identity().accessibility == false }.getOrDefault(false)
             access.visibility = if (missing) View.VISIBLE else View.GONE
         }
     }
@@ -487,7 +487,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         tileView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val result = client().runTile(tile.id)
+                val result = client().deck.runTile(tile.id)
                 result.windows?.let { picker.show(tile, it, removable = isAppsPage()) }
                 result.openedApp?.let { Toast.makeText(requireContext(), getString(R.string.media_opened_app, it), Toast.LENGTH_SHORT).show() }
                 // Un raccourci comme "Micro Teams" peut avoir changé l'état du son.
@@ -568,7 +568,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             .setPositiveButton(R.string.apps_remove) { _, _ ->
                 viewLifecycleOwner.lifecycleScope.launch {
                     try {
-                        client().removeDeckLink(tile.id)
+                        client().deck.removeLink(tile.id)
                         IconCache.forget(tile.id)
                         loadDeck()
                     } catch (e: Exception) {

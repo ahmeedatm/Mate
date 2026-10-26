@@ -42,7 +42,7 @@ object Updater {
 
     /** Mises à jour annoncées, avec la version installée de chaque paquet. */
     suspend fun check(context: Context): List<Pair<AppUpdate, PackageInfo?>> =
-        BackendClient(context).updates().map { it to installed(context, it.pkg) }
+        BackendClient(context).updates.list().map { it to installed(context, it.pkg) }
 
     fun isNewer(update: AppUpdate, info: PackageInfo?) = info == null || update.versionCode > versionCode(info)
 
@@ -57,7 +57,7 @@ object Updater {
         try {
             // Le téléchargement est une boucle bloquante : l'annulation y est vérifiée à chaque pour cent.
             val job = currentCoroutineContext()[Job]
-            val sha256 = BackendClient(app).downloadUpdate(update, file) { percent ->
+            val sha256 = BackendClient(app).updates.download(update, file) { percent ->
                 if (job?.isActive == false) throw CancellationException("Download cancelled")
                 progress(percent)
             }

@@ -102,7 +102,7 @@ class VoiceControl(private val activity: MainActivity, private val button: View,
     private fun loadTiles() {
         if (Computers.all(activity).isEmpty()) return
         tiles = activity.lifecycleScope.async {
-            runCatching { BackendClient(activity).deck().flatMap { it.tiles } }.getOrDefault(emptyList())
+            runCatching { BackendClient(activity).deck.pages().flatMap { it.tiles } }.getOrDefault(emptyList())
         }
     }
 
@@ -190,18 +190,18 @@ class VoiceControl(private val activity: MainActivity, private val button: View,
         return when (command) {
             is VoiceCommand.ShowMode -> { activity.showMode(command.mode); Answer(text(R.string.voice_done)) }
             is VoiceCommand.Volume -> {
-                val state = client.setAudio(output = command.level, outputDelta = command.delta)
+                val state = client.system.setAudio(output = command.level, outputDelta = command.delta)
                 Answer(state.output?.let { text(R.string.voice_volume, it) } ?: text(R.string.voice_done))
             }
-            is VoiceCommand.Mute -> { client.setAudio(muted = command.muted); Answer(text(if (command.muted) R.string.voice_muted else R.string.voice_unmuted)) }
-            is VoiceCommand.Mic -> { client.setAudio(micMuted = command.muted); Answer(text(if (command.muted) R.string.voice_mic_off else R.string.voice_mic_on)) }
+            is VoiceCommand.Mute -> { client.system.setAudio(muted = command.muted); Answer(text(if (command.muted) R.string.voice_muted else R.string.voice_unmuted)) }
+            is VoiceCommand.Mic -> { client.system.setAudio(micMuted = command.muted); Answer(text(if (command.muted) R.string.voice_mic_off else R.string.voice_mic_on)) }
             is VoiceCommand.Media -> {
-                val session = client.media().let { all -> all.firstOrNull { it.current } ?: all.firstOrNull() }
+                val session = client.system.media().let { all -> all.firstOrNull { it.current } ?: all.firstOrNull() }
                     ?: return Answer(text(R.string.voice_no_media), speak = true)
                 when (command.action) {
-                    "pause" -> if (session.playing) client.mediaControl("play-pause", session.app)
-                    "play" -> if (!session.playing) client.mediaControl("play-pause", session.app)
-                    else -> client.mediaControl(command.action, session.app)
+                    "pause" -> if (session.playing) client.system.mediaControl("play-pause", session.app)
+                    "play" -> if (!session.playing) client.system.mediaControl("play-pause", session.app)
+                    else -> client.system.mediaControl(command.action, session.app)
                 }
                 Answer(session.title.ifBlank { session.name })
             }
@@ -224,20 +224,20 @@ class VoiceControl(private val activity: MainActivity, private val button: View,
                 command.kind?.let { NoisePlayer.play(NoisePlayer.Kind.valueOf(it)) } ?: NoisePlayer.stop()
                 Answer(text(if (command.kind == null) R.string.voice_noise_off else R.string.voice_noise_on))
             }
-            is VoiceCommand.AddTask -> { client.addTask(command.label); Answer(text(R.string.voice_task_added, command.label)) }
-            is VoiceCommand.Tile -> { client.runTile(command.tile.id); Answer(command.tile.label) }
+            is VoiceCommand.AddTask -> { client.tasks.add(command.label); Answer(text(R.string.voice_task_added, command.label)) }
+            is VoiceCommand.Tile -> { client.deck.runTile(command.tile.id); Answer(command.tile.label) }
             VoiceCommand.Time -> Answer(text(R.string.voice_time, time.format(Date())), speak = true)
             VoiceCommand.NextEvent -> {
                 val now = System.currentTimeMillis()
-                val next = client.calendar(days = 7).events.firstOrNull { !it.allDay && it.endMs > now }
+                val next = client.calendar.days(days = 7).events.firstOrNull { !it.allDay && it.endMs > now }
                     ?: return Answer(text(R.string.voice_no_event), speak = true)
                 Answer(text(R.string.voice_next_event, next.title, whenText(now, next.startMs)), speak = true)
             }
             VoiceCommand.Join -> {
                 val now = System.currentTimeMillis()
-                val meeting = client.calendar(days = 1).events.firstOrNull { it.joinable && it.endMs > now && it.startMs - now <= 15 * 60_000 }
+                val meeting = client.calendar.days(days = 1).events.firstOrNull { it.joinable && it.endMs > now && it.startMs - now <= 15 * 60_000 }
                     ?: return Answer(text(R.string.voice_no_meeting), speak = true)
-                if (client.joinMeeting(meeting.id) == "teams" && client.homeFeatures().teams) activity.showMeetingControls()
+                if (client.calendar.joinMeeting(meeting.id) == "teams" && client.deck.homeFeatures().teams) activity.showMeetingControls()
                 Answer(text(R.string.join_opened, meeting.title))
             }
             VoiceCommand.Drink -> {
@@ -247,22 +247,22 @@ class VoiceControl(private val activity: MainActivity, private val button: View,
             }
             is VoiceCommand.Window -> window(client, command)
             VoiceCommand.Tasks -> {
-                val todo = client.tasks().filter { !it.done }
+                val todo = client.tasks.list().filter { !it.done }
                 Answer(if (todo.isEmpty()) text(R.string.voice_no_tasks) else text(R.string.voice_tasks, todo.size, list(todo.map { it.label })), speak = true)
             }
             is VoiceCommand.DoneTask -> {
-                val task = client.tasks().firstOrNull { !it.done && !it.auto && VoiceCommands.names(command.target, it.label) }
+                val task = client.tasks.list().firstOrNull { !it.done && !it.auto && VoiceCommands.names(command.target, it.label) }
                     ?: return Answer(text(R.string.voice_task_unknown), speak = true)
-                client.setTaskDone(task.id, true)
+                client.tasks.setDone(task.id, true)
                 Answer(text(R.string.voice_task_done, task.label))
             }
             is VoiceCommand.Day -> day(client, command)
-            is VoiceCommand.Remind -> { client.addTask(command.label, remindAt = command.at); Answer(text(R.string.voice_reminder, command.at.replace(":", " h "), command.label)) }
+            is VoiceCommand.Remind -> { client.tasks.add(command.label, remindAt = command.at); Answer(text(R.string.voice_reminder, command.at.replace(":", " h "), command.label)) }
             is VoiceCommand.Search -> {
-                client.openUrlOnComputer("https://www.google.com/search?q=" + URLEncoder.encode(command.query, "UTF-8"))
+                client.docs.openUrlOnComputer("https://www.google.com/search?q=" + URLEncoder.encode(command.query, "UTF-8"))
                 Answer(text(R.string.voice_search, command.query))
             }
-            is VoiceCommand.Type -> { client.typeOnComputer(command.text); Answer(text(R.string.voice_typed)) }
+            is VoiceCommand.Type -> { client.system.typeOnComputer(command.text); Answer(text(R.string.voice_typed)) }
             VoiceCommand.Help -> Answer(text(R.string.voice_help))
             is VoiceCommand.Call -> {
                 val overlay = activity.callOverlay
@@ -270,13 +270,13 @@ class VoiceControl(private val activity: MainActivity, private val button: View,
                 if (command.action == "decline") overlay.decline() else overlay.respond(video = command.action == "video")
                 Answer(text(R.string.voice_done))
             }
-            VoiceCommand.HangUp -> Answer(text(R.string.voice_hung_up, client.hangUp()))
+            VoiceCommand.HangUp -> Answer(text(R.string.voice_hung_up, client.system.hangUp()))
         }
     }
 
     /** Fenêtre désignée : l'appli ou le titre dit, sinon celle de devant ; agit comme l'onglet Ouvertes du Deck. */
     private suspend fun window(client: BackendClient, command: VoiceCommand.Window): Answer {
-        val open = client.openWindows()
+        val open = client.windows.openWindows()
         val pairs = open.apps.flatMap { app -> app.windows.map { app to it } }
         val target = if (VoiceCommands.words(command.target).isEmpty()) {
             pairs.firstOrNull { it.second.front } ?: return Answer(text(R.string.voice_win_no_front), speak = true)
@@ -301,7 +301,7 @@ class VoiceControl(private val activity: MainActivity, private val button: View,
         val screens = open.displays.sortedBy { it.x }
         val here = window.display ?: screens.firstOrNull { it.main }?.id
         when (command.action) {
-            "max" -> if (!window.maximized) client.openWindowAction(app, window, "place", here, "max")
+            "max" -> if (!window.maximized) client.windows.openWindowAction(app, window, "place", here, "max")
             "place" -> {
                 val display = when (command.display) {
                     null -> here
@@ -311,9 +311,9 @@ class VoiceControl(private val activity: MainActivity, private val button: View,
                     else -> screens.getOrNull(command.display - 1)?.id ?: return Answer(text(R.string.voice_win_no_screen, command.display), speak = true)
                 }
                 if (command.display != null && display == here) return Answer(text(R.string.voice_win_same_screen, app.name), speak = true)
-                client.openWindowAction(app, window, "place", display, command.layout ?: "keep")
+                client.windows.openWindowAction(app, window, "place", display, command.layout ?: "keep")
             }
-            else -> client.openWindowAction(app, window, command.action)
+            else -> client.windows.openWindowAction(app, window, command.action)
         }
         return Answer(text(when (command.action) {
             "focus" -> R.string.voice_win_focus
@@ -329,13 +329,13 @@ class VoiceControl(private val activity: MainActivity, private val button: View,
      * le plus proche à l'oreille parmi les applis installées et les touches du Deck.
      */
     private suspend fun launch(client: BackendClient, said: String): Answer {
-        val installed = client.deckCatalog().apps
+        val installed = client.deck.catalog().apps
         val tiles = tiles?.await().orEmpty()
         val exact = targets(said).firstNotNullOfOrNull { VoiceCommands.bestApp(it, installed) }
         val name = exact ?: VoiceCommands.closest(targets(said), installed + tiles.map { it.label })
             ?: return Answer(text(R.string.voice_app_unknown, said), speak = true)
-        tiles.firstOrNull { exact == null && it.label == name }?.let { client.runTile(it.id); return Answer(it.label) }
-        client.launchApp(name)
+        tiles.firstOrNull { exact == null && it.label == name }?.let { client.deck.runTile(it.id); return Answer(it.label) }
+        client.system.launchApp(name)
         return Answer(text(R.string.voice_app_opened, name))
     }
 
@@ -347,13 +347,13 @@ class VoiceControl(private val activity: MainActivity, private val button: View,
             add(Calendar.DAY_OF_YEAR, command.days)
         }.timeInMillis
         val dayEnd = dayStart + 24 * 3_600_000L
-        val events = client.calendar(days = 2).events
+        val events = client.calendar.days(days = 2).events
             .filter { it.startMs < dayEnd && it.endMs > maxOf(dayStart, now) }
             .map { if (it.allDay) it.title else text(R.string.voice_event_at, it.title, time.format(Date(it.startMs))) }
         val whenDay = text(if (command.days == 0) R.string.voice_today else R.string.voice_tomorrow)
         val agenda = if (events.isEmpty()) text(R.string.voice_day_empty, whenDay) else text(R.string.voice_day, whenDay, list(events))
         if (!command.withTasks) return Answer(agenda, speak = true)
-        val todo = runCatching { client.tasks().count { !it.done } }.getOrDefault(0)
+        val todo = runCatching { client.tasks.list().count { !it.done } }.getOrDefault(0)
         return Answer(if (todo == 0) agenda else agenda + " " + activity.resources.getQuantityString(R.plurals.voice_day_tasks, todo, todo), speak = true)
     }
 

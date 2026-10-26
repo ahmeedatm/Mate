@@ -124,10 +124,10 @@ class KeyEditor @JvmOverloads constructor(
             try {
                 val client = BackendClient(context)
                 if (catalog == null) {
-                    catalog = client.deckCatalog()
+                    catalog = client.deck.catalog()
                     if (this@KeyEditor.slot == slot) selectType(type)
                 }
-                val key = client.persoKey(slot) ?: return@launch
+                val key = client.deck.persoKey(slot) ?: return@launch
                 if (this@KeyEditor.slot != slot) return@launch
                 clearButton.visibility = VISIBLE
                 label.setText(key.optString("label"))
@@ -159,7 +159,7 @@ class KeyEditor @JvmOverloads constructor(
         val target = slot
         scope.launch {
             try {
-                BackendClient(context).savePersoKey(target, key)
+                BackendClient(context).deck.savePersoKey(target, key)
                 IconCache.forget("k-$target")
                 hide()
                 onChanged()
@@ -173,7 +173,7 @@ class KeyEditor @JvmOverloads constructor(
         val target = slot
         scope.launch {
             try {
-                BackendClient(context).clearPersoKey(target)
+                BackendClient(context).deck.clearPersoKey(target)
                 IconCache.forget("k-$target")
                 hide()
                 onChanged()

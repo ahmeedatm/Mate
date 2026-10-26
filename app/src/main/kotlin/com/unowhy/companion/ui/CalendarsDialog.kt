@@ -41,7 +41,7 @@ class CalendarsDialog(
             message.setText(R.string.loading)
             scope.launch {
                 try {
-                    val calendars = BackendClient(context).linkedCalendars()
+                    val calendars = BackendClient(context).calendar.linked()
                     list.removeAllViews()
                     message.setText(if (calendars.isEmpty()) R.string.calendars_none else R.string.calendars_hint)
                     dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setText(if (calendars.isEmpty()) R.string.calendars_add_first else R.string.calendars_add)
@@ -76,7 +76,7 @@ class CalendarsDialog(
             .setPositiveButton(R.string.calendars_unlink) { _, _ ->
                 scope.launch {
                     try {
-                        BackendClient(context).unlinkCalendar(calendar.id)
+                        BackendClient(context).calendar.unlink(calendar.id)
                         closeList()
                         onChanged()
                         show()

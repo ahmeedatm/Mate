@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import com.unowhy.companion.Computers
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
+import com.unowhy.companion.net.WindowsApi
 import com.unowhy.companion.net.MacDisplay
 import com.unowhy.companion.net.MacWindow
 import com.unowhy.companion.net.OpenApp
@@ -98,7 +99,7 @@ class OpenWindowsView @JvmOverloads constructor(
 
     private suspend fun refresh() {
         try {
-            val result = BackendClient(context).openWindows()
+            val result = BackendClient(context).windows.openWindows()
             if (dragged == null && acting == 0) render(result)
         } catch (e: Exception) {
             showStatus(context.errorText(e))
@@ -106,11 +107,11 @@ class OpenWindowsView @JvmOverloads constructor(
     }
 
     /** Appelle l'ordinateur puis affiche la liste à jour ; `rollback` : état à remettre en cas d'échec. */
-    private fun act(rollback: OpenWindows?, call: suspend BackendClient.() -> OpenWindows) {
+    private fun act(rollback: OpenWindows?, call: suspend WindowsApi.() -> OpenWindows) {
         acting++
         scope.launch {
             try {
-                render(BackendClient(context).call())
+                render(BackendClient(context).windows.call())
             } catch (e: Exception) {
                 rollback?.let(::render)
                 showStatus(context.errorText(e))

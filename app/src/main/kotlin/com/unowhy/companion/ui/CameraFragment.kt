@@ -235,7 +235,7 @@ class CameraFragment : Fragment() {
         main.postDelayed(ticker, 1_000)
         // Montrer sur l'ordi : la fenêtre s'ouvre d'elle-même, sauf si elle l'est déjà (retour dans le mode).
         if (purpose == Purpose.SHOW) lifecycleScope.launch {
-            val open = runCatching { backend.cameraViewers() > 0 }.getOrDefault(false)
+            val open = runCatching { backend.camera.viewers() > 0 }.getOrDefault(false)
             if (camera === cam && !open) showOnMac() else if (camera === cam) setWindowOpen(true)
         }
     }
@@ -274,7 +274,7 @@ class CameraFragment : Fragment() {
         try {
             executor.execute {
                 try {
-                    backend.sendFrame(jpeg)
+                    backend.camera.sendFrame(jpeg)
                     sentFrames.incrementAndGet()
                     online = true
                 } catch (e: Exception) {
@@ -293,7 +293,7 @@ class CameraFragment : Fragment() {
         val backend = client ?: return
         // Photo : l'ordinateur n'a pas d'image en direct à annoncer.
         if (purpose != Purpose.SHOW && state != "off") return
-        lifecycleScope.launch { runCatching { backend.cameraState(state, rotation) } }
+        lifecycleScope.launch { runCatching { backend.camera.state(state, rotation) } }
     }
 
     private fun setFrozen(value: Boolean) {
@@ -324,7 +324,7 @@ class CameraFragment : Fragment() {
                 viewLifecycleOwner.lifecycleScope.launch {
                     try {
                         withContext(Dispatchers.IO) { file.writeBytes(jpeg) }
-                        val saved = backend.uploadPhoto(file)
+                        val saved = backend.docs.uploadPhoto(file)
                         Toast.makeText(requireContext(), getString(R.string.camera_photo_sent, saved.substringAfterLast('/')), Toast.LENGTH_LONG).show()
                         // Photo pour l'ordi : on la montre à côté, comme dans Depuis l'ordi.
                         if (purpose == Purpose.PHOTO) (activity as? MainActivity)?.openDocument(
@@ -345,7 +345,7 @@ class CameraFragment : Fragment() {
         setWindowOpen(null)
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                BackendClient(requireContext()).openCameraOnMac()
+                BackendClient(requireContext()).camera.openCameraOnMac()
             } catch (e: Exception) {
                 setWindowOpen(false)
                 toastError(e)
@@ -358,7 +358,7 @@ class CameraFragment : Fragment() {
         val backend = client ?: return
         if (purpose != Purpose.SHOW) return
         lifecycleScope.launch {
-            val viewers = runCatching { backend.cameraViewers() }.getOrNull() ?: return@launch
+            val viewers = runCatching { backend.camera.viewers() }.getOrNull() ?: return@launch
             if (viewers > 0) setWindowOpen(true)
             else if (SystemClock.elapsedRealtime() - openedAt > OPEN_GRACE_MS) setWindowOpen(false)
         }

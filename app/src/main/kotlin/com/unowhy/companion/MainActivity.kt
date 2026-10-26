@@ -306,7 +306,7 @@ class MainActivity : AppCompatActivity() {
         if (wanted == focusDnd || (focusDnd == null && !wanted)) return
         focusDnd = wanted
         val minutes = ((state.remainingMs + 59_999) / 60_000).toInt()
-        lifecycleScope.launch { runCatching { BackendClient(this@MainActivity).focusDnd(wanted, minutes) } }
+        lifecycleScope.launch { runCatching { BackendClient(this@MainActivity).system.focusDnd(wanted, minutes) } }
     }
 
     override fun onStart() {

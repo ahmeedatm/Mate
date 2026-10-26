@@ -138,7 +138,7 @@ class CallOverlay(private val activity: MainActivity) : FrameLayout(activity) {
         setButtonsEnabled(false)
         activity.lifecycleScope.launch {
             try {
-                BackendClient(activity).answerCall(current, video)
+                BackendClient(activity).system.answerCall(current, video)
                 hide()
                 activity.showAppControls(current)
             } catch (e: Exception) {
@@ -153,7 +153,7 @@ class CallOverlay(private val activity: MainActivity) : FrameLayout(activity) {
         setButtonsEnabled(false)
         activity.lifecycleScope.launch {
             try {
-                BackendClient(activity).declineCall(current)
+                BackendClient(activity).system.declineCall(current)
                 hide()
             } catch (e: Exception) {
                 setButtonsEnabled(true)
