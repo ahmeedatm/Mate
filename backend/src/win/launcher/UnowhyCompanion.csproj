@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
-    Lanceur du compagnon sous Windows (voir Program.cs), sans fenêtre : remplace la boucle PowerShell cachée
-    run-windows.ps1. .NET Framework 4.8. Compilé avec le pilote : npm run build:helper (dans backend/).
+    Lanceur du compagnon sous Windows (voir Program.cs), sans fenêtre, sans PowerShell. .NET Framework 4.8. Compilé avec le pilote : npm run build:helper (dans backend/).
   -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>

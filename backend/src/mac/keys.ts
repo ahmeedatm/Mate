@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process";
+import { parseCombo } from "../driver-common.ts";
+import type { MediaCommand } from "../screens.ts";
 import { osascript, run } from "./run.ts";
 
 // Modificateurs : code clavier de la touche et drapeau CGEvent correspondant.
@@ -53,14 +55,7 @@ function run(argv) {
 
 /** Raccourci au format "cmd+shift+m", envoyé à `app` (mise au premier plan avant) ou à l'appli active. */
 export async function sendKeys(combo: string, app?: string) {
-  const parts = combo.toLowerCase().split("+").map((p) => p.trim()).filter(Boolean);
-  const key = parts.pop();
-  if (!key) throw new Error(`Raccourci invalide : ${combo}`);
-  const mods = parts.map((p) => {
-    const mod = MODIFIERS[p];
-    if (!mod) throw new Error(`Modificateur inconnu : ${p}`);
-    return mod;
-  });
+  const { key, mods } = parseCombo(combo, MODIFIERS);
   const code = KEY_CODES[key];
   if (code === undefined && key.length !== 1) throw new Error(`Touche inconnue : ${key}`);
   if (app) {
@@ -85,8 +80,7 @@ function run(argv) {
   });
 }`;
 
-const MEDIA_KEYS = { "play-pause": 16, next: 17, previous: 18 } as const;
-export type MediaCommand = keyof typeof MEDIA_KEYS;
+const MEDIA_KEYS: Record<MediaCommand, number> = { "play-pause": 16, next: 17, previous: 18 };
 
 export async function sendMediaKey(command: MediaCommand) {
   await osascript(MEDIA_SCRIPT, [String(MEDIA_KEYS[command])], "JavaScript");

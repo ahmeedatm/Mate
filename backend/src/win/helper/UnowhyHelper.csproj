@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
     Pilote Windows du compagnon (voir Program.cs) : un exe compilé d'avance, sans PowerShell ni compilation à
-    l'exécution (Bitdefender classait helper.ps1 en cmd:Heur.BZC.PZQ.Boxter). .NET Framework 4.8, présent sur
+    l'exécution (les antivirus s'en méfient). .NET Framework 4.8, présent sur
     tout Windows 10/11. Compilé depuis le Mac ou Windows : npm run build:helper (dans backend/).
   -->
   <PropertyGroup>

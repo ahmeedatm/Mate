@@ -1,6 +1,7 @@
 import { call } from "./helper.ts";
 import { labelDisplays, type AppWindow, type Layout, type OpenAction, type OpenApp, type OpenWindows, type RawScreen, type WindowsInfo, type WindowTarget } from "../screens.ts";
-import type { AudioState } from "../mac/audio.ts";
+import { parseCombo, planAudio, sortedNames } from "../driver-common.ts";
+import type { AudioChange, AudioState, MediaCommand, SystemCommand } from "../screens.ts";
 
 /**
  * Pilotage de Windows (10 et 11), mêmes fonctions que les modules de src/mac/ : voir src/os.ts.
@@ -50,8 +51,7 @@ async function requireApp(name: string) {
 }
 
 export async function listApps(): Promise<string[]> {
-  const names = (await startApps(true)).map((a) => a.name);
-  return [...new Set(names)].sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
+  return sortedNames((await startApps(true)).map((a) => a.name));
 }
 
 export async function isInstalled(name: string) {
@@ -93,14 +93,7 @@ const KEY_CODES: Record<string, number> = {
 };
 
 export async function sendKeys(combo: string, app?: string) {
-  const parts = combo.toLowerCase().split("+").map((p) => p.trim()).filter(Boolean);
-  const key = parts.pop();
-  if (!key) throw new Error(`Raccourci invalide : ${combo}`);
-  const mods = parts.map((p) => {
-    const vk = MODIFIERS[p];
-    if (vk === undefined) throw new Error(`Modificateur inconnu : ${p}`);
-    return vk;
-  });
+  const { key, mods } = parseCombo(combo, MODIFIERS);
   let vk = KEY_CODES[key];
   // Lettres et chiffres : touche du même nom quelle que soit la disposition (chiffres de la rangée du haut).
   if (vk === undefined && /^[a-z0-9]$/.test(key)) vk = key.toUpperCase().charCodeAt(0);
@@ -112,9 +105,9 @@ export async function sendKeys(combo: string, app?: string) {
   await call("keys", { mods: [...new Set(mods)], ...(vk !== undefined ? { vk } : { ch: key }) });
 }
 
-const MEDIA_KEYS = { "play-pause": 0xb3, next: 0xb0, previous: 0xb1 } as const;
+const MEDIA_KEYS: Record<MediaCommand, number> = { "play-pause": 0xb3, next: 0xb0, previous: 0xb1 };
 
-export async function sendMediaKey(command: keyof typeof MEDIA_KEYS) {
+export async function sendMediaKey(command: MediaCommand) {
   await call("keys", { mods: [], vk: MEDIA_KEYS[command] });
 }
 
@@ -128,14 +121,8 @@ export async function getAudio(): Promise<AudioState> {
   return call<AudioState>("audio");
 }
 
-export async function setAudio(change: { output?: number; outputDelta?: number; muted?: boolean; micMuted?: boolean }): Promise<AudioState> {
-  const current = await getAudio();
-  const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
-  let output: number | undefined;
-  if (change.output !== undefined) output = clamp(change.output);
-  else if (change.outputDelta !== undefined && current.output !== null) output = clamp(current.output + change.outputDelta);
-  // Monter le volume réactive le son, comme les touches du clavier.
-  const muted = change.muted ?? (output !== undefined && output > 0 && current.muted ? false : undefined);
+export async function setAudio(change: AudioChange): Promise<AudioState> {
+  const { output, muted } = planAudio(change, await getAudio());
   return call<AudioState>("audio", { output, muted, micMuted: change.micMuted });
 }
 
@@ -188,12 +175,12 @@ export async function mediaControl(action: MediaAction, app?: string, positionMs
   return call<boolean>("media", { action, app, position: positionMs });
 }
 
-/** Vignette de ce qui joue (pochette, image de la vidéo) écrite dans `out`. */
 /** Page ouverte dans le navigateur au premier plan (le plus en avant des navigateurs) : voir helper/Program.cs. */
 export function browserPage() {
   return call<{ found: boolean; url?: string; title?: string; browser?: string }>("browser");
 }
 
+/** Vignette de ce qui joue (pochette, image de la vidéo) écrite dans `out`. */
 export async function mediaThumb(app: string, out: string) {
   return call<boolean>("media", { action: "thumb", app, out });
 }
@@ -285,7 +272,7 @@ export async function controlOpenWindow(_key: string, window: WindowTarget, acti
 
 // --- Système
 
-export async function systemCommand(command: "sleep-display" | "toggle-dark-mode" | "screenshot-clipboard" | "lock") {
+export async function systemCommand(command: SystemCommand) {
   await call("system", { command });
 }
 

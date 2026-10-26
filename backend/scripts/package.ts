@@ -16,7 +16,8 @@ import { build } from "esbuild";
  *   ../dist/Compagnon-Unowhy-Mac.zip       node pour Apple Silicon et Intel, choisi par l'installeur
  */
 
-const NODE_LINE = "latest-v22.x";
+// Version figée (celle de latest-v22.x au 26/10/2026) : deux paquets faits à des dates différentes embarquent le même node.
+const NODE_VERSION = "v22.23.4";
 const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repo = path.resolve(backend, "..");
 const out = path.join(repo, "dist");
@@ -35,13 +36,13 @@ async function download(url: string): Promise<Buffer> {
 /** Archive officielle de node, gardée dans .cache/node et vérifiée à chaque fois. */
 async function nodeArchive(sums: string, suffix: string): Promise<{ file: string; dir: string }> {
   const line = sums.split("\n").find((l) => l.endsWith(suffix));
-  if (!line) throw new Error(`Pas d'archive node « ${suffix} » dans ${NODE_LINE}`);
+  if (!line) throw new Error(`Pas d'archive node « ${suffix} » dans ${NODE_VERSION}`);
   const [hash, name] = line.trim().split(/\s+/);
   const file = path.join(cache, name);
   if (!fs.existsSync(file)) {
     console.log(`Téléchargement de ${name}…`);
     fs.mkdirSync(cache, { recursive: true });
-    fs.writeFileSync(file, await download(`https://nodejs.org/dist/${NODE_LINE}/${name}`));
+    fs.writeFileSync(file, await download(`https://nodejs.org/dist/${NODE_VERSION}/${name}`));
   }
   if (createHash("sha256").update(fs.readFileSync(file)).digest("hex") !== hash) {
     fs.rmSync(file);
@@ -119,7 +120,7 @@ async function stage(platform: "windows" | "mac", sums: string): Promise<string>
 
 async function main() {
   if (process.platform !== "darwin") throw new Error("À lancer sur le Mac (ditto, unzip, tar)");
-  const sums = (await download(`https://nodejs.org/dist/${NODE_LINE}/SHASUMS256.txt`)).toString("utf8");
+  const sums = (await download(`https://nodejs.org/dist/${NODE_VERSION}/SHASUMS256.txt`)).toString("utf8");
   console.log(`Node : ${sums.match(/node-(v[\d.]+)-/)?.[1] ?? "?"}`);
   for (const platform of ["windows", "mac"] as const) {
     const zip = await stage(platform, sums);
