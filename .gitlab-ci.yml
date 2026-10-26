@@ -153,6 +153,25 @@ install-mac:
       - install-mac-backend.log
     expire_in: 1 week
 
+# Tests instrumentés (app/src/androidTest/) sur un émulateur Android 10 sans services Google, 1280×800.
+# Le runner Kubernetes partagé expose /dev/kvm (pod privilégié) : démarrage en ~25 s. Même script qu'en local.
+android-emulateur:
+  extends: .android
+  stage: test
+  timeout: 30m
+  cache:
+    policy: pull
+  script:
+    - scripts/test-android.sh
+  artifacts:
+    when: always
+    paths:
+      - app/build/test-android/
+      - app/build/reports/androidTests/
+    reports:
+      junit: app/build/outputs/androidTest-results/connected/debug/*.xml
+    expire_in: 2 weeks
+
 # Paquets de l'ordinateur (Windows et Mac, node embarqué) : backend/scripts/package.ts.
 package:
   extends: [.node, .release-tag]

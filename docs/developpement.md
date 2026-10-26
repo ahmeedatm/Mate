@@ -87,13 +87,14 @@ adb -s <série> install -r app/build/outputs/apk/debug/app-debug.apk   # un appa
 
 `main` est protégée : on n'y pousse plus directement. Une branche par changement (`feat/…`, `fix/…`, `docs/…`, `ci/…`), puis une MR vers `main`. Elle se fusionne quand le pipeline est vert et les discussions résolues.
 
-Le pipeline (`.gitlab-ci.yml`, runner Linux) lance trois jobs en parallèle :
+Le pipeline (`.gitlab-ci.yml`, runner Linux) lance quatre jobs en parallèle :
 
 | Job | Vérifie |
 |---|---|
 | `backend` | `npm run typecheck`, puis `npm test` : tests d'intégration (`backend/test/`), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP |
 | `e2e` | pages web du backend dans Chromium (Playwright, `backend/e2e/`) : page locale (adresse, code d'appairage, lien ICS), visualiseur `/camera`, retours d'erreur de `/oauth/:provider/callback`. Même serveur que les tests d'intégration. Artefacts : `e2e-results/junit.xml` et traces des tests en échec |
 | `android` | tests JVM (`app/src/test/`), lint, APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
+| `android-emulateur` | tests instrumentés (`app/src/androidTest/`, Espresso) sur un émulateur Android 10 sans services Google, 1280×800 à 160 dpi ; artefacts : rapport JUnit, capture de l'écran de bienvenue |
 
 Sur un tag `vX.Y.Z`, trois jobs de plus construisent et publient la release (section suivante).
 
@@ -107,7 +108,7 @@ Obligatoire seulement sur les MR qui touchent `backend/src/mac/`, `os.ts`, `path
 
 L'installeur, lancé sans terminal (stdin non interactif), ne fait pas de pause et rend le code de sortie de l'installation ; au double-clic, rien ne change.
 
-Avant de pousser : `cd backend && npm run typecheck && npm test`, et `./gradlew testDebugUnitTest lintDebug`.
+Avant de pousser : `cd backend && npm run typecheck && npm test`, et `./gradlew testDebugUnitTest lintDebug`. Si l'écran ou un parcours change : `scripts/test-android.sh`.
 
 Tests Playwright (page web touchée : `src/local-page.ts`, `src/camera.ts`, routes OAuth) : `cd backend && npm run test:e2e`, après un `npx playwright install chromium` la première fois. Sans navigateur installé, dans l'image du job :
 
@@ -118,7 +119,17 @@ docker run --rm -e CI=true -v "$PWD":/w -v /w/backend/node_modules -w /w/backend
 
 Le tag de l'image du job `e2e` suit la version exacte de `@playwright/test` (`backend/package.json`) : changer les deux ensemble (et le digest). Trace d'un échec : `npx playwright show-trace e2e-results/traces/<test>/trace.zip`.
 
-Ce que la CI ne voit pas : le pilotage réel du Mac et de Windows (sur Linux, le deck répond 501 ; `install-mac` ne teste que l'installation), l'appli sur la tablette. Ils restent testés à la main (case « Testé sur » de la MR).
+Ce que la CI ne voit pas : le pilotage réel du Mac et de Windows (sur Linux, le deck répond 501 ; `install-mac` ne teste que l'installation), l'appli sur la vraie tablette (perfs, kiosque, micro, caméra). Ils restent testés à la main (case « Testé sur » de la MR).
+
+### Tests instrumentés (émulateur)
+
+Espresso, dans `app/src/androidTest/` : le test tourne dans l'appli, peut effacer ses préférences avant de la lancer, et attend seul que l'écran soit stable. Premier parcours : `WelcomeTest` (lancement sans ordinateur, écran de bienvenue, « Plus tard », Deck → « Connecter » ramène à la bienvenue). Noms de tests en camelCase : D8 refuse les espaces dans les noms de méthode sous API 30.
+
+`scripts/test-android.sh [--window]` fait tout : AVD dédié `companion_test_api29` (port 5580, effacé à chaque lancement ; `companion_api29` n'est pas touché), compilation, installation, tests, capture `app/build/test-android/bienvenue.png`, arrêt de l'émulateur. Sortie non nulle si un test échoue.
+
+- **Mac Apple Silicon** : émulateur natif (Hypervisor.framework) et image `android-29;default;arm64-v8a`, téléchargés au premier lancement (~800 Mo, empreintes vérifiées) dans `~/Library/Android/sdk`. Sans JDK, les APK sont compilés dans l'image Docker de la CI et les tests lancés par `am instrument`. Avec un JDK : `./gradlew connectedDebugAndroidTest`. L'émulateur ne peut pas tourner dans Docker sur le Mac : pas de KVM (pas de virtualisation imbriquée sur M1).
+- **CI** : même script, image `x86_64` par `sdkmanager`. Le runner Kubernetes partagé expose `/dev/kvm` (pod privilégié, vérifié le 26/10/2026 : `emulator -accel-check` → « KVM is installed and usable », boot en ~25 s). Si ce runner change de configuration, le job échoue avec « /dev/kvm absent » : il faudra alors un runner dédié avec KVM, taggé.
+- Sur le WiFi du bureau, l'émulateur local peut trouver un vrai compagnon (recherche UDP) : les tests n'en dépendent pas.
 
 Lint : les erreurs déjà présentes sont figées dans `app/lint-baseline.xml`, seules les nouvelles font échouer le job. Après en avoir corrigé, `./gradlew updateLintBaseline`.
 
