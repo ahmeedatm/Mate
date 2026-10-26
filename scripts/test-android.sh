@@ -3,24 +3,31 @@
 # services Google, 1280×800 à 160 dpi, 2 Go, 4 cœurs. Démarre l'émulateur, compile, installe, lance les tests, l'arrête.
 #
 # Usage : scripts/test-android.sh [--window]   (--window : voir l'émulateur pendant les tests)
+#         EMULATOR_PORT=5590 scripts/test-android.sh : second lancement en parallèle (autre worktree), AVD et cache Gradle à part.
 #
 # - AVD dédié companion_test_api29 sur le port 5580, effacé à chaque lancement : companion_api29 (dev) n'est pas touché.
 # - Mac Apple Silicon : émulateur et image arm64 téléchargés au premier lancement (~800 Mo) dans le SDK.
 #   Linux (CI) : image x86_64 par sdkmanager, /dev/kvm obligatoire.
 # - Avec un JDK : ./gradlew connectedDebugAndroidTest (rapport JUnit). Sans : APK compilés dans l'image Docker
 #   de la CI, tests lancés par am instrument.
-# Résultats et capture de l'écran de bienvenue dans app/build/test-android/.
+# - Backend réel pour les tests du Deck (backend/test/deck-emulateur.ts, ports 3910 et 3911, joint par 10.0.2.2) :
+#   pilotage simulé sans contrôle (toucher une touche répond 501), rien n'agit sur la machine.
+#   node 22 du système, sinon (image Android de la CI) celui de nodejs.org (version de backend/scripts/package.ts).
+# Résultats, journal du backend et capture de l'écran de bienvenue dans app/build/test-android/.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SDK=${ANDROID_HOME:-$HOME/Library/Android/sdk}
 export ANDROID_HOME=$SDK ANDROID_SDK_ROOT=$SDK
+PORT=${EMULATOR_PORT:-5580}
 AVD=companion_test_api29
-PORT=5580
+GRADLE_VOLUME=companion-gradle
+[ "$PORT" = 5580 ] || { AVD=${AVD}_$PORT; GRADLE_VOLUME=$GRADLE_VOLUME-$PORT; }
 SERIAL=emulator-$PORT
 OUT=app/build/test-android
 CI_IMAGE=ghcr.io/cirruslabs/android-sdk:36
 ADB="$SDK/platform-tools/adb -s $SERIAL"
+BACKEND_PID=
 WINDOW=-no-window
 [ "${1:-}" = --window ] && WINDOW=
 
@@ -72,13 +79,50 @@ disk.dataPartition.size=2G
 EOF
 }
 
+# Sans node 22 (image Android de la CI, Linux) : node officiel, vérifié par sa somme SHA-256.
+ensure_node() {
+  node -e 'process.exit(Number(+process.versions.node.split(".")[0] < 22))' 2>/dev/null && return
+  [ "$(uname -s)" = Linux ] || { echo "node 22 ou plus requis pour le backend de test"; exit 1; }
+  local version arch name dir=$HOME/.cache/companion-node tmp
+  version=$(sed -n 's/^const NODE_VERSION = "\(.*\)";/\1/p' backend/scripts/package.ts)
+  case $(uname -m) in aarch64) arch=arm64 ;; *) arch=x64 ;; esac
+  name=node-$version-linux-$arch.tar.xz
+  if [ ! -x "$dir/$version/bin/node" ]; then
+    tmp=$(mktemp -d)
+    curl -fsSL -o "$tmp/$name" "https://nodejs.org/dist/$version/$name"
+    curl -fsSL "https://nodejs.org/dist/$version/SHASUMS256.txt" | grep " $name\$" | (cd "$tmp" && sha256sum -c --quiet -)
+    mkdir -p "$dir/$version" && tar -xJf "$tmp/$name" -C "$dir/$version" --strip-components=1 && rm -rf "$tmp"
+  fi
+  export PATH="$dir/$version/bin:$PATH"
+}
+
+start_backend() {
+  ensure_node
+  (cd backend && npm ci --prefer-offline --no-audit --no-fund > /dev/null && exec node --import tsx test/deck-emulateur.ts) \
+    > "$OUT/backend.log" 2>&1 &
+  BACKEND_PID=$!
+}
+
+wait_backend() {
+  local start=$SECONDS
+  until curl -sf http://127.0.0.1:3911/health > /dev/null; do
+    [ $((SECONDS - start)) -lt 120 ] || { echo "Le backend de test n'a pas démarré en 2 min (voir $OUT/backend.log)"; exit 1; }
+    sleep 1
+  done
+  echo "Backend de test prêt"
+}
+
+cleanup() {
+  $ADB emu kill > /dev/null 2>&1 || true
+  [ -z "$BACKEND_PID" ] || kill "$BACKEND_PID" 2> /dev/null || true
+}
+
 boot() {
   if [ "$(uname -s)" = Linux ] && [ ! -w /dev/kvm ]; then
     echo "/dev/kvm absent ou inaccessible : l'émulateur x86_64 ne démarre pas sans KVM (runner non privilégié ?)"; exit 1
   fi
   "$SDK/emulator/emulator" -avd $AVD -port $PORT $WINDOW -no-audio -no-boot-anim -no-snapshot -wipe-data \
     -gpu swiftshader_indirect > "$OUT/emulator.log" 2>&1 &
-  trap '$ADB emu kill >/dev/null 2>&1 || true' EXIT
   local start=$SECONDS
   $ADB wait-for-device
   until [ "$($ADB shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; do
@@ -92,15 +136,19 @@ boot() {
 }
 
 mkdir -p "$OUT"
+trap cleanup EXIT
 install_sdk
 create_avd
+# Backend lancé pendant le démarrage de l'émulateur.
+start_backend
 boot
+wait_backend
 
 status=0
 if has_jdk; then
   ANDROID_SERIAL=$SERIAL ./gradlew --console=plain connectedDebugAndroidTest || status=$?
 else
-  docker run --rm --platform linux/amd64 -v "$PWD":/w -v companion-gradle:/gradle -e GRADLE_USER_HOME=/gradle -w /w \
+  docker run --rm --platform linux/amd64 -v "$PWD":/w -v $GRADLE_VOLUME:/gradle -e GRADLE_USER_HOME=/gradle -w /w \
     $CI_IMAGE ./gradlew --no-daemon --no-watch-fs --console=plain assembleDebug assembleDebugAndroidTest
   $ADB install -r -t app/build/outputs/apk/debug/app-debug.apk > /dev/null
   $ADB install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk > /dev/null

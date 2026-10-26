@@ -79,8 +79,10 @@ app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validat
 });
 
 // Pilotage de l'ordinateur (deck d'applis et de raccourcis, son, micro) : macOS et Windows seulement.
+// Ailleurs, le deck se lit et ses touches perso se modifient ; toucher une touche répond 501 (os.ts : unsupported).
+const DECK_ANYWHERE = /^\/deck(\/keys\/\d+|\/run)?(\?|$)/;
 app.addHook("preHandler", async (req, reply) => {
-  if (!canControl && (req.url.startsWith("/deck") || req.url.startsWith("/system"))) {
+  if (!canControl && ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) || req.url.startsWith("/system"))) {
     return reply.code(501).send({ error: "Pilotage disponible sur macOS et Windows seulement" });
   }
 });

@@ -77,6 +77,7 @@ export default async function deckRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const tile = await findTile(req.body.id);
       if (!tile) return reply.code(404).send({ error: "Tuile inconnue" });
+      req.log.info({ tile: tile.id, action: tile.action.type }, "Touche du deck");
       // Appli déjà ouverte avec plusieurs fenêtres : la tablette propose de choisir au lieu d'activer.
       if (tile.action.type === "app") {
         const info = await listWindows(tile.action.name).catch(() => undefined);

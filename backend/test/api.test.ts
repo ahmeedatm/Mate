@@ -232,10 +232,22 @@ describe("mises à jour de la tablette", () => {
 });
 
 describe("pilotage hors Mac et Windows", () => {
-  it("répond 501 sur le deck", async () => {
+  it("montre le deck et garde les touches perso, mais répond 501 quand on en touche une", async () => {
     const linux = await startServer({ os: "other" });
     try {
-      assert.equal((await linux.call("GET", "/deck")).status, 501);
+      const deck = await linux.call("GET", "/deck");
+      assert.equal(deck.status, 200);
+      assert.equal(deck.json.pages.at(-1).title, "Perso");
+
+      const key = { label: "Bonjour", steps: [{ type: "text", text: "Salut" }] };
+      assert.equal((await linux.call("PUT", "/deck/keys/0", key)).status, 200);
+      assert.deepEqual((await linux.call("GET", "/deck/keys/0")).json.key, key);
+
+      const run = await linux.call("POST", "/deck/run", { id: "k-0" });
+      assert.equal(run.status, 501);
+      assert.equal(run.json.message, "Pilotage disponible sur macOS et Windows seulement");
+      assert.deepEqual(linux.osCalls(), []);
+      assert.equal((await linux.call("GET", "/deck/catalog")).status, 501);
     } finally {
       await linux.stop();
     }
