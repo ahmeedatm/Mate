@@ -92,16 +92,16 @@ namespace Companion
 
         public static object Invoke(Dictionary<string, object> req)
         {
-            var app = Program.Str(req, "app");
-            switch (Program.Str(req, "action"))
+            var app = Native.Str(req, "app");
+            switch (Native.Str(req, "action"))
             {
                 case "list": return List();
-                case "thumb": return SaveThumb(Find(app), Program.Str(req, "out"));
+                case "thumb": return SaveThumb(Find(app), Native.Str(req, "out"));
                 case "play-pause": return Await(Find(app).TryTogglePlayPauseAsync());
                 case "next": return Await(Find(app).TrySkipNextAsync());
                 case "previous": return Await(Find(app).TrySkipPreviousAsync());
                 case "seek": return Await(Find(app).TryChangePlaybackPositionAsync(Convert.ToInt64(req["position"]) * 10000));
-                default: throw new ArgumentException("Action inconnue : " + Program.Str(req, "action"));
+                default: throw new ArgumentException("Action inconnue : " + Native.Str(req, "action"));
             }
         }
     }

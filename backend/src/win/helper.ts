@@ -6,7 +6,7 @@ import path from "node:path";
 import { backendRoot } from "../config.ts";
 
 /**
- * Pilote Windows résident (UnowhyHelper.exe, compilé depuis helper/ et native.cs par `npm run build:helper`) :
+ * Pilote Windows résident (UnowhyHelper.exe, compilé depuis helper/ par `npm run build:helper`) :
  * un processus par action serait trop lent pour un deck. Un exe compilé d'avance et pas PowerShell, que les
  * antivirus bloquent.
  * Une requête à la fois, réponses dans l'ordre ; relancé au besoin s'il meurt ou ne répond plus.
@@ -96,7 +96,7 @@ function start(): Promise<void> {
   });
 }
 
-/** Exécute une opération de native.cs (voir Dispatch) et renvoie son résultat. */
+/** Exécute une opération du pilote (voir Native.Dispatch dans helper/Native.cs) et renvoie son résultat. */
 export function call<T = unknown>(op: string, args: Record<string, unknown> = {}, timeoutMs = REQUEST_TIMEOUT_MS): Promise<T> {
   const task = queue.then(async () => {
     if (!child || !ready) ready = start();
