@@ -1,0 +1,10 @@
+{
+  "include": ["src/**"],
+  "exclude": ["src/mac/**", "src/win/**", "src/os.ts", "src/mcp.ts"],
+  "reporter": ["text", "text-summary", "cobertura"],
+  "reports-dir": "coverage",
+  "check-coverage": true,
+  "lines": 81,
+  "branches": 85,
+  "functions": 76
+}
