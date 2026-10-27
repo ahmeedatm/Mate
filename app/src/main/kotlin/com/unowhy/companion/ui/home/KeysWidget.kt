@@ -25,6 +25,7 @@ import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeBool
+import com.unowhy.companion.ui.themeFont
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -49,6 +50,8 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     private fun render() {
         view.removeAllViews()
+        view.background = null
+        view.setPadding(0, 0, 0, 0)
         val keys = chosen().take(capacity)
         if (keys.isEmpty()) {
             view.addView(LinearLayout(context).apply {
@@ -60,6 +63,18 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                 setOnClickListener { showSettings() }
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             return
+        }
+        // Cadran, vertical : les touches dans une tuile titrée, comme les autres cartes de l'Accueil.
+        if (placed.size == WidgetSize.V && themeBool(context, R.attr.c_cadran)) {
+            view.setBackgroundResource(R.drawable.cadran_tile_bg)
+            view.setPadding(dp(24), dp(24), dp(24), dp(20))
+            view.addView(
+                label(15f, R.attr.c_text_dim).apply {
+                    setText(R.string.widget_keys_title)
+                    typeface = themeFont(context, R.attr.c_font_medium)
+                },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(12) },
+            )
         }
         // Grand : 2 × 2 ; vertical : 2 × 3 ; sinon une rangée.
         val perRow = if (capacity >= 4) 2 else capacity
@@ -82,9 +97,15 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val initial = view.findViewById<TextView>(R.id.tile_initial)
         view.findViewById<TextView>(R.id.tile_label).text = key.optString("label")
         if (themeBool(context, R.attr.c_cadran)) {
-            // Cadran : touche sans cadre, icône à coins arrondis, appui sur ressort.
+            // Cadran : touche sans cadre, icône à coins arrondis, appui sur ressort ; compacte pour tenir 3 rangées.
             view.background = null
             view.stateListAnimator = null
+            view.setPadding(0, 0, 0, 0)
+            (icon.parent as View).layoutParams.apply { width = dp(52); height = dp(52) }
+            view.findViewById<TextView>(R.id.tile_label).apply {
+                textSize = 13f
+                (layoutParams as LinearLayout.LayoutParams).topMargin = dp(6)
+            }
             icon.clipToOutline = true
             icon.outlineProvider = object : ViewOutlineProvider() {
                 override fun getOutline(v: View, outline: Outline) = outline.setRoundRect(0, 0, v.width, v.height, dp(22).toFloat())
