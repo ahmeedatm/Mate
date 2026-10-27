@@ -1,6 +1,6 @@
 # État du projet
 
-Mis à jour le 27/10/2026 (travail d'Ahmed récupéré : tablette et compagnon du Mac à jour, le PC pas encore ; étude OBS dans [obs.md](obs.md)). Le 26/10 : Assistant IA retiré ; avant, 5e session du 25/10 : MCP revérifié, extension de navigateur reportée à la vente, poste de dev installé sur le PC perso d'Eliot, sans changement du code). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
+Mis à jour le 27/10/2026 au soir (page Média sur Mac fusionnée, compagnon du PC mis à jour ; travail d'Ahmed récupéré ; étude OBS dans [obs.md](obs.md)). Le 26/10 : Assistant IA retiré ; avant, 5e session du 25/10 : MCP revérifié, extension de navigateur reportée à la vente, poste de dev installé sur le PC perso d'Eliot, sans changement du code). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
 
 ## Pourquoi ce projet
 
@@ -84,9 +84,9 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 ## À faire, dans l'ordre
 
 0. Bug des onglets du Deck (voir plus haut) s'il revient.
-1. **Teams sous Windows** (prévu le soir du 27/10, PC mis à jour d'abord, puis Recharger l'extension 1.1.0 dans `opera://extensions` : page Média) : relever en vrai les boutons de Teams par UI Automation (réunion, avant-réunion, fenêtre de sonnerie) pour faire comme sur Mac. Volume de Teams sur Mac : process tap Core Audio proposé, pas décidé.
+1. **Teams sous Windows** (prévu le soir du 27/10, PC mis à jour le 27/10 au soir sur c9542c2 ; reste à Recharger l'extension 1.1.0 dans `opera://extensions` : page Média) : relever en vrai les boutons de Teams par UI Automation (réunion, avant-réunion, fenêtre de sonnerie) pour faire comme sur Mac. Volume de Teams sur Mac : process tap Core Audio proposé, pas décidé.
 1. **Voix et appels** : appels WhatsApp (captures pendant un vrai appel, reporté par Eliot) ; idées : météo, réglages de la tablette à la voix. Réactiver l'appli Google sans adb : impossible (un device owner ne peut pas annuler `pm disable-user`), inutile car la procédure du kiosque la garde ; sans elle, Parler ouvre la commande écrite.
-2. **Paquet** : relance du compagnon Mac à l'ouverture de session : vue le 25/10 (Mac redémarré, compagnon relancé seul, Accessibilité gardée). Pas de NSIS ni d'appli .app pour l'instant. Le 27/10, paquet refait après le travail d'Ahmed (découpage du backend et du pilote Windows) : installé sur le Mac (tablette reconnectée) ; **PC à mettre à jour** (rsync de `dist/windows` puis `/companion/restart`), puis essayer Ouvertes et Média : les nouveaux exe n'ont pas encore tourné sur le PC.
+2. **Paquet** : relance du compagnon Mac à l'ouverture de session : vue le 25/10 (Mac redémarré, compagnon relancé seul, Accessibilité gardée). Pas de NSIS ni d'appli .app pour l'instant. Le 27/10, paquet refait après le travail d'Ahmed (découpage du backend et du pilote Windows) : installé sur le Mac (tablette reconnectée) ; PC mis à jour le 27/10 au soir (rsync de `dist/windows` puis `/companion/restart`, `/windows/open` en 200) ; reste à essayer Ouvertes et Média sur le PC.
 
 ## Décisions prises
 
