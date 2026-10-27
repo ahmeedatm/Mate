@@ -9,14 +9,14 @@
 /* Tokens : rôles Material 3 (tons HCT) calculés depuis la charte Unowhy, voir README.md */
 :root {
   --bg: #FAF2F1; --tile: #FFFFFF; --tile-high: #EEE6E6; --tile-highest: #E9E1E0;
-  --ink: #1E1B1B; --ink-2: #4D4545; --ink-3: #7C7272; --line: #D0C4C3;
+  --ink: #1E1B1B; --ink-2: #4D4545; --ink-3: #6F6666; --line: #D0C4C3; --graph: #8C8181;
   --now: #CA0538; --now-soft: #FFDADA; --on-now: #FFFFFF; --ok: #31685A;
   --state: 30, 27, 27; --scrim: rgba(0, 0, 0, .32);
   --r-tile: 32px; --pad: 24px; --gap: 16px;
 }
 body.nuit {
   --bg: #100D0D; --tile: #221F1F; --tile-high: #282525; --tile-highest: #2F2B2B;
-  --ink: #E9E1E0; --ink-2: #D0C4C3; --ink-3: #998E8E; --line: #4D4545;
+  --ink: #E9E1E0; --ink-2: #D0C4C3; --ink-3: #998E8E; --line: #4D4545; --graph: #776D6D;
   --now: #FF5165; --now-soft: #680018; --on-now: #2A0006; --ok: #9AD2C1; --state: 233, 225, 224; --scrim: rgba(0, 0, 0, .5);
 }
 body.fondu, body.fondu * { transition: background-color 1.6s cubic-bezier(.2,0,0,1), color 1.6s cubic-bezier(.2,0,0,1), fill 1.6s cubic-bezier(.2,0,0,1), stroke 1.6s cubic-bezier(.2,0,0,1), border-color 1.6s cubic-bezier(.2,0,0,1) !important; }
@@ -33,7 +33,7 @@ svg.i { width: 24px; height: 24px; fill: currentColor; flex: none; }
 
 /* Poignée : seule trace du menu au repos */
 .poignee { position: absolute; left: 0; top: 0; width: 28px; height: 800px; z-index: 5; }
-.poignee i { position: absolute; left: 7px; top: 372px; width: 5px; height: 56px; border-radius: 3px; background: var(--line); }
+.poignee i { position: absolute; left: 7px; top: 372px; width: 5px; height: 56px; border-radius: 3px; background: var(--graph); }
 
 /* Menu : rail étendu modal de M3 Expressive */
 .voile { position: absolute; left: 0; top: 0; width: 1280px; height: 800px; background: var(--scrim); opacity: 0; pointer-events: none; z-index: 8; }
@@ -72,7 +72,7 @@ svg.i { width: 24px; height: 24px; fill: currentColor; flex: none; }
 .verres i b { position: absolute; inset: 0; background: var(--ok); border-radius: 4px; transform-origin: 50% 100%; will-change: transform; }
 
 .jour { position: relative; height: 92px; margin: 4px 0 20px; }
-.piste { position: absolute; left: 0; right: 0; top: 46px; height: 2px; background: var(--line); border-radius: 1px; }
+.piste { position: absolute; left: 0; right: 0; top: 46px; height: 2px; background: var(--graph); border-radius: 1px; }
 .passe { position: absolute; left: 0; top: 46px; height: 2px; background: var(--ink-3); border-radius: 1px; transform-origin: 0 50%; }
 .heures span { position: absolute; top: 72px; transform: translateX(-50%); font: 500 12px/16px Outfit; color: var(--ink-3); white-space: nowrap; }
 .ev { position: absolute; top: 12px; height: 40px; font: 500 13px/16px Outfit; color: var(--ink-2); white-space: nowrap; will-change: opacity; }
@@ -125,7 +125,7 @@ li.faite .barre { transform: scaleX(1); }
 .focus .tete { align-self: stretch; }
 .cadran { position: relative; }
 .cadran svg { display: block; width: 100%; height: 100%; }
-.cadran line { stroke: var(--line); stroke-linecap: round; transition: stroke 160ms linear; }
+.cadran line { stroke: var(--graph); stroke-linecap: round; transition: stroke 160ms linear; }
 .cadran line.r { stroke: var(--now); }
 .cadran .c { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .petit { width: 176px; height: 176px; margin-top: 2px; }
