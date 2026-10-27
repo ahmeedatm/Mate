@@ -13,10 +13,20 @@ val techCode = (findProperty("techCode") as String?) ?: "4242"
 // Adresse courte du logiciel de l'ordinateur, affichée au premier lancement (à taper dans le navigateur de l'ordinateur).
 val installUrl = (findProperty("installUrl") as String?) ?: "unowhy.com/compagnon"
 
+// Serveur central des mises à jour : registre de paquets du projet GitLab (manifest.json + APK). -PupdateUrl=http://10.0.2.2:8099
+// pour un essai local, vide pour le couper.
+val updateUrl = (findProperty("updateUrl") as String?)
+    ?: "https://gitlab.unowhy.dev/api/v4/projects/891/packages/generic/companion-updates/latest"
+// En-tête envoyé au seul serveur central, « Nom: valeur ». La CI release passe « Deploy-Token: … » (lecture seule du registre) ;
+// vide en debug : le registre répond 401, la tablette n'y voit aucune mise à jour.
+val updateHeader = (findProperty("updateHeader") as String?) ?: ""
+
 // Version : celle du tag vX.Y.Z en CI (-PappVersion=X.Y.Z). versionCode = X × 10000 + Y × 100 + Z, toujours croissant.
-val appVersion = (findProperty("appVersion") as String?) ?: "0.1.0"
+// Sans tag : 0.0.0, code 1 (Android refuse 0) : une build locale ne bloque que v0.0.1, et un APK debug ne reçoit
+// de toute façon pas un APK release (signature différente).
+val appVersion = (findProperty("appVersion") as String?) ?: "0.0.0"
 val appVersionCode = Regex("""(\d+)\.(\d{1,2})\.(\d{1,2})""").matchEntire(appVersion)
-    ?.destructured?.let { (x, y, z) -> x.toInt() * 10000 + y.toInt() * 100 + z.toInt() }
+    ?.destructured?.let { (x, y, z) -> (x.toInt() * 10000 + y.toInt() * 100 + z.toInt()).coerceAtLeast(1) }
     ?: throw GradleException("appVersion « $appVersion » : attendu X.Y.Z, Y et Z inférieurs à 100")
 
 // Clé de signature release, jamais dans le dépôt : fichier PKCS12 et mot de passe donnés par l'environnement (CI).
@@ -35,6 +45,8 @@ android {
         buildConfigField("String", "DEFAULT_BACKEND_URL", "\"$backendUrl\"")
         buildConfigField("String", "TECH_CODE", "\"$techCode\"")
         buildConfigField("String", "INSTALL_URL", "\"$installUrl\"")
+        buildConfigField("String", "UPDATE_URL", "\"$updateUrl\"")
+        buildConfigField("String", "UPDATE_HEADER", "\"$updateHeader\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

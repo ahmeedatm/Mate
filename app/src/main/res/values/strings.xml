@@ -364,10 +364,13 @@
     <string name="wifi_forget_confirm">Oublier le réseau %1$s ? Il faudra retaper son mot de passe.</string>
     <string name="updates_title">Mises à jour</string>
     <string name="updates_check">Rechercher</string>
-    <string name="updates_hint">Le moteur web et le Companion se mettent à jour depuis le serveur Unowhy, sans quitter le kiosque.</string>
+    <string name="updates_hint">Le moteur web et le Companion se mettent à jour depuis le serveur Unowhy ou l\'ordinateur, sans quitter le kiosque. En kiosque, le Companion se met à jour seul (au démarrage puis toutes les 6 h).</string>
     <string name="updates_checking">Recherche des mises à jour…</string>
     <string name="updates_none">Aucune mise à jour annoncée.</string>
-    <string name="updates_row">%1$s · %2$s → %3$s</string>
+    <string name="updates_row">%1$s · %2$s → %3$s · %4$s</string>
+    <string name="updates_source_server">serveur Unowhy</string>
+    <string name="updates_source_computer">ordinateur</string>
+    <string name="updates_source_error">Depuis le %1$s : %2$s</string>
     <string name="updates_row_current">%1$s · %2$s · à jour</string>
     <string name="updates_install">Mettre à jour</string>
     <string name="updates_downloading">Téléchargement %1$d %%</string>
@@ -377,6 +380,9 @@
     <string name="update_file_corrupt">Fichier abîmé ou modifié : empreinte différente, installation annulée.</string>
     <string name="update_unfinished">Android n\'a pas fini l\'installation : réessaie plus tard.</string>
     <string name="update_needs_confirmation">Android demande une confirmation : installation annulée.</string>
+    <string name="update_busy">Une mise à jour est déjà en cours : réessaie dans quelques minutes.</string>
+    <string name="update_server_download_failed">Téléchargement impossible depuis le serveur Unowhy : réessaie plus tard.</string>
+    <string name="update_server_unreachable">serveur Unowhy injoignable, vérifie le WiFi.</string>
     <string name="update_install_failed">Échec de l\'installation (code %1$d).</string>
     <string name="wifi_refused">Android a refusé ce réseau.</string>
     <string name="camera_busy">Caméra prise par une autre appli</string>

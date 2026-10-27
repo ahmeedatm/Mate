@@ -17,7 +17,10 @@ class HttpException(val code: Int, val reason: String) : IOException("HTTP $code
  * Plomberie HTTP partagée par les clients de domaine (DeckApi, SystemApi…). HttpURLConnection + org.json,
  * inclus dans Android, pour garder l'APK sans dépendance réseau.
  */
-class Http(private val baseUrl: String, private val token: String, private val connectTimeoutMs: Int) {
+class Http(
+    private val baseUrl: String, private val token: String, private val connectTimeoutMs: Int,
+    private val headers: Map<String, String> = emptyMap(),
+) {
 
     suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }
 
@@ -61,6 +64,7 @@ class Http(private val baseUrl: String, private val token: String, private val c
         conn.connectTimeout = connectTimeoutMs
         conn.readTimeout = timeoutMs
         if (token.isNotEmpty()) conn.setRequestProperty("Authorization", "Bearer $token")
+        headers.forEach { (name, value) -> conn.setRequestProperty(name, value) }
         if (body != null) {
             conn.doOutput = true
             conn.setRequestProperty("Content-Type", contentType)
