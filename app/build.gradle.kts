@@ -83,6 +83,8 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    // Ressorts (SpringAnimation) : mouvement de la DA Cadran.
+    implementation("androidx.dynamicanimation:dynamicanimation:1.1.0")
 
     testImplementation("junit:junit:4.13.2")
     // Vraie implémentation de org.json : celle d'android.jar n'est qu'un bouchon sur la JVM.

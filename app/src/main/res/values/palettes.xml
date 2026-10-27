@@ -122,4 +122,66 @@
         <item name="c_hue_yellow">#FFFFD27A</item>
         <item name="c_hue_blue">#FF7FB2E5</item>
     </style>
+
+    <!-- Cadran (docs/ui-ux/da) : rôles Material 3 générés depuis le rouge Unowhy, une seule couleur vivante.
+         Les teintes par fonction deviennent neutres, sauf rouge (maintenant) et vert (fait). -->
+    <style name="Palette.Cadran" parent="">
+        <item name="c_bg">#FFFAF2F1</item>
+        <item name="c_rail">#FFFAF2F1</item>
+        <item name="c_surface">#FFFFFFFF</item>
+        <item name="c_surface_raised">#FFEEE6E6</item>
+        <item name="c_surface_pressed">#FFE9E1E0</item>
+        <item name="c_stroke">#FFD0C4C3</item>
+        <item name="c_accent">#FFCA0538</item>
+        <item name="c_accent_soft">#FFFFDADA</item>
+        <item name="c_on_accent">#FFFFFFFF</item>
+        <item name="c_text">#FF1E1B1B</item>
+        <item name="c_text_dim">#FF4D4545</item>
+        <item name="c_text_faint">#FF7C7272</item>
+        <item name="c_ok">#FF31685A</item>
+        <item name="c_ok_soft">#FFB5EEDD</item>
+        <item name="c_ko">#FFBA1A1A</item>
+        <item name="c_ko_soft">#24BA1A1A</item>
+        <item name="c_warn">#FF8A6100</item>
+        <item name="c_paper">#FFFFFFFF</item>
+        <item name="c_scrim">#52000000</item>
+        <item name="c_hue_orange">#FF4D4545</item>
+        <item name="c_hue_cyan">#FF4D4545</item>
+        <item name="c_hue_violet">#FF4D4545</item>
+        <item name="c_hue_pink">#FF4D4545</item>
+        <item name="c_hue_yellow">#FF4D4545</item>
+        <item name="c_hue_blue">#FF4D4545</item>
+        <item name="c_hue_red">#FFCA0538</item>
+        <item name="c_hue_green">#FF31685A</item>
+    </style>
+
+    <style name="Palette.CadranNuit" parent="">
+        <item name="c_bg">#FF100D0D</item>
+        <item name="c_rail">#FF100D0D</item>
+        <item name="c_surface">#FF221F1F</item>
+        <item name="c_surface_raised">#FF282525</item>
+        <item name="c_surface_pressed">#FF2F2B2B</item>
+        <item name="c_stroke">#FF4D4545</item>
+        <item name="c_accent">#FFFF5165</item>
+        <item name="c_accent_soft">#FF680018</item>
+        <item name="c_on_accent">#FF40000B</item>
+        <item name="c_text">#FFE9E1E0</item>
+        <item name="c_text_dim">#FFD0C4C3</item>
+        <item name="c_text_faint">#FF998E8E</item>
+        <item name="c_ok">#FF9AD2C1</item>
+        <item name="c_ok_soft">#FF00382D</item>
+        <item name="c_ko">#FFFFB4AB</item>
+        <item name="c_ko_soft">#29FFB4AB</item>
+        <item name="c_warn">#FFFFD166</item>
+        <item name="c_paper">#FFFFFFFF</item>
+        <item name="c_scrim">#80000000</item>
+        <item name="c_hue_orange">#FFD0C4C3</item>
+        <item name="c_hue_cyan">#FFD0C4C3</item>
+        <item name="c_hue_violet">#FFD0C4C3</item>
+        <item name="c_hue_pink">#FFD0C4C3</item>
+        <item name="c_hue_yellow">#FFD0C4C3</item>
+        <item name="c_hue_blue">#FFD0C4C3</item>
+        <item name="c_hue_red">#FFFF5165</item>
+        <item name="c_hue_green">#FF9AD2C1</item>
+    </style>
 </resources>

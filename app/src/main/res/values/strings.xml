@@ -237,7 +237,7 @@
     <string name="focus_phase_work">Concentration</string>
     <string name="focus_phase_break">Pause</string>
     <string name="focus_count">Sessions terminées : %1$d</string>
-    <string name="focus_ready">Prêt à démarrer</string>
+    <string name="focus_ready">Prêt</string>
     <string name="ambiance">Ambiance</string>
     <string name="noise_brown">Brun</string>
     <string name="noise_pink">Pluie</string>
@@ -483,6 +483,8 @@
     <string name="theme_clair">Clair</string>
     <string name="theme_neon">Néon</string>
     <string name="theme_chaud">Chaud</string>
+    <string name="theme_cadran">Cadran</string>
+    <string name="theme_cadran_nuit">Cadran nuit</string>
     <string name="tablet_info">Version %1$s · Adresse %2$s · %3$s</string>
     <string name="tablet_no_address">aucune</string>
     <string name="tech_code_title">Code technicien</string>
