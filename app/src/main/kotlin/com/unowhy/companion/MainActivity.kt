@@ -37,12 +37,16 @@ import com.unowhy.companion.ui.FromComputerFragment
 import com.unowhy.companion.ui.HomeFragment
 import com.unowhy.companion.ui.IconCache
 import com.unowhy.companion.ui.KeyboardControl
+import com.unowhy.companion.ui.MenuPanel
+import com.unowhy.companion.ui.Navigation
 import com.unowhy.companion.ui.Rail
 import com.unowhy.companion.ui.SettingsFragment
 import com.unowhy.companion.ui.TabletAlerts
 import com.unowhy.companion.ui.TabletStatusView
 import com.unowhy.companion.ui.WelcomeView
+import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.showImmersive
+import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.voice.VoiceControl
 
 /** Les écrans qui veulent les boutons de volume de la tablette (ex. le deck pilote le son de l'ordinateur). */
@@ -55,7 +59,9 @@ class MainActivity : AppCompatActivity() {
 
     private val rehide = Runnable { hideSystemBars() }
     private var current = Mode.HOME
-    private lateinit var rail: Rail
+    /** Barre latérale, ou menu caché (thèmes Cadran). */
+    private lateinit var nav: Navigation
+    private var menu: MenuPanel? = null
     private lateinit var documentPanel: DocumentPanel
     private lateinit var banner: Banner
     private lateinit var alerts: TabletAlerts
@@ -83,8 +89,16 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         Speaker.init(this)
 
-        rail = Rail(this, ::show)
-        voice = VoiceControl(this, rail.talk, rail.talk.findViewById(R.id.rail_icon))
+        val cadran = themeBool(this, R.attr.c_cadran)
+        if (cadran) {
+            findViewById<View>(R.id.rail).visibility = View.GONE
+            // Plus de barre à contourner : le bandeau garde une marge ordinaire.
+            findViewById<View>(R.id.remote_banner).apply { layoutParams = (layoutParams as android.widget.FrameLayout.LayoutParams).also { it.marginStart = dp(24) } }
+            nav = MenuPanel(this, ::show).also { menu = it }
+        } else {
+            nav = Rail(this, ::show)
+        }
+        voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon), onPressed = { menu?.close() })
         callOverlay = CallOverlay(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(callOverlay, android.view.ViewGroup.LayoutParams(-1, -1))
 
@@ -103,11 +117,17 @@ class MainActivity : AppCompatActivity() {
         documentPanel.onExpandedChanged = { expanded ->
             findViewById<View>(R.id.mode_area).visibility = if (expanded) View.GONE else View.VISIBLE
         }
-        findViewById<View>(R.id.status).setOnClickListener { showComputerPicker() }
+        nav.status.setOnClickListener {
+            menu?.close()
+            showComputerPicker()
+        }
         banner = Banner(findViewById(R.id.remote_banner))
         alerts = TabletAlerts(this, banner)
         findViewById<TabletStatusView>(R.id.tablet_status).apply {
-            setOnClickListener { show(Mode.SETTINGS) }
+            setOnClickListener {
+                menu?.close()
+                show(Mode.SETTINGS)
+            }
             onMinute = {
                 Screen.apply(this@MainActivity)
                 alerts.remindWater()
@@ -128,6 +148,7 @@ class MainActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this) {
             when {
                 welcome.visibility == View.VISIBLE -> Unit
+                menu?.isOpen == true -> menu?.close()
                 documentPanel.visibility == View.VISIBLE -> documentPanel.close()
                 current != Mode.HOME -> show(Mode.HOME)
             }
@@ -143,7 +164,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showLink(link: Link) {
         this.link = link
-        rail.showLink(link)
+        nav.showLink(link)
         settings()?.onLinkChanged()
     }
 
@@ -196,7 +217,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val focusListener: (FocusTimer.State) -> Unit = { state ->
-        rail.showFocus(state)
+        nav.showFocus(state)
         followFocusDnd(state)
     }
 
@@ -245,6 +266,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN) Screen.touched(this)
+        menu?.touched()
         keyboard.onTouch(event)
         return super.dispatchTouchEvent(event)
     }
@@ -262,7 +284,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Nombre de tâches non faites, en pastille sur l'icône Accueil (mis à jour par la carte Tâches). */
-    fun setPendingTasks(count: Int) = rail.setPendingTasks(count)
+    fun setPendingTasks(count: Int) = nav.setPendingTasks(count)
 
     /** Ouvre un document de l'ordinateur dans le panneau latéral, à côté du mode courant. */
     /**
@@ -342,7 +364,10 @@ class MainActivity : AppCompatActivity() {
         // Un écran ajouté juste avant (ex. recréé par onComputerChanged) doit exister pour être masqué.
         fm.executePendingTransactions()
         val tx = fm.beginTransaction()
-        if (changed) tx.setCustomAnimations(R.animator.mode_in, 0)
+        if (changed) {
+            // Cadran : fondu enchaîné (sortie, puis entrée avec échelle) ; sinon fondu et légère montée.
+            if (menu != null) tx.setCustomAnimations(R.animator.cadran_in, R.animator.cadran_out) else tx.setCustomAnimations(R.animator.mode_in, 0)
+        }
         fm.fragments.forEach { tx.hide(it) }
         // Sans ordinateur, un mode qui en a besoin n'est pas créé (caméra, requêtes) : renderNoComputer le remplace.
         val needsComputer = mode.connect != null && Computers.all(this).isEmpty()
@@ -350,7 +375,7 @@ class MainActivity : AppCompatActivity() {
         if (existing != null) tx.show(existing) else if (!needsComputer) tx.add(R.id.mode_container, create(mode), mode.tag)
         tx.commit()
 
-        rail.select(mode, changed)
+        nav.select(mode, changed)
         renderNoComputer()
     }
 

@@ -186,6 +186,23 @@ object Look {
             .also { it.start() }
     }
 
+    /**
+     * Ressort sur une propriété de vue, lancé à `velocity` (px/s : celle du doigt qui lâche). `onEnd` quand elle est posée
+     * (pas si on l'annule). Échelle d'animation à zéro : valeur posée tout de suite, null.
+     */
+    fun springTo(
+        view: View, property: DynamicAnimation.ViewProperty, token: Spring, to: Float, velocity: Float = 0f, onEnd: (() -> Unit)? = null,
+    ): SpringAnimation? {
+        if (reduced(view.context)) {
+            property.setValue(view, to)
+            onEnd?.invoke()
+            return null
+        }
+        return SpringAnimation(view, property).setSpring(force(token, to)).setStartVelocity(velocity)
+            .addEndListener { _, canceled, _, _ -> if (!canceled) onEnd?.invoke() }
+            .also { it.start() }
+    }
+
     /** Arrivée d'un élément de l'Accueil Cadran : il monte de `dy` dp (ressort par défaut) en fondu, après `delayMs`. */
     fun enterSpring(view: View, delayMs: Long, dy: Int) {
         view.animate().cancel()

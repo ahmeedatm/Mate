@@ -178,7 +178,7 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun renderWater(state: Water.State, animate: Boolean) {
         glasses.show(state.glasses, state.goal, animate)
         glassesCount.set(state.glasses.toString(), animate)
-        glassesLabel.text = context.getString(R.string.hero_glasses, state.goal)
+        glassesLabel.text = context.resources.getQuantityString(R.plurals.hero_glasses, state.glasses, state.goal)
     }
 
     override suspend fun load() {

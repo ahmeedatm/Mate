@@ -43,7 +43,13 @@ import java.util.Locale
  * présente dans l'image d'usine des tablettes : en ligne, sans clé ni compte) ; la phrase est comprise sur la
  * tablette par [VoiceCommands], sans IA. Appui long (ou pas de reconnaissance) : la commande s'écrit.
  */
-class VoiceControl(private val activity: MainActivity, private val button: View, private val icon: View) {
+class VoiceControl(
+    private val activity: MainActivity,
+    private val button: View,
+    private val icon: View,
+    /** Le bouton est touché (le menu Cadran se referme pour montrer le résultat). */
+    private val onPressed: () -> Unit = {},
+) {
 
     /** Réponse à afficher ; `speak` : lue à voix haute (questions, incompris), les actions restent silencieuses. */
     private class Answer(val text: String, val speak: Boolean = false)
@@ -59,8 +65,15 @@ class VoiceControl(private val activity: MainActivity, private val button: View,
     private val dayName = SimpleDateFormat("EEEE", Locale.FRENCH)
 
     init {
-        button.setOnClickListener { if (listening) recognizer?.stopListening() else start() }
-        button.setOnLongClickListener { typeCommand(); true }
+        button.setOnClickListener {
+            onPressed()
+            if (listening) recognizer?.stopListening() else start()
+        }
+        button.setOnLongClickListener {
+            onPressed()
+            typeCommand()
+            true
+        }
     }
 
     private val available get() = SpeechRecognizer.isRecognitionAvailable(activity)

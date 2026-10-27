@@ -100,6 +100,8 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         texts.removeAllViews()
         val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
         val match = ViewGroup.LayoutParams.MATCH_PARENT
+        labelView.maxLines = if (placed.size == WidgetSize.V) 1 else Int.MAX_VALUE
+        labelView.ellipsize = TextUtils.TruncateAt.END
         if (placed.size == WidgetSize.V) {
             view.orientation = LinearLayout.VERTICAL
             view.gravity = Gravity.TOP
@@ -152,7 +154,8 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val events = host.events
         val upcoming = nextEvent(events, now, host.chosenId)
         val chosen = upcoming?.takeIf { it.id == host.chosenId }
-        labelView.setText(if (chosen == null) R.string.next_label else R.string.chosen_label)
+        // Vertical : titre « Agenda » sur une ligne, le compteur du jour à droite.
+        labelView.setText(if (chosen != null) R.string.chosen_label else if (placed.size == WidgetSize.V) R.string.today else R.string.next_label)
         // « Rejoindre » à partir de 15 min avant : plus tôt, un toucher par erreur ouvrirait Teams pour rien.
         // Une réunion choisie dans l'agenda peut être rejointe tout de suite (le choix est volontaire).
         joinable = upcoming?.takeIf { host.features.meetings && it.joinable && (chosen != null || it.startMs - now <= JOIN_EARLY_MS) }
