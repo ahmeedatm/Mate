@@ -4,7 +4,7 @@ import { canMedia, isInstalled, launchApp, mediaControl, mediaSessions, openTarg
  * Touches de la page Média : un site qui a son appli de bureau installée (Spotify, Deezer, Netflix…) ouvre
  * l'appli plutôt que le site. Pour la musique, la lecture démarre ensuite
  * toute seule : un onglet tout juste ouvert n'a rien à lire et le navigateur bloque le son sans geste de
- * l'utilisateur, alors l'ordinateur relance la lecture par les contrôles multimédias de Windows dès qu'elle apparaît.
+ * l'utilisateur, alors l'ordinateur relance la lecture dès qu'elle apparaît (contrôles multimédias de Windows, page de l'onglet sur Mac).
  */
 type Service = {
   host: RegExp;
@@ -28,7 +28,7 @@ const SERVICES: Service[] = [
   { host: /(^|\.)crunchyroll\.com$/i, apps: ["Crunchyroll"] },
 ];
 
-const BROWSERS = /chrome|msedge|edge|firefox|opera|brave|vivaldi/i;
+const BROWSERS = /chrome|msedge|edge|firefox|opera|brave|vivaldi|safari|arc/i;
 
 function serviceOf(url: string) {
   const host = URL.parse(url)?.host ?? "";

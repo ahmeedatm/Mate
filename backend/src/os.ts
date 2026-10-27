@@ -9,6 +9,7 @@ import * as macCalls from "./mac/calls.ts";
 import * as macDnd from "./mac/dnd.ts";
 import { extensionFrontPage, extensionTabs } from "./browser-extension.ts";
 import * as macKeys from "./mac/keys.ts";
+import * as macMedia from "./mac/media.ts";
 import * as macSystem from "./mac/system.ts";
 import * as macWindows from "./mac/windows.ts";
 import * as win from "./win/index.ts";
@@ -142,21 +143,24 @@ export async function setDnd(on: boolean): Promise<boolean | null> {
   unsupported();
 }
 
-/** Lecture en cours (vidéo, musique) et ses commandes : Windows seulement pour l'instant. */
-export const canMedia = isWindows;
+/** Lecture en cours (vidéo, musique) et ses commandes : contrôles multimédias de Windows ; sur Mac, lecteurs et onglets. */
+export const canMedia = isWindows || isMac;
 
 export function mediaSessions() {
   if (isWindows) return win.mediaSessions();
+  if (isMac) return macMedia.mediaSessions();
   unsupported();
 }
 
 export function mediaControl(action: win.MediaAction, app?: string, positionMs?: number) {
   if (isWindows) return win.mediaControl(action, app, positionMs);
+  if (isMac) return macMedia.mediaControl(action, app, positionMs);
   unsupported();
 }
 
 export function mediaThumb(app: string, out: string) {
   if (isWindows) return win.mediaThumb(app, out);
+  if (isMac) return macMedia.mediaThumb(app, out);
   unsupported();
 }
 

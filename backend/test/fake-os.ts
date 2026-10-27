@@ -58,7 +58,7 @@ export const isMac = fakeOs === "mac";
 export const isWindows = fakeOs === "windows";
 export const canControl = fakeOs !== "other";
 export const osName = fakeOs;
-export const canMedia = isWindows;
+export const canMedia = isWindows || isMac;
 
 export type { AudioState, MediaCommand, SystemCommand } from "../src/screens.ts";
 

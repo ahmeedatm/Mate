@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { receiveTabs, type ExtensionReport } from "../browser-extension.ts";
+import { receiveTabs, waitCommands, type ExtensionReport } from "../browser-extension.ts";
 import { browserPage, browserTabs, openTarget, osName } from "../os.ts";
 
 export default async function browserRoutes(app: FastifyInstance) {
@@ -67,6 +67,31 @@ export default async function browserRoutes(app: FastifyInstance) {
         return reply.code(403).send({ error: "Réservé à l'extension du navigateur" });
       receiveTabs(req.body);
       return { ok: true };
+    },
+  );
+
+  /** Ordres de lecture pour l'extension (page Média), attendus en long-polling (en local, sans jeton). */
+  app.post<{ Body: { browser: string; report?: string } }>(
+    "/browser/extension/commands",
+    {
+      logLevel: "warn",
+      schema: {
+        body: {
+          type: "object",
+          required: ["browser"],
+          properties: { browser: { type: "string", maxLength: 40 }, report: { type: "string", maxLength: 300 } },
+        },
+      },
+    },
+    async (req, reply) => {
+      if (!/^(chrome|moz)-extension:\/\//.test(req.headers.origin ?? ""))
+        return reply.code(403).send({ error: "Réservé à l'extension du navigateur" });
+      // Résultat du dernier ordre (onglet visé, lecteur trouvé ou non) : pour comprendre un ordre sans effet.
+      if (req.body.report) req.log.warn({ browser: req.body.browser, report: req.body.report }, "extension : ordre de lecture");
+      // Extension arrêtée pendant l'attente : l'ordre suivant ne lui est pas promis.
+      const gone = new AbortController();
+      reply.raw.once("close", () => gone.abort());
+      return { commands: await waitCommands(req.body.browser, gone.signal) };
     },
   );
 

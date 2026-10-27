@@ -49,7 +49,7 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     (method === "PUT" && url === "/local/calendar") ||
     (method === "POST" && url === "/system/accessibility") ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
-    (method === "POST" && url === "/browser/extension") ||
+    (method === "POST" && (url === "/browser/extension" || url === "/browser/extension/commands")) ||
     (method === "DELETE" && /^\/local\/accounts\/(microsoft|google)$/.test(url)));
 /** Sans jeton : identité (la tablette reconnaît l'ordinateur) et appairage par code. */
 const PUBLIC = /^\/(health|pair\/request|pair\/confirm)(\?|$)/;
