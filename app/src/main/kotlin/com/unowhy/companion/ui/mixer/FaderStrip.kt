@@ -89,12 +89,12 @@ class FaderStrip(context: Context) : View(context) {
     var dragging = false
         private set
 
-    // Vumètre : LED affichées (retombent doucement), crête tenue une seconde ; `metered` faux : niveau illisible (Mac).
+    // Vumètre : barre tenue à son plus haut puis qui retombe doucement (pas de LED de crête détachée : le trou
+    // en dessous clignotait à chaque relecture) ; `metered` faux : niveau illisible (Mac).
     private var metered = false
     private var targetLeds = 0
     private var shownLeds = 0f
-    private var peakLed = 0
-    private var peakAt = 0L
+    private var heldAt = 0L
     private var lastFrame = 0L
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -159,10 +159,9 @@ class FaderStrip(context: Context) : View(context) {
         metered = level != null
         targetLeds = MixerMath.ledsLit(level ?: 0, LEDS)
         val now = SystemClock.uptimeMillis()
-        if (targetLeds >= shownLeds) shownLeds = targetLeds.toFloat()
-        if (targetLeds >= peakLed || now - peakAt > PEAK_HOLD_MS) {
-            peakLed = targetLeds
-            peakAt = now
+        if (targetLeds >= shownLeds) {
+            shownLeds = targetLeds.toFloat()
+            heldAt = now
         }
         lastFrame = now
         invalidate()
@@ -304,19 +303,18 @@ class FaderStrip(context: Context) : View(context) {
 
     private fun drawMeter(canvas: Canvas) {
         val now = SystemClock.uptimeMillis()
-        // Retombée : environ 12 LED par seconde, comme l'aiguille d'un vrai vumètre.
+        // Retombée après la tenue : environ 12 LED par seconde, comme l'aiguille d'un vrai vumètre.
         if (shownLeds > targetLeds) {
-            shownLeds = max(targetLeds.toFloat(), shownLeds - (now - lastFrame) * FALL_PER_MS)
+            if (now - heldAt >= HOLD_MS) shownLeds = max(targetLeds.toFloat(), shownLeds - (now - lastFrame) * FALL_PER_MS)
             lastFrame = now
             postInvalidateOnAnimation()
         }
         val lit = shownLeds.toInt()
-        val peak = if (now - peakAt < PEAK_HOLD_MS) peakLed else 0
         paint.color = cSlot
         canvas.drawRoundRect(meterX - dp(3), faderArea.top - dp(3), meterX + ledW + dp(3), faderArea.bottom + dp(3), dp(5).toFloat(), dp(5).toFloat(), paint)
         for (i in 0 until LEDS) {
             val bottom = faderArea.bottom - i * (ledH + ledGap)
-            val on = metered && (i < lit || (peak > 0 && i == peak - 1))
+            val on = metered && i < lit
             paint.color = if (on) cLeds[MixerMath.ledZone(i, LEDS)] else cLedOff
             canvas.drawRoundRect(meterX, bottom - ledH, meterX + ledW, bottom, dp(2).toFloat(), dp(2).toFloat(), paint)
         }
@@ -429,7 +427,7 @@ class FaderStrip(context: Context) : View(context) {
 
     private companion object {
         const val LEDS = 24
-        const val PEAK_HOLD_MS = 1_000L
+        const val HOLD_MS = 500L
         const val FALL_PER_MS = 0.012f
         /** Volumes où le curseur « cranté » vibre en passant. */
         val DETENTS = setOf(0, 50, 100)
