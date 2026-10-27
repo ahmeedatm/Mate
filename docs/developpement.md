@@ -91,7 +91,7 @@ Le pipeline (`.gitlab-ci.yml`) tourne sur le runner Linux, sauf `install-mac` (M
 
 | Job | Vérifie |
 |---|---|
-| `backend` | `npm run lint` (format prettier, puis typecheck), puis `npm test` : tests unitaires et d'intégration (`backend/test/`), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP ; le pilotage de l'ordinateur y est simulé (voir plus bas). Comprend la sanity (`test/sanity.test.ts`) |
+| `backend` | `npm run lint` (format prettier, puis typecheck), puis `npm run coverage` : tests unitaires et d'intégration (`backend/test/`) sous seuil de couverture (voir plus bas), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP ; le pilotage de l'ordinateur y est simulé (voir plus bas). Comprend la sanity (`test/sanity.test.ts`) |
 | `e2e` | pages web du backend dans Chromium (Playwright, `backend/e2e/`) : page locale (adresse, code d'appairage, lien ICS), visualiseur `/camera`, retours d'erreur de `/oauth/:provider/callback`. Même serveur que les tests d'intégration. Artefacts : `e2e-results/junit.xml` et traces des tests en échec |
 | `android` | style Kotlin (`ktlintCheck`), tests JVM (`app/src/test/` : `Computers`, `Prefs`, `Connection` contre de petits serveurs HTTP locaux, `FocusTimer`, `Water`, ordre `focus`, modes, widgets, commande vocale ; contexte simulé `FakeContext`), lint Android, APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
 | `android-emulateur` | tests instrumentés (`app/src/androidTest/`, Espresso) sur un émulateur Android 10 sans services Google, 1280×800 à 160 dpi ; dont le Deck contre un vrai backend ; artefacts : rapport JUnit, journal du backend, capture de l'écran de bienvenue |
@@ -142,7 +142,7 @@ L'installeur, lancé sans terminal (stdin non interactif), ne fait pas de pause 
 - Retour arrière : `sudo scripts/runner-mac.sh retour` (arrête l'agent de `ci-runner`, retire sa config et l'ACL ; `--supprimer` retire aussi le compte), puis `brew services start gitlab-runner` sous le compte du développeur (sa config `~/.gitlab-runner/config.toml` n'est pas touchée).
 - Mise à jour du runner : `brew upgrade gitlab-runner` sous le compte du développeur, puis fermer et rouvrir la session `ci-runner` (l'agent pointe sur `/opt/homebrew/opt/gitlab-runner`).
 
-Avant de pousser : `cd backend && npm run lint && npm test`, et `./gradlew ktlintCheck testDebugUnitTest lintDebug`. Si l'écran ou un parcours change : `scripts/test-android.sh`.
+Avant de pousser : `cd backend && npm run lint && npm run coverage`, et `./gradlew ktlintCheck testDebugUnitTest lintDebug`. Si l'écran ou un parcours change : `scripts/test-android.sh`.
 
 **Format et style** (bloquants en CI) :
 
@@ -152,6 +152,8 @@ Avant de pousser : `cd backend && npm run lint && npm test`, et `./gradlew ktlin
 | Android | `./gradlew ktlintFormat` | `./gradlew ktlintCheck` | `.editorconfig` : ktlint (style IntelliJ) sans les règles qui coupent les lignes ; tâches dans `build.gradle.kts` (sans plugin) |
 
 Pas d'eslint : typescript-eslint ne prend pas encore TypeScript 7. Un paramètre inutilisé mais imposé par une signature se préfixe par `_`. Si `ktlintFormat` échoue sur `MaxPermSize`, c'est `~/.gradle/gradle.properties` : retirer l'option (Java 8) ou lancer avec `-Dorg.gradle.jvmargs=-Xmx2048m`.
+
+**Couverture du backend** (bloquante en CI) : `npm run coverage` lance les tests sous c8, serveur de test compris (processus enfant ; `test/fake-os-hook.ts` le fait sortir proprement sur `SIGTERM`, sinon V8 n'écrit pas sa couverture). Le job échoue si les lignes, branches ou fonctions de `src/` passent sous les seuils de `backend/.c8rc.json` ; la MR affiche l'écart de couverture et les lignes non couvertes du diff. Hors mesure : vrais pilotes (`src/mac/`, `src/win/`, `src/os.ts`, vérifiés par `install-mac` et `install-windows`) et `src/mcp.ts`. Seuils = valeur du job arrondie à l'entier inférieur : les remonter dans la MR qui fait monter la couverture, jamais les baisser pour faire passer un pipeline. La valeur locale (Mac, Node récent) peut dépasser celle de la CI de quelques dixièmes.
 
 Tests Playwright (page web touchée : `src/local-page.ts`, `src/camera.ts`, routes OAuth) : `cd backend && npm run test:e2e`, après un `npx playwright install chromium` la première fois. Sans navigateur installé, dans l'image du job :
 

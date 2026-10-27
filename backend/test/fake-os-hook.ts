@@ -14,3 +14,6 @@ registerHooks({
     return resolved.url === real ? { ...resolved, url: fake } : resolved;
   },
 });
+
+// Arrêt du serveur de test (child.kill) : sortie normale, sans quoi V8 n'écrit pas la couverture (npm run coverage).
+process.on("SIGTERM", () => process.exit(0));

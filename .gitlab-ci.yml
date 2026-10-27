@@ -117,12 +117,17 @@ backend:
     # Format (prettier --check) puis typecheck.
     - npm run lint
     # Tests d'intégration : le vrai serveur démarre avec un dossier de données vide.
-    - node --import tsx --test --test-reporter=spec --test-reporter-destination=stdout
+    # Sous c8 : échoue si la couverture passe sous les seuils de backend/.c8rc.json.
+    - npx c8 node --import tsx --test --test-reporter=spec --test-reporter-destination=stdout
       --test-reporter=junit --test-reporter-destination=junit.xml "test/**/*.test.ts"
+  coverage: '/^Lines\s*:\s*(\d+(?:\.\d+)?)%/'
   artifacts:
     when: always
     reports:
       junit: backend/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: backend/coverage/cobertura-coverage.xml
     expire_in: 1 week
 
 # Pages web du backend (page locale, visualiseur /camera, retour OAuth) dans Chromium, même serveur que les tests d'intégration.
