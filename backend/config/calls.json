@@ -1,5 +1,5 @@
 {
-  "_doc": "Appels entrants signalés sur la tablette (Windows). title : titre de fenêtre pendant la sonnerie (expression régulière) ; caller : élément de l'interface qui donne l'appelant (1er groupe) ; answer / video / decline / hangup : noms des boutons, en français et en anglais. Une appli de plus = une règle, après une capture pendant un vrai appel (GET /deck/buttons?app=…&detail=true).",
+  "_doc": "Appels entrants signalés sur la tablette. os : mac ou windows (windows par défaut) ; title : titre de fenêtre pendant la sonnerie (expression régulière, Windows) ; ring : sinon, boutons présents seulement pendant la sonnerie (Mac) ; caller : élément de l'interface qui donne l'appelant (1er groupe) ; answer / video / decline / hangup : noms des boutons, en français et en anglais. Une appli de plus = une règle, après une capture pendant un vrai appel (GET /deck/buttons?app=…&detail=true).",
   "rules": [
     {
       "app": "Discord",
@@ -9,6 +9,16 @@
       "video": ["Rejoindre l'appel vidéo", "Join Video Call"],
       "decline": ["Ignorer", "Ignore"],
       "hangup": ["Déconnecter", "Disconnect"]
+    },
+    {
+      "app": "Microsoft Teams",
+      "os": "mac",
+      "ring": ["Accepter avec l'audio", "Accepter avec la vidéo", "Accept with audio", "Accept with video"],
+      "caller": "^Texte : (.+?) (?:vous appelle|is calling you)",
+      "answer": ["Accepter avec l'audio", "Accept with audio"],
+      "video": ["Accepter avec la vidéo", "Accept with video"],
+      "decline": ["Refuser l'appel", "Decline call", "Decline"],
+      "hangup": ["Quitter", "Raccrocher", "Leave", "Hang up"]
     }
   ]
 }

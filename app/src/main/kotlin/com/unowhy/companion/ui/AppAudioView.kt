@@ -47,6 +47,9 @@ class AppAudioView @JvmOverloads constructor(
     private var poll: Job? = null
     private var state: AppAudio? = null
     private var dragging = false
+    private val sender by lazy {
+        LatestSender<Pair<String, Int>>(scope) { (app, level) -> render(BackendClient(context).system.setAppAudio(app, volume = level)) }
+    }
     /** Dernier son entendu : le témoin reste allumé un instant entre deux mots. */
     private var loudAt = 0L
 
@@ -63,12 +66,14 @@ class AppAudioView @JvmOverloads constructor(
 
         volume.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
-                if (fromUser) value.text = context.getString(R.string.percent, progress)
+                if (!fromUser) return
+                value.text = context.getString(R.string.percent, progress)
+                app?.let { sender.offer(it to progress) }
             }
             override fun onStartTrackingTouch(bar: SeekBar) { dragging = true }
             override fun onStopTrackingTouch(bar: SeekBar) {
                 dragging = false
-                change { setAppAudio(it, volume = bar.progress) }
+                app?.let { sender.offer(it to bar.progress) }
             }
         })
         mute.setOnClickListener { change { setAppAudio(it, muted = !(state?.muted ?: false)) } }
@@ -143,7 +148,7 @@ class AppAudioView @JvmOverloads constructor(
         volume.isEnabled = running
         mute.isEnabled = running
         if (!dragging) volume.progress = audio?.volume ?: 0
-        value.text = when {
+        if (!dragging) value.text = when {
             !running -> ""
             audio!!.muted -> context.getString(R.string.muted)
             else -> context.getString(R.string.percent, audio.volume ?: 0)

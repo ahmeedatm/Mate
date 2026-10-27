@@ -272,8 +272,11 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     /** Après « Rejoindre » sur l'Accueil : page Réunion (micro, caméra, raccrocher). */
     fun openMeetingPage() = openPage { it.meeting }
 
-    /** Après avoir répondu à un appel : page de l'appli (micro, sourdine, Quitter l'appel). */
-    fun openAppPage(app: String) = openPage { !it.meeting && it.app.equals(app, ignoreCase = true) }
+    /** Après avoir répondu à un appel : page de l'appli (micro, sourdine, Quitter l'appel), Réunion pour Teams. */
+    fun openAppPage(app: String) {
+        val ofApp = { page: DeckPage -> page.app.equals(app, ignoreCase = true) }
+        openPage { ofApp(it) && (!it.meeting || pages.none { other -> ofApp(other) && !other.meeting }) }
+    }
 
     private fun openPage(wanted: (DeckPage) -> Boolean) {
         val index = pages.indexOfFirst(wanted)

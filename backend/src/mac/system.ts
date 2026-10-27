@@ -35,9 +35,12 @@ export async function isAppRunning(app: string): Promise<boolean> {
   return (await run("ps", ["-axo", "comm="])).split("\n").some((c) => c.includes(`/${app}.app/`));
 }
 
-/** Sa fenêtre d'appel est ouverte (Teams) ou, si sa fenêtre ne se lit pas, elle tourne et un micro est utilisé. */
+/**
+ * Sa fenêtre d'appel ou son écran d'avant-réunion est ouvert (Teams) ou, si sa fenêtre ne se lit pas, elle tourne et
+ * un micro est utilisé.
+ */
 export async function isAppInCall(app: string): Promise<boolean> {
   if (!(await isAppRunning(app))) return false;
   const call = await calls.callState(app).catch(() => null);
-  return call?.found ? call.connected : audio.micInUse();
+  return call?.found ? call.connected || Boolean(call.lobby) : audio.micInUse();
 }
