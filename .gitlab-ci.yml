@@ -21,9 +21,12 @@ default:
   interruptible: true
 
 # Jobs de release : seulement sur un tag de version.
+# UPDATES_URL : serveur central des mises à jour de la tablette (paquet générique du registre, privé).
 .release-tag:
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+  variables:
+    UPDATES_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/companion-updates/latest
 
 # Zones du dépôt. Changer la CI relance tout.
 .files-backend: &files-backend
@@ -339,7 +342,7 @@ helper-windows:
     expire_in: 1 week
 
 # APK release signé, version = tag. Clé : variables protégées et masquées, visibles seulement des tags protégés (v*).
-# Publie aussi l'entrée du « serveur Unowhy » (companion-X.Y.Z.json), lue par `npm run updates:add`.
+# Publie aussi l'entrée du « serveur Unowhy » (companion-X.Y.Z.json), lue par `npm run updates:add` et le job updates.
 android-release:
   extends: [.android, .release-tag]
   stage: build
@@ -347,9 +350,13 @@ android-release:
   script:
     - test -n "$RELEASE_KEYSTORE_BASE64" -a -n "$RELEASE_KEYSTORE_PASSWORD"
       || { echo "Clé de signature absente (variables RELEASE_KEYSTORE_*, tag protégé v*)"; exit 1; }
+    - test -n "$UPDATE_DEPLOY_TOKEN" || { echo "Jeton de lecture des mises à jour absent (UPDATE_DEPLOY_TOKEN)"; exit 1; }
     - VERSION=${CI_COMMIT_TAG#v}
     - echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > /tmp/release.p12
-    - RELEASE_KEYSTORE=/tmp/release.p12 ./gradlew --no-daemon --console=plain assembleRelease -PappVersion=$VERSION
+    # Jeton de lecture seule du registre (deploy token read_package_registry), jamais affiché.
+    - >-
+      RELEASE_KEYSTORE=/tmp/release.p12 ./gradlew --no-daemon --console=plain assembleRelease -PappVersion=$VERSION
+      -PupdateUrl="$UPDATES_URL" -PupdateHeader="Deploy-Token: $UPDATE_DEPLOY_TOKEN"
     - mkdir -p dist && cp app/build/outputs/apk/release/app-release.apk dist/companion-$VERSION.apk
     - $ANDROID_HOME/build-tools/36.0.0/apksigner verify --print-certs dist/companion-$VERSION.apk
     - CODE=$($ANDROID_HOME/build-tools/36.0.0/aapt2 dump badging dist/companion-$VERSION.apk | sed -n "1s/.*versionCode='\([0-9]*\)'.*/\1/p")
@@ -361,6 +368,16 @@ android-release:
     paths:
       - dist/companion-*
     expire_in: 1 week
+
+# Serveur central des mises à jour de la tablette : manifest.json + l'APK de la dernière version déposés dans
+# le paquet générique UPDATES_URL (jeton du job), anciens fichiers supprimés. Voir docs/developpement.md, section Release.
+updates:
+  extends: .release-tag
+  stage: release
+  image: node:22.22-bookworm-slim
+  needs: [android-release]
+  script:
+    - node scripts/updates-publish.mjs dist updates
 
 # Release GitLab : fichiers déposés dans le registre de paquets générique du projet, jeton du job.
 release:
