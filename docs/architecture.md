@@ -61,7 +61,7 @@ La tablette n'ouvre aucun port. `remote/RemoteChannel.kt` garde une requête `PO
 - La tablette reçoit les pages (`GET /deck`) et n'envoie qu'un **identifiant de touche** ; `runAction` (`deck.ts`) exécute les étapes (app, keys, text, url, media, system, wait, window, macro). Aucune commande arbitraire ne vient de la tablette.
 - Onglets : pages fixes, puis pages d'appli (Discord, Réunion) tant que l'appli tourne ou est en appel (`GET /deck/live`). On change d'onglet en touchant ou en balayant la grille.
 - **Ouvertes** : toutes les fenêtres de l'ordinateur sur le schéma de ses écrans (`OpenWindowsView` + `ScreenMap`, `GET/POST /windows/open`), relu toutes les 5 s.
-- **Média** (Windows) : lecture en cours lue dans les contrôles multimédias de Windows (`/system/media`), musique ouverte dans l'appli du site si elle est installée (`music.ts`).
+- **Média** (Windows et Mac) : lecture en cours lue dans les contrôles multimédias de Windows (`/system/media`) ou, sur Mac, par MediaRemote (« À l'écoute », `src/mac/media.ts` + `NowPlaying.dylib` chargée par `/usr/bin/perl`, seul accès possible depuis macOS 15.4 : risque qu'Apple le ferme, secours par les titres d'onglets) ; musique ouverte dans l'appli du site si elle est installée, sinon le site (`music.ts`). Sur Mac, les commandes passent par l'extension du navigateur qui joue quand elle est chargée (dans la page : lecteur, actions Media Session), sinon par MediaRemote.
 
 ### 5. Agenda, tâches, rappels
 

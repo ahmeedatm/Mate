@@ -103,16 +103,18 @@ async function stage(platform: "windows" | "mac", sums: string): Promise<string>
       copy(path.join(backend, "src", "win", f), path.join(dest, "src", "win", f));
     copy(path.join(backend, "scripts", "firewall-windows.ps1"), path.join(dest, "scripts", "firewall-windows.ps1"));
     copy(path.join(backend, "assets", "compagnon.ico"), path.join(dest, "assets", "compagnon.ico"));
-    // Extension du navigateur (onglets sur la tablette) : à charger depuis ce dossier, mode développeur.
-    for (const f of fs.readdirSync(path.join(backend, "extension")))
-      copy(path.join(backend, "extension", f), path.join(root, "Extension navigateur", f));
     extract(await nodeArchive(sums, "-win-x64.zip"), "node.exe", path.join(dest, "node", "node.exe"));
   } else {
     copy(path.join(repo, "Installer (Mac).command"), path.join(root, "Installer (Mac).command"));
+    copy(path.join(backend, "src", "mac", "NowPlaying.dylib"), path.join(dest, "src", "mac", "NowPlaying.dylib"));
     for (const arch of ["arm64", "x64"]) {
       extract(await nodeArchive(sums, `-darwin-${arch}.tar.gz`), "bin/node", path.join(dest, "node", `darwin-${arch}`, "node"));
     }
   }
+
+  // Extension du navigateur (onglets et page Média sur la tablette) : à charger depuis ce dossier, mode développeur.
+  for (const f of fs.readdirSync(path.join(backend, "extension")))
+    copy(path.join(backend, "extension", f), path.join(root, "Extension navigateur", f));
 
   // zip (Info-ZIP) : lisible par l'Explorateur de Windows et le Finder, droits d'exécution gardés, sans __MACOSX.
   const zip = path.join(out, `Compagnon-Unowhy-${platform === "windows" ? "Windows" : "Mac"}.zip`);

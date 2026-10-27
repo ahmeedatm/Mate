@@ -19,6 +19,11 @@
       ]
     },
     {
+      "title": "Média",
+      "media": true,
+      "tiles": []
+    },
+    {
       "title": "Réunion",
       "meeting": true,
       "app": "Microsoft Teams",

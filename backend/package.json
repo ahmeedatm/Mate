@@ -23,6 +23,7 @@
     "service:status": "tsx --env-file-if-exists=.env scripts/service.ts status",
     "package": "tsx scripts/package.ts",
     "build:helper": "tsx scripts/build-helper.ts",
+    "build:nowplaying": "clang -dynamiclib -arch arm64 -arch x86_64 -mmacosx-version-min=11.0 -fobjc-arc -framework AppKit -o src/mac/NowPlaying.dylib src/mac/nowplaying/NowPlaying.m",
     "updates:add": "tsx scripts/updates.ts add"
   },
   "dependencies": {
