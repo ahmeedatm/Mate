@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { checkOpenTarget } from "../src/open-guard.ts";
+import type { Perf } from "../src/perf.ts";
 import type { VoiceState } from "../src/win/index.ts";
 import type {
   AudioChange,
@@ -28,6 +29,8 @@ export type FakeState = {
   running?: string[];
   inCall?: string[];
   dnd?: boolean | null;
+  /** Mesure renvoyée par getPerf (sinon une mesure fixe). */
+  perf?: Perf;
   /** Fenêtres par appli ; `elsewhere` : sur un autre bureau. */
   windows?: Record<string, { title: string; elsewhere?: boolean }[]>;
   /** Fenêtres qui apparaissent quand l'appli est lancée (launchApp). */
@@ -141,6 +144,15 @@ export async function getAudio() {
 export async function setAudio(change: AudioChange) {
   record("setAudio", change);
   return getAudio();
+}
+
+export async function getPerf(): Promise<Perf> {
+  if (!canControl) unsupported();
+  return read().perf ?? { cpu: 12, ram: { used: 4, total: 16, percent: 25 } };
+}
+
+export async function getPerfDetail(): Promise<unknown> {
+  return { gpu: null };
 }
 
 export async function getDnd(): Promise<boolean | null> {

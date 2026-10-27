@@ -124,6 +124,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.WATER -> WaterWidget(context, host, placed)
                 WidgetType.AUDIO -> AudioWidget(context, host, placed)
                 WidgetType.MEDIA -> MediaWidget(context, host, placed)
+                WidgetType.PERF -> PerfWidget(context, host, placed)
                 WidgetType.KEYS -> KeysWidget(context, host, placed)
                 WidgetType.WEATHER -> WeatherWidget(context, host, placed)
                 WidgetType.NOTE -> NoteWidget(context, host, placed)
