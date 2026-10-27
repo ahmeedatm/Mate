@@ -23,7 +23,7 @@
             android:id="@+id/tile_initial"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="?attr/c_font_medium"
             android:gravity="center"
             android:textColor="?attr/c_accent"
             android:textSize="30sp" />

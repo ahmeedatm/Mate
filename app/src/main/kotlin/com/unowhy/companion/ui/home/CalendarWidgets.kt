@@ -17,7 +17,11 @@ import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.CalendarEvent
 import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.errorText
+import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.ui.themeColor
+import com.unowhy.companion.ui.themeFont
+import com.unowhy.companion.ui.themePx
+import com.unowhy.companion.ui.themeRes
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -41,16 +45,17 @@ internal fun daysFrom(now: Long, ms: Long): Int {
  * 15 min avant. Moyen : le bouton à droite du titre ; grand : en dessous.
  */
 class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
+    private val cadran = themeBool(context, R.attr.c_cadran)
     private val labelView = TitleView(context).apply {
         setIcon(R.drawable.ic_event)
         setTextColor(color(R.attr.c_hue_orange))
     }
     private val title = label(22f).apply {
         ellipsize = TextUtils.TruncateAt.END
-        typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+        typeface = themeFont(context, R.attr.c_font_medium)
     }
-    private val whenText = label(17f, R.attr.c_hue_orange).apply { isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
-    private val join = Button(context, null, 0, R.style.PrimaryButton).apply {
+    private val whenText = label(17f, if (cadran) R.attr.c_accent else R.attr.c_hue_orange).apply { isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
+    private val join = Button(context, null, 0, R.style.NowButton).apply {
         setText(R.string.join_meeting)
         setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_videocam, 0, 0, 0)
         visibility = View.GONE
@@ -63,13 +68,18 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         addView(whenText, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(2) })
     }
     override val view = LinearLayout(context).apply {
-        // Fond teinté de la couleur de l'agenda (orange), comme la pastille du titre.
-        background = GradientDrawable().apply {
-            cornerRadius = dp(20).toFloat()
-            setColor(ColorUtils.compositeColors(ColorUtils.setAlphaComponent(color(R.attr.c_hue_orange), 0x26), color(R.attr.c_surface)))
-            setStroke(dp(1), ColorUtils.setAlphaComponent(color(R.attr.c_hue_orange), 0x55))
+        if (cadran) {
+            setBackgroundResource(themeRes(context, R.attr.c_card_bg))
+            themePx(context, R.attr.c_card_pad).let { setPadding(it, it, it, it) }
+        } else {
+            // Fond teinté de la couleur de l'agenda (orange), comme la pastille du titre.
+            background = GradientDrawable().apply {
+                cornerRadius = dp(20).toFloat()
+                setColor(ColorUtils.compositeColors(ColorUtils.setAlphaComponent(color(R.attr.c_hue_orange), 0x26), color(R.attr.c_surface)))
+                setStroke(dp(1), ColorUtils.setAlphaComponent(color(R.attr.c_hue_orange), 0x55))
+            }
+            setPadding(dp(20), dp(16), dp(20), dp(16))
         }
-        setPadding(dp(20), dp(16), dp(20), dp(16))
     }
     private var joinable: CalendarEvent? = null
 

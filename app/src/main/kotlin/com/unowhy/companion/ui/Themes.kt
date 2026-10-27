@@ -3,7 +3,9 @@ package com.unowhy.companion.ui
 import android.app.Activity
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Typeface
 import android.util.TypedValue
+import androidx.core.content.res.ResourcesCompat
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 
@@ -40,3 +42,31 @@ fun themeColor(context: Context, attr: Int): Int {
 }
 
 fun themeColorList(context: Context, attr: Int): ColorStateList = ColorStateList.valueOf(themeColor(context, attr))
+
+/** Booléen du thème (absent = faux) : `themeBool(context, R.attr.c_cadran)`. */
+fun themeBool(context: Context, attr: Int): Boolean {
+    val value = TypedValue()
+    return context.theme.resolveAttribute(attr, value, true) && value.data != 0
+}
+
+/** Ressource (drawable) pointée par un attribut référence : `themeRes(context, R.attr.c_card_bg)`. */
+fun themeRes(context: Context, attr: Int): Int {
+    val value = TypedValue()
+    context.theme.resolveAttribute(attr, value, true)
+    return value.resourceId
+}
+
+/** Dimension du thème en pixels : `themePx(context, R.attr.c_card_pad)`. */
+fun themePx(context: Context, attr: Int): Int {
+    val value = TypedValue()
+    context.theme.resolveAttribute(attr, value, true)
+    return value.getDimension(context.resources.displayMetrics).toInt()
+}
+
+/** Police du thème : nom de famille système ou ressource `@font/…`. */
+fun themeFont(context: Context, attr: Int): Typeface {
+    val value = TypedValue()
+    context.theme.resolveAttribute(attr, value, true)
+    return if (value.resourceId != 0) ResourcesCompat.getFont(context, value.resourceId) ?: Typeface.DEFAULT
+    else Typeface.create(value.string.toString(), Typeface.NORMAL)
+}

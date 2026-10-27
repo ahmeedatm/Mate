@@ -29,4 +29,14 @@
     <attr name="c_hue_pink" format="color" />
     <attr name="c_hue_yellow" format="color" />
     <attr name="c_hue_blue" format="color" />
+    <!-- Habillage Cadran : les thèmes de base posent les valeurs d'origine, les palettes Cadran les remplacent. -->
+    <attr name="c_cadran" format="boolean" />
+    <attr name="c_card_bg" format="reference" />
+    <attr name="c_tile_bg" format="reference" />
+    <attr name="c_card_pad" format="dimension" />
+    <attr name="c_primary" format="color" />
+    <attr name="c_on_primary" format="color" />
+    <attr name="c_primary_pressed" format="color" />
+    <attr name="c_font_medium" format="reference|string" />
+    <attr name="c_font_light" format="reference|string" />
 </resources>

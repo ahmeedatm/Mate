@@ -2,7 +2,6 @@ package com.unowhy.companion.ui
 
 import android.animation.ValueAnimator
 import android.content.res.ColorStateList
-import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -41,7 +40,7 @@ class CallOverlay(private val activity: MainActivity) : FrameLayout(activity) {
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
     }
     private val label = text(18f, R.attr.c_text_dim).apply { setText(R.string.call_incoming) }
-    private val name = text(40f, R.attr.c_text).apply { typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL); maxLines = 2 }
+    private val name = text(40f, R.attr.c_text).apply { typeface = themeFont(context, R.attr.c_font_medium); maxLines = 2 }
     private val answer = button(R.string.call_answer, R.drawable.ic_call, R.attr.c_ok) { respond(video = false) }
     private val video = button(R.string.call_video, R.drawable.ic_videocam, R.attr.c_accent) { respond(video = true) }
     private val decline = button(R.string.call_decline, R.drawable.ic_call_end, R.attr.c_ko) { decline() }
@@ -75,7 +74,7 @@ class CallOverlay(private val activity: MainActivity) : FrameLayout(activity) {
     }
 
     private fun button(text: Int, icon: Int, colorAttr: Int, onClick: () -> Unit) =
-        Button(context, null, 0, R.style.PrimaryButton).apply {
+        Button(context, null, 0, R.style.NowButton).apply {
             setText(text)
             textSize = 20f
             setPadding(dp(28), 0, dp(28), 0)

@@ -187,19 +187,30 @@ object Look {
 
 /**
  * Titre de carte (style CardTitle) : son icône (`android:drawableStart`) devient une pastille de la teinte de la fonction.
- * Dans le code : `TitleView(context)` puis [setIcon].
+ * Dans le code : `TitleView(context)` puis [setIcon]. En Cadran : texte simple, sans icône ni majuscules.
  */
 class TitleView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0, defStyleRes: Int = R.style.CardTitle,
 ) : TextView(context, attrs, defStyleAttr, defStyleRes) {
+    private val cadran = themeBool(context, R.attr.c_cadran)
+
     init {
         val a = context.obtainStyledAttributes(attrs, intArrayOf(android.R.attr.drawableStart), defStyleAttr, defStyleRes)
         val icon = a.getResourceId(0, 0)
         a.recycle()
-        if (icon != 0) setIcon(icon)
+        if (cadran) {
+            setCompoundDrawablesRelative(null, null, null, null)
+            isAllCaps = false
+            letterSpacing = 0f
+            textSize = 15f
+            setTextColor(themeColor(context, R.attr.c_text_dim))
+        } else if (icon != 0) {
+            setIcon(icon)
+        }
     }
 
     fun setIcon(icon: Int, hue: Int = Look.iconHue(icon)) {
+        if (cadran) return
         setCompoundDrawablesRelative(Look.badge(context, icon, themeColor(context, hue)), null, null, null)
     }
 }

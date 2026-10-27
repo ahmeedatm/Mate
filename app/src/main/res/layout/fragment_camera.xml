@@ -17,7 +17,7 @@
             android:id="@+id/camera_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-medium"
+            android:fontFamily="?attr/c_font_medium"
             android:text="@string/mode_camera"
             android:textSize="22sp" />
 

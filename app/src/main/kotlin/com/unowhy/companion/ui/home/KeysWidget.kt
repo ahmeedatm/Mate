@@ -2,11 +2,13 @@ package com.unowhy.companion.ui.home
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Outline
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewOutlineProvider
 import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -22,6 +24,7 @@ import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.showImmersive
+import com.unowhy.companion.ui.themeBool
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -78,7 +81,17 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val icon = view.findViewById<ImageView>(R.id.tile_icon)
         val initial = view.findViewById<TextView>(R.id.tile_initial)
         view.findViewById<TextView>(R.id.tile_label).text = key.optString("label")
-        key.optString("color").takeIf { it.isNotBlank() }?.let { runCatching { Color.parseColor(it) }.getOrNull() }?.let { view.background.mutate().setTint(it) }
+        if (themeBool(context, R.attr.c_cadran)) {
+            // Cadran : touche sans cadre, icône à coins arrondis, appui sur ressort.
+            view.background = null
+            view.stateListAnimator = null
+            icon.clipToOutline = true
+            icon.outlineProvider = object : ViewOutlineProvider() {
+                override fun getOutline(v: View, outline: Outline) = outline.setRoundRect(0, 0, v.width, v.height, dp(22).toFloat())
+            }
+            Look.pressSpring(view)
+        }
+        key.optString("color").takeIf { it.isNotBlank() }?.let { runCatching { Color.parseColor(it) }.getOrNull() }?.let { view.background?.mutate()?.setTint(it) }
         val glyph = key.optString("glyph").takeIf { it.isNotBlank() }
         Look.tintInitial(initial, key.optString("label"))
         if (glyph != null) {

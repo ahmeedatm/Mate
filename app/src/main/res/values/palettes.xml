@@ -126,6 +126,16 @@
     <!-- Cadran (docs/ui-ux/da) : rôles Material 3 générés depuis le rouge Unowhy, une seule couleur vivante.
          Les teintes par fonction deviennent neutres, sauf rouge (maintenant) et vert (fait). -->
     <style name="Palette.Cadran" parent="">
+        <item name="c_cadran">true</item>
+        <item name="c_card_bg">@drawable/cadran_tile_bg</item>
+        <item name="c_tile_bg">@drawable/cadran_tile_bg</item>
+        <item name="c_card_pad">24dp</item>
+        <item name="c_primary">?attr/c_text</item>
+        <item name="c_on_primary">?attr/c_bg</item>
+        <item name="c_primary_pressed">?attr/c_text_dim</item>
+        <item name="c_font_medium">@font/outfit_500</item>
+        <item name="c_font_light">@font/outfit_300</item>
+        <item name="android:fontFamily">@font/outfit_400</item>
         <item name="c_bg">#FFFAF2F1</item>
         <item name="c_rail">#FFFAF2F1</item>
         <item name="c_surface">#FFFFFFFF</item>
@@ -146,7 +156,7 @@
         <item name="c_paper">#FFFFFFFF</item>
         <item name="c_scrim">#52000000</item>
         <item name="c_hue_orange">#FF4D4545</item>
-        <item name="c_hue_cyan">#FF4D4545</item>
+        <item name="c_hue_cyan">#FF31685A</item>
         <item name="c_hue_violet">#FF4D4545</item>
         <item name="c_hue_pink">#FF4D4545</item>
         <item name="c_hue_yellow">#FF4D4545</item>
@@ -156,6 +166,16 @@
     </style>
 
     <style name="Palette.CadranNuit" parent="">
+        <item name="c_cadran">true</item>
+        <item name="c_card_bg">@drawable/cadran_tile_bg</item>
+        <item name="c_tile_bg">@drawable/cadran_tile_bg</item>
+        <item name="c_card_pad">24dp</item>
+        <item name="c_primary">?attr/c_text</item>
+        <item name="c_on_primary">?attr/c_bg</item>
+        <item name="c_primary_pressed">?attr/c_text_dim</item>
+        <item name="c_font_medium">@font/outfit_500</item>
+        <item name="c_font_light">@font/outfit_300</item>
+        <item name="android:fontFamily">@font/outfit_400</item>
         <item name="c_bg">#FF100D0D</item>
         <item name="c_rail">#FF100D0D</item>
         <item name="c_surface">#FF221F1F</item>
@@ -176,7 +196,7 @@
         <item name="c_paper">#FFFFFFFF</item>
         <item name="c_scrim">#80000000</item>
         <item name="c_hue_orange">#FFD0C4C3</item>
-        <item name="c_hue_cyan">#FFD0C4C3</item>
+        <item name="c_hue_cyan">#FF9AD2C1</item>
         <item name="c_hue_violet">#FFD0C4C3</item>
         <item name="c_hue_pink">#FFD0C4C3</item>
         <item name="c_hue_yellow">#FFD0C4C3</item>

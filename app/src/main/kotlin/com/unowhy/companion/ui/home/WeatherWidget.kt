@@ -14,6 +14,7 @@ import androidx.appcompat.app.AlertDialog
 import com.unowhy.companion.R
 import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.showForTyping
+import com.unowhy.companion.ui.themeRes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -41,7 +42,7 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         addView(city)
     }
     override val view = LinearLayout(context).asCard(16).apply {
-        setBackgroundResource(R.drawable.tile_bg)
+        setBackgroundResource(themeRes(context, R.attr.c_tile_bg))
         setPadding(dp(18), dp(14), dp(18), dp(14))
         gravity = Gravity.CENTER_VERTICAL
         addView(emoji)

@@ -1,7 +1,6 @@
 package com.unowhy.companion.ui.home
 
 import android.content.Context
-import android.graphics.Typeface
 import android.text.InputType
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -35,6 +34,9 @@ import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.label
 import com.unowhy.companion.ui.showForTyping
 import com.unowhy.companion.ui.themeColor
+import com.unowhy.companion.ui.themeFont
+import com.unowhy.companion.ui.themePx
+import com.unowhy.companion.ui.themeRes
 import kotlinx.coroutines.CoroutineScope
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -76,9 +78,10 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     protected fun dp(value: Int) = context.dp(value)
 
     /** Carte de fond commune (même style que les cartes de l'application). */
-    protected fun <T : View> T.asCard(padding: Int = 20): T = apply {
-        setBackgroundResource(R.drawable.card_bg)
-        setPadding(dp(padding), dp(padding), dp(padding), dp(padding))
+    protected fun <T : View> T.asCard(padding: Int? = null): T = apply {
+        setBackgroundResource(themeRes(context, R.attr.c_card_bg))
+        val px = padding?.let { dp(it) } ?: themePx(context, R.attr.c_card_pad)
+        setPadding(px, px, px, px)
     }
 
     protected fun cardTitle(text: Int, icon: Int) = TitleView(context).apply {
@@ -89,7 +92,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     protected fun label(size: Float, colorId: Int = R.attr.c_text, light: Boolean = false) = TextView(context).apply {
         textSize = size
         setTextColor(color(colorId))
-        if (light) typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
+        if (light) typeface = themeFont(context, R.attr.c_font_light)
     }
 
     companion object {
@@ -120,7 +123,7 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         format24Hour = "HH:mm"
         includeFontPadding = false
         setTextColor(color(R.attr.c_text))
-        typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
+        typeface = themeFont(context, R.attr.c_font_light)
     }
     private val date = label(22f, R.attr.c_text_dim)
     private val side = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
@@ -283,7 +286,7 @@ class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val text = label(22f).apply { gravity = Gravity.CENTER_VERTICAL }
     override val view = LinearLayout(context).asCard().apply {
         orientation = LinearLayout.VERTICAL
-        setBackgroundResource(R.drawable.tile_bg)
+        setBackgroundResource(themeRes(context, R.attr.c_tile_bg))
         setPadding(dp(20), dp(16), dp(20), dp(16))
         addView(cardTitle(R.string.widget_note, R.drawable.ic_edit))
         addView(text, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(6) })
