@@ -257,7 +257,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     }
 
     private fun isLit(tile: DeckTile) = voice?.connected == true && when (tile.lit) {
-        "muted" -> voice?.muted == true
+        // En sourdine, Discord coupe aussi le micro (il revient avec le casque, comme il était avant).
+        "muted" -> voice?.muted == true || voice?.deafened == true
         "deafened" -> voice?.deafened == true
         else -> false
     }
