@@ -19,14 +19,15 @@ import androidx.core.content.ContextCompat
 import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.R
+import com.unowhy.companion.focus.FocusTicks
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
 import com.unowhy.companion.net.CalendarEvent
 import com.unowhy.companion.net.HomeFeatures
 import com.unowhy.companion.ui.ComputerAudioView
+import com.unowhy.companion.ui.FocusDial
 import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.NowPlayingView
-import com.unowhy.companion.ui.ProgressRing
 import com.unowhy.companion.ui.TasksCard
 import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.WaterCard
@@ -167,30 +168,30 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 }
 
-/** Minuteur Focus : toucher = mode Focus, bouton = démarrer / pause. Petit : sans l'anneau. */
+/**
+ * Minuteur Focus (DA Cadran) : cadran de 25 graduations, une par minute, allumées pendant le chrono et éteintes en
+ * cascade à la pause. Toucher = mode Focus, bouton = démarrer / pause. Rien ne bouge en dehors des changements.
+ */
 class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     override val view: View = LayoutInflater.from(context).inflate(R.layout.widget_focus, null)
-    private val ring = view.findViewById<ProgressRing>(R.id.widget_focus_ring)
+    private val dial = view.findViewById<FocusDial>(R.id.widget_focus_dial)
     private val time = view.findViewById<TextView>(R.id.widget_focus_time)
+    private val phase = view.findViewById<TextView>(R.id.widget_focus_phase)
     private val detail = view.findViewById<TextView>(R.id.widget_focus_detail)
-    private val toggle = view.findViewById<ImageButton>(R.id.widget_focus_toggle)
+    private val toggle = view.findViewById<View>(R.id.widget_focus_toggle)
+    private val toggleIcon = view.findViewById<ImageView>(R.id.widget_focus_toggle_icon)
     private val focusListener: (FocusTimer.State) -> Unit = { render() }
     private val noiseListener: () -> Unit = { render() }
-    private var active = false
-    private var pulse: android.animation.ValueAnimator? = null
+    private var shown = false
 
     init {
         view.setOnClickListener { host.main?.showMode("focus") }
         toggle.setOnClickListener { FocusTimer.toggle() }
-    }
-
-    override fun applySize() {
-        view.findViewById<View>(R.id.widget_focus_ring_box).visibility = if (placed.size == WidgetSize.S) View.GONE else View.VISIBLE
-        (time.parent as View).let { (it.layoutParams as LinearLayout.LayoutParams).marginStart = if (placed.size == WidgetSize.S) 0 else dp(18) }
+        Look.pressSpring(view)
+        Look.pressSpring(toggle)
     }
 
     override fun setActive(active: Boolean) {
-        this.active = active
         if (active) {
             FocusTimer.observe(focusListener)
             NoisePlayer.observe(noiseListener)
@@ -198,6 +199,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             FocusTimer.unobserve(focusListener)
             NoisePlayer.unobserve(noiseListener)
         }
+        shown = false
         render()
     }
 
@@ -206,21 +208,16 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private fun render() {
         val state = FocusTimer.state
         val focus = state.phase == FocusTimer.Phase.FOCUS
-        val active = state.running || state.remainingMs < state.durationMs
+        val started = state.running || state.remainingMs < state.durationMs
         time.text = FocusTimer.format(state.remainingMs)
-        ring.progress = (state.durationMs - state.remainingMs).toFloat() / state.durationMs.coerceAtLeast(1)
-        ring.color = color(if (focus) R.attr.c_hue_red else R.attr.c_hue_green)
-        val phase = context.getString(if (!active) R.string.focus_ready else if (focus) R.string.focus_phase_work else R.string.focus_phase_break)
-        val noise = NoisePlayer.kind?.takeIf { NoisePlayer.playing }
-        detail.text = if (noise == null) phase else "$phase · " + context.getString(R.string.noise_playing, context.getString(noise.label))
-        toggle.setImageResource(if (state.running) R.drawable.ic_pause else R.drawable.ic_play)
+        phase.setText(if (!started) R.string.focus_ready else if (focus) R.string.focus_phase_work else R.string.focus_phase_break)
+        dial.color = color(if (focus) R.attr.c_accent else R.attr.c_ok)
+        // Première image sans cascade : l'écran arrive déjà dans le bon état.
+        dial.show(FocusTicks.lit(state.remainingMs, state.durationMs, state.running), animate = shown)
+        shown = true
+        detail.text = NoisePlayer.kind?.takeIf { NoisePlayer.playing }?.let { context.getString(R.string.noise_playing, context.getString(it.label)) } ?: ""
+        Look.swapIcon(toggleIcon, if (state.running) R.drawable.ic_pause else R.drawable.ic_play)
         toggle.contentDescription = context.getString(if (state.running) R.string.focus_pause else R.string.focus_start)
-        // Le bouton bat doucement pendant le chrono (seulement à l'écran).
-        if (state.running && active && pulse == null) pulse = Look.pulse(toggle)
-        if ((!state.running || !active) && pulse != null) {
-            Look.stop(pulse, toggle)
-            pulse = null
-        }
     }
 }
 

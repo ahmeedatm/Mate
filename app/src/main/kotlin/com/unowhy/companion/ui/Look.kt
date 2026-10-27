@@ -2,6 +2,7 @@ package com.unowhy.companion.ui
 
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
@@ -9,12 +10,17 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
 import android.util.AttributeSet
+import android.view.MotionEvent
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
+import androidx.dynamicanimation.animation.DynamicAnimation
+import androidx.dynamicanimation.animation.SpringAnimation
+import androidx.dynamicanimation.animation.SpringForce
 import com.unowhy.companion.R
 
 /**
@@ -135,6 +141,40 @@ object Look {
             addUpdateListener { view.scaleX = it.animatedValue as Float; view.scaleY = view.scaleX }
             start()
         }
+    }
+
+    /** Ressort M3 « spatial fast » (schéma standard : amortissement 0,9, raideur 1400), voir docs/ui-ux/da. */
+    private fun spatialFast(view: View, property: DynamicAnimation.ViewProperty) =
+        SpringAnimation(view, property).setSpring(SpringForce(1f).setStiffness(1400f).setDampingRatio(0.9f))
+
+    /** Appui (DA Cadran) : la vue s'enfonce à 0,96 puis revient sur un ressort. Le clic n'est pas consommé. */
+    @SuppressLint("ClickableViewAccessibility")
+    fun pressSpring(view: View) {
+        val x = spatialFast(view, DynamicAnimation.SCALE_X)
+        val y = spatialFast(view, DynamicAnimation.SCALE_Y)
+        view.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> 0.96f
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> 1f
+                else -> null
+            }?.let { x.animateToFinalPosition(it); y.animateToFinalPosition(it) }
+            false
+        }
+    }
+
+    /** Change l'icône : la nouvelle arrive en grandissant (0,5 → 1) sur un ressort, en fondu. Même icône : rien. */
+    fun swapIcon(icon: ImageView, res: Int) {
+        if (icon.tag == res) return
+        val first = icon.tag == null
+        icon.tag = res
+        icon.setImageResource(res)
+        if (first) return
+        icon.scaleX = 0.5f
+        icon.scaleY = 0.5f
+        icon.alpha = 0f
+        spatialFast(icon, DynamicAnimation.SCALE_X).animateToFinalPosition(1f)
+        spatialFast(icon, DynamicAnimation.SCALE_Y).animateToFinalPosition(1f)
+        icon.animate().alpha(1f).setDuration(120).start()
     }
 
     fun stop(animator: ValueAnimator?, view: View) {
