@@ -10,8 +10,7 @@ Recherche du 26/10/2026. But : une UI de produit fini, épurée, animée sans sa
 2. **Adopter la DA Cadran** ([`da/README.md`](da/README.md)) : tokens générés depuis la charte
    Unowhy avec les outils de Material 3, posés dans `palettes.xml`. Les attributs `?attr/c_…`
    existent déjà : on change des valeurs, pas l'architecture.
-3. **Installer peu** : skills Android officiels de Google (mesure du jank, R8), `frontend-design`
-   pour les pages web, mise à jour de ui-ux-pro-max. Liste exacte en fin de document, à valider.
+3. **Installer peu** : fait le 27/10/2026, voir la fin du document.
 
 ## Inventaire de l'existant (déjà installé)
 
@@ -85,26 +84,14 @@ Mesure : `adb shell dumpsys gfxinfo com.unowhy.companion reset`, faire le geste,
 
 Polices variables : les axes ne sont pilotables qu'à partir d'API 26, et les fichiers sont lourds (Inter 877 Ko, Doto 457 Ko). Embarquer dans `res/font/` des instances **statiques** sous-ensemblées au latin (`pyftsubset`), 20 à 40 Ko par graisse. Pas de polices téléchargeables : elles passent par les services Google, absents en kiosque.
 
-## Installation proposée (en attente de validation)
+## Installé (27/10/2026)
 
-Rien n'est installé. Portée **projet** pour ce qui ne sert qu'ici (versionné dans `.claude/settings.json`, Eliot en profite), **utilisateur** pour le reste.
-
-```text
-# 1. Skills Android officiels (projet)
-claude plugin marketplace add android/skills
-claude plugin install android-skills@android-skills --scope project
-
-# 2. Direction esthétique des pages web (projet)
-claude plugin install frontend-design@claude-plugins-official --scope project
-
-# 3. Mise à jour de l'existant (utilisateur)
-claude plugin marketplace update ui-ux-pro-max-skill
-claude plugin update ui-ux-pro-max@ui-ux-pro-max-skill
-
-# 4. Doc à jour Material Components / AndroidX (projet)
-claude plugin enable context7@claude-plugins-official --scope project
-```
+| Outil | Portée | Pourquoi |
+|---|---|---|
+| `frontend-design@claude-plugins-official` | utilisateur (profil Orca et `~/.claude`) | pages web, tous projets |
+| `ui-ux-pro-max` 2.11.0 → 2.15.0 | utilisateur | garde-fou UX |
+| context7 (réactivé) | utilisateur | doc à jour des API |
+| `android-skills@android-skills` 1.0.18 | **local** à ce dépôt (`.claude/settings.local.json`, non versionné) | ~6 300 tokens dans chaque session : réservé aux projets Android |
+| skill `direction-artistique` | `~/.claude/skills` (tous projets) | la démarche de cette DA, outillée : charte, palette M3, polices, icônes, captures, film |
 
 Non retenu : skills Compose (pas de Compose), mobile-mcp et android-mcp (adb suffit), superdesign (envoie le code dehors).
-
-Après validation : installation, puis preuve sur **une** carte de l'Accueil en Cadran, captures avant/après sur l'émulateur `companion_api29` et mesure `gfxinfo`.

@@ -59,7 +59,8 @@ Valeurs officielles et liens : [`../specs-ds.md`](../specs-ds.md).
 
 Neutres = palette tonale M3 à la teinte du rouge Unowhy (16,2°) et chroma 2 : un gris chaud qui
 rappelle le blanc de la marque sans tirer vers le rose. Tous les rôles sont des tons M3, aucun hex
-n'est choisi à l'œil.
+n'est choisi à l'œil. Valeurs reproductibles avec la skill `direction-artistique` :
+`palette.sh '#CA0538' --ok '#2A6154'`.
 
 | Rôle (attribut actuel) | Rôle M3 | Jour | Nuit |
 |---|---|---|---|
@@ -68,13 +69,13 @@ n'est choisi à l'œil.
 | relief (`c_surface_raised`) | surfaceContainerHigh / Highest | `#EEE6E6` (T92) | `#282525` (T15) |
 | texte (`c_text`) | onSurface | `#1E1B1B` (T10) | `#E9E1E0` (T90) |
 | texte secondaire (`c_text_dim`) | onSurfaceVariant | `#4D4545` | `#D0C4C3` |
-| texte tertiaire (`c_text_faint`) | outline | `#7E7575` | `#998E8E` |
+| texte tertiaire (`c_text_faint`) | outline, ajusté à 4,5:1 | `#7C7272` | `#998E8E` |
 | filet (`c_stroke`) | outlineVariant | `#D0C4C3` | `#4D4545` |
 | maintenant (`c_accent`) | rouge Unowhy, palette tonale | `#CA0538` | `#FF5165` (T60) |
 | fond du maintenant (`c_accent_soft`) | T90 / T20 | `#FFDADA` | `#680018` |
 | fait (`c_ok`) | vert Unowhy, palette tonale | `#31685A` (T40) | `#9AD2C1` (T80) |
 
-Contrastes (ratio M3) : rouge sur fond 5,3 en jour et 5,4 en nuit, texte secondaire sur tuile 9,3
+Contrastes (ratio M3) : rouge sur fond 5,3 en jour et 5,4 en nuit, texte tertiaire sur tuile 4,7 et 5,2, texte secondaire sur tuile 9,3
 et 11,4, vert sur tuile 6,4 et 9,6. Tout passe le seuil de 4,5.
 
 Les huit teintes `c_hue_*` disparaissent. Les tâches, l'agenda et les touches se distinguent par
