@@ -11,23 +11,33 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.unowhy.companion.Computers
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.UserFacingException
 import com.unowhy.companion.net.AppUpdate
 import com.unowhy.companion.net.BackendClient
+import com.unowhy.companion.net.HttpException
+import com.unowhy.companion.net.UpdateSource
+import com.unowhy.companion.net.UpdatesApi
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import org.json.JSONException
 import java.io.File
+import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Mises à jour installées par le Companion lui-même, sans personne (démo du « serveur Unowhy ») : moteur web
- * (WebView, figé en 81 par le kiosque) et le Companion. Device owner : Android installe sans demander de
+ * Mises à jour installées par le Companion lui-même, sans personne : moteur web (WebView, figé en 81 par le kiosque)
+ * et le Companion. Deux sources : l'ordinateur relié (« serveur Unowhy » simulé) et le serveur central (GitLab Pages,
+ * `BuildConfig.UPDATE_URL`), qui marche sans ordinateur. Device owner : Android installe sans demander de
  * confirmation. Sécurité : empreinte SHA-256 du fichier comparée à celle annoncée, puis Android refuse toute
  * mise à jour qui n'est pas signée par le même éditeur (Google pour le WebView).
  */
@@ -40,9 +50,53 @@ object Updater {
     @Suppress("DEPRECATION")
     fun versionCode(info: PackageInfo): Long = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
 
-    /** Mises à jour annoncées, avec la version installée de chaque paquet. */
-    suspend fun check(context: Context): List<Pair<AppUpdate, PackageInfo?>> =
-        BackendClient(context).updates.list().map { it to installed(context, it.pkg) }
+    /** Résultat d'une recherche : annonces fusionnées (voir [UpdatePlan.merge]) et sources en erreur. */
+    class Check(val updates: List<Pair<AppUpdate, PackageInfo?>>, val errors: Map<UpdateSource, Exception>)
+
+    /** Une seule installation à la fois : bouton de Réglages et [AutoUpdater]. */
+    private val busy = AtomicBoolean(false)
+
+    /** Interroge les deux sources en parallèle ; l'ordinateur seulement s'il y en a un d'appairé. */
+    suspend fun check(context: Context): Check = coroutineScope {
+        val computer = if (Computers.all(context).isEmpty()) null else async { fetch { BackendClient(context).updates.list() } }
+        val server = UpdatesApi.server()?.let { api -> async { fetch { serverList(api) } } }
+        val results = mapOf(UpdateSource.COMPUTER to computer?.await(), UpdateSource.SERVER to server?.await())
+        val merged = UpdatePlan.merge(*results.values.map { it?.getOrNull().orEmpty() }.toTypedArray())
+        Check(
+            merged.map { it to installed(context, it.pkg) },
+            results.mapNotNull { (source, r) -> r?.exceptionOrNull()?.let { source to it as Exception } }.toMap(),
+        )
+    }
+
+    private suspend fun fetch(block: suspend () -> List<AppUpdate>): Result<List<AppUpdate>> =
+        try { Result.success(block()) } catch (e: CancellationException) { throw e } catch (e: Exception) { Result.failure(e) }
+
+    /**
+     * Serveur central. Rien de publié (404) ou Pages privées (redirection vers la page de connexion GitLab, donc du
+     * HTML) : aucune mise à jour, pas une erreur. Réseau absent : phrase propre au serveur (errorText parlerait de l'ordinateur).
+     */
+    private suspend fun serverList(api: UpdatesApi): List<AppUpdate> = try {
+        api.list()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: HttpException) {
+        if (e.code in 300..499) emptyList<AppUpdate>().also { Log.i("Updater", "Serveur central : rien de publié (${e.code})") } else throw serverError(e)
+    } catch (e: JSONException) {
+        Log.i("Updater", "Serveur central : pas de manifest lisible", e)
+        emptyList()
+    } catch (e: Exception) {
+        throw serverError(e)
+    }
+
+    private fun serverError(e: Exception): UserFacingException {
+        Log.w("Updater", "Serveur central injoignable", e)
+        return UserFacingException(R.string.update_server_unreachable)
+    }
+
+    private fun api(context: Context, source: UpdateSource): UpdatesApi = when (source) {
+        UpdateSource.COMPUTER -> BackendClient(context).updates
+        UpdateSource.SERVER -> UpdatesApi.server() ?: throw UserFacingException(R.string.update_server_unreachable)
+    }
 
     fun isNewer(update: AppUpdate, info: PackageInfo?) = info == null || update.versionCode > versionCode(info)
 
@@ -52,14 +106,29 @@ object Updater {
      */
     suspend fun install(context: Context, update: AppUpdate, progress: (Int) -> Unit, committed: () -> Unit = {}) {
         if (!Kiosk.isDeviceOwner(context)) throw UserFacingException(R.string.update_needs_kiosk)
-        val app = context.applicationContext
+        if (!busy.compareAndSet(false, true)) throw UserFacingException(R.string.update_busy)
+        try {
+            download(context.applicationContext, update, progress, committed)
+        } finally {
+            busy.set(false)
+        }
+    }
+
+    private suspend fun download(app: Context, update: AppUpdate, progress: (Int) -> Unit, committed: () -> Unit) {
         val file = File(app.cacheDir, "updates").apply { mkdirs() }.resolve("update.apk")
         try {
             // Le téléchargement est une boucle bloquante : l'annulation y est vérifiée à chaque pour cent.
             val job = currentCoroutineContext()[Job]
-            val sha256 = BackendClient(app).updates.download(update, file) { percent ->
-                if (job?.isActive == false) throw CancellationException("Download cancelled")
-                progress(percent)
+            val sha256 = try {
+                api(app, update.source).download(update, file) { percent ->
+                    if (job?.isActive == false) throw CancellationException("Download cancelled")
+                    progress(percent)
+                }
+            } catch (e: IOException) {
+                // Le serveur central répond en HTML (page d'erreur GitLab) : jamais affiché tel quel.
+                if (update.source != UpdateSource.SERVER) throw e
+                Log.w("Updater", "Téléchargement depuis le serveur central impossible", e)
+                throw UserFacingException(R.string.update_server_download_failed)
             }
             if (!sha256.equals(update.sha256, ignoreCase = true)) throw UserFacingException(R.string.update_file_corrupt)
             // Le blocage des installations s'applique aussi au device owner : levé le temps de l'installation.

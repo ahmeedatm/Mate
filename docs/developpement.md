@@ -199,7 +199,7 @@ Un tag `vX.Y.Z` posé sur `main` lance les mêmes tests, puis :
 git tag v1.2.0 origin/main && git push origin v1.2.0
 ```
 
-Version de l'appli : `versionName` = `X.Y.Z` du tag, `versionCode` = X × 10000 + Y × 100 + Z (Y et Z sous 100), donnés à Gradle par `-PappVersion=X.Y.Z`. Sans ce paramètre : `0.1.0` (code 100). La tablette n'installe une mise à jour que si son `versionCode` est plus grand : chaque tag doit être supérieur au précédent.
+Version de l'appli : `versionName` = `X.Y.Z` du tag, `versionCode` = X × 10000 + Y × 100 + Z (Y et Z sous 100), donnés à Gradle par `-PappVersion=X.Y.Z`. Sans ce paramètre : `0.0.0` (code 1, Android refuse 0). La tablette n'installe une mise à jour que si son `versionCode` est plus grand : chaque tag doit être supérieur au précédent.
 
 Numérotation : premier tag `v0.0.1` (code 1), puis `v0.0.2` (2)… `v0.1.0` (100). Pas de `v1.0.0` (10000) tant qu'il n'y a pas de MVP concret. Vérifié en local : `assembleRelease -PappVersion=0.0.1` donne `versionCode='1' versionName='0.0.1'` (aapt2), même entrée JSON que le job. Attention : un APK construit sans `-PappVersion` porte le code par défaut de `app/build.gradle.kts`, pas celui d'un tag : la tablette refuse toute mise à jour dont le code n'est pas strictement plus grand que celui de l'APK installé.
 

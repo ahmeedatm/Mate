@@ -21,6 +21,7 @@ import com.unowhy.companion.device.Tablet
 import com.unowhy.companion.focus.FocusDnd
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
+import com.unowhy.companion.kiosk.AutoUpdater
 import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.Link
@@ -91,6 +92,7 @@ class MainActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContentView(R.layout.activity_main)
         Speaker.init(this)
+        AutoUpdater.start(this)
 
         val cadran = themeBool(this, R.attr.c_cadran)
         if (cadran) {
