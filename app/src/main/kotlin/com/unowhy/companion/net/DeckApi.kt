@@ -3,10 +3,11 @@ package com.unowhy.companion.net
 import org.json.JSONObject
 
 /** `app` : nom de l'appli du Mac (tuile d'appli). */
-/** `whenState` : touche d'une page d'appli d'appel, montrée seulement en appel (`call`), hors appel (`idle`) ou pendant un partage d'écran (`streaming`). */
+/** `whenState` : touche d'une page d'appli d'appel, montrée seulement en appel (`call`), hors appel (`idle`), pendant un partage d'écran (`streaming`), en appel sans partage (`share`) ou sur l'écran d'avant-réunion (`lobby`). */
 data class DeckTile(val id: String, val label: String, val type: String, val glyph: String?, val color: String?, val app: String? = null, val whenState: String? = null)
 /** Appel en cours dans une appli (Discord) : salon, participants vus, micro et sourdine (null : inconnu). */
-data class VoiceState(val connected: Boolean, val channel: String?, val people: List<String>, val muted: Boolean?, val deafened: Boolean?, val streaming: Boolean = false)
+/** `lobby` : écran d'avant-réunion de Teams (« Rejoindre maintenant »), pas encore dans la réunion. */
+data class VoiceState(val connected: Boolean, val channel: String?, val people: List<String>, val muted: Boolean?, val deafened: Boolean?, val streaming: Boolean = false, val lobby: Boolean = false)
 /**
  * `editable` : page Perso (touches à programmer) ; `apps` : page d'applis que l'on complète ;
  * `meeting` : page Réunion, ouverte après « Rejoindre » sur l'Accueil ; `app` : page d'une appli (Discord…),
@@ -85,7 +86,7 @@ class DeckApi(private val http: Http) {
         if (v == null || !v.optBoolean("found")) return@io null
         fun flag(key: String) = if (v.isNull(key)) null else v.optBoolean(key)
         val people = v.optJSONArray("people")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty()
-        VoiceState(v.optBoolean("connected"), v.optStringOrNull("channel"), people, flag("muted"), flag("deafened"), v.optBoolean("streaming"))
+        VoiceState(v.optBoolean("connected"), v.optStringOrNull("channel"), people, flag("muted"), flag("deafened"), v.optBoolean("streaming"), v.optBoolean("lobby"))
     }
 
     // Page Média : sites ajoutés (vide au départ) et sites proposés.

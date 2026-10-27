@@ -183,13 +183,18 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         }
     }
 
-    /** L'onglet reste un moment après la fermeture ou la fin du micro : pas de clignotement si Discord le coupe un instant. */
+    /**
+     * L'onglet reste un moment après la fermeture ou la fin du micro : pas de clignotement si Discord le coupe un instant.
+     * Page Réunion : peu de temps, l'ordinateur lisse déjà l'appel (Teams sur Mac : 8 s).
+     */
     private suspend fun refreshLiveApps() {
         val seen = runCatching { client().deck.liveApps() }.getOrNull() ?: return
         val now = SystemClock.uptimeMillis()
         val before = openApps.keys to liveApps.keys
         openApps = (openApps + seen.open.associateWith { now }).filterValues { now - it < LIVE_HOLD_MS }
-        liveApps = (liveApps + seen.live.associateWith { now }).filterValues { now - it < LIVE_HOLD_MS }
+        val meetingApps = pages.filter { it.meeting }.mapNotNull { it.app?.lowercase() }.toSet()
+        liveApps = (liveApps + seen.live.associateWith { now })
+            .filter { (app, at) -> now - at < if (app.lowercase() in meetingApps) MEETING_HOLD_MS else LIVE_HOLD_MS }
         openKnown = true
         // Fin de l'appel sur la page Réunion : elle n'a plus rien à montrer, retour à la première page.
         val page = pages.getOrNull(pageIndex)
@@ -206,7 +211,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         val app = pages.getOrNull(pageIndex)?.app?.takeUnless { showingOpen }
         val state = app?.let { runCatching { client().deck.voice(it) }.getOrNull() }
         if (app != pages.getOrNull(pageIndex)?.app || showingOpen) return
-        val changed = state?.connected != voice?.connected
+        val changed = state?.connected != voice?.connected || state?.streaming != voice?.streaming
         voice = state
         renderVoice()
         if (changed) showPage(pageIndex)
@@ -227,10 +232,16 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         voicePeople.setTextColor(themeColor(requireContext(), if (v.muted == true || v.deafened == true) R.attr.c_ko else R.attr.c_text_dim))
     }
 
-    /** Touche à montrer selon l'appel : `call` seulement en appel, `idle` hors appel, `streaming` pendant un partage d'écran. */
+    /**
+     * Touche à montrer selon l'appel : `call` seulement en appel, `idle` hors appel, `streaming` pendant un partage
+     * d'écran, `share` en appel sans partage (« Partager », remplacé par « Arrêter le partage »), `lobby` sur l'écran
+     * d'avant-réunion de Teams (« Rejoindre maintenant »).
+     */
     private fun shownNow(tile: DeckTile) = when (tile.whenState) {
         "call" -> voice?.connected == true
         "streaming" -> voice?.streaming == true
+        "share" -> voice?.connected == true && voice?.streaming != true
+        "lobby" -> voice?.lobby == true
         "idle" -> voice?.connected != true
         else -> true
     }
@@ -594,6 +605,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         const val ADD = "add"
         const val LIVE_POLL_MS = 4_000L
         const val LIVE_HOLD_MS = 20_000L
+        const val MEETING_HOLD_MS = 5_000L
         /** Clés des onglets (ordre gardé dans Prefs) : « Ouvertes », et une page par son titre. */
         const val OPEN_TAB = "open"
         const val PAGE_TAB = "page:"
