@@ -23,6 +23,7 @@ enum class WidgetSize(val w: Int, val h: Int, @StringRes val label: Int) {
     T(2, 4, R.string.widget_size_t),
     W(4, 1, R.string.widget_size_w),
     XL(4, 2, R.string.widget_size_xl),
+    V(1, 2, R.string.widget_size_v),
 }
 
 /**
@@ -38,16 +39,18 @@ enum class WidgetType(
     val computer: Boolean,
 ) {
     CLOCK("clock", R.string.widget_clock, R.string.widget_clock_desc, R.drawable.ic_clock, listOf(WidgetSize.L, WidgetSize.M, WidgetSize.W, WidgetSize.XL), false),
-    NEXT("next", R.string.widget_next, R.string.widget_next_desc, R.drawable.ic_event, listOf(WidgetSize.M, WidgetSize.L), true),
+    NEXT("next", R.string.widget_next, R.string.widget_next_desc, R.drawable.ic_event, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.V), true),
     AGENDA("agenda", R.string.widget_agenda, R.string.widget_agenda_desc, R.drawable.ic_event, listOf(WidgetSize.L, WidgetSize.T), true),
-    TASKS("tasks", R.string.widget_tasks, R.string.widget_tasks_desc, R.drawable.ic_tasks, listOf(WidgetSize.L, WidgetSize.T), true),
-    FOCUS("focus", R.string.widget_focus, R.string.widget_focus_desc, R.drawable.ic_timer, listOf(WidgetSize.S, WidgetSize.M), false),
+    TASKS("tasks", R.string.widget_tasks, R.string.widget_tasks_desc, R.drawable.ic_tasks, listOf(WidgetSize.L, WidgetSize.T, WidgetSize.V), true),
+    FOCUS("focus", R.string.widget_focus, R.string.widget_focus_desc, R.drawable.ic_timer, listOf(WidgetSize.S, WidgetSize.M, WidgetSize.V), false),
     WATER("water", R.string.widget_water, R.string.widget_water_desc, R.drawable.ic_water, listOf(WidgetSize.S, WidgetSize.M), false),
     AUDIO("audio", R.string.widget_audio, R.string.widget_audio_desc, R.drawable.ic_volume, listOf(WidgetSize.M), true),
     MEDIA("media", R.string.widget_media, R.string.widget_media_desc, R.drawable.ic_play, listOf(WidgetSize.M), true),
-    KEYS("keys", R.string.widget_keys, R.string.widget_keys_desc, R.drawable.ic_deck, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L), true),
+    KEYS("keys", R.string.widget_keys, R.string.widget_keys_desc, R.drawable.ic_deck, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L, WidgetSize.V), true),
     WEATHER("weather", R.string.widget_weather, R.string.widget_weather_desc, R.drawable.ic_cloud, listOf(WidgetSize.M, WidgetSize.S), false),
-    NOTE("note", R.string.widget_note, R.string.widget_note_desc, R.drawable.ic_edit, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L), false);
+    NOTE("note", R.string.widget_note, R.string.widget_note_desc, R.drawable.ic_edit, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L), false),
+    HERO("hero", R.string.widget_hero, R.string.widget_hero_desc, R.drawable.ic_clock, listOf(WidgetSize.W), false),
+    DAYLINE("dayline", R.string.widget_dayline, R.string.widget_dayline_desc, R.drawable.ic_alarm, listOf(WidgetSize.W), false);
 
     companion object {
         fun of(key: String) = entries.firstOrNull { it.key == key }
@@ -110,15 +113,17 @@ class HomeLayout(val widgets: MutableList<Placed>, var pages: Int) {
 
     companion object {
         private const val PREFS = "companion"
-        private const val KEY = "home_layout"
 
-        fun load(context: Context): HomeLayout {
-            val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
-            return raw?.let { runCatching { parse(it) }.getOrNull() } ?: Template.WORK.build()
+        /** Les thèmes Cadran ont leur propre disposition : leurs lignes inégales ne vont pas aux autres thèmes. */
+        fun key(cadran: Boolean) = if (cadran) "home_layout_cadran" else "home_layout"
+
+        fun load(context: Context, cadran: Boolean): HomeLayout {
+            val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(key(cadran), null)
+            return raw?.let { runCatching { parse(it) }.getOrNull() } ?: Template.defaultFor(cadran).build()
         }
 
-        fun save(context: Context, layout: HomeLayout) {
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, layout.toJson()).apply()
+        fun save(context: Context, layout: HomeLayout, cadran: Boolean) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(key(cadran), layout.toJson()).apply()
         }
 
         /** Disposition invalide (widget inconnu, chevauchement) : on la refuse en entier, le modèle la remplace. */
@@ -140,7 +145,7 @@ class HomeLayout(val widgets: MutableList<Placed>, var pages: Int) {
 }
 
 /** Modèles prêts à l'emploi : le défaut (Travail) ressemble à l'ancien Accueil. */
-enum class Template(@StringRes val title: Int, @StringRes val description: Int, private val items: List<Placed>) {
+enum class Template(@StringRes val title: Int, @StringRes val description: Int, private val items: List<Placed>, val cadran: Boolean = false) {
     WORK(R.string.template_work, R.string.template_work_desc, listOf(
         Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 0),
         Placed(WidgetType.AGENDA, WidgetSize.L, 0, 2, 0),
@@ -163,7 +168,31 @@ enum class Template(@StringRes val title: Int, @StringRes val description: Int, 
         Placed(WidgetType.NEXT, WidgetSize.L, 0, 0, 2),
         Placed(WidgetType.FOCUS, WidgetSize.M, 0, 2, 2),
         Placed(WidgetType.WATER, WidgetSize.M, 0, 2, 3),
-    ));
+    )),
+    WORK_CADRAN(R.string.template_work, R.string.template_work_cadran_desc, listOf(
+        Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
+        Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
+        Placed(WidgetType.NEXT, WidgetSize.V, 0, 0, 2),
+        Placed(WidgetType.TASKS, WidgetSize.V, 0, 1, 2),
+        Placed(WidgetType.FOCUS, WidgetSize.V, 0, 2, 2),
+        Placed(WidgetType.KEYS, WidgetSize.V, 0, 3, 2),
+    ), cadran = true),
+    HOME_CADRAN(R.string.template_home, R.string.template_home_cadran_desc, listOf(
+        Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
+        Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
+        Placed(WidgetType.KEYS, WidgetSize.L, 0, 0, 2),
+        Placed(WidgetType.MEDIA, WidgetSize.M, 0, 2, 2),
+        Placed(WidgetType.AUDIO, WidgetSize.M, 0, 2, 3),
+    ), cadran = true),
+    STANDBY_CADRAN(R.string.template_standby, R.string.template_standby_cadran_desc, listOf(
+        Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
+        Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
+    ), cadran = true);
 
     fun build() = HomeLayout(items.map { it.copy() }.toMutableList(), 1)
+
+    companion object {
+        /** Modèle d'un premier lancement : Travail (celui de la famille Cadran, quand il existe). */
+        fun defaultFor(cadran: Boolean) = entries.firstOrNull { it.cadran == cadran } ?: WORK
+    }
 }

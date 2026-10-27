@@ -2,11 +2,13 @@ package com.unowhy.companion.ui.home
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Outline
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewOutlineProvider
 import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -22,6 +24,8 @@ import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.showImmersive
+import com.unowhy.companion.ui.themeBool
+import com.unowhy.companion.ui.themeFont
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -35,7 +39,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     override val hasSettings get() = true
 
-    private val capacity get() = when (placed.size) { WidgetSize.S -> 1; WidgetSize.M -> 2; else -> 4 }
+    private val capacity get() = when (placed.size) { WidgetSize.S -> 1; WidgetSize.M -> 2; WidgetSize.V -> 6; else -> 4 }
 
     private fun chosen(): List<JSONObject> {
         val keys = placed.config.optJSONArray("keys") ?: return emptyList()
@@ -46,6 +50,8 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     private fun render() {
         view.removeAllViews()
+        view.background = null
+        view.setPadding(0, 0, 0, 0)
         val keys = chosen().take(capacity)
         if (keys.isEmpty()) {
             view.addView(LinearLayout(context).apply {
@@ -58,8 +64,20 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             return
         }
-        // Grand : 2 × 2 ; sinon une rangée.
-        val perRow = if (capacity == 4) 2 else capacity
+        // Cadran, vertical : les touches dans une tuile titrée, comme les autres cartes de l'Accueil.
+        if (placed.size == WidgetSize.V && themeBool(context, R.attr.c_cadran)) {
+            view.setBackgroundResource(R.drawable.cadran_tile_bg)
+            view.setPadding(dp(24), dp(24), dp(24), dp(20))
+            view.addView(
+                label(15f, R.attr.c_text_dim).apply {
+                    setText(R.string.widget_keys_title)
+                    typeface = themeFont(context, R.attr.c_font_medium)
+                },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(12) },
+            )
+        }
+        // Grand : 2 × 2 ; vertical : 2 × 3 ; sinon une rangée.
+        val perRow = if (capacity >= 4) 2 else capacity
         val gap = dp(12)
         keys.chunked(perRow).forEachIndexed { r, rowKeys ->
             val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
@@ -78,7 +96,23 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val icon = view.findViewById<ImageView>(R.id.tile_icon)
         val initial = view.findViewById<TextView>(R.id.tile_initial)
         view.findViewById<TextView>(R.id.tile_label).text = key.optString("label")
-        key.optString("color").takeIf { it.isNotBlank() }?.let { runCatching { Color.parseColor(it) }.getOrNull() }?.let { view.background.mutate().setTint(it) }
+        if (themeBool(context, R.attr.c_cadran)) {
+            // Cadran : touche sans cadre, icône à coins arrondis, appui sur ressort ; compacte pour tenir 3 rangées.
+            view.background = null
+            view.stateListAnimator = null
+            view.setPadding(0, 0, 0, 0)
+            (icon.parent as View).layoutParams.apply { width = dp(52); height = dp(52) }
+            view.findViewById<TextView>(R.id.tile_label).apply {
+                textSize = 13f
+                (layoutParams as LinearLayout.LayoutParams).topMargin = dp(6)
+            }
+            icon.clipToOutline = true
+            icon.outlineProvider = object : ViewOutlineProvider() {
+                override fun getOutline(v: View, outline: Outline) = outline.setRoundRect(0, 0, v.width, v.height, dp(22).toFloat())
+            }
+            Look.pressSpring(view)
+        }
+        key.optString("color").takeIf { it.isNotBlank() }?.let { runCatching { Color.parseColor(it) }.getOrNull() }?.let { view.background?.mutate()?.setTint(it) }
         val glyph = key.optString("glyph").takeIf { it.isNotBlank() }
         Look.tintInitial(initial, key.optString("label"))
         if (glyph != null) {
@@ -102,7 +136,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         return view
     }
 
-    /** Liste des touches de toutes les pages du deck de l'ordinateur actif, à cocher (au plus 4). */
+    /** Liste des touches de toutes les pages du deck de l'ordinateur actif, à cocher (au plus 6). */
     override fun showSettings() {
         host.scope.launch {
             val pages = try {
@@ -159,6 +193,6 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
 
     private companion object {
-        const val MAX_KEYS = 4
+        const val MAX_KEYS = 6
     }
 }

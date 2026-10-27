@@ -42,7 +42,7 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
             Look.pop(count)
         }
         findViewById<View>(R.id.water_minus).setOnClickListener { Water.add(context, -1) }
-        findViewById<View>(R.id.water_header).setOnClickListener { showSettings() }
+        findViewById<View>(R.id.water_header).setOnClickListener { WaterSettings.show(context) }
     }
 
     override fun onAttachedToWindow() {
@@ -85,14 +85,17 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
             }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { if (i > 0) marginStart = gap })
         }
     }
+}
 
+/** Réglages de l'eau (objectif, rappel) : touché sur le titre de la carte, appui long sur la complication du héros. */
+object WaterSettings {
     /** Objectif (verres par jour), rappel marche/arrêt et sa fréquence ; enregistré à chaque toucher. */
-    private fun showSettings() {
+    fun show(context: Context) {
         val state = Water.state(context)
         var goal = state.goal
         var interval = state.intervalMinutes
-        val pad = dp(24)
-        val box = LinearLayout(context).apply { orientation = VERTICAL; setPadding(pad, pad / 3, pad, 0) }
+        val pad = context.dp(24)
+        val box = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; setPadding(pad, pad / 3, pad, 0) }
         val inflater = LayoutInflater.from(context)
 
         fun title(text: Int) = TitleView(context).apply {
@@ -108,7 +111,7 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
             setText(R.string.water_reminder)
             textSize = 16f
             isChecked = state.reminder
-            minHeight = dp(48)
+            minHeight = context.dp(48)
         }
         val intervalTitle = title(R.string.water_interval)
         val intervalRow = LinearLayout(context)
@@ -130,7 +133,7 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
 
         box.addView(title(R.string.water_goal))
         box.addView(goalRow)
-        box.addView(reminder, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = pad / 2 })
+        box.addView(reminder, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = pad / 2 })
         box.addView(intervalTitle)
         box.addView(intervalRow)
         update()

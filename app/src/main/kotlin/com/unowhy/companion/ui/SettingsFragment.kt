@@ -35,6 +35,7 @@ import com.unowhy.companion.kiosk.Updater
 import com.unowhy.companion.net.AppUpdate
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.Link
+import com.unowhy.companion.net.UpdateSource
 import com.unowhy.companion.net.Wifi
 import kotlinx.coroutines.launch
 
@@ -351,9 +352,12 @@ class SettingsFragment : Fragment() {
         updates.removeAllViews()
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val found = Updater.check(requireContext())
-                updatesStatus.setText(if (found.isEmpty()) R.string.updates_none else R.string.updates_hint)
-                for ((update, info) in found) updates.addView(updateRow(update, info))
+                val check = Updater.check(requireContext())
+                // Une ligne par source en erreur, sous la phrase d'état : l'autre source reste utilisable.
+                val lines = listOf(getString(if (check.updates.isEmpty()) R.string.updates_none else R.string.updates_hint)) +
+                    check.errors.map { (source, e) -> getString(R.string.updates_source_error, sourceName(source), errorText(e)) }
+                updatesStatus.text = lines.joinToString("\n")
+                for ((update, info) in check.updates) updates.addView(updateRow(update, info))
             } catch (e: Exception) {
                 updatesStatus.text = errorText(e)
             }
@@ -373,7 +377,7 @@ class SettingsFragment : Fragment() {
         val current = info?.versionName ?: getString(R.string.updates_not_installed)
         val label = TextView(ctx).apply {
             textSize = 16f
-            text = if (Updater.isNewer(update, info)) getString(R.string.updates_row, update.label, current, update.versionName)
+            text = if (Updater.isNewer(update, info)) getString(R.string.updates_row, update.label, current, update.versionName, sourceName(update.source))
             else getString(R.string.updates_row_current, update.label, current)
         }
         row.addView(label, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
@@ -398,6 +402,9 @@ class SettingsFragment : Fragment() {
         }
         return block
     }
+
+    private fun sourceName(source: UpdateSource) =
+        getString(if (source == UpdateSource.SERVER) R.string.updates_source_server else R.string.updates_source_computer)
 
     private fun install(update: AppUpdate, button: Button, bar: android.widget.ProgressBar, cancel: Button) {
         if (installing) return

@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Héros de l'Accueil (HeroWidget, DA Cadran) : heure en grand qui bascule, date, « Ensuite … », météo et eau à droite.
+     Sans fond : le héros n'est pas une tuile. Il déborde de quelques dp sous sa ligne, comme dans la maquette. -->
+<com.unowhy.companion.ui.home.HeroView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/hero"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:id="@+id/hero_left"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:clipChildren="false"
+        android:orientation="vertical">
+
+        <com.unowhy.companion.ui.RollingText
+            android:id="@+id/hero_clock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="-10dp" />
+
+        <TextView
+            android:id="@+id/hero_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minHeight="32dp"
+            android:layout_marginTop="6dp"
+            android:fontFamily="@font/outfit_400"
+            android:gravity="center_vertical"
+            android:includeFontPadding="false"
+            android:singleLine="true"
+            android:textColor="?attr/c_text_dim"
+            android:textSize="26sp" />
+
+        <LinearLayout
+            android:id="@+id/hero_next"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minHeight="24dp"
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <!-- Ordinateur injoignable : seul message de l'Accueil, à la place de « Ensuite ». -->
+            <TextView
+                android:id="@+id/hero_next_down"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="@font/outfit_500"
+                android:includeFontPadding="false"
+                android:maxWidth="560dp"
+                android:singleLine="true"
+                android:textColor="?attr/c_warn"
+                android:textSize="17sp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/hero_next_prefix"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:fontFamily="@font/outfit_400"
+                android:includeFontPadding="false"
+                android:text="@string/next_prefix"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/hero_next_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="@font/outfit_500"
+                android:includeFontPadding="false"
+                android:maxWidth="520dp"
+                android:singleLine="true"
+                android:textColor="?attr/c_text"
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/hero_next_when"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:fontFamily="@font/outfit_400"
+                android:includeFontPadding="false"
+                android:singleLine="true"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="17sp" />
+
+            <LinearLayout
+                android:id="@+id/hero_next_in"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/outfit_500"
+                    android:includeFontPadding="false"
+                    android:text="@string/hero_in"
+                    android:textColor="?attr/c_accent"
+                    android:textSize="17sp" />
+
+                <com.unowhy.companion.ui.RollingText
+                    android:id="@+id/hero_next_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:fontFamily="@font/outfit_500"
+                    android:includeFontPadding="false"
+                    android:text="@string/hero_min"
+                    android:textColor="?attr/c_accent"
+                    android:textSize="17sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/hero_compl"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:orientation="horizontal"
+        android:paddingTop="22dp">
+
+        <LinearLayout
+            android:id="@+id/hero_weather"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="end"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/hero_wx_temp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="56dp"
+                android:drawablePadding="10dp"
+                app:drawableTint="?attr/c_text_dim"
+                android:fontFamily="@font/outfit_300"
+                android:fontFeatureSettings="tnum"
+                android:gravity="center_vertical"
+                android:includeFontPadding="false"
+                android:letterSpacing="-0.02"
+                android:singleLine="true"
+                android:textColor="?attr/c_text"
+                android:textSize="52sp" />
+
+            <TextView
+                android:id="@+id/hero_wx_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="20dp"
+                android:layout_marginTop="2dp"
+                android:fontFamily="@font/outfit_400"
+                android:gravity="center_vertical"
+                android:includeFontPadding="false"
+                android:singleLine="true"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/hero_water"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginStart="40dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="end"
+            android:orientation="vertical">
+
+            <com.unowhy.companion.ui.home.GlassBars
+                android:id="@+id/hero_glasses"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="20dp"
+                android:layout_marginTop="2dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.unowhy.companion.ui.RollingText
+                    android:id="@+id/hero_glasses_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+                <TextView
+                    android:id="@+id/hero_glasses_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:fontFamily="@font/outfit_400"
+                    android:includeFontPadding="false"
+                    android:singleLine="true"
+                    android:textColor="?attr/c_text_dim"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</com.unowhy.companion.ui.home.HeroView>

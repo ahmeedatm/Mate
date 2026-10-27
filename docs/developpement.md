@@ -91,7 +91,7 @@ Le pipeline (`.gitlab-ci.yml`) tourne sur le runner Linux, sauf `install-mac` (M
 
 | Job | Vérifie |
 |---|---|
-| `backend` | `npm run lint` (format prettier, puis typecheck), puis `npm test` : tests unitaires et d'intégration (`backend/test/`), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP ; le pilotage de l'ordinateur y est simulé (voir plus bas). Comprend la sanity (`test/sanity.test.ts`) |
+| `backend` | `npm run lint` (format prettier, puis typecheck), puis `npm run coverage` : tests unitaires et d'intégration (`backend/test/`) sous seuil de couverture (voir plus bas), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP ; le pilotage de l'ordinateur y est simulé (voir plus bas). Comprend la sanity (`test/sanity.test.ts`) |
 | `e2e` | pages web du backend dans Chromium (Playwright, `backend/e2e/`) : page locale (adresse, code d'appairage, lien ICS), visualiseur `/camera`, retours d'erreur de `/oauth/:provider/callback`. Même serveur que les tests d'intégration. Artefacts : `e2e-results/junit.xml` et traces des tests en échec |
 | `android` | style Kotlin (`ktlintCheck`), tests JVM (`app/src/test/` : `Computers`, `Prefs`, `Connection` contre de petits serveurs HTTP locaux, `FocusTimer`, `Water`, ordre `focus`, modes, widgets, commande vocale ; contexte simulé `FakeContext`), lint Android, APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
 | `android-emulateur` | tests instrumentés (`app/src/androidTest/`, Espresso) sur un émulateur Android 10 sans services Google, 1280×800 à 160 dpi ; dont le Deck contre un vrai backend ; artefacts : rapport JUnit, journal du backend, capture de l'écran de bienvenue |
@@ -142,7 +142,7 @@ L'installeur, lancé sans terminal (stdin non interactif), ne fait pas de pause 
 - Retour arrière : `sudo scripts/runner-mac.sh retour` (arrête l'agent de `ci-runner`, retire sa config et l'ACL ; `--supprimer` retire aussi le compte), puis `brew services start gitlab-runner` sous le compte du développeur (sa config `~/.gitlab-runner/config.toml` n'est pas touchée).
 - Mise à jour du runner : `brew upgrade gitlab-runner` sous le compte du développeur, puis fermer et rouvrir la session `ci-runner` (l'agent pointe sur `/opt/homebrew/opt/gitlab-runner`).
 
-Avant de pousser : `cd backend && npm run lint && npm test`, et `./gradlew ktlintCheck testDebugUnitTest lintDebug`. Si l'écran ou un parcours change : `scripts/test-android.sh`.
+Avant de pousser : `cd backend && npm run lint && npm run coverage`, et `./gradlew ktlintCheck testDebugUnitTest lintDebug`. Si l'écran ou un parcours change : `scripts/test-android.sh`.
 
 **Format et style** (bloquants en CI) :
 
@@ -152,6 +152,8 @@ Avant de pousser : `cd backend && npm run lint && npm test`, et `./gradlew ktlin
 | Android | `./gradlew ktlintFormat` | `./gradlew ktlintCheck` | `.editorconfig` : ktlint (style IntelliJ) sans les règles qui coupent les lignes ; tâches dans `build.gradle.kts` (sans plugin) |
 
 Pas d'eslint : typescript-eslint ne prend pas encore TypeScript 7. Un paramètre inutilisé mais imposé par une signature se préfixe par `_`. Si `ktlintFormat` échoue sur `MaxPermSize`, c'est `~/.gradle/gradle.properties` : retirer l'option (Java 8) ou lancer avec `-Dorg.gradle.jvmargs=-Xmx2048m`.
+
+**Couverture du backend** (bloquante en CI) : `npm run coverage` lance les tests sous c8, serveur de test compris (processus enfant ; `test/fake-os-hook.ts` le fait sortir proprement sur `SIGTERM`, sinon V8 n'écrit pas sa couverture). Le job échoue si les lignes, branches ou fonctions de `src/` passent sous les seuils de `backend/.c8rc.json` ; la MR affiche l'écart de couverture et les lignes non couvertes du diff. Hors mesure : vrais pilotes (`src/mac/`, `src/win/`, `src/os.ts`, vérifiés par `install-mac` et `install-windows`) et `src/mcp.ts`. Seuils = valeur du job arrondie à l'entier inférieur : les remonter dans la MR qui fait monter la couverture, jamais les baisser pour faire passer un pipeline. La valeur locale (Mac, Node récent) peut dépasser celle de la CI de quelques dixièmes.
 
 Tests Playwright (page web touchée : `src/local-page.ts`, `src/camera.ts`, routes OAuth) : `cd backend && npm run test:e2e`, après un `npx playwright install chromium` la première fois. Sans navigateur installé, dans l'image du job :
 
@@ -192,13 +194,16 @@ Un tag `vX.Y.Z` posé sur `main` lance les mêmes tests, puis :
 |---|---|
 | `package-windows`, `package-mac` | `Compagnon-Unowhy-Windows.zip` et `Compagnon-Unowhy-Mac.zip` (`npm run package -- windows` ou `mac` sur le runner Linux, un job par plateforme : artefacts sous 100 Mo) |
 | `android-release` | `companion-X.Y.Z.apk` signé, et `companion-X.Y.Z.json` : son entrée pour le « serveur Unowhy » |
+| `updates` | serveur central des mises à jour de la tablette (registre de paquets du projet) : `manifest.json` et l'APK de la dernière version |
 | `release` | release GitLab du tag, fichiers déposés dans le registre de paquets du projet (`glab release create`, jeton du job) |
 
 ```bash
 git tag v1.2.0 origin/main && git push origin v1.2.0
 ```
 
-Version de l'appli : `versionName` = `X.Y.Z` du tag, `versionCode` = X × 10000 + Y × 100 + Z (Y et Z sous 100), donnés à Gradle par `-PappVersion=X.Y.Z`. Sans ce paramètre : `0.1.0` (code 100). La tablette n'installe une mise à jour que si son `versionCode` est plus grand : chaque tag doit être supérieur au précédent.
+Version de l'appli : `versionName` = `X.Y.Z` du tag, `versionCode` = X × 10000 + Y × 100 + Z (Y et Z sous 100), donnés à Gradle par `-PappVersion=X.Y.Z`. Sans ce paramètre : `0.0.0` (code 1, Android refuse 0). La tablette n'installe une mise à jour que si son `versionCode` est plus grand : chaque tag doit être supérieur au précédent.
+
+Numérotation : premier tag `v0.0.1` (code 1), puis `v0.0.2` (2)… `v0.1.0` (100). Pas de `v1.0.0` (10000) tant qu'il n'y a pas de MVP concret. Vérifié en local : `assembleRelease -PappVersion=0.0.1` donne `versionCode='1' versionName='0.0.1'` (aapt2), même entrée JSON que le job. Attention : un APK construit sans `-PappVersion` porte le code par défaut de `app/build.gradle.kts`, pas celui d'un tag : la tablette refuse toute mise à jour dont le code n'est pas strictement plus grand que celui de l'APK installé.
 
 **Clé de signature**, jamais dans le dépôt. Variables CI du projet, protégées et masquées : `RELEASE_KEYSTORE_BASE64` (fichier PKCS12 en base64, sur une ligne) et `RELEASE_KEYSTORE_PASSWORD` (mot de passe du fichier et de la clé, alias `companion`). Une variable protégée n'existe que pour une branche ou un tag protégé : protéger les tags `v*` (Settings > Repository > Protected tags), sinon `android-release` échoue (« Clé de signature absente »). Créer la clé une fois, puis la garder hors du dépôt (perdue = plus aucune mise à jour possible des tablettes) :
 
@@ -209,7 +214,16 @@ base64 -i companion-release.p12 | tr -d '\n'   # valeur de RELEASE_KEYSTORE_BASE
 
 Sur un poste de dev, `./gradlew assembleRelease` sans `RELEASE_KEYSTORE` donne un APK release non signé. Avec : `RELEASE_KEYSTORE=chemin.p12 RELEASE_KEYSTORE_PASSWORD=… ./gradlew assembleRelease -PappVersion=1.2.0`.
 
-**Alimenter le « serveur Unowhy »** (mise à jour de la tablette depuis l'ordinateur) : télécharger de la release `companion-X.Y.Z.apk` et `companion-X.Y.Z.json` dans un même dossier, puis sur l'ordinateur, dans `backend/` :
+**Serveur central des mises à jour** : le projet reste privé. Le job `updates` dépose les fichiers dans le paquet générique `companion-updates`, version `latest`, du registre de paquets du projet (jeton du job). Base : `https://gitlab.unowhy.dev/api/v4/projects/891/packages/generic/companion-updates/latest` (`UPDATES_URL` dans `.gitlab-ci.yml`).
+
+- `GET <base>/manifest.json` → `{"updates":[{"package":"com.unowhy.companion","label":"Companion","versionCode":N,"versionName":"X.Y.Z","file":"companion-X.Y.Z.apk","size":octets,"sha256":"…"}]}`, même forme que `GET /updates` du backend ;
+- `GET <base>/companion-X.Y.Z.apk` → l'APK signé.
+
+La tablette lit avec l'en-tête `Deploy-Token: <jeton>` : deploy token « tablettes-mises-a-jour », lecture seule du registre (`read_package_registry`), variable CI `UPDATE_DEPLOY_TOKEN` protégée et masquée. `android-release` le donne à Gradle (`-PupdateUrl`, `-PupdateHeader`, jamais affiché) : il est dans l'APK, donc lisible par qui a l'APK, et ne permet que de télécharger les paquets du projet. Le révoquer = plus aucune mise à jour pour les tablettes déjà installées.
+
+`scripts/updates-publish.mjs` (à la racine) lit l'entrée `companion-X.Y.Z.json` d'`android-release`, calcule taille et SHA-256, dépose l'APK puis `manifest.json` (le manifest ne désigne jamais un fichier absent), puis supprime les anciens fichiers du paquet : seule la dernière version reste. Un même nom déposé deux fois se télécharge dans sa dernière version (vérifié le 27/10 sur un paquet d'essai). Essai local sans dépôt : `node scripts/updates-publish.mjs dist updates` ; avec dépôt, `UPDATES_URL=<base d'un paquet d'essai>` et `GITLAB_TOKEN` (jeton personnel).
+
+**Alimenter le « serveur Unowhy » d'un ordinateur** (mise à jour de la tablette depuis l'ordinateur, sans le serveur central) : télécharger de la release `companion-X.Y.Z.apk` et `companion-X.Y.Z.json` dans un même dossier, puis sur l'ordinateur, dans `backend/` :
 
 ```bash
 npm run updates:add -- ~/Téléchargements/companion-1.2.0.json                  # données du dépôt (backend/.data)

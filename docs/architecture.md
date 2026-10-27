@@ -83,7 +83,12 @@ Pas d'IA : la reconnaissance est celle d'Android (`SpeechRecognizer`, servie par
 
 ### 9. Mises à jour de la tablette
 
-Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/updates/manifest.json` + APK). La tablette (`kiosk/Updater.kt`) télécharge et installe en silence (device owner) son propre APK ou le WebView ; `kiosk/UpdatedReceiver` la relance en kiosque après sa propre mise à jour. En production, ce serait l'infrastructure SQOOL (MDM/OTA).
+Deux sources, même format (`{"updates":[{package, label, versionCode, versionName, file, size, sha256}]}`) :
+
+- **L'ordinateur relié** (« serveur Unowhy » simulé, `updates.ts` : `.data/updates/manifest.json` + APK), avec le jeton d'appairage. Il sert aussi le WebView.
+- **Le serveur central** : registre de paquets GitLab du projet (`BuildConfig.UPDATE_URL`, `GET <base>/manifest.json` puis `GET <base>/<file>`), rempli par la CI à chaque tag `vX.Y.Z`. Marche sans ordinateur. En-tête `BuildConfig.UPDATE_HEADER` (« Deploy-Token: … », lecture seule, injecté par la CI au build release, vide en debug). Rien de publié (404), accès refusé (401) ou page HTML : « aucune mise à jour », pas d'erreur.
+
+`kiosk/Updater.kt` interroge les deux en parallèle et fusionne (`kiosk/UpdatePlan.kt` : par paquet, la plus haute `versionCode` ; à égalité, l'ordinateur). Il télécharge, vérifie le SHA-256 et installe en silence (device owner), une installation à la fois. `kiosk/AutoUpdater.kt` vérifie au démarrage puis toutes les 6 h (échéance relue tous les quarts d'heure) et installe seul la version la plus récente du Companion, en device owner seulement, sans rien afficher. La carte Mises à jour de Réglages montre les deux sources (nom de la source sur chaque ligne, une ligne par source en erreur). `kiosk/UpdatedReceiver` relance l'appli en kiosque après sa propre mise à jour.
 
 ## Carte du code
 
@@ -104,7 +109,7 @@ Le compagnon joue le rôle d'un « serveur Unowhy » (`updates.ts` : `.data/upda
 | `ui/CallOverlay.kt` | carte d'appel entrant |
 | `camera/DocCamera.kt` | caméra du visualiseur |
 | `device/` | batterie, signal, luminosité (atténuée la nuit) |
-| `kiosk/` | `Kiosk` (verrouillage, SQOOL masqué), `Updater`, `UpdatedReceiver`, `KioskAdminReceiver` |
+| `kiosk/` | `Kiosk` (verrouillage, SQOOL masqué), `Updater`, `UpdatePlan`, `AutoUpdater`, `UpdatedReceiver`, `KioskAdminReceiver` |
 | `res/values/strings.xml` | tous les textes (français) ; `attrs.xml` + `palettes.xml` (couleurs des 4 thèmes), `themes.xml` pour le style ; `ui/Themes.kt`, `ui/Look.kt` |
 
 ### Ordinateur : `backend/src/`

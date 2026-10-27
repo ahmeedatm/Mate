@@ -2,5 +2,6 @@
 .cache/
 dist/
 e2e-results/
+coverage/
 # Exemples du deck : une tuile par ligne, plus lisible que le JSON éclaté.
 config/*.json

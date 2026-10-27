@@ -1,67 +1,109 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Widget Focus (FocusWidget) : toucher = mode Focus, bouton = démarrer / pause ; petit : sans l'anneau. -->
+<!-- Widget Focus (FocusWidget, DA Cadran) : cadran de 25 graduations, chrono au centre ; toucher = mode Focus,
+     bouton = démarrer / pause. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/widget_focus"
-    style="@style/Card"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/tile_bg"
+    android:background="@drawable/cadran_tile_bg"
+    android:baselineAligned="false"
     android:clickable="true"
     android:focusable="true"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingTop="16dp"
-    android:paddingBottom="16dp">
+    android:padding="20dp">
 
     <FrameLayout
         android:id="@+id/widget_focus_ring_box"
-        android:layout_width="60dp"
-        android:layout_height="60dp">
+        android:layout_width="124dp"
+        android:layout_height="124dp">
 
-        <com.unowhy.companion.ui.ProgressRing
-            android:id="@+id/widget_focus_ring"
+        <com.unowhy.companion.ui.FocusDial
+            android:id="@+id/widget_focus_dial"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_gravity="center"
-            android:importantForAccessibility="no"
-            android:src="@drawable/ic_timer"
-            app:tint="?attr/c_text_dim" />
-    </FrameLayout>
-
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="18dp"
-        android:layout_weight="1"
-        android:orientation="vertical">
-
-        <TextView
-            android:id="@+id/widget_focus_time"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-light"
-            android:includeFontPadding="false"
-            android:textSize="34sp" />
+            android:layout_gravity="center"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/widget_focus_detail"
-            android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/widget_focus_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/outfit_300"
+                android:fontFeatureSettings="tnum"
+                android:includeFontPadding="false"
+                android:letterSpacing="-0.02"
+                android:textColor="?attr/c_text"
+                android:textSize="30sp" />
+
+            <TextView
+                android:id="@+id/widget_focus_phase"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="@font/outfit_400"
+                android:maxWidth="88dp"
+                android:singleLine="true"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <FrameLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="16dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:singleLine="true"
-            android:textColor="?attr/c_text_dim"
-            android:textSize="14sp" />
-    </LinearLayout>
+            android:layout_gravity="top|end"
+            android:gravity="end"
+            android:orientation="vertical">
 
-    <ImageButton
-        android:id="@+id/widget_focus_toggle"
-        style="@style/IconButton.Primary"
-        android:backgroundTint="?attr/c_hue_red"
-        android:contentDescription="@string/focus_start"
-        android:src="@drawable/ic_play" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/outfit_500"
+                android:text="@string/widget_focus"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/widget_focus_detail"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:fontFamily="@font/outfit_400"
+                android:singleLine="true"
+                android:textColor="?attr/c_text_faint"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/widget_focus_toggle"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="bottom|end"
+            android:background="@drawable/cadran_round_bg"
+            android:clickable="true"
+            android:contentDescription="@string/focus_start"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/widget_focus_toggle_icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                app:tint="?attr/c_text" />
+        </FrameLayout>
+    </FrameLayout>
 </LinearLayout>

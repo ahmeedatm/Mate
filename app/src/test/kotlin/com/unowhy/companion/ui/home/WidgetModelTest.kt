@@ -59,4 +59,74 @@ class WidgetModelTest {
         assertEquals(2, layout.pages)
         assertEquals(1, far.page)
     }
+
+    @Test
+    fun `la taille V est acceptee par Agenda, Taches, Focus et Touches`() {
+        for (type in listOf(WidgetType.NEXT, WidgetType.TASKS, WidgetType.FOCUS, WidgetType.KEYS)) {
+            assertTrue("$type", WidgetSize.V in type.sizes)
+            assertFalse("$type : V ne doit pas etre la taille d'un ajout", type.sizes.first() == WidgetSize.V)
+        }
+    }
+
+    @Test
+    fun `V occupe une colonne sur deux lignes`() {
+        assertEquals(1, WidgetSize.V.w)
+        assertEquals(2, WidgetSize.V.h)
+        val layout = HomeLayout(mutableListOf(), 1)
+        assertTrue(layout.fits(0, 3, 2, WidgetSize.V))
+        assertFalse(layout.fits(0, 3, 3, WidgetSize.V))
+        layout.widgets += Placed(WidgetType.FOCUS, WidgetSize.V, 0, 3, 2)
+        assertFalse(layout.fits(0, 3, 3, WidgetSize.S))
+        assertTrue(layout.fits(0, 2, 2, WidgetSize.V))
+    }
+
+    @Test
+    fun `une disposition enregistree sans V se relit a l'identique`() {
+        val old = """{"v":1,"pages":1,"widgets":[{"t":"clock","s":"L","p":0,"c":0,"r":0,"cfg":{}},{"t":"focus","s":"S","p":0,"c":0,"r":3,"cfg":{}}]}"""
+        val context = com.unowhy.companion.FakeContext()
+        context.getSharedPreferences("companion", 0).edit().putString("home_layout", old).apply()
+        val layout = HomeLayout.load(context, cadran = false)
+        assertEquals(listOf(WidgetType.CLOCK to WidgetSize.L, WidgetType.FOCUS to WidgetSize.S), layout.widgets.map { it.type to it.size })
+    }
+
+    @Test
+    fun `une taille V enregistree se relit`() {
+        val context = com.unowhy.companion.FakeContext()
+        HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.FOCUS, WidgetSize.V, 0, 3, 2)), 1), cadran = true)
+        assertEquals(WidgetSize.V, HomeLayout.load(context, cadran = true).widgets.single().size)
+    }
+
+    @Test
+    fun `chaque modele Cadran commence par le heros puis la ligne du jour`() {
+        for (template in Template.entries.filter { it.cadran }) {
+            val widgets = template.build().widgets
+            val hero = widgets.single { it.type == WidgetType.HERO }
+            val line = widgets.single { it.type == WidgetType.DAYLINE }
+            assertEquals("$template heros", Triple(WidgetSize.W, 0, 0), Triple(hero.size, hero.col, hero.row))
+            assertEquals("$template ligne du jour", Triple(WidgetSize.W, 0, 1), Triple(line.size, line.col, line.row))
+        }
+    }
+
+    @Test
+    fun `les trois modeles existent aussi en Cadran, avec les memes titres`() {
+        val plain = Template.entries.filter { !it.cadran }.map { it.title }
+        val cadran = Template.entries.filter { it.cadran }.map { it.title }
+        assertEquals(plain, cadran)
+    }
+
+    @Test
+    fun `le modele par defaut de Cadran est Travail Cadran, celui des autres reste Travail`() {
+        assertTrue(Template.defaultFor(true).cadran)
+        assertEquals(Template.WORK.title, Template.defaultFor(true).title)
+        assertEquals(WidgetType.NEXT to WidgetSize.V, Template.defaultFor(true).build().widgets.single { it.type == WidgetType.NEXT }.let { it.type to it.size })
+        assertEquals(Template.WORK, Template.defaultFor(false))
+    }
+
+    @Test
+    fun `le heros et la ligne du jour n'ont besoin que de la largeur de la grille`() {
+        assertEquals(listOf(WidgetSize.W), WidgetType.HERO.sizes)
+        assertEquals(listOf(WidgetSize.W), WidgetType.DAYLINE.sizes)
+        assertFalse(WidgetType.HERO.computer)
+        assertFalse(WidgetType.DAYLINE.computer)
+    }
 }

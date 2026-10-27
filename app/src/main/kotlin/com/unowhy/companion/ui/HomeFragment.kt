@@ -22,12 +22,15 @@ import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.CalendarEvent
 import com.unowhy.companion.net.HomeFeatures
 import com.unowhy.companion.ui.home.COLS
+import com.unowhy.companion.ui.home.DayLineWidget
+import com.unowhy.companion.ui.home.Down
 import com.unowhy.companion.ui.home.HomeHost
 import com.unowhy.companion.ui.home.HomeLayout
 import com.unowhy.companion.ui.home.HomeWidget
 import com.unowhy.companion.ui.home.MAX_PAGES
 import com.unowhy.companion.ui.home.Placed
 import com.unowhy.companion.ui.home.ROWS
+import com.unowhy.companion.ui.home.RowProfile
 import com.unowhy.companion.ui.home.Template
 import com.unowhy.companion.ui.home.WidgetGrid
 import com.unowhy.companion.ui.home.WidgetType
@@ -54,6 +57,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private var backup: HomeLayout? = null
     private val widgets = LinkedHashMap<Placed, HomeWidget>()
     private var page = 0
+    /** Famille de thème Cadran : disposition à part et lignes inégales. */
+    private val cadran get() = themeBool(requireContext(), R.attr.c_cadran)
     /** Aucun ordinateur appairé : les widgets qui en ont besoin proposent de le connecter. */
     private var noComputer = false
     private var loop: Job? = null
@@ -66,6 +71,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     override var features = HomeFeatures()
     override var calendarNote = ""
     override var chosenId: String? = null
+    override var unreachable: Down? = null
     override val scope: CoroutineScope get() = viewLifecycleOwner.lifecycleScope
     override val main get() = activity as? MainActivity
 
@@ -79,6 +85,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         dots = view.findViewById(R.id.home_dots)
         pageButton = view.findViewById(R.id.home_edit_page)
         grid.listener = this
+        grid.blocked = { unreachable != null && dependsOnComputer(it) }
 
         view.findViewById<View>(R.id.home_edit_add).setOnClickListener { onAddAt(-1, -1) }
         view.findViewById<View>(R.id.home_edit_templates).setOnClickListener { chooseTemplate() }
@@ -88,7 +95,15 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
         // Écran recréé quand l'ordinateur change (MainActivity.onComputerChanged) : lu une fois ici.
         noComputer = Computers.all(requireContext()).isEmpty()
-        layout = HomeLayout.load(requireContext())
+        if (cadran) {
+            unreachable = main?.unreachable()
+            grid.setPadding(dp(44), dp(28), dp(40), dp(32))
+            grid.gap = dp(16)
+            grid.rowWeights = RowProfile.CADRAN_ROWS
+            // L'heure déborde de quelques dp sous sa ligne, comme dans la maquette.
+            grid.clipChildren = false
+        }
+        layout = HomeLayout.load(requireContext(), cadran)
         build()
 
         // Le panneau document peut réduire la largeur de moitié : 2 colonnes, la page défile.
@@ -130,10 +145,22 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         activate()
     }
 
-    /** Les widgets de la page arrivent l'un après l'autre, de haut en bas puis de gauche à droite. */
+    /**
+     * Les widgets de la page arrivent l'un après l'autre, de haut en bas puis de gauche à droite. Cadran : le héros
+     * descend d'un cran, la ligne du jour se dessine, les tuiles montent de 50 ms en 50 ms (ressorts).
+     */
     private fun animateIn() {
-        widgets.keys.filter { it.page == page }.sortedWith(compareBy({ it.row }, { it.col }))
-            .forEachIndexed { i, placed -> widgets[placed]?.let { Look.enter(it.view, i) } }
+        val shown = widgets.keys.filter { it.page == page }.sortedWith(compareBy({ it.row }, { it.col }))
+        if (!cadran) return shown.forEachIndexed { i, placed -> widgets[placed]?.let { Look.enter(it.view, i) } }
+        var tiles = 0
+        for (placed in shown) {
+            val widget = widgets[placed] ?: continue
+            when (placed.type) {
+                WidgetType.HERO -> Look.enterSpring(widget.view, 0, -8)
+                WidgetType.DAYLINE -> (widget as? DayLineWidget)?.arrive()
+                else -> Look.enterSpring(widget.view, 160L + 50L * tiles++, 24)
+            }
+        }
     }
 
     // --- Widgets
@@ -153,6 +180,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private fun addWidget(placed: Placed): HomeWidget {
         val widget = HomeWidget.create(requireContext(), this, placed, noComputer)
         widget.view.tag = placed
+        widget.setUnavailable(unreachable != null && dependsOnComputer(placed))
         widget.applySize()
         widget.onCalendar()
         widget.onMinute()
@@ -172,16 +200,17 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         loop = scope.launch {
             var tick = 0
             while (true) {
+                // Le battement d'abord : les chiffres basculent à hh:mm:00, avant les échanges réseau.
+                widgets.values.forEach { it.onMinute() }
                 if (!noComputer && (tick % 5 == 0 || waitingLink) && showsCalendar()) {
                     fetchCalendar()
                     renderCalendar()
                 }
                 for (widget in widgets.values.toList()) widget.load()
-                widgets.values.forEach { it.onMinute() }
                 // Sans widget Tâches, la pastille de la barre latérale n'a plus rien à compter.
                 if (widgets.keys.none { it.type == WidgetType.TASKS }) main?.setPendingTasks(0)
                 tick++
-                delay(60_000)
+                delay(MinuteClock.msToNextMinute(System.currentTimeMillis()) + MinuteClock.SLACK_MS)
             }
         }
     }
@@ -197,7 +226,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         }
     }
 
-    private fun showsCalendar() = widgets.keys.any { it.type == WidgetType.AGENDA || it.type == WidgetType.NEXT }
+    private fun showsCalendar() = widgets.keys.any {
+        it.type == WidgetType.AGENDA || it.type == WidgetType.NEXT || it.type == WidgetType.HERO || it.type == WidgetType.DAYLINE
+    }
 
     private suspend fun fetchCalendar() {
         val client = BackendClient(requireContext())
@@ -215,6 +246,24 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     // --- HomeHost
 
     override fun renderCalendar() = widgets.values.forEach { it.onCalendar() }
+
+    /** Ce qui s'éteint avec l'ordinateur : ses widgets, et la ligne du jour (ses rendez-vous viennent de lui). */
+    private fun dependsOnComputer(placed: Placed) = placed.type.computer || placed.type == WidgetType.DAYLINE
+
+    /**
+     * Thèmes Cadran : la liaison a changé. Un seul message dans le héros, les widgets qui dépendent de l'ordinateur
+     * s'atténuent et ne répondent plus au toucher ; dès qu'il répond, tout est relu.
+     */
+    fun onLinkChanged() {
+        if (view == null || !cadran) return
+        val down = main?.unreachable()
+        if (down == unreachable) return
+        val recovered = down == null
+        unreachable = down
+        widgets.forEach { (placed, widget) -> if (dependsOnComputer(placed)) widget.setUnavailable(down != null) }
+        renderCalendar()
+        if (recovered) refreshAll()
+    }
 
     override fun reloadCalendar() {
         scope.launch {
@@ -278,7 +327,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     /** Réglage d'un widget changé hors mode Modifier ; en mode Modifier, « Terminé » enregistre. */
     override fun save() {
-        if (!grid.editing) HomeLayout.save(requireContext(), layout)
+        if (!grid.editing) HomeLayout.save(requireContext(), layout, cadran)
     }
 
     // --- Pages
@@ -332,7 +381,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             return
         }
         layout.compact()
-        HomeLayout.save(requireContext(), layout)
+        HomeLayout.save(requireContext(), layout, cadran)
         showPage(page)
     }
 
@@ -461,7 +510,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     private fun chooseTemplate() {
         val ctx = requireContext()
-        val templates = Template.entries
+        val templates = Template.entries.filter { it.cadran == cadran }
         val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(8), dp(16), dp(8)) }
         val dialog = AlertDialog.Builder(ctx)
             .setTitle(R.string.home_templates_title)
