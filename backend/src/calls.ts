@@ -2,18 +2,23 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { backendRoot } from "./config.ts";
 import { logFailure } from "./log.ts";
-import { isWindows, listButtons, listWindows, pressButton } from "./os.ts";
+import { isMac, isWindows, listButtons, listWindows, pressButton } from "./os.ts";
 
 /**
- * Appels entrants (Discord…) signalés sur la tablette. Pendant la sonnerie, l'appli renomme sa fenêtre (« Appel
- * entrant - Discord ») : on ne lit que les titres toutes les 2 s (peu coûteux), et l'interface seulement au début
- * d'un appel, pour le nom de l'appelant. Répondre / ignorer / raccrocher = appuyer sur le vrai bouton de l'appli
- * (UI Automation). Règles dans config/calls.json ; Windows seulement (Mac pas encore observé).
+ * Appels entrants (Discord, Teams…) signalés sur la tablette. Windows : pendant la sonnerie, l'appli renomme sa
+ * fenêtre (« Appel entrant - Discord ») : on ne lit que les titres toutes les 2 s (peu coûteux), et l'interface
+ * seulement au début d'un appel, pour le nom de l'appelant. Mac : la sonnerie se voit à ses boutons (`ring`, lus par
+ * l'API d'Accessibilité, 0,3 s pour Teams). Répondre / ignorer / raccrocher = appuyer sur le vrai bouton de l'appli.
+ * Règles dans config/calls.json, `os` = système où elles s'appliquent.
  */
 
 type CallRule = {
   app: string;
-  title: string;
+  os?: "mac" | "windows";
+  /** Titre de fenêtre pendant la sonnerie (Windows). */
+  title?: string;
+  /** Sinon, boutons présents seulement pendant la sonnerie (Mac). */
+  ring?: string[];
   caller?: string;
   answer: string[];
   video?: string[];
@@ -52,9 +57,23 @@ async function callerOf(rule: CallRule): Promise<string | null> {
   return null;
 }
 
+const hasButton = (buttons: string[], names: string[]) => buttons.some((b) => names.some((n) => b === n || b.startsWith(n + " ")));
+
+async function isRinging(rule: CallRule): Promise<boolean> {
+  if (rule.title) {
+    const title = new RegExp(rule.title);
+    const info = await listWindows(rule.app).catch(() => null);
+    return Boolean(info?.windows.some((w) => title.test(w.title)));
+  }
+  if (!rule.ring?.length) return false;
+  const { buttons } = await listButtons(rule.app).catch(() => ({ buttons: [] as string[] }));
+  return hasButton(buttons, rule.ring);
+}
+
 export async function startCallWatch(notify: (event: CallEvent) => void) {
-  if (!isWindows) return;
-  rules = await loadRules();
+  if (!isWindows && !isMac) return;
+  const os = isMac ? "mac" : "windows";
+  rules = (await loadRules()).filter((r) => (r.os ?? "windows") === os);
   if (rules.length === 0) return;
   let busy = false;
   const tick = async () => {
@@ -63,10 +82,8 @@ export async function startCallWatch(notify: (event: CallEvent) => void) {
     try {
       let found: CallRule | undefined;
       for (const rule of rules) {
-        const info = await listWindows(rule.app).catch(() => null);
-        const title = new RegExp(rule.title);
         if ((quietUntil.get(rule.app) ?? 0) > Date.now()) continue;
-        if (info?.windows.some((w) => title.test(w.title))) {
+        if (await isRinging(rule)) {
           found = rule;
           break;
         }

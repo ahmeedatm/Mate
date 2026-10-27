@@ -23,6 +23,7 @@
       "meeting": true,
       "app": "Microsoft Teams",
       "tiles": [
+        { "label": "Rejoindre maintenant", "glyph": "✅", "when": "idle", "action": { "type": "press", "app": "Microsoft Teams", "names": ["Rejoindre maintenant", "Join now"] } },
         { "label": "Micro", "glyph": "🎤", "when": "call", "action": { "type": "press", "app": "Microsoft Teams", "names": ["Couper le micro", "Activer le micro", "Réactiver le micro", "Mute", "Unmute"] } },
         { "label": "Caméra", "glyph": "📷", "when": "call", "action": { "type": "press", "app": "Microsoft Teams", "names": ["Activer la caméra", "Désactiver la caméra", "Turn camera on", "Turn camera off"] } },
         { "label": "Partager l'écran", "glyph": "🖥", "when": "call", "action": { "type": "press", "app": "Microsoft Teams", "names": ["Partager", "Share"] } },

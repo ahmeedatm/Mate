@@ -18,9 +18,15 @@ import com.unowhy.companion.net.AudioState
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.SystemApi
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-/** Son et micro du Mac : bouton muet, curseur de volume, bouton micro. Utilisé par l'Accueil et le Deck. */
+/**
+ * Son et micro de l'ordinateur : bouton muet, curseur de volume, bouton micro. Utilisé par l'Accueil et le Deck.
+ * Relu chaque seconde tant qu'il est à l'écran (volume changé sur l'ordinateur) ; le volume part pendant le glisser.
+ */
 class ComputerAudioView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -32,6 +38,9 @@ class ComputerAudioView @JvmOverloads constructor(
     private val mic: ImageButton
 
     private lateinit var scope: CoroutineScope
+    private var poll: Job? = null
+    private var dragging = false
+    private val sender by lazy { LatestSender<Int>(scope) { render(BackendClient(context).system.setAudio(output = it)) } }
 
     /** Dans le Deck : nom de la barre, pour la distinguer de celle d'une appli. */
     fun showLabel() {
@@ -50,10 +59,17 @@ class ComputerAudioView @JvmOverloads constructor(
 
         volume.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
-                if (fromUser) value.text = context.getString(R.string.percent, progress)
+                if (!fromUser) return
+                value.text = context.getString(R.string.percent, progress)
+                sender.offer(progress)
             }
-            override fun onStartTrackingTouch(bar: SeekBar) = Unit
-            override fun onStopTrackingTouch(bar: SeekBar) = change { setAudio(output = bar.progress) }
+            override fun onStartTrackingTouch(bar: SeekBar) {
+                dragging = true
+            }
+            override fun onStopTrackingTouch(bar: SeekBar) {
+                dragging = false
+                sender.offer(bar.progress)
+            }
         })
         mute.setOnClickListener { change { setAudio(muted = !(state?.muted ?: false)) } }
         mic.setOnClickListener { change { setAudio(micMuted = !(state?.micMuted ?: false)) } }
@@ -62,6 +78,31 @@ class ComputerAudioView @JvmOverloads constructor(
 
     fun attach(scope: CoroutineScope) {
         this.scope = scope
+        if (isAttachedToWindow) startPolling()
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (::scope.isInitialized) startPolling()
+    }
+
+    override fun onDetachedFromWindow() {
+        poll?.cancel()
+        poll = null
+        super.onDetachedFromWindow()
+    }
+
+    private fun startPolling() {
+        poll?.cancel()
+        poll = scope.launch {
+            while (isActive) {
+                delay(POLL_MS)
+                // Écran caché (autre mode) ou doigt sur le curseur : rien à relire.
+                if (!isShown || dragging) continue
+                val audio = runCatching { BackendClient(context).system.audio() }.getOrNull() ?: continue
+                if (!dragging) render(audio)
+            }
+        }
     }
 
     /** Relit l'état : le son a pu changer depuis le Mac. */
@@ -79,8 +120,8 @@ class ComputerAudioView @JvmOverloads constructor(
     private fun render(audio: AudioState?) {
         state = audio
         volume.isEnabled = audio?.output != null
-        volume.progress = audio?.output ?: 0
-        value.text = when {
+        if (!dragging) volume.progress = audio?.output ?: 0
+        if (!dragging) value.text = when {
             audio == null -> "–"
             audio.muted -> context.getString(R.string.muted)
             audio.output == null -> ""
@@ -98,5 +139,9 @@ class ComputerAudioView @JvmOverloads constructor(
         button.setImageResource(icon)
         ImageViewCompat.setImageTintList(button, ColorStateList.valueOf(themeColor(context, if (alert) R.attr.c_ko else R.attr.c_text)))
         ViewCompat.setBackgroundTintList(button, if (alert) ColorStateList.valueOf(themeColor(context, R.attr.c_ko_soft)) else null)
+    }
+
+    private companion object {
+        const val POLL_MS = 1_000L
     }
 }

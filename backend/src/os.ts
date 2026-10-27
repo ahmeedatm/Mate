@@ -208,9 +208,10 @@ export async function openAccessibility() {
   unsupported();
 }
 
-/** Boutons d'une fenêtre d'appli : lister leurs noms (Windows), en actionner un (Windows, Mac). */
+/** Boutons d'une fenêtre d'appli : lister leurs noms, en actionner un. */
 export function listButtons(app: string, detail = false) {
   if (isWindows) return win.listButtons(app, detail);
+  if (isMac) return macCalls.listButtons(app, detail);
   unsupported();
 }
 
