@@ -220,9 +220,10 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         val state = app?.let { runCatching { client().deck.voice(it) }.getOrNull() }
         if (app != pages.getOrNull(pageIndex)?.app || showingOpen) return
         val changed = state?.connected != voice?.connected || state?.streaming != voice?.streaming
+        val relit = state?.muted != voice?.muted || state?.deafened != voice?.deafened
         voice = state
         renderVoice()
-        if (changed) showPage(pageIndex)
+        if (changed) showPage(pageIndex) else if (relit) adapter.notifyDataSetChanged()
     }
 
     private fun renderVoice() {
@@ -236,7 +237,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             getString(R.string.deck_voice_deafened).takeIf { v.deafened == true },
         )
         voicePeople.text = parts.joinToString(" · ")
-        voicePeople.visibility = if (parts.isEmpty()) View.GONE else View.VISIBLE
+        // Place gardée même vide : sinon les touches sautent quand « Ton micro est coupé » apparaît.
+        voicePeople.visibility = if (parts.isEmpty()) View.INVISIBLE else View.VISIBLE
         voicePeople.setTextColor(themeColor(requireContext(), if (v.muted == true || v.deafened == true) R.attr.c_ko else R.attr.c_text_dim))
     }
 
@@ -252,6 +254,12 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         "lobby" -> voice?.lobby == true
         "idle" -> voice?.connected != true
         else -> true
+    }
+
+    private fun isLit(tile: DeckTile) = voice?.connected == true && when (tile.lit) {
+        "muted" -> voice?.muted == true
+        "deafened" -> voice?.deafened == true
+        else -> false
     }
 
     /** Fermée = on la lance en ouvrant sa page ; dans le doute (pas encore lu), on la lance aussi. */
@@ -572,7 +580,12 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             val custom = tile.color?.let { runCatching { Color.parseColor(it) }.getOrNull() }
             // setBackgroundResource ne fait rien si c'est déjà le même fond : la couleur d'une tuile d'une autre page
             // (Micro rouge, Décrocher vert) resterait sur la vue recyclée, il faut l'effacer.
-            if (custom != null) view.background.mutate().setTint(custom) else view.background.setTintList(null)
+            // Micro coupé, casque en sourdine : allumée du rouge de Muet (onglet Son), pour le voir d'un coup d'œil.
+            val lit = isLit(tile)
+            val tint = if (lit) themeColor(requireContext(), R.attr.c_ko) else custom
+            if (tint != null) view.background.mutate().setTint(tint) else view.background.setTintList(null)
+            view.findViewById<TextView>(R.id.tile_label)
+                .setTextColor(themeColor(requireContext(), if (lit) R.attr.c_on_accent else R.attr.c_text))
 
             if (tile.type == "empty" || tile.type == ADD) {
                 if (tile.type == "empty") view.findViewById<TextView>(R.id.tile_label).setText(R.string.key_empty_label)

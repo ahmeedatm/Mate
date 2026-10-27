@@ -66,7 +66,16 @@ describe("touches perso : routes", () => {
     assert.deepEqual((await server.call("GET", "/deck/keys/0")).json.key, macro);
 
     const perso = (await server.call("GET", "/deck")).json.pages.at(-1);
-    assert.deepEqual(perso.tiles[0], { id: "k-0", label: "Réunion", type: "macro", glyph: "📅", color: "#3366CC", when: null, app: null });
+    assert.deepEqual(perso.tiles[0], {
+      id: "k-0",
+      label: "Réunion",
+      type: "macro",
+      glyph: "📅",
+      color: "#3366CC",
+      when: null,
+      lit: null,
+      app: null,
+    });
 
     assert.equal((await server.call("POST", "/deck/run", { id: "k-0" })).status, 200);
     assert.deepEqual(server.osCalls(), [

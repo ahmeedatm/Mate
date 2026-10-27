@@ -29,7 +29,7 @@
       "app": "Microsoft Teams",
       "tiles": [
         { "label": "Rejoindre maintenant", "glyph": "✅", "when": "lobby", "action": { "type": "press", "app": "Microsoft Teams", "names": ["Rejoindre maintenant", "Join now"] } },
-        { "label": "Micro", "glyph": "🎤", "when": "call", "action": { "type": "press", "app": "Microsoft Teams", "names": ["Couper le micro", "Activer le micro", "Réactiver le micro", "Mute", "Unmute"] } },
+        { "label": "Micro", "glyph": "🎤", "when": "call", "lit": "muted", "action": { "type": "press", "app": "Microsoft Teams", "names": ["Couper le micro", "Activer le micro", "Réactiver le micro", "Mute", "Unmute"] } },
         { "label": "Caméra", "glyph": "📷", "when": "call", "action": { "type": "press", "app": "Microsoft Teams", "names": ["Activer la caméra", "Désactiver la caméra", "Turn camera on", "Turn camera off"] } },
         { "label": "Partager l'écran", "glyph": "🖥", "when": "share", "action": { "type": "press", "app": "Microsoft Teams", "names": ["Partager", "Share"] } },
         { "label": "Arrêter le partage", "glyph": "🛑", "when": "streaming", "action": { "type": "press", "app": "Microsoft Teams", "names": ["Arrêter le partage", "Arrêter la présentation", "Stop sharing", "Stop presenting"] } },
@@ -42,8 +42,8 @@
       "app": "Discord",
       "tiles": [
         { "label": "Ouvrir Discord", "action": { "type": "app", "name": "Discord" } },
-        { "label": "Couper mon micro", "glyph": "🎤", "action": { "type": "keys", "keys": "cmd+shift+m", "app": "Discord" } },
-        { "label": "Sourdine (casque)", "glyph": "🎧", "action": { "type": "keys", "keys": "cmd+shift+d", "app": "Discord" } },
+        { "label": "Couper mon micro", "glyph": "🎤", "lit": "muted", "action": { "type": "keys", "keys": "cmd+shift+m", "app": "Discord" } },
+        { "label": "Sourdine (casque)", "glyph": "🎧", "lit": "deafened", "action": { "type": "keys", "keys": "cmd+shift+d", "app": "Discord" } },
         { "label": "Accepter l'appel", "glyph": "📞", "when": "idle", "action": { "type": "keys", "keys": "cmd+return", "app": "Discord" } },
         { "label": "Refuser l'appel", "glyph": "✖️", "when": "idle", "action": { "type": "keys", "keys": "escape", "app": "Discord" } }
       ]
