@@ -127,16 +127,16 @@ class DeckTest {
     fun perteDuBackendPuisRetour() {
         openDeck().use {
             eventually { onView(tile("Copier")).check(matches(isDisplayed())) }
-            eventually(20_000) { onView(withId(R.id.status)).check(matches(withContentDescription(R.string.online))) }
+            eventually(20_000) { onView(withId(R.id.menu_status)).check(matches(withContentDescription(R.string.online))) }
 
             TestBackend.stop()
-            eventually(20_000) { onView(withId(R.id.status)).check(matches(withContentDescription(R.string.offline))) }
+            eventually(20_000) { onView(withId(R.id.menu_status)).check(matches(withContentDescription(R.string.offline))) }
             onView(withId(R.id.deck_refresh)).perform(click())
             val unreachable = context.getString(R.string.error_unreachable, "Ordi de test")
             eventually { onView(withId(R.id.deck_status)).check(matches(allOf(isDisplayed(), withText(unreachable)))) }
 
             TestBackend.start()
-            eventually(30_000) { onView(withId(R.id.status)).check(matches(withContentDescription(R.string.online))) }
+            eventually(30_000) { onView(withId(R.id.menu_status)).check(matches(withContentDescription(R.string.online))) }
             onView(withId(R.id.deck_refresh)).perform(click())
             eventually { onView(withId(R.id.deck_status)).check(matches(not(isDisplayed()))) }
             onView(tile("Copier")).check(matches(isDisplayed()))
@@ -144,7 +144,7 @@ class DeckTest {
     }
 
     private fun openDeck(): ActivityScenario<MainActivity> = ActivityScenario.launch(MainActivity::class.java).also {
-        onView(withContentDescription(R.string.mode_deck)).perform(click())
+        showMode(Mode.DECK)
     }
 
     /**

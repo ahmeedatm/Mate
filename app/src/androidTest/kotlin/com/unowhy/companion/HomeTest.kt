@@ -10,6 +10,7 @@ import androidx.test.espresso.matcher.ViewMatchers.Visibility
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
 import androidx.test.espresso.matcher.ViewMatchers.withId
+import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.Water
@@ -23,7 +24,7 @@ import java.io.File
 
 /**
  * Accueil avec un ordinateur appairé mais éteint : pas d'écran de bienvenue, et les widgets propres à la tablette
- * (Focus, Eau) marchent sans lui.
+ * (Focus, eau du héros) marchent sans lui.
  */
 @RunWith(AndroidJUnit4::class)
 class HomeTest {
@@ -46,21 +47,25 @@ class HomeTest {
         FocusTimer.reset()
     }
 
+    private fun glassesLabel(count: Int) = context.resources.getQuantityString(R.plurals.hero_glasses, count, Water.state(context).goal)
+
     @Test
     fun accueilSansBienvenueAvecLesWidgetsDeLaTablette() {
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withId(R.id.welcome)).check(matches(withEffectiveVisibility(Visibility.GONE)))
             onView(withId(R.id.home_grid)).check(matches(isDisplayed()))
             onView(withId(R.id.widget_focus)).check(matches(isDisplayed()))
-            onView(withId(R.id.water_plus)).check(matches(isDisplayed()))
+            onView(withId(R.id.hero_water)).check(matches(isDisplayed()))
         }
     }
 
     @Test
     fun verreDEauEtChronoDepuisLAccueil() {
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withId(R.id.water_plus)).perform(click())
+            onView(withId(R.id.hero_glasses_label)).check(matches(withText(glassesLabel(0))))
+            onView(withId(R.id.hero_water)).perform(click())
             assertEquals(1, Water.state(context).glasses)
+            eventually { onView(withId(R.id.hero_glasses_label)).check(matches(withText(glassesLabel(1)))) }
 
             onView(withId(R.id.widget_focus_toggle)).perform(click())
             assertTrue(FocusTimer.state.running)
