@@ -55,10 +55,16 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         set(value) { if (field != value) { field = value; requestLayout() } }
 
     private val density = resources.displayMetrics.density
-    private val gap = dp(20)
+    /** Gouttière entre les cases. */
+    var gap = dp(20)
+        set(value) { if (field != value) { field = value; requestLayout() } }
+    /** Poids des [ROWS] lignes (voir [RowProfile]) ; null : lignes égales, comme avant le profil Cadran. */
+    var rowWeights: IntArray? = null
+        set(value) { field = value; requestLayout() }
     private val narrowRowHeight = dp(176)
     private var cellW = 0
-    private var cellH = 0
+    /** Hauteur de chaque ligne en mode normal (en mode étroit, toutes valent [narrowRowHeight]). */
+    private var rowH = IntArray(ROWS)
     /** Cases occupées en mode étroit (le flux remplace la position enregistrée). */
     private val flow = HashMap<Placed, IntArray>()
 
@@ -101,20 +107,19 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         if (narrow) {
             computeFlow()
             val rows = flow.values.maxOfOrNull { it[1] + it[3] } ?: 1
-            cellH = narrowRowHeight
-            height = paddingTop + paddingBottom + rows * cellH + (rows - 1) * gap
+            height = paddingTop + paddingBottom + spanHeight(0, rows)
         } else {
             height = if (viewportHeight > 0) viewportHeight else MeasureSpec.getSize(heightMeasureSpec)
-            cellH = (height - paddingTop - paddingBottom - gap * (ROWS - 1)) / ROWS
+            rowH = computeRows(height - paddingTop - paddingBottom)
         }
         for (i in 0 until childCount) {
             val child = getChildAt(i)
             val placed = placedOf(child) ?: continue
             if (child.visibility == View.GONE) continue
-            val (_, _, w, h) = cells(placed)
+            val (_, row, w, h) = cells(placed)
             child.measure(
                 MeasureSpec.makeMeasureSpec(w * cellW + (w - 1) * gap, MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec(h * cellH + (h - 1) * gap, MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(spanHeight(row, h), MeasureSpec.EXACTLY),
             )
         }
         setMeasuredDimension(width, height)
@@ -127,7 +132,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             if (child.visibility == View.GONE) continue
             val (c, row) = cells(placed)
             val left = paddingLeft + c * (cellW + gap)
-            val top = paddingTop + row * (cellH + gap)
+            val top = paddingTop + rowTop(row)
             child.layout(left, top, left + child.measuredWidth, top + child.measuredHeight)
         }
     }
@@ -141,6 +146,29 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         }
         requestLayout()
         invalidate()
+    }
+
+    private fun computeRows(room: Int): IntArray {
+        val weights = rowWeights ?: return IntArray(ROWS) { (room - gap * (ROWS - 1)) / ROWS }
+        return RowProfile.rowHeights(room, gap, weights)
+    }
+
+    private fun rowHeight(r: Int) = if (narrow) narrowRowHeight else rowH[r]
+
+    /** Ordonnée du haut de la ligne `r`, dans la zone sous le padding. */
+    private fun rowTop(r: Int): Int {
+        var top = 0
+        for (i in 0 until r) top += rowHeight(i) + gap
+        return top
+    }
+
+    /** Hauteur de `h` lignes à partir de `r`, gouttières comprises. */
+    private fun spanHeight(r: Int, h: Int): Int = rowTop(r + h) - rowTop(r) - gap
+
+    /** Ligne sous l'ordonnée `y` (la gouttière compte pour la ligne du dessus), [ROWS] si en dessous de la dernière. */
+    private fun rowAt(y: Float): Int {
+        for (r in 0 until ROWS) if (y < rowTop(r) + rowHeight(r) + gap) return r
+        return ROWS
     }
 
     /** Colonne, ligne, largeur, hauteur affichées (enregistrées, ou le flux en mode étroit). */
@@ -291,7 +319,8 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
                     view.translationY = dy
                     val placed = placedOf(view) ?: return
                     dropCol = ((view.left + dx - paddingLeft) / (cellW + gap)).roundToInt().coerceIn(0, COLS - placed.size.w)
-                    dropRow = ((view.top + dy - paddingTop) / (cellH + gap)).roundToInt().coerceIn(0, ROWS - placed.size.h)
+                    val y = view.top + dy - paddingTop
+                    dropRow = (0..ROWS - placed.size.h).minBy { abs(rowTop(it) - y) }
                     dropOk = listener?.canMove(placed, dropCol, dropRow) == true
                     invalidate()
                 }
@@ -341,7 +370,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             if (child.visibility == View.VISIBLE && x >= child.left && x < child.right && y >= child.top && y < child.bottom) return Hit.Body(child, placed)
         }
         val col = ((x - paddingLeft) / (cellW + gap)).toInt()
-        val row = ((y - paddingTop) / (cellH + gap)).toInt()
+        val row = rowAt((y - paddingTop).coerceAtLeast(0f))
         return if (col in 0 until COLS && row in 0 until ROWS) Hit.Empty(col, row) else null
     }
 
@@ -388,8 +417,8 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         if (dragging) {
             val placed = dragView?.let { placedOf(it) } ?: return
             val left = paddingLeft + dropCol * (cellW + gap)
-            val top = paddingTop + dropRow * (cellH + gap)
-            val rect = RectF(left.toFloat(), top.toFloat(), (left + placed.size.w * cellW + (placed.size.w - 1) * gap).toFloat(), (top + placed.size.h * cellH + (placed.size.h - 1) * gap).toFloat())
+            val top = paddingTop + rowTop(dropRow)
+            val rect = RectF(left.toFloat(), top.toFloat(), (left + placed.size.w * cellW + (placed.size.w - 1) * gap).toFloat(), (top + spanHeight(dropRow, placed.size.h)).toFloat())
             stroke.color = if (dropOk) accent else ko
             fill.color = (if (dropOk) accent else ko) and 0x33FFFFFF
             canvas.drawRoundRect(rect, 20 * density, 20 * density, fill)
@@ -419,8 +448,8 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         for (r in 0 until ROWS) for (c in 0 until COLS) {
             if (taken.any { it.covers(c, r) }) continue
             val left = (paddingLeft + c * (cellW + gap)).toFloat()
-            val top = (paddingTop + r * (cellH + gap)).toFloat()
-            val rect = RectF(left + dp(2), top + dp(2), left + cellW - dp(2), top + cellH - dp(2))
+            val top = (paddingTop + rowTop(r)).toFloat()
+            val rect = RectF(left + dp(2), top + dp(2), left + cellW - dp(2), top + rowHeight(r) - dp(2))
             canvas.drawRoundRect(rect, 20 * density, 20 * density, dashed)
             canvas.drawText("+", rect.centerX(), rect.centerY() - (text.descent() + text.ascent()) / 2, text)
         }

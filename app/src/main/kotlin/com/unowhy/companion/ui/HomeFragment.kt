@@ -28,6 +28,7 @@ import com.unowhy.companion.ui.home.HomeWidget
 import com.unowhy.companion.ui.home.MAX_PAGES
 import com.unowhy.companion.ui.home.Placed
 import com.unowhy.companion.ui.home.ROWS
+import com.unowhy.companion.ui.home.RowProfile
 import com.unowhy.companion.ui.home.Template
 import com.unowhy.companion.ui.home.WidgetGrid
 import com.unowhy.companion.ui.home.WidgetType
@@ -54,6 +55,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private var backup: HomeLayout? = null
     private val widgets = LinkedHashMap<Placed, HomeWidget>()
     private var page = 0
+    /** Famille de thème Cadran : disposition à part et lignes inégales. */
+    private val cadran get() = themeBool(requireContext(), R.attr.c_cadran)
     /** Aucun ordinateur appairé : les widgets qui en ont besoin proposent de le connecter. */
     private var noComputer = false
     private var loop: Job? = null
@@ -88,7 +91,12 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
         // Écran recréé quand l'ordinateur change (MainActivity.onComputerChanged) : lu une fois ici.
         noComputer = Computers.all(requireContext()).isEmpty()
-        layout = HomeLayout.load(requireContext())
+        if (cadran) {
+            grid.setPadding(dp(44), dp(28), dp(40), dp(32))
+            grid.gap = dp(16)
+            grid.rowWeights = RowProfile.CADRAN_ROWS
+        }
+        layout = HomeLayout.load(requireContext(), cadran)
         build()
 
         // Le panneau document peut réduire la largeur de moitié : 2 colonnes, la page défile.
@@ -278,7 +286,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     /** Réglage d'un widget changé hors mode Modifier ; en mode Modifier, « Terminé » enregistre. */
     override fun save() {
-        if (!grid.editing) HomeLayout.save(requireContext(), layout)
+        if (!grid.editing) HomeLayout.save(requireContext(), layout, cadran)
     }
 
     // --- Pages
@@ -332,7 +340,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             return
         }
         layout.compact()
-        HomeLayout.save(requireContext(), layout)
+        HomeLayout.save(requireContext(), layout, cadran)
         showPage(page)
     }
 

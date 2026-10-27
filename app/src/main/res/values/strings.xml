@@ -522,6 +522,7 @@
     <string name="widget_size_t">Colonne</string>
     <string name="widget_size_w">Bandeau</string>
     <string name="widget_size_xl">Très grand</string>
+    <string name="widget_size_v">Vertical</string>
     <string name="widget_needs_computer">%1$s : connecte ton ordinateur</string>
     <string name="widget_clock">Horloge</string>
     <string name="widget_clock_desc">L\'heure et la date, en grand</string>
