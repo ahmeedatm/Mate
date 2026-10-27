@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Cadran · Accueil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&display=block">
+<style>
+/* Tokens : rôles Material 3 (tons HCT) calculés depuis la charte Unowhy, voir README.md */
+:root {
+  --bg: #FAF2F1; --tile: #FFFFFF; --tile-high: #EEE6E6; --tile-highest: #E9E1E0;
+  --ink: #1E1B1B; --ink-2: #4D4545; --ink-3: #6F6666; --line: #D0C4C3; --graph: #8C8181;
+  --now: #CA0538; --now-soft: #FFDADA; --on-now: #FFFFFF; --ok: #31685A;
+  --state: 30, 27, 27; --scrim: rgba(0, 0, 0, .32);
+  --r-tile: 32px; --pad: 24px; --gap: 16px;
+}
+body.nuit {
+  --bg: #100D0D; --tile: #221F1F; --tile-high: #282525; --tile-highest: #2F2B2B;
+  --ink: #E9E1E0; --ink-2: #D0C4C3; --ink-3: #998E8E; --line: #4D4545; --graph: #776D6D;
+  --now: #FF5165; --now-soft: #680018; --on-now: #2A0006; --ok: #9AD2C1; --state: 233, 225, 224; --scrim: rgba(0, 0, 0, .5);
+}
+body.fondu, body.fondu * { transition: background-color 1.6s cubic-bezier(.2,0,0,1), color 1.6s cubic-bezier(.2,0,0,1), fill 1.6s cubic-bezier(.2,0,0,1), stroke 1.6s cubic-bezier(.2,0,0,1), border-color 1.6s cubic-bezier(.2,0,0,1) !important; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1280px; height: 800px; overflow: hidden; }
+body { position: relative; background: var(--bg); color: var(--ink); font: 400 15px/1.4 Outfit, sans-serif; -webkit-font-smoothing: antialiased; user-select: none; }
+body.legende { height: 864px; }
+.num { font-feature-settings: "tnum"; }
+svg.i { width: 24px; height: 24px; fill: currentColor; flex: none; }
+.sq { corner-shape: squircle; }
+.ecran { position: absolute; left: 0; top: 0; width: 1280px; height: 800px; will-change: transform, opacity; }
+[hidden] { display: none !important; }
+
+/* Poignée : seule trace du menu au repos */
+.poignee { position: absolute; left: 0; top: 0; width: 28px; height: 800px; z-index: 5; }
+.poignee i { position: absolute; left: 7px; top: 372px; width: 5px; height: 56px; border-radius: 3px; background: var(--graph); }
+
+/* Menu : rail étendu modal de M3 Expressive */
+.voile { position: absolute; left: 0; top: 0; width: 1280px; height: 800px; background: var(--scrim); opacity: 0; pointer-events: none; z-index: 8; }
+.menu { position: absolute; left: 12px; top: 12px; width: 300px; height: 776px; border-radius: 28px; background: var(--tile); z-index: 9; padding: 20px 12px; display: flex; flex-direction: column; will-change: transform; }
+.menu .parler { margin: 0 4px 20px; height: 56px; border-radius: 28px; display: flex; align-items: center; gap: 12px; padding: 0 22px 0 18px; background: var(--ink); color: var(--bg); font: 500 16px Outfit; align-self: flex-start; position: relative; }
+.menu nav { position: relative; display: flex; flex-direction: column; gap: 4px; }
+.menu .ind { position: absolute; left: 0; right: 0; top: 0; height: 56px; border-radius: 28px; background: var(--tile-highest); will-change: transform; }
+.dest { position: relative; height: 56px; display: flex; align-items: center; gap: 16px; padding: 0 20px; font: 500 16px Outfit; color: var(--ink-2); border-radius: 28px; will-change: transform, opacity; }
+.dest.on { color: var(--ink); }
+.menu .pied { margin-top: auto; padding: 0 20px; display: flex; flex-direction: column; gap: 6px; color: var(--ink-2); font: 400 14px/20px Outfit; }
+.menu .pied div { display: flex; align-items: center; gap: 10px; }
+.menu .pied svg.i { width: 20px; height: 20px; }
+
+/* Accueil */
+.contenu { padding: 28px 40px 32px 44px; height: 800px; display: flex; flex-direction: column; }
+.heros { display: flex; justify-content: space-between; align-items: flex-start; height: 236px; will-change: transform, opacity; }
+.horloge { font: 300 184px/1 Outfit; letter-spacing: -0.035em; margin-left: -10px; display: flex; height: 176px; }
+.horloge .sep { width: .26em; text-align: center; transform: translateY(-.06em); }
+.case { position: relative; display: inline-block; width: .56em; height: 1em; overflow: hidden; }
+.case > span { position: absolute; inset: 0; text-align: center; will-change: transform, opacity; }
+.date { font: 400 26px/32px Outfit; color: var(--ink-2); margin-top: 6px; }
+.ensuite { font: 400 17px/24px Outfit; color: var(--ink-2); margin-top: 6px; display: flex; gap: 6px; }
+.ensuite b { font-weight: 500; color: var(--ink); }
+.ensuite .rouge { color: var(--now); font-weight: 500; display: inline-flex; gap: .25em; }
+.compte { display: inline-flex; height: 24px; vertical-align: top; }
+.compte .case { width: .58em; height: 24px; }
+
+.compl { display: flex; gap: 40px; padding-top: 22px; }
+.co { position: relative; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.co .v { font: 300 52px/56px Outfit; letter-spacing: -.02em; display: flex; align-items: center; gap: 10px; }
+.co .v svg.i { width: 32px; height: 32px; color: var(--ink-2); }
+.co .l { font: 400 14px/20px Outfit; color: var(--ink-2); display: flex; gap: .25em; }
+.co .l .compte, .co .l .case { height: 20px; }
+.verres { display: flex; gap: 5px; height: 56px; align-items: center; }
+.verres i { position: relative; width: 8px; height: 30px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.verres i b { position: absolute; inset: 0; background: var(--ok); border-radius: 4px; transform-origin: 50% 100%; will-change: transform; }
+
+.jour { position: relative; height: 92px; margin: 4px 0 20px; }
+.piste { position: absolute; left: 0; right: 0; top: 46px; height: 2px; background: var(--graph); border-radius: 1px; }
+.passe { position: absolute; left: 0; top: 46px; height: 2px; background: var(--ink-3); border-radius: 1px; transform-origin: 0 50%; }
+.heures span { position: absolute; top: 72px; transform: translateX(-50%); font: 500 12px/16px Outfit; color: var(--ink-3); white-space: nowrap; }
+.ev { position: absolute; top: 12px; height: 40px; font: 500 13px/16px Outfit; color: var(--ink-2); white-space: nowrap; will-change: opacity; }
+.ev::after { content: ""; position: absolute; left: 0; right: 0; top: 30px; height: 8px; border-radius: 4px; background: var(--ink-3); }
+.ev.fini { color: var(--ink-3); }
+.ev.fini::after { background: var(--line); }
+.ev.suiv { color: var(--now); }
+.ev.suiv::after { background: var(--now); }
+.bulle { position: absolute; bottom: 58px; padding: 12px 16px; border-radius: 16px; background: var(--ink); color: var(--bg); font: 400 14px/20px Outfit; white-space: nowrap; transform-origin: 16px 100%; opacity: 0; z-index: 3; }
+.bulle b { font-weight: 500; display: block; font-size: 15px; }
+.mainten { position: absolute; top: 0; width: 0; height: 92px; }
+.mainten .trait { position: absolute; left: -1px; top: 22px; width: 2px; height: 48px; border-radius: 1px; background: var(--now); }
+.mainten .pt { position: absolute; left: -6px; top: 41px; width: 12px; height: 12px; border-radius: 6px; background: var(--now); box-shadow: 0 0 0 3px var(--bg); }
+.onde { position: absolute; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--now); opacity: 0; pointer-events: none; }
+.mainten .onde { left: -6px; top: 41px; }
+
+.tuiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--gap); flex: 1; }
+.t { position: relative; background: var(--tile); border-radius: var(--r-tile); padding: var(--pad); display: flex; flex-direction: column; overflow: hidden; will-change: transform, opacity; }
+.t::after, .app::after, .bouton::after, .rond::after, .dest::after, .parler::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: rgba(var(--state), 0); pointer-events: none; transition: background-color 90ms linear; }
+.presse::after, .presse .app::after { background: rgba(var(--state), .10) !important; }
+.parler.presse::after { background: rgba(255, 255, 255, .14) !important; }
+.tete { display: flex; justify-content: space-between; align-items: baseline; font: 500 15px/20px Outfit; color: var(--ink-2); margin-bottom: 16px; }
+.tete .num { color: var(--ink-3); font-weight: 400; }
+
+.prochain .h { font: 300 44px/48px Outfit; letter-spacing: -.02em; }
+.prochain .n { font: 500 18px/24px Outfit; margin-top: 6px; }
+.prochain .s { font: 400 14px/20px Outfit; color: var(--ink-2); }
+.bouton { position: relative; margin-top: 18px; align-self: flex-start; height: 44px; padding: 0 20px 0 14px; border-radius: 22px; display: flex; align-items: center; gap: 8px; background: var(--now); color: var(--on-now); font: 500 15px/20px Outfit; will-change: transform; }
+.bouton svg.i { width: 20px; height: 20px; }
+.apres { margin-top: auto; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+.apres div { display: flex; gap: 12px; font: 400 15px/20px Outfit; }
+.apres .num { color: var(--ink-2); min-width: 44px; }
+
+.taches { list-style: none; display: flex; flex-direction: column; position: relative; }
+.taches li { display: flex; align-items: center; gap: 12px; height: 44px; font: 400 16px/20px Outfit; position: relative; will-change: transform; }
+.coche { width: 24px; height: 24px; border-radius: 12px; box-shadow: inset 0 0 0 1.5px var(--ink-3); display: grid; place-items: center; flex: none; will-change: transform; }
+.coche svg { width: 16px; height: 16px; fill: none; stroke: var(--tile); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.coche path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+li.faite .coche { background: var(--ok); box-shadow: none; }
+li.faite .coche path { stroke-dashoffset: 0; }
+.libelle { position: relative; }
+.barre { position: absolute; left: 0; right: 0; top: 50%; height: 1.5px; background: var(--ink-3); transform: scaleX(0); transform-origin: 0 50%; }
+li.faite .libelle { color: var(--ink-3); }
+li.faite .barre { transform: scaleX(1); }
+.ajout { color: var(--ink-3); }
+.ajout .coche { box-shadow: none; }
+.ajout .coche svg.i { width: 22px; height: 22px; fill: currentColor; stroke: none; }
+
+.focus { align-items: center; }
+.focus .tete { align-self: stretch; }
+.cadran { position: relative; }
+.cadran svg { display: block; width: 100%; height: 100%; }
+.cadran line { stroke: var(--graph); stroke-linecap: round; transition: stroke 160ms linear; }
+.cadran line.r { stroke: var(--now); }
+.cadran .c { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.petit { width: 176px; height: 176px; margin-top: 2px; }
+.petit line { stroke-width: 3.5; }
+.petit .c b { font: 300 40px/44px Outfit; letter-spacing: -.02em; }
+.petit .c small { font: 400 13px/16px Outfit; color: var(--ink-2); }
+.cmd { margin-top: auto; display: flex; gap: 10px; }
+.rond { position: relative; height: 44px; min-width: 44px; padding: 0 14px; border-radius: 22px; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--tile-high); color: var(--ink); font: 500 14px/20px Outfit; will-change: transform; }
+.rond svg.i { width: 20px; height: 20px; }
+.bascule { position: relative; width: 20px; height: 20px; }
+.bascule svg.i { position: absolute; inset: 0; will-change: transform, opacity; }
+
+.touches { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
+.touche { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; font: 400 13px/16px Outfit; color: var(--ink-2); will-change: transform; }
+.app { position: relative; width: 60px; height: 60px; border-radius: 22px; display: grid; place-items: center; }
+.app svg { width: 32px; height: 32px; }
+body.nuit .app { box-shadow: inset 0 0 0 1px var(--line); }
+.app .live { position: absolute; top: -3px; right: -3px; width: 14px; height: 14px; border-radius: 7px; background: var(--now); box-shadow: 0 0 0 3px var(--tile); }
+.touche .onde { left: 50%; top: 30px; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 22px; border-color: var(--ink-3); corner-shape: squircle; }
+
+/* En direct : ce qui se passe maintenant prend le haut de l'écran */
+.heros { position: relative; z-index: 2; }
+.heros > div:first-child { position: relative; flex: 1; }
+.horloge { transform-origin: 10px 0; will-change: transform; }
+#infos { will-change: opacity; }
+.direct { position: absolute; left: 0; top: 96px; right: 24px; }
+.direct > * { will-change: transform, opacity; }
+.etiquette { display: flex; align-items: center; gap: 8px; font: 500 15px/20px Outfit; color: var(--now); }
+.etiquette .pt { width: 8px; height: 8px; border-radius: 4px; background: var(--now); }
+.etiquette .compte, .etiquette .case { height: 20px; }
+.direct .titre { font: 300 44px/52px Outfit; letter-spacing: -.02em; }
+.direct .actions { display: flex; gap: 10px; margin-top: 12px; }
+.direct .rond.quitter { background: var(--now); color: var(--on-now); }
+#directFocus { display: flex; align-items: center; gap: 28px; top: 88px; }
+.mini { width: 140px; height: 140px; transform-origin: 0 0; flex: none; }
+.mini line { stroke-width: 4; }
+#directFocus .titre { font: 300 64px/68px Outfit; }
+#directFocus .s { font: 400 15px/20px Outfit; color: var(--ink-2); }
+
+/* Écran Focus */
+.ecran-focus { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 36px; }
+.grand { width: 460px; height: 460px; }
+.grand line { stroke-width: 7; }
+.grand .c b { font: 200 132px/1 Outfit; letter-spacing: -.03em; }
+.grand .c small { font: 400 18px/24px Outfit; color: var(--ink-2); margin-top: 10px; }
+.ecran-focus .cmd { margin: 0; gap: 14px; }
+.ecran-focus .rond { height: 56px; min-width: 56px; border-radius: 28px; padding: 0 22px; font-size: 16px; }
+.ecran-focus .rond.plein { background: var(--ink); color: var(--bg); }
+.ecran-focus .rond svg.i, .ecran-focus .bascule { width: 24px; height: 24px; }
+
+/* Démonstration : doigt et légende (hors interface) */
+.doigt { position: absolute; left: 0; top: 0; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 22px; background: rgba(120, 120, 120, .28); box-shadow: 0 0 0 2px rgba(255, 255, 255, .85); opacity: 0; z-index: 20; pointer-events: none; will-change: transform, opacity; }
+.leg { display: none; }
+body.legende .leg { display: flex; position: absolute; left: 0; top: 800px; width: 1280px; height: 64px; align-items: center; justify-content: center; background: #0B0B0B; color: #EDEDED; font: 400 18px Outfit; }
+.leg span { opacity: 0; transition: opacity .25s; }
+.leg span.vu { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="ecran" id="accueil">
+  <div class="contenu">
+    <section class="heros" id="heros">
+      <div>
+        <div class="horloge num" id="horloge"></div>
+        <div id="infos"><div class="date">Lundi 26 octobre</div>
+        <div class="ensuite"><span>Ensuite</span><b>Démo tablette</b><span class="rouge num">dans <span class="compte" id="compte"></span> min</span></div></div>
+        <div class="direct" id="directReunion" hidden>
+          <div class="etiquette num"><i class="pt"></i>En cours depuis <span class="compte" id="depuis"></span> min · Teams</div>
+          <div class="titre">Démo tablette</div>
+          <div class="actions"><div class="rond" id="micro"><span class="bascule"><svg class="i" viewBox="0 -960 960 960"><path d="M480-400q-50 0-85-35t-35-85v-240q0-50 35-85t85-35q50 0 85 35t35 85v240q0 50-35 85t-85 35Zm-40 240v-83q-92-13-157.5-78T203-479q-2-17 9-29t28-12q17 0 28.5 11.5T284-480q14 70 69.5 115T480-320q72 0 127-45.5T676-480q4-17 15.5-28.5T720-520q17 0 28 12t9 29q-14 91-79 157t-158 79v83q0 17-11.5 28.5T480-120q-17 0-28.5-11.5T440-160Z"/></svg><svg class="i" viewBox="0 -960 960 960"><path d="M672-377q-14-8-18-24.5t4-30.5q7-11 11.5-23.5T676-481q4-17 15.5-28t28.5-11q17 0 28 12t9 29q-3 23-10.5 45T727-392q-8 14-24.5 18.5T672-377ZM532-542 383-691q-11-11-17-25.5t-6-30.5v-13q0-50 35-85t85-35q50 0 85 35t35 85v189q0 27-24.5 37.5T532-542Zm-92 382v-84q-92-12-157.5-77T203-479q-2-17 9-29t28-12q17 0 28.5 11.5T284-480q14 70 69.5 115T480-320q34 0 64.5-10.5T600-360l57 57q-29 23-63.5 38.5T520-244v84q0 17-11.5 28.5T480-120q-17 0-28.5-11.5T440-160Zm324 76L84-764q-11-11-11-28t11-28q11-11 28-11t28 11l680 680q11 11 11 28t-11 28q-11 11-28 11t-28-11Z"/></svg></span>Micro</div><div class="rond"><svg class="i" viewBox="0 -960 960 960"><path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h480q33 0 56.5 23.5T720-720v180l126-126q10-10 22-5t12 19v344q0 14-12 19t-22-5L720-420v180q0 33-23.5 56.5T640-160H160Z"/></svg>Caméra</div><div class="rond quitter" id="quitter"><svg class="i" viewBox="0 -960 960 960"><path d="M480-640q118 0 232.5 47.5T916-450q12 12 12 28t-12 28l-92 90q-11 11-25.5 12t-26.5-8l-116-88q-8-6-12-14t-4-18v-114q-38-12-78-19t-82-7q-42 0-82 7t-78 19v114q0 10-4 18t-12 14l-116 88q-12 9-26.5 8T136-304l-92-90q-12-12-12-28t12-28q88-95 203-142.5T480-640Z"/></svg>Quitter</div></div>
+        </div>
+        <div class="direct" id="directFocus" hidden>
+          <div class="cadran mini" id="miniCadran"><svg viewBox="0 0 176 176"></svg></div>
+          <div><div class="etiquette"><i class="pt"></i>Focus · séance 2 sur 4</div><div class="titre num chrono">18:05</div><div class="s">Pause à 14:55 · ambiance Pluie</div></div>
+        </div>
+      </div>
+      <div class="compl">
+        <div class="co"><div class="v num"><svg class="i" viewBox="0 -960 960 960"><path d="M480-760q-17 0-28.5-11.5T440-800v-80q0-17 11.5-28.5T480-920q17 0 28.5 11.5T520-880v80q0 17-11.5 28.5T480-760Zm198 82q-11-11-11-28t11-28l56-57q12-12 28.5-12t28.5 12q11 11 11 28t-11 28l-57 57q-11 11-28 11t-28-11Zm122 238q-17 0-28.5-11.5T760-480q0-17 11.5-28.5T800-520h80q17 0 28.5 11.5T920-480q0 17-11.5 28.5T880-440h-80Zm-66 271-56-57q-11-11-11-28t11-28q11-11 28-11t28 11l57 56q12 12 12 28.5T791-169q-12 12-28.5 12T734-169ZM226-678l-57-57q-11-11-11-28t11-28q12-12 28.5-12t28.5 12l56 57q11 11 11 28t-11 28q-11 11-28 11t-28-11Zm14 478h180q25 0 42.5-17.5T480-260q0-25-17-42.5T421-320h-51l-20-48q-14-33-44-52.5T240-440q-50 0-85 35t-35 85q0 50 35 85t85 35Zm0 80q-83 0-141.5-58.5T40-320q0-83 58.5-141.5T240-520q60 0 109.5 32.5T423-400q58 0 97.5 43T560-254q-2 57-42.5 95.5T420-120H240Zm320-134q-5-20-10-39t-10-39q45-19 72.5-59t27.5-89q0-66-47-113t-113-47q-60 0-105 39t-53 99q-20-5-41-9t-41-9q14-88 82.5-144T480-720q100 0 170 70t70 170q0 77-44 138.5T560-254Zm-79-226Z"/></svg>14°</div><div class="l">Éclaircies, 17° max</div></div>
+        <div class="co" id="eau"><div class="verres" id="verres"></div><div class="l num"><span class="compte" id="nbverres"></span><span>verres sur 8</span></div></div>
+      </div>
+    </section>
+
+    <section class="jour" id="jour">
+      <div class="piste"></div>
+      <div class="passe" id="passe"></div>
+      <div class="heures" id="heures"></div>
+      <div class="ev fini" data-de="9.5" data-a="10.5" data-l="Teams · 1 h">Daily</div>
+      <div class="ev fini" data-de="12" data-a="13.25" data-l="Agenda perso">Déjeuner</div>
+      <div class="ev suiv" data-de="14.5" data-a="15.5" data-l="Teams · dans 23 min">Démo tablette</div>
+      <div class="ev" data-de="17" data-a="18" data-l="17:00 – 18:00 · Teams">Point Eliot</div>
+      <div class="bulle" id="bulle"><b id="bulle-t"></b><span id="bulle-s"></span></div>
+      <div class="mainten" id="mainten"><div class="onde" id="onde"></div><div class="trait"></div><div class="pt"></div></div>
+    </section>
+
+    <section class="tuiles">
+      <article class="t prochain">
+        <div class="tete"><span>Agenda</span><span class="num">3 aujourd'hui</span></div>
+        <div class="h num">14:30</div>
+        <div class="n">Démo tablette</div>
+        <div class="s">Teams · 1 h</div>
+        <div class="bouton" id="rejoindre"><svg class="i" viewBox="0 -960 960 960"><path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h480q33 0 56.5 23.5T720-720v180l126-126q10-10 22-5t12 19v344q0 14-12 19t-22-5L720-420v180q0 33-23.5 56.5T640-160H160Z"/></svg>Rejoindre</div>
+        <div class="apres">
+          <div><span class="num">17:00</span>Point Eliot</div>
+          <div><span class="num">Mar.</span>Daily 9:30</div>
+        </div>
+      </article>
+
+      <article class="t">
+        <div class="tete"><span>Tâches</span><span class="num" id="reste">3 restantes</span></div>
+        <ul class="taches" id="taches">
+          <li id="t1"><span class="coche"><svg viewBox="0 0 24 24"><path pathLength="1" d="M6 12.5l4 4 8-9"/></svg></span><span class="libelle">Relire la MR caméra<i class="barre"></i></span></li>
+          <li><span class="coche"><svg viewBox="0 0 24 24"><path pathLength="1" d="M6 12.5l4 4 8-9"/></svg></span><span class="libelle">Worklog Jira<i class="barre"></i></span></li>
+          <li><span class="coche"><svg viewBox="0 0 24 24"><path pathLength="1" d="M6 12.5l4 4 8-9"/></svg></span><span class="libelle">Appeler Eliot<i class="barre"></i></span></li>
+          <li class="faite"><span class="coche"><svg viewBox="0 0 24 24"><path pathLength="1" d="M6 12.5l4 4 8-9"/></svg></span><span class="libelle">Préparer la démo<i class="barre"></i></span></li>
+          <li class="ajout"><span class="coche"><svg class="i" viewBox="0 -960 960 960"><path d="M440-440H240q-17 0-28.5-11.5T200-480q0-17 11.5-28.5T240-520h200v-200q0-17 11.5-28.5T480-760q17 0 28.5 11.5T520-720v200h200q17 0 28.5 11.5T760-480q0 17-11.5 28.5T720-440H520v200q0 17-11.5 28.5T480-200q-17 0-28.5-11.5T440-240v-200Z"/></svg></span><span class="libelle">Nouvelle tâche</span></li>
+        </ul>
+      </article>
+
+      <article class="t focus">
+        <div class="tete"><span>Focus</span><span class="num">2 sur 4</span></div>
+        <div class="cadran petit" id="petitCadran"><svg viewBox="0 0 176 176"></svg><div class="c"><b class="num chrono">18:05</b><small>concentration</small></div></div>
+        <div class="cmd"><div class="rond pause"><span class="bascule"><svg class="i" viewBox="0 -960 960 960"><path d="M640-200q-33 0-56.5-23.5T560-280v-400q0-33 23.5-56.5T640-760q33 0 56.5 23.5T720-680v400q0 33-23.5 56.5T640-200Zm-320 0q-33 0-56.5-23.5T240-280v-400q0-33 23.5-56.5T320-760q33 0 56.5 23.5T400-680v400q0 33-23.5 56.5T320-200Z"/></svg><svg class="i" viewBox="0 -960 960 960"><path d="M320-273v-414q0-17 12-28.5t28-11.5q5 0 10.5 1.5T381-721l326 207q9 6 13.5 15t4.5 19q0 10-4.5 19T707-446L381-239q-5 3-10.5 4.5T360-233q-16 0-28-11.5T320-273Z"/></svg></span></div><div class="rond"><svg class="i" viewBox="0 -960 960 960"><path d="M558-84q-15 8-30.5 2.5T504-102l-60-120q-8-15-2.5-30.5T462-276q15-8 30.5-2.5T516-258l60 120q8 15 2.5 30.5T558-84Zm240 0q-15 8-30.5 2.5T744-102l-60-120q-8-15-2.5-30.5T702-276q15-8 30.5-2.5T756-258l60 120q8 15 2.5 30.5T798-84Zm-480 0q-15 8-30.5 2.5T264-102l-60-120q-8-15-2.5-30.5T222-276q15-8 30.5-2.5T276-258l60 120q8 15 2.5 30.5T318-84Zm-18-236q-91 0-155.5-64.5T80-540q0-83 55-145t136-73q32-57 87.5-89.5T480-880q90 0 156.5 57.5T717-679q69 6 116 57t47 122q0 75-52.5 127.5T700-320H300Zm0-80h400q42 0 71-29t29-71q0-42-29-71t-71-29h-60v-40q0-66-47-113t-113-47q-48 0-87.5 26T333-704l-10 24h-25q-57 2-97.5 42.5T160-540q0 58 41 99t99 41Zm180-200Z"/></svg>Pluie</div></div>
+      </article>
+
+      <article class="t">
+        <div class="tete"><span>Touches</span></div>
+        <div class="touches">
+          <div class="touche"><div class="app sq" style="background:#121212"><svg viewBox="0 0 24 24" aria-label="Spotify"><path fill="#1ED760" d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg></div>Spotify<span class="onde"></span></div>
+          <div class="touche" id="discord"><div class="app sq" style="background:#5865F2"><svg viewBox="0 0 24 24" aria-label="Discord"><path fill="#FFFFFF" d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg><span class="live"></span></div>Discord<span class="onde"></span></div>
+          <div class="touche"><div class="app sq" style="background:#FFFFFF;box-shadow:inset 0 0 0 1px var(--line)"><svg viewBox="0 0 24 24" aria-label="YouTube"><path fill="#FF0000" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></div>YouTube<span class="onde"></span></div>
+          <div class="touche"><div class="app sq" style="background:#171A21"><svg viewBox="0 0 24 24" aria-label="Steam"><path fill="#FFFFFF" d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z"/></svg></div>Steam<span class="onde"></span></div>
+          <div class="touche"><div class="app sq" style="background:#9146FF"><svg viewBox="0 0 24 24" aria-label="Twitch"><path fill="#FFFFFF" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg></div>Twitch<span class="onde"></span></div>
+          <div class="touche"><div class="app sq" style="background:#FFFFFF;box-shadow:inset 0 0 0 1px var(--line)"><svg viewBox="0 0 24 24" aria-label="Notion"><path fill="#000000" d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/></svg></div>Notion<span class="onde"></span></div>
+        </div>
+      </article>
+    </section>
+  </div>
+</div>
+
+<div class="ecran ecran-focus" id="focusEcran" hidden>
+  <div class="cadran grand" id="grandCadran"><svg viewBox="0 0 460 460"></svg><div class="c"><b class="num chrono">18:05</b><small>Concentration · séance 2 sur 4</small></div></div>
+  <div class="cmd"><div class="rond plein pause"><span class="bascule"><svg class="i" viewBox="0 -960 960 960"><path d="M640-200q-33 0-56.5-23.5T560-280v-400q0-33 23.5-56.5T640-760q33 0 56.5 23.5T720-680v400q0 33-23.5 56.5T640-200Zm-320 0q-33 0-56.5-23.5T240-280v-400q0-33 23.5-56.5T320-760q33 0 56.5 23.5T400-680v400q0 33-23.5 56.5T320-200Z"/></svg><svg class="i" viewBox="0 -960 960 960"><path d="M320-273v-414q0-17 12-28.5t28-11.5q5 0 10.5 1.5T381-721l326 207q9 6 13.5 15t4.5 19q0 10-4.5 19T707-446L381-239q-5 3-10.5 4.5T360-233q-16 0-28-11.5T320-273Z"/></svg></span></div><div class="rond"><svg class="i" viewBox="0 -960 960 960"><path d="M558-84q-15 8-30.5 2.5T504-102l-60-120q-8-15-2.5-30.5T462-276q15-8 30.5-2.5T516-258l60 120q8 15 2.5 30.5T558-84Zm240 0q-15 8-30.5 2.5T744-102l-60-120q-8-15-2.5-30.5T702-276q15-8 30.5-2.5T756-258l60 120q8 15 2.5 30.5T798-84Zm-480 0q-15 8-30.5 2.5T264-102l-60-120q-8-15-2.5-30.5T222-276q15-8 30.5-2.5T276-258l60 120q8 15 2.5 30.5T318-84Zm-18-236q-91 0-155.5-64.5T80-540q0-83 55-145t136-73q32-57 87.5-89.5T480-880q90 0 156.5 57.5T717-679q69 6 116 57t47 122q0 75-52.5 127.5T700-320H300Zm0-80h400q42 0 71-29t29-71q0-42-29-71t-71-29h-60v-40q0-66-47-113t-113-47q-48 0-87.5 26T333-704l-10 24h-25q-57 2-97.5 42.5T160-540q0 58 41 99t99 41Zm180-200Z"/></svg>Pluie</div><div class="rond">Terminer</div></div>
+</div>
+
+<div class="poignee" id="poignee"><i></i></div>
+<div class="voile" id="voile"></div>
+<aside class="menu" id="menu">
+  <div class="parler" id="parler"><svg class="i" viewBox="0 -960 960 960"><path d="M480-400q-50 0-85-35t-35-85v-240q0-50 35-85t85-35q50 0 85 35t35 85v240q0 50-35 85t-85 35Zm-40 240v-83q-92-13-157.5-78T203-479q-2-17 9-29t28-12q17 0 28.5 11.5T284-480q14 70 69.5 115T480-320q72 0 127-45.5T676-480q4-17 15.5-28.5T720-520q17 0 28 12t9 29q-14 91-79 157t-158 79v83q0 17-11.5 28.5T480-120q-17 0-28.5-11.5T440-160Z"/></svg>Parler</div>
+  <nav id="nav">
+    <div class="ind" id="ind"></div>
+    <div class="dest on" data-ecran="accueil"><svg class="i" viewBox="0 -960 960 960"><path d="M160-200v-360q0-19 8.5-36t23.5-28l240-180q21-16 48-16t48 16l240 180q15 11 23.5 28t8.5 36v360q0 33-23.5 56.5T720-120H600q-17 0-28.5-11.5T560-160v-200q0-17-11.5-28.5T520-400h-80q-17 0-28.5 11.5T400-360v200q0 17-11.5 28.5T360-120H240q-33 0-56.5-23.5T160-200Z"/></svg>Accueil</div>
+    <div class="dest"><svg class="i" viewBox="0 -960 960 960"><path d="M200-520q-33 0-56.5-23.5T120-600v-160q0-33 23.5-56.5T200-840h160q33 0 56.5 23.5T440-760v160q0 33-23.5 56.5T360-520H200Zm0 400q-33 0-56.5-23.5T120-200v-160q0-33 23.5-56.5T200-440h160q33 0 56.5 23.5T440-360v160q0 33-23.5 56.5T360-120H200Zm400-400q-33 0-56.5-23.5T520-600v-160q0-33 23.5-56.5T600-840h160q33 0 56.5 23.5T840-760v160q0 33-23.5 56.5T760-520H600Zm0 400q-33 0-56.5-23.5T520-200v-160q0-33 23.5-56.5T600-440h160q33 0 56.5 23.5T840-360v160q0 33-23.5 56.5T760-120H600ZM200-600h160v-160H200v160Zm400 0h160v-160H600v160Zm0 400h160v-160H600v160Zm-400 0h160v-160H200v160Zm400-400Zm0 240Zm-240 0Zm0-240Z"/></svg>Deck</div>
+    <div class="dest"><svg class="i" viewBox="0 -960 960 960"><path d="M80-120q-17 0-28.5-11.5T40-160q0-17 11.5-28.5T80-200h800q17 0 28.5 11.5T920-160q0 17-11.5 28.5T880-120H80Zm80-120q-33 0-56.5-23.5T80-320v-440q0-33 23.5-56.5T160-840h640q33 0 56.5 23.5T880-760v440q0 33-23.5 56.5T800-240H160Zm0-80h640v-440H160v440Zm0 0v-440 440Z"/></svg>Depuis l'ordi</div>
+    <div class="dest" data-ecran="focusEcran"><svg class="i" viewBox="0 -960 960 960"><path d="M400-840q-17 0-28.5-11.5T360-880q0-17 11.5-28.5T400-920h160q17 0 28.5 11.5T600-880q0 17-11.5 28.5T560-840H400Zm80 440q17 0 28.5-11.5T520-440v-160q0-17-11.5-28.5T480-640q-17 0-28.5 11.5T440-600v160q0 17 11.5 28.5T480-400Zm0 320q-74 0-139.5-28.5T226-186q-49-49-77.5-114.5T120-440q0-74 28.5-139.5T226-694q49-49 114.5-77.5T480-800q62 0 119 20t107 58l28-28q11-11 28-11t28 11q11 11 11 28t-11 28l-28 28q38 50 58 107t20 119q0 74-28.5 139.5T734-186q-49 49-114.5 77.5T480-80Zm0-80q116 0 198-82t82-198q0-116-82-198t-198-82q-116 0-198 82t-82 198q0 116 82 198t198 82Zm0-280Z"/></svg>Focus</div>
+    <div class="dest"><svg class="i" viewBox="0 -960 960 960"><path d="M480-260q75 0 127.5-52.5T660-440q0-75-52.5-127.5T480-620q-75 0-127.5 52.5T300-440q0 75 52.5 127.5T480-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM160-120q-33 0-56.5-23.5T80-200v-480q0-33 23.5-56.5T160-760h126l50-54q11-12 26.5-19t32.5-7h170q17 0 32.5 7t26.5 19l50 54h126q33 0 56.5 23.5T880-680v480q0 33-23.5 56.5T800-120H160Zm0-80h640v-480H638l-73-80H395l-73 80H160v480Zm320-240Z"/></svg>Caméra</div>
+    <div class="dest"><svg class="i" viewBox="0 -960 960 960"><path d="M433-80q-27 0-46.5-18T363-142l-9-66q-13-5-24.5-12T307-235l-62 26q-25 11-50 2t-39-32l-47-82q-14-23-8-49t27-43l53-40q-1-7-1-13.5v-27q0-6.5 1-13.5l-53-40q-21-17-27-43t8-49l47-82q14-23 39-32t50 2l62 26q11-8 23-15t24-12l9-66q4-26 23.5-44t46.5-18h94q27 0 46.5 18t23.5 44l9 66q13 5 24.5 12t22.5 15l62-26q25-11 50-2t39 32l47 82q14 23 8 49t-27 43l-53 40q1 7 1 13.5v27q0 6.5-2 13.5l53 40q21 17 27 43t-8 49l-48 82q-14 23-39 32t-50-2l-60-26q-11 8-23 15t-24 12l-9 66q-4 26-23.5 44T527-80h-94Zm7-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/></svg>Réglages</div>
+  </nav>
+  <div class="pied">
+    <div><svg class="i" viewBox="0 -960 960 960"><path d="M80-160q-33 0-56.5-23.5T0-240h160q-33 0-56.5-23.5T80-320v-440q0-33 23.5-56.5T160-840h640q33 0 56.5 23.5T880-760v440q0 33-23.5 56.5T800-240h160q0 33-23.5 56.5T880-160H80Zm400-40q17 0 28.5-11.5T520-240q0-17-11.5-28.5T480-280q-17 0-28.5 11.5T440-240q0 17 11.5 28.5T480-200ZM160-320h640v-440H160v440Zm0 0v-440 440Z"/></svg>MacBook d'Ahmed</div>
+    <div><svg class="i" viewBox="0 -960 960 960"><path d="M480-120q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29Zm0-440q75 0 142.5 24T745-470q20 15 20.5 39.5T748-388q-17 17-42 17.5T661-384q-38-26-84-41t-97-15q-51 0-97 15t-84 41q-20 14-45 13t-42-18q-17-18-17-42.5t20-39.5q55-42 122.5-65.5T480-560Zm0-240q125 0 235.5 41T914-643q20 17 21 42t-17 43q-17 17-42 17.5T831-556q-72-59-161.5-91.5T480-680q-100 0-189.5 32.5T129-556q-20 16-45 15.5T42-558q-18-18-17-43t21-42q88-75 198.5-116T480-800Z"/></svg>WiFi Unowhy</div>
+    <div><svg class="i" viewBox="0 -960 960 960"><path d="M320-80q-17 0-28.5-11.5T280-120v-640q0-17 11.5-28.5T320-800h80v-40q0-17 11.5-28.5T440-880h80q17 0 28.5 11.5T560-840v40h80q17 0 28.5 11.5T680-760v640q0 17-11.5 28.5T640-80H320Zm40-480h240v-160H360v160Z"/></svg>Batterie 82 %</div>
+  </div>
+</aside>
+<div class="doigt" id="doigt"></div>
+<div class="leg"><span id="legt"></span></div>
+
+<script>
+// Ressorts M3, schéma standard (amortissement, raideur) : README.md, section Mouvement.
+const M = {
+  spatialFast:    { z: 0.9, k: 1400 },
+  spatialDefault: { z: 0.9, k: 700 },
+  spatialSlow:    { z: 0.9, k: 300 },
+  effectsFast:    { z: 1,   k: 3800 },
+  effectsDefault: { z: 1,   k: 1600 },
+  effectsSlow:    { z: 1,   k: 800 },
+};
+const reduit = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = id => document.getElementById(id);
+const etat = new WeakMap();
+const UN = new Set(['sc', 'sx', 'sy', 'o']);
+function val(el, cle) { const s = etat.get(el) || {}; return cle in s ? s[cle] : (UN.has(cle) ? 1 : 0); }
+function poser(el, cle, v) {
+  const s = etat.get(el) || {}; s[cle] = v; etat.set(el, s);
+  if (cle === 'dash') { el.style.strokeDashoffset = v; return; }
+  if (cle === 'o') { el.style.opacity = v; return; }
+  const tx = s.tx ?? 0, ty = s.ty ?? 0, sc = s.sc ?? 1, sx = s.sx ?? 1, sy = s.sy ?? 1;
+  el.style.transform = `translate(${tx}px, ${ty}px) scale(${sc * sx}, ${sc * sy})`;
+}
+// Ressort amorti de masse 1 (même modèle que SpringForce d'AndroidX). Interruptible : repart de la position et de la vitesse courantes.
+function ressort(el, cle, vers, jeton, fin) {
+  const s = etat.get(el) || {}; const id = (s['_' + cle] || 0) + 1; s['_' + cle] = id; etat.set(el, s);
+  let x = val(el, cle), v = s['v' + cle] || 0, avant = performance.now();
+  if (reduit) { poser(el, cle, vers); fin && fin(); return; }
+  const c = 2 * jeton.z * Math.sqrt(jeton.k), seuil = Math.max(0.002, Math.abs(vers - x) * 0.002);
+  function pas(t) {
+    if ((etat.get(el) || {})['_' + cle] !== id) return;
+    const dt = Math.min(0.05, (t - avant) / 1000); avant = t;
+    const n = Math.max(1, Math.ceil(dt / 0.002)), h = dt / n;
+    for (let i = 0; i < n; i++) { const a = -jeton.k * (x - vers) - c * v; v += a * h; x += v * h; }
+    const st = etat.get(el); st['v' + cle] = v;
+    if (Math.abs(x - vers) < seuil && Math.abs(v) < seuil * 10) { st['v' + cle] = 0; poser(el, cle, vers); fin && fin(); return; }
+    poser(el, cle, x); requestAnimationFrame(pas);
+  }
+  requestAnimationFrame(pas);
+}
+const attendre = ms => new Promise(r => setTimeout(r, ms));
+
+// Chiffres qui basculent : seuls ceux qui changent bougent.
+function basculer(c, ch, anime, delai = 0) {
+  const ancien = c.lastElementChild;
+  if (ancien && ancien.textContent === ch) return;
+  const nouveau = document.createElement('span'); nouveau.textContent = ch; c.appendChild(nouveau);
+  if (!anime || !ancien) { if (ancien) ancien.remove(); return; }
+  const d = c.offsetHeight * 0.62;
+  poser(nouveau, 'ty', d); poser(nouveau, 'o', 0);
+  setTimeout(() => {
+    ressort(nouveau, 'ty', 0, M.spatialDefault); ressort(nouveau, 'o', 1, M.effectsDefault);
+    ressort(ancien, 'ty', -d, M.spatialFast); ressort(ancien, 'o', 0, M.effectsFast, () => ancien.remove());
+  }, delai);
+}
+function rouleau(id, texte, anime) {
+  const c = $(id);
+  if (!c.children.length) { c.innerHTML = [...texte].map(ch => `<span class="case"><span>${ch}</span></span>`).join(''); return; }
+  [...c.children].forEach((k, i) => basculer(k, texte[i], anime, i * 30));
+}
+function horloge(texte, anime) {
+  const hz = $('horloge');
+  if (!hz.children.length) {
+    hz.innerHTML = [...texte].map(ch => ch === ':' ? '<span class="sep">:</span>' : `<span class="case"><span>${ch}</span></span>`).join('');
+    return;
+  }
+  [...hz.querySelectorAll('.case')].forEach((k, i) => basculer(k, texte.replace(':', '')[i], anime, i * 30));
+}
+
+// Ligne du jour : 8 h → 20 h
+const L = $('jour').offsetWidth, x = h => (h - 8) / 12 * L;
+$('heures').innerHTML = [8, 10, 12, 14, 16, 18, 20].map(h => `<span style="left:${x(h)}px">${h} h</span>`).join('');
+const hs = document.querySelectorAll('.heures span'); hs[0].style.transform = 'none'; hs[hs.length - 1].style.transform = 'translateX(-100%)';
+document.querySelectorAll('.ev').forEach(e => { e.style.left = x(+e.dataset.de) + 'px'; e.style.width = (x(+e.dataset.a) - x(+e.dataset.de) - 4) + 'px'; });
+let minutes = 14 * 60 + 7;
+const passe = $('passe'), mainten = $('mainten');
+function placerMaintenant(anime) {
+  const px = x(minutes / 60); passe.style.width = px + 'px';
+  anime ? ressort(mainten, 'tx', px, M.spatialDefault) : poser(mainten, 'tx', px);
+}
+function onde(el, vers = 3.2) { poser(el, 'sc', 1); poser(el, 'o', 0.9); ressort(el, 'sc', vers, M.effectsSlow); ressort(el, 'o', 0, M.effectsSlow); }
+
+// Bulle d'un événement : naît de sa barre.
+let bulleMinuteur;
+function bulle(ev) {
+  const b = $('bulle'); clearTimeout(bulleMinuteur);
+  $('bulle-t').textContent = ev.textContent; $('bulle-s').textContent = ev.dataset.l;
+  b.style.left = ev.style.left;
+  poser(b, 'sc', 0.86); poser(b, 'o', 0); poser(b, 'ty', 6);
+  ressort(b, 'sc', 1, M.spatialFast); ressort(b, 'o', 1, M.effectsDefault); ressort(b, 'ty', 0, M.spatialFast);
+  bulleMinuteur = setTimeout(() => { ressort(b, 'o', 0, M.effectsFast); ressort(b, 'sc', 0.94, M.spatialFast); }, 2600);
+}
+document.querySelectorAll('.ev').forEach(e => e.addEventListener('click', () => bulle(e)));
+
+// Eau : le verre se remplit par le bas, le compte bascule.
+let verres = 5;
+$('verres').innerHTML = Array.from({ length: 8 }, () => '<i><b></b></i>').join('');
+document.querySelectorAll('#verres b').forEach((b, i) => poser(b, 'sy', i < verres ? 1 : 0));
+rouleau('nbverres', String(verres), false);
+function boire() {
+  if (verres >= 8) return;
+  ressort(document.querySelectorAll('#verres b')[verres++], 'sy', 1, M.spatialDefault);
+  rouleau('nbverres', String(verres), true);
+}
+$('eau').addEventListener('click', boire);
+
+// Focus : graduations (une par minute de la séance), chrono, pause.
+let reste = 18 * 60 + 5, enPause = false;
+function graduer(svg, taille, r1, r2) {
+  const m = taille / 2;
+  svg.innerHTML = Array.from({ length: 25 }, (_, i) => {
+    const a = (i / 25) * 2 * Math.PI - Math.PI / 2;
+    return `<line x1="${m + r1 * Math.cos(a)}" y1="${m + r1 * Math.sin(a)}" x2="${m + r2 * Math.cos(a)}" y2="${m + r2 * Math.sin(a)}"/>`;
+  }).join('');
+}
+graduer(document.querySelector('#petitCadran svg'), 176, 76, 86);
+graduer(document.querySelector('#grandCadran svg'), 460, 196, 222);
+graduer(document.querySelector('#miniCadran svg'), 176, 74, 86);
+const cadrans = [...document.querySelectorAll('.cadran svg')];
+function graduations(cascade) {
+  const n = enPause ? 0 : Math.ceil(reste / 60);
+  cadrans.forEach(svg => [...svg.querySelectorAll('line')].forEach((l, i) => {
+    const allume = i >= 25 - n;
+    if (l.classList.contains('r') === allume) return;
+    cascade ? setTimeout(() => l.classList.toggle('r', allume), (allume ? i - (25 - n) : 24 - i) * 18) : l.classList.toggle('r', allume);
+  }));
+}
+function chrono() { document.querySelectorAll('.chrono').forEach(c => c.textContent = `${String(Math.floor(reste / 60)).padStart(2, '0')}:${String(reste % 60).padStart(2, '0')}`); }
+document.querySelectorAll('.bascule').forEach(b => { const l = b.children[1]; poser(l, 'o', 0); poser(l, 'sc', 0.5); });
+function pause() {
+  enPause = !enPause;
+  document.querySelectorAll('.bascule').forEach(b => {
+    const [p, l] = b.children, sort = enPause ? p : l, entre = enPause ? l : p;
+    ressort(sort, 'o', 0, M.effectsFast); ressort(sort, 'sc', 0.5, M.spatialFast);
+    ressort(entre, 'o', 1, M.effectsDefault); ressort(entre, 'sc', 1, M.spatialFast);
+  });
+  graduations(true);
+}
+document.querySelectorAll('.pause').forEach(p => p.addEventListener('click', pause));
+
+// Le battement de la minute : tout ce qui dépend de l'heure avance d'un seul geste.
+function battement() {
+  minutes++;
+  horloge(`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`, true);
+  const avant = 14 * 60 + 30 - minutes;
+  if (avant > 0) rouleau('compte', String(avant).padStart(2, '\u2007'), true);
+  else if (!$('infos').dataset.suite) { $('infos').dataset.suite = 1; $('infos').querySelector('.ensuite').innerHTML = '<span>Ensuite</span><b>Point Eliot</b><span class="num">à 17:00</span>'; }
+  placerMaintenant(true); onde($('onde'));
+  if (direct === 'directReunion') rouleau('depuis', String(minutes - minuteDebut), true);
+}
+
+// Appui : légère pression + calque d'état M3 à 10 %. Touche d'appli : une onde confirme l'action.
+function presser(el) { el.classList.add('presse'); ressort(el, 'sc', 0.96, M.spatialFast); }
+function relacher(el, confirme) {
+  el.classList.remove('presse'); ressort(el, 'sc', 1, M.spatialFast);
+  const o = confirme && el.querySelector(':scope > .onde'); if (o) onde(o, 1.45);
+}
+document.querySelectorAll('.t, .touche, .bouton, .rond, .dest, .parler').forEach(el => {
+  el.addEventListener('pointerdown', e => { e.stopPropagation(); presser(el); });
+  el.addEventListener('pointerup', () => relacher(el, el.classList.contains('touche')));
+  el.addEventListener('pointerleave', () => el.classList.contains('presse') && relacher(el));
+});
+
+// Cocher : le trait se dessine, la ligne se barre, puis la tâche descend sous les autres.
+function cocher(li) {
+  const p = li.querySelector('.coche path'), b = li.querySelector('.barre'), ul = li.parentElement, k = li.querySelector('.coche');
+  li.classList.add('faite');
+  poser(p, 'dash', 1); ressort(p, 'dash', 0, M.effectsDefault);
+  poser(b, 'sx', 0); ressort(b, 'sx', 1, M.spatialFast);
+  poser(k, 'sc', 0.7); ressort(k, 'sc', 1, M.spatialFast);
+  $('reste').textContent = '2 restantes';
+  setTimeout(() => {
+    const items = [...ul.children], avant = new Map(items.map(e => [e, e.getBoundingClientRect().top]));
+    ul.insertBefore(li, ul.querySelector('.ajout'));
+    items.forEach((e, i) => {
+      const d = avant.get(e) - e.getBoundingClientRect().top; if (!d) return;
+      poser(e, 'ty', d); setTimeout(() => ressort(e, 'ty', 0, M.spatialDefault), e === li ? 0 : 20 * i);
+    });
+  }, 650);
+}
+document.querySelectorAll('.taches li:not(.ajout)').forEach(li => li.querySelector('.coche').addEventListener('click', () => li.classList.contains('faite') || cocher(li)));
+
+// Menu : caché au repos. Il suit le doigt depuis le bord, s'ouvre ou se referme selon la distance et la vitesse au lâcher.
+const menu = $('menu'), voile = $('voile'), poignee = $('poignee').firstElementChild, LARG = 330, dests = [...document.querySelectorAll('.dest')];
+let ecran = 'accueil', fermeAuto;
+poser(menu, 'tx', -LARG); poser(voile, 'o', 0);
+function suivre(p) { poser(menu, 'tx', -LARG * (1 - p)); poser(voile, 'o', p); poser(poignee, 'o', 1 - p); }
+function ouvrir(vitesse = 0) {
+  voile.style.pointerEvents = 'auto';
+  etat.get(menu).vtx = vitesse;
+  ressort(menu, 'tx', 0, M.spatialDefault); ressort(voile, 'o', 1, M.effectsDefault); ressort(poignee, 'o', 0, M.effectsFast);
+  [$('parler'), ...dests].forEach((d, i) => { poser(d, 'tx', -14); poser(d, 'o', 0); setTimeout(() => { ressort(d, 'tx', 0, M.spatialFast); ressort(d, 'o', 1, M.effectsDefault); }, 40 + i * 28); });
+  clearTimeout(fermeAuto); fermeAuto = setTimeout(fermer, 6000);
+}
+function fermer() {
+  voile.style.pointerEvents = 'none'; clearTimeout(fermeAuto);
+  ressort(menu, 'tx', -LARG, M.spatialFast); ressort(voile, 'o', 0, M.effectsFast); ressort(poignee, 'o', 1, M.effectsDefault);
+}
+function placerIndicateur(d, anime) { anime ? ressort($('ind'), 'ty', d.offsetTop, M.spatialDefault) : poser($('ind'), 'ty', d.offsetTop); }
+placerIndicateur(dests[0], false);
+voile.addEventListener('click', fermer);
+let glisse = null;
+$('poignee').addEventListener('pointerdown', e => { glisse = { x0: e.clientX, t: performance.now(), x: e.clientX, v: 0 }; $('poignee').setPointerCapture(e.pointerId); });
+$('poignee').addEventListener('pointermove', e => {
+  if (!glisse) return; const t = performance.now();
+  glisse.v = (e.clientX - glisse.x) / Math.max(1, t - glisse.t) * 1000; glisse.x = e.clientX; glisse.t = t;
+  suivre(Math.min(1, Math.max(0, (e.clientX - glisse.x0) / LARG)));
+});
+$('poignee').addEventListener('pointerup', e => {
+  if (!glisse) return;
+  const p = (e.clientX - glisse.x0) / LARG, v = glisse.v; glisse = null;
+  (p < 0.02 || p > 0.4 || v > 600) && v > -300 ? ouvrir(v) : fermer();
+});
+
+// Changer d'écran : l'indicateur glisse, le menu se ferme, puis fondu enchaîné M3 (sortie sur les premiers 35 %, entrée depuis 92 %).
+function aller(d) {
+  if (!d.dataset.ecran) return;
+  dests.forEach(x => x.classList.toggle('on', x === d)); placerIndicateur(d, true);
+  setTimeout(() => {
+    fermer();
+    if (d.dataset.ecran === ecran) return;
+    const sort = $(ecran), entre = $(d.dataset.ecran); ecran = d.dataset.ecran;
+    ressort(sort, 'o', 0, M.effectsFast, () => { sort.hidden = true; });
+    setTimeout(() => {
+      entre.hidden = false; poser(entre, 'o', 0); poser(entre, 'sc', 0.92);
+      ressort(entre, 'o', 1, M.effectsDefault); ressort(entre, 'sc', 1, M.spatialDefault);
+    }, 110);
+  }, 220);
+}
+dests.forEach(d => d.addEventListener('click', () => aller(d)));
+
+// Arrivée : le jour se dessine jusqu'à maintenant, puis les tuiles montent.
+const tuiles = [...document.querySelectorAll('.t')];
+function arrivee() {
+  poser(passe, 'sx', 0); ressort(passe, 'sx', 1, M.spatialSlow);
+  document.querySelectorAll('.ev').forEach((e, i) => { poser(e, 'o', 0); setTimeout(() => ressort(e, 'o', 1, M.effectsDefault), 120 + i * 60); });
+  poser(mainten, 'o', 0); setTimeout(() => { ressort(mainten, 'o', 1, M.effectsDefault); onde($('onde')); }, 520);
+  tuiles.forEach((t, i) => { poser(t, 'ty', 24); poser(t, 'o', 0); setTimeout(() => { ressort(t, 'ty', 0, M.spatialDefault); ressort(t, 'o', 1, M.effectsDefault); }, 160 + i * 50); });
+  const h = $('heros'); poser(h, 'o', 0); poser(h, 'ty', -8); ressort(h, 'o', 1, M.effectsDefault); ressort(h, 'ty', 0, M.spatialDefault);
+}
+
+// Repos : sans toucher, seuls l'heure et la ligne du jour restent. Un toucher fait revenir le reste.
+let auRepos = false;
+function repos(oui) {
+  auRepos = oui;
+  (oui ? [...tuiles].reverse() : tuiles).forEach((t, i) => setTimeout(() => {
+    ressort(t, 'o', oui ? 0 : 1, oui ? M.effectsSlow : M.effectsDefault);
+    ressort(t, 'ty', oui ? 16 : 0, oui ? M.spatialSlow : M.spatialDefault);
+  }, i * (oui ? 70 : 45)));
+}
+document.addEventListener('pointerdown', () => auRepos && repos(false), true);
+
+// En direct : l'heure se replie dans le coin, ce qui se passe maintenant prend sa place.
+let direct = null, minuteDebut = 0;
+function voler(de, vers, fin) { // container transform maison : seule une transformation, calculée une fois (FLIP)
+  const a = de.getBoundingClientRect(), b = vers.getBoundingClientRect();
+  poser(vers, 'tx', a.left - b.left); poser(vers, 'ty', a.top - b.top); poser(vers, 'sc', a.width / b.width);
+  ressort(vers, 'tx', 0, M.spatialDefault); ressort(vers, 'ty', 0, M.spatialDefault); ressort(vers, 'sc', 1, M.spatialDefault, fin);
+}
+function enDirect(id) {
+  if (direct) return; direct = id; minuteDebut = minutes;
+  const d = $(id); d.hidden = false;
+  ressort($('horloge'), 'sc', 0.4, M.spatialDefault); ressort($('infos'), 'o', 0, M.effectsFast);
+  if (id === 'directReunion') { rouleau('depuis', '0', false); ressort($('rejoindre'), 'o', 0.35, M.effectsDefault); }
+  [...d.children].forEach((c, i) => {
+    if (c.id === 'miniCadran') { poser($('petitCadran'), 'o', 0); voler($('petitCadran'), c); return; }
+    poser(c, 'o', 0); poser(c, 'ty', 14);
+    setTimeout(() => { ressort(c, 'o', 1, M.effectsDefault); ressort(c, 'ty', 0, M.spatialDefault); }, 120 + i * 50);
+  });
+}
+function finDirect() {
+  if (!direct) return; const d = $(direct); direct = null; ressort($('rejoindre'), 'o', 1, M.effectsDefault);
+  const mini = d.querySelector('#miniCadran');
+  [...d.children].forEach(c => { if (c !== mini) { ressort(c, 'o', 0, M.effectsFast); ressort(c, 'ty', -8, M.spatialFast); } });
+  if (mini) {
+    const a = $('petitCadran').getBoundingClientRect(), b = mini.getBoundingClientRect();
+    ressort(mini, 'tx', a.left - b.left, M.spatialDefault); ressort(mini, 'ty', a.top - b.top, M.spatialDefault);
+    ressort(mini, 'sc', a.width / b.width, M.spatialDefault, () => { poser($('petitCadran'), 'o', 1); d.hidden = true; poser(mini, 'tx', 0); poser(mini, 'ty', 0); poser(mini, 'sc', 1); });
+  } else setTimeout(() => d.hidden = true, 260);
+  setTimeout(() => { ressort($('horloge'), 'sc', 1, M.spatialDefault); ressort($('infos'), 'o', 1, M.effectsDefault); }, 90);
+}
+let microCoupe = false;
+$('micro').addEventListener('click', () => {
+  microCoupe = !microCoupe; const [on, off] = $('micro').querySelector('.bascule').children, sort = microCoupe ? on : off, entre = microCoupe ? off : on;
+  ressort(sort, 'o', 0, M.effectsFast); ressort(sort, 'sc', 0.5, M.spatialFast); ressort(entre, 'o', 1, M.effectsDefault); ressort(entre, 'sc', 1, M.spatialFast);
+});
+$('quitter').addEventListener('click', finDirect);
+$('rejoindre').addEventListener('click', () => enDirect('directReunion'));
+$('petitCadran').addEventListener('click', () => enDirect('directFocus'));
+$('miniCadran').addEventListener('click', finDirect);
+
+function nuit(oui) { document.body.classList.add('fondu'); document.body.classList.toggle('nuit', oui); setTimeout(() => document.body.classList.remove('fondu'), 1700); }
+
+// Démarrage
+horloge('14:07', false); rouleau('compte', '23', false); placerMaintenant(false); graduations(false); chrono();
+const q = new URLSearchParams(location.search);
+if (q.get('theme') === 'nuit') document.body.classList.add('nuit');
+if (q.has('menu')) { suivre(1); voile.style.pointerEvents = 'auto'; }
+const tictac = setInterval(() => { if (enPause) return; reste--; chrono(); if (reste % 60 === 59) graduations(true); }, 1000);
+if (q.has('fige')) clearInterval(tictac);
+
+// Démonstration filmée : un doigt simulé et une légende (hors interface).
+const doigt = $('doigt');
+function doigtA(px, py) { poser(doigt, 'tx', px); poser(doigt, 'ty', py); }
+async function toucher(el, confirme) {
+  const r = el.getBoundingClientRect(); doigtA(r.left + r.width / 2, r.top + Math.min(r.height / 2, 30));
+  ressort(doigt, 'o', 1, M.effectsFast); presser(el); await attendre(200); relacher(el, confirme); el.click(); ressort(doigt, 'o', 0, M.effectsDefault); await attendre(150);
+}
+async function glisserDuBord() {
+  doigtA(8, 400); ressort(doigt, 'o', 1, M.effectsFast); await attendre(160);
+  const t0 = performance.now();
+  await new Promise(fin => { (function f(t) { const p = Math.min(1, (t - t0) / 380), e = 1 - Math.pow(1 - p, 2); doigtA(8 + e * 190, 400); suivre(e * 0.58); p < 1 ? requestAnimationFrame(f) : fin(); })(t0); });
+  ressort(doigt, 'o', 0, M.effectsDefault); ouvrir(900);
+}
+async function legende(t) { const l = $('legt'); l.classList.remove('vu'); await attendre(240); l.textContent = t; l.classList.add('vu'); }
+async function demo() {
+  if (q.has('legende')) document.body.classList.add('legende');
+  await document.fonts.ready; await attendre(400);
+  legende('Arrivée : le jour se dessine jusqu’à maintenant'); arrivee(); await attendre(2500);
+  legende('Le menu reste caché. Glisser depuis le bord : il suit le doigt'); await attendre(700); await glisserDuBord(); await attendre(1400);
+  legende('Changer d’écran : l’indicateur glisse, puis fondu enchaîné'); await toucher(dests[3]); await attendre(2000);
+  legende('Pause : le cadran s’éteint graduation par graduation'); await toucher(document.querySelector('#focusEcran .pause')); await attendre(1800);
+  legende('Reprise : il se rallume'); await toucher(document.querySelector('#focusEcran .pause')); await attendre(1600);
+  legende('Toucher la poignée rouvre le menu'); await toucher($('poignee')); ouvrir(); await attendre(900); await toucher(dests[0]); await attendre(1700);
+  legende('Un verre de plus : il se remplit, le compte bascule'); await toucher($('eau')); await attendre(1600);
+  legende('Une touche : l’action part, une onde confirme'); await toucher($('discord'), true); await attendre(1500);
+  legende('Toucher un rendez-vous : la bulle naît de sa barre'); await toucher(document.querySelectorAll('.ev')[3]); await attendre(2200);
+  legende('Cocher : le trait se dessine, la tâche descend'); await toucher($('t1').querySelector('.coche')); await attendre(2200);
+  legende('Le battement de la minute : 14:07 → 14:08'); await attendre(400); battement(); await attendre(2200);
+  legende('Deux chiffres changent : 14:09 → 14:10'); minutes = 14 * 60 + 9; battement(); await attendre(2200);
+  legende('Sans toucher, l’écran se repose : l’heure et la ligne du jour restent'); await attendre(300); repos(true); await attendre(2600);
+  legende('Un toucher, et tout revient'); doigtA(900, 600); ressort(doigt, 'o', 1, M.effectsFast); await attendre(160); repos(false); ressort(doigt, 'o', 0, M.effectsDefault); await attendre(1800);
+  legende('Au coucher du soleil, le bureau passe en nuit'); await attendre(300); nuit(true); await attendre(2800);
+  legende('La nuit, seul le rouge signale le présent'); battement(); await attendre(2600);
+}
+async function demoDirect() {
+  if (q.has('legende')) document.body.classList.add('legende');
+  await document.fonts.ready; await attendre(400);
+  legende('Accueil'); arrivee(); await attendre(2200);
+  legende('14:29 : la réunion approche'); minutes = 14 * 60 + 28; battement(); await attendre(2000);
+  legende('14:30 : toucher Rejoindre'); battement(); await attendre(700); await toucher($('rejoindre')); await attendre(300);
+  legende('La réunion prend le haut de l\u2019écran, l\u2019heure se replie'); await attendre(2600);
+  legende('Couper le micro : l\u2019icône se transforme'); await toucher($('micro')); await attendre(1600);
+  legende('Le battement continue : en cours depuis 1 min'); battement(); await attendre(2200);
+  legende('Quitter : l\u2019heure reprend sa place'); await toucher($('quitter')); await attendre(2200);
+  legende('Toucher le cadran du Focus'); await toucher($('petitCadran')); await attendre(200);
+  legende('Il vole de sa tuile jusqu\u2019en haut de l\u2019écran'); await attendre(3200);
+  legende('Le toucher à nouveau : il retourne dans sa tuile'); await toucher($('miniCadran')); await attendre(2400);
+}
+if (q.has('demo')) demo();
+if (q.has('direct')) demoDirect();
+</script>
+</body>
+</html>
