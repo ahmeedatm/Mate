@@ -60,6 +60,21 @@ class TabletStatusView @JvmOverloads constructor(context: Context, attrs: Attrib
         level = findViewById(R.id.tablet_battery_level)
     }
 
+    /** Pied du menu Cadran : l'heure, puis WiFi et batterie, sur une ligne alignée à gauche. */
+    fun inline() {
+        orientation = HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        background = null
+        setPadding(0, 0, 0, 0)
+        (getChildAt(1).layoutParams as LayoutParams).apply {
+            topMargin = 0
+            marginStart = context.dp(12)
+        }
+        time.textSize = 14f
+        time.setTextColor(themeColor(context, R.attr.c_text_dim))
+        level.textSize = 14f
+    }
+
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         val filter = IntentFilter().apply {

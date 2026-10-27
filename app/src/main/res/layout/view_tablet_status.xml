@@ -7,7 +7,7 @@
         android:id="@+id/tablet_time"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="sans-serif-medium"
+        android:fontFamily="?attr/c_font_medium"
         android:textColor="?attr/c_text"
         android:textSize="18sp" />
 

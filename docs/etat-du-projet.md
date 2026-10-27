@@ -48,6 +48,8 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 ## Fait mais pas encore testé en vrai
 
+- **Thème Cadran** (jour et nuit, seuls thèmes depuis le 27/10 ; Nuit, Clair, Néon, Chaud retirés) : Accueil de la DA `docs/ui-ux/da` (héros, ligne du jour, cartes Agenda / Tâches / Focus / Touches, menu caché qui sort du bord), états injoignable / vide / police agrandie traités. Vérifié sur l'émulateur `companion_api29` (captures, `gfxinfo` : 1 % d'images en retard) ; installé sur la tablette 4.2 en kiosque le 27/10.
+
 - **Tests instrumentés sur émulateur** (26/10) : Espresso (`app/src/androidTest/`), émulateur Android 10 sans services Google calqué sur la tablette, en local (`scripts/test-android.sh`, émulateur natif du Mac) et en CI (job `android-emulateur` : le runner Kubernetes partagé a KVM). Premier parcours : lancement sans ordinateur → bienvenue → « Plus tard » → Deck → « Connecter ». Espresso plutôt que Maestro : dans Gradle et l'image CI déjà là, rien à installer, préférences effacées depuis le test, synchronisation automatique ; Maestro (YAML, boîte noire) reste une piste pour un test de fumée sur la vraie tablette en kiosque. Deck contre un vrai backend Linux (`DeckTest`, 26/10) : onglets, balayage, refus 501, touche perso, perte du backend ; appairage sans dialogue. Pas couvert : kiosque (l'émulateur n'est pas device owner), appairage par code, pilotage réel (Mac, Windows).
 
 - **Commande vocale** (24/10) : « ferme … », « cherche … », « raccroche », « arrête le partage » à la voix. La reconnaissance entend souvent « mais » pour « mets » et « de » pour « 2 » : acceptés. Pas de mot de réveil (bouton seulement). La carte d'appel cache le bouton Parler : « réponds » / « ignore » à la voix ne servent pas encore.

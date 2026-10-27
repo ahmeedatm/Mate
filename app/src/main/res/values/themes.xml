@@ -11,6 +11,15 @@
         <item name="android:textColorHint">?attr/c_text_faint</item>
         <!-- Pas d'animations de fenêtre : la tablette est lente. -->
         <item name="android:windowAnimationStyle">@null</item>
+        <item name="c_card_bg">@drawable/card_bg</item>
+        <item name="c_tile_bg">@drawable/tile_bg</item>
+        <item name="c_card_pad">20dp</item>
+        <item name="c_graphic">?attr/c_stroke</item>
+        <item name="c_primary">?attr/c_accent</item>
+        <item name="c_on_primary">?attr/c_on_accent</item>
+        <item name="c_primary_pressed">?attr/c_text</item>
+        <item name="c_font_medium">sans-serif-medium</item>
+        <item name="c_font_light">sans-serif-light</item>
     </style>
 
     <!-- Même thème sur fond clair (dialogues et champs de saisie d'AppCompat en version claire). -->
@@ -25,6 +34,15 @@
         <item name="android:textColorHint">?attr/c_text_faint</item>
         <!-- Pas d'animations de fenêtre : la tablette est lente. -->
         <item name="android:windowAnimationStyle">@null</item>
+        <item name="c_card_bg">@drawable/card_bg</item>
+        <item name="c_tile_bg">@drawable/tile_bg</item>
+        <item name="c_card_pad">20dp</item>
+        <item name="c_graphic">?attr/c_stroke</item>
+        <item name="c_primary">?attr/c_accent</item>
+        <item name="c_on_primary">?attr/c_on_accent</item>
+        <item name="c_primary_pressed">?attr/c_text</item>
+        <item name="c_font_medium">sans-serif-medium</item>
+        <item name="c_font_light">sans-serif-light</item>
     </style>
 
     <!-- Boutons -->
@@ -46,9 +64,17 @@
 
     <style name="PrimaryButton" parent="ActionButton">
         <item name="android:background">@drawable/button_primary_bg</item>
+        <item name="android:textColor">?attr/c_on_primary</item>
+        <item name="android:drawableTint">?attr/c_on_primary</item>
+        <item name="android:fontFamily">?attr/c_font_medium</item>
+    </style>
+
+    <!-- Bouton rouge « maintenant » (Rejoindre, appel entrant) : garde l'accent dans tous les thèmes. -->
+    <style name="NowButton" parent="ActionButton">
+        <item name="android:background">@drawable/button_now_bg</item>
         <item name="android:textColor">?attr/c_on_accent</item>
         <item name="android:drawableTint">?attr/c_on_accent</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">?attr/c_font_medium</item>
     </style>
 
     <!-- Pastille sélectionnable (onglets du deck, préréglages Focus, sons) : état via isSelected. -->
@@ -88,14 +114,14 @@
         <item name="android:layout_height">56dp</item>
         <item name="android:padding">15dp</item>
         <item name="android:background">@drawable/round_primary_bg</item>
-        <item name="tint">?attr/c_on_accent</item>
+        <item name="tint">?attr/c_on_primary</item>
     </style>
 
     <!-- Cartes et textes -->
 
     <style name="Card">
-        <item name="android:background">@drawable/card_bg</item>
-        <item name="android:padding">20dp</item>
+        <item name="android:background">?attr/c_card_bg</item>
+        <item name="android:padding">?attr/c_card_pad</item>
     </style>
 
     <style name="CardTitle">
@@ -103,7 +129,7 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:gravity">center_vertical</item>
         <item name="android:drawablePadding">12dp</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">?attr/c_font_medium</item>
         <item name="android:textColor">?attr/c_text_dim</item>
         <item name="android:textSize">13sp</item>
         <item name="android:textAllCaps">true</item>
@@ -125,7 +151,7 @@
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">?attr/c_font_medium</item>
         <item name="android:textSize">24sp</item>
     </style>
 

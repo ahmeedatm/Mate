@@ -8,7 +8,6 @@ import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.Visibility
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
-import androidx.test.espresso.matcher.ViewMatchers.withContentDescription
 import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
@@ -46,10 +45,10 @@ class WelcomeTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withId(R.id.welcome_later)).perform(click())
             onView(withId(R.id.welcome)).check(matches(withEffectiveVisibility(Visibility.GONE)))
-            onView(withId(R.id.mode_bar)).check(matches(isDisplayed()))
+            onView(withId(R.id.menu_handle)).check(matches(isDisplayed()))
 
             // Le Deck a besoin d'un ordinateur : il propose d'en connecter un.
-            onView(withContentDescription(R.string.mode_deck)).perform(click())
+            showMode(Mode.DECK)
             onView(withId(R.id.no_computer)).check(matches(isDisplayed()))
             onView(withId(R.id.connect_button)).perform(click())
             onView(withId(R.id.welcome)).check(matches(isDisplayed()))

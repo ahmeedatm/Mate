@@ -85,4 +85,5 @@ Carte Kiosque (code technicien, voir plus haut) :
 
 - **Réglages > Quitter le kiosque** : déverrouille jusqu'au prochain démarrage de l'appli.
 - **Réglages > Retirer le mode kiosque** : lève le blocage des installations et retire le statut device owner (à refaire via adb ensuite).
+  ⚠️ Sur une tablette 4.2, SqoolOTA reprend la main à la seconde où Companion perd le device owner : il devient profile owner, même WiFi coupé, puis réinstalle le MDM SQOOL dès qu'il a du réseau. `dpm set-device-owner` devient impossible : seule une réinitialisation d'usine hors ligne en sort (constaté le 27/10/2026). Pour installer un APK signé avec une autre clé, ne pas passer par ici : réinitialiser hors ligne et reprendre la section 2. Vérifier d'abord la signature : `apksigner verify --print-certs` sur l'APK installé (`adb shell pm path com.unowhy.companion`, puis `adb pull`) et sur le nouveau.
 - En dernier recours : réinitialisation d'usine.

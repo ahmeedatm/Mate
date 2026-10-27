@@ -1,14 +1,15 @@
 package com.unowhy.companion.ui.home
 
 import android.content.Context
-import android.graphics.Typeface
 import android.text.InputType
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -16,24 +17,31 @@ import android.widget.TextClock
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.drawable.toDrawable
 import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.R
+import com.unowhy.companion.focus.FocusTicks
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
 import com.unowhy.companion.net.CalendarEvent
 import com.unowhy.companion.net.HomeFeatures
 import com.unowhy.companion.ui.ComputerAudioView
+import com.unowhy.companion.ui.FocusDial
 import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.NowPlayingView
-import com.unowhy.companion.ui.ProgressRing
 import com.unowhy.companion.ui.TasksCard
 import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.WaterCard
 import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.label
 import com.unowhy.companion.ui.showForTyping
+import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.ui.themeColor
+import com.unowhy.companion.ui.themeFont
+import com.unowhy.companion.ui.themePx
+import com.unowhy.companion.ui.themeRes
 import kotlinx.coroutines.CoroutineScope
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -48,6 +56,8 @@ interface HomeHost {
     val features: HomeFeatures
     /** Erreur ou provenance de l'agenda (« Agenda d'exemple »), vide sinon. */
     val calendarNote: String
+    /** Thèmes Cadran : l'ordinateur ne répond plus ; l'Accueil le dit une fois, dans le héros. Null : il répond. */
+    val unreachable: Down?
     /** Réunion touchée dans l'agenda, montrée par « Prochain rendez-vous » jusqu'à sa fin. */
     var chosenId: String?
     fun renderCalendar()
@@ -69,15 +79,22 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     open suspend fun load() = Unit
     open fun onCalendar() = Unit
     open fun setActive(active: Boolean) = Unit
+
+    /** L'ordinateur ne répond plus et ce widget en dépend : atténué, sans disparaître (l'Accueil bloque aussi ses touchers). */
+    open fun setUnavailable(on: Boolean) {
+        view.foreground = if (on) ColorUtils.setAlphaComponent(color(R.attr.c_bg), UNAVAILABLE_VEIL).toDrawable() else null
+    }
+
     open val hasSettings: Boolean get() = false
     open fun showSettings() = Unit
     protected fun color(id: Int) = themeColor(context, id)
     protected fun dp(value: Int) = context.dp(value)
 
     /** Carte de fond commune (même style que les cartes de l'application). */
-    protected fun <T : View> T.asCard(padding: Int = 20): T = apply {
-        setBackgroundResource(R.drawable.card_bg)
-        setPadding(dp(padding), dp(padding), dp(padding), dp(padding))
+    protected fun <T : View> T.asCard(padding: Int? = null): T = apply {
+        setBackgroundResource(themeRes(context, R.attr.c_card_bg))
+        val px = padding?.let { dp(it) } ?: themePx(context, R.attr.c_card_pad)
+        setPadding(px, px, px, px)
     }
 
     protected fun cardTitle(text: Int, icon: Int) = TitleView(context).apply {
@@ -88,10 +105,13 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     protected fun label(size: Float, colorId: Int = R.attr.c_text, light: Boolean = false) = TextView(context).apply {
         textSize = size
         setTextColor(color(colorId))
-        if (light) typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
+        if (light) typeface = themeFont(context, R.attr.c_font_light)
     }
 
     companion object {
+        /** Voile de la couleur du fond sur un widget indisponible (0x8C : 55 %). */
+        private const val UNAVAILABLE_VEIL = 0x8C
+
         /** Sans ordinateur, les widgets qui en ont besoin laissent la place à une carte « Connecter mon ordinateur ». */
         fun create(context: Context, host: HomeHost, placed: Placed, noComputer: Boolean): HomeWidget =
             if (noComputer && placed.type.computer) ConnectWidget(context, host, placed)
@@ -107,6 +127,8 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.KEYS -> KeysWidget(context, host, placed)
                 WidgetType.WEATHER -> WeatherWidget(context, host, placed)
                 WidgetType.NOTE -> NoteWidget(context, host, placed)
+                WidgetType.HERO -> HeroWidget(context, host, placed)
+                WidgetType.DAYLINE -> DayLineWidget(context, host, placed)
             }
     }
 }
@@ -119,7 +141,7 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         format24Hour = "HH:mm"
         includeFontPadding = false
         setTextColor(color(R.attr.c_text))
-        typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
+        typeface = themeFont(context, R.attr.c_font_light)
     }
     private val date = label(22f, R.attr.c_text_dim)
     private val side = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
@@ -167,30 +189,63 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 }
 
-/** Minuteur Focus : toucher = mode Focus, bouton = démarrer / pause. Petit : sans l'anneau. */
+/**
+ * Minuteur Focus (DA Cadran) : cadran de 25 graduations, une par minute, allumées pendant le chrono et éteintes en
+ * cascade à la pause. Toucher = mode Focus, bouton = démarrer / pause. Rien ne bouge en dehors des changements.
+ */
 class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    override val view: View = LayoutInflater.from(context).inflate(R.layout.widget_focus, null)
-    private val ring = view.findViewById<ProgressRing>(R.id.widget_focus_ring)
-    private val time = view.findViewById<TextView>(R.id.widget_focus_time)
-    private val detail = view.findViewById<TextView>(R.id.widget_focus_detail)
-    private val toggle = view.findViewById<ImageButton>(R.id.widget_focus_toggle)
+    /** Conteneur stable : la vue interne est refaite quand la taille change (vertical = autre mise en page). */
+    override val view = FrameLayout(context)
+    private lateinit var dial: FocusDial
+    private lateinit var time: TextView
+    private lateinit var phase: TextView
+    private lateinit var detail: TextView
+    private lateinit var toggle: View
+    private lateinit var toggleIcon: ImageView
     private val focusListener: (FocusTimer.State) -> Unit = { render() }
     private val noiseListener: () -> Unit = { render() }
-    private var active = false
-    private var pulse: android.animation.ValueAnimator? = null
+    private var shown = false
+    private var tall = false
+    private val cadran = themeBool(context, R.attr.c_cadran)
 
     init {
-        view.setOnClickListener { host.main?.showMode("focus") }
-        toggle.setOnClickListener { FocusTimer.toggle() }
+        bind()
     }
 
     override fun applySize() {
-        view.findViewById<View>(R.id.widget_focus_ring_box).visibility = if (placed.size == WidgetSize.S) View.GONE else View.VISIBLE
-        (time.parent as View).let { (it.layoutParams as LinearLayout.LayoutParams).marginStart = if (placed.size == WidgetSize.S) 0 else dp(18) }
+        if ((placed.size == WidgetSize.V) == tall) return
+        bind()
+        render()
+    }
+
+    private fun bind() {
+        tall = placed.size == WidgetSize.V
+        view.removeAllViews()
+        val inner = LayoutInflater.from(context).inflate(if (tall) R.layout.widget_focus_tall else R.layout.widget_focus, view, false)
+        view.addView(inner)
+        dial = inner.findViewById(R.id.widget_focus_dial)
+        time = inner.findViewById(R.id.widget_focus_time)
+        phase = inner.findViewById(R.id.widget_focus_phase)
+        detail = inner.findViewById(R.id.widget_focus_detail)
+        toggleIcon = inner.findViewById(R.id.widget_focus_toggle_icon)
+        toggle = inner.findViewById(R.id.widget_focus_toggle)
+        if (cadran) {
+            capToDial(time, if (tall) 40f else 30f)
+            capToDial(phase, if (tall) 13f else 12f)
+        }
+        inner.setOnClickListener { host.main?.showMode("focus") }
+        toggle.setOnClickListener { FocusTimer.toggle() }
+        Look.pressSpring(inner)
+        Look.pressSpring(toggle)
+        shown = false
+    }
+
+    /** Police agrandie : le texte ne dépasse pas sa taille à 1,0 ([maxSp]), celle qui tient dans le cadran. Réduite, il suit. */
+    private fun capToDial(text: TextView, maxSp: Float) {
+        text.setTextSize(TypedValue.COMPLEX_UNIT_PX, minOf(text.textSize, maxSp * context.resources.displayMetrics.density))
     }
 
     override fun setActive(active: Boolean) {
-        this.active = active
         if (active) {
             FocusTimer.observe(focusListener)
             NoisePlayer.observe(noiseListener)
@@ -198,6 +253,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             FocusTimer.unobserve(focusListener)
             NoisePlayer.unobserve(noiseListener)
         }
+        shown = false
         render()
     }
 
@@ -206,21 +262,23 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private fun render() {
         val state = FocusTimer.state
         val focus = state.phase == FocusTimer.Phase.FOCUS
-        val active = state.running || state.remainingMs < state.durationMs
+        val started = state.running || state.remainingMs < state.durationMs
         time.text = FocusTimer.format(state.remainingMs)
-        ring.progress = (state.durationMs - state.remainingMs).toFloat() / state.durationMs.coerceAtLeast(1)
-        ring.color = color(if (focus) R.attr.c_hue_red else R.attr.c_hue_green)
-        val phase = context.getString(if (!active) R.string.focus_ready else if (focus) R.string.focus_phase_work else R.string.focus_phase_break)
-        val noise = NoisePlayer.kind?.takeIf { NoisePlayer.playing }
-        detail.text = if (noise == null) phase else "$phase · " + context.getString(R.string.noise_playing, context.getString(noise.label))
-        toggle.setImageResource(if (state.running) R.drawable.ic_pause else R.drawable.ic_play)
+        phase.setText(when {
+            !started -> R.string.focus_ready
+            !state.running && cadran -> R.string.focus_paused
+            focus -> R.string.focus_phase_work
+            else -> R.string.focus_phase_break
+        })
+        dial.color = color(if (focus) R.attr.c_accent else R.attr.c_ok)
+        // Première image sans cascade : l'écran arrive déjà dans le bon état.
+        dial.show(FocusTicks.lit(state.remainingMs, state.durationMs, state.running), animate = shown)
+        shown = true
+        detail.text = NoisePlayer.kind?.takeIf { NoisePlayer.playing }?.let { context.getString(R.string.noise_playing, context.getString(it.label)) } ?: ""
+        // Vertical : l'ambiance est à côté du bouton, qui reste centré tant qu'il n'y en a pas.
+        if (tall) detail.visibility = if (detail.text.isEmpty()) View.GONE else View.VISIBLE
+        Look.swapIcon(toggleIcon, if (state.running) R.drawable.ic_pause else R.drawable.ic_play)
         toggle.contentDescription = context.getString(if (state.running) R.string.focus_pause else R.string.focus_start)
-        // Le bouton bat doucement pendant le chrono (seulement à l'écran).
-        if (state.running && active && pulse == null) pulse = Look.pulse(toggle)
-        if ((!state.running || !active) && pulse != null) {
-            Look.stop(pulse, toggle)
-            pulse = null
-        }
     }
 }
 
@@ -279,6 +337,11 @@ class TasksWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     override val view: View = tasks.asCard()
 
     override suspend fun load() = tasks.load()
+
+    override fun setUnavailable(on: Boolean) {
+        tasks.quiet = on
+        super.setUnavailable(on)
+    }
 }
 
 /** Note libre, écrite depuis la tablette (« Penser au pain », un code de salle…). */
@@ -286,7 +349,7 @@ class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val text = label(22f).apply { gravity = Gravity.CENTER_VERTICAL }
     override val view = LinearLayout(context).asCard().apply {
         orientation = LinearLayout.VERTICAL
-        setBackgroundResource(R.drawable.tile_bg)
+        setBackgroundResource(themeRes(context, R.attr.c_tile_bg))
         setPadding(dp(20), dp(16), dp(20), dp(16))
         addView(cardTitle(R.string.widget_note, R.drawable.ic_edit))
         addView(text, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(6) })

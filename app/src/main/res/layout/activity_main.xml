@@ -123,6 +123,53 @@
         android:visibility="gone" />
 </LinearLayout>
 
+    <!-- Thèmes Cadran : menu caché (poignée au bord gauche, voile, panneau), géré par MenuPanel. Autres thèmes : absent. -->
+    <FrameLayout
+        android:id="@+id/menu_host"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
+        <!-- Départ du glisser : les 16 premiers dp du bord, sur toute la hauteur. -->
+        <View
+            android:id="@+id/menu_edge"
+            android:layout_width="16dp"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no" />
+
+        <!-- Cible du toucher : 48 x 96 dp centrée sur la poignée ; hors d'elle, les touchers passent à l'écran dessous. -->
+        <FrameLayout
+            android:id="@+id/menu_handle"
+            android:layout_width="48dp"
+            android:layout_height="96dp"
+            android:layout_gravity="center_vertical"
+            android:contentDescription="@string/menu_open">
+
+            <View
+                android:layout_width="5dp"
+                android:layout_height="56dp"
+                android:layout_gravity="center_vertical"
+                android:layout_marginStart="7dp"
+                android:background="@drawable/menu_handle_bg" />
+        </FrameLayout>
+
+        <View
+            android:id="@+id/menu_scrim"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:alpha="0"
+            android:background="?attr/c_scrim"
+            android:importantForAccessibility="no"
+            android:visibility="gone" />
+
+        <include
+            layout="@layout/view_menu_panel"
+            android:layout_width="300dp"
+            android:layout_height="match_parent"
+            android:layout_margin="12dp"
+            android:visibility="gone" />
+    </FrameLayout>
+
     <!-- Premier lancement : tant qu'aucun ordinateur n'est appairé. -->
     <com.unowhy.companion.ui.WelcomeView
         android:id="@+id/welcome"
