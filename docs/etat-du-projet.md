@@ -1,6 +1,6 @@
 # État du projet
 
-Mis à jour le 26/10/2026 (Assistant IA retiré ; avant, 5e session du 25/10 : MCP revérifié, extension de navigateur reportée à la vente, poste de dev installé sur le PC perso d'Eliot, sans changement du code). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
+Mis à jour le 27/10/2026 (travail d'Ahmed récupéré : tablette et compagnon du Mac à jour, le PC pas encore ; étude OBS dans [obs.md](obs.md)). Le 26/10 : Assistant IA retiré ; avant, 5e session du 25/10 : MCP revérifié, extension de navigateur reportée à la vente, poste de dev installé sur le PC perso d'Eliot, sans changement du code). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
 
 ## Pourquoi ce projet
 
@@ -81,7 +81,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 0. Bug des onglets du Deck (voir plus haut) s'il revient.
 1. **Voix et appels** : appels Teams / WhatsApp (captures pendant un vrai appel, reporté par Eliot) ; idées : météo, réglages de la tablette à la voix. Réactiver l'appli Google sans adb : impossible (un device owner ne peut pas annuler `pm disable-user`), inutile car la procédure du kiosque la garde ; sans elle, Parler ouvre la commande écrite.
-2. **Paquet** : relance du compagnon Mac à l'ouverture de session : vue le 25/10 (Mac redémarré, compagnon relancé seul, Accessibilité gardée). Pas de NSIS ni d'appli .app pour l'instant.
+2. **Paquet** : relance du compagnon Mac à l'ouverture de session : vue le 25/10 (Mac redémarré, compagnon relancé seul, Accessibilité gardée). Pas de NSIS ni d'appli .app pour l'instant. Le 27/10, paquet refait après le travail d'Ahmed (découpage du backend et du pilote Windows) : installé sur le Mac (tablette reconnectée) ; **PC à mettre à jour** (rsync de `dist/windows` puis `/companion/restart`), puis essayer Ouvertes et Média : les nouveaux exe n'ont pas encore tourné sur le PC.
 
 ## Décisions prises
 
@@ -114,7 +114,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 ## Idées notées, pas faites
 
-Dofus Rétro (« Jouer » par un clic dans la fenêtre : perso, pas pour la démo) · mettre en commun `dp()` (15 copies) · réglage « ne jamais changer d'ordinateur » · Mot de réveil · presse-papiers partagé · empêcher la veille de l'ordinateur · extension de navigateur pour « Page de l'ordi » · bouton « Éteindre l'écran » · webcam USB (UVC, à demander à l'équipe firmware) · noms de programmes bruts sous Windows quand l'appli n'est pas au menu Démarrer · fenêtre de devant mise en avant dans Ouvertes · boutons « bureau précédent / suivant » (Mac) dans Ouvertes, si le triple toucher ne suffit pas.
+Dofus Rétro (« Jouer » par un clic dans la fenêtre : perso, pas pour la démo) · mettre en commun `dp()` (15 copies) · réglage « ne jamais changer d'ordinateur » · Mot de réveil · presse-papiers partagé · empêcher la veille de l'ordinateur · extension de navigateur pour « Page de l'ordi » · bouton « Éteindre l'écran » · webcam USB (UVC, à demander à l'équipe firmware) · noms de programmes bruts sous Windows quand l'appli n'est pas au menu Démarrer · fenêtre de devant mise en avant dans Ouvertes · boutons « bureau précédent / suivant » (Mac) dans Ouvertes, si le triple toucher ne suffit pas · piloter OBS pour les streamers (étudié : `docs/obs.md`).
 
 ## Historique
 
