@@ -40,10 +40,8 @@
       "app": "Discord",
       "tiles": [
         { "label": "Ouvrir Discord", "action": { "type": "app", "name": "Discord" } },
-        { "label": "Couper mon micro", "glyph": "🎤", "lit": "muted", "action": { "type": "keys", "keys": "ctrl+shift+m", "app": "Discord" } },
-        { "label": "Sourdine (casque)", "glyph": "🎧", "lit": "deafened", "action": { "type": "keys", "keys": "ctrl+shift+d", "app": "Discord" } },
-        { "label": "Accepter l'appel", "glyph": "📞", "when": "idle", "action": { "type": "keys", "keys": "ctrl+return", "app": "Discord" } },
-        { "label": "Refuser l'appel", "glyph": "✖️", "when": "idle", "action": { "type": "keys", "keys": "escape", "app": "Discord" } },
+        { "label": "Couper mon micro", "glyph": "🎤", "when": "call", "lit": "muted", "action": { "type": "keys", "keys": "ctrl+shift+m", "app": "Discord" } },
+        { "label": "Sourdine (casque)", "glyph": "🎧", "when": "call", "lit": "deafened", "action": { "type": "keys", "keys": "ctrl+shift+d", "app": "Discord" } },
         { "label": "Arrêter le partage", "glyph": "🛑", "when": "streaming", "action": { "type": "press", "app": "Discord", "names": ["Arrêter de streamer", "Stop Streaming"] } },
         { "label": "Quitter l'appel", "glyph": "📴", "when": "call", "action": { "type": "press", "app": "Discord", "names": ["Déconnecter", "Disconnect"] } }
       ]

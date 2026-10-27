@@ -42,10 +42,8 @@
       "app": "Discord",
       "tiles": [
         { "label": "Ouvrir Discord", "action": { "type": "app", "name": "Discord" } },
-        { "label": "Couper mon micro", "glyph": "🎤", "lit": "muted", "action": { "type": "keys", "keys": "cmd+shift+m", "app": "Discord" } },
-        { "label": "Sourdine (casque)", "glyph": "🎧", "lit": "deafened", "action": { "type": "keys", "keys": "cmd+shift+d", "app": "Discord" } },
-        { "label": "Accepter l'appel", "glyph": "📞", "when": "idle", "action": { "type": "keys", "keys": "cmd+return", "app": "Discord" } },
-        { "label": "Refuser l'appel", "glyph": "✖️", "when": "idle", "action": { "type": "keys", "keys": "escape", "app": "Discord" } }
+        { "label": "Couper mon micro", "glyph": "🎤", "when": "call", "lit": "muted", "action": { "type": "keys", "keys": "cmd+shift+m", "app": "Discord" } },
+        { "label": "Sourdine (casque)", "glyph": "🎧", "when": "call", "lit": "deafened", "action": { "type": "keys", "keys": "cmd+shift+d", "app": "Discord" } }
       ]
     },
     {
