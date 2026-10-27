@@ -38,6 +38,7 @@ class MenuPanel(private val activity: Activity, private val onSelect: (Mode) -> 
 
     private val host: View = activity.findViewById(R.id.menu_host)
     private val handle: View = activity.findViewById(R.id.menu_handle)
+    private val edge: View = activity.findViewById(R.id.menu_edge)
     private val scrim: View = activity.findViewById(R.id.menu_scrim)
     private val panel: View = activity.findViewById(R.id.menu_panel)
     private val ind: View = activity.findViewById(R.id.menu_ind)
@@ -96,7 +97,7 @@ class MenuPanel(private val activity: Activity, private val onSelect: (Mode) -> 
         var dragging = false
         val slop = ViewConfiguration.get(activity).scaledTouchSlop
         handle.setOnClickListener { open() }
-        handle.setOnTouchListener { v, event ->
+        val touch = View.OnTouchListener { v, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     tracker = VelocityTracker.obtain().also { it.addMovement(event) }
@@ -134,12 +135,14 @@ class MenuPanel(private val activity: Activity, private val onSelect: (Mode) -> 
             }
             true
         }
-        // Le geste Retour du système part du même bord (API 29+) : la poignée le garde pour elle.
+        handle.setOnTouchListener(touch)
+        edge.setOnTouchListener(touch)
+        // Le geste Retour du système part du même bord (API 29+) : le menu le garde pour lui autour de la poignée.
         if (Build.VERSION.SDK_INT >= 29) {
-            handle.addOnLayoutChangeListener { v, _, top, right, bottom, _, _, _, _ ->
+            host.addOnLayoutChangeListener { v, _, top, _, bottom, _, _, _, _ ->
                 val half = activity.dp(100)
-                val middle = (top + bottom) / 2
-                v.systemGestureExclusionRects = listOf(Rect(0, middle - half, right, middle + half))
+                val middle = (bottom - top) / 2
+                v.systemGestureExclusionRects = listOf(Rect(0, middle - half, handle.width, middle + half))
             }
         }
     }

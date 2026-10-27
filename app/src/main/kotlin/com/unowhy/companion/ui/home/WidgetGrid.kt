@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import com.unowhy.companion.R
 import com.unowhy.companion.ui.dp
+import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.ui.themeColor
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -391,7 +392,13 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private val button = dp(44)
     private val inset = dp(8)
 
-    private fun removeRect(v: View) = RectF((v.left + inset).toFloat(), (v.top + inset).toFloat(), (v.left + inset + button).toFloat(), (v.top + inset + button).toFloat())
+    /** Thèmes Cadran : ✕ et puce de taille sont centrés sur le bord haut du widget et laissent son titre lisible. */
+    private val cadran = themeBool(context, R.attr.c_cadran)
+
+    /** Haut des boutons du haut : dans le widget, ou à cheval sur son bord haut en Cadran. */
+    private fun topButtonsY(v: View) = if (cadran) v.top - button / 2 else v.top + inset
+
+    private fun removeRect(v: View) = RectF((v.left + inset).toFloat(), topButtonsY(v).toFloat(), (v.left + inset + button).toFloat(), (topButtonsY(v) + button).toFloat())
 
     private fun settingsRect(v: View) = RectF((v.right - inset - button).toFloat(), (v.bottom - inset - button).toFloat(), (v.right - inset).toFloat(), (v.bottom - inset).toFloat())
 
@@ -400,7 +407,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private fun sizeRect(v: View, placed: Placed): RectF {
         text.textSize = 15 * density
         val w = text.measureText(sizeLabel(placed) + "  ⇆") + dp(28)
-        return RectF(v.right - inset - w, (v.top + inset).toFloat(), (v.right - inset).toFloat(), (v.top + inset + button).toFloat())
+        return RectF(v.right - inset - w, topButtonsY(v).toFloat(), (v.right - inset).toFloat(), (topButtonsY(v) + button).toFloat())
     }
 
     override fun dispatchDraw(canvas: Canvas) {

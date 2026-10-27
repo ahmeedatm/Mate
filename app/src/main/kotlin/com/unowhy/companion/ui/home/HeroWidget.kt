@@ -160,7 +160,7 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     /**
      * « Ensuite <titre> dans N min » : le compteur bascule chaque minute ; plus tard ou demain, le moment en texte.
-     * Ordinateur injoignable : « <nom> ne répond pas depuis HH:MM » à la place, les rendez-vous peuvent dater.
+     * Ordinateur injoignable : « <nom> ne répond pas depuis HH:MM » (sans l'heure si jamais vu en ligne) à la place, les rendez-vous peuvent dater.
      */
     private fun renderNext(animate: Boolean) {
         val down = host.unreachable
@@ -168,7 +168,9 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         view.nextWanted = down != null || line != null
         nextDown.visibility = if (down != null) View.VISIBLE else View.GONE
         if (down != null) {
-            nextDown.text = context.getString(R.string.hero_down, down.name, down.since())
+            val since = down.since()
+            nextDown.text =
+                if (since != null) context.getString(R.string.hero_down, down.name, since) else context.getString(R.string.hero_down_unknown, down.name)
             nextPrefix.visibility = View.GONE
             nextTitle.visibility = View.GONE
             nextWhen.visibility = View.GONE

@@ -2,6 +2,7 @@ package com.unowhy.companion.ui.home
 
 import android.content.Context
 import android.text.InputType
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -36,6 +37,7 @@ import com.unowhy.companion.ui.WaterCard
 import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.label
 import com.unowhy.companion.ui.showForTyping
+import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.ui.themeColor
 import com.unowhy.companion.ui.themeFont
 import com.unowhy.companion.ui.themePx
@@ -204,6 +206,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private val noiseListener: () -> Unit = { render() }
     private var shown = false
     private var tall = false
+    private val cadran = themeBool(context, R.attr.c_cadran)
 
     init {
         bind()
@@ -226,11 +229,20 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         detail = inner.findViewById(R.id.widget_focus_detail)
         toggleIcon = inner.findViewById(R.id.widget_focus_toggle_icon)
         toggle = inner.findViewById(R.id.widget_focus_toggle)
+        if (cadran) {
+            capToDial(time, if (tall) 40f else 30f)
+            capToDial(phase, if (tall) 13f else 12f)
+        }
         inner.setOnClickListener { host.main?.showMode("focus") }
         toggle.setOnClickListener { FocusTimer.toggle() }
         Look.pressSpring(inner)
         Look.pressSpring(toggle)
         shown = false
+    }
+
+    /** Police agrandie : le texte ne dépasse pas sa taille à 1,0 ([maxSp]), celle qui tient dans le cadran. Réduite, il suit. */
+    private fun capToDial(text: TextView, maxSp: Float) {
+        text.setTextSize(TypedValue.COMPLEX_UNIT_PX, minOf(text.textSize, maxSp * context.resources.displayMetrics.density))
     }
 
     override fun setActive(active: Boolean) {
@@ -254,7 +266,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         time.text = FocusTimer.format(state.remainingMs)
         phase.setText(when {
             !started -> R.string.focus_ready
-            !state.running -> R.string.focus_paused
+            !state.running && cadran -> R.string.focus_paused
             focus -> R.string.focus_phase_work
             else -> R.string.focus_phase_break
         })

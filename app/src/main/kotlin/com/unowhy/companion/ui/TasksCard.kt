@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.dynamicanimation.animation.DynamicAnimation
+import com.unowhy.companion.Computers
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.TaskItem
@@ -71,25 +72,32 @@ class TasksCard @JvmOverloads constructor(
     /** Dernière lecture en échec. */
     private var failed = false
 
+    /** Une liste est affichée (lue ici, ou la dernière lecture de l'ordinateur). */
+    private var hasRead = false
+
     /** L'ordinateur ne répond plus et l'Accueil le dit ailleurs : pas de message ici. */
     var quiet = false
         set(value) {
             field = value
-            if (value && failed) showStatus(null)
+            if (value && failed) showStatus(if (hasRead) null else context.getString(R.string.tasks_unavailable))
         }
 
     suspend fun load(refresh: Boolean = false) {
         try {
-            render(client().tasks.list(refresh))
+            val tasks = client().tasks.list(refresh)
+            if (cadran) Computers.active(context)?.let { lastRead[it.id] = tasks }
+            render(tasks)
             failed = false
         } catch (e: Exception) {
             failed = true
-            if (quiet) return
-            // Cadran : les tâches déjà lues restent affichées sous le message.
-            if (!cadran) {
-                list.removeAllViews()
-                count.text = ""
+            // Cadran : les tâches déjà lues restent affichées (écran recréé : la dernière lecture de cet ordinateur).
+            if (cadran) {
+                if (!hasRead) Computers.active(context)?.let { lastRead[it.id] }?.let { render(it) }
+                if (!hasRead) showStatus(context.getString(R.string.tasks_unavailable)) else if (!quiet) showStatus(context.errorText(e))
+                return
             }
+            list.removeAllViews()
+            count.text = ""
             showStatus(context.errorText(e))
         }
     }
@@ -151,6 +159,7 @@ class TasksCard @JvmOverloads constructor(
     }
 
     private fun render(tasks: List<TaskItem>) {
+        hasRead = true
         pending = tasks.count { !it.done }
         onPending(pending)
         showCount(tasks.isNotEmpty())
@@ -307,5 +316,8 @@ class TasksCard @JvmOverloads constructor(
 
     private companion object {
         const val SINK_DELAY_MS = 650L
+
+        /** Thèmes Cadran : dernière liste lue par ordinateur, pour un écran recréé pendant une coupure. */
+        val lastRead = HashMap<String, List<TaskItem>>()
     }
 }

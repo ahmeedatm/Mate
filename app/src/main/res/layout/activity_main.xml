@@ -130,10 +130,19 @@
         android:layout_height="match_parent"
         android:visibility="gone">
 
+        <!-- Départ du glisser : les 16 premiers dp du bord, sur toute la hauteur. -->
+        <View
+            android:id="@+id/menu_edge"
+            android:layout_width="16dp"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no" />
+
+        <!-- Cible du toucher : 48 x 96 dp centrée sur la poignée ; hors d'elle, les touchers passent à l'écran dessous. -->
         <FrameLayout
             android:id="@+id/menu_handle"
             android:layout_width="48dp"
-            android:layout_height="match_parent"
+            android:layout_height="96dp"
+            android:layout_gravity="center_vertical"
             android:contentDescription="@string/menu_open">
 
             <View

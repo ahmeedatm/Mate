@@ -258,6 +258,7 @@
         <item quantity="other">%1$d restantes</item>
     </plurals>
     <string name="tasks_empty">Rien à faire pour l\'instant</string>
+    <string name="tasks_unavailable">Tâches indisponibles</string>
     <string name="task_hint">Nouvelle tâche…</string>
     <string name="add">Ajouter</string>
     <string name="delete">Supprimer</string>
@@ -543,6 +544,7 @@
     <string name="widget_dayline_desc">Les rendez-vous de 8 h à 20 h, le présent en rouge</string>
     <string name="next_prefix">Ensuite</string>
     <string name="hero_down">%1$s ne répond pas depuis %2$s</string>
+    <string name="hero_down_unknown">%1$s ne répond pas</string>
     <string name="hero_in">dans</string>
     <string name="hero_min">min</string>
     <plurals name="hero_glasses">

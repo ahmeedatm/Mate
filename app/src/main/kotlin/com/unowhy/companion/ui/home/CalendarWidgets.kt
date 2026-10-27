@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
+import androidx.core.view.isEmpty
 import androidx.core.view.isNotEmpty
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
@@ -85,8 +86,11 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val todayCount = label(15f, R.attr.c_text_faint)
     private val bigTime = label(44f, light = true).apply { isSingleLine = true; fontFeatureSettings = "tnum" }
     private val after = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+    private val spacer = View(context)
+    private val divider = View(context).apply { setBackgroundColor(color(R.attr.c_stroke)) }
     override val view = LinearLayout(context).apply {
         if (cadran) {
+            addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fitFollowing() }
             setBackgroundResource(themeRes(context, R.attr.c_card_bg))
             themePx(context, R.attr.c_card_pad).let { setPadding(it, it, it, it) }
         } else {
@@ -125,8 +129,8 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             view.addView(whenText, LinearLayout.LayoutParams(match, wrap))
             view.addView(join, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = dp(18) })
             view.addView(add, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = dp(18) })
-            view.addView(View(context), LinearLayout.LayoutParams(match, 0, 1f))
-            view.addView(View(context).apply { setBackgroundColor(color(R.attr.c_stroke)) }, LinearLayout.LayoutParams(match, dp(1)))
+            view.addView(spacer, LinearLayout.LayoutParams(match, 0, 1f))
+            view.addView(divider, LinearLayout.LayoutParams(match, dp(1)))
             view.addView(after, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(14) })
         } else {
             labelView.visibility = View.VISIBLE
@@ -194,7 +198,11 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         todayCount.text = if (today > 0) context.getString(R.string.next_today, today) else ""
         bigTime.text = upcoming?.let { timeFormat.format(Date(it.startMs)) } ?: ""
         after.removeAllViews()
-        val following = events.filter { !it.allDay && it.endMs > now && it !== upcoming }.take(2)
+        val following = events.filter { !it.allDay && it.endMs > now && it !== upcoming }.take(if (cadran) FOLLOWING_CADRAN else 2)
+        // Cadran : sans suivant, ni filet ni bloc ; avec, autant de lignes que la place en laisse (fitFollowing).
+        val show = if (cadran && following.isEmpty()) View.GONE else View.VISIBLE
+        divider.visibility = show
+        after.visibility = show
         for (event in following) after.addView(LinearLayout(context).apply {
             val sameDay = daysFrom(now, event.startMs) == 0
             addView(label(15f, R.attr.c_text_dim).apply {
@@ -207,6 +215,28 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                 ellipsize = TextUtils.TruncateAt.END
             }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { if (after.isNotEmpty()) topMargin = dp(10) })
+    }
+
+    /**
+     * Cadran, vertical : cache les rendez-vous suivants qui ne tiennent pas entre le contenu du haut et le bas de la
+     * tuile (le filet disparaît s'il n'en tient aucun). La place ne dépend pas des lignes cachées : la décision est stable.
+     */
+    private fun fitFollowing() {
+        if (placed.size != WidgetSize.V || after.isEmpty() || view.height == 0 || after.width == 0) return
+        var free = view.height - view.paddingBottom - spacer.top - dp(1) - dp(14)
+        var fitting = 0
+        for (i in 0 until after.childCount) {
+            val row = after.getChildAt(i)
+            row.measure(View.MeasureSpec.makeMeasureSpec(after.width, View.MeasureSpec.EXACTLY), View.MeasureSpec.UNSPECIFIED)
+            val need = row.measuredHeight + if (i > 0) dp(10) else 0
+            if (need > free) break
+            free -= need
+            fitting++
+        }
+        for (i in 0 until after.childCount) after.getChildAt(i).visibility = if (i < fitting) View.VISIBLE else View.GONE
+        val show = if (fitting > 0) View.VISIBLE else View.GONE
+        divider.visibility = show
+        after.visibility = show
     }
 
     private fun joinNext() {
@@ -228,6 +258,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     private companion object {
         const val JOIN_EARLY_MS = 15 * 60_000L
+        const val FOLLOWING_CADRAN = 4
     }
 }
 
