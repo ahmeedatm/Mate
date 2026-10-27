@@ -40,8 +40,11 @@ export type Step =
   /** Colle un texte dans l'appli au premier plan. */
   | { type: "text"; text: string }
   | { type: "wait"; ms: number }
-  /** Appuie sur un bouton de la fenêtre de l'appli (UI Automation, Windows), le premier trouvé parmi `names`. */
-  | { type: "press"; app: string; names: string[] }
+  /**
+   * Appuie sur un bouton de la fenêtre de l'appli (UI Automation, Accessibilité sur Mac), le premier trouvé parmi
+   * `names` ; `waitMs` : le bouton peut mettre ce temps à apparaître (panneau ouvert par l'étape d'avant).
+   */
+  | { type: "press"; app: string; names: string[]; waitMs?: number }
   /** Place les fenêtres d'une appli (lancée si besoin) ; `display` : libellé d'écran ("Mac", nom du moniteur). */
   | { type: "window"; app: string; display?: string; layout?: Layout };
 
@@ -49,8 +52,19 @@ export type Step =
 export type Action = Step | { type: "macro"; steps: Step[] };
 
 /** glyph : symbole affiché à la place de l'icône (emoji), utile pour les raccourcis. */
-/** when : page d'appli d'appel, touche montrée seulement en appel (`call`), hors appel (`idle`) ou pendant un partage d'écran (`streaming`). */
-type TileConfig = { label: string; action: Action; icon?: string; glyph?: string; color?: string; when?: "call" | "idle" | "streaming" };
+/**
+ * when : page d'appli d'appel, touche montrée seulement en appel (`call`), hors appel (`idle`), pendant un partage
+ * d'écran (`streaming`), en appel sans partage (`share` : « Partager », remplacé par « Arrêter le partage ») ou sur
+ * l'écran d'avant-réunion de Teams (`lobby` : « Rejoindre maintenant »).
+ */
+type TileConfig = {
+  label: string;
+  action: Action;
+  icon?: string;
+  glyph?: string;
+  color?: string;
+  when?: "call" | "idle" | "streaming" | "share" | "lobby";
+};
 /** `apps` : page d'applis que l'on complète depuis la tablette (voir saveApps) ; `meeting` : page affichée
  * par la tablette après « Rejoindre » (micro, caméra, raccrocher) ; `app` : page d'une appli (Discord, Teams…),
  * montrée seulement si l'appli est dans la page Apps ; sur la tablette ce n'est pas un onglet : toucher l'appli
@@ -240,9 +254,14 @@ export async function runAction(action: Action): Promise<unknown> {
       return typeText(action.text);
     case "wait":
       return sleep(Math.min(action.ms, 10_000));
-    case "press":
-      if (!(await pressButton(action.app, action.names))) throw new Error(`Bouton introuvable dans ${action.app}`);
+    case "press": {
+      const until = Date.now() + Math.min(action.waitMs ?? 0, 10_000);
+      while (!(await pressButton(action.app, action.names))) {
+        if (Date.now() >= until) throw new Error(`Bouton introuvable dans ${action.app}`);
+        await sleep(300);
+      }
       return;
+    }
     case "window":
       return placeAppWindows(action.app, action.display, action.layout ?? "keep");
     case "system":

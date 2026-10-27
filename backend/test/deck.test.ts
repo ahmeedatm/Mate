@@ -110,6 +110,14 @@ describe("runAction", () => {
     await assert.rejects(deck.runAction({ type: "press", app: "Discord", names: ["Raccrocher"] }), /Bouton introuvable dans Discord/);
   });
 
+  it("attend un bouton qui apparaît (panneau ouvert par l'étape d'avant), jusqu'à waitMs", async () => {
+    reset({ buttons: { "Microsoft Teams": [] } });
+    setTimeout(() => (state.buttons = { "Microsoft Teams": ["Écran : Built-in Retina Display"] }), 100);
+    await deck.runAction({ type: "press", app: "Microsoft Teams", names: ["Écran : Built-in Retina Display"], waitMs: 2_000 });
+    assert.deepEqual(calls, [{ fn: "pressButton", args: ["Microsoft Teams", "Écran : Built-in Retina Display"] }]);
+    await assert.rejects(deck.runAction({ type: "press", app: "Microsoft Teams", names: ["Quitter"], waitMs: 400 }), /Bouton introuvable/);
+  });
+
   it("place les fenêtres d'une appli déjà ouverte sur l'écran nommé, sans la relancer", async () => {
     reset({ windows: { Notes: [{ title: "Notes" }] } });
     await deck.runAction({ type: "window", app: "Notes", display: "ÉCRAN", layout: "left" });
