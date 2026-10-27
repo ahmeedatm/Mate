@@ -16,6 +16,8 @@ import android.widget.TextClock
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.drawable.toDrawable
 import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.R
@@ -52,6 +54,8 @@ interface HomeHost {
     val features: HomeFeatures
     /** Erreur ou provenance de l'agenda (« Agenda d'exemple »), vide sinon. */
     val calendarNote: String
+    /** Thèmes Cadran : l'ordinateur ne répond plus ; l'Accueil le dit une fois, dans le héros. Null : il répond. */
+    val unreachable: Down?
     /** Réunion touchée dans l'agenda, montrée par « Prochain rendez-vous » jusqu'à sa fin. */
     var chosenId: String?
     fun renderCalendar()
@@ -73,6 +77,12 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     open suspend fun load() = Unit
     open fun onCalendar() = Unit
     open fun setActive(active: Boolean) = Unit
+
+    /** L'ordinateur ne répond plus et ce widget en dépend : atténué, sans disparaître (l'Accueil bloque aussi ses touchers). */
+    open fun setUnavailable(on: Boolean) {
+        view.foreground = if (on) ColorUtils.setAlphaComponent(color(R.attr.c_bg), UNAVAILABLE_VEIL).toDrawable() else null
+    }
+
     open val hasSettings: Boolean get() = false
     open fun showSettings() = Unit
     protected fun color(id: Int) = themeColor(context, id)
@@ -97,6 +107,9 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     }
 
     companion object {
+        /** Voile de la couleur du fond sur un widget indisponible (0x8C : 55 %). */
+        private const val UNAVAILABLE_VEIL = 0x8C
+
         /** Sans ordinateur, les widgets qui en ont besoin laissent la place à une carte « Connecter mon ordinateur ». */
         fun create(context: Context, host: HomeHost, placed: Placed, noComputer: Boolean): HomeWidget =
             if (noComputer && placed.type.computer) ConnectWidget(context, host, placed)
@@ -239,7 +252,12 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         val focus = state.phase == FocusTimer.Phase.FOCUS
         val started = state.running || state.remainingMs < state.durationMs
         time.text = FocusTimer.format(state.remainingMs)
-        phase.setText(if (!started) R.string.focus_ready else if (focus) R.string.focus_phase_work else R.string.focus_phase_break)
+        phase.setText(when {
+            !started -> R.string.focus_ready
+            !state.running -> R.string.focus_paused
+            focus -> R.string.focus_phase_work
+            else -> R.string.focus_phase_break
+        })
         dial.color = color(if (focus) R.attr.c_accent else R.attr.c_ok)
         // Première image sans cascade : l'écran arrive déjà dans le bon état.
         dial.show(FocusTicks.lit(state.remainingMs, state.durationMs, state.running), animate = shown)
@@ -307,6 +325,11 @@ class TasksWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     override val view: View = tasks.asCard()
 
     override suspend fun load() = tasks.load()
+
+    override fun setUnavailable(on: Boolean) {
+        tasks.quiet = on
+        super.setUnavailable(on)
+    }
 }
 
 /** Note libre, écrite depuis la tablette (« Penser au pain », un code de salle…). */

@@ -45,6 +45,8 @@ import com.unowhy.companion.ui.TabletAlerts
 import com.unowhy.companion.ui.TabletStatusView
 import com.unowhy.companion.ui.WelcomeView
 import com.unowhy.companion.ui.dp
+import com.unowhy.companion.ui.home.Down
+import com.unowhy.companion.ui.home.LinkWatch
 import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.voice.VoiceControl
@@ -74,6 +76,7 @@ class MainActivity : AppCompatActivity() {
     /** Dernier état de la liaison, repris par les Réglages et le sélecteur d'ordinateur. */
     var link = Link(null, Link.State.NONE)
         private set
+    private val linkWatch = LinkWatch()
     private lateinit var voice: VoiceControl
     lateinit var callOverlay: CallOverlay
         private set
@@ -164,9 +167,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun showLink(link: Link) {
         this.link = link
+        linkWatch.onLink(link.computer?.id, link.state, System.currentTimeMillis())
         nav.showLink(link)
         settings()?.onLinkChanged()
+        (supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment)?.onLinkChanged()
     }
+
+    /** L'ordinateur actif ne répond plus (dit par l'Accueil Cadran), ou null. */
+    fun unreachable(): Down? = linkWatch.down(link.computer?.name, System.currentTimeMillis())
 
     /** Ordinateur actif renommé : nom à jour dans la barre latérale. */
     fun refreshLink() = showLink(link.copy(computer = Computers.active(this)))

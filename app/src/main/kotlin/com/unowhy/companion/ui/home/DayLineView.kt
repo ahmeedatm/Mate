@@ -23,7 +23,8 @@ import kotlin.math.roundToInt
  */
 class DayLineView(context: Context) : View(context) {
 
-    private val trackColor = themeColor(context, R.attr.c_stroke)
+    private val trackColor = themeColor(context, R.attr.c_graphic)
+    private val fadedColor = themeColor(context, R.attr.c_stroke)
     private val pastColor = themeColor(context, R.attr.c_text_faint)
     private val nowColor = themeColor(context, R.attr.c_accent)
     private val laterColor = themeColor(context, R.attr.c_text_dim)
@@ -54,6 +55,14 @@ class DayLineView(context: Context) : View(context) {
     private var markerSpring: SpringAnimation? = null
     private var ondeSprings: List<SpringAnimation> = emptyList()
     private val delayed = ArrayList<Runnable>()
+
+    /** L'ordinateur ne répond plus : les rendez-vous affichés peuvent dater, ils sont atténués. */
+    var stale = false
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
 
     init {
         contentDescription = context.getString(R.string.widget_dayline)
@@ -183,14 +192,14 @@ class DayLineView(context: Context) : View(context) {
         val barTop = dp(42).toFloat()
         val barH = dp(8).toFloat()
         for ((i, bar) in bars.withIndex()) {
-            val alpha = barAlpha[i]
+            val alpha = barAlpha[i] * if (stale) STALE_ALPHA else 1f
             val text = when (bar.state) {
                 DayLineModel.State.PAST -> pastColor
                 DayLineModel.State.NEXT -> nowColor
                 DayLineModel.State.LATER -> laterColor
             }
             val barColor = when (bar.state) {
-                DayLineModel.State.PAST -> trackColor
+                DayLineModel.State.PAST -> fadedColor
                 DayLineModel.State.NEXT -> nowColor
                 DayLineModel.State.LATER -> pastColor
             }
@@ -218,5 +227,9 @@ class DayLineView(context: Context) : View(context) {
             ring.color = color(nowColor, ondeAlpha)
             canvas.drawCircle(x, cy, dp(5) * ondeScale, ring)
         }
+    }
+
+    private companion object {
+        const val STALE_ALPHA = 0.45f
     }
 }

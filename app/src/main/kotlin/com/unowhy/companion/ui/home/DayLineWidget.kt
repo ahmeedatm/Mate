@@ -19,6 +19,11 @@ class DayLineWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         if (active) line.show(host.events, System.currentTimeMillis(), animate = false)
     }
 
+    /** Pas de voile : la ligne atténue elle-même ses rendez-vous, l'heure et le point « maintenant » restent justes. */
+    override fun setUnavailable(on: Boolean) {
+        line.stale = on
+    }
+
     /** Arrivée de l'écran, appelée par l'Accueil après chaque retour sur la page. */
     fun arrive() = line.arrive()
 }

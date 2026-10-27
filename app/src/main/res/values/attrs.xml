@@ -7,6 +7,8 @@
     <attr name="c_surface_raised" format="color" />
     <attr name="c_surface_pressed" format="color" />
     <attr name="c_stroke" format="color" />
+    <!-- Ton des traits qui portent un sens (graduations éteintes, piste, poignée) : ≥ 3:1 dans les thèmes Cadran, c_stroke ailleurs. -->
+    <attr name="c_graphic" format="color" />
     <attr name="c_accent" format="color" />
     <attr name="c_accent_soft" format="color" />
     <attr name="c_on_accent" format="color" />

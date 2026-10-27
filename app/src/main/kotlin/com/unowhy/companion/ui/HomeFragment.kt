@@ -23,6 +23,7 @@ import com.unowhy.companion.net.CalendarEvent
 import com.unowhy.companion.net.HomeFeatures
 import com.unowhy.companion.ui.home.COLS
 import com.unowhy.companion.ui.home.DayLineWidget
+import com.unowhy.companion.ui.home.Down
 import com.unowhy.companion.ui.home.HomeHost
 import com.unowhy.companion.ui.home.HomeLayout
 import com.unowhy.companion.ui.home.HomeWidget
@@ -70,6 +71,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     override var features = HomeFeatures()
     override var calendarNote = ""
     override var chosenId: String? = null
+    override var unreachable: Down? = null
     override val scope: CoroutineScope get() = viewLifecycleOwner.lifecycleScope
     override val main get() = activity as? MainActivity
 
@@ -83,6 +85,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         dots = view.findViewById(R.id.home_dots)
         pageButton = view.findViewById(R.id.home_edit_page)
         grid.listener = this
+        grid.blocked = { unreachable != null && dependsOnComputer(it) }
 
         view.findViewById<View>(R.id.home_edit_add).setOnClickListener { onAddAt(-1, -1) }
         view.findViewById<View>(R.id.home_edit_templates).setOnClickListener { chooseTemplate() }
@@ -93,6 +96,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         // Écran recréé quand l'ordinateur change (MainActivity.onComputerChanged) : lu une fois ici.
         noComputer = Computers.all(requireContext()).isEmpty()
         if (cadran) {
+            unreachable = main?.unreachable()
             grid.setPadding(dp(44), dp(28), dp(40), dp(32))
             grid.gap = dp(16)
             grid.rowWeights = RowProfile.CADRAN_ROWS
@@ -176,6 +180,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private fun addWidget(placed: Placed): HomeWidget {
         val widget = HomeWidget.create(requireContext(), this, placed, noComputer)
         widget.view.tag = placed
+        widget.setUnavailable(unreachable != null && dependsOnComputer(placed))
         widget.applySize()
         widget.onCalendar()
         widget.onMinute()
@@ -241,6 +246,24 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     // --- HomeHost
 
     override fun renderCalendar() = widgets.values.forEach { it.onCalendar() }
+
+    /** Ce qui s'éteint avec l'ordinateur : ses widgets, et la ligne du jour (ses rendez-vous viennent de lui). */
+    private fun dependsOnComputer(placed: Placed) = placed.type.computer || placed.type == WidgetType.DAYLINE
+
+    /**
+     * Thèmes Cadran : la liaison a changé. Un seul message dans le héros, les widgets qui dépendent de l'ordinateur
+     * s'atténuent et ne répondent plus au toucher ; dès qu'il répond, tout est relu.
+     */
+    fun onLinkChanged() {
+        if (view == null || !cadran) return
+        val down = main?.unreachable()
+        if (down == unreachable) return
+        val recovered = down == null
+        unreachable = down
+        widgets.forEach { (placed, widget) -> if (dependsOnComputer(placed)) widget.setUnavailable(down != null) }
+        renderCalendar()
+        if (recovered) refreshAll()
+    }
 
     override fun reloadCalendar() {
         scope.launch {

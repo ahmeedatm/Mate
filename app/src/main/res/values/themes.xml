@@ -14,6 +14,7 @@
         <item name="c_card_bg">@drawable/card_bg</item>
         <item name="c_tile_bg">@drawable/tile_bg</item>
         <item name="c_card_pad">20dp</item>
+        <item name="c_graphic">?attr/c_stroke</item>
         <item name="c_primary">?attr/c_accent</item>
         <item name="c_on_primary">?attr/c_on_accent</item>
         <item name="c_primary_pressed">?attr/c_text</item>
@@ -36,6 +37,7 @@
         <item name="c_card_bg">@drawable/card_bg</item>
         <item name="c_tile_bg">@drawable/tile_bg</item>
         <item name="c_card_pad">20dp</item>
+        <item name="c_graphic">?attr/c_stroke</item>
         <item name="c_primary">?attr/c_accent</item>
         <item name="c_on_primary">?attr/c_on_accent</item>
         <item name="c_primary_pressed">?attr/c_text</item>

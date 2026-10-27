@@ -74,6 +74,12 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         visibility = View.GONE
         setOnClickListener { joinNext() }
     }
+    /** Thèmes Cadran, rien de prévu : l'action visible pour noter un rendez-vous (prend la place de « Rejoindre »). */
+    private val add = Button(context, null, 0, R.style.ActionButton).apply {
+        setText(R.string.event_add)
+        visibility = View.GONE
+        setOnClickListener { host.editEvent(null) }
+    }
     private val texts = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
     /** Vertical : nombre de rendez-vous du jour (en tête), heure en grand, les deux suivants (en bas). */
     private val todayCount = label(15f, R.attr.c_text_faint)
@@ -118,6 +124,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             view.addView(title, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(6) })
             view.addView(whenText, LinearLayout.LayoutParams(match, wrap))
             view.addView(join, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = dp(18) })
+            view.addView(add, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = dp(18) })
             view.addView(View(context), LinearLayout.LayoutParams(match, 0, 1f))
             view.addView(View(context).apply { setBackgroundColor(color(R.attr.c_stroke)) }, LinearLayout.LayoutParams(match, dp(1)))
             view.addView(after, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(14) })
@@ -135,6 +142,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                 title.textSize = 22f
                 view.addView(texts, LinearLayout.LayoutParams(0, wrap, 1f))
                 view.addView(join, LinearLayout.LayoutParams(wrap, wrap).apply { marginStart = dp(12) })
+                view.addView(add, LinearLayout.LayoutParams(wrap, wrap).apply { marginStart = dp(12) })
             } else {
                 view.orientation = LinearLayout.VERTICAL
                 view.gravity = Gravity.CENTER_VERTICAL
@@ -142,6 +150,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                 title.textSize = 28f
                 view.addView(texts, LinearLayout.LayoutParams(match, wrap))
                 view.addView(join, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = dp(14) })
+                view.addView(add, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = dp(14) })
             }
         }
         onCalendar()
@@ -161,9 +170,17 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         joinable = upcoming?.takeIf { host.features.meetings && it.joinable && (chosen != null || it.startMs - now <= JOIN_EARLY_MS) }
         join.visibility = if (joinable == null) View.GONE else View.VISIBLE
         if (placed.size == WidgetSize.V) renderVertical(events, upcoming, now)
+        // Cadran, rien de prévu : l'action pour noter un rendez-vous. Ordinateur injoignable et rien de lu : on ne dit pas « rien de prévu ».
+        val empty = cadran && upcoming == null && host.unreachable == null
+        add.visibility = if (empty) View.VISIBLE else View.GONE
+        whenText.visibility = if (cadran && upcoming == null) View.GONE else View.VISIBLE
         if (upcoming == null) {
-            title.setText(R.string.next_none)
-            whenText.setText(R.string.next_none_hint)
+            if (cadran) {
+                title.text = if (empty) context.getString(R.string.next_none_today) else ""
+            } else {
+                title.setText(R.string.next_none)
+                whenText.setText(R.string.next_none_hint)
+            }
             return
         }
         title.text = upcoming.title

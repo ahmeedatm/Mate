@@ -132,7 +132,7 @@
 
         <FrameLayout
             android:id="@+id/menu_handle"
-            android:layout_width="28dp"
+            android:layout_width="48dp"
             android:layout_height="match_parent"
             android:contentDescription="@string/menu_open">
 

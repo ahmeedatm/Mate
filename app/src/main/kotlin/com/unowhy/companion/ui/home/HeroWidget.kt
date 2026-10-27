@@ -9,6 +9,7 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.view.isVisible
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.Water
 import com.unowhy.companion.ui.RollingText
@@ -27,6 +28,7 @@ import kotlin.math.roundToInt
  */
 class HeroView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : FrameLayout(context, attrs) {
     private lateinit var clock: RollingText
+    private lateinit var date: View
     private lateinit var next: View
     private lateinit var compl: View
 
@@ -37,6 +39,7 @@ class HeroView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     override fun onFinishInflate() {
         super.onFinishInflate()
         clock = findViewById(R.id.hero_clock)
+        date = findViewById(R.id.hero_date)
         next = findViewById(R.id.hero_next)
         compl = findViewById(R.id.hero_compl)
     }
@@ -46,12 +49,24 @@ class HeroView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         val h = MeasureSpec.getSize(heightMeasureSpec)
         val density = resources.displayMetrics.density
         val full = h >= FULL_HEIGHT * density
-        // Ligne de l'heure : 176 pour 184 de corps ; dessous, la date (38) et « Ensuite » (30) ne tiennent que sur une ligne haute.
-        val size = minOf(MAX_CLOCK * density, 0.45f * w, if (full) Float.MAX_VALUE else (h - 40 * density) / LINE_RATIO)
-        clock.setSize(size, (size * LINE_RATIO).roundToInt(), size.roundToInt())
         show(next, full && nextWanted)
         show(compl, w >= COMPL_WIDTH * density)
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        // L'heure prend ce que la date et « Ensuite » (hauteur de leur texte, police agrandie comprise) laissent dans la
+        // ligne ; sur une ligne haute elle déborde de 12 dp, sous 220 dp elle rend 2 dp. La ligne de l'heure vaut 176 pour 184 de corps.
+        val below = blockHeight(date) + if (next.isVisible) blockHeight(next) else 0
+        val room = h + (if (full) OVERHANG else -2) * density - below
+        val maxClock = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, MAX_CLOCK, resources.displayMetrics)
+        val size = minOf(maxClock, 0.45f * w, room / LINE_RATIO)
+        clock.setSize(size, (size * LINE_RATIO).roundToInt(), size.roundToInt())
+        // Les textes ont le droit de déborder de la ligne (la mesure normale les coupe à sa hauteur) : la vue garde la sienne.
+        super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(h + (2 * OVERHANG * density).roundToInt(), MeasureSpec.AT_MOST))
+        setMeasuredDimension(measuredWidth, h)
+    }
+
+    /** Hauteur d'un bloc sous l'heure, marge du haut comprise. */
+    private fun blockHeight(view: View): Int {
+        view.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
+        return view.measuredHeight + (view.layoutParams as MarginLayoutParams).topMargin
     }
 
     private fun show(view: View, visible: Boolean) {
@@ -61,6 +76,7 @@ class HeroView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     private companion object {
         const val FULL_HEIGHT = 220
+        const val OVERHANG = 12
         const val MAX_CLOCK = 184f
         const val COMPL_WIDTH = 760
         const val LINE_RATIO = 176f / 184f
@@ -76,6 +92,7 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val clock = view.findViewById<RollingText>(R.id.hero_clock)
     private val date = view.findViewById<TextView>(R.id.hero_date)
     private val next = view.findViewById<View>(R.id.hero_next)
+    private val nextDown = view.findViewById<TextView>(R.id.hero_next_down)
     private val nextPrefix = view.findViewById<TextView>(R.id.hero_next_prefix)
     private val nextTitle = view.findViewById<TextView>(R.id.hero_next_title)
     private val nextWhen = view.findViewById<TextView>(R.id.hero_next_when)
@@ -141,10 +158,24 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         renderWater(Water.state(context), animate)
     }
 
-    /** « Ensuite <titre> dans N min » : le compteur bascule chaque minute ; plus tard ou demain, le moment en texte. */
+    /**
+     * « Ensuite <titre> dans N min » : le compteur bascule chaque minute ; plus tard ou demain, le moment en texte.
+     * Ordinateur injoignable : « <nom> ne répond pas depuis HH:MM » à la place, les rendez-vous peuvent dater.
+     */
     private fun renderNext(animate: Boolean) {
-        val line = nextLine(host.events, System.currentTimeMillis(), host.chosenId)
-        view.nextWanted = line != null
+        val down = host.unreachable
+        val line = if (down == null) nextLine(host.events, System.currentTimeMillis(), host.chosenId) else null
+        view.nextWanted = down != null || line != null
+        nextDown.visibility = if (down != null) View.VISIBLE else View.GONE
+        if (down != null) {
+            nextDown.text = context.getString(R.string.hero_down, down.name, down.since())
+            nextPrefix.visibility = View.GONE
+            nextTitle.visibility = View.GONE
+            nextWhen.visibility = View.GONE
+            nextIn.visibility = View.GONE
+            return
+        }
+        nextTitle.visibility = View.VISIBLE
         if (line == null) return
         nextPrefix.visibility = if (line is NextLine.Now) View.GONE else View.VISIBLE
         nextTitle.text = line.title

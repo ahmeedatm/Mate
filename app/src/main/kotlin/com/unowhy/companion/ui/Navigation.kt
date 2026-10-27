@@ -27,18 +27,20 @@ interface Navigation {
     fun showLink(link: Link)
 }
 
-/** Libellé du mode Focus : le temps restant tant qu'un Pomodoro est lancé ou entamé. */
-internal fun focusLabel(activity: Activity, state: FocusTimer.State): String {
-    val active = state.running || state.remainingMs < state.durationMs
-    return if (active) FocusTimer.format(state.remainingMs) else activity.getString(R.string.mode_focus)
-}
+/** Temps restant du Pomodoro tant qu'il est lancé ou entamé, sinon null. */
+internal fun focusRemaining(state: FocusTimer.State): String? =
+    if (state.running || state.remainingMs < state.durationMs) FocusTimer.format(state.remainingMs) else null
 
-/** Pastille de connexion : couleur selon l'état, nom de l'ordinateur actif. */
-internal fun renderLink(activity: Activity, dot: View, name: TextView, status: View, link: Link) {
+/** Libellé du mode Focus : le temps restant tant qu'un Pomodoro est lancé ou entamé. */
+internal fun focusLabel(activity: Activity, state: FocusTimer.State): String =
+    focusRemaining(state) ?: activity.getString(R.string.mode_focus)
+
+/** Pastille de connexion : couleur selon l'état (`offline` : celle de l'injoignable), nom de l'ordinateur actif. */
+internal fun renderLink(activity: Activity, dot: View, name: TextView, status: View, link: Link, offline: Int = R.attr.c_ko) {
     val color = when (link.state) {
         Link.State.ONLINE -> R.attr.c_ok
         Link.State.UNAUTHORIZED -> R.attr.c_warn
-        else -> R.attr.c_ko
+        else -> offline
     }
     dot.background.mutate().setTint(themeColor(activity, color))
     name.text = link.computer?.name ?: activity.getString(R.string.no_computer_short)

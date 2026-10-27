@@ -6,6 +6,9 @@ import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.style.RelativeSizeSpan
 import android.view.MotionEvent
 import android.view.VelocityTracker
 import android.view.View
@@ -232,14 +235,19 @@ class MenuPanel(private val activity: Activity, private val onSelect: (Mode) -> 
 
     override fun select(mode: Mode, changed: Boolean) = mark(mode, animate = isOpen && changed)
 
+    /** L'entrée garde son libellé ; le temps restant du Pomodoro vient après, plus petit. */
     override fun showFocus(state: FocusTimer.State) {
-        rows.getValue(Mode.FOCUS).text = focusLabel(activity, state)
+        val label = activity.getString(Mode.FOCUS.label)
+        rows.getValue(Mode.FOCUS).text = focusRemaining(state)?.let {
+            SpannableStringBuilder(label).append("  ").append(it, RelativeSizeSpan(0.85f), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        } ?: label
     }
 
     /** Pas de pastille dans le menu : le nombre de tâches restantes est dans la carte Tâches. */
     override fun setPendingTasks(count: Int) = Unit
 
-    override fun showLink(link: Link) = renderLink(activity, statusDot, statusName, status, link)
+    /** Le rouge est réservé au « maintenant » : le point est vert si l'ordinateur répond, neutre sinon. */
+    override fun showLink(link: Link) = renderLink(activity, statusDot, statusName, status, link, offline = R.attr.c_text_faint)
 
     private companion object {
         const val AUTO_CLOSE_MS = 6_000L

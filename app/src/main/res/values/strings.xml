@@ -240,6 +240,7 @@
     <string name="focus_phase_break">Pause</string>
     <string name="focus_count">Sessions terminées : %1$d</string>
     <string name="focus_ready">Prêt</string>
+    <string name="focus_paused">En pause</string>
     <string name="ambiance">Ambiance</string>
     <string name="noise_brown">Brun</string>
     <string name="noise_pink">Pluie</string>
@@ -435,6 +436,8 @@
     <string name="agenda_empty">Rien de prévu. Touche + pour noter un rendez-vous.</string>
     <string name="next_today" tools:ignore="PluralsCandidate">%1$d aujourd\'hui</string>
     <string name="next_none">Rien de prévu</string>
+    <string name="next_none_today">Rien de prévu aujourd\'hui</string>
+    <string name="event_add">Noter un rendez-vous</string>
     <string name="next_none_hint">Note un rendez-vous avec + dans l\'agenda</string>
     <string name="tomorrow_at">demain à %1$s</string>
     <string name="day_at">%1$s à %2$s</string>
@@ -539,6 +542,7 @@
     <string name="widget_dayline">Ligne du jour</string>
     <string name="widget_dayline_desc">Les rendez-vous de 8 h à 20 h, le présent en rouge</string>
     <string name="next_prefix">Ensuite</string>
+    <string name="hero_down">%1$s ne répond pas depuis %2$s</string>
     <string name="hero_in">dans</string>
     <string name="hero_min">min</string>
     <plurals name="hero_glasses">

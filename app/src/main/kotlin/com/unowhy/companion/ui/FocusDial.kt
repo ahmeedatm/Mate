@@ -23,7 +23,7 @@ class FocusDial @JvmOverloads constructor(
     attrs: AttributeSet? = null,
 ) : View(context, attrs) {
 
-    private val off = themeColor(context, R.attr.c_stroke)
+    private val off = themeColor(context, R.attr.c_graphic)
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND

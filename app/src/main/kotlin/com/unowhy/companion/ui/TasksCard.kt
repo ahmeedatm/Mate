@@ -68,12 +68,28 @@ class TasksCard @JvmOverloads constructor(
         this.onPending = onPending
     }
 
+    /** Dernière lecture en échec. */
+    private var failed = false
+
+    /** L'ordinateur ne répond plus et l'Accueil le dit ailleurs : pas de message ici. */
+    var quiet = false
+        set(value) {
+            field = value
+            if (value && failed) showStatus(null)
+        }
+
     suspend fun load(refresh: Boolean = false) {
         try {
             render(client().tasks.list(refresh))
+            failed = false
         } catch (e: Exception) {
-            list.removeAllViews()
-            count.text = ""
+            failed = true
+            if (quiet) return
+            // Cadran : les tâches déjà lues restent affichées sous le message.
+            if (!cadran) {
+                list.removeAllViews()
+                count.text = ""
+            }
             showStatus(context.errorText(e))
         }
     }

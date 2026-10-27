@@ -14,6 +14,7 @@ import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.SeekBar
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import com.unowhy.companion.R
 import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.themeColor
@@ -44,6 +45,8 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     }
 
     var listener: Listener? = null
+    /** Widget qui ne répond plus au toucher (ordinateur injoignable) : il reste affiché, l'appui long et le balayage restent à la grille. */
+    var blocked: (Placed) -> Boolean = { false }
     var editing = false
         set(value) { field = value; endDrag(); invalidate() }
     var page = 0
@@ -253,6 +256,16 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         if (stolen || ignoreUntilUp) return true
         super.dispatchTouchEvent(ev)
         return true
+    }
+
+    override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.actionMasked != MotionEvent.ACTION_DOWN) return false
+        return (0 until childCount).any { i ->
+            val child = getChildAt(i)
+            val placed = placedOf(child)
+            placed != null && child.isVisible && blocked(placed) &&
+                ev.x >= child.left && ev.x < child.right && ev.y >= child.top && ev.y < child.bottom
+        }
     }
 
     private fun cancelChildren() {
