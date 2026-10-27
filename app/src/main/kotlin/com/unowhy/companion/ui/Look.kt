@@ -9,6 +9,7 @@ import android.graphics.PorterDuffColorFilter
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
+import android.provider.Settings
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -19,9 +20,11 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.dynamicanimation.animation.DynamicAnimation
+import androidx.dynamicanimation.animation.FloatValueHolder
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
 import com.unowhy.companion.R
+import kotlin.math.abs
 
 /**
  * Ce qui donne de la vie à l'interface : une teinte par fonction (pastilles rondes des titres, tuiles d'applis)
@@ -143,9 +146,61 @@ object Look {
         }
     }
 
-    /** Ressort M3 « spatial fast » (schéma standard : amortissement 0,9, raideur 1400), voir docs/ui-ux/da. */
+    /** Ressort M3 (schéma standard, docs/ui-ux/da) : raideur et amortissement. */
+    class Spring(val stiffness: Float, val damping: Float)
+
+    val SPATIAL_FAST = Spring(1400f, 0.9f)
+    val SPATIAL_DEFAULT = Spring(700f, 0.9f)
+    val SPATIAL_SLOW = Spring(300f, 0.9f)
+    val EFFECTS_FAST = Spring(3800f, 1f)
+    val EFFECTS_DEFAULT = Spring(1600f, 1f)
+    val EFFECTS_SLOW = Spring(800f, 1f)
+
+    /**
+     * Échelle d'animation d'Android à zéro (réglage développeur, tests instrumentés) : états finaux posés sans animer.
+     * Les ressorts ne suivent pas cette échelle d'eux-mêmes.
+     */
+    fun reduced(context: Context): Boolean =
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+
+    private fun force(token: Spring, to: Float) = SpringForce(to).setStiffness(token.stiffness).setDampingRatio(token.damping)
+
     private fun spatialFast(view: View, property: DynamicAnimation.ViewProperty) =
-        SpringAnimation(view, property).setSpring(SpringForce(1f).setStiffness(1400f).setDampingRatio(0.9f))
+        SpringAnimation(view, property).setSpring(force(SPATIAL_FAST, 1f))
+
+    /**
+     * Ressort sur une valeur seule : `onUpdate` reçoit la valeur de `from` vers `to`, `onEnd` quand elle est posée
+     * (pas si on l'annule). À annuler avec `cancel()` quand la vue part. Échelle d'animation à zéro : `to` tout de suite, null.
+     */
+    fun spring(context: Context, token: Spring, from: Float, to: Float, onUpdate: (Float) -> Unit, onEnd: (() -> Unit)? = null): SpringAnimation? {
+        if (from == to || reduced(context)) {
+            onUpdate(to)
+            onEnd?.invoke()
+            return null
+        }
+        return SpringAnimation(FloatValueHolder(from))
+            .setSpring(force(token, to))
+            .setMinimumVisibleChange(maxOf(abs(to - from) * 0.002f, 0.0005f))
+            .addUpdateListener { _, value, _ -> onUpdate(value) }
+            .addEndListener { _, canceled, _, _ -> if (!canceled) onEnd?.invoke() }
+            .also { it.start() }
+    }
+
+    /** Arrivée d'un élément de l'Accueil Cadran : il monte de `dy` dp (ressort par défaut) en fondu, après `delayMs`. */
+    fun enterSpring(view: View, delayMs: Long, dy: Int) {
+        view.animate().cancel()
+        if (reduced(view.context)) {
+            view.alpha = 1f
+            view.translationY = 0f
+            return
+        }
+        view.alpha = 0f
+        view.translationY = dy * view.resources.displayMetrics.density
+        view.postDelayed({
+            SpringAnimation(view, DynamicAnimation.TRANSLATION_Y).setSpring(force(SPATIAL_DEFAULT, 0f)).start()
+            SpringAnimation(view, DynamicAnimation.ALPHA).setSpring(force(EFFECTS_DEFAULT, 1f)).start()
+        }, delayMs)
+    }
 
     /** Appui (DA Cadran) : la vue s'enfonce à 0,96 puis revient sur un ressort. Le clic n'est pas consommé. */
     @SuppressLint("ClickableViewAccessibility")

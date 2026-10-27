@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -111,6 +112,8 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.KEYS -> KeysWidget(context, host, placed)
                 WidgetType.WEATHER -> WeatherWidget(context, host, placed)
                 WidgetType.NOTE -> NoteWidget(context, host, placed)
+                WidgetType.HERO -> HeroWidget(context, host, placed)
+                WidgetType.DAYLINE -> DayLineWidget(context, host, placed)
             }
     }
 }
@@ -176,22 +179,45 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
  * cascade à la pause. Toucher = mode Focus, bouton = démarrer / pause. Rien ne bouge en dehors des changements.
  */
 class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    override val view: View = LayoutInflater.from(context).inflate(R.layout.widget_focus, null)
-    private val dial = view.findViewById<FocusDial>(R.id.widget_focus_dial)
-    private val time = view.findViewById<TextView>(R.id.widget_focus_time)
-    private val phase = view.findViewById<TextView>(R.id.widget_focus_phase)
-    private val detail = view.findViewById<TextView>(R.id.widget_focus_detail)
-    private val toggle = view.findViewById<View>(R.id.widget_focus_toggle)
-    private val toggleIcon = view.findViewById<ImageView>(R.id.widget_focus_toggle_icon)
+    /** Conteneur stable : la vue interne est refaite quand la taille change (vertical = autre mise en page). */
+    override val view = FrameLayout(context)
+    private lateinit var dial: FocusDial
+    private lateinit var time: TextView
+    private lateinit var phase: TextView
+    private lateinit var detail: TextView
+    private lateinit var toggle: View
+    private lateinit var toggleIcon: ImageView
     private val focusListener: (FocusTimer.State) -> Unit = { render() }
     private val noiseListener: () -> Unit = { render() }
     private var shown = false
+    private var tall = false
 
     init {
-        view.setOnClickListener { host.main?.showMode("focus") }
+        bind()
+    }
+
+    override fun applySize() {
+        if ((placed.size == WidgetSize.V) == tall) return
+        bind()
+        render()
+    }
+
+    private fun bind() {
+        tall = placed.size == WidgetSize.V
+        view.removeAllViews()
+        val inner = LayoutInflater.from(context).inflate(if (tall) R.layout.widget_focus_tall else R.layout.widget_focus, view, false)
+        view.addView(inner)
+        dial = inner.findViewById(R.id.widget_focus_dial)
+        time = inner.findViewById(R.id.widget_focus_time)
+        phase = inner.findViewById(R.id.widget_focus_phase)
+        detail = inner.findViewById(R.id.widget_focus_detail)
+        toggleIcon = inner.findViewById(R.id.widget_focus_toggle_icon)
+        toggle = inner.findViewById(R.id.widget_focus_toggle)
+        inner.setOnClickListener { host.main?.showMode("focus") }
         toggle.setOnClickListener { FocusTimer.toggle() }
-        Look.pressSpring(view)
+        Look.pressSpring(inner)
         Look.pressSpring(toggle)
+        shown = false
     }
 
     override fun setActive(active: Boolean) {
@@ -219,6 +245,8 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         dial.show(FocusTicks.lit(state.remainingMs, state.durationMs, state.running), animate = shown)
         shown = true
         detail.text = NoisePlayer.kind?.takeIf { NoisePlayer.playing }?.let { context.getString(R.string.noise_playing, context.getString(it.label)) } ?: ""
+        // Vertical : l'ambiance est à côté du bouton, qui reste centré tant qu'il n'y en a pas.
+        if (tall) detail.visibility = if (detail.text.isEmpty()) View.GONE else View.VISIBLE
         Look.swapIcon(toggleIcon, if (state.running) R.drawable.ic_pause else R.drawable.ic_play)
         toggle.contentDescription = context.getString(if (state.running) R.string.focus_pause else R.string.focus_start)
     }

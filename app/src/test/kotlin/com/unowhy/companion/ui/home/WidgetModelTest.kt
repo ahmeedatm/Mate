@@ -95,4 +95,38 @@ class WidgetModelTest {
         HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.FOCUS, WidgetSize.V, 0, 3, 2)), 1), cadran = true)
         assertEquals(WidgetSize.V, HomeLayout.load(context, cadran = true).widgets.single().size)
     }
+
+    @Test
+    fun `chaque modele Cadran commence par le heros puis la ligne du jour`() {
+        for (template in Template.entries.filter { it.cadran }) {
+            val widgets = template.build().widgets
+            val hero = widgets.single { it.type == WidgetType.HERO }
+            val line = widgets.single { it.type == WidgetType.DAYLINE }
+            assertEquals("$template heros", Triple(WidgetSize.W, 0, 0), Triple(hero.size, hero.col, hero.row))
+            assertEquals("$template ligne du jour", Triple(WidgetSize.W, 0, 1), Triple(line.size, line.col, line.row))
+        }
+    }
+
+    @Test
+    fun `les trois modeles existent aussi en Cadran, avec les memes titres`() {
+        val plain = Template.entries.filter { !it.cadran }.map { it.title }
+        val cadran = Template.entries.filter { it.cadran }.map { it.title }
+        assertEquals(plain, cadran)
+    }
+
+    @Test
+    fun `le modele par defaut de Cadran est Travail Cadran, celui des autres reste Travail`() {
+        assertTrue(Template.defaultFor(true).cadran)
+        assertEquals(Template.WORK.title, Template.defaultFor(true).title)
+        assertEquals(WidgetType.NEXT to WidgetSize.V, Template.defaultFor(true).build().widgets.single { it.type == WidgetType.NEXT }.let { it.type to it.size })
+        assertEquals(Template.WORK, Template.defaultFor(false))
+    }
+
+    @Test
+    fun `le heros et la ligne du jour n'ont besoin que de la largeur de la grille`() {
+        assertEquals(listOf(WidgetSize.W), WidgetType.HERO.sizes)
+        assertEquals(listOf(WidgetSize.W), WidgetType.DAYLINE.sizes)
+        assertFalse(WidgetType.HERO.computer)
+        assertFalse(WidgetType.DAYLINE.computer)
+    }
 }

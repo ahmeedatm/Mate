@@ -38,7 +38,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     override val hasSettings get() = true
 
-    private val capacity get() = when (placed.size) { WidgetSize.S -> 1; WidgetSize.M -> 2; else -> 4 }
+    private val capacity get() = when (placed.size) { WidgetSize.S -> 1; WidgetSize.M -> 2; WidgetSize.V -> 6; else -> 4 }
 
     private fun chosen(): List<JSONObject> {
         val keys = placed.config.optJSONArray("keys") ?: return emptyList()
@@ -61,8 +61,8 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             return
         }
-        // Grand : 2 × 2 ; sinon une rangée.
-        val perRow = if (capacity == 4) 2 else capacity
+        // Grand : 2 × 2 ; vertical : 2 × 3 ; sinon une rangée.
+        val perRow = if (capacity >= 4) 2 else capacity
         val gap = dp(12)
         keys.chunked(perRow).forEachIndexed { r, rowKeys ->
             val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
@@ -115,7 +115,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         return view
     }
 
-    /** Liste des touches de toutes les pages du deck de l'ordinateur actif, à cocher (au plus 4). */
+    /** Liste des touches de toutes les pages du deck de l'ordinateur actif, à cocher (au plus 6). */
     override fun showSettings() {
         host.scope.launch {
             val pages = try {
@@ -172,6 +172,6 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
 
     private companion object {
-        const val MAX_KEYS = 4
+        const val MAX_KEYS = 6
     }
 }

@@ -22,6 +22,7 @@ import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.CalendarEvent
 import com.unowhy.companion.net.HomeFeatures
 import com.unowhy.companion.ui.home.COLS
+import com.unowhy.companion.ui.home.DayLineWidget
 import com.unowhy.companion.ui.home.HomeHost
 import com.unowhy.companion.ui.home.HomeLayout
 import com.unowhy.companion.ui.home.HomeWidget
@@ -95,6 +96,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             grid.setPadding(dp(44), dp(28), dp(40), dp(32))
             grid.gap = dp(16)
             grid.rowWeights = RowProfile.CADRAN_ROWS
+            // L'heure déborde de quelques dp sous sa ligne, comme dans la maquette.
+            grid.clipChildren = false
         }
         layout = HomeLayout.load(requireContext(), cadran)
         build()
@@ -138,10 +141,22 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         activate()
     }
 
-    /** Les widgets de la page arrivent l'un après l'autre, de haut en bas puis de gauche à droite. */
+    /**
+     * Les widgets de la page arrivent l'un après l'autre, de haut en bas puis de gauche à droite. Cadran : le héros
+     * descend d'un cran, la ligne du jour se dessine, les tuiles montent de 50 ms en 50 ms (ressorts).
+     */
     private fun animateIn() {
-        widgets.keys.filter { it.page == page }.sortedWith(compareBy({ it.row }, { it.col }))
-            .forEachIndexed { i, placed -> widgets[placed]?.let { Look.enter(it.view, i) } }
+        val shown = widgets.keys.filter { it.page == page }.sortedWith(compareBy({ it.row }, { it.col }))
+        if (!cadran) return shown.forEachIndexed { i, placed -> widgets[placed]?.let { Look.enter(it.view, i) } }
+        var tiles = 0
+        for (placed in shown) {
+            val widget = widgets[placed] ?: continue
+            when (placed.type) {
+                WidgetType.HERO -> Look.enterSpring(widget.view, 0, -8)
+                WidgetType.DAYLINE -> (widget as? DayLineWidget)?.arrive()
+                else -> Look.enterSpring(widget.view, 160L + 50L * tiles++, 24)
+            }
+        }
     }
 
     // --- Widgets
@@ -180,16 +195,17 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         loop = scope.launch {
             var tick = 0
             while (true) {
+                // Le battement d'abord : les chiffres basculent à hh:mm:00, avant les échanges réseau.
+                widgets.values.forEach { it.onMinute() }
                 if (!noComputer && (tick % 5 == 0 || waitingLink) && showsCalendar()) {
                     fetchCalendar()
                     renderCalendar()
                 }
                 for (widget in widgets.values.toList()) widget.load()
-                widgets.values.forEach { it.onMinute() }
                 // Sans widget Tâches, la pastille de la barre latérale n'a plus rien à compter.
                 if (widgets.keys.none { it.type == WidgetType.TASKS }) main?.setPendingTasks(0)
                 tick++
-                delay(60_000)
+                delay(MinuteClock.msToNextMinute(System.currentTimeMillis()) + MinuteClock.SLACK_MS)
             }
         }
     }
@@ -205,7 +221,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         }
     }
 
-    private fun showsCalendar() = widgets.keys.any { it.type == WidgetType.AGENDA || it.type == WidgetType.NEXT }
+    private fun showsCalendar() = widgets.keys.any {
+        it.type == WidgetType.AGENDA || it.type == WidgetType.NEXT || it.type == WidgetType.HERO || it.type == WidgetType.DAYLINE
+    }
 
     private suspend fun fetchCalendar() {
         val client = BackendClient(requireContext())
@@ -469,7 +487,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     private fun chooseTemplate() {
         val ctx = requireContext()
-        val templates = Template.entries
+        val templates = Template.entries.filter { it.cadran == cadran }
         val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(8), dp(16), dp(8)) }
         val dialog = AlertDialog.Builder(ctx)
             .setTitle(R.string.home_templates_title)

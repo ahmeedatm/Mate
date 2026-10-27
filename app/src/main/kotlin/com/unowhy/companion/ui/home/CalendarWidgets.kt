@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
+import androidx.core.view.isNotEmpty
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.CalendarEvent
@@ -31,6 +32,7 @@ import java.util.Locale
 private val timeFormat get() = SimpleDateFormat("HH:mm", Locale.FRANCE)
 private val dayHeader get() = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
 private val dayName get() = SimpleDateFormat("EEEE", Locale.FRANCE)
+private val shortDay get() = SimpleDateFormat("EEE", Locale.FRANCE)
 
 /** Jours entre aujourd'hui et `ms` (0 = aujourd'hui), au calendrier (pas en tranches de 24 h). */
 internal fun daysFrom(now: Long, ms: Long): Int {
@@ -39,10 +41,21 @@ internal fun daysFrom(now: Long, ms: Long): Int {
     return Math.round((b.timeInMillis - a.timeInMillis) / 86_400_000.0).toInt()
 }
 
+/** « dans 23 min », « à 17:00 », « En cours, jusqu'à 15:30 », « demain à 9:30 », « mardi à 9:30 ». */
+internal fun NextLine.whenText(context: Context): String = when (this) {
+    is NextLine.InMinutes -> context.getString(R.string.in_minutes, minutes)
+    is NextLine.At -> context.getString(R.string.at_time, timeFormat.format(Date(startMs)))
+    is NextLine.Now -> context.getString(R.string.now_until, timeFormat.format(Date(endMs)))
+    is NextLine.Tomorrow -> context.getString(R.string.tomorrow_at, timeFormat.format(Date(startMs)))
+    is NextLine.Day -> context.getString(
+        R.string.day_at, if (days < 7) dayName.format(Date(startMs)) else dayHeader.format(Date(startMs)), timeFormat.format(Date(startMs)),
+    )
+}
+
 /**
  * Prochain rendez-vous (ou la réunion touchée dans l'agenda), avec « Rejoindre » pour une réunion en ligne (Teams,
- * Meet, Zoom, Webex) à partir de
- * 15 min avant. Moyen : le bouton à droite du titre ; grand : en dessous.
+ * Meet, Zoom, Webex) à partir de 15 min avant. Moyen : le bouton à droite du titre ; grand : en dessous ; vertical :
+ * l'heure en grand, puis les deux rendez-vous suivants.
  */
 class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val cadran = themeBool(context, R.attr.c_cadran)
@@ -61,12 +74,11 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         visibility = View.GONE
         setOnClickListener { joinNext() }
     }
-    private val texts = LinearLayout(context).apply {
-        orientation = LinearLayout.VERTICAL
-        addView(labelView)
-        addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
-        addView(whenText, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(2) })
-    }
+    private val texts = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+    /** Vertical : nombre de rendez-vous du jour (en tête), heure en grand, les deux suivants (en bas). */
+    private val todayCount = label(15f, R.attr.c_text_faint)
+    private val bigTime = label(44f, light = true).apply { isSingleLine = true; fontFeatureSettings = "tnum" }
+    private val after = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
     override val view = LinearLayout(context).apply {
         if (cadran) {
             setBackgroundResource(themeRes(context, R.attr.c_card_bg))
@@ -85,21 +97,50 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     override fun applySize() {
         view.removeAllViews()
+        texts.removeAllViews()
         val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
-        if (placed.size == WidgetSize.M) {
-            view.orientation = LinearLayout.HORIZONTAL
-            view.gravity = Gravity.CENTER_VERTICAL
-            title.maxLines = 1
-            title.textSize = 22f
-            view.addView(texts, LinearLayout.LayoutParams(0, wrap, 1f))
-            view.addView(join, LinearLayout.LayoutParams(wrap, wrap).apply { marginStart = dp(12) })
-        } else {
+        val match = ViewGroup.LayoutParams.MATCH_PARENT
+        if (placed.size == WidgetSize.V) {
             view.orientation = LinearLayout.VERTICAL
-            view.gravity = Gravity.CENTER_VERTICAL
-            title.maxLines = 3
-            title.textSize = 28f
-            view.addView(texts, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, wrap))
-            view.addView(join, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = dp(14) })
+            view.gravity = Gravity.TOP
+            title.maxLines = 2
+            title.textSize = 18f
+            whenText.textSize = 14f
+            whenText.setTextColor(color(R.attr.c_text_dim))
+            view.addView(LinearLayout(context).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                addView(labelView, LinearLayout.LayoutParams(0, wrap, 1f))
+                addView(todayCount)
+            })
+            view.addView(bigTime, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(16) })
+            view.addView(title, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(6) })
+            view.addView(whenText, LinearLayout.LayoutParams(match, wrap))
+            view.addView(join, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = dp(18) })
+            view.addView(View(context), LinearLayout.LayoutParams(match, 0, 1f))
+            view.addView(View(context).apply { setBackgroundColor(color(R.attr.c_stroke)) }, LinearLayout.LayoutParams(match, dp(1)))
+            view.addView(after, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(14) })
+        } else {
+            labelView.visibility = View.VISIBLE
+            whenText.textSize = 17f
+            whenText.setTextColor(color(if (cadran) R.attr.c_accent else R.attr.c_hue_orange))
+            texts.addView(labelView)
+            texts.addView(title, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(8) })
+            texts.addView(whenText, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(2) })
+            if (placed.size == WidgetSize.M) {
+                view.orientation = LinearLayout.HORIZONTAL
+                view.gravity = Gravity.CENTER_VERTICAL
+                title.maxLines = 1
+                title.textSize = 22f
+                view.addView(texts, LinearLayout.LayoutParams(0, wrap, 1f))
+                view.addView(join, LinearLayout.LayoutParams(wrap, wrap).apply { marginStart = dp(12) })
+            } else {
+                view.orientation = LinearLayout.VERTICAL
+                view.gravity = Gravity.CENTER_VERTICAL
+                title.maxLines = 3
+                title.textSize = 28f
+                view.addView(texts, LinearLayout.LayoutParams(match, wrap))
+                view.addView(join, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = dp(14) })
+            }
         }
         onCalendar()
     }
@@ -109,30 +150,43 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     override fun onCalendar() {
         val now = System.currentTimeMillis()
         val events = host.events
-        val chosen = events.firstOrNull { it.id == host.chosenId && it.endMs > now }
+        val upcoming = nextEvent(events, now, host.chosenId)
+        val chosen = upcoming?.takeIf { it.id == host.chosenId }
         labelView.setText(if (chosen == null) R.string.next_label else R.string.chosen_label)
-        val upcoming = chosen ?: events.firstOrNull { !it.allDay && it.endMs > now }
         // « Rejoindre » à partir de 15 min avant : plus tôt, un toucher par erreur ouvrirait Teams pour rien.
         // Une réunion choisie dans l'agenda peut être rejointe tout de suite (le choix est volontaire).
         joinable = upcoming?.takeIf { host.features.meetings && it.joinable && (chosen != null || it.startMs - now <= JOIN_EARLY_MS) }
         join.visibility = if (joinable == null) View.GONE else View.VISIBLE
+        if (placed.size == WidgetSize.V) renderVertical(events, upcoming, now)
         if (upcoming == null) {
             title.setText(R.string.next_none)
             whenText.setText(R.string.next_none_hint)
             return
         }
         title.text = upcoming.title
-        val time = timeFormat.format(Date(upcoming.startMs))
-        val text = when (val days = daysFrom(now, upcoming.startMs)) {
-            0 -> when {
-                upcoming.startMs <= now -> context.getString(R.string.now_until, timeFormat.format(Date(upcoming.endMs)))
-                upcoming.startMs - now < 60 * 60_000 -> context.getString(R.string.in_minutes, ((upcoming.startMs - now) / 60_000).toInt())
-                else -> context.getString(R.string.at_time, time)
-            }
-            1 -> context.getString(R.string.tomorrow_at, time)
-            else -> context.getString(R.string.day_at, if (days < 7) dayName.format(Date(upcoming.startMs)) else dayHeader.format(Date(upcoming.startMs)), time)
-        }
+        val text = nextLine(upcoming, now).whenText(context)
         whenText.text = if (upcoming.location.isBlank()) text else "$text · ${upcoming.location}"
+    }
+
+    /** Vertical : compteur du jour, heure du prochain en grand, deux rendez-vous suivants. */
+    private fun renderVertical(events: List<CalendarEvent>, upcoming: CalendarEvent?, now: Long) {
+        val today = events.count { !it.allDay && daysFrom(now, it.startMs) == 0 }
+        todayCount.text = if (today > 0) context.getString(R.string.next_today, today) else ""
+        bigTime.text = upcoming?.let { timeFormat.format(Date(it.startMs)) } ?: ""
+        after.removeAllViews()
+        val following = events.filter { !it.allDay && it.endMs > now && it !== upcoming }.take(2)
+        for (event in following) after.addView(LinearLayout(context).apply {
+            val sameDay = daysFrom(now, event.startMs) == 0
+            addView(label(15f, R.attr.c_text_dim).apply {
+                text = if (sameDay) timeFormat.format(Date(event.startMs)) else shortDay.format(Date(event.startMs)).replaceFirstChar { it.uppercase() }
+                minWidth = dp(56)
+            })
+            addView(label(15f).apply {
+                text = if (sameDay) event.title else "${event.title} ${timeFormat.format(Date(event.startMs))}"
+                isSingleLine = true
+                ellipsize = TextUtils.TruncateAt.END
+            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { if (after.isNotEmpty()) topMargin = dp(10) })
     }
 
     private fun joinNext() {

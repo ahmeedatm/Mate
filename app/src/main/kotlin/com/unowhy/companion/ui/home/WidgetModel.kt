@@ -48,7 +48,9 @@ enum class WidgetType(
     MEDIA("media", R.string.widget_media, R.string.widget_media_desc, R.drawable.ic_play, listOf(WidgetSize.M), true),
     KEYS("keys", R.string.widget_keys, R.string.widget_keys_desc, R.drawable.ic_deck, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L, WidgetSize.V), true),
     WEATHER("weather", R.string.widget_weather, R.string.widget_weather_desc, R.drawable.ic_cloud, listOf(WidgetSize.M, WidgetSize.S), false),
-    NOTE("note", R.string.widget_note, R.string.widget_note_desc, R.drawable.ic_edit, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L), false);
+    NOTE("note", R.string.widget_note, R.string.widget_note_desc, R.drawable.ic_edit, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L), false),
+    HERO("hero", R.string.widget_hero, R.string.widget_hero_desc, R.drawable.ic_clock, listOf(WidgetSize.W), false),
+    DAYLINE("dayline", R.string.widget_dayline, R.string.widget_dayline_desc, R.drawable.ic_alarm, listOf(WidgetSize.W), false);
 
     companion object {
         fun of(key: String) = entries.firstOrNull { it.key == key }
@@ -166,7 +168,26 @@ enum class Template(@StringRes val title: Int, @StringRes val description: Int, 
         Placed(WidgetType.NEXT, WidgetSize.L, 0, 0, 2),
         Placed(WidgetType.FOCUS, WidgetSize.M, 0, 2, 2),
         Placed(WidgetType.WATER, WidgetSize.M, 0, 2, 3),
-    ));
+    )),
+    WORK_CADRAN(R.string.template_work, R.string.template_work_cadran_desc, listOf(
+        Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
+        Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
+        Placed(WidgetType.NEXT, WidgetSize.V, 0, 0, 2),
+        Placed(WidgetType.TASKS, WidgetSize.V, 0, 1, 2),
+        Placed(WidgetType.FOCUS, WidgetSize.V, 0, 2, 2),
+        Placed(WidgetType.KEYS, WidgetSize.V, 0, 3, 2),
+    ), cadran = true),
+    HOME_CADRAN(R.string.template_home, R.string.template_home_cadran_desc, listOf(
+        Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
+        Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
+        Placed(WidgetType.KEYS, WidgetSize.L, 0, 0, 2),
+        Placed(WidgetType.MEDIA, WidgetSize.M, 0, 2, 2),
+        Placed(WidgetType.AUDIO, WidgetSize.M, 0, 2, 3),
+    ), cadran = true),
+    STANDBY_CADRAN(R.string.template_standby, R.string.template_standby_cadran_desc, listOf(
+        Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
+        Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
+    ), cadran = true);
 
     fun build() = HomeLayout(items.map { it.copy() }.toMutableList(), 1)
 
