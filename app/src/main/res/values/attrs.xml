@@ -41,4 +41,23 @@
     <attr name="c_primary_pressed" format="color" />
     <attr name="c_font_medium" format="reference|string" />
     <attr name="c_font_light" format="reference|string" />
+    <!-- Console de l'onglet Son du deck (plaque, afficheurs, curseurs, LED), tirées des tons de Cadran : ui/mixer/. -->
+    <attr name="c_mx_plate_top" format="color" />
+    <attr name="c_mx_plate_bottom" format="color" />
+    <attr name="c_mx_lcd_bg" format="color" />
+    <attr name="c_mx_lcd_text" format="color" />
+    <attr name="c_mx_text" format="color" />
+    <attr name="c_mx_slot" format="color" />
+    <attr name="c_mx_cap_top" format="color" />
+    <attr name="c_mx_cap_bottom" format="color" />
+    <attr name="c_mx_cap_line" format="color" />
+    <attr name="c_mx_led_off" format="color" />
+    <attr name="c_mx_led_low" format="color" />
+    <attr name="c_mx_led_mid" format="color" />
+    <attr name="c_mx_led_high" format="color" />
+    <attr name="c_mx_engrave" format="color" />
+    <attr name="c_mx_shadow" format="color" />
+    <attr name="c_mx_highlight" format="color" />
+    <attr name="c_mx_key_top" format="color" />
+    <attr name="c_mx_key_bottom" format="color" />
 </resources>

@@ -5,7 +5,19 @@ import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { config } from "../config.ts";
 import { focusDnd } from "../dnd.ts";
-import { appAudio, getAudio, getDnd, mediaControl, mediaSessions, mediaThumb, openAccessibility, setAudio, typeText } from "../os.ts";
+import { applyScene, deleteScene, listScenes, saveScene } from "../mixer.ts";
+import {
+  appAudio,
+  getAudio,
+  getDnd,
+  mediaControl,
+  mediaSessions,
+  mediaThumb,
+  mixer,
+  openAccessibility,
+  setAudio,
+  typeText,
+} from "../os.ts";
 
 /** Ordinateur : Accessibilité, dictée, son, Ne pas déranger, lecture en cours. */
 export default async function systemRoutes(app: FastifyInstance) {
@@ -87,6 +99,49 @@ export default async function systemRoutes(app: FastifyInstance) {
     },
     async (req) => appAudio(req.body.name, { volume: req.body.volume, muted: req.body.muted }),
   );
+
+  // Onglet Son du deck : relu 4 fois par seconde tant qu'il est affiché (niveaux sonores).
+  app.get("/system/mixer", { logLevel: "warn" }, async () => mixer());
+
+  app.post<{ Body: { id: string; volume?: number; muted?: boolean } }>(
+    "/system/mixer",
+    {
+      logLevel: "warn",
+      schema: {
+        body: {
+          type: "object",
+          required: ["id"],
+          additionalProperties: false,
+          properties: { id: appName, volume: { type: "integer", minimum: 0, maximum: 100 }, muted: { type: "boolean" } },
+        },
+      },
+    },
+    async (req) => mixer(req.body),
+  );
+
+  app.get("/system/mixer/scenes", async () => ({ scenes: await listScenes() }));
+
+  app.post<{ Body: { name: string } }>(
+    "/system/mixer/scenes",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["name"],
+          additionalProperties: false,
+          properties: { name: { type: "string", minLength: 1, maxLength: 30, pattern: "\\S" } },
+        },
+      },
+    },
+    async (req) => saveScene(req.body.name),
+  );
+
+  app.delete<{ Params: { id: string } }>("/system/mixer/scenes/:id", async (req) => {
+    await deleteScene(req.params.id);
+    return { ok: true };
+  });
+
+  app.post<{ Params: { id: string } }>("/system/mixer/scenes/:id/apply", async (req) => applyScene(req.params.id));
 
   // Lecture en cours (YouTube, Twitch, Spotify… : contrôles multimédias de Windows). Relue chaque seconde par la
   // tablette tant que la page Média est affichée.

@@ -1,6 +1,17 @@
 import fs from "node:fs";
 import { checkOpenTarget } from "../src/open-guard.ts";
-import type { AudioChange, Display, Layout, MediaCommand, OpenAction, SystemCommand, WindowsInfo, WindowTarget } from "../src/screens.ts";
+import type {
+  AudioChange,
+  Display,
+  Layout,
+  MediaCommand,
+  MixerChange,
+  MixerState,
+  OpenAction,
+  SystemCommand,
+  WindowsInfo,
+  WindowTarget,
+} from "../src/screens.ts";
 
 /**
  * Remplace src/os.ts dans les tests (voir fake-os-hook.ts) : rien ne pilote l'ordinateur, chaque action est notée.
@@ -22,6 +33,8 @@ export type FakeState = {
   onLaunch?: Record<string, { title: string }[]>;
   /** Boutons de la fenêtre de chaque appli (listButtons, pressButton). */
   buttons?: Record<string, string[]>;
+  /** Mélangeur de l'onglet Son (mixer) : modifié par les changements reçus. */
+  mixer?: MixerState;
   /** Fonctions qui échouent (« Appli absente ») : `"sendKeys"`, ou `"openTarget msteams:"` pour un début de premier argument. */
   fail?: string[];
 };
@@ -155,6 +168,21 @@ export async function browserPage() {
 
 export async function browserTabs() {
   return undefined;
+}
+
+export async function mixer(change?: MixerChange): Promise<MixerState> {
+  const current = read().mixer ?? {
+    master: { id: "master", name: "master", volume: 50, muted: false, level: 0 },
+    mic: { id: "mic", name: "mic", volume: 80, muted: false, level: 0 },
+    apps: [],
+  };
+  if (!change) return current;
+  record("mixer", change);
+  const { id, ...values } = change;
+  const apply = (c: MixerState["master"]) => (c.id === id ? { ...c, ...values } : c);
+  const next = { master: apply(current.master), mic: apply(current.mic), apps: current.apps?.map(apply) ?? null };
+  write({ ...read(), mixer: next });
+  return next;
 }
 
 export async function appAudio(app: string, change: { volume?: number; muted?: boolean } = {}) {

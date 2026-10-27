@@ -31,6 +31,24 @@
         <item name="c_hue_pink">#FFFF7EB6</item>
         <item name="c_hue_yellow">#FFFFD166</item>
         <item name="c_hue_blue">#FF6CB4FF</item>
+        <item name="c_mx_plate_top">?attr/c_surface_raised</item>
+        <item name="c_mx_plate_bottom">?attr/c_surface</item>
+        <item name="c_mx_lcd_bg">?attr/c_bg</item>
+        <item name="c_mx_lcd_text">?attr/c_ok</item>
+        <item name="c_mx_text">?attr/c_text</item>
+        <item name="c_mx_slot">?attr/c_bg</item>
+        <item name="c_mx_cap_top">?attr/c_text</item>
+        <item name="c_mx_cap_bottom">?attr/c_text_faint</item>
+        <item name="c_mx_cap_line">?attr/c_bg</item>
+        <item name="c_mx_led_off">?attr/c_surface_raised</item>
+        <item name="c_mx_led_low">?attr/c_ok</item>
+        <item name="c_mx_led_mid">?attr/c_warn</item>
+        <item name="c_mx_led_high">?attr/c_accent</item>
+        <item name="c_mx_engrave">?attr/c_text_faint</item>
+        <item name="c_mx_shadow">#66000000</item>
+        <item name="c_mx_highlight">#14FFFFFF</item>
+        <item name="c_mx_key_top">?attr/c_stroke</item>
+        <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
     </style>
 
     <style name="Palette.Clair" parent="Theme.AppCompat.Light.NoActionBar">
@@ -61,6 +79,24 @@
         <item name="c_hue_pink">#FFD6336C</item>
         <item name="c_hue_yellow">#FFC99400</item>
         <item name="c_hue_blue">#FF1F6FEB</item>
+        <item name="c_mx_plate_top">?attr/c_surface</item>
+        <item name="c_mx_plate_bottom">?attr/c_bg</item>
+        <item name="c_mx_lcd_bg">?attr/c_text</item>
+        <item name="c_mx_lcd_text">#FF9AD2C1</item>
+        <item name="c_mx_text">?attr/c_text</item>
+        <item name="c_mx_slot">?attr/c_text</item>
+        <item name="c_mx_cap_top">?attr/c_text_dim</item>
+        <item name="c_mx_cap_bottom">?attr/c_text</item>
+        <item name="c_mx_cap_line">?attr/c_surface</item>
+        <item name="c_mx_led_off">?attr/c_text_dim</item>
+        <item name="c_mx_led_low">#FF9AD2C1</item>
+        <item name="c_mx_led_mid">#FFFFD166</item>
+        <item name="c_mx_led_high">#FFFF5165</item>
+        <item name="c_mx_engrave">?attr/c_text_faint</item>
+        <item name="c_mx_shadow">#24000000</item>
+        <item name="c_mx_highlight">#FFFFFFFF</item>
+        <item name="c_mx_key_top">?attr/c_surface</item>
+        <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
     </style>
 
     <!-- Cadran (docs/ui-ux/da) : rôles Material 3 générés depuis le rouge Unowhy, une seule couleur vivante.
@@ -104,6 +140,24 @@
         <item name="c_hue_blue">#FF4D4545</item>
         <item name="c_hue_red">#FFCA0538</item>
         <item name="c_hue_green">#FF31685A</item>
+        <item name="c_mx_plate_top">?attr/c_surface</item>
+        <item name="c_mx_plate_bottom">?attr/c_bg</item>
+        <item name="c_mx_lcd_bg">?attr/c_text</item>
+        <item name="c_mx_lcd_text">#FF9AD2C1</item>
+        <item name="c_mx_text">?attr/c_text</item>
+        <item name="c_mx_slot">?attr/c_text</item>
+        <item name="c_mx_cap_top">?attr/c_text_dim</item>
+        <item name="c_mx_cap_bottom">?attr/c_text</item>
+        <item name="c_mx_cap_line">?attr/c_surface</item>
+        <item name="c_mx_led_off">?attr/c_text_dim</item>
+        <item name="c_mx_led_low">#FF9AD2C1</item>
+        <item name="c_mx_led_mid">#FFFFD166</item>
+        <item name="c_mx_led_high">#FFFF5165</item>
+        <item name="c_mx_engrave">?attr/c_text_faint</item>
+        <item name="c_mx_shadow">#24000000</item>
+        <item name="c_mx_highlight">#FFFFFFFF</item>
+        <item name="c_mx_key_top">?attr/c_surface</item>
+        <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
     </style>
 
     <style name="Palette.CadranNuit" parent="">
@@ -145,5 +199,23 @@
         <item name="c_hue_blue">#FFD0C4C3</item>
         <item name="c_hue_red">#FFFF5165</item>
         <item name="c_hue_green">#FF9AD2C1</item>
+        <item name="c_mx_plate_top">?attr/c_surface_raised</item>
+        <item name="c_mx_plate_bottom">?attr/c_surface</item>
+        <item name="c_mx_lcd_bg">?attr/c_bg</item>
+        <item name="c_mx_lcd_text">?attr/c_ok</item>
+        <item name="c_mx_text">?attr/c_text</item>
+        <item name="c_mx_slot">?attr/c_bg</item>
+        <item name="c_mx_cap_top">?attr/c_text</item>
+        <item name="c_mx_cap_bottom">?attr/c_text_faint</item>
+        <item name="c_mx_cap_line">?attr/c_bg</item>
+        <item name="c_mx_led_off">?attr/c_surface_raised</item>
+        <item name="c_mx_led_low">?attr/c_ok</item>
+        <item name="c_mx_led_mid">?attr/c_warn</item>
+        <item name="c_mx_led_high">?attr/c_accent</item>
+        <item name="c_mx_engrave">?attr/c_text_faint</item>
+        <item name="c_mx_shadow">#66000000</item>
+        <item name="c_mx_highlight">#14FFFFFF</item>
+        <item name="c_mx_key_top">?attr/c_stroke</item>
+        <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
     </style>
 </resources>

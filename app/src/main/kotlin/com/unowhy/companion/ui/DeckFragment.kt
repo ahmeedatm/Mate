@@ -29,6 +29,7 @@ import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DeckPage
 import com.unowhy.companion.net.DeckTile
 import com.unowhy.companion.net.VoiceState
+import com.unowhy.companion.ui.mixer.MixerView
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -47,6 +48,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private lateinit var nowPlaying: NowPlayingView
     private lateinit var picker: WindowPicker
     private lateinit var openWindows: OpenWindowsView
+    private lateinit var mixer: MixerView
     private lateinit var editor: KeyEditor
     private lateinit var adder: AppAdder
     private lateinit var linkAdder: LinkAdder
@@ -55,6 +57,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private var pageIndex = 0
     /** Onglet « Ouvertes » affiché (toutes les fenêtres de l'ordinateur) à la place de la page `pageIndex`. */
     private var showingOpen = false
+    /** Onglet « Son » affiché (console de mixage). */
+    private var showingMixer = false
     /** Onglets dans l'ordre affiché (pour le balayage) et celui qui est sélectionné. */
     private var tabActions: List<() -> Unit> = emptyList()
     private var selectedTab = -1
@@ -100,6 +104,9 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         openWindows.attach(viewLifecycleOwner.lifecycleScope)
         // Dans « Ouvertes », glisser une fenêtre de côté la déplace : le balayage ne part que des espaces entre les écrans.
         swipeTabs(openWindows)
+        // Console : glisser de côté la fait défiler, les curseurs se glissent verticalement ; pas de balayage d'onglet.
+        mixer = view.findViewById(R.id.deck_mixer)
+        mixer.attach(viewLifecycleOwner.lifecycleScope)
         editor = view.findViewById(R.id.deck_editor)
         editor.attach(viewLifecycleOwner.lifecycleScope) { loadDeck() }
         adder = view.findViewById(R.id.deck_adder)
@@ -173,6 +180,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         appAudio.setActive(active)
         nowPlaying.setActive(active)
         openWindows.setActive(active && showingOpen)
+        mixer.setActive(active && showingMixer)
         livePoll?.cancel()
         if (active) livePoll = viewLifecycleOwner.lifecycleScope.launch {
             while (isActive) {
@@ -315,12 +323,14 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         class Tab(val key: String, val title: String, val selected: Boolean, val onClick: () -> Unit)
         val entries = mutableListOf<Tab>()
         fun openTab() = Tab(OPEN_TAB, getString(R.string.deck_open_tab), showingOpen, ::showOpen)
+        fun mixerTab() = Tab(MIXER_TAB, getString(R.string.deck_mixer_tab), showingMixer, ::showMixer)
         // Par défaut, « Ouvertes » juste après Apps (en premier sans page Apps) : toutes les applis ouvertes, pas seulement les choisies.
         val openAfter = shown.indexOfFirst { pages[it].apps }
-        if (openAfter < 0) entries += openTab()
+        // « Son » juste après.
+        if (openAfter < 0) entries += listOf(openTab(), mixerTab())
         shown.forEachIndexed { i, index ->
-            entries += Tab(PAGE_TAB + pages[index].title, pages[index].title, !showingOpen && index == pageIndex) { showPage(index) }
-            if (i == openAfter) entries += openTab()
+            entries += Tab(PAGE_TAB + pages[index].title, pages[index].title, !showingOpen && !showingMixer && index == pageIndex) { showPage(index) }
+            if (i == openAfter) entries += listOf(openTab(), mixerTab())
         }
         // Ordre choisi en déplaçant les onglets ; un onglet jamais placé (page d'appli qui apparaît) garde sa place relative, à la fin.
         val order = Prefs.deckTabOrder(requireContext())
@@ -446,6 +456,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
 
     /** Onglet « Ouvertes » : les touches et les barres de son laissent la place au schéma des écrans. */
     private fun showOpen() {
+        hideMixer()
         showingOpen = true
         grid.visibility = View.GONE
         // Les instructions sont dans la bande du bas d'« Ouvertes », qui devient la corbeille pendant un glisser.
@@ -458,6 +469,31 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         openWindows.setActive(isResumed && !isHidden)
     }
 
+    /** Onglet « Son » : la console de mixage prend la place des touches et des barres de son. */
+    private fun showMixer() {
+        if (showingOpen) {
+            showingOpen = false
+            openWindows.setActive(false)
+        }
+        showingMixer = true
+        grid.visibility = View.GONE
+        status.visibility = View.GONE
+        renderTabs()
+        audio.visibility = View.GONE
+        voiceCard.visibility = View.GONE
+        appAudio.bind(null)
+        nowPlaying.bind(false)
+        mixer.visibility = View.VISIBLE
+        mixer.setActive(isResumed && !isHidden)
+    }
+
+    private fun hideMixer() {
+        if (!showingMixer) return
+        showingMixer = false
+        mixer.setActive(false)
+        mixer.visibility = View.GONE
+    }
+
     /** Page de l'appli d'une tuile (Discord, Teams), -1 si elle n'en a pas. */
     private fun appPageOf(tile: DeckTile) =
         if (tile.type != "app") -1 else pages.indexOfFirst { it.app != null && it.app.equals(tile.app, ignoreCase = true) }
@@ -467,8 +503,9 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         if (showingOpen) {
             showingOpen = false
             openWindows.setActive(false)
-            grid.visibility = View.VISIBLE
         }
+        hideMixer()
+        grid.visibility = View.VISIBLE
         val page = pages.getOrNull(index)
         // Pages Apps et Média : tuile « Ajouter » en dernier (applis de l'ordinateur, sites).
         // Autre appli (ou page sans appli) : l'appel lu ne vaut plus ; celui de la nouvelle appli est lu tout de suite.
@@ -608,6 +645,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         const val MEETING_HOLD_MS = 5_000L
         /** Clés des onglets (ordre gardé dans Prefs) : « Ouvertes », et une page par son titre. */
         const val OPEN_TAB = "open"
+        const val MIXER_TAB = "mixer"
         const val PAGE_TAB = "page:"
         /** Distance de côté qui change d'onglet. */
         const val SWIPE_DP = 80

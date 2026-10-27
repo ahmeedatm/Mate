@@ -55,6 +55,7 @@ namespace Companion
                 case "text": TypeText(Str(req, "text")); return true;
                 case "audio": return Audio(req);
                 case "appaudio": return AppAudio(req);
+                case "mixer": return Mixer(req);
                 case "system": SystemCommand(Str(req, "command")); return true;
                 case "alert": Alert(Str(req, "title"), Str(req, "text")); return true;
                 default: return Program.Dispatch(op, req);

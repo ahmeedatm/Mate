@@ -147,6 +147,18 @@ export async function runSanity(opts: { url: string; token: string; os?: Os }): 
       },
     },
     {
+      name: "mélangeur",
+      run: async () => {
+        const res = await call("GET", "/system/mixer");
+        if (!controlled()) return expectStatus(res, 501, "/system/mixer");
+        expectStatus(res, 200, "/system/mixer");
+        expect(res.json.master?.id === "master" && res.json.mic?.id === "mic", "sortie ou micro absent");
+        const scenes = await call("GET", "/system/mixer/scenes");
+        expectStatus(scenes, 200, "/system/mixer/scenes");
+        return res.json.apps ? `${res.json.apps.length} applis avec du son` : "sortie et micro (pas de volume par appli)";
+      },
+    },
+    {
       name: "fenêtres ouvertes",
       run: async () => {
         // Mac sans Accessibilité (job install-mac) : System Events demanderait une autorisation à l'écran.
