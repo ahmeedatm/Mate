@@ -65,6 +65,8 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     /** Poids des [ROWS] lignes (voir [RowProfile]) ; null : lignes égales, comme avant le profil Cadran. */
     var rowWeights: IntArray? = null
         set(value) { field = value; requestLayout() }
+    /** Après chaque mise en page (un widget a changé de contenu ou de place) : halo des textes en Rétro. */
+    var afterLayout: (() -> Unit)? = null
     private val narrowRowHeight = dp(176)
     private var cellW = 0
     /** Hauteur de chaque ligne en mode normal (en mode étroit, toutes valent [narrowRowHeight]). */
@@ -139,6 +141,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             val top = paddingTop + rowTop(row)
             child.layout(left, top, left + child.measuredWidth, top + child.measuredHeight)
         }
+        afterLayout?.invoke()
     }
 
     /** Seuls les widgets de la page affichée sont visibles (à rappeler après un ajout). */

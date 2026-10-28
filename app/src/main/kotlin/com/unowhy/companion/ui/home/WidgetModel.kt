@@ -52,6 +52,9 @@ enum class WidgetType(
     HERO("hero", R.string.widget_hero, R.string.widget_hero_desc, R.drawable.ic_clock, listOf(WidgetSize.W), false),
     DAYLINE("dayline", R.string.widget_dayline, R.string.widget_dayline_desc, R.drawable.ic_alarm, listOf(WidgetSize.W), false);
 
+    /** Sans fond de carte, posé à même l'écran : les tubes du thème Rétro y passent derrière un voile. */
+    val bare get() = this == HERO || this == DAYLINE
+
     companion object {
         fun of(key: String) = entries.firstOrNull { it.key == key }
     }
