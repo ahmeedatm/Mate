@@ -11,11 +11,13 @@ import * as macDnd from "./mac/dnd.ts";
 import { extensionFrontPage, extensionTabs } from "./browser-extension.ts";
 import * as macKeys from "./mac/keys.ts";
 import * as macMedia from "./mac/media.ts";
+import * as macPointer from "./mac/pointer.ts";
 import * as macSystem from "./mac/system.ts";
 import * as macWindows from "./mac/windows.ts";
 import * as win from "./win/index.ts";
 import { checkOpenTarget } from "./open-guard.ts";
 import { perfSampler, type Perf } from "./perf.ts";
+import type { PointerAction, PointerButton, PointerGesture } from "./pointer.ts";
 import type {
   AudioChange,
   ClipboardContent,
@@ -200,6 +202,50 @@ export async function setDnd(on: boolean): Promise<boolean | null> {
   unsupported();
 }
 
+/** Pavé tactile : déplacement relatif du pointeur (pixels), défilement (crans) et boutons de la souris. */
+export async function pointerMove(dx: number, dy: number) {
+  if (isWindows) return win.pointerMove(dx, dy);
+  if (isMac) return macPointer.pointerMove(dx, dy);
+  unsupported();
+}
+
+export async function pointerScroll(sx: number, sy: number) {
+  if (isWindows) return win.pointerScroll(sx, sy);
+  if (isMac) return macPointer.pointerScroll(sx, sy);
+  unsupported();
+}
+
+export async function pointerButton(button: PointerButton, action: PointerAction) {
+  if (isWindows) return win.pointerButton(button, action);
+  if (isMac) return macPointer.pointerButton(button, action);
+  unsupported();
+}
+
+// Gestes : raccourci par système (table fermée). Le zoom est géré à part ; `null` = sans effet.
+const GESTURE_KEYS: Record<Exclude<PointerGesture, "zoom-in" | "zoom-out">, { windows: string; mac: string | null }> = {
+  back: { windows: "alt+left", mac: "cmd+[" },
+  forward: { windows: "alt+right", mac: "cmd+]" },
+  "task-view": { windows: "win+tab", mac: "ctrl+up" },
+  desktop: { windows: "win+d", mac: "ctrl+down" },
+  "app-previous": { windows: "alt+shift+tab", mac: "cmd+shift+tab" },
+  "app-next": { windows: "alt+tab", mac: "cmd+tab" },
+  search: { windows: "win+s", mac: "cmd+space" },
+  "desktop-previous": { windows: "ctrl+win+left", mac: "ctrl+left" },
+  "desktop-next": { windows: "ctrl+win+right", mac: "ctrl+right" },
+  notifications: { windows: "win+n", mac: null },
+};
+
+/** Geste du pavé tactile (zoom, retour, vue des tâches…) traduit en raccourci selon le système. */
+export async function pointerGesture(name: PointerGesture) {
+  if (!isWindows && !isMac) unsupported();
+  if (name === "zoom-in" || name === "zoom-out") {
+    if (isWindows) return win.pointerZoom(name === "zoom-in" ? 1 : -1);
+    return macKeys.sendKeys(name === "zoom-in" ? "cmd+=" : "cmd+-");
+  }
+  const combo = GESTURE_KEYS[name][isWindows ? "windows" : "mac"];
+  if (combo) await sendKeys(combo);
+}
+
 /** Lecture en cours (vidéo, musique) et ses commandes : contrôles multimédias de Windows ; sur Mac, lecteurs et onglets. */
 export const canMedia = isWindows || isMac;
 
@@ -265,8 +311,12 @@ export async function isAppRunning(app: string): Promise<boolean> {
   return isMac ? macSystem.isAppRunning(app) : false;
 }
 
-/** Mac : le compagnon a-t-il l'autorisation Accessibilité ? null ailleurs (rien à autoriser). */
+/**
+ * Mac : le compagnon a-t-il l'autorisation Accessibilité ? null ailleurs (rien à autoriser). Instance de test : non,
+ * sans demander à macOS, car la question seule ajoute son node à la liste de Réglages Système (un par job).
+ */
 export async function accessibility(): Promise<boolean | null> {
+  if (isMac && headless) return false;
   return isMac ? macAccess.accessibilityTrusted() : null;
 }
 

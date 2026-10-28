@@ -23,13 +23,14 @@ scripts/  Sauvegarde (bundle git + données perso)
 
 Sur chaque ordinateur à piloter (une fois) :
 
-1. Installer **Node.js 22 ou plus** (version LTS sur [nodejs.org](https://nodejs.org/fr/download)). Inutile avec un paquet `Compagnon-Unowhy-Windows.zip` / `-Mac.zip` (`npm run package`, voir [développement](docs/developpement.md)) : Node y est embarqué ; extraire le zip, puis passer à l'étape 2 dans le dossier « Compagnon Unowhy ».
-2. Récupérer ce dossier, puis double-cliquer **`Installer (Mac).command`** ou **`Installer (Windows).cmd`**.
-   Le compagnon démarre et se relancera tout seul à chaque ouverture de session : plus de terminal à garder ouvert.
+1. Télécharger l'installeur de la dernière release (`npm run package` pour le fabriquer, voir [développement](docs/developpement.md)) : Node y est embarqué, rien d'autre à installer.
+   - **Windows** : lancer **`Compagnon-Unowhy-Windows.exe`** (sans droits d'administrateur ; non signé : SmartScreen > « Informations complémentaires » > « Exécuter quand même »). Désinstallation : Paramètres > Applications > Compagnon Unowhy.
+   - **Mac** : extraire `Compagnon-Unowhy-Mac.zip`, ouvrir **Compagnon Unowhy** (non notarisée : la première fois, Réglages Système > Confidentialité et sécurité > « Ouvrir quand même »). Elle se copie dans Applications et s'ouvre de là ; la rouvrir rouvre la page.
+2. Le compagnon démarre et se relancera tout seul à chaque ouverture de session : plus de terminal à garder ouvert. Mettre à jour = relancer l'installeur d'une version plus récente. Depuis ce dépôt, sans installeur : Node.js 22 ou plus, puis `npm install && npm run service:install` dans `backend/`.
 3. La page **http://127.0.0.1:3000/** s'ouvre : adresse de l'ordinateur, code d'appairage, agenda.
 4. Autorisations, une fois :
-   - **Mac** : Réglages Système > Confidentialité et sécurité > **Accessibilité** > ajouter `node` (le Finder l'affiche) pour les raccourcis, macros et fenêtres.
-   - **Windows** : accepter la demande du **pare-feu** pour Node.js sur les réseaux **privés** ; le WiFi doit être en profil « Privé ».
+   - **Mac** : Réglages Système > Confidentialité et sécurité > **Accessibilité** > ajouter `node` (le Finder l'affiche, dans l'appli) pour les raccourcis, macros et fenêtres.
+   - **Windows** : accepter la demande d'administrateur de l'installeur pour le **pare-feu** sur les réseaux **privés** ; le WiFi doit être en profil « Privé ».
 
 Sur la tablette : au premier lancement, l'écran **Bienvenue** guide en trois étapes (WiFi, adresse du logiciel à ouvrir sur l'ordinateur — `INSTALL_URL`, `-PinstallUrl=…` —, ordinateurs trouvés sur le WiFi). Ensuite : **Réglages > Ordinateurs > Ajouter un ordinateur**, toucher l'ordinateur trouvé sur le WiFi, saisir le code à 6 chiffres affiché sur l'ordinateur. C'est tout : le jeton arrive avec le code. Ordinateur introuvable (autre réseau, diffusion bloquée) : « Saisir l'adresse » avec celle de la page.
 

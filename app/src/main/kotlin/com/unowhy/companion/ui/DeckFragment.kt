@@ -22,6 +22,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.unowhy.companion.Computers
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.VolumeKeyHandler
@@ -30,6 +31,7 @@ import com.unowhy.companion.net.DeckPage
 import com.unowhy.companion.net.DeckTile
 import com.unowhy.companion.net.VoiceState
 import com.unowhy.companion.ui.mixer.MixerView
+import com.unowhy.companion.ui.pointer.PadView
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -50,6 +52,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private lateinit var openWindows: OpenWindowsView
     private lateinit var mixer: MixerView
     private lateinit var agents: AgentsView
+    private lateinit var pad: PadView
     private lateinit var editor: KeyEditor
     private lateinit var adder: AppAdder
     private lateinit var linkAdder: LinkAdder
@@ -60,6 +63,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private var showingOpen = false
     /** Onglet « Son » affiché (console de mixage). */
     private var showingMixer = false
+    /** Onglet « Pavé » affiché (la tablette pilote le pointeur de l'ordinateur), proposé seulement pour un Mac ou un Windows. */
+    private var showingPad = false
     /** Onglet « Agents » affiché (sessions Claude Code), et proposé seulement si l'ordinateur l'annonce (`/deck/features`). */
     private var showingAgents = false
     private var agentsOn = false
@@ -116,6 +121,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         agents = view.findViewById(R.id.deck_agents)
         agents.attach(viewLifecycleOwner)
         swipeTabs(agents)
+        // Pavé : tout geste est pour le pointeur, jamais un balayage d'onglet (pas de swipeTabs, la vue garde ses touches).
+        pad = view.findViewById(R.id.deck_pad)
         editor = view.findViewById(R.id.deck_editor)
         editor.attach(viewLifecycleOwner.lifecycleScope) { loadDeck() }
         adder = view.findViewById(R.id.deck_adder)
@@ -191,6 +198,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         openWindows.setActive(active && showingOpen)
         mixer.setActive(active && showingMixer)
         agents.setActive(active && showingAgents)
+        pad.setActive(active && showingPad)
         livePoll?.cancel()
         if (active) livePoll = viewLifecycleOwner.lifecycleScope.launch {
             while (isActive) {
@@ -217,7 +225,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         // Fin de l'appel sur la page Réunion : elle n'a plus rien à montrer, retour à la première page.
         val page = pages.getOrNull(pageIndex)
         fun live(keys: Set<String>) = keys.any { it.equals(page?.app, ignoreCase = true) }
-        if (page?.meeting == true && !showingOpen && live(before.second) && !live(liveApps.keys)) {
+        if (page?.meeting == true && !showingOpen && !showingPad && live(before.second) && !live(liveApps.keys)) {
             showPage(0)
             return
         }
@@ -226,9 +234,9 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
 
     /** Page d'une appli d'appel : relit l'appel, et refait les touches si on entre ou sort d'un appel. */
     private suspend fun refreshVoice() {
-        val app = pages.getOrNull(pageIndex)?.app?.takeUnless { showingOpen }
+        val app = pages.getOrNull(pageIndex)?.app?.takeUnless { showingOpen || showingPad }
         val state = app?.let { runCatching { client().deck.voice(it) }.getOrNull() }
-        if (app != pages.getOrNull(pageIndex)?.app || showingOpen) return
+        if (app != pages.getOrNull(pageIndex)?.app || showingOpen || showingPad) return
         val changed = state?.connected != voice?.connected || state?.streaming != voice?.streaming
         val relit = state?.muted != voice?.muted || state?.deafened != voice?.deafened || state?.cameraOff != voice?.cameraOff
         voice = state
@@ -297,6 +305,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                 agentsOn = runCatching { client().deck.homeFeatures().agents }.getOrDefault(false)
                 when {
                     showingOpen -> showOpen()
+                    showingPad && padOn() -> showPad()
                     (showingAgents || pendingAgents) && agentsOn -> showAgents()
                     else -> showPage(pageIndex)
                 }
@@ -346,15 +355,16 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         val entries = mutableListOf<Tab>()
         fun openTab() = Tab(OPEN_TAB, getString(R.string.deck_open_tab), showingOpen, ::showOpen)
         fun mixerTab() = Tab(MIXER_TAB, getString(R.string.deck_mixer_tab), showingMixer, ::showMixer)
+        fun padTab() = Tab(PAD_TAB, getString(R.string.deck_pad_tab), showingPad, ::showPad)
         fun agentsTab() = Tab(AGENTS_TAB, getString(R.string.deck_agents_tab), showingAgents, ::showAgents)
-        // « Ouvertes », « Son », puis « Agents » (si l'ordinateur les offre) : ensemble posé après Apps.
-        fun extras() = listOfNotNull(openTab(), mixerTab(), agentsTab().takeIf { agentsOn })
+        // « Ouvertes », « Pavé » (Mac ou Windows), « Son », puis « Agents » (si l'ordinateur les offre) : ensemble posé après Apps.
+        fun extras() = listOfNotNull(openTab(), padTab().takeIf { padOn() }, mixerTab(), agentsTab().takeIf { agentsOn })
         // Par défaut, « Ouvertes » juste après Apps (en premier sans page Apps) : toutes les applis ouvertes, pas seulement les choisies.
         val openAfter = shown.indexOfFirst { pages[it].apps }
         // « Son » juste après.
         if (openAfter < 0) entries += extras()
         shown.forEachIndexed { i, index ->
-            entries += Tab(PAGE_TAB + pages[index].title, pages[index].title, !showingOpen && !showingMixer && !showingAgents && index == pageIndex) { showPage(index) }
+            entries += Tab(PAGE_TAB + pages[index].title, pages[index].title, !showingOpen && !showingPad && !showingMixer && !showingAgents && index == pageIndex) { showPage(index) }
             if (i == openAfter) entries += extras()
         }
         // Ordre choisi en déplaçant les onglets ; un onglet jamais placé (page d'appli qui apparaît) garde sa place relative, à la fin.
@@ -519,6 +529,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private fun showOpen() {
         hideMixer()
         hideAgents()
+        hidePad()
         showingOpen = true
         grid.visibility = View.GONE
         // Les instructions sont dans la bande du bas d'« Ouvertes », qui devient la corbeille pendant un glisser.
@@ -531,6 +542,34 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         openWindows.setActive(isResumed && !isHidden)
     }
 
+    /** Le pavé ne se propose que pour un ordinateur qu'on peut piloter (Mac, Windows). */
+    private fun padOn() = Computers.active(requireContext())?.os in setOf("mac", "windows")
+
+    /** Onglet « Pavé » : la surface tactile prend la place des touches et des barres de son. */
+    private fun showPad() {
+        if (showingOpen) {
+            showingOpen = false
+            openWindows.setActive(false)
+        }
+        hideMixer()
+        hideAgents()
+        showingPad = true
+        grid.visibility = View.GONE
+        status.visibility = View.GONE
+        renderTabs()
+        audio.visibility = View.GONE
+        voiceCard.visibility = View.GONE
+        appAudio.bind(null)
+        nowPlaying.bind(false)
+        pad.setActive(isResumed && !isHidden)
+    }
+
+    private fun hidePad() {
+        if (!showingPad) return
+        showingPad = false
+        pad.setActive(false)
+    }
+
     /** Onglet « Son » : la console de mixage prend la place des touches et des barres de son. */
     private fun showMixer() {
         if (showingOpen) {
@@ -538,6 +577,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             openWindows.setActive(false)
         }
         hideAgents()
+        hidePad()
         showingMixer = true
         grid.visibility = View.GONE
         status.visibility = View.GONE
@@ -564,6 +604,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             openWindows.setActive(false)
         }
         hideMixer()
+        hidePad()
         showingAgents = true
         pendingAgents = false
         grid.visibility = View.GONE
@@ -599,6 +640,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         }
         hideMixer()
         hideAgents()
+        hidePad()
         grid.visibility = View.VISIBLE
         val page = pages.getOrNull(index)
         // Pages Apps et Média : tuile « Ajouter » en dernier (applis de l'ordinateur, sites).
@@ -751,6 +793,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         const val OPEN_TAB = "open"
         const val MIXER_TAB = "mixer"
         const val AGENTS_TAB = "agents"
+        const val PAD_TAB = "pad"
         const val PAGE_TAB = "page:"
         /** Distance de côté qui change d'onglet. */
         const val SWIPE_DP = 80

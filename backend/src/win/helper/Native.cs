@@ -60,6 +60,7 @@ namespace Companion
                 case "perf": return Perf(req);
                 case "cpu": return Cpu();
                 case "system": SystemCommand(Str(req, "command")); return true;
+                case "pointer": return Pointer(req);
                 case "alert": Alert(Str(req, "title"), Str(req, "text")); return true;
                 case "clipget": return ClipboardGet();
                 case "clipset": ClipboardSetText(Str(req, "text")); return true;

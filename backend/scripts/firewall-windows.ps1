@@ -1,5 +1,5 @@
 # Ouvre le pare-feu de Windows au node du paquet (serveur du compagnon + recherche UDP de la tablette),
-# reseaux prives seulement. Lance par "Installer (Windows).cmd" ; demande l'accord administrateur si la
+# reseaux prives seulement. Lance par l'installeur (backend/installer/windows/compagnon.nsi) ; demande l'accord administrateur si la
 # regle manque ou vise un autre dossier (paquet extrait ailleurs). Code de sortie 0 = regle en place.
 $name = 'Compagnon Unowhy'
 $node = Join-Path (Split-Path -Parent $PSScriptRoot) 'node\node.exe'

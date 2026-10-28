@@ -231,12 +231,12 @@ describe("mises à jour de la tablette", () => {
     assert.equal(await res.text(), "apk 1.2.4");
   });
 
-  it("updates:essai dépose l'essai du registre, vérifié, et refuse un APK abîmé ou un jeton absent", async () => {
+  it("updates:essai dépose l'essai du registre à côté de la stable, et refuse un APK abîmé, un jeton absent ou le paquet de la stable", async () => {
     // Faux paquet générique companion-updates/essai : manifest.json + APK, lus avec le jeton personnel.
     const apk = "apk essai";
     const update = {
-      package: "com.unowhy.companion",
-      label: "Companion",
+      package: "com.unowhy.companion.essai",
+      label: "Companion essai",
       versionCode: 2170,
       versionName: "0.0.2-essai.169",
       file: "companion-0.0.2-essai.169.apk",
@@ -244,9 +244,10 @@ describe("mises à jour de la tablette", () => {
       sha256: createHash("sha256").update(apk).digest("hex"),
     };
     let served = apk;
+    let announced = update;
     const registry = http.createServer((req, res) => {
       if (req.headers["private-token"] !== "jeton") return res.writeHead(401).end();
-      if (req.url === "/essai/manifest.json") return res.end(JSON.stringify({ updates: [update] }));
+      if (req.url === "/essai/manifest.json") return res.end(JSON.stringify({ updates: [announced] }));
       if (req.url === `/essai/${update.file}`) return res.end(served);
       res.writeHead(404).end();
     });
@@ -264,17 +265,25 @@ describe("mises à jour de la tablette", () => {
           ...env,
         },
       });
-    const companion = async () =>
-      (await server.call("GET", "/updates")).json.updates.find((u: any) => u.package === "com.unowhy.companion");
+    const announcedOf = async (pkg: string) => (await server.call("GET", "/updates")).json.updates.find((u: any) => u.package === pkg);
+    const companion = () => announcedOf("com.unowhy.companion.essai");
+    const stable = await announcedOf("com.unowhy.companion");
     try {
       await assert.rejects(run({}), /Jeton absent/);
       await assert.rejects(run({ GITLAB_TOKEN: "faux" }), /jeton refusé/);
       served = "apk abîmé";
       await assert.rejects(run({ GITLAB_TOKEN: "jeton" }), /SHA-256/);
-      assert.notEqual((await companion())?.versionName, update.versionName, "rien n'est changé");
+      assert.equal(await companion(), undefined, "rien n'est changé");
 
+      // Ancien essai au paquet de la stable : il la remplacerait sur la tablette, sans retour possible.
       served = apk;
+      announced = { ...update, package: "com.unowhy.companion" };
+      await assert.rejects(run({ GITLAB_TOKEN: "jeton" }), /com\.unowhy\.companion\.essai/);
+      assert.deepEqual(await announcedOf("com.unowhy.companion"), stable, "stable intacte");
+
+      announced = update;
       await run({ GITLAB_TOKEN: "jeton" });
+      assert.deepEqual(await announcedOf("com.unowhy.companion"), stable, "stable annoncée à côté de l'essai");
       const added = await companion();
       assert.equal(added.versionCode, 2170);
       assert.equal(added.versionName, "0.0.2-essai.169");

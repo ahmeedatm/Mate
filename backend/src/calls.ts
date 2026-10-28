@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { backendRoot } from "./config.ts";
 import { logFailure } from "./log.ts";
-import { isMac, isWindows, listButtons, listWindows, pressButton } from "./os.ts";
+import { accessibility, isMac, isWindows, listButtons, listWindows, pressButton } from "./os.ts";
 
 /**
  * Appels entrants (Discord, Teams…) signalés sur la tablette. Windows : pendant la sonnerie, l'appli renomme sa
@@ -87,6 +87,8 @@ export async function startCallWatch(notify: (event: CallEvent) => void) {
     if (busy) return;
     busy = true;
     try {
+      // Mac sans Accessibilité : rien à lire, et lire quand même ferait apparaître le compagnon dans Réglages Système.
+      if (isMac && !(await accessibility())) return;
       let found: CallRule | undefined;
       for (const rule of rules) {
         if ((quietUntil.get(rule.app) ?? 0) > Date.now()) continue;

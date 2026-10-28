@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">Companion</string>
 
     <!-- Modes -->
     <string name="mode_home">Accueil</string>
@@ -127,9 +126,16 @@
     <string name="deck_open_tab">Ouvertes</string>
     <string name="deck_mixer_tab">Son</string>
     <string name="deck_agents_tab">Agents</string>
+    <string name="deck_pad_tab">Pavé</string>
+    <string name="pad_hint">Un doigt pour bouger, deux pour défiler · pince pour zoomer · 3 doigts : fenêtres · touche pour cliquer</string>
+    <string name="pad_left_click">Clic gauche</string>
+    <string name="pad_right_click">Clic droit</string>
     <!-- Agents Claude Code (onglet Agents du Deck, widget, lumière de bord). -->
     <string name="agents_title">Agents Claude</string>
     <string name="agent_state_working">Travaille</string>
+    <string name="agent_state_monitoring">Surveille une tâche de fond</string>
+    <string name="agent_kind_claude">Claude</string>
+    <string name="agent_mr">!%1$d</string>
     <string name="agent_state_done">Fini</string>
     <string name="agent_state_limit">Limite atteinte</string>
     <string name="agent_state_idle">Inactif</string>
@@ -139,10 +145,20 @@
         <item quantity="one">travaille</item>
         <item quantity="other">travaillent</item>
     </plurals>
-    <plurals name="agent_count_waiting">
-        <item quantity="one">attend</item>
-        <item quantity="other">attendent</item>
+    <plurals name="agent_count_monitoring">
+        <item quantity="one">surveille</item>
+        <item quantity="other">surveillent</item>
     </plurals>
+    <plurals name="agent_count_waiting">
+        <item quantity="one">vous concerne</item>
+        <item quantity="other">vous concernent</item>
+    </plurals>
+    <string name="agent_col_working">Travaillent</string>
+    <string name="agent_col_monitoring">Surveillent</string>
+    <string name="agent_col_you">Vous concerne</string>
+    <string name="agent_col_done">Finis</string>
+    <string name="agent_col_empty">Aucune</string>
+    <string name="agent_col_header">%1$s · %2$d</string>
     <plurals name="agent_count_done">
         <item quantity="one">fini</item>
         <item quantity="other">finis</item>
@@ -514,14 +530,20 @@
     <string name="wifi_forget_confirm">Oublier le réseau %1$s ? Il faudra retaper son mot de passe.</string>
     <string name="updates_title">Mises à jour</string>
     <string name="updates_check">Rechercher</string>
-    <string name="updates_hint">Le moteur web et le Companion se mettent à jour depuis le serveur Unowhy ou l\'ordinateur, sans quitter le kiosque. En kiosque, le Companion se met à jour seul (au démarrage puis toutes les 6 h).</string>
+    <string name="updates_hint">Le moteur web et le Companion se mettent à jour depuis le serveur Unowhy ou l\'ordinateur, sans quitter le kiosque. En kiosque, le Companion installe seul les versions de main (au démarrage puis toutes les 6 h) ; un essai s\'installe seulement avec son bouton.</string>
     <string name="updates_checking">Recherche des mises à jour…</string>
     <string name="updates_none">Aucune mise à jour annoncée.</string>
-    <string name="updates_row">%1$s · %2$s → %3$s · %4$s</string>
+    <string name="updates_row_title">%1$s · %2$s</string>
+    <string name="updates_row_title_channel">%1$s · %2$s · %3$s</string>
+    <string name="updates_channel_main">main</string>
+    <string name="updates_channel_trial">essai</string>
+    <string name="updates_row_newer">Installée : %1$s · %2$s</string>
+    <string name="updates_row_absent">Pas installée · %1$s</string>
+    <string name="updates_row_installed">Version installée.</string>
+    <string name="updates_row_older">Pas installable : plus ancienne que la version installée (%1$s). Android refuse de revenir à une version plus basse.</string>
     <string name="updates_source_server">serveur Unowhy</string>
     <string name="updates_source_computer">ordinateur</string>
     <string name="updates_source_error">Depuis le %1$s : %2$s</string>
-    <string name="updates_row_current">%1$s · %2$s · à jour</string>
     <string name="updates_install">Mettre à jour</string>
     <string name="updates_downloading">Téléchargement %1$d %%</string>
     <string name="updates_installing">Installation…</string>
@@ -546,7 +568,6 @@
     <string name="duration_seconds">%1$d s</string>
     <string name="duration_minutes">%1$d min</string>
     <string name="updates_downloading_short">Téléchargement…</string>
-    <string name="updates_not_installed">absent</string>
     <string name="kiosk_title">Mode kiosque</string>
     <string name="kiosk_off">Inactif : la tablette n\'a pas été préparée en kiosque (docs/kiosque.md).</string>
     <!-- Premier lancement (WelcomeView) et écrans sans ordinateur -->
@@ -846,4 +867,8 @@
         <item quantity="one">Et %1$d tâche à faire.</item>
         <item quantity="other">Et %1$d tâches à faire.</item>
     </plurals>
+    <!-- Appli d'essai depuis une MR, installée à côté de la stable (trial/Trial.kt) -->
+    <string name="trial_open">Ouvrir l\'essai</string>
+    <string name="trial_back">Revenir à la stable</string>
+    <string name="trial_hint">Version d\'essai d\'une MR, installée à côté du Companion. Mises à jour, WiFi et kiosque se règlent dans le Companion.</string>
 </resources>

@@ -25,6 +25,9 @@
     <attr name="c_agent_wait" format="color" />
     <attr name="c_agent_done" format="color" />
     <attr name="c_agent_limit" format="color" />
+    <!-- Une session travaille (roue qui tourne), surveille une tâche de fond (écran), comme dans Orca. -->
+    <attr name="c_agent_work" format="color" />
+    <attr name="c_agent_monitor" format="color" />
     <attr name="c_scrim" format="color" />
     <!-- Teintes des fonctions (pastilles des titres, tuiles d'applis) : ui/Look.kt. -->
     <attr name="c_hue_orange" format="color" />

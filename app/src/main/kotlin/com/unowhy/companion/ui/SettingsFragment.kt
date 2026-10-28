@@ -31,12 +31,14 @@ import com.unowhy.companion.R
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
 import com.unowhy.companion.kiosk.Kiosk
+import com.unowhy.companion.kiosk.UpdatePlan
 import com.unowhy.companion.kiosk.Updater
 import com.unowhy.companion.net.AppUpdate
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.Link
 import com.unowhy.companion.net.UpdateSource
 import com.unowhy.companion.net.Wifi
+import com.unowhy.companion.trial.Trial
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -61,6 +63,7 @@ class SettingsFragment : Fragment() {
     private lateinit var tabletInfo: TextView
     private lateinit var updatesStatus: TextView
     private lateinit var updates: LinearLayout
+    private lateinit var switchApp: Button
     private var installing = false
     private val main get() = requireActivity() as MainActivity
     private val adder by lazy { ComputerAdder(requireActivity(), main.lifecycleScope) { main.onComputerChanged(it) } }
@@ -87,6 +90,10 @@ class SettingsFragment : Fragment() {
         updatesStatus = view.findViewById(R.id.settings_updates_status)
         updates = view.findViewById(R.id.settings_updates)
         view.findViewById<Button>(R.id.settings_updates_check).setOnClickListener { checkUpdates() }
+        switchApp = view.findViewById(R.id.settings_switch_app)
+        switchApp.setText(if (BuildConfig.TRIAL) R.string.trial_back else R.string.trial_open)
+        switchApp.setOnClickListener { Trial.switch(requireActivity()) }
+        view.findViewById<View>(R.id.settings_trial_hint).visibility = if (BuildConfig.TRIAL) View.VISIBLE else View.GONE
         battery = view.findViewById(R.id.settings_battery)
         batteryHint = view.findViewById(R.id.settings_battery_hint)
         brightness = view.findViewById(R.id.settings_brightness)
@@ -97,6 +104,7 @@ class SettingsFragment : Fragment() {
         setUpThemes(view.findViewById(R.id.settings_themes))
         renderComputers()
         renderWifi()
+        renderSwitchApp()
 
         view.findViewById<Button>(R.id.settings_kiosk_exit).setOnClickListener {
             Kiosk.exit(requireActivity())
@@ -121,6 +129,7 @@ class SettingsFragment : Fragment() {
             renderWifi()
             renderTablet()
             renderKiosk()
+            renderSwitchApp()
             loadAutoJoin()
         }
     }
@@ -359,6 +368,11 @@ class SettingsFragment : Fragment() {
 
     // --- Mises à jour
 
+    /** Bouton vers l'autre appli (essai ou stable), seulement si elle est installée. */
+    private fun renderSwitchApp() {
+        switchApp.visibility = if (Trial.isInstalled(requireContext(), Trial.other)) View.VISIBLE else View.GONE
+    }
+
     private fun checkUpdates() {
         if (installing) return
         updatesStatus.setText(R.string.updates_checking)
@@ -387,15 +401,29 @@ class SettingsFragment : Fragment() {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
         }
-        val current = info?.versionName ?: getString(R.string.updates_not_installed)
-        val label = TextView(ctx).apply {
+        val state = UpdatePlan.state(update, info?.let { Updater.versionCode(it) })
+        // Le Companion a deux canaux (releases de main, essais d'une MR) : nommé sur chaque ligne pour les distinguer.
+        val channel = if (update.pkg != ctx.packageName) null
+        else getString(if (UpdatePlan.isTrial(update)) R.string.updates_channel_trial else R.string.updates_channel_main)
+        val texts = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        texts.addView(TextView(ctx).apply {
             textSize = 16f
-            text = if (Updater.isNewer(update, info)) getString(R.string.updates_row, update.label, current, update.versionName, sourceName(update.source))
-            else getString(R.string.updates_row_current, update.label, current)
-        }
-        row.addView(label, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            text = if (channel == null) getString(R.string.updates_row_title, update.label, update.versionName)
+            else getString(R.string.updates_row_title_channel, update.label, channel, update.versionName)
+        })
+        texts.addView(TextView(ctx).apply {
+            textSize = 14f
+            setTextColor(themeColor(ctx, if (state == UpdatePlan.State.OLDER) R.attr.c_warn else R.attr.c_text_dim))
+            text = when (state) {
+                UpdatePlan.State.NEWER -> if (info == null) getString(R.string.updates_row_absent, sourceName(update.source))
+                else getString(R.string.updates_row_newer, info.versionName, sourceName(update.source))
+                UpdatePlan.State.INSTALLED -> getString(R.string.updates_row_installed)
+                UpdatePlan.State.OLDER -> getString(R.string.updates_row_older, info?.versionName)
+            }
+        })
+        row.addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         block.addView(row)
-        if (Updater.isNewer(update, info)) {
+        if (state == UpdatePlan.State.NEWER) {
             val button = Button(ctx, null, 0, R.style.PrimaryButton).apply { setText(R.string.updates_install) }
             // Barre épaisse sous la ligne, montrée pendant le téléchargement.
             val bar = android.widget.ProgressBar(ctx, null, 0, android.R.style.Widget_Material_ProgressBar_Horizontal).apply {
@@ -496,6 +524,8 @@ class SettingsFragment : Fragment() {
         button.backgroundTintList = android.content.res.ColorStateList.valueOf(themeColor(button.context, if (ok) R.attr.c_ok else R.attr.c_ko))
         button.setText(if (ok) R.string.updates_done else R.string.updates_failed)
         button.isEnabled = !ok
+        // Essai tout juste installé : « Ouvrir l'essai » apparaît.
+        if (ok && view != null) renderSwitchApp()
     }
 
     /** Code technicien : montre la carte Kiosque (quitter, retirer, autoriser les installations). */
