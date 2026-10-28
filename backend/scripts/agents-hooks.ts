@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { hooksBlock, mergeAgentHooks, withoutAgentHooks, type Settings } from "../src/agents-hooks.ts";
+import { hooksBlock, mergeAgentHooks, withoutAgentHooks, withoutStatusLine, withStatusLine, type Settings } from "../src/agents-hooks.ts";
 import { hookSecret } from "../src/agents-secret.ts";
 import { config } from "../src/config.ts";
 
@@ -11,6 +11,7 @@ import { config } from "../src/config.ts";
  *   npm run agents:hooks                      affiche le bloc à coller dans settings.json
  *   npm run agents:hooks -- --install         le fusionne dans ~/.claude/settings.json (sauvegarde avant)
  *   npm run agents:hooks -- --remove          retire les entrées du compagnon
+ *   --statusline      avec --install : enveloppe aussi la statusline (quota 5 h / 7 j), sa sortie ne change pas
  *   --file <chemin>   autre settings.json ; --port <n>, --hold <s>
  *
  * Le secret et le port viennent des données de CET ordinateur : pour un compagnon installé par paquet,
@@ -50,10 +51,11 @@ function save(next: Settings) {
 }
 
 if (flag("--install")) {
-  save(mergeAgentHooks(load(), block));
+  const merged = mergeAgentHooks(load(), block);
+  save(flag("--statusline") ? withStatusLine(merged, { port, secret: hookSecret() }) : merged);
   console.log(`Hooks installés dans ${file}. Les sessions Claude déjà ouvertes les prennent au prochain démarrage.`);
 } else if (flag("--remove")) {
-  save(withoutAgentHooks(load()));
+  save(withoutStatusLine(withoutAgentHooks(load())));
   console.log(`Hooks du compagnon retirés de ${file}.`);
 } else {
   console.log(JSON.stringify(block, null, 2));

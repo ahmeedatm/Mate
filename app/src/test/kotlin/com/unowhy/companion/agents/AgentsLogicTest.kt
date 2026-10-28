@@ -93,6 +93,20 @@ class AgentsLogicTest {
     }
 
     @Test
+    fun `lit le quota et l'interruption possible`() {
+        val state = parseAgents(
+            """{"sessions":[{"id":"s1","name":"x","dir":"x","branch":null,"state":"working","since":1,"waitingFor":null,"tool":null,"lines":[],"workedMs":null,"limit":null,"canInterrupt":true,"canFocus":true}],
+              "counts":{"working":1,"waiting":0,"done":0,"limit":0,"idle":0},"total":1,"hooks":true,"now":1,
+              "quota":{"fiveHour":{"used":21,"resetsAt":1800000000000},"sevenDay":{"used":44,"resetsAt":null},"at":1}}""",
+        )
+        assertTrue(state.sessions[0].canInterrupt)
+        assertEquals(21, state.quota?.fiveHour?.used)
+        assertEquals(1_800_000_000_000L, state.quota?.fiveHour?.resetsAt)
+        assertNull(state.quota?.sevenDay?.resetsAt)
+        assertNull(parseAgents("""{"sessions":[],"counts":{},"now":1}""").quota)
+    }
+
+    @Test
     fun `un etat inconnu est inactif`() {
         assertEquals(AgentState.IDLE, AgentState.of("autre"))
         assertEquals(AgentState.IDLE, AgentState.of(null))

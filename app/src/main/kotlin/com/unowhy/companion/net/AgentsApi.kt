@@ -35,6 +35,8 @@ data class AgentSession(
     val workedMs: Long?,
     val limit: String?,
     val canFocus: Boolean,
+    /** Interrompre possible : session qui travaille, dans un terminal Orca. */
+    val canInterrupt: Boolean = false,
     /** Message rapide possible : session au repos dans un terminal Orca (seul moyen fiable d'y écrire). */
     val canSend: Boolean = false,
     /** Limite atteinte : heure de reprise (heure de l'ordinateur, absolue) si elle a pu être lue, et « continue » armé pour cette heure. */
@@ -46,8 +48,21 @@ data class AgentSession(
 
 data class AgentCounts(val working: Int, val waiting: Int, val done: Int, val limit: Int, val idle: Int)
 
+/** Part utilisée d'une fenêtre de quota (%) et sa fin (heure de l'ordinateur), si connue. */
+data class QuotaWindow(val used: Int, val resetsAt: Long?)
+
+/** Quota du compte Claude (5 h, 7 j), lu dans la statusline ; null tant qu'elle n'est pas enveloppée. */
+data class AgentQuota(val fiveHour: QuotaWindow?, val sevenDay: QuotaWindow?)
+
 /** `now` : l'heure de l'ordinateur à la lecture (les durées se calculent avec elle, pas avec l'horloge de la tablette). */
-data class AgentsState(val sessions: List<AgentSession>, val counts: AgentCounts, val total: Int, val hooks: Boolean, val now: Long)
+data class AgentsState(
+    val sessions: List<AgentSession>,
+    val counts: AgentCounts,
+    val total: Int,
+    val hooks: Boolean,
+    val now: Long,
+    val quota: AgentQuota? = null,
+)
 
 data class AgentOption(val label: String, val description: String)
 
@@ -125,6 +140,12 @@ class AgentsApi(private val http: Http) {
         Unit
     }
 
+    /** Interrompt le tour en cours (Échap dans son terminal). */
+    suspend fun interrupt(session: String) = http.io {
+        http.postJson("/agents/interrupt", JSONObject().put("session", session))
+        Unit
+    }
+
     suspend fun focus(session: String) = http.io {
         http.postJson("/agents/focus", JSONObject().put("session", session))
         Unit
@@ -153,6 +174,7 @@ internal fun parseAgents(text: String): AgentsState {
                 limit = s.optStringOrNull("limit"),
                 canFocus = s.optBoolean("canFocus"),
                 canSend = s.optBoolean("canSend"),
+                canInterrupt = s.optBoolean("canInterrupt"),
                 resumeAt = if (s.isNull("resumeAt")) null else s.optLong("resumeAt"),
                 resumeArmed = s.optBoolean("resumeArmed"),
                 askId = s.optStringOrNull("askId"),
@@ -164,6 +186,10 @@ internal fun parseAgents(text: String): AgentsState {
         total = json.optInt("total", list.length()),
         hooks = json.optBoolean("hooks"),
         now = json.optLong("now"),
+        quota = json.optJSONObject("quota")?.let { q ->
+            fun window(key: String) = q.optJSONObject(key)?.let { w -> QuotaWindow(w.optInt("used"), if (w.isNull("resetsAt")) null else w.optLong("resetsAt")) }
+            AgentQuota(window("fiveHour"), window("sevenDay"))
+        },
     )
 }
 

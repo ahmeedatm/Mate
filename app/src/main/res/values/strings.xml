@@ -196,6 +196,15 @@
     <string name="agent_ask_back">Retour</string>
     <string name="agent_ask_ok">OK</string>
     <string name="agent_continue">Continue</string>
+    <string name="agent_interrupt">Interrompre</string>
+    <string name="agent_interrupt_title">Interrompre %1$s ?</string>
+    <string name="agent_interrupt_text">Le tour en cours s\'arrête, comme Échap au clavier. La session reste ouverte.</string>
+    <string name="agent_interrupted">%1$s interrompue</string>
+    <string name="agent_quota_5h">5 h</string>
+    <string name="agent_quota_line">Quota : 5 h %1$s · 7 j %2$s</string>
+    <string name="agent_quota_7d">7 j</string>
+    <string name="agent_quota_value">%1$d %%</string>
+    <string name="agent_quota_reset">%1$d %% · reprise à %2$s</string>
     <string name="agents_private">Mode privé</string>
     <string name="agent_private_hidden">Contenu masqué (mode privé)</string>
     <string name="agent_private_show">Afficher</string>
