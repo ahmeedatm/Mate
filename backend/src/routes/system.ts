@@ -5,10 +5,12 @@ import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { config } from "../config.ts";
 import { focusDnd } from "../dnd.ts";
+import { resolveDoc } from "../docs.ts";
 import { applyScene, deleteScene, listScenes, saveScene } from "../mixer.ts";
 import {
   appAudio,
   getAudio,
+  getClipboard,
   getDnd,
   mediaControl,
   mediaSessions,
@@ -16,8 +18,14 @@ import {
   mixer,
   openAccessibility,
   setAudio,
+  setClipboardImage,
+  setClipboardText,
   typeText,
 } from "../os.ts";
+
+/** Texte du presse-papiers échangé avec la tablette : au plus 100 000 caractères. */
+const CLIPBOARD_MAX = 100_000;
+const CLIPBOARD_IMAGE = /\.(jpe?g|png)$/i;
 
 /** Ordinateur : Accessibilité, dictée, son, Ne pas déranger, lecture en cours. */
 export default async function systemRoutes(app: FastifyInstance) {
@@ -33,6 +41,43 @@ export default async function systemRoutes(app: FastifyInstance) {
     { schema: { body: { type: "object", required: ["text"], properties: { text: { type: "string", minLength: 1, maxLength: 2000 } } } } },
     async (req) => {
       await typeText(req.body.text);
+      return { ok: true };
+    },
+  );
+
+  // Presse-papiers partagé avec la tablette. Lu à l'ouverture de l'écran et sur « Actualiser » seulement.
+  // Le contenu n'est jamais écrit dans le journal : ni corps de requête, ni réponse, ni message d'erreur.
+  app.get("/system/clipboard", { logLevel: "warn" }, async () => {
+    const content = await getClipboard();
+    if (content.kind === "text" && content.text.length > CLIPBOARD_MAX) {
+      return { kind: "text", text: content.text.slice(0, CLIPBOARD_MAX), truncated: true };
+    }
+    return content;
+  });
+
+  app.post<{ Body: { text: string } }>(
+    "/system/clipboard",
+    {
+      schema: {
+        body: { type: "object", required: ["text"], properties: { text: { type: "string", minLength: 1, maxLength: CLIPBOARD_MAX } } },
+      },
+    },
+    async (req) => {
+      await setClipboardText(req.body.text);
+      return { ok: true };
+    },
+  );
+
+  // Photo du dossier partagé (ex. « Photos tablette ») copiée comme image dans le presse-papiers.
+  app.post<{ Body: { path: string } }>(
+    "/system/clipboard/image",
+    { schema: { body: { type: "object", required: ["path"], properties: { path: { type: "string", minLength: 1, maxLength: 1000 } } } } },
+    async (req, reply) => {
+      if (!CLIPBOARD_IMAGE.test(req.body.path)) return reply.code(400).send({ error: "Seules les images .jpg et .png se copient" });
+      const full = resolveDoc(req.body.path);
+      const stat = await fs.stat(full).catch(() => undefined);
+      if (!stat?.isFile()) return reply.code(404).send({ error: "Fichier introuvable" });
+      await setClipboardImage(full);
       return { ok: true };
     },
   );

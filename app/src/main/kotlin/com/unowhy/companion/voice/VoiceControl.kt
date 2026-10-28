@@ -183,7 +183,9 @@ class VoiceControl(
             val deck = tiles?.await().orEmpty()
             val (said, command) = candidates.firstNotNullOfOrNull { c -> VoiceCommands.parse(c, deck)?.let { c to it } }
                 ?: (heard to null)
-            android.util.Log.i("Voice", "heard $candidates → $command")
+            // Texte à copier sur l'ordinateur : jamais dans le journal (ni la phrase entendue, qui le contient).
+            if (command is VoiceCommand.CopyToComputer) android.util.Log.i("Voice", "copie sur l'ordi (${command.text.length} caractères)")
+            else android.util.Log.i("Voice", "heard $candidates → $command")
             val answer = if (command == null) {
                 Answer(activity.getString(R.string.voice_not_understood), speak = true)
             } else {
@@ -276,6 +278,12 @@ class VoiceControl(
                 Answer(text(R.string.voice_search, command.query))
             }
             is VoiceCommand.Type -> { client.system.typeOnComputer(command.text); Answer(text(R.string.voice_typed)) }
+            // Appuyer sur Parler vaut le toucher exigé : le texte part tel qu'il a été dit, sans restaurer l'ancien contenu.
+            is VoiceCommand.CopyToComputer -> {
+                if (command.text.isEmpty()) return Answer(text(R.string.voice_copy_what), speak = true)
+                client.system.copyToComputer(command.text)
+                Answer(text(R.string.voice_copied), speak = true)
+            }
             VoiceCommand.Help -> Answer(text(R.string.voice_help))
             is VoiceCommand.Call -> {
                 val overlay = activity.callOverlay

@@ -34,6 +34,8 @@ sealed class VoiceCommand {
     data class Search(val query: String) : VoiceCommand()
     /** Dictée : texte écrit dans l'appli au premier plan de l'ordinateur. */
     data class Type(val text: String) : VoiceCommand()
+    /** « copie sur l'ordi … » : texte mis dans le presse-papiers de l'ordinateur ; vide si rien n'a été dit après. */
+    data class CopyToComputer(val text: String) : VoiceCommand()
     data object Tasks : VoiceCommand()
     data object Time : VoiceCommand()
     data object NextEvent : VoiceCommand()
@@ -75,6 +77,10 @@ object VoiceCommands {
         // Dictée en premier : le texte dicté peut contenir n'importe quels mots (« écris : coupe le micro »).
         Regex("^\\s*(?:écris|ecris|écrire|ecrire|tape|taper|dicte|saisis)\\s*:?\\s+(.+)$", RegexOption.IGNORE_CASE).find(text)
             ?.let { return VoiceCommand.Type(it.groupValues[1].trim()) }
+        // Copie vers l'ordinateur, juste après la dictée : le texte à copier peut aussi contenir n'importe quels mots.
+        // Sans lettre ni chiffre (un « . » ajouté par la reconnaissance), il n'y a rien à copier.
+        Regex("^\\s*copier?(?:\\s+(?:ça|ca))?\\s+sur\\s+l(?:['’]|\\s+)\\s*(?:ordinateur|ordi|pc)(?!\\p{L})\\s*:?\\s*(.*)$", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)).find(text)
+            ?.let { m -> return VoiceCommand.CopyToComputer(m.groupValues[1].trim().takeIf { said -> said.any(Char::isLetterOrDigit) }.orEmpty()) }
         fun has(vararg words: String) = words.any { Regex("\\b$it\\b").containsMatchIn(t) }
         val number = Regex("\\b(\\d{1,3})\\b").find(t)?.groupValues?.get(1)?.toInt()
 

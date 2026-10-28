@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Texte et icône de la pilule principale : lisibles aussi quand elle est désactivée (fond en relief). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="?attr/c_text_dim" android:state_enabled="false" />
+    <item android:color="?attr/c_on_primary" />
+</selector>

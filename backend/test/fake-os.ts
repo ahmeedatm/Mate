@@ -1,8 +1,10 @@
 import fs from "node:fs";
+import { clipboardUnavailable } from "../src/driver-common.ts";
 import { checkOpenTarget } from "../src/open-guard.ts";
 import type { VoiceState } from "../src/win/index.ts";
 import type {
   AudioChange,
+  ClipboardContent,
   Display,
   Layout,
   MediaCommand,
@@ -28,6 +30,10 @@ export type FakeState = {
   running?: string[];
   inCall?: string[];
   dnd?: boolean | null;
+  /** Presse-papiers de l'ordinateur (getClipboard) ; les écritures le remplacent. Vide par défaut. */
+  clipboard?: ClipboardContent;
+  /** Pas de presse-papiers (session sans bureau) : getClipboard répond 503. */
+  clipboardUnavailable?: boolean;
   /** Fenêtres par appli ; `elsewhere` : sur un autre bureau. */
   windows?: Record<string, { title: string; elsewhere?: boolean }[]>;
   /** Fenêtres qui apparaissent quand l'appli est lancée (launchApp). */
@@ -132,6 +138,24 @@ export async function sendMediaKey(command: MediaCommand) {
 
 export async function typeText(text: string) {
   record("typeText", text);
+}
+
+export async function getClipboard(): Promise<ClipboardContent> {
+  if (read().clipboardUnavailable) clipboardUnavailable();
+  if (read().fail?.includes("getClipboard")) throw new Error("getClipboard a échoué (test)");
+  return read().clipboard ?? { kind: "empty" };
+}
+
+export async function setClipboardText(text: string) {
+  if (read().clipboardUnavailable) clipboardUnavailable();
+  record("setClipboardText", text);
+  write({ ...read(), clipboard: { kind: "text", text } });
+}
+
+export async function setClipboardImage(fullPath: string) {
+  if (read().clipboardUnavailable) clipboardUnavailable();
+  record("setClipboardImage", fullPath);
+  write({ ...read(), clipboard: { kind: "image" } });
 }
 
 export async function getAudio() {

@@ -21,6 +21,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.unowhy.companion.MainActivity
@@ -56,8 +57,9 @@ class CameraFragment : Fragment() {
     private lateinit var frozenHint: View
     private lateinit var freeze: Button
     private lateinit var photo: Button
+    private lateinit var copy: Button
     private lateinit var title: TextView
-    private lateinit var controls: View
+    private lateinit var controls: LinearLayout
     private lateinit var choice: View
     private lateinit var closedBanner: View
     private val zoomButtons = mutableListOf<Pair<Float, Button>>()
@@ -77,6 +79,10 @@ class CameraFragment : Fragment() {
     /** Dernière ouverture demandée : on laisse au navigateur le temps de se connecter avant de dire la page fermée. */
     private var openedAt = 0L
     private var ticks = 0
+    /** Dernière photo envoyée (chemin relatif au dossier partagé) : celle que « Copier sur l'ordi » met dans le presse-papiers. */
+    private var lastPhoto: String? = null
+    /** Photo en cours d'envoi ou copie en cours : « Copier sur l'ordi » attend. */
+    private var photoBusy = false
 
     // Lus depuis le fil de la caméra et le fil d'envoi.
     @Volatile private var frozen = false
@@ -118,6 +124,7 @@ class CameraFragment : Fragment() {
         frozenHint = view.findViewById(R.id.camera_frozen)
         freeze = view.findViewById(R.id.camera_freeze)
         photo = view.findViewById(R.id.camera_photo)
+        copy = view.findViewById(R.id.camera_copy)
         title = view.findViewById(R.id.camera_title)
         controls = view.findViewById(R.id.camera_controls)
         choice = view.findViewById(R.id.camera_choice)
@@ -139,10 +146,15 @@ class CameraFragment : Fragment() {
         }
         // L'aperçu garde le format 16:9 du flux, centré dans la place disponible.
         frame.addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ -> fitPreview(right - left, bottom - top) }
+        // Largeur changée (panneau document ouvert ou fermé à côté) : la barre du bas se réajuste après la mise en page.
+        controls.addOnLayoutChangeListener { _, left, _, right, _, oldLeft, _, oldRight, _ ->
+            if (right - left != oldRight - oldLeft) controls.post { fitControls() }
+        }
 
         stop.setOnClickListener { choose(null) }
         freeze.setOnClickListener { setFrozen(!frozen) }
         photo.setOnClickListener { takePhoto() }
+        copy.setOnClickListener { copyPhoto() }
         view.findViewById<Button>(R.id.camera_show).setOnClickListener { showOnComputer() }
 
         val zooms = view.findViewById<LinearLayout>(R.id.camera_zooms)
@@ -150,6 +162,8 @@ class CameraFragment : Fragment() {
         for (value in ZOOMS.filter { it <= maxZoom }) {
             val button = Button(requireContext(), null, 0, R.style.Chip).apply {
                 text = getString(R.string.camera_zoom, if (value % 1f == 0f) value.toInt().toString() else value.toString().replace('.', ','))
+                // Jamais sur deux lignes (« 2 / × ») : fitControls garde la place de toutes les pastilles.
+                isSingleLine = true
                 setOnClickListener { setZoom(value) }
             }
             zooms.addView(button, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { marginEnd = dp(8) })
@@ -173,6 +187,8 @@ class CameraFragment : Fragment() {
     }
 
     override fun onHiddenChanged(hidden: Boolean) {
+        // Le bouton « Copier sur l'ordi » ne survit pas à la sortie du mode.
+        lastPhoto = null
         if (!hidden) {
             askedPermission = false
             purpose = null
@@ -313,11 +329,13 @@ class CameraFragment : Fragment() {
         val cam = camera ?: return
         val backend = client ?: return
         photo.isEnabled = false
+        setPhotoBusy(true)
         cam.takePhoto { jpeg ->
             main.post {
                 if (jpeg == null || view == null) {
                     if (view != null) Toast.makeText(requireContext(), R.string.camera_photo_failed, Toast.LENGTH_SHORT).show()
                     photo.isEnabled = true
+                    setPhotoBusy(false)
                     return@post
                 }
                 val file = File(File(requireContext().cacheDir, "photos").apply { mkdirs() }, "visualiseur.jpg")
@@ -325,6 +343,8 @@ class CameraFragment : Fragment() {
                     try {
                         withContext(Dispatchers.IO) { file.writeBytes(jpeg) }
                         val saved = backend.docs.uploadPhoto(file)
+                        // Seulement si l'on est toujours dans ce mode : « Copier sur l'ordi » vise cette photo-ci.
+                        if (purpose != null && !isHidden) lastPhoto = saved
                         Toast.makeText(requireContext(), getString(R.string.camera_photo_sent, saved.substringAfterLast('/')), Toast.LENGTH_LONG).show()
                         // Photo pour l'ordi : on la montre à côté, comme dans Depuis l'ordi.
                         if (purpose == Purpose.PHOTO) (activity as? MainActivity)?.openDocument(
@@ -334,10 +354,84 @@ class CameraFragment : Fragment() {
                         toastError(e)
                     } finally {
                         photo.isEnabled = true
+                        setPhotoBusy(false)
                     }
                 }
             }
         }
+    }
+
+    /** Met la dernière photo envoyée dans le presse-papiers de l'ordinateur (le fichier y est déjà : rien n'est renvoyé). */
+    private fun copyPhoto() {
+        val path = lastPhoto ?: return
+        setPhotoBusy(true)
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                BackendClient(requireContext()).system.copyImageToComputer(path)
+                Toast.makeText(requireContext(), R.string.camera_copied, Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                toastError(e)
+            } finally {
+                setPhotoBusy(false)
+            }
+        }
+    }
+
+    private fun setPhotoBusy(busy: Boolean) {
+        photoBusy = busy
+        if (view != null) renderCopy()
+    }
+
+    /** « Copier sur l'ordi » : après une photo envoyée dans ce mode, en attente pendant un envoi ou une copie. */
+    private fun renderCopy() {
+        copy.visibility = if (purpose != null && lastPhoto != null) View.VISIBLE else View.GONE
+        copy.isEnabled = !photoBusy
+        fitControls()
+    }
+
+    /**
+     * Barre du bas trop étroite (panneau document ouvert à côté : la Caméra n'a que la moitié de l'écran, ~590 dp) :
+     * « Copier sur l'ordi », puis le bouton photo si ça ne suffit pas, ne gardent que leur icône (64 × 52 dp, libellé
+     * pour l'accessibilité). Les pastilles de zoom gardent toutes leur place. En pleine largeur, rien ne change.
+     */
+    private fun fitControls() {
+        if (view == null) return
+        val width = controls.width - controls.paddingStart - controls.paddingEnd
+        if (width <= 0) return
+        val buttons = listOf(copy, photo)
+        buttons.forEach { setIconOnly(it, false) }
+        for (button in buttons) {
+            if (naturalWidth() <= width) break
+            if (button.isVisible) setIconOnly(button, true)
+        }
+        // Les mesures ci-dessous sont faites sans contrainte : la barre est remesurée pour de bon.
+        controls.requestLayout()
+    }
+
+    /** Largeur que la barre du bas demanderait sans contrainte (boutons et pastilles visibles, marges comprises). */
+    private fun naturalWidth(): Int {
+        val free = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        return (0 until controls.childCount).map { controls.getChildAt(it) }.filter { it.visibility != View.GONE }.sumOf { child ->
+            child.measure(free, free)
+            val params = child.layoutParams as ViewGroup.MarginLayoutParams
+            child.measuredWidth + params.marginStart + params.marginEnd
+        }
+    }
+
+    private fun setIconOnly(button: Button, on: Boolean) {
+        val label = getString(
+            when {
+                button === copy -> R.string.camera_copy
+                purpose == Purpose.SHOW -> R.string.camera_photo
+                else -> R.string.camera_take_photo
+            },
+        )
+        button.text = if (on) "" else label
+        button.contentDescription = if (on) label else null
+        // Icône seule centrée : ni écart avant le texte, ni largeur minimale d'ActionButton (88 dp).
+        button.compoundDrawablePadding = if (on) 0 else dp(10)
+        button.minWidth = if (on) 0 else dp(88)
+        button.minimumWidth = if (on) 0 else dp(88)
     }
 
     private fun showOnComputer() {
@@ -423,6 +517,7 @@ class CameraFragment : Fragment() {
         purpose = next
         frozen = false
         windowOpen = null
+        lastPhoto = null
         renderControls()
         sync()
     }
@@ -450,6 +545,7 @@ class CameraFragment : Fragment() {
         freeze.isEnabled = ready
         photo.isEnabled = ready
         stop.isEnabled = ready
+        renderCopy()
     }
 
     /** `fps` : images envoyées dans la dernière seconde, null au démarrage ou après un changement d'état. */

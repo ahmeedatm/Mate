@@ -87,6 +87,12 @@ export type MixerChannel = { id: string; name: string; volume: number | null; mu
 /** `apps` null : pas de volume par appli sur cet ordinateur (Mac). */
 export type MixerState = { master: MixerChannel; mic: MixerChannel; apps: MixerChannel[] | null };
 export type MixerChange = { id: string; volume?: number; muted?: boolean };
+/**
+ * Presse-papiers de l'ordinateur, tel que la tablette le lit : `protected` = contenu sensible (mot de passe d'un
+ * gestionnaire), jamais lu ; `other` = ni texte ni image (liste de fichiers…).
+ */
+export type ClipboardContent =
+  { kind: "text"; text: string; truncated?: true } | { kind: "image" } | { kind: "empty" } | { kind: "protected" } | { kind: "other" };
 
 export type MediaCommand = "play-pause" | "next" | "previous";
 

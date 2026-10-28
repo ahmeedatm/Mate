@@ -312,6 +312,11 @@ class MainActivity : AppCompatActivity() {
         documentPanel.openComputerPage(expand = current == Mode.COMPUTER, splittable = current != Mode.COMPUTER)
     }
 
+    /** Affiche une adresse web (lien copié sur l'ordinateur) dans le panneau latéral, comme « Page de l'ordi ». */
+    fun openUrl(url: String) {
+        documentPanel.openUrl(url, expand = current == Mode.COMPUTER, splittable = current != Mode.COMPUTER)
+    }
+
     // --- Utilisé par RemoteChannel (ordres de l'ordinateur)
 
     val modeName: String

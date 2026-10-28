@@ -29,6 +29,31 @@ data class MixerState(val master: MixerChannel, val mic: MixerChannel, val apps:
 /** Scène du mélangeur : volumes de la sortie et des applis rappelés en un toucher. */
 data class MixerScene(val id: String, val name: String)
 
+/**
+ * Ce que contient le presse-papiers de l'ordinateur. `Text.truncated` : le compagnon a coupé un texte énorme.
+ * `Protected` : contenu sensible (mot de passe), jamais lu ; `Other` : fichiers ou format inconnu.
+ */
+sealed class ClipContent {
+    data class Text(val text: String, val truncated: Boolean) : ClipContent()
+    data object Image : ClipContent()
+    data object Empty : ClipContent()
+    data object Protected : ClipContent()
+    data object Other : ClipContent()
+}
+
+/** Réponse de `GET /system/clipboard` ; un `kind` inconnu (compagnon plus récent) est traité comme `Other`. */
+fun parseClip(json: String): ClipContent {
+    val j = JSONObject(json)
+    return when (j.optString("kind")) {
+        // optStringOrNull : sur Android, org.json rend un JSON null comme la chaîne "null".
+        "text" -> ClipContent.Text(j.optStringOrNull("text").orEmpty(), j.optBoolean("truncated"))
+        "image" -> ClipContent.Image
+        "empty" -> ClipContent.Empty
+        "protected" -> ClipContent.Protected
+        else -> ClipContent.Other
+    }
+}
+
 /** Système de l'ordinateur : son, lecture en cours, Ne pas déranger, appels, applis, saisie, réglages. */
 class SystemApi(private val http: Http) {
 
@@ -135,6 +160,15 @@ class SystemApi(private val http: Http) {
 
     /** Dictée : texte collé dans l'appli au premier plan de l'ordinateur. */
     suspend fun typeOnComputer(text: String) = http.io { http.postJson("/system/type", JSONObject().put("text", text)); Unit }
+
+    /** Presse-papiers de l'ordinateur, lu une fois ; HTTP 503 s'il n'y a pas de session de bureau. */
+    suspend fun clipboard(): ClipContent = http.io { parseClip(http.get("/system/clipboard", timeoutMs = 10_000)) }
+
+    /** Met ce texte dans le presse-papiers de l'ordinateur (1 à 100 000 caractères). */
+    suspend fun copyToComputer(text: String) = http.io { http.postJson("/system/clipboard", JSONObject().put("text", text)); Unit }
+
+    /** Met cette image (`path` : relatif au dossier partagé, .jpg/.jpeg/.png) dans le presse-papiers de l'ordinateur. */
+    suspend fun copyImageToComputer(path: String) = http.io { http.postJson("/system/clipboard/image", JSONObject().put("path", path)); Unit }
 
     /** Mac : ouvre le réglage Accessibilité, le compagnon déjà dans la liste. */
     suspend fun openAccessibility() = http.io { http.postJson("/system/accessibility", JSONObject()); Unit }

@@ -10,8 +10,8 @@ import {
   type WindowsInfo,
   type WindowTarget,
 } from "../screens.ts";
-import { parseCombo, planAudio, sortedNames } from "../driver-common.ts";
-import type { AudioChange, AudioState, MediaCommand, MixerChange, MixerState, SystemCommand } from "../screens.ts";
+import { parseCombo, planAudio, sortedNames, whenClipboardAvailable } from "../driver-common.ts";
+import type { AudioChange, AudioState, ClipboardContent, MediaCommand, MixerChange, MixerState, SystemCommand } from "../screens.ts";
 
 /**
  * Pilotage de Windows (10 et 11), mêmes fonctions que les modules de src/mac/ : voir src/os.ts.
@@ -152,6 +152,22 @@ export async function sendMediaKey(command: MediaCommand) {
 
 export async function typeText(text: string) {
   await call("text", { text });
+}
+
+// --- Presse-papiers
+
+export async function getClipboard(): Promise<ClipboardContent> {
+  // Lecture comme écritures : sans session de bureau, le pilote répond par l'erreur que `whenClipboardAvailable` change en 503.
+  return whenClipboardAvailable(call<ClipboardContent>("clipget"));
+}
+
+export async function setClipboardText(text: string) {
+  await whenClipboardAvailable(call("clipset", { text }));
+}
+
+/** Copie l'image du fichier (jpg, png) comme image dans le presse-papiers. */
+export async function setClipboardImage(path: string) {
+  await whenClipboardAvailable(call("clipimage", { path }));
 }
 
 // --- Son

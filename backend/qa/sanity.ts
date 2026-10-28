@@ -159,6 +159,31 @@ export async function runSanity(opts: { url: string; token: string; os?: Os }): 
       },
     },
     {
+      name: "presse-papiers",
+      run: async () => {
+        const first = await call("GET", "/system/clipboard");
+        if (!controlled()) return expectStatus(first, 501, "/system/clipboard");
+        // Seul le 503 du compagnon (aucune session de bureau : conteneur Windows, service sans session ouverte) passe
+        // son tour ; toute autre erreur, un script Mac cassé (500) par exemple, fait échouer le contrôle.
+        if (first.status === 503) throw new Skip(first.json?.message ?? "presse-papiers indisponible");
+        expectStatus(first, 200, "GET /system/clipboard");
+        const old = first.json;
+        // Image, contenu sensible, fichiers, ou texte coupé : pas écrasé, lecture seulement. Le contenu n'est jamais affiché.
+        if ((old.kind !== "text" && old.kind !== "empty") || old.truncated) return `lecture seule (${old.kind})`;
+        // Accents compris : le texte doit revenir à l'identique (encodage de pbcopy / du pilote).
+        const marker = "sanity-presse-papiers é à ç";
+        expectStatus(await call("POST", "/system/clipboard", { text: marker }), 200, "POST /system/clipboard");
+        try {
+          const read = await call("GET", "/system/clipboard");
+          expectStatus(read, 200, "relecture du presse-papiers");
+          expect(read.json.kind === "text" && read.json.text === marker, `texte écrit mal relu (${read.json.kind})`);
+        } finally {
+          // L'API ne sait pas vider le presse-papiers : s'il l'était, le texte du contrôle y reste.
+          if (old.kind === "text") await call("POST", "/system/clipboard", { text: old.text });
+        }
+      },
+    },
+    {
       name: "fenêtres ouvertes",
       run: async () => {
         // Mac sans Accessibilité (job install-mac) : System Events demanderait une autorisation à l'écran.
