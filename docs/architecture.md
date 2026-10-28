@@ -90,6 +90,10 @@ Deux sources, même format (`{"updates":[{package, label, versionCode, versionNa
 
 `kiosk/Updater.kt` interroge les deux en parallèle et fusionne (`kiosk/UpdatePlan.kt` : par paquet, la plus haute `versionCode` ; à égalité, l'ordinateur). Il télécharge, vérifie le SHA-256 et installe en silence (device owner), une installation à la fois. `kiosk/AutoUpdater.kt` vérifie au démarrage puis toutes les 6 h (échéance relue tous les quarts d'heure) et installe seul la version la plus récente du Companion, en device owner seulement, sans rien afficher. La carte Mises à jour de Réglages montre les deux sources (nom de la source sur chaque ligne, une ligne par source en erreur). `kiosk/UpdatedReceiver` relance l'appli en kiosque après sa propre mise à jour.
 
+### 10. Agents Claude (Mac)
+
+La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui a fini, qui attend) et y répond. `agents.ts` tient l'état par `session_id`, en mémoire, de trois sources : `claude agents --json` (toutes les 4 s, seulement tablette connectée : le filet), les hooks HTTP de Claude Code (`POST /agents/hook`, local, secret propre dans `.data/agents-hook.json`, posés par `npm run agents:hooks`) et `orca worktree ps --json` si Orca est là (branche, terminal). États : travaille, attend, fini, limite, inactif. La tablette est prévenue par l'ordre `agent` du canal `/tablet` (lumière de bord et son), sauf si l'appli de devant est un terminal ou Orca : l'utilisateur n'est alors pas prévenu. Répondre : le hook `PermissionRequest` (permission) ou `PreToolUse` sur `AskUserQuestion` (question à choix) reste ouvert jusqu'à `POST /agents/answer` ou `AGENTS_HOLD_S` (90 s), puis reçoit `{}` : le terminal décide. Jamais de décision sans action sur la tablette, ni « toujours autoriser ». Détails et essais : [recherche-agents-claude.md](recherche-agents-claude.md).
+
 ## Carte du code
 
 ### Tablette : `app/src/main/kotlin/com/unowhy/companion/`
@@ -127,6 +131,7 @@ Deux sources, même format (`{"updates":[{package, label, versionCode, versionNa
 | `tasks.ts`, `jira.ts` | tâches et rappels |
 | `tablet.ts`, `mcp.ts` | canal vers la tablette, extension Claude |
 | `calls.ts` (+ `config/calls.json`) | appels entrants : surveillance des fenêtres, Répondre / Ignorer / Raccrocher |
+| `agents.ts`, `agents-sources.ts`, `agents-secret.ts`, `agents-hooks.ts`, `routes/agents.ts` | agents Claude : état et réponses, lecture de `claude` et d'Orca, secret des hooks, bloc de hooks (`scripts/agents-hooks.ts`) |
 | `camera.ts`, `docs.ts` | visualiseur, dossier partagé |
 | `updates.ts` | mises à jour de la tablette |
 

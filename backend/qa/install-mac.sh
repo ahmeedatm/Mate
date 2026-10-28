@@ -82,9 +82,11 @@ run() {
   echo "Relancé : pid $(listener "$PORT")"
 
   step "Sanity"
-  local token sanity=0
+  local token secret sanity=0
   token=$("$NODE" -p "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).token" "$DATA_DIR/identity.json")
-  "$NODE" "$SANITY" --url "http://127.0.0.1:$PORT" --token "$token" --os mac --junit "$junit" || sanity=$?
+  # Secret des hooks des agents Claude (créé au démarrage) : la sanity envoie de faux événements.
+  secret=$("$NODE" -p "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).secret" "$DATA_DIR/agents-hook.json")
+  "$NODE" "$SANITY" --url "http://127.0.0.1:$PORT" --token "$token" --os mac --hook-secret "$secret" --junit "$junit" || sanity=$?
 
   step "Désinstallation"
   (cd "$APP/backend" && "$NODE" dist/service.mjs uninstall)

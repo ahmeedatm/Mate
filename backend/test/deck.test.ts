@@ -12,6 +12,7 @@ import { calls, state, type FakeState } from "./fake-os.ts";
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), "companion-deck-"));
 process.env.DATA_DIR = dir;
 process.env.CALENDAR_ICS_URLS = "";
+process.env.CLAUDE_BIN = "/inexistant";
 const { config } = await import("../src/config.ts");
 const deck = await import("../src/deck.ts");
 const { saveKey } = await import("../src/perso.ts");
@@ -258,8 +259,15 @@ describe("page Média : sites", () => {
 
 describe("homeFeatures", () => {
   it("bouton Rejoindre de Teams seulement si Teams est dans la page Apps", async () => {
-    assert.deepEqual(await deck.homeFeatures(), { agenda: true, linked: false, meetings: true, teams: false });
+    assert.deepEqual(await deck.homeFeatures(), { agenda: true, linked: false, meetings: true, teams: false, agents: false });
     await deck.addDeckApp("Microsoft Teams");
     assert.equal((await deck.homeFeatures()).teams, true);
+  });
+
+  it("agents Claude : seulement si Claude Code est installé", async () => {
+    process.env.CLAUDE_BIN = process.execPath;
+    assert.equal((await deck.homeFeatures()).agents, true);
+    process.env.CLAUDE_BIN = "/inexistant";
+    assert.equal((await deck.homeFeatures()).agents, false);
   });
 });

@@ -38,6 +38,8 @@ export type FakeState = {
   voice?: Record<string, VoiceState>;
   /** Mélangeur de l'onglet Son (mixer) : modifié par les changements reçus. */
   mixer?: MixerState;
+  /** Appli au premier plan (frontApp) ; absente : Safari. */
+  front?: { name: string; bundleId: string };
   /** Fonctions qui échouent (« Appli absente ») : `"sendKeys"`, ou `"openTarget msteams:"` pour un début de premier argument. */
   fail?: string[];
 };
@@ -199,6 +201,11 @@ export async function isAppInCall(app: string) {
 
 export async function isAppRunning(app: string) {
   return (read().running ?? []).includes(app);
+}
+
+export async function frontApp(): Promise<{ name: string; bundleId: string }> {
+  if (!isMac) unsupported();
+  return read().front ?? { name: "Safari", bundleId: "com.apple.Safari" };
 }
 
 export async function accessibility(): Promise<boolean | null> {
