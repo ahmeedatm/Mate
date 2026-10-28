@@ -29,3 +29,23 @@ fun age(ms: Long): Age {
 
 /** Sessions à montrer dans un widget : celles qui demandent l'attention d'abord (le compagnon les trie déjà), `max` au plus. */
 fun shortList(sessions: List<AgentSession>, max: Int): List<AgentSession> = sessions.filter { it.state != AgentState.IDLE }.take(max)
+
+/**
+ * Colonnes du tableau de l'onglet Agents : travaillent, surveillent (tâche de fond), vous concerne (une réponse ou une
+ * limite à lever), finis (sessions au repos comprises).
+ */
+enum class Column { WORKING, MONITORING, YOU, DONE }
+
+fun columnOf(s: AgentSession): Column = when (s.state) {
+    AgentState.WORKING -> if (s.monitoring) Column.MONITORING else Column.WORKING
+    AgentState.WAITING, AgentState.LIMIT -> Column.YOU
+    AgentState.DONE, AgentState.IDLE -> Column.DONE
+}
+
+/** Nombre de sessions par colonne, d'après les compteurs du compagnon (toutes les sessions, pas seulement les 10 montrées). */
+fun columnCounts(c: com.unowhy.companion.net.AgentCounts): Map<Column, Int> = mapOf(
+    Column.WORKING to c.working,
+    Column.MONITORING to c.monitoring,
+    Column.YOU to c.waiting + c.limit,
+    Column.DONE to c.done + c.idle,
+)

@@ -127,6 +127,21 @@ class AgentsLogicTest {
     }
 
     @Test
+    fun `chaque session va dans sa colonne`() {
+        fun s(state: AgentState, monitoring: Boolean = false) = session("x", state).copy(monitoring = monitoring)
+        assertEquals(Column.WORKING, columnOf(s(AgentState.WORKING)))
+        assertEquals(Column.MONITORING, columnOf(s(AgentState.WORKING, monitoring = true)))
+        assertEquals(Column.YOU, columnOf(s(AgentState.WAITING)))
+        assertEquals(Column.YOU, columnOf(s(AgentState.LIMIT)))
+        assertEquals(Column.DONE, columnOf(s(AgentState.DONE)))
+        assertEquals(Column.DONE, columnOf(s(AgentState.IDLE)))
+        assertEquals(
+            mapOf(Column.WORKING to 1, Column.MONITORING to 6, Column.YOU to 3, Column.DONE to 6),
+            columnCounts(AgentCounts(working = 1, waiting = 2, done = 4, limit = 1, idle = 2, monitoring = 6)),
+        )
+    }
+
+    @Test
     fun `un etat inconnu est inactif`() {
         assertEquals(AgentState.IDLE, AgentState.of("autre"))
         assertEquals(AgentState.IDLE, AgentState.of(null))
