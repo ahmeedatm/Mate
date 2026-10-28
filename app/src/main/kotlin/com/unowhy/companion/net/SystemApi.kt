@@ -28,6 +28,27 @@ data class MixerState(val master: MixerChannel, val mic: MixerChannel, val apps:
 
 /** Scène du mélangeur : volumes de la sortie et des applis rappelés en un toucher. */
 data class MixerScene(val id: String, val name: String)
+/**
+ * Carte graphique de l'ordinateur : `usage` 0-100, `dedicated` faux pour une puce intégrée. `tempC` et `fanRpm` sont
+ * absents quand l'ordinateur ne sait pas les lire ; `fanRpm` à 0 veut dire ventilateur arrêté.
+ */
+data class GpuPerf(val name: String, val usage: Int, val dedicated: Boolean, val tempC: Int?, val fanRpm: Int?)
+
+/** Performances de l'ordinateur ; `gpu` absent sur Mac ou sans carte lisible. */
+data class PcPerf(val cpu: Int, val ramPercent: Int, val ramUsedGb: Double, val ramTotalGb: Double, val gpu: GpuPerf?)
+
+fun parsePerf(json: String): PcPerf {
+    val j = JSONObject(json)
+    val ram = j.getJSONObject("ram")
+    val gpu = j.optJSONObject("gpu")?.let { g ->
+        GpuPerf(
+            g.getString("name"), g.getInt("usage"), g.optBoolean("dedicated"),
+            if (g.isNull("tempC")) null else g.getInt("tempC"),
+            if (g.isNull("fanRpm")) null else g.getInt("fanRpm"),
+        )
+    }
+    return PcPerf(j.getInt("cpu"), ram.getInt("percent"), ram.getDouble("used"), ram.getDouble("total"), gpu)
+}
 
 /**
  * Ce que contient le presse-papiers de l'ordinateur. `Text.truncated` : le compagnon a coupé un texte énorme.
@@ -58,6 +79,9 @@ fun parseClip(json: String): ClipContent {
 class SystemApi(private val http: Http) {
 
     suspend fun audio(): AudioState = http.io { parseAudio(http.get("/system/audio")) }
+
+    /** Processeur, mémoire et carte graphique (widget Performances) ; relevé instantané. */
+    suspend fun perf(): PcPerf = http.io { parsePerf(http.get("/system/perf", timeoutMs = 5_000)) }
 
     suspend fun setAudio(output: Int? = null, outputDelta: Int? = null, muted: Boolean? = null, micMuted: Boolean? = null): AudioState = http.io {
         val body = JSONObject()

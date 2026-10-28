@@ -12,6 +12,7 @@ import {
 } from "../screens.ts";
 import { parseCombo, planAudio, sortedNames, whenClipboardAvailable } from "../driver-common.ts";
 import type { AudioChange, AudioState, ClipboardContent, MediaCommand, MixerChange, MixerState, SystemCommand } from "../screens.ts";
+import type { GpuPerf } from "../perf.ts";
 
 /**
  * Pilotage de Windows (10 et 11), mêmes fonctions que les modules de src/mac/ : voir src/os.ts.
@@ -179,6 +180,23 @@ export async function getAudio(): Promise<AudioState> {
 export async function setAudio(change: AudioChange): Promise<AudioState> {
   const { output, muted } = planAudio(change, await getAudio());
   return call<AudioState>("audio", { output, muted, micMuted: change.micMuted });
+}
+
+// --- Performances
+
+/** Carte graphique principale (usage, température, ventilateur) ; null si le pilote n'en lit aucune. */
+export function gpuPerf(): Promise<GpuPerf | null> {
+  return call<GpuPerf | null>("perf");
+}
+
+/** Activité du processeur (0-100) selon le Gestionnaire des tâches (« % Processor Utility ») ; null si le compteur est illisible. */
+export function cpuUtility(): Promise<number | null> {
+  return call<number | null>("cpu");
+}
+
+/** Lecture brute du pilote (toutes les cartes, tous les compteurs), pour diagnostiquer un PC à carte dédiée. */
+export function gpuPerfDetail(): Promise<unknown> {
+  return call("perf", { detail: true });
 }
 
 /**

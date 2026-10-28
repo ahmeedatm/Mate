@@ -15,6 +15,7 @@ import * as macSystem from "./mac/system.ts";
 import * as macWindows from "./mac/windows.ts";
 import * as win from "./win/index.ts";
 import { checkOpenTarget } from "./open-guard.ts";
+import { perfSampler, type Perf } from "./perf.ts";
 import type {
   AudioChange,
   ClipboardContent,
@@ -151,6 +152,32 @@ export async function setClipboardImage(fullPath: string) {
 export function getAudio() {
   if (isMac) return macAudio.getAudio();
   if (isWindows) return win.getAudio();
+  unsupported();
+}
+
+/** Un seul échantillonneur par processus : il porte le cache d'une seconde, le point de départ du CPU et la mémoire du ventilateur. */
+let perfSample: (() => Promise<Perf>) | undefined;
+
+/** Processeur, mémoire et carte graphique de l'ordinateur ; sans carte lisible, pas de `gpu`. */
+export function getPerf(): Promise<Perf> {
+  if (!canControl) unsupported();
+  perfSample ??= perfSampler({
+    cpus: os.cpus,
+    memory: isMac
+      ? async () => ({ total: os.totalmem(), available: await macSystem.availableMemory() })
+      : async () => ({ total: os.totalmem(), available: os.freemem() }),
+    cpuPercent: isWindows ? win.cpuUtility : null,
+    gpu: isWindows ? win.gpuPerf : null,
+    // Horloge monotone : un changement d'heure du PC ne fige pas le cache ni le point de départ du processeur.
+    now: () => performance.now(),
+  });
+  return perfSample();
+}
+
+/** Diagnostic brut du lecteur de carte graphique (Windows) ; sur Mac, pas de lecteur. */
+export async function getPerfDetail(): Promise<unknown> {
+  if (isWindows) return win.gpuPerfDetail();
+  if (isMac) return { gpu: null };
   unsupported();
 }
 

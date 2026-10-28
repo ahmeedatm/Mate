@@ -12,6 +12,8 @@ import {
   getAudio,
   getClipboard,
   getDnd,
+  getPerf,
+  getPerfDetail,
   mediaControl,
   mediaSessions,
   mediaThumb,
@@ -102,6 +104,12 @@ export default async function systemRoutes(app: FastifyInstance) {
     },
     async (req) => setAudio(req.body),
   );
+
+  // Processeur, mémoire et carte graphique : relus toutes les 2 s par la tablette tant que le widget est affiché.
+  app.get("/system/perf", { logLevel: "warn" }, async () => getPerf());
+
+  // Lecture brute du lecteur de carte graphique, pour diagnostiquer un PC à carte dédiée.
+  app.get("/system/perf/detail", async () => getPerfDetail());
 
   // Ne pas déranger de l'ordinateur pendant le Focus de la tablette (voir src/dnd.ts).
   app.get("/system/dnd", async () => ({ on: await getDnd() }));
