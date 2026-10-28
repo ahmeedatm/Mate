@@ -320,6 +320,35 @@
         <item quantity="other">%1$d éléments</item>
     </plurals>
 
+    <!-- Presse-papiers partagé (Depuis l'ordi, Caméra, voix) -->
+    <string name="clip_choose">Presse-papiers</string>
+    <string name="clip_choose_hint">Le texte copié sur l\'ordi s\'affiche ici : un code, une adresse, un lien. Ce que tu écris ou dictes sur la tablette part dans le presse-papiers de l\'ordi, prêt à coller.</string>
+    <string name="clip_subtitle">Copier et coller entre l\'ordi et la tablette</string>
+    <string name="clip_on_computer">Sur l\'ordi</string>
+    <string name="clip_to_computer">Vers l\'ordi</string>
+    <string name="clip_reading">Lecture du presse-papiers de l\'ordi…</string>
+    <string name="clip_image">Une image est copiée sur l\'ordi</string>
+    <string name="clip_empty">Rien n\'est copié sur l\'ordi</string>
+    <string name="clip_protected">Contenu protégé (mot de passe ?) : il n\'est pas affiché</string>
+    <string name="clip_other">Ce contenu ne s\'affiche pas ici</string>
+    <string name="clip_shortened">Long texte : seul le début s\'affiche, « Copier sur la tablette » prend tout</string>
+    <string name="clip_truncated">Texte très long : seul le début est arrivé sur la tablette</string>
+    <string name="clip_unavailable">Presse-papiers indisponible sur l\'ordi</string>
+    <string name="clip_not_supported">Non disponible sur cet ordinateur</string>
+    <string name="clip_copy_here">Copier sur la tablette</string>
+    <string name="clip_copied_here">Copié sur la tablette</string>
+    <string name="clip_open">Ouvrir</string>
+    <string name="clip_write">Écrire…</string>
+    <string name="clip_dictate">Dicter</string>
+    <string name="clip_dictate_stop">Arrêter</string>
+    <string name="clip_to_computer_hint">Écris ou dicte un texte : il remplace ce qui est copié sur l\'ordi, colle-le ensuite où tu veux.</string>
+    <string name="clip_write_title">Texte à copier sur l\'ordi</string>
+    <string name="clip_write_hint">Ton texte</string>
+    <string name="clip_send">Copier sur l\'ordi</string>
+    <string name="clip_copied">Copié sur l\'ordi</string>
+    <string name="clip_dictate_offline">La dictée a besoin d\'internet</string>
+    <string name="clip_dictate_failed">La dictée n\'a pas marché, réessaie ou écris le texte</string>
+
     <!-- Visualiseur (mode Caméra) -->
     <string name="camera_title_show">Montrer sur l\'ordi</string>
     <string name="camera_title_photo">Photo pour l\'ordi</string>
@@ -339,6 +368,8 @@
     <string name="camera_photo">Photo → ordi</string>
     <string name="camera_photo_sent">Photo enregistrée : %1$s</string>
     <string name="camera_photo_failed">Photo impossible, réessaie</string>
+    <string name="camera_copy">Copier sur l\'ordi</string>
+    <string name="camera_copied">Photo copiée sur l\'ordi, prête à coller</string>
     <string name="camera_zoom">%1$s×</string>
     <string name="camera_starting">Démarrage…</string>
     <string name="camera_live">En direct sur l\'ordinateur · %1$d i/s</string>
@@ -772,8 +803,10 @@
     <string name="voice_tomorrow_at">demain à %1$s</string>
     <string name="voice_day_at">%1$s à %2$s</string>
     <string name="voice_water">Un verre de plus : %1$d sur %2$d</string>
-    <string name="voice_help">Exemples : « réponds », « ignore », « raccroche », « écris : je serai en retard », « ouvre Discord », « réduis Chrome », « mets Discord à gauche », « mets Teams sur l\'autre écran », « ferme la fenêtre », « quelles tâches aujourd\'hui », « qu\'est-ce que j\'ai demain », « rappelle-moi d\'appeler Paul à 15 h », « coche worklog », « cherche météo Paris », « volume 30 », « coupe le micro », « pause », « lance un focus de 25 minutes », « rejoins la réunion », et pour les agents Claude « autorise », « refuse la commande », « option deux », « valide », « continue ». Toutes les touches du Deck se lancent par leur nom.</string>
+    <string name="voice_help">Exemples : « réponds », « ignore », « raccroche », « écris : je serai en retard », « copie sur l\'ordi : 06 12 34 56 78 », « ouvre Discord », « réduis Chrome », « mets Discord à gauche », « mets Teams sur l\'autre écran », « ferme la fenêtre », « quelles tâches aujourd\'hui », « qu\'est-ce que j\'ai demain », « rappelle-moi d\'appeler Paul à 15 h », « coche worklog », « cherche météo Paris », « volume 30 », « coupe le micro », « pause », « lance un focus de 25 minutes », « rejoins la réunion », et pour les agents Claude « autorise », « refuse la commande », « option deux », « valide », « continue ». Toutes les touches du Deck se lancent par leur nom.</string>
     <string name="voice_typed">Écrit sur l\'ordinateur</string>
+    <string name="voice_copy_what">Dis ce que je dois copier</string>
+    <string name="voice_copied">Copié sur l\'ordi</string>
     <string name="call_incoming">Appel entrant</string>
     <string name="call_incoming_app">Appel entrant · %1$s</string>
     <string name="call_answer">Répondre</string>

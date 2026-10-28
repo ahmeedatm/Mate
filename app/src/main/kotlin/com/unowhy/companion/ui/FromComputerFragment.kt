@@ -1,5 +1,6 @@
 package com.unowhy.companion.ui
 
+import android.Manifest
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.os.Environment
@@ -15,6 +16,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ListView
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.widget.ImageViewCompat
@@ -27,10 +29,13 @@ import com.unowhy.companion.net.DocEntry
 import kotlinx.coroutines.launch
 
 /**
- * Depuis l'ordi : d'abord un choix expliqué (fichiers du dossier partagé, ou page du navigateur de l'ordi),
- * puis la liste des fichiers ; un fichier s'ouvre dans le panneau latéral.
+ * Depuis l'ordi : d'abord un choix expliqué (fichiers du dossier partagé, page du navigateur de l'ordi, ou
+ * presse-papiers), puis la liste des fichiers (un fichier s'ouvre dans le panneau latéral) ou l'écran Presse-papiers
+ * ([ClipboardView]).
  */
 class FromComputerFragment : Fragment() {
+
+    private enum class Screen { CHOICE, FILES, CLIPBOARD }
 
     private lateinit var list: ListView
     private lateinit var path: TextView
@@ -41,11 +46,20 @@ class FromComputerFragment : Fragment() {
     private lateinit var back: Button
     private lateinit var choice: View
     private lateinit var files: View
+    private lateinit var clipboardRoot: View
+    private lateinit var clipboard: ClipboardView
     private lateinit var adapter: DocAdapter
 
     private var dir = ""
-    /** Liste des fichiers affichée (sinon, l'écran de choix). */
-    private var browsing = false
+    private var screen = Screen.CHOICE
+    /** Liste des fichiers affichée. */
+    private val browsing get() = screen == Screen.FILES
+
+    /** Dicter (Presse-papiers) sans le micro autorisé : la dictée reprend si l'utilisateur accepte. */
+    private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (view == null || screen != Screen.CLIPBOARD || isHidden) return@registerForActivityResult
+        if (granted) clipboard.dictate() else clipboard.micDenied()
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, state: Bundle?): View =
         inflater.inflate(R.layout.fragment_from_computer, container, false)
@@ -60,6 +74,8 @@ class FromComputerFragment : Fragment() {
         back = view.findViewById(R.id.docs_back)
         choice = view.findViewById(R.id.docs_choice)
         files = view.findViewById(R.id.docs_files)
+        clipboardRoot = view.findViewById(R.id.docs_clipboard)
+        clipboard = ClipboardView(this, clipboardRoot) { micPermission.launch(Manifest.permission.RECORD_AUDIO) }
         adapter = DocAdapter()
         list.adapter = adapter
 
@@ -69,29 +85,53 @@ class FromComputerFragment : Fragment() {
         }
         up.setOnClickListener { load(dir.substringBeforeLast('/', "")) }
         refresh.setOnClickListener { load(dir) }
-        back.setOnClickListener { browse(false) }
-        view.findViewById<View>(R.id.docs_choose_files).setOnClickListener { browse(true) }
+        back.setOnClickListener { show(Screen.CHOICE) }
+        view.findViewById<View>(R.id.docs_choose_files).setOnClickListener { show(Screen.FILES) }
         view.findViewById<View>(R.id.docs_choose_web).setOnClickListener { (requireActivity() as MainActivity).openComputerPage() }
+        view.findViewById<View>(R.id.docs_choose_clipboard).setOnClickListener { show(Screen.CLIPBOARD) }
 
-        browse(false)
+        show(Screen.CHOICE)
     }
 
     override fun onHiddenChanged(hidden: Boolean) {
         if (!hidden && browsing) load(dir)
+        // Presse-papiers : on revient au choix quand l'écran est caché (comme la caméra), pour qu'il ne se relise jamais
+        // sans un toucher sur la tablette (ouverture de l'écran ou Actualiser), même si le mode revient d'un ordre du PC.
+        if (hidden && screen == Screen.CLIPBOARD) show(Screen.CHOICE)
     }
 
-    private fun browse(on: Boolean) {
-        browsing = on
-        choice.visibility = if (on) View.GONE else View.VISIBLE
-        files.visibility = if (on) View.VISIBLE else View.GONE
+    override fun onStop() {
+        // Appli en arrière-plan : le micro ne reste pas ouvert.
+        if (view != null) clipboard.stopDictation()
+        super.onStop()
+    }
+
+    override fun onDestroyView() {
+        clipboard.release()
+        super.onDestroyView()
+    }
+
+    private fun show(next: Screen) {
+        if (screen == Screen.CLIPBOARD && next != Screen.CLIPBOARD) clipboard.stop()
+        screen = next
+        choice.visibility = if (next == Screen.CHOICE) View.VISIBLE else View.GONE
+        files.visibility = if (next == Screen.FILES) View.VISIBLE else View.GONE
+        clipboardRoot.visibility = if (next == Screen.CLIPBOARD) View.VISIBLE else View.GONE
         refresh.visibility = files.visibility
-        back.visibility = files.visibility
-        if (on) {
-            load("")
-        } else {
-            path.setText(R.string.docs_title)
-            count.setText(R.string.docs_subtitle)
-            up.visibility = View.GONE
+        back.visibility = if (next == Screen.CHOICE) View.GONE else View.VISIBLE
+        when (next) {
+            Screen.FILES -> load("")
+            Screen.CHOICE -> {
+                path.setText(R.string.docs_title)
+                count.setText(R.string.docs_subtitle)
+                up.visibility = View.GONE
+            }
+            Screen.CLIPBOARD -> {
+                path.setText(R.string.clip_choose)
+                count.setText(R.string.clip_subtitle)
+                up.visibility = View.GONE
+                clipboard.read()
+            }
         }
     }
 

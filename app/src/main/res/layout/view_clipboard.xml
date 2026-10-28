@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Presse-papiers (Depuis l'ordi) : deux tuiles Cadran côte à côte. « Sur l'ordi » montre ce qui est copié sur
+     l'ordinateur, lu à l'ouverture et sur Actualiser seulement ; « Vers l'ordi » envoie un texte écrit ou dicté.
+     Géré par ClipboardView. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:baselineAligned="false"
+    android:orientation="horizontal">
+
+    <!-- Poids imbriqués (largeur des tuiles, hauteur du texte) : deux tuiles mesurées une fois à l'ouverture. -->
+    <LinearLayout
+        style="@style/Card"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="16dp"
+        android:layout_weight="3"
+        android:orientation="vertical"
+        tools:ignore="NestedWeights">
+
+        <com.unowhy.companion.ui.TitleView
+            style="@style/CardTitle"
+            android:text="@string/clip_on_computer" />
+
+        <ScrollView
+            android:id="@+id/clip_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="12dp"
+            android:layout_weight="1"
+            android:fadeScrollbars="false"
+            android:scrollbarStyle="outsideOverlay">
+
+            <TextView
+                android:id="@+id/clip_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/c_text"
+                android:textSize="18sp" />
+        </ScrollView>
+
+        <TextView
+            android:id="@+id/clip_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="?attr/c_text_faint"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/clip_refresh"
+                style="@style/PillButton"
+                android:drawableStart="@drawable/ic_refresh"
+                android:text="@string/refresh" />
+
+            <Button
+                android:id="@+id/clip_copy_here"
+                style="@style/PillButton.Primary"
+                android:layout_marginStart="12dp"
+                android:drawableStart="@drawable/ic_tablet"
+                android:text="@string/clip_copy_here"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/clip_open"
+                style="@style/PillButton"
+                android:layout_marginStart="12dp"
+                android:drawableStart="@drawable/ic_open"
+                android:text="@string/clip_open"
+                android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        style="@style/Card"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="2"
+        android:orientation="vertical">
+
+        <com.unowhy.companion.ui.TitleView
+            style="@style/CardTitle"
+            android:text="@string/clip_to_computer" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/clip_to_computer_hint"
+            android:textColor="?attr/c_text_dim"
+            android:textSize="16sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/clip_write"
+                style="@style/PillButton.Primary"
+                android:drawableStart="@drawable/ic_edit"
+                android:text="@string/clip_write" />
+
+            <Button
+                android:id="@+id/clip_dictate"
+                style="@style/PillButton"
+                android:layout_marginStart="12dp"
+                android:drawableStart="@drawable/ic_mic"
+                android:text="@string/clip_dictate" />
+        </LinearLayout>
+
+        <!-- J'écoute, ce qui est entendu, Copié sur l'ordi, erreur. -->
+        <TextView
+            android:id="@+id/clip_send_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textColor="?attr/c_text_dim"
+            android:textSize="16sp"
+            android:visibility="gone" />
+    </LinearLayout>
+</LinearLayout>
