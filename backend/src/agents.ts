@@ -35,7 +35,7 @@ export type OrcaInfo = {
   worktrees: {
     path: string;
     branch: string | null;
-    agents: { paneKey: string; toolName: string | null; lastMessage: string | null; structured: boolean }[];
+    agents: { paneKey: string; state: string | null; toolName: string | null; lastMessage: string | null; structured: boolean }[];
   }[];
   /** Terminal vivant par clé de volet (`tabId:leafId`). */
   handles: Map<string, string>;
@@ -130,6 +130,8 @@ type Session = {
   branch: string | null;
   handle: string | null;
   inOrca: boolean;
+  /** État vu par Orca (`working`, `done`) : il voit aussi les tâches de fond (surveillance de pipeline), que `claude agents` ne compte pas. */
+  orcaState: string | null;
   /** Dernier hook reçu : le filet `claude agents` ne contredit pas un hook de moins de 6 s. */
   hookAt: number;
   missing: number;
@@ -141,8 +143,6 @@ type Session = {
 /** Hooks reçus depuis le démarrage : la tablette sait si « répondre » est possible. */
 const HOOK_STALE_MS = 6_000;
 const QUOTA_TTL_MS = 15 * 60_000;
-/** Un « fini » devient « inactif » au bout de ce délai. */
-const DONE_TTL_MS = 10 * 60_000;
 /** Une session connue par hook seulement, sans `SessionEnd`, est oubliée après ce délai sans nouvelle. */
 const SILENT_TTL_MS = 12 * 3600_000;
 
@@ -329,6 +329,7 @@ export function createAgents(deps: AgentsDeps) {
     branch: null,
     handle: null,
     inOrca: false,
+    orcaState: null,
     hookAt: 0,
     missing: 0,
     alerted: false,
@@ -614,7 +615,7 @@ export function createAgents(deps: AgentsDeps) {
   }
 
   function effectiveState(s: Session): AgentState {
-    return s.state === "done" && now() - s.since > DONE_TTL_MS ? "idle" : s.state;
+    return s.state;
   }
 
   const ORDER: Record<AgentState, number> = { waiting: 0, limit: 1, done: 2, working: 3, idle: 4 };
@@ -728,7 +729,9 @@ export function createAgents(deps: AgentsDeps) {
       if (live) {
         const seen = new Set<string>();
         for (const e of live) {
-          if (!e.sessionId) continue;
+          // Session dont le processus n'existe plus (session en arrière-plan abandonnée, gardée par Claude tant qu'elle
+          // « attend ») : rien à suivre ni à quoi répondre.
+          if (!e.sessionId || (!e.status && !e.pid)) continue;
           seen.add(e.sessionId);
           let s = sessions.get(e.sessionId);
           const fresh = !s;
@@ -750,7 +753,12 @@ export function createAgents(deps: AgentsDeps) {
           else if (status === "waiting") {
             if (s.state !== "waiting") setWaiting(s, e.waitingFor ?? null, !fresh);
             else s.waitingFor = e.waitingFor ?? s.waitingFor;
-          } else if (s.state === "working" || s.state === "waiting") setState(s, "idle", true);
+          } else if ((s.state === "working" || s.state === "waiting") && s.orcaState !== "working") {
+            // Tour fini sans hook Stop (pas de hooks, ou Échap) : fini, avec son alerte.
+            s.workedMs = s.turnStartedAt ? Math.max(0, t - s.turnStartedAt) : null;
+            s.turnStartedAt = null;
+            setState(s, "done");
+          }
         }
         for (const s of [...sessions.values()]) {
           if (seen.has(s.id)) continue;
@@ -771,6 +779,7 @@ export function createAgents(deps: AgentsDeps) {
     for (const s of sessions.values()) {
       s.inOrca = false;
       s.handle = null;
+      s.orcaState = null;
       // Volet exact donné par le hook (le dossier de la session peut différer de celui du worktree) ; sinon le dossier,
       // et alors la seule session Claude du worktree.
       let tree = s.pane ? orca.worktrees.find((w) => w.agents.some((a) => a.paneKey === s.pane)) : undefined;
@@ -781,8 +790,15 @@ export function createAgents(deps: AgentsDeps) {
       s.branch = tree.branch;
       const agent = byPane ? tree.agents.find((a) => a.paneKey === s.pane) : tree.agents.length === 1 ? tree.agents[0] : undefined;
       if (!agent) continue;
+      s.orcaState = agent.state;
       if (agent.toolName && s.state === "working") s.tool = agent.toolName;
-      if (!s.message && agent.lastMessage) s.message = cut(agent.lastMessage, 1000);
+      const hooksStale = now() - s.hookAt >= HOOK_STALE_MS;
+      if (agent.lastMessage && (!s.message || hooksStale)) s.message = cut(agent.lastMessage, 1000);
+      // Sans hook récent, l'état d'Orca corrige celui de `claude agents` (au prompt mais une surveillance tourne ; tour fini).
+      if (hooksStale && !s.ask) {
+        if (agent.state === "working" && (s.state === "idle" || s.state === "done")) setState(s, "working", true);
+        else if (agent.state === "done" && s.state === "idle") setState(s, "done", true);
+      }
       // Une session de chat Orca n'a pas de terminal : rien à qui écrire.
       if (!agent.structured) s.handle = orca.handles.get(agent.paneKey) ?? null;
     }

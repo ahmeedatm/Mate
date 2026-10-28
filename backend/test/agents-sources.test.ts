@@ -13,7 +13,7 @@ const script = (name: string, body: string) => {
   fs.writeFileSync(file, `#!/bin/sh\n${body}\n`, { mode: 0o755 });
   return file;
 };
-const { agentsAvailable, claudeBin, frontIsClaude, listClaude, listOrca } = await import("../src/agents-sources.ts");
+const { agentsAvailable, claudeBin, claudeConfigDirs, frontIsClaude, listClaude, listOrca } = await import("../src/agents-sources.ts");
 const { hookSecret, hookSecretOk } = await import("../src/agents-secret.ts");
 
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -33,6 +33,26 @@ describe("sources des agents", () => {
     assert.equal(await listClaude(), null);
   });
 
+  it("lit chaque dossier de config (défaut, profils Orca, AGENTS_CLAUDE_CONFIG_DIRS) et fusionne sans doublon", async () => {
+    const a = fs.mkdtempSync(path.join(dir, "cfg-a-"));
+    const b = fs.mkdtempSync(path.join(dir, "cfg-b-"));
+    process.env.CLAUDE_CONFIG_DIR = a;
+    process.env.AGENTS_CLAUDE_CONFIG_DIRS = `${b}:${a}`;
+    assert.deepEqual(
+      claudeConfigDirs().filter((d) => d === a || d === b),
+      [a, b],
+      "chaque dossier une fois",
+    );
+    // Le faux claude répond selon le dossier reçu dans CLAUDE_CONFIG_DIR.
+    process.env.CLAUDE_BIN = script(
+      "claude-dirs",
+      `case "$CLAUDE_CONFIG_DIR" in "${a}") echo '[{"sessionId":"1","status":"idle"},{"sessionId":"2","status":"busy"}]';; "${b}") echo '[{"sessionId":"2","status":"busy"},{"sessionId":"3","status":"idle"}]';; *) echo '[]';; esac`,
+    );
+    assert.deepEqual((await listClaude())?.map((s) => s.sessionId).sort(), ["1", "2", "3"]);
+    delete process.env.CLAUDE_CONFIG_DIR;
+    delete process.env.AGENTS_CLAUDE_CONFIG_DIRS;
+  });
+
   it("orca : branche, agents Claude, terminaux par volet ; en échec : null puis pas d'insistance", async () => {
     const ps = {
       result: {
@@ -41,7 +61,14 @@ describe("sources des agents", () => {
             path: "/w/p",
             branch: "refs/heads/feat/x",
             agents: [
-              { agentType: "claude", paneKey: "t:l", toolName: "Edit", lastAssistantMessage: "ok", structuredHostOwned: null },
+              {
+                agentType: "claude",
+                state: "done",
+                paneKey: "t:l",
+                toolName: "Edit",
+                lastAssistantMessage: "ok",
+                structuredHostOwned: null,
+              },
               { agentType: "codex", paneKey: "autre" },
             ],
           },
@@ -55,7 +82,11 @@ describe("sources des agents", () => {
     );
     const info = await listOrca();
     assert.deepEqual(info?.worktrees, [
-      { path: "/w/p", branch: "feat/x", agents: [{ paneKey: "t:l", toolName: "Edit", lastMessage: "ok", structured: false }] },
+      {
+        path: "/w/p",
+        branch: "feat/x",
+        agents: [{ paneKey: "t:l", state: "done", toolName: "Edit", lastMessage: "ok", structured: false }],
+      },
     ]);
     assert.equal(info?.handles.get("t:l"), "term_1");
     process.env.ORCA_BIN = script("orca-ko", "exit 1");
