@@ -134,6 +134,9 @@
     <!-- Agents Claude Code (onglet Agents du Deck, widget, lumière de bord). -->
     <string name="agents_title">Agents Claude</string>
     <string name="agent_state_working">Travaille</string>
+    <string name="agent_state_monitoring">Surveille une tâche de fond</string>
+    <string name="agent_kind_claude">Claude</string>
+    <string name="agent_mr">!%1$d</string>
     <string name="agent_state_done">Fini</string>
     <string name="agent_state_limit">Limite atteinte</string>
     <string name="agent_state_idle">Inactif</string>
@@ -143,10 +146,20 @@
         <item quantity="one">travaille</item>
         <item quantity="other">travaillent</item>
     </plurals>
-    <plurals name="agent_count_waiting">
-        <item quantity="one">attend</item>
-        <item quantity="other">attendent</item>
+    <plurals name="agent_count_monitoring">
+        <item quantity="one">surveille</item>
+        <item quantity="other">surveillent</item>
     </plurals>
+    <plurals name="agent_count_waiting">
+        <item quantity="one">vous concerne</item>
+        <item quantity="other">vous concernent</item>
+    </plurals>
+    <string name="agent_col_working">Travaillent</string>
+    <string name="agent_col_monitoring">Surveillent</string>
+    <string name="agent_col_you">Vous concerne</string>
+    <string name="agent_col_done">Finis</string>
+    <string name="agent_col_empty">Aucune</string>
+    <string name="agent_col_header">%1$s · %2$d</string>
     <plurals name="agent_count_done">
         <item quantity="one">fini</item>
         <item quantity="other">finis</item>

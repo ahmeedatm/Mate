@@ -13,7 +13,17 @@ const script = (name: string, body: string) => {
   fs.writeFileSync(file, `#!/bin/sh\n${body}\n`, { mode: 0o755 });
   return file;
 };
-const { agentsAvailable, claudeBin, frontIsClaude, listClaude, listOrca } = await import("../src/agents-sources.ts");
+const {
+  agentsAvailable,
+  claudeBin,
+  claudeConfigDirs,
+  frontIsClaude,
+  listClaude,
+  listOrca,
+  projectSlug,
+  readTranscriptTail,
+  transcriptInfo,
+} = await import("../src/agents-sources.ts");
 const { hookSecret, hookSecretOk } = await import("../src/agents-secret.ts");
 
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -33,6 +43,26 @@ describe("sources des agents", () => {
     assert.equal(await listClaude(), null);
   });
 
+  it("lit chaque dossier de config (défaut, profils Orca, AGENTS_CLAUDE_CONFIG_DIRS) et fusionne sans doublon", async () => {
+    const a = fs.mkdtempSync(path.join(dir, "cfg-a-"));
+    const b = fs.mkdtempSync(path.join(dir, "cfg-b-"));
+    process.env.CLAUDE_CONFIG_DIR = a;
+    process.env.AGENTS_CLAUDE_CONFIG_DIRS = `${b}:${a}`;
+    assert.deepEqual(
+      claudeConfigDirs().filter((d) => d === a || d === b),
+      [a, b],
+      "chaque dossier une fois",
+    );
+    // Le faux claude répond selon le dossier reçu dans CLAUDE_CONFIG_DIR.
+    process.env.CLAUDE_BIN = script(
+      "claude-dirs",
+      `case "$CLAUDE_CONFIG_DIR" in "${a}") echo '[{"sessionId":"1","status":"idle"},{"sessionId":"2","status":"busy"}]';; "${b}") echo '[{"sessionId":"2","status":"busy"},{"sessionId":"3","status":"idle"}]';; *) echo '[]';; esac`,
+    );
+    assert.deepEqual((await listClaude())?.map((s) => s.sessionId).sort(), ["1", "2", "3"]);
+    delete process.env.CLAUDE_CONFIG_DIR;
+    delete process.env.AGENTS_CLAUDE_CONFIG_DIRS;
+  });
+
   it("orca : branche, agents Claude, terminaux par volet ; en échec : null puis pas d'insistance", async () => {
     const ps = {
       result: {
@@ -40,8 +70,18 @@ describe("sources des agents", () => {
           {
             path: "/w/p",
             branch: "refs/heads/feat/x",
+            linkedGitLabMR: 394,
+            linkedItems: [{ provider: "jira", jiraIdentifier: "SQOOL-1" }],
             agents: [
-              { agentType: "claude", paneKey: "t:l", toolName: "Edit", lastAssistantMessage: "ok", structuredHostOwned: null },
+              {
+                agentType: "claude",
+                state: "done",
+                workingMode: "monitoring",
+                paneKey: "t:l",
+                toolName: "Edit",
+                lastAssistantMessage: "ok",
+                structuredHostOwned: null,
+              },
               { agentType: "codex", paneKey: "autre" },
             ],
           },
@@ -55,13 +95,46 @@ describe("sources des agents", () => {
     );
     const info = await listOrca();
     assert.deepEqual(info?.worktrees, [
-      { path: "/w/p", branch: "feat/x", agents: [{ paneKey: "t:l", toolName: "Edit", lastMessage: "ok", structured: false }] },
+      {
+        path: "/w/p",
+        branch: "feat/x",
+        ticket: "SQOOL-1",
+        mr: 394,
+        agents: [{ paneKey: "t:l", state: "done", monitoring: true, toolName: "Edit", lastMessage: "ok", structured: false }],
+      },
     ]);
     assert.equal(info?.handles.get("t:l"), "term_1");
     process.env.ORCA_BIN = script("orca-ko", "exit 1");
     assert.equal(await listOrca(), null);
     process.env.ORCA_BIN = script("orca-ok2", `echo '${JSON.stringify(ps)}'`);
     assert.equal(await listOrca(), null, "Orca vient d'échouer : pas de nouvel essai avant 30 s");
+  });
+
+  it("journal de la session : dernier titre automatique et dernière MR, lignes coupées ignorées", async () => {
+    const lines = [
+      '"aiTitle":"début coupé"}',
+      JSON.stringify({ type: "ai-title", aiTitle: "Ancien titre", sessionId: "x" }),
+      JSON.stringify({ type: "pr-link", prNumber: 61, prUrl: "u" }),
+      JSON.stringify({ type: "user", message: "« ai-title » dans un message" }),
+      JSON.stringify({ type: "ai-title", aiTitle: "Agents Claude : première version V1", sessionId: "x" }),
+      JSON.stringify({ type: "pr-link", prNumber: 74, prUrl: "u" }),
+    ];
+    assert.deepEqual(readTranscriptTail(lines.join("\n")), { title: "Agents Claude : première version V1", mr: 74 });
+    assert.deepEqual(readTranscriptTail("rien"), { title: null, mr: null });
+    assert.equal(projectSlug("/Users/a/orca/workspaces/x.y"), "-Users-a-orca-workspaces-x-y");
+
+    const id = "0c83ea11-b00b-4d90-a5ad-a1c9b717f12c";
+    const cfg = fs.mkdtempSync(path.join(dir, "cfg-t-"));
+    process.env.CLAUDE_CONFIG_DIR = cfg;
+    const file = path.join(cfg, "projects", projectSlug("/w/p"), `${id}.jsonl`);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, lines.join("\n") + "\n");
+    assert.deepEqual(await transcriptInfo(id, "/w/p", null), { title: "Agents Claude : première version V1", mr: 74 });
+    // La suite du journal sans titre : on garde le dernier connu.
+    fs.appendFileSync(file, JSON.stringify({ type: "assistant", text: "x".repeat(300 * 1024) }) + "\n");
+    assert.deepEqual(await transcriptInfo(id, "/w/p", null), { title: "Agents Claude : première version V1", mr: 74 });
+    assert.equal(await transcriptInfo("pas-un-id", "/w/p", null), null);
+    delete process.env.CLAUDE_CONFIG_DIR;
   });
 
   it("devant Claude : Orca et les terminaux, pas un navigateur", async () => {

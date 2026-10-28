@@ -1,15 +1,16 @@
-﻿# Paquet Windows testé de bout en bout sur un vrai PC (job install-windows, runner local-runner, ou à la main) :
-# installeur en mode silencieux, lancement automatique, backend qui répond, sanity, pilote, désinstallation propre.
+﻿# Installeur Windows testé de bout en bout sur un vrai PC (job install-windows, runner local-runner, ou à la main) :
+# installeur NSIS en mode silencieux, entrée de Programmes et fonctionnalités, lancement automatique, backend qui
+# répond, sanity, pilote, désinstalleur.
 #
-#   powershell -NoProfile -ExecutionPolicy Bypass -File backend\qa\install-windows.ps1 -Zip dist\Compagnon-Unowhy-Windows.zip
+#   powershell -NoProfile -ExecutionPolicy Bypass -File backend\qa\install-windows.ps1 -Installeur dist\Compagnon-Unowhy-Windows.exe
 #   powershell -NoProfile -ExecutionPolicy Bypass -File backend\qa\install-windows.ps1 -Nettoyage   (after_script)
 #
 # Le PC sert à d'autres tests : tout est propre au test (port, DATA_DIR, journaux, LOCALAPPDATA, clé Run
-# « UnowhyCompanionCI »), sous un seul dossier supprimé à la fin, et rien ne s'affiche (COMPANION_HEADLESS).
+# et entrée de désinstallation « UnowhyCompanionCI »), sous un seul dossier supprimé à la fin, et rien ne s'affiche (COMPANION_HEADLESS).
 # Un compagnon déjà installé n'est pas touché.
 # Windows PowerShell 5.1 ou PowerShell 7. Script de CI : le compagnon, lui, ne lance jamais de PowerShell (antivirus).
 param(
-  [string] $Zip,
+  [string] $Installeur,
   [switch] $Nettoyage,
   [string] $Root = (Join-Path $env:TEMP "compagnon-ci"),
   [int] $Port = 3917,
@@ -26,6 +27,8 @@ $backend = Join-Path $pkg "backend"
 $node = Join-Path $backend "node\node.exe"
 $base = "http://127.0.0.1:$Port"
 $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+$uninstallKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\$Name"
+$uninstaller = Join-Path $pkg "Desinstaller.exe"
 
 # Hérité par l'installeur, le lanceur, le serveur et le pilote.
 $env:PORT = "$Port"
@@ -34,7 +37,7 @@ $env:DATA_DIR = Join-Path $Root "data"
 $env:DOCS_DIR = Join-Path $Root "partage"
 $env:LOCALAPPDATA = Join-Path $Root "localappdata"   # copies du pilote
 $env:COMPANION_LOG_DIR = Join-Path $Root "logs"
-$env:COMPANION_LABEL = $Name       # valeur de la clé Run propre au test
+$env:COMPANION_LABEL = $Name       # valeur de la clé Run et entrée de désinstallation propres au test
 # Ni boîte du code d'appairage (lu sur la page locale par la sanity), ni page, ni raccourci, ni document ouvert.
 $env:COMPANION_HEADLESS = "1"
 New-Item -ItemType Directory -Force $env:LOCALAPPDATA | Out-Null
@@ -45,6 +48,14 @@ function RunValue { (Get-ItemProperty $runKey -Name $Name -ErrorAction SilentlyC
 # Processus du test seulement : ceux qui tournent depuis le dossier du test.
 function Leftovers {
   @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($Root, "OrdinalIgnoreCase") })
+}
+# Appli graphique (installeur, désinstalleur) : attendre sa fin et rendre son code. Pas Start-Process -Wait, qui
+# attend aussi les descendants : le compagnon lancé par l'installeur ne se termine jamais.
+function RunSetup([string] $exe, [string] $arguments) {
+  $p = Start-Process -FilePath $exe -ArgumentList $arguments -PassThru
+  $null = $p.Handle   # sans lui, ExitCode reste vide une fois le processus fini
+  $p.WaitForExit()
+  $p.ExitCode
 }
 function Uninstall {
   if (Test-Path (Join-Path $backend "dist\service.mjs")) {
@@ -59,31 +70,34 @@ if ($Nettoyage) {
   Leftovers | Stop-Process -Force -ErrorAction SilentlyContinue
   Start-Sleep -Seconds 1
   if (RunValue) { Remove-ItemProperty $runKey -Name $Name }
+  if (Test-Path $uninstallKey) { Remove-Item $uninstallKey -Recurse }
   if (Test-Path $Root) { Remove-Item -Recurse -Force $Root }
-  Write-Host "Nettoyage : $Root et clé Run $Name retirés"
+  Write-Host "Nettoyage : $Root, clé Run et entrée de désinstallation $Name retirés"
   exit 0
 }
 
-if (-not $Zip) { throw "-Zip <paquet Windows> attendu (ou -Nettoyage)" }
-$Zip = Full $Zip
+if (-not $Installeur) { throw "-Installeur <Compagnon-Unowhy-Windows.exe> attendu (ou -Nettoyage)" }
+$Installeur = Full $Installeur
 $Junit = Full $Junit
 $Logs = Full $Logs
 $sanity = Join-Path $PSScriptRoot "sanity.ts"
 $sanityCode = 0
 try {
-  Step "Paquet"
+  Step "Installation silencieuse"
   if (Health) { throw "le port $Port est déjà pris" }
   if (Test-Path $pkg) { Remove-Item -Recurse -Force $pkg }
-  Expand-Archive $Zip $Root
-  $installer = Join-Path $pkg "Installer (Windows).cmd"
-  foreach ($f in @($installer, $node, (Join-Path $backend "dist\server.mjs"), (Join-Path $backend "src\win\UnowhyHelper.exe"))) {
-    if (-not (Test-Path $f)) { throw "absent du paquet : $f" }
+  # /D en dernier, sans guillemets.
+  $code = RunSetup $Installeur "/S /D=$pkg"
+  if ($code -ne 0) { throw "l'installeur a échoué (code $code)" }
+  foreach ($f in @($uninstaller, $node, (Join-Path $backend "dist\server.mjs"), (Join-Path $backend "src\win\UnowhyHelper.exe"))) {
+    if (-not (Test-Path $f)) { throw "absent après l'installation : $f" }
   }
   "node $(& $node --version), PowerShell $($PSVersionTable.PSVersion)"
 
-  Step "Installation silencieuse"
-  & $installer /silencieux
-  if ($LASTEXITCODE -ne 0) { throw "l'installeur a échoué (code $LASTEXITCODE)" }
+  Step "Programmes et fonctionnalités"
+  $entry = Get-ItemProperty $uninstallKey -ErrorAction SilentlyContinue
+  if (-not $entry -or $entry.InstallLocation -ne $pkg) { throw "entrée de désinstallation $Name absente ou inattendue" }
+  "$($entry.DisplayName) $($entry.DisplayVersion) : $($entry.UninstallString)"
 
   Step "Lancement automatique"
   $run = RunValue
@@ -110,15 +124,18 @@ try {
   "pilote $($helper[0].Id) : $(@($open.apps).Count) applis ouvertes sur $(@($open.displays).Count) écrans, volume $($audio.output)"
 
   Step "Désinstallation"
-  Uninstall
-  if ($LASTEXITCODE -ne 0) { throw "désinstallation : code $LASTEXITCODE" }
+  # _? : le désinstalleur tourne sur place (sinon il se recopie et rend la main tout de suite).
+  $code = RunSetup $uninstaller "/S _?=$pkg"
+  if ($code -ne 0) { throw "désinstallation : code $code" }
   $deadline = (Get-Date).AddSeconds(30)
   while (((Health) -or @(Leftovers).Count) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
   if (Health) { throw "le compagnon répond encore après la désinstallation" }
   $left = @(Leftovers)
   if ($left.Count) { throw "processus restants : $(($left | ForEach-Object { "$($_.Name) ($($_.Id))" }) -join ', ')" }
   if (RunValue) { throw "clé Run $Name encore présente" }
-  "lancement automatique et processus retirés"
+  if (Test-Path $uninstallKey) { throw "entrée de désinstallation $Name encore présente" }
+  if (Test-Path $backend) { throw "dossier encore présent : $backend" }
+  "lancement automatique, processus, entrée de désinstallation et fichiers retirés"
 
   if ($sanityCode -ne 0) { throw "sanity en échec (voir plus haut)" }
   Write-Host "`nInstallation Windows : OK"

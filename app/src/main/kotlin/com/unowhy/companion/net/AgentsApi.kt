@@ -44,9 +44,17 @@ data class AgentSession(
     val resumeArmed: Boolean = false,
     /** Demande à laquelle la tablette peut répondre (permission ou question), tenue ouverte par l'ordinateur. */
     val askId: String? = null,
+    /** Titre automatique que Claude donne à la session (sinon son nom), type d'agent, ticket et MR liés. */
+    val title: String = name,
+    val agent: String = "claude",
+    val ticket: String? = null,
+    val mr: Int? = null,
+    /** Travaille sur une tâche de fond (surveillance d'un pipeline), comme Orca l'affiche. */
+    val monitoring: Boolean = false,
 )
 
-data class AgentCounts(val working: Int, val waiting: Int, val done: Int, val limit: Int, val idle: Int)
+/** `monitoring` : sessions qui surveillent une tâche de fond, comptées à part de `working`. */
+data class AgentCounts(val working: Int, val waiting: Int, val done: Int, val limit: Int, val idle: Int, val monitoring: Int = 0)
 
 /** Part utilisée d'une fenêtre de quota (%) et sa fin (heure de l'ordinateur), si connue. */
 data class QuotaWindow(val used: Int, val resetsAt: Long?)
@@ -178,10 +186,16 @@ internal fun parseAgents(text: String): AgentsState {
                 resumeAt = if (s.isNull("resumeAt")) null else s.optLong("resumeAt"),
                 resumeArmed = s.optBoolean("resumeArmed"),
                 askId = s.optStringOrNull("askId"),
+                title = s.optStringOrNull("title") ?: s.getString("name"),
+                agent = s.optStringOrNull("agent") ?: "claude",
+                ticket = s.optStringOrNull("ticket"),
+                mr = if (s.isNull("mr") || !s.has("mr")) null else s.optInt("mr"),
+                monitoring = s.optBoolean("monitoring"),
             )
         },
         counts = AgentCounts(
             counts.optInt("working"), counts.optInt("waiting"), counts.optInt("done"), counts.optInt("limit"), counts.optInt("idle"),
+            counts.optInt("monitoring"),
         ),
         total = json.optInt("total", list.length()),
         hooks = json.optBoolean("hooks"),

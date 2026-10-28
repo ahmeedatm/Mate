@@ -31,6 +31,7 @@ describe("appels entrants (Mac)", () => {
     calls.length = 0;
     state.windows = {};
     state.buttons = {};
+    delete state.accessibility;
   });
 
   it("signale la sonnerie de Teams à ses boutons, puis la fin", async () => {
@@ -46,6 +47,13 @@ describe("appels entrants (Mac)", () => {
     state.buttons = { [TEAMS]: ["Envoyer", "Accepter"] };
     await tick();
     assert.deepEqual(events.at(-1), { state: "ended", app: TEAMS, caller: "Eugénie HARINIAINA", video: true });
+  });
+
+  it("sans Accessibilité, Teams n'est pas lu : macOS ne demande rien au compagnon", async () => {
+    state.accessibility = false;
+    state.buttons = { [TEAMS]: ["Accepter avec la vidéo", "Accepter avec l'audio", "Refuser l'appel"] };
+    await tick();
+    assert.deepEqual(events, []);
   });
 
   it("les règles Windows ne s'appliquent pas", async () => {
