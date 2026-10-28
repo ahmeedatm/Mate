@@ -24,6 +24,7 @@ import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
 import com.unowhy.companion.kiosk.AutoUpdater
 import com.unowhy.companion.kiosk.Kiosk
+import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.Link
 import com.unowhy.companion.remote.RemoteLink
@@ -55,6 +56,7 @@ import com.unowhy.companion.ui.home.LinkWatch
 import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.voice.VoiceControl
+import kotlinx.coroutines.launch
 
 /** Les écrans qui veulent les boutons de volume de la tablette (ex. le deck pilote le son de l'ordinateur). */
 interface VolumeKeyHandler {
@@ -183,6 +185,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showLink(link: Link) {
+        if (link.state == Link.State.ONLINE && this.link.state != Link.State.ONLINE) resyncAgents()
         this.link = link
         linkWatch.onLink(link.computer?.id, link.state, System.currentTimeMillis())
         nav.showLink(link)
@@ -354,6 +357,37 @@ class MainActivity : AppCompatActivity() {
 
     /** Carte de la demande de Claude (permission, questions) à laquelle la tablette peut répondre. */
     fun openAgentAsk(id: String) = agentAsk.open(id)
+
+    val agentAskOpen get() = agentAsk.isOpen
+
+    /** Demande d'agent en attente depuis avant la connexion : lumière rallumée (voir AgentAlerts.resync). */
+    private fun resyncAgents() {
+        lifecycleScope.launch {
+            val ask = runCatching { BackendClient(this@MainActivity).agents.state() }.getOrNull()?.sessions?.firstNotNullOfOrNull { it.askId }
+            agentAlerts.resync(ask)
+        }
+    }
+
+    /** Commande vocale lancée d'ailleurs que le bouton Parler (carte d'une demande d'agent). */
+    fun startVoice() = voice.start()
+
+    /**
+     * Commande vocale pour les agents Claude ; rend la phrase à afficher. Elle n'agit que sur la carte ouverte (on voit ce
+     * qu'on autorise) : sinon, elle ouvre la demande en attente. « continue » relance la dernière session finie qui le permet.
+     */
+    suspend fun agentVoice(action: String, choice: Int?): String {
+        if (action == "continue") {
+            val session = runCatching { BackendClient(this).agents.state() }.getOrNull()?.sessions
+                ?.firstOrNull { it.canSend && it.state == com.unowhy.companion.net.AgentState.DONE }
+                ?: return getString(R.string.agent_voice_no_session)
+            BackendClient(this).agents.send(session.id, "continue")
+            return getString(R.string.agent_sent, session.name)
+        }
+        if (agentAsk.isOpen) return agentAsk.voice(action, choice)
+        val id = agentAlerts.pendingAsk ?: return getString(R.string.agent_voice_none)
+        agentAsk.open(id)
+        return getString(R.string.agent_voice_opened)
+    }
 
     /** Deck sur l'onglet Agents. */
     fun showAgents() {

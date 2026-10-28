@@ -13,6 +13,7 @@ import android.widget.TextView
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.unowhy.companion.MainActivity
+import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.agents.Age
 import com.unowhy.companion.agents.AgentsFeed
@@ -83,7 +84,27 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         orientation = VERTICAL
         visibility = GONE
         counters.orientation = HORIZONTAL
-        addView(counters, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        counters.gravity = Gravity.CENTER_VERTICAL
+        addView(
+            LinearLayout(context).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                addView(counters, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+                // Mode privé : pour le direct, rien de ce que fait l'agent ne s'affiche (commandes, questions, résumés).
+                addView(
+                    Button(context, null, 0, R.style.Chip).apply {
+                        setText(R.string.agents_private)
+                        isSelected = Prefs.agentsPrivate(context)
+                        setOnClickListener {
+                            Prefs.setAgentsPrivate(context, !isSelected)
+                            isSelected = !isSelected
+                            signature = emptyList()
+                            AgentsFeed.last?.let(::render)
+                        }
+                    },
+                )
+            },
+            LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT),
+        )
         status.apply {
             textSize = 15f
             setTextColor(themeColor(context, R.attr.c_text_dim))
@@ -162,12 +183,13 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 stateLabel(context, s),
                 context.getString(R.string.agent_answer_hint).takeIf { s.askId != null },
                 s.workedMs?.takeIf { s.state == AgentState.DONE || s.state == AgentState.LIMIT }?.let { workedLabel(it) },
-                s.tool?.takeIf { s.state == AgentState.WORKING }?.let { context.getString(R.string.agent_tool, it) },
+                s.tool?.takeIf { s.state == AgentState.WORKING && !Prefs.agentsPrivate(context) }?.let { context.getString(R.string.agent_tool, it) },
             ).joinToString(" · ")
             setTextColor(stateColor(context, s.state))
         }
         bindActions(row, s)
-        val lines = if (s.state == AgentState.LIMIT) listOfNotNull(s.limit) + s.lines.filter { it != s.limit } else s.lines
+        val shown = if (s.state == AgentState.LIMIT) listOfNotNull(s.limit) + s.lines.filter { it != s.limit } else s.lines
+        val lines = if (Prefs.agentsPrivate(context) && shown.isNotEmpty()) listOf(context.getString(R.string.agent_private_hidden)) else shown
         row.findViewById<TextView>(R.id.agent_lines).apply {
             text = lines.joinToString("\n")
             visibility = if (lines.isEmpty()) GONE else VISIBLE

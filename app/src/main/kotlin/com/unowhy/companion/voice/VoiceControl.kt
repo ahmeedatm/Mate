@@ -277,8 +277,13 @@ class VoiceControl(
             }
             is VoiceCommand.Type -> { client.system.typeOnComputer(command.text); Answer(text(R.string.voice_typed)) }
             VoiceCommand.Help -> Answer(text(R.string.voice_help))
+            is VoiceCommand.Agent -> Answer(activity.agentVoice(command.action, command.choice))
             is VoiceCommand.Call -> {
                 val overlay = activity.callOverlay
+                // Pas d'appel, mais une demande d'agent à l'écran : « refuse » et « accepte » valent pour elle.
+                if (overlay.app == null && activity.agentAskOpen) {
+                    return Answer(activity.agentVoice(if (command.action == "decline") "deny" else "allow", null))
+                }
                 if (overlay.app == null) return Answer(text(R.string.voice_no_call), speak = true)
                 if (command.action == "decline") overlay.decline() else overlay.respond(video = command.action == "video")
                 Answer(text(R.string.voice_done))

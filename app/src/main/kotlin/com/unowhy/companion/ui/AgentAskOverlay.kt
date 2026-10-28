@@ -13,6 +13,7 @@ import android.widget.TextView
 import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.lifecycleScope
 import com.unowhy.companion.MainActivity
+import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.agents.AgentsFeed
 import com.unowhy.companion.agents.AnswerDraft
@@ -47,6 +48,9 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
     private var draft: AnswerDraft? = null
     private var page = 0
     private var busy = false
+    /** Mode privé levé pour cette demande (bouton Afficher). */
+    private var revealed = false
+    private val masked get() = Prefs.agentsPrivate(context) && !revealed
     /** Fin du délai, en horloge de la tablette (le compagnon donne le temps restant). */
     private var expiresAt = 0L
     private val card = LinearLayout(context)
@@ -86,6 +90,7 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
             draft = if (found.kind == "question") AnswerDraft(found.questions) else null
             page = 0
             busy = false
+            revealed = false
             expiresAt = SystemClock.elapsedRealtime() + found.expiresInMs
             visibility = VISIBLE
             bringToFront()
@@ -126,6 +131,19 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
             },
             LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(12) },
         )
+        // Parler sans fermer la carte (elle recouvre le bouton Parler) : « autorise », « option deux », « valide »…
+        addView(
+            androidx.appcompat.widget.AppCompatImageButton(context, null, 0).apply {
+                setImageResource(R.drawable.ic_mic)
+                setBackgroundResource(R.drawable.round_bg)
+                setPadding(dp(12), dp(12), dp(12), dp(12))
+                scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                androidx.core.widget.ImageViewCompat.setImageTintList(this, themeColorList(context, R.attr.c_text))
+                contentDescription = context.getString(R.string.voice_button)
+                setOnClickListener { activity.startVoice() }
+            },
+            LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginEnd = dp(8) },
+        )
         addView(flat(R.string.agent_ask_later) { close() })
     }
 
@@ -139,12 +157,13 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
         // Texte brut de l'agent : jamais de lien ni de mise en forme.
         val command = text(17f, R.attr.c_text).apply {
             typeface = Typeface.MONOSPACE
-            text = a.text
+            text = if (masked) context.getString(R.string.agent_private_hidden) else a.text
             setPadding(dp(16), dp(12), dp(16), dp(12))
             setBackgroundResource(R.drawable.row_bg)
             gravity = Gravity.START
         }
         card.addView(BoundedScrollView(context, dp(200)).apply { addView(command) }, params(top = 16))
+        if (masked) card.addView(revealButton(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)))
         if (a.risky) card.addView(text(15f, R.attr.c_ko, bold = true).apply { setText(R.string.agent_ask_risky) }, params(top = 12))
         val left = text(13f, R.attr.c_text_faint)
         countdown = left
@@ -192,21 +211,14 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
             },
             params(top = 8),
         )
-        card.addView(text(22f, R.attr.c_text).apply { text = q.question }, params(top = 8))
+        card.addView(text(22f, R.attr.c_text).apply { text = if (masked) context.getString(R.string.agent_private_hidden) else q.question }, params(top = 8))
+        if (masked) card.addView(revealButton(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)))
         if (q.multi) card.addView(text(14f, R.attr.c_text_dim).apply { setText(R.string.agent_ask_multi) }, params(top = 4))
         val list = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         q.options.forEachIndexed { i, o ->
-            list.addView(
-                option(o.label, o.description, selected = i in d.choices(page)) {
-                    d.toggle(page, i)
-                    // Question simple, pas la dernière : la suivante s'ouvre d'elle-même.
-                    if (!q.multi && page < d.size - 1) {
-                        page++
-                    }
-                    render()
-                },
-                params(top = 8),
-            )
+            // Masqué : les options gardent leur numéro, on peut répondre « option deux » sans rien montrer.
+            val label = if (masked) context.getString(R.string.agent_voice_choice, i + 1) else o.label
+            list.addView(option(label, if (masked) "" else o.description, selected = i in d.choices(page)) { tapOption(i) }, params(top = 8))
         }
         val other = d.other(page)
         list.addView(
@@ -232,6 +244,64 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
             },
             params(top = 12),
         )
+    }
+
+    private fun tapOption(i: Int) {
+        val a = ask ?: return
+        val d = draft ?: return
+        d.toggle(page, i)
+        // Question simple, pas la dernière : la suivante s'ouvre d'elle-même.
+        if (!a.questions[page].multi && page < d.size - 1) page++
+        render()
+    }
+
+    private fun revealButton() = flat(R.string.agent_private_show) {
+        revealed = true
+        render()
+    }
+
+    /** Commande vocale sur la carte ouverte (voir MainActivity.agentVoice) ; rend la phrase à afficher. */
+    fun voice(action: String, choice: Int?): String {
+        val a = ask ?: return context.getString(R.string.agent_voice_none)
+        if (a.kind != "question") {
+            return when (action) {
+                "allow", "send" -> if (a.risky) context.getString(R.string.agent_voice_risky) else {
+                    answerPermission(allow = true, held = false)
+                    context.getString(R.string.agent_ask_allowed)
+                }
+                "deny" -> {
+                    answerPermission(allow = false, held = false)
+                    context.getString(R.string.agent_ask_denied)
+                }
+                else -> context.getString(R.string.agent_voice_permission)
+            }
+        }
+        val d = draft ?: return context.getString(R.string.agent_voice_none)
+        return when (action) {
+            "choice" -> {
+                val n = choice ?: 0
+                if (n !in 1..a.questions[page].options.size) return context.getString(R.string.agent_voice_no_choice, n)
+                tapOption(n - 1)
+                context.getString(R.string.agent_voice_choice, n)
+            }
+            "allow", "send" -> when {
+                page == d.size - 1 && d.isComplete() -> {
+                    sendAnswers()
+                    context.getString(R.string.agent_ask_sent)
+                }
+                page < d.size - 1 && d.isAnswered(page) -> {
+                    page++
+                    render()
+                    context.getString(R.string.agent_voice_next)
+                }
+                else -> context.getString(R.string.agent_voice_pick)
+            }
+            "deny" -> {
+                close()
+                context.getString(R.string.agent_voice_later)
+            }
+            else -> context.getString(R.string.agent_voice_question)
+        }
     }
 
     private fun sendAnswers() {

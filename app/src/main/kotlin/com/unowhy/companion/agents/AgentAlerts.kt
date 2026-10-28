@@ -20,6 +20,8 @@ class AgentAlerts(
     /** Dernière demande annoncée, tant que l'ordinateur ne l'a pas retirée ; null : on ne peut que regarder. */
     private var askId: String? = null
 
+    val pendingAsk get() = askId
+
     /** Le bord allumé est touché. */
     fun onTouched() {
         val id = askId
@@ -47,6 +49,16 @@ class AgentAlerts(
                 if (light.kind == AgentLight.Kind.WAITING) light.hide()
             }
         }
+    }
+
+    /**
+     * Ordinateur (re)joint, appli relancée : une demande peut attendre depuis avant (l'ordre `waiting` est passé). La
+     * lumière se rallume, sans son ; la tablette pourra y répondre.
+     */
+    fun resync(waitingAsk: String?) {
+        if (waitingAsk == null || askId == waitingAsk) return
+        askId = waitingAsk
+        light.show(AgentLight.Kind.WAITING)
     }
 
     /** Concentration en cours : pas de son pour les bonnes nouvelles. */
