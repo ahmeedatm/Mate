@@ -339,9 +339,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         EventDialog(ctx, save, delete).show(event)
     }
 
-    /** Agenda relié : « Mes agendas » (voir, délier, en relier un autre) ; sinon droit à la page de l'ordinateur. */
     override suspend fun deckPages(force: Boolean) = pagesCache.get(force)
 
+    /** Agenda relié : « Mes agendas » (voir, délier, en relier un autre) ; sinon droit à la page de l'ordinateur. */
     override fun showCalendars() {
         if (features.linked) CalendarsDialog(requireContext(), scope, onChanged = { reloadCalendar() }, onAdd = { openAgendaSetup() }).show()
         else openAgendaSetup()

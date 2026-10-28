@@ -18,16 +18,23 @@ class DeckPagesCache(
     private var pages: List<DeckPage>? = null
     private var readAt = 0L
 
+    /** Change à chaque [invalidate] : une requête partie avant ne garde pas ses pages. */
+    @Volatile private var gen = 0
+
     suspend fun get(force: Boolean = false): List<DeckPage> = lock.withLock {
         val cached = pages
         if (!force && cached != null && clock() - readAt < ttlMs) return cached
+        val startedAt = gen
         fetch().also {
-            pages = it
-            readAt = clock()
+            if (startedAt == gen) {
+                pages = it
+                readAt = clock()
+            }
         }
     }
 
     fun invalidate() {
+        gen++
         pages = null
     }
 }

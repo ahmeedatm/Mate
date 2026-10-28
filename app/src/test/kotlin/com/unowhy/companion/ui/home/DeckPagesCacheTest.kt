@@ -82,4 +82,20 @@ class DeckPagesCacheTest {
         assertEquals(pages(2), cache.get())
         assertEquals(2, calls)
     }
+
+    @Test
+    fun `invalidate pendant une requete force une nouvelle lecture`() = runBlocking {
+        val gate = CompletableDeferred<Unit>()
+        val cache = cache {
+            val n = ++calls
+            if (n == 1) gate.await()
+            pages(n)
+        }
+        val first = async(start = CoroutineStart.UNDISPATCHED) { cache.get() }
+        cache.invalidate()
+        gate.complete(Unit)
+        assertEquals(pages(1), first.await())
+        assertEquals(pages(2), cache.get())
+        assertEquals(2, calls)
+    }
 }
