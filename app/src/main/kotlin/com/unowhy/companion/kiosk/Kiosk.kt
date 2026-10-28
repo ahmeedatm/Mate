@@ -29,6 +29,9 @@ object Kiosk {
     /** Agent de provisionnement SQOOL (dans l'image : réinstalle le MDM) et MDM : masqués tant que l'appli est device owner. */
     private val HIDDEN_PACKAGES = listOf("com.unowhy.sqoolota", "com.hisqool.devicemanager")
 
+    /** Accueil de secours d'Android (FallbackHome) : jamais masqué, il attend sur un écran vide qu'un accueil revienne. */
+    private const val FALLBACK_HOME = "com.android.settings"
+
     /**
      * Accordées d'office : en kiosque, Paramètres est inaccessible, un refus (« Ne plus demander ») serait sans retour.
      * La localisation est accordée par Wifi (exigée pour lister les réseaux).
@@ -65,11 +68,13 @@ object Kiosk {
         // Seule l'appli elle-même : la caméra passe par Camera2 (mode Caméra), plus par l'appli photo du système.
         dpm.setLockTaskPackages(admin(activity), arrayOf(activity.packageName))
         setHome(activity, true)
+        hideLaunchers(activity, true)
         if (!isLocked(activity)) activity.startLockTask()
     }
 
     fun exit(activity: Activity) {
         suspended = true
+        hideLaunchers(activity, false)
         if (isLocked(activity)) activity.stopLockTask()
     }
 
@@ -118,6 +123,21 @@ object Kiosk {
             // Paquet absent : rien à masquer.
             runCatching { dpm.setApplicationHidden(admin(context), pkg, hidden) }
         }
+    }
+
+    /**
+     * Accueils d'Android (Launcher3…) masqués pendant le kiosque : pendant une mise à jour de l'appli, Android l'arrête
+     * et affichait le sien quelques secondes, utilisable, avant que [UpdatedReceiver] la relance. Ainsi, écran vide.
+     */
+    private fun hideLaunchers(context: Context, hidden: Boolean) {
+        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        // MATCH_UNINSTALLED_PACKAGES : les accueils déjà masqués restent listés, pour les rendre visibles.
+        val launchers = context.packageManager.queryIntentActivities(home, PackageManager.MATCH_UNINSTALLED_PACKAGES)
+            .map { it.activityInfo.packageName }
+            .filter { it != context.packageName && it != FALLBACK_HOME }
+            .toSet()
+        val dpm = dpm(context)
+        for (pkg in launchers) runCatching { dpm.setApplicationHidden(admin(context), pkg, hidden) }
     }
 
     private fun setHome(context: Context, enabled: Boolean) {
