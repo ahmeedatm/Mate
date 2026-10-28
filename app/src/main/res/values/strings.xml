@@ -127,6 +127,10 @@
     <string name="deck_open_tab">Ouvertes</string>
     <string name="deck_mixer_tab">Son</string>
     <string name="deck_agents_tab">Agents</string>
+    <string name="deck_pad_tab">Pavé</string>
+    <string name="pad_hint">Un doigt pour bouger, deux pour défiler · pince pour zoomer · 3 doigts : fenêtres · touche pour cliquer</string>
+    <string name="pad_left_click">Clic gauche</string>
+    <string name="pad_right_click">Clic droit</string>
     <!-- Agents Claude Code (onglet Agents du Deck, widget, lumière de bord). -->
     <string name="agents_title">Agents Claude</string>
     <string name="agent_state_working">Travaille</string>
