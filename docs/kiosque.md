@@ -13,7 +13,12 @@ adb shell settings put global transition_animation_scale 0
 adb shell settings put global animator_duration_scale 0
 # Écran allumé tant que la tablette est branchée
 adb shell settings put global stay_on_while_plugged_in 7
+# DuraSpeed (MediaTek) coupé : sinon il arrête Companion dès qu'il passe en arrière-plan
+adb shell settings put system setting.duraspeed.enabled 0
+adb shell settings put global setting.duraspeed.enabled 0
 ```
+
+DuraSpeed est actif d'usine au niveau le plus fort (`dumpsys duraspeed config` : `PolicyLevel: 6`, nettoyage 5 min après l'extinction de l'écran, liste blanche vide). `dumpsys duraspeed addwhitelist` ne survit pas à un redémarrage, et la liste blanche durable ne se règle que depuis son écran de réglages : on le coupe. Vérifier : `adb shell dumpsys duraspeed status` → `false`, aussi après un redémarrage.
 
 L'appli **Caméra** du système n'est plus utilisée (le mode Caméra passe par Camera2) : elle peut être désactivée comme les autres.
 Ne pas désactiver Google Play Services / WebView sans tester.
