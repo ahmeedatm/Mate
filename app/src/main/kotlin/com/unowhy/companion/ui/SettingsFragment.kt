@@ -38,6 +38,7 @@ import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.Link
 import com.unowhy.companion.net.UpdateSource
 import com.unowhy.companion.net.Wifi
+import com.unowhy.companion.trial.Trial
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -62,6 +63,7 @@ class SettingsFragment : Fragment() {
     private lateinit var tabletInfo: TextView
     private lateinit var updatesStatus: TextView
     private lateinit var updates: LinearLayout
+    private lateinit var switchApp: Button
     private var installing = false
     private val main get() = requireActivity() as MainActivity
     private val adder by lazy { ComputerAdder(requireActivity(), main.lifecycleScope) { main.onComputerChanged(it) } }
@@ -88,6 +90,10 @@ class SettingsFragment : Fragment() {
         updatesStatus = view.findViewById(R.id.settings_updates_status)
         updates = view.findViewById(R.id.settings_updates)
         view.findViewById<Button>(R.id.settings_updates_check).setOnClickListener { checkUpdates() }
+        switchApp = view.findViewById(R.id.settings_switch_app)
+        switchApp.setText(if (BuildConfig.TRIAL) R.string.trial_back else R.string.trial_open)
+        switchApp.setOnClickListener { Trial.switch(requireActivity()) }
+        view.findViewById<View>(R.id.settings_trial_hint).visibility = if (BuildConfig.TRIAL) View.VISIBLE else View.GONE
         battery = view.findViewById(R.id.settings_battery)
         batteryHint = view.findViewById(R.id.settings_battery_hint)
         brightness = view.findViewById(R.id.settings_brightness)
@@ -98,6 +104,7 @@ class SettingsFragment : Fragment() {
         setUpThemes(view.findViewById(R.id.settings_themes))
         renderComputers()
         renderWifi()
+        renderSwitchApp()
 
         view.findViewById<Button>(R.id.settings_kiosk_exit).setOnClickListener {
             Kiosk.exit(requireActivity())
@@ -122,6 +129,7 @@ class SettingsFragment : Fragment() {
             renderWifi()
             renderTablet()
             renderKiosk()
+            renderSwitchApp()
             loadAutoJoin()
         }
     }
@@ -360,6 +368,11 @@ class SettingsFragment : Fragment() {
 
     // --- Mises à jour
 
+    /** Bouton vers l'autre appli (essai ou stable), seulement si elle est installée. */
+    private fun renderSwitchApp() {
+        switchApp.visibility = if (Trial.isInstalled(requireContext(), Trial.other)) View.VISIBLE else View.GONE
+    }
+
     private fun checkUpdates() {
         if (installing) return
         updatesStatus.setText(R.string.updates_checking)
@@ -511,6 +524,8 @@ class SettingsFragment : Fragment() {
         button.backgroundTintList = android.content.res.ColorStateList.valueOf(themeColor(button.context, if (ok) R.attr.c_ok else R.attr.c_ko))
         button.setText(if (ok) R.string.updates_done else R.string.updates_failed)
         button.isEnabled = !ok
+        // Essai tout juste installé : « Ouvrir l'essai » apparaît.
+        if (ok && view != null) renderSwitchApp()
     }
 
     /** Code technicien : montre la carte Kiosque (quitter, retirer, autoriser les installations). */

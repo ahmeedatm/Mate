@@ -236,7 +236,7 @@ Changement de signature : Android refuse une mise à jour signée par une autre 
 
 ### Déployer un essai depuis une MR
 
-Pour essayer l'appli d'une MR sur une tablette en kiosque, sans fusionner ni tagger. La tablette n'accepte qu'un APK signé par la clé de release, d'un `versionCode` plus grand : seul un pipeline de ref protégée voit la clé.
+Pour essayer l'appli d'une MR sur une tablette en kiosque, sans fusionner ni tagger. L'essai est une **autre appli**, `com.unowhy.companion.essai` « Companion essai », installée à côté de la stable : la stable reste device owner et kiosque, et on revient à elle sans rien réinstaller. Il doit être signé par la clé de release (même clé que la stable : sinon pas d'ordinateurs repris) : seul un pipeline de ref protégée la voit.
 
 1. Une fois : protéger les branches `essai/*` (Settings > Repository > Protected branches, Allowed to merge et Allowed to push : Maintainers).
 2. Depuis la branche de la MR, la pousser sur une branche d'essai à son numéro : `git push origin HEAD:essai/mr-<iid>`. Les commits suivants de la MR s'y poussent de la même façon. Push refusé (MR rebasée, branche protégée sans force push) : supprimer la branche dans Code > Branches, puis repousser. Supprimer aussi la branche quand l'essai est fini.
@@ -248,11 +248,15 @@ npm run updates:essai                   # compagnon lancé depuis le dépôt (ba
 DATA_DIR=paquet npm run updates:essai   # compagnon installé par paquet
 ```
 
-5. Sur la tablette : Réglages > Mises à jour > Rechercher, puis « Mettre à jour » sur la ligne « Companion · essai ». La tablette n'installe jamais un essai seule : sa vérification automatique ne prend que les releases de main (ligne « Companion · main »). Un essai plus bas que la version installée (tag posé depuis, ou essai d'une branche plus ancienne) est affiché « Pas installable » : Android refuse une version plus basse.
+5. Sur la tablette, dans la stable : Réglages > Mises à jour > Rechercher, puis « Mettre à jour » sur la ligne **Companion essai** (jamais installé seul : `AutoUpdater` ne prend que le paquet de la stable). « Ouvrir l'essai » apparaît à côté de Rechercher. L'essai démarre avec les ordinateurs de la stable, verrouillé à l'écran comme elle ; dans l'essai, Réglages > Mises à jour > « Revenir à la stable » le ferme et rouvre la stable. Un essai plus bas que l'essai installé (essai d'une branche plus ancienne) est affiché « Pas installable » : Android refuse une version plus basse.
 
-Version : `X.Y.Z-essai.N`, X.Y.Z = dernier tag de la branche, N = numéro du pipeline ; code = celui du tag + 1 + N mod 999 (`app/build.gradle.kts`), au-dessus du tag installé et sous le tag suivant. Tous les 999 pipelines, le code repart du bas : un essai peut alors être plus petit que le précédent et la tablette le refuse ; relancer un pipeline ne suffit pas, poser un tag. L'APK d'essai lit les mises à jour du serveur central dans `latest`, comme une release : la tablette repasse seule à la release suivante. Pas de retour à une version plus ancienne (Android refuse un code plus petit).
+Limites : l'essai n'est pas device owner. Mises à jour, WiFi et carte Kiosque ne s'y testent pas (ils se règlent dans la stable) ; il garde ses propres réglages (thème, Accueil) et, une fois ses ordinateurs repris, sa propre liste. Kiosque quitté dans la stable (carte Kiosque) : l'essai s'ouvre sans verrouillage.
 
-`essai-updates` dépose l'APK et son `manifest.json` dans le paquet générique `companion-updates`, version `essai`, jamais `latest` : aucune tablette ne lit ce paquet seule. Un seul essai à la fois, le dernier remplace. `npm run updates:essai` (`backend/scripts/updates.ts`) le télécharge, vérifie taille et SHA-256, puis fait comme `updates:add`. Autre paquet : `UPDATES_URL=<base>`.
+Version : `X.Y.Z-essai.N`, X.Y.Z = dernier tag de la branche, N = numéro du pipeline ; code = celui du tag + 1 + N mod 999 (`app/build.gradle.kts`). Le suffixe `-essai.N` fait l'appli d'essai (`applicationIdSuffix ".essai"`, libellé, `BuildConfig.TRIAL`) ; la CI lit paquet et libellé dans l'APK (`aapt2 dump badging`) et refuse un essai qui porterait le paquet de la stable. Un essai plus récent remplace le précédent ; tous les 999 pipelines, le code repart du bas et Android le refuse : désinstaller l'essai (carte Kiosque > Autoriser les installations, puis `adb uninstall com.unowhy.companion.essai`) ou poser un tag. Essai local sur l'émulateur : `./gradlew assembleDebug -PappVersion=0.0.3-essai.1`, à côté d'une stable debug (même clé debug).
+
+Tablette où un ancien essai (paquet de la stable, avant ce changement) a remplacé le Companion : elle repasse seule à la prochaine release, de code plus grand.
+
+`essai-updates` dépose l'APK et son `manifest.json` dans le paquet générique `companion-updates`, version `essai`, jamais `latest` : aucune tablette ne lit ce paquet seule. Un seul essai à la fois, le dernier remplace. `npm run updates:essai` (`backend/scripts/updates.ts`) le télécharge, vérifie taille et SHA-256, refuse tout paquet autre que `com.unowhy.companion.essai`, puis fait comme `updates:add` : l'essai est annoncé à côté de la stable. Autre paquet : `UPDATES_URL=<base>`.
 
 Sécurité : l'APK d'essai porte la clé de release et le deploy token des tablettes, comme une release. Les jobs ne tournent que sur une branche protégée (`$CI_COMMIT_REF_PROTECTED`, sinon pas de job), la clé n'est jamais affichée, l'artefact expire au bout d'un jour. Sur une branche `essai/*`, aucun autre job ne tourne (les tests sont ceux de la MR).
 
