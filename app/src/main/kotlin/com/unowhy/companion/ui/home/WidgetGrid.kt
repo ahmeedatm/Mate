@@ -306,19 +306,23 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private fun ownerAt(x: Float, y: Float): GestureOwner? {
         var longPress = false
         var swipe = false
+        // Vrai si un propriétaire est dans la vue : les frères du dessous restent lus tant que rien n'est trouvé
+        // (un calque transparent au-dessus d'un propriétaire ne lui prend pas le geste).
         fun walk(view: View, x: Float, y: Float): Boolean {
             if (view.visibility != View.VISIBLE) return false
             if (x < view.left || x >= view.right || y < view.top || y >= view.bottom) return false
+            var found = false
             if (view is GestureOwner) {
                 longPress = longPress || view.ownsLongPress
                 swipe = swipe || view.ownsSwipe
+                found = true
             }
             if (view is ViewGroup) {
                 val lx = x - view.left + view.scrollX
                 val ly = y - view.top + view.scrollY
-                for (i in view.childCount - 1 downTo 0) if (walk(view.getChildAt(i), lx, ly)) break
+                for (i in view.childCount - 1 downTo 0) if (walk(view.getChildAt(i), lx, ly)) { found = true; break }
             }
-            return true
+            return found
         }
         for (i in childCount - 1 downTo 0) if (walk(getChildAt(i), x, y)) break
         if (!longPress && !swipe) return null

@@ -15,6 +15,7 @@ import androidx.annotation.AttrRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.TooltipCompat
 import com.unowhy.companion.R
 import com.unowhy.companion.ui.dismissKeyboard
 import com.unowhy.companion.ui.dp
@@ -28,13 +29,15 @@ import com.unowhy.companion.ui.themeColor
  * (vide ou depuis un modèle). `current` : le profil affiché ; `onChanged(show, structure)` est appelé après chaque
  * changement, la disposition est déjà modifiée, avec le profil à afficher. `structure` : des profils ont été ajoutés,
  * déplacés ou retirés (les widgets sont à recréer) ; faux pour un renommage ou le marquage de jeu. `onEdit(index)` :
- * la boîte est fermée, le profil `index` est à afficher puis à passer en mode Modifier.
+ * la boîte est fermée, le profil `index` est à afficher puis à passer en mode Modifier. `canEdit` faux (grille
+ * étroite, sans mode Modifier) : le bouton n'est pas montré.
  */
 class ProfilesDialog(
     private val context: Context,
     private val layout: HomeLayout,
     private var current: Int,
     private val name: (Int) -> String,
+    private val canEdit: Boolean,
     private val onEdit: (Int) -> Unit,
     private val onChanged: (show: Int, structure: Boolean) -> Unit,
 ) {
@@ -103,10 +106,12 @@ class ProfilesDialog(
             }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
         val game = layout.gameProfile == i
-        addView(iconButton(R.drawable.ic_widgets, R.string.profile_edit, R.attr.c_text_dim) {
-            dialog.dismiss()
-            onEdit(i)
-        })
+        if (canEdit) {
+            addView(iconButton(R.drawable.ic_widgets, R.string.profile_edit, R.attr.c_text_dim) {
+                dialog.dismiss()
+                onEdit(i)
+            }.also { TooltipCompat.setTooltipText(it, context.getString(R.string.profile_edit)) })
+        }
         addView(iconButton(R.drawable.ic_gamepad, R.string.profile_game, if (game) R.attr.c_accent else R.attr.c_text_faint) {
             layout.setGameProfile(if (game) -1 else i)
             changed(structure = false)

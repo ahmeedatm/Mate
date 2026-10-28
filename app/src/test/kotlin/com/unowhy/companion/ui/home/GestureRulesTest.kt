@@ -37,4 +37,22 @@ class GestureRulesTest {
         assertFalse(GestureRules.allowSwipe(null, onSlider = false, narrow = true))
         assertFalse(GestureRules.allowSwipe(owner(longPress = false, swipe = false), onSlider = false, narrow = true))
     }
+
+    @Test fun `un proprietaire des deux gestes les garde tous les deux`() {
+        val o = owner(longPress = true, swipe = true)
+        assertFalse(GestureRules.allowLongPress(o, onSlider = false))
+        assertFalse(GestureRules.allowSwipe(o, onSlider = false, narrow = false))
+    }
+
+    @Test fun `un curseur sous un proprietaire garde les deux gestes`() {
+        val o = owner(longPress = false, swipe = false)
+        assertFalse(GestureRules.allowLongPress(o, onSlider = true))
+        assertFalse(GestureRules.allowSwipe(o, onSlider = true, narrow = false))
+    }
+
+    @Test fun `en mode etroit un proprietaire d'appui long le garde`() {
+        val o = owner(longPress = true, swipe = false)
+        assertFalse(GestureRules.allowLongPress(o, onSlider = false))
+        assertFalse(GestureRules.allowSwipe(o, onSlider = false, narrow = true))
+    }
 }
