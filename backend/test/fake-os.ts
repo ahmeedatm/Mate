@@ -31,6 +31,8 @@ export type FakeState = {
   running?: string[];
   inCall?: string[];
   dnd?: boolean | null;
+  /** Autorisation Accessibilité du Mac (accessibility) ; absente : accordée. */
+  accessibility?: boolean;
   /** Presse-papiers de l'ordinateur (getClipboard) ; les écritures le remplacent. Vide par défaut. */
   clipboard?: ClipboardContent;
   /** Pas de presse-papiers (session sans bureau) : getClipboard répond 503. */
@@ -261,7 +263,7 @@ export async function frontApp(): Promise<{ name: string; bundleId: string }> {
 }
 
 export async function accessibility(): Promise<boolean | null> {
-  return isMac ? true : null;
+  return isMac ? (read().accessibility ?? true) : null;
 }
 
 export async function openAccessibility() {

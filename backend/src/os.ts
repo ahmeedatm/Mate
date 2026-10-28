@@ -311,8 +311,12 @@ export async function isAppRunning(app: string): Promise<boolean> {
   return isMac ? macSystem.isAppRunning(app) : false;
 }
 
-/** Mac : le compagnon a-t-il l'autorisation Accessibilité ? null ailleurs (rien à autoriser). */
+/**
+ * Mac : le compagnon a-t-il l'autorisation Accessibilité ? null ailleurs (rien à autoriser). Instance de test : non,
+ * sans demander à macOS, car la question seule ajoute son node à la liste de Réglages Système (un par job).
+ */
 export async function accessibility(): Promise<boolean | null> {
+  if (isMac && headless) return false;
   return isMac ? macAccess.accessibilityTrusted() : null;
 }
 
