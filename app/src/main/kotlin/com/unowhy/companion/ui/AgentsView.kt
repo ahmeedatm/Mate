@@ -22,6 +22,7 @@ import com.unowhy.companion.agents.Waiting
 import com.unowhy.companion.agents.age
 import com.unowhy.companion.agents.columnCounts
 import com.unowhy.companion.agents.columnOf
+import com.unowhy.companion.agents.daysUntil
 import com.unowhy.companion.agents.elapsedMs
 import com.unowhy.companion.agents.waitingKind
 import com.unowhy.companion.net.AgentSession
@@ -87,6 +88,8 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private val rows = LinkedHashMap<String, View>()
     private var signature: List<Any?> = emptyList()
     private val clock = SimpleDateFormat("H 'h' mm", Locale.FRENCH)
+    private val weekday = SimpleDateFormat("EEEE", Locale.FRENCH)
+    private val dateDay = SimpleDateFormat("d MMMM", Locale.FRENCH)
     private var observer: ((AgentsFeed.Snapshot) -> Unit)? = null
     private lateinit var owner: LifecycleOwner
 
@@ -98,7 +101,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         addView(
             LinearLayout(context).apply {
                 gravity = Gravity.CENTER_VERTICAL
-                // Quota du compte à gauche (caché sans statusline), mode privé à droite.
+                // Usage Claude du compte à gauche (caché tant qu'il est inconnu), mode privé à droite.
                 addView(quota, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
                 // Mode privé : pour le direct, rien de ce que fait l'agent ne s'affiche (commandes, questions, résumés).
                 addView(
@@ -203,7 +206,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             return
         }
         showHeaders(columnCounts(state.counts))
-        showQuota(state.quota)
+        showQuota(state.quota, state.now)
         status.text = when {
             state.sessions.isEmpty() -> context.getString(R.string.agents_empty)
             !state.hooks -> context.getString(R.string.agents_hooks_hint)
@@ -313,46 +316,99 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             .showImmersive()
     }
 
-    /** Quota du compte (5 h, 7 j) : barre, pourcentage et heure de reprise ; caché tant que la statusline ne le donne pas. */
-    private fun showQuota(q: com.unowhy.companion.net.AgentQuota?) {
+    /**
+     * Usage Claude du compte (5 h, 7 j) : une jauge par fenêtre, pourcentage, barre et heure de reprise, puis l'âge de la
+     * lecture si elle date. Caché tant qu'aucune source (Orca, statusline) ne l'a donné. `now` = heure de l'ordinateur.
+     */
+    private fun showQuota(q: com.unowhy.companion.net.AgentQuota?, now: Long) {
         quota.removeAllViews()
         val windows = listOfNotNull(q?.fiveHour?.let { R.string.agent_quota_5h to it }, q?.sevenDay?.let { R.string.agent_quota_7d to it })
         quota.visibility = if (windows.isEmpty()) INVISIBLE else VISIBLE
-        for ((label, w) in windows) {
-            val color = themeColor(
-                context,
-                when {
-                    w.used >= 100 -> R.attr.c_agent_limit
-                    w.used >= 80 -> R.attr.c_agent_wait
-                    else -> R.attr.c_agent_done
-                },
-            )
+        if (q == null || windows.isEmpty()) return
+        quota.addView(
+            TextView(context).apply {
+                setText(R.string.agent_quota_title)
+                textSize = 15f
+                typeface = themeFont(context, R.attr.c_font_medium)
+                setTextColor(themeColor(context, R.attr.c_text))
+                setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_claude, 0, 0, 0)
+                compoundDrawablePadding = dp(8)
+                gravity = Gravity.CENTER_VERTICAL
+            },
+            LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(24) },
+        )
+        for ((label, w) in windows) quota.addView(meter(label, w, now), LayoutParams(dp(220), LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(24) })
+        // Orca ou la statusline n'ont pas relu depuis un moment : le dire plutôt que montrer un chiffre comme s'il était frais.
+        if (q.ageMs >= 10 * 60_000) {
             quota.addView(TextView(context).apply {
-                setText(label)
-                textSize = 14f
+                text = context.getString(R.string.agent_quota_age, ageLabel(context, q.ageMs))
+                textSize = 13f
                 setTextColor(themeColor(context, R.attr.c_text_dim))
             })
-            quota.addView(
+        }
+    }
+
+    /** Une fenêtre de quota : nom et pourcentage, barre, heure de reprise (jour en plus si ce n'est pas aujourd'hui). */
+    private fun meter(label: Int, w: com.unowhy.companion.net.QuotaWindow, now: Long): View {
+        val used = w.used.coerceIn(0, 100)
+        val color = themeColor(
+            context,
+            when {
+                used >= 100 -> R.attr.c_agent_limit
+                used >= 80 -> R.attr.c_agent_wait
+                else -> R.attr.c_agent_done
+            },
+        )
+        val dim = themeColor(context, R.attr.c_text_dim)
+        return LinearLayout(context).apply {
+            orientation = VERTICAL
+            addView(
+                LinearLayout(context).apply {
+                    gravity = Gravity.BOTTOM
+                    addView(
+                        TextView(context).apply {
+                            setText(label)
+                            textSize = 14f
+                            setTextColor(dim)
+                        },
+                        LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f),
+                    )
+                    addView(TextView(context).apply {
+                        text = context.getString(R.string.agent_quota_value, used)
+                        textSize = 22f
+                        typeface = themeFont(context, R.attr.c_font_display)
+                        setTextColor(color)
+                        includeFontPadding = false
+                    })
+                },
+            )
+            addView(
                 LinearLayout(context).apply {
                     background = GradientDrawable().apply {
-                        cornerRadius = dp(3).toFloat()
+                        cornerRadius = dp(4).toFloat()
                         setColor(themeColor(context, R.attr.c_surface_raised))
                     }
-                    addView(View(context).apply { background = GradientDrawable().apply { cornerRadius = dp(3).toFloat(); setColor(color) } }, LayoutParams(0, LayoutParams.MATCH_PARENT, w.used.coerceIn(0, 100).toFloat()))
-                    addView(View(context), LayoutParams(0, LayoutParams.MATCH_PARENT, (100 - w.used.coerceIn(0, 100)).toFloat()))
+                    if (used > 0) addView(View(context).apply { background = GradientDrawable().apply { cornerRadius = dp(4).toFloat(); setColor(color) } }, LayoutParams(0, LayoutParams.MATCH_PARENT, used.toFloat()))
+                    if (used < 100) addView(View(context), LayoutParams(0, LayoutParams.MATCH_PARENT, (100 - used).toFloat()))
                 },
-                LayoutParams(dp(120), dp(6)).apply { marginStart = dp(8) },
+                LayoutParams(LayoutParams.MATCH_PARENT, dp(8)).apply { topMargin = dp(6) },
             )
             val at = w.resetsAt
-            quota.addView(
-                TextView(context).apply {
-                    text = if (at != null && w.used >= 80) context.getString(R.string.agent_quota_reset, w.used, clock.format(Date(at)))
-                    else context.getString(R.string.agent_quota_value, w.used)
-                    textSize = 14f
-                    setTextColor(color)
-                },
-                LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8); marginEnd = dp(24) },
-            )
+            if (at != null) {
+                val time = clock.format(Date(at))
+                addView(
+                    TextView(context).apply {
+                        text = when (val days = daysUntil(at, now)) {
+                            0 -> context.getString(R.string.agent_quota_reset_today, time)
+                            1 -> context.getString(R.string.agent_quota_reset_tomorrow, time)
+                            else -> context.getString(R.string.agent_quota_reset_day, (if (days < 7) weekday else dateDay).format(Date(at)), time)
+                        }
+                        textSize = 13f
+                        setTextColor(dim)
+                    },
+                    LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) },
+                )
+            }
         }
     }
 

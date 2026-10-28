@@ -2,6 +2,8 @@ package com.unowhy.companion.agents
 
 import com.unowhy.companion.net.AgentSession
 import com.unowhy.companion.net.AgentState
+import java.util.Calendar
+import java.util.TimeZone
 
 /** Ce que Claude attend, d'après `waitingFor` de `claude agents --json` (`permission prompt`, `input needed`…). */
 enum class Waiting { PERMISSION, INPUT }
@@ -25,6 +27,18 @@ fun age(ms: Long): Age {
         minutes < 60 -> Age.Minutes(minutes)
         else -> Age.Hours(minutes / 60, minutes % 60)
     }
+}
+
+/** Jours entre `now` et la reprise d'une fenêtre de quota, au calendrier (0 = aujourd'hui, 1 = demain). */
+fun daysUntil(resetsAt: Long, now: Long, zone: TimeZone = TimeZone.getDefault()): Int {
+    fun day(ms: Long) = Calendar.getInstance(zone).apply {
+        timeInMillis = ms
+        set(Calendar.HOUR_OF_DAY, 12)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+    return Math.round((day(resetsAt) - day(now)) / 86_400_000.0).toInt().coerceAtLeast(0)
 }
 
 /** Sessions à montrer dans un widget : celles qui demandent l'attention d'abord (le compagnon les trie déjà), `max` au plus. */
