@@ -150,6 +150,16 @@
             android:layout_marginTop="16dp"
             android:layout_weight="1" />
 
+        <!-- Onglet « Son » : console de mixage de l'ordinateur (sortie, micro, applis, scènes). -->
+        <com.unowhy.companion.ui.mixer.MixerView
+            android:id="@+id/deck_mixer"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"
+            android:layout_weight="1"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/deck_status"
             android:layout_width="match_parent"

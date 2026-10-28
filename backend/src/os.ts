@@ -14,7 +14,7 @@ import * as macSystem from "./mac/system.ts";
 import * as macWindows from "./mac/windows.ts";
 import * as win from "./win/index.ts";
 import { checkOpenTarget } from "./open-guard.ts";
-import type { AudioChange, Layout, MediaCommand, OpenAction, SystemCommand, WindowTarget } from "./screens.ts";
+import type { AudioChange, Layout, MediaCommand, MixerChange, OpenAction, SystemCommand, WindowTarget } from "./screens.ts";
 
 /**
  * Pilotage de l'ordinateur, une seule interface pour macOS (src/mac/) et Windows (src/win/).
@@ -177,6 +177,13 @@ export function browserTabs() {
   if (isMac) return macBrowser.browserTabs();
   // Windows : envoyés par l'extension du navigateur ; undefined si elle n'est pas installée (ou le navigateur fermé).
   if (isWindows) return extensionTabs();
+  unsupported();
+}
+
+/** Mélangeur de l'onglet Son : sortie, micro, et volume par appli sur Windows ; `change` appliqué avant la lecture. */
+export function mixer(change?: MixerChange) {
+  if (isWindows) return win.mixer(change);
+  if (isMac) return macAudio.mixer(change);
   unsupported();
 }
 

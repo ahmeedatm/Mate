@@ -4,7 +4,17 @@ import org.json.JSONObject
 
 /** `app` : nom de l'appli du Mac (tuile d'appli). */
 /** `whenState` : touche d'une page d'appli d'appel, montrée seulement en appel (`call`), hors appel (`idle`), pendant un partage d'écran (`streaming`), en appel sans partage (`share`) ou sur l'écran d'avant-réunion (`lobby`). */
-data class DeckTile(val id: String, val label: String, val type: String, val glyph: String?, val color: String?, val app: String? = null, val whenState: String? = null)
+/** `lit` : touche allumée quand le micro est coupé (`muted`) ou le casque en sourdine (`deafened`). */
+data class DeckTile(
+    val id: String,
+    val label: String,
+    val type: String,
+    val glyph: String?,
+    val color: String?,
+    val app: String? = null,
+    val whenState: String? = null,
+    val lit: String? = null,
+)
 /** Appel en cours dans une appli (Discord) : salon, participants vus, micro et sourdine (null : inconnu). */
 /** `lobby` : écran d'avant-réunion de Teams (« Rejoindre maintenant »), pas encore dans la réunion. */
 data class VoiceState(val connected: Boolean, val channel: String?, val people: List<String>, val muted: Boolean?, val deafened: Boolean?, val streaming: Boolean = false, val lobby: Boolean = false)
@@ -49,7 +59,7 @@ class DeckApi(private val http: Http) {
             val tiles = p.getJSONArray("tiles")
             DeckPage(p.getString("title"), (0 until tiles.length()).map { j ->
                 val t = tiles.getJSONObject(j)
-                DeckTile(t.getString("id"), t.getString("label"), t.getString("type"), t.optStringOrNull("glyph"), t.optStringOrNull("color"), t.optStringOrNull("app"), t.optStringOrNull("when"))
+                DeckTile(t.getString("id"), t.getString("label"), t.getString("type"), t.optStringOrNull("glyph"), t.optStringOrNull("color"), t.optStringOrNull("app"), t.optStringOrNull("when"), t.optStringOrNull("lit"))
             }, p.optBoolean("editable"), p.optBoolean("apps"), p.optBoolean("meeting"), p.optStringOrNull("app"), p.optBoolean("media"))
         }
     }

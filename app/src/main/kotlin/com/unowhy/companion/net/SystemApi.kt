@@ -17,6 +17,18 @@ data class MediaSession(
 /** Son d'une appli de l'ordinateur (mélangeur de volume de Windows) ; `level` : niveau sonore instantané, 0-100. */
 data class AppAudio(val running: Boolean, val volume: Int?, val muted: Boolean, val level: Int)
 
+/**
+ * Tranche du mélangeur (onglet Son du deck) : `id` "master" (sortie), "mic" ou une appli ("system" : sons de
+ * l'ordinateur) ; `volume` null s'il ne se pilote pas ; `level` : niveau instantané 0-100, null si illisible (Mac).
+ */
+data class MixerChannel(val id: String, val name: String, val volume: Int?, val muted: Boolean, val level: Int?)
+
+/** `apps` null : pas de volume par appli sur cet ordinateur (Mac). */
+data class MixerState(val master: MixerChannel, val mic: MixerChannel, val apps: List<MixerChannel>?)
+
+/** Scène du mélangeur : volumes de la sortie et des applis rappelés en un toucher. */
+data class MixerScene(val id: String, val name: String)
+
 /** Système de l'ordinateur : son, lecture en cours, Ne pas déranger, appels, applis, saisie, réglages. */
 class SystemApi(private val http: Http) {
 
@@ -41,6 +53,36 @@ class SystemApi(private val http: Http) {
         volume?.let { body.put("volume", it) }
         muted?.let { body.put("muted", it) }
         parseAppAudio(http.postJson("/system/audio/app", body))
+    }
+
+    // Mélangeur (onglet Son) ; HTTP 501 si l'ordinateur ne pilote pas le son.
+
+    suspend fun mixer(): MixerState = http.io { parseMixer(JSONObject(http.get("/system/mixer", timeoutMs = 5_000))) }
+
+    suspend fun setMixer(id: String, volume: Int? = null, muted: Boolean? = null): MixerState = http.io {
+        val body = JSONObject().put("id", id)
+        volume?.let { body.put("volume", it) }
+        muted?.let { body.put("muted", it) }
+        parseMixer(JSONObject(http.postJson("/system/mixer", body)))
+    }
+
+    suspend fun mixerScenes(): List<MixerScene> = http.io {
+        val scenes = JSONObject(http.get("/system/mixer/scenes")).getJSONArray("scenes")
+        (0 until scenes.length()).map { i -> scenes.getJSONObject(i).let { MixerScene(it.getString("id"), it.getString("name")) } }
+    }
+
+    /** Enregistre les volumes actuels (une scène du même nom est remplacée). */
+    suspend fun saveMixerScene(name: String): MixerScene = http.io {
+        JSONObject(http.postJson("/system/mixer/scenes", JSONObject().put("name", name))).let { MixerScene(it.getString("id"), it.getString("name")) }
+    }
+
+    suspend fun deleteMixerScene(id: String) = http.io { http.delete("/system/mixer/scenes/" + http.encode(id)) }
+
+    /** Rappelle une scène ; `second` : applis de la scène sans son en ce moment (laissées telles quelles). */
+    suspend fun applyMixerScene(id: String): Pair<MixerState, List<String>> = http.io {
+        val j = JSONObject(http.postJson("/system/mixer/scenes/" + http.encode(id) + "/apply", JSONObject()))
+        val missing = j.getJSONArray("missing")
+        parseMixer(j.getJSONObject("mixer")) to (0 until missing.length()).map { missing.getString(it) }
     }
 
     // Lecture en cours (Windows ; HTTP 501 sur Mac).
@@ -100,6 +142,20 @@ class SystemApi(private val http: Http) {
     /** Ouvre la page du compagnon sur l'ordinateur ; `section` : "agenda" pour y relier un agenda. */
     suspend fun openLocalPage(section: String? = null) = http.io {
         http.postJson("/local/open", JSONObject().apply { if (section != null) put("section", section) }); Unit
+    }
+
+    private fun parseChannel(j: JSONObject) = MixerChannel(
+        j.getString("id"), j.getString("name"),
+        if (j.isNull("volume")) null else j.getInt("volume"), j.getBoolean("muted"),
+        if (j.isNull("level")) null else j.getInt("level"),
+    )
+
+    private fun parseMixer(j: JSONObject): MixerState {
+        val apps = j.optJSONArray("apps")
+        return MixerState(
+            parseChannel(j.getJSONObject("master")), parseChannel(j.getJSONObject("mic")),
+            apps?.let { a -> (0 until a.length()).map { parseChannel(a.getJSONObject(it)) } },
+        )
     }
 
     private fun parseAudio(raw: String): AudioState {

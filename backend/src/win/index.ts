@@ -11,7 +11,7 @@ import {
   type WindowTarget,
 } from "../screens.ts";
 import { parseCombo, planAudio, sortedNames } from "../driver-common.ts";
-import type { AudioChange, AudioState, MediaCommand, SystemCommand } from "../screens.ts";
+import type { AudioChange, AudioState, MediaCommand, MixerChange, MixerState, SystemCommand } from "../screens.ts";
 
 /**
  * Pilotage de Windows (10 et 11), mêmes fonctions que les modules de src/mac/ : voir src/os.ts.
@@ -174,6 +174,11 @@ export type AppAudio = { running: boolean; volume: number | null; muted: boolean
 /** Sessions audio dont le processus porte le nom de l'appli ("Microsoft Teams" : ms-teams.exe, Teams.exe). */
 export async function appAudio(app: string, change: { volume?: number; muted?: boolean } = {}): Promise<AppAudio> {
   return call<AppAudio>("appaudio", { names: [app, simple(app)], volume: change.volume, muted: change.muted });
+}
+
+/** Mélangeur de volume : sortie, micro et une tranche par appli ; `change` appliqué avant la lecture. */
+export async function mixer(change?: MixerChange): Promise<MixerState> {
+  return call<MixerState>("mixer", change ?? {});
 }
 
 // --- Lecture en cours (contrôles multimédias de Windows)

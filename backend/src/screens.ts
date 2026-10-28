@@ -79,6 +79,15 @@ export type AudioState = {
 
 export type AudioChange = { output?: number; outputDelta?: number; muted?: boolean; micMuted?: boolean };
 
+/**
+ * Tranche du mélangeur (onglet Son du deck) : `id` "master" (sortie), "mic" ou une appli ; `volume` null s'il ne se
+ * pilote pas ; `level` : niveau sonore instantané 0-100, null si l'ordinateur ne le donne pas (Mac).
+ */
+export type MixerChannel = { id: string; name: string; volume: number | null; muted: boolean; level: number | null };
+/** `apps` null : pas de volume par appli sur cet ordinateur (Mac). */
+export type MixerState = { master: MixerChannel; mic: MixerChannel; apps: MixerChannel[] | null };
+export type MixerChange = { id: string; volume?: number; muted?: boolean };
+
 export type MediaCommand = "play-pause" | "next" | "previous";
 
 export type SystemCommand = "sleep-display" | "toggle-dark-mode" | "screenshot-clipboard" | "lock";

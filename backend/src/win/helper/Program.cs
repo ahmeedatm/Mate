@@ -244,7 +244,8 @@ namespace Companion
                             if (Match(name, "Voix connect|Voice connected")) { state["connected"] = true; phase = "channel"; }
                             else if (type == "Text") self.Add(name);
                             else if (button && Match(name, "^(Rendre muet|R.activer|Mute|Unmute)")) { state["mic"] = name; state["muted"] = ToggleState(e); }
-                            else if (button && Match(name, "sourdine|deafen")) { state["deaf"] = name; state["deafened"] = ToggleState(e); phase = "call"; }
+                            // Nom exact : en sourdine, « Soundboard est désactivé lorsqu'il est mis en sourdine » passe avant.
+                            else if (button && Match(name, "^(Mettre en sourdine|Ne plus mettre en sourdine|Deafen|Undeafen)")) { state["deaf"] = name; state["deafened"] = ToggleState(e); phase = "call"; }
                             break;
                         case "channel":
                             if (type == "Hyperlink") { state["channel"] = name; phase = "panel"; }

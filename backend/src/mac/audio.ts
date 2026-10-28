@@ -1,5 +1,5 @@
 import { planAudio } from "../driver-common.ts";
-import type { AudioChange, AudioState } from "../screens.ts";
+import type { AudioChange, AudioState, MixerChange, MixerState } from "../screens.ts";
 import { osascript } from "./run.ts";
 
 // Volume micro mémorisé pour pouvoir le rétablir après un "couper le micro".
@@ -32,6 +32,24 @@ export async function setAudio(change: AudioChange): Promise<AudioState> {
     await osascript("on run argv\nset volume input volume (item 1 of argv as integer)\nend run", [String(level)]);
   }
   return getAudio();
+}
+
+/** Mélangeur : sortie et micro seulement (macOS n'a ni volume par appli, ni niveau sonore lisible sans pilote). */
+export async function mixer(change?: MixerChange): Promise<MixerState> {
+  if (change?.id === "master") await setAudio({ output: change.volume, muted: change.muted });
+  if (change?.id === "mic") {
+    if (change.volume !== undefined) {
+      await osascript("on run argv\nset volume input volume (item 1 of argv as integer)\nend run", [String(change.volume)]);
+      if (change.volume > 0) micRestoreLevel = change.volume;
+    }
+    if (change.muted !== undefined) await setAudio({ micMuted: change.muted });
+  }
+  const audio = await getAudio();
+  return {
+    master: { id: "master", name: "master", volume: audio.output, muted: audio.muted, level: null },
+    mic: { id: "mic", name: "mic", volume: audio.micMuted ? micRestoreLevel : audio.input, muted: audio.micMuted, level: null },
+    apps: null,
+  };
 }
 
 /** Un micro du Mac est-il utilisé par une appli (en appel) ? macOS ne dit pas laquelle. */
