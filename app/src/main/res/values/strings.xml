@@ -588,7 +588,6 @@
     <string name="widget_audio_desc">Volume et micro de l\'ordi</string>
     <string name="widget_media">Lecture en cours</string>
     <string name="widget_media_desc">Musique ou vidéo de l\'ordi, avec ses commandes</string>
-    <string name="widget_media_windows_only">Disponible avec un PC Windows.</string>
     <string name="widget_keys">Touches du deck</string>
     <string name="widget_keys_title">Touches</string>
     <string name="widget_keys_desc">1 à 6 touches du Deck, à portée de main</string>
