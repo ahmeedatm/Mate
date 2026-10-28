@@ -139,6 +139,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.HERO -> HeroWidget(context, host, placed)
                 WidgetType.DAYLINE -> DayLineWidget(context, host, placed)
                 WidgetType.AGENTS -> AgentsWidget(context, host, placed)
+                WidgetType.MIXER -> MixerWidget(context, host, placed)
             }
     }
 }

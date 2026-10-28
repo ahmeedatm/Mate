@@ -32,6 +32,9 @@ import kotlin.math.max
  * de Cadran (docs/ui-ux/da). Dessinée à la main (une seule vue par tranche, rien à gonfler : la tablette est lente) ;
  * la plaque est celle de [MixerView], derrière.
  *
+ * Sous [TIGHT_DP] de hauteur (console d'un profil de l'Accueil), la tranche est resserrée : ni vis ni icône, le nom
+ * seul sur l'afficheur, le volume et Muet sur une même rangée, un capuchon plus court : le curseur garde sa course.
+ *
  * Le curseur se saisit sans sauter : glisser n'importe où dans sa colonne le déplace d'autant (pas de saut de
  * volume en touchant la piste). Un glisser de côté laisse défiler la console.
  */
@@ -106,7 +109,8 @@ class FaderStrip(context: Context) : View(context) {
     // Géométrie, calculée à la taille.
     private val pad = dp(12).toFloat()
     private val capW = dp(46).toFloat()
-    private val capH = dp(60).toFloat()
+    private var capH = dp(60).toFloat()
+    private var tight = false
     private val ledW = dp(10).toFloat()
     private val ledGap = dp(2).toFloat()
     private var ledH = 0f
@@ -116,6 +120,7 @@ class FaderStrip(context: Context) : View(context) {
     private val faderArea = RectF()
     private val muteBox = RectF()
     private var valueY = 0f
+    private var valueX = 0f
     private var travelTop = 0f
     private var travelBottom = 0f
     private var meterX = 0f
@@ -168,12 +173,26 @@ class FaderStrip(context: Context) : View(context) {
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        val iconSize = dp(32).toFloat()
-        iconBox.set(w / 2f - iconSize / 2, pad + dp(8), w / 2f + iconSize / 2, pad + dp(8) + iconSize)
-        lcd.set(pad, iconBox.bottom + dp(10), w - pad, iconBox.bottom + dp(10) + dp(32))
-        muteBox.set(pad + dp(4), h - pad - dp(48), w - pad - dp(4), h - pad)
-        valueY = muteBox.top - dp(14)
-        faderArea.set(0f, lcd.bottom + dp(18), w.toFloat(), valueY - dp(42))
+        tight = h < dp(TIGHT_DP)
+        capH = dp(if (tight) 28 else 60).toFloat()
+        valueX = w / 2f
+        if (tight) {
+            val side = dp(8).toFloat()
+            lcd.set(side, dp(6).toFloat(), w - side, dp(30).toFloat())
+            muteBox.set(w / 2f + dp(2), h - dp(42).toFloat(), w - side, h - dp(6).toFloat())
+            valueX = (side + w / 2f) / 2
+            text.typeface = light
+            text.textSize = sp(VALUE_TIGHT_SP)
+            valueY = muteBox.centerY() - (text.ascent() + text.descent()) / 2
+            faderArea.set(0f, lcd.bottom + dp(4), w.toFloat(), muteBox.top - dp(4))
+        } else {
+            val iconSize = dp(32).toFloat()
+            iconBox.set(w / 2f - iconSize / 2, pad + dp(8), w / 2f + iconSize / 2, pad + dp(8) + iconSize)
+            lcd.set(pad, iconBox.bottom + dp(10), w - pad, iconBox.bottom + dp(10) + dp(32))
+            muteBox.set(pad + dp(4), h - pad - dp(48), w - pad - dp(4), h - pad)
+            valueY = muteBox.top - dp(14)
+            faderArea.set(0f, lcd.bottom + dp(18), w.toFloat(), valueY - dp(42))
+        }
         // Graduations, curseur et vumètre centrés ensemble dans la tranche.
         val group = dp(34) + capW + dp(10) + ledW
         cx = w / 2f - group / 2 + dp(34) + capW / 2
@@ -196,10 +215,11 @@ class FaderStrip(context: Context) : View(context) {
         p.shader = null
         p.color = cHighlight
         c.drawRect(r, 1f, capW - r, dp(2).toFloat(), p)
-        val step = dp(6).toFloat()
-        var y = dp(10).toFloat()
-        while (y < capH - dp(10)) {
-            if (abs(y - capH / 2) > dp(6)) {
+        val step = dp(if (tight) 5 else 6).toFloat()
+        val edge = dp(if (tight) 4 else 10)
+        var y = edge.toFloat()
+        while (y < capH - edge + 1) {
+            if (abs(y - capH / 2) > dp(if (tight) 3 else 6)) {
                 p.color = cShadow
                 c.drawRect(dp(8).toFloat(), y, capW - dp(8), y + dp(1), p)
             }
@@ -217,35 +237,15 @@ class FaderStrip(context: Context) : View(context) {
         val h = height.toFloat()
 
         // Filet entre deux tranches (ton plus sombre puis plus clair : une rainure) et vis du module.
+        val groove = dp(if (tight) 8 else 16).toFloat()
         paint.color = cShadow
-        canvas.drawRect(w - dp(2), dp(16).toFloat(), w - dp(1), h - dp(16), paint)
+        canvas.drawRect(w - dp(2), groove, w - dp(1), h - groove, paint)
         paint.color = cHighlight
-        canvas.drawRect(w - dp(1), dp(16).toFloat(), w, h - dp(16), paint)
-        screw(canvas, pad + dp(2), pad + dp(2))
-        screw(canvas, w - pad - dp(4), pad + dp(2))
-
-        // Icône : pastille de l'afficheur, image de l'appli ou initiale.
-        paint.color = cLcdBg
-        canvas.drawCircle(iconBox.centerX(), iconBox.centerY(), iconBox.width() / 2 + dp(4), paint)
-        val bitmap = icon
-        val drawable = iconDrawable
-        when {
-            bitmap != null -> {
-                rect.set(iconBox)
-                rect.inset(dp(2).toFloat(), dp(2).toFloat())
-                canvas.drawBitmap(bitmap, null, rect, paint)
-            }
-            drawable != null -> {
-                drawable.setBounds(iconBox.left.toInt() + dp(3), iconBox.top.toInt() + dp(3), iconBox.right.toInt() - dp(3), iconBox.bottom.toInt() - dp(3))
-                drawable.draw(canvas)
-            }
-            else -> {
-                text.typeface = medium
-                text.color = cLcdText
-                text.textSize = sp(17f)
-                text.textAlign = Paint.Align.CENTER
-                canvas.drawText(title.take(1).uppercase(), iconBox.centerX(), iconBox.centerY() - (text.ascent() + text.descent()) / 2, text)
-            }
+        canvas.drawRect(w - dp(1), groove, w, h - groove, paint)
+        if (!tight) {
+            screw(canvas, pad + dp(2), pad + dp(2))
+            screw(canvas, w - pad - dp(4), pad + dp(2))
+            drawIcon(canvas)
         }
 
         // Afficheur du nom.
@@ -293,12 +293,38 @@ class FaderStrip(context: Context) : View(context) {
 
         // Volume en gros, chiffres fins (comme les valeurs de l'Accueil).
         text.typeface = light
-        text.textSize = sp(34f)
+        text.textSize = sp(if (tight) VALUE_TIGHT_SP else 34f)
         text.textAlign = Paint.Align.CENTER
         text.color = if (muted) cMuted else cText
-        canvas.drawText(if (v == null) "—" else "$v %", w / 2, valueY, text)
+        canvas.drawText(if (v == null) "—" else "$v %", valueX, valueY, text)
 
         drawMute(canvas)
+    }
+
+    private fun drawIcon(canvas: Canvas) {
+        // Pastille de l'afficheur, image de l'appli ou initiale.
+        paint.color = cLcdBg
+        canvas.drawCircle(iconBox.centerX(), iconBox.centerY(), iconBox.width() / 2 + dp(4), paint)
+        val bitmap = icon
+        val drawable = iconDrawable
+        when {
+            bitmap != null -> {
+                rect.set(iconBox)
+                rect.inset(dp(2).toFloat(), dp(2).toFloat())
+                canvas.drawBitmap(bitmap, null, rect, paint)
+            }
+            drawable != null -> {
+                drawable.setBounds(iconBox.left.toInt() + dp(3), iconBox.top.toInt() + dp(3), iconBox.right.toInt() - dp(3), iconBox.bottom.toInt() - dp(3))
+                drawable.draw(canvas)
+            }
+            else -> {
+                text.typeface = medium
+                text.color = cLcdText
+                text.textSize = sp(17f)
+                text.textAlign = Paint.Align.CENTER
+                canvas.drawText(title.take(1).uppercase(), iconBox.centerX(), iconBox.centerY() - (text.ascent() + text.descent()) / 2, text)
+            }
+        }
     }
 
     private fun drawMeter(canvas: Canvas) {
@@ -425,11 +451,14 @@ class FaderStrip(context: Context) : View(context) {
 
     private fun dpf(value: Float) = value * resources.displayMetrics.density
 
-    private companion object {
-        const val LEDS = 24
-        const val HOLD_MS = 500L
-        const val FALL_PER_MS = 0.012f
+    companion object {
+        private const val LEDS = 24
+        /** Sous cette hauteur (dp), tranche resserrée : la console d'un profil de l'Accueil. */
+        const val TIGHT_DP = 380
+        private const val VALUE_TIGHT_SP = 22f
+        private const val HOLD_MS = 500L
+        private const val FALL_PER_MS = 0.012f
         /** Volumes où le curseur « cranté » vibre en passant. */
-        val DETENTS = setOf(0, 50, 100)
+        private val DETENTS = setOf(0, 50, 100)
     }
 }
