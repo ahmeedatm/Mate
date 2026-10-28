@@ -130,6 +130,9 @@
     <!-- Agents Claude Code (onglet Agents du Deck, widget, lumière de bord). -->
     <string name="agents_title">Agents Claude</string>
     <string name="agent_state_working">Travaille</string>
+    <string name="agent_state_monitoring">Surveille une tâche de fond</string>
+    <string name="agent_kind_claude">Claude</string>
+    <string name="agent_mr">!%1$d</string>
     <string name="agent_state_done">Fini</string>
     <string name="agent_state_limit">Limite atteinte</string>
     <string name="agent_state_idle">Inactif</string>

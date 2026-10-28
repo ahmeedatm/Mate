@@ -1,7 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import { AnswerError, createAgents, type QuestionAnswer } from "../agents.ts";
 import { hookSecret, hookSecretOk } from "../agents-secret.ts";
-import { agentsAvailable, focusSession, frontIsClaude, interruptSession, listClaude, listOrca, sendText } from "../agents-sources.ts";
+import {
+  agentsAvailable,
+  focusSession,
+  frontIsClaude,
+  interruptSession,
+  listClaude,
+  listOrca,
+  sendText,
+  transcriptInfo,
+} from "../agents-sources.ts";
 import { isMac } from "../os.ts";
 import { sendToTablet, tabletStatus } from "../tablet.ts";
 
@@ -17,6 +26,7 @@ export default async function agentRoutes(app: FastifyInstance) {
   const agents = createAgents({
     listClaude,
     listOrca,
+    transcriptInfo,
     frontIsClaude: alwaysAlert ? async () => false : frontIsClaude,
     tabletConnected: () => tabletStatus().connected,
     // Prévenir la tablette sans attendre : l'alerte ne doit jamais retarder un hook.

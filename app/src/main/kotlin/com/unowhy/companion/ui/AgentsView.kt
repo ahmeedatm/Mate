@@ -29,21 +29,25 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Couleur d'un état : ambre (attend), vert (fini), bleu (limite), gris moyen (travaille), gris pâle (inactif). */
+/** Couleur d'un état, comme dans Orca : orange (travaille), rouge (attend), vert (fini), bleu (limite), gris (inactif). */
 fun stateColor(context: Context, state: AgentState): Int = themeColor(
     context,
     when (state) {
         AgentState.WAITING -> R.attr.c_agent_wait
         AgentState.DONE -> R.attr.c_agent_done
         AgentState.LIMIT -> R.attr.c_agent_limit
-        AgentState.WORKING -> R.attr.c_text_dim
+        AgentState.WORKING -> R.attr.c_agent_work
         AgentState.IDLE -> R.attr.c_text_faint
     },
 )
 
+/** Couleur d'une session : jaune quand elle surveille une tâche de fond. */
+fun sessionColor(context: Context, session: AgentSession): Int =
+    if (session.state == AgentState.WORKING && session.monitoring) themeColor(context, R.attr.c_agent_monitor) else stateColor(context, session.state)
+
 fun stateLabel(context: Context, session: AgentSession): String = context.getString(
     when (session.state) {
-        AgentState.WORKING -> R.string.agent_state_working
+        AgentState.WORKING -> if (session.monitoring) R.string.agent_state_monitoring else R.string.agent_state_working
         AgentState.WAITING -> if (waitingKind(session.waitingFor) == Waiting.PERMISSION) R.string.agent_waiting_permission else R.string.agent_waiting_input
         AgentState.DONE -> R.string.agent_state_done
         AgentState.LIMIT -> R.string.agent_state_limit
@@ -159,7 +163,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             else -> context.getString(R.string.agents_focus_hint)
         }
         status.visibility = VISIBLE
-        val sig = state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId, it.canSend, it.resumeAt, it.resumeArmed, it.canInterrupt) }
+        val sig = state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId, it.canSend, it.resumeAt, it.resumeArmed, it.canInterrupt, it.title, it.ticket, it.mr, it.monitoring) }
         if (sig != signature) {
             signature = sig
             list.removeAllViews()
@@ -182,9 +186,14 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         if (age(ms) == Age.Now) context.getString(R.string.agent_worked_short) else context.getString(R.string.agent_worked, ageLabel(context, ms))
 
     private fun bind(row: View, s: AgentSession) {
-        row.findViewById<View>(R.id.agent_dot).background = dot(context, s.state)
-        row.findViewById<TextView>(R.id.agent_name).text = s.name
-        row.findViewById<TextView>(R.id.agent_where).text = listOfNotNull(s.dir.takeIf { it != s.name }, s.branch).joinToString(" · ")
+        row.findViewById<AgentStatusIcon>(R.id.agent_status_icon).bind(s.state, s.monitoring)
+        row.findViewById<TextView>(R.id.agent_name).text = s.title
+        row.findViewById<TextView>(R.id.agent_where).text = listOfNotNull(
+            context.getString(R.string.agent_kind_claude),
+            s.ticket,
+            s.mr?.let { context.getString(R.string.agent_mr, it) },
+            s.branch ?: s.dir,
+        ).joinToString(" · ")
         row.findViewById<TextView>(R.id.agent_status).apply {
             text = listOfNotNull(
                 stateLabel(context, s),
@@ -192,7 +201,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 s.workedMs?.takeIf { s.state == AgentState.DONE || s.state == AgentState.LIMIT }?.let { workedLabel(it) },
                 s.tool?.takeIf { s.state == AgentState.WORKING && !Prefs.agentsPrivate(context) }?.let { context.getString(R.string.agent_tool, it) },
             ).joinToString(" · ")
-            setTextColor(stateColor(context, s.state))
+            setTextColor(sessionColor(context, s))
         }
         bindActions(row, s)
         val shown = if (s.state == AgentState.LIMIT) listOfNotNull(s.limit) + s.lines.filter { it != s.limit } else s.lines

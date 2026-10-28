@@ -77,12 +77,12 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
             list.addView(
                 LinearLayout(context).apply {
                     gravity = Gravity.CENTER_VERTICAL
-                    addView(View(context).apply { background = dot(context, s.state) }, LinearLayout.LayoutParams(dp(10), dp(10)))
+                    addView(com.unowhy.companion.ui.AgentStatusIcon(context).apply { bind(s.state, s.monitoring) }, LinearLayout.LayoutParams(dp(16), dp(16)))
                     addView(
-                        label(15f).apply { text = s.name; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END },
+                        label(15f).apply { text = s.title; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END },
                         LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(10) },
                     )
-                    addView(label(13f).apply { text = stateLabel(context, s); setTextColor(stateColor(context, s.state)) })
+                    addView(label(13f).apply { text = stateLabel(context, s); setTextColor(com.unowhy.companion.ui.sessionColor(context, s)) })
                 },
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) },
             )

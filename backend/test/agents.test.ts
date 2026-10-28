@@ -6,6 +6,7 @@ import {
   cut,
   isRisky,
   parseQuota,
+  ticketOf,
   parseResume,
   permissionOutput,
   summaryLines,
@@ -738,6 +739,55 @@ describe("message rapide et session devant", () => {
     await b.refresh();
     await b.focus("chat");
     assert.deepEqual(focused, ["term_1", null]);
+  });
+});
+
+describe("titre, ticket, MR, surveillance", () => {
+  it("titre automatique et MR du journal, ticket et surveillance d'Orca", async () => {
+    const a = createAgents({
+      ...deps(),
+      transcriptInfo: async (id) => (id === "s1" ? { title: "Agents Claude : première version", mr: 74 } : null),
+    });
+    await a.hook(event("UserPromptSubmit", { session_title: "agents-claude-v1-33" }), { pane: "tab:leaf" });
+    orca = {
+      worktrees: [
+        {
+          path: "/work/projet",
+          branch: "auto-test/SQOOL-12256-catalog",
+          ticket: "SQOOL-12256",
+          mr: 394,
+          agents: [{ paneKey: "tab:leaf", state: "working", monitoring: true, toolName: null, lastMessage: null, structured: false }],
+        },
+      ],
+      handles: new Map(),
+    };
+    live = [{ sessionId: "s1", cwd: "/work/projet", status: "idle" }];
+    clock += 10_000;
+    await a.refresh();
+    const s = a.list().sessions[0];
+    assert.equal(s.title, "Agents Claude : première version");
+    assert.equal(s.name, "agents-claude-v1-33");
+    assert.equal(s.agent, "claude");
+    assert.equal(s.ticket, "SQOOL-12256");
+    assert.equal(s.mr, 74, "la MR du journal, plus récente, passe devant celle du worktree");
+    assert.equal(s.state, "working");
+    assert.equal(s.monitoring, true);
+  });
+
+  it("sans titre : le nom ; sans Orca : le ticket lu dans la branche", async () => {
+    const a = createAgents(deps());
+    await a.hook(event("UserPromptSubmit", { session_title: "ma-session" }), {});
+    const s = a.list().sessions[0];
+    assert.equal(s.title, "ma-session");
+    assert.equal(s.ticket, null);
+    assert.equal(s.monitoring, false);
+  });
+
+  it("ticketOf : clé Jira dans la branche", () => {
+    assert.equal(ticketOf("auto-test/SQOOL-12256-catalog-settings"), "SQOOL-12256");
+    assert.equal(ticketOf("feat/QA-12_x"), "QA-12");
+    assert.equal(ticketOf("feat/agents-claude"), null);
+    assert.equal(ticketOf(null), null);
   });
 });
 

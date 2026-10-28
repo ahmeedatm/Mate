@@ -107,6 +107,26 @@ class AgentsLogicTest {
     }
 
     @Test
+    fun `lit le titre automatique le ticket la MR et la surveillance`() {
+        val state = parseAgents(
+            """{"sessions":[{"id":"s1","name":"sqool-12256-78","title":"SQOOL-12256 paramètres à automatiser","agent":"claude","ticket":"SQOOL-12256","mr":394,
+              "monitoring":true,"dir":"SQOOL-12256","branch":"auto-test/SQOOL-12256","state":"working","since":1,"lines":[],"canFocus":true},
+              {"id":"s2","name":"autre","dir":"autre","branch":null,"state":"idle","since":1,"lines":[]}],
+              "counts":{"working":1},"total":2,"hooks":false,"now":1}""",
+        )
+        val (orca, plain) = state.sessions
+        assertEquals("SQOOL-12256 paramètres à automatiser", orca.title)
+        assertEquals("SQOOL-12256", orca.ticket)
+        assertEquals(394, orca.mr)
+        assertTrue(orca.monitoring)
+        assertEquals("claude", orca.agent)
+        assertEquals("autre", plain.title)
+        assertNull(plain.mr)
+        assertNull(plain.ticket)
+        assertFalse(plain.monitoring)
+    }
+
+    @Test
     fun `un etat inconnu est inactif`() {
         assertEquals(AgentState.IDLE, AgentState.of("autre"))
         assertEquals(AgentState.IDLE, AgentState.of(null))
