@@ -73,18 +73,19 @@
                 android:contentDescription="@string/profile_prev"
                 android:src="@drawable/ic_chevron_left" />
 
-            <LinearLayout
+            <!-- Nom en haut ; zone des pastilles (48dp de haut) collée en bas : elle déborde sur le bas du nom, le point reste à 8dp. -->
+            <FrameLayout
                 android:id="@+id/home_profile_title"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="vertical">
+                android:layout_weight="1">
 
                 <TextView
                     android:id="@+id/home_profile_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_gravity="top|center_horizontal"
+                    android:layout_marginTop="4dp"
                     android:ellipsize="end"
                     android:fontFamily="?attr/c_font_title"
                     android:maxLines="1"
@@ -95,10 +96,11 @@
                 <LinearLayout
                     android:id="@+id/home_dots"
                     android:layout_width="wrap_content"
-                    android:layout_height="12dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="bottom|center_horizontal"
                     android:gravity="center"
                     android:orientation="horizontal" />
-            </LinearLayout>
+            </FrameLayout>
 
             <ImageButton
                 android:id="@+id/home_profile_next"

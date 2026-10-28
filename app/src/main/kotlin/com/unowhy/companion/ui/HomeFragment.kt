@@ -6,6 +6,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -63,6 +64,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     /** Aucun ordinateur appairé : les widgets qui en ont besoin proposent de le connecter. */
     private var noComputer = false
     private var loop: Job? = null
+    /** Chargement du profil qu'on vient d'ouvrir : annulé dès qu'on en ouvre un autre. */
+    private var profileLoad: Job? = null
     /** Entre onStart et onStop (l'état du cycle de vie n'y est pas encore STARTED). */
     private var started = false
     /** « Relier Outlook / Google » touché : l'agenda relié sur l'ordinateur apparaît dans la minute. */
@@ -349,13 +352,19 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         layout.names.getOrNull(index)
             ?: if (index == 0) getString(R.string.profile_first) else getString(R.string.profile_default, index + 1)
 
-    /** Affiche le profil [index] et charge tout de suite ses widgets. */
+    /** Affiche le profil [index] et charge tout de suite ses widgets (le chargement du profil quitté est annulé). */
     fun showProfile(index: Int) {
+        profileLoad?.cancel()
+        displayProfile(index)
+        profileLoad = scope.launch { shownWidgets().forEach { it.load() } }
+    }
+
+    /** Titre, pastilles et widgets actifs, sans rien relire de l'ordinateur. */
+    private fun displayProfile(index: Int) {
         page = index.coerceIn(0, layout.pages - 1)
         grid.page = page
         renderProfileBar()
         activate()
-        scope.launch { shownWidgets().forEach { it.load() } }
     }
 
     /** Profils ajoutés, renommés, déplacés ou retirés : widgets recréés, disposition enregistrée, barre relue. */
@@ -374,13 +383,16 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         dots.removeAllViews()
         dots.visibility = if (layout.pages > 1) View.VISIBLE else View.GONE
         for (i in 0 until layout.pages) {
-            dots.addView(View(requireContext()).apply {
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(themeColor(context, if (i == page) R.attr.c_accent else R.attr.c_text_faint))
-                }
+            // Point de 8dp dans une zone de toucher de 32 x 48dp.
+            dots.addView(FrameLayout(requireContext()).apply {
                 setOnClickListener { showProfile(i) }
-            }, LinearLayout.LayoutParams(dp(8), dp(8)).apply { marginStart = dp(4); marginEnd = dp(4) })
+                addView(View(context).apply {
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(themeColor(context, if (i == page) R.attr.c_accent else R.attr.c_text_faint))
+                    }
+                }, FrameLayout.LayoutParams(dp(8), dp(8), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dp(4) })
+            }, LinearLayout.LayoutParams(dp(32), dp(48)))
         }
     }
 
@@ -410,7 +422,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             return
         }
         HomeLayout.save(requireContext(), layout, cadran)
-        showProfile(page)
+        displayProfile(page)
     }
 
     override fun onAddAt(col: Int, row: Int) {
