@@ -85,6 +85,9 @@ class CallOverlay(private val activity: MainActivity) : FrameLayout(activity) {
             setOnClickListener { onClick() }
         }
 
+    /** Sonnerie sans nouvelle de l'ordinateur (fin d'appel perdue, compagnon redémarré) : la carte se ferme seule. */
+    private val expire = Runnable { if (app != null) hide() }
+
     /** Ordre `call` de l'ordinateur : `ringing` (de nouveau quand l'appelant est connu) ou `ended`. */
     fun onCall(state: String, app: String, caller: String?, hasVideo: Boolean) {
         if (state == "ended") {
@@ -101,6 +104,8 @@ class CallOverlay(private val activity: MainActivity) : FrameLayout(activity) {
         label.text = context.getString(if (this.caller != null) R.string.call_incoming_app else R.string.call_incoming, app)
         video.visibility = if (hasVideo) VISIBLE else GONE
         setButtonsEnabled(true)
+        removeCallbacks(expire)
+        postDelayed(expire, RING_TIMEOUT_MS)
         if (fresh) {
             announced = false
             visibility = VISIBLE
@@ -122,6 +127,7 @@ class CallOverlay(private val activity: MainActivity) : FrameLayout(activity) {
     }
 
     fun hide() {
+        removeCallbacks(expire)
         app = null
         visibility = GONE
         Look.stop(pulse, badge)
@@ -151,17 +157,18 @@ class CallOverlay(private val activity: MainActivity) : FrameLayout(activity) {
         val current = app ?: return
         setButtonsEnabled(false)
         activity.lifecycleScope.launch {
+            // Fermée même si l'ordinateur n'a pas trouvé le bouton (appel déjà fini) : jamais de carte bloquée.
             try {
                 BackendClient(activity).system.declineCall(current)
-                hide()
             } catch (e: Exception) {
-                setButtonsEnabled(true)
                 activity.showBanner(context.errorText(e), 6)
             }
+            hide()
         }
     }
 
     private companion object {
         const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
+        const val RING_TIMEOUT_MS = 120_000L
     }
 }

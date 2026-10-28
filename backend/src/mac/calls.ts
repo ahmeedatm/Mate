@@ -2,8 +2,9 @@ import { osascript } from "./run.ts";
 
 /**
  * Appel en cours dans une appli de visio (Teams) lu par l'API d'Accessibilité, comme Discord sous Windows.
- * Teams (moteur web Edge) n'expose ses boutons qu'une fois `AXEnhancedUserInterface` posé sur l'appli : le script
- * le pose à chaque lecture (sans effet visible), l'arbre arrive à la lecture suivante. Les boutons de l'appel
+ * Teams (moteur web Edge) n'expose ses boutons qu'une fois `AXEnhancedUserInterface` posé sur l'appli, Discord
+ * (Electron) qu'une fois `AXManualAccessibility` posé : le script pose l'un ou l'autre à chaque lecture (sans effet
+ * visible), l'arbre arrive à la lecture suivante. Les boutons de l'appel
  * (« Couper le micro », « Partager », « Quitter »…) changent de nom selon l'état : c'est ce qui donne micro et partage.
  * Appelé par l'API C (AXUIElement…) plutôt que System Events : 34 ms au lieu de 2 s pour la fenêtre d'appel.
  * La sonnerie (« Eugénie … vous appelle », Accepter / Refuser) est une boîte native d'un autre processus,
@@ -42,7 +43,10 @@ function list(el, name) {
   return out;
 }
 function run(argv) {
-  const [appName, pressJson] = argv;
+  const [appName, pressJson, mode] = argv;
+  // « items » : tous les éléments dans l'ordre de l'écran (Discord) ; textes seulement dans les boutons et le panneau
+  // de l'utilisateur (son nom), pas ceux des messages.
+  const wantItems = mode === "items";
   const apps = $.NSWorkspace.sharedWorkspace.runningApplications;
   let main = false;
   const pids = [];
@@ -54,15 +58,28 @@ function run(argv) {
   }
   if (!main) return JSON.stringify(null);
   const press = pressJson ? JSON.parse(pressJson) : null;
-  const windows = [], shareDialogs = [];
+  // Interrupteurs (AXCheckBox : micro et sourdine de Discord) : appuyés seulement si aucun bouton n'a le nom voulu.
+  const windows = [], shareDialogs = [], toggles = [];
   for (const pid of pids) {
     const app = $.AXUIElementCreateApplication(pid);
-    $.AXUIElementSetAttributeValue(app, $("AXEnhancedUserInterface"), $.kCFBooleanTrue);
+    // Applis Electron (Discord) : arbre ouvert par AXManualAccessibility, en NSNumber (kCFBooleanTrue est ignoré) ;
+    // y poser aussi AXEnhancedUserInterface retire les textes des boutons (le nom de l'utilisateur dans Discord).
+    if ($.AXUIElementSetAttributeValue(app, $("AXManualAccessibility"), $.NSNumber.numberWithBool(true)) !== 0)
+      $.AXUIElementSetAttributeValue(app, $("AXEnhancedUserInterface"), $.kCFBooleanTrue);
     for (const w of list(app, "AXWindows")) {
       const dialog = str(w, "AXSubrole") === "AXDialog";
-      const buttons = [], texts = [], stack = [[w, false]];
+      const buttons = [], texts = [], links = [], items = [], stack = [[w, false, false, false]];
       while (stack.length) {
-        const [e, inScreens] = stack.pop(), role = str(e, "AXRole");
+        const [e, inScreens, inButton, inPanel] = stack.pop(), role = str(e, "AXRole");
+        if (wantItems) {
+          const name = str(e, "AXDescription") || str(e, "AXTitle");
+          if (role === "AXCheckBox") {
+            const v = attr(e, "AXValue"), on = v ? ObjC.castRefToObject(v).js : 0;
+            items.push({ role, name, on: on === 1 || on === true });
+          }
+          else if (role === "AXStaticText" && (inButton || inPanel)) { const v = str(e, "AXValue"); if (v) items.push({ role, name: v }); }
+          else if (name && role !== "AXStaticText") items.push({ role, name });
+        }
         if (str(e, "AXSubrole") === "AXApplicationDialog" && /^(Partager du contenu|Share content)$/i.test(str(e, "AXDescription") || str(e, "AXTitle")))
           shareDialogs.push({ e, w, pid });
         const screens = inScreens || (role === "AXList" && /^(Choisir un écran|Choose a screen)$/i.test(str(e, "AXDescription") || str(e, "AXTitle")));
@@ -70,17 +87,29 @@ function run(argv) {
           // Les écrans du panneau de partage portent leur nom en valeur (« Built-in Retina Display »).
           const name = str(e, "AXDescription") || str(e, "AXTitle") || (inScreens ? str(e, "AXValue") : "");
           if (name) buttons.push({ name: inScreens ? "Écran : " + name : name, e });
+        } else if (role === "AXCheckBox") {
+          const name = str(e, "AXDescription") || str(e, "AXTitle");
+          if (name) toggles.push({ name, e });
+        } else if (role === "AXLink") {
+          // Discord : l'appelant est dans le lien de la conversation (« Ju' (message privé), Appel entrant »).
+          const name = str(e, "AXDescription") || str(e, "AXTitle");
+          if (name) links.push(name);
         } else if (dialog && role === "AXStaticText") {
           const value = str(e, "AXValue");
           if (value) texts.push(value);
         }
         // À l'envers : la pile rend les enfants dans l'ordre de l'écran (appelant avant « vous appelle »).
-        for (const k of list(e, "AXChildren").reverse()) stack.push([k, screens]);
+        const panel = inPanel || (role === "AXGroup" && /^(Statut et param|User (status|area|settings))/i.test(str(e, "AXDescription") || str(e, "AXTitle")));
+        for (const k of list(e, "AXChildren").reverse()) stack.push([k, screens, inButton || role === "AXButton", panel]);
       }
-      windows.push({ title: str(w, "AXTitle"), text: texts.join(" "), buttons });
+      windows.push({ title: str(w, "AXTitle"), text: texts.join(" "), buttons, links, items });
     }
   }
-  if (!press) return JSON.stringify({ windows: windows.map((w) => ({ title: w.title, text: w.text, buttons: w.buttons.map((b) => b.name) })) });
+  if (wantItems) return JSON.stringify({ windows: windows.map((w) => ({ title: w.title, items: w.items })) });
+  if (!press)
+    return JSON.stringify({
+      windows: windows.map((w) => ({ title: w.title, text: w.text, links: w.links, buttons: w.buttons.map((b) => b.name) })),
+    });
   // Un bouton « Partager » existe aussi dans les conversations : d'abord la fenêtre de l'appel ou de la sonnerie.
   const call = /${LEAVE_SOURCE}|${RING_SOURCE}|${SCREEN_SOURCE}|${SHARING_SOURCE}/i;
   const order = windows.filter((w) => w.buttons.some((b) => call.test(b.name))).concat(windows);
@@ -119,6 +148,13 @@ function run(argv) {
       }
     }
   }
+  for (const p of press) {
+    const t = toggles.find((t) => t.name === p);
+    if (t) {
+      $.AXUIElementPerformAction(t.e, $("AXPress"));
+      return JSON.stringify({ pressed: t.name });
+    }
+  }
   return JSON.stringify({ pressed: null });
 }`;
 
@@ -145,7 +181,7 @@ export type CallState = {
   lobby?: boolean;
 };
 
-export type AppWindows = { windows: { title: string; text: string; buttons: string[] }[] } | null;
+export type AppWindows = { windows: { title: string; text: string; links?: string[]; buttons: string[] }[] } | null;
 
 // /deck/live, /deck/voice et la surveillance des appels entrants lisent la même chose à quelques ms d'écart :
 // une lecture sert à tous.
@@ -180,7 +216,94 @@ export async function callState(app: string): Promise<CallState | null> {
 }
 
 async function readCall(app: string): Promise<CallState | null> {
+  if (app.toLowerCase() === "discord") return discordStateOf(await readItems(app));
   return callStateOf(await readWindows(app));
+}
+
+export type AppItems = { windows: { title: string; items: AxItem[] }[] } | null;
+/** Élément de l'interface dans l'ordre de l'écran ; `on` : case cochée (interrupteurs Micro et Sourdine de Discord). */
+export type AxItem = { role: string; name: string; on?: boolean };
+
+const itemsCache = new Map<string, { at: number; value: Promise<AppItems> }>();
+
+function readItems(app: string): Promise<AppItems> {
+  const hit = itemsCache.get(app);
+  if (hit && Date.now() - hit.at < 1500) return hit.value;
+  const value = osascript(SCRIPT, [app, "", "items"], "JavaScript").then((out) => JSON.parse(out) as AppItems);
+  itemsCache.set(app, { at: Date.now(), value });
+  value.catch(() => itemsCache.delete(app));
+  return value;
+}
+
+/**
+ * Appel Discord, lu comme sous Windows (`Voice` de helper/Program.cs) : panneau du bas à gauche (« Voix connectée »,
+ * lien du salon, interrupteurs Micro et Sourdine), puis vue de l'appel : « Déconnecter » et un bouton par participant
+ * (appel privé) ou une vignette « Vignette d'appel, pseudo » suivie de l'image au nom affiché (salon de serveur).
+ * Ses propres noms (pas des participants) : les textes qui suivent le bouton « Gérer le profil ». Exporté pour les tests.
+ */
+export function discordStateOf(raw: AppItems): CallState | null {
+  if (!raw) return null;
+  const state: CallState = { found: false, connected: false, streaming: false, channel: null, people: [], muted: null, deafened: null };
+  for (const w of raw.windows) {
+    let phase = "start";
+    let profile = false;
+    const self = new Set<string>();
+    const people: string[] = [];
+    const tiles: string[] = [];
+    let tile: string | null = null;
+    for (const { role, name, on } of w.items) {
+      const button = role === "AXButton";
+      if (profile && role === "AXStaticText") self.add(name);
+      profile = button && /^(Gérer le profil|Manage profile)/i.test(name) ? true : profile && role === "AXStaticText";
+      if (button && /^(Arr.ter de streamer|Stop Streaming)$/i.test(name)) state.streaming = true;
+      if (phase === "start") {
+        if (role === "AXGroup" && /^(Statut et param|User (status|area|settings))/i.test(name)) {
+          phase = "panel";
+          state.found = true;
+        }
+      } else if (phase === "panel") {
+        if (/Voix connect|Voice connected/i.test(name)) {
+          state.connected = true;
+          phase = "channel";
+        } else if (role === "AXCheckBox" && /^(Rendre muet|Mute)$/i.test(name)) state.muted = Boolean(on);
+        else if (role === "AXCheckBox" && /^(Mettre en sourdine|Deafen)$/i.test(name)) {
+          state.deafened = Boolean(on);
+          phase = "call";
+        }
+      } else if (phase === "channel") {
+        if (role === "AXLink") {
+          state.channel = name;
+          phase = "panel";
+        }
+      } else if (phase === "call") {
+        if (button && /^(D.connecter|Disconnect)$/i.test(name)) phase = "people";
+      } else if (phase === "people") {
+        const m = button ? /^(Vignette d.appel|Call tile), (.+)$/i.exec(name) : null;
+        // Fin de la liste : le salon de discussion qui suit (« fuck la solo queue (salon) »).
+        if (role === "AXGroup") break;
+        if (m) {
+          if (tile) tiles.push(tile);
+          tile = self.has(m[2]) ? null : m[2];
+        } else if (role === "AXImage" && tile) {
+          tiles.push(self.has(name) ? tile : name.trim() || tile);
+          tile = null;
+        } else if (
+          button &&
+          !self.has(name) &&
+          !/^(Passer en lecteur|Plein .cran|Pop ?out|Full ?screen|Inviter|Invite|Choisis une Activit|Choose an Activity|Arr.ter de streamer|Stop Streaming)/i.test(
+            name,
+          )
+        )
+          people.push(name);
+      }
+    }
+    if (state.found) {
+      if (tile) tiles.push(tile);
+      state.people = people.length > 0 ? people : tiles;
+      break;
+    }
+  }
+  return state;
 }
 
 /** État de l'appel d'après les fenêtres lues (exporté pour les tests). */
@@ -227,7 +350,9 @@ export function callStateOf(raw: AppWindows): CallState | null {
 export async function listButtons(app: string, detail = false): Promise<{ buttons: string[]; total: number }> {
   const raw = await readWindows(app);
   const buttons = (raw?.windows ?? []).flatMap((w) =>
-    detail ? [`Fenêtre : ${w.title}`, ...(w.text ? [`Texte : ${w.text}`] : []), ...w.buttons] : w.buttons,
+    detail
+      ? [`Fenêtre : ${w.title}`, ...(w.text ? [`Texte : ${w.text}`] : []), ...(w.links ?? []).map((l) => `Lien : ${l}`), ...w.buttons]
+      : w.buttons,
   );
   return { buttons, total: buttons.length };
 }
@@ -241,6 +366,7 @@ export async function pressButton(app: string, names: string[]): Promise<string 
       closed?: boolean;
     } | null;
     cache.delete(app);
+    itemsCache.delete(app);
     if (raw?.closed) {
       await new Promise((r) => setTimeout(r, 400));
       continue;
