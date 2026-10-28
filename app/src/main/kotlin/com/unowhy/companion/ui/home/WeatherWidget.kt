@@ -7,7 +7,6 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import com.unowhy.companion.R
 import com.unowhy.companion.ui.Look
-import com.unowhy.companion.ui.themeRes
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -40,7 +39,6 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     /** Grand : une colonne par jour suivant (jour, emoji, min / max). */
     private val days = LinearLayout(context)
     override val view = LinearLayout(context).asCard(16).apply {
-        setBackgroundResource(themeRes(context, R.attr.c_tile_bg))
         setPadding(dp(18), dp(14), dp(18), dp(14))
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL

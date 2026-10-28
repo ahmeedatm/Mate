@@ -1,0 +1,100 @@
+<style>
+  .tab { background:#0f1218; border-radius:14px; padding:14px; display:inline-block; }
+  .w { background:#1a1f29; border-radius:16px; color:#e8ecf3; font-family:system-ui,sans-serif; padding:14px 16px; box-sizing:border-box; position:relative; }
+  .ttl { font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:#9aa4b5; display:flex; align-items:center; gap:6px; margin-bottom:10px; }
+  .dot { width:8px; height:8px; border-radius:50%; background:#6CB4FF; }
+  .ok { color:#5fd38a; } .warn { color:#ffa94d; } .bad { color:#ff6b6b; }
+  .ring { width:74px; height:74px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-direction:column; }
+  .ring b { font-size:20px; } .ring span { font-size:11px; color:#9aa4b5; }
+  .bar { height:8px; background:#2a3140; border-radius:4px; overflow:hidden; flex:1; }
+  .bar i { display:block; height:100%; border-radius:4px; }
+  .row { display:flex; align-items:center; gap:10px; font-size:14px; margin:7px 0; }
+  .row .k { width:46px; color:#9aa4b5; font-size:13px; }
+  .row .v { width:54px; text-align:right; font-weight:600; }
+  .chip { background:#242b38; border-radius:10px; padding:6px 10px; font-size:13px; display:inline-flex; gap:6px; align-items:center; }
+  .note { font-size:12px; color:#9aa4b5; margin-top:8px; }
+  .big { font-size:26px; font-weight:700; }
+  .lbl { font-size:11px; color:#9aa4b5; text-transform:uppercase; letter-spacing:.05em; }
+</style>
+
+<h2>Widget « Performances du PC » — quelle présentation ?</h2>
+<p class="subtitle">Rendu sur la tablette (thème Nuit). Valeurs d'exemple d'un PC avec carte NVIDIA, carte graphique un peu chaude (orange).</p>
+
+<div class="options">
+
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Jauges rondes — carré 2×2</h3>
+      <p>Lisible de loin d'un coup d'œil. Prend un quart de la page d'Accueil.</p>
+      <div class="tab"><div class="w" style="width:420px;height:290px">
+        <div class="ttl"><span class="dot"></span>PC · DESKTOP-JEU</div>
+        <div style="display:flex;justify-content:space-around;margin-top:6px">
+          <div class="ring" style="background:conic-gradient(#6CB4FF 0 42%,#2a3140 42% 100%)"><div class="ring" style="width:60px;height:60px;background:#1a1f29"><b>42%</b><span>CPU</span></div></div>
+          <div class="ring" style="background:conic-gradient(#ffa94d 0 97%,#2a3140 97% 100%)"><div class="ring" style="width:60px;height:60px;background:#1a1f29"><b class="warn">97%</b><span>GPU</span></div></div>
+          <div class="ring" style="background:conic-gradient(#6CB4FF 0 63%,#2a3140 63% 100%)"><div class="ring" style="width:60px;height:60px;background:#1a1f29"><b>63%</b><span>RAM</span></div></div>
+        </div>
+        <div style="text-align:center;font-size:12px;color:#9aa4b5;margin-top:6px">RAM : 20,1 / 32 Go</div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+          <span class="chip">🌡️ GPU <b class="warn">81 °C</b></span>
+          <span class="chip">🌀 Ventilo GPU <b>1 850 tr/min</b></span>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Barres — bandeau 4×1</h3>
+      <p>Toute la largeur, peu de hauteur : laisse la place aux autres widgets. Style « moniteur » (Xeneon Edge).</p>
+      <div class="tab"><div class="w" style="width:860px;height:140px">
+        <div class="ttl"><span class="dot"></span>PC · DESKTOP-JEU</div>
+        <div style="display:flex;gap:28px">
+          <div style="flex:1">
+            <div class="row"><span class="k">CPU</span><span class="bar"><i style="width:42%;background:#6CB4FF"></i></span><span class="v">42 %</span></div>
+            <div class="row"><span class="k">GPU</span><span class="bar"><i style="width:97%;background:#ffa94d"></i></span><span class="v warn">97 %</span></div>
+            <div class="row"><span class="k">RAM</span><span class="bar"><i style="width:63%;background:#6CB4FF"></i></span><span class="v">63 %</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;justify-content:center">
+            <span class="chip">🌡️ GPU <b class="warn">81 °C</b></span>
+            <span class="chip">🌀 <b>1 850 tr/min</b></span>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Chiffres + courbe — rectangle 2×1</h3>
+      <p>Compact, avec l'historique de la dernière minute : on voit si ça monte.</p>
+      <div class="tab"><div class="w" style="width:420px;height:140px">
+        <div class="ttl"><span class="dot"></span>PC · DESKTOP-JEU</div>
+        <div style="display:flex;justify-content:space-between">
+          <div><div class="lbl">CPU</div><div class="big">42<small style="font-size:14px">%</small></div></div>
+          <div><div class="lbl">GPU</div><div class="big warn">97<small style="font-size:14px">%</small></div></div>
+          <div><div class="lbl">RAM</div><div class="big">63<small style="font-size:14px">%</small></div></div>
+          <div><div class="lbl">GPU °C</div><div class="big warn">81°</div></div>
+        </div>
+        <svg width="388" height="30" style="margin-top:4px"><polyline fill="none" stroke="#ffa94d" stroke-width="2" points="0,26 30,24 60,25 90,18 120,14 150,10 180,8 210,6 240,5 270,4 300,4 330,3 360,3 388,2"/><polyline fill="none" stroke="#6CB4FF" stroke-width="2" opacity=".7" points="0,20 30,18 60,22 90,17 120,19 150,16 180,18 210,15 240,17 270,16 300,18 330,16 360,17 388,16"/></svg>
+      </div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:24px">
+  <h3>Sur un PC sans carte dédiée (ton portable Intel)</h3>
+  <p class="subtitle">Même widget, la température et le ventilateur disparaissent simplement :</p>
+  <div class="tab"><div class="w" style="width:420px;height:140px">
+    <div class="ttl"><span class="dot"></span>PC · DESKTOP-046UR4P</div>
+    <div style="display:flex;justify-content:space-around">
+      <div><div class="lbl">CPU</div><div class="big">18<small style="font-size:14px">%</small></div></div>
+      <div><div class="lbl">GPU</div><div class="big">7<small style="font-size:14px">%</small></div></div>
+      <div><div class="lbl">RAM</div><div class="big">54<small style="font-size:14px">%</small></div></div>
+    </div>
+    <div class="note">Couleurs : vert/bleu normal · orange au-delà d'un seuil · rouge critique</div>
+  </div></div>
+</div>
