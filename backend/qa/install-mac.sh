@@ -45,6 +45,20 @@ check_real() {
   echo "Vrai compagnon intact :"; cat "$WORK/real-after.txt"
 }
 
+# Aucune autorisation macOS (TCC) demandée par le node du job : TCC suit un programme en ligne de commande par son
+# chemin, propre à chaque job, et chaque demande ajoute un « node » de plus dans Réglages Système (ou une invite).
+# Base illisible sans accès complet au disque : contrôle sauté.
+check_tcc() {
+  local db rows read=0
+  for db in "/Library/Application Support/com.apple.TCC/TCC.db" ~/"Library/Application Support/com.apple.TCC/TCC.db"; do
+    rows=$(sqlite3 "$db" "select service from access where client like '$WORK/%' or client like '/private$WORK/%'" 2>/dev/null) ||
+      { echo "Base TCC illisible ($db) : contrôle sauté"; continue; }
+    [[ -z $rows ]] || fail "autorisations macOS demandées par l'instance de test : $(tr '\n' ' ' <<< "$rows")"
+    read=$((read + 1))
+  done
+  ((read == 0)) || echo "Aucune autorisation macOS demandée"
+}
+
 wait_for() { # secondes, commande
   local n=$(($1 * 2)); shift
   while ((n-- > 0)); do "$@" && return 0; sleep 0.5; done
@@ -97,6 +111,9 @@ run() {
   step "Vrai compagnon après le test"
   check_real
   ((sanity == 0)) || fail "sanity en échec (voir plus haut)"
+
+  step "Autorisations macOS"
+  check_tcc
   echo; echo "OK : installation, démarrage, relance, sanity et désinstallation"
 }
 
