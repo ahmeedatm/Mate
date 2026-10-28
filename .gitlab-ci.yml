@@ -2,10 +2,12 @@
 # En MR, seuls les jobs de la zone touchée tournent (rules:changes, voir docs/developpement.md, section CI) ;
 # sur main et sur un tag, tout tourne.
 # Tag vX.Y.Z : mêmes tests, puis paquets de l'ordinateur, APK signé et release GitLab.
+# Branche protégée essai/* : seulement l'APK signé d'essai, job manuel (docs/developpement.md, section Release).
 
 workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^essai\//
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -71,24 +73,24 @@ default:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes: *files-backend
-    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
 .zone-android:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes: *files-android
-    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
 .zone-install-windows:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes: *files-install-common
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes: *files-install-windows
-    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
 .zone-helper-windows:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes: *files-helper-windows
-    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
 
 # Toujours là : une MR qui ne touche aucune zone (docs) a quand même un pipeline, sans lequel elle ne fusionne pas.
 zones:
@@ -221,7 +223,7 @@ install-mac:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: manual
       allow_failure: true
-    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
   script:
     # node@18 passe avant dans le PATH du runner : celui de Homebrew (22 ou plus).
     - export PATH="/opt/homebrew/bin:$PATH"
@@ -249,7 +251,7 @@ android-emulateur:
       changes: *files-android
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes: *files-deck-backend
-    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
   timeout: 30m
   cache:
     policy: pull
@@ -289,7 +291,7 @@ package-windows:
 package-mac:
   extends: .package
   rules:
-    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
   variables:
     PLATFORM: mac
 
@@ -346,17 +348,14 @@ helper-windows:
       - backend/src/win/*.exe
     expire_in: 1 week
 
-# APK release signé, version = tag. Clé : variables protégées et masquées, visibles seulement des tags protégés (v*).
-# Publie aussi l'entrée du « serveur Unowhy » (companion-X.Y.Z.json), lue par `npm run updates:add` et le job updates.
-android-release:
-  extends: [.android, .release-tag]
-  stage: build
-  dependencies: []
+# APK release signé, version = $VERSION. Clé : variables protégées et masquées, visibles seulement des refs protégées
+# (tags v*, branches essai/*). Publie aussi l'entrée du « serveur Unowhy » (companion-$VERSION.json), lue par
+# `npm run updates:add` et les jobs updates / essai-updates.
+.android-signed:
   script:
     - test -n "$RELEASE_KEYSTORE_BASE64" -a -n "$RELEASE_KEYSTORE_PASSWORD"
-      || { echo "Clé de signature absente (variables RELEASE_KEYSTORE_*, tag protégé v*)"; exit 1; }
+      || { echo "Clé de signature absente (variables RELEASE_KEYSTORE_*, ref protégée)"; exit 1; }
     - test -n "$UPDATE_DEPLOY_TOKEN" || { echo "Jeton de lecture des mises à jour absent (UPDATE_DEPLOY_TOKEN)"; exit 1; }
-    - VERSION=${CI_COMMIT_TAG#v}
     - echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > /tmp/release.p12
     # Jeton de lecture seule du registre (deploy token read_package_registry), jamais affiché.
     - >-
@@ -369,6 +368,15 @@ android-release:
       '{package:"com.unowhy.companion", label:"Companion", versionCode:$c, versionName:$v, file:$f}'
       > dist/companion-$VERSION.json
     - cat dist/companion-$VERSION.json
+
+# Version = tag.
+android-release:
+  extends: [.android, .release-tag]
+  stage: build
+  dependencies: []
+  script:
+    - VERSION=${CI_COMMIT_TAG#v}
+    - !reference [.android-signed, script]
   artifacts:
     paths:
       - dist/companion-*
@@ -383,6 +391,50 @@ updates:
   needs: [android-release]
   script:
     - node scripts/updates-publish.mjs dist updates
+
+# Essai de l'appli tablette depuis une MR, sans fusion ni tag : branche protégée essai/mr-<iid> poussée depuis la branche
+# de la MR, puis job manuel. Version X.Y.Z-essai.N (X.Y.Z = dernier tag de la branche, N = numéro du pipeline) : code
+# entre ce tag et le suivant (app/build.gradle.kts). L'APK lit les mises à jour dans latest, comme une release : la
+# tablette d'essai repasse seule à la prochaine release. Branche non protégée : pas de job (clé invisible).
+essai-android:
+  extends: .android
+  stage: build
+  dependencies: []
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^essai\// && $CI_COMMIT_REF_PROTECTED == "true"
+      when: manual
+  variables:
+    # Tous les commits et les tags, pour git describe.
+    GIT_DEPTH: "0"
+    GIT_FETCH_EXTRA_FLAGS: --prune --quiet --tags
+    UPDATES_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/companion-updates/latest
+  script:
+    - TAG=$(git describe --tags --abbrev=0 --match "v[0-9]*.[0-9]*.[0-9]*")
+      || { echo "Aucun tag vX.Y.Z dans l'historique de la branche"; exit 1; }
+    - VERSION=${TAG#v}-essai.$CI_PIPELINE_IID
+    - !reference [.android-signed, script]
+  # APK signé par la clé de release : gardé peu de temps.
+  artifacts:
+    paths:
+      - dist/companion-*
+    expire_in: 1 day
+
+# Paquet companion-updates/essai, jamais latest (aucune tablette ne le lit seule). Un seul essai : le dernier remplace.
+essai-updates:
+  stage: release
+  image: node:22.22-bookworm-slim
+  needs: [essai-android]
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^essai\// && $CI_COMMIT_REF_PROTECTED == "true"
+  variables:
+    UPDATES_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/companion-updates/essai
+  script:
+    - node scripts/updates-publish.mjs dist updates
+    - |
+      echo "Essai publié. Sur l'ordinateur de la tablette, dans backend/ (GITLAB_TOKEN ou UPDATE_DEPLOY_TOKEN dans backend/.env) :"
+      echo "  npm run updates:essai                  # compagnon lancé depuis le dépôt"
+      echo "  DATA_DIR=paquet npm run updates:essai  # compagnon installé par paquet"
+      echo "Puis sur la tablette : Réglages > Mises à jour."
 
 # Release GitLab : fichiers déposés dans le registre de paquets générique du projet, jeton du job.
 release:

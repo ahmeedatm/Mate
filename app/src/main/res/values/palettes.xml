@@ -111,6 +111,7 @@
         <item name="c_cadran">true</item>
         <item name="c_card_bg">@drawable/cadran_tile_bg</item>
         <item name="c_tile_bg">@drawable/cadran_tile_bg</item>
+        <item name="c_home_card_bg">@drawable/cadran_tile_bg</item>
         <item name="c_card_pad">24dp</item>
         <item name="c_primary">?attr/c_text</item>
         <item name="c_on_primary">?attr/c_bg</item>
@@ -176,6 +177,7 @@
         <item name="c_cadran">true</item>
         <item name="c_card_bg">@drawable/cadran_tile_bg</item>
         <item name="c_tile_bg">@drawable/cadran_tile_bg</item>
+        <item name="c_home_card_bg">@drawable/cadran_tile_bg</item>
         <item name="c_card_pad">24dp</item>
         <item name="c_primary">?attr/c_text</item>
         <item name="c_on_primary">?attr/c_bg</item>
@@ -237,15 +239,18 @@
         <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
     </style>
     <!-- Rétro : DA Cadran (mêmes formes et dispositions) habillée années 70 : brun, rouge, orange et crème d'Eliot,
-         titres et grands chiffres en Abril Fatface, textes en Nunito, grain par-dessus l'écran, bande qui coule
-         à gauche de l'Accueil. Textes au-dessus de 4,5:1 sur le fond et les cartes : accent et rouge de Muet en
-         brique (B82800, lisibles en petit, pastilles choisies comprises), le rouge FE3400 et l'orange vifs
+         titres et grands chiffres en Abril Fatface, textes en Nunito, grain par-dessus l'écran, tube qui coule
+         en L à droite et en bas de l'Accueil. Textes au-dessus de 4,5:1 sur le fond et les cartes : accent et rouge de Muet en
+         brique (B82800, lisibles en petit, pastilles choisies comprises), textes secondaires foncés, ceux de l'Accueil
+         détourés d'un halo crème (tubes derrière, Look.haloTexts), le rouge FE3400 et l'orange vifs
          restent aux graphismes (bande, vumètres, teintes). -->
     <style name="Palette.Retro" parent="">
         <item name="c_cadran">true</item>
         <item name="c_card_bg">@drawable/cadran_tile_bg</item>
         <item name="c_tile_bg">@drawable/cadran_tile_bg</item>
+        <item name="c_home_card_bg">@drawable/retro_home_card_bg</item>
         <item name="c_card_pad">24dp</item>
+        <item name="c_title_size">17sp</item>
         <item name="c_primary">?attr/c_text</item>
         <item name="c_on_primary">#FFFBF2B7</item>
         <item name="c_primary_pressed">?attr/c_text_dim</item>
@@ -275,8 +280,8 @@
         <item name="c_accent_soft">#FFFFD9C2</item>
         <item name="c_on_accent">#FFFBF2B7</item>
         <item name="c_text">#FF552805</item>
-        <item name="c_text_dim">#FF7A4A1E</item>
-        <item name="c_text_faint">#FF8F6239</item>
+        <item name="c_text_dim">#FF66380F</item>
+        <item name="c_text_faint">#FF7A4A1E</item>
         <item name="c_graphic">#FFA0714A</item>
         <item name="c_ok">#FF5A6B10</item>
         <item name="c_ok_soft">#FFE6E4A6</item>

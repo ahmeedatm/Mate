@@ -1,22 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Accueil à widgets (HomeFragment, WidgetGrid) : appui long = mode Modifier, avec sa barre en haut ;
-     points des pages en bas quand il y en a plusieurs. Panneau document ouvert : 2 colonnes, la page défile
-     (et la bande du thème Rétro s'efface). -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+     points des pages en bas quand il y en a plusieurs. Panneau document ouvert : 2 colonnes, la page défile. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="horizontal">
+    android:layout_height="match_parent">
 
-    <!-- Thème Rétro seulement (sinon GONE) : tubes qui coulent sur toute la hauteur, à gauche. -->
+    <!-- Thème Rétro seulement (sinon GONE) : tubes qui coulent sur toute la hauteur, derrière les widgets, à droite
+         (voilés derrière le héros et la ligne du jour, sans fond : FlowBandView.hidden). -->
     <com.unowhy.companion.ui.home.FlowBandView
         android:id="@+id/home_flow"
         android:layout_width="wrap_content"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:layout_gravity="end" />
 
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_weight="1"
         android:orientation="vertical">
 
         <LinearLayout
@@ -99,4 +98,4 @@
                 android:visibility="gone" />
         </FrameLayout>
     </LinearLayout>
-</LinearLayout>
+</FrameLayout>
