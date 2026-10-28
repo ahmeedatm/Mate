@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { frontApp, isMac } from "./os.ts";
-import type { ClaudeSession, FocusTarget, OrcaInfo, TranscriptInfo } from "./agents.ts";
+import { parseOrcaQuota, type ClaudeSession, type FocusTarget, type OrcaInfo, type Quota, type TranscriptInfo } from "./agents.ts";
 
 /**
  * Ce que les agents Claude lisent sur l'ordinateur : `claude agents --json`, la CLI d'Orca, l'appli de devant.
@@ -219,14 +219,21 @@ export async function focusSession({ handle, worktree, tab }: FocusTarget): Prom
 
 const CHAT_TAB = /^agent-session:[\w-]+$/;
 
-/**
- * La CLI d'Orca sait changer de terminal, pas de chat : on passe par son client du runtime (`worktree.activate`,
- * `session.tabs.activate`), lancé comme elle, par l'exécutable d'Orca en mode Node.
- */
+/** Lance un script du client du runtime d'Orca, comme sa CLI : par l'exécutable d'Orca en mode Node. */
+async function orcaRuntime(bin: string, script: string, env: NodeJS.ProcessEnv = {}): Promise<string | null> {
+  const app = /^(.*?\.app)\//.exec(fs.realpathSync(bin))?.[1];
+  if (!app) return null;
+  return exec(path.join(app, "Contents", "MacOS", "Orca"), ["-e", script], 8_000, {
+    ...process.env,
+    ...env,
+    ELECTRON_RUN_AS_NODE: "1",
+    ORCA_CLIENT: path.join(app, "Contents", "Resources", "app.asar.unpacked", "out", "cli", "runtime-client.js"),
+  });
+}
+
+/** La CLI d'Orca sait changer de terminal, pas de chat : on passe par son client du runtime (`worktree.activate`, `session.tabs.activate`). */
 async function showOrcaChat(bin: string, worktree: string, tab: string | null): Promise<void> {
   if (!path.isAbsolute(worktree)) return;
-  const app = /^(.*?\.app)\//.exec(fs.realpathSync(bin))?.[1];
-  if (!app) return;
   const script = `const { RuntimeClient } = require(process.env.ORCA_CLIENT);
 const { worktree, tab } = JSON.parse(process.env.ORCA_FOCUS);
 (async () => {
@@ -235,12 +242,30 @@ const { worktree, tab } = JSON.parse(process.env.ORCA_FOCUS);
   ok(await c.call("worktree.activate", { worktree }));
   if (tab) ok(await c.call("session.tabs.activate", { worktree, tabId: tab }));
 })().then(() => process.exit(0), () => process.exit(1));`;
-  await exec(path.join(app, "Contents", "MacOS", "Orca"), ["-e", script], 8_000, {
-    ...process.env,
-    ELECTRON_RUN_AS_NODE: "1",
-    ORCA_CLIENT: path.join(app, "Contents", "Resources", "app.asar.unpacked", "out", "cli", "runtime-client.js"),
+  await orcaRuntime(bin, script, {
     ORCA_FOCUS: JSON.stringify({ worktree: `path:${worktree}`, tab: tab && CHAT_TAB.test(tab) ? tab : null }),
   });
+}
+
+/**
+ * Usage Claude (5 h, 7 j) qu'Orca lit lui-même auprès d'Anthropic : `rateLimits.claude` de `accounts.list`. Seul ce bloc
+ * sort du script (pas les comptes). Aucun jeton lu par le compagnon, aucun appel de plus à Anthropic.
+ */
+export async function orcaQuota(): Promise<Quota | null> {
+  const bin = orcaBin();
+  if (!bin) return null;
+  const script = `const { RuntimeClient } = require(process.env.ORCA_CLIENT);
+new RuntimeClient().call("accounts.list", {}).then(
+  (r) => { process.stdout.write(JSON.stringify(r?.result?.rateLimits?.claude ?? null)); process.exit(0); },
+  () => process.exit(1),
+);`;
+  const out = await orcaRuntime(bin, script).catch(() => null);
+  if (!out) return null;
+  try {
+    return parseOrcaQuota(JSON.parse(out));
+  } catch {
+    return null;
+  }
 }
 
 // --- Journal de la session (~/.claude/projects/<dossier>/<session>.jsonl) : le titre automatique que Claude donne à la

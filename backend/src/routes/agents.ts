@@ -8,6 +8,7 @@ import {
   interruptSession,
   listClaude,
   listOrca,
+  orcaQuota,
   sendText,
   transcriptInfo,
 } from "../agents-sources.ts";
@@ -26,6 +27,7 @@ export default async function agentRoutes(app: FastifyInstance) {
   const agents = createAgents({
     listClaude,
     listOrca,
+    readQuota: orcaQuota,
     transcriptInfo,
     frontIsClaude: alwaysAlert ? async () => false : frontIsClaude,
     tabletConnected: () => tabletStatus().connected,
