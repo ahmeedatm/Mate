@@ -2,7 +2,9 @@ package com.unowhy.companion.ui.home
 
 import com.unowhy.companion.FakeContext
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HomeLayoutKeyTest {
@@ -25,6 +27,15 @@ class HomeLayoutKeyTest {
         HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.WATER, WidgetSize.S, 0, 0, 0)), 1), cadran = true)
         assertEquals(listOf(WidgetType.NOTE), HomeLayout.load(context, cadran = false).widgets.map { it.type })
         assertEquals(listOf(WidgetType.WATER), HomeLayout.load(context, cadran = true).widgets.map { it.type })
+    }
+
+    @Test
+    fun `has lit la disposition du theme`() {
+        val context = FakeContext()
+        HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.WATER, WidgetSize.S, 0, 0, 0)), 1), cadran = true)
+        assertTrue(HomeLayout.has(context, cadran = true, WidgetType.WATER))
+        HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.NOTE, WidgetSize.S, 0, 0, 0)), 1), cadran = false)
+        assertFalse(HomeLayout.has(context, cadran = false, WidgetType.WATER))
     }
 
     @Test
