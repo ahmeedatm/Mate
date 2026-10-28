@@ -5,14 +5,11 @@ import android.os.SystemClock
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.view.inputmethod.EditorInfo
 import android.widget.Button
-import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
 import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.lifecycleScope
 import com.unowhy.companion.MainActivity
@@ -24,7 +21,6 @@ import com.unowhy.companion.net.AgentAsk
 import com.unowhy.companion.net.AgentState
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.HttpException
-import com.unowhy.companion.voice.Dictation
 import kotlinx.coroutines.launch
 
 /** Défile au-delà de `maxHeight` : une longue commande ou six options ne sortent pas de l'écran. */
@@ -53,7 +49,6 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
     private var busy = false
     /** Fin du délai, en horloge de la tablette (le compagnon donne le temps restant). */
     private var expiresAt = 0L
-    private val dictation = Dictation(activity)
     private val card = LinearLayout(context)
     private val tick = object : Runnable {
         override fun run() {
@@ -106,7 +101,6 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
         visibility = GONE
         ask = null
         draft = null
-        dictation.release()
     }
 
     private fun gone() {
@@ -260,34 +254,10 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
     /** « Autre » : texte écrit, ou dicté par le bouton Dicter (sans reconnaissance, l'écriture seule). */
     private fun askOther() {
         val d = draft ?: return
-        val input = activity.layoutInflater.inflate(R.layout.item_input, null) as EditText
-        input.setHint(R.string.agent_ask_other_hint)
-        input.setText(d.other(page).orEmpty())
-        input.setSelection(input.text.length)
-        input.imeOptions = EditorInfo.IME_ACTION_DONE
-        val dialog = AlertDialog.Builder(activity)
-            .setTitle(R.string.agent_ask_other_title)
-            .setView(input)
-            .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.agent_ask_ok, null)
-            .apply { if (dictation.available) setNeutralButton(R.string.agent_ask_dictate, null) }
-            .create()
-        dialog.showForTyping(input)
-        val ok = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-        ok.setOnClickListener {
-            d.setOther(page, input.text.toString())
-            dialog.dismiss()
+        activity.askAgentText(context.getString(R.string.agent_ask_other_title), R.string.agent_ask_other_hint, d.other(page).orEmpty()) { text ->
+            d.setOther(page, text)
             render()
         }
-        dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setOnClickListener {
-            val started = dictation.start(
-                onPartial = { input.setText(it); input.setSelection(input.text.length) },
-                onResult = { input.setText(it); input.setSelection(input.text.length) },
-                onError = { activity.showBanner(context.getString(R.string.voice_nothing), 4) },
-            )
-            if (!started) activity.showBanner(context.getString(R.string.voice_no_mic), 6)
-        }
-        dialog.setOnDismissListener { dictation.release() }
     }
 
     private fun failed(e: Exception) {

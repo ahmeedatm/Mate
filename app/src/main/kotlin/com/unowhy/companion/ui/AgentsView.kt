@@ -6,6 +6,7 @@ import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -23,6 +24,9 @@ import com.unowhy.companion.net.AgentSession
 import com.unowhy.companion.net.AgentState
 import com.unowhy.companion.net.BackendClient
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /** Couleur d'un état : ambre (attend), vert (fini), bleu (limite), gris moyen (travaille), gris pâle (inactif). */
 fun stateColor(context: Context, state: AgentState): Int = themeColor(
@@ -71,6 +75,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private val status = TextView(context)
     private val rows = LinkedHashMap<String, View>()
     private var signature: List<Any?> = emptyList()
+    private val clock = SimpleDateFormat("H 'h' mm", Locale.FRENCH)
     private var observer: ((AgentsFeed.Snapshot) -> Unit)? = null
     private lateinit var owner: LifecycleOwner
 
@@ -126,7 +131,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             else -> context.getString(R.string.agents_focus_hint)
         }
         status.visibility = VISIBLE
-        val sig = state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId) }
+        val sig = state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId, it.canSend, it.resumeAt, it.resumeArmed) }
         if (sig != signature) {
             signature = sig
             list.removeAllViews()
@@ -144,6 +149,10 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         }
     }
 
+    /** « Travaillé 4 min » ; sous la minute, « moins d'1 min » (pas « à l'instant »). */
+    private fun workedLabel(ms: Long): String =
+        if (age(ms) == Age.Now) context.getString(R.string.agent_worked_short) else context.getString(R.string.agent_worked, ageLabel(context, ms))
+
     private fun bind(row: View, s: AgentSession) {
         row.findViewById<View>(R.id.agent_dot).background = dot(context, s.state)
         row.findViewById<TextView>(R.id.agent_name).text = s.name
@@ -152,15 +161,74 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             text = listOfNotNull(
                 stateLabel(context, s),
                 context.getString(R.string.agent_answer_hint).takeIf { s.askId != null },
-                s.workedMs?.takeIf { s.state == AgentState.DONE || s.state == AgentState.LIMIT }?.let { context.getString(R.string.agent_worked, ageLabel(context, it)) },
+                s.workedMs?.takeIf { s.state == AgentState.DONE || s.state == AgentState.LIMIT }?.let { workedLabel(it) },
                 s.tool?.takeIf { s.state == AgentState.WORKING }?.let { context.getString(R.string.agent_tool, it) },
             ).joinToString(" · ")
             setTextColor(stateColor(context, s.state))
         }
+        bindActions(row, s)
         val lines = if (s.state == AgentState.LIMIT) listOfNotNull(s.limit) + s.lines.filter { it != s.limit } else s.lines
         row.findViewById<TextView>(R.id.agent_lines).apply {
             text = lines.joinToString("\n")
             visibility = if (lines.isEmpty()) GONE else VISIBLE
+        }
+    }
+
+    /** Boutons d'une session : « continue » et un message écrit ou dicté (session au repos dans un terminal Orca), reprise après une limite. */
+    private fun bindActions(row: View, s: AgentSession) {
+        val box = row.findViewById<LinearLayout>(R.id.agent_actions)
+        box.removeAllViews()
+        val actions = mutableListOf<Pair<String, () -> Unit>>()
+        if (s.canSend && (s.state == AgentState.DONE || s.state == AgentState.IDLE)) {
+            actions += context.getString(R.string.agent_continue) to { send(s, "continue") }
+            actions += context.getString(R.string.agent_write) to { write(s) }
+        }
+        val at = s.resumeAt
+        if (s.state == AgentState.LIMIT && s.canSend && at != null) {
+            val time = clock.format(Date(at))
+            actions += context.getString(if (s.resumeArmed) R.string.agent_resume_armed else R.string.agent_resume_at, time) to { resume(s, !s.resumeArmed, time) }
+        }
+        box.visibility = if (actions.isEmpty()) GONE else VISIBLE
+        for ((label, onClick) in actions) {
+            box.addView(
+                Button(context, null, 0, R.style.Chip).apply {
+                    text = label
+                    setBackgroundResource(R.drawable.agent_action_bg)
+                    setOnClickListener { onClick() }
+                },
+                LayoutParams(LayoutParams.WRAP_CONTENT, dp(44)).apply { marginEnd = dp(8) },
+            )
+        }
+    }
+
+    private fun write(s: AgentSession) {
+        (context as? MainActivity)?.askAgentText(context.getString(R.string.agent_write_title, s.name), R.string.agent_write_hint, "") { text ->
+            if (text.isNotBlank()) send(s, text.trim())
+        }
+    }
+
+    private fun send(s: AgentSession, text: String) = call(s) {
+        BackendClient(context).agents.send(s.id, text)
+        (context as? MainActivity)?.showBanner(context.getString(R.string.agent_sent, s.name), 3)
+    }
+
+    private fun resume(s: AgentSession, armed: Boolean, time: String) = call(s) {
+        BackendClient(context).agents.resume(s.id, armed)
+        (context as? MainActivity)?.showBanner(
+            if (armed) context.getString(R.string.agent_resume_armed_banner, s.name, time) else context.getString(R.string.agent_resume_cancelled),
+            4,
+        )
+    }
+
+    /** Une action sur une session, puis relecture ; l'échec est dit en une phrase (le compagnon dit pourquoi). */
+    private fun call(s: AgentSession, action: suspend () -> Unit) {
+        owner.lifecycleScope.launch {
+            try {
+                action()
+                AgentsFeed.refresh(context)
+            } catch (e: Exception) {
+                (context as? MainActivity)?.showBanner(context.errorText(e), 6)
+            }
         }
     }
 

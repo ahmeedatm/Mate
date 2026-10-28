@@ -150,6 +150,7 @@
     <string name="agent_age_now">à l\'instant</string>
     <string name="agent_age_hours">%1$d h %2$02d</string>
     <string name="agent_worked">Travaillé %1$s</string>
+    <string name="agent_worked_short">Travaillé moins d\'1 min</string>
     <string name="agent_tool">Outil : %1$s</string>
     <string name="agents_empty">Aucune session Claude Code ouverte sur l\'ordinateur.</string>
     <string name="agents_hooks_hint">Pour répondre d\'ici : poser les hooks sur l\'ordinateur (npm run agents:hooks).</string>
@@ -185,6 +186,15 @@
     <string name="agent_ask_send">Envoyer</string>
     <string name="agent_ask_back">Retour</string>
     <string name="agent_ask_ok">OK</string>
+    <string name="agent_continue">Continue</string>
+    <string name="agent_write">Écrire…</string>
+    <string name="agent_write_title">Écrire à %1$s</string>
+    <string name="agent_write_hint">Ton message</string>
+    <string name="agent_sent">Message envoyé à %1$s</string>
+    <string name="agent_resume_at">Reprendre à %1$s</string>
+    <string name="agent_resume_armed">Reprise à %1$s · annuler</string>
+    <string name="agent_resume_armed_banner">%1$s reprendra à %2$s</string>
+    <string name="agent_resume_cancelled">Reprise annulée</string>
     <!-- Onglet Son du deck (console de mixage). -->
     <string name="mixer_master">Sortie</string>
     <string name="mixer_mic">Micro</string>

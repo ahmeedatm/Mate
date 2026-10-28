@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bouton d'action d'une session (continue, écrire, reprise) : contour sur la carte de la session. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="?attr/c_surface_pressed" /><corners android:radius="22dp" /><stroke android:width="1dp" android:color="?attr/c_text_faint" /></shape></item>
+    <item><shape android:shape="rectangle"><corners android:radius="22dp" /><stroke android:width="1dp" android:color="?attr/c_text_faint" /></shape></item>
+</selector>

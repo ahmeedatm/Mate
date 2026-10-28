@@ -35,6 +35,11 @@ data class AgentSession(
     val workedMs: Long?,
     val limit: String?,
     val canFocus: Boolean,
+    /** Message rapide possible : session au repos dans un terminal Orca (seul moyen fiable d'y écrire). */
+    val canSend: Boolean = false,
+    /** Limite atteinte : heure de reprise (heure de l'ordinateur, absolue) si elle a pu être lue, et « continue » armé pour cette heure. */
+    val resumeAt: Long? = null,
+    val resumeArmed: Boolean = false,
     /** Demande à laquelle la tablette peut répondre (permission ou question), tenue ouverte par l'ordinateur. */
     val askId: String? = null,
 )
@@ -100,6 +105,18 @@ class AgentsApi(private val http: Http) {
         Unit
     }
 
+    /** Écrit une ligne dans le terminal d'une session au repos (« continue », une phrase dictée). */
+    suspend fun send(session: String, text: String) = http.io {
+        http.postJson("/agents/send", JSONObject().put("session", session).put("text", text))
+        Unit
+    }
+
+    /** Arme ou désarme l'envoi de « continue » à l'heure de reprise d'une limite. */
+    suspend fun resume(session: String, armed: Boolean) = http.io {
+        http.postJson("/agents/resume", JSONObject().put("session", session).put("armed", armed))
+        Unit
+    }
+
     suspend fun focus(session: String) = http.io {
         http.postJson("/agents/focus", JSONObject().put("session", session))
         Unit
@@ -127,6 +144,9 @@ internal fun parseAgents(text: String): AgentsState {
                 workedMs = if (s.isNull("workedMs")) null else s.optLong("workedMs"),
                 limit = s.optStringOrNull("limit"),
                 canFocus = s.optBoolean("canFocus"),
+                canSend = s.optBoolean("canSend"),
+                resumeAt = if (s.isNull("resumeAt")) null else s.optLong("resumeAt"),
+                resumeArmed = s.optBoolean("resumeArmed"),
                 askId = s.optStringOrNull("askId"),
             )
         },

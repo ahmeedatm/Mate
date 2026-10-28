@@ -74,6 +74,25 @@ class AgentsLogicTest {
     }
 
     @Test
+    fun `lit la limite avec son heure de reprise et le message rapide`() {
+        val state = parseAgents(
+            """{"sessions":[{"id":"s1","name":"site","dir":"site","branch":null,"state":"limit","since":1,"waitingFor":null,"tool":null,"lines":[],"workedMs":null,
+              "limit":"You've hit your limit · resets 3pm","resumeAt":1793194380000,"resumeArmed":true,"askId":null,"askKind":null,"canSend":true,"canFocus":true},
+              {"id":"s2","name":"autre","dir":"autre","branch":null,"state":"done","since":1,"waitingFor":null,"tool":null,"lines":[],"workedMs":null,"limit":null,"resumeAt":null,"resumeArmed":false,"canSend":false,"canFocus":false}],
+              "counts":{"working":0,"waiting":0,"done":1,"limit":1,"idle":0},"total":2,"hooks":true,"now":1}""",
+        )
+        val (limit, done) = state.sessions
+        assertEquals(AgentState.LIMIT, limit.state)
+        assertEquals(1_793_194_380_000L, limit.resumeAt)
+        assertTrue(limit.resumeArmed)
+        assertTrue(limit.canSend)
+        assertEquals("You've hit your limit · resets 3pm", limit.limit)
+        assertNull(done.resumeAt)
+        assertFalse(done.resumeArmed)
+        assertFalse(done.canSend)
+    }
+
+    @Test
     fun `un etat inconnu est inactif`() {
         assertEquals(AgentState.IDLE, AgentState.of("autre"))
         assertEquals(AgentState.IDLE, AgentState.of(null))

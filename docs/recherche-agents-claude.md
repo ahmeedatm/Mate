@@ -1,6 +1,6 @@
 # Les agents Claude Code sur la tablette (recherche, V1 en cours de livraison)
 
-Étudié le 28/10/2026, avec Claude Code 2.1.308 sur le Mac de développement. Idée : la tablette montre les sessions Claude Code de l'ordinateur (travaille, a fini, attend une réponse) et on répond depuis la tablette, surtout aux permissions et aux questions à choix (outil `AskUserQuestion`).
+Étudié le 28/10/2026, avec Claude Code 2.1.308 sur le Mac de développement. La V1 est livrée le même jour (MR !59 à !63) : voir « Résultats des essais » plus bas et [etat-du-projet.md](etat-du-projet.md). Idée : la tablette montre les sessions Claude Code de l'ordinateur (travaille, a fini, attend une réponse) et on répond depuis la tablette, surtout aux permissions et aux questions à choix (outil `AskUserQuestion`).
 
 ## En bref
 
