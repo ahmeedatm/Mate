@@ -13,7 +13,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.unowhy.companion.Computers
@@ -25,6 +24,7 @@ import com.unowhy.companion.net.HomeFeatures
 import com.unowhy.companion.ui.home.COLS
 import com.unowhy.companion.ui.home.DayLineWidget
 import com.unowhy.companion.ui.home.Down
+import com.unowhy.companion.ui.home.FlowBandView
 import com.unowhy.companion.ui.home.HomeHost
 import com.unowhy.companion.ui.home.HomeLayout
 import com.unowhy.companion.ui.home.HomeWidget
@@ -107,6 +107,12 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         layout = HomeLayout.load(requireContext(), cadran)
         build()
 
+        // Rétro : les tubes passent derrière les widgets, voilés derrière ceux sans fond (où qu'ils soient placés) ;
+        // les textes foncés sont détourés d'un halo pour rester lisibles dessus.
+        if (themeBool(requireContext(), R.attr.c_flow)) grid.afterLayout = { Look.haloTexts(grid) }
+        view.findViewById<FlowBandView>(R.id.home_flow).hidden = {
+            widgets.mapNotNull { (placed, widget) -> widget.view.takeIf { placed.page == page && placed.type.bare } }
+        }
         // Le panneau document peut réduire la largeur de moitié : 2 colonnes, la page défile.
         scroll.addOnLayoutChangeListener { _, l, t, r, b, _, _, _, _ ->
             val narrow = r - l < dp(880)
@@ -114,15 +120,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             grid.post {
                 grid.narrow = narrow
                 grid.viewportHeight = b - t
-            }
-        }
-        // Rétro : la bande cède sa place quand le panneau document réduit l'Accueil (largeur de l'Accueil entier,
-        // que la bande ne change pas : pas d'aller-retour).
-        val flow = view.findViewById<View>(R.id.home_flow)
-        if (flow.visibility != View.GONE) {
-            view.addOnLayoutChangeListener { _, l, t, r, b, _, _, _, _ ->
-                val shown = r - l - (b - t) * 328 / 800 >= dp(880)
-                if (flow.isVisible != shown) flow.post { flow.isVisible = shown }
             }
         }
     }

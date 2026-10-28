@@ -42,9 +42,16 @@ class ProgressRing @JvmOverloads constructor(
             if (value != arc.color) { arc.color = value; invalidate() }
         }
 
+    /** Couleur du cercle de fond (par défaut `c_surface_raised`). */
+    var trackColor: Int
+        get() = track.color
+        set(value) {
+            if (value != track.color) { track.color = value; invalidate() }
+        }
+
     /** Trait proportionnel à la taille : l'anneau sert en grand (Focus) et en petit (Accueil). */
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        stroke = maxOf(minStroke, minOf(w, h) / 24f)
+        stroke = strokeFor(minOf(w, h).toFloat(), minStroke)
         track.strokeWidth = stroke
         arc.strokeWidth = stroke
     }
@@ -56,5 +63,10 @@ class ProgressRing @JvmOverloads constructor(
         bounds.set(left, top, left + size - stroke, top + size - stroke)
         canvas.drawArc(bounds, 0f, 360f, false, track)
         if (progress > 0f) canvas.drawArc(bounds, -90f, 360f * progress, false, arc)
+    }
+
+    companion object {
+        /** Épaisseur du trait pour un anneau de `size` pixels (au moins `minStroke`) : de quoi placer un texte dedans. */
+        fun strokeFor(size: Float, minStroke: Float): Float = maxOf(minStroke, size / 24f)
     }
 }

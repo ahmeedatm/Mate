@@ -21,13 +21,18 @@ val updateUrl = (findProperty("updateUrl") as String?)
 // vide en debug : le registre répond 401, la tablette n'y voit aucune mise à jour.
 val updateHeader = (findProperty("updateHeader") as String?) ?: ""
 
-// Version : celle du tag vX.Y.Z en CI (-PappVersion=X.Y.Z). versionCode = X × 10000 + Y × 100 + Z, toujours croissant.
-// Sans tag : 0.0.0, code 1 (Android refuse 0) : une build locale ne bloque que v0.0.1, et un APK debug ne reçoit
+// Version : celle du tag vX.Y.Z en CI (-PappVersion=X.Y.Z). versionCode = (X × 10000 + Y × 100 + Z) × 1000, toujours croissant.
+// Essai depuis une MR (job essai-android) : -PappVersion=X.Y.Z-essai.N, X.Y.Z = dernier tag de la branche, N = numéro
+// du pipeline ; code = celui du tag + 1 + N mod 999 : au-dessus du tag, sous le suivant.
+// Sans tag : 0.0.0, code 1 (Android refuse 0) : une build locale ne bloque aucun tag, et un APK debug ne reçoit
 // de toute façon pas un APK release (signature différente).
 val appVersion = (findProperty("appVersion") as String?) ?: "0.0.0"
-val appVersionCode = Regex("""(\d+)\.(\d{1,2})\.(\d{1,2})""").matchEntire(appVersion)
-    ?.destructured?.let { (x, y, z) -> (x.toInt() * 10000 + y.toInt() * 100 + z.toInt()).coerceAtLeast(1) }
-    ?: throw GradleException("appVersion « $appVersion » : attendu X.Y.Z, Y et Z inférieurs à 100")
+val appVersionCode = Regex("""(\d+)\.(\d{1,2})\.(\d{1,2})(?:-essai\.(\d+))?""").matchEntire(appVersion)
+    ?.destructured?.let { (x, y, z, n) ->
+        val tag = (x.toInt() * 10000 + y.toInt() * 100 + z.toInt()) * 1000
+        (if (n.isEmpty()) tag else tag + 1 + n.toInt() % 999).coerceAtLeast(1)
+    }
+    ?: throw GradleException("appVersion « $appVersion » : attendu X.Y.Z ou X.Y.Z-essai.N, Y et Z inférieurs à 100")
 
 // Clé de signature release, jamais dans le dépôt : fichier PKCS12 et mot de passe donnés par l'environnement (CI).
 val releaseKeystore = providers.environmentVariable("RELEASE_KEYSTORE").orNull

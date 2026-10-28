@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import os from "node:os";
 import type { SystemCommand } from "../screens.ts";
 import * as audio from "./audio.ts";
 import * as calls from "./calls.ts";
@@ -28,6 +29,22 @@ activate
 display dialog (item 2 of argv) with title (item 1 of argv) buttons {"OK"} default button 1 giving up after 120
 end run`;
   spawn("osascript", ["-e", script, title, text], { detached: true, stdio: "ignore" }).unref();
+}
+
+/** Mémoire disponible en octets d'après la sortie de `vm_stat` : pages libres + inactives + spéculatives + purgeables. */
+export function parseVmStat(output: string): number {
+  const pageSize = Number(/page size of (\d+) bytes/.exec(output)?.[1] ?? 4096);
+  const pages = (label: string) => Number(new RegExp(`^Pages ${label}:\\s+(\\d+)`, "m").exec(output)?.[1] ?? 0);
+  return (pages("free") + pages("inactive") + pages("speculative") + pages("purgeable")) * pageSize;
+}
+
+/** Mémoire disponible en octets (`os.freemem()` ne compte que la libre, macOS garde le reste en cache) ; `vm_stat` en échec : `os.freemem()`. */
+export async function availableMemory(): Promise<number> {
+  try {
+    return parseVmStat(await run("vm_stat", []));
+  } catch {
+    return os.freemem();
+  }
 }
 
 /** L'appli tourne, même sans fenêtre. */
