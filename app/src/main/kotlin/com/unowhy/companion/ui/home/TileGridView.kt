@@ -48,6 +48,9 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
     override val ownsLongPress = true
     override val ownsSwipe = false
 
+    // Cases enfoncées, seules rendues au relâchement.
+    private val pressed = mutableListOf<View>()
+
     private val adapter = object : BaseAdapter() {
         override fun getCount() = cells.size
         override fun getItem(position: Int) = cells[position]
@@ -94,7 +97,12 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val position = pointToPosition(ev.x.toInt(), ev.y.toInt())
-                if (position != INVALID_POSITION) getChildAt(position - firstVisiblePosition)?.let { Look.pressTo(it, true) }
+                if (position != INVALID_POSITION) {
+                    getChildAt(position - firstVisiblePosition)?.let {
+                        pressed += it
+                        Look.pressTo(it, true)
+                    }
+                }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> releaseAll()
         }
@@ -102,7 +110,8 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
     }
 
     private fun releaseAll() {
-        for (i in 0 until childCount) Look.pressTo(getChildAt(i), false)
+        pressed.forEach { Look.pressTo(it, false) }
+        pressed.clear()
     }
 
     /** Dessine [cell] dans une vue de [newCell] (neuve ou recyclée). */

@@ -305,22 +305,24 @@ object Look {
         }
     }
 
-    private val presses = java.util.WeakHashMap<View, Pair<SpringAnimation, SpringAnimation>>()
-
     /**
      * Appui piloté de l'extérieur, pour une vue qui ne reçoit pas elle-même le DOWN et l'UP (case d'une liste dont le
      * clic passe par la liste) : `true` l'enfonce à 0,96, `false` la rend. [pressSpring] pour une vue cliquable.
      */
     fun pressTo(view: View, pressed: Boolean) {
-        val (x, y) = presses.getOrPut(view) { spatialFast(view, DynamicAnimation.SCALE_X) to spatialFast(view, DynamicAnimation.SCALE_Y) }
+        val (x, y) = springsOf(view) ?: (spatialFast(view, DynamicAnimation.SCALE_X) to spatialFast(view, DynamicAnimation.SCALE_Y))
+            .also { view.setTag(R.id.press_springs, it) }
         val to = if (pressed) 0.96f else 1f
         x.animateToFinalPosition(to)
         y.animateToFinalPosition(to)
     }
 
+    @Suppress("UNCHECKED_CAST")
+    private fun springsOf(view: View) = view.getTag(R.id.press_springs) as? Pair<SpringAnimation, SpringAnimation>
+
     /** Vue réutilisée pour une autre case : plus d'appui en cours, taille normale. */
     fun pressReset(view: View) {
-        presses.remove(view)?.let { (x, y) -> x.cancel(); y.cancel() }
+        springsOf(view)?.let { (x, y) -> x.cancel(); y.cancel() }
         view.scaleX = 1f
         view.scaleY = 1f
     }
