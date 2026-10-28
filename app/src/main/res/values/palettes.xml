@@ -21,6 +21,9 @@
         <item name="c_ko">#FFFF6B6B</item>
         <item name="c_ko_soft">#29FF6B6B</item>
         <item name="c_warn">#FFF5B85C</item>
+        <item name="c_agent_wait">#FFFFB020</item>
+        <item name="c_agent_done">#FF5DD39E</item>
+        <item name="c_agent_limit">#FF6CB4FF</item>
         <item name="c_paper">#FFFFFFFF</item>
         <item name="c_scrim">#B3000000</item>
         <item name="c_hue_orange">#FFFFA05C</item>
@@ -69,6 +72,9 @@
         <item name="c_ko">#FFE5484D</item>
         <item name="c_ko_soft">#24E5484D</item>
         <item name="c_warn">#FFD3841A</item>
+        <item name="c_agent_wait">#FFD98200</item>
+        <item name="c_agent_done">#FF1C9A61</item>
+        <item name="c_agent_limit">#FF1F6FEB</item>
         <item name="c_paper">#FFFFFFFF</item>
         <item name="c_scrim">#B3000000</item>
         <item name="c_hue_orange">#FFE8710A</item>
@@ -133,6 +139,9 @@
         <item name="c_ko">#FFBA1A1A</item>
         <item name="c_ko_soft">#24BA1A1A</item>
         <item name="c_warn">#FF8A6100</item>
+        <item name="c_agent_wait">#FFB86A00</item>
+        <item name="c_agent_done">#FF1E8F54</item>
+        <item name="c_agent_limit">#FF1F6FEB</item>
         <item name="c_paper">#FFFFFFFF</item>
         <item name="c_scrim">#52000000</item>
         <item name="c_hue_orange">#FF4D4545</item>
@@ -195,6 +204,9 @@
         <item name="c_ko">#FFFFB4AB</item>
         <item name="c_ko_soft">#29FFB4AB</item>
         <item name="c_warn">#FFFFD166</item>
+        <item name="c_agent_wait">#FFFFB020</item>
+        <item name="c_agent_done">#FF5DD39E</item>
+        <item name="c_agent_limit">#FF6CB4FF</item>
         <item name="c_paper">#FFFFFFFF</item>
         <item name="c_scrim">#80000000</item>
         <item name="c_hue_orange">#FFD0C4C3</item>
@@ -271,6 +283,9 @@
         <item name="c_ko">#FFB02600</item>
         <item name="c_ko_soft">#24B02600</item>
         <item name="c_warn">#FFA85A00</item>
+        <item name="c_agent_wait">#FFB35A00</item>
+        <item name="c_agent_done">#FF2E8B3D</item>
+        <item name="c_agent_limit">#FF1F5FBF</item>
         <item name="c_paper">#FFFFFFFF</item>
         <item name="c_scrim">#59552805</item>
         <item name="c_hue_orange">#FFE07A00</item>

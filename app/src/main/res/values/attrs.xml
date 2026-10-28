@@ -21,6 +21,10 @@
     <attr name="c_ko_soft" format="color" />
     <attr name="c_warn" format="color" />
     <attr name="c_paper" format="color" />
+    <!-- Agents Claude : une session attend (ambre), a fini (vert), a atteint sa limite (bleu). Signaux, pas décor : lisibles sur chaque thème. -->
+    <attr name="c_agent_wait" format="color" />
+    <attr name="c_agent_done" format="color" />
+    <attr name="c_agent_limit" format="color" />
     <attr name="c_scrim" format="color" />
     <!-- Teintes des fonctions (pastilles des titres, tuiles d'applis) : ui/Look.kt. -->
     <attr name="c_hue_orange" format="color" />

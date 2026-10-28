@@ -160,6 +160,16 @@
             android:layout_weight="1"
             android:visibility="gone" />
 
+        <!-- Onglet « Agents » : les sessions Claude Code de l'ordinateur (qui travaille, qui a fini, qui attend). -->
+        <com.unowhy.companion.ui.AgentsView
+            android:id="@+id/deck_agents"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"
+            android:layout_weight="1"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/deck_status"
             android:layout_width="match_parent"

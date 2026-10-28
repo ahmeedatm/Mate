@@ -102,7 +102,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 |---|---|
 | `MainActivity.kt` | câblage des modes (`Mode.kt`), panneau document, changement d'ordinateur ; barre latérale `ui/Rail`, clavier `ui/KeyboardControl`, bandeau `ui/Banner`, rappels Eau et batterie `ui/TabletAlerts`, Ne pas déranger `focus/FocusDnd`, canal `remote/RemoteLink` |
 | `Prefs.kt`, `Computers.kt` | préférences, liste des ordinateurs appairés |
-| `net/` | `BackendClient` (point d'accès : un client par domaine, `DeckApi`, `WindowsApi`, `SystemApi`, `DocsApi`, `CalendarApi`, `TasksApi`, `CameraApi`, `UpdatesApi`, `TabletApi`, `PairingApi`), `Http` (plomberie, `HttpException`), `Connection` (bascule), `Discovery` (UDP), `Wifi` |
+| `net/` | `BackendClient` (point d'accès : un client par domaine, `DeckApi`, `WindowsApi`, `SystemApi`, `DocsApi`, `CalendarApi`, `TasksApi`, `CameraApi`, `UpdatesApi`, `TabletApi`, `AgentsApi`, `PairingApi`), `Http` (plomberie, `HttpException`), `Connection` (bascule), `Discovery` (UDP), `Wifi` |
 | `remote/RemoteChannel.kt` | ordres reçus de l'ordinateur |
 | `ui/` | un fichier par écran ou composant : `HomeFragment`, `DeckFragment`, `FromComputerFragment` (Depuis l'ordi : choix Fichiers / Page de l'ordi, puis la liste ; `BrowserTabsDialog` : onglets de l'ordi), `FocusFragment`, `CameraFragment`, `SettingsFragment`, `WelcomeView` (premier lancement), `DocumentPanel`, boîtes de dialogue (`TaskDialog`, `EventDialog`, `ComputerAdder`, `WifiPicker`…) |
 | `ui/home/` | Accueil à widgets : `WidgetModel` (grille 4×4, tailles, modèles), `WidgetGrid` (placement, mode Modifier, pages), widgets |
@@ -111,6 +111,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | `audio/` | `Speaker` (synthèse vocale) |
 | `voice/` | commande vocale : `VoiceCommands` (phrases comprises, noms rapprochés à l'oreille), `VoiceControl` (écoute, exécution) |
 | `ui/CallOverlay.kt` | carte d'appel entrant |
+| `agents/`, `ui/AgentsView.kt`, `ui/AgentLight.kt`, `ui/home/AgentsWidget.kt`, `audio/AgentSounds.kt` | agents Claude : relevé partagé des sessions (`AgentsFeed`, 3 s tant qu'une vue les montre), alertes de l'ordre `agent` (`AgentAlerts` : lumière de bord + son court, tus pendant le Focus sauf « attend »), onglet Agents du Deck (après « Son », si `/deck/features` annonce `agents`), widget d'Accueil |
 | `camera/DocCamera.kt` | caméra du visualiseur |
 | `device/` | batterie, signal, luminosité (atténuée la nuit) |
 | `kiosk/` | `Kiosk` (verrouillage, SQOOL masqué), `Updater`, `UpdatePlan`, `AutoUpdater`, `UpdatedReceiver`, `KioskAdminReceiver` |

@@ -41,7 +41,14 @@ data class LiveApps(val open: List<String>, val live: List<String>)
 /** Cartes de l'Accueil selon les applis du deck : agenda (Outlook, Calendrier…), bouton Rejoindre (Teams). */
 /** `linked` : l'ordinateur a un agenda relié (lien ICS, compte) en plus de l'agenda personnel. */
 /** `meetings` : Rejoindre (tout lien de visio) ; `teams` : Teams dans le deck, sa page Réunion après Rejoindre. */
-data class HomeFeatures(val agenda: Boolean = true, val meetings: Boolean = true, val linked: Boolean = true, val teams: Boolean = false)
+/** `agents` : agents Claude Code (Mac avec Claude Code installé) : onglet Agents du Deck. */
+data class HomeFeatures(
+    val agenda: Boolean = true,
+    val meetings: Boolean = true,
+    val linked: Boolean = true,
+    val teams: Boolean = false,
+    val agents: Boolean = false,
+)
 
 /** Choix proposés par l'éditeur de touche perso. */
 data class DeckCatalog(val apps: List<String>, val shortcuts: List<String>, val displays: List<String>)
@@ -77,7 +84,7 @@ class DeckApi(private val http: Http) {
     suspend fun homeFeatures(): HomeFeatures = http.io {
         JSONObject(http.get("/deck/features")).let {
             // Ordinateur pas encore à jour (sans `teams`) : `meetings` y voulait dire « Teams dans le deck ».
-            HomeFeatures(it.optBoolean("agenda", true), it.optBoolean("meetings", true), it.optBoolean("linked", true), it.optBoolean("teams", it.optBoolean("meetings", true)))
+            HomeFeatures(it.optBoolean("agenda", true), it.optBoolean("meetings", true), it.optBoolean("linked", true), it.optBoolean("teams", it.optBoolean("meetings", true)), it.optBoolean("agents"))
         }
     }
 

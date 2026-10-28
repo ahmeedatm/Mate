@@ -126,6 +126,38 @@
     <string name="apps_remove">Retirer</string>
     <string name="deck_open_tab">Ouvertes</string>
     <string name="deck_mixer_tab">Son</string>
+    <string name="deck_agents_tab">Agents</string>
+    <!-- Agents Claude Code (onglet Agents du Deck, widget, lumière de bord). -->
+    <string name="agents_title">Agents Claude</string>
+    <string name="agent_state_working">Travaille</string>
+    <string name="agent_state_waiting">Attend</string>
+    <string name="agent_state_done">Fini</string>
+    <string name="agent_state_limit">Limite atteinte</string>
+    <string name="agent_state_idle">Inactif</string>
+    <string name="agent_waiting_permission">Attend une permission</string>
+    <string name="agent_waiting_input">Attend une réponse</string>
+    <plurals name="agent_count_working">
+        <item quantity="one">travaille</item>
+        <item quantity="other">travaillent</item>
+    </plurals>
+    <plurals name="agent_count_waiting">
+        <item quantity="one">attend</item>
+        <item quantity="other">attendent</item>
+    </plurals>
+    <plurals name="agent_count_done">
+        <item quantity="one">fini</item>
+        <item quantity="other">finis</item>
+    </plurals>
+    <string name="agent_age_now">à l\'instant</string>
+    <string name="agent_age_hours">%1$d h %2$02d</string>
+    <string name="agent_worked">Travaillé %1$s</string>
+    <string name="agent_tool">Outil : %1$s</string>
+    <string name="agents_empty">Aucune session Claude Code ouverte sur l\'ordinateur.</string>
+    <string name="agents_hooks_hint">Pour répondre d\'ici : poser les hooks sur l\'ordinateur (npm run agents:hooks).</string>
+    <string name="agents_focus_hint">Toucher une session l\'amène devant sur l\'ordinateur.</string>
+    <string name="agents_focused">%1$s est devant sur l\'ordinateur</string>
+    <string name="agents_more">+ %1$d autres</string>
+    <string name="agents_light_description">Un agent Claude attend</string>
     <!-- Onglet Son du deck (console de mixage). -->
     <string name="mixer_master">Sortie</string>
     <string name="mixer_mic">Micro</string>
@@ -590,6 +622,8 @@
     <string name="widget_audio_desc">Volume et micro de l\'ordi</string>
     <string name="widget_media">Lecture en cours</string>
     <string name="widget_media_desc">Musique ou vidéo de l\'ordi, avec ses commandes</string>
+    <string name="widget_agents">Agents Claude</string>
+    <string name="widget_agents_desc">Qui travaille, qui a fini, qui t\'attend</string>
     <string name="widget_keys">Touches du deck</string>
     <string name="widget_keys_title">Touches</string>
     <string name="widget_keys_desc">1 à 6 touches du Deck, à portée de main</string>

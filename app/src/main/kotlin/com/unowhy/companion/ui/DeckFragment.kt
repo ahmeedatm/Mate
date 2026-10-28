@@ -49,6 +49,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private lateinit var picker: WindowPicker
     private lateinit var openWindows: OpenWindowsView
     private lateinit var mixer: MixerView
+    private lateinit var agents: AgentsView
     private lateinit var editor: KeyEditor
     private lateinit var adder: AppAdder
     private lateinit var linkAdder: LinkAdder
@@ -59,6 +60,11 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private var showingOpen = false
     /** Onglet « Son » affiché (console de mixage). */
     private var showingMixer = false
+    /** Onglet « Agents » affiché (sessions Claude Code), et proposé seulement si l'ordinateur l'annonce (`/deck/features`). */
+    private var showingAgents = false
+    private var agentsOn = false
+    /** Onglet Agents demandé (lumière touchée) avant que l'ordinateur ait dit s'il l'offre. */
+    private var pendingAgents = false
     /** Onglets dans l'ordre affiché (pour le balayage) et celui qui est sélectionné. */
     private var tabActions: List<() -> Unit> = emptyList()
     private var selectedTab = -1
@@ -107,6 +113,9 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         // Console : glisser de côté la fait défiler, les curseurs se glissent verticalement ; pas de balayage d'onglet.
         mixer = view.findViewById(R.id.deck_mixer)
         mixer.attach(viewLifecycleOwner.lifecycleScope)
+        agents = view.findViewById(R.id.deck_agents)
+        agents.attach(viewLifecycleOwner)
+        swipeTabs(agents)
         editor = view.findViewById(R.id.deck_editor)
         editor.attach(viewLifecycleOwner.lifecycleScope) { loadDeck() }
         adder = view.findViewById(R.id.deck_adder)
@@ -181,6 +190,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         nowPlaying.setActive(active)
         openWindows.setActive(active && showingOpen)
         mixer.setActive(active && showingMixer)
+        agents.setActive(active && showingAgents)
         livePoll?.cancel()
         if (active) livePoll = viewLifecycleOwner.lifecycleScope.launch {
             while (isActive) {
@@ -284,7 +294,12 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                 }
                 pageIndex = pageIndex.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
                 status.visibility = View.GONE
-                if (showingOpen) showOpen() else showPage(pageIndex)
+                agentsOn = runCatching { client().deck.homeFeatures().agents }.getOrDefault(false)
+                when {
+                    showingOpen -> showOpen()
+                    (showingAgents || pendingAgents) && agentsOn -> showAgents()
+                    else -> showPage(pageIndex)
+                }
             } catch (e: Exception) {
                 status.text = errorText(e)
                 status.visibility = View.VISIBLE
@@ -331,13 +346,16 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         val entries = mutableListOf<Tab>()
         fun openTab() = Tab(OPEN_TAB, getString(R.string.deck_open_tab), showingOpen, ::showOpen)
         fun mixerTab() = Tab(MIXER_TAB, getString(R.string.deck_mixer_tab), showingMixer, ::showMixer)
+        fun agentsTab() = Tab(AGENTS_TAB, getString(R.string.deck_agents_tab), showingAgents, ::showAgents)
+        // « Ouvertes », « Son », puis « Agents » (si l'ordinateur les offre) : ensemble posé après Apps.
+        fun extras() = listOfNotNull(openTab(), mixerTab(), agentsTab().takeIf { agentsOn })
         // Par défaut, « Ouvertes » juste après Apps (en premier sans page Apps) : toutes les applis ouvertes, pas seulement les choisies.
         val openAfter = shown.indexOfFirst { pages[it].apps }
         // « Son » juste après.
-        if (openAfter < 0) entries += listOf(openTab(), mixerTab())
+        if (openAfter < 0) entries += extras()
         shown.forEachIndexed { i, index ->
-            entries += Tab(PAGE_TAB + pages[index].title, pages[index].title, !showingOpen && !showingMixer && index == pageIndex) { showPage(index) }
-            if (i == openAfter) entries += listOf(openTab(), mixerTab())
+            entries += Tab(PAGE_TAB + pages[index].title, pages[index].title, !showingOpen && !showingMixer && !showingAgents && index == pageIndex) { showPage(index) }
+            if (i == openAfter) entries += extras()
         }
         // Ordre choisi en déplaçant les onglets ; un onglet jamais placé (page d'appli qui apparaît) garde sa place relative, à la fin.
         val order = Prefs.deckTabOrder(requireContext())
@@ -500,6 +518,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     /** Onglet « Ouvertes » : les touches et les barres de son laissent la place au schéma des écrans. */
     private fun showOpen() {
         hideMixer()
+        hideAgents()
         showingOpen = true
         grid.visibility = View.GONE
         // Les instructions sont dans la bande du bas d'« Ouvertes », qui devient la corbeille pendant un glisser.
@@ -518,6 +537,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             showingOpen = false
             openWindows.setActive(false)
         }
+        hideAgents()
         showingMixer = true
         grid.visibility = View.GONE
         status.visibility = View.GONE
@@ -537,6 +557,36 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         mixer.visibility = View.GONE
     }
 
+    /** Onglet « Agents » : les sessions Claude Code à la place des touches et des barres de son. */
+    private fun showAgents() {
+        if (showingOpen) {
+            showingOpen = false
+            openWindows.setActive(false)
+        }
+        hideMixer()
+        showingAgents = true
+        pendingAgents = false
+        grid.visibility = View.GONE
+        status.visibility = View.GONE
+        renderTabs()
+        audio.visibility = View.GONE
+        voiceCard.visibility = View.GONE
+        appAudio.bind(null)
+        nowPlaying.bind(false)
+        agents.setActive(isResumed && !isHidden)
+    }
+
+    private fun hideAgents() {
+        if (!showingAgents) return
+        showingAgents = false
+        agents.setActive(false)
+    }
+
+    /** Lumière touchée (ou widget) : l'onglet Agents, dès que l'ordinateur a dit qu'il l'offre. */
+    fun openAgentsTab() {
+        if (agentsOn) showAgents() else pendingAgents = true
+    }
+
     /** Page de l'appli d'une tuile (Discord, Teams), -1 si elle n'en a pas. */
     private fun appPageOf(tile: DeckTile) =
         if (tile.type != "app") -1 else pages.indexOfFirst { it.app != null && it.app.equals(tile.app, ignoreCase = true) }
@@ -548,6 +598,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             openWindows.setActive(false)
         }
         hideMixer()
+        hideAgents()
         grid.visibility = View.VISIBLE
         val page = pages.getOrNull(index)
         // Pages Apps et Média : tuile « Ajouter » en dernier (applis de l'ordinateur, sites).
@@ -699,6 +750,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         /** Clés des onglets (ordre gardé dans Prefs) : « Ouvertes », et une page par son titre. */
         const val OPEN_TAB = "open"
         const val MIXER_TAB = "mixer"
+        const val AGENTS_TAB = "agents"
         const val PAGE_TAB = "page:"
         /** Distance de côté qui change d'onglet. */
         const val SWIPE_DP = 80

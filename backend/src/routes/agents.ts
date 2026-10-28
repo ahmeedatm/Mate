@@ -48,7 +48,7 @@ export default async function agentRoutes(app: FastifyInstance) {
     },
   );
 
-  app.get("/agents", { logLevel: "warn" }, async () => ({ ...agents.list(), available: agentsAvailable() }));
+  app.get("/agents", { logLevel: "warn" }, async () => ({ ...agents.list(), available: agentsAvailable(), now: Date.now() }));
 
   app.get<{ Querystring: { id: string } }>(
     "/agents/ask",

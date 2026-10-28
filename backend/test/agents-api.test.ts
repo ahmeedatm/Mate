@@ -89,6 +89,7 @@ describe("agents Claude : hooks et état", () => {
     assert.equal(json.sessions[0].state, "working");
     assert.equal(json.counts.working, 1);
     assert.equal(json.hooks, true);
+    assert.ok(Math.abs(json.now - Date.now()) < 5_000, "l'heure de l'ordinateur : la tablette en tire les durées");
     await hook({ hook_event_name: "Stop", last_assistant_message: "Fini.\nTrois fichiers changés." });
     ({ json } = await server.call("GET", "/agents"));
     assert.equal(json.sessions[0].state, "done");
