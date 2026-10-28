@@ -1,6 +1,6 @@
 // Serveur central des mises à jour de la tablette : `node scripts/updates-publish.mjs dist updates`.
-// Lit l'entrée companion-X.Y.Z.json produite par android-release, copie l'APK qu'elle nomme dans <sortie>/
-// et écrit <sortie>/manifest.json, même forme que GET /updates du backend (taille et SHA-256 compris).
+// Lit l'entrée companion-X.Y.Z.json produite par android-release (companion-X.Y.Z-essai.N.json par essai-android),
+// copie l'APK qu'elle nomme dans <sortie>/ et écrit <sortie>/manifest.json, même forme que GET /updates du backend (taille et SHA-256 compris).
 // Avec UPDATES_URL (paquet générique du registre, …/packages/generic/<nom>/<version>), dépose l'APK puis
 // manifest.json et supprime les anciens fichiers du paquet : seule la dernière version est servie.
 // Jeton : CI_JOB_TOKEN en CI, GITLAB_TOKEN (jeton personnel) pour un essai local.
@@ -14,7 +14,7 @@ if (!distDir || !outDir) {
   process.exit(1);
 }
 
-const entries = fs.readdirSync(distDir).filter((f) => /^companion-\d+\.\d+\.\d+\.json$/.test(f));
+const entries = fs.readdirSync(distDir).filter((f) => /^companion-\d+\.\d+\.\d+(-essai\.\d+)?\.json$/.test(f));
 if (entries.length !== 1) {
   console.error(`${distDir} : une entrée companion-X.Y.Z.json attendue, ${entries.length} trouvée(s)`);
   process.exit(1);

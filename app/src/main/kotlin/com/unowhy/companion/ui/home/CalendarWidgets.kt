@@ -91,7 +91,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     override val view = LinearLayout(context).apply {
         if (cadran) {
             addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fitFollowing() }
-            setBackgroundResource(themeRes(context, R.attr.c_card_bg))
+            setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
             themePx(context, R.attr.c_card_pad).let { setPadding(it, it, it, it) }
         } else {
             // Fond teinté de la couleur de l'agenda (orange), comme la pastille du titre.

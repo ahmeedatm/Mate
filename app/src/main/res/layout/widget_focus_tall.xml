@@ -6,7 +6,7 @@
     android:id="@+id/widget_focus"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/cadran_tile_bg"
+    android:background="?attr/c_home_card_bg"
     android:clickable="true"
     android:focusable="true"
     android:gravity="center_horizontal"
@@ -19,7 +19,7 @@
         android:fontFamily="?attr/c_font_title"
         android:text="@string/widget_focus"
         android:textColor="?attr/c_text_dim"
-        android:textSize="15sp" />
+        android:textSize="?attr/c_title_size" />
 
     <FrameLayout
         android:id="@+id/widget_focus_ring_box"

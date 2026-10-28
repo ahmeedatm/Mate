@@ -193,6 +193,18 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "performances",
+      run: async () => {
+        const perf = await call("GET", "/system/perf");
+        if (!controlled()) return expectStatus(perf, 501, "/system/perf");
+        expectStatus(perf, 200, "/system/perf");
+        const { cpu, ram, gpu } = perf.json;
+        expect(typeof cpu === "number" && cpu >= 0 && cpu <= 100, `processeur hors 0-100 : ${cpu}`);
+        expect(ram?.total > 0, "mémoire totale absente");
+        return `cpu ${cpu} %, ram ${ram.percent} %${gpu ? `, gpu ${gpu.usage} %` : ""}`;
+      },
+    },
+    {
       name: "fenêtres ouvertes",
       run: async () => {
         // Mac sans Accessibilité (job install-mac) : System Events demanderait une autorisation à l'écran.

@@ -683,6 +683,17 @@
     <string name="widget_media_desc">Musique ou vidéo de l\'ordi, avec ses commandes</string>
     <string name="widget_agents">Agents Claude</string>
     <string name="widget_agents_desc">Qui travaille, qui a fini, qui t\'attend</string>
+    <string name="widget_perf">Performances du PC</string>
+    <string name="widget_perf_desc">Processeur, carte graphique et mémoire en direct</string>
+    <string name="perf_title">PC · %1$s</string>
+    <string name="perf_cpu">CPU</string>
+    <string name="perf_gpu">GPU</string>
+    <string name="perf_ram">RAM</string>
+    <string name="perf_ram_gb">%1$s / %2$s Go</string>
+    <string name="perf_fan">Ventilateur</string>
+    <string name="perf_fan_rpm">%1$s tr/min</string>
+    <string name="perf_fan_stopped">Arrêté</string>
+    <string name="perf_unavailable">Non disponible sur cet ordinateur</string>
     <string name="widget_keys">Touches du deck</string>
     <string name="widget_keys_title">Touches</string>
     <string name="widget_keys_desc">1 à 6 touches du Deck, à portée de main</string>
