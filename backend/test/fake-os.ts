@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { checkOpenTarget } from "../src/open-guard.ts";
+import type { VoiceState } from "../src/win/index.ts";
 import type {
   AudioChange,
   Display,
@@ -33,6 +34,8 @@ export type FakeState = {
   onLaunch?: Record<string, { title: string }[]>;
   /** Boutons de la fenêtre de chaque appli (listButtons, pressButton). */
   buttons?: Record<string, string[]>;
+  /** État vocal par appli d'appel (voiceState : appel Discord, micro coupé…) ; absent = pas d'appel lu. */
+  voice?: Record<string, VoiceState>;
   /** Mélangeur de l'onglet Son (mixer) : modifié par les changements reçus. */
   mixer?: MixerState;
   /** Fonctions qui échouent (« Appli absente ») : `"sendKeys"`, ou `"openTarget msteams:"` pour un début de premier argument. */
@@ -218,8 +221,8 @@ export async function pressButton(app: string, names: string[]): Promise<string 
   return pressed;
 }
 
-export async function voiceState(_app: string) {
-  return null;
+export async function voiceState(app: string): Promise<VoiceState | null> {
+  return read().voice?.[app] ?? null;
 }
 
 export async function listDisplays() {

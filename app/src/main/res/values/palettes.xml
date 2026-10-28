@@ -226,8 +226,9 @@
     </style>
     <!-- Rétro : DA Cadran (mêmes formes et dispositions) habillée années 70 : brun, rouge, orange et crème d'Eliot,
          titres et grands chiffres en Abril Fatface, textes en Nunito, grain par-dessus l'écran, bande qui coule
-         à gauche de l'Accueil. Couleurs de texte gardées au-dessus de 4,5:1 sur le fond (brun), l'orange et le
-         rouge vifs servent aux graphismes. -->
+         à gauche de l'Accueil. Textes au-dessus de 4,5:1 sur le fond et les cartes : accent et rouge de Muet en
+         brique (B82800, lisibles en petit, pastilles choisies comprises), le rouge FE3400 et l'orange vifs
+         restent aux graphismes (bande, vumètres, teintes). -->
     <style name="Palette.Retro" parent="">
         <item name="c_cadran">true</item>
         <item name="c_card_bg">@drawable/cadran_tile_bg</item>
@@ -242,6 +243,9 @@
         <item name="c_font_title">@font/abril_fatface</item>
         <item name="c_font_display">@font/abril_fatface</item>
         <item name="android:fontFamily">@font/nunito_400</item>
+        <!-- Boîtes de dialogue sur le crème des cartes plutôt qu'en blanc. -->
+        <item name="colorBackgroundFloating">?attr/c_surface</item>
+        <item name="android:colorBackgroundFloating">?attr/c_surface</item>
         <item name="c_flow">true</item>
         <item name="c_flow_dark">#FF552805</item>
         <item name="c_flow_red">#FFFE3400</item>
@@ -255,8 +259,8 @@
         <item name="c_surface_raised">#FFF5E2B4</item>
         <item name="c_surface_pressed">#FFECD4A0</item>
         <item name="c_stroke">#FFDDB98F</item>
-        <item name="c_accent">#FFFE3400</item>
-        <item name="c_accent_soft">#FFFFD3B8</item>
+        <item name="c_accent">#FFB82800</item>
+        <item name="c_accent_soft">#FFFFD9C2</item>
         <item name="c_on_accent">#FFFBF2B7</item>
         <item name="c_text">#FF552805</item>
         <item name="c_text_dim">#FF7A4A1E</item>
@@ -264,8 +268,8 @@
         <item name="c_graphic">#FFA0714A</item>
         <item name="c_ok">#FF5A6B10</item>
         <item name="c_ok_soft">#FFE6E4A6</item>
-        <item name="c_ko">#FFC22B00</item>
-        <item name="c_ko_soft">#24C22B00</item>
+        <item name="c_ko">#FFB02600</item>
+        <item name="c_ko_soft">#24B02600</item>
         <item name="c_warn">#FFA85A00</item>
         <item name="c_paper">#FFFFFFFF</item>
         <item name="c_scrim">#59552805</item>
