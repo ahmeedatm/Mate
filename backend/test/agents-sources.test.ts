@@ -61,7 +61,14 @@ describe("sources des agents", () => {
             path: "/w/p",
             branch: "refs/heads/feat/x",
             agents: [
-              { agentType: "claude", paneKey: "t:l", toolName: "Edit", lastAssistantMessage: "ok", structuredHostOwned: null },
+              {
+                agentType: "claude",
+                state: "done",
+                paneKey: "t:l",
+                toolName: "Edit",
+                lastAssistantMessage: "ok",
+                structuredHostOwned: null,
+              },
               { agentType: "codex", paneKey: "autre" },
             ],
           },
@@ -75,7 +82,11 @@ describe("sources des agents", () => {
     );
     const info = await listOrca();
     assert.deepEqual(info?.worktrees, [
-      { path: "/w/p", branch: "feat/x", agents: [{ paneKey: "t:l", toolName: "Edit", lastMessage: "ok", structured: false }] },
+      {
+        path: "/w/p",
+        branch: "feat/x",
+        agents: [{ paneKey: "t:l", state: "done", toolName: "Edit", lastMessage: "ok", structured: false }],
+      },
     ]);
     assert.equal(info?.handles.get("t:l"), "term_1");
     process.env.ORCA_BIN = script("orca-ko", "exit 1");

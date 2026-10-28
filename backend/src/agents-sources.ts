@@ -128,6 +128,7 @@ export async function listOrca(): Promise<OrcaInfo | null> {
           .filter((a) => a.agentType === "claude")
           .map((a) => ({
             paneKey: String(a.paneKey ?? ""),
+            state: typeof a.state === "string" ? a.state : null,
             toolName: typeof a.toolName === "string" ? a.toolName : null,
             lastMessage: typeof a.lastAssistantMessage === "string" ? a.lastAssistantMessage : null,
             structured: a.structuredHostOwned === true,

@@ -107,12 +107,12 @@ describe("états par les hooks", () => {
     assert.deepEqual(alerts, [{ kind: "done", session: "s1", name: "refacto", askId: undefined, waiting: 0 }]);
   });
 
-  it("fini devient inactif au bout de 10 minutes", async () => {
+  it("fini reste fini tant qu'on ne relance pas la session (elle t'attend)", async () => {
     const a = createAgents(deps());
     await a.hook(event("Stop", { last_assistant_message: "ok" }), {});
-    clock += 11 * 60_000;
-    assert.equal(a.list().sessions[0].state, "idle");
-    assert.equal(a.list().counts.idle, 1);
+    clock += 3 * 3600_000;
+    assert.equal(a.list().sessions[0].state, "done");
+    assert.equal(a.list().counts.done, 1);
   });
 
   it("limite atteinte : état limite et alerte", async () => {
@@ -536,7 +536,7 @@ describe("filet claude agents --json", () => {
     assert.equal(a.list().sessions[0].state, "working");
     clock += 5_000;
     await a.refresh();
-    assert.equal(a.list().sessions[0].state, "idle", "tour interrompu sans Stop (Échap) : inactif");
+    assert.equal(a.list().sessions[0].state, "done", "tour fini sans hook Stop : fini");
   });
 
   it("oublie une session absente deux relevés de suite, pas un relevé raté", async () => {
@@ -579,6 +579,51 @@ describe("filet claude agents --json", () => {
 });
 
 describe("Orca", () => {
+  it("sans hooks : l'état d'Orca prime (surveillance en tâche de fond = travaille ; tour fini = fini)", async () => {
+    const a = createAgents(deps());
+    live = [
+      { sessionId: "veille", cwd: "/w/veille", status: "idle" },
+      { sessionId: "finie", cwd: "/w/finie", status: "idle" },
+    ];
+    orca = {
+      worktrees: [
+        {
+          path: "/w/veille",
+          branch: "b1",
+          agents: [{ paneKey: "p1", state: "working", toolName: null, lastMessage: "Surveillance du pipeline", structured: false }],
+        },
+        {
+          path: "/w/finie",
+          branch: "b2",
+          agents: [{ paneKey: "p2", state: "done", toolName: null, lastMessage: "Les deux MR sont prêtes.", structured: false }],
+        },
+      ],
+      handles: new Map(),
+    };
+    await a.refresh();
+    const byId = Object.fromEntries(a.list().sessions.map((s) => [s.id, s]));
+    assert.equal(byId.veille.state, "working");
+    assert.equal(byId.finie.state, "done");
+    assert.deepEqual(byId.finie.lines, ["Les deux MR sont prêtes."]);
+    // Relevé suivant : claude toujours « idle », Orca toujours « working » : pas de bascule en « fini ».
+    clock += 10_000;
+    await a.refresh();
+    assert.equal(a.list().sessions.find((s) => s.id === "veille")?.state, "working");
+  });
+
+  it("sans hooks : un tour qui se termine passe à fini, avec l'alerte", async () => {
+    const a = createAgents(deps());
+    live = [{ sessionId: "x", cwd: "/w/x", status: "busy" }];
+    await a.refresh();
+    clock += 60_000;
+    live = [{ sessionId: "x", cwd: "/w/x", status: "idle" }];
+    await a.refresh();
+    await flush();
+    assert.equal(a.list().sessions[0].state, "done");
+    assert.equal(a.list().sessions[0].workedMs, 60_000);
+    assert.equal(alerts.at(-1)?.kind, "done");
+  });
+
   const info = (agents: OrcaInfo["worktrees"][number]["agents"]): OrcaInfo => ({
     worktrees: [{ path: "/work/projet", branch: "feat/x", agents }],
     handles: new Map([["tab:leaf", "term_1"]]),
@@ -586,7 +631,7 @@ describe("Orca", () => {
 
   it("branche et terminal par le volet donné par le hook ; « continue » seulement au repos", async () => {
     const a = createAgents(deps());
-    orca = info([{ paneKey: "tab:leaf", toolName: "Edit", lastMessage: null, structured: false }]);
+    orca = info([{ paneKey: "tab:leaf", state: null, toolName: "Edit", lastMessage: null, structured: false }]);
     await a.hook(event("UserPromptSubmit"), { pane: "tab:leaf" });
     live = [{ sessionId: "s1", cwd: "/work/projet", status: "busy" }];
     await a.refresh();
@@ -602,7 +647,7 @@ describe("Orca", () => {
 
   it("le volet du hook prime sur le dossier : session lancée dans un autre dossier que le worktree", async () => {
     const a = createAgents(deps());
-    orca = info([{ paneKey: "tab:leaf", toolName: null, lastMessage: null, structured: false }]);
+    orca = info([{ paneKey: "tab:leaf", state: null, toolName: null, lastMessage: null, structured: false }]);
     await a.hook({ ...event("Stop", { last_assistant_message: "ok" }), cwd: "/tmp/ailleurs" }, { pane: "tab:leaf" });
     live = [{ sessionId: "s1", cwd: "/tmp/ailleurs", status: "idle" }];
     await a.refresh();
@@ -613,7 +658,7 @@ describe("Orca", () => {
 
   it("une session de chat Orca n'a pas de terminal : pas de message", async () => {
     const a = createAgents(deps());
-    orca = info([{ paneKey: "structured-agent-session-claude_x:y", toolName: null, lastMessage: null, structured: true }]);
+    orca = info([{ paneKey: "structured-agent-session-claude_x:y", state: null, toolName: null, lastMessage: null, structured: true }]);
     await a.hook(event("Stop", { last_assistant_message: "ok" }), {});
     live = [{ sessionId: "s1", cwd: "/work/projet", status: "idle" }];
     await a.refresh();
@@ -625,8 +670,8 @@ describe("Orca", () => {
   it("deux agents dans le worktree et pas de volet connu : pas de jonction hasardeuse", async () => {
     const a = createAgents(deps());
     orca = info([
-      { paneKey: "tab:leaf", toolName: null, lastMessage: null, structured: false },
-      { paneKey: "tab2:leaf2", toolName: null, lastMessage: null, structured: false },
+      { paneKey: "tab:leaf", state: null, toolName: null, lastMessage: null, structured: false },
+      { paneKey: "tab2:leaf2", state: null, toolName: null, lastMessage: null, structured: false },
     ]);
     await a.hook(event("Stop", { last_assistant_message: "ok" }), {});
     live = [{ sessionId: "s1", cwd: "/work/projet", status: "idle" }];
@@ -643,7 +688,11 @@ async function restingInOrca(
 ) {
   orca = {
     worktrees: [
-      { path: "/work/projet", branch: "feat/x", agents: [{ paneKey: "tab:leaf", toolName: null, lastMessage: null, structured: false }] },
+      {
+        path: "/work/projet",
+        branch: "feat/x",
+        agents: [{ paneKey: "tab:leaf", state: null, toolName: null, lastMessage: null, structured: false }],
+      },
     ],
     handles: new Map([["tab:leaf", "term_1"]]),
   };
@@ -697,7 +746,11 @@ describe("interrompre et quota", () => {
     const a = createAgents(deps());
     orca = {
       worktrees: [
-        { path: "/work/projet", branch: null, agents: [{ paneKey: "tab:leaf", toolName: null, lastMessage: null, structured: false }] },
+        {
+          path: "/work/projet",
+          branch: null,
+          agents: [{ paneKey: "tab:leaf", state: null, toolName: null, lastMessage: null, structured: false }],
+        },
       ],
       handles: new Map([["tab:leaf", "term_1"]]),
     };
@@ -775,7 +828,11 @@ describe("reprise après limite", () => {
     await a.hook(event("StopFailure", limit), { pane: "tab:leaf" });
     orca = {
       worktrees: [
-        { path: "/work/projet", branch: null, agents: [{ paneKey: "tab:leaf", toolName: null, lastMessage: null, structured: false }] },
+        {
+          path: "/work/projet",
+          branch: null,
+          agents: [{ paneKey: "tab:leaf", state: null, toolName: null, lastMessage: null, structured: false }],
+        },
       ],
       handles: new Map([["tab:leaf", "term_1"]]),
     };
