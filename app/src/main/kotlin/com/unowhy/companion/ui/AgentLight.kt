@@ -26,7 +26,6 @@ class AgentLight(context: Context) : View(context) {
     var kind: Kind? = null
         private set
 
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var animator: Animator? = null
     private var color = 0
     private val band = context.dp(BAND_DP).toFloat()
@@ -56,6 +55,7 @@ class AgentLight(context: Context) : View(context) {
                 Kind.LIMIT -> R.attr.c_agent_limit
             },
         )
+        buildEdges()
         visibility = VISIBLE
         bringToFront()
         invalidate()
@@ -88,23 +88,33 @@ class AgentLight(context: Context) : View(context) {
         visibility = GONE
     }
 
+    /** Dégradés des quatre bords, refaits quand la taille ou la couleur change (pas d'allocation dans onDraw). */
+    private val edges = Array(4) { Paint(Paint.ANTI_ALIAS_FLAG) }
+
+    private fun buildEdges() {
+        if (width == 0 || height == 0) return
+        val w = width.toFloat()
+        val h = height.toFloat()
+        val strong = ColorUtils.setAlphaComponent(color, 0xCC)
+        val none = ColorUtils.setAlphaComponent(color, 0)
+        edges[0].shader = LinearGradient(0f, 0f, 0f, band, strong, none, Shader.TileMode.CLAMP)
+        edges[1].shader = LinearGradient(0f, h, 0f, h - band, strong, none, Shader.TileMode.CLAMP)
+        edges[2].shader = LinearGradient(0f, 0f, band, 0f, strong, none, Shader.TileMode.CLAMP)
+        edges[3].shader = LinearGradient(w, 0f, w - band, 0f, strong, none, Shader.TileMode.CLAMP)
+    }
+
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        buildEdges()
         invalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
         val w = width.toFloat()
         val h = height.toFloat()
-        val strong = ColorUtils.setAlphaComponent(color, 0xCC)
-        val none = ColorUtils.setAlphaComponent(color, 0)
-        fun edge(x0: Float, y0: Float, x1: Float, y1: Float, left: Float, top: Float, right: Float, bottom: Float) {
-            paint.shader = LinearGradient(x0, y0, x1, y1, strong, none, Shader.TileMode.CLAMP)
-            canvas.drawRect(left, top, right, bottom, paint)
-        }
-        edge(0f, 0f, 0f, band, 0f, 0f, w, band)
-        edge(0f, h, 0f, h - band, 0f, h - band, w, h)
-        edge(0f, 0f, band, 0f, 0f, 0f, band, h)
-        edge(w, 0f, w - band, 0f, w - band, 0f, w, h)
+        canvas.drawRect(0f, 0f, w, band, edges[0])
+        canvas.drawRect(0f, h - band, w, h, edges[1])
+        canvas.drawRect(0f, 0f, band, h, edges[2])
+        canvas.drawRect(w - band, 0f, w, h, edges[3])
     }
 
     /** Ne prend que les touchers sur le bord allumé ; ailleurs, l'écran dessous répond comme d'habitude. */

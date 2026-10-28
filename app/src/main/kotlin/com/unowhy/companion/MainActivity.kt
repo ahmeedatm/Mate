@@ -27,6 +27,7 @@ import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.Link
 import com.unowhy.companion.remote.RemoteLink
+import com.unowhy.companion.ui.AgentAskOverlay
 import com.unowhy.companion.ui.AgentLight
 import com.unowhy.companion.ui.AppTheme
 import com.unowhy.companion.ui.Banner
@@ -85,6 +86,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var callOverlay: CallOverlay
         private set
     private lateinit var agentAlerts: AgentAlerts
+    private lateinit var agentAsk: AgentAskOverlay
     /** Micro refusé hors kiosque (en kiosque, il est accordé d'office) : la commande repart une fois accepté. */
     private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) voice.start() else showBanner(getString(R.string.voice_no_mic), 6)
@@ -110,9 +112,12 @@ class MainActivity : AppCompatActivity() {
         }
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon), onPressed = { menu?.close() })
         // Lumière des agents Claude sous la carte d'appel : un appel prime sur tout.
-        val agentLight = AgentLight(this).apply { onTouched = ::showAgents }
-        agentAlerts = AgentAlerts(agentLight)
+        val agentLight = AgentLight(this)
+        agentAsk = AgentAskOverlay(this)
+        agentAlerts = AgentAlerts(agentLight, openAsk = ::openAgentAsk, openList = ::showAgents)
+        agentLight.onTouched = agentAlerts::onTouched
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(agentLight, android.view.ViewGroup.LayoutParams(-1, -1))
+        findViewById<android.view.ViewGroup>(android.R.id.content).addView(agentAsk, android.view.ViewGroup.LayoutParams(-1, -1))
         callOverlay = CallOverlay(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(callOverlay, android.view.ViewGroup.LayoutParams(-1, -1))
 
@@ -162,6 +167,7 @@ class MainActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this) {
             when {
                 welcome.visibility == View.VISIBLE -> Unit
+                agentAsk.isOpen -> agentAsk.close()
                 menu?.isOpen == true -> menu?.close()
                 documentPanel.visibility == View.VISIBLE -> documentPanel.close()
                 current != Mode.HOME -> show(Mode.HOME)
@@ -344,7 +350,10 @@ class MainActivity : AppCompatActivity() {
     fun onCall(state: String, app: String, caller: String?, video: Boolean) = callOverlay.onCall(state, app, caller, video)
 
     /** Un agent Claude attend, a fini ou a atteint sa limite (ordre `agent`, voir AgentAlerts). */
-    fun onAgent(kind: String, waiting: Int) = agentAlerts.onOrder(kind, waiting)
+    fun onAgent(kind: String, askId: String?, waiting: Int) = agentAlerts.onOrder(kind, askId, waiting)
+
+    /** Carte de la demande de Claude (permission, questions) à laquelle la tablette peut répondre. */
+    fun openAgentAsk(id: String) = agentAsk.open(id)
 
     /** Deck sur l'onglet Agents. */
     fun showAgents() {

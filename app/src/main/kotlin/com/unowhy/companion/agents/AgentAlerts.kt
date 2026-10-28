@@ -9,11 +9,27 @@ import com.unowhy.companion.ui.AgentLight
  * l'écran et un son court, jamais de voix ni de carte plein écran. L'ordinateur ne prévient pas quand un terminal ou
  * Orca est devant. Pendant le Focus, seul « attend » sonne ; la lumière reste.
  */
-class AgentAlerts(private val light: AgentLight) {
+class AgentAlerts(
+    private val light: AgentLight,
+    /** Une demande est à la tablette : l'ouvrir (carte). */
+    private val openAsk: (String) -> Unit,
+    /** Rien à répondre d'ici : l'onglet Agents. */
+    private val openList: () -> Unit,
+) {
 
-    fun onOrder(kind: String, waiting: Int) {
+    /** Dernière demande annoncée, tant que l'ordinateur ne l'a pas retirée ; null : on ne peut que regarder. */
+    private var askId: String? = null
+
+    /** Le bord allumé est touché. */
+    fun onTouched() {
+        val id = askId
+        if (id != null) openAsk(id) else openList()
+    }
+
+    fun onOrder(kind: String, askId: String?, waiting: Int) {
         when (kind) {
             "waiting" -> {
+                this.askId = askId
                 light.show(AgentLight.Kind.WAITING)
                 AgentSounds.waiting()
             }
@@ -26,7 +42,10 @@ class AgentAlerts(private val light: AgentLight) {
                 if (waiting == 0) light.show(AgentLight.Kind.LIMIT)
                 if (!focusing()) AgentSounds.done()
             }
-            "clear" -> if (light.kind == AgentLight.Kind.WAITING) light.hide()
+            "clear" -> {
+                this.askId = null
+                if (light.kind == AgentLight.Kind.WAITING) light.hide()
+            }
         }
     }
 

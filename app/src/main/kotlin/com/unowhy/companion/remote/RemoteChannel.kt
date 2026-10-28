@@ -140,7 +140,7 @@ class RemoteChannel(private val activity: MainActivity) {
             null
         }
         "agent" -> {
-            activity.onAgent(command.getString("kind"), command.optInt("waiting"))
+            activity.onAgent(command.getString("kind"), command.optString("askId").takeIf { command.has("askId") && !command.isNull("askId") }, command.optInt("waiting"))
             null
         }
         else -> error("Ordre inconnu : $type (mettre à jour l'appli ?)")

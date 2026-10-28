@@ -174,7 +174,7 @@ describe("permission", () => {
       text: "npm test",
       risky: false,
       questions: null,
-      expiresAt: clock + 5_000,
+      expiresInMs: 5_000,
     });
     a.answer(askId, { decision: "allow" });
     assert.deepEqual(await out, { hookSpecificOutput: { hookEventName: "PermissionRequest", decision: { behavior: "allow" } } });
@@ -626,6 +626,29 @@ describe("outils", () => {
       assert.equal(isRisky("Bash", { command: c }, "/work/projet"), true, c);
     }
     for (const c of ["npm test", "git status", "ls -la", "git log --oneline"]) {
+      assert.equal(isRisky("Bash", { command: c }, "/work/projet"), false, c);
+    }
+    // Écrire hors du projet.
+    for (const c of [
+      "cp -r dist /var/www/site",
+      "mv a.txt ~/Documents/",
+      "touch /Users/x/autre/f",
+      "echo x > /etc/hosts",
+      "mkdir -p ~/bin",
+      "sed -i s/a/b/ /etc/hosts",
+    ]) {
+      assert.equal(isRisky("Bash", { command: c }, "/work/projet"), true, c);
+    }
+    for (const c of [
+      "cp a.txt /work/projet/b.txt",
+      "cp a b /tmp/essai/",
+      "mkdir -p src/x",
+      "touch /work/projet/src/f",
+      "echo x > /dev/null",
+      "ls /etc",
+      "cat /etc/hosts",
+      "git diff",
+    ]) {
       assert.equal(isRisky("Bash", { command: c }, "/work/projet"), false, c);
     }
     assert.equal(isRisky("Write", { file_path: "/etc/hosts" }, "/work/projet"), true);

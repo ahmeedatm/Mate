@@ -126,7 +126,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             else -> context.getString(R.string.agents_focus_hint)
         }
         status.visibility = VISIBLE
-        val sig = state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus) }
+        val sig = state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId) }
         if (sig != signature) {
             signature = sig
             list.removeAllViews()
@@ -151,6 +151,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         row.findViewById<TextView>(R.id.agent_status).apply {
             text = listOfNotNull(
                 stateLabel(context, s),
+                context.getString(R.string.agent_answer_hint).takeIf { s.askId != null },
                 s.workedMs?.takeIf { s.state == AgentState.DONE || s.state == AgentState.LIMIT }?.let { context.getString(R.string.agent_worked, ageLabel(context, it)) },
                 s.tool?.takeIf { s.state == AgentState.WORKING }?.let { context.getString(R.string.agent_tool, it) },
             ).joinToString(" · ")
@@ -172,7 +173,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         ).forEach { (n, label, state) ->
             counters.addView(
                 TextView(context).apply {
-                    text = "$n ${context.resources.getQuantityString(label, n)}"
+                    text = context.getString(R.string.agent_counter, n, context.resources.getQuantityString(label, n))
                     textSize = 16f
                     setTextColor(if (n > 0) stateColor(context, state) else themeColor(context, R.attr.c_text_faint))
                     compoundDrawablePadding = dp(8)
@@ -184,8 +185,10 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         }
     }
 
-    /** Amène la session devant sur l'ordinateur (terminal Orca, ou Orca) ; sans moyen de la trouver, ne fait rien. */
+    /** Une demande à laquelle répondre : sa carte. Sinon, amène la session devant sur l'ordinateur (terminal Orca, ou Orca). */
     private fun open(s: AgentSession) {
+        val ask = s.askId
+        if (ask != null) return (context as? MainActivity)?.openAgentAsk(ask) ?: Unit
         if (!s.canFocus) return
         owner.lifecycleScope.launch {
             try {

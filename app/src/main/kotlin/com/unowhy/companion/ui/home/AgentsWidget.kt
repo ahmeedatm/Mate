@@ -1,6 +1,7 @@
 package com.unowhy.companion.ui.home
 
 import android.content.Context
+import java.util.Locale
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -88,7 +89,7 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         }
         val more = state.sessions.count { it.state != AgentState.IDLE } - shown.size
         if (more > 0) {
-            list.addView(label(13f, R.attr.c_text_dim).apply { text = context.getString(R.string.agents_more, more) }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(6) })
+            list.addView(label(13f, R.attr.c_text_dim).apply { text = context.resources.getQuantityString(R.plurals.agents_more, more, more) }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(6) })
         }
     }
 
@@ -99,7 +100,7 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
                 orientation = if (vertical) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
                 gravity = if (vertical) Gravity.START else Gravity.CENTER_VERTICAL
                 addView(TextView(context).apply {
-                    this.text = n.toString()
+                    this.text = String.format(Locale.getDefault(), "%d", n)
                     textSize = if (placed.size == WidgetSize.M || vertical) 24f else 30f
                     setTextColor(if (n > 0) stateColor(context, kind) else color(R.attr.c_text_faint))
                 })

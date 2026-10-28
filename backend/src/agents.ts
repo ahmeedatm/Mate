@@ -149,11 +149,32 @@ const RISKY_BASH = [
   /\b(curl|wget)\b[^|]*\|\s*(sudo\s+)?(ba|z|da)?sh\b/,
   /\b(chmod|chown|dd|mkfs|kill|killall|pkill|launchctl)\b/,
   /\bnpm\s+publish\b/,
-  />\s*\/(?!tmp\b|dev\/null)/,
 ];
 
+/** Commandes qui écrivent : risquées quand une de leurs cibles est hors du dossier du projet. */
+const WRITE_CMD = /\b(cp|mv|tee|mkdir|touch|ln|rsync|install|dd|chmod|chown|sed\s+-i)\b/;
+/** Dossiers où écrire reste sans conséquence. */
+const SCRATCH = ["/tmp/", "/private/tmp/", "/var/folders/", "/dev/null"];
+
+/** Chemin absolu ou `~` cité dans la commande, hors du dossier du projet et des dossiers temporaires. */
+function writesOutside(command: string, cwd: string): boolean {
+  const targets = command.match(/(?:^|[\s=])(~[^\s'";|&<>]*|\/[^\s'";|&<>]*)/g) ?? [];
+  return targets.some((raw) => {
+    const target = raw.trim().replace(/^=/, "");
+    if (target.startsWith("~")) return true;
+    if (SCRATCH.some((dir) => target === dir.replace(/\/$/, "") || target.startsWith(dir))) return false;
+    const rel = path.relative(cwd, target);
+    return rel.startsWith("..") || path.isAbsolute(rel);
+  });
+}
+
 export function isRisky(tool: string, input: Record<string, unknown>, cwd: string): boolean {
-  if (tool === "Bash") return RISKY_BASH.some((re) => re.test(String(input.command ?? "")));
+  if (tool === "Bash") {
+    const command = String(input.command ?? "");
+    return (
+      RISKY_BASH.some((re) => re.test(command)) || ((WRITE_CMD.test(command) || />\s*[~/]/.test(command)) && writesOutside(command, cwd))
+    );
+  }
   const file = typeof input.file_path === "string" ? input.file_path : typeof input.notebook_path === "string" ? input.notebook_path : null;
   if (file) {
     const rel = path.relative(cwd, path.resolve(cwd, file));
@@ -556,7 +577,8 @@ export function createAgents(deps: AgentsDeps) {
       text: a.text,
       risky: a.risky,
       questions: a.questions ?? null,
-      expiresAt: a.createdAt + deps.holdMs,
+      /** Reste avant que le terminal reprenne la main : relatif, la tablette n'a pas la même horloge. */
+      expiresInMs: Math.max(0, a.createdAt + deps.holdMs - now()),
     };
   }
 

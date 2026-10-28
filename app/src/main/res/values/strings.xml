@@ -130,7 +130,6 @@
     <!-- Agents Claude Code (onglet Agents du Deck, widget, lumière de bord). -->
     <string name="agents_title">Agents Claude</string>
     <string name="agent_state_working">Travaille</string>
-    <string name="agent_state_waiting">Attend</string>
     <string name="agent_state_done">Fini</string>
     <string name="agent_state_limit">Limite atteinte</string>
     <string name="agent_state_idle">Inactif</string>
@@ -156,8 +155,36 @@
     <string name="agents_hooks_hint">Pour répondre d\'ici : poser les hooks sur l\'ordinateur (npm run agents:hooks).</string>
     <string name="agents_focus_hint">Toucher une session l\'amène devant sur l\'ordinateur.</string>
     <string name="agents_focused">%1$s est devant sur l\'ordinateur</string>
-    <string name="agents_more">+ %1$d autres</string>
+    <plurals name="agents_more">
+        <item quantity="one">+ %1$d autre</item>
+        <item quantity="other">+ %1$d autres</item>
+    </plurals>
+    <string name="agent_counter">%1$d %2$s</string>
     <string name="agents_light_description">Un agent Claude attend</string>
+    <string name="agent_answer_hint">Toucher pour répondre</string>
+    <string name="agent_ask_permission">%1$s demande une permission</string>
+    <string name="agent_ask_question">%1$s te pose une question</string>
+    <string name="agent_ask_risky">Commande à risque : maintiens le bouton pour l\'autoriser.</string>
+    <string name="agent_ask_allow">Autoriser une fois</string>
+    <string name="agent_ask_allow_hold">Maintenir pour autoriser</string>
+    <string name="agent_ask_deny">Refuser</string>
+    <string name="agent_ask_later">Plus tard</string>
+    <string name="agent_ask_expires">Le terminal reprend la main dans %1$d s</string>
+    <string name="agent_ask_gone">Cette demande n\'existe plus : traitée au clavier, ou le terminal a repris la main.</string>
+    <string name="agent_ask_allowed">Autorisé une fois</string>
+    <string name="agent_ask_denied">Refusé</string>
+    <string name="agent_ask_sent">Réponse envoyée</string>
+    <string name="agent_ask_page">Question %1$d sur %2$d</string>
+    <string name="agent_ask_multi">Plusieurs réponses possibles</string>
+    <string name="agent_ask_other">Autre…</string>
+    <string name="agent_ask_other_value">Autre : %1$s</string>
+    <string name="agent_ask_other_title">Autre réponse</string>
+    <string name="agent_ask_other_hint">Ta réponse</string>
+    <string name="agent_ask_dictate">Dicter</string>
+    <string name="agent_ask_next">Suivant</string>
+    <string name="agent_ask_send">Envoyer</string>
+    <string name="agent_ask_back">Retour</string>
+    <string name="agent_ask_ok">OK</string>
     <!-- Onglet Son du deck (console de mixage). -->
     <string name="mixer_master">Sortie</string>
     <string name="mixer_mic">Micro</string>
