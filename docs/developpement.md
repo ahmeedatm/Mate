@@ -248,7 +248,7 @@ npm run updates:essai                   # compagnon lancé depuis le dépôt (ba
 DATA_DIR=paquet npm run updates:essai   # compagnon installé par paquet
 ```
 
-5. Sur la tablette : Réglages > Mises à jour. Sans rien toucher, elle l'installe aussi seule à sa prochaine vérification (démarrage, puis toutes les 6 h), comme toute tablette reliée à cet ordinateur.
+5. Sur la tablette : Réglages > Mises à jour > Rechercher, puis « Mettre à jour » sur la ligne « Companion · essai ». La tablette n'installe jamais un essai seule : sa vérification automatique ne prend que les releases de main (ligne « Companion · main »). Un essai plus bas que la version installée (tag posé depuis, ou essai d'une branche plus ancienne) est affiché « Pas installable » : Android refuse une version plus basse.
 
 Version : `X.Y.Z-essai.N`, X.Y.Z = dernier tag de la branche, N = numéro du pipeline ; code = celui du tag + 1 + N mod 999 (`app/build.gradle.kts`), au-dessus du tag installé et sous le tag suivant. Tous les 999 pipelines, le code repart du bas : un essai peut alors être plus petit que le précédent et la tablette le refuse ; relancer un pipeline ne suffit pas, poser un tag. L'APK d'essai lit les mises à jour du serveur central dans `latest`, comme une release : la tablette repasse seule à la release suivante. Pas de retour à une version plus ancienne (Android refuse un code plus petit).
 

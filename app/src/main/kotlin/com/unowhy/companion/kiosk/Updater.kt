@@ -99,8 +99,6 @@ object Updater {
         UpdateSource.SERVER -> UpdatesApi.server() ?: throw UserFacingException(R.string.update_server_unreachable)
     }
 
-    fun isNewer(update: AppUpdate, info: PackageInfo?) = info == null || update.versionCode > versionCode(info)
-
     /**
      * Télécharge, vérifie et installe. `progress` : 0 à 100 pendant le téléchargement (hors du fil principal) ;
      * `committed` : le fichier est confié à Android, on ne peut plus annuler. Annulable (coroutine) jusque-là.

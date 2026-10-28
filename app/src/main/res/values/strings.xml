@@ -514,14 +514,20 @@
     <string name="wifi_forget_confirm">Oublier le réseau %1$s ? Il faudra retaper son mot de passe.</string>
     <string name="updates_title">Mises à jour</string>
     <string name="updates_check">Rechercher</string>
-    <string name="updates_hint">Le moteur web et le Companion se mettent à jour depuis le serveur Unowhy ou l\'ordinateur, sans quitter le kiosque. En kiosque, le Companion se met à jour seul (au démarrage puis toutes les 6 h).</string>
+    <string name="updates_hint">Le moteur web et le Companion se mettent à jour depuis le serveur Unowhy ou l\'ordinateur, sans quitter le kiosque. En kiosque, le Companion installe seul les versions de main (au démarrage puis toutes les 6 h) ; un essai s\'installe seulement avec son bouton.</string>
     <string name="updates_checking">Recherche des mises à jour…</string>
     <string name="updates_none">Aucune mise à jour annoncée.</string>
-    <string name="updates_row">%1$s · %2$s → %3$s · %4$s</string>
+    <string name="updates_row_title">%1$s · %2$s</string>
+    <string name="updates_row_title_channel">%1$s · %2$s · %3$s</string>
+    <string name="updates_channel_main">main</string>
+    <string name="updates_channel_trial">essai</string>
+    <string name="updates_row_newer">Installée : %1$s · %2$s</string>
+    <string name="updates_row_absent">Pas installée · %1$s</string>
+    <string name="updates_row_installed">Version installée.</string>
+    <string name="updates_row_older">Pas installable : plus ancienne que la version installée (%1$s). Android refuse de revenir à une version plus basse.</string>
     <string name="updates_source_server">serveur Unowhy</string>
     <string name="updates_source_computer">ordinateur</string>
     <string name="updates_source_error">Depuis le %1$s : %2$s</string>
-    <string name="updates_row_current">%1$s · %2$s · à jour</string>
     <string name="updates_install">Mettre à jour</string>
     <string name="updates_downloading">Téléchargement %1$d %%</string>
     <string name="updates_installing">Installation…</string>
@@ -546,7 +552,6 @@
     <string name="duration_seconds">%1$d s</string>
     <string name="duration_minutes">%1$d min</string>
     <string name="updates_downloading_short">Téléchargement…</string>
-    <string name="updates_not_installed">absent</string>
     <string name="kiosk_title">Mode kiosque</string>
     <string name="kiosk_off">Inactif : la tablette n\'a pas été préparée en kiosque (docs/kiosque.md).</string>
     <!-- Premier lancement (WelcomeView) et écrans sans ordinateur -->

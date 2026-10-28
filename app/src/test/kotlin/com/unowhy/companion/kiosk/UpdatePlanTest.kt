@@ -49,6 +49,48 @@ class UpdatePlanTest {
         assertNull(UpdatePlan.auto(listOf(update(webview, 120, UpdateSource.COMPUTER)), companion, 0))
     }
 
+    private fun trial(code: Long, n: Int, source: UpdateSource = UpdateSource.COMPUTER) =
+        AppUpdate(companion, "Companion", code, "0.2.2-essai.$n", "companion-0.2.2-essai.$n.apk", 10, "ab", source)
+
+    @Test
+    fun `isTrial reconnait une version d'essai`() {
+        assertTrue(UpdatePlan.isTrial(trial(202_005, 4)))
+        assertFalse(UpdatePlan.isTrial(update(companion, 202_000, UpdateSource.SERVER)))
+        assertFalse(UpdatePlan.isTrial(AppUpdate(companion, "Companion", 202_000, "0.2.2", "c.apk", 10, "ab")))
+    }
+
+    @Test
+    fun `merge garde l'essai a cote de la release plus recente`() {
+        // Release 0.2.2 taguée pendant qu'un essai 0.2.1-essai.N attend sur l'ordinateur : les deux restent, main d'abord.
+        val oldTrial = AppUpdate(companion, "Companion", 201_188, "0.2.1-essai.187", "e.apk", 10, "ab")
+        val release = update(companion, 202_000, UpdateSource.SERVER)
+        val web = update(webview, 81, UpdateSource.COMPUTER)
+        assertEquals(listOf(release, oldTrial, web), UpdatePlan.merge(listOf(oldTrial, web), listOf(release)))
+    }
+
+    @Test
+    fun `merge garde le plus haut essai`() {
+        val merged = UpdatePlan.merge(listOf(trial(202_005, 4)), listOf(trial(202_010, 9, UpdateSource.SERVER)))
+        assertEquals(listOf(trial(202_010, 9, UpdateSource.SERVER)), merged)
+    }
+
+    @Test
+    fun `auto n'installe jamais un essai`() {
+        assertNull(UpdatePlan.auto(listOf(trial(202_005, 4)), companion, 202_000))
+        val release = update(companion, 203_000, UpdateSource.SERVER)
+        assertEquals(release, UpdatePlan.auto(listOf(trial(203_500, 4), release), companion, 202_000))
+    }
+
+    @Test
+    fun `state compare a la version installee`() {
+        val u = update(companion, 202_000, UpdateSource.SERVER)
+        assertEquals(UpdatePlan.State.NEWER, UpdatePlan.state(u, null))
+        assertEquals(UpdatePlan.State.NEWER, UpdatePlan.state(u, 201_000))
+        assertEquals(UpdatePlan.State.INSTALLED, UpdatePlan.state(u, 202_000))
+        // Essai installé plus haut que la release : Android refuserait la release.
+        assertEquals(UpdatePlan.State.OLDER, UpdatePlan.state(u, 202_005))
+    }
+
     @Test
     fun `isDue au demarrage puis toutes les 6 h`() {
         val h = 3_600_000L
