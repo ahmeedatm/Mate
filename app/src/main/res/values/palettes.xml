@@ -111,6 +111,9 @@
         <item name="c_primary_pressed">?attr/c_text_dim</item>
         <item name="c_font_medium">@font/outfit_500</item>
         <item name="c_font_light">@font/outfit_300</item>
+        <item name="c_font_regular">@font/outfit_400</item>
+        <item name="c_font_title">@font/outfit_500</item>
+        <item name="c_font_display">@font/outfit_300</item>
         <item name="android:fontFamily">@font/outfit_400</item>
         <item name="c_bg">#FFFAF2F1</item>
         <item name="c_rail">#FFFAF2F1</item>
@@ -170,6 +173,9 @@
         <item name="c_primary_pressed">?attr/c_text_dim</item>
         <item name="c_font_medium">@font/outfit_500</item>
         <item name="c_font_light">@font/outfit_300</item>
+        <item name="c_font_regular">@font/outfit_400</item>
+        <item name="c_font_title">@font/outfit_500</item>
+        <item name="c_font_display">@font/outfit_300</item>
         <item name="android:fontFamily">@font/outfit_400</item>
         <item name="c_bg">#FF100D0D</item>
         <item name="c_rail">#FF100D0D</item>
@@ -216,6 +222,78 @@
         <item name="c_mx_shadow">#66000000</item>
         <item name="c_mx_highlight">#14FFFFFF</item>
         <item name="c_mx_key_top">?attr/c_stroke</item>
+        <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
+    </style>
+    <!-- Rétro : DA Cadran (mêmes formes et dispositions) habillée années 70 : brun, rouge, orange et crème d'Eliot,
+         titres et grands chiffres en Abril Fatface, textes en Nunito, grain par-dessus l'écran, bande qui coule
+         à gauche de l'Accueil. Couleurs de texte gardées au-dessus de 4,5:1 sur le fond (brun), l'orange et le
+         rouge vifs servent aux graphismes. -->
+    <style name="Palette.Retro" parent="">
+        <item name="c_cadran">true</item>
+        <item name="c_card_bg">@drawable/cadran_tile_bg</item>
+        <item name="c_tile_bg">@drawable/cadran_tile_bg</item>
+        <item name="c_card_pad">24dp</item>
+        <item name="c_primary">?attr/c_text</item>
+        <item name="c_on_primary">#FFFBF2B7</item>
+        <item name="c_primary_pressed">?attr/c_text_dim</item>
+        <item name="c_font_medium">@font/nunito_600</item>
+        <item name="c_font_light">@font/nunito_300</item>
+        <item name="c_font_regular">@font/nunito_400</item>
+        <item name="c_font_title">@font/abril_fatface</item>
+        <item name="c_font_display">@font/abril_fatface</item>
+        <item name="android:fontFamily">@font/nunito_400</item>
+        <item name="c_flow">true</item>
+        <item name="c_flow_dark">#FF552805</item>
+        <item name="c_flow_red">#FFFE3400</item>
+        <item name="c_flow_orange">#FFFC9303</item>
+        <item name="c_flow_cream">#FFFBF2B7</item>
+        <item name="c_grain_light">#38FBF2B7</item>
+        <item name="c_grain_dark">#1F552805</item>
+        <item name="c_bg">#FFF3DECB</item>
+        <item name="c_rail">#FFF3DECB</item>
+        <item name="c_surface">#FFFBF2B7</item>
+        <item name="c_surface_raised">#FFF5E2B4</item>
+        <item name="c_surface_pressed">#FFECD4A0</item>
+        <item name="c_stroke">#FFDDB98F</item>
+        <item name="c_accent">#FFFE3400</item>
+        <item name="c_accent_soft">#FFFFD3B8</item>
+        <item name="c_on_accent">#FFFBF2B7</item>
+        <item name="c_text">#FF552805</item>
+        <item name="c_text_dim">#FF7A4A1E</item>
+        <item name="c_text_faint">#FF8F6239</item>
+        <item name="c_graphic">#FFA0714A</item>
+        <item name="c_ok">#FF5A6B10</item>
+        <item name="c_ok_soft">#FFE6E4A6</item>
+        <item name="c_ko">#FFC22B00</item>
+        <item name="c_ko_soft">#24C22B00</item>
+        <item name="c_warn">#FFA85A00</item>
+        <item name="c_paper">#FFFFFFFF</item>
+        <item name="c_scrim">#59552805</item>
+        <item name="c_hue_orange">#FFE07A00</item>
+        <item name="c_hue_cyan">#FF5A6B10</item>
+        <item name="c_hue_violet">#FF7A4A1E</item>
+        <item name="c_hue_pink">#FF7A4A1E</item>
+        <item name="c_hue_yellow">#FF7A4A1E</item>
+        <item name="c_hue_blue">#FF7A4A1E</item>
+        <item name="c_hue_red">#FFFE3400</item>
+        <item name="c_hue_green">#FF5A6B10</item>
+        <item name="c_mx_plate_top">?attr/c_surface</item>
+        <item name="c_mx_plate_bottom">?attr/c_bg</item>
+        <item name="c_mx_lcd_bg">?attr/c_text</item>
+        <item name="c_mx_lcd_text">#FFFC9303</item>
+        <item name="c_mx_text">?attr/c_text</item>
+        <item name="c_mx_slot">?attr/c_text</item>
+        <item name="c_mx_cap_top">?attr/c_text_dim</item>
+        <item name="c_mx_cap_bottom">?attr/c_text</item>
+        <item name="c_mx_cap_line">?attr/c_surface</item>
+        <item name="c_mx_led_off">?attr/c_text_dim</item>
+        <item name="c_mx_led_low">#FFFC9303</item>
+        <item name="c_mx_led_mid">#FFFE3400</item>
+        <item name="c_mx_led_high">#FFFBF2B7</item>
+        <item name="c_mx_engrave">?attr/c_text_faint</item>
+        <item name="c_mx_shadow">#2E552805</item>
+        <item name="c_mx_highlight">#FFFFFBEA</item>
+        <item name="c_mx_key_top">?attr/c_surface</item>
         <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
     </style>
 </resources>

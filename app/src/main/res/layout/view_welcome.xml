@@ -15,7 +15,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="?attr/c_font_light"
+            android:fontFamily="?attr/c_font_display"
             android:text="@string/welcome_title"
             android:textSize="44sp" />
 

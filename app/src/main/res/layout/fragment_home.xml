@@ -1,88 +1,102 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Accueil à widgets (HomeFragment, WidgetGrid) : appui long = mode Modifier, avec sa barre en haut ;
-     points des pages en bas quand il y en a plusieurs. Panneau document ouvert : 2 colonnes, la page défile. -->
+     points des pages en bas quand il y en a plusieurs. Panneau document ouvert : 2 colonnes, la page défile
+     (et la bande du thème Rétro s'efface). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="horizontal">
+
+    <!-- Thème Rétro seulement (sinon GONE) : tubes qui coulent sur toute la hauteur, à gauche. -->
+    <com.unowhy.companion.ui.home.FlowBandView
+        android:id="@+id/home_flow"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent" />
 
     <LinearLayout
-        android:id="@+id/home_edit_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="24dp"
-        android:paddingTop="16dp"
-        android:paddingEnd="24dp"
-        android:visibility="gone">
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical">
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/home_edit_hint"
-            android:textColor="?attr/c_text_dim"
-            android:textSize="15sp" />
-
-        <Button
-            android:id="@+id/home_edit_add"
-            style="@style/ActionButton"
-            android:drawableStart="@drawable/ic_add"
-            android:text="@string/home_edit_add" />
-
-        <Button
-            android:id="@+id/home_edit_templates"
-            style="@style/ActionButton"
-            android:layout_marginStart="8dp"
-            android:drawableStart="@drawable/ic_widgets"
-            android:text="@string/home_edit_templates" />
-
-        <Button
-            android:id="@+id/home_edit_page"
-            style="@style/ActionButton"
-            android:layout_marginStart="8dp"
-            android:text="@string/home_edit_page" />
-
-        <Button
-            android:id="@+id/home_edit_cancel"
-            style="@style/ActionButton"
-            android:layout_marginStart="8dp"
-            android:text="@string/cancel" />
-
-        <Button
-            android:id="@+id/home_edit_done"
-            style="@style/PrimaryButton"
-            android:layout_marginStart="8dp"
-            android:text="@string/home_edit_done" />
-    </LinearLayout>
-
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <ScrollView
-            android:id="@+id/home_scroll"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:fillViewport="true">
-
-            <com.unowhy.companion.ui.home.WidgetGrid
-                android:id="@+id/home_grid"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="24dp" />
-        </ScrollView>
-
-        <!-- Une pastille par page, dans la marge du bas de la grille ; toucher = aller à la page. -->
         <LinearLayout
-            android:id="@+id/home_dots"
-            android:layout_width="wrap_content"
-            android:layout_height="24dp"
-            android:layout_gravity="bottom|center_horizontal"
-            android:gravity="center"
+            android:id="@+id/home_edit_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:visibility="gone" />
-    </FrameLayout>
+            android:paddingStart="24dp"
+            android:paddingTop="16dp"
+            android:paddingEnd="24dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/home_edit_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="15sp" />
+
+            <Button
+                android:id="@+id/home_edit_add"
+                style="@style/ActionButton"
+                android:drawableStart="@drawable/ic_add"
+                android:text="@string/home_edit_add" />
+
+            <Button
+                android:id="@+id/home_edit_templates"
+                style="@style/ActionButton"
+                android:layout_marginStart="8dp"
+                android:drawableStart="@drawable/ic_widgets"
+                android:text="@string/home_edit_templates" />
+
+            <Button
+                android:id="@+id/home_edit_page"
+                style="@style/ActionButton"
+                android:layout_marginStart="8dp"
+                android:text="@string/home_edit_page" />
+
+            <Button
+                android:id="@+id/home_edit_cancel"
+                style="@style/ActionButton"
+                android:layout_marginStart="8dp"
+                android:text="@string/cancel" />
+
+            <Button
+                android:id="@+id/home_edit_done"
+                style="@style/PrimaryButton"
+                android:layout_marginStart="8dp"
+                android:text="@string/home_edit_done" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <ScrollView
+                android:id="@+id/home_scroll"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true">
+
+                <com.unowhy.companion.ui.home.WidgetGrid
+                    android:id="@+id/home_grid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="24dp" />
+            </ScrollView>
+
+            <!-- Une pastille par page, dans la marge du bas de la grille ; toucher = aller à la page. -->
+            <LinearLayout
+                android:id="@+id/home_dots"
+                android:layout_width="wrap_content"
+                android:layout_height="24dp"
+                android:layout_gravity="bottom|center_horizontal"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:visibility="gone" />
+        </FrameLayout>
+    </LinearLayout>
 </LinearLayout>

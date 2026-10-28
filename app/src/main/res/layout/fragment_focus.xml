@@ -32,7 +32,7 @@
                 android:id="@+id/focus_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="?attr/c_font_light"
+                android:fontFamily="?attr/c_font_display"
                 android:includeFontPadding="false"
                 android:singleLine="true"
                 android:textSize="72sp" />

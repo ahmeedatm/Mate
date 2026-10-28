@@ -13,6 +13,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.unowhy.companion.Computers
@@ -113,6 +114,15 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             grid.post {
                 grid.narrow = narrow
                 grid.viewportHeight = b - t
+            }
+        }
+        // Rétro : la bande cède sa place quand le panneau document réduit l'Accueil (largeur de l'Accueil entier,
+        // que la bande ne change pas : pas d'aller-retour).
+        val flow = view.findViewById<View>(R.id.home_flow)
+        if (flow.visibility != View.GONE) {
+            view.addOnLayoutChangeListener { _, l, t, r, b, _, _, _, _ ->
+                val shown = r - l - (b - t) * 328 / 800 >= dp(880)
+                if (flow.isVisible != shown) flow.post { flow.isVisible = shown }
             }
         }
     }
