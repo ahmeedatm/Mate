@@ -9,21 +9,28 @@ import type { Step } from "./deck.ts";
  */
 export type PersoKey = { label: string; glyph?: string; color?: string; steps: Step[] };
 
-export const SLOTS = 14;
+/** Emplacements montrés au minimum. */
+export const MIN_SLOTS = 14;
+/** Plafond : validation de la route et de l'outil MCP (mcp.ts en recopie la valeur). */
+export const MAX_SLOTS = 100;
 const storeFile = path.join(config.dataDir, "keys.json");
 
+/** Longueur : un emplacement libre après le dernier rempli, entre MIN_SLOTS et MAX_SLOTS. */
 export async function loadKeys(): Promise<(PersoKey | null)[]> {
   const saved = (await readJson<{ slots?: (PersoKey | null)[] }>(storeFile, () => ({}))).slots ?? [];
-  return Array.from({ length: SLOTS }, (_, i) => saved[i] ?? null);
+  const length = Math.min(MAX_SLOTS, Math.max(MIN_SLOTS, saved.findLastIndex(Boolean) + 2));
+  return Array.from({ length }, (_, i) => saved[i] ?? null);
 }
 
+/** Le fichier s'arrête au dernier emplacement rempli : pas de `null` en queue. */
 export async function saveKey(slot: number, key: PersoKey | null) {
   await updateJson<{ slots?: (PersoKey | null)[] }>(
     storeFile,
     () => ({}),
     (data) => {
-      const slots = Array.from({ length: SLOTS }, (_, i) => data.slots?.[i] ?? null);
+      const slots = Array.from({ length: Math.max(data.slots?.length ?? 0, slot + 1) }, (_, i) => data.slots?.[i] ?? null);
       slots[slot] = key;
+      slots.length = slots.findLastIndex(Boolean) + 1;
       data.slots = slots;
     },
   );

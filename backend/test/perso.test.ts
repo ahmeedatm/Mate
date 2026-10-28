@@ -7,33 +7,59 @@ import { startServer, type TestServer } from "./server.ts";
 
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), "companion-perso-"));
 process.env.DATA_DIR = dir;
-const { loadKeys, saveKey, SLOTS } = await import("../src/perso.ts");
+const { loadKeys, saveKey, MIN_SLOTS, MAX_SLOTS } = await import("../src/perso.ts");
 
 describe("touches perso : stockage", () => {
+  const key = (i = 0) => ({ label: `T${i}`, steps: [{ type: "text" as const, text: String(i) }] });
+  const fileSlots = async () => JSON.parse(await fs.readFile(path.join(dir, "keys.json"), "utf8")).slots as unknown[];
+
+  beforeEach(() => fs.rm(path.join(dir, "keys.json"), { force: true }));
+
   it("14 emplacements vides au départ", async () => {
-    assert.equal(SLOTS, 14);
+    assert.equal(MIN_SLOTS, 14);
     assert.deepEqual(await loadKeys(), Array(14).fill(null));
   });
 
-  it("un fichier plus court est complété, un plus long est coupé", async () => {
-    const key = { label: "A", steps: [{ type: "keys" as const, keys: "cmd+a" }] };
-    await fs.writeFile(path.join(dir, "keys.json"), JSON.stringify({ slots: [key] }));
+  it("un fichier plus court est complété", async () => {
+    await fs.writeFile(path.join(dir, "keys.json"), JSON.stringify({ slots: [key()] }));
     const keys = await loadKeys();
-    assert.equal(keys.length, 14);
-    assert.deepEqual(keys[0], key);
-    await fs.writeFile(path.join(dir, "keys.json"), JSON.stringify({ slots: Array(20).fill(key) }));
-    assert.equal((await loadKeys()).length, 14);
+    assert.equal(keys.length, MIN_SLOTS);
+    assert.deepEqual(keys[0], key());
+  });
+
+  it("il reste toujours un emplacement libre après le dernier rempli", async () => {
+    await Promise.all(Array.from({ length: 14 }, (_, i) => saveKey(i, key(i))));
+    const full = await loadKeys();
+    assert.equal(full.length, 15);
+    assert.equal(full[14], null);
+    await saveKey(20, key(20));
+    assert.equal((await loadKeys()).length, 22);
+    await saveKey(20, null);
+    assert.equal((await loadKeys()).length, 15);
+  });
+
+  it("un fichier plus long que le plafond est coupé", async () => {
+    await fs.writeFile(path.join(dir, "keys.json"), JSON.stringify({ slots: Array(120).fill(key()) }));
+    assert.equal((await loadKeys()).length, MAX_SLOTS);
+  });
+
+  it("vider la dernière touche retire les null de fin du fichier", async () => {
+    await saveKey(2, key(2));
+    await saveKey(20, key(20));
+    assert.equal((await fileSlots()).length, 21);
+    await saveKey(20, null);
+    assert.equal((await fileSlots()).length, 3);
+    await saveKey(2, null);
+    assert.equal((await fileSlots()).length, 0);
   });
 
   it("enregistrer ou vider un emplacement ne touche pas aux autres, même en même temps", async () => {
-    await fs.rm(path.join(dir, "keys.json"), { force: true });
-    const key = (i: number) => ({ label: `T${i}`, steps: [{ type: "text" as const, text: String(i) }] });
-    await Promise.all(Array.from({ length: SLOTS }, (_, i) => saveKey(i, key(i))));
+    await Promise.all(Array.from({ length: MIN_SLOTS }, (_, i) => saveKey(i, key(i))));
     await saveKey(5, null);
     const keys = await loadKeys();
     assert.deepEqual(
-      keys.map((k) => k?.label ?? null),
-      Array.from({ length: SLOTS }, (_, i) => (i === 5 ? null : `T${i}`)),
+      keys.slice(0, MIN_SLOTS).map((k) => k?.label ?? null),
+      Array.from({ length: MIN_SLOTS }, (_, i) => (i === 5 ? null : `T${i}`)),
     );
   });
 });
@@ -114,9 +140,24 @@ describe("touches perso : routes", () => {
 
   it("refuse un emplacement hors de la page", async () => {
     const key = { label: "X", steps: [{ type: "keys", keys: "a" }] };
-    assert.equal((await put(14, key)).status, 400);
+    assert.equal((await put(MAX_SLOTS, key)).status, 400);
     assert.equal((await put(-1, key)).status, 400);
     assert.equal((await put("abc", key)).status, 400);
+  });
+
+  it("PUT /deck/keys/20 enregistre la 21e touche et /deck la montre", async () => {
+    assert.equal((await put(20, { label: "Vingt et un", steps: [{ type: "keys", keys: "a" }] })).status, 200);
+    const perso = (await server.call("GET", "/deck")).json.pages.at(-1);
+    assert.equal(perso.tiles.find((t: { id: string }) => t.id === "k-20").label, "Vingt et un");
+    assert.equal(perso.tiles.length, 22);
+    await server.call("DELETE", "/deck/keys/20");
+  });
+
+  it("PUT /deck/keys/99 passe, /deck/keys/100 est refusé", async () => {
+    const key = { label: "X", steps: [{ type: "keys", keys: "a" }] };
+    assert.equal((await put(99, key)).status, 200);
+    assert.equal((await put(100, key)).status, 400);
+    await server.call("DELETE", "/deck/keys/99");
   });
 
   it("vide un emplacement", async () => {
