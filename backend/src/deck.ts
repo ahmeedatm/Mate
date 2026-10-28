@@ -85,6 +85,8 @@ export type DeckPage = {
   meeting?: boolean;
   app?: string;
   media?: boolean;
+  /** Appli absente de la page Apps : sa page ne s'affiche que pendant un appel (`/deck/live`). */
+  callOnly?: boolean;
   tiles: (Tile | { id: string; empty: true })[];
 };
 
@@ -188,11 +190,13 @@ export async function homeFeatures() {
 export async function loadDeck(): Promise<DeckPage[]> {
   const deck = await loadConfig();
   const apps = await deckApps(deck);
-  // Pages d'applis absentes de la page Apps (pas installées, ou retirées depuis la tablette) : masquées après
-  // la numérotation, les identifiants de tuiles ne bougent pas.
+  // Pages d'applis absentes de la page Apps (pas installées, retirées depuis la tablette, ou installées après
+  // l'enregistrement de la liste) : gardées pour les appels seulement (`callOnly`, onglet pendant l'appel, Répondre
+  // depuis la tablette y mène).
   const names = new Set(apps.map((a) => a.name.toLowerCase()));
-  // Page Média (`media` : lecture en cours au-dessus des touches) seulement si l'ordinateur sait la lire.
-  const present = deck.pages.map((page) => (!page.app || names.has(page.app.toLowerCase())) && (!page.media || canMedia));
+  // Page Média (`media` : lecture en cours au-dessus des touches) seulement si l'ordinateur sait la lire ; masquée
+  // après la numérotation, les identifiants de tuiles ne bougent pas.
+  const present = deck.pages.map((page) => !page.media || canMedia);
   const links = await deckLinks();
   const pages = deck.pages
     .map((page, p): DeckPage =>
@@ -209,6 +213,7 @@ export async function loadDeck(): Promise<DeckPage[]> {
               meeting: page.meeting,
               app: page.app,
               media: page.media,
+              ...(page.app && !names.has(page.app.toLowerCase()) ? { callOnly: true } : {}),
               tiles: page.tiles.map((tile, t) => ({ ...tile, id: `${p}-${t}` })),
             },
     )

@@ -160,6 +160,7 @@ namespace Companion
             var listing = Native.Str(req, "action") == "list";
             var seen = new List<string>();
             var total = 0;
+            AutomationElement hidden = null;
             foreach (var root in WindowRoots(req))
             {
                 foreach (AutomationElement e in root.FindAll(TreeScope.Descendants, Condition.TrueCondition))
@@ -182,13 +183,16 @@ namespace Companion
                         continue;
                     }
                     if (!wanted.Contains(name.ToLowerInvariant())) continue;
-                    if (e.Current.IsOffscreen || !e.Current.IsEnabled) continue;
-                    object pattern;
-                    if (e.TryGetCurrentPattern(InvokePattern.Pattern, out pattern))
+                    if (!e.Current.IsEnabled) continue;
+                    // Hors écran (Discord réduit ou dans la zone de notification) : gardé en secours, actionné
+                    // seulement par un motif d'UI Automation, jamais par un clic.
+                    if (e.Current.IsOffscreen)
                     {
-                        ((InvokePattern)pattern).Invoke();
-                        return new Dictionary<string, object> { { "pressed", name }, { "how", "invoke" } };
+                        if (hidden == null) hidden = e;
+                        continue;
                     }
+                    var done = Act(e, name);
+                    if (done != null) return done;
                     var r = e.Current.BoundingRectangle;
                     if (r.Width <= 0 || r.Height <= 0) continue;
                     SetCursorPos((int)(r.X + r.Width / 2), (int)(r.Y + r.Height / 2));
@@ -198,7 +202,25 @@ namespace Companion
                 }
             }
             if (listing || detail) return new Dictionary<string, object> { { "items", seen }, { "total", total } };
+            if (hidden != null) return Act(hidden, (hidden.Current.Name ?? "").Trim()) ?? new Dictionary<string, object> { { "pressed", null } };
             return new Dictionary<string, object> { { "pressed", null } };
+        }
+
+        // Bouton (Invoke) ou interrupteur (Toggle : micro et sourdine de Discord, sans le mettre devant) ; null sinon.
+        static Dictionary<string, object> Act(AutomationElement e, string name)
+        {
+            object pattern;
+            if (e.TryGetCurrentPattern(InvokePattern.Pattern, out pattern))
+            {
+                ((InvokePattern)pattern).Invoke();
+                return new Dictionary<string, object> { { "pressed", name }, { "how", "invoke" } };
+            }
+            if (e.TryGetCurrentPattern(TogglePattern.Pattern, out pattern))
+            {
+                ((TogglePattern)pattern).Toggle();
+                return new Dictionary<string, object> { { "pressed", name }, { "how", "toggle" } };
+            }
+            return null;
         }
 
         // --- État vocal de Discord (UI Automation : Chromium expose son interface une fois l'accessibilité demandée).
