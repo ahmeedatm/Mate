@@ -1,7 +1,6 @@
 package com.unowhy.companion.ui.home
 
 import android.content.Context
-import java.util.Locale
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -16,6 +15,7 @@ import com.unowhy.companion.ui.dot
 import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.stateColor
 import com.unowhy.companion.ui.stateLabel
+import java.util.Locale
 
 /**
  * Agents Claude : trois compteurs (travaillent, attendent, finis) et, en grand, la liste courte des sessions qui comptent.
