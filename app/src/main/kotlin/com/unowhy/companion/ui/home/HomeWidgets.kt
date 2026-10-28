@@ -309,14 +309,35 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     override suspend fun load() = audio.refresh()
 }
 
-/** Ce qui joue sur l'ordinateur (contrôles multimédias de Windows, MediaRemote sur Mac), comme la page Média. */
+/**
+ * Ce qui joue sur l'ordinateur (contrôles multimédias de Windows, MediaRemote sur Mac), comme la page Média ;
+ * en grand, boutons sous le titre et son de l'ordinateur dessous.
+ */
 class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val playing = NowPlayingView(context).apply { attach(host.scope) }
+    private val audio = ComputerAudioView(context).apply { attach(host.scope) }
     override val view = LinearLayout(context).asCard(16).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
         playing.bind(true)
         addView(playing, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        addView(audio, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16) })
+    }
+
+    init {
+        applySize()
+    }
+
+    private val big get() = placed.size == WidgetSize.L
+
+    override fun applySize() {
+        playing.stacked(big)
+        audio.visibility = if (big) View.VISIBLE else View.GONE
+        if (big) audio.refresh()
+    }
+
+    override suspend fun load() {
+        if (big) audio.refresh()
     }
 
     override fun setActive(active: Boolean) = playing.setActive(active)
