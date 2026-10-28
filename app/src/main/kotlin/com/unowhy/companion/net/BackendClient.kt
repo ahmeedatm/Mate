@@ -23,4 +23,5 @@ class BackendClient(baseUrl: String, token: String = "", connectTimeoutMs: Int =
     val camera = CameraApi(http)
     val updates = UpdatesApi(http)
     val tablet = TabletApi(http)
+    val agents = AgentsApi(http)
 }

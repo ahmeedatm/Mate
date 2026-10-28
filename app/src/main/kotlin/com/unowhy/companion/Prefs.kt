@@ -11,6 +11,7 @@ object Prefs {
     private const val KEY_DECK_TABS = "deck_tabs_"
     private const val KEY_THEME = "theme"
     private const val KEY_FOCUS_DND = "focus_dnd"
+    private const val KEY_AGENTS_PRIVATE = "agents_private"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -56,6 +57,13 @@ object Prefs {
     }
 
     /** Thème choisi dans Réglages (nom d'AppTheme) ; null : Nuit. */
+    /** Agents Claude : contenu des sessions (commandes, questions, résumés) masqué à l'écran, pour le direct. */
+    fun agentsPrivate(context: Context): Boolean = prefs(context).getBoolean(KEY_AGENTS_PRIVATE, false)
+
+    fun setAgentsPrivate(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_AGENTS_PRIVATE, value).apply()
+    }
+
     fun theme(context: Context): String? = prefs(context).getString(KEY_THEME, null)
 
     fun setTheme(context: Context, value: String) {

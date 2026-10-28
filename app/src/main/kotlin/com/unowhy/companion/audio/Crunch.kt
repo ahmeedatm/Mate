@@ -1,11 +1,6 @@
 package com.unowhy.companion.audio
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
-import android.os.Handler
-import android.os.Looper
 import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.sin
@@ -20,30 +15,7 @@ object Crunch {
 
     private val samples: ShortArray by lazy { build() }
 
-    fun play(context: Context) {
-        val data = samples
-        val track = AudioTrack.Builder()
-            .setAudioAttributes(AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build())
-            .setAudioFormat(AudioFormat.Builder()
-                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                .setSampleRate(RATE)
-                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                .build())
-            .setTransferMode(AudioTrack.MODE_STATIC)
-            .setBufferSizeInBytes(data.size * 2)
-            .build()
-        try {
-            track.write(data, 0, data.size)
-            track.play()
-        } catch (e: IllegalStateException) {
-            track.release()
-            return
-        }
-        Handler(Looper.getMainLooper()).postDelayed({ track.release() }, data.size * 1000L / RATE + 200)
-    }
+    fun play(context: Context) = PcmPlayer.play(samples, RATE)
 
     private fun build(): ShortArray {
         val out = FloatArray(RATE * 340 / 1000)

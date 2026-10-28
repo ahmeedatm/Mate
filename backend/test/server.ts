@@ -72,6 +72,9 @@ export async function startServer(options: ServerOptions = {}): Promise<TestServ
       COMPUTER_NAME: "Ordi de test",
       CALENDAR_ICS_URLS: "",
       NO_ALERT: "1",
+      // Pas de vrai Claude Code ni de vrai Orca dans les tests (src/agents-sources.ts) ; les tests des agents donnent leurs faux.
+      CLAUDE_BIN: "/inexistant",
+      ORCA_BIN: "/inexistant",
       FAKE_OS: options.os ?? "mac",
       FAKE_OS_STATE: osState,
       FAKE_OS_LOG: osLog,

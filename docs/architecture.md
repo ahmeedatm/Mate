@@ -90,6 +90,10 @@ Deux sources, même format (`{"updates":[{package, label, versionCode, versionNa
 
 `kiosk/Updater.kt` interroge les deux en parallèle et fusionne (`kiosk/UpdatePlan.kt` : par paquet, la plus haute `versionCode` ; à égalité, l'ordinateur). Il télécharge, vérifie le SHA-256 et installe en silence (device owner), une installation à la fois. `kiosk/AutoUpdater.kt` vérifie au démarrage puis toutes les 6 h (échéance relue tous les quarts d'heure) et installe seul la version la plus récente du Companion, en device owner seulement, sans rien afficher. La carte Mises à jour de Réglages montre les deux sources (nom de la source sur chaque ligne, une ligne par source en erreur). `kiosk/UpdatedReceiver` relance l'appli en kiosque après sa propre mise à jour.
 
+### 10. Agents Claude (Mac)
+
+La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui a fini, qui attend) et y répond. `agents.ts` tient l'état par `session_id`, en mémoire, de trois sources : `claude agents --json` (toutes les 4 s, seulement tablette connectée : le filet), les hooks HTTP de Claude Code (`POST /agents/hook`, local, secret propre dans `.data/agents-hook.json`, posés par `npm run agents:hooks`) et `orca worktree ps --json` si Orca est là (branche, terminal). États : travaille, attend, fini, limite, inactif. La tablette est prévenue par l'ordre `agent` du canal `/tablet` (lumière de bord et son), sauf si l'appli de devant est un terminal ou Orca : l'utilisateur n'est alors pas prévenu. Répondre : le hook `PermissionRequest` (permission) ou `PreToolUse` sur `AskUserQuestion` (question à choix) reste ouvert jusqu'à `POST /agents/answer` ou `AGENTS_HOLD_S` (90 s), puis reçoit `{}` : le terminal décide. Sur la tablette, la carte de la demande (`AgentAskOverlay`) s'ouvre en touchant la lumière de bord ou une session de l'onglet : permission (Autoriser une fois / Refuser ; une commande à risque, `isRisky` côté compagnon, s'autorise en maintenant le bouton) ou questions à choix, une page par question, multi-choix, « Autre » écrit ou dicté. Sur une session au repos dans un terminal Orca (volet exact donné par `$ORCA_PANE_KEY` en en-tête du hook, terminal par `orca terminal list`), « continue » ou une phrase partent par `POST /agents/send` (`orca terminal send`) ; après une limite d'usage (`StopFailure` `rate_limit`), la tablette peut armer l'envoi de « continue » à l'heure de reprise lue dans le message. Les sessions de chat Orca et les terminaux ordinaires n'ont pas de moyen fiable : pas de bouton. Par l'extension MCP, Claude lit lui-même l'état des autres sessions (`agents_lister`) et peut poser une question à choix sur la tablette (`tablette_demander`, `POST /agents/ask-tablet`) : même carte, réponse renvoyée comme résultat d'outil. Interrompre une session (Échap dans son terminal Orca, après confirmation) et quota du compte 5 h / 7 j (statusline enveloppée par `agents:hooks --statusline`, seul `rate_limits` est lu) complètent l'onglet. Jamais de décision sans action sur la tablette, ni « toujours autoriser ». Détails et essais : [recherche-agents-claude.md](recherche-agents-claude.md).
+
 ## Carte du code
 
 ### Tablette : `app/src/main/kotlin/com/unowhy/companion/`
@@ -98,7 +102,7 @@ Deux sources, même format (`{"updates":[{package, label, versionCode, versionNa
 |---|---|
 | `MainActivity.kt` | câblage des modes (`Mode.kt`), panneau document, changement d'ordinateur ; barre latérale `ui/Rail`, clavier `ui/KeyboardControl`, bandeau `ui/Banner`, rappels Eau et batterie `ui/TabletAlerts`, Ne pas déranger `focus/FocusDnd`, canal `remote/RemoteLink` |
 | `Prefs.kt`, `Computers.kt` | préférences, liste des ordinateurs appairés |
-| `net/` | `BackendClient` (point d'accès : un client par domaine, `DeckApi`, `WindowsApi`, `SystemApi`, `DocsApi`, `CalendarApi`, `TasksApi`, `CameraApi`, `UpdatesApi`, `TabletApi`, `PairingApi`), `Http` (plomberie, `HttpException`), `Connection` (bascule), `Discovery` (UDP), `Wifi` |
+| `net/` | `BackendClient` (point d'accès : un client par domaine, `DeckApi`, `WindowsApi`, `SystemApi`, `DocsApi`, `CalendarApi`, `TasksApi`, `CameraApi`, `UpdatesApi`, `TabletApi`, `AgentsApi`, `PairingApi`), `Http` (plomberie, `HttpException`), `Connection` (bascule), `Discovery` (UDP), `Wifi` |
 | `remote/RemoteChannel.kt` | ordres reçus de l'ordinateur |
 | `ui/` | un fichier par écran ou composant : `HomeFragment`, `DeckFragment`, `FromComputerFragment` (Depuis l'ordi : trois choix, Fichiers (la liste, `GET /docs`), Page de l'ordi (`BrowserTabsDialog` : onglets de l'ordi) et Presse-papiers (`ClipboardView`, `ClipboardModel` : `GET /system/clipboard` pour lire le texte copié sur l'ordi, `POST /system/clipboard` pour y copier un texte écrit ou dicté, `POST /system/clipboard/image` pour une photo du dossier « Photos tablette » depuis la Caméra) ; le Presse-papiers n'est lu que sur un toucher, jamais à l'arrivée sur l'écran par un ordre du PC), `FocusFragment`, `CameraFragment`, `SettingsFragment`, `WelcomeView` (premier lancement), `DocumentPanel`, boîtes de dialogue (`TaskDialog`, `EventDialog`, `ComputerAdder`, `WifiPicker`…) |
 | `ui/home/` | Accueil à widgets : `WidgetModel` (grille 4×4, tailles, modèles), `WidgetGrid` (placement, mode Modifier, pages), widgets |
@@ -107,6 +111,7 @@ Deux sources, même format (`{"updates":[{package, label, versionCode, versionNa
 | `audio/` | `Speaker` (synthèse vocale) |
 | `voice/` | commande vocale : `VoiceCommands` (phrases comprises, noms rapprochés à l'oreille), `VoiceControl` (écoute, exécution) |
 | `ui/CallOverlay.kt` | carte d'appel entrant |
+| `agents/`, `ui/AgentsView.kt`, `ui/AgentLight.kt`, `ui/AgentAskOverlay.kt`, `ui/HoldButton.kt`, `voice/Dictation.kt`, `ui/home/AgentsWidget.kt`, `audio/AgentSounds.kt` | agents Claude : relevé partagé des sessions (`AgentsFeed`, 3 s tant qu'une vue les montre), alertes de l'ordre `agent` (`AgentAlerts` : lumière de bord + son court, tus pendant le Focus sauf « attend »), onglet Agents du Deck (après « Son », si `/deck/features` annonce `agents`), widget d'Accueil |
 | `camera/DocCamera.kt` | caméra du visualiseur |
 | `device/` | batterie, signal, luminosité (atténuée la nuit) |
 | `kiosk/` | `Kiosk` (verrouillage, SQOOL masqué), `Updater`, `UpdatePlan`, `AutoUpdater`, `UpdatedReceiver`, `KioskAdminReceiver` |
@@ -127,6 +132,7 @@ Deux sources, même format (`{"updates":[{package, label, versionCode, versionNa
 | `tasks.ts`, `jira.ts` | tâches et rappels |
 | `tablet.ts`, `mcp.ts` | canal vers la tablette, extension Claude |
 | `calls.ts` (+ `config/calls.json`) | appels entrants : surveillance des fenêtres, Répondre / Ignorer / Raccrocher |
+| `agents.ts`, `agents-sources.ts`, `agents-secret.ts`, `agents-hooks.ts`, `routes/agents.ts` | agents Claude : état et réponses, lecture de `claude` et d'Orca, secret des hooks, bloc de hooks (`scripts/agents-hooks.ts`) |
 | `camera.ts`, `docs.ts` | visualiseur, dossier partagé |
 | `updates.ts` | mises à jour de la tablette |
 

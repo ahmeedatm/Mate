@@ -1,6 +1,6 @@
-# Les agents Claude Code sur la tablette (idée, pas faite)
+# Les agents Claude Code sur la tablette (recherche, V1 en cours de livraison)
 
-Étudié le 28/10/2026, avec Claude Code 2.1.308 sur le Mac de développement. Idée : la tablette montre les sessions Claude Code de l'ordinateur (travaille, a fini, attend une réponse) et on répond depuis la tablette, surtout aux permissions et aux questions à choix (outil `AskUserQuestion`).
+Étudié le 28/10/2026, avec Claude Code 2.1.308 sur le Mac de développement. La V1 est livrée le même jour (MR !59 à !63) : voir « Résultats des essais » plus bas et [etat-du-projet.md](etat-du-projet.md). Idée : la tablette montre les sessions Claude Code de l'ordinateur (travaille, a fini, attend une réponse) et on répond depuis la tablette, surtout aux permissions et aux questions à choix (outil `AskUserQuestion`).
 
 ## En bref
 
@@ -241,15 +241,39 @@ Les en-têtes passent par la [syntaxe `headers`](https://code.claude.com/docs/en
 3. **Questions à choix** : une page par question, multi-choix, dictée pour « Autre ».
 4. **Voix, lampe, Focus, mode privé.**
 
-## À vérifier par un essai avant de coder
+## Résultats des essais (28/10/2026, Claude Code 2.1.308, Mac)
 
-1. **Le dialogue du terminal est-il affiché pendant que le hook attend ?** La doc dit seulement que, avec un hôte SDK, « whichever decides first applies ». Si le dialogue est caché, l'utilisateur au clavier attend le délai.
-2. **`PreToolUse` + `updatedInput` sur `AskUserQuestion` en session interactive.** L'exemple de la doc vise `claude -p` ; le mécanisme est décrit comme général.
-3. **Réponse en texte libre (« Autre »).** La doc dit que `answers` associe la question à « the selected option label ». Happy et claudecodeui envoient du texte joint par des virgules ; le texte libre n'est pas documenté.
-4. **Hook `http` : durée d'attente réelle**, plafond du `timeout`, comportement si le serveur ne répond pas avant.
-5. **`waiting` et `waitingFor`** de `claude agents --json` sur une vraie permission (pas encore observé).
-6. **Coexistence avec les hooks d'Orca**, et Orca qui réécrit ou non `~/.claude/settings.json`.
-7. **Windows** : `claude agents --json`, hooks HTTP, Orca : rien de testé.
+Session Claude jetable (`claude --settings <fichier de test>`, rien dans `~/.claude/settings.json`), contre un serveur d'essai sur un autre port, puis contre le vrai backend (instance de test, autre `DATA_DIR`) avec une fausse tablette. Aucun point ne casse la V1.
+
+| # | Question | Résultat |
+|---|---|---|
+| 1 | Le dialogue du terminal est-il affiché pendant que le hook attend ? | **Oui.** `Do you want to proceed?` est à l'écran dès le début de l'attente ; répondre au clavier marche tout de suite, sans attendre le hook. Le `PostToolUse` arrive ensuite, et `claude agents --json` repasse à `busy` : la carte de la tablette se retire seule. L'utilisateur au clavier n'attend jamais |
+| 2 | `PreToolUse` + `updatedInput` sur `AskUserQuestion`, session interactive | **Marche.** Le dialogue n'apparaît pas, le modèle reçoit `User answered Claude's questions: · question → réponse`. Les `questions` d'origine doivent être renvoyées avec `answers` |
+| 3 | Texte libre dans `answers` | **Marche.** « Violet foncé, presque noir » et « Fraise des bois » (hors des options) sont transmis tels quels ; multi-choix = libellés joints par `, ` |
+| 4 | Durée d'un hook http | Retenu **130 s** avec `timeout` 300 : la décision `allow` est appliquée. Avec `timeout` 8, le hook est annulé au bout de 8 s, le dialogue du terminal reste, et la réponse tardive du serveur est ignorée. Le `timeout` du hook doit donc dépasser `AGENTS_HOLD_S` (120 s pour 90 s) |
+| 5 | `waiting` et `waitingFor` | **Vus** : `status: "waiting"`, `waitingFor: "permission prompt"` pendant une vraie permission (même pendant que le hook la retient), `busy` ensuite. `input needed` (question) non observé directement. Aucune valeur pour une limite d'usage |
+| 6 | Coexistence avec les hooks d'Orca | **Oui.** Les hooks de `~/.claude/settings.json` (Orca, `afplay`) et les nôtres tournent en parallèle sur le même événement (`running Stop hooks… 2/3`) ; la décision `allow` du nôtre s'applique malgré le `PermissionRequest` d'Orca. Orca remplit toujours sa carte (`worktree ps` : `done`). Non vérifié : Orca ne réécrit pas `settings.json` à son démarrage (non relancé pour ne pas gêner les autres sessions) |
+| 7 | Windows | Non essayé : `agents` absent de `/deck/features` et `/agents/*` répondent 501 |
+
+Constats en plus :
+
+- **`SessionStart` n'accepte pas les hooks `http`** (command et mcp_tool seulement, doc). Le premier événement vu est `UserPromptSubmit` ; les sessions déjà ouvertes sont connues par `claude agents --json`.
+- **Compagnon éteint** : chaque hook affiche `UserPromptSubmit hook error · connect ECONNREFUSED` dans le terminal, sans rien bloquer. Le message revient à chaque événement hooké : on ne pose donc pas `PostToolUse` (un par outil), seulement les événements de début et de fin de tour.
+- **`$ORCA_PANE_KEY` passe en en-tête** (`headers` + `allowedEnvVars`) : le compagnon connaît le volet exact (`tabId:leafId`) de la session, donc son terminal Orca (`orca terminal list`) sans deviner par le dossier. `$TERM_SESSION_ID` arrive vide, `$__CFBundleIdentifier` est mal lu : non utilisés.
+- **Les sessions de chat Orca** (`structuredHostOwned`) n'ont pas de terminal : `orca terminal list` ne les voit pas. Le message rapide n'est offert que pour les sessions d'un terminal Orca (essayé : `orca terminal send --enter` démarre bien le tour, `terminal switch` amène l'onglet devant). Terminal ordinaire (Terminal.app, iTerm2, Ghostty) : aucun moyen fiable, pas de bouton.
+- **`PermissionRequest`** n'a pas de `tool_use_id` : la demande se rattache à la session, pas à l'appel.
+- **Limite d'usage** : `StopFailure` avec `error: "rate_limit"` et `last_assistant_message` = texte de l'erreur. Aucune heure de reprise dans un champ ; le compagnon la lit dans le texte (« resets 3pm ») et, si elle est illisible, n'offre pas la reprise automatique. Une vraie limite n'a pas pu être provoquée : la lecture de l'heure n'est testée que sur des textes écrits à la main.
+
+### Essais du 28/10/2026 (suite : plan, interruption, quota)
+
+| Question | Résultat |
+|---|---|
+| Approuver un plan (`ExitPlanMode`) depuis un hook | `PreToolUse` et `PermissionRequest` arrivent tous deux, avec `tool_input.plan` et `planFilePath`. `allow` seul ne suffit pas (ni en `PermissionRequest`, ni en `PreToolUse`) : le dialogue reste. **`PreToolUse` `allow` + `updatedInput` (l'entrée d'origine renvoyée) approuve** : Claude sort du mode plan vers le mode **default** (chaque modification reste demandée), jamais vers auto |
+| Refuser un plan avec un retour | `PreToolUse` `deny` + `permissionDecisionReason` : Claude reçoit la raison, reste en mode plan et corrige son plan |
+| Pendant un `PreToolUse` tenu (question, plan) | Le terminal **n'affiche aucun dialogue** (il n'apparaît qu'au retour du hook) et `claude agents --json` dit `busy`. On ne peut donc pas y répondre au clavier : le filet ne doit pas rendre la main (corrigé), et quelqu'un revenu au clavier attend la fin du délai ou répond sur la tablette |
+| Fichier du plan | En mode plan, Claude écrit le plan dans `<config>/plans/*.md` avant `ExitPlanMode` : une permission `Write` hors du projet, à ne pas traiter comme une écriture à risque |
+| Interrompre une session (terminal Orca) | `orca terminal send --text $'\e'` (Échap) interrompt le tour en cours (`busy` → `idle`, pas de `Stop`), sans risque de quitter Claude. `--interrupt` le fait aussi mais envoie Ctrl-C (deux de suite quittent Claude). Le texte du tour interrompu revient dans la zone de saisie : avant d'écrire un message, l'effacer (`\x15`) |
+| Quota 5 h / 7 j | La statusline reçoit `rate_limits` : `five_hour` et `seven_day`, chacun `used_percentage` et `resets_at` (secondes) ; absent tant qu'aucune réponse de l'API n'est arrivée dans la session. Aucun hook ne le donne |
 
 ## Questions pour toi
 

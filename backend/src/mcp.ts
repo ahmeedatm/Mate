@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -332,6 +333,62 @@ server.registerTool(
     inputSchema: { numero: z.number().int().min(1).max(14) },
   },
   ({ numero }) => attempt(async () => (await api("DELETE", `/deck/keys/${numero - 1}`), text(`Touche ${numero} vidée.`))),
+);
+
+server.registerTool(
+  "agents_lister",
+  {
+    title: "Sessions Claude Code de l'ordinateur",
+    description:
+      "Liste les sessions Claude Code ouvertes sur cet ordinateur (Mac) et leur état : travaille, attend une réponse, fini, " +
+      "limite atteinte, inactif ; dossier, branche, depuis quand, début du dernier message. Pour savoir où en sont les autres sessions.",
+    annotations: { readOnlyHint: true },
+  },
+  () =>
+    attempt(async () => {
+      const state = await api("GET", "/agents");
+      const label: Record<string, string> = {
+        working: "travaille",
+        waiting: "attend",
+        done: "fini",
+        limit: "limite atteinte",
+        idle: "inactif",
+      };
+      const lines = (state.sessions as Record<string, any>[]).map((s) => {
+        const since = Math.round((state.now - s.since) / 60_000);
+        const where = [s.dir, s.branch].filter(Boolean).join(" · ");
+        const summary = (s.lines as string[]).join(" / ");
+        return `- ${s.name} (${where}) : ${label[s.state] ?? s.state} depuis ${since} min${summary ? ` : ${summary}` : ""}`;
+      });
+      return text(lines.length ? lines.join("\n") : "Aucune session Claude Code ouverte.");
+    }),
+);
+
+server.registerTool(
+  "tablette_demander",
+  {
+    title: "Poser une question sur la tablette",
+    description:
+      "Pose une question à choix à l'utilisateur sur la tablette posée à côté de l'ordinateur (lumière sur le bord de l'écran, " +
+      "carte à toucher), et attend sa réponse (3 min au plus). Pour une décision quand il n'est peut-être pas devant l'ordinateur. " +
+      "Il peut aussi répondre en texte libre (« Autre »). Renvoie la réponse, ou l'absence de réponse.",
+    inputSchema: {
+      question: z.string().min(1).max(500),
+      options: z.array(z.string().min(1).max(200)).min(1).max(6),
+      choix_multiple: z.boolean().default(false),
+    },
+  },
+  ({ question, options, choix_multiple }) =>
+    attempt(async () => {
+      const res = await api("POST", "/agents/ask-tablet", {
+        question,
+        options,
+        multi: choix_multiple,
+        who: "Claude",
+        where: path.basename(process.cwd()),
+      });
+      return text(res.answered ? `Réponse sur la tablette : ${res.answer}` : "Pas de réponse sur la tablette à temps.");
+    }),
 );
 
 await server.connect(new StdioServerTransport());

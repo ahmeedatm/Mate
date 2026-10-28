@@ -2,7 +2,7 @@
  * Contrôle de non-régression d'un compagnon RÉEL déjà démarré (installé par paquet, ou serveur de test) :
  * un contrôle par feature, avec la réponse attendue selon le système (501 là où il ne gère pas le pilotage).
  *
- *   node qa/sanity.ts --url http://127.0.0.1:3000 --token <jeton> [--os windows|mac|other] [--junit sanity.xml]
+ *   node qa/sanity.ts --url http://127.0.0.1:3000 --token <jeton> [--os windows|mac|other] [--hook-secret <secret>] [--junit sanity.xml]
  *
  * Aucune dépendance (modules de Node seulement) : lancé tel quel par le node du paquet, sans `npm ci`.
  * Ce qu'il crée (tâche, rendez-vous, agenda ICS) est retiré à la fin ; un agenda déjà relié n'est pas touché.
@@ -51,7 +51,7 @@ function serveIcs(body: string): Promise<{ url: string; close: () => void }> {
 
 type Check = { name: string; run: () => Promise<string | void> };
 
-export async function runSanity(opts: { url: string; token: string; os?: Os }): Promise<Result[]> {
+export async function runSanity(opts: { url: string; token: string; os?: Os; hookSecret?: string }): Promise<Result[]> {
   const base = opts.url.replace(/\/$/, "");
   const local = /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i.test(base);
   const call: Call = async (method, route, body, auth = true) => {
@@ -134,6 +134,40 @@ export async function runSanity(opts: { url: string; token: string; os?: Os }): 
         const missing = shown.filter((a) => !installed.some((i) => i === a.toLowerCase() || i.includes(a.toLowerCase())));
         expect(missing.length === 0, `applis du deck absentes de l'ordinateur : ${missing.join(", ")}`);
         return `${pages.length} pages, ${shown.length} applis sur ${installed.length} installées`;
+      },
+    },
+    {
+      name: "agents Claude : hooks et état",
+      run: async () => {
+        const agents = await call("GET", "/agents");
+        if (os !== "mac") {
+          expectStatus(agents, 501, "/agents hors Mac");
+          return "501 hors Mac";
+        }
+        expectStatus(agents, 200, "/agents");
+        expect(Array.isArray(agents.json.sessions) && typeof agents.json.counts?.working === "number", "forme de /agents inattendue");
+        const hook = (body: object, secret?: string) =>
+          fetch(`${base}/agents/hook`, {
+            method: "POST",
+            headers: { "content-type": "application/json", ...(secret ? { "x-companion-hook": secret } : {}) },
+            body: JSON.stringify({ session_id: stamp, cwd: "/sanity/agents", ...body }),
+            signal: AbortSignal.timeout(10_000),
+          });
+        // Le hook demande son secret propre : sans lui, refusé (le jeton d'appairage n'y change rien).
+        expect((await hook({ hook_event_name: "Stop" })).status === 401, "un hook sans secret devrait être refusé (401)");
+        if (!opts.hookSecret) return "hook refusé sans secret ; événements non essayés (pas de --hook-secret)";
+        const find = async () => (await call("GET", "/agents")).json.sessions.find((s: any) => s.id === stamp);
+        try {
+          expect((await hook({ hook_event_name: "UserPromptSubmit" }, opts.hookSecret)).status === 200, "hook UserPromptSubmit refusé");
+          expect((await find())?.state === "working", "la session devrait travailler");
+          await hook({ hook_event_name: "Stop", last_assistant_message: "Fini." }, opts.hookSecret);
+          const done = await find();
+          expect(done?.state === "done" && done.lines[0] === "Fini.", "la session devrait être finie, avec son résumé");
+        } finally {
+          await hook({ hook_event_name: "SessionEnd" }, opts.hookSecret).catch(() => {});
+        }
+        expect(!(await find()), "la session de test devrait être retirée");
+        return "travaille, fini, retirée";
       },
     },
     {
@@ -342,11 +376,14 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const url = arg("url") ?? "http://127.0.0.1:3000";
   const token = arg("token") ?? process.env.COMPANION_TOKEN ?? "";
   const os = arg("os") as Os | undefined;
+  const hookSecret = arg("hook-secret");
   if (!token || (os && !["mac", "windows", "other"].includes(os))) {
-    console.error("Usage : node qa/sanity.ts --url http://127.0.0.1:3000 --token <jeton> [--os windows|mac|other] [--junit fichier.xml]");
+    console.error(
+      "Usage : node qa/sanity.ts --url http://127.0.0.1:3000 --token <jeton> [--os windows|mac|other] [--hook-secret <secret>] [--junit fichier.xml]",
+    );
     process.exit(2);
   }
-  const results = await runSanity({ url, token, os });
+  const results = await runSanity({ url, token, os, hookSecret });
   const mark = { ok: "OK  ", fail: "ECHEC", skip: "SAUTE" };
   for (const r of results) console.log(`${mark[r.status]} ${r.name}${r.detail ? ` : ${r.detail}` : ""}`);
   const failed = results.filter((r) => r.status === "fail").length;
