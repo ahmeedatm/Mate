@@ -5,6 +5,7 @@ import {
   createAgents,
   cut,
   isRisky,
+  parseQuota,
   parseResume,
   permissionOutput,
   summaryLines,
@@ -13,7 +14,17 @@ import {
   type ClaudeSession,
   type OrcaInfo,
 } from "../src/agents.ts";
-import { hooksBlock, mergeAgentHooks, withoutAgentHooks } from "../src/agents-hooks.ts";
+import { execFile } from "node:child_process";
+import http from "node:http";
+import {
+  hooksBlock,
+  mergeAgentHooks,
+  statusLineCommand,
+  unwrapStatusLine,
+  withoutAgentHooks,
+  withoutStatusLine,
+  withStatusLine,
+} from "../src/agents-hooks.ts";
 
 let clock = 1_000_000;
 let tablet = true;
@@ -33,6 +44,7 @@ const deps = (holdMs = 5_000): AgentsDeps => ({
   notify: (a) => alerts.push(a),
   holdMs,
   sendText: async (handle, text) => void sent.push({ handle, text }),
+  interruptSession: async (handle) => void sent.push({ handle, text: "<Échap>" }),
   focusSession: async (handle) => void focused.push(handle),
 });
 
@@ -667,6 +679,67 @@ describe("message rapide et session devant", () => {
   });
 });
 
+describe("interrompre et quota", () => {
+  it("interrompt une session qui travaille dans un terminal Orca (Échap), puis inactive", async () => {
+    const a = createAgents(deps());
+    orca = {
+      worktrees: [
+        { path: "/work/projet", branch: null, agents: [{ paneKey: "tab:leaf", toolName: null, lastMessage: null, structured: false }] },
+      ],
+      handles: new Map([["tab:leaf", "term_1"]]),
+    };
+    await a.hook(event("UserPromptSubmit"), { pane: "tab:leaf" });
+    live = [{ sessionId: "s1", cwd: "/work/projet", status: "busy" }];
+    await a.refresh();
+    assert.equal(a.list().sessions[0].canInterrupt, true);
+    await a.interrupt("s1");
+    assert.deepEqual(sent, [{ handle: "term_1", text: "<Échap>" }]);
+    assert.equal(a.list().sessions[0].state, "idle");
+    await assert.rejects(a.interrupt("s1"), /ne travaille pas/);
+  });
+
+  it("refuse d'interrompre hors terminal Orca", async () => {
+    const a = createAgents(deps());
+    await a.hook(event("UserPromptSubmit"), {});
+    assert.equal(a.list().sessions[0].canInterrupt, false);
+    await assert.rejects(a.interrupt("s1"), /pas dans un terminal Orca/);
+  });
+
+  it("garde le quota de la statusline 15 min, rien d'autre", async () => {
+    const a = createAgents(deps());
+    a.statusline({
+      cwd: "/secret",
+      rate_limits: { five_hour: { used_percentage: 21.4, resets_at: 1_800_000 }, seven_day: { used_percentage: 44 } },
+    });
+    assert.deepEqual(a.list().quota, {
+      fiveHour: { used: 21, resetsAt: 1_800_000_000 },
+      sevenDay: { used: 44, resetsAt: null },
+      at: clock,
+    });
+    a.statusline({ cwd: "/secret" });
+    assert.equal(a.list().quota?.fiveHour?.used, 21, "une statusline sans quota ne l'efface pas");
+    clock += 16 * 60_000;
+    assert.equal(a.list().quota, null);
+  });
+
+  it("parseQuota : bornes et champs manquants", () => {
+    assert.equal(parseQuota(undefined, 0), null);
+    assert.equal(parseQuota({ five_hour: { used_percentage: "x" } }, 0), null);
+    assert.deepEqual(parseQuota({ seven_day: { used_percentage: 140 } }, 5), {
+      fiveHour: null,
+      sevenDay: { used: 100, resetsAt: null },
+      at: 5,
+    });
+  });
+
+  it("limite sans heure dans le message : la fin de la fenêtre de 5 h de la statusline", async () => {
+    const a = createAgents(deps());
+    a.statusline({ rate_limits: { five_hour: { used_percentage: 100, resets_at: (clock + 3_600_000) / 1000 } } });
+    await a.hook(event("StopFailure", { error: "rate_limit", last_assistant_message: "API Error: Rate limit reached" }), {});
+    assert.equal(a.list().sessions[0].resumeAt, clock + 3_600_000);
+  });
+});
+
 describe("reprise après limite", () => {
   const limit = { hook_event_name: "StopFailure", error: "rate_limit", last_assistant_message: "limit reached · resets 3pm" };
   const almost3pm = () => {
@@ -787,6 +860,45 @@ describe("outils", () => {
     assert.equal(next.getHours(), 9);
     assert.equal(parseResume("rien", now), null);
     assert.equal(parseResume(null, now), null);
+  });
+});
+
+describe("statusline enveloppée", () => {
+  const opts = { port: 3000, secret: "s3cret" };
+
+  it("garde la statusline d'origine, s'enveloppe une seule fois, se retire proprement", () => {
+    const settings = { statusLine: { type: "command", command: "bun ~/statusline.ts # perso", padding: 0 } };
+    const once = withStatusLine(settings, opts);
+    const command = (once.statusLine as { command: string }).command;
+    assert.equal(unwrapStatusLine(command), "bun ~/statusline.ts # perso");
+    assert.equal((once.statusLine as { padding: number }).padding, 0);
+    const twice = withStatusLine(once, { port: 3000, secret: "nouveau" });
+    assert.equal(unwrapStatusLine((twice.statusLine as { command: string }).command), "bun ~/statusline.ts # perso");
+    assert.deepEqual(withoutStatusLine(twice), settings);
+    assert.deepEqual(withoutStatusLine({}), {});
+    assert.deepEqual(withoutStatusLine(withStatusLine({}, opts)), {}, "pas de statusline avant : aucune après");
+  });
+
+  it("en vrai : la sortie d'origine s'affiche et le compagnon reçoit l'entrée", async () => {
+    let received = "";
+    let secret = "";
+    const srv = http.createServer((req, res) => {
+      secret = String(req.headers["x-companion-hook"]);
+      req.on("data", (c) => (received += c));
+      req.on("end", () => res.end("{}"));
+    });
+    await new Promise<void>((r) => srv.listen(0, "127.0.0.1", r));
+    const port = (srv.address() as { port: number }).port;
+    const command = statusLineCommand({ port, secret: "s3cret" }, "cat > /dev/null; echo 'ligne perso' # fin");
+    const out = await new Promise<string>((resolve, reject) => {
+      const child = execFile("/bin/sh", ["-c", command], (err, stdout) => (err ? reject(err) : resolve(stdout)));
+      child.stdin!.end(JSON.stringify({ rate_limits: { five_hour: { used_percentage: 3 } } }));
+    });
+    assert.equal(out, "ligne perso\n");
+    for (let i = 0; i < 50 && !received; i++) await new Promise((r) => setTimeout(r, 50));
+    srv.close();
+    assert.equal(secret, "s3cret");
+    assert.equal(JSON.parse(received).rate_limits.five_hour.used_percentage, 3);
   });
 });
 

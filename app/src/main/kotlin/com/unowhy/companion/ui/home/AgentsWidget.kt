@@ -87,6 +87,10 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) },
             )
         }
+        state.quota?.let { q ->
+            fun pct(w: com.unowhy.companion.net.QuotaWindow?) = w?.let { context.getString(R.string.agent_quota_value, it.used) } ?: "?"
+            list.addView(label(13f, R.attr.c_text_dim).apply { text = context.getString(R.string.agent_quota_line, pct(q.fiveHour), pct(q.sevenDay)) }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(10) })
+        }
         val more = state.sessions.count { it.state != AgentState.IDLE } - shown.size
         if (more > 0) {
             list.addView(label(13f, R.attr.c_text_dim).apply { text = context.resources.getQuantityString(R.plurals.agents_more, more, more) }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(6) })

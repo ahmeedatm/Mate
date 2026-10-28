@@ -232,6 +232,29 @@ describe("agents Claude : outil MCP tablette_demander", () => {
   });
 });
 
+describe("agents Claude : statusline et interruption", () => {
+  it("la statusline donne le quota (secret propre exigé)", async () => {
+    const post = (secret: string | null) =>
+      fetch(`${server.url}/agents/statusline`, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...(secret ? { "x-companion-hook": secret } : {}) },
+        body: JSON.stringify({ rate_limits: { five_hour: { used_percentage: 42, resets_at: 2_000_000_000 } } }),
+      });
+    assert.equal((await post(null)).status, 401);
+    assert.equal((await post(SECRET)).status, 200);
+    assert.deepEqual((await server.call("GET", "/agents")).json.quota.fiveHour, { used: 42, resetsAt: 2_000_000_000_000 });
+  });
+
+  it("interrompre : session inconnue 404, hors terminal Orca 409", async () => {
+    assert.equal((await server.call("POST", "/agents/interrupt", { session: "inconnue" })).status, 404);
+    await hook({ hook_event_name: "UserPromptSubmit" });
+    const res = await server.call("POST", "/agents/interrupt", { session: "s1" });
+    assert.equal(res.status, 409);
+    assert.match(res.json.error, /terminal Orca/);
+    await hook({ hook_event_name: "SessionEnd" });
+  });
+});
+
 describe("agents Claude : ailleurs que sur Mac", () => {
   it("Windows : 501 et agents absent de /deck/features", async () => {
     const win = await startServer({ os: "windows", env: { CLAUDE_BIN: claude } });

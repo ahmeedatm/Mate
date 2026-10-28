@@ -52,7 +52,7 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
     (method === "POST" && (url === "/browser/extension" || url === "/browser/extension/commands")) ||
     // Hooks de Claude Code : pas de jeton d'appairage, un secret propre vérifié par la route (src/agents-sources.ts).
-    (method === "POST" && url === "/agents/hook") ||
+    (method === "POST" && (url === "/agents/hook" || url === "/agents/statusline")) ||
     (method === "DELETE" && /^\/local\/accounts\/(microsoft|google)$/.test(url)));
 /** Sans jeton : identité (la tablette reconnaît l'ordinateur) et appairage par code. */
 const PUBLIC = /^\/(health|pair\/request|pair\/confirm)(\?|$)/;

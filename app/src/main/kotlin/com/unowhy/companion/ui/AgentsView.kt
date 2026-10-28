@@ -72,6 +72,7 @@ fun dot(context: Context, state: AgentState): GradientDrawable =
 class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : LinearLayout(context, attrs) {
 
     private val counters = LinearLayout(context)
+    private val quota = LinearLayout(context)
     private val list = LinearLayout(context)
     private val status = TextView(context)
     private val rows = LinkedHashMap<String, View>()
@@ -101,10 +102,15 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                             AgentsFeed.last?.let(::render)
                         }
                     },
+                    LayoutParams(LayoutParams.WRAP_CONTENT, dp(40)),
                 )
             },
             LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT),
         )
+        quota.orientation = HORIZONTAL
+        quota.gravity = Gravity.CENTER_VERTICAL
+        quota.visibility = GONE
+        addView(quota, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
         status.apply {
             textSize = 15f
             setTextColor(themeColor(context, R.attr.c_text_dim))
@@ -146,13 +152,14 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         }
         val counts = state.counts
         showCounters(counts.working, counts.waiting, counts.done + counts.limit)
+        showQuota(state.quota)
         status.text = when {
             state.sessions.isEmpty() -> context.getString(R.string.agents_empty)
             !state.hooks -> context.getString(R.string.agents_hooks_hint)
             else -> context.getString(R.string.agents_focus_hint)
         }
         status.visibility = VISIBLE
-        val sig = state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId, it.canSend, it.resumeAt, it.resumeArmed) }
+        val sig = state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId, it.canSend, it.resumeAt, it.resumeArmed, it.canInterrupt) }
         if (sig != signature) {
             signature = sig
             list.removeAllViews()
@@ -201,6 +208,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         val box = row.findViewById<LinearLayout>(R.id.agent_actions)
         box.removeAllViews()
         val actions = mutableListOf<Pair<String, () -> Unit>>()
+        if (s.canInterrupt) actions += context.getString(R.string.agent_interrupt) to { confirmInterrupt(s) }
         if (s.canSend && (s.state == AgentState.DONE || s.state == AgentState.IDLE)) {
             actions += context.getString(R.string.agent_continue) to { send(s, "continue") }
             actions += context.getString(R.string.agent_write) to { write(s) }
@@ -219,6 +227,64 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                     setOnClickListener { onClick() }
                 },
                 LayoutParams(LayoutParams.WRAP_CONTENT, dp(44)).apply { marginEnd = dp(8) },
+            )
+        }
+    }
+
+    /** Interrompre se confirme : le travail en cours s'arrête. */
+    private fun confirmInterrupt(s: AgentSession) {
+        androidx.appcompat.app.AlertDialog.Builder(context)
+            .setTitle(context.getString(R.string.agent_interrupt_title, s.name))
+            .setMessage(R.string.agent_interrupt_text)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.agent_interrupt) { _, _ ->
+                call(s) {
+                    BackendClient(context).agents.interrupt(s.id)
+                    (context as? MainActivity)?.showBanner(context.getString(R.string.agent_interrupted, s.name), 3)
+                }
+            }
+            .showImmersive()
+    }
+
+    /** Quota du compte (5 h, 7 j) : barre, pourcentage et heure de reprise ; caché tant que la statusline ne le donne pas. */
+    private fun showQuota(q: com.unowhy.companion.net.AgentQuota?) {
+        quota.removeAllViews()
+        val windows = listOfNotNull(q?.fiveHour?.let { R.string.agent_quota_5h to it }, q?.sevenDay?.let { R.string.agent_quota_7d to it })
+        quota.visibility = if (windows.isEmpty()) GONE else VISIBLE
+        for ((label, w) in windows) {
+            val color = themeColor(
+                context,
+                when {
+                    w.used >= 100 -> R.attr.c_agent_limit
+                    w.used >= 80 -> R.attr.c_agent_wait
+                    else -> R.attr.c_agent_done
+                },
+            )
+            quota.addView(TextView(context).apply {
+                setText(label)
+                textSize = 14f
+                setTextColor(themeColor(context, R.attr.c_text_dim))
+            })
+            quota.addView(
+                LinearLayout(context).apply {
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(3).toFloat()
+                        setColor(themeColor(context, R.attr.c_surface_raised))
+                    }
+                    addView(View(context).apply { background = GradientDrawable().apply { cornerRadius = dp(3).toFloat(); setColor(color) } }, LayoutParams(0, LayoutParams.MATCH_PARENT, w.used.coerceIn(0, 100).toFloat()))
+                    addView(View(context), LayoutParams(0, LayoutParams.MATCH_PARENT, (100 - w.used.coerceIn(0, 100)).toFloat()))
+                },
+                LayoutParams(dp(120), dp(6)).apply { marginStart = dp(8) },
+            )
+            val at = w.resetsAt
+            quota.addView(
+                TextView(context).apply {
+                    text = if (at != null && w.used >= 80) context.getString(R.string.agent_quota_reset, w.used, clock.format(Date(at)))
+                    else context.getString(R.string.agent_quota_value, w.used)
+                    textSize = 14f
+                    setTextColor(color)
+                },
+                LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8); marginEnd = dp(24) },
             )
         }
     }

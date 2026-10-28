@@ -123,13 +123,13 @@ export async function frontIsClaude(): Promise<boolean> {
 
 const HANDLE = /^term_[0-9a-zA-Z-]+$/;
 
-/** Écrit une ligne dans le terminal d'une session Orca et l'envoie. Un terminal disparu se dit en français. */
-export async function sendText(handle: string, text: string): Promise<void> {
+/** Frappe brute dans le terminal d'une session Orca (sans Entrée). Un terminal disparu se dit en français. */
+async function keys(handle: string, text: string, enter: boolean): Promise<void> {
   const bin = orcaBin();
   if (!bin || !HANDLE.test(handle)) throw new Error("Orca est introuvable");
   let out: string;
   try {
-    out = await exec(bin, ["terminal", "send", "--terminal", handle, "--text", text, "--enter", "--json"], 10_000);
+    out = await exec(bin, ["terminal", "send", "--terminal", handle, "--text", text, ...(enter ? ["--enter"] : []), "--json"], 10_000);
   } catch (e) {
     const detail = String((e as { stdout?: string }).stdout ?? "") + String((e as Error).message);
     throw new Error(
@@ -139,6 +139,20 @@ export async function sendText(handle: string, text: string): Promise<void> {
     );
   }
   if (JSON.parse(out).result?.send?.accepted !== true) throw new Error("Le terminal n'a pas accepté le message (menu ouvert ?)");
+}
+
+/**
+ * Écrit une ligne dans le terminal d'une session Orca et l'envoie. La zone de saisie est d'abord vidée (Ctrl-U) : après une
+ * interruption, Claude y remet le texte du tour interrompu, qui se mêlerait au message.
+ */
+export async function sendText(handle: string, text: string): Promise<void> {
+  await keys(handle, "\u0015", false);
+  await keys(handle, text, true);
+}
+
+/** Interrompt le tour en cours, comme Échap au clavier (Ctrl-C, deux fois de suite, quitterait Claude). */
+export async function interruptSession(handle: string): Promise<void> {
+  await keys(handle, "\u001b", false);
 }
 
 /** Terminal de la session devant dans Orca, puis Orca devant. Sans terminal : Orca seulement. */

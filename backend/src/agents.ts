@@ -51,6 +51,23 @@ export type AgentAlert = {
   waiting: number;
 };
 
+/** Part du quota utilisée (%) et fin de la fenêtre (ms), pour 5 h et 7 j. */
+export type Quota = { fiveHour: QuotaWindow | null; sevenDay: QuotaWindow | null; at: number };
+type QuotaWindow = { used: number; resetsAt: number | null };
+
+/** Lit `rate_limits` de la statusline (`used_percentage`, `resets_at` en secondes) ; rien d'autre n'est gardé. */
+export function parseQuota(rateLimits: unknown, at: number): Quota | null {
+  const r = rateLimits as Record<string, { used_percentage?: unknown; resets_at?: unknown }> | null | undefined;
+  if (!r || typeof r !== "object") return null;
+  const window = (w: { used_percentage?: unknown; resets_at?: unknown } | undefined): QuotaWindow | null => {
+    if (!w || typeof w.used_percentage !== "number" || !Number.isFinite(w.used_percentage)) return null;
+    const resets = typeof w.resets_at === "number" && Number.isFinite(w.resets_at) ? w.resets_at * 1000 : null;
+    return { used: Math.max(0, Math.min(100, Math.round(w.used_percentage))), resetsAt: resets };
+  };
+  const q = { fiveHour: window(r.five_hour), sevenDay: window(r.seven_day), at };
+  return q.fiveHour || q.sevenDay ? q : null;
+}
+
 export type AgentsDeps = {
   now?: () => number;
   listClaude: () => Promise<ClaudeSession[] | null>;
@@ -63,6 +80,8 @@ export type AgentsDeps = {
   holdMs: number;
   /** Écrit une ligne dans le terminal d'une session (`orca terminal send`). */
   sendText: (handle: string, text: string) => Promise<void>;
+  /** Interrompt le tour en cours d'une session (Échap dans son terminal Orca). */
+  interruptSession: (handle: string) => Promise<void>;
   /** Amène une session devant sur l'ordinateur (terminal Orca, ou Orca seulement). */
   focusSession: (handle: string | null) => Promise<void>;
 };
@@ -121,6 +140,7 @@ type Session = {
 
 /** Hooks reçus depuis le démarrage : la tablette sait si « répondre » est possible. */
 const HOOK_STALE_MS = 6_000;
+const QUOTA_TTL_MS = 15 * 60_000;
 /** Un « fini » devient « inactif » au bout de ce délai. */
 const DONE_TTL_MS = 10 * 60_000;
 /** Une session connue par hook seulement, sans `SessionEnd`, est oubliée après ce délai sans nouvelle. */
@@ -282,6 +302,8 @@ export function createAgents(deps: AgentsDeps) {
   const sessions = new Map<string, Session>();
   const asks = new Map<string, Pending>();
   let hooksSeen = false;
+  /** Quota 5 h / 7 j du compte, lu dans la statusline de Claude Code (`POST /agents/statusline`). */
+  let quota: Quota | null = null;
   let timer: NodeJS.Timeout | undefined;
   let refreshing = false;
   let lastOrca = 0;
@@ -524,7 +546,9 @@ export function createAgents(deps: AgentsDeps) {
         s.turnStartedAt = null;
         if (body.error === "rate_limit") {
           s.limitText = text || "Limite atteinte";
-          s.resumeAt = parseResume(text, now());
+          // Heure lue dans le message, sinon la fin de la fenêtre de 5 h donnée par la statusline.
+          const window = quota?.fiveHour?.resetsAt;
+          s.resumeAt = parseResume(text, now()) ?? (window && window > now() ? window : null);
           setState(s, "limit");
         } else {
           s.message = text || cut(body.error, 60);
@@ -616,6 +640,7 @@ export function createAgents(deps: AgentsDeps) {
       askKind: s.ask?.kind ?? null,
       canSend: Boolean(s.handle) && state !== "working" && state !== "waiting",
       canFocus: Boolean(s.handle) || s.inOrca,
+      canInterrupt: Boolean(s.handle) && state === "working",
     };
   }
 
@@ -623,7 +648,9 @@ export function createAgents(deps: AgentsDeps) {
     const all = [...sessions.values()].sort((a, b) => ORDER[effectiveState(a)] - ORDER[effectiveState(b)] || b.since - a.since);
     const counts = { working: 0, waiting: 0, done: 0, limit: 0, idle: 0 };
     for (const s of all) counts[effectiveState(s)]++;
-    return { sessions: all.slice(0, 10).map(view), counts, total: all.length, hooks: hooksSeen };
+    // Quota de plus de 15 min : plus à jour (la statusline ne tourne que pendant qu'une session s'affiche).
+    const freshQuota = quota && now() - quota.at < QUOTA_TTL_MS ? quota : null;
+    return { sessions: all.slice(0, 10).map(view), counts, total: all.length, hooks: hooksSeen, quota: freshQuota };
   }
 
   /** Détail d'une demande en attente, pour la tablette. */
@@ -793,6 +820,24 @@ export function createAgents(deps: AgentsDeps) {
     setState(s, "working", true);
   }
 
+  /** Interrompt le tour en cours (Échap) ; seulement une session qui travaille, dans un terminal Orca. */
+  async function interrupt(sessionId: string) {
+    const s = sessions.get(sessionId);
+    if (!s) throw new AnswerError("Cette session n'existe plus", 404);
+    if (effectiveState(s) !== "working") throw new AnswerError("Cette session ne travaille pas", 409);
+    if (!s.handle) throw new AnswerError("Cette session n'est pas dans un terminal Orca : impossible de l'interrompre d'ici", 409);
+    await deps.interruptSession(s.handle);
+    // Pas de hook Stop après une interruption : la session est au repos.
+    s.turnStartedAt = null;
+    setState(s, "idle", true);
+  }
+
+  /** Statusline de Claude Code : seul `rate_limits` est lu. */
+  function statusline(body: Record<string, unknown>) {
+    const q = parseQuota(body.rate_limits, now());
+    if (q) quota = q;
+  }
+
   async function focus(sessionId: string) {
     const s = sessions.get(sessionId);
     if (!s) throw new AnswerError("Cette session n'existe plus", 404);
@@ -827,7 +872,7 @@ export function createAgents(deps: AgentsDeps) {
     s.resumeTimer.unref?.();
   }
 
-  return { hook, answer, list, ask, askTablet, refresh, start, stop, handleOf, send, focus, resume };
+  return { hook, answer, list, ask, askTablet, refresh, start, stop, handleOf, send, focus, resume, interrupt, statusline };
 }
 
 export type Agents = ReturnType<typeof createAgents>;

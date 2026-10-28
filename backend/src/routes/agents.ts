@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { AnswerError, createAgents, type QuestionAnswer } from "../agents.ts";
 import { hookSecret, hookSecretOk } from "../agents-secret.ts";
-import { agentsAvailable, focusSession, frontIsClaude, listClaude, listOrca, sendText } from "../agents-sources.ts";
+import { agentsAvailable, focusSession, frontIsClaude, interruptSession, listClaude, listOrca, sendText } from "../agents-sources.ts";
 import { isMac } from "../os.ts";
 import { sendToTablet, tabletStatus } from "../tablet.ts";
 
@@ -23,6 +23,7 @@ export default async function agentRoutes(app: FastifyInstance) {
     notify: (alert) => void sendToTablet({ type: "agent", ...alert }, 20_000),
     holdMs,
     sendText,
+    interruptSession,
     focusSession,
   });
   if (isMac) hookSecret(); // créé au démarrage : `npm run agents:hooks` et les contrôles de sanity le lisent
@@ -47,6 +48,18 @@ export default async function agentRoutes(app: FastifyInstance) {
         // Connexion coupée par Claude Code (délai du hook, session fermée) : plus rien à attendre.
         onClosed: (cb) => reply.raw.on("close", () => !reply.raw.writableEnded && cb()),
       });
+    },
+  );
+
+  // Statusline de Claude Code (enveloppe posée par `npm run agents:hooks -- --install --statusline`) : quota 5 h / 7 j.
+  app.post<{ Body: Record<string, unknown> }>(
+    "/agents/statusline",
+    { logLevel: "warn", bodyLimit: 1024 * 1024, schema: { body: { type: "object" } } },
+    async (req, reply) => {
+      if (!hookSecretOk(req.headers["x-companion-hook"] as string | undefined))
+        return reply.code(401).send({ error: "Secret de hook invalide" });
+      agents.statusline(req.body);
+      return {};
     },
   );
 
@@ -125,6 +138,13 @@ export default async function agentRoutes(app: FastifyInstance) {
       },
     },
     (req, reply) => guarded(reply, () => agents.send(req.body.session, req.body.text)),
+  );
+
+  // Interrompt le tour en cours (Échap), après confirmation sur la tablette.
+  app.post<{ Body: { session: string } }>(
+    "/agents/interrupt",
+    { schema: { body: { ...sessionBody, properties: { session: sessionId } } } },
+    (req, reply) => guarded(reply, () => agents.interrupt(req.body.session)),
   );
 
   // Amène la session devant sur l'ordinateur.
