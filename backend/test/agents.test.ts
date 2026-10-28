@@ -297,6 +297,19 @@ describe("questions à choix", () => {
     });
   });
 
+  it("pendant qu'une question est tenue, le filet ne la rend pas (Claude est « busy » sur le hook)", async () => {
+    const a = createAgents(deps());
+    const out = a.hook(askQuestions(), {});
+    await flush();
+    clock += 30_000;
+    live = [{ sessionId: "s1", cwd: "/work/projet", status: "busy" }];
+    await a.refresh();
+    const id = alerts[0].askId!;
+    assert.equal(a.ask(id)?.kind, "question", "toujours en attente");
+    a.answer(id, { answers: [{ choices: [0] }, { choices: [1] }] });
+    assert.equal(((await out) as any).hookSpecificOutput.permissionDecision, "allow");
+  });
+
   it("texte libre (Autre) : seul, ou ajouté aux choix d'une question multiple", async () => {
     const a = createAgents(deps());
     const out = a.hook(askQuestions(), {});
