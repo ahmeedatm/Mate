@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageButton
@@ -55,6 +56,7 @@ class NowPlayingView @JvmOverloads constructor(
     private var chosenApp: String? = null
     private var thumbKey: String? = null
     private var seeking = false
+    private var mode = Layout.ROW
 
     init {
         orientation = HORIZONTAL
@@ -105,17 +107,33 @@ class NowPlayingView @JvmOverloads constructor(
         restart()
     }
 
-    /** Boutons sous la vignette et le titre (grand widget de l'Accueil) au lieu d'à droite : le titre garde la largeur. */
-    fun stacked(on: Boolean) {
-        orientation = if (on) VERTICAL else HORIZONTAL
+    /**
+     * Mise en page : boutons à droite (page Média), dessous (grand widget de l'Accueil : le titre garde la largeur),
+     * ou petite (widget d'une case : titre, artiste et boutons, sans vignette ni avancement).
+     */
+    enum class Layout { ROW, STACKED, SMALL }
+
+    fun layout(mode: Layout) {
+        this.mode = mode
+        val below = mode != Layout.ROW
+        orientation = if (below) VERTICAL else HORIZONTAL
+        gravity = if (below) Gravity.CENTER_HORIZONTAL else Gravity.CENTER_VERTICAL
         val main = findViewById<LinearLayout>(R.id.media_main)
-        main.layoutParams = if (on) LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT) else LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
+        main.layoutParams = if (below) LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT) else LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
         val controls = findViewById<LinearLayout>(R.id.media_controls)
         controls.layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-            if (on) topMargin = context.dp(12)
+            if (below) topMargin = context.dp(if (mode == Layout.SMALL) 8 else 12)
         }
-        (previous.layoutParams as MarginLayoutParams).marginStart = context.dp(if (on) 0 else 16)
-        gravity = if (on) Gravity.CENTER_HORIZONTAL else Gravity.CENTER_VERTICAL
+        (previous.layoutParams as MarginLayoutParams).marginStart = context.dp(if (below) 0 else 16)
+        val small = mode == Layout.SMALL
+        thumb.visibility = if (small) GONE else VISIBLE
+        source.visibility = if (small) GONE else VISIBLE
+        (title.parent as View).let { (it.layoutParams as MarginLayoutParams).marginStart = if (small) 0 else context.dp(20) }
+        title.maxLines = if (small) 1 else 2
+        if (small) {
+            timeline.visibility = GONE
+            sessionsRow.visibility = GONE
+        }
     }
 
     /** Deck à l'écran ou non : on ne relit que s'il est visible. */
@@ -183,7 +201,9 @@ class NowPlayingView @JvmOverloads constructor(
         enable(next, s.canNext)
 
         val duration = s.durationMs
-        if (duration != null && duration > 0) {
+        if (mode == Layout.SMALL) {
+            timeline.visibility = GONE
+        } else if (duration != null && duration > 0) {
             timeline.visibility = VISIBLE
             progress.isEnabled = s.canSeek
             if (!seeking) {
@@ -199,7 +219,7 @@ class NowPlayingView @JvmOverloads constructor(
     }
 
     private fun renderSessions(selected: MediaSession?) {
-        if (sessions.size < 2) {
+        if (sessions.size < 2 || mode == Layout.SMALL) {
             sessionsRow.visibility = GONE
             return
         }

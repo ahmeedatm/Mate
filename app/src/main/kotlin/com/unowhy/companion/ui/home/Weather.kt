@@ -32,23 +32,36 @@ import java.net.URLEncoder
 object Weather {
     const val REFRESH_MS = 30 * 60_000L
 
-    class Forecast(val temperature: Double, val code: Int, val min: Double, val max: Double)
+    /** Aujourd'hui et les 4 jours suivants. */
+    private const val DAYS = 5
+
+    /** Temps actuel et min / max du jour ; [days] : les jours suivants (grand widget). */
+    class Forecast(val temperature: Double, val code: Int, val min: Double, val max: Double, val days: List<Day> = emptyList())
+
+    /** Un jour suivant : date au format d'Open-Meteo (« 2026-10-29 »), temps, min et max. */
+    class Day(val date: String, val code: Int, val min: Double, val max: Double)
     class Place(val name: String, val label: String, val lat: Double, val lon: Double)
 
     /** Le temps qu'il fait : emoji (widget Météo), icône monochrome (héros Cadran) et libellé. */
     class Sky(val emoji: String, @DrawableRes val icon: Int, @StringRes val text: Int)
 
-    suspend fun forecast(lat: Double, lon: Double): Forecast {
-        val json = get(
+    suspend fun forecast(lat: Double, lon: Double): Forecast = parse(
+        get(
             "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code" +
-                "&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1",
-        )
+                "&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=$DAYS",
+        ),
+    )
+
+    /** Réponse d'Open-Meteo : le jour 0 donne min / max d'aujourd'hui, les suivants vont dans [Forecast.days]. */
+    fun parse(json: JSONObject): Forecast {
         val now = json.getJSONObject("current")
         val daily = json.getJSONObject("daily")
-        return Forecast(
-            now.getDouble("temperature_2m"), now.getInt("weather_code"),
-            daily.getJSONArray("temperature_2m_min").getDouble(0), daily.getJSONArray("temperature_2m_max").getDouble(0),
-        )
+        val dates = daily.getJSONArray("time")
+        val codes = daily.optJSONArray("weather_code")
+        val mins = daily.getJSONArray("temperature_2m_min")
+        val maxs = daily.getJSONArray("temperature_2m_max")
+        val days = (1 until dates.length()).map { Day(dates.getString(it), codes?.optInt(it) ?: 0, mins.getDouble(it), maxs.getDouble(it)) }
+        return Forecast(now.getDouble("temperature_2m"), now.getInt("weather_code"), mins.getDouble(0), maxs.getDouble(0), days)
     }
 
     suspend fun geocode(query: String): List<Place> {

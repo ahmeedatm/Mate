@@ -9,11 +9,14 @@ import com.unowhy.companion.R
 import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.themeRes
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
  * Météo de la ville choisie, lue par la tablette chez Open-Meteo (gratuit, sans clé ni compte), toutes les 30 min.
- * Petit : emoji et température ; moyen : en plus le temps qu'il fait, min / max du jour et la ville.
+ * Petit : emoji et température ; moyen : en plus le temps qu'il fait, min / max du jour et la ville ; grand : en plus
+ * les 4 jours suivants.
  */
 class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val emoji = label(44f)
@@ -27,13 +30,22 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         addView(range)
         addView(city)
     }
-    override val view = LinearLayout(context).asCard(16).apply {
-        setBackgroundResource(themeRes(context, R.attr.c_tile_bg))
-        setPadding(dp(18), dp(14), dp(18), dp(14))
+    private val now = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
         addView(emoji)
         addView(temp, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
         addView(details, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(16) })
+    }
+
+    /** Grand : une colonne par jour suivant (jour, emoji, min / max). */
+    private val days = LinearLayout(context)
+    override val view = LinearLayout(context).asCard(16).apply {
+        setBackgroundResource(themeRes(context, R.attr.c_tile_bg))
+        setPadding(dp(18), dp(14), dp(18), dp(14))
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER_VERTICAL
+        addView(now, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        addView(days, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(24) })
         setOnClickListener { if (!placed.config.has("lat")) showSettings() }
     }
 
@@ -57,6 +69,7 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         details.visibility = if (small) android.view.View.GONE else android.view.View.VISIBLE
         emoji.textSize = if (small) 34f else 44f
         temp.textSize = if (small) 34f else 40f
+        days.visibility = if (placed.size == WidgetSize.L) android.view.View.VISIBLE else android.view.View.GONE
         render()
     }
 
@@ -93,6 +106,25 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         temp.text = context.getString(R.string.widget_weather_temp, f.temperature.roundToInt())
         sky.setText(weather.text)
         range.text = context.getString(R.string.widget_weather_range, f.min.roundToInt(), f.max.roundToInt())
+        renderDays(f.days)
+    }
+
+    private fun renderDays(list: List<Weather.Day>) {
+        days.removeAllViews()
+        if (placed.size != WidgetSize.L) return
+        for (day in list.take(4)) {
+            val name = runCatching { dayName.format(isoDate.parse(day.date)!!) }.getOrDefault("").replaceFirstChar { it.uppercase() }
+            days.addView(
+                LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER_HORIZONTAL
+                    addView(label(15f, R.attr.c_text_dim).apply { text = name })
+                    addView(label(30f).apply { text = Weather.describe(day.code).emoji })
+                    addView(label(15f).apply { text = context.getString(R.string.widget_weather_day, day.min.roundToInt(), day.max.roundToInt()) })
+                },
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
+            )
+        }
     }
 
     override fun showSettings() = Weather.chooseCity(context, host.scope, placed.config) {
@@ -100,5 +132,10 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         host.save()
         render()
         host.scope.launch { load() }
+    }
+
+    private companion object {
+        val isoDate = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val dayName = SimpleDateFormat("EEE", Locale.FRANCE)
     }
 }

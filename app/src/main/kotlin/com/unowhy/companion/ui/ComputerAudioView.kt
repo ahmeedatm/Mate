@@ -47,6 +47,7 @@ class ComputerAudioView @JvmOverloads constructor(
         findViewById<View>(R.id.audio_label).visibility = VISIBLE
     }
     private var state: AudioState? = null
+    private var compacted = false
 
     init {
         orientation = HORIZONTAL
@@ -103,6 +104,28 @@ class ComputerAudioView @JvmOverloads constructor(
                 if (!dragging) render(audio)
             }
         }
+    }
+
+    /**
+     * Petit widget de l'Accueil : muet, −, volume, + (sans curseur ni micro, qui ne tiennent pas dans une case).
+     * Les boutons − et + font comme ceux de la tablette.
+     */
+    fun compact() {
+        if (compacted) return
+        compacted = true
+        volume.visibility = GONE
+        mic.visibility = GONE
+        value.gravity = Gravity.CENTER
+        value.textSize = 20f
+        value.setTextColor(themeColor(context, R.attr.c_text))
+        fun step(icon: Int, label: Int, up: Boolean) = ImageButton(context, null, 0, R.style.IconButton).apply {
+            setImageResource(icon)
+            contentDescription = context.getString(label)
+            setOnClickListener { nudge(up) }
+        }
+        addView(step(R.drawable.ic_remove, R.string.volume_down, false), indexOfChild(value))
+        addView(step(R.drawable.ic_add, R.string.volume_up, true), indexOfChild(value) + 1)
+        value.layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
     }
 
     /** Relit l'état : le son a pu changer depuis le Mac. */
