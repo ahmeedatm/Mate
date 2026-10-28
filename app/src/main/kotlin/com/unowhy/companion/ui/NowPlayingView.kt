@@ -36,6 +36,7 @@ class NowPlayingView @JvmOverloads constructor(
 ) : LinearLayout(context, attrs) {
 
     private val thumb: ImageView
+    private val sessionsBar: View
     private val sessionsRow: LinearLayout
     private val source: TextView
     private val title: TextView
@@ -64,6 +65,7 @@ class NowPlayingView @JvmOverloads constructor(
         LayoutInflater.from(context).inflate(R.layout.view_now_playing, this, true)
         thumb = findViewById(R.id.media_thumb)
         thumb.clipToOutline = true
+        sessionsBar = findViewById(R.id.media_sessions_scroll)
         sessionsRow = findViewById(R.id.media_sessions)
         source = findViewById(R.id.media_source)
         title = findViewById(R.id.media_title)
@@ -132,7 +134,7 @@ class NowPlayingView @JvmOverloads constructor(
         title.maxLines = if (small) 1 else 2
         if (small) {
             timeline.visibility = GONE
-            sessionsRow.visibility = GONE
+            sessionsBar.visibility = GONE
         }
     }
 
@@ -220,14 +222,16 @@ class NowPlayingView @JvmOverloads constructor(
 
     private fun renderSessions(selected: MediaSession?) {
         if (sessions.size < 2 || mode == Layout.SMALL) {
-            sessionsRow.visibility = GONE
+            sessionsBar.visibility = GONE
             return
         }
-        sessionsRow.visibility = VISIBLE
+        sessionsBar.visibility = VISIBLE
         sessionsRow.removeAllViews()
         for (session in sessions) {
             val chip = Button(context, null, 0, R.style.Chip).apply {
                 text = session.name
+                maxLines = 1
+                setPadding(dp(14), 0, dp(14), 0)
                 isSelected = session.app == selected?.app
                 setOnClickListener {
                     chosenApp = session.app
