@@ -436,18 +436,27 @@ essai-updates:
       echo "  DATA_DIR=paquet npm run updates:essai  # compagnon installé par paquet"
       echo "Puis sur la tablette : Réglages > Mises à jour."
 
-# Release GitLab : fichiers déposés dans le registre de paquets générique du projet, jeton du job.
-# Un fichier à la fois : envoyés ensemble dans une version de paquet pas encore créée, l'un reçoit un 500.
+# Release GitLab : liens vers les fichiers des jobs du tag, pas de copie dans le registre (le zip Mac y reçoit un 500
+# avec le jeton du job). Fichiers gardés : dernière pipeline réussie du tag (« Keep artifacts from most recent successful jobs »).
 release:
   extends: .release-tag
   stage: release
   image: registry.gitlab.com/gitlab-org/cli:v1.124.0@sha256:f6837b5aea075ca297281b554556d2fc4f8fb291ace6b48286790790dce622cd
-  needs: [package-windows, package-mac, android-release]
+  needs:
+    - { job: package-windows, artifacts: false }
+    - { job: package-mac, artifacts: false }
+    - { job: android-release, artifacts: false }
   variables:
     GLAB_ENABLE_CI_AUTOLOGIN: "true"
   script:
-    - >-
-      glab release create "$CI_COMMIT_TAG" --ref "$CI_COMMIT_SHA"
-      --name "Compagnon $CI_COMMIT_TAG"
-      --notes "Paquets de l'ordinateur (Windows, Mac) et APK de la tablette. Mise à jour de la tablette par le « serveur Unowhy » : docs/developpement.md, section Release."
-    - for f in dist/*; do glab release upload "$CI_COMMIT_TAG" "$f" --use-package-registry; done
+    - |
+      VERSION=${CI_COMMIT_TAG#v}
+      BASE="$CI_PROJECT_URL/-/jobs/artifacts/$CI_COMMIT_TAG/raw/dist"
+      LINKS=""
+      for f in Compagnon-Unowhy-Windows.zip:package-windows Compagnon-Unowhy-Mac.zip:package-mac \
+        companion-$VERSION.apk:android-release companion-$VERSION.json:android-release; do
+        LINKS="$LINKS{\"name\":\"${f%%:*}\",\"url\":\"$BASE/${f%%:*}?job=${f##*:}\",\"link_type\":\"package\"},"
+      done
+      glab release create "$CI_COMMIT_TAG" --ref "$CI_COMMIT_SHA" --name "Compagnon $CI_COMMIT_TAG" \
+        --notes "Paquets de l'ordinateur (Windows, Mac) et APK de la tablette. Mise à jour de la tablette par le « serveur Unowhy » : docs/developpement.md, section Release." \
+        --assets-links "[${LINKS%,}]"

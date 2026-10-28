@@ -195,7 +195,7 @@ Un tag `vX.Y.Z` posé sur `main` lance les mêmes tests, puis :
 | `package-windows`, `package-mac` | `Compagnon-Unowhy-Windows.zip` et `Compagnon-Unowhy-Mac.zip` (`npm run package -- windows` ou `mac` sur le runner Linux, un job par plateforme : artefacts sous 100 Mo) |
 | `android-release` | `companion-X.Y.Z.apk` signé, et `companion-X.Y.Z.json` : son entrée pour le « serveur Unowhy » |
 | `updates` | serveur central des mises à jour de la tablette (registre de paquets du projet) : `manifest.json` et l'APK de la dernière version |
-| `release` | release GitLab du tag, fichiers déposés un par un dans le registre de paquets du projet (`glab`, jeton du job) |
+| `release` | release GitLab du tag, liens vers les fichiers des jobs (gardés : dernière pipeline réussie du tag) |
 
 ```bash
 git tag v1.2.0 origin/main && git push origin v1.2.0
