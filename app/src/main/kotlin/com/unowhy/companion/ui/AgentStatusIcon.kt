@@ -1,28 +1,31 @@
 package com.unowhy.companion.ui
 
-import android.animation.ObjectAnimator
-import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.View
-import android.view.animation.LinearInterpolator
 import com.unowhy.companion.R
 import com.unowhy.companion.net.AgentState
+import kotlin.math.PI
+import kotlin.math.cos
 
 /**
  * État d'une session, dessiné comme dans Orca : une roue orange qui tourne (travaille), un écran jaune qui pulse
  * (surveille une tâche de fond), un point rouge qui pulse (attend), une coche verte (fini), un point bleu (limite),
- * un cercle gris (inactif). Les animations ne touchent que la rotation ou l'opacité (fil de rendu) et s'arrêtent hors écran.
+ * un cercle gris (inactif).
+ *
+ * L'animation est dessinée à la main, 20 images par seconde, à partir de l'horloge : le kiosque coupe les animateurs
+ * d'Android (`animator_duration_scale 0`, docs/kiosque.md) et une roue animée par eux resterait figée. Elle ne tourne que
+ * tant que l'icône est à l'écran.
  */
 class AgentStatusIcon @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
 
     private var state = AgentState.IDLE
     private var monitoring = false
-    private var animator: ValueAnimator? = null
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND }
     private val arc = RectF()
     private val path = Path()
@@ -32,7 +35,6 @@ class AgentStatusIcon @JvmOverloads constructor(context: Context, attrs: Attribu
         this.state = state
         this.monitoring = monitoring
         invalidate()
-        restart()
     }
 
     private fun color() = themeColor(
@@ -47,16 +49,25 @@ class AgentStatusIcon @JvmOverloads constructor(context: Context, attrs: Attribu
         },
     )
 
+    private val animated get() = state == AgentState.WORKING || state == AgentState.WAITING
+
+    /** Opacité d'une pulsation de `periodMs` : de 35 % à 100 %, en douceur. */
+    private fun pulse(now: Long, periodMs: Long): Int {
+        val phase = (now % periodMs).toDouble() / periodMs
+        return (255 * (0.35 + 0.65 * (0.5 + 0.5 * cos(2 * PI * phase)))).toInt()
+    }
+
     override fun onDraw(canvas: Canvas) {
+        val now = SystemClock.uptimeMillis()
         val w = width.toFloat()
         val h = height.toFloat()
         val s = minOf(w, h)
-        val stroke = s * 0.13f
         paint.color = color()
-        paint.strokeWidth = stroke
+        paint.strokeWidth = s * 0.13f
         when {
             state == AgentState.WORKING && monitoring -> {
-                // Écran : un cadre arrondi et son pied.
+                // Écran : un cadre arrondi et son pied, qui pulse.
+                paint.alpha = pulse(now, 1_600)
                 paint.style = Paint.Style.STROKE
                 arc.set(w / 2 - s * 0.42f, h / 2 - s * 0.36f, w / 2 + s * 0.42f, h / 2 + s * 0.18f)
                 canvas.drawRoundRect(arc, s * 0.08f, s * 0.08f, paint)
@@ -64,10 +75,10 @@ class AgentStatusIcon @JvmOverloads constructor(context: Context, attrs: Attribu
                 canvas.drawLine(w / 2 - s * 0.2f, h / 2 + s * 0.38f, w / 2 + s * 0.2f, h / 2 + s * 0.38f, paint)
             }
             state == AgentState.WORKING -> {
-                // Roue : un arc de trois quarts, que l'animation fait tourner.
+                // Roue : un arc de trois quarts qui fait un tour en 0,9 s.
                 paint.style = Paint.Style.STROKE
                 arc.set(w / 2 - s * 0.38f, h / 2 - s * 0.38f, w / 2 + s * 0.38f, h / 2 + s * 0.38f)
-                canvas.drawArc(arc, 0f, 270f, false, paint)
+                canvas.drawArc(arc, (now % SPIN_MS) * 360f / SPIN_MS, 270f, false, paint)
             }
             state == AgentState.DONE -> {
                 paint.style = Paint.Style.STROKE
@@ -82,49 +93,21 @@ class AgentStatusIcon @JvmOverloads constructor(context: Context, attrs: Attribu
                 canvas.drawCircle(w / 2, h / 2, s * 0.3f, paint)
             }
             else -> {
+                if (state == AgentState.WAITING) paint.alpha = pulse(now, 900)
                 paint.style = Paint.Style.FILL
                 canvas.drawCircle(w / 2, h / 2, s * 0.32f, paint)
             }
         }
-    }
-
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        restart()
-    }
-
-    override fun onDetachedFromWindow() {
-        stopAnimation()
-        super.onDetachedFromWindow()
+        if (animated && isShown) postInvalidateDelayed(FRAME_MS)
     }
 
     override fun onVisibilityChanged(changedView: View, visibility: Int) {
         super.onVisibilityChanged(changedView, visibility)
-        if (isAttachedToWindow) restart()
+        if (animated && isShown) invalidate()
     }
 
-    private fun stopAnimation() {
-        animator?.cancel()
-        animator = null
-        rotation = 0f
-        alpha = 1f
-    }
-
-    private fun restart() {
-        stopAnimation()
-        if (!isAttachedToWindow || !isShown || Look.reduced(context)) return
-        animator = when {
-            state == AgentState.WORKING && !monitoring -> ObjectAnimator.ofFloat(this, ROTATION, 0f, 360f).apply {
-                duration = 900
-                interpolator = LinearInterpolator()
-                repeatCount = ValueAnimator.INFINITE
-            }
-            state == AgentState.WORKING || state == AgentState.WAITING -> ObjectAnimator.ofFloat(this, ALPHA, 1f, 0.35f).apply {
-                duration = if (state == AgentState.WAITING) 700 else 1_400
-                repeatMode = ValueAnimator.REVERSE
-                repeatCount = ValueAnimator.INFINITE
-            }
-            else -> null
-        }?.also { it.start() }
+    private companion object {
+        const val SPIN_MS = 900L
+        const val FRAME_MS = 50L
     }
 }

@@ -155,7 +155,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             return
         }
         val counts = state.counts
-        showCounters(counts.working, counts.waiting, counts.done + counts.limit)
+        showCounters(counts)
         showQuota(state.quota)
         status.text = when {
             state.sessions.isEmpty() -> context.getString(R.string.agents_empty)
@@ -329,21 +329,33 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         }
     }
 
-    private fun showCounters(working: Int, waiting: Int, done: Int) {
+    /** Compteurs du haut, avec les icônes des états : travaillent (roue), surveillent (écran), attendent, finis. */
+    private fun showCounters(c: com.unowhy.companion.net.AgentCounts) {
         counters.removeAllViews()
         listOf(
-            Triple(working, R.plurals.agent_count_working, AgentState.WORKING),
-            Triple(waiting, R.plurals.agent_count_waiting, AgentState.WAITING),
-            Triple(done, R.plurals.agent_count_done, AgentState.DONE),
-        ).forEach { (n, label, state) ->
+            Triple(c.working, R.plurals.agent_count_working, AgentState.WORKING to false),
+            Triple(c.monitoring, R.plurals.agent_count_monitoring, AgentState.WORKING to true),
+            Triple(c.waiting, R.plurals.agent_count_waiting, AgentState.WAITING to false),
+            Triple(c.done + c.limit, R.plurals.agent_count_done, AgentState.DONE to false),
+        ).forEach { (n, label, look) ->
+            val (state, monitoring) = look
+            val color = when {
+                n == 0 -> themeColor(context, R.attr.c_text_faint)
+                monitoring -> themeColor(context, R.attr.c_agent_monitor)
+                else -> stateColor(context, state)
+            }
             counters.addView(
-                TextView(context).apply {
-                    text = context.getString(R.string.agent_counter, n, context.resources.getQuantityString(label, n))
-                    textSize = 16f
-                    setTextColor(if (n > 0) stateColor(context, state) else themeColor(context, R.attr.c_text_faint))
-                    compoundDrawablePadding = dp(8)
-                    setCompoundDrawablesRelativeWithIntrinsicBounds(dot(context, state).apply { setSize(dp(10), dp(10)) }, null, null, null)
+                LinearLayout(context).apply {
                     gravity = Gravity.CENTER_VERTICAL
+                    addView(AgentStatusIcon(context).apply { bind(if (n == 0) AgentState.IDLE else state, monitoring) }, LayoutParams(dp(18), dp(18)))
+                    addView(
+                        TextView(context).apply {
+                            text = context.getString(R.string.agent_counter, n, context.resources.getQuantityString(label, n))
+                            textSize = 16f
+                            setTextColor(color)
+                        },
+                        LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) },
+                    )
                 },
                 LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(24) },
             )

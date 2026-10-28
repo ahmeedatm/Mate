@@ -500,7 +500,7 @@ describe("filet claude agents --json", () => {
     ];
     await a.refresh();
     await flush();
-    assert.deepEqual(a.list().counts, { working: 1, waiting: 1, done: 0, limit: 0, idle: 1 });
+    assert.deepEqual(a.list().counts, { working: 1, monitoring: 0, waiting: 1, done: 0, limit: 0, idle: 1 });
     assert.deepEqual(alerts, []);
   });
 
@@ -772,6 +772,7 @@ describe("titre, ticket, MR, surveillance", () => {
     assert.equal(s.mr, 74, "la MR du journal, plus récente, passe devant celle du worktree");
     assert.equal(s.state, "working");
     assert.equal(s.monitoring, true);
+    assert.deepEqual(a.list().counts, { working: 0, monitoring: 1, waiting: 0, done: 0, limit: 0, idle: 0 });
   });
 
   it("sans titre : le nom ; sans Orca : le ticket lu dans la branche", async () => {

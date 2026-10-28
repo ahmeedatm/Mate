@@ -686,8 +686,13 @@ export function createAgents(deps: AgentsDeps) {
 
   function list() {
     const all = [...sessions.values()].sort((a, b) => ORDER[effectiveState(a)] - ORDER[effectiveState(b)] || b.since - a.since);
-    const counts = { working: 0, waiting: 0, done: 0, limit: 0, idle: 0 };
-    for (const s of all) counts[effectiveState(s)]++;
+    // `monitoring` : sessions qui surveillent une tâche de fond, comptées à part de celles qui travaillent (comme Orca).
+    const counts = { working: 0, monitoring: 0, waiting: 0, done: 0, limit: 0, idle: 0 };
+    for (const s of all) {
+      const state = effectiveState(s);
+      if (state === "working" && s.monitoring) counts.monitoring++;
+      else counts[state]++;
+    }
     // Quota de plus de 15 min : plus à jour (la statusline ne tourne que pendant qu'une session s'affiche).
     const freshQuota = quota && now() - quota.at < QUOTA_TTL_MS ? quota : null;
     return { sessions: all.slice(0, 10).map(view), counts, total: all.length, hooks: hooksSeen, quota: freshQuota };

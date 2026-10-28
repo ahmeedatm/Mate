@@ -142,6 +142,10 @@
         <item quantity="one">travaille</item>
         <item quantity="other">travaillent</item>
     </plurals>
+    <plurals name="agent_count_monitoring">
+        <item quantity="one">surveille</item>
+        <item quantity="other">surveillent</item>
+    </plurals>
     <plurals name="agent_count_waiting">
         <item quantity="one">attend</item>
         <item quantity="other">attendent</item>
