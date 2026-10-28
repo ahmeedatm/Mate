@@ -110,7 +110,7 @@ La tablette n'envoie qu'un identifiant de tuile : seules les actions écrites da
 ### Agenda et documents
 
 - Agenda : lien ICS collé dans la page http://127.0.0.1:3000/ de l'ordinateur (gardé dans `backend/.data/calendar.json`), ou `CALENDAR_ICS_URLS` dans `.env`. Sans lien, pas d'agenda ; `demo` donne l'agenda d'exemple.
-- Réunions Teams : bouton « Rejoindre » sur le prochain rendez-vous de l'Accueil (15 min avant jusqu'à la fin), lien pris dans la description ICS et ouvert dans l'appli Teams de l'ordinateur (écran d'avant-réunion). Option dans Réglages : rejoindre automatiquement 1 min avant (désactivée par défaut, gardée dans `backend/.data/meetings.json`, ignore les réunions « Libre »).
+- Réunions Teams : bouton « Rejoindre » sur le prochain rendez-vous des Profils (15 min avant jusqu'à la fin), lien pris dans la description ICS et ouvert dans l'appli Teams de l'ordinateur (écran d'avant-réunion). Option dans Réglages : rejoindre automatiquement 1 min avant (désactivée par défaut, gardée dans `backend/.data/meetings.json`, ignore les réunions « Libre »).
 - Documents : `DOCS_DIR` dans `.env` (défaut : `shared/` à la racine du repo). Les photos de la tablette arrivent dans `Photos tablette/`.
 
 ### Visualiseur (mode Caméra)
