@@ -28,7 +28,6 @@ import com.unowhy.companion.ui.home.FlowBandView
 import com.unowhy.companion.ui.home.HomeHost
 import com.unowhy.companion.ui.home.HomeLayout
 import com.unowhy.companion.ui.home.HomeWidget
-import com.unowhy.companion.ui.home.MAX_PAGES
 import com.unowhy.companion.ui.home.Placed
 import com.unowhy.companion.ui.home.ROWS
 import com.unowhy.companion.ui.home.RowProfile
@@ -51,7 +50,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private lateinit var scroll: ScrollView
     private lateinit var editBar: View
     private lateinit var dots: LinearLayout
-    private lateinit var pageButton: View
 
     private lateinit var layout: HomeLayout
     /** Disposition au moment d'entrer dans le mode Modifier : « Annuler » y revient. */
@@ -84,13 +82,12 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         scroll = view.findViewById(R.id.home_scroll)
         editBar = view.findViewById(R.id.home_edit_bar)
         dots = view.findViewById(R.id.home_dots)
-        pageButton = view.findViewById(R.id.home_edit_page)
         grid.listener = this
         grid.blocked = { unreachable != null && dependsOnComputer(it) }
 
         view.findViewById<View>(R.id.home_edit_add).setOnClickListener { onAddAt(-1, -1) }
         view.findViewById<View>(R.id.home_edit_templates).setOnClickListener { chooseTemplate() }
-        pageButton.setOnClickListener { addPage() }
+        view.findViewById<View>(R.id.home_edit_page).setOnClickListener { addPage() }
         view.findViewById<View>(R.id.home_edit_cancel).setOnClickListener { endEdit(keep = false) }
         view.findViewById<View>(R.id.home_edit_done).setOnClickListener { endEdit(keep = true) }
 
@@ -358,7 +355,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
                 setOnClickListener { showPage(i) }
             }, LinearLayout.LayoutParams(dp(12), dp(12)).apply { marginStart = dp(8); marginEnd = dp(8) })
         }
-        pageButton.visibility = if (layout.pages < MAX_PAGES) View.VISIBLE else View.GONE
     }
 
     override fun onPageSwipe(delta: Int) {
@@ -387,15 +383,12 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             refreshAll()
             return
         }
-        layout.compact()
         HomeLayout.save(requireContext(), layout, cadran)
         showPage(page)
     }
 
     private fun addPage() {
-        if (layout.pages >= MAX_PAGES) return
-        layout.pages++
-        showPage(layout.pages - 1)
+        showPage(layout.addProfile(null))
     }
 
     override fun onAddAt(col: Int, row: Int) {

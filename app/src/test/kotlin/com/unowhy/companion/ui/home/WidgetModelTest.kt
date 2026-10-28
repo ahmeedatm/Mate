@@ -52,12 +52,8 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `compact retire les pages vides et renumerote`() {
-        val far = Placed(WidgetType.NOTE, WidgetSize.S, 2, 0, 0)
-        val layout = HomeLayout(mutableListOf(Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 0), far), 3)
-        layout.compact()
-        assertEquals(2, layout.pages)
-        assertEquals(1, far.page)
+    fun `les modeles construisent un seul profil sans nom`() {
+        assertEquals(listOf<String?>(null), Template.WORK_CADRAN.build().names)
     }
 
     @Test
