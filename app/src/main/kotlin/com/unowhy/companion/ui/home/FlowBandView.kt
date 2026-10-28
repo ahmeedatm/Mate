@@ -20,11 +20,13 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 
 /**
- * Bande du thème Rétro à gauche de l'Accueil, d'après le dessin d'Eliot (328 × 800, toute la hauteur) : deux tubes
+ * Bande du thème Rétro derrière les widgets de l'Accueil, calée à droite, d'après le dessin d'Eliot (328 × 800, toute la hauteur) : deux tubes
  * de trois bandes qui font une boucle tous les 400, détourée d'un liseré du fond. Un liquide y coule lentement vers
  * le bas : une vague plus claire glisse dans chaque bande (dégradé linéaire décalé dans les tiges, dégradé circulaire
  * qui tourne dans les boucles, en phase avec la tige au point où ils se touchent). Rien que des rectangles et des
  * disques, 30 images/s, arrêtée dès qu'elle n'est plus à l'écran. Masquée hors thème Rétro (`c_flow`).
+ * Voilée derrière les widgets sans fond ([hidden]) comme à travers une carte, relus à chaque image : ils suivent
+ * un glisser du mode Modifier.
  */
 class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
     /**
@@ -60,6 +62,12 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val matrix = Matrix()
     private var running = false
+    private val origin = IntArray(2)
+    private val at = IntArray(2)
+    private val join = 48 * resources.displayMetrics.density
+
+    /** Vues sans carte (héros, ligne du jour) derrière lesquelles les tubes passent voilés de la couleur du fond. */
+    var hidden: () -> List<View> = { emptyList() }
 
     init {
         visibility = if (themeBool(context, R.attr.c_flow)) VISIBLE else GONE
@@ -76,6 +84,28 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
         if (isVisible) invalidate()
     }
 
+    /**
+     * Hauteurs voilées : celles des vues [hidden], sur toute la largeur. Deux zones à moins de [join] l'une de
+     * l'autre se rejoignent, et une zone aussi près du haut ou du bas va jusqu'au bord : pas de bout de tube vif
+     * isolé dans les marges.
+     */
+    private fun hiddenBands(): List<Pair<Float, Float>> {
+        getLocationInWindow(origin)
+        val spans = hidden().filter { it.isShown }.map { view ->
+            view.getLocationInWindow(at)
+            (at[1] - origin[1]).toFloat() to (at[1] - origin[1] + view.height).toFloat()
+        }.sortedBy { it.first }
+        val merged = ArrayList<Pair<Float, Float>>()
+        for ((top, bottom) in spans) {
+            val last = merged.lastOrNull()
+            if (last != null && top - last.second < join) merged[merged.size - 1] = last.first to maxOf(last.second, bottom)
+            else merged.add(top to bottom)
+        }
+        return merged.map { (top, bottom) ->
+            (if (top < join) 0f else top - join / 4) to (if (bottom > height - join) height.toFloat() else bottom + join / 4)
+        }
+    }
+
     override fun onDraw(canvas: Canvas) {
         val scale = height / HEIGHT
         canvas.save()
@@ -83,8 +113,27 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
         val flowed = ((SystemClock.uptimeMillis() * SPEED / 1000.0) % WAVE).toFloat()
         for (tube in tubes) drawTube(canvas, tube, flowed)
         canvas.restore()
+        for ((top, bottom) in hiddenBands()) drawVeil(canvas, top, bottom)
         paint.shader = null
         if (running) postInvalidateDelayed(FRAME_MS)
+    }
+
+    /** Voile de la couleur du fond, aussi opaque qu'une carte, estompé en haut et en bas (sauf au bord de la vue). */
+    private fun drawVeil(canvas: Canvas, top: Float, bottom: Float) {
+        val solid = ColorUtils.setAlphaComponent(bg, CARD_ALPHA)
+        val clear = ColorUtils.setAlphaComponent(bg, 0)
+        val fade = join / 2
+        paint.shader = null
+        paint.color = solid
+        canvas.drawRect(0f, top, width.toFloat(), bottom, paint)
+        if (top > 0f) {
+            paint.shader = LinearGradient(0f, top - fade, 0f, top, clear, solid, Shader.TileMode.CLAMP)
+            canvas.drawRect(0f, top - fade, width.toFloat(), top, paint)
+        }
+        if (bottom < height) {
+            paint.shader = LinearGradient(0f, bottom, 0f, bottom + fade, solid, clear, Shader.TileMode.CLAMP)
+            canvas.drawRect(0f, bottom, width.toFloat(), bottom + fade, paint)
+        }
     }
 
     /** Boucles visibles de [nMin] à [nMax], tiges de [nMin] - 1 à [nMax], dans l'ordre où elles se recouvrent. */
@@ -143,6 +192,9 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
     }
 
     companion object {
+        /** Opacité du voile, sur 255 : celle des widgets de l'Accueil posés sur les tubes (color/home_card, 0,8). */
+        private const val CARD_ALPHA = 204
+
         private const val WIDTH = 328f
         private const val HEIGHT = 800f
         private const val PERIOD = 400f
@@ -152,13 +204,13 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
 
         /** Longueur d'une vague, éclaircissement en son milieu. */
         private const val WAVE = 150f
-        private const val TINT = 0.4f
+        private const val TINT = 0.75f
 
         /** Vagues sur le tour de la boucle de la bande [k] : un nombre entier, pour qu'elle se referme sans raccord. */
         private fun waves(k: Int) = maxOf(1, (2 * PI * RADII[k] / WAVE).roundToInt())
 
         /** Vitesse du liquide, en unités du dessin par seconde. */
-        private const val SPEED = 22.0
+        private const val SPEED = 34.0
         private const val FRAME_MS = 33L
     }
 }

@@ -4,6 +4,7 @@ import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.drawable.Drawable
@@ -11,8 +12,10 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
 import android.provider.Settings
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.ImageView
@@ -32,6 +35,27 @@ import kotlin.math.abs
  * sur un calque matériel, et les boucles s'arrêtent dès que l'écran n'est plus affiché.
  */
 object Look {
+    /** Rétro : halo crème autour d'un texte dessiné à la main, pour le lire sur les tubes qui coulent derrière. */
+    fun halo(context: Context, paint: Paint) {
+        if (themeBool(context, R.attr.c_flow)) paint.setShadowLayer(HALO_RADIUS, 0f, 0f, themeColor(context, R.attr.c_surface))
+    }
+
+    /**
+     * Rétro : halo crème autour des textes foncés sous [root] (Accueil, tubes derrière) ; jamais autour d'un texte
+     * clair, posé sur un fond coloré (tuile, bouton plein), qu'il brouillerait.
+     */
+    fun haloTexts(root: View) {
+        if (root is TextView) {
+            val dark = ColorUtils.calculateLuminance(root.currentTextColor) < DARK_TEXT
+            val halo = if (dark) themeColor(root.context, R.attr.c_surface) else 0
+            if (root.shadowColor != halo) root.setShadowLayer(if (dark) HALO_RADIUS else 0f, 0f, 0f, halo)
+        }
+        if (root is ViewGroup) for (i in 0 until root.childCount) haloTexts(root.getChildAt(i))
+    }
+
+    private const val HALO_RADIUS = 8f
+    private const val DARK_TEXT = 0.3
+
     private val HUES = intArrayOf(
         R.attr.c_hue_orange, R.attr.c_hue_green, R.attr.c_hue_cyan, R.attr.c_hue_violet,
         R.attr.c_hue_red, R.attr.c_hue_pink, R.attr.c_hue_yellow, R.attr.c_hue_blue,
@@ -285,7 +309,7 @@ class TitleView @JvmOverloads constructor(
             setCompoundDrawablesRelative(null, null, null, null)
             isAllCaps = false
             letterSpacing = 0f
-            textSize = 15f
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, themePx(context, R.attr.c_title_size).toFloat())
             setTextColor(themeColor(context, R.attr.c_text_dim))
         } else if (icon != 0) {
             setIcon(icon)

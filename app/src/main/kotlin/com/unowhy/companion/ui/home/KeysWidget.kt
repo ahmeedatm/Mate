@@ -25,7 +25,7 @@ import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeBool
-import com.unowhy.companion.ui.themeFont
+import com.unowhy.companion.ui.themeRes
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -66,13 +66,10 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
         // Cadran, vertical : les touches dans une tuile titrée, comme les autres cartes de l'Accueil.
         if (placed.size == WidgetSize.V && themeBool(context, R.attr.c_cadran)) {
-            view.setBackgroundResource(R.drawable.cadran_tile_bg)
+            view.setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
             view.setPadding(dp(24), dp(24), dp(24), dp(20))
             view.addView(
-                label(15f, R.attr.c_text_dim).apply {
-                    setText(R.string.widget_keys_title)
-                    typeface = themeFont(context, R.attr.c_font_medium)
-                },
+                cardTitle(R.string.widget_keys_title, R.drawable.ic_deck),
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(12) },
             )
         }
