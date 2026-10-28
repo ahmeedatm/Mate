@@ -2,6 +2,7 @@ package com.unowhy.companion.voice
 
 import com.unowhy.companion.net.DeckTile
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.util.Calendar
@@ -43,6 +44,40 @@ class VoiceCommandsTest {
     @Test
     fun `la dictee garde le texte tel quel`() {
         assertEquals(VoiceCommand.Type("coupe le micro"), parse("écris : coupe le micro"))
+    }
+
+    @Test
+    fun `copie sur l'ordi garde le texte tel quel`() {
+        assertEquals(VoiceCommand.CopyToComputer("bonjour"), parse("copie sur l'ordi bonjour"))
+        assertEquals(VoiceCommand.CopyToComputer("Bonjour à Élise"), parse("Copie sur l'ordi Bonjour à Élise"))
+        assertEquals(VoiceCommand.CopyToComputer("coupe le micro"), parse("copie sur l'ordi : coupe le micro"))
+        assertEquals(VoiceCommand.CopyToComputer("bonjour"), parse("copie sur l'ordinateur bonjour"))
+    }
+
+    @Test
+    fun `copie ca sur l'ordi`() {
+        assertEquals(VoiceCommand.CopyToComputer("bonjour"), parse("copie ça sur l'ordi bonjour"))
+        assertEquals(VoiceCommand.CopyToComputer("bonjour"), parse("copie ca sur l ordi bonjour"))
+    }
+
+    @Test
+    fun `copie sur l'ordi sans texte`() {
+        assertEquals(VoiceCommand.CopyToComputer(""), parse("copie sur l'ordi"))
+        assertEquals(VoiceCommand.CopyToComputer(""), parse("copie ça sur l'ordi"))
+    }
+
+    @Test
+    fun `copie sur l'ordi sans lettre ni chiffre compte comme vide`() {
+        assertEquals(VoiceCommand.CopyToComputer(""), parse("copie sur l'ordi ."))
+        assertEquals(VoiceCommand.CopyToComputer(""), parse("copie sur l'ordi : ?!"))
+        assertEquals(VoiceCommand.CopyToComputer("42"), parse("copie sur l'ordi 42"))
+    }
+
+    @Test
+    fun `copie seul ou autre objet n'est pas une copie sur l'ordi`() {
+        assertFalse(parse("copie le fichier") is VoiceCommand.CopyToComputer)
+        assertFalse(parse("copie") is VoiceCommand.CopyToComputer)
+        assertFalse(parse("copie sur l'ordinal") is VoiceCommand.CopyToComputer)
     }
 
     @Test

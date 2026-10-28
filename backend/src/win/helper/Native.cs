@@ -1,6 +1,7 @@
 // Pilotage de Windows pour le compagnon : compilé dans UnowhyHelper.exe (npm run build:helper), appelé ligne par
 // ligne par src/win/helper.ts. Écrit en C# 7.3. Classe partielle : ici la lecture des requêtes et l'aiguillage,
-// un fichier Native.<thème>.cs par thème (Apps, Icons, Windows, OpenWindows, Keys, Audio, AppAudio, System, Perf).
+// un fichier Native.<thème>.cs par thème (Apps, Icons, Windows, OpenWindows, Keys, Audio, AppAudio, System, Perf,
+// Clipboard).
 //
 // Requête : {"op": "...", ...} ; réponse : {"ok": true, "result": ...} ou {"ok": false, "error": "..."}.
 
@@ -60,6 +61,9 @@ namespace Companion
                 case "cpu": return Cpu();
                 case "system": SystemCommand(Str(req, "command")); return true;
                 case "alert": Alert(Str(req, "title"), Str(req, "text")); return true;
+                case "clipget": return ClipboardGet();
+                case "clipset": ClipboardSetText(Str(req, "text")); return true;
+                case "clipimage": ClipboardSetImage(Str(req, "path")); return true;
                 default: return Program.Dispatch(op, req);
             }
         }

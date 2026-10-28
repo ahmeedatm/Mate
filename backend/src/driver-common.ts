@@ -2,6 +2,25 @@ import type { AudioChange, AudioState } from "./screens.ts";
 
 /** Ce que Mac (src/mac/) et Windows (src/win/) font pareil : le pilote de chaque système n'a que ses codes et ses commandes. */
 
+/** Mot que le pilote Windows met dans son erreur quand le presse-papiers n'existe pas (aucune session de bureau). */
+export const CLIPBOARD_UNAVAILABLE = "CLIPBOARD_UNAVAILABLE";
+
+/**
+ * Pas de presse-papiers sur cet ordinateur (service sans session de bureau ouverte, conteneur) : 503, le seul cas où le
+ * contrôle sanity passe son tour. Toute autre erreur (pilote cassé, script refusé) reste une erreur 500.
+ */
+export function clipboardUnavailable(): never {
+  throw Object.assign(new Error("Presse-papiers indisponible : aucune session de bureau ouverte sur l'ordinateur"), { statusCode: 503 });
+}
+
+/** Le pilote Windows signale l'absence de bureau par `CLIPBOARD_UNAVAILABLE` : en 503 ; les autres erreurs restent telles quelles. */
+export function whenClipboardAvailable<T>(result: Promise<T>): Promise<T> {
+  return result.catch((e: Error) => {
+    if (e.message.includes(CLIPBOARD_UNAVAILABLE)) clipboardUnavailable();
+    throw e;
+  });
+}
+
 /** Volume (0-100) et sourdine à appliquer pour `change` ; monter le volume réactive le son, comme les touches du clavier. */
 export function planAudio(change: AudioChange, current: AudioState): { output?: number; muted?: boolean } {
   const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));

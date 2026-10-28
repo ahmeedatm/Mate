@@ -5,6 +5,7 @@ import * as macAccess from "./mac/access.ts";
 import * as macApps from "./mac/apps.ts";
 import * as macAudio from "./mac/audio.ts";
 import * as macBrowser from "./mac/browser.ts";
+import * as macClipboard from "./mac/clipboard.ts";
 import * as macCalls from "./mac/calls.ts";
 import * as macDnd from "./mac/dnd.ts";
 import { extensionFrontPage, extensionTabs } from "./browser-extension.ts";
@@ -15,7 +16,16 @@ import * as macWindows from "./mac/windows.ts";
 import * as win from "./win/index.ts";
 import { checkOpenTarget } from "./open-guard.ts";
 import { perfSampler, type Perf } from "./perf.ts";
-import type { AudioChange, Layout, MediaCommand, MixerChange, OpenAction, SystemCommand, WindowTarget } from "./screens.ts";
+import type {
+  AudioChange,
+  ClipboardContent,
+  Layout,
+  MediaCommand,
+  MixerChange,
+  OpenAction,
+  SystemCommand,
+  WindowTarget,
+} from "./screens.ts";
 
 /**
  * Pilotage de l'ordinateur, une seule interface pour macOS (src/mac/) et Windows (src/win/).
@@ -116,6 +126,26 @@ export async function sendMediaKey(command: MediaCommand) {
 export async function typeText(text: string) {
   if (isMac) return macKeys.typeText(text);
   if (isWindows) return win.typeText(text);
+  unsupported();
+}
+
+/** Contenu du presse-papiers de l'ordinateur (jamais celui d'un gestionnaire de mots de passe : `protected`). */
+export async function getClipboard(): Promise<ClipboardContent> {
+  if (isMac) return macClipboard.getClipboard();
+  if (isWindows) return win.getClipboard();
+  unsupported();
+}
+
+export async function setClipboardText(text: string) {
+  if (isMac) return macClipboard.setClipboardText(text);
+  if (isWindows) return win.setClipboardText(text);
+  unsupported();
+}
+
+/** Copie une image (jpg, png) comme image dans le presse-papiers ; `fullPath` : chemin complet, déjà vérifié par la route. */
+export async function setClipboardImage(fullPath: string) {
+  if (isMac) return macClipboard.setClipboardImage(fullPath);
+  if (isWindows) return win.setClipboardImage(fullPath);
   unsupported();
 }
 

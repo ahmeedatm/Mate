@@ -21,6 +21,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.net.toUri
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.BrowserTab
@@ -168,6 +169,20 @@ class DocumentPanel @JvmOverloads constructor(
                 showStatus(context.errorText(e))
             }
         }
+    }
+
+    /**
+     * Affiche une adresse web (lien du presse-papiers de l'ordinateur) dans le même WebView que la page de l'ordi.
+     * Schéma ramené en minuscules (« HTTPS:// » copié tel quel) ; autre chose que http/https est ignoré.
+     */
+    fun openUrl(url: String, expand: Boolean, splittable: Boolean) {
+        val uri = url.toUri().normalizeScheme()
+        if (uri.scheme !in WEB_SCHEMES) return
+        release()
+        entry = null
+        visibility = VISIBLE
+        setExpanded(expand, splittable)
+        showWeb(WebPage(uri.toString(), uri.host ?: uri.toString()))
     }
 
     /** Onglet choisi dans la liste « Onglets » : son adresse est déjà connue. */
