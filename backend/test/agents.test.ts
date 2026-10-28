@@ -436,6 +436,47 @@ describe("approuver un plan", () => {
   });
 });
 
+describe("question posée par l'outil MCP tablette_demander", () => {
+  const q = { question: "On déploie ?", options: ["Oui", "Non", "Demain"], multi: false, who: "Claude", where: "projet" };
+
+  it("passe par la même carte et rend le libellé choisi", async () => {
+    const a = createAgents(deps());
+    const out = a.askTablet(q, 5_000);
+    const id = alerts[0].askId!;
+    assert.equal(alerts[0].kind, "waiting");
+    const detail = a.ask(id)!;
+    assert.equal(detail.session, "Claude");
+    assert.equal(detail.dir, "projet");
+    assert.equal(detail.expiresInMs, 5_000);
+    assert.deepEqual(
+      detail.questions?.[0].options.map((o) => o.label),
+      ["Oui", "Non", "Demain"],
+    );
+    a.answer(id, { answers: [{ choices: [2] }] });
+    assert.equal(await out, "Demain");
+    assert.equal(alerts.at(-1)?.kind, "clear");
+  });
+
+  it("choix multiple et texte libre", async () => {
+    const a = createAgents(deps());
+    const out = a.askTablet({ ...q, multi: true }, 5_000);
+    a.answer(alerts[0].askId!, { answers: [{ choices: [0, 2], other: "après 18 h" }] });
+    assert.equal(await out, "Oui, Demain, après 18 h");
+  });
+
+  it("sans réponse : null ; tablette absente : refus", async () => {
+    const a = createAgents(deps());
+    assert.equal(await a.askTablet(q, 20), null);
+    tablet = false;
+    assert.throws(
+      () => a.askTablet(q, 20),
+      (e: AnswerError) => e.statusCode === 409,
+    );
+    tablet = true;
+    assert.throws(() => a.askTablet({ ...q, options: [] }, 20), AnswerError);
+  });
+});
+
 describe("filet claude agents --json", () => {
   it("crée les sessions sans hook, sans alerter à la découverte", async () => {
     const a = createAgents(deps());

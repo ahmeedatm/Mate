@@ -211,6 +211,27 @@ describe("agents Claude : message, session devant, reprise", () => {
   });
 });
 
+describe("agents Claude : outil MCP tablette_demander", () => {
+  it("tient la requête jusqu'à la réponse de la tablette", async () => {
+    const pending = server.call("POST", "/agents/ask-tablet", {
+      question: "On déploie ?",
+      options: ["Oui", "Non"],
+      who: "Claude",
+      where: "projet",
+    });
+    const orders = await nextOrders();
+    const id = orders.find((o) => o.askId).askId;
+    assert.equal((await server.call("GET", `/agents/ask?id=${id}`)).json.session, "Claude");
+    assert.equal((await server.call("POST", "/agents/answer", { id, answers: [{ choices: [1] }] })).status, 200);
+    assert.deepEqual((await pending).json, { answered: true, answer: "Non" });
+  });
+
+  it("demande le jeton et une question valide", async () => {
+    assert.equal((await server.call("POST", "/agents/ask-tablet", { question: "x", options: ["a"] }, false)).status, 401);
+    assert.equal((await server.call("POST", "/agents/ask-tablet", { question: "x", options: [] })).status, 400);
+  });
+});
+
 describe("agents Claude : ailleurs que sur Mac", () => {
   it("Windows : 501 et agents absent de /deck/features", async () => {
     const win = await startServer({ os: "windows", env: { CLAUDE_BIN: claude } });

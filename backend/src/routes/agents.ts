@@ -8,6 +8,8 @@ import { sendToTablet, tabletStatus } from "../tablet.ts";
 /** Attente maximale d'une réponse de la tablette avant de rendre la main au terminal (AGENTS_HOLD_S, 90 s par défaut). */
 /** AGENTS_ALWAYS_ALERT=1 : alerter même si le terminal est devant (essais depuis un terminal). */
 const alwaysAlert = process.env.AGENTS_ALWAYS_ALERT === "1";
+/** Attente d'une réponse à une question posée par l'outil MCP (AGENTS_ASK_S, 3 min par défaut). */
+const askTabletMs = Math.max(5, Number(process.env.AGENTS_ASK_S) || 180) * 1000;
 const holdMs = Math.max(5, Number(process.env.AGENTS_HOLD_S) || 90) * 1000;
 
 /** Agents Claude Code (src/agents.ts) : `POST /agents/hook` pour Claude Code, le reste pour la tablette. */
@@ -139,5 +141,39 @@ export default async function agentRoutes(app: FastifyInstance) {
       schema: { body: { ...sessionBody, required: ["session", "armed"], properties: { session: sessionId, armed: { type: "boolean" } } } },
     },
     (req, reply) => guarded(reply, () => agents.resume(req.body.session, req.body.armed)),
+  );
+
+  // Outil MCP `tablette_demander` (src/mcp.ts) : Claude pose lui-même une question sur la tablette ; tenue jusqu'à la réponse.
+  app.post<{ Body: { question: string; options: string[]; multi?: boolean; who?: string; where?: string } }>(
+    "/agents/ask-tablet",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["question", "options"],
+          additionalProperties: false,
+          properties: {
+            question: { type: "string", minLength: 1, maxLength: 500 },
+            options: { type: "array", minItems: 1, maxItems: 6, items: { type: "string", minLength: 1, maxLength: 200 } },
+            multi: { type: "boolean" },
+            who: { type: "string", maxLength: 100 },
+            where: { type: "string", maxLength: 300 },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const b = req.body;
+      try {
+        const answer = await agents.askTablet(
+          { question: b.question, options: b.options, multi: b.multi === true, who: b.who || "Claude", where: b.where ?? "" },
+          askTabletMs,
+        );
+        return { answered: answer !== null, answer };
+      } catch (e) {
+        if (e instanceof AnswerError) return reply.code(e.statusCode).send({ error: e.message });
+        throw e;
+      }
+    },
   );
 }

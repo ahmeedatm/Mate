@@ -179,6 +179,7 @@
     <string name="agent_ask_deny">Refuser</string>
     <string name="agent_ask_later">Plus tard</string>
     <string name="agent_ask_expires">Le terminal reprend la main dans %1$d s</string>
+    <string name="agent_ask_expires_mcp">Sans réponse, Claude continue dans %1$d s</string>
     <string name="agent_ask_gone">Cette demande n\'existe plus : traitée au clavier, ou le terminal a repris la main.</string>
     <string name="agent_ask_allowed">Autorisé une fois</string>
     <string name="agent_ask_denied">Refusé</string>

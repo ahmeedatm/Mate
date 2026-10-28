@@ -81,6 +81,11 @@ type Pending = {
   original?: unknown[];
   questions?: Question[];
   createdAt: number;
+  /** Durée de l'attente (le délai d'une question posée par l'outil MCP est plus long que celui d'un hook). */
+  holdMs?: number;
+  /** Question posée par l'outil MCP `tablette_demander` : pas de session derrière, qui la pose et d'où. */
+  who?: string;
+  where?: string;
   finish: (output: unknown) => void;
 };
 
@@ -625,19 +630,64 @@ export function createAgents(deps: AgentsDeps) {
   function ask(askId: string) {
     const a = asks.get(askId);
     const s = a && sessions.get(a.sessionId);
-    if (!a || !s) return null;
+    if (!a || (!s && !a.who)) return null;
     return {
       id: a.id,
       kind: a.kind,
-      session: cut(s.name, LIMITS.name),
-      dir: cut(path.basename(s.cwd), LIMITS.dir),
+      session: cut(s?.name ?? a.who, LIMITS.name),
+      dir: cut(s ? path.basename(s.cwd) : (a.where ?? ""), LIMITS.dir),
       tool: a.tool,
       text: a.text,
       risky: a.risky,
       questions: a.questions ?? null,
       /** Reste avant que le terminal reprenne la main : relatif, la tablette n'a pas la même horloge. */
-      expiresInMs: Math.max(0, a.createdAt + deps.holdMs - now()),
+      expiresInMs: Math.max(0, a.createdAt + (a.holdMs ?? deps.holdMs) - now()),
     };
+  }
+
+  /**
+   * Question posée par Claude lui-même avec l'outil MCP `tablette_demander` : même carte qu'une question à choix,
+   * tenue jusqu'à la réponse ou `holdMs`. Rend le texte de la réponse (libellés joints par « , »), ou null sans réponse.
+   */
+  function askTablet(
+    q: { question: string; options: string[]; multi: boolean; who: string; where: string },
+    holdMs: number,
+  ): Promise<string | null> {
+    if (!deps.tabletConnected()) throw new AnswerError("Tablette non connectée : impossible de lui poser la question", 409);
+    const original = [{ question: q.question, header: "", multiSelect: q.multi, options: q.options.map((label) => ({ label })) }];
+    const parsed = parseQuestions({ questions: original });
+    if (!parsed) throw new AnswerError("Question invalide : de 1 à 6 options");
+    return new Promise((resolve) => {
+      let ended = false;
+      const id = randomUUID();
+      const finish = (output: unknown) => {
+        if (ended) return;
+        ended = true;
+        clearTimeout(expiry);
+        asks.delete(id);
+        const answers = (output as { hookSpecificOutput?: { updatedInput?: { answers?: Record<string, string> } } }).hookSpecificOutput
+          ?.updatedInput?.answers;
+        if (waitingCount() === 0 && deps.tabletConnected()) deps.notify({ kind: "clear", waiting: 0 });
+        resolve(answers ? (Object.values(answers)[0] ?? null) : null);
+      };
+      const expiry = setTimeout(() => finish({}), holdMs);
+      asks.set(id, {
+        id,
+        sessionId: "",
+        kind: "question",
+        tool: "tablette_demander",
+        text: "",
+        risky: false,
+        original: parsed.original,
+        questions: parsed.questions,
+        createdAt: now(),
+        holdMs,
+        who: cut(q.who, LIMITS.name),
+        where: cut(q.where, LIMITS.dir),
+        finish,
+      });
+      deps.notify({ kind: "waiting", name: cut(q.who, LIMITS.name), askId: id, waiting: waitingCount() + 1 });
+    });
   }
 
   /** Relit `claude agents --json` (et Orca) et corrige l'état : le filet quand un hook manque (Esc, session fermée…). */
@@ -777,7 +827,7 @@ export function createAgents(deps: AgentsDeps) {
     s.resumeTimer.unref?.();
   }
 
-  return { hook, answer, list, ask, refresh, start, stop, handleOf, send, focus, resume };
+  return { hook, answer, list, ask, askTablet, refresh, start, stop, handleOf, send, focus, resume };
 }
 
 export type Agents = ReturnType<typeof createAgents>;

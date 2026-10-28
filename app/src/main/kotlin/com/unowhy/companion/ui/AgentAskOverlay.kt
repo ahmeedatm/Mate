@@ -58,7 +58,9 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
         override fun run() {
             val left = expiresAt - SystemClock.elapsedRealtime()
             if (left <= 0) return gone()
-            countdown?.text = context.getString(R.string.agent_ask_expires, (left / 1000).toInt() + 1)
+            // Question posée par Claude avec l'outil MCP : pas de terminal derrière, Claude continue sans réponse.
+            val mcp = ask?.tool == "tablette_demander"
+            countdown?.text = context.getString(if (mcp) R.string.agent_ask_expires_mcp else R.string.agent_ask_expires, (left / 1000).toInt() + 1)
             postDelayed(this, 1_000)
         }
     }
