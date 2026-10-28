@@ -633,7 +633,9 @@
     <string name="water_settings">Eau</string>
     <string name="water_goal">Objectif par jour</string>
     <string name="water_goal_value">%1$d verres</string>
-    <string name="water_reminder">Me rappeler de boire (9 h – 20 h)</string>
+    <string name="water_reminder">Me rappeler de boire (9 h – 20 h, avec le widget Eau sur l\'Accueil)</string>
+    <string name="water_bell_on">Rappel de boire activé, toucher pour le couper</string>
+    <string name="water_bell_off">Rappel de boire coupé, toucher pour l\'activer</string>
     <string name="water_interval">Rappel toutes les</string>
     <string name="water_interval_30">30 min</string>
     <string name="water_interval_60">1 h</string>

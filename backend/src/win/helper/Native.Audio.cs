@@ -54,6 +54,46 @@ namespace Companion
             return (IAudioEndpointVolume)o;
         }
 
+        /**
+         * Tous les micros actifs : couper « le micro » de l'ordinateur les coupe tous, car une appli (Discord, Teams)
+         * peut utiliser un autre micro que celui par défaut (casque, webcam, périphérique de communication).
+         */
+        static List<IAudioEndpointVolume> Mics()
+        {
+            var mics = new List<IAudioEndpointVolume>();
+            var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
+            IMMDeviceCollection devices;
+            if (enumerator.EnumAudioEndpoints(1, 1, out devices) != 0 || devices == null) return mics; // DEVICE_STATE_ACTIVE
+            uint count;
+            if (devices.GetCount(out count) != 0) return mics;
+            Guid iid = typeof(IAudioEndpointVolume).GUID;
+            for (uint i = 0; i < count; i++)
+            {
+                IMMDevice device;
+                object o;
+                if (devices.Item(i, out device) == 0 && device != null && device.Activate(ref iid, 23, IntPtr.Zero, out o) == 0)
+                    mics.Add((IAudioEndpointVolume)o);
+            }
+            return mics;
+        }
+
+        static void SetMicsMuted(bool mute)
+        {
+            Guid ctx = Guid.Empty;
+            foreach (var mic in Mics()) mic.SetMute(mute, ref ctx);
+        }
+
+        /** Coupé seulement si tous les micros actifs le sont (aucun micro : coupé). */
+        static bool MicsMuted()
+        {
+            foreach (var mic in Mics())
+            {
+                bool muted;
+                if (mic.GetMute(out muted) == 0 && !muted) return false;
+            }
+            return true;
+        }
+
         static object Audio(Dictionary<string, object> req)
         {
             Guid ctx = Guid.Empty;
@@ -64,7 +104,7 @@ namespace Companion
                 if (Has(req, "output")) output.SetMasterVolumeLevelScalar(Math.Max(0, Math.Min(100, Int(req, "output", 0))) / 100f, ref ctx);
                 if (Has(req, "muted")) output.SetMute(Convert.ToBoolean(req["muted"]), ref ctx);
             }
-            if (input != null && Has(req, "micMuted")) input.SetMute(Convert.ToBoolean(req["micMuted"]), ref ctx);
+            if (Has(req, "micMuted")) SetMicsMuted(Convert.ToBoolean(req["micMuted"]));
 
             var res = new Dictionary<string, object>();
             float level = 0;
@@ -77,14 +117,9 @@ namespace Companion
             else res["output"] = null;
             res["muted"] = muted;
             float mic = 0;
-            bool micMuted = true;
-            if (input != null)
-            {
-                input.GetMasterVolumeLevelScalar(out mic);
-                input.GetMute(out micMuted);
-            }
+            if (input != null) input.GetMasterVolumeLevelScalar(out mic);
             res["input"] = (int)Math.Round(mic * 100);
-            res["micMuted"] = micMuted;
+            res["micMuted"] = MicsMuted();
             return res;
         }
     }

@@ -31,6 +31,15 @@
                 android:textSize="17sp" />
         </LinearLayout>
 
+        <!-- Rappel « Pense à boire » marche / arrêt : il ne sonne que si ce widget est sur l'Accueil. -->
+        <ImageButton
+            android:id="@+id/water_bell"
+            style="@style/IconButton.Flat"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:padding="11dp"
+            android:src="@drawable/ic_alarm_off" />
+
         <ImageButton
             android:id="@+id/water_minus"
             style="@style/IconButton.Flat"

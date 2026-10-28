@@ -320,10 +320,11 @@
         <item name="c_mx_cap_top">?attr/c_text_dim</item>
         <item name="c_mx_cap_bottom">?attr/c_text</item>
         <item name="c_mx_cap_line">?attr/c_surface</item>
-        <item name="c_mx_led_off">?attr/c_text_dim</item>
-        <item name="c_mx_led_low">#FFFC9303</item>
-        <item name="c_mx_led_mid">#FFFE3400</item>
-        <item name="c_mx_led_high">#FFFBF2B7</item>
+        <item name="c_mx_led_off">#FFE2CC98</item>
+        <!-- Vert avocat, moutarde, rouge brique : le vert « ça passe » reste lisible sur la plaque crème. -->
+        <item name="c_mx_led_low">#FF6B8E23</item>
+        <item name="c_mx_led_mid">#FFD99A00</item>
+        <item name="c_mx_led_high">?attr/c_accent</item>
         <item name="c_mx_engrave">?attr/c_text_faint</item>
         <item name="c_mx_shadow">#2E552805</item>
         <item name="c_mx_highlight">#FFFFFBEA</item>

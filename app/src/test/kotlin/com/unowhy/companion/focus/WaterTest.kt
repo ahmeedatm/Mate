@@ -20,7 +20,7 @@ class WaterTest {
 
     @Test
     fun `etat par defaut`() {
-        assertEquals(Water.State(glasses = 0, goal = 8, reminder = true, intervalMinutes = 60), Water.state(context))
+        assertEquals(Water.State(glasses = 0, goal = 8, reminder = false, intervalMinutes = 60), Water.state(context))
     }
 
     @Test
@@ -50,12 +50,14 @@ class WaterTest {
 
     @Test
     fun `rappel compte depuis 9 h au premier passage du jour`() {
+        Water.setReminder(context, true)
         assertFalse(Water.reminderDue(context, at(9, 30)))
         assertTrue(Water.reminderDue(context, at(10, 0)))
     }
 
     @Test
     fun `rappel une fois par intervalle`() {
+        Water.setReminder(context, true)
         assertTrue(Water.reminderDue(context, at(10, 30)))
         assertFalse(Water.reminderDue(context, at(11, 0)))
         assertTrue(Water.reminderDue(context, at(11, 30)))
@@ -63,6 +65,7 @@ class WaterTest {
 
     @Test
     fun `pas de rappel la nuit`() {
+        Water.setReminder(context, true)
         assertFalse(Water.reminderDue(context, at(8, 59)))
         assertFalse(Water.reminderDue(context, at(20, 0)))
     }
