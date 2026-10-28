@@ -19,6 +19,11 @@ type CallRule = {
   title?: string;
   /** Sinon, boutons présents seulement pendant la sonnerie (Mac). */
   ring?: string[];
+  /**
+   * Avec `ring` : texte de l'interface (liste détaillée, « Lien : … ») exigé en plus. Discord garde « Se joindre à
+   * l'appel » tant qu'un appel de groupe continue sans nous ; seul le lien dit « Appel entrant ».
+   */
+  ringText?: string;
   caller?: string;
   answer: string[];
   video?: string[];
@@ -66,8 +71,10 @@ async function isRinging(rule: CallRule): Promise<boolean> {
     return Boolean(info?.windows.some((w) => title.test(w.title)));
   }
   if (!rule.ring?.length) return false;
-  const { buttons } = await listButtons(rule.app).catch(() => ({ buttons: [] as string[] }));
-  return hasButton(buttons, rule.ring);
+  const { buttons } = await listButtons(rule.app, Boolean(rule.ringText)).catch(() => ({ buttons: [] as string[] }));
+  if (!hasButton(buttons, rule.ring)) return false;
+  const text = rule.ringText ? new RegExp(rule.ringText) : null;
+  return !text || buttons.some((b) => text.test(b));
 }
 
 export async function startCallWatch(notify: (event: CallEvent) => void) {

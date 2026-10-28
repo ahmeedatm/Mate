@@ -148,9 +148,11 @@ describe("cartes de l'Accueil et onglets d'appli", () => {
     assert.deepEqual(json, { apps: ["Microsoft Teams"], open: ["Microsoft Teams", "Discord"] });
   });
 
-  it("/deck/live : une appli en appel mais retirée de la page Apps n'a pas d'onglet", async () => {
-    server.setOs({ installed: ["Discord"], inCall: ["Microsoft Teams"] });
-    assert.deepEqual((await server.call("GET", "/deck/live")).json, { apps: [], open: [] });
+  it("/deck/live : appli hors de la page Apps, onglet seulement pendant un appel", async () => {
+    server.setOs({ installed: ["Discord"], running: ["Discord"] });
+    assert.deepEqual((await server.call("GET", "/deck/live")).json, { apps: [], open: [] }, "ouverte mais pas en appel");
+    server.setOs({ installed: ["Discord"], running: ["Discord"], inCall: ["Discord"] });
+    assert.deepEqual((await server.call("GET", "/deck/live")).json, { apps: ["Discord"], open: ["Discord"] });
   });
 });
 

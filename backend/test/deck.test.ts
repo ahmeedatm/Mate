@@ -140,8 +140,6 @@ describe("runAction", () => {
 });
 
 describe("loadDeck", () => {
-  const titles = async () => (await deck.loadDeck()).map((p) => p.title);
-
   it("page Apps : profil de base réduit aux applis installées", async () => {
     reset({ installed: [baseApps[1], baseApps[0], "Autre appli"] });
     const apps = (await deck.loadDeck()).find((p) => p.apps)!;
@@ -151,15 +149,15 @@ describe("loadDeck", () => {
     );
   });
 
-  it("masque les pages d'appli absentes de la page Apps, sans changer les identifiants des autres tuiles", async () => {
+  it("pages d'appli absentes de la page Apps : gardées pour les appels seulement (callOnly)", async () => {
     const appPages = deckConfig.pages.filter((p) => p.app);
     assert.ok(appPages.length > 0, "le deck de départ a des pages d'appli");
-    const withoutApps = await titles();
-    for (const page of appPages) assert.ok(!withoutApps.includes(page.title), `${page.title} masquée`);
+    const callOnly = async (title: string) => (await deck.loadDeck()).find((p) => p.title === title)?.callOnly;
+    for (const page of appPages) assert.equal(await callOnly(page.title), true, `${page.title} pour les appels seulement`);
 
-    // Ajoutée depuis la tablette : sa page apparaît.
+    // Ajoutée depuis la tablette : page ordinaire.
     await deck.addDeckApp(appPages[0].app!);
-    assert.ok((await titles()).includes(appPages[0].title));
+    assert.equal(await callOnly(appPages[0].title), undefined);
 
     // Tuiles numérotées d'après leur place dans le fichier, pages masquées comprises.
     const last = deckConfig.pages.length - 1;
