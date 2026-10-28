@@ -191,6 +191,22 @@ export async function setDnd(on: boolean): Promise<boolean | null> {
   return on;
 }
 
+export async function pointerMove(dx: number, dy: number) {
+  record("pointerMove", dx, dy);
+}
+
+export async function pointerScroll(sx: number, sy: number) {
+  record("pointerScroll", sx, sy);
+}
+
+export async function pointerButton(button: string, action: string) {
+  record("pointerButton", button, action);
+}
+
+export async function pointerGesture(name: string) {
+  record("pointerGesture", name);
+}
+
 export async function mediaSessions() {
   return [];
 }

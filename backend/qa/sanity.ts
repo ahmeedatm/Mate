@@ -243,6 +243,16 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "pointeur",
+      run: async () => {
+        // Déplacement nul seulement : jamais de clic sur un ordinateur qui sert à autre chose.
+        if (os === "mac" && accessibility === false) throw new Skip("Accessibilité non accordée");
+        const res = await call("POST", "/pointer/move", { dx: 0, dy: 0 });
+        if (!controlled()) return expectStatus(res, 501, "/pointer/move");
+        expectStatus(res, 200, "POST /pointer/move");
+      },
+    },
+    {
       name: "garde de /docs/open (refuse un .exe)",
       run: async () => {
         const res = await call("POST", "/docs/open", { path: "sanity.exe" });
