@@ -337,7 +337,6 @@ export function createAgents(deps: AgentsDeps) {
       };
       const pending = build(finish);
       expiry = setTimeout(() => finish({}), deps.holdMs);
-      expiry.unref?.();
       asks.set(pending.id, pending);
       s.ask = pending;
       setWaiting(s, pending.kind === "question" ? "input needed" : "permission prompt", false);
