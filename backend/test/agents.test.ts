@@ -5,6 +5,7 @@ import {
   createAgents,
   cut,
   isRisky,
+  parseOrcaQuota,
   parseQuota,
   ticketOf,
   parseResume,
@@ -15,6 +16,7 @@ import {
   type ClaudeSession,
   type FocusTarget,
   type OrcaInfo,
+  type Quota,
 } from "../src/agents.ts";
 import { execFile, spawnSync } from "node:child_process";
 import http from "node:http";
@@ -839,7 +841,7 @@ describe("interrompre et quota", () => {
     await assert.rejects(a.interrupt("s1"), /pas dans un terminal Orca/);
   });
 
-  it("garde le quota de la statusline 15 min, rien d'autre", async () => {
+  it("garde le quota de la statusline 3 h, avec son âge, rien d'autre", async () => {
     const a = createAgents(deps());
     a.statusline({
       cwd: "/secret",
@@ -849,10 +851,13 @@ describe("interrompre et quota", () => {
       fiveHour: { used: 21, resetsAt: 1_800_000_000 },
       sevenDay: { used: 44, resetsAt: null },
       at: clock,
+      ageMs: 0,
     });
     a.statusline({ cwd: "/secret" });
     assert.equal(a.list().quota?.fiveHour?.used, 21, "une statusline sans quota ne l'efface pas");
-    clock += 16 * 60_000;
+    clock += 20 * 60_000;
+    assert.equal(a.list().quota?.ageMs, 20 * 60_000);
+    clock += 3 * 3_600_000;
     assert.equal(a.list().quota, null);
   });
 
@@ -864,6 +869,52 @@ describe("interrompre et quota", () => {
       sevenDay: { used: 100, resetsAt: null },
       at: 5,
     });
+  });
+
+  it("parseOrcaQuota : usage Claude lu par Orca (`rateLimits.claude` de `accounts.list`)", () => {
+    const claude = {
+      provider: "claude",
+      session: { usedPercent: 35.4, windowMinutes: 300, resetsAt: 1_793_229_600_357, resetDescription: "Thu 12:20 AM" },
+      weekly: { usedPercent: 56, windowMinutes: 10080, resetsAt: 1_793_462_400_357 },
+      updatedAt: 1_793_219_746_396,
+      status: "ok",
+    };
+    assert.deepEqual(parseOrcaQuota(claude), {
+      fiveHour: { used: 35, resetsAt: 1_793_229_600_357 },
+      sevenDay: { used: 56, resetsAt: 1_793_462_400_357 },
+      at: 1_793_219_746_396,
+    });
+    assert.equal(parseOrcaQuota({ ...claude, status: "error" })?.sevenDay?.used, 56, "Orca n'a pas pu relire : dernières valeurs");
+    assert.equal(parseOrcaQuota({ ...claude, session: null, weekly: null }), null);
+    assert.equal(parseOrcaQuota({ ...claude, updatedAt: "hier" }), null);
+    assert.equal(parseOrcaQuota(null), null);
+  });
+
+  it("lit l'usage dans Orca à chaque minute ; la statusline plus récente l'emporte", async () => {
+    let reads = 0;
+    let fromOrca: Quota | null = { fiveHour: { used: 35, resetsAt: null }, sevenDay: { used: 56, resetsAt: null }, at: clock - 60_000 };
+    const a = createAgents({ ...deps(), readQuota: async () => (reads++, fromOrca) });
+    await a.refresh();
+    assert.equal(a.list().quota?.sevenDay?.used, 56);
+    await a.refresh();
+    assert.equal(reads, 1, "pas plus d'une lecture par minute");
+    a.statusline({ rate_limits: { five_hour: { used_percentage: 40 } } });
+    assert.equal(a.list().quota?.fiveHour?.used, 40);
+    clock += 61_000;
+    fromOrca = { ...fromOrca, at: clock - 120_000 };
+    await a.refresh();
+    assert.equal(reads, 2);
+    assert.equal(a.list().quota?.fiveHour?.used, 40, "un usage d'Orca plus ancien ne remplace pas la statusline");
+  });
+
+  it("écarte une fenêtre de quota déjà terminée", () => {
+    const a = createAgents(deps());
+    a.statusline({
+      rate_limits: { five_hour: { used_percentage: 90, resets_at: (clock + 60_000) / 1000 }, seven_day: { used_percentage: 50 } },
+    });
+    clock += 61_000;
+    assert.equal(a.list().quota?.fiveHour, null);
+    assert.equal(a.list().quota?.sevenDay?.used, 50);
   });
 
   it("limite sans heure dans le message : la fin de la fenêtre de 5 h de la statusline", async () => {

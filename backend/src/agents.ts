@@ -82,6 +82,24 @@ export function parseQuota(rateLimits: unknown, at: number): Quota | null {
   return q.fiveHour || q.sevenDay ? q : null;
 }
 
+/**
+ * Lit l'usage Claude qu'Orca tient à jour (`rateLimits.claude` de `accounts.list`, lu auprès d'Anthropic par Orca) :
+ * `session` = 5 h, `weekly` = 7 j, en % et heure de fin en ms ; `at` = heure de la lecture d'Orca.
+ */
+export function parseOrcaQuota(claude: unknown): Quota | null {
+  const c = claude as { updatedAt?: unknown; session?: unknown; weekly?: unknown } | null | undefined;
+  // Pas de filtre sur `status` : quand Orca ne peut pas relire (jeton périmé), il garde les dernières valeurs et leur heure.
+  if (!c || typeof c !== "object" || typeof c.updatedAt !== "number") return null;
+  const window = (w: unknown): QuotaWindow | null => {
+    const x = w as { usedPercent?: unknown; resetsAt?: unknown } | null | undefined;
+    if (!x || typeof x.usedPercent !== "number" || !Number.isFinite(x.usedPercent)) return null;
+    const resets = typeof x.resetsAt === "number" && Number.isFinite(x.resetsAt) ? x.resetsAt : null;
+    return { used: Math.max(0, Math.min(100, Math.round(x.usedPercent))), resetsAt: resets };
+  };
+  const q = { fiveHour: window(c.session), sevenDay: window(c.weekly), at: c.updatedAt };
+  return q.fiveHour || q.sevenDay ? q : null;
+}
+
 /** Ce que le journal d'une session donne en plus : le titre automatique de Claude, la dernière MR créée. */
 export type TranscriptInfo = { title: string | null; mr: number | null };
 
@@ -91,6 +109,8 @@ export type AgentsDeps = {
   transcriptInfo?: (sessionId: string, cwd: string, hinted: string | null) => Promise<TranscriptInfo | null>;
   listClaude: () => Promise<ClaudeSession[] | null>;
   listOrca: () => Promise<OrcaInfo | null>;
+  /** Usage Claude lu dans Orca (absent hors Mac et dans les tests qui n'en ont pas besoin). */
+  readQuota?: () => Promise<Quota | null>;
   /** L'appli au premier plan est un terminal ou Orca : l'utilisateur est devant Claude. */
   frontIsClaude: () => Promise<boolean>;
   tabletConnected: () => boolean;
@@ -170,7 +190,9 @@ type Session = {
 
 /** Hooks reçus depuis le démarrage : la tablette sait si « répondre » est possible. */
 const HOOK_STALE_MS = 6_000;
-const QUOTA_TTL_MS = 15 * 60_000;
+const QUOTA_TTL_MS = 3 * 3_600_000;
+/** Lecture de l'usage dans Orca : une par minute au plus. */
+const QUOTA_READ_MS = 60_000;
 /** Une session connue par hook seulement, sans `SessionEnd`, est oubliée après ce délai sans nouvelle. */
 const SILENT_TTL_MS = 12 * 3600_000;
 
@@ -341,8 +363,9 @@ export function createAgents(deps: AgentsDeps) {
   const sessions = new Map<string, Session>();
   const asks = new Map<string, Pending>();
   let hooksSeen = false;
-  /** Quota 5 h / 7 j du compte, lu dans la statusline de Claude Code (`POST /agents/statusline`). */
+  /** Quota 5 h / 7 j du compte : lu dans Orca, ou dans la statusline de Claude Code (`POST /agents/statusline`). */
   let quota: Quota | null = null;
+  let lastQuotaRead = -Infinity;
   let timer: NodeJS.Timeout | undefined;
   let refreshing = false;
   let lastOrca = 0;
@@ -707,9 +730,20 @@ export function createAgents(deps: AgentsDeps) {
       if (state === "working" && s.monitoring) counts.monitoring++;
       else counts[state]++;
     }
-    // Quota de plus de 15 min : plus à jour (la statusline ne tourne que pendant qu'une session s'affiche).
-    const freshQuota = quota && now() - quota.at < QUOTA_TTL_MS ? quota : null;
-    return { sessions: all.slice(0, 10).map(view), counts, total: all.length, hooks: hooksSeen, quota: freshQuota };
+    return { sessions: all.slice(0, 10).map(view), counts, total: all.length, hooks: hooksSeen, quota: quotaView() };
+  }
+
+  /**
+   * Dernier quota connu, avec son âge (`ageMs`, pour dire « il y a 20 min » : Orca et la statusline ne relisent pas toujours).
+   * Plus de 3 h : oublié. Une fenêtre déjà terminée est écartée (son pourcentage ne vaut plus rien).
+   */
+  function quotaView() {
+    if (!quota || now() - quota.at >= QUOTA_TTL_MS) return null;
+    const open = (w: QuotaWindow | null) => (w && (w.resetsAt === null || w.resetsAt > now()) ? w : null);
+    const fiveHour = open(quota.fiveHour);
+    const sevenDay = open(quota.sevenDay);
+    if (!fiveHour && !sevenDay) return null;
+    return { fiveHour, sevenDay, at: quota.at, ageMs: now() - quota.at };
   }
 
   /** Détail d'une demande en attente, pour la tablette. */
@@ -783,6 +817,12 @@ export function createAgents(deps: AgentsDeps) {
     try {
       const [live, orca] = await Promise.all([deps.listClaude(), now() - lastOrca > 8_000 ? deps.listOrca() : Promise.resolve(undefined)]);
       if (orca !== undefined) lastOrca = now();
+      if (deps.readQuota && now() - lastQuotaRead >= QUOTA_READ_MS) {
+        lastQuotaRead = now();
+        // Orca relit l'usage de lui-même : le plus récent des deux (Orca, statusline) l'emporte.
+        const q = await deps.readQuota().catch(() => null);
+        if (q && (!quota || q.at > quota.at)) quota = q;
+      }
       const t = now();
       if (live) {
         const seen = new Set<string>();
