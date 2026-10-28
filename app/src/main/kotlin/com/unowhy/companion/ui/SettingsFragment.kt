@@ -37,7 +37,9 @@ import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.Link
 import com.unowhy.companion.net.UpdateSource
 import com.unowhy.companion.net.Wifi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SettingsFragment : Fragment() {
 
@@ -241,11 +243,16 @@ class SettingsFragment : Fragment() {
     }
 
     private fun renderWifi() {
-        val name = Wifi.current(requireContext())
-        wifiStatus.text = when {
-            name == null -> getString(R.string.wifi_off)
-            name.isEmpty() -> getString(R.string.wifi_current_unnamed)
-            else -> getString(R.string.wifi_current, name)
+        val ctx = requireContext()
+        // Wifi.current interroge ConnectivityManager et WifiManager (binder) : hors thread principal.
+        viewLifecycleOwner.lifecycleScope.launch {
+            val name = withContext(Dispatchers.IO) { Wifi.current(ctx) }
+            if (view == null) return@launch
+            wifiStatus.text = when {
+                name == null -> getString(R.string.wifi_off)
+                name.isEmpty() -> getString(R.string.wifi_current_unnamed)
+                else -> getString(R.string.wifi_current, name)
+            }
         }
     }
 
@@ -305,16 +312,22 @@ class SettingsFragment : Fragment() {
 
     private fun renderTablet() {
         val ctx = requireContext()
-        Tablet.battery(ctx)?.let(::onBattery)
         val chosen = Prefs.brightness(ctx)
         // Pas encore réglée ici : position de la luminosité du système (0 à 255).
         brightness.progress = if (chosen >= 0) (chosen * 100).toInt()
         else Settings.System.getInt(ctx.contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128) * 100 / 255
         volume.progress = ctx.getSystemService(AudioManager::class.java).getStreamVolume(AudioManager.STREAM_MUSIC)
         nightDim.isChecked = Prefs.nightDim(ctx)
-        tabletInfo.text = getString(
-            R.string.tablet_info, BuildConfig.VERSION_NAME, Tablet.ipAddress() ?: getString(R.string.tablet_no_address), android.os.Build.MODEL,
-        )
+        // Batterie (registerReceiver) et adresse IP (NetworkInterface) : appels système lents, hors thread principal.
+        viewLifecycleOwner.lifecycleScope.launch {
+            val battery = withContext(Dispatchers.IO) { Tablet.battery(ctx) }
+            val ip = withContext(Dispatchers.IO) { Tablet.ipAddress() }
+            if (view == null) return@launch
+            battery?.let(::onBattery)
+            tabletInfo.text = getString(
+                R.string.tablet_info, BuildConfig.VERSION_NAME, ip ?: getString(R.string.tablet_no_address), android.os.Build.MODEL,
+            )
+        }
     }
 
     /** Batterie changée (MainActivity, barre latérale) : détail à jour si les Réglages sont affichés. */
