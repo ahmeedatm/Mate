@@ -4,8 +4,8 @@
     <!-- Allumé quand l'appli joue du son (quelqu'un parle sur Discord). -->
     <View
         android:id="@+id/app_audio_dot"
-        android:layout_width="14dp"
-        android:layout_height="14dp"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
         android:layout_marginStart="8dp"
         android:background="@drawable/dot" />
 

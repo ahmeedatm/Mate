@@ -142,8 +142,9 @@ class AppAudioView @JvmOverloads constructor(
                 else -> R.string.app_audio_silent
             },
         )
-        stateText.setTextColor(themeColor(context, if (talking) R.attr.c_accent else R.attr.c_text_dim))
-        ViewCompat.setBackgroundTintList(dot, ColorStateList.valueOf(themeColor(context, if (talking) R.attr.c_accent else R.attr.c_text_faint)))
+        // Vert « ça parle » : celui des LED de la console (onglet Son), vif dans chaque thème, Rétro compris.
+        stateText.setTextColor(themeColor(context, if (talking) R.attr.c_ok else R.attr.c_text_dim))
+        ViewCompat.setBackgroundTintList(dot, ColorStateList.valueOf(themeColor(context, if (talking) R.attr.c_mx_led_low else R.attr.c_text_faint)))
 
         volume.isEnabled = running
         mute.isEnabled = running

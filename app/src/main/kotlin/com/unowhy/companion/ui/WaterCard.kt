@@ -1,11 +1,13 @@
 package com.unowhy.companion.ui
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -16,12 +18,13 @@ import com.unowhy.companion.focus.Water
 
 /**
  * Carte Eau de l'Accueil : un segment par verre de l'objectif, rempli au fil de la journée ; + = un verre bu,
- * − = corriger ; toucher le titre = objectif et rappel. Le rappel lui-même est lancé par MainActivity (chaque minute).
+ * − = corriger ; toucher le titre = objectif et rappel. Cloche = rappel marche / arrêt. Le rappel lui-même est lancé par MainActivity (chaque minute).
  */
 class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : LinearLayout(context, attrs) {
 
     private val count: TextView
     private val gauge: LinearLayout
+    private val bell: ImageButton
     private val listener: (Water.State) -> Unit = { render(it) }
 
     /** Petit widget de l'Accueil : « 3 / 8 » sans « verres », pas de bouton − (corriger : réglages). */
@@ -37,6 +40,11 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         LayoutInflater.from(context).inflate(R.layout.view_water_card, this, true)
         count = findViewById(R.id.water_count)
         gauge = findViewById(R.id.water_gauge)
+        bell = findViewById(R.id.water_bell)
+        bell.setOnClickListener {
+            Water.setReminder(context, !Water.state(context).reminder)
+            Look.pop(bell)
+        }
         findViewById<View>(R.id.water_plus).setOnClickListener {
             Water.add(context, 1)
             Look.pop(count)
@@ -69,6 +77,9 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
             state.glasses, state.goal,
         )
         count.setTextColor(themeColor(context, if (done) R.attr.c_ok else R.attr.c_text))
+        bell.setImageResource(if (state.reminder) R.drawable.ic_alarm else R.drawable.ic_alarm_off)
+        bell.imageTintList = ColorStateList.valueOf(themeColor(context, if (state.reminder) R.attr.c_hue_cyan else R.attr.c_text_dim))
+        bell.contentDescription = context.getString(if (state.reminder) R.string.water_bell_on else R.string.water_bell_off)
         gauge.removeAllViews()
         val gap = dp(3)
         for (i in 0 until state.goal) {
