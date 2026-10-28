@@ -91,8 +91,9 @@ class TabStrip @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         var ended = 0
         val settled = { if (++ended == 2) restoreText() }
         springs = listOf(
-            Look.spring(context, Look.SPATIAL_FAST, 0f, 1f, { lead = it; left?.setTextColor(blend(1 - it)); invalidate() }, settled),
-            Look.spring(context, Look.SPATIAL_DEFAULT, 0f, 1f, { trail = it; chosen?.setTextColor(blend(it)); invalidate() }, settled),
+            // Joue même en kiosque (échelle d'animation à zéro), comme Look.slideIn.
+            Look.spring(context, Look.SPATIAL_FAST, 0f, 1f, { lead = it; left?.setTextColor(blend(1 - it)); invalidate() }, settled, always = true),
+            Look.spring(context, Look.SPATIAL_DEFAULT, 0f, 1f, { trail = it; chosen?.setTextColor(blend(it)); invalidate() }, settled, always = true),
         )
     }
 

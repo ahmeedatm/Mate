@@ -205,10 +205,13 @@ object Look {
 
     /**
      * Ressort sur une valeur seule : `onUpdate` reçoit la valeur de `from` vers `to`, `onEnd` quand elle est posée
-     * (pas si on l'annule). À annuler avec `cancel()` quand la vue part. Échelle d'animation à zéro : `to` tout de suite, null.
+     * (pas si on l'annule). À annuler avec `cancel()` quand la vue part. Échelle d'animation à zéro : `to` tout de suite, null,
+     * sauf `always` (joue quand même : voir [slideIn]).
      */
-    fun spring(context: Context, token: Spring, from: Float, to: Float, onUpdate: (Float) -> Unit, onEnd: (() -> Unit)? = null): SpringAnimation? {
-        if (from == to || reduced(context)) {
+    fun spring(
+        context: Context, token: Spring, from: Float, to: Float, onUpdate: (Float) -> Unit, onEnd: (() -> Unit)? = null, always: Boolean = false,
+    ): SpringAnimation? {
+        if (from == to || (!always && reduced(context))) {
             onUpdate(to)
             onEnd?.invoke()
             return null
@@ -257,9 +260,11 @@ object Look {
     /**
      * Changement d'onglet (axe partagé M3, docs/ui-ux/specs-ds.md) : les vues visibles entrent de 30 dp du côté
      * `direction` (1 droite, -1 gauche) en fondu, sur un calque matériel. Rend les ressorts, à annuler avec [settle].
+     * Joue même échelle d'animation à zéro : le kiosque la met à zéro pour la vitesse (docs/kiosque.md), et ces ressorts
+     * (Android 10 : ils ne lisent pas l'échelle) ne touchent que des propriétés de vue sur calque matériel.
      */
     fun slideIn(views: List<View>, direction: Int): List<SpringAnimation> {
-        if (direction == 0 || reduced(views.firstOrNull()?.context ?: return emptyList())) return emptyList()
+        if (direction == 0 || views.isEmpty()) return emptyList()
         val shift = direction * SHARED_AXIS_DP * views.first().resources.displayMetrics.density
         return views.filter { it.visibility == View.VISIBLE }.flatMap { view ->
             view.setLayerType(View.LAYER_TYPE_HARDWARE, null)
