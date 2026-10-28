@@ -766,6 +766,8 @@
     <string name="widget_agents_desc">Qui travaille, qui a fini, qui t\'attend</string>
     <string name="widget_mixer">Console de mixage</string>
     <string name="widget_mixer_desc">Sortie, micro et chaque appli, avec leurs scènes</string>
+    <string name="widget_open">Fenêtres ouvertes</string>
+    <string name="widget_open_desc">Les fenêtres de l\'ordi par écran, à déplacer ou fermer</string>
     <string name="widget_perf">Performances du PC</string>
     <string name="widget_perf_desc">Processeur, carte graphique et mémoire en direct</string>
     <string name="perf_title">PC · %1$s</string>
