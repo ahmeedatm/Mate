@@ -60,6 +60,24 @@ class UpdatePlanTest {
     }
 
     @Test
+    fun `reachedAnySource faux quand toutes les sources echouent`() {
+        // Démarrage hors ligne : la seule source tentée (serveur central) est en erreur réseau.
+        assertFalse(UpdatePlan.reachedAnySource(attempted = 1, errored = 1))
+        // Ordinateur + serveur, les deux injoignables.
+        assertFalse(UpdatePlan.reachedAnySource(attempted = 2, errored = 2))
+    }
+
+    @Test
+    fun `reachedAnySource vrai des qu'une source repond`() {
+        // Une source a répondu (même « rien à installer », même 401/404 hors erreurs).
+        assertTrue(UpdatePlan.reachedAnySource(attempted = 1, errored = 0))
+        // Ordinateur injoignable mais serveur central joignable.
+        assertTrue(UpdatePlan.reachedAnySource(attempted = 2, errored = 1))
+        // Aucune source configurée (build debug sans URL ni ordinateur) : rien à réessayer.
+        assertTrue(UpdatePlan.reachedAnySource(attempted = 0, errored = 0))
+    }
+
+    @Test
     fun `parseUpdates lit le manifest du serveur central`() {
         val json = """{"updates":[{"package":"com.unowhy.companion","label":"Companion","versionCode":10300,"versionName":"1.3.0",
             "file":"companion-1.3.0.apk","size":4200000,"sha256":"0f"}]}"""

@@ -22,4 +22,11 @@ object UpdatePlan {
     /** Vérification due : jamais faite, faite il y a `intervalMs` ou plus, ou horloge revenue en arrière. */
     fun isDue(lastMs: Long?, nowMs: Long, intervalMs: Long = INTERVAL_MS): Boolean =
         lastMs == null || nowMs < lastMs || nowMs - lastMs >= intervalMs
+
+    /**
+     * Une vérification a abouti dès qu'au moins une source a répondu : on peut attendre l'intervalle plein avant la
+     * suivante. Démarrage hors ligne, toutes les sources tentées en erreur : rien n'a abouti, à refaire au tick suivant.
+     * Un 401/404 du serveur central n'est pas une erreur (aucune mise à jour) ; aucune source tentée non plus.
+     */
+    fun reachedAnySource(attempted: Int, errored: Int): Boolean = attempted == 0 || errored < attempted
 }
