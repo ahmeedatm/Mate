@@ -10,7 +10,7 @@ Un **compagnon de bureau** : la tablette posée sur le bureau, avec plusieurs mo
 
 ### Contraintes techniques connues
 - Cible : **Android 10 (API 29)**, tests sur l'émulateur `companion_api29` puis la vraie tablette. `minSdk 24` est gardé (ne coûte rien, laisse tourner les lots en Android 8). Les `<queries>` du manifeste restent pour Android 11+.
-- D'après le support SQOOL (à confirmer par adb) : MediaTek MT8167 4 cœurs 1,3 GHz, 2 ou 3 Go de RAM, écran 10,1" 1280×800. Numéro de série commençant par 7733 = V4.2.
+- **Seul matériel cible** : spec relevée par adb dans `docs/tablette-4.2.md` (MT8167 4 × Cortex-A35 1,3 GHz, 2 Go de RAM, tas de 128 Mo, GPU PowerVR GE8300, écran 1280×800 à 55 Hz soit 18,2 ms par image, WebView 81, pas de vibreur). Toute décision technique se vérifie contre elle. Numéro de série commençant par 7733 = V4.2.
 - Pas d'IA, ni locale ni cloud (Assistant IA retiré le 26/10/2026). La tablette est une interface : micro (commande vocale par la reconnaissance Android), écran, haut-parleur.
 - Aucun secret (clé API) ne doit être stocké sur la tablette. Seule exception (27/10/2026) : le deploy token « tablettes-mises-a-jour », en lecture seule du registre de paquets du projet (`read_package_registry`), injecté par la CI dans l'APK release pour lire les mises à jour (variable `UPDATE_DEPLOY_TOKEN`).
 
