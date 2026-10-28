@@ -31,6 +31,19 @@ class AgentsLogicTest {
     }
 
     @Test
+    fun `la reprise du quota se compte en jours de calendrier`() {
+        val paris = java.util.TimeZone.getTimeZone("Europe/Paris")
+        val at = { d: Int, h: Int, m: Int -> java.util.Calendar.getInstance(paris).apply { set(2026, 9, d, h, m, 0) }.timeInMillis }
+        val now = at(28, 22, 0)
+        assertEquals(0, daysUntil(at(28, 23, 59), now, paris))
+        assertEquals(1, daysUntil(at(29, 0, 20), now, paris))
+        assertEquals(3, daysUntil(at(31, 17, 0), now, paris))
+        // Passage à l'heure d'hiver (25/10) : toujours un jour de calendrier.
+        assertEquals(1, daysUntil(at(26, 1, 0), at(25, 23, 0), paris))
+        assertEquals(0, daysUntil(now - 60_000, now, paris))
+    }
+
+    @Test
     fun `la duree s'affiche en instant, minutes puis heures`() {
         assertEquals(Age.Now, age(59_999))
         assertEquals(Age.Minutes(1), age(60_000))
@@ -97,12 +110,13 @@ class AgentsLogicTest {
         val state = parseAgents(
             """{"sessions":[{"id":"s1","name":"x","dir":"x","branch":null,"state":"working","since":1,"waitingFor":null,"tool":null,"lines":[],"workedMs":null,"limit":null,"canInterrupt":true,"canFocus":true}],
               "counts":{"working":1,"waiting":0,"done":0,"limit":0,"idle":0},"total":1,"hooks":true,"now":1,
-              "quota":{"fiveHour":{"used":21,"resetsAt":1800000000000},"sevenDay":{"used":44,"resetsAt":null},"at":1}}""",
+              "quota":{"fiveHour":{"used":21,"resetsAt":1800000000000},"sevenDay":{"used":44,"resetsAt":null},"at":1,"ageMs":1200000}}""",
         )
         assertTrue(state.sessions[0].canInterrupt)
         assertEquals(21, state.quota?.fiveHour?.used)
         assertEquals(1_800_000_000_000L, state.quota?.fiveHour?.resetsAt)
         assertNull(state.quota?.sevenDay?.resetsAt)
+        assertEquals(1_200_000L, state.quota?.ageMs)
         assertNull(parseAgents("""{"sessions":[],"counts":{},"now":1}""").quota)
     }
 
