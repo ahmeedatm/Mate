@@ -24,6 +24,7 @@ import com.unowhy.companion.net.CalendarEvent
 import com.unowhy.companion.net.HomeFeatures
 import com.unowhy.companion.ui.home.COLS
 import com.unowhy.companion.ui.home.DayLineWidget
+import com.unowhy.companion.ui.home.DeckPagesCache
 import com.unowhy.companion.ui.home.Down
 import com.unowhy.companion.ui.home.FlowBandView
 import com.unowhy.companion.ui.home.HomeHost
@@ -72,6 +73,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private var started = false
     /** « Relier Outlook / Google » touché : l'agenda relié sur l'ordinateur apparaît dans la minute. */
     private var waitingLink = false
+
+    /** Pages du deck partagées entre les widgets ; l'écran est recréé quand l'ordinateur change. */
+    private val pagesCache by lazy { DeckPagesCache { BackendClient(requireContext()).deck.pages() } }
 
     override var events: List<CalendarEvent> = emptyList()
     override var features = HomeFeatures()
@@ -326,6 +330,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     }
 
     /** Agenda relié : « Mes agendas » (voir, délier, en relier un autre) ; sinon droit à la page de l'ordinateur. */
+    override suspend fun deckPages(force: Boolean) = pagesCache.get(force)
+
     override fun showCalendars() {
         if (features.linked) CalendarsDialog(requireContext(), scope, onChanged = { reloadCalendar() }, onAdd = { openAgendaSetup() }).show()
         else openAgendaSetup()

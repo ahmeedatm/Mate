@@ -26,6 +26,7 @@ import com.unowhy.companion.focus.FocusTicks
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
 import com.unowhy.companion.net.CalendarEvent
+import com.unowhy.companion.net.DeckPage
 import com.unowhy.companion.net.HomeFeatures
 import com.unowhy.companion.ui.ComputerAudioView
 import com.unowhy.companion.ui.FocusDial
@@ -64,6 +65,8 @@ interface HomeHost {
     fun reloadCalendar()
     fun editEvent(event: CalendarEvent?)
     fun showCalendars()
+    /** Pages du deck, lues une fois pour tous les widgets ; [force] les relit. */
+    suspend fun deckPages(force: Boolean = false): List<DeckPage>
     /** Réglages d'un widget changés : la disposition est enregistrée. */
     fun save()
 }
