@@ -65,8 +65,8 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         note.visibility = View.GONE
         counter(AgentState.WORKING, false, state.counts.working, R.plurals.agent_count_working)
         counter(AgentState.WORKING, true, state.counts.monitoring, R.plurals.agent_count_monitoring)
-        counter(AgentState.WAITING, false, state.counts.waiting, R.plurals.agent_count_waiting)
-        counter(AgentState.DONE, false, state.counts.done + state.counts.limit, R.plurals.agent_count_done)
+        counter(AgentState.WAITING, false, state.counts.waiting + state.counts.limit, R.plurals.agent_count_waiting)
+        counter(AgentState.DONE, false, state.counts.done + state.counts.idle, R.plurals.agent_count_done)
         if (placed.size != WidgetSize.L) return
         val shown = shortList(state.sessions, MAX_ROWS)
         if (shown.isEmpty()) {
