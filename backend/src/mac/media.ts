@@ -243,13 +243,35 @@ export function mediaSessions(): Promise<MediaSession[]> {
   return pending;
 }
 
+/** Appli Spotify ou Musique (identifiant MediaRemote ou nom du secours) → son nom AppleScript. */
+const PLAYERS: Record<string, string> = { "com.spotify.client": "Spotify", Spotify: "Spotify", "com.apple.Music": "Music", Music: "Music" };
+
+/** Spotify ignore les commandes MediaRemote : Spotify et Musique sont pilotés par AppleScript. */
+export function playerScript(app: string, action: MediaAction, positionMs?: number): string | undefined {
+  const player = PLAYERS[app];
+  if (!player) return undefined;
+  const verb = {
+    "play-pause": "playpause",
+    next: "next track",
+    previous: "previous track",
+    seek: `set player position to ${Math.max(0, Math.round((positionMs ?? 0) / 1000))}`,
+  }[action];
+  return `tell application "${player}" to ${verb}`;
+}
+
 /**
- * Navigateur qui joue avec l'extension « Compagnon Unowhy » : elle agit dans la page (Opera GX en pause ne répond plus
+ * Spotify et Musique par AppleScript. Navigateur qui joue avec l'extension « Compagnon Unowhy » : elle agit dans la page (Opera GX en pause ne répond plus
  * qu'à la vraie touche du clavier). Sinon MediaRemote, qui vise ce qui joue (`app` ignoré : une seule lecture en
  * cours sur Mac) ; secours : touches multimédias.
  */
 export async function mediaControl(action: MediaAction, _app?: string, positionMs?: number): Promise<boolean> {
   const playing = last;
+  const script = playing && playerScript(playing.app, action, positionMs);
+  if (script)
+    return osascript(script).then(
+      () => true,
+      () => false,
+    );
   if (playing?.name && sendToExtension(playing.name, { action, seconds: (positionMs ?? 0) / 1000, title: playing.title })) return true;
   const arg = action === "seek" ? String((positionMs ?? 0) / 1000) : "";
   const res = await nowPlaying<{ ok?: boolean }>(action, arg);
