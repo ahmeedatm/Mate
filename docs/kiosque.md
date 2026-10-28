@@ -74,7 +74,7 @@ La carte **Kiosque** de Réglages est cachée au client : appui long sur le titr
 **code technicien** (`4242` par défaut, `-PtechCode=…` à la compilation). Elle disparaît en quittant Réglages.
 Micro et caméra sont accordés d'office (`setPermissionGrantState`) : en kiosque, un refus serait sans retour.
 Heure et fuseau automatiques imposés à chaque passage en kiosque (`setGlobalSetting` AUTO_TIME / AUTO_TIME_ZONE) : une tablette sortie du stock a souvent une heure fausse.
-Après une mise à jour de l'appli (adb ou Réglages > Mises à jour), Android l'arrête et le verrouillage avec elle : `kiosk/UpdatedReceiver` (`MY_PACKAGE_REPLACED`) la relance aussitôt (kiosque revenu en ~4 s).
+Après une mise à jour de l'appli (adb ou Réglages > Mises à jour), Android l'arrête et le verrouillage avec elle : `kiosk/UpdatedReceiver` (`MY_PACKAGE_REPLACED`) la relance aussitôt (kiosque revenu en ~4 s). Pendant ces secondes, Android affichait son propre accueil (Launcher3), utilisable : en kiosque, Companion masque les accueils du système (`Kiosk.hideLaunchers`, sauf l'accueil de secours de `com.android.settings`, qui attend sur un écran vide) et les rend visibles quand le kiosque est suspendu ou retiré.
 Pas d'écran de verrouillage après une mise en veille (`setKeyguardDisabled`, rétabli par « Retirer le mode kiosque »).
 La barre d'état étant masquée, heure, WiFi et batterie sont dans la barre latérale ; luminosité et volume dans Réglages > Tablette.
 
