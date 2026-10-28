@@ -18,8 +18,9 @@ LABEL=$REAL_LABEL.ci-$ID
 PORT=$((41000 + ${ID//[!0-9]/0} % 1000))
 PLIST=~/Library/LaunchAgents/$LABEL.plist
 SANITY="$(cd "$(dirname "$0")" && pwd)/sanity.ts"
-APP="$WORK/install/Compagnon Unowhy"
-NODE="$APP/backend/node/darwin-$([[ $(uname -m) == arm64 ]] && echo arm64 || echo x64)/node"
+APP="$WORK/install/Compagnon Unowhy/Compagnon Unowhy.app"
+BACKEND="$APP/Contents/Resources/backend"
+NODE="$BACKEND/node/darwin-$([[ $(uname -m) == arm64 ]] && echo arm64 || echo x64)/node"
 
 export COMPANION_LABEL=$LABEL PORT HOST=127.0.0.1 DATA_DIR=$WORK/data DOCS_DIR=$WORK/shared \
   COMPANION_LOG_DIR=$WORK/logs COMPANION_HEADLESS=1
@@ -76,13 +77,14 @@ run() {
 
   step "Installation du paquet ($LABEL, port $PORT, $WORK)"
   unzip -q "$zip" -d "$WORK/install"
-  "$APP/Installer (Mac).command" < /dev/null || { cat "$WORK/logs/backend.log" 2>/dev/null; fail "installeur"; }
+  # Exécutable de l'appli, comme au double-clic ; COMPANION_HEADLESS : sur place, sans copie dans Applications.
+  "$APP/Contents/MacOS/Compagnon Unowhy" < /dev/null || { cat "$WORK/logs/backend.log" 2>/dev/null; fail "installeur"; }
 
   step "Agent launchd et serveur"
   grep -q "<string>$DATA_DIR</string>" "$PLIST" || fail "DATA_DIR absent de $PLIST"
   [[ $(agent "$LABEL") == running* ]] || fail "agent $LABEL : $(agent "$LABEL")"
   local pid; pid=$(listener "$PORT")
-  ps -o command= -p "$pid" | grep -qF "$APP/backend" || fail "le port $PORT n'est pas servi par le paquet de test"
+  ps -o command= -p "$pid" | grep -qF "$BACKEND/" || fail "le port $PORT n'est pas servi par le paquet de test"
   local h; h=$(health "$PORT"); echo "$h"
   grep -q '"os":"mac"' <<< "$h" || fail "/health : os"
   # Accessibilité non accordée au node du job : attendu.
@@ -103,7 +105,7 @@ run() {
   "$NODE" "$SANITY" --url "http://127.0.0.1:$PORT" --token "$token" --os mac --hook-secret "$secret" --junit "$junit" || sanity=$?
 
   step "Désinstallation"
-  (cd "$APP/backend" && "$NODE" dist/service.mjs uninstall)
+  (cd "$BACKEND" && "$NODE" dist/service.mjs uninstall)
   [[ ! -e $PLIST ]] || fail "$PLIST toujours là"
   [[ $(agent "$LABEL") == absent ]] || fail "agent $LABEL toujours chargé"
   wait_for 10 bash -c "[[ -z \$(lsof -nP -iTCP:$PORT -sTCP:LISTEN -t) ]]" || fail "port $PORT toujours ouvert"
