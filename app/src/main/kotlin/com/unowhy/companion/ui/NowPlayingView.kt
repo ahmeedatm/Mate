@@ -105,6 +105,19 @@ class NowPlayingView @JvmOverloads constructor(
         restart()
     }
 
+    /** Boutons sous la vignette et le titre (grand widget de l'Accueil) au lieu d'à droite : le titre garde la largeur. */
+    fun stacked(on: Boolean) {
+        orientation = if (on) VERTICAL else HORIZONTAL
+        val main = findViewById<LinearLayout>(R.id.media_main)
+        main.layoutParams = if (on) LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT) else LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
+        val controls = findViewById<LinearLayout>(R.id.media_controls)
+        controls.layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
+            if (on) topMargin = context.dp(12)
+        }
+        (previous.layoutParams as MarginLayoutParams).marginStart = context.dp(if (on) 0 else 16)
+        gravity = if (on) Gravity.CENTER_HORIZONTAL else Gravity.CENTER_VERTICAL
+    }
+
     /** Deck à l'écran ou non : on ne relit que s'il est visible. */
     fun setActive(active: Boolean) {
         this.active = active

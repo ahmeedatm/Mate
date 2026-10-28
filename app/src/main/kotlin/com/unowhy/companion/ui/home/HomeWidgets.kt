@@ -19,7 +19,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.toDrawable
-import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.FocusTicks
@@ -310,25 +309,38 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     override suspend fun load() = audio.refresh()
 }
 
-/** Ce qui joue sur l'ordinateur (contrôles multimédias de Windows ; un Mac ne les donne pas). */
+/**
+ * Ce qui joue sur l'ordinateur (contrôles multimédias de Windows, MediaRemote sur Mac), comme la page Média ;
+ * en grand, boutons sous le titre et son de l'ordinateur dessous.
+ */
 class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val windows = Computers.active(context)?.os == "windows"
     private val playing = NowPlayingView(context).apply { attach(host.scope) }
+    private val audio = ComputerAudioView(context).apply { attach(host.scope) }
     override val view = LinearLayout(context).asCard(16).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
-        if (windows) {
-            playing.bind(true)
-            addView(playing, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        } else {
-            addView(cardTitle(R.string.widget_media, R.drawable.ic_play))
-            addView(label(16f, R.attr.c_text_dim).apply { setText(R.string.widget_media_windows_only); setPadding(0, dp(8), 0, 0) })
-        }
+        playing.bind(true)
+        addView(playing, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        addView(audio, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16) })
     }
 
-    override fun setActive(active: Boolean) {
-        if (windows) playing.setActive(active)
+    init {
+        applySize()
     }
+
+    private val big get() = placed.size == WidgetSize.L
+
+    override fun applySize() {
+        playing.stacked(big)
+        audio.visibility = if (big) View.VISIBLE else View.GONE
+        if (big) audio.refresh()
+    }
+
+    override suspend fun load() {
+        if (big) audio.refresh()
+    }
+
+    override fun setActive(active: Boolean) = playing.setActive(active)
 }
 
 /** Tâches du jour, stockées sur l'ordinateur ; le nombre restant va sur la pastille de la barre latérale. */

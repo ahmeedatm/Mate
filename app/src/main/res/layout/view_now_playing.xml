@@ -1,100 +1,118 @@
 <?xml version="1.0" encoding="utf-8"?>
 <merge xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Vignette 16:9 (image de la vidéo, ou pochette centrée). -->
-    <ImageView
-        android:id="@+id/media_thumb"
-        android:layout_width="192dp"
-        android:layout_height="108dp"
-        android:background="@drawable/thumb_bg"
-        android:contentDescription="@null"
-        android:scaleType="centerCrop" />
-
+    <!-- Vignette et textes ; les boutons à droite, ou dessous en grand (NowPlayingView.stacked). -->
     <LinearLayout
+        android:id="@+id/media_main"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
         android:layout_weight="1"
-        android:orientation="vertical">
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-        <!-- Plusieurs applis jouent (navigateur et Spotify) : une pastille par appli. -->
-        <LinearLayout
-            android:id="@+id/media_sessions"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="6dp"
-            android:orientation="horizontal"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/media_source"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="?attr/c_text_dim"
-            android:textSize="13sp" />
-
-        <TextView
-            android:id="@+id/media_title"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="2"
-            android:textColor="?attr/c_text"
-            android:textSize="19sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/media_artist"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textColor="?attr/c_text_dim"
-            android:textSize="15sp" />
+        <!-- Vignette 16:9 (image de la vidéo, ou pochette centrée). -->
+        <ImageView
+            android:id="@+id/media_thumb"
+            android:layout_width="192dp"
+            android:layout_height="108dp"
+            android:background="@drawable/thumb_bg"
+            android:contentDescription="@null"
+            android:scaleType="centerCrop" />
 
         <LinearLayout
-            android:id="@+id/media_timeline"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:layout_marginStart="20dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-            <SeekBar
-                android:id="@+id/media_progress"
-                style="@style/Slider"
-                android:layout_width="0dp"
-                android:layout_height="36dp"
-                android:layout_weight="1"
-                android:paddingStart="0dp" />
-
-            <TextView
-                android:id="@+id/media_time"
+            <!-- Plusieurs applis jouent (navigateur et Spotify) : une pastille par appli. -->
+            <LinearLayout
+                android:id="@+id/media_sessions"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginBottom="6dp"
+                android:orientation="horizontal"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/media_source"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:textColor="?attr/c_text_dim"
                 android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/media_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="?attr/c_text"
+                android:textSize="19sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/media_artist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="15sp" />
+
+            <LinearLayout
+                android:id="@+id/media_timeline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <SeekBar
+                    android:id="@+id/media_progress"
+                    style="@style/Slider"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:paddingStart="0dp" />
+
+                <TextView
+                    android:id="@+id/media_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textColor="?attr/c_text_dim"
+                    android:textSize="13sp" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 
-    <ImageButton
-        android:id="@+id/media_previous"
-        style="@style/IconButton"
-        android:layout_marginStart="16dp"
-        android:contentDescription="@string/media_previous"
-        android:src="@drawable/ic_skip_previous" />
+    <LinearLayout
+        android:id="@+id/media_controls"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal">
 
-    <ImageButton
-        android:id="@+id/media_play"
-        style="@style/IconButton.Primary"
-        android:layout_marginStart="12dp"
-        android:contentDescription="@string/media_play_pause"
-        android:src="@drawable/ic_play" />
+        <ImageButton
+            android:id="@+id/media_previous"
+            style="@style/IconButton"
+            android:layout_marginStart="16dp"
+            android:contentDescription="@string/media_previous"
+            android:src="@drawable/ic_skip_previous" />
 
-    <ImageButton
-        android:id="@+id/media_next"
-        style="@style/IconButton"
-        android:layout_marginStart="12dp"
-        android:contentDescription="@string/media_next"
-        android:src="@drawable/ic_skip" />
+        <ImageButton
+            android:id="@+id/media_play"
+            style="@style/IconButton.Primary"
+            android:layout_marginStart="12dp"
+            android:contentDescription="@string/media_play_pause"
+            android:src="@drawable/ic_play" />
+
+        <ImageButton
+            android:id="@+id/media_next"
+            style="@style/IconButton"
+            android:layout_marginStart="12dp"
+            android:contentDescription="@string/media_next"
+            android:src="@drawable/ic_skip" />
+    </LinearLayout>
 </merge>
