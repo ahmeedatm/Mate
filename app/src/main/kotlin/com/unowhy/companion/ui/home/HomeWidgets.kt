@@ -20,6 +20,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.toDrawable
+import androidx.lifecycle.LifecycleOwner
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.FocusTicks
@@ -69,6 +70,10 @@ interface HomeHost {
     suspend fun deckPages(force: Boolean = false): List<DeckPage>
     /** Réglages d'un widget changés : la disposition est enregistrée. */
     fun save()
+    /** Panneaux plein écran du Deck (touche, applis, sites, fenêtres), créés à la demande. */
+    val overlays: DeckOverlays
+    /** Le cycle de vie de l'écran (viewLifecycleOwner) : [com.unowhy.companion.ui.AgentsView.attach] en a besoin. */
+    val owner: LifecycleOwner
 }
 
 /**
