@@ -14,7 +14,7 @@ import {
   type ClaudeSession,
   type OrcaInfo,
 } from "../src/agents.ts";
-import { execFile } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import http from "node:http";
 import {
   hooksBlock,
@@ -895,6 +895,8 @@ describe("statusline enveloppée", () => {
       child.stdin!.end(JSON.stringify({ rate_limits: { five_hour: { used_percentage: 3 } } }));
     });
     assert.equal(out, "ligne perso\n");
+    // Sans curl (image Linux minimale de la CI), l'enveloppe affiche quand même la statusline, sans rien envoyer.
+    if (spawnSync("sh", ["-c", "command -v curl"]).status !== 0) return void srv.close();
     for (let i = 0; i < 50 && !received; i++) await new Promise((r) => setTimeout(r, 50));
     srv.close();
     assert.equal(secret, "s3cret");
