@@ -586,6 +586,9 @@ export function createAgents(deps: AgentsDeps) {
           s.startedAt = e.startedAt ?? s.startedAt;
           const status = e.status ?? (e.state === "working" ? "busy" : e.state === "blocked" ? "waiting" : "idle");
           if (!fresh && t - s.hookAt < HOOK_STALE_MS) continue;
+          // Question tenue par un PreToolUse : Claude attend le hook (« busy »), aucun dialogue n'est au terminal, la
+          // réponse ne peut venir que de la tablette, du délai ou d'une coupure.
+          if (s.ask && s.ask.kind !== "permission") continue;
           if (status === "busy") setState(s, "working", fresh);
           else if (status === "waiting") {
             if (s.state !== "waiting") setWaiting(s, e.waitingFor ?? null, !fresh);
