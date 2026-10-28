@@ -8,7 +8,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.TextView
-import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.Water
@@ -114,16 +113,16 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     init {
         val sp = { value: Float -> TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, value, context.resources.displayMetrics) }
-        clock.typeface = themeFont(context, R.attr.c_font_light)
+        clock.typeface = themeFont(context, R.attr.c_font_display)
         clock.color = color(R.attr.c_text)
-        nextCount.typeface = ResourcesCompat.getFont(context, R.font.outfit_500)
+        nextCount.typeface = themeFont(context, R.attr.c_font_medium)
         nextCount.cellEm = 0.58f
         nextCount.minCells = 2
         nextCount.color = color(R.attr.c_accent)
         nextCount.setSize(sp(17f), dp(24))
         glassesCount.cellEm = 0.58f
         glassesCount.color = color(R.attr.c_text_dim)
-        glassesCount.typeface = ResourcesCompat.getFont(context, R.font.outfit_400)
+        glassesCount.typeface = themeFont(context, R.attr.c_font_regular)
         glassesCount.setSize(sp(14f), dp(20))
         view.findViewById<View>(R.id.hero_weather).setOnClickListener { if (!placed.config.has("lat")) showSettings() }
         val water = view.findViewById<View>(R.id.hero_water)

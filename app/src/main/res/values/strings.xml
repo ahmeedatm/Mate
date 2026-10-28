@@ -514,6 +514,7 @@
     <string name="theme_title">Thème</string>
     <string name="theme_cadran">Cadran</string>
     <string name="theme_cadran_nuit">Cadran nuit</string>
+    <string name="theme_retro">Rétro</string>
     <string name="tablet_info">Version %1$s · Adresse %2$s · %3$s</string>
     <string name="tablet_no_address">aucune</string>
     <string name="tech_code_title">Code technicien</string>

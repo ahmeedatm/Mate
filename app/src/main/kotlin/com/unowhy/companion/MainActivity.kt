@@ -35,6 +35,7 @@ import com.unowhy.companion.ui.DeckFragment
 import com.unowhy.companion.ui.DocumentPanel
 import com.unowhy.companion.ui.FocusFragment
 import com.unowhy.companion.ui.FromComputerFragment
+import com.unowhy.companion.ui.Grain
 import com.unowhy.companion.ui.HomeFragment
 import com.unowhy.companion.ui.IconCache
 import com.unowhy.companion.ui.KeyboardControl
@@ -91,6 +92,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContentView(R.layout.activity_main)
+        Grain.applyTo(findViewById(android.R.id.content))
         Speaker.init(this)
         AutoUpdater.start(this)
 

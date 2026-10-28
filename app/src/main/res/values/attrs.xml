@@ -41,6 +41,20 @@
     <attr name="c_primary_pressed" format="color" />
     <attr name="c_font_medium" format="reference|string" />
     <attr name="c_font_light" format="reference|string" />
+    <attr name="c_font_regular" format="reference|string" />
+    <!-- Titres des écrans et des cartes. -->
+    <attr name="c_font_title" format="reference|string" />
+    <!-- Grands chiffres (heure, chrono, température) et titre de bienvenue. -->
+    <attr name="c_font_display" format="reference|string" />
+    <!-- Thème Rétro : bande qui coule à gauche de l'Accueil (ui/home/FlowBandView), ses quatre couleurs, et grain
+         de deux couleurs par-dessus tout l'écran (ui/Grain.kt ; absentes = pas de grain). -->
+    <attr name="c_flow" format="boolean" />
+    <attr name="c_flow_dark" format="color" />
+    <attr name="c_flow_red" format="color" />
+    <attr name="c_flow_orange" format="color" />
+    <attr name="c_flow_cream" format="color" />
+    <attr name="c_grain_light" format="color" />
+    <attr name="c_grain_dark" format="color" />
     <!-- Console de l'onglet Son du deck (plaque, afficheurs, curseurs, LED), tirées des tons de Cadran : ui/mixer/. -->
     <attr name="c_mx_plate_top" format="color" />
     <attr name="c_mx_plate_bottom" format="color" />

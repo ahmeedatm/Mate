@@ -32,7 +32,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="start"
-                android:fontFamily="?attr/c_font_medium"
+                android:fontFamily="?attr/c_font_title"
                 android:singleLine="true"
                 android:text="@string/docs_title"
                 android:textSize="22sp" />

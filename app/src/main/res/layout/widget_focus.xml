@@ -35,7 +35,7 @@
                 android:id="@+id/widget_focus_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/outfit_300"
+                android:fontFamily="?attr/c_font_display"
                 android:fontFeatureSettings="tnum"
                 android:includeFontPadding="false"
                 android:letterSpacing="-0.02"
@@ -47,7 +47,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:fontFamily="@font/outfit_400"
+                android:fontFamily="?attr/c_font_regular"
                 android:maxWidth="88dp"
                 android:singleLine="true"
                 android:textColor="?attr/c_text_dim"
@@ -71,7 +71,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/outfit_500"
+                android:fontFamily="?attr/c_font_title"
                 android:text="@string/widget_focus"
                 android:textColor="?attr/c_text_dim"
                 android:textSize="15sp" />
@@ -81,7 +81,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:fontFamily="@font/outfit_400"
+                android:fontFamily="?attr/c_font_regular"
                 android:singleLine="true"
                 android:textColor="?attr/c_text_faint"
                 android:textSize="13sp" />

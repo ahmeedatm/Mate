@@ -15,7 +15,7 @@
             android:id="@+id/settings_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="?attr/c_font_medium"
+            android:fontFamily="?attr/c_font_title"
             android:text="@string/mode_settings"
             android:textSize="28sp" />
 
