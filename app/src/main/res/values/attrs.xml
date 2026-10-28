@@ -40,6 +40,10 @@
     <attr name="c_card_bg" format="reference" />
     <attr name="c_tile_bg" format="reference" />
     <attr name="c_card_pad" format="dimension" />
+    <!-- Fond des widgets de l'Accueil : celui des tuiles, translucide en Rétro (les tubes passent derrière). -->
+    <attr name="c_home_card_bg" format="reference" />
+    <!-- Taille des titres de carte en Cadran (TitleView) : un peu plus grande en Rétro, l'Abril Fatface étant petite. -->
+    <attr name="c_title_size" format="dimension" />
     <attr name="c_primary" format="color" />
     <attr name="c_on_primary" format="color" />
     <attr name="c_primary_pressed" format="color" />
@@ -50,7 +54,7 @@
     <attr name="c_font_title" format="reference|string" />
     <!-- Grands chiffres (heure, chrono, température) et titre de bienvenue. -->
     <attr name="c_font_display" format="reference|string" />
-    <!-- Thème Rétro : bande qui coule à gauche de l'Accueil (ui/home/FlowBandView), ses quatre couleurs, et grain
+    <!-- Thème Rétro : tube qui coule en L à droite et en bas de l'Accueil (ui/home/FlowBandView), ses quatre couleurs, et grain
          de deux couleurs par-dessus tout l'écran (ui/Grain.kt ; absentes = pas de grain). -->
     <attr name="c_flow" format="boolean" />
     <attr name="c_flow_dark" format="color" />
