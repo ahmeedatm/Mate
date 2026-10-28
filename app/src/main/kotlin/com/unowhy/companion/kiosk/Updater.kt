@@ -50,8 +50,8 @@ object Updater {
     @Suppress("DEPRECATION")
     fun versionCode(info: PackageInfo): Long = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
 
-    /** Résultat d'une recherche : annonces fusionnées (voir [UpdatePlan.merge]) et sources en erreur. */
-    class Check(val updates: List<Pair<AppUpdate, PackageInfo?>>, val errors: Map<UpdateSource, Exception>)
+    /** Résultat d'une recherche : annonces fusionnées (voir [UpdatePlan.merge]), sources interrogées et sources en erreur. */
+    class Check(val updates: List<Pair<AppUpdate, PackageInfo?>>, val attempted: Set<UpdateSource>, val errors: Map<UpdateSource, Exception>)
 
     /** Une seule installation à la fois : bouton de Réglages et [AutoUpdater]. */
     private val busy = AtomicBoolean(false)
@@ -64,6 +64,7 @@ object Updater {
         val merged = UpdatePlan.merge(*results.values.map { it?.getOrNull().orEmpty() }.toTypedArray())
         Check(
             merged.map { it to installed(context, it.pkg) },
+            results.mapNotNull { (source, r) -> if (r != null) source else null }.toSet(),
             results.mapNotNull { (source, r) -> r?.exceptionOrNull()?.let { source to it as Exception } }.toMap(),
         )
     }
