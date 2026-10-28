@@ -503,6 +503,19 @@ describe("filet claude agents --json", () => {
     assert.deepEqual(alerts, []);
   });
 
+  it("ignore une session en arrière-plan dont le processus n'existe plus", async () => {
+    const a = createAgents(deps());
+    live = [
+      { sessionId: "vieille", cwd: "/x/v", name: "Review ADR", kind: "background", state: "blocked" },
+      { sessionId: "vivante", cwd: "/x/w", name: "en cours", kind: "background", state: "working", status: "busy", pid: 12 },
+    ];
+    await a.refresh();
+    assert.deepEqual(
+      a.list().sessions.map((s) => s.id),
+      ["vivante"],
+    );
+  });
+
   it("une session qui passe en attente alerte (sans demande : la tablette ne peut pas répondre)", async () => {
     const a = createAgents(deps());
     live = [{ sessionId: "a", cwd: "/x/un", name: "un", status: "busy" }];

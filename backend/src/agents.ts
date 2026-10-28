@@ -728,7 +728,9 @@ export function createAgents(deps: AgentsDeps) {
       if (live) {
         const seen = new Set<string>();
         for (const e of live) {
-          if (!e.sessionId) continue;
+          // Session dont le processus n'existe plus (session en arrière-plan abandonnée, gardée par Claude tant qu'elle
+          // « attend ») : rien à suivre ni à quoi répondre.
+          if (!e.sessionId || (!e.status && !e.pid)) continue;
           seen.add(e.sessionId);
           let s = sessions.get(e.sessionId);
           const fresh = !s;

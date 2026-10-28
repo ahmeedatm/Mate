@@ -45,21 +45,62 @@ export const orcaBin = () =>
 /** Les agents sont proposés sur Mac, quand Claude Code est installé. Windows : `claude agents` et les hooks n'y sont pas essayés. */
 export const agentsAvailable = () => isMac && claudeBin() !== null;
 
-function exec(bin: string, args: string[], timeoutMs: number): Promise<string> {
+function exec(bin: string, args: string[], timeoutMs: number, env?: NodeJS.ProcessEnv): Promise<string> {
   return new Promise((resolve, reject) => {
-    execFile(bin, args, { timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024 }, (err, stdout) => (err ? reject(err) : resolve(stdout)));
+    execFile(bin, args, { timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024, env }, (err, stdout) => (err ? reject(err) : resolve(stdout)));
   });
 }
 
+/**
+ * Dossiers de config de Claude Code à lire : chaque dossier a ses propres sessions. Celui du compagnon (par défaut
+ * `~/.claude`), ceux des profils d'Orca (ses sessions tournent avec `CLAUDE_CONFIG_DIR` = `…/orca/claude-profiles/<id>/home`,
+ * invisibles depuis `~/.claude`), et ceux de `AGENTS_CLAUDE_CONFIG_DIRS` (liste séparée par « : »).
+ */
+export function claudeConfigDirs(): string[] {
+  const dirs = [process.env.CLAUDE_CONFIG_DIR?.trim() || path.join(home, ".claude")];
+  const profiles = path.join(home, "Library", "Application Support", "orca", "claude-profiles");
+  try {
+    for (const id of fs.readdirSync(profiles)) {
+      const dir = path.join(profiles, id, "home");
+      if (fs.existsSync(dir)) dirs.push(dir);
+    }
+  } catch {
+    // Pas d'Orca sur cet ordinateur.
+  }
+  dirs.push(
+    ...(process.env.AGENTS_CLAUDE_CONFIG_DIRS ?? "")
+      .split(":")
+      .map((d) => d.trim())
+      .filter(Boolean),
+  );
+  const real = (d: string) => {
+    try {
+      return fs.realpathSync(d);
+    } catch {
+      return d;
+    }
+  };
+  return [...new Map(dirs.map((d) => [real(d), d])).values()];
+}
+
+/** `claude agents --json` de chaque dossier de config, fusionnés ; null si aucun n'a répondu. */
 export async function listClaude(): Promise<ClaudeSession[] | null> {
   const bin = claudeBin();
   if (!bin) return null;
-  try {
-    const list = JSON.parse(await exec(bin, ["agents", "--json"], 8_000));
-    return Array.isArray(list) ? (list as ClaudeSession[]) : null;
-  } catch {
-    return null;
-  }
+  const lists = await Promise.all(
+    claudeConfigDirs().map(async (dir) => {
+      try {
+        const list = JSON.parse(await exec(bin, ["agents", "--json"], 8_000, { ...process.env, CLAUDE_CONFIG_DIR: dir }));
+        return Array.isArray(list) ? (list as ClaudeSession[]) : null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  if (lists.every((l) => l === null)) return null;
+  const merged = new Map<string, ClaudeSession>();
+  for (const e of lists.flatMap((l) => l ?? [])) if (e.sessionId && !merged.has(e.sessionId)) merged.set(e.sessionId, e);
+  return [...merged.values()];
 }
 
 /** Orca fermé ou absent : on n'insiste pas avant 30 s. */
