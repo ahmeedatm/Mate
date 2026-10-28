@@ -119,7 +119,11 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
         card.removeAllViews()
         countdown = null
         card.addView(header(a))
-        if (a.kind == "question") renderQuestion(a) else renderPermission(a)
+        when (a.kind) {
+            "question" -> renderQuestion(a)
+            "plan" -> renderPlan(a)
+            else -> renderPermission(a)
+        }
     }
 
     private fun header(a: AgentAsk): View = LinearLayout(context).apply {
@@ -127,7 +131,14 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
         addView(View(context).apply { background = dot(context, AgentState.WAITING) }, LinearLayout.LayoutParams(dp(14), dp(14)))
         addView(
             text(22f, R.attr.c_text, bold = true).apply {
-                this.text = context.getString(if (a.kind == "question") R.string.agent_ask_question else R.string.agent_ask_permission, a.session)
+                this.text = context.getString(
+                    when (a.kind) {
+                        "question" -> R.string.agent_ask_question
+                        "plan" -> R.string.agent_ask_plan
+                        else -> R.string.agent_ask_permission
+                    },
+                    a.session,
+                )
             },
             LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(12) },
         )
@@ -200,6 +211,56 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
         }
     }
 
+    // --- Plan (ExitPlanMode)
+
+    private fun renderPlan(a: AgentAsk) {
+        // Markdown affiché brut : pas d'interprétation du texte venu de l'agent.
+        val plan = text(16f, R.attr.c_text).apply {
+            text = if (masked) context.getString(R.string.agent_private_hidden) else a.text
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setBackgroundResource(R.drawable.row_bg)
+        }
+        card.addView(BoundedScrollView(context, dp(340)).apply { addView(plan) }, params(top = 16))
+        if (masked) card.addView(revealButton(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)))
+        card.addView(text(14f, R.attr.c_text_dim).apply { setText(R.string.agent_plan_note) }, params(top = 12))
+        val left = text(13f, R.attr.c_text_faint)
+        countdown = left
+        card.addView(left, params(top = 8))
+        card.addView(
+            LinearLayout(context).apply {
+                gravity = Gravity.END
+                addView(flat(R.string.agent_plan_refuse) { refusePlan() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(56)))
+                addView(
+                    primary(R.string.agent_plan_approve).apply { setOnClickListener { answerPlan(approve = true, feedback = null) } },
+                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(56)).apply { marginStart = dp(12) },
+                )
+            },
+            params(top = 16),
+        )
+    }
+
+    private fun refusePlan() {
+        activity.askAgentText(context.getString(R.string.agent_plan_feedback_title), R.string.agent_plan_feedback_hint, "") { text ->
+            answerPlan(approve = false, feedback = text.trim().ifEmpty { null })
+        }
+    }
+
+    private fun answerPlan(approve: Boolean, feedback: String?) {
+        val a = ask ?: return
+        if (busy) return
+        busy = true
+        activity.lifecycleScope.launch {
+            try {
+                BackendClient(context).agents.answerPlan(a.id, approve, feedback)
+                activity.showBanner(context.getString(if (approve) R.string.agent_plan_approved else R.string.agent_plan_refused), 3)
+                close()
+                AgentsFeed.refresh(context)
+            } catch (e: Exception) {
+                failed(e)
+            }
+        }
+    }
+
     // --- Questions à choix
 
     private fun renderQuestion(a: AgentAsk) {
@@ -263,6 +324,19 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
     /** Commande vocale sur la carte ouverte (voir MainActivity.agentVoice) ; rend la phrase à afficher. */
     fun voice(action: String, choice: Int?): String {
         val a = ask ?: return context.getString(R.string.agent_voice_none)
+        if (a.kind == "plan") {
+            return when (action) {
+                "allow", "send" -> {
+                    answerPlan(approve = true, feedback = null)
+                    context.getString(R.string.agent_plan_approved)
+                }
+                "deny" -> {
+                    answerPlan(approve = false, feedback = null)
+                    context.getString(R.string.agent_plan_refused)
+                }
+                else -> context.getString(R.string.agent_voice_permission)
+            }
+        }
         if (a.kind != "question") {
             return when (action) {
                 "allow", "send" -> if (a.risky) context.getString(R.string.agent_voice_risky) else {

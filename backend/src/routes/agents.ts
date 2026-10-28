@@ -56,7 +56,7 @@ export default async function agentRoutes(app: FastifyInstance) {
     async (req, reply) => agents.ask(req.query.id) ?? reply.code(404).send({ error: "Cette demande n'existe plus" }),
   );
 
-  type AnswerBody = { id: string; decision?: "allow" | "deny"; held?: boolean; answers?: QuestionAnswer[] };
+  type AnswerBody = { id: string; decision?: "allow" | "deny"; held?: boolean; answers?: QuestionAnswer[]; feedback?: string };
   app.post<{ Body: AnswerBody }>(
     "/agents/answer",
     {
@@ -69,6 +69,7 @@ export default async function agentRoutes(app: FastifyInstance) {
             id: { type: "string", maxLength: 80 },
             decision: { enum: ["allow", "deny"] },
             held: { type: "boolean" },
+            feedback: { type: "string", maxLength: 2000 },
             answers: {
               type: "array",
               maxItems: 4,

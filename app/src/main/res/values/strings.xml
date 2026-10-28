@@ -165,6 +165,14 @@
     <string name="agent_answer_hint">Toucher pour répondre</string>
     <string name="agent_ask_permission">%1$s demande une permission</string>
     <string name="agent_ask_question">%1$s te pose une question</string>
+    <string name="agent_ask_plan">%1$s propose un plan</string>
+    <string name="agent_plan_note">Approuver : Claude sort du mode plan, chaque modification te sera encore demandée.</string>
+    <string name="agent_plan_approve">Approuver le plan</string>
+    <string name="agent_plan_refuse">Refuser…</string>
+    <string name="agent_plan_feedback_title">Ce qu\'il faut changer</string>
+    <string name="agent_plan_feedback_hint">Facultatif : laisse vide pour reprendre au clavier</string>
+    <string name="agent_plan_approved">Plan approuvé</string>
+    <string name="agent_plan_refused">Plan refusé</string>
     <string name="agent_ask_risky">Commande à risque : maintiens le bouton pour l\'autoriser.</string>
     <string name="agent_ask_allow">Autoriser une fois</string>
     <string name="agent_ask_allow_hold">Maintenir pour autoriser</string>

@@ -31,7 +31,7 @@ export function hooksBlock(opts: { port: number; secret: string; holdS?: number 
   const wait = Math.ceil(opts.holdS ?? 90) + 30;
   const hooks: Record<string, Group[]> = {
     PermissionRequest: [{ hooks: [hook(wait)] }],
-    PreToolUse: [{ matcher: "AskUserQuestion", hooks: [hook(wait)] }],
+    PreToolUse: [{ matcher: "AskUserQuestion|ExitPlanMode", hooks: [hook(wait)] }],
   };
   for (const event of OBSERVE) hooks[event] = [{ hooks: [hook(5)] }];
   return { hooks };

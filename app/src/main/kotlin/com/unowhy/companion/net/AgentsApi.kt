@@ -55,8 +55,8 @@ data class AgentOption(val label: String, val description: String)
 data class AgentQuestion(val header: String, val question: String, val multi: Boolean, val options: List<AgentOption>)
 
 /**
- * Demande en attente d'une réponse : `permission` (le texte est la commande, le fichier ou l'adresse) ou `question`
- * (`questions`, de 1 à 4). `risky` : commande à risque, il faut maintenir le bouton pour l'autoriser. `expiresInMs` : temps
+ * Demande en attente d'une réponse : `permission` (le texte est la commande, le fichier ou l'adresse), `question`
+ * (`questions`, de 1 à 4) ou `plan` (le texte est le plan, en Markdown brut). `risky` : commande à risque, il faut maintenir le bouton pour l'autoriser. `expiresInMs` : temps
  * restant avant que le terminal reprenne la main. Le texte vient de l'agent : à afficher tel quel.
  */
 data class AgentAsk(
@@ -92,6 +92,14 @@ class AgentsApi(private val http: Http) {
     suspend fun answerPermission(id: String, allow: Boolean, held: Boolean = false) = http.io {
         val body = JSONObject().put("id", id).put("decision", if (allow) "allow" else "deny")
         if (held) body.put("held", true)
+        http.postJson("/agents/answer", body)
+        Unit
+    }
+
+    /** Plan de Claude : approuver (sortie du mode plan, modifications toujours demandées) ou refuser avec ce qu'il faut changer. */
+    suspend fun answerPlan(id: String, approve: Boolean, feedback: String? = null) = http.io {
+        val body = JSONObject().put("id", id).put("decision", if (approve) "allow" else "deny")
+        if (!feedback.isNullOrBlank()) body.put("feedback", feedback)
         http.postJson("/agents/answer", body)
         Unit
     }

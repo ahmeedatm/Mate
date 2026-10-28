@@ -369,6 +369,73 @@ describe("questions à choix", () => {
   });
 });
 
+describe("approuver un plan", () => {
+  const plan = { plan: "# Plan\n1. Écrire hello.txt\n2. Relire", planFilePath: "/Users/x/.claude/plans/p.md" };
+  const exitPlan = () => event("PreToolUse", { tool_name: "ExitPlanMode", tool_input: plan, permission_mode: "plan" });
+
+  it("tient la demande et renvoie le plan d'origine pour l'approuver (mode par défaut ensuite, pas d'auto)", async () => {
+    const a = createAgents(deps());
+    const out = a.hook(exitPlan(), {});
+    await flush();
+    const detail = a.ask(alerts[0].askId!)!;
+    assert.equal(detail.kind, "plan");
+    assert.match(detail.text, /Écrire hello.txt/);
+    a.answer(detail.id, { decision: "allow" });
+    assert.deepEqual(await out, { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput: plan } });
+  });
+
+  it("refuse avec ce qu'il faut changer, sur une ligne", async () => {
+    const a = createAgents(deps());
+    const out = a.hook(exitPlan(), {});
+    await flush();
+    a.answer(alerts[0].askId!, { decision: "deny", feedback: "le fichier\ns'appelle salut.txt" });
+    const o = (await out) as any;
+    assert.equal(o.hookSpecificOutput.permissionDecision, "deny");
+    assert.equal(
+      o.hookSpecificOutput.permissionDecisionReason,
+      "Plan refusé depuis la tablette. À changer : le fichier s'appelle salut.txt",
+    );
+  });
+
+  it("refus sans retour : Claude attend la suite au clavier ; une autre réponse est refusée", async () => {
+    const a = createAgents(deps());
+    const out = a.hook(exitPlan(), {});
+    await flush();
+    assert.throws(() => a.answer(alerts[0].askId!, { answers: [] }), AnswerError);
+    a.answer(alerts[0].askId!, { decision: "deny" });
+    assert.match(((await out) as any).hookSpecificOutput.permissionDecisionReason, /au clavier/);
+  });
+
+  it("pendant qu'un plan ou une question est tenu, le filet ne le rend pas (Claude est « busy » sur le hook)", async () => {
+    const a = createAgents(deps());
+    const out = a.hook(exitPlan(), {});
+    await flush();
+    clock += 30_000;
+    live = [{ sessionId: "s1", cwd: "/work/projet", status: "busy" }];
+    await a.refresh();
+    const id = alerts[0].askId!;
+    assert.equal(a.ask(id)?.kind, "plan", "toujours en attente");
+    a.answer(id, { decision: "allow" });
+    assert.equal(((await out) as any).hookSpecificOutput.permissionDecision, "allow");
+  });
+
+  it("le PermissionRequest d'un plan rend la main au terminal tout de suite", async () => {
+    const a = createAgents(deps());
+    assert.deepEqual(await a.hook(event("PermissionRequest", { tool_name: "ExitPlanMode", tool_input: plan }), {}), {});
+    assert.equal(a.list().sessions[0].state, "waiting");
+    assert.equal(a.list().sessions[0].askId, null);
+  });
+
+  it("le fichier de plan que Claude écrit n'est pas une écriture à risque", () => {
+    assert.equal(isRisky("Write", { file_path: "/Users/x/.claude/plans/p.md" }, "/work/projet"), false);
+    assert.equal(
+      isRisky("Write", { file_path: "/Users/x/Library/Application Support/orca/claude-profiles/abc/home/plans/p.md" }, "/work/projet"),
+      false,
+    );
+    assert.equal(isRisky("Write", { file_path: "/Users/x/.claude/settings.json" }, "/work/projet"), true);
+  });
+});
+
 describe("filet claude agents --json", () => {
   it("crée les sessions sans hook, sans alerter à la découverte", async () => {
     const a = createAgents(deps());
@@ -689,7 +756,7 @@ describe("bloc de hooks", () => {
     const hold = (e: string) => (block.hooks[e][0].hooks[0] as { timeout: number }).timeout;
     assert.equal(hold("PermissionRequest"), 120);
     assert.equal(hold("PreToolUse"), 120);
-    assert.equal(block.hooks.PreToolUse[0].matcher, "AskUserQuestion");
+    assert.equal(block.hooks.PreToolUse[0].matcher, "AskUserQuestion|ExitPlanMode");
     for (const e of ["UserPromptSubmit", "Notification", "Stop", "StopFailure", "SessionEnd"]) assert.equal(hold(e), 5, e);
     assert.equal(block.hooks.SessionStart, undefined, "SessionStart n'accepte pas les hooks http");
   });

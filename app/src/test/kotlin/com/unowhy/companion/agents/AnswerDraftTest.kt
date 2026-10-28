@@ -92,4 +92,12 @@ class AnswerDraftTest {
         assertFalse(question.questions[0].multi)
         assertEquals(listOf(AgentOption("Rouge", "Le rouge"), AgentOption("Bleu", "")), question.questions[0].options)
     }
+
+    @Test
+    fun `lit un plan a approuver`() {
+        val plan = parseAsk("""{"id":"p1","kind":"plan","session":"docs","dir":"docs","tool":"ExitPlanMode","text":"# Plan\n1. Écrire","risky":false,"questions":null,"expiresInMs":5000}""")
+        assertEquals("plan", plan.kind)
+        assertEquals("# Plan\n1. Écrire", plan.text)
+        assertTrue(plan.questions.isEmpty())
+    }
 }

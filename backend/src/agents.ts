@@ -72,7 +72,7 @@ type Question = { question: string; header: string; multi: boolean; options: { l
 type Pending = {
   id: string;
   sessionId: string;
-  kind: "permission" | "question";
+  kind: "permission" | "question" | "plan";
   tool: string;
   /** Commande, fichier ou adresse, tronqué. */
   text: string;
@@ -121,7 +121,19 @@ const DONE_TTL_MS = 10 * 60_000;
 /** Une session connue par hook seulement, sans `SessionEnd`, est oubliée après ce délai sans nouvelle. */
 const SILENT_TTL_MS = 12 * 3600_000;
 
-export const LIMITS = { name: 60, dir: 60, tool: 40, ask: 400, question: 200, option: 80, description: 120, line: 120, free: 500 };
+export const LIMITS = {
+  plan: 6000,
+  feedback: 500,
+  name: 60,
+  dir: 60,
+  tool: 40,
+  ask: 400,
+  question: 200,
+  option: 80,
+  description: 120,
+  line: 120,
+  free: 500,
+};
 
 /** Texte venu de l'agent : sans caractères de contrôle, tronqué. */
 export function cut(value: unknown, max: number): string {
@@ -168,6 +180,8 @@ function writesOutside(command: string, cwd: string): boolean {
   });
 }
 
+const CLAUDE_PLAN = /\/(\.claude|claude-profiles\/[^/]+\/home)\/plans\/[^/]+\.md$/;
+
 export function isRisky(tool: string, input: Record<string, unknown>, cwd: string): boolean {
   if (tool === "Bash") {
     const command = String(input.command ?? "");
@@ -177,6 +191,8 @@ export function isRisky(tool: string, input: Record<string, unknown>, cwd: strin
   }
   const file = typeof input.file_path === "string" ? input.file_path : typeof input.notebook_path === "string" ? input.notebook_path : null;
   if (file) {
+    // Fichier de plan que Claude écrit lui-même en mode plan : pas une écriture du projet, pas un risque.
+    if (CLAUDE_PLAN.test(file)) return false;
     const rel = path.relative(cwd, path.resolve(cwd, file));
     return rel.startsWith("..") || path.isAbsolute(rel);
   }
@@ -218,6 +234,16 @@ export function questionOutput(original: unknown[], answers: Record<string, stri
   return {
     hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput: { questions: original, answers } },
   };
+}
+
+/**
+ * Réponse à `ExitPlanMode` : approuver = `allow` avec l'entrée d'origine (exigé pour ce outil), Claude sort du mode plan
+ * vers le mode par défaut (chaque modification reste demandée, vérifié) ; refuser = `deny` avec ce qu'il faut changer.
+ */
+export function planOutput(approve: boolean, input: unknown, feedback?: string) {
+  if (approve) return { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput: input } };
+  const reason = "Plan refusé depuis la tablette." + (feedback ? ` À changer : ${feedback}` : " Attends la suite au clavier.");
+  return { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason } };
 }
 
 export type QuestionAnswer = { choices?: number[]; other?: string };
@@ -406,6 +432,11 @@ export function createAgents(deps: AgentsDeps) {
         setState(s, "working");
         break;
       case "PermissionRequest": {
+        // Un plan ne s'approuve pas ici (essayé : `allow` laisse le dialogue) ; le PreToolUse l'a déjà proposé à la tablette.
+        if (tool === "ExitPlanMode") {
+          setWaiting(s, "plan", false);
+          return {};
+        }
         const text = permissionText(tool, input);
         const risky = isRisky(tool, input, s.cwd);
         return hold(
@@ -415,6 +446,28 @@ export function createAgents(deps: AgentsDeps) {
         );
       }
       case "PreToolUse": {
+        if (tool === "ExitPlanMode") {
+          const plan = cut(input.plan, LIMITS.plan);
+          if (!plan) {
+            setWaiting(s, "plan", true);
+            break;
+          }
+          return hold(
+            s,
+            (finish) => ({
+              id: randomUUID(),
+              sessionId: s.id,
+              kind: "plan",
+              tool,
+              text: plan,
+              risky: false,
+              original: [input],
+              createdAt: now(),
+              finish,
+            }),
+            meta.onClosed ?? (() => {}),
+          );
+        }
         if (tool !== "AskUserQuestion") {
           s.tool = tool || s.tool;
           break;
@@ -496,9 +549,14 @@ export function createAgents(deps: AgentsDeps) {
   }
 
   /** Réponse de la tablette à une demande en attente. */
-  function answer(askId: string, body: { decision?: string; held?: boolean; answers?: QuestionAnswer[] }) {
+  function answer(askId: string, body: { decision?: string; held?: boolean; answers?: QuestionAnswer[]; feedback?: string }) {
     const ask = asks.get(askId);
     if (!ask) throw new AnswerError("Cette demande n'existe plus (déjà traitée au clavier, ou expirée)", 404);
+    if (ask.kind === "plan") {
+      if (body.decision !== "allow" && body.decision !== "deny") throw new AnswerError("Réponse attendue : allow ou deny");
+      const feedback = typeof body.feedback === "string" ? cut(body.feedback.replace(/[\r\n]+/g, " "), LIMITS.feedback) : "";
+      return void ask.finish(planOutput(body.decision === "allow", (ask.original ?? [])[0], feedback || undefined));
+    }
     if (ask.kind === "permission") {
       if (body.decision === "deny") return void ask.finish(permissionOutput("deny"));
       if (body.decision !== "allow") throw new AnswerError("Réponse attendue : allow ou deny");
@@ -608,8 +666,8 @@ export function createAgents(deps: AgentsDeps) {
           s.startedAt = e.startedAt ?? s.startedAt;
           const status = e.status ?? (e.state === "working" ? "busy" : e.state === "blocked" ? "waiting" : "idle");
           if (!fresh && t - s.hookAt < HOOK_STALE_MS) continue;
-          // Question tenue par un PreToolUse : Claude attend le hook (« busy »), aucun dialogue n'est au terminal, la
-          // réponse ne peut venir que de la tablette, du délai ou d'une coupure.
+          // Question ou plan tenus par un PreToolUse : Claude attend le hook (« busy »), aucun dialogue n'est au terminal,
+          // la réponse ne peut venir que de la tablette, du délai ou d'une coupure.
           if (s.ask && s.ask.kind !== "permission") continue;
           if (status === "busy") setState(s, "working", fresh);
           else if (status === "waiting") {
