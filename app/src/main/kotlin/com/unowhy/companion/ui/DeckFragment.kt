@@ -9,6 +9,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.widget.BaseAdapter
 import android.widget.Button
 import android.widget.GridView
@@ -20,6 +21,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.unowhy.companion.Computers
@@ -41,7 +43,8 @@ import kotlin.math.abs
 /** Deck façon Stream Deck : tuiles d'applis et de raccourcis du Mac, son et micro du Mac. */
 class DeckFragment : Fragment(), VolumeKeyHandler {
 
-    private lateinit var tabs: LinearLayout
+    private lateinit var tabs: TabStrip
+    private lateinit var content: View
     private lateinit var grid: GridView
     private lateinit var status: TextView
     private lateinit var access: View
@@ -73,6 +76,11 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     /** Onglets dans l'ordre affiché (pour le balayage) et celui qui est sélectionné. */
     private var tabActions: List<() -> Unit> = emptyList()
     private var selectedTab = -1
+    /** Clé de l'onglet affiché : en changer fait entrer le contenu du côté du nouvel onglet. */
+    private var shownTab: String? = null
+    /** Côté d'où entrera le contenu au prochain dessin (0 : rien en attente). */
+    private var pendingSlide = 0
+    private var slide: List<SpringAnimation> = emptyList()
     /** Un onglet est tenu (appui long) et déplacé dans la barre. */
     private var movingTab = false
     /** Page demandée avant que le deck soit chargé (Réunion, page d'une appli après un appel). */
@@ -97,6 +105,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
 
     override fun onViewCreated(view: View, state: Bundle?) {
         tabs = view.findViewById(R.id.deck_tabs)
+        content = view.findViewById(R.id.deck_content)
         grid = view.findViewById(R.id.deck_grid)
         status = view.findViewById(R.id.deck_status)
         audio = view.findViewById(R.id.deck_audio)
@@ -388,7 +397,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         val actions = mutableListOf<() -> Unit>()
         selectedTab = -1
         sorted.forEach { t ->
-            val tab = Button(requireContext(), null, 0, R.style.Chip).apply {
+            val tab = Button(requireContext(), null, 0, R.style.Chip_Tab).apply {
                 text = t.title
                 tag = t.key
                 isSelected = t.selected
@@ -401,6 +410,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         }
         tabActions = actions
         scrollToSelectedTab()
+        followSelection(sorted)
     }
 
     /** Ensemble d'onglets inchangé : met à jour l'état sélectionné et les actions sur les boutons déjà en place. */
@@ -416,7 +426,37 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         }
         tabActions = actions
         scrollToSelectedTab()
+        followSelection(sorted)
     }
+
+    /**
+     * Nouvel onglet : la pastille glisse jusqu'à lui et le contenu entre de son côté (axe partagé). Les vues de l'onglet
+     * ne sont rendues visibles qu'après renderTabs : le glissement part juste avant le dessin suivant.
+     */
+    private fun followSelection(sorted: List<Tab>) {
+        tabs.select(selectedTab)
+        val key = sorted.getOrNull(selectedTab)?.key
+        if (key == shownTab) return
+        val direction = TabMotion.direction(sorted.indexOfFirst { it.key == shownTab }, selectedTab)
+        shownTab = key
+        Look.settle(slide, pageViews())
+        slide = emptyList()
+        if (direction == 0 || !isResumed || isHidden) return
+        if (pendingSlide == 0) {
+            content.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    content.viewTreeObserver.removeOnPreDrawListener(this)
+                    slide = Look.slideIn(pageViews(), pendingSlide)
+                    pendingSlide = 0
+                    return true
+                }
+            })
+        }
+        pendingSlide = direction
+    }
+
+    /** Ce qui change d'un onglet à l'autre, sous la rangée d'onglets. */
+    private fun pageViews() = listOf(audio, appAudio, voiceCard, nowPlaying, grid, openWindows, mixer, agents, pad, status)
 
     /** Onglet choisi par balayage : on fait défiler la barre jusqu'à lui. */
     private fun scrollToSelectedTab() {

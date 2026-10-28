@@ -125,12 +125,8 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         glassesCount.typeface = themeFont(context, R.attr.c_font_regular)
         glassesCount.setSize(sp(14f), dp(20))
         view.findViewById<View>(R.id.hero_weather).setOnClickListener { if (!placed.config.has("lat")) showSettings() }
-        val water = view.findViewById<View>(R.id.hero_water)
-        water.setOnClickListener {
-            val state = Water.state(context)
-            if (state.glasses < state.goal) Water.add(context, 1)
-        }
-        water.setOnLongClickListener { WaterSettings.show(context); true }
+        // L'appui long appartient à la grille (mode Modifier) : un toucher ouvre la boîte Eau (verres − / +, rappel).
+        view.findViewById<View>(R.id.hero_water).setOnClickListener { WaterSettings.show(context) }
         render(animate = false)
     }
 

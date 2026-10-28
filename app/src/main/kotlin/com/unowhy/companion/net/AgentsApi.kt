@@ -59,8 +59,8 @@ data class AgentCounts(val working: Int, val waiting: Int, val done: Int, val li
 /** Part utilisée d'une fenêtre de quota (%) et sa fin (heure de l'ordinateur), si connue. */
 data class QuotaWindow(val used: Int, val resetsAt: Long?)
 
-/** Quota du compte Claude (5 h, 7 j), lu dans la statusline ; null tant qu'elle n'est pas enveloppée. */
-data class AgentQuota(val fiveHour: QuotaWindow?, val sevenDay: QuotaWindow?)
+/** Usage du compte Claude (5 h, 7 j), lu dans Orca ou la statusline ; `ageMs` = âge de la lecture. Null tant qu'aucune source ne l'a donné. */
+data class AgentQuota(val fiveHour: QuotaWindow?, val sevenDay: QuotaWindow?, val ageMs: Long = 0)
 
 /** `now` : l'heure de l'ordinateur à la lecture (les durées se calculent avec elle, pas avec l'horloge de la tablette). */
 data class AgentsState(
@@ -202,7 +202,7 @@ internal fun parseAgents(text: String): AgentsState {
         now = json.optLong("now"),
         quota = json.optJSONObject("quota")?.let { q ->
             fun window(key: String) = q.optJSONObject(key)?.let { w -> QuotaWindow(w.optInt("used"), if (w.isNull("resetsAt")) null else w.optLong("resetsAt")) }
-            AgentQuota(window("fiveHour"), window("sevenDay"))
+            AgentQuota(window("fiveHour"), window("sevenDay"), q.optLong("ageMs"))
         },
     )
 }

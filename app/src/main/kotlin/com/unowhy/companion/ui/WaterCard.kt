@@ -1,11 +1,13 @@
 package com.unowhy.companion.ui
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -16,12 +18,13 @@ import com.unowhy.companion.focus.Water
 
 /**
  * Carte Eau de l'Accueil : un segment par verre de l'objectif, rempli au fil de la journée ; + = un verre bu,
- * − = corriger ; toucher le titre = objectif et rappel. Le rappel lui-même est lancé par MainActivity (chaque minute).
+ * − = corriger ; toucher le titre = objectif et rappel. Cloche = rappel marche / arrêt. Le rappel lui-même est lancé par MainActivity (chaque minute).
  */
 class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : LinearLayout(context, attrs) {
 
     private val count: TextView
     private val gauge: LinearLayout
+    private val bell: ImageButton
     private val listener: (Water.State) -> Unit = { render(it) }
 
     /** Petit widget de l'Accueil : « 3 / 8 » sans « verres », pas de bouton − (corriger : réglages). */
@@ -37,6 +40,11 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         LayoutInflater.from(context).inflate(R.layout.view_water_card, this, true)
         count = findViewById(R.id.water_count)
         gauge = findViewById(R.id.water_gauge)
+        bell = findViewById(R.id.water_bell)
+        bell.setOnClickListener {
+            Water.setReminder(context, !Water.state(context).reminder)
+            Look.pop(bell)
+        }
         findViewById<View>(R.id.water_plus).setOnClickListener {
             Water.add(context, 1)
             Look.pop(count)
@@ -69,6 +77,9 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
             state.glasses, state.goal,
         )
         count.setTextColor(themeColor(context, if (done) R.attr.c_ok else R.attr.c_text))
+        bell.setImageResource(if (state.reminder) R.drawable.ic_alarm else R.drawable.ic_alarm_off)
+        bell.imageTintList = ColorStateList.valueOf(themeColor(context, if (state.reminder) R.attr.c_hue_cyan else R.attr.c_text_dim))
+        bell.contentDescription = context.getString(if (state.reminder) R.string.water_bell_on else R.string.water_bell_off)
         gauge.removeAllViews()
         val gap = dp(3)
         for (i in 0 until state.goal) {
@@ -89,7 +100,7 @@ class WaterCard @JvmOverloads constructor(context: Context, attrs: AttributeSet?
 
 /** Réglages de l'eau (objectif, rappel) : touché sur le titre de la carte, appui long sur la complication du héros. */
 object WaterSettings {
-    /** Objectif (verres par jour), rappel marche/arrêt et sa fréquence ; enregistré à chaque toucher. */
+    /** Verres d'aujourd'hui (− / +), objectif, rappel marche/arrêt et sa fréquence ; enregistré à chaque toucher. */
     fun show(context: Context) {
         val state = Water.state(context)
         var goal = state.goal
@@ -104,6 +115,12 @@ object WaterSettings {
         }
         fun chips(row: LinearLayout, values: List<Int>, label: (Int) -> String) =
             values.map { v -> (inflater.inflate(R.layout.item_chip, row, false) as Button).apply { text = label(v); row.addView(this) } to v }
+
+        val today = inflater.inflate(R.layout.item_water_today, box, false)
+        val todayCount = today.findViewById<TextView>(R.id.water_today_count)
+        val showToday = { s: Water.State -> todayCount.text = context.getString(R.string.water_count, s.glasses, s.goal) }
+        today.findViewById<View>(R.id.water_today_minus).setOnClickListener { Water.add(context, -1); showToday(Water.state(context)) }
+        today.findViewById<View>(R.id.water_today_plus).setOnClickListener { Water.add(context, 1); showToday(Water.state(context)) }
 
         val goalRow = LinearLayout(context)
         val goalChips = chips(goalRow, Water.GOALS) { context.getString(R.string.water_goal_value, it) }
@@ -126,11 +143,14 @@ object WaterSettings {
             intervalTitle.visibility = visibility
             intervalRow.visibility = visibility
             Water.configure(context, goal, reminder.isChecked, interval)
+            showToday(Water.state(context))
         }
         goalChips.forEach { (chip, v) -> chip.setOnClickListener { goal = v; update() } }
         intervalChips.forEach { (chip, v) -> chip.setOnClickListener { interval = v; update() } }
         reminder.setOnCheckedChangeListener { _, _ -> update() }
 
+        box.addView(title(R.string.water_today))
+        box.addView(today)
         box.addView(title(R.string.water_goal))
         box.addView(goalRow)
         box.addView(reminder, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = pad / 2 })

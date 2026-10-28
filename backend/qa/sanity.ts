@@ -146,6 +146,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         }
         expectStatus(agents, 200, "/agents");
         expect(Array.isArray(agents.json.sessions) && typeof agents.json.counts?.working === "number", "forme de /agents inattendue");
+        // Usage Claude (Orca ou statusline) : absent tant qu'aucune source ne l'a donné, sinon des pourcentages.
+        const quota = agents.json.quota;
+        const pct = (w: any) => w === null || (Number.isInteger(w?.used) && w.used >= 0 && w.used <= 100);
+        expect(quota === null || (pct(quota.fiveHour) && pct(quota.sevenDay) && typeof quota.ageMs === "number"), "usage Claude mal formé");
         const hook = (body: object, secret?: string) =>
           fetch(`${base}/agents/hook`, {
             method: "POST",
@@ -155,7 +159,8 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           });
         // Le hook demande son secret propre : sans lui, refusé (le jeton d'appairage n'y change rien).
         expect((await hook({ hook_event_name: "Stop" })).status === 401, "un hook sans secret devrait être refusé (401)");
-        if (!opts.hookSecret) return "hook refusé sans secret ; événements non essayés (pas de --hook-secret)";
+        const usage = quota ? `usage ${quota.fiveHour?.used ?? "?"} % sur 5 h` : "usage inconnu";
+        if (!opts.hookSecret) return `${usage} ; hook refusé sans secret ; événements non essayés (pas de --hook-secret)`;
         const find = async () => (await call("GET", "/agents")).json.sessions.find((s: any) => s.id === stamp);
         try {
           expect((await hook({ hook_event_name: "UserPromptSubmit" }, opts.hookSecret)).status === 200, "hook UserPromptSubmit refusé");
@@ -167,7 +172,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           await hook({ hook_event_name: "SessionEnd" }, opts.hookSecret).catch(() => {});
         }
         expect(!(await find()), "la session de test devrait être retirée");
-        return "travaille, fini, retirée";
+        return `${usage} ; travaille, fini, retirée`;
       },
     },
     {

@@ -6,6 +6,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:id="@+id/deck_content"
         android:orientation="vertical"
         android:padding="24dp">
 
@@ -24,7 +25,7 @@
                 android:fillViewport="true"
                 android:scrollbars="none">
 
-                <LinearLayout
+                <com.unowhy.companion.ui.TabStrip
                     android:id="@+id/deck_tabs"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

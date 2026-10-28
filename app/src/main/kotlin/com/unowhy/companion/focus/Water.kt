@@ -30,7 +30,7 @@ object Water {
     fun state(context: Context): State {
         val p = prefs(context)
         val glasses = if (p.getString("day", null) == today()) p.getInt("glasses", 0) else 0
-        return State(glasses, p.getInt("goal", 8), p.getBoolean("reminder", true), p.getInt("interval", 60))
+        return State(glasses, p.getInt("goal", 8), p.getBoolean("reminder", false), p.getInt("interval", 60))
     }
 
     /** +1 verre (ou -1 pour corriger une erreur). */
@@ -39,6 +39,12 @@ object Water {
         val edit = prefs(context).edit().putString("day", today()).putInt("glasses", glasses)
         if (delta > 0) edit.putLong("last", System.currentTimeMillis())
         edit.apply()
+        notifyChanged(context)
+    }
+
+    /** Rappel marche / arrêt (cloche du widget Eau) ; coupé tant qu'on ne l'a pas activé. */
+    fun setReminder(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean("reminder", on).apply()
         notifyChanged(context)
     }
 
