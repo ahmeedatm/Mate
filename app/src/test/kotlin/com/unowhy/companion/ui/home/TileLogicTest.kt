@@ -154,4 +154,9 @@ class TileLogicTest {
         val renamed = listOf(KeyRef("2-4", "Y"), KeyRef("k-0", "A"))
         assertEquals(listOf(KeyRef("2-4", "X"), KeyRef("k-0", "A")), reconcileKeys(renamed, pages))
     }
+
+    @Test
+    fun `reconcile ne touche a rien quand les pages ne sont pas lues`() {
+        assertNull(reconcileKeys(listOf(KeyRef("k-0", "A"), KeyRef("k-3", "B")), emptyList()))
+    }
 }

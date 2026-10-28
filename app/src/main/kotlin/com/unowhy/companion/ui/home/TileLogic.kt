@@ -63,9 +63,10 @@ fun nextFreeSlot(pages: List<DeckPage>): Int? =
 /**
  * Remet les touches choisies à jour d'après le deck : une touche retrouvée prend ses données à jour, une touche perso
  * vidée ou disparue est retirée, une touche d'une page fixe absente (page pas encore lue) est gardée.
- * Rend null quand rien ne change.
+ * Rend null quand rien ne change, et aussi quand `pages` est vide (deck pas encore lu) : tout paraîtrait absent.
  */
 fun reconcileKeys(chosen: List<KeyRef>, pages: List<DeckPage>): List<KeyRef>? {
+    if (pages.isEmpty()) return null
     val tiles = pages.flatMap { it.tiles }.associateBy { it.id }
     val result = chosen.mapNotNull { key ->
         val tile = tiles[key.id]
