@@ -6,7 +6,7 @@ Mis à jour le 28/10/2026 au matin (thème Rétro fusionné, page Média du PC v
 
 Hackathon interne Unowhy. Unowhy a **environ 20 000 tablettes 4.2** en stock. L'objectif réel est de **les vendre**, pas seulement de leur trouver un usage. Unowhy vend aussi des PC : la tablette peut devenir un **accessoire du PC** (posée sur le bureau, sans configuration, en kiosque), sur le modèle du Stream Deck ou du Corsair Xeneon Edge.
 
-Deux publics possibles, pas encore tranché :
+Deux publics envisagés au départ (tranché le 28/10/2026 pour les gamers et streamers : [cible-et-positionnement.md](cible-et-positionnement.md)) :
 
 - **Bureau / maison** : compagnon du PC (agenda, tâches, deck, fenêtres, son, musique, jeux).
 - **École, « console du prof »** : télécommande du PC de la classe, minuteur et surtout **visualiseur de documents**. La caméra filme une feuille, le PC la projette. Les écoles achètent ces appareils entre 100 et 300 € : c'est ce qui donne une valeur matérielle à la tablette.
@@ -98,7 +98,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 ## Décisions en attente
 
-- Nom du projet, public cible (bureau ou école).
+- Nom du projet. Public cible tranché le 28/10/2026 : gamers, streamers, créateurs de contenu ([cible-et-positionnement.md](cible-et-positionnement.md)).
 - Adresse provisoire de l'écran de bienvenue : `unowhy.com/compagnon` (`INSTALL_URL`), à revoir à la fin.
 - Le Play Store reste-t-il actif en kiosque ?
 
@@ -123,7 +123,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 ## Idées notées, pas faites
 
-Dofus Rétro (« Jouer » par un clic dans la fenêtre : perso, pas pour la démo) · mettre en commun `dp()` (15 copies) · réglage « ne jamais changer d'ordinateur » · Mot de réveil · presse-papiers partagé · empêcher la veille de l'ordinateur · extension de navigateur pour « Page de l'ordi » · bouton « Éteindre l'écran » · webcam USB (UVC, à demander à l'équipe firmware) · noms de programmes bruts sous Windows quand l'appli n'est pas au menu Démarrer · fenêtre de devant mise en avant dans Ouvertes · boutons « bureau précédent / suivant » (Mac) dans Ouvertes, si le triple toucher ne suffit pas · piloter OBS pour les streamers (étudié : `docs/obs.md`).
+Dofus Rétro (« Jouer » par un clic dans la fenêtre : perso, pas pour la démo) · mettre en commun `dp()` (15 copies) · réglage « ne jamais changer d'ordinateur » · Mot de réveil · presse-papiers partagé · empêcher la veille de l'ordinateur · extension de navigateur pour « Page de l'ordi » · bouton « Éteindre l'écran » · webcam USB (UVC, à demander à l'équipe firmware) · noms de programmes bruts sous Windows quand l'appli n'est pas au menu Démarrer · fenêtre de devant mise en avant dans Ouvertes · boutons « bureau précédent / suivant » (Mac) dans Ouvertes, si le triple toucher ne suffit pas · piloter OBS pour les streamers (étudié : `docs/obs.md` ; priorité dans [cible-et-positionnement.md](cible-et-positionnement.md)).
 
 ## Historique
 
