@@ -33,9 +33,11 @@ Panneau domotique (Home Assistant), companion focus / Pomodoro, cadre photo / af
 - Dépendances minimales (APK léger, compat API 24).
 - Test sur **tablette réelle** via adb dès le premier jour (l'émulateur ne reflète pas les perfs).
 
+### Décidé
+- Public cible (28/10/2026) : gamers, streamers, créateurs de contenu ; positionnement « régie de poche ». Voir `docs/cible-et-positionnement.md`.
+
 ### Pas encore décidé
 - Nom du projet.
-- Public cible (perso bureau vs produit Unowhy vs usage scolaire).
 - Sens exact du mode "Steam Deck" (média/ambiance ? gaming rétro ?).
 
 ### Règles de travail
