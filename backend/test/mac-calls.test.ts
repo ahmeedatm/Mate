@@ -56,4 +56,16 @@ describe("état d'un appel Teams (Mac)", () => {
       { connected: true, channel: "DSM SQOOL", muted: true, streaming: true },
     );
   });
+
+  it("caméra : coupée avec « Activer la caméra », allumée avec « Désactiver la caméra », inconnue sans bouton", () => {
+    const call = (camera: string[]) => ({
+      title: "Affichage compact de réunion | DSM SQOOL",
+      text: "",
+      buttons: ["Réduire", ...camera, "Couper le micro", "Quitter"],
+    });
+    assert.equal(callStateOf({ windows: [chat, call(["Activer la caméra"])] })?.cameraOff, true);
+    assert.equal(callStateOf({ windows: [chat, call(["Désactiver la caméra"])] })?.cameraOff, false);
+    assert.equal(callStateOf({ windows: [chat, call(["Turn camera on"])] })?.cameraOff, true);
+    assert.equal(callStateOf({ windows: [chat, call([])] })?.cameraOff, null);
+  });
 });
