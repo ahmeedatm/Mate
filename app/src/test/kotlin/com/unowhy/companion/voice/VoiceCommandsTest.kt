@@ -81,4 +81,26 @@ class VoiceCommandsTest {
         assertEquals("Ankama Launcher", VoiceCommands.closest(listOf("en cabane launcher"), listOf("Ankama Launcher", "Steam", "Discord")))
         assertNull(VoiceCommands.closest(listOf("xyz"), listOf("Steam", "Discord")))
     }
+
+    @Test
+    fun `agents Claude autoriser refuser choisir valider relancer`() {
+        assertEquals(VoiceCommand.Agent("allow"), parse("Autorise"))
+        assertEquals(VoiceCommand.Agent("allow"), parse("approuve le plan"))
+        assertEquals(VoiceCommand.Agent("allow"), parse("vas-y"))
+        assertEquals(VoiceCommand.Agent("deny"), parse("refuse la commande"))
+        assertEquals(VoiceCommand.Agent("send"), parse("valide"))
+        assertEquals(VoiceCommand.Agent("send"), parse("question suivante"))
+        assertEquals(VoiceCommand.Agent("continue"), parse("Continue"))
+        assertEquals(VoiceCommand.Agent("choice", 2), parse("option deux"))
+        assertEquals(VoiceCommand.Agent("choice", 3), parse("choix 3"))
+        assertEquals(VoiceCommand.Agent("choice", 1), parse("le premier choix"))
+        assertEquals(VoiceCommand.Agent("choice", 2), parse("la deuxième option"))
+    }
+
+    @Test
+    fun `refuse seul reste celui de l'appel et une option hors bornes n'est pas une option`() {
+        assertEquals(VoiceCommand.Call("decline"), parse("refuse"))
+        assertEquals(VoiceCommand.Call("answer"), parse("accepte"))
+        assertNull((parse("option neuf") as? VoiceCommand.Agent))
+    }
 }

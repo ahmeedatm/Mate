@@ -1,6 +1,6 @@
 # Les agents Claude Code sur la tablette (recherche, V1 en cours de livraison)
 
-Étudié le 28/10/2026, avec Claude Code 2.1.308 sur le Mac de développement. Idée : la tablette montre les sessions Claude Code de l'ordinateur (travaille, a fini, attend une réponse) et on répond depuis la tablette, surtout aux permissions et aux questions à choix (outil `AskUserQuestion`).
+Étudié le 28/10/2026, avec Claude Code 2.1.308 sur le Mac de développement. La V1 est livrée le même jour (MR !59 à !63) : voir « Résultats des essais » plus bas et [etat-du-projet.md](etat-du-projet.md). Idée : la tablette montre les sessions Claude Code de l'ordinateur (travaille, a fini, attend une réponse) et on répond depuis la tablette, surtout aux permissions et aux questions à choix (outil `AskUserQuestion`).
 
 ## En bref
 
@@ -263,6 +263,17 @@ Constats en plus :
 - **Les sessions de chat Orca** (`structuredHostOwned`) n'ont pas de terminal : `orca terminal list` ne les voit pas. Le message rapide n'est offert que pour les sessions d'un terminal Orca (essayé : `orca terminal send --enter` démarre bien le tour, `terminal switch` amène l'onglet devant). Terminal ordinaire (Terminal.app, iTerm2, Ghostty) : aucun moyen fiable, pas de bouton.
 - **`PermissionRequest`** n'a pas de `tool_use_id` : la demande se rattache à la session, pas à l'appel.
 - **Limite d'usage** : `StopFailure` avec `error: "rate_limit"` et `last_assistant_message` = texte de l'erreur. Aucune heure de reprise dans un champ ; le compagnon la lit dans le texte (« resets 3pm ») et, si elle est illisible, n'offre pas la reprise automatique. Une vraie limite n'a pas pu être provoquée : la lecture de l'heure n'est testée que sur des textes écrits à la main.
+
+### Essais du 28/10/2026 (suite : plan, interruption, quota)
+
+| Question | Résultat |
+|---|---|
+| Approuver un plan (`ExitPlanMode`) depuis un hook | `PreToolUse` et `PermissionRequest` arrivent tous deux, avec `tool_input.plan` et `planFilePath`. `allow` seul ne suffit pas (ni en `PermissionRequest`, ni en `PreToolUse`) : le dialogue reste. **`PreToolUse` `allow` + `updatedInput` (l'entrée d'origine renvoyée) approuve** : Claude sort du mode plan vers le mode **default** (chaque modification reste demandée), jamais vers auto |
+| Refuser un plan avec un retour | `PreToolUse` `deny` + `permissionDecisionReason` : Claude reçoit la raison, reste en mode plan et corrige son plan |
+| Pendant un `PreToolUse` tenu (question, plan) | Le terminal **n'affiche aucun dialogue** (il n'apparaît qu'au retour du hook) et `claude agents --json` dit `busy`. On ne peut donc pas y répondre au clavier : le filet ne doit pas rendre la main (corrigé), et quelqu'un revenu au clavier attend la fin du délai ou répond sur la tablette |
+| Fichier du plan | En mode plan, Claude écrit le plan dans `<config>/plans/*.md` avant `ExitPlanMode` : une permission `Write` hors du projet, à ne pas traiter comme une écriture à risque |
+| Interrompre une session (terminal Orca) | `orca terminal send --text $'\e'` (Échap) interrompt le tour en cours (`busy` → `idle`, pas de `Stop`), sans risque de quitter Claude. `--interrupt` le fait aussi mais envoie Ctrl-C (deux de suite quittent Claude). Le texte du tour interrompu revient dans la zone de saisie : avant d'écrire un message, l'effacer (`\x15`) |
+| Quota 5 h / 7 j | La statusline reçoit `rate_limits` : `five_hour` et `seven_day`, chacun `used_percentage` et `resets_at` (secondes) ; absent tant qu'aucune réponse de l'API n'est arrivée dans la session. Aucun hook ne le donne |
 
 ## Questions pour toi
 

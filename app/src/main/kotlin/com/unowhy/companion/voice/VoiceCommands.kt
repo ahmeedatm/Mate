@@ -43,6 +43,11 @@ sealed class VoiceCommand {
     /** Appel entrant (carte d'appel) : répondre, en vidéo, ou ignorer. */
     data class Call(val action: String) : VoiceCommand()
     data object HangUp : VoiceCommand()
+    /**
+     * Agent Claude : `allow` (autorise), `deny` (refuse la commande), `choice` (option `choice`, à partir de 1), `send`
+     * (valide, suivant), `continue` (relance la dernière session finie). N'agit que sur la carte ouverte à l'écran.
+     */
+    data class Agent(val action: String, val choice: Int? = null) : VoiceCommand()
 }
 
 object VoiceCommands {
@@ -60,6 +65,28 @@ object VoiceCommands {
     private val SCREEN_NUMBERS = mapOf("un" to 1, "une" to 1, "deux" to 2, "de" to 2, "trois" to 3, "quatre" to 4)
     private val TASK = Regex("^(?:ajoute|ajouter|note|noter|nouvelle|cree|creer)(?: une)? (?:tache|a faire)(?: :)? (.+)$")
     private val TASK_ORIGINAL = Regex("^\\s*\\S+(?:\\s+une)?\\s+(?:t[âa]che|[àa] faire)\\s*:?\\s*", RegexOption.IGNORE_CASE)
+
+    private val ORDINALS = mapOf(
+        "un" to 1, "une" to 1, "premier" to 1, "premiere" to 1, "deux" to 2, "de" to 2, "deuxieme" to 2, "second" to 2, "seconde" to 2,
+        "trois" to 3, "troisieme" to 3, "quatre" to 4, "quatrieme" to 4, "cinq" to 5, "cinquieme" to 5, "six" to 6, "sixieme" to 6,
+    )
+
+    /** Réponses à un agent Claude. « refuse » seul reste celui de l'appel : la commande vocale le reporte sur l'agent sans appel. */
+    private fun agent(t: String): VoiceCommand.Agent? {
+        if (Regex("^(autorise|autoriser|approuve|approuver|vas y|oui vas y)( la commande| la permission| le plan| une fois)?$").matches(t)) return VoiceCommand.Agent("allow")
+        if (Regex("^(refuse|refuser|rejette|rejeter) (la commande|la permission|le plan)$").matches(t)) return VoiceCommand.Agent("deny")
+        if (Regex("^(envoie|envoyer|valide|valider|suivant|question suivante)( les reponses| la reponse| le plan)?$").matches(t)) return VoiceCommand.Agent("send")
+        if (Regex("^(continue|continuer)( claude| l agent)?$").matches(t)) return VoiceCommand.Agent("continue")
+        Regex("^(?:l |le |la )?(?:option|choix|reponse) (\\w+)$").find(t)?.let { m ->
+            val n = m.groupValues[1].toIntOrNull() ?: ORDINALS[m.groupValues[1]]
+            if (n != null && n in 1..6) return VoiceCommand.Agent("choice", n)
+        }
+        Regex("^(?:le |la )?(\\w+) (?:choix|option|reponse)$").find(t)?.let { m ->
+            ORDINALS[m.groupValues[1]]?.takeIf { m.groupValues[1].endsWith("ieme") || m.groupValues[1].startsWith("premi") || m.groupValues[1].startsWith("second") }
+                ?.let { return VoiceCommand.Agent("choice", it) }
+        }
+        return null
+    }
 
     /** Minuscules, sans accents ni ponctuation : « Ouvre l'Accueil ! » → « ouvre l accueil ». */
     fun normalize(text: String): String =
@@ -80,6 +107,7 @@ object VoiceCommands {
 
         if (Regex("^(aide|que sais tu faire|qu est ce que (tu sais faire|je peux dire))").containsMatchIn(t)) return VoiceCommand.Help
         if (has("quelle heure")) return VoiceCommand.Time
+        agent(t)?.let { return it }
         if (Regex("^(reponds|repond|repondre|decroche|decrocher|accepte|accepter)( l appel)?( en video)?$").matches(t)) {
             return VoiceCommand.Call(if (has("video")) "video" else "answer")
         }

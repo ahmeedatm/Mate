@@ -5,6 +5,7 @@ import {
   createAgents,
   cut,
   isRisky,
+  parseQuota,
   parseResume,
   permissionOutput,
   summaryLines,
@@ -13,7 +14,17 @@ import {
   type ClaudeSession,
   type OrcaInfo,
 } from "../src/agents.ts";
-import { hooksBlock, mergeAgentHooks, withoutAgentHooks } from "../src/agents-hooks.ts";
+import { execFile, spawnSync } from "node:child_process";
+import http from "node:http";
+import {
+  hooksBlock,
+  mergeAgentHooks,
+  statusLineCommand,
+  unwrapStatusLine,
+  withoutAgentHooks,
+  withoutStatusLine,
+  withStatusLine,
+} from "../src/agents-hooks.ts";
 
 let clock = 1_000_000;
 let tablet = true;
@@ -33,6 +44,7 @@ const deps = (holdMs = 5_000): AgentsDeps => ({
   notify: (a) => alerts.push(a),
   holdMs,
   sendText: async (handle, text) => void sent.push({ handle, text }),
+  interruptSession: async (handle) => void sent.push({ handle, text: "<Échap>" }),
   focusSession: async (handle) => void focused.push(handle),
 });
 
@@ -174,7 +186,7 @@ describe("permission", () => {
       text: "npm test",
       risky: false,
       questions: null,
-      expiresAt: clock + 5_000,
+      expiresInMs: 5_000,
     });
     a.answer(askId, { decision: "allow" });
     assert.deepEqual(await out, { hookSpecificOutput: { hookEventName: "PermissionRequest", decision: { behavior: "allow" } } });
@@ -369,6 +381,114 @@ describe("questions à choix", () => {
   });
 });
 
+describe("approuver un plan", () => {
+  const plan = { plan: "# Plan\n1. Écrire hello.txt\n2. Relire", planFilePath: "/Users/x/.claude/plans/p.md" };
+  const exitPlan = () => event("PreToolUse", { tool_name: "ExitPlanMode", tool_input: plan, permission_mode: "plan" });
+
+  it("tient la demande et renvoie le plan d'origine pour l'approuver (mode par défaut ensuite, pas d'auto)", async () => {
+    const a = createAgents(deps());
+    const out = a.hook(exitPlan(), {});
+    await flush();
+    const detail = a.ask(alerts[0].askId!)!;
+    assert.equal(detail.kind, "plan");
+    assert.match(detail.text, /Écrire hello.txt/);
+    a.answer(detail.id, { decision: "allow" });
+    assert.deepEqual(await out, { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput: plan } });
+  });
+
+  it("refuse avec ce qu'il faut changer, sur une ligne", async () => {
+    const a = createAgents(deps());
+    const out = a.hook(exitPlan(), {});
+    await flush();
+    a.answer(alerts[0].askId!, { decision: "deny", feedback: "le fichier\ns'appelle salut.txt" });
+    const o = (await out) as any;
+    assert.equal(o.hookSpecificOutput.permissionDecision, "deny");
+    assert.equal(
+      o.hookSpecificOutput.permissionDecisionReason,
+      "Plan refusé depuis la tablette. À changer : le fichier s'appelle salut.txt",
+    );
+  });
+
+  it("refus sans retour : Claude attend la suite au clavier ; une autre réponse est refusée", async () => {
+    const a = createAgents(deps());
+    const out = a.hook(exitPlan(), {});
+    await flush();
+    assert.throws(() => a.answer(alerts[0].askId!, { answers: [] }), AnswerError);
+    a.answer(alerts[0].askId!, { decision: "deny" });
+    assert.match(((await out) as any).hookSpecificOutput.permissionDecisionReason, /au clavier/);
+  });
+
+  it("pendant qu'un plan ou une question est tenu, le filet ne le rend pas (Claude est « busy » sur le hook)", async () => {
+    const a = createAgents(deps());
+    const out = a.hook(exitPlan(), {});
+    await flush();
+    clock += 30_000;
+    live = [{ sessionId: "s1", cwd: "/work/projet", status: "busy" }];
+    await a.refresh();
+    const id = alerts[0].askId!;
+    assert.equal(a.ask(id)?.kind, "plan", "toujours en attente");
+    a.answer(id, { decision: "allow" });
+    assert.equal(((await out) as any).hookSpecificOutput.permissionDecision, "allow");
+  });
+
+  it("le PermissionRequest d'un plan rend la main au terminal tout de suite", async () => {
+    const a = createAgents(deps());
+    assert.deepEqual(await a.hook(event("PermissionRequest", { tool_name: "ExitPlanMode", tool_input: plan }), {}), {});
+    assert.equal(a.list().sessions[0].state, "waiting");
+    assert.equal(a.list().sessions[0].askId, null);
+  });
+
+  it("le fichier de plan que Claude écrit n'est pas une écriture à risque", () => {
+    assert.equal(isRisky("Write", { file_path: "/Users/x/.claude/plans/p.md" }, "/work/projet"), false);
+    assert.equal(
+      isRisky("Write", { file_path: "/Users/x/Library/Application Support/orca/claude-profiles/abc/home/plans/p.md" }, "/work/projet"),
+      false,
+    );
+    assert.equal(isRisky("Write", { file_path: "/Users/x/.claude/settings.json" }, "/work/projet"), true);
+  });
+});
+
+describe("question posée par l'outil MCP tablette_demander", () => {
+  const q = { question: "On déploie ?", options: ["Oui", "Non", "Demain"], multi: false, who: "Claude", where: "projet" };
+
+  it("passe par la même carte et rend le libellé choisi", async () => {
+    const a = createAgents(deps());
+    const out = a.askTablet(q, 5_000);
+    const id = alerts[0].askId!;
+    assert.equal(alerts[0].kind, "waiting");
+    const detail = a.ask(id)!;
+    assert.equal(detail.session, "Claude");
+    assert.equal(detail.dir, "projet");
+    assert.equal(detail.expiresInMs, 5_000);
+    assert.deepEqual(
+      detail.questions?.[0].options.map((o) => o.label),
+      ["Oui", "Non", "Demain"],
+    );
+    a.answer(id, { answers: [{ choices: [2] }] });
+    assert.equal(await out, "Demain");
+    assert.equal(alerts.at(-1)?.kind, "clear");
+  });
+
+  it("choix multiple et texte libre", async () => {
+    const a = createAgents(deps());
+    const out = a.askTablet({ ...q, multi: true }, 5_000);
+    a.answer(alerts[0].askId!, { answers: [{ choices: [0, 2], other: "après 18 h" }] });
+    assert.equal(await out, "Oui, Demain, après 18 h");
+  });
+
+  it("sans réponse : null ; tablette absente : refus", async () => {
+    const a = createAgents(deps());
+    assert.equal(await a.askTablet(q, 20), null);
+    tablet = false;
+    assert.throws(
+      () => a.askTablet(q, 20),
+      (e: AnswerError) => e.statusCode === 409,
+    );
+    tablet = true;
+    assert.throws(() => a.askTablet({ ...q, options: [] }, 20), AnswerError);
+  });
+});
+
 describe("filet claude agents --json", () => {
   it("crée les sessions sans hook, sans alerter à la découverte", async () => {
     const a = createAgents(deps());
@@ -559,6 +679,67 @@ describe("message rapide et session devant", () => {
   });
 });
 
+describe("interrompre et quota", () => {
+  it("interrompt une session qui travaille dans un terminal Orca (Échap), puis inactive", async () => {
+    const a = createAgents(deps());
+    orca = {
+      worktrees: [
+        { path: "/work/projet", branch: null, agents: [{ paneKey: "tab:leaf", toolName: null, lastMessage: null, structured: false }] },
+      ],
+      handles: new Map([["tab:leaf", "term_1"]]),
+    };
+    await a.hook(event("UserPromptSubmit"), { pane: "tab:leaf" });
+    live = [{ sessionId: "s1", cwd: "/work/projet", status: "busy" }];
+    await a.refresh();
+    assert.equal(a.list().sessions[0].canInterrupt, true);
+    await a.interrupt("s1");
+    assert.deepEqual(sent, [{ handle: "term_1", text: "<Échap>" }]);
+    assert.equal(a.list().sessions[0].state, "idle");
+    await assert.rejects(a.interrupt("s1"), /ne travaille pas/);
+  });
+
+  it("refuse d'interrompre hors terminal Orca", async () => {
+    const a = createAgents(deps());
+    await a.hook(event("UserPromptSubmit"), {});
+    assert.equal(a.list().sessions[0].canInterrupt, false);
+    await assert.rejects(a.interrupt("s1"), /pas dans un terminal Orca/);
+  });
+
+  it("garde le quota de la statusline 15 min, rien d'autre", async () => {
+    const a = createAgents(deps());
+    a.statusline({
+      cwd: "/secret",
+      rate_limits: { five_hour: { used_percentage: 21.4, resets_at: 1_800_000 }, seven_day: { used_percentage: 44 } },
+    });
+    assert.deepEqual(a.list().quota, {
+      fiveHour: { used: 21, resetsAt: 1_800_000_000 },
+      sevenDay: { used: 44, resetsAt: null },
+      at: clock,
+    });
+    a.statusline({ cwd: "/secret" });
+    assert.equal(a.list().quota?.fiveHour?.used, 21, "une statusline sans quota ne l'efface pas");
+    clock += 16 * 60_000;
+    assert.equal(a.list().quota, null);
+  });
+
+  it("parseQuota : bornes et champs manquants", () => {
+    assert.equal(parseQuota(undefined, 0), null);
+    assert.equal(parseQuota({ five_hour: { used_percentage: "x" } }, 0), null);
+    assert.deepEqual(parseQuota({ seven_day: { used_percentage: 140 } }, 5), {
+      fiveHour: null,
+      sevenDay: { used: 100, resetsAt: null },
+      at: 5,
+    });
+  });
+
+  it("limite sans heure dans le message : la fin de la fenêtre de 5 h de la statusline", async () => {
+    const a = createAgents(deps());
+    a.statusline({ rate_limits: { five_hour: { used_percentage: 100, resets_at: (clock + 3_600_000) / 1000 } } });
+    await a.hook(event("StopFailure", { error: "rate_limit", last_assistant_message: "API Error: Rate limit reached" }), {});
+    assert.equal(a.list().sessions[0].resumeAt, clock + 3_600_000);
+  });
+});
+
 describe("reprise après limite", () => {
   const limit = { hook_event_name: "StopFailure", error: "rate_limit", last_assistant_message: "limit reached · resets 3pm" };
   const almost3pm = () => {
@@ -641,6 +822,29 @@ describe("outils", () => {
     for (const c of ["npm test", "git status", "ls -la", "git log --oneline"]) {
       assert.equal(isRisky("Bash", { command: c }, "/work/projet"), false, c);
     }
+    // Écrire hors du projet.
+    for (const c of [
+      "cp -r dist /var/www/site",
+      "mv a.txt ~/Documents/",
+      "touch /Users/x/autre/f",
+      "echo x > /etc/hosts",
+      "mkdir -p ~/bin",
+      "sed -i s/a/b/ /etc/hosts",
+    ]) {
+      assert.equal(isRisky("Bash", { command: c }, "/work/projet"), true, c);
+    }
+    for (const c of [
+      "cp a.txt /work/projet/b.txt",
+      "cp a b /tmp/essai/",
+      "mkdir -p src/x",
+      "touch /work/projet/src/f",
+      "echo x > /dev/null",
+      "ls /etc",
+      "cat /etc/hosts",
+      "git diff",
+    ]) {
+      assert.equal(isRisky("Bash", { command: c }, "/work/projet"), false, c);
+    }
     assert.equal(isRisky("Write", { file_path: "/etc/hosts" }, "/work/projet"), true);
     assert.equal(isRisky("Edit", { file_path: "../autre/f.ts" }, "/work/projet"), true);
     assert.equal(isRisky("Edit", { file_path: "/work/projet/src/f.ts" }, "/work/projet"), false);
@@ -659,6 +863,47 @@ describe("outils", () => {
   });
 });
 
+describe("statusline enveloppée", () => {
+  const opts = { port: 3000, secret: "s3cret" };
+
+  it("garde la statusline d'origine, s'enveloppe une seule fois, se retire proprement", () => {
+    const settings = { statusLine: { type: "command", command: "bun ~/statusline.ts # perso", padding: 0 } };
+    const once = withStatusLine(settings, opts);
+    const command = (once.statusLine as { command: string }).command;
+    assert.equal(unwrapStatusLine(command), "bun ~/statusline.ts # perso");
+    assert.equal((once.statusLine as { padding: number }).padding, 0);
+    const twice = withStatusLine(once, { port: 3000, secret: "nouveau" });
+    assert.equal(unwrapStatusLine((twice.statusLine as { command: string }).command), "bun ~/statusline.ts # perso");
+    assert.deepEqual(withoutStatusLine(twice), settings);
+    assert.deepEqual(withoutStatusLine({}), {});
+    assert.deepEqual(withoutStatusLine(withStatusLine({}, opts)), {}, "pas de statusline avant : aucune après");
+  });
+
+  it("en vrai : la sortie d'origine s'affiche et le compagnon reçoit l'entrée", async () => {
+    let received = "";
+    let secret = "";
+    const srv = http.createServer((req, res) => {
+      secret = String(req.headers["x-companion-hook"]);
+      req.on("data", (c) => (received += c));
+      req.on("end", () => res.end("{}"));
+    });
+    await new Promise<void>((r) => srv.listen(0, "127.0.0.1", r));
+    const port = (srv.address() as { port: number }).port;
+    const command = statusLineCommand({ port, secret: "s3cret" }, "cat > /dev/null; echo 'ligne perso' # fin");
+    const out = await new Promise<string>((resolve, reject) => {
+      const child = execFile("/bin/sh", ["-c", command], (err, stdout) => (err ? reject(err) : resolve(stdout)));
+      child.stdin!.end(JSON.stringify({ rate_limits: { five_hour: { used_percentage: 3 } } }));
+    });
+    assert.equal(out, "ligne perso\n");
+    // Sans curl (image Linux minimale de la CI), l'enveloppe affiche quand même la statusline, sans rien envoyer.
+    if (spawnSync("sh", ["-c", "command -v curl"]).status !== 0) return void srv.close();
+    for (let i = 0; i < 50 && !received; i++) await new Promise((r) => setTimeout(r, 50));
+    srv.close();
+    assert.equal(secret, "s3cret");
+    assert.equal(JSON.parse(received).rate_limits.five_hour.used_percentage, 3);
+  });
+});
+
 describe("bloc de hooks", () => {
   const block = hooksBlock({ port: 3000, secret: "s3cret", holdS: 90 });
 
@@ -666,7 +911,7 @@ describe("bloc de hooks", () => {
     const hold = (e: string) => (block.hooks[e][0].hooks[0] as { timeout: number }).timeout;
     assert.equal(hold("PermissionRequest"), 120);
     assert.equal(hold("PreToolUse"), 120);
-    assert.equal(block.hooks.PreToolUse[0].matcher, "AskUserQuestion");
+    assert.equal(block.hooks.PreToolUse[0].matcher, "AskUserQuestion|ExitPlanMode");
     for (const e of ["UserPromptSubmit", "Notification", "Stop", "StopFailure", "SessionEnd"]) assert.equal(hold(e), 5, e);
     assert.equal(block.hooks.SessionStart, undefined, "SessionStart n'accepte pas les hooks http");
   });

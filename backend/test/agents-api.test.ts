@@ -89,6 +89,7 @@ describe("agents Claude : hooks et état", () => {
     assert.equal(json.sessions[0].state, "working");
     assert.equal(json.counts.working, 1);
     assert.equal(json.hooks, true);
+    assert.ok(Math.abs(json.now - Date.now()) < 5_000, "l'heure de l'ordinateur : la tablette en tire les durées");
     await hook({ hook_event_name: "Stop", last_assistant_message: "Fini.\nTrois fichiers changés." });
     ({ json } = await server.call("GET", "/agents"));
     assert.equal(json.sessions[0].state, "done");
@@ -206,6 +207,50 @@ describe("agents Claude : message, session devant, reprise", () => {
     assert.equal(send.status, 409);
     assert.match(send.json.error, /pas dans un terminal Orca/);
     assert.equal((await server.call("GET", "/agents")).json.sessions[0].canSend, false);
+    await hook({ hook_event_name: "SessionEnd" });
+  });
+});
+
+describe("agents Claude : outil MCP tablette_demander", () => {
+  it("tient la requête jusqu'à la réponse de la tablette", async () => {
+    const pending = server.call("POST", "/agents/ask-tablet", {
+      question: "On déploie ?",
+      options: ["Oui", "Non"],
+      who: "Claude",
+      where: "projet",
+    });
+    const orders = await nextOrders();
+    const id = orders.find((o) => o.askId).askId;
+    assert.equal((await server.call("GET", `/agents/ask?id=${id}`)).json.session, "Claude");
+    assert.equal((await server.call("POST", "/agents/answer", { id, answers: [{ choices: [1] }] })).status, 200);
+    assert.deepEqual((await pending).json, { answered: true, answer: "Non" });
+  });
+
+  it("demande le jeton et une question valide", async () => {
+    assert.equal((await server.call("POST", "/agents/ask-tablet", { question: "x", options: ["a"] }, false)).status, 401);
+    assert.equal((await server.call("POST", "/agents/ask-tablet", { question: "x", options: [] })).status, 400);
+  });
+});
+
+describe("agents Claude : statusline et interruption", () => {
+  it("la statusline donne le quota (secret propre exigé)", async () => {
+    const post = (secret: string | null) =>
+      fetch(`${server.url}/agents/statusline`, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...(secret ? { "x-companion-hook": secret } : {}) },
+        body: JSON.stringify({ rate_limits: { five_hour: { used_percentage: 42, resets_at: 2_000_000_000 } } }),
+      });
+    assert.equal((await post(null)).status, 401);
+    assert.equal((await post(SECRET)).status, 200);
+    assert.deepEqual((await server.call("GET", "/agents")).json.quota.fiveHour, { used: 42, resetsAt: 2_000_000_000_000 });
+  });
+
+  it("interrompre : session inconnue 404, hors terminal Orca 409", async () => {
+    assert.equal((await server.call("POST", "/agents/interrupt", { session: "inconnue" })).status, 404);
+    await hook({ hook_event_name: "UserPromptSubmit" });
+    const res = await server.call("POST", "/agents/interrupt", { session: "s1" });
+    assert.equal(res.status, 409);
+    assert.match(res.json.error, /terminal Orca/);
     await hook({ hook_event_name: "SessionEnd" });
   });
 });

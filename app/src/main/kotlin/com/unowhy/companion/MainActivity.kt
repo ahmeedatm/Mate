@@ -15,6 +15,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.unowhy.companion.agents.AgentAlerts
 import com.unowhy.companion.audio.Speaker
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
@@ -23,9 +24,12 @@ import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
 import com.unowhy.companion.kiosk.AutoUpdater
 import com.unowhy.companion.kiosk.Kiosk
+import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.Link
 import com.unowhy.companion.remote.RemoteLink
+import com.unowhy.companion.ui.AgentAskOverlay
+import com.unowhy.companion.ui.AgentLight
 import com.unowhy.companion.ui.AppTheme
 import com.unowhy.companion.ui.Banner
 import com.unowhy.companion.ui.CallOverlay
@@ -52,6 +56,7 @@ import com.unowhy.companion.ui.home.LinkWatch
 import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.voice.VoiceControl
+import kotlinx.coroutines.launch
 
 /** Les écrans qui veulent les boutons de volume de la tablette (ex. le deck pilote le son de l'ordinateur). */
 interface VolumeKeyHandler {
@@ -82,6 +87,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var voice: VoiceControl
     lateinit var callOverlay: CallOverlay
         private set
+    private lateinit var agentAlerts: AgentAlerts
+    private lateinit var agentAsk: AgentAskOverlay
     /** Micro refusé hors kiosque (en kiosque, il est accordé d'office) : la commande repart une fois accepté. */
     private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) voice.start() else showBanner(getString(R.string.voice_no_mic), 6)
@@ -106,6 +113,13 @@ class MainActivity : AppCompatActivity() {
             nav = Rail(this, ::show)
         }
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon), onPressed = { menu?.close() })
+        // Lumière des agents Claude sous la carte d'appel : un appel prime sur tout.
+        val agentLight = AgentLight(this)
+        agentAsk = AgentAskOverlay(this)
+        agentAlerts = AgentAlerts(agentLight, openAsk = ::openAgentAsk, openList = ::showAgents)
+        agentLight.onTouched = agentAlerts::onTouched
+        findViewById<android.view.ViewGroup>(android.R.id.content).addView(agentLight, android.view.ViewGroup.LayoutParams(-1, -1))
+        findViewById<android.view.ViewGroup>(android.R.id.content).addView(agentAsk, android.view.ViewGroup.LayoutParams(-1, -1))
         callOverlay = CallOverlay(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(callOverlay, android.view.ViewGroup.LayoutParams(-1, -1))
 
@@ -155,6 +169,7 @@ class MainActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this) {
             when {
                 welcome.visibility == View.VISIBLE -> Unit
+                agentAsk.isOpen -> agentAsk.close()
                 menu?.isOpen == true -> menu?.close()
                 documentPanel.visibility == View.VISIBLE -> documentPanel.close()
                 current != Mode.HOME -> show(Mode.HOME)
@@ -170,6 +185,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showLink(link: Link) {
+        if (link.state == Link.State.ONLINE && this.link.state != Link.State.ONLINE) resyncAgents()
         this.link = link
         linkWatch.onLink(link.computer?.id, link.state, System.currentTimeMillis())
         nav.showLink(link)
@@ -335,6 +351,50 @@ class MainActivity : AppCompatActivity() {
 
     /** Appel entrant sur l'ordinateur (ordre `call`, voir CallOverlay). */
     fun onCall(state: String, app: String, caller: String?, video: Boolean) = callOverlay.onCall(state, app, caller, video)
+
+    /** Un agent Claude attend, a fini ou a atteint sa limite (ordre `agent`, voir AgentAlerts). */
+    fun onAgent(kind: String, askId: String?, waiting: Int) = agentAlerts.onOrder(kind, askId, waiting)
+
+    /** Carte de la demande de Claude (permission, questions) à laquelle la tablette peut répondre. */
+    fun openAgentAsk(id: String) = agentAsk.open(id)
+
+    val agentAskOpen get() = agentAsk.isOpen
+
+    /** Demande d'agent en attente depuis avant la connexion : lumière rallumée (voir AgentAlerts.resync). */
+    private fun resyncAgents() {
+        lifecycleScope.launch {
+            val ask = runCatching { BackendClient(this@MainActivity).agents.state() }.getOrNull()?.sessions?.firstNotNullOfOrNull { it.askId }
+            agentAlerts.resync(ask)
+        }
+    }
+
+    /** Commande vocale lancée d'ailleurs que le bouton Parler (carte d'une demande d'agent). */
+    fun startVoice() = voice.start()
+
+    /**
+     * Commande vocale pour les agents Claude ; rend la phrase à afficher. Elle n'agit que sur la carte ouverte (on voit ce
+     * qu'on autorise) : sinon, elle ouvre la demande en attente. « continue » relance la dernière session finie qui le permet.
+     */
+    suspend fun agentVoice(action: String, choice: Int?): String {
+        if (action == "continue") {
+            val session = runCatching { BackendClient(this).agents.state() }.getOrNull()?.sessions
+                ?.firstOrNull { it.canSend && it.state == com.unowhy.companion.net.AgentState.DONE }
+                ?: return getString(R.string.agent_voice_no_session)
+            BackendClient(this).agents.send(session.id, "continue")
+            return getString(R.string.agent_sent, session.name)
+        }
+        if (agentAsk.isOpen) return agentAsk.voice(action, choice)
+        val id = agentAlerts.pendingAsk ?: return getString(R.string.agent_voice_none)
+        agentAsk.open(id)
+        return getString(R.string.agent_voice_opened)
+    }
+
+    /** Deck sur l'onglet Agents. */
+    fun showAgents() {
+        show(Mode.DECK)
+        supportFragmentManager.executePendingTransactions()
+        (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.openAgentsTab()
+    }
 
     /** Deck sur la page de l'appli (Discord) : micro, sourdine, Quitter l'appel. */
     fun showAppControls(app: String) {

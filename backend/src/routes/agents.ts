@@ -1,13 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import { AnswerError, createAgents, type QuestionAnswer } from "../agents.ts";
 import { hookSecret, hookSecretOk } from "../agents-secret.ts";
-import { agentsAvailable, focusSession, frontIsClaude, listClaude, listOrca, sendText } from "../agents-sources.ts";
+import { agentsAvailable, focusSession, frontIsClaude, interruptSession, listClaude, listOrca, sendText } from "../agents-sources.ts";
 import { isMac } from "../os.ts";
 import { sendToTablet, tabletStatus } from "../tablet.ts";
 
 /** Attente maximale d'une réponse de la tablette avant de rendre la main au terminal (AGENTS_HOLD_S, 90 s par défaut). */
 /** AGENTS_ALWAYS_ALERT=1 : alerter même si le terminal est devant (essais depuis un terminal). */
 const alwaysAlert = process.env.AGENTS_ALWAYS_ALERT === "1";
+/** Attente d'une réponse à une question posée par l'outil MCP (AGENTS_ASK_S, 3 min par défaut). */
+const askTabletMs = Math.max(5, Number(process.env.AGENTS_ASK_S) || 180) * 1000;
 const holdMs = Math.max(5, Number(process.env.AGENTS_HOLD_S) || 90) * 1000;
 
 /** Agents Claude Code (src/agents.ts) : `POST /agents/hook` pour Claude Code, le reste pour la tablette. */
@@ -21,6 +23,7 @@ export default async function agentRoutes(app: FastifyInstance) {
     notify: (alert) => void sendToTablet({ type: "agent", ...alert }, 20_000),
     holdMs,
     sendText,
+    interruptSession,
     focusSession,
   });
   if (isMac) hookSecret(); // créé au démarrage : `npm run agents:hooks` et les contrôles de sanity le lisent
@@ -48,7 +51,19 @@ export default async function agentRoutes(app: FastifyInstance) {
     },
   );
 
-  app.get("/agents", { logLevel: "warn" }, async () => ({ ...agents.list(), available: agentsAvailable() }));
+  // Statusline de Claude Code (enveloppe posée par `npm run agents:hooks -- --install --statusline`) : quota 5 h / 7 j.
+  app.post<{ Body: Record<string, unknown> }>(
+    "/agents/statusline",
+    { logLevel: "warn", bodyLimit: 1024 * 1024, schema: { body: { type: "object" } } },
+    async (req, reply) => {
+      if (!hookSecretOk(req.headers["x-companion-hook"] as string | undefined))
+        return reply.code(401).send({ error: "Secret de hook invalide" });
+      agents.statusline(req.body);
+      return {};
+    },
+  );
+
+  app.get("/agents", { logLevel: "warn" }, async () => ({ ...agents.list(), available: agentsAvailable(), now: Date.now() }));
 
   app.get<{ Querystring: { id: string } }>(
     "/agents/ask",
@@ -56,7 +71,7 @@ export default async function agentRoutes(app: FastifyInstance) {
     async (req, reply) => agents.ask(req.query.id) ?? reply.code(404).send({ error: "Cette demande n'existe plus" }),
   );
 
-  type AnswerBody = { id: string; decision?: "allow" | "deny"; held?: boolean; answers?: QuestionAnswer[] };
+  type AnswerBody = { id: string; decision?: "allow" | "deny"; held?: boolean; answers?: QuestionAnswer[]; feedback?: string };
   app.post<{ Body: AnswerBody }>(
     "/agents/answer",
     {
@@ -69,6 +84,7 @@ export default async function agentRoutes(app: FastifyInstance) {
             id: { type: "string", maxLength: 80 },
             decision: { enum: ["allow", "deny"] },
             held: { type: "boolean" },
+            feedback: { type: "string", maxLength: 2000 },
             answers: {
               type: "array",
               maxItems: 4,
@@ -124,6 +140,13 @@ export default async function agentRoutes(app: FastifyInstance) {
     (req, reply) => guarded(reply, () => agents.send(req.body.session, req.body.text)),
   );
 
+  // Interrompt le tour en cours (Échap), après confirmation sur la tablette.
+  app.post<{ Body: { session: string } }>(
+    "/agents/interrupt",
+    { schema: { body: { ...sessionBody, properties: { session: sessionId } } } },
+    (req, reply) => guarded(reply, () => agents.interrupt(req.body.session)),
+  );
+
   // Amène la session devant sur l'ordinateur.
   app.post<{ Body: { session: string } }>(
     "/agents/focus",
@@ -138,5 +161,39 @@ export default async function agentRoutes(app: FastifyInstance) {
       schema: { body: { ...sessionBody, required: ["session", "armed"], properties: { session: sessionId, armed: { type: "boolean" } } } },
     },
     (req, reply) => guarded(reply, () => agents.resume(req.body.session, req.body.armed)),
+  );
+
+  // Outil MCP `tablette_demander` (src/mcp.ts) : Claude pose lui-même une question sur la tablette ; tenue jusqu'à la réponse.
+  app.post<{ Body: { question: string; options: string[]; multi?: boolean; who?: string; where?: string } }>(
+    "/agents/ask-tablet",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["question", "options"],
+          additionalProperties: false,
+          properties: {
+            question: { type: "string", minLength: 1, maxLength: 500 },
+            options: { type: "array", minItems: 1, maxItems: 6, items: { type: "string", minLength: 1, maxLength: 200 } },
+            multi: { type: "boolean" },
+            who: { type: "string", maxLength: 100 },
+            where: { type: "string", maxLength: 300 },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const b = req.body;
+      try {
+        const answer = await agents.askTablet(
+          { question: b.question, options: b.options, multi: b.multi === true, who: b.who || "Claude", where: b.where ?? "" },
+          askTabletMs,
+        );
+        return { answered: answer !== null, answer };
+      } catch (e) {
+        if (e instanceof AnswerError) return reply.code(e.statusCode).send({ error: e.message });
+        throw e;
+      }
+    },
   );
 }

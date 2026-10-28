@@ -51,6 +51,23 @@ export type AgentAlert = {
   waiting: number;
 };
 
+/** Part du quota utilisée (%) et fin de la fenêtre (ms), pour 5 h et 7 j. */
+export type Quota = { fiveHour: QuotaWindow | null; sevenDay: QuotaWindow | null; at: number };
+type QuotaWindow = { used: number; resetsAt: number | null };
+
+/** Lit `rate_limits` de la statusline (`used_percentage`, `resets_at` en secondes) ; rien d'autre n'est gardé. */
+export function parseQuota(rateLimits: unknown, at: number): Quota | null {
+  const r = rateLimits as Record<string, { used_percentage?: unknown; resets_at?: unknown }> | null | undefined;
+  if (!r || typeof r !== "object") return null;
+  const window = (w: { used_percentage?: unknown; resets_at?: unknown } | undefined): QuotaWindow | null => {
+    if (!w || typeof w.used_percentage !== "number" || !Number.isFinite(w.used_percentage)) return null;
+    const resets = typeof w.resets_at === "number" && Number.isFinite(w.resets_at) ? w.resets_at * 1000 : null;
+    return { used: Math.max(0, Math.min(100, Math.round(w.used_percentage))), resetsAt: resets };
+  };
+  const q = { fiveHour: window(r.five_hour), sevenDay: window(r.seven_day), at };
+  return q.fiveHour || q.sevenDay ? q : null;
+}
+
 export type AgentsDeps = {
   now?: () => number;
   listClaude: () => Promise<ClaudeSession[] | null>;
@@ -63,6 +80,8 @@ export type AgentsDeps = {
   holdMs: number;
   /** Écrit une ligne dans le terminal d'une session (`orca terminal send`). */
   sendText: (handle: string, text: string) => Promise<void>;
+  /** Interrompt le tour en cours d'une session (Échap dans son terminal Orca). */
+  interruptSession: (handle: string) => Promise<void>;
   /** Amène une session devant sur l'ordinateur (terminal Orca, ou Orca seulement). */
   focusSession: (handle: string | null) => Promise<void>;
 };
@@ -72,7 +91,7 @@ type Question = { question: string; header: string; multi: boolean; options: { l
 type Pending = {
   id: string;
   sessionId: string;
-  kind: "permission" | "question";
+  kind: "permission" | "question" | "plan";
   tool: string;
   /** Commande, fichier ou adresse, tronqué. */
   text: string;
@@ -81,6 +100,11 @@ type Pending = {
   original?: unknown[];
   questions?: Question[];
   createdAt: number;
+  /** Durée de l'attente (le délai d'une question posée par l'outil MCP est plus long que celui d'un hook). */
+  holdMs?: number;
+  /** Question posée par l'outil MCP `tablette_demander` : pas de session derrière, qui la pose et d'où. */
+  who?: string;
+  where?: string;
   finish: (output: unknown) => void;
 };
 
@@ -116,12 +140,25 @@ type Session = {
 
 /** Hooks reçus depuis le démarrage : la tablette sait si « répondre » est possible. */
 const HOOK_STALE_MS = 6_000;
+const QUOTA_TTL_MS = 15 * 60_000;
 /** Un « fini » devient « inactif » au bout de ce délai. */
 const DONE_TTL_MS = 10 * 60_000;
 /** Une session connue par hook seulement, sans `SessionEnd`, est oubliée après ce délai sans nouvelle. */
 const SILENT_TTL_MS = 12 * 3600_000;
 
-export const LIMITS = { name: 60, dir: 60, tool: 40, ask: 400, question: 200, option: 80, description: 120, line: 120, free: 500 };
+export const LIMITS = {
+  plan: 6000,
+  feedback: 500,
+  name: 60,
+  dir: 60,
+  tool: 40,
+  ask: 400,
+  question: 200,
+  option: 80,
+  description: 120,
+  line: 120,
+  free: 500,
+};
 
 /** Texte venu de l'agent : sans caractères de contrôle, tronqué. */
 export function cut(value: unknown, max: number): string {
@@ -149,13 +186,38 @@ const RISKY_BASH = [
   /\b(curl|wget)\b[^|]*\|\s*(sudo\s+)?(ba|z|da)?sh\b/,
   /\b(chmod|chown|dd|mkfs|kill|killall|pkill|launchctl)\b/,
   /\bnpm\s+publish\b/,
-  />\s*\/(?!tmp\b|dev\/null)/,
 ];
 
+/** Commandes qui écrivent : risquées quand une de leurs cibles est hors du dossier du projet. */
+const WRITE_CMD = /\b(cp|mv|tee|mkdir|touch|ln|rsync|install|dd|chmod|chown|sed\s+-i)\b/;
+/** Dossiers où écrire reste sans conséquence. */
+const SCRATCH = ["/tmp/", "/private/tmp/", "/var/folders/", "/dev/null"];
+
+/** Chemin absolu ou `~` cité dans la commande, hors du dossier du projet et des dossiers temporaires. */
+function writesOutside(command: string, cwd: string): boolean {
+  const targets = command.match(/(?:^|[\s=])(~[^\s'";|&<>]*|\/[^\s'";|&<>]*)/g) ?? [];
+  return targets.some((raw) => {
+    const target = raw.trim().replace(/^=/, "");
+    if (target.startsWith("~")) return true;
+    if (SCRATCH.some((dir) => target === dir.replace(/\/$/, "") || target.startsWith(dir))) return false;
+    const rel = path.relative(cwd, target);
+    return rel.startsWith("..") || path.isAbsolute(rel);
+  });
+}
+
+const CLAUDE_PLAN = /\/(\.claude|claude-profiles\/[^/]+\/home)\/plans\/[^/]+\.md$/;
+
 export function isRisky(tool: string, input: Record<string, unknown>, cwd: string): boolean {
-  if (tool === "Bash") return RISKY_BASH.some((re) => re.test(String(input.command ?? "")));
+  if (tool === "Bash") {
+    const command = String(input.command ?? "");
+    return (
+      RISKY_BASH.some((re) => re.test(command)) || ((WRITE_CMD.test(command) || />\s*[~/]/.test(command)) && writesOutside(command, cwd))
+    );
+  }
   const file = typeof input.file_path === "string" ? input.file_path : typeof input.notebook_path === "string" ? input.notebook_path : null;
   if (file) {
+    // Fichier de plan que Claude écrit lui-même en mode plan : pas une écriture du projet, pas un risque.
+    if (CLAUDE_PLAN.test(file)) return false;
     const rel = path.relative(cwd, path.resolve(cwd, file));
     return rel.startsWith("..") || path.isAbsolute(rel);
   }
@@ -199,6 +261,16 @@ export function questionOutput(original: unknown[], answers: Record<string, stri
   };
 }
 
+/**
+ * Réponse à `ExitPlanMode` : approuver = `allow` avec l'entrée d'origine (exigé pour ce outil), Claude sort du mode plan
+ * vers le mode par défaut (chaque modification reste demandée, vérifié) ; refuser = `deny` avec ce qu'il faut changer.
+ */
+export function planOutput(approve: boolean, input: unknown, feedback?: string) {
+  if (approve) return { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput: input } };
+  const reason = "Plan refusé depuis la tablette." + (feedback ? ` À changer : ${feedback}` : " Attends la suite au clavier.");
+  return { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason } };
+}
+
 export type QuestionAnswer = { choices?: number[]; other?: string };
 
 export class AnswerError extends Error {
@@ -230,6 +302,8 @@ export function createAgents(deps: AgentsDeps) {
   const sessions = new Map<string, Session>();
   const asks = new Map<string, Pending>();
   let hooksSeen = false;
+  /** Quota 5 h / 7 j du compte, lu dans la statusline de Claude Code (`POST /agents/statusline`). */
+  let quota: Quota | null = null;
   let timer: NodeJS.Timeout | undefined;
   let refreshing = false;
   let lastOrca = 0;
@@ -385,6 +459,11 @@ export function createAgents(deps: AgentsDeps) {
         setState(s, "working");
         break;
       case "PermissionRequest": {
+        // Un plan ne s'approuve pas ici (essayé : `allow` laisse le dialogue) ; le PreToolUse l'a déjà proposé à la tablette.
+        if (tool === "ExitPlanMode") {
+          setWaiting(s, "plan", false);
+          return {};
+        }
         const text = permissionText(tool, input);
         const risky = isRisky(tool, input, s.cwd);
         return hold(
@@ -394,6 +473,28 @@ export function createAgents(deps: AgentsDeps) {
         );
       }
       case "PreToolUse": {
+        if (tool === "ExitPlanMode") {
+          const plan = cut(input.plan, LIMITS.plan);
+          if (!plan) {
+            setWaiting(s, "plan", true);
+            break;
+          }
+          return hold(
+            s,
+            (finish) => ({
+              id: randomUUID(),
+              sessionId: s.id,
+              kind: "plan",
+              tool,
+              text: plan,
+              risky: false,
+              original: [input],
+              createdAt: now(),
+              finish,
+            }),
+            meta.onClosed ?? (() => {}),
+          );
+        }
         if (tool !== "AskUserQuestion") {
           s.tool = tool || s.tool;
           break;
@@ -445,7 +546,9 @@ export function createAgents(deps: AgentsDeps) {
         s.turnStartedAt = null;
         if (body.error === "rate_limit") {
           s.limitText = text || "Limite atteinte";
-          s.resumeAt = parseResume(text, now());
+          // Heure lue dans le message, sinon la fin de la fenêtre de 5 h donnée par la statusline.
+          const window = quota?.fiveHour?.resetsAt;
+          s.resumeAt = parseResume(text, now()) ?? (window && window > now() ? window : null);
           setState(s, "limit");
         } else {
           s.message = text || cut(body.error, 60);
@@ -475,9 +578,14 @@ export function createAgents(deps: AgentsDeps) {
   }
 
   /** Réponse de la tablette à une demande en attente. */
-  function answer(askId: string, body: { decision?: string; held?: boolean; answers?: QuestionAnswer[] }) {
+  function answer(askId: string, body: { decision?: string; held?: boolean; answers?: QuestionAnswer[]; feedback?: string }) {
     const ask = asks.get(askId);
     if (!ask) throw new AnswerError("Cette demande n'existe plus (déjà traitée au clavier, ou expirée)", 404);
+    if (ask.kind === "plan") {
+      if (body.decision !== "allow" && body.decision !== "deny") throw new AnswerError("Réponse attendue : allow ou deny");
+      const feedback = typeof body.feedback === "string" ? cut(body.feedback.replace(/[\r\n]+/g, " "), LIMITS.feedback) : "";
+      return void ask.finish(planOutput(body.decision === "allow", (ask.original ?? [])[0], feedback || undefined));
+    }
     if (ask.kind === "permission") {
       if (body.decision === "deny") return void ask.finish(permissionOutput("deny"));
       if (body.decision !== "allow") throw new AnswerError("Réponse attendue : allow ou deny");
@@ -532,6 +640,7 @@ export function createAgents(deps: AgentsDeps) {
       askKind: s.ask?.kind ?? null,
       canSend: Boolean(s.handle) && state !== "working" && state !== "waiting",
       canFocus: Boolean(s.handle) || s.inOrca,
+      canInterrupt: Boolean(s.handle) && state === "working",
     };
   }
 
@@ -539,25 +648,73 @@ export function createAgents(deps: AgentsDeps) {
     const all = [...sessions.values()].sort((a, b) => ORDER[effectiveState(a)] - ORDER[effectiveState(b)] || b.since - a.since);
     const counts = { working: 0, waiting: 0, done: 0, limit: 0, idle: 0 };
     for (const s of all) counts[effectiveState(s)]++;
-    return { sessions: all.slice(0, 10).map(view), counts, total: all.length, hooks: hooksSeen };
+    // Quota de plus de 15 min : plus à jour (la statusline ne tourne que pendant qu'une session s'affiche).
+    const freshQuota = quota && now() - quota.at < QUOTA_TTL_MS ? quota : null;
+    return { sessions: all.slice(0, 10).map(view), counts, total: all.length, hooks: hooksSeen, quota: freshQuota };
   }
 
   /** Détail d'une demande en attente, pour la tablette. */
   function ask(askId: string) {
     const a = asks.get(askId);
     const s = a && sessions.get(a.sessionId);
-    if (!a || !s) return null;
+    if (!a || (!s && !a.who)) return null;
     return {
       id: a.id,
       kind: a.kind,
-      session: cut(s.name, LIMITS.name),
-      dir: cut(path.basename(s.cwd), LIMITS.dir),
+      session: cut(s?.name ?? a.who, LIMITS.name),
+      dir: cut(s ? path.basename(s.cwd) : (a.where ?? ""), LIMITS.dir),
       tool: a.tool,
       text: a.text,
       risky: a.risky,
       questions: a.questions ?? null,
-      expiresAt: a.createdAt + deps.holdMs,
+      /** Reste avant que le terminal reprenne la main : relatif, la tablette n'a pas la même horloge. */
+      expiresInMs: Math.max(0, a.createdAt + (a.holdMs ?? deps.holdMs) - now()),
     };
+  }
+
+  /**
+   * Question posée par Claude lui-même avec l'outil MCP `tablette_demander` : même carte qu'une question à choix,
+   * tenue jusqu'à la réponse ou `holdMs`. Rend le texte de la réponse (libellés joints par « , »), ou null sans réponse.
+   */
+  function askTablet(
+    q: { question: string; options: string[]; multi: boolean; who: string; where: string },
+    holdMs: number,
+  ): Promise<string | null> {
+    if (!deps.tabletConnected()) throw new AnswerError("Tablette non connectée : impossible de lui poser la question", 409);
+    const original = [{ question: q.question, header: "", multiSelect: q.multi, options: q.options.map((label) => ({ label })) }];
+    const parsed = parseQuestions({ questions: original });
+    if (!parsed) throw new AnswerError("Question invalide : de 1 à 6 options");
+    return new Promise((resolve) => {
+      let ended = false;
+      const id = randomUUID();
+      const finish = (output: unknown) => {
+        if (ended) return;
+        ended = true;
+        clearTimeout(expiry);
+        asks.delete(id);
+        const answers = (output as { hookSpecificOutput?: { updatedInput?: { answers?: Record<string, string> } } }).hookSpecificOutput
+          ?.updatedInput?.answers;
+        if (waitingCount() === 0 && deps.tabletConnected()) deps.notify({ kind: "clear", waiting: 0 });
+        resolve(answers ? (Object.values(answers)[0] ?? null) : null);
+      };
+      const expiry = setTimeout(() => finish({}), holdMs);
+      asks.set(id, {
+        id,
+        sessionId: "",
+        kind: "question",
+        tool: "tablette_demander",
+        text: "",
+        risky: false,
+        original: parsed.original,
+        questions: parsed.questions,
+        createdAt: now(),
+        holdMs,
+        who: cut(q.who, LIMITS.name),
+        where: cut(q.where, LIMITS.dir),
+        finish,
+      });
+      deps.notify({ kind: "waiting", name: cut(q.who, LIMITS.name), askId: id, waiting: waitingCount() + 1 });
+    });
   }
 
   /** Relit `claude agents --json` (et Orca) et corrige l'état : le filet quand un hook manque (Esc, session fermée…). */
@@ -586,8 +743,8 @@ export function createAgents(deps: AgentsDeps) {
           s.startedAt = e.startedAt ?? s.startedAt;
           const status = e.status ?? (e.state === "working" ? "busy" : e.state === "blocked" ? "waiting" : "idle");
           if (!fresh && t - s.hookAt < HOOK_STALE_MS) continue;
-          // Question tenue par un PreToolUse : Claude attend le hook (« busy »), aucun dialogue n'est au terminal, la
-          // réponse ne peut venir que de la tablette, du délai ou d'une coupure.
+          // Question ou plan tenus par un PreToolUse : Claude attend le hook (« busy »), aucun dialogue n'est au terminal,
+          // la réponse ne peut venir que de la tablette, du délai ou d'une coupure.
           if (s.ask && s.ask.kind !== "permission") continue;
           if (status === "busy") setState(s, "working", fresh);
           else if (status === "waiting") {
@@ -663,6 +820,24 @@ export function createAgents(deps: AgentsDeps) {
     setState(s, "working", true);
   }
 
+  /** Interrompt le tour en cours (Échap) ; seulement une session qui travaille, dans un terminal Orca. */
+  async function interrupt(sessionId: string) {
+    const s = sessions.get(sessionId);
+    if (!s) throw new AnswerError("Cette session n'existe plus", 404);
+    if (effectiveState(s) !== "working") throw new AnswerError("Cette session ne travaille pas", 409);
+    if (!s.handle) throw new AnswerError("Cette session n'est pas dans un terminal Orca : impossible de l'interrompre d'ici", 409);
+    await deps.interruptSession(s.handle);
+    // Pas de hook Stop après une interruption : la session est au repos.
+    s.turnStartedAt = null;
+    setState(s, "idle", true);
+  }
+
+  /** Statusline de Claude Code : seul `rate_limits` est lu. */
+  function statusline(body: Record<string, unknown>) {
+    const q = parseQuota(body.rate_limits, now());
+    if (q) quota = q;
+  }
+
   async function focus(sessionId: string) {
     const s = sessions.get(sessionId);
     if (!s) throw new AnswerError("Cette session n'existe plus", 404);
@@ -697,7 +872,7 @@ export function createAgents(deps: AgentsDeps) {
     s.resumeTimer.unref?.();
   }
 
-  return { hook, answer, list, ask, refresh, start, stop, handleOf, send, focus, resume };
+  return { hook, answer, list, ask, askTablet, refresh, start, stop, handleOf, send, focus, resume, interrupt, statusline };
 }
 
 export type Agents = ReturnType<typeof createAgents>;
