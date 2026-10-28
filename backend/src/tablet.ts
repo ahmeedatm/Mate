@@ -25,7 +25,9 @@ export type TabletCommand =
   | { type: "noise"; kind: (typeof NOISES)[number]; volume?: number }
   | { type: "screenshot" }
   /** Appel entrant (src/calls.ts) : carte Répondre / Ignorer sur la tablette, retirée à `ended`. */
-  | { type: "call"; state: "ringing" | "ended"; app: string; caller: string | null; video: boolean };
+  | { type: "call"; state: "ringing" | "ended"; app: string; caller: string | null; video: boolean }
+  /** Agent Claude (src/agents.ts) : une session attend, a fini ou a atteint sa limite ; `clear` : plus rien n'attend. */
+  | { type: "agent"; kind: "waiting" | "done" | "limit" | "clear"; session?: string; name?: string; askId?: string; waiting: number };
 
 /** `received` : la tablette a répondu (même en échec, ex. message affiché mais pas lu faute de voix). */
 export type TabletResult = { ok: boolean; error?: string; data?: Record<string, unknown>; received?: boolean };

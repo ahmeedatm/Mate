@@ -312,6 +312,12 @@ export async function systemCommand(command: SystemCommand) {
   unsupported();
 }
 
+/** Appli au premier plan de l'ordinateur (Mac seulement : sert aux alertes des agents Claude). */
+export async function frontApp(): Promise<{ name: string; bundleId: string }> {
+  if (isMac) return macSystem.frontApp();
+  unsupported();
+}
+
 /** Message bien visible sur l'ordinateur (code d'appairage), sans attendre qu'il soit fermé. */
 export async function alert(title: string, text: string) {
   // Tests d'intégration et instance de test : pas de boîte réelle à chaque appairage.

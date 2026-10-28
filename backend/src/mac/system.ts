@@ -61,3 +61,10 @@ export async function isAppInCall(app: string): Promise<boolean> {
   const call = await calls.callState(app).catch(() => null);
   return call?.found ? call.connected || Boolean(call.lobby) : audio.micInUse();
 }
+
+/** Appli au premier plan (sans permission : NSWorkspace). */
+export async function frontApp(): Promise<{ name: string; bundleId: string }> {
+  const script =
+    'ObjC.import("AppKit"); const a = $.NSWorkspace.sharedWorkspace.frontmostApplication; JSON.stringify({ name: ObjC.unwrap(a.localizedName) || "", bundleId: ObjC.unwrap(a.bundleIdentifier) || "" })';
+  return JSON.parse(await osascript(script, [], "JavaScript"));
+}

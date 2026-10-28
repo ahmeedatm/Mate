@@ -130,7 +130,13 @@ describe("page Média : sites", () => {
 
 describe("cartes de l'Accueil et onglets d'appli", () => {
   it("/deck/features : Teams seulement s'il est dans la page Apps", async () => {
-    assert.deepEqual((await server.call("GET", "/deck/features")).json, { agenda: true, linked: false, meetings: true, teams: false });
+    assert.deepEqual((await server.call("GET", "/deck/features")).json, {
+      agenda: true,
+      linked: false,
+      meetings: true,
+      teams: false,
+      agents: false,
+    });
     server.setOs({ installed: ["Microsoft Teams"] });
     assert.equal((await server.call("GET", "/deck/features")).json.teams, true);
   });

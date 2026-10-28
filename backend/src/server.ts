@@ -10,6 +10,7 @@ import { canControl, osName } from "./os.ts";
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
 import { sendToTablet } from "./tablet.ts";
 import { startReminders } from "./tasks.ts";
+import agentRoutes from "./routes/agents.ts";
 import browserRoutes from "./routes/browser.ts";
 import calendarRoutes from "./routes/calendar.ts";
 import callRoutes from "./routes/calls.ts";
@@ -50,6 +51,8 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     (method === "POST" && url === "/system/accessibility") ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
     (method === "POST" && (url === "/browser/extension" || url === "/browser/extension/commands")) ||
+    // Hooks de Claude Code : pas de jeton d'appairage, un secret propre vérifié par la route (src/agents-sources.ts).
+    (method === "POST" && url === "/agents/hook") ||
     (method === "DELETE" && /^\/local\/accounts\/(microsoft|google)$/.test(url)));
 /** Sans jeton : identité (la tablette reconnaît l'ordinateur) et appairage par code. */
 const PUBLIC = /^\/(health|pair\/request|pair\/confirm)(\?|$)/;
@@ -104,6 +107,7 @@ app.register(cameraRoutes);
 app.register(calendarRoutes);
 app.register(taskRoutes);
 app.register(callRoutes);
+app.register(agentRoutes);
 app.register(tabletRoutes);
 
 // --- Tâches de fond
