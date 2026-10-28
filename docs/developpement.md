@@ -234,6 +234,28 @@ DATA_DIR=paquet npm run updates:add -- ~/Téléchargements/companion-1.2.0.json 
 
 Changement de signature : Android refuse une mise à jour signée par une autre clé. Une tablette qui a reçu l'APK debug (adb, artefact du job `android`) n'acceptera l'APK de release qu'après désinstallation du Companion, donc, en kiosque, après avoir refait la procédure de [kiosque.md](kiosque.md) avec l'APK de release.
 
+### Déployer un essai depuis une MR
+
+Pour essayer l'appli d'une MR sur une tablette en kiosque, sans fusionner ni tagger. La tablette n'accepte qu'un APK signé par la clé de release, d'un `versionCode` plus grand : seul un pipeline de ref protégée voit la clé.
+
+1. Une fois : protéger les branches `essai/*` (Settings > Repository > Protected branches, Allowed to merge et Allowed to push : Maintainers).
+2. Depuis la branche de la MR, la pousser sur une branche d'essai à son numéro : `git push origin HEAD:essai/mr-<iid>`. Les commits suivants de la MR s'y poussent de la même façon. Push refusé (MR rebasée, branche protégée sans force push) : supprimer la branche dans Code > Branches, puis repousser. Supprimer aussi la branche quand l'essai est fini.
+3. Dans le pipeline de `essai/mr-<iid>`, lancer le job manuel `essai-android` (Build > Pipelines). `essai-updates` suit seul et écrit dans son journal la commande à lancer.
+4. Sur l'ordinateur de la tablette, dans `backend/` (`GITLAB_TOKEN`, jeton personnel `read_api`, ou `UPDATE_DEPLOY_TOKEN` dans `backend/.env`) :
+
+```bash
+npm run updates:essai                   # compagnon lancé depuis le dépôt (backend/.data)
+DATA_DIR=paquet npm run updates:essai   # compagnon installé par paquet
+```
+
+5. Sur la tablette : Réglages > Mises à jour. Sans rien toucher, elle l'installe aussi seule à sa prochaine vérification (démarrage, puis toutes les 6 h), comme toute tablette reliée à cet ordinateur.
+
+Version : `X.Y.Z-essai.N`, X.Y.Z = dernier tag de la branche, N = numéro du pipeline ; code = celui du tag + 1 + N mod 999 (`app/build.gradle.kts`), au-dessus du tag installé et sous le tag suivant. Tous les 999 pipelines, le code repart du bas : un essai peut alors être plus petit que le précédent et la tablette le refuse ; relancer un pipeline ne suffit pas, poser un tag. L'APK d'essai lit les mises à jour du serveur central dans `latest`, comme une release : la tablette repasse seule à la release suivante. Pas de retour à une version plus ancienne (Android refuse un code plus petit).
+
+`essai-updates` dépose l'APK et son `manifest.json` dans le paquet générique `companion-updates`, version `essai`, jamais `latest` : aucune tablette ne lit ce paquet seule. Un seul essai à la fois, le dernier remplace. `npm run updates:essai` (`backend/scripts/updates.ts`) le télécharge, vérifie taille et SHA-256, puis fait comme `updates:add`. Autre paquet : `UPDATES_URL=<base>`.
+
+Sécurité : l'APK d'essai porte la clé de release et le deploy token des tablettes, comme une release. Les jobs ne tournent que sur une branche protégée (`$CI_COMMIT_REF_PROTECTED`, sinon pas de job), la clé n'est jamais affichée, l'artefact expire au bout d'un jour. Sur une branche `essai/*`, aucun autre job ne tourne (les tests sont ceux de la MR).
+
 ## Mettre à jour les ordinateurs de test (installés par paquet)
 
 Le PC d'Eliot et le Mac tournent depuis le paquet (pas depuis le dépôt). D'abord `cd backend && npm run package` : le dossier `dist/<windows|mac>/Compagnon Unowhy/` est le contenu du zip.
