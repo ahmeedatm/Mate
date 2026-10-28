@@ -254,6 +254,37 @@ object Look {
         }, delayMs)
     }
 
+    /**
+     * Changement d'onglet (axe partagé M3, docs/ui-ux/specs-ds.md) : les vues visibles entrent de 30 dp du côté
+     * `direction` (1 droite, -1 gauche) en fondu, sur un calque matériel. Rend les ressorts, à annuler avec [settle].
+     */
+    fun slideIn(views: List<View>, direction: Int): List<SpringAnimation> {
+        if (direction == 0 || reduced(views.firstOrNull()?.context ?: return emptyList())) return emptyList()
+        val shift = direction * SHARED_AXIS_DP * views.first().resources.displayMetrics.density
+        return views.filter { it.visibility == View.VISIBLE }.flatMap { view ->
+            view.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            view.translationX = shift
+            view.alpha = 0f
+            listOf(
+                SpringAnimation(view, DynamicAnimation.TRANSLATION_X).setSpring(force(SPATIAL_DEFAULT, 0f))
+                    .addEndListener { _, _, _, _ -> view.setLayerType(View.LAYER_TYPE_NONE, null) },
+                SpringAnimation(view, DynamicAnimation.ALPHA).setSpring(force(EFFECTS_DEFAULT, 1f)),
+            )
+        }.onEach { it.start() }
+    }
+
+    /** Arrête un [slideIn] en cours et remet les vues en place. */
+    fun settle(springs: List<SpringAnimation>, views: List<View>) {
+        springs.forEach { it.cancel() }
+        views.forEach {
+            it.translationX = 0f
+            it.alpha = 1f
+            it.setLayerType(View.LAYER_TYPE_NONE, null)
+        }
+    }
+
+    private const val SHARED_AXIS_DP = 30
+
     /** Appui (DA Cadran) : la vue s'enfonce à 0,96 puis revient sur un ressort. Le clic n'est pas consommé. */
     @SuppressLint("ClickableViewAccessibility")
     fun pressSpring(view: View) {
