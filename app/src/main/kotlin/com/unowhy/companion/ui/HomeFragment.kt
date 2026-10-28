@@ -30,6 +30,7 @@ import com.unowhy.companion.ui.home.HomeHost
 import com.unowhy.companion.ui.home.HomeLayout
 import com.unowhy.companion.ui.home.HomeWidget
 import com.unowhy.companion.ui.home.Placed
+import com.unowhy.companion.ui.home.ProfilesDialog
 import com.unowhy.companion.ui.home.ROWS
 import com.unowhy.companion.ui.home.RowProfile
 import com.unowhy.companion.ui.home.WidgetGrid
@@ -92,6 +93,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         profileNext = view.findViewById(R.id.home_profile_next)
         profilePrev.setOnClickListener { showProfile(page - 1) }
         profileNext.setOnClickListener { showProfile(page + 1) }
+        profileName.setOnClickListener { openProfiles() }
         grid.listener = this
         grid.blocked = { unreachable != null && dependsOnComputer(it) }
 
@@ -372,6 +374,15 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         build()
         refreshAll()
         save()
+    }
+
+    /** Liste des profils. Un changement termine d'abord le mode Modifier en gardant les widgets : `save()` n'écrit rien tant qu'il est actif. */
+    private fun openProfiles() {
+        ProfilesDialog(requireContext(), layout, page, ::profileName) { show ->
+            if (grid.editing) endEdit(keep = true)
+            onProfilesChanged()
+            showProfile(show)
+        }.show()
     }
 
     private fun renderProfileBar() {

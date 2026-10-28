@@ -28,6 +28,12 @@ class VoiceCommandsTest {
     }
 
     @Test
+    fun `les profils ouvrent l'ecran des profils`() {
+        assertEquals(VoiceCommand.ShowMode("home"), parse("ouvre les profils"))
+        assertEquals(VoiceCommand.ShowMode("home"), parse("va aux profils"))
+    }
+
+    @Test
     fun `son et micro`() {
         assertEquals(VoiceCommand.Volume(level = 40), parse("volume à 40"))
         assertEquals(VoiceCommand.Volume(delta = 10), parse("plus fort"))
