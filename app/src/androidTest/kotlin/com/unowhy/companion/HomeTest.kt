@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.Espresso.pressBack
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.Visibility
@@ -64,7 +65,9 @@ class HomeTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withId(R.id.hero_glasses_label)).check(matches(withText(glassesLabel(0))))
             onView(withId(R.id.hero_water)).perform(click())
+            onView(withId(R.id.water_today_plus)).perform(click())
             assertEquals(1, Water.state(context).glasses)
+            pressBack()
             eventually { onView(withId(R.id.hero_glasses_label)).check(matches(withText(glassesLabel(1)))) }
 
             onView(withId(R.id.widget_focus_toggle)).perform(click())
