@@ -46,3 +46,15 @@ describe("vue Ouvertes en HTTP", () => {
     );
   });
 });
+
+describe("pages du Mac en HTTP", () => {
+  it("passe sur une page et refuse une page mal formée (400)", async () => {
+    server.clearOsCalls();
+    assert.deepEqual((await server.call("POST", "/windows/page", { page: 291 })).json, { ok: true });
+    for (const body of [{}, { page: -1 }, { page: "291" + "x" }, { page: 1.5 }]) {
+      assert.equal((await server.call("POST", "/windows/page", body)).status, 400, JSON.stringify(body));
+    }
+    assert.equal((await server.call("POST", "/windows/page", { page: 1 }, false)).status, 401);
+    assert.deepEqual(server.osCalls(), [{ fn: "showPage", args: [291] }]);
+  });
+});

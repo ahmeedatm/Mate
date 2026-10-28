@@ -1,5 +1,6 @@
 import { run, osascript } from "./run.ts";
 import { findAppBundle } from "./apps.ts";
+import { sendKeys } from "./keys.ts";
 import {
   labelDisplays,
   type AppWindow,
@@ -7,6 +8,7 @@ import {
   type OpenAction,
   type OpenApp,
   type OpenWindows,
+  type Page,
   type RawScreen,
   type WindowsInfo,
   type WindowTarget,
@@ -122,7 +124,7 @@ function cgAll() {
       const b = o.kCGWindowBounds;
       // Couche 0 et assez grande : pas les barres d'outils ni les fenêtres techniques.
       if (o.kCGWindowLayer !== 0 || b.Width < 200 || b.Height < 200) return;
-      (out[o.kCGWindowOwnerPID] = out[o.kCGWindowOwnerPID] || []).push({ pos: [b.X, b.Y], size: [b.Width, b.Height], name: o.kCGWindowName || null });
+      (out[o.kCGWindowOwnerPID] = out[o.kCGWindowOwnerPID] || []).push({ pos: [b.X, b.Y], size: [b.Width, b.Height], name: o.kCGWindowName || null, wid: o.kCGWindowNumber });
     });
     return out;
   } catch (e) {
@@ -282,9 +284,8 @@ function displaysOf(all) {
 // Vue « Ouvertes » : toutes les applis qui ont une fenêtre, y compris sur les autres bureaux (plein
 // écran…). Le menu Fenêtre est lent à lire : seulement pour les applis dont le serveur de fenêtres
 // connaît une fenêtre que l'Accessibilité ne voit pas.
-function allApps(se, all) {
+function allApps(se, all, cg) {
   const apps = [];
-  const cg = cgAll();
   se.applicationProcesses.whose({ backgroundOnly: false })().forEach((p) => {
     let list, away = [];
     try { list = windowsOf(p); } catch (e) { return; }
@@ -299,18 +300,67 @@ function allApps(se, all) {
     try { name = String(p.applicationFile().name()).replace(/[.]app$/, ''); } catch (e) { name = p.name(); }
     // Sans identifiant de bundle (émulateur…) : désignée par son processus.
     const front = p.frontmost();
-    apps.push({ key: p.bundleIdentifier() || 'pid:' + p.unixId(), name: name, front: front, windows: list.map((e) => describe(all, e, front)).concat(away.map((e) => ({
+    apps.push({ key: p.bundleIdentifier() || 'pid:' + p.unixId(), name: name, front: front, pid: p.unixId(), windows: list.map((e) => describe(all, e, front)).concat(away.map((e) => ({
       index: 0, title: e.title, minimized: false, fullscreen: false, display: e.display, elsewhere: true, front: false, maximized: false,
     }))) });
   });
   return apps;
 }
 
+// Pages du balayage à trois doigts (Spaces), dans l'ordre, par écran : API privée de SkyLight, en lecture seule et
+// sans autorisation (comme yabai ou AltTab). Illisible : null, la tablette garde la vue sans pages.
+function spaces(all) {
+  try {
+    ObjC.bindFunction('CGSMainConnectionID', ['int', []]);
+    ObjC.bindFunction('CGSCopyManagedDisplaySpaces', ['void *', ['int']]);
+    ObjC.bindFunction('CGDisplayCreateUUIDFromDisplayID', ['void *', ['unsigned int']]);
+    ObjC.bindFunction('CFUUIDCreateString', ['void *', ['void *', 'void *']]);
+    const uuid = (id) => ObjC.castRefToObject($.CFUUIDCreateString(null, $.CGDisplayCreateUUIDFromDisplayID(id))).js;
+    const pages = [];
+    ObjC.deepUnwrap(ObjC.castRefToObject($.CGSCopyManagedDisplaySpaces($.CGSMainConnectionID()))).forEach((d) => {
+      // « Main » quand les écrans partagent leurs pages (réglage « Les écrans disposent de Spaces distincts » coupé).
+      const s = all.length === 1 ? all[0] : all.find((x) => uuid(x.id) === d['Display Identifier']);
+      const current = d['Current Space'] && d['Current Space'].ManagedSpaceID;
+      d.Spaces.forEach((sp) => pages.push({
+        id: sp.ManagedSpaceID, display: s ? s.id : null, fullscreen: sp.type === 4, current: sp.ManagedSpaceID === current,
+        pid: sp.pid, wid: sp.fs_wid,
+      }));
+    });
+    return pages;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Fenêtre de chaque page plein écran : une fenêtre de son appli en plein écran ou sur un autre bureau, du même titre
+// que celle du serveur de fenêtres quand il est lisible (Enregistrement de l'écran), sinon la seule ou la première.
+function assignPages(apps, pages, cg) {
+  pages.filter((pg) => pg.fullscreen).forEach((pg) => {
+    const app = apps.find((a) => a.pid === pg.pid);
+    if (!app) return;
+    pg.app = app.name;
+    const free = app.windows.filter((w) => w.page === undefined && (w.fullscreen || w.elsewhere));
+    const known = ((cg && cg[pg.pid]) || []).find((c) => c.wid === pg.wid);
+    const name = known && known.name;
+    const w = (name && free.find((x) => sameTitle(x.title, name) || sameTitle(name, x.title))) ||
+      free.find((x) => x.fullscreen) || free[0];
+    if (w) w.page = pg.id;
+  });
+  pages.forEach((pg) => { delete pg.pid; delete pg.wid; });
+}
+
 function run(argv) {
   const req = JSON.parse(argv[0]);
   const all = screens();
+  if (req.op === 'pages') return JSON.stringify(spaces(all));
   const se = Application('System Events');
-  if (req.op === 'all') return JSON.stringify({ apps: allApps(se, all), displays: displaysOf(all) });
+  if (req.op === 'all') {
+    const cg = cgAll();
+    const apps = allApps(se, all, cg);
+    const pages = spaces(all);
+    if (pages) assignPages(apps, pages, cg);
+    return JSON.stringify({ apps: apps, displays: displaysOf(all), pages: pages });
+  }
   // Sans appli (écrans seulement) : System Events n'est pas interrogé, macOS ne demande aucune autorisation.
   const procs = req.pid ? se.applicationProcesses.whose({ unixId: req.pid })() : req.bundleId ? se.applicationProcesses.whose({ bundleIdentifier: req.bundleId })() : [];
   const proc = procs[0];
@@ -390,9 +440,27 @@ export function placeWindow(app: string, opts: { window?: WindowTarget; display?
 /** Toutes les applis qui ont une fenêtre affichée (vue « Ouvertes »), la plus en avant d'abord ; `key` : identifiant de bundle. */
 export async function listOpenWindows(): Promise<OpenWindows> {
   const raw = await osascript(SCRIPT, [JSON.stringify({ op: "all" })], "JavaScript");
-  const parsed = JSON.parse(raw) as { apps: (OpenApp & { front: boolean })[]; displays: RawScreen[] };
-  const apps = parsed.apps.sort((a, b) => Number(b.front) - Number(a.front)).map(({ front: _, ...app }) => app);
-  return { apps, displays: labelDisplays(parsed.displays) };
+  const parsed = JSON.parse(raw) as {
+    apps: (OpenApp & { front: boolean; pid: number })[];
+    displays: RawScreen[];
+    pages: Page[] | null;
+  };
+  const apps = parsed.apps.sort((a, b) => Number(b.front) - Number(a.front)).map(({ front: _, pid: __, ...app }) => app);
+  return { apps, displays: labelDisplays(parsed.displays), ...(parsed.pages ? { pages: parsed.pages } : {}) };
+}
+
+/**
+ * Passe sur une page du balayage à trois doigts comme le ferait Ctrl + flèche (raccourci de Mission Control, actif
+ * par défaut) : autant de pas que de pages d'écart sur son écran.
+ */
+export async function showPage(id: number) {
+  const pages = JSON.parse(await osascript(SCRIPT, [JSON.stringify({ op: "pages" })], "JavaScript")) as Page[] | null;
+  const target = pages?.find((p) => p.id === id);
+  if (!pages || !target) throw new Error("Page introuvable sur le Mac");
+  const same = pages.filter((p) => p.display === target.display);
+  const from = same.findIndex((p) => p.current);
+  const to = same.indexOf(target);
+  for (let i = 0; i < Math.abs(to - from); i++) await sendKeys(to > from ? "ctrl+right" : "ctrl+left");
 }
 
 /** Pilote une fenêtre de la vue « Ouvertes », désignée par l'identifiant de son appli. */

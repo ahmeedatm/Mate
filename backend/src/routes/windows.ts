@@ -1,7 +1,7 @@
 import { createReadStream } from "node:fs";
 import type { FastifyInstance } from "fastify";
 import { appIconFile } from "../deck.ts";
-import { controlOpenWindow, listOpenWindows } from "../os.ts";
+import { controlOpenWindow, listOpenWindows, showPage } from "../os.ts";
 import type { Layout, OpenAction, WindowTarget } from "../screens.ts";
 
 /** Fenêtre visée (vue « Ouvertes » et fenêtres d'une tuile du deck). */
@@ -68,6 +68,25 @@ export default async function windowRoutes(app: FastifyInstance) {
         controlOpenWindow(key, window, action, action === "place" ? { display, layout: layout ?? "keep" } : undefined),
       );
       return list === false ? { ok: true } : listOpenWindows();
+    },
+  );
+
+  // Mac : page du balayage à trois doigts ; réponse dès les touches envoyées, l'animation suit.
+  app.post<{ Body: { page: number } }>(
+    "/windows/page",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["page"],
+          additionalProperties: false,
+          properties: { page: { type: "integer", minimum: 0 } },
+        },
+      },
+    },
+    async (req) => {
+      await oneAtATime(() => showPage(req.body.page));
+      return { ok: true };
     },
   );
 }

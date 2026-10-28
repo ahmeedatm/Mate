@@ -327,6 +327,11 @@ export async function controlOpenWindow(
   return listOpenWindows();
 }
 
+export async function showPage(id: number) {
+  if (!canControl) unsupported();
+  record("showPage", id);
+}
+
 export async function systemCommand(command: SystemCommand) {
   record("systemCommand", command);
 }
