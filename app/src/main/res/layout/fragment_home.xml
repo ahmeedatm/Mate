@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Accueil à widgets (HomeFragment, WidgetGrid) : appui long = mode Modifier, avec sa barre en haut ;
-     points des pages en bas quand il y en a plusieurs. Panneau document ouvert : 2 colonnes, la page défile. -->
+<!-- Écran Profils (HomeFragment, WidgetGrid) : barre de profil en haut (flèches, nom, pastilles), appui long sur la
+     grille = mode Modifier, avec sa barre. Panneau document ouvert : 2 colonnes, la page défile. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -44,19 +44,6 @@
                 android:text="@string/home_edit_add" />
 
             <Button
-                android:id="@+id/home_edit_templates"
-                style="@style/ActionButton"
-                android:layout_marginStart="8dp"
-                android:drawableStart="@drawable/ic_widgets"
-                android:text="@string/home_edit_templates" />
-
-            <Button
-                android:id="@+id/home_edit_page"
-                style="@style/ActionButton"
-                android:layout_marginStart="8dp"
-                android:text="@string/home_edit_page" />
-
-            <Button
                 android:id="@+id/home_edit_cancel"
                 style="@style/ActionButton"
                 android:layout_marginStart="8dp"
@@ -69,33 +56,72 @@
                 android:text="@string/home_edit_done" />
         </LinearLayout>
 
-        <FrameLayout
+        <LinearLayout
+            android:id="@+id/home_profile_bar"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp">
+
+            <ImageButton
+                android:id="@+id/home_profile_prev"
+                style="@style/IconButton.Flat"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:contentDescription="@string/profile_prev"
+                android:src="@drawable/ic_chevron_left" />
+
+            <LinearLayout
+                android:id="@+id/home_profile_title"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/home_profile_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="?attr/c_font_title"
+                    android:maxLines="1"
+                    android:textColor="?attr/c_text"
+                    android:textSize="22sp" />
+
+                <!-- Une pastille par profil, sur une seule ligne ; toucher = aller au profil. -->
+                <LinearLayout
+                    android:id="@+id/home_dots"
+                    android:layout_width="wrap_content"
+                    android:layout_height="12dp"
+                    android:gravity="center"
+                    android:orientation="horizontal" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/home_profile_next"
+                style="@style/IconButton.Flat"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:contentDescription="@string/profile_next"
+                android:rotation="180"
+                android:src="@drawable/ic_chevron_left" />
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/home_scroll"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1">
+            android:layout_weight="1"
+            android:fillViewport="true">
 
-            <ScrollView
-                android:id="@+id/home_scroll"
+            <com.unowhy.companion.ui.home.WidgetGrid
+                android:id="@+id/home_grid"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:fillViewport="true">
-
-                <com.unowhy.companion.ui.home.WidgetGrid
-                    android:id="@+id/home_grid"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="24dp" />
-            </ScrollView>
-
-            <!-- Une pastille par page, dans la marge du bas de la grille ; toucher = aller à la page. -->
-            <LinearLayout
-                android:id="@+id/home_dots"
-                android:layout_width="wrap_content"
-                android:layout_height="24dp"
-                android:layout_gravity="bottom|center_horizontal"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:visibility="gone" />
-        </FrameLayout>
+                android:layout_height="wrap_content"
+                android:padding="24dp" />
+        </ScrollView>
     </LinearLayout>
 </FrameLayout>

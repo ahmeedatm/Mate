@@ -31,7 +31,6 @@ import com.unowhy.companion.ui.home.HomeWidget
 import com.unowhy.companion.ui.home.Placed
 import com.unowhy.companion.ui.home.ROWS
 import com.unowhy.companion.ui.home.RowProfile
-import com.unowhy.companion.ui.home.Template
 import com.unowhy.companion.ui.home.WidgetGrid
 import com.unowhy.companion.ui.home.WidgetType
 import kotlinx.coroutines.CoroutineScope
@@ -41,7 +40,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Accueil à widgets, personnalisable comme un écran de téléphone : appui long = mode Modifier (ajouter, retirer,
- * changer la taille, glisser, modèles, pages). La disposition est propre à la tablette ([HomeLayout]) ; l'agenda est
+ * changer la taille, glisser). Chaque page de la grille est un profil nommé, parcouru par la barre de profil en haut. La disposition est propre à la tablette ([HomeLayout]) ; l'agenda est
  * chargé ici une fois pour tous les widgets qui l'affichent, toutes les 5 min, le reste chaque minute.
  */
 class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
@@ -50,6 +49,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private lateinit var scroll: ScrollView
     private lateinit var editBar: View
     private lateinit var dots: LinearLayout
+    private lateinit var profileName: TextView
+    private lateinit var profilePrev: View
+    private lateinit var profileNext: View
 
     private lateinit var layout: HomeLayout
     /** Disposition au moment d'entrer dans le mode Modifier : « Annuler » y revient. */
@@ -82,12 +84,15 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         scroll = view.findViewById(R.id.home_scroll)
         editBar = view.findViewById(R.id.home_edit_bar)
         dots = view.findViewById(R.id.home_dots)
+        profileName = view.findViewById(R.id.home_profile_name)
+        profilePrev = view.findViewById(R.id.home_profile_prev)
+        profileNext = view.findViewById(R.id.home_profile_next)
+        profilePrev.setOnClickListener { showProfile(page - 1) }
+        profileNext.setOnClickListener { showProfile(page + 1) }
         grid.listener = this
         grid.blocked = { unreachable != null && dependsOnComputer(it) }
 
         view.findViewById<View>(R.id.home_edit_add).setOnClickListener { onAddAt(-1, -1) }
-        view.findViewById<View>(R.id.home_edit_templates).setOnClickListener { chooseTemplate() }
-        view.findViewById<View>(R.id.home_edit_page).setOnClickListener { addPage() }
         view.findViewById<View>(R.id.home_edit_cancel).setOnClickListener { endEdit(keep = false) }
         view.findViewById<View>(R.id.home_edit_done).setOnClickListener { endEdit(keep = true) }
 
@@ -177,7 +182,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         layout.widgets.forEach { addWidget(it) }
         page = page.coerceIn(0, layout.pages - 1)
         grid.page = page
-        renderDots()
+        renderProfileBar()
         activate()
     }
 
@@ -193,7 +198,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         return widget
     }
 
-    /** Seuls les widgets de la page à l'écran se mettent à jour en continu (Focus, lecture en cours). */
+    /** Seuls les widgets du profil à l'écran se mettent à jour en continu (Focus, lecture en cours). */
     private fun activate() {
         val visible = started && !isHidden
         widgets.forEach { (placed, widget) -> widget.setActive(visible && placed.page == page) }
@@ -210,7 +215,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
                     fetchCalendar()
                     renderCalendar()
                 }
-                for (widget in widgets.values.toList()) widget.load()
+                for (widget in shownWidgets()) widget.load()
                 // Sans widget Tâches, la pastille de la barre latérale n'a plus rien à compter.
                 if (widgets.keys.none { it.type == WidgetType.TASKS }) main?.setPendingTasks(0)
                 tick++
@@ -226,9 +231,12 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
                 fetchCalendar()
                 renderCalendar()
             }
-            for (widget in widgets.values.toList()) widget.load()
+            for (widget in shownWidgets()) widget.load()
         }
     }
+
+    /** Les widgets du profil affiché : les autres ne relisent pas l'ordinateur (tablette lente). */
+    private fun shownWidgets() = widgets.filterKeys { it.page == page }.values.toList()
 
     private fun showsCalendar() = widgets.keys.any {
         it.type == WidgetType.AGENDA || it.type == WidgetType.NEXT || it.type == WidgetType.HERO || it.type == WidgetType.DAYLINE
@@ -334,32 +342,51 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         if (!grid.editing) HomeLayout.save(requireContext(), layout, cadran)
     }
 
-    // --- Pages
+    // --- Profils
 
-    private fun showPage(index: Int) {
+    /** Nom du profil : celui donné par l'utilisateur, sinon « Bureau » pour le premier, « Profil N » pour les autres. */
+    fun profileName(index: Int): String =
+        layout.names.getOrNull(index)
+            ?: if (index == 0) getString(R.string.profile_first) else getString(R.string.profile_default, index + 1)
+
+    /** Affiche le profil [index] et charge tout de suite ses widgets. */
+    fun showProfile(index: Int) {
         page = index.coerceIn(0, layout.pages - 1)
         grid.page = page
-        renderDots()
+        renderProfileBar()
         activate()
+        scope.launch { shownWidgets().forEach { it.load() } }
     }
 
-    private fun renderDots() {
+    /** Profils ajoutés, renommés, déplacés ou retirés : widgets recréés, disposition enregistrée, barre relue. */
+    fun onProfilesChanged() {
+        build()
+        refreshAll()
+        save()
+    }
+
+    private fun renderProfileBar() {
+        profileName.text = profileName(page)
+        profilePrev.isEnabled = page > 0
+        profilePrev.alpha = if (page > 0) 1f else DISABLED_ALPHA
+        profileNext.isEnabled = page < layout.pages - 1
+        profileNext.alpha = if (page < layout.pages - 1) 1f else DISABLED_ALPHA
         dots.removeAllViews()
-        dots.visibility = if (layout.pages > 1 || grid.editing) View.VISIBLE else View.GONE
+        dots.visibility = if (layout.pages > 1) View.VISIBLE else View.GONE
         for (i in 0 until layout.pages) {
             dots.addView(View(requireContext()).apply {
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     setColor(themeColor(context, if (i == page) R.attr.c_accent else R.attr.c_text_faint))
                 }
-                setOnClickListener { showPage(i) }
-            }, LinearLayout.LayoutParams(dp(12), dp(12)).apply { marginStart = dp(8); marginEnd = dp(8) })
+                setOnClickListener { showProfile(i) }
+            }, LinearLayout.LayoutParams(dp(8), dp(8)).apply { marginStart = dp(4); marginEnd = dp(4) })
         }
     }
 
     override fun onPageSwipe(delta: Int) {
         val next = page + delta
-        if (next in 0 until layout.pages) showPage(next)
+        if (next in 0 until layout.pages) showProfile(next)
     }
 
     // --- Mode Modifier
@@ -368,7 +395,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         backup = layout.copy()
         grid.editing = true
         editBar.visibility = View.VISIBLE
-        renderDots()
     }
 
     private fun endEdit(keep: Boolean) {
@@ -384,11 +410,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             return
         }
         HomeLayout.save(requireContext(), layout, cadran)
-        showPage(page)
-    }
-
-    private fun addPage() {
-        showPage(layout.addProfile(null))
+        showProfile(page)
     }
 
     override fun onAddAt(col: Int, row: Int) {
@@ -508,35 +530,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         grid.invalidate()
     }
 
-    private fun chooseTemplate() {
-        val ctx = requireContext()
-        val templates = Template.entries.filter { it.cadran == cadran }
-        val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(8), dp(16), dp(8)) }
-        val dialog = AlertDialog.Builder(ctx)
-            .setTitle(R.string.home_templates_title)
-            .setView(list)
-            .setNegativeButton(R.string.cancel, null)
-            .create()
-        for (template in templates) list.addView(LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundResource(R.drawable.row_bg)
-            setPadding(dp(16), dp(12), dp(16), dp(12))
-            addView(TextView(ctx).apply { setText(template.title); textSize = 18f; setTextColor(themeColor(ctx, R.attr.c_text)) })
-            addView(TextView(ctx).apply { setText(template.description); textSize = 14f; setTextColor(themeColor(ctx, R.attr.c_text_dim)) })
-            setOnClickListener {
-                dialog.dismiss()
-                // Le modèle remplace l'accueil ; « Annuler » ramène celui d'avant.
-                layout = template.build()
-                page = 0
-                build()
-                refreshAll()
-            }
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
-        dialog.showImmersive()
-    }
-
     private companion object {
         /** Aujourd'hui et les 7 jours suivants : « mardi soir » se voit dès aujourd'hui. */
         const val AGENDA_DAYS = 8
+        const val DISABLED_ALPHA = 0.3f
     }
 }
