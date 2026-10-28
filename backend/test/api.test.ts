@@ -255,7 +255,14 @@ describe("mises à jour de la tablette", () => {
     const run = (env: Record<string, string>) =>
       promisify(execFile)(process.execPath, ["--import", "tsx", "scripts/updates.ts", "essai"], {
         cwd: path.resolve(import.meta.dirname, ".."),
-        env: { ...process.env, DATA_DIR: server.dataDir, UPDATES_URL: `http://127.0.0.1:${port}/essai`, GITLAB_TOKEN: "", ...env },
+        env: {
+          ...process.env,
+          DATA_DIR: server.dataDir,
+          UPDATES_URL: `http://127.0.0.1:${port}/essai`,
+          GITLAB_TOKEN: "",
+          UPDATE_DEPLOY_TOKEN: "",
+          ...env,
+        },
       });
     const companion = async () =>
       (await server.call("GET", "/updates")).json.updates.find((u: any) => u.package === "com.unowhy.companion");
