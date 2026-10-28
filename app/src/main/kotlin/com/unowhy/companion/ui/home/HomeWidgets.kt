@@ -90,9 +90,9 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     protected fun color(id: Int) = themeColor(context, id)
     protected fun dp(value: Int) = context.dp(value)
 
-    /** Carte de fond commune (même style que les cartes de l'application). */
+    /** Carte de fond commune (même style que les cartes de l'application, translucide en Rétro). */
     protected fun <T : View> T.asCard(padding: Int? = null): T = apply {
-        setBackgroundResource(themeRes(context, R.attr.c_card_bg))
+        setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
         val px = padding?.let { dp(it) } ?: themePx(context, R.attr.c_card_pad)
         setPadding(px, px, px, px)
     }
@@ -124,6 +124,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.WATER -> WaterWidget(context, host, placed)
                 WidgetType.AUDIO -> AudioWidget(context, host, placed)
                 WidgetType.MEDIA -> MediaWidget(context, host, placed)
+                WidgetType.PERF -> PerfWidget(context, host, placed)
                 WidgetType.KEYS -> KeysWidget(context, host, placed)
                 WidgetType.WEATHER -> WeatherWidget(context, host, placed)
                 WidgetType.NOTE -> NoteWidget(context, host, placed)
@@ -469,7 +470,6 @@ class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val text = label(22f).apply { gravity = Gravity.CENTER_VERTICAL }
     override val view = LinearLayout(context).asCard().apply {
         orientation = LinearLayout.VERTICAL
-        setBackgroundResource(themeRes(context, R.attr.c_tile_bg))
         setPadding(dp(20), dp(16), dp(20), dp(16))
         addView(cardTitle(R.string.widget_note, R.drawable.ic_edit))
         addView(text, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(6) })

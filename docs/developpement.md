@@ -201,9 +201,9 @@ Un tag `vX.Y.Z` posé sur `main` lance les mêmes tests, puis :
 git tag v1.2.0 origin/main && git push origin v1.2.0
 ```
 
-Version de l'appli : `versionName` = `X.Y.Z` du tag, `versionCode` = X × 10000 + Y × 100 + Z (Y et Z sous 100), donnés à Gradle par `-PappVersion=X.Y.Z`. Sans ce paramètre : `0.0.0` (code 1, Android refuse 0). La tablette n'installe une mise à jour que si son `versionCode` est plus grand : chaque tag doit être supérieur au précédent.
+Version de l'appli : `versionName` = `X.Y.Z` du tag, `versionCode` = (X × 10000 + Y × 100 + Z) × 1000 (Y et Z sous 100), donnés à Gradle par `-PappVersion=X.Y.Z`. Les 999 codes entre deux tags servent aux essais depuis une MR (`-PappVersion=X.Y.Z-essai.N` : code du dernier tag + 1 + N mod 999). Sans ce paramètre : `0.0.0` (code 1, Android refuse 0). La tablette n'installe une mise à jour que si son `versionCode` est plus grand : chaque tag doit être supérieur au précédent.
 
-Numérotation : premier tag `v0.0.1` (code 1), puis `v0.0.2` (2)… `v0.1.0` (100). Pas de `v1.0.0` (10000) tant qu'il n'y a pas de MVP concret. Vérifié en local : `assembleRelease -PappVersion=0.0.1` donne `versionCode='1' versionName='0.0.1'` (aapt2), même entrée JSON que le job. Attention : un APK construit sans `-PappVersion` porte le code par défaut de `app/build.gradle.kts`, pas celui d'un tag : la tablette refuse toute mise à jour dont le code n'est pas strictement plus grand que celui de l'APK installé.
+Numérotation : `v0.0.1` (code 1) et `v0.0.2` (2) ont été publiés avant le × 1000 ; la suite part de `v0.0.3` (3000), toujours au-dessus. `v0.1.0` = 100000. Pas de `v1.0.0` tant qu'il n'y a pas de MVP concret. Vérifié en local (manifeste fusionné) : `0.0.3` → 3000, `0.1.0` → 100000, `0.0.2-essai.169` → 2170, sans paramètre → 1. Attention : un APK construit sans `-PappVersion` porte le code par défaut de `app/build.gradle.kts`, pas celui d'un tag : la tablette refuse toute mise à jour dont le code n'est pas strictement plus grand que celui de l'APK installé.
 
 **Clé de signature**, jamais dans le dépôt. Variables CI du projet, protégées et masquées : `RELEASE_KEYSTORE_BASE64` (fichier PKCS12 en base64, sur une ligne) et `RELEASE_KEYSTORE_PASSWORD` (mot de passe du fichier et de la clé, alias `companion`). Une variable protégée n'existe que pour une branche ou un tag protégé : protéger les tags `v*` (Settings > Repository > Protected tags), sinon `android-release` échoue (« Clé de signature absente »). Créer la clé une fois, puis la garder hors du dépôt (perdue = plus aucune mise à jour possible des tablettes) :
 
@@ -233,6 +233,28 @@ DATA_DIR=paquet npm run updates:add -- ~/Téléchargements/companion-1.2.0.json 
 `scripts/updates.ts` copie l'APK dans `<données>/updates/` et remplace la version précédente du Companion dans `manifest.json` ; les autres entrées (WebView) restent. La tablette la voit dans Réglages > Mises à jour.
 
 Changement de signature : Android refuse une mise à jour signée par une autre clé. Une tablette qui a reçu l'APK debug (adb, artefact du job `android`) n'acceptera l'APK de release qu'après désinstallation du Companion, donc, en kiosque, après avoir refait la procédure de [kiosque.md](kiosque.md) avec l'APK de release.
+
+### Déployer un essai depuis une MR
+
+Pour essayer l'appli d'une MR sur une tablette en kiosque, sans fusionner ni tagger. La tablette n'accepte qu'un APK signé par la clé de release, d'un `versionCode` plus grand : seul un pipeline de ref protégée voit la clé.
+
+1. Une fois : protéger les branches `essai/*` (Settings > Repository > Protected branches, Allowed to merge et Allowed to push : Maintainers).
+2. Depuis la branche de la MR, la pousser sur une branche d'essai à son numéro : `git push origin HEAD:essai/mr-<iid>`. Les commits suivants de la MR s'y poussent de la même façon. Push refusé (MR rebasée, branche protégée sans force push) : supprimer la branche dans Code > Branches, puis repousser. Supprimer aussi la branche quand l'essai est fini.
+3. Dans le pipeline de `essai/mr-<iid>`, lancer le job manuel `essai-android` (Build > Pipelines). `essai-updates` suit seul et écrit dans son journal la commande à lancer.
+4. Sur l'ordinateur de la tablette, dans `backend/` (`GITLAB_TOKEN`, jeton personnel `read_api`, ou `UPDATE_DEPLOY_TOKEN` dans `backend/.env`) :
+
+```bash
+npm run updates:essai                   # compagnon lancé depuis le dépôt (backend/.data)
+DATA_DIR=paquet npm run updates:essai   # compagnon installé par paquet
+```
+
+5. Sur la tablette : Réglages > Mises à jour. Sans rien toucher, elle l'installe aussi seule à sa prochaine vérification (démarrage, puis toutes les 6 h), comme toute tablette reliée à cet ordinateur.
+
+Version : `X.Y.Z-essai.N`, X.Y.Z = dernier tag de la branche, N = numéro du pipeline ; code = celui du tag + 1 + N mod 999 (`app/build.gradle.kts`), au-dessus du tag installé et sous le tag suivant. Tous les 999 pipelines, le code repart du bas : un essai peut alors être plus petit que le précédent et la tablette le refuse ; relancer un pipeline ne suffit pas, poser un tag. L'APK d'essai lit les mises à jour du serveur central dans `latest`, comme une release : la tablette repasse seule à la release suivante. Pas de retour à une version plus ancienne (Android refuse un code plus petit).
+
+`essai-updates` dépose l'APK et son `manifest.json` dans le paquet générique `companion-updates`, version `essai`, jamais `latest` : aucune tablette ne lit ce paquet seule. Un seul essai à la fois, le dernier remplace. `npm run updates:essai` (`backend/scripts/updates.ts`) le télécharge, vérifie taille et SHA-256, puis fait comme `updates:add`. Autre paquet : `UPDATES_URL=<base>`.
+
+Sécurité : l'APK d'essai porte la clé de release et le deploy token des tablettes, comme une release. Les jobs ne tournent que sur une branche protégée (`$CI_COMMIT_REF_PROTECTED`, sinon pas de job), la clé n'est jamais affichée, l'artefact expire au bout d'un jour. Sur une branche `essai/*`, aucun autre job ne tourne (les tests sont ceux de la MR).
 
 ## Mettre à jour les ordinateurs de test (installés par paquet)
 
