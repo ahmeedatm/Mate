@@ -12,10 +12,12 @@ import android.content.pm.PackageManager
 import android.os.UserManager
 import android.provider.Settings
 import com.unowhy.companion.Prefs
+import com.unowhy.companion.trial.Trial
 
 /**
  * Mode kiosque. Ne fait rien tant que l'appli n'est pas device owner (voir docs/kiosque.md) :
- * aucun risque de bloquer la tablette pendant le développement.
+ * aucun risque de bloquer la tablette pendant le développement. Seule exception, l'appli d'essai (trial/Trial.kt) :
+ * jamais device owner, elle se verrouille à l'écran si la stable l'y autorise.
  */
 object Kiosk {
 
@@ -55,18 +57,24 @@ object Kiosk {
 
     /** À appeler dans onResume : verrouille l'appli à l'écran et en fait l'écran d'accueil. */
     fun enter(activity: Activity) {
-        if (!isDeviceOwner(activity)) return
+        if (!isDeviceOwner(activity)) {
+            // Essai ouvert depuis la stable en kiosque : verrouillé lui aussi, sans accueil ni réglages du device owner.
+            if (dpm(activity).isLockTaskPermitted(activity.packageName) && !isLocked(activity)) activity.startLockTask()
+            return
+        }
         // Le blocage des installations reste actif même kiosque suspendu.
         lockApps(activity, !Prefs.allowInstalls(activity))
         hideSqool(activity, true)
-        grantPermissions(activity)
+        grantPermissions(activity, activity.packageName)
+        grantPermissions(activity, Trial.TRIAL)
         // Pas d'écran de verrouillage à faire glisser après une mise en veille (aucun code n'est défini).
         runCatching { dpm(activity).setKeyguardDisabled(admin(activity), true) }
         autoTime(activity)
         if (suspended) return
         val dpm = dpm(activity)
-        // Seule l'appli elle-même : la caméra passe par Camera2 (mode Caméra), plus par l'appli photo du système.
-        dpm.setLockTaskPackages(admin(activity), arrayOf(activity.packageName))
+        // L'appli et son essai (installé à côté, ouvert depuis Réglages) : la caméra passe par Camera2 (mode Caméra),
+        // plus par l'appli photo du système.
+        dpm.setLockTaskPackages(admin(activity), arrayOf(activity.packageName, Trial.TRIAL))
         setHome(activity, true)
         hideLaunchers(activity, true)
         if (!isLocked(activity)) activity.startLockTask()
@@ -75,6 +83,8 @@ object Kiosk {
     fun exit(activity: Activity) {
         suspended = true
         hideLaunchers(activity, false)
+        // Plus aucune appli autorisée : l'essai ouvert ensuite ne se verrouille pas à la place de la stable.
+        runCatching { dpm(activity).setLockTaskPackages(admin(activity), emptyArray()) }
         if (isLocked(activity)) activity.stopLockTask()
     }
 
@@ -108,11 +118,13 @@ object Kiosk {
         }
     }
 
-    private fun grantPermissions(context: Context) {
+    /** Micro et caméra accordés à `pkg` (l'appli ou son essai). Sans effet hors device owner ou paquet absent. */
+    fun grantPermissions(context: Context, pkg: String) {
+        if (!isDeviceOwner(context)) return
         val dpm = dpm(context)
         for (permission in GRANTED_PERMISSIONS) {
             runCatching {
-                dpm.setPermissionGrantState(admin(context), context.packageName, permission, DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED)
+                dpm.setPermissionGrantState(admin(context), pkg, permission, DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED)
             }
         }
     }

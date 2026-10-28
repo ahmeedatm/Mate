@@ -28,6 +28,7 @@ import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.Link
 import com.unowhy.companion.remote.RemoteLink
+import com.unowhy.companion.trial.Trial
 import com.unowhy.companion.ui.AgentAskOverlay
 import com.unowhy.companion.ui.AgentLight
 import com.unowhy.companion.ui.AppTheme
@@ -97,6 +98,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         AppTheme.apply(this)
         super.onCreate(savedInstanceState)
+        // Appli d'essai : ordinateurs de la stable repris avant de construire les écrans, sans réappairer.
+        Trial.importComputers(this)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContentView(R.layout.activity_main)
         Grain.applyTo(findViewById(android.R.id.content))

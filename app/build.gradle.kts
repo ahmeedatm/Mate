@@ -27,12 +27,15 @@ val updateHeader = (findProperty("updateHeader") as String?) ?: ""
 // Sans tag : 0.0.0, code 1 (Android refuse 0) : une build locale ne bloque aucun tag, et un APK debug ne reçoit
 // de toute façon pas un APK release (signature différente).
 val appVersion = (findProperty("appVersion") as String?) ?: "0.0.0"
-val appVersionCode = Regex("""(\d+)\.(\d{1,2})\.(\d{1,2})(?:-essai\.(\d+))?""").matchEntire(appVersion)
-    ?.destructured?.let { (x, y, z, n) ->
-        val tag = (x.toInt() * 10000 + y.toInt() * 100 + z.toInt()) * 1000
-        (if (n.isEmpty()) tag else tag + 1 + n.toInt() % 999).coerceAtLeast(1)
-    }
+val versionParts = Regex("""(\d+)\.(\d{1,2})\.(\d{1,2})(?:-essai\.(\d+))?""").matchEntire(appVersion)?.destructured
     ?: throw GradleException("appVersion « $appVersion » : attendu X.Y.Z ou X.Y.Z-essai.N, Y et Z inférieurs à 100")
+val appVersionCode = versionParts.let { (x, y, z, n) ->
+    val tag = (x.toInt() * 10000 + y.toInt() * 100 + z.toInt()) * 1000
+    (if (n.isEmpty()) tag else tag + 1 + n.toInt() % 999).coerceAtLeast(1)
+}
+// Un essai est une autre appli (com.unowhy.companion.essai, « Companion essai »), installée à côté de la stable : la
+// stable reste device owner et kiosque, et on revient à elle sans réinstaller (docs/developpement.md, section Release).
+val trial = versionParts.component4().isNotEmpty()
 
 // Clé de signature release, jamais dans le dépôt : fichier PKCS12 et mot de passe donnés par l'environnement (CI).
 val releaseKeystore = providers.environmentVariable("RELEASE_KEYSTORE").orNull
@@ -47,6 +50,9 @@ android {
         targetSdk = 34
         versionCode = appVersionCode
         versionName = appVersion
+        if (trial) applicationIdSuffix = ".essai"
+        manifestPlaceholders["appLabel"] = if (trial) "Companion essai" else "Companion"
+        buildConfigField("boolean", "TRIAL", "$trial")
         buildConfigField("String", "DEFAULT_BACKEND_URL", "\"$backendUrl\"")
         buildConfigField("String", "TECH_CODE", "\"$techCode\"")
         buildConfigField("String", "INSTALL_URL", "\"$installUrl\"")

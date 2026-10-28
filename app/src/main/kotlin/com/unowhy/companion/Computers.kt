@@ -41,11 +41,7 @@ object Computers {
     fun all(context: Context): List<Computer> {
         migrate(context)
         val raw = prefs(context).getString(KEY_LIST, null) ?: return emptyList()
-        val array = JSONArray(raw)
-        return (0 until array.length()).map { i ->
-            val j = array.getJSONObject(i)
-            Computer(j.getString("id"), j.getString("name"), j.getString("url"), j.optString("token"), j.optString("os"), j.optLong("lastUsedMs"))
-        }
+        return parse(JSONArray(raw))
     }
 
     fun active(context: Context): Computer? {
@@ -85,7 +81,33 @@ object Computers {
         return adopted
     }
 
-    private fun write(context: Context, list: List<Computer>) {
+    /**
+     * Liste et actif, pour l'appli d'essai installée à côté (trial/ComputersProvider). Contient les jetons : ne sort
+     * de l'appli que vers une appli signée par la même clé.
+     */
+    fun export(context: Context): String =
+        JSONObject().put("computers", toJson(all(context))).put("active", active(context)?.id).toString()
+
+    /**
+     * Appli d'essai : reprend les ordinateurs de la stable ([export]) tant qu'elle n'en a aucun, sans réappairer.
+     * Ensuite, chacune garde sa liste. @return true si des ordinateurs ont été repris.
+     */
+    fun importIfEmpty(context: Context, raw: String): Boolean {
+        if (all(context).isNotEmpty()) return false
+        val json = JSONObject(raw)
+        val list = parse(json.getJSONArray("computers"))
+        if (list.isEmpty()) return false
+        write(context, list)
+        json.optString("active").takeIf { id -> list.any { it.id == id } }?.let { prefs(context).edit().putString(KEY_ACTIVE, it).apply() }
+        return true
+    }
+
+    private fun parse(array: JSONArray): List<Computer> = (0 until array.length()).map { i ->
+        val j = array.getJSONObject(i)
+        Computer(j.getString("id"), j.getString("name"), j.getString("url"), j.optString("token"), j.optString("os"), j.optLong("lastUsedMs"))
+    }
+
+    private fun toJson(list: List<Computer>): JSONArray {
         val array = JSONArray()
         list.sortedByDescending { it.lastUsedMs }.forEach {
             array.put(
@@ -93,7 +115,11 @@ object Computers {
                     .put("os", it.os).put("lastUsedMs", it.lastUsedMs),
             )
         }
-        prefs(context).edit().putString(KEY_LIST, array.toString()).apply()
+        return array
+    }
+
+    private fun write(context: Context, list: List<Computer>) {
+        prefs(context).edit().putString(KEY_LIST, toJson(list).toString()).apply()
     }
 
     /** Ancienne version (une seule URL + jeton dans Réglages) : devient le premier ordinateur de la liste. */

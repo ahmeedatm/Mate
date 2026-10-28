@@ -16,6 +16,13 @@
     <!-- Mises à jour installées par le Companion (device owner : sans confirmation) : moteur web, Companion. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- Ordinateurs appairés lus par l'appli d'essai dans la stable (trial/ComputersProvider) : seulement entre applis
+         signées par la même clé. Nom fixe, déclaré à l'identique par la stable et l'essai. -->
+    <permission
+        android:name="com.unowhy.companion.permission.COMPUTERS"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.unowhy.companion.permission.COMPUTERS" />
+
     <queries>
         <!-- Android 11+ : sans cette déclaration, TextToSpeech ne voit aucun moteur de synthèse vocale. -->
         <intent>
@@ -30,11 +37,14 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
         </intent>
+        <!-- Android 11+ : la stable et l'essai se voient (Réglages > Mises à jour, ordinateurs appairés). -->
+        <package android:name="com.unowhy.companion" />
+        <package android:name="com.unowhy.companion.essai" />
     </queries>
 
     <application
         android:allowBackup="false"
-        android:label="@string/app_name"
+        android:label="${appLabel}"
         android:icon="@drawable/ic_launcher"
         android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@style/Theme.Companion">
@@ -77,6 +87,13 @@
                 <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
             </intent-filter>
         </receiver>
+
+        <!-- Ordinateurs appairés, pour l'essai installé à côté : permission signature, jamais d'autre appli. -->
+        <provider
+            android:name=".trial.ComputersProvider"
+            android:authorities="${applicationId}.computers"
+            android:exported="true"
+            android:permission="com.unowhy.companion.permission.COMPUTERS" />
 
         <!-- Relance l'appli (et le kiosque) juste après sa mise à jour. -->
         <receiver

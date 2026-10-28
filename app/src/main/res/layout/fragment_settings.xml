@@ -245,6 +245,13 @@
                     android:drawableStart="@drawable/ic_refresh"
                     android:text="@string/updates_title" />
 
+                <!-- Stable : « Ouvrir l'essai » si l'appli d'essai est installée ; essai : « Revenir à la stable ». -->
+                <Button
+                    android:id="@+id/settings_switch_app"
+                    style="@style/ActionButton"
+                    android:layout_marginEnd="12dp"
+                    android:visibility="gone" />
+
                 <Button
                     android:id="@+id/settings_updates_check"
                     style="@style/ActionButton"
@@ -259,6 +266,16 @@
                 android:text="@string/updates_hint"
                 android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/settings_trial_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/trial_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp"
+                android:visibility="gone" />
 
             <LinearLayout
                 android:id="@+id/settings_updates"

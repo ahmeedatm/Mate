@@ -366,9 +366,17 @@ helper-windows:
       -PupdateUrl="$UPDATES_URL" -PupdateHeader="Deploy-Token: $UPDATE_DEPLOY_TOKEN"
     - mkdir -p dist && cp app/build/outputs/apk/release/app-release.apk dist/companion-$VERSION.apk
     - $ANDROID_HOME/build-tools/36.0.0/apksigner verify --print-certs dist/companion-$VERSION.apk
-    - CODE=$($ANDROID_HOME/build-tools/36.0.0/aapt2 dump badging dist/companion-$VERSION.apk | sed -n "1s/.*versionCode='\([0-9]*\)'.*/\1/p")
-    - jq -n --arg v "$VERSION" --argjson c "$CODE" --arg f "companion-$VERSION.apk"
-      '{package:"com.unowhy.companion", label:"Companion", versionCode:$c, versionName:$v, file:$f}'
+    # Paquet, libellé et code lus dans l'APK : com.unowhy.companion « Companion », ou l'essai com.unowhy.companion.essai
+    # « Companion essai », appli à part installée à côté (app/build.gradle.kts).
+    - $ANDROID_HOME/build-tools/36.0.0/aapt2 dump badging dist/companion-$VERSION.apk > /tmp/badging.txt
+    - PKG=$(sed -n "1s/^package:.name='\([^']*\)'.*/\1/p" /tmp/badging.txt)
+    - CODE=$(sed -n "1s/.*versionCode='\([0-9]*\)'.*/\1/p" /tmp/badging.txt)
+    - LABEL=$(sed -n "s/^application-label:'\(.*\)'$/\1/p" /tmp/badging.txt)
+    # Un essai qui porterait le paquet de la stable la remplacerait sur la tablette, sans retour possible.
+    - case "$VERSION" in *-essai.*) WANT=com.unowhy.companion.essai ;; *) WANT=com.unowhy.companion ;; esac
+    - test "$PKG" = "$WANT" || { echo "Paquet « $PKG » pour la version $VERSION, attendu $WANT"; exit 1; }
+    - jq -n --arg p "$PKG" --arg l "$LABEL" --arg v "$VERSION" --argjson c "$CODE" --arg f "companion-$VERSION.apk"
+      '{package:$p, label:$l, versionCode:$c, versionName:$v, file:$f}'
       > dist/companion-$VERSION.json
     - cat dist/companion-$VERSION.json
 
@@ -397,8 +405,9 @@ updates:
 
 # Essai de l'appli tablette depuis une MR, sans fusion ni tag : branche protégée essai/mr-<iid> poussée depuis la branche
 # de la MR, puis job manuel. Version X.Y.Z-essai.N (X.Y.Z = dernier tag de la branche, N = numéro du pipeline) : code
-# entre ce tag et le suivant (app/build.gradle.kts). L'APK lit les mises à jour dans latest, comme une release : la
-# tablette d'essai repasse seule à la prochaine release. Branche non protégée : pas de job (clé invisible).
+# entre ce tag et le suivant. Version en -essai.N = autre appli, com.unowhy.companion.essai « Companion essai »
+# (app/build.gradle.kts), installée par la stable à côté d'elle : la stable reste device owner, on revient à elle sans
+# réinstaller. Branche non protégée : pas de job (clé invisible).
 essai-android:
   extends: .android
   stage: build

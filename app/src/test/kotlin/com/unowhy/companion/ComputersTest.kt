@@ -114,6 +114,33 @@ class ComputersTest {
     }
 
     @Test
+    fun `l'essai reprend les ordinateurs et l'actif de la stable`() {
+        Computers.save(context, bureau, makeActive = true)
+        Computers.save(context, maison)
+        val trial = FakeContext()
+        assertTrue(Computers.importIfEmpty(trial, Computers.export(context)))
+        assertEquals(Computers.all(context), Computers.all(trial))
+        assertEquals("jeton-b", Computers.active(trial)?.token)
+        assertEquals("id-bureau", Computers.active(trial)?.id)
+    }
+
+    @Test
+    fun `l'essai garde ses propres ordinateurs une fois repris`() {
+        Computers.save(context, bureau)
+        val trial = FakeContext()
+        Computers.save(trial, maison)
+        assertFalse(Computers.importIfEmpty(trial, Computers.export(context)))
+        assertEquals(listOf("id-maison"), Computers.all(trial).map { it.id })
+    }
+
+    @Test
+    fun `stable sans ordinateur, rien n'est repris`() {
+        val trial = FakeContext()
+        assertFalse(Computers.importIfEmpty(trial, Computers.export(context)))
+        assertEquals(emptyList<Computer>(), Computers.all(trial))
+    }
+
+    @Test
     fun `address retire le schema`() {
         assertEquals("192.168.1.20:3000", bureau.address)
     }
