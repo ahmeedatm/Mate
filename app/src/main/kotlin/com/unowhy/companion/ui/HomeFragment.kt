@@ -93,7 +93,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         profileNext = view.findViewById(R.id.home_profile_next)
         profilePrev.setOnClickListener { showProfile(page - 1) }
         profileNext.setOnClickListener { showProfile(page + 1) }
-        profileName.setOnClickListener { openProfiles() }
+        view.findViewById<View>(R.id.home_profile_title).setOnClickListener { openProfiles() }
         grid.listener = this
         grid.blocked = { unreachable != null && dependsOnComputer(it) }
 
@@ -112,6 +112,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             grid.clipChildren = false
         }
         layout = HomeLayout.load(requireContext(), cadran)
+        if (nameProfiles()) HomeLayout.save(requireContext(), layout, cadran)
         build()
 
         // Rétro : les tubes passent derrière les widgets, voilés derrière ceux sans fond (où qu'ils soient placés) ;
@@ -354,6 +355,18 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         layout.names.getOrNull(index)
             ?: if (index == 0) getString(R.string.profile_first) else getString(R.string.profile_default, index + 1)
 
+    /** Donne son nom par défaut à chaque profil sans nom : il le garde quand on le déplace. Vrai si un nom a été posé. */
+    private fun nameProfiles(): Boolean {
+        var named = false
+        for (i in layout.names.indices) {
+            if (layout.names[i] == null) {
+                layout.renameProfile(i, profileName(i))
+                named = true
+            }
+        }
+        return named
+    }
+
     /** Affiche le profil [index] et charge tout de suite ses widgets (le chargement du profil quitté est annulé). */
     fun showProfile(index: Int) {
         profileLoad?.cancel()
@@ -380,6 +393,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private fun openProfiles() {
         ProfilesDialog(requireContext(), layout, page, ::profileName) { show ->
             if (grid.editing) endEdit(keep = true)
+            nameProfiles()
             onProfilesChanged()
             showProfile(show)
         }.show()
@@ -394,16 +408,12 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         dots.removeAllViews()
         dots.visibility = if (layout.pages > 1) View.VISIBLE else View.GONE
         for (i in 0 until layout.pages) {
-            // Point de 8dp dans une zone de toucher de 32 x 48dp.
-            dots.addView(FrameLayout(requireContext()).apply {
-                setOnClickListener { showProfile(i) }
-                addView(View(context).apply {
-                    background = GradientDrawable().apply {
-                        shape = GradientDrawable.OVAL
-                        setColor(themeColor(context, if (i == page) R.attr.c_accent else R.attr.c_text_faint))
-                    }
-                }, FrameLayout.LayoutParams(dp(8), dp(8), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dp(4) })
-            }, LinearLayout.LayoutParams(dp(32), dp(48)))
+            dots.addView(View(requireContext()).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(themeColor(context, if (i == page) R.attr.c_accent else R.attr.c_text_faint))
+                }
+            }, LinearLayout.LayoutParams(dp(8), dp(8)).apply { marginStart = dp(12); marginEnd = dp(12) })
         }
     }
 
