@@ -1,6 +1,6 @@
 # État du projet
 
-Mis à jour le 28/10/2026 au matin (thème Rétro fusionné, page Média du PC validée). Mis à jour le 27/10/2026 au soir (page Média sur Mac fusionnée, compagnon du PC mis à jour ; travail d'Ahmed récupéré ; étude OBS dans [obs.md](obs.md)). Le 26/10 : Assistant IA retiré ; avant, 5e session du 25/10 : MCP revérifié, extension de navigateur reportée à la vente, poste de dev installé sur le PC perso d'Eliot, sans changement du code). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
+Mis à jour le 28/10/2026 l'après-midi (widget Lecture en cours sur Mac, tailles des widgets : !51 et !53 fusionnées). Le 28/10 au matin : thème Rétro fusionné, page Média du PC validée. Mis à jour le 27/10/2026 au soir (page Média sur Mac fusionnée, compagnon du PC mis à jour ; travail d'Ahmed récupéré ; étude OBS dans [obs.md](obs.md)). Le 26/10 : Assistant IA retiré ; avant, 5e session du 25/10 : MCP revérifié, extension de navigateur reportée à la vente, poste de dev installé sur le PC perso d'Eliot, sans changement du code). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
 
 ## Pourquoi ce projet
 
@@ -26,7 +26,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 | Domaine | Fonctions |
 |---|---|
 | Ordinateurs | Mac **et** PC Windows, appairage par code, plusieurs ordinateurs, bascule automatique, lancement automatique à l'ouverture de session (Mac et Windows) |
-| Accueil | widgets (grille 4×4, 3 pages, modèles Travail / Maison-Jeu / Veille, mode Modifier), heure, météo, agenda 8 jours, prochain rendez-vous + Rejoindre (Teams testé en vrai), tâches, eau, mini-Focus, son de l'ordinateur |
+| Accueil | widgets (grille 4×4, 3 pages, modèles Travail / Maison-Jeu / Veille, mode Modifier), heure, météo, agenda 8 jours, prochain rendez-vous + Rejoindre (Teams testé en vrai), tâches, eau, mini-Focus, son de l'ordinateur, lecture en cours (Windows et, depuis le 28/10, Mac). Tailles (28/10, !53, vues par Eliot sur la tablette en 0.1.11) : petit pour Horloge, Prochain RDV, Son (muet, −, +) et Lecture en cours ; moyen pour Agenda (aujourd'hui) et Tâches ; grand pour Focus (ambiances), Son (une ligne par source du mélangeur), Lecture en cours (avec le son) et Météo (4 jours suivants). Retirés après essai : Tâches en petit (inutile), Focus en moyen (inutile), console du Deck dans le grand Son (coupée) |
 | Agenda | lien ICS (Outlook), agenda personnel noté depuis la tablette avec rappel parlé, « Mes agendas » |
 | Tâches | ponctuelles, récurrentes (jours + rappel parlé), quotidiennes par fichier (worklog Jira) |
 | Deck | Apps (ajout/retrait depuis la tablette), raccourcis, Perso (touches et macros éditées sur la tablette), pages d'appli (Discord, Réunion), Média (Windows et Mac : lecture en cours, sites choisis, YouTube Music), **Ouvertes** (toutes les fenêtres sur le schéma des écrans : toucher, réduire, agrandir, changer d'écran, défiler), fenêtres d'une appli (appui long), son et micro |
@@ -150,3 +150,4 @@ Dofus Rétro (« Jouer » par un clic dans la fenêtre : perso, pas pour la dém
 | après cefe754 | serveur central des mises à jour de la tablette : job `updates` (registre de paquets privé, manifest + dernier APK, deploy token en lecture) sur tag |
 | après b5113f7 | mises à jour automatiques de la tablette : serveur central (registre GitLab) en plus de l'ordinateur, toutes les 6 h |
 | après c785465 | thème Rétro (palette années 70, Abril Fatface et Nunito, grain, bande qui coule), polices par attributs du thème |
+| après 597b136 | widget Lecture en cours sur Mac ; tailles petite, moyenne et grande des widgets de l'Accueil quand elles servent |
