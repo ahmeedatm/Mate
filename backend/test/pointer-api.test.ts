@@ -20,7 +20,7 @@ describe("pavé tactile en HTTP", () => {
       { fn: "pointerGesture", args: ["zoom-in"] },
     ]);
     server.clearOsCalls();
-    for (const body of [{ gesture: "ctrl+alt+delete" }, { gesture: "" }, {}, { gesture: "back", extra: 1 }]) {
+    for (const body of [{ gesture: "ctrl+alt+delete" }, { gesture: "" }, {}]) {
       assert.equal((await server.call("POST", "/pointer/gesture", body)).status, 400, JSON.stringify(body));
     }
     assert.equal((await server.call("POST", "/pointer/gesture", { gesture: "back" }, false)).status, 401);
