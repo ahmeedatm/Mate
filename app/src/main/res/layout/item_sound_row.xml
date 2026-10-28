@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Une source du grand widget Son (SoundList) : muet, nom, volume. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <ImageButton
+        android:id="@+id/sound_mute"
+        style="@style/IconButton"
+        android:contentDescription="@string/app_audio_mute"
+        android:src="@drawable/ic_volume" />
+
+    <TextView
+        android:id="@+id/sound_name"
+        android:layout_width="96dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:ellipsize="end"
+        android:fontFamily="?attr/c_font_medium"
+        android:maxLines="1"
+        android:textColor="?attr/c_text"
+        android:textSize="16sp" />
+
+    <SeekBar
+        android:id="@+id/sound_volume"
+        style="@style/Slider"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:max="100" />
+
+    <TextView
+        android:id="@+id/sound_value"
+        android:layout_width="48dp"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:textColor="?attr/c_text_dim"
+        android:textSize="15sp" />
+</LinearLayout>

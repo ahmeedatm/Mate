@@ -55,8 +55,8 @@ internal fun NextLine.whenText(context: Context): String = when (this) {
 
 /**
  * Prochain rendez-vous (ou la réunion touchée dans l'agenda), avec « Rejoindre » pour une réunion en ligne (Teams,
- * Meet, Zoom, Webex) à partir de 15 min avant. Moyen : le bouton à droite du titre ; grand : en dessous ; vertical :
- * l'heure en grand, puis les deux rendez-vous suivants.
+ * Meet, Zoom, Webex) à partir de 15 min avant. Moyen : le bouton à droite du titre ; petit et grand : en dessous ;
+ * vertical : l'heure en grand, puis les deux rendez-vous suivants.
  */
 class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val cadran = themeBool(context, R.attr.c_cadran)
@@ -148,13 +148,16 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                 view.addView(join, LinearLayout.LayoutParams(wrap, wrap).apply { marginStart = dp(12) })
                 view.addView(add, LinearLayout.LayoutParams(wrap, wrap).apply { marginStart = dp(12) })
             } else {
+                val small = placed.size == WidgetSize.S
                 view.orientation = LinearLayout.VERTICAL
                 view.gravity = Gravity.CENTER_VERTICAL
-                title.maxLines = 3
-                title.textSize = 28f
+                title.maxLines = if (small) 2 else 3
+                title.textSize = if (small) 18f else 28f
+                if (small) whenText.textSize = 14f
+                val gap = dp(if (small) 8 else 14)
                 view.addView(texts, LinearLayout.LayoutParams(match, wrap))
-                view.addView(join, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = dp(14) })
-                view.addView(add, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = dp(14) })
+                view.addView(join, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = gap })
+                view.addView(add, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = gap })
             }
         }
         onCalendar()
@@ -265,7 +268,8 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 /**
  * Agenda : aujourd'hui et les 7 jours suivants, agendas reliés (Outlook, Google, ICS) et agenda personnel (+ pour
  * noter un rendez-vous, toucher un des siens pour le modifier). Toucher une réunion d'un agenda relié la met dans
- * « Prochain rendez-vous » (pour rejoindre une autre réunion), la toucher à nouveau l'enlève.
+ * « Prochain rendez-vous » (pour rejoindre une autre réunion), la toucher à nouveau l'enlève. Moyen : aujourd'hui
+ * seulement, sans la source ni « Mes agendas ».
  */
 class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     override val view: View = LayoutInflater.from(context).inflate(R.layout.widget_agenda, null)
@@ -279,6 +283,14 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         view.findViewById<View>(R.id.widget_agenda_add).setOnClickListener { host.editEvent(null) }
     }
 
+    private val today get() = placed.size == WidgetSize.M
+
+    override fun applySize() {
+        source.visibility = if (today) View.GONE else View.VISIBLE
+        link.visibility = if (today) View.GONE else View.VISIBLE
+        onCalendar()
+    }
+
     override fun onMinute() = onCalendar()
 
     override fun onCalendar() {
@@ -290,6 +302,7 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         if (events.isEmpty()) return list.addView(note(R.string.agenda_empty))
         // Un événement commencé avant aujourd'hui (journée entière sur plusieurs jours) est rangé aujourd'hui.
         val byDay = events.groupBy { daysFrom(now, it.startMs).coerceAtLeast(0) }.toSortedMap()
+            .let { if (today) it.headMap(1) else it }
         if (0 !in byDay) list.addView(note(R.string.agenda_nothing_today))
         for ((day, dayEvents) in byDay) {
             if (day > 0) list.addView(TextView(context).apply {

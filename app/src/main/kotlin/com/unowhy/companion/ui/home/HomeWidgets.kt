@@ -13,6 +13,7 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextClock
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -139,10 +140,11 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         format12Hour = "HH:mm"
         format24Hour = "HH:mm"
         includeFontPadding = false
+        isSingleLine = true
         setTextColor(color(R.attr.c_text))
         typeface = themeFont(context, R.attr.c_font_light)
     }
-    private val date = label(22f, R.attr.c_text_dim)
+    private val date = label(22f, R.attr.c_text_dim).apply { isSingleLine = true }
     private val side = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
     override val view = LinearLayout(context).asCard(24)
 
@@ -150,7 +152,17 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         view.removeAllViews()
         side.removeAllViews()
         val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
+        val small = placed.size == WidgetSize.S
+        view.setPadding(dp(if (small) 12 else 24), dp(if (small) 12 else 24), dp(if (small) 12 else 24), dp(if (small) 12 else 24))
         when (placed.size) {
+            // Une case : l'heure et la date dessous, centrées.
+            WidgetSize.S -> {
+                view.orientation = LinearLayout.VERTICAL
+                view.gravity = Gravity.CENTER
+                clock.textSize = 48f
+                date.textSize = 15f
+                for (line in listOf(clock, date)) view.addView(line, LinearLayout.LayoutParams(wrap, wrap))
+            }
             // Une ligne : l'heure, et à côté la salutation et la date.
             WidgetSize.M, WidgetSize.W -> {
                 val wide = placed.size == WidgetSize.W
@@ -184,16 +196,19 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             in 12..17 -> R.string.greeting_afternoon
             else -> R.string.greeting_evening
         })
-        date.text = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE).format(Date()).replaceFirstChar { it.uppercase() }
+        // Une case : date courte (« Mer. 28 oct. »), qui tient sur une ligne.
+        val pattern = if (placed.size == WidgetSize.S) "EEE d MMM" else "EEEE d MMMM"
+        date.text = SimpleDateFormat(pattern, Locale.FRANCE).format(Date()).replaceFirstChar { it.uppercase() }
     }
 }
 
 /**
  * Minuteur Focus (DA Cadran) : cadran de 25 graduations, une par minute, allumées pendant le chrono et éteintes en
- * cascade à la pause. Toucher = mode Focus, bouton = démarrer / pause. Rien ne bouge en dehors des changements.
+ * cascade à la pause. Toucher = mode Focus, bouton = démarrer / pause. Grand : cadran plus grand et ambiances à
+ * choisir dessous. Rien ne bouge en dehors des changements.
  */
 class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    /** Conteneur stable : la vue interne est refaite quand la taille change (vertical = autre mise en page). */
+    /** Conteneur stable : la vue interne est refaite quand la taille change (vertical, grand = autre mise en page). */
     override val view = FrameLayout(context)
     private lateinit var dial: FocusDial
     private lateinit var time: TextView
@@ -201,10 +216,13 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private lateinit var detail: TextView
     private lateinit var toggle: View
     private lateinit var toggleIcon: ImageView
+    private val noiseChips = LinkedHashMap<NoisePlayer.Kind, Button>()
     private val focusListener: (FocusTimer.State) -> Unit = { render() }
     private val noiseListener: () -> Unit = { render() }
     private var shown = false
     private var tall = false
+    private var big = false
+    private var small = false
     private val cadran = themeBool(context, R.attr.c_cadran)
 
     init {
@@ -212,31 +230,67 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 
     override fun applySize() {
-        if ((placed.size == WidgetSize.V) == tall) return
+        if ((placed.size == WidgetSize.V) == tall && (placed.size == WidgetSize.L) == big && (placed.size == WidgetSize.S) == small) return
         bind()
         render()
     }
 
     private fun bind() {
         tall = placed.size == WidgetSize.V
+        big = placed.size == WidgetSize.L
+        small = placed.size == WidgetSize.S
         view.removeAllViews()
+        noiseChips.clear()
         val inner = LayoutInflater.from(context).inflate(if (tall) R.layout.widget_focus_tall else R.layout.widget_focus, view, false)
-        view.addView(inner)
+        if (big) view.addView(withNoises(inner)) else view.addView(inner)
         dial = inner.findViewById(R.id.widget_focus_dial)
         time = inner.findViewById(R.id.widget_focus_time)
         phase = inner.findViewById(R.id.widget_focus_phase)
         detail = inner.findViewById(R.id.widget_focus_detail)
         toggleIcon = inner.findViewById(R.id.widget_focus_toggle_icon)
         toggle = inner.findViewById(R.id.widget_focus_toggle)
+        if (small) shrink(inner)
         if (cadran) {
-            capToDial(time, if (tall) 40f else 30f)
-            capToDial(phase, if (tall) 13f else 12f)
+            capToDial(time, if (tall || big) 40f else if (small) 26f else 30f)
+            capToDial(phase, if (tall || big) 13f else if (small) 11f else 12f)
         }
         inner.setOnClickListener { host.main?.showMode("focus") }
         toggle.setOnClickListener { FocusTimer.toggle() }
         Look.pressSpring(inner)
         Look.pressSpring(toggle)
         shown = false
+    }
+
+    /** Une case : cadran réduit et bouton seulement (le titre « Focus » et l'ambiance ne tiennent pas à côté). */
+    private fun shrink(inner: View) {
+        inner.setPadding(dp(14), dp(14), dp(14), dp(14))
+        inner.findViewById<View>(R.id.widget_focus_ring_box).layoutParams.apply { width = dp(104); height = dp(104) }
+        (detail.parent as View).visibility = View.GONE
+        ((toggle.parent as View).layoutParams as LinearLayout.LayoutParams).marginStart = dp(8)
+    }
+
+    /** Grand : la tuile passe autour du cadran agrandi et d'une rangée d'ambiances (toucher celle qui joue l'arrête). */
+    private fun withNoises(inner: View): View {
+        val tile = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            background = inner.background
+            setPadding(inner.paddingLeft, inner.paddingTop, inner.paddingRight, inner.paddingBottom)
+        }
+        inner.background = null
+        inner.setPadding(0, 0, 0, 0)
+        inner.findViewById<View>(R.id.widget_focus_ring_box).layoutParams.apply { width = dp(176); height = dp(176) }
+        tile.addView(inner, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        val row = LinearLayout(context).apply { gravity = Gravity.CENTER }
+        for (kind in listOf(NoisePlayer.Kind.BROWN, NoisePlayer.Kind.PINK, NoisePlayer.Kind.WHITE)) {
+            val chip = Button(context, null, 0, R.style.Chip).apply {
+                setText(kind.label)
+                setOnClickListener { if (NoisePlayer.kind == kind) NoisePlayer.stop() else NoisePlayer.play(kind) }
+            }
+            row.addView(chip, LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginStart = dp(4); marginEnd = dp(4) })
+            noiseChips[kind] = chip
+        }
+        tile.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
+        return tile
     }
 
     /** Police agrandie : le texte ne dépasse pas sa taille à 1,0 ([maxSp]), celle qui tient dans le cadran. Réduite, il suit. */
@@ -276,6 +330,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         detail.text = NoisePlayer.kind?.takeIf { NoisePlayer.playing }?.let { context.getString(R.string.noise_playing, context.getString(it.label)) } ?: ""
         // Vertical : l'ambiance est à côté du bouton, qui reste centré tant qu'il n'y en a pas.
         if (tall) detail.visibility = if (detail.text.isEmpty()) View.GONE else View.VISIBLE
+        for ((kind, chip) in noiseChips) chip.isSelected = NoisePlayer.kind == kind
         Look.swapIcon(toggleIcon, if (state.running) R.drawable.ic_pause else R.drawable.ic_play)
         toggle.contentDescription = context.getString(if (state.running) R.string.focus_pause else R.string.focus_start)
     }
@@ -296,22 +351,73 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     override fun onMinute() = card.refresh()
 }
 
-/** Son et micro de l'ordinateur. */
+/**
+ * Son et micro de l'ordinateur ; petit : muet et volume −/+ ; grand : une ligne par source (sortie, micro et, sur
+ * Windows, chaque appli qui a du son).
+ */
 class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val audio = ComputerAudioView(context).apply { attach(host.scope) }
-    override val view = LinearLayout(context).asCard(16).apply {
-        orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER_VERTICAL
-        addView(cardTitle(R.string.computer_volume, R.drawable.ic_volume))
-        addView(audio, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+    /** Conteneur stable : le contenu est refait quand la taille change. */
+    override val view = FrameLayout(context)
+    private var audio: ComputerAudioView? = null
+    private var mixer: SoundList? = null
+    private var shownSize: WidgetSize? = null
+    private var active = false
+
+    override fun applySize() {
+        if (placed.size == shownSize) return
+        shownSize = placed.size
+        mixer?.setActive(false)
+        view.removeAllViews()
+        audio = null
+        mixer = null
+        val fill = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        if (placed.size == WidgetSize.L) {
+            val list = SoundList(context, host.scope)
+            mixer = list
+            view.addView(
+                LinearLayout(context).asCard(16).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(cardTitle(R.string.computer_volume, R.drawable.ic_volume))
+                    addView(
+                        ScrollView(context).apply { isVerticalScrollBarEnabled = false; addView(list) },
+                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(8) },
+                    )
+                },
+                fill,
+            )
+        } else {
+            val bar = ComputerAudioView(context).apply {
+                attach(host.scope)
+                if (placed.size == WidgetSize.S) compact()
+            }
+            audio = bar
+            view.addView(
+                LinearLayout(context).asCard(16).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    addView(cardTitle(R.string.computer_volume, R.drawable.ic_volume))
+                    addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+                },
+                fill,
+            )
+            bar.refresh()
+        }
+        setActive(active)
     }
 
-    override suspend fun load() = audio.refresh()
+    override suspend fun load() {
+        audio?.refresh()
+    }
+
+    override fun setActive(active: Boolean) {
+        this.active = active
+        mixer?.setActive(active)
+    }
 }
 
 /**
  * Ce qui joue sur l'ordinateur (contrôles multimédias de Windows, MediaRemote sur Mac), comme la page Média ;
- * en grand, boutons sous le titre et son de l'ordinateur dessous.
+ * petit : titre et boutons ; grand : boutons sous le titre et son de l'ordinateur dessous.
  */
 class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val playing = NowPlayingView(context).apply { attach(host.scope) }
@@ -324,14 +430,16 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         addView(audio, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16) })
     }
 
-    init {
-        applySize()
-    }
-
     private val big get() = placed.size == WidgetSize.L
 
     override fun applySize() {
-        playing.stacked(big)
+        playing.layout(
+            when (placed.size) {
+                WidgetSize.S -> NowPlayingView.Layout.SMALL
+                WidgetSize.L -> NowPlayingView.Layout.STACKED
+                else -> NowPlayingView.Layout.ROW
+            },
+        )
         audio.visibility = if (big) View.VISIBLE else View.GONE
         if (big) audio.refresh()
     }
