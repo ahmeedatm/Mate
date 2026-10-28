@@ -12,6 +12,7 @@ import com.unowhy.companion.R
 import com.unowhy.companion.net.CalendarEvent
 import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.dp
+import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.ui.themeColor
 import com.unowhy.companion.ui.themeFont
 import kotlin.math.roundToInt
@@ -32,8 +33,10 @@ class DayLineView(context: Context) : View(context) {
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val hourPaint = textPaint(12f)
-    private val eventPaint = textPaint(13f)
+    // Rétro : tubes derrière, textes un peu plus grands et détourés.
+    private val retro = themeBool(context, R.attr.c_flow)
+    private val hourPaint = textPaint(if (retro) 13f else 12f)
+    private val eventPaint = textPaint(if (retro) 14f else 13f)
 
     private var events: List<CalendarEvent> = emptyList()
     private var now = System.currentTimeMillis()
@@ -71,6 +74,7 @@ class DayLineView(context: Context) : View(context) {
     private fun textPaint(sp: Float) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = themeFont(context, R.attr.c_font_medium)
         textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, resources.displayMetrics)
+        Look.halo(context, this)
     }
 
     /** Agenda et heure : les barres sont recalculées. `animate` : le point avance sur son ressort et émet l'onde. */
