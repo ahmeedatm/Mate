@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { backendRoot } from "./config.ts";
 import { logFailure } from "./log.ts";
-import { isMac, isWindows, listButtons, listWindows, pressButton } from "./os.ts";
+import { accessibility, isMac, isWindows, listButtons, listWindows, pressButton } from "./os.ts";
 
 /**
  * Appels entrants (Discord, Teams…) signalés sur la tablette. Windows : pendant la sonnerie, l'appli renomme sa
@@ -19,6 +19,11 @@ type CallRule = {
   title?: string;
   /** Sinon, boutons présents seulement pendant la sonnerie (Mac). */
   ring?: string[];
+  /**
+   * Avec `ring` : texte de l'interface (liste détaillée, « Lien : … ») exigé en plus. Discord garde « Se joindre à
+   * l'appel » tant qu'un appel de groupe continue sans nous ; seul le lien dit « Appel entrant ».
+   */
+  ringText?: string;
   caller?: string;
   answer: string[];
   video?: string[];
@@ -66,8 +71,10 @@ async function isRinging(rule: CallRule): Promise<boolean> {
     return Boolean(info?.windows.some((w) => title.test(w.title)));
   }
   if (!rule.ring?.length) return false;
-  const { buttons } = await listButtons(rule.app).catch(() => ({ buttons: [] as string[] }));
-  return hasButton(buttons, rule.ring);
+  const { buttons } = await listButtons(rule.app, Boolean(rule.ringText)).catch(() => ({ buttons: [] as string[] }));
+  if (!hasButton(buttons, rule.ring)) return false;
+  const text = rule.ringText ? new RegExp(rule.ringText) : null;
+  return !text || buttons.some((b) => text.test(b));
 }
 
 export async function startCallWatch(notify: (event: CallEvent) => void) {
@@ -80,6 +87,8 @@ export async function startCallWatch(notify: (event: CallEvent) => void) {
     if (busy) return;
     busy = true;
     try {
+      // Mac sans Accessibilité : rien à lire, et lire quand même ferait apparaître le compagnon dans Réglages Système.
+      if (isMac && !(await accessibility())) return;
       let found: CallRule | undefined;
       for (const rule of rules) {
         if ((quietUntil.get(rule.app) ?? 0) > Date.now()) continue;

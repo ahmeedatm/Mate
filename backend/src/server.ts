@@ -19,6 +19,7 @@ import deckRoutes from "./routes/deck.ts";
 import docRoutes from "./routes/docs.ts";
 import localRoutes from "./routes/local.ts";
 import pairingRoutes from "./routes/pairing.ts";
+import pointerRoutes from "./routes/pointer.ts";
 import systemRoutes from "./routes/system.ts";
 import tabletRoutes from "./routes/tablet.ts";
 import taskRoutes from "./routes/tasks.ts";
@@ -85,7 +86,10 @@ app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validat
 // Ailleurs, le deck se lit et ses touches perso se modifient ; toucher une touche répond 501 (os.ts : unsupported).
 const DECK_ANYWHERE = /^\/deck(\/keys\/\d+|\/run)?(\?|$)/;
 app.addHook("preHandler", async (req, reply) => {
-  if (!canControl && ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) || req.url.startsWith("/system"))) {
+  if (
+    !canControl &&
+    ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) || req.url.startsWith("/system") || req.url.startsWith("/pointer"))
+  ) {
     return reply.code(501).send({ error: "Pilotage disponible sur macOS et Windows seulement" });
   }
 });
@@ -100,6 +104,7 @@ app.register(localRoutes);
 app.register(deckRoutes);
 app.register(windowRoutes);
 app.register(systemRoutes);
+app.register(pointerRoutes);
 app.register(docRoutes);
 app.register(updateRoutes);
 app.register(browserRoutes);

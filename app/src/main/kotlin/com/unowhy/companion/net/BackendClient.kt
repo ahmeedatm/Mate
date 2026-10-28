@@ -17,6 +17,7 @@ class BackendClient(baseUrl: String, token: String = "", connectTimeoutMs: Int =
     val deck = DeckApi(http)
     val windows = WindowsApi(http)
     val system = SystemApi(http)
+    val pointer = PointerApi(http)
     val docs = DocsApi(http)
     val calendar = CalendarApi(http)
     val tasks = TasksApi(http)

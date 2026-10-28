@@ -31,6 +31,8 @@ export type FakeState = {
   running?: string[];
   inCall?: string[];
   dnd?: boolean | null;
+  /** Autorisation Accessibilité du Mac (accessibility) ; absente : accordée. */
+  accessibility?: boolean;
   /** Presse-papiers de l'ordinateur (getClipboard) ; les écritures le remplacent. Vide par défaut. */
   clipboard?: ClipboardContent;
   /** Pas de presse-papiers (session sans bureau) : getClipboard répond 503. */
@@ -191,6 +193,22 @@ export async function setDnd(on: boolean): Promise<boolean | null> {
   return on;
 }
 
+export async function pointerMove(dx: number, dy: number) {
+  record("pointerMove", dx, dy);
+}
+
+export async function pointerScroll(sx: number, sy: number) {
+  record("pointerScroll", sx, sy);
+}
+
+export async function pointerButton(button: string, action: string) {
+  record("pointerButton", button, action);
+}
+
+export async function pointerGesture(name: string) {
+  record("pointerGesture", name);
+}
+
 export async function mediaSessions() {
   return [];
 }
@@ -245,7 +263,7 @@ export async function frontApp(): Promise<{ name: string; bundleId: string }> {
 }
 
 export async function accessibility(): Promise<boolean | null> {
-  return isMac ? true : null;
+  return isMac ? (read().accessibility ?? true) : null;
 }
 
 export async function openAccessibility() {

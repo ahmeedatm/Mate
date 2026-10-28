@@ -311,7 +311,8 @@ function run(argv) {
   const all = screens();
   const se = Application('System Events');
   if (req.op === 'all') return JSON.stringify({ apps: allApps(se, all), displays: displaysOf(all) });
-  const procs = req.pid ? se.applicationProcesses.whose({ unixId: req.pid })() : se.applicationProcesses.whose({ bundleIdentifier: req.bundleId })();
+  // Sans appli (écrans seulement) : System Events n'est pas interrogé, macOS ne demande aucune autorisation.
+  const procs = req.pid ? se.applicationProcesses.whose({ unixId: req.pid })() : req.bundleId ? se.applicationProcesses.whose({ bundleIdentifier: req.bundleId })() : [];
   const proc = procs[0];
 
   if (proc && req.op !== 'list') {

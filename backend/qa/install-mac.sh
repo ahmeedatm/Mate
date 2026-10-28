@@ -18,8 +18,9 @@ LABEL=$REAL_LABEL.ci-$ID
 PORT=$((41000 + ${ID//[!0-9]/0} % 1000))
 PLIST=~/Library/LaunchAgents/$LABEL.plist
 SANITY="$(cd "$(dirname "$0")" && pwd)/sanity.ts"
-APP="$WORK/install/Compagnon Unowhy"
-NODE="$APP/backend/node/darwin-$([[ $(uname -m) == arm64 ]] && echo arm64 || echo x64)/node"
+APP="$WORK/install/Compagnon Unowhy/Compagnon Unowhy.app"
+BACKEND="$APP/Contents/Resources/backend"
+NODE="$BACKEND/node/darwin-$([[ $(uname -m) == arm64 ]] && echo arm64 || echo x64)/node"
 
 export COMPANION_LABEL=$LABEL PORT HOST=127.0.0.1 DATA_DIR=$WORK/data DOCS_DIR=$WORK/shared \
   COMPANION_LOG_DIR=$WORK/logs COMPANION_HEADLESS=1
@@ -45,6 +46,20 @@ check_real() {
   echo "Vrai compagnon intact :"; cat "$WORK/real-after.txt"
 }
 
+# Aucune autorisation macOS (TCC) demandée par le node du job : TCC suit un programme en ligne de commande par son
+# chemin, propre à chaque job, et chaque demande ajoute un « node » de plus dans Réglages Système (ou une invite).
+# Base illisible sans accès complet au disque : contrôle sauté.
+check_tcc() {
+  local db rows read=0
+  for db in "/Library/Application Support/com.apple.TCC/TCC.db" ~/"Library/Application Support/com.apple.TCC/TCC.db"; do
+    rows=$(sqlite3 "$db" "select service from access where client like '$WORK/%' or client like '/private$WORK/%'" 2>/dev/null) ||
+      { echo "Base TCC illisible ($db) : contrôle sauté"; continue; }
+    [[ -z $rows ]] || fail "autorisations macOS demandées par l'instance de test : $(tr '\n' ' ' <<< "$rows")"
+    read=$((read + 1))
+  done
+  ((read == 0)) || echo "Aucune autorisation macOS demandée"
+}
+
 wait_for() { # secondes, commande
   local n=$(($1 * 2)); shift
   while ((n-- > 0)); do "$@" && return 0; sleep 0.5; done
@@ -62,13 +77,14 @@ run() {
 
   step "Installation du paquet ($LABEL, port $PORT, $WORK)"
   unzip -q "$zip" -d "$WORK/install"
-  "$APP/Installer (Mac).command" < /dev/null || { cat "$WORK/logs/backend.log" 2>/dev/null; fail "installeur"; }
+  # Exécutable de l'appli, comme au double-clic ; COMPANION_HEADLESS : sur place, sans copie dans Applications.
+  "$APP/Contents/MacOS/Compagnon Unowhy" < /dev/null || { cat "$WORK/logs/backend.log" 2>/dev/null; fail "installeur"; }
 
   step "Agent launchd et serveur"
   grep -q "<string>$DATA_DIR</string>" "$PLIST" || fail "DATA_DIR absent de $PLIST"
   [[ $(agent "$LABEL") == running* ]] || fail "agent $LABEL : $(agent "$LABEL")"
   local pid; pid=$(listener "$PORT")
-  ps -o command= -p "$pid" | grep -qF "$APP/backend" || fail "le port $PORT n'est pas servi par le paquet de test"
+  ps -o command= -p "$pid" | grep -qF "$BACKEND/" || fail "le port $PORT n'est pas servi par le paquet de test"
   local h; h=$(health "$PORT"); echo "$h"
   grep -q '"os":"mac"' <<< "$h" || fail "/health : os"
   # Accessibilité non accordée au node du job : attendu.
@@ -89,7 +105,7 @@ run() {
   "$NODE" "$SANITY" --url "http://127.0.0.1:$PORT" --token "$token" --os mac --hook-secret "$secret" --junit "$junit" || sanity=$?
 
   step "Désinstallation"
-  (cd "$APP/backend" && "$NODE" dist/service.mjs uninstall)
+  (cd "$BACKEND" && "$NODE" dist/service.mjs uninstall)
   [[ ! -e $PLIST ]] || fail "$PLIST toujours là"
   [[ $(agent "$LABEL") == absent ]] || fail "agent $LABEL toujours chargé"
   wait_for 10 bash -c "[[ -z \$(lsof -nP -iTCP:$PORT -sTCP:LISTEN -t) ]]" || fail "port $PORT toujours ouvert"
@@ -97,6 +113,9 @@ run() {
   step "Vrai compagnon après le test"
   check_real
   ((sanity == 0)) || fail "sanity en échec (voir plus haut)"
+
+  step "Autorisations macOS"
+  check_tcc
   echo; echo "OK : installation, démarrage, relance, sanity et désinstallation"
 }
 

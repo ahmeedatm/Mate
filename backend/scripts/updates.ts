@@ -12,11 +12,13 @@ import type { Update } from "../src/updates.ts";
  * Ordinateur installé par paquet : DATA_DIR=paquet.
  *
  * `npm run updates:essai` : même effet avec l'essai publié depuis une MR (job essai-updates, paquet générique
- * companion-updates/essai du registre). Jeton : GITLAB_TOKEN (personnel, read_api) ou UPDATE_DEPLOY_TOKEN (deploy token
+ * companion-updates/essai du registre). L'essai est une autre appli (com.unowhy.companion.essai), annoncée à côté de la
+ * stable : tout autre paquet est refusé (un ancien essai au paquet de la stable la remplacerait sans retour). Jeton : GITLAB_TOKEN (personnel, read_api) ou UPDATE_DEPLOY_TOKEN (deploy token
  * des tablettes), dans l'environnement ou backend/.env. UPDATES_URL : autre paquet (tests).
  */
 
 const ESSAI_URL = "https://gitlab.unowhy.dev/api/v4/projects/891/packages/generic/companion-updates/essai";
+const ESSAI_PACKAGE = "com.unowhy.companion.essai";
 
 function add(entryFile: string) {
   const entry = JSON.parse(fs.readFileSync(entryFile, "utf8")) as Update;
@@ -61,6 +63,8 @@ async function essai() {
     updates?: (Update & { size?: number; sha256?: string })[];
   };
   if (!updates?.length) throw new Error(`${base}/manifest.json : aucune mise à jour annoncée`);
+  const other = updates.find((u) => u.package !== ESSAI_PACKAGE);
+  if (other) throw new Error(`${base}/manifest.json : paquet ${other.package}, seul ${ESSAI_PACKAGE} est un essai`);
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "companion-essai-"));
   try {
     for (const { size, sha256, ...entry } of updates) {

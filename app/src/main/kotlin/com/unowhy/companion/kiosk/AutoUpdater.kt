@@ -15,7 +15,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Vérifie les mises à jour au démarrage puis toutes les 6 h, et installe seule la plus récente du Companion.
+ * Vérifie les mises à jour au démarrage puis toutes les 6 h, et installe seule la release de main la plus récente du
+ * Companion, jamais un essai (bouton de Réglages).
  * Seulement en device owner ; sinon rien, et jamais d'erreur à l'écran (journal seulement). Singleton : survit aux
  * `recreate()` de l'activité. Android arrête l'appli pour la remplacer, `UpdatedReceiver` la relance.
  */

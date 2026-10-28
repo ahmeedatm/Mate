@@ -6,15 +6,15 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
 /**
- * Paquets du logiciel de l'ordinateur, sans Node à installer : `npm run package` (Mac ou Linux, dont la CI).
+ * Installeurs du logiciel de l'ordinateur, sans Node à installer : `npm run package` (Mac ou Linux, dont la CI).
  *
- * Chaque zip contient l'installeur à double-cliquer, le serveur regroupé en un fichier (dist/server.mjs, et
- * dist/service.mjs pour le lancement automatique), les fichiers lus à l'exécution (config, UnowhyHelper.exe…) et
- * le node officiel de nodejs.org (signé par l'OpenJS Foundation), vérifié par sa somme SHA-256.
+ * Chacun embarque le serveur regroupé en un fichier (dist/server.mjs, et dist/service.mjs pour le lancement
+ * automatique), les fichiers lus à l'exécution (config, UnowhyHelper.exe…), l'extension du navigateur et le node
+ * officiel de nodejs.org (signé par l'OpenJS Foundation), vérifié par sa somme SHA-256.
  *
- *   ../dist/Compagnon-Unowhy-Windows.zip   node.exe (x64)
- *   ../dist/Compagnon-Unowhy-Mac.zip       node pour Apple Silicon et Intel, choisi par l'installeur
- * `npm run package -- windows` ou `-- mac` : une seule des deux.
+ *   ../dist/Compagnon-Unowhy-Windows.exe   installeur NSIS (installer/windows/compagnon.nsi, makensis requis), node.exe x64
+ *   ../dist/Compagnon-Unowhy-Mac.zip       « Compagnon Unowhy.app » (installer/mac/), node Apple Silicon et Intel
+ * `npm run package -- windows` ou `-- mac` : un seul des deux. Version : tag de la CI (CI_COMMIT_TAG), sinon 0.0.0.
  */
 
 // Version figée (celle de latest-v22.x au 26/10/2026) : deux paquets faits à des dates différentes embarquent le même node.
@@ -24,6 +24,7 @@ const repo = path.resolve(backend, "..");
 const out = path.join(repo, "dist");
 const cache = path.join(backend, ".cache", "node");
 const FOLDER = "Compagnon Unowhy";
+const VERSION = /^v\d+\.\d+\.\d+$/.test(process.env.CI_COMMIT_TAG ?? "") ? process.env.CI_COMMIT_TAG!.slice(1) : "0.0.0";
 
 /** Fichiers de config livrés : pas deck.json ni tasks.json (données de l'ordinateur, créées sur place). */
 const CONFIG = ["accounts.json", "calls.json", "deck.example.json", "deck.example.windows.json", "tasks.example.json"];
@@ -67,9 +68,42 @@ function copy(from: string, to: string) {
   fs.chmodSync(to, fs.statSync(from).mode);
 }
 
+const xml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** Info.plist de l'appli Mac. UnowhyBuild (date du paquet) : le lanceur réinstalle quand il change. */
+function infoPlist(): string {
+  const keys: [string, string | boolean][] = [
+    ["CFBundleName", FOLDER],
+    ["CFBundleDisplayName", FOLDER],
+    ["CFBundleIdentifier", "com.unowhy.companion.app"],
+    ["CFBundleExecutable", FOLDER],
+    ["CFBundleIconFile", "compagnon"],
+    ["CFBundlePackageType", "APPL"],
+    ["CFBundleShortVersionString", VERSION],
+    ["CFBundleVersion", VERSION],
+    ["CFBundleDevelopmentRegion", "fr"],
+    ["LSApplicationCategoryType", "public.app-category.utilities"],
+    // node 22 : macOS 11 au moins.
+    ["LSMinimumSystemVersion", "11.0"],
+    ["NSHighResolutionCapable", true],
+    ["UnowhyBuild", new Date().toISOString()],
+  ];
+  const body = keys.map(([k, v]) => `  <key>${k}</key>\n  ${typeof v === "boolean" ? `<${v}/>` : `<string>${xml(v)}</string>`}`).join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+${body}
+</dict>
+</plist>
+`;
+}
+
 async function stage(platform: "windows" | "mac", sums: string): Promise<string> {
   const root = path.join(out, platform, FOLDER);
-  const dest = path.join(root, "backend");
+  // Mac : tout le compagnon dans l'appli ; l'extension reste à côté (le Finder n'ouvre pas une appli pour y choisir un dossier).
+  const bundle = path.join(root, `${FOLDER}.app`, "Contents");
+  const dest = platform === "windows" ? path.join(root, "backend") : path.join(bundle, "Resources", "backend");
   fs.rmSync(path.join(out, platform), { recursive: true, force: true });
 
   await build({
@@ -98,14 +132,16 @@ async function stage(platform: "windows" | "mac", sums: string): Promise<string>
   for (const f of CONFIG) copy(path.join(backend, "config", f), path.join(dest, "config", f));
 
   if (platform === "windows") {
-    copy(path.join(repo, "Installer (Windows).cmd"), path.join(root, "Installer (Windows).cmd"));
     for (const f of ["UnowhyHelper.exe", "UnowhyCompanion.exe"])
       copy(path.join(backend, "src", "win", f), path.join(dest, "src", "win", f));
     copy(path.join(backend, "scripts", "firewall-windows.ps1"), path.join(dest, "scripts", "firewall-windows.ps1"));
     copy(path.join(backend, "assets", "compagnon.ico"), path.join(dest, "assets", "compagnon.ico"));
     extract(await nodeArchive(sums, "-win-x64.zip"), "node.exe", path.join(dest, "node", "node.exe"));
   } else {
-    copy(path.join(repo, "Installer (Mac).command"), path.join(root, "Installer (Mac).command"));
+    fs.mkdirSync(path.join(bundle, "MacOS"), { recursive: true });
+    fs.writeFileSync(path.join(bundle, "Info.plist"), infoPlist());
+    copy(path.join(backend, "installer", "mac", "launcher.sh"), path.join(bundle, "MacOS", FOLDER));
+    copy(path.join(backend, "assets", "compagnon.icns"), path.join(bundle, "Resources", "compagnon.icns"));
     copy(path.join(backend, "src", "mac", "NowPlaying.dylib"), path.join(dest, "src", "mac", "NowPlaying.dylib"));
     for (const arch of ["arm64", "x64"]) {
       extract(await nodeArchive(sums, `-darwin-${arch}.tar.gz`), "bin/node", path.join(dest, "node", `darwin-${arch}`, "node"));
@@ -116,23 +152,39 @@ async function stage(platform: "windows" | "mac", sums: string): Promise<string>
   for (const f of fs.readdirSync(path.join(backend, "extension")))
     copy(path.join(backend, "extension", f), path.join(root, "Extension navigateur", f));
 
-  // zip (Info-ZIP) : lisible par l'Explorateur de Windows et le Finder, droits d'exécution gardés, sans __MACOSX.
-  const zip = path.join(out, `Compagnon-Unowhy-${platform === "windows" ? "Windows" : "Mac"}.zip`);
+  if (platform === "windows") {
+    const exe = path.join(out, "Compagnon-Unowhy-Windows.exe");
+    fs.rmSync(exe, { force: true });
+    const nsi = path.join(backend, "installer", "windows", "compagnon.nsi");
+    try {
+      execFileSync("makensis", ["-V2", "-INPUTCHARSET", "UTF8", `-DSOURCE=${root}`, `-DOUTFILE=${exe}`, `-DVERSION=${VERSION}`, nsi], {
+        stdio: "inherit",
+      });
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "ENOENT")
+        throw new Error("makensis introuvable : brew install makensis (Mac), apt-get install nsis (Linux)");
+      throw new Error("makensis a échoué (voir plus haut)");
+    }
+    return exe;
+  }
+
+  // zip (Info-ZIP) : lisible par le Finder, droits d'exécution gardés, sans __MACOSX.
+  const zip = path.join(out, "Compagnon-Unowhy-Mac.zip");
   fs.rmSync(zip, { force: true });
   execFileSync("zip", ["-r", "-q", zip, FOLDER, "-x", "*.DS_Store"], { cwd: path.join(out, platform) });
   return zip;
 }
 
 async function main() {
-  if (process.platform === "win32") throw new Error("À lancer sur le Mac ou sous Linux (zip, unzip, tar)");
+  if (process.platform === "win32") throw new Error("À lancer sur le Mac ou sous Linux (zip, unzip, tar, makensis)");
   const sums = (await download(`https://nodejs.org/dist/${NODE_VERSION}/SHASUMS256.txt`)).toString("utf8");
   console.log(`Node : ${sums.match(/node-(v[\d.]+)-/)?.[1] ?? "?"}`);
   // Un job CI par plateforme : artefacts sous la limite de 100 Mo de GitLab.
   const only = process.argv[2];
   if (only && only !== "windows" && only !== "mac") throw new Error(`Plateforme « ${only} » : windows ou mac`);
   for (const platform of (["windows", "mac"] as const).filter((p) => !only || p === only)) {
-    const zip = await stage(platform, sums);
-    console.log(`✓ ${path.relative(repo, zip)} (${Math.round(fs.statSync(zip).size / 1e6)} Mo)`);
+    const file = await stage(platform, sums);
+    console.log(`✓ ${path.relative(repo, file)} (${Math.round(fs.statSync(file).size / 1e6)} Mo)`);
   }
 }
 

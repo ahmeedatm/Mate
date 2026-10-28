@@ -13,6 +13,7 @@ import {
 import { parseCombo, planAudio, sortedNames, whenClipboardAvailable } from "../driver-common.ts";
 import type { AudioChange, AudioState, ClipboardContent, MediaCommand, MixerChange, MixerState, SystemCommand } from "../screens.ts";
 import type { GpuPerf } from "../perf.ts";
+import type { PointerAction, PointerButton } from "../pointer.ts";
 
 /**
  * Pilotage de Windows (10 et 11), mêmes fonctions que les modules de src/mac/ : voir src/os.ts.
@@ -402,4 +403,22 @@ export async function setDnd(on: boolean): Promise<boolean | null> {
 /** Message au premier plan (code d'appairage), sans attendre qu'il soit fermé. */
 export async function alert(title: string, text: string) {
   await call("alert", { title, text });
+}
+
+/** Pavé tactile : opération `pointer` du pilote (SendInput). */
+export async function pointerMove(dx: number, dy: number) {
+  await call("pointer", { kind: "move", dx, dy });
+}
+
+export async function pointerScroll(sx: number, sy: number) {
+  await call("pointer", { kind: "scroll", sx, sy });
+}
+
+/** Zoom : Ctrl + molette, `steps` crans (positif = agrandir). */
+export async function pointerZoom(steps: number) {
+  await call("pointer", { kind: "zoom", steps });
+}
+
+export async function pointerButton(button: PointerButton, action: PointerAction) {
+  await call("pointer", { kind: "button", button, action });
 }

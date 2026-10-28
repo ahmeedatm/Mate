@@ -75,9 +75,15 @@ namespace Companion
                 if (endpoint != null)
                 {
                     if (target == id && hasVolume) endpoint.SetMasterVolumeLevelScalar(wanted, ref ctx);
-                    if (target == id && hasMuted) endpoint.SetMute(Convert.ToBoolean(req["muted"]), ref ctx);
+                    // Micro : tous les micros actifs, comme la barre « Son de l'ordinateur » (Mics).
+                    if (target == id && hasMuted)
+                    {
+                        if (flow == 1) SetMicsMuted(Convert.ToBoolean(req["muted"]));
+                        else endpoint.SetMute(Convert.ToBoolean(req["muted"]), ref ctx);
+                    }
                     if (endpoint.GetMasterVolumeLevelScalar(out level) == 0) volume = level;
-                    endpoint.GetMute(out muted);
+                    if (flow == 1) muted = MicsMuted();
+                    else endpoint.GetMute(out muted);
                 }
                 res[id] = Channel(id, id, volume, muted, endpoint != null ? EndpointPeak(flow) : 0);
             }
