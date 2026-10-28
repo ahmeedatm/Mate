@@ -57,7 +57,7 @@ export type Action = Step | { type: "macro"; steps: Step[] };
  * d'écran (`streaming`), en appel sans partage (`share` : « Partager », remplacé par « Arrêter le partage ») ou sur
  * l'écran d'avant-réunion de Teams (`lobby` : « Rejoindre maintenant »).
  * lit : touche allumée (rouge, comme Muet dans l'onglet Son) quand le micro est coupé (`muted`) ou le casque en
- * sourdine (`deafened`), d'après l'appel lu dans l'appli.
+ * sourdine (`deafened`), ou la caméra coupée (`camera`, Teams sur Mac), d'après l'appel lu dans l'appli.
  */
 type TileConfig = {
   label: string;
@@ -66,7 +66,7 @@ type TileConfig = {
   glyph?: string;
   color?: string;
   when?: "call" | "idle" | "streaming" | "share" | "lobby";
-  lit?: "muted" | "deafened";
+  lit?: "muted" | "deafened" | "camera";
 };
 /** `apps` : page d'applis que l'on complète depuis la tablette (voir saveApps) ; `meeting` : page affichée
  * par la tablette après « Rejoindre » (micro, caméra, raccrocher) ; `app` : page d'une appli (Discord, Teams…),

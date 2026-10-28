@@ -220,7 +220,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         val state = app?.let { runCatching { client().deck.voice(it) }.getOrNull() }
         if (app != pages.getOrNull(pageIndex)?.app || showingOpen) return
         val changed = state?.connected != voice?.connected || state?.streaming != voice?.streaming
-        val relit = state?.muted != voice?.muted || state?.deafened != voice?.deafened
+        val relit = state?.muted != voice?.muted || state?.deafened != voice?.deafened || state?.cameraOff != voice?.cameraOff
         voice = state
         renderVoice()
         if (changed) showPage(pageIndex) else if (relit) adapter.notifyDataSetChanged()
@@ -260,6 +260,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         // En sourdine, Discord coupe aussi le micro (il revient avec le casque, comme il était avant).
         "muted" -> voice?.muted == true || voice?.deafened == true
         "deafened" -> voice?.deafened == true
+        "camera" -> voice?.cameraOff == true
         else -> false
     }
 

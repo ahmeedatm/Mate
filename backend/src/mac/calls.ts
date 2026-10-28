@@ -125,6 +125,8 @@ function run(argv) {
 const LEAVE = new RegExp(LEAVE_SOURCE, "i");
 const MIC_ON = /^(Couper|Désactiver) (le )?micro|^Mute\b/i;
 const MIC_OFF = /^(Activer|Réactiver|Rétablir) (le )?micro|^Unmute\b/i;
+const CAMERA_ON = /^(Désactiver|Couper|Arrêter) (la )?(caméra|vidéo)|^Turn (camera|video) off\b/i;
+const CAMERA_OFF = /^(Activer|Démarrer|Allumer) (la )?(caméra|vidéo)|^Turn (camera|video) on\b/i;
 const JOIN_NOW = /^(Rejoindre maintenant|Join now)$/i;
 const SCREEN = new RegExp(SCREEN_SOURCE);
 const SHARING = new RegExp(SHARING_SOURCE, "i");
@@ -137,6 +139,8 @@ export type CallState = {
   people: string[];
   muted: boolean | null;
   deafened: boolean | null;
+  /** Caméra coupée (bouton « Activer la caméra ») ; null si le bouton n'est pas lu. */
+  cameraOff?: boolean | null;
   /** Écran d'avant-réunion de Teams (« Rejoindre maintenant ») : pas encore dans la réunion. */
   lobby?: boolean;
 };
@@ -199,6 +203,7 @@ export function callStateOf(raw: AppWindows): CallState | null {
       people: [],
       muted: null,
       deafened: null,
+      cameraOff: null,
       lobby,
     };
   }
@@ -211,8 +216,11 @@ export function callStateOf(raw: AppWindows): CallState | null {
       ?.trim() || null;
   const micWindow = mic(call) ? call : calls.find(mic);
   const muted = micWindow ? has(micWindow, MIC_OFF) : null;
+  const camera = (w: { buttons: string[] }) => has(w, CAMERA_ON) || has(w, CAMERA_OFF);
+  const cameraWindow = camera(call) ? call : calls.find(camera);
+  const cameraOff = cameraWindow ? has(cameraWindow, CAMERA_OFF) : null;
   const streaming = calls.some((w) => has(w, SHARING));
-  return { found: true, connected: true, streaming, channel, people: [], muted, deafened: null };
+  return { found: true, connected: true, streaming, channel, people: [], muted, deafened: null, cameraOff };
 }
 
 /** Boutons de toutes les fenêtres de l'appli (sonnerie, diagnostic) ; `detail` ajoute titres et textes des boîtes. */
