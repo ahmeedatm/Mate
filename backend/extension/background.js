@@ -131,6 +131,20 @@ function controlPage(action, seconds) {
     const seen = navigator.mediaSession?.__unowhy ? Object.keys(navigator.mediaSession.__unowhy).join(",") : "script absent";
     return button ? "bouton" : `pas de bouton (actions : ${seen})`;
   }
+  if (!media && action === "play-pause") {
+    // Lecteur hors de la page (Spotify) : son bouton, sinon l'action déclarée par le site selon son état.
+    const button = document.querySelector("[data-testid=control-button-playpause]");
+    if (button) {
+      button.click();
+      return `${location.host} bouton`;
+    }
+    const state = navigator.mediaSession?.playbackState;
+    const handler = navigator.mediaSession?.__unowhy?.[state === "playing" ? "pause" : "play"];
+    if (state !== "none" && handler) {
+      handler({ action: state === "playing" ? "pause" : "play" });
+      return `${location.host} media session`;
+    }
+  }
   if (!media) return "pas de lecteur";
   if (action === "seek") media.currentTime = seconds;
   else if (media.paused) media.play();

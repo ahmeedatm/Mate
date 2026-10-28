@@ -3,7 +3,8 @@ import os from "node:os";
 import { randomInt, randomUUID } from "node:crypto";
 import { config } from "./config.ts";
 import { logFailure } from "./log.ts";
-import { alert, computerName, osName } from "./os.ts";
+import { alert, computerName, osName, pointerMove, pointerScroll } from "./os.ts";
+import { handlePointerDatagram, POINTER_HEADER, PointerGate } from "./pointer.ts";
 
 /**
  * Appairage d'une tablette sans rien recopier à la main :
@@ -36,7 +37,13 @@ export function lanAddresses(): string[] {
 export function startDiscovery(log: (msg: string) => void) {
   if (config.loopbackOnly) return;
   const socket = dgram.createSocket({ type: "udp4", reuseAddr: true });
+  const gate = new PointerGate();
   socket.on("message", (msg, from) => {
+    // Pavé tactile : paquets de déplacement ; tout le reste de la découverte est inchangé (src/pointer.ts).
+    if (msg.subarray(0, POINTER_HEADER.length).toString("utf8") === POINTER_HEADER) {
+      void handlePointerDatagram(gate, msg, from, config.token, { move: pointerMove, scroll: pointerScroll });
+      return;
+    }
     if (msg.toString("utf8").trim() !== PROBE) return;
     socket.send(JSON.stringify(identity()), from.port, from.address);
   });
