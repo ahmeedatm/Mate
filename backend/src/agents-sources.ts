@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { frontApp, isMac } from "./os.ts";
-import type { ClaudeSession, OrcaInfo } from "./agents.ts";
+import type { ClaudeSession, OrcaInfo, TranscriptInfo } from "./agents.ts";
 
 /**
  * Ce que les agents Claude lisent sur l'ordinateur : `claude agents --json`, la CLI d'Orca, l'appli de devant.
@@ -124,11 +124,18 @@ export async function listOrca(): Promise<OrcaInfo | null> {
       worktrees: trees.map((w) => ({
         path: String(w.path ?? ""),
         branch: typeof w.branch === "string" ? w.branch.replace(/^refs\/heads\//, "") : null,
+        ticket: ((w.linkedItems ?? []) as Record<string, any>[]).find((i) => typeof i.jiraIdentifier === "string")?.jiraIdentifier ?? null,
+        mr:
+          typeof w.linkedGitLabMR === "number"
+            ? w.linkedGitLabMR
+            : (((w.linkedItems ?? []) as Record<string, any>[]).filter((i) => i.provider === "gitlab" && i.type === "mr").at(-1)?.number ??
+              null),
         agents: ((w.agents ?? []) as Record<string, any>[])
           .filter((a) => a.agentType === "claude")
           .map((a) => ({
             paneKey: String(a.paneKey ?? ""),
             state: typeof a.state === "string" ? a.state : null,
+            monitoring: a.workingMode === "monitoring",
             toolName: typeof a.toolName === "string" ? a.toolName : null,
             lastMessage: typeof a.lastAssistantMessage === "string" ? a.lastAssistantMessage : null,
             structured: a.structuredHostOwned === true,
@@ -204,4 +211,71 @@ export async function focusSession(handle: string | null): Promise<void> {
   await exec("open", ["-a", "Orca"], 6_000).catch(() => {
     throw new Error("Impossible d'amener Orca devant");
   });
+}
+
+// --- Journal de la session (~/.claude/projects/<dossier>/<session>.jsonl) : le titre automatique que Claude donne à la
+// session (`ai-title`) et la dernière MR créée (`pr-link`). Format interne de Claude Code, lu sans s'y fier : la fin du
+// fichier seulement, relue quand sa taille change ; rien d'autre n'est gardé.
+
+const TAIL_BYTES = 256 * 1024;
+const transcripts = new Map<string, { size: number; info: TranscriptInfo }>();
+
+/** Dossier du journal : le chemin de la session, chaque caractère non alphanumérique remplacé par « - ». */
+export const projectSlug = (cwd: string) => cwd.replace(/[^A-Za-z0-9]/g, "-");
+
+export function readTranscriptTail(text: string): TranscriptInfo {
+  let title: string | null = null;
+  let mr: number | null = null;
+  for (const line of text.split("\n").reverse()) {
+    if (title && mr) break;
+    if (!title && line.includes('"ai-title"')) {
+      try {
+        const e = JSON.parse(line);
+        if (e.type === "ai-title" && typeof e.aiTitle === "string") title = e.aiTitle;
+      } catch {
+        // Ligne coupée par le début de la lecture.
+      }
+    }
+    if (!mr && line.includes('"pr-link"')) {
+      try {
+        const e = JSON.parse(line);
+        if (e.type === "pr-link" && Number.isInteger(e.prNumber)) mr = e.prNumber;
+      } catch {
+        // Idem.
+      }
+    }
+  }
+  return { title, mr };
+}
+
+export async function transcriptInfo(sessionId: string, cwd: string, hinted: string | null): Promise<TranscriptInfo | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(sessionId)) return null;
+  const candidates = [
+    hinted,
+    ...claudeConfigDirs().map((dir) => path.join(dir, "projects", projectSlug(cwd), `${sessionId}.jsonl`)),
+  ].filter((p): p is string => Boolean(p));
+  for (const file of candidates) {
+    let size: number;
+    try {
+      size = fs.statSync(file).size;
+    } catch {
+      continue;
+    }
+    const cached = transcripts.get(file);
+    if (cached && cached.size === size) return cached.info;
+    const fd = fs.openSync(file, "r");
+    try {
+      const length = Math.min(size, TAIL_BYTES);
+      const buf = Buffer.alloc(length);
+      fs.readSync(fd, buf, 0, length, size - length);
+      const info = readTranscriptTail(buf.toString("utf8"));
+      // Titre ou MR plus anciens que la fin lue : on garde ceux d'avant.
+      const merged = { title: info.title ?? cached?.info.title ?? null, mr: info.mr ?? cached?.info.mr ?? null };
+      transcripts.set(file, { size, info: merged });
+      return merged;
+    } finally {
+      fs.closeSync(fd);
+    }
+  }
+  return null;
 }
