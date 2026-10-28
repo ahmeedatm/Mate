@@ -93,6 +93,17 @@ object Look {
         }
     }
 
+    /**
+     * Texte lisible sur un fond imposé (tuile colorée de deck.json) : le texte du thème ou le fond du thème,
+     * celui qui contraste le plus. Ex. Verrouiller (ardoise) en thème clair : texte clair.
+     */
+    fun readableOn(context: Context, fill: Int): Int {
+        val text = themeColor(context, R.attr.c_text)
+        val bg = themeColor(context, R.attr.c_bg)
+        val opaque = ColorUtils.setAlphaComponent(fill, 0xFF)
+        return if (ColorUtils.calculateContrast(text, opaque) >= ColorUtils.calculateContrast(bg, opaque)) text else bg
+    }
+
     /** Initiale neutre (emplacement vide « + », emoji choisi) : sans rond. */
     fun plainInitial(view: TextView, colorAttr: Int) {
         view.setTextColor(themeColor(view.context, colorAttr))

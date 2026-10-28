@@ -585,8 +585,13 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             val lit = isLit(tile)
             val tint = if (lit) themeColor(requireContext(), R.attr.c_ko) else custom
             if (tint != null) view.background.mutate().setTint(tint) else view.background.setTintList(null)
-            view.findViewById<TextView>(R.id.tile_label)
-                .setTextColor(themeColor(requireContext(), if (lit) R.attr.c_on_accent else R.attr.c_text))
+            view.findViewById<TextView>(R.id.tile_label).setTextColor(
+                when {
+                    lit -> themeColor(requireContext(), R.attr.c_on_accent)
+                    custom != null -> Look.readableOn(requireContext(), custom)
+                    else -> themeColor(requireContext(), R.attr.c_text)
+                },
+            )
 
             if (tile.type == "empty" || tile.type == ADD) {
                 if (tile.type == "empty") view.findViewById<TextView>(R.id.tile_label).setText(R.string.key_empty_label)
