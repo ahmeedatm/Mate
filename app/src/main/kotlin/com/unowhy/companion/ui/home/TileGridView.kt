@@ -7,6 +7,7 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
@@ -75,6 +76,33 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             onHold(cell, view)
             true
         }
+        // Le défilement reprend la main sur le doigt : plus d'appui.
+        setOnScrollListener(object : AbsListView.OnScrollListener {
+            override fun onScrollStateChanged(view: AbsListView, scrollState: Int) {
+                if (scrollState != AbsListView.OnScrollListener.SCROLL_STATE_IDLE) releaseAll()
+            }
+
+            override fun onScroll(view: AbsListView, firstVisibleItem: Int, visibleItemCount: Int, totalItemCount: Int) = Unit
+        })
+    }
+
+    /**
+     * Ressort d'appui posé ici et non sur les cases : elles ne sont pas cliquables (le clic passe par la grille), une
+     * case qui garde un `OnTouchListener` ne reçoit que le DOWN et resterait enfoncée.
+     */
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                val position = pointToPosition(ev.x.toInt(), ev.y.toInt())
+                if (position != INVALID_POSITION) getChildAt(position - firstVisiblePosition)?.let { Look.pressTo(it, true) }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> releaseAll()
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
+    private fun releaseAll() {
+        for (i in 0 until childCount) Look.pressTo(getChildAt(i), false)
     }
 
     /** Dessine [cell] dans une vue de [newCell] (neuve ou recyclée). */
@@ -109,7 +137,6 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
                     override fun getOutline(v: View, outline: Outline) = outline.setRoundRect(0, 0, v.width, v.height, context.dp(RADIUS_DP).toFloat())
                 }
             }
-            Look.pressSpring(view)
             return view
         }
 
@@ -124,12 +151,14 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             val icon = view.findViewById<ImageView>(R.id.tile_icon)
             val initial = view.findViewById<TextView>(R.id.tile_initial)
             val label = view.findViewById<TextView>(R.id.tile_label)
-            view.tag = key.id
+            Look.pressReset(view)
             icon.setImageBitmap(null)
             icon.setPadding(0, 0, 0, 0)
             initial.visibility = View.VISIBLE
 
             val empty = cell.add || cell.type == EMPTY
+            // Case sans touche : pas de tag, sinon une icône en retard d'une autre case se poserait dessus.
+            view.tag = if (empty) null else key.id
             if (empty) {
                 plate.setBackgroundResource(R.drawable.tile_empty_bg)
                 label.text = if (cell.type == EMPTY) context.getString(R.string.key_empty_label) else key.label

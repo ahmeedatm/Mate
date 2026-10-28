@@ -305,6 +305,26 @@ object Look {
         }
     }
 
+    private val presses = java.util.WeakHashMap<View, Pair<SpringAnimation, SpringAnimation>>()
+
+    /**
+     * Appui piloté de l'extérieur, pour une vue qui ne reçoit pas elle-même le DOWN et l'UP (case d'une liste dont le
+     * clic passe par la liste) : `true` l'enfonce à 0,96, `false` la rend. [pressSpring] pour une vue cliquable.
+     */
+    fun pressTo(view: View, pressed: Boolean) {
+        val (x, y) = presses.getOrPut(view) { spatialFast(view, DynamicAnimation.SCALE_X) to spatialFast(view, DynamicAnimation.SCALE_Y) }
+        val to = if (pressed) 0.96f else 1f
+        x.animateToFinalPosition(to)
+        y.animateToFinalPosition(to)
+    }
+
+    /** Vue réutilisée pour une autre case : plus d'appui en cours, taille normale. */
+    fun pressReset(view: View) {
+        presses.remove(view)?.let { (x, y) -> x.cancel(); y.cancel() }
+        view.scaleX = 1f
+        view.scaleY = 1f
+    }
+
     /** Change l'icône : la nouvelle arrive en grandissant (0,5 → 1) sur un ressort, en fondu. Même icône : rien. */
     fun swapIcon(icon: ImageView, res: Int) {
         if (icon.tag == res) return
