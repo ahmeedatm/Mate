@@ -700,6 +700,7 @@
     <string name="profiles_title">Profils</string>
     <string name="profile_new_empty">Nouveau profil vide</string>
     <string name="profile_new_template">Depuis un modèle</string>
+    <string name="profile_edit">Modifier ce profil</string>
     <string name="profile_rename">Renommer</string>
     <string name="profile_rename_hint">Nom du profil</string>
     <string name="profile_delete">Supprimer</string>

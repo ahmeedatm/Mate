@@ -24,16 +24,18 @@ import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeColor
 
 /**
- * Liste des profils de l'Accueil : afficher, marquer le profil de jeu, monter, renommer, supprimer, en ajouter un
+ * Liste des profils de l'Accueil : afficher, modifier les widgets, marquer le profil de jeu, monter, renommer, supprimer, en ajouter un
  * (vide ou depuis un modèle). `current` : le profil affiché ; `onChanged(show, structure)` est appelé après chaque
  * changement, la disposition est déjà modifiée, avec le profil à afficher. `structure` : des profils ont été ajoutés,
- * déplacés ou retirés (les widgets sont à recréer) ; faux pour un renommage ou le marquage de jeu.
+ * déplacés ou retirés (les widgets sont à recréer) ; faux pour un renommage ou le marquage de jeu. `onEdit(index)` :
+ * la boîte est fermée, le profil `index` est à afficher puis à passer en mode Modifier.
  */
 class ProfilesDialog(
     private val context: Context,
     private val layout: HomeLayout,
     private var current: Int,
     private val name: (Int) -> String,
+    private val onEdit: (Int) -> Unit,
     private val onChanged: (show: Int, structure: Boolean) -> Unit,
 ) {
 
@@ -101,6 +103,10 @@ class ProfilesDialog(
             }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
         val game = layout.gameProfile == i
+        addView(iconButton(R.drawable.ic_widgets, R.string.profile_edit, R.attr.c_text_dim) {
+            dialog.dismiss()
+            onEdit(i)
+        })
         addView(iconButton(R.drawable.ic_gamepad, R.string.profile_game, if (game) R.attr.c_accent else R.attr.c_text_faint) {
             layout.setGameProfile(if (game) -1 else i)
             changed(structure = false)

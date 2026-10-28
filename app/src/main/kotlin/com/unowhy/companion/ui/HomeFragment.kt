@@ -397,7 +397,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
      * données. Renommage ou marquage de jeu : la barre seulement, ni widgets ni réseau.
      */
     private fun openProfiles() {
-        ProfilesDialog(requireContext(), layout, page, ::profileName) { show, structure ->
+        ProfilesDialog(requireContext(), layout, page, ::profileName, ::editProfile) { show, structure ->
             if (grid.editing) endEdit(keep = true)
             nameProfiles()
             save()
@@ -410,6 +410,14 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
                 else -> renderProfileBar()
             }
         }.show()
+    }
+
+    /** « Modifier ce profil » : le profil choisi s'affiche, puis le mode Modifier commence, comme à l'appui long. */
+    private fun editProfile(index: Int) {
+        if (grid.narrow) return
+        if (grid.editing) endEdit(keep = true)
+        if (index != page) showProfile(index)
+        onEnterEdit()
     }
 
     private fun renderProfileBar() {
