@@ -127,6 +127,9 @@ class HomeLayout(val widgets: MutableList<Placed>, var pages: Int) {
             return raw?.let { runCatching { parse(it) }.getOrNull() } ?: Template.defaultFor(cadran).build()
         }
 
+        /** Ce widget est-il sur l'Accueil (disposition du thème, modèle par défaut si rien n'est enregistré) ? */
+        fun has(context: Context, cadran: Boolean, type: WidgetType) = load(context, cadran).widgets.any { it.type == type }
+
         fun save(context: Context, layout: HomeLayout, cadran: Boolean) {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(key(cadran), layout.toJson()).apply()
         }
