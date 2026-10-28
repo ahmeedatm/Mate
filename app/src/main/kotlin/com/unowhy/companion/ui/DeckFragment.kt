@@ -316,12 +316,10 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
      * seulement pendant l'appel, Teams restant ouvert toute la journée). Sinon la page d'une appli n'a pas d'onglet :
      * on l'ouvre en touchant l'appli, et une pastille à son nom s'ajoute au bout tant qu'elle est affichée.
      */
-    private fun renderTabs() {
-        // Un onglet est en train d'être déplacé : la barre sera refaite au lâcher.
-        if (movingTab) return
-        tabs.removeAllViews()
-        val actions = mutableListOf<() -> Unit>()
-        selectedTab = -1
+    private class Tab(val key: String, val title: String, val selected: Boolean, val onClick: () -> Unit)
+
+    /** Les onglets à afficher, dans l'ordre choisi. Aucune vue créée ici. */
+    private fun computeTabs(): List<Tab> {
         fun seen(map: Map<String, Long>, app: String) = map.keys.any { it.equals(app, ignoreCase = true) }
         val live = pages.indices.filter { i ->
             val app = pages[i].app ?: return@filter false
@@ -329,7 +327,6 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         }
         val shown = pages.indices.filter { pages[it].app == null } + live +
             listOf(pageIndex).filter { pages.getOrNull(it)?.app != null && it !in live }
-        class Tab(val key: String, val title: String, val selected: Boolean, val onClick: () -> Unit)
         val entries = mutableListOf<Tab>()
         fun openTab() = Tab(OPEN_TAB, getString(R.string.deck_open_tab), showingOpen, ::showOpen)
         fun mixerTab() = Tab(MIXER_TAB, getString(R.string.deck_mixer_tab), showingMixer, ::showMixer)
@@ -343,7 +340,24 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         }
         // Ordre choisi en déplaçant les onglets ; un onglet jamais placé (page d'appli qui apparaît) garde sa place relative, à la fin.
         val order = Prefs.deckTabOrder(requireContext())
-        val sorted = entries.withIndex().sortedBy { (i, t) -> order.indexOf(t.key).takeIf { it >= 0 } ?: (order.size + i) }.map { it.value }
+        return entries.withIndex().sortedBy { (i, t) -> order.indexOf(t.key).takeIf { it >= 0 } ?: (order.size + i) }.map { it.value }
+    }
+
+    private fun renderTabs() {
+        // Un onglet est en train d'être déplacé : la barre sera refaite au lâcher.
+        if (movingTab) return
+        val sorted = computeTabs()
+        // Même ensemble d'onglets (simple changement de sélection) : on met à jour l'état sélectionné sans
+        // removeAllViews ni ré-inflation, qui provoquaient une mise en page complète à chaque toucher d'onglet.
+        val sameTabs = tabs.childCount == sorted.size &&
+            sorted.withIndex().all { (i, t) -> tabs.getChildAt(i).tag == t.key }
+        if (sameTabs) {
+            applyTabSelection(sorted)
+            return
+        }
+        tabs.removeAllViews()
+        val actions = mutableListOf<() -> Unit>()
+        selectedTab = -1
         sorted.forEach { t ->
             val tab = Button(requireContext(), null, 0, R.style.Chip).apply {
                 text = t.title
@@ -357,7 +371,26 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             actions += t.onClick
         }
         tabActions = actions
-        // Onglet choisi par balayage : on fait défiler la barre jusqu'à lui.
+        scrollToSelectedTab()
+    }
+
+    /** Ensemble d'onglets inchangé : met à jour l'état sélectionné et les actions sur les boutons déjà en place. */
+    private fun applyTabSelection(sorted: List<Tab>) {
+        val actions = mutableListOf<() -> Unit>()
+        selectedTab = -1
+        sorted.forEachIndexed { i, t ->
+            val tab = tabs.getChildAt(i)
+            if (tab.isSelected != t.selected) tab.isSelected = t.selected
+            tab.setOnClickListener { t.onClick() }
+            if (t.selected) selectedTab = i
+            actions += t.onClick
+        }
+        tabActions = actions
+        scrollToSelectedTab()
+    }
+
+    /** Onglet choisi par balayage : on fait défiler la barre jusqu'à lui. */
+    private fun scrollToSelectedTab() {
         tabs.getChildAt(selectedTab)?.let { tab ->
             tabs.post { (tabs.parent as HorizontalScrollView).smoothScrollTo((tab.left - dp(48)).coerceAtLeast(0), 0) }
         }
