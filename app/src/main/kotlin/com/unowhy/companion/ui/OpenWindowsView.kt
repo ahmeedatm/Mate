@@ -51,6 +51,10 @@ class OpenWindowsView @JvmOverloads constructor(
     private var dragged: View? = null
     /** Actions en cours : la relecture périodique les attend, sinon elle remettrait l'ancien état un instant. */
     private var acting = 0
+    /** Numéro du dernier geste : la réponse d'un geste dépassé par un autre est ignorée (pas de retour en arrière). */
+    private var lastAction = 0
+    /** Fenêtre du dernier geste, estompée jusqu'à la réponse de l'ordinateur. */
+    private var pending: Pair<String, ComputerWindow>? = null
 
     init {
         orientation = VERTICAL
@@ -106,47 +110,81 @@ class OpenWindowsView @JvmOverloads constructor(
         }
     }
 
-    /** Appelle l'ordinateur puis affiche la liste à jour ; `rollback` : état à remettre en cas d'échec. */
-    private fun act(rollback: OpenWindows?, call: suspend WindowsApi.() -> OpenWindows) {
+    /**
+     * Affiche tout de suite l'état attendu (`target` estompée), appelle l'ordinateur, puis relit la liste une fois
+     * l'animation de l'ordinateur finie. En cas d'échec, l'état d'avant revient.
+     */
+    private fun act(app: OpenApp, target: ComputerWindow, expected: OpenWindows, call: suspend WindowsApi.() -> OpenWindows?) {
+        val before = shown
+        val id = ++lastAction
+        pending = app.key to expected.windowOf(app.key, target)
+        render(expected, force = true)
         acting++
         scope.launch {
             try {
-                render(BackendClient(context).windows.call())
+                val api = BackendClient(context).windows
+                val result = api.call() ?: run {
+                    delay(SETTLE_MS)
+                    if (id == lastAction) api.openWindows() else null
+                }
+                if (id == lastAction) {
+                    pending = null
+                    result?.let { if (dragged == null) render(it, force = true) }
+                }
             } catch (e: Exception) {
-                rollback?.let(::render)
-                showStatus(context.errorText(e))
+                val message = context.errorText(e)
+                if (id == lastAction) {
+                    pending = null
+                    before?.let { render(it, force = true) }
+                    showStatus(message)
+                }
             } finally {
                 acting--
             }
         }
     }
 
+    /** État attendu après un geste sur `w` : seule cette fenêtre change (et le premier plan). */
+    private fun expect(app: OpenApp, w: ComputerWindow, front: Boolean = w.front, change: (ComputerWindow) -> ComputerWindow): OpenWindows {
+        val current = shown ?: OpenWindows(listOf(app), emptyList())
+        return current.copy(apps = current.apps.map { a ->
+            a.copy(windows = a.windows.map {
+                when {
+                    a.key == app.key && it == w -> change(it).copy(front = front)
+                    front -> it.copy(front = false)
+                    else -> it
+                }
+            })
+        })
+    }
+
+    private fun OpenWindows.windowOf(key: String, w: ComputerWindow) =
+        apps.firstOrNull { it.key == key }?.windows?.firstOrNull { it.index == w.index && it.title == w.title } ?: w
+
     /** Fenêtre déposée sur un écran : le schéma change tout de suite, l'ordinateur confirme ensuite. */
     private fun drop(drag: Drag, display: ComputerDisplay, layout: String) {
-        val current = shown ?: return
+        if (shown == null) return
         val w = drag.window
         if (!w.elsewhere && w.display == display.id && layout == "keep") return
-        val moved = w.copy(display = display.id, elsewhere = false, minimized = false, fullscreen = false)
-        render(current.copy(apps = current.apps.map { a ->
-            if (a != drag.app) a else a.copy(windows = a.windows.map { if (it == w) moved else it })
-        }))
-        act(rollback = current) { openWindowAction(drag.app, w, "place", display = display.id, layout = layout) }
+        val moved = expect(drag.app, w, front = true) { it.copy(display = display.id, elsewhere = false, minimized = false, fullscreen = false) }
+        act(drag.app, w, moved) { openWindowAction(drag.app, w, "place", display = display.id, layout = layout) }
     }
 
     /** Fenêtre lâchée dans la corbeille : fermée comme par sa croix (l'appli peut demander d'enregistrer). */
     private fun close(drag: Drag) {
         val current = shown ?: return
-        render(current.copy(apps = current.apps.mapNotNull { a ->
+        val closed = current.copy(apps = current.apps.mapNotNull { a ->
             if (a != drag.app) a else a.copy(windows = a.windows - drag.window).takeIf { it.windows.isNotEmpty() }
-        }))
-        act(rollback = current) { openWindowAction(drag.app, drag.window, "close") }
+        })
+        act(drag.app, drag.window, closed) { openWindowAction(drag.app, drag.window, "close") }
     }
 
-    private fun render(data: OpenWindows) {
+    /** `force` : reconstruit même si la liste n'a pas changé (fenêtre estompée ou plus). */
+    private fun render(data: OpenWindows, force: Boolean = false) {
         status.visibility = GONE
         if (data.apps.isEmpty()) showStatus(context.getString(R.string.open_none))
         // Même état qu'avant : on ne reconstruit pas (le défilement de chaque écran reste où il est).
-        if (data == shown) return
+        if (data == shown && !force) return
         shown = data
         // Par nom d'appli puis par titre, pas de la plus en avant à la plus en arrière : la liste ne bouge pas quand on
         // touche une fenêtre ou qu'on change de bureau.
@@ -178,20 +216,29 @@ class OpenWindowsView @JvmOverloads constructor(
         )
         card.findViewById<TextView>(R.id.open_title).text =
             (listOf(w.title.ifBlank { context.getString(R.string.windows_untitled) }) + meta).joinToString(" · ")
+        if (pending == app.key to w) card.alpha = PENDING_ALPHA
         card.dragToScreens(
             Drag(app, w), canDrag = { true }, onDragStarted = { dragged = it },
             onDoubleTap = {
                 card.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                act(rollback = null) { openWindowAction(app, w, "zoom") }
+                // Sortir du plein écran rend aussi sa taille d'avant.
+                val zoomed = expect(app, w, front = true) { it.copy(minimized = false, fullscreen = false, maximized = !it.maximized && !it.fullscreen) }
+                act(app, w, zoomed) { openWindowAction(app, w, "zoom") }
             },
             // Mac : plein écran sur son propre bureau (bouton vert), à part de « remplir l'écran ».
             onTripleTap = {
                 card.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                act(rollback = null) { openWindowAction(app, w, "fullscreen") }
+                act(app, w, expect(app, w, front = true) { it.copy(minimized = false, fullscreen = !it.fullscreen) }) {
+                    openWindowAction(app, w, "fullscreen")
+                }
             }.takeIf { Computers.active(context)?.os == "mac" },
         ) {
             card.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-            act(rollback = null) { openWindowAction(app, w, if (w.front && !w.minimized) "minimize" else "focus") }
+            if (w.front && !w.minimized) {
+                act(app, w, expect(app, w, front = false) { it.copy(minimized = true) }) { openWindowAction(app, w, "minimize") }
+            } else {
+                act(app, w, expect(app, w, front = true) { it.copy(minimized = false) }) { openWindowAction(app, w, "focus") }
+            }
         }
         return card
     }
@@ -206,5 +253,8 @@ class OpenWindowsView @JvmOverloads constructor(
     private companion object {
         /** La liste du Mac prend près de 2 s à lire (Accessibilité) : pas plus souvent. */
         const val POLL_MS = 5_000L
+        /** Le plein écran et la sortie du plein écran sont animés par macOS (~1 s) : relire après. */
+        const val SETTLE_MS = 1_500L
+        const val PENDING_ALPHA = 0.55f
     }
 }

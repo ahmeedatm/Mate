@@ -39,17 +39,19 @@ class WindowsApi(private val http: Http) {
     suspend fun openWindows(): OpenWindows = http.io { parseOpenWindows(JSONObject(http.get("/windows/open", timeoutMs = 20_000))) }
 
     /**
-     * `action` : focus (mettre devant), place (sur l'écran `display`, disposition `layout`), minimize (réduire) ou
-     * zoom (agrandir, ou rendre sa taille) ; renvoie la liste à jour.
+     * `action` : focus (mettre devant), place (sur l'écran `display`, disposition `layout`), minimize (réduire),
+     * zoom (agrandir, ou rendre sa taille), fullscreen (Mac) ou close. L'ordinateur répond dès l'action faite (null),
+     * sans relire la liste ; un compagnon plus ancien rend quand même la liste à jour.
      */
-    suspend fun openWindowAction(app: OpenApp, window: ComputerWindow, action: String, display: Int? = null, layout: String? = null): OpenWindows = http.io {
+    suspend fun openWindowAction(app: OpenApp, window: ComputerWindow, action: String, display: Int? = null, layout: String? = null): OpenWindows? = http.io {
         val body = JSONObject()
             .put("key", app.key)
             .put("action", action)
             .put("window", JSONObject().put("index", window.index).put("title", window.title))
+            .put("list", false)
         display?.let { body.put("display", it) }
         layout?.let { body.put("layout", it) }
-        parseOpenWindows(JSONObject(http.postJson("/windows/open", body)))
+        JSONObject(http.postJson("/windows/open", body)).takeIf { it.has("apps") }?.let(::parseOpenWindows)
     }
 
     /** Icône PNG d'une appli de l'ordinateur d'après son nom, ou null si elle n'en a pas. */
