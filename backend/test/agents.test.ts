@@ -13,6 +13,7 @@ import {
   type AgentAlert,
   type AgentsDeps,
   type ClaudeSession,
+  type FocusTarget,
   type OrcaInfo,
 } from "../src/agents.ts";
 import { execFile, spawnSync } from "node:child_process";
@@ -34,7 +35,7 @@ let live: ClaudeSession[] | null = [];
 let orca: OrcaInfo | null = null;
 const alerts: AgentAlert[] = [];
 const sent: { handle: string; text: string }[] = [];
-const focused: (string | null)[] = [];
+const focused: FocusTarget[] = [];
 
 const deps = (holdMs = 5_000): AgentsDeps => ({
   now: () => clock,
@@ -46,7 +47,7 @@ const deps = (holdMs = 5_000): AgentsDeps => ({
   holdMs,
   sendText: async (handle, text) => void sent.push({ handle, text }),
   interruptSession: async (handle) => void sent.push({ handle, text: "<Échap>" }),
-  focusSession: async (handle) => void focused.push(handle),
+  focusSession: async (target) => void focused.push(target),
 });
 
 const flush = async () => {
@@ -724,21 +725,37 @@ describe("message rapide et session devant", () => {
     assert.deepEqual(sent, []);
   });
 
-  it("amène devant le terminal, ou Orca seulement pour une session de chat ; sinon refuse", async () => {
+  it("amène devant le terminal, ou le chat Orca de la session ; sinon refuse", async () => {
     const a = createAgents(deps());
     await restingInOrca(a);
     await a.focus("s1");
-    assert.deepEqual(focused, ["term_1"]);
+    assert.deepEqual(focused, [{ handle: "term_1", worktree: "/work/projet", tab: null }]);
     const b = createAgents(deps());
     await b.hook({ ...event("Stop"), session_id: "libre", cwd: "/ailleurs" }, {});
     await assert.rejects(b.focus("libre"), (e: AnswerError) => e.statusCode === 409);
-    orca = { worktrees: [{ path: "/work/projet", branch: null, agents: [] }], handles: new Map() };
+    const chat = {
+      paneKey: "structured-agent-session-claude_c9c1:67e9",
+      state: "done",
+      toolName: null,
+      lastMessage: null,
+      structured: true,
+    };
+    orca = { worktrees: [{ path: "/work/projet", branch: null, agents: [chat] }], handles: new Map() };
     await b.hook({ ...event("Stop"), session_id: "chat" }, {});
     live = [{ sessionId: "chat", cwd: "/work/projet", status: "idle" }];
     clock += 10_000;
     await b.refresh();
     await b.focus("chat");
-    assert.deepEqual(focused, ["term_1", null]);
+    assert.deepEqual(focused[1], { handle: null, worktree: "/work/projet", tab: "agent-session:claude_c9c1" });
+    // Plusieurs agents dans le worktree, aucun reconnu : le worktree seulement.
+    orca = {
+      worktrees: [{ path: "/work/projet", branch: null, agents: [chat, { ...chat, paneKey: "structured-agent-session-claude_d2:1" }] }],
+      handles: new Map(),
+    };
+    clock += 10_000;
+    await b.refresh();
+    await b.focus("chat");
+    assert.deepEqual(focused[2], { handle: null, worktree: "/work/projet", tab: null });
   });
 });
 

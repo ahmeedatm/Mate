@@ -52,6 +52,9 @@ export type OrcaInfo = {
   handles: Map<string, string>;
 };
 
+/** Où amener une session : son terminal Orca, sinon son worktree et son onglet de chat dans Orca. */
+export type FocusTarget = { handle: string | null; worktree: string | null; tab: string | null };
+
 export type AgentAlert = {
   kind: "waiting" | "done" | "limit" | "clear";
   session?: string;
@@ -98,8 +101,8 @@ export type AgentsDeps = {
   sendText: (handle: string, text: string) => Promise<void>;
   /** Interrompt le tour en cours d'une session (Échap dans son terminal Orca). */
   interruptSession: (handle: string) => Promise<void>;
-  /** Amène une session devant sur l'ordinateur (terminal Orca, ou Orca seulement). */
-  focusSession: (handle: string | null) => Promise<void>;
+  /** Amène une session devant sur l'ordinateur (terminal Orca, chat Orca, ou Orca seulement). */
+  focusSession: (target: FocusTarget) => Promise<void>;
 };
 
 type Question = { question: string; header: string; multi: boolean; options: { label: string; description: string }[] };
@@ -152,6 +155,9 @@ type Session = {
   transcript: string | null;
   handle: string | null;
   inOrca: boolean;
+  /** Worktree Orca de la session et, pour une session de chat, son onglet (`agent-session:<id>`). */
+  orcaTree: string | null;
+  orcaTab: string | null;
   /** État vu par Orca (`working`, `done`) : il voit aussi les tâches de fond (surveillance de pipeline), que `claude agents` ne compte pas. */
   orcaState: string | null;
   /** Dernier hook reçu : le filet `claude agents` ne contredit pas un hook de moins de 6 s. */
@@ -190,6 +196,12 @@ export function cut(value: unknown, max: number): string {
 }
 
 /** Ticket cité dans un nom de branche : `auto-test/SQOOL-12256-catalog` → `SQOOL-12256`. */
+/** Onglet d'un chat Orca d'après la clé de son volet : `structured-agent-session-<id>:<…>` → `agent-session:<id>`. */
+export function chatTab(paneKey: string): string | null {
+  const m = /^structured-agent-session-([\w-]+):/.exec(paneKey);
+  return m ? `agent-session:${m[1]}` : null;
+}
+
 export function ticketOf(branch: string | null): string | null {
   return /(?:^|[/_-])([A-Z][A-Z0-9]+-\d+)(?=$|[/_-])/.exec(branch ?? "")?.[1] ?? null;
 }
@@ -361,6 +373,8 @@ export function createAgents(deps: AgentsDeps) {
     transcript: null,
     handle: null,
     inOrca: false,
+    orcaTree: null,
+    orcaTab: null,
     orcaState: null,
     hookAt: 0,
     missing: 0,
@@ -833,6 +847,8 @@ export function createAgents(deps: AgentsDeps) {
     for (const s of sessions.values()) {
       s.inOrca = false;
       s.handle = null;
+      s.orcaTree = null;
+      s.orcaTab = null;
       s.orcaState = null;
       s.monitoring = false;
       // Volet exact donné par le hook (le dossier de la session peut différer de celui du worktree) ; sinon le dossier,
@@ -842,6 +858,7 @@ export function createAgents(deps: AgentsDeps) {
       tree ??= orca.worktrees.find((w) => norm(w.path) === norm(s.cwd));
       if (!tree) continue;
       s.inOrca = true;
+      s.orcaTree = tree.path;
       s.branch = tree.branch;
       s.ticket = tree.ticket ?? s.ticket;
       if (tree.mr) s.mr = tree.mr;
@@ -859,6 +876,7 @@ export function createAgents(deps: AgentsDeps) {
       }
       // Une session de chat Orca n'a pas de terminal : rien à qui écrire.
       if (!agent.structured) s.handle = orca.handles.get(agent.paneKey) ?? null;
+      else s.orcaTab = chatTab(agent.paneKey);
     }
   }
 
@@ -916,7 +934,7 @@ export function createAgents(deps: AgentsDeps) {
     const s = sessions.get(sessionId);
     if (!s) throw new AnswerError("Cette session n'existe plus", 404);
     if (!s.handle && !s.inOrca) throw new AnswerError("Je ne sais pas où est cette session sur l'ordinateur", 409);
-    await deps.focusSession(s.handle);
+    await deps.focusSession({ handle: s.handle, worktree: s.orcaTree, tab: s.orcaTab });
   }
 
   /** Arme (ou désarme) l'envoi de « continue » à l'heure de reprise d'une limite : décision prise sur la tablette. */

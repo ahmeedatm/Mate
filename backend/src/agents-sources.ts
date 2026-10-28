@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { frontApp, isMac } from "./os.ts";
-import type { ClaudeSession, OrcaInfo, TranscriptInfo } from "./agents.ts";
+import type { ClaudeSession, FocusTarget, OrcaInfo, TranscriptInfo } from "./agents.ts";
 
 /**
  * Ce que les agents Claude lisent sur l'ordinateur : `claude agents --json`, la CLI d'Orca, l'appli de devant.
@@ -204,12 +204,42 @@ export async function interruptSession(handle: string): Promise<void> {
   await keys(handle, "\u001b", false);
 }
 
-/** Terminal de la session devant dans Orca, puis Orca devant. Sans terminal : Orca seulement. */
-export async function focusSession(handle: string | null): Promise<void> {
+/**
+ * Session devant dans Orca (son terminal, sinon son worktree et son onglet de chat), puis Orca devant. Si Orca ne
+ * répond pas, Orca devant seulement.
+ */
+export async function focusSession({ handle, worktree, tab }: FocusTarget): Promise<void> {
   const bin = orcaBin();
   if (bin && handle && HANDLE.test(handle)) await exec(bin, ["terminal", "switch", "--terminal", handle], 6_000).catch(() => {});
+  else if (bin && worktree) await showOrcaChat(bin, worktree, tab).catch(() => {});
   await exec("open", ["-a", "Orca"], 6_000).catch(() => {
     throw new Error("Impossible d'amener Orca devant");
+  });
+}
+
+const CHAT_TAB = /^agent-session:[\w-]+$/;
+
+/**
+ * La CLI d'Orca sait changer de terminal, pas de chat : on passe par son client du runtime (`worktree.activate`,
+ * `session.tabs.activate`), lancé comme elle, par l'exécutable d'Orca en mode Node.
+ */
+async function showOrcaChat(bin: string, worktree: string, tab: string | null): Promise<void> {
+  if (!path.isAbsolute(worktree)) return;
+  const app = /^(.*?\.app)\//.exec(fs.realpathSync(bin))?.[1];
+  if (!app) return;
+  const script = `const { RuntimeClient } = require(process.env.ORCA_CLIENT);
+const { worktree, tab } = JSON.parse(process.env.ORCA_FOCUS);
+(async () => {
+  const c = new RuntimeClient();
+  const ok = (r) => { if (!r || r.ok === false) throw new Error("refus"); };
+  ok(await c.call("worktree.activate", { worktree }));
+  if (tab) ok(await c.call("session.tabs.activate", { worktree, tabId: tab }));
+})().then(() => process.exit(0), () => process.exit(1));`;
+  await exec(path.join(app, "Contents", "MacOS", "Orca"), ["-e", script], 8_000, {
+    ...process.env,
+    ELECTRON_RUN_AS_NODE: "1",
+    ORCA_CLIENT: path.join(app, "Contents", "Resources", "app.asar.unpacked", "out", "cli", "runtime-client.js"),
+    ORCA_FOCUS: JSON.stringify({ worktree: `path:${worktree}`, tab: tab && CHAT_TAB.test(tab) ? tab : null }),
   });
 }
 
