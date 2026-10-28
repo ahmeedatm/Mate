@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Compagnon Unowhy",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Montre sur la tablette Unowhy les onglets ouverts dans ce navigateur (Page de l'ordi) et pilote la vidéo ou la musique (page Média). Rien ne quitte l'ordinateur.",
   "permissions": ["tabs", "alarms", "storage", "scripting"],
   "host_permissions": [

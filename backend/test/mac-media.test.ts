@@ -1,8 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { fallbackSessions, playingApps, sessionOfNowPlaying, siteName, tabTitle, thumbOfTabs } from "../src/mac/media.ts";
+import { fallbackSessions, playerScript, playingApps, sessionOfNowPlaying, siteName, tabTitle, thumbOfTabs } from "../src/mac/media.ts";
 
 describe("lecture en cours (Mac)", () => {
+  it("Spotify et Musique pilotés par AppleScript, les autres non", () => {
+    assert.equal(playerScript("com.spotify.client", "play-pause"), 'tell application "Spotify" to playpause');
+    assert.equal(playerScript("Music", "next"), 'tell application "Music" to next track');
+    assert.equal(playerScript("Spotify", "seek", 61_400), 'tell application "Spotify" to set player position to 61');
+    assert.equal(playerScript("com.operasoftware.OperaGX", "play-pause"), undefined);
+  });
+
   it("MediaRemote : appli, état, position avancée depuis l'instant noté", () => {
     // Relevé sur le Mac d'Eliot (YouTube Music dans Opera GX).
     const raw = {
