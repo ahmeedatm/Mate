@@ -107,6 +107,18 @@ class ProfilesTest {
     }
 
     @Test
+    fun `deplacer un profil vers le haut emporte ses widgets et le marquage`() {
+        val first = Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 0)
+        val third = Placed(WidgetType.NOTE, WidgetSize.S, 2, 0, 0)
+        val layout = HomeLayout(mutableListOf(first, third), mutableListOf("A", "B", "C"), 2)
+        layout.moveProfile(2, 0)
+        assertEquals(0, third.page)
+        assertEquals(1, first.page)
+        assertEquals(0, layout.gameProfile)
+        assertEquals(listOf<String?>("C", "A", "B"), layout.names)
+    }
+
+    @Test
     fun `un seul profil de jeu`() {
         val layout = layoutOf(3)
         layout.setGameProfile(1)
@@ -129,5 +141,27 @@ class ProfilesTest {
         assertEquals(0, copy.gameProfile)
         copy.renameProfile(0, "X")
         assertEquals(listOf<String?>(null), layout.names)
+        val widget = Placed(WidgetType.NOTE, WidgetSize.S, 0, 1, 0)
+        val withWidget = HomeLayout(mutableListOf(widget), 1).copy()
+        withWidget.widgets.single().col = 3
+        assertEquals(1, widget.col)
+    }
+
+    @Test
+    fun `un nouveau nom par defaut prend le premier numero libre`() {
+        val layout = HomeLayout(mutableListOf(), mutableListOf("Bureau", "Profil 2", "Profil 3"))
+        layout.removeProfile(1)
+        layout.addProfile(null)
+        assertTrue(layout.nameMissing("Bureau", "Profil %d"))
+        assertEquals(listOf<String?>("Bureau", "Profil 3", "Profil 2"), layout.names)
+        assertEquals("Profil 4", layout.freeName("Profil %d"))
+    }
+
+    @Test
+    fun `une disposition sans nom donne Bureau au premier puis Profil 2 et Profil 3`() {
+        val layout = layoutOf(3)
+        assertTrue(layout.nameMissing("Bureau", "Profil %d"))
+        assertEquals(listOf<String?>("Bureau", "Profil 2", "Profil 3"), layout.names)
+        assertFalse(layout.nameMissing("Bureau", "Profil %d"))
     }
 }

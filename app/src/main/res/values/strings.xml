@@ -698,7 +698,7 @@
     <string name="profile_delete">Supprimer</string>
     <string name="profile_delete_confirm">Supprimer le profil « %s » et ses widgets ?</string>
     <string name="profile_game">Profil de jeu</string>
-    <string name="profile_game_hint">Proposé quand un jeu se lance sur l\'ordinateur</string>
+    <string name="profile_game_hint">Sera proposé quand un jeu se lance sur l\'ordinateur.</string>
     <string name="profile_move_up">Monter</string>
     <string name="home_edit_add">Ajouter</string>
     <string name="home_edit_done">Terminé</string>

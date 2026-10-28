@@ -25,15 +25,16 @@ import com.unowhy.companion.ui.themeColor
 
 /**
  * Liste des profils de l'Accueil : afficher, marquer le profil de jeu, monter, renommer, supprimer, en ajouter un
- * (vide ou depuis un modèle). `current` : le profil affiché ; `onChanged(show)` est appelé après chaque changement,
- * la disposition est déjà modifiée, avec le profil à afficher.
+ * (vide ou depuis un modèle). `current` : le profil affiché ; `onChanged(show, structure)` est appelé après chaque
+ * changement, la disposition est déjà modifiée, avec le profil à afficher. `structure` : des profils ont été ajoutés,
+ * déplacés ou retirés (les widgets sont à recréer) ; faux pour un renommage ou le marquage de jeu.
  */
 class ProfilesDialog(
     private val context: Context,
     private val layout: HomeLayout,
     private var current: Int,
     private val name: (Int) -> String,
-    private val onChanged: (show: Int) -> Unit,
+    private val onChanged: (show: Int, structure: Boolean) -> Unit,
 ) {
 
     private val list = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
@@ -43,7 +44,7 @@ class ProfilesDialog(
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(context.dp(24), context.dp(8), context.dp(24), context.dp(8))
-            addView(ScrollView(context).apply { addView(list) })
+            addView(ScrollView(context).apply { addView(list) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             addView(caption(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = context.dp(12) })
         }
         dialog = AlertDialog.Builder(context)
@@ -96,13 +97,13 @@ class ProfilesDialog(
             setTextColor(themeColor(context, if (i == current) R.attr.c_accent else R.attr.c_text))
             setOnClickListener {
                 dialog.dismiss()
-                onChanged(i)
+                onChanged(i, false)
             }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
         val game = layout.gameProfile == i
         addView(iconButton(R.drawable.ic_gamepad, R.string.profile_game, if (game) R.attr.c_accent else R.attr.c_text_faint) {
             layout.setGameProfile(if (game) -1 else i)
-            changed()
+            changed(structure = false)
         })
         if (i > 0) addView(iconButton(R.drawable.ic_arrow_up, R.string.profile_move_up, R.attr.c_text_dim) { moveUp(i) })
         addView(iconButton(R.drawable.ic_edit, R.string.profile_rename, R.attr.c_text_dim) { rename(i) })
@@ -120,16 +121,16 @@ class ProfilesDialog(
         setOnClickListener { onClick() }
     }
 
-    /** Relit la liste et prévient l'Accueil : le profil affiché reste `current`. */
-    private fun changed() {
+    /** Relit la liste et prévient l'écran des profils : le profil affiché reste `current`. */
+    private fun changed(structure: Boolean) {
         render()
-        onChanged(current)
+        onChanged(current, structure)
     }
 
     /** Profil ajouté : la boîte se ferme, le nouveau profil s'affiche. */
     private fun added(index: Int) {
         dialog.dismiss()
-        onChanged(index)
+        onChanged(index, true)
     }
 
     private fun moveUp(i: Int) {
@@ -139,7 +140,7 @@ class ProfilesDialog(
             i - 1 -> i
             else -> current
         }
-        changed()
+        changed(structure = true)
     }
 
     private fun rename(i: Int) {
@@ -158,9 +159,9 @@ class ProfilesDialog(
             .setPositiveButton(R.string.save) { _, _ ->
                 input.dismissKeyboard()
                 val value = input.text.toString().trim()
-                if (value.isNotEmpty()) {
+                if (value.isNotEmpty() && value != name(i)) {
                     layout.renameProfile(i, value)
-                    changed()
+                    changed(structure = false)
                 }
             }
             .create()
@@ -179,7 +180,7 @@ class ProfilesDialog(
                         current > i -> current - 1
                         else -> current
                     }
-                    changed()
+                    changed(structure = true)
                 }
             }
             .showImmersive()

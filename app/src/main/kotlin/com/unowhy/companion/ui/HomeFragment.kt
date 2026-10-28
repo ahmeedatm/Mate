@@ -42,8 +42,9 @@ import kotlinx.coroutines.launch
 
 /**
  * Accueil à widgets, personnalisable comme un écran de téléphone : appui long = mode Modifier (ajouter, retirer,
- * changer la taille, glisser). Chaque page de la grille est un profil nommé, parcouru par la barre de profil en haut. La disposition est propre à la tablette ([HomeLayout]) ; l'agenda est
- * chargé ici une fois pour tous les widgets qui l'affichent, toutes les 5 min, le reste chaque minute.
+ * changer la taille, glisser). Chaque page de la grille est un profil nommé, parcouru par la barre de profil en haut.
+ * La disposition est propre à la tablette ([HomeLayout]) ; l'agenda est chargé ici une fois pour tous les widgets
+ * qui l'affichent, toutes les 5 min, le reste chaque minute.
  */
 class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
@@ -356,16 +357,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             ?: if (index == 0) getString(R.string.profile_first) else getString(R.string.profile_default, index + 1)
 
     /** Donne son nom par défaut à chaque profil sans nom : il le garde quand on le déplace. Vrai si un nom a été posé. */
-    private fun nameProfiles(): Boolean {
-        var named = false
-        for (i in layout.names.indices) {
-            if (layout.names[i] == null) {
-                layout.renameProfile(i, profileName(i))
-                named = true
-            }
-        }
-        return named
-    }
+    private fun nameProfiles() = layout.nameMissing(getString(R.string.profile_first), getString(R.string.profile_default))
 
     /** Affiche le profil [index] et charge tout de suite ses widgets (le chargement du profil quitté est annulé). */
     fun showProfile(index: Int) {
@@ -382,20 +374,24 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         activate()
     }
 
-    /** Profils ajoutés, renommés, déplacés ou retirés : widgets recréés, disposition enregistrée, barre relue. */
-    fun onProfilesChanged() {
-        build()
-        refreshAll()
-        save()
-    }
-
-    /** Liste des profils. Un changement termine d'abord le mode Modifier en gardant les widgets : `save()` n'écrit rien tant qu'il est actif. */
+    /**
+     * Liste des profils. Un changement termine d'abord le mode Modifier en gardant les widgets : `save()` n'écrit rien
+     * tant qu'il est actif. Profils ajoutés, déplacés ou retirés : widgets recréés, puis le profil affiché charge ses
+     * données. Renommage ou marquage de jeu : la barre seulement, ni widgets ni réseau.
+     */
     private fun openProfiles() {
-        ProfilesDialog(requireContext(), layout, page, ::profileName) { show ->
+        ProfilesDialog(requireContext(), layout, page, ::profileName) { show, structure ->
             if (grid.editing) endEdit(keep = true)
             nameProfiles()
-            onProfilesChanged()
-            showProfile(show)
+            save()
+            when {
+                structure -> {
+                    build()
+                    showProfile(show)
+                }
+                show != page -> showProfile(show)
+                else -> renderProfileBar()
+            }
         }.show()
     }
 
@@ -406,8 +402,10 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         profileNext.isEnabled = page < layout.pages - 1
         profileNext.alpha = if (page < layout.pages - 1) 1f else DISABLED_ALPHA
         dots.removeAllViews()
-        dots.visibility = if (layout.pages > 1) View.VISIBLE else View.GONE
-        for (i in 0 until layout.pages) {
+        // Au-delà de MAX_DOTS profils, les pastilles ne tiennent plus : le nom et les flèches suffisent.
+        val showDots = layout.pages in 2..MAX_DOTS
+        dots.visibility = if (showDots) View.VISIBLE else View.GONE
+        for (i in 0 until if (showDots) layout.pages else 0) {
             dots.addView(View(requireContext()).apply {
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
@@ -567,5 +565,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         /** Aujourd'hui et les 7 jours suivants : « mardi soir » se voit dès aujourd'hui. */
         const val AGENDA_DAYS = 8
         const val DISABLED_ALPHA = 0.3f
+        const val MAX_DOTS = 12
     }
 }

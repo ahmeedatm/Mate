@@ -77,8 +77,8 @@ class Placed(
 }
 
 /**
- * Disposition complète : widgets et profils. Un profil = une page ; `names[i]` null = nom par défaut (l'interface le
- * choisit, le modèle ne touche à aucune ressource). `gameProfile` : le profil de jeu (au plus un), -1 si aucun.
+ * Disposition complète : widgets et profils. Un profil = une page ; `names[i]` null = pas encore de nom ([nameMissing]
+ * lui en donne un, l'interface passe les textes : le modèle ne touche à aucune ressource). `gameProfile` : le profil de jeu (au plus un), -1 si aucun.
  */
 class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String?>, @set:JvmName("assignGameProfile") var gameProfile: Int = -1) {
 
@@ -99,6 +99,22 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
 
     fun renameProfile(index: Int, name: String) {
         names[index] = name
+    }
+
+    /** Premier nom « Profil N » (N ≥ 2) que aucun profil ne porte ; `pattern` est le modèle de nom (« Profil %d »). */
+    fun freeName(pattern: String): String =
+        generateSequence(2) { it + 1 }.map { pattern.format(it) }.first { it !in names }
+
+    /** Donne un nom à chaque profil qui n'en a pas : `first` au premier, le premier numéro libre aux autres. Vrai si un nom a été posé. */
+    fun nameMissing(first: String, pattern: String): Boolean {
+        var named = false
+        for (i in names.indices) {
+            if (names[i] == null) {
+                names[i] = if (i == 0) first else freeName(pattern)
+                named = true
+            }
+        }
+        return named
     }
 
     /** Remet le profil `from` à la place `to` ; ses widgets et le marquage de jeu le suivent. */
