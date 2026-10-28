@@ -1,5 +1,5 @@
 import type { BrowserTab } from "../screens.ts";
-import { osascript, run } from "./run.ts";
+import { osascript, run, UTF8_ENV } from "./run.ts";
 
 /**
  * Page ouverte dans le navigateur du Mac (bouton « Page de l'ordi » de la tablette). Le navigateur choisi est celui
@@ -47,7 +47,7 @@ export async function browserPage(): Promise<{ found: boolean; url?: string; tit
   const page = JSON.parse(await osascript(SCRIPT, [], "JavaScript"));
   if (page.found) return page;
   // Secours (Firefox, autorisation refusée) : lien copié dans le navigateur (⌘L puis ⌘C).
-  const copied = (await run("pbpaste", []).catch(() => "")).trim();
+  const copied = (await run("pbpaste", [], 10_000, UTF8_ENV).catch(() => "")).trim();
   return /^https?:\/\/\S+$/.test(copied) ? { found: true, url: copied, title: "", browser: "clipboard" } : page;
 }
 

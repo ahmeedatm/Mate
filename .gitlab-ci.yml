@@ -437,6 +437,7 @@ essai-updates:
       echo "Puis sur la tablette : Réglages > Mises à jour."
 
 # Release GitLab : fichiers déposés dans le registre de paquets générique du projet, jeton du job.
+# Un fichier à la fois : envoyés ensemble dans une version de paquet pas encore créée, l'un reçoit un 500.
 release:
   extends: .release-tag
   stage: release
@@ -446,6 +447,7 @@ release:
     GLAB_ENABLE_CI_AUTOLOGIN: "true"
   script:
     - >-
-      glab release create "$CI_COMMIT_TAG" dist/* --use-package-registry --ref "$CI_COMMIT_SHA"
+      glab release create "$CI_COMMIT_TAG" --ref "$CI_COMMIT_SHA"
       --name "Compagnon $CI_COMMIT_TAG"
       --notes "Paquets de l'ordinateur (Windows, Mac) et APK de la tablette. Mise à jour de la tablette par le « serveur Unowhy » : docs/developpement.md, section Release."
+    - for f in dist/*; do glab release upload "$CI_COMMIT_TAG" "$f" --use-package-registry; done

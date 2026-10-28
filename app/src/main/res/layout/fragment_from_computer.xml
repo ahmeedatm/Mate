@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Depuis l'ordi : d'abord un choix (fichiers du dossier partagé, ou page ouverte dans le navigateur de l'ordi),
-     comme dans Caméra, puis la liste des fichiers. -->
+<!-- Depuis l'ordi : d'abord un choix (fichiers du dossier partagé, page ouverte dans le navigateur de l'ordi, ou
+     presse-papiers), comme dans Caméra, puis la liste des fichiers ou l'écran Presse-papiers. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -66,7 +67,7 @@
         android:layout_marginTop="20dp"
         android:layout_weight="1">
 
-        <!-- Écran de départ : les deux usages, expliqués. -->
+        <!-- Écran de départ : les trois usages, expliqués. -->
         <LinearLayout
             android:id="@+id/docs_choice"
             android:layout_width="match_parent"
@@ -153,7 +154,55 @@
                     android:textColor="?attr/c_text_dim"
                     android:textSize="16sp" />
             </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/docs_choose_clipboard"
+                style="@style/Card"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?android:attr/selectableItemBackground"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:padding="28dp">
+
+                <ImageView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_clipboard"
+                    app:tint="?attr/c_accent" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/clip_choose"
+                    android:textColor="?attr/c_text"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center"
+                    android:text="@string/clip_choose_hint"
+                    android:textColor="?attr/c_text_dim"
+                    android:textSize="16sp" />
+            </LinearLayout>
         </LinearLayout>
+
+        <!-- Presse-papiers : ce qui est copié sur l'ordi, et l'envoi d'un texte vers l'ordi. -->
+        <include
+            android:id="@+id/docs_clipboard"
+            layout="@layout/view_clipboard"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
 
         <FrameLayout
             android:id="@+id/docs_files"

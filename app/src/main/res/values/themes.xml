@@ -79,6 +79,20 @@
         <item name="android:fontFamily">?attr/c_font_medium</item>
     </style>
 
+    <!-- Bouton en pilule de la DA Cadran (48 dp, rayon = moitié de la hauteur) : écran Presse-papiers. -->
+    <style name="PillButton" parent="ActionButton">
+        <item name="android:layout_height">48dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:background">@drawable/pill_bg</item>
+    </style>
+
+    <style name="PillButton.Primary">
+        <item name="android:background">@drawable/pill_primary_bg</item>
+        <item name="android:textColor">@color/pill_primary_text</item>
+        <item name="android:drawableTint">@color/pill_primary_text</item>
+        <item name="android:fontFamily">?attr/c_font_medium</item>
+    </style>
+
     <!-- Bouton rouge « maintenant » (Rejoindre, appel entrant) : garde l'accent dans tous les thèmes. -->
     <style name="NowButton" parent="ActionButton">
         <item name="android:background">@drawable/button_now_bg</item>

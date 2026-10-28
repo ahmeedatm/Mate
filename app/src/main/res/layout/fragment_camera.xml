@@ -249,6 +249,15 @@
             android:gravity="center_vertical"
             android:orientation="horizontal" />
 
+        <!-- Après une photo envoyée : la met dans le presse-papiers de l'ordi (Ctrl+V dans Teams, Word…). -->
+        <Button
+            android:id="@+id/camera_copy"
+            style="@style/ActionButton"
+            android:layout_marginEnd="12dp"
+            android:drawableStart="@drawable/ic_clipboard"
+            android:text="@string/camera_copy"
+            android:visibility="gone" />
+
         <Button
             android:id="@+id/camera_photo"
             style="@style/ActionButton"

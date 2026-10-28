@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { parseCombo } from "../driver-common.ts";
 import type { MediaCommand } from "../screens.ts";
-import { osascript, run } from "./run.ts";
+import { osascript, run, UTF8_ENV } from "./run.ts";
 
 // Modificateurs : code clavier de la touche et drapeau CGEvent correspondant.
 const MODIFIERS: Record<string, string> = {
@@ -117,7 +117,7 @@ export async function sendMediaKey(command: MediaCommand) {
 
 /** Colle un texte dans l'appli au premier plan, puis remet l'ancien texte du presse-papiers. */
 export async function typeText(text: string) {
-  const previous = await run("pbpaste", []).catch(() => "");
+  const previous = await run("pbpaste", [], 10_000, UTF8_ENV).catch(() => "");
   await pbcopy(text);
   await sendKeys("cmd+v");
   // Laisser l'appli lire le presse-papiers avant de le restaurer.
@@ -125,9 +125,9 @@ export async function typeText(text: string) {
   await pbcopy(previous);
 }
 
-function pbcopy(text: string) {
+export function pbcopy(text: string) {
   return new Promise<void>((resolve, reject) => {
-    const child = spawn("pbcopy");
+    const child = spawn("pbcopy", [], { env: UTF8_ENV });
     child.on("error", reject);
     child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`pbcopy : code ${code}`))));
     child.stdin.end(text);
