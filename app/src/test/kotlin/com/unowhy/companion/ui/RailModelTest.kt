@@ -9,7 +9,7 @@ import org.junit.Test
 
 class RailModelTest {
 
-    private val tools = listOf(RailEntry.Tool(Mode.FOCUS), RailEntry.Tool(Mode.COMPUTER), RailEntry.Tool(Mode.CAMERA))
+    private val tools = listOf(RailEntry.Tool(Mode.FOCUS), RailEntry.Tool(Mode.COMPUTER))
 
     /** Accueil, un écran ajouté (Deck), Réunion (rôle), puis `extra` profils de plus. */
     private fun layout(extra: Int = 0) = HomeLayout(mutableListOf(), 1).apply {
@@ -60,6 +60,8 @@ class RailModelTest {
         assertEquals(1, RailModel.selected(entries, Mode.HOME, page = 1))
         assertEquals(entries.indexOf(RailEntry.Tool(Mode.FOCUS)), RailModel.selected(entries, Mode.FOCUS, page = 0))
         assertEquals(-1, RailModel.selected(entries, Mode.SETTINGS, page = 0))
+        // La Caméra s'ouvre depuis Ordi, hors barre : Ordi reste marqué.
+        assertEquals(entries.indexOf(RailEntry.Tool(Mode.COMPUTER)), RailModel.selected(entries, Mode.CAMERA, page = 0))
     }
 
     @Test

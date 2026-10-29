@@ -355,10 +355,10 @@
     <!-- Depuis l'ordi (ancien Partage) -->
     <string name="docs_root">Dossier partagé</string>
     <string name="docs_title">Depuis l\'ordi</string>
-    <string name="docs_subtitle">Ce qui est sur ton ordinateur, affiché sur la tablette</string>
-    <string name="docs_choose_files">Fichiers de l\'ordi</string>
-    <string name="docs_choose_files_hint">Les documents, PDF et images rangés dans le dossier « Partage tablette » de l\'ordi (dans Documents). Touche un fichier pour l\'ouvrir en grand ; dans les autres modes, il reste affiché à côté.</string>
-    <string name="docs_choose_web_hint">La page ouverte dans le navigateur de l\'ordi s\'affiche sur la tablette : une recette, un tuto, une doc, un guide de jeu… à garder sous les yeux pendant que tu travailles ou que tu joues.</string>
+    <string name="docs_subtitle">Tout ce qui passe entre la tablette et ton ordinateur</string>
+    <string name="docs_choose_files">Fichiers partagés</string>
+    <string name="docs_choose_files_hint">Les documents du dossier « Partage tablette » de l\'ordi, à ouvrir en grand ou à garder à côté.</string>
+    <string name="docs_choose_web_hint">La page ouverte dans le navigateur de l\'ordi, à garder sous les yeux pendant que tu travailles ou que tu joues.</string>
     <string name="docs_count_free">%1$s · Tablette : %2$s libres</string>
     <string name="up">Remonter</string>
     <string name="empty_folder">Dossier vide : dépose des fichiers dedans depuis l\'ordinateur</string>
@@ -386,7 +386,7 @@
 
     <!-- Presse-papiers partagé (Depuis l'ordi, Caméra, voix) -->
     <string name="clip_choose">Presse-papiers</string>
-    <string name="clip_choose_hint">Le texte copié sur l\'ordi s\'affiche ici : un code, une adresse, un lien. Ce que tu écris ou dictes sur la tablette part dans le presse-papiers de l\'ordi, prêt à coller.</string>
+    <string name="clip_choose_hint">Le texte copié sur l\'ordi s\'affiche ici ; ce que tu écris ou dictes ici part dans son presse-papiers.</string>
     <string name="clip_subtitle">Copier et coller entre l\'ordi et la tablette</string>
     <string name="clip_on_computer">Sur l\'ordi</string>
     <string name="clip_to_computer">Vers l\'ordi</string>
@@ -447,9 +447,9 @@
     <string name="camera_title_show">Montrer sur l\'ordi</string>
     <string name="camera_title_photo">Photo pour l\'ordi</string>
     <string name="camera_choose_show">Montrer sur l\'ordi</string>
-    <string name="camera_choose_show_hint">La tablette devient la caméra de l\'ordi : une feuille, un cahier, un objet, un montage, ton téléphone… Ce qu\'elle filme s\'affiche en direct sur l\'écran de l\'ordi, à projeter, à montrer en réunion ou à partager en appel.</string>
+    <string name="camera_choose_show_hint">La tablette filme une feuille, un objet, un montage… en direct sur l\'écran de l\'ordi.</string>
     <string name="camera_choose_photo">Envoyer une photo</string>
-    <string name="camera_choose_photo_hint">Prends une photo avec la tablette : elle arrive dans le dossier « Partage tablette » de l\'ordi, prête à être utilisée.</string>
+    <string name="camera_choose_photo_hint">Une photo prise avec la tablette arrive dans « Partage tablette » sur l\'ordi.</string>
     <string name="camera_back">Terminer</string>
     <string name="camera_take_photo">Prendre la photo</string>
     <string name="camera_photo_preview">Aperçu · rien n\'est envoyé avant la photo</string>
@@ -1078,7 +1078,7 @@
     <string name="tour_screens_title">Plusieurs écrans</string>
     <string name="tour_screens_body">Un seul écran pour commencer. Touche + pour en ajouter un en un toucher : vide, Bureau, Veille ou Deck (le son et tes fenêtres).</string>
     <string name="tour_swipe_title">Glisser</string>
-    <string name="tour_swipe_body">Glisse vers le haut ou le bas n\'importe où sur l\'écran : tu passes à l\'entrée suivante de la barre, tes écrans puis Focus, Ordi et Caméra.</string>
+    <string name="tour_swipe_body">Glisse vers le haut ou le bas n\'importe où sur l\'écran : tu passes à l\'entrée suivante de la barre, tes écrans puis Focus et Ordi.</string>
     <string name="tour_talk_title">Parler</string>
     <string name="tour_talk_body">Demande à voix haute : « ouvre Outlook », « coupe le micro », « rejoins la réunion ». Appui long pour l\'écrire.</string>
     <string name="tour_notifications_title">Notifications</string>

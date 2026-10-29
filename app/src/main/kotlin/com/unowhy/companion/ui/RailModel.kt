@@ -83,6 +83,8 @@ object RailModel {
     /** Index de l'entrée à marquer : le profil affiché (ou « Plus » s'il est caché derrière), l'outil, -1 sinon (Réglages). */
     fun selected(entries: List<RailEntry>, mode: Mode, page: Int): Int = when (mode) {
         Mode.HOME -> entries.indexOfFirst { it is RailEntry.Profile && it.page == page }.takeIf { it >= 0 } ?: entries.indexOf(RailEntry.More)
+        // La Caméra s'ouvre depuis Ordi : c'est Ordi qui reste marqué.
+        Mode.CAMERA -> entries.indexOf(RailEntry.Tool(Mode.COMPUTER))
         else -> entries.indexOf(RailEntry.Tool(mode))
     }
 }
