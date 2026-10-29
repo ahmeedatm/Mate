@@ -1,3 +1,4 @@
+import { TILE_SYMBOLS } from "../screens.ts";
 import { createReadStream } from "node:fs";
 import type { FastifyInstance } from "fastify";
 import {
@@ -54,6 +55,7 @@ export default async function deckRoutes(app: FastifyInstance) {
                 id: t.id,
                 label: t.label,
                 type: t.action.type,
+                symbol: t.symbol && (TILE_SYMBOLS as readonly string[]).includes(t.symbol) ? t.symbol : null,
                 glyph: t.glyph ?? null,
                 color: t.color ?? null,
                 when: t.when ?? null,

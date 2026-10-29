@@ -268,7 +268,10 @@ const STEP = z.discriminatedUnion("type", [
   z.object({ type: z.literal("url"), url: z.string().describe("http(s), mailto, msteams, slack, vscode, x-apple…") }),
   z.object({ type: z.literal("shortcut"), name: z.string().describe("Raccourci de l'appli Raccourcis (Mac seulement)") }),
   z.object({ type: z.literal("media"), command: z.enum(["play-pause", "next", "previous"]) }),
-  z.object({ type: z.literal("system"), command: z.enum(["sleep-display", "toggle-dark-mode", "screenshot-clipboard", "lock"]) }),
+  z.object({
+    type: z.literal("system"),
+    command: z.enum(["sleep-display", "toggle-dark-mode", "screenshot-clipboard", "lock", "mute-mic", "dnd"]),
+  }),
   z.object({ type: z.literal("wait"), ms: z.number().int().min(0).max(10_000) }),
   z.object({
     type: z.literal("window"),

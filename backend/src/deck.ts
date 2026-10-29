@@ -7,6 +7,8 @@ import {
   appIcon,
   canControl,
   canMedia,
+  getAudio,
+  getDnd,
   isInstalled,
   launchApp,
   listWindows,
@@ -16,6 +18,8 @@ import {
   runShortcut,
   sendKeys,
   sendMediaKey,
+  setAudio,
+  setDnd,
   systemCommand,
   typeText,
   type MediaCommand,
@@ -64,6 +68,8 @@ type TileConfig = {
   label: string;
   action: Action;
   icon?: string;
+  /** Symbole de la tablette (TILE_SYMBOLS de screens.ts) ; un nom inconnu est ignoré. */
+  symbol?: string;
   glyph?: string;
   color?: string;
   when?: "call" | "idle" | "streaming" | "share" | "lobby";
@@ -243,7 +249,7 @@ export async function loadDeck(): Promise<DeckPage[]> {
       const id = `${PERSO_PREFIX}${slot}`;
       if (!key) return { id, empty: true as const };
       const action: Action = key.steps.length === 1 ? key.steps[0] : { type: "macro", steps: key.steps };
-      return { id, label: key.label, glyph: key.glyph, color: key.color, action };
+      return { id, label: key.label, ...(key.symbol ? { symbol: key.symbol } : {}), glyph: key.glyph, color: key.color, action };
     }),
   });
   return pages;
@@ -292,6 +298,9 @@ export async function runAction(action: Action): Promise<unknown> {
     case "window":
       return placeAppWindows(action.app, action.display, action.layout ?? "keep");
     case "system":
+      // Bascules faites ici, pareil sur Mac et Windows : on lit l'état et on pose l'inverse.
+      if (action.command === "mute-mic") return setAudio({ micMuted: !(await getAudio()).micMuted });
+      if (action.command === "dnd") return setDnd((await getDnd()) !== true);
       return systemCommand(action.command);
   }
   throw new Error(`Action inconnue : ${JSON.stringify(action)}`);

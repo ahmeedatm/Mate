@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { startServer, type TestServer } from "./server.ts";
 
-type TileView = { id: string; label: string; type: string; app: string | null };
+type TileView = { id: string; label: string; type: string; app: string | null; symbol?: string | null; glyph?: string | null };
 type PageView = { title: string; apps: boolean; editable: boolean; app: string | null; sound: boolean; mail: boolean; tiles: TileView[] };
 
 let server: TestServer;
@@ -30,6 +30,14 @@ describe("GET /deck", () => {
     assert.equal(perso.tiles.length, 14);
     assert.ok(perso.tiles.every((t) => t.type === "empty" && t.label === ""));
     assert.deepEqual(list.find((p) => p.apps)!.tiles, [], "aucune appli installée : page Apps vide");
+  });
+
+  it("les tuiles du deck de départ portent leur symbole (icône de la tablette), l'emoji reste en secours", async () => {
+    const lock = await tileByLabel("Verrouiller");
+    assert.equal(lock.symbol, "lock");
+    assert.ok(lock.glyph, "emoji gardé pour les tablettes d'avant les symboles");
+    assert.equal((await tileByLabel("Couper le micro")).symbol, "mic_off");
+    assert.equal((await tileByLabel("Ne pas déranger")).symbol, "dnd");
   });
 
   it("`sound` : barre Son voulue par défaut, coupée sur les pages Office ; `mail` : seulement Outlook", async () => {
