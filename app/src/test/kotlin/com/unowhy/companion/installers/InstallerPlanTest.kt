@@ -63,4 +63,28 @@ class InstallerPlanTest {
         assertNull(InstallerPlan.osOf("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1"))
         assertNull(InstallerPlan.osOf(null))
     }
+
+    @Test
+    fun `newerFor propose l'installeur de l'OS quand le compagnon est plus ancien`() {
+        assertEquals(mac, InstallerPlan.newerFor("mac", "1.1.9", listOf(mac, windows)))
+        assertEquals(windows, InstallerPlan.newerFor("windows", "0.9.0", listOf(mac, windows)))
+    }
+
+    @Test
+    fun `newerFor rien quand le compagnon est a jour ou plus recent`() {
+        assertNull(InstallerPlan.newerFor("mac", "1.2.0", listOf(mac)))
+        assertNull(InstallerPlan.newerFor("mac", "1.10.0", listOf(mac)))
+    }
+
+    @Test
+    fun `newerFor version absente = ancien compagnon, dev = jamais`() {
+        assertEquals(mac, InstallerPlan.newerFor("mac", null, listOf(mac)))
+        assertNull(InstallerPlan.newerFor("mac", "dev", listOf(mac)))
+    }
+
+    @Test
+    fun `newerFor rien sans installeur pour cet OS`() {
+        assertNull(InstallerPlan.newerFor("windows", null, listOf(mac)))
+        assertNull(InstallerPlan.newerFor("linux", null, listOf(mac, windows)))
+    }
 }

@@ -105,6 +105,9 @@ class MainActivity : AppCompatActivity() {
     /** Toucher qui a fermé le cadre : avalé jusqu'au lever du doigt, l'écran dessous ne le reçoit pas. */
     private var swallowTouch = false
     private var battery: Tablet.Battery? = null
+    /** Compagnon de l'ordinateur comparé à l'installeur gardé : au plus tous les quarts d'heure, bandeau une fois par version. */
+    private var companionCheckMs = 0L
+    private val companionNotified = mutableSetOf<String>()
     /** Micro refusé hors kiosque (en kiosque, il est accordé d'office) : la commande repart une fois accepté. */
     private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) voice.start() else showBanner(getString(R.string.voice_no_mic), 6)
@@ -176,6 +179,7 @@ class MainActivity : AppCompatActivity() {
                 Screen.apply(this@MainActivity)
                 alerts.remindWater()
                 followFrame()
+                checkCompanionVersion()
             }
             onBattery = ::onBattery
         }
@@ -290,6 +294,18 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         Kiosk.enter(this)
         Screen.apply(this)
+    }
+
+    private fun checkCompanionVersion() {
+        val now = System.currentTimeMillis()
+        if (now - companionCheckMs < COMPANION_CHECK_MS || Computers.active(this) == null) return
+        companionCheckMs = now
+        lifecycleScope.launch {
+            val (identity, installer) = InstallerService.newerForActive(this@MainActivity) ?: return@launch
+            val address = InstallerService.address() ?: return@launch
+            if (!companionNotified.add("${identity.id}:${installer.version}")) return@launch
+            showBanner(getString(R.string.companion_update_available, identity.name, installer.version, address), 20)
+        }
     }
 
     private fun onBattery(state: Tablet.Battery) {
@@ -593,5 +609,6 @@ class MainActivity : AppCompatActivity() {
 
         /** Bandeau d'une notification de l'ordinateur : le temps de lire l'appli, le titre et le début du texte. */
         private const val NOTIFICATION_SECONDS = 8
+        private const val COMPANION_CHECK_MS = 15 * 60_000L
     }
 }

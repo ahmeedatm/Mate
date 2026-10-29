@@ -89,6 +89,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expectStatus(open, 200, "/health sans jeton");
         expect(open.json.service === "unowhy-companion", `service inattendu : ${open.json.service}`);
         expect(open.json.auth === false, "/health sans jeton devrait dire auth: false");
+        expect(/^(\d+\.\d+\.\d+|dev)$/.test(open.json.version ?? ""), `version du paquet inattendue : ${open.json.version}`);
         if (opts.os) expect(open.json.os === opts.os, `système annoncé « ${open.json.os} », attendu « ${opts.os} »`);
         os = open.json.os === "mac" || open.json.os === "windows" ? open.json.os : "other";
         id = open.json.id;

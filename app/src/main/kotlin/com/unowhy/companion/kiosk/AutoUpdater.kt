@@ -17,7 +17,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Vérifie les mises à jour au démarrage puis toutes les 6 h, et installe seule la release de main la plus récente du
- * Companion, jamais un essai (bouton de Réglages). Télécharge aussi les installeurs de l'ordinateur (`InstallerService`).
+ * Companion, jamais un essai (bouton de Réglages). Les installeurs de l'ordinateur (`InstallerService`) sont vérifiés à
+ * chaque quart d'heure.
  * Seulement en device owner ; sinon rien, et jamais d'erreur à l'écran (journal seulement). Singleton : survit aux
  * `recreate()` de l'activité. Android arrête l'appli pour la remplacer, `UpdatedReceiver` la relance.
  */
@@ -41,8 +42,9 @@ object AutoUpdater {
                 val now = System.currentTimeMillis()
                 if (UpdatePlan.isDue(lastCheckMs, now)) {
                     // Heure mémorisée seulement si une source a répondu : sinon (démarrage hors ligne) on réessaie au tick suivant.
-                    if (runOnce(app)) lastCheckMs = now
+                    if (checkApp(app)) lastCheckMs = now
                 }
+                InstallerService.sync(app)
                 // Dort jusqu'au prochain quart d'heure, ou se réveille dès que le réseau revient.
                 withTimeoutOrNull(TICK_MS) { wake.receive() }
             }
@@ -57,13 +59,6 @@ object AutoUpdater {
         }
         runCatching { cm.registerDefaultNetworkCallback(callback) }
             .onFailure { Log.w(TAG, "Surveillance du réseau indisponible", it) }
-    }
-
-    /** Mise à jour de l'appli, puis installeurs de l'ordinateur (même rythme, même serveur central). */
-    private suspend fun runOnce(context: Context): Boolean {
-        val reached = checkApp(context)
-        InstallerService.sync(context)
-        return reached
     }
 
     /** @return false seulement si aucune source n'a pu être jointe (à refaire au tick suivant). */

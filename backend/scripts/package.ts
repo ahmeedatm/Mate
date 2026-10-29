@@ -115,6 +115,8 @@ async function stage(platform: "windows" | "mac", sums: string): Promise<string>
     format: "esm",
     target: "node22",
     legalComments: "none",
+    // Version renvoyée par /health : la tablette propose l'installeur plus récent qu'elle garde.
+    define: { "process.env.COMPANION_VERSION": JSON.stringify(VERSION) },
     logLevel: "warning",
     // Modules CommonJS regroupés dans un fichier ESM : ils attendent require, __filename et __dirname.
     banner: {

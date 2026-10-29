@@ -4,7 +4,15 @@ import org.json.JSONObject
 
 /** Ce que l'ordinateur dit de lui (GET /health, sans jeton) ; `auth` : le jeton envoyé est accepté. */
 /** `accessibility` : Mac seulement, false = fenêtres et raccourcis bloqués (autorisation à donner sur le Mac). */
-data class Identity(val id: String?, val name: String, val os: String, val auth: Boolean, val accessibility: Boolean? = null)
+/** `version` : celle du compagnon, null avant qu'il la donne. */
+data class Identity(
+    val id: String?,
+    val name: String,
+    val os: String,
+    val auth: Boolean,
+    val accessibility: Boolean? = null,
+    val version: String? = null,
+)
 
 /** Résultat de l'appairage : jeton à garder, empreinte du certificat à épingler et identité de l'ordinateur. */
 data class Pairing(val token: String, val fingerprint: String, val id: String, val name: String, val os: String)
@@ -22,6 +30,7 @@ class PairingApi(private val http: Http) {
         Identity(
             j.optStringOrNull("id"), j.optString("name", "Ordinateur"), j.optString("os", "mac"), j.optBoolean("auth", true),
             if (j.has("accessibility") && !j.isNull("accessibility")) j.getBoolean("accessibility") else null,
+            j.optStringOrNull("version"),
         )
     }
 

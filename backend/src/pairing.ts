@@ -35,6 +35,8 @@ export function identity() {
     os: osName,
     port: config.port,
     tlsPort: config.loopbackOnly ? null : config.tlsPort,
+    // Version du paquet (tag de la release, posée par scripts/package.ts) ; "dev" lancé depuis le dépôt.
+    version: process.env.COMPANION_VERSION || "dev",
   };
 }
 

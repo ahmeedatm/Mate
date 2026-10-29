@@ -39,6 +39,21 @@ object InstallerPlan {
     fun toDelete(announced: List<Installer>, onDisk: List<Installer>): List<Installer> =
         if (announced.isEmpty()) emptyList() else onDisk.filter { d -> announced.none { it.file == d.file } }
 
+    /**
+     * Installeur gardé pour l'OS de l'ordinateur et plus récent que son compagnon, sinon null. Version absente : compagnon
+     * d'avant la 1.2, à mettre à jour ; `dev` ou illisible (lancé depuis le dépôt) : jamais.
+     */
+    fun newerFor(os: String, version: String?, onDisk: List<Installer>): Installer? {
+        val installer = onDisk.firstOrNull { it.os.key == os } ?: return null
+        val available = numbers(installer.version) ?: return null
+        if (version == null) return installer
+        val current = numbers(version) ?: return null
+        return installer.takeIf { compareValuesBy(available, current, { it[0] }, { it[1] }, { it[2] }) > 0 }
+    }
+
+    private fun numbers(version: String): List<Int>? =
+        Regex("""^(\d+)\.(\d+)\.(\d+)$""").matchEntire(version)?.groupValues?.drop(1)?.map { it.toInt() }
+
     /** OS du navigateur qui visite la page ; null pour un téléphone, Linux, ou un navigateur sans `User-Agent`. */
     fun osOf(userAgent: String?): Os? = when {
         userAgent == null -> null

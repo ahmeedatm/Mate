@@ -24,6 +24,7 @@ describe("santé et jeton", () => {
     assert.equal(json.ok, true);
     assert.equal(json.name, "Ordi de test");
     assert.equal(json.auth, false);
+    assert.equal(json.version, "dev");
   });
 
   it("/health signale un jeton valide", async () => {
