@@ -155,7 +155,7 @@ La tablette n'expose aucun serveur : elle garde une requête ouverte vers le bac
       "args": ["/chemin/vers/unowhy-companion/backend/src/mcp.ts"] } } }
   ```
 
-Exemple de demande : « Passe la tablette en Focus 50 minutes avec du bruit brun, puis affiche-moi une capture. »
+Exemple de demande : « Passe la tablette en Focus 50 minutes avec la pluie en fond, puis affiche-moi une capture. »
 
 Test sans Claude : `curl -X POST localhost:3000/tablet/command -H 'content-type: application/json' -d '{"type":"message","text":"Salut","speak":true}'`, état avec `curl localhost:3000/tablet`.
 

@@ -115,7 +115,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | `ui/` | un fichier par écran ou composant : `HomeFragment`, `DeckFragment`, `FromComputerFragment` (Depuis l'ordi : quatre choix, Fichiers (la liste, `GET /docs`), Page de l'ordi (`BrowserTabsDialog` : onglets de l'ordi), Presse-papiers (`ClipboardView`, `ClipboardModel` : `GET /system/clipboard` pour lire le texte copié sur l'ordi, `POST /system/clipboard` pour y copier un texte écrit ou dicté, `POST /system/clipboard/image` pour une photo du dossier « Photos tablette » depuis la Caméra) ; le Presse-papiers n'est lu que sur un toucher, jamais à l'arrivée sur l'écran par un ordre du PC, Cadre photo (`FrameSettingsView`, voir § 7)), `FocusFragment`, `CameraFragment`, `SettingsFragment`, `WelcomeView` (premier lancement), `DocumentPanel`, boîtes de dialogue (`TaskDialog`, `EventDialog`, `ComputerAdder`, `WifiPicker`…) |
 | `ui/home/` | Profils (ex-Accueil) à widgets : `WidgetModel` (grille 4×4, tailles, modèles, `HomeLayout` : profils nommés et profil de jeu), `WidgetGrid` (placement, mode Modifier, balayage entre profils), `ProfilesDialog` (créer, renommer, monter, supprimer, profil de jeu), widgets |
 | `ui/ScreenMap.kt`, `WindowPicker.kt`, `OpenWindowsView.kt` | écrans et fenêtres de l'ordinateur |
-| `focus/` | `FocusTimer`, `NoisePlayer` (bruit généré), `Water` |
+| `focus/` | `FocusTimer`, `NoisePlayer` (ambiances enregistrées CC0, `res/raw`, `scripts/ambiances.mjs`), `Water` |
 | `audio/` | `Speaker` (synthèse vocale) |
 | `voice/` | commande vocale : `VoiceCommands` (phrases comprises, noms rapprochés à l'oreille), `VoiceControl` (écoute, exécution) |
 | `ui/CallOverlay.kt` | carte d'appel entrant |

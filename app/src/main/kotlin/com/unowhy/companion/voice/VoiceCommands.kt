@@ -158,12 +158,14 @@ object VoiceCommands {
                 else -> VoiceCommand.Focus("start", number?.takeIf { it in 1..180 })
             }
         }
-        if (has("ambiance", "bruit blanc", "bruit rose", "bruit brun", "bruit marron")) {
+        if (has("ambiance", "musique lofi", "lofi", "bruit de pluie", "son de pluie", "bruit de la mer", "son de la mer")) {
             return when {
                 has("arrete", "coupe", "stop", "eteins", "enleve") -> VoiceCommand.Noise(null)
-                has("blanc") -> VoiceCommand.Noise("WHITE")
-                has("rose") -> VoiceCommand.Noise("PINK")
-                else -> VoiceCommand.Noise("BROWN")
+                has("foret", "oiseau") -> VoiceCommand.Noise("FOREST")
+                has("japon", "zen") -> VoiceCommand.Noise("JAPAN")
+                has("mer", "vague", "ocean", "plage") -> VoiceCommand.Noise("SEA")
+                has("lofi") -> VoiceCommand.Noise("LOFI")
+                else -> VoiceCommand.Noise("STORM")
             }
         }
         if (has("micro")) {

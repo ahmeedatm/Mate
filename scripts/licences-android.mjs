@@ -85,6 +85,16 @@ DONNÉES
   https://creativecommons.org/licenses/by/4.0/ ; mises en forme pour l'affichage.
 - Liste des villes : GeoNames (https://www.geonames.org), licence CC BY 4.0 ; extraite et réduite.
 
+SONS D'AMBIANCE (domaine public, CC0 1.0 : https://creativecommons.org/publicdomain/zero/1.0/ ;
+extraits, mis en boucle et au même volume par scripts/ambiances.mjs)
+- Pluie : « rain and thunders », kindland (https://opengameart.org/content/rain-and-thunders)
+- Forêt : « Park ambiences », Thimras (https://opengameart.org/content/park-ambiences)
+- Japon : « Asianoriental1 », Tozan (https://opengameart.org/content/asianoriental1)
+- Mer : « Ocean Waves on a Tropical Beach », Jarrod Stanley
+  (https://commons.wikimedia.org/wiki/File:Ocean_Waves_on_a_Tropical_Beach.ogg)
+- Lofi : « Chill lofi inspired [loop edit] », qubodup d'après omfgdude
+  (https://opengameart.org/content/chill-lofi-inspired-loop-edit)
+
 ${rule}
 Apache License 2.0
 ${rule}

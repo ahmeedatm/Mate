@@ -160,6 +160,11 @@ describe("canal tablette", () => {
     assert.equal(sent.json.received, true);
   });
 
+  it("refuse les anciens bruits d'ambiance (brun, rose, blanc)", async () => {
+    const old = await server.call("POST", "/tablet/command", { type: "noise", kind: "brown" });
+    assert.equal(old.status, 400);
+  });
+
   it("refuse un ordre sans son champ requis", async () => {
     const { status, json } = await server.call("POST", "/tablet/command", { type: "noise" });
     assert.equal(status, 400);

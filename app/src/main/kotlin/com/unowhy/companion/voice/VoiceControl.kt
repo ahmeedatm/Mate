@@ -243,7 +243,7 @@ class VoiceControl(
                 })
             }
             is VoiceCommand.Noise -> {
-                command.kind?.let { NoisePlayer.play(NoisePlayer.Kind.valueOf(it)) } ?: NoisePlayer.stop()
+                command.kind?.let { NoisePlayer.Kind.of(it) }?.let { NoisePlayer.play(it) } ?: NoisePlayer.stop()
                 Answer(text(if (command.kind == null) R.string.voice_noise_off else R.string.voice_noise_on))
             }
             is VoiceCommand.AddTask -> { client.tasks.add(command.label); Answer(text(R.string.voice_task_added, command.label)) }
