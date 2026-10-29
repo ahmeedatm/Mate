@@ -22,7 +22,9 @@ class TileMetricsTest {
     @Test
     fun `la case contient la plaque et deux lignes de libelle`() {
         for (m in listOf(TileMetrics.NORMAL, TileMetrics.LARGE)) {
-            assertTrue(m.cellDp >= m.plateDp + 2 * m.labelSp.toInt() * 12 / 10)
+            // Plaque, marge, puis deux lignes de libellé à 1,2 × la taille.
+            val needed = m.plateDp + TileMetrics.LABEL_GAP_DP + 2 * m.labelSp * 1.2f
+            assertTrue("cellule de ${m.cellDp} dp pour $needed", m.cellDp >= needed)
             assertTrue(m.columnDp >= m.plateDp)
         }
     }

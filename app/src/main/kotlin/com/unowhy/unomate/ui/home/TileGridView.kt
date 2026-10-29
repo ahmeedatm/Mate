@@ -133,19 +133,22 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
          * Vue d'une case, au style Cadran de `KeysWidget.tile` : sans cadre, icône de 52 dp à coins arrondis, libellé
          * de 13 sp, appui sur ressort. `item_tile` fait 136 dp : ici 100 dp, assez pour deux lignes de libellé. [metrics]
          * donne les grandes cotes aux grilles du thème Contraste élevé ; les rangées du widget gardent les normales.
+         * Plaque en haut de la case, libellé dessous : toutes les plaques d'une rangée sont alignées, quel que soit le nombre
+         * de lignes du libellé. La case grandit si la taille du texte (Réglages > Accessibilité) lui prend plus de place.
          */
         fun newCell(context: Context, metrics: TileMetrics = TileMetrics.NORMAL): View {
             val view = LayoutInflater.from(context).inflate(R.layout.item_tile, null)
-            view.layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(metrics.cellDp))
             view.background = null
             view.stateListAnimator = null
             view.setPadding(0, 0, 0, 0)
             val plate = view.findViewById<ImageView>(R.id.tile_icon).parent as View
             plate.layoutParams = LinearLayout.LayoutParams(context.dp(metrics.plateDp), context.dp(metrics.plateDp))
-            view.findViewById<TextView>(R.id.tile_label).apply {
+            val label = view.findViewById<TextView>(R.id.tile_label).apply {
                 textSize = metrics.labelSp
-                (layoutParams as LinearLayout.LayoutParams).topMargin = context.dp(6)
+                (layoutParams as LinearLayout.LayoutParams).topMargin = context.dp(TileMetrics.LABEL_GAP_DP)
             }
+            val twoLines = context.dp(metrics.plateDp + TileMetrics.LABEL_GAP_DP) + 2 * label.lineHeight
+            view.layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, maxOf(context.dp(metrics.cellDp), twoLines))
             view.findViewById<TextView>(R.id.tile_initial).textSize = metrics.initialSp
             val radius = context.dp(TileMetrics.radiusFor(metrics.plateDp)).toFloat()
             view.findViewById<ImageView>(R.id.tile_icon).apply {

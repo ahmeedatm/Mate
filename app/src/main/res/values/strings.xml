@@ -923,6 +923,9 @@
     <string name="a11y_reduce_motion_hint">Plus rien ne bouge en continu (tubes Rétro, voyants des agents), pas de glissés ni de rebonds</string>
     <string name="a11y_read_banners">Lire les bandeaux à voix haute</string>
     <string name="a11y_read_banners_hint">Notifications du PC et messages de l\'ordinateur lus par la tablette (en mode discret : appli et titre seulement)</string>
+    <string name="a11y_speak_actions">Retour parlé des actions</string>
+    <string name="a11y_speak_actions_hint">Chaque touche lancée est annoncée à voix haute : son nom, ou « n\'a pas marché » (coupé quand TalkBack est actif)</string>
+    <string name="action_failed">%1$s n\'a pas marché</string>
     <string name="tablet_info">Version %1$s · Adresse %2$s · %3$s</string>
     <string name="tablet_no_address">aucune</string>
     <string name="tech_code_title">Code technicien</string>

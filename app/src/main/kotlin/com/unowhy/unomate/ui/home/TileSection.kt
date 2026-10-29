@@ -11,7 +11,6 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.core.widget.ImageViewCompat
 import com.unowhy.unomate.R
-import com.unowhy.unomate.net.BackendClient
 import com.unowhy.unomate.net.DeckPage
 import com.unowhy.unomate.net.DeckTile
 import com.unowhy.unomate.net.TileResult
@@ -115,7 +114,7 @@ class TileSection(
     /** Lance la tuile sur l'ordinateur ; [onResult] reçoit la réponse (fenêtres à choisir, appli ouverte). */
     fun run(tile: DeckTile, onResult: (TileResult) -> Unit = {}) {
         host.scope.launch {
-            runCatchingCancellable { BackendClient(context).deck.runTile(tile.id) }
+            runTileSpoken(context, tile.id, tile.label)
                 .onSuccess(onResult)
                 .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
         }

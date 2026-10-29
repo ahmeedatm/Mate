@@ -459,6 +459,10 @@ class SettingsFragment : Fragment() {
             isChecked = Prefs.readBanners(ctx)
             setOnCheckedChangeListener { _, checked -> Prefs.setReadBanners(ctx, checked) }
         }
+        view.findViewById<SwitchCompat>(R.id.settings_speak_actions).apply {
+            isChecked = Prefs.speakActions(ctx)
+            setOnCheckedChangeListener { _, checked -> Prefs.setSpeakActions(ctx, checked) }
+        }
     }
 
     /**
