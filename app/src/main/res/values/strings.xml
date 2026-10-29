@@ -938,7 +938,7 @@
     <string name="profile_blank">Vide</string>
     <string name="profile_blank_desc">Une grille vide, à remplir de widgets.</string>
     <string name="profile_edit">Modifier cet écran</string>
-    <string name="profile_rename">Renommer</string>
+    <string name="profile_rename">Nom et icône</string>
     <string name="profile_rename_hint">Nom de l\'écran</string>
     <string name="profile_delete">Supprimer</string>
     <string name="profile_delete_confirm">Supprimer l\'écran « %s » et ses widgets ?</string>
