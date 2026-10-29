@@ -448,90 +448,52 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
  */
 class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val playing = NowPlayingView(context).apply { attach(host.scope) }
-    private var sites: List<DeckTile> = emptyList()
 
-    private val grid = TileGridView(context, host.scope).apply {
-        onTap = { cell, _ -> siteOf(cell)?.let(::open) }
-        onHold = { cell, _ -> siteOf(cell)?.let(::confirmRemove) }
-    }
+    private val sites: TileSection = TileSection(
+        context, host, R.string.widget_media_sites, R.drawable.ic_link, R.string.links_add_title,
+        tilesOf = { pages -> pages.firstOrNull { it.media }?.tiles },
+        onAdd = { host.overlays.addLinks { sites.reload() } },
+    )
 
-    /** « + » à droite du titre des sites : même place que celui du widget Apps. */
-    private val addButton = ImageButton(context, null, 0, R.style.IconButton_Flat).apply {
-        setImageResource(R.drawable.ic_add)
-        // `tint` du style n'est lu que par les vues AppCompat gonflées depuis le XML.
-        ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(themeColor(context, R.attr.c_accent)))
-        contentDescription = context.getString(R.string.links_add_title)
-        setOnClickListener { host.overlays.addLinks { reload() } }
-    }
-
-    private val header = LinearLayout(context).apply {
-        gravity = Gravity.CENTER_VERTICAL
-        addView(cardTitle(R.string.widget_media_sites, R.drawable.ic_link), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        addView(addButton, LinearLayout.LayoutParams(dp(BUTTON_DP), dp(BUTTON_DP)))
-    }
-
-    override val view = OwnerLinearLayout(context).asCard(16).apply {
+    override val view = LinearLayout(context).asCard(16).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
         playing.bind(true)
         addView(playing, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
-        addView(grid, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        sites.addTo(this, headerTopMarginDp = 8)
     }
 
     private val big get() = placed.size == WidgetSize.L
 
+    init {
+        // L'appui long d'un site n'entre pas en mode Modifier ; celui des autres tailles, si.
+        sites.grid.onTap = { cell, _ -> sites.tileOf(cell)?.let(::open) }
+        sites.grid.onHold = { cell, _ -> sites.tileOf(cell)?.let(::confirmRemove) }
+    }
+
     override fun applySize() {
         playing.layout(if (placed.size == WidgetSize.S) NowPlayingView.Layout.SMALL else NowPlayingView.Layout.ROW)
-        val show = if (big) View.VISIBLE else View.GONE
-        header.visibility = show
-        grid.visibility = show
+        sites.shown = big
         if (big) host.scope.launch { load() }
     }
 
     override suspend fun load() {
-        if (!big) return
-        val pages = runCatchingCancellable { host.deckPages() }.getOrNull() ?: return
-        store(pages)
+        if (big) sites.load()
     }
 
-    private fun store(pages: List<DeckPage>) {
-        val next = pages.firstOrNull { it.media }?.tiles.orEmpty()
-        // Inchangé : la grille garde son défilement.
-        if (next == sites) return
-        sites = next
-        grid.cells = sites.map { TileGridView.Cell(KeyRef.of(it), type = it.type) }
-    }
-
-    private fun siteOf(cell: TileGridView.Cell) = sites.firstOrNull { it.id == cell.key.id }
-
-    /** Après un ajout ou un retrait : relit le deck pour de bon. */
-    private fun reload() {
-        host.scope.launch {
-            runCatchingCancellable { host.deckPages(force = true) }
-                .onSuccess(::store)
-                .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
-        }
-    }
-
-    private fun open(site: DeckTile) {
-        host.scope.launch {
-            runCatchingCancellable { BackendClient(context).deck.runTile(site.id) }
-                .onSuccess { result -> result.openedApp?.let { host.main?.showBanner(context.getString(R.string.media_opened_app, it), BANNER_S) } }
-                .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
-        }
-    }
+    private fun open(site: DeckTile) =
+        sites.run(site) { result -> result.openedApp?.let { host.main?.showBanner(context.getString(R.string.media_opened_app, it), BANNER_S) } }
 
     private fun confirmRemove(site: DeckTile) {
         AlertDialog.Builder(context)
-            .setMessage(context.getString(R.string.links_remove_confirm, site.label))
+            .setMessage(context.getString(R.string.widget_media_remove_confirm, site.label))
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.apps_remove) { _, _ ->
                 host.scope.launch {
                     runCatchingCancellable { BackendClient(context).deck.removeLink(site.id) }
                         .onSuccess {
                             IconCache.forget(site.id)
-                            reload()
+                            sites.reload()
                         }
                         .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
                 }
@@ -542,8 +504,6 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     override fun setActive(active: Boolean) = playing.setActive(active)
 
     private companion object {
-        /** Cible tactile du « + ». */
-        const val BUTTON_DP = 48
         const val BANNER_S = 4
     }
 }

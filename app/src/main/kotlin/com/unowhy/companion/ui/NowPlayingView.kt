@@ -124,7 +124,7 @@ class NowPlayingView @JvmOverloads constructor(
         main.layoutParams = if (below) LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT) else LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
         val controls = findViewById<LinearLayout>(R.id.media_controls)
         controls.layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-            if (below) topMargin = context.dp(if (mode == Layout.SMALL) 8 else 12)
+            if (below) topMargin = context.dp(8)
         }
         (previous.layoutParams as MarginLayoutParams).marginStart = context.dp(if (below) 0 else 16)
         val small = mode == Layout.SMALL
