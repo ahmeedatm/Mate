@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.DashPathEffect
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.RectF
 import android.os.SystemClock
 import android.util.AttributeSet
@@ -14,7 +15,10 @@ import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.SeekBar
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.view.isVisible
+import androidx.customview.widget.ExploreByTouchHelper
 import com.unowhy.unomate.R
 import com.unowhy.unomate.ui.dp
 import com.unowhy.unomate.ui.themeBool
@@ -28,8 +32,9 @@ import kotlin.math.roundToInt
  * affichée est visible. Appui long sur un widget : il s'agrandit (le mode Modifier vient du crayon de la barre) ; balayage vertical : profil suivant (vers le haut) ou
  * précédent (vers le bas), sauf si ce qui est sous le doigt défile encore dans ce sens (liste d'un widget).
  *
- * Mode Modifier : les widgets ne reçoivent plus les touchers. Chacun a un ✕ (retirer), sa taille (changer) et, s'il
- * en a, ⚙ (réglages) ; on le glisse vers d'autres cases ; une case vide (+) ajoute un widget à cet endroit.
+ * Mode Modifier : les widgets ne reçoivent plus les touchers. Chacun a un ✕ (retirer), une poignée dans le coin bas-droit
+ * (la tirer : il prend la taille permise la plus proche de la zone tirée) et, s'il en a, ⚙ (réglages) ; on le glisse vers
+ * d'autres cases ; une case vide (+) ajoute un widget à cet endroit.
  *
  * Étroit (panneau document ouvert) : 2 colonnes, les widgets se suivent dans l'ordre de lecture (la page défile).
  */
@@ -46,6 +51,12 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         fun onPageDragEnd() {}
         fun onAddAt(col: Int, row: Int)
         fun onRemove(placed: Placed)
+
+        /** Taille permise de `placed` la plus proche de la zone tirée (`w` × `h` cases) qui tient à sa case, null si aucune. */
+        fun pickSize(placed: Placed, w: Float, h: Float): WidgetSize?
+        fun onResize(placed: Placed, size: WidgetSize)
+
+        /** Action d'accessibilité de la poignée : taille suivante qui tient. */
         fun onCycleSize(placed: Placed)
         fun onSettings(placed: Placed)
         fun hasSettings(placed: Placed): Boolean
@@ -57,7 +68,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     /** Widget qui ne répond plus au toucher (ordinateur injoignable) : il reste affiché, l'appui long et le balayage restent à la grille. */
     var blocked: (Placed) -> Boolean = { false }
     var editing = false
-        set(value) { field = value; endDrag(); invalidate() }
+        set(value) { field = value; endDrag(); a11y.invalidateRoot(); invalidate() }
     var page = 0
         set(value) { field = value; showPage() }
     var narrow = false
@@ -97,6 +108,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; isFakeBoldText = true }
     private val removeIcon = ContextCompat.getDrawable(context, R.drawable.ic_close)!!.mutate()
     private val settingsIcon = ContextCompat.getDrawable(context, R.drawable.ic_settings)!!.mutate()
+    private val resizeIcon = ContextCompat.getDrawable(context, R.drawable.ic_resize)!!.mutate()
     private val accent = themeColor(context, R.attr.c_accent)
     private val raised = themeColor(context, R.attr.c_surface_raised)
     private val ko = themeColor(context, R.attr.c_ko)
@@ -114,7 +126,51 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         setWillNotDraw(false)
         removeIcon.setTint(textColor)
         settingsIcon.setTint(textColor)
+        resizeIcon.setTint(textColor)
     }
+
+    /** TalkBack : la poignée de chaque widget redimensionnable (description, un appui = taille suivante). */
+    private val a11y = object : ExploreByTouchHelper(this) {
+        private fun resizable() = (0 until childCount).filter { i ->
+            val child = getChildAt(i)
+            editing && child.isVisible && (placedOf(child)?.type?.sizes?.size ?: 0) > 1
+        }
+
+        override fun getVirtualViewAt(x: Float, y: Float): Int =
+            resizable().firstOrNull { resizeRect(getChildAt(it)).touchable().contains(x, y) } ?: HOST_ID
+
+        override fun getVisibleVirtualViews(ids: MutableList<Int>) {
+            ids += resizable()
+        }
+
+        override fun onPopulateNodeForVirtualView(id: Int, node: AccessibilityNodeInfoCompat) {
+            val child = getChildAt(id)
+            val placed = child?.let { placedOf(it) }
+            if (child == null || placed == null) {
+                node.contentDescription = ""
+                node.setBoundsInParent(Rect(0, 0, 1, 1))
+                return
+            }
+            node.contentDescription = context.getString(R.string.widget_resize_cd, context.getString(placed.type.title), context.getString(placed.size.label))
+            val r = resizeRect(child).touchable()
+            node.setBoundsInParent(Rect(r.left.toInt(), r.top.toInt(), r.right.toInt(), r.bottom.toInt()))
+            node.addAction(AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK)
+        }
+
+        override fun onPerformActionForVirtualView(id: Int, action: Int, arguments: android.os.Bundle?): Boolean {
+            if (action != AccessibilityNodeInfoCompat.ACTION_CLICK) return false
+            val placed = getChildAt(id)?.let { placedOf(it) } ?: return false
+            listener?.onCycleSize(placed)
+            invalidateVirtualView(id)
+            return true
+        }
+    }
+
+    init {
+        ViewCompat.setAccessibilityDelegate(this, a11y)
+    }
+
+    override fun dispatchHoverEvent(event: MotionEvent): Boolean = a11y.dispatchHoverEvent(event) || super.dispatchHoverEvent(event)
 
     private fun placedOf(child: View) = child.tag as? Placed
 
@@ -394,9 +450,15 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private var dropOk = false
     private var pressed: Hit? = null
 
+    /** Poignée tirée : widget, zone brute sous le doigt (px de la grille) et taille qui s'y calerait. */
+    private var resizeView: View? = null
+    private var resizing = false
+    private var resizePick: WidgetSize? = null
+    private val resizeZone = RectF()
+
     private sealed class Hit {
         class Remove(val placed: Placed) : Hit()
-        class Size(val placed: Placed) : Hit()
+        class Resize(val view: View, val placed: Placed) : Hit()
         class Settings(val placed: Placed) : Hit()
         class Body(val view: View, val placed: Placed) : Hit()
         class Empty(val col: Int, val row: Int) : Hit()
@@ -409,8 +471,12 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 pressed = hitAt(ev.x, ev.y)
                 dragging = false
                 dragView = (pressed as? Hit.Body)?.view
+                resizeView = (pressed as? Hit.Resize)?.view
+                resizing = false
+                resizePick = null
             }
             MotionEvent.ACTION_MOVE -> {
+                resizeView?.let { return moveResize(it, ev) }
                 val view = dragView ?: return
                 val dx = ev.x - downX
                 val dy = ev.y - downY
@@ -432,7 +498,12 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             }
             MotionEvent.ACTION_UP -> {
                 val hit = pressed
-                if (dragging) {
+                val resized = resizeView?.takeIf { resizing }?.let(::placedOf)
+                val size = resizePick
+                if (resizeView != null) {
+                    endDrag()
+                    if (resized != null && size != null && size != resized.size) listener?.onResize(resized, size)
+                } else if (dragging) {
                     val placed = dragView?.let { placedOf(it) }
                     val ok = dropOk
                     endDrag()
@@ -441,7 +512,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
                     playSoundEffect(android.view.SoundEffectConstants.CLICK)
                     when (hit) {
                         is Hit.Remove -> listener?.onRemove(hit.placed)
-                        is Hit.Size -> listener?.onCycleSize(hit.placed)
+                        is Hit.Resize -> Unit
                         is Hit.Settings -> listener?.onSettings(hit.placed)
                         is Hit.Empty -> listener?.onAddAt(hit.col, hit.row)
                         is Hit.Body -> if (listener?.hasSettings(hit.placed) == true) listener?.onSettings(hit.placed)
@@ -453,10 +524,39 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         }
     }
 
+    /** Poignée en cours de tirage : la zone suit le doigt, la taille permise la plus proche se cale sur la grille. */
+    private fun moveResize(view: View, ev: MotionEvent) {
+        val placed = placedOf(view) ?: return
+        val dx = ev.x - downX
+        val dy = ev.y - downY
+        if (!resizing) {
+            if (abs(dx) <= slop && abs(dy) <= slop) return
+            resizing = true
+            view.alpha = 0.85f
+        }
+        val right = (view.right + dx).coerceAtLeast(view.left.toFloat())
+        val bottom = (view.bottom + dy).coerceAtLeast(view.top.toFloat())
+        resizeZone.set(view.left.toFloat(), view.top.toFloat(), right, bottom)
+        val w = (right - view.left + gap) / (cellW + gap)
+        resizePick = listener?.pickSize(placed, w, cellsSpanned(placed.row, bottom - paddingTop))
+        invalidate()
+    }
+
+    /** Lignes couvertes, fractions comprises, de la ligne `row` jusqu'à l'ordonnée `y` (sous le padding). */
+    private fun cellsSpanned(row: Int, y: Float): Float {
+        var cells = 0f
+        for (r in row until ROWS) cells += ((y - rowTop(r) + gap) / (rowHeight(r) + gap)).coerceIn(0f, 1f)
+        return cells
+    }
+
     private fun endDrag() {
         dragView?.apply { translationX = 0f; translationY = 0f; alpha = 1f }
         dragView = null
         dragging = false
+        resizeView?.alpha = 1f
+        resizeView = null
+        resizing = false
+        resizePick = null
         invalidate()
     }
 
@@ -466,8 +566,8 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             val placed = placedOf(child) ?: continue
             if (child.visibility != View.VISIBLE) continue
             if (removeRect(child).touchable().contains(x, y)) return Hit.Remove(placed)
-            if (placed.type.sizes.size > 1 && sizeRect(child, placed).touchable().contains(x, y)) return Hit.Size(placed)
             if (listener?.hasSettings(placed) == true && settingsRect(child).touchable().contains(x, y)) return Hit.Settings(placed)
+            if (placed.type.sizes.size > 1 && resizeRect(child).touchable().contains(x, y)) return Hit.Resize(child, placed)
         }
         for (i in childCount - 1 downTo 0) {
             val child = getChildAt(i)
@@ -488,7 +588,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     private fun RectF.touchable() = apply { inset(-touchSlack, -touchSlack) }
 
-    /** Thèmes Cadran : ✕ et puce de taille sont centrés sur le bord haut du widget et laissent son titre lisible. */
+    /** Thèmes Cadran : ✕ et ⚙ sont centrés sur le bord haut du widget et laissent son titre lisible. */
     private val cadran = themeBool(context, R.attr.c_cadran)
 
     /** Haut des boutons du haut : dans le widget, ou à cheval sur son bord haut en Cadran. */
@@ -496,14 +596,16 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     private fun removeRect(v: View) = RectF((v.left + inset).toFloat(), topButtonsY(v).toFloat(), (v.left + inset + button).toFloat(), (topButtonsY(v) + button).toFloat())
 
-    private fun settingsRect(v: View) = RectF((v.right - inset - button).toFloat(), (v.bottom - inset - button).toFloat(), (v.right - inset).toFloat(), (v.bottom - inset).toFloat())
+    private fun settingsRect(v: View) = RectF((v.right - inset - button).toFloat(), topButtonsY(v).toFloat(), (v.right - inset).toFloat(), (topButtonsY(v) + button).toFloat())
 
-    private fun sizeLabel(placed: Placed) = context.getString(placed.size.label)
+    /** Poignée de redimensionnement : coin bas-droit, dans le widget. */
+    private fun resizeRect(v: View) = RectF((v.right - inset - button).toFloat(), (v.bottom - inset - button).toFloat(), (v.right - inset).toFloat(), (v.bottom - inset).toFloat())
 
-    private fun sizeRect(v: View, placed: Placed): RectF {
-        text.textSize = 15 * density
-        val w = text.measureText(sizeLabel(placed) + "  ⇆") + dp(28)
-        return RectF(v.right - inset - w, topButtonsY(v).toFloat(), (v.right - inset).toFloat(), (topButtonsY(v) + button).toFloat())
+    /** Cadre des cases de `size` à partir de (`col`, `row`) : la taille calée sur la grille, pour le dépôt et le redimensionnement. */
+    private fun cellFrame(col: Int, row: Int, size: WidgetSize): RectF {
+        val left = paddingLeft + col * (cellW + gap)
+        val top = paddingTop + rowTop(row)
+        return RectF(left.toFloat(), top.toFloat(), (left + size.w * cellW + (size.w - 1) * gap).toFloat(), (top + spanHeight(row, size.h)).toFloat())
     }
 
     override fun dispatchDraw(canvas: Canvas) {
@@ -526,23 +628,31 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             val radius = 20 * density
             canvas.drawRoundRect(RectF(child.left.toFloat(), child.top.toFloat(), child.right.toFloat(), child.bottom.toFloat()), radius, radius, stroke)
             drawRound(canvas, removeRect(child), ko) { r -> drawIcon(canvas, removeIcon, r) }
-            if (placed.type.sizes.size > 1) drawRound(canvas, sizeRect(child, placed), raised) { r ->
-                text.color = textColor
-                text.textSize = 15 * density
-                canvas.drawText(sizeLabel(placed) + "  ⇆", r.centerX(), r.centerY() - (text.descent() + text.ascent()) / 2, text)
-            }
+            if (placed.type.sizes.size > 1) drawRound(canvas, resizeRect(child), raised) { r -> drawIcon(canvas, resizeIcon, r) }
             if (listener?.hasSettings(placed) == true) drawRound(canvas, settingsRect(child), raised) { r -> drawIcon(canvas, settingsIcon, r) }
             canvas.restore()
         }
         if (dragging) {
             val placed = dragView?.let { placedOf(it) } ?: return
-            val left = paddingLeft + dropCol * (cellW + gap)
-            val top = paddingTop + rowTop(dropRow)
-            val rect = RectF(left.toFloat(), top.toFloat(), (left + placed.size.w * cellW + (placed.size.w - 1) * gap).toFloat(), (top + spanHeight(dropRow, placed.size.h)).toFloat())
+            val rect = cellFrame(dropCol, dropRow, placed.size)
             stroke.color = if (dropOk) accent else ko
             fill.color = (if (dropOk) accent else ko) and 0x33FFFFFF
             canvas.drawRoundRect(rect, 20 * density, 20 * density, fill)
             canvas.drawRoundRect(rect, 20 * density, 20 * density, stroke)
+        }
+        if (resizing) {
+            val placed = resizeView?.let { placedOf(it) } ?: return
+            // Zone sous le doigt en pointillés ; la taille permise où elle se calera, pleine.
+            dashed.color = accent
+            canvas.drawRoundRect(resizeZone, 20 * density, 20 * density, dashed)
+            dashed.color = themeColor(context, R.attr.c_stroke)
+            resizePick?.let { size ->
+                val rect = cellFrame(placed.col, placed.row, size)
+                stroke.color = accent
+                fill.color = accent and 0x33FFFFFF
+                canvas.drawRoundRect(rect, 20 * density, 20 * density, fill)
+                canvas.drawRoundRect(rect, 20 * density, 20 * density, stroke)
+            }
         }
     }
 
