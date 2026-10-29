@@ -133,7 +133,7 @@
 - [ ] **Step 2 :** FAIL, puis implémenter `direction`, PASS.
 - [ ] **Step 3 :** implémenter `Look.sharedAxis`. Sortie en alpha 1 → 0 sur un ressort `EFFECTS_FAST`. Entrée en `translationY` de ±24 dp → 0 (`SPATIAL_DEFAULT`) et alpha 0 → 1 (`EFFECTS_DEFAULT`). Tout en `always = true`, calque matériel pendant l'animation. Brancher sur `MainActivity.show()` et sur le changement de profil.
 - [ ] **Step 4 :** repos : alpha de la barre 1 → 0,4 et libellés 1 → 0 (`EFFECTS_DEFAULT`), retour au premier toucher. Mode Modifier de `WidgetGrid` : les widgets passent à l'échelle 0,94 (`SPATIAL_DEFAULT`), les poignées apparaissent en fondu, sans tremblement ; retour à 1 en sortant.
-- [ ] **Step 5 :** mesurer sur la tablette : `adb shell dumpsys gfxinfo com.unowhy.unomate reset`, 10 changements d'écran, puis `dumpsys gfxinfo com.unowhy.unomate`. Attendu : 90e centile ≤ 18 ms. Noter le chiffre dans la MR.
+- [ ] **Step 5 :** mesurer sur la tablette : `adb shell dumpsys gfxinfo com.unowhy.companion reset`, 10 changements d'écran, puis `dumpsys gfxinfo com.unowhy.companion`. Attendu : 90e centile ≤ 18 ms. Noter le chiffre dans la MR.
 - [ ] **Step 6 :** commit `Navigation : transitions par la barre et repos`.
 
 ### Task 5 : Backend, commandes `mute-mic` et `dnd`, champ `icon`, deck Bureau
