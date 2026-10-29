@@ -4,6 +4,7 @@
 # Tag vX.Y.Z : mêmes tests, puis applis portables de l'ordinateur, APK signé et release GitLab.
 # Branche protégée essai/mr-<iid> : l'APK signé d'essai (job manuel) et, si backend/ change, l'archive du backend, publiés
 # dans le paquet commun companion-updates/essais, une entrée par MR (docs/developpement.md, section Release).
+# Sur main, purge-essais retire de ce paquet les entrées des MR fusionnées.
 
 workflow:
   rules:
@@ -79,6 +80,8 @@ zones:
 backend:
   extends: [.node, .zone-backend]
   stage: test
+  # Image avec git : le test de purge-essais lit un vrai historique git (la slim n'en a pas).
+  image: node:22.22-bookworm
   script:
     # Format (prettier --check) puis typecheck.
     - npm run lint
@@ -338,6 +341,23 @@ essai-updates:
   script:
     - node scripts/updates-publish.mjs --essai "${CI_COMMIT_BRANCH#essai/mr-}" dist updates
     - echo "Essai publié. Sur la tablette, Réglages > Mises à jour > Rechercher, puis choisir la MR."
+
+# Essais des MR fusionnées : sur main, retire de companion-updates/essais les entrées dont la MR figure dans l'historique
+# (lignes « See merge request <projet>!N »), donc plus listées dans Réglages > Mises à jour. Historique complet, et image
+# avec git (la slim n'en a pas). Même resource_group que essai-updates : jamais pendant une publication.
+purge-essais:
+  stage: release
+  image: node:22.22-bookworm
+  needs: []
+  interruptible: false
+  resource_group: essais
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  variables:
+    GIT_DEPTH: "0"
+    UPDATES_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/companion-updates/essais
+  script:
+    - node scripts/updates-publish.mjs --purge-fusionnes updates
 
 # Release GitLab : liens vers les fichiers des jobs du tag, pas de copie dans le registre (le zip Mac y reçoit un 500
 # avec le jeton du job). Fichiers gardés : dernière pipeline réussie du tag (« Keep artifacts from most recent successful jobs »).
