@@ -30,6 +30,8 @@ class ProfileRail(
     private val bar: LinearLayout = activity.findViewById(R.id.mode_bar)
     private val indicator: View = activity.findViewById(R.id.rail_indicator)
     private val settings: View = activity.findViewById(R.id.rail_settings)
+    private val bell: View = activity.findViewById(R.id.notif_bell)
+    private val items: View = activity.findViewById(R.id.rail_items)
     private val statusDot: View = activity.findViewById(R.id.status_dot)
     private val statusName: TextView = activity.findViewById(R.id.status_name)
     private val statusState: TextView = activity.findViewById(R.id.status_state)
@@ -40,6 +42,7 @@ class ProfileRail(
     private var page = layout.homeProfile
     private var inCall = false
     private var mode = Mode.HOME
+    private var notifications = false
     private var entries: List<RailEntry> = emptyList()
     private val views = mutableListOf<View>()
     private var focus: String? = null
@@ -86,6 +89,12 @@ class ProfileRail(
         mark(animate = changed)
     }
 
+    override fun showNotifications(shown: Boolean) {
+        if (shown == notifications) return
+        notifications = shown
+        mark(animate = true)
+    }
+
     override fun showFocus(state: FocusTimer.State) {
         focus = focusRemaining(state)
         entries.indexOf(RailEntry.Tool(Mode.FOCUS)).takeIf { it >= 0 }?.let { decorate(views[it], entries[it]) }
@@ -105,7 +114,9 @@ class ProfileRail(
     override fun tourAnchor(step: TourModel.Step): View? = when (step) {
         TourModel.Step.HOME -> views.getOrNull(entries.indexOfFirst { it is RailEntry.Profile && it.page == layout.homeProfile })
         TourModel.Step.SCREENS -> views.getOrNull(entries.indexOf(RailEntry.Add))
+        TourModel.Step.SWIPE -> bar
         TourModel.Step.TALK -> talk
+        TourModel.Step.NOTIFICATIONS -> bell
         TourModel.Step.CUSTOMIZE -> null
     }
 
@@ -139,6 +150,14 @@ class ProfileRail(
         }
         placed = false
         mark(animate = false)
+    }
+
+    override fun step(delta: Int): Boolean {
+        // Notifications (cloche) : en pied de barre comme Réglages, hors du balayage.
+        if (notifications && mode == Mode.COMPUTER) return false
+        val entry = RailModel.neighbor(entries, mode, page, delta) ?: return false
+        open(entry)
+        return true
     }
 
     private fun open(entry: RailEntry) = when (entry) {
@@ -208,7 +227,8 @@ class ProfileRail(
 
     /** Élément choisi : icône pleine et texte plein, le repère rouge glisse à sa hauteur (ressort, joue aussi en kiosque). */
     private fun mark(animate: Boolean) {
-        val selected = RailModel.selected(entries, mode, page)
+        val bellShown = notifications && mode == Mode.COMPUTER
+        val selected = if (bellShown) -1 else RailModel.selected(entries, mode, page)
         if (selected != marked) lastMove = RailModel.direction(marked, selected)
         marked = selected
         views.forEachIndexed { i, v ->
@@ -216,7 +236,9 @@ class ProfileRail(
             v.findViewById<TextView>(R.id.rail_label).typeface = if (i == selected) fontMedium else fontRegular
         }
         settings.isSelected = mode == Mode.SETTINGS
-        val target = views.getOrNull(selected)
+        bell.isSelected = bellShown
+        // La cloche et la roue sont en pied de barre, hors de la liste des entrées : le repère descend jusqu'à elles.
+        val target = views.getOrNull(selected) ?: bell.takeIf { bellShown } ?: settings.takeIf { mode == Mode.SETTINGS }
         if (target == null) {
             Look.navSpring(indicator, DynamicAnimation.ALPHA, Look.EFFECTS_DEFAULT, 0f)
             return
@@ -237,7 +259,7 @@ class ProfileRail(
             return
         }
         // Le repère se centre sur l'entrée (icône et libellé), au bord gauche.
-        val y = (bar.top + target.top + (target.height - indicator.height) / 2).toFloat()
+        val y = (topInRail(target) - topInRail(items) + (target.height - indicator.height) / 2).toFloat()
         if (!animate || !placed) {
             indicator.translationY = y
             indicator.alpha = 1f
@@ -246,6 +268,17 @@ class ProfileRail(
         }
         Look.navSpring(indicator, DynamicAnimation.ALPHA, Look.EFFECTS_DEFAULT, 1f)
         Look.navSpring(indicator, DynamicAnimation.TRANSLATION_Y, Look.SPATIAL_DEFAULT, y)
+    }
+
+    /** Haut de `view` dans la barre entière (sans les translations). */
+    private fun topInRail(view: View): Int {
+        var y = 0
+        var v: View? = view
+        while (v != null && v !== rail) {
+            y += v.top
+            v = v.parent as? View
+        }
+        return y
     }
 
     /** Repos : la barre passe à 40 %, les libellés s'effacent ; un toucher la ravive. Rien ne disparaît. */

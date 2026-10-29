@@ -48,6 +48,7 @@ import com.unowhy.companion.ui.CallSession
 import com.unowhy.companion.ui.CameraFragment
 import com.unowhy.companion.ui.CompanionUpdate
 import com.unowhy.companion.ui.ComputerAdder
+import com.unowhy.companion.ui.ComputersDialog
 import com.unowhy.companion.ui.DocumentPanel
 import com.unowhy.companion.ui.FocusFragment
 import com.unowhy.companion.ui.FromComputerFragment
@@ -61,6 +62,7 @@ import com.unowhy.companion.ui.Navigation
 import com.unowhy.companion.ui.PhotoFrameView
 import com.unowhy.companion.ui.PluginsView
 import com.unowhy.companion.ui.ProfileRail
+import com.unowhy.companion.ui.RailSwipeLayout
 import com.unowhy.companion.ui.ReadingAids
 import com.unowhy.companion.ui.SettingsFragment
 import com.unowhy.companion.ui.TabletAlerts
@@ -106,6 +108,8 @@ class MainActivity : AppCompatActivity() {
     private val keyboard = KeyboardControl(this)
     private val focusDnd = FocusDnd(this)
     private val remote = RemoteLink(this, ::showLink) { computer -> onComputerChanged(computer, automatic = true) }
+    /** Écran montré avant la cloche, quand il n'était pas Depuis l'ordi : « Terminer » des notifications y revient. */
+    private var beforeNotifications: Mode? = null
     private val computerDialogs by lazy { ComputerAdder(this, lifecycleScope) { onComputerChanged(it) } }
     /** Dernier état de la liaison, repris par les Réglages et le sélecteur d'ordinateur. */
     var link = Link(null, Link.State.NONE)
@@ -167,7 +171,8 @@ class MainActivity : AppCompatActivity() {
         AutoUpdater.start(this)
         InstallerService.start(this)
 
-        nav = ProfileRail(this, ::show, ::showProfile, ::openProfiles)
+        nav = ProfileRail(this, ::showFromRail, ::showProfile, ::openProfiles)
+        findViewById<RailSwipeLayout>(R.id.mode_container).onSwipe = { delta -> railStep(delta) }
         wakeRail()
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
         wake = WakeWord(this, findViewById(R.id.wake_mic)) { voice.start() }
@@ -344,31 +349,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Toucher la pastille de connexion : changer d'ordinateur (ou renommer l'actif) sans passer par les Réglages. */
+    /** Ordinateur en pied de barre : la liste des ordinateurs (ComputersDialog), ou la bienvenue s'il n'y en a aucun. */
     private fun showComputerPicker() {
-        val computers = Computers.all(this)
-        if (computers.isEmpty()) return showWelcome()
-        val current = Computers.active(this)
-        val active = current?.id
-        val labels = computers.map { (if (it.id == active) "✓  " else "     ") + it.name }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle(R.string.computers_title)
-            .setItems(labels) { _, which ->
-                val chosen = computers[which]
-                if (chosen.id != active) {
-                    Computers.setActive(this, chosen.id)
-                    onComputerChanged(Computers.active(this))
+        if (Computers.all(this).isEmpty()) return showWelcome()
+        ComputersDialog(
+            this,
+            link,
+            computerDialogs,
+            onSwitch = { chosen ->
+                Computers.setActive(this, chosen.id)
+                onComputerChanged(Computers.active(this))
+            },
+            onRename = { computer ->
+                computerDialogs.rename(computer) {
+                    refreshLink()
+                    settings()?.onLinkChanged()
                 }
-            }
-            .setNeutralButton(R.string.computers_manage) { _, _ -> show(Mode.SETTINGS) }
-            .apply {
-                if (current != null) setPositiveButton(R.string.computer_rename) { _, _ ->
-                    computerDialogs.rename(current) {
-                        refreshLink()
-                        settings()?.onLinkChanged()
-                    }
-                }
-            }
-            .showImmersive()
+            },
+            onSettings = { show(Mode.SETTINGS) },
+        ).show()
     }
 
     private val focusListener: (FocusTimer.State) -> Unit = { state ->
@@ -604,10 +603,30 @@ class MainActivity : AppCompatActivity() {
     /** Cloche de la barre : Depuis l'ordi > Notifications, pastille retirée. */
     private fun openNotifications() {
         findViewById<View>(R.id.notif_dot).visibility = View.GONE
+        val from = current
         show(Mode.COMPUTER)
+        beforeNotifications = from.takeIf { it != Mode.COMPUTER }
         // Le mode vient peut-être d'être créé : sa vue doit exister avant de choisir l'écran.
         supportFragmentManager.executePendingTransactions()
         (supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment)?.openNotifications()
+    }
+
+    /** Depuis l'ordi entre dans ses notifications ou en sort : la barre marque la cloche à la place de « Depuis l'ordi ». */
+    fun onNotificationsShown(shown: Boolean) {
+        if (::nav.isInitialized) nav.showNotifications(shown)
+    }
+
+    /** « Terminer » des notifications : retour à l'écran d'avant la cloche (rien s'il s'agissait de Depuis l'ordi). */
+    fun notificationsClosed() {
+        val mode = beforeNotifications ?: return
+        beforeNotifications = null
+        if (current == Mode.COMPUTER) show(mode)
+    }
+
+    /** Mode choisi dans la barre (toucher ou balayage) : « Depuis l'ordi » quitte ses notifications, ouvertes par la cloche. */
+    private fun showFromRail(mode: Mode) {
+        if (mode == Mode.COMPUTER) (supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment)?.leaveNotifications()
+        show(mode)
     }
 
     /** Un agent Claude attend, a fini ou a atteint sa limite (ordre `agent`, voir AgentAlerts). */
@@ -761,6 +780,9 @@ class MainActivity : AppCompatActivity() {
         controller.hide(WindowInsetsCompat.Type.systemBars())
     }
 
+    /** Balayage vertical (Accueil ou autre mode) : entrée voisine de la barre ; faux au bout. */
+    fun railStep(delta: Int): Boolean = nav.step(delta)
+
     private fun show(mode: Mode) {
         if (::frame.isInitialized) closeFrame()
         // Le champ d'un écran masqué garderait sinon le clavier (et la saisie) par-dessus le nouvel écran.
@@ -771,6 +793,8 @@ class MainActivity : AppCompatActivity() {
         }
         val changed = current != mode
         current = mode
+        // Parti ailleurs que par la cloche : « Terminer » des notifications ne ramène plus à l'écran d'avant.
+        if (mode != Mode.COMPUTER) beforeNotifications = null
         val fm = supportFragmentManager
         // Un écran ajouté juste avant (ex. recréé par onComputerChanged) doit exister pour être masqué.
         fm.executePendingTransactions()
@@ -785,6 +809,8 @@ class MainActivity : AppCompatActivity() {
         tx.commit()
 
         nav.select(mode, changed)
+        // L'Accueil a son propre balayage (WidgetGrid) ; Réglages n'est pas dans la barre.
+        findViewById<RailSwipeLayout>(R.id.mode_container).swipeEnabled = mode != Mode.HOME && mode != Mode.SETTINGS
         renderNoComputer()
         if (changed) slideTo(mode)
     }

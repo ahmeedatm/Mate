@@ -99,4 +99,33 @@ class RailModelTest {
         l.removeProfile(1)
         assertNotEquals(before, RailModel.snapshot(l, inCall = false, tools = Prefs.RAIL_TOOLS, labels = true))
     }
+
+    @Test
+    fun `balayage vers le haut, profil suivant puis outils en sautant +`() {
+        val entries = RailModel.entries(layout(), inCall = false)
+        assertEquals(RailEntry.Profile(1, false), RailModel.neighbor(entries, Mode.HOME, 0, 1))
+        assertEquals(RailEntry.Tool(Mode.FOCUS), RailModel.neighbor(entries, Mode.HOME, 1, 1))
+        assertEquals(RailEntry.Tool(Mode.COMPUTER), RailModel.neighbor(entries, Mode.FOCUS, 0, 1))
+    }
+
+    @Test
+    fun `balayage vers le bas, du premier outil au dernier profil`() {
+        val entries = RailModel.entries(layout(), inCall = false)
+        assertEquals(RailEntry.Profile(1, false), RailModel.neighbor(entries, Mode.FOCUS, 0, -1))
+        assertEquals(RailEntry.Profile(0, false), RailModel.neighbor(entries, Mode.HOME, 1, -1))
+    }
+
+    @Test
+    fun `rien au bout de la barre ni hors barre`() {
+        val entries = RailModel.entries(layout(), inCall = false)
+        assertEquals(null, RailModel.neighbor(entries, Mode.HOME, 0, -1))
+        assertEquals(null, RailModel.neighbor(entries, Mode.CAMERA, 0, 1))
+        assertEquals(null, RailModel.neighbor(entries, Mode.SETTINGS, 0, 1))
+    }
+
+    @Test
+    fun `un seul profil, le balayage mene aux outils`() {
+        val single = HomeLayout(mutableListOf(), 1).apply { ensureRoles("Réunion") }
+        assertEquals(RailEntry.Tool(Mode.FOCUS), RailModel.neighbor(RailModel.entries(single, inCall = false), Mode.HOME, 0, 1))
+    }
 }

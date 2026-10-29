@@ -57,6 +57,9 @@ class FromComputerFragment : Fragment() {
 
     private var dir = ""
     private var screen = Screen.CHOICE
+
+    /** Écran d'ici montré avant les notifications : « Terminer » ou « Depuis l'ordi » dans la barre y revient. */
+    private var beforeNotifications = Screen.CHOICE
     /** Liste des fichiers affichée. */
     private val browsing get() = screen == Screen.FILES
 
@@ -94,7 +97,7 @@ class FromComputerFragment : Fragment() {
         }
         up.setOnClickListener { load(dir.substringBeforeLast('/', "")) }
         refresh.setOnClickListener { load(dir) }
-        back.setOnClickListener { show(Screen.CHOICE) }
+        back.setOnClickListener { if (screen == Screen.NOTIFICATIONS) closeNotifications() else show(Screen.CHOICE) }
         view.findViewById<View>(R.id.docs_choose_files).setOnClickListener { show(Screen.FILES) }
         view.findViewById<View>(R.id.docs_choose_web).setOnClickListener { (requireActivity() as MainActivity).openComputerPage() }
         view.findViewById<View>(R.id.docs_choose_clipboard).setOnClickListener { show(Screen.CLIPBOARD) }
@@ -120,7 +123,23 @@ class FromComputerFragment : Fragment() {
     /** Cloche en haut à gauche (MainActivity) : l'historique des notifications, quel que soit l'écran affiché ici. */
     fun openNotifications() {
         if (view == null) return
-        if (screen == Screen.NOTIFICATIONS) notifications.read() else show(Screen.NOTIFICATIONS)
+        if (screen == Screen.NOTIFICATIONS) {
+            notifications.read()
+        } else {
+            beforeNotifications = screen
+            show(Screen.NOTIFICATIONS)
+        }
+    }
+
+    /** « Terminer » des notifications : l'écran d'avant ici, et l'écran d'avant la cloche s'il était ailleurs. */
+    private fun closeNotifications() {
+        show(beforeNotifications)
+        (activity as? MainActivity)?.notificationsClosed()
+    }
+
+    /** « Depuis l'ordi » touché dans la barre (ou atteint par balayage) : on quitte les notifications pour le choix. */
+    fun leaveNotifications() {
+        if (view != null && screen == Screen.NOTIFICATIONS) show(beforeNotifications)
     }
 
     /** Notification reçue de l'ordinateur (voir MainActivity.onNotification) : l'historique affiché est relu. */
@@ -143,6 +162,7 @@ class FromComputerFragment : Fragment() {
         if (screen == Screen.CLIPBOARD && next != Screen.CLIPBOARD) clipboard.stop()
         if (screen == Screen.NOTIFICATIONS && next != Screen.NOTIFICATIONS) notifications.stop()
         screen = next
+        (activity as? MainActivity)?.onNotificationsShown(next == Screen.NOTIFICATIONS)
         choice.visibility = if (next == Screen.CHOICE) View.VISIBLE else View.GONE
         files.visibility = if (next == Screen.FILES) View.VISIBLE else View.GONE
         clipboardRoot.visibility = if (next == Screen.CLIPBOARD) View.VISIBLE else View.GONE

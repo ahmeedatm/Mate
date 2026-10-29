@@ -21,6 +21,12 @@ interface Navigation {
 
     fun select(mode: Mode, changed: Boolean)
 
+    /** Depuis l'ordi montre ses notifications : la cloche est l'élément choisi, plus « Depuis l'ordi ». */
+    fun showNotifications(shown: Boolean) {}
+
+    /** Balayage vertical : ouvre l'entrée voisine de la barre (+1 suivante, -1 précédente) ; faux s'il n'y en a pas. */
+    fun step(delta: Int): Boolean = false
+
     /** Temps restant du Pomodoro à la place du libellé Focus, visible depuis n'importe quel écran. */
     fun showFocus(state: FocusTimer.State)
 

@@ -448,8 +448,12 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         main?.onProfileShown(layout, page)
     }
 
-    /** Balayage : profil voisin dans l'ordre de la barre (Réunion n'y est que pendant un appel). */
+    /**
+     * Balayage vertical : entrée voisine de la barre, profil puis outils (Focus, Ordi, Caméra), comme en la touchant. Sans
+     * barre (ou profil caché derrière « Plus ») : profil voisin dans l'ordre des profils.
+     */
     override fun onPageSwipe(delta: Int) {
+        if (main?.railStep(delta) == true) return
         val order = layout.profilesInOrder(inCall = main?.inCall == true)
         order.getOrNull(order.indexOf(page) + delta)?.let(::showProfile)
     }

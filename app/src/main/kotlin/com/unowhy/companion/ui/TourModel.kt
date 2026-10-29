@@ -4,11 +4,11 @@ import android.content.Context
 import com.unowhy.companion.Prefs
 
 /**
- * Visite guidée du premier lancement (après l'appairage), sans vue : quatre bulles le long de la barre de gauche, puis
+ * Visite guidée du premier lancement (après l'appairage), sans vue : six bulles le long de la barre de gauche, puis
  * plus jamais (passée ou finie). Montrée par [TourOverlay].
  */
 object TourModel {
-    enum class Step { HOME, SCREENS, TALK, CUSTOMIZE }
+    enum class Step { HOME, SCREENS, SWIPE, TALK, NOTIFICATIONS, CUSTOMIZE }
 
     val STEPS = Step.entries.toList()
 
