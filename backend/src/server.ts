@@ -70,7 +70,7 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
   LOOPBACK.has(ip) &&
   LOCAL_HOST.test(host ?? "") &&
   ((method === "GET" &&
-    /^\/(camera(\/stream|\/status)?|local\/(status|licences)|web\/outfit-[345]00\.ttf|oauth\/(microsoft|google)\/(start|callback))?(\?|$)/.test(
+    /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite)|web\/outfit-[345]00\.ttf|oauth\/(microsoft|google)\/(start|callback))?(\?|$)/.test(
       url,
     )) ||
     (method === "PUT" && (url === "/local/calendar" || url === "/local/tablet/settings")) ||

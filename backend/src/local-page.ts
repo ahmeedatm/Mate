@@ -162,8 +162,11 @@ ${FAVICON}
     </details>
   </div>
 
-  <!-- Compagnon installé : mentions de licences des composants tiers (LICENCES-TIERS.txt, scripts/package.ts). -->
-  <p class="dim" id="licences" hidden><a href="/local/licences" target="_blank">Licences des composants</a></p>
+  <!-- Politique de confidentialité (config/confidentialite.txt) ; compagnon installé : licences des composants tiers (LICENCES-TIERS.txt, scripts/package.ts). -->
+  <p class="dim">
+    <a href="/local/confidentialite" target="_blank">Confidentialité</a>
+    <span id="licences" hidden> · <a href="/local/licences" target="_blank">Licences des composants</a></span>
+  </p>
 </main>
 <script>
   const OS = { mac: "macOS", windows: "Windows", other: "Linux (pilotage indisponible)" };

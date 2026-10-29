@@ -34,7 +34,14 @@ const FOLDER = "Compagnon Unowhy";
 const VERSION = /^v\d+\.\d+\.\d+$/.test(process.env.CI_COMMIT_TAG ?? "") ? process.env.CI_COMMIT_TAG!.slice(1) : "0.0.0";
 
 /** Fichiers de config livrés : pas deck.json ni tasks.json (données de l'ordinateur, créées sur place). */
-const CONFIG = ["accounts.json", "calls.json", "deck.example.json", "deck.example.windows.json", "tasks.example.json"];
+const CONFIG = [
+  "accounts.json",
+  "calls.json",
+  "confidentialite.txt",
+  "deck.example.json",
+  "deck.example.windows.json",
+  "tasks.example.json",
+];
 
 async function download(url: string): Promise<Buffer> {
   const res = await fetch(url);

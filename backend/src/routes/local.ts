@@ -14,6 +14,8 @@ import { sendToTablet, tabletStatus, THEMES, type TabletSettings } from "../tabl
 const SETTINGS = ["theme", "brightness", "volume", "nightDim", "focusDnd"] satisfies (keyof TabletSettings)[];
 
 const LICENCES_FILE = path.join(backendRoot, "LICENCES-TIERS.txt");
+/** Politique de confidentialité (même texte dans l'appli, assets/confidentialite.txt ; docs/confidentialite.md). */
+const PRIVACY_FILE = path.join(backendRoot, "config", "confidentialite.txt");
 
 /** Page d'accueil locale (ouverte dans le navigateur de l'ordinateur) et connexion des comptes d'agenda. */
 export default async function localRoutes(app: FastifyInstance) {
@@ -25,6 +27,8 @@ export default async function localRoutes(app: FastifyInstance) {
     const data = await readFile(path.join(backendRoot, "assets", "web", req.params.file));
     return reply.type("font/ttf").header("cache-control", "max-age=86400").send(data);
   });
+
+  app.get("/local/confidentialite", async (_req, reply) => reply.type("text/plain; charset=utf-8").send(fs.createReadStream(PRIVACY_FILE)));
 
   /** Mentions de licences des composants tiers : écrites dans le compagnon installé par scripts/package.ts. */
   app.get("/local/licences", async (_req, reply) => {
