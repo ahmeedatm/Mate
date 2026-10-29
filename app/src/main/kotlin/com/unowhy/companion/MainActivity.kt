@@ -32,6 +32,7 @@ import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.Link
 import com.unowhy.companion.net.PcNotification
+import com.unowhy.companion.net.runCatchingCancellable
 import com.unowhy.companion.remote.RemoteLink
 import com.unowhy.companion.trial.EssaiBackend
 import com.unowhy.companion.trial.Trial
@@ -55,12 +56,14 @@ import com.unowhy.companion.ui.MenuPanel
 import com.unowhy.companion.ui.MiniPlayerView
 import com.unowhy.companion.ui.Navigation
 import com.unowhy.companion.ui.PhotoFrameView
+import com.unowhy.companion.ui.PluginsView
 import com.unowhy.companion.ui.Rail
 import com.unowhy.companion.ui.SettingsFragment
 import com.unowhy.companion.ui.TabletAlerts
 import com.unowhy.companion.ui.TabletStatusView
 import com.unowhy.companion.ui.WelcomeView
 import com.unowhy.companion.ui.dp
+import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.home.Down
 import com.unowhy.companion.ui.home.LinkWatch
 import com.unowhy.companion.ui.notificationBannerText
@@ -68,6 +71,7 @@ import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.voice.VoiceControl
 import com.unowhy.companion.voice.WakeWord
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -90,6 +94,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var banner: Banner
     private lateinit var alerts: TabletAlerts
     private lateinit var welcome: WelcomeView
+    private lateinit var plugins: PluginsView
+    /** Ordinateurs dont l'écran des plugins a été fermé par « Plus tard » : plus proposé avant le prochain lancement. */
+    private val pluginsLater = mutableSetOf<String>()
     private lateinit var noComputer: View
     private val keyboard = KeyboardControl(this)
     private val focusDnd = FocusDnd(this)
@@ -231,11 +238,17 @@ class MainActivity : AppCompatActivity() {
             show(Mode.HOME)
             showBanner(getString(R.string.welcome_done, computer.name), 6)
         }
+        plugins = findViewById(R.id.plugins)
+        plugins.attach(
+            this,
+            onLater = { Computers.active(this)?.let { pluginsLater += it.id } },
+            onSaved = ::recreateScreens,
+        )
 
         // Retour ne quitte jamais l'appli : il ferme le document ouvert, sinon ramène à l'accueil.
         onBackPressedDispatcher.addCallback(this) {
             when {
-                welcome.visibility == View.VISIBLE -> Unit
+                welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE -> Unit
                 agentAsk.isOpen -> agentAsk.close()
                 menu?.isOpen == true -> menu?.close()
                 documentPanel.visibility == View.VISIBLE -> documentPanel.close()
@@ -271,6 +284,15 @@ class MainActivity : AppCompatActivity() {
      * recréé pour relire deck, agenda, tâches et documents de cet ordinateur. Focus et sons continuent.
      */
     fun onComputerChanged(computer: Computer?, automatic: Boolean = false) {
+        recreateScreens()
+        showLink(Link(computer, Link.State.OFFLINE))
+        remote.restart()
+        if (automatic && computer != null) showBanner(getString(R.string.computer_switched, computer.name), 6)
+        offerPlugins()
+    }
+
+    /** Chaque écran est recréé : il relit le deck, l'agenda, les tâches et les documents de l'ordinateur actif. */
+    private fun recreateScreens() {
         IconCache.clear()
         documentPanel.close()
         val fm = supportFragmentManager
@@ -278,9 +300,36 @@ class MainActivity : AppCompatActivity() {
         fm.fragments.forEach { tx.remove(it) }
         tx.commitNow()
         show(current)
-        showLink(Link(computer, Link.State.OFFLINE))
-        remote.restart()
-        if (automatic && computer != null) showBanner(getString(R.string.computer_switched, computer.name), 6)
+    }
+
+    /**
+     * Plugins jamais proposés sur l'ordinateur actif (premier appairage, appli compatible installée depuis) : écran
+     * des plugins. Silencieux si l'ordinateur ne répond pas ou n'est pas encore à jour.
+     */
+    private fun offerPlugins() {
+        val computer = Computers.active(this) ?: return
+        if (computer.id in pluginsLater || welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE) return
+        lifecycleScope.launch {
+            val list = runCatchingCancellable { BackendClient(this@MainActivity).plugins.list() }.getOrNull() ?: return@launch
+            if (list.any { it.fresh } && Computers.active(this@MainActivity)?.id == computer.id && welcome.visibility != View.VISIBLE) {
+                plugins.show(computer.name, list, offered = true)
+            }
+        }
+    }
+
+    /** Depuis les Réglages : l'écran des plugins, même si tout a déjà été choisi. */
+    fun showPlugins() {
+        val computer = Computers.active(this) ?: return showWelcome()
+        lifecycleScope.launch {
+            try {
+                val list = BackendClient(this@MainActivity).plugins.list()
+                if (list.isEmpty()) showBanner(getString(R.string.plugins_unavailable), 6) else plugins.show(computer.name, list, offered = false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                showBanner(errorText(e), 6)
+            }
+        }
     }
 
     /** Toucher la pastille de connexion : changer d'ordinateur (ou renommer l'actif) sans passer par les Réglages. */
@@ -322,6 +371,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         FocusTimer.observe(focusListener)
+        offerPlugins()
     }
 
     override fun onStop() {
@@ -615,6 +665,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Ce qui sert encore, que le cadre ne doit pas cacher. */
     private fun frameBusy() = callOverlay.visibility == View.VISIBLE || agentAsk.isOpen || welcome.visibility == View.VISIBLE ||
+        plugins.visibility == View.VISIBLE ||
         menu?.isOpen == true || documentPanel.visibility == View.VISIBLE || current == Mode.CAMERA || FocusTimer.state.running
 
     /** Lance le cadre tout de suite (Réglages > Cadre photo > Essayer, ou délai écoulé) ; sans photo, rien. */

@@ -69,6 +69,34 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Plugins de l'ordinateur actif : le même écran qu'à la première utilisation. -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <com.unowhy.companion.ui.TitleView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_widgets"
+                android:text="@string/plugins_card" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/plugins_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/settings_plugins"
+                style="@style/ActionButton"
+                android:layout_marginTop="16dp"
+                android:text="@string/plugins_choose" />
+        </LinearLayout>
+
         <!-- WiFi : en kiosque, Paramètres d'Android est inaccessible. -->
         <LinearLayout
             style="@style/Card"

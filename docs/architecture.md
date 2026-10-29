@@ -46,6 +46,7 @@ Pas de serveur dans le cloud : chaque ordinateur a son compagnon, la tablette pa
 2. La tablette cherche les ordinateurs (`net/Discovery.kt`), ou on saisit l'adresse.
 3. En WiFi, tout passe en HTTPS (certificat auto-signé de l'ordinateur, `tls.ts`) ; le HTTP n'écoute que sur 127.0.0.1. La tablette affiche un code à 6 chiffres, qui mêle l'empreinte du certificat qu'elle voit ; l'utilisateur le saisit sur l'ordinateur (page `http://127.0.0.1:3000/`), la tablette reçoit le jeton et épingle le certificat. Détails et protocole : [securite-appairage.md](securite-appairage.md).
 4. La tablette garde une **liste d'ordinateurs** (`Computers.kt` : id, nom, url, jeton, os, empreinte épinglée) et pilote l'actif. Si l'actif ne répond plus, `net/Connection.kt` retrouve sa nouvelle adresse par la recherche, ou bascule vers un autre ordinateur qui répond.
+5. **Plugins** (première utilisation) : le compagnon propose ses plugins (`plugins.ts`, `GET /plugins`) : applis trouvées sur l'ordinateur (Discord, Teams, Claude Code) et fonctions intégrées (Ouvertes, Son, Pavé, Média). La tablette ouvre l'écran des plugins (`PluginsView`) tant qu'un plugin n'a jamais été proposé : au premier appairage, et quand une appli compatible apparaît ensuite. Les choix (`POST /plugins`, `.data/plugins.json`) valent pour cet ordinateur. Un plugin coupé : sa page disparaît du deck (`/deck`), ses appels ne sonnent plus, ses onglets sont masqués (`off` de `/deck/features`). Jamais choisi = actif. Rouvrable dans Réglages > Plugins.
 
 ### 2. Une requête ordinaire (tablette → ordinateur)
 
@@ -152,7 +153,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | Où | Quoi | Dans git ? |
 |---|---|---|
 | Tablette, préférences de l'appli | ordinateurs appairés et jetons, profils de l'Accueil (noms, widgets, profil de jeu), eau, réglages | non |
-| `backend/.data/` (sur chaque ordinateur) | identité et jeton, agendas reliés, comptes, agenda perso, tâches, touches perso, applis, sites, réunions, mises à jour | non (perso) |
+| `backend/.data/` (sur chaque ordinateur) | identité et jeton, agendas reliés, comptes, agenda perso, tâches, touches perso, applis, sites, réunions, plugins, mises à jour | non (perso) |
 | `backend/config/deck.json`, `tasks.json` | deck et tâches quotidiennes de cet ordinateur | non (perso) |
 | `backend/config/*.example*.json`, `accounts.json` | modèles de départ, identifiants publics OAuth | oui |
 | `backend/.env` | secrets et réglages (`.env.example` pour la liste) | non |

@@ -665,6 +665,17 @@
     <string name="welcome_manual">Saisir son adresse</string>
     <string name="welcome_later">Plus tard</string>
     <string name="welcome_done">Connecté à %1$s</string>
+    <string name="plugins_title">Tes plugins</string>
+    <string name="plugins_subtitle">Choisis ce que la tablette fait avec %1$s. Tu pourras changer d\'avis dans Réglages.</string>
+    <string name="plugins_apps">Trouvés sur ton ordinateur</string>
+    <string name="plugins_native">Intégrés</string>
+    <string name="plugins_new">Nouveau</string>
+    <string name="plugins_save">Valider</string>
+    <string name="plugins_no_apps">Aucune appli compatible trouvée (Discord, Teams, Claude Code).</string>
+    <string name="plugins_card">Plugins</string>
+    <string name="plugins_choose">Choisir les plugins</string>
+    <string name="plugins_hint">Applis de l\'ordinateur (Discord, Teams…) et fonctions du Deck à afficher sur la tablette.</string>
+    <string name="plugins_unavailable">Cet ordinateur ne propose pas de plugins : mets à jour le compagnon.</string>
     <string name="connect_title">Aucun ordinateur connecté</string>
     <string name="connect_button">Connecter mon ordinateur</string>
     <string name="connect_deck">Le Deck lance les applis et les raccourcis de ton ordinateur.</string>

@@ -26,6 +26,7 @@ import localRoutes from "./routes/local.ts";
 import mailRoutes from "./routes/mail.ts";
 import notificationRoutes from "./routes/notifications.ts";
 import pairingRoutes from "./routes/pairing.ts";
+import pluginRoutes from "./routes/plugins.ts";
 import pointerRoutes from "./routes/pointer.ts";
 import systemRoutes from "./routes/system.ts";
 import tabletRoutes from "./routes/tablet.ts";
@@ -132,6 +133,7 @@ app.addContentTypeParser("application/gzip", { parseAs: "buffer", bodyLimit: 100
 app.register(pairingRoutes, { authorized, fingerprint: tls?.fingerprint ?? null });
 app.register(localRoutes);
 app.register(deckRoutes);
+app.register(pluginRoutes);
 app.register(windowRoutes);
 app.register(systemRoutes);
 app.register(pointerRoutes);
