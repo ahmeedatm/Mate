@@ -45,6 +45,8 @@ export default async function deckRoutes(app: FastifyInstance) {
         meeting: p.meeting ?? false,
         app: p.app ?? null,
         media: p.media ?? false,
+        sound: p.sound ?? true,
+        mail: p.mail ?? false,
         tiles: p.tiles.map((t) =>
           "empty" in t
             ? { id: t.id, label: "", type: "empty", glyph: null, color: null }

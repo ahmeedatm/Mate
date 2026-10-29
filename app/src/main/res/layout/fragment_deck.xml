@@ -129,6 +129,14 @@
             android:paddingTop="16dp"
             android:paddingBottom="16dp" />
 
+        <!-- Page Outlook : courrier du compte Microsoft relié (compteurs, derniers non lus, prochain rendez-vous). -->
+        <com.unowhy.companion.ui.MailView
+            android:id="@+id/deck_mail"
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" />
+
         <GridView
             android:id="@+id/deck_grid"
             android:layout_width="match_parent"
