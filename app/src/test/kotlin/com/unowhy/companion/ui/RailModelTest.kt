@@ -54,6 +54,15 @@ class RailModelTest {
     }
 
     @Test
+    fun `direction dit si l'on descend ou monte dans la barre`() {
+        assertEquals(1, RailModel.direction(0, 2))
+        assertEquals(-1, RailModel.direction(2, 0))
+        assertEquals(0, RailModel.direction(1, 1))
+        // Rien de marqué avant (Réglages) : on arrive comme en descendant.
+        assertEquals(1, RailModel.direction(-1, 3))
+    }
+
+    @Test
     fun `un profil cache derriere More selectionne More`() {
         val entries = RailModel.entries(HomeLayout(mutableListOf(), 7), inCall = false)
         assertEquals(entries.indexOf(RailEntry.More), RailModel.selected(entries, Mode.HOME, page = 6))

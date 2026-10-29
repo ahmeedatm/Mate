@@ -2,4 +2,6 @@
 <resources>
     <!-- Ressorts d'appui d'une vue (Look.pressTo), gardés sur la vue : aucune table qui retienne la vue. -->
     <item name="press_springs" type="id" />
+    <!-- Ressorts de navigation d'une vue (Look.navSpring), un par propriété : le suivant remplace le précédent. -->
+    <item name="nav_springs" type="id" />
 </resources>

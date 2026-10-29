@@ -366,12 +366,24 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     /** Donne son nom par défaut à chaque profil sans nom : il le garde quand on le déplace. Vrai si un nom a été posé. */
     private fun nameProfiles() = layout.nameMissing(getString(R.string.profile_first), getString(R.string.profile_default))
 
-    /** Affiche le profil [index] et charge tout de suite ses widgets (le chargement du profil quitté est annulé). */
-    fun showProfile(index: Int) {
+    /**
+     * Affiche le profil [index] et charge ses widgets (le chargement du profil quitté est annulé).
+     * `animate` : la grille arrive dans le sens du déplacement dans la barre (ordre des profils) ; le chargement attend
+     * la fin du glissement : des widgets qui se redessinent pendant ce temps feraient recalculer le calque à chaque image.
+     */
+    fun showProfile(index: Int, animate: Boolean = true) {
         deckOverlays?.hideAll()
         profileLoad?.cancel()
+        val order = layout.profilesInOrder(inCall = false)
+        val move = RailModel.direction(order.indexOf(page), order.indexOf(index))
+        val changed = index != page
         displayProfile(index)
-        profileLoad = scope.launch { shownWidgets().forEach { it.load() } }
+        val slide = animate && changed
+        if (slide) Look.sharedAxis(null, grid, fromBelow = move >= 0)
+        profileLoad = scope.launch {
+            if (slide) delay(Look.NAV_SETTLE_MS)
+            shownWidgets().forEach { it.load() }
+        }
     }
 
     /** Titre, pastilles et widgets actifs, sans rien relire de l'ordinateur. */
@@ -429,10 +441,20 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         backup = layout.copy()
         grid.editing = true
         editBar.visibility = View.VISIBLE
+        scaleWidgets(EDIT_SCALE)
+    }
+
+    /** Mode Modifier : les widgets du profil se resserrent un peu (pas de tremblement, c'est une boucle) ; 1 en sortant. */
+    private fun scaleWidgets(scale: Float) {
+        shownWidgets().forEach {
+            Look.navSpring(it.view, androidx.dynamicanimation.animation.DynamicAnimation.SCALE_X, Look.SPATIAL_DEFAULT, scale)
+            Look.navSpring(it.view, androidx.dynamicanimation.animation.DynamicAnimation.SCALE_Y, Look.SPATIAL_DEFAULT, scale)
+        }
     }
 
     private fun endEdit(keep: Boolean) {
         if (!grid.editing) return
+        scaleWidgets(1f)
         deckOverlays?.hideAll()
         grid.editing = false
         editBar.visibility = View.GONE
@@ -566,6 +588,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     }
 
     private companion object {
+        /** Échelle des widgets en mode Modifier. */
+        const val EDIT_SCALE = 0.94f
+
         /** Aujourd'hui et les 7 jours suivants : « mardi soir » se voit dès aujourd'hui. */
         const val AGENDA_DAYS = 8
     }

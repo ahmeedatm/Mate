@@ -51,6 +51,7 @@ import com.unowhy.companion.ui.Grain
 import com.unowhy.companion.ui.HomeFragment
 import com.unowhy.companion.ui.IconCache
 import com.unowhy.companion.ui.KeyboardControl
+import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.MiniPlayerView
 import com.unowhy.companion.ui.Navigation
 import com.unowhy.companion.ui.PhotoFrameView
@@ -145,6 +146,7 @@ class MainActivity : AppCompatActivity() {
         InstallerService.start(this)
 
         nav = ProfileRail(this, ::show, ::showProfile, ::openProfiles)
+        wake()
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
         // Lumière des agents Claude sous la carte d'appel : un appel prime sur tout.
         val agentLight = AgentLight(this)
@@ -193,10 +195,9 @@ class MainActivity : AppCompatActivity() {
         banner = Banner(findViewById(R.id.remote_banner))
         findViewById<View>(R.id.notif_bell).setOnClickListener { openNotifications() }
         alerts = TabletAlerts(this, banner)
+        findViewById<View>(R.id.rail_settings).setOnClickListener { show(Mode.SETTINGS) }
         findViewById<TabletStatusView>(R.id.tablet_status).apply {
-            setOnClickListener {
-                show(Mode.SETTINGS)
-            }
+            inline()
             onMinute = {
                 Screen.apply(this@MainActivity)
                 alerts.remindWater()
@@ -351,6 +352,7 @@ class MainActivity : AppCompatActivity() {
         if (event.action == MotionEvent.ACTION_DOWN) {
             Screen.touched(this)
             lastTouch = SystemClock.elapsedRealtime()
+            wake()
             if (frame.isShowing) {
                 closeFrame()
                 swallowTouch = true
@@ -606,16 +608,15 @@ class MainActivity : AppCompatActivity() {
             documentPanel.setExpanded(mode == Mode.COMPUTER, splittable = mode != Mode.COMPUTER)
         }
         val changed = current != mode
+        val previous = current
         current = mode
         val fm = supportFragmentManager
         // Un écran ajouté juste avant (ex. recréé par onComputerChanged) doit exister pour être masqué.
         fm.executePendingTransactions()
         val tx = fm.beginTransaction()
-        if (changed) {
-            // Cadran : fondu enchaîné (sortie, puis entrée avec échelle) ; sinon fondu et légère montée.
-            tx.setCustomAnimations(R.animator.cadran_in, R.animator.cadran_out)
-        }
-        fm.fragments.forEach { tx.hide(it) }
+        // L'écran quitté reste visible le temps de s'effacer (Look.sharedAxis), puis il est masqué.
+        val leaving = fm.findFragmentByTag(previous.tag)?.takeIf { changed && it.isVisible && it.view != null }
+        fm.fragments.forEach { if (it !== leaving) tx.hide(it) }
         // Sans ordinateur, un mode qui en a besoin n'est pas créé (caméra, requêtes) : renderNoComputer le remplace.
         val needsComputer = mode.connect != null && Computers.all(this).isEmpty()
         val existing = fm.findFragmentByTag(mode.tag)
@@ -628,13 +629,35 @@ class MainActivity : AppCompatActivity() {
 
         nav.select(mode, changed)
         renderNoComputer()
+        if (changed) slideTo(mode, leaving)
+    }
+
+    /**
+     * Arrivée de l'écran `mode` dans le sens du déplacement dans la barre ; l'écran quitté s'efface, puis il est masqué
+     * (sauf s'il est redevenu l'écran affiché entre-temps). Ressorts qui jouent aussi en kiosque.
+     */
+    private fun slideTo(mode: Mode, leaving: Fragment?) {
+        val fm = supportFragmentManager
+        fm.executePendingTransactions()
+        val into = fm.findFragmentByTag(mode.tag)?.view
+        if (into == null) {
+            leaving?.let { fm.beginTransaction().hide(it).commitAllowingStateLoss() }
+            return
+        }
+        Look.sharedAxis(leaving?.view, into, fromBelow = nav.lastMove >= 0) {
+            val out = leaving ?: return@sharedAxis
+            out.view?.alpha = 1f
+            if (out.tag != current.tag && !fm.isDestroyed) fm.beginTransaction().hide(out).commitAllowingStateLoss()
+        }
     }
 
     /** Entrée de profil de la barre : l'Accueil, sur ce profil (créé au besoin : sa vue doit exister avant). */
     private fun showProfile(page: Int) {
+        // Déjà sur l'Accueil : seul le profil change (et glisse) ; sinon l'écran arrive en entier, sur ce profil.
+        val within = current == Mode.HOME
         show(Mode.HOME)
         supportFragmentManager.executePendingTransactions()
-        homeFragment()?.showProfile(page)
+        homeFragment()?.showProfile(page, animate = within)
     }
 
     /** Appui long sur un profil de la barre, ou « Plus » : la liste des profils, depuis l'Accueil. */
@@ -648,6 +671,15 @@ class MainActivity : AppCompatActivity() {
     fun onProfileShown(layout: HomeLayout, page: Int) = nav.showProfiles(layout, page, inCall = false)
 
     private fun homeFragment() = supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment
+
+    /** Repos de la barre après [REST_MS] sans toucher ; [wake] la ravive et relance l'attente. */
+    private val rest = Runnable { nav.setResting(true) }
+
+    private fun wake() {
+        nav.setResting(false)
+        window.decorView.removeCallbacks(rest)
+        window.decorView.postDelayed(rest, REST_MS)
+    }
 
     /** Modes qui ont besoin de l'ordinateur : « Aucun ordinateur connecté » par-dessus, tant qu'il n'y en a pas. */
     private fun renderNoComputer() {
@@ -670,6 +702,9 @@ class MainActivity : AppCompatActivity() {
 
         /** Tag de la vue vide au bout de la ligne de titre des écrans, élargie de la place du petit lecteur. */
         const val MEDIA_SPACE = "media_space"
+
+        /** Sans toucher pendant ce temps, la barre passe au repos (atténuée). */
+        private const val REST_MS = 60_000L
 
         /** Bandeau d'une notification de l'ordinateur : le temps de lire l'appli, le titre et le début du texte. */
         private const val NOTIFICATION_SECONDS = 8

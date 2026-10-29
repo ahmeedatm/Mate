@@ -29,6 +29,12 @@ interface Navigation {
 
     /** Profils de la barre (noms, rôles, Réunion pendant un appel) et profil affiché. */
     fun showProfiles(layout: HomeLayout, page: Int, inCall: Boolean)
+
+    /** Sens du dernier changement dans la barre ([RailModel.direction]) : l'écran suivant arrive de ce côté. */
+    val lastMove: Int
+
+    /** Repos (personne ne touche la tablette) : la barre s'efface à moitié, sans disparaître. */
+    fun setResting(resting: Boolean)
 }
 
 /** Temps restant du Pomodoro tant qu'il est lancé ou entamé, sinon null. */

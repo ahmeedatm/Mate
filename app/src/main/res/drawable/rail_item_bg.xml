@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="?attr/c_surface_pressed" /><corners android:radius="18dp" /></shape></item>
-    <item android:state_selected="true"><shape android:shape="rectangle"><solid android:color="?attr/c_surface_raised" /><corners android:radius="18dp" /></shape></item>
-    <item><shape android:shape="rectangle"><solid android:color="@android:color/transparent" /><corners android:radius="18dp" /></shape></item>
+        <item><shape android:shape="rectangle"><solid android:color="@android:color/transparent" /><corners android:radius="18dp" /></shape></item>
 </selector>

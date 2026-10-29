@@ -30,6 +30,12 @@ object RailModel {
         return shown + listOfNotNull(call?.let { RailEntry.Profile(it, true) }) + TOOLS.map { RailEntry.Tool(it) }
     }
 
+    /**
+     * Sens du déplacement dans la barre, d'une entrée marquée à une autre : +1 vers le bas (le nouvel écran monte),
+     * -1 vers le haut, 0 sur place. Rien de marqué avant (Réglages) : comme vers le bas.
+     */
+    fun direction(from: Int, to: Int): Int = if (from < 0) 1 else Integer.signum(to - from)
+
     /** Index de l'entrée à marquer : le profil affiché (ou « Plus » s'il est caché derrière), l'outil, -1 sinon (Réglages). */
     fun selected(entries: List<RailEntry>, mode: Mode, page: Int): Int = when (mode) {
         Mode.HOME -> entries.indexOfFirst { it is RailEntry.Profile && it.page == page }.takeIf { it >= 0 } ?: entries.indexOf(RailEntry.More)
