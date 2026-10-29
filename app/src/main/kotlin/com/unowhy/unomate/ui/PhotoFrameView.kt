@@ -50,15 +50,17 @@ class PhotoFrameView(private val activity: MainActivity) : FrameLayout(activity)
         textSize = 72f
         typeface = themeFont(context, R.attr.c_font_display)
         includeFontPadding = false
+        isSingleLine = true
     }
     private val date = TextView(context).apply {
         textSize = 22f
         typeface = themeFont(context, R.attr.c_font_regular)
     }
+    // Toute la largeur, texte à gauche : mesurée au plus juste, l'heure perdait son dernier chiffre (« 20:2 ») en Rétro.
     private val time = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
-        addView(clock)
-        addView(date, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(4) })
+        addView(clock, LinearLayout.LayoutParams(-1, -2))
+        addView(date, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
     }
 
     val isShowing: Boolean get() = visibility == VISIBLE
@@ -72,7 +74,7 @@ class PhotoFrameView(private val activity: MainActivity) : FrameLayout(activity)
             it.setTextColor(themeColor(context, R.attr.c_frame_text))
             it.setShadowLayer(dp(8).toFloat(), 0f, dp(2).toFloat(), shadow)
         }
-        addView(time, LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.START).apply { setMargins(dp(40), 0, 0, dp(32)) })
+        addView(time, LayoutParams(-1, -2, Gravity.BOTTOM or Gravity.START).apply { setMargins(dp(40), 0, dp(40), dp(32)) })
     }
 
     /** Affiche le cadre avec ces photos (déjà réduites, voir FrameCache). */

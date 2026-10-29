@@ -68,28 +68,24 @@
         android:layout_marginTop="20dp"
         android:layout_weight="1">
 
-        <!-- Écran de départ : les quatre usages, expliqués, en cartes de même hauteur. -->
-        <LinearLayout
+        <!-- Écran de départ : les quatre usages, expliqués, dans un grand carré coupé en croix (cases translucides en Rétro). -->
+        <com.unowhy.unomate.ui.CrossSquareLayout
             android:id="@+id/docs_choice"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:gravity="center"
-            android:orientation="horizontal">
+            android:layout_height="match_parent">
 
             <LinearLayout
                 android:id="@+id/docs_choose_files"
                 style="@style/Card"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="12dp"
-                android:layout_weight="1"
+                android:layout_height="0dp"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?android:attr/selectableItemBackground"
                 android:gravity="center_horizontal"
                 android:orientation="vertical"
-                android:padding="28dp">
+                android:padding="28dp"
+                android:paddingTop="40dp">
 
                 <ImageView
                     android:layout_width="64dp"
@@ -121,15 +117,14 @@
                 android:id="@+id/docs_choose_web"
                 style="@style/Card"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="12dp"
-                android:layout_weight="1"
+                android:layout_height="0dp"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?android:attr/selectableItemBackground"
                 android:gravity="center_horizontal"
                 android:orientation="vertical"
-                android:padding="28dp">
+                android:padding="28dp"
+                android:paddingTop="40dp">
 
                 <ImageView
                     android:layout_width="64dp"
@@ -161,15 +156,14 @@
                 android:id="@+id/docs_choose_clipboard"
                 style="@style/Card"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="24dp"
-                android:layout_weight="1"
+                android:layout_height="0dp"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?android:attr/selectableItemBackground"
                 android:gravity="center_horizontal"
                 android:orientation="vertical"
-                android:padding="28dp">
+                android:padding="28dp"
+                android:paddingTop="40dp">
 
                 <ImageView
                     android:layout_width="64dp"
@@ -201,15 +195,14 @@
                 android:id="@+id/docs_choose_frame"
                 style="@style/Card"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="24dp"
-                android:layout_weight="1"
+                android:layout_height="0dp"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?android:attr/selectableItemBackground"
                 android:gravity="center_horizontal"
                 android:orientation="vertical"
-                android:padding="28dp">
+                android:padding="28dp"
+                android:paddingTop="40dp">
 
                 <ImageView
                     android:layout_width="64dp"
@@ -236,7 +229,7 @@
                     android:textColor="?attr/c_text_dim"
                     android:textSize="16sp" />
             </LinearLayout>
-        </LinearLayout>
+        </com.unowhy.unomate.ui.CrossSquareLayout>
 
         <!-- Cadre photo : photos de l'ordi qui défilent quand la tablette ne sert pas, et quand. -->
         <include

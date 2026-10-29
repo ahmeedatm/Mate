@@ -74,6 +74,7 @@ import com.unowhy.unomate.ui.dp
 import com.unowhy.unomate.ui.errorText
 import com.unowhy.unomate.ui.home.Demo
 import com.unowhy.unomate.ui.home.Down
+import com.unowhy.unomate.ui.home.FlowBandView
 import com.unowhy.unomate.ui.home.HomeLayout
 import com.unowhy.unomate.ui.home.LinkWatch
 import com.unowhy.unomate.ui.notificationBannerText
@@ -99,6 +100,7 @@ class MainActivity : AppCompatActivity() {
     private var current = Mode.HOME
     /** Barre fixe à gauche : Parler, profils, outils, ordinateur, Réglages. */
     private lateinit var nav: Navigation
+    private lateinit var flow: FlowBandView
     private lateinit var documentPanel: DocumentPanel
     private lateinit var banner: Banner
     private lateinit var alerts: TabletAlerts
@@ -181,6 +183,9 @@ class MainActivity : AppCompatActivity() {
             onSwipe = { delta -> railStep(delta) }
             canSwipe = { delta -> railCanStep(delta) }
         }
+        // Tubes du Rétro derrière tous les écrans : voilés derrière les widgets sans fond de l'Accueil affiché.
+        flow = findViewById(R.id.flow)
+        flow.hidden = { homeFragment()?.bareWidgets().orEmpty() }
         wakeRail()
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
         wake = WakeWord(this, findViewById(R.id.wake_mic)) { voice.start() }
@@ -429,6 +434,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        // Activité recréée (thème, mise à jour) pendant le cadre : sa luminosité réduite ne reste pas à l'écran suivant.
+        if (::frame.isInitialized && frame.isShowing) Screen.frameCharging = null
         documentPanel.close()
         if (isFinishing) NoisePlayer.stop()
         voice.release()
@@ -438,6 +445,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        // Boîte de dialogue ouverte ou fermée (thème, mise à jour…) : ses touchers ne passent pas par dispatchTouchEvent,
+        // ils comptent quand même pour le délai du cadre photo, qui ne part pas à la fermeture d'une longue boîte.
+        lastTouch = SystemClock.elapsedRealtime()
         if (!hasFocus) return
         hideSystemBars()
         keyboard.closeOrphan()
@@ -762,8 +772,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Ce qui sert encore, que le cadre ne doit pas cacher. */
-    private fun frameBusy() = callOverlay.visibility == View.VISIBLE || agentAsk.isOpen || welcome.visibility == View.VISIBLE ||
+    /** Ce qui sert encore, que le cadre ne doit pas cacher (dont une boîte de dialogue ouverte : la fenêtre perd le focus). */
+    private fun frameBusy() = !hasWindowFocus() || callOverlay.visibility == View.VISIBLE || agentAsk.isOpen || welcome.visibility == View.VISIBLE ||
         plugins.visibility == View.VISIBLE ||
         documentPanel.visibility == View.VISIBLE || current == Mode.CAMERA || FocusTimer.state.running ||
         Breathing.running
@@ -840,7 +850,11 @@ class MainActivity : AppCompatActivity() {
         // Kiosque : l'Accueil arrive par ses widgets (Look.enterSpring), pas en glissant tout entier par-dessus.
         if (mode == Mode.HOME && Look.cascadeOnly(this)) return
         Look.sharedAxis(into, fromBelow = nav.lastMove >= 0)
+        flowTravel(nav.lastMove)
     }
+
+    /** Écran ou profil voisin dans la barre ([move] > 0 : plus bas) : les tubes du Rétro défilent avec lui. */
+    fun flowTravel(move: Int) = flow.travel(move)
 
     /** Entrée de profil de la barre : l'Accueil, sur ce profil (créé au besoin : sa vue doit exister avant). */
     private fun showProfile(page: Int) {
