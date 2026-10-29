@@ -381,6 +381,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         val focus = state.phase == FocusTimer.Phase.FOCUS
         val started = state.running || state.remainingMs < state.durationMs
         time.text = FocusTimer.format(state.remainingMs)
+        Look.countdown(time, state.remainingMs, state.running)
         phase.setText(when {
             !started -> R.string.focus_ready
             !state.running && cadran -> R.string.focus_paused

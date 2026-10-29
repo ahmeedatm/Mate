@@ -27,6 +27,20 @@ object Accessibility {
     fun canConfigure(context: Context): Boolean =
         context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
 
+    /**
+     * Vitesse des animations d'Android réglée d'après l'appli : 1 (tout joue) ou 0 avec Réduire les animations.
+     * L'installation du kiosque la met à 0 (docs/kiosque.md) ; c'est l'appli qui décide ensuite, famille par famille
+     * (Réglages > Animations). Sans WRITE_SECURE_SETTINGS : rien n'est écrit.
+     */
+    fun applyAnimationScale(context: Context, reduce: Boolean) {
+        if (!canConfigure(context)) return
+        val want = if (reduce) 0f else 1f
+        val resolver = context.contentResolver
+        if (Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != want) {
+            runCatching { Settings.Global.putFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, want) }
+        }
+    }
+
     fun talkBackInstalled(context: Context): Boolean = runCatching { context.packageManager.getPackageInfo(TALKBACK_PACKAGE, 0) }.isSuccess
 
     fun talkBackOn(context: Context): Boolean = TALKBACK in enabledServices(context)

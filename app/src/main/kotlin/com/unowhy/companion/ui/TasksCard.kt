@@ -167,6 +167,7 @@ class TasksCard @JvmOverloads constructor(
         showStatus(if (tasks.isEmpty()) context.getString(R.string.tasks_empty) else null)
 
         list.removeAllViews()
+        if (tasks.isNotEmpty()) Look.revealOnce(list)
         if (cadran) return tasks.sortedBy { it.done }.forEach { list.addView(cadranRow(it)) }
         val inflater = LayoutInflater.from(context)
         // Les tâches à faire d'abord, l'ordre du Mac est gardé à l'intérieur de chaque groupe.

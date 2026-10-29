@@ -6,14 +6,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Thème Rétro seulement (sinon GONE) : tubes qui coulent sur toute la hauteur, derrière les widgets, à droite
-         (voilés derrière le héros et la ligne du jour, sans fond : FlowBandView.hidden). -->
-    <com.unowhy.companion.ui.home.FlowBandView
-        android:id="@+id/home_flow"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_gravity="end" />
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"

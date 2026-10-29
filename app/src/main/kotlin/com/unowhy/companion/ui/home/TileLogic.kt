@@ -156,5 +156,8 @@ class TileMetrics(val columnDp: Int, val cellDp: Int, val plateDp: Int, val labe
 
         /** Rayon des coins d'une plaque : 22 sur 52, gardé en proportion. */
         fun radiusFor(plate: Int) = plate * 22 / 52
+
+        /** Marge autour d'un symbole Material : 12 sur 52, l'icône garde un peu plus de la moitié de la plaque. */
+        fun symbolPadFor(plate: Int) = plate * 12 / 52
     }
 }

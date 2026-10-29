@@ -68,11 +68,13 @@ import com.unowhy.companion.ui.ReadingAids
 import com.unowhy.companion.ui.SettingsFragment
 import com.unowhy.companion.ui.TabletAlerts
 import com.unowhy.companion.ui.TabletStatusView
+import com.unowhy.companion.ui.ThemePattern
 import com.unowhy.companion.ui.WelcomeView
 import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.home.Demo
 import com.unowhy.companion.ui.home.Down
+import com.unowhy.companion.ui.home.FlowBandView
 import com.unowhy.companion.ui.home.HomeLayout
 import com.unowhy.companion.ui.home.LinkWatch
 import com.unowhy.companion.ui.notificationBannerText
@@ -98,6 +100,7 @@ class MainActivity : AppCompatActivity() {
     private var current = Mode.HOME
     /** Barre fixe à gauche : Parler, profils, outils, ordinateur, Réglages. */
     private lateinit var nav: Navigation
+    private lateinit var flow: FlowBandView
     private lateinit var documentPanel: DocumentPanel
     private lateinit var banner: Banner
     private lateinit var alerts: TabletAlerts
@@ -168,6 +171,7 @@ class MainActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContentView(R.layout.activity_main)
         Grain.applyTo(findViewById(android.R.id.content))
+        ThemePattern.applyTo(findViewById(android.R.id.content))
         Speaker.init(this)
         Prefs.focusPreset(this).let { FocusTimer.restore(it.focus, it.pause) }
         NoisePlayer.init(this)
@@ -175,7 +179,13 @@ class MainActivity : AppCompatActivity() {
         InstallerService.start(this)
 
         nav = ProfileRail(this, ::showFromRail, ::showProfile, ::openProfiles)
-        findViewById<RailSwipeLayout>(R.id.mode_container).onSwipe = { delta -> railStep(delta) }
+        findViewById<RailSwipeLayout>(R.id.mode_container).apply {
+            onSwipe = { delta -> railStep(delta) }
+            canSwipe = { delta -> railCanStep(delta) }
+        }
+        // Tubes du Rétro derrière tous les écrans : voilés derrière les widgets sans fond de l'Accueil affiché.
+        flow = findViewById(R.id.flow)
+        flow.hidden = { homeFragment()?.bareWidgets().orEmpty() }
         wakeRail()
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
         wake = WakeWord(this, findViewById(R.id.wake_mic)) { voice.start() }
@@ -397,6 +407,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Kiosk.enter(this)
+        Accessibility.applyAnimationScale(this, Prefs.reduceMotion(this))
         Screen.apply(this)
         Screen.applyOrientation(this)
         // Retour de l'essai : si l'ordinateur est resté sur le backend d'une MR (essai planté), on remet le sien.
@@ -425,6 +436,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        // Activité recréée (thème, mise à jour) pendant le cadre : sa luminosité réduite ne reste pas à l'écran suivant.
+        if (::frame.isInitialized && frame.isShowing) Screen.frameCharging = null
         documentPanel.close()
         if (isFinishing) NoisePlayer.stop()
         voice.release()
@@ -434,6 +447,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        // Boîte de dialogue ouverte ou fermée (thème, mise à jour…) : ses touchers ne passent pas par dispatchTouchEvent,
+        // ils comptent quand même pour le délai du cadre photo, qui ne part pas à la fermeture d'une longue boîte.
+        lastTouch = SystemClock.elapsedRealtime()
         if (!hasFocus) return
         hideSystemBars()
         keyboard.closeOrphan()
@@ -603,7 +619,11 @@ class MainActivity : AppCompatActivity() {
         val computer = supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment
         computer?.onNotification()
         // Pastille sur la cloche, sauf si l'historique est déjà sous les yeux.
-        if (computer?.showingNotifications != true || current != Mode.COMPUTER) findViewById<View>(R.id.notif_dot).visibility = View.VISIBLE
+        if (computer?.showingNotifications != true || current != Mode.COMPUTER) {
+            val dot = findViewById<View>(R.id.notif_dot)
+            dot.visibility = View.VISIBLE
+            Look.ring(findViewById(R.id.notif_bell), dot)
+        }
     }
 
     /** Cloche de la barre : Depuis l'ordi > Notifications, pastille retirée. */
@@ -754,8 +774,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Ce qui sert encore, que le cadre ne doit pas cacher. */
-    private fun frameBusy() = callOverlay.visibility == View.VISIBLE || agentAsk.isOpen || welcome.visibility == View.VISIBLE ||
+    /** Ce qui sert encore, que le cadre ne doit pas cacher (dont une boîte de dialogue ouverte : la fenêtre perd le focus). */
+    private fun frameBusy() = !hasWindowFocus() || callOverlay.visibility == View.VISIBLE || agentAsk.isOpen || welcome.visibility == View.VISIBLE ||
         plugins.visibility == View.VISIBLE ||
         documentPanel.visibility == View.VISIBLE || current == Mode.CAMERA || FocusTimer.state.running ||
         Breathing.running
@@ -789,6 +809,9 @@ class MainActivity : AppCompatActivity() {
 
     /** Balayage vertical (Accueil ou autre mode) : entrée voisine de la barre ; faux au bout. */
     fun railStep(delta: Int): Boolean = nav.step(delta)
+
+    /** Une entrée de la barre attend dans ce sens (l'écran suit alors le doigt, sinon il résiste). */
+    fun railCanStep(delta: Int): Boolean = nav.canStep(delta)
 
     private fun show(mode: Mode) {
         if (::frame.isInitialized) closeFrame()
@@ -826,8 +849,14 @@ class MainActivity : AppCompatActivity() {
     private fun slideTo(mode: Mode) {
         supportFragmentManager.executePendingTransactions()
         val into = supportFragmentManager.findFragmentByTag(mode.tag)?.view ?: return
+        // Kiosque : l'Accueil arrive par ses widgets (Look.enterSpring), pas en glissant tout entier par-dessus.
+        if (mode == Mode.HOME && Look.cascadeOnly(this)) return
         Look.sharedAxis(into, fromBelow = nav.lastMove >= 0)
+        flowTravel(nav.lastMove)
     }
+
+    /** Écran ou profil voisin dans la barre ([move] > 0 : plus bas) : les tubes du Rétro défilent avec lui. */
+    fun flowTravel(move: Int) = flow.travel(move)
 
     /** Entrée de profil de la barre : l'Accueil, sur ce profil (créé au besoin : sa vue doit exister avant). */
     private fun showProfile(page: Int) {

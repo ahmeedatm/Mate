@@ -11,6 +11,7 @@ import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.View
 import androidx.core.graphics.ColorUtils
+import androidx.dynamicanimation.animation.SpringAnimation
 import com.unowhy.companion.R
 import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.themeBool
@@ -19,15 +20,17 @@ import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.roundToInt
+import kotlin.math.sign
 
 /**
- * Bande du thème Rétro derrière les widgets de l'Accueil, calée à droite, d'après le dessin d'Eliot (328 × 800, toute la hauteur) : deux tubes
+ * Bande du thème Rétro derrière tous les écrans, calée à droite (MainActivity), d'après le dessin d'Eliot (328 × 800, toute la hauteur) : deux tubes
  * de trois bandes qui font une boucle tous les 400, détourée d'un liseré du fond. Un liquide y coule lentement vers
  * le bas : une vague plus claire glisse dans chaque bande (dégradé linéaire décalé dans les tiges, dégradé circulaire
  * qui tourne dans les boucles, en phase avec la tige au point où ils se touchent). Rien que des rectangles et des
  * disques, 30 images/s, arrêtée dès qu'elle n'est plus à l'écran. Masquée hors thème Rétro (`c_flow`).
  * Voilée derrière les widgets sans fond ([hidden]) comme à travers une carte, relus à chaque image : ils suivent
- * un glisser du mode Modifier.
+ * un glisser du mode Modifier. Les écrans sont comme empilés le long des tubes : passer à l'écran ou au profil suivant de
+ * la barre fait défiler les tubes d'un écran entier ([travel]).
  */
 class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
     /**
@@ -67,11 +70,36 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
     private val at = IntArray(2)
     private val join = 48 * resources.displayMetrics.density
 
+    /** Défilement des tubes, en unités du dessin (un écran = [HEIGHT]) ; ramené dans [LOOP] une fois posé. */
+    private var offset = 0f
+    private var target = 0f
+    private var travelling: SpringAnimation? = null
+
     /** Vues sans carte (héros, ligne du jour) derrière lesquelles les tubes passent voilés de la couleur du fond. */
     var hidden: () -> List<View> = { emptyList() }
 
     init {
         visibility = if (themeBool(context, R.attr.c_flow)) VISIBLE else GONE
+    }
+
+    /**
+     * Passage à l'écran voisin dans la barre ([direction] > 0 : on descend, les tubes montent d'un écran ; < 0 : ils
+     * descendent). Ressort de navigation : joue aussi en kiosque ; Réduire les animations : posé sans glisser.
+     */
+    fun travel(direction: Int) {
+        if (direction == 0 || visibility != VISIBLE) return
+        travelling?.cancel()
+        target += direction.sign * HEIGHT
+        travelling = Look.spring(context, Look.SPATIAL_DEFAULT, offset, target, {
+            offset = it
+            invalidate()
+        }, {
+            // Même dessin un tour de [LOOP] plus loin : le défilement ne grandit pas sans fin.
+            target %= LOOP
+            offset = target
+            travelling = null
+        }, always = true)
+        invalidate()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -111,6 +139,8 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
         val scale = height / HEIGHT
         canvas.save()
         canvas.scale(scale, scale)
+        // Le dessin défile sous la vue : on dessine les boucles de [offset] à [offset] + [HEIGHT].
+        canvas.translate(0f, -offset)
         // Réduire les animations : le liquide ne coule plus (vague figée) ; les images continuent pour que le voile suive
         // les widgets glissés du mode Modifier.
         val flowed = if (Look.still(context)) 0f else ((SystemClock.uptimeMillis() * SPEED / 1000.0) % WAVE).toFloat()
@@ -141,8 +171,8 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     /** Boucles visibles de [nMin] à [nMax], tiges de [nMin] - 1 à [nMax], dans l'ordre où elles se recouvrent. */
     private fun drawTube(canvas: Canvas, tube: Tube, flowed: Float) {
-        val nMin = ceil((-OUTLINE - tube.firstLoop) / PERIOD).toInt()
-        val nMax = floor((HEIGHT + OUTLINE - tube.firstLoop) / PERIOD).toInt()
+        val nMin = ceil((offset - OUTLINE - tube.firstLoop) / PERIOD).toInt()
+        val nMax = floor((offset + HEIGHT + OUTLINE - tube.firstLoop) / PERIOD).toInt()
         if (tube.lowerOver) {
             drawStem(canvas, tube, nMin - 1, flowed)
             for (n in nMin..nMax) {
@@ -201,6 +231,9 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
         private const val WIDTH = 328f
         private const val HEIGHT = 800f
         private const val PERIOD = 400f
+
+        /** Défilement au bout duquel tout se retrouve (boucles tous les [PERIOD], vagues tous les [WAVE]) : 1200. */
+        private const val LOOP = 1200f
         private const val BAND = 24f
         private const val OUTLINE = 82f + BAND
         private val RADII = floatArrayOf(22f, 46f, 70f)

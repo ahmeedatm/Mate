@@ -1,5 +1,7 @@
 # Piloter OBS (idée, pas faite)
 
+> 29/10/2026 : mise de côté. La cible est le B2B ([cible-et-positionnement.md](cible-et-positionnement.md)) ; OBS servait le cadrage gamers / streamers.
+
 Étudié le 26/10/2026. OBS 28+ intègre obs-websocket v5 (port 4455) : le backend, sur l'ordinateur, s'y connecte en local (WebSocket natif de Node 22, sans dépendance). Mac et Windows.
 
 ## Possible
