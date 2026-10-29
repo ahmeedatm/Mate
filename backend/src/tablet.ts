@@ -39,6 +39,8 @@ export type TabletCommand =
   | { type: "screenshot" }
   /** Panneau Tablette de la page locale (routes/local.ts). */
   | ({ type: "settings" } & TabletSettings)
+  /** Mise à jour du Companion depuis la page locale : chercher, ou installer la version trouvée. */
+  | { type: "update"; action: "check" | "install" }
   /** Appel entrant (src/calls.ts) : carte Répondre / Ignorer sur la tablette, retirée à `ended`. */
   | { type: "call"; state: "ringing" | "ended"; app: string; caller: string | null; video: boolean }
   /** Notification de l'ordinateur (src/notifications.ts), affichée en bandeau et gardée dans l'historique. */

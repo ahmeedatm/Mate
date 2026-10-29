@@ -115,6 +115,46 @@ test.describe("page locale GET /", () => {
     void tablet.catch(() => {});
   });
 
+  test("cherche puis installe la mise à jour de la tablette depuis la carte", async ({ page, server }) => {
+    // Fausse tablette en kiosque, rien cherché encore : la page lance la recherche seule.
+    let app = "0.2.11";
+    let update = { checked: false, available: null as string | null, installing: false, error: null, kiosk: true };
+    const actions: string[] = [];
+    const state = () => ({ mode: "home", app, model: "Unowhy 4.2", battery: null, settings: null, update });
+    let running = true;
+    const tablet = (async () => {
+      while (running) {
+        const { json } = await server.call("POST", "/tablet/poll", { state: state() });
+        for (const { id, command } of json.commands ?? []) {
+          actions.push(command.action);
+          const available = app === "0.2.11" ? "0.2.12" : null;
+          update = command.action === "check" ? { ...update, checked: true, available } : { ...update, installing: true };
+          await server.call("POST", "/tablet/result", { id, ok: true, state: state() });
+        }
+      }
+    })();
+
+    await page.goto("/");
+    await expect(page.locator("#updatestate")).toHaveText("Version 0.2.12 disponible (installée : 0.2.11).");
+    expect(actions).toEqual(["check"]);
+    await page.getByRole("button", { name: "Mettre à jour" }).click();
+    await expect(page.locator("#updatestate")).toHaveText(/^Installation de la version 0\.2\.12 en cours/);
+    await expect(page.locator("#updatebtn")).toBeHidden();
+    expect(actions).toEqual(["check", "install"]);
+
+    // Appli remplacée puis relancée : nouvelle version, rien cherché encore, la page relance la recherche.
+    app = "0.2.12";
+    update = { checked: false, available: null, installing: false, error: null, kiosk: true };
+    // Premier poll de l'appli relancée : il remplace celui en cours, qui rend la main à la boucle.
+    void server.call("POST", "/tablet/poll", { state: state() }).catch(() => {});
+    await expect(page.locator("#updatestate")).toHaveText("Appli à jour (0.2.12).");
+    await expect(page.getByRole("button", { name: "Rechercher" })).toBeVisible();
+    expect(actions).toEqual(["check", "install", "check"]);
+
+    running = false;
+    void tablet.catch(() => {});
+  });
+
   test("?section=agenda met la carte Agenda en avant", async ({ page }) => {
     await page.goto("/?section=agenda");
     await expect(page.locator("#agenda")).toHaveClass(/focus/);

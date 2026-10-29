@@ -151,6 +151,13 @@ class RemoteChannel(private val activity: MainActivity) {
             activity.onRemoteSettings(themeChanged)
             null
         }
+        "update" -> {
+            when (command.getString("action")) {
+                "check" -> RemoteUpdate.check(activity)
+                "install" -> RemoteUpdate.install(activity)
+            }
+            RemoteUpdate.state(activity)
+        }
         "notification" -> {
             // Envoyé sans attendre par le compagnon : une entrée incomplète est ignorée, pas une erreur.
             parseNotification(command)?.let(activity::onNotification)
@@ -204,6 +211,7 @@ class RemoteChannel(private val activity: MainActivity) {
             .put("model", Build.MODEL)
             .put("battery", activity.battery?.let { JSONObject().put("level", it.level).put("charging", it.charging) } ?: JSONObject.NULL)
             .put("settings", TabletSettings.read(activity, systemBrightness, volume))
+            .put("update", RemoteUpdate.state(activity))
     }
 
     private companion object {

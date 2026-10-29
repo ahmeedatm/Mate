@@ -383,6 +383,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expect("tabletInfo" in status.json, "état de la tablette absent de /local/status");
         // Réglage vide : refusé avant d'atteindre une tablette peut-être réelle.
         expectStatus(await call("PUT", "/local/tablet/settings", {}), 400, "PUT /local/tablet/settings vide");
+        expectStatus(await call("POST", "/local/tablet/update", { action: "rollback" }), 400, "POST /local/tablet/update inconnue");
       },
     },
   ];

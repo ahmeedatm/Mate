@@ -83,6 +83,24 @@ export default async function localRoutes(app: FastifyInstance) {
     },
   );
 
+  /**
+   * Mise à jour de l'appli de la tablette (ordre `update`, RemoteUpdate côté tablette). Chercher interroge l'ordinateur et
+   * le serveur central depuis la tablette ; installer rend la main dès le téléchargement lancé.
+   */
+  app.post<{ Body: { action: "check" | "install" } }>(
+    "/local/tablet/update",
+    {
+      schema: {
+        body: { type: "object", required: ["action"], additionalProperties: false, properties: { action: { enum: ["check", "install"] } } },
+      },
+    },
+    async (req, reply) => {
+      if (!tabletStatus().connected) return reply.code(409).send({ error: "Tablette non connectée" });
+      const result = await sendToTablet({ type: "update", action: req.body.action }, 45_000);
+      return result.ok ? { ok: true, tablet: tabletInfo() } : reply.code(502).send({ error: result.error });
+    },
+  );
+
   // Connexion d'un compte d'agenda (src/accounts.ts), depuis la page locale : le navigateur de l'ordinateur part chez
   // Microsoft ou Google et revient sur /oauth/…/callback (adresse déclarée telle quelle dans l'appli enregistrée).
   app.get<{ Params: { provider: string } }>("/oauth/:provider/start", async (req, reply) => {
@@ -140,5 +158,13 @@ function tabletInfo() {
   const { connected, state } = tabletStatus();
   if (!connected || !state || typeof state !== "object") return null;
   const s = state as Record<string, unknown>;
-  return { app: s.app ?? null, model: s.model ?? null, screen: s.screen ?? null, battery: s.battery ?? null, settings: s.settings ?? null };
+  return {
+    app: s.app ?? null,
+    model: s.model ?? null,
+    screen: s.screen ?? null,
+    battery: s.battery ?? null,
+    settings: s.settings ?? null,
+    // Absent : appli trop ancienne pour être mise à jour d'ici.
+    update: s.update ?? null,
+  };
 }

@@ -29,6 +29,7 @@ describe("panneau Tablette", () => {
     assert.equal(status.json.tabletInfo, null);
     const put = await server.call("PUT", "/local/tablet/settings", { nightDim: false }, false);
     assert.equal(put.status, 409);
+    assert.equal((await server.call("POST", "/local/tablet/update", { action: "check" }, false)).status, 409);
     assert.equal(put.json.error, "Tablette non connectée");
   });
 
@@ -43,6 +44,7 @@ describe("panneau Tablette", () => {
       screen: "1280x800",
       battery: { level: 82, charging: true },
       settings: SETTINGS,
+      update: null,
     });
 
     const put = server.call("PUT", "/local/tablet/settings", { theme: "RETRO", brightness: 0.3 }, false);
@@ -78,5 +80,25 @@ describe("panneau Tablette", () => {
   it("l'ordre settings n'est pas ouvert à l'extension MCP", async () => {
     const put = await server.call("POST", "/tablet/command", { type: "settings" });
     assert.equal(put.status, 400);
+  });
+
+  it("demande à la tablette de chercher une mise à jour et rend son état", async () => {
+    const polling = server.call("POST", "/tablet/poll", { state: STATE });
+    await new Promise((r) => setTimeout(r, 300));
+    const post = server.call("POST", "/local/tablet/update", { action: "check" }, false);
+    const [order] = (await polling).json.commands;
+    assert.deepEqual(order.command, { type: "update", action: "check" });
+
+    const update = { checked: true, available: "0.2.12", installing: false, error: null, kiosk: true };
+    await server.call("POST", "/tablet/result", { id: order.id, ok: true, state: { ...STATE, update } });
+    const done = await post;
+    assert.equal(done.status, 200);
+    assert.deepEqual(done.json.tablet.update, update);
+  });
+
+  it("refuse une action de mise à jour inconnue, et l'ordre update depuis l'extension MCP", async () => {
+    assert.equal((await server.call("POST", "/local/tablet/update", { action: "rollback" }, false)).status, 400);
+    assert.equal((await server.call("POST", "/local/tablet/update", {}, false)).status, 400);
+    assert.equal((await server.call("POST", "/tablet/command", { type: "update" })).status, 400);
   });
 });

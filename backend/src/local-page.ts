@@ -41,6 +41,8 @@ export const LOCAL_PAGE = `<!doctype html>
   .row label { flex: 1; }
   .row input[type=range] { flex: 1; margin: 0; padding: 0; border: 0; accent-color: var(--accent); }
   .row input[type=checkbox] { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+  .row .grow { flex: 1; }
+  .row button { margin-top: 0; }
   .row .value { min-width: 48px; text-align: right; font-variant-numeric: tabular-nums; }
   .themes { display: flex; gap: 8px; margin-top: 10px; }
   .themes button { flex: 1; margin: 0; background: transparent; color: var(--text); border: 1px solid var(--dim); }
@@ -79,6 +81,7 @@ export const LOCAL_PAGE = `<!doctype html>
   <div class="card" id="tabletcard" hidden>
     <b>Réglages de la tablette</b>
     <div class="dim" id="tabletinfo"></div>
+    <div class="row" id="updaterow" hidden><span class="grow" id="updatestate"></span><button id="updatebtn" hidden></button></div>
     <div class="dim" id="tabletold" hidden style="margin-top:8px">Mets à jour l'appli de la tablette pour la régler d'ici.</div>
     <div id="tabletsettings">
       <div style="margin-top:14px">Thème</div>
@@ -200,6 +203,7 @@ export const LOCAL_PAGE = `<!doctype html>
     document.getElementById("tabletinfo").textContent = [
       t.model, t.app && "appli " + t.app, b && "batterie " + b.level + " %" + (b.charging ? " (en charge)" : ""),
     ].filter(Boolean).join(" · ");
+    renderUpdate(t);
     const st = t.settings;
     document.getElementById("tabletold").hidden = !!st;
     document.getElementById("tabletsettings").hidden = !st;
@@ -212,6 +216,51 @@ export const LOCAL_PAGE = `<!doctype html>
     document.getElementById("nightdim").checked = st.nightDim;
     document.getElementById("focusdnd").checked = st.focusDnd;
   }
+  // Mise à jour de l'appli de la tablette : état remonté par la tablette (RemoteUpdate). Recherche lancée seule une fois
+  // par version de l'appli : à l'ouverture, puis après une installation (l'appli relancée n'a encore rien cherché).
+  // updateNote : refus de la dernière demande, gardé jusqu'à la suivante (sinon effacé au rafraîchissement).
+  let checkedFor = null, updateBusy = false, updateNote = null;
+  function renderUpdate(t) {
+    const u = t.update;
+    document.getElementById("updaterow").hidden = !u;
+    if (!u || updateBusy) return;
+    let text, action = null;
+    if (u.installing) text = "Installation de la version " + u.available + " en cours : la tablette redémarre l'appli à la fin.";
+    else if (!u.kiosk) text = "Mise à jour d'ici possible seulement en kiosque (pas dans l'appli d'essai).";
+    else if (u.error) [text, action] = [u.error, "check"];
+    else if (!u.checked) text = "Recherche d'une mise à jour…";
+    else if (u.available) [text, action] = ["Version " + u.available + " disponible (installée : " + t.app + ").", "install"];
+    else [text, action] = ["Appli à jour (" + t.app + ").", "check"];
+    if (updateNote) text = updateNote;
+    document.getElementById("updatestate").textContent = text;
+    const btn = document.getElementById("updatebtn");
+    btn.hidden = !action;
+    btn.textContent = action === "install" ? "Mettre à jour" : u.error ? "Réessayer" : "Rechercher";
+    btn.dataset.action = action || "";
+    if (u.kiosk && !u.checked && checkedFor !== t.app) {
+      checkedFor = t.app;
+      sendUpdate("check");
+    }
+  }
+  async function sendUpdate(action) {
+    updateBusy = true;
+    updateNote = null;
+    const state = document.getElementById("updatestate"), btn = document.getElementById("updatebtn");
+    state.textContent = action === "install" ? "Lancement de l'installation…" : "Recherche d'une mise à jour…";
+    btn.hidden = true;
+    try {
+      const res = await fetch("/local/tablet/update", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action }) });
+      const r = await res.json();
+      updateBusy = false;
+      if (!res.ok) updateNote = "Pas fait : " + (r.error || r.message);
+      refresh();
+    } catch (e) {
+      updateBusy = false;
+      updateNote = "Compagnon injoignable";
+      state.textContent = updateNote;
+    }
+  }
+  document.getElementById("updatebtn").onclick = (e) => sendUpdate(e.target.dataset.action);
   async function saveTablet(change) {
     const msg = document.getElementById("tabletmsg");
     tabletBusyUntil = Date.now() + 20000;
