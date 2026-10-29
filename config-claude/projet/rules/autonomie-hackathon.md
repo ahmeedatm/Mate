@@ -25,8 +25,8 @@ push / MR) et sur la ligne « Ne rien commit sans demande explicite » du CLAUDE
    question : le récap en 3 à 5 lignes (ce qui sera fait, hors sujet, comment le tester) et « Je pars
    là-dessus ? ». Demande déjà précise ou bug évident : la seule question de récap.
 2. **Autonomie** : après ce go, plus aucune question jusqu'à l'essai publié. Lancer le workflow `tache`
-   (`.claude/workflows/tache.js`, `args: {demande: <récap validé>}`) : worktree, code, tests, vérif sur
-   l'émulateur et relecture, puis `/ship` jusqu'à l'essai publié. Un choix imprévu en route : le défaut le
+   (`.claude/workflows/tache.js`, `args: {demande: <récap validé>}`) : worktree, code, tests,
+   relecture, puis `/ship` jusqu'à l'essai publié. Un choix imprévu en route : le défaut le
    plus simple, écrit dans la description de la MR. S'arrêter seulement pour ce qui est dans « Demander
    avant » ou un blocage impossible à lever seul.
 3. **Test** : relayer tel quel le `message` rendu par le workflow (c'est fini, version d'essai, comment

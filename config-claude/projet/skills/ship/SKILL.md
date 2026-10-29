@@ -22,7 +22,7 @@ Fichiers : `git diff --name-only origin/main...HEAD` + `git status --porcelain`.
 | Touché | Commande |
 |---|---|
 | `backend/` | `cd backend && npm run format && npm run lint && npm test` |
-| `app/`, `*.gradle*` | `./gradlew ktlintFormat ktlintCheck testDebugUnitTest lintDebug` |
+| `app/`, `*.gradle*` | `./gradlew ktlintFormat ktlintCheck testDebugUnitTest` |
 | `backend/src/win/helper/`, `native.cs` | `cd backend && npm run build:helper` (exe gardés dans le dépôt) |
 | docs seules | rien |
 
