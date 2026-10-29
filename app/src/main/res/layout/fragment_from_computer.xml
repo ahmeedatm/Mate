@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Depuis l'ordi : d'abord un choix (fichiers du dossier partagé, page ouverte dans le navigateur de l'ordi, ou
-     presse-papiers), comme dans Caméra, puis la liste des fichiers ou l'écran Presse-papiers. -->
+<!-- Depuis l'ordi : d'abord un choix (fichiers du dossier partagé, page ouverte dans le navigateur de l'ordi,
+     presse-papiers), comme dans Caméra, puis la liste des fichiers ou l'écran Presse-papiers. L'historique des
+     notifications s'affiche ici aussi, ouvert par la cloche en haut à gauche (activity_main.xml). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -200,6 +201,14 @@
         <include
             android:id="@+id/docs_clipboard"
             layout="@layout/view_clipboard"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
+        <!-- Notifications : historique des notifications de l'ordinateur. -->
+        <include
+            android:id="@+id/docs_notifications"
+            layout="@layout/view_notifications"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:visibility="gone" />

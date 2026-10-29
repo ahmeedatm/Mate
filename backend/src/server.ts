@@ -6,7 +6,8 @@ import { startCallWatch } from "./calls.ts";
 import { startEventReminders } from "./events.ts";
 import { setLogger } from "./log.ts";
 import { startAutoJoin } from "./meetings.ts";
-import { canControl, osName } from "./os.ts";
+import { notificationHistory, watchNotifications } from "./notifications.ts";
+import { canControl, osName, readNotifications } from "./os.ts";
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
 import { sendToTablet } from "./tablet.ts";
 import { startReminders } from "./tasks.ts";
@@ -18,6 +19,7 @@ import cameraRoutes from "./routes/camera.ts";
 import deckRoutes from "./routes/deck.ts";
 import docRoutes from "./routes/docs.ts";
 import localRoutes from "./routes/local.ts";
+import notificationRoutes from "./routes/notifications.ts";
 import pairingRoutes from "./routes/pairing.ts";
 import pointerRoutes from "./routes/pointer.ts";
 import systemRoutes from "./routes/system.ts";
@@ -88,7 +90,10 @@ const DECK_ANYWHERE = /^\/deck(\/keys\/\d+|\/run)?(\?|$)/;
 app.addHook("preHandler", async (req, reply) => {
   if (
     !canControl &&
-    ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) || req.url.startsWith("/system") || req.url.startsWith("/pointer"))
+    ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) ||
+      req.url.startsWith("/system") ||
+      req.url.startsWith("/pointer") ||
+      req.url.startsWith("/notifications"))
   ) {
     return reply.code(501).send({ error: "Pilotage disponible sur macOS et Windows seulement" });
   }
@@ -105,6 +110,7 @@ app.register(deckRoutes);
 app.register(windowRoutes);
 app.register(systemRoutes);
 app.register(pointerRoutes);
+app.register(notificationRoutes);
 app.register(docRoutes);
 app.register(updateRoutes);
 app.register(browserRoutes);
@@ -123,6 +129,16 @@ startReminders(remind);
 startEventReminders(remind);
 // Appel entrant : prévenir la tablette sans attendre sa réponse (la sonnerie ne doit pas bloquer la surveillance).
 void startCallWatch((event) => void sendToTablet({ type: "call", ...event }, 30_000));
+// Notifications de l'ordinateur : base du système relue toutes les 2 s, chaque nouvelle envoyée à la tablette sans attendre.
+if (canControl) {
+  watchNotifications(
+    readNotifications,
+    notificationHistory,
+    ({ id, app: name, title, body, at }) => void sendToTablet({ type: "notification", id, app: name, title, body, at }),
+    Number(process.env.NOTIFICATIONS_POLL_MS) || 2000,
+    (e) => app.log.warn(`Notifications de l'ordinateur illisibles : ${e.message}`),
+  );
+}
 if (canControl) startAutoJoin((text) => sendToTablet({ type: "message", text, seconds: 60 }));
 
 await app.listen({ port: config.port, host: config.host });

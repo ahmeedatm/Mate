@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { clipboardUnavailable } from "../src/driver-common.ts";
 import { checkOpenTarget } from "../src/open-guard.ts";
+import type { NotificationBatch, RawNotification } from "../src/notifications.ts";
 import type { Perf } from "../src/perf.ts";
 import type { VoiceState } from "../src/win/index.ts";
 import type {
@@ -35,6 +36,10 @@ export type FakeState = {
   accessibility?: boolean;
   /** Presse-papiers de l'ordinateur (getClipboard) ; les écritures le remplacent. Vide par défaut. */
   clipboard?: ClipboardContent;
+  /** Notifications du système (readNotifications) : le curseur est leur nombre déjà lu. */
+  notifications?: RawNotification[];
+  /** Base de notifications illisible : readNotifications échoue (503). */
+  notificationsUnavailable?: boolean;
   /** Pas de presse-papiers (session sans bureau) : getClipboard répond 503. */
   clipboardUnavailable?: boolean;
   /** Mesure renvoyée par getPerf (sinon une mesure fixe). */
@@ -151,6 +156,13 @@ export async function getClipboard(): Promise<ClipboardContent> {
   if (read().clipboardUnavailable) clipboardUnavailable();
   if (read().fail?.includes("getClipboard")) throw new Error("getClipboard a échoué (test)");
   return read().clipboard ?? { kind: "empty" };
+}
+
+export async function readNotifications(cursor?: string): Promise<NotificationBatch> {
+  if (!canControl) unsupported();
+  if (read().notificationsUnavailable) throw Object.assign(new Error("Notifications illisibles (test)"), { statusCode: 503 });
+  const all = read().notifications ?? [];
+  return { cursor: String(all.length), items: all.slice(Number(cursor ?? 0)) };
 }
 
 export async function setClipboardText(text: string) {

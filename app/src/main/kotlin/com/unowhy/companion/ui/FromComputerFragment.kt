@@ -29,13 +29,13 @@ import com.unowhy.companion.net.DocEntry
 import kotlinx.coroutines.launch
 
 /**
- * Depuis l'ordi : d'abord un choix expliqué (fichiers du dossier partagé, page du navigateur de l'ordi, ou
- * presse-papiers), puis la liste des fichiers (un fichier s'ouvre dans le panneau latéral) ou l'écran Presse-papiers
- * ([ClipboardView]).
+ * Depuis l'ordi : d'abord un choix expliqué (fichiers du dossier partagé, page du navigateur de l'ordi,
+ * presse-papiers ou notifications), puis la liste des fichiers (un fichier s'ouvre dans le panneau latéral), l'écran
+ * Presse-papiers ([ClipboardView]) ou l'historique des notifications ([NotificationsView]).
  */
 class FromComputerFragment : Fragment() {
 
-    private enum class Screen { CHOICE, FILES, CLIPBOARD }
+    private enum class Screen { CHOICE, FILES, CLIPBOARD, NOTIFICATIONS }
 
     private lateinit var list: ListView
     private lateinit var path: TextView
@@ -48,6 +48,8 @@ class FromComputerFragment : Fragment() {
     private lateinit var files: View
     private lateinit var clipboardRoot: View
     private lateinit var clipboard: ClipboardView
+    private lateinit var notificationsRoot: View
+    private lateinit var notifications: NotificationsView
     private lateinit var adapter: DocAdapter
 
     private var dir = ""
@@ -76,6 +78,8 @@ class FromComputerFragment : Fragment() {
         files = view.findViewById(R.id.docs_files)
         clipboardRoot = view.findViewById(R.id.docs_clipboard)
         clipboard = ClipboardView(this, clipboardRoot) { micPermission.launch(Manifest.permission.RECORD_AUDIO) }
+        notificationsRoot = view.findViewById(R.id.docs_notifications)
+        notifications = NotificationsView(this, notificationsRoot)
         adapter = DocAdapter()
         list.adapter = adapter
 
@@ -98,6 +102,24 @@ class FromComputerFragment : Fragment() {
         // Presse-papiers : on revient au choix quand l'écran est caché (comme la caméra), pour qu'il ne se relise jamais
         // sans un toucher sur la tablette (ouverture de l'écran ou Actualiser), même si le mode revient d'un ordre du PC.
         if (hidden && screen == Screen.CLIPBOARD) show(Screen.CHOICE)
+        // Notifications : relues au retour dans le mode (celles arrivées entre-temps), la lecture en cours oubliée sinon.
+        if (screen == Screen.NOTIFICATIONS) {
+            if (hidden) notifications.stop() else notifications.read()
+        }
+    }
+
+    /** Historique des notifications affiché (pas de pastille sur la cloche pour ce qui arrive). */
+    val showingNotifications get() = view != null && !isHidden && screen == Screen.NOTIFICATIONS
+
+    /** Cloche en haut à gauche (MainActivity) : l'historique des notifications, quel que soit l'écran affiché ici. */
+    fun openNotifications() {
+        if (view == null) return
+        if (screen == Screen.NOTIFICATIONS) notifications.read() else show(Screen.NOTIFICATIONS)
+    }
+
+    /** Notification reçue de l'ordinateur (voir MainActivity.onNotification) : l'historique affiché est relu. */
+    fun onNotification() {
+        if (view != null && !isHidden && screen == Screen.NOTIFICATIONS) notifications.read()
     }
 
     override fun onStop() {
@@ -113,10 +135,12 @@ class FromComputerFragment : Fragment() {
 
     private fun show(next: Screen) {
         if (screen == Screen.CLIPBOARD && next != Screen.CLIPBOARD) clipboard.stop()
+        if (screen == Screen.NOTIFICATIONS && next != Screen.NOTIFICATIONS) notifications.stop()
         screen = next
         choice.visibility = if (next == Screen.CHOICE) View.VISIBLE else View.GONE
         files.visibility = if (next == Screen.FILES) View.VISIBLE else View.GONE
         clipboardRoot.visibility = if (next == Screen.CLIPBOARD) View.VISIBLE else View.GONE
+        notificationsRoot.visibility = if (next == Screen.NOTIFICATIONS) View.VISIBLE else View.GONE
         refresh.visibility = files.visibility
         back.visibility = if (next == Screen.CHOICE) View.GONE else View.VISIBLE
         when (next) {
@@ -131,6 +155,12 @@ class FromComputerFragment : Fragment() {
                 count.setText(R.string.clip_subtitle)
                 up.visibility = View.GONE
                 clipboard.read()
+            }
+            Screen.NOTIFICATIONS -> {
+                path.setText(R.string.notif_choose)
+                count.setText(R.string.notif_subtitle)
+                up.visibility = View.GONE
+                notifications.read()
             }
         }
     }

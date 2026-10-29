@@ -6,6 +6,8 @@ import * as macApps from "./mac/apps.ts";
 import * as macAudio from "./mac/audio.ts";
 import * as macBrowser from "./mac/browser.ts";
 import * as macClipboard from "./mac/clipboard.ts";
+import { readMacNotifications } from "./mac/notifications.ts";
+import type { NotificationBatch } from "./notifications.ts";
 import * as macCalls from "./mac/calls.ts";
 import * as macDnd from "./mac/dnd.ts";
 import { extensionFrontPage, extensionTabs } from "./browser-extension.ts";
@@ -141,6 +143,13 @@ export async function getClipboard(): Promise<ClipboardContent> {
 export async function setClipboardText(text: string) {
   if (isMac) return macClipboard.setClipboardText(text);
   if (isWindows) return win.setClipboardText(text);
+  unsupported();
+}
+
+/** Notifications de l'ordinateur arrivées depuis `cursor` (absent : celles des dernières 24 h). Voir src/notifications.ts. */
+export async function readNotifications(cursor?: string): Promise<NotificationBatch> {
+  if (isMac) return readMacNotifications(cursor);
+  if (isWindows) return win.readNotifications(cursor);
   unsupported();
 }
 

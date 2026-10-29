@@ -11,6 +11,8 @@ import {
   type WindowTarget,
 } from "../screens.ts";
 import { parseCombo, planAudio, sortedNames, whenClipboardAvailable } from "../driver-common.ts";
+import { appNameFromId, type NotificationBatch } from "../notifications.ts";
+import { readWindowsNotifications } from "./notifications.ts";
 import type { AudioChange, AudioState, ClipboardContent, MediaCommand, MixerChange, MixerState, SystemCommand } from "../screens.ts";
 import type { GpuPerf } from "../perf.ts";
 import type { PointerAction, PointerButton } from "../pointer.ts";
@@ -50,6 +52,14 @@ function pick(apps: StartApp[], name: string): StartApp | undefined {
     apps.find((a) => simple(a.name) === simple(name)) ??
     apps.find((a) => simple(a.name).startsWith(simple(name) + " "))
   );
+}
+
+/** Notifications arrivées depuis `cursor` (src/win/notifications.ts), nommées comme dans le menu Démarrer. */
+export async function readNotifications(cursor?: string): Promise<NotificationBatch> {
+  return readWindowsNotifications(cursor, async (id) => {
+    const apps = await startApps().catch(() => [] as StartApp[]);
+    return apps.find((a) => a.id.toLowerCase() === id.toLowerCase())?.name ?? appNameFromId(id);
+  });
 }
 
 /** Appli du menu Démarrer d'après son nom ; la liste est relue (au plus toutes les 30 s) si le nom est inconnu. */
