@@ -67,6 +67,7 @@ import com.unowhy.companion.ui.notificationBannerText
 import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.voice.VoiceControl
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -116,6 +117,20 @@ class MainActivity : AppCompatActivity() {
     /** Micro refusé hors kiosque (en kiosque, il est accordé d'office) : la commande repart une fois accepté. */
     private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) voice.start() else showBanner(getString(R.string.voice_no_mic), 6)
+    }
+
+    /** Localisation hors kiosque (en kiosque, accordée d'office) : demandée seulement par « Ma position » de la météo. */
+    private var locationAnswer: CompletableDeferred<Boolean>? = null
+    private val locationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        locationAnswer?.complete(granted)
+        locationAnswer = null
+    }
+
+    suspend fun requestLocationPermission(): Boolean {
+        val answer = CompletableDeferred<Boolean>()
+        locationAnswer = answer
+        locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+        return answer.await()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
