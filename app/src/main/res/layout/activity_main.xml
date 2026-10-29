@@ -169,6 +169,14 @@
         android:layout_height="match_parent"
         android:layout_weight="1">
 
+        <!-- Thème Rétro seulement (sinon GONE) : tubes qui coulent sur toute la hauteur, derrière tous les écrans, à droite ;
+             ils défilent d'un écran quand on passe à l'entrée voisine de la barre (ui/home/FlowBandView). -->
+        <com.unowhy.companion.ui.home.FlowBandView
+            android:id="@+id/flow"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="end" />
+
         <!-- paddingTop : la ligne du haut à droite (lecture en cours, heure, batterie) ne chevauche pas les cartes. -->
         <!-- Balayage vertical entre les entrées de la barre (ui/RailSwipeLayout). -->
         <com.unowhy.companion.ui.RailSwipeLayout

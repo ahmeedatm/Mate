@@ -38,6 +38,12 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     interface Listener {
         fun onExpand(placed: Placed)
         fun onPageSwipe(delta: Int)
+
+        /** Balayage en cours, doigt à `dy` px du départ : l'écran le suit (SwipeFollow). */
+        fun onPageDrag(dy: Float) {}
+
+        /** Balayage lâché trop court ou annulé : l'écran revient en place. */
+        fun onPageDragEnd() {}
         fun onAddAt(col: Int, row: Int)
         fun onRemove(placed: Placed)
         fun onCycleSize(placed: Placed)
@@ -267,13 +273,16 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
                     stolen = true
                     swiping = true
                 }
+                if (swiping) listener?.onPageDrag(dy)
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 removeCallbacks(expand)
                 if (swiping && ev.actionMasked == MotionEvent.ACTION_UP) {
                     val dy = ev.y - downY
                     // Vers le haut : profil suivant, qui arrive par le bas (Look.sharedAxis de HomeFragment.showProfile).
-                    if (abs(dy) > height / 8) listener?.onPageSwipe(if (dy < 0) 1 else -1)
+                    if (abs(dy) > height / 8) listener?.onPageSwipe(if (dy < 0) 1 else -1) else listener?.onPageDragEnd()
+                } else if (swiping) {
+                    listener?.onPageDragEnd()
                 }
                 val wasStolen = stolen || ignoreUntilUp
                 stolen = false; swiping = false; ignoreUntilUp = false

@@ -43,7 +43,7 @@ object RailModel {
     fun snapshot(layout: HomeLayout, inCall: Boolean, tools: List<Mode>, labels: Boolean) = Snapshot(
         layout.names.toList(),
         layout.names.indices.map { layout.iconOf(it) },
-        listOf(layout.homeProfile, layout.deckProfile, layout.callProfile, layout.gameProfile),
+        listOf(layout.homeProfile, layout.deckProfile, layout.callProfile),
         inCall,
         tools.toList(),
         labels,

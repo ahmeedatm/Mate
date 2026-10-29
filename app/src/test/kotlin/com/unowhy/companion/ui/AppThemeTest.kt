@@ -2,15 +2,55 @@ package com.unowhy.companion.ui
 
 import com.unowhy.companion.FakeContext
 import com.unowhy.companion.Prefs
+import com.unowhy.companion.ui.home.Demo
+import com.unowhy.companion.ui.home.Persona
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AppThemeTest {
     private val context = FakeContext()
 
     @Test
-    fun `Cadran, Cadran nuit, Retro et Contraste`() {
-        assertEquals(listOf(AppTheme.CADRAN, AppTheme.CADRAN_NUIT, AppTheme.RETRO, AppTheme.CONTRASTE), AppTheme.entries.toList())
+    fun `Cadran, Cadran nuit, Retro et Contraste sont les seuls themes des Reglages`() {
+        assertEquals(listOf(AppTheme.CADRAN, AppTheme.CADRAN_NUIT, AppTheme.RETRO, AppTheme.CONTRASTE), AppTheme.choosable)
+        assertEquals(
+            listOf(AppTheme.REGISTRE, AppTheme.STUDIO, AppTheme.MAISON, AppTheme.TABLEAU, AppTheme.TERMINAL),
+            AppTheme.entries.filter { it.demo },
+        )
+    }
+
+    @Test
+    fun `chaque persona a son theme, de demo sauf Sam`() {
+        val expected = mapOf(
+            Persona.NOUR to AppTheme.REGISTRE, Persona.GWEN to AppTheme.STUDIO, Persona.CAMILLE to AppTheme.MAISON,
+            Persona.AIMEE to AppTheme.TABLEAU, Persona.SAM to AppTheme.CONTRASTE, Persona.SACHA to AppTheme.TERMINAL,
+        )
+        assertEquals(Persona.entries.toSet(), expected.keys)
+        for ((persona, theme) in expected) assertEquals(persona.name, theme.name, persona.theme)
+        assertEquals(AppTheme.entries.filter { it.demo }.toSet(), Persona.entries.mapNotNull { p -> AppTheme.entries.first { it.name == p.theme }.takeIf { it.demo } }.toSet())
+    }
+
+    @Test
+    fun `un theme de demo enregistre sans demo retombe sur Cadran`() {
+        for (theme in AppTheme.entries.filter { it.demo }) {
+            Prefs.setTheme(context, theme.name)
+            assertEquals(theme.name, AppTheme.CADRAN, AppTheme.current(context))
+        }
+    }
+
+    @Test
+    fun `le theme du persona s'applique pendant la demo et Cadran revient en la quittant`() {
+        for (persona in Persona.entries.filter { it.theme != "CONTRASTE" }) {
+            val layout = persona.layout(persona.profiles.map { it.name.toString() }, "Réunion", emptyMap(), null)
+            Demo.start(context, persona, layout, cadran = true)
+            assertEquals(persona.theme, AppTheme.current(context).name)
+            assertTrue(AppTheme.current(context).demo)
+            assertTrue(Demo.quit(context, cadran = true))
+            assertEquals(AppTheme.CADRAN, AppTheme.current(context))
+        }
+        assertFalse(Demo.quit(context, cadran = true))
     }
 
     @Test

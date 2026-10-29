@@ -1,0 +1,7 @@
+# Médias lourds ou régénérables : voir README.md pour les récupérer.
+*/.media/
+*/.hyperframes/
+*/renders/
+*/assets/footage/
+*/assets/bgm/
+*/audio_request.json

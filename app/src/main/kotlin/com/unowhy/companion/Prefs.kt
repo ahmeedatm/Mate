@@ -4,6 +4,24 @@ import android.content.Context
 import com.unowhy.companion.focus.FocusPresets
 
 /** Réglages locaux : ordinateur piloté (voir Computers), luminosité, thème, kiosque. Aucune clé d'API ici. */
+/** Familles d'animations qui se coupent une à une dans Réglages > Animations (`key` : préférence). */
+enum class AnimFamily(val key: String) {
+    /** Changement d'écran : glissé, écran qui suit le doigt au balayage. */
+    NAVIGATION("anim_navigation"),
+
+    /** Arrivée des widgets de l'Accueil, un à un. */
+    HOME("anim_home"),
+
+    /** Boîtes de dialogue qui apparaissent en douceur. */
+    DIALOGS("anim_dialogs"),
+
+    /** Cloche, bandeau, pastille de l'ordinateur. */
+    ALERTS("anim_alerts"),
+
+    /** Rebonds, fondus des contenus, compte à rebours du Pomodoro. */
+    DETAILS("anim_details"),
+}
+
 object Prefs {
     private const val FILE = "companion"
     private const val KEY_ALLOW_INSTALLS = "allow_installs"
@@ -217,6 +235,13 @@ object Prefs {
 
     fun setReduceMotion(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_REDUCE_MOTION, value).apply()
+    }
+
+    /** Réglages > Animations : une famille d'animations coupée (toutes actives par défaut). Voir ui/Look.on. */
+    fun animation(context: Context, family: AnimFamily): Boolean = prefs(context).getBoolean(family.key, true)
+
+    fun setAnimation(context: Context, family: AnimFamily, value: Boolean) {
+        prefs(context).edit().putBoolean(family.key, value).apply()
     }
 
     /** Accessibilité : notifications du PC et messages de l'ordinateur lus à voix haute. Désactivé par défaut. */

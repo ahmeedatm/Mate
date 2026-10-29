@@ -30,7 +30,9 @@ fun AlertDialog.showForTyping(input: EditText?, keyboard: Boolean = true) {
         val state = if (keyboard) WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE else WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
         setSoftInputMode(state or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
     }
+    window?.setWindowAnimations(0)
     show()
+    window?.decorView?.let(Look::popIn)
     // Saisie en cours tant que la boîte est là (un appel qui commence ne fait pas changer l'écran derrière).
     Typing.opened()
     window?.decorView?.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
@@ -59,7 +61,9 @@ fun AlertDialog.showForTyping(input: EditText?, keyboard: Boolean = true) {
 fun <T : Dialog> T.showImmersive(): T {
     val window = window
     window?.setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+    window?.setWindowAnimations(0)
     show()
+    window?.decorView?.let(Look::popIn)
     window?.let {
         WindowCompat.getInsetsController(it, it.decorView).apply {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE

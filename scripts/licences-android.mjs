@@ -80,6 +80,15 @@ POLICES (SIL Open Font License 1.1, texte plus bas)
 - Nunito : Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
 - Abril Fatface : Copyright (c) 2011, TypeTogether (www.type-together.com), noms de police réservés « Abril » et « Abril Fatface »
 - Atkinson Hyperlegible : Copyright 2020 Braille Institute of America, Inc. (https://github.com/googlefonts/atkinson-hyperlegible)
+- IBM Plex Sans : Copyright © 2017 IBM Corp. with Reserved Font Name "Plex"
+- IBM Plex Mono : Copyright © 2017 IBM Corp. with Reserved Font Name "Plex"
+- Instrument Serif : Copyright 2022 The Instrument Serif Project Authors (https://github.com/Instrument/instrument-serif)
+- Instrument Sans : Copyright 2022 The Instrument Sans Project Authors (https://github.com/Instrument/instrument-sans)
+- Young Serif : Copyright 2023 The Young Serif Project Authors (https://github.com/noirblancrouge/YoungSerif)
+- Figtree : Copyright 2022 The Figtree Project Authors (https://github.com/erikdkennedy/figtree)
+- Barlow : Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
+- Barlow Semi Condensed : Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
+- JetBrains Mono : Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
 
 DONNÉES
 - Prévisions météo : MET Norway (Institut météorologique norvégien), licence CC BY 4.0,

@@ -6,8 +6,7 @@ import com.unowhy.companion.R
 
 /**
  * Icônes proposées pour un écran (boîte des écrans) : clé enregistrée dans la disposition ([HomeLayout.icons]) →
- * icône et nom lu par TalkBack. Sans choix, l'icône du rôle : maison pour l'Accueil, caméra pour Réunion, manette pour
- * le profil de jeu. Les clés sont enregistrées : ne jamais en renommer une.
+ * icône et nom lu par TalkBack. Sans choix, l'icône du rôle : maison pour l'Accueil, caméra pour Réunion. Les clés sont enregistrées : ne jamais en renommer une.
  */
 object ProfileIcons {
     data class Icon(val key: String, @DrawableRes val drawable: Int, @StringRes val label: Int)
@@ -42,7 +41,6 @@ object ProfileIcons {
         Icon("music", R.drawable.ic_wave, R.string.icon_music),
         Icon("note", R.drawable.ic_music_note, R.string.icon_note),
         Icon("headphones", R.drawable.ic_headphones, R.string.icon_headphones),
-        Icon("game", R.drawable.ic_gamepad, R.string.icon_game),
         Icon("camera", R.drawable.ic_camera, R.string.icon_camera),
         Icon("palette", R.drawable.ic_palette, R.string.icon_palette),
         Icon("image", R.drawable.ic_image, R.string.icon_image),
@@ -68,16 +66,16 @@ object ProfileIcons {
     @DrawableRes
     fun drawable(key: String?): Int? = find(key)?.drawable
 
-    /** Clé de l'icône montrée pour `page` : celle choisie, sinon celle de son rôle (null si aucune ne correspond). */
-    fun keyOf(layout: HomeLayout, page: Int): String? = of(layout, page).let { shown -> ALL.firstOrNull { it.drawable == shown }?.key }
+    /** Clé de l'icône montrée pour `page` : `choice` (par défaut celle enregistrée), sinon celle de son rôle (null si aucune ne correspond). */
+    fun keyOf(layout: HomeLayout, page: Int, choice: String? = layout.iconOf(page)): String? =
+        of(layout, page, choice).let { shown -> ALL.firstOrNull { it.drawable == shown }?.key }
 
-    /** Icône de l'écran `page` : celle choisie, sinon celle de son rôle. */
+    /** Icône de l'écran `page` : `choice` (par défaut celle enregistrée), sinon celle de son rôle. */
     @DrawableRes
-    fun of(layout: HomeLayout, page: Int): Int = drawable(layout.iconOf(page)) ?: when (page) {
+    fun of(layout: HomeLayout, page: Int, choice: String? = layout.iconOf(page)): Int = drawable(choice) ?: when (page) {
         layout.homeProfile -> R.drawable.ic_home
         layout.deckProfile -> R.drawable.ic_deck
         layout.callProfile -> R.drawable.ic_videocam
-        layout.gameProfile -> R.drawable.ic_gamepad
         else -> R.drawable.ic_widgets
     }
 }
