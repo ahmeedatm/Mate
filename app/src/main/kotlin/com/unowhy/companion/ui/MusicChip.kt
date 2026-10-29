@@ -92,6 +92,11 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         super.onDetachedFromWindow()
     }
 
+    /** Cachée tout de suite si [suppressed] (mode Modifier, cadre photo), sinon telle qu'à la dernière lecture. */
+    fun update() {
+        visibility = if (!suppressed() && session != null) VISIBLE else GONE
+    }
+
     /** Relit la lecture en cours ; en erreur (pas de lecture lisible) ou en pause depuis longtemps, la pastille se cache. */
     private suspend fun refresh() {
         val picked = runCatchingCancellable { pick(BackendClient(context).system.media()) }.getOrNull()

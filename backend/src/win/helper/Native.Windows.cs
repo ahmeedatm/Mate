@@ -408,7 +408,8 @@ namespace Companion
                     string layout = Str(req, "layout") ?? "keep";
                     foreach (var w in targets) Place(w.H, screens, display, layout);
                 }
-                Focus(targets[0].H);
+                // Fenêtres dans l'ordre de l'écran (la plus récente d'abord) : une visible plutôt qu'une réduite oubliée.
+                Focus((targets.FirstOrDefault(w => !IsIconic(w.H)) ?? targets[0]).H);
                 Thread.Sleep(150);
                 wins = mine();
             }

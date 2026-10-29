@@ -31,6 +31,9 @@ class TourOverlay(context: Context, private val anchor: (TourModel.Step) -> View
     private var hole: RectF? = null
     private var index = 0
 
+    /** Visite finie ou passée : ce qui attendait la fin (écran des plugins) peut s'afficher. */
+    var onDone: () -> Unit = {}
+
     private val title = TextView(context).apply {
         textSize = 22f
         typeface = themeFont(context, R.attr.c_font_title)
@@ -134,7 +137,10 @@ class TourOverlay(context: Context, private val anchor: (TourModel.Step) -> View
 
     private fun finish() {
         Prefs.setTourDone(context)
-        Look.navSpring(this, DynamicAnimation.ALPHA, Look.EFFECTS_FAST, 0f) { visibility = GONE }
+        Look.navSpring(this, DynamicAnimation.ALPHA, Look.EFFECTS_FAST, 0f) {
+            visibility = GONE
+            onDone()
+        }
     }
 
     private companion object {

@@ -16,15 +16,23 @@ class EssaiPlanTest {
 
     @Test
     fun `install une MR sans essai installe, au meme code ne fait rien, plus haut remplace`() {
-        assertEquals(EssaiPlan.Install.INSTALL, EssaiPlan.install(5_100, null))
-        assertEquals(EssaiPlan.Install.NONE, EssaiPlan.install(5_100, 5_100))
-        assertEquals(EssaiPlan.Install.INSTALL, EssaiPlan.install(5_101, 5_100))
+        assertEquals(EssaiPlan.Install.INSTALL, EssaiPlan.install(5_100, null, 109, 0))
+        assertEquals(EssaiPlan.Install.NONE, EssaiPlan.install(5_100, 5_100, 109, 109))
+        assertEquals(EssaiPlan.Install.INSTALL, EssaiPlan.install(5_101, 5_100, 109, 109))
+    }
+
+    @Test
+    fun `install une autre MR n'est jamais installee, meme au meme code`() {
+        // Après l'essai de la MR B, la ligne de A ne doit plus passer pour installée.
+        assertEquals(EssaiPlan.Install.INSTALL, EssaiPlan.install(5_100, 5_100, 109, 110))
+        assertEquals(EssaiPlan.Install.INSTALL, EssaiPlan.install(5_100, 5_100, 109, 0))
+        assertEquals(EssaiPlan.Install.INSTALL, EssaiPlan.install(5_200, 5_100, 109, 110))
     }
 
     @Test
     fun `install une MR au code plus bas desinstalle d'abord`() {
         // Android refuserait de descendre : pipeline plus ancien que celui de l'essai installé.
-        assertEquals(EssaiPlan.Install.UNINSTALL_FIRST, EssaiPlan.install(5_099, 5_100))
+        assertEquals(EssaiPlan.Install.UNINSTALL_FIRST, EssaiPlan.install(5_099, 5_100, 109, 110))
     }
 
     private val origin = BackendState(packaged = true, mode = "origin", mr = null, sha256 = null)

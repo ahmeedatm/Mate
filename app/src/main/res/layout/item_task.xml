@@ -45,9 +45,9 @@
     <ImageButton
         android:id="@+id/task_open"
         style="@style/IconButton.Flat"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:padding="11dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:padding="13dp"
         android:contentDescription="@string/open_on_computer"
         android:src="@drawable/ic_open"
         app:tint="?attr/c_accent" />
@@ -55,9 +55,9 @@
     <ImageButton
         android:id="@+id/task_delete"
         style="@style/IconButton.Flat"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:padding="12dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:padding="14dp"
         android:contentDescription="@string/delete"
         android:src="@drawable/ic_close" />
 </LinearLayout>

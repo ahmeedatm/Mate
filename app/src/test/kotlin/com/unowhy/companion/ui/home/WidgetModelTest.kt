@@ -1,5 +1,6 @@
 package com.unowhy.companion.ui.home
 
+import com.unowhy.companion.net.HomeFeatures
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -81,6 +82,31 @@ class WidgetModelTest {
         assertEquals(listOf(WidgetSize.W), WidgetType.DAY.sizes)
         assertFalse(WidgetType.DAY.computer)
         assertTrue(WidgetType.DAY.bare)
+    }
+
+    @Test
+    fun `Jira et GitLab, widgets du Deck en XL ou L, seulement si l'ordinateur les offre`() {
+        assertEquals(WidgetType.JIRA, WidgetType.of("jira"))
+        assertEquals(WidgetType.GITLAB, WidgetType.of("gitlab"))
+        for (type in listOf(WidgetType.JIRA, WidgetType.GITLAB)) {
+            assertEquals(listOf(WidgetSize.XL, WidgetSize.L), type.sizes)
+            assertTrue(type.computer)
+        }
+        assertFalse(WidgetType.JIRA.offered(HomeFeatures()))
+        assertFalse(WidgetType.GITLAB.offered(HomeFeatures()))
+        assertTrue(WidgetType.JIRA.offered(HomeFeatures(jira = true)))
+        assertTrue(WidgetType.GITLAB.offered(HomeFeatures(gitlab = true)))
+    }
+
+    @Test
+    fun `un plugin coupe retire son widget du catalogue, les autres restent`() {
+        val off = HomeFeatures(off = setOf("open", "mixer", "pad"))
+        assertFalse(WidgetType.OPEN.offered(off))
+        assertFalse(WidgetType.MIXER.offered(off))
+        assertFalse(WidgetType.PAD.offered(off))
+        assertTrue(WidgetType.OPEN.offered(HomeFeatures()))
+        assertTrue(WidgetType.CLOCK.offered(off))
+        assertTrue(WidgetType.KEYS.offered(off))
     }
 
     @Test

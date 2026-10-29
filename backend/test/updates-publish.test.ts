@@ -86,9 +86,9 @@ function dist(version: string, { code = 1000, pkg = "com.unowhy.companion.essai"
   return dir;
 }
 
-function publish(args: string[], env: Record<string, string> = {}) {
-  return promisify(execFile)(process.execPath, ["scripts/updates-publish.mjs", ...args], {
-    cwd: repo,
+function publish(args: string[], env: Record<string, string> = {}, cwd = repo) {
+  return promisify(execFile)(process.execPath, [path.join(repo, "scripts", "updates-publish.mjs"), ...args], {
+    cwd,
     env: { ...process.env, CI_JOB_TOKEN: "", GITLAB_TOKEN: "jeton", UPDATES_URL: urlOf("essais"), MR_TITLE: "", ...env },
   });
 }
@@ -180,6 +180,36 @@ describe("publication des essais par MR", () => {
       "rien n'est changé",
     );
   });
+
+  it("purger les fusionnées retire les essais dont la MR est dans l'historique git, garde les ouvertes", async () => {
+    await publish(["--essai", "110", dist("0.2.2-essai.13", { code: 202_013, backend: ["mac", "windows"] }), out()]);
+    await publish(["--essai", "12", dist("0.2.2-essai.14", { code: 202_014 }), out()]);
+    await publish(["--essai", "123", dist("0.2.2-essai.15", { code: 202_015 }), out()]);
+    // Historique de main : !12 et !110 fusionnées ; !1230 (autre numéro) et un message qui cite !123 sans être une fusion.
+    const git = path.join(tmp, "git-main");
+    fs.mkdirSync(git);
+    const run = (...args: string[]) => promisify(execFile)("git", args, { cwd: git });
+    await run("init", "-q");
+    await run("config", "user.email", "ci@example.com");
+    await run("config", "user.name", "ci");
+    for (const message of [
+      "Fusion\n\nSee merge request unowhy/companion!12",
+      "Fusion\n\nSee merge request unowhy/companion!110\n",
+      "Fusion\n\nSee merge request unowhy/companion!1230",
+      "Correction de !123, voir aussi !109",
+    ])
+      await run("commit", "-q", "--allow-empty", "-m", message);
+    await publish(["--purge-fusionnes", out()], {}, git);
+    assert.deepEqual(
+      registry.manifest("companion-updates/essais").essais.map((e: any) => e.mr),
+      [109, 123],
+    );
+    assert.deepEqual(registry.names("companion-updates/essais"), [
+      "companion-0.2.2-essai.12.apk",
+      "companion-0.2.2-essai.15.apk",
+      "manifest.json",
+    ]);
+  });
 });
 
 describe("publication d'une release", () => {
@@ -214,6 +244,32 @@ describe("publication d'une release", () => {
       "companion-0.3.0.apk",
       "manifest.json",
     ]);
+  });
+
+  it("dépose les archives du backend sous le nom de la version et les décrit dans `backends`", async () => {
+    const dir = dist("0.3.2", { code: 302_000, pkg: "com.unowhy.companion", backend: ["mac", "windows"] });
+    await publish([dir, out()], { UPDATES_URL: urlOf("latest") });
+    const { backends } = registry.manifest("companion-updates/latest");
+    assert.deepEqual(backends, [
+      { os: "mac", file: "backend-0.3.2-mac.tar.gz", size: "backend mac 0.3.2".length, sha256: sha("backend mac 0.3.2"), version: "0.3.2" },
+      {
+        os: "windows",
+        file: "backend-0.3.2-windows.tar.gz",
+        size: "backend windows 0.3.2".length,
+        sha256: sha("backend windows 0.3.2"),
+        version: "0.3.2",
+      },
+    ]);
+    assert.deepEqual(registry.names("companion-updates/latest"), [
+      "backend-0.3.2-mac.tar.gz",
+      "backend-0.3.2-windows.tar.gz",
+      "companion-0.3.2.apk",
+      "manifest.json",
+    ]);
+    await assert.rejects(
+      publish([dist("0.3.3", { code: 303_000, pkg: "com.unowhy.companion", backend: ["mac"] }), out()], { UPDATES_URL: urlOf("latest") }),
+      /une archive backend par plateforme/,
+    );
   });
 
   it("sans installeur dans dist : pas de clé `installers`", async () => {

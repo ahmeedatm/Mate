@@ -239,7 +239,7 @@ class NowPlayingView @JvmOverloads constructor(
                     render()
                 }
             }
-            sessionsRow.addView(chip, LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)).apply { marginEnd = dp(8) })
+            sessionsRow.addView(chip, LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginEnd = dp(8) })
         }
     }
 

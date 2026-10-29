@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.unowhy.companion.R
+import com.unowhy.companion.net.HomeFeatures
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -60,10 +61,25 @@ enum class WidgetType(
     DISCORD("discord", R.string.widget_discord, R.string.widget_discord_desc, R.drawable.ic_call, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     MEETING("meeting", R.string.widget_meeting, R.string.widget_meeting_desc, R.drawable.ic_videocam, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     PAD("pad", R.string.widget_pad, R.string.widget_pad_desc, R.drawable.ic_tablet, listOf(WidgetSize.XL, WidgetSize.L), true),
-    CALL("call", R.string.widget_call, R.string.widget_call_desc, R.drawable.ic_videocam, listOf(WidgetSize.XL, WidgetSize.L), true);
+    CALL("call", R.string.widget_call, R.string.widget_call_desc, R.drawable.ic_videocam, listOf(WidgetSize.XL, WidgetSize.L), true),
+    JIRA("jira", R.string.widget_jira, R.string.widget_jira_desc, R.drawable.ic_dashboard, listOf(WidgetSize.XL, WidgetSize.L), true),
+    GITLAB("gitlab", R.string.widget_gitlab, R.string.widget_gitlab_desc, R.drawable.ic_merge, listOf(WidgetSize.XL, WidgetSize.L), true);
 
     /** Sans fond de carte, posé à même l'écran : les tubes du thème Rétro y passent derrière un voile. */
     val bare get() = this == HERO || this == DAY || this == DAYLINE
+
+    /**
+     * Proposé dans le catalogue de l'ordinateur actif : Jira et GitLab seulement s'il les offre, Ouvertes, Son et Pavé
+     * seulement si leur plugin n'est pas coupé (écran des plugins).
+     */
+    fun offered(features: HomeFeatures) = when (this) {
+        JIRA -> features.jira
+        GITLAB -> features.gitlab
+        OPEN -> "open" !in features.off
+        MIXER -> "mixer" !in features.off
+        PAD -> "pad" !in features.off
+        else -> true
+    }
 
     companion object {
         fun of(key: String) = entries.firstOrNull { it.key == key }

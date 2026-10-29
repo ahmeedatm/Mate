@@ -29,6 +29,7 @@ import com.unowhy.companion.R
 import com.unowhy.companion.camera.DocCamera
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DocEntry
+import com.unowhy.companion.voice.Mic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -166,7 +167,7 @@ class CameraFragment : Fragment() {
                 isSingleLine = true
                 setOnClickListener { setZoom(value) }
             }
-            zooms.addView(button, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { marginEnd = dp(8) })
+            zooms.addView(button, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginEnd = dp(8) })
             zoomButtons += value to button
         }
         renderControls()
@@ -199,6 +200,7 @@ class CameraFragment : Fragment() {
 
     override fun onDestroyView() {
         stopCamera()
+        Mic.release(Mic.CAMERA)
         super.onDestroyView()
     }
 
@@ -209,6 +211,8 @@ class CameraFragment : Fragment() {
     private fun sync() {
         if (view == null) return
         val visible = started && !isHidden
+        // Mode Caméra à l'écran : le mot de réveil se met en pause.
+        Mic.set(Mic.CAMERA, visible)
         choice.visibility = if (purpose == null) View.VISIBLE else View.GONE
         if (purpose == null) {
             stopCamera()

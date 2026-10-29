@@ -32,6 +32,7 @@ class ProfileRail(
     private val settings: View = activity.findViewById(R.id.rail_settings)
     private val statusDot: View = activity.findViewById(R.id.status_dot)
     private val statusName: TextView = activity.findViewById(R.id.status_name)
+    private val statusState: TextView = activity.findViewById(R.id.status_state)
     override val status: View = activity.findViewById(R.id.status)
     override val talk: View = activity.layoutInflater.inflate(R.layout.item_rail_talk, rail, false).also { rail.addView(it, 0) }
 
@@ -95,7 +96,8 @@ class ProfileRail(
         entries.indexOfFirst { it is RailEntry.Profile && it.page == layout.homeProfile }.takeIf { it >= 0 }?.let { decorate(views[it], entries[it]) }
     }
 
-    override fun showLink(link: Link) = renderLink(activity, statusDot, statusName, status, link, offline = R.attr.c_text_faint)
+    /** Le rouge est réservé au « maintenant » : point vert si l'ordinateur répond, neutre sinon ; sa forme et l'état écrit disent le reste. */
+    override fun showLink(link: Link) = renderLink(activity, statusDot, statusName, statusState, status, link, offline = R.attr.c_text_faint)
 
     /** Recrée les entrées (profils ajoutés, renommés, retirés, appel commencé ou fini). */
     override fun applySettings() = render()

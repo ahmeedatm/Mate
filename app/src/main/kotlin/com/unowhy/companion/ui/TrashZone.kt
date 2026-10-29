@@ -70,6 +70,7 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
             alpha = 0f
         }
         icon.setImageResource(R.drawable.ic_delete)
+        icon.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         bin.addView(icon, LinearLayout.LayoutParams(dp(44), dp(44)).apply { marginEnd = dp(14) })
         label.textSize = 20f
         label.typeface = Typeface.DEFAULT_BOLD
@@ -104,7 +105,8 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
         armed = true
         label.setText(R.string.trash_release)
         performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-        // Prête à avaler : la corbeille tremble.
+        // Prête à avaler : la corbeille tremble (pas avec Réduire les animations : le texte suffit).
+        if (Look.still(context)) return
         wobble = ObjectAnimator.ofFloat(icon, View.ROTATION, 0f, -12f, 12f, -8f, 8f, 0f).apply {
             duration = 500
             repeatCount = ValueAnimator.INFINITE

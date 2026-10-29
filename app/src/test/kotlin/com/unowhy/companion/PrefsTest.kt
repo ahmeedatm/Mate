@@ -53,4 +53,11 @@ class PrefsTest {
         assertTrue(Prefs.allowInstalls(context))
         assertEquals("NEON", Prefs.theme(context))
     }
+
+    @Test
+    fun `taille du texte normale par defaut, puis celle choisie`() {
+        assertEquals(1f, Prefs.textScale(context), 0f)
+        Prefs.setTextScale(context, 1.5f)
+        assertEquals(1.5f, Prefs.textScale(context), 0f)
+    }
 }

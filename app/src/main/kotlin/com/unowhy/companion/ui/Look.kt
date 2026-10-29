@@ -22,10 +22,12 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
+import androidx.core.view.ViewCompat
 import androidx.dynamicanimation.animation.DynamicAnimation
 import androidx.dynamicanimation.animation.FloatValueHolder
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
+import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import kotlin.math.abs
 
@@ -136,6 +138,12 @@ object Look {
 
     /** Arrivée à l'écran : montée et fondu, décalés d'un élément à l'autre. */
     fun enter(view: View, index: Int) {
+        if (reduced(view.context)) {
+            view.animate().cancel()
+            view.alpha = 1f
+            view.translationY = 0f
+            return
+        }
         val shift = 18 * view.resources.displayMetrics.density
         view.animate().cancel()
         view.alpha = 0f
@@ -148,23 +156,28 @@ object Look {
     /** Petit rebond (sélection, ajout). */
     fun pop(view: View) {
         view.animate().cancel()
+        if (reduced(view.context)) {
+            view.scaleX = 1f
+            view.scaleY = 1f
+            return
+        }
         view.scaleX = 0.7f
         view.scaleY = 0.7f
         view.animate().scaleX(1f).scaleY(1f).setDuration(320).setInterpolator(OvershootInterpolator(3f)).start()
     }
 
-    /** Flottement lent, en boucle : à arrêter avec [stop]. */
+    /** Flottement lent, en boucle : à arrêter avec [stop]. Réduire les animations : immobile (pas lancé). */
     fun float(view: View): ValueAnimator {
         val amplitude = 4 * view.resources.displayMetrics.density
         return ObjectAnimator.ofFloat(view, View.TRANSLATION_Y, -amplitude, amplitude).apply {
             duration = 2400
             repeatMode = ValueAnimator.REVERSE
             repeatCount = ValueAnimator.INFINITE
-            start()
+            if (!still(view.context)) start()
         }
     }
 
-    /** Pulsation douce, en boucle (chrono en marche). Le parent ne rogne plus l'élément agrandi. */
+    /** Pulsation douce, en boucle (chrono en marche). Le parent ne rogne plus l'élément agrandi. Réduire les animations : pas lancée. */
     fun pulse(view: View): ValueAnimator {
         var parent = view.parent as? android.view.ViewGroup
         repeat(2) {
@@ -177,7 +190,7 @@ object Look {
             repeatMode = ValueAnimator.REVERSE
             repeatCount = ValueAnimator.INFINITE
             addUpdateListener { view.scaleX = it.animatedValue as Float; view.scaleY = view.scaleX }
-            start()
+            if (!still(view.context)) start()
         }
     }
 
@@ -192,11 +205,19 @@ object Look {
     val EFFECTS_SLOW = Spring(800f, 1f)
 
     /**
-     * Échelle d'animation d'Android à zéro (réglage développeur, tests instrumentés) : états finaux posés sans animer.
-     * Les ressorts ne suivent pas cette échelle d'eux-mêmes.
+     * Réduire les animations (Réglages > Accessibilité) ou échelle d'animation d'Android à zéro (kiosque, réglage
+     * développeur, tests instrumentés) : états finaux posés sans animer. Les ressorts ne suivent pas cette échelle d'eux-mêmes.
      */
-    fun reduced(context: Context): Boolean =
-        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+    fun reduced(context: Context): Boolean = Motion.transitions(
+        Prefs.reduceMotion(context),
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f),
+    )
+
+    /**
+     * Réduire les animations, demandé dans Réglages > Accessibilité : plus rien ne bouge en continu, et même les ressorts
+     * joués malgré l'échelle à zéro se posent. Pas l'échelle d'Android : le kiosque la met à zéro pour la vitesse (voir Motion).
+     */
+    fun still(context: Context): Boolean = Motion.loops(Prefs.reduceMotion(context))
 
     private fun force(token: Spring, to: Float) = SpringForce(to).setStiffness(token.stiffness).setDampingRatio(token.damping)
 
@@ -206,12 +227,12 @@ object Look {
     /**
      * Ressort sur une valeur seule : `onUpdate` reçoit la valeur de `from` vers `to`, `onEnd` quand elle est posée
      * (pas si on l'annule). À annuler avec `cancel()` quand la vue part. Échelle d'animation à zéro : `to` tout de suite, null,
-     * sauf `always` (joue quand même : voir [slideIn]).
+     * sauf `always` (joue quand même : voir [slideIn]) ; Réduire les animations : `to` tout de suite, même avec `always`.
      */
     fun spring(
         context: Context, token: Spring, from: Float, to: Float, onUpdate: (Float) -> Unit, onEnd: (() -> Unit)? = null, always: Boolean = false,
     ): SpringAnimation? {
-        if (from == to || (!always && reduced(context))) {
+        if (from == to || (!always && reduced(context)) || still(context)) {
             onUpdate(to)
             onEnd?.invoke()
             return null
@@ -308,9 +329,10 @@ object Look {
      * `direction` (1 droite, -1 gauche) en fondu, sur un calque matériel. Rend les ressorts, à annuler avec [settle].
      * Joue même échelle d'animation à zéro : le kiosque la met à zéro pour la vitesse (docs/kiosque.md), et ces ressorts
      * (Android 10 : ils ne lisent pas l'échelle) ne touchent que des propriétés de vue sur calque matériel.
+     * Réduire les animations : rien ne glisse.
      */
     fun slideIn(views: List<View>, direction: Int): List<SpringAnimation> {
-        if (direction == 0 || views.isEmpty()) return emptyList()
+        if (direction == 0 || views.isEmpty() || still(views.first().context)) return emptyList()
         val shift = direction * SHARED_AXIS_DP * views.first().resources.displayMetrics.density
         return views.filter { it.visibility == View.VISIBLE }.flatMap { view ->
             view.setLayerType(View.LAYER_TYPE_HARDWARE, null)
@@ -339,6 +361,7 @@ object Look {
     /** Appui (DA Cadran) : la vue s'enfonce à 0,96 puis revient sur un ressort. Le clic n'est pas consommé. */
     @SuppressLint("ClickableViewAccessibility")
     fun pressSpring(view: View) {
+        if (still(view.context)) return
         val x = spatialFast(view, DynamicAnimation.SCALE_X)
         val y = spatialFast(view, DynamicAnimation.SCALE_Y)
         view.setOnTouchListener { _, event ->
@@ -356,6 +379,7 @@ object Look {
      * clic passe par la liste) : `true` l'enfonce à 0,96, `false` la rend. [pressSpring] pour une vue cliquable.
      */
     fun pressTo(view: View, pressed: Boolean) {
+        if (still(view.context)) return
         val (x, y) = springsOf(view) ?: (spatialFast(view, DynamicAnimation.SCALE_X) to spatialFast(view, DynamicAnimation.SCALE_Y))
             .also { view.setTag(R.id.press_springs, it) }
         val to = if (pressed) 0.96f else 1f
@@ -379,7 +403,7 @@ object Look {
         val first = icon.tag == null
         icon.tag = res
         icon.setImageResource(res)
-        if (first) return
+        if (first || still(icon.context)) return
         icon.scaleX = 0.5f
         icon.scaleY = 0.5f
         icon.alpha = 0f
@@ -409,10 +433,12 @@ class TitleView @JvmOverloads constructor(
         val a = context.obtainStyledAttributes(attrs, intArrayOf(android.R.attr.drawableStart), defStyleAttr, defStyleRes)
         val icon = a.getResourceId(0, 0)
         a.recycle()
+        // TalkBack : titre de section, atteint par la navigation de titre en titre.
+        ViewCompat.setAccessibilityHeading(this, true)
         if (cadran) {
             setCompoundDrawablesRelative(null, null, null, null)
             isAllCaps = false
-            letterSpacing = 0f
+            letterSpacing = ReadingAids.letterSpacing(context)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, themePx(context, R.attr.c_title_size).toFloat())
             setTextColor(themeColor(context, R.attr.c_text_dim))
         } else if (icon != 0) {

@@ -11,9 +11,9 @@ import { osascript, run } from "./run.ts";
  * Lecture en cours sur le Mac (page Média de la tablette), sans aucun réglage : comme les contrôles multimédias de
  * Windows, MediaRemote (« À l'écoute » du Centre de contrôle) connaît ce qui joue dans n'importe quelle appli ou
  * navigateur. Depuis macOS 15.4, il ne répond qu'aux programmes d'Apple : NowPlaying.dylib est chargée par
- * /usr/bin/perl (src/mac/nowplaying/NowPlaying.m). Si MediaRemote ne dit rien (fermé par une mise à jour de macOS),
- * secours : Spotify et Musique par AppleScript, titre des onglets des sites connus, « joue » lu dans les assertions
- * d'énergie (`pmset`), commandes par les touches multimédias.
+ * /usr/bin/perl (src/mac/nowplaying/NowPlaying.m). Il ne connaît qu'une lecture : les autres (et toutes, s'il ne dit
+ * rien) viennent du secours : Spotify et Musique par AppleScript, titre des onglets des sites connus, « joue » lu dans
+ * les assertions d'énergie (`pmset`), commandes par l'extension du navigateur ou les touches multimédias.
  */
 export type MediaSession = {
   app: string;
@@ -192,11 +192,14 @@ export function playingApps(assertions: string): Set<string> {
   return names;
 }
 
+/** Identifiant d'un onglet de site sur la tablette (pastille, commandes, pochette) : un par site et par navigateur. */
+const tabApp = (browser: string, site: string) => `${browser}|${site}`;
+
 /** Secours : un lecteur ou un onglet de site connu par session ; un navigateur qui joue du son passe en lecture. */
 export function fallbackSessions(raw: (RawPlayer | RawTab)[], playing: Set<string>): MediaSession[] {
   const sessions: MediaSession[] = [];
   for (const r of raw) {
-    const base = { canPlayPause: true, canNext: true, canPrevious: true, hasThumb: false, current: false };
+    const base = { canPlayPause: true, canNext: true, canPrevious: true, current: false };
     if (r.kind === "player") {
       if (!r.title || r.state === "stopped") continue;
       const duration = ms(r.dur);
@@ -207,6 +210,7 @@ export function fallbackSessions(raw: (RawPlayer | RawTab)[], playing: Set<strin
         title: r.title,
         artist: r.artist,
         album: r.album,
+        hasThumb: !!r.artist,
         status: r.state === "playing" ? "playing" : "paused",
         canSeek: false,
         positionMs: ms(r.pos),
@@ -215,35 +219,92 @@ export function fallbackSessions(raw: (RawPlayer | RawTab)[], playing: Set<strin
       continue;
     }
     const site = siteName(r.url);
-    const title = site && tabTitle(r.tabTitle, site);
-    if (!site || !title) continue;
+    const title = site ? tabTitle(r.tabTitle, site) : "";
+    // Lecteur en pause (YouTube Music) : onglet sans titre ni morceau dans l'adresse, gardé (voir `mergeSessions`).
+    if (!site || (!title && !PLAYER_SITES.has(site))) continue;
     const browser = r.app.toLowerCase();
     const sounding = [...playing].some((p) => browser.startsWith(p) || p.startsWith(browser.split(" ")[0]));
-    sessions.push({
+    const session: MediaSession = {
       ...base,
-      app: r.app,
+      app: tabApp(r.app, site),
       name: site,
       title,
       artist: "",
       album: "",
+      hasThumb: !!youtubeThumb(r.url),
       status: sounding ? "playing" : "paused",
       canSeek: false,
       positionMs: null,
       durationMs: null,
-    });
+    };
+    // Un par site et par navigateur, celui qui a un titre de préférence.
+    const same = sessions.findIndex((s) => s.app === session.app);
+    if (same < 0) sessions.push(session);
+    else if (title && !sessions[same].title) sessions[same] = session;
   }
   const current = sessions.find((s) => s.status === "playing") ?? sessions[0];
   if (current) current.current = true;
   return sessions;
 }
 
-async function readPlayersAndTabs(): Promise<(RawPlayer | RawTab)[]> {
-  return JSON.parse(await osascript(FALLBACK_SCRIPT, [], "JavaScript").catch(() => "[]"));
+/** Sites lecteurs : leur onglet reste une lecture en pause même sans titre. */
+const PLAYER_SITES = new Set(["YouTube Music", "Spotify", "Deezer", "SoundCloud"]);
+
+/** Dernier morceau vu par onglet lecteur (`app`), repris quand il est en pause sans titre. */
+export type Recall = Map<string, { title: string; artist: string }>;
+
+const sameTitle = (a: string, b: string) => {
+  const [x, y] = [a.toLowerCase(), b.toLowerCase()];
+  return !!x && !!y && (x.includes(y) || y.includes(x));
+};
+
+/**
+ * Toutes les lectures du Mac, dans l'ordre du secours (Spotify, Musique, puis les onglets). Celle de MediaRemote prend
+ * l'identifiant de sa jumelle du secours (même lecteur, onglet du même titre, sinon onglet lecteur sans titre du même
+ * navigateur) : quand plusieurs jouent à la fois, MediaRemote passe de l'une à l'autre, et la pastille choisie sur la
+ * tablette doit garder son identifiant et sa place. Sans jumelle, elle est en tête. Devant (`current`) : ce qui joue,
+ * MediaRemote d'abord ; il peut rester figé sur une appli en pause pendant qu'un onglet joue (Spotify « unravel »
+ * pendant YouTube Music dans Opera GX, relevé du 29/10). Les autres onglets du navigateur que MediaRemote voit jouer ne
+ * jouent pas (`pmset` ne dit que le navigateur). Un onglet lecteur sans titre (YouTube Music en pause) reprend le
+ * dernier morceau retenu dans `recall`, sinon le nom du site. `remote` : identifiant de la lecture de MediaRemote.
+ */
+export function mergeSessions(
+  primary: MediaSession | undefined,
+  others: MediaSession[],
+  recall: Recall = new Map(),
+): { sessions: MediaSession[]; remote?: string } {
+  const browserOf = (o: MediaSession) => (o.app.includes("|") ? o.app.split("|")[0].toLowerCase() : "");
+  // Navigateur de MediaRemote : `browser` quand son nom a été remplacé par le site (enrichBrowserSession).
+  const ofPrimary = (o: MediaSession) => !!browserOf(o) && !!primary && extensionBrowser(primary).toLowerCase().startsWith(browserOf(o));
+  const twin =
+    primary &&
+    (others.find((o) => PLAYERS[o.app] && PLAYERS[o.app] === PLAYERS[primary.app]) ??
+      others.find((o) => sameTitle(o.title, primary.title)) ??
+      others.find((o) => !o.title && ofPrimary(o)));
+  const main = primary && (twin ? { ...primary, app: twin.app, name: twin.name } : primary);
+  if (primary && twin && browserOf(twin)) recall.set(twin.app, { title: primary.title, artist: primary.artist });
+  const all: MediaSession[] = main && !twin ? [main] : [];
+  for (const o of others) {
+    if (o === twin && main) {
+      all.push(main);
+      continue;
+    }
+    if (primary && sameTitle(o.title, primary.title)) continue;
+    if (!o.title) {
+      if (ofPrimary(o)) continue;
+      const seen = recall.get(o.app);
+      all.push({ ...o, title: seen?.title ?? o.name, artist: seen?.artist ?? "", hasThumb: o.hasThumb || !!seen?.artist });
+      continue;
+    }
+    if (browserOf(o)) recall.set(o.app, { title: o.title, artist: o.artist });
+    all.push(ofPrimary(o) && primary?.status === "playing" ? { ...o, status: "paused" } : o);
+  }
+  const front = (main?.status === "playing" ? main : undefined) ?? all.find((s) => s.status === "playing") ?? all[0];
+  return { sessions: all.map((s) => ({ ...s, current: s === front })), remote: main?.app };
 }
 
-async function fallback(): Promise<MediaSession[]> {
-  const [raw, assertions] = await Promise.all([readPlayersAndTabs(), run("pmset", ["-g", "assertions"]).catch(() => "")]);
-  return fallbackSessions(raw, playingApps(assertions));
+async function readPlayersAndTabs(): Promise<(RawPlayer | RawTab)[]> {
+  return JSON.parse(await osascript(FALLBACK_SCRIPT, [], "JavaScript").catch(() => "[]"));
 }
 
 /** Titre que le navigateur donne à macOS quand la page ne décrit pas ce qu'elle joue (Chrome, en français ou en anglais). */
@@ -276,28 +337,57 @@ export function extensionBrowser(session: MediaSession): string {
 
 // --- Interface du Mac pour os.ts
 
+/** Lecteurs et onglets relus au plus toutes les 5 s, en arrière-plan (osascript, ~0,2 s) ; `pmset` (~10 ms) à chaque fois. */
+const OTHERS_MS = 5_000;
+let others: { raw: (RawPlayer | RawTab)[]; atMs: number } | undefined;
+let othersPending: Promise<void> | undefined;
+
+function refreshOthers(): Promise<void> {
+  othersPending ??= readPlayersAndTabs()
+    .then((raw) => void (others = { raw, atMs: Date.now() }))
+    .finally(() => (othersPending = undefined));
+  return othersPending;
+}
+
+async function playersAndTabs(): Promise<(RawPlayer | RawTab)[]> {
+  if (!others) await refreshOthers();
+  else if (Date.now() - others.atMs > OTHERS_MS) void refreshOthers();
+  return others?.raw ?? [];
+}
+
 let pending: Promise<MediaSession[]> | undefined;
-/** Dernière lecture vue, pour la pochette (`/system/media/thumb` ne donne que l'appli). */
-let last: MediaSession | undefined;
+/** Dernières lectures envoyées à la tablette : commandes et pochettes visent l'une d'elles par son `app`. */
+let known: MediaSession[] = [];
+/** Appli de la lecture de MediaRemote (sa pochette vient de MediaRemote). */
+let remoteApp: string | undefined;
+/** Dernier morceau de chaque onglet lecteur (voir `mergeSessions`). */
+const recall: Recall = new Map();
 /** Dernière lecture que MediaRemote a vue jouer (voir `heldSession`). */
 let lastPlaying: { session: MediaSession; atMs: number } | undefined;
 
 /** Relu chaque seconde par la tablette : deux demandes simultanées partagent la même lecture. */
 export function mediaSessions(): Promise<MediaSession[]> {
   pending ??= (async () => {
-    const raw = await nowPlaying<RawNowPlaying>("get");
+    const [raw, players, assertions] = await Promise.all([
+      nowPlaying<RawNowPlaying>("get"),
+      playersAndTabs(),
+      run("pmset", ["-g", "assertions"]).catch(() => ""),
+    ]);
     const now = Date.now();
     let fresh = raw && sessionOfNowPlaying(raw, now);
     // Navigateur sans description de ce qu'il joue : on lit ses onglets pour donner le vrai titre et le site.
     if (fresh && GENERIC_TITLE.test(fresh.title)) {
-      const tabs = (await readPlayersAndTabs()).filter((r): r is RawTab => r.kind === "tab");
-      fresh = enrichBrowserSession(fresh, tabs);
+      fresh = enrichBrowserSession(
+        fresh,
+        players.filter((r): r is RawTab => r.kind === "tab"),
+      );
     }
     if (fresh?.status === "playing") lastPlaying = { session: fresh, atMs: now };
     const session = heldSession(lastPlaying, fresh, now);
-    const sessions = session ? [session] : await fallback();
-    last = sessions.find((s) => s.current);
-    return sessions;
+    const merged = mergeSessions(session, fallbackSessions(players, playingApps(assertions)), recall);
+    known = merged.sessions;
+    remoteApp = merged.remote;
+    return known;
   })().finally(() => (pending = undefined));
   return pending;
 }
@@ -319,20 +409,28 @@ export function playerScript(app: string, action: MediaAction, positionMs?: numb
 }
 
 /**
- * Spotify et Musique par AppleScript. Navigateur qui joue avec l'extension « Compagnon Unowhy » : elle agit dans la page (Opera GX en pause ne répond plus
- * qu'à la vraie touche du clavier). Sinon MediaRemote, qui vise ce qui joue (`app` ignoré : une seule lecture en
- * cours sur Mac) ; secours : touches multimédias.
+ * Lecture choisie sur la tablette (`app`, sinon celle de devant). Spotify et Musique par AppleScript. Navigateur avec
+ * l'extension « Compagnon Unowhy » : elle agit dans la page (Opera GX en pause ne répond plus qu'à la vraie touche du
+ * clavier). Sinon MediaRemote, qui vise sa propre lecture ; secours : touches multimédias. Un onglet sans extension :
+ * refusé (MediaRemote ou la touche iraient à une autre appli).
  */
-export async function mediaControl(action: MediaAction, _app?: string, positionMs?: number): Promise<boolean> {
-  const playing = last;
-  const script = playing && playerScript(playing.app, action, positionMs);
+export async function mediaControl(action: MediaAction, app?: string, positionMs?: number): Promise<boolean> {
+  // Nouvel état du lecteur ou de l'onglet relu sans attendre les 5 s.
+  setTimeout(() => void refreshOthers(), 700);
+  const target = known.find((s) => s.app === app) ?? known.find((s) => s.current);
+  const script = target && playerScript(target.app, action, positionMs);
   if (script)
     return osascript(script).then(
       () => true,
       () => false,
     );
-  if (playing?.name && sendToExtension(extensionBrowser(playing), { action, seconds: (positionMs ?? 0) / 1000, title: playing.title }))
-    return true;
+  // Navigateur : `name` pour MediaRemote (« Opera GX », ou `browser` quand `name` affiche le site), début de `app` pour
+  // un onglet du secours (`name` = le site).
+  if (target) {
+    const command = { action, seconds: (positionMs ?? 0) / 1000, title: target.title };
+    if ([extensionBrowser(target), target.app.split("|")[0]].some((b) => b && sendToExtension(b, command))) return true;
+    if (target.app !== remoteApp) return false;
+  }
   const arg = action === "seek" ? String((positionMs ?? 0) / 1000) : "";
   const res = await nowPlaying<{ ok?: boolean }>(action, arg);
   if (res?.ok) return true;
@@ -356,15 +454,16 @@ async function storeArtwork(title: string, artist: string): Promise<string | und
 }
 
 /**
- * Pochette de ce qui joue, écrite dans `out` : celle de MediaRemote (les navigateurs ne la donnent pas toujours),
- * sinon l'image YouTube de l'onglet qui joue, sinon, pour un morceau avec artiste, celle de la recherche d'Apple.
+ * Pochette d'une lecture (`app`, sinon celle de devant), écrite dans `out` : celle de MediaRemote pour sa lecture (les
+ * navigateurs ne la donnent pas toujours), sinon l'image YouTube de l'onglet du même titre, sinon, pour un morceau
+ * avec artiste, celle de la recherche d'Apple.
  */
-export async function mediaThumb(_app: string, out: string): Promise<boolean> {
-  if ((await nowPlaying<{ ok?: boolean }>("art", out))?.ok === true) return true;
-  const playing = last;
-  if (!playing) return false;
-  const tabs = (await readPlayersAndTabs()).filter((r): r is RawTab => r.kind === "tab");
-  const url = thumbOfTabs(tabs, playing.title) ?? (playing.artist ? await storeArtwork(playing.title, playing.artist) : undefined);
+export async function mediaThumb(app: string, out: string): Promise<boolean> {
+  const session = known.find((s) => s.app === app) ?? known.find((s) => s.current);
+  if (!session) return false;
+  if (session.app === remoteApp && (await nowPlaying<{ ok?: boolean }>("art", out))?.ok === true) return true;
+  const tabs = (await playersAndTabs()).filter((r): r is RawTab => r.kind === "tab");
+  const url = thumbOfTabs(tabs, session.title) ?? (session.artist ? await storeArtwork(session.title, session.artist) : undefined);
   if (!url) return false;
   const res = await fetchPublic(url, { maxBytes: 2_000_000, timeoutMs: 5000 }).catch(() => null);
   if (!res?.ok || res.truncated) return false;

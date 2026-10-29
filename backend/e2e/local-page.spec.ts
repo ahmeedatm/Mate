@@ -10,6 +10,14 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#addr")).toHaveText(`127.0.0.1:${new URL(server.url).port}`);
     await expect(page.locator("#state")).toHaveText("Tablette non connectée");
     await expect(page.locator("#pairing")).toBeHidden();
+    // Police Cadran servie par le compagnon lui-même (hors ligne).
+    expect(await page.evaluate(async () => (await document.fonts.load("16px Outfit")).length)).toBeGreaterThan(0);
+  });
+
+  test("cache la carte « Cette appli » hors appli portable", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("#state")).toHaveText("Tablette non connectée");
+    await expect(page.locator("#panel")).toBeHidden();
   });
 
   test("reçoit le code affiché par la tablette et la connecte", async ({ page, server }) => {
@@ -26,6 +34,10 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#pairing")).toBeVisible();
     await expect(page.locator("#tablet")).toHaveText("Tablette QA");
     await expect(page.locator("#paircode")).toBeFocused();
+    // Ligne du jour : le point a commencé à avancer sur les 2 minutes du code.
+    const progress = Number(await page.locator("#pairtimer").evaluate((el) => (el as HTMLElement).style.getPropertyValue("--p")));
+    expect(progress).toBeGreaterThanOrEqual(0);
+    expect(progress).toBeLessThan(0.2);
 
     await page.locator("#paircode").fill("000 000" === code ? "111 111" : "000 000");
     await page.getByRole("button", { name: "Connecter la tablette" }).click();
@@ -68,6 +80,107 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#calstate")).toHaveText("Lien enregistré : 127.0.0.1:9");
     await expect(page.locator("body")).not.toContainText("secret-token");
     await server.call("PUT", "/local/calendar", { urls: [] }, false);
+  });
+
+  // Après les tests qui veulent la tablette déconnectée : la fausse tablette reste vue connectée 35 s.
+  test("règle la tablette connectée depuis la carte Tablette", async ({ page, server }) => {
+    await page.goto("/");
+    await expect(page.locator("#tabletcard")).toBeHidden();
+
+    // Fausse tablette : un poll ouvert, chaque ordre exécuté sur son état puis renvoyé avec le résultat.
+    let settings = { theme: "CADRAN", brightness: 0.6, volume: 0.4, nightDim: true, focusDnd: true };
+    const received: Record<string, unknown>[] = [];
+    const state = () => ({
+      mode: "home",
+      app: "1.4.0",
+      name: "Tablette Unowhy 4.2",
+      model: "Unowhy 4.2",
+      battery: { level: 82, charging: true },
+      settings,
+    });
+    let running = true;
+    const tablet = (async () => {
+      while (running) {
+        const { json } = await server.call("POST", "/tablet/poll", { state: state() });
+        for (const { id, command } of json.commands ?? []) {
+          const { type, ...change } = command;
+          received.push(change);
+          settings = { ...settings, ...change };
+          await server.call("POST", "/tablet/result", { id, ok: true, state: state() });
+        }
+      }
+    })();
+
+    await expect(page.locator("#tabletcard")).toBeVisible();
+    await expect(page.locator("#tabletinfo")).toHaveText("Unowhy 4.2 · appli 1.4.0 · batterie 82 % (en charge)");
+    // Tablette connectée : sa carte passe avant l'état et l'adresse, et l'onglet porte son nom.
+    await expect(page).toHaveTitle("Compagnon · Tablette Unowhy 4.2");
+    const top = (id: string) => page.locator(id).evaluate((el) => el.getBoundingClientRect().top);
+    expect(await top("#tabletcard")).toBeLessThan(await top("#state"));
+    await expect(page.getByRole("button", { name: "Cadran", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#brightnessvalue")).toHaveText("60 %");
+    await expect(page.locator("#nightdim")).toBeChecked();
+
+    await page.getByRole("button", { name: "Rétro" }).click();
+    await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");
+    await expect(page.getByRole("button", { name: "Rétro" })).toHaveAttribute("aria-pressed", "true");
+
+    await page.locator("#nightdim").uncheck();
+    await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");
+    await page.locator("#volume").fill("75");
+    await expect(page.locator("#volumevalue")).toHaveText("75 %");
+    await expect.poll(() => received.length).toBe(3);
+    expect(received).toEqual([{ theme: "RETRO" }, { nightDim: false }, { volume: 0.75 }]);
+    await expect(page.locator("#nightdim")).not.toBeChecked();
+
+    // Ouverte depuis « Régler depuis l'ordi » : la carte est mise en avant.
+    expect((await server.call("POST", "/local/open", { section: "tablette" })).status).toBe(200);
+    await page.goto("/?section=tablette");
+    await expect(page.locator("#tabletcard .card")).toHaveClass(/focus/);
+
+    // Son dernier poll (jusqu'à 25 s) finit sans elle.
+    running = false;
+    void tablet.catch(() => {});
+  });
+
+  test("cherche puis installe la mise à jour de la tablette depuis la carte", async ({ page, server }) => {
+    // Fausse tablette en kiosque, rien cherché encore : la page lance la recherche seule.
+    let app = "0.2.11";
+    let update = { checked: false, available: null as string | null, installing: false, error: null, kiosk: true };
+    const actions: string[] = [];
+    const state = () => ({ mode: "home", app, model: "Unowhy 4.2", battery: null, settings: null, update });
+    let running = true;
+    const tablet = (async () => {
+      while (running) {
+        const { json } = await server.call("POST", "/tablet/poll", { state: state() });
+        for (const { id, command } of json.commands ?? []) {
+          actions.push(command.action);
+          const available = app === "0.2.11" ? "0.2.12" : null;
+          update = command.action === "check" ? { ...update, checked: true, available } : { ...update, installing: true };
+          await server.call("POST", "/tablet/result", { id, ok: true, state: state() });
+        }
+      }
+    })();
+
+    await page.goto("/");
+    await expect(page.locator("#updatestate")).toHaveText("Version 0.2.12 disponible (installée : 0.2.11).");
+    expect(actions).toEqual(["check"]);
+    await page.getByRole("button", { name: "Mettre à jour" }).click();
+    await expect(page.locator("#updatestate")).toHaveText(/^Installation de la version 0\.2\.12 en cours/);
+    await expect(page.locator("#updatebtn")).toBeHidden();
+    expect(actions).toEqual(["check", "install"]);
+
+    // Appli remplacée puis relancée : nouvelle version, rien cherché encore, la page relance la recherche.
+    app = "0.2.12";
+    update = { checked: false, available: null, installing: false, error: null, kiosk: true };
+    // Premier poll de l'appli relancée : il remplace celui en cours, qui rend la main à la boucle.
+    void server.call("POST", "/tablet/poll", { state: state() }).catch(() => {});
+    await expect(page.locator("#updatestate")).toHaveText("Appli à jour (0.2.12).");
+    await expect(page.getByRole("button", { name: "Rechercher" })).toBeVisible();
+    expect(actions).toEqual(["check", "install", "check"]);
+
+    running = false;
+    void tablet.catch(() => {});
   });
 
   test("?section=agenda met la carte Agenda en avant", async ({ page }) => {

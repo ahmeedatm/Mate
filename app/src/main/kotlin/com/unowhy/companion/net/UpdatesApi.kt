@@ -1,6 +1,8 @@
 package com.unowhy.companion.net
 
 import com.unowhy.companion.BuildConfig
+import com.unowhy.companion.installers.BackendPlan
+import com.unowhy.companion.installers.BackendRelease
 import com.unowhy.companion.installers.Installer
 import com.unowhy.companion.installers.InstallerPlan
 import org.json.JSONObject
@@ -56,6 +58,16 @@ class UpdatesApi(private val http: Http, private val source: UpdateSource = Upda
     /** Envoie l'archive du backend de la MR `mr` à l'ordinateur, qui la pose puis redémarre. */
     suspend fun sendBackend(mr: Int, sha256: String, archive: ByteArray) {
         http.io { http.text(http.request("POST", "/companion/backend/essai?mr=$mr&sha256=$sha256", archive, "application/gzip", 120_000)) }
+    }
+
+    /** Archives du backend d'une release (clé `backends`) : manifest du serveur central, ou `GET /updates` de l'ordinateur. */
+    suspend fun backends(): List<BackendRelease> = http.io {
+        BackendPlan.parse(http.get(if (source == UpdateSource.SERVER) "/manifest.json" else "/updates"), source)
+    }
+
+    /** Envoie l'archive du backend de la release `version` à l'ordinateur, qui remplace le sien puis redémarre. */
+    suspend fun sendBackendUpdate(version: String, sha256: String, archive: ByteArray) {
+        http.io { http.text(http.request("POST", "/companion/backend/update?version=$version&sha256=$sha256", archive, "application/gzip", 120_000)) }
     }
 
     /** Remet le backend d'origine de l'ordinateur (sans effet s'il y est déjà). */

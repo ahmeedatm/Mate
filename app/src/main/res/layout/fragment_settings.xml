@@ -69,6 +69,34 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Plugins de l'ordinateur actif : le même écran qu'à la première utilisation. -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <com.unowhy.companion.ui.TitleView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_widgets"
+                android:text="@string/plugins_card" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/plugins_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/settings_plugins"
+                style="@style/ActionButton"
+                android:layout_marginTop="16dp"
+                android:text="@string/plugins_choose" />
+        </LinearLayout>
+
         <!-- WiFi : en kiosque, Paramètres d'Android est inaccessible. -->
         <LinearLayout
             style="@style/Card"
@@ -101,6 +129,102 @@
                 android:id="@+id/settings_wifi"
                 style="@style/ActionButton"
                 android:text="@string/wifi_choose" />
+        </LinearLayout>
+
+        <!-- Accessibilité malgré le kiosque (device/Accessibility) : TalkBack et taille du texte de l'appli,
+             puis les aides à la lecture (ui/ReadingAids.kt) : police lisible, animations réduites, bandeaux lus. -->
+
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <com.unowhy.companion.ui.TitleView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_accessibility"
+                android:text="@string/a11y_title" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_talkback"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/a11y_talkback"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/settings_talkback_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/a11y_talkback_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/a11y_text_size"
+                android:textColor="?attr/c_text"
+                android:textSize="16sp" />
+
+            <LinearLayout
+                android:id="@+id/settings_text_sizes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_legible_font"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:minHeight="48dp"
+                android:text="@string/a11y_legible_font"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/a11y_legible_font_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_reduce_motion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/a11y_reduce_motion"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/a11y_reduce_motion_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_read_banners"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/a11y_read_banners"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/a11y_read_banners_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
         </LinearLayout>
 
         <!-- Thème : ambiances prédéfinies (ui/Themes.kt), pastilles ajoutées par SettingsFragment. -->
@@ -285,6 +409,47 @@
                 android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
 
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_wake_word"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/wake_word"
+                android:textSize="16sp" />
+
+            <!-- État du mot de réveil : prêt, téléchargement du modèle, micro non autorisé, modèle indisponible. -->
+            <TextView
+                android:id="@+id/settings_wake_word_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/wake_ready"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_weather_location"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/weather_location"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/weather_location_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <!-- Ouvre sur l'ordinateur la page du compagnon, carte Réglages de la tablette en avant. -->
+            <Button
+                android:id="@+id/settings_tablet_remote"
+                style="@style/ActionButton"
+                android:layout_marginTop="12dp"
+                android:text="@string/tablet_remote" />
+
             <TextView
                 android:id="@+id/settings_tablet_info"
                 android:layout_width="match_parent"
@@ -353,6 +518,22 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
+
+            <!-- Compagnon de l'ordinateur actif : version, mise à jour envoyée par la tablette (installers/CompanionUpdater). -->
+            <TextView
+                android:id="@+id/settings_companion_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/settings_companion_update"
+                style="@style/PrimaryButton"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/settings_essais_title"
@@ -486,11 +667,20 @@
                 android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
 
-            <Button
-                android:id="@+id/settings_licences"
-                style="@style/ActionButton"
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="@string/about_licences" />
+                android:orientation="horizontal">
+
+                <Button android:id="@+id/settings_privacy" style="@style/ActionButton" android:text="@string/about_privacy" />
+
+                <Button
+                    android:id="@+id/settings_licences"
+                    style="@style/ActionButton"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/about_licences" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 </ScrollView>

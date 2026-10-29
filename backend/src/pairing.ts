@@ -3,6 +3,7 @@ import os from "node:os";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { config } from "./config.ts";
 import { logFailure } from "./log.ts";
+import { packaged } from "./paths.ts";
 import { alert, computerName, openTarget, osName, pointerMove, pointerScroll } from "./os.ts";
 import { handlePointerDatagram, POINTER_HEADER, PointerGate } from "./pointer.ts";
 
@@ -37,6 +38,8 @@ export function identity() {
     tlsPort: config.loopbackOnly ? null : config.tlsPort,
     // Version du paquet (tag de la release, posée par scripts/package.ts) ; "dev" lancé depuis le dépôt.
     version: process.env.COMPANION_VERSION || "dev",
+    // Mise à jour envoyée par la tablette (POST /companion/backend/update) : absent d'un compagnon plus ancien.
+    backendUpdate: packaged,
   };
 }
 
@@ -213,5 +216,7 @@ export function confirmPairing(request: string, fingerprint: string) {
 
 /** Pour la page locale : la tablette qui attend qu'on saisisse son code (jamais le code lui-même). */
 export function pendingCode() {
-  return pending && Date.now() < pending.expires && pending.code && !pending.approved ? { tablet: pending.tablet } : null;
+  if (!pending || Date.now() >= pending.expires || !pending.code || pending.approved) return null;
+  // En secondes (jamais 6 chiffres à la suite : la page ne montre aucun code) ; la page en tire son compte à rebours.
+  return { tablet: pending.tablet, remainingS: Math.ceil((pending.expires - Date.now()) / 1000), ttlS: CODE_TTL_MS / 1000 };
 }

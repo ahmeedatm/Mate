@@ -24,6 +24,9 @@ import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.HttpException
 import kotlinx.coroutines.launch
 
+/** Durée (s) des bandeaux de confirmation des agents (« Autorisé », « Envoyé »…) : 6 s au moins, le temps de les lire. */
+internal const val AGENT_CONFIRM_SECONDS = 6
+
 /** Défile au-delà de `maxHeight` : une longue commande ou six options ne sortent pas de l'écran. */
 private class BoundedScrollView(context: android.content.Context, private val maxHeight: Int) : ScrollView(context) {
     init {
@@ -204,7 +207,7 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
         activity.lifecycleScope.launch {
             try {
                 BackendClient(context).agents.answerPermission(a.id, allow, held)
-                activity.showBanner(context.getString(if (allow) R.string.agent_ask_allowed else R.string.agent_ask_denied), 3)
+                activity.showBanner(context.getString(if (allow) R.string.agent_ask_allowed else R.string.agent_ask_denied), AGENT_CONFIRM_SECONDS)
                 close()
                 AgentsFeed.refresh(context)
             } catch (e: Exception) {
@@ -254,7 +257,7 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
         activity.lifecycleScope.launch {
             try {
                 BackendClient(context).agents.answerPlan(a.id, approve, feedback)
-                activity.showBanner(context.getString(if (approve) R.string.agent_plan_approved else R.string.agent_plan_refused), 3)
+                activity.showBanner(context.getString(if (approve) R.string.agent_plan_approved else R.string.agent_plan_refused), AGENT_CONFIRM_SECONDS)
                 close()
                 AgentsFeed.refresh(context)
             } catch (e: Exception) {
@@ -388,7 +391,7 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
         activity.lifecycleScope.launch {
             try {
                 BackendClient(context).agents.answerQuestions(a.id, d.build())
-                activity.showBanner(context.getString(R.string.agent_ask_sent), 3)
+                activity.showBanner(context.getString(R.string.agent_ask_sent), AGENT_CONFIRM_SECONDS)
                 close()
                 AgentsFeed.refresh(context)
             } catch (e: Exception) {

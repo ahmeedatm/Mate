@@ -136,3 +136,19 @@ fun reconcileKeys(chosen: List<KeyRef>, pages: List<DeckPage>): List<KeyRef>? {
     }
     return result.takeIf { it != chosen }
 }
+
+/**
+ * Cotes d'une case de touche, en dp et sp. Normales : plaque de 52 dp, libellé de 13 sp. Grandes (thème Contraste
+ * élevé, `c_big_keys`) : colonnes de 148 dp, plaque de 80 dp, libellé de 18 sp, assez pour deux lignes.
+ */
+class TileMetrics(val columnDp: Int, val cellDp: Int, val plateDp: Int, val labelSp: Float, val initialSp: Float) {
+    companion object {
+        val NORMAL = TileMetrics(columnDp = 96, cellDp = 100, plateDp = 52, labelSp = 13f, initialSp = 30f)
+        val LARGE = TileMetrics(columnDp = 148, cellDp = 148, plateDp = 80, labelSp = 18f, initialSp = 42f)
+
+        fun of(big: Boolean) = if (big) LARGE else NORMAL
+
+        /** Rayon des coins d'une plaque : 22 sur 52, gardé en proportion. */
+        fun radiusFor(plate: Int) = plate * 22 / 52
+    }
+}

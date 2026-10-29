@@ -57,7 +57,10 @@ describe("appairage", () => {
     assert.equal(req.status, 200);
     assert.equal((await server.call("POST", "/pair/reveal", { request: req.json.request, nonce: tablet }, false)).status, 200);
     const local = await server.call("GET", "/local/status", undefined, false);
-    assert.deepEqual(local.json.pairing, { tablet: "Tablette CI" });
+    const { tablet: waiting, remainingS, ttlS } = local.json.pairing;
+    assert.equal(waiting, "Tablette CI");
+    assert.equal(ttlS, 120);
+    assert.ok(remainingS > 0 && remainingS <= 120);
 
     // En HTTP local, pas de certificat : l'empreinte du calcul est vide.
     const code = pairingCode("", tablet, req.json.nonce);
@@ -176,6 +179,15 @@ describe("pages locales", () => {
     assert.match(json, /<html/i);
   });
 
+  it("sert les polices Outfit des pages sans jeton, et rien d'autre", async () => {
+    const font = await fetch(`${server.url}/web/outfit-400.ttf`);
+    assert.equal(font.status, 200);
+    assert.equal(font.headers.get("content-type"), "font/ttf");
+    assert.ok((await font.arrayBuffer()).byteLength > 10_000);
+    assert.equal((await fetch(`${server.url}/web/outfit-900.ttf`)).status, 401);
+    assert.equal((await server.call("GET", "/web/..%2Fconfig.ts")).status, 404);
+  });
+
   it("refuse la page locale demandée sous un autre nom d'hôte (DNS rebinding)", async () => {
     // fetch ne laisse pas changer l'en-tête Host : requête http brute.
     const status = await new Promise<number>((resolve, reject) => {
@@ -236,6 +248,38 @@ describe("mises à jour de la tablette", () => {
 
     const res = await fetch(`${server.url}/updates/file/companion-1.2.4.apk`, { headers: { authorization: `Bearer ${TOKEN}` } });
     assert.equal(await res.text(), "apk 1.2.4");
+  });
+
+  it("annonce l'archive du backend ajoutée, une par plateforme, et la sert", async () => {
+    const add = (file: string) => {
+      const archive = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "companion-backend-")), file);
+      fs.writeFileSync(archive, `archive ${file}`);
+      execFileSync(process.execPath, ["--import", "tsx", "scripts/updates.ts", "add", archive], {
+        cwd: path.resolve(import.meta.dirname, ".."),
+        env: { ...process.env, DATA_DIR: server.dataDir },
+      });
+    };
+    add("backend-1.2.3-mac.tar.gz");
+    add("backend-1.2.4-mac.tar.gz");
+    add("backend-1.2.4-windows.tar.gz");
+
+    const { json } = await server.call("GET", "/updates");
+    assert.equal(json.updates.length, 2, "les APK restent");
+    assert.deepEqual(
+      json.backends.map((b: any) => [b.os, b.file, b.version, b.sha256]),
+      [
+        ["mac", "backend-1.2.4-mac.tar.gz", "1.2.4", createHash("sha256").update("archive backend-1.2.4-mac.tar.gz").digest("hex")],
+        [
+          "windows",
+          "backend-1.2.4-windows.tar.gz",
+          "1.2.4",
+          createHash("sha256").update("archive backend-1.2.4-windows.tar.gz").digest("hex"),
+        ],
+      ],
+    );
+    assert.equal(fs.existsSync(path.join(server.dataDir, "updates", "backend-1.2.3-mac.tar.gz")), false, "ancienne archive retirée");
+    const res = await fetch(`${server.url}/updates/file/backend-1.2.4-mac.tar.gz`, { headers: { authorization: `Bearer ${TOKEN}` } });
+    assert.equal(await res.text(), "archive backend-1.2.4-mac.tar.gz");
   });
 });
 

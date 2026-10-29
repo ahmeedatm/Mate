@@ -461,6 +461,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         grid.editing = true
         editBar.visibility = View.VISIBLE
         scaleWidgets(EDIT_SCALE)
+        (activity as? MainActivity)?.refreshMiniPlayer()
     }
 
     /** Mode Modifier : les widgets du profil se resserrent un peu (pas de tremblement, c'est une boucle) ; 1 en sortant. */
@@ -471,12 +472,15 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         }
     }
 
+    fun isEditing() = view != null && grid.editing
+
     private fun endEdit(keep: Boolean) {
         if (!grid.editing) return
         scaleWidgets(1f)
         deckOverlays?.hideAll()
         grid.editing = false
         editBar.visibility = View.GONE
+        (activity as? MainActivity)?.refreshMiniPlayer()
         val previous = backup
         backup = null
         if (!keep && previous != null) {
@@ -491,7 +495,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     override fun onAddAt(col: Int, row: Int) {
         val ctx = requireContext()
-        val types = WidgetType.entries
+        // Seulement ce que l'ordinateur actif offre (Jira, GitLab) et ce que ses plugins laissent (Ouvertes, Son, Pavé).
+        val types = WidgetType.entries.filter { it.offered(features) }
         val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(8), dp(16), dp(8)) }
         val dialog = AlertDialog.Builder(ctx)
             .setTitle(R.string.home_gallery_title)
@@ -514,6 +519,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             setPadding(dp(16), dp(12), dp(16), dp(12))
             addView(ImageView(ctx).apply {
                 setImageResource(type.icon)
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
                 setColorFilter(themeColor(ctx, R.attr.c_accent))
             }, LinearLayout.LayoutParams(dp(28), dp(28)))
             addView(LinearLayout(ctx).apply {

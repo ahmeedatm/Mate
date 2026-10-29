@@ -9,8 +9,8 @@ class AppThemeTest {
     private val context = FakeContext()
 
     @Test
-    fun `Cadran, Cadran nuit et Retro`() {
-        assertEquals(listOf(AppTheme.CADRAN, AppTheme.CADRAN_NUIT, AppTheme.RETRO), AppTheme.entries.toList())
+    fun `Cadran, Cadran nuit, Retro et Contraste`() {
+        assertEquals(listOf(AppTheme.CADRAN, AppTheme.CADRAN_NUIT, AppTheme.RETRO, AppTheme.CONTRASTE), AppTheme.entries.toList())
     }
 
     @Test
@@ -36,5 +36,17 @@ class AppThemeTest {
     fun `Retro enregistre est garde`() {
         Prefs.setTheme(context, "RETRO")
         assertEquals(AppTheme.RETRO, AppTheme.current(context))
+    }
+
+    @Test
+    fun `Contraste enregistre est garde`() {
+        Prefs.setTheme(context, "CONTRASTE")
+        assertEquals(AppTheme.CONTRASTE, AppTheme.current(context))
+    }
+
+    @Test
+    fun `un nom de theme inconnu retombe sur Cadran`() {
+        Prefs.setTheme(context, "CONTRASTE_ELEVE")
+        assertEquals(AppTheme.CADRAN, AppTheme.current(context))
     }
 }

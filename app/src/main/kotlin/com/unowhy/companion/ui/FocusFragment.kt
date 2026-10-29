@@ -94,6 +94,11 @@ class FocusFragment : Fragment() {
         })
     }
 
+    /** Ne pas déranger changé depuis la page de l'ordinateur. */
+    fun onRemoteSettings() {
+        view?.findViewById<Button>(R.id.focus_dnd)?.isSelected = Prefs.focusDnd(requireContext())
+    }
+
     override fun onStart() {
         super.onStart()
         FocusTimer.observe(listener)
@@ -114,7 +119,7 @@ class FocusFragment : Fragment() {
         }
 
     private fun chipParams() =
-        LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { marginStart = dp(4); marginEnd = dp(4) }
+        LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginStart = dp(4); marginEnd = dp(4) }
 
     private fun render(state: FocusTimer.State) {
         val focus = state.phase == FocusTimer.Phase.FOCUS

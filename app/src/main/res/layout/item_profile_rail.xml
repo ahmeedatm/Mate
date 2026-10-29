@@ -53,7 +53,7 @@
         android:minWidth="18dp"
         android:paddingStart="5dp"
         android:paddingEnd="5dp"
-        android:textColor="?attr/c_paper"
+        android:textColor="?attr/c_on_ko"
         android:textSize="11sp"
         android:textStyle="bold"
         android:visibility="gone" />

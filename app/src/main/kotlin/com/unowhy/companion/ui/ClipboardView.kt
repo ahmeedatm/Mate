@@ -29,6 +29,7 @@ import com.unowhy.companion.audio.Speaker
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.ClipContent
 import com.unowhy.companion.net.HttpException
+import com.unowhy.companion.voice.Mic
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -242,6 +243,8 @@ class ClipboardView(
     fun micDenied() = showSendStatus(context.getString(R.string.voice_no_mic))
 
     private fun setListening(on: Boolean) {
+        // Pris avant startListening, rendu à la fin de la dictée : le mot de réveil se tait pendant ce temps.
+        Mic.set(Mic.CLIPBOARD, on)
         listening = on
         dictateButton.setText(if (on) R.string.clip_dictate_stop else R.string.clip_dictate)
     }

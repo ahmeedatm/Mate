@@ -1,9 +1,10 @@
 # CI : sur chaque MR, sur main et sur les tags. Rien n'arrive sur main sans pipeline vert.
 # En MR, seuls les jobs de la zone touchée tournent (rules:changes, voir docs/developpement.md, section CI) ;
 # sur main et sur un tag, tout tourne.
-# Tag vX.Y.Z : mêmes tests, puis installeurs de l'ordinateur, APK signé et release GitLab.
+# Tag vX.Y.Z : mêmes tests, puis applis portables de l'ordinateur, APK signé et release GitLab.
 # Branche protégée essai/mr-<iid> : l'APK signé d'essai (job manuel) et, si backend/ change, l'archive du backend, publiés
 # dans le paquet commun companion-updates/essais, une entrée par MR (docs/developpement.md, section Release).
+# Sur main, purge-essais retire de ce paquet les entrées des MR fusionnées.
 
 workflow:
   rules:
@@ -79,6 +80,8 @@ zones:
 backend:
   extends: [.node, .zone-backend]
   stage: test
+  # Image avec git : le test de purge-essais lit un vrai historique git (la slim n'en a pas).
+  image: node:22.22-bookworm
   script:
     # Format (prettier --check) puis typecheck.
     - npm run lint
@@ -151,15 +154,15 @@ android:
       junit: app/build/test-results/testDebugUnitTest/*.xml
     expire_in: 2 weeks
 
-# Installeurs de l'ordinateur (node embarqué) : backend/scripts/package.ts. Un job par plateforme : les deux
-# ensemble dépassent la limite d'artefacts par défaut (100 Mo). Seulement sur un tag de version, pour la release.
-# nsis : makensis compile l'installeur Windows (Debian bookworm : NSIS 3.08).
+# Applis portables de l'ordinateur, sans installation (node embarqué) : backend/scripts/package.ts. Un job par
+# plateforme : les deux ensemble dépassent la limite d'artefacts par défaut (100 Mo). Seulement sur un tag de version,
+# pour la release. zip et unzip : le runtime Windows est zippé puis ajouté à l'exe, l'appli Mac est zippée.
 .package:
   extends: [.node, .release-tag]
   stage: build
   dependencies: []
   before_script:
-    - apt-get update -qq && apt-get install -y -qq --no-install-recommends zip unzip nsis > /dev/null
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends zip unzip > /dev/null
     - !reference [.node, before_script]
   script:
     - npm run package -- $PLATFORM
@@ -178,6 +181,19 @@ package-mac:
   extends: .package
   variables:
     PLATFORM: mac
+
+# Archives du backend de la release (sans node ni lanceur, version du tag) : la tablette en envoie une à l'ordinateur
+# actif, qui se met à jour sans installeur (backend/src/essai-backend.ts, applyUpdate).
+package-backend:
+  extends: [.node, .release-tag]
+  stage: build
+  dependencies: []
+  script:
+    - npm run package -- essai
+  artifacts:
+    paths:
+      - dist/backend-*.tar.gz
+    expire_in: 1 week
 
 # Pilote et lanceur recompilés sous Windows : échoue si le C# ne compile pas ou si les exe commités ne sont plus
 # ceux des sources (backend/qa/build-helper-windows.ps1). Runner partagé « HiSqool Windows » (Docker, Server Core,
@@ -245,14 +261,15 @@ android-release:
       - dist/companion-*
     expire_in: 1 week
 
-# Serveur central des mises à jour de la tablette : manifest.json, l'APK de la dernière version et les installeurs de
-# l'ordinateur (que la tablette télécharge puis sert sur son WiFi) déposés dans le paquet générique UPDATES_URL (jeton
+# Serveur central des mises à jour de la tablette : manifest.json, l'APK de la dernière version, les applis de
+# l'ordinateur (que la tablette télécharge puis sert sur son WiFi) et les archives du backend (mise à jour de
+# l'ordinateur depuis la tablette) déposés dans le paquet générique UPDATES_URL (jeton
 # du job), anciens fichiers supprimés. Voir docs/developpement.md, section Release.
 updates:
   extends: .release-tag
   stage: release
   image: node:22.22-bookworm-slim
-  needs: [android-release, package-windows, package-mac]
+  needs: [android-release, package-windows, package-mac, package-backend]
   script:
     - node scripts/updates-publish.mjs dist updates
 
@@ -325,6 +342,23 @@ essai-updates:
     - node scripts/updates-publish.mjs --essai "${CI_COMMIT_BRANCH#essai/mr-}" dist updates
     - echo "Essai publié. Sur la tablette, Réglages > Mises à jour > Rechercher, puis choisir la MR."
 
+# Essais des MR fusionnées : sur main, retire de companion-updates/essais les entrées dont la MR figure dans l'historique
+# (lignes « See merge request <projet>!N »), donc plus listées dans Réglages > Mises à jour. Historique complet, et image
+# avec git (la slim n'en a pas). Même resource_group que essai-updates : jamais pendant une publication.
+purge-essais:
+  stage: release
+  image: node:22.22-bookworm
+  needs: []
+  interruptible: false
+  resource_group: essais
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  variables:
+    GIT_DEPTH: "0"
+    UPDATES_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/companion-updates/essais
+  script:
+    - node scripts/updates-publish.mjs --purge-fusionnes updates
+
 # Release GitLab : liens vers les fichiers des jobs du tag, pas de copie dans le registre (le zip Mac y reçoit un 500
 # avec le jeton du job). Fichiers gardés : dernière pipeline réussie du tag (« Keep artifacts from most recent successful jobs »).
 release:
@@ -347,5 +381,5 @@ release:
         LINKS="$LINKS{\"name\":\"${f%%:*}\",\"url\":\"$BASE/${f%%:*}?job=${f##*:}\",\"link_type\":\"package\"},"
       done
       glab release create "$CI_COMMIT_TAG" --ref "$CI_COMMIT_SHA" --name "Compagnon $CI_COMMIT_TAG" \
-        --notes "Installeurs de l'ordinateur (Windows, Mac) et APK de la tablette. Mise à jour de la tablette par le « serveur Unowhy » : docs/developpement.md, section Release." \
+        --notes "Applis portables de l'ordinateur (Windows, Mac) et APK de la tablette. Mise à jour de la tablette par le « serveur Unowhy » : docs/developpement.md, section Release." \
         --assets-links "[${LINKS%,}]"

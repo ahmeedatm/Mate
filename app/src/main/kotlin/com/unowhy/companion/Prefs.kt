@@ -15,11 +15,17 @@ object Prefs {
     private const val KEY_FOCUS_DND = "focus_dnd"
     private const val KEY_AGENTS_PRIVATE = "agents_private"
     private const val KEY_NOTIFICATIONS_DISCREET = "notifications_discreet"
+    private const val KEY_WAKE_WORD = "wake_word"
+    private const val KEY_WEATHER_LOCATION = "weather_location"
+    private const val KEY_TEXT_SCALE = "text_scale"
     private const val KEY_FRAME_DELAY = "frame_delay_min"
     private const val KEY_FRAME_INTERVAL = "frame_interval_s"
     private const val KEY_TRIAL_MR = "trial_mr"
     private const val KEY_TRIAL_BACKEND = "trial_backend"
     private const val KEY_TRIAL_OPENED = "trial_opened"
+    private const val KEY_LEGIBLE_FONT = "legible_font"
+    private const val KEY_REDUCE_MOTION = "reduce_motion"
+    private const val KEY_READ_BANNERS = "read_banners"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -117,10 +123,58 @@ object Prefs {
         prefs(context).edit().putBoolean(KEY_NOTIFICATIONS_DISCREET, value).apply()
     }
 
+    /** Mot de réveil « Mate » : écoute du mot quand Companion est à l'écran (voice/WakeWord). Activé par défaut. */
+    fun wakeWord(context: Context): Boolean = prefs(context).getBoolean(KEY_WAKE_WORD, true)
+
+    fun setWakeWord(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_WAKE_WORD, value).apply()
+    }
+
+    /**
+     * Ville de la météo trouvée seule par la position (services de localisation de Google, docs/confidentialite.md).
+     * Coupé par défaut ; « Ma position » dans « Choisir ma ville » reste possible, c'est une demande explicite.
+     */
+    /**
+     * Taille du texte de l'appli, en plus de celle d'Android (que le kiosque empêche de régler) : 1 = normale.
+     * Appliquée par MainActivity.attachBaseContext ; un changement recrée l'activité.
+     */
+    fun textScale(context: Context): Float = prefs(context).getFloat(KEY_TEXT_SCALE, 1f)
+
+    fun setTextScale(context: Context, value: Float) {
+        prefs(context).edit().putFloat(KEY_TEXT_SCALE, value).apply()
+    }
+
+    fun weatherLocation(context: Context): Boolean = prefs(context).getBoolean(KEY_WEATHER_LOCATION, false)
+
+    fun setWeatherLocation(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_WEATHER_LOCATION, value).apply()
+    }
+
     fun theme(context: Context): String? = prefs(context).getString(KEY_THEME, null)
 
     fun setTheme(context: Context, value: String) {
         prefs(context).edit().putString(KEY_THEME, value).apply()
+    }
+
+    /** Accessibilité : police Atkinson Hyperlegible à la place de celles du thème. Désactivé par défaut. */
+    fun legibleFont(context: Context): Boolean = prefs(context).getBoolean(KEY_LEGIBLE_FONT, false)
+
+    fun setLegibleFont(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_LEGIBLE_FONT, value).apply()
+    }
+
+    /** Accessibilité : ni animations continues ni ressorts (Look.still). Désactivé par défaut. */
+    fun reduceMotion(context: Context): Boolean = prefs(context).getBoolean(KEY_REDUCE_MOTION, false)
+
+    fun setReduceMotion(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_REDUCE_MOTION, value).apply()
+    }
+
+    /** Accessibilité : notifications du PC et messages de l'ordinateur lus à voix haute. Désactivé par défaut. */
+    fun readBanners(context: Context): Boolean = prefs(context).getBoolean(KEY_READ_BANNERS, false)
+
+    fun setReadBanners(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_READ_BANNERS, value).apply()
     }
 
     /** MR de l'essai installé par la stable (0 : aucun, ou installé autrement) et son backend : « Ouvrir l'essai » les relit. */

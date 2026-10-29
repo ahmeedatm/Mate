@@ -1,5 +1,7 @@
 package com.unowhy.companion.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.media.AudioManager
 import android.os.BatteryManager
@@ -29,8 +31,12 @@ import com.unowhy.companion.MainActivity
 import com.unowhy.companion.Mode
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
+import com.unowhy.companion.device.Accessibility
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
+import com.unowhy.companion.installers.BackendPlan
+import com.unowhy.companion.installers.BackendRelease
+import com.unowhy.companion.installers.CompanionUpdater
 import com.unowhy.companion.installers.InstallerService
 import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.kiosk.UpdatePlan
@@ -38,12 +44,14 @@ import com.unowhy.companion.kiosk.Updater
 import com.unowhy.companion.net.AppUpdate
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.Essai
+import com.unowhy.companion.net.Identity
 import com.unowhy.companion.net.Link
 import com.unowhy.companion.net.UpdateSource
 import com.unowhy.companion.net.Wifi
 import com.unowhy.companion.trial.EssaiBackend
 import com.unowhy.companion.trial.EssaiPlan
 import com.unowhy.companion.trial.Trial
+import com.unowhy.companion.voice.WakeModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -66,13 +74,20 @@ class SettingsFragment : Fragment() {
     private lateinit var volume: SeekBar
     private lateinit var nightDim: SwitchCompat
     private lateinit var notifDiscreet: SwitchCompat
+    private lateinit var wakeWord: SwitchCompat
+    private lateinit var wakeStatus: TextView
+    private lateinit var weatherLocation: SwitchCompat
+    private lateinit var talkBack: SwitchCompat
     private lateinit var tabletInfo: TextView
     private lateinit var updatesStatus: TextView
     private lateinit var updates: LinearLayout
     private lateinit var essaisTitle: TextView
     private lateinit var essais: LinearLayout
     private lateinit var switchApp: Button
+    private lateinit var companionStatus: TextView
+    private lateinit var companionUpdate: Button
     private var installing = false
+    private var companionUpdating = false
     private val main get() = requireActivity() as MainActivity
     private val adder by lazy { ComputerAdder(requireActivity(), main.lifecycleScope) { main.onComputerChanged(it) } }
     private val wifi by lazy { WifiPicker(requireActivity(), main.lifecycleScope) { if (view != null) renderWifi() } }
@@ -83,6 +98,7 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, state: Bundle?) {
         computers = view.findViewById(R.id.settings_computers)
         view.findViewById<Button>(R.id.settings_add_computer).setOnClickListener { adder.search() }
+        view.findViewById<Button>(R.id.settings_plugins).setOnClickListener { main.showPlugins() }
         view.findViewById<Button>(R.id.settings_add_manual).setOnClickListener { adder.manual() }
         kioskCard = view.findViewById(R.id.settings_kiosk_card)
         view.findViewById<View>(R.id.settings_title).setOnLongClickListener { askTechCode(); true }
@@ -95,10 +111,13 @@ class SettingsFragment : Fragment() {
         autoJoinHint = view.findViewById(R.id.settings_autojoin_hint)
         wifiStatus = view.findViewById(R.id.settings_wifi_status)
         view.findViewById<Button>(R.id.settings_wifi).setOnClickListener { wifi.show() }
+        view.findViewById<Button>(R.id.settings_tablet_remote).setOnClickListener { openOnComputer() }
         updatesStatus = view.findViewById(R.id.settings_updates_status)
         updates = view.findViewById(R.id.settings_updates)
         essaisTitle = view.findViewById(R.id.settings_essais_title)
         essais = view.findViewById(R.id.settings_essais)
+        companionStatus = view.findViewById(R.id.settings_companion_status)
+        companionUpdate = view.findViewById(R.id.settings_companion_update)
         view.findViewById<Button>(R.id.settings_updates_check).setOnClickListener { checkUpdates() }
         switchApp = view.findViewById(R.id.settings_switch_app)
         switchApp.setText(if (BuildConfig.TRIAL) R.string.trial_back else R.string.trial_open)
@@ -110,15 +129,22 @@ class SettingsFragment : Fragment() {
         volume = view.findViewById(R.id.settings_volume)
         nightDim = view.findViewById(R.id.settings_night_dim)
         notifDiscreet = view.findViewById(R.id.settings_notif_discreet)
+        wakeWord = view.findViewById(R.id.settings_wake_word)
+        wakeStatus = view.findViewById(R.id.settings_wake_word_status)
+        weatherLocation = view.findViewById(R.id.settings_weather_location)
         tabletInfo = view.findViewById(R.id.settings_tablet_info)
         setUpTablet()
         setUpThemes(view.findViewById(R.id.settings_themes))
         setUpRail(view)
+        setUpAccessibility(view)
+        setUpReadingAids(view)
         renderComputers()
         renderWifi()
         renderSwitchApp()
+        checkCompanion()
 
-        view.findViewById<Button>(R.id.settings_licences).setOnClickListener { showLicences() }
+        view.findViewById<Button>(R.id.settings_licences).setOnClickListener { showText(R.string.about_licences, "licences.txt", monospace = true) }
+        view.findViewById<Button>(R.id.settings_privacy).setOnClickListener { showText(R.string.about_privacy, "confidentialite.txt", monospace = false) }
         view.findViewById<Button>(R.id.settings_kiosk_exit).setOnClickListener {
             Kiosk.exit(requireActivity())
             renderKiosk()
@@ -144,7 +170,13 @@ class SettingsFragment : Fragment() {
             renderKiosk()
             renderSwitchApp()
             loadAutoJoin()
+            renderTalkBack()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        renderTalkBack()
     }
 
     /** État de la liaison changé (MainActivity) : ligne de l'ordinateur actif à jour. */
@@ -279,6 +311,46 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    // --- Accessibilité (COMP-50) : TalkBack et taille du texte, que le kiosque empêche de régler dans Android
+
+    private fun setUpAccessibility(view: View) {
+        val ctx = requireContext()
+        talkBack = view.findViewById(R.id.settings_talkback)
+        val hint = view.findViewById<TextView>(R.id.settings_talkback_hint)
+        val installed = Accessibility.talkBackInstalled(ctx)
+        val allowed = Accessibility.canConfigure(ctx)
+        talkBack.isEnabled = installed && allowed
+        if (!installed) hint.setText(R.string.a11y_talkback_missing) else if (!allowed) hint.setText(R.string.a11y_talkback_locked)
+        renderTalkBack()
+
+        val row = view.findViewById<LinearLayout>(R.id.settings_text_sizes)
+        val current = Prefs.textScale(ctx)
+        for ((scale, label) in TEXT_SIZES) {
+            val chip = Button(ctx, null, 0, R.style.Chip).apply {
+                setText(label)
+                isSelected = scale == current
+                setOnClickListener {
+                    if (scale == current) return@setOnClickListener
+                    Prefs.setTextScale(context, scale)
+                    requireActivity().recreate()
+                }
+            }
+            row.addView(chip, LinearLayout.LayoutParams(0, dp(48), 1f).apply { if (row.childCount > 0) marginStart = dp(10) })
+        }
+    }
+
+    /**
+     * État réel de TalkBack : il change aussi sans l'interrupteur (raccourci des touches de volume, Paramètres hors
+     * kiosque), relu à chaque retour sur les Réglages. Écouteur retiré le temps de la relecture : rien n'est réécrit.
+     */
+    private fun renderTalkBack() {
+        if (!::talkBack.isInitialized) return
+        val ctx = requireContext()
+        talkBack.setOnCheckedChangeListener(null)
+        talkBack.isChecked = Accessibility.talkBackOn(ctx)
+        talkBack.setOnCheckedChangeListener { _, checked -> Accessibility.setTalkBack(ctx, checked) }
+    }
+
     // --- Tablette : luminosité, volume, batterie (cachés par le kiosque)
 
     /** Barre de gauche : noms sous les icônes et outils affichés, appliqués tout de suite. */
@@ -328,6 +400,30 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    /**
+     * Accessibilité, aides à la lecture (ui/ReadingAids.kt) : interrupteurs sous la taille du texte. Police et animations
+     * s'appliquent à la création de l'activité (AppTheme.apply, vues animées) : les changer la recrée, comme le thème.
+     * Les bandeaux lus sont relus à chaque bandeau.
+     */
+    private fun setUpReadingAids(view: View) {
+        val ctx = requireContext()
+        fun recreating(id: Int, get: (android.content.Context) -> Boolean, set: (android.content.Context, Boolean) -> Unit) {
+            view.findViewById<SwitchCompat>(id).apply {
+                isChecked = get(ctx)
+                setOnCheckedChangeListener { _, checked ->
+                    set(ctx, checked)
+                    requireActivity().recreate()
+                }
+            }
+        }
+        recreating(R.id.settings_legible_font, Prefs::legibleFont, Prefs::setLegibleFont)
+        recreating(R.id.settings_reduce_motion, Prefs::reduceMotion, Prefs::setReduceMotion)
+        view.findViewById<SwitchCompat>(R.id.settings_read_banners).apply {
+            isChecked = Prefs.readBanners(ctx)
+            setOnCheckedChangeListener { _, checked -> Prefs.setReadBanners(ctx, checked) }
+        }
+    }
+
     private fun setUpTablet() {
         val ctx = requireContext()
         brightness.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -355,6 +451,16 @@ class SettingsFragment : Fragment() {
         }
         // Mode discret : lu à chaque bandeau et à chaque affichage de l'historique, rien d'autre à prévenir.
         notifDiscreet.setOnCheckedChangeListener { _, checked -> Prefs.setNotificationsDiscreet(ctx, checked) }
+        // Mot de réveil : l'activer télécharge le modèle s'il manque ; l'écoute suit tout de suite.
+        wakeWord.setOnCheckedChangeListener { _, checked ->
+            Prefs.setWakeWord(ctx, checked)
+            if (checked) WakeModel.ensure(ctx)
+            main.onWakeWordChanged()
+            renderWake()
+        }
+        viewLifecycleOwner.lifecycleScope.launch { WakeModel.state.collect { renderWake() } }
+        // Ville par la position : lu à la prochaine lecture de la météo d'un widget sans ville.
+        weatherLocation.setOnCheckedChangeListener { _, checked -> Prefs.setWeatherLocation(ctx, checked) }
         renderTablet()
     }
 
@@ -367,6 +473,9 @@ class SettingsFragment : Fragment() {
         volume.progress = ctx.getSystemService(AudioManager::class.java).getStreamVolume(AudioManager.STREAM_MUSIC)
         nightDim.isChecked = Prefs.nightDim(ctx)
         notifDiscreet.isChecked = Prefs.notificationsDiscreet(ctx)
+        wakeWord.isChecked = Prefs.wakeWord(ctx)
+        renderWake()
+        weatherLocation.isChecked = Prefs.weatherLocation(ctx)
         // Batterie (registerReceiver) et adresse IP (NetworkInterface) : appels système lents, hors thread principal.
         viewLifecycleOwner.lifecycleScope.launch {
             val battery = withContext(Dispatchers.IO) { Tablet.battery(ctx) }
@@ -376,6 +485,40 @@ class SettingsFragment : Fragment() {
             tabletInfo.text = getString(
                 R.string.tablet_info, BuildConfig.VERSION_NAME, ip ?: getString(R.string.tablet_no_address), android.os.Build.MODEL,
             )
+        }
+    }
+
+    /** Ouvre sur l'ordinateur la page du compagnon, carte Réglages de la tablette en avant. */
+    private fun openOnComputer() {
+        val ctx = requireContext()
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                BackendClient(ctx).system.openLocalPage("tablette")
+                main.showBanner(getString(R.string.tablet_remote_opened), 6)
+            } catch (e: Exception) {
+                main.showBanner(errorText(e), 6)
+            }
+        }
+    }
+
+    /** Réglages changés depuis la page de l'ordinateur : curseurs et interrupteurs à jour. */
+    fun onRemoteSettings() {
+        if (view != null) renderTablet()
+    }
+
+    /** Ligne d'état du mot de réveil : micro d'abord (sans lui rien ne sert), puis le modèle ; rien quand il est coupé. */
+    private fun renderWake() {
+        val ctx = context ?: return
+        if (view == null) return
+        val on = Prefs.wakeWord(ctx)
+        wakeStatus.visibility = if (on) View.VISIBLE else View.GONE
+        if (!on) return
+        val mic = ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        wakeStatus.text = if (!mic) getString(R.string.wake_no_mic) else when (val model = WakeModel.refresh(ctx)) {
+            WakeModel.State.Ready -> getString(R.string.wake_ready)
+            is WakeModel.State.Downloading -> getString(R.string.wake_downloading, model.percent)
+            WakeModel.State.Absent -> getString(R.string.wake_downloading, 0)
+            WakeModel.State.Failed -> getString(R.string.wake_failed)
         }
     }
 
@@ -433,12 +576,71 @@ class SettingsFragment : Fragment() {
             // Essais de MR : seulement dans la stable (device owner, qui les installe).
             if (!BuildConfig.TRIAL) showEssais()
         }
+        checkCompanion()
+    }
+
+    /** Compagnon de l'ordinateur actif : sa version et, si une plus récente est publiée, le bouton qui l'y met. */
+    private fun checkCompanion() {
+        if (companionUpdating) return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val status = CompanionUpdater.check(requireContext())
+            if (view == null || companionUpdating) return@launch
+            companionUpdate.visibility = View.GONE
+            companionStatus.visibility = if (status == null) View.GONE else View.VISIBLE
+            val identity = status?.identity
+            if (status == null) return@launch
+            if (identity == null) {
+                companionStatus.setText(R.string.companion_state_unreachable)
+                return@launch
+            }
+            val name = identity.name
+            val version = identity.version ?: getString(R.string.companion_version_old)
+            companionStatus.text = when (val d = status.decision) {
+                BackendPlan.Decision.Unreachable -> getString(R.string.companion_state_unreachable)
+                BackendPlan.Decision.FromRepo -> getString(R.string.companion_state_repo, name)
+                BackendPlan.Decision.NothingPublished -> getString(R.string.companion_state_nothing, name, version)
+                BackendPlan.Decision.OnEssai -> getString(R.string.companion_state_essai, name)
+                BackendPlan.Decision.UpToDate -> getString(R.string.companion_state_uptodate, name, version)
+                is BackendPlan.Decision.ComputerNewer -> getString(R.string.companion_state_newer, name, version, d.release.version)
+                is BackendPlan.Decision.NeedsInstaller -> {
+                    showCompanionButton(R.string.companion_update_steps) { main.companionUpdate.showInstallSteps(identity) }
+                    getString(R.string.companion_state_installer, name, version, d.release.version)
+                }
+                is BackendPlan.Decision.Available -> {
+                    showCompanionButton(R.string.companion_update_button) { updateCompanion(identity, d.release) }
+                    getString(R.string.companion_state_available, name, version, d.release.version)
+                }
+            }
+        }
+    }
+
+    private fun showCompanionButton(text: Int, onClick: () -> Unit) {
+        companionUpdate.setText(text)
+        companionUpdate.isEnabled = true
+        companionUpdate.visibility = View.VISIBLE
+        companionUpdate.setOnClickListener { onClick() }
+    }
+
+    /** Le travail tourne dans la portée de l'activité : les vues ne sont touchées que si les Réglages sont encore là. */
+    private fun updateCompanion(identity: Identity, release: BackendRelease) {
+        val showing = { isAdded && view != null }
+        main.companionUpdate.confirm(identity, release, onState = { text ->
+            companionUpdating = true
+            if (showing()) {
+                companionUpdate.isEnabled = false
+                companionUpdate.text = text
+            }
+        }, onDone = {
+            companionUpdating = false
+            if (showing()) checkCompanion()
+        })
     }
 
     /** Une ligne par essai publié, sous les mises à jour. Une erreur s'ajoute à la phrase d'état, sans masquer le reste. */
     private suspend fun showEssais() {
         try {
             val list = Updater.essais(requireContext())
+            essais.removeAllViews()
             essaisTitle.visibility = View.VISIBLE
             essaisTitle.setText(if (list.isEmpty()) R.string.essais_none else R.string.essais_title)
             val installed = Updater.installed(requireContext(), Trial.TRIAL)
@@ -494,7 +696,8 @@ class SettingsFragment : Fragment() {
         }
         val installedCode = info?.let { Updater.versionCode(it) }
         val state = UpdatePlan.state(update, installedCode)
-        val plan = essai?.let { EssaiPlan.install(update.versionCode, installedCode) }
+        val installedMr = Prefs.trialMr(ctx)
+        val plan = essai?.let { EssaiPlan.install(update.versionCode, installedCode, essai.mr, installedMr) }
         val texts = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         texts.addView(TextView(ctx).apply {
             textSize = 16f
@@ -504,7 +707,7 @@ class SettingsFragment : Fragment() {
         texts.addView(TextView(ctx).apply {
             textSize = 14f
             setTextColor(themeColor(ctx, if (plan == EssaiPlan.Install.UNINSTALL_FIRST || (essai == null && state == UpdatePlan.State.OLDER)) R.attr.c_warn else R.attr.c_text_dim))
-            text = if (essai != null) essaiState(essai, plan!!, info) else when (state) {
+            text = if (essai != null) essaiState(essai, plan!!, info, installedMr) else when (state) {
                 UpdatePlan.State.NEWER -> if (info == null) getString(R.string.updates_row_absent, sourceName(update.source))
                 else getString(R.string.updates_row_newer, info.versionName, sourceName(update.source))
                 UpdatePlan.State.INSTALLED -> getString(R.string.updates_row_installed)
@@ -538,12 +741,15 @@ class SettingsFragment : Fragment() {
         getString(if (source == UpdateSource.COMPUTER) R.string.updates_source_computer else R.string.updates_source_server)
 
     /** Version, backend, et ce que l'installation fait de l'essai déjà installé. */
-    private fun essaiState(essai: Essai, plan: EssaiPlan.Install, info: android.content.pm.PackageInfo?): String {
+    private fun essaiState(essai: Essai, plan: EssaiPlan.Install, info: android.content.pm.PackageInfo?, installedMr: Int): String {
         val backend = getString(if (essai.hasBackend) R.string.essai_row_backend else R.string.essai_row_no_backend)
         val state = when (plan) {
-            EssaiPlan.Install.NONE -> getString(R.string.updates_row_installed)
-            EssaiPlan.Install.INSTALL -> if (info == null) getString(R.string.essai_row_absent) else getString(R.string.essai_row_replace, info.versionName)
-            EssaiPlan.Install.UNINSTALL_FIRST -> getString(R.string.essai_row_downgrade, info?.versionName)
+            EssaiPlan.Install.NONE -> getString(R.string.essai_row_installed)
+            EssaiPlan.Install.INSTALL -> if (info == null) getString(R.string.essai_row_absent)
+            else if (installedMr != 0) getString(R.string.essai_row_replace_mr, installedMr, info.versionName)
+            else getString(R.string.essai_row_replace, info.versionName)
+            EssaiPlan.Install.UNINSTALL_FIRST -> if (installedMr != 0) getString(R.string.essai_row_downgrade_mr, installedMr, info?.versionName)
+            else getString(R.string.essai_row_downgrade, info?.versionName)
         }
         return getString(R.string.essai_row_version, essai.update.versionName, backend) + "\n" + state
     }
@@ -594,6 +800,8 @@ class SettingsFragment : Fragment() {
                 }
                 showResult(button, bar, ok = true)
                 if (showing()) updatesStatus.setText(R.string.updates_hint)
+                // Les lignes reflètent le nouvel essai installé (« Installée », MR remplacée).
+                if (essai != null && showing()) showEssais()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // Annulé : retour à l'état de départ, rien d'installé.
                 bar.visibility = View.GONE
@@ -682,24 +890,35 @@ class SettingsFragment : Fragment() {
     }
 
     /**
-     * Mentions de licences des composants tiers (assets/licences.txt, généré par scripts/licences-android.mjs) :
-     * obligatoires pour les bibliothèques Apache 2.0 et les polices OFL embarquées.
+     * Texte de l'appli en plein écran : mentions de licences (assets/licences.txt, généré par
+     * scripts/licences-android.mjs, obligatoires pour les bibliothèques Apache 2.0 et les polices OFL) ou politique de
+     * confidentialité (assets/confidentialite.txt, copie de backend/config/confidentialite.txt, docs/confidentialite.md).
      */
-    private fun showLicences() {
+    private fun showText(title: Int, asset: String, monospace: Boolean) {
         val context = requireContext()
-        val text = runCatching { context.assets.open("licences.txt").bufferedReader().use { it.readText() } }.getOrDefault("")
+        val text = runCatching { context.assets.open(asset).bufferedReader().use { it.readText() } }.getOrDefault("")
         val body = TextView(context).apply {
             this.text = text
-            textSize = 12f
-            typeface = Typeface.MONOSPACE
+            textSize = if (monospace) 12f else 14f
+            if (monospace) typeface = Typeface.MONOSPACE else setLineSpacing(0f, 1.15f)
             setTextColor(themeColor(context, R.attr.c_text))
             setTextIsSelectable(false)
             setPadding(context.dp(24), context.dp(8), context.dp(24), context.dp(8))
         }
         AlertDialog.Builder(context)
-            .setTitle(R.string.about_licences)
+            .setTitle(title)
             .setView(android.widget.ScrollView(context).apply { addView(body) })
             .setPositiveButton(R.string.close, null)
             .showImmersive()
+    }
+
+    private companion object {
+        /** Facteurs de la taille du texte, en plus de celle d'Android : jusqu'à une fois et demie. */
+        val TEXT_SIZES = listOf(
+            1f to R.string.a11y_size_normal,
+            1.15f to R.string.a11y_size_large,
+            1.3f to R.string.a11y_size_larger,
+            1.5f to R.string.a11y_size_largest,
+        )
     }
 }

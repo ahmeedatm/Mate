@@ -1,5 +1,7 @@
 package com.unowhy.companion
 
+import android.content.Context
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
@@ -18,6 +20,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.unowhy.companion.agents.AgentAlerts
 import com.unowhy.companion.audio.Speaker
+import com.unowhy.companion.device.Accessibility
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
 import com.unowhy.companion.focus.FocusDnd
@@ -32,6 +35,7 @@ import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.Link
 import com.unowhy.companion.net.PcNotification
+import com.unowhy.companion.net.runCatchingCancellable
 import com.unowhy.companion.remote.RemoteLink
 import com.unowhy.companion.trial.EssaiBackend
 import com.unowhy.companion.trial.Trial
@@ -52,14 +56,18 @@ import com.unowhy.companion.ui.HomeFragment
 import com.unowhy.companion.ui.IconCache
 import com.unowhy.companion.ui.KeyboardControl
 import com.unowhy.companion.ui.Look
+import com.unowhy.companion.ui.MusicChip
 import com.unowhy.companion.ui.Navigation
 import com.unowhy.companion.ui.PhotoFrameView
+import com.unowhy.companion.ui.PluginsView
 import com.unowhy.companion.ui.ProfileRail
+import com.unowhy.companion.ui.ReadingAids
 import com.unowhy.companion.ui.SettingsFragment
 import com.unowhy.companion.ui.TabletAlerts
 import com.unowhy.companion.ui.TabletStatusView
 import com.unowhy.companion.ui.WelcomeView
 import com.unowhy.companion.ui.dp
+import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.home.Down
 import com.unowhy.companion.ui.home.HomeLayout
 import com.unowhy.companion.ui.home.LinkWatch
@@ -67,6 +75,8 @@ import com.unowhy.companion.ui.notificationBannerText
 import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.voice.VoiceControl
+import com.unowhy.companion.voice.WakeWord
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -88,6 +98,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var banner: Banner
     private lateinit var alerts: TabletAlerts
     private lateinit var welcome: WelcomeView
+    private lateinit var plugins: PluginsView
+    /** Ordinateurs dont l'écran des plugins a été fermé par « Plus tard » : plus proposé avant le prochain lancement. */
+    private val pluginsLater = mutableSetOf<String>()
     private lateinit var noComputer: View
     private val keyboard = KeyboardControl(this)
     private val focusDnd = FocusDnd(this)
@@ -98,6 +111,8 @@ class MainActivity : AppCompatActivity() {
         private set
     private val linkWatch = LinkWatch()
     private lateinit var voice: VoiceControl
+    /** Mot de réveil « Mate » : lance la même commande vocale que « Parler », sans toucher l'écran. */
+    private lateinit var wake: WakeWord
     lateinit var callOverlay: CallOverlay
         private set
     private lateinit var agentAlerts: AgentAlerts
@@ -107,8 +122,10 @@ class MainActivity : AppCompatActivity() {
     private var lastTouch = SystemClock.elapsedRealtime()
     /** Toucher qui a fermé le cadre : avalé jusqu'au lever du doigt, l'écran dessous ne le reçoit pas. */
     private var swallowTouch = false
-    private var battery: Tablet.Battery? = null
-    private val companionUpdate = CompanionUpdate(this)
+    /** Dernier état de la batterie : cadre photo, et état de la tablette envoyé à l'ordinateur. */
+    var battery: Tablet.Battery? = null
+        private set
+    val companionUpdate = CompanionUpdate(this)
     /** Micro refusé hors kiosque (en kiosque, il est accordé d'office) : la commande repart une fois accepté. */
     private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) voice.start() else showBanner(getString(R.string.voice_no_mic), 6)
@@ -128,9 +145,18 @@ class MainActivity : AppCompatActivity() {
         return answer.await()
     }
 
+    /** Taille du texte choisie dans Réglages > Accessibilité, en plus de celle d'Android (COMP-50). */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase)
+        val scale = Prefs.textScale(newBase)
+        if (scale != 1f) applyOverrideConfiguration(Configuration().apply { fontScale = newBase.resources.configuration.fontScale * scale })
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         AppTheme.apply(this)
         super.onCreate(savedInstanceState)
+        // Raccourci des touches de volume réglé sur TalkBack (kiosque : seul moyen de le lancer sans voir l'écran).
+        Accessibility.prepareShortcut(this)
         // Appli d'essai : ordinateurs de la stable repris avant de construire les écrans, sans réappairer.
         Trial.importComputers(this)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -141,8 +167,9 @@ class MainActivity : AppCompatActivity() {
         InstallerService.start(this)
 
         nav = ProfileRail(this, ::show, ::showProfile, ::openProfiles)
-        wake()
+        wakeRail()
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
+        wake = WakeWord(this, findViewById(R.id.wake_mic)) { voice.start() }
         // Lumière des agents Claude sous la carte d'appel : un appel prime sur tout.
         val agentLight = AgentLight(this)
         agentAsk = AgentAskOverlay(this)
@@ -153,12 +180,15 @@ class MainActivity : AppCompatActivity() {
         callOverlay = CallOverlay(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(callOverlay, android.view.ViewGroup.LayoutParams(-1, -1))
         tour = com.unowhy.companion.ui.TourOverlay(this) { nav.tourAnchor(it) }
+        tour.onDone = { offerPlugins() }
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(tour, android.view.ViewGroup.LayoutParams(-1, -1))
         // Cadre photo juste au-dessus des écrans : lumière des agents, question et appel restent devant.
         frame = PhotoFrameView(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(frame, 1, android.view.ViewGroup.LayoutParams(-1, -1))
-        // Lecture en cours du header : rien à relire sous le cadre photo ni sans ordinateur.
-        findViewById<com.unowhy.companion.ui.MusicChip>(R.id.music_chip).suppressed = { frame.isShowing || Computers.all(this).isEmpty() }
+        // Lecture en cours du header : rien à relire sous le cadre photo ni sans ordinateur ; cachée en mode Modifier (COMP-63).
+        findViewById<MusicChip>(R.id.music_chip).suppressed = {
+            frame.isShowing || Computers.all(this).isEmpty() || (current == Mode.HOME && homeFragment()?.isEditing() == true)
+        }
 
         keyboard.setUp()
 
@@ -204,11 +234,23 @@ class MainActivity : AppCompatActivity() {
             showBanner(getString(R.string.welcome_done, computer.name), 6)
             maybeTour()
         }
+        plugins = findViewById(R.id.plugins)
+        plugins.attach(
+            this,
+            onLater = {
+                Computers.active(this)?.let { pluginsLater += it.id }
+                maybeTour()
+            },
+            onSaved = {
+                recreateScreens()
+                maybeTour()
+            },
+        )
 
         // Retour ne quitte jamais l'appli : il ferme le document ouvert, sinon ramène à l'accueil.
         onBackPressedDispatcher.addCallback(this) {
             when {
-                welcome.visibility == View.VISIBLE -> Unit
+                welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE -> Unit
                 agentAsk.isOpen -> agentAsk.close()
                 documentPanel.visibility == View.VISIBLE -> documentPanel.close()
                 current != Mode.HOME || homeFragment()?.shownPage != shownLayout().homeProfile -> showProfile(shownLayout().homeProfile)
@@ -248,6 +290,15 @@ class MainActivity : AppCompatActivity() {
      * recréé pour relire deck, agenda, tâches et documents de cet ordinateur. Focus et sons continuent.
      */
     fun onComputerChanged(computer: Computer?, automatic: Boolean = false) {
+        recreateScreens()
+        showLink(Link(computer, Link.State.OFFLINE))
+        remote.restart()
+        if (automatic && computer != null) showBanner(getString(R.string.computer_switched, computer.name), 6)
+        offerPlugins()
+    }
+
+    /** Chaque écran est recréé : il relit le deck, l'agenda, les tâches et les documents de l'ordinateur actif. */
+    private fun recreateScreens() {
         IconCache.clear()
         // L'appel suivi était celui de l'ordinateur quitté.
         endCall()
@@ -257,9 +308,37 @@ class MainActivity : AppCompatActivity() {
         fm.fragments.forEach { tx.remove(it) }
         tx.commitNow()
         show(current)
-        showLink(Link(computer, Link.State.OFFLINE))
-        remote.restart()
-        if (automatic && computer != null) showBanner(getString(R.string.computer_switched, computer.name), 6)
+    }
+
+    /**
+     * Plugins jamais proposés sur l'ordinateur actif (premier appairage, appli compatible installée depuis) : écran
+     * des plugins. Silencieux si l'ordinateur ne répond pas ou n'est pas encore à jour.
+     */
+    private fun offerPlugins() {
+        val computer = Computers.active(this) ?: return
+        // Jamais par-dessus la visite guidée : proposé à sa fin (tour.onDone).
+        if (computer.id in pluginsLater || welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE || tour.visibility == View.VISIBLE) return
+        lifecycleScope.launch {
+            val list = runCatchingCancellable { BackendClient(this@MainActivity).plugins.list() }.getOrNull() ?: return@launch
+            if (list.any { it.fresh } && Computers.active(this@MainActivity)?.id == computer.id && welcome.visibility != View.VISIBLE && tour.visibility != View.VISIBLE) {
+                plugins.show(computer.name, list, offered = true)
+            }
+        }
+    }
+
+    /** Depuis les Réglages : l'écran des plugins, même si tout a déjà été choisi. */
+    fun showPlugins() {
+        val computer = Computers.active(this) ?: return showWelcome()
+        lifecycleScope.launch {
+            try {
+                val list = BackendClient(this@MainActivity).plugins.list()
+                if (list.isEmpty()) showBanner(getString(R.string.plugins_unavailable), 6) else plugins.show(computer.name, list, offered = false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                showBanner(errorText(e), 6)
+            }
+        }
     }
 
     /** Toucher la pastille de connexion : changer d'ordinateur (ou renommer l'actif) sans passer par les Réglages. */
@@ -301,6 +380,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         FocusTimer.observe(focusListener)
+        offerPlugins()
     }
 
     override fun onStop() {
@@ -317,6 +397,13 @@ class MainActivity : AppCompatActivity() {
             Prefs.setTrialOpened(this, false)
             lifecycleScope.launch { EssaiBackend.restoreOrigin(applicationContext) }
         }
+        wake.resume()
+    }
+
+    /** Companion quitte l'écran (écran éteint, autre appli) : le mot de réveil n'écoute plus. */
+    override fun onPause() {
+        wake.pause()
+        super.onPause()
     }
 
     private fun onBattery(state: Tablet.Battery) {
@@ -334,6 +421,7 @@ class MainActivity : AppCompatActivity() {
         documentPanel.close()
         if (isFinishing) NoisePlayer.stop()
         voice.release()
+        wake.release()
         super.onDestroy()
     }
 
@@ -348,7 +436,7 @@ class MainActivity : AppCompatActivity() {
         if (event.action == MotionEvent.ACTION_DOWN) {
             Screen.touched(this)
             lastTouch = SystemClock.elapsedRealtime()
-            wake()
+            wakeRail()
             if (frame.isShowing) {
                 closeFrame()
                 swallowTouch = true
@@ -405,6 +493,20 @@ class MainActivity : AppCompatActivity() {
 
     val documentPath: String?
         get() = documentPanel.currentPath
+
+    /**
+     * Réglages changés depuis la page de l'ordinateur (ordre `settings`). Nouveau thème : écran recréé un peu après,
+     * le temps de renvoyer le résultat ; s'il se perd, l'ordre revient et ne recrée plus rien (thème déjà en place).
+     */
+    fun onRemoteSettings(themeChanged: Boolean) {
+        if (themeChanged) {
+            window.decorView.postDelayed({ if (!isFinishing) recreate() }, 500)
+            return
+        }
+        settings()?.onRemoteSettings()
+        (supportFragmentManager.findFragmentByTag(Mode.FOCUS.tag) as? FocusFragment)?.onRemoteSettings()
+        followFocusDnd(FocusTimer.state)
+    }
 
     fun showMode(name: String) {
         // Ancien mode Deck : le profil Deck. Accueil ou nom inconnu (« tasks », ancien « chat ») : le profil Accueil.
@@ -484,10 +586,13 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Notification arrivée sur l'ordinateur (ordre `notification`) : bandeau quel que soit l'écran (sans le texte en
-     * mode discret), et liste de Depuis l'ordi relue si elle est affichée.
+     * mode discret), lu à voix haute si Réglages > Accessibilité le demande, et liste de Depuis l'ordi relue si elle
+     * est affichée.
      */
     fun onNotification(n: PcNotification) {
-        showBanner(notificationBannerText(n, Prefs.notificationsDiscreet(this)), NOTIFICATION_SECONDS)
+        val text = notificationBannerText(n, Prefs.notificationsDiscreet(this))
+        showBanner(text, NOTIFICATION_SECONDS)
+        readAloud(text)
         val computer = supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment
         computer?.onNotification()
         // Pastille sur la cloche, sauf si l'historique est déjà sous les yeux.
@@ -534,6 +639,9 @@ class MainActivity : AppCompatActivity() {
     /** Commande vocale lancée d'ailleurs que le bouton Parler (carte d'une demande d'agent). */
     fun startVoice() = voice.start()
 
+    /** Réglage du mot de réveil changé : écoute ou non tout de suite. */
+    fun onWakeWordChanged() = wake.sync()
+
     /**
      * Commande vocale pour les agents Claude ; rend la phrase à afficher. Elle n'agit que sur la carte ouverte (on voit ce
      * qu'on autorise) : sinon, elle ouvre la demande en attente. « continue » relance la dernière session finie qui le permet.
@@ -561,6 +669,12 @@ class MainActivity : AppCompatActivity() {
     /** Appel décroché sur la tablette : profil Réunion, avec les touches de l'appli (Discord : micro, sourdine, quitter). */
     fun showAppControls(app: String) = startCall(app)
 
+    /**
+     * Mode Modifier de l'Accueil changé (COMP-63) : la lecture en cours du header se cache pendant le mode Modifier, dont
+     * la barre (Ajouter, Annuler, Terminé) est à sa place.
+     */
+    fun refreshMiniPlayer() = findViewById<MusicChip>(R.id.music_chip).update()
+
     fun closeDocument() {
         documentPanel.close()
     }
@@ -575,6 +689,14 @@ class MainActivity : AppCompatActivity() {
         // Un message de l'ordinateur ou un rappel se lit : le cadre lui laisse la place.
         closeFrame()
         banner.show(text, seconds, onTap)
+    }
+
+    /**
+     * Réglages > Accessibilité > Lire les bandeaux à voix haute : bandeau d'une notification ou d'un message de
+     * l'ordinateur lu par la voix de la tablette. Coupé : rien.
+     */
+    fun readAloud(banner: String) {
+        if (Prefs.readBanners(this)) Speaker.speak(ReadingAids.spoken(banner))
     }
 
     /**
@@ -607,6 +729,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Ce qui sert encore, que le cadre ne doit pas cacher. */
     private fun frameBusy() = callOverlay.visibility == View.VISIBLE || agentAsk.isOpen || welcome.visibility == View.VISIBLE ||
+        plugins.visibility == View.VISIBLE ||
         documentPanel.visibility == View.VISIBLE || current == Mode.CAMERA || FocusTimer.state.running
 
     /** Lance le cadre tout de suite (Réglages > Cadre photo > Essayer, ou délai écoulé) ; sans photo, rien. */
@@ -694,20 +817,25 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var tour: com.unowhy.companion.ui.TourOverlay
 
-    /** Visite guidée, une fois, après l'appairage (laisse le temps aux écrans de se poser). */
+    /**
+     * Visite guidée, une fois, après l'appairage (laisse le temps aux écrans de se poser). Jamais par-dessus l'écran des
+     * plugins : relancée à sa fermeture.
+     */
     private fun maybeTour() {
-        if (welcome.visibility == View.VISIBLE || tour.visibility == View.VISIBLE) return
+        if (welcome.visibility == View.VISIBLE || tour.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE) return
         if (!com.unowhy.companion.ui.TourModel.shouldShow(this, Computers.all(this).isNotEmpty())) return
-        window.decorView.postDelayed({ if (welcome.visibility != View.VISIBLE) tour.start() }, TOUR_DELAY_MS)
+        window.decorView.postDelayed({
+            if (welcome.visibility != View.VISIBLE && plugins.visibility != View.VISIBLE && tour.visibility != View.VISIBLE) tour.start()
+        }, TOUR_DELAY_MS)
     }
 
     /** Réglages > Barre de gauche : noms et outils changés. */
     fun applyRailSettings() = nav.applySettings()
 
-    /** Repos de la barre après [REST_MS] sans toucher ; [wake] la ravive et relance l'attente. */
+    /** Repos de la barre après [REST_MS] sans toucher ; [wakeRail] la ravive et relance l'attente. */
     private val rest = Runnable { nav.setResting(true) }
 
-    private fun wake() {
+    private fun wakeRail() {
         nav.setResting(false)
         window.decorView.removeCallbacks(rest)
         window.decorView.postDelayed(rest, REST_MS)
