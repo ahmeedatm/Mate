@@ -126,6 +126,7 @@ class SettingsFragment : Fragment() {
         renderSwitchApp()
         checkCompanion()
 
+        view.findViewById<Button>(R.id.settings_licences).setOnClickListener { showLicences() }
         view.findViewById<Button>(R.id.settings_kiosk_exit).setOnClickListener {
             Kiosk.exit(requireActivity())
             renderKiosk()
@@ -721,5 +722,27 @@ class SettingsFragment : Fragment() {
                 else -> R.string.kiosk_on
             },
         )
+    }
+
+    /**
+     * Mentions de licences des composants tiers (assets/licences.txt, généré par scripts/licences-android.mjs) :
+     * obligatoires pour les bibliothèques Apache 2.0 et les polices OFL embarquées.
+     */
+    private fun showLicences() {
+        val context = requireContext()
+        val text = runCatching { context.assets.open("licences.txt").bufferedReader().use { it.readText() } }.getOrDefault("")
+        val body = TextView(context).apply {
+            this.text = text
+            textSize = 12f
+            typeface = Typeface.MONOSPACE
+            setTextColor(themeColor(context, R.attr.c_text))
+            setTextIsSelectable(false)
+            setPadding(context.dp(24), context.dp(8), context.dp(24), context.dp(8))
+        }
+        AlertDialog.Builder(context)
+            .setTitle(R.string.about_licences)
+            .setView(android.widget.ScrollView(context).apply { addView(body) })
+            .setPositiveButton(R.string.close, null)
+            .showImmersive()
     }
 }

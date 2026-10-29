@@ -14,7 +14,7 @@ Une tablette Unowhy 4.2 (Android 10, lente) posée à côté de l'ordinateur ser
 │ RemoteChannel (long-polling) ◀──────────────│─ ordres ── │ tablet.ts (file   └─ win/ (UnowhyHelper.exe, C#)      │
 │ Discovery (UDP) ◀──────── diffusion ────────│─ UDP ───── │   d'ordres)        calendar, tasks, events, camera…   │
 └─────────────────────────────────────────────┘            │ .data/ : données de cet ordinateur                   │
-        │ Open-Meteo (météo, sans clé)                     └───────────────────────────────────────────────────────┘
+        │ MET Norway (météo, sans clé)                     └───────────────────────────────────────────────────────┘
         ▼                                                     ▲ mcp.ts (Claude Code / Desktop) relaie vers /tablet/command
 ```
 

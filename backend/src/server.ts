@@ -69,7 +69,8 @@ const LOCAL_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
 const isLocalPage = (method: string, url: string, ip: string, host: string | undefined) =>
   LOOPBACK.has(ip) &&
   LOCAL_HOST.test(host ?? "") &&
-  ((method === "GET" && /^\/(camera(\/stream|\/status)?|local\/status|oauth\/(microsoft|google)\/(start|callback))?(\?|$)/.test(url)) ||
+  ((method === "GET" &&
+    /^\/(camera(\/stream|\/status)?|local\/(status|licences)|oauth\/(microsoft|google)\/(start|callback))?(\?|$)/.test(url)) ||
     (method === "PUT" && url === "/local/calendar") ||
     (method === "POST" && (url === "/system/accessibility" || url === "/local/pair")) ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.

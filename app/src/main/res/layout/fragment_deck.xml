@@ -38,6 +38,12 @@
                 android:layout_marginStart="8dp"
                 android:contentDescription="@string/refresh"
                 android:src="@drawable/ic_refresh" />
+
+            <!-- Place du petit lecteur de musique (MainActivity.MEDIA_SPACE), 0 quand il est caché. -->
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:tag="media_space" />
         </LinearLayout>
 
         <!-- Mac sans l'autorisation Accessibilité : fenêtres et raccourcis ne marchent pas, le bouton ouvre le réglage. -->
