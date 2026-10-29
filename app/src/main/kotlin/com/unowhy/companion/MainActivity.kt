@@ -147,6 +147,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         Grain.applyTo(findViewById(android.R.id.content))
         Speaker.init(this)
+        NoisePlayer.init(this)
         AutoUpdater.start(this)
         InstallerService.start(this)
 

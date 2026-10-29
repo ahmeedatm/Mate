@@ -22,9 +22,11 @@ import com.unowhy.companion.focus.NoisePlayer
 @get:StringRes
 val NoisePlayer.Kind.label: Int
     get() = when (this) {
-        NoisePlayer.Kind.BROWN -> R.string.noise_brown
-        NoisePlayer.Kind.PINK -> R.string.noise_pink
-        NoisePlayer.Kind.WHITE -> R.string.noise_white
+        NoisePlayer.Kind.STORM -> R.string.noise_storm
+        NoisePlayer.Kind.FOREST -> R.string.noise_forest
+        NoisePlayer.Kind.JAPAN -> R.string.noise_japan
+        NoisePlayer.Kind.SEA -> R.string.noise_sea
+        NoisePlayer.Kind.LOFI -> R.string.noise_lofi
     }
 
 /** Focus : Pomodoro + sons d'ambiance. Les deux continuent quand on change de mode. */
@@ -75,7 +77,7 @@ class FocusFragment : Fragment() {
 
         val noises = view.findViewById<LinearLayout>(R.id.focus_noises)
         // Toucher l'ambiance choisie l'arrête ; le haut-parleur la coupe sans la perdre.
-        for (kind in listOf(NoisePlayer.Kind.BROWN, NoisePlayer.Kind.PINK, NoisePlayer.Kind.WHITE)) {
+        for (kind in NoisePlayer.Kind.entries) {
             val button = chip(getString(kind.label)) {
                 if (NoisePlayer.kind == kind) NoisePlayer.stop() else NoisePlayer.play(kind)
             }

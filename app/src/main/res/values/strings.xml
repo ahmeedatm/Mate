@@ -451,9 +451,11 @@
     <string name="focus_ready">Prêt</string>
     <string name="focus_paused">En pause</string>
     <string name="ambiance">Ambiance</string>
-    <string name="noise_brown">Brun</string>
-    <string name="noise_pink">Pluie</string>
-    <string name="noise_white">Blanc</string>
+    <string name="noise_storm">Pluie</string>
+    <string name="noise_forest">Forêt</string>
+    <string name="noise_japan">Japon</string>
+    <string name="noise_sea">Mer</string>
+    <string name="noise_lofi">Lofi</string>
     <string name="noise_mute">Couper l\'ambiance</string>
     <string name="noise_unmute">Remettre l\'ambiance</string>
     <string name="noise_playing">Son : %1$s</string>
@@ -936,7 +938,7 @@
     <string name="weather_location_hint">Quand aucune ville n\'est choisie. La position est demandée aux services de localisation de Google de la tablette ; seule la ville trouvée sert à la météo.</string>
     <string name="about_privacy">Confidentialité</string>
     <string name="about_licences">Licences des composants</string>
-    <string name="about_sources">Météo : données de MET Norway (Institut météorologique norvégien), licence CC BY 4.0, mises en forme pour l\'affichage. api.met.no\nVilles : GeoNames, licence CC BY 4.0. geonames.org\nPolices : Outfit, Nunito et Abril Fatface, licence SIL Open Font License 1.1.\nLicence CC BY 4.0 : creativecommons.org/licenses/by/4.0</string>
+    <string name="about_sources">Météo : données de MET Norway (Institut météorologique norvégien), licence CC BY 4.0, mises en forme pour l\'affichage. api.met.no\nVilles : GeoNames, licence CC BY 4.0. geonames.org\nPolices : Outfit, Nunito et Abril Fatface, licence SIL Open Font License 1.1.\nSons d\'ambiance : OpenGameArt et Wikimedia Commons, domaine public (CC0).\nLicence CC BY 4.0 : creativecommons.org/licenses/by/4.0</string>
     <string name="widget_weather_none">Aucune ville trouvée.</string>
     <string name="sky_clear">Ciel dégagé</string>
     <string name="sky_partly">Quelques nuages</string>
