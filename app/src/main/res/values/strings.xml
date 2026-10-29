@@ -761,6 +761,7 @@
     <string name="widget_audio">Son de l\'ordinateur</string>
     <string name="widget_audio_desc">Volume et micro de l\'ordi</string>
     <string name="widget_media">Lecture en cours</string>
+    <string name="widget_media_sites">Sites</string>
     <string name="widget_media_desc">Musique ou vidéo de l\'ordi, avec ses commandes</string>
     <string name="widget_agents">Agents Claude</string>
     <string name="widget_agents_desc">Qui travaille, qui a fini, qui t\'attend</string>

@@ -110,10 +110,10 @@ class NowPlayingView @JvmOverloads constructor(
     }
 
     /**
-     * Mise en page : boutons à droite (page Média), dessous (grand widget de l'Accueil : le titre garde la largeur),
-     * ou petite (widget d'une case : titre, artiste et boutons, sans vignette ni avancement).
+     * Mise en page : boutons à droite (page Média, widgets de l'Accueil), ou petite (widget d'une case : titre,
+     * artiste et boutons dessous, sans vignette ni avancement).
      */
-    enum class Layout { ROW, STACKED, SMALL }
+    enum class Layout { ROW, SMALL }
 
     fun layout(mode: Layout) {
         this.mode = mode

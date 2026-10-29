@@ -1,6 +1,7 @@
 package com.unowhy.companion.ui.home
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.text.InputType
 import android.util.TypedValue
 import android.view.Gravity
@@ -16,35 +17,44 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextClock
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.toDrawable
+import androidx.core.widget.ImageViewCompat
 import androidx.lifecycle.LifecycleOwner
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.FocusTicks
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
+import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.CalendarEvent
 import com.unowhy.companion.net.DeckPage
+import com.unowhy.companion.net.DeckTile
 import com.unowhy.companion.net.HomeFeatures
+import com.unowhy.companion.net.runCatchingCancellable
 import com.unowhy.companion.ui.ComputerAudioView
 import com.unowhy.companion.ui.FocusDial
+import com.unowhy.companion.ui.IconCache
 import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.NowPlayingView
 import com.unowhy.companion.ui.TasksCard
 import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.WaterCard
 import com.unowhy.companion.ui.dp
+import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.label
 import com.unowhy.companion.ui.showForTyping
+import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.ui.themeColor
 import com.unowhy.companion.ui.themeFont
 import com.unowhy.companion.ui.themePx
 import com.unowhy.companion.ui.themeRes
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -432,38 +442,110 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
 /**
  * Ce qui joue sur l'ordinateur (contrôles multimédias de Windows, MediaRemote sur Mac), comme la page Média ;
- * petit : titre et boutons ; grand : boutons sous le titre et son de l'ordinateur dessous.
+ * petit : titre et boutons ; moyen : la lecture sur une ligne ; grand : la même, puis les sites de la page Média
+ * (toucher ouvre, appui long retire, « + » du titre ajoute). Pas de barre de son : en 2 × 2 elle prendrait la place
+ * des sites, et le widget Son la fait. Le widget garde l'appui long : sinon la grille entrerait en mode Modifier.
  */
 class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val playing = NowPlayingView(context).apply { attach(host.scope) }
-    private val audio = ComputerAudioView(context).apply { attach(host.scope) }
-    override val view = LinearLayout(context).asCard(16).apply {
+    private var sites: List<DeckTile> = emptyList()
+
+    private val grid = TileGridView(context, host.scope).apply {
+        onTap = { cell, _ -> siteOf(cell)?.let(::open) }
+        onHold = { cell, _ -> siteOf(cell)?.let(::confirmRemove) }
+    }
+
+    /** « + » à droite du titre des sites : même place que celui du widget Apps. */
+    private val addButton = ImageButton(context, null, 0, R.style.IconButton_Flat).apply {
+        setImageResource(R.drawable.ic_add)
+        // `tint` du style n'est lu que par les vues AppCompat gonflées depuis le XML.
+        ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(themeColor(context, R.attr.c_accent)))
+        contentDescription = context.getString(R.string.links_add_title)
+        setOnClickListener { host.overlays.addLinks { reload() } }
+    }
+
+    private val header = LinearLayout(context).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        addView(cardTitle(R.string.widget_media_sites, R.drawable.ic_link), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        addView(addButton, LinearLayout.LayoutParams(dp(BUTTON_DP), dp(BUTTON_DP)))
+    }
+
+    override val view = OwnerLinearLayout(context).asCard(16).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
         playing.bind(true)
         addView(playing, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        addView(audio, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16) })
+        addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+        addView(grid, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
     }
 
     private val big get() = placed.size == WidgetSize.L
 
     override fun applySize() {
-        playing.layout(
-            when (placed.size) {
-                WidgetSize.S -> NowPlayingView.Layout.SMALL
-                WidgetSize.L -> NowPlayingView.Layout.STACKED
-                else -> NowPlayingView.Layout.ROW
-            },
-        )
-        audio.visibility = if (big) View.VISIBLE else View.GONE
-        if (big) audio.refresh()
+        playing.layout(if (placed.size == WidgetSize.S) NowPlayingView.Layout.SMALL else NowPlayingView.Layout.ROW)
+        val show = if (big) View.VISIBLE else View.GONE
+        header.visibility = show
+        grid.visibility = show
+        if (big) host.scope.launch { load() }
     }
 
     override suspend fun load() {
-        if (big) audio.refresh()
+        if (!big) return
+        val pages = runCatchingCancellable { host.deckPages() }.getOrNull() ?: return
+        store(pages)
+    }
+
+    private fun store(pages: List<DeckPage>) {
+        val next = pages.firstOrNull { it.media }?.tiles.orEmpty()
+        // Inchangé : la grille garde son défilement.
+        if (next == sites) return
+        sites = next
+        grid.cells = sites.map { TileGridView.Cell(KeyRef.of(it), type = it.type) }
+    }
+
+    private fun siteOf(cell: TileGridView.Cell) = sites.firstOrNull { it.id == cell.key.id }
+
+    /** Après un ajout ou un retrait : relit le deck pour de bon. */
+    private fun reload() {
+        host.scope.launch {
+            runCatchingCancellable { host.deckPages(force = true) }
+                .onSuccess(::store)
+                .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
+        }
+    }
+
+    private fun open(site: DeckTile) {
+        host.scope.launch {
+            runCatchingCancellable { BackendClient(context).deck.runTile(site.id) }
+                .onSuccess { result -> result.openedApp?.let { host.main?.showBanner(context.getString(R.string.media_opened_app, it), BANNER_S) } }
+                .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
+        }
+    }
+
+    private fun confirmRemove(site: DeckTile) {
+        AlertDialog.Builder(context)
+            .setMessage(context.getString(R.string.links_remove_confirm, site.label))
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.apps_remove) { _, _ ->
+                host.scope.launch {
+                    runCatchingCancellable { BackendClient(context).deck.removeLink(site.id) }
+                        .onSuccess {
+                            IconCache.forget(site.id)
+                            reload()
+                        }
+                        .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
+                }
+            }
+            .showImmersive()
     }
 
     override fun setActive(active: Boolean) = playing.setActive(active)
+
+    private companion object {
+        /** Cible tactile du « + ». */
+        const val BUTTON_DP = 48
+        const val BANNER_S = 4
+    }
 }
 
 /** Tâches du jour, stockées sur l'ordinateur ; le nombre restant va sur la pastille de la barre latérale. */
