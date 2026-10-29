@@ -905,6 +905,7 @@
     <string name="profile_icon_default">Par défaut</string>
     <string name="profile_icon_row">Icône de « %1$s » : changer</string>
     <string name="profile_icon_chosen">%1$s, choisie</string>
+    <string name="home_empty_hint">Appui long pour ajouter un widget</string>
     <!-- Noms des icônes d'écran, lus par TalkBack (ui/home/ProfileIcons) -->
     <string name="icon_home">Maison</string>
     <string name="icon_work">Travail</string>
