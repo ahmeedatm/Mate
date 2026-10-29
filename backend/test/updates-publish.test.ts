@@ -195,4 +195,29 @@ describe("publication d'une release", () => {
     assert.equal(updates[0].sha256, sha("apk 0.2.2"));
     assert.deepEqual(registry.names("companion-updates/latest"), ["companion-0.2.2.apk", "manifest.json"]);
   });
+
+  it("dépose les installeurs de l'ordinateur avant le manifest et les décrit dans `installers`", async () => {
+    const dir = dist("0.3.0", { code: 300_000, pkg: "com.unowhy.companion" });
+    fs.writeFileSync(path.join(dir, "Compagnon-Unowhy-Mac.zip"), "zip");
+    fs.writeFileSync(path.join(dir, "Compagnon-Unowhy-Windows.exe"), "exe!");
+    const local = out();
+    await publish([dir, local], { UPDATES_URL: urlOf("latest") });
+    const { installers } = registry.manifest("companion-updates/latest");
+    assert.deepEqual(installers, [
+      { os: "mac", file: "Compagnon-Unowhy-Mac.zip", size: 3, sha256: sha("zip"), version: "0.3.0" },
+      { os: "windows", file: "Compagnon-Unowhy-Windows.exe", size: 4, sha256: sha("exe!"), version: "0.3.0" },
+    ]);
+    assert.equal(fs.readFileSync(path.join(local, "Compagnon-Unowhy-Windows.exe"), "utf8"), "exe!");
+    assert.deepEqual(registry.names("companion-updates/latest"), [
+      "Compagnon-Unowhy-Mac.zip",
+      "Compagnon-Unowhy-Windows.exe",
+      "companion-0.3.0.apk",
+      "manifest.json",
+    ]);
+  });
+
+  it("sans installeur dans dist : pas de clé `installers`", async () => {
+    await publish([dist("0.3.1", { code: 301_000, pkg: "com.unowhy.companion" }), out()], { UPDATES_URL: urlOf("latest") });
+    assert.equal("installers" in registry.manifest("companion-updates/latest"), false);
+  });
 });

@@ -245,13 +245,14 @@ android-release:
       - dist/companion-*
     expire_in: 1 week
 
-# Serveur central des mises à jour de la tablette : manifest.json + l'APK de la dernière version déposés dans
-# le paquet générique UPDATES_URL (jeton du job), anciens fichiers supprimés. Voir docs/developpement.md, section Release.
+# Serveur central des mises à jour de la tablette : manifest.json, l'APK de la dernière version et les installeurs de
+# l'ordinateur (que la tablette télécharge puis sert sur son WiFi) déposés dans le paquet générique UPDATES_URL (jeton
+# du job), anciens fichiers supprimés. Voir docs/developpement.md, section Release.
 updates:
   extends: .release-tag
   stage: release
   image: node:22.22-bookworm-slim
-  needs: [android-release]
+  needs: [android-release, package-windows, package-mac]
   script:
     - node scripts/updates-publish.mjs dist updates
 

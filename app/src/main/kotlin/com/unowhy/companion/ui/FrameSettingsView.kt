@@ -56,9 +56,13 @@ class FrameSettingsView(private val fragment: Fragment, root: View) {
 
     /** Pastilles d'un choix (une seule sélectionnée), enregistré au toucher. */
     private fun setUpChoices(row: LinearLayout, values: List<Int>, current: Int, label: (Int) -> String, save: (Int) -> Unit) {
+        // Cinq pastilles de même largeur dans la colonne : marges réduites, une ligne (sinon « Jamais » se coupe).
+        row.isBaselineAligned = false
         for (value in values) {
             val chip = Button(context, null, 0, R.style.Chip).apply {
                 text = label(value)
+                isSingleLine = true
+                setPadding(context.dp(6), 0, context.dp(6), 0)
                 isSelected = value == current
                 setOnClickListener {
                     save(value)

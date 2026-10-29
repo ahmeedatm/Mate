@@ -105,6 +105,7 @@
     <string name="media_play_pause">Lecture / pause</string>
     <string name="media_next">Morceau suivant</string>
     <string name="media_previous">Morceau précédent</string>
+    <string name="mini_player_open">Ouvrir la page Média</string>
     <string name="system_sleep">Veille de l\'écran</string>
     <string name="system_dark">Mode sombre</string>
     <string name="system_screenshot">Capture → presse-papiers</string>
@@ -511,7 +512,7 @@
     <string name="computer_pick">Toucher l\'ordinateur à ajouter :</string>
     <string name="computer_known">déjà enregistré</string>
     <string name="computer_outdated">compagnon à mettre à jour</string>
-    <string name="computer_outdated_detail">Le compagnon de %1$s est trop ancien pour cette tablette. Mets-le à jour sur l\'ordinateur (%2$s), puis recommence.</string>
+    <string name="computer_outdated_detail">Le compagnon de %1$s est trop ancien pour cette tablette. Mets-le à jour : sur l\'ordinateur, ouvre %2$s et lance le nouvel installeur, puis recommence.</string>
     <string name="computer_manual_hint">Adresse affichée sur l\'ordinateur, dans la page du compagnon ouverte à l\'installation. Exemple : 192.168.1.20</string>
     <string name="computer_address_hint">192.168.1.20</string>
     <string name="computer_connect">Se connecter</string>
@@ -629,6 +630,15 @@
     <string name="welcome_wifi_text">Connecte la tablette au WiFi de la maison ou du bureau, le même que celui de l\'ordinateur.</string>
     <string name="welcome_install_title">Sur l\'ordinateur</string>
     <string name="welcome_install_text">Ouvre cette adresse dans le navigateur de l\'ordinateur et lance l\'installation :</string>
+    <string name="install_address_no_wifi">connecte d\'abord le WiFi</string>
+    <string name="companion_update_available">Nouvelle version du compagnon pour %1$s (%2$s) : touche pour la mettre à jour</string>
+    <string name="companion_update_title">Mettre à jour le compagnon de %1$s</string>
+    <string name="companion_update_steps_mac">1. Sur le Mac, ouvre %1$s (bouton « Ouvrir sur l\'ordi »).\n2. Télécharge le zip, ouvre-le, puis ouvre « Compagnon Unowhy » : il remplace l\'ancien dans Applications et redémarre.\n3. Si macOS redemande l\'Accessibilité, accorde-la (Réglages Système > Confidentialité et sécurité > Accessibilité).\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
+    <string name="companion_update_steps_windows">1. Sur le PC, ouvre %1$s (bouton « Ouvrir sur l\'ordi »).\n2. Télécharge et lance l\'installeur : il remplace l\'ancien et redémarre le compagnon.\n3. Si SmartScreen bloque : « Informations complémentaires », puis « Exécuter quand même ».\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
+    <string name="companion_update_open">Ouvrir sur l\'ordi</string>
+    <string name="companion_update_later">Plus tard</string>
+    <string name="companion_update_opened">Page ouverte sur l\'ordinateur</string>
+    <string name="companion_updated">Compagnon de %1$s à jour (%2$s)</string>
     <string name="welcome_install_os">Mac ou PC Windows</string>
     <string name="welcome_connect_title">Connecter</string>
     <string name="welcome_connect_text">Ton ordinateur apparaît ici dès que le compagnon est installé. Touche-le, puis saisis le code qu\'il affiche.</string>
@@ -830,7 +840,7 @@
         <item quantity="one">verre sur %1$d</item>
         <item quantity="other">verres sur %1$d</item>
     </plurals>
-    <string name="hero_wx_label">%1$s, %2$d° max</string>
+    <string name="hero_wx_label">%1$s · %2$s, %3$d° max</string>
     <string name="dayline_hour">%1$d h</string>
     <string name="widget_clock">Horloge</string>
     <string name="widget_clock_desc">L\'heure et la date, en grand</string>
@@ -900,7 +910,13 @@
     <string name="widget_weather_day">%1$d° / %2$d°</string>
     <string name="widget_weather_city_hint">Ville (ex. Paris)</string>
     <string name="widget_weather_search">Chercher</string>
-    <string name="widget_weather_offline">Pas d\'accès à Internet : vérifie le WiFi de la tablette.</string>
+    <string name="widget_weather_locate">Ma position</string>
+    <string name="widget_weather_locating">Recherche de la position de la tablette…</string>
+    <string name="widget_weather_no_permission">Localisation refusée : cherche la ville par son nom.</string>
+    <string name="widget_weather_no_position">Position introuvable : cherche la ville par son nom.</string>
+    <string name="about_title">À propos</string>
+    <string name="about_licences">Licences des composants</string>
+    <string name="about_sources">Météo : données de MET Norway (Institut météorologique norvégien), licence CC BY 4.0, mises en forme pour l\'affichage. api.met.no\nVilles : GeoNames, licence CC BY 4.0. geonames.org\nPolices : Outfit, Nunito et Abril Fatface, licence SIL Open Font License 1.1.\nLicence CC BY 4.0 : creativecommons.org/licenses/by/4.0</string>
     <string name="widget_weather_none">Aucune ville trouvée.</string>
     <string name="sky_clear">Ciel dégagé</string>
     <string name="sky_partly">Quelques nuages</string>

@@ -38,7 +38,13 @@ object Kiosk {
      * Accordées d'office : en kiosque, Paramètres est inaccessible, un refus (« Ne plus demander ») serait sans retour.
      * La localisation est accordée par Wifi (exigée pour lister les réseaux).
      */
-    private val GRANTED_PERMISSIONS = listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA)
+    /** Localisation : la ville de la météo (device/Position), à la ville près. */
+    private val GRANTED_PERMISSIONS = listOf(
+        Manifest.permission.RECORD_AUDIO,
+        Manifest.permission.CAMERA,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+    )
 
     /** "Quitter le kiosque" : suspendu jusqu'au prochain démarrage de l'appli. */
     var suspended = false
@@ -118,7 +124,7 @@ object Kiosk {
         }
     }
 
-    /** Micro et caméra accordés à `pkg` (l'appli ou son essai). Sans effet hors device owner ou paquet absent. */
+    /** Micro, caméra et localisation accordés à `pkg` (l'appli ou son essai). Sans effet hors device owner ou paquet absent. */
     fun grantPermissions(context: Context, pkg: String) {
         if (!isDeviceOwner(context)) return
         val dpm = dpm(context)

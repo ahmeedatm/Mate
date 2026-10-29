@@ -25,6 +25,7 @@ import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.unowhy.companion.Computers
+import com.unowhy.companion.MainActivity
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.VolumeKeyHandler
@@ -337,6 +338,9 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
 
     /** Après « Rejoindre » sur l'Accueil : page Réunion (micro, caméra, raccrocher). */
     fun openMeetingPage() = openPage { it.meeting }
+
+    /** Petit lecteur touché : page Média. */
+    fun openMediaPage() = openPage { it.media }
 
     /** Après avoir répondu à un appel : page de l'appli (micro, sourdine, Quitter l'appel), Réunion pour Teams. */
     fun openAppPage(app: String) {
@@ -719,6 +723,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         appAudio.bind(page?.app.takeIf { sound })
         nowPlaying.bind(page?.media == true)
         mail.bind(page?.mail == true)
+        (activity as? MainActivity)?.onDeckPageChanged()
     }
 
     private fun runTile(tileView: View, tile: DeckTile) {
@@ -808,6 +813,9 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private fun isAppsPage() = pages.getOrNull(pageIndex)?.apps == true
 
     private fun isMediaPage() = pages.getOrNull(pageIndex)?.media == true
+
+    /** Page Média affichée (pas un onglet à part comme Ouvertes ou Son) : le petit lecteur se cache. */
+    fun isMediaPageShown() = isMediaPage() && nowPlaying.visibility == View.VISIBLE
 
     private fun confirmRemoveLink(tile: DeckTile) {
         AlertDialog.Builder(requireContext())

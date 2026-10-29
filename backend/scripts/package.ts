@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
+import { bundledPackages, noticeOf, thirdPartyNotices } from "./licences.ts";
 
 /**
  * Installeurs du logiciel de l'ordinateur, sans Node à installer : `npm run package` (Mac ou Linux, dont la CI).
@@ -57,13 +58,16 @@ async function nodeArchive(sums: string, suffix: string): Promise<{ file: string
   return { file, dir: name.replace(/\.(zip|tar\.gz)$/, "") };
 }
 
+function member(archive: { file: string; dir: string }, inner: string): Buffer {
+  const name = `${archive.dir}/${inner}`;
+  return archive.file.endsWith(".zip")
+    ? execFileSync("unzip", ["-p", archive.file, name], { maxBuffer: 512 * 1024 * 1024 })
+    : execFileSync("tar", ["-xzOf", archive.file, name], { maxBuffer: 512 * 1024 * 1024 });
+}
+
 function extract(archive: { file: string; dir: string }, inner: string, dest: string) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
-  const member = `${archive.dir}/${inner}`;
-  const data = archive.file.endsWith(".zip")
-    ? execFileSync("unzip", ["-p", archive.file, member], { maxBuffer: 512 * 1024 * 1024 })
-    : execFileSync("tar", ["-xzOf", archive.file, member], { maxBuffer: 512 * 1024 * 1024 });
-  fs.writeFileSync(dest, data, { mode: 0o755 });
+  fs.writeFileSync(dest, member(archive, inner), { mode: 0o755 });
 }
 
 function copy(from: string, to: string) {
@@ -110,7 +114,8 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
   const dest = platform === "windows" ? path.join(root, "backend") : path.join(bundle, "Resources", "backend");
   fs.rmSync(path.join(out, platform), { recursive: true, force: true });
 
-  await build({
+  const built = await build({
+    metafile: true,
     entryPoints: { server: path.join(backend, "src", "server.ts"), service: path.join(backend, "scripts", "service.ts") },
     outdir: path.join(dest, "dist"),
     outExtension: { ".js": ".mjs" },
@@ -119,6 +124,8 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
     format: "esm",
     target: "node22",
     legalComments: "none",
+    // Version renvoyée par /health : la tablette propose l'installeur plus récent qu'elle garde.
+    define: { "process.env.COMPANION_VERSION": JSON.stringify(VERSION) },
     logLevel: "warning",
     // Modules CommonJS regroupés dans un fichier ESM : ils attendent require, __filename et __dirname.
     banner: {
@@ -154,6 +161,16 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
       }
     }
   }
+
+  // Mentions de licences (scripts/licences.ts) : paquets regroupés par esbuild et node embarqué (même licence sur Windows
+  // et Mac : celle de l'archive Windows). Dans le backend (servi par la page locale) et à la racine du dossier installé.
+  const packages = bundledPackages(Object.keys(built.metafile.inputs)).map((dir) => noticeOf(path.join(backend, dir)));
+  const node = essai
+    ? undefined
+    : { version: NODE_VERSION, license: member(await nodeArchive(sums, "-win-x64.zip"), "LICENSE").toString("utf8") };
+  const notices = thirdPartyNotices(packages, node);
+  fs.writeFileSync(path.join(dest, "LICENCES-TIERS.txt"), notices);
+  if (!essai) fs.writeFileSync(path.join(root, "LICENCES-TIERS.txt"), notices);
 
   if (essai) {
     const archive = path.join(out, `backend-${platform}.tar.gz`);

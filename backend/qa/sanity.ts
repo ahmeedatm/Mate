@@ -89,6 +89,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expectStatus(open, 200, "/health sans jeton");
         expect(open.json.service === "unowhy-companion", `service inattendu : ${open.json.service}`);
         expect(open.json.auth === false, "/health sans jeton devrait dire auth: false");
+        expect(/^(\d+\.\d+\.\d+|dev)$/.test(open.json.version ?? ""), `version du paquet inattendue : ${open.json.version}`);
         if (opts.os) expect(open.json.os === opts.os, `système annoncé « ${open.json.os} », attendu « ${opts.os} »`);
         os = open.json.os === "mac" || open.json.os === "windows" ? open.json.os : "other";
         id = open.json.id;
@@ -419,6 +420,23 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const status = await call("GET", "/local/status");
         expectStatus(status, 200, "/local/status");
         expect(Array.isArray(status.json.addresses) && status.json.addresses.length > 0, "aucune adresse affichée");
+      },
+    },
+    {
+      name: "mentions de licences",
+      run: async () => {
+        // Compagnon installé : LICENCES-TIERS.txt joint par scripts/package.ts ; lancé depuis le dépôt, pas de fichier.
+        const status = await call("GET", "/local/status");
+        const res = await call("GET", "/local/licences", undefined, local ? false : true);
+        if (!status.json.licences) {
+          expectStatus(res, 404, "/local/licences sans fichier");
+          throw new Skip("compagnon lancé depuis le dépôt : licences jointes aux installeurs seulement");
+        }
+        expectStatus(res, 200, "/local/licences");
+        const text = String(res.json);
+        expect(text.startsWith("Compagnon Unowhy : composants tiers et licences"), "fichier de licences inattendu");
+        expect(/^- Node\.js v/m.test(text) && /^- fastify /m.test(text), "node ou fastify absents des licences");
+        return `${text.split("\n").filter((l) => /^- /.test(l)).length} lignes de composants`;
       },
     },
   ];

@@ -32,6 +32,7 @@ import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
+import com.unowhy.companion.installers.InstallerService
 import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.kiosk.UpdatePlan
 import com.unowhy.companion.kiosk.Updater
@@ -122,6 +123,7 @@ class SettingsFragment : Fragment() {
         renderWifi()
         renderSwitchApp()
 
+        view.findViewById<Button>(R.id.settings_licences).setOnClickListener { showLicences() }
         view.findViewById<Button>(R.id.settings_kiosk_exit).setOnClickListener {
             Kiosk.exit(requireActivity())
             renderKiosk()
@@ -165,7 +167,7 @@ class SettingsFragment : Fragment() {
         val all = Computers.all(ctx)
         if (all.isEmpty()) {
             computers.addView(TextView(ctx).apply {
-                text = getString(R.string.computers_empty, BuildConfig.INSTALL_URL)
+                text = getString(R.string.computers_empty, InstallerService.address() ?: getString(R.string.install_address_no_wifi))
                 textSize = 16f
                 setPadding(0, dp(8), 0, 0)
             })
@@ -685,5 +687,27 @@ class SettingsFragment : Fragment() {
                 else -> R.string.kiosk_on
             },
         )
+    }
+
+    /**
+     * Mentions de licences des composants tiers (assets/licences.txt, généré par scripts/licences-android.mjs) :
+     * obligatoires pour les bibliothèques Apache 2.0 et les polices OFL embarquées.
+     */
+    private fun showLicences() {
+        val context = requireContext()
+        val text = runCatching { context.assets.open("licences.txt").bufferedReader().use { it.readText() } }.getOrDefault("")
+        val body = TextView(context).apply {
+            this.text = text
+            textSize = 12f
+            typeface = Typeface.MONOSPACE
+            setTextColor(themeColor(context, R.attr.c_text))
+            setTextIsSelectable(false)
+            setPadding(context.dp(24), context.dp(8), context.dp(24), context.dp(8))
+        }
+        AlertDialog.Builder(context)
+            .setTitle(R.string.about_licences)
+            .setView(android.widget.ScrollView(context).apply { addView(body) })
+            .setPositiveButton(R.string.close, null)
+            .showImmersive()
     }
 }

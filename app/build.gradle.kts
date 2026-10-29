@@ -10,9 +10,6 @@ val backendUrl = (findProperty("backendUrl") as String?) ?: "http://127.0.0.1:30
 // Code technicien (appui long sur le titre de Réglages) : montre la carte Kiosque. -PtechCode=… pour le changer.
 val techCode = (findProperty("techCode") as String?) ?: "4242"
 
-// Adresse courte du logiciel de l'ordinateur, affichée au premier lancement (à taper dans le navigateur de l'ordinateur).
-val installUrl = (findProperty("installUrl") as String?) ?: "unowhy.com/compagnon"
-
 // Serveur central des mises à jour : registre de paquets du projet GitLab (manifest.json + APK). -PupdateUrl=http://10.0.2.2:8099
 // pour un essai local, vide pour le couper.
 val updateUrl = (findProperty("updateUrl") as String?)
@@ -55,7 +52,6 @@ android {
         buildConfigField("boolean", "TRIAL", "$trial")
         buildConfigField("String", "DEFAULT_BACKEND_URL", "\"$backendUrl\"")
         buildConfigField("String", "TECH_CODE", "\"$techCode\"")
-        buildConfigField("String", "INSTALL_URL", "\"$installUrl\"")
         buildConfigField("String", "UPDATE_URL", "\"$updateUrl\"")
         buildConfigField("String", "UPDATE_HEADER", "\"$updateHeader\"")
         // Bibliothèques natives de Vosk (10 Mo par ABI) : la tablette (arm64-v8a), les lots 32 bits (armeabi-v7a) et

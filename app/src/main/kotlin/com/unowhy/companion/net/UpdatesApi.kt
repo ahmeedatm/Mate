@@ -1,6 +1,8 @@
 package com.unowhy.companion.net
 
 import com.unowhy.companion.BuildConfig
+import com.unowhy.companion.installers.Installer
+import com.unowhy.companion.installers.InstallerPlan
 import org.json.JSONObject
 import java.io.File
 
@@ -63,6 +65,12 @@ class UpdatesApi(private val http: Http, private val source: UpdateSource = Upda
 
     /** Télécharge une mise à jour dans `dest` ; `progress` (0 à 100, appelé hors du fil principal). Renvoie l'empreinte SHA-256 reçue. */
     suspend fun download(update: AppUpdate, dest: File, progress: (Int) -> Unit): String = download(update.file, update.size, dest, progress)
+
+    /** Installeurs de l'ordinateur annoncés par le serveur central (clé `installers` du manifeste). */
+    suspend fun installers(): List<Installer> = http.io { InstallerPlan.parse(http.get("/manifest.json")) }
+
+    /** Télécharge un installeur de l'ordinateur dans `dest`. Renvoie l'empreinte SHA-256 reçue. */
+    suspend fun downloadInstaller(installer: Installer, dest: File): String = download(installer.file, installer.size, dest) {}
 
     /** Idem pour un fichier de la source (APK, archive du backend d'un essai) ; `size` sert au pourcentage. */
     suspend fun download(file: String, size: Long, dest: File, progress: (Int) -> Unit): String = http.io {

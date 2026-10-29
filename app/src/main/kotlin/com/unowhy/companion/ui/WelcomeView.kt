@@ -11,10 +11,10 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import com.unowhy.companion.BuildConfig
 import com.unowhy.companion.Computer
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.R
+import com.unowhy.companion.installers.InstallerService
 import com.unowhy.companion.net.Discovery
 import com.unowhy.companion.net.FoundComputer
 import com.unowhy.companion.net.Wifi
@@ -35,6 +35,7 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private val wifiStep: TextView
     private val wifiStatus: TextView
     private val installStep: TextView
+    private val installUrl: TextView
     private val connectStep: TextView
     private val found: LinearLayout
     private val searchStatus: TextView
@@ -52,7 +53,7 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         connectStep = findViewById(R.id.welcome_step_connect)
         found = findViewById(R.id.welcome_found)
         searchStatus = findViewById(R.id.welcome_search_status)
-        findViewById<TextView>(R.id.welcome_install_url).text = BuildConfig.INSTALL_URL
+        installUrl = findViewById(R.id.welcome_install_url)
     }
 
     /** `onAdded` : ordinateur appairé (MainActivity ferme cet écran et recrée les modes). */
@@ -128,6 +129,7 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         wifiStatus.setTextColor(color)
         wifiStatus.compoundDrawablesRelative[0]?.mutate()?.setTint(color)
         markStep(wifiStep, "1", done = name != null)
+        installUrl.text = InstallerService.address() ?: context.getString(R.string.install_address_no_wifi)
     }
 
     /** Étape faite : pastille verte avec ✓ à la place du numéro. */
