@@ -419,27 +419,36 @@ class SettingsFragment :
             }
     }
 
-    /** Une pastille par thème, avec sa couleur ; en choisir un recrée l'activité (les écrans se redessinent). */
-    private fun setUpThemes(row: LinearLayout) {
+    /**
+     * Une pastille par thème, avec sa couleur, sur deux lignes : thèmes de base, puis ceux des personas. En choisir un
+     * recrée l'activité (les écrans se redessinent).
+     */
+    private fun setUpThemes(rows: LinearLayout) {
         val current = AppTheme.current(requireContext())
-        for (theme in AppTheme.choosable) {
-            val chip = Button(requireContext(), null, 0, R.style.Chip).apply {
-                setText(theme.label)
-                isSelected = theme == current
-                compoundDrawablePadding = dp(10)
-                setCompoundDrawablesRelative(
-                    ContextCompat.getDrawable(context, R.drawable.dot)!!.mutate().also {
-                        it.setTint(theme.swatch)
-                        it.setBounds(0, 0, dp(14), dp(14))
-                    }, null, null, null,
-                )
-                setOnClickListener {
-                    if (theme == current) return@setOnClickListener
-                    Prefs.setTheme(context, theme.name)
-                    requireActivity().recreate()
+        for ((index, group) in AppTheme.entries.partition { !it.demo }.toList().withIndex()) {
+            val row = LinearLayout(requireContext())
+            for (theme in group) {
+                val chip = Button(requireContext(), null, 0, R.style.Chip).apply {
+                    setText(theme.label)
+                    isSelected = theme == current
+                    compoundDrawablePadding = dp(10)
+                    setCompoundDrawablesRelative(
+                        ContextCompat.getDrawable(context, R.drawable.dot)!!.mutate().also {
+                            it.setTint(theme.swatch)
+                            it.setBounds(0, 0, dp(14), dp(14))
+                        }, null, null, null,
+                    )
+                    setOnClickListener {
+                        if (theme == current) return@setOnClickListener
+                        Prefs.setTheme(context, theme.name)
+                        requireActivity().recreate()
+                    }
                 }
+                row.addView(chip, LinearLayout.LayoutParams(0, dp(48), 1f).apply { if (row.childCount > 0) marginStart = dp(10) })
             }
-            row.addView(chip, LinearLayout.LayoutParams(0, dp(48), 1f).apply { if (row.childCount > 0) marginStart = dp(10) })
+            rows.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                if (index > 0) topMargin = dp(10)
+            })
         }
     }
 

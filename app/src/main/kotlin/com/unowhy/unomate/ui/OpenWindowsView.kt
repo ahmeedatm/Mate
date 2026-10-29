@@ -89,7 +89,7 @@ class OpenWindowsView @JvmOverloads constructor(
         elsewhere.addView(elsewhereList)
         elsewhere.visibility = GONE
         addView(elsewhere, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
-        addView(trash, LayoutParams(LayoutParams.MATCH_PARENT, dp(84)).apply { topMargin = dp(12) })
+        addView(trash, LayoutParams(LayoutParams.MATCH_PARENT, dp(TRASH_DP)).apply { topMargin = dp(12) })
 
         map.onDrop = { payload, display, layout -> (payload as? Drag)?.let { drop(it, display, layout) } }
         map.onDragEnded = {
@@ -100,6 +100,13 @@ class OpenWindowsView @JvmOverloads constructor(
 
     fun attach(scope: CoroutineScope) {
         this.scope = scope
+    }
+
+    // Widget de 2 lignes : la bande du bas se resserre, les écrans gardent la place.
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        val wanted = dp(if (h < dp(TIGHT_DP)) TRASH_TIGHT_DP else TRASH_DP)
+        if (trash.layoutParams.height != wanted) trash.layoutParams = trash.layoutParams.apply { height = wanted }
     }
 
     /** Affichée et relue en boucle, ou cachée. Sans changement d'état, la boucle en cours continue (pas de relecture en plus). */
@@ -411,6 +418,10 @@ class OpenWindowsView @JvmOverloads constructor(
     private companion object {
         /** La liste du Mac prend près de 2 s à lire (Accessibilité) : pas plus souvent. */
         const val POLL_MS = 5_000L
+        const val TRASH_DP = 84
+        const val TRASH_TIGHT_DP = 56
+        /** Sous cette hauteur (dp), la bande du bas est resserrée. */
+        const val TIGHT_DP = 360
         /** Le plein écran et la sortie du plein écran sont animés par macOS (~1 s) : relire après. */
         const val SETTLE_MS = 1_500L
         const val PENDING_ALPHA = 0.55f

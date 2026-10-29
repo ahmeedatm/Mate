@@ -9,7 +9,8 @@ import type { PersonaId } from "./demo.ts";
 import type { AppWindow, AudioState, Display, MixerChannel, MixerState, OpenApp } from "./screens.ts";
 
 /**
- * Données fictives de la démo : tant qu'un persona est actif (`.data/demo.json`), les routes qui LISENT l'ordinateur
+ * Données fictives de la démo : tant qu'un persona est actif (`.data/demo.json`) et que la tablette envoie le même (en-tête
+ * `X-Demo-Persona`, voir `demoPersonaOf`), les routes qui LISENT l'ordinateur
  * (GitLab, Jira, agents Claude, fenêtres ouvertes, lecture en cours, son, performances, courrier, notifications,
  * presse-papiers, onglets du navigateur, appels, agenda) répondent avec les données du persona, jamais avec celles de
  * l'ordinateur. Les actions sur ces données répondent ok sans toucher à l'ordinateur et changent l'état fictif
@@ -494,13 +495,26 @@ const stateFile = () => path.join(config.dataDir, "demo.json");
 let active: PersonaId | null | undefined;
 let state: State | undefined;
 
-/** Persona de la démo en cours, null hors démo. */
+/** Persona de la démo en cours sur l'ordinateur, null hors démo (pas celui d'une requête : voir `demoPersonaOf`). */
 export async function activePersona(): Promise<PersonaId | null> {
   if (active === undefined) {
     const saved = await readJson<{ persona?: PersonaId }>(stateFile(), () => ({}));
     active = saved.persona && saved.persona in MOCKS ? saved.persona : null;
   }
   return active;
+}
+
+/** En-tête que la tablette pose sur chaque requête quand elle a choisi un persona. */
+export const PERSONA_HEADER = "x-demo-persona";
+export type PersonaHeaders = Record<string, string | string[] | undefined>;
+
+/**
+ * Persona dont les données fictives servent CETTE requête : celui de la démo en cours, seulement si la tablette
+ * demande le même. Sans en-tête (tablette sans persona : essai, réinstallation) ou avec un autre : null, vraies données.
+ */
+export async function demoPersonaOf(headers?: PersonaHeaders): Promise<PersonaId | null> {
+  const id = await activePersona();
+  return id && headers?.[PERSONA_HEADER] === id ? id : null;
 }
 
 export function activateMock(id: PersonaId) {
@@ -1004,10 +1018,14 @@ function controlWindow(s: State, body: { key: string; action: string; window: { 
  * Réponse fictive à la requête, ou `undefined` : hors démo, ou route sans données de l'ordinateur à remplacer.
  * `route` : la forme de la route Fastify (`/jira/issues/:key/transitions`).
  */
-export async function demoAnswer(method: string, route: string, req: { body?: unknown; query?: unknown; params?: unknown }) {
+export async function demoAnswer(
+  method: string,
+  route: string,
+  req: { body?: unknown; query?: unknown; params?: unknown; headers?: PersonaHeaders },
+) {
   const handler = HANDLERS[`${method} ${route}`];
   if (!handler) return undefined;
-  const id = await activePersona();
+  const id = await demoPersonaOf(req.headers);
   if (!id) return undefined;
   return handler({ s: current(id), body: req.body ?? {}, query: req.query ?? {}, params: req.params ?? {} });
 }
@@ -1016,8 +1034,8 @@ export async function demoAnswer(method: string, route: string, req: { body?: un
  * Ce que le persona offre en plus de ce que l'ordinateur offre : GitLab, Jira et agents ne dépendent que de ses
  * données fictives (même sans jeton ni Claude Code sur l'ordinateur, même avec : un persona qui ne les liste pas les cache).
  */
-export async function demoFeatures() {
-  const id = await activePersona();
+export async function demoFeatures(headers?: PersonaHeaders) {
+  const id = await demoPersonaOf(headers);
   if (!id) return null;
   const m = MOCKS[id];
   return { agents: !!m.agents, gitlab: !!m.gitlab, jira: !!m.jira };

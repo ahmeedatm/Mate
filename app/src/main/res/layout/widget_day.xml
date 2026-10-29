@@ -86,6 +86,7 @@
          Rejoindre quand une réunion en ligne approche. Rouge = en cours. En bas du bandeau, juste au-dessus de la ligne du
          jour : la salutation en haut, la réunion entre les deux. -->
     <LinearLayout
+        android:id="@+id/day_actions"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"

@@ -15,4 +15,4 @@ Ce sont les fichiers de la release (`npm run package`, paquet `companion-updates
 
 Essai en local : `python3 -m http.server -d site 8765`.
 
-DA : Cadran (`docs/ui-ux/da/README.md`). Logo : variante « visage ». Captures : `docs/ui-ux/da`. Police Outfit (SIL OFL), copiée de `app/src/main/res/font/`.
+DA : Cadran (`docs/ui-ux/da/README.md`). Logo : variante « visage ». Section « Un écran à l'image de chaque poste » : défilé de captures des personas de la démo (`docs/personas.md`), chacune sur la palette de son thème (`res/values/palettes.xml`) avec sa police de titre ; ni persona, ni métier, ni thème nommés, l'écran parle de lui-même. Captures : `video/captures/` (`video/scripts/captures.mjs`, émulateur, données fictives). Polices (SIL OFL) copiées de `app/src/main/res/font/`.

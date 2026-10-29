@@ -121,8 +121,9 @@ app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validat
   reply.send(err);
 });
 
-// Démo (src/demo-mock.ts) : tant qu'un persona est actif, les routes qui lisent l'ordinateur répondent avec ses données
-// fictives, et leurs actions changent cet état fictif sans toucher à l'ordinateur. Avant le contrôle de l'OS : la démo
+// Démo (src/demo-mock.ts) : tant qu'un persona est actif ET que la tablette envoie le même (en-tête X-Demo-Persona), les
+// routes qui lisent l'ordinateur répondent avec ses données fictives, et leurs actions changent cet état fictif sans
+// toucher à l'ordinateur. Tablette sans persona ou avec un autre : les vraies données. Avant le contrôle de l'OS : la démo
 // marche aussi sur un ordinateur que le compagnon ne pilote pas.
 app.addHook("preHandler", async (req, reply) => {
   const answer = await demoAnswer(req.method, req.routeOptions.url ?? "", req);

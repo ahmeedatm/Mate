@@ -45,11 +45,9 @@ class TabletSettingsTest {
     }
 
     @Test
-    fun `un theme de demo n'est pas accepte depuis la page de l'ordinateur`() {
-        assertThrows(IllegalStateException::class.java) {
-            TabletSettings.save(context, JSONObject().put("theme", "TERMINAL"))
-        }
-        assertEquals(null, Prefs.theme(context))
+    fun `un theme de persona est accepte depuis la page de l'ordinateur, hors demo`() {
+        assertTrue(TabletSettings.save(context, JSONObject().put("theme", "TERMINAL")))
+        assertEquals("TERMINAL", TabletSettings.read(context, 0.5f, 0.4f).getString("theme"))
     }
 
     @Test
