@@ -38,6 +38,7 @@ import com.unowhy.companion.ui.home.ROWS
 import com.unowhy.companion.ui.home.RowProfile
 import com.unowhy.companion.ui.home.WidgetGrid
 import com.unowhy.companion.ui.home.WidgetType
+import com.unowhy.companion.ui.home.WidgetZoom
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -97,6 +98,14 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     override val owner: LifecycleOwner get() = viewLifecycleOwner
 
     private var deckOverlays: DeckOverlays? = null
+
+    /** Widget agrandi, par-dessus la grille et les panneaux du Deck ; créé au premier appui long. */
+    private var zoomView: WidgetZoom? = null
+    private val zoom: WidgetZoom
+        get() = zoomView ?: WidgetZoom(requireContext()).also {
+            zoomView = it
+            requireView().findViewById<ViewGroup>(R.id.home_root).addView(it, ViewGroup.LayoutParams(-1, -1))
+        }
     override val overlays: DeckOverlays
         get() = deckOverlays ?: DeckOverlays(requireView().findViewById(R.id.home_root), scope).also { deckOverlays = it }
 
@@ -167,6 +176,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         started = false
         // Les autres panneaux restent : l'écran qui s'éteint ne doit pas perdre une macro à moitié saisie.
         deckOverlays?.hideAgentsBoard()
+        closeZoom()
         widgets.values.forEach { it.setActive(false) }
         loop?.cancel()
         super.onStop()
@@ -174,6 +184,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     override fun onHiddenChanged(hidden: Boolean) {
         if (hidden) {
+            closeZoom()
             deckOverlays?.hideAll()
             if (grid.editing) endEdit(keep = true)
             loop?.cancel()
@@ -206,6 +217,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     /** (Re)crée tous les widgets d'après la disposition. */
     private fun build() {
+        closeZoom()
         widgets.values.forEach { it.setActive(false) }
         widgets.clear()
         grid.removeAllViews()
@@ -246,6 +258,10 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
                     renderCalendar()
                 }
                 for (widget in shownWidgets()) widget.load()
+                zoomView?.current()?.let {
+                    it.onMinute()
+                    it.load()
+                }
                 // Sans widget Tâches, la pastille de la barre latérale n'a plus rien à compter.
                 if (widgets.keys.none { it.type == WidgetType.TASKS }) main?.setPendingTasks(0)
                 tick++
@@ -391,6 +407,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
      * la fin du glissement : des widgets qui se redessinent pendant ce temps feraient recalculer le calque à chaque image.
      */
     fun showProfile(index: Int, animate: Boolean = true) {
+        closeZoom()
         deckOverlays?.hideAll()
         profileLoad?.cancel()
         val order = layout.profilesInOrder(inCall = main?.inCall == true)
@@ -458,12 +475,55 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         order.getOrNull(order.indexOf(page) + delta)?.let(::showProfile)
     }
 
+    // --- Widget agrandi
+
+    /** Widget maintenu : un second exemplaire dans sa plus grande taille, par-dessus l'écran, à jour tant qu'il est ouvert. */
+    override fun onExpand(placed: Placed) {
+        if (grid.editing) return
+        // Même réglages (objet partagé) : ce qui est changé dans le grand vaut pour le widget de la grille.
+        val big = Placed(placed.type, placed.type.zoomSize, placed.page, placed.col, placed.row, placed.config)
+        val widget = HomeWidget.create(requireContext(), this, big, noComputer)
+        widget.applySize()
+        widget.onCalendar()
+        widget.onMinute()
+        zoom.show(widget) {
+            widget.setActive(false)
+            // Ce qui a changé dans le grand (tâche cochée, volume) se voit tout de suite dans la grille.
+            widgets[placed]?.let { small -> scope.launch { small.load() } }
+        }
+        widget.setActive(true)
+        scope.launch { widget.load() }
+    }
+
+    /** Ferme le widget agrandi ; faux s'il n'y en avait pas (Retour). */
+    fun closeZoom(): Boolean {
+        val shown = zoomView?.takeIf { it.isShowing } ?: return false
+        shown.hide()
+        return true
+    }
+
     // --- Mode Modifier
 
-    override fun onEnterEdit() {
+    /** Crayon de la barre : commence le mode Modifier, ou le termine (en gardant) s'il est en cours. */
+    fun toggleEdit() {
+        if (grid.editing) {
+            endEdit(keep = true)
+            return
+        }
+        // Panneau document ouvert (2 colonnes) : pas de mode Modifier, comme avant à l'appui long.
+        if (grid.narrow) {
+            main?.showBanner(getString(R.string.home_edit_narrow), 4)
+            return
+        }
+        closeZoom()
+        onEnterEdit()
+    }
+
+    private fun onEnterEdit() {
         backup = layout.copy()
         grid.editing = true
         editBar.visibility = View.VISIBLE
+        main?.onEditingChanged(true)
         scaleWidgets(EDIT_SCALE)
         (activity as? MainActivity)?.refreshMiniPlayer()
     }
@@ -484,6 +544,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         deckOverlays?.hideAll()
         grid.editing = false
         editBar.visibility = View.GONE
+        main?.onEditingChanged(false)
         (activity as? MainActivity)?.refreshMiniPlayer()
         val previous = backup
         backup = null

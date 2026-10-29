@@ -1000,7 +1000,10 @@
     <string name="profile_icon_default">Par défaut</string>
     <string name="profile_icon_row">Icône de « %1$s » : changer</string>
     <string name="profile_icon_chosen">%1$s, choisie</string>
-    <string name="home_empty_hint">Appui long pour ajouter un widget</string>
+    <string name="home_empty_hint">Touche le crayon de la barre pour ajouter un widget</string>
+    <string name="home_edit_open">Modifier cet écran</string>
+    <string name="home_edit_narrow">Ferme le document pour modifier l\'écran.</string>
+    <string name="widget_zoom_close">Fermer</string>
     <!-- Noms des icônes d'écran, lus par TalkBack (ui/home/ProfileIcons) -->
     <string name="icon_home">Maison</string>
     <string name="icon_work">Travail</string>
@@ -1066,7 +1069,7 @@
     <string name="tour_notifications_title">Notifications</string>
     <string name="tour_notifications_body">La cloche montre ce qui est arrivé sur l\'ordi ; un point s\'y allume quand il y a du nouveau. « Terminer » te ramène où tu étais.</string>
     <string name="tour_customize_title">À ta façon</string>
-    <string name="tour_customize_body">Pendant un appel, Réunion apparaît tout seul dans la barre. Appui long sur un écran pour le modifier ; + pour renommer, ranger, changer l\'icône ou supprimer tes écrans.</string>
+    <string name="tour_customize_body">Pendant un appel, Réunion apparaît tout seul dans la barre. Maintiens un widget pour l\'agrandir ; le crayon, en bas de la barre, pour modifier l\'écran ; + pour renommer, ranger, changer l\'icône ou supprimer tes écrans.</string>
     <string name="next_not_linked">Agenda pas encore relié</string>
     <string name="agenda_link_now">Relier mon agenda</string>
     <string name="settings_rail">Barre de gauche</string>

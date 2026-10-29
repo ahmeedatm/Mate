@@ -25,7 +25,7 @@ import kotlin.math.roundToInt
 
 /**
  * Grille de l'Accueil : place chaque widget (vue dont le `tag` est son [Placed]) sur ses cases. Seule la page
- * affichée est visible. Appui long n'importe où : mode Modifier ; balayage vertical : profil suivant (vers le haut) ou
+ * affichée est visible. Appui long sur un widget : il s'agrandit (le mode Modifier vient du crayon de la barre) ; balayage vertical : profil suivant (vers le haut) ou
  * précédent (vers le bas), sauf si ce qui est sous le doigt défile encore dans ce sens (liste d'un widget).
  *
  * Mode Modifier : les widgets ne reçoivent plus les touchers. Chacun a un ✕ (retirer), sa taille (changer) et, s'il
@@ -36,7 +36,7 @@ import kotlin.math.roundToInt
 class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : ViewGroup(context, attrs) {
 
     interface Listener {
-        fun onEnterEdit()
+        fun onExpand(placed: Placed)
         fun onPageSwipe(delta: Int)
         fun onAddAt(col: Int, row: Int)
         fun onRemove(placed: Placed)
@@ -228,13 +228,18 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private var owner: GestureOwner? = null
     private var ignoreUntilUp = false
 
-    private val enterEdit = Runnable {
-        if (narrow) return@Runnable
+    /** Widget maintenu : il s'agrandit ([Listener.onExpand]). Le mode Modifier s'ouvre par le crayon de la barre. */
+    private val expand = Runnable {
+        val placed = placedAt(downX, downY)?.takeIf { it.type.zoomable && !blocked(it) } ?: return@Runnable
         performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
         cancelChildren()
         ignoreUntilUp = true
-        listener?.onEnterEdit()
+        listener?.onExpand(placed)
     }
+
+    private fun placedAt(x: Float, y: Float): Placed? = (childCount - 1 downTo 0).map(::getChildAt).firstOrNull { child ->
+        child.isVisible && x >= child.left && x < child.right && y >= child.top && y < child.bottom && placedOf(child) != null
+    }?.let(::placedOf)
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         if (editing) {
@@ -249,12 +254,12 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 stolen = false; swiping = false; ignoreUntilUp = false
                 onSlider = sliderAt(ev.x, ev.y)
                 owner = ownerAt(ev.x, ev.y)
-                if (GestureRules.allowLongPress(owner, onSlider)) postDelayed(enterEdit, longPress)
+                if (GestureRules.allowLongPress(owner, onSlider)) postDelayed(expand, longPress)
             }
             MotionEvent.ACTION_MOVE -> {
                 val dx = ev.x - downX
                 val dy = ev.y - downY
-                if (abs(dx) > slop || abs(dy) > slop) removeCallbacks(enterEdit)
+                if (abs(dx) > slop || abs(dy) > slop) removeCallbacks(expand)
                 if (!stolen && GestureRules.allowSwipe(owner, onSlider, narrow) && abs(dy) > slop * 2 && abs(dy) > abs(dx) * 2 &&
                     !scrollsAt(downX, downY, if (dy < 0) 1 else -1)
                 ) {
@@ -264,7 +269,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                removeCallbacks(enterEdit)
+                removeCallbacks(expand)
                 if (swiping && ev.actionMasked == MotionEvent.ACTION_UP) {
                     val dy = ev.y - downY
                     // Vers le haut : profil suivant, qui arrive par le bas (Look.sharedAxis de HomeFragment.showProfile).

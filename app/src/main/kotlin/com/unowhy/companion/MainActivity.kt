@@ -221,6 +221,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.notif_bell).setOnClickListener { openNotifications() }
         alerts = TabletAlerts(this, banner)
         findViewById<View>(R.id.rail_settings).setOnClickListener { show(Mode.SETTINGS) }
+        findViewById<View>(R.id.rail_edit).setOnClickListener { editProfile() }
         findViewById<TabletStatusView>(R.id.tablet_status).apply {
             inline()
             onMinute = {
@@ -261,6 +262,7 @@ class MainActivity : AppCompatActivity() {
             when {
                 welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE -> Unit
                 agentAsk.isOpen -> agentAsk.close()
+                current == Mode.HOME && homeFragment()?.closeZoom() == true -> Unit
                 documentPanel.visibility == View.VISIBLE -> documentPanel.close()
                 current != Mode.HOME || homeFragment()?.shownPage != shownLayout().homeProfile -> showProfile(shownLayout().homeProfile)
             }
@@ -834,6 +836,18 @@ class MainActivity : AppCompatActivity() {
         show(Mode.HOME)
         supportFragmentManager.executePendingTransactions()
         homeFragment()?.showProfile(page, animate = within)
+    }
+
+    /** Crayon de la barre : le profil affiché (ou le dernier vu) passe en mode Modifier, ou en sort. */
+    private fun editProfile() {
+        if (current != Mode.HOME) show(Mode.HOME)
+        supportFragmentManager.executePendingTransactions()
+        homeFragment()?.toggleEdit()
+    }
+
+    /** Mode Modifier commencé ou fini : le crayon de la barre est plein pendant ce temps. */
+    fun onEditingChanged(editing: Boolean) {
+        findViewById<View>(R.id.rail_edit).isSelected = editing
     }
 
     /** Appui long sur un profil de la barre, ou « Plus » : la liste des profils, depuis l'Accueil. */

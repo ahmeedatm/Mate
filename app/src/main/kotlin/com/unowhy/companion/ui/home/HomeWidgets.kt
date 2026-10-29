@@ -460,11 +460,15 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         onAdd = { host.overlays.addLinks { sites.reload() } },
     )
 
+    /** Son de l'ordinateur, en Grand (et agrandi) : on règle le volume sans changer de widget. */
+    private val volume = ComputerAudioView(context).apply { attach(host.scope) }
+
     override val view = LinearLayout(context).asCard(16).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
         playing.bind(true)
         addView(playing, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        addView(volume, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
         sites.addTo(this, headerTopMarginDp = 8)
     }
 
@@ -480,6 +484,7 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     override fun applySize() {
         playing.layout(if (placed.size == WidgetSize.S) NowPlayingView.Layout.SMALL else NowPlayingView.Layout.ROW)
         sites.shown = big
+        volume.visibility = if (big) View.VISIBLE else View.GONE
         if (big) host.scope.launch { load() }
     }
 
