@@ -840,7 +840,8 @@ class MainActivity : AppCompatActivity() {
 
         nav.select(mode, changed)
         // L'Accueil a son propre balayage (WidgetGrid) ; Réglages n'est pas dans la barre.
-        findViewById<RailSwipeLayout>(R.id.mode_container).swipeEnabled = mode != Mode.HOME && mode != Mode.SETTINGS
+        // Caméra : hors barre, et ses gestes (zoom) restent à elle.
+        findViewById<RailSwipeLayout>(R.id.mode_container).swipeEnabled = mode != Mode.HOME && mode != Mode.SETTINGS && mode != Mode.CAMERA
         renderNoComputer()
         if (changed) slideTo(mode)
     }
@@ -866,6 +867,16 @@ class MainActivity : AppCompatActivity() {
         supportFragmentManager.executePendingTransactions()
         homeFragment()?.showProfile(page, animate = within)
     }
+
+    /** Cases caméra d'Ordi : le mode Caméra, directement dans l'usage choisi. */
+    fun openCamera(photo: Boolean) {
+        show(Mode.CAMERA)
+        supportFragmentManager.executePendingTransactions()
+        (supportFragmentManager.findFragmentByTag(Mode.CAMERA.tag) as? CameraFragment)?.start(photo)
+    }
+
+    /** Caméra arrêtée : retour à Ordi, d'où elle s'ouvre. */
+    fun backToComputer() = show(Mode.COMPUTER)
 
     /** Crayon de la barre : le profil affiché (ou le dernier vu) passe en mode Modifier, ou en sort. */
     private fun editProfile() {
