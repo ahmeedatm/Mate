@@ -12,7 +12,7 @@ import org.junit.Test
 
 class UpdatePlanTest {
 
-    private val companion = "com.unowhy.unomate"
+    private val companion = "com.unowhy.companion"
     private val webview = "com.google.android.webview"
 
     private fun update(pkg: String, code: Long, source: UpdateSource) =
@@ -51,7 +51,7 @@ class UpdatePlanTest {
 
     @Test
     fun `auto ignore un autre paquet, meme plus recent`() {
-        val trial = AppUpdate("com.unowhy.unomate.essai", "UnoMate essai", 999_999, "0.2.2-essai.4", "e.apk", 10, "ab")
+        val trial = AppUpdate("com.unowhy.companion.essai", "UnoMate essai", 999_999, "0.2.2-essai.4", "e.apk", 10, "ab")
         assertNull(UpdatePlan.auto(listOf(trial), companion, 202_000))
     }
 
@@ -95,7 +95,7 @@ class UpdatePlanTest {
 
     @Test
     fun `parseUpdates lit le manifest du serveur central`() {
-        val json = """{"updates":[{"package":"com.unowhy.unomate","label":"UnoMate","versionCode":10300,"versionName":"1.3.0",
+        val json = """{"updates":[{"package":"com.unowhy.companion","label":"UnoMate","versionCode":10300,"versionName":"1.3.0",
             "file":"companion-1.3.0.apk","size":4200000,"sha256":"0f"}]}"""
         assertEquals(
             listOf(AppUpdate(companion, "UnoMate", 10300, "1.3.0", "companion-1.3.0.apk", 4_200_000, "0f", UpdateSource.SERVER)),

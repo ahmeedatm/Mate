@@ -31,9 +31,9 @@
     <!-- Ordinateurs appairés lus par l'appli d'essai dans la stable (trial/ComputersProvider) : seulement entre applis
          signées par la même clé. Nom fixe, déclaré à l'identique par la stable et l'essai. -->
     <permission
-        android:name="com.unowhy.unomate.permission.COMPUTERS"
+        android:name="com.unowhy.companion.permission.COMPUTERS"
         android:protectionLevel="signature" />
-    <uses-permission android:name="com.unowhy.unomate.permission.COMPUTERS" />
+    <uses-permission android:name="com.unowhy.companion.permission.COMPUTERS" />
 
     <queries>
         <!-- Android 11+ : sans cette déclaration, TextToSpeech ne voit aucun moteur de synthèse vocale. -->
@@ -50,8 +50,8 @@
             <category android:name="android.intent.category.HOME" />
         </intent>
         <!-- Android 11+ : la stable et l'essai se voient (Réglages > Mises à jour, ordinateurs appairés). -->
-        <package android:name="com.unowhy.unomate" />
-        <package android:name="com.unowhy.unomate.essai" />
+        <package android:name="com.unowhy.companion" />
+        <package android:name="com.unowhy.companion.essai" />
     </queries>
 
     <application
@@ -75,9 +75,10 @@
         </activity>
 
         <!-- Écran d'accueil (launcher) : désactivé par défaut pour ne pas gêner pendant le dev,
-             activé par le mode kiosque (voir kiosk/Kiosk.kt). -->
+             activé par le mode kiosque (voir kiosk/Kiosk.kt). Nom complet d'avant le renommage UnoMate : c'est lui que
+             les tablettes en kiosque ont retenu comme accueil. -->
         <activity-alias
-            android:name=".HomeAlias"
+            android:name="com.unowhy.companion.HomeAlias"
             android:enabled="false"
             android:exported="true"
             android:targetActivity=".MainActivity">
@@ -88,8 +89,9 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Nom complet d'avant le renommage UnoMate : le device owner des tablettes est ce composant, il ne doit pas changer. -->
         <receiver
-            android:name=".kiosk.KioskAdminReceiver"
+            android:name="com.unowhy.companion.kiosk.KioskAdminReceiver"
             android:exported="true"
             android:permission="android.permission.BIND_DEVICE_ADMIN">
             <meta-data
@@ -105,7 +107,7 @@
             android:name=".trial.ComputersProvider"
             android:authorities="${applicationId}.computers"
             android:exported="true"
-            android:permission="com.unowhy.unomate.permission.COMPUTERS" />
+            android:permission="com.unowhy.companion.permission.COMPUTERS" />
 
         <!-- Relance l'appli (et le kiosque) juste après sa mise à jour. -->
         <receiver
