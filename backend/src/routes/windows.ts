@@ -14,6 +14,14 @@ export const windowTarget = {
 
 /** Vue « Ouvertes » : toutes les applis ouvertes sur l'ordinateur et l'écran de chacune de leurs fenêtres. */
 export default async function windowRoutes(app: FastifyInstance) {
+  // Une action à la fois : deux gestes rapprochés visaient la même fenêtre en même temps (plein écran animé…).
+  let queue: Promise<unknown> = Promise.resolve();
+  function oneAtATime<T>(task: () => Promise<T>): Promise<T> {
+    const run = queue.then(task, task);
+    queue = run.catch(() => {});
+    return run;
+  }
+
   app.get("/windows/open", async () => listOpenWindows());
 
   app.get<{ Querystring: { name: string } }>(
@@ -31,7 +39,11 @@ export default async function windowRoutes(app: FastifyInstance) {
     },
   );
 
-  app.post<{ Body: { key: string; action: OpenAction; window: WindowTarget; display?: number; layout?: Layout } }>(
+  // `list: false` : réponse dès l'action faite, sans relire la liste (près de 4 s sur Mac) ; la tablette la relit
+  // elle-même une fois l'animation finie.
+  app.post<{
+    Body: { key: string; action: OpenAction; window: WindowTarget; display?: number; layout?: Layout; list?: boolean };
+  }>(
     "/windows/open",
     {
       schema: {
@@ -45,14 +57,17 @@ export default async function windowRoutes(app: FastifyInstance) {
             window: windowTarget,
             display: { type: "integer" },
             layout: { enum: ["keep", "left", "right", "max"] },
+            list: { type: "boolean" },
           },
         },
       },
     },
     async (req) => {
-      const { key, action, window, display, layout } = req.body;
-      await controlOpenWindow(key, window, action, action === "place" ? { display, layout: layout ?? "keep" } : undefined);
-      return listOpenWindows();
+      const { key, action, window, display, layout, list } = req.body;
+      await oneAtATime(() =>
+        controlOpenWindow(key, window, action, action === "place" ? { display, layout: layout ?? "keep" } : undefined),
+      );
+      return list === false ? { ok: true } : listOpenWindows();
     },
   );
 }

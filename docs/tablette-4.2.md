@@ -134,7 +134,9 @@ appli Google 102 Mo.
   (Chrome 88), pas d'`aspect-ratio` (Chrome 88), pas de `:has()` ni de `@container`.
 - **Animations système à 0 en kiosque** (`docs/kiosque.md`, étape 1) : `animator_duration_scale = 0`
   coupe les `ValueAnimator`. ⚠️ À trancher avant le passage de Cadran dans l'appli, dont la DA
-  repose sur les animations et les coupe justement quand cette échelle vaut 0.
+  repose sur les animations et les coupe justement quand cette échelle vaut 0. Exception : le
+  changement d'onglet du Deck (`TabStrip`, `Look.slideIn`) joue quand même (ressorts de
+  `dynamicanimation`, qui ne lisent pas l'échelle avant l'API 33).
 - **Encodage vidéo** : 720p au plus (visualiseur de la caméra en JPEG 720p).
 - **Capteur de luminosité** : disponible pour atténuer l'écran selon la pièce, en plus de l'horaire
   22 h – 7 h de `device/Screen`.

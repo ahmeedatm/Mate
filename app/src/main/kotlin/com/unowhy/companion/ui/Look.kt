@@ -205,10 +205,13 @@ object Look {
 
     /**
      * Ressort sur une valeur seule : `onUpdate` reçoit la valeur de `from` vers `to`, `onEnd` quand elle est posée
-     * (pas si on l'annule). À annuler avec `cancel()` quand la vue part. Échelle d'animation à zéro : `to` tout de suite, null.
+     * (pas si on l'annule). À annuler avec `cancel()` quand la vue part. Échelle d'animation à zéro : `to` tout de suite, null,
+     * sauf `always` (joue quand même : voir [slideIn]).
      */
-    fun spring(context: Context, token: Spring, from: Float, to: Float, onUpdate: (Float) -> Unit, onEnd: (() -> Unit)? = null): SpringAnimation? {
-        if (from == to || reduced(context)) {
+    fun spring(
+        context: Context, token: Spring, from: Float, to: Float, onUpdate: (Float) -> Unit, onEnd: (() -> Unit)? = null, always: Boolean = false,
+    ): SpringAnimation? {
+        if (from == to || (!always && reduced(context))) {
             onUpdate(to)
             onEnd?.invoke()
             return null
@@ -253,6 +256,39 @@ object Look {
             SpringAnimation(view, DynamicAnimation.ALPHA).setSpring(force(EFFECTS_DEFAULT, 1f)).start()
         }, delayMs)
     }
+
+    /**
+     * Changement d'onglet (axe partagé M3, docs/ui-ux/specs-ds.md) : les vues visibles entrent de 30 dp du côté
+     * `direction` (1 droite, -1 gauche) en fondu, sur un calque matériel. Rend les ressorts, à annuler avec [settle].
+     * Joue même échelle d'animation à zéro : le kiosque la met à zéro pour la vitesse (docs/kiosque.md), et ces ressorts
+     * (Android 10 : ils ne lisent pas l'échelle) ne touchent que des propriétés de vue sur calque matériel.
+     */
+    fun slideIn(views: List<View>, direction: Int): List<SpringAnimation> {
+        if (direction == 0 || views.isEmpty()) return emptyList()
+        val shift = direction * SHARED_AXIS_DP * views.first().resources.displayMetrics.density
+        return views.filter { it.visibility == View.VISIBLE }.flatMap { view ->
+            view.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            view.translationX = shift
+            view.alpha = 0f
+            listOf(
+                SpringAnimation(view, DynamicAnimation.TRANSLATION_X).setSpring(force(SPATIAL_DEFAULT, 0f))
+                    .addEndListener { _, _, _, _ -> view.setLayerType(View.LAYER_TYPE_NONE, null) },
+                SpringAnimation(view, DynamicAnimation.ALPHA).setSpring(force(EFFECTS_DEFAULT, 1f)),
+            )
+        }.onEach { it.start() }
+    }
+
+    /** Arrête un [slideIn] en cours et remet les vues en place. */
+    fun settle(springs: List<SpringAnimation>, views: List<View>) {
+        springs.forEach { it.cancel() }
+        views.forEach {
+            it.translationX = 0f
+            it.alpha = 1f
+            it.setLayerType(View.LAYER_TYPE_NONE, null)
+        }
+    }
+
+    private const val SHARED_AXIS_DP = 30
 
     /** Appui (DA Cadran) : la vue s'enfonce à 0,96 puis revient sur un ressort. Le clic n'est pas consommé. */
     @SuppressLint("ClickableViewAccessibility")

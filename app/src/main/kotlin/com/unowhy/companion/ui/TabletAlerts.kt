@@ -14,9 +14,11 @@ class TabletAlerts(private val context: Context, private val banner: Banner) {
     /** Bandeau « batterie faible » déjà montré (de nouveau après une recharge). */
     private var lowBatteryWarned = false
 
-    /** « Pense à boire » (carte Eau de l'Accueil) : bandeau et voix ; vérifié chaque minute. Seulement si le widget Eau est sur l'Accueil. */
+    /** « Pense à boire » : bandeau et voix ; vérifié chaque minute. Seulement si l'Accueil montre l'eau (widget Eau, ou l'Heure de Cadran). */
     fun remindWater() {
-        if (!HomeLayout.has(context, themeBool(context, R.attr.c_cadran), WidgetType.WATER) || !Water.reminderDue(context)) return
+        val cadran = themeBool(context, R.attr.c_cadran)
+        val shown = HomeLayout.has(context, cadran, WidgetType.WATER) || (cadran && HomeLayout.has(context, true, WidgetType.HERO))
+        if (!shown || !Water.reminderDue(context)) return
         val state = Water.state(context)
         banner.show(context.getString(R.string.water_remind_banner, state.glasses, state.goal), 30)
         Speaker.speak(context.getString(R.string.water_remind_text))
