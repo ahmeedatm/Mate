@@ -30,6 +30,8 @@ export type MediaSession = {
   canSeek: boolean;
   positionMs: number | null;
   durationMs: number | null;
+  /** Navigateur qui joue, quand `name` affiche le site à sa place ([enrichBrowserSession]). */
+  browser?: string;
 };
 export type MediaAction = MediaCommand | "seek";
 
@@ -172,14 +174,16 @@ function run() {
     try { wins = b.windows(); } catch (e) {}
     for (const win of wins) try {
       const urls = win.tabs.url(), titles = name === "Safari" ? win.tabs.name() : win.tabs.title();
-      urls.forEach((url, t) => out.push({ kind: "tab", app: name, url, tabTitle: titles[t] || "" }));
+      let active = 0;
+      try { active = name === "Safari" ? win.currentTab.index() : win.activeTabIndex(); } catch (e) {}
+      urls.forEach((url, t) => out.push({ kind: "tab", app: name, url, tabTitle: titles[t] || "", active: t + 1 === active }));
     } catch (e) {}
   }
   return JSON.stringify(out);
 }`;
 
 type RawPlayer = { kind: "player"; app: string; state: string; title: string; artist: string; album: string; pos: number; dur: number };
-type RawTab = { kind: "tab"; app: string; url: string; tabTitle: string };
+type RawTab = { kind: "tab"; app: string; url: string; tabTitle: string; active?: boolean };
 
 /** Programmes qui jouent du son (« Playing audio » dans les assertions d'énergie), en minuscules. */
 export function playingApps(assertions: string): Set<string> {
@@ -270,7 +274,8 @@ export function mergeSessions(
   recall: Recall = new Map(),
 ): { sessions: MediaSession[]; remote?: string } {
   const browserOf = (o: MediaSession) => (o.app.includes("|") ? o.app.split("|")[0].toLowerCase() : "");
-  const ofPrimary = (o: MediaSession) => !!browserOf(o) && !!primary && primary.name.toLowerCase().startsWith(browserOf(o));
+  // Navigateur de MediaRemote : `browser` quand son nom a été remplacé par le site (enrichBrowserSession).
+  const ofPrimary = (o: MediaSession) => !!browserOf(o) && !!primary && extensionBrowser(primary).toLowerCase().startsWith(browserOf(o));
   const twin =
     primary &&
     (others.find((o) => PLAYERS[o.app] && PLAYERS[o.app] === PLAYERS[primary.app]) ??
@@ -300,6 +305,34 @@ export function mergeSessions(
 
 async function readPlayersAndTabs(): Promise<(RawPlayer | RawTab)[]> {
   return JSON.parse(await osascript(FALLBACK_SCRIPT, [], "JavaScript").catch(() => "[]"));
+}
+
+/** Titre que le navigateur donne à macOS quand la page ne décrit pas ce qu'elle joue (Chrome, en français ou en anglais). */
+const GENERIC_TITLE = /un site est en train de lire|lit du contenu multimédia|a site is playing|is playing media/i;
+
+/**
+ * Session d'un navigateur au titre générique : titre de l'onglet et nom du site à la place, seulement pour un site de
+ * lecture connu ([siteName]) de ce navigateur, l'onglet actif d'abord. Jamais un onglet quelconque : son titre (un
+ * document, un intranet) s'afficherait sur la tablette posée sur le bureau. Rien de connu : inchangée.
+ */
+export function enrichBrowserSession(
+  session: MediaSession,
+  tabs: { app: string; url: string; tabTitle: string; active?: boolean }[],
+): MediaSession {
+  if (!GENERIC_TITLE.test(session.title)) return session;
+  const mine = tabs.filter((t) => t.app === session.name || session.name.startsWith(t.app));
+  // L'onglet actif d'abord : c'est le plus souvent celui qui joue.
+  for (const t of [...mine.filter((t) => t.active), ...mine.filter((t) => !t.active)]) {
+    const site = siteName(t.url);
+    const title = site && tabTitle(t.tabTitle, site);
+    if (site && title) return { ...session, name: site, title, browser: session.name };
+  }
+  return session;
+}
+
+/** Navigateur à qui l'extension doit envoyer les commandes : jamais le site affiché à la place de son nom. */
+export function extensionBrowser(session: MediaSession): string {
+  return session.browser ?? session.name;
 }
 
 // --- Interface du Mac pour os.ts
@@ -341,7 +374,14 @@ export function mediaSessions(): Promise<MediaSession[]> {
       run("pmset", ["-g", "assertions"]).catch(() => ""),
     ]);
     const now = Date.now();
-    const fresh = raw && sessionOfNowPlaying(raw, now);
+    let fresh = raw && sessionOfNowPlaying(raw, now);
+    // Navigateur sans description de ce qu'il joue : on lit ses onglets pour donner le vrai titre et le site.
+    if (fresh && GENERIC_TITLE.test(fresh.title)) {
+      fresh = enrichBrowserSession(
+        fresh,
+        players.filter((r): r is RawTab => r.kind === "tab"),
+      );
+    }
     if (fresh?.status === "playing") lastPlaying = { session: fresh, atMs: now };
     const session = heldSession(lastPlaying, fresh, now);
     const merged = mergeSessions(session, fallbackSessions(players, playingApps(assertions)), recall);
@@ -384,10 +424,11 @@ export async function mediaControl(action: MediaAction, app?: string, positionMs
       () => true,
       () => false,
     );
-  // Navigateur : `name` pour MediaRemote (« Opera GX »), début de `app` pour un onglet du secours (`name` = le site).
+  // Navigateur : `name` pour MediaRemote (« Opera GX », ou `browser` quand `name` affiche le site), début de `app` pour
+  // un onglet du secours (`name` = le site).
   if (target) {
     const command = { action, seconds: (positionMs ?? 0) / 1000, title: target.title };
-    if ([target.name, target.app.split("|")[0]].some((b) => b && sendToExtension(b, command))) return true;
+    if ([extensionBrowser(target), target.app.split("|")[0]].some((b) => b && sendToExtension(b, command))) return true;
     if (target.app !== remoteApp) return false;
   }
   const arg = action === "seek" ? String((positionMs ?? 0) / 1000) : "";

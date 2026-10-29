@@ -14,6 +14,8 @@ data class DeckTile(
     val app: String? = null,
     val whenState: String? = null,
     val lit: String? = null,
+    /** Symbole de la tablette (`TileIcons`) à la place de l'emoji ; null : emoji, sinon initiale ou icône d'appli. */
+    val symbol: String? = null,
 )
 /** Appel en cours dans une appli (Discord) : salon, participants vus, micro et sourdine (null : inconnu). */
 /** `lobby` : écran d'avant-réunion de Teams (« Rejoindre maintenant »), pas encore dans la réunion. */
@@ -74,7 +76,7 @@ class DeckApi(private val http: Http) {
             val tiles = p.getJSONArray("tiles")
             DeckPage(p.getString("title"), (0 until tiles.length()).map { j ->
                 val t = tiles.getJSONObject(j)
-                DeckTile(t.getString("id"), t.getString("label"), t.getString("type"), t.optStringOrNull("glyph"), t.optStringOrNull("color"), t.optStringOrNull("app"), t.optStringOrNull("when"), t.optStringOrNull("lit"))
+                DeckTile(t.getString("id"), t.getString("label"), t.getString("type"), t.optStringOrNull("glyph"), t.optStringOrNull("color"), t.optStringOrNull("app"), t.optStringOrNull("when"), t.optStringOrNull("lit"), t.optStringOrNull("symbol"))
             }, p.optBoolean("editable"), p.optBoolean("apps"), p.optBoolean("meeting"), p.optStringOrNull("app"), p.optBoolean("media"),
                 // Ordinateur pas encore à jour (sans `sound`) : barre Son comme avant.
                 p.optBoolean("sound", true), p.optBoolean("mail"))

@@ -247,12 +247,14 @@ object Look {
 
     /**
      * Ressort sur une propriété de vue, lancé à `velocity` (px/s : celle du doigt qui lâche). `onEnd` quand elle est posée
-     * (pas si on l'annule). Échelle d'animation à zéro : valeur posée tout de suite, null.
+     * (pas si on l'annule). Échelle d'animation à zéro : valeur posée tout de suite, null, sauf `always` (navigation :
+     * le kiosque met cette échelle à zéro pour les animations du système, les ressorts de la barre jouent quand même).
      */
     fun springTo(
         view: View, property: DynamicAnimation.ViewProperty, token: Spring, to: Float, velocity: Float = 0f, onEnd: (() -> Unit)? = null,
+        always: Boolean = false,
     ): SpringAnimation? {
-        if (reduced(view.context)) {
+        if (!always && reduced(view.context)) {
             property.setValue(view, to)
             onEnd?.invoke()
             return null
@@ -261,6 +263,50 @@ object Look {
             .addEndListener { _, canceled, _, _ -> if (!canceled) onEnd?.invoke() }
             .also { it.start() }
     }
+
+    /**
+     * Ressort de navigation (barre, changement d'écran, repos) : joue même en kiosque (échelle d'animation à zéro, voir
+     * [springTo]) et remplace le ressort en cours sur la même propriété, qui repart de sa position et de sa vitesse.
+     */
+    fun navSpring(view: View, property: DynamicAnimation.ViewProperty, token: Spring, to: Float, onEnd: (() -> Unit)? = null) {
+        @Suppress("UNCHECKED_CAST")
+        val springs = view.getTag(R.id.nav_springs) as? MutableMap<DynamicAnimation.ViewProperty, SpringAnimation>
+            ?: mutableMapOf<DynamicAnimation.ViewProperty, SpringAnimation>().also { view.setTag(R.id.nav_springs, it) }
+        val running = springs[property]
+        if (running != null && running.isRunning) {
+            running.spring.finalPosition = to
+            running.addEndListener(endOnce(onEnd))
+            return
+        }
+        springs[property] = springTo(view, property, token, to, onEnd = onEnd, always = true) ?: return
+    }
+
+    private fun endOnce(onEnd: (() -> Unit)?): DynamicAnimation.OnAnimationEndListener =
+        object : DynamicAnimation.OnAnimationEndListener {
+            override fun onAnimationEnd(animation: DynamicAnimation<*>, canceled: Boolean, value: Float, velocity: Float) {
+                animation.removeEndListener(this)
+                if (!canceled) onEnd?.invoke()
+            }
+        }
+
+    /**
+     * Changement d'écran ou de profil par la barre (axe partagé vertical) : le nouveau arrive de 24 dp dans le sens du
+     * déplacement (`fromBelow` : on est descendu dans la barre, il monte) en fondu, sur le fond de l'écran. L'ancien est
+     * déjà masqué : pas de fondu croisé, qui mêle deux écrans chargés. Calque matériel le temps du mouvement.
+     */
+    fun sharedAxis(into: View, fromBelow: Boolean) {
+        into.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        into.alpha = 0f
+        into.translationY = into.dp(NAV_AXIS_DP) * if (fromBelow) 1f else -1f
+        navSpring(into, DynamicAnimation.ALPHA, EFFECTS_DEFAULT, 1f)
+        navSpring(into, DynamicAnimation.TRANSLATION_Y, SPATIAL_DEFAULT, 0f) { into.setLayerType(View.LAYER_TYPE_NONE, null) }
+    }
+
+    /** Temps du glissement d'un écran par la barre : ce qui recharge l'écran attend jusque-là (calque stable). */
+    const val NAV_SETTLE_MS = 350L
+
+    /** Course de l'écran qui arrive par la barre (24 dp, spec Deck V2). */
+    private const val NAV_AXIS_DP = 24
 
     /** Arrivée d'un élément de l'Accueil Cadran : il monte de `dy` dp (ressort par défaut) en fondu, après `delayMs`. */
     fun enterSpring(view: View, delayMs: Long, dy: Int) {

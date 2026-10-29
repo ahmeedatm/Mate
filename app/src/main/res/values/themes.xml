@@ -116,11 +116,6 @@
         <item name="android:stateListAnimator">@animator/press</item>
     </style>
 
-    <!-- Onglet du Deck : fond dessiné par TabStrip. -->
-    <style name="Chip.Tab">
-        <item name="android:background">@drawable/tab_bg</item>
-    </style>
-
     <!-- Bouton rond à icône. -->
     <style name="IconButton">
         <item name="android:layout_width">48dp</item>

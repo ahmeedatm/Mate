@@ -129,6 +129,9 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
         /** Cotes du thème : grandes en Contraste élevé (`c_big_keys`). */
         fun metrics(context: Context) = TileMetrics.of(themeBool(context, R.attr.c_big_keys))
 
+        /** Marge autour d'un symbole dans sa pastille ronde (touche sans couleur). */
+        private const val SYMBOL_PAD_DP = 12
+
         /**
          * Vue d'une case, au style Cadran de `KeysWidget.tile` : sans cadre, icône de 52 dp à coins arrondis, libellé
          * de 13 sp, appui sur ressort. `item_tile` fait 136 dp : ici 100 dp, assez pour deux lignes de libellé. [metrics]
@@ -171,6 +174,8 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             Look.pressReset(view)
             icon.setImageBitmap(null)
             icon.setPadding(0, 0, 0, 0)
+            icon.imageTintList = null
+            icon.background = null
             initial.visibility = View.VISIBLE
 
             val empty = cell.add || cell.type == EMPTY
@@ -203,6 +208,21 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
                 initial.setTextColor(if (cell.lit) themeColor(context, R.attr.c_on_accent) else Look.readableOn(context, tint!!))
             }
 
+            // Symbole de la tablette (Deck V2) : icône monochrome, prioritaire sur l'emoji.
+            TileIcons.drawable(key.symbol)?.let { symbol ->
+                icon.setImageResource(symbol)
+                val ink = when {
+                    cell.lit -> themeColor(context, R.attr.c_on_accent)
+                    plain -> themeColor(context, R.attr.c_text)
+                    else -> Look.readableOn(context, tint!!)
+                }
+                icon.imageTintList = android.content.res.ColorStateList.valueOf(ink)
+                if (plain) icon.setBackgroundResource(R.drawable.round_bg)
+                val pad = context.dp(if (plain) SYMBOL_PAD_DP else SYMBOL_PAD_DP + 8)
+                icon.setPadding(pad, pad, pad, pad)
+                initial.visibility = View.GONE
+                return
+            }
             if (key.glyph != null) {
                 initial.text = key.glyph
                 return

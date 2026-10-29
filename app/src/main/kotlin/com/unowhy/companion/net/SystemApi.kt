@@ -186,6 +186,12 @@ class SystemApi(private val http: Http) {
         http.postJson("/system/dnd", JSONObject().put("on", on).put("minutes", minutes.coerceIn(1, 240))); Unit
     }
 
+    /** Ne pas déranger de l'ordinateur : null si illisible (pastille de Ma journée). */
+    suspend fun dnd(): Boolean? = http.io { JSONObject(http.get("/system/dnd")).opt("on") as? Boolean }
+
+    /** Posé à la main (pastille de Ma journée) : l'utilisateur en prend la main, le Focus ne l'éteindra plus. */
+    suspend fun setDnd(on: Boolean) = http.io { http.putJson("/system/dnd", JSONObject().put("on", on)); Unit }
+
     /** Appel entrant (src/calls.ts) : appuie sur Répondre (ou Vidéo) / Ignorer dans l'appli. */
     suspend fun answerCall(app: String, video: Boolean) = http.io { http.postJson("/calls/answer", JSONObject().put("app", app).put("video", video)); Unit }
 

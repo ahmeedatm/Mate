@@ -54,16 +54,24 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private lateinit var grid: WidgetGrid
     private lateinit var scroll: ScrollView
     private lateinit var editBar: View
-    private lateinit var dots: LinearLayout
-    private lateinit var profileName: TextView
-    private lateinit var profilePrev: View
-    private lateinit var profileNext: View
 
     private lateinit var layout: HomeLayout
     /** Disposition au moment d'entrer dans le mode Modifier : « Annuler » y revient. */
     private var backup: HomeLayout? = null
     private val widgets = LinkedHashMap<Placed, HomeWidget>()
     private var page = 0
+
+    /** Profil affiché (la barre et la fin d'appel s'en servent). */
+    val shownPage: Int get() = page
+
+    /** La disposition affichée (l'objet vivant : la barre et l'appel en cours s'en servent), null avant le chargement. */
+    val shownLayout: HomeLayout? get() = if (::layout.isInitialized) layout else null
+
+    /** Premier affichage de cet écran : il s'ouvre sur le profil Accueil, pas sur la première page. */
+    private var pageChosen = false
+
+    /** Mode Modifier en cours : un appel qui commence ne fait pas changer d'écran. */
+    val editing: Boolean get() = ::grid.isInitialized && grid.editing
     /** Famille de thème Cadran : disposition à part et lignes inégales. */
     private val cadran get() = themeBool(requireContext(), R.attr.c_cadran)
     /** Aucun ordinateur appairé : les widgets qui en ont besoin proposent de le connecter. */
@@ -100,13 +108,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         grid = view.findViewById(R.id.home_grid)
         scroll = view.findViewById(R.id.home_scroll)
         editBar = view.findViewById(R.id.home_edit_bar)
-        dots = view.findViewById(R.id.home_dots)
-        profileName = view.findViewById(R.id.home_profile_name)
-        profilePrev = view.findViewById(R.id.home_profile_prev)
-        profileNext = view.findViewById(R.id.home_profile_next)
-        profilePrev.setOnClickListener { showProfile(page - 1) }
-        profileNext.setOnClickListener { showProfile(page + 1) }
-        view.findViewById<View>(R.id.home_profile_title).setOnClickListener { openProfiles() }
         grid.listener = this
         grid.blocked = { unreachable != null && dependsOnComputer(it) }
 
@@ -125,7 +126,14 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             grid.clipChildren = false
         }
         layout = HomeLayout.load(requireContext(), cadran)
-        if (nameProfiles()) HomeLayout.save(requireContext(), layout, cadran)
+        // `or` : tout s'applique. Réunion posé une fois ; le Deck d'office du premier Deck V2 retiré s'il n'a pas été touché.
+        if (nameProfiles() or (cadran && (layout.ensureRoles(getString(R.string.profile_call)) or layout.dropDefaultDeck()))) {
+            HomeLayout.save(requireContext(), layout, cadran)
+        }
+        if (!pageChosen) {
+            page = layout.homeProfile
+            pageChosen = true
+        }
         build()
 
         // Rétro : les tubes passent derrière les widgets, voilés derrière ceux sans fond (où qu'ils soient placés) ;
@@ -187,7 +195,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         for (placed in shown) {
             val widget = widgets[placed] ?: continue
             when (placed.type) {
-                WidgetType.HERO -> Look.enterSpring(widget.view, 0, -8)
+                WidgetType.HERO, WidgetType.DAY -> Look.enterSpring(widget.view, 0, -8)
                 WidgetType.DAYLINE -> (widget as? DayLineWidget)?.arrive()
                 else -> Look.enterSpring(widget.view, 160L + 50L * tiles++, 24)
             }
@@ -261,7 +269,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private fun shownWidgets() = widgets.filterKeys { it.page == page }.values.toList()
 
     private fun showsCalendar() = widgets.keys.any {
-        it.type == WidgetType.AGENDA || it.type == WidgetType.NEXT || it.type == WidgetType.HERO || it.type == WidgetType.DAYLINE
+        it.type == WidgetType.AGENDA || it.type == WidgetType.NEXT || it.type == WidgetType.HERO || it.type == WidgetType.DAY || it.type == WidgetType.DAYLINE
     }
 
     private suspend fun fetchCalendar() {
@@ -361,6 +369,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         }
     }
 
+    /** Tableau des agents Claude en grand (alerte d'un agent, voix). */
+    fun showAgentsBoard() = overlays.agentsBoard(viewLifecycleOwner)
+
     /** Réglage d'un widget changé hors mode Modifier ; en mode Modifier, « Terminé » enregistre. */
     override fun save() {
         if (!grid.editing) HomeLayout.save(requireContext(), layout, cadran)
@@ -369,19 +380,29 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     // --- Profils
 
     /** Nom du profil : celui donné par l'utilisateur, sinon « Bureau » pour le premier, « Profil N » pour les autres. */
-    fun profileName(index: Int): String =
-        layout.names.getOrNull(index)
-            ?: if (index == 0) getString(R.string.profile_first) else getString(R.string.profile_default, index + 1)
+    fun profileName(index: Int): String = layout.nameOf(index, getString(R.string.profile_first), getString(R.string.profile_default))
 
     /** Donne son nom par défaut à chaque profil sans nom : il le garde quand on le déplace. Vrai si un nom a été posé. */
     private fun nameProfiles() = layout.nameMissing(getString(R.string.profile_first), getString(R.string.profile_default))
 
-    /** Affiche le profil [index] et charge tout de suite ses widgets (le chargement du profil quitté est annulé). */
-    fun showProfile(index: Int) {
+    /**
+     * Affiche le profil [index] et charge ses widgets (le chargement du profil quitté est annulé).
+     * `animate` : la grille arrive dans le sens du déplacement dans la barre (ordre des profils) ; le chargement attend
+     * la fin du glissement : des widgets qui se redessinent pendant ce temps feraient recalculer le calque à chaque image.
+     */
+    fun showProfile(index: Int, animate: Boolean = true) {
         deckOverlays?.hideAll()
         profileLoad?.cancel()
+        val order = layout.profilesInOrder(inCall = main?.inCall == true)
+        val move = RailModel.direction(order.indexOf(page), order.indexOf(index))
+        val changed = index != page
         displayProfile(index)
-        profileLoad = scope.launch { shownWidgets().forEach { it.load() } }
+        val slide = animate && changed
+        if (slide) Look.sharedAxis(grid, fromBelow = move >= 0)
+        profileLoad = scope.launch {
+            if (slide) delay(Look.NAV_SETTLE_MS)
+            shownWidgets().forEach { it.load() }
+        }
     }
 
     /** Titre, pastilles et widgets actifs, sans rien relire de l'ordinateur. */
@@ -397,7 +418,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
      * tant qu'il est actif. Profils ajoutés, déplacés ou retirés : widgets recréés, puis le profil affiché charge ses
      * données. Renommage ou marquage de jeu : la barre seulement, ni widgets ni réseau.
      */
-    private fun openProfiles() {
+    fun openProfiles() {
         ProfilesDialog(requireContext(), layout, page, ::profileName, !grid.narrow, ::editProfile) { show, structure ->
             if (grid.editing) endEdit(keep = true)
             nameProfiles()
@@ -417,32 +438,20 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private fun editProfile(index: Int) {
         if (grid.editing) endEdit(keep = true)
         if (index != page) showProfile(index)
+        // Réunion hors appel : on le règle en aperçu.
+        if (index == layout.callProfile) main?.showBanner(getString(R.string.call_profile_preview), 6)
         onEnterEdit()
     }
 
+    /** La barre fixe montre les profils et marque celui affiché. */
     private fun renderProfileBar() {
-        profileName.text = profileName(page)
-        profilePrev.isEnabled = page > 0
-        profilePrev.alpha = if (page > 0) 1f else DISABLED_ALPHA
-        profileNext.isEnabled = page < layout.pages - 1
-        profileNext.alpha = if (page < layout.pages - 1) 1f else DISABLED_ALPHA
-        dots.removeAllViews()
-        // Au-delà de MAX_DOTS profils, les pastilles ne tiennent plus : le nom et les flèches suffisent.
-        val showDots = layout.pages in 2..MAX_DOTS
-        dots.visibility = if (showDots) View.VISIBLE else View.GONE
-        for (i in 0 until if (showDots) layout.pages else 0) {
-            dots.addView(View(requireContext()).apply {
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(themeColor(context, if (i == page) R.attr.c_accent else R.attr.c_text_faint))
-                }
-            }, LinearLayout.LayoutParams(dp(8), dp(8)).apply { marginStart = dp(12); marginEnd = dp(12) })
-        }
+        main?.onProfileShown(layout, page)
     }
 
+    /** Balayage : profil voisin dans l'ordre de la barre (Réunion n'y est que pendant un appel). */
     override fun onPageSwipe(delta: Int) {
-        val next = page + delta
-        if (next in 0 until layout.pages) showProfile(next)
+        val order = layout.profilesInOrder(inCall = main?.inCall == true)
+        order.getOrNull(order.indexOf(page) + delta)?.let(::showProfile)
     }
 
     // --- Mode Modifier
@@ -451,13 +460,23 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         backup = layout.copy()
         grid.editing = true
         editBar.visibility = View.VISIBLE
+        scaleWidgets(EDIT_SCALE)
         (activity as? MainActivity)?.refreshMiniPlayer()
+    }
+
+    /** Mode Modifier : les widgets du profil se resserrent un peu (pas de tremblement, c'est une boucle) ; 1 en sortant. */
+    private fun scaleWidgets(scale: Float) {
+        shownWidgets().forEach {
+            Look.navSpring(it.view, androidx.dynamicanimation.animation.DynamicAnimation.SCALE_X, Look.SPATIAL_DEFAULT, scale)
+            Look.navSpring(it.view, androidx.dynamicanimation.animation.DynamicAnimation.SCALE_Y, Look.SPATIAL_DEFAULT, scale)
+        }
     }
 
     fun isEditing() = view != null && grid.editing
 
     private fun endEdit(keep: Boolean) {
         if (!grid.editing) return
+        scaleWidgets(1f)
         deckOverlays?.hideAll()
         grid.editing = false
         editBar.visibility = View.GONE
@@ -476,7 +495,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     override fun onAddAt(col: Int, row: Int) {
         val ctx = requireContext()
-        val types = WidgetType.entries
+        // Seulement ce que l'ordinateur actif offre (Jira, GitLab) et ce que ses plugins laissent (Ouvertes, Son, Pavé).
+        val types = WidgetType.entries.filter { it.offered(features) }
         val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(8), dp(16), dp(8)) }
         val dialog = AlertDialog.Builder(ctx)
             .setTitle(R.string.home_gallery_title)
@@ -593,9 +613,10 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     }
 
     private companion object {
+        /** Échelle des widgets en mode Modifier. */
+        const val EDIT_SCALE = 0.94f
+
         /** Aujourd'hui et les 7 jours suivants : « mardi soir » se voit dès aujourd'hui. */
         const val AGENDA_DAYS = 8
-        const val DISABLED_ALPHA = 0.3f
-        const val MAX_DOTS = 12
     }
 }

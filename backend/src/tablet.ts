@@ -43,6 +43,8 @@ export type TabletCommand =
   | { type: "update"; action: "check" | "install" }
   /** Appel entrant (src/calls.ts) : carte Répondre / Ignorer sur la tablette, retirée à `ended`. */
   | { type: "call"; state: "ringing" | "ended"; app: string; caller: string | null; video: boolean }
+  /** Réunion en cours (src/meeting-watch.ts) : la tablette passe sur son profil Réunion à `start`, en revient à `end`. */
+  | { type: "meeting"; state: "start" | "end"; app: string }
   /** Notification de l'ordinateur (src/notifications.ts), affichée en bandeau et gardée dans l'historique. */
   | { type: "notification"; id: string; app: string; title: string; body: string; at: number }
   /** Agent Claude (src/agents.ts) : une session attend, a fini ou a atteint sa limite ; `clear` : plus rien n'attend. */

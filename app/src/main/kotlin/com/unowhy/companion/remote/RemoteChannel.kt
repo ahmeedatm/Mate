@@ -171,6 +171,10 @@ class RemoteChannel(private val activity: MainActivity) {
             activity.onCall(command.getString("state"), command.getString("app"), command.optString("caller").takeIf { command.has("caller") && !command.isNull("caller") }, command.optBoolean("video"))
             null
         }
+        "meeting" -> {
+            activity.onMeeting(command.getString("state"), command.getString("app"))
+            null
+        }
         "agent" -> {
             activity.onAgent(command.getString("kind"), command.optString("askId").takeIf { command.has("askId") && !command.isNull("askId") }, command.optInt("waiting"))
             null

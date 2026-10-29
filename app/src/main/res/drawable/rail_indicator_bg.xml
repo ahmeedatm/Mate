@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Repère de l'élément choisi de la barre fixe : trait rouge (« ici, maintenant ») qui glisse d'une entrée à l'autre. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="?attr/c_accent" />
+    <corners android:radius="2dp" />
+</shape>

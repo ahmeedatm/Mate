@@ -7,6 +7,10 @@ import {
   appIcon,
   canControl,
   canMedia,
+  getAudio,
+  getDnd,
+  isAppInCall,
+  isAppRunning,
   isInstalled,
   launchApp,
   listWindows,
@@ -16,6 +20,8 @@ import {
   runShortcut,
   sendKeys,
   sendMediaKey,
+  setAudio,
+  setDnd,
   systemCommand,
   typeText,
   type MediaCommand,
@@ -67,6 +73,8 @@ type TileConfig = {
   label: string;
   action: Action;
   icon?: string;
+  /** Symbole de la tablette (TILE_SYMBOLS de screens.ts) ; un nom inconnu est ignoré. */
+  symbol?: string;
   glyph?: string;
   color?: string;
   when?: "call" | "idle" | "streaming" | "share" | "lobby";
@@ -262,10 +270,37 @@ export async function loadDeck(): Promise<DeckPage[]> {
       const id = `${PERSO_PREFIX}${slot}`;
       if (!key) return { id, empty: true as const };
       const action: Action = key.steps.length === 1 ? key.steps[0] : { type: "macro", steps: key.steps };
-      return { id, label: key.label, glyph: key.glyph, color: key.color, action };
+      return { id, label: key.label, ...(key.symbol ? { symbol: key.symbol } : {}), glyph: key.glyph, color: key.color, action };
     }),
   });
   return pages;
+}
+
+/** Applis des pages d'appli du deck (Discord, Teams) : une fois chacune, avec leurs pages. */
+async function appPages() {
+  const pages = (await loadDeck()).filter((p) => p.app);
+  return { pages, apps: [...new Set(pages.map((p) => p.app as string))] };
+}
+
+/**
+ * `open` : l'appli tourne (sa page s'affiche) ; `apps` : elle utilise le micro, donc en appel. Une appli hors de la page
+ * Apps (`callOnly`) n'a sa page que pendant un appel, pas tant qu'elle tourne.
+ */
+export async function liveDeckApps(): Promise<{ apps: string[]; open: string[] }> {
+  const { pages, apps } = await appPages();
+  const callOnly = new Set(apps.filter((a) => pages.filter((p) => p.app === a).every((p) => p.callOnly)));
+  const [open, live] = await Promise.all([
+    Promise.all(apps.map((a) => (callOnly.has(a) ? false : isAppRunning(a).catch(() => false)))),
+    Promise.all(apps.map((a) => isAppInCall(a).catch(() => false))),
+  ]);
+  return { apps: apps.filter((_, i) => live[i]), open: apps.filter((_, i) => open[i] || live[i]) };
+}
+
+/** Applis du deck en appel (micro utilisé), sans relire celles qui tournent : la veille des réunions (meeting-watch). */
+export async function callingDeckApps(): Promise<string[]> {
+  const { apps } = await appPages();
+  const live = await Promise.all(apps.map((a) => isAppInCall(a).catch(() => false)));
+  return apps.filter((_, i) => live[i]);
 }
 
 export async function findTile(id: string): Promise<Tile | undefined> {
@@ -311,6 +346,9 @@ export async function runAction(action: Action): Promise<unknown> {
     case "window":
       return placeAppWindows(action.app, action.display, action.layout ?? "keep");
     case "system":
+      // Bascules faites ici, pareil sur Mac et Windows : on lit l'état et on pose l'inverse.
+      if (action.command === "mute-mic") return setAudio({ micMuted: !(await getAudio()).micMuted });
+      if (action.command === "dnd") return setDnd((await getDnd()) !== true);
       return systemCommand(action.command);
   }
   throw new Error(`Action inconnue : ${JSON.stringify(action)}`);
