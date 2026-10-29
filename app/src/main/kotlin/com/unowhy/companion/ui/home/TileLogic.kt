@@ -33,18 +33,22 @@ data class KeyRef(val id: String, val label: String, val glyph: String? = null, 
     fun toJson(): JSONObject = JSONObject().put("id", id).put("label", label).put("glyph", glyph ?: "").put("color", color ?: "")
 
     companion object {
-        fun of(json: JSONObject) = KeyRef(
-            json.getString("id"),
-            json.optString("label"),
-            json.optString("glyph").takeIf { it.isNotEmpty() },
-            json.optString("color").takeIf { it.isNotEmpty() },
-        )
+        /** Null pour un élément sans id : une config abîmée ne doit pas faire planter le rendu. */
+        fun of(json: JSONObject): KeyRef? {
+            val id = json.optString("id").takeIf { it.isNotEmpty() } ?: return null
+            return KeyRef(
+                id,
+                json.optString("label"),
+                json.optString("glyph").takeIf { it.isNotEmpty() },
+                json.optString("color").takeIf { it.isNotEmpty() },
+            )
+        }
 
         fun of(tile: DeckTile) = KeyRef(tile.id, tile.label, tile.glyph, tile.color)
 
         fun list(config: JSONObject): List<KeyRef> {
             val array = config.optJSONArray("keys") ?: return emptyList()
-            return (0 until array.length()).map { of(array.getJSONObject(it)) }
+            return (0 until array.length()).mapNotNull { array.optJSONObject(it)?.let(::of) }
         }
 
         fun put(config: JSONObject, keys: List<KeyRef>) {

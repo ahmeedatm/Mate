@@ -82,10 +82,20 @@ class TileLogicTest {
     fun `KeyRef relit l'ancien format de configuration`() {
         val key = KeyRef.of(JSONObject("""{"id":"k-3","label":"Mute","glyph":"","color":""}"""))
         assertEquals(KeyRef("k-3", "Mute", null, null), key)
-        val json = key.toJson()
+        val json = key!!.toJson()
         assertEquals(setOf("id", "label", "glyph", "color"), json.keys().asSequence().toSet())
         assertEquals("", json.getString("glyph"))
         assertEquals("", json.getString("color"))
+    }
+
+    @Test
+    fun `un element sans id est ignore au lieu de faire planter la lecture`() {
+        assertNull(KeyRef.of(JSONObject("""{"label":"Sans id"}""")))
+        val config = JSONObject("""{"keys":[{"label":"Sans id"},{"id":"k-1","label":"A"},"abime",null]}""")
+        assertEquals(listOf(KeyRef("k-1", "A")), KeyRef.list(config))
+        assertEquals(listOf(KeyRef("k-1", "A")), KeyRef.listFor(config, "pc-a"))
+        val own = JSONObject("""{"byComputer":{"pc-a":{"keys":[{"id":"","label":"Vide"},{"id":"2-4","label":"B"}]}}}""")
+        assertEquals(listOf(KeyRef("2-4", "B")), KeyRef.listFor(own, "pc-a"))
     }
 
     @Test
