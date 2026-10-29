@@ -68,6 +68,7 @@ import com.unowhy.companion.ui.ReadingAids
 import com.unowhy.companion.ui.SettingsFragment
 import com.unowhy.companion.ui.TabletAlerts
 import com.unowhy.companion.ui.TabletStatusView
+import com.unowhy.companion.ui.ThemePattern
 import com.unowhy.companion.ui.WelcomeView
 import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.errorText
@@ -168,6 +169,7 @@ class MainActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContentView(R.layout.activity_main)
         Grain.applyTo(findViewById(android.R.id.content))
+        ThemePattern.applyTo(findViewById(android.R.id.content))
         Speaker.init(this)
         Prefs.focusPreset(this).let { FocusTimer.restore(it.focus, it.pause) }
         NoisePlayer.init(this)

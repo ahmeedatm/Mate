@@ -230,16 +230,15 @@ class PersonasTest {
     fun `le theme du persona s'applique puis est rendu`() {
         val context = FakeContext()
         Prefs.setTheme(context, "CADRAN")
-        // Persona sans thème : le thème ne bouge pas.
         Demo.start(context, Persona.AIMEE, layout(Persona.AIMEE), cadran = true)
-        assertEquals("CADRAN", Prefs.theme(context))
-        // Sam reçoit le thème Contraste élevé ; le persona suivant, sans thème, rend celui d'avant la démo.
+        assertEquals("TABLEAU", Prefs.theme(context))
+        // Sam reçoit le thème Contraste élevé, chaque autre persona le sien (thèmes de démo, voir AppThemeTest).
         assertEquals("CONTRASTE", Persona.SAM.theme)
-        assertTrue(Persona.entries.filter { it.theme != null } == listOf(Persona.SAM))
+        assertTrue(Persona.entries.all { it.theme != null })
         Demo.start(context, Persona.SAM, layout(Persona.SAM), cadran = true)
         assertEquals("CONTRASTE", Prefs.theme(context))
         Demo.start(context, Persona.NOUR, layout(Persona.NOUR), cadran = true)
-        assertEquals("CADRAN", Prefs.theme(context))
+        assertEquals("REGISTRE", Prefs.theme(context))
         Demo.start(context, Persona.SAM, layout(Persona.SAM), cadran = true)
         Demo.quit(context, cadran = true)
         assertEquals("CADRAN", Prefs.theme(context))

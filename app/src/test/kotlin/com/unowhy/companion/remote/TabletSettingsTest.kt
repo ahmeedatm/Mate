@@ -45,6 +45,14 @@ class TabletSettingsTest {
     }
 
     @Test
+    fun `un theme de demo n'est pas accepte depuis la page de l'ordinateur`() {
+        assertThrows(IllegalStateException::class.java) {
+            TabletSettings.save(context, JSONObject().put("theme", "TERMINAL"))
+        }
+        assertEquals(null, Prefs.theme(context))
+    }
+
+    @Test
     fun `lit les reglages, luminosite du systeme tant qu'aucune n'est choisie`() {
         val first = TabletSettings.read(context, systemBrightness = 0.5f, volume = 0.4f)
         assertEquals("CADRAN", first.getString("theme"))
