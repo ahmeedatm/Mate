@@ -67,7 +67,6 @@ const TEAMS = "Microsoft Teams";
 const WORD = "Microsoft Word";
 const CHROME = "Google Chrome";
 const POWERPOINT = "Microsoft PowerPoint";
-const KEYNOTE = "Keynote";
 
 /** Touches de Sam : page Perso, widget Touches de l'Accueil et page « Mes touches » (grosses touches avec le thème Contraste élevé). */
 const SAM_KEYS: PersoKey[] = [
@@ -190,17 +189,6 @@ const PERSONAS: Record<PersonaId, Persona> = {
       key("videocam", "Visio", "🎥", "#2B6CB0", app(TEAMS)),
     ],
     pages: [
-      page(
-        "Diapos",
-        key("skip_next", "PPT suivante", "▶️", "#C05621", keys("right", POWERPOINT)),
-        key("skip_previous", "PPT précédente", "◀️", "#C05621", keys("left", POWERPOINT)),
-        key("play", "PPT début", "⏮", "#C05621", keys("1", POWERPOINT), keys("enter")),
-        key("close", "PPT fin", "⏹", "#C05621", keys("escape", POWERPOINT)),
-        key("skip_next", "Keynote suivante", "▶️", "#2B6CB0", keys("right", KEYNOTE)),
-        key("skip_previous", "Keynote précédente", "◀️", "#2B6CB0", keys("left", KEYNOTE)),
-        key("play", "Keynote début", "⏮", "#2B6CB0", keys("1", KEYNOTE), keys("enter")),
-        key("close", "Keynote fin", "⏹", "#2B6CB0", keys("escape", KEYNOTE)),
-      ),
       page(
         "Réseaux",
         key("work", "LinkedIn", "💼", "#2B6CB0", site("https://www.linkedin.com")),

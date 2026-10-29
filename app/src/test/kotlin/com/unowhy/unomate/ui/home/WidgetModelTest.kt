@@ -188,6 +188,15 @@ class WidgetModelTest {
     }
 
     @Test
+    fun `widget Presentation, en XL et L, propose a tous et a besoin de l'ordinateur`() {
+        assertEquals(WidgetType.PRESENT, WidgetType.of("present"))
+        assertEquals(listOf(WidgetSize.XL, WidgetSize.L), WidgetType.PRESENT.sizes)
+        assertTrue(WidgetType.PRESENT.computer)
+        assertTrue(WidgetType.PRESENT.offered(HomeFeatures()))
+        assertTrue(WidgetType.PRESENT.offered(HomeFeatures(off = setOf("open", "mixer", "pad"))))
+    }
+
+    @Test
     fun `config de base bureau, les touches de l'Accueil et du Deck arrivent remplies`() {
         for (template in listOf(Template.WORK_CADRAN, Template.DECK_CADRAN)) {
             val keys = template.build().widgets.single { it.type == WidgetType.KEYS }
@@ -211,5 +220,20 @@ class WidgetModelTest {
         assertEquals(WidgetSize.M, WidgetType.WATER.zoomSize)
         assertTrue(WidgetType.MEDIA.zoomable)
         assertFalse(WidgetType.HERO.zoomable)
+    }
+
+    @Test
+    fun `widget Cloture, en L et Haut, tout sur la tablette, config gardee avec la disposition`() {
+        assertEquals(WidgetType.CHECKLIST, WidgetType.of("checklist"))
+        assertEquals(listOf(WidgetSize.L, WidgetSize.T), WidgetType.CHECKLIST.sizes)
+        assertFalse(WidgetType.CHECKLIST.computer)
+        assertTrue(WidgetType.CHECKLIST.offered(HomeFeatures()))
+        assertEquals(WidgetSize.T, WidgetType.CHECKLIST.zoomSize)
+        val config = Checklist.config("Bilan", 1_800_000_000_000L, listOf(ChecklistStep("Balance", true), ChecklistStep("TVA")))
+        val context = com.unowhy.unomate.FakeContext()
+        HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.CHECKLIST, WidgetSize.T, 0, 0, 0, config)), 1), cadran = true)
+        val back = HomeLayout.load(context, cadran = true).widgets.single()
+        assertEquals(WidgetType.CHECKLIST, back.type)
+        assertEquals(Checklist.read(config), Checklist.read(back.config))
     }
 }
