@@ -14,6 +14,12 @@ test.describe("page locale GET /", () => {
     expect(await page.evaluate(async () => (await document.fonts.load("16px Outfit")).length)).toBeGreaterThan(0);
   });
 
+  test("cache la carte « Cette appli » hors appli portable", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("#state")).toHaveText("Tablette non connectée");
+    await expect(page.locator("#panel")).toBeHidden();
+  });
+
   test("reçoit le code affiché par la tablette et la connecte", async ({ page, server }) => {
     await page.goto("/");
     await expect(page.locator("#pairing")).toBeHidden();

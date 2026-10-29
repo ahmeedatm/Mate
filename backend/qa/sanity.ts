@@ -288,7 +288,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
     {
       name: "fenêtres ouvertes",
       run: async () => {
-        // Mac sans Accessibilité (job install-mac) : System Events demanderait une autorisation à l'écran.
+        // Mac sans Accessibilité (install-mac.sh) : System Events demanderait une autorisation à l'écran.
         if (os === "mac" && accessibility === false) throw new Skip("Accessibilité non accordée");
         const open = await call("GET", "/windows/open");
         if (!controlled()) return expectStatus(open, 501, "/windows/open");
@@ -478,7 +478,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const res = await call("GET", "/local/licences", undefined, local ? false : true);
         if (!status.json.licences) {
           expectStatus(res, 404, "/local/licences sans fichier");
-          throw new Skip("compagnon lancé depuis le dépôt : licences jointes aux installeurs seulement");
+          throw new Skip("compagnon lancé depuis le dépôt : licences jointes à l'appli portable seulement");
         }
         expectStatus(res, 200, "/local/licences");
         const text = String(res.json);

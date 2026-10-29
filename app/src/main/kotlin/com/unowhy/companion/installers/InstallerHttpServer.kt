@@ -12,8 +12,9 @@ import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 /**
- * Petit serveur HTTP sans dépendance : `GET /` (page d'accueil, voir [InstallerPage]) et `GET /<fichier>` pour les
- * installeurs de `available()`, rien d'autre. Chemins comparés aux noms annoncés : jamais de nom venu du client
+ * Petit serveur HTTP sans dépendance : `GET /` (page d'accueil, voir [InstallerPage]), `GET /installers.json` (liste lue
+ * par le panneau de l'appli de l'ordinateur pour se mettre à jour) et `GET /<fichier>` pour les installeurs de
+ * `available()`, rien d'autre. Chemins comparés aux noms annoncés : jamais de nom venu du client
  * ouvert tel quel. Pas de jeton : le contenu est public, la tablette ne garde aucun secret.
  */
 class InstallerHttpServer(private val port: Int, private val dir: File, private val available: () -> List<Installer>) {
@@ -68,14 +69,22 @@ class InstallerHttpServer(private val port: Int, private val dir: File, private 
         when {
             request.path == "/" || request.path == "/index.html" ->
                 reply(out, 200, "OK", InstallerPage.render(InstallerPlan.osOf(request.userAgent), installers), head = request.method == "HEAD")
+            request.path == "/installers.json" ->
+                reply(out, 200, "OK", InstallerPlan.toJson(installers), head = request.method == "HEAD", type = "application/json")
             file != null -> sendFile(out, file, head = request.method == "HEAD")
             else -> reply(out, 404, "Not Found", "Introuvable.")
         }
     }
 
-    private fun reply(out: OutputStream, code: Int, reason: String, text: String, head: Boolean = false) {
+    private fun reply(
+        out: OutputStream,
+        code: Int,
+        reason: String,
+        text: String,
+        head: Boolean = false,
+        type: String = if (code == 200) "text/html" else "text/plain",
+    ) {
         val body = text.toByteArray(Charsets.UTF_8)
-        val type = if (code == 200) "text/html" else "text/plain"
         out.write(header(code, reason, "Content-Type: $type; charset=utf-8", body.size.toLong(), "Cache-Control: no-store").toByteArray())
         if (!head) out.write(body)
         out.flush()
