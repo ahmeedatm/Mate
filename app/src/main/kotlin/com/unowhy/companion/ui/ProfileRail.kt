@@ -98,6 +98,13 @@ class ProfileRail(
     /** Recrée les entrées (profils ajoutés, renommés, retirés, appel commencé ou fini). */
     override fun applySettings() = render()
 
+    override fun tourAnchor(step: TourModel.Step): View? = when (step) {
+        TourModel.Step.HOME -> views.getOrNull(entries.indexOfFirst { it is RailEntry.Profile && it.page == layout.homeProfile })
+        TourModel.Step.DECK -> views.getOrNull(entries.indexOfFirst { it is RailEntry.Profile && it.page == layout.deckProfile })
+        TourModel.Step.TALK -> talk
+        TourModel.Step.CUSTOMIZE -> null
+    }
+
     private fun render() {
         val labels = Prefs.railLabels(activity)
         talk.findViewById<View>(R.id.rail_talk_label).visibility = if (labels) View.VISIBLE else View.GONE

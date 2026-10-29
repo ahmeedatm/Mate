@@ -1,0 +1,17 @@
+package com.unowhy.companion.ui
+
+import android.content.Context
+import com.unowhy.companion.Prefs
+
+/**
+ * Visite guidée du premier lancement (après l'appairage), sans vue : quatre bulles le long de la barre de gauche, puis
+ * plus jamais (passée ou finie). Montrée par [TourOverlay].
+ */
+object TourModel {
+    enum class Step { HOME, DECK, TALK, CUSTOMIZE }
+
+    val STEPS = Step.entries.toList()
+
+    /** Une fois, et seulement quand un ordinateur est appairé : avant, la bienvenue s'en charge. */
+    fun shouldShow(context: Context, hasComputer: Boolean): Boolean = hasComputer && !Prefs.tourDone(context)
+}

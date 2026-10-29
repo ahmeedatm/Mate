@@ -38,6 +38,9 @@ interface Navigation {
 
     /** Réglages de la barre changés (noms, outils affichés) : elle se redessine. */
     fun applySettings()
+
+    /** Vue que la visite guidée éclaire pour une étape (null : bulle au centre). */
+    fun tourAnchor(step: TourModel.Step): View?
 }
 
 /** Temps restant du Pomodoro tant qu'il est lancé ou entamé, sinon null. */

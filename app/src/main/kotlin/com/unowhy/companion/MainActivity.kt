@@ -152,6 +152,8 @@ class MainActivity : AppCompatActivity() {
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(agentAsk, android.view.ViewGroup.LayoutParams(-1, -1))
         callOverlay = CallOverlay(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(callOverlay, android.view.ViewGroup.LayoutParams(-1, -1))
+        tour = com.unowhy.companion.ui.TourOverlay(this) { nav.tourAnchor(it) }
+        findViewById<android.view.ViewGroup>(android.R.id.content).addView(tour, android.view.ViewGroup.LayoutParams(-1, -1))
         // Cadre photo juste au-dessus des écrans : lumière des agents, question et appel restent devant.
         frame = PhotoFrameView(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(frame, 1, android.view.ViewGroup.LayoutParams(-1, -1))
@@ -198,6 +200,7 @@ class MainActivity : AppCompatActivity() {
             onComputerChanged(computer)
             show(Mode.HOME)
             showBanner(getString(R.string.welcome_done, computer.name), 6)
+            maybeTour()
         }
 
         // Retour ne quitte jamais l'appli : il ferme le document ouvert, sinon ramène à l'accueil.
@@ -214,6 +217,8 @@ class MainActivity : AppCompatActivity() {
         show(restored ?: Mode.HOME)
         // Premier lancement (ou plus aucun ordinateur) : écran de bienvenue.
         if (savedInstanceState == null && Computers.all(this).isEmpty()) welcome.show()
+        // Tablette déjà appairée qui n'a jamais vu la visite (mise à jour) : elle la voit une fois.
+        if (savedInstanceState == null) maybeTour()
         showLink(Link(Computers.active(this), Link.State.OFFLINE))
         remote.restart()
     }
@@ -685,6 +690,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun homeFragment() = supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment
 
+    private lateinit var tour: com.unowhy.companion.ui.TourOverlay
+
+    /** Visite guidée, une fois, après l'appairage (laisse le temps aux écrans de se poser). */
+    private fun maybeTour() {
+        if (welcome.visibility == View.VISIBLE || tour.visibility == View.VISIBLE) return
+        if (!com.unowhy.companion.ui.TourModel.shouldShow(this, Computers.all(this).isNotEmpty())) return
+        window.decorView.postDelayed({ if (welcome.visibility != View.VISIBLE) tour.start() }, TOUR_DELAY_MS)
+    }
+
     /** Réglages > Barre de gauche : noms et outils changés. */
     fun applyRailSettings() = nav.applySettings()
 
@@ -714,6 +728,9 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val STATE_MODE = "mode"
+
+        /** Délai avant la visite guidée : l'Accueil a le temps d'arriver. */
+        private const val TOUR_DELAY_MS = 900L
 
         /** Sans toucher pendant ce temps, la barre passe au repos (atténuée). */
         private const val REST_MS = 60_000L

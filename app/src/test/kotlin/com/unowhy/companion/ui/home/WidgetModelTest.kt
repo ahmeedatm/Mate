@@ -141,4 +141,19 @@ class WidgetModelTest {
         assertTrue(layout.widgets.any { it.type == WidgetType.CALL && it.size == WidgetSize.XL })
         for (r in 0 until ROWS) for (c in 0 until COLS) assertTrue("case $c,$r", layout.widgets.any { it.covers(c, r) })
     }
+
+    @Test
+    fun `config de base bureau, les touches de l'Accueil et du Deck arrivent remplies`() {
+        for (template in listOf(Template.WORK_CADRAN, Template.DECK_CADRAN)) {
+            val keys = template.build().widgets.single { it.type == WidgetType.KEYS }
+            assertEquals("$template", "Raccourcis", keys.config.optString(KeyRef.DEFAULT_PAGE))
+        }
+    }
+
+    @Test
+    fun `config de base bureau, le Deck montre les fenetres, la musique reste dans le header`() {
+        val deck = Template.DECK_CADRAN.build().widgets.map { it.type }
+        assertTrue(WidgetType.OPEN in deck)
+        assertFalse(WidgetType.MEDIA in deck)
+    }
 }

@@ -331,7 +331,8 @@ enum class Template(
         Placed(WidgetType.NEXT, WidgetSize.V, 0, 0, 2),
         Placed(WidgetType.TASKS, WidgetSize.V, 0, 1, 2),
         Placed(WidgetType.FOCUS, WidgetSize.V, 0, 2, 2),
-        Placed(WidgetType.KEYS, WidgetSize.V, 0, 3, 2),
+        // Touches remplies d'office (Verrouiller, Couper le micro, Ne pas déranger…) : pas de case vide au premier lancement.
+        Placed(WidgetType.KEYS, WidgetSize.V, 0, 3, 2, JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")),
     ), cadran = true),
     HOME_CADRAN(R.string.template_home, R.string.template_home_cadran_desc, listOf(
         Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
@@ -345,12 +346,13 @@ enum class Template(
         Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
     ), cadran = true),
 
-    // Deck : agir sur l'ordinateur. Applis sur la haute ligne, son de l'ordinateur sur la ligne fine, touches et lecture dessous.
+    // Deck : agir sur l'ordinateur. Applis sur la haute ligne, son de l'ordinateur sur la ligne fine, touches et fenêtres
+    // dessous (la musique est dans le header, MusicChip : pas de doublon).
     DECK_CADRAN(R.string.template_deck, R.string.template_deck_desc, listOf(
         Placed(WidgetType.APPS, WidgetSize.W, 0, 0, 0),
         Placed(WidgetType.AUDIO, WidgetSize.W, 0, 0, 1),
         Placed(WidgetType.KEYS, WidgetSize.L, 0, 0, 2, JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")),
-        Placed(WidgetType.MEDIA, WidgetSize.L, 0, 2, 2),
+        Placed(WidgetType.OPEN, WidgetSize.L, 0, 2, 2),
     ), cadran = true),
 
     // Réunion : piloter l'appel en cours. Affiché seulement pendant un appel.

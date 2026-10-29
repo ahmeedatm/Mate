@@ -80,7 +80,8 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val add = Button(context, null, 0, R.style.ActionButton).apply {
         setText(R.string.event_add)
         visibility = View.GONE
-        setOnClickListener { host.editEvent(null) }
+        // Sans agenda relié, le plus utile au bureau : relier Outlook ou Google (page ouverte sur l'ordinateur).
+        setOnClickListener { if (host.features.linked) host.editEvent(null) else host.showCalendars() }
     }
     private val texts = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
     /** Vertical : nombre de rendez-vous du jour (en tête), heure en grand, les deux suivants (en bas). */
@@ -184,7 +185,8 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         whenText.visibility = if (cadran && upcoming == null) View.GONE else View.VISIBLE
         if (upcoming == null) {
             if (cadran) {
-                title.text = if (empty) context.getString(R.string.next_none_today) else ""
+                add.setText(if (host.features.linked) R.string.event_add else R.string.agenda_link_now)
+                title.text = if (!empty) "" else context.getString(if (host.features.linked) R.string.next_none_today else R.string.next_not_linked)
             } else {
                 title.setText(R.string.next_none)
                 whenText.setText(R.string.next_none_hint)
