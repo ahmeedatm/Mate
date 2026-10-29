@@ -65,6 +65,21 @@ object RailModel {
      */
     fun direction(from: Int, to: Int): Int = if (from < 0) 1 else Integer.signum(to - from)
 
+    /**
+     * Entrée voisine pour le balayage vertical (+1 : suivante, plus bas dans la barre ; -1 : précédente) : profils puis
+     * outils, dans l'ordre de la barre. « Plus » et « + » ouvrent une liste, pas un écran : sautés. Null au bout, ou
+     * hors barre (Réglages).
+     */
+    fun neighbor(entries: List<RailEntry>, mode: Mode, page: Int, delta: Int): RailEntry? {
+        var i = selected(entries, mode, page)
+        if (i < 0 || delta == 0) return null
+        while (true) {
+            i += delta
+            val entry = entries.getOrNull(i) ?: return null
+            if (entry is RailEntry.Profile || entry is RailEntry.Tool) return entry
+        }
+    }
+
     /** Index de l'entrée à marquer : le profil affiché (ou « Plus » s'il est caché derrière), l'outil, -1 sinon (Réglages). */
     fun selected(entries: List<RailEntry>, mode: Mode, page: Int): Int = when (mode) {
         Mode.HOME -> entries.indexOfFirst { it is RailEntry.Profile && it.page == page }.takeIf { it >= 0 } ?: entries.indexOf(RailEntry.More)

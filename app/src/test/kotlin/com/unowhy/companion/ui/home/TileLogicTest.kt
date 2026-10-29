@@ -168,6 +168,16 @@ class TileLogicTest {
         assertNull(slotOf("k-x"))
     }
 
+    @Test
+    fun `pageSlotOf lit les touches des pages de touches nommees`() {
+        assertEquals(0 to 3, pageSlotOf("k1-3"))
+        assertEquals(2 to 12, pageSlotOf("k3-12"))
+        assertNull(pageSlotOf("k-3"))
+        assertNull(pageSlotOf("k0-3"))
+        assertNull(pageSlotOf("2-4"))
+        assertNull(pageSlotOf("k2-"))
+    }
+
     private fun slot(n: Int, label: String? = null) =
         if (label == null) DeckTile("k-$n", "", "empty", null, null) else DeckTile("k-$n", label, "keys", null, null)
 

@@ -88,7 +88,7 @@ server.setOs({
       connected: true,
       streaming: false,
       channel: "Salon vocal",
-      people: ["Léa", "Karim", "Moi"],
+      people: ["Léa", "Malo", "Moi"],
       muted: true,
       deafened: false,
       mic: "Micro coupé",

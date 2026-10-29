@@ -16,23 +16,57 @@ export const MIN_SLOTS = 14;
 export const MAX_SLOTS = 100;
 const storeFile = path.join(config.dataDir, "keys.json");
 
+type Slots = (PersoKey | null)[];
+
 /** Longueur : un emplacement libre après le dernier rempli, entre MIN_SLOTS et MAX_SLOTS. */
-export async function loadKeys(): Promise<(PersoKey | null)[]> {
-  const saved = (await readJson<{ slots?: (PersoKey | null)[] }>(storeFile, () => ({}))).slots ?? [];
+const fit = (saved: Slots = []): Slots => {
   const length = Math.min(MAX_SLOTS, Math.max(MIN_SLOTS, saved.findLastIndex(Boolean) + 2));
   return Array.from({ length }, (_, i) => saved[i] ?? null);
-}
+};
 
 /** Le fichier s'arrête au dernier emplacement rempli : pas de `null` en queue. */
+const put = (saved: Slots | undefined, slot: number, key: PersoKey | null): Slots => {
+  const slots = Array.from({ length: Math.max(saved?.length ?? 0, slot + 1) }, (_, i) => saved?.[i] ?? null);
+  slots[slot] = key;
+  slots.length = slots.findLastIndex(Boolean) + 1;
+  return slots;
+};
+
+export async function loadKeys(): Promise<Slots> {
+  return fit((await readJson<{ slots?: Slots }>(storeFile, () => ({}))).slots);
+}
+
 export async function saveKey(slot: number, key: PersoKey | null) {
-  await updateJson<{ slots?: (PersoKey | null)[] }>(
+  await updateJson<{ slots?: Slots }>(
     storeFile,
     () => ({}),
     (data) => {
-      const slots = Array.from({ length: Math.max(data.slots?.length ?? 0, slot + 1) }, (_, i) => data.slots?.[i] ?? null);
-      slots[slot] = key;
-      slots.length = slots.findLastIndex(Boolean) + 1;
-      data.slots = slots;
+      data.slots = put(data.slots, slot, key);
+    },
+  );
+}
+
+/**
+ * Pages de touches nommées (.data/pages.json) : comme Perso, éditables depuis la tablette. Elles s'affichent après
+ * Perso, la `n`-ième a les touches `k<n+1>-<emplacement>`. Posées par la démo (src/demo.ts).
+ */
+export type KeyPage = { title: string; slots: Slots };
+export const pagesFile = path.join(config.dataDir, "pages.json");
+
+export async function loadKeyPages(): Promise<{ title: string; keys: Slots }[]> {
+  const saved = (await readJson<{ pages?: KeyPage[] }>(pagesFile, () => ({}))).pages ?? [];
+  return saved.map((p) => ({ title: p.title, keys: fit(p.slots) }));
+}
+
+/** Faux si la page n'existe pas. */
+export async function saveKeyPage(page: number, slot: number, key: PersoKey | null): Promise<boolean> {
+  return updateJson<{ pages?: KeyPage[] }, boolean>(
+    pagesFile,
+    () => ({}),
+    (data) => {
+      const target = data.pages?.[page];
+      if (target) target.slots = put(target.slots, slot, key);
+      return target !== undefined;
     },
   );
 }

@@ -55,6 +55,8 @@ class KeyEditor @JvmOverloads constructor(
     private lateinit var scope: CoroutineScope
     private var onChanged: () -> Unit = {}
     private var slot = -1
+    /** Rang de la page de touches nommée éditée, null : Perso. */
+    private var page: Int? = null
     private val steps = mutableListOf<JSONObject>()
     private var color: String? = null
     private var catalog: DeckCatalog? = null
@@ -110,9 +112,10 @@ class KeyEditor @JvmOverloads constructor(
 
     val isShowing get() = visibility == VISIBLE
 
-    /** Ouvre la touche `slot` (0 à 99) : vide, ou avec ce qui est enregistré sur le Mac. */
-    fun show(slot: Int) {
+    /** Ouvre la touche `slot` (0 à 99) de Perso, ou de la page de touches nommée `page` : vide, ou avec ce qui est enregistré sur le Mac. */
+    fun show(slot: Int, page: Int? = null) {
         this.slot = slot
+        this.page = page
         title.text = context.getString(R.string.key_title, slot + 1)
         label.setText("")
         glyph.setText("")
@@ -131,7 +134,7 @@ class KeyEditor @JvmOverloads constructor(
                     catalog = client.deck.catalog()
                     if (this@KeyEditor.slot == slot) selectType(type)
                 }
-                val key = client.deck.persoKey(slot) ?: return@launch
+                val key = client.deck.persoKey(slot, page) ?: return@launch
                 if (this@KeyEditor.slot != slot) return@launch
                 clearButton.visibility = VISIBLE
                 label.setText(key.optString("label"))
@@ -152,6 +155,7 @@ class KeyEditor @JvmOverloads constructor(
         dismissKeyboard()
         visibility = GONE
         slot = -1
+        page = null
     }
 
     private fun save() {
@@ -161,10 +165,11 @@ class KeyEditor @JvmOverloads constructor(
         glyph.text.toString().trim().takeIf { it.isNotEmpty() }?.let { key.put("glyph", it) }
         color?.let { key.put("color", it) }
         val target = slot
+        val targetPage = page
         scope.launch {
             try {
-                BackendClient(context).deck.savePersoKey(target, key)
-                IconCache.forget("k-$target")
+                BackendClient(context).deck.savePersoKey(target, key, targetPage)
+                IconCache.forget(tileId(target, targetPage))
                 hide()
                 onChanged()
             } catch (e: Exception) {
@@ -175,10 +180,11 @@ class KeyEditor @JvmOverloads constructor(
 
     private fun clear() {
         val target = slot
+        val targetPage = page
         scope.launch {
             try {
-                BackendClient(context).deck.clearPersoKey(target)
-                IconCache.forget("k-$target")
+                BackendClient(context).deck.clearPersoKey(target, targetPage)
+                IconCache.forget(tileId(target, targetPage))
                 hide()
                 onChanged()
             } catch (e: Exception) {
@@ -186,6 +192,9 @@ class KeyEditor @JvmOverloads constructor(
             }
         }
     }
+
+    /** Identifiant de la tuile côté ordinateur : `k-<emplacement>` pour Perso, `k<rang + 1>-<emplacement>` pour une page nommée. */
+    private fun tileId(slot: Int, page: Int?) = if (page == null) "k-$slot" else "k${page + 1}-$slot"
 
     private fun showError(e: Exception) = showError(context.errorText(e))
 

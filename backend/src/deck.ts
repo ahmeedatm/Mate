@@ -28,10 +28,11 @@ import {
   type SystemCommand,
 } from "./os.ts";
 import type { Layout } from "./screens.ts";
-import { loadKeys, loadLinks, loadSavedApps, saveApps, saveLinks, type DeckApp, type DeckLink } from "./perso.ts";
+import { loadKeyPages, loadKeys, loadLinks, loadSavedApps, saveApps, saveLinks, type DeckApp, type DeckLink } from "./perso.ts";
 import { agentsAvailable } from "./agents-sources.ts";
 import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
+import { demoFeatures } from "./demo-mock.ts";
 import { jiraConfigured } from "./jira.ts";
 import { appPluginOff, pluginOn, pluginsOff } from "./plugins.ts";
 import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
@@ -105,6 +106,8 @@ export type Tile = TileConfig & { id: string };
 export type DeckPage = {
   title: string;
   editable?: boolean;
+  /** Page de touches nommée éditable (voir perso.ts) : son rang ; absent pour Perso. */
+  keyPage?: number;
   apps?: boolean;
   meeting?: boolean;
   app?: string;
@@ -214,14 +217,16 @@ export async function homeFeatures() {
   const agents = agentsAvailable() && (await pluginOn("claude"));
   // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
   const jira = jiraConfigured && (await pluginOn("jira"));
+  // Démo : GitLab, Jira et agents suivent les données fictives du persona, pas l'ordinateur (jeton, Claude Code).
+  const demo = await demoFeatures();
   return {
     agenda: true,
     linked: await hasCalendar(),
     meetings: canControl,
     teams,
-    agents,
-    gitlab: canControl && (await gitlabAvailable()),
-    jira,
+    agents: demo ? demo.agents : agents,
+    gitlab: demo ? demo.gitlab : canControl && (await gitlabAvailable()),
+    jira: demo ? demo.jira : jira,
     off: await pluginsOff(),
   };
 }
@@ -262,16 +267,16 @@ export async function loadDeck(): Promise<DeckPage[]> {
             },
     )
     .filter((_, p) => present[p]);
-  const keys = await loadKeys();
-  pages.push({
-    title: "Perso",
-    editable: true,
-    tiles: keys.map((key, slot) => {
-      const id = `${PERSO_PREFIX}${slot}`;
+  const keyTiles = (keys: Awaited<ReturnType<typeof loadKeys>>, prefix: string): DeckPage["tiles"] =>
+    keys.map((key, slot) => {
+      const id = `${prefix}${slot}`;
       if (!key) return { id, empty: true as const };
       const action: Action = key.steps.length === 1 ? key.steps[0] : { type: "macro", steps: key.steps };
       return { id, label: key.label, ...(key.symbol ? { symbol: key.symbol } : {}), glyph: key.glyph, color: key.color, action };
-    }),
+    });
+  pages.push({ title: "Perso", editable: true, tiles: keyTiles(await loadKeys(), PERSO_PREFIX) });
+  (await loadKeyPages()).forEach((page, n) => {
+    pages.push({ title: page.title, editable: true, keyPage: n, tiles: keyTiles(page.keys, `k${n + 1}-`) });
   });
   return pages;
 }

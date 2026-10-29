@@ -5,6 +5,7 @@ import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import { config } from "./config.ts";
 import { startCallWatch } from "./calls.ts";
+import { activePersona, demoAnswer } from "./demo-mock.ts";
 import { clipboardHistory, watchClipboard } from "./clipboard-history.ts";
 import { startEventReminders } from "./events.ts";
 import { GitLabError } from "./gitlab.ts";
@@ -25,6 +26,7 @@ import calendarRoutes from "./routes/calendar.ts";
 import callRoutes from "./routes/calls.ts";
 import cameraRoutes from "./routes/camera.ts";
 import deckRoutes from "./routes/deck.ts";
+import demoRoutes from "./routes/demo.ts";
 import docRoutes from "./routes/docs.ts";
 import gitlabRoutes from "./routes/gitlab.ts";
 import jiraRoutes from "./routes/jira.ts";
@@ -117,6 +119,14 @@ app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validat
   reply.send(err);
 });
 
+// Démo (src/demo-mock.ts) : tant qu'un persona est actif, les routes qui lisent l'ordinateur répondent avec ses données
+// fictives, et leurs actions changent cet état fictif sans toucher à l'ordinateur. Avant le contrôle de l'OS : la démo
+// marche aussi sur un ordinateur que le compagnon ne pilote pas.
+app.addHook("preHandler", async (req, reply) => {
+  const answer = await demoAnswer(req.method, req.routeOptions.url ?? "", req);
+  if (answer !== undefined) return reply.send(answer);
+});
+
 // Pilotage de l'ordinateur (deck d'applis et de raccourcis, son, micro) : macOS et Windows seulement.
 // Ailleurs, le deck se lit et ses touches perso se modifient ; toucher une touche répond 501 (os.ts : unsupported).
 const DECK_ANYWHERE = /^\/deck(\/keys\/\d+|\/run)?(\?|$)/;
@@ -145,6 +155,7 @@ app.register(localRoutes);
 app.register(portableRoutes);
 app.register(deckRoutes);
 app.register(pluginRoutes);
+app.register(demoRoutes);
 app.register(windowRoutes);
 app.register(systemRoutes);
 app.register(pointerRoutes);
@@ -174,7 +185,8 @@ void startCallWatch((event) => void sendToTablet({ type: "call", ...event }, 30_
 if (canControl) {
   startMeetingWatch((event) => void sendToTablet({ type: "meeting", ...event }), {
     connected: () => tabletStatus().connected,
-    liveApps: callingDeckApps,
+    // Démo : aucun appel (le vrai appel de l'ordinateur ferait quitter l'écran d'arrivée du persona).
+    liveApps: async () => ((await activePersona()) ? [] : callingDeckApps()),
   });
 }
 // Notifications de l'ordinateur : base du système relue toutes les 2 s, chaque nouvelle envoyée à la tablette sans attendre.

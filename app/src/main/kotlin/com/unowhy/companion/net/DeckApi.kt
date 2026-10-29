@@ -21,7 +21,8 @@ data class DeckTile(
 /** `lobby` : écran d'avant-réunion de Teams (« Rejoindre maintenant »), pas encore dans la réunion. */
 data class VoiceState(val connected: Boolean, val channel: String?, val people: List<String>, val muted: Boolean?, val deafened: Boolean?, val streaming: Boolean = false, val lobby: Boolean = false, val cameraOff: Boolean? = null)
 /**
- * `editable` : page Perso (touches à programmer) ; `apps` : page d'applis que l'on complète ;
+ * `editable` : page Perso ou page de touches nommée (touches à programmer) ; `keyPage` : rang de la page nommée (null :
+ * Perso) ; `apps` : page d'applis que l'on complète ;
  * `meeting` : page Réunion, ouverte après « Rejoindre » sur l'Accueil ; `app` : page d'une appli (Discord…),
  * ouverte en touchant l'appli (pas d'onglet), avec son volume propre au-dessus des touches ;
  * `media` : lecture en cours (vidéo, musique) au-dessus des touches ; `sound` : barre « Son de l'ordinateur » sur la page
@@ -37,6 +38,7 @@ data class DeckPage(
     val media: Boolean = false,
     val sound: Boolean = true,
     val mail: Boolean = false,
+    val keyPage: Int? = null,
 )
 
 data class TileResult(val windows: WindowsInfo?, val openedApp: String?)
@@ -79,7 +81,7 @@ class DeckApi(private val http: Http) {
                 DeckTile(t.getString("id"), t.getString("label"), t.getString("type"), t.optStringOrNull("glyph"), t.optStringOrNull("color"), t.optStringOrNull("app"), t.optStringOrNull("when"), t.optStringOrNull("lit"), t.optStringOrNull("symbol"))
             }, p.optBoolean("editable"), p.optBoolean("apps"), p.optBoolean("meeting"), p.optStringOrNull("app"), p.optBoolean("media"),
                 // Ordinateur pas encore à jour (sans `sound`) : barre Son comme avant.
-                p.optBoolean("sound", true), p.optBoolean("mail"))
+                p.optBoolean("sound", true), p.optBoolean("mail"), p.optInt("keyPage", -1).takeIf { it >= 0 })
         }
     }
 
@@ -140,11 +142,14 @@ class DeckApi(private val http: Http) {
         DeckCatalog(list("apps"), list("shortcuts"), list("displays"))
     }
 
-    suspend fun persoKey(slot: Int): JSONObject? = http.io { JSONObject(http.get("/deck/keys/$slot")).optJSONObject("key") }
+    /** Touches d'une page éditable : Perso (`page` null) ou la page de touches nommée de ce rang. */
+    private fun keyPath(slot: Int, page: Int?) = if (page == null) "/deck/keys/$slot" else "/deck/pages/$page/keys/$slot"
 
-    suspend fun savePersoKey(slot: Int, key: JSONObject) = http.io { http.putJson("/deck/keys/$slot", key); Unit }
+    suspend fun persoKey(slot: Int, page: Int? = null): JSONObject? = http.io { JSONObject(http.get(keyPath(slot, page))).optJSONObject("key") }
 
-    suspend fun clearPersoKey(slot: Int) = http.io { http.delete("/deck/keys/$slot"); Unit }
+    suspend fun savePersoKey(slot: Int, key: JSONObject, page: Int? = null) = http.io { http.putJson(keyPath(slot, page), key); Unit }
+
+    suspend fun clearPersoKey(slot: Int, page: Int? = null) = http.io { http.delete(keyPath(slot, page)); Unit }
 
     /** Lance l'action d'une tuile ; renvoie les fenêtres si l'appli en a plusieurs (rien n'est alors activé). */
     /** `windows` : appli à plusieurs fenêtres, à choisir ; `openedApp` : lien de la page Média ouvert dans son appli. */

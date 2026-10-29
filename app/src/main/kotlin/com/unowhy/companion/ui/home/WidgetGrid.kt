@@ -25,7 +25,8 @@ import kotlin.math.roundToInt
 
 /**
  * Grille de l'Accueil : place chaque widget (vue dont le `tag` est son [Placed]) sur ses cases. Seule la page
- * affichée est visible. Appui long n'importe où : mode Modifier ; balayage horizontal : page suivante.
+ * affichée est visible. Appui long n'importe où : mode Modifier ; balayage vertical : profil suivant (vers le haut) ou
+ * précédent (vers le bas), sauf si ce qui est sous le doigt défile encore dans ce sens (liste d'un widget).
  *
  * Mode Modifier : les widgets ne reçoivent plus les touchers. Chacun a un ✕ (retirer), sa taille (changer) et, s'il
  * en a, ⚙ (réglages) ; on le glisse vers d'autres cases ; une case vide (+) ajoute un widget à cet endroit.
@@ -254,7 +255,9 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 val dx = ev.x - downX
                 val dy = ev.y - downY
                 if (abs(dx) > slop || abs(dy) > slop) removeCallbacks(enterEdit)
-                if (!stolen && GestureRules.allowSwipe(owner, onSlider, narrow) && abs(dx) > slop * 2 && abs(dx) > abs(dy) * 2) {
+                if (!stolen && GestureRules.allowSwipe(owner, onSlider, narrow) && abs(dy) > slop * 2 && abs(dy) > abs(dx) * 2 &&
+                    !scrollsAt(downX, downY, if (dy < 0) 1 else -1)
+                ) {
                     cancelChildren()
                     stolen = true
                     swiping = true
@@ -263,8 +266,9 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 removeCallbacks(enterEdit)
                 if (swiping && ev.actionMasked == MotionEvent.ACTION_UP) {
-                    val dx = ev.x - downX
-                    if (abs(dx) > width / 8) listener?.onPageSwipe(if (dx < 0) 1 else -1)
+                    val dy = ev.y - downY
+                    // Vers le haut : profil suivant, qui arrive par le bas (Look.sharedAxis de HomeFragment.showProfile).
+                    if (abs(dy) > height / 8) listener?.onPageSwipe(if (dy < 0) 1 else -1)
                 }
                 val wasStolen = stolen || ignoreUntilUp
                 stolen = false; swiping = false; ignoreUntilUp = false
@@ -292,6 +296,26 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         val cancel = MotionEvent.obtain(downAt, SystemClock.uptimeMillis(), MotionEvent.ACTION_CANCEL, downX, downY, 0)
         super.dispatchTouchEvent(cancel)
         cancel.recycle()
+    }
+
+    /**
+     * Une vue sous le doigt défile encore dans ce sens (`direction` 1 : son contenu monte, le doigt va vers le haut) :
+     * le geste est pour elle, pas pour changer de profil.
+     */
+    private fun scrollsAt(x: Float, y: Float, direction: Int): Boolean {
+        fun find(view: View, x: Float, y: Float): Boolean {
+            if (view.visibility != View.VISIBLE) return false
+            if (x < view.left || x >= view.right || y < view.top || y >= view.bottom) return false
+            if (view.canScrollVertically(direction)) return true
+            if (view is ViewGroup) {
+                val lx = x - view.left + view.scrollX
+                val ly = y - view.top + view.scrollY
+                for (i in view.childCount - 1 downTo 0) if (find(view.getChildAt(i), lx, ly)) return true
+            }
+            return false
+        }
+        for (i in childCount - 1 downTo 0) if (!veiled(getChildAt(i)) && find(getChildAt(i), x, y)) return true
+        return false
     }
 
     /** Un curseur (volume) se tire à l'horizontale : pas de balayage de page ni d'appui long dessus. */
