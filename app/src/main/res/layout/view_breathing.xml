@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Respiration de Focus (BreathingPanel) : ondes, consigne en grand, rythme, durée, Commencer / Arrêter. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:paddingStart="48dp"
+    android:paddingTop="24dp"
+    android:paddingEnd="48dp"
+    android:paddingBottom="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/breath_back"
+            style="@style/IconButton.Flat"
+            android:contentDescription="@string/breath_back"
+            android:src="@drawable/ic_back" />
+
+        <com.unowhy.companion.ui.TitleView
+            style="@style/CardTitle"
+            android:layout_marginStart="8dp"
+            android:drawableStart="@drawable/ic_wave"
+            android:text="@string/breath_title" />
+    </LinearLayout>
+
+    <FrameLayout
+        style="@style/Card"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:layout_marginTop="12dp"
+        android:padding="0dp">
+
+        <com.unowhy.companion.ui.BreathingView
+            android:id="@+id/breath_waves"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/breath_step"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="?attr/c_font_display"
+                android:includeFontPadding="false"
+                android:textColor="?attr/c_text"
+                android:textSize="56sp" />
+
+            <TextView
+                android:id="@+id/breath_seconds"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:fontFamily="?attr/c_font_regular"
+                android:gravity="center"
+                android:maxWidth="520dp"
+                android:textColor="?attr/c_text"
+                android:textSize="20sp" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/breath_patterns"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:orientation="horizontal" />
+
+    <LinearLayout
+        android:id="@+id/breath_durations"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal" />
+
+    <Button
+        android:id="@+id/breath_start"
+        style="@style/PrimaryButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:minWidth="200dp"
+        android:text="@string/breath_start" />
+</LinearLayout>

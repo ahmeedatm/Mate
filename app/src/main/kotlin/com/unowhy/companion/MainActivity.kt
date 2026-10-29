@@ -20,6 +20,7 @@ import com.unowhy.companion.agents.AgentAlerts
 import com.unowhy.companion.audio.Speaker
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
+import com.unowhy.companion.focus.Breathing
 import com.unowhy.companion.focus.FocusDnd
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
@@ -616,7 +617,8 @@ class MainActivity : AppCompatActivity() {
 
     /** Ce qui sert encore, que le cadre ne doit pas cacher. */
     private fun frameBusy() = callOverlay.visibility == View.VISIBLE || agentAsk.isOpen || welcome.visibility == View.VISIBLE ||
-        menu?.isOpen == true || documentPanel.visibility == View.VISIBLE || current == Mode.CAMERA || FocusTimer.state.running
+        menu?.isOpen == true || documentPanel.visibility == View.VISIBLE || current == Mode.CAMERA || FocusTimer.state.running ||
+        Breathing.running
 
     /** Lance le cadre tout de suite (Réglages > Cadre photo > Essayer, ou délai écoulé) ; sans photo, rien. */
     fun openFrame(photos: List<java.io.File>) {

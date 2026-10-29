@@ -41,6 +41,7 @@ class FocusFragment : Fragment() {
     private lateinit var custom: Button
     private val noiseButtons = mutableMapOf<NoisePlayer.Kind, Button>()
     private lateinit var mute: ImageButton
+    private lateinit var breathing: BreathingPanel
 
     private val listener: (FocusTimer.State) -> Unit = { render(it) }
     private val noiseListener: () -> Unit = { renderNoise() }
@@ -83,6 +84,17 @@ class FocusFragment : Fragment() {
             }
         }
 
+        val pomodoro = view.findViewById<View>(R.id.focus_pomodoro)
+        val breathingRoot = view.findViewById<View>(R.id.focus_breathing)
+        breathing = BreathingPanel(breathingRoot) {
+            breathingRoot.visibility = View.GONE
+            pomodoro.visibility = View.VISIBLE
+        }
+        view.findViewById<Button>(R.id.focus_breathe).setOnClickListener {
+            pomodoro.visibility = View.GONE
+            breathingRoot.visibility = View.VISIBLE
+        }
+
         val noises = view.findViewById<LinearLayout>(R.id.focus_noises)
         // Toucher l'ambiance choisie l'arrête ; le haut-parleur la coupe sans la perdre.
         for (kind in listOf(NoisePlayer.Kind.BROWN, NoisePlayer.Kind.PINK, NoisePlayer.Kind.WHITE)) {
@@ -123,6 +135,8 @@ class FocusFragment : Fragment() {
     }
 
     override fun onStop() {
+        // Écran quitté : la respiration s'arrête (elle ne se suit qu'en la regardant).
+        breathing.stop()
         FocusTimer.unobserve(listener)
         NoisePlayer.unobserve(noiseListener)
         super.onStop()
