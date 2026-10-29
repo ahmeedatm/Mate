@@ -179,6 +179,19 @@ package-mac:
   variables:
     PLATFORM: mac
 
+# Archives du backend de la release (sans node ni lanceur, version du tag) : la tablette en envoie une à l'ordinateur
+# actif, qui se met à jour sans installeur (backend/src/essai-backend.ts, applyUpdate).
+package-backend:
+  extends: [.node, .release-tag]
+  stage: build
+  dependencies: []
+  script:
+    - npm run package -- essai
+  artifacts:
+    paths:
+      - dist/backend-*.tar.gz
+    expire_in: 1 week
+
 # Pilote et lanceur recompilés sous Windows : échoue si le C# ne compile pas ou si les exe commités ne sont plus
 # ceux des sources (backend/qa/build-helper-windows.ps1). Runner partagé « HiSqool Windows » (Docker, Server Core,
 # sans bureau : suffit pour compiler) ; image au SDK exact de backend/global.json, à monter ensemble.
@@ -245,14 +258,15 @@ android-release:
       - dist/companion-*
     expire_in: 1 week
 
-# Serveur central des mises à jour de la tablette : manifest.json, l'APK de la dernière version et les installeurs de
-# l'ordinateur (que la tablette télécharge puis sert sur son WiFi) déposés dans le paquet générique UPDATES_URL (jeton
+# Serveur central des mises à jour de la tablette : manifest.json, l'APK de la dernière version, les installeurs de
+# l'ordinateur (que la tablette télécharge puis sert sur son WiFi) et les archives du backend (mise à jour de
+# l'ordinateur depuis la tablette) déposés dans le paquet générique UPDATES_URL (jeton
 # du job), anciens fichiers supprimés. Voir docs/developpement.md, section Release.
 updates:
   extends: .release-tag
   stage: release
   image: node:22.22-bookworm-slim
-  needs: [android-release, package-windows, package-mac]
+  needs: [android-release, package-windows, package-mac, package-backend]
   script:
     - node scripts/updates-publish.mjs dist updates
 

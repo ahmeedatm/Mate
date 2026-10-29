@@ -7,7 +7,9 @@
 // Release : lit l'entrée companion-X.Y.Z.json produite par android-release, copie l'APK qu'elle nomme dans <sortie>/ et
 // écrit <sortie>/manifest.json (même forme que GET /updates du backend, taille et SHA-256 compris). Les installeurs de
 // l'ordinateur présents dans <dist> (Compagnon-Unowhy-Mac.zip, Compagnon-Unowhy-Windows.exe) sont copiés aussi et décrits
-// dans manifest.json, clé `installers` : la tablette les télécharge pour les servir sur le WiFi.
+// dans manifest.json, clé `installers` : la tablette les télécharge pour les servir sur le WiFi. Les archives du backend
+// (dist/backend-mac.tar.gz et backend-windows.tar.gz du job package-backend, les deux ou aucune) deviennent
+// backend-X.Y.Z-<os>.tar.gz, clé `backends` : la tablette en envoie une à l'ordinateur actif, qui se met à jour seul.
 // Essai : même entrée (companion-X.Y.Z-essai.N.json d'essai-android), plus dist/backend-mac.tar.gz et
 // dist/backend-windows.tar.gz si le backend de la MR a changé. Le manifest {"essais":[…]} a une entrée par MR (numéro,
 // titre MR_TITLE, version, APK, backends) : une MR ne remplace que la sienne.
@@ -22,9 +24,15 @@ import { createHash } from "node:crypto";
 const BACKEND_PLATFORMS = ["mac", "windows"];
 const ESSAI_PACKAGE = "com.unowhy.companion.essai";
 const MAX_TITLE = 200;
-const INSTALLERS = { mac: "Compagnon-Unowhy-Mac.zip", windows: "Compagnon-Unowhy-Windows.exe" };
+const INSTALLERS = {
+  mac: "Compagnon-Unowhy-Mac.zip",
+  windows: "Compagnon-Unowhy-Windows.exe",
+};
 
-const fingerprint = (buf) => ({ size: buf.length, sha256: createHash("sha256").update(buf).digest("hex") });
+const fingerprint = (buf) => ({
+  size: buf.length,
+  sha256: createHash("sha256").update(buf).digest("hex"),
+});
 
 function usage() {
   console.error(
@@ -37,19 +45,34 @@ function usage() {
 
 /** Entrée companion-X.Y.Z[-essai.N].json du dossier `dist`, vérifiée. */
 function readEntry(distDir, essai) {
-  const entries = fs.readdirSync(distDir).filter((f) => /^companion-\d+\.\d+\.\d+(-essai\.\d+)?\.json$/.test(f));
+  const entries = fs
+    .readdirSync(distDir)
+    .filter((f) => /^companion-\d+\.\d+\.\d+(-essai\.\d+)?\.json$/.test(f));
   if (entries.length !== 1) {
-    console.error(`${distDir} : une entrée companion-X.Y.Z.json attendue, ${entries.length} trouvée(s)`);
+    console.error(
+      `${distDir} : une entrée companion-X.Y.Z.json attendue, ${entries.length} trouvée(s)`,
+    );
     process.exit(1);
   }
-  const entry = JSON.parse(fs.readFileSync(path.join(distDir, entries[0]), "utf8"));
+  const entry = JSON.parse(
+    fs.readFileSync(path.join(distDir, entries[0]), "utf8"),
+  );
   const { package: pkg, label, versionCode, versionName, file } = entry;
-  if (!pkg || !label || !Number.isInteger(versionCode) || !versionName || !file || path.basename(file) !== file) {
+  if (
+    !pkg ||
+    !label ||
+    !Number.isInteger(versionCode) ||
+    !versionName ||
+    !file ||
+    path.basename(file) !== file
+  ) {
     console.error(`${entries[0]} : entrée de mise à jour invalide`);
     process.exit(1);
   }
   if (essai && (pkg !== ESSAI_PACKAGE || !/-essai\.\d+$/.test(versionName))) {
-    console.error(`${entries[0]} : un essai a le paquet ${ESSAI_PACKAGE} et une version X.Y.Z-essai.N`);
+    console.error(
+      `${entries[0]} : un essai a le paquet ${ESSAI_PACKAGE} et une version X.Y.Z-essai.N`,
+    );
     process.exit(1);
   }
   return { package: pkg, label, versionCode, versionName, file };
@@ -57,22 +80,37 @@ function readEntry(distDir, essai) {
 
 /** Paquet générique du registre : dépôt, lecture, suppression. */
 function registry(url) {
-  const match = url.replace(/\/+$/, "").match(/^(.+\/projects\/[^/]+)\/packages\/generic\/([^/]+)\/([^/]+)$/);
-  if (!match) throw new Error(`UPDATES_URL « ${url} » : attendu …/projects/<id>/packages/generic/<nom>/<version>`);
+  const match = url
+    .replace(/\/+$/, "")
+    .match(/^(.+\/projects\/[^/]+)\/packages\/generic\/([^/]+)\/([^/]+)$/);
+  if (!match)
+    throw new Error(
+      `UPDATES_URL « ${url} » : attendu …/projects/<id>/packages/generic/<nom>/<version>`,
+    );
   const [, projectApi, name, version] = match;
   const base = `${projectApi}/packages/generic/${name}/${version}`;
-  const auth = process.env.CI_JOB_TOKEN ? { "JOB-TOKEN": process.env.CI_JOB_TOKEN } : { "PRIVATE-TOKEN": process.env.GITLAB_TOKEN ?? "" };
+  const auth = process.env.CI_JOB_TOKEN
+    ? { "JOB-TOKEN": process.env.CI_JOB_TOKEN }
+    : { "PRIVATE-TOKEN": process.env.GITLAB_TOKEN ?? "" };
 
   async function api(method, target, body, okCodes = []) {
     const res = await fetch(target, { method, headers: auth, body });
-    if (!res.ok && !okCodes.includes(res.status)) throw new Error(`${method} ${target.replace(projectApi, "")} : HTTP ${res.status}`);
+    if (!res.ok && !okCodes.includes(res.status))
+      throw new Error(
+        `${method} ${target.replace(projectApi, "")} : HTTP ${res.status}`,
+      );
     return res;
   }
 
   async function pages(target) {
     const all = [];
     for (let page = 1; ; page++) {
-      const batch = await (await api("GET", `${target}${target.includes("?") ? "&" : "?"}per_page=100&page=${page}`)).json();
+      const batch = await (
+        await api(
+          "GET",
+          `${target}${target.includes("?") ? "&" : "?"}per_page=100&page=${page}`,
+        )
+      ).json();
       all.push(...batch);
       if (batch.length < 100) return all;
     }
@@ -88,14 +126,26 @@ function registry(url) {
     },
     /** Supprime les fichiers du paquet que `keep` ne nomme pas, et les anciens doublons d'un même nom (le dernier déposé est servi). */
     async prune(keep) {
-      const packages = await pages(`${projectApi}/packages?package_type=generic&package_name=${name}`);
-      const found = packages.find((p) => p.name === name && p.version === version);
-      if (!found) throw new Error(`paquet ${name}/${version} introuvable après dépôt`);
-      const files = await pages(`${projectApi}/packages/${found.id}/package_files`);
+      const packages = await pages(
+        `${projectApi}/packages?package_type=generic&package_name=${name}`,
+      );
+      const found = packages.find(
+        (p) => p.name === name && p.version === version,
+      );
+      if (!found)
+        throw new Error(`paquet ${name}/${version} introuvable après dépôt`);
+      const files = await pages(
+        `${projectApi}/packages/${found.id}/package_files`,
+      );
       const latest = new Map();
-      for (const f of files) if (keep.has(f.file_name)) latest.set(f.file_name, Math.max(latest.get(f.file_name) ?? 0, f.id));
+      for (const f of files)
+        if (keep.has(f.file_name))
+          latest.set(f.file_name, Math.max(latest.get(f.file_name) ?? 0, f.id));
       for (const f of files.filter((f) => latest.get(f.file_name) !== f.id)) {
-        await api("DELETE", `${projectApi}/packages/${found.id}/package_files/${f.id}`);
+        await api(
+          "DELETE",
+          `${projectApi}/packages/${found.id}/package_files/${f.id}`,
+        );
         console.log(`supprimé : ${f.file_name} (${f.id})`);
       }
       console.log(`publié : ${base}/manifest.json`);
@@ -103,14 +153,39 @@ function registry(url) {
   };
 }
 
+/**
+ * Archives dist/backend-<os>.tar.gz : une par plateforme ou aucune, sinon arrêt. `add(fichier publié, contenu)` ;
+ * renvoie leurs entrées {os, file, size, sha256, version}.
+ */
+function backendArchives(distDir, version, add) {
+  const backends = [];
+  for (const os of BACKEND_PLATFORMS) {
+    const archive = path.join(distDir, `backend-${os}.tar.gz`);
+    if (!fs.existsSync(archive)) continue;
+    const data = fs.readFileSync(archive);
+    const file = `backend-${version}-${os}.tar.gz`;
+    add(file, data);
+    backends.push({ os, file, ...fingerprint(data), version });
+  }
+  if (backends.length && backends.length !== BACKEND_PLATFORMS.length) {
+    console.error(
+      `${distDir} : une archive backend par plateforme (${BACKEND_PLATFORMS.join(", ")}) ou aucune`,
+    );
+    process.exit(1);
+  }
+  return backends;
+}
+
 function writeOut(outDir, files) {
   fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
-  for (const [name, content] of Object.entries(files)) fs.writeFileSync(path.join(outDir, name), content);
+  for (const [name, content] of Object.entries(files))
+    fs.writeFileSync(path.join(outDir, name), content);
 }
 
 const arg = process.argv.slice(2);
-const mode = arg[0] === "--essai" ? "essai" : arg[0] === "--retire" ? "retire" : "release";
+const mode =
+  arg[0] === "--essai" ? "essai" : arg[0] === "--retire" ? "retire" : "release";
 if (mode !== "release") arg.shift();
 const iid = mode === "release" ? undefined : Number(arg.shift());
 if (mode !== "release" && !(Number.isInteger(iid) && iid > 0)) usage();
@@ -127,12 +202,34 @@ if (mode === "release") {
   for (const [os, file] of Object.entries(INSTALLERS)) {
     if (!fs.existsSync(path.join(distDir, file))) continue;
     files[file] = fs.readFileSync(path.join(distDir, file));
-    installers.push({ os, file, ...fingerprint(files[file]), version: entry.versionName });
+    installers.push({
+      os,
+      file,
+      ...fingerprint(files[file]),
+      version: entry.versionName,
+    });
   }
-  const manifest = JSON.stringify({ updates: [update], ...(installers.length ? { installers } : {}) }, null, 2) + "\n";
+  const backends = backendArchives(
+    distDir,
+    entry.versionName,
+    (file, data) => (files[file] = data),
+  );
+  const manifest =
+    JSON.stringify(
+      {
+        updates: [update],
+        ...(installers.length ? { installers } : {}),
+        ...(backends.length ? { backends } : {}),
+      },
+      null,
+      2,
+    ) + "\n";
   writeOut(outDir, { ...files, "manifest.json": manifest });
   console.log(JSON.stringify(update));
-  if (installers.length) console.log(`installeurs : ${installers.map((i) => i.file).join(", ")}`);
+  if (installers.length)
+    console.log(`installeurs : ${installers.map((i) => i.file).join(", ")}`);
+  if (backends.length)
+    console.log(`backends : ${backends.map((b) => b.file).join(", ")}`);
   if (url) {
     const reg = registry(url);
     // Fichiers d'abord : le manifest ne désigne jamais un fichier absent.
@@ -142,11 +239,15 @@ if (mode === "release") {
   }
 } else {
   if (!url) {
-    console.error("UPDATES_URL : paquet des essais attendu (…/packages/generic/companion-updates/essais)");
+    console.error(
+      "UPDATES_URL : paquet des essais attendu (…/packages/generic/companion-updates/essais)",
+    );
     process.exit(1);
   }
   const reg = registry(url);
-  const essais = ((await reg.manifest())?.essais ?? []).filter((e) => e.mr !== iid);
+  const essais = ((await reg.manifest())?.essais ?? []).filter(
+    (e) => e.mr !== iid,
+  );
   const files = {};
   if (mode === "essai") {
     const [distDir, outDir] = arg;
@@ -155,20 +256,21 @@ if (mode === "release") {
     const apk = fs.readFileSync(path.join(distDir, entry.file));
     files[entry.file] = apk;
     const backend = {};
-    for (const platform of BACKEND_PLATFORMS) {
-      const archive = path.join(distDir, `backend-${platform}.tar.gz`);
-      if (!fs.existsSync(archive)) continue;
-      const data = fs.readFileSync(archive);
-      const file = `backend-${entry.versionName}-${platform}.tar.gz`;
-      files[file] = data;
-      backend[platform] = { file, ...fingerprint(data) };
-    }
-    if (Object.keys(backend).length && Object.keys(backend).length !== BACKEND_PLATFORMS.length) {
-      console.error(`${distDir} : une archive backend par plateforme (${BACKEND_PLATFORMS.join(", ")}) ou aucune`);
-      process.exit(1);
+    for (const { os, file, size, sha256 } of backendArchives(
+      distDir,
+      entry.versionName,
+      (file, data) => (files[file] = data),
+    )) {
+      backend[os] = { file, size, sha256 };
     }
     const title = (process.env.MR_TITLE ?? "").trim().slice(0, MAX_TITLE);
-    essais.push({ mr: iid, title, ...entry, ...fingerprint(apk), ...(Object.keys(backend).length ? { backend } : {}) });
+    essais.push({
+      mr: iid,
+      title,
+      ...entry,
+      ...fingerprint(apk),
+      ...(Object.keys(backend).length ? { backend } : {}),
+    });
     essais.sort((a, b) => a.mr - b.mr);
     console.log(JSON.stringify(essais.find((e) => e.mr === iid)));
     const manifest = JSON.stringify({ essais }, null, 2) + "\n";

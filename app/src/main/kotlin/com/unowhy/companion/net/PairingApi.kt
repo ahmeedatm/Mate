@@ -16,6 +16,8 @@ data class Identity(
     val auth: Boolean,
     val accessibility: Boolean? = null,
     val version: String? = null,
+    /** Se met à jour depuis la tablette (POST /companion/backend/update) ; faux pour un compagnon plus ancien ou lancé depuis le dépôt. */
+    val backendUpdate: Boolean = false,
 )
 
 /** Résultat de l'appairage : jeton à garder, empreinte du certificat à épingler et identité de l'ordinateur. */
@@ -35,6 +37,7 @@ class PairingApi(private val http: Http) {
             j.optStringOrNull("id"), j.optString("name", "Ordinateur"), j.optString("os", "mac"), j.optBoolean("auth", true),
             if (j.has("accessibility") && !j.isNull("accessibility")) j.getBoolean("accessibility") else null,
             j.optStringOrNull("version"),
+            j.optBoolean("backendUpdate", false),
         )
     }
 

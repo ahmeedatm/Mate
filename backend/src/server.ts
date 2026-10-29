@@ -122,7 +122,7 @@ app.addHook("preHandler", async (req, reply) => {
 
 // Images du visualiseur (POST /camera/frame).
 app.addContentTypeParser("image/jpeg", { parseAs: "buffer", bodyLimit: 2 * 1024 * 1024 }, (_req, body, done) => done(null, body));
-// Archive du backend d'une MR (POST /companion/backend/essai).
+// Archive du backend : essai d'une MR (POST /companion/backend/essai) ou release (POST /companion/backend/update).
 app.addContentTypeParser("application/gzip", { parseAs: "buffer", bodyLimit: 100 * 1024 * 1024 }, (_req, body, done) => done(null, body));
 
 // --- Routes, une par domaine dans src/routes/ (les hooks ci-dessus valent pour toutes)

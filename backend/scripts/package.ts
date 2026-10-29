@@ -19,7 +19,8 @@ import { bundledPackages, noticeOf, thirdPartyNotices } from "./licences.ts";
  *
  * `npm run package -- essai` : seulement le backend de chaque plateforme, sans node ni lanceur Windows, en
  * ../dist/backend-windows.tar.gz et backend-mac.tar.gz. C'est ce que la tablette envoie à l'ordinateur pour essayer le
- * backend d'une MR (src/essai-backend.ts). Rien n'est téléchargé.
+ * backend d'une MR (src/essai-backend.ts), ou, fait sur un tag (job package-backend), pour le mettre à jour vers la
+ * release. Rien n'est téléchargé.
  */
 
 // Version figée (celle de latest-v22.x au 26/10/2026) : deux paquets faits à des dates différentes embarquent le même node.

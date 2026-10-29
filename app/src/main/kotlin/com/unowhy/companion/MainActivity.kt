@@ -116,7 +116,7 @@ class MainActivity : AppCompatActivity() {
     /** Toucher qui a fermé le cadre : avalé jusqu'au lever du doigt, l'écran dessous ne le reçoit pas. */
     private var swallowTouch = false
     private var battery: Tablet.Battery? = null
-    private val companionUpdate = CompanionUpdate(this)
+    val companionUpdate = CompanionUpdate(this)
     /** Micro refusé hors kiosque (en kiosque, il est accordé d'office) : la commande repart une fois accepté. */
     private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) voice.start() else showBanner(getString(R.string.voice_no_mic), 6)

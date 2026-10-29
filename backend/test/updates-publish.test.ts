@@ -216,6 +216,32 @@ describe("publication d'une release", () => {
     ]);
   });
 
+  it("dépose les archives du backend sous le nom de la version et les décrit dans `backends`", async () => {
+    const dir = dist("0.3.2", { code: 302_000, pkg: "com.unowhy.companion", backend: ["mac", "windows"] });
+    await publish([dir, out()], { UPDATES_URL: urlOf("latest") });
+    const { backends } = registry.manifest("companion-updates/latest");
+    assert.deepEqual(backends, [
+      { os: "mac", file: "backend-0.3.2-mac.tar.gz", size: "backend mac 0.3.2".length, sha256: sha("backend mac 0.3.2"), version: "0.3.2" },
+      {
+        os: "windows",
+        file: "backend-0.3.2-windows.tar.gz",
+        size: "backend windows 0.3.2".length,
+        sha256: sha("backend windows 0.3.2"),
+        version: "0.3.2",
+      },
+    ]);
+    assert.deepEqual(registry.names("companion-updates/latest"), [
+      "backend-0.3.2-mac.tar.gz",
+      "backend-0.3.2-windows.tar.gz",
+      "companion-0.3.2.apk",
+      "manifest.json",
+    ]);
+    await assert.rejects(
+      publish([dist("0.3.3", { code: 303_000, pkg: "com.unowhy.companion", backend: ["mac"] }), out()], { UPDATES_URL: urlOf("latest") }),
+      /une archive backend par plateforme/,
+    );
+  });
+
   it("sans installeur dans dist : pas de clé `installers`", async () => {
     await publish([dist("0.3.1", { code: 301_000, pkg: "com.unowhy.companion" }), out()], { UPDATES_URL: urlOf("latest") });
     assert.equal("installers" in registry.manifest("companion-updates/latest"), false);

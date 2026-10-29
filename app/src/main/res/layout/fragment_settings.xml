@@ -317,6 +317,22 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
 
+            <!-- Compagnon de l'ordinateur actif : version, mise à jour envoyée par la tablette (installers/CompanionUpdater). -->
+            <TextView
+                android:id="@+id/settings_companion_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/settings_companion_update"
+                style="@style/PrimaryButton"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
+
             <TextView
                 android:id="@+id/settings_essais_title"
                 android:layout_width="match_parent"

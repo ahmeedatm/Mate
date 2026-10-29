@@ -232,6 +232,38 @@ describe("mises à jour de la tablette", () => {
     const res = await fetch(`${server.url}/updates/file/companion-1.2.4.apk`, { headers: { authorization: `Bearer ${TOKEN}` } });
     assert.equal(await res.text(), "apk 1.2.4");
   });
+
+  it("annonce l'archive du backend ajoutée, une par plateforme, et la sert", async () => {
+    const add = (file: string) => {
+      const archive = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "companion-backend-")), file);
+      fs.writeFileSync(archive, `archive ${file}`);
+      execFileSync(process.execPath, ["--import", "tsx", "scripts/updates.ts", "add", archive], {
+        cwd: path.resolve(import.meta.dirname, ".."),
+        env: { ...process.env, DATA_DIR: server.dataDir },
+      });
+    };
+    add("backend-1.2.3-mac.tar.gz");
+    add("backend-1.2.4-mac.tar.gz");
+    add("backend-1.2.4-windows.tar.gz");
+
+    const { json } = await server.call("GET", "/updates");
+    assert.equal(json.updates.length, 2, "les APK restent");
+    assert.deepEqual(
+      json.backends.map((b: any) => [b.os, b.file, b.version, b.sha256]),
+      [
+        ["mac", "backend-1.2.4-mac.tar.gz", "1.2.4", createHash("sha256").update("archive backend-1.2.4-mac.tar.gz").digest("hex")],
+        [
+          "windows",
+          "backend-1.2.4-windows.tar.gz",
+          "1.2.4",
+          createHash("sha256").update("archive backend-1.2.4-windows.tar.gz").digest("hex"),
+        ],
+      ],
+    );
+    assert.equal(fs.existsSync(path.join(server.dataDir, "updates", "backend-1.2.3-mac.tar.gz")), false, "ancienne archive retirée");
+    const res = await fetch(`${server.url}/updates/file/backend-1.2.4-mac.tar.gz`, { headers: { authorization: `Bearer ${TOKEN}` } });
+    assert.equal(await res.text(), "archive backend-1.2.4-mac.tar.gz");
+  });
 });
 
 describe("pilotage hors Mac et Windows", () => {

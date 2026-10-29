@@ -10,6 +10,7 @@ import { backendRoot, packaged } from "./paths.ts";
  * Essai du backend d'une MR : la tablette envoie l'archive du backend de la MR (npm run package -- essai : sans node
  * ni lanceur Windows), cet ordinateur garde une copie de son backend installé, le remplace, puis redémarre.
  * Une seule copie, celle d'origine : un essai suivant ne l'écrase pas, seul le retour à l'origine la supprime.
+ * Mise à jour stable (applyUpdate) : même archive, celle d'une release ; elle remplace le backend installé, sans copie.
  * Compagnon installé par paquet seulement : lancé depuis le dépôt, il refuse (409).
  */
 
@@ -115,32 +116,42 @@ export function restoreOrigin(layout: Layout = defaultLayout()): boolean {
 }
 
 /**
+ * Archive vérifiée (SHA-256 si donné, fichiers de la plateforme) et extraite dans `tmp` ; renvoie le dossier extrait.
+ * Rien n'est touché dans l'installation.
+ */
+function extract(archive: Buffer, sha256: string | undefined, layout: Layout, tmp: string): { files: string; received: string } {
+  const received = createHash("sha256").update(archive).digest("hex");
+  if (sha256 && received !== sha256.toLowerCase()) {
+    fail("L'archive du backend reçue est abîmée (SHA-256 différent) : rien n'est changé.", 400);
+  }
+  fs.writeFileSync(path.join(tmp, "backend.tar.gz"), archive);
+  fs.mkdirSync(path.join(tmp, "backend"));
+  // bsdtar sur Mac et Windows 10 : chemins relatifs (une lettre de lecteur serait prise pour un hôte par GNU tar).
+  try {
+    execFileSync("tar", ["-xzf", "backend.tar.gz", "-C", "backend"], { cwd: tmp, stdio: "ignore" });
+  } catch {
+    fail("L'archive du backend est illisible : rien n'est changé.", 400);
+  }
+  const files = path.join(tmp, "backend");
+  if (!fs.existsSync(path.join(files, "dist", "server.mjs")) || !fs.existsSync(path.join(files, expected(layout.platform)))) {
+    fail("Cette archive n'est pas un backend pour cet ordinateur : rien n'est changé.", 400);
+  }
+  return { files, received };
+}
+
+const notPackaged = (what: string) =>
+  fail(`Ce compagnon est lancé depuis le dépôt : ${what} marche seulement avec le compagnon installé par paquet.`, 409);
+
+/**
  * Remplace le backend par celui de la MR `mr`. Archive vérifiée (SHA-256 si donné, fichiers attendus) et extraite à
  * part avant de toucher à quoi que ce soit ; un échec en cours de remplacement remet le backend d'origine.
  * L'appelant redémarre le compagnon.
  */
 export function applyEssai(archive: Buffer, mr: number, sha256: string | undefined, layout: Layout = defaultLayout()) {
-  if (!layout.packaged) {
-    fail("Ce compagnon est lancé depuis le dépôt : l'essai du backend marche seulement avec le compagnon installé par paquet.", 409);
-  }
-  const received = createHash("sha256").update(archive).digest("hex");
-  if (sha256 && received !== sha256.toLowerCase()) {
-    fail("L'archive du backend reçue est abîmée (SHA-256 différent) : rien n'est changé.", 400);
-  }
+  if (!layout.packaged) notPackaged("l'essai du backend");
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "companion-essai-"));
   try {
-    fs.writeFileSync(path.join(tmp, "backend.tar.gz"), archive);
-    fs.mkdirSync(path.join(tmp, "backend"));
-    // bsdtar sur Mac et Windows 10 : chemins relatifs (une lettre de lecteur serait prise pour un hôte par GNU tar).
-    try {
-      execFileSync("tar", ["-xzf", "backend.tar.gz", "-C", "backend"], { cwd: tmp, stdio: "ignore" });
-    } catch {
-      fail("L'archive du backend est illisible : rien n'est changé.", 400);
-    }
-    const files = path.join(tmp, "backend");
-    if (!fs.existsSync(path.join(files, "dist", "server.mjs")) || !fs.existsSync(path.join(files, expected(layout.platform)))) {
-      fail("Cette archive n'est pas un backend pour cet ordinateur : rien n'est changé.", 400);
-    }
+    const { files, received } = extract(archive, sha256, layout, tmp);
 
     // Copie d'origine : prise à la première bascule seulement (pas d'essai en cours), jamais écrasée par un essai.
     const copy = path.join(layout.dataDir, ORIGIN);
@@ -160,6 +171,54 @@ export function applyEssai(archive: Buffer, mr: number, sha256: string | undefin
     }
     fs.mkdirSync(layout.dataDir, { recursive: true });
     fs.writeFileSync(path.join(layout.dataDir, MARKER), JSON.stringify({ mr, sha256: received, server: serverSha(layout) }) + "\n");
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+/** [X, Y, Z] d'une version X.Y.Z, null sinon (« dev », vide). */
+export function versionNumbers(version: string | undefined): number[] | null {
+  const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(version ?? "");
+  return m ? m.slice(1).map(Number) : null;
+}
+
+const newer = (a: number[], b: number[]) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+
+/**
+ * Mise à jour stable : remplace le backend installé par celui de la release `version` (archive de la release, sans node
+ * ni lanceur). SHA-256 exigée. Version pas plus récente que `current` (celle qui tourne) : refus (409). Un essai de MR
+ * posé est oublié (marque et copie d'origine) : la nouvelle version devient l'origine. Copie temporaire de l'installation
+ * pendant le remplacement, remise si une copie échoue. L'appelant redémarre le compagnon.
+ */
+export function applyUpdate(
+  archive: Buffer,
+  sha256: string,
+  version: string,
+  current: string | undefined = process.env.COMPANION_VERSION,
+  layout: Layout = defaultLayout(),
+) {
+  if (!layout.packaged) notPackaged("la mise à jour depuis la tablette");
+  const target = versionNumbers(version);
+  if (!target) fail(`Version « ${version} » invalide : X.Y.Z attendu.`, 400);
+  const running = versionNumbers(current);
+  if (running && newer(target, running) <= 0) fail(`Ce compagnon est déjà en version ${current} : rien n'est changé.`, 409);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "companion-update-"));
+  try {
+    const { files } = extract(archive, sha256, layout, tmp);
+    const backup = path.join(tmp, "installed");
+    replaceManaged(layout.root, backup);
+    try {
+      replaceManaged(files, layout.root);
+    } catch (e) {
+      try {
+        replaceManaged(backup, layout.root);
+      } catch {
+        // Le premier échec est celui qu'on remonte.
+      }
+      throw e;
+    }
+    fs.rmSync(path.join(layout.dataDir, MARKER), { force: true });
+    fs.rmSync(path.join(layout.dataDir, ORIGIN), { recursive: true, force: true });
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
