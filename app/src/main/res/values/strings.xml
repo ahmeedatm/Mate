@@ -400,6 +400,13 @@
     <string name="notif_clear_message">La liste de la tablette est vidée. Les notifications restent dans le centre de notifications de l\'ordi.</string>
     <string name="notif_discreet">Mode discret</string>
     <string name="notif_discreet_hint">Notifications du PC : appli et titre seulement, sans le texte</string>
+    <string name="wake_word">Mot de réveil « Mate »</string>
+    <string name="wake_ready">Dis « Mate » puis ta demande</string>
+    <string name="wake_downloading">Téléchargement du modèle vocal… %1$d %%</string>
+    <string name="wake_no_mic">Micro non autorisé : touche Parler une fois</string>
+    <string name="wake_failed">Modèle vocal indisponible, nouvel essai plus tard</string>
+    <string name="wake_listening">Mot de réveil : la tablette écoute « Mate »</string>
+    <string name="wake_heard">« Mate » entendu</string>
 
     <!-- Visualiseur (mode Caméra) -->
     <string name="camera_title_show">Montrer sur l\'ordi</string>

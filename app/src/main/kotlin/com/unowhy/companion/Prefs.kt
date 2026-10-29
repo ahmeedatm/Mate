@@ -13,6 +13,7 @@ object Prefs {
     private const val KEY_FOCUS_DND = "focus_dnd"
     private const val KEY_AGENTS_PRIVATE = "agents_private"
     private const val KEY_NOTIFICATIONS_DISCREET = "notifications_discreet"
+    private const val KEY_WAKE_WORD = "wake_word"
     private const val KEY_FRAME_DELAY = "frame_delay_min"
     private const val KEY_FRAME_INTERVAL = "frame_interval_s"
     private const val KEY_TRIAL_MR = "trial_mr"
@@ -92,6 +93,13 @@ object Prefs {
 
     fun setNotificationsDiscreet(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_NOTIFICATIONS_DISCREET, value).apply()
+    }
+
+    /** Mot de réveil « Mate » : écoute du mot quand Companion est à l'écran (voice/WakeWord). Activé par défaut. */
+    fun wakeWord(context: Context): Boolean = prefs(context).getBoolean(KEY_WAKE_WORD, true)
+
+    fun setWakeWord(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_WAKE_WORD, value).apply()
     }
 
     fun theme(context: Context): String? = prefs(context).getString(KEY_THEME, null)
