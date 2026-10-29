@@ -6,8 +6,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.agents.AgentsFeed
+import com.unowhy.companion.agents.sessionTitle
 import com.unowhy.companion.agents.shortList
 import com.unowhy.companion.net.AgentState
 import com.unowhy.companion.ui.AgentStatusIcon
@@ -115,7 +117,7 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
                     gravity = Gravity.CENTER_VERTICAL
                     addView(com.unowhy.companion.ui.AgentStatusIcon(context).apply { bind(s.state, s.monitoring) }, LinearLayout.LayoutParams(dp(16), dp(16)))
                     addView(
-                        label(15f).apply { text = s.title; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END },
+                        label(15f).apply { text = sessionTitle(s, Prefs.agentsPrivate(context)); maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END },
                         LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(10) },
                     )
                     addView(label(13f).apply { text = stateLabel(context, s); setTextColor(com.unowhy.companion.ui.sessionColor(context, s)) })

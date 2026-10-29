@@ -24,6 +24,7 @@ import com.unowhy.companion.agents.columnCounts
 import com.unowhy.companion.agents.columnOf
 import com.unowhy.companion.agents.daysUntil
 import com.unowhy.companion.agents.elapsedMs
+import com.unowhy.companion.agents.sessionTitle
 import com.unowhy.companion.agents.waitingKind
 import com.unowhy.companion.net.AgentSession
 import com.unowhy.companion.net.AgentState
@@ -254,7 +255,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     private fun bind(row: View, s: AgentSession) {
         row.findViewById<AgentStatusIcon>(R.id.agent_status_icon).bind(s.state, s.monitoring)
-        row.findViewById<TextView>(R.id.agent_name).text = s.title
+        row.findViewById<TextView>(R.id.agent_name).text = sessionTitle(s, Prefs.agentsPrivate(context))
         row.findViewById<TextView>(R.id.agent_where).text = listOfNotNull(
             context.getString(R.string.agent_kind_claude),
             s.ticket,
