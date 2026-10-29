@@ -26,6 +26,7 @@ import localRoutes from "./routes/local.ts";
 import mailRoutes from "./routes/mail.ts";
 import notificationRoutes from "./routes/notifications.ts";
 import pairingRoutes from "./routes/pairing.ts";
+import pluginRoutes from "./routes/plugins.ts";
 import pointerRoutes from "./routes/pointer.ts";
 import portableRoutes from "./routes/portable.ts";
 import systemRoutes from "./routes/system.ts";
@@ -136,6 +137,7 @@ app.register(pairingRoutes, { authorized, fingerprint: tls?.fingerprint ?? null 
 app.register(localRoutes);
 app.register(portableRoutes);
 app.register(deckRoutes);
+app.register(pluginRoutes);
 app.register(windowRoutes);
 app.register(systemRoutes);
 app.register(pointerRoutes);
