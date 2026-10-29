@@ -137,6 +137,25 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "plugins de première utilisation",
+      run: async () => {
+        const res = await call("GET", "/plugins");
+        expectStatus(res, 200, "/plugins");
+        const plugins: { id: string; kind: string; on: boolean }[] = res.json.plugins;
+        const natives = plugins.filter((p) => p.kind === "native").map((p) => p.id);
+        // Ordinateur non pilotable : aucun plugin, et /deck/features répond 501.
+        if (!controlled()) return expect(plugins.length === 0, "plugins proposés sur un ordinateur non pilotable");
+        expect(
+          ["open", "mixer", "pad"].every((id) => natives.includes(id)),
+          `plugins intégrés manquants : ${natives.join(", ")}`,
+        );
+        const features = await call("GET", "/deck/features");
+        expect(Array.isArray(features.json.off), "/deck/features sans la liste des plugins coupés");
+        const apps = plugins.filter((p) => p.kind === "app").map((p) => p.id);
+        return `${natives.length} intégrés, applis trouvées : ${apps.join(", ") || "aucune"}`;
+      },
+    },
+    {
       name: "touches perso au-delà de 14",
       run: async () => {
         const slot = 14;

@@ -136,6 +136,7 @@ describe("cartes de l'Accueil et onglets d'appli", () => {
       meetings: true,
       teams: false,
       agents: false,
+      off: [],
     });
     server.setOs({ installed: ["Microsoft Teams"] });
     assert.equal((await server.call("GET", "/deck/features")).json.teams, true);

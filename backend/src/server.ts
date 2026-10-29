@@ -20,6 +20,7 @@ import deckRoutes from "./routes/deck.ts";
 import docRoutes from "./routes/docs.ts";
 import localRoutes from "./routes/local.ts";
 import pairingRoutes from "./routes/pairing.ts";
+import pluginRoutes from "./routes/plugins.ts";
 import pointerRoutes from "./routes/pointer.ts";
 import systemRoutes from "./routes/system.ts";
 import tabletRoutes from "./routes/tablet.ts";
@@ -103,6 +104,7 @@ app.addContentTypeParser("image/jpeg", { parseAs: "buffer", bodyLimit: 2 * 1024 
 app.register(pairingRoutes, { authorized });
 app.register(localRoutes);
 app.register(deckRoutes);
+app.register(pluginRoutes);
 app.register(windowRoutes);
 app.register(systemRoutes);
 app.register(pointerRoutes);
