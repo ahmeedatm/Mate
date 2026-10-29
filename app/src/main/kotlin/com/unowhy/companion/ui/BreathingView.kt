@@ -2,22 +2,23 @@ package com.unowhy.companion.ui
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Matrix
 import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.RectF
+import android.graphics.RadialGradient
+import android.graphics.Shader
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.View
 import androidx.core.graphics.ColorUtils
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.Breathing
-import kotlin.math.PI
-import kotlin.math.sin
+import kotlin.math.min
 
 /**
- * Ondes de la respiration : trois vagues qui montent à l'inspiration, tiennent, et redescendent à l'expiration
- * ([Breathing.level]). Dessinées à la main toutes les [FRAME_MS] pendant l'exercice (le kiosque coupe les
- * animateurs d'Android) ; à l'arrêt, une image fixe et plus aucun dessin.
+ * Sphère de la respiration : elle gonfle à l'inspiration, tient, et dégonfle à l'expiration ([Breathing.level]) ;
+ * pendant l'exercice, des ondes s'en échappent doucement. Éclairée en haut à gauche (dégradé), sans cadre : elle prend
+ * la place libre. Dessinée à la main toutes les [FRAME_MS] pendant l'exercice (le kiosque coupe les animateurs
+ * d'Android) ; à l'arrêt, une image fixe et plus aucun dessin.
  */
 class BreathingView @JvmOverloads constructor(
     context: Context,
@@ -39,13 +40,17 @@ class BreathingView @JvmOverloads constructor(
     private var last: Pair<Breathing.Step, Int>? = null
 
     private val hue = themeColor(context, R.attr.c_hue_cyan)
-    private val paints = listOf(40, 70, 105).map { alpha ->
-        Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ColorUtils.setAlphaComponent(hue, alpha) }
+    private val sphere = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val halo = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ColorUtils.setAlphaComponent(hue, 36) }
+    private val ripple = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2 * resources.displayMetrics.density
+        color = hue
     }
-    private val path = Path()
-    private val clip = Path()
-    private val bounds = RectF()
-    private val radius = 32 * resources.displayMetrics.density
+
+    /** Dégradé calculé une fois pour le plus grand rayon, ramené au rayon du moment par une matrice. */
+    private val scale = Matrix()
+    private var maxRadius = 0f
 
     fun start(pattern: Breathing.Pattern, minutes: Int) {
         this.pattern = pattern
@@ -69,41 +74,40 @@ class BreathingView @JvmOverloads constructor(
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        bounds.set(0f, 0f, w.toFloat(), h.toFloat())
-        clip.reset()
-        clip.addRoundRect(bounds, radius, radius, Path.Direction.CW)
+        // Place pour les ondes autour de la sphère pleine.
+        maxRadius = min(w, h) / 2f * 0.8f
+        // Pâle (la consigne, foncée, se lit dessus de loin) : reflet presque blanc, bord à la teinte de la fonction.
+        val white = 0xFFFFFFFF.toInt()
+        sphere.shader = RadialGradient(
+            w / 2f - maxRadius * 0.35f, h / 2f - maxRadius * 0.4f, maxRadius * 1.5f,
+            intArrayOf(ColorUtils.blendARGB(hue, white, 0.85f), ColorUtils.blendARGB(hue, white, 0.55f), ColorUtils.blendARGB(hue, white, 0.15f)),
+            floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP,
+        )
     }
 
     override fun onDraw(canvas: Canvas) {
         val now = SystemClock.uptimeMillis()
         val level = if (running) moment(now - startedAt) else IDLE_LEVEL
-        val w = width.toFloat()
-        val h = height.toFloat()
-        // Ligne d'eau : basse poumons vides, haute poumons pleins.
-        val base = h * (0.85f - 0.65f * level)
-        canvas.save()
-        canvas.clipPath(clip)
-        paints.forEachIndexed { i, paint ->
-            val amplitude = h * (0.025f + 0.012f * i)
-            val wavelength = w / (1.1f + 0.45f * i)
-            val shift = (now % 60_000L) / 1_000f * (0.35f + 0.2f * i) * if (i % 2 == 0) 1 else -1
-            val offset = base + h * 0.04f * i
-            path.reset()
-            path.moveTo(0f, h)
-            var x = 0f
-            while (x <= w + STEP) {
-                path.lineTo(x, offset + amplitude * sin(2 * PI.toFloat() * x / wavelength + shift))
-                x += STEP
+        val cx = width / 2f
+        val cy = height / 2f
+        val radius = maxRadius * (MIN_SIZE + (1 - MIN_SIZE) * level)
+        if (running) {
+            // Ondes : trois cercles qui partent de la sphère et s'effacent en s'éloignant.
+            for (i in 0 until RIPPLES) {
+                val t = ((now + i * RIPPLE_MS / RIPPLES) % RIPPLE_MS) / RIPPLE_MS.toFloat()
+                ripple.alpha = (90 * (1 - t)).toInt()
+                canvas.drawCircle(cx, cy, radius + maxRadius * 0.25f * t, ripple)
             }
-            path.lineTo(w, h)
-            path.close()
-            canvas.drawPath(path, paint)
         }
-        canvas.restore()
+        canvas.drawCircle(cx, cy, radius * 1.08f, halo)
+        val s = radius / maxRadius
+        scale.setScale(s, s, cx, cy)
+        sphere.shader?.setLocalMatrix(scale)
+        canvas.drawCircle(cx, cy, radius, sphere)
         if (running && isShown) postInvalidateDelayed(FRAME_MS)
     }
 
-    /** Niveau de l'onde, et l'étape annoncée quand elle change ; fin de l'exercice à la durée choisie. */
+    /** Niveau de la sphère, et l'étape annoncée quand elle change ; fin de l'exercice à la durée choisie. */
     private fun moment(elapsed: Long): Float {
         if (elapsed >= endMs) {
             post { end(finished = true) }
@@ -129,7 +133,11 @@ class BreathingView @JvmOverloads constructor(
 
     private companion object {
         const val FRAME_MS = 33L
-        const val STEP = 12f
         const val IDLE_LEVEL = 0.35f
+
+        /** Sphère vide : cette part du rayon plein. */
+        const val MIN_SIZE = 0.45f
+        const val RIPPLES = 3
+        const val RIPPLE_MS = 3_000L
     }
 }

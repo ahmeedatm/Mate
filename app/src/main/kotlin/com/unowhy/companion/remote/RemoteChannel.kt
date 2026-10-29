@@ -243,7 +243,7 @@ internal fun focusCommand(command: JSONObject): JSONObject {
     when (command.getString("action")) {
         "start" -> if (!running) FocusTimer.toggle()
         "pause" -> if (running) FocusTimer.toggle()
-        "reset" -> FocusTimer.reset()
+        "reset" -> FocusTimer.stop()
         "skip" -> FocusTimer.skip()
     }
     return focusState()

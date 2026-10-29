@@ -33,7 +33,6 @@ class FocusFragment : Fragment() {
     private lateinit var phase: TextView
     private lateinit var time: TextView
     private lateinit var ring: ProgressRing
-    private lateinit var count: TextView
     private lateinit var start: ImageButton
     private lateinit var volume: SeekBar
     private val presetButtons = mutableListOf<Pair<Int, Button>>()
@@ -51,11 +50,10 @@ class FocusFragment : Fragment() {
         phase = view.findViewById(R.id.focus_phase)
         time = view.findViewById(R.id.focus_time)
         ring = view.findViewById(R.id.focus_ring)
-        count = view.findViewById(R.id.focus_count)
         start = view.findViewById(R.id.focus_start)
         start.setOnClickListener { FocusTimer.toggle() }
         view.findViewById<ImageButton>(R.id.focus_skip).setOnClickListener { FocusTimer.skip() }
-        view.findViewById<ImageButton>(R.id.focus_reset).setOnClickListener { FocusTimer.reset() }
+        view.findViewById<ImageButton>(R.id.focus_reset).setOnClickListener { FocusTimer.stop() }
 
         val presets = view.findViewById<LinearLayout>(R.id.focus_presets)
         for ((focus, pause) in listOf(25 to 5, 50 to 10, 15 to 3)) {
@@ -147,7 +145,6 @@ class FocusFragment : Fragment() {
         time.text = FocusTimer.format(state.remainingMs)
         ring.color = color
         ring.progress = (state.durationMs - state.remainingMs).toFloat() / state.durationMs.coerceAtLeast(1)
-        count.text = getString(R.string.focus_count, state.completed)
         start.setImageResource(if (state.running) R.drawable.ic_pause else R.drawable.ic_play)
         start.contentDescription = getString(if (state.running) R.string.focus_pause else R.string.focus_start)
         presetButtons.forEach { (minutes, button) -> button.isSelected = minutes == FocusTimer.focusMinutes }

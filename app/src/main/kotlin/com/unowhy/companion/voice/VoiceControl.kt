@@ -234,7 +234,7 @@ class VoiceControl(
                         if (!FocusTimer.state.running) FocusTimer.toggle()
                     }
                     "pause" -> if (FocusTimer.state.running) FocusTimer.toggle()
-                    else -> FocusTimer.reset()
+                    else -> FocusTimer.stop()
                 }
                 Answer(when (command.action) {
                     "start" -> text(R.string.voice_focus_started, FocusTimer.focusMinutes)

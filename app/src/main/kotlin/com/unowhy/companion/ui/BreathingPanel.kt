@@ -8,6 +8,7 @@ import android.widget.TextView
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.Breathing
 import com.unowhy.companion.focus.FocusTimer
+import com.unowhy.companion.focus.NoisePlayer
 
 /**
  * Respiration de Focus, à la place du Pomodoro (qui continue derrière) ; l'ambiance reste réglable en dessous : rythme,
@@ -40,7 +41,12 @@ class BreathingPanel(private val root: View) {
             step.setText(m.step.label)
             seconds.text = context.getString(R.string.breath_seconds_left, m.secondsLeft, FocusTimer.format(waves.remainingMs()))
         }
-        waves.onEnd = { finished -> done = finished; render() }
+        waves.onEnd = { finished ->
+            // Exercice fini ou arrêté : l'ambiance s'arrête avec lui.
+            NoisePlayer.stop()
+            done = finished
+            render()
+        }
         render()
     }
 
