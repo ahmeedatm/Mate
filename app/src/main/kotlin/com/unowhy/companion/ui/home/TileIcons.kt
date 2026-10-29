@@ -43,7 +43,6 @@ object TileIcons {
         "📷" to R.drawable.ic_videocam,
         "📞" to R.drawable.ic_call_end,
         "🖼" to R.drawable.ic_display,
-        "🎮" to R.drawable.ic_gamepad,
         "💾" to R.drawable.ic_tile_save,
         "↩" to R.drawable.ic_tile_undo,
         "↪" to R.drawable.ic_tile_redo,
