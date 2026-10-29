@@ -14,6 +14,7 @@ process.env.DATA_DIR = dir;
 process.env.CALENDAR_ICS_URLS = "";
 process.env.CLAUDE_BIN = "/inexistant";
 process.env.GITLAB_TOKEN = "";
+process.env.ACCOUNTS_FILE = new URL("./accounts-vide.json", import.meta.url).pathname;
 const { config } = await import("../src/config.ts");
 const deck = await import("../src/deck.ts");
 const { saveKey } = await import("../src/perso.ts");

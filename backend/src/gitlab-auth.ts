@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import path from "node:path";
-import { backendRoot, config } from "./config.ts";
+import { accountsFile, config } from "./config.ts";
 import { readJson, updateJson } from "./store.ts";
 
 /**
@@ -23,7 +23,7 @@ export const gitlabBaseUrl = () => (process.env.GITLAB_URL?.trim() || DEFAULT_UR
 export async function gitlabClientId(): Promise<string | undefined> {
   const fromEnv = process.env.GITLAB_CLIENT_ID?.trim();
   if (fromEnv) return fromEnv;
-  const file = await readJson<{ gitlab?: { clientId?: string } }>(path.join(backendRoot, "config", "accounts.json"), () => ({}), {
+  const file = await readJson<{ gitlab?: { clientId?: string } }>(accountsFile(), () => ({}), {
     quarantine: false,
   });
   return file.gitlab?.clientId?.trim() || undefined;

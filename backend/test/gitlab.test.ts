@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, it, mock } from "node:test";
 // Dossier de données vide (aucun compte connecté) et pas d'appli OAuth : seul GITLAB_TOKEN ouvre GitLab ici.
 process.env.DATA_DIR = await fs.mkdtemp(path.join(os.tmpdir(), "companion-gitlab-"));
 delete process.env.GITLAB_CLIENT_ID;
+process.env.ACCOUNTS_FILE = new URL("./accounts-vide.json", import.meta.url).pathname;
 const { clearGitlabCache, gitlabAvailable, GitLabError, listMrs, mergeMr, mrUrl, pipelineOf, statusLabel } =
   await import("../src/gitlab.ts");
 

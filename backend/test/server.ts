@@ -79,6 +79,7 @@ export async function startServer(options: ServerOptions = {}): Promise<TestServ
       GITLAB_TOKEN: "",
       GITLAB_URL: "",
       GITLAB_CLIENT_ID: "",
+      ACCOUNTS_FILE: path.join(backendDir, "test", "accounts-vide.json"),
       FAKE_OS: options.os ?? "mac",
       FAKE_OS_STATE: osState,
       FAKE_OS_LOG: osLog,
