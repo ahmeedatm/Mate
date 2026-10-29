@@ -215,4 +215,45 @@ class TileLogicTest {
     fun `reconcile ne touche a rien quand les pages ne sont pas lues`() {
         assertNull(reconcileKeys(listOf(KeyRef("k-0", "A"), KeyRef("k-3", "B")), emptyList()))
     }
+
+    // Deck V2 : symboles des tuiles et touches de départ du profil Deck.
+
+    private fun page(title: String, n: Int) =
+        DeckPage(title, (1..n).map { DeckTile("r-$it", "Touche $it", "system", "🔒", null, symbol = "lock") }, false, false, false, null, false, true, false)
+
+    @Test
+    fun `le symbole d'une touche suit la tuile et survit au JSON`() {
+        val key = KeyRef.of(DeckTile("r-1", "Verrouiller", "system", "🔒", null, symbol = "lock"))
+        assertEquals("lock", key.symbol)
+        assertEquals(key, KeyRef.of(key.toJson()))
+        assertNull(KeyRef.of(JSONObject().put("id", "x").put("label", "X"))!!.symbol)
+    }
+
+    @Test
+    fun `touches de depart, la page Raccourcis, une seule fois par ordinateur`() {
+        val config = JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")
+        val pages = listOf(page("Apps", 3), page("Raccourcis", 12))
+        val seeded = KeyRef.seed(config, "mac", pages)!!
+        assertEquals(KeyRef.SEED_MAX, seeded.size)
+        assertEquals("r-1", seeded.first().id)
+        KeyRef.putFor(config, "mac", emptyList())
+        assertNull("déjà posées, même vidées ensuite", KeyRef.seed(config, "mac", pages))
+        assertEquals(KeyRef.SEED_MAX, KeyRef.seed(config, "pc", pages)!!.size)
+    }
+
+    @Test
+    fun `pas de touches de depart sans page choisie, sans la page ou sans ordinateur`() {
+        val pages = listOf(page("Raccourcis", 4))
+        assertNull(KeyRef.seed(JSONObject(), "mac", pages))
+        assertNull(KeyRef.seed(JSONObject().put(KeyRef.DEFAULT_PAGE, "Absente"), "mac", pages))
+        assertNull(KeyRef.seed(JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis"), null, pages))
+    }
+
+    @Test
+    fun `chaque symbole du backend a son icone`() {
+        for (name in TileIcons.NAMES) assertTrue(name, TileIcons.drawable(name) != null)
+        assertEquals(21, TileIcons.NAMES.size)
+        assertNull(TileIcons.drawable("fusee"))
+        assertNull(TileIcons.drawable(null))
+    }
 }

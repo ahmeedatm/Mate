@@ -348,7 +348,7 @@ enum class Template(
     DECK_CADRAN(R.string.template_deck, R.string.template_deck_desc, listOf(
         Placed(WidgetType.APPS, WidgetSize.W, 0, 0, 0),
         Placed(WidgetType.AUDIO, WidgetSize.W, 0, 0, 1),
-        Placed(WidgetType.KEYS, WidgetSize.L, 0, 0, 2),
+        Placed(WidgetType.KEYS, WidgetSize.L, 0, 0, 2, JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")),
         Placed(WidgetType.MEDIA, WidgetSize.L, 0, 2, 2),
     ), cadran = true),
 
