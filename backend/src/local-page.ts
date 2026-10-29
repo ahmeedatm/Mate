@@ -78,6 +78,7 @@ ${FAVICON}
   .label { margin-top: 18px; }
   /* Pastilles de thème : comme les puces de l'appli (sélection = fond doux et contour de la couleur « maintenant »). */
   .themes { display: flex; gap: 10px; margin-top: 10px; }
+  .themes + .themes { margin-top: 8px; }
   .themes button { flex: 1; justify-content: center; margin: 0; background: var(--tile-high); color: var(--ink); outline: 1px solid transparent; }
   .themes button[aria-pressed=true] { background: var(--now-soft); color: var(--now); outline-color: var(--now); }
   #tabletinfo { margin-top: 2px; }
@@ -115,8 +116,11 @@ ${FAVICON}
       <div class="dim" id="tabletold" hidden style="margin-top:8px">Mets à jour l'appli de la tablette pour la régler d'ici.</div>
       <div id="tabletsettings">
         <div class="label">Thème</div>
-        <div class="themes" id="themes">
+        <div class="themes">
           <button data-theme="CADRAN">Cadran</button><button data-theme="CADRAN_NUIT">Cadran nuit</button><button data-theme="RETRO">Rétro</button><button data-theme="CONTRASTE">Contraste élevé</button>
+        </div>
+        <div class="themes">
+          <button data-theme="REGISTRE">Registre</button><button data-theme="STUDIO">Studio</button><button data-theme="MAISON">Maison</button><button data-theme="TABLEAU">Tableau</button><button data-theme="TERMINAL">Terminal</button>
         </div>
         <div class="row"><label for="brightness">Luminosité de l'écran</label><input type="range" id="brightness" min="5" max="100"><span class="value" id="brightnessvalue"></span></div>
         <div class="row"><label for="volume">Volume du haut-parleur</label><input type="range" id="volume" min="0" max="100"><span class="value" id="volumevalue"></span></div>
@@ -329,7 +333,7 @@ ${FAVICON}
     document.getElementById("tabletold").hidden = !!st;
     document.getElementById("tabletsettings").hidden = !st;
     if (!st || Date.now() < tabletBusyUntil) return;
-    for (const btn of document.querySelectorAll("#themes button")) btn.setAttribute("aria-pressed", String(btn.dataset.theme === st.theme));
+    for (const btn of document.querySelectorAll(".themes button")) btn.setAttribute("aria-pressed", String(btn.dataset.theme === st.theme));
     for (const id of ["brightness", "volume"]) {
       document.getElementById(id).value = percent(st[id]);
       document.getElementById(id + "value").textContent = percent(st[id]) + " %";
@@ -396,9 +400,9 @@ ${FAVICON}
     tabletBusyUntil = 0;
     refresh();
   }
-  for (const btn of document.querySelectorAll("#themes button")) {
+  for (const btn of document.querySelectorAll(".themes button")) {
     btn.onclick = () => {
-      for (const other of document.querySelectorAll("#themes button")) other.setAttribute("aria-pressed", String(other === btn));
+      for (const other of document.querySelectorAll(".themes button")) other.setAttribute("aria-pressed", String(other === btn));
       saveTablet({ theme: btn.dataset.theme });
     };
   }

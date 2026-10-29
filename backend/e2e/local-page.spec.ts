@@ -125,12 +125,17 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");
     await expect(page.getByRole("button", { name: "Rétro" })).toHaveAttribute("aria-pressed", "true");
 
+    // Thème d'un persona, seconde ligne : un seul bouton reste pressé.
+    await page.getByRole("button", { name: "Terminal" }).click();
+    await expect(page.getByRole("button", { name: "Terminal" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "Rétro" })).toHaveAttribute("aria-pressed", "false");
+
     await page.locator("#nightdim").uncheck();
     await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");
     await page.locator("#volume").fill("75");
     await expect(page.locator("#volumevalue")).toHaveText("75 %");
-    await expect.poll(() => received.length).toBe(3);
-    expect(received).toEqual([{ theme: "RETRO" }, { nightDim: false }, { volume: 0.75 }]);
+    await expect.poll(() => received.length).toBe(4);
+    expect(received).toEqual([{ theme: "RETRO" }, { theme: "TERMINAL" }, { nightDim: false }, { volume: 0.75 }]);
     await expect(page.locator("#nightdim")).not.toBeChecked();
 
     // Ouverte depuis « Régler depuis l'ordi » : la carte est mise en avant.
