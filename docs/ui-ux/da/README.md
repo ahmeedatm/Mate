@@ -181,6 +181,32 @@ Ils seront mesurés avec `dumpsys gfxinfo` sur l'écran de preuve.
 - Ton des textes : phrases courtes au présent, tutoiement comme aujourd'hui, l'heure avant le
   libellé (« 17:00 Point Eliot »), jamais de point d'exclamation.
 
+## Thèmes de la démo (30/10)
+
+Cinq variantes de Cadran, une par persona de la démo, **réservées à la démo** (absentes du choix de
+Réglages ; Sam garde Contraste élevé). Même structure que Cadran (formes, tuiles, mouvement, mêmes
+attributs `?attr/c_…`), seuls changent la palette, les polices, un motif et la couleur du thème
+(`c_primary`, boutons et sélection). Rouge, ou ambre en Terminal, reste « maintenant » seulement. Neutres :
+palette tonale M3 à une teinte propre, générés avec `palette.sh '<rouge>' --teinte <T> --chroma <C>`
+(skill `direction-artistique`), couleurs de thème et teintes de fonction prises au ton 35 à 42 de leur
+teinte (HCT). Polices sous licence OFL, réduites au latin (`res/font/`). Motif : `ui/ThemePattern`
+(trames : une tuile d'au plus 48 dp répétée ; forme d'accent : deux arcs), ou `ui/Grain` ; dessiné une
+fois, statique, jamais de bitmap plein écran. Contrastes verrouillés par `ThemePalettesTest`.
+
+| Thème (persona) | Palette | Polices | Motif | Contrastes (pire cas sur fond, tuile, relief) |
+|---|---|---|---|---|
+| Registre (Nour, comptable) | papier crème `#F8F3E5`, feuillets blancs, vert comptable `#175E34`, rouge d'encre `#B3261E` | IBM Plex Sans 300 à 600 ; grands chiffres IBM Plex Mono 300 (chasse fixe) | filets de registre tous les 32 dp, vert à 10 % | texte 14,0 · secondaire 7,7 · tertiaire 4,5 · rouge 5,3 · vert thème 6,4 |
+| Studio (Gwen, marketing) | blanc lilas `#F6F3F6`, indigo `#513FFF`, teintes de fonction franches au ton 40 à 42, rouge `#C0153A` | Instrument Serif (titres, grands chiffres), Instrument Sans 400 à 600 | quart de disque et anneau d'indigo, coin bas droit, 16 % | texte 14,0 · tertiaire 4,6 · rouge 5,0 · indigo 4,9 |
+| Maison (Camille, cheffe de projet) | crème chaud `#FFF1E7`, ardoise calme `#456179`, teintes atténuées, brique `#B3412F` | Young Serif (titres), Figtree 300 à 500 | grain chaud, plus clair que Rétro | texte 14,1 · tertiaire 4,5 · brique 4,6 · ardoise 5,3 |
+| Tableau (Aimée, désordonnée) | gris froid `#F4F3F5`, bleu marine `#005592`, statuts francs (vert `#006E2E`, bleu, orange, ocre, rouge `#C62828`) | Barlow 300 à 500 ; titres et grands chiffres Barlow Semi Condensed | trame de cellules de 48 dp, 8 % ; tuiles à filet de 1 dp | texte 14,0 · tertiaire 4,6 · rouge 4,6 · marine 6,3 |
+| Terminal (Sacha, développeur) | base nuit teintée de vert `#0C0F0C`, vert phosphore `#43E188`, ambre `#FFB000` = maintenant | JetBrains Mono 300 à 600, partout | lignes de scan d'un pixel tous les 4 pixels, noir à 14 % | texte 11,8 · tertiaire 4,8 · ambre 8,3 · vert 9,0 |
+
+Texte sur les aplats (blanc sur rouge, sur couleur du thème, sur rouge d'erreur) et couleurs de sens sur
+leur fond teinté : au moins 4,5 dans les cinq palettes. Signaux des agents, teintes de fonction : au moins 3.
+
+⚠️ Pas vus à l'écran : le rendu des motifs et les débordements de texte (JetBrains Mono est plus large que Outfit) restent à
+contrôler sur l'émulateur puis la tablette.
+
 ## Ce que Cadran refuse
 
 Le look « généré » : cartes bleu nuit, néon, dégradés violet → turquoise, pastille colorée devant

@@ -17,7 +17,7 @@ internal object TabletSettings {
         // Thème vérifié d'abord : un ordre refusé ne change rien.
         val theme = if (command.has("theme")) {
             val name = command.getString("theme")
-            AppTheme.entries.firstOrNull { it.name == name } ?: error("Thème inconnu : $name (mettre à jour l'appli ?)")
+            AppTheme.choosable.firstOrNull { it.name == name } ?: error("Thème inconnu : $name (mettre à jour l'appli ?)")
         } else {
             null
         }

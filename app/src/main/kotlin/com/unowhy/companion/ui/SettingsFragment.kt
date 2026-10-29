@@ -387,7 +387,7 @@ class SettingsFragment : Fragment() {
     /** Une pastille par thème, avec sa couleur ; en choisir un recrée l'activité (les écrans se redessinent). */
     private fun setUpThemes(row: LinearLayout) {
         val current = AppTheme.current(requireContext())
-        for (theme in AppTheme.entries) {
+        for (theme in AppTheme.choosable) {
             val chip = Button(requireContext(), null, 0, R.style.Chip).apply {
                 setText(theme.label)
                 isSelected = theme == current
