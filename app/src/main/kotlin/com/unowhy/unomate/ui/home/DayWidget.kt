@@ -3,6 +3,7 @@ package com.unowhy.unomate.ui.home
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.TextView
@@ -52,6 +53,21 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         dndButton.setOnClickListener { toggleDnd() }
         renderFocusPill(DayBrief.focusPill(FocusTimer.state))
         render(animate = false)
+        // Posée sur la ligne fine (92 dp en Cadran) : la salutation et la date ne tiennent pas au-dessus des pastilles.
+        view.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+            if (bottom - top != oldBottom - oldTop) view.post(::fitHeight)
+        }
+    }
+
+    /** Ligne basse : ni salutation ni date (l'heure et la date sont en haut à droite), la réunion juste au-dessus des pastilles. */
+    private fun fitHeight() {
+        val short = view.height in 1 until dp(SHORT_DP)
+        greeting.visibility = if (short) View.GONE else View.VISIBLE
+        date.visibility = greeting.visibility
+        val top = if (short) 0 else dp(16)
+        for (v in listOf(meeting, note)) (v.layoutParams as ViewGroup.MarginLayoutParams).topMargin = top
+        meeting.minimumHeight = if (short) 0 else dp(44)
+        meeting.requestLayout()
     }
 
     override fun setActive(active: Boolean) {
@@ -161,4 +177,9 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     }
 
     override fun showSettings() = compl.showSettings()
+
+    private companion object {
+        /** En dessous de cette hauteur, la ligne est « basse » (comme l'Horloge : la fine de l'Accueil Cadran fait 92 dp). */
+        const val SHORT_DP = 130
+    }
 }

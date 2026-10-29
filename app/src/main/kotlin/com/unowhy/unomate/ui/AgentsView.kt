@@ -210,8 +210,10 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         if (state == null) {
             status.text = context.errorText(snapshot.error)
             status.visibility = VISIBLE
+            showBoard(false)
             return
         }
+        showBoard(true)
         showHeaders(columnCounts(state.counts))
         showQuota(state.quota, state.now)
         status.text = when {
@@ -248,6 +250,17 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         for (s in state.sessions) {
             rows[s.id]?.findViewById<TextView>(R.id.agent_age)?.text = ageLabel(context, elapsedMs(s.since, state.now, snapshot.readAtMs, android.os.SystemClock.elapsedRealtime()))
         }
+    }
+
+    /**
+     * Tableau (colonnes, mode privé) ou, s'il n'y a rien à lire (agents absents de l'ordinateur, erreur), le seul message
+     * au milieu : pas de colonnes vides sans titre.
+     */
+    private fun showBoard(on: Boolean) {
+        if ((board.visibility == VISIBLE) == on) return
+        board.visibility = if (on) VISIBLE else GONE
+        privateButton.visibility = board.visibility
+        status.layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, if (on) LayoutParams.WRAP_CONTENT else 0, if (on) 0f else 1f)
     }
 
     /** « Travaillé 4 min » ; sous la minute, « moins d'1 min » (pas « à l'instant »). */

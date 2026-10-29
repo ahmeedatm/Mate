@@ -25,6 +25,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+/** Nom affiché d'une appli dans « Son de … » : sans l'éditeur (« Microsoft Teams » → « Teams »), qui ne tient pas. */
+fun shortAppName(app: String): String = app.removePrefix("Microsoft ").ifBlank { app }
+
 /**
  * Son d'une appli de l'ordinateur (page Discord du deck) : témoin « ça parle », sourdine et volume propres à l'appli.
  * Relu en boucle tant que la page est affichée ; masqué si l'ordinateur ne sait pas (Mac : pas de volume par appli).
@@ -90,7 +93,7 @@ class AppAudioView @JvmOverloads constructor(
         this.app = app
         state = null
         loudAt = 0
-        name.text = app?.let { context.getString(R.string.app_audio_title, it) }.orEmpty()
+        name.text = app?.let { context.getString(R.string.app_audio_title, shortAppName(it)) }.orEmpty()
         visibility = if (app != null) VISIBLE else GONE
         render(null)
         restart()

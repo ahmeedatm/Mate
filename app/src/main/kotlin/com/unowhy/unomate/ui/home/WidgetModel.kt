@@ -79,10 +79,11 @@ enum class WidgetType(
     val zoomable get() = !bare
 
     /**
-     * Proposé dans le catalogue de l'ordinateur actif : Jira, GitLab et Pipelines seulement s'il les offre, Ouvertes, Son et Pavé
-     * seulement si leur plugin n'est pas coupé (écran des plugins).
+     * Proposé dans le catalogue de l'ordinateur actif : Agents, Jira, GitLab et Pipelines seulement s'il les offre (Agents :
+     * Mac avec Claude Code), Ouvertes, Son et Pavé seulement si leur plugin n'est pas coupé (écran des plugins).
      */
     fun offered(features: HomeFeatures) = when (this) {
+        AGENTS -> features.agents
         JIRA -> features.jira
         GITLAB, PIPELINES -> features.gitlab
         OPEN -> "open" !in features.off
