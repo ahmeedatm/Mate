@@ -152,7 +152,7 @@ export default async function deckRoutes(app: FastifyInstance) {
   });
 
   /** Cartes de l'Accueil à afficher selon les applis du deck. */
-  app.get("/deck/features", () => homeFeatures());
+  app.get("/deck/features", (req) => homeFeatures(req.headers));
 
   // Applis des pages d'appli (Discord, Teams) en appel en ce moment (micro utilisé) : la tablette leur donne un onglet.
   app.get("/deck/live", { logLevel: "warn" }, () => liveDeckApps());

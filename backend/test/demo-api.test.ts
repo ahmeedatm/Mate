@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, it } from "node:test";
+import { after, afterEach, describe, it } from "node:test";
 import { TILE_SYMBOLS } from "../src/screens.ts";
+import { startFakeGitlab } from "./fake-gitlab.ts";
 import { startServer, type TestServer } from "./server.ts";
 
 type Tile = { id: string; label?: string; type?: string; app: string | null };
@@ -501,6 +502,76 @@ describe("démo : données fictives à la place de celles de l'ordinateur", () =
     assert.equal((await s.call("GET", "/mail/summary")).json.status, "no-account");
   });
 
+  it("les données fictives ne servent que la tablette qui annonce le persona actif, les autres lisent l'ordinateur", async () => {
+    // Faux GitLab sans MR : l'ordinateur lit une liste vide, le persona en a.
+    const gitlab = await startFakeGitlab();
+    after(() => gitlab.stop());
+    gitlab.personalToken = "jeton-de-test";
+    gitlab.mrs = { assigned: [], review: [] };
+    server = await startServer({ env: { GITLAB_URL: gitlab.url, GITLAB_TOKEN: gitlab.personalToken } });
+    server.setOs({
+      installed: [],
+      openWindows: realWindows,
+      media: [realMedia],
+      clipboard: { kind: "text", text: "Presse-papiers privé" },
+    });
+    const s = server;
+    await s.call("POST", "/demo/persona", { persona: "sacha" });
+    const readings = async () => ({
+      gitlab: (await s.call("GET", "/gitlab/mrs")).json,
+      jira: (await features(s)).jira,
+      agents: (await features(s)).agents,
+      windows: (await s.call("GET", "/windows/open")).json.apps[0].name,
+      media: await mediaTitle(s),
+      clipboard: (await s.call("GET", "/system/clipboard")).json.text,
+      mail: (await s.call("GET", "/mail/summary")).json.status,
+    });
+
+    // En-tête correct : les mocks.
+    const mocked = await readings();
+    assert.equal(mocked.gitlab.connected, true);
+    assert.ok(mocked.gitlab.mine.length > 0);
+    assert.equal(mocked.jira, true);
+    assert.equal(mocked.agents, true);
+    assert.notEqual(mocked.windows, "Vrai");
+    assert.notEqual(mocked.media, "Morceau privé");
+    assert.notEqual(mocked.clipboard, "Presse-papiers privé");
+    assert.equal(mocked.mail, "ok");
+
+    // Sans en-tête (tablette sans persona : essai, réinstallation) et avec celui d'un autre persona : les vraies données.
+    for (const persona of [null, "nour"]) {
+      s.persona = persona;
+      const real = await readings();
+      assert.equal(real.gitlab.connected, true, `${persona} gitlab réel (jeton)`);
+      assert.equal(real.gitlab.mine.length, 0, `${persona} gitlab réel`);
+      assert.equal(real.jira, false, `${persona} jira`);
+      assert.equal(real.agents, false, `${persona} agents`);
+      assert.equal(real.windows, "Vrai", `${persona} fenêtres`);
+      assert.equal(real.media, "Morceau privé", `${persona} média`);
+      assert.equal(real.clipboard, "Presse-papiers privé", `${persona} presse-papiers`);
+      assert.equal(real.mail, "no-account", `${persona} courrier`);
+      assert.equal((await s.call("GET", "/calendar?days=7")).json.source, "local");
+    }
+
+    // Une action d'une tablette sans persona ne touche pas l'état fictif de l'autre.
+    s.persona = null;
+    s.clearOsCalls();
+    await s.call("POST", "/system/audio", { output: 7 });
+    assert.ok(s.osCalls().length > 0);
+    s.persona = "sacha";
+    assert.notEqual((await s.call("GET", "/system/audio")).json.output, 7);
+  });
+
+  it("une tablette sans persona rend l'ordinateur d'origine avec DELETE /demo, sans effet s'il n'y a pas de démo", async () => {
+    const s = await start();
+    await s.call("POST", "/demo/persona", { persona: "nour" });
+    s.persona = null;
+    assert.ok((await taskLabels(s)).includes("Rapprochement bancaire"));
+    assert.deepEqual((await s.call("DELETE", "/demo")).json, { restored: true });
+    assert.ok(!(await taskLabels(s)).includes("Rapprochement bancaire"));
+    assert.deepEqual((await s.call("DELETE", "/demo")).json, { restored: false });
+  });
+
   it("une démo en cours survit à un redémarrage du compagnon", async () => {
     // Dossier donné : gardé à l'arrêt du serveur (voir test/server.ts).
     const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), "companion-demo-"));
@@ -509,6 +580,7 @@ describe("démo : données fictives à la place de celles de l'ordinateur", () =
       await first.call("POST", "/demo/persona", { persona: "sacha" });
       await first.stop();
       server = await startServer({ dataDir });
+      server.persona = "sacha";
       assert.equal((await server.call("GET", "/gitlab/mrs")).json.connected, true);
       await server.call("DELETE", "/demo");
       assert.equal((await server.call("GET", "/gitlab/mrs")).json.connected, false);

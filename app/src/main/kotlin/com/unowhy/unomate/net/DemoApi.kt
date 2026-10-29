@@ -31,6 +31,6 @@ class DemoApi(private val http: Http) {
         parseDemoSetup(http.postJson("/demo/persona", JSONObject().put("persona", id)))
     }
 
-    /** Rend les données d'avant la démo. */
+    /** Rend les données d'avant la démo. Rend faux (sans erreur) s'il n'y en avait pas. */
     suspend fun quit() = http.io { http.delete("/demo"); Unit }
 }
