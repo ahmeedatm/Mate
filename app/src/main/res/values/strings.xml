@@ -801,7 +801,7 @@
     <string name="widget_keys_add">Ajouter</string>
     <string name="widget_keys_new">Nouvelle touche</string>
     <string name="widget_keys_existing">Choisir parmi les touches existantes</string>
-    <string name="widget_keys_widget_full">Ce widget a déjà %1$d touches : retire-en une avant d\'en créer.</string>
+    <string name="widget_keys_widget_full">Ce widget a déjà %1$d touches : retires-en une avant d\'en créer.</string>
     <string name="widget_keys_no_perso">Ce deck n\'a pas de page de touches perso.</string>
     <string name="widget_keys_full">Les emplacements des touches perso sont tous pris.</string>
     <string name="widget_keys_remove">Retirer « %1$s » de ce widget ?</string>
