@@ -18,7 +18,20 @@ class PrefsTest {
         assertTrue(Prefs.nightDim(context))
         assertTrue(Prefs.focusDnd(context))
         assertFalse(Prefs.allowInstalls(context))
+        assertFalse(Prefs.exitLock(context))
+        assertFalse(Prefs.powerMenu(context))
+        assertFalse(Prefs.landscapeLocked(context))
         assertNull(Prefs.theme(context))
+    }
+
+    @Test
+    fun `reglages du kiosque retenus`() {
+        Prefs.setExitLock(context, true)
+        Prefs.setPowerMenu(context, true)
+        Prefs.setLandscapeLocked(context, true)
+        assertTrue(Prefs.exitLock(context))
+        assertTrue(Prefs.powerMenu(context))
+        assertTrue(Prefs.landscapeLocked(context))
     }
 
     @Test

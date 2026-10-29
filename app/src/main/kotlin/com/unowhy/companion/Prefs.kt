@@ -6,6 +6,9 @@ import android.content.Context
 object Prefs {
     private const val FILE = "companion"
     private const val KEY_ALLOW_INSTALLS = "allow_installs"
+    private const val KEY_EXIT_LOCK = "exit_lock"
+    private const val KEY_POWER_MENU = "power_menu"
+    private const val KEY_LANDSCAPE_LOCKED = "landscape_locked"
     private const val KEY_BRIGHTNESS = "brightness"
     private const val KEY_NIGHT_DIM = "night_dim"
     private const val KEY_THEME = "theme"
@@ -77,6 +80,27 @@ object Prefs {
 
     fun setAllowInstalls(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_ALLOW_INSTALLS, value).apply()
+    }
+
+    /** Kiosque : réinitialisation d'usine et mode sans échec interdits (anti-sortie). Permis par défaut. */
+    fun exitLock(context: Context): Boolean = prefs(context).getBoolean(KEY_EXIT_LOCK, false)
+
+    fun setExitLock(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_EXIT_LOCK, value).apply()
+    }
+
+    /** Kiosque : menu du bouton marche/arrêt (éteindre, redémarrer) permis en verrouillage d'écran. Coupé par défaut. */
+    fun powerMenu(context: Context): Boolean = prefs(context).getBoolean(KEY_POWER_MENU, false)
+
+    fun setPowerMenu(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_POWER_MENU, value).apply()
+    }
+
+    /** Écran verrouillé en paysage, un seul sens. Par défaut les deux sens de paysage suivent le capteur. */
+    fun landscapeLocked(context: Context): Boolean = prefs(context).getBoolean(KEY_LANDSCAPE_LOCKED, false)
+
+    fun setLandscapeLocked(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_LANDSCAPE_LOCKED, value).apply()
     }
 
     /** Visite guidée du premier lancement déjà vue (ou passée). */

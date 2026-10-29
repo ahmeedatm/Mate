@@ -393,6 +393,7 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         Kiosk.enter(this)
         Screen.apply(this)
+        Screen.applyOrientation(this)
         // Retour de l'essai : si l'ordinateur est resté sur le backend d'une MR (essai planté), on remet le sien.
         if (!BuildConfig.TRIAL && Prefs.trialOpened(this)) {
             Prefs.setTrialOpened(this, false)

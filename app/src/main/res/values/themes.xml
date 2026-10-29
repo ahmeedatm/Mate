@@ -183,6 +183,16 @@
         <item name="android:letterSpacing">0.1</item>
     </style>
 
+    <!-- Sous-titre d'une section dans une carte (Réglages > Mode kiosque). -->
+    <style name="SectionLabel">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">20dp</item>
+        <item name="android:textColor">?attr/c_text</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
     <!-- Écran de bienvenue : numéro, titre et texte de chaque étape. -->
     <style name="WelcomeStep">
         <item name="android:layout_width">44dp</item>

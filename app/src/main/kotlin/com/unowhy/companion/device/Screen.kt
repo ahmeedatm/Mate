@@ -1,6 +1,7 @@
 package com.unowhy.companion.device
 
 import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.os.SystemClock
 import android.provider.Settings
 import android.view.WindowManager
@@ -45,6 +46,16 @@ object Screen {
             params.screenBrightness = target
             window.attributes = params
         }
+    }
+
+    /** Sens de l'écran : paysage fixe, ou les deux sens de paysage selon le capteur (le choix du manifeste). */
+    fun orientation(locked: Boolean): Int =
+        if (locked) ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+
+    /** À appeler au démarrage et après un changement de réglage : la configuration ne recrée pas l'activité. */
+    fun applyOrientation(activity: Activity) {
+        val target = orientation(Prefs.landscapeLocked(activity))
+        if (activity.requestedOrientation != target) activity.requestedOrientation = target
     }
 
     /** Luminosité du système, de 0 à 1 (réglage de 0 à 255). */
