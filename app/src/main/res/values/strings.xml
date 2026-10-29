@@ -2,7 +2,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Modes -->
-    <string name="mode_home">Profils</string>
+    <string name="mode_home">Écrans</string>
     <string name="menu_computer">Depuis l\'ordi</string>
     <string name="mode_deck">Deck</string>
     <string name="mode_computer">Ordi</string>
@@ -712,11 +712,11 @@
     <string name="plugins_no_apps">Aucune appli compatible trouvée (Discord, Teams, Claude Code).</string>
     <string name="plugins_card">Plugins</string>
     <string name="plugins_choose">Choisir les plugins</string>
-    <string name="plugins_hint">Applis de l\'ordinateur (Discord, Teams…) et fonctions du Deck à afficher sur la tablette.</string>
+    <string name="plugins_hint">Applis de l\'ordinateur (Discord, Teams…) et fonctions à afficher sur la tablette.</string>
     <string name="plugins_unavailable">Cet ordinateur ne propose pas de plugins : mets à jour le compagnon.</string>
     <string name="connect_title">Aucun ordinateur connecté</string>
     <string name="connect_button">Connecter mon ordinateur</string>
-    <string name="connect_deck">Le Deck lance les applis et les raccourcis de ton ordinateur.</string>
+    <string name="connect_deck">La tablette lance les applis et les raccourcis de ton ordinateur.</string>
     <string name="connect_computer">Depuis l\'ordi affiche les fichiers et la page web de ton ordinateur.</string>
     <string name="connect_camera">Le visualiseur montre sur l\'écran de ton ordinateur ce que filme la tablette.</string>
     <!-- Tablette : état caché par le kiosque (barre latérale, Réglages) -->
@@ -866,30 +866,30 @@
     <!-- Accueil à widgets -->
     <string name="home_edit_hint">Glisse un widget pour le déplacer, touche + pour en ajouter.</string>
     <string name="profile_first">Accueil</string>
-    <string name="profile_default">Profil %d</string>
-    <string name="profiles_title">Profils</string>
-    <string name="profile_new_empty">Nouveau profil vide</string>
+    <string name="profile_default">Écran %d</string>
+    <string name="profiles_title">Écrans</string>
+    <string name="profile_new_empty">Nouvel écran vide</string>
     <string name="profile_new_template">Depuis un modèle</string>
-    <string name="profile_edit">Modifier ce profil</string>
+    <string name="profile_edit">Modifier cet écran</string>
     <string name="profile_rename">Renommer</string>
-    <string name="profile_rename_hint">Nom du profil</string>
+    <string name="profile_rename_hint">Nom de l\'écran</string>
     <string name="profile_delete">Supprimer</string>
-    <string name="profile_delete_confirm">Supprimer le profil « %s » et ses widgets ?</string>
+    <string name="profile_delete_confirm">Supprimer l\'écran « %s » et ses widgets ?</string>
     <string name="profile_move_up">Monter</string>
     <string name="profile_move_down">Descendre</string>
     <string name="home_edit_add">Ajouter</string>
     <string name="home_edit_done">Terminé</string>
     <string name="home_gallery_title">Ajouter un widget</string>
     <string name="home_gallery_detail">%1$s · %2$s</string>
-    <string name="home_no_room">Plus de place sur ce profil : retire ou réduis un widget.</string>
+    <string name="home_no_room">Plus de place sur cet écran : retire ou réduis un widget.</string>
     <string name="home_no_room_size">Pas assez de place autour pour une autre taille : déplace ou retire un widget voisin.</string>
     <string name="template_work">Bureau</string>
     <string name="template_work_desc">Heure, agenda, prochain rendez-vous, tâches, Focus et eau.</string>
     <string name="template_home">Gamer</string>
-    <string name="template_home_desc">Heure, météo, son de l\'ordi, touches du deck, lecture en cours, Focus et eau.</string>
+    <string name="template_home_desc">Heure, météo, son de l\'ordi, touches, lecture en cours, Focus et eau.</string>
     <string name="template_standby">Veille</string>
     <string name="template_work_cadran_desc">Ma journée, ligne du jour, prochain rendez-vous, tâches, applis et touches.</string>
-    <string name="template_home_cadran_desc">Heure, ligne du jour, touches du deck, lecture en cours et son de l\'ordi.</string>
+    <string name="template_home_cadran_desc">Heure, ligne du jour, touches, lecture en cours et son de l\'ordi.</string>
     <string name="template_standby_cadran_desc">L\'heure et la ligne du jour, rien d\'autre : lisible de loin.</string>
     <string name="template_standby_desc">Très grande heure, prochain rendez-vous, Focus et eau : lisible de loin.</string>
     <string name="template_deck">Deck</string>
@@ -915,13 +915,13 @@
     <string name="tour_talk_title">Parler</string>
     <string name="tour_talk_body">Demande à voix haute : « ouvre Outlook », « coupe le micro », « rejoins la réunion ». Appui long pour l\'écrire.</string>
     <string name="tour_customize_title">À ta façon</string>
-    <string name="tour_customize_body">Pendant un appel, Réunion apparaît tout seul dans la barre. Appui long sur un écran pour le modifier, sur Accueil ou Deck pour gérer tes profils.</string>
+    <string name="tour_customize_body">Pendant un appel, Réunion apparaît tout seul dans la barre. Appui long sur un écran pour le modifier, + pour en ajouter ou changer leur ordre et leur icône.</string>
     <string name="next_not_linked">Agenda pas encore relié</string>
     <string name="agenda_link_now">Relier mon agenda</string>
     <string name="settings_rail">Barre de gauche</string>
     <string name="settings_rail_labels">Noms sous les icônes</string>
     <string name="settings_rail_tools">Outils affichés dans la barre</string>
-    <string name="call_profile_preview">Aperçu : ce profil s\'affiche pendant un appel.</string>
+    <string name="call_profile_preview">Aperçu : cet écran s\'affiche pendant un appel.</string>
     <string name="widget_size_s">Petit</string>
     <string name="widget_size_m">Moyen</string>
     <string name="widget_size_l">Grand</string>
@@ -988,7 +988,7 @@
     <string name="widget_open">Fenêtres ouvertes</string>
     <string name="widget_open_desc">Les fenêtres de l\'ordi par écran, à déplacer ou fermer</string>
     <string name="widget_apps">Applis</string>
-    <string name="widget_apps_desc">Les applis du Deck : lancer, ajouter, retirer, voir leurs fenêtres</string>
+    <string name="widget_apps_desc">Les applis de l\'ordinateur : lancer, ajouter, retirer, voir leurs fenêtres</string>
     <string name="widget_discord">Discord</string>
     <string name="widget_discord_desc">L\'appel Discord : micro, sourdine, quitter l\'appel</string>
     <string name="widget_meeting">Réunion</string>
@@ -1000,7 +1000,7 @@
     <string name="pad_unsupported">Le pavé marche avec un Mac ou un PC Windows</string>
     <string name="call_idle">Pas d\'appel</string>
     <string name="call_lobby">Avant la réunion</string>
-    <string name="call_no_page">Pas de page pour ce widget dans le Deck</string>
+    <string name="call_no_page">Pas de page pour ce widget sur cet ordinateur</string>
     <string name="widget_perf">Performances du PC</string>
     <string name="widget_perf_desc">Processeur, carte graphique et mémoire en direct</string>
     <string name="perf_title">PC · %1$s</string>
@@ -1014,7 +1014,7 @@
     <string name="perf_unavailable">Non disponible sur cet ordinateur</string>
     <string name="widget_keys">Touches du deck</string>
     <string name="widget_keys_title">Touches</string>
-    <string name="widget_keys_desc">Les touches du Deck, à créer et à modifier sur place</string>
+    <string name="widget_keys_desc">Tes touches, à créer et à modifier sur place</string>
     <string name="widget_keys_choose">Choisir les touches</string>
     <string name="widget_keys_hint">%1$d touche(s) choisie(s) sur %2$d au plus. Un petit widget montre la première, un moyen les deux premières, un vertical les six premières, un grand toutes (il défile).</string>
     <string name="widget_keys_add">Ajouter</string>
@@ -1107,7 +1107,7 @@
     <string name="voice_tomorrow_at">demain à %1$s</string>
     <string name="voice_day_at">%1$s à %2$s</string>
     <string name="voice_water">Un verre de plus : %1$d sur %2$d</string>
-    <string name="voice_help">Exemples : « réponds », « ignore », « raccroche », « écris : je serai en retard », « copie sur l\'ordi : 06 12 34 56 78 », « ouvre Discord », « réduis Chrome », « mets Discord à gauche », « mets Teams sur l\'autre écran », « ferme la fenêtre », « quelles tâches aujourd\'hui », « qu\'est-ce que j\'ai demain », « rappelle-moi d\'appeler Paul à 15 h », « coche worklog », « cherche météo Paris », « volume 30 », « coupe le micro », « pause », « lance un focus de 25 minutes », « rejoins la réunion », et pour les agents Claude « autorise », « refuse la commande », « option deux », « valide », « continue ». Toutes les touches du Deck se lancent par leur nom.</string>
+    <string name="voice_help">Exemples : « réponds », « ignore », « raccroche », « écris : je serai en retard », « copie sur l\'ordi : 06 12 34 56 78 », « ouvre Discord », « réduis Chrome », « mets Discord à gauche », « mets Teams sur l\'autre écran », « ferme la fenêtre », « quelles tâches aujourd\'hui », « qu\'est-ce que j\'ai demain », « rappelle-moi d\'appeler Paul à 15 h », « coche worklog », « cherche météo Paris », « volume 30 », « coupe le micro », « pause », « lance un focus de 25 minutes », « rejoins la réunion », et pour les agents Claude « autorise », « refuse la commande », « option deux », « valide », « continue ». Toutes tes touches se lancent par leur nom.</string>
     <string name="voice_typed">Écrit sur l\'ordinateur</string>
     <string name="voice_copy_what">Dis ce que je dois copier</string>
     <string name="voice_copied">Copié sur l\'ordi</string>
