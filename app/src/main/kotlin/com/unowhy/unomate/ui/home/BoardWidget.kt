@@ -5,9 +5,10 @@ import android.view.View
 import android.view.ViewGroup
 import com.unowhy.unomate.ui.GitLabView
 import com.unowhy.unomate.ui.JiraView
+import com.unowhy.unomate.ui.PipelinesView
 
 /**
- * Jira et GitLab sur un profil (anciens onglets du Deck, Deck V2) : les vues autonomes [JiraView] et [GitLabView] dans
+ * Jira, GitLab et Pipelines sur un profil (anciens onglets du Deck, Deck V2) : les vues autonomes [JiraView], [GitLabView] et [PipelinesView] dans
  * une carte. Leurs colonnes défilent : le widget garde l'appui long et le balayage. Relues seulement tant que le profil
  * est à l'écran ; proposées au catalogue seulement si l'ordinateur les offre ([WidgetType.offered]).
  */
@@ -32,5 +33,10 @@ fun jiraWidget(context: Context, host: HomeHost, placed: Placed): BoardWidget {
 
 fun gitLabWidget(context: Context, host: HomeHost, placed: Placed): BoardWidget {
     val board = GitLabView(context).apply { attach(host.scope) }
+    return BoardWidget(context, host, placed, board, board::setActive)
+}
+
+fun pipelinesWidget(context: Context, host: HomeHost, placed: Placed): BoardWidget {
+    val board = PipelinesView(context).apply { attach(host.scope) }
     return BoardWidget(context, host, placed, board, board::setActive)
 }

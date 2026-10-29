@@ -69,7 +69,7 @@ class PersonasTest {
         assertEquals(1, Persona.SAM.profiles.size)
         assertEquals(4, Persona.SACHA.profiles.size)
         assertEquals(setOf(WidgetType.NEXT, WidgetType.TASKS, WidgetType.AGENDA, WidgetType.OPEN, WidgetType.KEYS, WidgetType.JIRA), types(Persona.AIMEE))
-        assertEquals(setOf(WidgetType.AGENTS, WidgetType.KEYS, WidgetType.GITLAB, WidgetType.JIRA, WidgetType.TASKS), types(Persona.SACHA))
+        assertEquals(setOf(WidgetType.AGENTS, WidgetType.KEYS, WidgetType.GITLAB, WidgetType.PIPELINES, WidgetType.JIRA, WidgetType.TASKS), types(Persona.SACHA))
         assertEquals(setOf(WidgetType.KEYS, WidgetType.APPS), types(Persona.SAM))
         assertEquals(setOf(WidgetType.FOCUS, WidgetType.NEXT, WidgetType.KEYS, WidgetType.MEDIA, WidgetType.TASKS, WidgetType.AWAY), types(Persona.CAMILLE))
         assertEquals(setOf(WidgetType.AGENDA, WidgetType.TASKS, WidgetType.KEYS, WidgetType.MEDIA, WidgetType.APPS, WidgetType.PRESENT), types(Persona.GWEN))
@@ -78,6 +78,14 @@ class PersonasTest {
         assertTrue(Persona.entries.none { WidgetType.HERO in types(it) || WidgetType.DAYLINE in types(it) })
         // La barre tient au plus 5 profils : aucun persona n'y met « Plus ».
         assertTrue(Persona.entries.all { it.profiles.size < RailModel.MAX_PROFILES })
+    }
+
+    @Test
+    fun `l'ecran GitLab de Sacha porte les MR et la console Pipelines, grille pleine`() {
+        val layout = layout(Persona.SACHA)
+        val page = layout.on(1)
+        assertEquals(listOf(WidgetType.GITLAB, WidgetType.PIPELINES), page.map { it.type })
+        assertEquals(COLS * ROWS, page.sumOf { it.size.w * it.size.h })
     }
 
     @Test

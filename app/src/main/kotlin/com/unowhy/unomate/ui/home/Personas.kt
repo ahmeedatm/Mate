@@ -148,6 +148,7 @@ enum class Persona(
         )),
         Profile(R.string.demo_screen_gitlab, listOf(
             Slot(WidgetType.GITLAB, WidgetSize.XL, 0, 0),
+            Slot(WidgetType.PIPELINES, WidgetSize.XL, 0, 2),
         )),
         Profile(R.string.demo_screen_jira, listOf(
             Slot(WidgetType.JIRA, WidgetSize.XL, 0, 0),

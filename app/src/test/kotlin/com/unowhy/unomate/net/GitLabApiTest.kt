@@ -82,4 +82,30 @@ class GitLabApiTest {
         assertFalse(parseHomeFeatures("""{"agenda":true,"meetings":true,"linked":false,"teams":false,"agents":true}""").gitlab)
         assertTrue(parseHomeFeatures("""{"gitlab":true}""").gitlab)
     }
+
+    @Test
+    fun `les pipelines gardent leurs champs, une duree nulle reste nulle`() {
+        val json = """{"connected":true,"pipelines":[
+            {"project":"equipe-demo/facturation","ref":"main","id":8841,"pipeline":"running","durationSec":null,"ageSec":240,"failedJobs":[]},
+            {"project":"equipe-demo/facturation","ref":"fix/x","id":8839,"pipeline":"failed","durationSec":148,"ageSec":1320,"failedJobs":["tests-unitaires","tests-e2e"]},
+            {"project":"a/b","ref":"main","id":1,"pipeline":"inconnu","durationSec":0,"ageSec":0}]}"""
+        val answer = parseGitLabPipelines(json)
+        assertTrue(answer.connected)
+        val (running, failed, unknown) = answer.pipelines
+        assertEquals(GitLabPipeline("equipe-demo/facturation", "main", 8841, Pipeline.RUNNING, null, 240, emptyList()), running)
+        assertEquals(GitLabPipeline("equipe-demo/facturation", "fix/x", 8839, Pipeline.FAILED, 148, 1320, listOf("tests-unitaires", "tests-e2e")), failed)
+        assertEquals(Pipeline.NONE, unknown.status)
+        assertEquals(0, unknown.durationSec)
+        assertTrue(unknown.failedJobs.isEmpty())
+    }
+
+    @Test
+    fun `pas connecte, liste vide et expired lu`() {
+        val answer = parseGitLabPipelines("""{"connected":false,"expired":true,"pipelines":[]}""")
+        assertFalse(answer.connected)
+        assertTrue(answer.expired)
+        assertTrue(answer.pipelines.isEmpty())
+        // Ancien compagnon : sans « connected », la réponse est lue comme connectée.
+        assertTrue(parseGitLabPipelines("""{"pipelines":[]}""").connected)
+    }
 }

@@ -66,7 +66,8 @@ enum class WidgetType(
     JIRA("jira", R.string.widget_jira, R.string.widget_jira_desc, R.drawable.ic_dashboard, listOf(WidgetSize.XL, WidgetSize.L), true),
     GITLAB("gitlab", R.string.widget_gitlab, R.string.widget_gitlab_desc, R.drawable.ic_merge, listOf(WidgetSize.XL, WidgetSize.L), true),
     CHECKLIST("checklist", R.string.widget_checklist, R.string.widget_checklist_desc, R.drawable.ic_tile_check_circle, listOf(WidgetSize.L, WidgetSize.T), false),
-    AWAY("away", R.string.widget_away, R.string.widget_away_desc, R.drawable.ic_cafe, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true);
+    AWAY("away", R.string.widget_away, R.string.widget_away_desc, R.drawable.ic_cafe, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
+    PIPELINES("pipelines", R.string.widget_pipelines, R.string.widget_pipelines_desc, R.drawable.ic_tile_rocket_launch, listOf(WidgetSize.XL, WidgetSize.L), true);
 
     /** Sans fond de carte, posé à même l'écran : les tubes du thème Rétro y passent derrière un voile. */
     val bare get() = this == HERO || this == DAY || this == DAYLINE
@@ -78,12 +79,12 @@ enum class WidgetType(
     val zoomable get() = !bare
 
     /**
-     * Proposé dans le catalogue de l'ordinateur actif : Jira et GitLab seulement s'il les offre, Ouvertes, Son et Pavé
+     * Proposé dans le catalogue de l'ordinateur actif : Jira, GitLab et Pipelines seulement s'il les offre, Ouvertes, Son et Pavé
      * seulement si leur plugin n'est pas coupé (écran des plugins).
      */
     fun offered(features: HomeFeatures) = when (this) {
         JIRA -> features.jira
-        GITLAB -> features.gitlab
+        GITLAB, PIPELINES -> features.gitlab
         OPEN -> "open" !in features.off
         MIXER -> "mixer" !in features.off
         PAD -> "pad" !in features.off

@@ -398,6 +398,18 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "GitLab : pipelines (lecture seule)",
+      run: async () => {
+        const res = await call("GET", "/gitlab/pipelines");
+        if (!controlled()) return expectStatus(res, 501, "/gitlab/pipelines");
+        if (res.status === 502) throw new Skip(`GitLab inaccessible depuis l'ordinateur (${res.json?.error})`);
+        expectStatus(res, 200, "/gitlab/pipelines");
+        expect(Array.isArray(res.json.pipelines), "forme de /gitlab/pipelines inattendue");
+        if (res.json.connected === false) return "pas connecté à GitLab";
+        return `${res.json.pipelines.length} pipelines`;
+      },
+    },
+    {
       name: "pointeur",
       run: async () => {
         // Déplacement nul seulement : jamais de clic sur un ordinateur qui sert à autre chose.

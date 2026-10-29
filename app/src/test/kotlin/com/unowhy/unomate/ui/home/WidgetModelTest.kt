@@ -110,6 +110,16 @@ class WidgetModelTest {
     }
 
     @Test
+    fun `Pipelines, console de GitLab en XL ou L, proposee seulement quand GitLab l'est`() {
+        assertEquals(WidgetType.PIPELINES, WidgetType.of("pipelines"))
+        assertEquals(listOf(WidgetSize.XL, WidgetSize.L), WidgetType.PIPELINES.sizes)
+        assertTrue(WidgetType.PIPELINES.computer)
+        assertFalse(WidgetType.PIPELINES.offered(HomeFeatures()))
+        assertFalse(WidgetType.PIPELINES.offered(HomeFeatures(jira = true)))
+        assertTrue(WidgetType.PIPELINES.offered(HomeFeatures(gitlab = true)))
+    }
+
+    @Test
     fun `un plugin coupe retire son widget du catalogue, les autres restent`() {
         val off = HomeFeatures(off = setOf("open", "mixer", "pad"))
         assertFalse(WidgetType.OPEN.offered(off))

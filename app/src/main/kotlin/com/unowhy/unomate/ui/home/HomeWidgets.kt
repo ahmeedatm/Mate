@@ -162,6 +162,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.CHECKLIST -> ChecklistWidget(context, host, placed)
                 WidgetType.PRESENT -> PresentWidget(context, host, placed)
                 WidgetType.AWAY -> AwayWidget(context, host, placed)
+                WidgetType.PIPELINES -> pipelinesWidget(context, host, placed)
             }
     }
 }
