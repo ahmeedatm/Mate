@@ -114,6 +114,12 @@
                 android:contentDescription="@string/profile_next"
                 android:rotation="180"
                 android:src="@drawable/ic_chevron_left" />
+
+            <!-- Place du petit lecteur de musique (MainActivity.MEDIA_SPACE), 0 quand il est caché. -->
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:tag="media_space" />
         </LinearLayout>
 
         <ScrollView

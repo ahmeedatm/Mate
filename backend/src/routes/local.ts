@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
@@ -12,6 +13,8 @@ import { sendToTablet, tabletStatus, THEMES, type TabletSettings } from "../tabl
 
 const SETTINGS = ["theme", "brightness", "volume", "nightDim", "focusDnd"] satisfies (keyof TabletSettings)[];
 
+const LICENCES_FILE = path.join(backendRoot, "LICENCES-TIERS.txt");
+
 /** Page d'accueil locale (ouverte dans le navigateur de l'ordinateur) et connexion des comptes d'agenda. */
 export default async function localRoutes(app: FastifyInstance) {
   app.get("/", async (_req, reply) => reply.type("text/html; charset=utf-8").send(LOCAL_PAGE));
@@ -23,6 +26,12 @@ export default async function localRoutes(app: FastifyInstance) {
     return reply.type("font/ttf").header("cache-control", "max-age=86400").send(data);
   });
 
+  /** Mentions de licences des composants tiers : écrites dans le compagnon installé par scripts/package.ts. */
+  app.get("/local/licences", async (_req, reply) => {
+    if (!fs.existsSync(LICENCES_FILE)) return reply.code(404).send({ error: "Licences jointes au compagnon installé seulement" });
+    return reply.type("text/plain; charset=utf-8").send(fs.createReadStream(LICENCES_FILE));
+  });
+
   app.get("/local/status", async () => ({
     ...identity(),
     accessibility: await accessibility().catch(() => null),
@@ -30,6 +39,7 @@ export default async function localRoutes(app: FastifyInstance) {
     tablet: tabletStatus().connected,
     tabletInfo: tabletInfo(),
     pairing: pendingCode(),
+    licences: fs.existsSync(LICENCES_FILE),
     // Hôtes seulement : un lien ICS publié donne accès à l'agenda, il ne s'affiche pas en entier.
     calendar: {
       env: config.icsUrls.length,

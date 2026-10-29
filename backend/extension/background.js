@@ -59,6 +59,7 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
 // l'alarme de la minute le relance.
 
 let polling = false;
+let retries = 0;
 async function poll() {
   if (polling) return;
   polling = true;
@@ -73,26 +74,35 @@ async function poll() {
         signal: AbortSignal.timeout(25_000),
       });
       if (!res.ok) break;
+      retries = 0;
       const { commands } = await res.json();
       report = undefined;
       for (const command of commands) report = await runMedia(command).catch((e) => `${command.action} : ${e?.message ?? e}`);
       await chrome.storage.local.get("lastAudible");
     }
   } catch {
-    // Compagnon arrêté : nouvel essai à la prochaine minute.
+    // Compagnon arrêté : voir plus bas.
   } finally {
     polling = false;
   }
+  // Compagnon relancé (mise à jour, redémarrage) : nouvel essai toutes les 5 s pendant une minute, puis à l'alarme de
+  // la minute ; sans ça, les ordres de la tablette sont perdus jusqu'à une minute après chaque relance.
+  if (retries < 12) {
+    retries++;
+    setTimeout(poll, 5_000);
+  }
 }
 
-/** Onglet visé : celui qui joue du son, sinon celui du titre lu par l'ordinateur, sinon le dernier qui a joué. */
+/**
+ * Onglet visé : celui du titre lu par l'ordinateur (la lecture choisie sur la tablette), d'abord parmi ceux qui jouent
+ * du son, sinon celui qui joue du son, sinon le dernier qui a joué.
+ */
 async function mediaTab(title) {
-  const [sounding] = await chrome.tabs.query({ audible: true });
-  if (sounding) return sounding.id;
   const tabs = await chrome.tabs.query({});
   const wanted = (title ?? "").toLowerCase();
-  const named = wanted && tabs.find((t) => (t.title ?? "").toLowerCase().includes(wanted));
-  if (named) return named.id;
+  const named = (t) => wanted && (t.title ?? "").toLowerCase().includes(wanted);
+  const target = tabs.find((t) => t.audible && named(t)) ?? tabs.find(named) ?? tabs.find((t) => t.audible);
+  if (target) return target.id;
   const { lastAudible } = await chrome.storage.local.get("lastAudible");
   return tabs.some((t) => t.id === lastAudible) ? lastAudible : undefined;
 }

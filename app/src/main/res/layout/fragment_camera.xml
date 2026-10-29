@@ -43,6 +43,12 @@
             style="@style/ActionButton"
             android:drawableStart="@drawable/ic_back"
             android:text="@string/camera_back" />
+
+        <!-- Place du petit lecteur de musique (MainActivity.MEDIA_SPACE), 0 quand il est caché. -->
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:tag="media_space" />
     </LinearLayout>
 
     <FrameLayout

@@ -8,24 +8,16 @@ object UpdatePlan {
     /** Vérification automatique : au démarrage, puis toutes les 6 h. */
     const val INTERVAL_MS = 6 * 3_600_000L
 
-    /** Essai depuis une MR (job essai-android) : versionName `X.Y.Z-essai.N`. Les releases de main sont en `X.Y.Z`. */
-    fun isTrial(update: AppUpdate): Boolean = TRIAL.containsMatchIn(update.versionName)
-
-    private val TRIAL = Regex("""-essai\.\d+$""")
-
     /**
-     * Par paquet, dans l'ordre d'arrivée : la plus haute versionCode de main, puis celle des essais. Un essai n'est
-     * jamais masqué par une release plus récente, ni l'inverse. À égalité, celle de la première liste (l'ordinateur,
-     * sur le réseau local, télécharge plus vite).
+     * Par paquet, dans l'ordre d'arrivée : la plus haute versionCode. À égalité, celle de la première liste (l'ordinateur,
+     * sur le réseau local, télécharge plus vite). Les essais de MR n'en font pas partie (registre à part, voir `trial/`).
      */
     fun merge(vararg sources: List<AppUpdate>): List<AppUpdate> =
-        sources.flatMap { it }.groupBy { it.pkg }.values.flatMap { same ->
-            same.groupBy { isTrial(it) }.toSortedMap().values.map { channel -> channel.maxBy { it.versionCode } }
-        }
+        sources.flatMap { it }.groupBy { it.pkg }.values.map { same -> same.maxBy { it.versionCode } }
 
-    /** Mise à jour installée sans personne : la release de main du Companion (`pkg`) plus récente que l'installée, jamais un essai. */
+    /** Mise à jour installée sans personne : la release de main du Companion (`pkg`) plus récente que l'installée. */
     fun auto(updates: List<AppUpdate>, pkg: String, installedCode: Long): AppUpdate? =
-        updates.filter { it.pkg == pkg && !isTrial(it) && it.versionCode > installedCode }.maxByOrNull { it.versionCode }
+        updates.filter { it.pkg == pkg && it.versionCode > installedCode }.maxByOrNull { it.versionCode }
 
     enum class State { NEWER, INSTALLED, OLDER }
 

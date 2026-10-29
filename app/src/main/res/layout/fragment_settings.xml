@@ -230,6 +230,24 @@
                 android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
 
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_wake_word"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/wake_word"
+                android:textSize="16sp" />
+
+            <!-- État du mot de réveil : prêt, téléchargement du modèle, micro non autorisé, modèle indisponible. -->
+            <TextView
+                android:id="@+id/settings_wake_word_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/wake_ready"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
             <TextView
                 android:id="@+id/settings_tablet_info"
                 android:layout_width="match_parent"
@@ -295,6 +313,38 @@
 
             <LinearLayout
                 android:id="@+id/settings_updates"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <!-- Compagnon de l'ordinateur actif : version, mise à jour envoyée par la tablette (installers/CompanionUpdater). -->
+            <TextView
+                android:id="@+id/settings_companion_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/settings_companion_update"
+                style="@style/PrimaryButton"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/settings_essais_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:textColor="?attr/c_text"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/settings_essais"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
@@ -391,6 +441,35 @@
                     android:text="@string/kiosk_remove"
                     android:textColor="?attr/c_ko" />
             </LinearLayout>
+        </LinearLayout>
+
+        <!-- À propos : sources des données et licences à citer (météo, villes, polices). -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <com.unowhy.companion.ui.TitleView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_info"
+                android:text="@string/about_title" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:lineSpacingExtra="4dp"
+                android:text="@string/about_sources"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/settings_licences"
+                style="@style/ActionButton"
+                android:layout_marginTop="12dp"
+                android:text="@string/about_licences" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>

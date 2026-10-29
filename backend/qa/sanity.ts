@@ -89,6 +89,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expectStatus(open, 200, "/health sans jeton");
         expect(open.json.service === "unowhy-companion", `service inattendu : ${open.json.service}`);
         expect(open.json.auth === false, "/health sans jeton devrait dire auth: false");
+        expect(/^(\d+\.\d+\.\d+|dev)$/.test(open.json.version ?? ""), `version du paquet inattendue : ${open.json.version}`);
         if (opts.os) expect(open.json.os === opts.os, `système annoncé « ${open.json.os} », attendu « ${opts.os} »`);
         os = open.json.os === "mac" || open.json.os === "windows" ? open.json.os : "other";
         id = open.json.id;
@@ -371,6 +372,53 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "courrier Outlook (page du Deck)",
+      run: async () => {
+        // Sans compte Microsoft relié : no-account ; relié sans Mail.Read : reconnect ; sinon les compteurs.
+        const mail = await call("GET", "/mail/summary");
+        expectStatus(mail, 200, "/mail/summary");
+        const status = mail.json.status;
+        expect(["no-account", "reconnect", "ok"].includes(status), `état du courrier inconnu : ${status}`);
+        if (status === "ok") {
+          expect(
+            ["unread", "junk", "drafts", "sent"].every((k) => Number.isInteger(mail.json[k])),
+            "compteurs du courrier absents",
+          );
+          expect(Array.isArray(mail.json.recent) && mail.json.recent.length <= 5, "derniers non lus invalides");
+        }
+        return status;
+      },
+    },
+    {
+      name: "essai du backend",
+      run: async () => {
+        const state = await call("GET", "/companion/backend");
+        expectStatus(state, 200, "/companion/backend");
+        expect(state.json.mode === "origin" && typeof state.json.packaged === "boolean", `état inattendu : ${JSON.stringify(state.json)}`);
+        // Rien à restaurer : ni changement, ni redémarrage.
+        const origin = await call("POST", "/companion/backend/origin", {});
+        expectStatus(origin, 200, "/companion/backend/origin");
+        expect(origin.json.changed === false, "le compagnon dit avoir restauré un backend");
+      },
+    },
+    {
+      name: "mise à jour du backend depuis la tablette",
+      run: async () => {
+        const health = await call("GET", "/health");
+        const packaged = (await call("GET", "/companion/backend")).json.packaged;
+        expect(health.json.backendUpdate === packaged, `backendUpdate ${health.json.backendUpdate}, paquet ${packaged}`);
+        // Version 0.0.0 : jamais plus récente, refusée avant de lire l'archive (ou lancé depuis le dépôt), rien n'est posé.
+        const res = await fetch(`${base}/companion/backend/update?version=0.0.0&sha256=${"0".repeat(64)}`, {
+          method: "POST",
+          headers: { "content-type": "application/gzip", authorization: `Bearer ${opts.token}` },
+          body: "x",
+          signal: AbortSignal.timeout(45_000),
+        });
+        expect(res.status === 409, `mise à jour en 0.0.0 : HTTP ${res.status}, 409 attendu`);
+        return packaged ? "installé par paquet" : "lancé depuis le dépôt";
+      },
+    },
+    {
       name: "visualiseur /camera",
       run: async () => {
         const page = await call("GET", "/camera");
@@ -393,6 +441,23 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         // Réglage vide : refusé avant d'atteindre une tablette peut-être réelle.
         expectStatus(await call("PUT", "/local/tablet/settings", {}), 400, "PUT /local/tablet/settings vide");
         expectStatus(await call("POST", "/local/tablet/update", { action: "rollback" }), 400, "POST /local/tablet/update inconnue");
+      },
+    },
+    {
+      name: "mentions de licences",
+      run: async () => {
+        // Compagnon installé : LICENCES-TIERS.txt joint par scripts/package.ts ; lancé depuis le dépôt, pas de fichier.
+        const status = await call("GET", "/local/status");
+        const res = await call("GET", "/local/licences", undefined, local ? false : true);
+        if (!status.json.licences) {
+          expectStatus(res, 404, "/local/licences sans fichier");
+          throw new Skip("compagnon lancé depuis le dépôt : licences jointes aux installeurs seulement");
+        }
+        expectStatus(res, 200, "/local/licences");
+        const text = String(res.json);
+        expect(text.startsWith("Compagnon Unowhy : composants tiers et licences"), "fichier de licences inattendu");
+        expect(/^- Node\.js v/m.test(text) && /^- fastify /m.test(text), "node ou fastify absents des licences");
+        return `${text.split("\n").filter((l) => /^- /.test(l)).length} lignes de composants`;
       },
     },
   ];

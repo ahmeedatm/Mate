@@ -22,7 +22,9 @@ jetons de renouvellement dans `backend/.data/accounts.json` (sur l'ordinateur, j
      `http://localhost:3000/oauth/microsoft/callback`
 3. **Inscrire**, puis copier l'**ID d'application (client)** (un identifiant `xxxxxxxx-xxxx-…`).
 4. **Autorisations d'API** › **Ajouter une autorisation** › **Microsoft Graph** › **Autorisations déléguées** ›
-   cocher **Calendars.Read** › Ajouter. (`User.Read`, déjà présent, peut rester.)
+   cocher **Calendars.Read** et **Mail.Read** › Ajouter. (`User.Read`, déjà présent, peut rester.) Mail.Read sert à la page
+   Outlook du Deck (compteurs, derniers non lus : lecture seule). Un compte relié avant l'ajout de Mail.Read garde son agenda ;
+   la page de l'ordinateur propose « Reconnecter » pour le courrier.
 5. Coller l'identifiant dans `backend/config/accounts.json` :
    ```json
    "microsoft": { "clientId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" }
