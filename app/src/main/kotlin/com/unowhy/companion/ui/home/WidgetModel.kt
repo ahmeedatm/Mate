@@ -55,7 +55,7 @@ enum class WidgetType(
     AGENTS("agents", R.string.widget_agents, R.string.widget_agents_desc, R.drawable.ic_agents, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.V, WidgetSize.XL), true),
     MIXER("mixer", R.string.widget_mixer, R.string.widget_mixer_desc, R.drawable.ic_wave, listOf(WidgetSize.XL), true),
     OPEN("open", R.string.widget_open, R.string.widget_open_desc, R.drawable.ic_display, listOf(WidgetSize.XL, WidgetSize.L), true),
-    APPS("apps", R.string.widget_apps, R.string.widget_apps_desc, R.drawable.ic_tabs, listOf(WidgetSize.L, WidgetSize.M, WidgetSize.XL, WidgetSize.W), true),
+    APPS("apps", R.string.widget_apps, R.string.widget_apps_desc, R.drawable.ic_tabs, listOf(WidgetSize.L, WidgetSize.M, WidgetSize.XL, WidgetSize.W, WidgetSize.V), true),
     DISCORD("discord", R.string.widget_discord, R.string.widget_discord_desc, R.drawable.ic_call, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     MEETING("meeting", R.string.widget_meeting, R.string.widget_meeting_desc, R.drawable.ic_videocam, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     PAD("pad", R.string.widget_pad, R.string.widget_pad_desc, R.drawable.ic_tablet, listOf(WidgetSize.XL, WidgetSize.L), true),
@@ -330,7 +330,8 @@ enum class Template(
         Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
         Placed(WidgetType.NEXT, WidgetSize.V, 0, 0, 2),
         Placed(WidgetType.TASKS, WidgetSize.V, 0, 1, 2),
-        Placed(WidgetType.FOCUS, WidgetSize.V, 0, 2, 2),
+        // Les applis du travail (Teams, Outlook, Chrome, VS Code…) plutôt que le Focus, qui reste dans la barre.
+        Placed(WidgetType.APPS, WidgetSize.V, 0, 2, 2),
         // Touches remplies d'office (Verrouiller, Couper le micro, Ne pas déranger…) : pas de case vide au premier lancement.
         Placed(WidgetType.KEYS, WidgetSize.V, 0, 3, 2, JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")),
     ), cadran = true),

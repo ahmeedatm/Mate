@@ -57,11 +57,20 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `la taille V est acceptee par Agenda, Taches, Focus et Touches`() {
-        for (type in listOf(WidgetType.NEXT, WidgetType.TASKS, WidgetType.FOCUS, WidgetType.KEYS)) {
+    fun `la taille V est acceptee par Agenda, Taches, Focus, Applis et Touches`() {
+        for (type in listOf(WidgetType.NEXT, WidgetType.TASKS, WidgetType.FOCUS, WidgetType.APPS, WidgetType.KEYS)) {
             assertTrue("$type", WidgetSize.V in type.sizes)
             assertFalse("$type : V ne doit pas etre la taille d'un ajout", type.sizes.first() == WidgetSize.V)
         }
+    }
+
+    @Test
+    fun `Accueil de bureau, les applis du travail a la place du Focus`() {
+        val bottom = Template.WORK_CADRAN.build().widgets.filter { it.row == 2 }.sortedBy { it.col }.map { it.type to it.size }
+        assertEquals(
+            listOf(WidgetType.NEXT, WidgetType.TASKS, WidgetType.APPS, WidgetType.KEYS).map { it to WidgetSize.V },
+            bottom,
+        )
     }
 
     @Test

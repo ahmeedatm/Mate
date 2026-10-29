@@ -4,6 +4,8 @@ import android.content.Context
 import android.widget.LinearLayout
 import com.unowhy.companion.R
 import com.unowhy.companion.net.DeckTile
+import com.unowhy.companion.ui.dp
+import com.unowhy.companion.ui.themeBool
 
 /**
  * Les applis de la page Apps du Deck, sur un profil : toucher lance l'appli (ou propose ses fenêtres si elle en a
@@ -24,6 +26,9 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         section.grid.onTap = { cell, _ -> section.tileOf(cell)?.let(::run) }
         section.grid.ownsLongPress = true
         section.grid.onHold = { cell, _ -> section.tileOf(cell)?.let { host.overlays.windows(it, removable = true) { section.reload() } } }
+        // Cadran, vertical (Accueil) : titre aligné sur ceux des cartes voisines (Agenda, Tâches, Touches). Le « + » de 48 dp
+        // agrandit la ligne de titre : 11 dp en haut au lieu de 24 ; en bas, la place reste aux noms des applis.
+        if (placed.size == WidgetSize.V && themeBool(context, R.attr.c_cadran)) view.setPadding(view.dp(24), view.dp(11), view.dp(24), view.dp(12))
         section.addTo(view)
     }
 
