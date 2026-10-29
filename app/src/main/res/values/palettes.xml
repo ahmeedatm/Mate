@@ -433,7 +433,7 @@
 
     <!-- Registre (démo, Nour) : Cadran sur papier de registre. Fond crème, feuillets blancs, vert comptable (c_primary), rouge d'encre
          = maintenant seulement. IBM Plex Sans ; grands chiffres en IBM Plex Mono (chasse fixe : les colonnes de chiffres ne bougent pas).
-         Motif : filets de registre discrets (ui/ThemePattern). Réservé à la démo (AppTheme.demo). Contrastes : ThemePalettesTest. -->
+         Motif : filets de registre discrets (ui/ThemePattern). Thème de persona (AppTheme.demo). Contrastes : ThemePalettesTest. -->
     <style name="Palette.Registre" parent="">
         <item name="c_cadran">true</item>
         <item name="c_card_bg">@drawable/cadran_tile_bg</item>
@@ -512,7 +512,7 @@
 
     <!-- Studio (démo, Gwen) : Cadran éditorial. Fond blanc légèrement lilas, indigo vif (c_primary) et teintes de fonction franches mais
          au ton 40 (AA), rouge = maintenant seulement. Titres et grands chiffres en Instrument Serif, texte en Instrument Sans.
-         Motif : quart de disque et anneau d'indigo dans le coin bas droit (ui/ThemePattern). Réservé à la démo. -->
+         Motif : quart de disque et anneau d'indigo dans le coin bas droit (ui/ThemePattern). Thème de persona. -->
     <style name="Palette.Studio" parent="">
         <item name="c_cadran">true</item>
         <item name="c_card_bg">@drawable/cadran_tile_bg</item>
@@ -590,7 +590,7 @@
 
     <!-- Maison (démo, Camille) : Cadran doux et chaud. Crème, bleu ardoise calme (c_primary), teintes de fonction atténuées, brique =
          maintenant seulement. Titres en Young Serif, texte en Figtree. Motif : grain chaud léger (ui/Grain, plus clair que Rétro).
-         Réservé à la démo. -->
+         Thème de persona. -->
     <style name="Palette.Maison" parent="">
         <item name="c_cadran">true</item>
         <item name="c_card_bg">@drawable/cadran_tile_bg</item>
@@ -670,7 +670,7 @@
 
     <!-- Tableau (démo, Aimée) : Cadran en tableau de bord. Gris froid, tuiles à filet de 1 dp (tableau_tile_bg), bleu marine
          (c_primary), statuts francs (vert, bleu, orange, rouge, ocre : AA sur chaque fond), rouge = maintenant seulement.
-         Barlow, titres et grands chiffres en Barlow Semi Condensed. Motif : trame de tableau (ui/ThemePattern). Réservé à la démo. -->
+         Barlow, titres et grands chiffres en Barlow Semi Condensed. Motif : trame de tableau (ui/ThemePattern). Thème de persona. -->
     <style name="Palette.Tableau" parent="">
         <item name="c_cadran">true</item>
         <item name="c_card_bg">@drawable/tableau_tile_bg</item>
@@ -747,7 +747,7 @@
     </style>
 
     <!-- Terminal (démo, Sacha) : Cadran nuit (base Theme.Companion), noir teinté de vert, texte clair, vert phosphore (c_primary, c_ok) et
-         ambre = maintenant. JetBrains Mono partout. Motif : lignes de scan statiques (ui/ThemePattern). Réservé à la démo. -->
+         ambre = maintenant. JetBrains Mono partout. Motif : lignes de scan statiques (ui/ThemePattern). Thème de persona. -->
     <style name="Palette.Terminal" parent="">
         <item name="c_cadran">true</item>
         <item name="c_card_bg">@drawable/cadran_tile_bg</item>

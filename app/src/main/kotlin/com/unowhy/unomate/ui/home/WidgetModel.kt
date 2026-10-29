@@ -16,7 +16,10 @@ import org.json.JSONObject
 const val COLS = 4
 const val ROWS = 4
 
-/** Tailles en cases (largeur × hauteur). */
+/**
+ * Tailles en cases (largeur × hauteur). `L3` (3 × 2), `T3` (3 × 4) et `FULL` (4 × 4, tout l'écran) ne sont proposées qu'aux
+ * tableaux (Agents, Jira, GitLab, Pipelines, Ouvertes, Son) : ceux-là ont de quoi remplir la place.
+ */
 enum class WidgetSize(val w: Int, val h: Int, @StringRes val label: Int) {
     S(1, 1, R.string.widget_size_s),
     M(2, 1, R.string.widget_size_m),
@@ -25,6 +28,9 @@ enum class WidgetSize(val w: Int, val h: Int, @StringRes val label: Int) {
     W(4, 1, R.string.widget_size_w),
     XL(4, 2, R.string.widget_size_xl),
     V(1, 2, R.string.widget_size_v),
+    L3(3, 2, R.string.widget_size_l3),
+    T3(3, 4, R.string.widget_size_t3),
+    FULL(4, 4, R.string.widget_size_full),
 }
 
 /**
@@ -54,20 +60,20 @@ enum class WidgetType(
     HERO("hero", R.string.widget_hero, R.string.widget_hero_desc, R.drawable.ic_clock, listOf(WidgetSize.W), false),
     DAY("day", R.string.widget_day, R.string.widget_day_desc, R.drawable.ic_event, listOf(WidgetSize.W), false),
     DAYLINE("dayline", R.string.widget_dayline, R.string.widget_dayline_desc, R.drawable.ic_alarm, listOf(WidgetSize.W), false),
-    AGENTS("agents", R.string.widget_agents, R.string.widget_agents_desc, R.drawable.ic_agents, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.V, WidgetSize.XL), true),
-    MIXER("mixer", R.string.widget_mixer, R.string.widget_mixer_desc, R.drawable.ic_wave, listOf(WidgetSize.XL), true),
-    OPEN("open", R.string.widget_open, R.string.widget_open_desc, R.drawable.ic_display, listOf(WidgetSize.XL, WidgetSize.L), true),
+    AGENTS("agents", R.string.widget_agents, R.string.widget_agents_desc, R.drawable.ic_agents, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.V, WidgetSize.XL, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
+    MIXER("mixer", R.string.widget_mixer, R.string.widget_mixer_desc, R.drawable.ic_wave, listOf(WidgetSize.XL, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
+    OPEN("open", R.string.widget_open, R.string.widget_open_desc, R.drawable.ic_display, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
     APPS("apps", R.string.widget_apps, R.string.widget_apps_desc, R.drawable.ic_tabs, listOf(WidgetSize.L, WidgetSize.M, WidgetSize.XL, WidgetSize.W, WidgetSize.V), true),
     DISCORD("discord", R.string.widget_discord, R.string.widget_discord_desc, R.drawable.ic_call, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     MEETING("meeting", R.string.widget_meeting, R.string.widget_meeting_desc, R.drawable.ic_videocam, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     PAD("pad", R.string.widget_pad, R.string.widget_pad_desc, R.drawable.ic_tablet, listOf(WidgetSize.XL, WidgetSize.L), true),
     CALL("call", R.string.widget_call, R.string.widget_call_desc, R.drawable.ic_videocam, listOf(WidgetSize.XL, WidgetSize.L), true),
     PRESENT("present", R.string.widget_present, R.string.widget_present_desc, R.drawable.ic_tile_slideshow, listOf(WidgetSize.XL, WidgetSize.L), true),
-    JIRA("jira", R.string.widget_jira, R.string.widget_jira_desc, R.drawable.ic_dashboard, listOf(WidgetSize.XL, WidgetSize.L), true),
-    GITLAB("gitlab", R.string.widget_gitlab, R.string.widget_gitlab_desc, R.drawable.ic_merge, listOf(WidgetSize.XL, WidgetSize.L), true),
+    JIRA("jira", R.string.widget_jira, R.string.widget_jira_desc, R.drawable.ic_dashboard, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
+    GITLAB("gitlab", R.string.widget_gitlab, R.string.widget_gitlab_desc, R.drawable.ic_merge, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
     CHECKLIST("checklist", R.string.widget_checklist, R.string.widget_checklist_desc, R.drawable.ic_tile_check_circle, listOf(WidgetSize.L, WidgetSize.T), false),
     AWAY("away", R.string.widget_away, R.string.widget_away_desc, R.drawable.ic_cafe, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
-    PIPELINES("pipelines", R.string.widget_pipelines, R.string.widget_pipelines_desc, R.drawable.ic_tile_rocket_launch, listOf(WidgetSize.XL, WidgetSize.L), true);
+    PIPELINES("pipelines", R.string.widget_pipelines, R.string.widget_pipelines_desc, R.drawable.ic_tile_rocket_launch, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true);
 
     /** Sans fond de carte, posé à même l'écran : les tubes du thème Rétro y passent derrière un voile. */
     val bare get() = this == HERO || this == DAY || this == DAYLINE
@@ -274,6 +280,16 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         }
     }
 
+    /**
+     * Taille de `placed` la plus proche de la zone tirée (`w` × `h` cases, fractions admises) parmi celles que son type
+     * accepte et qui tiennent à sa case (haut gauche gardé) sans chevaucher ; à distance égale, la plus petite. Null si
+     * aucune ne tient.
+     */
+    fun pickSize(placed: Placed, w: Float, h: Float): WidgetSize? =
+        placed.type.sizes
+            .filter { fits(placed.page, placed.col, placed.row, it, ignore = placed) }
+            .minWithOrNull(compareBy({ (it.w - w) * (it.w - w) + (it.h - h) * (it.h - h) }, { it.w * it.h }))
+
     /** Première case libre (lecture de gauche à droite, de haut en bas) où `size` tient, ou null. */
     fun freeSpot(page: Int, size: WidgetSize, ignore: Placed? = null): Pair<Int, Int>? {
         for (r in 0..ROWS - size.h) for (c in 0..COLS - size.w) if (fits(page, c, r, size, ignore)) return c to r
@@ -342,7 +358,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
             for (i in 0 until list.length()) {
                 val w = list.getJSONObject(i)
                 val type = WidgetType.of(w.getString("t")) ?: continue
-                val size = WidgetSize.valueOf(w.getString("s")).takeIf { it in type.sizes } ?: type.sizes.first()
+                val size = WidgetSize.entries.firstOrNull { it.name == w.getString("s") }?.takeIf { it in type.sizes } ?: type.sizes.first()
                 val placed = Placed(type, size, w.getInt("p"), w.getInt("c"), w.getInt("r"), w.optJSONObject("cfg") ?: JSONObject())
                 require(placed.page < layout.pages && layout.fits(placed.page, placed.col, placed.row, size))
                 layout.widgets += placed

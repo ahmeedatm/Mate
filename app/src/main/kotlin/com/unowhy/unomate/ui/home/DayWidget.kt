@@ -3,7 +3,6 @@ package com.unowhy.unomate.ui.home
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.TextView
@@ -23,7 +22,9 @@ import java.util.Locale
  * Ma journée (Accueil de bureau, à la place de la grande heure : l'heure est déjà en haut à droite) : salutation et date,
  * la prochaine réunion du jour en grand, ou « Aucune / Plus de réunion aujourd'hui » et la suivante ; puis les actions
  * du jour : Focus (le chrono, [DayBrief.focusPill]), Ne pas déranger de l'ordinateur (lu à chaque [load], caché s'il est
- * illisible), Rejoindre ([DayBrief.canJoin]). Météo et eau à droite ([HeroComplications]).
+ * illisible), Rejoindre ([DayBrief.canJoin]). Météo et eau à droite ([HeroComplications]). Sur la ligne fine de
+ * l'Accueil (92 de poids contre 232 pour la première), la place manque : la réunion et les actions s'effacent, la
+ * salutation et la date restent seules, sans pastilles par-dessus.
  */
 class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     override val view: View = LayoutInflater.from(context).inflate(R.layout.widget_day, FrameLayout(context), false)
@@ -36,11 +37,16 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     private val focusButton = view.findViewById<Button>(R.id.day_focus)
     private val dndButton = view.findViewById<Button>(R.id.day_dnd)
     private val note = view.findViewById<TextView>(R.id.day_note)
+    private val actions = view.findViewById<View>(R.id.day_actions)
     private val compl = HeroComplications(context, host, placed, view)
     private val dateFormat = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
     private var joinable: CalendarEvent? = null
     private var pill: DayBrief.FocusPill? = null
     private var dnd: Boolean? = null
+
+    /** Hauteur du widget, relue à chaque mise en page : sous [MIN_DP] la réunion et les actions s'effacent. */
+    private var room = Int.MAX_VALUE
+    private val roomForMore get() = room >= dp(MIN_DP)
 
     // Le chrono prévient chaque seconde : la pastille ne change qu'avec les minutes ou l'état.
     private val focusListener: (FocusTimer.State) -> Unit = { state -> DayBrief.focusPill(state).takeIf { it != pill }?.let(::renderFocusPill) }
@@ -48,26 +54,23 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     override val hasSettings get() = true
 
     init {
+        view.addOnLayoutChangeListener { v, _, top, _, bottom, _, _, _, _ ->
+            val h = bottom - top
+            if (h != room) {
+                room = h
+                v.post { fit() }
+            }
+        }
         join.setOnClickListener { joinable?.let { joinMeeting(host, it, join) } }
         focusButton.setOnClickListener { FocusTimer.toggle() }
         dndButton.setOnClickListener { toggleDnd() }
         renderFocusPill(DayBrief.focusPill(FocusTimer.state))
         render(animate = false)
-        // Posée sur la ligne fine (92 dp en Cadran) : la salutation et la date ne tiennent pas au-dessus des pastilles.
-        view.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
-            if (bottom - top != oldBottom - oldTop) view.post(::fitHeight)
-        }
     }
 
-    /** Ligne basse : ni salutation ni date (l'heure et la date sont en haut à droite), la réunion juste au-dessus des pastilles. */
-    private fun fitHeight() {
-        val short = view.height in 1 until dp(SHORT_DP)
-        greeting.visibility = if (short) View.GONE else View.VISIBLE
-        date.visibility = greeting.visibility
-        val top = if (short) 0 else dp(16)
-        for (v in listOf(meeting, note)) (v.layoutParams as ViewGroup.MarginLayoutParams).topMargin = top
-        meeting.minimumHeight = if (short) 0 else dp(44)
-        meeting.requestLayout()
+    private fun fit() {
+        actions.visibility = if (roomForMore) View.VISIBLE else View.GONE
+        renderFocus()
     }
 
     override fun setActive(active: Boolean) {
@@ -105,7 +108,7 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         }
         when (val focus = DayBrief.focus(host.events, now, host.chosenId)) {
             is DayBrief.Focus.Meeting -> {
-                meeting.visibility = View.VISIBLE
+                meeting.visibility = if (roomForMore) View.VISIBLE else View.GONE
                 note.visibility = View.GONE
                 title.text = focus.event.title
                 whenText.text = focus.line.whenText(context)
@@ -127,7 +130,7 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     private fun showNote(text: String?, colorAttr: Int) {
         meeting.visibility = View.GONE
         joinable = null
-        note.visibility = if (text != null) View.VISIBLE else View.GONE
+        note.visibility = if (text != null && roomForMore) View.VISIBLE else View.GONE
         note.text = text
         note.setTextColor(color(colorAttr))
     }
@@ -179,7 +182,7 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     override fun showSettings() = compl.showSettings()
 
     private companion object {
-        /** En dessous de cette hauteur, la ligne est « basse » (comme l'Horloge : la fine de l'Accueil Cadran fait 92 dp). */
-        const val SHORT_DP = 130
+        /** Entre la ligne fine (92 sur 740 de hauteur) et la première ligne (232) : salutation et date seules en dessous. */
+        const val MIN_DP = 110
     }
 }

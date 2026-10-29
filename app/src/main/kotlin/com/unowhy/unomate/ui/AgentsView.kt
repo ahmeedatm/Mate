@@ -78,6 +78,8 @@ fun dot(context: Context, state: AgentState): GradientDrawable =
  * Onglet Agents du Deck : un tableau de quatre colonnes (travaillent, surveillent, vous concerne, finis), une carte par
  * session, les plus pressantes en haut (le compagnon les trie). Le texte vient de l'agent : affiché tel quel, tronqué par
  * le compagnon. Toucher une session l'amène devant sur l'ordinateur, ou ouvre sa demande.
+ * [compact] : place comptée (widget de 2 lignes) : usage Claude sur une ligne, sans l'astuce du bas, pour laisser la
+ * place aux cartes. Sans lecture (ordinateur injoignable, Windows), aucune colonne : le message seul, au milieu.
  */
 class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : LinearLayout(context, attrs) {
 
@@ -96,6 +98,14 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private var observer: ((AgentsFeed.Snapshot) -> Unit)? = null
     private var active = false
     private lateinit var owner: LifecycleOwner
+    private var last: AgentsFeed.Snapshot? = null
+
+    var compact = false
+        set(value) {
+            if (field == value) return
+            field = value
+            last?.let(::render)
+        }
 
     init {
         orientation = VERTICAL
@@ -139,6 +149,9 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 typeface = themeFont(context, R.attr.c_font_medium)
                 gravity = Gravity.CENTER_VERTICAL
                 compoundDrawablePadding = dp(8)
+                // Colonne étroite (widget de 3 cases) : le titre se coupe, il ne sort pas de la colonne.
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
             }
             headers[column] = header
             columns[column] = cards
@@ -148,7 +161,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                     addView(LinearLayout(context).apply {
                         gravity = Gravity.CENTER_VERTICAL
                         addView(AgentStatusIcon(context).apply { tag = column }, LayoutParams(dp(18), dp(18)))
-                        addView(header, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
+                        addView(header, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(8) })
                     }, LayoutParams(LayoutParams.MATCH_PARENT, dp(36)))
                     addView(
                         ScrollView(context).apply {
@@ -191,6 +204,12 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         this.owner = owner
     }
 
+    // La largeur donne celle des jauges : elles sont redessinées quand elle change.
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        if (w != oldw) last?.let { showQuota(it.state?.quota, it.state?.now ?: 0L) }
+    }
+
     /** Affiché et relu en boucle (par AgentsFeed), ou caché. */
     fun setActive(active: Boolean) {
         visibility = if (active) VISIBLE else GONE
@@ -204,16 +223,27 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         AgentsFeed.observe(context, listener)
     }
 
+    /** Le message seul prend la place des colonnes (rien à lire), ou reprend sa hauteur d'une ligne. */
+    private fun statusAlone(alone: Boolean) {
+        board.visibility = if (alone) GONE else VISIBLE
+        (status.layoutParams as LayoutParams).apply {
+            height = if (alone) 0 else LayoutParams.WRAP_CONTENT
+            weight = if (alone) 1f else 0f
+        }
+        status.requestLayout()
+    }
+
     private fun render(snapshot: AgentsFeed.Snapshot) {
+        last = snapshot
         privateButton.isSelected = Prefs.agentsPrivate(context)
         val state = snapshot.state
         if (state == null) {
             status.text = context.errorText(snapshot.error)
             status.visibility = VISIBLE
-            showBoard(false)
+            statusAlone(true)
             return
         }
-        showBoard(true)
+        statusAlone(false)
         showHeaders(columnCounts(state.counts))
         showQuota(state.quota, state.now)
         status.text = when {
@@ -221,7 +251,8 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             !state.hooks -> context.getString(R.string.agents_hooks_hint)
             else -> context.getString(R.string.agents_focus_hint)
         }
-        status.visibility = VISIBLE
+        // Place comptée : l'astuce du bas n'apprend rien de neuf, les cartes passent avant.
+        status.visibility = if (compact && state.sessions.isNotEmpty() && state.hooks) GONE else VISIBLE
         // Le mode privé change le rendu : il fait partie de la signature, sinon une autre vue (tableau ouvert depuis un widget) le laisse périmé.
         val sig = listOf(Prefs.agentsPrivate(context), state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId, it.canSend, it.resumeAt, it.resumeArmed, it.canInterrupt, it.title, it.ticket, it.mr, it.monitoring) })
         if (sig != signature) {
@@ -250,17 +281,6 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         for (s in state.sessions) {
             rows[s.id]?.findViewById<TextView>(R.id.agent_age)?.text = ageLabel(context, elapsedMs(s.since, state.now, snapshot.readAtMs, android.os.SystemClock.elapsedRealtime()))
         }
-    }
-
-    /**
-     * Tableau (colonnes, mode privé) ou, s'il n'y a rien à lire (agents absents de l'ordinateur, erreur), le seul message
-     * au milieu : pas de colonnes vides sans titre.
-     */
-    private fun showBoard(on: Boolean) {
-        if ((board.visibility == VISIBLE) == on) return
-        board.visibility = if (on) VISIBLE else GONE
-        privateButton.visibility = board.visibility
-        status.layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, if (on) LayoutParams.WRAP_CONTENT else 0, if (on) 0f else 1f)
     }
 
     /** « Travaillé 4 min » ; sous la minute, « moins d'1 min » (pas « à l'instant »). */
@@ -360,7 +380,9 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             },
             LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(24) },
         )
-        for ((label, w) in windows) quota.addView(meter(label, w, now), LayoutParams(dp(220), LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(24) })
+        // Jusqu'à 220 dp par jauge, moins si la place manque (widget de 3 cases) : titre et bouton gardent la leur.
+        val meterWidth = ((width - dp(260) - windows.size * dp(24)) / windows.size).coerceIn(dp(120), dp(220))
+        for ((label, w) in windows) quota.addView(meter(label, w, now), LayoutParams(meterWidth, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(24) })
         // Orca ou la statusline n'ont pas relu depuis un moment : le dire plutôt que montrer un chiffre comme s'il était frais.
         if (q.ageMs >= 10 * 60_000) {
             quota.addView(TextView(context).apply {
@@ -417,7 +439,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 LayoutParams(LayoutParams.MATCH_PARENT, dp(8)).apply { topMargin = dp(6) },
             )
             val at = w.resetsAt
-            if (at != null) {
+            if (at != null && !compact) {
                 val time = clock.format(Date(at))
                 addView(
                     TextView(context).apply {

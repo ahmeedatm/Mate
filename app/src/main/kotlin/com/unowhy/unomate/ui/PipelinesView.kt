@@ -41,7 +41,9 @@ class PipelinesView @JvmOverloads constructor(context: Context, attrs: Attribute
 
     private val title = TitleView(context)
     private val status = TextView(context)
+    /** Les lignes, rangées dans [columns] colonnes côte à côte quand la place le permet (widget de 3 cases ou plus). */
     private val list = LinearLayout(context)
+    private var columns = 1
     private val scroll = ScrollView(context)
     private val empty = TextView(context)
     private val connectCard = GitLabConnectCard(context, { scope }, ::showError, compact = true)
@@ -73,7 +75,7 @@ class PipelinesView @JvmOverloads constructor(context: Context, attrs: Attribute
             visibility = GONE
         }
         addView(status, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        list.orientation = VERTICAL
+        list.orientation = HORIZONTAL
         scroll.apply {
             isVerticalScrollBarEnabled = false
             addView(list)
@@ -148,13 +150,30 @@ class PipelinesView @JvmOverloads constructor(context: Context, attrs: Attribute
         if (answer == shown) return
         shown = answer
         list.removeAllViews()
-        for (p in rows) {
-            val row = LayoutInflater.from(context).inflate(R.layout.item_pipeline, list, false)
+        val stacks = List(columns) { LinearLayout(context).apply { orientation = VERTICAL } }
+        for ((i, stack) in stacks.withIndex()) list.addView(stack, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply { if (i > 0) marginStart = dp(COLUMN_GAP_DP) })
+        // Les plus récentes en haut de chaque colonne : une ligne sur deux dans la seconde.
+        for ((i, p) in rows.withIndex()) {
+            val stack = stacks[i % columns]
+            val row = LayoutInflater.from(context).inflate(R.layout.item_pipeline, stack, false)
             bind(row, p)
             row.setOnClickListener { open(p) }
-            list.addView(row, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { if (list.childCount > 0) topMargin = dp(6) })
+            stack.addView(row, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { if (stack.childCount > 0) topMargin = dp(6) })
         }
         Look.revealOnce(list)
+    }
+
+    // Une colonne de plus tous les COLUMN_DP : une ligne seule dans 1 000 dp de large serait vide à droite.
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        val wanted = (w / dp(COLUMN_DP)).coerceIn(1, MAX_COLUMNS)
+        if (wanted == columns) return
+        columns = wanted
+        // Même lecture, autre rangement : la dernière est redessinée.
+        shown?.let { answer ->
+            shown = null
+            render(answer)
+        }
     }
 
     private fun bind(row: View, p: GitLabPipeline) {
@@ -225,5 +244,8 @@ class PipelinesView @JvmOverloads constructor(context: Context, attrs: Attribute
     private companion object {
         const val POLL_MS = 30_000L
         const val CONNECT_POLL_MS = 3_000L
+        const val COLUMN_DP = 440
+        const val COLUMN_GAP_DP = 12
+        const val MAX_COLUMNS = 2
     }
 }
