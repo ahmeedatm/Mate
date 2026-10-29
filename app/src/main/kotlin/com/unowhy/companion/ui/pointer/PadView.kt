@@ -15,6 +15,7 @@ import com.unowhy.companion.net.PointerButton
 import com.unowhy.companion.net.PointerChannel
 import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.themeColor
+import com.unowhy.companion.ui.themeRes
 import kotlin.math.hypot
 
 /**
@@ -35,7 +36,7 @@ class PadView @JvmOverloads constructor(
         orientation = VERTICAL
         visibility = GONE
 
-        surface.setBackgroundResource(R.drawable.card_bg)
+        surface.setBackgroundResource(themeRes(context, R.attr.c_card_bg))
         surface.addView(
             TextView(context).apply {
                 setText(R.string.pad_hint)
@@ -63,6 +64,9 @@ class PadView @JvmOverloads constructor(
         setBackgroundResource(R.drawable.pill_bg)
         setOnClickListener { channel?.click(button) }
     }
+
+    /** Sur un profil, la surface prend le fond des cartes de l'Accueil, comme les autres widgets (translucide en Rétro). */
+    fun useHomeCard() = surface.setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
 
     /** Affichée : canal ouvert et écran gardé allumé ; cachée : canal fermé. */
     fun setActive(active: Boolean) {

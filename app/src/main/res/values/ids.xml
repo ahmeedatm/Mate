@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Ressorts d'appui d'une vue (Look.pressTo), gardés sur la vue : aucune table qui retienne la vue. -->
+    <item name="press_springs" type="id" />
+</resources>

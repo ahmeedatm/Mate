@@ -52,6 +52,7 @@ class MixerView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
 ) : LinearLayout(context, attrs) {
 
+    private val sceneScroll: HorizontalScrollView
     private val sceneRow: LinearLayout
     private val strips: LinearLayout
     private val note: TextView
@@ -70,6 +71,9 @@ class MixerView @JvmOverloads constructor(
     private var litScene: String? = null
     private var state: MixerState? = null
 
+    /** Console basse (widget d'un profil) : rangée des scènes et tranches resserrées. */
+    private var tight = false
+
     // Plaque de métal brossé, dessinée derrière tout.
     private val plate = Paint()
     private val brush = Paint()
@@ -86,14 +90,14 @@ class MixerView @JvmOverloads constructor(
         }
 
         // Rangée des scènes.
-        val sceneScroll = HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false }
+        sceneScroll = HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false }
         sceneRow = LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(24), dp(10), dp(24), dp(6))
         }
         sceneScroll.addView(sceneRow)
-        addView(sceneScroll, LayoutParams(LayoutParams.MATCH_PARENT, dp(66)))
+        addView(sceneScroll, LayoutParams(LayoutParams.MATCH_PARENT, sceneHeight()))
 
         // Tranches.
         val stripScroll = HorizontalScrollView(context).apply {
@@ -262,6 +266,7 @@ class MixerView @JvmOverloads constructor(
 
     private fun renderScenes() {
         sceneRow.removeAllViews()
+        sceneRow.setPadding(dp(24), dp(if (tight) 6 else 10), dp(24), dp(6))
         sceneRow.addView(engraved(R.string.mixer_scenes).apply {
             setTextColor(themeColor(context, R.attr.c_mx_text))
             setPadding(0, 0, dp(16), dp(3))
@@ -283,7 +288,9 @@ class MixerView @JvmOverloads constructor(
         if (scenes.isEmpty()) sceneRow.addView(engraved(R.string.mixer_scenes_hint).apply { setPadding(dp(6), 0, 0, dp(3)) })
     }
 
-    private fun keyParams() = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginEnd = dp(10) }
+    private fun keyParams() = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(if (tight) 40 else 48)).apply { marginEnd = dp(10) }
+
+    private fun sceneHeight() = dp(if (tight) SCENES_TIGHT_DP else SCENES_DP)
 
     private fun apply(scene: MixerScene) {
         litScene = scene.id
@@ -369,6 +376,13 @@ class MixerView @JvmOverloads constructor(
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        val low = h < dp(FaderStrip.TIGHT_DP)
+        if (low != tight) {
+            tight = low
+            sceneScroll.layoutParams = sceneScroll.layoutParams.apply { height = sceneHeight() }
+            strips.setPadding(dp(16), 0, dp(16), if (tight) 0 else dp(10))
+            renderScenes()
+        }
         post { fitStrips() }
         plate.shader = LinearGradient(0f, 0f, 0f, h.toFloat(), themeColor(context, R.attr.c_mx_plate_top), themeColor(context, R.attr.c_mx_plate_bottom), Shader.TileMode.CLAMP)
     }
@@ -390,12 +404,15 @@ class MixerView @JvmOverloads constructor(
         // Rainure sous les scènes.
         brush.alpha = 255
         brush.color = cShadow
-        canvas.drawRect(dp(24).toFloat(), dp(66).toFloat(), w - dp(24), dp(67).toFloat(), brush)
+        val groove = sceneHeight().toFloat()
+        canvas.drawRect(dp(24).toFloat(), groove, w - dp(24), groove + 1, brush)
         brush.color = cHighlight
-        canvas.drawRect(dp(24).toFloat(), dp(67).toFloat(), w - dp(24), dp(68).toFloat(), brush)
+        canvas.drawRect(dp(24).toFloat(), groove + 1, w - dp(24), groove + 2, brush)
     }
 
     private companion object {
+        const val SCENES_DP = 66
+        const val SCENES_TIGHT_DP = 52
         const val MIN_STRIP_DP = 140
         const val MAX_STRIP_DP = 280
         const val GROUP_GAP_DP = 14

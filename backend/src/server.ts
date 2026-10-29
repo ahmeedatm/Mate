@@ -3,11 +3,12 @@ import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import { config } from "./config.ts";
 import { startCallWatch } from "./calls.ts";
+import { clipboardHistory, watchClipboard } from "./clipboard-history.ts";
 import { startEventReminders } from "./events.ts";
 import { setLogger } from "./log.ts";
 import { startAutoJoin } from "./meetings.ts";
 import { notificationHistory, watchNotifications } from "./notifications.ts";
-import { canControl, osName, readNotifications } from "./os.ts";
+import { canControl, clipboardStamp, getClipboard, isMac, osName, readNotifications } from "./os.ts";
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
 import { sendToTablet } from "./tablet.ts";
 import { startReminders } from "./tasks.ts";
@@ -138,6 +139,11 @@ if (canControl) {
     Number(process.env.NOTIFICATIONS_POLL_MS) || 2000,
     (e) => app.log.warn(`Notifications de l'ordinateur illisibles : ${e.message}`),
   );
+}
+// Historique du presse-papiers : repère relu chaque seconde (2 s sur Mac, un osascript à chaque fois).
+if (canControl) {
+  const pollMs = Number(process.env.CLIPBOARD_POLL_MS) || (isMac ? 2000 : 1000);
+  watchClipboard({ stamp: clipboardStamp, read: getClipboard }, clipboardHistory, pollMs);
 }
 if (canControl) startAutoJoin((text) => sendToTablet({ type: "message", text, seconds: 60 }));
 

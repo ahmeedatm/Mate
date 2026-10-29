@@ -57,7 +57,7 @@ const server = new McpServer(
     instructions:
       "Pilote la tablette Unowhy posée sur le bureau (compagnon de l'ordinateur, Mac ou PC Windows). Écran paysage 1280×800, " +
       "modes : accueil (tableau de bord : heure, prochain rendez-vous, agenda, tâches dont le worklog Jira, Focus, son de l'ordinateur), " +
-      "deck (raccourcis de l'ordinateur, page Perso de touches à affecter : deck_touche_*), docs (dossier partagé de l'ordinateur), focus (Pomodoro, sons d'ambiance), camera (visualiseur : la caméra filme une feuille, image projetée depuis l'ordinateur sur /camera), réglages. Commencer par tablette_etat ; tablette_capture montre l'écran. " +
+      "deck (raccourcis de l'ordinateur, touches perso à affecter : deck_touche_*), docs (dossier partagé de l'ordinateur), focus (Pomodoro, sons d'ambiance), camera (visualiseur : la caméra filme une feuille, image projetée depuis l'ordinateur sur /camera), réglages. Commencer par tablette_etat ; tablette_capture montre l'écran. " +
       "Textes affichés en français, courts : la tablette est lue de loin.",
   },
 );
@@ -250,6 +250,9 @@ server.registerTool(
     }),
 );
 
+// Plafond des touches perso : MAX_SLOTS de backend/src/perso.ts (ce fichier ne charge pas src/).
+const MAX_SLOTS = 100;
+
 // Étapes d'une touche perso : mêmes types que backend/src/perso.ts (le backend revalide).
 const STEP = z.discriminatedUnion("type", [
   z.object({
@@ -283,7 +286,7 @@ server.registerTool(
   {
     title: "Touches perso du deck",
     description:
-      "Liste les touches de la page Perso du deck (numéros 1 à 14, vides comprises), les écrans de l'ordinateur, son système et les raccourcis Apple disponibles (Mac).",
+      "Liste les touches perso du deck (numéros 1 et suivants, vides comprises, une libre à la fin), les écrans de l'ordinateur, son système et les raccourcis Apple disponibles (Mac).",
     annotations: { readOnlyHint: true },
   },
   () =>
@@ -305,10 +308,10 @@ server.registerTool(
   {
     title: "Affecter une touche perso",
     description:
-      "Programme une touche de la page Perso du deck : une étape (raccourci simple) ou plusieurs (macro exécutée dans l'ordre). " +
+      "Programme une touche perso du deck : une étape (raccourci simple) ou plusieurs (macro exécutée dans l'ordre). " +
       "Ex. « Mode code » : window VS Code sur l'écran externe en max, puis window Teams sur l'écran intégré à gauche. Remplace la touche si elle est prise.",
     inputSchema: {
-      numero: z.number().int().min(1).max(14),
+      numero: z.number().int().min(1).max(MAX_SLOTS),
       libelle: z.string().min(1).max(40).describe("Court : lu de loin sur la tablette"),
       symbole: z.string().max(8).optional().describe("Emoji affiché à la place de l'icône d'appli"),
       couleur: z
@@ -329,8 +332,8 @@ server.registerTool(
   "deck_touche_effacer",
   {
     title: "Vider une touche perso",
-    description: "Remet à vide une touche de la page Perso du deck.",
-    inputSchema: { numero: z.number().int().min(1).max(14) },
+    description: "Remet à vide une touche perso du deck.",
+    inputSchema: { numero: z.number().int().min(1).max(MAX_SLOTS) },
   },
   ({ numero }) => attempt(async () => (await api("DELETE", `/deck/keys/${numero - 1}`), text(`Touche ${numero} vidée.`))),
 );

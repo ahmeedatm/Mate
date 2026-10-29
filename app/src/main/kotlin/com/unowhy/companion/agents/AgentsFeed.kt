@@ -51,6 +51,12 @@ object AgentsFeed {
         }
     }
 
+    /** Redonne la dernière lecture à tous les observateurs, sans réseau (un réglage d'affichage a changé). */
+    fun replay() {
+        val snapshot = last ?: return
+        listeners.toList().forEach { it(snapshot) }
+    }
+
     /** Relecture tout de suite (après une action) ; sans effet si personne n'observe. */
     fun refresh(context: Context) {
         if (listeners.isEmpty()) return

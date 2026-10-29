@@ -212,6 +212,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private var stolen = false
     private var swiping = false
     private var onSlider = false
+    private var owner: GestureOwner? = null
     private var ignoreUntilUp = false
 
     private val enterEdit = Runnable {
@@ -234,13 +235,14 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 downX = ev.x; downY = ev.y; downAt = SystemClock.uptimeMillis()
                 stolen = false; swiping = false; ignoreUntilUp = false
                 onSlider = sliderAt(ev.x, ev.y)
-                if (!onSlider) postDelayed(enterEdit, longPress)
+                owner = ownerAt(ev.x, ev.y)
+                if (GestureRules.allowLongPress(owner, onSlider)) postDelayed(enterEdit, longPress)
             }
             MotionEvent.ACTION_MOVE -> {
                 val dx = ev.x - downX
                 val dy = ev.y - downY
                 if (abs(dx) > slop || abs(dy) > slop) removeCallbacks(enterEdit)
-                if (!stolen && !onSlider && !narrow && abs(dx) > slop * 2 && abs(dx) > abs(dy) * 2) {
+                if (!stolen && GestureRules.allowSwipe(owner, onSlider, narrow) && abs(dx) > slop * 2 && abs(dx) > abs(dy) * 2) {
                     cancelChildren()
                     stolen = true
                     swiping = true
@@ -293,8 +295,44 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             }
             return false
         }
-        for (i in childCount - 1 downTo 0) if (find(getChildAt(i), x, y)) return true
+        for (i in childCount - 1 downTo 0) if (!veiled(getChildAt(i)) && find(getChildAt(i), x, y)) return true
         return false
+    }
+
+    /** Widget voilé (ordinateur injoignable) : il ne reçoit aucun toucher, donc ne garde ni appui long ni balayage. */
+    private fun veiled(child: View) = placedOf(child)?.let(blocked) == true
+
+    /**
+     * Les gestes gardés par les vues sous le doigt : même descente que [sliderAt], les propriétaires imbriqués se
+     * cumulent (un widget qui garde le balayage, une touche dedans qui garde l'appui long). Null s'il n'y en a pas.
+     */
+    private fun ownerAt(x: Float, y: Float): GestureOwner? {
+        var longPress = false
+        var swipe = false
+        // Vrai si un propriétaire est dans la vue : les frères du dessous restent lus tant que rien n'est trouvé
+        // (un calque transparent au-dessus d'un propriétaire ne lui prend pas le geste).
+        fun walk(view: View, x: Float, y: Float): Boolean {
+            if (view.visibility != View.VISIBLE) return false
+            if (x < view.left || x >= view.right || y < view.top || y >= view.bottom) return false
+            var found = false
+            if (view is GestureOwner) {
+                longPress = longPress || view.ownsLongPress
+                swipe = swipe || view.ownsSwipe
+                found = true
+            }
+            if (view is ViewGroup) {
+                val lx = x - view.left + view.scrollX
+                val ly = y - view.top + view.scrollY
+                for (i in view.childCount - 1 downTo 0) if (walk(view.getChildAt(i), lx, ly)) { found = true; break }
+            }
+            return found
+        }
+        for (i in childCount - 1 downTo 0) if (!veiled(getChildAt(i)) && walk(getChildAt(i), x, y)) break
+        if (!longPress && !swipe) return null
+        return object : GestureOwner {
+            override val ownsLongPress = longPress
+            override val ownsSwipe = swipe
+        }
     }
 
     // --- Mode Modifier : toucher, glisser

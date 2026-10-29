@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
@@ -24,6 +25,8 @@ import com.unowhy.companion.net.CalendarEvent
 import com.unowhy.companion.net.HomeFeatures
 import com.unowhy.companion.ui.home.COLS
 import com.unowhy.companion.ui.home.DayLineWidget
+import com.unowhy.companion.ui.home.DeckOverlays
+import com.unowhy.companion.ui.home.DeckPagesCache
 import com.unowhy.companion.ui.home.Down
 import com.unowhy.companion.ui.home.FlowBandView
 import com.unowhy.companion.ui.home.HomeHost
@@ -73,6 +76,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     /** « Relier Outlook / Google » touché : l'agenda relié sur l'ordinateur apparaît dans la minute. */
     private var waitingLink = false
 
+    /** Pages du deck partagées entre les widgets ; l'écran est recréé quand l'ordinateur change. */
+    private val pagesCache by lazy { DeckPagesCache { BackendClient(requireContext()).deck.pages() } }
+
     override var events: List<CalendarEvent> = emptyList()
     override var features = HomeFeatures()
     override var calendarNote = ""
@@ -80,11 +86,17 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     override var unreachable: Down? = null
     override val scope: CoroutineScope get() = viewLifecycleOwner.lifecycleScope
     override val main get() = activity as? MainActivity
+    override val owner: LifecycleOwner get() = viewLifecycleOwner
+
+    private var deckOverlays: DeckOverlays? = null
+    override val overlays: DeckOverlays
+        get() = deckOverlays ?: DeckOverlays(requireView().findViewById(R.id.home_root), scope).also { deckOverlays = it }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, state: Bundle?): View =
         inflater.inflate(R.layout.fragment_home, container, false)
 
     override fun onViewCreated(view: View, state: Bundle?) {
+        deckOverlays = null
         grid = view.findViewById(R.id.home_grid)
         scroll = view.findViewById(R.id.home_scroll)
         editBar = view.findViewById(R.id.home_edit_bar)
@@ -145,6 +157,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     override fun onStop() {
         started = false
+        // Les autres panneaux restent : l'écran qui s'éteint ne doit pas perdre une macro à moitié saisie.
+        deckOverlays?.hideAgentsBoard()
         widgets.values.forEach { it.setActive(false) }
         loop?.cancel()
         super.onStop()
@@ -152,6 +166,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     override fun onHiddenChanged(hidden: Boolean) {
         if (hidden) {
+            deckOverlays?.hideAll()
             if (grid.editing) endEdit(keep = true)
             loop?.cancel()
         } else {
@@ -325,6 +340,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         EventDialog(ctx, save, delete).show(event)
     }
 
+    override suspend fun deckPages(force: Boolean) = pagesCache.get(force)
+
     /** Agenda relié : « Mes agendas » (voir, délier, en relier un autre) ; sinon droit à la page de l'ordinateur. */
     override fun showCalendars() {
         if (features.linked) CalendarsDialog(requireContext(), scope, onChanged = { reloadCalendar() }, onAdd = { openAgendaSetup() }).show()
@@ -361,6 +378,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     /** Affiche le profil [index] et charge tout de suite ses widgets (le chargement du profil quitté est annulé). */
     fun showProfile(index: Int) {
+        deckOverlays?.hideAll()
         profileLoad?.cancel()
         displayProfile(index)
         profileLoad = scope.launch { shownWidgets().forEach { it.load() } }
@@ -380,7 +398,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
      * données. Renommage ou marquage de jeu : la barre seulement, ni widgets ni réseau.
      */
     private fun openProfiles() {
-        ProfilesDialog(requireContext(), layout, page, ::profileName) { show, structure ->
+        ProfilesDialog(requireContext(), layout, page, ::profileName, !grid.narrow, ::editProfile) { show, structure ->
             if (grid.editing) endEdit(keep = true)
             nameProfiles()
             save()
@@ -393,6 +411,13 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
                 else -> renderProfileBar()
             }
         }.show()
+    }
+
+    /** « Modifier ce profil » : le profil choisi s'affiche, puis le mode Modifier commence, comme à l'appui long. */
+    private fun editProfile(index: Int) {
+        if (grid.editing) endEdit(keep = true)
+        if (index != page) showProfile(index)
+        onEnterEdit()
     }
 
     private fun renderProfileBar() {
@@ -430,6 +455,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     private fun endEdit(keep: Boolean) {
         if (!grid.editing) return
+        deckOverlays?.hideAll()
         grid.editing = false
         editBar.visibility = View.GONE
         val previous = backup

@@ -50,4 +50,17 @@ class ClipboardModelTest {
         assertNull(linkOf(""))
         assertNull(linkOf("bonjour"))
     }
+
+    @Test
+    fun `ligne d'historique sur une ligne, espaces reduits`() {
+        assertEquals("bonjour le monde", historyLine("  bonjour\n\tle   monde ", secret = false, revealed = false))
+        assertEquals("abc…", historyLine("abcdef", secret = false, revealed = false, max = 3))
+    }
+
+    @Test
+    fun `code masque tant qu'il n'est pas devoile, masque de longueur fixe`() {
+        assertEquals(SECRET_MASK, historyLine("482913", secret = true, revealed = false))
+        assertEquals(SECRET_MASK, historyLine("un-mot-de-passe-tres-long-42", secret = true, revealed = false))
+        assertEquals("482913", historyLine("482913", secret = true, revealed = true))
+    }
 }

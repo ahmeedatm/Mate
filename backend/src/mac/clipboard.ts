@@ -37,6 +37,11 @@ function run(argv) {
   return JSON.stringify({ kind: 'other' });
 }`;
 
+const STAMP_SCRIPT = `ObjC.import('AppKit');
+function run() {
+  return String($.NSPasteboard.generalPasteboard.changeCount);
+}`;
+
 // Image : le fichier devient un NSImage, déposé comme image (le presse-papiers en dérive png et tiff).
 const IMAGE_SCRIPT = `ObjC.import('AppKit');
 function run(argv) {
@@ -54,6 +59,11 @@ export async function getClipboard(): Promise<ClipboardContent> {
   const content = JSON.parse(out) as ClipboardContent | { kind: "unavailable" };
   if (content.kind === "unavailable") clipboardUnavailable();
   return content;
+}
+
+/** changeCount du presse-papiers : change à chaque copie, sans lire le contenu. */
+export async function clipboardStamp(): Promise<string> {
+  return osascript(STAMP_SCRIPT, [], "JavaScript");
 }
 
 export async function setClipboardText(text: string) {

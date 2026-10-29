@@ -177,6 +177,11 @@ export async function setClipboardText(text: string) {
   await whenClipboardAvailable(call("clipset", { text }));
 }
 
+/** Numéro de séquence du presse-papiers (GetClipboardSequenceNumber) : change à chaque copie. */
+export async function clipboardStamp(): Promise<string> {
+  return String(await whenClipboardAvailable(call<number>("clipseq")));
+}
+
 /** Copie l'image du fichier (jpg, png) comme image dans le presse-papiers. */
 export async function setClipboardImage(path: string) {
   await whenClipboardAvailable(call("clipimage", { path }));

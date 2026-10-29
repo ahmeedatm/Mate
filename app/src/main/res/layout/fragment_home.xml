@@ -2,6 +2,7 @@
 <!-- Écran Profils (HomeFragment, WidgetGrid) : barre de profil en haut (flèches, nom, pastilles), appui long sur la
      grille = mode Modifier, avec sa barre. Panneau document ouvert : 2 colonnes, la page défile. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/home_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 

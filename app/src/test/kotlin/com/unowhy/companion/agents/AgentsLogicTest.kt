@@ -15,6 +15,13 @@ class AgentsLogicTest {
     private fun session(id: String, state: AgentState) = AgentSession(id, id, "dir", null, state, 0, null, null, emptyList(), null, null, false)
 
     @Test
+    fun `le mode prive remplace le titre automatique par le dossier`() {
+        val s = session("a", AgentState.WORKING).copy(dir = "uem", title = "Corriger le bug du jeton de paiement")
+        assertEquals("Corriger le bug du jeton de paiement", sessionTitle(s, private = false))
+        assertEquals("uem", sessionTitle(s, private = true))
+    }
+
+    @Test
     fun `une permission se distingue d'une question`() {
         assertEquals(Waiting.PERMISSION, waitingKind("permission prompt"))
         assertEquals(Waiting.INPUT, waitingKind("input needed"))

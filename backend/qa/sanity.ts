@@ -137,6 +137,29 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "touches perso au-delà de 14",
+      run: async () => {
+        const slot = 14;
+        const label = "Sanity touche 15";
+        try {
+          expectStatus(
+            await call("PUT", `/deck/keys/${slot}`, { label, steps: [{ type: "text", text: "sanity" }] }),
+            200,
+            "PUT /deck/keys/14",
+          );
+          const deck = await call("GET", "/deck");
+          expectStatus(deck, 200, "/deck");
+          const perso = (deck.json.pages as { editable: boolean; tiles: { id: string; label?: string }[] }[]).find((p) => p.editable);
+          expect(perso?.tiles.find((t) => t.id === `k-${slot}`)?.label === label, "touche k-14 absente de la page Perso");
+        } finally {
+          expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE /deck/keys/14");
+        }
+        const gone = await call("GET", `/deck/keys/${slot}`);
+        expectStatus(gone, 200, "GET /deck/keys/14");
+        expect(gone.json.key === null, "la touche 14 n'est pas vidée");
+      },
+    },
+    {
       name: "agents Claude : hooks et état",
       run: async () => {
         const agents = await call("GET", "/agents");

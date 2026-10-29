@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
+import { clipboardHistory } from "../clipboard-history.ts";
 import { config } from "../config.ts";
 import { focusDnd } from "../dnd.ts";
 import { resolveDoc } from "../docs.ts";
@@ -83,6 +84,26 @@ export default async function systemRoutes(app: FastifyInstance) {
       return { ok: true };
     },
   );
+
+  // Historique des textes copiés sur l'ordinateur (src/clipboard-history.ts), en mémoire seulement.
+  app.get("/system/clipboard/history", { logLevel: "warn" }, async () => ({ items: clipboardHistory.list() }));
+
+  app.post<{ Params: { id: string } }>("/system/clipboard/history/:id/copy", { logLevel: "warn" }, async (req, reply) => {
+    const item = clipboardHistory.get(req.params.id);
+    if (!item) return reply.code(404).send({ error: "Ce texte n'est plus dans l'historique" });
+    await setClipboardText(item.text);
+    return { ok: true };
+  });
+
+  app.delete<{ Params: { id: string } }>("/system/clipboard/history/:id", { logLevel: "warn" }, async (req, reply) => {
+    if (!clipboardHistory.remove(req.params.id)) return reply.code(404).send({ error: "Ce texte n'est plus dans l'historique" });
+    return { ok: true };
+  });
+
+  app.delete("/system/clipboard/history", { logLevel: "warn" }, async () => {
+    clipboardHistory.clear();
+    return { ok: true };
+  });
 
   app.get("/system/audio", async () => getAudio());
 
