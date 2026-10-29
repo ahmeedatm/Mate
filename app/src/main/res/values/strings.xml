@@ -1187,6 +1187,14 @@
     <string name="present_start_desc">Revenir à la première diapo</string>
     <string name="present_end_desc">Quitter le diaporama</string>
     <string name="present_key_state">%1$s : %2$s</string>
+    <string name="widget_away">Je m\'absente</string>
+    <string name="widget_away_desc">Un geste pour partir : micro coupé, Focus en pause, fenêtres gardées, puis tout est remis</string>
+    <string name="away_leave">Je m\'absente</string>
+    <string name="away_resume">Reprendre</string>
+    <string name="away_hint">Coupe le micro, met le Focus en pause et garde les fenêtres de l\'ordi</string>
+    <string name="away_since_now">Absence à l\'instant</string>
+    <string name="away_since_min">Absence depuis %1$d min</string>
+    <string name="away_since_hour">Absence depuis %1$d h %2$02d</string>
     <string name="pad_unsupported">Le pavé marche avec un Mac ou un PC Windows</string>
     <string name="call_idle">Pas d\'appel</string>
     <string name="call_lobby">Avant la réunion</string>

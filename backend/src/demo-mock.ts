@@ -4,6 +4,7 @@ import { dayRange } from "./calendar.ts";
 import { localEvents } from "./events.ts";
 import { statusLabel, type Mr } from "./gitlab.ts";
 import { readJson } from "./store.ts";
+import { resumeAway, startAway, type AwayDeps, type Saved } from "./away.ts";
 import type { PersonaId } from "./demo.ts";
 import type { AppWindow, AudioState, Display, MixerChannel, MixerState, OpenApp } from "./screens.ts";
 
@@ -514,6 +515,8 @@ type State = {
   columns: Column[];
   mrs: { mine: MockMr[]; review: MockMr[] };
   agents: MockAgent[];
+  /** Fenêtres gardées par « Je m'absente » : en mémoire, comme tout l'état fictif. */
+  away: Saved | null;
 };
 
 const channel = (id: string, name: string, volume: number): MixerChannel => ({ id, name, volume, muted: false, level: 0 });
@@ -559,6 +562,7 @@ function build(id: PersonaId): State {
     columns: structuredClone(mock.jira ?? []),
     mrs: { mine: [...(mock.gitlab?.mine ?? [])], review: [...(mock.gitlab?.review ?? [])] },
     agents: structuredClone(mock.agents ?? []),
+    away: null,
   };
 }
 
@@ -746,6 +750,10 @@ const HANDLERS: Record<string, Handler> = {
   "POST /windows/page": () => ok,
   "POST /windows/page/move": () => ok,
 
+  "GET /away": ({ s }) => ({ saved: s.away !== null, count: s.away?.windows.length ?? 0 }),
+  "POST /away/start": ({ s }) => startAway(awayDeps(s)),
+  "POST /away/resume": ({ s }) => resumeAway(awayDeps(s)),
+
   "GET /system/media": ({ s }) => mediaOf(s),
   "POST /system/media": ({ s, body }) => {
     const tracks = s.mock.media.tracks.length;
@@ -910,6 +918,15 @@ function changeChannel(s: State, change: { id: string; volume?: number; muted?: 
     s.audio = { ...s.audio, input: s.mic.volume ?? 0, micMuted: s.mic.muted };
   } else s.sound = s.sound.map((c) => (c.id === change.id ? apply(c) : c));
 }
+
+/** « Je m'absente » sur les fenêtres fictives et une sauvegarde en mémoire : l'ordinateur n'est pas touché. */
+const awayDeps = (s: State): AwayDeps => ({
+  list: async () => openWindows(s),
+  control: async (key, window, action, opts) => controlWindow(s, { key, action, window, display: opts?.display, layout: opts?.layout }),
+  load: async () => s.away,
+  save: async (saved) => void (s.away = saved),
+  clear: async () => void (s.away = null),
+});
 
 function controlWindow(s: State, body: { key: string; action: string; window: { index: number }; display?: number; layout?: string }) {
   const app = s.windows.find((a) => a.key === body.key);

@@ -36,4 +36,5 @@ class BackendClient(baseUrl: String, token: String = "", connectTimeoutMs: Int =
     val present = PresentApi(http)
     val demo = DemoApi(http)
     val notifications = NotificationsApi(http)
+    val away = AwayApi(http)
 }

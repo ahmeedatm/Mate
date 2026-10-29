@@ -370,6 +370,16 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "absence : état gardé (lecture seule)",
+      run: async () => {
+        // Jamais de start ni de resume ici : ils pilotent les fenêtres réelles.
+        const res = await call("GET", "/away");
+        expectStatus(res, 200, "GET /away");
+        expect(typeof res.json.saved === "boolean" && typeof res.json.count === "number", "réponse sans saved ni count");
+        return res.json.saved ? `${res.json.count} fenêtres gardées` : "rien de gardé";
+      },
+    },
+    {
       name: "GitLab : MR (lecture seule)",
       run: async () => {
         const mrs = await call("GET", "/gitlab/mrs");
