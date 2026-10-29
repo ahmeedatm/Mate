@@ -230,6 +230,24 @@
                 android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
 
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_wake_word"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/wake_word"
+                android:textSize="16sp" />
+
+            <!-- État du mot de réveil : prêt, téléchargement du modèle, micro non autorisé, modèle indisponible. -->
+            <TextView
+                android:id="@+id/settings_wake_word_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/wake_ready"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
             <TextView
                 android:id="@+id/settings_tablet_info"
                 android:layout_width="match_parent"

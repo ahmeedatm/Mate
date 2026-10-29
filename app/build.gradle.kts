@@ -59,6 +59,15 @@ android {
         buildConfigField("String", "UPDATE_URL", "\"$updateUrl\"")
         buildConfigField("String", "UPDATE_HEADER", "\"$updateHeader\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Bibliothèques natives de Vosk (10 Mo par ABI) : la tablette (arm64-v8a), les lots 32 bits (armeabi-v7a) et
+        // l'émulateur (x86_64) ; x86, armeabi et mips n'ont pas de Vosk de toute façon.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
+    }
+
+    // Bibliothèques natives compressées dans l'APK (décompressées à l'installation) : APK de 17 Mo au lieu de 48,
+    // c'est lui que les mises à jour téléchargent.
+    packaging {
+        jniLibs.useLegacyPackaging = true
     }
 
     buildFeatures {
@@ -80,7 +89,7 @@ android {
             signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 
@@ -108,6 +117,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     // Ressorts (SpringAnimation) : mouvement de la DA Cadran.
     implementation("androidx.dynamicanimation:dynamicanimation:1.1.0")
+    // Mot de réveil « Mate » : reconnaissance hors ligne sur la tablette (Apache 2.0, sans clé ni compte). JNA en aar,
+    // comme la démo Android de Vosk : ses bibliothèques natives par ABI, à la version que demande vosk-android.
+    implementation("com.alphacephei:vosk-android:0.3.75")
+    implementation("net.java.dev.jna:jna:5.18.1@aar")
 
     testImplementation("junit:junit:4.13.2")
     // Vraie implémentation de org.json : celle d'android.jar n'est qu'un bouchon sur la JVM.
