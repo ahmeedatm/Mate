@@ -33,7 +33,8 @@ import kotlinx.coroutines.launch
  * déjà ; deux touchers l'agrandissent, ou lui rendent sa taille ; la glisser sur un écran l'y déplace (bords : moitié
  * d'écran, haut : agrandie). Relue toutes les quelques secondes tant qu'elle est affichée.
  * Mac : bande des pages du balayage à trois doigts (Bureau, applis en plein écran), dans l'ordre ; toucher une page y
- * passe, glisser une fenêtre sur « Plein écran » en fait une page, glisser une page sur un écran l'y ramène.
+ * passe, glisser une fenêtre sur « Plein écran » en fait une page, glisser une page sur un écran l'y ramène, sur une
+ * autre page la met à sa place.
  */
 class OpenWindowsView @JvmOverloads constructor(
     context: Context,
@@ -306,6 +307,7 @@ class OpenWindowsView @JvmOverloads constructor(
                     }
                 }
             }
+            tile.acceptPage(page)
             pagesList.addView(tile, LayoutParams(dp(220), LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
         }
         pagesList.addView(newPageTile(), LayoutParams(dp(220), LayoutParams.WRAP_CONTENT))
@@ -349,6 +351,34 @@ class OpenWindowsView @JvmOverloads constructor(
 
     /** Sa page plein écran retirée de la bande (la fenêtre revient sur le Bureau). */
     private fun OpenWindows.withoutPage(w: ComputerWindow) = if (w.page == null) this else copy(pages = pages.filter { it.id != w.page })
+
+    /** Page plein écran lâchée sur une autre page : elle prend sa place (le Mac la glisse dans Mission Control). */
+    private fun View.acceptPage(target: ComputerPage) {
+        setOnDragListener { v, e ->
+            val moved = (e.localState as? Drag)?.window?.page
+            when (e.action) {
+                DragEvent.ACTION_DRAG_STARTED -> moved != null && moved != target.id
+                DragEvent.ACTION_DRAG_ENTERED -> true.also { v.isPressed = true }
+                DragEvent.ACTION_DRAG_EXITED, DragEvent.ACTION_DRAG_ENDED -> true.also { v.isPressed = false }
+                DragEvent.ACTION_DROP -> true.also {
+                    v.isPressed = false
+                    if (moved != null) reorderPage(moved, target)
+                }
+                else -> true
+            }
+        }
+    }
+
+    private fun reorderPage(id: Int, target: ComputerPage) {
+        val current = shown ?: return
+        val page = current.pages.firstOrNull { it.id == id } ?: return
+        val to = current.pages.indexOf(target)
+        val pages = current.pages.toMutableList().apply {
+            remove(page)
+            add(to, page)
+        }
+        act(null, null, current.copy(pages = pages)) { movePage(page, to) }
+    }
 
     /** Même liste, la page `id` affichée sur l'ordinateur (celle de son écran qui l'était ne l'est plus). */
     private fun OpenWindows.showing(id: Int): OpenWindows {

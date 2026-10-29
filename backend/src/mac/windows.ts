@@ -134,6 +134,22 @@ function cgAll() {
 function sameFrame(a, pos, size) {
   return Math.abs(a.pos[0] - pos[0]) < 4 && Math.abs(a.pos[1] - pos[1]) < 4 && Math.abs(a.size[0] - size[0]) < 4 && Math.abs(a.size[1] - size[1]) < 4;
 }
+// Fenêtres du serveur de fenêtres qu'aucune fenêtre de l'Accessibilité ne couvre. Chacune n'en couvre qu'une, la plus
+// proche : une fenêtre agrandie et une fenêtre plein écran de la même appli ont presque le même cadre (à un point près
+// sous l'encoche d'un MacBook), sinon la plein écran passait pour visible et n'était pas cherchée dans le menu.
+function unmatched(cg, frames) {
+  const left = cg.slice();
+  frames.forEach((f) => {
+    let best = -1, gap = Infinity;
+    left.forEach((c, i) => {
+      if (!sameFrame(c, f.pos, f.size)) return;
+      const d = Math.abs(c.pos[0] - f.pos[0]) + Math.abs(c.pos[1] - f.pos[1]) + Math.abs(c.size[0] - f.size[0]) + Math.abs(c.size[1] - f.size[1]);
+      if (d < gap) { gap = d; best = i; }
+    });
+    if (best >= 0) left.splice(best, 1);
+  });
+  return left;
+}
 
 /**
  * Fenêtres des autres bureaux (derrière une fenêtre plein écran, Spaces) : entrées du menu absentes
@@ -148,7 +164,7 @@ function elsewhereWindows(proc, list, all, cg = cgWindows(proc)) {
     return false;
   });
   if (!cg) return away.map((e) => ({ title: e.title, item: e.item, display: null }));
-  const spare = cg.filter((c) => !list.some((e) => sameFrame(c, e.w.position(), e.w.size())));
+  const spare = unmatched(cg, list.map((e) => ({ pos: e.w.position(), size: e.w.size() })));
   // Pas plus d'entrées que de fenêtres réelles cachées : le reste du menu, ce sont des commandes.
   away = away.slice(Math.max(0, away.length - spare.length));
   const screensOf = spare.map((c) => (screenOf(all, c.pos, c.size) || {}).id);
@@ -295,7 +311,7 @@ function allApps(se, all, cg) {
     try {
       const mine = cg ? cg[p.unixId()] || [] : [];
       const frames = list.map((e) => ({ pos: e.w.position(), size: e.w.size() }));
-      if (mine.some((c) => !frames.some((f) => sameFrame(c, f.pos, f.size)))) away = elsewhereWindows(p, list, all, mine);
+      if (unmatched(mine, frames).length) away = elsewhereWindows(p, list, all, mine);
     } catch (e) {}
     if (!list.length && !away.length) return;
     // Nom de l'appli (Visual Studio Code), pas celui du processus (Code) : il sert à retrouver son icône.
@@ -477,6 +493,62 @@ function run(argv) {
     delay(0.15);
   }
 }`;
+
+// Ordre des pages : aucune API (yabai lui-même demande de couper le SIP). On fait le geste de l'utilisateur dans
+// Mission Control : glisser la vignette de la page dans la barre du haut, puis refermer. Lâchée à côté de la
+// vignette visée (dans l'espace entre deux pages) : lâchée dessus, elle fusionnerait en écran partagé.
+const MOVE_PAGE_SCRIPT = `ObjC.import('CoreGraphics');
+function mouse(type, x, y) {
+  $.CGEventPost(0, $.CGEventCreateMouseEvent(null, type, $.CGPointMake(x, y), 0));
+}
+// Barre des pages de Mission Control (nom traduit selon la langue : trouvée par sa forme, une liste de boutons).
+function bar() {
+  const mc = Application('System Events').processes.byName('Dock').groups.byName('Mission Control');
+  const group = mc.groups[0].groups().find((g) => { try { return g.lists.length > 0; } catch (e) { return false; } });
+  if (!group) throw new Error('Mission Control ne montre pas ses pages');
+  return group.lists[0].buttons().map((b) => ({ name: b.name(), pos: b.position(), size: b.size() }));
+}
+function run(argv) {
+  const from = parseInt(argv[0], 10), to = parseInt(argv[1], 10), count = parseInt(argv[2], 10);
+  const app = Application.currentApplication();
+  app.includeStandardAdditions = true;
+  const back = $.CGEventGetLocation($.CGEventCreate(null));
+  app.doShellScript('open -b com.apple.exposelauncher');
+  try {
+    delay(0.8);
+    const b = bar();
+    if (b.length !== count) throw new Error('Mission Control ne montre pas les mêmes pages');
+    const sx = b[from].pos[0] + b[from].size[0] / 2, y = b[from].pos[1] + b[from].size[1] / 2;
+    const tx = to > from ? b[to].pos[0] + b[to].size[0] + 12 : b[to].pos[0] - 12;
+    mouse(5, sx, y);
+    delay(0.1);
+    mouse(1, sx, y);
+    delay(0.2);
+    for (let i = 1; i <= 20; i++) { mouse(6, sx + (tx - sx) * i / 20, y); delay(0.02); }
+    delay(0.4);
+    mouse(2, tx, y);
+    delay(0.6);
+  } finally {
+    app.doShellScript('open -b com.apple.exposelauncher');
+    delay(0.4);
+    mouse(5, back.x, back.y);
+  }
+}`;
+
+/**
+ * Déplace une page du balayage à trois doigts à la place `to` (rang parmi les pages de son écran), par Mission
+ * Control. Un seul écran à pages : avec plusieurs, la barre à prendre n'est pas sûre.
+ */
+export async function movePage(id: number, to: number) {
+  const pages = JSON.parse(await osascript(SCRIPT, [JSON.stringify({ op: "pages" })], "JavaScript")) as Page[] | null;
+  const target = pages?.find((p) => p.id === id);
+  if (!pages || !target) throw new Error("Page introuvable sur le Mac");
+  if (new Set(pages.map((p) => p.display)).size > 1) throw new Error("Pages de plusieurs écrans : à ranger sur le Mac");
+  const from = pages.indexOf(target);
+  if (to < 0 || to >= pages.length) throw new Error("Place introuvable sur le Mac");
+  if (to === from) return;
+  await run("osascript", ["-l", "JavaScript", "-e", MOVE_PAGE_SCRIPT, String(from), String(to), String(pages.length)], 20_000);
+}
 
 /**
  * Passe sur une page du balayage à trois doigts comme le ferait Ctrl + flèche (raccourci de Mission Control, actif

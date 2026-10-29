@@ -327,6 +327,11 @@ export async function controlOpenWindow(
   return listOpenWindows();
 }
 
+export async function movePage(id: number, to: number) {
+  if (!canControl) unsupported();
+  record("movePage", id, to);
+}
+
 export async function showPage(id: number) {
   if (!canControl) unsupported();
   record("showPage", id);

@@ -67,6 +67,12 @@ class WindowsApi(private val http: Http) {
         null
     }
 
+    /** Mac : déplace une page à la place `to` de la bande (le Mac la glisse dans Mission Control, ~3 s). */
+    suspend fun movePage(page: ComputerPage, to: Int): OpenWindows? = http.io {
+        http.postJson("/windows/page/move", JSONObject().put("page", page.id).put("to", to))
+        null
+    }
+
     /** Icône PNG d'une appli de l'ordinateur d'après son nom, ou null si elle n'en a pas. */
     suspend fun appIcon(name: String): ByteArray? = http.io { http.bytesOrNull("/windows/icon?name=" + http.encode(name)) }
 

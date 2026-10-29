@@ -57,4 +57,13 @@ describe("pages du Mac en HTTP", () => {
     assert.equal((await server.call("POST", "/windows/page", { page: 1 }, false)).status, 401);
     assert.deepEqual(server.osCalls(), [{ fn: "showPage", args: [291] }]);
   });
+
+  it("change l'ordre des pages et refuse une demande mal formée (400)", async () => {
+    server.clearOsCalls();
+    assert.deepEqual((await server.call("POST", "/windows/page/move", { page: 297, to: 3 })).json, { ok: true });
+    for (const body of [{ page: 297 }, { to: 1 }, { page: 297, to: -1 }, { page: 297, to: 51 }]) {
+      assert.equal((await server.call("POST", "/windows/page/move", body)).status, 400, JSON.stringify(body));
+    }
+    assert.deepEqual(server.osCalls(), [{ fn: "movePage", args: [297, 3] }]);
+  });
 });

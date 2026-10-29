@@ -1,7 +1,7 @@
 import { createReadStream } from "node:fs";
 import type { FastifyInstance } from "fastify";
 import { appIconFile } from "../deck.ts";
-import { controlOpenWindow, listOpenWindows, showPage } from "../os.ts";
+import { controlOpenWindow, listOpenWindows, movePage, showPage } from "../os.ts";
 import type { Layout, OpenAction, WindowTarget } from "../screens.ts";
 
 /** Fenêtre visée (vue « Ouvertes » et fenêtres d'une tuile du deck). */
@@ -64,10 +64,35 @@ export default async function windowRoutes(app: FastifyInstance) {
     },
     async (req) => {
       const { key, action, window, display, layout, list } = req.body;
-      await oneAtATime(() =>
-        controlOpenWindow(key, window, action, action === "place" ? { display, layout: layout ?? "keep" } : undefined),
-      );
+      try {
+        await oneAtATime(() =>
+          controlOpenWindow(key, window, action, action === "place" ? { display, layout: layout ?? "keep" } : undefined),
+        );
+      } catch (e) {
+        // Quelle fenêtre a échoué (sans son titre, qui peut être privé) : pour retrouver le cas dans le journal.
+        req.log.warn({ key, action, index: window.index }, "action de fenêtre échouée");
+        throw e;
+      }
       return list === false ? { ok: true } : listOpenWindows();
+    },
+  );
+
+  // Mac : change l'ordre des pages (glisser dans Mission Control, ~3 s).
+  app.post<{ Body: { page: number; to: number } }>(
+    "/windows/page/move",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["page", "to"],
+          additionalProperties: false,
+          properties: { page: { type: "integer", minimum: 0 }, to: { type: "integer", minimum: 0, maximum: 50 } },
+        },
+      },
+    },
+    async (req) => {
+      await oneAtATime(() => movePage(req.body.page, req.body.to));
+      return { ok: true };
     },
   );
 
