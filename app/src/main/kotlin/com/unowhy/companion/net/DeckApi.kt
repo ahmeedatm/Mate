@@ -42,12 +42,14 @@ data class LiveApps(val open: List<String>, val live: List<String>)
 /** `linked` : l'ordinateur a un agenda relié (lien ICS, compte) en plus de l'agenda personnel. */
 /** `meetings` : Rejoindre (tout lien de visio) ; `teams` : Teams dans le deck, sa page Réunion après Rejoindre. */
 /** `agents` : agents Claude Code (Mac avec Claude Code installé) : onglet Agents du Deck. */
+/** `gitlab` : jeton GitLab réglé sur l'ordinateur : onglet GitLab du Deck. */
 data class HomeFeatures(
     val agenda: Boolean = true,
     val meetings: Boolean = true,
     val linked: Boolean = true,
     val teams: Boolean = false,
     val agents: Boolean = false,
+    val gitlab: Boolean = false,
 )
 
 /** Choix proposés par l'éditeur de touche perso. */
@@ -81,12 +83,7 @@ class DeckApi(private val http: Http) {
     /** Retour au profil de base. */
     suspend fun resetApps() = http.io { http.delete("/deck/apps"); Unit }
 
-    suspend fun homeFeatures(): HomeFeatures = http.io {
-        JSONObject(http.get("/deck/features")).let {
-            // Ordinateur pas encore à jour (sans `teams`) : `meetings` y voulait dire « Teams dans le deck ».
-            HomeFeatures(it.optBoolean("agenda", true), it.optBoolean("meetings", true), it.optBoolean("linked", true), it.optBoolean("teams", it.optBoolean("meetings", true)), it.optBoolean("agents"))
-        }
-    }
+    suspend fun homeFeatures(): HomeFeatures = http.io { parseHomeFeatures(http.get("/deck/features")) }
 
     /** Applis à page (Discord, Teams) ouvertes sur l'ordinateur, et celles en appel (micro utilisé). */
     suspend fun liveApps(): LiveApps = http.io {
@@ -148,4 +145,12 @@ class DeckApi(private val http: Http) {
 
     /** Icône PNG d'une tuile, ou null si l'appli n'en a pas. */
     suspend fun tileIcon(id: String): ByteArray? = http.io { http.bytesOrNull("/deck/icon/" + http.encode(id)) }
+}
+
+internal fun parseHomeFeatures(text: String): HomeFeatures = JSONObject(text).let {
+    // Ordinateur pas encore à jour (sans `teams`) : `meetings` y voulait dire « Teams dans le deck ».
+    HomeFeatures(
+        it.optBoolean("agenda", true), it.optBoolean("meetings", true), it.optBoolean("linked", true),
+        it.optBoolean("teams", it.optBoolean("meetings", true)), it.optBoolean("agents"), it.optBoolean("gitlab"),
+    )
 }
