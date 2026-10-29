@@ -86,40 +86,43 @@
             android:paddingBottom="8dp"
             android:orientation="vertical">
 
-            <ImageView
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_link"
-                app:tint="?attr/c_text_faint" />
+            <!-- Ordinateur et son état : le point (vert, orange, gris) posé sur le coin de l'icône, le nom centré dessous. -->
+            <FrameLayout
+                android:layout_width="30dp"
+                android:layout_height="26dp">
 
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_laptop"
+                    app:tint="?attr/c_text_dim" />
 
                 <View
                     android:id="@+id/status_dot"
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
-                    android:layout_marginEnd="6dp"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_gravity="top|end"
                     android:background="@drawable/dot" />
+            </FrameLayout>
 
-                <TextView
-                    android:id="@+id/status_name"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:maxWidth="70dp"
-                    android:ellipsize="end"
-                    android:gravity="center"
-                    android:maxLines="2"
-                    android:textColor="?attr/c_text_faint"
-                    android:textSize="11sp" />
-            </LinearLayout>
+            <TextView
+                android:id="@+id/status_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:fontFamily="?attr/c_font_regular"
+                android:gravity="center"
+                android:maxLines="2"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="11sp" />
         </LinearLayout>
-        <!-- Réglages : la roue, choisie (pastille grise) quand Réglages est affiché. -->
+
+        <!-- Réglages : la roue, en texte plein quand Réglages est affiché. -->
         <ImageButton
             android:id="@+id/rail_settings"
             style="@style/IconButton.Flat"
