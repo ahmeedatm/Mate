@@ -5,7 +5,9 @@
 //   node scripts/updates-publish.mjs --retire <iid> essais         retire l'essai de la MR <iid> (fusion ou abandon)
 //
 // Release : lit l'entrée companion-X.Y.Z.json produite par android-release, copie l'APK qu'elle nomme dans <sortie>/ et
-// écrit <sortie>/manifest.json (même forme que GET /updates du backend, taille et SHA-256 compris).
+// écrit <sortie>/manifest.json (même forme que GET /updates du backend, taille et SHA-256 compris). Les installeurs de
+// l'ordinateur présents dans <dist> (Compagnon-Unowhy-Mac.zip, Compagnon-Unowhy-Windows.exe) sont copiés aussi et décrits
+// dans manifest.json, clé `installers` : la tablette les télécharge pour les servir sur le WiFi.
 // Essai : même entrée (companion-X.Y.Z-essai.N.json d'essai-android), plus dist/backend-mac.tar.gz et
 // dist/backend-windows.tar.gz si le backend de la MR a changé. Le manifest {"essais":[…]} a une entrée par MR (numéro,
 // titre MR_TITLE, version, APK, backends) : une MR ne remplace que la sienne.
@@ -20,6 +22,7 @@ import { createHash } from "node:crypto";
 const BACKEND_PLATFORMS = ["mac", "windows"];
 const ESSAI_PACKAGE = "com.unowhy.companion.essai";
 const MAX_TITLE = 200;
+const INSTALLERS = { mac: "Compagnon-Unowhy-Mac.zip", windows: "Compagnon-Unowhy-Windows.exe" };
 
 const fingerprint = (buf) => ({ size: buf.length, sha256: createHash("sha256").update(buf).digest("hex") });
 
@@ -119,15 +122,23 @@ if (mode === "release") {
   const entry = readEntry(distDir, false);
   const apk = fs.readFileSync(path.join(distDir, entry.file));
   const update = { ...entry, ...fingerprint(apk) };
-  const manifest = JSON.stringify({ updates: [update] }, null, 2) + "\n";
-  writeOut(outDir, { [entry.file]: apk, "manifest.json": manifest });
+  const files = { [entry.file]: apk };
+  const installers = [];
+  for (const [os, file] of Object.entries(INSTALLERS)) {
+    if (!fs.existsSync(path.join(distDir, file))) continue;
+    files[file] = fs.readFileSync(path.join(distDir, file));
+    installers.push({ os, file, ...fingerprint(files[file]), version: entry.versionName });
+  }
+  const manifest = JSON.stringify({ updates: [update], ...(installers.length ? { installers } : {}) }, null, 2) + "\n";
+  writeOut(outDir, { ...files, "manifest.json": manifest });
   console.log(JSON.stringify(update));
+  if (installers.length) console.log(`installeurs : ${installers.map((i) => i.file).join(", ")}`);
   if (url) {
     const reg = registry(url);
-    // APK d'abord : le manifest ne désigne jamais un fichier absent.
-    await reg.put(entry.file, apk);
+    // Fichiers d'abord : le manifest ne désigne jamais un fichier absent.
+    for (const [file, data] of Object.entries(files)) await reg.put(file, data);
     await reg.put("manifest.json", manifest);
-    await reg.prune(new Set(["manifest.json", entry.file]));
+    await reg.prune(new Set(["manifest.json", ...Object.keys(files)]));
   }
 } else {
   if (!url) {

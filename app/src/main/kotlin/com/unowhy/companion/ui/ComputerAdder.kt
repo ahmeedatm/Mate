@@ -12,10 +12,10 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import com.unowhy.companion.BuildConfig
 import com.unowhy.companion.Computer
 import com.unowhy.companion.Computers
 import com.unowhy.companion.R
+import com.unowhy.companion.installers.InstallerService
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.Discovery
 import com.unowhy.companion.net.HttpException
@@ -232,7 +232,11 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
         }
     }
 
-    private fun outdatedText(name: String) = context.getString(R.string.computer_outdated_detail, name, BuildConfig.INSTALL_URL)
+    private fun outdatedText(name: String) = context.getString(
+        R.string.computer_outdated_detail,
+        name,
+        InstallerService.address() ?: context.getString(R.string.install_address_no_wifi),
+    )
 
     private fun reason(e: Exception): String = when (e) {
         is HttpException -> e.reason

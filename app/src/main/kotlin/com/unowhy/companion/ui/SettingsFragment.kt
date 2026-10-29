@@ -30,6 +30,7 @@ import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
+import com.unowhy.companion.installers.InstallerService
 import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.kiosk.UpdatePlan
 import com.unowhy.companion.kiosk.Updater
@@ -158,7 +159,7 @@ class SettingsFragment : Fragment() {
         val all = Computers.all(ctx)
         if (all.isEmpty()) {
             computers.addView(TextView(ctx).apply {
-                text = getString(R.string.computers_empty, BuildConfig.INSTALL_URL)
+                text = getString(R.string.computers_empty, InstallerService.address() ?: getString(R.string.install_address_no_wifi))
                 textSize = 16f
                 setPadding(0, dp(8), 0, 0)
             })
