@@ -1407,4 +1407,44 @@
     <string name="mixer_strip_muted">%1$s, son coupé</string>
     <string name="perf_level_warn">en alerte</string>
     <string name="perf_level_critical">critique</string>
+
+    <!-- Bandeau du haut (ui/topbar) : titre de l'écran à gauche, éléments choisis à droite -->
+    <string name="top_music">Lecture en cours</string>
+    <string name="top_music_desc">Ce que joue l\'ordinateur, avec Précédent, Lecture et Suivant</string>
+    <string name="top_meeting">Prochain rendez-vous</string>
+    <string name="top_meeting_desc">Dans l\'heure qui vient ou en cours ; toucher = Rejoindre une réunion en ligne</string>
+    <string name="top_focus">Chrono Focus</string>
+    <string name="top_focus_desc">Minutes restantes pendant un Focus ; toucher = pause ou reprise</string>
+    <string name="top_call">Micro de l\'ordi</string>
+    <string name="top_call_desc">Pendant un appel, ou micro coupé : toucher = couper ou rouvrir le micro</string>
+    <string name="top_agents">Agents en attente</string>
+    <string name="top_agents_desc">Agents Claude qui attendent ta réponse (Mac) ; toucher = le tableau</string>
+    <string name="top_weather">Météo</string>
+    <string name="top_weather_desc">Le temps et la température de ta ville</string>
+    <string name="top_date">Date</string>
+    <string name="top_date_desc">Le jour et la date, en court</string>
+    <string name="top_clock">Heure</string>
+    <string name="top_clock_desc">L\'heure de la tablette</string>
+    <string name="top_wifi">WiFi</string>
+    <string name="top_wifi_desc">Le signal du WiFi de la tablette</string>
+    <string name="top_battery">Batterie</string>
+    <string name="top_battery_desc">Le niveau de la batterie de la tablette</string>
+    <string name="top_edit_hint">Bandeau : maintiens puis glisse pour ranger, ✕ pour retirer</string>
+    <string name="top_edit_add">Ajouter</string>
+    <string name="top_edit_done">OK</string>
+    <string name="top_edit_remove">Retirer %1$s du bandeau</string>
+    <string name="top_add_title">Ajouter au bandeau</string>
+    <string name="top_add_none">Tout est déjà dans le bandeau.</string>
+    <string name="top_edit_open">Modifier le bandeau du haut</string>
+    <string name="top_meeting_in">%1$s · %2$d min</string>
+    <string name="top_meeting_now">%1$s · en cours</string>
+    <string name="top_focus_running">Focus %1$d min</string>
+    <string name="top_focus_paused">En pause · %1$d min</string>
+    <string name="top_focus_break">Pause %1$d min</string>
+    <string name="top_mic_on">Micro de l\'ordi ouvert : toucher pour le couper</string>
+    <string name="top_mic_off">Micro de l\'ordi coupé : toucher pour le rouvrir</string>
+    <string name="top_agents_waiting">%1$d en attente</string>
+    <string name="top_weather_temp">%1$d°</string>
+    <string name="top_weather_city">Choisir la ville</string>
+    <string name="top_weather_choose">Choisir la ville de la météo</string>
 </resources>

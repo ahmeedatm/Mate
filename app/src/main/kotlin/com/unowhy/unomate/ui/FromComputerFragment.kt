@@ -26,6 +26,7 @@ import com.unowhy.unomate.MainActivity
 import com.unowhy.unomate.R
 import com.unowhy.unomate.net.BackendClient
 import com.unowhy.unomate.net.DocEntry
+import com.unowhy.unomate.ui.topbar.TopHeader
 import kotlinx.coroutines.launch
 
 /**
@@ -34,7 +35,12 @@ import kotlinx.coroutines.launch
  * latéral), l'écran Presse-papiers ([ClipboardView]), le Cadre photo ([FrameSettingsView]) ou l'historique des
  * notifications ([NotificationsView]).
  */
-class FromComputerFragment : Fragment() {
+class FromComputerFragment :
+    Fragment(),
+    TopHeader {
+    /** Retour, chemin, nombre, Actualiser, Retour : dans le bandeau du haut. */
+    override var topHeader: View? = null
+        private set
 
     private enum class Screen { CHOICE, FILES, CLIPBOARD, FRAME, NOTIFICATIONS }
 
@@ -74,6 +80,7 @@ class FromComputerFragment : Fragment() {
 
     override fun onViewCreated(view: View, state: Bundle?) {
         list = view.findViewById(R.id.docs_list)
+        topHeader = view.findViewById(R.id.docs_header)
         path = view.findViewById(R.id.docs_path)
         count = view.findViewById(R.id.docs_count)
         status = view.findViewById(R.id.docs_status)

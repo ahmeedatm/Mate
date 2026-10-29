@@ -59,6 +59,8 @@ object Prefs {
     private const val KEY_AWAY_MIC = "away_mic_by_us"
     private const val KEY_AWAY_FOCUS = "away_focus_by_us"
     private const val KEY_SPEAK_ACTIONS = "speak_actions"
+    private const val KEY_TOP_BAR = "top_bar"
+    private const val KEY_TOP_WEATHER = "top_weather"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -277,6 +279,20 @@ object Prefs {
 
     fun setSpeakActions(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_SPEAK_ACTIONS, value).apply()
+    }
+
+    /** Éléments du bandeau du haut, dans l'ordre (clés de TopItem séparées par des virgules) ; null : jamais réglé. */
+    fun topBar(context: Context): String? = prefs(context).getString(KEY_TOP_BAR, null)
+
+    fun setTopBar(context: Context, value: String) {
+        prefs(context).edit().putString(KEY_TOP_BAR, value).apply()
+    }
+
+    /** Ville de la météo du bandeau (même forme que la config d'un widget Météo : city, lat, lon, auto) ; null : aucune. */
+    fun topWeather(context: Context): String? = prefs(context).getString(KEY_TOP_WEATHER, null)
+
+    fun setTopWeather(context: Context, value: String) {
+        prefs(context).edit().putString(KEY_TOP_WEATHER, value).apply()
     }
 
     /** MR de l'essai installé par la stable (0 : aucun, ou installé autrement) et son backend : « Ouvrir l'essai » les relit. */

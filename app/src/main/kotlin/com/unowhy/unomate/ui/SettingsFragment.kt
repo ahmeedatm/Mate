@@ -54,12 +54,18 @@ import com.unowhy.unomate.trial.EssaiBackend
 import com.unowhy.unomate.trial.EssaiPlan
 import com.unowhy.unomate.trial.Trial
 import com.unowhy.unomate.ui.home.Demo
+import com.unowhy.unomate.ui.topbar.TopHeader
 import com.unowhy.unomate.voice.WakeModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class SettingsFragment : Fragment() {
+class SettingsFragment :
+    Fragment(),
+    TopHeader {
+    /** Le titre (appui long : code technicien), dans le bandeau du haut. */
+    override var topHeader: View? = null
+        private set
 
     private lateinit var kioskCard: View
     private lateinit var kioskStatus: TextView
@@ -121,7 +127,7 @@ class SettingsFragment : Fragment() {
         }
         view.findViewById<Button>(R.id.settings_add_manual).setOnClickListener { adder.manual() }
         kioskCard = view.findViewById(R.id.settings_kiosk_card)
-        view.findViewById<View>(R.id.settings_title).setOnLongClickListener { askTechCode(); true }
+        topHeader = view.findViewById<View>(R.id.settings_title).apply { setOnLongClickListener { askTechCode(); true } }
         kioskStatus = view.findViewById(R.id.settings_kiosk_status)
         kioskActions = view.findViewById(R.id.settings_kiosk_actions)
         allowInstalls = view.findViewById(R.id.settings_allow_installs)
