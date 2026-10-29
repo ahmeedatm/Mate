@@ -30,6 +30,8 @@ export type MediaSession = {
   canSeek: boolean;
   positionMs: number | null;
   durationMs: number | null;
+  /** Navigateur qui joue, quand `name` affiche le site à sa place ([enrichBrowserSession]). */
+  browser?: string;
 };
 export type MediaAction = MediaCommand | "seek";
 
@@ -262,9 +264,14 @@ export function enrichBrowserSession(
   for (const t of [...mine.filter((t) => t.active), ...mine.filter((t) => !t.active)]) {
     const site = siteName(t.url);
     const title = site && tabTitle(t.tabTitle, site);
-    if (site && title) return { ...session, name: site, title };
+    if (site && title) return { ...session, name: site, title, browser: session.name };
   }
   return session;
+}
+
+/** Navigateur à qui l'extension doit envoyer les commandes : jamais le site affiché à la place de son nom. */
+export function extensionBrowser(session: MediaSession): string {
+  return session.browser ?? session.name;
 }
 
 // --- Interface du Mac pour os.ts
@@ -324,7 +331,8 @@ export async function mediaControl(action: MediaAction, _app?: string, positionM
       () => true,
       () => false,
     );
-  if (playing?.name && sendToExtension(playing.name, { action, seconds: (positionMs ?? 0) / 1000, title: playing.title })) return true;
+  if (playing?.name && sendToExtension(extensionBrowser(playing), { action, seconds: (positionMs ?? 0) / 1000, title: playing.title }))
+    return true;
   const arg = action === "seek" ? String((positionMs ?? 0) / 1000) : "";
   const res = await nowPlaying<{ ok?: boolean }>(action, arg);
   if (res?.ok) return true;

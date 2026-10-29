@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   enrichBrowserSession,
+  extensionBrowser,
   fallbackSessions,
   HOLD_MS,
   heldSession,
@@ -69,6 +70,14 @@ describe("lecture en cours (Mac)", () => {
       enrichBrowserSession(titled, [{ app: "Google Chrome", url: "https://www.youtube.com/", tabTitle: "X - YouTube", active: true }]),
       titled,
     );
+  });
+
+  it("session enrichie : les commandes vont toujours au navigateur, pas au site affiché", () => {
+    const tabs = [{ app: "Google Chrome", url: "https://www.youtube.com/watch?v=abc", tabTitle: "Lo-fi beats - YouTube", active: true }];
+    const s = enrichBrowserSession(generic, tabs);
+    assert.equal(s.name, "YouTube");
+    assert.equal(extensionBrowser(s), "Google Chrome");
+    assert.equal(extensionBrowser(generic), "Google Chrome");
   });
 
   it("titre générique sans onglet lisible : rien ne change", () => {
