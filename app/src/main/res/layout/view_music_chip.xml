@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Lecture en cours dans le header (MusicChip, largeur fixe) : pochette, titre et artiste (qui défilent en continu
+<!-- Lecture en cours dans le header (MusicChip, largeur fixe) : pochette, titre et artiste (qui défilent trois fois
      s'ils sont trop longs, dans toute la place laissée), puis
      Précédent, Lecture / Pause, Suivant, comme le widget Média (boutons ronds, Lecture plein), en plus petit, sur 32 dp de haut. -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
