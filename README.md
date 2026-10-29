@@ -17,7 +17,8 @@ scripts/  Sauvegarde (bundle git + données perso)
 [travailler dessus et sauvegarder](docs/developpement.md) ·
 [la tablette 4.2](docs/tablette-4.2.md) ·
 [kiosque](docs/kiosque.md) ·
-[agenda par compte Microsoft/Google](docs/agenda-comptes.md)
+[agenda par compte Microsoft/Google](docs/agenda-comptes.md) ·
+[GitLab par connexion au compte](docs/gitlab-oauth.md)
 
 ## Installation (Mac ou Windows)
 

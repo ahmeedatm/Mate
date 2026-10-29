@@ -7,6 +7,7 @@ import { config } from "./config.ts";
 import { startCallWatch } from "./calls.ts";
 import { clipboardHistory, watchClipboard } from "./clipboard-history.ts";
 import { startEventReminders } from "./events.ts";
+import { GitLabError } from "./gitlab.ts";
 import { setLogger } from "./log.ts";
 import { startAutoJoin } from "./meetings.ts";
 import { notificationHistory, watchNotifications } from "./notifications.ts";
@@ -22,6 +23,8 @@ import callRoutes from "./routes/calls.ts";
 import cameraRoutes from "./routes/camera.ts";
 import deckRoutes from "./routes/deck.ts";
 import docRoutes from "./routes/docs.ts";
+import gitlabRoutes from "./routes/gitlab.ts";
+import jiraRoutes from "./routes/jira.ts";
 import localRoutes from "./routes/local.ts";
 import mailRoutes from "./routes/mail.ts";
 import notificationRoutes from "./routes/notifications.ts";
@@ -72,7 +75,7 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
   LOOPBACK.has(ip) &&
   LOCAL_HOST.test(host ?? "") &&
   ((method === "GET" &&
-    /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite|panel|update)|web\/outfit-[345]00\.ttf|oauth\/(microsoft|google)\/(start|callback))?(\?|$)/.test(
+    /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite|panel|update)|web\/outfit-[345]00\.ttf|oauth\/(microsoft|google|gitlab)\/(start|callback))?(\?|$)/.test(
       url,
     )) ||
     (method === "PUT" && (url === "/local/calendar" || url === "/local/tablet/settings")) ||
@@ -83,7 +86,7 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     (method === "POST" && (url === "/browser/extension" || url === "/browser/extension/commands")) ||
     // Hooks de Claude Code : pas de jeton d'appairage, un secret propre vérifié par la route (src/agents-sources.ts).
     (method === "POST" && (url === "/agents/hook" || url === "/agents/statusline")) ||
-    (method === "DELETE" && /^\/local\/accounts\/(microsoft|google)$/.test(url)));
+    (method === "DELETE" && /^\/local\/accounts\/(microsoft|google|gitlab)$/.test(url)));
 /** Sans jeton : identité (la tablette reconnaît l'ordinateur) et appairage par code. */
 const PUBLIC = /^\/(health|pair\/request|pair\/reveal|pair\/confirm)(\?|$)/;
 const authorized = (header: string | undefined) => {
@@ -101,7 +104,7 @@ app.addHook("onRequest", async (req, reply) => {
  * (sortie d'osascript, erreur système de Node, requête mal formée) reste dans le journal de l'ordinateur.
  */
 app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validation?: unknown; technical?: boolean }, req, reply) => {
-  if (err instanceof PairingError) return reply.code(err.statusCode).send({ error: err.message });
+  if (err instanceof PairingError || err instanceof GitLabError) return reply.code(err.statusCode).send({ error: err.message });
   if (err.validation) return reply.code(400).send({ error: "Demande invalide : mets à jour l'appli de la tablette" });
   const status = err.statusCode && err.statusCode >= 400 ? err.statusCode : 500;
   if (status >= 500 && (err.technical || (typeof err.code === "string" && /^E[A-Z]/.test(err.code)))) {
@@ -120,6 +123,7 @@ app.addHook("preHandler", async (req, reply) => {
     ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) ||
       req.url.startsWith("/system") ||
       req.url.startsWith("/pointer") ||
+      req.url.startsWith("/gitlab") ||
       req.url.startsWith("/notifications"))
   ) {
     return reply.code(501).send({ error: "Pilotage disponible sur macOS et Windows seulement" });
@@ -149,8 +153,10 @@ app.register(cameraRoutes);
 app.register(calendarRoutes);
 app.register(mailRoutes);
 app.register(taskRoutes);
+app.register(jiraRoutes);
 app.register(callRoutes);
 app.register(agentRoutes);
+app.register(gitlabRoutes);
 app.register(tabletRoutes);
 
 // --- Tâches de fond

@@ -163,6 +163,13 @@ ${FAVICON}
     </details>
   </div>
 
+  <!-- Compte GitLab (onglet GitLab du Deck) : visible si l'appli OAuth est réglée, un compte connecté ou GITLAB_TOKEN (src/gitlab-auth.ts). -->
+  <div class="card" id="gitlab" hidden>
+    <b>GitLab</b>
+    <div class="dim" id="gitlabstate"></div>
+    <div id="gitlabaccount"></div>
+    <div id="gitlabmsg" class="dim" style="margin-top:8px"></div>
+  </div>
   <!-- Appli portable seulement (voir src/routes/portable.ts) : rien n'est installé, ces réglages sont ceux de l'utilisateur. -->
   <section id="panel" hidden>
     <h2>Cette appli</h2>
@@ -213,6 +220,7 @@ ${FAVICON}
       document.getElementById("calstate").textContent = n === 0 ? "Aucun agenda : la tablette propose de le relier."
         : (c.saved.length ? "Lien enregistré : " + c.saved.join(", ") : "") + (c.env ? (c.saved.length ? " · " : "") + c.env + " lien(s) dans .env" : "");
       renderAccounts(c);
+      renderGitlab(s.gitlab);
       renderTablet(s.tabletInfo);
       const p = s.pairing, card = document.getElementById("pairing");
       const shown = card.style.display === "block";
@@ -264,6 +272,37 @@ ${FAVICON}
         document.getElementById("icshelp").open = true;
         document.getElementById("calurl").focus();
       }
+    }
+  }
+  // GitLab : reconstruit seulement s'il change (même raison que les comptes).
+  let gitlabKey = "";
+  function renderGitlab(g) {
+    document.getElementById("gitlab").hidden = !(g.available || g.account || g.token);
+    const key = JSON.stringify(g);
+    if (key === gitlabKey) return;
+    gitlabKey = key;
+    const box = document.getElementById("gitlabaccount");
+    box.replaceChildren();
+    const state = document.getElementById("gitlabstate");
+    if (g.account) {
+      state.textContent = "La tablette lit et fusionne tes MR avec ce compte.";
+      const row = document.createElement("div");
+      row.className = "account";
+      const label = document.createElement("span");
+      label.className = "grow";
+      label.innerHTML = g.account.expired ? '<span class="ko">⚠</span> ' : '<span class="ok">✓</span> ';
+      label.append("GitLab" + (g.account.username ? " · " + g.account.username : "") + (g.account.expired ? " (à reconnecter)" : ""));
+      const off = document.createElement("button");
+      off.className = "ghost";
+      off.textContent = "Déconnecter GitLab";
+      off.onclick = async () => { await fetch("/local/accounts/gitlab", { method: "DELETE" }); refresh(); };
+      row.append(label);
+      if (g.account.expired) row.append(connectLink("gitlab", "Reconnecter"));
+      row.append(off);
+      box.append(row);
+    } else {
+      state.textContent = g.token ? "Jeton GITLAB_TOKEN du fichier .env utilisé. Le compte connecté, s'il y en a un, passe avant." : "Pas connecté.";
+      if (g.available) box.append(connectLink("gitlab", "Se connecter avec GitLab"));
     }
   }
   // Réglages de la tablette : pas réécrits pendant un réglage en cours (curseur tenu, envoi pas encore fini).
@@ -415,8 +454,16 @@ ${FAVICON}
     if (url) saveCalendar([url]);
   };
   document.getElementById("calclear").onclick = () => saveCalendar([]);
-  if (new URLSearchParams(location.search).get("section") === "agenda") {
-    const card = document.getElementById("agenda");
+  const GITLAB_MSG = {
+    ok: "✓ GitLab connecté : l'onglet GitLab de la tablette se remplit dans quelques secondes.",
+    refused: "Connexion annulée.",
+    error: "La connexion à GitLab a échoué. Réessaie.",
+  };
+  const gitlabResult = new URLSearchParams(location.search).get("gitlab");
+  if (GITLAB_MSG[gitlabResult]) document.getElementById("gitlabmsg").textContent = GITLAB_MSG[gitlabResult];
+  const section = new URLSearchParams(location.search).get("section");
+  if (section === "agenda" || section === "gitlab") {
+    const card = document.getElementById(section);
     card.classList.add("focus");
     card.scrollIntoView({ block: "center" });
   }

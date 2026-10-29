@@ -299,6 +299,24 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "GitLab : MR (lecture seule)",
+      run: async () => {
+        const mrs = await call("GET", "/gitlab/mrs");
+        if (!controlled()) return expectStatus(mrs, 501, "/gitlab/mrs");
+        const features = await call("GET", "/deck/features");
+        expectStatus(features, 200, "/deck/features");
+        expect(typeof features.json.gitlab === "boolean", "/deck/features sans booléen gitlab");
+        // Jeton refusé ou GitLab injoignable depuis cet ordinateur : pas une panne du compagnon.
+        if (mrs.status === 502) throw new Skip(`GitLab inaccessible depuis l'ordinateur (${mrs.json?.error})`);
+        expectStatus(mrs, 200, "/gitlab/mrs");
+        expect(Array.isArray(mrs.json.mine) && Array.isArray(mrs.json.review), "forme de /gitlab/mrs inattendue");
+        // Ni compte connecté ni GITLAB_TOKEN (CI, tests) : réponse normale « pas connecté », jamais de 401. Jamais de fusion ni d'ouverture ici.
+        if (mrs.json.connected === false) return "pas connecté à GitLab";
+        expect(features.json.gitlab === true, "GitLab connecté mais gitlab absent de /deck/features");
+        return `${mrs.json.mine.length} MR à moi, ${mrs.json.review.length} à relire`;
+      },
+    },
+    {
       name: "pointeur",
       run: async () => {
         // Déplacement nul seulement : jamais de clic sur un ordinateur qui sert à autre chose.
@@ -346,6 +364,25 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         } finally {
           await call("DELETE", `/tasks/${taskId}`);
         }
+      },
+    },
+    {
+      name: "Jira : tickets",
+      run: async () => {
+        // Lecture seule : jamais de transition, ce sont les vrais tickets de l'utilisateur.
+        // Hors Mac et Windows, /deck/features répond 501 : on ne sait plus si Jira est configuré.
+        const features = await call("GET", "/deck/features");
+        const configured = features.status === 200 ? features.json.jira : undefined;
+        const issues = await call("GET", "/jira/issues");
+        if (configured === false || (configured === undefined && issues.status === 501)) {
+          return expectStatus(issues, 501, "/jira/issues sans Jira configuré");
+        }
+        expectStatus(issues, 200, "/jira/issues");
+        expect(Array.isArray(issues.json.columns), "forme de /jira/issues inattendue");
+        expect(typeof issues.json.boardsChosen === "boolean", "boardsChosen absent de /jira/issues");
+        const boards = await call("GET", "/jira/boards");
+        expectStatus(boards, 200, "/jira/boards");
+        expect(Array.isArray(boards.json.boards) && Array.isArray(boards.json.selected), "forme de /jira/boards inattendue");
       },
     },
     {
