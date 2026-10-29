@@ -371,6 +371,24 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "courrier Outlook (page du Deck)",
+      run: async () => {
+        // Sans compte Microsoft relié : no-account ; relié sans Mail.Read : reconnect ; sinon les compteurs.
+        const mail = await call("GET", "/mail/summary");
+        expectStatus(mail, 200, "/mail/summary");
+        const status = mail.json.status;
+        expect(["no-account", "reconnect", "ok"].includes(status), `état du courrier inconnu : ${status}`);
+        if (status === "ok") {
+          expect(
+            ["unread", "junk", "drafts", "sent"].every((k) => Number.isInteger(mail.json[k])),
+            "compteurs du courrier absents",
+          );
+          expect(Array.isArray(mail.json.recent) && mail.json.recent.length <= 5, "derniers non lus invalides");
+        }
+        return status;
+      },
+    },
+    {
       name: "visualiseur /camera",
       run: async () => {
         const page = await call("GET", "/camera");

@@ -51,6 +51,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private lateinit var audio: ComputerAudioView
     private lateinit var appAudio: AppAudioView
     private lateinit var nowPlaying: NowPlayingView
+    private lateinit var mail: MailView
     private lateinit var picker: WindowPicker
     private lateinit var openWindows: OpenWindowsView
     private lateinit var mixer: MixerView
@@ -118,6 +119,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         voicePeople = view.findViewById(R.id.deck_voice_people)
         nowPlaying = view.findViewById(R.id.deck_now_playing)
         nowPlaying.attach(viewLifecycleOwner.lifecycleScope)
+        mail = view.findViewById(R.id.deck_mail)
+        mail.attach(viewLifecycleOwner.lifecycleScope)
         picker = view.findViewById(R.id.deck_windows)
         picker.attach(viewLifecycleOwner.lifecycleScope) { loadDeck() }
         openWindows = view.findViewById(R.id.deck_open)
@@ -204,6 +207,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private fun setLiveViewsActive(active: Boolean) {
         appAudio.setActive(active)
         nowPlaying.setActive(active)
+        mail.setActive(active)
         openWindows.setActive(active && showingOpen)
         mixer.setActive(active && showingMixer)
         agents.setActive(active && showingAgents)
@@ -456,7 +460,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     }
 
     /** Ce qui change d'un onglet à l'autre, sous la rangée d'onglets. */
-    private fun pageViews() = listOf(audio, appAudio, voiceCard, nowPlaying, grid, openWindows, mixer, agents, pad, status)
+    private fun pageViews() = listOf(audio, appAudio, voiceCard, nowPlaying, mail, grid, openWindows, mixer, agents, pad, status)
 
     /** Onglet choisi par balayage : on fait défiler la barre jusqu'à lui. */
     private fun scrollToSelectedTab() {
@@ -579,6 +583,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         voiceCard.visibility = View.GONE
         appAudio.bind(null)
         nowPlaying.bind(false)
+        mail.bind(false)
         openWindows.setActive(isResumed && !isHidden)
     }
 
@@ -601,6 +606,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         voiceCard.visibility = View.GONE
         appAudio.bind(null)
         nowPlaying.bind(false)
+        mail.bind(false)
         pad.setActive(isResumed && !isHidden)
     }
 
@@ -626,6 +632,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         voiceCard.visibility = View.GONE
         appAudio.bind(null)
         nowPlaying.bind(false)
+        mail.bind(false)
         mixer.visibility = View.VISIBLE
         mixer.setActive(isResumed && !isHidden)
     }
@@ -654,6 +661,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         voiceCard.visibility = View.GONE
         appAudio.bind(null)
         nowPlaying.bind(false)
+        mail.bind(false)
         agents.setActive(isResumed && !isHidden)
     }
 
@@ -704,10 +712,13 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             status.visibility = View.GONE
         }
         renderTabs()
-        // Son de l'ordinateur : utile pour un média ou une appli (Discord), pas pour des raccourcis.
-        audio.visibility = if (page?.media == true || page?.app != null) View.VISIBLE else View.GONE
-        appAudio.bind(page?.app)
+        // Son de l'ordinateur : utile pour un média ou une appli (Discord), pas pour des raccourcis ; `sound: false` (Word,
+        // Excel, PowerPoint, Outlook) le retire, et le volume propre à l'appli avec.
+        val sound = page?.sound != false
+        audio.visibility = if (sound && (page?.media == true || page?.app != null)) View.VISIBLE else View.GONE
+        appAudio.bind(page?.app.takeIf { sound })
         nowPlaying.bind(page?.media == true)
+        mail.bind(page?.mail == true)
     }
 
     private fun runTile(tileView: View, tile: DeckTile) {

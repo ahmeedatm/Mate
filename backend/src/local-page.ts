@@ -136,14 +136,14 @@ export const LOCAL_PAGE = `<!doctype html>
         row.className = "account";
         const label = document.createElement("span");
         label.className = "grow";
-        label.innerHTML = a.expired ? '<span class="ko">⚠</span> ' : '<span class="ok">✓</span> ';
-        label.append(a.label + " · " + a.email + (a.expired ? " (à reconnecter)" : ""));
+        label.innerHTML = a.expired || a.mailMissing ? '<span class="ko">⚠</span> ' : '<span class="ok">✓</span> ';
+        label.append(a.label + " · " + a.email + (a.expired ? " (à reconnecter)" : a.mailMissing ? " (à reconnecter pour le courrier)" : ""));
         const off = document.createElement("button");
         off.className = "ghost";
         off.textContent = "Déconnecter";
         off.onclick = async () => { await fetch("/local/accounts/" + a.provider, { method: "DELETE" }); refresh(); };
         row.append(label);
-        if (a.expired) row.append(connectLink(a.provider, "Reconnecter"));
+        if (a.expired || a.mailMissing) row.append(connectLink(a.provider, "Reconnecter"));
         row.append(off);
         box.append(row);
       }
