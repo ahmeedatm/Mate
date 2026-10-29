@@ -94,7 +94,7 @@ class WidgetModelTest {
 
     @Test
     fun `chaque modele Cadran commence par le heros puis la ligne du jour`() {
-        for (template in Template.entries.filter { it.cadran }) {
+        for (template in Template.entries.filter { it.cadran && !it.role }) {
             val widgets = template.build().widgets
             val hero = widgets.single { it.type == WidgetType.HERO }
             val line = widgets.single { it.type == WidgetType.DAYLINE }
@@ -106,8 +106,15 @@ class WidgetModelTest {
     @Test
     fun `les trois modeles existent aussi en Cadran, avec les memes titres`() {
         val plain = Template.entries.filter { !it.cadran }.map { it.title }
-        val cadran = Template.entries.filter { it.cadran }.map { it.title }
+        val cadran = Template.entries.filter { it.cadran && !it.role }.map { it.title }
         assertEquals(plain, cadran)
+    }
+
+    @Test
+    fun `le modele Deck remplit toute la grille, sans case vide`() {
+        val layout = Template.DECK_CADRAN.build()
+        for (r in 0 until ROWS) for (c in 0 until COLS) assertTrue("case $c,$r", layout.widgets.any { it.covers(c, r) })
+        assertTrue(layout.widgets.all { it.size in it.type.sizes })
     }
 
     @Test

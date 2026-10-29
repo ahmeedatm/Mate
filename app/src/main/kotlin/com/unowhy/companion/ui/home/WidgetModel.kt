@@ -44,7 +44,7 @@ enum class WidgetType(
     TASKS("tasks", R.string.widget_tasks, R.string.widget_tasks_desc, R.drawable.ic_tasks, listOf(WidgetSize.L, WidgetSize.T, WidgetSize.V, WidgetSize.M), true),
     FOCUS("focus", R.string.widget_focus, R.string.widget_focus_desc, R.drawable.ic_timer, listOf(WidgetSize.S, WidgetSize.V, WidgetSize.L), false),
     WATER("water", R.string.widget_water, R.string.widget_water_desc, R.drawable.ic_water, listOf(WidgetSize.S, WidgetSize.M), false),
-    AUDIO("audio", R.string.widget_audio, R.string.widget_audio_desc, R.drawable.ic_volume, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
+    AUDIO("audio", R.string.widget_audio, R.string.widget_audio_desc, R.drawable.ic_volume, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S, WidgetSize.W), true),
     MEDIA("media", R.string.widget_media, R.string.widget_media_desc, R.drawable.ic_play, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     PERF("perf", R.string.widget_perf, R.string.widget_perf_desc, R.drawable.ic_speed, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.W), true),
     KEYS("keys", R.string.widget_keys, R.string.widget_keys_desc, R.drawable.ic_deck, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L, WidgetSize.V, WidgetSize.XL), true),
@@ -55,7 +55,7 @@ enum class WidgetType(
     AGENTS("agents", R.string.widget_agents, R.string.widget_agents_desc, R.drawable.ic_agents, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.V, WidgetSize.XL), true),
     MIXER("mixer", R.string.widget_mixer, R.string.widget_mixer_desc, R.drawable.ic_wave, listOf(WidgetSize.XL), true),
     OPEN("open", R.string.widget_open, R.string.widget_open_desc, R.drawable.ic_display, listOf(WidgetSize.XL, WidgetSize.L), true),
-    APPS("apps", R.string.widget_apps, R.string.widget_apps_desc, R.drawable.ic_tabs, listOf(WidgetSize.L, WidgetSize.M, WidgetSize.XL), true),
+    APPS("apps", R.string.widget_apps, R.string.widget_apps_desc, R.drawable.ic_tabs, listOf(WidgetSize.L, WidgetSize.M, WidgetSize.XL, WidgetSize.W), true),
     DISCORD("discord", R.string.widget_discord, R.string.widget_discord_desc, R.drawable.ic_call, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     MEETING("meeting", R.string.widget_meeting, R.string.widget_meeting_desc, R.drawable.ic_videocam, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     PAD("pad", R.string.widget_pad, R.string.widget_pad_desc, R.drawable.ic_tablet, listOf(WidgetSize.XL, WidgetSize.L), true);
@@ -85,15 +85,57 @@ class Placed(
 /**
  * Disposition complète : widgets et profils. Un profil = une page ; `names[i]` null = pas encore de nom ([nameMissing]
  * lui en donne un, l'interface passe les textes : le modèle ne touche à aucune ressource). `gameProfile` : le profil de jeu (au plus un), -1 si aucun.
+ * Rôles (Deck V2) : `homeProfile` (Accueil, jamais supprimé), `deckProfile` (Deck, -1 s'il a été supprimé), `callProfile`
+ * (Réunion : jamais supprimé, absent de la barre et du balayage hors appel). `rolesSet` : rôles déjà posés une fois
+ * ([ensureRoles] ne recrée pas un Deck supprimé).
  */
 class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String?>, @set:JvmName("assignGameProfile") var gameProfile: Int = -1) {
 
     /** Profils sans nom : garde les appels qui ne comptent que des pages. */
     constructor(widgets: MutableList<Placed>, pages: Int) : this(widgets, MutableList<String?>(pages.coerceAtLeast(1)) { null })
 
+    var homeProfile = 0
+    var deckProfile = -1
+    var callProfile = -1
+    var rolesSet = false
+
     val pages get() = names.size
 
-    fun copy() = HomeLayout(widgets.map { it.copy() }.toMutableList(), names.toMutableList(), gameProfile)
+    fun copy() = HomeLayout(widgets.map { it.copy() }.toMutableList(), names.toMutableList(), gameProfile).also {
+        it.homeProfile = homeProfile
+        it.deckProfile = deckProfile
+        it.callProfile = callProfile
+        it.rolesSet = rolesSet
+    }
+
+    /**
+     * Pose une fois les rôles : Deck juste après l'Accueil (les profils suivants reculent d'une page), Réunion en dernier,
+     * chacun depuis son modèle. Vrai si la disposition a changé. Ne recrée jamais un rôle supprimé ensuite.
+     */
+    fun ensureRoles(deckName: String, callName: String): Boolean {
+        if (rolesSet) return false
+        rolesSet = true
+        val deck = homeProfile + 1
+        widgets.filter { it.page >= deck }.forEach { it.page++ }
+        names.add(deck, deckName)
+        fun shifted(p: Int) = if (p >= deck) p + 1 else p
+        if (gameProfile >= 0) gameProfile = shifted(gameProfile)
+        widgets += Template.DECK_CADRAN.widgets(deck)
+        deckProfile = deck
+        callProfile = addProfile(callName, Template.CALL_CADRAN.widgets(0))
+        return true
+    }
+
+    /** Le dernier profil reste ; une fois les rôles posés, l'Accueil et Réunion aussi. */
+    fun canRemove(index: Int) =
+        names.size > 1 && index in names.indices && !(rolesSet && (index == homeProfile || index == callProfile))
+
+    /** Profils dans l'ordre de la barre et du balayage : Réunion n'y est que pendant un appel, en dernier. */
+    fun profilesInOrder(inCall: Boolean): List<Int> =
+        names.indices.filter { it != callProfile } + if (inCall && callProfile >= 0) listOf(callProfile) else emptyList()
+
+    /** Profil où mène « Deck » (canal, voix, extension Claude) : l'Accueil si le Deck a été supprimé. */
+    fun deckTarget() = if (deckProfile >= 0) deckProfile else homeProfile
 
     /** Ajoute un profil à la fin et renvoie son index ; `items` sont recopiés sur sa page. */
     fun addProfile(name: String?, items: List<Placed> = emptyList()): Int {
@@ -135,19 +177,26 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         }
         widgets.forEach { it.page = moved(it.page) }
         if (gameProfile >= 0) gameProfile = moved(gameProfile)
+        homeProfile = moved(homeProfile)
+        if (deckProfile >= 0) deckProfile = moved(deckProfile)
+        if (callProfile >= 0) callProfile = moved(callProfile)
     }
 
-    /** Retire le profil et ses widgets, les suivants reculent d'une page. Faux (rien ne change) pour le dernier profil. */
+    /** Retire le profil et ses widgets, les suivants reculent d'une page. Faux (rien ne change) si [canRemove] le refuse. */
     fun removeProfile(index: Int): Boolean {
-        if (names.size <= 1 || index !in names.indices) return false
+        if (!canRemove(index)) return false
         names.removeAt(index)
         widgets.removeAll { it.page == index }
         widgets.filter { it.page > index }.forEach { it.page-- }
-        gameProfile = when {
-            gameProfile == index -> -1
-            gameProfile > index -> gameProfile - 1
-            else -> gameProfile
+        fun after(p: Int) = when {
+            p == index -> -1
+            p > index -> p - 1
+            else -> p
         }
+        gameProfile = after(gameProfile)
+        homeProfile = after(homeProfile)
+        deckProfile = after(deckProfile)
+        callProfile = after(callProfile)
         return true
     }
 
@@ -179,6 +228,10 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         .put("pages", pages)
         .put("names", JSONArray().apply { names.forEach { put(it ?: JSONObject.NULL) } })
         .put("game", gameProfile)
+        .put("home", homeProfile)
+        .put("deck", deckProfile)
+        .put("call", callProfile)
+        .put("roles", rolesSet)
         .put("widgets", JSONArray().apply {
             widgets.forEach {
                 put(JSONObject().put("t", it.type.key).put("s", it.size.name).put("p", it.page).put("c", it.col).put("r", it.row).put("cfg", it.config))
@@ -215,6 +268,10 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
             }
             val layout = HomeLayout(mutableListOf(), names)
             layout.gameProfile = json.optInt("game", -1).takeIf { it in names.indices } ?: -1
+            layout.homeProfile = json.optInt("home", 0).takeIf { it in names.indices } ?: 0
+            layout.deckProfile = json.optInt("deck", -1).takeIf { it in names.indices } ?: -1
+            layout.callProfile = json.optInt("call", -1).takeIf { it in names.indices } ?: -1
+            layout.rolesSet = json.optBoolean("roles", false)
             val list = json.getJSONArray("widgets")
             for (i in 0 until list.length()) {
                 val w = list.getJSONObject(i)
@@ -229,8 +286,17 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
     }
 }
 
-/** Modèles prêts à l'emploi : le défaut (Travail) ressemble à l'ancien Accueil. */
-enum class Template(@StringRes val title: Int, @StringRes val description: Int, private val items: List<Placed>, val cadran: Boolean = false) {
+/**
+ * Modèles prêts à l'emploi : le défaut (Travail) ressemble à l'ancien Accueil. `listed` : proposé à la création d'un
+ * profil (Réunion ne l'est pas : il n'existe qu'une fois, posé par [HomeLayout.ensureRoles]).
+ */
+enum class Template(
+    @StringRes val title: Int,
+    @StringRes val description: Int,
+    private val items: List<Placed>,
+    val cadran: Boolean = false,
+    val listed: Boolean = true,
+) {
     WORK(R.string.template_work, R.string.template_work_desc, listOf(
         Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 0),
         Placed(WidgetType.AGENDA, WidgetSize.L, 0, 2, 0),
@@ -272,7 +338,25 @@ enum class Template(@StringRes val title: Int, @StringRes val description: Int, 
     STANDBY_CADRAN(R.string.template_standby, R.string.template_standby_cadran_desc, listOf(
         Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
         Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
-    ), cadran = true);
+    ), cadran = true),
+
+    // Deck : agir sur l'ordinateur. Applis sur la haute ligne, son de l'ordinateur sur la ligne fine, touches et lecture dessous.
+    DECK_CADRAN(R.string.template_deck, R.string.template_deck_desc, listOf(
+        Placed(WidgetType.APPS, WidgetSize.W, 0, 0, 0),
+        Placed(WidgetType.AUDIO, WidgetSize.W, 0, 0, 1),
+        Placed(WidgetType.KEYS, WidgetSize.L, 0, 0, 2),
+        Placed(WidgetType.MEDIA, WidgetSize.L, 0, 2, 2),
+    ), cadran = true),
+
+    // Réunion : piloter l'appel en cours. Affiché seulement pendant un appel.
+    CALL_CADRAN(R.string.template_call, R.string.template_call_desc, listOf(
+        Placed(WidgetType.MEETING, WidgetSize.L, 0, 0, 0),
+        Placed(WidgetType.NEXT, WidgetSize.L, 0, 2, 0),
+        Placed(WidgetType.AUDIO, WidgetSize.L, 0, 0, 2),
+    ), cadran = true, listed = false);
+
+    /** Modèle d'un rôle (Deck, Réunion) : une page pour agir, pas un Accueil (ni héros ni ligne du jour). */
+    val role get() = this == DECK_CADRAN || this == CALL_CADRAN
 
     /** Les widgets du modèle recopiés sur la page `page` (profil à ajouter). */
     fun widgets(page: Int) = items.map { it.copy().also { c -> c.page = page } }

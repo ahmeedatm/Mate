@@ -782,7 +782,7 @@
 
     <!-- Accueil à widgets -->
     <string name="home_edit_hint">Glisse un widget pour le déplacer, touche + pour en ajouter.</string>
-    <string name="profile_first">Bureau</string>
+    <string name="profile_first">Accueil</string>
     <string name="profile_default">Profil %d</string>
     <string name="profile_prev">Profil précédent</string>
     <string name="profile_next">Profil suivant</string>
@@ -812,6 +812,12 @@
     <string name="template_home_cadran_desc">Heure, ligne du jour, touches du deck, lecture en cours et son de l\'ordi.</string>
     <string name="template_standby_cadran_desc">L\'heure et la ligne du jour, rien d\'autre : lisible de loin.</string>
     <string name="template_standby_desc">Très grande heure, prochain rendez-vous, Focus et eau : lisible de loin.</string>
+    <string name="template_deck">Deck</string>
+    <string name="template_deck_desc">Applis, son de l\'ordi, touches et lecture en cours : agir sur l\'ordinateur.</string>
+    <string name="template_call">Réunion</string>
+    <string name="template_call_desc">Micro, caméra, partage et son de l\'appel : s\'affiche pendant un appel.</string>
+    <string name="profile_deck">Deck</string>
+    <string name="profile_call">Réunion</string>
     <string name="widget_size_s">Petit</string>
     <string name="widget_size_m">Moyen</string>
     <string name="widget_size_l">Grand</string>

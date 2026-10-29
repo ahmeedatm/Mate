@@ -125,7 +125,10 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             grid.clipChildren = false
         }
         layout = HomeLayout.load(requireContext(), cadran)
-        if (nameProfiles()) HomeLayout.save(requireContext(), layout, cadran)
+        // Rôles posés une fois (Deck V2) : Deck après l'Accueil, Réunion pour les appels. `or` : les deux s'appliquent.
+        if (nameProfiles() or (cadran && layout.ensureRoles(getString(R.string.profile_deck), getString(R.string.profile_call)))) {
+            HomeLayout.save(requireContext(), layout, cadran)
+        }
         build()
 
         // Rétro : les tubes passent derrière les widgets, voilés derrière ceux sans fond (où qu'ils soient placés) ;

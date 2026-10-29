@@ -207,7 +207,7 @@ class ProfilesDialog(
             .setView(ScrollView(context).apply { addView(choices) })
             .setNegativeButton(R.string.cancel, null)
             .create()
-        Template.entries.filter { it.cadran }.forEachIndexed { n, template ->
+        Template.entries.filter { it.cadran && it.listed }.forEachIndexed { n, template ->
             val card = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 setBackgroundResource(R.drawable.row_bg)
