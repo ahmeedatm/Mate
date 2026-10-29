@@ -122,7 +122,6 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 ## Décisions en attente
 
 - Nom du projet. Public cible tranché le 28/10/2026 : gamers, streamers, créateurs de contenu ([cible-et-positionnement.md](cible-et-positionnement.md)).
-- Adresse provisoire de l'écran de bienvenue : `unowhy.com/compagnon` (`INSTALL_URL`), à revoir à la fin.
 - Le Play Store reste-t-il actif en kiosque ?
 
 ## Avant de livrer ou de faire la démo

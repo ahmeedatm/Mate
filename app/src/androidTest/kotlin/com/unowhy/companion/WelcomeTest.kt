@@ -12,6 +12,9 @@ import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.hamcrest.Matchers.anyOf
+import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.startsWith
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,10 +35,11 @@ class WelcomeTest {
 
     @Test
     fun afficheLaBienvenueSansOrdinateur() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withId(R.id.welcome)).check(matches(isDisplayed()))
             onView(withText(R.string.welcome_title)).check(matches(isDisplayed()))
-            onView(withId(R.id.welcome_install_url)).check(matches(withText(BuildConfig.INSTALL_URL)))
+            onView(withId(R.id.welcome_install_url)).check(matches(withText(anyOf(startsWith("http://"), equalTo(context.getString(R.string.install_address_no_wifi))))))
             onView(withId(R.id.welcome_manual)).check(matches(isDisplayed()))
         }
     }

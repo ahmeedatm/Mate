@@ -609,6 +609,7 @@
     <string name="welcome_wifi_text">Connecte la tablette au WiFi de la maison ou du bureau, le même que celui de l\'ordinateur.</string>
     <string name="welcome_install_title">Sur l\'ordinateur</string>
     <string name="welcome_install_text">Ouvre cette adresse dans le navigateur de l\'ordinateur et lance l\'installation :</string>
+    <string name="install_address_no_wifi">connecte d\'abord le WiFi</string>
     <string name="welcome_install_os">Mac ou PC Windows</string>
     <string name="welcome_connect_title">Connecter</string>
     <string name="welcome_connect_text">Ton ordinateur apparaît ici dès que le compagnon est installé. Touche-le, puis saisis le code qu\'il affiche.</string>

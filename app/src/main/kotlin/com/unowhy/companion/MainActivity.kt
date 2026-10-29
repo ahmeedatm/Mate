@@ -25,6 +25,7 @@ import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
 import com.unowhy.companion.frame.FrameCache
 import com.unowhy.companion.frame.FrameLogic
+import com.unowhy.companion.installers.InstallerService
 import com.unowhy.companion.kiosk.AutoUpdater
 import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.net.BackendClient
@@ -119,6 +120,7 @@ class MainActivity : AppCompatActivity() {
         Grain.applyTo(findViewById(android.R.id.content))
         Speaker.init(this)
         AutoUpdater.start(this)
+        InstallerService.start(this)
 
         val cadran = themeBool(this, R.attr.c_cadran)
         if (cadran) {

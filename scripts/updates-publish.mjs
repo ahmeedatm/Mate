@@ -1,7 +1,9 @@
 // Serveur central des mises à jour de la tablette : `node scripts/updates-publish.mjs dist updates`.
 // Lit l'entrée companion-X.Y.Z.json produite par android-release (companion-X.Y.Z-essai.N.json par essai-android),
 // copie l'APK qu'elle nomme dans <sortie>/ et écrit <sortie>/manifest.json, même forme que GET /updates du backend (taille et SHA-256 compris).
-// Avec UPDATES_URL (paquet générique du registre, …/packages/generic/<nom>/<version>), dépose l'APK puis
+// Les installeurs de l'ordinateur présents dans <dist> (Compagnon-Unowhy-Mac.zip, Compagnon-Unowhy-Windows.exe) sont copiés
+// aussi et décrits dans manifest.json, clé `installers` : la tablette les télécharge pour les servir sur le WiFi.
+// Avec UPDATES_URL (paquet générique du registre, …/packages/generic/<nom>/<version>), dépose l'APK, les installeurs puis
 // manifest.json et supprime les anciens fichiers du paquet : seule la dernière version est servie.
 // Jeton : CI_JOB_TOKEN en CI, GITLAB_TOKEN (jeton personnel) pour un essai local.
 import fs from "node:fs";
@@ -37,13 +39,23 @@ const update = {
   size: apk.length,
   sha256: createHash("sha256").update(apk).digest("hex"),
 };
-const manifest = JSON.stringify({ updates: [update] }, null, 2) + "\n";
+
+const INSTALLERS = { mac: "Compagnon-Unowhy-Mac.zip", windows: "Compagnon-Unowhy-Windows.exe" };
+const installers = Object.entries(INSTALLERS)
+  .filter(([, name]) => fs.existsSync(path.join(distDir, name)))
+  .map(([os, name]) => {
+    const data = fs.readFileSync(path.join(distDir, name));
+    return { os, file: name, size: data.length, sha256: createHash("sha256").update(data).digest("hex"), version: versionName };
+  });
+const manifest = JSON.stringify({ updates: [update], ...(installers.length ? { installers } : {}) }, null, 2) + "\n";
 
 fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(outDir, { recursive: true });
 fs.writeFileSync(path.join(outDir, file), apk);
+for (const { file: name } of installers) fs.copyFileSync(path.join(distDir, name), path.join(outDir, name));
 fs.writeFileSync(path.join(outDir, "manifest.json"), manifest);
 console.log(JSON.stringify(update));
+if (installers.length) console.log(`installeurs : ${installers.map((i) => i.file).join(", ")}`);
 
 const url = process.env.UPDATES_URL;
 if (url) await publish(url.replace(/\/+$/, ""));
@@ -64,6 +76,7 @@ async function publish(url) {
 
   // APK d'abord : le manifest ne désigne jamais un fichier absent.
   await api("PUT", `${url}/${file}`, apk);
+  for (const { file: name } of installers) await api("PUT", `${url}/${name}`, fs.readFileSync(path.join(distDir, name)));
   await api("PUT", `${url}/manifest.json`, manifest);
 
   // Le téléchargement rend le dernier fichier déposé sous un nom ; les autres sont supprimés.
@@ -72,7 +85,7 @@ async function publish(url) {
   if (!found) throw new Error(`paquet ${name}/${version} introuvable après dépôt`);
   const files = await (await api("GET", `${projectApi}/packages/${found.id}/package_files?per_page=100`)).json();
   const keep = new Set(
-    ["manifest.json", file].map((n) => Math.max(...files.filter((f) => f.file_name === n).map((f) => f.id))),
+    ["manifest.json", file, ...installers.map((i) => i.file)].map((n) => Math.max(...files.filter((f) => f.file_name === n).map((f) => f.id))),
   );
   for (const f of files.filter((f) => !keep.has(f.id))) {
     await api("DELETE", `${projectApi}/packages/${found.id}/package_files/${f.id}`);

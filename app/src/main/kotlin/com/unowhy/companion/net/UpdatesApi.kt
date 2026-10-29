@@ -1,6 +1,8 @@
 package com.unowhy.companion.net
 
 import com.unowhy.companion.BuildConfig
+import com.unowhy.companion.installers.Installer
+import com.unowhy.companion.installers.InstallerPlan
 import org.json.JSONObject
 import java.io.File
 
@@ -27,6 +29,18 @@ class UpdatesApi(private val http: Http, private val source: UpdateSource = Upda
     /** Télécharge une mise à jour dans `dest` ; `progress` (0 à 100, appelé hors du fil principal). Renvoie l'empreinte SHA-256 reçue. */
     suspend fun download(update: AppUpdate, dest: File, progress: (Int) -> Unit): String = http.io {
         val path = (if (source == UpdateSource.SERVER) "/" else "/updates/file/") + http.encode(update.file)
+        fetch(path, update.size, dest, progress)
+    }
+
+    /** Installeurs de l'ordinateur annoncés par le serveur central (clé `installers` du manifeste). */
+    suspend fun installers(): List<Installer> = http.io { InstallerPlan.parse(http.get("/manifest.json")) }
+
+    /** Télécharge un installeur de l'ordinateur dans `dest`. Renvoie l'empreinte SHA-256 reçue. */
+    suspend fun downloadInstaller(installer: Installer, dest: File): String = http.io {
+        fetch("/" + http.encode(installer.file), installer.size, dest) {}
+    }
+
+    private fun fetch(path: String, size: Long, dest: File, progress: (Int) -> Unit): String {
         val conn = http.request("GET", path, timeoutMs = 120_000)
         val digest = java.security.MessageDigest.getInstance("SHA-256")
         try {
@@ -41,7 +55,7 @@ class UpdatesApi(private val http: Http, private val source: UpdateSource = Upda
                         out.write(buffer, 0, n)
                         digest.update(buffer, 0, n)
                         done += n
-                        val percent = if (update.size > 0) (done * 100 / update.size).toInt() else 0
+                        val percent = if (size > 0) (done * 100 / size).toInt() else 0
                         if (percent != shown) { shown = percent; progress(percent) }
                     }
                 }
@@ -49,7 +63,7 @@ class UpdatesApi(private val http: Http, private val source: UpdateSource = Upda
         } finally {
             conn.disconnect()
         }
-        digest.digest().joinToString("") { "%02x".format(it) }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     companion object {

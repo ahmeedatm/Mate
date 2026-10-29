@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.util.Log
 import com.unowhy.companion.UserFacingException
+import com.unowhy.companion.installers.InstallerService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,7 +17,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Vérifie les mises à jour au démarrage puis toutes les 6 h, et installe seule la release de main la plus récente du
- * Companion, jamais un essai (bouton de Réglages).
+ * Companion, jamais un essai (bouton de Réglages). Télécharge aussi les installeurs de l'ordinateur (`InstallerService`).
  * Seulement en device owner ; sinon rien, et jamais d'erreur à l'écran (journal seulement). Singleton : survit aux
  * `recreate()` de l'activité. Android arrête l'appli pour la remplacer, `UpdatedReceiver` la relance.
  */
@@ -58,8 +59,15 @@ object AutoUpdater {
             .onFailure { Log.w(TAG, "Surveillance du réseau indisponible", it) }
     }
 
-    /** @return false seulement si aucune source n'a pu être jointe (à refaire au tick suivant). */
+    /** Mise à jour de l'appli, puis installeurs de l'ordinateur (même rythme, même serveur central). */
     private suspend fun runOnce(context: Context): Boolean {
+        val reached = checkApp(context)
+        InstallerService.sync(context)
+        return reached
+    }
+
+    /** @return false seulement si aucune source n'a pu être jointe (à refaire au tick suivant). */
+    private suspend fun checkApp(context: Context): Boolean {
         if (!Kiosk.isDeviceOwner(context)) return true
         val check = try {
             Updater.check(context)
