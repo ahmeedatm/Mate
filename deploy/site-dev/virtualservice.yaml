@@ -5,12 +5,12 @@ metadata:
   annotations:
     external-dns.alpha.kubernetes.io/use-external-dns: "true"
 spec:
-  # Passerelle des hôtes *.unowhy.dev de sqool-deploy (staging, preprod) : à confirmer avec l'équipe plateforme pour
-  # *.development.unowhy.dev.
+  # Passerelle du cluster hisqool-dev qui accepte *.integration.unowhy.dev, avec son certificat (comme
+  # power.integration.unowhy.dev) ; *.development.unowhy.dev n'y est servi par aucune passerelle.
   gateways:
-    - devops-core/devops-unowhy-gateway
+    - devops-core/devops-hisqool-gateway
   hosts:
-    - mate.development.unowhy.dev
+    - mate.integration.unowhy.dev
   http:
     - name: mate-site
       route:

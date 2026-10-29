@@ -399,7 +399,7 @@ release:
         --assets-links "[${LINKS%,}]"
 
 # --- Site vitrine Mate (site/) : image nginx dans Harbor (harbor.unowhy.dev/squads/mate-site), déployée à la main sur le
-# cluster dev avec deploy/site-dev/ (VirtualService Istio, mate.development.unowhy.dev). Même façon de faire que les
+# cluster dev avec deploy/site-dev/ (VirtualService Istio, mate.integration.unowhy.dev). Même façon de faire que les
 # images des squads (sqool-deploy) : docker-in-docker du proxy Harbor, connexion par HARBOR_REGISTRY_USERNAME /
 # HARBOR_REGISTRY_PASSWORD (variables CI masquées, à demander à l'équipe plateforme). La CI construit et pousse seulement.
 

@@ -1,6 +1,6 @@
 # Site vitrine Mate sur le cluster dev
 
-https://mate.development.unowhy.dev : le site de `site/` et les installeurs de la dernière release, dans une image nginx.
+https://mate.integration.unowhy.dev : le site de `site/` et les installeurs de la dernière release, dans une image nginx.
 
 ## Ce que fait la CI
 
@@ -28,9 +28,9 @@ Essayer l'image d'une MR sans fusionner : `kubectl -n mate set image deployment/
 ## À demander une fois à l'équipe plateforme
 
 1. **Harbor** : le projet `squads/mate-site`, et un compte robot qui peut y pousser ; ses identifiants dans les variables CI du projet, masquées et protégées : `HARBOR_REGISTRY_USERNAME`, `HARBOR_REGISTRY_PASSWORD` (les mêmes noms que pour les squads).
-2. **Namespace** `mate` sur le cluster dev, avec l'injection Istio comme les autres namespaces des squads.
-3. **Secret de tirage** `harbor-squads-mate-site-registry-credential` dans ce namespace (type `kubernetes.io/dockerconfigjson`, lecture de `squads/mate-site`) : jamais dans ce dépôt.
-4. **Passerelle Istio** : le VirtualService utilise `devops-core/devops-unowhy-gateway`, celle des hôtes `*.unowhy.dev` de `sqool-deploy` ; confirmer qu'elle accepte `mate.development.unowhy.dev` (certificat compris), sinon changer `gateways` dans `virtualservice.yaml`. Le DNS est créé par external-dns (annotation du VirtualService).
+2. ~~**Namespace** `mate`~~ : créé le 29/10/2026 (`namespace.yaml`). Il lui faut les étiquettes des squads : `istio.io/rev` (révision Istio) et les trois `hisqool.dev/*` que suit istiod (sans elles, pas de certificat Istio dans le namespace et le pod reste bloqué à l'initialisation).
+3. ~~**Secret de tirage**~~ `harbor-squads-mate-site-registry-credential` : créé le 29/10/2026 dans `mate`, copie de celui de `powerbank-front-admin` (même compte robot `robot-squads`, lecture de tout le projet `squads`). Jamais dans ce dépôt ; pour le recréer, le recopier depuis un autre namespace des squads.
+4. ~~**Passerelle Istio**~~ : `devops-core/devops-hisqool-gateway`, la seule du cluster `hisqool-dev` qui accepte `*.integration.unowhy.dev` avec son certificat (comme `power.integration.unowhy.dev`) ; aucune n'y sert `*.development.unowhy.dev`. Le DNS est créé par external-dns (annotation du VirtualService), environ 2 min après le premier `apply`.
 5. **Runner** : `site-image` construit en docker-in-docker (service `docker:27.5.1-dind` du proxy Harbor, comme `sqool-deploy`), donc sur un runner qui l'autorise.
 
 ## Fichiers
@@ -38,6 +38,7 @@ Essayer l'image d'une MR sans fusionner : `kubectl -n mate set image deployment/
 | Fichier | Rôle |
 |---|---|
 | `kustomization.yaml` | namespace `mate`, étiquettes, image `harbor.unowhy.dev/squads/mate-site:main` |
-| `deployment.yaml` | 1 réplique, nginx sans root (101), système de fichiers en lecture seule, sondes `/healthz`, Keel |
+| `namespace.yaml` | namespace `mate` et ses étiquettes Istio |
+| `deployment.yaml` | 1 réplique, nginx sans root (101), système de fichiers en lecture seule, sondes `/healthz`, Keel, proxy Istio demandé (`sidecar.istio.io/inject`, la politique du cluster est « disabled ») |
 | `service.yaml` | port 80 vers le 8080 de nginx |
-| `virtualservice.yaml` | `mate.development.unowhy.dev`, passerelle Istio, external-dns |
+| `virtualservice.yaml` | `mate.integration.unowhy.dev`, passerelle Istio, external-dns |

@@ -12,6 +12,10 @@ spec:
   replicas: 1
   revisionHistoryLimit: 3
   template:
+    metadata:
+      labels:
+        # Injection du proxy Istio : la politique du cluster est « disabled », chaque pod la demande (comme les squads).
+        sidecar.istio.io/inject: "true"
     spec:
       imagePullSecrets:
         - name: harbor-squads-mate-site-registry-credential
@@ -23,7 +27,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: site
-          image: mate-site
+          image: harbor.unowhy.dev/squads/mate-site:feat-site-image
           imagePullPolicy: Always
           ports:
             - name: http

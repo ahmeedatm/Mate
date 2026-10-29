@@ -2,7 +2,7 @@
 
 Page statique, sans build.
 
-**Cluster dev** (https://mate.development.unowhy.dev) : image nginx `harbor.unowhy.dev/squads/mate-site` construite par la CI (jobs `site-downloads` et `site-image`), installeurs de la dernière release compris ; déploiement : `deploy/site-dev/README.md`. Image en local : `docker build -t mate-site site && docker run --rm -p 8080:8080 mate-site`.
+**Cluster dev** (https://mate.integration.unowhy.dev) : image nginx `harbor.unowhy.dev/squads/mate-site` construite par la CI (jobs `site-downloads` et `site-image`), installeurs de la dernière release compris ; déploiement : `deploy/site-dev/README.md`. Image en local : `docker build -t mate-site site && docker run --rm -p 8080:8080 mate-site`.
 
 **Bucket S3** (statique) : déposer le contenu de `site/` à la racine du bucket.
 
