@@ -19,6 +19,7 @@ stages:
   - test
   - build
   - release
+  - site
 
 default:
   interruptible: true
@@ -35,6 +36,10 @@ default:
 .files-backend: &files-backend
   - backend/**/*
   - .gitlab-ci.yml
+.files-site: &files-site
+  - site/**/*
+  - scripts/site-downloads.mjs
+  - .gitlab-ci.yml
 .files-android: &files-android
   - app/**/*
   - "*.gradle*"
@@ -48,6 +53,15 @@ default:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes: *files-backend
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
+# Site vitrine : en MR, image construite sans être poussée ; sur main, poussée si site/ change ; sur un tag de version,
+# toujours (nouveaux installeurs dans l'image).
+.zone-site:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: *files-site
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *files-site
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
 .zone-android:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -383,3 +397,51 @@ release:
       glab release create "$CI_COMMIT_TAG" --ref "$CI_COMMIT_SHA" --name "Compagnon $CI_COMMIT_TAG" \
         --notes "Applis portables de l'ordinateur (Windows, Mac) et APK de la tablette. Mise à jour de la tablette par le « serveur Unowhy » : docs/developpement.md, section Release." \
         --assets-links "[${LINKS%,}]"
+
+# --- Site vitrine Mate (site/) : image nginx dans Harbor (harbor.unowhy.dev/squads/mate-site), déployée à la main sur le
+# cluster dev avec deploy/site-dev/ (VirtualService Istio, mate.development.unowhy.dev). Même façon de faire que les
+# images des squads (sqool-deploy) : docker-in-docker du proxy Harbor, connexion par HARBOR_REGISTRY_USERNAME /
+# HARBOR_REGISTRY_PASSWORD (variables CI masquées, à demander à l'équipe plateforme). La CI construit et pousse seulement.
+
+# Installeurs de la dernière release (scripts/site-downloads.mjs), mis dans l'image. Sur un tag : après leur publication.
+site-downloads:
+  extends: .zone-site
+  stage: site
+  image: node:22.22-bookworm-slim
+  needs:
+    - { job: updates, optional: true }
+  variables:
+    UPDATES_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/companion-updates/latest
+  script:
+    - node scripts/site-downloads.mjs site/downloads
+  artifacts:
+    paths:
+      - site/downloads/
+    expire_in: 1 day
+
+# Tags de l'image : main (suivi par Keel sur le cluster dev, deploy/site-dev/deployment.yaml) et le commit ; sur un tag
+# de version, vX.Y.Z aussi. En MR : construite, jamais poussée (vérifie le Dockerfile).
+site-image:
+  extends: .zone-site
+  stage: site
+  needs: [site-downloads]
+  image: harbor.unowhy.dev/docker-hub-proxy/library/docker:27.5.1-dind@sha256:aa3df78ecf320f5fafdce71c659f1629e96e9de0968305fe1de670e0ca9176ce
+  services:
+    - name: harbor.unowhy.dev/docker-hub-proxy/library/docker:27.5.1-dind@sha256:aa3df78ecf320f5fafdce71c659f1629e96e9de0968305fe1de670e0ca9176ce
+  timeout: 10 minutes
+  variables:
+    DOCKER_HOST: tcp://localhost:2375
+    DOCKER_TLS_CERTDIR: ""
+    SITE_IMAGE: harbor.unowhy.dev/squads/mate-site
+  script:
+    - |
+      for i in $(seq 20); do docker info >/dev/null 2>&1 && break; echo "Attente de docker…"; sleep 1; done
+      docker info >/dev/null
+    - docker build --label org.opencontainers.image.revision=$CI_COMMIT_SHA --label org.opencontainers.image.source=$CI_PROJECT_URL -t site site
+    - |
+      if [ "$CI_PIPELINE_SOURCE" = "merge_request_event" ]; then echo "MR : image construite, pas poussée."; exit 0; fi
+      test -n "$HARBOR_REGISTRY_USERNAME" || { echo "HARBOR_REGISTRY_USERNAME / HARBOR_REGISTRY_PASSWORD absentes des variables CI"; exit 1; }
+      echo "$HARBOR_REGISTRY_PASSWORD" | docker login -u "$HARBOR_REGISTRY_USERNAME" --password-stdin harbor.unowhy.dev
+      TAGS="$CI_COMMIT_SHORT_SHA"
+      if [ -n "$CI_COMMIT_TAG" ]; then TAGS="$TAGS $CI_COMMIT_TAG main"; else TAGS="$TAGS main"; fi
+      for t in $TAGS; do docker tag site "$SITE_IMAGE:$t" && docker push "$SITE_IMAGE:$t"; done

@@ -1,0 +1,5 @@
+# Seuls les fichiers servis entrent dans l'image (site/Dockerfile).
+README.md
+Dockerfile
+.dockerignore
+downloads/.gitignore

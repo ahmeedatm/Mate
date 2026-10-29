@@ -1,0 +1,26 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: mate-site
+  annotations:
+    external-dns.alpha.kubernetes.io/use-external-dns: "true"
+spec:
+  # Passerelle des hôtes *.unowhy.dev de sqool-deploy (staging, preprod) : à confirmer avec l'équipe plateforme pour
+  # *.development.unowhy.dev.
+  gateways:
+    - devops-core/devops-unowhy-gateway
+  hosts:
+    - mate.development.unowhy.dev
+  http:
+    - name: mate-site
+      route:
+        - destination:
+            host: mate-site.mate.svc.cluster.local
+            port:
+              number: 80
+      retries:
+        attempts: 2
+        perTryTimeout: 3s
+        retryOn: retriable-4xx,5xx
+      # Installeurs de plusieurs dizaines de Mo : délai large.
+      timeout: 120s
