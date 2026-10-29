@@ -75,7 +75,7 @@ class BreathingView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         // Place pour les ondes autour de la sphère pleine.
-        maxRadius = min(w, h) / 2f * 0.8f
+        maxRadius = min(w, h) / 2f * 0.78f
         // Pâle (la consigne, foncée, se lit dessus de loin) : reflet presque blanc, bord à la teinte de la fonction.
         val white = 0xFFFFFFFF.toInt()
         sphere.shader = RadialGradient(
