@@ -10,6 +10,8 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#addr")).toHaveText(`127.0.0.1:${new URL(server.url).port}`);
     await expect(page.locator("#state")).toHaveText("Tablette non connectée");
     await expect(page.locator("#pairing")).toBeHidden();
+    // Police Cadran servie par le compagnon lui-même (hors ligne).
+    expect(await page.evaluate(async () => (await document.fonts.load("16px Outfit")).length)).toBeGreaterThan(0);
   });
 
   test("reçoit le code affiché par la tablette et la connecte", async ({ page, server }) => {
@@ -26,6 +28,10 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#pairing")).toBeVisible();
     await expect(page.locator("#tablet")).toHaveText("Tablette QA");
     await expect(page.locator("#paircode")).toBeFocused();
+    // Ligne du jour : le point a commencé à avancer sur les 2 minutes du code.
+    const progress = Number(await page.locator("#pairtimer").evaluate((el) => (el as HTMLElement).style.getPropertyValue("--p")));
+    expect(progress).toBeGreaterThanOrEqual(0);
+    expect(progress).toBeLessThan(0.2);
 
     await page.locator("#paircode").fill("000 000" === code ? "111 111" : "000 000");
     await page.getByRole("button", { name: "Connecter la tablette" }).click();

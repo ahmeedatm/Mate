@@ -1,8 +1,11 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvider, loginUrl } from "../accounts.ts";
 import { calendarSources, dayRange, getEvents, invalidateCalendar, saveCalendarUrls, savedCalendarUrls } from "../calendar.ts";
-import { config } from "../config.ts";
+import { backendRoot, config } from "../config.ts";
 import { LOCAL_PAGE } from "../local-page.ts";
+import { WEB_FILES } from "../web-style.ts";
 import { accessibility, openTarget } from "../os.ts";
 import { identity, lanAddresses, pendingCode } from "../pairing.ts";
 import { sendToTablet, tabletStatus, THEMES, type TabletSettings } from "../tablet.ts";
@@ -12,6 +15,13 @@ const SETTINGS = ["theme", "brightness", "volume", "nightDim", "focusDnd"] satis
 /** Page d'accueil locale (ouverte dans le navigateur de l'ordinateur) et connexion des comptes d'agenda. */
 export default async function localRoutes(app: FastifyInstance) {
   app.get("/", async (_req, reply) => reply.type("text/html; charset=utf-8").send(LOCAL_PAGE));
+
+  /** Polices des pages web (web-style.ts) : liste fermée, jamais un chemin venu de la requête. */
+  app.get<{ Params: { file: string } }>("/web/:file", async (req, reply) => {
+    if (!WEB_FILES.includes(req.params.file)) return reply.code(404).send({ error: "Fichier inconnu" });
+    const data = await readFile(path.join(backendRoot, "assets", "web", req.params.file));
+    return reply.type("font/ttf").header("cache-control", "max-age=86400").send(data);
+  });
 
   app.get("/local/status", async () => ({
     ...identity(),

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
+import { WEB_FILES } from "../src/web-style.ts";
 
 /**
  * Installeurs du logiciel de l'ordinateur, sans Node à installer : `npm run package` (Mac ou Linux, dont la CI).
@@ -130,6 +131,7 @@ async function stage(platform: "windows" | "mac", sums: string): Promise<string>
   });
 
   for (const f of CONFIG) copy(path.join(backend, "config", f), path.join(dest, "config", f));
+  for (const f of WEB_FILES) copy(path.join(backend, "assets", "web", f), path.join(dest, "assets", "web", f));
 
   if (platform === "windows") {
     for (const f of ["UnowhyHelper.exe", "UnowhyCompanion.exe"])
