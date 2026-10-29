@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { startServer, type TestServer } from "./server.ts";
 
-type Tile = { id: string; label?: string; app: string | null; empty?: boolean };
+type Tile = { id: string; label?: string; type?: string; app: string | null };
 type Page = { title: string; apps: boolean; editable: boolean; tiles: Tile[] };
 
 let server: TestServer | undefined;
@@ -19,7 +19,8 @@ const start = async (installed: string[] = []) => {
   return server;
 };
 const pages = async (s: TestServer): Promise<Page[]> => (await s.call("GET", "/deck")).json.pages;
-const persoLabels = async (s: TestServer) => (await pages(s)).find((p) => p.editable)!.tiles.flatMap((t) => (t.empty ? [] : [t.label]));
+const persoLabels = async (s: TestServer) =>
+  (await pages(s)).find((p) => p.editable)!.tiles.flatMap((t) => (t.type === "empty" ? [] : [t.label]));
 const taskLabels = async (s: TestServer): Promise<string[]> =>
   (await s.call("GET", "/tasks/recurring")).json.tasks.map((t: { label: string }) => t.label);
 const exists = (s: TestServer, name: string) =>
