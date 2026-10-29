@@ -73,7 +73,7 @@ n'est choisi à l'œil. Valeurs reproductibles avec la skill `direction-artistiq
 | graphique (`c_graphic`) | outline, ajusté à 3:1 : graduations éteintes, piste de la ligne du jour, poignée | `#8C8181` | `#776D6D` |
 | filet (`c_stroke`) | outlineVariant | `#D0C4C3` | `#4D4545` |
 | maintenant (`c_accent`) | rouge Unowhy, palette tonale | `#CA0538` | `#FF5165` (T60) |
-| fond du maintenant (`c_accent_soft`) | T90 / T20 | `#FFDADA` | `#680018` |
+| fond du maintenant (`c_accent_soft`) | T90 / T20, assombri en nuit pour 4,5:1 sous le rouge (4,7) | `#FFDADA` | `#560013` |
 | fait (`c_ok`) | vert Unowhy, palette tonale | `#31685A` (T40) | `#9AD2C1` (T80) |
 
 Contrastes (ratio M3) : rouge sur fond 5,3 en jour et 5,4 en nuit, texte tertiaire au moins 4,5 sur toutes les surfaces, graphique au moins 3, texte secondaire sur tuile 9,3

@@ -445,7 +445,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                 setOnClickListener { t.onClick() }
             }
             moveOnLongPress(tab)
-            tabs.addView(tab, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { marginEnd = dp(8) })
+            tabs.addView(tab, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginEnd = dp(8) })
             if (t.selected) selectedTab = actions.size
             actions += t.onClick
         }

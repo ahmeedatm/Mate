@@ -18,6 +18,7 @@ class Rail(private val activity: Activity, onSelect: (Mode) -> Unit) : Navigatio
     private val items = mutableMapOf<Mode, Item>()
     private val statusDot: View = activity.findViewById(R.id.status_dot)
     private val statusName: TextView = activity.findViewById(R.id.status_name)
+    private val statusState: TextView = activity.findViewById(R.id.status_state)
     override val status: View = activity.findViewById(R.id.status)
 
     /** Commandes vocales : sous les modes, au-dessus de l'état de la tablette. */
@@ -59,6 +60,6 @@ class Rail(private val activity: Activity, onSelect: (Mode) -> Unit) : Navigatio
         badge.visibility = if (count > 0) View.VISIBLE else View.GONE
     }
 
-    /** Pastille de connexion : couleur selon l'état, nom de l'ordinateur actif. */
-    override fun showLink(link: Link) = renderLink(activity, statusDot, statusName, status, link)
+    /** Pastille de connexion : forme et couleur selon l'état, nom de l'ordinateur actif et état écrit. */
+    override fun showLink(link: Link) = renderLink(activity, statusDot, statusName, statusState, status, link)
 }

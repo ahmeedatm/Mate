@@ -155,8 +155,9 @@ class TabStrip @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         return Pair(center - half, center + half)
     }
 
+    // 2 dp en retrait en haut et en bas (comme `chip_bg`) : 44 dp dessinés dans un onglet de 48 dp (cible tactile).
     private fun vertical(child: View): Pair<Float, Float> {
-        val half = child.height * child.scaleY / 2f
+        val half = (child.height / 2f - dp(2)) * child.scaleY
         val center = child.top + child.translationY + child.height / 2f
         return Pair(center - half, center + half)
     }

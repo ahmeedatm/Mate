@@ -72,8 +72,8 @@
 
                 <View
                     android:id="@+id/status_dot"
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
                     android:layout_marginEnd="6dp"
                     android:background="@drawable/dot" />
 
@@ -88,6 +88,15 @@
                     android:textColor="?attr/c_text_faint"
                     android:textSize="11sp" />
             </LinearLayout>
+
+            <!-- État écrit (« hors ligne »…) : la pastille ne le dit pas par sa seule couleur. -->
+            <TextView
+                android:id="@+id/status_state"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:singleLine="true"
+                android:textColor="?attr/c_text_faint"
+                android:textSize="11sp" />
         </LinearLayout>
     </LinearLayout>
 

@@ -61,6 +61,7 @@ import com.unowhy.companion.ui.Navigation
 import com.unowhy.companion.ui.PhotoFrameView
 import com.unowhy.companion.ui.PluginsView
 import com.unowhy.companion.ui.Rail
+import com.unowhy.companion.ui.ReadingAids
 import com.unowhy.companion.ui.SettingsFragment
 import com.unowhy.companion.ui.TabletAlerts
 import com.unowhy.companion.ui.TabletStatusView
@@ -529,10 +530,13 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Notification arrivée sur l'ordinateur (ordre `notification`) : bandeau quel que soit l'écran (sans le texte en
-     * mode discret), et liste de Depuis l'ordi relue si elle est affichée.
+     * mode discret), lu à voix haute si Réglages > Accessibilité le demande, et liste de Depuis l'ordi relue si elle
+     * est affichée.
      */
     fun onNotification(n: PcNotification) {
-        showBanner(notificationBannerText(n, Prefs.notificationsDiscreet(this)), NOTIFICATION_SECONDS)
+        val text = notificationBannerText(n, Prefs.notificationsDiscreet(this))
+        showBanner(text, NOTIFICATION_SECONDS)
+        readAloud(text)
         val computer = supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment
         computer?.onNotification()
         // Pastille sur la cloche, sauf si l'historique est déjà sous les yeux.
@@ -645,6 +649,14 @@ class MainActivity : AppCompatActivity() {
         // Un message de l'ordinateur ou un rappel se lit : le cadre lui laisse la place.
         closeFrame()
         banner.show(text, seconds, onTap)
+    }
+
+    /**
+     * Réglages > Accessibilité > Lire les bandeaux à voix haute : bandeau d'une notification ou d'un message de
+     * l'ordinateur lu par la voix de la tablette. Coupé : rien.
+     */
+    fun readAloud(banner: String) {
+        if (Prefs.readBanners(this)) Speaker.speak(ReadingAids.spoken(banner))
     }
 
     /**

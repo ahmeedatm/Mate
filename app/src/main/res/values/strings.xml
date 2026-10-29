@@ -840,6 +840,13 @@
     <string name="theme_cadran_nuit">Cadran nuit</string>
     <string name="theme_retro">Rétro</string>
     <string name="theme_contraste">Contraste élevé</string>
+    <!-- Accessibilité (lot 2) : aides à la lecture, dans la carte Accessibilité de COMP-50 (ui/ReadingAids.kt) -->
+    <string name="a11y_legible_font">Police lisible</string>
+    <string name="a11y_legible_font_hint">Atkinson Hyperlegible, lettres faciles à distinguer, un peu plus espacées</string>
+    <string name="a11y_reduce_motion">Réduire les animations</string>
+    <string name="a11y_reduce_motion_hint">Plus rien ne bouge en continu (tubes Rétro, voyants des agents), pas de glissés ni de rebonds</string>
+    <string name="a11y_read_banners">Lire les bandeaux à voix haute</string>
+    <string name="a11y_read_banners_hint">Notifications du PC et messages de l\'ordinateur lus par la tablette (en mode discret : appli et titre seulement)</string>
     <string name="tablet_info">Version %1$s · Adresse %2$s · %3$s</string>
     <string name="tablet_no_address">aucune</string>
     <string name="tech_code_title">Code technicien</string>
@@ -1098,4 +1105,21 @@
     <string name="trial_open">Ouvrir l\'essai</string>
     <string name="trial_back">Revenir à la stable</string>
     <string name="trial_hint">Version d\'essai d\'une MR, installée à côté du Companion. Mises à jour, WiFi et kiosque se règlent dans le Companion. Le backend de l\'ordinateur revient à l\'origine quand tu reviens à la stable.</string>
+    <!-- Accessibilité (lot 1) : états écrits en plus de la couleur, noms pour TalkBack -->
+    <string name="link_state_online">en ligne</string>
+    <string name="link_state_unauthorized">non autorisé</string>
+    <string name="link_state_offline">hors ligne</string>
+    <string name="color_default">Couleur par défaut</string>
+    <string name="color_red">Rouge</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_green">Vert</string>
+    <string name="color_blue">Bleu</string>
+    <string name="color_violet">Violet</string>
+    <string name="color_grey">Gris</string>
+    <string name="wifi_weak">WiFi faible</string>
+    <string name="tablet_battery_state_charging">Batterie de la tablette : %1$d %%, en charge</string>
+    <string name="tablet_battery_state_low">Batterie de la tablette faible : %1$d %%</string>
+    <string name="mixer_strip_muted">%1$s, son coupé</string>
+    <string name="perf_level_warn">en alerte</string>
+    <string name="perf_level_critical">critique</string>
 </resources>

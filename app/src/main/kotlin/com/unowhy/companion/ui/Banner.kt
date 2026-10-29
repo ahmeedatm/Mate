@@ -11,6 +11,8 @@ class Banner(private val view: TextView) {
     private var onTap: (() -> Unit)? = null
 
     init {
+        // Annoncé par TalkBack dès qu'il change, sans couper ce qui est en train d'être lu.
+        view.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         view.setOnClickListener {
             hide.run()
             onTap?.invoke()

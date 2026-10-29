@@ -104,13 +104,26 @@ class TabletStatusView @JvmOverloads constructor(context: Context, attrs: Attrib
 
     private fun renderWifi() {
         val signal = Tablet.wifiLevel(context)
-        wifi.setImageResource(if (signal == null) R.drawable.ic_wifi_off else R.drawable.ic_wifi)
+        // Signal faible : arcs estompés en plus de l'ambre (pas la couleur seule).
+        wifi.setImageResource(
+            when {
+                signal == null -> R.drawable.ic_wifi_off
+                signal <= 1 -> R.drawable.ic_wifi_weak
+                else -> R.drawable.ic_wifi
+            },
+        )
         tint(wifi, when {
             signal == null -> R.attr.c_ko
             signal <= 1 -> R.attr.c_warn
             else -> R.attr.c_text_dim
         })
-        wifi.contentDescription = context.getString(if (signal == null) R.string.wifi_off else R.string.wifi_current_unnamed)
+        wifi.contentDescription = context.getString(
+            when {
+                signal == null -> R.string.wifi_off
+                signal <= 1 -> R.string.wifi_weak
+                else -> R.string.wifi_current_unnamed
+            },
+        )
     }
 
     private fun renderBattery(state: Tablet.Battery) {
@@ -129,7 +142,15 @@ class TabletStatusView @JvmOverloads constructor(context: Context, attrs: Attrib
         tint(battery, color)
         level.setTextColor(themeColor(context, color))
         level.text = context.getString(R.string.percent, state.level)
-        contentDescription = context.getString(R.string.tablet_battery_state, state.level)
+        // L'icône dit déjà « en charge » et « faible » ; TalkBack aussi.
+        contentDescription = context.getString(
+            when {
+                state.charging -> R.string.tablet_battery_state_charging
+                state.low -> R.string.tablet_battery_state_low
+                else -> R.string.tablet_battery_state
+            },
+            state.level,
+        )
         onBattery(state)
     }
 

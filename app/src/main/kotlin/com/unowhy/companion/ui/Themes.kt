@@ -27,11 +27,12 @@ enum class AppTheme(val label: Int, val base: Int, val palette: Int, val swatch:
         fun current(context: Context): AppTheme =
             entries.firstOrNull { it.name == Prefs.theme(context) } ?: CADRAN
 
-        /** À appeler avant super.onCreate. */
+        /** À appeler avant super.onCreate. Police lisible (Réglages > Accessibilité) par-dessus la palette. */
         fun apply(activity: Activity) {
             val theme = current(activity)
             activity.setTheme(theme.base)
             activity.theme.applyStyle(theme.palette, true)
+            ReadingAids.applyFont(activity)
         }
     }
 }

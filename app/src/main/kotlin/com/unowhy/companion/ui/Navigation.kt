@@ -3,6 +3,8 @@ package com.unowhy.companion.ui
 import android.app.Activity
 import android.view.View
 import android.widget.TextView
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import com.unowhy.companion.Mode
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.FocusTimer
@@ -35,20 +37,47 @@ internal fun focusRemaining(state: FocusTimer.State): String? =
 internal fun focusLabel(activity: Activity, state: FocusTimer.State): String =
     focusRemaining(state) ?: activity.getString(R.string.mode_focus)
 
-/** Pastille de connexion : couleur selon l'état (`offline` : celle de l'injoignable), nom de l'ordinateur actif. */
-internal fun renderLink(activity: Activity, dot: View, name: TextView, status: View, link: Link, offline: Int = R.attr.c_ko) {
+/** Forme de la pastille de connexion : l'état se lit sans la couleur (vert et rouge ont la même luminance). */
+internal enum class LinkShape(@DrawableRes val drawable: Int) {
+    /** Pleine : l'ordinateur répond. */
+    FILLED(R.drawable.dot),
+
+    /** Anneau : il répond mais refuse le jeton. */
+    RING(R.drawable.dot_ring),
+
+    /** Croix : injoignable, ou aucun ordinateur. */
+    CROSS(R.drawable.dot_cross),
+}
+
+/**
+ * Ce que montre la pastille d'un état : sa forme, l'état écrit à côté du nom (« en ligne »… ; null sans ordinateur :
+ * le nom dit déjà « Aucun ») et la phrase lue par TalkBack.
+ */
+internal data class LinkMark(val shape: LinkShape, @StringRes val label: Int?, @StringRes val spoken: Int)
+
+internal fun linkMark(state: Link.State): LinkMark = when (state) {
+    Link.State.ONLINE -> LinkMark(LinkShape.FILLED, R.string.link_state_online, R.string.online)
+    Link.State.UNAUTHORIZED -> LinkMark(LinkShape.RING, R.string.link_state_unauthorized, R.string.unauthorized)
+    Link.State.OFFLINE -> LinkMark(LinkShape.CROSS, R.string.link_state_offline, R.string.offline)
+    Link.State.NONE -> LinkMark(LinkShape.CROSS, null, R.string.no_computer)
+}
+
+/**
+ * Pastille de connexion : forme et couleur selon l'état (`offline` : couleur de l'injoignable), nom de l'ordinateur
+ * actif et, dans `stateText`, l'état écrit.
+ */
+internal fun renderLink(activity: Activity, dot: View, name: TextView, stateText: TextView, status: View, link: Link, offline: Int = R.attr.c_ko) {
     val color = when (link.state) {
         Link.State.ONLINE -> R.attr.c_ok
         Link.State.UNAUTHORIZED -> R.attr.c_warn
         else -> offline
     }
+    val mark = linkMark(link.state)
+    dot.setBackgroundResource(mark.shape.drawable)
     dot.background.mutate().setTint(themeColor(activity, color))
     name.text = link.computer?.name ?: activity.getString(R.string.no_computer_short)
-    val state = when (link.state) {
-        Link.State.ONLINE -> R.string.online
-        Link.State.UNAUTHORIZED -> R.string.unauthorized
-        Link.State.OFFLINE -> R.string.offline
-        Link.State.NONE -> R.string.no_computer
-    }
-    status.contentDescription = activity.getString(state)
+    stateText.text = mark.label?.let { activity.getString(it) }
+    stateText.visibility = if (mark.label == null) View.GONE else View.VISIBLE
+    val spoken = activity.getString(mark.spoken)
+    status.contentDescription = link.computer?.name?.let { "$it, $spoken" } ?: spoken
 }

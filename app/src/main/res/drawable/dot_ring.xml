@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pastille de connexion « non autorisé » : anneau (la forme dit l'état sans la couleur). Teinte posée dans le code. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval"><solid android:color="@android:color/transparent" /><stroke android:width="2dp" android:color="?attr/c_text_dim" /></shape>

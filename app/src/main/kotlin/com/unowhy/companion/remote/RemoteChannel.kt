@@ -118,8 +118,11 @@ class RemoteChannel(private val activity: MainActivity) {
         "message" -> {
             val text = command.getString("text")
             activity.showBanner(text, command.optInt("seconds", 10))
-            if (command.optBoolean("speak") && !Speaker.speak(text)) {
-                error("Message affiché, mais la synthèse vocale est indisponible (pas de voix française ?)")
+            if (command.optBoolean("speak")) {
+                if (!Speaker.speak(text)) error("Message affiché, mais la synthèse vocale est indisponible (pas de voix française ?)")
+            } else {
+                // Réglages > Accessibilité > Lire les bandeaux : lu aussi sans `speak` (une seule fois avec).
+                activity.readAloud(text)
             }
             null
         }

@@ -135,6 +135,7 @@ class SettingsFragment : Fragment() {
         setUpTablet()
         setUpThemes(view.findViewById(R.id.settings_themes))
         setUpAccessibility(view)
+        setUpReadingAids(view)
         renderComputers()
         renderWifi()
         renderSwitchApp()
@@ -371,6 +372,30 @@ class SettingsFragment : Fragment() {
                 }
             }
             row.addView(chip, LinearLayout.LayoutParams(0, dp(48), 1f).apply { if (row.childCount > 0) marginStart = dp(10) })
+        }
+    }
+
+    /**
+     * Accessibilité, aides à la lecture (ui/ReadingAids.kt) : interrupteurs sous la taille du texte. Police et animations
+     * s'appliquent à la création de l'activité (AppTheme.apply, vues animées) : les changer la recrée, comme le thème.
+     * Les bandeaux lus sont relus à chaque bandeau.
+     */
+    private fun setUpReadingAids(view: View) {
+        val ctx = requireContext()
+        fun recreating(id: Int, get: (android.content.Context) -> Boolean, set: (android.content.Context, Boolean) -> Unit) {
+            view.findViewById<SwitchCompat>(id).apply {
+                isChecked = get(ctx)
+                setOnCheckedChangeListener { _, checked ->
+                    set(ctx, checked)
+                    requireActivity().recreate()
+                }
+            }
+        }
+        recreating(R.id.settings_legible_font, Prefs::legibleFont, Prefs::setLegibleFont)
+        recreating(R.id.settings_reduce_motion, Prefs::reduceMotion, Prefs::setReduceMotion)
+        view.findViewById<SwitchCompat>(R.id.settings_read_banners).apply {
+            isChecked = Prefs.readBanners(ctx)
+            setOnCheckedChangeListener { _, checked -> Prefs.setReadBanners(ctx, checked) }
         }
     }
 

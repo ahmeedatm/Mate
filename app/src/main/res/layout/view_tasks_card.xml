@@ -25,18 +25,18 @@
         <ImageButton
             android:id="@+id/tasks_recurring"
             style="@style/IconButton.Flat"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:padding="9dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="13dp"
             android:contentDescription="@string/tasks_recurring"
             android:src="@drawable/ic_repeat" />
 
         <ImageButton
             android:id="@+id/tasks_refresh"
             style="@style/IconButton.Flat"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:padding="9dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="13dp"
             android:contentDescription="@string/refresh"
             android:src="@drawable/ic_refresh" />
     </LinearLayout>
