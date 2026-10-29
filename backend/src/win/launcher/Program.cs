@@ -1,11 +1,11 @@
-// Compagnon Unowhy sous Windows : un seul exe, sans installation. Le runtime (node, serveur, pilote, config) est un zip
-// ajouté en fin de fichier (scripts/package.ts). Au lancement, l'exe l'extrait dans %LOCALAPPDATA%\UnowhyCompanion\runtime
+// UnoMate sous Windows : un seul exe, sans installation. Le runtime (node, serveur, pilote, config) est un zip
+// ajouté en fin de fichier (scripts/package.ts). Au lancement, l'exe l'extrait dans %LOCALAPPDATA%\UnoMate\runtime
 // (chemin stable, l'exe lui-même n'est jamais verrouillé par node), lance le serveur, le relance s'il s'arrête, et
 // ouvre le panneau (page locale). Rien n'est inscrit dans Windows : le lancement au démarrage se coche dans le panneau.
 // Programme sans fenêtre : pas de PowerShell caché, que les antivirus prennent pour un logiciel malveillant.
 //
-//   UnowhyCompanion.exe [--demarrage]          appli portable ; --demarrage : ouverture de session, sans ouvrir la page
-//   UnowhyCompanion.exe --node <node.exe> --backend <dossier backend> --logs <dossier> --data <dossier>
+//   UnoMate.exe [--demarrage]          appli portable ; --demarrage : ouverture de session, sans ouvrir la page
+//   UnoMate.exe --node <node.exe> --backend <dossier backend> --logs <dossier> --data <dossier>
 //                                              lancé depuis le dépôt par scripts/service.ts : relance seulement
 //
 // Sortie du serveur : 75 = quitter (panneau), 76 = quitter et effacer le runtime (« tout oublier »), autre = relancer.
@@ -26,7 +26,7 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace Companion
+namespace UnoMate
 {
     static class Launcher
     {
@@ -50,7 +50,7 @@ namespace Companion
 
         static void Alert(string text)
         {
-            if (!Headless) MessageBox(IntPtr.Zero, text, "Compagnon Unowhy", 0x10);
+            if (!Headless) MessageBox(IntPtr.Zero, text, "UnoMate", 0x10);
         }
 
         static int Main(string[] argv)
@@ -72,7 +72,7 @@ namespace Companion
         static int Portable(bool startup)
         {
             var self = Assembly.GetExecutingAssembly().Location;
-            var root = Path.Combine(Environment.GetEnvironmentVariable("LOCALAPPDATA") ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "UnowhyCompanion");
+            var root = Path.Combine(Environment.GetEnvironmentVariable("LOCALAPPDATA") ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "UnoMate");
             var runtime = Environment.GetEnvironmentVariable("COMPANION_RUNTIME_DIR");
             if (string.IsNullOrEmpty(runtime)) runtime = Path.Combine(root, "runtime");
             var data = Path.Combine(root, "data");
@@ -82,7 +82,7 @@ namespace Companion
             var zip = OpenPayload(self, out stamp);
             if (zip == null)
             {
-                Alert("Cet exécutable ne contient pas le compagnon : télécharge « Compagnon-Unowhy-Windows.exe » depuis la tablette.");
+                Alert("Cet exécutable ne contient pas le compagnon : télécharge « UnoMate-Windows.exe » depuis la tablette.");
                 return 2;
             }
 

@@ -9,7 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
-namespace Companion
+namespace UnoMate
 {
     public static partial class Native
     {

@@ -9,13 +9,13 @@
     android:gravity="center_vertical"
     android:orientation="horizontal">
 
-    <com.unowhy.companion.ui.TaskCheck
+    <com.unowhy.unomate.ui.TaskCheck
         android:id="@+id/task_check"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_marginEnd="-12dp" />
 
-    <com.unowhy.companion.ui.StrikeText
+    <com.unowhy.unomate.ui.StrikeText
         android:id="@+id/task_label"
         android:layout_width="0dp"
         android:layout_height="wrap_content"

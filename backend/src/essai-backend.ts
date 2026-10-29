@@ -30,7 +30,7 @@ const ORIGIN = "backend-origin";
 /** Remplacés par l'essai. Pas node/ (verrouillé en marche) ni .env, .cache : à l'ordinateur. */
 const MANAGED = ["dist", "src", "scripts", "assets", "config"];
 /** Le lanceur Windows est verrouillé tant que le compagnon tourne. */
-const LOCKED = ["src/win/UnowhyCompanion.exe"];
+const LOCKED = ["src/win/UnoMate.exe"];
 /** Données de l'ordinateur dans config/ : jamais copiées ni remplacées. */
 const USER_FILES = ["config/deck.json", "config/tasks.json"];
 

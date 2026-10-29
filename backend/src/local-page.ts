@@ -1,7 +1,7 @@
 import { CADRAN_CSS, FAVICON, ICON_SVG } from "./web-style.ts";
 
 /**
- * Page http://127.0.0.1:3000/ ouverte sur l'ordinateur (le panneau de l'appli : relancer « Compagnon Unowhy » la rouvre) :
+ * Page http://127.0.0.1:3000/ ouverte sur l'ordinateur (le panneau de l'appli : relancer « UnoMate » la rouvre) :
  * état du compagnon, marche à suivre sur la tablette, réglages de la tablette connectée (thème, écran, son), la case
  * où saisir le code d'appairage affiché par la tablette, et la carte « Cette appli » (lancement au démarrage,
  * pare-feu, ancienne installation, mise à jour, quitter, tout oublier).
@@ -12,7 +12,7 @@ export const LOCAL_PAGE = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Compagnon Unowhy</title>
+<title>UnoMate</title>
 ${FAVICON}
 <style>
   ${CADRAN_CSS}
@@ -85,7 +85,7 @@ ${FAVICON}
 </head>
 <body>
 <main>
-  <header><span class="logo">${ICON_SVG}</span><div><h1 id="name">Compagnon Unowhy</h1><p id="os"></p></div></header>
+  <header><span class="logo">${ICON_SVG}</span><div><h1 id="name">UnoMate</h1><p id="os"></p></div></header>
 
   <!-- Mac sans l'autorisation Accessibilité : fenêtres et raccourcis du deck ne marchent pas encore. -->
   <div class="card warn" id="access" hidden>
@@ -176,7 +176,7 @@ ${FAVICON}
     <div class="card">
       <div class="dim" id="appinfo"></div>
       <div class="row"><label for="autostart">Lancer au démarrage de l'ordinateur</label><input type="checkbox" id="autostart"></div>
-      <div class="dim">Rien n'est inscrit tant que la case n'est pas cochée. Sinon, rouvre « Compagnon Unowhy » quand tu en as besoin.</div>
+      <div class="dim">Rien n'est inscrit tant que la case n'est pas cochée. Sinon, rouvre « UnoMate » quand tu en as besoin.</div>
       <div id="firewallrow" hidden>
         <div class="row"><span class="grow" id="firewallstate"></span><button id="firewallopen">Ouvrir le pare-feu</button></div>
         <div class="dim">Réseaux privés seulement. Windows demande l'accord d'un administrateur.</div>
@@ -222,7 +222,7 @@ ${FAVICON}
       renderAccounts(c);
       renderGitlab(s.gitlab);
       renderTablet(s.tabletInfo);
-      document.title = s.tabletInfo ? "Compagnon · " + (s.tabletInfo.name || "tablette") : "Compagnon Unowhy";
+      document.title = s.tabletInfo ? "Compagnon · " + (s.tabletInfo.name || "tablette") : "UnoMate";
       const p = s.pairing, card = document.getElementById("pairing");
       const shown = card.style.display === "block";
       card.style.display = p ? "block" : "none";
@@ -521,7 +521,7 @@ ${FAVICON}
     $("appupdatestate").textContent = r.available ? "Version " + r.available + " sur la tablette (tu as la " + r.current + ")." : "À jour (version " + r.current + ").";
   });
   $("updateinstall").onclick = () => act(() => post("/local/update"), (r) => "Version " + r.version + " téléchargée : l'appli redémarre, la page se recharge.", true);
-  $("quit").onclick = () => act(() => post("/local/quit"), () => "Compagnon arrêté. Rouvre « Compagnon Unowhy » pour le relancer.", true);
+  $("quit").onclick = () => act(() => post("/local/quit"), () => "Compagnon arrêté. Rouvre « UnoMate » pour le relancer.", true);
   $("forget").onclick = () => {
     if (confirm("Tout oublier ? La tablette devra être appairée à nouveau, l'agenda et les tâches de cet ordinateur sont effacés.")) {
       act(() => post("/local/forget", { sure: true }), () => "Tout est oublié. Tu peux supprimer l'appli.", true);

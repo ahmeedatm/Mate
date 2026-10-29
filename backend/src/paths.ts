@@ -16,8 +16,8 @@ export const packaged = import.meta.url.endsWith(".mjs");
 /** Données du paquet hors du dossier extrait : une nouvelle version (autre dossier) les retrouve. */
 function appDataDir() {
   return process.platform === "win32"
-    ? path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), "AppData", "Local"), "UnowhyCompanion", "data")
-    : path.join(os.homedir(), "Library", "Application Support", "UnowhyCompanion");
+    ? path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), "AppData", "Local"), "UnoMate", "data")
+    : path.join(os.homedir(), "Library", "Application Support", "UnoMate");
 }
 
 // DATA_DIR : autre dossier de données (tests : deux « ordinateurs » sur la même machine) ; « paquet » = celles du
@@ -59,7 +59,7 @@ export function userFolder(kind: "Personal" | "Desktop" | "Programs", fallback: 
 
 /**
  * Dossier partagé avec la tablette : dans Documents pour le paquet (gardé d'une version à l'autre), à la racine du dépôt en dev.
- * Pas « Compagnon Unowhy » : c'est le nom du dossier du zip, souvent extrait dans Documents.
+ * Pas « UnoMate » : c'est le nom du dossier du zip, souvent extrait dans Documents.
  */
 export function sharedDir(): string {
   const old = path.resolve(backendRoot, "..", "shared");

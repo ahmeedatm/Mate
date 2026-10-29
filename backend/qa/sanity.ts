@@ -560,7 +560,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       run: async () => {
         const page = await call("GET", "/", undefined, local ? false : true);
         expectStatus(page, 200, "/");
-        expect(/<title>Compagnon Unowhy<\/title>/.test(page.json), "page locale inattendue");
+        expect(/<title>UnoMate<\/title>/.test(page.json), "page locale inattendue");
         const status = await call("GET", "/local/status");
         expectStatus(status, 200, "/local/status");
         expect(Array.isArray(status.json.addresses) && status.json.addresses.length > 0, "aucune adresse affichée");
@@ -575,7 +575,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       run: async () => {
         const res = await call("GET", "/local/confidentialite", undefined, local ? false : true);
         expectStatus(res, 200, "/local/confidentialite");
-        expect(String(res.json).startsWith("Companion Unowhy : politique de confidentialité"), "politique de confidentialité inattendue");
+        expect(String(res.json).startsWith("UnoMate : politique de confidentialité"), "politique de confidentialité inattendue");
       },
     },
     {
@@ -590,7 +590,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         }
         expectStatus(res, 200, "/local/licences");
         const text = String(res.json);
-        expect(text.startsWith("Compagnon Unowhy : composants tiers et licences"), "fichier de licences inattendu");
+        expect(text.startsWith("UnoMate : composants tiers et licences"), "fichier de licences inattendu");
         expect(/^- Node\.js v/m.test(text) && /^- fastify /m.test(text), "node ou fastify absents des licences");
         return `${text.split("\n").filter((l) => /^- /.test(l)).length} lignes de composants`;
       },

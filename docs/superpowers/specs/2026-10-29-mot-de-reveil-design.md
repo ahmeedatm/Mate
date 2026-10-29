@@ -12,7 +12,7 @@ Android, `VoiceCommands`, exécution) ne change pas.
 
 - Le mot est **« Mate »** (« Hey Mate » / « Hé Mate » aussi).
 - Proposition de Claude acceptée :
-  - à l'écoute seulement quand Companion est à l'écran et l'écran allumé ; rien en arrière-plan ;
+  - à l'écoute seulement quand UnoMate est à l'écran et l'écran allumé ; rien en arrière-plan ;
   - reconnaissance du mot sur la tablette, hors ligne ; rien ne part avant « Mate » ;
   - un voyant toujours visible quand la tablette écoute, qui s'allume franchement quand elle a entendu « Mate » ;
   - pause automatique quand le micro sert déjà (commande vocale en cours, dictée du presse-papiers, caméra, appel) ;

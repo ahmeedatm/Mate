@@ -33,7 +33,7 @@ test("connecter, voir le compte, déconnecter", async ({ page }) => {
   await expect(card.locator("#gitlabstate")).toHaveText("Pas connecté.");
 
   await card.getByRole("link", { name: "Se connecter avec GitLab" }).click();
-  await expect(page.getByRole("heading", { name: "Autoriser Unowhy Companion ?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Autoriser UnoMate ?" })).toBeVisible();
   await page.getByRole("link", { name: "Autoriser" }).click();
 
   await expect(page).toHaveURL(/\/\?section=gitlab&gitlab=ok$/);

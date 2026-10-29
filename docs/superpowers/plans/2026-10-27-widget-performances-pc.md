@@ -167,7 +167,7 @@ it("GET /system/perf garde les champs gpu fournis", async () => { /* FakeState.p
 **Files :**
 - Create : `backend/src/win/helper/Native.Perf.cs` (classe partielle `Native`, comme `Native.AppAudio.cs`)
 - Modify : `backend/src/win/helper/Native.cs:56` (ajouter `case "perf": return Perf(req);` dans `Dispatch`)
-- Regenerate : `backend/src/win/UnowhyHelper.exe` (et `UnowhyCompanion.exe` si la compilation le change)
+- Regenerate : `backend/src/win/UnowhyHelper.exe` (et `UnoMate.exe` si la compilation le change)
 
 **Interfaces :**
 - Consumes : protocole JSON ligne à ligne de `helper.ts` (`call("perf", { detail? })`).
@@ -210,10 +210,10 @@ Choix fixés (le reste au développeur) :
 ### Task 4 : API de la tablette et logique pure du widget
 
 **Files :**
-- Modify : `app/src/main/kotlin/com/unowhy/companion/net/SystemApi.kt`
-- Create : `app/src/main/kotlin/com/unowhy/companion/ui/home/PerfModel.kt`
-- Test : `app/src/test/kotlin/com/unowhy/companion/net/SystemApiPerfTest.kt`
-- Test : `app/src/test/kotlin/com/unowhy/companion/ui/home/PerfModelTest.kt`
+- Modify : `app/src/main/kotlin/com/unowhy/unomate/net/SystemApi.kt`
+- Create : `app/src/main/kotlin/com/unowhy/unomate/ui/home/PerfModel.kt`
+- Test : `app/src/test/kotlin/com/unowhy/unomate/net/SystemApiPerfTest.kt`
+- Test : `app/src/test/kotlin/com/unowhy/unomate/ui/home/PerfModelTest.kt`
 
 **Interfaces :**
 - Consumes : JSON de `GET /system/perf` (Task 2).
@@ -249,10 +249,10 @@ Choix fixés (le reste au développeur) :
 ### Task 5 : le widget `PerfWidget` (trois vues)
 
 **Files :**
-- Create : `app/src/main/kotlin/com/unowhy/companion/ui/home/PerfWidget.kt` (widget + petites vues dessinées : jauge
+- Create : `app/src/main/kotlin/com/unowhy/unomate/ui/home/PerfWidget.kt` (widget + petites vues dessinées : jauge
   ronde, courbe, barre)
-- Modify : `app/src/main/kotlin/com/unowhy/companion/ui/home/WidgetModel.kt` (entrée `PERF` après `MEDIA`)
-- Modify : `app/src/main/kotlin/com/unowhy/companion/ui/home/HomeWidgets.kt` (`create` : `WidgetType.PERF -> PerfWidget(...)`)
+- Modify : `app/src/main/kotlin/com/unowhy/unomate/ui/home/WidgetModel.kt` (entrée `PERF` après `MEDIA`)
+- Modify : `app/src/main/kotlin/com/unowhy/unomate/ui/home/HomeWidgets.kt` (`create` : `WidgetType.PERF -> PerfWidget(...)`)
 - Modify : `app/src/main/res/values/strings.xml`
 - Create : `app/src/main/res/drawable/ic_speed.xml` (icône Material « speed », même format que les autres `ic_*`)
 

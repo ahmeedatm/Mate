@@ -9,7 +9,7 @@
     android:paddingBottom="8dp">
 
     <!-- La sphère prend toute la place libre, sans cadre ; la consigne en dessous, lisible quelle que soit sa taille. -->
-    <com.unowhy.companion.ui.BreathingView
+    <com.unowhy.unomate.ui.BreathingView
         android:id="@+id/breath_waves"
         android:layout_width="match_parent"
         android:layout_height="0dp"

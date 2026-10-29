@@ -15,8 +15,8 @@ import { WEB_FILES } from "../src/web-style.ts";
  * UnowhyHelper.exe…), l'extension du navigateur et le node officiel de nodejs.org (signé par l'OpenJS Foundation),
  * vérifié par sa somme SHA-256. Au premier lancement, le runtime est extrait dans le dossier de l'utilisateur.
  *
- *   ../dist/Compagnon-Unowhy-Windows.exe   le lanceur (src/win/UnowhyCompanion.exe) suivi du zip du runtime, node.exe x64
- *   ../dist/Compagnon-Unowhy-Mac.zip       « Compagnon Unowhy.app » (portable/mac/), node Apple Silicon et Intel
+ *   ../dist/UnoMate-Windows.exe   le lanceur (src/win/UnoMate.exe) suivi du zip du runtime, node.exe x64
+ *   ../dist/UnoMate-Mac.zip       « UnoMate.app » (portable/mac/), node Apple Silicon et Intel
  * `npm run package -- windows` ou `-- mac` : un seul des deux. Version : tag de la CI (CI_COMMIT_TAG), sinon 0.0.0.
  *
  * `npm run package -- essai` : seulement le backend de chaque plateforme, sans node ni lanceur Windows, en
@@ -31,7 +31,7 @@ const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const repo = path.resolve(backend, "..");
 const out = path.join(repo, "dist");
 const cache = path.join(backend, ".cache", "node");
-const FOLDER = "Compagnon Unowhy";
+const FOLDER = "UnoMate";
 const VERSION = /^v\d+\.\d+\.\d+$/.test(process.env.CI_COMMIT_TAG ?? "") ? process.env.CI_COMMIT_TAG!.slice(1) : "0.0.0";
 
 /** Fichiers de config livrés : pas deck.json ni tasks.json (données de l'ordinateur, créées sur place). */
@@ -93,7 +93,7 @@ function infoPlist(): string {
   const keys: [string, string | boolean][] = [
     ["CFBundleName", FOLDER],
     ["CFBundleDisplayName", FOLDER],
-    ["CFBundleIdentifier", "com.unowhy.companion.app"],
+    ["CFBundleIdentifier", "com.unowhy.unomate.app"],
     ["CFBundleExecutable", FOLDER],
     ["CFBundleIconFile", "compagnon"],
     ["CFBundlePackageType", "APPL"],
@@ -205,14 +205,14 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
     const trailer = Buffer.alloc(16);
     trailer.writeBigInt64LE(BigInt(payload.length), 0);
     trailer.write("UNOWHYZ1", 8, "ascii");
-    const exe = path.join(out, "Compagnon-Unowhy-Windows.exe");
+    const exe = path.join(out, "UnoMate-Windows.exe");
     fs.rmSync(exe, { force: true });
-    fs.writeFileSync(exe, Buffer.concat([fs.readFileSync(path.join(backend, "src", "win", "UnowhyCompanion.exe")), payload, trailer]));
+    fs.writeFileSync(exe, Buffer.concat([fs.readFileSync(path.join(backend, "src", "win", "UnoMate.exe")), payload, trailer]));
     return exe;
   }
 
   // zip (Info-ZIP) : lisible par le Finder, droits d'exécution gardés, sans __MACOSX.
-  const zip = path.join(out, "Compagnon-Unowhy-Mac.zip");
+  const zip = path.join(out, "UnoMate-Mac.zip");
   fs.rmSync(zip, { force: true });
   execFileSync("zip", ["-r", "-q", zip, FOLDER, "-x", "*.DS_Store"], { cwd: path.join(out, platform) });
   return zip;

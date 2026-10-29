@@ -84,7 +84,7 @@ final class Controller: NSObject {
       }
       DispatchQueue.main.async {
         self.status = next
-        self.item.button?.toolTip = "Compagnon Unowhy · " + self.summary()
+        self.item.button?.toolTip = "UnoMate · " + self.summary()
       }
     }.resume()
   }

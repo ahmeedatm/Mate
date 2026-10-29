@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Web.Script.Serialization;
 
-namespace Companion
+namespace UnoMate
 {
     public static partial class Native
     {

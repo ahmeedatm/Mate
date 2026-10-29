@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
-namespace Companion
+namespace UnoMate
 {
     public static partial class Native
     {

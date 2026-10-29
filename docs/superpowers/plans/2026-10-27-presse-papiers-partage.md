@@ -116,9 +116,9 @@ contenu), le pilote continue.
 
 ### Task 3 : tablette — API et logique pure
 
-**Files :** Modify `app/src/main/kotlin/com/unowhy/companion/net/SystemApi.kt` ; Create
-`app/src/main/kotlin/com/unowhy/companion/ui/ClipboardModel.kt` ; Modify
-`app/src/main/kotlin/com/unowhy/companion/voice/VoiceCommands.kt` ; Tests `app/src/test/.../net/ClipboardApiTest.kt`,
+**Files :** Modify `app/src/main/kotlin/com/unowhy/unomate/net/SystemApi.kt` ; Create
+`app/src/main/kotlin/com/unowhy/unomate/ui/ClipboardModel.kt` ; Modify
+`app/src/main/kotlin/com/unowhy/unomate/voice/VoiceCommands.kt` ; Tests `app/src/test/.../net/ClipboardApiTest.kt`,
 `app/src/test/.../ui/ClipboardModelTest.kt`, `app/src/test/.../voice/` (fichier de test existant des commandes vocales).
 
 **Interfaces (produites) :**

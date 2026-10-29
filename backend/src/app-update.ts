@@ -143,7 +143,7 @@ export async function installUpdate(current: string): Promise<{ version: string;
   return { version: installer.version, launch: () => spawn("open", [appPath!], { detached: true, stdio: "ignore" }).unref() };
 }
 
-/** « Compagnon Unowhy.app » dans le zip, à la racine ou dans son dossier. */
+/** « UnoMate.app » dans le zip, à la racine ou dans son dossier. */
 function findApp(dir: string): string | undefined {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);

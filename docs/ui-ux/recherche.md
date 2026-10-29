@@ -78,7 +78,7 @@ faisaient « générées » : couleurs et polices choisies à l'œil, pas de des
 | `TransitionManager`, `MotionLayout` | relayout, lourd | oui / oui | éviter |
 | `RenderEffect` (flou, glow) | GPU | API 31+ | indisponible |
 
-Mesure : `adb shell dumpsys gfxinfo com.unowhy.companion reset`, faire le geste, puis `dumpsys gfxinfo com.unowhy.companion` (images saccadées, 90e centile) ; [doc dumpsys](https://developer.android.com/tools/dumpsys), [rendu lent](https://developer.android.com/topic/performance/vitals/render). L'émulateur rend sur le GPU du Mac : il valide l'absence de relayout, pas les 60 i/s. Seule la vraie tablette tranche ; le skill `android-profiler` de Google lit les traces Perfetto.
+Mesure : `adb shell dumpsys gfxinfo com.unowhy.unomate reset`, faire le geste, puis `dumpsys gfxinfo com.unowhy.unomate` (images saccadées, 90e centile) ; [doc dumpsys](https://developer.android.com/tools/dumpsys), [rendu lent](https://developer.android.com/topic/performance/vitals/render). L'émulateur rend sur le GPU du Mac : il valide l'absence de relayout, pas les 60 i/s. Seule la vraie tablette tranche ; le skill `android-profiler` de Google lit les traces Perfetto.
 
 ## Polices sur Android
 

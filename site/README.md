@@ -8,8 +8,8 @@ Page statique, sans build.
 
 Pour le bucket, les deux installeurs sont à déposer à la main dans `downloads/` (ignorés par git ; l'image les récupère seule) :
 
-- `downloads/Compagnon-Unowhy-Mac.zip`
-- `downloads/Compagnon-Unowhy-Windows.exe`
+- `downloads/UnoMate-Mac.zip`
+- `downloads/UnoMate-Windows.exe`
 
 Ce sont les fichiers de la release (`npm run package`, paquet `companion-updates/latest`).
 

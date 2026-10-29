@@ -5,7 +5,7 @@ import path from "node:path";
 import { backendRoot, dataDir, userFolder } from "./paths.ts";
 
 /**
- * Appli portable (un seul .exe sous Windows, « Compagnon Unowhy.app » sous Mac) : rien n'est installé ni inscrit. Le
+ * Appli portable (un seul .exe sous Windows, « UnoMate.app » sous Mac) : rien n'est installé ni inscrit. Le
  * lanceur extrait le runtime dans le dossier de l'utilisateur et pose `COMPANION_APP` (chemin de l'exe ou de l'appli).
  * Ce module porte ce que le panneau (page locale) change sur l'ordinateur : lancement au démarrage, pare-feu, ancienne
  * installation, tout oublier. Rien n'est fait de lui-même : chaque fonction répond à un bouton.
@@ -23,13 +23,14 @@ export const FORGET_CODE = 76;
 
 /** Instance de test (qa/) : sa propre entrée de démarrage, celle du vrai compagnon n'est pas touchée. */
 const LABEL = process.env.COMPANION_LABEL || "";
-const MAC_LABEL = LABEL || "com.unowhy.companion.demarrage";
+const MAC_LABEL = LABEL || "com.unowhy.unomate.demarrage";
 const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-const RUN_VALUE = LABEL || "UnowhyCompanion";
+const RUN_VALUE = LABEL || "UnoMate";
 const UNINSTALL_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\UnowhyCompanion";
 const LEGACY_MAC_LABEL = "com.unowhy.companion";
-const SHORTCUT = "Compagnon Unowhy";
-const FIREWALL_RULE = "Compagnon Unowhy";
+const LEGACY_RUN_VALUE = LABEL || "UnowhyCompanion";
+const LEGACY_SHORTCUT = "Compagnon Unowhy";
+const FIREWALL_RULE = "UnoMate";
 const home = os.homedir();
 const reg = async (args: string[]) => void (await sh("reg", args));
 
@@ -73,7 +74,7 @@ export function macLaunchAgent(label: string, executable: string): string {
 export const isLegacyMacAgent = (plist: string) => plist.includes("Contents/Resources/backend");
 export const isLegacyRun = (value: string) => value.includes("--backend") && /\\node\\node\.exe/i.test(value);
 
-const macExecutable = () => path.join(appPath!, "Contents", "MacOS", "Compagnon Unowhy");
+const macExecutable = () => path.join(appPath!, "Contents", "MacOS", "UnoMate");
 const macPlist = (label: string) => path.join(home, "Library", "LaunchAgents", `${label}.plist`);
 
 // --- Lancement au démarrage
@@ -102,7 +103,7 @@ export async function setAutostart(on: boolean) {
 const firewallScript = path.join(backendRoot, "scripts", "firewall-windows.ps1");
 let firewallCache: { value: boolean; at: number } | undefined;
 
-/** Règle « Compagnon Unowhy » visant le node de ce runtime. Lue par netsh (pas de PowerShell), gardée 15 s. */
+/** Règle « UnoMate » visant le node de ce runtime. Lue par netsh (pas de PowerShell), gardée 15 s. */
 export async function firewallOpen(): Promise<boolean | null> {
   if (!isWindows) return null;
   if (firewallCache && Date.now() - firewallCache.at < 15_000) return firewallCache.value;
@@ -147,16 +148,16 @@ async function leftovers(): Promise<Leftover[]> {
     const stamp = path.join(dataDir, "app-Info.plist");
     if (fs.existsSync(stamp)) found.push({ label: "repère de l'ancien installeur", remove: () => rm(stamp) });
     // Raccourci de l'ancien installeur : retiré avec lui seulement (le dépôt en pose aussi, vers la même page).
-    const webloc = path.join(home, "Desktop", `${SHORTCUT}.webloc`);
+    const webloc = path.join(home, "Desktop", `${LEGACY_SHORTCUT}.webloc`);
     if (found.length > 0 && fs.existsSync(webloc)) found.push({ label: "raccourci du Bureau", remove: () => rm(webloc) });
     return found;
   }
 
-  const run = await sh("reg", ["query", RUN_KEY, "/v", RUN_VALUE]);
+  const run = await sh("reg", ["query", RUN_KEY, "/v", LEGACY_RUN_VALUE]);
   if (run.ok && isLegacyRun(run.out)) {
     found.push({
       label: "lancement automatique de l'ancienne installation",
-      remove: () => reg(["delete", RUN_KEY, "/v", RUN_VALUE, "/f"]),
+      remove: () => reg(["delete", RUN_KEY, "/v", LEGACY_RUN_VALUE, "/f"]),
     });
   }
   if ((await sh("reg", ["query", UNINSTALL_KEY])).ok) {
@@ -174,13 +175,13 @@ async function leftovers(): Promise<Leftover[]> {
     found.push({ label: `dossier ${installed}`, remove: () => rm(installed) });
   }
   const shortcuts = [
-    path.join(userFolder("Desktop", path.join(home, "Desktop")), `${SHORTCUT}.url`),
+    path.join(userFolder("Desktop", path.join(home, "Desktop")), `${LEGACY_SHORTCUT}.url`),
     path.join(
       userFolder(
         "Programs",
         path.join(process.env.APPDATA ?? path.join(home, "AppData", "Roaming"), "Microsoft", "Windows", "Start Menu", "Programs"),
       ),
-      `${SHORTCUT}.url`,
+      `${LEGACY_SHORTCUT}.url`,
     ),
   ].filter((f) => fs.existsSync(f));
   if (found.length > 0) for (const f of shortcuts) found.push({ label: `raccourci ${path.basename(f)}`, remove: () => rm(f) });

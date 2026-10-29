@@ -16,7 +16,7 @@
         android:minHeight="40dp"
         android:orientation="horizontal">
 
-        <com.unowhy.companion.ui.TitleView
+        <com.unowhy.unomate.ui.TitleView
             style="@style/CardTitle"
             android:drawableStart="@drawable/ic_event"
             android:text="@string/today" />
