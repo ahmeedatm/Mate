@@ -1,13 +1,12 @@
 export const meta = {
   name: 'tache',
-  description: "Tâche cadrée du compagnon de bout en bout : worktree, code et tests, relecture, /ship jusqu'à l'essai publié",
+  description: "Tâche cadrée du compagnon de bout en bout : worktree, code et vérif rapide, /ship jusqu'à l'essai publié",
   whenToUse:
     "Après le go du cadrage (.claude/rules/autonomie-hackathon.md, étape 2), ou pour un retour sur l'essai. args = {demande: récap validé ou retour à corriger, branche?: 'feat/x', worktree?: chemin du worktree existant}. Rend {message} : le message de fin d'essai, à relayer tel quel.",
   phases: [
     { title: 'Préparer', detail: 'worktree Orca + branche depuis origin/main' },
-    { title: 'Coder', detail: 'implémentation, tests, vérif locale' },
-    { title: 'Vérifier', detail: 'relecture du diff, 2 corrections au plus' },
-    { title: 'Livrer', detail: '/ship étapes 1 à 6 : commit, push, MR, pipeline vert, essai publié' },
+    { title: 'Coder', detail: 'implémentation, tests écrits, format + typecheck' },
+    { title: 'Livrer', detail: "/ship étapes 1 à 6 : commit, push, MR, essai publié pendant le pipeline" },
   ],
 }
 
@@ -38,23 +37,13 @@ const CODE = {
   },
   required: ['ok', 'resume', 'fichiers', 'aTester', 'nonTestableEssai', 'choix'],
 }
-const REV = {
-  type: 'object',
-  properties: {
-    bloquants: {
-      type: 'array',
-      items: { type: 'object', properties: { fichier: str, probleme: str }, required: ['fichier', 'probleme'] },
-    },
-  },
-  required: ['bloquants'],
-}
 const SHIP = {
   type: 'object',
   properties: {
     ok: { type: 'boolean' },
     mr: { type: 'integer' },
     url: str,
-    pipeline: str,
+    pipeline: { type: 'string', description: 'success, running, ou failed suivi du job en échec' },
     essai: { type: 'string', description: 'version X.Y.Z-essai.N annoncée, vide si pas d\'essai' },
     raison: { type: 'string', description: "pourquoi pas d'essai, ou ce qui bloque" },
   },
@@ -82,47 +71,22 @@ Demande : ${A.demande}`,
 }
 log(`worktree ${wt}`)
 
-const coder = (retour) =>
-  agent(
-    `Worktree : ${wt}. Travaille uniquement dedans, en chemins absolus.
+phase('Coder')
+const code = await agent(
+  `Worktree : ${wt}. Travaille uniquement dedans, en chemins absolus.
 
 Tâche validée avec l'utilisateur. Ne pose aucune question : un choix imprévu → le défaut le plus simple, noté dans "choix".
 ${A.demande}
-${retour ? `\nÀ corriger d'abord (vérification précédente) :\n${retour}\n` : ''}
+
 - Conventions du CLAUDE.md du projet (couleurs ?attr/c_…, textes dans strings.xml, errorText(e), pas de nouvelle dépendance sans nécessité).
-- Tests : comportement backend → backend/test/, page web du backend → backend/e2e/, logique pure Android → app/src/test/.
-- Vérif locale selon les dossiers touchés : table de l'étape 2 de ${REPO}/.claude/skills/ship/SKILL.md, formatage compris. node_modules absent : npm ci d'abord.
+- Tests : comportement backend → backend/test/, page web du backend → backend/e2e/, logique pure Android → app/src/test/. Écris-les, ne les lance pas : la CI s'en charge.
+- Vérif locale = format + typecheck seulement : table de l'étape 2 de ${REPO}/.claude/skills/ship/SKILL.md. node_modules absent : npm ci d'abord. Pas d'émulateur, pas de lintDebug.
 - Ne commit pas, ne pousse pas.
 ok=false seulement si la vérif locale reste rouge.`,
-    { label: retour ? 'correction' : 'code', phase: 'Coder', agentType: 'implementer', schema: CODE },
-  )
-
-const verifier = () =>
-  agent(
-    `Relis le changement en cours du worktree ${wt}, en lecture seule : \`git -C ${wt} diff origin/main\` et les fichiers non suivis.
-Demande : ${A.demande}
-Ne remonte que le bloquant, avec fichier:ligne : bug de correction, demande non couverte, test manquant, règle du CLAUDE.md du projet violée (couleur en dur, e.message affiché, texte hors strings.xml, dépendance ajoutée). Rien de cosmétique. Liste vide si rien.`,
-    { label: 'relecture', phase: 'Vérifier', agentType: 'claude', model: SONNET, schema: REV },
-  )
-
-phase('Coder')
-let code = await coder('')
-const alertes = []
-for (let tour = 0; ; tour++) {
-  if (!code || !code.ok) {
-    return { message: `❌ Tâche arrêtée : vérif locale rouge (${(code && (code.erreur || code.verifs)) || 'agent sans réponse'}). Worktree : ${wt}` }
-  }
-  phase('Vérifier')
-  const rev = await verifier()
-  const problemes = []
-  if (rev) rev.bloquants.forEach((b) => problemes.push(`${b.fichier} : ${b.probleme}`))
-  if (!problemes.length) break
-  if (tour >= 2) {
-    return { message: `⚠️ Pas livré : encore rouge après 2 corrections.\n${problemes.map((p) => '- ' + p).join('\n')}\nWorktree : ${wt}` }
-  }
-  log(`${problemes.length} problème(s), correction ${tour + 1}/2`)
-  phase('Coder')
-  code = await coder(problemes.join('\n'))
+  { label: 'code', agentType: 'implementer', schema: CODE },
+)
+if (!code || !code.ok) {
+  return { message: `❌ Tâche arrêtée : vérif locale rouge (${(code && (code.erreur || code.verifs)) || 'agent sans réponse'}). Worktree : ${wt}` }
 }
 
 phase('Livrer')
@@ -131,8 +95,8 @@ const ship = await agent(
 - Changement : ${code.resume}
 - Fichiers : ${code.fichiers.join(', ')}
 - MR (seulement si elle n'existe pas) : titre court en français ; template du dépôt rempli ; « Testé sur » : rien de coché (l'utilisateur teste l'essai)${code.choix.length ? ` ; choix imprévus à écrire dans la description : ${code.choix.join(' ; ')}` : ''}.
-- Attente du pipeline au premier plan : \`wait-until.sh --timeout 540\`, relancé tant qu'il sort 124, 30 min au plus. essai.sh au premier plan, timeout Bash 600000.
-- Pipeline rouge : lire le log, corriger, revérifier en local, nouveau commit, repousser. 3 tentatives au plus.
+- Juste après le push : essai.sh au premier plan (timeout Bash 600000), sans attendre le pipeline de la MR. Puis lis l'état du pipeline de la MR, sans l'attendre s'il tourne encore : "pipeline" = success, running, ou failed suivi du job en échec.
+- Essai rouge : lire le log, corriger, revérifier en local, nouveau commit, repousser, relancer essai.sh. 2 tentatives au plus. Pipeline de la MR rouge : ne corrige pas ici (la fusion l'exige vert, étape 7), ok reste true si l'essai est publié.
 - Arrête-toi avant l'étape 7 : pas de fusion, pas de message à l'utilisateur.`,
   { label: 'ship', agentType: 'claude', model: SONNET, schema: SHIP },
 )
@@ -140,12 +104,13 @@ const ship = await agent(
 if (!ship || !ship.ok) {
   return { message: `❌ Livraison bloquée : ${(ship && ship.raison) || 'agent sans réponse'}.${ship && ship.url ? ` MR : ${ship.url}` : ''}`, worktree: wt }
 }
-if (code.nonTestableEssai) alertes.push(code.nonTestableEssai)
-const fin = alertes.map((a) => `⚠️ ${a}`)
+const fin = []
+if (code.nonTestableEssai) fin.push(`⚠️ ${code.nonTestableEssai}`)
+if (/^failed/.test(ship.pipeline || '')) fin.push(`⚠️ pipeline de la MR rouge (${ship.pipeline}) : à corriger avant la fusion`)
 const message = ship.essai
   ? [
       `C'est fini. Essai ${ship.essai} à installer (MR !${ship.mr}).`,
-      `Installer : Réglages > Mises à jour > Rechercher, section « Essais de MR », « Mettre à jour » sur la ligne « !${ship.mr} … », puis « Ouvrir l'essai » (backend de l'ordinateur basculé seul si la MR le touche).`,
+      "Installer : Réglages > Mises à jour > Rechercher, « Mettre à jour » sur Companion essai, puis « Ouvrir l'essai ».",
       `Tester : ${code.aTester}`,
       ...fin,
     ].join('\n')

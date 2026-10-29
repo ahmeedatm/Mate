@@ -12,6 +12,7 @@ set -eu
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 root=$(git rev-parse --show-toplevel)
+here=$(cd "$(dirname "$0")" && pwd)
 wait="$HOME/.claude/scripts/wait-until.sh"
 proj=efreifer%2Funowhy-companion
 
@@ -81,7 +82,27 @@ if [ "$status" != success ]; then
 fi
 
 # Entrée de la MR dans le manifest du registre : version et backend.
-entry=$(glab api "projects/$proj/packages/generic/companion-updates/essais/manifest.json" |
-  jq -c --argjson iid "$iid" '.essais[] | select(.mr == $iid)')
-[ -n "$entry" ] || { echo "❌ la MR !$iid n'est pas dans le manifest des essais"; exit 1; }
+entry=$(glab api "projects/$proj/packages/generic/companion-updates/essais/manifest.json" 2>/dev/null |
+  jq -c --argjson iid "$iid" '.essais[]? | select(.mr == $iid)' || true)
+
+# TRANSITION (à retirer quand la stable de la tablette lit le registre des essais, version après !115) :
+# la stable d'avant ne voit que l'annonce du Mac, et le Mac garde le backend de la branche comme avant.
+cd "$root/backend"
+[ -d node_modules ] || npm ci --silent
+if [ -z "$entry" ]; then
+  # Branche d'avant !115 : sa CI publie encore dans l'ancien paquet companion-updates/essai.
+  DATA_DIR=paquet npm run -s updates:essai
+  APK=0 "$here/deploy-tablette.sh"
+  exit 0
+fi
+tmp=$(mktemp -d)
+file=$(printf %s "$entry" | jq -r .file)
+glab api "projects/$proj/packages/generic/companion-updates/essais/$file" > "$tmp/$file"
+[ "$(shasum -a 256 "$tmp/$file" | cut -d' ' -f1)" = "$(printf %s "$entry" | jq -r .sha256)" ] ||
+  { rm -rf "$tmp"; echo "❌ $file : SHA-256 différent du manifest"; exit 1; }
+printf %s "$entry" | jq '{package,label,versionCode,versionName,file}' > "$tmp/$file.json"
+DATA_DIR=paquet npm run -s updates:add -- "$tmp/$file.json"
+rm -rf "$tmp"
+APK=0 "$here/deploy-tablette.sh"
+
 printf %s "$entry" | jq -r '"essai \(.versionName) de la MR !\(.mr) publié (backend : \(if .backend then "oui" else "non" end))"'

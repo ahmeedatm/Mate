@@ -1,7 +1,7 @@
 #!/bin/sh
 # Déploie la branche courante pour le test de l'utilisateur avant fusion :
 # APK debug sur la tablette (adb, émulateurs ignorés), et compagnon du Mac si backend/ a changé.
-# BACKEND=1 redéploie le Mac même sans changement (retour à main). APK=0 : Mac seul. ANDROID_SERIAL choisit la tablette s'il y en a plusieurs. Sortie 2 = rien à quoi déployer.
+# BACKEND=1 redéploie le Mac même sans changement (retour à main). APK=0 : Mac seul (essai.sh). ANDROID_SERIAL choisit la tablette s'il y en a plusieurs. Sortie 2 = rien à quoi déployer.
 set -eu
 
 root=$(git rev-parse --show-toplevel)

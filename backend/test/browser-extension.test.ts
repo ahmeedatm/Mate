@@ -16,6 +16,13 @@ describe("ordres de lecture pour l'extension du navigateur", () => {
     assert.equal(sendToExtension("Safari", { action: "next" }), false);
   });
 
+  it("nom court (« Opera » du secours du Mac) = extension au nom plus long (« Opera GX ») ; un début de mot non", async () => {
+    const waiting = waitCommands("Vivaldi Snapshot");
+    assert.equal(sendToExtension("Vivaldi", { action: "play-pause" }), true);
+    assert.deepEqual(await waiting, [{ action: "play-pause" }]);
+    assert.equal(sendToExtension("Viv", { action: "next" }), false);
+  });
+
   it("extension partie pendant l'attente : liste vide", async () => {
     const gone = new AbortController();
     const waiting = waitCommands("Brave", gone.signal);

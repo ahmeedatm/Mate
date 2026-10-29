@@ -200,7 +200,8 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val sky = Weather.describe(f.code)
         wxTemp.setCompoundDrawablesRelativeWithIntrinsicBounds(sky.icon, 0, 0, 0)
         wxTemp.text = context.getString(R.string.widget_weather_temp, f.temperature.roundToInt())
-        wxLabel.text = context.getString(R.string.hero_wx_label, context.getString(sky.text), f.max.roundToInt())
+        // La ville d'abord : trouvée seule par la position, elle doit se voir pour pouvoir être corrigée.
+        wxLabel.text = context.getString(R.string.hero_wx_label, placed.config.optString("city"), context.getString(sky.text), f.max.roundToInt())
     }
 
     private fun renderWater(state: Water.State, animate: Boolean) {
@@ -210,6 +211,8 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
 
     override suspend fun load() {
+        // Pas encore de ville : celle de la position de la tablette, sinon « Choisir ma ville ».
+        if (!placed.config.has("lat") && Weather.autoCity(context, placed.config)) host.save()
         if (!placed.config.has("lat")) return renderWeather()
         if (forecast != null && SystemClock.elapsedRealtime() - fetchedAt < Weather.REFRESH_MS) return
         forecast = runCatching { Weather.forecast(placed.config.getDouble("lat"), placed.config.getDouble("lon")) }.getOrNull() ?: forecast
