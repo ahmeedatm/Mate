@@ -75,6 +75,20 @@ fun parseClip(json: String): ClipContent {
     }
 }
 
+/** Texte de l'historique du presse-papiers ; `at` : heure de la copie (ms) ; `secret` : à masquer (code, mot de passe). */
+data class ClipHistoryItem(val id: String, val text: String, val at: Long, val secret: Boolean)
+
+/** Réponse de `GET /system/clipboard/history`, la copie la plus récente en premier. */
+fun parseClipHistory(json: String): List<ClipHistoryItem> {
+    val items = JSONObject(json).optJSONArray("items") ?: return emptyList()
+    return (0 until items.length()).mapNotNull { i ->
+        val item = items.optJSONObject(i) ?: return@mapNotNull null
+        val id = item.optStringOrNull("id") ?: return@mapNotNull null
+        val text = item.optStringOrNull("text") ?: return@mapNotNull null
+        ClipHistoryItem(id, text, item.optLong("at"), item.optBoolean("secret"))
+    }
+}
+
 /** Système de l'ordinateur : son, lecture en cours, Ne pas déranger, appels, applis, saisie, réglages. */
 class SystemApi(private val http: Http) {
 
@@ -190,6 +204,16 @@ class SystemApi(private val http: Http) {
 
     /** Met ce texte dans le presse-papiers de l'ordinateur (1 à 100 000 caractères). */
     suspend fun copyToComputer(text: String) = http.io { http.postJson("/system/clipboard", JSONObject().put("text", text)); Unit }
+
+    /** Textes copiés sur l'ordinateur depuis une heure (20 au plus), gardés en mémoire par le compagnon. */
+    suspend fun clipboardHistory(): List<ClipHistoryItem> = http.io { parseClipHistory(http.get("/system/clipboard/history", timeoutMs = 10_000)) }
+
+    /** Remet ce texte de l'historique dans le presse-papiers de l'ordinateur ; HTTP 404 s'il a disparu. */
+    suspend fun recopyFromHistory(id: String) = http.io { http.postJson("/system/clipboard/history/" + http.encode(id) + "/copy", JSONObject()); Unit }
+
+    suspend fun removeFromHistory(id: String) = http.io { http.delete("/system/clipboard/history/" + http.encode(id)); Unit }
+
+    suspend fun clearHistory() = http.io { http.delete("/system/clipboard/history"); Unit }
 
     /** Met cette image (`path` : relatif au dossier partagé, .jpg/.jpeg/.png) dans le presse-papiers de l'ordinateur. */
     suspend fun copyImageToComputer(path: String) = http.io { http.postJson("/system/clipboard/image", JSONObject().put("path", path)); Unit }

@@ -153,6 +153,13 @@ export async function getClipboard(): Promise<ClipboardContent> {
   return read().clipboard ?? { kind: "empty" };
 }
 
+/** Le contenu lui-même sert de repère : il change quand le scénario ou une écriture change le presse-papiers. */
+export async function clipboardStamp(): Promise<string> {
+  if (read().clipboardUnavailable) clipboardUnavailable();
+  if (!canControl) unsupported();
+  return JSON.stringify(read().clipboard ?? { kind: "empty" });
+}
+
 export async function setClipboardText(text: string) {
   if (read().clipboardUnavailable) clipboardUnavailable();
   record("setClipboardText", text);

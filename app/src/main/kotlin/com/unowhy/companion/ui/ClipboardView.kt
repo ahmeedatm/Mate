@@ -38,6 +38,7 @@ import kotlinx.coroutines.launch
  *   pour un texte, « Ouvrir » pour un lien (dans le panneau latéral, comme « Page de l'ordi ») ;
  * - « Vers l'ordi » : un texte écrit (boîte de saisie) ou dicté (reconnaissance Android, proposé dans la même boîte),
  *   envoyé dans le presse-papiers de l'ordinateur.
+ *   En dessous, « Récents » : l'historique des textes copiés sur l'ordinateur ([ClipboardHistoryList]).
  * Le presse-papiers de l'ordinateur est lu à l'affichage de l'écran et sur Actualiser seulement, jamais en boucle ; son
  * texte n'est écrit dans aucun journal.
  */
@@ -59,6 +60,7 @@ class ClipboardView(
     /** Texte complet reçu de l'ordinateur (copié sur la tablette tel quel) ; null si ce n'est pas du texte. */
     private var received: String? = null
     private var readJob: Job? = null
+    private val history = ClipboardHistoryList(fragment, root, ::clipError)
     private var recognizer: SpeechRecognizer? = null
     private var listening = false
 
@@ -77,6 +79,7 @@ class ClipboardView(
         readJob?.cancel()
         showSendStatus(null)
         showState(context.getString(R.string.clip_reading))
+        history.load()
         readJob = scope.launch {
             try {
                 show(BackendClient(context).system.clipboard())
@@ -89,6 +92,7 @@ class ClipboardView(
     /** L'écran n'est plus affiché : la lecture en cours est oubliée, la dictée s'arrête. */
     fun stop() {
         readJob?.cancel()
+        history.stop()
         stopDictation()
     }
 

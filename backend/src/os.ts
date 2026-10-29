@@ -144,6 +144,13 @@ export async function setClipboardText(text: string) {
   unsupported();
 }
 
+/** Repère qui change à chaque copie, sans lire le contenu (historique du presse-papiers : src/clipboard-history.ts). */
+export async function clipboardStamp(): Promise<string> {
+  if (isMac) return macClipboard.clipboardStamp();
+  if (isWindows) return win.clipboardStamp();
+  unsupported();
+}
+
 /** Copie une image (jpg, png) comme image dans le presse-papiers ; `fullPath` : chemin complet, déjà vérifié par la route. */
 export async function setClipboardImage(fullPath: string) {
   if (isMac) return macClipboard.setClipboardImage(fullPath);
