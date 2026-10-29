@@ -510,8 +510,7 @@ function run(argv) {
 }`;
 
 // Ordre des pages : aucune API (yabai lui-même demande de couper le SIP). On fait le geste de l'utilisateur dans
-// Mission Control : glisser la vignette de la page dans la barre du haut, puis refermer. Lâchée à côté de la
-// vignette visée (dans l'espace entre deux pages) : lâchée dessus, elle fusionnerait en écran partagé.
+// Mission Control : glisser la vignette de la page dans la barre du haut, puis refermer.
 const MOVE_PAGE_SCRIPT = `ObjC.import('CoreGraphics');
 function mouse(type, x, y) {
   $.CGEventPost(0, $.CGEventCreateMouseEvent(null, type, $.CGPointMake(x, y), 0));
@@ -556,12 +555,31 @@ function run(argv) {
     }
     if (!b || b.length !== count || b[0].pos[1] < 0) throw new Error('Mission Control ne montre pas les mêmes pages');
     const sx = b[from].pos[0] + b[from].size[0] / 2, y = b[from].pos[1] + b[from].size[1] / 2;
+    // Dans l'espace entre deux vignettes, du côté de la destination (lâchée sur une vignette, elle fusionnerait).
     const tx = to > from ? b[to].pos[0] + b[to].size[0] + 12 : b[to].pos[0] - 12;
     mouse(5, sx, y);
     mouse(1, sx, y);
     delay(0.1);
-    for (let i = 1; i <= 8; i++) { mouse(6, sx + (tx - sx) * i / 8, y); delay(0.015); }
-    delay(0.15);
+    // Assez lentement pour que Mission Control suive vignette après vignette.
+    const steps = 6 * Math.max(1, Math.abs(to - from));
+    for (let i = 1; i <= steps; i++) { mouse(6, sx + (tx - sx) * i / steps, y); delay(0.035); }
+    // Vers la gauche, lâcher seulement une fois la place ouverte (la barre montre déjà le nouvel ordre) : lâchée trop
+    // tôt près du Bureau, une page plein écran y retombait en simple fenêtre. Sinon, retour au départ, rien ne change.
+    const want = b.map((x) => x.name);
+    want.splice(to, 0, want.splice(from, 1)[0]);
+    // Vers la droite, Mission Control ne montre l'ordre qu'au lâcher : seul le côté gauche (celui du Bureau) attend.
+    let ready = to > from;
+    for (let k = 0; k < 12 && !ready; k++) {
+      delay(0.08);
+      mouse(6, tx + (k % 2 ? 2 : -2), y);
+      try { ready = bar().map((x) => x.name).join('|') === want.join('|'); } catch (e) {}
+    }
+    if (!ready) {
+      for (let i = 1; i <= 8; i++) { mouse(6, tx + (sx - tx) * i / 8, y); delay(0.015); }
+      delay(0.15);
+      mouse(2, sx, y);
+      throw new Error('Mission Control n’a pas ouvert la place');
+    }
     mouse(2, tx, y);
     // Laisser macOS poser la page, puis refermer en touchant la page qui était affichée : refermé par la bascule,
     // Mission Control restait sur une autre page (le Bureau).
