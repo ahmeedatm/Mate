@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Barre de modes à gauche (tablette en paysage), écran du mode au centre,
+<!-- Barre fixe à gauche (Parler, profils, outils ; tablette en paysage), écran du mode au centre,
      panneau document à droite (masqué tant qu'aucun document n'est ouvert),
      bandeau de message de l'ordinateur par-dessus. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -20,28 +20,59 @@
         android:background="?attr/c_rail"
         android:gravity="center_horizontal"
         android:orientation="vertical"
-        android:paddingTop="16dp"
-        android:paddingBottom="20dp">
+        android:paddingTop="24dp"
+        android:paddingBottom="16dp">
 
-        <!-- Boutons de mode, ajoutés par MainActivity. -->
-        <LinearLayout
-            android:id="@+id/mode_bar"
-            android:layout_width="wrap_content"
+        <!-- Parler (ajouté en tête par ProfileRail), puis les entrées (profils, « Plus », outils) ; la pastille de
+             l'élément choisi glisse derrière elles. -->
+        <FrameLayout
+            android:id="@+id/rail_items"
+            android:layout_width="80dp"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="vertical" />
+            android:layout_weight="1">
 
-        <!-- Heure, WiFi, batterie de la tablette (barre d'état masquée en kiosque) ; toucher : Réglages. -->
-        <com.unowhy.companion.ui.TabletStatusView
-            android:id="@+id/tablet_status"
-            android:layout_width="88dp"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="4dp"
-            android:background="@drawable/rail_item_bg"
-            android:clickable="true"
-            android:focusable="true"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp" />
+            <View
+                android:id="@+id/rail_indicator"
+                android:layout_width="56dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="12dp"
+                android:alpha="0"
+                android:background="@drawable/rail_indicator_bg"
+                android:importantForAccessibility="no" />
+
+            <LinearLayout
+                android:id="@+id/mode_bar"
+                android:layout_width="80dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </FrameLayout>
+
+        <!-- Cloche : notifications de l'ordinateur (Depuis l'ordi > Notifications) ; pastille : arrivées depuis la
+             dernière ouverture. -->
+        <FrameLayout
+            android:layout_width="48dp"
+            android:layout_height="48dp">
+
+            <ImageButton
+                android:id="@+id/notif_bell"
+                style="@style/IconButton.Flat"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:contentDescription="@string/notif_open"
+                android:src="@drawable/ic_notifications" />
+
+            <View
+                android:id="@+id/notif_dot"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="10dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/dot"
+                android:backgroundTint="?attr/c_accent"
+                android:importantForAccessibility="no"
+                android:visibility="gone" />
+        </FrameLayout>
 
         <!-- Ordinateur piloté et pastille de connexion ; toucher : changer d'ordinateur. -->
         <LinearLayout
@@ -89,6 +120,18 @@
                     android:textSize="11sp" />
             </LinearLayout>
         </LinearLayout>
+        <!-- Heure, WiFi, batterie de la tablette (barre d'état masquée en kiosque) ; toucher : Réglages (choisi quand Réglages est affiché). -->
+        <com.unowhy.companion.ui.TabletStatusView
+            android:id="@+id/tablet_status"
+            android:layout_width="88dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/rail_item_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp" />
+
     </LinearLayout>
 
     <!-- Écran du mode ; par-dessus, « Aucun ordinateur connecté » pour les modes qui en ont besoin. -->
@@ -98,10 +141,8 @@
         android:layout_height="match_parent"
         android:layout_weight="1">
 
-        <!-- paddingStart : place de la cloche des notifications, en haut à gauche de chaque écran. -->
         <FrameLayout
             android:id="@+id/mode_container"
-            android:paddingStart="40dp"
             android:defaultFocusHighlightEnabled="false"
             tools:targetApi="o"
             android:focusable="true"
@@ -116,34 +157,6 @@
             android:layout_height="match_parent"
             android:visibility="gone" />
 
-        <!-- Cloche : notifications de l'ordinateur (Depuis l'ordi > Notifications) ; pastille : arrivées depuis la
-             dernière ouverture. Alignée sur la ligne de titre des écrans (padding 24 dp, hauteur 48 dp). -->
-        <FrameLayout
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginTop="24dp">
-
-            <ImageButton
-                android:id="@+id/notif_bell"
-                style="@style/IconButton.Flat"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:contentDescription="@string/notif_open"
-                android:src="@drawable/ic_notifications" />
-
-            <View
-                android:id="@+id/notif_dot"
-                android:layout_width="10dp"
-                android:layout_height="10dp"
-                android:layout_gravity="top|end"
-                android:layout_marginTop="10dp"
-                android:layout_marginEnd="10dp"
-                android:background="@drawable/dot"
-                android:backgroundTint="?attr/c_accent"
-                android:importantForAccessibility="no"
-                android:visibility="gone" />
-        </FrameLayout>
     </FrameLayout>
 
     <com.unowhy.companion.ui.DocumentPanel
@@ -153,53 +166,6 @@
         android:layout_weight="1"
         android:visibility="gone" />
 </LinearLayout>
-
-    <!-- Thèmes Cadran : menu caché (poignée au bord gauche, voile, panneau), géré par MenuPanel. Autres thèmes : absent. -->
-    <FrameLayout
-        android:id="@+id/menu_host"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone">
-
-        <!-- Départ du glisser : les 16 premiers dp du bord, sur toute la hauteur. -->
-        <View
-            android:id="@+id/menu_edge"
-            android:layout_width="16dp"
-            android:layout_height="match_parent"
-            android:importantForAccessibility="no" />
-
-        <!-- Cible du toucher : 48 x 96 dp centrée sur la poignée ; hors d'elle, les touchers passent à l'écran dessous. -->
-        <FrameLayout
-            android:id="@+id/menu_handle"
-            android:layout_width="48dp"
-            android:layout_height="96dp"
-            android:layout_gravity="center_vertical"
-            android:contentDescription="@string/menu_open">
-
-            <View
-                android:layout_width="5dp"
-                android:layout_height="56dp"
-                android:layout_gravity="center_vertical"
-                android:layout_marginStart="7dp"
-                android:background="@drawable/menu_handle_bg" />
-        </FrameLayout>
-
-        <View
-            android:id="@+id/menu_scrim"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:alpha="0"
-            android:background="?attr/c_scrim"
-            android:importantForAccessibility="no"
-            android:visibility="gone" />
-
-        <include
-            layout="@layout/view_menu_panel"
-            android:layout_width="300dp"
-            android:layout_height="match_parent"
-            android:layout_margin="12dp"
-            android:visibility="gone" />
-    </FrameLayout>
 
     <!-- Premier lancement : tant qu'aucun ordinateur n'est appairé. -->
     <com.unowhy.companion.ui.WelcomeView

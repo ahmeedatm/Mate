@@ -54,10 +54,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private lateinit var grid: WidgetGrid
     private lateinit var scroll: ScrollView
     private lateinit var editBar: View
-    private lateinit var dots: LinearLayout
-    private lateinit var profileName: TextView
-    private lateinit var profilePrev: View
-    private lateinit var profileNext: View
 
     private lateinit var layout: HomeLayout
     /** Disposition au moment d'entrer dans le mode Modifier : « Annuler » y revient. */
@@ -100,13 +96,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         grid = view.findViewById(R.id.home_grid)
         scroll = view.findViewById(R.id.home_scroll)
         editBar = view.findViewById(R.id.home_edit_bar)
-        dots = view.findViewById(R.id.home_dots)
-        profileName = view.findViewById(R.id.home_profile_name)
-        profilePrev = view.findViewById(R.id.home_profile_prev)
-        profileNext = view.findViewById(R.id.home_profile_next)
-        profilePrev.setOnClickListener { showProfile(page - 1) }
-        profileNext.setOnClickListener { showProfile(page + 1) }
-        view.findViewById<View>(R.id.home_profile_title).setOnClickListener { openProfiles() }
         grid.listener = this
         grid.blocked = { unreachable != null && dependsOnComputer(it) }
 
@@ -372,9 +361,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     // --- Profils
 
     /** Nom du profil : celui donné par l'utilisateur, sinon « Bureau » pour le premier, « Profil N » pour les autres. */
-    fun profileName(index: Int): String =
-        layout.names.getOrNull(index)
-            ?: if (index == 0) getString(R.string.profile_first) else getString(R.string.profile_default, index + 1)
+    fun profileName(index: Int): String = layout.nameOf(index, getString(R.string.profile_first), getString(R.string.profile_default))
 
     /** Donne son nom par défaut à chaque profil sans nom : il le garde quand on le déplace. Vrai si un nom a été posé. */
     private fun nameProfiles() = layout.nameMissing(getString(R.string.profile_first), getString(R.string.profile_default))
@@ -400,7 +387,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
      * tant qu'il est actif. Profils ajoutés, déplacés ou retirés : widgets recréés, puis le profil affiché charge ses
      * données. Renommage ou marquage de jeu : la barre seulement, ni widgets ni réseau.
      */
-    private fun openProfiles() {
+    fun openProfiles() {
         ProfilesDialog(requireContext(), layout, page, ::profileName, !grid.narrow, ::editProfile) { show, structure ->
             if (grid.editing) endEdit(keep = true)
             nameProfiles()
@@ -420,32 +407,20 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private fun editProfile(index: Int) {
         if (grid.editing) endEdit(keep = true)
         if (index != page) showProfile(index)
+        // Réunion hors appel : on le règle en aperçu.
+        if (index == layout.callProfile) main?.showBanner(getString(R.string.call_profile_preview), 6)
         onEnterEdit()
     }
 
+    /** La barre fixe montre les profils et marque celui affiché. */
     private fun renderProfileBar() {
-        profileName.text = profileName(page)
-        profilePrev.isEnabled = page > 0
-        profilePrev.alpha = if (page > 0) 1f else DISABLED_ALPHA
-        profileNext.isEnabled = page < layout.pages - 1
-        profileNext.alpha = if (page < layout.pages - 1) 1f else DISABLED_ALPHA
-        dots.removeAllViews()
-        // Au-delà de MAX_DOTS profils, les pastilles ne tiennent plus : le nom et les flèches suffisent.
-        val showDots = layout.pages in 2..MAX_DOTS
-        dots.visibility = if (showDots) View.VISIBLE else View.GONE
-        for (i in 0 until if (showDots) layout.pages else 0) {
-            dots.addView(View(requireContext()).apply {
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(themeColor(context, if (i == page) R.attr.c_accent else R.attr.c_text_faint))
-                }
-            }, LinearLayout.LayoutParams(dp(8), dp(8)).apply { marginStart = dp(12); marginEnd = dp(12) })
-        }
+        main?.onProfileShown(layout, page)
     }
 
+    /** Balayage : profil voisin dans l'ordre de la barre (Réunion n'y est que pendant un appel). */
     override fun onPageSwipe(delta: Int) {
-        val next = page + delta
-        if (next in 0 until layout.pages) showProfile(next)
+        val order = layout.profilesInOrder(inCall = false)
+        order.getOrNull(order.indexOf(page) + delta)?.let(::showProfile)
     }
 
     // --- Mode Modifier
@@ -593,7 +568,5 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private companion object {
         /** Aujourd'hui et les 7 jours suivants : « mardi soir » se voit dès aujourd'hui. */
         const val AGENDA_DAYS = 8
-        const val DISABLED_ALPHA = 0.3f
-        const val MAX_DOTS = 12
     }
 }

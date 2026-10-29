@@ -226,12 +226,14 @@ object Look {
 
     /**
      * Ressort sur une propriété de vue, lancé à `velocity` (px/s : celle du doigt qui lâche). `onEnd` quand elle est posée
-     * (pas si on l'annule). Échelle d'animation à zéro : valeur posée tout de suite, null.
+     * (pas si on l'annule). Échelle d'animation à zéro : valeur posée tout de suite, null, sauf `always` (navigation :
+     * le kiosque met cette échelle à zéro pour les animations du système, les ressorts de la barre jouent quand même).
      */
     fun springTo(
         view: View, property: DynamicAnimation.ViewProperty, token: Spring, to: Float, velocity: Float = 0f, onEnd: (() -> Unit)? = null,
+        always: Boolean = false,
     ): SpringAnimation? {
-        if (reduced(view.context)) {
+        if (!always && reduced(view.context)) {
             property.setValue(view, to)
             onEnd?.invoke()
             return null

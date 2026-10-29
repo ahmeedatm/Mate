@@ -3,7 +3,6 @@
 
     <!-- Modes -->
     <string name="mode_home">Profils</string>
-    <string name="menu_open">Ouvrir le menu</string>
     <string name="menu_computer">Depuis l\'ordi</string>
     <string name="mode_deck">Deck</string>
     <string name="mode_computer">Ordi</string>
@@ -784,8 +783,6 @@
     <string name="home_edit_hint">Glisse un widget pour le déplacer, touche + pour en ajouter.</string>
     <string name="profile_first">Accueil</string>
     <string name="profile_default">Profil %d</string>
-    <string name="profile_prev">Profil précédent</string>
-    <string name="profile_next">Profil suivant</string>
     <string name="profiles_title">Profils</string>
     <string name="profile_new_empty">Nouveau profil vide</string>
     <string name="profile_new_template">Depuis un modèle</string>
@@ -818,6 +815,8 @@
     <string name="template_call_desc">Micro, caméra, partage et son de l\'appel : s\'affiche pendant un appel.</string>
     <string name="profile_deck">Deck</string>
     <string name="profile_call">Réunion</string>
+    <string name="rail_more">Plus</string>
+    <string name="call_profile_preview">Aperçu : ce profil s\'affiche pendant un appel.</string>
     <string name="widget_size_s">Petit</string>
     <string name="widget_size_m">Moyen</string>
     <string name="widget_size_l">Grand</string>

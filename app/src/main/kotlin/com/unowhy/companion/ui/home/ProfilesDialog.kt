@@ -116,9 +116,10 @@ class ProfilesDialog(
             layout.setGameProfile(if (game) -1 else i)
             changed(structure = false)
         })
-        if (i > 0) addView(iconButton(R.drawable.ic_arrow_up, R.string.profile_move_up, R.attr.c_text_dim) { moveUp(i) })
+        // Réunion ne se déplace pas : il n'est ni dans la barre ni dans le balayage hors appel.
+        if (i > 0 && i != layout.callProfile) addView(iconButton(R.drawable.ic_arrow_up, R.string.profile_move_up, R.attr.c_text_dim) { moveUp(i) })
         addView(iconButton(R.drawable.ic_edit, R.string.profile_rename, R.attr.c_text_dim) { rename(i) })
-        if (layout.pages > 1) addView(iconButton(R.drawable.ic_delete, R.string.profile_delete, R.attr.c_text_dim) { confirmDelete(i) })
+        if (layout.canRemove(i)) addView(iconButton(R.drawable.ic_delete, R.string.profile_delete, R.attr.c_text_dim) { confirmDelete(i) })
     }
 
     private fun iconButton(@DrawableRes icon: Int, @StringRes description: Int, @AttrRes tint: Int, onClick: () -> Unit) = ImageButton(context).apply {

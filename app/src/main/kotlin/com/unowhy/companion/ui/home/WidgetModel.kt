@@ -145,6 +145,10 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         return index
     }
 
+    /** Nom affiché : celui donné, sinon `first` pour le premier profil et `pattern` numéroté pour les autres. */
+    fun nameOf(index: Int, first: String, pattern: String): String =
+        names.getOrNull(index) ?: if (index == 0) first else pattern.format(index + 1)
+
     fun renameProfile(index: Int, name: String) {
         names[index] = name
     }

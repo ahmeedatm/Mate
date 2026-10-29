@@ -19,8 +19,8 @@ class KeyboardControl(private val activity: Activity) {
     private val window get() = activity.window
 
     fun setUp() {
-        // Clavier ouvert : la barre latérale (ou la poignée du menu Cadran) se cache plutôt que d'être coupée.
-        val rail = activity.findViewById<View>(if (themeBool(activity, R.attr.c_cadran)) R.id.menu_host else R.id.rail)
+        // Clavier ouvert : la barre fixe se cache plutôt que d'être coupée.
+        val rail = activity.findViewById<View>(R.id.rail)
         val content = activity.findViewById<View>(android.R.id.content)
         window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, focused ->
             window.setSoftInputMode(

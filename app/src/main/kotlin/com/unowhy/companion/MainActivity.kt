@@ -51,17 +51,17 @@ import com.unowhy.companion.ui.Grain
 import com.unowhy.companion.ui.HomeFragment
 import com.unowhy.companion.ui.IconCache
 import com.unowhy.companion.ui.KeyboardControl
-import com.unowhy.companion.ui.MenuPanel
 import com.unowhy.companion.ui.MiniPlayerView
 import com.unowhy.companion.ui.Navigation
 import com.unowhy.companion.ui.PhotoFrameView
-import com.unowhy.companion.ui.Rail
+import com.unowhy.companion.ui.ProfileRail
 import com.unowhy.companion.ui.SettingsFragment
 import com.unowhy.companion.ui.TabletAlerts
 import com.unowhy.companion.ui.TabletStatusView
 import com.unowhy.companion.ui.WelcomeView
 import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.home.Down
+import com.unowhy.companion.ui.home.HomeLayout
 import com.unowhy.companion.ui.home.LinkWatch
 import com.unowhy.companion.ui.notificationBannerText
 import com.unowhy.companion.ui.showImmersive
@@ -82,9 +82,8 @@ class MainActivity : AppCompatActivity() {
 
     private val rehide = Runnable { hideSystemBars() }
     private var current = Mode.HOME
-    /** Barre latérale, ou menu caché (thèmes Cadran). */
+    /** Barre fixe à gauche : Parler, profils, outils, ordinateur, Réglages. */
     private lateinit var nav: Navigation
-    private var menu: MenuPanel? = null
     private lateinit var documentPanel: DocumentPanel
     private lateinit var banner: Banner
     private lateinit var alerts: TabletAlerts
@@ -145,16 +144,8 @@ class MainActivity : AppCompatActivity() {
         AutoUpdater.start(this)
         InstallerService.start(this)
 
-        val cadran = themeBool(this, R.attr.c_cadran)
-        if (cadran) {
-            findViewById<View>(R.id.rail).visibility = View.GONE
-            // Plus de barre à contourner : le bandeau garde une marge ordinaire.
-            findViewById<View>(R.id.remote_banner).apply { layoutParams = (layoutParams as android.widget.FrameLayout.LayoutParams).also { it.marginStart = dp(24) } }
-            nav = MenuPanel(this, ::show).also { menu = it }
-        } else {
-            nav = Rail(this, ::show)
-        }
-        voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon), onPressed = { menu?.close() })
+        nav = ProfileRail(this, ::show, ::showProfile, ::openProfiles)
+        voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
         // Lumière des agents Claude sous la carte d'appel : un appel prime sur tout.
         val agentLight = AgentLight(this)
         agentAsk = AgentAskOverlay(this)
@@ -197,7 +188,6 @@ class MainActivity : AppCompatActivity() {
             findViewById<View>(R.id.mode_area).visibility = if (expanded) View.GONE else View.VISIBLE
         }
         nav.status.setOnClickListener {
-            menu?.close()
             showComputerPicker()
         }
         banner = Banner(findViewById(R.id.remote_banner))
@@ -205,7 +195,6 @@ class MainActivity : AppCompatActivity() {
         alerts = TabletAlerts(this, banner)
         findViewById<TabletStatusView>(R.id.tablet_status).apply {
             setOnClickListener {
-                menu?.close()
                 show(Mode.SETTINGS)
             }
             onMinute = {
@@ -231,7 +220,6 @@ class MainActivity : AppCompatActivity() {
             when {
                 welcome.visibility == View.VISIBLE -> Unit
                 agentAsk.isOpen -> agentAsk.close()
-                menu?.isOpen == true -> menu?.close()
                 documentPanel.visibility == View.VISIBLE -> documentPanel.close()
                 current != Mode.HOME -> show(Mode.HOME)
             }
@@ -372,7 +360,6 @@ class MainActivity : AppCompatActivity() {
             if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) swallowTouch = false
             return true
         }
-        menu?.touched()
         keyboard.onTouch(event)
         return super.dispatchTouchEvent(event)
     }
@@ -449,9 +436,8 @@ class MainActivity : AppCompatActivity() {
         if (computer?.showingNotifications != true || current != Mode.COMPUTER) findViewById<View>(R.id.notif_dot).visibility = View.VISIBLE
     }
 
-    /** Cloche en haut à gauche : Depuis l'ordi > Notifications, pastille retirée. */
+    /** Cloche de la barre : Depuis l'ordi > Notifications, pastille retirée. */
     private fun openNotifications() {
-        menu?.close()
         findViewById<View>(R.id.notif_dot).visibility = View.GONE
         show(Mode.COMPUTER)
         // Le mode vient peut-être d'être créé : sa vue doit exister avant de choisir l'écran.
@@ -580,7 +566,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Ce qui sert encore, que le cadre ne doit pas cacher. */
     private fun frameBusy() = callOverlay.visibility == View.VISIBLE || agentAsk.isOpen || welcome.visibility == View.VISIBLE ||
-        menu?.isOpen == true || documentPanel.visibility == View.VISIBLE || current == Mode.CAMERA || FocusTimer.state.running
+        documentPanel.visibility == View.VISIBLE || current == Mode.CAMERA || FocusTimer.state.running
 
     /** Lance le cadre tout de suite (Réglages > Cadre photo > Essayer, ou délai écoulé) ; sans photo, rien. */
     fun openFrame(photos: List<java.io.File>) {
@@ -627,7 +613,7 @@ class MainActivity : AppCompatActivity() {
         val tx = fm.beginTransaction()
         if (changed) {
             // Cadran : fondu enchaîné (sortie, puis entrée avec échelle) ; sinon fondu et légère montée.
-            if (menu != null) tx.setCustomAnimations(R.animator.cadran_in, R.animator.cadran_out) else tx.setCustomAnimations(R.animator.mode_in, 0)
+            tx.setCustomAnimations(R.animator.cadran_in, R.animator.cadran_out)
         }
         fm.fragments.forEach { tx.hide(it) }
         // Sans ordinateur, un mode qui en a besoin n'est pas créé (caméra, requêtes) : renderNoComputer le remplace.
@@ -643,6 +629,25 @@ class MainActivity : AppCompatActivity() {
         nav.select(mode, changed)
         renderNoComputer()
     }
+
+    /** Entrée de profil de la barre : l'Accueil, sur ce profil (créé au besoin : sa vue doit exister avant). */
+    private fun showProfile(page: Int) {
+        show(Mode.HOME)
+        supportFragmentManager.executePendingTransactions()
+        homeFragment()?.showProfile(page)
+    }
+
+    /** Appui long sur un profil de la barre, ou « Plus » : la liste des profils, depuis l'Accueil. */
+    private fun openProfiles() {
+        show(Mode.HOME)
+        supportFragmentManager.executePendingTransactions()
+        homeFragment()?.openProfiles()
+    }
+
+    /** L'Accueil prévient à chaque profil affiché et à chaque changement des profils : la barre suit. */
+    fun onProfileShown(layout: HomeLayout, page: Int) = nav.showProfiles(layout, page, inCall = false)
+
+    private fun homeFragment() = supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment
 
     /** Modes qui ont besoin de l'ordinateur : « Aucun ordinateur connecté » par-dessus, tant qu'il n'y en a pas. */
     private fun renderNoComputer() {

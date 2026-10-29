@@ -247,6 +247,14 @@ class ProfilesTest {
     }
 
     @Test
+    fun `nameOf donne le nom du profil ou son nom par defaut`() {
+        val layout = HomeLayout(mutableListOf(), mutableListOf(null, "Deck", null))
+        assertEquals("Accueil", layout.nameOf(0, "Accueil", "Profil %d"))
+        assertEquals("Deck", layout.nameOf(1, "Accueil", "Profil %d"))
+        assertEquals("Profil 3", layout.nameOf(2, "Accueil", "Profil %d"))
+    }
+
+    @Test
     fun `deplacer un profil suit les roles`() {
         val layout = layoutOf(1)
         layout.ensureRoles("Deck", "Réunion")
