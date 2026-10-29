@@ -153,6 +153,29 @@
         <item name="android:padding">?attr/c_card_pad</item>
     </style>
 
+    <!-- Compteur de la carte Courrier (page Outlook du Deck) : chiffre au-dessus de son libellé. -->
+    <style name="MailCounter">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
+    <style name="MailCounter.Value">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">?attr/c_text</item>
+        <item name="android:textSize">26sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="MailCounter.Label">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">?attr/c_text_dim</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
     <style name="CardTitle">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>

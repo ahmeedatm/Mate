@@ -74,8 +74,21 @@ type TileConfig = {
  * par la tablette après « Rejoindre » (micro, caméra, raccrocher) ; `app` : page d'une appli (Discord, Teams…),
  * montrée seulement si l'appli est dans la page Apps ; sur la tablette ce n'est pas un onglet : toucher l'appli
  * ouvre sa page (sans la lancer), qui affiche son volume (Windows) ; `media` : lecture en cours au-dessus des touches,
- * et pour touches les sites ajoutés depuis la tablette (.data/links.json, vide au départ ; `tiles` est ignoré). */
-type DeckConfig = { pages: { title: string; apps?: boolean; meeting?: boolean; app?: string; media?: boolean; tiles: TileConfig[] }[] };
+ * et pour touches les sites ajoutés depuis la tablette (.data/links.json, vide au départ ; `tiles` est ignoré) ;
+ * `sound: false` : pas de barre « Son de l'ordinateur » sur la page (Word, Excel : des raccourcis, pas de son) ;
+ * `mail` : page Outlook, courrier du compte Microsoft relié au-dessus des touches (src/mail.ts). */
+type DeckConfig = {
+  pages: {
+    title: string;
+    apps?: boolean;
+    meeting?: boolean;
+    app?: string;
+    media?: boolean;
+    sound?: boolean;
+    mail?: boolean;
+    tiles: TileConfig[];
+  }[];
+};
 
 export type Tile = TileConfig & { id: string };
 /** `empty` : emplacement libre de la page Perso. */
@@ -86,6 +99,8 @@ export type DeckPage = {
   meeting?: boolean;
   app?: string;
   media?: boolean;
+  sound?: boolean;
+  mail?: boolean;
   /** Appli absente de la page Apps : sa page ne s'affiche que pendant un appel (`/deck/live`). */
   callOnly?: boolean;
   tiles: (Tile | { id: string; empty: true })[];
@@ -215,6 +230,8 @@ export async function loadDeck(): Promise<DeckPage[]> {
               meeting: page.meeting,
               app: page.app,
               media: page.media,
+              sound: page.sound,
+              mail: page.mail,
               ...(page.app && !names.has(page.app.toLowerCase()) ? { callOnly: true } : {}),
               tiles: page.tiles.map((tile, t) => ({ ...tile, id: `${p}-${t}` })),
             },
