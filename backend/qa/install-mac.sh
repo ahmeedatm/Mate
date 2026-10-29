@@ -23,6 +23,8 @@ NODE="$RUNTIME/node/darwin-$([[ $(uname -m) == arm64 ]] && echo arm64 || echo x6
 export PORT HOST=127.0.0.1 DATA_DIR=$WORK/data DOCS_DIR=$WORK/shared \
   COMPANION_LOG_DIR=$WORK/logs COMPANION_RUNTIME_DIR=$RUNTIME COMPANION_HEADLESS=1
 
+START=$(date +%s)
+
 step() { echo; echo "== $*"; }
 fail() { echo "ÉCHEC : $*" >&2; exit 1; }
 sha() { [[ -f $1 ]] && shasum -a 256 "$1" | cut -c1-16 || echo absent; }
@@ -31,12 +33,13 @@ health() { curl -fsS --max-time 3 "http://127.0.0.1:$1/health" 2>/dev/null || tr
 agent() { launchctl print "gui/$UID/$1" 2>/dev/null | awk -F' = ' '/^\tstate = /{s=$2} /^\tpid = /{p=$2} END{print (s ? s " pid " p : "absent")}'; }
 post() { curl -fsS --max-time 5 -X POST -H 'content-type: application/json' -d "${2:-{\}}" "http://127.0.0.1:$PORT$1"; }
 
-# État du vrai compagnon, comparé avant / après.
+# État du vrai compagnon, comparé avant / après. Sans PID : une tablette connectée peut le relancer pendant le test
+# (essai de backend d'une MR, mise à jour à distance) ; ce qui compte, c'est qu'il tourne, sur le même port et la même identité.
 real_state() {
-  echo "agent : $(agent $REAL_LABEL)"
+  echo "agent : $(agent $REAL_LABEL | sed 's/ pid .*//')"
   echo "plist : $(sha ~/Library/LaunchAgents/$REAL_LABEL.plist)"
   echo "LaunchAgents : $(ls ~/Library/LaunchAgents 2>/dev/null | shasum | cut -c1-16)"
-  echo "port $REAL_PORT : pid $(listener $REAL_PORT), $(health $REAL_PORT | grep -o '"id":"[^"]*"' || echo 'pas de réponse')"
+  echo "port $REAL_PORT : $([[ -n $(listener $REAL_PORT) ]] && echo écoute || echo muet), $(health $REAL_PORT | grep -o '"id":"[^"]*"' || echo 'pas de réponse')"
   echo "données : $(sha ~/Library/Application\ Support/UnowhyCompanion/identity.json)"
 }
 
@@ -48,11 +51,12 @@ check_real() {
 
 # Aucune autorisation macOS (TCC) demandée par le node du job : TCC suit un programme en ligne de commande par son
 # chemin, propre à chaque job, et chaque demande ajoute un « node » de plus dans Réglages Système (ou une invite).
+# Seules les entrées créées pendant ce test comptent (les restes d'anciens essais portent le même préfixe).
 # Base illisible sans accès complet au disque : contrôle sauté.
 check_tcc() {
   local db rows read=0
   for db in "/Library/Application Support/com.apple.TCC/TCC.db" ~/"Library/Application Support/com.apple.TCC/TCC.db"; do
-    rows=$(sqlite3 "$db" "select service from access where client like '$WORK/%' or client like '/private$WORK/%'" 2>/dev/null) ||
+    rows=$(sqlite3 "$db" "select service from access where (client like '$WORK/%' or client like '/private$WORK/%') and last_modified >= $START" 2>/dev/null) ||
       { echo "Base TCC illisible ($db) : contrôle sauté"; continue; }
     [[ -z $rows ]] || fail "autorisations macOS demandées par l'instance de test : $(tr '\n' ' ' <<< "$rows")"
     read=$((read + 1))
