@@ -48,10 +48,13 @@ object InstallerPlan {
         val available = numbers(installer.version) ?: return null
         if (version == null) return installer
         val current = numbers(version) ?: return null
-        return installer.takeIf { compareValuesBy(available, current, { it[0] }, { it[1] }, { it[2] }) > 0 }
+        return installer.takeIf { compare(available, current) > 0 }
     }
 
-    private fun numbers(version: String): List<Int>? =
+    internal fun compare(a: List<Int>, b: List<Int>): Int = compareValuesBy(a, b, { it[0] }, { it[1] }, { it[2] })
+
+    /** [X, Y, Z] d'une version X.Y.Z, null sinon (« dev », vide). */
+    internal fun numbers(version: String): List<Int>? =
         Regex("""^(\d+)\.(\d+)\.(\d+)$""").matchEntire(version)?.groupValues?.drop(1)?.map { it.toInt() }
 
     /** OS du navigateur qui visite la page ; null pour un téléphone, Linux, ou un navigateur sans `User-Agent`. */

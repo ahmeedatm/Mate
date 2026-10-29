@@ -30,6 +30,9 @@ import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
+import com.unowhy.companion.installers.BackendPlan
+import com.unowhy.companion.installers.BackendRelease
+import com.unowhy.companion.installers.CompanionUpdater
 import com.unowhy.companion.installers.InstallerService
 import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.kiosk.UpdatePlan
@@ -37,6 +40,7 @@ import com.unowhy.companion.kiosk.Updater
 import com.unowhy.companion.net.AppUpdate
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.Essai
+import com.unowhy.companion.net.Identity
 import com.unowhy.companion.net.Link
 import com.unowhy.companion.net.UpdateSource
 import com.unowhy.companion.net.Wifi
@@ -71,7 +75,10 @@ class SettingsFragment : Fragment() {
     private lateinit var essaisTitle: TextView
     private lateinit var essais: LinearLayout
     private lateinit var switchApp: Button
+    private lateinit var companionStatus: TextView
+    private lateinit var companionUpdate: Button
     private var installing = false
+    private var companionUpdating = false
     private val main get() = requireActivity() as MainActivity
     private val adder by lazy { ComputerAdder(requireActivity(), main.lifecycleScope) { main.onComputerChanged(it) } }
     private val wifi by lazy { WifiPicker(requireActivity(), main.lifecycleScope) { if (view != null) renderWifi() } }
@@ -98,6 +105,8 @@ class SettingsFragment : Fragment() {
         updates = view.findViewById(R.id.settings_updates)
         essaisTitle = view.findViewById(R.id.settings_essais_title)
         essais = view.findViewById(R.id.settings_essais)
+        companionStatus = view.findViewById(R.id.settings_companion_status)
+        companionUpdate = view.findViewById(R.id.settings_companion_update)
         view.findViewById<Button>(R.id.settings_updates_check).setOnClickListener { checkUpdates() }
         switchApp = view.findViewById(R.id.settings_switch_app)
         switchApp.setText(if (BuildConfig.TRIAL) R.string.trial_back else R.string.trial_open)
@@ -115,6 +124,7 @@ class SettingsFragment : Fragment() {
         renderComputers()
         renderWifi()
         renderSwitchApp()
+        checkCompanion()
 
         view.findViewById<Button>(R.id.settings_kiosk_exit).setOnClickListener {
             Kiosk.exit(requireActivity())
@@ -407,6 +417,64 @@ class SettingsFragment : Fragment() {
             // Essais de MR : seulement dans la stable (device owner, qui les installe).
             if (!BuildConfig.TRIAL) showEssais()
         }
+        checkCompanion()
+    }
+
+    /** Compagnon de l'ordinateur actif : sa version et, si une plus récente est publiée, le bouton qui l'y met. */
+    private fun checkCompanion() {
+        if (companionUpdating) return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val status = CompanionUpdater.check(requireContext())
+            if (view == null || companionUpdating) return@launch
+            companionUpdate.visibility = View.GONE
+            companionStatus.visibility = if (status == null) View.GONE else View.VISIBLE
+            val identity = status?.identity
+            if (status == null) return@launch
+            if (identity == null) {
+                companionStatus.setText(R.string.companion_state_unreachable)
+                return@launch
+            }
+            val name = identity.name
+            val version = identity.version ?: getString(R.string.companion_version_old)
+            companionStatus.text = when (val d = status.decision) {
+                BackendPlan.Decision.Unreachable -> getString(R.string.companion_state_unreachable)
+                BackendPlan.Decision.FromRepo -> getString(R.string.companion_state_repo, name)
+                BackendPlan.Decision.NothingPublished -> getString(R.string.companion_state_nothing, name, version)
+                BackendPlan.Decision.OnEssai -> getString(R.string.companion_state_essai, name)
+                BackendPlan.Decision.UpToDate -> getString(R.string.companion_state_uptodate, name, version)
+                is BackendPlan.Decision.ComputerNewer -> getString(R.string.companion_state_newer, name, version, d.release.version)
+                is BackendPlan.Decision.NeedsInstaller -> {
+                    showCompanionButton(R.string.companion_update_steps) { main.companionUpdate.showInstallSteps(identity) }
+                    getString(R.string.companion_state_installer, name, version, d.release.version)
+                }
+                is BackendPlan.Decision.Available -> {
+                    showCompanionButton(R.string.companion_update_button) { updateCompanion(identity, d.release) }
+                    getString(R.string.companion_state_available, name, version, d.release.version)
+                }
+            }
+        }
+    }
+
+    private fun showCompanionButton(text: Int, onClick: () -> Unit) {
+        companionUpdate.setText(text)
+        companionUpdate.isEnabled = true
+        companionUpdate.visibility = View.VISIBLE
+        companionUpdate.setOnClickListener { onClick() }
+    }
+
+    /** Le travail tourne dans la portée de l'activité : les vues ne sont touchées que si les Réglages sont encore là. */
+    private fun updateCompanion(identity: Identity, release: BackendRelease) {
+        val showing = { isAdded && view != null }
+        main.companionUpdate.confirm(identity, release, onState = { text ->
+            companionUpdating = true
+            if (showing()) {
+                companionUpdate.isEnabled = false
+                companionUpdate.text = text
+            }
+        }, onDone = {
+            companionUpdating = false
+            if (showing()) checkCompanion()
+        })
     }
 
     /** Une ligne par essai publié, sous les mises à jour. Une erreur s'ajoute à la phrase d'état, sans masquer le reste. */
