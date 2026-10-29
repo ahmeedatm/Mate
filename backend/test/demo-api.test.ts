@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, it } from "node:test";
+import { TILE_SYMBOLS } from "../src/screens.ts";
 import { startServer, type TestServer } from "./server.ts";
 
 type Tile = { id: string; label?: string; type?: string; app: string | null };
@@ -72,6 +73,23 @@ describe("démo : personas", () => {
     assert.equal(await exists(s, "events.json"), false);
     assert.equal(await exists(s, "apps.json"), false);
     assert.equal(await exists(s, "demo.json"), false);
+  });
+
+  it("chaque touche de chaque persona a un symbole connu de la tablette", async () => {
+    const s = await start();
+    const known: readonly string[] = TILE_SYMBOLS;
+    for (const persona of ["nour", "gwen", "camille", "aimee", "sam", "sacha"]) {
+      const set = await s.call("POST", "/demo/persona", { persona });
+      assert.equal(set.status, 200, persona);
+      const posed = [...set.json.keys, ...set.json.pages.flatMap((p: { keys: unknown[] }) => p.keys)] as {
+        label: string;
+        symbol?: string;
+      }[];
+      for (const k of posed) assert.ok(k.symbol && known.includes(k.symbol), `${persona} : ${k.label} (${k.symbol})`);
+      // Le deck rend le même symbole à la tablette (un nom hors liste y serait écarté).
+      const tiles = (await pages(s)).flatMap((p) => p.tiles.filter((t) => t.type !== "empty")) as (Tile & { symbol?: string | null })[];
+      for (const t of tiles.filter((t) => /^k\d*-\d+$/.test(t.id))) assert.ok(t.symbol, `${persona} : ${t.label} sans symbole dans /deck`);
+    }
   });
 
   it("changer de persona garde la sauvegarde d'avant la démo", async () => {
