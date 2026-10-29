@@ -133,6 +133,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | `os.ts` → `mac/`, `win/` | pilotage du système ; `screens.ts` : types d'écrans et fenêtres |
 | `calendar.ts`, `accounts.ts`, `events.ts`, `meetings.ts`, `meeting-links.ts` | agenda et réunions |
 | `tasks.ts`, `jira.ts` | tâches et rappels |
+| `gitlab.ts`, `routes/gitlab.ts` | onglet GitLab : mes MR et celles à relire (une requête GraphQL, gardée 20 s), fusion au `sha` affiché, ouverture de la MR sur l'ordinateur |
 | `tablet.ts`, `mcp.ts` | canal vers la tablette, extension Claude |
 | `calls.ts` (+ `config/calls.json`) | appels entrants : surveillance des fenêtres, Répondre / Ignorer / Raccrocher |
 | `agents.ts`, `agents-sources.ts`, `agents-secret.ts`, `agents-hooks.ts`, `routes/agents.ts` | agents Claude : état et réponses, lecture de `claude` et d'Orca, secret des hooks, bloc de hooks (`scripts/agents-hooks.ts`) |
