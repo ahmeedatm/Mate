@@ -7,6 +7,7 @@ import {
   type OpenAction,
   type OpenApp,
   type OpenWindows,
+  type Page,
   type RawScreen,
   type WindowsInfo,
   type WindowTarget,
@@ -122,7 +123,7 @@ function cgAll() {
       const b = o.kCGWindowBounds;
       // Couche 0 et assez grande : pas les barres d'outils ni les fenêtres techniques.
       if (o.kCGWindowLayer !== 0 || b.Width < 200 || b.Height < 200) return;
-      (out[o.kCGWindowOwnerPID] = out[o.kCGWindowOwnerPID] || []).push({ pos: [b.X, b.Y], size: [b.Width, b.Height], name: o.kCGWindowName || null });
+      (out[o.kCGWindowOwnerPID] = out[o.kCGWindowOwnerPID] || []).push({ pos: [b.X, b.Y], size: [b.Width, b.Height], name: o.kCGWindowName || null, wid: o.kCGWindowNumber });
     });
     return out;
   } catch (e) {
@@ -132,6 +133,22 @@ function cgAll() {
 
 function sameFrame(a, pos, size) {
   return Math.abs(a.pos[0] - pos[0]) < 4 && Math.abs(a.pos[1] - pos[1]) < 4 && Math.abs(a.size[0] - size[0]) < 4 && Math.abs(a.size[1] - size[1]) < 4;
+}
+// Fenêtres du serveur de fenêtres qu'aucune fenêtre de l'Accessibilité ne couvre. Chacune n'en couvre qu'une, la plus
+// proche : une fenêtre agrandie et une fenêtre plein écran de la même appli ont presque le même cadre (à un point près
+// sous l'encoche d'un MacBook), sinon la plein écran passait pour visible et n'était pas cherchée dans le menu.
+function unmatched(cg, frames) {
+  const left = cg.slice();
+  frames.forEach((f) => {
+    let best = -1, gap = Infinity;
+    left.forEach((c, i) => {
+      if (!sameFrame(c, f.pos, f.size)) return;
+      const d = Math.abs(c.pos[0] - f.pos[0]) + Math.abs(c.pos[1] - f.pos[1]) + Math.abs(c.size[0] - f.size[0]) + Math.abs(c.size[1] - f.size[1]);
+      if (d < gap) { gap = d; best = i; }
+    });
+    if (best >= 0) left.splice(best, 1);
+  });
+  return left;
 }
 
 /**
@@ -147,7 +164,7 @@ function elsewhereWindows(proc, list, all, cg = cgWindows(proc)) {
     return false;
   });
   if (!cg) return away.map((e) => ({ title: e.title, item: e.item, display: null }));
-  const spare = cg.filter((c) => !list.some((e) => sameFrame(c, e.w.position(), e.w.size())));
+  const spare = unmatched(cg, list.map((e) => ({ pos: e.w.position(), size: e.w.size() })));
   // Pas plus d'entrées que de fenêtres réelles cachées : le reste du menu, ce sont des commandes.
   away = away.slice(Math.max(0, away.length - spare.length));
   const screensOf = spare.map((c) => (screenOf(all, c.pos, c.size) || {}).id);
@@ -282,16 +299,19 @@ function displaysOf(all) {
 // Vue « Ouvertes » : toutes les applis qui ont une fenêtre, y compris sur les autres bureaux (plein
 // écran…). Le menu Fenêtre est lent à lire : seulement pour les applis dont le serveur de fenêtres
 // connaît une fenêtre que l'Accessibilité ne voit pas.
-function allApps(se, all) {
+function allApps(se, all, cg) {
   const apps = [];
-  const cg = cgAll();
+  let failed = null;
   se.applicationProcesses.whose({ backgroundOnly: false })().forEach((p) => {
+    // Fenêtre ou appli disparue pendant la lecture (plein écran qui s'anime, appli qui quitte : -1728, -1719) :
+    // appli sautée pour cette fois, la liste suivante la reprend.
+    try {
     let list, away = [];
     try { list = windowsOf(p); } catch (e) { return; }
     try {
       const mine = cg ? cg[p.unixId()] || [] : [];
       const frames = list.map((e) => ({ pos: e.w.position(), size: e.w.size() }));
-      if (mine.some((c) => !frames.some((f) => sameFrame(c, f.pos, f.size)))) away = elsewhereWindows(p, list, all, mine);
+      if (unmatched(mine, frames).length) away = elsewhereWindows(p, list, all, mine);
     } catch (e) {}
     if (!list.length && !away.length) return;
     // Nom de l'appli (Visual Studio Code), pas celui du processus (Code) : il sert à retrouver son icône.
@@ -299,18 +319,82 @@ function allApps(se, all) {
     try { name = String(p.applicationFile().name()).replace(/[.]app$/, ''); } catch (e) { name = p.name(); }
     // Sans identifiant de bundle (émulateur…) : désignée par son processus.
     const front = p.frontmost();
-    apps.push({ key: p.bundleIdentifier() || 'pid:' + p.unixId(), name: name, front: front, windows: list.map((e) => describe(all, e, front)).concat(away.map((e) => ({
+    apps.push({ key: p.bundleIdentifier() || 'pid:' + p.unixId(), name: name, front: front, pid: p.unixId(), windows: list.map((e) => describe(all, e, front)).concat(away.map((e) => ({
       index: 0, title: e.title, minimized: false, fullscreen: false, display: e.display, elsewhere: true, front: false, maximized: false,
     }))) });
+    } catch (e) {
+      failed = failed || e;
+    }
   });
+  // Rien de lisible du tout : vraie erreur (Accessibilité refusée…), pas un aléa.
+  if (!apps.length && failed) throw failed;
   return apps;
+}
+
+// Pages du balayage à trois doigts (Spaces), dans l'ordre, par écran : API privée de SkyLight, en lecture seule et
+// sans autorisation (comme yabai ou AltTab). Illisible : null, la tablette garde la vue sans pages.
+function spaces(all) {
+  try {
+    ObjC.bindFunction('CGSMainConnectionID', ['int', []]);
+    ObjC.bindFunction('CGSCopyManagedDisplaySpaces', ['void *', ['int']]);
+    ObjC.bindFunction('CGDisplayCreateUUIDFromDisplayID', ['void *', ['unsigned int']]);
+    ObjC.bindFunction('CFUUIDCreateString', ['void *', ['void *', 'void *']]);
+    const uuid = (id) => ObjC.castRefToObject($.CFUUIDCreateString(null, $.CGDisplayCreateUUIDFromDisplayID(id))).js;
+    const pages = [];
+    ObjC.deepUnwrap(ObjC.castRefToObject($.CGSCopyManagedDisplaySpaces($.CGSMainConnectionID()))).forEach((d) => {
+      // « Main » quand les écrans partagent leurs pages (réglage « Les écrans disposent de Spaces distincts » coupé).
+      const s = all.length === 1 ? all[0] : all.find((x) => uuid(x.id) === d['Display Identifier']);
+      const current = d['Current Space'] && d['Current Space'].ManagedSpaceID;
+      // Écran partagé (deux applis sur une page plein écran) : pid est une liste, une fenêtre par appli.
+      d.Spaces.forEach((sp) => pages.push({
+        id: sp.ManagedSpaceID, display: s ? s.id : null, fullscreen: sp.type === 4, current: sp.ManagedSpaceID === current,
+        pids: [].concat(sp.pid || []),
+        wids: sp.TileLayoutManager && sp.TileLayoutManager.TileSpaces ? sp.TileLayoutManager.TileSpaces.map((t) => t.TileWindowID) : [sp.fs_wid],
+      }));
+    });
+    return pages;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Fenêtre de chaque page plein écran : une fenêtre de son appli en plein écran ou sur un autre bureau, du même titre
+// que celle du serveur de fenêtres quand il est lisible (Enregistrement de l'écran), sinon la seule ou la première.
+function assignPages(apps, pages, cg) {
+  pages.filter((pg) => pg.fullscreen).forEach((pg) => {
+    const names = [];
+    pg.pids.forEach((pid) => {
+      const app = apps.find((a) => a.pid === pid);
+      if (!app) return;
+      names.push(app.name);
+      const free = app.windows.filter((w) => w.page === undefined && (w.fullscreen || w.elsewhere));
+      const known = ((cg && cg[pid]) || []).find((c) => pg.wids.includes(c.wid));
+      const name = known && known.name;
+      const w = (name && free.find((x) => sameTitle(x.title, name) || sameTitle(name, x.title))) ||
+        free.find((x) => x.fullscreen) || free[0];
+      if (w) w.page = pg.id;
+    });
+    if (names.length) pg.app = names.join(' & ');
+  });
+  pages.forEach((pg) => { delete pg.pids; delete pg.wids; });
 }
 
 function run(argv) {
   const req = JSON.parse(argv[0]);
   const all = screens();
+  if (req.op === 'pages') {
+    const pages = spaces(all);
+    if (pages) pages.forEach((pg) => { delete pg.pids; delete pg.wids; });
+    return JSON.stringify(pages);
+  }
   const se = Application('System Events');
-  if (req.op === 'all') return JSON.stringify({ apps: allApps(se, all), displays: displaysOf(all) });
+  if (req.op === 'all') {
+    const cg = cgAll();
+    const apps = allApps(se, all, cg);
+    const pages = spaces(all);
+    if (pages) assignPages(apps, pages, cg);
+    return JSON.stringify({ apps: apps, displays: displaysOf(all), pages: pages });
+  }
   // Sans appli (écrans seulement) : System Events n'est pas interrogé, macOS ne demande aucune autorisation.
   const procs = req.pid ? se.applicationProcesses.whose({ unixId: req.pid })() : req.bundleId ? se.applicationProcesses.whose({ bundleIdentifier: req.bundleId })() : [];
   const proc = procs[0];
@@ -390,9 +474,179 @@ export function placeWindow(app: string, opts: { window?: WindowTarget; display?
 /** Toutes les applis qui ont une fenêtre affichée (vue « Ouvertes »), la plus en avant d'abord ; `key` : identifiant de bundle. */
 export async function listOpenWindows(): Promise<OpenWindows> {
   const raw = await osascript(SCRIPT, [JSON.stringify({ op: "all" })], "JavaScript");
-  const parsed = JSON.parse(raw) as { apps: (OpenApp & { front: boolean })[]; displays: RawScreen[] };
-  const apps = parsed.apps.sort((a, b) => Number(b.front) - Number(a.front)).map(({ front: _, ...app }) => app);
-  return { apps, displays: labelDisplays(parsed.displays) };
+  const parsed = JSON.parse(raw) as {
+    apps: (OpenApp & { front: boolean; pid: number })[];
+    displays: RawScreen[];
+    pages: Page[] | null;
+  };
+  const apps = parsed.apps.sort((a, b) => Number(b.front) - Number(a.front)).map(({ front: _, pid: __, ...app }) => app);
+  return { apps, displays: labelDisplays(parsed.displays), ...(parsed.pages ? { pages: parsed.pages } : {}) };
+}
+
+// Ctrl + flèche de Mission Control : macOS n'y réagit que si la flèche porte, comme celles du clavier, les drapeaux
+// fn et pavé numérique (sans eux, l'événement est ignoré). Un pas = Ctrl appuyé, flèche, Ctrl relâché.
+const PAGE_SCRIPT = `ObjC.import('CoreGraphics');
+ObjC.bindFunction('CGSMainConnectionID', ['int', []]);
+ObjC.bindFunction('CGSGetActiveSpace', ['unsigned long long', ['int']]);
+function post(key, down, flags) {
+  const ev = $.CGEventCreateKeyboardEvent(null, key, down);
+  $.CGEventSetFlags(ev, flags);
+  $.CGEventPost(0, ev);
+  delay(0.02);
+}
+function run(argv) {
+  const arrow = argv[0] === 'right' ? 124 : 123;
+  const CTRL = 0x40000, ARROW = CTRL | 0x800000 | 0x200000;
+  const cid = $.CGSMainConnectionID();
+  for (let i = 0; i < parseInt(argv[1], 10); i++) {
+    const before = $.CGSGetActiveSpace(cid);
+    post(59, true, CTRL);
+    post(arrow, true, ARROW);
+    post(arrow, false, ARROW);
+    post(59, false, 0);
+    // Pas suivant une fois la page changée (un pas envoyé pendant l'animation était perdu), 1 s au plus.
+    for (let k = 0; k < 20 && $.CGSGetActiveSpace(cid) === before; k++) delay(0.05);
+  }
+}`;
+
+// Ordre des pages : aucune API (yabai lui-même demande de couper le SIP). On fait le geste de l'utilisateur dans
+// Mission Control : glisser la vignette de la page dans la barre du haut, puis refermer.
+const MOVE_PAGE_SCRIPT = `ObjC.import('CoreGraphics');
+function mouse(type, x, y) {
+  $.CGEventPost(0, $.CGEventCreateMouseEvent(null, type, $.CGPointMake(x, y), 0));
+}
+// Mission Control ouvert : le Dock n'a de groupe que pendant Mission Control. Ouvrir ou fermer se fait par la même
+// bascule : jamais sans regarder d'abord (un Mission Control resté ouvert inversait tous les essais suivants).
+function isOpen() {
+  try { return Application('System Events').processes.byName('Dock').groups.length > 0; } catch (e) { return false; }
+}
+function toggle(app, open) {
+  if (isOpen() === open) return;
+  app.doShellScript('open -b com.apple.exposelauncher');
+  for (let i = 0; i < 40 && isOpen() !== open; i++) delay(0.05);
+}
+// Barre des pages de Mission Control (nom traduit selon la langue : trouvée par sa forme, une liste de boutons).
+function bar() {
+  const mc = Application('System Events').processes.byName('Dock').groups[0];
+  const group = mc.groups[0].groups().find((g) => { try { return g.lists.length > 0; } catch (e) { return false; } });
+  if (!group) throw new Error('Mission Control ne montre pas ses pages');
+  return group.lists[0].buttons().map((b) => ({ name: b.name(), pos: b.position(), size: b.size() }));
+}
+function run(argv) {
+  const from = parseInt(argv[0], 10), to = parseInt(argv[1], 10), count = parseInt(argv[2], 10);
+  const shown = parseInt(argv[3], 10);
+  let closed = false;
+  const app = Application.currentApplication();
+  app.includeStandardAdditions = true;
+  const back = $.CGEventGetLocation($.CGEventCreate(null));
+  toggle(app, true);
+  try {
+    // Vignettes en place : deux lectures identiques de suite, 4 s au plus (ouverture plus lente depuis le Bureau). Lue pendant l'animation d'ouverture,
+    // la barre répond en plus d'une seconde : première lecture une fois l'animation passée.
+    const start = Date.now();
+    let b = null, last = '';
+    delay(0.3);
+    while (Date.now() - start < 4000) {
+      try { b = bar(); } catch (e) { delay(0.05); continue; }
+      const now = JSON.stringify(b);
+      if (b.length === count && b[0].pos[1] >= 0 && now === last) break;
+      last = now;
+      delay(0.05);
+    }
+    if (!b || b.length !== count || b[0].pos[1] < 0) throw new Error('Mission Control ne montre pas les mêmes pages');
+    const sx = b[from].pos[0] + b[from].size[0] / 2, y = b[from].pos[1] + b[from].size[1] / 2;
+    // Dans l'espace entre deux vignettes, du côté de la destination (lâchée sur une vignette, elle fusionnerait).
+    const tx = to > from ? b[to].pos[0] + b[to].size[0] + 12 : b[to].pos[0] - 12;
+    mouse(5, sx, y);
+    mouse(1, sx, y);
+    delay(0.1);
+    // Assez lentement pour que Mission Control suive vignette après vignette.
+    const steps = 6 * Math.max(1, Math.abs(to - from));
+    for (let i = 1; i <= steps; i++) { mouse(6, sx + (tx - sx) * i / steps, y); delay(0.035); }
+    // Vers la gauche, lâcher seulement une fois la place ouverte (la barre montre déjà le nouvel ordre) : lâchée trop
+    // tôt près du Bureau, une page plein écran y retombait en simple fenêtre. Sinon, retour au départ, rien ne change.
+    const want = b.map((x) => x.name);
+    want.splice(to, 0, want.splice(from, 1)[0]);
+    // Vers la droite, Mission Control ne montre l'ordre qu'au lâcher : seul le côté gauche (celui du Bureau) attend.
+    let ready = to > from;
+    for (let k = 0; k < 12 && !ready; k++) {
+      delay(0.08);
+      mouse(6, tx + (k % 2 ? 2 : -2), y);
+      try { ready = bar().map((x) => x.name).join('|') === want.join('|'); } catch (e) {}
+    }
+    if (!ready) {
+      for (let i = 1; i <= 8; i++) { mouse(6, tx + (sx - tx) * i / 8, y); delay(0.015); }
+      delay(0.15);
+      mouse(2, sx, y);
+      throw new Error('Mission Control n’a pas ouvert la place');
+    }
+    mouse(2, tx, y);
+    // Laisser macOS poser la page, puis refermer en touchant la page qui était affichée : refermé par la bascule,
+    // Mission Control restait sur une autre page (le Bureau).
+    delay(0.2);
+    // Parti du Bureau, Mission Control se referme seul au lâcher : rien à toucher (movePage vérifie la page).
+    if (shown >= 0 && isOpen()) {
+      try {
+        const order = [...Array(count).keys()];
+        order.splice(to, 0, order.splice(from, 1)[0]);
+        const after = bar()[order.indexOf(shown)];
+        const cx = after.pos[0] + after.size[0] / 2, cy = after.pos[1] + after.size[1] / 2;
+        mouse(5, cx, cy);
+        mouse(1, cx, cy);
+        mouse(2, cx, cy);
+        // Le toucher referme Mission Control sur cette page ; sinon, la bascule le referme.
+        for (let i = 0; i < 20 && isOpen(); i++) delay(0.05);
+      } catch (e) {}
+    }
+    closed = !isOpen();
+  } finally {
+    if (!closed) toggle(app, false);
+    mouse(5, back.x, back.y);
+  }
+}`;
+
+/**
+ * Déplace une page du balayage à trois doigts à la place `to` (rang parmi les pages de son écran), par Mission
+ * Control. Un seul écran à pages : avec plusieurs, la barre à prendre n'est pas sûre.
+ */
+export async function movePage(id: number, to: number) {
+  const read = async () => JSON.parse(await osascript(SCRIPT, [JSON.stringify({ op: "pages" })], "JavaScript")) as Page[] | null;
+  let pages = await read();
+  const target = pages?.find((p) => p.id === id);
+  if (!pages || !target) throw new Error("Page introuvable sur le Mac");
+  if (new Set(pages.map((p) => p.display)).size > 1) throw new Error("Pages de plusieurs écrans : à ranger sur le Mac");
+  if (to < 0 || to >= pages.length) throw new Error("Place introuvable sur le Mac");
+  if (to === pages.indexOf(target)) return;
+  const shown = pages.find((p) => p.current);
+  // Depuis le Bureau, la barre de Mission Control est repliée et le glisser n'est pas fiable (une page lâchée sur une
+  // autre les a fusionnées) : on part d'une page plein écran, puis on revient.
+  if (shown && !shown.fullscreen) {
+    const start = pages.find((p) => p.fullscreen && p.id !== id) ?? pages.find((p) => p.fullscreen);
+    if (!start) throw new Error("Pas de page plein écran sur le Mac");
+    await showPage(start.id);
+    pages = (await read()) ?? pages;
+  }
+  const order = pages.map((p) => p.id);
+  const args = [order.indexOf(id), to, order.length, pages.findIndex((p) => p.current)].map(String);
+  await run("osascript", ["-l", "JavaScript", "-e", MOVE_PAGE_SCRIPT, ...args], 20_000);
+  // Toujours sur la page affichée avant : Mission Control a pu se refermer ailleurs.
+  if (shown) await showPage(shown.id);
+  if (((await read()) ?? pages).length < pages.length) throw new Error("Deux pages se sont réunies en écran partagé sur le Mac");
+}
+
+/**
+ * Passe sur une page du balayage à trois doigts comme le ferait Ctrl + flèche (raccourci de Mission Control, actif
+ * par défaut) : autant de pas que de pages d'écart sur son écran.
+ */
+export async function showPage(id: number) {
+  const pages = JSON.parse(await osascript(SCRIPT, [JSON.stringify({ op: "pages" })], "JavaScript")) as Page[] | null;
+  const target = pages?.find((p) => p.id === id);
+  if (!pages || !target) throw new Error("Page introuvable sur le Mac");
+  const same = pages.filter((p) => p.display === target.display);
+  const from = same.findIndex((p) => p.current);
+  const to = same.indexOf(target);
+  if (from < 0 || to === from) return;
+  await osascript(PAGE_SCRIPT, [to > from ? "right" : "left", String(Math.abs(to - from))], "JavaScript");
 }
 
 /** Pilote une fenêtre de la vue « Ouvertes », désignée par l'identifiant de son appli. */

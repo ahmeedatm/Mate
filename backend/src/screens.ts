@@ -19,6 +19,8 @@ export type AppWindow = {
   /** Vue « Ouvertes » : fenêtre au premier plan de l'ordinateur ; agrandie (Mac : remplit l'écran, ou plein écran). */
   front?: boolean;
   maximized?: boolean;
+  /** Mac : page plein écran (Page.id) que cette fenêtre occupe. */
+  page?: number;
 };
 
 export type WindowsInfo = { app: string; running: boolean; windows: AppWindow[]; displays: Display[] };
@@ -30,7 +32,14 @@ export type WindowsInfo = { app: string; running: boolean; windows: AppWindow[];
  */
 export type OpenApp = { key: string; name: string; windows: AppWindow[] };
 
-export type OpenWindows = { apps: OpenApp[]; displays: Display[] };
+/**
+ * Mac : page du balayage à trois doigts (Space), dans l'ordre du balayage. `display` null : écrans qui partagent leurs
+ * pages ; `app` : appli d'une page plein écran.
+ */
+export type Page = { id: number; display: number | null; fullscreen: boolean; current: boolean; app?: string };
+
+/** `pages` : Mac seulement (absent si illisible). */
+export type OpenWindows = { apps: OpenApp[]; displays: Display[]; pages?: Page[] };
 
 /**
  * focus : mettre devant ; place : changer d'écran ou de moitié ; minimize : réduire ; zoom : agrandir, ou rendre sa taille ;
