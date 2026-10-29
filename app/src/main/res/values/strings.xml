@@ -503,6 +503,8 @@
     <string name="computer_none_found">Aucun ordinateur trouvé. Le compagnon doit être installé sur l\'ordinateur, et les deux appareils sur le même WiFi. Sinon, saisis son adresse.</string>
     <string name="computer_pick">Toucher l\'ordinateur à ajouter :</string>
     <string name="computer_known">déjà enregistré</string>
+    <string name="computer_outdated">compagnon à mettre à jour</string>
+    <string name="computer_outdated_detail">Le compagnon de %1$s est trop ancien pour cette tablette. Mets-le à jour sur l\'ordinateur (%2$s), puis recommence.</string>
     <string name="computer_manual_hint">Adresse affichée sur l\'ordinateur, dans la page du compagnon ouverte à l\'installation. Exemple : 192.168.1.20</string>
     <string name="computer_address_hint">192.168.1.20</string>
     <string name="computer_connect">Se connecter</string>

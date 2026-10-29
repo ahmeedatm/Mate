@@ -12,6 +12,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import com.unowhy.companion.BuildConfig
 import com.unowhy.companion.Computer
 import com.unowhy.companion.Computers
 import com.unowhy.companion.R
@@ -19,9 +20,11 @@ import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.Discovery
 import com.unowhy.companion.net.HttpException
 import com.unowhy.companion.net.InsecureComputerException
+import com.unowhy.companion.net.OutdatedCompanionException
 import com.unowhy.companion.net.Pairing
 import com.unowhy.companion.net.PairingCode
 import com.unowhy.companion.net.PinnedTrust
+import com.unowhy.companion.net.isLocalUrl
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -61,6 +64,7 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
                     val meta = listOfNotNull(
                         osLabel(context, f.os), f.url.substringAfter("://"),
                         context.getString(R.string.computer_known).takeIf { f.id in known },
+                        context.getString(R.string.computer_outdated).takeIf { f.outdated },
                     ).joinToString(" · ")
                     list.addView(row(list, f.name, meta) { dialog.dismiss(); pair(f.url, f.name) })
                 }
@@ -138,6 +142,8 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
             .setNeutralButton(R.string.computer_new_code, null)
             .create()
         val client = BackendClient(url, connectTimeoutMs = 4_000, trust = trust)
+        // HTTP en clair sur le WiFi : compagnon d'avant le HTTPS, aucune demande (elle échouerait et s'afficherait sur l'ordinateur).
+        val outdated = !url.startsWith("https://") && !isLocalUrl(url)
         var job: Job? = null
         val start = {
             job?.cancel()
@@ -171,6 +177,10 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
                     onAdded(Computers.active(context) ?: computer)
                 } catch (e: CancellationException) {
                     throw e
+                } catch (e: OutdatedCompanionException) {
+                    code.visibility = View.GONE
+                    dialog.getButton(AlertDialog.BUTTON_NEUTRAL).visibility = View.GONE
+                    form.message.text = outdatedText(name)
                 } catch (e: Exception) {
                     code.visibility = View.GONE
                     form.message.text = reason(e)
@@ -178,6 +188,11 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
             }
         }
         dialog.setOnShowListener {
+            if (outdated) {
+                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).visibility = View.GONE
+                form.message.text = outdatedText(name)
+                return@setOnShowListener
+            }
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener { start() }
             start()
         }
@@ -216,6 +231,8 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
             true
         }
     }
+
+    private fun outdatedText(name: String) = context.getString(R.string.computer_outdated_detail, name, BuildConfig.INSTALL_URL)
 
     private fun reason(e: Exception): String = when (e) {
         is HttpException -> e.reason
