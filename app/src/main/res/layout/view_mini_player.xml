@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Petit lecteur en haut à droite de chaque écran (MiniPlayerView) : vignette et titre (toucher = page Média),
+     puis précédent, lecture / pause, suivant. Même hauteur que la ligne de titre des écrans (48 dp). -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <LinearLayout
+        android:id="@+id/mini_open"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:background="?android:attr/selectableItemBackground"
+        android:contentDescription="@string/mini_player_open"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="6dp"
+        android:paddingEnd="4dp">
+
+        <ImageView
+            android:id="@+id/mini_thumb"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/thumb_bg"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/mini_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="?attr/c_font_medium"
+                android:maxWidth="150dp"
+                android:singleLine="true"
+                android:textColor="?attr/c_text"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/mini_source"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="?attr/c_font_regular"
+                android:maxWidth="150dp"
+                android:singleLine="true"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/mini_previous"
+        style="@style/IconButton.Flat"
+        android:contentDescription="@string/media_previous"
+        android:src="@drawable/ic_skip_previous"
+        app:tint="?attr/c_text" />
+
+    <ImageButton
+        android:id="@+id/mini_play"
+        style="@style/IconButton.Flat"
+        android:contentDescription="@string/media_play_pause"
+        android:src="@drawable/ic_play"
+        app:tint="?attr/c_text" />
+
+    <ImageButton
+        android:id="@+id/mini_next"
+        style="@style/IconButton.Flat"
+        android:contentDescription="@string/media_next"
+        android:src="@drawable/ic_skip"
+        app:tint="?attr/c_text" />
+</merge>

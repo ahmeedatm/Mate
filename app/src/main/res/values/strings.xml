@@ -105,6 +105,7 @@
     <string name="media_play_pause">Lecture / pause</string>
     <string name="media_next">Morceau suivant</string>
     <string name="media_previous">Morceau précédent</string>
+    <string name="mini_player_open">Ouvrir la page Média</string>
     <string name="system_sleep">Veille de l\'écran</string>
     <string name="system_dark">Mode sombre</string>
     <string name="system_screenshot">Capture → presse-papiers</string>
