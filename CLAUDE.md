@@ -1,7 +1,7 @@
 # Hackathon Unowhy : compagnon de bureau sur tablette 4.2
 
 ### Le projet
-Unowhy a des tablettes **Unowhy 4.2** (tablettes SQOOL) en stock, sous Android 8 à 11 selon les lots. **On cible Android 10** (celle d'Eliot, et l'image sans surcouche demandée). Un hackathon interne doit leur trouver une seconde vie. Elles sont peu puissantes : pas d'applis lourdes. Pas d'IA : l'Assistant IA a été abandonné le 26/10/2026.
+Unowhy a des tablettes **Unowhy 4.2** (tablettes SQOOL) en stock (18 000 à valoriser, d'après la note projet UNOMATE), sous Android 8 à 11 selon les lots. **On cible Android 10** (celle d'Eliot, et l'image sans surcouche demandée). Un hackathon interne doit leur trouver une seconde vie. Elles sont peu puissantes : pas d'applis lourdes. Pas d'IA : l'Assistant IA a été abandonné le 26/10/2026.
 
 ### L'idée de départ (Eliot)
 Un **compagnon de bureau** : la tablette posée sur le bureau, avec plusieurs modes :
@@ -34,7 +34,7 @@ Panneau domotique (Home Assistant), companion focus / Pomodoro, cadre photo / af
 - Test sur **tablette réelle** via adb dès le premier jour (l'émulateur ne reflète pas les perfs).
 
 ### Décidé
-- Public cible (28/10/2026) : gamers, streamers, créateurs de contenu ; positionnement « régie de poche ». Voir `docs/cible-et-positionnement.md`. **Revu le 29/10/2026 (Momo, Deck V2) : B2B, salariés de bureau (Mac, Windows)** ; la config de base vise ce public.
+- Public cible : **B2B** (29/10/2026, Momo pour le Deck V2, puis note projet UNOMATE) : entreprises et professionnels qui travaillent sur ordinateur (Mac, Windows) ; accessoire de productivité personnalisable, vendu seul ou en pack avec un PC Unowhy ; B2C (site e-commerce, indépendants et télétravailleurs) en complément ; 18 000 tablettes à valoriser ; la config de base vise ce public. Le cadrage gamers, streamers, créateurs de contenu (« régie de poche », 28/10) est écarté ; ses briques (soundboard, OBS, Twitch, SimHub) sont mises de côté. Voir `docs/cible-et-positionnement.md`. Pas de prix ni de chiffres commerciaux dans le dépôt.
 
 ### Pas encore décidé
 - Nom du projet.
