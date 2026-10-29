@@ -50,6 +50,36 @@ data class KeyRef(val id: String, val label: String, val glyph: String? = null, 
         fun put(config: JSONObject, keys: List<KeyRef>) {
             config.put("keys", JSONArray().apply { keys.forEach { put(it.toJson()) } })
         }
+
+        /**
+         * Touches d'un ordinateur : les ids (`k-N`, pages fixes) lui sont propres alors que la disposition est celle de la
+         * tablette, donc la config les range dans `byComputer[<id>]`. Lecture seule : un ancien `keys` sert tant qu'il
+         * n'est pas rattaché ([adopt]). Sans ordinateur actif, c'est lui qui est lu.
+         */
+        fun listFor(config: JSONObject, computerId: String?): List<KeyRef> {
+            val own = computerId?.let { config.optJSONObject(BY_COMPUTER)?.optJSONObject(it) }
+            return if (own != null) list(own) else list(config)
+        }
+
+        /** Écrit les touches de [computerId] sans toucher aux autres. Faux, sans rien écrire, sans ordinateur actif. */
+        fun putFor(config: JSONObject, computerId: String?, keys: List<KeyRef>): Boolean {
+            if (computerId == null) return false
+            adopt(config, computerId)
+            val all = config.optJSONObject(BY_COMPUTER) ?: JSONObject().also { config.put(BY_COMPUTER, it) }
+            all.put(computerId, JSONObject().also { put(it, keys) })
+            return true
+        }
+
+        /** Rattache l'ancien `keys` à [computerId] (sans écraser ses touches) puis le retire. Vrai si la config a changé. */
+        fun adopt(config: JSONObject, computerId: String?): Boolean {
+            if (computerId == null || !config.has("keys")) return false
+            val all = config.optJSONObject(BY_COMPUTER) ?: JSONObject().also { config.put(BY_COMPUTER, it) }
+            if (!all.has(computerId)) all.put(computerId, JSONObject().put("keys", config.get("keys")))
+            config.remove("keys")
+            return true
+        }
+
+        private const val BY_COMPUTER = "byComputer"
     }
 }
 

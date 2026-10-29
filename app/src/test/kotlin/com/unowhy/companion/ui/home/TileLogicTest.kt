@@ -95,6 +95,52 @@ class TileLogicTest {
     }
 
     @Test
+    fun `l'ancien format est rattache a l'ordinateur actif puis retire`() {
+        val config = JSONObject()
+        val old = listOf(KeyRef("k-0", "A"), KeyRef("2-4", "B"))
+        KeyRef.put(config, old)
+        assertEquals(old, KeyRef.listFor(config, "pc-a"))
+        assertTrue(KeyRef.adopt(config, "pc-a"))
+        assertFalse(config.has("keys"))
+        assertEquals(old, KeyRef.listFor(config, "pc-a"))
+        assertEquals(emptyList<KeyRef>(), KeyRef.listFor(config, "pc-b"))
+        assertFalse(KeyRef.adopt(config, "pc-a"))
+    }
+
+    @Test
+    fun `deux ordinateurs gardent chacun leurs touches`() {
+        val config = JSONObject()
+        val a = listOf(KeyRef("k-0", "A"))
+        val b = listOf(KeyRef("k-5", "B"), KeyRef("3-1", "C"))
+        assertTrue(KeyRef.putFor(config, "pc-a", a))
+        assertTrue(KeyRef.putFor(config, "pc-b", b))
+        assertEquals(a, KeyRef.listFor(config, "pc-a"))
+        assertEquals(b, KeyRef.listFor(config, "pc-b"))
+    }
+
+    @Test
+    fun `ecrire pour A ne touche pas B`() {
+        val config = JSONObject()
+        val b = listOf(KeyRef("k-5", "B"))
+        KeyRef.putFor(config, "pc-b", b)
+        KeyRef.putFor(config, "pc-a", listOf(KeyRef("k-0", "A")))
+        KeyRef.putFor(config, "pc-a", emptyList())
+        assertEquals(b, KeyRef.listFor(config, "pc-b"))
+        assertEquals(emptyList<KeyRef>(), KeyRef.listFor(config, "pc-a"))
+    }
+
+    @Test
+    fun `sans ordinateur actif on n'ecrit rien`() {
+        val config = JSONObject()
+        val old = listOf(KeyRef("k-0", "A"))
+        KeyRef.put(config, old)
+        val before = config.toString()
+        assertFalse(KeyRef.putFor(config, null, listOf(KeyRef("k-1", "Z"))))
+        assertFalse(KeyRef.adopt(config, null))
+        assertEquals(before, config.toString())
+    }
+
+    @Test
     fun `KeyRef put et list font l'aller-retour`() {
         val keys = listOf(KeyRef("k-0", "A", "a", "#00ff00"), KeyRef("2-4", "B"))
         val config = JSONObject()

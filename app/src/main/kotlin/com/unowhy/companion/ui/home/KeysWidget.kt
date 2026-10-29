@@ -10,6 +10,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import com.unowhy.companion.Computers
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DeckPage
@@ -50,8 +51,13 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** Relit le deck : une touche modifiée ou vidée dans l'éditeur se met à jour ici. */
     override suspend fun load() {
         val pages = runCatchingCancellable { host.deckPages() }.getOrNull() ?: return
-        reconcileKeys(KeyRef.list(placed.config), pages)?.let { store(it) }
+        // Sans ordinateur actif, rien n'est lu ni écrit : le deck lu ne serait celui de personne.
+        val id = computerId ?: return
+        if (KeyRef.adopt(placed.config, id)) host.save()
+        reconcileKeys(keys(), pages)?.let { store(it) }
     }
+
+    private fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_LONG).show()
 
     /** Pages du deck, ou null (message affiché) si l'ordinateur ne répond pas. */
     private suspend fun readPages(force: Boolean): List<DeckPage>? =
@@ -59,8 +65,13 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
             .getOrNull()
 
+    /** Les touches sont rangées par ordinateur : leurs ids (`k-N`, pages fixes) n'ont de sens que sur le sien. */
+    private val computerId get() = Computers.active(context)?.id
+
+    private fun keys() = KeyRef.listFor(placed.config, computerId)
+
     private fun store(keys: List<KeyRef>) {
-        KeyRef.put(placed.config, keys)
+        if (!KeyRef.putFor(placed.config, computerId, keys)) return
         host.save()
         render()
     }
@@ -69,7 +80,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         view.removeAllViews()
         view.background = null
         view.setPadding(0, 0, 0, 0)
-        val keys = KeyRef.list(placed.config)
+        val keys = keys()
         if (inGrid) return renderGrid(keys)
         if (keys.isEmpty()) {
             view.addView(LinearLayout(context).apply {
@@ -147,7 +158,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         AlertDialog.Builder(context)
             .setMessage(context.getString(R.string.widget_keys_remove, key.label))
             .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.widget_keys_remove_yes) { _, _ -> store(KeyRef.list(placed.config).filterNot { it.id == key.id }) }
+            .setPositiveButton(R.string.widget_keys_remove_yes) { _, _ -> store(keys().filterNot { it.id == key.id }) }
             .showImmersive()
     }
 
@@ -165,11 +176,10 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         host.scope.launch {
             // Relu pour de bon : un emplacement déjà pris serait écrasé.
             val pages = readPages(force = true) ?: return@launch
-            val slot = nextFreeSlot(pages)
-            if (slot == null) {
-                Toast.makeText(context, R.string.widget_keys_full, Toast.LENGTH_LONG).show()
-                return@launch
-            }
+            // Créée sans place dans le widget, la touche n'y apparaîtrait pas : on le dit avant.
+            if (keys().size >= MAX_KEYS) return@launch toast(context.getString(R.string.widget_keys_widget_full, MAX_KEYS))
+            if (pages.none { it.editable }) return@launch toast(context.getString(R.string.widget_keys_no_perso))
+            val slot = nextFreeSlot(pages) ?: return@launch toast(context.getString(R.string.widget_keys_full))
             host.overlays.editKey(slot) { reload("k-$slot") }
         }
     }
@@ -178,7 +188,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun reload(added: String? = null) {
         host.scope.launch {
             val pages = readPages(force = true) ?: return@launch
-            val current = KeyRef.list(placed.config)
+            val current = keys()
             var keys = reconcileKeys(current, pages) ?: current
             val created = pages.flatMap { it.tiles }.firstOrNull { it.id == added && it.type != "empty" }
             if (created != null && keys.none { it.id == created.id } && keys.size < MAX_KEYS) keys = keys + KeyRef.of(created)
@@ -190,7 +200,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     override fun showSettings() {
         host.scope.launch {
             val pages = readPages(force = false) ?: return@launch
-            val current = KeyRef.list(placed.config)
+            val current = keys()
             val selected = current.map { it.id }.toMutableList()
             val box = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(24), dp(4), dp(24), dp(8)) }
             val boxes = mutableListOf<Pair<CheckBox, DeckTile>>()
