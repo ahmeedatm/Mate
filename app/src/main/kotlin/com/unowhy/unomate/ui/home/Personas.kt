@@ -104,12 +104,14 @@ enum class Persona(
         )),
     ), theme = "STUDIO"),
     CAMILLE("camille", R.string.persona_camille, R.string.persona_camille_desc, listOf(
-        // Je m'absente au centre de la haute rangée, Focus et prochain rendez-vous en colonnes de part et d'autre, touches dessous : 16 cases.
+        // Je m'absente au centre de la haute rangée, Focus et prochain rendez-vous en colonnes de part et d'autre, touches et tâches dessous : 16 cases.
         Profile(R.string.demo_screen_work, listOf(
             Slot(WidgetType.FOCUS, WidgetSize.V, 0, 0),
             Slot(WidgetType.AWAY, WidgetSize.L, 1, 0),
             Slot(WidgetType.NEXT, WidgetSize.V, 3, 0),
-            Slot(WidgetType.KEYS, WidgetSize.XL, 0, 2, page = "Travail"),
+            // Six touches : en L elles remplissent la carte, les tâches du jour à côté (en XL, une rangée sur un grand vide).
+            Slot(WidgetType.KEYS, WidgetSize.L, 0, 2, page = "Travail"),
+            Slot(WidgetType.TASKS, WidgetSize.L, 2, 2),
         )),
         Profile(R.string.demo_screen_house, listOf(
             Slot(WidgetType.KEYS, WidgetSize.L, 0, 0, page = "Maison"),
