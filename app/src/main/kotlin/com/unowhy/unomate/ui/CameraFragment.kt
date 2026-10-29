@@ -152,7 +152,11 @@ class CameraFragment : Fragment() {
             if (right - left != oldRight - oldLeft) controls.post { fitControls() }
         }
 
-        stop.setOnClickListener { choose(null) }
+        // Arrêter : retour à Ordi, d'où les deux usages de la caméra s'ouvrent.
+        stop.setOnClickListener {
+            choose(null)
+            (activity as? MainActivity)?.backToComputer()
+        }
         freeze.setOnClickListener { setFrozen(!frozen) }
         photo.setOnClickListener { takePhoto() }
         copy.setOnClickListener { copyPhoto() }
@@ -516,6 +520,9 @@ class CameraFragment : Fragment() {
         actionLabel?.let { action.setText(it) }
         action.setOnClickListener { onAction?.invoke() }
     }
+
+    /** Case d'Ordi : « Montrer sur l'ordi » ou « Envoyer une photo », sans passer par l'écran de choix de la caméra. */
+    fun start(photo: Boolean) = choose(if (photo) Purpose.PHOTO else Purpose.SHOW)
 
     private fun choose(next: Purpose?) {
         purpose = next

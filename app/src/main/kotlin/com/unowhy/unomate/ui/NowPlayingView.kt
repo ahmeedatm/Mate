@@ -60,8 +60,7 @@ class NowPlayingView @JvmOverloads constructor(
     private var mode = Layout.ROW
 
     init {
-        orientation = HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
+        orientation = VERTICAL
         LayoutInflater.from(context).inflate(R.layout.view_now_playing, this, true)
         thumb = findViewById(R.id.media_thumb)
         thumb.clipToOutline = true
@@ -110,16 +109,17 @@ class NowPlayingView @JvmOverloads constructor(
     }
 
     /**
-     * Mise en page : boutons à droite (page Média, widgets de l'Accueil), ou petite (widget d'une case : titre,
-     * artiste et boutons dessous, sans vignette ni avancement).
+     * Mise en page : pastilles des lectures en haut, boutons à droite (widgets Moyen et Grand), ou petite (widget d'une
+     * case : titre, artiste et boutons dessous, sans vignette, pastilles ni avancement).
      */
     enum class Layout { ROW, SMALL }
 
     fun layout(mode: Layout) {
         this.mode = mode
         val below = mode != Layout.ROW
-        orientation = if (below) VERTICAL else HORIZONTAL
-        gravity = if (below) Gravity.CENTER_HORIZONTAL else Gravity.CENTER_VERTICAL
+        val row = findViewById<LinearLayout>(R.id.media_row)
+        row.orientation = if (below) VERTICAL else HORIZONTAL
+        row.gravity = if (below) Gravity.CENTER_HORIZONTAL else Gravity.CENTER_VERTICAL
         val main = findViewById<LinearLayout>(R.id.media_main)
         main.layoutParams = if (below) LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT) else LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
         val controls = findViewById<LinearLayout>(R.id.media_controls)
@@ -128,9 +128,8 @@ class NowPlayingView @JvmOverloads constructor(
         }
         (previous.layoutParams as MarginLayoutParams).marginStart = context.dp(if (below) 0 else 16)
         val small = mode == Layout.SMALL
-        thumb.visibility = if (small) GONE else VISIBLE
+        fitThumb(!small && thumb.drawable != null)
         source.visibility = if (small) GONE else VISIBLE
-        (title.parent as View).let { (it.layoutParams as MarginLayoutParams).marginStart = if (small) 0 else context.dp(20) }
         title.maxLines = if (small) 1 else 2
         if (small) {
             timeline.visibility = GONE
@@ -248,18 +247,30 @@ class NowPlayingView @JvmOverloads constructor(
         button.alpha = if (enabled) 1f else 0.4f
     }
 
+    /** Vignette affichée seulement quand il y a une image ; sans elle, les textes partent du bord de la carte. */
+    private fun fitThumb(shown: Boolean) {
+        thumb.visibility = if (shown) VISIBLE else GONE
+        (title.parent as View).let { (it.layoutParams as MarginLayoutParams).marginStart = if (shown) context.dp(16) else 0 }
+    }
+
     /** Vignette rechargée seulement quand le morceau ou la vidéo change. */
     private fun showThumb(app: String?, key: String?) {
         if (key == thumbKey) return
         thumbKey = key
         thumb.setImageBitmap(null)
+        fitThumb(false)
         if (app == null || key == null) return
         scope.launch {
             val bytes = runCatching { BackendClient(context).system.mediaThumb(app, key) }.getOrNull()
             val bitmap = bytes?.let { withContext(Dispatchers.Default) { decode(it) } }
             if (thumbKey != key) return@launch
             // Échec (ordinateur occupé, helper relancé) : réessayé à l'actualisation suivante.
-            if (bitmap == null) thumbKey = null else thumb.setImageBitmap(bitmap)
+            if (bitmap == null) {
+                thumbKey = null
+            } else {
+                thumb.setImageBitmap(bitmap)
+                fitThumb(mode != Layout.SMALL)
+            }
         }
     }
 

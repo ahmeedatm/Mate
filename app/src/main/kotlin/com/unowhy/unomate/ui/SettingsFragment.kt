@@ -396,7 +396,7 @@ class SettingsFragment : Fragment() {
             }
         }
         val shown = Prefs.railTools(requireContext())
-        mapOf(R.id.settings_rail_focus to Mode.FOCUS, R.id.settings_rail_computer to Mode.COMPUTER, R.id.settings_rail_camera to Mode.CAMERA)
+        mapOf(R.id.settings_rail_focus to Mode.FOCUS, R.id.settings_rail_computer to Mode.COMPUTER)
             .forEach { (id, tool) ->
                 view.findViewById<SwitchCompat>(id).apply {
                     isChecked = tool in shown

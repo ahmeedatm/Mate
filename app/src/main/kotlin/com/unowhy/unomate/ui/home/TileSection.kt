@@ -59,13 +59,21 @@ class TileSection(
     private var pageExists = true
     private var wanted = true
 
+    /** Ligne trop basse pour le titre (bandeau sur la ligne fine) : seules les tuiles restent ; agrandir montre le reste. */
+    var headerHidden = false
+        set(value) {
+            if (field == value) return
+            field = value
+            shown = wanted
+        }
+
     /** Le widget montre la section ou non (sa taille) ; sans page, elle reste cachée. */
     var shown: Boolean
         get() = wanted
         set(value) {
             wanted = value
             val visibility = if (wanted && pageExists) View.VISIBLE else View.GONE
-            header.visibility = visibility
+            header.visibility = if (headerHidden) View.GONE else visibility
             grid.visibility = visibility
         }
 

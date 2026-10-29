@@ -201,4 +201,15 @@ class WidgetModelTest {
         assertTrue(WidgetType.OPEN in deck)
         assertFalse(WidgetType.MEDIA in deck)
     }
+
+    @Test
+    fun `widget maintenu, agrandi dans sa plus grande taille, la plus large a surface egale`() {
+        assertEquals(WidgetSize.L, WidgetType.MEDIA.zoomSize)
+        assertEquals(WidgetSize.XL, WidgetType.KEYS.zoomSize)
+        // Tâches : Grand, Haut (2 × 4), Vertical, Moyen : Haut a la plus grande surface.
+        assertEquals(WidgetSize.T, WidgetType.TASKS.zoomSize)
+        assertEquals(WidgetSize.M, WidgetType.WATER.zoomSize)
+        assertTrue(WidgetType.MEDIA.zoomable)
+        assertFalse(WidgetType.HERO.zoomable)
+    }
 }

@@ -171,8 +171,8 @@ object Prefs {
         prefs(context).edit().putStringSet(KEY_RAIL_HIDDEN, hidden).apply()
     }
 
-    /** Outils que la barre de gauche peut montrer. */
-    val RAIL_TOOLS = listOf(Mode.FOCUS, Mode.COMPUTER, Mode.CAMERA)
+    /** Outils que la barre de gauche peut montrer ; la Caméra s'ouvre depuis Ordi (ses deux cases), plus depuis la barre. */
+    val RAIL_TOOLS = listOf(Mode.FOCUS, Mode.COMPUTER)
 
     /** Thème choisi dans Réglages (nom d'AppTheme) ; null : Nuit. */
     /** Agents Claude : contenu des sessions (commandes, questions, résumés) masqué à l'écran, pour le direct. */

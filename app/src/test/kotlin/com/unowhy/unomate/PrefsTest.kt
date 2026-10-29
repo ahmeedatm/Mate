@@ -37,13 +37,14 @@ class PrefsTest {
     @Test
     fun `barre de gauche, noms et outils affiches par defaut, puis retenus`() {
         assertTrue(Prefs.railLabels(context))
-        assertEquals(listOf(Mode.FOCUS, Mode.COMPUTER, Mode.CAMERA), Prefs.railTools(context))
-        Prefs.setRailLabels(context, false)
-        Prefs.setRailTool(context, Mode.CAMERA, false)
-        assertFalse(Prefs.railLabels(context))
+        // La Caméra n'est plus un outil de la barre : elle s'ouvre depuis Ordi.
         assertEquals(listOf(Mode.FOCUS, Mode.COMPUTER), Prefs.railTools(context))
-        Prefs.setRailTool(context, Mode.CAMERA, true)
-        assertEquals(listOf(Mode.FOCUS, Mode.COMPUTER, Mode.CAMERA), Prefs.railTools(context))
+        Prefs.setRailLabels(context, false)
+        Prefs.setRailTool(context, Mode.FOCUS, false)
+        assertFalse(Prefs.railLabels(context))
+        assertEquals(listOf(Mode.COMPUTER), Prefs.railTools(context))
+        Prefs.setRailTool(context, Mode.FOCUS, true)
+        assertEquals(listOf(Mode.FOCUS, Mode.COMPUTER), Prefs.railTools(context))
     }
 
     @Test

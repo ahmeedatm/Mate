@@ -68,8 +68,9 @@
         android:layout_marginTop="20dp"
         android:layout_weight="1">
 
-        <!-- Écran de départ : les quatre usages, expliqués, dans un grand carré coupé en croix (cases translucides en Rétro). -->
-        <com.unowhy.unomate.ui.CrossSquareLayout
+        <!-- Écran de départ : les six usages entre la tablette et l'ordi, expliqués, en un bloc de 3 × 2 cases coupé par des
+             sillons (cases translucides en Rétro) ; les deux de la caméra ouvrent le mode Caméra. -->
+        <com.unowhy.unomate.ui.TileBlockLayout
             android:id="@+id/docs_choice"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
@@ -229,7 +230,83 @@
                     android:textColor="?attr/c_text_dim"
                     android:textSize="16sp" />
             </LinearLayout>
-        </com.unowhy.unomate.ui.CrossSquareLayout>
+            <LinearLayout
+                android:id="@+id/docs_choose_camera_show"
+                style="@style/Card"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?android:attr/selectableItemBackground"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:padding="28dp"
+                android:paddingTop="40dp">
+
+                <ImageView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_videocam"
+                    app:tint="?attr/c_accent" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/camera_choose_show"
+                    android:textColor="?attr/c_text"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center"
+                    android:text="@string/camera_choose_show_hint"
+                    android:textColor="?attr/c_text_dim"
+                    android:textSize="16sp" />
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/docs_choose_camera_photo"
+                style="@style/Card"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?android:attr/selectableItemBackground"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:padding="28dp"
+                android:paddingTop="40dp">
+
+                <ImageView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_camera"
+                    app:tint="?attr/c_accent" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/camera_choose_photo"
+                    android:textColor="?attr/c_text"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center"
+                    android:text="@string/camera_choose_photo_hint"
+                    android:textColor="?attr/c_text_dim"
+                    android:textSize="16sp" />
+            </LinearLayout>
+        </com.unowhy.unomate.ui.TileBlockLayout>
 
         <!-- Cadre photo : photos de l'ordi qui défilent quand la tablette ne sert pas, et quand. -->
         <include

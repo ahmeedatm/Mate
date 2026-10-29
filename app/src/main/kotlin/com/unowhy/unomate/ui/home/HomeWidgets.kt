@@ -218,6 +218,32 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             }
         }
         onMinute()
+        view.post(::fitHeight)
+    }
+
+    init {
+        // La hauteur dépend de la ligne de l'Accueil (232, 92 ou 184 dp en Cadran) : l'heure s'y ajuste.
+        view.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+            if (bottom - top != oldBottom - oldTop) view.post(::fitHeight)
+        }
+    }
+
+    /**
+     * Une ligne (Moyen, Bandeau) : sur une ligne basse (la fine de 92 dp), marges réduites, sans salutation, et l'heure
+     * rapetissée pour tenir en hauteur ; sinon les tailles de [applySize].
+     */
+    private fun fitHeight() {
+        if (placed.size != WidgetSize.M && placed.size != WidgetSize.W) return
+        val wide = placed.size == WidgetSize.W
+        val short = view.height in 1 until dp(SHORT_DP)
+        val pad = dp(if (short) 8 else 24)
+        if (view.paddingTop != pad) view.setPadding(dp(24), pad, dp(24), pad)
+        greeting.visibility = if (short) View.GONE else View.VISIBLE
+        date.textSize = if (short) 18f else if (wide) 26f else 18f
+        val base = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, if (wide) 116f else 80f, context.resources.displayMetrics)
+        // Chiffres sans marge de police (includeFontPadding faux) : la ligne fait ~1,15 fois la taille du texte.
+        val room = (view.height - 2 * pad) / CLOCK_LINE
+        clock.setTextSize(TypedValue.COMPLEX_UNIT_PX, if (view.height > 0) minOf(base, room) else base)
     }
 
     override fun onMinute() {
@@ -229,6 +255,14 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         // Une case : date courte (« Mer. 28 oct. »), qui tient sur une ligne.
         val pattern = if (placed.size == WidgetSize.S) "EEE d MMM" else "EEEE d MMMM"
         date.text = SimpleDateFormat(pattern, Locale.FRANCE).format(Date()).replaceFirstChar { it.uppercase() }
+    }
+
+    private companion object {
+        /** En dessous de cette hauteur, la ligne est « basse » (la fine de l'Accueil Cadran fait 92 dp). */
+        const val SHORT_DP = 130
+
+        /** Hauteur d'une ligne de chiffres, en tailles de texte. */
+        const val CLOCK_LINE = 1.15f
     }
 }
 
@@ -461,11 +495,15 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         onAdd = { host.overlays.addLinks { sites.reload() } },
     )
 
+    /** Son de l'ordinateur, en Grand (et agrandi) : on règle le volume sans changer de widget. */
+    private val volume = ComputerAudioView(context).apply { attach(host.scope) }
+
     override val view = LinearLayout(context).asCard(16).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
         playing.bind(true)
         addView(playing, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        addView(volume, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
         sites.addTo(this, headerTopMarginDp = 8)
     }
 
@@ -481,6 +519,7 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     override fun applySize() {
         playing.layout(if (placed.size == WidgetSize.S) NowPlayingView.Layout.SMALL else NowPlayingView.Layout.ROW)
         sites.shown = big
+        volume.visibility = if (big) View.VISIBLE else View.GONE
         if (big) host.scope.launch { load() }
     }
 

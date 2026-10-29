@@ -102,6 +102,8 @@ class FromComputerFragment : Fragment() {
         view.findViewById<View>(R.id.docs_choose_web).setOnClickListener { (requireActivity() as MainActivity).openComputerPage() }
         view.findViewById<View>(R.id.docs_choose_clipboard).setOnClickListener { show(Screen.CLIPBOARD) }
         view.findViewById<View>(R.id.docs_choose_frame).setOnClickListener { show(Screen.FRAME) }
+        view.findViewById<View>(R.id.docs_choose_camera_show).setOnClickListener { (requireActivity() as MainActivity).openCamera(photo = false) }
+        view.findViewById<View>(R.id.docs_choose_camera_photo).setOnClickListener { (requireActivity() as MainActivity).openCamera(photo = true) }
 
         show(Screen.CHOICE)
     }

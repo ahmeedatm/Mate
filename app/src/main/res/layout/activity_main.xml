@@ -135,15 +135,31 @@
                 android:textSize="10sp" />
         </LinearLayout>
 
-        <!-- Réglages : la roue, en texte plein quand Réglages est affiché. -->
-        <ImageButton
-            android:id="@+id/rail_settings"
-            style="@style/IconButton.Flat"
-            android:layout_width="56dp"
-            android:layout_height="48dp"
-            android:contentDescription="@string/mode_settings"
-            android:src="@drawable/ic_settings"
-            app:tint="@color/rail_profile_content" />
+        <!-- Crayon : mode Modifier du profil affiché (l'appui long agrandit un widget), plein pendant le mode Modifier ;
+             puis Réglages : la roue, en texte plein quand Réglages est affiché. Côte à côte : la barre est pleine en hauteur. -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/rail_edit"
+                style="@style/IconButton.Flat"
+                android:layout_width="44dp"
+                android:layout_height="48dp"
+                android:contentDescription="@string/home_edit_open"
+                android:src="@drawable/ic_edit"
+                app:tint="@color/rail_profile_content" />
+
+            <ImageButton
+                android:id="@+id/rail_settings"
+                style="@style/IconButton.Flat"
+                android:layout_width="44dp"
+                android:layout_height="48dp"
+                android:contentDescription="@string/mode_settings"
+                android:src="@drawable/ic_settings"
+                app:tint="@color/rail_profile_content" />
+        </LinearLayout>
     </LinearLayout>
 
     <!-- Écran du mode ; par-dessus, « Aucun ordinateur connecté » pour les modes qui en ont besoin. -->

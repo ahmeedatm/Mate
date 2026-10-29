@@ -355,14 +355,6 @@
                 android:minHeight="48dp"
                 android:text="@string/mode_computer"
                 android:textSize="16sp" />
-
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/settings_rail_camera"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minHeight="48dp"
-                android:text="@string/mode_camera"
-                android:textSize="16sp" />
         </LinearLayout>
 
         <!-- Tablette : ce que le kiosque cache (batterie, luminosité, volume, version, adresse). -->

@@ -13,6 +13,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.dynamicanimation.animation.DynamicAnimation
 import com.unowhy.unomate.Computers
 import com.unowhy.unomate.R
@@ -242,9 +243,16 @@ class TasksCard @JvmOverloads constructor(
             paint(done, animate = true)
             toggle(task, row, done)
         }
-        row.findViewById<TextView>(R.id.task_detail).apply {
+        val detail = row.findViewById<TextView>(R.id.task_detail).apply {
             text = task.detail ?: task.schedule
             visibility = if (text.isNullOrEmpty()) View.GONE else View.VISIBLE
+        }
+        // Carte étroite (Vertical, une colonne) : le libellé d'abord ; le détail (« Lun-ven · 17:30 ») ne le réduit pas à « R… ».
+        if (!detail.text.isNullOrEmpty()) {
+            row.addOnLayoutChangeListener { _, left, _, right, _, _, _, _, _ ->
+                val shown = right - left >= context.dp(NARROW_ROW_DP)
+                if (detail.isVisible != shown) row.post { detail.isVisible = shown }
+            }
         }
         row.findViewById<ImageButton>(R.id.task_open).apply {
             visibility = if (task.hasUrl) View.VISIBLE else View.GONE
@@ -317,6 +325,9 @@ class TasksCard @JvmOverloads constructor(
 
     private companion object {
         const val SINK_DELAY_MS = 650L
+
+        /** Largeur de ligne sous laquelle le détail d'une tâche se cache (carte Vertical : ~270 dp). */
+        const val NARROW_ROW_DP = 340
 
         /** Thèmes Cadran : dernière liste lue par ordinateur, pour un écran recréé pendant une coupure. */
         val lastRead = HashMap<String, List<TaskItem>>()
