@@ -238,7 +238,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showLink(link: Link) {
-        if (link.state == Link.State.ONLINE && this.link.state != Link.State.ONLINE) resyncAgents()
+        if (link.state == Link.State.ONLINE && this.link.state != Link.State.ONLINE) {
+            resyncAgents()
+            resyncCall()
+        }
         this.link = link
         linkWatch.onLink(link.computer?.id, link.state, System.currentTimeMillis())
         nav.showLink(link)
@@ -429,6 +432,9 @@ class MainActivity : AppCompatActivity() {
 
     val inCall: Boolean get() = call.active
 
+    /** Appli de l'appel en cours (widget d'appel du profil Réunion), null hors appel. */
+    val callApp: String? get() = call.app
+
     /** Ordre `meeting` de l'ordinateur : un appel commence ou finit. */
     fun onMeeting(state: String, app: String) = if (state == "start") startCall(app) else endCall()
 
@@ -505,6 +511,17 @@ class MainActivity : AppCompatActivity() {
     val agentAskOpen get() = agentAsk.isOpen
 
     /** Demande d'agent en attente depuis avant la connexion : lumière rallumée (voir AgentAlerts.resync). */
+    /**
+     * Retour en ligne (lancement, relance de l'appli, réseau revenu) : un appel déjà en cours sur l'ordinateur ne serait
+     * pas redit par l'ordre `meeting` (il ne prévient qu'au changement) ; on le relit une fois.
+     */
+    private fun resyncCall() {
+        lifecycleScope.launch {
+            val live = runCatching { BackendClient(this@MainActivity).deck.liveApps() }.getOrNull() ?: return@launch
+            live.live.firstOrNull()?.let { startCall(it) }
+        }
+    }
+
     private fun resyncAgents() {
         lifecycleScope.launch {
             val ask = runCatching { BackendClient(this@MainActivity).agents.state() }.getOrNull()?.sessions?.firstNotNullOfOrNull { it.askId }

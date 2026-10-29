@@ -136,4 +136,5 @@ export const TILE_SYMBOLS = [
   "link",
   "apps",
   "search",
+  "call",
 ] as const;

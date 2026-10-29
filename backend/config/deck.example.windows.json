@@ -31,8 +31,8 @@
       "tiles": [
         { "label": "Micro Teams", "glyph": "🎤", "lit": "muted", "action": { "type": "keys", "keys": "ctrl+shift+m", "app": "Microsoft Teams" } },
         { "label": "Caméra Teams", "glyph": "📷", "action": { "type": "keys", "keys": "ctrl+shift+o", "app": "Microsoft Teams" } },
-        { "label": "Lever la main", "glyph": "✋", "action": { "type": "keys", "keys": "ctrl+shift+k", "app": "Microsoft Teams" } },
-        { "label": "Partager l'écran", "glyph": "🖥", "action": { "type": "keys", "keys": "ctrl+shift+e", "app": "Microsoft Teams" } },
+        { "label": "Lever la main", "symbol": "hand", "glyph": "✋", "action": { "type": "keys", "keys": "ctrl+shift+k", "app": "Microsoft Teams" } },
+        { "label": "Partager l'écran", "symbol": "present", "glyph": "🖥", "action": { "type": "keys", "keys": "ctrl+shift+e", "app": "Microsoft Teams" } },
         { "label": "Raccrocher", "glyph": "📞", "color": "#C62828", "action": { "type": "keys", "keys": "ctrl+shift+h", "app": "Microsoft Teams" } }
       ]
     },
@@ -41,10 +41,10 @@
       "app": "Discord",
       "tiles": [
         { "label": "Ouvrir Discord", "action": { "type": "app", "name": "Discord" } },
-        { "label": "Couper mon micro", "glyph": "🎤", "when": "call", "lit": "muted", "action": { "type": "press", "app": "Discord", "names": ["Rendre muet", "Ne plus rendre muet", "Mute", "Unmute"] } },
-        { "label": "Sourdine (casque)", "glyph": "🎧", "when": "call", "lit": "deafened", "action": { "type": "press", "app": "Discord", "names": ["Mettre en sourdine", "Ne plus mettre en sourdine", "Deafen", "Undeafen"] } },
-        { "label": "Arrêter le partage", "glyph": "🛑", "when": "streaming", "action": { "type": "press", "app": "Discord", "names": ["Arrêter de streamer", "Stop Streaming"] } },
-        { "label": "Quitter l'appel", "glyph": "📴", "when": "call", "action": { "type": "press", "app": "Discord", "names": ["Déconnecter", "Disconnect"] } }
+        { "label": "Couper mon micro", "symbol": "mic_off", "glyph": "🎤", "when": "call", "lit": "muted", "action": { "type": "press", "app": "Discord", "names": ["Rendre muet", "Ne plus rendre muet", "Mute", "Unmute"] } },
+        { "label": "Sourdine (casque)", "symbol": "volume_off", "glyph": "🎧", "when": "call", "lit": "deafened", "action": { "type": "press", "app": "Discord", "names": ["Mettre en sourdine", "Ne plus mettre en sourdine", "Deafen", "Undeafen"] } },
+        { "label": "Arrêter le partage", "symbol": "present", "glyph": "🛑", "when": "streaming", "action": { "type": "press", "app": "Discord", "names": ["Arrêter de streamer", "Stop Streaming"] } },
+        { "label": "Quitter l'appel", "symbol": "call_end", "glyph": "📴", "when": "call", "action": { "type": "press", "app": "Discord", "names": ["Déconnecter", "Disconnect"] } }
       ]
     },
     {

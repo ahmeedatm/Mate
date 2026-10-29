@@ -1,5 +1,7 @@
 package com.unowhy.companion.ui
 
+import com.unowhy.companion.net.DeckPage
+
 /**
  * Appel en cours sur l'ordinateur (Deck V2), sans vue : il commence par l'ordre `meeting` de l'ordinateur (Teams,
  * Discord : micro utilisé) ou par « Rejoindre » sur la tablette (toute réunion en ligne, avec l'heure de fin de
@@ -57,6 +59,19 @@ class CallSession(private val now: () -> Long = System::currentTimeMillis) {
             "zoom" -> "Zoom"
             "webex" -> "Webex"
             else -> "Réunion"
+        }
+
+        /** Page du deck de l'appel : la page Réunion (`meeting`) pour Teams, la page de l'appli sinon ; null : aucune. */
+        fun pageFor(app: String?, pages: List<DeckPage>): DeckPage? {
+            if (app == null) return null
+            val mine = pages.filter { it.app.equals(app, ignoreCase = true) }
+            return mine.firstOrNull { it.meeting } ?: mine.firstOrNull()
+        }
+
+        /** Appli sans page (Meet, Zoom, Webex) : ce que l'ordinateur sait faire partout, la touche « Couper le micro ». */
+        fun fallbackPage(pages: List<DeckPage>): DeckPage? {
+            val tiles = pages.flatMap { it.tiles }.filter { it.symbol == "mic_off" }.distinctBy { it.id }.take(1)
+            return if (tiles.isEmpty()) null else DeckPage("Réunion", tiles, false, false, false, null, false, true, false)
         }
     }
 }

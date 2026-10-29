@@ -1,5 +1,7 @@
 package com.unowhy.companion.ui
 
+import com.unowhy.companion.net.DeckPage
+import com.unowhy.companion.net.DeckTile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -75,5 +77,31 @@ class CallSessionTest {
         assertEquals("Zoom", CallSession.appOfKind("zoom"))
         assertEquals("Webex", CallSession.appOfKind("webex"))
         assertEquals("Réunion", CallSession.appOfKind(null))
+    }
+
+    private fun page(title: String, app: String?, meeting: Boolean = false, tiles: List<DeckTile> = emptyList()) =
+        DeckPage(title, tiles, false, false, meeting, app, false, true, false)
+
+    private val pages = listOf(
+        page("Apps", null),
+        page("Microsoft Teams", "Microsoft Teams"),
+        page("Réunion", "Microsoft Teams", meeting = true),
+        page("Discord", "Discord"),
+        page("Raccourcis", null, tiles = listOf(DeckTile("r-2", "Couper le micro", "system", null, null, symbol = "mic_off"))),
+    )
+
+    @Test
+    fun `page de l'appel, la Reunion pour Teams, la sienne pour Discord`() {
+        assertEquals("Réunion", CallSession.pageFor("Microsoft Teams", pages)?.title)
+        assertEquals("Discord", CallSession.pageFor("Discord", pages)?.title)
+        assertNull(CallSession.pageFor("Zoom", pages))
+        assertNull(CallSession.pageFor(null, pages))
+    }
+
+    @Test
+    fun `appli sans page, la touche Couper le micro du deck`() {
+        val fallback = CallSession.fallbackPage(pages)!!
+        assertEquals(listOf("r-2"), fallback.tiles.map { it.id })
+        assertNull(CallSession.fallbackPage(pages.take(4)))
     }
 }

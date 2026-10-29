@@ -58,7 +58,8 @@ enum class WidgetType(
     APPS("apps", R.string.widget_apps, R.string.widget_apps_desc, R.drawable.ic_tabs, listOf(WidgetSize.L, WidgetSize.M, WidgetSize.XL, WidgetSize.W), true),
     DISCORD("discord", R.string.widget_discord, R.string.widget_discord_desc, R.drawable.ic_call, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     MEETING("meeting", R.string.widget_meeting, R.string.widget_meeting_desc, R.drawable.ic_videocam, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
-    PAD("pad", R.string.widget_pad, R.string.widget_pad_desc, R.drawable.ic_tablet, listOf(WidgetSize.XL, WidgetSize.L), true);
+    PAD("pad", R.string.widget_pad, R.string.widget_pad_desc, R.drawable.ic_tablet, listOf(WidgetSize.XL, WidgetSize.L), true),
+    CALL("call", R.string.widget_call, R.string.widget_call_desc, R.drawable.ic_videocam, listOf(WidgetSize.XL, WidgetSize.L), true);
 
     /** Sans fond de carte, posé à même l'écran : les tubes du thème Rétro y passent derrière un voile. */
     val bare get() = this == HERO || this == DAYLINE
@@ -354,9 +355,9 @@ enum class Template(
 
     // Réunion : piloter l'appel en cours. Affiché seulement pendant un appel.
     CALL_CADRAN(R.string.template_call, R.string.template_call_desc, listOf(
-        Placed(WidgetType.MEETING, WidgetSize.L, 0, 0, 0),
-        Placed(WidgetType.NEXT, WidgetSize.L, 0, 2, 0),
-        Placed(WidgetType.AUDIO, WidgetSize.L, 0, 0, 2),
+        Placed(WidgetType.CALL, WidgetSize.XL, 0, 0, 0),
+        Placed(WidgetType.NEXT, WidgetSize.L, 0, 0, 2),
+        Placed(WidgetType.AUDIO, WidgetSize.L, 0, 2, 2),
     ), cadran = true, listed = false);
 
     /** Modèle d'un rôle (Deck, Réunion) : une page pour agir, pas un Accueil (ni héros ni ligne du jour). */

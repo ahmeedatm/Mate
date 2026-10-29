@@ -873,6 +873,8 @@
     <string name="widget_discord_desc">L\'appel Discord : micro, sourdine, quitter l\'appel</string>
     <string name="widget_meeting">Réunion</string>
     <string name="widget_meeting_desc">La réunion en ligne : rejoindre, micro, caméra, quitter</string>
+    <string name="widget_call">Appel en cours</string>
+    <string name="widget_call_desc">L\'appel du moment, quelle que soit l\'appli : micro, caméra, partage, quitter</string>
     <string name="widget_pad">Pavé tactile</string>
     <string name="widget_pad_desc">Piloter le pointeur de l\'ordi du doigt : bouger, défiler, cliquer</string>
     <string name="pad_unsupported">Le pavé marche avec un Mac ou un PC Windows</string>

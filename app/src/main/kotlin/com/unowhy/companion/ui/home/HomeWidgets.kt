@@ -154,6 +154,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.APPS -> AppsWidget(context, host, placed)
                 WidgetType.DISCORD -> DiscordWidget(context, host, placed)
                 WidgetType.MEETING -> MeetingWidget(context, host, placed)
+                WidgetType.CALL -> AnyCallWidget(context, host, placed)
                 WidgetType.PAD -> PadWidget(context, host, placed)
             }
     }

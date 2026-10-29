@@ -31,12 +31,14 @@
       "tiles": [
         {
           "label": "Rejoindre maintenant",
+          "symbol": "call",
           "glyph": "✅",
           "when": "lobby",
           "action": { "type": "press", "app": "Microsoft Teams", "names": ["Rejoindre maintenant", "Join now"] }
         },
         {
           "label": "Micro",
+          "symbol": "mic_off",
           "glyph": "🎤",
           "when": "call",
           "lit": "muted",
@@ -48,6 +50,7 @@
         },
         {
           "label": "Caméra",
+          "symbol": "videocam_off",
           "glyph": "📷",
           "when": "call",
           "lit": "camera",
@@ -59,12 +62,14 @@
         },
         {
           "label": "Partager l'écran",
+          "symbol": "present",
           "glyph": "🖥",
           "when": "share",
           "action": { "type": "press", "app": "Microsoft Teams", "names": ["Partager", "Share"] }
         },
         {
           "label": "Arrêter le partage",
+          "symbol": "present",
           "glyph": "🛑",
           "when": "streaming",
           "action": {
@@ -75,12 +80,14 @@
         },
         {
           "label": "Lever la main",
+          "symbol": "hand",
           "glyph": "✋",
           "when": "call",
           "action": { "type": "keys", "keys": "cmd+shift+k", "app": "Microsoft Teams" }
         },
         {
           "label": "Quitter l'appel",
+          "symbol": "call_end",
           "glyph": "📴",
           "color": "#C62828",
           "when": "call",
@@ -95,6 +102,7 @@
         { "label": "Ouvrir Discord", "action": { "type": "app", "name": "Discord" } },
         {
           "label": "Couper mon micro",
+          "symbol": "mic_off",
           "glyph": "🎤",
           "when": "call",
           "lit": "muted",
@@ -102,6 +110,7 @@
         },
         {
           "label": "Sourdine (casque)",
+          "symbol": "volume_off",
           "glyph": "🎧",
           "when": "call",
           "lit": "deafened",
@@ -109,6 +118,7 @@
         },
         {
           "label": "Quitter l'appel",
+          "symbol": "call_end",
           "glyph": "📴",
           "when": "call",
           "action": { "type": "press", "app": "Discord", "names": ["Déconnecter", "Disconnect"] }

@@ -132,4 +132,13 @@ class WidgetModelTest {
         assertFalse(WidgetType.HERO.computer)
         assertFalse(WidgetType.DAYLINE.computer)
     }
+
+    @Test
+    fun `widget d'appel generique, en XL et L, remplit le modele Reunion`() {
+        assertEquals(WidgetType.CALL, WidgetType.of("call"))
+        assertEquals(listOf(WidgetSize.XL, WidgetSize.L), WidgetType.CALL.sizes)
+        val layout = Template.CALL_CADRAN.build()
+        assertTrue(layout.widgets.any { it.type == WidgetType.CALL && it.size == WidgetSize.XL })
+        for (r in 0 until ROWS) for (c in 0 until COLS) assertTrue("case $c,$r", layout.widgets.any { it.covers(c, r) })
+    }
 }

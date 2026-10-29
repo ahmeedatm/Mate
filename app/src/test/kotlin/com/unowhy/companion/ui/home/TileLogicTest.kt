@@ -252,7 +252,7 @@ class TileLogicTest {
     @Test
     fun `chaque symbole du backend a son icone`() {
         for (name in TileIcons.NAMES) assertTrue(name, TileIcons.drawable(name) != null)
-        assertEquals(21, TileIcons.NAMES.size)
+        assertEquals(22, TileIcons.NAMES.size)
         assertNull(TileIcons.drawable("fusee"))
         assertNull(TileIcons.drawable(null))
     }

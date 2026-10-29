@@ -31,6 +31,7 @@ object TileIcons {
         "link" to R.drawable.ic_link,
         "apps" to R.drawable.ic_deck,
         "search" to R.drawable.ic_tile_search,
+        "call" to R.drawable.ic_call,
     )
 
     val NAMES: Set<String> get() = icons.keys
