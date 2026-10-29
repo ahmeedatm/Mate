@@ -768,6 +768,8 @@
     <string name="widget_mixer_desc">Sortie, micro et chaque appli, avec leurs scènes</string>
     <string name="widget_open">Fenêtres ouvertes</string>
     <string name="widget_open_desc">Les fenêtres de l\'ordi par écran, à déplacer ou fermer</string>
+    <string name="widget_apps">Applis</string>
+    <string name="widget_apps_desc">Les applis du Deck : lancer, ajouter, retirer, voir leurs fenêtres</string>
     <string name="widget_perf">Performances du PC</string>
     <string name="widget_perf_desc">Processeur, carte graphique et mémoire en direct</string>
     <string name="perf_title">PC · %1$s</string>
@@ -787,6 +789,8 @@
     <string name="widget_keys_add">Ajouter</string>
     <string name="widget_keys_new">Nouvelle touche</string>
     <string name="widget_keys_existing">Choisir parmi les touches existantes</string>
+    <string name="widget_keys_widget_full">Ce widget a déjà %1$d touches : retire-en une avant d\'en créer.</string>
+    <string name="widget_keys_no_perso">Ce deck n\'a pas de page de touches perso.</string>
     <string name="widget_keys_full">Les emplacements des touches perso sont tous pris.</string>
     <string name="widget_keys_remove">Retirer « %1$s » de ce widget ?</string>
     <string name="widget_keys_remove_yes">Retirer</string>

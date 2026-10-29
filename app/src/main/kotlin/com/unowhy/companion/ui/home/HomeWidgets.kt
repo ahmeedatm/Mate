@@ -141,6 +141,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.AGENTS -> AgentsWidget(context, host, placed)
                 WidgetType.MIXER -> MixerWidget(context, host, placed)
                 WidgetType.OPEN -> OpenWindowsWidget(context, host, placed)
+                WidgetType.APPS -> AppsWidget(context, host, placed)
             }
     }
 }
