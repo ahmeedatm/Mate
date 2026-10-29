@@ -486,9 +486,8 @@
     <string name="focus_ready">Prêt</string>
     <string name="focus_paused">En pause</string>
     <string name="ambiance">Ambiance</string>
-    <string name="breath_open">Respirer</string>
-    <string name="breath_title">Respiration</string>
-    <string name="breath_back">Retour au Pomodoro</string>
+    <string name="focus_mode_pomodoro">Pomodoro</string>
+    <string name="focus_mode_breath">Respiration</string>
     <string name="breath_coherence">Cohérence 5-5</string>
     <string name="breath_box">Carré 4-4-4-4</string>
     <string name="breath_relax">Détente 4-7-8</string>

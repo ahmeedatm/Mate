@@ -74,16 +74,10 @@ class FocusFragment : Fragment() {
             }
         }
 
-        val pomodoro = view.findViewById<View>(R.id.focus_pomodoro)
-        val breathingRoot = view.findViewById<View>(R.id.focus_breathing)
-        breathing = BreathingPanel(breathingRoot) {
-            breathingRoot.visibility = View.GONE
-            pomodoro.visibility = View.VISIBLE
-        }
-        view.findViewById<Button>(R.id.focus_breathe).setOnClickListener {
-            pomodoro.visibility = View.GONE
-            breathingRoot.visibility = View.VISIBLE
-        }
+        breathing = BreathingPanel(view.findViewById(R.id.focus_breathing))
+        view.findViewById<Button>(R.id.focus_mode_pomodoro).setOnClickListener { showBreathing(false) }
+        view.findViewById<Button>(R.id.focus_mode_breath).setOnClickListener { showBreathing(true) }
+        showBreathing(false)
 
         val noises = view.findViewById<LinearLayout>(R.id.focus_noises)
         // Toucher l'ambiance choisie l'arrête ; le haut-parleur la coupe sans la perdre.
@@ -104,6 +98,16 @@ class FocusFragment : Fragment() {
             override fun onStartTrackingTouch(bar: SeekBar) = Unit
             override fun onStopTrackingTouch(bar: SeekBar) = Unit
         })
+    }
+
+    /** Pomodoro ou Respiration à la même place ; revenir au Pomodoro arrête l'exercice (le chrono, lui, continue). */
+    private fun showBreathing(on: Boolean) {
+        val view = view ?: return
+        if (!on) breathing.stop()
+        view.findViewById<View>(R.id.focus_pomodoro).visibility = if (on) View.GONE else View.VISIBLE
+        view.findViewById<View>(R.id.focus_breathing).visibility = if (on) View.VISIBLE else View.GONE
+        view.findViewById<View>(R.id.focus_mode_pomodoro).isSelected = !on
+        view.findViewById<View>(R.id.focus_mode_breath).isSelected = on
     }
 
     /** Ne pas déranger changé depuis la page de l'ordinateur. */
