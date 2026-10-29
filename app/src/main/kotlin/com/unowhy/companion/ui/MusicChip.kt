@@ -2,16 +2,19 @@ package com.unowhy.companion.ui
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.graphics.Outline
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.TextUtils
 import android.text.style.ForegroundColorSpan
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewOutlineProvider
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.PopupWindow
 import android.widget.TextView
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -24,11 +27,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Lecture en cours de l'ordinateur, en haut à droite à côté de l'heure, dans le style du widget Média : vignette,
- * titre et provenance (Spotify, YouTube, nom du site), Précédent, Lecture / Pause, Suivant. Visible seulement quand une
- * session a un titre ; relue toutes les [POLL_MS] tant qu'elle est à l'écran et qu'un ordinateur est appairé.
- * Toucher la pochette ou le titre : le widget Média en grand ([NowPlayingView] : pochette, sources, progression,
- * commandes) dans une carte flottante, sous la pastille ; un toucher ailleurs la referme.
+ * Lecture en cours de l'ordinateur, dans le header en haut à droite, au style du widget Média : pochette, titre et
+ * artiste (sinon la provenance : Spotify, YouTube, nom du site), Précédent, Lecture / Pause, Suivant. Titre trop long :
+ * il défile ([MARQUEE_REPEAT] passages à chaque morceau, puis s'arrête sur le début, pour ne pas redessiner sans fin).
+ * Visible seulement quand une session a un titre ; relue toutes les [POLL_MS] tant qu'elle est à l'écran et qu'un
+ * ordinateur est appairé.
  */
 class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : LinearLayout(context, attrs) {
 
@@ -40,7 +43,6 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
     private var session: MediaSession? = null
     private var thumbKey: String? = null
     private var poll: Job? = null
-    private var card: PopupWindow? = null
 
     init {
         orientation = HORIZONTAL
@@ -48,17 +50,21 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         visibility = GONE
         LayoutInflater.from(context).inflate(R.layout.view_music_chip, this, true)
         thumb = findViewById(R.id.chip_thumb)
+        thumb.outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) = outline.setRoundRect(0, 0, view.width, view.height, view.dp(8).toFloat())
+        }
         thumb.clipToOutline = true
         title = findViewById(R.id.chip_title)
+        title.apply {
+            isSingleLine = true
+            ellipsize = TextUtils.TruncateAt.MARQUEE
+            marqueeRepeatLimit = MARQUEE_REPEAT
+            // Le défilement ne part que sur une vue « choisie ».
+            isSelected = true
+        }
         previous = findViewById(R.id.chip_previous)
         play = findViewById(R.id.chip_play)
         next = findViewById(R.id.chip_next)
-        thumb.outlineProvider = object : android.view.ViewOutlineProvider() {
-            override fun getOutline(view: android.view.View, outline: android.graphics.Outline) =
-                outline.setRoundRect(0, 0, view.width, view.height, view.dp(8).toFloat())
-        }
-        title.setOnClickListener { toggleCard() }
-        thumb.setOnClickListener { toggleCard() }
         previous.setOnClickListener { control("previous") }
         play.setOnClickListener { control("play-pause") }
         next.setOnClickListener { control("next") }
@@ -75,7 +81,6 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
     }
 
     override fun onDetachedFromWindow() {
-        card?.dismiss()
         poll?.cancel()
         super.onDetachedFromWindow()
     }
@@ -85,16 +90,17 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         val shown = if (Computers.all(context).isEmpty()) null else runCatching { pick(BackendClient(context).system.media()) }.getOrNull()
         session = shown
         visibility = if (shown != null) VISIBLE else GONE
-        if (shown == null) card?.dismiss()
         shown ?: return
-        title.text = SpannableStringBuilder(shown.title).apply {
-            source(shown)?.let {
+        val line = SpannableStringBuilder(shown.title).apply {
+            subtitle(shown)?.let {
                 val start = length
                 append("  ·  ").append(it)
-                setSpan(ForegroundColorSpan(themeColor(context, R.attr.c_text_faint)), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                setSpan(ForegroundColorSpan(themeColor(context, R.attr.c_text_dim)), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
         }
-        title.contentDescription = context.getString(R.string.music_chip_open, shown.title)
+        // Même morceau : on ne touche pas au texte, le défilement en cours continue (et ne repart pas à chaque relecture).
+        if (line.toString() != title.text.toString()) title.text = line
+        title.contentDescription = listOfNotNull(shown.title, subtitle(shown)).joinToString(", ")
         play.setImageResource(if (shown.playing) R.drawable.ic_pause else R.drawable.ic_play)
         play.visibility = if (shown.canPlayPause) VISIBLE else GONE
         previous.visibility = if (shown.canPrevious) VISIBLE else GONE
@@ -103,37 +109,6 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
             thumbKey = shown.thumb
             val bytes = shown.thumb?.let { runCatching { BackendClient(context).system.mediaThumb(shown.app, it) }.getOrNull() }
             thumb.setImageBitmap(bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size, BitmapFactory.Options().apply { inSampleSize = 4 }) })
-        }
-    }
-
-    /** Carte flottante : la vue du widget Média (mise en page en ligne), relue tant qu'elle est ouverte. */
-    private fun toggleCard() {
-        card?.let {
-            it.dismiss()
-            return
-        }
-        val scope = findViewTreeLifecycleOwner()?.lifecycleScope ?: return
-        val view = NowPlayingView(context).apply {
-            attach(scope)
-            layout(NowPlayingView.Layout.ROW)
-            bind(true)
-            setActive(true)
-        }
-        val box = android.widget.FrameLayout(context).apply {
-            setBackgroundResource(R.drawable.floating_card_bg)
-            setPadding(dp(24), dp(20), dp(24), dp(20))
-            addView(view)
-        }
-        val width = dp(CARD_WIDTH_DP)
-        card = PopupWindow(box, width, LayoutParams.WRAP_CONTENT).apply {
-            isOutsideTouchable = true
-            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
-            setOnDismissListener {
-                view.setActive(false)
-                card = null
-            }
-            // Bord droit aligné sur celui de la pastille, juste dessous.
-            showAsDropDown(this@MusicChip, this@MusicChip.width - width, dp(8))
         }
     }
 
@@ -147,7 +122,9 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
 
     companion object {
         private const val POLL_MS = 5_000L
-        private const val CARD_WIDTH_DP = 640
+
+        /** Passages du titre trop long à chaque nouveau morceau. */
+        private const val MARQUEE_REPEAT = 3
 
         /** Session à montrer : la courante de l'ordinateur, sinon celle qui joue, sinon la première ; toujours avec un titre. */
         fun pick(sessions: List<MediaSession>): MediaSession? {
@@ -155,7 +132,10 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
             return titled.firstOrNull { it.current } ?: titled.firstOrNull { it.playing } ?: titled.firstOrNull()
         }
 
-        /** Provenance affichée après le titre : l'appli ou le site, sauf vide ou identique au titre. */
+        /** Provenance : l'appli ou le site, sauf vide ou identique au titre. */
         fun source(session: MediaSession): String? = session.name.trim().takeIf { it.isNotEmpty() && !it.equals(session.title.trim(), ignoreCase = true) }
+
+        /** Après le titre : l'artiste, sinon la provenance. */
+        fun subtitle(session: MediaSession): String? = session.artist.trim().takeIf { it.isNotEmpty() } ?: source(session)
     }
 }

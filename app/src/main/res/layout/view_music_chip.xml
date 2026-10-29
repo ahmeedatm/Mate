@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Lecture en cours en haut à droite (MusicChip) : pochette, titre et provenance, puis Précédent, Lecture / Pause,
-     Suivant, comme le widget Média (boutons ronds, Lecture plein), en plus petit. Toucher la pochette ou le titre :
-     le widget Média en grand dans une carte flottante. -->
+<!-- Lecture en cours dans le header (MusicChip) : pochette, titre et artiste (qui défilent s'ils sont trop longs), puis
+     Précédent, Lecture / Pause, Suivant, comme le widget Média (boutons ronds, Lecture plein), en plus petit. -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     tools:parentTag="android.widget.LinearLayout">
@@ -19,10 +18,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
-        android:ellipsize="end"
         android:fontFamily="?attr/c_font_regular"
-        android:maxWidth="260dp"
-        android:maxLines="1"
+        android:maxWidth="280dp"
         android:textColor="?attr/c_text"
         android:textSize="13sp" />
 

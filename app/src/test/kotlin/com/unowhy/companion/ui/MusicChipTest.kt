@@ -30,6 +30,13 @@ class MusicChipTest {
     }
 
     @Test
+    fun `apres le titre, l'artiste, sinon la provenance`() {
+        assertEquals("Major Lazer", MusicChip.subtitle(session("spotify", "Cold Water").copy(name = "Spotify", artist = "Major Lazer")))
+        assertEquals("YouTube", MusicChip.subtitle(session("chrome", "Clip").copy(name = "YouTube")))
+        assertNull(MusicChip.subtitle(session("x", "Titre").copy(name = "")))
+    }
+
+    @Test
     fun `une session sans titre ne s'affiche pas`() {
         assertNull(MusicChip.pick(listOf(session("chrome", "", current = true, playing = true))))
         assertNull(MusicChip.pick(emptyList()))
