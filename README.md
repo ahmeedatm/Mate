@@ -2,7 +2,7 @@
 
 Compagnon de bureau pour tablettes Unowhy 4.2 (Android 10), posé à côté de l'ordinateur (**Mac ou PC Windows**). La tablette est une interface légère ; le backend tourne sur l'ordinateur et sert d'agent de pilotage. Pas d'IA. Une tablette peut connaître plusieurs ordinateurs (bureau, maison) et passe toute seule à celui qui répond.
 
-**Modes** : Accueil (widgets à disposer : heure, météo, agenda, tâches, eau, Focus, son de l'ordinateur) · Deck (applis, raccourcis, touches perso et macros, Média, toutes les fenêtres ouvertes sur le schéma des écrans, son et micro ; les boutons de volume de la tablette pilotent l'ordinateur) · Depuis l'ordi (« Ordi » dans la barre : fichiers du dossier partagé, page web de l'ordinateur) · Focus (Pomodoro + ambiance) · Caméra (visualiseur de documents, photo → ordinateur) · Réglages. La tablette tourne en kiosque : le bouton Retour ne quitte jamais l'appli.
+**Modes** : Profils (ex-Accueil : un profil nommé par page de widgets à disposer : heure, météo, agenda, tâches, eau, Focus, son de l'ordinateur) · Deck (applis, raccourcis, touches perso et macros, Média, toutes les fenêtres ouvertes sur le schéma des écrans, son et micro ; les boutons de volume de la tablette pilotent l'ordinateur) · Depuis l'ordi (« Ordi » dans la barre : fichiers du dossier partagé, page web de l'ordinateur) · Focus (Pomodoro + ambiance) · Caméra (visualiseur de documents, photo → ordinateur) · Réglages. La tablette tourne en kiosque : le bouton Retour ne quitte jamais l'appli.
 
 ```
 app/      Appli Android (Kotlin, vues XML, minSdk 24)
@@ -110,7 +110,7 @@ La tablette n'envoie qu'un identifiant de tuile : seules les actions écrites da
 ### Agenda et documents
 
 - Agenda : lien ICS collé dans la page http://127.0.0.1:3000/ de l'ordinateur (gardé dans `backend/.data/calendar.json`), ou `CALENDAR_ICS_URLS` dans `.env`. Sans lien, pas d'agenda ; `demo` donne l'agenda d'exemple.
-- Réunions Teams : bouton « Rejoindre » sur le prochain rendez-vous de l'Accueil (15 min avant jusqu'à la fin), lien pris dans la description ICS et ouvert dans l'appli Teams de l'ordinateur (écran d'avant-réunion). Option dans Réglages : rejoindre automatiquement 1 min avant (désactivée par défaut, gardée dans `backend/.data/meetings.json`, ignore les réunions « Libre »).
+- Réunions Teams : bouton « Rejoindre » sur le prochain rendez-vous des Profils (15 min avant jusqu'à la fin), lien pris dans la description ICS et ouvert dans l'appli Teams de l'ordinateur (écran d'avant-réunion). Option dans Réglages : rejoindre automatiquement 1 min avant (désactivée par défaut, gardée dans `backend/.data/meetings.json`, ignore les réunions « Libre »).
 - Documents : `DOCS_DIR` dans `.env` (défaut : `shared/` à la racine du repo). Les photos de la tablette arrivent dans `Photos tablette/`.
 
 ### Visualiseur (mode Caméra)

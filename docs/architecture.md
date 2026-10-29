@@ -24,7 +24,7 @@ Pas de serveur dans le cloud : chaque ordinateur a son compagnon, la tablette pa
 
 ### La tablette (`app/`)
 
-- **Une seule Activity** (`MainActivity`) plein écran, barre latérale à gauche (modes, heure, WiFi, batterie, nom de l'ordinateur), un **Fragment par mode** : Accueil, Deck, Depuis l'ordi, Focus, Caméra, Réglages. Les fragments sont créés une fois et cachés/montrés ; ils sont recréés quand on change d'ordinateur (`onComputerChanged`).
+- **Une seule Activity** (`MainActivity`) plein écran, barre latérale à gauche (modes, heure, WiFi, batterie, nom de l'ordinateur), un **Fragment par mode** : Profils (ex-Accueil), Deck, Depuis l'ordi, Focus, Caméra, Réglages. Les fragments sont créés une fois et cachés/montrés ; ils sont recréés quand on change d'ordinateur (`onComputerChanged`).
 - **Panneau document** (`DocumentPanel`) à droite : document du dossier partagé ou page web de l'ordinateur, à côté de n'importe quel mode ou en grand.
 - **Kiosque** : l'appli est *device owner* (installée sur une tablette réinitialisée, voir [kiosque.md](kiosque.md)). Elle verrouille l'écran sur elle-même (lock task), masque l'agent SQOOL, bloque les installations, s'installe elle-même ses mises à jour et règle le WiFi.
 - Vues XML, pas de Compose ; dépendances : appcompat, lifecycle, coroutines. HTTP par `HttpURLConnection` + `org.json`. Tout doit rester léger (MT8167, 2 Go de RAM).
@@ -107,7 +107,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | `net/` | `BackendClient` (point d'accès : un client par domaine, `DeckApi`, `WindowsApi`, `SystemApi`, `DocsApi`, `CalendarApi`, `TasksApi`, `CameraApi`, `UpdatesApi`, `TabletApi`, `AgentsApi`, `PairingApi`), `Http` (plomberie, `HttpException`), `Connection` (bascule), `Discovery` (UDP), `Wifi` |
 | `remote/RemoteChannel.kt` | ordres reçus de l'ordinateur |
 | `ui/` | un fichier par écran ou composant : `HomeFragment`, `DeckFragment`, `FromComputerFragment` (Depuis l'ordi : trois choix, Fichiers (la liste, `GET /docs`), Page de l'ordi (`BrowserTabsDialog` : onglets de l'ordi) et Presse-papiers (`ClipboardView`, `ClipboardModel` : `GET /system/clipboard` pour lire le texte copié sur l'ordi, `POST /system/clipboard` pour y copier un texte écrit ou dicté, `POST /system/clipboard/image` pour une photo du dossier « Photos tablette » depuis la Caméra) ; le Presse-papiers n'est lu que sur un toucher, jamais à l'arrivée sur l'écran par un ordre du PC), `FocusFragment`, `CameraFragment`, `SettingsFragment`, `WelcomeView` (premier lancement), `DocumentPanel`, boîtes de dialogue (`TaskDialog`, `EventDialog`, `ComputerAdder`, `WifiPicker`…) |
-| `ui/home/` | Accueil à widgets : `WidgetModel` (grille 4×4, tailles, modèles), `WidgetGrid` (placement, mode Modifier, pages), widgets |
+| `ui/home/` | Profils (ex-Accueil) à widgets : `WidgetModel` (grille 4×4, tailles, modèles, `HomeLayout` : profils nommés et profil de jeu), `WidgetGrid` (placement, mode Modifier, balayage entre profils), `ProfilesDialog` (créer, renommer, monter, supprimer, profil de jeu), widgets |
 | `ui/ScreenMap.kt`, `WindowPicker.kt`, `OpenWindowsView.kt` | écrans et fenêtres de l'ordinateur |
 | `focus/` | `FocusTimer`, `NoisePlayer` (bruit généré), `Water` |
 | `audio/` | `Speaker` (synthèse vocale) |
@@ -143,7 +143,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 
 | Où | Quoi | Dans git ? |
 |---|---|---|
-| Tablette, préférences de l'appli | ordinateurs appairés et jetons, disposition de l'Accueil, eau, réglages | non |
+| Tablette, préférences de l'appli | ordinateurs appairés et jetons, profils de l'Accueil (noms, widgets, profil de jeu), eau, réglages | non |
 | `backend/.data/` (sur chaque ordinateur) | identité et jeton, agendas reliés, comptes, agenda perso, tâches, touches perso, applis, sites, réunions, mises à jour | non (perso) |
 | `backend/config/deck.json`, `tasks.json` | deck et tâches quotidiennes de cet ordinateur | non (perso) |
 | `backend/config/*.example*.json`, `accounts.json` | modèles de départ, identifiants publics OAuth | oui |
@@ -156,7 +156,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 - **Nouvelle action système** : l'ajouter à `os.ts`, l'écrire dans `mac/` **et** `win/` (C# 7.3 dans `win/helper/`, `Native.<thème>.cs` pour le pilotage, puis `npm run build:helper`).
 - **Nouvelle étape de touche** : type dans `deck.ts` (`runAction`), et dans `KeyEditor` si elle se règle depuis la tablette.
 - **Nouvel ordre vers la tablette** : type dans `tablet.ts` + schéma dans `routes/tablet.ts` + outil dans `mcp.ts` + branche dans `RemoteChannel.execute`.
-- **Nouveau widget d'Accueil** : le déclarer dans `WidgetModel`, le construire dans `HomeWidgets` (ou un fichier dédié de `ui/home/`).
+- **Nouveau widget d'Accueil (Profils)** : le déclarer dans `WidgetModel`, le construire dans `HomeWidgets` (ou un fichier dédié de `ui/home/`).
 - **Nouveau texte** : `strings.xml`, en français, court (la tablette est lue de loin), « ordinateur » (« ordi » sur les boutons courts).
 
 Les conventions détaillées (noms historiques `Mac*` = l'ordinateur, Mac ou Windows ; clavier ; dialogues ; pièges de l'UI) sont dans [CLAUDE.md](../CLAUDE.md), tenu à jour à chaque changement.

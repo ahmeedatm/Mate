@@ -8,12 +8,12 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Accueil à widgets : une grille de [COLS] × [ROWS] cases par page (jusqu'à [MAX_PAGES] pages), des widgets de
- * tailles fixes calés sur la grille. La disposition est propre à la tablette (préférences), quel que soit l'ordinateur.
+ * Accueil à widgets : une grille de [COLS] × [ROWS] cases par profil (une page = un profil nommé, sans limite), des
+ * widgets de tailles fixes calés sur la grille. La disposition est propre à la tablette (préférences), quel que soit
+ * l'ordinateur.
  */
 const val COLS = 4
 const val ROWS = 4
-const val MAX_PAGES = 3
 
 /** Tailles en cases (largeur × hauteur). */
 enum class WidgetSize(val w: Int, val h: Int, @StringRes val label: Int) {
@@ -76,10 +76,79 @@ class Placed(
     fun covers(c: Int, r: Int) = c in col until col + size.w && r in row until row + size.h
 }
 
-/** Disposition complète : widgets et nombre de pages. */
-class HomeLayout(val widgets: MutableList<Placed>, var pages: Int) {
+/**
+ * Disposition complète : widgets et profils. Un profil = une page ; `names[i]` null = pas encore de nom ([nameMissing]
+ * lui en donne un, l'interface passe les textes : le modèle ne touche à aucune ressource). `gameProfile` : le profil de jeu (au plus un), -1 si aucun.
+ */
+class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String?>, @set:JvmName("assignGameProfile") var gameProfile: Int = -1) {
 
-    fun copy() = HomeLayout(widgets.map { it.copy() }.toMutableList(), pages)
+    /** Profils sans nom : garde les appels qui ne comptent que des pages. */
+    constructor(widgets: MutableList<Placed>, pages: Int) : this(widgets, MutableList<String?>(pages.coerceAtLeast(1)) { null })
+
+    val pages get() = names.size
+
+    fun copy() = HomeLayout(widgets.map { it.copy() }.toMutableList(), names.toMutableList(), gameProfile)
+
+    /** Ajoute un profil à la fin et renvoie son index ; `items` sont recopiés sur sa page. */
+    fun addProfile(name: String?, items: List<Placed> = emptyList()): Int {
+        names += name
+        val index = names.size - 1
+        widgets += items.map { it.copy().also { c -> c.page = index } }
+        return index
+    }
+
+    fun renameProfile(index: Int, name: String) {
+        names[index] = name
+    }
+
+    /** Premier nom « Profil N » (N ≥ 2) que aucun profil ne porte ; `pattern` est le modèle de nom (« Profil %d »). */
+    fun freeName(pattern: String): String =
+        generateSequence(2) { it + 1 }.map { pattern.format(it) }.first { it !in names }
+
+    /** Donne un nom à chaque profil qui n'en a pas : `first` au premier, le premier numéro libre aux autres. Vrai si un nom a été posé. */
+    fun nameMissing(first: String, pattern: String): Boolean {
+        var named = false
+        for (i in names.indices) {
+            if (names[i] == null) {
+                names[i] = if (i == 0) first else freeName(pattern)
+                named = true
+            }
+        }
+        return named
+    }
+
+    /** Remet le profil `from` à la place `to` ; ses widgets et le marquage de jeu le suivent. */
+    fun moveProfile(from: Int, to: Int) {
+        if (from == to || from !in names.indices || to !in names.indices) return
+        names.add(to, names.removeAt(from))
+        fun moved(p: Int) = when {
+            p == from -> to
+            from < to && p in from + 1..to -> p - 1
+            from > to && p in to until from -> p + 1
+            else -> p
+        }
+        widgets.forEach { it.page = moved(it.page) }
+        if (gameProfile >= 0) gameProfile = moved(gameProfile)
+    }
+
+    /** Retire le profil et ses widgets, les suivants reculent d'une page. Faux (rien ne change) pour le dernier profil. */
+    fun removeProfile(index: Int): Boolean {
+        if (names.size <= 1 || index !in names.indices) return false
+        names.removeAt(index)
+        widgets.removeAll { it.page == index }
+        widgets.filter { it.page > index }.forEach { it.page-- }
+        gameProfile = when {
+            gameProfile == index -> -1
+            gameProfile > index -> gameProfile - 1
+            else -> gameProfile
+        }
+        return true
+    }
+
+    /** Un seul profil de jeu : le nouveau remplace l'ancien, -1 n'en laisse aucun. */
+    fun setGameProfile(index: Int) {
+        gameProfile = index
+    }
 
     fun on(page: Int) = widgets.filter { it.page == page }
 
@@ -99,16 +168,11 @@ class HomeLayout(val widgets: MutableList<Placed>, var pages: Int) {
         return null
     }
 
-    /** Pages vides retirées (la première reste), widgets renumérotés. */
-    fun compact() {
-        val used = (0 until pages).filter { p -> p == 0 || widgets.any { it.page == p } }
-        widgets.forEach { it.page = used.indexOf(it.page) }
-        pages = used.size.coerceAtLeast(1)
-    }
-
     fun toJson(): String = JSONObject()
-        .put("v", 1)
+        .put("v", 2)
         .put("pages", pages)
+        .put("names", JSONArray().apply { names.forEach { put(it ?: JSONObject.NULL) } })
+        .put("game", gameProfile)
         .put("widgets", JSONArray().apply {
             widgets.forEach {
                 put(JSONObject().put("t", it.type.key).put("s", it.size.name).put("p", it.page).put("c", it.col).put("r", it.row).put("cfg", it.config))
@@ -137,7 +201,14 @@ class HomeLayout(val widgets: MutableList<Placed>, var pages: Int) {
         /** Disposition invalide (widget inconnu, chevauchement) : on la refuse en entier, le modèle la remplace. */
         private fun parse(raw: String): HomeLayout {
             val json = JSONObject(raw)
-            val layout = HomeLayout(mutableListOf(), json.getInt("pages").coerceIn(1, MAX_PAGES))
+            val saved = json.optJSONArray("names")
+            val names = if (saved != null) {
+                MutableList(saved.length().coerceAtLeast(1)) { i -> if (saved.isNull(i)) null else saved.getString(i) }
+            } else {
+                MutableList<String?>(json.getInt("pages").coerceAtLeast(1)) { null }
+            }
+            val layout = HomeLayout(mutableListOf(), names)
+            layout.gameProfile = json.optInt("game", -1).takeIf { it in names.indices } ?: -1
             val list = json.getJSONArray("widgets")
             for (i in 0 until list.length()) {
                 val w = list.getJSONObject(i)
@@ -197,7 +268,10 @@ enum class Template(@StringRes val title: Int, @StringRes val description: Int, 
         Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
     ), cadran = true);
 
-    fun build() = HomeLayout(items.map { it.copy() }.toMutableList(), 1)
+    /** Les widgets du modèle recopiés sur la page `page` (profil à ajouter). */
+    fun widgets(page: Int) = items.map { it.copy().also { c -> c.page = page } }
+
+    fun build() = HomeLayout(widgets(0).toMutableList(), 1)
 
     companion object {
         /** Modèle d'un premier lancement : Travail (celui de la famille Cadran, quand il existe). */

@@ -55,7 +55,7 @@ sealed class VoiceCommand {
 object VoiceCommands {
 
     private val MODES = mapOf(
-        "accueil" to "home", "agenda" to "home", "deck" to "deck", "raccourcis" to "deck", "touches" to "deck",
+        "accueil" to "home", "agenda" to "home", "profils" to "home", "profil" to "home", "deck" to "deck", "raccourcis" to "deck", "touches" to "deck",
         "partage" to "docs", "documents" to "docs", "fichiers" to "docs", "focus" to "focus", "pomodoro" to "focus", "camera" to "camera",
         "visualiseur" to "camera", "reglages" to "settings", "parametres" to "settings",
     )
