@@ -99,6 +99,17 @@ class WidgetModelTest {
     }
 
     @Test
+    fun `Je m'absente, widget de l'ordinateur en M, L ou S, toujours propose, relu tel quel`() {
+        assertEquals(WidgetType.AWAY, WidgetType.of("away"))
+        assertEquals(listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), WidgetType.AWAY.sizes)
+        assertTrue(WidgetType.AWAY.computer)
+        assertTrue(WidgetType.AWAY.offered(HomeFeatures(off = setOf("open", "mixer", "pad"))))
+        val context = com.unowhy.unomate.FakeContext()
+        HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.AWAY, WidgetSize.L, 0, 1, 0)), 1), cadran = true)
+        assertEquals(listOf(WidgetType.AWAY to WidgetSize.L), HomeLayout.load(context, cadran = true).widgets.map { it.type to it.size })
+    }
+
+    @Test
     fun `un plugin coupe retire son widget du catalogue, les autres restent`() {
         val off = HomeFeatures(off = setOf("open", "mixer", "pad"))
         assertFalse(WidgetType.OPEN.offered(off))

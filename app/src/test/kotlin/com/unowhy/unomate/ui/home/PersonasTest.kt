@@ -67,7 +67,7 @@ class PersonasTest {
         assertEquals(setOf(WidgetType.NEXT, WidgetType.TASKS, WidgetType.AGENDA, WidgetType.OPEN, WidgetType.KEYS, WidgetType.JIRA), types(Persona.AIMEE))
         assertEquals(setOf(WidgetType.AGENTS, WidgetType.KEYS, WidgetType.GITLAB, WidgetType.JIRA, WidgetType.TASKS), types(Persona.SACHA))
         assertEquals(setOf(WidgetType.KEYS, WidgetType.APPS), types(Persona.SAM))
-        assertEquals(setOf(WidgetType.FOCUS, WidgetType.NEXT, WidgetType.KEYS, WidgetType.MEDIA, WidgetType.TASKS), types(Persona.CAMILLE))
+        assertEquals(setOf(WidgetType.FOCUS, WidgetType.NEXT, WidgetType.KEYS, WidgetType.MEDIA, WidgetType.TASKS, WidgetType.AWAY), types(Persona.CAMILLE))
         assertEquals(setOf(WidgetType.AGENDA, WidgetType.TASKS, WidgetType.KEYS, WidgetType.MEDIA, WidgetType.APPS), types(Persona.GWEN))
         // Les personas ne se ressemblent pas, et aucun n'a le héros ni la ligne du jour.
         assertEquals(Persona.entries.size, Persona.entries.map { p -> p.profiles.map { pr -> pr.slots.map { it.type to it.size } } }.toSet().size)
@@ -139,6 +139,15 @@ class PersonasTest {
                 assertTrue(profile.slots.all { (it.type == WidgetType.KEYS) == (it.page != null) })
             }
         }
+    }
+
+    @Test
+    fun `Camille a Je m'absente sur son ecran Travail, avec Focus et le prochain rendez-vous, grille pleine`() {
+        val work = layout(Persona.CAMILLE).on(0)
+        assertEquals(1, work.count { it.type == WidgetType.AWAY })
+        assertTrue(work.any { it.type == WidgetType.FOCUS } && work.any { it.type == WidgetType.NEXT })
+        assertEquals(COLS * ROWS, work.sumOf { it.size.w * it.size.h })
+        assertTrue(Persona.entries.filter { it != Persona.CAMILLE }.none { WidgetType.AWAY in types(it) })
     }
 
     @Test

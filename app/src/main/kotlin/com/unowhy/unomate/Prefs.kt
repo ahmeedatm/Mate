@@ -1,6 +1,7 @@
 package com.unowhy.unomate
 
 import android.content.Context
+import com.unowhy.unomate.away.AwayState
 import com.unowhy.unomate.focus.FocusPresets
 
 /** Réglages locaux : ordinateur piloté (voir Computers), luminosité, thème, kiosque. Aucune clé d'API ici. */
@@ -54,6 +55,9 @@ object Prefs {
     private const val KEY_LEGIBLE_FONT = "legible_font"
     private const val KEY_REDUCE_MOTION = "reduce_motion"
     private const val KEY_READ_BANNERS = "read_banners"
+    private const val KEY_AWAY_SINCE = "away_since"
+    private const val KEY_AWAY_MIC = "away_mic_by_us"
+    private const val KEY_AWAY_FOCUS = "away_focus_by_us"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -282,4 +286,17 @@ object Prefs {
     }
 
     fun trialOpened(context: Context): Boolean = prefs(context).getBoolean(KEY_TRIAL_OPENED, false)
+
+    /** Absence en cours (widget « Je m'absente ») : survit à la recréation de l'activité ; null si aucune. */
+    fun away(context: Context): AwayState? = prefs(context).let {
+        val since = it.getLong(KEY_AWAY_SINCE, 0L)
+        if (since <= 0L) null else AwayState(since, it.getBoolean(KEY_AWAY_MIC, false), it.getBoolean(KEY_AWAY_FOCUS, false))
+    }
+
+    fun setAway(context: Context, state: AwayState?) {
+        prefs(context).edit().apply {
+            if (state == null) remove(KEY_AWAY_SINCE).remove(KEY_AWAY_MIC).remove(KEY_AWAY_FOCUS)
+            else putLong(KEY_AWAY_SINCE, state.sinceMs).putBoolean(KEY_AWAY_MIC, state.micMutedByUs).putBoolean(KEY_AWAY_FOCUS, state.focusPausedByUs)
+        }.apply()
+    }
 }
