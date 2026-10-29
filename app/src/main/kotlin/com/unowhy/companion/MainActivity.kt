@@ -126,6 +126,7 @@ class MainActivity : AppCompatActivity() {
         private set
     private lateinit var agentAlerts: AgentAlerts
     private lateinit var agentAsk: AgentAskOverlay
+    private lateinit var meetingAlert: com.unowhy.companion.ui.MeetingAlertOverlay
     private lateinit var frame: PhotoFrameView
     /** Dernier toucher (ou touche de volume) : le cadre photo se lance après Prefs.frameDelayMin sans toucher. */
     private var lastTouch = SystemClock.elapsedRealtime()
@@ -190,6 +191,10 @@ class MainActivity : AppCompatActivity() {
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
         wake = WakeWord(this, findViewById(R.id.wake_mic)) { voice.start() }
         // Lumière des agents Claude sous la carte d'appel : un appel prime sur tout.
+        // L'alerte de réunion est tout en bas des calques : lumière des agents, question et appel passent devant.
+        meetingAlert = com.unowhy.companion.ui.MeetingAlertOverlay(this)
+        findViewById<android.view.ViewGroup>(android.R.id.content).addView(meetingAlert, android.view.ViewGroup.LayoutParams(-1, -1))
+        meetingAlert.post { meetingAlert.onMinute() }
         val agentLight = AgentLight(this)
         agentAsk = AgentAskOverlay(this)
         agentAlerts = AgentAlerts(agentLight, openAsk = ::openAgentAsk, openList = ::showAgents)
@@ -237,6 +242,7 @@ class MainActivity : AppCompatActivity() {
             onMinute = {
                 Screen.apply(this@MainActivity)
                 alerts.remindWater()
+                meetingAlert.onMinute()
                 followFrame()
                 companionUpdate.onMinute()
                 // « Rejoindre » sans détection de fin : l'appel finit à l'heure de l'événement.
@@ -546,6 +552,13 @@ class MainActivity : AppCompatActivity() {
     private var beforeCall: Pair<Mode, Int>? = null
 
     val inCall: Boolean get() = call.active
+
+    /** Pas d'alerte de réunion pendant un appel, dans la Caméra plein écran ni pendant une saisie. */
+    fun meetingAlertBlocked(): Boolean = com.unowhy.companion.ui.MeetingAlertModel.blocked(
+        inCall = call.active || callOverlay.app != null,
+        camera = current == Mode.CAMERA,
+        typing = com.unowhy.companion.ui.Typing.active(focusIsEditText = currentFocus is android.widget.EditText),
+    )
 
     /** Appli de l'appel en cours (widget d'appel du profil Réunion), null hors appel. */
     val callApp: String? get() = call.app

@@ -24,8 +24,11 @@ import type { LocalEvent } from "./events.ts";
 export const PERSONA_IDS = ["nour", "gwen", "camille", "aimee", "sam", "sacha"] as const;
 export type PersonaId = (typeof PERSONA_IDS)[number];
 
-/** `day` : jours après aujourd'hui ; `at` : "HH:MM" ; `remind` : minutes avant, pour le rappel parlé. */
-type DemoEvent = { title: string; day: number; at: string; minutes: number; remind?: number };
+/**
+ * `day` : jours après aujourd'hui ; `at` : "HH:MM" ; `remind` : minutes avant, pour le rappel parlé. `inMinutes` à la place
+ * de `day` et `at` : début dans N minutes à partir du choix du persona, arrondi à la minute pleine (alerte de réunion).
+ */
+type DemoEvent = { title: string; minutes: number; remind?: number } & ({ day: number; at: string } | { inMinutes: number });
 type DemoTask = { label: string; days?: number[]; remindAt?: string };
 type DemoPage = { title: string; keys: PersoKey[] };
 type Persona = {
@@ -346,6 +349,7 @@ const PERSONAS: Record<PersonaId, Persona> = {
       { title: "Revue Boréal", day: 0, at: "15:00", minutes: 45, remind: 10 },
       { title: "Comité de suivi", day: 1, at: "11:00", minutes: 60 },
       { title: "Point fournisseur", day: 3, at: "14:30", minutes: 30 },
+      { title: "Point client Boréal", inMinutes: 6, minutes: 30 },
     ],
     off: ["discord", "claude", "pad", "mixer", "media"],
   },
@@ -437,6 +441,14 @@ const at = (day: number, hhmm: string) => {
   return d.getTime();
 };
 
+/** Début d'un événement fictif : à son jour et son heure, ou dans `inMinutes` minutes (minute pleine). */
+const startOf = (e: DemoEvent) => {
+  if (!("inMinutes" in e)) return at(e.day, e.at);
+  const d = new Date();
+  d.setSeconds(0, 0);
+  return d.getTime() + e.inMinutes * 60_000;
+};
+
 function tasksOf(id: PersonaId, data: Persona) {
   const recurring: DailyTask[] = data.daily.map((t, i) => {
     const task: DailyTask = { id: `demo-${id}-r${i}`, label: t.label, days: t.days };
@@ -453,14 +465,20 @@ function tasksOf(id: PersonaId, data: Persona) {
 
 function eventsOf(id: PersonaId, data: Persona): { items: LocalEvent[] } {
   return {
-    items: data.events.map((e, i) => ({
-      id: `demo-${id}-${i}`,
-      title: e.title,
-      startMs: at(e.day, e.at),
-      endMs: at(e.day, e.at) + e.minutes * 60_000,
-      allDay: false,
-      ...(e.remind ? { remindBefore: e.remind } : {}),
-    })),
+    items: data.events
+      .map((e, i) => {
+        const startMs = startOf(e);
+        return {
+          id: `demo-${id}-${i}`,
+          title: e.title,
+          startMs,
+          endMs: startMs + e.minutes * 60_000,
+          allDay: false,
+          ...(e.remind ? { remindBefore: e.remind } : {}),
+        };
+      })
+      // Trié par début, comme events.ts le garde : un événement « dans N minutes » ne doit pas passer après ceux de demain.
+      .sort((a, b) => a.startMs - b.startMs),
   };
 }
 
