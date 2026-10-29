@@ -957,6 +957,16 @@
     <string name="weather_location">Trouver la ville de la météo par la position</string>
     <string name="weather_location_hint">Quand aucune ville n\'est choisie. La position est demandée aux services de localisation de Google de la tablette ; seule la ville trouvée sert à la météo.</string>
     <string name="about_privacy">Confidentialité</string>
+    <string name="a11y_title">Accessibilité</string>
+    <string name="a11y_talkback">Lecteur d\'écran (TalkBack)</string>
+    <string name="a11y_talkback_hint">Lit à voix haute ce qui est touché. Raccourci, même sans voir l\'écran : maintenir les deux touches de volume 3 secondes.</string>
+    <string name="a11y_talkback_locked">À autoriser à l\'installation de la tablette (voir la documentation du kiosque). Le raccourci des deux touches de volume reste à régler dans Paramètres d\'Android.</string>
+    <string name="a11y_talkback_missing">TalkBack n\'est pas installé sur cette tablette.</string>
+    <string name="a11y_text_size">Taille du texte</string>
+    <string name="a11y_size_normal">Normale</string>
+    <string name="a11y_size_large">Grande</string>
+    <string name="a11y_size_larger">Très grande</string>
+    <string name="a11y_size_largest">Maximale</string>
     <string name="about_licences">Licences des composants</string>
     <string name="about_sources">Météo : données de MET Norway (Institut météorologique norvégien), licence CC BY 4.0, mises en forme pour l\'affichage. api.met.no\nVilles : GeoNames, licence CC BY 4.0. geonames.org\nPolices : Outfit, Nunito et Abril Fatface, licence SIL Open Font License 1.1.\nLicence CC BY 4.0 : creativecommons.org/licenses/by/4.0</string>
     <string name="widget_weather_none">Aucune ville trouvée.</string>
