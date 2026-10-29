@@ -387,6 +387,11 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    /** Réglages changés depuis la page de l'ordinateur : curseurs et interrupteurs à jour. */
+    fun onRemoteSettings() {
+        if (view != null) renderTablet()
+    }
+
     /** Ligne d'état du mot de réveil : micro d'abord (sans lui rien ne sert), puis le modèle ; rien quand il est coupé. */
     private fun renderWake() {
         val ctx = context ?: return

@@ -94,6 +94,11 @@ class FocusFragment : Fragment() {
         })
     }
 
+    /** Ne pas déranger changé depuis la page de l'ordinateur. */
+    fun onRemoteSettings() {
+        view?.findViewById<Button>(R.id.focus_dnd)?.isSelected = Prefs.focusDnd(requireContext())
+    }
+
     override fun onStart() {
         super.onStart()
         FocusTimer.observe(listener)

@@ -43,7 +43,8 @@ beforeEach(() => {
 test("parcours normal : la tablette affiche le code, l'ordinateur le reçoit, la tablette reçoit le jeton et l'empreinte", () => {
   const { request, code } = pairUntilCode();
   assert.equal(dialogs, 1);
-  assert.deepEqual(pendingCode(), { tablet: "Tablette d'Eliot" });
+  assert.equal(pendingCode()?.tablet, "Tablette d'Eliot");
+  assert.ok(pendingCode()!.remainingS <= pendingCode()!.ttlS);
   assert.deepEqual(confirmPairing(request, FP), { waiting: true });
   approvePairing(code.slice(0, 3) + " " + code.slice(3));
   const out = confirmPairing(request, FP);

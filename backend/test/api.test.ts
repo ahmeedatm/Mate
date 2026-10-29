@@ -57,7 +57,10 @@ describe("appairage", () => {
     assert.equal(req.status, 200);
     assert.equal((await server.call("POST", "/pair/reveal", { request: req.json.request, nonce: tablet }, false)).status, 200);
     const local = await server.call("GET", "/local/status", undefined, false);
-    assert.deepEqual(local.json.pairing, { tablet: "Tablette CI" });
+    const { tablet: waiting, remainingS, ttlS } = local.json.pairing;
+    assert.equal(waiting, "Tablette CI");
+    assert.equal(ttlS, 120);
+    assert.ok(remainingS > 0 && remainingS <= 120);
 
     // En HTTP local, pas de certificat : l'empreinte du calcul est vide.
     const code = pairingCode("", tablet, req.json.nonce);
@@ -169,6 +172,15 @@ describe("pages locales", () => {
     const { status, json } = await server.call("GET", "/", undefined, false);
     assert.equal(status, 200);
     assert.match(json, /<html/i);
+  });
+
+  it("sert les polices Outfit des pages sans jeton, et rien d'autre", async () => {
+    const font = await fetch(`${server.url}/web/outfit-400.ttf`);
+    assert.equal(font.status, 200);
+    assert.equal(font.headers.get("content-type"), "font/ttf");
+    assert.ok((await font.arrayBuffer()).byteLength > 10_000);
+    assert.equal((await fetch(`${server.url}/web/outfit-900.ttf`)).status, 401);
+    assert.equal((await server.call("GET", "/web/..%2Fconfig.ts")).status, 404);
   });
 
   it("refuse la page locale demandée sous un autre nom d'hôte (DNS rebinding)", async () => {
