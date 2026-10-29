@@ -1,6 +1,5 @@
 import { run, osascript } from "./run.ts";
 import { findAppBundle } from "./apps.ts";
-import { sendKeys } from "./keys.ts";
 import {
   labelDisplays,
   type AppWindow,
@@ -286,7 +285,11 @@ function displaysOf(all) {
 // connaît une fenêtre que l'Accessibilité ne voit pas.
 function allApps(se, all, cg) {
   const apps = [];
+  let failed = null;
   se.applicationProcesses.whose({ backgroundOnly: false })().forEach((p) => {
+    // Fenêtre ou appli disparue pendant la lecture (plein écran qui s'anime, appli qui quitte : -1728, -1719) :
+    // appli sautée pour cette fois, la liste suivante la reprend.
+    try {
     let list, away = [];
     try { list = windowsOf(p); } catch (e) { return; }
     try {
@@ -303,7 +306,12 @@ function allApps(se, all, cg) {
     apps.push({ key: p.bundleIdentifier() || 'pid:' + p.unixId(), name: name, front: front, pid: p.unixId(), windows: list.map((e) => describe(all, e, front)).concat(away.map((e) => ({
       index: 0, title: e.title, minimized: false, fullscreen: false, display: e.display, elsewhere: true, front: false, maximized: false,
     }))) });
+    } catch (e) {
+      failed = failed || e;
+    }
   });
+  // Rien de lisible du tout : vraie erreur (Accessibilité refusée…), pas un aléa.
+  if (!apps.length && failed) throw failed;
   return apps;
 }
 
@@ -449,6 +457,27 @@ export async function listOpenWindows(): Promise<OpenWindows> {
   return { apps, displays: labelDisplays(parsed.displays), ...(parsed.pages ? { pages: parsed.pages } : {}) };
 }
 
+// Ctrl + flèche de Mission Control : macOS n'y réagit que si la flèche porte, comme celles du clavier, les drapeaux
+// fn et pavé numérique (sans eux, l'événement est ignoré). Un pas = Ctrl appuyé, flèche, Ctrl relâché.
+const PAGE_SCRIPT = `ObjC.import('CoreGraphics');
+function post(key, down, flags) {
+  const ev = $.CGEventCreateKeyboardEvent(null, key, down);
+  $.CGEventSetFlags(ev, flags);
+  $.CGEventPost(0, ev);
+  delay(0.02);
+}
+function run(argv) {
+  const arrow = argv[0] === 'right' ? 124 : 123;
+  const CTRL = 0x40000, ARROW = CTRL | 0x800000 | 0x200000;
+  for (let i = 0; i < parseInt(argv[1], 10); i++) {
+    post(59, true, CTRL);
+    post(arrow, true, ARROW);
+    post(arrow, false, ARROW);
+    post(59, false, 0);
+    delay(0.15);
+  }
+}`;
+
 /**
  * Passe sur une page du balayage à trois doigts comme le ferait Ctrl + flèche (raccourci de Mission Control, actif
  * par défaut) : autant de pas que de pages d'écart sur son écran.
@@ -460,7 +489,8 @@ export async function showPage(id: number) {
   const same = pages.filter((p) => p.display === target.display);
   const from = same.findIndex((p) => p.current);
   const to = same.indexOf(target);
-  for (let i = 0; i < Math.abs(to - from); i++) await sendKeys(to > from ? "ctrl+right" : "ctrl+left");
+  if (from < 0 || to === from) return;
+  await osascript(PAGE_SCRIPT, [to > from ? "right" : "left", String(Math.abs(to - from))], "JavaScript");
 }
 
 /** Pilote une fenêtre de la vue « Ouvertes », désignée par l'identifiant de son appli. */

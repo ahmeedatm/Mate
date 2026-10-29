@@ -59,6 +59,8 @@ class OpenWindowsView @JvmOverloads constructor(
     private var acting = 0
     /** Numéro du dernier geste : la réponse d'un geste dépassé par un autre est ignorée (pas de retour en arrière). */
     private var lastAction = 0
+    /** Relectures échouées d'affilée. */
+    private var failures = 0
     /** Fenêtre du dernier geste, estompée jusqu'à la réponse de l'ordinateur. */
     private var pending: Pair<String, ComputerWindow>? = null
 
@@ -115,9 +117,12 @@ class OpenWindowsView @JvmOverloads constructor(
     private suspend fun refresh() {
         try {
             val result = BackendClient(context).windows.openWindows()
+            failures = 0
             if (dragged == null && acting == 0) render(result)
         } catch (e: Exception) {
-            showStatus(context.errorText(e))
+            val message = context.errorText(e)
+            // Un échec isolé (Mac pendant une animation de plein écran) : la liste affichée reste, la suivante le rattrape.
+            if (++failures >= 2 || shown == null) showStatus(message)
         }
     }
 
