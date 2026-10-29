@@ -27,7 +27,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: site
-          image: harbor.unowhy.dev/squads/mate-site:feat-site-image
+          image: mate-site
           imagePullPolicy: Always
           ports:
             - name: http
