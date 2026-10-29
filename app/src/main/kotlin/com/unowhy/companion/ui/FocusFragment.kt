@@ -37,7 +37,6 @@ class FocusFragment : Fragment() {
     private lateinit var phase: TextView
     private lateinit var time: TextView
     private lateinit var ring: ProgressRing
-    private lateinit var count: TextView
     private lateinit var start: ImageButton
     private lateinit var volume: SeekBar
     private val presetButtons = mutableListOf<Pair<FocusPresets.Preset, Button>>()
@@ -56,11 +55,10 @@ class FocusFragment : Fragment() {
         phase = view.findViewById(R.id.focus_phase)
         time = view.findViewById(R.id.focus_time)
         ring = view.findViewById(R.id.focus_ring)
-        count = view.findViewById(R.id.focus_count)
         start = view.findViewById(R.id.focus_start)
         start.setOnClickListener { FocusTimer.toggle() }
         view.findViewById<ImageButton>(R.id.focus_skip).setOnClickListener { FocusTimer.skip() }
-        view.findViewById<ImageButton>(R.id.focus_reset).setOnClickListener { FocusTimer.reset() }
+        view.findViewById<ImageButton>(R.id.focus_reset).setOnClickListener { FocusTimer.stop() }
 
         val presets = view.findViewById<LinearLayout>(R.id.focus_presets)
         for (preset in FocusPresets.FIXED) {
@@ -132,14 +130,12 @@ class FocusFragment : Fragment() {
         view.findViewById<View>(R.id.focus_mode_breath).isSelected = on
     }
 
-    /** Proposition de l'humeur : ambiance lancée, puis respiration ou Pomodoro (l'ambiance reste réglable en dessous). */
+    /** Proposition de l'humeur : respiration ou Pomodoro, puis son ambiance (réglable en dessous, arrêtée avec eux). */
     private fun start(plan: Moods.Plan) {
-        NoisePlayer.play(plan.ambiance)
         when (plan) {
             is Moods.Plan.Breathe -> {
                 showBreathing(true)
-                // L'ambiance de la proposition s'arrête avec l'exercice (si personne ne l'a changée).
-                breathing.startWith(plan.pattern, plan.minutes) { if (NoisePlayer.kind == plan.ambiance) NoisePlayer.stop() }
+                breathing.startWith(plan.pattern, plan.minutes)
             }
             is Moods.Plan.Work -> {
                 showBreathing(false)
@@ -148,6 +144,8 @@ class FocusFragment : Fragment() {
                 FocusTimer.toggle()
             }
         }
+        // Après : arrêter l'exercice en cours couperait l'ambiance.
+        NoisePlayer.play(plan.ambiance)
     }
 
     /** Ne pas déranger changé depuis la page de l'ordinateur. */
@@ -187,7 +185,6 @@ class FocusFragment : Fragment() {
         time.text = FocusTimer.format(state.remainingMs)
         ring.color = color
         ring.progress = (state.durationMs - state.remainingMs).toFloat() / state.durationMs.coerceAtLeast(1)
-        count.text = getString(R.string.focus_count, state.completed)
         start.setImageResource(if (state.running) R.drawable.ic_pause else R.drawable.ic_play)
         start.contentDescription = getString(if (state.running) R.string.focus_pause else R.string.focus_start)
         val current = FocusPresets.Preset(FocusTimer.focusMinutes, FocusTimer.breakMinutes)

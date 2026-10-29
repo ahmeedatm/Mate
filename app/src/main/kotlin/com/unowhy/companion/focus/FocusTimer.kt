@@ -80,6 +80,12 @@ object FocusTimer {
         notifyListeners()
     }
 
+    /** Arrêt (bouton, voix, Claude) : chrono remis à zéro et ambiance coupée. */
+    fun stop() {
+        reset()
+        NoisePlayer.stop()
+    }
+
     /** Passe directement à la phase suivante (ex. sauter la pause). */
     fun skip() {
         val wasRunning = endAt != 0L

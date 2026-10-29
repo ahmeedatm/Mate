@@ -74,6 +74,8 @@ contributeurs Kotlin (kotlin, kotlinx, annotations), The JSpecify Authors (jspec
 
 ICÔNES
 Icônes Material Symbols et Material Icons, Copyright Google LLC, licence Apache 2.0 (texte plus bas).
+Visages de l'humeur (Focus) : Fluent Emoji 3D, Copyright (c) Microsoft Corporation, licence MIT (texte plus bas),
+https://github.com/microsoft/fluentui-emoji ; réduits à 144 px.
 
 POLICES (SIL Open Font License 1.1, texte plus bas)
 - Outfit : Copyright 2021 The Outfit Project Authors (https://github.com/Outfitio/Outfit-Fonts)
@@ -109,6 +111,12 @@ SIL Open Font License 1.1
 ${rule}
 
 ${text("OFL-1.1.txt")}
+
+${rule}
+MIT (Fluent Emoji)
+${rule}
+
+${text("MIT-fluent-emoji.txt")}
 `;
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, content);

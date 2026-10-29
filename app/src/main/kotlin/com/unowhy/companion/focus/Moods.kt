@@ -6,12 +6,7 @@ package com.unowhy.companion.focus
  */
 object Moods {
 
-    enum class Mood(val emoji: String) {
-        STRESSED("😣"),
-        TIRED("😴"),
-        SCATTERED("🤯"),
-        MOTIVATED("💪"),
-    }
+    enum class Mood { STRESSED, TIRED, SCATTERED, MOTIVATED }
 
     /** Respirer d'abord, ou se mettre au travail ; avec une ambiance. */
     sealed class Plan {

@@ -9,6 +9,7 @@ import androidx.annotation.StringRes
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.Breathing
 import com.unowhy.companion.focus.FocusTimer
+import com.unowhy.companion.focus.NoisePlayer
 
 /**
  * Respiration de Focus, à la place du Pomodoro (qui continue derrière) ; l'ambiance reste réglable en dessous : rythme,
@@ -42,23 +43,19 @@ class BreathingPanel(private val root: View) {
             seconds.text = context.getString(R.string.breath_seconds_left, m.secondsLeft, FocusTimer.format(waves.remainingMs()))
         }
         waves.onEnd = { finished ->
+            // Exercice fini ou arrêté : l'ambiance s'arrête avec lui.
+            NoisePlayer.stop()
             done = finished
             render()
-            onEnd?.invoke()
-            onEnd = null
         }
         render()
     }
 
-    /** Fin de l'exercice lancé par [startWith] (au bout ou arrêté), une seule fois. */
-    private var onEnd: (() -> Unit)? = null
-
     /** Exercice proposé par l'humeur : rythme et durée choisis, lancé tout de suite. */
-    fun startWith(pattern: Breathing.Pattern, minutes: Int, onEnd: () -> Unit) {
+    fun startWith(pattern: Breathing.Pattern, minutes: Int) {
         stop()
         this.pattern = pattern
         this.minutes = minutes
-        this.onEnd = onEnd
         begin()
     }
 
