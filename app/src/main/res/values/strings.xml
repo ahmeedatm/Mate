@@ -177,6 +177,10 @@
     <string name="jira_transitions_none">Aucune transition possible.</string>
     <string name="jira_pill_finish">%1$s · À finir dans Jira</string>
     <string name="jira_moved">%1$s : %2$s</string>
+    <string name="jira_boards_button">Tableaux</string>
+    <string name="jira_boards_title">Tableaux Jira</string>
+    <string name="jira_boards_hint">Coche les tableaux dont tu veux les colonnes (%1$d sur %2$d au plus). Le premier coché de la liste donne l\'ordre des colonnes.</string>
+    <string name="jira_boards_none">Aucun tableau trouvé pour tes projets.</string>
     <string name="agents_hooks_hint">Pour répondre d\'ici : poser les hooks sur l\'ordinateur (npm run agents:hooks).</string>
     <string name="agents_focus_hint">Toucher une session l\'amène devant sur l\'ordinateur.</string>
     <string name="agents_focused">%1$s est devant sur l\'ordinateur</string>

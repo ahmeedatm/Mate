@@ -19,6 +19,7 @@ import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.JiraColumn
 import com.unowhy.companion.net.JiraIssue
+import com.unowhy.companion.net.JiraIssues
 import com.unowhy.companion.net.JiraTransition
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -26,14 +27,20 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
- * Onglet Jira du Deck : les tickets assignés à l'utilisateur, une colonne par statut (à faire puis en cours, rangées par
- * l'ordinateur). Toucher un ticket ouvre un tiroir en bas : ses transitions possibles et « Ouvrir sur l'ordi ». Relu à
- * l'ouverture puis chaque minute ; les colonnes ne sont recréées que si la liste a changé.
+ * Onglet Jira du Deck : les tickets assignés à l'utilisateur, rangés dans les colonnes des tableaux Jira choisis (vides
+ * comprises, rangées par l'ordinateur), en défilement horizontal si elles ne tiennent pas. Les terminés récents sont
+ * atténués. Toucher un ticket ouvre un tiroir en bas : ses transitions possibles et « Ouvrir sur l'ordi ». Le bouton
+ * « Tableaux » choisit les tableaux (la boîte s'ouvre seule tant qu'aucun n'est choisi, une fois par affichage).
+ * Relu à l'ouverture puis chaque minute ; les colonnes ne sont recréées que si la liste a changé.
  */
 class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : FrameLayout(context, attrs) {
 
     private val status = TextView(context)
     private val board = LinearLayout(context)
+    private val boardScroll = HorizontalScrollView(context)
+    private val boardsButton = Button(context, null, 0, R.style.Chip)
+    private var boardsDialog: JiraBoardsDialog? = null
+    private var prompted = false
     private val scrim = View(context)
     private val drawer = LinearLayout(context)
     private val drawerKey = TextView(context)
@@ -43,7 +50,7 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private val openButton = Button(context, null, 0, R.style.Chip)
     private lateinit var owner: LifecycleOwner
     private var poll: Job? = null
-    private var shown: List<JiraColumn>? = null
+    private var shown: JiraIssues? = null
     /** Ticket dont le tiroir est ouvert (la réponse tardive d'un autre ticket est ignorée). */
     private var current: JiraIssue? = null
     private var busy = false
@@ -57,9 +64,27 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             gravity = Gravity.CENTER
             setPadding(0, dp(6), 0, dp(6))
         }
-        content.addView(status, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        boardsButton.apply {
+            setText(R.string.jira_boards_button)
+            textSize = 13f
+            setOnClickListener { openBoards() }
+        }
+        content.addView(
+            LinearLayout(context).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                addView(status, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+                addView(boardsButton, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, dp(36)).apply { marginStart = dp(8) })
+            },
+            LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT),
+        )
         board.orientation = LinearLayout.HORIZONTAL
-        content.addView(board, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(4) })
+        // Remplit la largeur quand les colonnes tiennent (poids), défile sinon (largeur fixe) : voir layoutColumns.
+        boardScroll.apply {
+            isFillViewport = true
+            isHorizontalScrollBarEnabled = false
+            addView(board, FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
+        }
+        content.addView(boardScroll, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(4) })
         addView(content, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
         scrim.apply {
@@ -130,7 +155,11 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         visibility = if (active) VISIBLE else GONE
         poll?.cancel()
         poll = null
-        if (!active) return closeDrawer()
+        if (!active) {
+            prompted = false
+            boardsDialog?.dismiss()
+            return closeDrawer()
+        }
         if (shown == null) showStatus(context.getString(R.string.loading))
         poll = owner.lifecycleScope.launch {
             while (isActive) {
@@ -147,47 +176,79 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     private suspend fun refresh() {
         try {
-            render(BackendClient(context).jira.issues())
+            val issues = BackendClient(context).jira.issues()
+            render(issues)
+            if (!issues.boardsChosen && !prompted) {
+                prompted = true
+                openBoards()
+            }
         } catch (e: Exception) {
             // La liste affichée reste ; l'erreur s'écrit au-dessus.
             showStatus(context.errorText(e))
         }
     }
 
-    private fun render(columns: List<JiraColumn>) {
-        if (columns == shown) {
+    private fun openBoards() {
+        if (boardsDialog?.isShowing == true) return
+        boardsDialog = JiraBoardsDialog(context, owner.lifecycleScope) { owner.lifecycleScope.launch { refresh() } }.also { it.show() }
+    }
+
+    private fun render(issues: JiraIssues) {
+        val columns = issues.columns
+        if (issues == shown) {
             showStatus(if (columns.isEmpty()) context.getString(R.string.jira_empty) else null)
             return
         }
         val scrolls = HashMap<String, Int>()
         for (i in 0 until board.childCount) (board.getChildAt(i).tag as? String)?.let { scrolls[it] = columnScroll(board.getChildAt(i)) }
-        shown = columns
+        val x = boardScroll.scrollX
+        shown = issues
         board.removeAllViews()
         showStatus(if (columns.isEmpty()) context.getString(R.string.jira_empty) else null)
         for ((i, column) in columns.withIndex()) {
             val view = columnView(column)
-            board.addView(view, LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { if (i > 0) marginStart = dp(12) })
-            scrolls[column.status]?.let { y -> view.post { (view as LinearLayout).getChildAt(1).scrollTo(0, y) } }
+            board.addView(view, LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { if (i > 0) marginStart = dp(COLUMN_GAP_DP) })
+            scrolls[column.title]?.let { y -> view.post { (view as LinearLayout).getChildAt(1).scrollTo(0, y) } }
         }
+        layoutColumns()
+        boardScroll.post { boardScroll.scrollTo(x, 0) }
+    }
+
+    /** Colonnes de largeur fixe qui défilent ; si elles tiennent toutes, elles se partagent la largeur. */
+    private fun layoutColumns() {
+        val n = board.childCount
+        if (n == 0) return
+        val fits = n * dp(COLUMN_DP) + (n - 1) * dp(COLUMN_GAP_DP) <= width
+        for (i in 0 until n) {
+            val child = board.getChildAt(i)
+            child.layoutParams = (child.layoutParams as LinearLayout.LayoutParams).apply {
+                width = if (fits) 0 else dp(COLUMN_DP)
+                weight = if (fits) 1f else 0f
+            }
+        }
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        layoutColumns()
     }
 
     private fun columnScroll(column: View): Int = (column as? LinearLayout)?.getChildAt(1)?.scrollY ?: 0
 
     private fun columnView(column: JiraColumn): View {
-        val color = themeColor(context, if (column.category == "indeterminate") R.attr.c_primary else R.attr.c_text_dim)
         val cards = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         for ((i, issue) in column.issues.withIndex()) {
             cards.addView(card(issue), LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { if (i > 0) topMargin = dp(8) })
         }
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            tag = column.status
+            tag = column.title
             addView(
                 TextView(context).apply {
-                    text = context.getString(R.string.jira_col_header, column.status, column.issues.size)
+                    text = context.getString(R.string.jira_col_header, column.title, column.issues.size)
                     textSize = 16f
                     typeface = themeFont(context, R.attr.c_font_medium)
-                    setTextColor(color)
+                    setTextColor(themeColor(context, R.attr.c_text_dim))
                     gravity = Gravity.CENTER_VERTICAL
                     maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
@@ -223,6 +284,8 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             },
             LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(2) },
         )
+        // Terminé récemment : atténué mais touchable comme les autres.
+        if (issue.done) alpha = DONE_ALPHA
         setOnClickListener { openDrawer(issue) }
     }
 
@@ -317,5 +380,8 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     private companion object {
         const val POLL_MS = 60_000L
+        const val COLUMN_DP = 280
+        const val COLUMN_GAP_DP = 12
+        const val DONE_ALPHA = 0.5f
     }
 }
