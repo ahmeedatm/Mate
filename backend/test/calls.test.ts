@@ -9,16 +9,13 @@ process.env.FAKE_OS = "windows";
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "companion-calls-"));
 await import("./fake-os-hook.ts");
 const { calls, state } = await import("./fake-os.ts");
-const { answerCall, declineCall, hangUp, startCallWatch } = await import("../src/calls.ts");
+const { answerCall, callWatchSettled, declineCall, hangUp, startCallWatch } = await import("../src/calls.ts");
 const { savePlugins } = await import("../src/plugins.ts");
 type CallEvent = Parameters<Parameters<typeof startCallWatch>[0]>[0];
 
 // Règle Discord de config/calls.json.
 const RINGING = "Appel entrant - Discord";
 const CALLER = "Hyperlink : Camille (message privé), Appel entrant";
-const flush = async () => {
-  for (let i = 0; i < 10; i++) await new Promise((r) => setImmediate(r));
-};
 
 const events: CallEvent[] = [];
 before(async () => {
@@ -28,9 +25,10 @@ before(async () => {
 });
 after(() => mock.timers.reset());
 
+/** Un tour de surveillance, attendu jusqu'au bout (il lit des fichiers : un nombre fixe de tours ne suffit pas en CI). */
 const tick = async () => {
   mock.timers.tick(2_000);
-  await flush();
+  await callWatchSettled();
 };
 
 describe("appels entrants", () => {
