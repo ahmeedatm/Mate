@@ -15,10 +15,10 @@ import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.provider.Settings
+import com.unowhy.companion.kiosk.KioskAdminReceiver
 import com.unowhy.unomate.R
 import com.unowhy.unomate.UserFacingException
 import com.unowhy.unomate.kiosk.Kiosk
-import com.unowhy.unomate.kiosk.KioskAdminReceiver
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull

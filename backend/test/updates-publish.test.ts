@@ -75,7 +75,7 @@ after(() => registry.server.close());
 const urlOf = (version: string) => `http://127.0.0.1:${port}/api/v4/projects/1/packages/generic/companion-updates/${version}`;
 
 /** dist/ d'un job essai-android (+ essai-backend) : APK, entrée .json, archives backend. */
-function dist(version: string, { code = 1000, pkg = "com.unowhy.unomate.essai", backend = [] as string[] } = {}) {
+function dist(version: string, { code = 1000, pkg = "com.unowhy.companion.essai", backend = [] as string[] } = {}) {
   const dir = fs.mkdtempSync(path.join(tmp, "dist-"));
   fs.writeFileSync(path.join(dir, `companion-${version}.apk`), `apk ${version}`);
   fs.writeFileSync(
@@ -103,7 +103,7 @@ describe("publication des essais par MR", () => {
     const [essai] = registry.manifest("companion-updates/essais").essais;
     assert.equal(essai.mr, 109);
     assert.equal(essai.title, "Mixeur par appli");
-    assert.equal(essai.package, "com.unowhy.unomate.essai");
+    assert.equal(essai.package, "com.unowhy.companion.essai");
     assert.equal(essai.versionCode, 202_010);
     assert.equal(essai.size, "apk 0.2.2-essai.10".length);
     assert.equal(essai.sha256, sha("apk 0.2.2-essai.10"));
@@ -164,7 +164,7 @@ describe("publication des essais par MR", () => {
   });
 
   it("refuse un essai au paquet de la stable, une seule archive backend, un jeton faux", async () => {
-    await assert.rejects(publish(["--essai", "111", dist("0.2.2-essai.13", { pkg: "com.unowhy.unomate" }), out()]), /un essai a le paquet/);
+    await assert.rejects(publish(["--essai", "111", dist("0.2.2-essai.13", { pkg: "com.unowhy.companion" }), out()]), /un essai a le paquet/);
     await assert.rejects(
       publish(["--essai", "111", dist("0.2.2-essai.13", { backend: ["mac"] }), out()]),
       /une archive backend par plateforme/,
@@ -212,19 +212,19 @@ describe("publication des essais par MR", () => {
 describe("publication d'une release", () => {
   it("dépose le manifest {updates} de la dernière version et supprime les anciens fichiers", async () => {
     const run = (version: string, code: number) =>
-      publish([dist(version, { code, pkg: "com.unowhy.unomate" }), out()], { UPDATES_URL: urlOf("latest") });
+      publish([dist(version, { code, pkg: "com.unowhy.companion" }), out()], { UPDATES_URL: urlOf("latest") });
     await run("0.2.1", 201_000);
     await run("0.2.2", 202_000);
     const { updates } = registry.manifest("companion-updates/latest");
     assert.equal(updates.length, 1);
-    assert.equal(updates[0].package, "com.unowhy.unomate");
+    assert.equal(updates[0].package, "com.unowhy.companion");
     assert.equal(updates[0].versionName, "0.2.2");
     assert.equal(updates[0].sha256, sha("apk 0.2.2"));
     assert.deepEqual(registry.names("companion-updates/latest"), ["companion-0.2.2.apk", "manifest.json"]);
   });
 
   it("dépose les installeurs de l'ordinateur avant le manifest et les décrit dans `installers`", async () => {
-    const dir = dist("0.3.0", { code: 300_000, pkg: "com.unowhy.unomate" });
+    const dir = dist("0.3.0", { code: 300_000, pkg: "com.unowhy.companion" });
     fs.writeFileSync(path.join(dir, "UnoMate-Mac.zip"), "zip");
     fs.writeFileSync(path.join(dir, "UnoMate-Windows.exe"), "exe!");
     const local = out();
@@ -244,7 +244,7 @@ describe("publication d'une release", () => {
   });
 
   it("dépose les archives du backend sous le nom de la version et les décrit dans `backends`", async () => {
-    const dir = dist("0.3.2", { code: 302_000, pkg: "com.unowhy.unomate", backend: ["mac", "windows"] });
+    const dir = dist("0.3.2", { code: 302_000, pkg: "com.unowhy.companion", backend: ["mac", "windows"] });
     await publish([dir, out()], { UPDATES_URL: urlOf("latest") });
     const { backends } = registry.manifest("companion-updates/latest");
     assert.deepEqual(backends, [
@@ -264,13 +264,13 @@ describe("publication d'une release", () => {
       "manifest.json",
     ]);
     await assert.rejects(
-      publish([dist("0.3.3", { code: 303_000, pkg: "com.unowhy.unomate", backend: ["mac"] }), out()], { UPDATES_URL: urlOf("latest") }),
+      publish([dist("0.3.3", { code: 303_000, pkg: "com.unowhy.companion", backend: ["mac"] }), out()], { UPDATES_URL: urlOf("latest") }),
       /une archive backend par plateforme/,
     );
   });
 
   it("sans installeur dans dist : pas de clé `installers`", async () => {
-    await publish([dist("0.3.1", { code: 301_000, pkg: "com.unowhy.unomate" }), out()], { UPDATES_URL: urlOf("latest") });
+    await publish([dist("0.3.1", { code: 301_000, pkg: "com.unowhy.companion" }), out()], { UPDATES_URL: urlOf("latest") });
     assert.equal("installers" in registry.manifest("companion-updates/latest"), false);
   });
 });

@@ -10,12 +10,12 @@ import com.unowhy.unomate.kiosk.Kiosk
 import com.unowhy.unomate.kiosk.Updater
 
 /**
- * Appli d'essai d'une MR (`com.unowhy.unomate.essai`, version X.Y.Z-essai.N), installée à côté de la stable.
+ * Appli d'essai d'une MR (`com.unowhy.companion.essai`, version X.Y.Z-essai.N), installée à côté de la stable.
  * La stable reste device owner : elle installe l'essai (Réglages > Mises à jour), l'autorise en kiosque
  * ([Kiosk.enter]) et l'ouvre. L'essai reprend les ordinateurs appairés de la stable et lui rend la main.
  */
 object Trial {
-    const val STABLE = "com.unowhy.unomate"
+    const val STABLE = "com.unowhy.companion"
     const val TRIAL = "$STABLE.essai"
 
     /** L'autre appli : l'essai vu de la stable, la stable vue de l'essai. */

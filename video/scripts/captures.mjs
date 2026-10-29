@@ -25,7 +25,7 @@ const ROOT = path.resolve(here, "..", "..");
 const OUT = path.join(ROOT, "video", "captures");
 const BACKEND_DIR = path.join(ROOT, "backend");
 const APK = path.join(ROOT, "app", "build", "outputs", "apk", "debug", "app-debug.apk");
-const PKG = "com.unowhy.unomate";
+const PKG = "com.unowhy.companion";
 const TOKEN = "jeton-de-test";
 const AVD = "companion_api29";
 const W = 1280;
@@ -857,7 +857,7 @@ const PHASES = [
 
 async function launchApp(t) {
   shell(`am force-stop ${PKG}`);
-  shell(`am start -n ${PKG}/.MainActivity`);
+  shell(`am start -n ${PKG}/com.unowhy.unomate.MainActivity`);
   touch();
   await waitFor(() => dumpNodes().some(matcher({ desc: "Parler" })), 40_000, "affichage de l'appli");
   await sleep(2500);

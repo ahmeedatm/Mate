@@ -62,9 +62,9 @@ class EssaiPlanTest {
     @Test
     fun `parseEssais lit le manifest, la MR la plus recente d'abord, backend par systeme`() {
         val json = """{"essais":[
-            {"mr":98,"title":"Ouvertes plus rapide","package":"com.unowhy.unomate.essai","label":"UnoMate essai","versionCode":2188,
+            {"mr":98,"title":"Ouvertes plus rapide","package":"com.unowhy.companion.essai","label":"UnoMate essai","versionCode":2188,
              "versionName":"0.0.2-essai.187","file":"companion-0.0.2-essai.187.apk","size":4200000,"sha256":"0f"},
-            {"mr":109,"title":"Essais par MR","package":"com.unowhy.unomate.essai","label":"UnoMate essai","versionCode":202014,
+            {"mr":109,"title":"Essais par MR","package":"com.unowhy.companion.essai","label":"UnoMate essai","versionCode":202014,
              "versionName":"0.2.2-essai.14","file":"companion-0.2.2-essai.14.apk","size":4300000,"sha256":"1a",
              "backend":{"mac":{"file":"backend-mr109-mac.tar.gz","size":900,"sha256":"2b"},
                         "windows":{"file":"backend-mr109-windows.tar.gz","size":950,"sha256":"3c"}}}]}"""
@@ -72,7 +72,7 @@ class EssaiPlanTest {
         assertEquals(listOf(109, 98), essais.map { it.mr })
         val mr109 = essais[0]
         assertEquals("Essais par MR", mr109.title)
-        assertEquals(AppUpdate("com.unowhy.unomate.essai", "UnoMate essai", 202014, "0.2.2-essai.14", "companion-0.2.2-essai.14.apk", 4_300_000, "1a", UpdateSource.TRIALS), mr109.update)
+        assertEquals(AppUpdate("com.unowhy.companion.essai", "UnoMate essai", 202014, "0.2.2-essai.14", "companion-0.2.2-essai.14.apk", 4_300_000, "1a", UpdateSource.TRIALS), mr109.update)
         assertTrue(mr109.hasBackend)
         assertEquals(BackendArchive("backend-mr109-windows.tar.gz", 950, "3c"), mr109.backends["windows"])
         assertFalse(essais[1].hasBackend)
