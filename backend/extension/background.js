@@ -1,4 +1,4 @@
-// Extension « Compagnon Unowhy » : envoie la liste des onglets de ce navigateur au compagnon de l'ordinateur
+// Extension « UnoMate » : envoie la liste des onglets de ce navigateur au compagnon de l'ordinateur
 // (http://127.0.0.1:3000, jamais ailleurs), pour le bouton Onglets de « Page de l'ordi » sur la tablette, et
 // exécute les ordres de lecture de la page Média (Lecture/Pause, Suivant, Précédent, position) dans l'onglet qui joue.
 // À chaque changement d'onglet ou de fenêtre (regroupés sur 300 ms), et toutes les minutes : le compagnon oublie

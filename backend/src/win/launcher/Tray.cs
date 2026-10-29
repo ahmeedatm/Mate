@@ -13,7 +13,7 @@ using System.Web.Script.Serialization;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
-namespace Companion
+namespace UnoMate
 {
     sealed class Tray : ApplicationContext
     {
@@ -85,7 +85,7 @@ namespace Companion
             if (battery.Visible) battery.Text = "Batterie " + Get(b, "level") + " %" + (Get(b, "charging") is bool && (bool)Get(b, "charging") ? " (en charge)" : "");
             settings.Enabled = connected;
             // Info-bulle : 63 caractères au plus.
-            var tip = "Compagnon Unowhy · " + state.Text;
+            var tip = "UnoMate · " + state.Text;
             icon.Text = tip.Length > 63 ? tip.Substring(0, 63) : tip;
             var nowLight = TaskbarIsLight();
             if (icon.Icon == null || nowLight != light)

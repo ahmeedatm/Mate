@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
-namespace Companion
+namespace UnoMate
 {
     public static partial class Native
     {

@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 
-namespace Companion
+namespace UnoMate
 {
     public static partial class Native
     {

@@ -15,7 +15,7 @@ import { config } from "../src/config.ts";
  *   --file <chemin>   autre settings.json ; --port <n>, --hold <s>
  *
  * Le secret et le port viennent des données de CET ordinateur : pour un compagnon installé par paquet,
- * lancer avec son dossier (`DATA_DIR="$HOME/Library/Application Support/UnowhyCompanion" PORT=3000 npm run agents:hooks`).
+ * lancer avec son dossier (`DATA_DIR="$HOME/Library/Application Support/UnoMate" PORT=3000 npm run agents:hooks`).
  */
 
 const args = process.argv.slice(2);

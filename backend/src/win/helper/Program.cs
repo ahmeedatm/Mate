@@ -16,7 +16,7 @@ using System.Threading;
 using System.Windows.Automation;
 using Microsoft.Win32;
 
-namespace Companion
+namespace UnoMate
 {
     static class Program
     {

@@ -31,7 +31,7 @@
                 android:src="@drawable/ic_close" />
         </LinearLayout>
 
-        <com.unowhy.companion.ui.AgentsView
+        <com.unowhy.unomate.ui.AgentsView
             android:id="@+id/board_agents"
             android:layout_width="match_parent"
             android:layout_height="0dp"

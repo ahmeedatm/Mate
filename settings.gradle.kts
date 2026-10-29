@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "unowhy-companion"
+rootProject.name = "unomate"
 include(":app")

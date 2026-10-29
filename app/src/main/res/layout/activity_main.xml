@@ -171,7 +171,7 @@
 
         <!-- Thème Rétro seulement (sinon GONE) : tubes qui coulent sur toute la hauteur, derrière tous les écrans, à droite ;
              ils défilent d'un écran quand on passe à l'entrée voisine de la barre (ui/home/FlowBandView). -->
-        <com.unowhy.companion.ui.home.FlowBandView
+        <com.unowhy.unomate.ui.home.FlowBandView
             android:id="@+id/flow"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
@@ -179,7 +179,7 @@
 
         <!-- paddingTop : la ligne du haut à droite (lecture en cours, heure, batterie) ne chevauche pas les cartes. -->
         <!-- Balayage vertical entre les entrées de la barre (ui/RailSwipeLayout). -->
-        <com.unowhy.companion.ui.RailSwipeLayout
+        <com.unowhy.unomate.ui.RailSwipeLayout
             android:id="@+id/mode_container"
             android:paddingTop="20dp"
             android:defaultFocusHighlightEnabled="false"
@@ -219,7 +219,7 @@
                 android:visibility="gone"
                 app:tint="?attr/c_text_faint" />
 
-            <com.unowhy.companion.ui.MusicChip
+            <com.unowhy.unomate.ui.MusicChip
                 android:id="@+id/music_chip"
                 android:layout_width="360dp"
                 android:layout_height="32dp"
@@ -228,7 +228,7 @@
                 android:paddingStart="5dp"
                 android:paddingEnd="5dp" />
 
-            <com.unowhy.companion.ui.TabletStatusView
+            <com.unowhy.unomate.ui.TabletStatusView
                 android:id="@+id/tablet_status"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
@@ -236,7 +236,7 @@
 
     </FrameLayout>
 
-    <com.unowhy.companion.ui.DocumentPanel
+    <com.unowhy.unomate.ui.DocumentPanel
         android:id="@+id/document_panel"
         android:layout_width="0dp"
         android:layout_height="match_parent"
@@ -245,14 +245,14 @@
 </LinearLayout>
 
     <!-- Premier lancement : tant qu'aucun ordinateur n'est appairé. -->
-    <com.unowhy.companion.ui.WelcomeView
+    <com.unowhy.unomate.ui.WelcomeView
         android:id="@+id/welcome"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone" />
 
     <!-- Plugins de l'ordinateur actif : première utilisation, appli compatible apparue, ou Réglages. -->
-    <com.unowhy.companion.ui.PluginsView
+    <com.unowhy.unomate.ui.PluginsView
         android:id="@+id/plugins"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

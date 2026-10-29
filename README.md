@@ -1,4 +1,4 @@
-# Unowhy Companion
+# UnoMate
 
 Compagnon de bureau pour tablettes Unowhy 4.2 (Android 10), posé à côté de l'ordinateur (**Mac ou PC Windows**). La tablette est une interface légère ; le backend tourne sur l'ordinateur et sert d'agent de pilotage. Pas d'IA. Une tablette peut connaître plusieurs ordinateurs (bureau, maison) et passe toute seule à celui qui répond.
 
@@ -27,12 +27,12 @@ scripts/  Sauvegarde (bundle git + données perso)
 Sur chaque ordinateur à piloter (une fois) :
 
 1. Télécharger l'appli : le plus simple est la tablette, qui les sert sur le WiFi (`http://<ip de la tablette>:8080`, affichée sur l'écran Bienvenue ; la page propose celle de l'ordinateur qui la visite). Sinon, celle de la dernière release (`npm run package` pour la fabriquer, voir [développement](docs/developpement.md)). Node y est embarqué, rien d'autre à installer, et rien ne s'installe : l'appli reste où on la met.
-   - **Windows** : lancer **`Compagnon-Unowhy-Windows.exe`** (un seul fichier, sans droits d'administrateur ; non signé : SmartScreen > « Informations complémentaires » > « Exécuter quand même »).
-   - **Mac** : extraire `Compagnon-Unowhy-Mac.zip`, ouvrir **Compagnon Unowhy** (non notarisée : la première fois, Réglages Système > Confidentialité et sécurité > « Ouvrir quand même »).
+   - **Windows** : lancer **`UnoMate-Windows.exe`** (un seul fichier, sans droits d'administrateur ; non signé : SmartScreen > « Informations complémentaires » > « Exécuter quand même »).
+   - **Mac** : extraire `UnoMate-Mac.zip`, ouvrir **UnoMate** (non notarisée : la première fois, Réglages Système > Confidentialité et sécurité > « Ouvrir quand même »).
 2. Le compagnon tourne tant qu'on ne le quitte pas ; relancer l'appli rouvre la page. Pour qu'il démarre à l'ouverture de session, cocher « Lancer au démarrage » dans la page (rien n'est inscrit avant). Mettre à jour : bouton « Chercher une mise à jour » de la page (l'appli vient de la tablette). Depuis ce dépôt, sans l'appli : Node.js 22 ou plus, puis `npm install && npm run service:install` dans `backend/`.
 3. La page **http://127.0.0.1:3000/** (le panneau) s'ouvre : adresse de l'ordinateur, case où saisir le code d'appairage affiché par la tablette, agenda, et la carte « Cette appli » (lancement au démarrage, pare-feu, mise à jour, ancienne installation, quitter, tout oublier).
 4. Autorisations, une fois :
-   - **Mac** : Réglages Système > Confidentialité et sécurité > **Accessibilité** > ajouter `node` (bouton « Ouvrir le réglage » du panneau ; `node` est dans `~/Library/Application Support/UnowhyCompanion/runtime`) pour les raccourcis, macros et fenêtres.
+   - **Mac** : Réglages Système > Confidentialité et sécurité > **Accessibilité** > ajouter `node` (bouton « Ouvrir le réglage » du panneau ; `node` est dans `~/Library/Application Support/UnoMate/runtime`) pour les raccourcis, macros et fenêtres.
    - **Windows** : « Ouvrir le pare-feu » dans le panneau (demande d'administrateur) pour les réseaux **privés** ; le WiFi doit être en profil « Privé ».
 
 Sur la tablette : au premier lancement, l'écran **Bienvenue** guide en trois étapes (WiFi, adresse de la tablette à ouvrir sur l'ordinateur pour y télécharger le logiciel, `http://<ip>:8080`, ordinateurs trouvés sur le WiFi). Ensuite : **Réglages > Ordinateurs > Ajouter un ordinateur**, toucher l'ordinateur trouvé sur le WiFi, puis saisir sur l'ordinateur (page du compagnon, qui s'ouvre seule) le code à 6 chiffres affiché par la tablette. C'est tout : le jeton arrive une fois le code accepté. Ordinateur introuvable (autre réseau, diffusion bloquée) : « Saisir l'adresse » avec celle de la page.
@@ -48,7 +48,7 @@ Sur la tablette : au premier lancement, l'écran **Bienvenue** guide en trois é
 | Redémarrer | `npm run service:start` |
 | Retirer le lancement automatique | `npm run service:uninstall` |
 
-Journal : `~/Library/Logs/UnowhyCompanion/` (Mac), `%LOCALAPPDATA%\UnowhyCompanion\` (Windows).
+Journal : `~/Library/Logs/UnoMate/` (Mac), `%LOCALAPPDATA%\UnoMate\` (Windows).
 
 ### Windows : ce qui change
 
@@ -170,7 +170,7 @@ Sur la tablette : Paramètres > À propos > taper 7 fois sur « Numéro de build
 adb devices                              # la tablette doit apparaître en "device"
 ./gradlew installDebug                   # build + installation
 adb reverse tcp:3000 tcp:3000            # la tablette joint le backend de l'ordinateur via USB
-adb shell am start -n com.unowhy.companion/.MainActivity
+adb shell am start -n com.unowhy.unomate/.MainActivity
 ```
 
 `adb reverse` est à relancer après chaque rebranchement du câble. En USB, ajouter l'ordinateur avec « Saisir l'adresse » : `127.0.0.1` (appairage par code comme en WiFi).
@@ -190,8 +190,8 @@ Autres commandes utiles :
 
 ```bash
 ./gradlew assembleDebug                  # APK dans app/build/outputs/apk/debug/
-adb logcat --pid=$(adb shell pidof com.unowhy.companion)   # logs de l'appli
-adb uninstall com.unowhy.companion
+adb logcat --pid=$(adb shell pidof com.unowhy.unomate)   # logs de l'appli
+adb uninstall com.unowhy.unomate
 ```
 
 **Deux « ordinateurs » sur un même Mac** (tester la bascule) : `PORT=3011 DATA_DIR=/tmp/a COMPUTER_NAME="Mac du bureau" npx tsx src/server.ts` et un second avec un autre port et dossier ; les ajouter depuis l'émulateur par `adb reverse tcp:3011 tcp:3011` et `127.0.0.1:3011`, puis arrêter l'actif.

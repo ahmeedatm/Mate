@@ -14,7 +14,7 @@ Parcours : onglet GitLab › carte **Connecter GitLab** › la page d'autorisati
 
 | Champ | Valeur |
 |---|---|
-| Nom | `Unowhy Companion` |
+| Nom | `UnoMate` |
 | URI de redirection (une par ligne) | `http://127.0.0.1:3000/oauth/gitlab/callback` |
 | | `http://localhost:3000/oauth/gitlab/callback` |
 | Confidentielle | **décochée** (appli de bureau : code d'autorisation + PKCE, pas de secret) |

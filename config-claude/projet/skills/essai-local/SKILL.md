@@ -1,6 +1,6 @@
 ---
 name: essai-local
-description: Pose l'appli d'une MR sur la tablette branchée en adb, tout en local (sans pipeline ni Mises à jour), et passe le compagnon du Mac sur le backend de la même MR. Build sur ce Mac de l'essai com.unowhy.companion.essai signé par la clé de release, installé à côté de la stable. Invoquer via /essai-local [iid], ou quand l'utilisateur veut « charger la MR sur la tablette », « essayer la MR en local », « mettre la version de la MR sur la tablette ».
+description: Pose l'appli d'une MR sur la tablette branchée en adb, tout en local (sans pipeline ni Mises à jour), et passe le compagnon du Mac sur le backend de la même MR. Build sur ce Mac de l'essai com.unowhy.unomate.essai signé par la clé de release, installé à côté de la stable. Invoquer via /essai-local [iid], ou quand l'utilisateur veut « charger la MR sur la tablette », « essayer la MR en local », « mettre la version de la MR sur la tablette ».
 ---
 
 # /essai-local [iid]
@@ -34,12 +34,12 @@ Ce que fait le script :
 2. Version `X.Y.Z-essai.N` : dernier tag de la branche, N choisi pour passer juste au-dessus de l'essai installé.
 3. Clé de release : copiée une fois des variables CI vers le trousseau macOS (`unowhy-companion-release-*`), posée
    dans un dossier temporaire le temps du build, puis effacée.
-4. `assembleRelease`, puis garde-fous : paquet `com.unowhy.companion.essai` (jamais celui de la stable) et même
+4. `assembleRelease`, puis garde-fous : paquet `com.unowhy.unomate.essai` (jamais celui de la stable) et même
    certificat que la stable de la tablette. Sinon rien n'est installé.
 5. `adb install -r`, ouverture de l'essai.
 6. Compagnon du Mac rebâti et relancé sur le backend des mêmes sources (`ship/deploy-tablette.sh`, `BACKEND=1 APK=0`).
 
-Dernière ligne : `com.unowhy.companion.essai X.Y.Z-essai.N (MR !<iid> …) posé`.
+Dernière ligne : `com.unowhy.unomate.essai X.Y.Z-essai.N (MR !<iid> …) posé`.
 
 ## Sorties
 
@@ -48,7 +48,7 @@ Dernière ligne : `com.unowhy.companion.essai X.Y.Z-essai.N (MR !<iid> …) pos�
   stable, Réglages > appui long sur le titre > code technicien > « Autoriser les installations », puis relancer.
 - `2`, aucune tablette : la brancher en USB.
 - `1` : lire le message. « au-dessus de ce que vX.Y.Z permet » = essai d'un tag plus récent installé : « Revenir à la
-  stable », `adb uninstall com.unowhy.companion.essai`, relancer.
+  stable », `adb uninstall com.unowhy.unomate.essai`, relancer.
 
 ## Limites
 

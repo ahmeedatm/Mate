@@ -96,7 +96,7 @@ Hypothèses, à confirmer avec l'équipe.
 
 Déjà suivis dans [etat-du-projet.md](etat-du-projet.md) :
 
-- exe Windows (`UnowhyHelper.exe`, `UnowhyCompanion.exe`) à signer avec un certificat Unowhy (section Pourquoi ce projet) ;
+- exe Windows (`UnowhyHelper.exe`, `UnoMate.exe`) à signer avec un certificat Unowhy (section Pourquoi ce projet) ;
 - kiosque à poser en usine par Unowhy, à confirmer avec eux (section Avant de livrer, [kiosque.md](kiosque.md)).
 
 ## Points non vérifiés

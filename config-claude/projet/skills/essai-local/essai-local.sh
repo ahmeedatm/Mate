@@ -1,5 +1,5 @@
 #!/bin/sh
-# Essai d'une MR sur la tablette, tout en local : APK d'essai (com.unowhy.companion.essai) construit sur ce Mac, signé
+# Essai d'une MR sur la tablette, tout en local : APK d'essai (com.unowhy.unomate.essai) construit sur ce Mac, signé
 # par la clé de release (trousseau macOS), posé par adb à côté de la stable, puis compagnon du Mac passé sur le backend.
 # Sans argument : le worktree courant tel quel (modifs non commitées comprises). Avec <iid> : la tête de la MR, dans le
 # worktree détaché essai-mr. ANDROID_SERIAL choisit la tablette s'il y en a plusieurs.
@@ -12,8 +12,8 @@ main=$(dirname "$(git -C "$here" rev-parse --path-format=absolute --git-common-d
 proj=efreifer%2Funowhy-companion
 adb="$HOME/Library/Android/sdk/platform-tools/adb"
 tools=$(ls -d "$HOME/Library/Android/sdk/build-tools/"* | tail -1)
-stable=com.unowhy.companion
-essai=com.unowhy.companion.essai
+stable=com.unowhy.unomate
+essai=com.unowhy.unomate.essai
 kc_store=unowhy-companion-release-keystore
 kc_pass=unowhy-companion-release-password
 
@@ -87,7 +87,7 @@ cert() { "$tools/apksigner" verify --print-certs "$1" | sed -n 's/.*SHA-256 dige
 
 "$adb" -s "$serial" install -r "$apk" >/dev/null
 "$adb" -s "$serial" shell monkey -p "$essai" -c android.intent.category.LAUNCHER 1 >/dev/null
-echo "✅ tablette $serial : Companion essai $version installé et ouvert"
+echo "✅ tablette $serial : UnoMate essai $version installé et ouvert"
 
 # 6. Compagnon du Mac sur le backend des mêmes sources.
 cd "$root/backend"

@@ -410,7 +410,7 @@ export function playerScript(app: string, action: MediaAction, positionMs?: numb
 
 /**
  * Lecture choisie sur la tablette (`app`, sinon celle de devant). Spotify et Musique par AppleScript. Navigateur avec
- * l'extension « Compagnon Unowhy » : elle agit dans la page (Opera GX en pause ne répond plus qu'à la vraie touche du
+ * l'extension « UnoMate » : elle agit dans la page (Opera GX en pause ne répond plus qu'à la vraie touche du
  * clavier). Sinon MediaRemote, qui vise sa propre lecture ; secours : touches multimédias. Un onglet sans extension :
  * refusé (MediaRemote ou la touche iraient à une autre appli).
  */

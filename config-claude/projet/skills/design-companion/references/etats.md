@@ -8,7 +8,7 @@ ou gère mal.
 
 | État | Comment le provoquer | Ce qu'on attend |
 |---|---|---|
-| Sans ordinateur appairé | données de l'appli effacées (`adb shell pm clear com.unowhy.companion`) | `WelcomeView` par-dessus tout ; Deck, Ordi, Caméra remplacés par `view_connect` ; l'Accueil garde heure et Focus |
+| Sans ordinateur appairé | données de l'appli effacées (`adb shell pm clear com.unowhy.unomate`) | `WelcomeView` par-dessus tout ; Deck, Ordi, Caméra remplacés par `view_connect` ; l'Accueil garde heure et Focus |
 | Ordinateur injoignable | arrêter le backend de test | le dire une fois, à un endroit stable, avec le nom de l'ordinateur et quoi vérifier ; données affichées marquées comme anciennes ; bouton Réessayer ; pas de valeur fausse (curseur à 0, liste vide) |
 | Bascule vers un autre ordinateur | deux backends, arrêter l'actif (`RemoteChannel.SWITCH_AFTER_MS`) | annonce de la bascule, nom du nouvel ordinateur visible |
 | Jeton refusé (401) | supprimer `identity.json` du backend de test | « appairer à nouveau », avec le chemin vers Réglages |

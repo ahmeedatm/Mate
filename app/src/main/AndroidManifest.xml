@@ -18,7 +18,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <!-- Mises à jour installées par le Companion (device owner : sans confirmation) : moteur web, Companion. -->
+    <!-- Mises à jour installées par UnoMate (device owner : sans confirmation) : moteur web, UnoMate. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Désinstaller l'essai d'une MR au pipeline plus ancien (Updater.uninstall) : sans confirmation en device owner. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
@@ -31,9 +31,9 @@
     <!-- Ordinateurs appairés lus par l'appli d'essai dans la stable (trial/ComputersProvider) : seulement entre applis
          signées par la même clé. Nom fixe, déclaré à l'identique par la stable et l'essai. -->
     <permission
-        android:name="com.unowhy.companion.permission.COMPUTERS"
+        android:name="com.unowhy.unomate.permission.COMPUTERS"
         android:protectionLevel="signature" />
-    <uses-permission android:name="com.unowhy.companion.permission.COMPUTERS" />
+    <uses-permission android:name="com.unowhy.unomate.permission.COMPUTERS" />
 
     <queries>
         <!-- Android 11+ : sans cette déclaration, TextToSpeech ne voit aucun moteur de synthèse vocale. -->
@@ -50,8 +50,8 @@
             <category android:name="android.intent.category.HOME" />
         </intent>
         <!-- Android 11+ : la stable et l'essai se voient (Réglages > Mises à jour, ordinateurs appairés). -->
-        <package android:name="com.unowhy.companion" />
-        <package android:name="com.unowhy.companion.essai" />
+        <package android:name="com.unowhy.unomate" />
+        <package android:name="com.unowhy.unomate.essai" />
     </queries>
 
     <application
@@ -105,7 +105,7 @@
             android:name=".trial.ComputersProvider"
             android:authorities="${applicationId}.computers"
             android:exported="true"
-            android:permission="com.unowhy.companion.permission.COMPUTERS" />
+            android:permission="com.unowhy.unomate.permission.COMPUTERS" />
 
         <!-- Relance l'appli (et le kiosque) juste après sa mise à jour. -->
         <receiver

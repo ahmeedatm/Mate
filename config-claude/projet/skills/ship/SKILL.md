@@ -103,7 +103,7 @@ travail, pas de liste de fichiers, pas de compte rendu (étape 8), pas de pipeli
 
 ```
 C'est fini. Essai X.Y.Z-essai.N à installer (MR !<iid>).
-Installer : Réglages > Mises à jour > Rechercher, « Mettre à jour » sur Companion essai, puis « Ouvrir l'essai ».
+Installer : Réglages > Mises à jour > Rechercher, « Mettre à jour » sur UnoMate essai, puis « Ouvrir l'essai ».
 Tester : <1 à 3 lignes : où aller, quel geste, ce qui doit se passer>
 ```
 

@@ -154,7 +154,7 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
         const link = (href: string, text: string) => `<a href="${`/oauth/decision?to=${encodeURIComponent(href)}`}">${text}</a>`;
         res.setHeader("content-type", "text/html; charset=utf-8");
         return res.end(
-          `<!doctype html><title>Faux GitLab</title><h1>Autoriser Unowhy Companion ?</h1><p>Accès à ton compte (${scope}).</p>` +
+          `<!doctype html><title>Faux GitLab</title><h1>Autoriser UnoMate ?</h1><p>Accès à ton compte (${scope}).</p>` +
             `${link(back({ code }), "Autoriser")} ${link(back({ error: "access_denied" }), "Refuser")}`,
         );
       }

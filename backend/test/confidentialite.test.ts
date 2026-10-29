@@ -19,7 +19,7 @@ describe("confidentialité (docs/confidentialite.md)", () => {
     const res = await fetch(`${server.url}/local/confidentialite`);
     assert.equal(res.status, 200);
     assert.match(res.headers.get("content-type") ?? "", /text\/plain/);
-    assert.match(await res.text(), /^Companion Unowhy : politique de confidentialité/);
+    assert.match(await res.text(), /^UnoMate : politique de confidentialité/);
     assert.match((await server.call("GET", "/", undefined, false)).json, /href="\/local\/confidentialite"/);
   });
 

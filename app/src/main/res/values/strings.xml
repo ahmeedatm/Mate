@@ -370,7 +370,7 @@
     <string name="web_tabs">Onglets</string>
     <string name="web_tabs_title">Onglets ouverts sur l\'ordi</string>
     <string name="web_tabs_hint">Touche un onglet pour l\'afficher ici.</string>
-    <string name="web_tabs_extension">Pour voir ici les onglets du PC, ajoute l\'extension « Compagnon Unowhy » à ton navigateur (dossier « Extension navigateur » du compagnon), puis touche un onglet sur le PC.</string>
+    <string name="web_tabs_extension">Pour voir ici les onglets du PC, ajoute l\'extension « UnoMate » à ton navigateur (dossier « Extension navigateur » du compagnon), puis touche un onglet sur le PC.</string>
     <string name="web_tabs_none">Aucun onglet ouvert dans un navigateur de l\'ordi.</string>
     <string name="web_tab_front">Affiché sur l\'ordi en ce moment</string>
     <string name="web_tab_shown">Affiché dans sa fenêtre</string>
@@ -662,7 +662,7 @@
     <string name="wifi_forget_confirm">Oublier le réseau %1$s ? Il faudra retaper son mot de passe.</string>
     <string name="updates_title">Mises à jour</string>
     <string name="updates_check">Rechercher</string>
-    <string name="updates_hint">Le moteur web et le Companion se mettent à jour depuis le serveur Unowhy ou l\'ordinateur, sans quitter le kiosque. En kiosque, le Companion installe seul les versions de main (au démarrage puis toutes les 6 h) ; un essai s\'installe seulement avec son bouton.</string>
+    <string name="updates_hint">Le moteur web et UnoMate se mettent à jour depuis le serveur Unowhy ou l\'ordinateur, sans quitter le kiosque. En kiosque, le UnoMate installe seul les versions de main (au démarrage puis toutes les 6 h) ; un essai s\'installe seulement avec son bouton.</string>
     <string name="updates_checking">Recherche des mises à jour…</string>
     <string name="updates_none">Aucune mise à jour annoncée.</string>
     <string name="updates_row_title">%1$s · %2$s</string>
@@ -726,7 +726,7 @@
     <string name="install_address_no_wifi">connecte d\'abord le WiFi</string>
     <string name="companion_update_available">Nouvelle version du compagnon pour %1$s (%2$s) : touche pour la mettre à jour</string>
     <string name="companion_update_title">Mettre à jour le compagnon de %1$s</string>
-    <string name="companion_update_steps_mac">1. Sur le Mac, rouvre « Compagnon Unowhy » : le panneau s\'ouvre.\n2. Carte « Cette appli » : « Chercher une mise à jour », puis « Installer ». L\'appli se remplace et redémarre.\n3. Si macOS redemande l\'Accessibilité, accorde-la (Réglages Système > Confidentialité et sécurité > Accessibilité).\n\nPas de panneau (ancienne version) : ouvre %1$s (bouton « Ouvrir sur l\'ordi »), télécharge la nouvelle appli et ouvre-la.\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
+    <string name="companion_update_steps_mac">1. Sur le Mac, rouvre « UnoMate » : le panneau s\'ouvre.\n2. Carte « Cette appli » : « Chercher une mise à jour », puis « Installer ». L\'appli se remplace et redémarre.\n3. Si macOS redemande l\'Accessibilité, accorde-la (Réglages Système > Confidentialité et sécurité > Accessibilité).\n\nPas de panneau (ancienne version) : ouvre %1$s (bouton « Ouvrir sur l\'ordi »), télécharge la nouvelle appli et ouvre-la.\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
     <string name="companion_update_steps_windows">1. Sur le PC, relance le compagnon : le panneau s\'ouvre.\n2. Carte « Cette appli » : « Chercher une mise à jour », puis « Installer ». Le fichier se remplace et redémarre.\n3. Si SmartScreen bloque : « Informations complémentaires », puis « Exécuter quand même ».\n\nPas de panneau (ancienne installation) : ouvre %1$s (bouton « Ouvrir sur l\'ordi »), télécharge le nouveau fichier, lance-le, puis « Retirer l\'ancienne installation » dans le panneau.\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
     <string name="companion_update_open">Ouvrir sur l\'ordi</string>
     <string name="companion_update_later">Plus tard</string>
@@ -1328,7 +1328,7 @@
     <!-- Appli d'essai depuis une MR, installée à côté de la stable (trial/Trial.kt) -->
     <string name="trial_open">Ouvrir l\'essai</string>
     <string name="trial_back">Revenir à la stable</string>
-    <string name="trial_hint">Version d\'essai d\'une MR, installée à côté du Companion. Mises à jour, WiFi et kiosque se règlent dans le Companion. Le backend de l\'ordinateur revient à l\'origine quand tu reviens à la stable.</string>
+    <string name="trial_hint">Version d\'essai d\'une MR, installée à côté du UnoMate. Mises à jour, WiFi et kiosque se règlent dans le UnoMate. Le backend de l\'ordinateur revient à l\'origine quand tu reviens à la stable.</string>
     <!-- Accessibilité (lot 1) : états écrits en plus de la couleur, noms pour TalkBack -->
     <string name="link_state_online">en ligne</string>
     <string name="link_state_unauthorized">non autorisé</string>

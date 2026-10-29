@@ -36,9 +36,9 @@
 ### Task 1 : Rôles des profils et migration
 
 **Files:**
-- Modify: `app/src/main/kotlin/com/unowhy/companion/ui/home/WidgetModel.kt` (`HomeLayout`, `Template`)
+- Modify: `app/src/main/kotlin/com/unowhy/unomate/ui/home/WidgetModel.kt` (`HomeLayout`, `Template`)
 - Modify: `app/src/main/res/values/strings.xml` (`profile_home`, `profile_deck`, `profile_call`, descriptions des modèles)
-- Test: `app/src/test/kotlin/com/unowhy/companion/ui/home/ProfilesTest.kt`
+- Test: `app/src/test/kotlin/com/unowhy/unomate/ui/home/ProfilesTest.kt`
 
 **Interfaces:**
 - Produces : dans `HomeLayout`, `var homeProfile: Int = 0`, `var deckProfile: Int = -1`, `var callProfile: Int = -1` (JSON `"home"`, `"deck"`, `"call"`, comme `"game"`) ; `fun ensureRoles(deckName: String, callName: String): Boolean` (vrai si la disposition a changé) ; `fun canRemove(index: Int): Boolean` (faux pour Accueil et Réunion) ; `fun profilesInOrder(inCall: Boolean): List<Int>` (pages dans l'ordre, sans `callProfile` hors appel) ; `fun deckTarget(): Int` (= `deckProfile`, ou `homeProfile` s'il n'y en a pas). Modèles `Template.DECK_CADRAN` et `Template.CALL_CADRAN` (`cadran = true`).
@@ -64,8 +64,8 @@
 ### Task 2 : RailModel, ce que la barre affiche
 
 **Files:**
-- Create: `app/src/main/kotlin/com/unowhy/companion/ui/RailModel.kt`
-- Test: `app/src/test/kotlin/com/unowhy/companion/ui/RailModelTest.kt`
+- Create: `app/src/main/kotlin/com/unowhy/unomate/ui/RailModel.kt`
+- Test: `app/src/test/kotlin/com/unowhy/unomate/ui/RailModelTest.kt`
 
 **Interfaces:**
 - Consumes : `HomeLayout.profilesInOrder(inCall)`, `HomeLayout.callProfile` (Task 1).
@@ -98,7 +98,7 @@
 ### Task 3 : ProfileRail remplace le menu caché et la barre de profils
 
 **Files:**
-- Create: `app/src/main/kotlin/com/unowhy/companion/ui/ProfileRail.kt`, `app/src/main/res/layout/view_profile_rail.xml`
+- Create: `app/src/main/kotlin/com/unowhy/unomate/ui/ProfileRail.kt`, `app/src/main/res/layout/view_profile_rail.xml`
 - Modify: `app/src/main/res/layout/activity_main.xml` (barre à gauche du conteneur des écrans, retrait de `menu_host`), `MainActivity.kt` (lignes ~120-135 : `nav = ProfileRail(...)` pour tous les thèmes ; retrait de `menu`), `ui/HomeFragment.kt` + `res/layout/fragment_home.xml` (retrait de la barre de profils `home_profile_*` ; `showProfile(index)` reste public), `ui/Navigation.kt` (ajouter `fun showProfiles(layout: HomeLayout, page: Int, inCall: Boolean)`)
 - Delete: `ui/MenuPanel.kt`, `ui/DrawerGesture.kt`, `ui/Rail.kt`, `res/layout/view_menu_panel.xml`, `item_menu.xml`, et les tests de `DrawerGesture` s'il y en a
 - Test: tests instrumentés touchés par le menu (`app/src/androidTest/…`), mis à jour
@@ -124,7 +124,7 @@
 
 **Files:**
 - Modify: `ui/Look.kt` (`fun sharedAxis(out: View?, into: View, fromBelow: Boolean)`), `MainActivity.show()` (~ligne 544), `ui/HomeFragment.kt` (changement de profil), `ui/ProfileRail.kt` (repos)
-- Test: `app/src/test/kotlin/com/unowhy/companion/ui/RailModelTest.kt` (sens du déplacement)
+- Test: `app/src/test/kotlin/com/unowhy/unomate/ui/RailModelTest.kt` (sens du déplacement)
 
 **Interfaces:**
 - Produces : `RailModel.direction(from: Int, to: Int): Int` (+1 si `to` est plus bas dans la barre, -1 sinon, 0 si égal) ; `ProfileRail.setResting(resting: Boolean)` appelé par le même déclencheur que le repos de l'Accueil.
@@ -133,7 +133,7 @@
 - [ ] **Step 2 :** FAIL, puis implémenter `direction`, PASS.
 - [ ] **Step 3 :** implémenter `Look.sharedAxis`. Sortie en alpha 1 → 0 sur un ressort `EFFECTS_FAST`. Entrée en `translationY` de ±24 dp → 0 (`SPATIAL_DEFAULT`) et alpha 0 → 1 (`EFFECTS_DEFAULT`). Tout en `always = true`, calque matériel pendant l'animation. Brancher sur `MainActivity.show()` et sur le changement de profil.
 - [ ] **Step 4 :** repos : alpha de la barre 1 → 0,4 et libellés 1 → 0 (`EFFECTS_DEFAULT`), retour au premier toucher. Mode Modifier de `WidgetGrid` : les widgets passent à l'échelle 0,94 (`SPATIAL_DEFAULT`), les poignées apparaissent en fondu, sans tremblement ; retour à 1 en sortant.
-- [ ] **Step 5 :** mesurer sur la tablette : `adb shell dumpsys gfxinfo com.unowhy.companion reset`, 10 changements d'écran, puis `dumpsys gfxinfo com.unowhy.companion`. Attendu : 90e centile ≤ 18 ms. Noter le chiffre dans la MR.
+- [ ] **Step 5 :** mesurer sur la tablette : `adb shell dumpsys gfxinfo com.unowhy.unomate reset`, 10 changements d'écran, puis `dumpsys gfxinfo com.unowhy.unomate`. Attendu : 90e centile ≤ 18 ms. Noter le chiffre dans la MR.
 - [ ] **Step 6 :** commit `Navigation : transitions par la barre et repos`.
 
 ### Task 5 : Backend, commandes `mute-mic` et `dnd`, champ `icon`, deck Bureau
@@ -161,9 +161,9 @@
 ### Task 6 : Tablette, icônes des touches et touches « tablette »
 
 **Files:**
-- Create: `app/src/main/kotlin/com/unowhy/companion/ui/home/TileIcons.kt`, les vecteurs `res/drawable/ic_tile_*.xml` qui manquent (Material Symbols Rounded, Apache 2.0)
+- Create: `app/src/main/kotlin/com/unowhy/unomate/ui/home/TileIcons.kt`, les vecteurs `res/drawable/ic_tile_*.xml` qui manquent (Material Symbols Rounded, Apache 2.0)
 - Modify: `net/DeckApi.kt:12,72` (`DeckTile.icon: String?`), `ui/home/TileGridView.kt` (icône prioritaire sur `glyph`), `ui/home/KeysWidget.kt`
-- Test: `app/src/test/kotlin/com/unowhy/companion/ui/home/TileIconsTest.kt`, `app/src/test/kotlin/com/unowhy/companion/net/…` (parsing de `icon`)
+- Test: `app/src/test/kotlin/com/unowhy/unomate/ui/home/TileIconsTest.kt`, `app/src/test/kotlin/com/unowhy/unomate/net/…` (parsing de `icon`)
 
 **Interfaces:**
 - Consumes : champ `icon` (Task 5).
@@ -177,7 +177,7 @@
 ### Task 7 : Ordre `meeting` et suivi de l'appel
 
 **Files:**
-- Create: `backend/src/meeting-watch.ts`, `backend/test/meeting-watch.test.ts`, `app/src/main/kotlin/com/unowhy/companion/ui/CallSession.kt`, `app/src/test/kotlin/com/unowhy/companion/ui/CallSessionTest.kt`
+- Create: `backend/src/meeting-watch.ts`, `backend/test/meeting-watch.test.ts`, `app/src/main/kotlin/com/unowhy/unomate/ui/CallSession.kt`, `app/src/test/kotlin/com/unowhy/unomate/ui/CallSessionTest.kt`
 - Modify: `backend/src/tablet.ts:20-32` (type), `src/routes/tablet.ts` (schéma), `src/server.ts:152` (démarrage), `src/mcp.ts` (aucun outil : ordre interne), `remote/RemoteChannel.kt:111` (branche `"meeting"`), `MainActivity.kt` (`showMeetingControls` → `CallSession`, `onComputerChanged` → `end`), `ui/ProfileRail.kt` (apparition de l'entrée)
 
 **Interfaces:**
@@ -226,9 +226,9 @@
 ### Task 8 : Widget d'appel générique `CALL`
 
 **Files:**
-- Create: `app/src/main/kotlin/com/unowhy/companion/ui/home/GenericCallWidget.kt`
+- Create: `app/src/main/kotlin/com/unowhy/unomate/ui/home/GenericCallWidget.kt`
 - Modify: `ui/home/WidgetModel.kt` (`WidgetType.CALL("call", …, listOf(WidgetSize.XL, WidgetSize.L), true)`), `ui/home/HomeWidgets.kt` (fabrique), `ui/home/CallWidget.kt` (logique partagée si besoin), `Template.CALL_CADRAN` (`CALL` en `XL`), `strings.xml`
-- Test: `app/src/test/kotlin/com/unowhy/companion/ui/home/WidgetModelTest.kt` (type et tailles), `CallSessionTest` (choix de l'appli affichée)
+- Test: `app/src/test/kotlin/com/unowhy/unomate/ui/home/WidgetModelTest.kt` (type et tailles), `CallSessionTest` (choix de l'appli affichée)
 
 **Interfaces:**
 - Consumes : `CallSession.active` et l'appli en cours (Task 7), pages `DeckPage` avec `app` / `meeting` (comme `CallWidget`).
@@ -244,7 +244,7 @@
 **Files:**
 - Modify: `Mode.kt` (retrait de `DECK`, `Mode.of("deck")` → `HOME`), `MainActivity.kt` (`showMode`, `showAgents`, `showAppControls`, `showMeetingControls` → profil Deck / Réunion), `voice/VoiceCommands.kt` + `voice/VoiceControl.kt` (« deck », pages d'appli → profil Deck), `remote/RemoteChannel.kt` (`mode: deck` → `HomeLayout.deckTarget()`), `backend/src/tablet.ts:14` (`MODES` garde `"deck"`, sens = profil Deck), docs de l'outil MCP du mode
 - Delete: `ui/DeckFragment.kt`, `ui/TabStrip.kt` et les vues propres au fragment, si plus rien ne les utilise (`OpenWindowsView`, `MixerView`, etc. restent : les widgets s'en servent)
-- Test: `app/src/test/kotlin/com/unowhy/companion/ModeTest.kt`, tests de `voice/`, `DeckTest` (androidTest, réécrit contre le profil Deck)
+- Test: `app/src/test/kotlin/com/unowhy/unomate/ModeTest.kt`, tests de `voice/`, `DeckTest` (androidTest, réécrit contre le profil Deck)
 
 - [ ] **Step 1 : inventaire écrit dans la MR.** Pour chaque onglet et chaque type de page de `deck.example*.json` (Apps, Ouvertes, Pavé, Son, Agents, Média, Raccourcis, Perso, Discord, Réunion, Word, Excel, PowerPoint, Outlook), noter le widget qui le remplace et le vérifier à l'écran. **Un manque arrête cette tâche** : le signaler et le traiter avant de continuer.
 - [ ] **Step 2 : tests**
