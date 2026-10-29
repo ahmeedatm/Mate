@@ -121,7 +121,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             unreachable = main?.unreachable()
             grid.setPadding(dp(44), dp(28), dp(40), dp(32))
             grid.gap = dp(16)
-            grid.rowWeights = RowProfile.CADRAN_ROWS
             // L'heure déborde de quelques dp sous sa ligne, comme dans la maquette.
             grid.clipChildren = false
         }
@@ -195,7 +194,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         for (placed in shown) {
             val widget = widgets[placed] ?: continue
             when (placed.type) {
-                WidgetType.HERO -> Look.enterSpring(widget.view, 0, -8)
+                WidgetType.HERO, WidgetType.DAY -> Look.enterSpring(widget.view, 0, -8)
                 WidgetType.DAYLINE -> (widget as? DayLineWidget)?.arrive()
                 else -> Look.enterSpring(widget.view, 160L + 50L * tiles++, 24)
             }
@@ -212,6 +211,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         layout.widgets.forEach { addWidget(it) }
         page = page.coerceIn(0, layout.pages - 1)
         grid.page = page
+        showRows()
         renderProfileBar()
         activate()
     }
@@ -265,11 +265,16 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         }
     }
 
+    /** Cadran : hauteurs des lignes selon le bandeau du profil affiché (Ma journée, plus bas, ou la grande heure). */
+    private fun showRows() {
+        if (cadran) grid.rowWeights = RowProfile.cadranRows(layout.widgets, page)
+    }
+
     /** Les widgets du profil affiché : les autres ne relisent pas l'ordinateur (tablette lente). */
     private fun shownWidgets() = widgets.filterKeys { it.page == page }.values.toList()
 
     private fun showsCalendar() = widgets.keys.any {
-        it.type == WidgetType.AGENDA || it.type == WidgetType.NEXT || it.type == WidgetType.HERO || it.type == WidgetType.DAYLINE
+        it.type == WidgetType.AGENDA || it.type == WidgetType.NEXT || it.type == WidgetType.HERO || it.type == WidgetType.DAY || it.type == WidgetType.DAYLINE
     }
 
     private suspend fun fetchCalendar() {
@@ -409,6 +414,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private fun displayProfile(index: Int) {
         page = index.coerceIn(0, layout.pages - 1)
         grid.page = page
+        showRows()
         renderProfileBar()
         activate()
     }
@@ -486,6 +492,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             return
         }
         HomeLayout.save(requireContext(), layout, cadran)
+        showRows()
         displayProfile(page)
     }
 

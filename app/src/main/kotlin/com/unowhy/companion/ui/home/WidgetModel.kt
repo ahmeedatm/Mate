@@ -51,6 +51,7 @@ enum class WidgetType(
     WEATHER("weather", R.string.widget_weather, R.string.widget_weather_desc, R.drawable.ic_cloud, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), false),
     NOTE("note", R.string.widget_note, R.string.widget_note_desc, R.drawable.ic_edit, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L), false),
     HERO("hero", R.string.widget_hero, R.string.widget_hero_desc, R.drawable.ic_clock, listOf(WidgetSize.W), false),
+    DAY("day", R.string.widget_day, R.string.widget_day_desc, R.drawable.ic_event, listOf(WidgetSize.W), false),
     DAYLINE("dayline", R.string.widget_dayline, R.string.widget_dayline_desc, R.drawable.ic_alarm, listOf(WidgetSize.W), false),
     AGENTS("agents", R.string.widget_agents, R.string.widget_agents_desc, R.drawable.ic_agents, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.V, WidgetSize.XL), true),
     MIXER("mixer", R.string.widget_mixer, R.string.widget_mixer_desc, R.drawable.ic_wave, listOf(WidgetSize.XL), true),
@@ -62,7 +63,7 @@ enum class WidgetType(
     CALL("call", R.string.widget_call, R.string.widget_call_desc, R.drawable.ic_videocam, listOf(WidgetSize.XL, WidgetSize.L), true);
 
     /** Sans fond de carte, posé à même l'écran : les tubes du thème Rétro y passent derrière un voile. */
-    val bare get() = this == HERO || this == DAYLINE
+    val bare get() = this == HERO || this == DAY || this == DAYLINE
 
     companion object {
         fun of(key: String) = entries.firstOrNull { it.key == key }
@@ -326,7 +327,8 @@ enum class Template(
         Placed(WidgetType.WATER, WidgetSize.M, 0, 2, 3),
     )),
     WORK_CADRAN(R.string.template_work, R.string.template_work_cadran_desc, listOf(
-        Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
+        // L'heure est déjà en haut à droite : la journée (salutation, prochaine réunion) plutôt qu'une grande heure.
+        Placed(WidgetType.DAY, WidgetSize.W, 0, 0, 0),
         Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
         Placed(WidgetType.NEXT, WidgetSize.V, 0, 0, 2),
         Placed(WidgetType.TASKS, WidgetSize.V, 0, 1, 2),

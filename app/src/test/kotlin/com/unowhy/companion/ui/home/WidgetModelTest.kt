@@ -74,6 +74,16 @@ class WidgetModelTest {
     }
 
     @Test
+    fun `Accueil de bureau, Ma journee a la place de la grande heure`() {
+        val top = Template.WORK_CADRAN.build().widgets.single { it.row == 0 }
+        assertEquals(WidgetType.DAY to WidgetSize.W, top.type to top.size)
+        assertEquals(WidgetType.DAY, WidgetType.of("day"))
+        assertEquals(listOf(WidgetSize.W), WidgetType.DAY.sizes)
+        assertFalse(WidgetType.DAY.computer)
+        assertTrue(WidgetType.DAY.bare)
+    }
+
+    @Test
     fun `V occupe une colonne sur deux lignes`() {
         assertEquals(1, WidgetSize.V.w)
         assertEquals(2, WidgetSize.V.h)
@@ -102,10 +112,10 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `chaque modele Cadran commence par le heros puis la ligne du jour`() {
+    fun `chaque modele Cadran commence par un bandeau (heure ou Ma journee) puis la ligne du jour`() {
         for (template in Template.entries.filter { it.cadran && !it.role }) {
             val widgets = template.build().widgets
-            val hero = widgets.single { it.type == WidgetType.HERO }
+            val hero = widgets.single { it.type == WidgetType.HERO || it.type == WidgetType.DAY }
             val line = widgets.single { it.type == WidgetType.DAYLINE }
             assertEquals("$template heros", Triple(WidgetSize.W, 0, 0), Triple(hero.size, hero.col, hero.row))
             assertEquals("$template ligne du jour", Triple(WidgetSize.W, 0, 1), Triple(line.size, line.col, line.row))

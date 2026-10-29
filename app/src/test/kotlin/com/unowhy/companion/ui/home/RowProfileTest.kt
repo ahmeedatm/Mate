@@ -20,6 +20,20 @@ class RowProfileTest {
     }
 
     @Test
+    fun `Ma journee en haut, bandeau plus bas, les cartes gagnent la place`() {
+        assertArrayEquals(intArrayOf(156, 92, 222, 222), RowProfile.rowHeights(740, 16, RowProfile.DAY_ROWS))
+        assertEquals(RowProfile.CADRAN_ROWS.sum(), RowProfile.DAY_ROWS.sum())
+    }
+
+    @Test
+    fun `les lignes suivent le bandeau du profil affiche`() {
+        val day = listOf(Placed(WidgetType.DAY, WidgetSize.W, 0, 0, 0), Placed(WidgetType.HERO, WidgetSize.W, 1, 0, 0))
+        assertArrayEquals(RowProfile.DAY_ROWS, RowProfile.cadranRows(day, page = 0))
+        assertArrayEquals(RowProfile.CADRAN_ROWS, RowProfile.cadranRows(day, page = 1))
+        assertArrayEquals(RowProfile.CADRAN_ROWS, RowProfile.cadranRows(day, page = 2))
+    }
+
+    @Test
     fun `le reste va a la derniere ligne`() {
         val rows = RowProfile.rowHeights(601, 16, intArrayOf(1, 1, 1, 1))
         assertArrayEquals(intArrayOf(138, 138, 138, 139), rows)

@@ -805,7 +805,7 @@
     <string name="template_home">Gamer</string>
     <string name="template_home_desc">Heure, météo, son de l\'ordi, touches du deck, lecture en cours, Focus et eau.</string>
     <string name="template_standby">Veille</string>
-    <string name="template_work_cadran_desc">Heure, ligne du jour, prochain rendez-vous, tâches, Focus et touches.</string>
+    <string name="template_work_cadran_desc">Ma journée, ligne du jour, prochain rendez-vous, tâches, applis et touches.</string>
     <string name="template_home_cadran_desc">Heure, ligne du jour, touches du deck, lecture en cours et son de l\'ordi.</string>
     <string name="template_standby_cadran_desc">L\'heure et la ligne du jour, rien d\'autre : lisible de loin.</string>
     <string name="template_standby_desc">Très grande heure, prochain rendez-vous, Focus et eau : lisible de loin.</string>
@@ -844,6 +844,15 @@
     <string name="widget_needs_computer">%1$s : connecte ton ordinateur</string>
     <string name="widget_hero">Heure du jour</string>
     <string name="widget_hero_desc">L\'heure en grand, le prochain rendez-vous, la météo et l\'eau</string>
+    <string name="widget_day">Ma journée</string>
+    <string name="widget_day_desc">Bonjour, la date, la prochaine réunion en grand avec Rejoindre, la météo et l\'eau</string>
+    <string name="day_morning">Bonjour</string>
+    <string name="day_afternoon">Bon après-midi</string>
+    <string name="day_evening">Bonsoir</string>
+    <string name="day_free">Aucune réunion aujourd\'hui</string>
+    <string name="day_free_after">Plus de réunion aujourd\'hui</string>
+    <!-- Après « Aucune réunion aujourd'hui » : la prochaine, « demain à 9 h 30 · Daily ». -->
+    <string name="day_later">%1$s · %2$s</string>
     <string name="widget_dayline">Ligne du jour</string>
     <string name="widget_dayline_desc">Les rendez-vous de 8 h à 20 h, le présent en rouge</string>
     <string name="next_prefix">Ensuite</string>

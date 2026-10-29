@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ma journée (DayWidget, Accueil de bureau) : salutation, date, puis la prochaine réunion du jour en grand avec
+     Rejoindre, ou ce qu'il reste à savoir ; météo et eau à droite. Sans fond, comme le héros. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/day_greeting"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="?attr/c_font_title"
+            android:includeFontPadding="false"
+            android:singleLine="true"
+            android:textColor="?attr/c_text"
+            android:textSize="40sp" />
+
+        <TextView
+            android:id="@+id/day_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:fontFamily="?attr/c_font_regular"
+            android:includeFontPadding="false"
+            android:singleLine="true"
+            android:textColor="?attr/c_text_dim"
+            android:textSize="20sp" />
+
+        <LinearLayout
+            android:id="@+id/day_meeting"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical"
+            android:minHeight="44dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/day_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="?attr/c_font_medium"
+                android:includeFontPadding="false"
+                android:maxWidth="440dp"
+                android:singleLine="true"
+                android:textColor="?attr/c_text"
+                android:textSize="24sp" />
+
+            <TextView
+                android:id="@+id/day_when"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:fontFamily="?attr/c_font_medium"
+                android:includeFontPadding="false"
+                android:singleLine="true"
+                android:textSize="20sp" />
+
+            <Button
+                android:id="@+id/day_join"
+                style="@style/NowButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="@string/join_meeting"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Pas de réunion à venir aujourd'hui, ou ordinateur injoignable (seul message, en orange). -->
+        <TextView
+            android:id="@+id/day_note"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:ellipsize="end"
+            android:fontFamily="?attr/c_font_regular"
+            android:includeFontPadding="false"
+            android:maxWidth="600dp"
+            android:singleLine="true"
+            android:textColor="?attr/c_text_dim"
+            android:textSize="20sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <include
+        android:id="@+id/hero_compl"
+        layout="@layout/view_hero_compl"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end" />
+</FrameLayout>
