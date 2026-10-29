@@ -36,6 +36,9 @@ abstract class CallWidget(
     override val view = OwnerLinearLayout(context).asCard(12).apply { orientation = LinearLayout.VERTICAL }
 
     private var page: DeckPage? = null
+
+    /** Les pages ont été lues au moins une fois : avant, ou pendant une panne, l'absence de page n'est pas un constat. */
+    private var read = false
     private var voice: VoiceState? = null
     private var active = false
     private var poll: Job? = null
@@ -104,6 +107,7 @@ abstract class CallWidget(
     /** Vrai si les pages ont été lues (même sans page pour ce widget : l'état d'appel est alors oublié). */
     private suspend fun readPage(): Boolean {
         val pages = runCatchingCancellable { host.deckPages() }.getOrNull() ?: return false
+        read = true
         val next = pages.firstOrNull(select)
         if (next?.app != page?.app) voice = null
         page = next
@@ -136,7 +140,7 @@ abstract class CallWidget(
         val inCall = v?.connected == true
         val page = page
         state.text = when {
-            page == null -> context.getString(R.string.call_no_page)
+            page == null -> if (read) context.getString(R.string.call_no_page) else ""
             inCall -> listOfNotNull(
                 context.getString(R.string.deck_voice_channel, v?.channel ?: page.app.orEmpty()),
                 // L montre les participants sur leur propre ligne.
