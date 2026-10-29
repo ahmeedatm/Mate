@@ -781,9 +781,15 @@
     <string name="perf_unavailable">Non disponible sur cet ordinateur</string>
     <string name="widget_keys">Touches du deck</string>
     <string name="widget_keys_title">Touches</string>
-    <string name="widget_keys_desc">1 à 6 touches du Deck, à portée de main</string>
+    <string name="widget_keys_desc">Les touches du Deck, à créer et à modifier sur place</string>
     <string name="widget_keys_choose">Choisir les touches</string>
-    <string name="widget_keys_hint">%1$d touche(s) choisie(s) sur %2$d au plus. Un petit widget montre la première, un moyen les deux premières, un grand les quatre premières, un vertical les six.</string>
+    <string name="widget_keys_hint">%1$d touche(s) choisie(s) sur %2$d au plus. Un petit widget montre la première, un moyen les deux premières, un vertical les six premières, un grand toutes (il défile).</string>
+    <string name="widget_keys_add">Ajouter</string>
+    <string name="widget_keys_new">Nouvelle touche</string>
+    <string name="widget_keys_existing">Choisir parmi les touches existantes</string>
+    <string name="widget_keys_full">Les emplacements des touches perso sont tous pris.</string>
+    <string name="widget_keys_remove">Retirer « %1$s » de ce widget ?</string>
+    <string name="widget_keys_remove_yes">Retirer</string>
     <string name="widget_weather">Météo</string>
     <string name="widget_weather_desc">Le temps qu\'il fait dans ta ville</string>
     <string name="widget_weather_choose">Choisir ma ville</string>
