@@ -5,7 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
-import { applyEssai, backendState, restoreOrigin, type Layout } from "../src/essai-backend.ts";
+import { applyEssai, applyUpdate, backendState, restoreOrigin, type Layout } from "../src/essai-backend.ts";
 import { startServer, TOKEN, type TestServer } from "./server.ts";
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "companion-essai-test-"));
@@ -185,6 +185,79 @@ describe("essai du backend d'une MR", () => {
   });
 });
 
+const sha = (buf: Buffer) => createHash("sha256").update(buf).digest("hex");
+
+describe("mise à jour stable du backend", () => {
+  for (const platform of ["mac", "windows"] as const) {
+    it(`${platform} : remplace le backend installé par celui de la release, garde l'ordinateur tel quel`, () => {
+      const layout = install(platform);
+      const tgz = archive(platform, "1.3.0");
+      applyUpdate(tgz, sha(tgz), "1.3.0", "1.2.0", layout);
+
+      assert.equal(read(layout.root, "dist/server.mjs"), "serveur 1.3.0");
+      assert.equal(read(layout.root, "config/calls.json"), "calls 1.3.0");
+      assert.equal(exists(layout.root, "dist/ancien.mjs"), false, "fichier absent de la release retiré");
+      assert.equal(read(layout.root, "config/deck.json"), "deck de l'ordinateur");
+      assert.equal(read(layout.root, "config/tasks.json"), "tâches de l'ordinateur");
+      assert.equal(read(layout.root, "node/node.exe"), "node verrouillé");
+      if (platform === "windows") assert.equal(read(layout.root, "src/win/UnowhyCompanion.exe"), "lanceur verrouillé");
+      assert.equal(read(layout.root, ".env"), "COMPANION_TOKEN=secret");
+      assert.equal(exists(layout.dataDir, "backend-origin"), false, "pas de copie d'origine");
+      assert.equal(backendState(layout).mode, "origin");
+    });
+  }
+
+  it("compagnon d'avant les versions ou backend d'essai (0.0.0) : mis à jour", () => {
+    const tgz = archive("mac", "1.3.0");
+    const old = install("mac");
+    applyUpdate(tgz, sha(tgz), "1.3.0", undefined, old);
+    assert.equal(read(old.root, "dist/server.mjs"), "serveur 1.3.0");
+    const essai = install("mac");
+    applyUpdate(tgz, sha(tgz), "1.3.0", "0.0.0", essai);
+    assert.equal(read(essai.root, "dist/server.mjs"), "serveur 1.3.0");
+  });
+
+  it("par-dessus un essai de MR : la release devient l'origine, l'essai est oublié", () => {
+    const layout = install("windows");
+    applyEssai(archive("windows", "mr109"), 109, undefined, layout);
+    const tgz = archive("windows", "1.3.0");
+    applyUpdate(tgz, sha(tgz), "1.3.0", "0.0.0", layout);
+    assert.deepEqual(backendState(layout), { packaged: true, mode: "origin", mr: null, sha256: null });
+    assert.equal(exists(layout.dataDir, "backend-origin"), false);
+    assert.equal(restoreOrigin(layout), false);
+    assert.equal(read(layout.root, "dist/server.mjs"), "serveur 1.3.0");
+  });
+
+  it("refuse une version pas plus récente, hors paquet, abîmée ou d'une autre plateforme, sans rien changer", () => {
+    const layout = install("mac");
+    const tgz = archive("mac", "1.3.0");
+    assert.throws(() => applyUpdate(tgz, sha(tgz), "1.3.0", "1.3.0", layout), /déjà en version 1\.3\.0/);
+    assert.throws(() => applyUpdate(tgz, sha(tgz), "1.2.9", "1.3.0", layout), /déjà en version/);
+    assert.throws(() => applyUpdate(tgz, sha(tgz), "1.3", "1.2.0", layout), /invalide/);
+    assert.throws(() => applyUpdate(tgz, sha(tgz), "1.3.0", "1.2.0", { ...layout, packaged: false }), /depuis le dépôt/);
+    assert.throws(() => applyUpdate(tgz, "0".repeat(64), "1.3.0", "1.2.0", layout), /SHA-256/);
+    const win = archive("windows", "1.3.0");
+    assert.throws(() => applyUpdate(win, sha(win), "1.3.0", "1.2.0", layout), /pas un backend pour cet ordinateur/);
+    assert.equal(read(layout.root, "dist/server.mjs"), "serveur origine");
+  });
+
+  it("remet l'installation si le remplacement échoue en route", () => {
+    const layout = install("mac");
+    const dir = fs.mkdtempSync(path.join(tmp, "src-"));
+    write(dir, files("mac", "1.3.0"));
+    fs.symlinkSync("n-existe-pas", path.join(dir, "config", "lien.json"));
+    const out = path.join(fs.mkdtempSync(path.join(tmp, "tgz-")), "backend.tar.gz");
+    execFileSync("tar", ["-czf", out, "-C", dir, "."]);
+    const tgz = fs.readFileSync(out);
+
+    assert.throws(() => applyUpdate(tgz, sha(tgz), "1.3.0", "1.2.0", layout), /ENOENT/);
+    assert.equal(read(layout.root, "dist/server.mjs"), "serveur origine");
+    assert.equal(read(layout.root, "dist/ancien.mjs"), "fichier qui n'est plus dans l'essai");
+    assert.equal(read(layout.root, "config/calls.json"), "calls origine");
+    assert.equal(read(layout.root, "config/deck.json"), "deck de l'ordinateur");
+  });
+});
+
 describe("routes de l'essai du backend", () => {
   let server: TestServer;
   before(async () => {
@@ -217,6 +290,28 @@ describe("routes de l'essai du backend", () => {
     assert.equal((await upload("", "x")).status, 400);
     assert.equal((await upload("?mr=109&sha256=abc", "x")).status, 400);
     assert.equal((await upload("?mr=109", "")).status, 415);
+  });
+
+  it("/health annonce la mise à jour depuis la tablette seulement pour un compagnon installé par paquet", async () => {
+    const { json } = await server.call("GET", "/health");
+    assert.equal(json.backendUpdate, false);
+  });
+
+  it("refuse la mise à jour lancée depuis le dépôt (409), sans version ou empreinte, sans corps", async () => {
+    const tgz = archive("mac", "1.3.0");
+    const update = (query: string, body: Buffer | string) =>
+      fetch(`${server.url}/companion/backend/update${query}`, {
+        method: "POST",
+        headers: { "content-type": "application/gzip", authorization: `Bearer ${TOKEN}` },
+        body: typeof body === "string" ? body : new Uint8Array(body),
+      });
+    const res = await update(`?version=1.3.0&sha256=${sha(tgz)}`, tgz);
+    assert.equal(res.status, 409);
+    assert.match(((await res.json()) as { message: string }).message, /lancé depuis le dépôt/);
+    assert.equal((await update(`?sha256=${sha(tgz)}`, tgz)).status, 400);
+    assert.equal((await update("?version=1.3.0", tgz)).status, 400);
+    assert.equal((await update(`?version=1.3&sha256=${sha(tgz)}`, tgz)).status, 400);
+    assert.equal((await update(`?version=1.3.0&sha256=${sha(tgz)}`, "")).status, 415);
   });
 
   it("restaurer l'origine sans essai en cours ne change rien", async () => {

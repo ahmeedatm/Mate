@@ -3,6 +3,7 @@ import os from "node:os";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { config } from "./config.ts";
 import { logFailure } from "./log.ts";
+import { packaged } from "./paths.ts";
 import { alert, computerName, openTarget, osName, pointerMove, pointerScroll } from "./os.ts";
 import { handlePointerDatagram, POINTER_HEADER, PointerGate } from "./pointer.ts";
 
@@ -37,6 +38,8 @@ export function identity() {
     tlsPort: config.loopbackOnly ? null : config.tlsPort,
     // Version du paquet (tag de la release, posée par scripts/package.ts) ; "dev" lancé depuis le dépôt.
     version: process.env.COMPANION_VERSION || "dev",
+    // Mise à jour envoyée par la tablette (POST /companion/backend/update) : absent d'un compagnon plus ancien.
+    backendUpdate: packaged,
   };
 }
 

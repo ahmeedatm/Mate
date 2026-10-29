@@ -402,6 +402,23 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "mise à jour du backend depuis la tablette",
+      run: async () => {
+        const health = await call("GET", "/health");
+        const packaged = (await call("GET", "/companion/backend")).json.packaged;
+        expect(health.json.backendUpdate === packaged, `backendUpdate ${health.json.backendUpdate}, paquet ${packaged}`);
+        // Version 0.0.0 : jamais plus récente, refusée avant de lire l'archive (ou lancé depuis le dépôt), rien n'est posé.
+        const res = await fetch(`${base}/companion/backend/update?version=0.0.0&sha256=${"0".repeat(64)}`, {
+          method: "POST",
+          headers: { "content-type": "application/gzip", authorization: `Bearer ${opts.token}` },
+          body: "x",
+          signal: AbortSignal.timeout(45_000),
+        });
+        expect(res.status === 409, `mise à jour en 0.0.0 : HTTP ${res.status}, 409 attendu`);
+        return packaged ? "installé par paquet" : "lancé depuis le dépôt";
+      },
+    },
+    {
       name: "visualiseur /camera",
       run: async () => {
         const page = await call("GET", "/camera");
