@@ -30,7 +30,7 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     override suspend fun load() = section.load()
 
     private fun addApps() {
-        // Nom d'appli → identifiant de tuile, comme `DeckFragment.currentApps`.
+        // Nom d'appli → identifiant de tuile (applis déjà dans la page Apps).
         val present = section.tiles.mapNotNull { t -> t.app?.let { it to t.id } }.toMap()
         host.overlays.addApps(present) { section.reload() }
     }

@@ -359,6 +359,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         }
     }
 
+    /** Tableau des agents Claude en grand (alerte d'un agent, voix). */
+    fun showAgentsBoard() = overlays.agentsBoard(viewLifecycleOwner)
+
     /** Réglage d'un widget changé hors mode Modifier ; en mode Modifier, « Terminé » enregistre. */
     override fun save() {
         if (!grid.editing) HomeLayout.save(requireContext(), layout, cadran)

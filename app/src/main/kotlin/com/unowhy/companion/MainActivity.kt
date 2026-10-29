@@ -44,7 +44,6 @@ import com.unowhy.companion.ui.CallSession
 import com.unowhy.companion.ui.CameraFragment
 import com.unowhy.companion.ui.CompanionUpdate
 import com.unowhy.companion.ui.ComputerAdder
-import com.unowhy.companion.ui.DeckFragment
 import com.unowhy.companion.ui.DocumentPanel
 import com.unowhy.companion.ui.FocusFragment
 import com.unowhy.companion.ui.FromComputerFragment
@@ -53,7 +52,6 @@ import com.unowhy.companion.ui.HomeFragment
 import com.unowhy.companion.ui.IconCache
 import com.unowhy.companion.ui.KeyboardControl
 import com.unowhy.companion.ui.Look
-import com.unowhy.companion.ui.MiniPlayerView
 import com.unowhy.companion.ui.Navigation
 import com.unowhy.companion.ui.PhotoFrameView
 import com.unowhy.companion.ui.ProfileRail
@@ -105,10 +103,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var agentAlerts: AgentAlerts
     private lateinit var agentAsk: AgentAskOverlay
     private lateinit var frame: PhotoFrameView
-    private lateinit var miniPlayer: MiniPlayerView
-
-    /** Largeur du petit lecteur, réservée au bout de la ligne de titre de chaque écran (vue marquée [MEDIA_SPACE]). */
-    private var mediaSpace = 0
     /** Dernier toucher (ou touche de volume) : le cadre photo se lance après Prefs.frameDelayMin sans toucher. */
     private var lastTouch = SystemClock.elapsedRealtime()
     /** Toucher qui a fermé le cadre : avalé jusqu'au lever du doigt, l'écran dessous ne le reçoit pas. */
@@ -161,19 +155,6 @@ class MainActivity : AppCompatActivity() {
         // Cadre photo juste au-dessus des écrans : lumière des agents, question et appel restent devant.
         frame = PhotoFrameView(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(frame, 1, android.view.ViewGroup.LayoutParams(-1, -1))
-        // Petit lecteur en haut à droite, sur la ligne de titre comme la cloche à gauche (padding 24 dp, hauteur 48 dp).
-        miniPlayer = MiniPlayerView(this, ::mediaPlayerHidden, ::showMediaPage) { px ->
-            mediaSpace = px
-            applyMediaSpace()
-        }
-        findViewById<android.widget.FrameLayout>(R.id.mode_area).addView(
-            miniPlayer,
-            android.widget.FrameLayout.LayoutParams(-2, dp(48), android.view.Gravity.TOP or android.view.Gravity.END).apply {
-                topMargin = dp(24)
-                marginEnd = dp(24)
-            },
-        )
-        miniPlayer.attach(this)
 
         keyboard.setUp()
 
@@ -419,7 +400,8 @@ class MainActivity : AppCompatActivity() {
         get() = documentPanel.currentPath
 
     fun showMode(name: String) {
-        // Nom inconnu (« tasks », ancien « chat ») : l'Accueil.
+        // Ancien mode Deck : le profil Deck. Nom inconnu (« tasks », ancien « chat ») : l'Accueil.
+        if (name.equals(Mode.DECK_KEY, ignoreCase = true)) return showProfile(HomeLayout.load(this, cadran = true).deckTarget())
         show(Mode.of(name) ?: Mode.HOME)
     }
 
@@ -550,43 +532,14 @@ class MainActivity : AppCompatActivity() {
         return getString(R.string.agent_voice_opened)
     }
 
-    /** Deck sur l'onglet Agents. */
+    /** Tableau des agents Claude, par-dessus le profil Deck. */
     fun showAgents() {
-        show(Mode.DECK)
-        supportFragmentManager.executePendingTransactions()
-        (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.openAgentsTab()
+        showProfile(HomeLayout.load(this, cadran = true).deckTarget())
+        homeFragment()?.showAgentsBoard()
     }
 
-    /** Deck sur sa page Média (toucher le titre du petit lecteur). */
-    private fun showMediaPage() {
-        show(Mode.DECK)
-        supportFragmentManager.executePendingTransactions()
-        (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.openMediaPage()
-    }
-
-    /** Page du deck changée : le petit lecteur se cache sur la page Média, qui fait la même chose en grand. */
-    fun onDeckPageChanged() {
-        if (::miniPlayer.isInitialized) miniPlayer.update()
-    }
-
-    private fun mediaPlayerHidden(): Boolean = frame.isShowing || Computers.all(this).isEmpty() ||
-        (current == Mode.DECK && (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.isMediaPageShown() == true)
-
-    /** Place du petit lecteur au bout de la ligne de titre de chaque écran, créé ou non (rien de masqué dessous). */
-    private fun applyMediaSpace() {
-        for (fragment in supportFragmentManager.fragments) {
-            val space = fragment.view?.findViewWithTag<View>(MEDIA_SPACE) ?: continue
-            if (space.layoutParams.width == mediaSpace) continue
-            space.layoutParams = space.layoutParams.apply { width = mediaSpace }
-        }
-    }
-
-    /** Deck sur la page de l'appli (Discord) : micro, sourdine, Quitter l'appel. */
-    fun showAppControls(app: String) {
-        show(Mode.DECK)
-        supportFragmentManager.executePendingTransactions()
-        (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.openAppPage(app)
-    }
+    /** Appel décroché sur la tablette : profil Réunion, avec les touches de l'appli (Discord : micro, sourdine, quitter). */
+    fun showAppControls(app: String) = startCall(app)
 
     fun closeDocument() {
         documentPanel.close()
@@ -641,7 +594,6 @@ class MainActivity : AppCompatActivity() {
         if (photos.isEmpty() || frame.isShowing) return
         keyboard.hide()
         frame.show(photos)
-        miniPlayer.update()
         // Écrans dessous masqués : rien à redessiner derrière la photo (horloges, animations de l'Accueil).
         findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0).visibility = View.INVISIBLE
         Screen.frameCharging = battery?.charging ?: true
@@ -651,7 +603,6 @@ class MainActivity : AppCompatActivity() {
     fun closeFrame() {
         if (!frame.isShowing) return
         frame.hide()
-        miniPlayer.update()
         findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0).visibility = View.VISIBLE
         Screen.frameCharging = null
         Screen.apply(this)
@@ -687,10 +638,6 @@ class MainActivity : AppCompatActivity() {
         val needsComputer = mode.connect != null && Computers.all(this).isEmpty()
         val existing = fm.findFragmentByTag(mode.tag)
         if (existing != null) tx.show(existing) else if (!needsComputer) tx.add(R.id.mode_container, create(mode), mode.tag)
-        tx.runOnCommit {
-            applyMediaSpace()
-            if (::miniPlayer.isInitialized) miniPlayer.update()
-        }
         tx.commit()
 
         nav.select(mode, changed)
@@ -759,7 +706,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun create(mode: Mode): Fragment = when (mode) {
         Mode.HOME -> HomeFragment()
-        Mode.DECK -> DeckFragment()
         Mode.COMPUTER -> FromComputerFragment()
         Mode.FOCUS -> FocusFragment()
         Mode.CAMERA -> CameraFragment()
@@ -768,9 +714,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val STATE_MODE = "mode"
-
-        /** Tag de la vue vide au bout de la ligne de titre des écrans, élargie de la place du petit lecteur. */
-        const val MEDIA_SPACE = "media_space"
 
         /** Sans toucher pendant ce temps, la barre passe au repos (atténuée). */
         private const val REST_MS = 60_000L

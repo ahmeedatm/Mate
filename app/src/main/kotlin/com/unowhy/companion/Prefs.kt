@@ -8,7 +8,6 @@ object Prefs {
     private const val KEY_ALLOW_INSTALLS = "allow_installs"
     private const val KEY_BRIGHTNESS = "brightness"
     private const val KEY_NIGHT_DIM = "night_dim"
-    private const val KEY_DECK_TABS = "deck_tabs_"
     private const val KEY_THEME = "theme"
     private const val KEY_RAIL_LABELS = "rail_labels"
     private const val KEY_RAIL_HIDDEN = "rail_hidden_tools"
@@ -94,14 +93,6 @@ object Prefs {
 
     /** Outils que la barre de gauche peut montrer. */
     val RAIL_TOOLS = listOf(Mode.FOCUS, Mode.COMPUTER, Mode.CAMERA)
-
-    /** Ordre des onglets du Deck choisi sur la tablette, propre à chaque ordinateur (clés d'onglets, voir DeckFragment). */
-    fun deckTabOrder(context: Context): List<String> =
-        prefs(context).getString(KEY_DECK_TABS + Computers.active(context)?.id.orEmpty(), null)?.split('\n').orEmpty()
-
-    fun setDeckTabOrder(context: Context, keys: List<String>) {
-        prefs(context).edit().putString(KEY_DECK_TABS + Computers.active(context)?.id.orEmpty(), keys.joinToString("\n")).apply()
-    }
 
     /** Thème choisi dans Réglages (nom d'AppTheme) ; null : Nuit. */
     /** Agents Claude : contenu des sessions (commandes, questions, résumés) masqué à l'écran, pour le direct. */

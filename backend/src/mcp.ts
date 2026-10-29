@@ -57,7 +57,7 @@ const server = new McpServer(
     instructions:
       "Pilote la tablette Unowhy posée sur le bureau (compagnon de l'ordinateur, Mac ou PC Windows). Écran paysage 1280×800, " +
       "modes : accueil (tableau de bord : heure, prochain rendez-vous, agenda, tâches dont le worklog Jira, Focus, son de l'ordinateur), " +
-      "deck (raccourcis de l'ordinateur, touches perso à affecter : deck_touche_*), docs (dossier partagé de l'ordinateur), focus (Pomodoro, sons d'ambiance), camera (visualiseur : la caméra filme une feuille, image projetée depuis l'ordinateur sur /camera), réglages. Commencer par tablette_etat ; tablette_capture montre l'écran. " +
+      "deck (profil Deck de l'Accueil : applis, son, raccourcis de l'ordinateur, touches perso à affecter : deck_touche_*), docs (dossier partagé de l'ordinateur), focus (Pomodoro, sons d'ambiance), camera (visualiseur : la caméra filme une feuille, image projetée depuis l'ordinateur sur /camera), réglages. Commencer par tablette_etat ; tablette_capture montre l'écran. " +
       "Textes affichés en français, courts : la tablette est lue de loin.",
   },
 );

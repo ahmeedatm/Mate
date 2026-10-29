@@ -19,7 +19,6 @@ class PrefsTest {
         assertTrue(Prefs.focusDnd(context))
         assertFalse(Prefs.allowInstalls(context))
         assertNull(Prefs.theme(context))
-        assertEquals(emptyList<String>(), Prefs.deckTabOrder(context))
     }
 
     @Test
@@ -53,15 +52,5 @@ class PrefsTest {
         assertFalse(Prefs.focusDnd(context))
         assertTrue(Prefs.allowInstalls(context))
         assertEquals("NEON", Prefs.theme(context))
-    }
-
-    @Test
-    fun `ordre des onglets du deck propre a chaque ordinateur`() {
-        Computers.save(context, Computer("a", "Bureau", "http://10.0.0.3:3000", "", "mac"), makeActive = true)
-        Prefs.setDeckTabOrder(context, listOf("apps", "open", "media"))
-        Computers.save(context, Computer("b", "Maison", "http://10.0.0.4:3000", "", "windows"), makeActive = true)
-        assertEquals(emptyList<String>(), Prefs.deckTabOrder(context))
-        Computers.setActive(context, "a")
-        assertEquals(listOf("apps", "open", "media"), Prefs.deckTabOrder(context))
     }
 }
