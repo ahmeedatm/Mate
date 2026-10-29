@@ -34,6 +34,10 @@ a { color: inherit; }
 .top { display: flex; align-items: center; justify-content: space-between; padding: 24px 0; }
 .marque { display: flex; align-items: center; gap: 12px; text-decoration: none; font: 500 22px/1 Outfit; letter-spacing: -.01em; }
 .marque img { border-radius: 10px; }
+.mot { font-weight: 500; letter-spacing: .06em; }
+.marque.grande { gap: 16px; font-size: 40px; margin-bottom: 32px; }
+.marque.grande img { border-radius: 16px; }
+.pied .mot { color: var(--ink); }
 .top nav { display: flex; align-items: center; gap: 8px; }
 .top nav a:not(.btn) { padding: 10px 16px; border-radius: 22px; text-decoration: none; color: var(--ink-2); font-weight: 500; font-size: 15px; }
 .top nav a:not(.btn):hover { background: var(--tile-high); color: var(--ink); }
@@ -89,6 +93,12 @@ h3 { font: 500 20px/26px Outfit; margin-bottom: 8px; }
 .tuile p { color: var(--ink-2); }
 .tuiles .tuile { grid-column: span 2; }
 .tuiles .tuile:nth-child(n+4) { grid-column: span 3; }
+.tuiles.tous .tuile:nth-child(n+4) { grid-column: span 2; }
+
+.chiffres { list-style: none; display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+.chiffres li { background: var(--tile); border-radius: 32px; padding: 28px 24px; }
+.chiffres b { display: block; font: 300 40px/1.1 Outfit; letter-spacing: -.02em; margin-bottom: 8px; }
+.chiffres span { color: var(--ink-2); font-size: 15px; line-height: 20px; }
 
 .galerie { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
 .galerie figure .tablette { border-radius: 20px; padding: 8px; }
@@ -127,6 +137,9 @@ details p { color: var(--ink-2); padding: 0 0 20px; max-width: 42em; }
   .hero { grid-template-columns: 1fr; gap: 32px; padding-top: 24px; }
   .tuiles { grid-template-columns: 1fr; }
   .tuiles .tuile, .tuiles .tuile:nth-child(n+4) { grid-column: auto; }
+  .tuiles.tous .tuile:nth-child(n+4) { grid-column: auto; }
+  .chiffres { grid-template-columns: repeat(2, 1fr); }
+  .chiffres li:last-child { grid-column: span 2; }
   .galerie, .etapes, .dl { grid-template-columns: 1fr; }
   .top nav a:not(.btn) { display: none; }
   .tuile, .etapes li { padding: 24px; }
