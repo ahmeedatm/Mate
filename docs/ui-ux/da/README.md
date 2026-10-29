@@ -35,10 +35,10 @@ Pour la suite (activités en direct, calme, son, techniques) : [`plus-loin.md`](
 4. **Le contenu donne la couleur.** L'interface reste en gris chaud. Les couleurs viennent des
    vraies icônes d'applis (déjà fournies par `GET /windows/icon`), de la météo, du vert Unowhy pour
    ce qui est fait. Plus de pastille colorée dans les titres.
-5. **Rien n'apparaît sans besoin.** Le menu est caché : il vient quand on glisse depuis le bord
-   gauche ou qu'on touche la poignée, et repart seul. Le WiFi et la batterie ne s'affichent que
-   dans le menu (ou en cas de problème, comme le bandeau batterie faible). Sans toucher, l'écran
-   se repose : seules l'heure et la ligne du jour restent.
+5. **Rien n'apparaît sans besoin.** La barre de gauche est toujours là (Deck V2, 29/10) : Accueil
+   et Deck à un toucher ; au repos, elle s'efface à 40 % sans disparaître. L'heure, le WiFi et la
+   batterie tiennent sur une ligne en haut à droite. Sans toucher, l'écran se repose : seules
+   l'heure et la ligne du jour restent.
 6. **Le jour, la nuit.** Papier le jour, graphite la nuit. La bascule suit le vrai coucher du
    soleil (à calculer sur la tablette : MET Norway, la source météo, ne le donne pas), en fondu de 1,6 s.
 
@@ -132,8 +132,8 @@ plus tard si la tablette le permet.
 |---|---|---|---|
 | Battement de la minute | 1 à 4 chiffres (translation Y + alpha, cadre qui coupe), compte à rebours, point + onde | tout le reste | 6 à 10 vues ~400 ms, une fois par minute : négligeable |
 | Arrivée de l'Accueil | trait du passé (échelle X), événements (alpha), onde, tuiles décalées de 50 ms (Y + alpha) | horloge (simple fondu) | ~700 ms, 12 vues ; déjà le cas avec `Look.enter` |
-| Menu qui suit le doigt | panneau (translation X collée au doigt), voile (alpha) ; au lâcher, ressort qui part de la vitesse du doigt | contenu dessous | 2 vues, une par image pendant le geste |
-| Ouverture du menu | panneau (spatial default), voile, 7 entrées décalées de 28 ms (X + alpha) | — | 9 vues, ~450 ms |
+| Barre : élément choisi | trait rouge de 4 dp qui glisse d'une entrée à l'autre (spatial default) | entrées | 1 vue |
+| Réunion qui entre dans la barre | entrée de 0,6 à 1 (échelle) en fondu, puis bascule d'écran | autres entrées | 1 vue |
 | Changer d'écran | indicateur qui glisse (Y), puis fondu enchaîné M3 : sortie en alpha, entrée en alpha + échelle 0,92 → 1 | — | 2 écrans en calque matériel le temps du fondu (~400 ms) |
 | Appui | échelle 0,96 + calque d'état 10 % | voisins | 1 vue, 200 ms |
 | Touche d'appli | appui, puis onde neutre autour de l'icône quand l'action est partie | — | 2 vues |
@@ -194,7 +194,7 @@ façon Nothing.
 2. `res/font/` : Outfit 300, 400, 500, puis styles de texte dans `themes.xml`.
 3. `ui/Look.kt` : jetons de ressort, appui, battement de la minute (un seul `Handler` calé sur la
    minute pleine).
-4. Menu : la barre latérale de `MainActivity` devient un panneau caché, ouvert par un geste depuis
-   le bord ou par la poignée. `TabletStatusView` passe dans son pied.
+4. Navigation : barre fixe à gauche (Deck V2, 29/10 ; d'abord un menu caché, abandonné : il
+   fallait le chercher). Voir `docs/superpowers/specs/2026-10-29-deck-v2-barre-profils-design.md`.
 5. Écran par écran, en commençant par une carte de l'Accueil (écran de preuve), captures avant/après
    et mesure `gfxinfo` sur `companion_api29`, puis la vraie tablette.
