@@ -50,6 +50,15 @@ object FocusTimer {
         reset()
     }
 
+    private var restored = false
+
+    /** Durées choisies sur l'écran Focus (Prefs), reprises une fois par processus : une activité recréée garde le chrono. */
+    fun restore(focus: Int, pause: Int) {
+        if (restored) return
+        restored = true
+        if (focus != focusMinutes || pause != breakMinutes) setPreset(focus, pause)
+    }
+
     fun toggle() {
         if (endAt != 0L) {
             remainingWhenPaused = remaining()

@@ -15,6 +15,7 @@ import androidx.fragment.app.Fragment
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
+import com.unowhy.companion.focus.FocusPresets
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
 
@@ -36,7 +37,8 @@ class FocusFragment : Fragment() {
     private lateinit var count: TextView
     private lateinit var start: ImageButton
     private lateinit var volume: SeekBar
-    private val presetButtons = mutableListOf<Pair<Int, Button>>()
+    private val presetButtons = mutableListOf<Pair<FocusPresets.Preset, Button>>()
+    private lateinit var custom: Button
     private val noiseButtons = mutableMapOf<NoisePlayer.Kind, Button>()
     private lateinit var mute: ImageButton
 
@@ -57,11 +59,19 @@ class FocusFragment : Fragment() {
         view.findViewById<ImageButton>(R.id.focus_reset).setOnClickListener { FocusTimer.reset() }
 
         val presets = view.findViewById<LinearLayout>(R.id.focus_presets)
-        for ((focus, pause) in listOf(25 to 5, 50 to 10, 15 to 3)) {
-            val button = chip(getString(R.string.focus_preset, focus, pause)) { FocusTimer.setPreset(focus, pause) }
+        for (preset in FocusPresets.FIXED) {
+            val button = chip(getString(R.string.focus_preset, preset.focus, preset.pause)) { choose(preset) }
             presets.addView(button, chipParams())
-            presetButtons += focus to button
+            presetButtons += preset to button
         }
+        // Perso : ouvre le réglage des durées, appliquées en le fermant.
+        custom = chip(getString(R.string.focus_custom)) {
+            FocusPresetDialog.show(requireContext()) { preset ->
+                Prefs.setFocusCustom(requireContext(), preset)
+                choose(preset)
+            }
+        }
+        presets.addView(custom, chipParams())
 
         view.findViewById<Button>(R.id.focus_dnd).apply {
             isSelected = Prefs.focusDnd(context)
@@ -92,6 +102,12 @@ class FocusFragment : Fragment() {
             override fun onStartTrackingTouch(bar: SeekBar) = Unit
             override fun onStopTrackingTouch(bar: SeekBar) = Unit
         })
+    }
+
+    /** Durées choisies sur cet écran : gardées pour le prochain démarrage (la voix et Claude ne les changent qu'un moment). */
+    private fun choose(preset: FocusPresets.Preset) {
+        Prefs.setFocusPreset(requireContext(), preset)
+        FocusTimer.setPreset(preset.focus, preset.pause)
     }
 
     /** Ne pas déranger changé depuis la page de l'ordinateur. */
@@ -132,7 +148,10 @@ class FocusFragment : Fragment() {
         count.text = getString(R.string.focus_count, state.completed)
         start.setImageResource(if (state.running) R.drawable.ic_pause else R.drawable.ic_play)
         start.contentDescription = getString(if (state.running) R.string.focus_pause else R.string.focus_start)
-        presetButtons.forEach { (minutes, button) -> button.isSelected = minutes == FocusTimer.focusMinutes }
+        val current = FocusPresets.Preset(FocusTimer.focusMinutes, FocusTimer.breakMinutes)
+        presetButtons.forEach { (preset, button) -> button.isSelected = preset == current }
+        custom.isSelected = !FocusPresets.isFixed(current)
+        custom.text = if (custom.isSelected) getString(R.string.focus_custom_value, current.focus, current.pause) else getString(R.string.focus_custom)
     }
 
     private fun renderNoise() {

@@ -147,6 +147,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         Grain.applyTo(findViewById(android.R.id.content))
         Speaker.init(this)
+        Prefs.focusPreset(this).let { FocusTimer.restore(it.focus, it.pause) }
         AutoUpdater.start(this)
         InstallerService.start(this)
 

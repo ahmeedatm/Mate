@@ -1,6 +1,7 @@
 package com.unowhy.companion
 
 import android.content.Context
+import com.unowhy.companion.focus.FocusPresets
 
 /** Réglages locaux : ordinateur piloté (voir Computers), luminosité, thème, kiosque. Aucune clé d'API ici. */
 object Prefs {
@@ -11,6 +12,10 @@ object Prefs {
     private const val KEY_DECK_TABS = "deck_tabs_"
     private const val KEY_THEME = "theme"
     private const val KEY_FOCUS_DND = "focus_dnd"
+    private const val KEY_FOCUS_MINUTES = "focus_minutes"
+    private const val KEY_FOCUS_PAUSE = "focus_pause"
+    private const val KEY_FOCUS_CUSTOM_MINUTES = "focus_custom_minutes"
+    private const val KEY_FOCUS_CUSTOM_PAUSE = "focus_custom_pause"
     private const val KEY_AGENTS_PRIVATE = "agents_private"
     private const val KEY_NOTIFICATIONS_DISCREET = "notifications_discreet"
     private const val KEY_WAKE_WORD = "wake_word"
@@ -50,6 +55,25 @@ object Prefs {
 
     fun setFocusDnd(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_FOCUS_DND, value).apply()
+    }
+
+    /** Durées du Pomodoro choisies sur l'écran Focus (25 / 5 par défaut), reprises au démarrage. */
+    fun focusPreset(context: Context): FocusPresets.Preset = prefs(context).let {
+        FocusPresets.bounded(it.getInt(KEY_FOCUS_MINUTES, 25), it.getInt(KEY_FOCUS_PAUSE, 5))
+    }
+
+    fun setFocusPreset(context: Context, value: FocusPresets.Preset) {
+        prefs(context).edit().putInt(KEY_FOCUS_MINUTES, value.focus).putInt(KEY_FOCUS_PAUSE, value.pause).apply()
+    }
+
+    /** Durées de la pastille « Perso » de Focus. */
+    fun focusCustom(context: Context): FocusPresets.Preset = prefs(context).let {
+        val default = FocusPresets.DEFAULT_CUSTOM
+        FocusPresets.bounded(it.getInt(KEY_FOCUS_CUSTOM_MINUTES, default.focus), it.getInt(KEY_FOCUS_CUSTOM_PAUSE, default.pause))
+    }
+
+    fun setFocusCustom(context: Context, value: FocusPresets.Preset) {
+        prefs(context).edit().putInt(KEY_FOCUS_CUSTOM_MINUTES, value.focus).putInt(KEY_FOCUS_CUSTOM_PAUSE, value.pause).apply()
     }
 
     /** Cadre photo : minutes sans toucher avant qu'il se lance (0 = jamais). 5 par défaut ; sans photo, il ne se lance pas. */
