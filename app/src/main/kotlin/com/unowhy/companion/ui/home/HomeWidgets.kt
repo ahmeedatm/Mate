@@ -312,7 +312,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
                 setText(kind.label)
                 setOnClickListener { if (NoisePlayer.kind == kind) NoisePlayer.stop() else NoisePlayer.play(kind) }
             }
-            row.addView(chip, LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginStart = dp(4); marginEnd = dp(4) })
+            row.addView(chip, LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginStart = dp(4); marginEnd = dp(4) })
             noiseChips[kind] = chip
         }
         tile.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
@@ -578,6 +578,7 @@ class ConnectWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         gravity = Gravity.CENTER
         addView(ImageView(context).apply {
             setImageResource(placed.type.icon)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             setColorFilter(color(R.attr.c_text_faint))
         }, LinearLayout.LayoutParams(dp(32), dp(32)))
         addView(label(16f, R.attr.c_text_dim).apply {

@@ -24,6 +24,7 @@
     "service:status": "tsx --env-file-if-exists=.env scripts/service.ts status",
     "package": "tsx scripts/package.ts",
     "build:helper": "tsx scripts/build-helper.ts",
+    "build:menubar": "mkdir -p .cache && swiftc -O -target arm64-apple-macos11 -o .cache/UnowhyMenu-arm64 src/mac/menubar/MenuBar.swift && swiftc -O -target x86_64-apple-macos11 -o .cache/UnowhyMenu-x86_64 src/mac/menubar/MenuBar.swift && lipo -create -output src/mac/UnowhyMenu .cache/UnowhyMenu-arm64 .cache/UnowhyMenu-x86_64 && codesign --force --sign - src/mac/UnowhyMenu",
     "build:nowplaying": "clang -dynamiclib -arch arm64 -arch x86_64 -mmacosx-version-min=11.0 -fobjc-arc -framework AppKit -o src/mac/NowPlaying.dylib src/mac/nowplaying/NowPlaying.m",
     "updates:add": "tsx scripts/updates.ts add",
     "agents:hooks": "tsx --env-file-if-exists=.env scripts/agents-hooks.ts"

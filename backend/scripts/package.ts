@@ -159,6 +159,7 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
     if (!essai) extract(await nodeArchive(sums, "-win-x64.zip"), "node.exe", path.join(dest, "node", "node.exe"));
   } else {
     copy(path.join(backend, "src", "mac", "NowPlaying.dylib"), path.join(dest, "src", "mac", "NowPlaying.dylib"));
+    copy(path.join(backend, "src", "mac", "UnowhyMenu"), path.join(dest, "src", "mac", "UnowhyMenu"));
     if (!essai) {
       fs.mkdirSync(path.join(bundle, "MacOS"), { recursive: true });
       fs.writeFileSync(path.join(bundle, "Info.plist"), infoPlist());

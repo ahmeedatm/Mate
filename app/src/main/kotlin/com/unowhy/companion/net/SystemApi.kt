@@ -221,7 +221,7 @@ class SystemApi(private val http: Http) {
     /** Mac : ouvre le réglage Accessibilité, le compagnon déjà dans la liste. */
     suspend fun openAccessibility() = http.io { http.postJson("/system/accessibility", JSONObject()); Unit }
 
-    /** Ouvre la page du compagnon sur l'ordinateur ; `section` : "agenda" pour y relier un agenda. */
+    /** Ouvre la page du compagnon sur l'ordinateur ; `section` : "agenda" pour y relier un agenda, "tablette" pour la carte Réglages de la tablette. */
     suspend fun openLocalPage(section: String? = null) = http.io {
         http.postJson("/local/open", JSONObject().apply { if (section != null) put("section", section) }); Unit
     }

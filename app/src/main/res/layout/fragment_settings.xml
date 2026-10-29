@@ -168,7 +168,9 @@
                 android:text="@string/wifi_choose" />
         </LinearLayout>
 
-        <!-- Accessibilité malgré le kiosque (device/Accessibility) : TalkBack et taille du texte de l'appli. -->
+        <!-- Accessibilité malgré le kiosque (device/Accessibility) : TalkBack et taille du texte de l'appli,
+             puis les aides à la lecture (ui/ReadingAids.kt) : police lisible, animations réduites, bandeaux lus. -->
+
         <LinearLayout
             style="@style/Card"
             android:layout_width="match_parent"
@@ -212,6 +214,54 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:orientation="horizontal" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_legible_font"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:minHeight="48dp"
+                android:text="@string/a11y_legible_font"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/a11y_legible_font_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_reduce_motion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/a11y_reduce_motion"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/a11y_reduce_motion_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_read_banners"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/a11y_read_banners"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/a11y_read_banners_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
         </LinearLayout>
 
         <!-- Thème : ambiances prédéfinies (ui/Themes.kt), pastilles ajoutées par SettingsFragment. -->
@@ -374,6 +424,13 @@
                 android:text="@string/weather_location_hint"
                 android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
+
+            <!-- Ouvre sur l'ordinateur la page du compagnon, carte Réglages de la tablette en avant. -->
+            <Button
+                android:id="@+id/settings_tablet_remote"
+                style="@style/ActionButton"
+                android:layout_marginTop="12dp"
+                android:text="@string/tablet_remote" />
 
             <TextView
                 android:id="@+id/settings_tablet_info"

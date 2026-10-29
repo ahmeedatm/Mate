@@ -3,6 +3,7 @@ package com.unowhy.companion.ui
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.drawable.InsetDrawable
 import android.os.Build
 import android.text.Editable
 import android.text.InputType
@@ -87,13 +88,16 @@ class KeyEditor @JvmOverloads constructor(
         closeOnDone(label)
         closeOnDone(glyph)
 
-        COLORS.forEach { hex ->
+        COLORS.forEachIndexed { i, hex ->
             colors.addView(View(context).apply {
-                // Pastille pleine de la couleur, ou vide (couleur par défaut) avec seulement le contour.
-                if (hex == null) setBackgroundResource(R.drawable.swatch) else background = swatchDrawable(Color.parseColor(hex))
+                // Pastille pleine de la couleur, ou vide (couleur par défaut) avec seulement le contour : 36 dp
+                // dessinés au milieu d'une zone de toucher de 48 dp. Nommée pour TalkBack (« sélectionné » suit isSelected).
+                val swatch = if (hex == null) ContextCompat.getDrawable(context, R.drawable.swatch) else swatchDrawable(Color.parseColor(hex))
+                background = InsetDrawable(swatch, dp(6))
+                contentDescription = context.getString(COLOR_NAMES[i])
                 tag = hex
                 setOnClickListener { color = hex; renderColors() }
-                layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply { marginStart = dp(6) }
+                layoutParams = LinearLayout.LayoutParams(dp(48), dp(48))
             })
         }
         TYPES.filterNot { onWindows && it.first == "shortcut" }.forEach { (key, text) ->
@@ -367,7 +371,7 @@ class KeyEditor @JvmOverloads constructor(
             this.text = text
             isSelected = selected
             setOnClickListener(onClick)
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { marginEnd = dp(8) }
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginEnd = dp(8) }
         }
 
     private fun row(text: String, selected: Boolean, onClick: () -> Unit) =
@@ -472,6 +476,12 @@ class KeyEditor @JvmOverloads constructor(
 
     private companion object {
         val COLORS = listOf(null, "#C62828", "#EF6C00", "#2E7D32", "#1565C0", "#6A1B9A", "#37474F")
+
+        /** Noms des pastilles de [COLORS], dans le même ordre (TalkBack). */
+        val COLOR_NAMES = listOf(
+            R.string.color_default, R.string.color_red, R.string.color_orange, R.string.color_green,
+            R.string.color_blue, R.string.color_violet, R.string.color_grey,
+        )
         val TYPES = listOf(
             "app" to R.string.step_app, "keys" to R.string.step_keys, "text" to R.string.step_text,
             "window" to R.string.step_window, "url" to R.string.step_url, "shortcut" to R.string.step_shortcut,
