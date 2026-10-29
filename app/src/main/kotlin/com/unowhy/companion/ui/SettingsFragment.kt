@@ -1,5 +1,7 @@
 package com.unowhy.companion.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.media.AudioManager
 import android.os.BatteryManager
@@ -47,6 +49,7 @@ import com.unowhy.companion.net.Wifi
 import com.unowhy.companion.trial.EssaiBackend
 import com.unowhy.companion.trial.EssaiPlan
 import com.unowhy.companion.trial.Trial
+import com.unowhy.companion.voice.WakeModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -69,6 +72,8 @@ class SettingsFragment : Fragment() {
     private lateinit var volume: SeekBar
     private lateinit var nightDim: SwitchCompat
     private lateinit var notifDiscreet: SwitchCompat
+    private lateinit var wakeWord: SwitchCompat
+    private lateinit var wakeStatus: TextView
     private lateinit var tabletInfo: TextView
     private lateinit var updatesStatus: TextView
     private lateinit var updates: LinearLayout
@@ -118,6 +123,8 @@ class SettingsFragment : Fragment() {
         volume = view.findViewById(R.id.settings_volume)
         nightDim = view.findViewById(R.id.settings_night_dim)
         notifDiscreet = view.findViewById(R.id.settings_notif_discreet)
+        wakeWord = view.findViewById(R.id.settings_wake_word)
+        wakeStatus = view.findViewById(R.id.settings_wake_word_status)
         tabletInfo = view.findViewById(R.id.settings_tablet_info)
         setUpTablet()
         setUpThemes(view.findViewById(R.id.settings_themes))
@@ -340,6 +347,14 @@ class SettingsFragment : Fragment() {
         }
         // Mode discret : lu à chaque bandeau et à chaque affichage de l'historique, rien d'autre à prévenir.
         notifDiscreet.setOnCheckedChangeListener { _, checked -> Prefs.setNotificationsDiscreet(ctx, checked) }
+        // Mot de réveil : l'activer télécharge le modèle s'il manque ; l'écoute suit tout de suite.
+        wakeWord.setOnCheckedChangeListener { _, checked ->
+            Prefs.setWakeWord(ctx, checked)
+            if (checked) WakeModel.ensure(ctx)
+            main.onWakeWordChanged()
+            renderWake()
+        }
+        viewLifecycleOwner.lifecycleScope.launch { WakeModel.state.collect { renderWake() } }
         renderTablet()
     }
 
@@ -352,6 +367,8 @@ class SettingsFragment : Fragment() {
         volume.progress = ctx.getSystemService(AudioManager::class.java).getStreamVolume(AudioManager.STREAM_MUSIC)
         nightDim.isChecked = Prefs.nightDim(ctx)
         notifDiscreet.isChecked = Prefs.notificationsDiscreet(ctx)
+        wakeWord.isChecked = Prefs.wakeWord(ctx)
+        renderWake()
         // Batterie (registerReceiver) et adresse IP (NetworkInterface) : appels système lents, hors thread principal.
         viewLifecycleOwner.lifecycleScope.launch {
             val battery = withContext(Dispatchers.IO) { Tablet.battery(ctx) }
@@ -361,6 +378,22 @@ class SettingsFragment : Fragment() {
             tabletInfo.text = getString(
                 R.string.tablet_info, BuildConfig.VERSION_NAME, ip ?: getString(R.string.tablet_no_address), android.os.Build.MODEL,
             )
+        }
+    }
+
+    /** Ligne d'état du mot de réveil : micro d'abord (sans lui rien ne sert), puis le modèle ; rien quand il est coupé. */
+    private fun renderWake() {
+        val ctx = context ?: return
+        if (view == null) return
+        val on = Prefs.wakeWord(ctx)
+        wakeStatus.visibility = if (on) View.VISIBLE else View.GONE
+        if (!on) return
+        val mic = ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        wakeStatus.text = if (!mic) getString(R.string.wake_no_mic) else when (val model = WakeModel.refresh(ctx)) {
+            WakeModel.State.Ready -> getString(R.string.wake_ready)
+            is WakeModel.State.Downloading -> getString(R.string.wake_downloading, model.percent)
+            WakeModel.State.Absent -> getString(R.string.wake_downloading, 0)
+            WakeModel.State.Failed -> getString(R.string.wake_failed)
         }
     }
 

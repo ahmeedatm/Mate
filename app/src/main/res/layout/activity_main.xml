@@ -144,6 +144,19 @@
                 android:importantForAccessibility="no"
                 android:visibility="gone" />
         </FrameLayout>
+
+        <!-- Voyant du mot de réveil « Mate », sous la cloche, dans la marge des écrans (voice/WakeWord) : atténué =
+             écoute le mot, accent = « Mate » entendu ou commande en cours, absent = coupé ou en pause. -->
+        <ImageView
+            android:id="@+id/wake_mic"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="22dp"
+            android:layout_marginTop="76dp"
+            android:contentDescription="@string/wake_listening"
+            android:src="@drawable/ic_mic"
+            android:visibility="gone"
+            app:tint="?attr/c_text_faint" />
     </FrameLayout>
 
     <com.unowhy.companion.ui.DocumentPanel

@@ -67,6 +67,7 @@ import com.unowhy.companion.ui.notificationBannerText
 import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.voice.VoiceControl
+import com.unowhy.companion.voice.WakeWord
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -99,6 +100,8 @@ class MainActivity : AppCompatActivity() {
         private set
     private val linkWatch = LinkWatch()
     private lateinit var voice: VoiceControl
+    /** Mot de réveil « Mate » : lance la même commande vocale que « Parler », sans toucher l'écran. */
+    private lateinit var wake: WakeWord
     lateinit var callOverlay: CallOverlay
         private set
     private lateinit var agentAlerts: AgentAlerts
@@ -155,6 +158,7 @@ class MainActivity : AppCompatActivity() {
             nav = Rail(this, ::show)
         }
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon), onPressed = { menu?.close() })
+        wake = WakeWord(this, findViewById(R.id.wake_mic)) { voice.start() }
         // Lumière des agents Claude sous la carte d'appel : un appel prime sur tout.
         val agentLight = AgentLight(this)
         agentAsk = AgentAskOverlay(this)
@@ -332,6 +336,13 @@ class MainActivity : AppCompatActivity() {
             Prefs.setTrialOpened(this, false)
             lifecycleScope.launch { EssaiBackend.restoreOrigin(applicationContext) }
         }
+        wake.resume()
+    }
+
+    /** Companion quitte l'écran (écran éteint, autre appli) : le mot de réveil n'écoute plus. */
+    override fun onPause() {
+        wake.pause()
+        super.onPause()
     }
 
     private fun onBattery(state: Tablet.Battery) {
@@ -349,6 +360,7 @@ class MainActivity : AppCompatActivity() {
         documentPanel.close()
         if (isFinishing) NoisePlayer.stop()
         voice.release()
+        wake.release()
         super.onDestroy()
     }
 
@@ -478,6 +490,9 @@ class MainActivity : AppCompatActivity() {
     /** Commande vocale lancée d'ailleurs que le bouton Parler (carte d'une demande d'agent). */
     fun startVoice() = voice.start()
 
+    /** Réglage du mot de réveil changé : écoute ou non tout de suite. */
+    fun onWakeWordChanged() = wake.sync()
+
     /**
      * Commande vocale pour les agents Claude ; rend la phrase à afficher. Elle n'agit que sur la carte ouverte (on voit ce
      * qu'on autorise) : sinon, elle ouvre la demande en attente. « continue » relance la dernière session finie qui le permet.
@@ -510,13 +525,17 @@ class MainActivity : AppCompatActivity() {
         (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.openMediaPage()
     }
 
-    /** Page du deck changée : le petit lecteur se cache sur la page Média, qui fait la même chose en grand. */
-    fun onDeckPageChanged() {
+    /**
+     * Page du deck ou mode Modifier de l'Accueil changé : le petit lecteur se cache sur la page Média, qui fait la même
+     * chose en grand, et pendant le mode Modifier, dont la barre (Ajouter, Annuler, Terminé) est à sa place.
+     */
+    fun refreshMiniPlayer() {
         if (::miniPlayer.isInitialized) miniPlayer.update()
     }
 
     private fun mediaPlayerHidden(): Boolean = frame.isShowing || Computers.all(this).isEmpty() ||
-        (current == Mode.DECK && (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.isMediaPageShown() == true)
+        (current == Mode.DECK && (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.isMediaPageShown() == true) ||
+        (current == Mode.HOME && (supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment)?.isEditing() == true)
 
     /** Place du petit lecteur au bout de la ligne de titre de chaque écran, créé ou non (rien de masqué dessous). */
     private fun applyMediaSpace() {

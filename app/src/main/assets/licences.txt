@@ -52,7 +52,9 @@ BIBLIOTHÈQUES (licence Apache 2.0, texte plus bas)
 - androidx.vectordrawable:vectordrawable:1.1.0
 - androidx.versionedparcelable:versionedparcelable:1.1.1
 - androidx.viewpager:viewpager:1.0.0
+- com.alphacephei:vosk-android:0.3.75
 - com.google.guava:listenablefuture:1.0
+- net.java.dev.jna:jna:5.18.1@aar (double licence LGPL 2.1 / Apache 2.0 : Apache 2.0 retenue)
 - org.jetbrains.kotlin:kotlin-stdlib:2.2.10
 - org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2
 - org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.10.2

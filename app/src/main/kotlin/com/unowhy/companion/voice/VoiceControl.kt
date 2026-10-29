@@ -104,9 +104,15 @@ class VoiceControl(
         recognizer?.destroy()
         recognizer = null
         setListening(false)
+        idle()
     }
 
+    /** Commande finie (comprise, exécutée ou ratée) : le micro est rendu au mot de réveil. */
+    private fun idle() = Mic.release(Mic.VOICE)
+
     private fun setListening(on: Boolean) {
+        // Pris avant startListening : le mot de réveil rend le micro tout de suite (Android ne le donne qu'à un).
+        if (on) Mic.hold(Mic.VOICE)
         listening = on
         button.isSelected = on
         if (on) pulse = pulse ?: Look.pulse(icon) else { Look.stop(pulse, icon); pulse = null }
@@ -140,6 +146,7 @@ class VoiceControl(
                 else -> R.string.voice_failed
             }
             activity.showBanner(activity.getString(text), 6)
+            idle()
         }
 
         override fun onReadyForSpeech(params: Bundle?) = Unit
@@ -177,7 +184,7 @@ class VoiceControl(
 
     /** `candidates` : ce que le reconnaisseur a entendu, du plus probable au moins probable. */
     private fun handle(candidates: List<String>) {
-        val heard = candidates.firstOrNull { it.isNotBlank() } ?: return activity.showBanner(activity.getString(R.string.voice_nothing), 6)
+        val heard = candidates.firstOrNull { it.isNotBlank() } ?: return activity.showBanner(activity.getString(R.string.voice_nothing), 6).also { idle() }
         this.heard = candidates.filter { it.isNotBlank() }
         activity.lifecycleScope.launch {
             val deck = tiles?.await().orEmpty()
@@ -197,7 +204,7 @@ class VoiceControl(
             }
             activity.showBanner(if (command is VoiceCommand.Help) answer.text else "« $said » · ${answer.text}", if (command is VoiceCommand.Help) 15 else 6)
             if (answer.speak) Speaker.speak(answer.text)
-        }
+        }.invokeOnCompletion { activity.runOnUiThread(::idle) }
     }
 
     private suspend fun run(command: VoiceCommand): Answer {
