@@ -15,5 +15,14 @@ fun displayText(text: String, max: Int = 10_000): String {
     return text.substring(0, end) + "…"
 }
 
+/** Masque d'un texte secret de l'historique : toujours la même longueur, pour ne pas trahir celle du code. */
+const val SECRET_MASK = "••••••••"
+
+/** Ligne de l'historique : retours à la ligne et espaces répétés réduits à un espace, coupée à `max` caractères. */
+fun historyLine(text: String, secret: Boolean, revealed: Boolean, max: Int = 200): String {
+    if (secret && !revealed) return SECRET_MASK
+    return displayText(text.trim().replace(Regex("\\s+"), " "), max)
+}
+
 /** Le texte entier est une seule URL http(s) (espaces autour ignorés) → l'URL, sinon null. */
 fun linkOf(text: String): String? = text.trim().takeIf { LINK.matches(it) }

@@ -43,4 +43,27 @@ class ClipboardApiTest {
         assertEquals(ClipContent.Other, parseClip("""{"kind":"video"}"""))
         assertEquals(ClipContent.Other, parseClip("""{}"""))
     }
+
+    @Test
+    fun `historique dans l'ordre du compagnon, entrees incompletes ignorees`() {
+        val json = """{"items":[
+            {"id":"2","text":"482913","at":1761700000000,"secret":true},
+            {"id":"1","text":"bonjour\nle monde","at":1761690000000,"secret":false},
+            {"id":"3"},
+            {"text":"sans id"}
+        ]}"""
+        assertEquals(
+            listOf(
+                ClipHistoryItem("2", "482913", 1761700000000, true),
+                ClipHistoryItem("1", "bonjour\nle monde", 1761690000000, false),
+            ),
+            parseClipHistory(json),
+        )
+    }
+
+    @Test
+    fun `historique vide ou absent`() {
+        assertEquals(emptyList<ClipHistoryItem>(), parseClipHistory("""{"items":[]}"""))
+        assertEquals(emptyList<ClipHistoryItem>(), parseClipHistory("""{}"""))
+    }
 }

@@ -78,6 +78,15 @@ namespace Companion
             }
         }
 
+        [DllImport("user32.dll")] static extern uint GetClipboardSequenceNumber();
+
+        /** Change à chaque copie, sans ouvrir le presse-papiers : relu chaque seconde pour l'historique (src/clipboard-history.ts). */
+        static object ClipboardSequence()
+        {
+            EnsureClipboardSession();
+            return GetClipboardSequenceNumber();
+        }
+
         static object ClipboardGet()
         {
             EnsureClipboardSession();

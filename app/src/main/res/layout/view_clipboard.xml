@@ -85,7 +85,8 @@
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="2"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        tools:ignore="NestedWeights">
 
         <com.unowhy.companion.ui.TitleView
             style="@style/CardTitle"
@@ -129,5 +130,51 @@
             android:textColor="?attr/c_text_dim"
             android:textSize="16sp"
             android:visibility="gone" />
+
+        <!-- Récents : textes copiés sur l'ordi depuis une heure (ClipboardHistoryList), lus avec « Sur l'ordi ». -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.unowhy.companion.ui.TitleView
+                style="@style/CardTitle"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:text="@string/clip_history" />
+
+            <Button
+                android:id="@+id/clip_history_clear"
+                style="@style/PillButton"
+                android:drawableStart="@drawable/ic_delete"
+                android:text="@string/clip_history_clear"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Vide, ou erreur de lecture. -->
+        <TextView
+            android:id="@+id/clip_history_state"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="?attr/c_text_faint"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_weight="1"
+            android:fadeScrollbars="false">
+
+            <LinearLayout
+                android:id="@+id/clip_history_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
     </LinearLayout>
 </LinearLayout>

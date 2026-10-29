@@ -374,6 +374,13 @@
     <string name="clip_send">Copier sur l\'ordi</string>
     <string name="clip_copied">Copié sur l\'ordi</string>
     <string name="clip_dictate_offline">La dictée a besoin d\'internet</string>
+    <string name="clip_history">Récents</string>
+    <string name="clip_history_empty">Les textes copiés sur l\'ordi s\'afficheront ici pendant une heure (pas les mots de passe des gestionnaires).</string>
+    <string name="clip_history_clear">Tout effacer</string>
+    <string name="clip_history_clear_confirm">Effacer tous les textes récents copiés sur l\'ordi ?</string>
+    <string name="clip_history_remove">Retirer de la liste</string>
+    <string name="clip_history_show">Afficher le code</string>
+    <string name="clip_history_hide">Masquer le code</string>
     <string name="clip_dictate_failed">La dictée n\'a pas marché, réessaie ou écris le texte</string>
 
     <!-- Visualiseur (mode Caméra) -->
