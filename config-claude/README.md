@@ -15,7 +15,7 @@ gardé et signalé (`--force` pour écraser).
 
 | Source | Installé dans | Contenu |
 |---|---|---|
-| `projet/` | `<dépôt>/.claude/` (non versionné) | règle d'autonomie, skills `/ship` et `/design-companion`, workflow `tache`, hook Stop, réglages |
+| `projet/` | `<dépôt>/.claude/` (non versionné) | règle d'autonomie, skills `/ship`, `/essai-local` et `/design-companion`, workflow `tache`, hook Stop, réglages |
 | `global/scripts/` | `~/.claude/scripts/` | `wait-until.sh` et `gitlab-status.sh`, attente bornée du pipeline |
 | `global/agents/` | `~/.claude/agents/` | agent `implementer`, appelé par le workflow `tache` |
 | `global/output-styles/` | `~/.claude/output-styles/` | style de sortie Concis (facultatif, à choisir dans `/config`) |
@@ -38,6 +38,9 @@ tablette passe par le compagnon installé sur ton Mac (`docs/developpement.md`, 
 - **Fusionner** : répondre « go ». Jamais de fusion sans ça.
 - **`/ship`** : livre à la main le travail en cours (vérif locale, commit, push, MR, pipeline, essai).
   Le hook Stop le rappelle s'il reste du travail non poussé.
+- **`/essai-local <iid>`** : pose l'appli d'une MR sur la tablette branchée en adb, construite sur le Mac
+  (sans pipeline), et passe le compagnon du Mac sur la MR. Rôle Maintainer requis la première fois
+  (clé de release copiée dans le trousseau).
 - **`/design-companion critique <écran>`** : passe qualité UX/UI d'un écran (aussi `polish`, `etats`,
   `harden`, `distill`, `animate`).
 
