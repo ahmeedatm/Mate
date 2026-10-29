@@ -186,7 +186,8 @@ class SettingsFragment : Fragment() {
                         main.onComputerChanged(Computers.active(ctx))
                     }
                     // Jeton refusé (ordinateur réinstallé) : nouvel appairage, même ordinateur.
-                    link.state == Link.State.UNAUTHORIZED -> adder.pair(c.url, c.name)
+                    // Appairé en HTTP avant le WiFi chiffré : réappairage en HTTPS (`pairUrl`).
+                    link.state == Link.State.UNAUTHORIZED -> adder.pair(c.pairUrl, c.name)
                 }
             }
             val rename = { adder.rename(c) { main.refreshLink(); renderComputers() } }

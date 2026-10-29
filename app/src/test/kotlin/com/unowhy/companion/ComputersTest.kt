@@ -148,4 +148,21 @@ class ComputersTest {
     fun `address retire le schema`() {
         assertEquals("192.168.1.20:3000", bureau.address)
     }
+
+    @Test
+    fun `reappairage d'un ordinateur en HTTP sur le WiFi passe en HTTPS sur le port suivant`() {
+        assertTrue(bureau.needsRepair)
+        assertEquals("https://192.168.1.20:3001", bureau.pairUrl)
+    }
+
+    @Test
+    fun `reappairage, une adresse HTTPS ou locale reste telle quelle`() {
+        assertEquals("https://192.168.1.20:3001", bureau.copy(url = "https://192.168.1.20:3001").pairUrl)
+        assertEquals("http://127.0.0.1:3000", bureau.copy(url = "http://127.0.0.1:3000").pairUrl)
+    }
+
+    @Test
+    fun `reappairage avec un port HTTP personnalise`() {
+        assertEquals("https://192.168.1.20:4001", bureau.copy(url = "http://192.168.1.20:4000").pairUrl)
+    }
 }
