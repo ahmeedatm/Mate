@@ -770,6 +770,13 @@
     <string name="widget_open_desc">Les fenêtres de l\'ordi par écran, à déplacer ou fermer</string>
     <string name="widget_apps">Applis</string>
     <string name="widget_apps_desc">Les applis du Deck : lancer, ajouter, retirer, voir leurs fenêtres</string>
+    <string name="widget_discord">Discord</string>
+    <string name="widget_discord_desc">L\'appel Discord : micro, sourdine, quitter l\'appel</string>
+    <string name="widget_meeting">Réunion</string>
+    <string name="widget_meeting_desc">La réunion en ligne : rejoindre, micro, caméra, quitter</string>
+    <string name="call_idle">Pas d\'appel</string>
+    <string name="call_lobby">Avant la réunion</string>
+    <string name="call_no_page">Pas de page pour ce widget dans le Deck</string>
     <string name="widget_perf">Performances du PC</string>
     <string name="widget_perf_desc">Processeur, carte graphique et mémoire en direct</string>
     <string name="perf_title">PC · %1$s</string>

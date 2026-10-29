@@ -3,6 +3,10 @@
  * (test/fake-os.ts), jeton connu (`jeton-de-test`), données dans un dossier temporaire supprimé à l'arrêt.
  * DEMO_PORT (3920) : le backend. L'émulateur le joint par 10.0.2.2:<port>.
  * DEMO_OS (mac) : les agents Claude n'existent que sur Mac (/agents répond 501 ailleurs) ; `windows` pour le reste du Deck seul.
+ * DEMO_DECK (deck.example.windows.json) : le deck de config/ ; `deck.example.json` (celui du Mac) a les touches « Rejoindre maintenant »
+ * (`lobby`) et Caméra de Teams, que celui de Windows n'a pas.
+ * Faire changer l'appel (Discord hors appel, Teams en `lobby`) : écrire `voice` et `inCall` dans le state.json du faux pilotage
+ * (dossier `companion-os-*` de TMPDIR), relu à chaque requête.
  */
 import fs from "node:fs";
 import os from "node:os";
@@ -14,7 +18,12 @@ import { startServer, TOKEN } from "./server.ts";
 const PORT = Number(process.env.DEMO_PORT || 3920);
 const demoOs = process.env.DEMO_OS === "windows" ? "windows" : "mac";
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-widgets-demo-"));
-const deckFile = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "config", "deck.example.windows.json");
+const deckFile = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "config",
+  process.env.DEMO_DECK || "deck.example.windows.json",
+);
 
 const channel = (id: string, name: string, volume: number, level: number, muted = false): MixerChannel => ({
   id,
