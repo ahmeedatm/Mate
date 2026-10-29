@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Lecture en cours dans le header (MusicChip) : pochette, titre et artiste (qui défilent s'ils sont trop longs), puis
+<!-- Lecture en cours dans le header (MusicChip, largeur fixe) : pochette, titre et artiste (qui défilent en continu
+     s'ils sont trop longs, dans toute la place laissée), puis
      Précédent, Lecture / Pause, Suivant, comme le widget Média (boutons ronds, Lecture plein), en plus petit, sur 32 dp de haut. -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
@@ -15,11 +16,11 @@
 
     <TextView
         android:id="@+id/chip_title"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_weight="1"
         android:layout_marginStart="8dp"
         android:fontFamily="?attr/c_font_regular"
-        android:maxWidth="280dp"
         android:textColor="?attr/c_text"
         android:textSize="12sp" />
 

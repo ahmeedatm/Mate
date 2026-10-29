@@ -5,7 +5,6 @@ import android.text.InputFilter
 import android.text.InputType
 import android.text.TextUtils
 import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -51,7 +50,6 @@ class ProfilesDialog(
             orientation = LinearLayout.VERTICAL
             setPadding(context.dp(24), context.dp(8), context.dp(24), context.dp(8))
             addView(ScrollView(context).apply { addView(list) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-            addView(caption(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = context.dp(12) })
         }
         dialog = AlertDialog.Builder(context)
             .setTitle(R.string.profiles_title)
@@ -67,25 +65,12 @@ class ProfilesDialog(
         render()
     }
 
-    /** Explique l'icône du profil de jeu. */
-    private fun caption() = LinearLayout(context).apply {
-        gravity = Gravity.CENTER_VERTICAL
-        addView(ImageView(context).apply {
-            setImageResource(R.drawable.ic_gamepad)
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            setColorFilter(themeColor(context, R.attr.c_text_dim))
-        }, LinearLayout.LayoutParams(context.dp(18), context.dp(18)))
-        addView(TextView(context).apply {
-            setText(R.string.profile_game_hint)
-            textSize = 14f
-            setTextColor(themeColor(context, R.attr.c_text_dim))
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = context.dp(8) })
-    }
-
     private fun render() {
         list.removeAllViews()
-        for (i in 0 until layout.pages) {
-            list.addView(row(i), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(56)).apply { if (i > 0) topMargin = context.dp(8) })
+        // Dans l'ordre de la barre, Réunion (caché hors appel) à la fin.
+        val shown = layout.profilesInOrder(inCall = false) + listOfNotNull(layout.callProfile.takeIf { it >= 0 })
+        shown.forEachIndexed { n, i ->
+            list.addView(row(i), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(56)).apply { if (n > 0) topMargin = context.dp(8) })
         }
     }
 
@@ -93,7 +78,9 @@ class ProfilesDialog(
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setBackgroundResource(R.drawable.row_bg)
-        setPadding(context.dp(16), 0, context.dp(4), 0)
+        setPadding(context.dp(4), 0, context.dp(4), 0)
+        // L'icône du profil (barre de gauche) : la toucher en choisit une autre.
+        addView(iconButton(ProfileIcons.of(layout, i), R.string.profile_icon, R.attr.c_text) { chooseIcon(i) })
         // Le nom prend la place restante : le toucher affiche le profil.
         addView(TextView(context).apply {
             text = name(i)
@@ -107,19 +94,19 @@ class ProfilesDialog(
                 onChanged(i, false)
             }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
-        val game = layout.gameProfile == i
         if (canEdit) {
             addView(iconButton(R.drawable.ic_widgets, R.string.profile_edit, R.attr.c_text_dim) {
                 dialog.dismiss()
                 onEdit(i)
             }.also { TooltipCompat.setTooltipText(it, context.getString(R.string.profile_edit)) })
         }
-        addView(iconButton(R.drawable.ic_gamepad, R.string.profile_game, if (game) R.attr.c_accent else R.attr.c_text_faint) {
-            layout.setGameProfile(if (game) -1 else i)
-            changed(structure = false)
-        })
-        // Réunion ne se déplace pas : il n'est ni dans la barre ni dans le balayage hors appel.
-        if (i > 0 && i != layout.callProfile) addView(iconButton(R.drawable.ic_arrow_up, R.string.profile_move_up, R.attr.c_text_dim) { moveUp(i) })
+        // Monter / descendre parmi les profils de la barre (Réunion, caché hors appel, est sauté et ne bouge pas).
+        val order = layout.profilesInOrder(inCall = false)
+        val pos = order.indexOf(i)
+        if (pos > 0) addView(iconButton(R.drawable.ic_arrow_up, R.string.profile_move_up, R.attr.c_text_dim) { move(i, order[pos - 1]) })
+        if (pos in 0 until order.lastIndex) {
+            addView(iconButton(R.drawable.ic_arrow_up, R.string.profile_move_down, R.attr.c_text_dim) { move(i, order[pos + 1]) }.apply { rotation = 180f })
+        }
         addView(iconButton(R.drawable.ic_edit, R.string.profile_rename, R.attr.c_text_dim) { rename(i) })
         if (layout.canRemove(i)) addView(iconButton(R.drawable.ic_delete, R.string.profile_delete, R.attr.c_text_dim) { confirmDelete(i) })
     }
@@ -135,6 +122,43 @@ class ProfilesDialog(
         setOnClickListener { onClick() }
     }
 
+    /** Grille des icônes ([ProfileIcons]) : l'actuelle en rouge ; « Par défaut » remet celle du rôle (maison pour l'Accueil). */
+    private fun chooseIcon(i: Int) {
+        val grid = android.widget.GridLayout(context).apply {
+            columnCount = ICON_COLUMNS
+            setPadding(context.dp(16), context.dp(8), context.dp(16), 0)
+        }
+        lateinit var picker: AlertDialog
+        val chosen = layout.iconOf(i)
+        for ((key, icon) in ProfileIcons.ALL) {
+            grid.addView(
+                iconButton(icon, R.string.profile_icon, if (key == chosen) R.attr.c_accent else R.attr.c_text) {
+                    layout.setIcon(i, key)
+                    picker.dismiss()
+                    changed(structure = false)
+                }.apply {
+                    setBackgroundResource(if (key == chosen) R.drawable.chip_bg else R.drawable.flat_bg)
+                    isSelected = key == chosen
+                    layoutParams = android.widget.GridLayout.LayoutParams().apply {
+                        width = context.dp(56)
+                        height = context.dp(56)
+                        setMargins(context.dp(4), context.dp(4), context.dp(4), context.dp(4))
+                    }
+                },
+            )
+        }
+        picker = AlertDialog.Builder(context)
+            .setTitle(context.getString(R.string.profile_icon_title, name(i)))
+            .setView(ScrollView(context).apply { addView(grid) })
+            .setNegativeButton(R.string.cancel, null)
+            .setNeutralButton(R.string.profile_icon_default) { _, _ ->
+                layout.setIcon(i, null)
+                changed(structure = false)
+            }
+            .create()
+        picker.showImmersive()
+    }
+
     /** Relit la liste et prévient l'écran des profils : le profil affiché reste `current`. */
     private fun changed(structure: Boolean) {
         render()
@@ -147,11 +171,13 @@ class ProfilesDialog(
         onChanged(index, true)
     }
 
-    private fun moveUp(i: Int) {
-        layout.moveProfile(i, i - 1)
-        current = when (current) {
-            i -> i - 1
-            i - 1 -> i
+    /** Met le profil `from` à la place de `to` ; le profil affiché suit ([HomeLayout.moveProfile] décale ceux d'entre les deux). */
+    private fun move(from: Int, to: Int) {
+        layout.moveProfile(from, to)
+        current = when {
+            current == from -> to
+            from < to && current in from + 1..to -> current - 1
+            from > to && current in to until from -> current + 1
             else -> current
         }
         changed(structure = true)
@@ -239,5 +265,8 @@ class ProfilesDialog(
 
     private companion object {
         const val NAME_MAX = 30
+
+        /** Icônes par ligne dans la grille de choix. */
+        const val ICON_COLUMNS = 6
     }
 }

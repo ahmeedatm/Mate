@@ -875,9 +875,8 @@
     <string name="profile_rename_hint">Nom du profil</string>
     <string name="profile_delete">Supprimer</string>
     <string name="profile_delete_confirm">Supprimer le profil « %s » et ses widgets ?</string>
-    <string name="profile_game">Profil de jeu</string>
-    <string name="profile_game_hint">Sera proposé quand un jeu se lance sur l\'ordinateur.</string>
     <string name="profile_move_up">Monter</string>
+    <string name="profile_move_down">Descendre</string>
     <string name="home_edit_add">Ajouter</string>
     <string name="home_edit_done">Terminé</string>
     <string name="home_gallery_title">Ajouter un widget</string>
@@ -901,6 +900,9 @@
     <string name="profile_call">Réunion</string>
     <string name="rail_more">Plus</string>
     <string name="rail_add">Écran</string>
+    <string name="profile_icon">Icône de l\'écran</string>
+    <string name="profile_icon_title">Icône de « %1$s »</string>
+    <string name="profile_icon_default">Par défaut</string>
     <string name="rail_add_desc">Ajouter un écran</string>
     <string name="tour_counter">%1$d sur %2$d</string>
     <string name="tour_skip">Passer</string>
