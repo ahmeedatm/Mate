@@ -10,6 +10,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Space
 import android.widget.TextView
 import androidx.annotation.AttrRes
 import androidx.annotation.DrawableRes
@@ -25,7 +26,7 @@ import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeColor
 
 /**
- * Liste des profils de l'Accueil : afficher, modifier les widgets, marquer le profil de jeu, monter, renommer, supprimer, en ajouter un
+ * Liste des profils de l'Accueil : afficher, changer l'icône, modifier les widgets, monter, descendre, renommer, supprimer, en ajouter un
  * (vide ou depuis un modèle). `current` : le profil affiché ; `onChanged(show, structure)` est appelé après chaque
  * changement, la disposition est déjà modifiée, avec le profil à afficher. `structure` : des profils ont été ajoutés,
  * déplacés ou retirés (les widgets sont à recréer) ; faux pour un renommage ou le marquage de jeu. `onEdit(index)` :
@@ -79,8 +80,10 @@ class ProfilesDialog(
         gravity = Gravity.CENTER_VERTICAL
         setBackgroundResource(R.drawable.row_bg)
         setPadding(context.dp(4), 0, context.dp(4), 0)
-        // L'icône du profil (barre de gauche) : la toucher en choisit une autre.
-        addView(iconButton(ProfileIcons.of(layout, i), R.string.profile_icon, R.attr.c_text) { chooseIcon(i) })
+        // L'icône de l'écran (barre de gauche) : la toucher en choisit une autre.
+        addView(iconButton(ProfileIcons.of(layout, i), R.string.profile_icon, R.attr.c_text) { chooseIcon(i) }.apply {
+            contentDescription = context.getString(R.string.profile_icon_row, name(i))
+        })
         // Le nom prend la place restante : le toucher affiche le profil.
         addView(TextView(context).apply {
             text = name(i)
@@ -100,16 +103,24 @@ class ProfilesDialog(
                 onEdit(i)
             }.also { TooltipCompat.setTooltipText(it, context.getString(R.string.profile_edit)) })
         }
-        // Monter / descendre parmi les profils de la barre (Réunion, caché hors appel, est sauté et ne bouge pas).
+        // Monter / descendre parmi les écrans de la barre (Réunion, caché hors appel, est sauté et ne bouge pas). Colonnes
+        // fixes : un bouton absent garde sa place, les boutons restent alignés d'une ligne à l'autre.
         val order = layout.profilesInOrder(inCall = false)
         val pos = order.indexOf(i)
-        if (pos > 0) addView(iconButton(R.drawable.ic_arrow_up, R.string.profile_move_up, R.attr.c_text_dim) { move(i, order[pos - 1]) })
-        if (pos in 0 until order.lastIndex) {
-            addView(iconButton(R.drawable.ic_arrow_up, R.string.profile_move_down, R.attr.c_text_dim) { move(i, order[pos + 1]) }.apply { rotation = 180f })
-        }
+        slot(if (pos > 0) iconButton(R.drawable.ic_arrow_up, R.string.profile_move_up, R.attr.c_text_dim) { move(i, order[pos - 1]) } else null)
+        slot(
+            if (pos in 0 until order.lastIndex) {
+                iconButton(R.drawable.ic_arrow_up, R.string.profile_move_down, R.attr.c_text_dim) { move(i, order[pos + 1]) }.apply { rotation = 180f }
+            } else {
+                null
+            },
+        )
         addView(iconButton(R.drawable.ic_edit, R.string.profile_rename, R.attr.c_text_dim) { rename(i) })
-        if (layout.canRemove(i)) addView(iconButton(R.drawable.ic_delete, R.string.profile_delete, R.attr.c_text_dim) { confirmDelete(i) })
+        slot(if (layout.canRemove(i)) iconButton(R.drawable.ic_delete, R.string.profile_delete, R.attr.c_text_dim) { confirmDelete(i) } else null)
     }
+
+    /** Le bouton, ou une place vide de même taille. */
+    private fun LinearLayout.slot(button: ImageButton?) = addView(button ?: Space(context).apply { layoutParams = LinearLayout.LayoutParams(context.dp(48), context.dp(48)) })
 
     private fun iconButton(@DrawableRes icon: Int, @StringRes description: Int, @AttrRes tint: Int, onClick: () -> Unit) = ImageButton(context).apply {
         setBackgroundResource(R.drawable.flat_bg)
@@ -122,26 +133,29 @@ class ProfilesDialog(
         setOnClickListener { onClick() }
     }
 
-    /** Grille des icônes ([ProfileIcons]) : l'actuelle en rouge ; « Par défaut » remet celle du rôle (maison pour l'Accueil). */
+    /**
+     * Grille des icônes ([ProfileIcons]), centrée : l'actuelle (choisie, sinon celle du rôle) en rouge ; « Par défaut »
+     * remet celle du rôle (maison pour l'Accueil).
+     */
     private fun chooseIcon(i: Int) {
-        val grid = android.widget.GridLayout(context).apply {
-            columnCount = ICON_COLUMNS
-            setPadding(context.dp(16), context.dp(8), context.dp(16), 0)
-        }
+        val grid = android.widget.GridLayout(context).apply { columnCount = ICON_COLUMNS }
         lateinit var picker: AlertDialog
-        val chosen = layout.iconOf(i)
-        for ((key, icon) in ProfileIcons.ALL) {
+        val shown = ProfileIcons.keyOf(layout, i)
+        for (icon in ProfileIcons.ALL) {
+            val isShown = icon.key == shown
+            val label = context.getString(icon.label)
             grid.addView(
-                iconButton(icon, R.string.profile_icon, if (key == chosen) R.attr.c_accent else R.attr.c_text) {
-                    layout.setIcon(i, key)
+                iconButton(icon.drawable, icon.label, if (isShown) R.attr.c_accent else R.attr.c_text) {
+                    layout.setIcon(i, icon.key)
                     picker.dismiss()
                     changed(structure = false)
                 }.apply {
-                    setBackgroundResource(if (key == chosen) R.drawable.chip_bg else R.drawable.flat_bg)
-                    isSelected = key == chosen
+                    contentDescription = if (isShown) context.getString(R.string.profile_icon_chosen, label) else label
+                    setBackgroundResource(if (isShown) R.drawable.chip_bg else R.drawable.flat_bg)
+                    isSelected = isShown
                     layoutParams = android.widget.GridLayout.LayoutParams().apply {
-                        width = context.dp(56)
-                        height = context.dp(56)
+                        width = context.dp(52)
+                        height = context.dp(52)
                         setMargins(context.dp(4), context.dp(4), context.dp(4), context.dp(4))
                     }
                 },
@@ -149,7 +163,17 @@ class ProfilesDialog(
         }
         picker = AlertDialog.Builder(context)
             .setTitle(context.getString(R.string.profile_icon_title, name(i)))
-            .setView(ScrollView(context).apply { addView(grid) })
+            .setView(
+                ScrollView(context).apply {
+                    addView(
+                        LinearLayout(context).apply {
+                            gravity = Gravity.CENTER_HORIZONTAL
+                            setPadding(context.dp(16), context.dp(8), context.dp(16), 0)
+                            addView(grid, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                        },
+                    )
+                },
+            )
             .setNegativeButton(R.string.cancel, null)
             .setNeutralButton(R.string.profile_icon_default) { _, _ ->
                 layout.setIcon(i, null)
@@ -267,6 +291,6 @@ class ProfilesDialog(
         const val NAME_MAX = 30
 
         /** Icônes par ligne dans la grille de choix. */
-        const val ICON_COLUMNS = 6
+        const val ICON_COLUMNS = 8
     }
 }
