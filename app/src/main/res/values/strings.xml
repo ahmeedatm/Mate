@@ -647,8 +647,11 @@
     <string name="essai_row_version">%1$s · %2$s</string>
     <string name="essai_row_backend">backend de l\'ordinateur remplacé</string>
     <string name="essai_row_no_backend">sans backend</string>
+    <string name="essai_row_installed">Installée.</string>
     <string name="essai_row_absent">Pas installé.</string>
     <string name="essai_row_replace">Remplace l\'essai installé (%1$s).</string>
+    <string name="essai_row_replace_mr">Remplace l\'essai de la !%1$d (%2$s).</string>
+    <string name="essai_row_downgrade_mr">Plus ancien que l\'essai de la !%1$d (%2$s) : désinstallé d\'abord, puis installé.</string>
     <string name="essai_row_downgrade">Plus ancien que l\'essai installé (%1$s) : désinstallé d\'abord, puis installé.</string>
     <string name="update_uninstall_failed">Impossible de désinstaller l\'essai installé (code %1$d).</string>
     <string name="trial_syncing">Backend de l\'ordinateur en cours de changement…</string>
@@ -794,6 +797,8 @@
     <string name="mail_reconnect_button">Reconnecter mon compte Microsoft</string>
     <string name="mail_setup_opened">Page ouverte sur l\'ordinateur : connecte ton compte Microsoft.</string>
     <string name="tablet_title">Tablette</string>
+    <string name="tablet_remote">Régler depuis l\'ordi</string>
+    <string name="tablet_remote_opened">Page ouverte sur l\'ordinateur : règle la tablette depuis la carte.</string>
     <string name="tablet_battery_state">Batterie de la tablette : %1$d %%</string>
     <string name="tablet_battery_charging">Batterie : %1$d %% · en charge (%2$s)</string>
     <string name="tablet_battery_discharging">Batterie : %1$d %% · sur batterie</string>
@@ -834,6 +839,7 @@
     <string name="theme_cadran">Cadran</string>
     <string name="theme_cadran_nuit">Cadran nuit</string>
     <string name="theme_retro">Rétro</string>
+    <string name="theme_contraste">Contraste élevé</string>
     <!-- Accessibilité (lot 2) : aides à la lecture, dans la carte Accessibilité de COMP-50 (ui/ReadingAids.kt) -->
     <string name="a11y_legible_font">Police lisible</string>
     <string name="a11y_legible_font_hint">Atkinson Hyperlegible, lettres faciles à distinguer, un peu plus espacées</string>

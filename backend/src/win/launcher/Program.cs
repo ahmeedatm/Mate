@@ -9,7 +9,10 @@
 //                                              lancé depuis le dépôt par scripts/service.ts : relance seulement
 //
 // Sortie du serveur : 75 = quitter (panneau), 76 = quitter et effacer le runtime (« tout oublier »), autre = relancer.
-// COMPANION_HEADLESS=1 (qa/install-windows.ps1) : ni page ni boîte de message.
+// COMPANION_HEADLESS=1 (qa/install-windows.ps1) : ni page, ni boîte de message, ni icône.
+//
+// Pendant que le serveur tourne, l'icône du compagnon est dans la zone de notification (Tray.cs) : clic = page locale,
+// clic droit = état de la tablette et réglages.
 
 using System;
 using System.Collections.Generic;
@@ -21,6 +24,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace Companion
 {
@@ -255,6 +259,38 @@ namespace Companion
             // PID de cette boucle : `npm run service:stop` ou le prochain lanceur l'arrête avec node (taskkill /T).
             File.WriteAllText(Path.Combine(data, "service.pid"), Process.GetCurrentProcess().Id.ToString());
 
+            var tray = StartTray();
+            try { return Loop(node, backend, logs, data, runtime); }
+            finally
+            {
+                if (tray != null)
+                {
+                    Application.Exit();
+                    tray.Join(2000);
+                }
+            }
+        }
+
+        /// <summary>Icône de la zone de notification, sur son propre fil (boucle de messages). Null sans écran (COMPANION_HEADLESS).</summary>
+        static Thread StartTray()
+        {
+            if (Headless) return null;
+            var thread = new Thread(() =>
+            {
+                try
+                {
+                    Application.EnableVisualStyles();
+                    Application.Run(new Tray(Port));
+                }
+                catch (Exception) { }
+            }) { IsBackground = true };
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            return thread;
+        }
+
+        static int Loop(string node, string backend, string logs, string data, string runtime)
+        {
             // Paquet client : serveur regroupé dans dist\server.mjs ; sinon les sources, par tsx.
             var entry = File.Exists(Path.Combine(backend, "dist", "server.mjs"))
                 ? "--env-file-if-exists=.env dist/server.mjs"

@@ -10,15 +10,18 @@ import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 
 /**
- * Thèmes de la DA Cadran (docs/ui-ux/da), choisis dans Réglages : jour, nuit et Rétro (Cadran habillé années 70,
- * grain et bande qui coule). Les couleurs et polices sont des attributs (`?attr/c_…`, res/values/palettes.xml) :
+ * Thèmes de la DA Cadran (docs/ui-ux/da), choisis dans Réglages : jour, nuit, Rétro (Cadran habillé années 70,
+ * grain et bande qui coule) et Contraste élevé (Cadran jour en lisibilité maximale, grandes touches). Un thème
+ * s'applique aussi par code : `Prefs.setTheme(context, AppTheme.CONTRASTE.name)` puis `recreate()` (ou l'ordre
+ * `settings` de la page de l'ordinateur, `{"theme": "CONTRASTE"}`). Les couleurs et polices sont des attributs (`?attr/c_…`, res/values/palettes.xml) :
  * changer de thème recrée l'activité. Les thèmes clairs ont leur propre base AppCompat (dialogues et champs clairs).
  * Un ancien thème enregistré (Nuit, Clair, Néon, Chaud) retombe sur Cadran.
  */
 enum class AppTheme(val label: Int, val base: Int, val palette: Int, val swatch: Int) {
     CADRAN(R.string.theme_cadran, R.style.Theme_CompanionLight, R.style.Palette_Cadran, 0xFFCA0538.toInt()),
     CADRAN_NUIT(R.string.theme_cadran_nuit, R.style.Theme_Companion, R.style.Palette_CadranNuit, 0xFFFF5165.toInt()),
-    RETRO(R.string.theme_retro, R.style.Theme_CompanionLight, R.style.Palette_Retro, 0xFFFC9303.toInt());
+    RETRO(R.string.theme_retro, R.style.Theme_CompanionLight, R.style.Palette_Retro, 0xFFFC9303.toInt()),
+    CONTRASTE(R.string.theme_contraste, R.style.Theme_CompanionLight, R.style.Palette_Contraste, 0xFF140F0F.toInt());
 
     companion object {
         fun current(context: Context): AppTheme =

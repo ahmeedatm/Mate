@@ -110,6 +110,7 @@ class SettingsFragment : Fragment() {
         autoJoinHint = view.findViewById(R.id.settings_autojoin_hint)
         wifiStatus = view.findViewById(R.id.settings_wifi_status)
         view.findViewById<Button>(R.id.settings_wifi).setOnClickListener { wifi.show() }
+        view.findViewById<Button>(R.id.settings_tablet_remote).setOnClickListener { openOnComputer() }
         updatesStatus = view.findViewById(R.id.settings_updates_status)
         updates = view.findViewById(R.id.settings_updates)
         essaisTitle = view.findViewById(R.id.settings_essais_title)
@@ -462,6 +463,19 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    /** Ouvre sur l'ordinateur la page du compagnon, carte Réglages de la tablette en avant. */
+    private fun openOnComputer() {
+        val ctx = requireContext()
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                BackendClient(ctx).system.openLocalPage("tablette")
+                main.showBanner(getString(R.string.tablet_remote_opened), 6)
+            } catch (e: Exception) {
+                main.showBanner(errorText(e), 6)
+            }
+        }
+    }
+
     /** Réglages changés depuis la page de l'ordinateur : curseurs et interrupteurs à jour. */
     fun onRemoteSettings() {
         if (view != null) renderTablet()
@@ -601,6 +615,7 @@ class SettingsFragment : Fragment() {
     private suspend fun showEssais() {
         try {
             val list = Updater.essais(requireContext())
+            essais.removeAllViews()
             essaisTitle.visibility = View.VISIBLE
             essaisTitle.setText(if (list.isEmpty()) R.string.essais_none else R.string.essais_title)
             val installed = Updater.installed(requireContext(), Trial.TRIAL)
@@ -656,7 +671,8 @@ class SettingsFragment : Fragment() {
         }
         val installedCode = info?.let { Updater.versionCode(it) }
         val state = UpdatePlan.state(update, installedCode)
-        val plan = essai?.let { EssaiPlan.install(update.versionCode, installedCode) }
+        val installedMr = Prefs.trialMr(ctx)
+        val plan = essai?.let { EssaiPlan.install(update.versionCode, installedCode, essai.mr, installedMr) }
         val texts = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         texts.addView(TextView(ctx).apply {
             textSize = 16f
@@ -666,7 +682,7 @@ class SettingsFragment : Fragment() {
         texts.addView(TextView(ctx).apply {
             textSize = 14f
             setTextColor(themeColor(ctx, if (plan == EssaiPlan.Install.UNINSTALL_FIRST || (essai == null && state == UpdatePlan.State.OLDER)) R.attr.c_warn else R.attr.c_text_dim))
-            text = if (essai != null) essaiState(essai, plan!!, info) else when (state) {
+            text = if (essai != null) essaiState(essai, plan!!, info, installedMr) else when (state) {
                 UpdatePlan.State.NEWER -> if (info == null) getString(R.string.updates_row_absent, sourceName(update.source))
                 else getString(R.string.updates_row_newer, info.versionName, sourceName(update.source))
                 UpdatePlan.State.INSTALLED -> getString(R.string.updates_row_installed)
@@ -700,12 +716,15 @@ class SettingsFragment : Fragment() {
         getString(if (source == UpdateSource.COMPUTER) R.string.updates_source_computer else R.string.updates_source_server)
 
     /** Version, backend, et ce que l'installation fait de l'essai déjà installé. */
-    private fun essaiState(essai: Essai, plan: EssaiPlan.Install, info: android.content.pm.PackageInfo?): String {
+    private fun essaiState(essai: Essai, plan: EssaiPlan.Install, info: android.content.pm.PackageInfo?, installedMr: Int): String {
         val backend = getString(if (essai.hasBackend) R.string.essai_row_backend else R.string.essai_row_no_backend)
         val state = when (plan) {
-            EssaiPlan.Install.NONE -> getString(R.string.updates_row_installed)
-            EssaiPlan.Install.INSTALL -> if (info == null) getString(R.string.essai_row_absent) else getString(R.string.essai_row_replace, info.versionName)
-            EssaiPlan.Install.UNINSTALL_FIRST -> getString(R.string.essai_row_downgrade, info?.versionName)
+            EssaiPlan.Install.NONE -> getString(R.string.essai_row_installed)
+            EssaiPlan.Install.INSTALL -> if (info == null) getString(R.string.essai_row_absent)
+            else if (installedMr != 0) getString(R.string.essai_row_replace_mr, installedMr, info.versionName)
+            else getString(R.string.essai_row_replace, info.versionName)
+            EssaiPlan.Install.UNINSTALL_FIRST -> if (installedMr != 0) getString(R.string.essai_row_downgrade_mr, installedMr, info?.versionName)
+            else getString(R.string.essai_row_downgrade, info?.versionName)
         }
         return getString(R.string.essai_row_version, essai.update.versionName, backend) + "\n" + state
     }
@@ -756,6 +775,8 @@ class SettingsFragment : Fragment() {
                 }
                 showResult(button, bar, ok = true)
                 if (showing()) updatesStatus.setText(R.string.updates_hint)
+                // Les lignes reflètent le nouvel essai installé (« Installée », MR remplacée).
+                if (essai != null && showing()) showEssais()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // Annulé : retour à l'état de départ, rien d'installé.
                 bar.visibility = View.GONE

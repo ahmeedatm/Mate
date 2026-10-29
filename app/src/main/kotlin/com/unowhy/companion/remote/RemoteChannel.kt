@@ -11,6 +11,7 @@ import com.unowhy.companion.BuildConfig
 import com.unowhy.companion.Computer
 import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
+import com.unowhy.companion.R
 import com.unowhy.companion.audio.Speaker
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.focus.FocusTimer
@@ -211,6 +212,7 @@ class RemoteChannel(private val activity: MainActivity) {
             .put("voice", Speaker.ready)
             .put("screen", "${metrics.widthPixels}x${metrics.heightPixels}")
             .put("app", BuildConfig.VERSION_NAME)
+            .put("name", activity.getString(R.string.tablet_name, Build.MODEL))
             .put("model", Build.MODEL)
             .put("battery", activity.battery?.let { JSONObject().put("level", it.level).put("charging", it.charging) } ?: JSONObject.NULL)
             .put("settings", TabletSettings.read(activity, systemBrightness, volume))

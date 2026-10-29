@@ -53,6 +53,8 @@
     <attr name="c_home_card_bg" format="reference" />
     <!-- Taille des titres de carte en Cadran (TitleView) : un peu plus grande en Rétro, l'Abril Fatface étant petite. -->
     <attr name="c_title_size" format="dimension" />
+    <!-- Contraste élevé : grandes touches (cases de 148 dp, libellé de 18 sp) dans les grilles de touches (ui/home/TileGridView). -->
+    <attr name="c_big_keys" format="boolean" />
     <attr name="c_primary" format="color" />
     <attr name="c_on_primary" format="color" />
     <attr name="c_primary_pressed" format="color" />

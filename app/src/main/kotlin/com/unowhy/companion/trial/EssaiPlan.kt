@@ -10,10 +10,11 @@ object EssaiPlan {
     /**
      * Android refuse une versionCode plus basse que celle installée : l'essai d'une MR au pipeline plus ancien
      * est désinstallé d'abord (device owner, sans confirmation). `installedCode` null = pas d'essai installé.
+     * NONE seulement pour la MR installée (`installedMr`, 0 = inconnue) : un même code pour une autre MR se réinstalle.
      */
-    fun install(entryCode: Long, installedCode: Long?): Install = when {
+    fun install(entryCode: Long, installedCode: Long?, mr: Int = 0, installedMr: Int = 0): Install = when {
         installedCode == null || entryCode > installedCode -> Install.INSTALL
-        entryCode == installedCode -> Install.NONE
+        entryCode == installedCode -> if (mr == installedMr) Install.NONE else Install.INSTALL
         else -> Install.UNINSTALL_FIRST
     }
 
