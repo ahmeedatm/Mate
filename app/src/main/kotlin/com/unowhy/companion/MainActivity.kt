@@ -23,6 +23,7 @@ import com.unowhy.companion.audio.Speaker
 import com.unowhy.companion.device.Accessibility
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
+import com.unowhy.companion.focus.Breathing
 import com.unowhy.companion.focus.FocusDnd
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
@@ -168,6 +169,8 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         Grain.applyTo(findViewById(android.R.id.content))
         Speaker.init(this)
+        Prefs.focusPreset(this).let { FocusTimer.restore(it.focus, it.pause) }
+        NoisePlayer.init(this)
         AutoUpdater.start(this)
         InstallerService.start(this)
 
@@ -751,7 +754,8 @@ class MainActivity : AppCompatActivity() {
     /** Ce qui sert encore, que le cadre ne doit pas cacher. */
     private fun frameBusy() = callOverlay.visibility == View.VISIBLE || agentAsk.isOpen || welcome.visibility == View.VISIBLE ||
         plugins.visibility == View.VISIBLE ||
-        documentPanel.visibility == View.VISIBLE || current == Mode.CAMERA || FocusTimer.state.running
+        documentPanel.visibility == View.VISIBLE || current == Mode.CAMERA || FocusTimer.state.running ||
+        Breathing.running
 
     /** Lance le cadre tout de suite (Réglages > Cadre photo > Essayer, ou délai écoulé) ; sans photo, rien. */
     fun openFrame(photos: List<java.io.File>) {

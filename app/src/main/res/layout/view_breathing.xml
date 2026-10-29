@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Respiration de Focus (BreathingPanel), à la place du Pomodoro : sphère, consigne en grand, rythme, durée, Commencer / Arrêter. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
+
+    <!-- La sphère prend toute la place libre, sans cadre ; la consigne en dessous, lisible quelle que soit sa taille. -->
+    <com.unowhy.companion.ui.BreathingView
+        android:id="@+id/breath_waves"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <TextView
+        android:id="@+id/breath_step"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="?attr/c_font_display"
+        android:includeFontPadding="false"
+        android:singleLine="true"
+        android:textColor="?attr/c_text"
+        android:textSize="48sp" />
+
+    <TextView
+        android:id="@+id/breath_seconds"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:fontFamily="?attr/c_font_regular"
+        android:gravity="center"
+        android:textColor="?attr/c_text"
+        android:textSize="18sp" />
+
+    <!-- Rythme puis durée, sur une ligne. -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/breath_patterns"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+
+        <LinearLayout
+            android:id="@+id/breath_durations"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:orientation="horizontal" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/breath_start"
+        style="@style/PrimaryButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:minWidth="200dp"
+        android:text="@string/breath_start" />
+</LinearLayout>

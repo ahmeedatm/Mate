@@ -160,6 +160,11 @@ describe("canal tablette", () => {
     assert.equal(sent.json.received, true);
   });
 
+  it("refuse les anciens bruits d'ambiance (brun, rose, blanc)", async () => {
+    const old = await server.call("POST", "/tablet/command", { type: "noise", kind: "brown" });
+    assert.equal(old.status, 400);
+  });
+
   it("refuse l'ordre meeting venu de l'extérieur : seul l'ordinateur le pousse", async () => {
     const { status } = await server.call("POST", "/tablet/command", { type: "meeting", state: "start", app: "Microsoft Teams" });
     assert.equal(status, 400);
