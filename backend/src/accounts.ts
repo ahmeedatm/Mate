@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import path from "node:path";
-import { backendRoot, config } from "./config.ts";
+import { accountsFile, config } from "./config.ts";
 import type { CalendarEvent } from "./calendar.ts";
 import { meetingLink } from "./meeting-links.ts";
 import { readJson, updateJson } from "./store.ts";
@@ -43,7 +43,7 @@ type ClientConfig = { clientId: string; clientSecret?: string };
 
 /** Identifiants des applis enregistrées (config/accounts.json, livré avec le logiciel ; .env pour tester). */
 async function client(provider: Provider): Promise<ClientConfig | undefined> {
-  const file = await readJson<Partial<Record<Provider, ClientConfig>>>(path.join(backendRoot, "config", "accounts.json"), () => ({}), {
+  const file = await readJson<Partial<Record<Provider, ClientConfig>>>(accountsFile(), () => ({}), {
     quarantine: false,
   });
   const fromFile = file[provider];

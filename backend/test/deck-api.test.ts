@@ -148,6 +148,7 @@ describe("cartes de l'Accueil et onglets d'appli", () => {
       meetings: true,
       teams: false,
       agents: false,
+      gitlab: false,
       jira: false,
       off: [],
     });

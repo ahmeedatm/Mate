@@ -144,6 +144,8 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | `calendar.ts`, `accounts.ts`, `events.ts`, `meetings.ts`, `meeting-links.ts` | agenda et réunions |
 | `tasks.ts` | tâches et rappels |
 | `jira.ts`, `routes/jira.ts` | Jira du compte du `.env` : temps saisi du jour (worklog), tickets assignés et leurs transitions (onglet Jira) |
+| `gitlab.ts`, `routes/gitlab.ts` | onglet GitLab : mes MR et celles à relire (une requête GraphQL, gardée 20 s), fusion au `sha` affiché, ouverture de la MR sur l'ordinateur |
+| `gitlab-auth.ts` | connexion GitLab par OAuth (code + PKCE, sans secret) : jetons sur l'ordinateur, renouvellement seul ; `GITLAB_TOKEN` en secours ([gitlab-oauth.md](gitlab-oauth.md)) |
 | `tablet.ts`, `mcp.ts` | canal vers la tablette, extension Claude |
 | `calls.ts` (+ `config/calls.json`) | appels entrants : surveillance des fenêtres, Répondre / Ignorer / Raccrocher |
 | `agents.ts`, `agents-sources.ts`, `agents-secret.ts`, `agents-hooks.ts`, `routes/agents.ts` | agents Claude : état et réponses, lecture de `claude` et d'Orca, secret des hooks, bloc de hooks (`scripts/agents-hooks.ts`) |
