@@ -92,6 +92,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private val weekday = SimpleDateFormat("EEEE", Locale.FRENCH)
     private val dateDay = SimpleDateFormat("d MMMM", Locale.FRENCH)
     private var observer: ((AgentsFeed.Snapshot) -> Unit)? = null
+    private var active = false
     private lateinit var owner: LifecycleOwner
 
     init {
@@ -191,6 +192,8 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     /** Affiché et relu en boucle (par AgentsFeed), ou caché. */
     fun setActive(active: Boolean) {
         visibility = if (active) VISIBLE else GONE
+        if (this.active == active) return
+        this.active = active
         observer?.let { AgentsFeed.unobserve(it) }
         observer = null
         if (!active) return

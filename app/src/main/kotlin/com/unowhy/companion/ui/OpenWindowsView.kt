@@ -47,6 +47,7 @@ class OpenWindowsView @JvmOverloads constructor(
 
     private lateinit var scope: CoroutineScope
     private var poll: Job? = null
+    private var active = false
     private var shown: OpenWindows? = null
     private var dragged: View? = null
     /** Actions en cours : la relecture périodique les attend, sinon elle remettrait l'ancien état un instant. */
@@ -83,9 +84,11 @@ class OpenWindowsView @JvmOverloads constructor(
         this.scope = scope
     }
 
-    /** Affichée et relue en boucle, ou cachée. */
+    /** Affichée et relue en boucle, ou cachée. Sans changement d'état, la boucle en cours continue (pas de relecture en plus). */
     fun setActive(active: Boolean) {
         visibility = if (active) VISIBLE else GONE
+        if (this.active == active) return
+        this.active = active
         poll?.cancel()
         if (!active) return
         if (shown == null) showStatus(context.getString(R.string.open_loading))

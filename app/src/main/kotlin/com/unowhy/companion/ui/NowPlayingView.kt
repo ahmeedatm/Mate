@@ -140,6 +140,7 @@ class NowPlayingView @JvmOverloads constructor(
 
     /** Deck à l'écran ou non : on ne relit que s'il est visible. */
     fun setActive(active: Boolean) {
+        if (this.active == active) return
         this.active = active
         restart()
     }

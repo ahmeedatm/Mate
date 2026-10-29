@@ -31,6 +31,9 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
     private var last: AgentsFeed.Snapshot? = null
     private var active = false
 
+    /** (affiché, plein écran) de l'abonnement en cours : un appel qui ne change rien ne relance pas de lecture. */
+    private var followed: Pair<Boolean, Boolean>? = null
+
     /** Compteurs et liste d'un Agents M, L ou V. */
     private val summary = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
@@ -72,6 +75,8 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
 
     /** Un seul abonné à la fois : le tableau en XL, les compteurs sinon ; aucun hors du profil affiché. */
     private fun follow() {
+        if (followed == active to full) return
+        followed = active to full
         observer?.let { AgentsFeed.unobserve(it) }
         observer = null
         board.setActive(active && full)
