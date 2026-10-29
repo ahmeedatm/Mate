@@ -2,13 +2,17 @@
 // Entrée « Exécuter » de la session (voir scripts/service.ts). Programme sans fenêtre : pas de PowerShell caché,
 // que les antivirus prennent pour un logiciel malveillant.
 //
-// UnowhyCompanion.exe --node <node.exe> --backend <dossier backend> --logs <dossier> --data <dossier>
+// UnowhyCompanion.exe --node <node.exe> --backend <dossier backend> --logs <dossier> --data <dossier> [--port <port>] [--no-tray]
+//
+// Porte aussi l'icône du compagnon dans la zone de notification (Tray.cs) : --port est le port de la page locale,
+// --no-tray la retire (instance de test sans écran).
 
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace Companion
 {
@@ -17,7 +21,12 @@ namespace Companion
         static int Main(string[] argv)
         {
             var args = new Dictionary<string, string>();
-            for (int i = 0; i + 1 < argv.Length; i += 2) args[argv[i].TrimStart('-')] = argv[i + 1];
+            var tray = true;
+            for (int i = 0; i < argv.Length; i++)
+            {
+                if (argv[i] == "--no-tray") tray = false;
+                else if (i + 1 < argv.Length) args[argv[i].TrimStart('-')] = argv[++i];
+            }
             string node, backend, logs, data;
             if (!args.TryGetValue("node", out node) || !args.TryGetValue("backend", out backend) || !args.TryGetValue("logs", out logs)) return 2;
             if (!args.TryGetValue("data", out data)) data = Path.Combine(backend, ".data");
@@ -31,12 +40,26 @@ namespace Companion
                 ? "--env-file-if-exists=.env dist/server.mjs"
                 : "--env-file-if-exists=.env --import tsx src/server.ts";
 
-            while (true)
+            // La boucle tourne à part : le fil principal garde la boucle de messages de l'icône.
+            var loop = new Thread(() =>
             {
-                try { Run(node, entry, backend, logs); }
-                catch (Exception e) { File.AppendAllText(Path.Combine(logs, "backend-erreurs.log"), DateTime.Now + " " + e.Message + Environment.NewLine); }
-                Thread.Sleep(10000);
+                while (true)
+                {
+                    try { Run(node, entry, backend, logs); }
+                    catch (Exception e) { File.AppendAllText(Path.Combine(logs, "backend-erreurs.log"), DateTime.Now + " " + e.Message + Environment.NewLine); }
+                    Thread.Sleep(10000);
+                }
+            }) { IsBackground = true };
+            loop.Start();
+            int port;
+            if (!tray || !args.ContainsKey("port") || !int.TryParse(args["port"], out port))
+            {
+                loop.Join();
+                return 0;
             }
+            Application.EnableVisualStyles();
+            Application.Run(new Tray(port));
+            return 0;
         }
 
         static void Run(string node, string entry, string backend, string logs)

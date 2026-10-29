@@ -8,7 +8,8 @@ import { backendRoot as backend, dataDir, packaged as bundled, userFolder } from
  * Lancement automatique du backend à l'ouverture de session, sans terminal :
  * - macOS : agent launchd (~/Library/LaunchAgents), relancé s'il s'arrête ;
  * - Windows : entrée « Exécuter » de la session (HKCU\…\Run), lanceur sans fenêtre qui relance node
- *   (src/win/UnowhyCompanion.exe : pas de PowerShell caché, que les antivirus bloquent).
+ *   (src/win/UnowhyCompanion.exe : pas de PowerShell caché, que les antivirus bloquent), qui porte aussi l'icône de la
+ *   zone de notification. Sur Mac, l'icône de la barre des menus est lancée par le compagnon (src/mac/menubar.ts).
  *
  *   npm run service:install     installe et démarre
  *   npm run service:stop        arrête (pour lancer `npm run dev` à la place)
@@ -153,7 +154,20 @@ const LAUNCHER = "UnowhyCompanion.exe";
 /** Ligne de commande du lanceur, la même dans la clé Run et au démarrage par l'installeur. */
 function windowsCommand(node: string) {
   const exe = path.join(backend, "src", "win", LAUNCHER);
-  const args = ["--node", node, "--backend", backend, "--logs", logDir, "--data", dataDir];
+  // --port : page locale lue par l'icône de la zone de notification ; instance de test : pas d'icône.
+  const args = [
+    "--node",
+    node,
+    "--backend",
+    backend,
+    "--logs",
+    logDir,
+    "--data",
+    dataDir,
+    "--port",
+    String(port),
+    ...(headless ? ["--no-tray"] : []),
+  ];
   const quote = (a: string) => (/[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a);
   return [exe, ...args].map(quote).join(" ");
 }
