@@ -177,6 +177,13 @@
         android:layout_height="match_parent"
         android:visibility="gone" />
 
+    <!-- Plugins de l'ordinateur actif : première utilisation, appli compatible apparue, ou Réglages. -->
+    <com.unowhy.companion.ui.PluginsView
+        android:id="@+id/plugins"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
     <TextView
         android:id="@+id/remote_banner"
         android:layout_width="wrap_content"
