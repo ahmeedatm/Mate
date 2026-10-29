@@ -27,6 +27,7 @@ import mailRoutes from "./routes/mail.ts";
 import notificationRoutes from "./routes/notifications.ts";
 import pairingRoutes from "./routes/pairing.ts";
 import pointerRoutes from "./routes/pointer.ts";
+import portableRoutes from "./routes/portable.ts";
 import systemRoutes from "./routes/system.ts";
 import tabletRoutes from "./routes/tablet.ts";
 import taskRoutes from "./routes/tasks.ts";
@@ -70,11 +71,13 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
   LOOPBACK.has(ip) &&
   LOCAL_HOST.test(host ?? "") &&
   ((method === "GET" &&
-    /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite)|web\/outfit-[345]00\.ttf|oauth\/(microsoft|google)\/(start|callback))?(\?|$)/.test(
+    /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite|panel|update)|web\/outfit-[345]00\.ttf|oauth\/(microsoft|google)\/(start|callback))?(\?|$)/.test(
       url,
     )) ||
     (method === "PUT" && (url === "/local/calendar" || url === "/local/tablet/settings")) ||
     (method === "POST" && (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update")) ||
+    // Panneau de l'appli portable (routes/portable.ts) : corps JSON exigé, pas envoyable par un autre site.
+    (method === "POST" && /^\/local\/(autostart|firewall|legacy\/remove|forget|quit|update)$/.test(url)) ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
     (method === "POST" && (url === "/browser/extension" || url === "/browser/extension/commands")) ||
     // Hooks de Claude Code : pas de jeton d'appairage, un secret propre vérifié par la route (src/agents-sources.ts).
@@ -131,6 +134,7 @@ app.addContentTypeParser("application/gzip", { parseAs: "buffer", bodyLimit: 100
 
 app.register(pairingRoutes, { authorized, fingerprint: tls?.fingerprint ?? null });
 app.register(localRoutes);
+app.register(portableRoutes);
 app.register(deckRoutes);
 app.register(windowRoutes);
 app.register(systemRoutes);

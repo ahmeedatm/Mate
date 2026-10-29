@@ -1,7 +1,7 @@
 # CI : sur chaque MR, sur main et sur les tags. Rien n'arrive sur main sans pipeline vert.
 # En MR, seuls les jobs de la zone touchée tournent (rules:changes, voir docs/developpement.md, section CI) ;
 # sur main et sur un tag, tout tourne.
-# Tag vX.Y.Z : mêmes tests, puis installeurs de l'ordinateur, APK signé et release GitLab.
+# Tag vX.Y.Z : mêmes tests, puis applis portables de l'ordinateur, APK signé et release GitLab.
 # Branche protégée essai/mr-<iid> : l'APK signé d'essai (job manuel) et, si backend/ change, l'archive du backend, publiés
 # dans le paquet commun companion-updates/essais, une entrée par MR (docs/developpement.md, section Release).
 
@@ -151,15 +151,15 @@ android:
       junit: app/build/test-results/testDebugUnitTest/*.xml
     expire_in: 2 weeks
 
-# Installeurs de l'ordinateur (node embarqué) : backend/scripts/package.ts. Un job par plateforme : les deux
-# ensemble dépassent la limite d'artefacts par défaut (100 Mo). Seulement sur un tag de version, pour la release.
-# nsis : makensis compile l'installeur Windows (Debian bookworm : NSIS 3.08).
+# Applis portables de l'ordinateur, sans installation (node embarqué) : backend/scripts/package.ts. Un job par
+# plateforme : les deux ensemble dépassent la limite d'artefacts par défaut (100 Mo). Seulement sur un tag de version,
+# pour la release. zip et unzip : le runtime Windows est zippé puis ajouté à l'exe, l'appli Mac est zippée.
 .package:
   extends: [.node, .release-tag]
   stage: build
   dependencies: []
   before_script:
-    - apt-get update -qq && apt-get install -y -qq --no-install-recommends zip unzip nsis > /dev/null
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends zip unzip > /dev/null
     - !reference [.node, before_script]
   script:
     - npm run package -- $PLATFORM
@@ -258,7 +258,7 @@ android-release:
       - dist/companion-*
     expire_in: 1 week
 
-# Serveur central des mises à jour de la tablette : manifest.json, l'APK de la dernière version, les installeurs de
+# Serveur central des mises à jour de la tablette : manifest.json, l'APK de la dernière version, les applis de
 # l'ordinateur (que la tablette télécharge puis sert sur son WiFi) et les archives du backend (mise à jour de
 # l'ordinateur depuis la tablette) déposés dans le paquet générique UPDATES_URL (jeton
 # du job), anciens fichiers supprimés. Voir docs/developpement.md, section Release.
@@ -361,5 +361,5 @@ release:
         LINKS="$LINKS{\"name\":\"${f%%:*}\",\"url\":\"$BASE/${f%%:*}?job=${f##*:}\",\"link_type\":\"package\"},"
       done
       glab release create "$CI_COMMIT_TAG" --ref "$CI_COMMIT_SHA" --name "Compagnon $CI_COMMIT_TAG" \
-        --notes "Installeurs de l'ordinateur (Windows, Mac) et APK de la tablette. Mise à jour de la tablette par le « serveur Unowhy » : docs/developpement.md, section Release." \
+        --notes "Applis portables de l'ordinateur (Windows, Mac) et APK de la tablette. Mise à jour de la tablette par le « serveur Unowhy » : docs/developpement.md, section Release." \
         --assets-links "[${LINKS%,}]"

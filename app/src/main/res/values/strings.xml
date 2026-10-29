@@ -512,7 +512,7 @@
     <string name="computer_pick">Toucher l\'ordinateur à ajouter :</string>
     <string name="computer_known">déjà enregistré</string>
     <string name="computer_outdated">compagnon à mettre à jour</string>
-    <string name="computer_outdated_detail">Le compagnon de %1$s est trop ancien pour cette tablette. Mets-le à jour : sur l\'ordinateur, ouvre %2$s et lance le nouvel installeur, puis recommence.</string>
+    <string name="computer_outdated_detail">Le compagnon de %1$s est trop ancien pour cette tablette. Mets-le à jour : sur l\'ordinateur, ouvre %2$s, télécharge la nouvelle appli et lance-la, puis recommence.</string>
     <string name="computer_manual_hint">Adresse affichée sur l\'ordinateur, dans la page du compagnon ouverte à l\'installation. Exemple : 192.168.1.20</string>
     <string name="computer_address_hint">192.168.1.20</string>
     <string name="computer_connect">Se connecter</string>
@@ -633,8 +633,8 @@
     <string name="install_address_no_wifi">connecte d\'abord le WiFi</string>
     <string name="companion_update_available">Nouvelle version du compagnon pour %1$s (%2$s) : touche pour la mettre à jour</string>
     <string name="companion_update_title">Mettre à jour le compagnon de %1$s</string>
-    <string name="companion_update_steps_mac">1. Sur le Mac, ouvre %1$s (bouton « Ouvrir sur l\'ordi »).\n2. Télécharge le zip, ouvre-le, puis ouvre « Compagnon Unowhy » : il remplace l\'ancien dans Applications et redémarre.\n3. Si macOS redemande l\'Accessibilité, accorde-la (Réglages Système > Confidentialité et sécurité > Accessibilité).\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
-    <string name="companion_update_steps_windows">1. Sur le PC, ouvre %1$s (bouton « Ouvrir sur l\'ordi »).\n2. Télécharge et lance l\'installeur : il remplace l\'ancien et redémarre le compagnon.\n3. Si SmartScreen bloque : « Informations complémentaires », puis « Exécuter quand même ».\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
+    <string name="companion_update_steps_mac">1. Sur le Mac, rouvre « Compagnon Unowhy » : le panneau s\'ouvre.\n2. Carte « Cette appli » : « Chercher une mise à jour », puis « Installer ». L\'appli se remplace et redémarre.\n3. Si macOS redemande l\'Accessibilité, accorde-la (Réglages Système > Confidentialité et sécurité > Accessibilité).\n\nPas de panneau (ancienne version) : ouvre %1$s (bouton « Ouvrir sur l\'ordi »), télécharge la nouvelle appli et ouvre-la.\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
+    <string name="companion_update_steps_windows">1. Sur le PC, relance le compagnon : le panneau s\'ouvre.\n2. Carte « Cette appli » : « Chercher une mise à jour », puis « Installer ». Le fichier se remplace et redémarre.\n3. Si SmartScreen bloque : « Informations complémentaires », puis « Exécuter quand même ».\n\nPas de panneau (ancienne installation) : ouvre %1$s (bouton « Ouvrir sur l\'ordi »), télécharge le nouveau fichier, lance-le, puis « Retirer l\'ancienne installation » dans le panneau.\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
     <string name="companion_update_open">Ouvrir sur l\'ordi</string>
     <string name="companion_update_later">Plus tard</string>
     <string name="companion_update_opened">Page ouverte sur l\'ordinateur</string>

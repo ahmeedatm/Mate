@@ -1,9 +1,10 @@
 import { CADRAN_CSS, FAVICON, ICON_SVG } from "./web-style.ts";
 
 /**
- * Page http://127.0.0.1:3000/ ouverte sur l'ordinateur (ouverte par l'installation) : état du compagnon,
- * marche à suivre sur la tablette, réglages de la tablette connectée (thème, écran, son) et, pendant un appairage,
- * la case où saisir le code affiché par la tablette.
+ * Page http://127.0.0.1:3000/ ouverte sur l'ordinateur (le panneau de l'appli : relancer « Compagnon Unowhy » la rouvre) :
+ * état du compagnon, marche à suivre sur la tablette, réglages de la tablette connectée (thème, écran, son), la case
+ * où saisir le code d'appairage affiché par la tablette, et la carte « Cette appli » (lancement au démarrage,
+ * pare-feu, ancienne installation, mise à jour, quitter, tout oublier).
  * Lue sans jeton, en local seulement (voir isLocalPage dans server.ts).
  */
 export const LOCAL_PAGE = `<!doctype html>
@@ -162,6 +163,30 @@ ${FAVICON}
     </details>
   </div>
 
+  <!-- Appli portable seulement (voir src/routes/portable.ts) : rien n'est installé, ces réglages sont ceux de l'utilisateur. -->
+  <section id="panel" hidden>
+    <h2>Cette appli</h2>
+    <div class="card">
+      <div class="dim" id="appinfo"></div>
+      <div class="row"><label for="autostart">Lancer au démarrage de l'ordinateur</label><input type="checkbox" id="autostart"></div>
+      <div class="dim">Rien n'est inscrit tant que la case n'est pas cochée. Sinon, rouvre « Compagnon Unowhy » quand tu en as besoin.</div>
+      <div id="firewallrow" hidden>
+        <div class="row"><span class="grow" id="firewallstate"></span><button id="firewallopen">Ouvrir le pare-feu</button></div>
+        <div class="dim">Réseaux privés seulement. Windows demande l'accord d'un administrateur.</div>
+      </div>
+      <div id="legacyrow" hidden>
+        <div class="label"><b>Ancienne installation trouvée</b></div>
+        <div class="row"><span class="grow dim" id="legacylist"></span><button id="legacyremove">Retirer</button></div>
+        <div class="dim">Tes réglages, ton agenda et l'appairage de la tablette sont gardés.</div>
+      </div>
+      <div class="row"><span class="grow dim" id="appupdatestate">Mise à jour depuis la tablette (même WiFi).</span><button id="updatecheck">Chercher</button><button id="updateinstall" hidden>Installer</button></div>
+      <div class="dim">Extension du navigateur (onglets, page Média) : à charger en mode développeur depuis <code id="extpath"></code></div>
+      <div class="row"><span class="grow"></span><button class="ghost" id="quit">Quitter</button><button class="ghost" id="forget">Tout oublier</button></div>
+      <div class="dim">Tout oublier retire le lancement au démarrage, l'appairage, l'agenda et les tâches de cet ordinateur.</div>
+      <div id="panelmsg" class="dim" style="margin-top:12px"></div>
+    </div>
+  </section>
+
   <!-- Politique de confidentialité (config/confidentialite.txt) ; compagnon installé : licences des composants tiers (LICENCES-TIERS.txt, scripts/package.ts). -->
   <p class="dim">
     <a href="/local/confidentialite" target="_blank">Confidentialité</a>
@@ -170,9 +195,13 @@ ${FAVICON}
 </main>
 <script>
   const OS = { mac: "macOS", windows: "Windows", other: "Linux (pilotage indisponible)" };
+  let version = null;
   async function refresh() {
     try {
       const s = await (await fetch("/local/status")).json();
+      // Mise à jour posée : le nouveau compagnon répond avec une autre version, la page se recharge.
+      if (version !== null && s.version !== version) return location.reload();
+      version = s.version;
       document.getElementById("name").textContent = s.name;
       document.getElementById("licences").hidden = !s.licences;
       document.getElementById("access").hidden = s.accessibility !== false;
@@ -391,7 +420,59 @@ ${FAVICON}
     card.classList.add("focus");
     card.scrollIntoView({ block: "center" });
   }
+
+  // Carte « Cette appli » : lue au chargement et après chaque action, pas à chaque rafraîchissement.
+  const $ = (id) => document.getElementById(id);
+  const say = (text) => { $("panelmsg").textContent = text; };
+  async function post(url, body) {
+    const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body || {}) });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || json.message || "Échec");
+    return json;
+  }
+  async function loadPanel() {
+    try {
+      const p = await (await fetch("/local/panel")).json();
+      $("panel").hidden = !p.portable;
+      if (!p.portable) return;
+      $("appinfo").textContent = "Version " + p.version + " · " + p.app;
+      $("autostart").checked = p.autostart;
+      $("firewallrow").hidden = p.firewall === null;
+      $("firewallstate").textContent = p.firewall ? "✓ Pare-feu ouvert : la tablette peut joindre ce PC." : "⚠ Pare-feu fermé : la tablette ne trouvera pas ce PC.";
+      $("firewallopen").hidden = p.firewall === true;
+      $("legacyrow").hidden = p.legacy.length === 0;
+      $("legacylist").textContent = p.legacy.join(" · ");
+      $("extpath").textContent = p.extension;
+    } catch (e) {
+      $("panel").hidden = true;
+    }
+  }
+  // last : l'action arrête ou relance le compagnon, la carte ne se relit pas (elle resterait vide).
+  async function act(fn, okText, last) {
+    say("…");
+    try { say(okText ? okText(await fn()) : ""); } catch (e) { say(e.message); }
+    if (!last) loadPanel();
+  }
+  $("autostart").onchange = (e) => act(() => post("/local/autostart", { on: e.target.checked }),
+    (r) => r.autostart ? "Lancement au démarrage activé." : "Lancement au démarrage retiré.");
+  $("firewallopen").onclick = () => act(() => post("/local/firewall"), (r) => r.ok ? "Pare-feu ouvert." : "Pare-feu inchangé : l'accord administrateur a été refusé.");
+  $("legacyremove").onclick = () => act(() => post("/local/legacy/remove"),
+    (r) => r.failed.length ? "Pas pu retirer : " + r.failed.join(", ") : "Ancienne installation retirée.");
+  $("updatecheck").onclick = () => act(async () => {
+    const r = await (await fetch("/local/update")).json().then((j) => j.error ? Promise.reject(new Error(j.error)) : j);
+    $("updateinstall").hidden = !r.available;
+    $("updateinstall").textContent = "Installer la version " + r.available;
+    $("appupdatestate").textContent = r.available ? "Version " + r.available + " sur la tablette (tu as la " + r.current + ")." : "À jour (version " + r.current + ").";
+  });
+  $("updateinstall").onclick = () => act(() => post("/local/update"), (r) => "Version " + r.version + " téléchargée : l'appli redémarre, la page se recharge.", true);
+  $("quit").onclick = () => act(() => post("/local/quit"), () => "Compagnon arrêté. Rouvre « Compagnon Unowhy » pour le relancer.", true);
+  $("forget").onclick = () => {
+    if (confirm("Tout oublier ? La tablette devra être appairée à nouveau, l'agenda et les tâches de cet ordinateur sont effacés.")) {
+      act(() => post("/local/forget", { sure: true }), () => "Tout est oublié. Tu peux supprimer l'appli.", true);
+    }
+  };
   refresh();
+  loadPanel();
   setInterval(refresh, 1500);
 </script>
 </body>
