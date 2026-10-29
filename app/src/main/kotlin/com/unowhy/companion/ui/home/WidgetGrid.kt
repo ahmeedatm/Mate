@@ -295,9 +295,12 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             }
             return false
         }
-        for (i in childCount - 1 downTo 0) if (find(getChildAt(i), x, y)) return true
+        for (i in childCount - 1 downTo 0) if (!veiled(getChildAt(i)) && find(getChildAt(i), x, y)) return true
         return false
     }
+
+    /** Widget voilé (ordinateur injoignable) : il ne reçoit aucun toucher, donc ne garde ni appui long ni balayage. */
+    private fun veiled(child: View) = placedOf(child)?.let(blocked) == true
 
     /**
      * Les gestes gardés par les vues sous le doigt : même descente que [sliderAt], les propriétaires imbriqués se
@@ -324,7 +327,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             }
             return found
         }
-        for (i in childCount - 1 downTo 0) if (walk(getChildAt(i), x, y)) break
+        for (i in childCount - 1 downTo 0) if (!veiled(getChildAt(i)) && walk(getChildAt(i), x, y)) break
         if (!longPress && !swipe) return null
         return object : GestureOwner {
             override val ownsLongPress = longPress
