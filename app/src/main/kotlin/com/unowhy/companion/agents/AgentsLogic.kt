@@ -45,6 +45,12 @@ fun daysUntil(resetsAt: Long, now: Long, zone: TimeZone = TimeZone.getDefault())
 fun shortList(sessions: List<AgentSession>, max: Int): List<AgentSession> = sessions.filter { it.state != AgentState.IDLE }.take(max)
 
 /**
+ * Titre d'une session à l'écran. Le titre automatique résume ce que fait l'agent : en mode privé il est remplacé par le
+ * dossier de la session (la branche, le ticket et la MR restent montrés à côté).
+ */
+fun sessionTitle(s: AgentSession, private: Boolean): String = if (private) s.dir else s.title
+
+/**
  * Colonnes du tableau de l'onglet Agents : travaillent, surveillent (tâche de fond), vous concerne (une réponse ou une
  * limite à lever), finis (sessions au repos comprises).
  */

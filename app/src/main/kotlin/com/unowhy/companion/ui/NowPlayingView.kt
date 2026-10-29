@@ -110,10 +110,10 @@ class NowPlayingView @JvmOverloads constructor(
     }
 
     /**
-     * Mise en page : boutons à droite (page Média), dessous (grand widget de l'Accueil : le titre garde la largeur),
-     * ou petite (widget d'une case : titre, artiste et boutons, sans vignette ni avancement).
+     * Mise en page : boutons à droite (page Média, widgets de l'Accueil), ou petite (widget d'une case : titre,
+     * artiste et boutons dessous, sans vignette ni avancement).
      */
-    enum class Layout { ROW, STACKED, SMALL }
+    enum class Layout { ROW, SMALL }
 
     fun layout(mode: Layout) {
         this.mode = mode
@@ -124,7 +124,7 @@ class NowPlayingView @JvmOverloads constructor(
         main.layoutParams = if (below) LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT) else LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
         val controls = findViewById<LinearLayout>(R.id.media_controls)
         controls.layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-            if (below) topMargin = context.dp(if (mode == Layout.SMALL) 8 else 12)
+            if (below) topMargin = context.dp(8)
         }
         (previous.layoutParams as MarginLayoutParams).marginStart = context.dp(if (below) 0 else 16)
         val small = mode == Layout.SMALL
@@ -140,6 +140,7 @@ class NowPlayingView @JvmOverloads constructor(
 
     /** Deck à l'écran ou non : on ne relit que s'il est visible. */
     fun setActive(active: Boolean) {
+        if (this.active == active) return
         this.active = active
         restart()
     }

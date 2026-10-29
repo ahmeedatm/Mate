@@ -24,6 +24,7 @@ import com.unowhy.companion.agents.columnCounts
 import com.unowhy.companion.agents.columnOf
 import com.unowhy.companion.agents.daysUntil
 import com.unowhy.companion.agents.elapsedMs
+import com.unowhy.companion.agents.sessionTitle
 import com.unowhy.companion.agents.waitingKind
 import com.unowhy.companion.net.AgentSession
 import com.unowhy.companion.net.AgentState
@@ -85,12 +86,14 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private val headers = HashMap<Column, TextView>()
     private val columns = HashMap<Column, LinearLayout>()
     private val status = TextView(context)
+    private val privateButton = Button(context, null, 0, R.style.Chip)
     private val rows = LinkedHashMap<String, View>()
     private var signature: List<Any?> = emptyList()
     private val clock = SimpleDateFormat("H 'h' mm", Locale.FRENCH)
     private val weekday = SimpleDateFormat("EEEE", Locale.FRENCH)
     private val dateDay = SimpleDateFormat("d MMMM", Locale.FRENCH)
     private var observer: ((AgentsFeed.Snapshot) -> Unit)? = null
+    private var active = false
     private lateinit var owner: LifecycleOwner
 
     init {
@@ -105,14 +108,14 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 addView(quota, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
                 // Mode privé : pour le direct, rien de ce que fait l'agent ne s'affiche (commandes, questions, résumés).
                 addView(
-                    Button(context, null, 0, R.style.Chip).apply {
+                    privateButton.apply {
                         setText(R.string.agents_private)
                         isSelected = Prefs.agentsPrivate(context)
                         setOnClickListener {
                             Prefs.setAgentsPrivate(context, !isSelected)
                             isSelected = !isSelected
-                            signature = emptyList()
-                            AgentsFeed.last?.let(::render)
+                            // Toutes les vues ouvertes (tableau, widget, onglet) se redessinent tout de suite, sans attendre la lecture suivante.
+                            AgentsFeed.replay()
                         }
                     },
                     LayoutParams(LayoutParams.WRAP_CONTENT, dp(40)),
@@ -190,6 +193,8 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     /** Affiché et relu en boucle (par AgentsFeed), ou caché. */
     fun setActive(active: Boolean) {
         visibility = if (active) VISIBLE else GONE
+        if (this.active == active) return
+        this.active = active
         observer?.let { AgentsFeed.unobserve(it) }
         observer = null
         if (!active) return
@@ -199,6 +204,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     }
 
     private fun render(snapshot: AgentsFeed.Snapshot) {
+        privateButton.isSelected = Prefs.agentsPrivate(context)
         val state = snapshot.state
         if (state == null) {
             status.text = context.errorText(snapshot.error)
@@ -213,7 +219,8 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             else -> context.getString(R.string.agents_focus_hint)
         }
         status.visibility = VISIBLE
-        val sig = state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId, it.canSend, it.resumeAt, it.resumeArmed, it.canInterrupt, it.title, it.ticket, it.mr, it.monitoring) }
+        // Le mode privé change le rendu : il fait partie de la signature, sinon une autre vue (tableau ouvert depuis un widget) le laisse périmé.
+        val sig = listOf(Prefs.agentsPrivate(context), state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId, it.canSend, it.resumeAt, it.resumeArmed, it.canInterrupt, it.title, it.ticket, it.mr, it.monitoring) })
         if (sig != signature) {
             signature = sig
             columns.values.forEach { it.removeAllViews() }
@@ -248,7 +255,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     private fun bind(row: View, s: AgentSession) {
         row.findViewById<AgentStatusIcon>(R.id.agent_status_icon).bind(s.state, s.monitoring)
-        row.findViewById<TextView>(R.id.agent_name).text = s.title
+        row.findViewById<TextView>(R.id.agent_name).text = sessionTitle(s, Prefs.agentsPrivate(context))
         row.findViewById<TextView>(R.id.agent_where).text = listOfNotNull(
             context.getString(R.string.agent_kind_claude),
             s.ticket,

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { clipboardUnavailable } from "../src/driver-common.ts";
 import { checkOpenTarget } from "../src/open-guard.ts";
 import type { Perf } from "../src/perf.ts";
-import type { VoiceState } from "../src/win/index.ts";
+import type { MediaSession, VoiceState } from "../src/win/index.ts";
 import type {
   AudioChange,
   ClipboardContent,
@@ -12,6 +12,7 @@ import type {
   MixerChange,
   MixerState,
   OpenAction,
+  OpenWindows,
   SystemCommand,
   WindowsInfo,
   WindowTarget,
@@ -46,7 +47,11 @@ export type FakeState = {
   /** Boutons de la fenêtre de chaque appli (listButtons, pressButton). */
   buttons?: Record<string, string[]>;
   /** État vocal par appli d'appel (voiceState : appel Discord, micro coupé…) ; absent = pas d'appel lu. */
-  voice?: Record<string, VoiceState>;
+  voice?: Record<string, VoiceState & { lobby?: boolean }>;
+  /** Fenêtres de la vue « Ouvertes » (listOpenWindows) ; absentes : aucune appli, l'écran factice. */
+  openWindows?: OpenWindows;
+  /** Lecture en cours (mediaSessions) ; absente : rien ne joue. */
+  media?: MediaSession[];
   /** Mélangeur de l'onglet Son (mixer) : modifié par les changements reçus. */
   mixer?: MixerState;
   /** Appli au premier plan (frontApp) ; absente : Safari. */
@@ -216,8 +221,8 @@ export async function pointerGesture(name: string) {
   record("pointerGesture", name);
 }
 
-export async function mediaSessions() {
-  return [];
+export async function mediaSessions(): Promise<MediaSession[]> {
+  return read().media ?? [];
 }
 
 export async function mediaControl(action: string, app?: string, positionMs?: number) {
@@ -319,9 +324,9 @@ export async function placeWindow(app: string, opts: { window?: WindowTarget; di
   return listWindows(app);
 }
 
-export async function listOpenWindows() {
+export async function listOpenWindows(): Promise<OpenWindows> {
   if (!canControl) unsupported();
-  return { apps: [], displays: [display] };
+  return read().openWindows ?? { apps: [], displays: [display] };
 }
 
 export async function controlOpenWindow(

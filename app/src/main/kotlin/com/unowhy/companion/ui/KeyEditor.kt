@@ -106,7 +106,7 @@ class KeyEditor @JvmOverloads constructor(
 
     val isShowing get() = visibility == VISIBLE
 
-    /** Ouvre la touche `slot` (0 à 13) : vide, ou avec ce qui est enregistré sur le Mac. */
+    /** Ouvre la touche `slot` (0 à 99) : vide, ou avec ce qui est enregistré sur le Mac. */
     fun show(slot: Int) {
         this.slot = slot
         title.text = context.getString(R.string.key_title, slot + 1)

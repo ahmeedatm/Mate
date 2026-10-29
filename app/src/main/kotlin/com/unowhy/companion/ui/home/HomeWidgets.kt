@@ -1,6 +1,7 @@
 package com.unowhy.companion.ui.home
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.text.InputType
 import android.util.TypedValue
 import android.view.Gravity
@@ -16,33 +17,44 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextClock
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.toDrawable
+import androidx.core.widget.ImageViewCompat
+import androidx.lifecycle.LifecycleOwner
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.FocusTicks
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
+import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.CalendarEvent
+import com.unowhy.companion.net.DeckPage
+import com.unowhy.companion.net.DeckTile
 import com.unowhy.companion.net.HomeFeatures
+import com.unowhy.companion.net.runCatchingCancellable
 import com.unowhy.companion.ui.ComputerAudioView
 import com.unowhy.companion.ui.FocusDial
+import com.unowhy.companion.ui.IconCache
 import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.NowPlayingView
 import com.unowhy.companion.ui.TasksCard
 import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.WaterCard
 import com.unowhy.companion.ui.dp
+import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.label
 import com.unowhy.companion.ui.showForTyping
+import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.ui.themeColor
 import com.unowhy.companion.ui.themeFont
 import com.unowhy.companion.ui.themePx
 import com.unowhy.companion.ui.themeRes
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -64,8 +76,14 @@ interface HomeHost {
     fun reloadCalendar()
     fun editEvent(event: CalendarEvent?)
     fun showCalendars()
+    /** Pages du deck, lues une fois pour tous les widgets ; [force] les relit. */
+    suspend fun deckPages(force: Boolean = false): List<DeckPage>
     /** Réglages d'un widget changés : la disposition est enregistrée. */
     fun save()
+    /** Panneaux plein écran du Deck (touche, applis, sites, fenêtres), créés à la demande. */
+    val overlays: DeckOverlays
+    /** Le cycle de vie de l'écran (viewLifecycleOwner) : [com.unowhy.companion.ui.AgentsView.attach] en a besoin. */
+    val owner: LifecycleOwner
 }
 
 /**
@@ -131,6 +149,12 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.HERO -> HeroWidget(context, host, placed)
                 WidgetType.DAYLINE -> DayLineWidget(context, host, placed)
                 WidgetType.AGENTS -> AgentsWidget(context, host, placed)
+                WidgetType.MIXER -> MixerWidget(context, host, placed)
+                WidgetType.OPEN -> OpenWindowsWidget(context, host, placed)
+                WidgetType.APPS -> AppsWidget(context, host, placed)
+                WidgetType.DISCORD -> DiscordWidget(context, host, placed)
+                WidgetType.MEETING -> MeetingWidget(context, host, placed)
+                WidgetType.PAD -> PadWidget(context, host, placed)
             }
     }
 }
@@ -419,38 +443,71 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
 /**
  * Ce qui joue sur l'ordinateur (contrôles multimédias de Windows, MediaRemote sur Mac), comme la page Média ;
- * petit : titre et boutons ; grand : boutons sous le titre et son de l'ordinateur dessous.
+ * petit : titre et boutons ; moyen : la lecture sur une ligne ; grand : la même, puis les sites de la page Média
+ * (toucher ouvre, appui long retire, « + » du titre ajoute). Pas de barre de son : en 2 × 2 elle prendrait la place
+ * des sites, et le widget Son la fait. Seule la grille des sites garde l'appui long (mode Modifier ailleurs).
  */
 class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val playing = NowPlayingView(context).apply { attach(host.scope) }
-    private val audio = ComputerAudioView(context).apply { attach(host.scope) }
+
+    private val sites: TileSection = TileSection(
+        context, host, R.string.widget_media_sites, R.drawable.ic_link, R.string.links_add_title,
+        tilesOf = { pages -> pages.firstOrNull { it.media }?.tiles },
+        onAdd = { host.overlays.addLinks { sites.reload() } },
+    )
+
     override val view = LinearLayout(context).asCard(16).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
         playing.bind(true)
         addView(playing, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        addView(audio, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16) })
+        sites.addTo(this, headerTopMarginDp = 8)
     }
 
     private val big get() = placed.size == WidgetSize.L
 
+    init {
+        // L'appui long d'un site n'entre pas en mode Modifier ; celui des autres tailles, si.
+        sites.grid.ownsLongPress = true
+        sites.grid.onTap = { cell, _ -> sites.tileOf(cell)?.let(::open) }
+        sites.grid.onHold = { cell, _ -> sites.tileOf(cell)?.let(::confirmRemove) }
+    }
+
     override fun applySize() {
-        playing.layout(
-            when (placed.size) {
-                WidgetSize.S -> NowPlayingView.Layout.SMALL
-                WidgetSize.L -> NowPlayingView.Layout.STACKED
-                else -> NowPlayingView.Layout.ROW
-            },
-        )
-        audio.visibility = if (big) View.VISIBLE else View.GONE
-        if (big) audio.refresh()
+        playing.layout(if (placed.size == WidgetSize.S) NowPlayingView.Layout.SMALL else NowPlayingView.Layout.ROW)
+        sites.shown = big
+        if (big) host.scope.launch { load() }
     }
 
     override suspend fun load() {
-        if (big) audio.refresh()
+        if (big) sites.load()
+    }
+
+    private fun open(site: DeckTile) =
+        sites.run(site) { result -> result.openedApp?.let { host.main?.showBanner(context.getString(R.string.media_opened_app, it), BANNER_S) } }
+
+    private fun confirmRemove(site: DeckTile) {
+        AlertDialog.Builder(context)
+            .setMessage(context.getString(R.string.widget_media_remove_confirm, site.label))
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.apps_remove) { _, _ ->
+                host.scope.launch {
+                    runCatchingCancellable { BackendClient(context).deck.removeLink(site.id) }
+                        .onSuccess {
+                            IconCache.forget(site.id)
+                            sites.reload()
+                        }
+                        .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
+                }
+            }
+            .showImmersive()
     }
 
     override fun setActive(active: Boolean) = playing.setActive(active)
+
+    private companion object {
+        const val BANNER_S = 4
+    }
 }
 
 /** Tâches du jour, stockées sur l'ordinateur ; le nombre restant va sur la pastille de la barre latérale. */

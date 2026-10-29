@@ -29,7 +29,7 @@ import {
   placeWindow,
   voiceState,
 } from "../os.ts";
-import { keySchema, loadKeys, saveKey, SLOTS, type PersoKey } from "../perso.ts";
+import { keySchema, loadKeys, saveKey, MAX_SLOTS, type PersoKey } from "../perso.ts";
 import type { Layout, WindowTarget } from "../screens.ts";
 import { windowTarget } from "./windows.ts";
 
@@ -198,7 +198,7 @@ export default async function deckRoutes(app: FastifyInstance) {
 
   // --- Touches perso (page Perso du deck), modifiables depuis la tablette et par Claude
 
-  const slotParam = { type: "object", required: ["slot"], properties: { slot: { type: "integer", minimum: 0, maximum: SLOTS - 1 } } };
+  const slotParam = { type: "object", required: ["slot"], properties: { slot: { type: "integer", minimum: 0, maximum: MAX_SLOTS - 1 } } };
 
   /** De quoi remplir l'éditeur de touche : applis installées, raccourcis Apple (Mac), écrans. */
   app.get("/deck/catalog", async () => {
@@ -213,7 +213,7 @@ export default async function deckRoutes(app: FastifyInstance) {
   });
 
   app.get<{ Params: { slot: number } }>("/deck/keys/:slot", { schema: { params: slotParam } }, async (req) => ({
-    key: (await loadKeys())[req.params.slot],
+    key: (await loadKeys())[req.params.slot] ?? null,
   }));
 
   app.put<{ Params: { slot: number }; Body: PersoKey }>(
