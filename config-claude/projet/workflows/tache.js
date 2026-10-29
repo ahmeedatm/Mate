@@ -172,7 +172,7 @@ const fin = alertes.map((a) => `⚠️ ${a}`)
 const message = ship.essai
   ? [
       `C'est fini. Essai ${ship.essai} à installer (MR !${ship.mr}).`,
-      "Installer : Réglages > Mises à jour > Rechercher, « Mettre à jour » sur Companion essai, puis « Ouvrir l'essai ».",
+      `Installer : Réglages > Mises à jour > Rechercher, section « Essais de MR », « Mettre à jour » sur la ligne « !${ship.mr} … », puis « Ouvrir l'essai » (backend de l'ordinateur basculé seul si la MR le touche).`,
       `Tester : ${code.aTester}`,
       ...fin,
     ].join('\n')
