@@ -5,15 +5,46 @@ import androidx.annotation.StringRes
 import com.unowhy.unomate.Mode
 import com.unowhy.unomate.Prefs
 import com.unowhy.unomate.R
+import org.json.JSONObject
+import java.util.Calendar
 
 /** Taille de texte la plus grande de Réglages > Accessibilité (`SettingsFragment.TEXT_SIZES`). */
 private const val MAX_TEXT_SCALE = 1.5f
 
 /**
  * Un widget d'un écran du persona : taille et case. `page` : pour le widget Touches, titre de la page de touches nommée
- * (posée par le compagnon, backend/src/demo.ts) dont il montre toutes les touches.
+ * (posée par le compagnon, backend/src/demo.ts) dont il montre toutes les touches. `config` : réglages calculés au choix
+ * du persona à partir de l'heure du choix (une échéance relative, par exemple), null s'il n'y en a pas.
  */
-class Slot(val type: WidgetType, val size: WidgetSize, val col: Int, val row: Int, val page: String? = null)
+class Slot(
+    val type: WidgetType,
+    val size: WidgetSize,
+    val col: Int,
+    val row: Int,
+    val page: String? = null,
+    val config: ((now: Long) -> JSONObject)? = null,
+)
+
+/** Étapes de clôture de Nour : les deux premières déjà faites, échéance dans deux jours à 18:00. */
+private fun closingChecklist(now: Long): JSONObject {
+    val steps = listOf(
+        "Rapprochements bancaires",
+        "Lettrage des comptes clients",
+        "Écritures de régularisation",
+        "Contrôle de la balance",
+        "Déclaration de TVA",
+        "Envoi du dossier au cabinet",
+    ).mapIndexed { i, text -> ChecklistStep(text, done = i < 2) }
+    val due = Calendar.getInstance().apply {
+        timeInMillis = now
+        add(Calendar.DAY_OF_MONTH, 2)
+        set(Calendar.HOUR_OF_DAY, 18)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+    return Checklist.config("", due, steps)
+}
 
 /** Un écran du persona (un profil de la barre) : son nom et ses widgets. */
 class Profile(@StringRes val name: Int, val slots: List<Slot>)
@@ -39,17 +70,19 @@ enum class Persona(
 ) {
     NOUR("nour", R.string.persona_nour, R.string.persona_nour_desc, listOf(
         Profile(R.string.demo_screen_excel, listOf(
-            Slot(WidgetType.KEYS, WidgetSize.XL, 0, 0, page = "Excel"),
-            Slot(WidgetType.KEYS, WidgetSize.XL, 0, 2, page = "Libellés"),
+            Slot(WidgetType.KEYS, WidgetSize.L, 0, 0, page = "Excel"),
+            Slot(WidgetType.KEYS, WidgetSize.L, 2, 0, page = "Libellés"),
+            Slot(WidgetType.OPEN, WidgetSize.XL, 0, 2),
         )),
         Profile(R.string.demo_screen_files, listOf(
-            Slot(WidgetType.KEYS, WidgetSize.XL, 0, 0, page = "Dossiers clients"),
+            Slot(WidgetType.KEYS, WidgetSize.L, 0, 0, page = "Dossiers clients"),
+            Slot(WidgetType.APPS, WidgetSize.L, 2, 0),
             Slot(WidgetType.OPEN, WidgetSize.XL, 0, 2),
         )),
         Profile(R.string.profile_first, listOf(
-            Slot(WidgetType.TASKS, WidgetSize.T, 0, 0),
+            Slot(WidgetType.CHECKLIST, WidgetSize.T, 0, 0, config = ::closingChecklist),
             Slot(WidgetType.AGENDA, WidgetSize.L, 2, 0),
-            Slot(WidgetType.NEXT, WidgetSize.L, 2, 2),
+            Slot(WidgetType.TASKS, WidgetSize.L, 2, 2),
         )),
     ), theme = "REGISTRE"),
     GWEN("gwen", R.string.persona_gwen, R.string.persona_gwen_desc, listOf(
@@ -125,12 +158,18 @@ enum class Persona(
      * l'ordinateur `computerId` (`pages` : titre de la page nommée vers ses touches ; les touches d'un widget sont rangées
      * par ordinateur, voir [KeyRef.putFor]).
      */
-    fun layout(names: List<String>, callName: String, pages: Map<String, List<KeyRef>>, computerId: String?): HomeLayout {
+    fun layout(
+        names: List<String>,
+        callName: String,
+        pages: Map<String, List<KeyRef>>,
+        computerId: String?,
+        now: Long = System.currentTimeMillis(),
+    ): HomeLayout {
         require(names.size == profiles.size)
         val layout = HomeLayout(mutableListOf(), mutableListOf())
         profiles.forEachIndexed { page, profile ->
             val items = profile.slots.map { slot ->
-                Placed(slot.type, slot.size, page, slot.col, slot.row).also {
+                Placed(slot.type, slot.size, page, slot.col, slot.row, slot.config?.invoke(now) ?: JSONObject()).also {
                     if (slot.type == WidgetType.KEYS) KeyRef.putFor(it.config, computerId, pages[slot.page].orEmpty())
                 }
             }

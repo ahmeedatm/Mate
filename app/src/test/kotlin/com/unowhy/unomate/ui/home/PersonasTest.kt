@@ -56,7 +56,11 @@ class PersonasTest {
     fun `les ecrans de chaque persona`() {
         val names = Persona.entries.associateWith { p -> p.profiles.map { it.slots.map { s -> s.type } } }
         assertEquals(
-            listOf(listOf(WidgetType.KEYS, WidgetType.KEYS), listOf(WidgetType.KEYS, WidgetType.OPEN), listOf(WidgetType.TASKS, WidgetType.AGENDA, WidgetType.NEXT)),
+            listOf(
+                listOf(WidgetType.KEYS, WidgetType.KEYS, WidgetType.OPEN),
+                listOf(WidgetType.KEYS, WidgetType.APPS, WidgetType.OPEN),
+                listOf(WidgetType.CHECKLIST, WidgetType.AGENDA, WidgetType.TASKS),
+            ),
             names[Persona.NOUR],
         )
         assertEquals(3, Persona.GWEN.profiles.size)
@@ -122,6 +126,34 @@ class PersonasTest {
         assertTrue(shown.flatten().all { it.symbol == "lock" })
         val sacha = layout(Persona.SACHA).widgets.filter { it.page == 0 && it.type == WidgetType.KEYS }.map { w -> KeyRef.listFor(w.config, "ordi").map { it.label } }
         assertEquals(listOf(pages["Git"], pages["Tests"], pages["Déploiement"]).map { p -> p!!.map { it.label } }, sacha)
+    }
+
+    @Test
+    fun `Nour a une checklist de cloture a six etapes, echeance dans deux jours a 18 heures`() {
+        val now = java.util.Calendar.getInstance().apply { set(2026, java.util.Calendar.OCTOBER, 29, 21, 30, 0) }.timeInMillis
+        val layout = Persona.NOUR.layout(Persona.NOUR.profiles.map { it.name.toString() }, "Réunion", pages, "ordi", now)
+        val widget = layout.widgets.single { it.type == WidgetType.CHECKLIST }
+        assertEquals(2, widget.page)
+        val list = Checklist.read(widget.config)
+        assertEquals(6, list.total)
+        assertEquals(listOf(true, true, false, false, false, false), list.steps.map { it.done })
+        assertTrue(list.dueMs!! > now)
+        assertEquals(Countdown.Days(2), list.countdown(now))
+        val due = java.util.Calendar.getInstance().apply { timeInMillis = list.dueMs!! }
+        assertEquals(18, due.get(java.util.Calendar.HOUR_OF_DAY))
+        assertEquals(31, due.get(java.util.Calendar.DAY_OF_MONTH))
+        // L'écran tient sur la grille 4 × 4, sans case libre : 8 + 4 + 4 cases = 16.
+        val onHome = layout.on(2)
+        assertEquals(COLS * ROWS, onHome.sumOf { it.size.w * it.size.h })
+        // Les autres personas n'ont pas de checklist, et deux appels ne partagent pas la config.
+        assertTrue((Persona.entries - Persona.NOUR).none { WidgetType.CHECKLIST in types(it) })
+        assertEquals(6, Checklist.read(layout.widgets.single { it.type == WidgetType.CHECKLIST }.config).total)
+    }
+
+    @Test
+    fun `les ecrans de Nour remplissent la grille`() {
+        val layout = layout(Persona.NOUR)
+        for (page in 0..2) assertEquals("écran $page", COLS * ROWS, layout.on(page).sumOf { it.size.w * it.size.h })
     }
 
     @Test
