@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import com.unowhy.companion.AnimFamily
 import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.R
@@ -387,7 +388,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     /**
      * Affiche le profil [index] et charge ses widgets (le chargement du profil quitté est annulé).
-     * `animate` : la grille arrive dans le sens du déplacement dans la barre (ordre des profils) ; le chargement attend
+     * `animate` : les widgets arrivent un à un (animateIn), ou la grille dans le sens du déplacement dans la barre si
+     * l'arrivée des widgets est coupée ; le chargement attend
      * la fin du glissement : des widgets qui se redessinent pendant ce temps feraient recalculer le calque à chaque image.
      */
     fun showProfile(index: Int, animate: Boolean = true) {
@@ -398,7 +400,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         val changed = index != page
         displayProfile(index)
         val slide = animate && changed
-        if (slide) Look.sharedAxis(grid, fromBelow = move >= 0)
+        // Arrivée des widgets active (Réglages > Animations) : ils arrivent un à un, comme en venant d'un autre écran,
+        // sans glisser la grille entière par-dessus (son calque serait redessiné à chaque image). Sinon : la grille glisse.
+        if (slide && Look.on(requireContext(), AnimFamily.HOME)) animateIn() else if (slide) Look.sharedAxis(grid, fromBelow = move >= 0)
         profileLoad = scope.launch {
             if (slide) delay(Look.NAV_SETTLE_MS)
             shownWidgets().forEach { it.load() }
