@@ -74,6 +74,7 @@ import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.home.Demo
 import com.unowhy.companion.ui.home.Down
+import com.unowhy.companion.ui.home.FlowBandView
 import com.unowhy.companion.ui.home.HomeLayout
 import com.unowhy.companion.ui.home.LinkWatch
 import com.unowhy.companion.ui.notificationBannerText
@@ -99,6 +100,7 @@ class MainActivity : AppCompatActivity() {
     private var current = Mode.HOME
     /** Barre fixe à gauche : Parler, profils, outils, ordinateur, Réglages. */
     private lateinit var nav: Navigation
+    private lateinit var flow: FlowBandView
     private lateinit var documentPanel: DocumentPanel
     private lateinit var banner: Banner
     private lateinit var alerts: TabletAlerts
@@ -181,6 +183,9 @@ class MainActivity : AppCompatActivity() {
             onSwipe = { delta -> railStep(delta) }
             canSwipe = { delta -> railCanStep(delta) }
         }
+        // Tubes du Rétro derrière tous les écrans : voilés derrière les widgets sans fond de l'Accueil affiché.
+        flow = findViewById(R.id.flow)
+        flow.hidden = { homeFragment()?.bareWidgets().orEmpty() }
         wakeRail()
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
         wake = WakeWord(this, findViewById(R.id.wake_mic)) { voice.start() }
@@ -845,7 +850,11 @@ class MainActivity : AppCompatActivity() {
         // Kiosque : l'Accueil arrive par ses widgets (Look.enterSpring), pas en glissant tout entier par-dessus.
         if (mode == Mode.HOME && Look.cascadeOnly(this)) return
         Look.sharedAxis(into, fromBelow = nav.lastMove >= 0)
+        flowTravel(nav.lastMove)
     }
+
+    /** Écran ou profil voisin dans la barre ([move] > 0 : plus bas) : les tubes du Rétro défilent avec lui. */
+    fun flowTravel(move: Int) = flow.travel(move)
 
     /** Entrée de profil de la barre : l'Accueil, sur ce profil (créé au besoin : sa vue doit exister avant). */
     private fun showProfile(page: Int) {

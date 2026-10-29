@@ -29,7 +29,6 @@ import com.unowhy.companion.ui.home.DayLineWidget
 import com.unowhy.companion.ui.home.DeckOverlays
 import com.unowhy.companion.ui.home.DeckPagesCache
 import com.unowhy.companion.ui.home.Down
-import com.unowhy.companion.ui.home.FlowBandView
 import com.unowhy.companion.ui.home.HomeHost
 import com.unowhy.companion.ui.home.HomeLayout
 import com.unowhy.companion.ui.home.HomeWidget
@@ -137,12 +136,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         }
         build()
 
-        // Rétro : les tubes passent derrière les widgets, voilés derrière ceux sans fond (où qu'ils soient placés) ;
-        // les textes foncés sont détourés d'un halo pour rester lisibles dessus.
+        // Rétro : les tubes passent derrière les widgets, voilés derrière ceux sans fond (bareWidgets) ; les textes foncés
+        // sont détourés d'un halo pour rester lisibles dessus.
         if (themeBool(requireContext(), R.attr.c_flow)) grid.afterLayout = { Look.haloTexts(grid) }
-        view.findViewById<FlowBandView>(R.id.home_flow).hidden = {
-            widgets.mapNotNull { (placed, widget) -> widget.view.takeIf { placed.page == page && placed.type.bare } }
-        }
         // Le panneau document peut réduire la largeur de moitié : 2 colonnes, la page défile.
         scroll.addOnLayoutChangeListener { _, l, t, r, b, _, _, _, _ ->
             val narrow = r - l < dp(880)
@@ -403,11 +399,16 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         // Arrivée des widgets active (Réglages > Animations) : ils arrivent un à un, comme en venant d'un autre écran,
         // sans glisser la grille entière par-dessus (son calque serait redessiné à chaque image). Sinon : la grille glisse.
         if (slide && Look.on(requireContext(), AnimFamily.HOME)) animateIn() else if (slide) Look.sharedAxis(grid, fromBelow = move >= 0)
+        if (slide) main?.flowTravel(move)
         profileLoad = scope.launch {
             if (slide) delay(Look.NAV_SETTLE_MS)
             shownWidgets().forEach { it.load() }
         }
     }
+
+    /** Widgets sans fond du profil affiché (héros, ligne du jour) : les tubes du Rétro passent voilés derrière (FlowBandView). */
+    fun bareWidgets(): List<View> =
+        widgets.mapNotNull { (placed, widget) -> widget.view.takeIf { placed.page == page && placed.type.bare } }
 
     /** Titre, pastilles et widgets actifs, sans rien relire de l'ordinateur. */
     private fun displayProfile(index: Int) {
