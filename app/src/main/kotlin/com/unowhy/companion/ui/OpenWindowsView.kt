@@ -357,7 +357,8 @@ class OpenWindowsView @JvmOverloads constructor(
         setOnDragListener { v, e ->
             val moved = (e.localState as? Drag)?.window?.page
             when (e.action) {
-                DragEvent.ACTION_DRAG_STARTED -> moved != null && moved != target.id
+                // Page provisoire (tout juste créée, pas encore relue) : pas encore déplaçable.
+                DragEvent.ACTION_DRAG_STARTED -> moved != null && moved != NEW_PAGE && moved != target.id && target.id != NEW_PAGE
                 DragEvent.ACTION_DRAG_ENTERED -> true.also { v.isPressed = true }
                 DragEvent.ACTION_DRAG_EXITED, DragEvent.ACTION_DRAG_ENDED -> true.also { v.isPressed = false }
                 DragEvent.ACTION_DROP -> true.also {
@@ -372,7 +373,9 @@ class OpenWindowsView @JvmOverloads constructor(
     private fun reorderPage(id: Int, target: ComputerPage) {
         val current = shown ?: return
         val page = current.pages.firstOrNull { it.id == id } ?: return
-        val to = current.pages.indexOf(target)
+        // Par numéro : la tuile visée a pu changer depuis (page affichée), elle ne serait plus « égale ».
+        val to = current.pages.indexOfFirst { it.id == target.id }
+        if (to < 0) return
         val pages = current.pages.toMutableList().apply {
             remove(page)
             add(to, page)
