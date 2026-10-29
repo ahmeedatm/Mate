@@ -390,6 +390,18 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "essai du backend",
+      run: async () => {
+        const state = await call("GET", "/companion/backend");
+        expectStatus(state, 200, "/companion/backend");
+        expect(state.json.mode === "origin" && typeof state.json.packaged === "boolean", `état inattendu : ${JSON.stringify(state.json)}`);
+        // Rien à restaurer : ni changement, ni redémarrage.
+        const origin = await call("POST", "/companion/backend/origin", {});
+        expectStatus(origin, 200, "/companion/backend/origin");
+        expect(origin.json.changed === false, "le compagnon dit avoir restauré un backend");
+      },
+    },
+    {
       name: "visualiseur /camera",
       run: async () => {
         const page = await call("GET", "/camera");

@@ -15,6 +15,10 @@ import { build } from "esbuild";
  *   ../dist/Compagnon-Unowhy-Windows.exe   installeur NSIS (installer/windows/compagnon.nsi, makensis requis), node.exe x64
  *   ../dist/Compagnon-Unowhy-Mac.zip       « Compagnon Unowhy.app » (installer/mac/), node Apple Silicon et Intel
  * `npm run package -- windows` ou `-- mac` : un seul des deux. Version : tag de la CI (CI_COMMIT_TAG), sinon 0.0.0.
+ *
+ * `npm run package -- essai` : seulement le backend de chaque plateforme, sans node ni lanceur Windows, en
+ * ../dist/backend-windows.tar.gz et backend-mac.tar.gz. C'est ce que la tablette envoie à l'ordinateur pour essayer le
+ * backend d'une MR (src/essai-backend.ts). Rien n'est téléchargé.
  */
 
 // Version figée (celle de latest-v22.x au 26/10/2026) : deux paquets faits à des dates différentes embarquent le même node.
@@ -99,7 +103,7 @@ ${body}
 `;
 }
 
-async function stage(platform: "windows" | "mac", sums: string): Promise<string> {
+async function stage(platform: "windows" | "mac", sums: string, essai = false): Promise<string> {
   const root = path.join(out, platform, FOLDER);
   // Mac : tout le compagnon dans l'appli ; l'extension reste à côté (le Finder n'ouvre pas une appli pour y choisir un dossier).
   const bundle = path.join(root, `${FOLDER}.app`, "Contents");
@@ -134,20 +138,32 @@ async function stage(platform: "windows" | "mac", sums: string): Promise<string>
   for (const f of CONFIG) copy(path.join(backend, "config", f), path.join(dest, "config", f));
 
   if (platform === "windows") {
-    for (const f of ["UnowhyHelper.exe", "UnowhyCompanion.exe"])
+    // Essai : ni le lanceur (verrouillé tant que le compagnon tourne) ni node, déjà sur l'ordinateur.
+    for (const f of essai ? ["UnowhyHelper.exe"] : ["UnowhyHelper.exe", "UnowhyCompanion.exe"])
       copy(path.join(backend, "src", "win", f), path.join(dest, "src", "win", f));
     copy(path.join(backend, "scripts", "firewall-windows.ps1"), path.join(dest, "scripts", "firewall-windows.ps1"));
     copy(path.join(backend, "assets", "compagnon.ico"), path.join(dest, "assets", "compagnon.ico"));
-    extract(await nodeArchive(sums, "-win-x64.zip"), "node.exe", path.join(dest, "node", "node.exe"));
+    if (!essai) extract(await nodeArchive(sums, "-win-x64.zip"), "node.exe", path.join(dest, "node", "node.exe"));
   } else {
-    fs.mkdirSync(path.join(bundle, "MacOS"), { recursive: true });
-    fs.writeFileSync(path.join(bundle, "Info.plist"), infoPlist());
-    copy(path.join(backend, "installer", "mac", "launcher.sh"), path.join(bundle, "MacOS", FOLDER));
-    copy(path.join(backend, "assets", "compagnon.icns"), path.join(bundle, "Resources", "compagnon.icns"));
     copy(path.join(backend, "src", "mac", "NowPlaying.dylib"), path.join(dest, "src", "mac", "NowPlaying.dylib"));
-    for (const arch of ["arm64", "x64"]) {
-      extract(await nodeArchive(sums, `-darwin-${arch}.tar.gz`), "bin/node", path.join(dest, "node", `darwin-${arch}`, "node"));
+    if (!essai) {
+      fs.mkdirSync(path.join(bundle, "MacOS"), { recursive: true });
+      fs.writeFileSync(path.join(bundle, "Info.plist"), infoPlist());
+      copy(path.join(backend, "installer", "mac", "launcher.sh"), path.join(bundle, "MacOS", FOLDER));
+      copy(path.join(backend, "assets", "compagnon.icns"), path.join(bundle, "Resources", "compagnon.icns"));
+      for (const arch of ["arm64", "x64"]) {
+        extract(await nodeArchive(sums, `-darwin-${arch}.tar.gz`), "bin/node", path.join(dest, "node", `darwin-${arch}`, "node"));
+      }
     }
+  }
+
+  if (essai) {
+    const archive = path.join(out, `backend-${platform}.tar.gz`);
+    fs.rmSync(archive, { force: true });
+    // COPYFILE_DISABLE : pas de fichiers ._* du Mac dans l'archive.
+    execFileSync("tar", ["-czf", archive, "-C", dest, "."], { env: { ...process.env, COPYFILE_DISABLE: "1" } });
+    fs.rmSync(path.join(out, platform), { recursive: true, force: true });
+    return archive;
   }
 
   // Extension du navigateur (onglets et page Média sur la tablette) : à charger depuis ce dossier, mode développeur.
@@ -179,13 +195,14 @@ async function stage(platform: "windows" | "mac", sums: string): Promise<string>
 
 async function main() {
   if (process.platform === "win32") throw new Error("À lancer sur le Mac ou sous Linux (zip, unzip, tar, makensis)");
-  const sums = (await download(`https://nodejs.org/dist/${NODE_VERSION}/SHASUMS256.txt`)).toString("utf8");
-  console.log(`Node : ${sums.match(/node-(v[\d.]+)-/)?.[1] ?? "?"}`);
   // Un job CI par plateforme : artefacts sous la limite de 100 Mo de GitLab.
   const only = process.argv[2];
-  if (only && only !== "windows" && only !== "mac") throw new Error(`Plateforme « ${only} » : windows ou mac`);
-  for (const platform of (["windows", "mac"] as const).filter((p) => !only || p === only)) {
-    const file = await stage(platform, sums);
+  const essai = only === "essai";
+  if (only && !essai && only !== "windows" && only !== "mac") throw new Error(`Plateforme « ${only} » : windows, mac ou essai`);
+  const sums = essai ? "" : (await download(`https://nodejs.org/dist/${NODE_VERSION}/SHASUMS256.txt`)).toString("utf8");
+  if (!essai) console.log(`Node : ${sums.match(/node-(v[\d.]+)-/)?.[1] ?? "?"}`);
+  for (const platform of (["windows", "mac"] as const).filter((p) => essai || !only || p === only)) {
+    const file = await stage(platform, sums, essai);
     console.log(`✓ ${path.relative(repo, file)} (${Math.round(fs.statSync(file).size / 1e6)} Mo)`);
   }
 }

@@ -26,15 +26,17 @@ Le serveur MCP `tablette` (`.mcp.json`) et le `CLAUDE.md` sont déjà versionné
 
 Mac, `glab` connecté (`glab auth login --hostname gitlab.unowhy.dev`), `jq`, Node 22, JDK 21, SDK Android
 (`~/Library/Android/sdk`), Orca pour les worktrees du workflow `tache`. L'essai sur la
-tablette passe par le compagnon installé sur ton Mac (`docs/developpement.md`, section Release).
+tablette passe par le registre de paquets du projet, pas par ton Mac (`docs/developpement.md`, section Release).
+Pour retirer l'essai d'une MR fusionnée ou abandonnée : `GITLAB_TOKEN` (jeton personnel, scope `api`) dans l'environnement.
 
 ## Utiliser
 
 - **Demander une tâche** : décrire la feature ou le bug. Claude pose des questions jusqu'à ce que le besoin
   soit clair, résume, attend ton « go ». Ensuite il travaille seul jusqu'à l'essai publié
   (`.claude/rules/autonomie-hackathon.md`).
-- **Tester** : sur la tablette, Réglages > Mises à jour > Rechercher, « Mettre à jour » sur Companion essai.
-  Un retour = une correction sur la même branche, nouvel essai.
+- **Tester** : sur la tablette, Réglages > Mises à jour > Rechercher, choisir la MR dans les essais, puis
+  « Ouvrir l'essai ». Si la MR touche le backend, celui de l'ordinateur est remplacé seul (compagnon installé par
+  paquet) et remis à l'origine par « Revenir à la stable ». Un retour = une correction sur la même branche, nouvel essai.
 - **Fusionner** : répondre « go ». Jamais de fusion sans ça.
 - **`/ship`** : livre à la main le travail en cours (vérif locale, commit, push, MR, pipeline, essai).
   Le hook Stop le rappelle s'il reste du travail non poussé.
@@ -47,6 +49,6 @@ tablette passe par le compagnon installé sur ton Mac (`docs/developpement.md`, 
   l'installer si tu préfères valider chaque action (supprimer `.claude/rules/autonomie-hackathon.md`).
 - Le workflow `tache` demande l'outil Workflow de Claude Code. Sans lui, Claude code dans la session puis
   lance `/ship`.
-- Un seul essai à la fois sur la tablette : le dernier publié remplace le précédent, quelle que soit la
-  personne.
+- Plusieurs MR peuvent avoir un essai publié (une entrée par MR), mais une seule appli d'essai est installée
+  sur la tablette : choisir une MR remplace la précédente.
 - `main` est protégée : force push et push direct sur `main` sont bloqués par les réglages.
