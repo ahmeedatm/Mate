@@ -129,9 +129,6 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
         /** Cotes du thème : grandes en Contraste élevé (`c_big_keys`). */
         fun metrics(context: Context) = TileMetrics.of(themeBool(context, R.attr.c_big_keys))
 
-        /** Marge autour d'un symbole dans sa pastille ronde (touche sans couleur). */
-        private const val SYMBOL_PAD_DP = 12
-
         /**
          * Vue d'une case, au style Cadran de `KeysWidget.tile` : sans cadre, icône de 52 dp à coins arrondis, libellé
          * de 13 sp, appui sur ressort. `item_tile` fait 136 dp : ici 100 dp, assez pour deux lignes de libellé. [metrics]
@@ -218,7 +215,8 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
                 }
                 icon.imageTintList = android.content.res.ColorStateList.valueOf(ink)
                 if (plain) icon.setBackgroundResource(R.drawable.round_bg)
-                val pad = context.dp(if (plain) SYMBOL_PAD_DP else SYMBOL_PAD_DP + 8)
+                // Même marge sur plaque couleur que sans : l'icône garde plus de la moitié de la plaque.
+                val pad = TileMetrics.symbolPadFor(plate.layoutParams.width)
                 icon.setPadding(pad, pad, pad, pad)
                 initial.visibility = View.GONE
                 return
