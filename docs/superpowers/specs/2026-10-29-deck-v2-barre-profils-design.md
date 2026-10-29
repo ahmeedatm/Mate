@@ -59,7 +59,7 @@ De haut en bas :
 - Pastilles d'information gardées : nombre de tâches non faites sur Accueil (comme `Rail.setPendingTasks`).
 - **Repos** (même déclencheur que le repos de l'Accueil) : la barre passe à 40 % d'opacité, les libellés s'effacent, rien ne disparaît ; un toucher la ravive.
 - Clavier ouvert : la barre reste (elle ne gêne pas la saisie) sauf si `KeyboardControl` a besoin de la place ; à trancher par le builder.
-- Changer de profil : toucher son entrée dans la barre. Le balayage horizontal entre profils reste, en geste secondaire. La liste des profils (créer, renommer, réordonner, supprimer, `ProfilesDialog`) s'ouvre par **appui long sur une entrée de profil** de la barre ; elle reste aussi dans Réglages.
+- Changer de profil : toucher son entrée dans la barre. Le balayage entre profils reste, en geste secondaire : vertical depuis le 29/10 (vers le haut : profil suivant, comme l'animation de changement de profil). La liste des profils (créer, renommer, réordonner, supprimer, `ProfilesDialog`) s'ouvre par **appui long sur une entrée de profil** de la barre ; elle reste aussi dans Réglages.
 
 ### Rôles des profils (mon choix)
 

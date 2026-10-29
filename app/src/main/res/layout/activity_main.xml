@@ -16,6 +16,7 @@
     <LinearLayout
         android:id="@+id/rail"
         android:layout_width="96dp"
+        android:clipChildren="false"
         android:layout_height="match_parent"
         android:background="?attr/c_rail"
         android:gravity="center_horizontal"
@@ -24,10 +25,11 @@
         android:paddingBottom="16dp">
 
         <!-- Parler (ajouté en tête par ProfileRail), puis les entrées (profils, « Plus », outils) ; la pastille de
-             l'élément choisi glisse derrière elles. -->
+             l'élément choisi glisse derrière elles, et jusqu'à la cloche et la roue du pied (pas de découpe). -->
         <FrameLayout
             android:id="@+id/rail_items"
             android:layout_width="80dp"
+            android:clipChildren="false"
             android:layout_height="0dp"
             android:layout_weight="1">
 
@@ -46,8 +48,8 @@
                 android:orientation="vertical" />
         </FrameLayout>
 
-        <!-- Cloche : notifications de l'ordinateur (Depuis l'ordi > Notifications) ; pastille : arrivées depuis la
-             dernière ouverture. -->
+        <!-- Cloche : notifications de l'ordinateur (Depuis l'ordi > Notifications), en texte plein quand elles sont
+             affichées ; pastille : arrivées depuis la dernière ouverture. -->
         <FrameLayout
             android:layout_width="48dp"
             android:layout_height="48dp">
@@ -58,7 +60,8 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:contentDescription="@string/notif_open"
-                android:src="@drawable/ic_notifications" />
+                android:src="@drawable/ic_notifications"
+                app:tint="@color/rail_profile_content" />
 
             <View
                 android:id="@+id/notif_dot"
@@ -151,7 +154,8 @@
         android:layout_weight="1">
 
         <!-- paddingTop : la ligne du haut à droite (lecture en cours, heure, batterie) ne chevauche pas les cartes. -->
-        <FrameLayout
+        <!-- Balayage vertical entre les entrées de la barre (ui/RailSwipeLayout). -->
+        <com.unowhy.companion.ui.RailSwipeLayout
             android:id="@+id/mode_container"
             android:paddingTop="20dp"
             android:defaultFocusHighlightEnabled="false"
