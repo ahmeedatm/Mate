@@ -30,6 +30,8 @@ import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
+import com.unowhy.companion.audio.Speaker
+import com.unowhy.companion.audio.VoiceChoice
 import com.unowhy.companion.device.Accessibility
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
@@ -397,6 +399,60 @@ class SettingsFragment : Fragment() {
             isChecked = Prefs.readBanners(ctx)
             setOnCheckedChangeListener { _, checked -> Prefs.setReadBanners(ctx, checked) }
         }
+        Speaker.whenStarted { if (getView() === view) setUpVoice(view) }
+    }
+
+    /**
+     * Voix et débit de la synthèse vocale (audio/Speaker), une fois le moteur démarré : une pastille par voix française
+     * hors ligne, nommée par son rang (le nom du moteur ne dit rien d'utile) ; toucher enregistre et fait écouter.
+     */
+    private fun setUpVoice(view: View) {
+        val ctx = requireContext()
+        val hint = view.findViewById<TextView>(R.id.settings_voice_hint)
+        if (!Speaker.ready) {
+            hint.setText(R.string.voice_unavailable)
+            return
+        }
+        val voices = Speaker.voices
+        val voiceRow = view.findViewById<LinearLayout>(R.id.settings_voices)
+        if (voices.isEmpty()) {
+            hint.setText(R.string.voice_none_offline)
+        } else {
+            hint.setText(R.string.voice_hint)
+            val saved = VoiceChoice.voiceToApply(Prefs.ttsVoice(ctx), voices)
+            val choices = listOf<String?>(null) + voices
+            choices.forEachIndexed { index, name ->
+                val label = if (name == null) getString(R.string.voice_auto) else getString(R.string.voice_numbered, index)
+                addChoice(voiceRow, label, name == saved) {
+                    Prefs.setTtsVoice(ctx, name)
+                    Speaker.preview(ctx, name, Prefs.ttsRate(ctx))
+                }
+            }
+            view.findViewById<View>(R.id.settings_voices_scroll).visibility = View.VISIBLE
+        }
+        val rateRow = view.findViewById<LinearLayout>(R.id.settings_voice_rates)
+        val rate = VoiceChoice.rateChoice(Prefs.ttsRate(ctx))
+        for ((value, label) in VoiceChoice.RATES.zip(VOICE_RATE_LABELS)) {
+            addChoice(rateRow, getString(label), value == rate) {
+                Prefs.setTtsRate(ctx, value)
+                Speaker.preview(ctx, Prefs.ttsVoice(ctx), value)
+            }
+        }
+        rateRow.visibility = View.VISIBLE
+        view.findViewById<View>(R.id.settings_voice_rate_title).visibility = View.VISIBLE
+    }
+
+    /** Pastille d'un choix exclusif de la ligne : la toucher la sélectionne seule, puis lance [onPick] (même choix : réécoute). */
+    private fun addChoice(row: LinearLayout, label: String, selected: Boolean, onPick: () -> Unit) {
+        val chip = Button(requireContext(), null, 0, R.style.Chip).apply {
+            text = label
+            isSelected = selected
+            setOnClickListener { button ->
+                for (i in 0 until row.childCount) row.getChildAt(i).isSelected = row.getChildAt(i) === button
+                onPick()
+            }
+        }
+        row.addView(chip, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(48), 1f).apply { if (row.childCount > 0) marginStart = dp(10) })
     }
 
     private fun setUpTablet() {
@@ -895,5 +951,8 @@ class SettingsFragment : Fragment() {
             1.3f to R.string.a11y_size_larger,
             1.5f to R.string.a11y_size_largest,
         )
+
+        /** Noms des débits de VoiceChoice.RATES, dans le même ordre. */
+        val VOICE_RATE_LABELS = listOf(R.string.voice_rate_slow, R.string.voice_rate_soft, R.string.voice_rate_normal)
     }
 }

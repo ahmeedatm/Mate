@@ -1,6 +1,7 @@
 package com.unowhy.companion
 
 import android.content.Context
+import com.unowhy.companion.audio.VoiceChoice
 
 /** Réglages locaux : ordinateur piloté (voir Computers), luminosité, thème, kiosque. Aucune clé d'API ici. */
 object Prefs {
@@ -24,6 +25,8 @@ object Prefs {
     private const val KEY_LEGIBLE_FONT = "legible_font"
     private const val KEY_REDUCE_MOTION = "reduce_motion"
     private const val KEY_READ_BANNERS = "read_banners"
+    private const val KEY_TTS_VOICE = "tts_voice"
+    private const val KEY_TTS_RATE = "tts_rate"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -152,6 +155,20 @@ object Prefs {
 
     fun setReadBanners(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_READ_BANNERS, value).apply()
+    }
+
+    /** Accessibilité : voix de la synthèse vocale (nom donné par le moteur) ; null = automatique (celle du moteur). */
+    fun ttsVoice(context: Context): String? = prefs(context).getString(KEY_TTS_VOICE, null)
+
+    fun setTtsVoice(context: Context, value: String?) {
+        prefs(context).edit().apply { if (value == null) remove(KEY_TTS_VOICE) else putString(KEY_TTS_VOICE, value) }.apply()
+    }
+
+    /** Accessibilité : débit de la synthèse vocale (1 = celui du moteur). 0,9 par défaut (VoiceChoice.DEFAULT_RATE). */
+    fun ttsRate(context: Context): Float = prefs(context).getFloat(KEY_TTS_RATE, VoiceChoice.DEFAULT_RATE)
+
+    fun setTtsRate(context: Context, value: Float) {
+        prefs(context).edit().putFloat(KEY_TTS_RATE, value).apply()
     }
 
     /** MR de l'essai installé par la stable (0 : aucun, ou installé autrement) et son backend : « Ouvrir l'essai » les relit. */
