@@ -164,7 +164,10 @@ describe("publication des essais par MR", () => {
   });
 
   it("refuse un essai au paquet de la stable, une seule archive backend, un jeton faux", async () => {
-    await assert.rejects(publish(["--essai", "111", dist("0.2.2-essai.13", { pkg: "com.unowhy.companion" }), out()]), /un essai a le paquet/);
+    await assert.rejects(
+      publish(["--essai", "111", dist("0.2.2-essai.13", { pkg: "com.unowhy.companion" }), out()]),
+      /un essai a le paquet/,
+    );
     await assert.rejects(
       publish(["--essai", "111", dist("0.2.2-essai.13", { backend: ["mac"] }), out()]),
       /une archive backend par plateforme/,

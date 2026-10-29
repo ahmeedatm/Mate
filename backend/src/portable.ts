@@ -87,7 +87,8 @@ const macPlist = (label: string) => path.join(home, "Library", "LaunchAgents", `
 
 // --- Lancement au démarrage
 
-const macAgentIsOurs = (label: string) => fs.existsSync(macPlist(label)) && fs.readFileSync(macPlist(label), "utf8").includes(xml(macExecutable()));
+const macAgentIsOurs = (label: string) =>
+  fs.existsSync(macPlist(label)) && fs.readFileSync(macPlist(label), "utf8").includes(xml(macExecutable()));
 const runIsOurs = async (value: string) => {
   const r = await sh("reg", ["query", RUN_KEY, "/v", value]);
   return r.ok && r.out.includes(windowsRunCommand(appPath!));
