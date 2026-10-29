@@ -85,6 +85,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private val headers = HashMap<Column, TextView>()
     private val columns = HashMap<Column, LinearLayout>()
     private val status = TextView(context)
+    private val privateButton = Button(context, null, 0, R.style.Chip)
     private val rows = LinkedHashMap<String, View>()
     private var signature: List<Any?> = emptyList()
     private val clock = SimpleDateFormat("H 'h' mm", Locale.FRENCH)
@@ -105,14 +106,14 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 addView(quota, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
                 // Mode privé : pour le direct, rien de ce que fait l'agent ne s'affiche (commandes, questions, résumés).
                 addView(
-                    Button(context, null, 0, R.style.Chip).apply {
+                    privateButton.apply {
                         setText(R.string.agents_private)
                         isSelected = Prefs.agentsPrivate(context)
                         setOnClickListener {
                             Prefs.setAgentsPrivate(context, !isSelected)
                             isSelected = !isSelected
-                            signature = emptyList()
-                            AgentsFeed.last?.let(::render)
+                            // Toutes les vues ouvertes (tableau, widget, onglet) se redessinent tout de suite, sans attendre la lecture suivante.
+                            AgentsFeed.replay()
                         }
                     },
                     LayoutParams(LayoutParams.WRAP_CONTENT, dp(40)),
@@ -199,6 +200,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     }
 
     private fun render(snapshot: AgentsFeed.Snapshot) {
+        privateButton.isSelected = Prefs.agentsPrivate(context)
         val state = snapshot.state
         if (state == null) {
             status.text = context.errorText(snapshot.error)
