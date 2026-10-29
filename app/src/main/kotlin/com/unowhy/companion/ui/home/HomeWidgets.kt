@@ -311,7 +311,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         inner.findViewById<View>(R.id.widget_focus_ring_box).layoutParams.apply { width = dp(176); height = dp(176) }
         tile.addView(inner, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         val row = LinearLayout(context).apply { gravity = Gravity.CENTER }
-        for (kind in listOf(NoisePlayer.Kind.BROWN, NoisePlayer.Kind.PINK, NoisePlayer.Kind.WHITE)) {
+        for (kind in NoisePlayer.Kind.entries) {
             val chip = Button(context, null, 0, R.style.Chip).apply {
                 setText(kind.label)
                 setOnClickListener { if (NoisePlayer.kind == kind) NoisePlayer.stop() else NoisePlayer.play(kind) }

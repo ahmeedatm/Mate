@@ -14,6 +14,10 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Bluetooth allumé depuis Réglages > Mode kiosque (device/Bluetooth) : Paramètres est inaccessible en kiosque. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <!-- Mises à jour installées par le Companion (device owner : sans confirmation) : moteur web, Companion. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Désinstaller l'essai d'une MR au pipeline plus ancien (Updater.uninstall) : sans confirmation en device owner. -->

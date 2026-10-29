@@ -89,4 +89,16 @@ class FocusTimerTest {
         assertEquals("00:00", FocusTimer.format(0))
         assertEquals("01:30", FocusTimer.format(89_001))
     }
+
+    @Test
+    fun `restore ne s'applique qu'une fois par processus`() {
+        FocusTimer.restore(40, 8)
+        val first = FocusTimer.focusMinutes to FocusTimer.breakMinutes
+        FocusTimer.toggle()
+        FocusTimer.restore(15, 3)
+        // Une activité recréée ne remet pas le chrono à zéro.
+        assertTrue(FocusTimer.state.running)
+        assertEquals(first, FocusTimer.focusMinutes to FocusTimer.breakMinutes)
+        FocusTimer.toggle()
+    }
 }

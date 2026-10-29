@@ -64,7 +64,7 @@ const server = new McpServer(
 
 const MODES = { accueil: "home", deck: "deck", docs: "docs", focus: "focus", camera: "camera", reglages: "settings" } as const;
 const FOCUS = { demarrer: "start", pause: "pause", reinitialiser: "reset", passer: "skip" } as const;
-const NOISES = { brun: "brown", rose: "pink", blanc: "white", silence: "off" } as const;
+const NOISES = { pluie: "storm", foret: "forest", japon: "japan", mer: "sea", lofi: "lofi", silence: "off" } as const;
 const keys = <T extends object>(o: T) => Object.keys(o) as [keyof T & string, ...(keyof T & string)[]];
 
 server.registerTool(
@@ -167,7 +167,8 @@ server.registerTool(
   "tablette_ambiance",
   {
     title: "Son d'ambiance",
-    description: "Lance un bruit d'ambiance généré sur le haut-parleur de la tablette (brun : grave, rose : pluie), ou le coupe.",
+    description:
+      "Lance une ambiance sonore douce sur le haut-parleur de la tablette (gouttes de pluie et tonnerre lointain, oiseaux et vent en forêt, lofi japonais, mer, lofi), ou la coupe.",
     inputSchema: { son: z.enum(keys(NOISES)), volume: z.number().int().min(0).max(100).optional().describe("En %") },
   },
   ({ son, volume }) =>

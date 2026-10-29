@@ -1,11 +1,15 @@
 package com.unowhy.companion
 
 import android.content.Context
+import com.unowhy.companion.focus.FocusPresets
 
 /** Réglages locaux : ordinateur piloté (voir Computers), luminosité, thème, kiosque. Aucune clé d'API ici. */
 object Prefs {
     private const val FILE = "companion"
     private const val KEY_ALLOW_INSTALLS = "allow_installs"
+    private const val KEY_EXIT_LOCK = "exit_lock"
+    private const val KEY_POWER_MENU = "power_menu"
+    private const val KEY_LANDSCAPE_LOCKED = "landscape_locked"
     private const val KEY_BRIGHTNESS = "brightness"
     private const val KEY_NIGHT_DIM = "night_dim"
     private const val KEY_THEME = "theme"
@@ -13,6 +17,10 @@ object Prefs {
     private const val KEY_TOUR_DONE = "tour_done"
     private const val KEY_RAIL_HIDDEN = "rail_hidden_tools"
     private const val KEY_FOCUS_DND = "focus_dnd"
+    private const val KEY_FOCUS_MINUTES = "focus_minutes"
+    private const val KEY_FOCUS_PAUSE = "focus_pause"
+    private const val KEY_FOCUS_CUSTOM_MINUTES = "focus_custom_minutes"
+    private const val KEY_FOCUS_CUSTOM_PAUSE = "focus_custom_pause"
     private const val KEY_AGENTS_PRIVATE = "agents_private"
     private const val KEY_NOTIFICATIONS_DISCREET = "notifications_discreet"
     private const val KEY_WAKE_WORD = "wake_word"
@@ -58,6 +66,25 @@ object Prefs {
         prefs(context).edit().putBoolean(KEY_FOCUS_DND, value).apply()
     }
 
+    /** Durées du Pomodoro choisies sur l'écran Focus (25 / 5 par défaut), reprises au démarrage. */
+    fun focusPreset(context: Context): FocusPresets.Preset = prefs(context).let {
+        FocusPresets.bounded(it.getInt(KEY_FOCUS_MINUTES, 25), it.getInt(KEY_FOCUS_PAUSE, 5))
+    }
+
+    fun setFocusPreset(context: Context, value: FocusPresets.Preset) {
+        prefs(context).edit().putInt(KEY_FOCUS_MINUTES, value.focus).putInt(KEY_FOCUS_PAUSE, value.pause).apply()
+    }
+
+    /** Durées de la pastille « Perso » de Focus. */
+    fun focusCustom(context: Context): FocusPresets.Preset = prefs(context).let {
+        val default = FocusPresets.DEFAULT_CUSTOM
+        FocusPresets.bounded(it.getInt(KEY_FOCUS_CUSTOM_MINUTES, default.focus), it.getInt(KEY_FOCUS_CUSTOM_PAUSE, default.pause))
+    }
+
+    fun setFocusCustom(context: Context, value: FocusPresets.Preset) {
+        prefs(context).edit().putInt(KEY_FOCUS_CUSTOM_MINUTES, value.focus).putInt(KEY_FOCUS_CUSTOM_PAUSE, value.pause).apply()
+    }
+
     /** Cadre photo : minutes sans toucher avant qu'il se lance (0 = jamais). 5 par défaut ; sans photo, il ne se lance pas. */
     fun frameDelayMin(context: Context): Int = prefs(context).getInt(KEY_FRAME_DELAY, 5)
 
@@ -77,6 +104,27 @@ object Prefs {
 
     fun setAllowInstalls(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_ALLOW_INSTALLS, value).apply()
+    }
+
+    /** Kiosque : réinitialisation d'usine et mode sans échec interdits (anti-sortie). Permis par défaut. */
+    fun exitLock(context: Context): Boolean = prefs(context).getBoolean(KEY_EXIT_LOCK, false)
+
+    fun setExitLock(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_EXIT_LOCK, value).apply()
+    }
+
+    /** Kiosque : menu du bouton marche/arrêt (éteindre, redémarrer) permis en verrouillage d'écran. Coupé par défaut. */
+    fun powerMenu(context: Context): Boolean = prefs(context).getBoolean(KEY_POWER_MENU, false)
+
+    fun setPowerMenu(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_POWER_MENU, value).apply()
+    }
+
+    /** Écran verrouillé en paysage, un seul sens. Par défaut les deux sens de paysage suivent le capteur. */
+    fun landscapeLocked(context: Context): Boolean = prefs(context).getBoolean(KEY_LANDSCAPE_LOCKED, false)
+
+    fun setLandscapeLocked(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_LANDSCAPE_LOCKED, value).apply()
     }
 
     /** Visite guidée du premier lancement déjà vue (ou passée). */
