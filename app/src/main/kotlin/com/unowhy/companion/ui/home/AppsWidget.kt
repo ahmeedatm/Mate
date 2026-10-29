@@ -15,7 +15,7 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     private val section = TileSection(
         context, host, R.string.widget_apps, R.drawable.ic_tabs, R.string.apps_add_tile,
-        tilesOf = { pages -> pages.firstOrNull { it.apps }?.tiles.orEmpty() },
+        tilesOf = { pages -> pages.firstOrNull { it.apps }?.tiles },
         onAdd = ::addApps,
     )
 
