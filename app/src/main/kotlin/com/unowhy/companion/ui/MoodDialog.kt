@@ -1,10 +1,13 @@
 package com.unowhy.companion.ui
 
 import android.content.Context
+import android.graphics.drawable.Drawable
 import android.widget.TextView
+import androidx.annotation.AttrRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.Moods
 
@@ -22,7 +25,7 @@ object MoodDialog {
         }
         AlertDialog.Builder(context)
             .setTitle(mood.label)
-            .setIcon(mood.face)
+            .setIcon(mood.drawable(context, context.dp(32)))
             .setView(text)
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.mood_go) { _, _ -> onGo() }
@@ -47,14 +50,31 @@ object MoodDialog {
         }
 }
 
-/** Visage d'une humeur : Fluent Emoji 3D de Microsoft (licence MIT, `res/drawable-nodpi/mood_*.png`, 144 px). */
+/** Icône d'une humeur (Material Symbols Rounded, `ic_mood_*`). */
 @get:DrawableRes
-val Moods.Mood.face: Int
+val Moods.Mood.icon: Int
     get() = when (this) {
-        Moods.Mood.STRESSED -> R.drawable.mood_stressed
-        Moods.Mood.TIRED -> R.drawable.mood_tired
-        Moods.Mood.SCATTERED -> R.drawable.mood_scattered
-        Moods.Mood.MOTIVATED -> R.drawable.mood_motivated
+        Moods.Mood.STRESSED -> R.drawable.ic_mood_stressed
+        Moods.Mood.TIRED -> R.drawable.ic_mood_tired
+        Moods.Mood.SCATTERED -> R.drawable.ic_mood_scattered
+        Moods.Mood.MOTIVATED -> R.drawable.ic_mood_motivated
+    }
+
+/** Teinte d'une humeur (`c_hue_*`), toujours avec son nom : la couleur n'est jamais seule. */
+@get:AttrRes
+val Moods.Mood.hue: Int
+    get() = when (this) {
+        Moods.Mood.STRESSED -> R.attr.c_hue_orange
+        Moods.Mood.TIRED -> R.attr.c_hue_violet
+        Moods.Mood.SCATTERED -> R.attr.c_hue_cyan
+        Moods.Mood.MOTIVATED -> R.attr.c_hue_red
+    }
+
+/** Icône teinte de l'humeur, à la taille demandée. */
+fun Moods.Mood.drawable(context: Context, size: Int): Drawable =
+    ContextCompat.getDrawable(context, icon)!!.mutate().apply {
+        setTint(themeColor(context, hue))
+        setBounds(0, 0, size, size)
     }
 
 /** Nom d'une humeur (colonne de Focus, proposition). */
