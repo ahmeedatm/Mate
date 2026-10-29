@@ -952,11 +952,8 @@
     <string name="home_no_room_size">Pas assez de place autour pour une autre taille : déplace ou retire un widget voisin.</string>
     <string name="template_work">Bureau</string>
     <string name="template_work_desc">Heure, agenda, prochain rendez-vous, tâches, Focus et eau.</string>
-    <string name="template_home">Gamer</string>
-    <string name="template_home_desc">Heure, météo, son de l\'ordi, touches, lecture en cours, Focus et eau.</string>
     <string name="template_standby">Veille</string>
     <string name="template_work_cadran_desc">Ma journée, ligne du jour, prochain rendez-vous, tâches, applis et touches.</string>
-    <string name="template_home_cadran_desc">Heure, ligne du jour, touches, lecture en cours et son de l\'ordi.</string>
     <string name="template_standby_cadran_desc">L\'heure et la ligne du jour, rien d\'autre : lisible de loin.</string>
     <string name="template_standby_desc">Très grande heure, prochain rendez-vous, Focus et eau : lisible de loin.</string>
     <string name="demo_card">Démo</string>
@@ -1031,7 +1028,6 @@
     <string name="icon_music">Musique</string>
     <string name="icon_note">Note de musique</string>
     <string name="icon_headphones">Casque</string>
-    <string name="icon_game">Manette</string>
     <string name="icon_camera">Appareil photo</string>
     <string name="icon_palette">Palette</string>
     <string name="icon_image">Image</string>
@@ -1058,7 +1054,7 @@
     <string name="tour_home_title">Accueil</string>
     <string name="tour_home_body">Ta journée d\'un coup d\'œil : le prochain rendez-vous, tes tâches, tes applis et les touches essentielles.</string>
     <string name="tour_screens_title">Plusieurs écrans</string>
-    <string name="tour_screens_body">Un seul écran pour commencer. Touche + pour en ajouter un en un toucher : vide, Bureau, Gamer, Veille ou Deck (le son et tes fenêtres).</string>
+    <string name="tour_screens_body">Un seul écran pour commencer. Touche + pour en ajouter un en un toucher : vide, Bureau, Veille ou Deck (le son et tes fenêtres).</string>
     <string name="tour_swipe_title">Glisser</string>
     <string name="tour_swipe_body">Glisse vers le haut ou le bas n\'importe où sur l\'écran : tu passes à l\'entrée suivante de la barre, tes écrans puis Focus, Ordi et Caméra.</string>
     <string name="tour_talk_title">Parler</string>

@@ -416,7 +416,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     /**
      * Liste des profils. Un changement termine d'abord le mode Modifier en gardant les widgets : `save()` n'écrit rien
      * tant qu'il est actif. Profils ajoutés, déplacés ou retirés : widgets recréés, puis le profil affiché charge ses
-     * données. Renommage ou marquage de jeu : la barre seulement, ni widgets ni réseau.
+     * données. Renommage : la barre seulement, ni widgets ni réseau.
      */
     fun openProfiles() {
         ProfilesDialog(requireContext(), layout, page, ::profileName, !grid.narrow, ::editProfile) { show, structure ->

@@ -12,11 +12,16 @@ class ProfileIconsTest {
     @Test
     fun `les icones survivent a l'enregistrement`() {
         val context = FakeContext()
-        val layout = layout("Bureau", "Jeux", "Réunion")
-        layout.setIcon(1, "game")
+        val layout = layout("Bureau", "Musique", "Réunion")
+        layout.setIcon(1, "music")
         HomeLayout.save(context, layout, cadran = true)
         val back = HomeLayout.load(context, cadran = true)
-        assertEquals(listOf(null, "game", null), back.names.indices.map { back.iconOf(it) })
+        assertEquals(listOf(null, "music", null), back.names.indices.map { back.iconOf(it) })
+    }
+
+    @Test
+    fun `une icone retiree du choix n'a plus de dessin`() {
+        assertNull(ProfileIcons.drawable("game"))
     }
 
     @Test

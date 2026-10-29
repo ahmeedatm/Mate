@@ -78,7 +78,7 @@ object Look {
     /** Couleurs connues des applis courantes ; les autres noms tirent une teinte stable. */
     private val BRANDS = listOf(
         "teams" to R.attr.c_hue_violet, "discord" to R.attr.c_hue_violet, "code" to R.attr.c_hue_blue,
-        "outlook" to R.attr.c_hue_blue, "word" to R.attr.c_hue_blue, "steam" to R.attr.c_hue_blue,
+        "outlook" to R.attr.c_hue_blue, "word" to R.attr.c_hue_blue,
         "whatsapp" to R.attr.c_hue_green, "spotify" to R.attr.c_hue_green, "excel" to R.attr.c_hue_green, "dofus" to R.attr.c_hue_green,
         "youtube" to R.attr.c_hue_red, "netflix" to R.attr.c_hue_red, "valorant" to R.attr.c_hue_red, "micro" to R.attr.c_hue_red,
         "chrome" to R.attr.c_hue_yellow, "firefox" to R.attr.c_hue_orange, "powerpoint" to R.attr.c_hue_orange,

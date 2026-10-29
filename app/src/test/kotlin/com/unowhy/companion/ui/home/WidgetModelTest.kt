@@ -149,7 +149,7 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `les trois modeles existent aussi en Cadran, avec les memes titres`() {
+    fun `les deux modeles existent aussi en Cadran, avec les memes titres`() {
         val plain = Template.entries.filter { !it.cadran }.map { it.title }
         val cadran = Template.entries.filter { it.cadran && !it.role }.map { it.title }
         assertEquals(plain, cadran)

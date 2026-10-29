@@ -35,7 +35,7 @@ import com.unowhy.companion.ui.themeFont
  * Liste des profils de l'Accueil : afficher, changer l'icône, modifier les widgets, monter, descendre, renommer, supprimer, en ajouter un
  * (vide ou depuis un modèle). `current` : le profil affiché ; `onChanged(show, structure)` est appelé après chaque
  * changement, la disposition est déjà modifiée, avec le profil à afficher. `structure` : des profils ont été ajoutés,
- * déplacés ou retirés (les widgets sont à recréer) ; faux pour un renommage ou le marquage de jeu. `onEdit(index)` :
+ * déplacés ou retirés (les widgets sont à recréer) ; faux pour un renommage. `onEdit(index)` :
  * la boîte est fermée, le profil `index` est à afficher puis à passer en mode Modifier. `canEdit` faux (grille
  * étroite, sans mode Modifier) : le bouton n'est pas montré.
  */
@@ -120,7 +120,6 @@ class ProfilesDialog(
     private fun profileIcon(i: Int, choice: String? = layout.iconOf(i)): Pair<Int, Int> = ProfileIcons.of(layout, i, choice) to when (i) {
         layout.callProfile -> R.attr.c_hue_violet
         layout.homeProfile -> R.attr.c_hue_blue
-        layout.gameProfile -> R.attr.c_hue_pink
         else -> R.attr.c_hue_green
     }
 
@@ -222,7 +221,6 @@ class ProfilesDialog(
 
     private fun templateIcon(template: Template): Pair<Int, Int> = when (template) {
         Template.WORK_CADRAN, Template.WORK -> R.drawable.ic_tasks to R.attr.c_hue_blue
-        Template.HOME_CADRAN, Template.HOME -> R.drawable.ic_gamepad to R.attr.c_hue_pink
         Template.STANDBY_CADRAN, Template.STANDBY -> R.drawable.ic_clock to R.attr.c_hue_orange
         Template.DECK_CADRAN -> R.drawable.ic_deck to R.attr.c_hue_red
         else -> R.drawable.ic_widgets to R.attr.c_hue_violet
