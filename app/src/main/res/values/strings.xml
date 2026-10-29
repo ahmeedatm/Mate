@@ -797,6 +797,8 @@
     <string name="mail_reconnect_button">Reconnecter mon compte Microsoft</string>
     <string name="mail_setup_opened">Page ouverte sur l\'ordinateur : connecte ton compte Microsoft.</string>
     <string name="tablet_title">Tablette</string>
+    <string name="tablet_remote">Régler depuis l\'ordi</string>
+    <string name="tablet_remote_opened">Page ouverte sur l\'ordinateur : règle la tablette depuis la carte.</string>
     <string name="tablet_battery_state">Batterie de la tablette : %1$d %%</string>
     <string name="tablet_battery_charging">Batterie : %1$d %% · en charge (%2$s)</string>
     <string name="tablet_battery_discharging">Batterie : %1$d %% · sur batterie</string>

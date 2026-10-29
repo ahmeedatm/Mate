@@ -61,7 +61,7 @@ ${FAVICON}
   details { margin-top: 12px; }
   summary { cursor: pointer; color: var(--ink-2); font-size: 15px; }
   details.dim { line-height: 1.6; }
-  /* Ouverte depuis la tablette (« Relier mon agenda ») : la carte Agenda est mise en avant. */
+  /* Ouverte depuis la tablette (« Relier mon agenda », « Régler depuis l'ordi ») : la carte demandée est mise en avant. */
   .card.focus { outline: 2px solid var(--now); }
   .card.warn { outline: 2px solid var(--now); }
   .account { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
@@ -106,12 +106,7 @@ ${FAVICON}
     <div class="dim" id="pairmsg" style="margin-top:12px">Valable 2 minutes. Ne saisis ici qu'un code affiché par ta tablette.</div>
   </div>
 
-  <div class="card liste">
-    <div class="ligne"><span class="t" id="state">Tablette non connectée</span><span class="dot" id="dot"></span></div>
-    <div class="ligne"><span class="t">Adresse de cet ordinateur</span><code id="addr">…</code></div>
-  </div>
-
-  <!-- Tablette connectée : son état et ses réglages, changés d'ici (ordre « settings », voir routes/local.ts). -->
+  <!-- Tablette connectée : sa carte passe juste sous l'en-tête, avant l'état et l'adresse. Son état et ses réglages, changés d'ici (ordre « settings », voir routes/local.ts). -->
   <section id="tabletcard" hidden>
     <h2>Réglages de la tablette</h2>
     <div class="card">
@@ -131,6 +126,11 @@ ${FAVICON}
       </div>
     </div>
   </section>
+
+  <div class="card liste">
+    <div class="ligne"><span class="t" id="state">Tablette non connectée</span><span class="dot" id="dot"></span></div>
+    <div class="ligne"><span class="t">Adresse de cet ordinateur</span><code id="addr">…</code></div>
+  </div>
 
   <h2>Connecter une tablette</h2>
   <div class="card">
@@ -222,6 +222,7 @@ ${FAVICON}
       renderAccounts(c);
       renderGitlab(s.gitlab);
       renderTablet(s.tabletInfo);
+      document.title = s.tabletInfo ? "Compagnon · " + (s.tabletInfo.name || "tablette") : "Compagnon Unowhy";
       const p = s.pairing, card = document.getElementById("pairing");
       const shown = card.style.display === "block";
       card.style.display = p ? "block" : "none";
@@ -308,9 +309,17 @@ ${FAVICON}
   // Réglages de la tablette : pas réécrits pendant un réglage en cours (curseur tenu, envoi pas encore fini).
   let tabletBusyUntil = 0;
   const percent = (v) => Math.round(v * 100);
+  let tabletFocused = false;
   function renderTablet(t) {
     document.getElementById("tabletcard").hidden = !t;
     if (!t) return;
+    // « Régler depuis l'ordi » : carte mise en avant une fois, dès que la tablette est vue connectée.
+    if (!tabletFocused && new URLSearchParams(location.search).get("section") === "tablette") {
+      tabletFocused = true;
+      const card = document.querySelector("#tabletcard .card");
+      card.classList.add("focus");
+      card.scrollIntoView({ block: "center" });
+    }
     const b = t.battery;
     document.getElementById("tabletinfo").textContent = [
       t.model, t.app && "appli " + t.app, b && "batterie " + b.level + " %" + (b.charging ? " (en charge)" : ""),

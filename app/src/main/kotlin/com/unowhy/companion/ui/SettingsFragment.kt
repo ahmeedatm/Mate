@@ -110,6 +110,7 @@ class SettingsFragment : Fragment() {
         autoJoinHint = view.findViewById(R.id.settings_autojoin_hint)
         wifiStatus = view.findViewById(R.id.settings_wifi_status)
         view.findViewById<Button>(R.id.settings_wifi).setOnClickListener { wifi.show() }
+        view.findViewById<Button>(R.id.settings_tablet_remote).setOnClickListener { openOnComputer() }
         updatesStatus = view.findViewById(R.id.settings_updates_status)
         updates = view.findViewById(R.id.settings_updates)
         essaisTitle = view.findViewById(R.id.settings_essais_title)
@@ -434,6 +435,19 @@ class SettingsFragment : Fragment() {
             tabletInfo.text = getString(
                 R.string.tablet_info, BuildConfig.VERSION_NAME, ip ?: getString(R.string.tablet_no_address), android.os.Build.MODEL,
             )
+        }
+    }
+
+    /** Ouvre sur l'ordinateur la page du compagnon, carte Réglages de la tablette en avant. */
+    private fun openOnComputer() {
+        val ctx = requireContext()
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                BackendClient(ctx).system.openLocalPage("tablette")
+                main.showBanner(getString(R.string.tablet_remote_opened), 6)
+            } catch (e: Exception) {
+                main.showBanner(errorText(e), 6)
+            }
         }
     }
 
