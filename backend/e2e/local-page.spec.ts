@@ -1,3 +1,5 @@
+import { createHash, randomBytes } from "node:crypto";
+import { pairingCode } from "../test/server.ts";
 import { expect, test } from "./fixtures.ts";
 
 test.describe("page locale GET /", () => {
@@ -10,18 +12,30 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#pairing")).toBeHidden();
   });
 
-  test("montre le code d'appairage demandé par une tablette", async ({ page, server }) => {
+  test("reçoit le code affiché par la tablette et la connecte", async ({ page, server }) => {
     await page.goto("/");
     await expect(page.locator("#pairing")).toBeHidden();
-    const req = await server.call("POST", "/pair/request", { tablet: "Tablette QA" }, false);
+    const tablet = randomBytes(32).toString("base64url");
+    const commit = createHash("sha256").update(tablet).digest("base64url");
+    const req = await server.call("POST", "/pair/request", { tablet: "Tablette QA", commit }, false);
     expect(req.status).toBe(200);
-    const { json } = await server.call("GET", "/local/status", undefined, false);
-    const code: string = json.pairing.code;
+    expect((await server.call("POST", "/pair/reveal", { request: req.json.request, nonce: tablet }, false)).status).toBe(200);
+    const code = pairingCode("", tablet, req.json.nonce);
 
-    // Sans recharger : la page se rafraîchit seule.
+    // Sans recharger : la page se rafraîchit seule, la case a le focus.
     await expect(page.locator("#pairing")).toBeVisible();
-    await expect(page.locator("#code")).toHaveText(`${code.slice(0, 3)} ${code.slice(3)}`);
     await expect(page.locator("#tablet")).toHaveText("Tablette QA");
+    await expect(page.locator("#paircode")).toBeFocused();
+
+    await page.locator("#paircode").fill("000 000" === code ? "111 111" : "000 000");
+    await page.getByRole("button", { name: "Connecter la tablette" }).click();
+    await expect(page.locator("#pairmsg")).toHaveText("Code incorrect");
+
+    await page.locator("#paircode").fill(`${code.slice(0, 3)} ${code.slice(3)}`);
+    await page.getByRole("button", { name: "Connecter la tablette" }).click();
+    await expect(page.locator("#pairmsg")).toHaveText("Tablette connectée : « Tablette QA ».");
+    expect((await server.call("POST", "/pair/confirm", { request: req.json.request }, false)).json.token).toBeTruthy();
+    await expect(page.locator("#pairing")).toBeHidden();
   });
 
   test("enregistre, refuse puis retire un lien ICS", async ({ page }) => {

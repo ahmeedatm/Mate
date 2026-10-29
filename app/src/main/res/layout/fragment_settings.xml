@@ -214,6 +214,22 @@
                 android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
 
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_notif_discreet"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/notif_discreet"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/notif_discreet_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
             <TextView
                 android:id="@+id/settings_tablet_info"
                 android:layout_width="match_parent"

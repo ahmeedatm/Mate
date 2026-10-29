@@ -106,11 +106,15 @@ class ComputersTest {
 
     @Test
     fun `normalizeUrl ajoute schema et port`() {
-        assertEquals("http://192.168.1.20:3000", Computers.normalizeUrl(" 192.168.1.20 "))
-        assertEquals("http://192.168.1.20:4000", Computers.normalizeUrl("192.168.1.20:4000/"))
-        assertEquals("https://mac.local:3000", Computers.normalizeUrl("https://mac.local"))
-        assertEquals("http://[fe80::1]:3000", Computers.normalizeUrl("[fe80::1]"))
-        assertEquals("http://[fe80::1]:8080", Computers.normalizeUrl("[fe80::1]:8080"))
+        // WiFi : HTTPS, port 3001 par défaut ; la tablette elle-même (USB) : HTTP, port 3000.
+        assertEquals("https://192.168.1.20:3001", Computers.normalizeUrl(" 192.168.1.20 "))
+        assertEquals("https://192.168.1.20:4001", Computers.normalizeUrl("192.168.1.20:4001/"))
+        assertEquals("https://mac.local:3001", Computers.normalizeUrl("https://mac.local"))
+        assertEquals("https://[fe80::1]:3001", Computers.normalizeUrl("[fe80::1]"))
+        assertEquals("https://[fe80::1]:8080", Computers.normalizeUrl("[fe80::1]:8080"))
+        assertEquals("http://127.0.0.1:3000", Computers.normalizeUrl("127.0.0.1"))
+        assertEquals("http://localhost:3021", Computers.normalizeUrl("localhost:3021"))
+        assertEquals("http://10.0.2.2:3000", Computers.normalizeUrl("http://10.0.2.2:3000"))
     }
 
     @Test

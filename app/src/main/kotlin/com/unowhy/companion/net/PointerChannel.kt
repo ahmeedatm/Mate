@@ -16,6 +16,8 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.URI
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -45,13 +47,23 @@ data class PointerTarget(val host: String, val port: Int, val viaUsb: Boolean) {
 object PointerPackets {
     const val HEADER = "UNOWHY-POINTER\n"
 
-    /** `UNOWHY-POINTER\n<jeton>\n<seq>\n<json>`. */
+    /**
+     * `UNOWHY-POINTER\n<signature>\n<seq>\n<json>`, signature = HMAC-SHA256 de `<seq>\n<json>` par le jeton : l'UDP
+     * n'est pas chiffré, le jeton n'y passe jamais (même calcul que `pointerSignature` du backend, src/pointer.ts).
+     */
     fun encode(token: String, seq: Long, message: PointerMessage): ByteArray {
         val json = when (message) {
             is PointerMessage.Move -> """{"dx":${message.dx},"dy":${message.dy}}"""
             is PointerMessage.Scroll -> """{"sx":${message.sx},"sy":${message.sy}}"""
         }
-        return "$HEADER$token\n$seq\n$json".toByteArray(Charsets.UTF_8)
+        return "$HEADER${signature(token, seq, json)}\n$seq\n$json".toByteArray(Charsets.UTF_8)
+    }
+
+    /** Vide sans jeton (ordinateur en USB sans jeton : rien à vérifier, comme en HTTP). */
+    fun signature(token: String, seq: Long, json: String): String {
+        if (token.isEmpty()) return ""
+        val mac = Mac.getInstance("HmacSHA256").apply { init(SecretKeySpec(token.toByteArray(Charsets.UTF_8), "HmacSHA256")) }
+        return mac.doFinal("$seq\n$json".toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
     }
 
     /** Coupe (a, b) en morceaux dont aucune composante ne dépasse `max`, dans le même sens. */

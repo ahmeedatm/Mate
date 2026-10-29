@@ -44,8 +44,8 @@ Pas de serveur dans le cloud : chaque ordinateur a son compagnon, la tablette pa
 
 1. Le compagnon crée au premier lancement son identité et son jeton (`.data/identity.json`) et répond à une diffusion UDP sur le WiFi (`pairing.ts`).
 2. La tablette cherche les ordinateurs (`net/Discovery.kt`), ou on saisit l'adresse.
-3. L'ordinateur affiche un code à 6 chiffres (page `http://127.0.0.1:3000/`). La tablette l'envoie à `/pair/*` et reçoit le jeton.
-4. La tablette garde une **liste d'ordinateurs** (`Computers.kt` : id, nom, url, jeton, os) et pilote l'actif. Si l'actif ne répond plus, `net/Connection.kt` retrouve sa nouvelle adresse par la recherche, ou bascule vers un autre ordinateur qui répond.
+3. En WiFi, tout passe en HTTPS (certificat auto-signé de l'ordinateur, `tls.ts`) ; le HTTP n'écoute que sur 127.0.0.1. La tablette affiche un code à 6 chiffres, qui mêle l'empreinte du certificat qu'elle voit ; l'utilisateur le saisit sur l'ordinateur (page `http://127.0.0.1:3000/`), la tablette reçoit le jeton et épingle le certificat. Détails et protocole : [securite-appairage.md](securite-appairage.md).
+4. La tablette garde une **liste d'ordinateurs** (`Computers.kt` : id, nom, url, jeton, os, empreinte épinglée) et pilote l'actif. Si l'actif ne répond plus, `net/Connection.kt` retrouve sa nouvelle adresse par la recherche, ou bascule vers un autre ordinateur qui répond.
 
 ### 2. Une requête ordinaire (tablette → ordinateur)
 
@@ -72,6 +72,10 @@ La tablette n'ouvre aucun port. `remote/RemoteChannel.kt` garde une requête `PO
 ### 6. Visualiseur (mode Caméra)
 
 `camera/DocCamera.kt` (Camera2) envoie du JPEG 720p à ~10 i/s à `POST /camera/frame` ; le compagnon garde la dernière image et la sert en MJPEG sur `http://127.0.0.1:3000/camera`, à projeter. « Envoyer une photo » : photo pleine taille dans le dossier Partage.
+
+### 7. Cadre photo
+
+Après quelques minutes sans toucher (Depuis l'ordi > Cadre photo, `ui/FrameSettingsView` : 2, 5, 10 ou 30 min, ou jamais ; vignettes, Ouvrir le dossier sur l'ordi, Essayer), les photos du dossier « Cadre photo » du dossier partagé défilent en plein écran, l'heure et la date en bas (`ui/PhotoFrameView`, lancé par `MainActivity.followFrame` à chaque minute) ; un toucher revient à l'écran sans agir dessous. `GET /frame` (`docs.ts`) liste les images (JPEG, PNG, WebP, sous-dossiers compris, 500 au plus) ; `frame/FrameCache` les copie une fois par `/docs/file`, réduites à la taille de l'écran et remises droites (EXIF), un dossier par ordinateur : le cadre marche ordinateur éteint. Économie (`frame/FrameLogic`) : luminosité plafonnée à 35 % (20 % sur batterie), image fixe entre deux fondus de 600 ms, écrans dessous masqués, arrêt la nuit (atténuation) et sous 20 % de batterie débranchée ; pas de cadre pendant un appel, une question d'agent, le Focus qui tourne, la Caméra ou un document ouvert.
 
 ### 7. Commande vocale (bouton Parler)
 
@@ -106,7 +110,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | `Prefs.kt`, `Computers.kt` | préférences, liste des ordinateurs appairés |
 | `net/` | `BackendClient` (point d'accès : un client par domaine, `DeckApi`, `WindowsApi`, `SystemApi`, `DocsApi`, `CalendarApi`, `TasksApi`, `CameraApi`, `UpdatesApi`, `TabletApi`, `AgentsApi`, `PairingApi`), `Http` (plomberie, `HttpException`), `Connection` (bascule), `Discovery` (UDP), `Wifi` |
 | `remote/RemoteChannel.kt` | ordres reçus de l'ordinateur |
-| `ui/` | un fichier par écran ou composant : `HomeFragment`, `DeckFragment`, `FromComputerFragment` (Depuis l'ordi : trois choix, Fichiers (la liste, `GET /docs`), Page de l'ordi (`BrowserTabsDialog` : onglets de l'ordi) et Presse-papiers (`ClipboardView`, `ClipboardModel` : `GET /system/clipboard` pour lire le texte copié sur l'ordi, `POST /system/clipboard` pour y copier un texte écrit ou dicté, `POST /system/clipboard/image` pour une photo du dossier « Photos tablette » depuis la Caméra) ; le Presse-papiers n'est lu que sur un toucher, jamais à l'arrivée sur l'écran par un ordre du PC), `FocusFragment`, `CameraFragment`, `SettingsFragment`, `WelcomeView` (premier lancement), `DocumentPanel`, boîtes de dialogue (`TaskDialog`, `EventDialog`, `ComputerAdder`, `WifiPicker`…) |
+| `ui/` | un fichier par écran ou composant : `HomeFragment`, `DeckFragment`, `FromComputerFragment` (Depuis l'ordi : quatre choix, Fichiers (la liste, `GET /docs`), Page de l'ordi (`BrowserTabsDialog` : onglets de l'ordi), Presse-papiers (`ClipboardView`, `ClipboardModel` : `GET /system/clipboard` pour lire le texte copié sur l'ordi, `POST /system/clipboard` pour y copier un texte écrit ou dicté, `POST /system/clipboard/image` pour une photo du dossier « Photos tablette » depuis la Caméra) ; le Presse-papiers n'est lu que sur un toucher, jamais à l'arrivée sur l'écran par un ordre du PC, Cadre photo (`FrameSettingsView`, voir § 7)), `FocusFragment`, `CameraFragment`, `SettingsFragment`, `WelcomeView` (premier lancement), `DocumentPanel`, boîtes de dialogue (`TaskDialog`, `EventDialog`, `ComputerAdder`, `WifiPicker`…) |
 | `ui/home/` | Profils (ex-Accueil) à widgets : `WidgetModel` (grille 4×4, tailles, modèles, `HomeLayout` : profils nommés et profil de jeu), `WidgetGrid` (placement, mode Modifier, balayage entre profils), `ProfilesDialog` (créer, renommer, monter, supprimer, profil de jeu), widgets |
 | `ui/ScreenMap.kt`, `WindowPicker.kt`, `OpenWindowsView.kt` | écrans et fenêtres de l'ordinateur |
 | `focus/` | `FocusTimer`, `NoisePlayer` (bruit généré), `Water` |
@@ -116,6 +120,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | `agents/`, `ui/AgentsView.kt`, `ui/AgentLight.kt`, `ui/AgentAskOverlay.kt`, `ui/HoldButton.kt`, `voice/Dictation.kt`, `ui/home/AgentsWidget.kt`, `audio/AgentSounds.kt` | agents Claude : relevé partagé des sessions (`AgentsFeed`, 3 s tant qu'une vue les montre), alertes de l'ordre `agent` (`AgentAlerts` : lumière de bord + son court, tus pendant le Focus sauf « attend »), onglet Agents du Deck (après « Son », si `/deck/features` annonce `agents`), widget d'Accueil |
 | `camera/DocCamera.kt` | caméra du visualiseur |
 | `device/` | batterie, signal, luminosité (atténuée la nuit) |
+| `frame/`, `ui/PhotoFrameView.kt` | cadre photo : règles (`FrameLogic`), photos copiées de l'ordinateur (`FrameCache`) |
 | `kiosk/` | `Kiosk` (verrouillage, SQOOL masqué), `Updater`, `UpdatePlan`, `AutoUpdater`, `UpdatedReceiver`, `KioskAdminReceiver` |
 | `trial/` | appli d'essai installée à côté de la stable : `Trial` (paquets, passer de l'une à l'autre, reprise des ordinateurs), `ComputersProvider` (permission signature) |
 | `res/values/strings.xml` | tous les textes (français) ; `attrs.xml` + `palettes.xml` (couleurs des 4 thèmes), `themes.xml` pour le style ; `ui/Themes.kt`, `ui/Look.kt` |
@@ -128,6 +133,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | `routes/` | routes de l'API, un plugin Fastify par domaine |
 | `config.ts` | variables d'environnement (`.env`) |
 | `pairing.ts` | identité, jeton, code d'appairage, découverte UDP |
+| `tls.ts` | certificat auto-signé du WiFi (`.data/tls.json`) et son empreinte |
 | `local-page.ts` | page `http://127.0.0.1:3000/` (adresse, code, agenda) |
 | `deck.ts`, `perso.ts`, `music.ts` | pages du deck, `runAction`, touches perso, musique |
 | `os.ts` → `mac/`, `win/` | pilotage du système ; `screens.ts` : types d'écrans et fenêtres |

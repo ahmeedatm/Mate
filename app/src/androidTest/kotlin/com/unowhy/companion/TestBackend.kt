@@ -9,13 +9,14 @@ import java.net.URL
 
 /**
  * Backend réel des tests du Deck (backend/test/deck-emulateur.ts, lancé par scripts/test-android.sh) :
- * l'émulateur le joint par 10.0.2.2, l'adresse de l'ordinateur hôte. Port de pilotage : arrêt, redémarrage, touches reçues.
+ * l'émulateur le joint en 127.0.0.1 (adb reverse posé par le script), comme une tablette en USB : l'appli n'envoie pas
+ * son jeton en HTTP en clair à une autre adresse. Port de pilotage : arrêt, redémarrage, touches reçues.
  */
 object TestBackend {
     /** Ports libres choisis par le script à chaque lancement (arguments d'instrumentation), sinon ceux d'un lancement à la main. */
     private val args = InstrumentationRegistry.getArguments()
-    private val url = "http://10.0.2.2:${args.getString("backendPort", "3910")}"
-    private val controlUrl = "http://10.0.2.2:${args.getString("controlPort", "3911")}"
+    private val url = "http://127.0.0.1:${args.getString("backendPort", "3910")}"
+    private val controlUrl = "http://127.0.0.1:${args.getString("controlPort", "3911")}"
     /** COMPANION_TOKEN du backend de test (backend/test/server.ts). */
     private const val TOKEN = "jeton-de-test"
 

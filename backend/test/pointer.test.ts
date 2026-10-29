@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { handlePointerDatagram, MAX_RATE, parsePointerPacket, PointerGate } from "../src/pointer.ts";
+import { handlePointerDatagram, MAX_RATE, parsePointerPacket, pointerSignature, PointerGate } from "../src/pointer.ts";
 
-const packet = (token: string, seq: number | string, body: unknown) =>
-  Buffer.from(`UNOWHY-POINTER\n${token}\n${seq}\n${JSON.stringify(body)}`);
+/** Paquet signé par `token` ("" : signature vide, comme une tablette sans jeton). */
+const packet = (token: string, seq: number | string, body: unknown) => {
+  const json = JSON.stringify(body);
+  return Buffer.from(`UNOWHY-POINTER\n${token && pointerSignature(token, seq, json)}\n${seq}\n${json}`);
+};
 
 describe("parsePointerPacket", () => {
   it("lit un déplacement et un défilement", () => {
@@ -15,6 +18,17 @@ describe("parsePointerPacket", () => {
     assert.equal(parsePointerPacket(packet("x", 1, { dx: 1, dy: 1 }), "t"), null);
     assert.equal(parsePointerPacket(packet("tt", 1, { dx: 1, dy: 1 }), "t"), null);
     assert.equal(parsePointerPacket(packet("", 1, { dx: 1, dy: 1 }), "t"), null);
+  });
+
+  it("le jeton ne passe jamais dans le paquet, seule sa signature", () => {
+    const token = "jeton-secret-de-la-tablette";
+    assert.ok(!packet(token, 1, { dx: 1, dy: 1 }).toString("utf8").includes(token));
+  });
+
+  it("refuse un paquet dont le contenu ou la séquence a été changé après signature", () => {
+    const [head, sig, , json] = packet("t", 5, { dx: 1, dy: 1 }).toString("utf8").split("\n");
+    assert.equal(parsePointerPacket(Buffer.from([head, sig, "6", json].join("\n")), "t"), null);
+    assert.equal(parsePointerPacket(Buffer.from([head, sig, "5", '{"dx":900,"dy":1}'].join("\n")), "t"), null);
   });
 
   it("sans jeton attendu, n'en vérifie aucun", () => {
