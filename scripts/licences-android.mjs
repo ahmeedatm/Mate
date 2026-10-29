@@ -86,6 +86,18 @@ DONNÉES
   https://creativecommons.org/licenses/by/4.0/ ; mises en forme pour l'affichage.
 - Liste des villes : GeoNames (https://www.geonames.org), licence CC BY 4.0 ; extraite et réduite.
 
+SONS D'AMBIANCE (domaine public, CC0 1.0 : https://creativecommons.org/publicdomain/zero/1.0/ ;
+extraits, mis en boucle et à un volume bas par scripts/ambiances.mjs)
+- Pluie : « RAIN_Light Thunderstorm, Decrescendo, Water Dripping near Building », HushAndHarmonyNow
+  (https://freesound.org/s/851881/)
+- Forêt : « Forest_Summer_Day_Quiet_Calm_Birds_Insects_Atmo_Nowind_Finland », Villehardt
+  (https://freesound.org/s/613995/) ; « Wind Through Trees », Yoyodaman234 (https://freesound.org/s/335889/)
+- Japon : « Japanese Lofi HipHop Track », pickentcode (https://opengameart.org/content/japanese-lofi-hiphop-track)
+- Mer : « Ocean Waves on a Tropical Beach », Jarrod Stanley
+  (https://commons.wikimedia.org/wiki/File:Ocean_Waves_on_a_Tropical_Beach.ogg)
+- Lofi : « Chill lofi inspired [loop edit] », qubodup d'après omfgdude
+  (https://opengameart.org/content/chill-lofi-inspired-loop-edit)
+
 ${rule}
 Apache License 2.0
 ${rule}

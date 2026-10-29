@@ -50,6 +50,15 @@ object FocusTimer {
         reset()
     }
 
+    private var restored = false
+
+    /** Durées choisies sur l'écran Focus (Prefs), reprises une fois par processus : une activité recréée garde le chrono. */
+    fun restore(focus: Int, pause: Int) {
+        if (restored) return
+        restored = true
+        if (focus != focusMinutes || pause != breakMinutes) setPreset(focus, pause)
+    }
+
     fun toggle() {
         if (endAt != 0L) {
             remainingWhenPaused = remaining()
@@ -69,6 +78,12 @@ object FocusTimer {
         durationMs = focusMinutes * 60_000L
         remainingWhenPaused = durationMs
         notifyListeners()
+    }
+
+    /** Arrêt (bouton, voix, Claude) : chrono remis à zéro et ambiance coupée. */
+    fun stop() {
+        reset()
+        NoisePlayer.stop()
     }
 
     /** Passe directement à la phase suivante (ex. sauter la pause). */

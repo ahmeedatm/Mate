@@ -139,7 +139,7 @@ class RemoteChannel(private val activity: MainActivity) {
             if (command.has("volume")) NoisePlayer.setVolume(command.getDouble("volume").toFloat())
             when (val kind = command.getString("kind")) {
                 "off" -> NoisePlayer.stop()
-                else -> NoisePlayer.play(NoisePlayer.Kind.valueOf(kind.uppercase(Locale.ROOT)))
+                else -> NoisePlayer.play(NoisePlayer.Kind.of(kind) ?: throw IllegalArgumentException("Ambiance inconnue : $kind"))
             }
             null
         }
@@ -243,7 +243,7 @@ internal fun focusCommand(command: JSONObject): JSONObject {
     when (command.getString("action")) {
         "start" -> if (!running) FocusTimer.toggle()
         "pause" -> if (running) FocusTimer.toggle()
-        "reset" -> FocusTimer.reset()
+        "reset" -> FocusTimer.stop()
         "skip" -> FocusTimer.skip()
     }
     return focusState()

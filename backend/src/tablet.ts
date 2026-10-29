@@ -12,7 +12,7 @@ import { randomUUID } from "node:crypto";
  */
 
 export const MODES = ["home", "deck", "docs", "focus", "camera", "tasks", "settings"] as const;
-export const NOISES = ["brown", "pink", "white", "off"] as const;
+export const NOISES = ["storm", "forest", "japan", "sea", "lofi", "off"] as const;
 export const FOCUS_ACTIONS = ["start", "pause", "reset", "skip"] as const;
 /** Thèmes de la tablette (AppTheme dans ui/Themes.kt). */
 export const THEMES = ["CADRAN", "CADRAN_NUIT", "RETRO", "CONTRASTE"] as const;
