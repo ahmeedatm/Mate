@@ -515,14 +515,17 @@ function run(argv) {
   const back = $.CGEventGetLocation($.CGEventCreate(null));
   app.doShellScript('open -b com.apple.exposelauncher');
   try {
-    // Vignettes en place : deux lectures identiques de suite (l'ouverture est animée), 1,5 s au plus.
+    // Vignettes en place : deux lectures identiques de suite, 2,5 s au plus. Lue pendant l'animation d'ouverture,
+    // la barre répond en plus d'une seconde : première lecture une fois l'animation passée.
+    const start = Date.now();
     let b = null, last = '';
-    for (let i = 0; i < 30; i++) {
-      delay(0.05);
-      try { b = bar(); } catch (e) { continue; }
+    delay(0.3);
+    while (Date.now() - start < 2500) {
+      try { b = bar(); } catch (e) { delay(0.05); continue; }
       const now = JSON.stringify(b);
       if (b.length === count && now === last) break;
       last = now;
+      delay(0.05);
     }
     if (!b || b.length !== count) throw new Error('Mission Control ne montre pas les mêmes pages');
     const sx = b[from].pos[0] + b[from].size[0] / 2, y = b[from].pos[1] + b[from].size[1] / 2;
@@ -533,12 +536,9 @@ function run(argv) {
     for (let i = 1; i <= 8; i++) { mouse(6, sx + (tx - sx) * i / 8, y); delay(0.015); }
     delay(0.15);
     mouse(2, tx, y);
-    // Page posée : la barre a changé d'ordre (0,6 s au plus), puis on referme.
-    const before = b.map((x) => x.name).join('|');
-    for (let i = 0; i < 12; i++) {
-      delay(0.05);
-      try { if (bar().map((x) => x.name).join('|') !== before) break; } catch (e) {}
-    }
+    // Laisser macOS poser la page avant de refermer. Pas de relecture de la barre : pendant l'animation, chaque
+    // lecture prend jusqu'à 250 ms.
+    delay(0.2);
   } finally {
     app.doShellScript('open -b com.apple.exposelauncher');
     mouse(5, back.x, back.y);

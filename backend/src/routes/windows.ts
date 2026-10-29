@@ -14,7 +14,9 @@ export const windowTarget = {
 
 /** Vue « Ouvertes » : toutes les applis ouvertes sur l'ordinateur et l'écran de chacune de leurs fenêtres. */
 export default async function windowRoutes(app: FastifyInstance) {
-  // Une action à la fois : deux gestes rapprochés visaient la même fenêtre en même temps (plein écran animé…).
+  // Une chose à la fois, relecture de la liste comprise : deux gestes rapprochés visaient la même fenêtre en même
+  // temps (plein écran animé…), et sur Mac la liste (plusieurs secondes) et Mission Control passent par la même file
+  // de System Events : un geste lancé pendant une relecture n'avait pas sa barre de Mission Control à temps.
   let queue: Promise<unknown> = Promise.resolve();
   function oneAtATime<T>(task: () => Promise<T>): Promise<T> {
     const run = queue.then(task, task);
@@ -22,7 +24,7 @@ export default async function windowRoutes(app: FastifyInstance) {
     return run;
   }
 
-  app.get("/windows/open", async () => listOpenWindows());
+  app.get("/windows/open", async () => oneAtATime(() => listOpenWindows()));
 
   app.get<{ Querystring: { name: string } }>(
     "/windows/icon",
