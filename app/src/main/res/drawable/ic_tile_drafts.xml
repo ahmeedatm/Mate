@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols Rounded « drafts » (Apache 2.0, google/material-design-icons), teintée par le code. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path android:fillColor="#FFFFFFFF" android:pathData="M21.99 8c0-.72-.37-1.35-.94-1.7L12 1 2.95 6.3C2.38 6.65 2 7.28 2 8v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2l-.01-10zM12 13L3.74 7.84 12 3l8.26 4.84L12 13z" />
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M521,64L842,256Q860,267 870,286Q880,305 880,326L880,760Q880,793 856.5,816.5Q833,840 800,840L160,840Q127,840 103.5,816.5Q80,793 80,760L80,326Q80,305 90,286Q100,267 118,256L439,64Q458,53 480,53Q502,53 521,64ZM480,506L792,320L480,134Q480,134 480,134Q480,134 480,134L168,320L480,506Q480,506 480,506Q480,506 480,506ZM439,575L160,408L160,760Q160,760 160,760Q160,760 160,760L800,760Q800,760 800,760Q800,760 800,760L800,408L521,575Q502,586 480,586Q458,586 439,575ZM521,760L800,760L800,760Q800,760 800,760Q800,760 800,760L160,760Q160,760 160,760Q160,760 160,760L160,760L439,760Q458,760 480,760Q502,760 521,760Z" />
 </vector>
