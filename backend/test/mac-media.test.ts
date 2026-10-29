@@ -4,6 +4,7 @@ import {
   fallbackSessions,
   HOLD_MS,
   heldSession,
+  mergeSessions,
   type MediaSession,
   playerScript,
   playingApps,
@@ -63,6 +64,82 @@ describe("lecture en cours (Mac)", () => {
     assert.equal(heldSession(undefined, spotify, 1_000_000), spotify);
   });
 
+  it("toutes les lectures : ordre et identifiants du secours, sans doublon, devant ce qui joue", () => {
+    const s = (app: string, name: string, title: string, status: string) => ({ app, name, title, status, current: false }) as MediaSession;
+    const ytm = s("Opera|YouTube Music", "YouTube Music", "Bécane - A COLORS SHOW", "playing");
+    const yt = s("Opera|YouTube", "YouTube", "Clip", "playing");
+    const spotifyApp = s("Spotify", "Spotify", "unravel", "paused");
+    const rows = (r: { sessions: MediaSession[] }) => r.sessions.map((m) => [m.app, m.status, m.current]);
+    // Relevé du 29/10 : MediaRemote figé sur Spotify en pause, YouTube Music joue dans Opera GX.
+    const stuck = s("com.spotify.client", "Spotify", "unravel", "paused");
+    const merged = mergeSessions(stuck, [spotifyApp, ytm]);
+    assert.deepEqual(rows(merged), [
+      ["Spotify", "paused", false],
+      ["Opera|YouTube Music", "playing", true],
+    ]);
+    assert.equal(merged.remote, "Spotify");
+    // MediaRemote suit YouTube Music : il prend l'identifiant et la place de l'onglet, l'autre onglet d'Opera ne joue pas.
+    const remote = s("com.operasoftware.OperaGX", "Opera GX", "Bécane", "playing");
+    const followed = mergeSessions(remote, [spotifyApp, ytm, yt]);
+    assert.deepEqual(rows(followed), [
+      ["Spotify", "paused", false],
+      ["Opera|YouTube Music", "playing", true],
+      ["Opera|YouTube", "paused", false],
+    ]);
+    assert.deepEqual(
+      [followed.remote, followed.sessions[1].name, followed.sessions[1].title],
+      ["Opera|YouTube Music", "YouTube Music", "Bécane"],
+    );
+    // MediaRemote muet : le secours tel quel ; appli inconnue du secours : en tête.
+    assert.deepEqual(rows(mergeSessions(undefined, [spotifyApp, ytm])), [
+      ["Spotify", "paused", false],
+      ["Opera|YouTube Music", "playing", true],
+    ]);
+    assert.equal(
+      mergeSessions(s("com.apple.podcasts", "Podcasts", "Épisode", "paused"), [spotifyApp]).sessions[0].app,
+      "com.apple.podcasts",
+    );
+  });
+
+  it("deux lectures à la fois : MediaRemote passe de l'une à l'autre, identifiants et ordre ne bougent pas", () => {
+    const s = (app: string, name: string, title: string, status: string) => ({ app, name, title, status, current: false }) as MediaSession;
+    const spotifyApp = s("Spotify", "Spotify", "unravel", "playing");
+    const ytm = s("Opera|YouTube Music", "YouTube Music", "Hold On", "playing");
+    const order = (primary: MediaSession) => mergeSessions(primary, [spotifyApp, ytm]).sessions.map((m) => [m.app, m.status]);
+    const both = [
+      ["Spotify", "playing"],
+      ["Opera|YouTube Music", "playing"],
+    ];
+    assert.deepEqual(order(s("com.spotify.client", "Spotify", "unravel", "playing")), both);
+    assert.deepEqual(order(s("com.operasoftware.OperaGX", "Opera GX", "Hold On", "playing")), both);
+  });
+
+  it("YouTube Music en pause (onglet sans titre) : gardé avec le dernier morceau, sans doublon si MediaRemote le suit", () => {
+    const s = (app: string, name: string, title: string, status: string, artist = "") =>
+      ({ app, name, title, artist, status, current: false }) as MediaSession;
+    const recall = new Map();
+    // MediaRemote suit YouTube Music qui joue : le morceau est retenu pour l'onglet.
+    const remote = s("com.operasoftware.OperaGX", "Opera GX", "Hold On", "playing", "Chord Overstreet");
+    mergeSessions(remote, [s("Opera|YouTube Music", "YouTube Music", "Hold On", "playing")], recall);
+    // En pause, l'onglet n'a plus de titre : MediaRemote le suit encore, une seule lecture, sous l'identifiant de l'onglet.
+    const idle = s("Opera|YouTube Music", "YouTube Music", "", "paused");
+    assert.deepEqual(
+      mergeSessions({ ...remote, status: "paused" }, [idle], recall).sessions.map((m) => [m.app, m.title]),
+      [["Opera|YouTube Music", "Hold On"]],
+    );
+    // Relevé du 29/10 : Spotify relancé depuis la tablette, MediaRemote passe sur Spotify ; YouTube Music reste.
+    const spotify = s("com.spotify.client", "Spotify", "unravel", "playing");
+    assert.deepEqual(
+      mergeSessions(spotify, [idle], recall).sessions.map((m) => [m.app, m.title, m.artist, m.status, m.current]),
+      [
+        ["com.spotify.client", "unravel", "", "playing", true],
+        ["Opera|YouTube Music", "Hold On", "Chord Overstreet", "paused", false],
+      ],
+    );
+    // Rien de retenu : le nom du site.
+    assert.equal(mergeSessions(spotify, [idle]).sessions[1].title, "YouTube Music");
+  });
+
   it("pochette de secours : image YouTube de l'onglet du même titre", () => {
     const tabs = [
       { url: "https://music.youtube.com/", tabTitle: "YouTube Music" },
@@ -94,8 +171,8 @@ describe("lecture en cours (Mac)", () => {
     assert.deepEqual(
       sessions.map((s) => [s.app, s.title, s.status, s.current]),
       [
-        ["Google Chrome", "Titre", "paused", false],
-        ["Opera", "Clip", "playing", true],
+        ["Google Chrome|YouTube Music", "Titre", "paused", false],
+        ["Opera|YouTube", "Clip", "playing", true],
       ],
     );
   });
