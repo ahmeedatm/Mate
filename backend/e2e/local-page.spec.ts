@@ -84,7 +84,14 @@ test.describe("page locale GET /", () => {
     // Fausse tablette : un poll ouvert, chaque ordre exécuté sur son état puis renvoyé avec le résultat.
     let settings = { theme: "CADRAN", brightness: 0.6, volume: 0.4, nightDim: true, focusDnd: true };
     const received: Record<string, unknown>[] = [];
-    const state = () => ({ mode: "home", app: "1.4.0", model: "Unowhy 4.2", battery: { level: 82, charging: true }, settings });
+    const state = () => ({
+      mode: "home",
+      app: "1.4.0",
+      name: "Tablette Unowhy 4.2",
+      model: "Unowhy 4.2",
+      battery: { level: 82, charging: true },
+      settings,
+    });
     let running = true;
     const tablet = (async () => {
       while (running) {
@@ -100,6 +107,10 @@ test.describe("page locale GET /", () => {
 
     await expect(page.locator("#tabletcard")).toBeVisible();
     await expect(page.locator("#tabletinfo")).toHaveText("Unowhy 4.2 · appli 1.4.0 · batterie 82 % (en charge)");
+    // Tablette connectée : sa carte passe avant l'état et l'adresse, et l'onglet porte son nom.
+    await expect(page).toHaveTitle("Compagnon · Tablette Unowhy 4.2");
+    const top = (id: string) => page.locator(id).evaluate((el) => el.getBoundingClientRect().top);
+    expect(await top("#tabletcard")).toBeLessThan(await top("#state"));
     await expect(page.getByRole("button", { name: "Cadran", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator("#brightnessvalue")).toHaveText("60 %");
     await expect(page.locator("#nightdim")).toBeChecked();
@@ -115,6 +126,11 @@ test.describe("page locale GET /", () => {
     await expect.poll(() => received.length).toBe(3);
     expect(received).toEqual([{ theme: "RETRO" }, { nightDim: false }, { volume: 0.75 }]);
     await expect(page.locator("#nightdim")).not.toBeChecked();
+
+    // Ouverte depuis « Régler depuis l'ordi » : la carte est mise en avant.
+    expect((await server.call("POST", "/local/open", { section: "tablette" })).status).toBe(200);
+    await page.goto("/?section=tablette");
+    await expect(page.locator("#tabletcard .card")).toHaveClass(/focus/);
 
     // Son dernier poll (jusqu'à 25 s) finit sans elle.
     running = false;

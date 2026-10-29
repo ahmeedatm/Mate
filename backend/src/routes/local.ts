@@ -163,10 +163,10 @@ export default async function localRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
-  /** Ouvre la page du compagnon sur l'ordinateur, depuis la tablette (« Relier mon agenda » de l'Accueil). */
-  app.post<{ Body: { section?: "agenda" } }>(
+  /** Ouvre la page du compagnon sur l'ordinateur, depuis la tablette (« Relier mon agenda » de l'Accueil, « Régler depuis l'ordi » des Réglages). */
+  app.post<{ Body: { section?: "agenda" | "tablette" } }>(
     "/local/open",
-    { schema: { body: { type: "object", additionalProperties: false, properties: { section: { enum: ["agenda"] } } } } },
+    { schema: { body: { type: "object", additionalProperties: false, properties: { section: { enum: ["agenda", "tablette"] } } } } },
     async (req) => {
       await openTarget(`http://127.0.0.1:${config.port}/${req.body?.section ? `?section=${req.body.section}` : ""}`);
       return { ok: true };
@@ -184,6 +184,8 @@ function tabletInfo() {
   const s = state as Record<string, unknown>;
   return {
     app: s.app ?? null,
+    // Nom donné à l'appairage (« Tablette <modèle> ») ; absent d'une appli plus ancienne : le modèle.
+    name: s.name ?? s.model ?? null,
     model: s.model ?? null,
     screen: s.screen ?? null,
     battery: s.battery ?? null,

@@ -292,6 +292,13 @@
                 android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
 
+            <!-- Ouvre sur l'ordinateur la page du compagnon, carte Réglages de la tablette en avant. -->
+            <Button
+                android:id="@+id/settings_tablet_remote"
+                style="@style/ActionButton"
+                android:layout_marginTop="12dp"
+                android:text="@string/tablet_remote" />
+
             <TextView
                 android:id="@+id/settings_tablet_info"
                 android:layout_width="match_parent"
