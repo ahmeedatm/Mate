@@ -117,7 +117,7 @@ class ProfilesDialog(
     }
 
     /** Pastille de l'écran : son icône ([ProfileIcons], choisie sinon celle du rôle), teinte du rôle. */
-    private fun profileIcon(i: Int): Pair<Int, Int> = ProfileIcons.of(layout, i) to when (i) {
+    private fun profileIcon(i: Int, choice: String? = layout.iconOf(i)): Pair<Int, Int> = ProfileIcons.of(layout, i, choice) to when (i) {
         layout.callProfile -> R.attr.c_hue_violet
         layout.homeProfile -> R.attr.c_hue_blue
         layout.gameProfile -> R.attr.c_hue_pink
@@ -138,7 +138,12 @@ class ProfilesDialog(
             addView(ImageView(context).apply {
                 setImageDrawable(Look.badge(context, icon, themeColor(context, hue), sizeDp = 40, iconDp = 22))
                 contentDescription = context.getString(R.string.profile_icon_row, name(i))
-                setOnClickListener { chooseIcon(i) }
+                setOnClickListener {
+                    chooseIcon(i, ProfileIcons.keyOf(layout, i)) { key ->
+                        layout.setIcon(i, key)
+                        changed(structure = false)
+                    }
+                }
             }, LinearLayout.LayoutParams(context.dp(40), context.dp(40)))
             addView(TextView(context).apply {
                 text = name(i)
@@ -177,7 +182,7 @@ class ProfilesDialog(
                 null
             },
         )
-        addView(iconButton(R.drawable.ic_edit, R.string.profile_rename, R.attr.c_text_dim) { rename(i) })
+        addView(iconButton(R.drawable.ic_edit, R.string.profile_rename, R.attr.c_text_dim) { editNameAndIcon(i) })
         slot(if (layout.canRemove(i)) iconButton(R.drawable.ic_delete, R.string.profile_delete, R.attr.c_text_dim) { confirmDelete(i) } else null)
     }
 
@@ -263,21 +268,19 @@ class ProfilesDialog(
     }
 
     /**
-     * Grille des icônes ([ProfileIcons]), centrée : l'actuelle (choisie, sinon celle du rôle) en rouge ; « Par défaut »
-     * remet celle du rôle (maison pour l'Accueil).
+     * Grille des icônes ([ProfileIcons]), centrée : `shown` (la choisie, sinon celle du rôle) en rouge ; « Par défaut »
+     * remet celle du rôle (maison pour l'Accueil). Le choix est rendu à `onPick` (null = par défaut), rien n'est enregistré ici.
      */
-    private fun chooseIcon(i: Int) {
+    private fun chooseIcon(i: Int, shown: String?, onPick: (String?) -> Unit) {
         val grid = android.widget.GridLayout(context).apply { columnCount = ICON_COLUMNS }
         lateinit var picker: AlertDialog
-        val shown = ProfileIcons.keyOf(layout, i)
         for (icon in ProfileIcons.ALL) {
             val isShown = icon.key == shown
             val label = context.getString(icon.label)
             grid.addView(
                 iconButton(icon.drawable, icon.label, if (isShown) R.attr.c_accent else R.attr.c_text) {
-                    layout.setIcon(i, icon.key)
                     picker.dismiss()
-                    changed(structure = false)
+                    onPick(icon.key)
                 }.apply {
                     contentDescription = if (isShown) context.getString(R.string.profile_icon_chosen, label) else label
                     setBackgroundResource(if (isShown) R.drawable.chip_bg else R.drawable.flat_bg)
@@ -304,10 +307,7 @@ class ProfilesDialog(
                 },
             )
             .setNegativeButton(R.string.cancel, null)
-            .setNeutralButton(R.string.profile_icon_default) { _, _ ->
-                layout.setIcon(i, null)
-                changed(structure = false)
-            }
+            .setNeutralButton(R.string.profile_icon_default) { _, _ -> onPick(null) }
             .create()
         picker.showImmersive()
     }
@@ -336,15 +336,32 @@ class ProfilesDialog(
         changed(structure = true)
     }
 
-    private fun rename(i: Int) {
+    /** Crayon : le nom et l'icône dans la même boîte ; Enregistrer applique les deux, Annuler aucun. */
+    private fun editNameAndIcon(i: Int) {
+        var icon = layout.iconOf(i)
         val form = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(context.dp(24), 0, context.dp(24), context.dp(8))
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(context.dp(24), context.dp(8), context.dp(24), context.dp(8))
         }
         val input = context.inputField(form, R.string.profile_rename_hint, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)
+        input.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = context.dp(16) }
         input.filters = arrayOf(InputFilter.LengthFilter(NAME_MAX))
         input.setText(name(i))
         input.selectAll()
+        // La pastille montre l'icône en attente ; la toucher ouvre la grille.
+        val badge = ImageView(context).apply {
+            contentDescription = context.getString(R.string.profile_icon_row, name(i))
+            setOnClickListener {
+                input.dismissKeyboard()
+                chooseIcon(i, ProfileIcons.keyOf(layout, i, icon)) { key ->
+                    icon = key
+                    showBadge(this, i, icon)
+                }
+            }
+        }
+        showBadge(badge, i, icon)
+        form.addView(badge, 0, LinearLayout.LayoutParams(context.dp(48), context.dp(48)))
         AlertDialog.Builder(context)
             .setTitle(R.string.profile_rename)
             .setView(form)
@@ -352,13 +369,19 @@ class ProfilesDialog(
             .setPositiveButton(R.string.save) { _, _ ->
                 input.dismissKeyboard()
                 val value = input.text.toString().trim()
-                if (value.isNotEmpty() && value != name(i)) {
-                    layout.renameProfile(i, value)
-                    changed(structure = false)
-                }
+                val renamed = value.isNotEmpty() && value != name(i)
+                val reiconed = icon != layout.iconOf(i)
+                if (renamed) layout.renameProfile(i, value)
+                if (reiconed) layout.setIcon(i, icon)
+                if (renamed || reiconed) changed(structure = false)
             }
             .create()
             .showForTyping(input)
+    }
+
+    private fun showBadge(view: ImageView, i: Int, choice: String?) {
+        val (drawable, hue) = profileIcon(i, choice)
+        view.setImageDrawable(Look.badge(context, drawable, themeColor(context, hue), sizeDp = 48, iconDp = 26))
     }
 
     private fun confirmDelete(i: Int) {

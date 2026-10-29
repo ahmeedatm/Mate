@@ -87,6 +87,16 @@ class ProfileIconsTest {
     }
 
     @Test
+    fun `un choix en attente remplace l'enregistre sans le modifier, null revient au role`() {
+        val layout = layout("Bureau", "Libre")
+        layout.setIcon(1, "cafe")
+        assertEquals("star", ProfileIcons.keyOf(layout, 1, "star"))
+        assertEquals("widgets", ProfileIcons.keyOf(layout, 1, null))
+        assertEquals("home", ProfileIcons.keyOf(layout, 0, null))
+        assertEquals("cafe", layout.iconOf(1))
+    }
+
+    @Test
     fun `cles et icones de la grille sont uniques`() {
         assertEquals(ProfileIcons.ALL.size, ProfileIcons.ALL.map { it.key }.toSet().size)
         assertEquals(ProfileIcons.ALL.size, ProfileIcons.ALL.map { it.drawable }.toSet().size)
