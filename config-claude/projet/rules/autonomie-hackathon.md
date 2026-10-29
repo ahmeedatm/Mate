@@ -9,8 +9,8 @@ push / MR) et sur la ligne « Ne rien commit sans demande explicite » du CLAUDE
   dépôt : titre en français, sans préfixe, puis 1 à 3 lignes sur le pourquoi.
 - **Push** de la branche, et à chaque correction.
 - **MR** : création, mise à jour, suivi du pipeline. Tout passe par `/ship`.
-- **Fusion** : jamais d'auto-merge. Pipeline vert → mise à jour d'essai publiée pour la tablette (et compagnon
-  du Mac si `backend/` change), l'utilisateur la teste, et je fusionne seulement après son go (`/ship`, étapes 6-7).
+- **Fusion** : jamais d'auto-merge. Pipeline vert → mise à jour d'essai publiée pour la tablette (avec le
+  backend de la MR si `backend/` change), l'utilisateur la teste, et je fusionne seulement après son go (`/ship`, étapes 6-7).
 - **`/ship` se lance seul** dès qu'une étape est terminée et vérifiée, sans attendre qu'on le demande.
   Un hook `Stop` le rappelle s'il reste du travail non livré à la fin d'un tour.
 - Pipeline rouge : lire le log du job, corriger, repousser. Sans attendre ni demander.
@@ -25,8 +25,8 @@ push / MR) et sur la ligne « Ne rien commit sans demande explicite » du CLAUDE
    question : le récap en 3 à 5 lignes (ce qui sera fait, hors sujet, comment le tester) et « Je pars
    là-dessus ? ». Demande déjà précise ou bug évident : la seule question de récap.
 2. **Autonomie** : après ce go, plus aucune question jusqu'à l'essai publié. Lancer le workflow `tache`
-   (`.claude/workflows/tache.js`, `args: {demande: <récap validé>}`) : worktree, code, tests, vérif sur
-   l'émulateur et relecture, puis `/ship` jusqu'à l'essai publié. Un choix imprévu en route : le défaut le
+   (`.claude/workflows/tache.js`, `args: {demande: <récap validé>}`) : worktree, code, tests,
+   relecture, puis `/ship` jusqu'à l'essai publié. Un choix imprévu en route : le défaut le
    plus simple, écrit dans la description de la MR. S'arrêter seulement pour ce qui est dans « Demander
    avant » ou un blocage impossible à lever seul.
 3. **Test** : relayer tel quel le `message` rendu par le workflow (c'est fini, version d'essai, comment

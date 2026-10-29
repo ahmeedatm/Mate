@@ -104,7 +104,10 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
             val row = LayoutInflater.from(context).inflate(R.layout.item_window, found, false)
             row.findViewById<TextView>(R.id.window_title).text = c.name
             row.findViewById<TextView>(R.id.window_meta).text =
-                listOfNotNull(ComputerAdder.osLabel(context, c.os), context.getString(R.string.welcome_tap)).joinToString(" · ")
+                listOfNotNull(
+                    ComputerAdder.osLabel(context, c.os),
+                    context.getString(if (c.outdated) R.string.computer_outdated else R.string.welcome_tap),
+                ).joinToString(" · ")
             row.setOnClickListener { adder.pair(c.url, c.name) }
             (row.layoutParams as? LinearLayout.LayoutParams)?.topMargin = dp(8)
             found.addView(row)

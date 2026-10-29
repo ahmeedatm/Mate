@@ -17,9 +17,11 @@ import com.unowhy.companion.R
 import com.unowhy.companion.UserFacingException
 import com.unowhy.companion.net.AppUpdate
 import com.unowhy.companion.net.BackendClient
+import com.unowhy.companion.net.Essai
 import com.unowhy.companion.net.HttpException
 import com.unowhy.companion.net.UpdateSource
 import com.unowhy.companion.net.UpdatesApi
+import com.unowhy.companion.trial.EssaiPlan
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -76,12 +78,20 @@ object Updater {
      * Serveur central. Rien de publié (404) ou Pages privées (redirection vers la page de connexion GitLab, donc du
      * HTML) : aucune mise à jour, pas une erreur. Réseau absent : phrase propre au serveur (errorText parlerait de l'ordinateur).
      */
-    private suspend fun serverList(api: UpdatesApi): List<AppUpdate> = try {
-        api.list()
+    private suspend fun serverList(api: UpdatesApi): List<AppUpdate> = lenient { api.list() }
+
+    /** Essais de MR publiés dans le registre, la plus récente d'abord ; aucun si rien n'est publié. */
+    suspend fun essais(context: Context): List<Essai> {
+        val api = UpdatesApi.essais() ?: return emptyList()
+        return lenient { api.essais() }
+    }
+
+    private suspend fun <T> lenient(block: suspend () -> List<T>): List<T> = try {
+        block()
     } catch (e: CancellationException) {
         throw e
     } catch (e: HttpException) {
-        if (e.code in 300..499) emptyList<AppUpdate>().also { Log.i("Updater", "Serveur central : rien de publié (${e.code})") } else throw serverError(e)
+        if (e.code in 300..499) emptyList<T>().also { Log.i("Updater", "Serveur central : rien de publié (${e.code})") } else throw serverError(e)
     } catch (e: JSONException) {
         Log.i("Updater", "Serveur central : pas de manifest lisible", e)
         emptyList()
@@ -97,6 +107,7 @@ object Updater {
     private fun api(context: Context, source: UpdateSource): UpdatesApi = when (source) {
         UpdateSource.COMPUTER -> BackendClient(context).updates
         UpdateSource.SERVER -> UpdatesApi.server() ?: throw UserFacingException(R.string.update_server_unreachable)
+        UpdateSource.TRIALS -> UpdatesApi.essais() ?: throw UserFacingException(R.string.update_server_unreachable)
     }
 
     /**
@@ -110,6 +121,32 @@ object Updater {
             download(context.applicationContext, update, progress, committed)
         } finally {
             busy.set(false)
+        }
+    }
+
+    /**
+     * Désinstalle un paquet sans confirmation (device owner) : l'essai d'une MR au pipeline plus ancien que l'essai
+     * installé, qu'Android refuserait de remplacer. Ses données partent avec ; il reprend les ordinateurs de la stable.
+     * Appelé pendant [install], installations déjà permises ([Kiosk.lockApps]).
+     */
+    private suspend fun uninstall(app: Context, pkg: String) {
+        val action = "${app.packageName}.UNINSTALL_RESULT_$pkg"
+        val result = CompletableDeferred<Intent>()
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, intent: Intent) { result.complete(intent) }
+        }
+        ContextCompat.registerReceiver(app, receiver, IntentFilter(action), ContextCompat.RECEIVER_NOT_EXPORTED)
+        try {
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
+            val pending = PendingIntent.getBroadcast(app, 0, Intent(action).setPackage(app.packageName), flags)
+            app.packageManager.packageInstaller.uninstall(pkg, pending.intentSender)
+            val intent = withTimeoutOrNull(2 * 60_000L) { result.await() }
+            val status = intent?.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+            if ((intent == null && installed(app, pkg) != null) || (status != null && status != PackageInstaller.STATUS_SUCCESS)) {
+                throw UserFacingException(R.string.update_uninstall_failed, status ?: -1)
+            }
+        } finally {
+            app.unregisterReceiver(receiver)
         }
     }
 
@@ -133,6 +170,12 @@ object Updater {
             // Le blocage des installations s'applique aussi au device owner : levé le temps de l'installation.
             Kiosk.lockApps(app, false)
             try {
+                // Essai d'une MR au pipeline plus ancien que l'essai installé : Android refuse la version plus basse.
+                // Après le téléchargement vérifié : un échec avant ne coûte pas l'essai installé.
+                val installedCode = installed(app, update.pkg)?.let { versionCode(it) }
+                if (update.source == UpdateSource.TRIALS && EssaiPlan.install(update.versionCode, installedCode) == EssaiPlan.Install.UNINSTALL_FIRST) {
+                    uninstall(app, update.pkg)
+                }
                 installApk(app, file, update, committed)
             } finally {
                 Kiosk.lockApps(app, !Prefs.allowInstalls(app))
