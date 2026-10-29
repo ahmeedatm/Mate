@@ -8,18 +8,24 @@ object Prefs {
     private const val KEY_ALLOW_INSTALLS = "allow_installs"
     private const val KEY_BRIGHTNESS = "brightness"
     private const val KEY_NIGHT_DIM = "night_dim"
-    private const val KEY_DECK_TABS = "deck_tabs_"
     private const val KEY_THEME = "theme"
+    private const val KEY_RAIL_LABELS = "rail_labels"
+    private const val KEY_TOUR_DONE = "tour_done"
+    private const val KEY_RAIL_HIDDEN = "rail_hidden_tools"
     private const val KEY_FOCUS_DND = "focus_dnd"
     private const val KEY_AGENTS_PRIVATE = "agents_private"
     private const val KEY_NOTIFICATIONS_DISCREET = "notifications_discreet"
     private const val KEY_WAKE_WORD = "wake_word"
     private const val KEY_WEATHER_LOCATION = "weather_location"
+    private const val KEY_TEXT_SCALE = "text_scale"
     private const val KEY_FRAME_DELAY = "frame_delay_min"
     private const val KEY_FRAME_INTERVAL = "frame_interval_s"
     private const val KEY_TRIAL_MR = "trial_mr"
     private const val KEY_TRIAL_BACKEND = "trial_backend"
     private const val KEY_TRIAL_OPENED = "trial_opened"
+    private const val KEY_LEGIBLE_FONT = "legible_font"
+    private const val KEY_REDUCE_MOTION = "reduce_motion"
+    private const val KEY_READ_BANNERS = "read_banners"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -73,13 +79,34 @@ object Prefs {
         prefs(context).edit().putBoolean(KEY_ALLOW_INSTALLS, value).apply()
     }
 
-    /** Ordre des onglets du Deck choisi sur la tablette, propre à chaque ordinateur (clés d'onglets, voir DeckFragment). */
-    fun deckTabOrder(context: Context): List<String> =
-        prefs(context).getString(KEY_DECK_TABS + Computers.active(context)?.id.orEmpty(), null)?.split('\n').orEmpty()
+    /** Visite guidée du premier lancement déjà vue (ou passée). */
+    fun tourDone(context: Context): Boolean = prefs(context).getBoolean(KEY_TOUR_DONE, false)
 
-    fun setDeckTabOrder(context: Context, keys: List<String>) {
-        prefs(context).edit().putString(KEY_DECK_TABS + Computers.active(context)?.id.orEmpty(), keys.joinToString("\n")).apply()
+    fun setTourDone(context: Context) {
+        prefs(context).edit().putBoolean(KEY_TOUR_DONE, true).apply()
     }
+
+    /** Barre de gauche : noms sous les icônes (Réglages > Barre de gauche). Affichés par défaut. */
+    fun railLabels(context: Context): Boolean = prefs(context).getBoolean(KEY_RAIL_LABELS, true)
+
+    fun setRailLabels(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_RAIL_LABELS, value).apply()
+    }
+
+    /** Outils de la barre de gauche, dans leur ordre : tous sauf ceux masqués dans Réglages. */
+    fun railTools(context: Context): List<Mode> {
+        val hidden = prefs(context).getStringSet(KEY_RAIL_HIDDEN, emptySet()).orEmpty()
+        return RAIL_TOOLS.filter { it.key !in hidden }
+    }
+
+    fun setRailTool(context: Context, tool: Mode, shown: Boolean) {
+        val hidden = prefs(context).getStringSet(KEY_RAIL_HIDDEN, emptySet()).orEmpty().toMutableSet()
+        if (shown) hidden -= tool.key else hidden += tool.key
+        prefs(context).edit().putStringSet(KEY_RAIL_HIDDEN, hidden).apply()
+    }
+
+    /** Outils que la barre de gauche peut montrer. */
+    val RAIL_TOOLS = listOf(Mode.FOCUS, Mode.COMPUTER, Mode.CAMERA)
 
     /** Thème choisi dans Réglages (nom d'AppTheme) ; null : Nuit. */
     /** Agents Claude : contenu des sessions (commandes, questions, résumés) masqué à l'écran, pour le direct. */
@@ -107,6 +134,16 @@ object Prefs {
      * Ville de la météo trouvée seule par la position (services de localisation de Google, docs/confidentialite.md).
      * Coupé par défaut ; « Ma position » dans « Choisir ma ville » reste possible, c'est une demande explicite.
      */
+    /**
+     * Taille du texte de l'appli, en plus de celle d'Android (que le kiosque empêche de régler) : 1 = normale.
+     * Appliquée par MainActivity.attachBaseContext ; un changement recrée l'activité.
+     */
+    fun textScale(context: Context): Float = prefs(context).getFloat(KEY_TEXT_SCALE, 1f)
+
+    fun setTextScale(context: Context, value: Float) {
+        prefs(context).edit().putFloat(KEY_TEXT_SCALE, value).apply()
+    }
+
     fun weatherLocation(context: Context): Boolean = prefs(context).getBoolean(KEY_WEATHER_LOCATION, false)
 
     fun setWeatherLocation(context: Context, value: Boolean) {
@@ -117,6 +154,27 @@ object Prefs {
 
     fun setTheme(context: Context, value: String) {
         prefs(context).edit().putString(KEY_THEME, value).apply()
+    }
+
+    /** Accessibilité : police Atkinson Hyperlegible à la place de celles du thème. Désactivé par défaut. */
+    fun legibleFont(context: Context): Boolean = prefs(context).getBoolean(KEY_LEGIBLE_FONT, false)
+
+    fun setLegibleFont(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_LEGIBLE_FONT, value).apply()
+    }
+
+    /** Accessibilité : ni animations continues ni ressorts (Look.still). Désactivé par défaut. */
+    fun reduceMotion(context: Context): Boolean = prefs(context).getBoolean(KEY_REDUCE_MOTION, false)
+
+    fun setReduceMotion(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_REDUCE_MOTION, value).apply()
+    }
+
+    /** Accessibilité : notifications du PC et messages de l'ordinateur lus à voix haute. Désactivé par défaut. */
+    fun readBanners(context: Context): Boolean = prefs(context).getBoolean(KEY_READ_BANNERS, false)
+
+    fun setReadBanners(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_READ_BANNERS, value).apply()
     }
 
     /** MR de l'essai installé par la stable (0 : aucun, ou installé autrement) et son backend : « Ouvrir l'essai » les relit. */

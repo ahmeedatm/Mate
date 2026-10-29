@@ -29,8 +29,9 @@ fun tileLit(tile: DeckTile, voice: VoiceState?) = voice?.connected == true && wh
 }
 
 /** Touche choisie dans un widget : assez pour la dessiner sans relire le deck. Le JSON garde l'ancien format de KeysWidget. */
-data class KeyRef(val id: String, val label: String, val glyph: String? = null, val color: String? = null) {
+data class KeyRef(val id: String, val label: String, val glyph: String? = null, val color: String? = null, val symbol: String? = null) {
     fun toJson(): JSONObject = JSONObject().put("id", id).put("label", label).put("glyph", glyph ?: "").put("color", color ?: "")
+        .apply { symbol?.let { put("symbol", it) } }
 
     companion object {
         /** Null pour un élément sans id : une config abîmée ne doit pas faire planter le rendu. */
@@ -41,10 +42,33 @@ data class KeyRef(val id: String, val label: String, val glyph: String? = null, 
                 json.optString("label"),
                 json.optString("glyph").takeIf { it.isNotEmpty() },
                 json.optString("color").takeIf { it.isNotEmpty() },
+                json.optString("symbol").takeIf { it.isNotEmpty() },
             )
         }
 
-        fun of(tile: DeckTile) = KeyRef(tile.id, tile.label, tile.glyph, tile.color)
+        fun of(tile: DeckTile) = KeyRef(tile.id, tile.label, tile.glyph, tile.color, tile.symbol)
+
+        /** Config d'un widget Touches : titre de la page du deck dont il prend ses touches de départ (profil Deck). */
+        const val DEFAULT_PAGE = "defaultPage"
+
+        /** Touches de départ au plus : une grille de 3 × 3 dans le widget en L du profil Deck. */
+        const val SEED_MAX = 9
+
+        /** Ordre des touches de départ par symbole ; les autres suivent, dans l'ordre de la page. */
+        private val SEED_PRIORITY = listOf("lock", "mic_off", "dnd", "screenshot", "clipboard", "windows", "search", "play_pause", "skip_previous", "skip_next")
+
+        /**
+         * Touches de départ d'un ordinateur : les [SEED_MAX] premières de la page [DEFAULT_PAGE], une seule fois (dès que
+         * l'ordinateur a ses touches dans la config, même vidées, plus rien n'est posé). Null : rien à poser.
+         */
+        fun seed(config: JSONObject, computerId: String?, pages: List<DeckPage>): List<KeyRef>? {
+            if (computerId == null || config.optJSONObject(BY_COMPUTER)?.has(computerId) == true) return null
+            val title = config.optString(DEFAULT_PAGE).takeIf { it.isNotEmpty() } ?: return null
+            val page = pages.firstOrNull { it.title == title } ?: return null
+            // Essentielles bureau d'abord (Verrouiller, micro, Ne pas déranger…), quel que soit l'ordre de la page.
+            val rank = { t: DeckTile -> SEED_PRIORITY.indexOf(t.symbol).let { if (it < 0) SEED_PRIORITY.size else it } }
+            return page.tiles.filter { it.type != "empty" }.sortedBy(rank).take(SEED_MAX).map(::of).takeIf { it.isNotEmpty() }
+        }
 
         fun list(config: JSONObject): List<KeyRef> {
             val array = config.optJSONArray("keys") ?: return emptyList()
@@ -111,4 +135,20 @@ fun reconcileKeys(chosen: List<KeyRef>, pages: List<DeckPage>): List<KeyRef>? {
         }
     }
     return result.takeIf { it != chosen }
+}
+
+/**
+ * Cotes d'une case de touche, en dp et sp. Normales : plaque de 52 dp, libellé de 13 sp. Grandes (thème Contraste
+ * élevé, `c_big_keys`) : colonnes de 148 dp, plaque de 80 dp, libellé de 18 sp, assez pour deux lignes.
+ */
+class TileMetrics(val columnDp: Int, val cellDp: Int, val plateDp: Int, val labelSp: Float, val initialSp: Float) {
+    companion object {
+        val NORMAL = TileMetrics(columnDp = 96, cellDp = 100, plateDp = 52, labelSp = 13f, initialSp = 30f)
+        val LARGE = TileMetrics(columnDp = 148, cellDp = 148, plateDp = 80, labelSp = 18f, initialSp = 42f)
+
+        fun of(big: Boolean) = if (big) LARGE else NORMAL
+
+        /** Rayon des coins d'une plaque : 22 sur 52, gardé en proportion. */
+        fun radiusFor(plate: Int) = plate * 22 / 52
+    }
 }

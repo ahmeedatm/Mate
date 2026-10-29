@@ -52,6 +52,16 @@ class InstallerHttpServerTest {
     }
 
     @Test
+    fun `installers json decrit les installeurs telecharges pour le panneau de l'ordinateur`() {
+        assertEquals(emptyList<Installer>(), InstallerPlan.parse(String(get("/installers.json").second)))
+        val exe = installer("Compagnon-Unowhy-Windows.exe", Os.WINDOWS, zip)
+        publish(exe, zip)
+        val (code, body) = get("/installers.json")
+        assertEquals(200, code)
+        assertEquals(listOf(exe), InstallerPlan.parse(String(body)))
+    }
+
+    @Test
     fun `la page dit que les installeurs ne sont pas la tant qu'ils ne sont pas telecharges`() {
         val (code, body) = get("/")
         assertEquals(200, code)

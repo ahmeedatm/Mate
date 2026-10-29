@@ -1,3 +1,4 @@
+import { SYSTEM_COMMANDS, TILE_SYMBOLS } from "./screens.ts";
 import path from "node:path";
 import { config } from "./config.ts";
 import { readJson, removeJson, updateJson, writeJson } from "./store.ts";
@@ -7,7 +8,7 @@ import type { Step } from "./deck.ts";
  * Touches perso : page "Perso" du deck, emplacements vides que l'on remplit depuis la tablette
  * ou depuis Claude (outil MCP deck_touche). Une étape = raccourci simple, plusieurs = macro.
  */
-export type PersoKey = { label: string; glyph?: string; color?: string; steps: Step[] };
+export type PersoKey = { label: string; symbol?: string; glyph?: string; color?: string; steps: Step[] };
 
 /** Emplacements montrés au minimum. */
 export const MIN_SLOTS = 14;
@@ -55,7 +56,7 @@ export const stepSchema = {
     step("keys", ["keys"], { keys: { type: "string", minLength: 1, maxLength: 60 }, app: name }),
     step("shortcut", ["name"], { name }),
     step("media", ["command"], { command: { enum: ["play-pause", "next", "previous"] } }),
-    step("system", ["command"], { command: { enum: ["sleep-display", "toggle-dark-mode", "screenshot-clipboard", "lock"] } }),
+    step("system", ["command"], { command: { enum: SYSTEM_COMMANDS } }),
     step("text", ["text"], { text: { type: "string", minLength: 1, maxLength: 4000 } }),
     step("wait", ["ms"], { ms: { type: "integer", minimum: 0, maximum: 10_000 } }),
     step("window", ["app"], { app: name, display: { type: "string", maxLength: 100 }, layout: { enum: ["keep", "left", "right", "max"] } }),
@@ -68,6 +69,7 @@ export const keySchema = {
   required: ["label", "steps"],
   properties: {
     label: { type: "string", minLength: 1, maxLength: 40 },
+    symbol: { enum: TILE_SYMBOLS },
     glyph: { type: "string", maxLength: 8 },
     color: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
     steps: { type: "array", minItems: 1, maxItems: 20, items: stepSchema },

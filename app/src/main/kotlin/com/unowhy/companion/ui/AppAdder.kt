@@ -24,8 +24,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
- * Ajout d'applis du Mac à la page Apps du deck, par-dessus le deck. Le panneau reste ouvert pour en
- * ajouter plusieurs ; « Profil de base » revient à la liste de config/deck.json.
+ * Toutes les applis de l'ordinateur (carte Applis de l'Accueil), en plein écran : toucher une appli la lance sur
+ * l'ordinateur et ferme le panneau ; l'épingle l'ajoute à la carte (page Apps du deck) ou l'en retire, le panneau reste
+ * ouvert. Épinglées d'abord ([order]) ; « Profil de base » revient à la liste de config/deck.json.
  */
 class AppAdder @JvmOverloads constructor(
     context: Context,
@@ -102,23 +103,50 @@ class AppAdder @JvmOverloads constructor(
     private fun render() {
         list.removeAllViews()
         val all = apps ?: return list.addView(TextView(context).apply { setText(R.string.loading); textSize = 16f })
-        val query = filter.text.toString().trim()
-        all.filter { it.contains(query, ignoreCase = true) }.take(60).forEach { name -> list.addView(row(name)) }
+        order(all, present.keys, filter.text.toString()).take(MAX_ROWS).forEach { name -> list.addView(row(name)) }
     }
 
-    private fun row(name: String) = TextView(context).apply {
-        val added = name in present
-        text = if (added) context.getString(R.string.apps_added, name) else name
-        textSize = 16f
+    /** Une appli : son nom (toucher = la lancer), puis l'épingle de la carte, rouge si elle y est. */
+    private fun row(name: String) = LinearLayout(context).apply {
+        val pinned = name in present
         gravity = Gravity.CENTER_VERTICAL
         setBackgroundResource(R.drawable.row_bg)
-        setPadding(dp(16), 0, dp(16), 0)
-        if (added) setTextColor(themeColor(context, R.attr.c_accent))
-        setOnClickListener {
-            dismissKeyboard()
-            if (added) remove(name) else add(name)
-        }
+        setPadding(dp(16), 0, dp(4), 0)
+        setOnClickListener { launch(name) }
+        addView(
+            TextView(context).apply {
+                text = name
+                textSize = 16f
+                isSingleLine = true
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            },
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
+        )
+        addView(
+            ImageButton(context, null, 0, R.style.IconButton_Flat).apply {
+                setImageResource(R.drawable.ic_push_pin)
+                imageTintList = android.content.res.ColorStateList.valueOf(themeColor(context, if (pinned) R.attr.c_accent else R.attr.c_text_faint))
+                contentDescription = context.getString(if (pinned) R.string.apps_unpin else R.string.apps_pin, name)
+                setOnClickListener {
+                    dismissKeyboard()
+                    if (pinned) remove(name) else add(name)
+                }
+            },
+            LinearLayout.LayoutParams(dp(48), dp(48)),
+        )
         layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)).apply { bottomMargin = dp(6) }
+    }
+
+    private fun launch(name: String) {
+        dismissKeyboard()
+        scope.launch {
+            try {
+                BackendClient(context).system.launchApp(name)
+                hide()
+            } catch (e: Exception) {
+                status.showError(e)
+            }
+        }
     }
 
     private fun add(name: String) {
@@ -169,5 +197,15 @@ class AppAdder @JvmOverloads constructor(
                 }
             }
             .showImmersive()
+    }
+
+    companion object {
+        private const val MAX_ROWS = 80
+
+        /** Applis épinglées sur la carte d'abord, puis les autres, chacune par ordre alphabétique ; filtrées par la recherche. */
+        fun order(apps: List<String>, pinned: Set<String>, query: String): List<String> {
+            val q = query.trim()
+            return apps.filter { it.contains(q, ignoreCase = true) }.sortedWith(compareBy({ it !in pinned }, { it.lowercase() }))
+        }
     }
 }

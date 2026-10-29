@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Contenu de AppAdder (FrameLayout plein écran sur fond assombri) : ajouter une appli du Mac à la page Apps. -->
+<!-- Contenu de AppAdder (FrameLayout plein écran sur fond assombri) : toutes les applis de l'ordinateur, à lancer ou
+     épingler sur la carte Applis. -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android">
 
     <LinearLayout
@@ -21,7 +22,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:fontFamily="?attr/c_font_medium"
-                android:text="@string/apps_add_title"
+                android:text="@string/apps_all_title"
                 android:textSize="20sp" />
 
             <Button

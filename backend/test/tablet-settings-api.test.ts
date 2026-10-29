@@ -16,6 +16,7 @@ const SETTINGS = { theme: "CADRAN", brightness: 0.6, volume: 0.4, nightDim: true
 const STATE = {
   mode: "home",
   app: "1.4.0",
+  name: "Tablette Unowhy 4.2",
   model: "Unowhy 4.2",
   screen: "1280x800",
   battery: { level: 82, charging: true },
@@ -40,6 +41,7 @@ describe("panneau Tablette", () => {
     const status = await server.call("GET", "/local/status", undefined, false);
     assert.deepEqual(status.json.tabletInfo, {
       app: "1.4.0",
+      name: "Tablette Unowhy 4.2",
       model: "Unowhy 4.2",
       screen: "1280x800",
       battery: { level: 82, charging: true },
@@ -57,6 +59,20 @@ describe("panneau Tablette", () => {
     assert.equal(done.status, 200);
     // Réponse avec l'état renvoyé par la tablette : la page se met à jour sans attendre le poll suivant.
     assert.equal(done.json.tablet.settings.theme, "RETRO");
+  });
+
+  it("accepte le thème Contraste élevé", async () => {
+    const polling = server.call("POST", "/tablet/poll", { state: STATE });
+    await new Promise((r) => setTimeout(r, 300));
+    const put = server.call("PUT", "/local/tablet/settings", { theme: "CONTRASTE" }, false);
+    const [order] = (await polling).json.commands;
+    assert.deepEqual(order.command, { type: "settings", theme: "CONTRASTE" });
+    await server.call("POST", "/tablet/result", {
+      id: order.id,
+      ok: true,
+      state: { ...STATE, settings: { ...SETTINGS, theme: "CONTRASTE" } },
+    });
+    assert.equal((await put).status, 200);
   });
 
   it("rend l'erreur de la tablette", async () => {

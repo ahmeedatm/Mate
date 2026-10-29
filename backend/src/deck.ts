@@ -7,6 +7,10 @@ import {
   appIcon,
   canControl,
   canMedia,
+  getAudio,
+  getDnd,
+  isAppInCall,
+  isAppRunning,
   isInstalled,
   launchApp,
   listWindows,
@@ -16,6 +20,8 @@ import {
   runShortcut,
   sendKeys,
   sendMediaKey,
+  setAudio,
+  setDnd,
   systemCommand,
   typeText,
   type MediaCommand,
@@ -24,7 +30,10 @@ import {
 import type { Layout } from "./screens.ts";
 import { loadKeys, loadLinks, loadSavedApps, saveApps, saveLinks, type DeckApp, type DeckLink } from "./perso.ts";
 import { agentsAvailable } from "./agents-sources.ts";
+import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
+import { jiraConfigured } from "./jira.ts";
+import { appPluginOff, pluginOn, pluginsOff } from "./plugins.ts";
 import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
 
 /**
@@ -64,6 +73,8 @@ type TileConfig = {
   label: string;
   action: Action;
   icon?: string;
+  /** Symbole de la tablette (TILE_SYMBOLS de screens.ts) ; un nom inconnu est ignoré. */
+  symbol?: string;
   glyph?: string;
   color?: string;
   when?: "call" | "idle" | "streaming" | "share" | "lobby";
@@ -197,9 +208,22 @@ export async function homeFeatures() {
   const names = (await deckApps(await loadConfig())).map((a) => a.name);
   // `meetings` : bouton Rejoindre et option d'ouverture automatique. Toute réunion avec un lien de visio s'ouvre
   // (appli ou navigateur) ; `teams` : l'appli Teams est dans le deck (page Réunion et ses raccourcis).
-  const teams = names.some((n) => MEETING_APPS.test(n));
-  // `agents` : onglet et widget des agents Claude (Mac avec Claude Code installé).
-  return { agenda: true, linked: await hasCalendar(), meetings: canControl, teams, agents: agentsAvailable() };
+  const teams = names.some((n) => MEETING_APPS.test(n)) && (await pluginOn("teams"));
+  // `agents` : onglet et widget des agents Claude (Mac avec Claude Code installé). `off` : plugins coupés (plugins.ts).
+  // `gitlab` : onglet des MR GitLab (jeton GITLAB_TOKEN dans .env, compte connecté par OAuth, ou appli OAuth réglée : la tablette propose de se connecter).
+  const agents = agentsAvailable() && (await pluginOn("claude"));
+  // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
+  const jira = jiraConfigured && (await pluginOn("jira"));
+  return {
+    agenda: true,
+    linked: await hasCalendar(),
+    meetings: canControl,
+    teams,
+    agents,
+    gitlab: canControl && (await gitlabAvailable()),
+    jira,
+    off: await pluginsOff(),
+  };
 }
 
 export async function loadDeck(): Promise<DeckPage[]> {
@@ -211,7 +235,10 @@ export async function loadDeck(): Promise<DeckPage[]> {
   const names = new Set(apps.map((a) => a.name.toLowerCase()));
   // Page Média (`media` : lecture en cours au-dessus des touches) seulement si l'ordinateur sait la lire ; masquée
   // après la numérotation, les identifiants de tuiles ne bougent pas.
-  const present = deck.pages.map((page) => !page.media || canMedia);
+  // Pages des plugins coupés sur la tablette (Discord, Teams, Média) : masquées de la même façon.
+  const mediaOn = canMedia && (await pluginOn("media"));
+  const appOff = await Promise.all(deck.pages.map((page) => (page.app ? appPluginOff(page.app) : false)));
+  const present = deck.pages.map((page, p) => (!page.media || mediaOn) && !appOff[p]);
   const links = await deckLinks();
   const pages = deck.pages
     .map((page, p): DeckPage =>
@@ -243,10 +270,37 @@ export async function loadDeck(): Promise<DeckPage[]> {
       const id = `${PERSO_PREFIX}${slot}`;
       if (!key) return { id, empty: true as const };
       const action: Action = key.steps.length === 1 ? key.steps[0] : { type: "macro", steps: key.steps };
-      return { id, label: key.label, glyph: key.glyph, color: key.color, action };
+      return { id, label: key.label, ...(key.symbol ? { symbol: key.symbol } : {}), glyph: key.glyph, color: key.color, action };
     }),
   });
   return pages;
+}
+
+/** Applis des pages d'appli du deck (Discord, Teams) : une fois chacune, avec leurs pages. */
+async function appPages() {
+  const pages = (await loadDeck()).filter((p) => p.app);
+  return { pages, apps: [...new Set(pages.map((p) => p.app as string))] };
+}
+
+/**
+ * `open` : l'appli tourne (sa page s'affiche) ; `apps` : elle utilise le micro, donc en appel. Une appli hors de la page
+ * Apps (`callOnly`) n'a sa page que pendant un appel, pas tant qu'elle tourne.
+ */
+export async function liveDeckApps(): Promise<{ apps: string[]; open: string[] }> {
+  const { pages, apps } = await appPages();
+  const callOnly = new Set(apps.filter((a) => pages.filter((p) => p.app === a).every((p) => p.callOnly)));
+  const [open, live] = await Promise.all([
+    Promise.all(apps.map((a) => (callOnly.has(a) ? false : isAppRunning(a).catch(() => false)))),
+    Promise.all(apps.map((a) => isAppInCall(a).catch(() => false))),
+  ]);
+  return { apps: apps.filter((_, i) => live[i]), open: apps.filter((_, i) => open[i] || live[i]) };
+}
+
+/** Applis du deck en appel (micro utilisé), sans relire celles qui tournent : la veille des réunions (meeting-watch). */
+export async function callingDeckApps(): Promise<string[]> {
+  const { apps } = await appPages();
+  const live = await Promise.all(apps.map((a) => isAppInCall(a).catch(() => false)));
+  return apps.filter((_, i) => live[i]);
 }
 
 export async function findTile(id: string): Promise<Tile | undefined> {
@@ -292,6 +346,9 @@ export async function runAction(action: Action): Promise<unknown> {
     case "window":
       return placeAppWindows(action.app, action.display, action.layout ?? "keep");
     case "system":
+      // Bascules faites ici, pareil sur Mac et Windows : on lit l'état et on pose l'inverse.
+      if (action.command === "mute-mic") return setAudio({ micMuted: !(await getAudio()).micMuted });
+      if (action.command === "dnd") return setDnd((await getDnd()) !== true);
       return systemCommand(action.command);
   }
   throw new Error(`Action inconnue : ${JSON.stringify(action)}`);

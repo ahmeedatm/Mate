@@ -15,7 +15,7 @@ export const MODES = ["home", "deck", "docs", "focus", "camera", "tasks", "setti
 export const NOISES = ["brown", "pink", "white", "off"] as const;
 export const FOCUS_ACTIONS = ["start", "pause", "reset", "skip"] as const;
 /** Thèmes de la tablette (AppTheme dans ui/Themes.kt). */
-export const THEMES = ["CADRAN", "CADRAN_NUIT", "RETRO"] as const;
+export const THEMES = ["CADRAN", "CADRAN_NUIT", "RETRO", "CONTRASTE"] as const;
 
 /** Réglages de la tablette changés depuis la page de l'ordinateur ; un champ absent reste tel quel. */
 export type TabletSettings = {
@@ -43,6 +43,8 @@ export type TabletCommand =
   | { type: "update"; action: "check" | "install" }
   /** Appel entrant (src/calls.ts) : carte Répondre / Ignorer sur la tablette, retirée à `ended`. */
   | { type: "call"; state: "ringing" | "ended"; app: string; caller: string | null; video: boolean }
+  /** Réunion en cours (src/meeting-watch.ts) : la tablette passe sur son profil Réunion à `start`, en revient à `end`. */
+  | { type: "meeting"; state: "start" | "end"; app: string }
   /** Notification de l'ordinateur (src/notifications.ts), affichée en bandeau et gardée dans l'historique. */
   | { type: "notification"; id: string; app: string; title: string; body: string; at: number }
   /** Agent Claude (src/agents.ts) : une session attend, a fini ou a atteint sa limite ; `clear` : plus rien n'attend. */
@@ -59,12 +61,24 @@ const inflight = new Map<string, { resolve: (r: TabletResult) => void; timer: No
 let waiter: ((commands: Queued[]) => void) | undefined;
 let lastSeen = 0;
 let lastState: unknown = null;
+let lastAddress: { ip: string; at: number } | undefined;
 
 /** Connectée = un poll est en attente, ou la tablette vient d'en finir un (elle exécute un ordre). */
 const isConnected = () => waiter !== undefined || Date.now() - lastSeen < 35_000;
 
 export function tabletStatus() {
   return { connected: isConnected(), lastSeenMs: lastSeen || null, state: lastState };
+}
+
+/** Adresse WiFi d'où la tablette interroge cet ordinateur (poll) : elle y sert les installeurs (port 8080). */
+export function noteTabletAddress(ip: string) {
+  lastAddress = { ip: ip.replace(/^::ffff:/, ""), at: Date.now() };
+}
+
+/** Dernière adresse vue il y a moins de 2 minutes ; null en USB (127.0.0.1) ou sans tablette. */
+export function tabletAddress(): string | null {
+  const a = lastAddress;
+  return a && Date.now() - a.at < 120_000 && /^\d+\.\d+\.\d+\.\d+$/.test(a.ip) && !a.ip.startsWith("127.") ? a.ip : null;
 }
 
 function flush() {

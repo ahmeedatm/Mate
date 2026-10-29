@@ -100,6 +100,11 @@ async function startOnce(options: ServerOptions, port: number): Promise<TestServ
       // Pas de vrai Claude Code ni de vrai Orca dans les tests (src/agents-sources.ts) ; les tests des agents donnent leurs faux.
       CLAUDE_BIN: "/inexistant",
       ORCA_BIN: "/inexistant",
+      // Pas de vrai GitLab : un GITLAB_TOKEN du poste ne doit pas ouvrir l'onglet GitLab ; les tests donnent leur faux serveur.
+      GITLAB_TOKEN: "",
+      GITLAB_URL: "",
+      GITLAB_CLIENT_ID: "",
+      ACCOUNTS_FILE: path.join(backendDir, "test", "accounts-vide.json"),
       FAKE_OS: options.os ?? "mac",
       FAKE_OS_STATE: osState,
       FAKE_OS_LOG: osLog,

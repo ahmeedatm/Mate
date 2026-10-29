@@ -1,7 +1,6 @@
 package com.unowhy.companion.ui.home
 
 import android.content.Context
-import android.os.SystemClock
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.LayoutInflater
@@ -10,11 +9,8 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
 import com.unowhy.companion.R
-import com.unowhy.companion.focus.Water
 import com.unowhy.companion.ui.RollingText
-import com.unowhy.companion.ui.WaterSettings
 import com.unowhy.companion.ui.themeFont
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -83,8 +79,8 @@ class HeroView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 }
 
 /**
- * Héros : heure qui bascule chiffre par chiffre à chaque minute, date, « Ensuite … dans N min », météo (réglable par ⚙ en
- * mode Modifier) et eau (toucher = un verre, appui long = réglages). Rien ne bouge entre deux minutes.
+ * Héros : heure qui bascule chiffre par chiffre à chaque minute, date, « Ensuite … dans N min », météo et eau
+ * ([HeroComplications]). Rien ne bouge entre deux minutes.
  */
 class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     override val view = LayoutInflater.from(context).inflate(R.layout.widget_hero, FrameLayout(context), false) as HeroView
@@ -97,17 +93,10 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val nextWhen = view.findViewById<TextView>(R.id.hero_next_when)
     private val nextIn = view.findViewById<View>(R.id.hero_next_in)
     private val nextCount = view.findViewById<RollingText>(R.id.hero_next_count)
-    private val wxTemp = view.findViewById<TextView>(R.id.hero_wx_temp)
-    private val wxLabel = view.findViewById<TextView>(R.id.hero_wx_label)
-    private val glasses = view.findViewById<GlassBars>(R.id.hero_glasses)
-    private val glassesCount = view.findViewById<RollingText>(R.id.hero_glasses_count)
-    private val glassesLabel = view.findViewById<TextView>(R.id.hero_glasses_label)
+    private val compl = HeroComplications(context, host, placed, view)
 
     private val dateFormat = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
-    private val waterListener: (Water.State) -> Unit = { renderWater(it, animate = true) }
     private var active = false
-    private var forecast: Weather.Forecast? = null
-    private var fetchedAt = 0L
 
     override val hasSettings get() = true
 
@@ -120,24 +109,13 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         nextCount.minCells = 2
         nextCount.color = color(R.attr.c_accent)
         nextCount.setSize(sp(17f), dp(24))
-        glassesCount.cellEm = 0.58f
-        glassesCount.color = color(R.attr.c_text_dim)
-        glassesCount.typeface = themeFont(context, R.attr.c_font_regular)
-        glassesCount.setSize(sp(14f), dp(20))
-        view.findViewById<View>(R.id.hero_weather).setOnClickListener { if (!placed.config.has("lat")) showSettings() }
-        // L'appui long appartient à la grille (mode Modifier) : un toucher ouvre la boîte Eau (verres − / +, rappel).
-        view.findViewById<View>(R.id.hero_water).setOnClickListener { WaterSettings.show(context) }
         render(animate = false)
     }
 
     override fun setActive(active: Boolean) {
         this.active = active
-        if (active) {
-            Water.observe(waterListener)
-            render(animate = false)
-        } else {
-            Water.unobserve(waterListener)
-        }
+        compl.setActive(active)
+        if (active) render(animate = false)
     }
 
     override fun onMinute() = render(animate = active)
@@ -149,8 +127,7 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         clock.set(SimpleDateFormat("HH:mm", Locale.FRANCE).format(Date(now)), animate)
         date.text = dateFormat.format(Date(now)).replaceFirstChar { it.uppercase() }
         renderNext(animate)
-        renderWeather()
-        renderWater(Water.state(context), animate)
+        compl.render(animate)
     }
 
     /**
@@ -188,42 +165,7 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
     }
 
-    private fun renderWeather() {
-        val f = forecast
-        val named = placed.config.optString("city").isNotBlank()
-        if (f == null) {
-            wxTemp.setCompoundDrawablesRelative(null, null, null, null)
-            wxTemp.text = ""
-            wxLabel.setText(if (named) R.string.loading else R.string.widget_weather_choose)
-            return
-        }
-        val sky = Weather.describe(f.code)
-        wxTemp.setCompoundDrawablesRelativeWithIntrinsicBounds(sky.icon, 0, 0, 0)
-        wxTemp.text = context.getString(R.string.widget_weather_temp, f.temperature.roundToInt())
-        // La ville d'abord : trouvée seule par la position, elle doit se voir pour pouvoir être corrigée.
-        wxLabel.text = context.getString(R.string.hero_wx_label, placed.config.optString("city"), context.getString(sky.text), f.max.roundToInt())
-    }
+    override suspend fun load() = compl.load()
 
-    private fun renderWater(state: Water.State, animate: Boolean) {
-        glasses.show(state.glasses, state.goal, animate)
-        glassesCount.set(state.glasses.toString(), animate)
-        glassesLabel.text = context.resources.getQuantityString(R.plurals.hero_glasses, state.glasses, state.goal)
-    }
-
-    override suspend fun load() {
-        // Pas encore de ville : celle de la position de la tablette, sinon « Choisir ma ville ».
-        if (!placed.config.has("lat") && Weather.autoCity(context, placed.config)) host.save()
-        if (!placed.config.has("lat")) return renderWeather()
-        if (forecast != null && SystemClock.elapsedRealtime() - fetchedAt < Weather.REFRESH_MS) return
-        forecast = runCatching { Weather.forecast(placed.config.getDouble("lat"), placed.config.getDouble("lon")) }.getOrNull() ?: forecast
-        if (forecast != null) fetchedAt = SystemClock.elapsedRealtime()
-        renderWeather()
-    }
-
-    override fun showSettings() = Weather.chooseCity(context, host.scope, placed.config) {
-        forecast = null
-        host.save()
-        renderWeather()
-        host.scope.launch { load() }
-    }
+    override fun showSettings() = compl.showSettings()
 }

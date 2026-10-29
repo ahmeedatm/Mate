@@ -146,6 +146,64 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "réunion en cours (profil Réunion de la tablette)",
+      run: async () => {
+        // Deck V2 : la veille des réunions (src/meeting-watch.ts) lit les applis en appel comme /deck/live.
+        // L'ordre meeting n'est poussé que par l'ordinateur : refusé s'il vient de l'extérieur.
+        expectStatus(
+          await call("POST", "/tablet/command", { type: "meeting", state: "start", app: "Sanity" }),
+          400,
+          "ordre meeting de l'extérieur",
+        );
+        const live = await call("GET", "/deck/live");
+        // Hors Mac et Windows, le pilotage répond 501 : pas de veille des réunions.
+        if (!controlled()) {
+          expectStatus(live, 501, "/deck/live hors Mac et Windows");
+          return "pas de pilotage ici (501)";
+        }
+        expectStatus(live, 200, "/deck/live");
+        expect(Array.isArray(live.json.apps) && Array.isArray(live.json.open), "/deck/live sans listes apps et open");
+        return live.json.apps.length ? `en appel : ${live.json.apps.join(", ")}` : "aucun appel en cours";
+      },
+    },
+    {
+      name: "Ne pas déranger à la main (pastille de l'Accueil)",
+      run: async () => {
+        expectStatus(await call("PUT", "/system/dnd", { on: "oui" }), 400, "PUT /system/dnd invalide");
+        const read = await call("GET", "/system/dnd");
+        if (!controlled()) {
+          expectStatus(read, 501, "/system/dnd hors Mac et Windows");
+          return "pas de pilotage ici (501)";
+        }
+        expectStatus(read, 200, "GET /system/dnd");
+        if (typeof read.json.on !== "boolean") return "état illisible sur cet ordinateur";
+        // L'état actuel reposé tel quel : la route marche sans rien changer pour l'utilisateur.
+        const put = await call("PUT", "/system/dnd", { on: read.json.on });
+        expectStatus(put, 200, "PUT /system/dnd");
+        expect(put.json.on === read.json.on, "PUT /system/dnd n'a pas rendu l'état demandé");
+        return read.json.on ? "activé" : "désactivé";
+      },
+    },
+    {
+      name: "plugins de première utilisation",
+      run: async () => {
+        const res = await call("GET", "/plugins");
+        expectStatus(res, 200, "/plugins");
+        const plugins: { id: string; kind: string; on: boolean }[] = res.json.plugins;
+        const natives = plugins.filter((p) => p.kind === "native").map((p) => p.id);
+        // Ordinateur non pilotable : aucun plugin, et /deck/features répond 501.
+        if (!controlled()) return expect(plugins.length === 0, "plugins proposés sur un ordinateur non pilotable");
+        expect(
+          ["open", "mixer", "pad"].every((id) => natives.includes(id)),
+          `plugins intégrés manquants : ${natives.join(", ")}`,
+        );
+        const features = await call("GET", "/deck/features");
+        expect(Array.isArray(features.json.off), "/deck/features sans la liste des plugins coupés");
+        const apps = plugins.filter((p) => p.kind === "app").map((p) => p.id);
+        return `${natives.length} intégrés, applis trouvées : ${apps.join(", ") || "aucune"}`;
+      },
+    },
+    {
       name: "touches perso au-delà de 14",
       run: async () => {
         const slot = 14;
@@ -269,7 +327,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
     {
       name: "fenêtres ouvertes",
       run: async () => {
-        // Mac sans Accessibilité (job install-mac) : System Events demanderait une autorisation à l'écran.
+        // Mac sans Accessibilité (install-mac.sh) : System Events demanderait une autorisation à l'écran.
         if (os === "mac" && accessibility === false) throw new Skip("Accessibilité non accordée");
         const open = await call("GET", "/windows/open");
         if (!controlled()) return expectStatus(open, 501, "/windows/open");
@@ -277,6 +335,24 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expect(Array.isArray(open.json.apps) && Array.isArray(open.json.displays), "réponse sans apps ni displays");
         // Sans bureau (conteneur Windows), la liste est vide : accepté.
         return `${open.json.apps.length} applis, ${open.json.displays.length} écrans`;
+      },
+    },
+    {
+      name: "GitLab : MR (lecture seule)",
+      run: async () => {
+        const mrs = await call("GET", "/gitlab/mrs");
+        if (!controlled()) return expectStatus(mrs, 501, "/gitlab/mrs");
+        const features = await call("GET", "/deck/features");
+        expectStatus(features, 200, "/deck/features");
+        expect(typeof features.json.gitlab === "boolean", "/deck/features sans booléen gitlab");
+        // Jeton refusé ou GitLab injoignable depuis cet ordinateur : pas une panne du compagnon.
+        if (mrs.status === 502) throw new Skip(`GitLab inaccessible depuis l'ordinateur (${mrs.json?.error})`);
+        expectStatus(mrs, 200, "/gitlab/mrs");
+        expect(Array.isArray(mrs.json.mine) && Array.isArray(mrs.json.review), "forme de /gitlab/mrs inattendue");
+        // Ni compte connecté ni GITLAB_TOKEN (CI, tests) : réponse normale « pas connecté », jamais de 401. Jamais de fusion ni d'ouverture ici.
+        if (mrs.json.connected === false) return "pas connecté à GitLab";
+        expect(features.json.gitlab === true, "GitLab connecté mais gitlab absent de /deck/features");
+        return `${mrs.json.mine.length} MR à moi, ${mrs.json.review.length} à relire`;
       },
     },
     {
@@ -327,6 +403,25 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         } finally {
           await call("DELETE", `/tasks/${taskId}`);
         }
+      },
+    },
+    {
+      name: "Jira : tickets",
+      run: async () => {
+        // Lecture seule : jamais de transition, ce sont les vrais tickets de l'utilisateur.
+        // Hors Mac et Windows, /deck/features répond 501 : on ne sait plus si Jira est configuré.
+        const features = await call("GET", "/deck/features");
+        const configured = features.status === 200 ? features.json.jira : undefined;
+        const issues = await call("GET", "/jira/issues");
+        if (configured === false || (configured === undefined && issues.status === 501)) {
+          return expectStatus(issues, 501, "/jira/issues sans Jira configuré");
+        }
+        expectStatus(issues, 200, "/jira/issues");
+        expect(Array.isArray(issues.json.columns), "forme de /jira/issues inattendue");
+        expect(typeof issues.json.boardsChosen === "boolean", "boardsChosen absent de /jira/issues");
+        const boards = await call("GET", "/jira/boards");
+        expectStatus(boards, 200, "/jira/boards");
+        expect(Array.isArray(boards.json.boards) && Array.isArray(boards.json.selected), "forme de /jira/boards inattendue");
       },
     },
     {
@@ -459,7 +554,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const res = await call("GET", "/local/licences", undefined, local ? false : true);
         if (!status.json.licences) {
           expectStatus(res, 404, "/local/licences sans fichier");
-          throw new Skip("compagnon lancé depuis le dépôt : licences jointes aux installeurs seulement");
+          throw new Skip("compagnon lancé depuis le dépôt : licences jointes à l'appli portable seulement");
         }
         expectStatus(res, 200, "/local/licences");
         const text = String(res.json);

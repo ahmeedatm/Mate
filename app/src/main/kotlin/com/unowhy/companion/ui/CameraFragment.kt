@@ -167,7 +167,7 @@ class CameraFragment : Fragment() {
                 isSingleLine = true
                 setOnClickListener { setZoom(value) }
             }
-            zooms.addView(button, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { marginEnd = dp(8) })
+            zooms.addView(button, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginEnd = dp(8) })
             zoomButtons += value to button
         }
         renderControls()

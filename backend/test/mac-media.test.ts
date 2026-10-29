@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  enrichBrowserSession,
+  extensionBrowser,
   fallbackSessions,
   HOLD_MS,
   heldSession,
@@ -15,6 +17,74 @@ import {
 } from "../src/mac/media.ts";
 
 describe("lecture en cours (Mac)", () => {
+  const generic = {
+    app: "com.google.Chrome",
+    name: "Google Chrome",
+    current: true,
+    title: "Un site est en train de lire un contenu multimédia",
+    artist: "",
+    album: "",
+    hasThumb: true,
+    status: "paused" as const,
+    canPlayPause: true,
+    canNext: true,
+    canPrevious: true,
+    canSeek: true,
+    positionMs: 75,
+    durationMs: 63_161,
+  };
+
+  it("titre générique du navigateur : titre de l'onglet du site connu et nom du site", () => {
+    const tabs = [
+      { app: "Google Chrome", url: "https://mail.google.com/", tabTitle: "Boîte de réception", active: true },
+      { app: "Google Chrome", url: "https://www.youtube.com/watch?v=abc", tabTitle: "(2) Lo-fi beats - YouTube", active: false },
+    ];
+    const s = enrichBrowserSession(generic, tabs);
+    assert.equal(s.title, "Lo-fi beats");
+    assert.equal(s.name, "YouTube");
+    assert.equal(s.app, "com.google.Chrome");
+    assert.equal(s.durationMs, 63_161);
+  });
+
+  it("titre générique sans site connu : rien n'est montré d'un onglet quelconque (confidentialité)", () => {
+    const tabs = [
+      { app: "Google Chrome", url: "https://intranet.example.fr/rh/salaires", tabTitle: "Grille des salaires 2027", active: true },
+    ];
+    assert.deepEqual(enrichBrowserSession(generic, tabs), generic);
+  });
+
+  it("plusieurs sites connus : l'onglet actif d'abord", () => {
+    const tabs = [
+      { app: "Google Chrome", url: "https://www.youtube.com/watch?v=a", tabTitle: "Vieux clip - YouTube", active: false },
+      { app: "Google Chrome", url: "https://www.twitch.tv/x", tabTitle: "Live du soir - Twitch", active: true },
+    ];
+    const s = enrichBrowserSession(generic, tabs);
+    assert.equal(s.name, "Twitch");
+    assert.equal(s.title, "Live du soir");
+  });
+
+  it("un vrai titre (Spotify, YouTube avec Media Session) reste tel quel", () => {
+    const spotify = { ...generic, app: "com.spotify.client", name: "Spotify", title: "Cold Water", artist: "Major Lazer" };
+    assert.deepEqual(enrichBrowserSession(spotify, []), spotify);
+    const titled = { ...generic, title: "Cold Water" };
+    assert.deepEqual(
+      enrichBrowserSession(titled, [{ app: "Google Chrome", url: "https://www.youtube.com/", tabTitle: "X - YouTube", active: true }]),
+      titled,
+    );
+  });
+
+  it("session enrichie : les commandes vont toujours au navigateur, pas au site affiché", () => {
+    const tabs = [{ app: "Google Chrome", url: "https://www.youtube.com/watch?v=abc", tabTitle: "Lo-fi beats - YouTube", active: true }];
+    const s = enrichBrowserSession(generic, tabs);
+    assert.equal(s.name, "YouTube");
+    assert.equal(extensionBrowser(s), "Google Chrome");
+    assert.equal(extensionBrowser(generic), "Google Chrome");
+  });
+
+  it("titre générique sans onglet lisible : rien ne change", () => {
+    assert.deepEqual(enrichBrowserSession(generic, []), generic);
+  });
+
   it("Spotify et Musique pilotés par AppleScript, les autres non", () => {
     assert.equal(playerScript("com.spotify.client", "play-pause"), 'tell application "Spotify" to playpause');
     assert.equal(playerScript("Music", "next"), 'tell application "Music" to next track');
@@ -175,5 +245,43 @@ describe("lecture en cours (Mac)", () => {
         ["Opera|YouTube", "Clip", "playing", true],
       ],
     );
+  });
+});
+
+describe("titre générique d'un navigateur et toutes les lectures", () => {
+  const chrome: MediaSession = {
+    app: "com.google.Chrome",
+    name: "Google Chrome",
+    current: true,
+    title: "Un site est en train de lire un contenu multimédia",
+    artist: "",
+    album: "",
+    hasThumb: false,
+    status: "playing",
+    canPlayPause: true,
+    canNext: true,
+    canPrevious: true,
+    canSeek: false,
+    positionMs: null,
+    durationMs: null,
+  };
+  const tab = (site: string, title: string): MediaSession => ({
+    ...chrome,
+    app: `Google Chrome|${site}`,
+    name: site,
+    title,
+    current: false,
+  });
+
+  it("la session enrichie retrouve son onglet : une seule lecture, commandes toujours au navigateur", () => {
+    const enriched = enrichBrowserSession(chrome, [
+      { app: "Google Chrome", url: "https://www.youtube.com/watch?v=a", tabTitle: "Nightcall - YouTube", active: true },
+    ]);
+    const { sessions } = mergeSessions(enriched, [tab("YouTube", "Nightcall"), tab("Twitch", "Live du soir")]);
+    const yt = sessions.find((s) => s.name === "YouTube")!;
+    assert.equal(sessions.filter((s) => s.title === "Nightcall").length, 1);
+    assert.equal(extensionBrowser(yt), "Google Chrome");
+    // L'autre onglet du même navigateur ne joue pas : MediaRemote dit que c'est celui de YouTube.
+    assert.equal(sessions.find((s) => s.name === "Twitch")!.status, "paused");
   });
 });

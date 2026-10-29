@@ -19,7 +19,18 @@ class PrefsTest {
         assertTrue(Prefs.focusDnd(context))
         assertFalse(Prefs.allowInstalls(context))
         assertNull(Prefs.theme(context))
-        assertEquals(emptyList<String>(), Prefs.deckTabOrder(context))
+    }
+
+    @Test
+    fun `barre de gauche, noms et outils affiches par defaut, puis retenus`() {
+        assertTrue(Prefs.railLabels(context))
+        assertEquals(listOf(Mode.FOCUS, Mode.COMPUTER, Mode.CAMERA), Prefs.railTools(context))
+        Prefs.setRailLabels(context, false)
+        Prefs.setRailTool(context, Mode.CAMERA, false)
+        assertFalse(Prefs.railLabels(context))
+        assertEquals(listOf(Mode.FOCUS, Mode.COMPUTER), Prefs.railTools(context))
+        Prefs.setRailTool(context, Mode.CAMERA, true)
+        assertEquals(listOf(Mode.FOCUS, Mode.COMPUTER, Mode.CAMERA), Prefs.railTools(context))
     }
 
     @Test
@@ -44,12 +55,9 @@ class PrefsTest {
     }
 
     @Test
-    fun `ordre des onglets du deck propre a chaque ordinateur`() {
-        Computers.save(context, Computer("a", "Bureau", "http://10.0.0.3:3000", "", "mac"), makeActive = true)
-        Prefs.setDeckTabOrder(context, listOf("apps", "open", "media"))
-        Computers.save(context, Computer("b", "Maison", "http://10.0.0.4:3000", "", "windows"), makeActive = true)
-        assertEquals(emptyList<String>(), Prefs.deckTabOrder(context))
-        Computers.setActive(context, "a")
-        assertEquals(listOf("apps", "open", "media"), Prefs.deckTabOrder(context))
+    fun `taille du texte normale par defaut, puis celle choisie`() {
+        assertEquals(1f, Prefs.textScale(context), 0f)
+        Prefs.setTextScale(context, 1.5f)
+        assertEquals(1.5f, Prefs.textScale(context), 0f)
     }
 }

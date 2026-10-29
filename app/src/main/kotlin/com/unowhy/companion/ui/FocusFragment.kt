@@ -133,7 +133,7 @@ class FocusFragment : Fragment() {
         }
 
     private fun chipParams() =
-        LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { marginStart = dp(4); marginEnd = dp(4) }
+        LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginStart = dp(4); marginEnd = dp(4) }
 
     private fun render(state: FocusTimer.State) {
         val focus = state.phase == FocusTimer.Phase.FOCUS

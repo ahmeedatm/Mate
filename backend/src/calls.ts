@@ -3,6 +3,7 @@ import path from "node:path";
 import { backendRoot } from "./config.ts";
 import { logFailure } from "./log.ts";
 import { accessibility, isMac, isWindows, listButtons, listWindows, pressButton } from "./os.ts";
+import { appPluginOff } from "./plugins.ts";
 
 /**
  * Appels entrants (Discord, Teams…) signalés sur la tablette. Windows : pendant la sonnerie, l'appli renomme sa
@@ -77,6 +78,10 @@ async function isRinging(rule: CallRule): Promise<boolean> {
   return !text || buttons.some((b) => text.test(b));
 }
 
+/** Tour de surveillance en cours (tests : attendre sa fin plutôt qu'un nombre de tours de la boucle d'événements). */
+let watching: Promise<void> = Promise.resolve();
+export const callWatchSettled = () => watching;
+
 export async function startCallWatch(notify: (event: CallEvent) => void) {
   if (!isWindows && !isMac) return;
   const os = isMac ? "mac" : "windows";
@@ -91,7 +96,7 @@ export async function startCallWatch(notify: (event: CallEvent) => void) {
       if (isMac && !(await accessibility())) return;
       let found: CallRule | undefined;
       for (const rule of rules) {
-        if ((quietUntil.get(rule.app) ?? 0) > Date.now()) continue;
+        if ((quietUntil.get(rule.app) ?? 0) > Date.now() || (await appPluginOff(rule.app))) continue;
         if (await isRinging(rule)) {
           found = rule;
           break;
@@ -115,7 +120,9 @@ export async function startCallWatch(notify: (event: CallEvent) => void) {
       busy = false;
     }
   };
-  setInterval(() => void tick().catch((e) => logFailure("Surveillance des appels", e)), 2_000);
+  setInterval(() => {
+    watching = tick().catch((e) => logFailure("Surveillance des appels", e));
+  }, 2_000);
 }
 
 async function press(app: string, kind: "answer" | "video" | "decline" | "hangup") {

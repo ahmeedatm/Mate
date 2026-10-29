@@ -34,6 +34,7 @@ class TileSection(
     @StringRes addDescription: Int,
     private val tilesOf: (List<DeckPage>) -> List<DeckTile>?,
     onAdd: () -> Unit,
+    @DrawableRes addIcon: Int = R.drawable.ic_add,
 ) {
     var tiles: List<DeckTile> = emptyList()
         private set
@@ -42,7 +43,7 @@ class TileSection(
 
     /** « + » à droite du titre : toujours visible, quelle que soit la taille du widget. */
     private val addButton = ImageButton(context, null, 0, R.style.IconButton_Flat).apply {
-        setImageResource(R.drawable.ic_add)
+        setImageResource(addIcon)
         // `tint` du style n'est lu que par les vues AppCompat gonflées depuis le XML.
         ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(themeColor(context, R.attr.c_accent)))
         contentDescription = context.getString(addDescription)

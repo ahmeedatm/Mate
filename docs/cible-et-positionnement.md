@@ -1,5 +1,7 @@
 # Public cible et positionnement
 
+> 29/10/2026 : cible revue pour le Deck V2 (Momo) : **B2B, salariés de bureau** sur Mac et Windows. Le moment où la tablette compte le plus est la réunion (écran partagé ou projeté). Ce document reste à reprendre.
+
 Décidé avec l'utilisateur les 27 et 28/10/2026. Doc de cadrage produit : à qui vendre la tablette, pour quoi faire, et ce qu'il reste à prouver. Les offres et les canaux sont des hypothèses à tester.
 
 ## Contexte
