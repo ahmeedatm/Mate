@@ -32,6 +32,7 @@ import com.unowhy.companion.Mode
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.device.Accessibility
+import com.unowhy.companion.device.Bluetooth
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
 import com.unowhy.companion.installers.BackendPlan
@@ -64,6 +65,12 @@ class SettingsFragment : Fragment() {
     private lateinit var kioskActions: View
     private lateinit var allowInstalls: SwitchCompat
     private lateinit var allowInstallsHint: View
+    private lateinit var bluetooth: SwitchCompat
+    private lateinit var bluetoothHint: View
+    private lateinit var landscapeLocked: SwitchCompat
+    private lateinit var kioskSecurity: View
+    private lateinit var exitLock: SwitchCompat
+    private lateinit var powerMenu: SwitchCompat
     private lateinit var meetingsCard: View
     private lateinit var autoJoin: SwitchCompat
     private lateinit var autoJoinHint: TextView
@@ -114,6 +121,12 @@ class SettingsFragment : Fragment() {
         kioskActions = view.findViewById(R.id.settings_kiosk_actions)
         allowInstalls = view.findViewById(R.id.settings_allow_installs)
         allowInstallsHint = view.findViewById(R.id.settings_allow_installs_hint)
+        bluetooth = view.findViewById(R.id.settings_bluetooth)
+        bluetoothHint = view.findViewById(R.id.settings_bluetooth_hint)
+        landscapeLocked = view.findViewById(R.id.settings_landscape_locked)
+        kioskSecurity = view.findViewById(R.id.settings_kiosk_security)
+        exitLock = view.findViewById(R.id.settings_exit_lock)
+        powerMenu = view.findViewById(R.id.settings_power_menu)
         meetingsCard = view.findViewById(R.id.settings_meetings_card)
         autoJoin = view.findViewById(R.id.settings_autojoin)
         autoJoinHint = view.findViewById(R.id.settings_autojoin_hint)
@@ -153,6 +166,15 @@ class SettingsFragment : Fragment() {
 
         view.findViewById<Button>(R.id.settings_licences).setOnClickListener { showText(R.string.about_licences, "licences.txt", monospace = true) }
         view.findViewById<Button>(R.id.settings_privacy).setOnClickListener { showText(R.string.about_privacy, "confidentialite.txt", monospace = false) }
+        view.findViewById<Button>(R.id.settings_kiosk_reboot).setOnClickListener {
+            AlertDialog.Builder(requireContext())
+                .setMessage(R.string.kiosk_reboot_confirm)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.confirm) { _, _ ->
+                    if (!Kiosk.reboot(requireContext())) main.showBanner(getString(R.string.kiosk_reboot_failed), 6)
+                }
+                .showImmersive()
+        }
         view.findViewById<Button>(R.id.settings_kiosk_exit).setOnClickListener {
             Kiosk.exit(requireActivity())
             renderKiosk()
@@ -888,6 +910,8 @@ class SettingsFragment : Fragment() {
             Prefs.setAllowInstalls(ctx, checked)
             Kiosk.lockApps(ctx, !checked)
         }
+        kioskSecurity.visibility = kioskActions.visibility
+        renderKioskSwitches(ctx)
         kioskStatus.setText(
             when {
                 !owner -> R.string.kiosk_off
@@ -895,6 +919,39 @@ class SettingsFragment : Fragment() {
                 else -> R.string.kiosk_on
             },
         )
+    }
+
+    /** Interrupteurs de la carte Kiosque, posés sans déclencher leur écouteur. */
+    private fun renderKioskSwitches(ctx: android.content.Context) {
+        val hasBluetooth = Bluetooth.available()
+        bluetooth.visibility = if (hasBluetooth) View.VISIBLE else View.GONE
+        bluetoothHint.visibility = bluetooth.visibility
+        bluetooth.setOnCheckedChangeListener(null)
+        bluetooth.isChecked = Bluetooth.isOn()
+        bluetooth.setOnCheckedChangeListener { _, checked ->
+            if (!Bluetooth.set(checked)) {
+                main.showBanner(getString(R.string.kiosk_bluetooth_failed), 6)
+                renderKioskSwitches(ctx)
+            }
+        }
+        landscapeLocked.setOnCheckedChangeListener(null)
+        landscapeLocked.isChecked = Prefs.landscapeLocked(ctx)
+        landscapeLocked.setOnCheckedChangeListener { _, checked ->
+            Prefs.setLandscapeLocked(ctx, checked)
+            Screen.applyOrientation(requireActivity())
+        }
+        exitLock.setOnCheckedChangeListener(null)
+        exitLock.isChecked = Prefs.exitLock(ctx)
+        exitLock.setOnCheckedChangeListener { _, checked ->
+            Prefs.setExitLock(ctx, checked)
+            Kiosk.lockExit(ctx, checked)
+        }
+        powerMenu.setOnCheckedChangeListener(null)
+        powerMenu.isChecked = Prefs.powerMenu(ctx)
+        powerMenu.setOnCheckedChangeListener { _, checked ->
+            Prefs.setPowerMenu(ctx, checked)
+            Kiosk.applyLockTaskFeatures(ctx)
+        }
     }
 
     /**

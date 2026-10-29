@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.UserManager
 import android.provider.Settings
 import com.unowhy.companion.Prefs
@@ -26,6 +27,12 @@ object Kiosk {
         UserManager.DISALLOW_INSTALL_APPS,
         UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
         UserManager.DISALLOW_UNINSTALL_APPS,
+    )
+
+    /** Anti-sortie : ni réinitialisation d'usine depuis Android, ni mode sans échec (qui suspendrait le kiosque). */
+    private val EXIT_RESTRICTIONS = listOf(
+        UserManager.DISALLOW_FACTORY_RESET,
+        UserManager.DISALLOW_SAFE_BOOT,
     )
 
     /** Agent de provisionnement SQOOL (dans l'image : réinstalle le MDM) et MDM : masqués tant que l'appli est device owner. */
@@ -70,6 +77,7 @@ object Kiosk {
         }
         // Le blocage des installations reste actif même kiosque suspendu.
         lockApps(activity, !Prefs.allowInstalls(activity))
+        lockExit(activity, Prefs.exitLock(activity))
         hideSqool(activity, true)
         grantPermissions(activity, activity.packageName)
         grantPermissions(activity, Trial.TRIAL)
@@ -81,6 +89,7 @@ object Kiosk {
         // L'appli et son essai (installé à côté, ouvert depuis Réglages) : la caméra passe par Camera2 (mode Caméra),
         // plus par l'appli photo du système.
         dpm.setLockTaskPackages(admin(activity), arrayOf(activity.packageName, Trial.TRIAL))
+        applyLockTaskFeatures(activity)
         setHome(activity, true)
         hideLaunchers(activity, true)
         if (!isLocked(activity)) activity.startLockTask()
@@ -99,6 +108,7 @@ object Kiosk {
         exit(activity)
         setHome(activity, false)
         lockApps(activity, false)
+        lockExit(activity, false)
         hideSqool(activity, false)
         runCatching { dpm(activity).setKeyguardDisabled(admin(activity), false) }
         dpm(activity).clearDeviceOwnerApp(activity.packageName)
@@ -112,6 +122,32 @@ object Kiosk {
             if (locked) dpm.addUserRestriction(admin(context), restriction)
             else dpm.clearUserRestriction(admin(context), restriction)
         }
+    }
+
+    /** Interdit (ou permet) la réinitialisation d'usine et le mode sans échec. Sans effet si l'appli n'est pas device owner. */
+    fun lockExit(context: Context, locked: Boolean) {
+        if (!isDeviceOwner(context)) return
+        val dpm = dpm(context)
+        for (restriction in EXIT_RESTRICTIONS) {
+            if (locked) dpm.addUserRestriction(admin(context), restriction)
+            else dpm.clearUserRestriction(admin(context), restriction)
+        }
+    }
+
+    /** Fonctions d'Android gardées en verrouillage d'écran : aucune, sauf le menu du bouton marche/arrêt si permis. */
+    fun lockTaskFeatures(powerMenu: Boolean): Int =
+        if (powerMenu) DevicePolicyManager.LOCK_TASK_FEATURE_GLOBAL_ACTIONS else DevicePolicyManager.LOCK_TASK_FEATURE_NONE
+
+    /** Applique [lockTaskFeatures] selon le réglage. Sans effet hors device owner, ou avant Android 9. */
+    fun applyLockTaskFeatures(context: Context) {
+        if (!isDeviceOwner(context) || Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
+        runCatching { dpm(context).setLockTaskFeatures(admin(context), lockTaskFeatures(Prefs.powerMenu(context))) }
+    }
+
+    /** Redémarre la tablette. false si l'appli n'est pas device owner ou si Android refuse (appel en cours). */
+    fun reboot(context: Context): Boolean {
+        if (!isDeviceOwner(context)) return false
+        return runCatching { dpm(context).reboot(admin(context)) }.isSuccess
     }
 
     /**
