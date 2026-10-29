@@ -8,6 +8,7 @@
  * Ce qu'il crée (tâche, rendez-vous, agenda ICS) est retiré à la fin ; un agenda déjà relié n'est pas touché.
  * Appairage sans boîte de dialogue : compagnon démarré avec COMPANION_HEADLESS=1 (instance de test) ou NO_ALERT=1.
  */
+import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
@@ -101,17 +102,24 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
     {
       name: "appairage par code",
       run: async () => {
-        const req = await call("POST", "/pair/request", { tablet: "Sanity CI" }, false);
+        // Comme une tablette en USB : HTTP local, donc empreinte vide dans le calcul du code (src/pairing.ts).
+        const secret = randomBytes(32).toString("base64url");
+        const commit = createHash("sha256").update(secret).digest("base64url");
+        const req = await call("POST", "/pair/request", { tablet: "Sanity CI", commit }, false);
         if (req.status === 409) throw new Skip("un autre appairage est en cours");
         expectStatus(req, 200, "/pair/request");
+        expectStatus(await call("POST", "/pair/reveal", { request: req.json.request, nonce: secret }, false), 200, "/pair/reveal");
         const status = await call("GET", "/local/status");
         expectStatus(status, 200, "/local/status");
-        const code: string | undefined = status.json.pairing?.code;
-        expect(/^\d{6}$/.test(code ?? ""), "code d'appairage absent de la page locale");
-        const ok = await call("POST", "/pair/confirm", { request: req.json.request, code }, false);
+        expect(status.json.pairing?.tablet === "Sanity CI", "la page locale n'annonce pas la tablette qui attend");
+        expect(!/\d{6}/.test(JSON.stringify(status.json.pairing)), "la page locale ne doit jamais montrer le code");
+        const n = createHash("sha256").update(`unowhy-pair-1\n\n${secret}\n${req.json.nonce}`).digest().readUInt32BE(0) % 1_000_000;
+        expectStatus(await call("POST", "/local/pair", { code: String(n).padStart(6, "0") }, false), 200, "/local/pair");
+        const ok = await call("POST", "/pair/confirm", { request: req.json.request }, false);
         expectStatus(ok, 200, "/pair/confirm");
         expect(ok.json.token === opts.token, "le jeton donné à l'appairage n'est pas celui de l'ordinateur");
         expect(ok.json.id === id, "l'appairage renvoie une autre identité que /health");
+        if (ok.json.tlsPort) expect(/^[0-9a-f]{64}$/.test(ok.json.fingerprint), "empreinte du certificat absente");
       },
     },
     {

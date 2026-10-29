@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import dgram from "node:dgram";
 import { after, before, describe, it } from "node:test";
+import { pointerSignature } from "../src/pointer.ts";
 import { startServer, TOKEN, type TestServer } from "./server.ts";
 
 // Le socket UDP n'existe qu'hors loopback (src/pairing.ts) : le serveur écoute sur toutes les interfaces.
@@ -19,7 +20,11 @@ after(async () => {
 
 const send = (text: string) =>
   new Promise<void>((resolve, reject) => socket.send(text, port, "127.0.0.1", (e) => (e ? reject(e) : resolve())));
-const pointer = (token: string, seq: number, body: unknown) => send(`UNOWHY-POINTER\n${token}\n${seq}\n${JSON.stringify(body)}`);
+/** Paquet signé par `token`, comme la tablette (le jeton lui-même ne part jamais). */
+const pointer = (token: string, seq: number, body: unknown) => {
+  const json = JSON.stringify(body);
+  return send(`UNOWHY-POINTER\n${pointerSignature(token, seq, json)}\n${seq}\n${json}`);
+};
 /** UDP sans accusé : attendre que le serveur ait traité (ou ignoré) ce qui précède. */
 const settle = () => new Promise((r) => setTimeout(r, 400));
 
@@ -42,8 +47,10 @@ describe("pavé tactile en UDP", () => {
     await pointer(TOKEN, 10, { dx: 1, dy: 1 });
     await pointer(TOKEN, 11, { dx: 1, dy: 1 });
     await pointer(TOKEN, 12, { dx: 99999, dy: 0 });
+    await pointer("faux", 13, { dx: 1, dy: 1 });
+    await send(`UNOWHY-POINTER\n${TOKEN}\n14\n{"dx":1,"dy":1}`);
     await settle();
-    assert.deepEqual(server.osCalls(), [], "seq ancien ou valeur hors bornes");
+    assert.deepEqual(server.osCalls(), [], "seq ancien, valeur hors bornes, mauvaise clé ou jeton en clair (ancien format)");
   });
 
   it("ne journalise rien du paquet, et la découverte marche toujours", async () => {

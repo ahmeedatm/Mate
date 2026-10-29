@@ -44,8 +44,8 @@ Pas de serveur dans le cloud : chaque ordinateur a son compagnon, la tablette pa
 
 1. Le compagnon crée au premier lancement son identité et son jeton (`.data/identity.json`) et répond à une diffusion UDP sur le WiFi (`pairing.ts`).
 2. La tablette cherche les ordinateurs (`net/Discovery.kt`), ou on saisit l'adresse.
-3. L'ordinateur affiche un code à 6 chiffres (page `http://127.0.0.1:3000/`). La tablette l'envoie à `/pair/*` et reçoit le jeton.
-4. La tablette garde une **liste d'ordinateurs** (`Computers.kt` : id, nom, url, jeton, os) et pilote l'actif. Si l'actif ne répond plus, `net/Connection.kt` retrouve sa nouvelle adresse par la recherche, ou bascule vers un autre ordinateur qui répond.
+3. En WiFi, tout passe en HTTPS (certificat auto-signé de l'ordinateur, `tls.ts`) ; le HTTP n'écoute que sur 127.0.0.1. La tablette affiche un code à 6 chiffres, qui mêle l'empreinte du certificat qu'elle voit ; l'utilisateur le saisit sur l'ordinateur (page `http://127.0.0.1:3000/`), la tablette reçoit le jeton et épingle le certificat. Détails et protocole : [securite-appairage.md](securite-appairage.md).
+4. La tablette garde une **liste d'ordinateurs** (`Computers.kt` : id, nom, url, jeton, os, empreinte épinglée) et pilote l'actif. Si l'actif ne répond plus, `net/Connection.kt` retrouve sa nouvelle adresse par la recherche, ou bascule vers un autre ordinateur qui répond.
 
 ### 2. Une requête ordinaire (tablette → ordinateur)
 
@@ -128,6 +128,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | `routes/` | routes de l'API, un plugin Fastify par domaine |
 | `config.ts` | variables d'environnement (`.env`) |
 | `pairing.ts` | identité, jeton, code d'appairage, découverte UDP |
+| `tls.ts` | certificat auto-signé du WiFi (`.data/tls.json`) et son empreinte |
 | `local-page.ts` | page `http://127.0.0.1:3000/` (adresse, code, agenda) |
 | `deck.ts`, `perso.ts`, `music.ts` | pages du deck, `runAction`, touches perso, musique |
 | `os.ts` → `mac/`, `win/` | pilotage du système ; `screens.ts` : types d'écrans et fenêtres |

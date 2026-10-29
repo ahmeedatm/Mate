@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import net from "node:net";
 import os from "node:os";
@@ -9,6 +9,13 @@ import type { FakeCall, FakeState } from "./fake-os.ts";
 
 const backendDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const TOKEN = "jeton-de-test";
+
+/** Code d'appairage, recalculé par les tests comme le fait la tablette (PairingCode.kt) : vérifie aussi la formule. */
+export const pairingCode = (channel: string, tablet: string, computer: string) =>
+  String(createHash("sha256").update(`unowhy-pair-1\n${channel}\n${tablet}\n${computer}`).digest().readUInt32BE(0) % 1_000_000).padStart(
+    6,
+    "0",
+  );
 
 export type TestServer = {
   url: string;
@@ -37,7 +44,7 @@ export type ServerOptions = {
   env?: Record<string, string>;
 };
 
-function freePort(): Promise<number> {
+export function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const srv = net.createServer();
     srv.once("error", reject);

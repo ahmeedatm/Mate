@@ -9,6 +9,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.UUID
+import javax.net.ssl.HttpsURLConnection
 
 /** `reason` : message de l'ordinateur, rédigé pour être affiché (voir ui/errorText). */
 class HttpException(val code: Int, val reason: String) : IOException("HTTP $code $reason".trim())
@@ -16,11 +17,16 @@ class HttpException(val code: Int, val reason: String) : IOException("HTTP $code
 /**
  * Plomberie HTTP partagée par les clients de domaine (DeckApi, SystemApi…). HttpURLConnection + org.json,
  * inclus dans Android, pour garder l'APK sans dépendance réseau.
+ *
+ * `trust` : certificat de l'ordinateur épinglé à l'appairage (HTTPS en WiFi) ; null pour un serveur à certificat
+ * classique (mises à jour). Le jeton ne part jamais en HTTP en clair hors de la tablette elle-même (USB).
  */
 class Http(
     private val baseUrl: String, private val token: String, private val connectTimeoutMs: Int,
     private val headers: Map<String, String> = emptyMap(),
+    private val trust: PinnedTrust? = null,
 ) {
+    private val cleartextRefused = token.isNotEmpty() && baseUrl.startsWith("http://") && !isLocalUrl(baseUrl)
 
     suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }
 
@@ -59,7 +65,9 @@ class Http(
     fun request(method: String, path: String, body: ByteArray? = null, contentType: String? = null, timeoutMs: Int = 60_000): HttpURLConnection {
         // DELETE sans corps : Android y met quand même un type de contenu, que Fastify refuse (415).
         if (method == "DELETE" && body == null) return request(method, path, "{}".toByteArray(), "application/json", timeoutMs)
+        if (cleartextRefused) throw InsecureComputerException()
         val conn = URL(baseUrl + path).openConnection() as HttpURLConnection
+        if (conn is HttpsURLConnection) trust?.apply(conn)
         conn.requestMethod = method
         conn.connectTimeout = connectTimeoutMs
         conn.readTimeout = timeoutMs
