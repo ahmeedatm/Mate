@@ -147,6 +147,8 @@ Ce que la CI ne voit pas : l'appli Android lancée (ni émulateur ni tablette en
 
 ## Release (tag vX.Y.Z)
 
+**Mentions de licences** (obligatoires pour vendre, carte COMP-51) : l'appli affiche `app/src/main/assets/licences.txt` (Réglages > À propos > Licences des composants), à régénérer après tout ajout ou changement de dépendance Android : `node scripts/licences-android.mjs` (licences lues dans les POM du cache Gradle ; le script s'arrête sur une licence autre qu'Apache 2.0, à traiter à la main ; `LicencesTest` échoue si une dépendance de `app/build.gradle.kts` manque). Côté ordinateur, rien à faire : `npm run package` écrit `LICENCES-TIERS.txt` (paquets npm réellement regroupés par esbuild, texte de leur licence, licence de node) dans le dossier installé.
+
 Un tag `vX.Y.Z` posé sur `main` lance les mêmes tests, puis :
 
 | Job | Produit |

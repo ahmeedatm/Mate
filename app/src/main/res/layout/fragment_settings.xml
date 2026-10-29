@@ -430,6 +430,12 @@
                 android:text="@string/about_sources"
                 android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/settings_licences"
+                style="@style/ActionButton"
+                android:layout_marginTop="12dp"
+                android:text="@string/about_licences" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>
