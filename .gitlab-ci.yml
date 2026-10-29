@@ -80,6 +80,8 @@ zones:
 backend:
   extends: [.node, .zone-backend]
   stage: test
+  # Image avec git : le test de purge-essais lit un vrai historique git (la slim n'en a pas).
+  image: node:22.22-bookworm
   script:
     # Format (prettier --check) puis typecheck.
     - npm run lint
