@@ -29,6 +29,7 @@ import com.unowhy.unomate.R
 import com.unowhy.unomate.camera.DocCamera
 import com.unowhy.unomate.net.BackendClient
 import com.unowhy.unomate.net.DocEntry
+import com.unowhy.unomate.ui.topbar.TopHeader
 import com.unowhy.unomate.voice.Mic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -45,7 +46,12 @@ import java.util.concurrent.atomic.AtomicInteger
  * - envoyer une photo : aperçu sans envoi, la photo pleine taille part dans le dossier « Partage tablette ».
  * La caméra ne tourne que quand un usage est choisi et le mode affiché.
  */
-class CameraFragment : Fragment() {
+class CameraFragment :
+    Fragment(),
+    TopHeader {
+    /** Titre, état, Arrêter : dans le bandeau du haut. */
+    override var topHeader: View? = null
+        private set
 
     private lateinit var preview: TextureView
     private lateinit var frame: FrameLayout
@@ -116,6 +122,7 @@ class CameraFragment : Fragment() {
     override fun onViewCreated(view: View, state: Bundle?) {
         preview = view.findViewById(R.id.camera_preview)
         frame = view.findViewById(R.id.camera_frame)
+        topHeader = view.findViewById(R.id.camera_header)
         dot = view.findViewById(R.id.camera_dot)
         status = view.findViewById(R.id.camera_status)
         messageBox = view.findViewById(R.id.camera_message_box)

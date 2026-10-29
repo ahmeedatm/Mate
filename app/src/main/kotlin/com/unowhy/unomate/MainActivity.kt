@@ -23,6 +23,7 @@ import com.unowhy.unomate.audio.Speaker
 import com.unowhy.unomate.device.Accessibility
 import com.unowhy.unomate.device.Screen
 import com.unowhy.unomate.device.Tablet
+import com.unowhy.unomate.device.TabletSignals
 import com.unowhy.unomate.focus.Breathing
 import com.unowhy.unomate.focus.FocusDnd
 import com.unowhy.unomate.focus.FocusTimer
@@ -33,6 +34,7 @@ import com.unowhy.unomate.installers.InstallerService
 import com.unowhy.unomate.kiosk.AutoUpdater
 import com.unowhy.unomate.kiosk.Kiosk
 import com.unowhy.unomate.net.BackendClient
+import com.unowhy.unomate.net.CalendarEvent
 import com.unowhy.unomate.net.DocEntry
 import com.unowhy.unomate.net.Link
 import com.unowhy.unomate.net.PcNotification
@@ -58,7 +60,6 @@ import com.unowhy.unomate.ui.HomeFragment
 import com.unowhy.unomate.ui.IconCache
 import com.unowhy.unomate.ui.KeyboardControl
 import com.unowhy.unomate.ui.Look
-import com.unowhy.unomate.ui.MusicChip
 import com.unowhy.unomate.ui.Navigation
 import com.unowhy.unomate.ui.PhotoFrameView
 import com.unowhy.unomate.ui.PluginsView
@@ -67,7 +68,6 @@ import com.unowhy.unomate.ui.RailSwipeLayout
 import com.unowhy.unomate.ui.ReadingAids
 import com.unowhy.unomate.ui.SettingsFragment
 import com.unowhy.unomate.ui.TabletAlerts
-import com.unowhy.unomate.ui.TabletStatusView
 import com.unowhy.unomate.ui.ThemePattern
 import com.unowhy.unomate.ui.WelcomeView
 import com.unowhy.unomate.ui.dp
@@ -80,6 +80,9 @@ import com.unowhy.unomate.ui.home.LinkWatch
 import com.unowhy.unomate.ui.notificationBannerText
 import com.unowhy.unomate.ui.showImmersive
 import com.unowhy.unomate.ui.themeBool
+import com.unowhy.unomate.ui.topbar.TopBar
+import com.unowhy.unomate.ui.topbar.TopBarHost
+import com.unowhy.unomate.ui.topbar.TopHeader
 import com.unowhy.unomate.voice.VoiceControl
 import com.unowhy.unomate.voice.WakeWord
 import kotlinx.coroutines.CancellationException
@@ -87,6 +90,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 
 /** Les écrans qui veulent les boutons de volume de la tablette (ex. le deck pilote le son de l'ordinateur). */
 interface VolumeKeyHandler {
@@ -122,6 +126,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var voice: VoiceControl
     /** Mot de réveil « Mate » : lance la même commande vocale que « Parler », sans toucher l'écran. */
     private lateinit var wake: WakeWord
+
+    /** Bandeau du haut : en-tête de l'écran, lecture en cours, heure, batterie… (ui/topbar). */
+    lateinit var topBar: TopBar
+        private set
+
+    /** Minute, batterie et WiFi de la tablette, pour les tâches de chaque minute et les éléments du bandeau. */
+    private val signals by lazy { TabletSignals(this) }
     lateinit var callOverlay: CallOverlay
         private set
     private lateinit var agentAlerts: AgentAlerts
@@ -189,7 +200,10 @@ class MainActivity : AppCompatActivity() {
         flow.hidden = { homeFragment()?.bareWidgets().orEmpty() }
         wakeRail()
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
-        wake = WakeWord(this, findViewById(R.id.wake_mic)) { voice.start() }
+        topBar = findViewById(R.id.top_bar)
+        topBar.attach(topHost)
+        topBar.onEditDone = { if (current == Mode.HOME && homeFragment()?.isEditing() == true) homeFragment()?.toggleEdit() }
+        wake = WakeWord(this, topBar.wakeMic) { voice.start() }
         // Lumière des agents Claude sous la carte d'appel : un appel prime sur tout.
         // L'alerte de réunion est tout en bas des calques : lumière des agents, question et appel passent devant.
         meetingAlert = com.unowhy.unomate.ui.MeetingAlertOverlay(this)
@@ -209,10 +223,6 @@ class MainActivity : AppCompatActivity() {
         // Cadre photo juste au-dessus des écrans : lumière des agents, question et appel restent devant.
         frame = PhotoFrameView(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(frame, 1, android.view.ViewGroup.LayoutParams(-1, -1))
-        // Lecture en cours du header : rien à relire sous le cadre photo ni sans ordinateur ; cachée en mode Modifier (COMP-63).
-        findViewById<MusicChip>(R.id.music_chip).suppressed = {
-            frame.isShowing || Computers.all(this).isEmpty() || (current == Mode.HOME && homeFragment()?.isEditing() == true)
-        }
 
         keyboard.setUp()
 
@@ -237,19 +247,17 @@ class MainActivity : AppCompatActivity() {
         alerts = TabletAlerts(this, banner)
         findViewById<View>(R.id.rail_settings).setOnClickListener { show(Mode.SETTINGS) }
         findViewById<View>(R.id.rail_edit).setOnClickListener { editProfile() }
-        findViewById<TabletStatusView>(R.id.tablet_status).apply {
-            inline()
-            onMinute = {
-                Screen.apply(this@MainActivity)
-                alerts.remindWater()
-                meetingAlert.onMinute()
-                followFrame()
-                companionUpdate.onMinute()
-                // « Rejoindre » sans détection de fin : l'appel finit à l'heure de l'événement.
-                if (call.tick()) afterCall()
-            }
-            onBattery = ::onBattery
+        signals.onMinute {
+            Screen.apply(this@MainActivity)
+            alerts.remindWater()
+            meetingAlert.onMinute()
+            followFrame()
+            companionUpdate.onMinute()
+            // « Rejoindre » sans détection de fin : l'appel finit à l'heure de l'événement.
+            if (call.tick()) afterCall()
         }
+        signals.onBattery(::onBattery)
+        signals.start()
         noComputer = findViewById(R.id.no_computer)
         noComputer.findViewById<View>(R.id.connect_button).setOnClickListener { showWelcome() }
         welcome = findViewById(R.id.welcome)
@@ -322,6 +330,7 @@ class MainActivity : AppCompatActivity() {
         recreateScreens()
         showLink(Link(computer, Link.State.OFFLINE))
         remote.restart()
+        topBar.restart()
         if (automatic && computer != null) showBanner(getString(R.string.computer_switched, computer.name), 6)
         offerPlugins()
         quitStrayDemo()
@@ -413,11 +422,13 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         FocusTimer.observe(focusListener)
+        topBar.setRunning(true)
         offerPlugins()
     }
 
     override fun onStop() {
         FocusTimer.unobserve(focusListener)
+        topBar.setRunning(false)
         super.onStop()
     }
 
@@ -459,6 +470,7 @@ class MainActivity : AppCompatActivity() {
         if (isFinishing) NoisePlayer.stop()
         voice.release()
         wake.release()
+        signals.stop()
         super.onDestroy()
     }
 
@@ -744,7 +756,9 @@ class MainActivity : AppCompatActivity() {
      * Mode Modifier de l'Accueil changé (COMP-63) : la lecture en cours du header se cache pendant le mode Modifier, dont
      * la barre (Ajouter, Annuler, Terminé) est à sa place.
      */
-    fun refreshMiniPlayer() = findViewById<MusicChip>(R.id.music_chip).update()
+    fun refreshMiniPlayer() {
+        topBar.music?.update()
+    }
 
     fun closeDocument() {
         documentPanel.close()
@@ -868,6 +882,58 @@ class MainActivity : AppCompatActivity() {
         findViewById<RailSwipeLayout>(R.id.mode_container).swipeEnabled = mode != Mode.HOME && mode != Mode.SETTINGS && mode != Mode.CAMERA
         renderNoComputer()
         if (changed) slideTo(mode)
+        fm.executePendingTransactions()
+        showTopHeader()
+    }
+
+    /**
+     * En-tête de l'écran affiché dans le bandeau du haut : celui de l'écran (titre, retour, boutons), le nom du profil
+     * sur l'Accueil, sinon le nom du mode.
+     */
+    private fun showTopHeader() {
+        val screen = supportFragmentManager.findFragmentByTag(current.tag)
+        val header = (screen as? TopHeader)?.topHeader
+        when {
+            header != null -> topBar.setHeader(header)
+            current == Mode.HOME -> topBar.setTitle(profileName.orEmpty())
+            else -> topBar.setTitle(getString(current.label))
+        }
+    }
+
+    /** Nom du profil affiché sur l'Accueil, pour le bandeau du haut. */
+    private var profileName: String? = null
+
+    /** Ce que les éléments du bandeau demandent à l'appli. */
+    private val topHost = object : TopBarHost {
+        override val context: Context get() = this@MainActivity
+        override val scope get() = lifecycleScope
+        override val signals get() = this@MainActivity.signals
+        override fun hasComputer() = Computers.all(this@MainActivity).isNotEmpty()
+
+        // Rien à relire sous le cadre photo ni sans ordinateur ; cachée en mode Modifier (COMP-63).
+        override fun musicSuppressed() =
+            frame.isShowing || !hasComputer() || (current == Mode.HOME && homeFragment()?.isEditing() == true)
+
+        override fun callActive() = call.active
+        override fun agentsOffered() = homeFragment()?.features?.agents == true
+        override fun openAgents() = showAgents()
+
+        override fun joinMeeting(event: CalendarEvent) {
+            lifecycleScope.launch {
+                try {
+                    val kind = BackendClient(this@MainActivity).calendar.joinMeeting(event.id)
+                    showBanner(getString(R.string.join_opened, event.title), 6)
+                    startCall(CallSession.appOfKind(kind), event.endMs)
+                } catch (e: Exception) {
+                    showBanner(errorText(e), 6)
+                }
+            }
+        }
+
+        override fun showError(e: Throwable) = showBanner(errorText(e), 6)
+
+        override fun homeCity(): JSONObject? = HomeLayout.load(this@MainActivity, cadran = true).widgets
+            .firstOrNull { it.config.has("lat") }?.config
     }
 
     /** Arrivée de l'écran `mode` dans le sens du déplacement dans la barre. Ressorts qui jouent aussi en kiosque. */
@@ -912,6 +978,8 @@ class MainActivity : AppCompatActivity() {
     /** Mode Modifier commencé ou fini : le crayon de la barre est plein pendant ce temps. */
     fun onEditingChanged(editing: Boolean) {
         findViewById<View>(R.id.rail_edit).isSelected = editing
+        // Le crayon modifie aussi le bandeau du haut ; Terminé de l'Accueil le referme.
+        topBar.edit(editing)
     }
 
     /** Appui long sur un profil de la barre, ou « Plus » : la liste des profils, depuis l'Accueil. */
@@ -922,7 +990,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** L'Accueil prévient à chaque profil affiché et à chaque changement des profils : la barre suit. */
-    fun onProfileShown(layout: HomeLayout, page: Int) = nav.showProfiles(layout, page, inCall = call.active)
+    fun onProfileShown(layout: HomeLayout, page: Int) {
+        nav.showProfiles(layout, page, inCall = call.active)
+        profileName = layout.names.getOrNull(page)
+        if (current == Mode.HOME) topBar.setTitle(profileName.orEmpty())
+    }
 
     private fun homeFragment() = supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment
 
