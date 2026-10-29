@@ -3,8 +3,10 @@ package com.unowhy.companion.ui.home
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import androidx.lifecycle.LifecycleOwner
 import com.unowhy.companion.net.DeckTile
 import com.unowhy.companion.net.WindowsInfo
+import com.unowhy.companion.ui.AgentsBoard
 import com.unowhy.companion.ui.AppAdder
 import com.unowhy.companion.ui.KeyEditor
 import com.unowhy.companion.ui.LinkAdder
@@ -12,7 +14,7 @@ import com.unowhy.companion.ui.WindowPicker
 import kotlinx.coroutines.CoroutineScope
 
 /**
- * Les panneaux plein écran du Deck (touche, applis, sites, fenêtres), par-dessus l'écran Profils. Chacun est créé à
+ * Les panneaux plein écran du Deck (touche, applis, sites, fenêtres, tableau des agents), par-dessus l'écran Profils. Chacun est créé à
  * la première demande : [KeyEditor] gonfle un gros layout, la tablette est lente. Leur rappel est enregistré
  * avant chaque ouverture : c'est celui du widget qui ouvre.
  */
@@ -21,10 +23,11 @@ class DeckOverlays(private val root: FrameLayout, private val scope: CoroutineSc
     private var appAdder: AppAdder? = null
     private var linkAdder: LinkAdder? = null
     private var windowPicker: WindowPicker? = null
+    private var agentsBoard: AgentsBoard? = null
 
     val anyShowing: Boolean
         get() = keyEditor?.isShowing == true || appAdder?.isShowing == true ||
-            linkAdder?.visibility == View.VISIBLE || windowPicker?.isShowing == true
+            linkAdder?.visibility == View.VISIBLE || windowPicker?.isShowing == true || agentsBoard?.isShowing == true
 
     fun editKey(slot: Int, onChanged: () -> Unit) {
         val editor = keyEditor ?: KeyEditor(root.context).also { keyEditor = it; add(it) }
@@ -50,11 +53,18 @@ class DeckOverlays(private val root: FrameLayout, private val scope: CoroutineSc
         picker.show(tile, known, removable)
     }
 
+    /** Le tableau des sessions Claude : relu tant qu'il est ouvert. */
+    fun agentsBoard(owner: LifecycleOwner) {
+        val board = agentsBoard ?: AgentsBoard(root.context).also { agentsBoard = it; add(it) }
+        board.show(owner)
+    }
+
     fun hideAll() {
         keyEditor?.hide()
         appAdder?.hide()
         linkAdder?.hide()
         windowPicker?.hide()
+        agentsBoard?.hide()
     }
 
     private fun add(view: View) =

@@ -213,7 +213,8 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             else -> context.getString(R.string.agents_focus_hint)
         }
         status.visibility = VISIBLE
-        val sig = state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId, it.canSend, it.resumeAt, it.resumeArmed, it.canInterrupt, it.title, it.ticket, it.mr, it.monitoring) }
+        // Le mode privé change le rendu : il fait partie de la signature, sinon une autre vue (tableau ouvert depuis un widget) le laisse périmé.
+        val sig = listOf(Prefs.agentsPrivate(context), state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId, it.canSend, it.resumeAt, it.resumeArmed, it.canInterrupt, it.title, it.ticket, it.mr, it.monitoring) })
         if (sig != signature) {
             signature = sig
             columns.values.forEach { it.removeAllViews() }

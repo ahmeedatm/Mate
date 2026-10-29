@@ -11,40 +11,71 @@ import com.unowhy.companion.agents.AgentsFeed
 import com.unowhy.companion.agents.shortList
 import com.unowhy.companion.net.AgentState
 import com.unowhy.companion.ui.AgentStatusIcon
+import com.unowhy.companion.ui.AgentsView
 import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.stateColor
 import com.unowhy.companion.ui.stateLabel
 import java.util.Locale
 
 /**
- * Agents Claude : trois compteurs (travaillent, attendent, finis) et, en grand, la liste courte des sessions qui comptent.
- * Toucher ouvre l'onglet Agents du Deck. Relu tant que la page de l'Accueil est à l'écran.
+ * Agents Claude : les compteurs (travaillent, surveillent, attendent, finis) et, en L, la liste courte des sessions qui
+ * comptent ; toucher ouvre le tableau en plein écran. En XL, le tableau lui-même ([AgentsView]) : ses colonnes défilent,
+ * le widget garde l'appui long et le balayage. Relu tant que la page de l'Accueil est à l'écran.
  */
 class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val counters = LinearLayout(context)
     private val list = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
     private val note = label(14f, R.attr.c_text_dim)
+    private val board = AgentsView(context).apply { attach(host.owner) }
     private var observer: ((AgentsFeed.Snapshot) -> Unit)? = null
     private var last: AgentsFeed.Snapshot? = null
+    private var active = false
 
-    override val view = LinearLayout(context).asCard(16).apply {
+    /** Compteurs et liste d'un Agents M, L ou V. */
+    private val summary = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         addView(cardTitle(R.string.agents_title, R.drawable.ic_agents))
         addView(counters, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
         addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(8) })
         addView(note)
-        setOnClickListener { host.main?.showAgents() }
+    }
+
+    private val full get() = placed.size == WidgetSize.XL
+
+    override val view = object : OwnerFrameLayout(context) {
+        // Seul le tableau garde les gestes de la grille ; les compteurs laissent l'appui long au mode Modifier.
+        override val ownsLongPress get() = full
+        override val ownsSwipe get() = full
+    }.asCard(16).apply {
+        addView(summary, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        addView(board, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
     }
 
     override fun applySize() {
+        view.asCard(if (full) 12 else 16)
+        summary.visibility = if (full) View.GONE else View.VISIBLE
+        if (full) {
+            view.setOnClickListener(null)
+            view.isClickable = false
+        } else {
+            view.setOnClickListener { host.overlays.agentsBoard(host.owner) }
+        }
         counters.orientation = if (placed.size == WidgetSize.V) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
         last?.let(::render)
+        follow()
     }
 
     override fun setActive(active: Boolean) {
+        this.active = active
+        follow()
+    }
+
+    /** Un seul abonné à la fois : le tableau en XL, les compteurs sinon ; aucun hors du profil affiché. */
+    private fun follow() {
         observer?.let { AgentsFeed.unobserve(it) }
         observer = null
-        if (!active) return
+        board.setActive(active && full)
+        if (!active || full) return
         val listener: (AgentsFeed.Snapshot) -> Unit = {
             last = it
             render(it)
