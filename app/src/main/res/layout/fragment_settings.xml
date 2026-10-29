@@ -264,6 +264,31 @@
                 android:textSize="14sp" />
         </LinearLayout>
 
+        <!-- Animations, famille par famille (Prefs.animation, ui/Look.on) ; interrupteurs ajoutés par SettingsFragment.
+             Réduire les animations (carte Accessibilité) les coupe toutes. -->
+        <LinearLayout
+            android:id="@+id/settings_animations"
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <com.unowhy.companion.ui.TitleView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_speed"
+                android:text="@string/anim_title" />
+
+            <TextView
+                android:id="@+id/settings_animations_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/anim_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+        </LinearLayout>
+
         <!-- Thème : ambiances prédéfinies (ui/Themes.kt), pastilles ajoutées par SettingsFragment. -->
         <LinearLayout
             style="@style/Card"

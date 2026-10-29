@@ -4,4 +4,7 @@
     <item name="press_springs" type="id" />
     <!-- Ressorts de navigation d'une vue (Look.navSpring), un par propriété : le suivant remplace le précédent. -->
     <item name="nav_springs" type="id" />
+    <!-- Contenu déjà apparu en fondu (Look.revealOnce) ; dernière seconde marquée du compte à rebours (Look.countdown). -->
+    <item name="revealed" type="id" />
+    <item name="countdown_second" type="id" />
 </resources>

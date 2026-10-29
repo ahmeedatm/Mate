@@ -453,9 +453,28 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
      * barre (ou profil caché derrière « Plus ») : profil voisin dans l'ordre des profils.
      */
     override fun onPageSwipe(delta: Int) {
+        val root = view ?: return
+        if (!canPage(delta)) return SwipeFollow.release(root)
+        // Le nouvel écran arrive par Look.sharedAxis : celui-ci reprend sa place d'un coup.
+        SwipeFollow.reset(root)
         if (main?.railStep(delta) == true) return
+        neighborProfile(delta)?.let(::showProfile)
+    }
+
+    override fun onPageDrag(dy: Float) {
+        view?.let { SwipeFollow.drag(it, dy, canPage(if (dy < 0) 1 else -1)) }
+    }
+
+    override fun onPageDragEnd() {
+        view?.let(SwipeFollow::release)
+    }
+
+    /** Un écran attend dans ce sens : entrée voisine de la barre, sinon profil voisin (caché derrière « Plus »). */
+    private fun canPage(delta: Int): Boolean = main?.railCanStep(delta) == true || neighborProfile(delta) != null
+
+    private fun neighborProfile(delta: Int): Int? {
         val order = layout.profilesInOrder(inCall = main?.inCall == true)
-        order.getOrNull(order.indexOf(page) + delta)?.let(::showProfile)
+        return order.getOrNull(order.indexOf(page) + delta)
     }
 
     // --- Mode Modifier

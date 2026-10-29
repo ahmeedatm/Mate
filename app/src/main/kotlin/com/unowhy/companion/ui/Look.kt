@@ -27,6 +27,7 @@ import androidx.dynamicanimation.animation.DynamicAnimation
 import androidx.dynamicanimation.animation.FloatValueHolder
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
+import com.unowhy.companion.AnimFamily
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import kotlin.math.abs
@@ -136,34 +137,80 @@ object Look {
         view.background = null
     }
 
-    /** Arrivée à l'écran : montée et fondu, décalés d'un élément à l'autre. */
-    fun enter(view: View, index: Int) {
-        if (reduced(view.context)) {
-            view.animate().cancel()
-            view.alpha = 1f
-            view.translationY = 0f
-            return
-        }
-        val shift = 18 * view.resources.displayMetrics.density
-        view.animate().cancel()
-        view.alpha = 0f
-        view.translationY = shift
-        view.animate().alpha(1f).translationY(0f)
-            .setStartDelay(index * 45L).setDuration(260)
-            .setInterpolator(DecelerateInterpolator(1.6f)).withLayer().start()
-    }
+    /** Arrivée à l'écran : montée et fondu, décalés d'un élément à l'autre (pas en kiosque, voir [enterSpring]). */
+    fun enter(view: View, index: Int) = enterSpring(view, index * 45L, 18)
 
-    /** Petit rebond (sélection, ajout). */
+    /** Petit rebond (sélection, ajout), sur un ressort peu amorti : joue aussi en kiosque. Réduire les animations : rien. */
     fun pop(view: View) {
         view.animate().cancel()
-        if (reduced(view.context)) {
+        if (!on(view.context, AnimFamily.DETAILS)) {
             view.scaleX = 1f
             view.scaleY = 1f
             return
         }
         view.scaleX = 0.7f
         view.scaleY = 0.7f
-        view.animate().scaleX(1f).scaleY(1f).setDuration(320).setInterpolator(OvershootInterpolator(3f)).start()
+        navSpring(view, DynamicAnimation.SCALE_X, BOUNCE, 1f)
+        navSpring(view, DynamicAnimation.SCALE_Y, BOUNCE, 1f)
+    }
+
+    /**
+     * Pastille dont l'état change (ordinateur en ligne ↔ injoignable) : elle gonfle puis revient, une fois. Réduire les
+     * animations : rien.
+     */
+    fun blip(view: View) {
+        if (!on(view.context, AnimFamily.ALERTS)) return
+        view.scaleX = BLIP_SCALE
+        view.scaleY = BLIP_SCALE
+        navSpring(view, DynamicAnimation.SCALE_X, BOUNCE, 1f)
+        navSpring(view, DynamicAnimation.SCALE_Y, BOUNCE, 1f)
+    }
+
+    /**
+     * Contenu chargé pour la première fois dans `view` (agenda, tâches, MRs, Jira) : fondu au lieu d'un saut du vide au
+     * plein. Les relectures suivantes (toutes les minutes…) ne rejouent rien.
+     */
+    fun revealOnce(view: View) {
+        if (view.getTag(R.id.revealed) == true) return
+        view.setTag(R.id.revealed, true)
+        if (!on(view.context, AnimFamily.DETAILS)) return
+        view.alpha = 0f
+        navSpring(view, DynamicAnimation.ALPHA, EFFECTS_SLOW, 1f)
+    }
+
+    /**
+     * Dernières secondes d'un compte à rebours (Pomodoro) : le chiffre grossit un peu à chaque seconde puis revient.
+     * À appeler à chaque rafraîchissement : une seule pulsation par seconde.
+     */
+    fun countdown(view: View, remainingMs: Long, running: Boolean) {
+        val second = ((remainingMs + 999) / 1000).toInt()
+        if (!running || second > COUNTDOWN_SECONDS || second <= 0 || view.getTag(R.id.countdown_second) == second) return
+        view.setTag(R.id.countdown_second, second)
+        if (!on(view.context, AnimFamily.DETAILS)) return
+        view.scaleX = COUNTDOWN_SCALE
+        view.scaleY = COUNTDOWN_SCALE
+        navSpring(view, DynamicAnimation.SCALE_X, SPATIAL_DEFAULT, 1f)
+        navSpring(view, DynamicAnimation.SCALE_Y, SPATIAL_DEFAULT, 1f)
+    }
+
+    /**
+     * Bandeau qui arrive (`show`) d'en haut en fondu, ou repart vers le haut puis disparaît ; `onGone` une fois masqué.
+     * Réduire les animations : affiché ou masqué tout de suite.
+     */
+    fun slideBanner(view: View, show: Boolean, onGone: () -> Unit = {}) {
+        val away = -view.dp(BANNER_AWAY_DP).toFloat()
+        if (!on(view.context, AnimFamily.ALERTS)) {
+            view.translationY = 0f
+            view.alpha = 1f
+            if (!show) onGone()
+            return
+        }
+        if (show && view.alpha == 1f && view.translationY == 0f) {
+            view.translationY = away
+            view.alpha = 0f
+        }
+        navSpring(view, DynamicAnimation.ALPHA, EFFECTS_DEFAULT, if (show) 1f else 0f)
+        navSpring(view, DynamicAnimation.TRANSLATION_Y, SPATIAL_DEFAULT, if (show) 0f else away) { if (!show) onGone() }
     }
 
     /** Flottement lent, en boucle : à arrêter avec [stop]. Réduire les animations : immobile (pas lancé). */
@@ -218,6 +265,9 @@ object Look {
      * joués malgré l'échelle à zéro se posent. Pas l'échelle d'Android : le kiosque la met à zéro pour la vitesse (voir Motion).
      */
     fun still(context: Context): Boolean = Motion.loops(Prefs.reduceMotion(context))
+
+    /** Animations de `family` jouées : ni Réduire les animations, ni la famille coupée dans Réglages > Animations. */
+    fun on(context: Context, family: AnimFamily): Boolean = !still(context) && Prefs.animation(context, family)
 
     private fun force(token: Spring, to: Float) = SpringForce(to).setStiffness(token.stiffness).setDampingRatio(token.damping)
 
@@ -295,6 +345,11 @@ object Look {
      * déjà masqué : pas de fondu croisé, qui mêle deux écrans chargés. Calque matériel le temps du mouvement.
      */
     fun sharedAxis(into: View, fromBelow: Boolean) {
+        if (!on(into.context, AnimFamily.NAVIGATION)) {
+            into.alpha = 1f
+            into.translationY = 0f
+            return
+        }
         into.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         into.alpha = 0f
         into.translationY = into.dp(NAV_AXIS_DP) * if (fromBelow) 1f else -1f
@@ -302,25 +357,86 @@ object Look {
         navSpring(into, DynamicAnimation.TRANSLATION_Y, SPATIAL_DEFAULT, 0f) { into.setLayerType(View.LAYER_TYPE_NONE, null) }
     }
 
+    /**
+     * Arrivée d'une boîte de dialogue (`root` : sa fenêtre) : fondu et léger zoom de 94 à 100 % sur des ressorts, qui jouent
+     * aussi en kiosque (l'animation de fenêtre d'Android, coupée là-bas, est retirée partout pour qu'elles se ressemblent).
+     * Réduire les animations : rien ne bouge.
+     */
+    fun popIn(root: View) {
+        if (!on(root.context, AnimFamily.DIALOGS)) return
+        root.alpha = 0f
+        root.scaleX = POP_SCALE
+        root.scaleY = POP_SCALE
+        navSpring(root, DynamicAnimation.ALPHA, EFFECTS_DEFAULT, 1f)
+        navSpring(root, DynamicAnimation.SCALE_X, SPATIAL_FAST, 1f)
+        navSpring(root, DynamicAnimation.SCALE_Y, SPATIAL_FAST, 1f)
+    }
+
+    /**
+     * Cloche qui sonne (notification arrivée) : un balancement amorti autour de son anneau, puis plus rien ; la pastille
+     * apparaît d'un petit rebond. Réduire les animations : la pastille s'affiche simplement.
+     */
+    fun ring(bell: View, dot: View) {
+        if (!on(bell.context, AnimFamily.ALERTS)) return
+        bell.pivotX = bell.width / 2f
+        bell.pivotY = bell.height * 0.25f
+        SpringAnimation(bell, DynamicAnimation.ROTATION)
+            .setSpring(SpringForce(0f).setStiffness(RING_STIFFNESS).setDampingRatio(RING_DAMPING))
+            .setStartVelocity(RING_VELOCITY)
+            .start()
+        dot.scaleX = 0f
+        dot.scaleY = 0f
+        SpringAnimation(dot, DynamicAnimation.SCALE_X).setSpring(SpringForce(1f).setStiffness(SpringForce.STIFFNESS_MEDIUM).setDampingRatio(0.45f)).start()
+        SpringAnimation(dot, DynamicAnimation.SCALE_Y).setSpring(SpringForce(1f).setStiffness(SpringForce.STIFFNESS_MEDIUM).setDampingRatio(0.45f)).start()
+    }
+
+    private const val POP_SCALE = 0.94f
+
+    /** Rebond (pop, pastille d'état) : ressort peu amorti, un dépassement visible puis posé. */
+    private val BOUNCE = Spring(600f, 0.45f)
+    private const val BLIP_SCALE = 1.9f
+
+    /** Compte à rebours : pulsation sur les 10 dernières secondes. */
+    private const val COUNTDOWN_SECONDS = 10
+    private const val COUNTDOWN_SCALE = 1.08f
+
+    /** Course du bandeau qui arrive d'en haut. */
+    private const val BANNER_AWAY_DP = 72
+
+    /** Balancement de la cloche : vitesse de départ (°/s), ressort peu amorti (quelques allers-retours, < 1 s). */
+    private const val RING_VELOCITY = 900f
+    private const val RING_STIFFNESS = 450f
+    private const val RING_DAMPING = 0.18f
+
     /** Temps du glissement d'un écran par la barre : ce qui recharge l'écran attend jusque-là (calque stable). */
     const val NAV_SETTLE_MS = 350L
 
     /** Course de l'écran qui arrive par la barre (24 dp, spec Deck V2). */
     private const val NAV_AXIS_DP = 24
 
+    /**
+     * Kiosque : les widgets de l'Accueil arrivent seuls (montée sans fondu, [enterSpring]) ; l'écran entier ne glisse
+     * pas en plus sur son calque, que leurs mouvements forceraient à redessiner à chaque image.
+     */
+    fun cascadeOnly(context: Context): Boolean = reduced(context) && !still(context)
+
     /** Arrivée d'un élément de l'Accueil Cadran : il monte de `dy` dp (ressort par défaut) en fondu, après `delayMs`. */
     fun enterSpring(view: View, delayMs: Long, dy: Int) {
         view.animate().cancel()
-        if (reduced(view.context)) {
+        if (!on(view.context, AnimFamily.HOME)) {
             view.alpha = 1f
             view.translationY = 0f
             return
         }
-        view.alpha = 0f
+        // Kiosque (échelle d'animation à zéro) : la montée seule, sans fondu ni calque. Une translation ne redessine
+        // rien ; le fondu par widget (et son calque) faisait passer l'arrivée de l'Accueil de 40 à 56 % d'images
+        // lentes sur la 4.2 (mesure du 29/10/2026). L'écran entier ne glisse pas en même temps ([cascadeOnly]).
+        val fade = !reduced(view.context)
+        if (fade) view.alpha = 0f
         view.translationY = dy * view.resources.displayMetrics.density
         view.postDelayed({
             SpringAnimation(view, DynamicAnimation.TRANSLATION_Y).setSpring(force(SPATIAL_DEFAULT, 0f)).start()
-            SpringAnimation(view, DynamicAnimation.ALPHA).setSpring(force(EFFECTS_DEFAULT, 1f)).start()
+            if (fade) SpringAnimation(view, DynamicAnimation.ALPHA).setSpring(force(EFFECTS_DEFAULT, 1f)).start()
         }, delayMs)
     }
 
