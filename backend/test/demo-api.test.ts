@@ -187,6 +187,34 @@ describe("démo : personas", () => {
     assert.deepEqual(await persoLabels(s), ["Ma touche"]);
   });
 
+  it("Aimée a une réunion entre 5 et 7 minutes après le choix, à la minute pleine (alerte de réunion)", async () => {
+    const s = await start();
+    const before = Date.now();
+    await s.call("POST", "/demo/persona", { persona: "aimee" });
+    const after = Date.now();
+    const events = (await s.call("GET", "/calendar?days=2")).json.events as {
+      title: string;
+      startMs: number;
+      endMs: number;
+      allDay: boolean;
+    }[];
+    const meeting = events.find((e) => e.title === "Point client Boréal");
+    assert.ok(meeting && !meeting.allDay);
+    assert.ok(meeting.startMs - after >= 5 * 60_000 && meeting.startMs - before <= 7 * 60_000);
+    assert.equal(meeting.startMs % 60_000, 0);
+    assert.ok(meeting.endMs > meeting.startMs);
+    // Triés par début, comme l'agenda personnel : la tablette prend le premier à venir comme « prochain rendez-vous ».
+    const starts = events.map((e) => e.startMs);
+    assert.deepEqual(
+      starts,
+      [...starts].sort((a, b) => a - b),
+    );
+    // Les autres personas n'ont pas cette réunion.
+    await s.call("POST", "/demo/persona", { persona: "nour" });
+    const nour = (await s.call("GET", "/calendar?days=2")).json.events as { title: string }[];
+    assert.ok(!nour.some((e) => e.title === "Point client Boréal"));
+  });
+
   it("les personas portent les nouveaux noms, les anciens sont refusés", async () => {
     const s = await start();
     for (const persona of ["nour", "gwen", "camille", "aimee", "sam", "sacha"]) {

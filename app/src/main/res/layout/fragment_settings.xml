@@ -472,6 +472,22 @@
                 android:textSize="14sp" />
 
             <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_meeting_alert"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/meeting_alert"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/meeting_alert_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/settings_wake_word"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
