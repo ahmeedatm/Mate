@@ -85,11 +85,11 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `Jira et GitLab, widgets du Deck en XL ou L, seulement si l'ordinateur les offre`() {
+    fun `Jira et GitLab, widgets du Deck en XL, L, 3 x 2, 3 x 4 ou plein ecran, seulement si l'ordinateur les offre`() {
         assertEquals(WidgetType.JIRA, WidgetType.of("jira"))
         assertEquals(WidgetType.GITLAB, WidgetType.of("gitlab"))
         for (type in listOf(WidgetType.JIRA, WidgetType.GITLAB)) {
-            assertEquals(listOf(WidgetSize.XL, WidgetSize.L), type.sizes)
+            assertEquals(listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), type.sizes)
             assertTrue(type.computer)
         }
         assertFalse(WidgetType.JIRA.offered(HomeFeatures()))
@@ -110,9 +110,9 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `Pipelines, console de GitLab en XL ou L, proposee seulement quand GitLab l'est`() {
+    fun `Pipelines, console de GitLab en tableau, proposee seulement quand GitLab l'est`() {
         assertEquals(WidgetType.PIPELINES, WidgetType.of("pipelines"))
-        assertEquals(listOf(WidgetSize.XL, WidgetSize.L), WidgetType.PIPELINES.sizes)
+        assertEquals(listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), WidgetType.PIPELINES.sizes)
         assertTrue(WidgetType.PIPELINES.computer)
         assertFalse(WidgetType.PIPELINES.offered(HomeFeatures()))
         assertFalse(WidgetType.PIPELINES.offered(HomeFeatures(jira = true)))
@@ -256,5 +256,80 @@ class WidgetModelTest {
         val back = HomeLayout.load(context, cadran = true).widgets.single()
         assertEquals(WidgetType.CHECKLIST, back.type)
         assertEquals(Checklist.read(config), Checklist.read(back.config))
+    }
+
+    private val boards = listOf(WidgetType.AGENTS, WidgetType.JIRA, WidgetType.GITLAB, WidgetType.PIPELINES, WidgetType.OPEN, WidgetType.MIXER)
+
+    @Test
+    fun `les tailles 3 x 2, 3 x 4 et plein ecran sont reservees aux tableaux`() {
+        assertEquals(listOf(3 to 2, 3 to 4, 4 to 4), listOf(WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL).map { it.w to it.h })
+        for (type in WidgetType.entries) {
+            val big = type.sizes.filter { it == WidgetSize.L3 || it == WidgetSize.T3 || it == WidgetSize.FULL }
+            if (type in boards) {
+                assertEquals("$type", listOf(WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), big)
+                assertFalse("$type : l'ajout ne commence pas en plein ecran", type.sizes.first() == WidgetSize.FULL)
+                // Maintenu, le tableau s'agrandit en plein écran.
+                assertEquals("$type", WidgetSize.FULL, type.zoomSize)
+            } else {
+                assertTrue("$type", big.isEmpty())
+            }
+        }
+    }
+
+    @Test
+    fun `une taille inconnue relue retombe sur la premiere taille du widget`() {
+        val context = com.unowhy.unomate.FakeContext()
+        val json = """{"v":2,"pages":1,"widgets":[{"t":"jira","s":"GEANT","p":0,"c":0,"r":0,"cfg":{}},{"t":"clock","s":"FULL","p":0,"c":0,"r":2,"cfg":{}}]}"""
+        context.getSharedPreferences("companion", 0).edit().putString(HomeLayout.key(cadran = true), json).apply()
+        val widgets = HomeLayout.load(context, cadran = true).widgets
+        assertEquals(WidgetType.JIRA.sizes.first(), widgets.single { it.type == WidgetType.JIRA }.size)
+        // Une taille connue mais refusée par ce widget : la première aussi.
+        assertEquals(WidgetType.CLOCK.sizes.first(), widgets.single { it.type == WidgetType.CLOCK }.size)
+    }
+
+    @Test
+    fun `la poignee choisit la taille permise la plus proche de la zone tiree`() {
+        val jira = Placed(WidgetType.JIRA, WidgetSize.L, 0, 0, 0)
+        val layout = HomeLayout(mutableListOf(jira), 1)
+        assertEquals(WidgetSize.L3, layout.pickSize(jira, 3f, 2f))
+        assertEquals(WidgetSize.FULL, layout.pickSize(jira, 4f, 4f))
+        assertEquals(WidgetSize.T3, layout.pickSize(jira, 3.1f, 3.7f))
+        assertEquals(WidgetSize.XL, layout.pickSize(jira, 3.6f, 1.2f))
+        assertEquals(WidgetSize.L, layout.pickSize(jira, 0.5f, 0.5f))
+        // Taille refusée par le widget : jamais choisie (une horloge n'a pas de plein écran).
+        val clock = Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 2)
+        layout.widgets += clock
+        assertEquals(WidgetSize.XL, layout.pickSize(clock, 4f, 4f))
+    }
+
+    @Test
+    fun `la poignee ne choisit que les tailles qui tiennent sans chevaucher`() {
+        val agents = Placed(WidgetType.AGENTS, WidgetSize.L, 0, 0, 0)
+        val neighbour = Placed(WidgetType.CLOCK, WidgetSize.S, 0, 3, 0)
+        val layout = HomeLayout(mutableListOf(agents, neighbour), 1)
+        // 4 × 2 et le plein écran touchent la case voisine : la plus proche qui tient est 3 × 4.
+        assertEquals(WidgetSize.T3, layout.pickSize(agents, 4f, 4f))
+        assertEquals(WidgetSize.L3, layout.pickSize(agents, 4f, 2f))
+        // Case en haut à gauche gardée : un widget en bas à droite ne grandit pas vers le haut.
+        val corner = Placed(WidgetType.GITLAB, WidgetSize.L, 0, 2, 2)
+        layout.widgets += corner
+        assertEquals(WidgetSize.L, layout.pickSize(corner, 4f, 4f))
+    }
+
+    @Test
+    fun `a distance egale la poignee prend la plus petite taille`() {
+        val mixer = Placed(WidgetType.MIXER, WidgetSize.XL, 0, 0, 0)
+        val layout = HomeLayout(mutableListOf(mixer), 1)
+        // 3 × 2 et 4 × 2 sont à égale distance de 3,5 × 2.
+        assertEquals(WidgetSize.L3, layout.pickSize(mixer, 3.5f, 2f))
+    }
+
+    @Test
+    fun `aucune taille ne tient, rien ne change`() {
+        val open = Placed(WidgetType.OPEN, WidgetSize.XL, 0, 0, 0)
+        val layout = HomeLayout(mutableListOf(open), 1)
+        // Colonne 3 : aucune taille d'Ouvertes (2 cases de large au moins) ne tient.
+        open.col = 3
+        assertNull(layout.pickSize(open, 4f, 4f))
     }
 }

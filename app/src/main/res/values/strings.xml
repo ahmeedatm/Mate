@@ -1107,6 +1107,10 @@
     <string name="widget_size_w">Bandeau</string>
     <string name="widget_size_xl">Très grand</string>
     <string name="widget_size_v">Vertical</string>
+    <string name="widget_size_l3">3 × 2</string>
+    <string name="widget_size_t3">3 × 4</string>
+    <string name="widget_size_full">Plein écran</string>
+    <string name="widget_resize_cd">Redimensionner %1$s, taille actuelle %2$s. Active pour passer à la taille suivante.</string>
     <string name="widget_needs_computer">%1$s : connecte ton ordinateur</string>
     <string name="widget_hero">Heure du jour</string>
     <string name="widget_hero_desc">L\'heure en grand, le prochain rendez-vous, la météo et l\'eau</string>
