@@ -2,7 +2,7 @@ import path from "node:path";
 import { config } from "./config.ts";
 import { dayRange } from "./calendar.ts";
 import { localEvents } from "./events.ts";
-import { statusLabel, type Mr } from "./gitlab.ts";
+import { sortPipelines, statusLabel, type Mr, type PipelineRow } from "./gitlab.ts";
 import { readJson } from "./store.ts";
 import { resumeAway, startAway, type AwayDeps, type Saved } from "./away.ts";
 import type { PersonaId } from "./demo.ts";
@@ -31,6 +31,17 @@ type MockMr = {
   given: number;
   status: string;
   by?: string[];
+};
+type MockPipeline = {
+  project?: string;
+  ref: string;
+  id: number;
+  pipeline: PipelineRow["pipeline"];
+  /** Durée du pipeline terminé. */
+  durationSec?: number;
+  /** Il y a combien de minutes il a fini (ou démarré, s'il tourne). */
+  minutes: number;
+  failedJobs?: string[];
 };
 type MockAgent = {
   title: string;
@@ -66,7 +77,7 @@ type PersonaMock = {
   clipboard: string[];
   tabs: { title: string; url: string }[];
   jira?: Column[];
-  gitlab?: { project: string; mine: MockMr[]; review: MockMr[] };
+  gitlab?: { project: string; mine: MockMr[]; review: MockMr[]; pipelines?: MockPipeline[] };
   agents?: MockAgent[];
 };
 
@@ -389,6 +400,19 @@ const MOCKS: Record<PersonaId, PersonaMock> = {
         { iid: 411, title: "Pagination de la liste des clients", author: "Inès", pipeline: "success", given: 0, status: "not_approved" },
         { iid: 407, title: "Mettre à jour le client PDF", author: "Malo", pipeline: "failed", given: 0, status: "ci_must_pass" },
       ],
+      pipelines: [
+        { ref: "main", id: 8841, pipeline: "running", minutes: 4 },
+        { ref: "v2.8.0", id: 8836, pipeline: "success", durationSec: 372, minutes: 95 },
+        {
+          ref: "fix/FACT-236-arrondi-tva",
+          id: 8839,
+          pipeline: "failed",
+          durationSec: 148,
+          minutes: 22,
+          failedJobs: ["tests-unitaires", "tests-e2e"],
+        },
+        { project: "equipe-demo/portail-clients", ref: "main", id: 3107, pipeline: "success", durationSec: 251, minutes: 180 },
+      ],
     },
     agents: [
       {
@@ -597,6 +621,20 @@ function mrsOf(s: State) {
   return { connected: true, canMerge: true, mine: s.mrs.mine.map(view), review: s.mrs.review.map(view) };
 }
 
+function pipelinesOf(s: State) {
+  const main = s.mock.gitlab?.project ?? "equipe-demo/projet";
+  const rows = (s.mock.gitlab?.pipelines ?? []).map((p): PipelineRow => ({
+    project: p.project ?? main,
+    ref: p.ref,
+    id: p.id,
+    pipeline: p.pipeline,
+    durationSec: p.durationSec ?? null,
+    ageSec: p.minutes * 60,
+    failedJobs: p.failedJobs ?? [],
+  }));
+  return { connected: true, pipelines: sortPipelines(rows) };
+}
+
 function issuesOf(s: State) {
   const last = s.columns.length - 1;
   return {
@@ -713,6 +751,8 @@ const HANDLERS: Record<string, Handler> = {
     return ok;
   },
   "POST /gitlab/mrs/open": () => ok,
+  "GET /gitlab/pipelines": ({ s }) => pipelinesOf(s),
+  "POST /gitlab/pipelines/open": () => ok,
 
   "GET /jira/boards": ({ s }) => ({
     boards: [{ id: 1, name: s.mock.jira ? "Tableau de l'équipe" : "Aucun", project: s.id === "aimee" ? "ATLAS" : "FACT" }],

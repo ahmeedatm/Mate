@@ -46,10 +46,36 @@ data class GitLabMrs(
     val canMerge: Boolean = true,
 )
 
+/**
+ * Un pipeline de la console (backend `GET /gitlab/pipelines`) : dernier pipeline de la branche par défaut d'un projet.
+ * `durationSec` : durée du pipeline terminé (null tant qu'il tourne) ; `ageSec` : âge à la lecture du compagnon, depuis la
+ * fin (ou le départ s'il tourne) ; `failedJobs` : jobs en échec, vide hors échec.
+ */
+data class GitLabPipeline(
+    val project: String,
+    val ref: String,
+    val id: Int,
+    val status: Pipeline,
+    val durationSec: Int?,
+    val ageSec: Int,
+    val failedJobs: List<String>,
+)
+
+/** `connected` faux : l'ordinateur n'a ni compte GitLab connecté ni jeton (réponse normale) ; `expired` : le compte n'est plus renouvelable. */
+data class GitLabPipelines(val pipelines: List<GitLabPipeline>, val connected: Boolean = true, val expired: Boolean = false)
+
 /** MR GitLab lues et pilotées par le compagnon de l'ordinateur (jamais de jeton ni de compte GitLab sur la tablette). */
 class GitLabApi(private val http: Http) {
 
     suspend fun mrs(): GitLabMrs = http.io { parseGitLabMrs(http.get("/gitlab/mrs", timeoutMs = 20_000)) }
+
+    suspend fun pipelines(): GitLabPipelines = http.io { parseGitLabPipelines(http.get("/gitlab/pipelines", timeoutMs = 20_000)) }
+
+    /** Ouvre la page du pipeline dans le navigateur de l'ordinateur. */
+    suspend fun openPipeline(project: String, id: Int) = http.io {
+        http.postJson("/gitlab/pipelines/open", JSONObject().put("project", project).put("id", id))
+        Unit
+    }
 
     /** Ouvre la MR dans le navigateur de l'ordinateur. */
     suspend fun open(project: String, iid: Int) = http.io {
@@ -89,4 +115,23 @@ internal fun parseGitLabMrs(text: String): GitLabMrs {
         }
     }
     return GitLabMrs(list("mine"), list("review"), json.optBoolean("connected", true), json.optBoolean("expired"), json.optBoolean("canMerge", true))
+}
+
+internal fun parseGitLabPipelines(text: String): GitLabPipelines {
+    val json = JSONObject(text)
+    val a = json.optJSONArray("pipelines")
+    val list = (0 until (a?.length() ?: 0)).map { i ->
+        val p = a!!.getJSONObject(i)
+        val jobs = p.optJSONArray("failedJobs")
+        GitLabPipeline(
+            project = p.getString("project"),
+            ref = p.optString("ref"),
+            id = p.getInt("id"),
+            status = Pipeline.of(p.optStringOrNull("pipeline")),
+            durationSec = if (p.isNull("durationSec")) null else p.optInt("durationSec"),
+            ageSec = p.optInt("ageSec"),
+            failedJobs = jobs?.let { j -> (0 until j.length()).map { j.getString(it) } }.orEmpty(),
+        )
+    }
+    return GitLabPipelines(list, json.optBoolean("connected", true), json.optBoolean("expired"))
 }

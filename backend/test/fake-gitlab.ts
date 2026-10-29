@@ -28,6 +28,18 @@ export const fakeMr = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+/** Pipeline tel que le rend `GET /projects/:id/pipelines/latest`. */
+export const fakePipeline = (over: Record<string, unknown> = {}) => ({
+  id: 500,
+  ref: "main",
+  status: "success",
+  created_at: "2026-10-29T09:00:00Z",
+  started_at: "2026-10-29T09:00:10Z",
+  finished_at: "2026-10-29T09:05:00Z",
+  duration: 290,
+  ...over,
+});
+
 export type Seen = { method: string; url: string; authorization?: string; privateToken?: string; body: any };
 
 export type FakeGitlab = {
@@ -51,6 +63,12 @@ export type FakeGitlab = {
   /** Page d'autorisation, étape « Autoriser » : adresse de retour de l'appli avec le code (ou l'erreur si `deny`). */
   authorize: (authorizeUrl: string, deny?: boolean) => Promise<string>;
   mrs: { assigned: unknown[]; review: unknown[] };
+  /** Dernier pipeline de la branche par défaut, par chemin de projet (absent : 404, projet sans pipeline). */
+  pipelines: Record<string, unknown>;
+  /** Noms des jobs en échec, par id de pipeline. */
+  failedJobs: Record<number, string[]>;
+  /** Code HTTP forcé pour `pipelines/latest` (200 : normal). */
+  pipelinesStatus: number;
   stop: () => Promise<void>;
 };
 
@@ -69,6 +87,9 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
     personalToken: "",
     allowedScopes: ["read_api", "openid", "profile", "email"],
     mergeStatus: 200,
+    pipelines: {},
+    failedJobs: {},
+    pipelinesStatus: 200,
     revokeAll: () => {
       access.clear();
       refresh.clear();
@@ -195,6 +216,18 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
           },
         });
       }
+      const latest = /^\/api\/v4\/projects\/([^/]+)\/pipelines\/latest$/.exec(url.pathname);
+      if (latest && req.method === "GET") {
+        if (fake.pipelinesStatus !== 200) return json(fake.pipelinesStatus, { message: "refus" });
+        const pipeline = fake.pipelines[decodeURIComponent(latest[1])];
+        return pipeline ? json(200, pipeline) : json(404, { message: "404 Not found" });
+      }
+      const jobs = /^\/api\/v4\/projects\/[^/]+\/pipelines\/(\d+)\/jobs$/.exec(url.pathname);
+      if (jobs && req.method === "GET")
+        return json(
+          200,
+          (fake.failedJobs[Number(jobs[1])] ?? []).map((name) => ({ name, status: "failed" })),
+        );
       if (/^\/api\/v4\/projects\/[^/]+\/merge_requests\/\d+\/merge$/.test(url.pathname) && req.method === "PUT") {
         return json(fake.mergeStatus, fake.mergeStatus === 200 ? { state: "merged" } : { message: "refus" });
       }

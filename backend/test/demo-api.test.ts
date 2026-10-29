@@ -311,6 +311,34 @@ describe("démo : données fictives à la place de celles de l'ordinateur", () =
     assert.equal((await s.call("GET", "/gitlab/mrs")).json.connected, false);
   });
 
+  it("GitLab : pipelines fictifs de Sacha (en cours, échec sur une MR, déploiement réussi), ouvrir ne touche pas l'ordinateur, rien chez les autres", async () => {
+    const s = await start();
+    assert.equal((await s.call("GET", "/gitlab/pipelines")).json.connected, false);
+    await s.call("POST", "/demo/persona", { persona: "sacha" });
+    const { connected, pipelines } = (await s.call("GET", "/gitlab/pipelines")).json;
+    assert.equal(connected, true);
+    assert.ok(pipelines.length >= 3 && pipelines.length <= 8);
+    assert.equal(pipelines[0].pipeline, "running");
+    assert.equal(pipelines[0].ref, "main");
+    const failed = pipelines.find((p: { pipeline: string }) => p.pipeline === "failed");
+    assert.ok(failed.failedJobs.length > 0);
+    assert.notEqual(failed.ref, "main");
+    assert.ok(pipelines.some((p: { pipeline: string }) => p.pipeline === "success"));
+    assert.ok(pipelines.every((p: { project: string }) => !p.project.includes("://")));
+    // Même projet fictif que les MR de Sacha.
+    const mrs = (await s.call("GET", "/gitlab/mrs")).json;
+    assert.ok(pipelines.some((p: { project: string }) => p.project === mrs.mine[0].project));
+    assert.equal((await s.call("POST", "/gitlab/pipelines/open", { project: failed.project, id: failed.id })).status, 200);
+    assert.deepEqual(s.osCalls(), []);
+
+    // Un persona sans GitLab ne reçoit aucun pipeline.
+    await s.call("POST", "/demo/persona", { persona: "nour" });
+    assert.deepEqual((await s.call("GET", "/gitlab/pipelines")).json.pipelines, []);
+
+    await s.call("DELETE", "/demo");
+    assert.equal((await s.call("GET", "/gitlab/pipelines")).json.connected, false);
+  });
+
   it("Jira : tickets fictifs de Sacha et d'Aimée, un ticket se déplace, 501 de nouveau après", async () => {
     const s = await start();
     assert.equal((await s.call("GET", "/jira/issues")).status, 501);
