@@ -121,6 +121,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             unreachable = main?.unreachable()
             grid.setPadding(dp(44), dp(28), dp(40), dp(32))
             grid.gap = dp(16)
+            grid.rowWeights = RowProfile.CADRAN_ROWS
             // L'heure déborde de quelques dp sous sa ligne, comme dans la maquette.
             grid.clipChildren = false
         }
@@ -211,7 +212,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         layout.widgets.forEach { addWidget(it) }
         page = page.coerceIn(0, layout.pages - 1)
         grid.page = page
-        showRows()
         renderProfileBar()
         activate()
     }
@@ -263,11 +263,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             }
             for (widget in shownWidgets()) widget.load()
         }
-    }
-
-    /** Cadran : hauteurs des lignes selon le bandeau du profil affiché (Ma journée, plus bas, ou la grande heure). */
-    private fun showRows() {
-        if (cadran) grid.rowWeights = RowProfile.cadranRows(layout.widgets, page)
     }
 
     /** Les widgets du profil affiché : les autres ne relisent pas l'ordinateur (tablette lente). */
@@ -414,7 +409,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private fun displayProfile(index: Int) {
         page = index.coerceIn(0, layout.pages - 1)
         grid.page = page
-        showRows()
         renderProfileBar()
         activate()
     }
@@ -492,7 +486,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             return
         }
         HomeLayout.save(requireContext(), layout, cadran)
-        showRows()
         displayProfile(page)
     }
 

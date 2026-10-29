@@ -1,5 +1,6 @@
 package com.unowhy.companion.ui.home
 
+import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.net.CalendarEvent
 
 /** Ce que dit « Ma journée » ([DayWidget]) : la salutation, puis la prochaine réunion du jour ou ce qu'il reste à savoir. */
@@ -38,4 +39,19 @@ object DayBrief {
         meetings && event.joinable && (chosen || event.startMs - now <= JOIN_EARLY_MS)
 
     const val JOIN_EARLY_MS = 15 * 60_000L
+
+    /** Pastille Focus de Ma journée : au repos la durée (« Focus 25 min »), sinon les minutes restantes, arrondies au-dessus. */
+    data class FocusPill(val kind: Kind, val minutes: Int) {
+        enum class Kind { IDLE, RUNNING, PAUSED, BREAK }
+    }
+
+    fun focusPill(state: FocusTimer.State): FocusPill {
+        val left = ((state.remainingMs + 59_999) / 60_000).toInt()
+        return when {
+            state.phase == FocusTimer.Phase.BREAK -> FocusPill(FocusPill.Kind.BREAK, left)
+            state.running -> FocusPill(FocusPill.Kind.RUNNING, left)
+            state.remainingMs < state.durationMs -> FocusPill(FocusPill.Kind.PAUSED, left)
+            else -> FocusPill(FocusPill.Kind.IDLE, (state.durationMs / 60_000).toInt())
+        }
+    }
 }

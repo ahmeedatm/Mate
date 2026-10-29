@@ -7,7 +7,12 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.TextView
 import com.unowhy.companion.R
+import com.unowhy.companion.focus.FocusTimer
+import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.CalendarEvent
+import com.unowhy.companion.net.runCatchingCancellable
+import com.unowhy.companion.ui.errorText
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -15,8 +20,9 @@ import java.util.Locale
 
 /**
  * Ma journée (Accueil de bureau, à la place de la grande heure : l'heure est déjà en haut à droite) : salutation et date,
- * puis la prochaine réunion du jour en grand avec Rejoindre ([DayBrief.canJoin]), ou « Aucune / Plus de réunion
- * aujourd'hui » et la suivante ; météo et eau à droite ([HeroComplications]). Relu chaque minute et à chaque agenda.
+ * la prochaine réunion du jour en grand, ou « Aucune / Plus de réunion aujourd'hui » et la suivante ; puis les actions
+ * du jour : Focus (le chrono, [DayBrief.focusPill]), Ne pas déranger de l'ordinateur (lu à chaque [load], caché s'il est
+ * illisible), Rejoindre ([DayBrief.canJoin]). Météo et eau à droite ([HeroComplications]).
  */
 class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     override val view: View = LayoutInflater.from(context).inflate(R.layout.widget_day, FrameLayout(context), false)
@@ -26,20 +32,31 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     private val title = view.findViewById<TextView>(R.id.day_title)
     private val whenText = view.findViewById<TextView>(R.id.day_when)
     private val join = view.findViewById<Button>(R.id.day_join)
+    private val focusButton = view.findViewById<Button>(R.id.day_focus)
+    private val dndButton = view.findViewById<Button>(R.id.day_dnd)
     private val note = view.findViewById<TextView>(R.id.day_note)
     private val compl = HeroComplications(context, host, placed, view)
     private val dateFormat = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
     private var joinable: CalendarEvent? = null
+    private var pill: DayBrief.FocusPill? = null
+    private var dnd: Boolean? = null
+
+    // Le chrono prévient chaque seconde : la pastille ne change qu'avec les minutes ou l'état.
+    private val focusListener: (FocusTimer.State) -> Unit = { state -> DayBrief.focusPill(state).takeIf { it != pill }?.let(::renderFocusPill) }
 
     override val hasSettings get() = true
 
     init {
         join.setOnClickListener { joinable?.let { joinMeeting(host, it, join) } }
+        focusButton.setOnClickListener { FocusTimer.toggle() }
+        dndButton.setOnClickListener { toggleDnd() }
+        renderFocusPill(DayBrief.focusPill(FocusTimer.state))
         render(animate = false)
     }
 
     override fun setActive(active: Boolean) {
         compl.setActive(active)
+        if (active) FocusTimer.observe(focusListener) else FocusTimer.unobserve(focusListener)
         if (active) render(animate = false)
     }
 
@@ -64,6 +81,7 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     private fun renderFocus() {
         val now = System.currentTimeMillis()
         // Ordinateur injoignable : seul message, les rendez-vous peuvent dater.
+        renderDnd()
         host.unreachable?.let { down ->
             val since = down.since()
             showNote(if (since != null) context.getString(R.string.hero_down, down.name, since) else context.getString(R.string.hero_down_unknown, down.name), R.attr.c_warn)
@@ -98,7 +116,49 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         note.setTextColor(color(colorAttr))
     }
 
-    override suspend fun load() = compl.load()
+    private fun renderFocusPill(p: DayBrief.FocusPill) {
+        pill = p
+        focusButton.text = context.getString(
+            when (p.kind) {
+                DayBrief.FocusPill.Kind.IDLE -> R.string.day_focus
+                DayBrief.FocusPill.Kind.RUNNING -> R.string.day_focus_running
+                DayBrief.FocusPill.Kind.PAUSED -> R.string.day_focus_paused
+                DayBrief.FocusPill.Kind.BREAK -> R.string.day_focus_break
+            },
+            p.minutes,
+        )
+        val running = FocusTimer.state.running
+        focusButton.setCompoundDrawablesRelativeWithIntrinsicBounds(if (running) R.drawable.ic_pause else R.drawable.ic_play, 0, 0, 0)
+        focusButton.isSelected = p.kind == DayBrief.FocusPill.Kind.RUNNING
+    }
+
+    /** Ne pas déranger : seulement lisible et ordinateur joignable ; rouge quand il est actif. */
+    private fun renderDnd() {
+        val on = dnd
+        dndButton.visibility = if (on != null && host.unreachable == null) View.VISIBLE else View.GONE
+        dndButton.isSelected = on == true
+    }
+
+    private fun toggleDnd() {
+        val wanted = dnd != true
+        dnd = wanted
+        renderDnd()
+        host.scope.launch {
+            try {
+                BackendClient(context).system.setDnd(wanted)
+            } catch (e: Exception) {
+                dnd = !wanted
+                renderDnd()
+                host.main?.showBanner(context.errorText(e), 6)
+            }
+        }
+    }
+
+    override suspend fun load() {
+        dnd = runCatchingCancellable { BackendClient(context).system.dnd() }.getOrNull()
+        renderDnd()
+        compl.load()
+    }
 
     override fun showSettings() = compl.showSettings()
 }

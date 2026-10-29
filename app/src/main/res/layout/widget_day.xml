@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Ma journée (DayWidget, Accueil de bureau) : salutation, date, puis la prochaine réunion du jour en grand avec
-     Rejoindre, ou ce qu'il reste à savoir ; météo et eau à droite. Sans fond, comme le héros. -->
+<!-- Ma journée (DayWidget, Accueil de bureau) : salutation, date, la prochaine réunion du jour en grand ou ce qu'il
+     reste à savoir, puis les actions du jour ; météo et eau à droite. Sans fond, comme le héros. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -63,15 +63,6 @@
                 android:includeFontPadding="false"
                 android:singleLine="true"
                 android:textSize="20sp" />
-
-            <Button
-                android:id="@+id/day_join"
-                style="@style/NowButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:text="@string/join_meeting"
-                android:visibility="gone" />
         </LinearLayout>
 
         <!-- Pas de réunion à venir aujourd'hui, ou ordinateur injoignable (seul message, en orange). -->
@@ -87,6 +78,43 @@
             android:singleLine="true"
             android:textColor="?attr/c_text_dim"
             android:textSize="20sp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- Actions du jour, d'un toucher sans quitter l'Accueil : Focus (le chrono), Ne pas déranger de l'ordinateur,
+         Rejoindre quand une réunion en ligne approche. Rouge = en cours. En bas du bandeau, juste au-dessus de la ligne du
+         jour : la salutation en haut, la réunion entre les deux. -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/day_focus"
+            style="@style/Chip"
+            android:drawablePadding="8dp"
+            android:drawableTint="@color/chip_text"
+            android:drawableStart="@drawable/ic_play" />
+
+        <Button
+            android:id="@+id/day_dnd"
+            style="@style/Chip"
+            android:layout_marginStart="10dp"
+            android:drawablePadding="8dp"
+            android:drawableTint="@color/chip_text"
+            android:drawableStart="@drawable/ic_tile_dnd"
+            android:text="@string/day_dnd"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/day_join"
+            style="@style/NowButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="@string/join_meeting"
             android:visibility="gone" />
     </LinearLayout>
 

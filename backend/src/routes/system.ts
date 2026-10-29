@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { clipboardHistory } from "../clipboard-history.ts";
 import { config } from "../config.ts";
-import { focusDnd } from "../dnd.ts";
+import { focusDnd, manualDnd } from "../dnd.ts";
 import { resolveDoc } from "../docs.ts";
 import { applyScene, deleteScene, listScenes, saveScene } from "../mixer.ts";
 import {
@@ -148,6 +148,17 @@ export default async function systemRoutes(app: FastifyInstance) {
       },
     },
     async (req) => focusDnd(req.body.on, req.body.minutes),
+  );
+
+  // Pastille de l'Accueil : posé à la main, sans minuteur (voir manualDnd).
+  app.put<{ Body: { on: boolean } }>(
+    "/system/dnd",
+    {
+      schema: {
+        body: { type: "object", additionalProperties: false, required: ["on"], properties: { on: { type: "boolean" } } },
+      },
+    },
+    async (req) => manualDnd(req.body.on),
   );
 
   // Son d'une appli (page du deck liée à une appli : Discord…). Lu en boucle par la tablette tant que la page est affichée.

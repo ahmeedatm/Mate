@@ -167,6 +167,24 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "Ne pas déranger à la main (pastille de l'Accueil)",
+      run: async () => {
+        expectStatus(await call("PUT", "/system/dnd", { on: "oui" }), 400, "PUT /system/dnd invalide");
+        const read = await call("GET", "/system/dnd");
+        if (!controlled()) {
+          expectStatus(read, 501, "/system/dnd hors Mac et Windows");
+          return "pas de pilotage ici (501)";
+        }
+        expectStatus(read, 200, "GET /system/dnd");
+        if (typeof read.json.on !== "boolean") return "état illisible sur cet ordinateur";
+        // L'état actuel reposé tel quel : la route marche sans rien changer pour l'utilisateur.
+        const put = await call("PUT", "/system/dnd", { on: read.json.on });
+        expectStatus(put, 200, "PUT /system/dnd");
+        expect(put.json.on === read.json.on, "PUT /system/dnd n'a pas rendu l'état demandé");
+        return read.json.on ? "activé" : "désactivé";
+      },
+    },
+    {
       name: "touches perso au-delà de 14",
       run: async () => {
         const slot = 14;

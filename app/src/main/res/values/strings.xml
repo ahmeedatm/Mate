@@ -853,6 +853,11 @@
     <string name="day_free_after">Plus de réunion aujourd\'hui</string>
     <!-- Après « Aucune réunion aujourd'hui » : la prochaine, « demain à 9 h 30 · Daily ». -->
     <string name="day_later">%1$s · %2$s</string>
+    <string name="day_focus">Focus %1$d min</string>
+    <string name="day_focus_running">Focus · encore %1$d min</string>
+    <string name="day_focus_paused">Reprendre le Focus · %1$d min</string>
+    <string name="day_focus_break">Pause · %1$d min</string>
+    <string name="day_dnd">Ne pas déranger</string>
     <string name="widget_dayline">Ligne du jour</string>
     <string name="widget_dayline_desc">Les rendez-vous de 8 h à 20 h, le présent en rouge</string>
     <string name="next_prefix">Ensuite</string>

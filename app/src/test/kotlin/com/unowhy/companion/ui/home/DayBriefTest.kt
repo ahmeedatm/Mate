@@ -1,5 +1,6 @@
 package com.unowhy.companion.ui.home
 
+import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.net.CalendarEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -70,5 +71,21 @@ class DayBriefTest {
         assertTrue(DayBrief.canJoin(online, at(16, 30), chosen = true, meetings = true))
         assertFalse(DayBrief.canJoin(online, at(16, 45), chosen = false, meetings = false))
         assertFalse(DayBrief.canJoin(online.copy(joinable = false), at(16, 45), chosen = false, meetings = true))
+    }
+
+    private fun timer(phase: FocusTimer.Phase, durationMin: Int, remainingMs: Long, running: Boolean) =
+        FocusTimer.State(phase, durationMin * 60_000L, remainingMs, running, 0)
+
+    @Test
+    fun `pastille Focus, au repos la duree, en cours ou en pause les minutes restantes arrondies au-dessus`() {
+        assertEquals(DayBrief.FocusPill(DayBrief.FocusPill.Kind.IDLE, 25), DayBrief.focusPill(timer(FocusTimer.Phase.FOCUS, 25, 25 * 60_000L, false)))
+        assertEquals(DayBrief.FocusPill(DayBrief.FocusPill.Kind.RUNNING, 18), DayBrief.focusPill(timer(FocusTimer.Phase.FOCUS, 25, 17 * 60_000L + 1, true)))
+        assertEquals(DayBrief.FocusPill(DayBrief.FocusPill.Kind.PAUSED, 10), DayBrief.focusPill(timer(FocusTimer.Phase.FOCUS, 25, 10 * 60_000L, false)))
+        assertEquals(DayBrief.FocusPill(DayBrief.FocusPill.Kind.BREAK, 4), DayBrief.focusPill(timer(FocusTimer.Phase.BREAK, 5, 3 * 60_000L + 30_000, true)))
+    }
+
+    @Test
+    fun `pastille Focus, la derniere seconde compte encore une minute`() {
+        assertEquals(1, DayBrief.focusPill(timer(FocusTimer.Phase.FOCUS, 25, 1_000L, true)).minutes)
     }
 }
