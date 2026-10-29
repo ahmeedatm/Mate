@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Notifications (Depuis l'ordi) : historique des notifications de l'ordinateur dans une tuile Cadran, la plus récente
+     en haut. Lu à l'ouverture, sur Actualiser et à l'arrivée d'une notification ; géré par NotificationsView. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Card"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <com.unowhy.companion.ui.TitleView
+        android:id="@+id/notif_title"
+        style="@style/CardTitle"
+        android:text="@string/notif_on_computer" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1">
+
+        <ListView
+            android:id="@+id/notif_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:divider="@android:color/transparent"
+            android:dividerHeight="8dp"
+            android:listSelector="@android:color/transparent"
+            android:scrollbars="none" />
+
+        <!-- Lecture en cours, aucune notification, erreur. -->
+        <TextView
+            android:id="@+id/notif_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:padding="16dp"
+            android:textColor="?attr/c_text_dim"
+            android:textSize="16sp"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/notif_refresh"
+            style="@style/PillButton"
+            android:drawableStart="@drawable/ic_refresh"
+            android:text="@string/refresh" />
+
+        <Button
+            android:id="@+id/notif_clear"
+            style="@style/PillButton"
+            android:layout_marginStart="12dp"
+            android:drawableStart="@drawable/ic_delete"
+            android:text="@string/notif_clear"
+            android:visibility="gone" />
+    </LinearLayout>
+</LinearLayout>

@@ -60,6 +60,7 @@ class SettingsFragment : Fragment() {
     private lateinit var brightness: SeekBar
     private lateinit var volume: SeekBar
     private lateinit var nightDim: SwitchCompat
+    private lateinit var notifDiscreet: SwitchCompat
     private lateinit var tabletInfo: TextView
     private lateinit var updatesStatus: TextView
     private lateinit var updates: LinearLayout
@@ -99,6 +100,7 @@ class SettingsFragment : Fragment() {
         brightness = view.findViewById(R.id.settings_brightness)
         volume = view.findViewById(R.id.settings_volume)
         nightDim = view.findViewById(R.id.settings_night_dim)
+        notifDiscreet = view.findViewById(R.id.settings_notif_discreet)
         tabletInfo = view.findViewById(R.id.settings_tablet_info)
         setUpTablet()
         setUpThemes(view.findViewById(R.id.settings_themes))
@@ -316,6 +318,8 @@ class SettingsFragment : Fragment() {
             Prefs.setNightDim(ctx, checked)
             Screen.apply(requireActivity())
         }
+        // Mode discret : lu à chaque bandeau et à chaque affichage de l'historique, rien d'autre à prévenir.
+        notifDiscreet.setOnCheckedChangeListener { _, checked -> Prefs.setNotificationsDiscreet(ctx, checked) }
         renderTablet()
     }
 
@@ -327,6 +331,7 @@ class SettingsFragment : Fragment() {
         else Settings.System.getInt(ctx.contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128) * 100 / 255
         volume.progress = ctx.getSystemService(AudioManager::class.java).getStreamVolume(AudioManager.STREAM_MUSIC)
         nightDim.isChecked = Prefs.nightDim(ctx)
+        notifDiscreet.isChecked = Prefs.notificationsDiscreet(ctx)
         // Batterie (registerReceiver) et adresse IP (NetworkInterface) : appels système lents, hors thread principal.
         viewLifecycleOwner.lifecycleScope.launch {
             val battery = withContext(Dispatchers.IO) { Tablet.battery(ctx) }

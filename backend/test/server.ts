@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import net from "node:net";
 import os from "node:os";
@@ -52,8 +53,25 @@ function freePort(): Promise<number> {
  * est remplacé par test/fake-os.ts : aucun test ne lance d'appli ni n'envoie de touches ; `os` : système simulé.
  */
 export async function startServer(options: ServerOptions = {}): Promise<TestServer> {
-  const port = options.port ?? (await freePort());
+  // Les fichiers de test tournent en parallèle : entre freePort et l'écoute, un autre serveur peut prendre le port.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await startOnce(options, options.port ?? (await freePort()));
+    } catch (e) {
+      if (!(e instanceof PortTaken) || options.port !== undefined || attempt >= 5) throw e;
+    }
+  }
+}
+
+/** Le port répond, mais c'est un autre serveur de test : à relancer ailleurs. */
+class PortTaken extends Error {}
+
+async function startOnce(options: ServerOptions, port: number): Promise<TestServer> {
   const dataDir = options.dataDir ?? fs.mkdtempSync(path.join(os.tmpdir(), "companion-test-"));
+  // Identité connue d'avance : /health dit si c'est bien ce serveur-ci qui répond sur le port.
+  const identityFile = path.join(dataDir, "identity.json");
+  if (!fs.existsSync(identityFile)) fs.writeFileSync(identityFile, JSON.stringify({ id: randomUUID(), token: randomUUID() }));
+  const expectedId = (JSON.parse(fs.readFileSync(identityFile, "utf8")) as { id: string }).id;
   const docsDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-docs-"));
   const fakeDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-os-"));
   const osState = path.join(fakeDir, "state.json");
@@ -103,10 +121,20 @@ export async function startServer(options: ServerOptions = {}): Promise<TestServ
   const deadline = Date.now() + 20_000;
   for (;;) {
     if (child.exitCode !== null) throw new Error(`Le serveur s'est arrêté au démarrage :\n${output}`);
+    let other = false;
     try {
-      if ((await fetch(`${url}/health`)).ok) break;
+      const res = await fetch(`${url}/health`);
+      if (res.ok && ((await res.json()) as { id?: string }).id === expectedId) break;
+      other = res.ok;
     } catch {
       // Pas encore à l'écoute.
+    }
+    if (other) {
+      child.kill();
+      if (!options.dataDir) fs.rmSync(dataDir, { recursive: true, force: true });
+      fs.rmSync(docsDir, { recursive: true, force: true });
+      fs.rmSync(fakeDir, { recursive: true, force: true });
+      throw new PortTaken(`Port ${port} déjà pris par un autre serveur de test`);
     }
     if (Date.now() > deadline) {
       child.kill();

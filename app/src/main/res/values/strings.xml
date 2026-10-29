@@ -383,6 +383,22 @@
     <string name="clip_history_hide">Masquer le code</string>
     <string name="clip_dictate_failed">La dictée n\'a pas marché, réessaie ou écris le texte</string>
 
+    <!-- Notifications de l'ordinateur (Depuis l'ordi, bandeau, Réglages) -->
+    <string name="notif_choose">Notifications</string>
+    <string name="notif_open">Notifications de l\'ordi</string>
+    <string name="notif_subtitle">Ce qui est arrivé sur l\'ordi, la plus récente en haut</string>
+    <string name="notif_on_computer">Sur l\'ordi</string>
+    <string name="notif_reading">Lecture des notifications de l\'ordi…</string>
+    <string name="notif_empty">Aucune notification sur l\'ordi depuis 24 h</string>
+    <string name="notif_unavailable">Notifications indisponibles sur l\'ordi</string>
+    <string name="notif_not_supported">Non disponible sur cet ordinateur</string>
+    <string name="notif_remove">Retirer cette notification</string>
+    <string name="notif_clear">Tout effacer</string>
+    <string name="notif_clear_title">Effacer toutes les notifications ?</string>
+    <string name="notif_clear_message">La liste de la tablette est vidée. Les notifications restent dans le centre de notifications de l\'ordi.</string>
+    <string name="notif_discreet">Mode discret</string>
+    <string name="notif_discreet_hint">Notifications du PC : appli et titre seulement, sans le texte</string>
+
     <!-- Visualiseur (mode Caméra) -->
     <string name="camera_title_show">Montrer sur l\'ordi</string>
     <string name="camera_title_photo">Photo pour l\'ordi</string>

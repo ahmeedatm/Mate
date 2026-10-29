@@ -27,6 +27,7 @@ import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.Link
+import com.unowhy.companion.net.PcNotification
 import com.unowhy.companion.remote.RemoteLink
 import com.unowhy.companion.trial.Trial
 import com.unowhy.companion.ui.AgentAskOverlay
@@ -54,6 +55,7 @@ import com.unowhy.companion.ui.WelcomeView
 import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.home.Down
 import com.unowhy.companion.ui.home.LinkWatch
+import com.unowhy.companion.ui.notificationBannerText
 import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.voice.VoiceControl
@@ -146,6 +148,7 @@ class MainActivity : AppCompatActivity() {
             showComputerPicker()
         }
         banner = Banner(findViewById(R.id.remote_banner))
+        findViewById<View>(R.id.notif_bell).setOnClickListener { openNotifications() }
         alerts = TabletAlerts(this, banner)
         findViewById<TabletStatusView>(R.id.tablet_status).apply {
             setOnClickListener {
@@ -360,6 +363,28 @@ class MainActivity : AppCompatActivity() {
     /** Appel entrant sur l'ordinateur (ordre `call`, voir CallOverlay). */
     fun onCall(state: String, app: String, caller: String?, video: Boolean) = callOverlay.onCall(state, app, caller, video)
 
+    /**
+     * Notification arrivée sur l'ordinateur (ordre `notification`) : bandeau quel que soit l'écran (sans le texte en
+     * mode discret), et liste de Depuis l'ordi relue si elle est affichée.
+     */
+    fun onNotification(n: PcNotification) {
+        showBanner(notificationBannerText(n, Prefs.notificationsDiscreet(this)), NOTIFICATION_SECONDS)
+        val computer = supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment
+        computer?.onNotification()
+        // Pastille sur la cloche, sauf si l'historique est déjà sous les yeux.
+        if (computer?.showingNotifications != true || current != Mode.COMPUTER) findViewById<View>(R.id.notif_dot).visibility = View.VISIBLE
+    }
+
+    /** Cloche en haut à gauche : Depuis l'ordi > Notifications, pastille retirée. */
+    private fun openNotifications() {
+        menu?.close()
+        findViewById<View>(R.id.notif_dot).visibility = View.GONE
+        show(Mode.COMPUTER)
+        // Le mode vient peut-être d'être créé : sa vue doit exister avant de choisir l'écran.
+        supportFragmentManager.executePendingTransactions()
+        (supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment)?.openNotifications()
+    }
+
     /** Un agent Claude attend, a fini ou a atteint sa limite (ordre `agent`, voir AgentAlerts). */
     fun onAgent(kind: String, askId: String?, waiting: Int) = agentAlerts.onOrder(kind, askId, waiting)
 
@@ -477,5 +502,8 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val STATE_MODE = "mode"
+
+        /** Bandeau d'une notification de l'ordinateur : le temps de lire l'appli, le titre et le début du texte. */
+        private const val NOTIFICATION_SECONDS = 8
     }
 }
