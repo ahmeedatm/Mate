@@ -1,5 +1,7 @@
 package com.unowhy.companion
 
+import android.content.Context
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
@@ -18,6 +20,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.unowhy.companion.agents.AgentAlerts
 import com.unowhy.companion.audio.Speaker
+import com.unowhy.companion.device.Accessibility
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
 import com.unowhy.companion.focus.FocusDnd
@@ -145,9 +148,18 @@ class MainActivity : AppCompatActivity() {
         return answer.await()
     }
 
+    /** Taille du texte choisie dans Réglages > Accessibilité, en plus de celle d'Android (COMP-50). */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase)
+        val scale = Prefs.textScale(newBase)
+        if (scale != 1f) applyOverrideConfiguration(Configuration().apply { fontScale = newBase.resources.configuration.fontScale * scale })
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         AppTheme.apply(this)
         super.onCreate(savedInstanceState)
+        // Raccourci des touches de volume réglé sur TalkBack (kiosque : seul moyen de le lancer sans voir l'écran).
+        Accessibility.prepareShortcut(this)
         // Appli d'essai : ordinateurs de la stable repris avant de construire les écrans, sans réappairer.
         Trial.importComputers(this)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
