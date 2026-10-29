@@ -30,12 +30,13 @@ import kotlinx.coroutines.launch
 
 /**
  * Depuis l'ordi : d'abord un choix expliqué (fichiers du dossier partagé, page du navigateur de l'ordi,
- * presse-papiers ou notifications), puis la liste des fichiers (un fichier s'ouvre dans le panneau latéral), l'écran
- * Presse-papiers ([ClipboardView]) ou l'historique des notifications ([NotificationsView]).
+ * presse-papiers, cadre photo ou notifications), puis la liste des fichiers (un fichier s'ouvre dans le panneau
+ * latéral), l'écran Presse-papiers ([ClipboardView]), le Cadre photo ([FrameSettingsView]) ou l'historique des
+ * notifications ([NotificationsView]).
  */
 class FromComputerFragment : Fragment() {
 
-    private enum class Screen { CHOICE, FILES, CLIPBOARD, NOTIFICATIONS }
+    private enum class Screen { CHOICE, FILES, CLIPBOARD, FRAME, NOTIFICATIONS }
 
     private lateinit var list: ListView
     private lateinit var path: TextView
@@ -48,6 +49,8 @@ class FromComputerFragment : Fragment() {
     private lateinit var files: View
     private lateinit var clipboardRoot: View
     private lateinit var clipboard: ClipboardView
+    private lateinit var frameRoot: View
+    private lateinit var frame: FrameSettingsView
     private lateinit var notificationsRoot: View
     private lateinit var notifications: NotificationsView
     private lateinit var adapter: DocAdapter
@@ -78,6 +81,8 @@ class FromComputerFragment : Fragment() {
         files = view.findViewById(R.id.docs_files)
         clipboardRoot = view.findViewById(R.id.docs_clipboard)
         clipboard = ClipboardView(this, clipboardRoot) { micPermission.launch(Manifest.permission.RECORD_AUDIO) }
+        frameRoot = view.findViewById(R.id.docs_frame)
+        frame = FrameSettingsView(this, frameRoot)
         notificationsRoot = view.findViewById(R.id.docs_notifications)
         notifications = NotificationsView(this, notificationsRoot)
         adapter = DocAdapter()
@@ -93,6 +98,7 @@ class FromComputerFragment : Fragment() {
         view.findViewById<View>(R.id.docs_choose_files).setOnClickListener { show(Screen.FILES) }
         view.findViewById<View>(R.id.docs_choose_web).setOnClickListener { (requireActivity() as MainActivity).openComputerPage() }
         view.findViewById<View>(R.id.docs_choose_clipboard).setOnClickListener { show(Screen.CLIPBOARD) }
+        view.findViewById<View>(R.id.docs_choose_frame).setOnClickListener { show(Screen.FRAME) }
 
         show(Screen.CHOICE)
     }
@@ -140,6 +146,7 @@ class FromComputerFragment : Fragment() {
         choice.visibility = if (next == Screen.CHOICE) View.VISIBLE else View.GONE
         files.visibility = if (next == Screen.FILES) View.VISIBLE else View.GONE
         clipboardRoot.visibility = if (next == Screen.CLIPBOARD) View.VISIBLE else View.GONE
+        frameRoot.visibility = if (next == Screen.FRAME) View.VISIBLE else View.GONE
         notificationsRoot.visibility = if (next == Screen.NOTIFICATIONS) View.VISIBLE else View.GONE
         refresh.visibility = files.visibility
         back.visibility = if (next == Screen.CHOICE) View.GONE else View.VISIBLE
@@ -155,6 +162,12 @@ class FromComputerFragment : Fragment() {
                 count.setText(R.string.clip_subtitle)
                 up.visibility = View.GONE
                 clipboard.read()
+            }
+            Screen.FRAME -> {
+                path.setText(R.string.frame_title)
+                count.setText(R.string.frame_subtitle)
+                up.visibility = View.GONE
+                frame.read()
             }
             Screen.NOTIFICATIONS -> {
                 path.setText(R.string.notif_choose)

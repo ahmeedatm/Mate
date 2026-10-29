@@ -704,7 +704,11 @@
     <string name="tablet_night_dim">Atténuer l\'écran la nuit (22 h – 7 h)</string>
     <string name="tablet_night_dim_hint">L\'écran reste allumé en permanence ; la nuit il baisse au minimum, un toucher le rallume.</string>
     <string name="frame_title">Cadre photo</string>
-    <string name="frame_hint">Quand personne ne touche la tablette, les photos du dossier « Cadre photo » de l\'ordinateur défilent, l\'heure en bas. Un toucher revient à l\'écran. Pour économiser l\'écran : luminosité réduite, rien ne bouge entre deux photos, arrêt la nuit et sous 20 % de batterie débranchée.</string>
+    <string name="frame_hint">Un toucher revient à l\'écran. Pour économiser l\'écran : luminosité réduite, rien ne bouge entre deux photos, arrêt la nuit et sous 20 % de batterie débranchée.</string>
+    <string name="frame_choose_hint">Tes photos de l\'ordi qui défilent quand la tablette ne sert pas.</string>
+    <string name="frame_subtitle">Photos du dossier « Cadre photo » de l\'ordinateur</string>
+    <string name="frame_photos">Photos</string>
+    <string name="frame_when">Quand</string>
     <string name="frame_after">Se lance après</string>
     <string name="frame_every">Une photo toutes les</string>
     <string name="frame_never">Jamais</string>
