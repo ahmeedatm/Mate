@@ -1,0 +1,30 @@
+package com.unowhy.companion.ui
+
+import com.unowhy.companion.net.MediaSession
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+class MusicChipTest {
+
+    private fun session(app: String, title: String, current: Boolean = false, playing: Boolean = false) =
+        MediaSession(app, app, current, title, "", playing, true, true, true, false, null, null, null)
+
+    @Test
+    fun `la session courante de l'ordinateur passe en premier`() {
+        val sessions = listOf(session("spotify", "Lo-fi", playing = true), session("chrome", "Vidéo", current = true))
+        assertEquals("chrome", MusicChip.pick(sessions)?.app)
+    }
+
+    @Test
+    fun `sans session courante, celle qui joue`() {
+        val sessions = listOf(session("chrome", "Vidéo"), session("spotify", "Lo-fi", playing = true))
+        assertEquals("spotify", MusicChip.pick(sessions)?.app)
+    }
+
+    @Test
+    fun `une session sans titre ne s'affiche pas`() {
+        assertNull(MusicChip.pick(listOf(session("chrome", "", current = true, playing = true))))
+        assertNull(MusicChip.pick(emptyList()))
+    }
+}

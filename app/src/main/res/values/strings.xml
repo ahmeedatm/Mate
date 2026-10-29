@@ -816,6 +816,9 @@
     <string name="profile_deck">Deck</string>
     <string name="profile_call">Réunion</string>
     <string name="rail_more">Plus</string>
+    <string name="music_chip_open">%1$s : ouvrir le Deck</string>
+    <string name="music_chip_play">Lecture</string>
+    <string name="music_chip_pause">Pause</string>
     <string name="call_profile_preview">Aperçu : ce profil s\'affiche pendant un appel.</string>
     <string name="widget_size_s">Petit</string>
     <string name="widget_size_m">Moyen</string>
