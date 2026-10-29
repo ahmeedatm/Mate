@@ -11,9 +11,9 @@ class MusicChipTest {
         MediaSession(app, app, current, title, "", playing, true, true, true, false, null, null, null)
 
     @Test
-    fun `la session courante de l'ordinateur passe en premier`() {
-        val sessions = listOf(session("spotify", "Lo-fi", playing = true), session("chrome", "Vidéo", current = true))
-        assertEquals("chrome", MusicChip.pick(sessions)?.app)
+    fun `ce qui joue passe devant la session courante (regle du petit lecteur, MiniPlayerLogic)`() {
+        val sessions = listOf(session("chrome", "Vidéo", current = true), session("spotify", "Lo-fi", playing = true))
+        assertEquals("spotify", MusicChip.pick(sessions)?.app)
     }
 
     @Test

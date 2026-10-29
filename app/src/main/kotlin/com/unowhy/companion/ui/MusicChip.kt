@@ -22,6 +22,7 @@ import com.unowhy.companion.Computers
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.MediaSession
+import com.unowhy.companion.net.runCatchingCancellable
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -30,8 +31,9 @@ import kotlinx.coroutines.launch
  * Lecture en cours de l'ordinateur, dans le header en haut à droite, au style du widget Média : pochette, titre et
  * artiste (sinon la provenance : Spotify, YouTube, nom du site), Précédent, Lecture / Pause, Suivant. Titre trop long :
  * il défile ([MARQUEE_REPEAT] passages à chaque morceau, puis s'arrête sur le début, pour ne pas redessiner sans fin).
- * Visible seulement quand une session a un titre ; relue toutes les [POLL_MS] tant qu'elle est à l'écran et qu'un
- * ordinateur est appairé.
+ * Règles du petit lecteur de COMP-56 ([MiniPlayerLogic]) : ce qui joue d'abord, visible pendant une lecture et dix
+ * minutes de pause. Relue toutes les [POLL_MS] (sur Mac, chaque lecture lance un programme), chaque seconde juste après
+ * un appui ; pas de relecture tant que [suppressed] (cadre photo, aucun ordinateur).
  */
 class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : LinearLayout(context, attrs) {
 
@@ -43,6 +45,11 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
     private var session: MediaSession? = null
     private var thumbKey: String? = null
     private var poll: Job? = null
+    private var lastPlayingMs: Long? = null
+    private var fastUntilMs = 0L
+
+    /** Rien à relire ni à montrer (cadre photo par-dessus, aucun ordinateur) : posé par MainActivity. */
+    var suppressed: () -> Boolean = { Computers.all(context).isEmpty() }
 
     init {
         orientation = HORIZONTAL
@@ -74,8 +81,8 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         super.onAttachedToWindow()
         poll = findViewTreeLifecycleOwner()?.lifecycleScope?.launch {
             while (true) {
-                refresh()
-                delay(POLL_MS)
+                if (suppressed()) visibility = GONE else refresh()
+                delay(if (System.currentTimeMillis() < fastUntilMs) FAST_MS else POLL_MS)
             }
         }
     }
@@ -85,9 +92,12 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         super.onDetachedFromWindow()
     }
 
-    /** Relit la lecture en cours ; sans ordinateur ou en erreur (pas de lecture lisible), la pastille se cache. */
+    /** Relit la lecture en cours ; en erreur (pas de lecture lisible) ou en pause depuis longtemps, la pastille se cache. */
     private suspend fun refresh() {
-        val shown = if (Computers.all(context).isEmpty()) null else runCatching { pick(BackendClient(context).system.media()) }.getOrNull()
+        val picked = runCatchingCancellable { pick(BackendClient(context).system.media()) }.getOrNull()
+        val now = System.currentTimeMillis()
+        if (picked?.playing == true) lastPlayingMs = now
+        val shown = picked?.takeIf { MiniPlayerLogic.visible(it, lastPlayingMs, now) }
         session = shown
         visibility = if (shown != null) VISIBLE else GONE
         shown ?: return
@@ -114,6 +124,7 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
 
     private fun control(action: String) {
         val current = session ?: return
+        fastUntilMs = System.currentTimeMillis() + FAST_FOR_MS
         findViewTreeLifecycleOwner()?.lifecycleScope?.launch {
             runCatching { BackendClient(context).system.mediaControl(action, current.app) }
             refresh()
@@ -123,14 +134,15 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
     companion object {
         private const val POLL_MS = 5_000L
 
+        /** Juste après un appui ([FAST_FOR_MS]) : relue chaque seconde, le nouveau morceau arrive vite. */
+        private const val FAST_MS = 1_000L
+        private const val FAST_FOR_MS = 8_000L
+
         /** Passages du titre trop long à chaque nouveau morceau. */
         private const val MARQUEE_REPEAT = 3
 
-        /** Session à montrer : la courante de l'ordinateur, sinon celle qui joue, sinon la première ; toujours avec un titre. */
-        fun pick(sessions: List<MediaSession>): MediaSession? {
-            val titled = sessions.filter { it.title.isNotBlank() }
-            return titled.firstOrNull { it.current } ?: titled.firstOrNull { it.playing } ?: titled.firstOrNull()
-        }
+        /** Session à montrer, toujours avec un titre : celle qui joue, sinon la courante de l'ordinateur ([MiniPlayerLogic.pick]). */
+        fun pick(sessions: List<MediaSession>): MediaSession? = MiniPlayerLogic.pick(sessions.filter { it.title.isNotBlank() })
 
         /** Provenance : l'appli ou le site, sauf vide ou identique au titre. */
         fun source(session: MediaSession): String? = session.name.trim().takeIf { it.isNotEmpty() && !it.equals(session.title.trim(), ignoreCase = true) }

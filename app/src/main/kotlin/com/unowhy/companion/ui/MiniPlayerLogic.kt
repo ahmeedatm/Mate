@@ -2,7 +2,7 @@ package com.unowhy.companion.ui
 
 import com.unowhy.companion.net.MediaSession
 
-/** Petit lecteur en haut à droite (MiniPlayerView) : quelle lecture, et quand l'afficher. */
+/** Lecture en cours du header ([MusicChip], règles du petit lecteur de COMP-56) : quelle lecture, et quand l'afficher. */
 object MiniPlayerLogic {
     /** Une pause reste affichée ce temps-là après la dernière lecture vue (relancer sans aller sur Média). */
     const val PAUSE_KEEP_MS = 10 * 60_000L

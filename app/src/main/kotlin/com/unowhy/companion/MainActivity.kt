@@ -157,6 +157,8 @@ class MainActivity : AppCompatActivity() {
         // Cadre photo juste au-dessus des écrans : lumière des agents, question et appel restent devant.
         frame = PhotoFrameView(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(frame, 1, android.view.ViewGroup.LayoutParams(-1, -1))
+        // Lecture en cours du header : rien à relire sous le cadre photo ni sans ordinateur.
+        findViewById<com.unowhy.companion.ui.MusicChip>(R.id.music_chip).suppressed = { frame.isShowing || Computers.all(this).isEmpty() }
 
         keyboard.setUp()
 
