@@ -440,6 +440,14 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "politique de confidentialité",
+      run: async () => {
+        const res = await call("GET", "/local/confidentialite", undefined, local ? false : true);
+        expectStatus(res, 200, "/local/confidentialite");
+        expect(String(res.json).startsWith("Companion Unowhy : politique de confidentialité"), "politique de confidentialité inattendue");
+      },
+    },
+    {
       name: "mentions de licences",
       run: async () => {
         // Compagnon installé : LICENCES-TIERS.txt joint par scripts/package.ts ; lancé depuis le dépôt, pas de fichier.

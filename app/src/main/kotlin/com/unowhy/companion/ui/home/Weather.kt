@@ -17,6 +17,7 @@ import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import com.unowhy.companion.BuildConfig
 import com.unowhy.companion.MainActivity
+import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.device.Position
 import com.unowhy.companion.ui.dp
@@ -147,7 +148,7 @@ object Weather {
      * choix). true si une ville a été trouvée (l'appelant enregistre la disposition).
      */
     suspend fun autoCity(context: Context, config: JSONObject): Boolean {
-        if (config.has("lat")) return false
+        if (config.has("lat") || !Prefs.weatherLocation(context)) return false
         val place = autoLock.withLock {
             autoFound ?: if (SystemClock.elapsedRealtime() - autoTriedAt < REFRESH_MS && autoTriedAt > 0) {
                 null
