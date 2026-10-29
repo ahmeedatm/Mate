@@ -4,6 +4,7 @@ import type { Step } from "./deck.ts";
 import { isInstalled } from "./os.ts";
 import { readJson, removeJson, writeJson } from "./store.ts";
 import { saveApps, type DeckApp, type PersoKey } from "./perso.ts";
+import { activateMock, deactivateMock } from "./demo-mock.ts";
 import { forgetPluginChoices, PLUGIN_IDS } from "./plugins.ts";
 import type { DailyTask, OneOffTask } from "./tasks.ts";
 import type { LocalEvent } from "./events.ts";
@@ -12,13 +13,15 @@ import type { LocalEvent } from "./events.ts";
  * Démo produit : six personas dont on pose les données fictives (touches perso, pages de touches nommées, page Apps,
  * plugins, tâches, agenda) à la place de celles de l'ordinateur. Les fichiers d'origine sont gardés dans .data/demo.json
  * au premier choix et rendus par `quitDemo`. Passer d'un persona à l'autre garde la sauvegarde d'avant la démo. Rien
- * ici n'est un vrai compte ni un vrai document, et aucune touche n'exécute de commande destructrice.
+ * ici n'est un vrai compte ni un vrai document, et aucune touche n'exécute de commande destructrice. Tant que la démo
+ * dure, les routes qui lisent l'ordinateur (GitLab, Jira, agents, fenêtres, média, son, courrier…) rendent aussi les
+ * données fictives du persona : voir demo-mock.ts.
  *
  * `keys` : page Perso (et widget Touches de l'Accueil) ; `pages` : pages de touches nommées après Perso, leurs titres
  * sont ceux que la tablette met dans l'ordre des onglets (ui/home/Personas.kt) ; `off` : plugins coupés (plugins.ts).
  */
 
-export const PERSONA_IDS = ["sylvie", "julie", "camille", "thomas", "karim", "leo"] as const;
+export const PERSONA_IDS = ["nour", "gwen", "camille", "aimee", "sam", "sacha"] as const;
 export type PersonaId = (typeof PERSONA_IDS)[number];
 
 /** `day` : jours après aujourd'hui ; `at` : "HH:MM" ; `remind` : minutes avant, pour le rappel parlé. */
@@ -55,8 +58,30 @@ const CHROME = "Google Chrome";
 const POWERPOINT = "Microsoft PowerPoint";
 const KEYNOTE = "Keynote";
 
+/** Touches de Sam : page Perso, widget Touches de l'Accueil et page « Mes touches » (grosses touches avec le thème Contraste élevé). */
+const SAM_KEYS: PersoKey[] = [
+  key("Copier", "📄", "#2B6CB0", keys("cmd+c")),
+  key("Coller", "📋", "#2F855A", keys("cmd+v")),
+  key("Enregistrer", "💾", "#6B46C1", keys("cmd+s")),
+  key("Courrier type", "✉️", "#B7791F", app(WORD)),
+  key(
+    "Accusé réception",
+    "📨",
+    "#2B6CB0",
+    text("Madame, Monsieur,\n\nNous accusons réception de votre demande et la traitons dans les meilleurs délais.\n\nCordialement,"),
+  ),
+  key(
+    "Pièces à fournir",
+    "📎",
+    "#C53030",
+    text(
+      "Madame, Monsieur,\n\nPour poursuivre le traitement de votre dossier, merci de nous transmettre les pièces demandées.\n\nCordialement,",
+    ),
+  ),
+];
+
 const PERSONAS: Record<PersonaId, Persona> = {
-  sylvie: {
+  nour: {
     keys: [
       key("Excel", "📊", "#1D6F42", app(EXCEL)),
       key("Clôture", "🗂", "#B7791F", app(EXCEL), app(OUTLOOK), place(EXCEL, "left"), place(OUTLOOK, "right")),
@@ -72,7 +97,7 @@ const PERSONAS: Record<PersonaId, Persona> = {
     ],
     pages: [
       page(
-        "Raccourcis Excel",
+        "Excel",
         key("Enregistrer", "💾", "#1D6F42", keys("cmd+s", EXCEL)),
         key("Rechercher", "🔍", "#4A5568", keys("cmd+f", EXCEL)),
         key("Format cellule", "🔢", "#4A5568", keys("cmd+1", EXCEL)),
@@ -122,9 +147,9 @@ const PERSONAS: Record<PersonaId, Persona> = {
       { title: "Rendez-vous client : bilan", day: 1, at: "10:00", minutes: 60 },
       { title: "Date limite de la déclaration de TVA", day: 3, at: "09:00", minutes: 30 },
     ],
-    off: ["discord", "mixer", "pad", "media", "claude"],
+    off: ["discord", "mixer", "pad", "media", "claude", "jira"],
   },
-  julie: {
+  gwen: {
     keys: [
       key("Canva", "🎨", "#00A3A3", app("Canva")),
       key("CRM", "👥", "#2B6CB0", site("https://app.hubspot.com")),
@@ -193,7 +218,7 @@ const PERSONAS: Record<PersonaId, Persona> = {
       { title: "Atelier réseaux sociaux", day: 2, at: "11:00", minutes: 60 },
       { title: "Présentation du plan trimestriel", day: 4, at: "15:00", minutes: 60 },
     ],
-    off: ["discord", "claude", "pad", "jira"],
+    off: ["discord", "claude", "pad", "jira", "open", "mixer"],
   },
   camille: {
     keys: [
@@ -233,9 +258,9 @@ const PERSONAS: Record<PersonaId, Persona> = {
       { title: "Comité de pilotage", day: 1, at: "14:00", minutes: 60, remind: 10 },
       { title: "Rendez-vous école", day: 2, at: "17:30", minutes: 30 },
     ],
-    off: ["discord", "claude", "pad", "mixer", "media"],
+    off: ["discord", "claude", "pad", "mixer", "jira", "open"],
   },
-  thomas: {
+  aimee: {
     keys: [
       key("Projet Atlas", "🧭", "#2B6CB0", app(CHROME), app("Notion"), place(CHROME, "left"), place("Notion", "right")),
       key("Projet Boréal", "❄️", "#00A3A3", app(CHROME), app("Slack"), place(CHROME, "left"), place("Slack", "right")),
@@ -274,28 +299,9 @@ const PERSONAS: Record<PersonaId, Persona> = {
     ],
     off: ["discord", "claude", "pad", "mixer", "media"],
   },
-  karim: {
-    keys: [
-      key("Copier", "📄", "#2B6CB0", keys("cmd+c")),
-      key("Coller", "📋", "#2F855A", keys("cmd+v")),
-      key("Enregistrer", "💾", "#6B46C1", keys("cmd+s")),
-      key("Courrier type", "✉️", "#B7791F", app(WORD)),
-      key(
-        "Accusé réception",
-        "📨",
-        "#2B6CB0",
-        text("Madame, Monsieur,\n\nNous accusons réception de votre demande et la traitons dans les meilleurs délais.\n\nCordialement,"),
-      ),
-      key(
-        "Pièces à fournir",
-        "📎",
-        "#C53030",
-        text(
-          "Madame, Monsieur,\n\nPour poursuivre le traitement de votre dossier, merci de nous transmettre les pièces demandées.\n\nCordialement,",
-        ),
-      ),
-    ],
-    pages: [],
+  sam: {
+    keys: SAM_KEYS,
+    pages: [{ title: "Mes touches", keys: SAM_KEYS }],
     apps: [label(WORD), label(EXCEL), label(OUTLOOK), label(CHROME)],
     daily: [
       { label: "Traiter les demandes reçues", days: [1, 2, 3, 4, 5] },
@@ -308,7 +314,7 @@ const PERSONAS: Record<PersonaId, Persona> = {
     ],
     off: ["discord", "claude", "jira", "open", "mixer", "pad", "media"],
   },
-  leo: {
+  sacha: {
     keys: [
       term("Tests", "🧪", "#2F855A", "npm test"),
       term("Build", "🔨", "#B7791F", "npm run build"),
@@ -426,6 +432,7 @@ export async function setPersona(id: PersonaId): Promise<DemoKey[]> {
   await saveApps(apps.length ? apps : null);
   await writeJson(file("plugins.json"), { choices: Object.fromEntries(PLUGIN_IDS.map((p) => [p, !data.off.includes(p)])) });
   forgetPluginChoices();
+  activateMock(id);
   await writeJson(file("tasks.json"), tasksOf(id, data));
   await writeJson(file("events.json"), eventsOf(id, data));
   return data.keys.map((k, slot) => ({ id: `k-${slot}`, label: k.label, glyph: k.glyph, color: k.color }));
@@ -441,6 +448,7 @@ export async function quitDemo(): Promise<boolean> {
     else await removeJson(file(f));
   }
   forgetPluginChoices();
+  deactivateMock();
   await removeJson(stateFile);
   return true;
 }

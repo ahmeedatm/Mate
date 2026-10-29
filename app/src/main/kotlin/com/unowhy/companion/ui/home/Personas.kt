@@ -10,6 +10,8 @@ import com.unowhy.companion.ui.DeckFragment
 private const val PAGE = DeckFragment.PAGE_TAB
 private const val OPEN = DeckFragment.OPEN_TAB
 private const val AGENTS = DeckFragment.AGENTS_TAB
+private const val GITLAB = DeckFragment.GITLAB_TAB
+private const val JIRA = DeckFragment.JIRA_TAB
 
 /** Taille de texte la plus grande de Réglages > Accessibilité (`SettingsFragment.TEXT_SIZES`). */
 private const val MAX_TEXT_SCALE = 1.5f
@@ -29,11 +31,12 @@ class Profile(@StringRes val name: Int, val slots: List<Slot>)
  * persona change toute l'expérience de la tablette :
  * - `profiles` : son Accueil (un ou plusieurs profils nommés) ;
  * - `arrival` : l'écran où l'on arrive après le choix ;
- * - `deckTabs` : onglets du Deck dans l'ordre (clés de DeckFragment : `page:<titre>` pour une page de touches, dont les
- *   titres sont ceux de backend/src/demo.ts, ou celle d'un onglet comme `open`, `agents`) ; le premier présent sur
- *   l'ordinateur s'ouvre au départ, ceux qui n'existent pas sont ignorés ;
+ * - `deckTabs` : les seuls onglets du Deck, dans l'ordre (clés de DeckFragment : `page:<titre>` pour une page, dont les
+ *   titres sont ceux de backend/src/demo.ts ou du deck (Apps, Média, Réunion), ou celle d'un onglet comme `open`,
+ *   `agents`, `gitlab`, `jira`) ; tout autre onglet est masqué, même offert par l'ordinateur (Perso compris) ; le premier
+ *   présent s'ouvre au départ ;
  * - `textScale` : taille du texte (1 = normale) ; `wakeWord` : mot d'éveil (null : celui d'avant la démo) ;
- * - `theme` : nom d'un [com.unowhy.companion.ui.AppTheme] à appliquer avec le persona (aucun pour l'instant).
+ * - `theme` : nom d'un [com.unowhy.companion.ui.AppTheme] à appliquer avec le persona (Sam : CONTRASTE).
  */
 enum class Persona(
     val id: String,
@@ -46,33 +49,33 @@ enum class Persona(
     val wakeWord: Boolean? = null,
     val theme: String? = null,
 ) {
-    SYLVIE("sylvie", R.string.persona_sylvie, R.string.persona_sylvie_desc, listOf(
-        Profile(R.string.persona_sylvie, listOf(
+    NOUR("nour", R.string.persona_nour, R.string.persona_nour_desc, listOf(
+        Profile(R.string.persona_nour, listOf(
             Slot(WidgetType.TASKS, WidgetSize.L, 0, 0),
             Slot(WidgetType.AGENDA, WidgetSize.L, 2, 0),
             Slot(WidgetType.KEYS, WidgetSize.XL, 0, 2),
         )),
-    ), arrival = Mode.DECK, deckTabs = listOf(PAGE + "Raccourcis Excel", PAGE + "Libellés", PAGE + "Dossiers clients")),
-    JULIE("julie", R.string.persona_julie, R.string.persona_julie_desc, listOf(
-        Profile(R.string.persona_julie_daily, listOf(
+    ), arrival = Mode.DECK, deckTabs = listOf(PAGE + "Excel", PAGE + "Libellés", PAGE + "Dossiers clients", PAGE + "Apps", OPEN)),
+    GWEN("gwen", R.string.persona_gwen, R.string.persona_gwen_desc, listOf(
+        Profile(R.string.persona_gwen_daily, listOf(
             Slot(WidgetType.HERO, WidgetSize.W, 0, 0),
             Slot(WidgetType.DAYLINE, WidgetSize.W, 0, 1),
             Slot(WidgetType.KEYS, WidgetSize.L, 0, 2, pick = listOf(0, 1, 2, 3)),
             Slot(WidgetType.MEETING, WidgetSize.M, 2, 2),
             Slot(WidgetType.NEXT, WidgetSize.M, 2, 3),
         )),
-        Profile(R.string.persona_julie_spring, listOf(
+        Profile(R.string.persona_gwen_spring, listOf(
             Slot(WidgetType.NOTE, WidgetSize.L, 0, 0),
             Slot(WidgetType.TASKS, WidgetSize.L, 2, 0),
             Slot(WidgetType.KEYS, WidgetSize.XL, 0, 2, pick = listOf(0, 4, 1, 2)),
         )),
-        Profile(R.string.persona_julie_webinar, listOf(
+        Profile(R.string.persona_gwen_webinar, listOf(
             Slot(WidgetType.MEETING, WidgetSize.L, 0, 0),
             Slot(WidgetType.NEXT, WidgetSize.L, 2, 0),
             Slot(WidgetType.NOTE, WidgetSize.L, 0, 2),
             Slot(WidgetType.KEYS, WidgetSize.L, 2, 2, pick = listOf(5, 3)),
         )),
-    ), deckTabs = listOf(PAGE + "Diapos", PAGE + "Réseaux", PAGE + "Modèles")),
+    ), deckTabs = listOf(PAGE + "Diapos", PAGE + "Réseaux", PAGE + "Modèles", PAGE + "Réunion", PAGE + "Apps", PAGE + "Média")),
     CAMILLE("camille", R.string.persona_camille, R.string.persona_camille_desc, listOf(
         Profile(R.string.persona_camille_work, listOf(
             Slot(WidgetType.MEETING, WidgetSize.L, 0, 0),
@@ -88,30 +91,30 @@ enum class Persona(
             Slot(WidgetType.WATER, WidgetSize.S, 0, 3),
             Slot(WidgetType.FOCUS, WidgetSize.S, 1, 3),
         )),
-    ), deckTabs = listOf(PAGE + "Travail", PAGE + "Maison")),
-    THOMAS("thomas", R.string.persona_thomas, R.string.persona_thomas_desc, listOf(
-        Profile(R.string.persona_thomas, listOf(
+    ), deckTabs = listOf(PAGE + "Travail", PAGE + "Maison", PAGE + "Réunion", PAGE + "Apps", PAGE + "Média")),
+    AIMEE("aimee", R.string.persona_aimee, R.string.persona_aimee_desc, listOf(
+        Profile(R.string.persona_aimee, listOf(
             Slot(WidgetType.NEXT, WidgetSize.M, 0, 0),
             Slot(WidgetType.TASKS, WidgetSize.L, 0, 1),
             Slot(WidgetType.KEYS, WidgetSize.M, 0, 3),
             Slot(WidgetType.AGENDA, WidgetSize.L, 2, 0),
             Slot(WidgetType.OPEN, WidgetSize.L, 2, 2),
         )),
-    ), deckTabs = listOf(OPEN, PAGE + "Projets")),
-    KARIM("karim", R.string.persona_karim, R.string.persona_karim_desc, listOf(
-        Profile(R.string.persona_karim, listOf(
+    ), deckTabs = listOf(OPEN, PAGE + "Projets", PAGE + "Réunion", JIRA, PAGE + "Apps")),
+    SAM("sam", R.string.persona_sam, R.string.persona_sam_desc, listOf(
+        Profile(R.string.persona_sam, listOf(
             Slot(WidgetType.KEYS, WidgetSize.XL, 0, 0),
             Slot(WidgetType.APPS, WidgetSize.L, 0, 2),
             Slot(WidgetType.TASKS, WidgetSize.L, 2, 2),
         )),
-    ), deckTabs = listOf(PAGE + "Perso"), textScale = MAX_TEXT_SCALE, wakeWord = true),
-    LEO("leo", R.string.persona_leo, R.string.persona_leo_desc, listOf(
-        Profile(R.string.persona_leo, listOf(
+    ), deckTabs = listOf(PAGE + "Mes touches", PAGE + "Apps"), textScale = MAX_TEXT_SCALE, wakeWord = true, theme = "CONTRASTE"),
+    SACHA("sacha", R.string.persona_sacha, R.string.persona_sacha_desc, listOf(
+        Profile(R.string.persona_sacha, listOf(
             Slot(WidgetType.AGENTS, WidgetSize.XL, 0, 0),
             Slot(WidgetType.KEYS, WidgetSize.L, 0, 2),
             Slot(WidgetType.TASKS, WidgetSize.L, 2, 2),
         )),
-    ), arrival = Mode.DECK, deckTabs = listOf(AGENTS, PAGE + "Git", PAGE + "Tests", PAGE + "Déploiement"));
+    ), arrival = Mode.DECK, deckTabs = listOf(PAGE + "Git", PAGE + "Tests", PAGE + "Déploiement", GITLAB, JIRA, AGENTS, OPEN));
 
     /**
      * L'Accueil du persona : un profil par entrée de [profiles], nommé d'après `names` (même ordre), et pour les widgets
@@ -159,9 +162,12 @@ object Demo {
 
     fun active(context: Context): Persona? = Persona.of(prefs(context).getString(KEY_PERSONA, null))
 
+    /** Onglets que le persona de la démo en cours laisse au Deck, dans l'ordre ; null hors démo. */
+    fun deckTabs(context: Context): List<String>? = active(context)?.deckTabs?.takeIf { it.isNotEmpty() }
+
     /**
      * Pose `layout` comme Accueil, l'ordre des onglets du Deck, la taille du texte et le mot d'éveil du persona, et son
-     * thème s'il en a un. L'écran d'arrivée et l'onglet de départ du Deck se lisent une fois ([takeArrival],
+     * thème (celui d'avant la démo s'il n'en a pas). L'écran d'arrivée et l'onglet de départ du Deck se lisent une fois ([takeArrival],
      * [takeStartTabs]). L'activité doit être recréée ensuite.
      */
     fun start(context: Context, persona: Persona, layout: HomeLayout, cadran: Boolean) {
@@ -182,7 +188,8 @@ object Demo {
             .putString(KEY_START, persona.deckTabs.joinToString("\n"))
             .apply()
         HomeLayout.save(context, layout, cadran)
-        persona.theme?.let { Prefs.setTheme(context, it) }
+        // Un persona sans thème rend celui d'avant la démo (le précédent persona a pu en poser un).
+        Prefs.setTheme(context, persona.theme ?: prefs.getString(KEY_THEME, null))
         Prefs.setDeckTabOrder(context, persona.deckTabs)
         Prefs.setTextScale(context, persona.textScale)
         Prefs.setWakeWord(context, persona.wakeWord ?: prefs.getBoolean(KEY_WAKE, true))

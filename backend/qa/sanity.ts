@@ -192,7 +192,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       run: async () => {
         const before = await call("GET", "/deck/keys/0");
         try {
-          const set = await call("POST", "/demo/persona", { persona: "leo" });
+          const set = await call("POST", "/demo/persona", { persona: "sacha" });
           expectStatus(set, 200, "POST /demo/persona");
           expect(set.json.keys?.[0]?.id === "k-0", "touches du persona absentes de la réponse");
           const key = await call("GET", "/deck/keys/0");
@@ -200,6 +200,16 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           const deck = await call("GET", "/deck");
           const named = (deck.json.pages as { title: string; keyPage: number | null }[]).find((p) => p.keyPage === 0);
           expect(named?.title === "Git", "page de touches nommée du persona absente du deck");
+          // Données fictives : GitLab, Jira et agents répondent par le persona, pas par l'ordinateur.
+          const mrs = await call("GET", "/gitlab/mrs");
+          expectStatus(mrs, 200, "GET /gitlab/mrs en démo");
+          expect(mrs.json.connected === true && mrs.json.mine?.length > 0, "MR fictives absentes en démo");
+          const issues = await call("GET", "/jira/issues");
+          expectStatus(issues, 200, "GET /jira/issues en démo");
+          expect(issues.json.columns?.length > 0, "tickets fictifs absents en démo");
+          const sessions = await call("GET", "/agents");
+          expectStatus(sessions, 200, "GET /agents en démo");
+          expect(sessions.json.sessions?.[0]?.id?.startsWith("demo-"), "sessions fictives absentes en démo");
         } finally {
           const quit = await call("DELETE", "/demo");
           expectStatus(quit, 200, "DELETE /demo");

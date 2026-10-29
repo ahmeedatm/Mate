@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { startServer, type TestServer } from "./server.ts";
 
 type Tile = { id: string; label?: string; type?: string; app: string | null };
 type Page = { title: string; apps: boolean; editable: boolean; keyPage: number | null; tiles: Tile[] };
+
+const OUTLOOK_NAME = "Microsoft Outlook";
 
 let server: TestServer | undefined;
 afterEach(async () => {
@@ -38,9 +41,9 @@ describe("démo : personas", () => {
     await s.call("PUT", "/deck/keys/0", { label: "Ma touche", steps: [{ type: "text", text: "a" }] });
     await s.call("POST", "/tasks", { label: "Ma tâche", days: [1, 2, 3, 4, 5, 6, 7] });
 
-    const set = await s.call("POST", "/demo/persona", { persona: "sylvie" });
+    const set = await s.call("POST", "/demo/persona", { persona: "nour" });
     assert.equal(set.status, 200);
-    assert.equal(set.json.persona, "sylvie");
+    assert.equal(set.json.persona, "nour");
     assert.equal(set.json.keys[0].id, "k-0");
     assert.ok(set.json.keys.length >= 6);
     assert.deepEqual(
@@ -67,11 +70,11 @@ describe("démo : personas", () => {
   it("changer de persona garde la sauvegarde d'avant la démo", async () => {
     const s = await start();
     await s.call("PUT", "/deck/keys/0", { label: "Ma touche", steps: [{ type: "text", text: "a" }] });
-    await s.call("POST", "/demo/persona", { persona: "julie" });
-    const karim = await s.call("POST", "/demo/persona", { persona: "karim" });
+    await s.call("POST", "/demo/persona", { persona: "gwen" });
+    const sam = await s.call("POST", "/demo/persona", { persona: "sam" });
     assert.deepEqual(
       await persoLabels(s),
-      karim.json.keys.map((k: { label: string }) => k.label),
+      sam.json.keys.map((k: { label: string }) => k.label),
     );
     await s.call("DELETE", "/demo");
     assert.deepEqual(await persoLabels(s), ["Ma touche"]);
@@ -79,11 +82,11 @@ describe("démo : personas", () => {
 
   it("pose les pages de touches nommées du persona, éditables, puis les retire", async () => {
     const s = await start();
-    await s.call("POST", "/demo/persona", { persona: "sylvie" });
+    await s.call("POST", "/demo/persona", { persona: "nour" });
     const named = await keyPages(s);
     assert.deepEqual(
       named.map((p) => p.title),
-      ["Raccourcis Excel", "Libellés", "Dossiers clients"],
+      ["Excel", "Libellés", "Dossiers clients"],
     );
     assert.ok(named.every((p, n) => p.editable && p.keyPage === n && p.tiles[0].id === `k${n + 1}-0` && filled(p).length >= 5));
 
@@ -107,8 +110,12 @@ describe("démo : personas", () => {
       (await keyPages(s)).map((p) => p.title),
       ["Travail", "Maison"],
     );
-    await s.call("POST", "/demo/persona", { persona: "karim" });
-    assert.deepEqual(await keyPages(s), []);
+    await s.call("POST", "/demo/persona", { persona: "sam" });
+    assert.deepEqual(
+      (await keyPages(s)).map((p) => p.title),
+      ["Mes touches"],
+    );
+    assert.ok(filled((await keyPages(s))[0]).length >= 6);
     await s.call("DELETE", "/demo");
     assert.deepEqual(await keyPages(s), []);
     assert.equal(await exists(s, "pages.json"), false);
@@ -118,15 +125,15 @@ describe("démo : personas", () => {
     const s = await start();
     await s.call("POST", "/plugins", { choices: { pad: false } });
 
-    await s.call("POST", "/demo/persona", { persona: "sylvie" });
+    await s.call("POST", "/demo/persona", { persona: "nour" });
     const off = await pluginsOff(s);
     for (const id of ["discord", "mixer", "pad", "media", "claude"]) assert.ok(off.includes(id), id);
     assert.ok(!off.includes("open"));
     assert.ok((await s.call("GET", "/plugins")).json.plugins.every((p: { fresh: boolean }) => !p.fresh));
 
-    await s.call("POST", "/demo/persona", { persona: "leo" });
-    const leo = await pluginsOff(s);
-    assert.ok(!leo.includes("claude") && !leo.includes("open"));
+    await s.call("POST", "/demo/persona", { persona: "sacha" });
+    const sacha = await pluginsOff(s);
+    assert.ok(!sacha.includes("claude") && !sacha.includes("open"));
 
     await s.call("DELETE", "/demo");
     assert.deepEqual(await pluginsOff(s), ["pad"]);
@@ -134,7 +141,7 @@ describe("démo : personas", () => {
 
   it("sans choix de plugins avant la démo, rien n'est choisi après", async () => {
     const s = await start();
-    await s.call("POST", "/demo/persona", { persona: "karim" });
+    await s.call("POST", "/demo/persona", { persona: "sam" });
     assert.ok((await pluginsOff(s)).length >= 5);
     await s.call("DELETE", "/demo");
     assert.deepEqual(await pluginsOff(s), []);
@@ -143,7 +150,7 @@ describe("démo : personas", () => {
 
   it("la page Apps ne garde que les applis installées", async () => {
     const s = await start(["Microsoft Excel", "Microsoft Word"]);
-    await s.call("POST", "/demo/persona", { persona: "sylvie" });
+    await s.call("POST", "/demo/persona", { persona: "nour" });
     const apps = (await pages(s)).find((p) => p.apps)!.tiles.map((t) => t.app);
     assert.deepEqual(apps, ["Microsoft Excel", "Microsoft Word"]);
   });
@@ -155,10 +162,276 @@ describe("démo : personas", () => {
     assert.deepEqual(await persoLabels(s), ["Ma touche"]);
   });
 
+  it("les personas portent les nouveaux noms, les anciens sont refusés", async () => {
+    const s = await start();
+    for (const persona of ["nour", "gwen", "camille", "aimee", "sam", "sacha"]) {
+      assert.equal((await s.call("POST", "/demo/persona", { persona })).status, 200, persona);
+    }
+    for (const persona of ["sylvie", "julie", "thomas", "karim", "leo"]) {
+      assert.equal((await s.call("POST", "/demo/persona", { persona })).status, 400, persona);
+    }
+  });
+
   it("refuse un persona inconnu et l'absence de jeton", async () => {
     const s = await start();
     assert.equal((await s.call("POST", "/demo/persona", { persona: "inconnu" })).status, 400);
-    assert.equal((await s.call("POST", "/demo/persona", { persona: "leo" }, false)).status, 401);
+    assert.equal((await s.call("POST", "/demo/persona", { persona: "sacha" }, false)).status, 401);
     assert.equal((await s.call("DELETE", "/demo", undefined, false)).status, 401);
+  });
+});
+
+describe("démo : données fictives à la place de celles de l'ordinateur", () => {
+  const features = async (s: TestServer) => (await s.call("GET", "/deck/features")).json;
+  const display = { id: 1, label: "Réel", main: true, x: 0, y: 0, w: 1920, h: 1080 };
+  const realWindows = {
+    apps: [
+      {
+        key: "Vrai",
+        name: "Vrai",
+        windows: [{ index: 1, title: "Document privé", minimized: false, fullscreen: false, display: 1, elsewhere: false }],
+      },
+    ],
+    displays: [display],
+  };
+  const realMedia = {
+    app: "Vrai",
+    name: "Vrai",
+    current: true,
+    title: "Morceau privé",
+    artist: "",
+    album: "",
+    hasThumb: false,
+    status: "playing",
+    canPlayPause: true,
+    canNext: true,
+    canPrevious: true,
+    canSeek: false,
+    positionMs: 0,
+    durationMs: 1000,
+  };
+  const mediaTitle = async (s: TestServer) => (await s.call("GET", "/system/media")).json.sessions[0]?.title;
+
+  it("onglets GitLab, Jira et Agents : seulement chez Sacha, même si l'ordinateur les offre, rendus en quittant", async () => {
+    server = await startServer({
+      env: { GITLAB_TOKEN: "jeton-de-test", JIRA_SITE: "http://127.0.0.1:1", JIRA_EMAIL: "a@b.c", JIRA_API_TOKEN: "x" },
+    });
+    server.setOs({ installed: [] });
+    const s = server;
+    assert.equal((await features(s)).gitlab, true);
+    assert.equal((await features(s)).jira, true);
+
+    for (const persona of ["nour", "gwen", "camille", "aimee", "sam"]) {
+      await s.call("POST", "/demo/persona", { persona });
+      const f = await features(s);
+      assert.equal(f.gitlab, false, `${persona} gitlab`);
+      assert.equal(f.agents, false, `${persona} agents`);
+      assert.equal(f.jira, persona === "aimee", `${persona} jira`);
+    }
+    await s.call("POST", "/demo/persona", { persona: "sacha" });
+    const f = await features(s);
+    assert.deepEqual([f.gitlab, f.jira, f.agents], [true, true, true]);
+    for (const id of ["claude", "jira", "open"]) assert.ok(!f.off.includes(id), id);
+    for (const id of ["discord", "mixer", "pad", "media"]) assert.ok(f.off.includes(id), id);
+
+    await s.call("DELETE", "/demo");
+    const after = await features(s);
+    assert.deepEqual([after.gitlab, after.jira], [true, true]);
+  });
+
+  it("GitLab : MR fictives, la fusion les retire sans appeler GitLab, les vraies sont rendues après", async () => {
+    const s = await start();
+    assert.equal((await s.call("GET", "/gitlab/mrs")).json.connected, false);
+    await s.call("POST", "/demo/persona", { persona: "sacha" });
+    const mrs = (await s.call("GET", "/gitlab/mrs")).json;
+    assert.equal(mrs.connected, true);
+    assert.ok(mrs.mine.length >= 2 && mrs.review.length >= 1);
+    assert.ok(mrs.mine.some((m: { mergeable: boolean }) => m.mergeable));
+    const merged = mrs.mine.find((m: { mergeable: boolean }) => m.mergeable);
+    assert.equal(merged.project.includes("example"), false);
+    const res = await s.call("POST", "/gitlab/mrs/merge", { project: merged.project, iid: merged.iid, sha: merged.sha });
+    assert.equal(res.status, 200);
+    assert.ok(!(await s.call("GET", "/gitlab/mrs")).json.mine.some((m: { iid: number }) => m.iid === merged.iid));
+    assert.equal((await s.call("POST", "/gitlab/mrs/open", { project: merged.project, iid: 1 })).status, 200);
+    assert.deepEqual(s.osCalls(), []);
+
+    await s.call("DELETE", "/demo");
+    assert.equal((await s.call("GET", "/gitlab/mrs")).json.connected, false);
+  });
+
+  it("Jira : tickets fictifs de Sacha et d'Aimée, un ticket se déplace, 501 de nouveau après", async () => {
+    const s = await start();
+    assert.equal((await s.call("GET", "/jira/issues")).status, 501);
+    await s.call("POST", "/demo/persona", { persona: "sacha" });
+    const keys = async () =>
+      (await s.call("GET", "/jira/issues")).json.columns.flatMap((c: { title: string; issues: { key: string }[] }) =>
+        c.issues.map((i) => `${c.title}/${i.key}`),
+      );
+    assert.ok((await keys()).includes("À faire/FACT-236"));
+    const { transitions } = (await s.call("GET", "/jira/issues/FACT-236/transitions")).json;
+    const toDone = transitions.find((t: { to: string }) => t.to === "Terminé");
+    assert.ok(toDone && !transitions.some((t: { to: string }) => t.to === "À faire"));
+    assert.equal((await s.call("POST", "/jira/issues/FACT-236/transitions", { id: toDone.id })).status, 200);
+    assert.ok((await keys()).includes("Terminé/FACT-236"));
+    assert.equal((await s.call("POST", "/jira/issues/FACT-236/open")).status, 200);
+    assert.deepEqual(s.osCalls(), []);
+
+    await s.call("POST", "/demo/persona", { persona: "aimee" });
+    const aimee: string[] = await keys();
+    assert.ok(aimee.some((k) => k.includes("ATLAS-")) && !aimee.some((k) => k.includes("FACT-")));
+
+    await s.call("DELETE", "/demo");
+    assert.equal((await s.call("GET", "/jira/issues")).status, 501);
+  });
+
+  it("agents Claude : sessions fictives de Sacha, actions sans toucher à l'ordinateur", async () => {
+    const s = await start();
+    await s.call("POST", "/demo/persona", { persona: "sacha" });
+    const agents = (await s.call("GET", "/agents")).json;
+    assert.ok(agents.sessions.length >= 4);
+    for (const state of ["working", "waiting", "done"])
+      assert.ok(
+        agents.sessions.some((a: { state: string }) => a.state === state),
+        state,
+      );
+    assert.equal(agents.counts.waiting, 1);
+    const idle = agents.sessions.find((a: { state: string }) => a.state === "idle");
+    assert.equal((await s.call("POST", "/agents/send", { session: idle.id, text: "continue" })).status, 200);
+    assert.equal((await s.call("GET", "/agents")).json.counts.idle, 0);
+    assert.deepEqual(s.osCalls(), []);
+
+    await s.call("POST", "/demo/persona", { persona: "nour" });
+    assert.equal((await s.call("GET", "/agents")).json.sessions.length, 0);
+    await s.call("DELETE", "/demo");
+    assert.ok(!(await s.call("GET", "/agents")).json.sessions?.some?.((a: { id: string }) => a.id.startsWith("demo-")));
+  });
+
+  it("Ouvertes : fenêtres et écrans fictifs, mettre devant ou fermer change l'état sans appeler l'OS", async () => {
+    const s = await start();
+    s.setOs({ openWindows: realWindows });
+    const titles = async () =>
+      (await s.call("GET", "/windows/open")).json.apps.flatMap((a: { windows: { title: string }[] }) => a.windows.map((w) => w.title));
+    assert.deepEqual(await titles(), ["Document privé"]);
+
+    await s.call("POST", "/demo/persona", { persona: "nour" });
+    const list = (await s.call("GET", "/windows/open")).json;
+    const names = list.apps.map((a: { name: string }) => a.name);
+    assert.ok(names.includes("Microsoft Excel") && names.includes(OUTLOOK_NAME));
+    assert.ok(!(await titles()).includes("Document privé"));
+    const outlook = list.apps.find((a: { name: string }) => a.name === OUTLOOK_NAME);
+    const win = outlook.windows[0];
+    s.clearOsCalls();
+    const after = await s.call("POST", "/windows/open", {
+      key: outlook.key,
+      action: "focus",
+      window: { index: win.index, title: win.title },
+    });
+    assert.equal(after.status, 200);
+    const front = after.json.apps
+      .flatMap((a: { windows: { index: number; front?: boolean }[] }) => a.windows)
+      .filter((w: { front?: boolean }) => w.front);
+    assert.deepEqual(
+      front.map((w: { index: number }) => w.index),
+      [win.index],
+    );
+    await s.call("POST", "/windows/open", {
+      key: outlook.key,
+      action: "close",
+      window: { index: win.index, title: win.title },
+      list: false,
+    });
+    assert.ok(!(await s.call("GET", "/windows/open")).json.apps.some((a: { name: string }) => a.name === OUTLOOK_NAME));
+    assert.deepEqual(s.osCalls(), []);
+
+    // Aimée : un navigateur à vingt onglets, sur deux écrans.
+    await s.call("POST", "/demo/persona", { persona: "aimee" });
+    assert.equal((await s.call("GET", "/browser/tabs")).json.tabs.length, 20);
+    assert.equal((await s.call("GET", "/windows/open")).json.displays.length, 2);
+
+    await s.call("DELETE", "/demo");
+    assert.deepEqual(await titles(), ["Document privé"]);
+  });
+
+  it("Média, Son et performances : lecture fictive qui réagit aux commandes, vraies valeurs après", async () => {
+    const s = await start();
+    s.setOs({ media: [realMedia] });
+    assert.equal(await mediaTitle(s), "Morceau privé");
+
+    await s.call("POST", "/demo/persona", { persona: "gwen" });
+    const first = await mediaTitle(s);
+    assert.ok(first && first !== "Morceau privé");
+    assert.equal((await s.call("GET", "/system/media")).json.sessions[0].status, "playing");
+    s.clearOsCalls();
+    await s.call("POST", "/system/media", { action: "play-pause" });
+    assert.equal((await s.call("GET", "/system/media")).json.sessions[0].status, "paused");
+    await s.call("POST", "/system/media", { action: "next" });
+    assert.notEqual(await mediaTitle(s), first);
+
+    assert.equal((await s.call("POST", "/system/audio", { output: 20, muted: true })).json.output, 20);
+    const audio = (await s.call("GET", "/system/audio")).json;
+    assert.deepEqual([audio.output, audio.muted], [20, true]);
+    const mixer = (await s.call("GET", "/system/mixer")).json;
+    assert.deepEqual([mixer.master.volume, mixer.master.muted], [20, true]);
+    const app = mixer.apps[0];
+    await s.call("POST", "/system/mixer", { id: app.id, volume: 33 });
+    assert.equal((await s.call("GET", "/system/mixer")).json.apps[0].volume, 33);
+    const scene = await s.call("POST", "/system/mixer/scenes", { name: "Réunion" });
+    assert.equal(scene.status, 200);
+    assert.equal((await s.call("GET", "/system/mixer/scenes")).json.scenes.length, 1);
+    const perf = (await s.call("GET", "/system/perf")).json;
+    assert.ok(perf.cpu > 0 && perf.ram.total > 0);
+    assert.deepEqual(s.osCalls(), []);
+
+    await s.call("DELETE", "/demo");
+    assert.equal(await mediaTitle(s), "Morceau privé");
+    assert.equal(await exists(s, "mixer.json"), false);
+  });
+
+  it("page Réunion, courrier, notifications, presse-papiers et agenda du persona", async () => {
+    const s = await start();
+    assert.deepEqual((await s.call("GET", "/deck/live")).json.apps, []);
+    s.setOs({ clipboard: { kind: "text", text: "Presse-papiers privé" } });
+
+    await s.call("POST", "/demo/persona", { persona: "gwen" });
+    assert.deepEqual((await s.call("GET", "/deck/live")).json.apps, ["Microsoft Teams"]);
+    await s.call("POST", "/demo/persona", { persona: "nour" });
+    assert.deepEqual((await s.call("GET", "/deck/live")).json.apps, []);
+
+    const mail = (await s.call("GET", "/mail/summary")).json;
+    assert.equal(mail.status, "ok");
+    assert.ok(mail.unread > 0 && mail.recent.length >= 2);
+    const notes = (await s.call("GET", "/notifications")).json.items;
+    assert.ok(notes.length >= 2);
+    assert.equal((await s.call("DELETE", `/notifications/${notes[0].id}`)).status, 200);
+    assert.equal((await s.call("GET", "/notifications")).json.items.length, notes.length - 1);
+    const clip = (await s.call("GET", "/system/clipboard")).json;
+    assert.equal(clip.kind, "text");
+    assert.notEqual(clip.text, "Presse-papiers privé");
+    assert.ok((await s.call("GET", "/system/clipboard/history")).json.items.length >= 1);
+
+    const week = (await s.call("GET", "/calendar?days=7")).json;
+    assert.equal(week.source, "local");
+    assert.ok(week.events.some((e: { title: string }) => e.title === "Point clôture mensuelle"));
+
+    await s.call("DELETE", "/demo");
+    assert.equal((await s.call("GET", "/system/clipboard")).json.text, "Presse-papiers privé");
+    assert.equal((await s.call("GET", "/mail/summary")).json.status, "no-account");
+  });
+
+  it("une démo en cours survit à un redémarrage du compagnon", async () => {
+    // Dossier donné : gardé à l'arrêt du serveur (voir test/server.ts).
+    const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), "companion-demo-"));
+    try {
+      const first = await startServer({ dataDir });
+      await first.call("POST", "/demo/persona", { persona: "sacha" });
+      await first.stop();
+      server = await startServer({ dataDir });
+      assert.equal((await server.call("GET", "/gitlab/mrs")).json.connected, true);
+      await server.call("DELETE", "/demo");
+      assert.equal((await server.call("GET", "/gitlab/mrs")).json.connected, false);
+    } finally {
+      await server?.stop();
+      server = undefined;
+      await fs.rm(dataDir, { recursive: true, force: true });
+    }
   });
 });

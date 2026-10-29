@@ -26,6 +26,7 @@ import { loadKeyPages, loadKeys, loadLinks, loadSavedApps, saveApps, saveLinks, 
 import { agentsAvailable } from "./agents-sources.ts";
 import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
+import { demoFeatures } from "./demo-mock.ts";
 import { jiraConfigured } from "./jira.ts";
 import { appPluginOff, pluginOn, pluginsOff } from "./plugins.ts";
 import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
@@ -208,14 +209,16 @@ export async function homeFeatures() {
   const agents = agentsAvailable() && (await pluginOn("claude"));
   // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
   const jira = jiraConfigured && (await pluginOn("jira"));
+  // Démo : GitLab, Jira et agents suivent les données fictives du persona, pas l'ordinateur (jeton, Claude Code).
+  const demo = await demoFeatures();
   return {
     agenda: true,
     linked: await hasCalendar(),
     meetings: canControl,
     teams,
-    agents,
-    gitlab: canControl && (await gitlabAvailable()),
-    jira,
+    agents: demo ? demo.agents : agents,
+    gitlab: demo ? demo.gitlab : canControl && (await gitlabAvailable()),
+    jira: demo ? demo.jira : jira,
     off: await pluginsOff(),
   };
 }

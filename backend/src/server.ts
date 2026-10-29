@@ -5,6 +5,7 @@ import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import { config } from "./config.ts";
 import { startCallWatch } from "./calls.ts";
+import { demoAnswer } from "./demo-mock.ts";
 import { clipboardHistory, watchClipboard } from "./clipboard-history.ts";
 import { startEventReminders } from "./events.ts";
 import { GitLabError } from "./gitlab.ts";
@@ -114,6 +115,14 @@ app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validat
     return reply.code(status).send({ error: "L'ordinateur n'a pas pu le faire (détail dans son journal)" });
   }
   reply.send(err);
+});
+
+// Démo (src/demo-mock.ts) : tant qu'un persona est actif, les routes qui lisent l'ordinateur répondent avec ses données
+// fictives, et leurs actions changent cet état fictif sans toucher à l'ordinateur. Avant le contrôle de l'OS : la démo
+// marche aussi sur un ordinateur que le compagnon ne pilote pas.
+app.addHook("preHandler", async (req, reply) => {
+  const answer = await demoAnswer(req.method, req.routeOptions.url ?? "", req);
+  if (answer !== undefined) return reply.send(answer);
 });
 
 // Pilotage de l'ordinateur (deck d'applis et de raccourcis, son, micro) : macOS et Windows seulement.

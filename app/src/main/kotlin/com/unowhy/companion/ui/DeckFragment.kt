@@ -371,6 +371,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             when {
                 key == OPEN_TAB && OPEN_TAB !in off -> showOpen()
                 key == AGENTS_TAB && agentsOn -> showAgents()
+                key == GITLAB_TAB && gitlabOn -> showGitLab()
+                key == JIRA_TAB && jiraOn -> showJira()
                 key.startsWith(PAGE_TAB) -> {
                     val index = pages.indexOfFirst { it.app == null && it.title == key.removePrefix(PAGE_TAB) }
                     if (index < 0) continue
@@ -442,7 +444,11 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         }
         // Ordre choisi en déplaçant les onglets ; un onglet jamais placé (page d'appli qui apparaît) garde sa place relative, à la fin.
         val order = Prefs.deckTabOrder(requireContext())
-        return entries.withIndex().sortedBy { (i, t) -> order.indexOf(t.key).takeIf { it >= 0 } ?: (order.size + i) }.map { it.value }
+        // Démo : le persona ne laisse que ses onglets (Perso et ceux que l'ordinateur offre en plus disparaissent). Sa page
+        // « Excel » et la page de l'appli Excel portent le même titre : la page de touches du persona est gardée seule.
+        val only = Demo.deckTabs(requireContext())
+        val kept = if (only == null) entries else entries.filter { it.key in only }.distinctBy { it.key }
+        return kept.withIndex().sortedBy { (i, t) -> order.indexOf(t.key).takeIf { it >= 0 } ?: (order.size + i) }.map { it.value }
     }
 
     private fun renderTabs() {

@@ -1,6 +1,6 @@
 # Ouverture : le compagnon est programmable
 
-Pour les développeurs (démo Léo). Trois portes vers la même mécanique : le deck de l'ordinateur. Une touche = une liste d'étapes
+Pour les développeurs (démo Sacha). Trois portes vers la même mécanique : le deck de l'ordinateur. Une touche = une liste d'étapes
 (`runAction`, `backend/src/deck.ts`), qu'on la déclare dans un fichier, par l'API HTTP ou en le demandant à Claude.
 
 | Porte | Où | Pour qui |
