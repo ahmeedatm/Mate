@@ -4,7 +4,7 @@
     android:layout_height="136dp"
     android:background="@drawable/tile_bg"
     android:stateListAnimator="@animator/press"
-    android:gravity="center"
+    android:gravity="top|center_horizontal"
     android:orientation="vertical"
     android:padding="10dp">
 

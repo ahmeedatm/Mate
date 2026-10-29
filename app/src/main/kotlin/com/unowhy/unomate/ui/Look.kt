@@ -67,7 +67,7 @@ object Look {
     /** Teinte de la fonction que représente l'icône d'un titre. */
     fun iconHue(icon: Int): Int = when (icon) {
         R.drawable.ic_event, R.drawable.ic_alarm -> R.attr.c_hue_orange
-        R.drawable.ic_tasks, R.drawable.ic_repeat, R.drawable.ic_tablet -> R.attr.c_hue_green
+        R.drawable.ic_tasks, R.drawable.ic_repeat, R.drawable.ic_tablet, R.drawable.ic_tile_check_circle -> R.attr.c_hue_green
         R.drawable.ic_water, R.drawable.ic_refresh -> R.attr.c_hue_cyan
         R.drawable.ic_volume, R.drawable.ic_display -> R.attr.c_hue_violet
         R.drawable.ic_timer, R.drawable.ic_lock -> R.attr.c_hue_red

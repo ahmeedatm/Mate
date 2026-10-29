@@ -33,6 +33,7 @@ class BackendClient(baseUrl: String, token: String = "", connectTimeoutMs: Int =
     val gitlab = GitLabApi(http)
     val jira = JiraApi(http)
     val plugins = PluginsApi(http)
+    val present = PresentApi(http)
     val demo = DemoApi(http)
     val notifications = NotificationsApi(http)
     val away = AwayApi(http)

@@ -145,10 +145,15 @@ fun reconcileKeys(chosen: List<KeyRef>, pages: List<DeckPage>): List<KeyRef>? {
 
 /**
  * Cotes d'une case de touche, en dp et sp. Normales : plaque de 52 dp, libellé de 13 sp. Grandes (thème Contraste
- * élevé, `c_big_keys`) : colonnes de 148 dp, plaque de 80 dp, libellé de 18 sp, assez pour deux lignes.
+ * élevé, `c_big_keys`) : colonnes de 148 dp, plaque de 80 dp, libellé de 18 sp, assez pour deux lignes. La case
+ * contient la plaque, [LABEL_GAP_DP] et deux lignes de libellé ; `TileGridView.newCell` l'agrandit si la taille du texte
+ * choisie dans les Réglages dépasse ces cotes.
  */
 class TileMetrics(val columnDp: Int, val cellDp: Int, val plateDp: Int, val labelSp: Float, val initialSp: Float) {
     companion object {
+        /** Espace entre la plaque et le libellé. */
+        const val LABEL_GAP_DP = 6
+
         val NORMAL = TileMetrics(columnDp = 96, cellDp = 100, plateDp = 52, labelSp = 13f, initialSp = 30f)
         val LARGE = TileMetrics(columnDp = 148, cellDp = 148, plateDp = 80, labelSp = 18f, initialSp = 42f)
 

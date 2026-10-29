@@ -168,7 +168,7 @@ abstract class CallWidget(
 
     private fun run(tile: DeckTile) {
         host.scope.launch {
-            val result = runCatchingCancellable { BackendClient(context).deck.runTile(tile.id) }
+            val result = runTileSpoken(context, tile.id, tile.label)
             result.onFailure {
                 Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show()
                 return@launch
