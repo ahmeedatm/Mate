@@ -1,6 +1,7 @@
 /**
  * Page http://127.0.0.1:3000/ ouverte sur l'ordinateur (ouverte par l'installation) : état du compagnon,
- * marche à suivre sur la tablette et, pendant un appairage, le code à saisir en grand.
+ * marche à suivre sur la tablette, réglages de la tablette connectée (thème, écran, son) et, pendant un appairage,
+ * le code à saisir en grand.
  * Lue sans jeton, en local seulement (voir isLocalPage dans server.ts).
  */
 export const LOCAL_PAGE = `<!doctype html>
@@ -36,6 +37,14 @@ export const LOCAL_PAGE = `<!doctype html>
   a.button { display: inline-block; font: inherit; padding: 10px 18px; border-radius: 10px; background: var(--accent); color: #fff;
     text-decoration: none; margin: 10px 8px 0 0; }
   .ok { color: var(--ok); } .ko { color: var(--ko); }
+  .row { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+  .row label { flex: 1; }
+  .row input[type=range] { flex: 1; margin: 0; padding: 0; border: 0; accent-color: var(--accent); }
+  .row input[type=checkbox] { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+  .row .value { min-width: 48px; text-align: right; font-variant-numeric: tabular-nums; }
+  .themes { display: flex; gap: 8px; margin-top: 10px; }
+  .themes button { flex: 1; margin: 0; background: transparent; color: var(--text); border: 1px solid var(--dim); }
+  .themes button[aria-pressed=true] { background: var(--accent); color: #fff; border-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -60,6 +69,24 @@ export const LOCAL_PAGE = `<!doctype html>
   <div class="card">
     <div><span class="dot" id="dot"></span><span id="state">Tablette non connectée</span></div>
     <div class="dim" style="margin-top:8px">Adresse de cet ordinateur : <code id="addr">…</code></div>
+  </div>
+
+  <!-- Tablette connectée : son état et ses réglages, changés d'ici (ordre « settings », voir routes/local.ts). -->
+  <div class="card" id="tabletcard" hidden>
+    <b>Réglages de la tablette</b>
+    <div class="dim" id="tabletinfo"></div>
+    <div class="dim" id="tabletold" hidden style="margin-top:8px">Mets à jour l'appli de la tablette pour la régler d'ici.</div>
+    <div id="tabletsettings">
+      <div style="margin-top:14px">Thème</div>
+      <div class="themes" id="themes">
+        <button data-theme="CADRAN">Cadran</button><button data-theme="CADRAN_NUIT">Cadran nuit</button><button data-theme="RETRO">Rétro</button>
+      </div>
+      <div class="row"><label for="brightness">Luminosité de l'écran</label><input type="range" id="brightness" min="5" max="100"><span class="value" id="brightnessvalue"></span></div>
+      <div class="row"><label for="volume">Volume du haut-parleur</label><input type="range" id="volume" min="0" max="100"><span class="value" id="volumevalue"></span></div>
+      <div class="row"><label for="nightdim">Atténuer l'écran la nuit (22 h – 7 h)</label><input type="checkbox" id="nightdim"></div>
+      <div class="row"><label for="focusdnd">Ne pas déranger sur l'ordinateur pendant la concentration</label><input type="checkbox" id="focusdnd"></div>
+      <div class="dim" id="tabletmsg" style="margin-top:10px"></div>
+    </div>
   </div>
 
   <div class="card">
@@ -108,6 +135,7 @@ export const LOCAL_PAGE = `<!doctype html>
       document.getElementById("calstate").textContent = n === 0 ? "Aucun agenda : la tablette propose de le relier."
         : (c.saved.length ? "Lien enregistré : " + c.saved.join(", ") : "") + (c.env ? (c.saved.length ? " · " : "") + c.env + " lien(s) dans .env" : "");
       renderAccounts(c);
+      renderTablet(s.tabletInfo);
       const p = s.pairing;
       document.getElementById("pairing").style.display = p ? "block" : "none";
       if (p) {
@@ -157,6 +185,59 @@ export const LOCAL_PAGE = `<!doctype html>
       }
     }
   }
+  // Réglages de la tablette : pas réécrits pendant un réglage en cours (curseur tenu, envoi pas encore fini).
+  let tabletBusyUntil = 0;
+  const percent = (v) => Math.round(v * 100);
+  function renderTablet(t) {
+    document.getElementById("tabletcard").hidden = !t;
+    if (!t) return;
+    const b = t.battery;
+    document.getElementById("tabletinfo").textContent = [
+      t.model, t.app && "appli " + t.app, b && "batterie " + b.level + " %" + (b.charging ? " (en charge)" : ""),
+    ].filter(Boolean).join(" · ");
+    const st = t.settings;
+    document.getElementById("tabletold").hidden = !!st;
+    document.getElementById("tabletsettings").hidden = !st;
+    if (!st || Date.now() < tabletBusyUntil) return;
+    for (const btn of document.querySelectorAll("#themes button")) btn.setAttribute("aria-pressed", String(btn.dataset.theme === st.theme));
+    for (const id of ["brightness", "volume"]) {
+      document.getElementById(id).value = percent(st[id]);
+      document.getElementById(id + "value").textContent = percent(st[id]) + " %";
+    }
+    document.getElementById("nightdim").checked = st.nightDim;
+    document.getElementById("focusdnd").checked = st.focusDnd;
+  }
+  async function saveTablet(change) {
+    const msg = document.getElementById("tabletmsg");
+    tabletBusyUntil = Date.now() + 20000;
+    msg.textContent = "Envoi à la tablette…";
+    try {
+      const res = await fetch("/local/tablet/settings", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(change) });
+      const r = await res.json();
+      msg.textContent = res.ok ? "Réglé sur la tablette." : "Pas réglé : " + (r.error || r.message);
+    } catch (e) {
+      msg.textContent = "Compagnon injoignable";
+    }
+    tabletBusyUntil = 0;
+    refresh();
+  }
+  for (const btn of document.querySelectorAll("#themes button")) {
+    btn.onclick = () => {
+      for (const other of document.querySelectorAll("#themes button")) other.setAttribute("aria-pressed", String(other === btn));
+      saveTablet({ theme: btn.dataset.theme });
+    };
+  }
+  for (const id of ["brightness", "volume"]) {
+    const range = document.getElementById(id);
+    // Valeur affichée pendant le glisser, envoyée au lâcher.
+    range.oninput = () => {
+      tabletBusyUntil = Date.now() + 20000;
+      document.getElementById(id + "value").textContent = range.value + " %";
+    };
+    range.onchange = () => saveTablet({ [id]: range.value / 100 });
+  }
+  document.getElementById("nightdim").onchange = (e) => saveTablet({ nightDim: e.target.checked });
+  document.getElementById("focusdnd").onchange = (e) => saveTablet({ focusDnd: e.target.checked });
   function connectLink(provider, text) {
     const link = document.createElement("a");
     link.className = "button";

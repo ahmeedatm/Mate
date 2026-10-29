@@ -14,6 +14,19 @@ import { randomUUID } from "node:crypto";
 export const MODES = ["home", "deck", "docs", "focus", "camera", "tasks", "settings"] as const;
 export const NOISES = ["brown", "pink", "white", "off"] as const;
 export const FOCUS_ACTIONS = ["start", "pause", "reset", "skip"] as const;
+/** Thèmes de la tablette (AppTheme dans ui/Themes.kt). */
+export const THEMES = ["CADRAN", "CADRAN_NUIT", "RETRO"] as const;
+
+/** Réglages de la tablette changés depuis la page de l'ordinateur ; un champ absent reste tel quel. */
+export type TabletSettings = {
+  theme?: (typeof THEMES)[number];
+  /** Luminosité de l'écran, 0,05 à 1. */
+  brightness?: number;
+  /** Volume du haut-parleur, 0 à 1. */
+  volume?: number;
+  nightDim?: boolean;
+  focusDnd?: boolean;
+};
 
 export type TabletDoc = { name: string; path: string; kind: string; size: number; mtimeMs: number };
 
@@ -24,6 +37,8 @@ export type TabletCommand =
   | { type: "focus"; action: (typeof FOCUS_ACTIONS)[number]; focusMinutes?: number; breakMinutes?: number }
   | { type: "noise"; kind: (typeof NOISES)[number]; volume?: number }
   | { type: "screenshot" }
+  /** Panneau Tablette de la page locale (routes/local.ts). */
+  | ({ type: "settings" } & TabletSettings)
   /** Appel entrant (src/calls.ts) : carte Répondre / Ignorer sur la tablette, retirée à `ended`. */
   | { type: "call"; state: "ringing" | "ended"; app: string; caller: string | null; video: boolean }
   /** Agent Claude (src/agents.ts) : une session attend, a fini ou a atteint sa limite ; `clear` : plus rien n'attend. */

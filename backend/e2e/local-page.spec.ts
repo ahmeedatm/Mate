@@ -56,6 +56,51 @@ test.describe("page locale GET /", () => {
     await server.call("PUT", "/local/calendar", { urls: [] }, false);
   });
 
+  // Après les tests qui veulent la tablette déconnectée : la fausse tablette reste vue connectée 35 s.
+  test("règle la tablette connectée depuis la carte Tablette", async ({ page, server }) => {
+    await page.goto("/");
+    await expect(page.locator("#tabletcard")).toBeHidden();
+
+    // Fausse tablette : un poll ouvert, chaque ordre exécuté sur son état puis renvoyé avec le résultat.
+    let settings = { theme: "CADRAN", brightness: 0.6, volume: 0.4, nightDim: true, focusDnd: true };
+    const received: Record<string, unknown>[] = [];
+    const state = () => ({ mode: "home", app: "1.4.0", model: "Unowhy 4.2", battery: { level: 82, charging: true }, settings });
+    let running = true;
+    const tablet = (async () => {
+      while (running) {
+        const { json } = await server.call("POST", "/tablet/poll", { state: state() });
+        for (const { id, command } of json.commands ?? []) {
+          const { type, ...change } = command;
+          received.push(change);
+          settings = { ...settings, ...change };
+          await server.call("POST", "/tablet/result", { id, ok: true, state: state() });
+        }
+      }
+    })();
+
+    await expect(page.locator("#tabletcard")).toBeVisible();
+    await expect(page.locator("#tabletinfo")).toHaveText("Unowhy 4.2 · appli 1.4.0 · batterie 82 % (en charge)");
+    await expect(page.getByRole("button", { name: "Cadran", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#brightnessvalue")).toHaveText("60 %");
+    await expect(page.locator("#nightdim")).toBeChecked();
+
+    await page.getByRole("button", { name: "Rétro" }).click();
+    await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");
+    await expect(page.getByRole("button", { name: "Rétro" })).toHaveAttribute("aria-pressed", "true");
+
+    await page.locator("#nightdim").uncheck();
+    await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");
+    await page.locator("#volume").fill("75");
+    await expect(page.locator("#volumevalue")).toHaveText("75 %");
+    await expect.poll(() => received.length).toBe(3);
+    expect(received).toEqual([{ theme: "RETRO" }, { nightDim: false }, { volume: 0.75 }]);
+    await expect(page.locator("#nightdim")).not.toBeChecked();
+
+    // Son dernier poll (jusqu'à 25 s) finit sans elle.
+    running = false;
+    void tablet.catch(() => {});
+  });
+
   test("?section=agenda met la carte Agenda en avant", async ({ page }) => {
     await page.goto("/?section=agenda");
     await expect(page.locator("#agenda")).toHaveClass(/focus/);
