@@ -240,6 +240,81 @@
                 android:textSize="13sp" />
         </LinearLayout>
 
+        <!-- Cadre photo : photos du dossier « Cadre photo » de l'ordinateur quand personne ne touche la tablette. -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <com.unowhy.companion.ui.TitleView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_image"
+                android:text="@string/frame_title" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/frame_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/frame_after"
+                android:textSize="16sp" />
+
+            <LinearLayout
+                android:id="@+id/settings_frame_delays"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/frame_every"
+                android:textSize="16sp" />
+
+            <LinearLayout
+                android:id="@+id/settings_frame_intervals"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal" />
+
+            <TextView
+                android:id="@+id/settings_frame_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:textSize="16sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/settings_frame_folder"
+                    style="@style/ActionButton"
+                    android:text="@string/frame_open_folder" />
+
+                <Button
+                    android:id="@+id/settings_frame_try"
+                    style="@style/ActionButton"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/frame_try" />
+            </LinearLayout>
+        </LinearLayout>
+
         <!-- Mises à jour (moteur web, Companion) depuis le « serveur Unowhy » simulé par l'ordinateur. -->
         <LinearLayout
             style="@style/Card"

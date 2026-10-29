@@ -30,6 +30,8 @@ import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
+import com.unowhy.companion.frame.FrameCache
+import com.unowhy.companion.frame.FrameLogic
 import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.kiosk.UpdatePlan
 import com.unowhy.companion.kiosk.Updater
@@ -62,6 +64,7 @@ class SettingsFragment : Fragment() {
     private lateinit var nightDim: SwitchCompat
     private lateinit var notifDiscreet: SwitchCompat
     private lateinit var tabletInfo: TextView
+    private lateinit var frameStatus: TextView
     private lateinit var updatesStatus: TextView
     private lateinit var updates: LinearLayout
     private lateinit var switchApp: Button
@@ -103,6 +106,7 @@ class SettingsFragment : Fragment() {
         notifDiscreet = view.findViewById(R.id.settings_notif_discreet)
         tabletInfo = view.findViewById(R.id.settings_tablet_info)
         setUpTablet()
+        setUpFrame(view)
         setUpThemes(view.findViewById(R.id.settings_themes))
         renderComputers()
         renderWifi()
@@ -133,6 +137,7 @@ class SettingsFragment : Fragment() {
             renderKiosk()
             renderSwitchApp()
             loadAutoJoin()
+            renderFrame()
         }
     }
 
@@ -321,6 +326,61 @@ class SettingsFragment : Fragment() {
         // Mode discret : lu à chaque bandeau et à chaque affichage de l'historique, rien d'autre à prévenir.
         notifDiscreet.setOnCheckedChangeListener { _, checked -> Prefs.setNotificationsDiscreet(ctx, checked) }
         renderTablet()
+    }
+
+    // --- Cadre photo : délai, durée d'une photo, photos copiées de l'ordinateur
+
+    private fun setUpFrame(view: View) {
+        val ctx = requireContext()
+        frameStatus = view.findViewById(R.id.settings_frame_status)
+        setUpChoices(view.findViewById(R.id.settings_frame_delays), FrameLogic.DELAYS_MIN, Prefs.frameDelayMin(ctx), {
+            if (it == 0) getString(R.string.frame_never) else getString(R.string.frame_minutes, it)
+        }) { Prefs.setFrameDelayMin(ctx, it) }
+        setUpChoices(view.findViewById(R.id.settings_frame_intervals), FrameLogic.INTERVALS_S, Prefs.frameIntervalS(ctx), {
+            if (it < 60) getString(R.string.frame_seconds, it) else getString(R.string.frame_minutes, it / 60)
+        }) { Prefs.setFrameIntervalS(ctx, it) }
+        // L'ordinateur crée le dossier en le listant : il existe avant d'être ouvert.
+        view.findViewById<Button>(R.id.settings_frame_folder).setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val docs = BackendClient(ctx).docs
+                    docs.framePhotos()
+                    docs.openOnComputer(FrameCache.FOLDER)
+                } catch (e: Exception) {
+                    frameStatus.text = errorText(e)
+                }
+            }
+        }
+        view.findViewById<Button>(R.id.settings_frame_try).setOnClickListener { renderFrame(force = true, open = true) }
+        renderFrame()
+    }
+
+    /** Pastilles d'un choix (une seule sélectionnée), enregistré au toucher. */
+    private fun setUpChoices(row: LinearLayout, values: List<Int>, current: Int, label: (Int) -> String, save: (Int) -> Unit) {
+        for (value in values) {
+            val chip = Button(requireContext(), null, 0, R.style.Chip).apply {
+                text = label(value)
+                isSelected = value == current
+                setOnClickListener {
+                    save(value)
+                    for (i in 0 until row.childCount) row.getChildAt(i).isSelected = row.getChildAt(i) === this
+                }
+            }
+            row.addView(chip, LinearLayout.LayoutParams(0, dp(48), 1f).apply { if (row.childCount > 0) marginStart = dp(10) })
+        }
+    }
+
+    /** Photos prêtes sur la tablette, après une synchro ([force] : tout de suite) ; [open] : lance le cadre ensuite. */
+    private fun renderFrame(force: Boolean = false, open: Boolean = false) {
+        val ctx = requireContext()
+        if (force) frameStatus.setText(R.string.frame_syncing)
+        viewLifecycleOwner.lifecycleScope.launch {
+            val count = FrameCache.sync(ctx, force)
+            if (view == null) return@launch
+            frameStatus.text = if (count == 0) getString(R.string.frame_empty)
+            else resources.getQuantityString(R.plurals.frame_count, count, count)
+            if (open) main.openFrame(withContext(Dispatchers.IO) { FrameCache.photos(ctx) })
+        }
     }
 
     private fun renderTablet() {

@@ -703,6 +703,21 @@
     <string name="tablet_volume">Volume de la tablette (voix, sons d\'ambiance)</string>
     <string name="tablet_night_dim">Atténuer l\'écran la nuit (22 h – 7 h)</string>
     <string name="tablet_night_dim_hint">L\'écran reste allumé en permanence ; la nuit il baisse au minimum, un toucher le rallume.</string>
+    <string name="frame_title">Cadre photo</string>
+    <string name="frame_hint">Quand personne ne touche la tablette, les photos du dossier « Cadre photo » de l\'ordinateur défilent, l\'heure en bas. Un toucher revient à l\'écran. Pour économiser l\'écran : luminosité réduite, rien ne bouge entre deux photos, arrêt la nuit et sous 20 % de batterie débranchée.</string>
+    <string name="frame_after">Se lance après</string>
+    <string name="frame_every">Une photo toutes les</string>
+    <string name="frame_never">Jamais</string>
+    <string name="frame_minutes">%1$d min</string>
+    <string name="frame_seconds">%1$d s</string>
+    <plurals name="frame_count">
+        <item quantity="one">%1$d photo sur la tablette</item>
+        <item quantity="other">%1$d photos sur la tablette</item>
+    </plurals>
+    <string name="frame_empty">Aucune photo : ajoute-en dans le dossier « Cadre photo » de l\'ordinateur.</string>
+    <string name="frame_syncing">Copie des photos de l\'ordinateur…</string>
+    <string name="frame_open_folder">Ouvrir le dossier sur l\'ordi</string>
+    <string name="frame_try">Essayer</string>
     <string name="theme_title">Thème</string>
     <string name="theme_cadran">Cadran</string>
     <string name="theme_cadran_nuit">Cadran nuit</string>

@@ -73,6 +73,10 @@ La tablette n'ouvre aucun port. `remote/RemoteChannel.kt` garde une requête `PO
 
 `camera/DocCamera.kt` (Camera2) envoie du JPEG 720p à ~10 i/s à `POST /camera/frame` ; le compagnon garde la dernière image et la sert en MJPEG sur `http://127.0.0.1:3000/camera`, à projeter. « Envoyer une photo » : photo pleine taille dans le dossier Partage.
 
+### 7. Cadre photo
+
+Après quelques minutes sans toucher (Réglages > Cadre photo : 2, 5, 10 ou 30 min, ou jamais), les photos du dossier « Cadre photo » du dossier partagé défilent en plein écran, l'heure et la date en bas (`ui/PhotoFrameView`, lancé par `MainActivity.followFrame` à chaque minute) ; un toucher revient à l'écran sans agir dessous. `GET /frame` (`docs.ts`) liste les images (JPEG, PNG, WebP, sous-dossiers compris, 500 au plus) ; `frame/FrameCache` les copie une fois par `/docs/file`, réduites à la taille de l'écran et remises droites (EXIF), un dossier par ordinateur : le cadre marche ordinateur éteint. Économie (`frame/FrameLogic`) : luminosité plafonnée à 35 % (20 % sur batterie), image fixe entre deux fondus de 600 ms, écrans dessous masqués, arrêt la nuit (atténuation) et sous 20 % de batterie débranchée ; pas de cadre pendant un appel, une question d'agent, le Focus qui tourne, la Caméra ou un document ouvert.
+
 ### 7. Commande vocale (bouton Parler)
 
 Pas d'IA : la reconnaissance est celle d'Android (`SpeechRecognizer`, servie par l'appli Google de l'image d'usine : en ligne, sans clé ni compte ; à ne pas désactiver dans la procédure de kiosque). La phrase est comprise **sur la tablette** par une liste de tournures (`voice/VoiceCommands.kt`) : modes, son et micro, musique, Focus, ambiance, fenêtres (comme l'onglet Ouvertes), tâches et journée, rappels, recherche, dictée (`POST /system/type`), copie sur l'ordi (« copie sur l'ordi … » ou « copie ça sur l'ordi … » → `POST /system/clipboard`), appels ; puis toute touche du Deck par son nom, puis toute appli installée (`POST /apps/launch`). Les noms d'applis mal entendus sont rapprochés à l'oreille (prononciation approximative + distance d'édition, sur les 5 variantes du reconnaisseur : « en cabane launcher » → Ankama Launcher). `voice/VoiceControl.kt` écoute et exécute ; appui long = commande écrite (émulateur sans reconnaissance). Journal : `adb logcat -s Voice` (niveau info : la tablette jette le debug).
@@ -116,6 +120,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | `agents/`, `ui/AgentsView.kt`, `ui/AgentLight.kt`, `ui/AgentAskOverlay.kt`, `ui/HoldButton.kt`, `voice/Dictation.kt`, `ui/home/AgentsWidget.kt`, `audio/AgentSounds.kt` | agents Claude : relevé partagé des sessions (`AgentsFeed`, 3 s tant qu'une vue les montre), alertes de l'ordre `agent` (`AgentAlerts` : lumière de bord + son court, tus pendant le Focus sauf « attend »), onglet Agents du Deck (après « Son », si `/deck/features` annonce `agents`), widget d'Accueil |
 | `camera/DocCamera.kt` | caméra du visualiseur |
 | `device/` | batterie, signal, luminosité (atténuée la nuit) |
+| `frame/`, `ui/PhotoFrameView.kt` | cadre photo : règles (`FrameLogic`), photos copiées de l'ordinateur (`FrameCache`) |
 | `kiosk/` | `Kiosk` (verrouillage, SQOOL masqué), `Updater`, `UpdatePlan`, `AutoUpdater`, `UpdatedReceiver`, `KioskAdminReceiver` |
 | `trial/` | appli d'essai installée à côté de la stable : `Trial` (paquets, passer de l'une à l'autre, reprise des ordinateurs), `ComputersProvider` (permission signature) |
 | `res/values/strings.xml` | tous les textes (français) ; `attrs.xml` + `palettes.xml` (couleurs des 4 thèmes), `themes.xml` pour le style ; `ui/Themes.kt`, `ui/Look.kt` |

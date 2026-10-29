@@ -81,3 +81,32 @@ export async function savePhoto(data: Buffer, extension = ".jpg") {
   await fs.writeFile(path.join(dir, name), data);
   return path.join(PHOTOS_DIR, name);
 }
+
+export const FRAME_DIR = "Cadre photo";
+/** Formats que la tablette décode (BitmapFactory, Android 7+). */
+const FRAME_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
+/** Assez pour des mois sans répétition (une photo par minute en journée) ; au-delà, la tablette garde la place. */
+export const FRAME_MAX = 500;
+
+/**
+ * Photos du cadre de la tablette : images du dossier « Cadre photo » du dossier partagé, sous-dossiers compris,
+ * dans l'ordre des chemins. Le dossier est créé s'il manque, pour que la tablette puisse l'ouvrir sur l'ordinateur.
+ */
+export async function framePhotos() {
+  const dir = path.join(config.docsDir, FRAME_DIR);
+  await fs.mkdir(dir, { recursive: true });
+  const names = (await fs.readdir(dir, { recursive: true }))
+    .filter((name) => !name.split(path.sep).some((part) => part.startsWith(".")))
+    .filter((name) => FRAME_EXTENSIONS.has(path.extname(name).toLowerCase()))
+    .sort((a, b) => a.localeCompare(b));
+  const photos = [];
+  for (const name of names) {
+    if (photos.length >= FRAME_MAX) break;
+    const stat = await fs.stat(path.join(dir, name)).catch(() => undefined);
+    if (!stat?.isFile()) continue;
+    // Chemin avec des « / » : relu tel quel par /docs/file, sur Mac comme sur Windows.
+    const relative = path.join(FRAME_DIR, name).split(path.sep).join("/");
+    photos.push({ path: relative, size: stat.size, mtimeMs: Math.round(stat.mtimeMs) });
+  }
+  return { dir: FRAME_DIR, photos };
+}

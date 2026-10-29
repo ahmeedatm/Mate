@@ -292,6 +292,15 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "cadre photo : liste du dossier",
+      run: async () => {
+        const res = await call("GET", "/frame");
+        expectStatus(res, 200, "GET /frame");
+        expect(Array.isArray(res.json.photos), "réponse sans photos");
+        return `${res.json.photos.length} photos`;
+      },
+    },
+    {
       name: "tâches : créer, lister, cocher",
       run: async () => {
         const added = await call("POST", "/tasks", { label: stamp });
