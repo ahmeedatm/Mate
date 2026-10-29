@@ -52,6 +52,8 @@ data class HomeFeatures(
     val teams: Boolean = false,
     val agents: Boolean = false,
     val jira: Boolean = false,
+    /** Plugins coupés sur cet ordinateur (`open`, `mixer`, `pad`…) : leurs onglets ne sont pas affichés. */
+    val off: Set<String> = emptySet(),
 )
 
 /** Choix proposés par l'éditeur de touche perso. */
@@ -90,7 +92,8 @@ class DeckApi(private val http: Http) {
     suspend fun homeFeatures(): HomeFeatures = http.io {
         JSONObject(http.get("/deck/features")).let {
             // Ordinateur pas encore à jour (sans `teams`) : `meetings` y voulait dire « Teams dans le deck ».
-            HomeFeatures(it.optBoolean("agenda", true), it.optBoolean("meetings", true), it.optBoolean("linked", true), it.optBoolean("teams", it.optBoolean("meetings", true)), it.optBoolean("agents"), it.optBoolean("jira"))
+            val off = it.optJSONArray("off")?.let { a -> (0 until a.length()).map { i -> a.getString(i) }.toSet() }.orEmpty()
+            HomeFeatures(it.optBoolean("agenda", true), it.optBoolean("meetings", true), it.optBoolean("linked", true), it.optBoolean("teams", it.optBoolean("meetings", true)), it.optBoolean("agents"), it.optBoolean("jira"), off)
         }
     }
 

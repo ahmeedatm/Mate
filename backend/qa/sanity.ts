@@ -146,6 +146,25 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "plugins de première utilisation",
+      run: async () => {
+        const res = await call("GET", "/plugins");
+        expectStatus(res, 200, "/plugins");
+        const plugins: { id: string; kind: string; on: boolean }[] = res.json.plugins;
+        const natives = plugins.filter((p) => p.kind === "native").map((p) => p.id);
+        // Ordinateur non pilotable : aucun plugin, et /deck/features répond 501.
+        if (!controlled()) return expect(plugins.length === 0, "plugins proposés sur un ordinateur non pilotable");
+        expect(
+          ["open", "mixer", "pad"].every((id) => natives.includes(id)),
+          `plugins intégrés manquants : ${natives.join(", ")}`,
+        );
+        const features = await call("GET", "/deck/features");
+        expect(Array.isArray(features.json.off), "/deck/features sans la liste des plugins coupés");
+        const apps = plugins.filter((p) => p.kind === "app").map((p) => p.id);
+        return `${natives.length} intégrés, applis trouvées : ${apps.join(", ") || "aucune"}`;
+      },
+    },
+    {
       name: "touches perso au-delà de 14",
       run: async () => {
         const slot = 14;
@@ -269,7 +288,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
     {
       name: "fenêtres ouvertes",
       run: async () => {
-        // Mac sans Accessibilité (job install-mac) : System Events demanderait une autorisation à l'écran.
+        // Mac sans Accessibilité (install-mac.sh) : System Events demanderait une autorisation à l'écran.
         if (os === "mac" && accessibility === false) throw new Skip("Accessibilité non accordée");
         const open = await call("GET", "/windows/open");
         if (!controlled()) return expectStatus(open, 501, "/windows/open");
@@ -456,6 +475,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const status = await call("GET", "/local/status");
         expectStatus(status, 200, "/local/status");
         expect(Array.isArray(status.json.addresses) && status.json.addresses.length > 0, "aucune adresse affichée");
+        expect("tabletInfo" in status.json, "état de la tablette absent de /local/status");
+        // Réglage vide : refusé avant d'atteindre une tablette peut-être réelle.
+        expectStatus(await call("PUT", "/local/tablet/settings", {}), 400, "PUT /local/tablet/settings vide");
+        expectStatus(await call("POST", "/local/tablet/update", { action: "rollback" }), 400, "POST /local/tablet/update inconnue");
       },
     },
     {
@@ -474,7 +497,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const res = await call("GET", "/local/licences", undefined, local ? false : true);
         if (!status.json.licences) {
           expectStatus(res, 404, "/local/licences sans fichier");
-          throw new Skip("compagnon lancé depuis le dépôt : licences jointes aux installeurs seulement");
+          throw new Skip("compagnon lancé depuis le dépôt : licences jointes à l'appli portable seulement");
         }
         expectStatus(res, 200, "/local/licences");
         const text = String(res.json);

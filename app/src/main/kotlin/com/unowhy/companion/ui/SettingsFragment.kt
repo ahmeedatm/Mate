@@ -95,6 +95,7 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, state: Bundle?) {
         computers = view.findViewById(R.id.settings_computers)
         view.findViewById<Button>(R.id.settings_add_computer).setOnClickListener { adder.search() }
+        view.findViewById<Button>(R.id.settings_plugins).setOnClickListener { main.showPlugins() }
         view.findViewById<Button>(R.id.settings_add_manual).setOnClickListener { adder.manual() }
         kioskCard = view.findViewById(R.id.settings_kiosk_card)
         view.findViewById<View>(R.id.settings_title).setOnLongClickListener { askTechCode(); true }
@@ -385,6 +386,11 @@ class SettingsFragment : Fragment() {
                 R.string.tablet_info, BuildConfig.VERSION_NAME, ip ?: getString(R.string.tablet_no_address), android.os.Build.MODEL,
             )
         }
+    }
+
+    /** Réglages changés depuis la page de l'ordinateur : curseurs et interrupteurs à jour. */
+    fun onRemoteSettings() {
+        if (view != null) renderTablet()
     }
 
     /** Ligne d'état du mot de réveil : micro d'abord (sans lui rien ne sert), puis le modèle ; rien quand il est coupé. */

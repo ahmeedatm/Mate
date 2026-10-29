@@ -31,5 +31,6 @@ class BackendClient(baseUrl: String, token: String = "", connectTimeoutMs: Int =
     val tablet = TabletApi(http)
     val agents = AgentsApi(http)
     val jira = JiraApi(http)
+    val plugins = PluginsApi(http)
     val notifications = NotificationsApi(http)
 }

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Un plugin de PluginsView : toucher la rangée l'active ou le coupe. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/row_bg"
+    android:gravity="center_vertical"
+    android:minHeight="72dp"
+    android:orientation="horizontal"
+    android:paddingStart="12dp"
+    android:paddingTop="10dp"
+    android:paddingEnd="8dp"
+    android:paddingBottom="10dp">
+
+    <ImageView
+        android:id="@+id/plugin_icon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:importantForAccessibility="no"
+        android:scaleType="fitCenter" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/plugin_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="?attr/c_font_medium"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/plugin_new"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/pill_bg"
+                android:paddingStart="10dp"
+                android:paddingTop="2dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="2dp"
+                android:text="@string/plugins_new"
+                android:textColor="?attr/c_accent"
+                android:textSize="12sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/plugin_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="?attr/c_text_dim"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/plugin_switch"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_marginStart="12dp" />
+</LinearLayout>
