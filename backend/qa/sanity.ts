@@ -188,6 +188,25 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "démo : persona posé puis rendu",
+      run: async () => {
+        const before = await call("GET", "/deck/keys/0");
+        try {
+          const set = await call("POST", "/demo/persona", { persona: "leo" });
+          expectStatus(set, 200, "POST /demo/persona");
+          expect(set.json.keys?.[0]?.id === "k-0", "touches du persona absentes de la réponse");
+          const key = await call("GET", "/deck/keys/0");
+          expect(key.json.key?.label === set.json.keys[0].label, "la touche k-0 n'est pas celle du persona");
+        } finally {
+          const quit = await call("DELETE", "/demo");
+          expectStatus(quit, 200, "DELETE /demo");
+          expect(quit.json.restored === true, "la démo n'a pas été rendue");
+        }
+        const after = await call("GET", "/deck/keys/0");
+        expect(JSON.stringify(after.json) === JSON.stringify(before.json), "la touche k-0 d'avant la démo n'est pas rendue");
+      },
+    },
+    {
       name: "agents Claude : hooks et état",
       run: async () => {
         const agents = await call("GET", "/agents");

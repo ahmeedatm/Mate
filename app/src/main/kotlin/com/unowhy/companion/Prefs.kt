@@ -126,7 +126,8 @@ object Prefs {
 
     fun theme(context: Context): String? = prefs(context).getString(KEY_THEME, null)
 
-    fun setTheme(context: Context, value: String) {
+    /** `null` : retour au thème par défaut. */
+    fun setTheme(context: Context, value: String?) {
         prefs(context).edit().putString(KEY_THEME, value).apply()
     }
 
