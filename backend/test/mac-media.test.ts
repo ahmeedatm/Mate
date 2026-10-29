@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  enrichBrowserSession,
   fallbackSessions,
   HOLD_MS,
   heldSession,
@@ -14,6 +15,59 @@ import {
 } from "../src/mac/media.ts";
 
 describe("lecture en cours (Mac)", () => {
+  const generic = {
+    app: "com.google.Chrome",
+    name: "Google Chrome",
+    current: true,
+    title: "Un site est en train de lire un contenu multimédia",
+    artist: "",
+    album: "",
+    hasThumb: true,
+    status: "paused" as const,
+    canPlayPause: true,
+    canNext: true,
+    canPrevious: true,
+    canSeek: true,
+    positionMs: 75,
+    durationMs: 63_161,
+  };
+
+  it("titre générique du navigateur : titre de l'onglet du site connu et nom du site", () => {
+    const tabs = [
+      { app: "Google Chrome", url: "https://mail.google.com/", tabTitle: "Boîte de réception", active: true },
+      { app: "Google Chrome", url: "https://www.youtube.com/watch?v=abc", tabTitle: "(2) Lo-fi beats - YouTube", active: false },
+    ];
+    const s = enrichBrowserSession(generic, tabs);
+    assert.equal(s.title, "Lo-fi beats");
+    assert.equal(s.name, "YouTube");
+    assert.equal(s.app, "com.google.Chrome");
+    assert.equal(s.durationMs, 63_161);
+  });
+
+  it("titre générique sans site connu : onglet actif et domaine du site", () => {
+    const tabs = [
+      { app: "Safari", url: "https://radio.example.fr/", tabTitle: "Autre navigateur", active: true },
+      { app: "Google Chrome", url: "https://www.radiofrance.fr/fip", tabTitle: "FIP en direct", active: true },
+    ];
+    const s = enrichBrowserSession(generic, tabs);
+    assert.equal(s.title, "FIP en direct");
+    assert.equal(s.name, "radiofrance.fr");
+  });
+
+  it("un vrai titre (Spotify, YouTube avec Media Session) reste tel quel", () => {
+    const spotify = { ...generic, app: "com.spotify.client", name: "Spotify", title: "Cold Water", artist: "Major Lazer" };
+    assert.deepEqual(enrichBrowserSession(spotify, []), spotify);
+    const titled = { ...generic, title: "Cold Water" };
+    assert.deepEqual(
+      enrichBrowserSession(titled, [{ app: "Google Chrome", url: "https://www.youtube.com/", tabTitle: "X - YouTube", active: true }]),
+      titled,
+    );
+  });
+
+  it("titre générique sans onglet lisible : rien ne change", () => {
+    assert.deepEqual(enrichBrowserSession(generic, []), generic);
+  });
+
   it("Spotify et Musique pilotés par AppleScript, les autres non", () => {
     assert.equal(playerScript("com.spotify.client", "play-pause"), 'tell application "Spotify" to playpause');
     assert.equal(playerScript("Music", "next"), 'tell application "Music" to next track');

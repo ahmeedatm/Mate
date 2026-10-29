@@ -139,8 +139,10 @@
         android:layout_height="match_parent"
         android:layout_weight="1">
 
+        <!-- paddingTop : la ligne du haut à droite (lecture en cours, heure, batterie) ne chevauche pas les cartes. -->
         <FrameLayout
             android:id="@+id/mode_container"
+            android:paddingTop="8dp"
             android:defaultFocusHighlightEnabled="false"
             tools:targetApi="o"
             android:focusable="true"

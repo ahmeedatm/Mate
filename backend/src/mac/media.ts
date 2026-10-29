@@ -172,14 +172,16 @@ function run() {
     try { wins = b.windows(); } catch (e) {}
     for (const win of wins) try {
       const urls = win.tabs.url(), titles = name === "Safari" ? win.tabs.name() : win.tabs.title();
-      urls.forEach((url, t) => out.push({ kind: "tab", app: name, url, tabTitle: titles[t] || "" }));
+      let active = 0;
+      try { active = name === "Safari" ? win.currentTab.index() : win.activeTabIndex(); } catch (e) {}
+      urls.forEach((url, t) => out.push({ kind: "tab", app: name, url, tabTitle: titles[t] || "", active: t + 1 === active }));
     } catch (e) {}
   }
   return JSON.stringify(out);
 }`;
 
 type RawPlayer = { kind: "player"; app: string; state: string; title: string; artist: string; album: string; pos: number; dur: number };
-type RawTab = { kind: "tab"; app: string; url: string; tabTitle: string };
+type RawTab = { kind: "tab"; app: string; url: string; tabTitle: string; active?: boolean };
 
 /** Programmes qui jouent du son (« Playing audio » dans les assertions d'énergie), en minuscules. */
 export function playingApps(assertions: string): Set<string> {
@@ -242,6 +244,29 @@ async function fallback(): Promise<MediaSession[]> {
   return fallbackSessions(raw, playingApps(assertions));
 }
 
+/** Titre que le navigateur donne à macOS quand la page ne décrit pas ce qu'elle joue (Chrome, en français ou en anglais). */
+const GENERIC_TITLE = /un site est en train de lire|lit du contenu multimédia|a site is playing|is playing media/i;
+
+/**
+ * Session d'un navigateur au titre générique : titre de l'onglet et nom du site à la place. D'abord un onglet d'un site
+ * connu ([siteName]) de ce navigateur, sinon l'onglet actif d'une de ses fenêtres (nom = domaine). Rien de lisible : inchangée.
+ */
+export function enrichBrowserSession(
+  session: MediaSession,
+  tabs: { app: string; url: string; tabTitle: string; active?: boolean }[],
+): MediaSession {
+  if (!GENERIC_TITLE.test(session.title)) return session;
+  const mine = tabs.filter((t) => t.app === session.name || session.name.startsWith(t.app));
+  for (const t of mine) {
+    const site = siteName(t.url);
+    const title = site && tabTitle(t.tabTitle, site);
+    if (site && title) return { ...session, name: site, title };
+  }
+  const active = mine.find((t) => t.active && t.tabTitle.trim());
+  const host = active && URL.parse(active.url)?.host.replace(/^www\.|^m\./, "");
+  return active && host ? { ...session, name: host, title: active.tabTitle.trim() } : session;
+}
+
 // --- Interface du Mac pour os.ts
 
 let pending: Promise<MediaSession[]> | undefined;
@@ -255,7 +280,12 @@ export function mediaSessions(): Promise<MediaSession[]> {
   pending ??= (async () => {
     const raw = await nowPlaying<RawNowPlaying>("get");
     const now = Date.now();
-    const fresh = raw && sessionOfNowPlaying(raw, now);
+    let fresh = raw && sessionOfNowPlaying(raw, now);
+    // Navigateur sans description de ce qu'il joue : on lit ses onglets pour donner le vrai titre et le site.
+    if (fresh && GENERIC_TITLE.test(fresh.title)) {
+      const tabs = (await readPlayersAndTabs()).filter((r): r is RawTab => r.kind === "tab");
+      fresh = enrichBrowserSession(fresh, tabs);
+    }
     if (fresh?.status === "playing") lastPlaying = { session: fresh, atMs: now };
     const session = heldSession(lastPlaying, fresh, now);
     const sessions = session ? [session] : await fallback();

@@ -2,12 +2,12 @@ package com.unowhy.companion.ui
 
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.graphics.Outline
-import android.text.TextUtils
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.util.AttributeSet
 import android.view.Gravity
-import android.view.View
-import android.view.ViewOutlineProvider
+import android.view.LayoutInflater
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -23,17 +23,20 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Lecture en cours de l'ordinateur, en haut à droite à côté de l'heure : vignette, titre, Lecture / Pause. Visible
- * seulement quand une session a un titre ; relue toutes les [POLL_MS] tant qu'elle est à l'écran et qu'un ordinateur
- * est appairé. Toucher le titre : [onOpen] (le profil Deck, où est la lecture en grand).
+ * Lecture en cours de l'ordinateur, en haut à droite à côté de l'heure, dans le style du widget Média : vignette,
+ * titre et provenance (Spotify, YouTube, nom du site), Précédent, Lecture / Pause, Suivant. Visible seulement quand une
+ * session a un titre ; relue toutes les [POLL_MS] tant qu'elle est à l'écran et qu'un ordinateur est appairé.
+ * Toucher le titre : [onOpen] (le profil Deck, où est la lecture en grand).
  */
 class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : LinearLayout(context, attrs) {
 
     var onOpen: () -> Unit = {}
 
-    private val thumb = ImageView(context)
-    private val title = TextView(context)
-    private val toggle = ImageButton(context)
+    private val thumb: ImageView
+    private val title: TextView
+    private val previous: ImageButton
+    private val play: ImageButton
+    private val next: ImageButton
     private var session: MediaSession? = null
     private var thumbKey: String? = null
     private var poll: Job? = null
@@ -42,30 +45,18 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         visibility = GONE
-        thumb.scaleType = ImageView.ScaleType.CENTER_CROP
-        thumb.setBackgroundColor(themeColor(context, R.attr.c_surface_raised))
-        thumb.outlineProvider = object : ViewOutlineProvider() {
-            override fun getOutline(view: View, outline: Outline) = outline.setRoundRect(0, 0, view.width, view.height, view.dp(4).toFloat())
-        }
+        LayoutInflater.from(context).inflate(R.layout.view_music_chip, this, true)
+        thumb = findViewById(R.id.chip_thumb)
         thumb.clipToOutline = true
-        thumb.importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
-        addView(thumb, LayoutParams(dp(20), dp(20)))
-        title.apply {
-            textSize = 13f
-            typeface = themeFont(context, R.attr.c_font_regular)
-            setTextColor(themeColor(context, R.attr.c_text_dim))
-            maxWidth = dp(220)
-            maxLines = 1
-            ellipsize = TextUtils.TruncateAt.END
-            setOnClickListener { onOpen() }
-        }
-        addView(title, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
-        toggle.apply {
-            background = null
-            setColorFilter(themeColor(context, R.attr.c_text))
-            setOnClickListener { playPause() }
-        }
-        addView(toggle, LayoutParams(dp(32), dp(32)).apply { marginStart = dp(2) })
+        title = findViewById(R.id.chip_title)
+        previous = findViewById(R.id.chip_previous)
+        play = findViewById(R.id.chip_play)
+        next = findViewById(R.id.chip_next)
+        title.setOnClickListener { onOpen() }
+        thumb.setOnClickListener { onOpen() }
+        previous.setOnClickListener { control("previous") }
+        play.setOnClickListener { control("play-pause") }
+        next.setOnClickListener { control("next") }
     }
 
     override fun onAttachedToWindow() {
@@ -89,11 +80,18 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         session = shown
         visibility = if (shown != null) VISIBLE else GONE
         shown ?: return
-        title.text = shown.title
+        title.text = SpannableStringBuilder(shown.title).apply {
+            source(shown)?.let {
+                val start = length
+                append("  ·  ").append(it)
+                setSpan(ForegroundColorSpan(themeColor(context, R.attr.c_text_faint)), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
         title.contentDescription = context.getString(R.string.music_chip_open, shown.title)
-        toggle.setImageResource(if (shown.playing) R.drawable.ic_pause else R.drawable.ic_play)
-        toggle.contentDescription = context.getString(if (shown.playing) R.string.music_chip_pause else R.string.music_chip_play)
-        toggle.visibility = if (shown.canPlayPause) VISIBLE else GONE
+        play.setImageResource(if (shown.playing) R.drawable.ic_pause else R.drawable.ic_play)
+        play.visibility = if (shown.canPlayPause) VISIBLE else GONE
+        previous.visibility = if (shown.canPrevious) VISIBLE else GONE
+        next.visibility = if (shown.canNext) VISIBLE else GONE
         if (shown.thumb != thumbKey) {
             thumbKey = shown.thumb
             val bytes = shown.thumb?.let { runCatching { BackendClient(context).system.mediaThumb(shown.app, it) }.getOrNull() }
@@ -101,10 +99,10 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         }
     }
 
-    private fun playPause() {
+    private fun control(action: String) {
         val current = session ?: return
         findViewTreeLifecycleOwner()?.lifecycleScope?.launch {
-            runCatching { BackendClient(context).system.mediaControl("play-pause", current.app) }
+            runCatching { BackendClient(context).system.mediaControl(action, current.app) }
             refresh()
         }
     }
@@ -117,5 +115,8 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
             val titled = sessions.filter { it.title.isNotBlank() }
             return titled.firstOrNull { it.current } ?: titled.firstOrNull { it.playing } ?: titled.firstOrNull()
         }
+
+        /** Provenance affichée après le titre : l'appli ou le site, sauf vide ou identique au titre. */
+        fun source(session: MediaSession): String? = session.name.trim().takeIf { it.isNotEmpty() && !it.equals(session.title.trim(), ignoreCase = true) }
     }
 }

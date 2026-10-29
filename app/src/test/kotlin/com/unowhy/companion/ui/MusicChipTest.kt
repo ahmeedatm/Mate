@@ -23,6 +23,13 @@ class MusicChipTest {
     }
 
     @Test
+    fun `la provenance est le nom de l'appli ou du site, sauf s'il redit le titre`() {
+        assertEquals("YouTube", MusicChip.source(session("chrome", "Lo-fi").copy(name = "YouTube")))
+        assertNull(MusicChip.source(session("spotify", "Spotify").copy(name = "Spotify")))
+        assertNull(MusicChip.source(session("x", "Titre").copy(name = " ")))
+    }
+
+    @Test
     fun `une session sans titre ne s'affiche pas`() {
         assertNull(MusicChip.pick(listOf(session("chrome", "", current = true, playing = true))))
         assertNull(MusicChip.pick(emptyList()))

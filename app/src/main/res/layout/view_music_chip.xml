@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lecture en cours en haut à droite (MusicChip) : vignette, titre et provenance, puis Précédent, Lecture / Pause,
+     Suivant, comme le widget Média (boutons ronds, Lecture plein), en plus petit. -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:parentTag="android.widget.LinearLayout">
+
+    <ImageView
+        android:id="@+id/chip_thumb"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:background="@drawable/thumb_bg"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop" />
+
+    <TextView
+        android:id="@+id/chip_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:ellipsize="end"
+        android:fontFamily="?attr/c_font_regular"
+        android:maxWidth="260dp"
+        android:maxLines="1"
+        android:textColor="?attr/c_text"
+        android:textSize="13sp" />
+
+    <ImageButton
+        android:id="@+id/chip_previous"
+        style="@style/IconButton"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginStart="12dp"
+        android:contentDescription="@string/media_previous"
+        android:padding="6dp"
+        android:src="@drawable/ic_skip_previous" />
+
+    <ImageButton
+        android:id="@+id/chip_play"
+        style="@style/IconButton.Primary"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="6dp"
+        android:contentDescription="@string/media_play_pause"
+        android:padding="7dp"
+        android:src="@drawable/ic_play" />
+
+    <ImageButton
+        android:id="@+id/chip_next"
+        style="@style/IconButton"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginStart="6dp"
+        android:contentDescription="@string/media_next"
+        android:padding="6dp"
+        android:src="@drawable/ic_skip" />
+</merge>
