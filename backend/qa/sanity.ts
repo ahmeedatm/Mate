@@ -456,6 +456,18 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const status = await call("GET", "/local/status");
         expectStatus(status, 200, "/local/status");
         expect(Array.isArray(status.json.addresses) && status.json.addresses.length > 0, "aucune adresse affichée");
+        expect("tabletInfo" in status.json, "état de la tablette absent de /local/status");
+        // Réglage vide : refusé avant d'atteindre une tablette peut-être réelle.
+        expectStatus(await call("PUT", "/local/tablet/settings", {}), 400, "PUT /local/tablet/settings vide");
+        expectStatus(await call("POST", "/local/tablet/update", { action: "rollback" }), 400, "POST /local/tablet/update inconnue");
+      },
+    },
+    {
+      name: "politique de confidentialité",
+      run: async () => {
+        const res = await call("GET", "/local/confidentialite", undefined, local ? false : true);
+        expectStatus(res, 200, "/local/confidentialite");
+        expect(String(res.json).startsWith("Companion Unowhy : politique de confidentialité"), "politique de confidentialité inattendue");
       },
     },
     {

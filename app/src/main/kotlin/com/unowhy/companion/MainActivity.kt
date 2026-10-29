@@ -122,7 +122,9 @@ class MainActivity : AppCompatActivity() {
     private var lastTouch = SystemClock.elapsedRealtime()
     /** Toucher qui a fermé le cadre : avalé jusqu'au lever du doigt, l'écran dessous ne le reçoit pas. */
     private var swallowTouch = false
-    private var battery: Tablet.Battery? = null
+    /** Dernier état de la batterie : cadre photo, et état de la tablette envoyé à l'ordinateur. */
+    var battery: Tablet.Battery? = null
+        private set
     val companionUpdate = CompanionUpdate(this)
     /** Micro refusé hors kiosque (en kiosque, il est accordé d'office) : la commande repart une fois accepté. */
     private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -482,6 +484,20 @@ class MainActivity : AppCompatActivity() {
 
     val documentPath: String?
         get() = documentPanel.currentPath
+
+    /**
+     * Réglages changés depuis la page de l'ordinateur (ordre `settings`). Nouveau thème : écran recréé un peu après,
+     * le temps de renvoyer le résultat ; s'il se perd, l'ordre revient et ne recrée plus rien (thème déjà en place).
+     */
+    fun onRemoteSettings(themeChanged: Boolean) {
+        if (themeChanged) {
+            window.decorView.postDelayed({ if (!isFinishing) recreate() }, 500)
+            return
+        }
+        settings()?.onRemoteSettings()
+        (supportFragmentManager.findFragmentByTag(Mode.FOCUS.tag) as? FocusFragment)?.onRemoteSettings()
+        followFocusDnd(FocusTimer.state)
+    }
 
     fun showMode(name: String) {
         // Nom inconnu (« tasks », ancien « chat ») : l'Accueil.

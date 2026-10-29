@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { bundledPackages, noticeOf, thirdPartyNotices } from "./licences.ts";
+import { WEB_FILES } from "../src/web-style.ts";
 
 /**
  * Installeurs du logiciel de l'ordinateur, sans Node à installer : `npm run package` (Mac ou Linux, dont la CI).
@@ -33,7 +34,14 @@ const FOLDER = "Compagnon Unowhy";
 const VERSION = /^v\d+\.\d+\.\d+$/.test(process.env.CI_COMMIT_TAG ?? "") ? process.env.CI_COMMIT_TAG!.slice(1) : "0.0.0";
 
 /** Fichiers de config livrés : pas deck.json ni tasks.json (données de l'ordinateur, créées sur place). */
-const CONFIG = ["accounts.json", "calls.json", "deck.example.json", "deck.example.windows.json", "tasks.example.json"];
+const CONFIG = [
+  "accounts.json",
+  "calls.json",
+  "confidentialite.txt",
+  "deck.example.json",
+  "deck.example.windows.json",
+  "tasks.example.json",
+];
 
 async function download(url: string): Promise<Buffer> {
   const res = await fetch(url);
@@ -142,6 +150,7 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
   });
 
   for (const f of CONFIG) copy(path.join(backend, "config", f), path.join(dest, "config", f));
+  for (const f of WEB_FILES) copy(path.join(backend, "assets", "web", f), path.join(dest, "assets", "web", f));
 
   if (platform === "windows") {
     // Essai : ni le lanceur (verrouillé tant que le compagnon tourne) ni node, déjà sur l'ordinateur.

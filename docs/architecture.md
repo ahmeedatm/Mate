@@ -137,7 +137,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | `config.ts` | variables d'environnement (`.env`) |
 | `pairing.ts` | identité, jeton, code d'appairage, découverte UDP |
 | `tls.ts` | certificat auto-signé du WiFi (`.data/tls.json`) et son empreinte |
-| `local-page.ts` | page `http://127.0.0.1:3000/` (adresse, code, agenda) |
+| `local-page.ts` | page `http://127.0.0.1:3000/` (adresse, code, réglages de la tablette connectée, agenda) |
 | `deck.ts`, `perso.ts`, `music.ts` | pages du deck, `runAction`, touches perso, musique |
 | `os.ts` → `mac/`, `win/` | pilotage du système ; `screens.ts` : types d'écrans et fenêtres |
 | `calendar.ts`, `accounts.ts`, `events.ts`, `meetings.ts`, `meeting-links.ts` | agenda et réunions |

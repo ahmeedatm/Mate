@@ -71,9 +71,11 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
   LOOPBACK.has(ip) &&
   LOCAL_HOST.test(host ?? "") &&
   ((method === "GET" &&
-    /^\/(camera(\/stream|\/status)?|local\/(status|licences)|oauth\/(microsoft|google)\/(start|callback))?(\?|$)/.test(url)) ||
-    (method === "PUT" && url === "/local/calendar") ||
-    (method === "POST" && (url === "/system/accessibility" || url === "/local/pair")) ||
+    /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite)|web\/outfit-[345]00\.ttf|oauth\/(microsoft|google)\/(start|callback))?(\?|$)/.test(
+      url,
+    )) ||
+    (method === "PUT" && (url === "/local/calendar" || url === "/local/tablet/settings")) ||
+    (method === "POST" && (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update")) ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
     (method === "POST" && (url === "/browser/extension" || url === "/browser/extension/commands")) ||
     // Hooks de Claude Code : pas de jeton d'appairage, un secret propre vérifié par la route (src/agents-sources.ts).
