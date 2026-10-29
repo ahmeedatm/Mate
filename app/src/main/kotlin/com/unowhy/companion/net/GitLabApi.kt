@@ -35,13 +35,15 @@ data class GitLabMr(
 /**
  * `mine` : MR dont l'utilisateur connecté est assigné ; `review` : MR qu'il doit relire. `connected` faux : l'ordinateur n'a
  * ni compte GitLab connecté ni jeton (réponse normale, pas une erreur) ; `expired` : le compte a été connecté mais GitLab
- * refuse de le renouveler.
+ * refuse de le renouveler. `canMerge` : l'ordinateur a un accès en écriture, la tablette peut fusionner ; sinon elle renvoie
+ * vers l'ordinateur (absent chez un ancien compagnon : vrai, comme avant).
  */
 data class GitLabMrs(
     val mine: List<GitLabMr>,
     val review: List<GitLabMr>,
     val connected: Boolean = true,
     val expired: Boolean = false,
+    val canMerge: Boolean = true,
 )
 
 /** MR GitLab lues et pilotées par le compagnon de l'ordinateur (jamais de jeton ni de compte GitLab sur la tablette). */
@@ -86,5 +88,5 @@ internal fun parseGitLabMrs(text: String): GitLabMrs {
             )
         }
     }
-    return GitLabMrs(list("mine"), list("review"), json.optBoolean("connected", true), json.optBoolean("expired"))
+    return GitLabMrs(list("mine"), list("review"), json.optBoolean("connected", true), json.optBoolean("expired"), json.optBoolean("canMerge", true))
 }

@@ -1,6 +1,6 @@
 # GitLab par connexion au compte (onglet GitLab du Deck)
 
-Sur la tablette, l'onglet **GitLab** (Deck) montre les MR de l'utilisateur et fusionne celles qui sont prêtes. Le compte GitLab
+Sur la tablette, l'onglet **GitLab** (Deck) montre les MR de l'utilisateur et fusionne celles qui sont prêtes (si l'accès le permet : voir « Portées »). Le compte GitLab
 se **connecte une fois dans le navigateur de l'ordinateur**, comme l'agenda ([agenda-comptes.md](agenda-comptes.md)) : plus de
 jeton à créer et à copier dans `.env`.
 
@@ -19,19 +19,40 @@ Parcours : onglet GitLab › carte **Connecter GitLab** › la page d'autorisati
 | | `http://localhost:3000/oauth/gitlab/callback` |
 | Confidentielle | **décochée** (appli de bureau : code d'autorisation + PKCE, pas de secret) |
 | Approuvée (*Trusted*) | décochée (l'utilisateur voit l'écran d'autorisation) |
-| Portée (*Scopes*) | **`api`** seulement (lecture des MR, fusion) |
+| Portée (*Scopes*) | **`read_api`** (liste et ouverture des MR) ; ajouter **`api`** seulement pour fusionner depuis la tablette |
 
 Un autre port que 3000 (`PORT` dans `.env` du compagnon) : ajouter les deux adresses avec ce port. GitLab compare l'adresse de retour
 caractère par caractère.
 
 Puis **Enregistrer** et copier l'**ID de l'application** (*Application ID*). Le **secret n'est pas utilisé** : ne pas le diffuser.
 
+## Portées
+
+| Portée | Ce qu'elle permet |
+|---|---|
+| `read_api` | lire les MR (liste, état, approbations) et les ouvrir sur l'ordinateur ; **pas** de fusion |
+| `api` | tout ce qui précède, plus fusionner depuis la tablette |
+
+L'appli de `gitlab.unowhy.dev` n'a que `read_api`, `openid`, `profile`, `email` (`api` demandée : « The requested scope is invalid, unknown, or malformed »). Le compagnon
+demande donc `read_api` : portée `gitlab.scope` de `backend/config/accounts.json` (défaut `read_api` si la clé manque). Si un admin
+ajoute `api` à l'application, passer `"scope": "api"` dans ce fichier puis **reconnecter** le compte (la portée se décide à la
+connexion).
+
+Le compagnon garde la portée **réellement accordée** (champ `scope` de la réponse du jeton, à la connexion et à chaque
+renouvellement) dans `.data/gitlab.json`, pas celle qu'il a demandée.
+
+Fusion : possible avec un accès en écriture seulement, dans cet ordre : le compte connecté s'il a reçu `api` ; sinon `GITLAB_TOKEN`
+du `.env` (supposé `api`) ; sinon impossible. La lecture reste faite avec le compte connecté quand il existe. Sans accès en
+écriture, `GET /gitlab/mrs` répond `canMerge: false`, la tablette montre « Fusionner sur l'ordi » (ouvre la MR sur l'ordinateur)
+à la place du bouton à appui maintenu, et `POST /gitlab/mrs/merge` répond 409 « La connexion GitLab est en lecture seule :
+fusionne sur l'ordinateur » sans appeler GitLab.
+
 ## Ce que fait Unowhy ensuite
 
 Coller l'ID (public) dans `backend/config/accounts.json` ; il est livré avec le logiciel :
 
 ```json
-"gitlab": { "clientId": "<ID de l'application>" }
+"gitlab": { "clientId": "<ID de l'application>", "scope": "read_api" }
 ```
 
 Le fichier est relu à chaque appel : pas de redémarrage. Pour un essai sans toucher au fichier : `GITLAB_CLIENT_ID` dans `.env`.
@@ -44,9 +65,9 @@ ID vide : pas de bouton de connexion, l'onglet n'apparaît que si `GITLAB_TOKEN`
 - **Jetons** : jeton d'accès (2 h) en mémoire ; jeton de renouvellement (tournant : chaque renouvellement donne un nouveau jeton et
   invalide l'ancien) dans `.data/gitlab.json` (droits 0600) de l'ordinateur. Rien ne va sur la tablette, ni dans une réponse, ni dans
   un journal. Renouvelé seul, un renouvellement à la fois.
-- **`GITLAB_TOKEN` du `.env`** reste en secours (jeton personnel, portée `api`). Le compte connecté prime. Compte à reconnecter et
-  `GITLAB_TOKEN` réglé : le jeton sert.
-- **Pas connecté** : `GET /gitlab/mrs` répond 200 `{ "connected": false, "expired": false, "mine": [], "review": [] }` (jamais 401,
+- **`GITLAB_TOKEN` du `.env`** reste en secours (jeton personnel, portée `api`). Le compte connecté prime pour lire ; pour
+  fusionner, il faut `api` (voir « Portées »). Compte à reconnecter et `GITLAB_TOKEN` réglé : le jeton sert.
+- **Pas connecté** : `GET /gitlab/mrs` répond 200 `{ "connected": false, "expired": false, "canMerge": false, "mine": [], "review": [] }` (jamais 401,
   qui voudrait dire « tablette à réappairer »). `expired: true` : GitLab a refusé le renouvellement (accès retiré dans GitLab,
   appli révoquée) : la tablette propose de reconnecter.
 - `/deck/features` : `gitlab` vrai si `GITLAB_TOKEN`, compte connecté ou ID d'appli réglé.
@@ -59,7 +80,8 @@ Si ça bloque :
 | Message | Cause | Solution |
 |---|---|---|
 | « The redirect URI included is not valid » sur la page GitLab | l'adresse de retour n'est pas dans l'application | ajouter exactement l'adresse affichée (port compris) |
-| « The requested scope is invalid » | l'application n'a pas la portée `api` | cocher `api` dans l'application |
+| « The requested scope is invalid » | `gitlab.scope` demande une portée que l'application n'a pas | mettre dans `gitlab.scope` une portée de l'application (`read_api`), ou ajouter la portée à l'application |
+| « Fusionner sur l'ordi » au lieu de « Fusionner » | compte connecté en `read_api` et pas de `GITLAB_TOKEN` | fusionner dans GitLab ; pour fusionner depuis la tablette : `api` sur l'application, `"scope": "api"`, reconnecter |
 | « Client authentication failed » au retour | application créée **confidentielle** | décocher *Confidentielle* |
 | carte GitLab absente de la page, onglet absent | ID vide et pas de `GITLAB_TOKEN` | renseigner `gitlab.clientId` |
 

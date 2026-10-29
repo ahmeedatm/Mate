@@ -11,8 +11,10 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.unowhy.companion.R
+import com.unowhy.companion.gitlab.MergeAction
 import com.unowhy.companion.gitlab.approvalsText
-import com.unowhy.companion.gitlab.canMerge
+import com.unowhy.companion.gitlab.mergeAction
+import com.unowhy.companion.gitlab.mergeEnabled
 import com.unowhy.companion.gitlab.mrKey
 import com.unowhy.companion.gitlab.shortProject
 import com.unowhy.companion.net.BackendClient
@@ -27,8 +29,10 @@ import kotlinx.coroutines.launch
 
 /**
  * Onglet GitLab du Deck : deux colonnes, « Mes MR » et « À relire », une carte par MR ouverte (pipeline, approbations,
- * état de fusion). Toucher une carte ouvre la MR sur l'ordinateur ; « Fusionner » (appui maintenu) n'est actif que si
- * GitLab dit la MR prête, et renvoie le commit affiché : GitLab refuse si la MR a bougé depuis. Relue toutes les 30 s
+ * état de fusion). Toucher une carte ouvre la MR sur l'ordinateur ; « Fusionner » (appui maintenu) n'est proposé que si
+ * GitLab dit la MR prête, et renvoie le commit affiché : GitLab refuse si la MR a bougé depuis. Quand la connexion de
+ * l'ordinateur est en lecture seule (`canMerge` faux), une MR prête a « Fusionner sur l'ordi » (simple toucher) à la place :
+ * il ouvre la MR sur l'ordinateur, comme le toucher de la carte. Relue toutes les 30 s
  * tant que la vue est affichée. Ordinateur sans compte GitLab connecté : une carte « Connecter GitLab » ouvre la connexion
  * dans le navigateur de l'ordinateur, la vue se remplit seule une fois reliée (relue toutes les 3 s en attendant).
  * Autonome : aucun accès au Deck, posable ailleurs.
@@ -56,6 +60,9 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     /** Fusions en cours (clé de carte). */
     private val busy = HashSet<String>()
+
+    /** L'ordinateur a un accès en écriture à GitLab (dernière lecture) : sinon la fusion se fait sur l'ordinateur. */
+    private var canMerge = true
 
     /** Dernier échec d'une action par carte, gardé jusqu'à la disparition de la MR ou la prochaine tentative. */
     private val messages = HashMap<String, String>()
@@ -204,6 +211,7 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     private fun render(mrs: GitLabMrs) {
         shown = mrs
+        canMerge = mrs.canMerge
         val keys = (mrs.mine + mrs.review).mapTo(HashSet()) { mrKey(it) }
         messages.keys.retainAll(keys)
         showHeaders(mrs.mine.size, mrs.review.size)
@@ -273,9 +281,20 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     /** Bouton seulement sur une MR fusionnable (l'état dit pourquoi les autres ne le sont pas), grisé pendant la fusion. */
     private fun bindMerge(box: LinearLayout, mr: GitLabMr, key: String) {
-        box.visibility = if (canMerge(mr, busy = false)) VISIBLE else GONE
-        if (box.visibility == GONE) return
-        val enabled = canMerge(mr, key in busy)
+        val action = mergeAction(mr, canMerge)
+        box.visibility = if (action == MergeAction.NONE) GONE else VISIBLE
+        if (action == MergeAction.NONE) return
+        if (action == MergeAction.OPEN_ON_COMPUTER) {
+            box.addView(
+                Button(context, null, 0, R.style.PrimaryButton).apply {
+                    setText(R.string.gitlab_merge_on_computer)
+                    setOnClickListener { open(mr) }
+                },
+                LayoutParams(LayoutParams.WRAP_CONTENT, dp(44)),
+            )
+            return
+        }
+        val enabled = mergeEnabled(action, key in busy)
         box.addView(
             HoldButton(context).apply {
                 setText(R.string.gitlab_merge)

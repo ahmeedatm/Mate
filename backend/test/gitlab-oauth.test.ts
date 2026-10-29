@@ -3,27 +3,39 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { after, before, describe, it } from "node:test";
+import { after, afterEach, before, describe, it } from "node:test";
 import { FAKE_CLIENT_ID, startFakeGitlab, type FakeGitlab } from "./fake-gitlab.ts";
 import { startServer, type TestServer } from "./server.ts";
 
 const PERSONAL = "glpat-jeton-personnel-de-test";
 
+// Fichier de config avec la portée `api` (appli OAuth qui l'autorise) ; test/accounts-vide.json n'a pas de portée : défaut read_api.
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "companion-gitlab-scope-"));
+const accountsWithScope = (scope: string) => {
+  const file = path.join(tmp, `accounts-${scope}.json`);
+  fs.writeFileSync(file, JSON.stringify({ gitlab: { clientId: "", scope } }));
+  return file;
+};
+const WRITE_ACCOUNTS = accountsWithScope("api");
+const MERGE_BODY = { project: "grp/proj", iid: 12, sha: "0123456789abcdef0123456789abcdef01234567" };
+
 let gitlab: FakeGitlab;
 const servers: TestServer[] = [];
-/** Compagnon neuf (dossier de données vide) relié au faux GitLab. */
+/** Compagnon neuf (dossier de données vide) relié au faux GitLab, qui demande la portée `api` sauf mention contraire. */
 const boot = async (env: Record<string, string> = { GITLAB_CLIENT_ID: FAKE_CLIENT_ID }) => {
-  const server = await startServer({ env: { GITLAB_URL: gitlab.url, ...env } });
+  const server = await startServer({ env: { GITLAB_URL: gitlab.url, ACCOUNTS_FILE: WRITE_ACCOUNTS, ...env } });
   servers.push(server);
   return server;
 };
 before(async () => {
   gitlab = await startFakeGitlab();
+  gitlab.allowedScopes.push("api");
   gitlab.personalToken = PERSONAL;
 });
 after(async () => {
   await Promise.all(servers.map((s) => s.stop()));
   await gitlab.stop();
+  fs.rmSync(tmp, { recursive: true, force: true });
 });
 
 const raw = (server: TestServer, route: string, init: RequestInit = {}) => fetch(server.url + route, { redirect: "manual", ...init });
@@ -32,8 +44,7 @@ const stored = (server: TestServer) => JSON.parse(fs.readFileSync(storedFile(ser
 const graphqlCalls = () => gitlab.seen.filter((s) => s.url === "/api/graphql");
 const tokenCalls = (grant: string) => gitlab.seen.filter((s) => s.url === "/oauth/token" && s.body.grant_type === grant);
 /** Une fusion vide le cache de 20 s du compagnon : la lecture suivante va jusqu'à GitLab. */
-const mergeToClearCache = (server: TestServer) =>
-  server.call("POST", "/gitlab/mrs/merge", { project: "grp/proj", iid: 12, sha: "0123456789abcdef0123456789abcdef01234567" });
+const mergeToClearCache = (server: TestServer) => server.call("POST", "/gitlab/mrs/merge", MERGE_BODY);
 
 /** Parcours du navigateur : start → page d'autorisation → Autoriser → retour sur le compagnon. Rend l'adresse finale de la page locale. */
 async function login(server: TestServer, { deny = false, fake = gitlab } = {}) {
@@ -55,7 +66,7 @@ describe("connexion GitLab : démarrage", () => {
     gitlab.seen.length = 0;
     const mrs = await server.call("GET", "/gitlab/mrs");
     assert.equal(mrs.status, 200);
-    assert.deepEqual(mrs.json, { connected: false, expired: false, mine: [], review: [] });
+    assert.deepEqual(mrs.json, { connected: false, expired: false, canMerge: false, mine: [], review: [] });
     assert.equal((await server.call("GET", "/deck/features")).json.gitlab, true);
     assert.equal(gitlab.seen.length, 0);
   });
@@ -64,7 +75,7 @@ describe("connexion GitLab : démarrage", () => {
     assert.equal((await server.call("GET", "/gitlab/mrs", undefined, false)).status, 401);
   });
 
-  it("start : redirige vers la page d'autorisation de GitLab, code + PKCE S256, portée api, sans secret", async () => {
+  it("start : redirige vers la page d'autorisation de GitLab, code + PKCE S256, portée de config/accounts.json, sans secret", async () => {
     const res = await raw(server, "/oauth/gitlab/start");
     assert.equal(res.status, 302);
     const url = new URL(res.headers.get("location")!);
@@ -201,7 +212,13 @@ describe("connexion GitLab : compte connecté", () => {
     assert.equal(del.status, 200);
     assert.deepEqual(stored(server), {});
     gitlab.seen.length = 0;
-    assert.deepEqual((await server.call("GET", "/gitlab/mrs")).json, { connected: false, expired: false, mine: [], review: [] });
+    assert.deepEqual((await server.call("GET", "/gitlab/mrs")).json, {
+      connected: false,
+      expired: false,
+      canMerge: false,
+      mine: [],
+      review: [],
+    });
     assert.equal((await server.call("POST", "/gitlab/mrs/merge", { project: "grp/proj", iid: 1, sha: "0".repeat(40) })).status, 503);
     assert.equal(gitlab.seen.length, 0);
     assert.equal((await server.call("GET", "/local/status", undefined, false)).json.gitlab.account, null);
@@ -253,7 +270,7 @@ describe("connexion GitLab : renouvellement", () => {
     const refused = await mergeToClearCache(server);
     assert.equal(refused.status, 502);
     const expired = await server.call("GET", "/gitlab/mrs");
-    assert.deepEqual(expired.json, { connected: false, expired: true, mine: [], review: [] });
+    assert.deepEqual(expired.json, { connected: false, expired: true, canMerge: false, mine: [], review: [] });
     const status = (await server.call("GET", "/local/status", undefined, false)).json.gitlab;
     assert.deepEqual(status.account, { username: "camille", expired: true });
     assert.equal((await server.call("GET", "/deck/features")).json.gitlab, true);
@@ -318,5 +335,123 @@ describe("connexion GitLab : jeton .env en secours", () => {
     assert.equal(status.json.gitlab.token, true);
     assert.ok(!JSON.stringify(status.json).includes(PERSONAL));
     assert.ok(!server.output().includes(PERSONAL));
+  });
+});
+
+describe("connexion GitLab : portées et droit de fusion", () => {
+  const readOnly = "La connexion GitLab est en lecture seule : fusionne sur l'ordinateur";
+  const merges = () => gitlab.seen.filter((s) => s.method === "PUT");
+  const authorizeScopes = () =>
+    gitlab.seen.filter((s) => s.url.startsWith("/oauth/authorize")).map((s) => new URL(s.url, gitlab.url).searchParams.get("scope"));
+  /** Compagnon dont l'appli OAuth n'a que read_api et dont la config ne dit rien (défaut), ou la portée donnée. */
+  const readOnlyServer = async (env: Record<string, string> = {}) =>
+    boot({ GITLAB_CLIENT_ID: FAKE_CLIENT_ID, ACCOUNTS_FILE: path.join(import.meta.dirname, "accounts-vide.json"), ...env });
+  afterEach(() => {
+    delete gitlab.grantScope;
+    gitlab.allowedScopes = ["read_api", "openid", "profile", "email", "api"];
+  });
+
+  it("sans `gitlab.scope` dans la config : la portée demandée est read_api, l'autorisation passe sur une appli qui n'a que ça", async () => {
+    gitlab.allowedScopes = ["read_api", "openid", "profile", "email"];
+    const server = await readOnlyServer();
+    gitlab.seen.length = 0;
+    assert.equal(await login(server), `${server.url}/?section=gitlab&gitlab=ok`);
+    assert.deepEqual(authorizeScopes(), ["read_api"]);
+    assert.equal(stored(server).scope, "read_api");
+  });
+
+  it("`gitlab.scope: api` mais appli sans api : GitLab refuse la portée, aucun compte", async () => {
+    gitlab.allowedScopes = ["read_api", "openid", "profile", "email"];
+    const server = await boot();
+    const start = await raw(server, "/oauth/gitlab/start");
+    const page = await fetch(start.headers.get("location")!);
+    assert.equal(page.status, 400);
+    assert.match(await page.text(), /requested scope is invalid/);
+    assert.equal(fs.existsSync(storedFile(server)), false);
+  });
+
+  it("compte en lecture seule : canMerge faux, la liste marche, la fusion répond 409 sans appeler GitLab", async () => {
+    const server = await readOnlyServer();
+    await login(server);
+    const list = await server.call("GET", "/gitlab/mrs");
+    assert.equal(list.json.connected, true);
+    assert.equal(list.json.canMerge, false);
+    gitlab.seen.length = 0;
+    const merge = await server.call("POST", "/gitlab/mrs/merge", MERGE_BODY);
+    assert.equal(merge.status, 409);
+    assert.equal(merge.json.error, readOnly);
+    assert.equal(gitlab.seen.length, 0);
+  });
+
+  it("compte avec api accordé : canMerge vrai, la fusion part avec le Bearer du compte", async () => {
+    const server = await boot();
+    await login(server);
+    assert.equal(stored(server).scope, "api");
+    assert.equal((await server.call("GET", "/gitlab/mrs")).json.canMerge, true);
+    gitlab.seen.length = 0;
+    assert.equal((await server.call("POST", "/gitlab/mrs/merge", MERGE_BODY)).status, 200);
+    const [merge] = merges();
+    assert.match(merge.authorization!, /^Bearer at-/);
+    assert.equal(merge.privateToken, undefined);
+  });
+
+  it("la portée réellement accordée compte, pas celle demandée", async () => {
+    gitlab.grantScope = "read_api";
+    const server = await boot();
+    await login(server);
+    assert.equal(stored(server).scope, "read_api");
+    assert.equal((await server.call("GET", "/gitlab/mrs")).json.canMerge, false);
+    gitlab.seen.length = 0;
+    assert.equal((await server.call("POST", "/gitlab/mrs/merge", MERGE_BODY)).status, 409);
+    assert.equal(gitlab.seen.length, 0);
+  });
+
+  it("la portée accordée est mise à jour à chaque renouvellement", async () => {
+    gitlab.expiresIn = 60;
+    try {
+      const server = await boot();
+      await login(server);
+      assert.equal(stored(server).scope, "api");
+      gitlab.grantScope = "read_api";
+      assert.equal((await server.call("GET", "/gitlab/mrs")).json.canMerge, false);
+      assert.equal(stored(server).scope, "read_api");
+    } finally {
+      gitlab.expiresIn = 7200;
+    }
+  });
+
+  it("compte en lecture seule + GITLAB_TOKEN : lecture avec le compte, fusion avec le jeton .env", async () => {
+    const server = await readOnlyServer({ GITLAB_TOKEN: PERSONAL });
+    await login(server);
+    gitlab.seen.length = 0;
+    const list = await server.call("GET", "/gitlab/mrs");
+    assert.equal(list.json.canMerge, true);
+    assert.match(graphqlCalls()[0].authorization!, /^Bearer at-/);
+    assert.equal((await server.call("POST", "/gitlab/mrs/merge", MERGE_BODY)).status, 200);
+    assert.equal(merges()[0].privateToken, PERSONAL);
+    assert.equal(merges()[0].authorization, undefined);
+  });
+
+  it("GITLAB_TOKEN seul : canMerge vrai (supposé api)", async () => {
+    const server = await readOnlyServer({ GITLAB_TOKEN: PERSONAL });
+    assert.equal((await server.call("GET", "/gitlab/mrs")).json.canMerge, true);
+  });
+
+  it("compte api déconnecté + rien d'autre : canMerge faux, fusion 503", async () => {
+    const server = await boot();
+    await login(server);
+    await raw(server, "/local/accounts/gitlab", { method: "DELETE" });
+    assert.equal((await server.call("GET", "/gitlab/mrs")).json.canMerge, false);
+    assert.equal((await server.call("POST", "/gitlab/mrs/merge", MERGE_BODY)).status, 503);
+  });
+
+  it("aucun jeton ni portée ne sort dans les réponses", async () => {
+    const server = await boot();
+    await login(server);
+    const answers = [await server.call("GET", "/gitlab/mrs"), await server.call("GET", "/local/status", undefined, false)];
+    for (const token of gitlab.issued) {
+      for (const a of answers) assert.ok(!JSON.stringify(a.json).includes(token));
+      assert.ok(!server.output().includes(token));
+    }
   });
 });

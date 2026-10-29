@@ -129,7 +129,7 @@ describe("GET /gitlab/mrs", () => {
   it("sans compte ni GITLAB_TOKEN : 200 « pas connecté » (la tablette le distingue), GitLab n'est pas appelé", async () => {
     const { status, json } = await noToken.call("GET", "/gitlab/mrs");
     assert.equal(status, 200);
-    assert.deepEqual(json, { connected: false, expired: false, mine: [], review: [] });
+    assert.deepEqual(json, { connected: false, expired: false, canMerge: false, mine: [], review: [] });
     assert.equal(seen.length, 0);
   });
 });

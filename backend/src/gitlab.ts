@@ -1,10 +1,18 @@
-import { forgetGitlabAccessToken, gitlabAccessToken, gitlabAccount, gitlabBaseUrl, gitlabClientId } from "./gitlab-auth.ts";
+import {
+  forgetGitlabAccessToken,
+  gitlabAccessToken,
+  gitlabAccount,
+  gitlabAccountCanWrite,
+  gitlabBaseUrl,
+  gitlabClientId,
+} from "./gitlab-auth.ts";
 import { logFailure } from "./log.ts";
 
 /**
  * MR GitLab de l'utilisateur connecté : les siennes et celles à relire, avec pipeline, approbations et état de fusion ;
  * fusion d'une MR prête. Optionnel. Accès : le compte connecté par OAuth (src/gitlab-auth.ts, prioritaire), sinon
- * GITLAB_TOKEN dans .env (jeton personnel, secours) ; portée `api`, nécessaire à la fusion. GITLAB_URL : défaut
+ * GITLAB_TOKEN dans .env (jeton personnel, secours). Lire suffit avec `read_api` ; fusionner demande `api` : le compte
+ * connecté s'il l'a reçue, sinon GITLAB_TOKEN (supposé `api`), sinon la fusion est refusée. GITLAB_URL : défaut
  * https://gitlab.unowhy.dev. Aucun jeton ne quitte l'ordinateur : ni réponse, ni message d'erreur, ni journal.
  * Config lue à chaque appel (les tests posent l'environnement).
  */
@@ -138,8 +146,15 @@ const NOT_CONNECTED = new GitLabError(503, "GitLab n'est pas connecté sur l'ord
 const UNREACHABLE = new GitLabError(502, "GitLab ne répond pas");
 const TOKEN_REFUSED = new GitLabError(502, "GitLab refuse l'accès de l'ordinateur : reconnecte-le depuis la page du compagnon");
 
-/** En-tête d'accès : le compte connecté prime, sinon GITLAB_TOKEN ; `undefined` si aucun des deux. */
-async function authHeader(): Promise<Record<string, string> | undefined> {
+const READ_ONLY = new GitLabError(409, "La connexion GitLab est en lecture seule : fusionne sur l'ordinateur");
+
+type Auth = Record<string, string>;
+
+/**
+ * En-têtes d'accès. `read` : le compte connecté prime, sinon GITLAB_TOKEN. `write` : le compte s'il a reçu la portée `api`,
+ * sinon GITLAB_TOKEN. `undefined` : pas d'accès de ce genre.
+ */
+async function authHeaders(): Promise<{ read?: Auth; write?: Auth }> {
   let bearer: string | undefined;
   try {
     bearer = await gitlabAccessToken();
@@ -147,12 +162,14 @@ async function authHeader(): Promise<Record<string, string> | undefined> {
     logFailure("Renouvellement du jeton GitLab", e);
     throw UNREACHABLE;
   }
-  if (bearer) return { authorization: `Bearer ${bearer}` };
-  return envToken() ? { "PRIVATE-TOKEN": envToken() } : undefined;
+  const account = bearer ? { authorization: `Bearer ${bearer}` } : undefined;
+  const personal = envToken() ? { "PRIVATE-TOKEN": envToken() } : undefined;
+  // Portée lue après le jeton : un renouvellement vient de la mettre à jour.
+  return { read: account ?? personal, write: account && (await gitlabAccountCanWrite()) ? account : personal };
 }
 
 /** Appel GitLab : tout échec réseau ou délai devient « ne répond pas ». */
-async function call(path: string, method: "POST" | "PUT", body: object, auth: Record<string, string>): Promise<Response> {
+async function call(path: string, method: "POST" | "PUT", body: object, auth: Auth): Promise<Response> {
   try {
     return await fetch(gitlabBaseUrl() + path, {
       method,
@@ -165,7 +182,7 @@ async function call(path: string, method: "POST" | "PUT", body: object, auth: Re
   }
 }
 
-async function readMrs(auth: Record<string, string>): Promise<{ mine: Mr[]; review: Mr[] }> {
+async function readMrs(auth: Auth): Promise<{ mine: Mr[]; review: Mr[] }> {
   const res = await call("/api/graphql", "POST", { query: QUERY }, auth);
   if (res.status === 401 || res.status === 403) {
     // Jeton d'accès révoqué : le prochain appel en renouvelle un (ou passe le compte à « à reconnecter »).
@@ -197,17 +214,21 @@ export const clearGitlabCache = () => {
 };
 
 export type MrLists = { mine: Mr[]; review: Mr[] };
-/** `connected: false` : ni compte connecté ni jeton .env ; `expired` : le compte a été connecté mais GitLab refuse de le renouveler. */
-export type MrsAnswer = ({ connected: true } & MrLists) | { connected: false; expired: boolean; mine: []; review: [] };
+/**
+ * `connected: false` : ni compte connecté ni jeton .env ; `expired` : le compte a été connecté mais GitLab refuse de le renouveler.
+ * `canMerge` : un accès en écriture existe (compte avec `api`, ou GITLAB_TOKEN) ; sinon la tablette renvoie vers l'ordinateur.
+ */
+export type MrsAnswer =
+  ({ connected: true; canMerge: boolean } & MrLists) | { connected: false; expired: boolean; canMerge: false; mine: []; review: [] };
 
 /** Mes MR et celles à relire. Résultat gardé 20 s, une seule lecture à la fois ; une erreur n'est pas gardée. Pas connecté : réponse normale, GitLab n'est pas appelé. */
 export async function listMrs(): Promise<MrsAnswer> {
-  const auth = await authHeader();
-  if (!auth) return { connected: false, expired: !!(await gitlabAccount())?.expired, mine: [], review: [] };
-  return { connected: true, ...(await read(auth)) };
+  const { read: auth, write } = await authHeaders();
+  if (!auth) return { connected: false, expired: !!(await gitlabAccount())?.expired, canMerge: false, mine: [], review: [] };
+  return { connected: true, canMerge: !!write, ...(await read(auth)) };
 }
 
-function read(auth: Record<string, string>): Promise<MrLists> {
+function read(auth: Auth): Promise<MrLists> {
   if (cache && Date.now() - cache.at < CACHE_MS) return Promise.resolve(cache.value);
   if (inflight) return inflight;
   // Une fusion vide `inflight` : la lecture déjà partie ne remplit plus le cache (elle date d'avant la fusion).
@@ -235,8 +256,10 @@ const MERGE_ERRORS: Record<number, GitLabError> = {
 
 /** Fusionne la MR à condition que sa tête soit encore `sha` (GitLab refuse en 409 sinon). */
 export async function mergeMr(project: string, iid: number, sha: string): Promise<void> {
-  const auth = await authHeader();
-  if (!auth) throw NOT_CONNECTED;
+  // Compte en lecture seule et pas de jeton .env : refus tout de suite, sans toucher à GitLab (pas même un renouvellement).
+  if (!envToken() && (await gitlabAccount()) && !(await gitlabAccountCanWrite())) throw READ_ONLY;
+  const { read: connected, write: auth } = await authHeaders();
+  if (!auth) throw connected ? READ_ONLY : NOT_CONNECTED;
   const res = await call(`/api/v4/projects/${encodeURIComponent(project)}/merge_requests/${iid}/merge`, "PUT", { sha }, auth);
   // Fusionnée ou refusée (elle a bougé, n'est plus fusionnable…) : la liste suivante relit GitLab.
   clearGitlabCache();

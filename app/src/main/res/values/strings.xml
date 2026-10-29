@@ -147,6 +147,7 @@
     <string name="gitlab_reconnect_text">La connexion à GitLab n\'est plus valable. Reconnecte-la dans le navigateur de l\'ordinateur.</string>
     <string name="gitlab_connect_waiting">Connexion ouverte sur l\'ordinateur : autorise l\'accès dans le navigateur. Les MR s\'affichent ici ensuite.</string>
     <string name="gitlab_merge">Fusionner</string>
+    <string name="gitlab_merge_on_computer">Fusionner sur l\'ordi</string>
     <string name="gitlab_merge_hint">Maintenir pour fusionner</string>
     <string name="deck_pad_tab">Pavé</string>
     <string name="pad_hint">Un doigt pour bouger, deux pour défiler · pince pour zoomer · 3 doigts : fenêtres · touche pour cliquer</string>

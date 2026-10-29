@@ -4,8 +4,9 @@ import type { AddressInfo } from "node:net";
 
 /**
  * Faux GitLab pour les tests et l'émulateur : page d'autorisation (OAuth, code + PKCE, appli non confidentielle),
- * `/oauth/token` (code et renouvellement, jeton de renouvellement tournant), `/api/v4/user`, `/api/graphql` et la
- * fusion. Un jeton d'accès (Bearer) ou le jeton personnel `personalToken` (PRIVATE-TOKEN) ouvre l'API ; le reste : 401.
+ * `/oauth/token` (code et renouvellement, jeton de renouvellement tournant, portée accordée dans `scope`), `/api/v4/user`,
+ * `/api/graphql` et la fusion. Comme le vrai, la page d'autorisation refuse une portée que l'appli n'a pas (`allowedScopes`).
+ * Un jeton d'accès (Bearer) ou le jeton personnel `personalToken` (PRIVATE-TOKEN) ouvre l'API ; le reste : 401.
  */
 
 export const FAKE_CLIENT_ID = "app-id-de-test";
@@ -39,6 +40,10 @@ export type FakeGitlab = {
   expiresIn: number;
   /** Jeton personnel accepté en PRIVATE-TOKEN (secours .env). */
   personalToken: string;
+  /** Portées de l'appli OAuth : l'autorisation en demandant une autre est refusée (réglage de l'admin GitLab). */
+  allowedScopes: string[];
+  /** Portée annoncée dans la réponse du jeton à la place de celle demandée (GitLab peut en accorder moins). */
+  grantScope?: string;
   /** Code HTTP de la fusion (200 : fusionnée). */
   mergeStatus: number;
   /** Jetons d'accès et de renouvellement tous révoqués : l'API répond 401, le renouvellement `invalid_grant`. */
@@ -53,15 +58,16 @@ const sha256url = (s: string) => createHash("sha256").update(s).digest("base64ur
 
 export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
   let counter = 0;
-  const codes = new Map<string, { challenge: string; redirectUri: string }>();
+  const codes = new Map<string, { challenge: string; redirectUri: string; scope: string }>();
   const access = new Set<string>();
-  const refresh = new Set<string>();
+  const refresh = new Map<string, string>();
   const fake: FakeGitlab = {
     url: "",
     seen: [],
     issued: [],
     expiresIn: 7200,
     personalToken: "",
+    allowedScopes: ["read_api", "openid", "profile", "email"],
     mergeStatus: 200,
     revokeAll: () => {
       access.clear();
@@ -82,15 +88,21 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
     stop: () => new Promise((r) => server.close(() => r())),
   };
 
-  const issue = () => {
+  const issue = (scope: string) => {
     const token = {
       access_token: `at-${counter}-${randomBytes(8).toString("hex")}`,
       refresh_token: `rt-${counter++}-${randomBytes(8).toString("hex")}`,
     };
     access.add(token.access_token);
-    refresh.add(token.refresh_token);
+    refresh.set(token.refresh_token, scope);
     fake.issued.push(token.access_token, token.refresh_token);
-    return { ...token, token_type: "bearer", expires_in: fake.expiresIn, created_at: Math.floor(Date.now() / 1000) };
+    return {
+      ...token,
+      token_type: "bearer",
+      scope: fake.grantScope ?? scope,
+      expires_in: fake.expiresIn,
+      created_at: Math.floor(Date.now() / 1000),
+    };
   };
   const authorized = (req: http.IncomingMessage) => {
     const bearer = /^Bearer (.+)$/.exec(String(req.headers.authorization ?? ""))?.[1];
@@ -125,19 +137,24 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
           q.get("response_type") !== "code" ||
           !redirectUri ||
           !q.get("code_challenge") ||
-          q.get("code_challenge_method") !== "S256" ||
-          q.get("scope") !== "api"
+          q.get("code_challenge_method") !== "S256"
         ) {
           res.statusCode = 400;
           return res.end("Demande d'autorisation invalide");
         }
+        const scope = q.get("scope") ?? "";
+        const asked = scope.split(" ").filter(Boolean);
+        if (asked.length === 0 || asked.some((s) => !fake.allowedScopes.includes(s))) {
+          res.statusCode = 400;
+          return res.end("The requested scope is invalid, unknown, or malformed.");
+        }
         const code = `code-${counter++}-${randomBytes(8).toString("hex")}`;
-        codes.set(code, { challenge: q.get("code_challenge")!, redirectUri });
+        codes.set(code, { challenge: q.get("code_challenge")!, redirectUri, scope });
         const back = (extra: Record<string, string>) => `${redirectUri}?${new URLSearchParams({ ...extra, state: q.get("state") ?? "" })}`;
         const link = (href: string, text: string) => `<a href="${`/oauth/decision?to=${encodeURIComponent(href)}`}">${text}</a>`;
         res.setHeader("content-type", "text/html; charset=utf-8");
         return res.end(
-          `<!doctype html><title>Faux GitLab</title><h1>Autoriser Unowhy Companion ?</h1><p>Accès à l'API de ton compte.</p>` +
+          `<!doctype html><title>Faux GitLab</title><h1>Autoriser Unowhy Companion ?</h1><p>Accès à ton compte (${scope}).</p>` +
             `${link(back({ code }), "Autoriser")} ${link(back({ error: "access_denied" }), "Refuser")}`,
         );
       }
@@ -156,14 +173,16 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
           if (!entry || entry.redirectUri !== p.get("redirect_uri") || sha256url(verifier) !== entry.challenge) {
             return json(400, { error: "invalid_grant", error_description: "Code ou vérificateur PKCE invalide" });
           }
-          return json(200, issue());
+          return json(200, issue(entry.scope));
         }
         if (p.get("grant_type") === "refresh_token") {
           const old = p.get("refresh_token") ?? "";
-          if (!refresh.delete(old)) return json(400, { error: "invalid_grant", error_description: "Jeton de renouvellement invalide" });
+          const scope = refresh.get(old);
+          if (scope === undefined) return json(400, { error: "invalid_grant", error_description: "Jeton de renouvellement invalide" });
+          refresh.delete(old);
           // Tournant : le renouvellement invalide aussi les jetons d'accès émis avant.
           access.clear();
-          return json(200, issue());
+          return json(200, issue(scope));
         }
         return json(400, { error: "unsupported_grant_type" });
       }

@@ -26,6 +26,23 @@ class GitLabLogicTest {
     }
 
     @Test
+    fun `bouton de fusion, retenu avec acces en ecriture, vers l'ordi en lecture seule, rien si pas prete`() {
+        assertEquals(MergeAction.HOLD, mergeAction(ready, canMerge = true))
+        assertEquals(MergeAction.OPEN_ON_COMPUTER, mergeAction(ready, canMerge = false))
+        assertEquals(MergeAction.NONE, mergeAction(ready.copy(mergeable = false), canMerge = true))
+        assertEquals(MergeAction.NONE, mergeAction(ready.copy(mergeable = false), canMerge = false))
+        assertEquals(MergeAction.NONE, mergeAction(ready.copy(draft = true), canMerge = false))
+        assertEquals(MergeAction.NONE, mergeAction(ready.copy(sha = ""), canMerge = false))
+    }
+
+    @Test
+    fun `une fusion en cours grise le bouton retenu, le bouton ordi reste actif`() {
+        assertFalse(mergeEnabled(MergeAction.HOLD, busy = true))
+        assertTrue(mergeEnabled(MergeAction.HOLD, busy = false))
+        assertTrue(mergeEnabled(MergeAction.OPEN_ON_COMPUTER, busy = false))
+    }
+
+    @Test
     fun `approbations`() {
         assertEquals("1/2", approvalsText(1, 2))
         assertEquals("0/1", approvalsText(0, 1))

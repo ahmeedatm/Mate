@@ -164,7 +164,7 @@ describe("gitlab : lecture des MR", () => {
 
   it("listes vides", async () => {
     fakeFetch(() => json(graphql([], [])));
-    assert.deepEqual(await listMrs(), { connected: true, mine: [], review: [] });
+    assert.deepEqual(await listMrs(), { connected: true, canMerge: true, mine: [], review: [] });
   });
 });
 
@@ -424,7 +424,7 @@ describe("gitlab : jeton absent", () => {
       else process.env.GITLAB_TOKEN = value;
       fakeFetch(() => json({}));
       assert.equal(await gitlabAvailable(), false);
-      assert.deepEqual(await listMrs(), { connected: false, expired: false, mine: [], review: [] });
+      assert.deepEqual(await listMrs(), { connected: false, expired: false, canMerge: false, mine: [], review: [] });
       await rejectsWith(mergeMr("a/b", 1, SHA), 503, "GitLab n'est pas connecté sur l'ordinateur");
       assert.equal(calls.length, 0);
     });

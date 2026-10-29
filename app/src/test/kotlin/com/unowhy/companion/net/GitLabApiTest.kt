@@ -63,6 +63,14 @@ class GitLabApiTest {
     }
 
     @Test
+    fun `canMerge lu, absent vaut vrai (ancien compagnon)`() {
+        assertTrue(parseGitLabMrs(full).canMerge)
+        assertTrue(parseGitLabMrs("""{"connected":true,"canMerge":true,"mine":[],"review":[]}""").canMerge)
+        assertFalse(parseGitLabMrs("""{"connected":true,"canMerge":false,"mine":[],"review":[]}""").canMerge)
+        assertFalse(parseGitLabMrs("""{"connected":false,"expired":false,"canMerge":false,"mine":[],"review":[]}""").canMerge)
+    }
+
+    @Test
     fun `chaque pipeline a sa cle, une cle inconnue ou absente vaut none`() {
         for (p in Pipeline.entries) assertEquals(p, Pipeline.of(p.key))
         assertEquals(Pipeline.NONE, Pipeline.of(null))

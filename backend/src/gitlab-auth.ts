@@ -13,25 +13,30 @@ import { readJson, updateJson } from "./store.ts";
  */
 
 const DEFAULT_URL = "https://gitlab.unowhy.dev";
-const SCOPE = "api";
+const DEFAULT_SCOPE = "read_api";
 const TIMEOUT_MS = 15_000;
 
 /** Lue à chaque appel (les tests posent l'environnement). */
 export const gitlabBaseUrl = () => (process.env.GITLAB_URL?.trim() || DEFAULT_URL).replace(/\/+$/, "");
 
+const gitlabConfig = async () =>
+  (await readJson<{ gitlab?: { clientId?: string; scope?: string } }>(accountsFile(), () => ({}), { quarantine: false })).gitlab ?? {};
+
 /** Identifiant public de l'appli : .env d'abord (essai), sinon config/accounts.json, relu à chaque appel. */
 export async function gitlabClientId(): Promise<string | undefined> {
   const fromEnv = process.env.GITLAB_CLIENT_ID?.trim();
   if (fromEnv) return fromEnv;
-  const file = await readJson<{ gitlab?: { clientId?: string } }>(accountsFile(), () => ({}), {
-    quarantine: false,
-  });
-  return file.gitlab?.clientId?.trim() || undefined;
+  return (await gitlabConfig()).clientId?.trim() || undefined;
+}
+
+/** Portée demandée à la connexion : `gitlab.scope` de config/accounts.json, sinon read_api (lecture : liste et ouverture des MR). */
+export async function gitlabScope(): Promise<string> {
+  return (await gitlabConfig()).scope?.trim() || DEFAULT_SCOPE;
 }
 
 // --- Compte connecté (.data/gitlab.json)
 
-type Stored = { refreshToken?: string; redirectUri?: string; username?: string; expired?: boolean };
+type Stored = { refreshToken?: string; redirectUri?: string; username?: string; expired?: boolean; scope?: string };
 const storeFile = path.join(config.dataDir, "gitlab.json");
 const load = () => readJson<Stored>(storeFile, () => ({}));
 /** Relit le fichier, applique `change`, réécrit : un renouvellement de jeton ne perd pas un autre changement. */
@@ -43,6 +48,11 @@ export async function gitlabAccount(): Promise<{ username: string; expired: bool
   return stored.refreshToken ? { username: stored.username ?? "", expired: !!stored.expired } : undefined;
 }
 
+/** Le compte connecté a reçu la portée `api` (celle qui permet d'écrire, donc de fusionner). Portée inconnue : non. */
+export async function gitlabAccountCanWrite(): Promise<boolean> {
+  return ((await load()).scope ?? "").split(/\s+/).includes("api");
+}
+
 export async function disconnectGitlab() {
   access = undefined;
   await edit((stored) => {
@@ -52,7 +62,7 @@ export async function disconnectGitlab() {
 
 // --- Connexion
 
-const pending = new Map<string, { verifier: string; redirectUri: string; expires: number }>();
+const pending = new Map<string, { verifier: string; redirectUri: string; scope: string; expires: number }>();
 const base64url = (b: Buffer) => b.toString("base64url");
 
 /** Adresse de la page d'autorisation de GitLab ; le retour arrive sur `redirectUri` avec `state`. */
@@ -63,12 +73,13 @@ export async function gitlabLoginUrl(redirectUri: string): Promise<string> {
   for (const [k, v] of pending) if (v.expires < now) pending.delete(k);
   const state = base64url(randomBytes(24));
   const verifier = base64url(randomBytes(48));
-  pending.set(state, { verifier, redirectUri, expires: now + 10 * 60_000 });
+  const scope = await gitlabScope();
+  pending.set(state, { verifier, redirectUri, scope, expires: now + 10 * 60_000 });
   const params = new URLSearchParams({
     client_id: clientId,
     response_type: "code",
     redirect_uri: redirectUri,
-    scope: SCOPE,
+    scope,
     state,
     code_challenge: base64url(createHash("sha256").update(verifier).digest()),
     code_challenge_method: "S256",
@@ -93,13 +104,18 @@ export async function finishGitlabLogin(state: string, code: string): Promise<{ 
   const username = await userName(tokens.access_token);
   await edit((stored) => {
     for (const key of Object.keys(stored)) delete stored[key as keyof Stored];
-    Object.assign(stored, { refreshToken: tokens.refresh_token, redirectUri: login.redirectUri, username });
+    Object.assign(stored, {
+      refreshToken: tokens.refresh_token,
+      redirectUri: login.redirectUri,
+      username,
+      scope: tokens.scope ?? login.scope,
+    });
   });
   access = { token: tokens.access_token, expires: expiry(tokens) };
   return { username };
 }
 
-type TokenResponse = { access_token: string; refresh_token?: string; expires_in?: number };
+type TokenResponse = { access_token: string; refresh_token?: string; expires_in?: number; scope?: string };
 const expiry = (t: TokenResponse) => Date.now() + ((t.expires_in ?? 7200) - 60) * 1000;
 
 async function tokenRequest(clientId: string, params: Record<string, string>): Promise<TokenResponse> {
@@ -172,6 +188,7 @@ async function renew(): Promise<string | undefined> {
   const kept = await edit((s) => {
     if (s.refreshToken !== stored.refreshToken) return false;
     if (tokens.refresh_token) s.refreshToken = tokens.refresh_token;
+    if (tokens.scope) s.scope = tokens.scope;
     return true;
   });
   if (!kept) return undefined;
