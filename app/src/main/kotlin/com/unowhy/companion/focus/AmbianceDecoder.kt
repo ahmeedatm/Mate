@@ -14,7 +14,8 @@ import java.nio.ByteOrder
  * Son d'ambiance (Opus en WebM) décodé en mono sur son propre fil, à la vitesse du décodeur (MediaCodec en mode
  * asynchrone : il prévient quand un tampon est prêt, aucune attente fixe) ; 48 kHz ramenés à 24 (moitié moins de
  * mémoire, assez pour une ambiance). La lecture part dès la première demi-seconde et lit [samples] jusqu'à [size]
- * pendant que le reste arrive ; [done] : fichier entier, [samples] se boucle. Décodeur rendu à la fin ou par [release].
+ * pendant que le reste arrive ; [done] : fichier entier, [samples] se boucle. Décodeur rendu à la fin ou par [release],
+ * toujours sur son propre fil : rendu d'ailleurs pendant qu'il livre un tampon, il fait tomber l'appli.
  */
 class AmbianceDecoder(context: Context, @RawRes raw: Int) {
 
@@ -45,6 +46,9 @@ class AmbianceDecoder(context: Context, @RawRes raw: Int) {
     @Volatile var failed = false
         private set
 
+    /** Décodeur rendu : les rappels encore en file ne le touchent plus (fil du décodeur seulement). */
+    private var released = false
+
     init {
         context.resources.openRawResourceFd(raw).use { extractor.setDataSource(it.fileDescriptor, it.startOffset, it.length) }
         val format = extractor.getTrackFormat(0)
@@ -62,14 +66,15 @@ class AmbianceDecoder(context: Context, @RawRes raw: Int) {
             codec.configure(format, null, null, 0)
             codec.start()
         } catch (e: Exception) {
-            release()
+            failed = true
+            free()
             throw e
         }
     }
 
     private val callback get() = object : MediaCodec.Callback() {
-        override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {
-            if (inputDone || failed) return
+        override fun onInputBufferAvailable(codec: MediaCodec, index: Int) = guard {
+            if (inputDone) return@guard
             val read = extractor.readSampleData(codec.getInputBuffer(index)!!, 0)
             if (read < 0) {
                 codec.queueInputBuffer(index, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
@@ -80,15 +85,14 @@ class AmbianceDecoder(context: Context, @RawRes raw: Int) {
             }
         }
 
-        override fun onOutputBufferAvailable(codec: MediaCodec, index: Int, info: MediaCodec.BufferInfo) {
-            if (failed) return
+        override fun onOutputBufferAvailable(codec: MediaCodec, index: Int, info: MediaCodec.BufferInfo) = guard {
             append(codec, index, info)
             codec.releaseOutputBuffer(index, false)
             if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
                 samples = samples.copyOf(size)
                 done = true
                 // Pas depuis un rappel du décodeur lui-même.
-                handler.post { release() }
+                handler.post { free() }
             }
         }
 
@@ -99,7 +103,19 @@ class AmbianceDecoder(context: Context, @RawRes raw: Int) {
         override fun onError(codec: MediaCodec, e: MediaCodec.CodecException) {
             Log.w("NoisePlayer", "décodage interrompu", e)
             failed = true
-            handler.post { release() }
+            handler.post { free() }
+        }
+
+        /** Rappel ignoré une fois le décodeur rendu ; une erreur arrête le décodage sans faire tomber l'appli. */
+        private inline fun guard(block: () -> Unit) {
+            if (released || failed) return
+            try {
+                block()
+            } catch (e: Exception) {
+                Log.w("NoisePlayer", "décodage interrompu", e)
+                failed = true
+                handler.post { free() }
+            }
         }
     }
 
@@ -132,9 +148,15 @@ class AmbianceDecoder(context: Context, @RawRes raw: Int) {
         size = written
     }
 
-    /** Décodeur et fil rendus ; les échantillons déjà là restent lisibles. */
+    /** Décodage arrêté (autre ambiance, pause) : décodeur et fil rendus sur ce fil ; les échantillons déjà là restent lisibles. */
     fun release() {
         failed = failed || !done
+        handler.post { free() }
+    }
+
+    private fun free() {
+        if (released) return
+        released = true
         runCatching { codec.release() }
         runCatching { extractor.release() }
         thread.quitSafely()

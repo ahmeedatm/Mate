@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Sons d'ambiance de Focus : app/src/main/res/raw/ambiance_*.webm, construits depuis des enregistrements CC0
-// (OpenGameArt, Wikimedia Commons ; cités dans assets/licences.txt). À relancer seulement pour changer un son :
-// node scripts/ambiances.mjs (demande ffmpeg : brew install ffmpeg).
+// (Freesound, OpenGameArt, Wikimedia Commons ; cités dans assets/licences.txt). À relancer seulement pour changer un son :
+// node scripts/ambiances.mjs [nom…] (demande ffmpeg : brew install ffmpeg).
 //
-// Chaque son : un extrait, mono 22 kHz, compressé en douceur (un coup de tonnerre ne fait pas sursauter), ramené au
-// même volume bas (LOUDNESS, en deux passes) puis bouclé sans couture : les FADE dernières secondes passent en fondu
+// Chaque son : un extrait, mono 22 kHz, compressé en douceur (un coup de tonnerre ne fait pas sursauter), ramené à
+// un volume bas (`loudness`, en deux passes ; les sons clairsemés plus bas encore) puis bouclé sans couture : les FADE dernières secondes passent en fondu
 // sur les premières. Opus 32 kbit/s en WebM (lu par MediaCodec depuis Android 5), décodé une fois puis bouclé par
 // NoisePlayer.
 import { spawnSync } from "node:child_process";
@@ -12,27 +12,41 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-/** Volume visé (LUFS intégrés), curseur au maximum : bas ; à 50 % (le défaut), environ -30. */
+/** Volume visé par défaut (LUFS intégrés), curseur au maximum ; à 50 % (le défaut), 6 dB de moins. */
 const LOUDNESS = -24;
 const FADE = 4;
 const OGA = "https://opengameart.org/sites/default/files/";
+/** Aperçus Freesound (MP3 128 kbit/s), téléchargeables sans compte ; bien assez pour de l'Opus à 32. */
+const FREESOUND = "https://cdn.freesound.org/previews/";
 const SOUNDS = [
-  // Pluie et orage : « rain and thunders » de kindland.
+  // Pluie : quelques gouttes et un tonnerre lointain, « RAIN_Light Thunderstorm, Decrescendo, Water Dripping near
+  // Building » de HushAndHarmonyNow (Freesound 851881) ; trois coups de tonnerre entre 50 et 200 s.
   {
     name: "storm",
-    url: OGA + "Dark_Rainy_Night%28ambience%29.ogg",
-    start: 10,
+    url: FREESOUND + "851/851881_18160342-hq.mp3",
+    start: 50,
     length: 150,
+    loudness: -30,
   },
-  // Forêt : « Park ambiences » (oiseaux) de Thimras.
+  // Forêt : petits chants d'oiseaux, sans vent ni circulation, « birdsongEvening » de tenkism (Freesound 350456).
   {
     name: "forest",
-    url: OGA + "park_ambience_birds.wav",
-    start: 60,
-    length: 120,
+    url: FREESOUND + "350/350456_2422703-hq.mp3",
+    start: 0,
+    length: 138,
+    loudness: -32,
+    // Chants adoucis : aigus perçants retirés, pics rapprochés du fond.
+    filter:
+      "lowpass=f=6000,acompressor=threshold=-36dB:ratio=6:attack=3:release=150:makeup=1",
   },
-  // Japon : « Asianoriental1 » de Tozan.
-  { name: "japan", url: OGA + "asianoriental1_0.ogg", start: 0, length: 99 },
+  // Japon : un supermarché de Tokyo, « Tokyo - Supermarket » de manuke (Freesound 315897).
+  {
+    name: "japan",
+    url: FREESOUND + "315/315897_5356267-hq.mp3",
+    start: 0,
+    length: 97,
+    loudness: -30,
+  },
   // Mer : « Ocean Waves on a Tropical Beach » de Jarrod Stanley (Wikimedia Commons).
   {
     name: "sea",
@@ -83,7 +97,7 @@ async function download(url) {
 }
 
 /** Extrait mono 22 kHz compressé, en WAV ; `extra` secondes de plus pour le fondu de bouclage. */
-function cut(source, { start, length }, extra, file) {
+function cut(source, { start, length, filter }, extra, file) {
   ffmpeg([
     "-ss",
     String(start),
@@ -92,7 +106,8 @@ function cut(source, { start, length }, extra, file) {
     "-i",
     source,
     "-af",
-    "aresample=22050,pan=mono|c0=0.5*c0+0.5*c1,acompressor=threshold=-28dB:ratio=3:attack=40:release=600",
+    "aresample=22050,pan=mono|c0=0.5*c0+0.5*c1,acompressor=threshold=-28dB:ratio=3:attack=40:release=600" +
+      (filter ? "," + filter : ""),
     "-c:a",
     "pcm_s16le",
     file,
@@ -116,9 +131,9 @@ function loop(file, length, looped) {
   ]);
 }
 
-/** Volume ramené à LOUDNESS sans déformer (loudnorm en deux passes, linéaire), encodé en Opus. */
-function normalize(file, target) {
-  const filter = `loudnorm=I=${LOUDNESS}:TP=-4:LRA=11`;
+/** Volume ramené à `loudness` sans déformer (loudnorm en deux passes, linéaire), encodé en Opus. */
+function normalize(file, target, loudness = LOUDNESS) {
+  const filter = `loudnorm=I=${loudness}:TP=-4:LRA=11`;
   const report = ffmpeg([
     "-i",
     file,
@@ -148,7 +163,11 @@ function normalize(file, target) {
 }
 
 fs.mkdirSync(out, { recursive: true });
-for (const sound of SOUNDS) {
+// Noms en arguments (storm, forest…) : seulement ceux-là ; sans argument, tous.
+const only = process.argv.slice(2);
+for (const sound of SOUNDS.filter(
+  (s) => only.length === 0 || only.includes(s.name),
+)) {
   const source = await download(sound.url);
   const looping = sound.loop !== false;
   const extract = path.join(tmp, `${sound.name}-cut.wav`);
@@ -159,7 +178,7 @@ for (const sound of SOUNDS) {
     loop(extract, sound.length, ready);
   }
   const target = path.join(out, `ambiance_${sound.name}.webm`);
-  normalize(ready, target);
+  normalize(ready, target, sound.loudness);
   console.log(
     `${path.basename(target)} : ${Math.round(fs.statSync(target).size / 1024)} Ko`,
   );

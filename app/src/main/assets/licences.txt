@@ -80,10 +80,11 @@ DONNÉES
 - Liste des villes : GeoNames (https://www.geonames.org), licence CC BY 4.0 ; extraite et réduite.
 
 SONS D'AMBIANCE (domaine public, CC0 1.0 : https://creativecommons.org/publicdomain/zero/1.0/ ;
-extraits, mis en boucle et au même volume par scripts/ambiances.mjs)
-- Pluie : « rain and thunders », kindland (https://opengameart.org/content/rain-and-thunders)
-- Forêt : « Park ambiences », Thimras (https://opengameart.org/content/park-ambiences)
-- Japon : « Asianoriental1 », Tozan (https://opengameart.org/content/asianoriental1)
+extraits, mis en boucle et à un volume bas par scripts/ambiances.mjs)
+- Pluie : « RAIN_Light Thunderstorm, Decrescendo, Water Dripping near Building », HushAndHarmonyNow
+  (https://freesound.org/s/851881/)
+- Forêt : « birdsongEvening », tenkism (https://freesound.org/s/350456/)
+- Japon : « Tokyo - Supermarket », manuke (https://freesound.org/s/315897/)
 - Mer : « Ocean Waves on a Tropical Beach », Jarrod Stanley
   (https://commons.wikimedia.org/wiki/File:Ocean_Waves_on_a_Tropical_Beach.ogg)
 - Lofi : « Chill lofi inspired [loop edit] », qubodup d'après omfgdude

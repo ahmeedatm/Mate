@@ -168,7 +168,7 @@ server.registerTool(
   {
     title: "Son d'ambiance",
     description:
-      "Lance une ambiance sonore douce sur le haut-parleur de la tablette (pluie avec un peu d'orage, forêt, musique japonaise, mer, lofi), ou la coupe.",
+      "Lance une ambiance sonore douce sur le haut-parleur de la tablette (gouttes de pluie et tonnerre lointain, oiseaux, magasin au Japon, mer, lofi), ou la coupe.",
     inputSchema: { son: z.enum(keys(NOISES)), volume: z.number().int().min(0).max(100).optional().describe("En %") },
   },
   ({ son, volume }) =>
