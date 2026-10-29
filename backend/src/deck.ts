@@ -24,7 +24,10 @@ import {
 import type { Layout } from "./screens.ts";
 import { loadKeys, loadLinks, loadSavedApps, saveApps, saveLinks, type DeckApp, type DeckLink } from "./perso.ts";
 import { agentsAvailable } from "./agents-sources.ts";
+import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
+import { jiraConfigured } from "./jira.ts";
+import { appPluginOff, pluginOn, pluginsOff } from "./plugins.ts";
 import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
 
 /**
@@ -197,9 +200,22 @@ export async function homeFeatures() {
   const names = (await deckApps(await loadConfig())).map((a) => a.name);
   // `meetings` : bouton Rejoindre et option d'ouverture automatique. Toute réunion avec un lien de visio s'ouvre
   // (appli ou navigateur) ; `teams` : l'appli Teams est dans le deck (page Réunion et ses raccourcis).
-  const teams = names.some((n) => MEETING_APPS.test(n));
-  // `agents` : onglet et widget des agents Claude (Mac avec Claude Code installé).
-  return { agenda: true, linked: await hasCalendar(), meetings: canControl, teams, agents: agentsAvailable() };
+  const teams = names.some((n) => MEETING_APPS.test(n)) && (await pluginOn("teams"));
+  // `agents` : onglet et widget des agents Claude (Mac avec Claude Code installé). `off` : plugins coupés (plugins.ts).
+  // `gitlab` : onglet des MR GitLab (jeton GITLAB_TOKEN dans .env, compte connecté par OAuth, ou appli OAuth réglée : la tablette propose de se connecter).
+  const agents = agentsAvailable() && (await pluginOn("claude"));
+  // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
+  const jira = jiraConfigured && (await pluginOn("jira"));
+  return {
+    agenda: true,
+    linked: await hasCalendar(),
+    meetings: canControl,
+    teams,
+    agents,
+    gitlab: canControl && (await gitlabAvailable()),
+    jira,
+    off: await pluginsOff(),
+  };
 }
 
 export async function loadDeck(): Promise<DeckPage[]> {
@@ -211,7 +227,10 @@ export async function loadDeck(): Promise<DeckPage[]> {
   const names = new Set(apps.map((a) => a.name.toLowerCase()));
   // Page Média (`media` : lecture en cours au-dessus des touches) seulement si l'ordinateur sait la lire ; masquée
   // après la numérotation, les identifiants de tuiles ne bougent pas.
-  const present = deck.pages.map((page) => !page.media || canMedia);
+  // Pages des plugins coupés sur la tablette (Discord, Teams, Média) : masquées de la même façon.
+  const mediaOn = canMedia && (await pluginOn("media"));
+  const appOff = await Promise.all(deck.pages.map((page) => (page.app ? appPluginOff(page.app) : false)));
+  const present = deck.pages.map((page, p) => (!page.media || mediaOn) && !appOff[p]);
   const links = await deckLinks();
   const pages = deck.pages
     .map((page, p): DeckPage =>

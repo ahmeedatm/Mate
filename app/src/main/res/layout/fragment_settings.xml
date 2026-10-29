@@ -69,6 +69,34 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Plugins de l'ordinateur actif : le même écran qu'à la première utilisation. -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <com.unowhy.companion.ui.TitleView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_widgets"
+                android:text="@string/plugins_card" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/plugins_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/settings_plugins"
+                style="@style/ActionButton"
+                android:layout_marginTop="16dp"
+                android:text="@string/plugins_choose" />
+        </LinearLayout>
+
         <!-- WiFi : en kiosque, Paramètres d'Android est inaccessible. -->
         <LinearLayout
             style="@style/Card"
@@ -101,6 +129,52 @@
                 android:id="@+id/settings_wifi"
                 style="@style/ActionButton"
                 android:text="@string/wifi_choose" />
+        </LinearLayout>
+
+        <!-- Accessibilité malgré le kiosque (device/Accessibility) : TalkBack et taille du texte de l'appli. -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <com.unowhy.companion.ui.TitleView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_accessibility"
+                android:text="@string/a11y_title" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_talkback"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/a11y_talkback"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/settings_talkback_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/a11y_talkback_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/a11y_text_size"
+                android:textColor="?attr/c_text"
+                android:textSize="16sp" />
+
+            <LinearLayout
+                android:id="@+id/settings_text_sizes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal" />
         </LinearLayout>
 
         <!-- Thème : ambiances prédéfinies (ui/Themes.kt), pastilles ajoutées par SettingsFragment. -->

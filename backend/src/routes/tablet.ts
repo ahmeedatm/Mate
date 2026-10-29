@@ -5,6 +5,7 @@ import {
   FOCUS_ACTIONS,
   MODES,
   NOISES,
+  noteTabletAddress,
   pollCommands,
   reportState,
   sendToTablet,
@@ -18,6 +19,7 @@ export default async function tabletRoutes(app: FastifyInstance) {
     "/tablet/poll",
     { logLevel: "warn", schema: { body: { type: "object", properties: { state: { type: "object" } } } } },
     async (req, reply) => {
+      noteTabletAddress(req.ip);
       const closed = new AbortController();
       reply.raw.on("close", () => closed.abort());
       return { commands: await pollCommands(req.body.state ?? null, 25_000, closed.signal) };

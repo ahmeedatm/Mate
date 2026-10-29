@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { after, before, beforeEach, describe, it, mock } from "node:test";
 
 // Appels entrants : Windows seulement. Le faux pilotage lit FAKE_OS à son chargement, d'où les imports dynamiques.
 process.env.FAKE_OS = "windows";
+process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "companion-calls-"));
 await import("./fake-os-hook.ts");
 const { calls, state } = await import("./fake-os.ts");
 const { answerCall, declineCall, hangUp, startCallWatch } = await import("../src/calls.ts");
+const { savePlugins } = await import("../src/plugins.ts");
 type CallEvent = Parameters<Parameters<typeof startCallWatch>[0]>[0];
 
 // Règle Discord de config/calls.json.
@@ -50,6 +55,19 @@ describe("appels entrants", () => {
     state.windows = { Discord: [{ title: "Discord" }] };
     await tick();
     assert.deepEqual(events.at(-1), { state: "ended", app: "Discord", caller: "Camille", video: true });
+  });
+
+  it("plugin Discord coupé sur la tablette : sa sonnerie n'est pas signalée", async () => {
+    // Avant les tests qui répondent : une réponse fait taire l'appli 6 s (horloge réelle).
+    await savePlugins({ discord: false });
+    state.windows = { Discord: [{ title: RINGING }] };
+    await tick();
+    assert.equal(events.length, 0);
+    await savePlugins({ discord: true });
+    await tick();
+    assert.equal(events[0]?.state, "ringing");
+    state.windows = {};
+    await tick();
   });
 
   it("répondre appuie sur le bouton de l'appli et coupe la sonnerie quelques secondes", async () => {

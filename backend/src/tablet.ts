@@ -59,12 +59,24 @@ const inflight = new Map<string, { resolve: (r: TabletResult) => void; timer: No
 let waiter: ((commands: Queued[]) => void) | undefined;
 let lastSeen = 0;
 let lastState: unknown = null;
+let lastAddress: { ip: string; at: number } | undefined;
 
 /** Connectée = un poll est en attente, ou la tablette vient d'en finir un (elle exécute un ordre). */
 const isConnected = () => waiter !== undefined || Date.now() - lastSeen < 35_000;
 
 export function tabletStatus() {
   return { connected: isConnected(), lastSeenMs: lastSeen || null, state: lastState };
+}
+
+/** Adresse WiFi d'où la tablette interroge cet ordinateur (poll) : elle y sert les installeurs (port 8080). */
+export function noteTabletAddress(ip: string) {
+  lastAddress = { ip: ip.replace(/^::ffff:/, ""), at: Date.now() };
+}
+
+/** Dernière adresse vue il y a moins de 2 minutes ; null en USB (127.0.0.1) ou sans tablette. */
+export function tabletAddress(): string | null {
+  const a = lastAddress;
+  return a && Date.now() - a.at < 120_000 && /^\d+\.\d+\.\d+\.\d+$/.test(a.ip) && !a.ip.startsWith("127.") ? a.ip : null;
 }
 
 function flush() {

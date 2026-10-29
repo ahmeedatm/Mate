@@ -3,6 +3,7 @@
 //   node scripts/updates-publish.mjs dist updates                  release : paquet …/companion-updates/latest
 //   node scripts/updates-publish.mjs --essai <iid> dist essais     essai de la MR <iid> : paquet …/companion-updates/essais
 //   node scripts/updates-publish.mjs --retire <iid> essais         retire l'essai de la MR <iid> (fusion ou abandon)
+//   node scripts/updates-publish.mjs --purge-fusionnes essais      retire les essais des MR fusionnées dans la branche courante
 //
 // Release : lit l'entrée companion-X.Y.Z.json produite par android-release, copie l'APK qu'elle nomme dans <sortie>/ et
 // écrit <sortie>/manifest.json (même forme que GET /updates du backend, taille et SHA-256 compris). Les installeurs de
@@ -16,10 +17,13 @@
 // Avec UPDATES_URL (paquet générique du registre, …/packages/generic/<nom>/<version>), dépose les fichiers puis
 // manifest.json et supprime les fichiers que le manifest ne nomme plus. Essai : le manifest du registre est lu puis
 // réécrit ; les jobs essai-updates se suivent (resource_group), --retire se lance quand aucun ne publie.
+// --purge-fusionnes (job purge-essais de main, même resource_group) retire d'un coup les entrées dont la MR figure dans
+// l'historique git (lignes « See merge request <projet>!N » des messages de fusion) : historique complet requis.
 // Jeton : CI_JOB_TOKEN en CI, GITLAB_TOKEN (jeton personnel, scope api) en local.
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 
 const BACKEND_PLATFORMS = ["mac", "windows"];
 const ESSAI_PACKAGE = "com.unowhy.companion.essai";
@@ -38,7 +42,8 @@ function usage() {
   console.error(
     "Usage : node scripts/updates-publish.mjs <dist> <sortie>\n" +
       "        node scripts/updates-publish.mjs --essai <iid> <dist> <sortie>\n" +
-      "        node scripts/updates-publish.mjs --retire <iid> <sortie>",
+      "        node scripts/updates-publish.mjs --retire <iid> <sortie>\n" +
+      "        node scripts/updates-publish.mjs --purge-fusionnes <sortie>",
   );
   process.exit(1);
 }
@@ -183,12 +188,32 @@ function writeOut(outDir, files) {
     fs.writeFileSync(path.join(outDir, name), content);
 }
 
+/** Numéros des MR fusionnées dans l'historique git courant (« See merge request <projet>!N », jamais !12 pour !123). */
+function mergedRequests() {
+  const log = execFileSync("git", ["log", "--format=%B"], {
+    encoding: "utf8",
+    maxBuffer: 1 << 28,
+  });
+  return new Set(
+    [...log.matchAll(/^See merge request \S*!(\d+)\s*$/gm)].map((m) =>
+      Number(m[1]),
+    ),
+  );
+}
+
 const arg = process.argv.slice(2);
 const mode =
-  arg[0] === "--essai" ? "essai" : arg[0] === "--retire" ? "retire" : "release";
+  arg[0] === "--essai"
+    ? "essai"
+    : arg[0] === "--retire"
+      ? "retire"
+      : arg[0] === "--purge-fusionnes"
+        ? "purge"
+        : "release";
 if (mode !== "release") arg.shift();
-const iid = mode === "release" ? undefined : Number(arg.shift());
-if (mode !== "release" && !(Number.isInteger(iid) && iid > 0)) usage();
+const iid =
+  mode === "essai" || mode === "retire" ? Number(arg.shift()) : undefined;
+if (iid !== undefined && !(Number.isInteger(iid) && iid > 0)) usage();
 const url = process.env.UPDATES_URL;
 
 if (mode === "release") {
@@ -245,9 +270,9 @@ if (mode === "release") {
     process.exit(1);
   }
   const reg = registry(url);
-  const essais = ((await reg.manifest())?.essais ?? []).filter(
-    (e) => e.mr !== iid,
-  );
+  const published = (await reg.manifest())?.essais ?? [];
+  const gone = mode === "purge" ? mergedRequests() : new Set([iid]);
+  const essais = published.filter((e) => !gone.has(e.mr));
   const files = {};
   if (mode === "essai") {
     const [distDir, outDir] = arg;
@@ -284,7 +309,14 @@ if (mode === "release") {
     const manifest = JSON.stringify({ essais }, null, 2) + "\n";
     writeOut(outDir, { "manifest.json": manifest });
     await reg.put("manifest.json", manifest);
-    console.log(`MR !${iid} retirée des essais (${essais.length} restant(s))`);
+    const retired = published
+      .filter((e) => gone.has(e.mr))
+      .map((e) => `!${e.mr}`);
+    console.log(
+      mode === "purge"
+        ? `essais retirés (MR fusionnées) : ${retired.join(", ") || "aucun"} (${essais.length} restant(s))`
+        : `MR !${iid} retirée des essais (${essais.length} restant(s))`,
+    );
   }
   const keep = new Set(["manifest.json"]);
   for (const e of essais) {

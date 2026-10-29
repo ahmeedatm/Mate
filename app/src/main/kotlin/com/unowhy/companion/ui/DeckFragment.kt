@@ -57,6 +57,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private lateinit var openWindows: OpenWindowsView
     private lateinit var mixer: MixerView
     private lateinit var agents: AgentsView
+    private lateinit var gitlab: GitLabView
+    private lateinit var jira: JiraView
     private lateinit var pad: PadView
     private lateinit var editor: KeyEditor
     private lateinit var adder: AppAdder
@@ -73,8 +75,16 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     /** Onglet « Agents » affiché (sessions Claude Code), et proposé seulement si l'ordinateur l'annonce (`/deck/features`). */
     private var showingAgents = false
     private var agentsOn = false
+    /** Onglet « GitLab » affiché (MR à suivre et à fusionner), proposé seulement si l'ordinateur a un jeton GitLab (`/deck/features`). */
+    private var showingGitLab = false
+    private var gitlabOn = false
+    /** Onglet « Jira » affiché (tickets de l'utilisateur), et proposé seulement si Jira est configuré sur l'ordinateur. */
+    private var showingJira = false
+    private var jiraOn = false
     /** Onglet Agents demandé (lumière touchée) avant que l'ordinateur ait dit s'il l'offre. */
     private var pendingAgents = false
+    /** Plugins coupés sur cet ordinateur (écran des plugins) : « Ouvertes », « Pavé », « Son » sans onglet. */
+    private var off: Set<String> = emptySet()
     /** Onglets dans l'ordre affiché (pour le balayage) et celui qui est sélectionné. */
     private var tabActions: List<() -> Unit> = emptyList()
     private var selectedTab = -1
@@ -134,6 +144,12 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         agents = view.findViewById(R.id.deck_agents)
         agents.attach(viewLifecycleOwner)
         swipeTabs(agents)
+        gitlab = view.findViewById(R.id.deck_gitlab)
+        gitlab.attach(viewLifecycleOwner.lifecycleScope)
+        swipeTabs(gitlab)
+        jira = view.findViewById(R.id.deck_jira)
+        jira.attach(viewLifecycleOwner)
+        swipeTabs(jira)
         // Pavé : tout geste est pour le pointeur, jamais un balayage d'onglet (pas de swipeTabs, la vue garde ses touches).
         pad = view.findViewById(R.id.deck_pad)
         editor = view.findViewById(R.id.deck_editor)
@@ -212,6 +228,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         openWindows.setActive(active && showingOpen)
         mixer.setActive(active && showingMixer)
         agents.setActive(active && showingAgents)
+        gitlab.setActive(active && showingGitLab)
+        jira.setActive(active && showingJira)
         pad.setActive(active && showingPad)
         livePoll?.cancel()
         if (active) livePoll = viewLifecycleOwner.lifecycleScope.launch {
@@ -316,11 +334,17 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                 }
                 pageIndex = pageIndex.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
                 status.visibility = View.GONE
-                agentsOn = runCatching { client().deck.homeFeatures().agents }.getOrDefault(false)
+                val features = runCatching { client().deck.homeFeatures() }.getOrNull()
+                agentsOn = features?.agents ?: false
+                gitlabOn = features?.gitlab ?: false
+                off = features?.off.orEmpty()
+                jiraOn = features?.jira == true
                 when {
-                    showingOpen -> showOpen()
+                    showingOpen && OPEN_TAB !in off -> showOpen()
                     showingPad && padOn() -> showPad()
                     (showingAgents || pendingAgents) && agentsOn -> showAgents()
+                    showingGitLab && gitlabOn -> showGitLab()
+                    showingJira && jiraOn -> showJira()
                     else -> showPage(pageIndex)
                 }
             } catch (e: Exception) {
@@ -374,14 +398,23 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         fun mixerTab() = Tab(MIXER_TAB, getString(R.string.deck_mixer_tab), showingMixer, ::showMixer)
         fun padTab() = Tab(PAD_TAB, getString(R.string.deck_pad_tab), showingPad, ::showPad)
         fun agentsTab() = Tab(AGENTS_TAB, getString(R.string.deck_agents_tab), showingAgents, ::showAgents)
-        // « Ouvertes », « Pavé » (Mac ou Windows), « Son », puis « Agents » (si l'ordinateur les offre) : ensemble posé après Apps.
-        fun extras() = listOfNotNull(openTab(), padTab().takeIf { padOn() }, mixerTab(), agentsTab().takeIf { agentsOn })
+        fun gitlabTab() = Tab(GITLAB_TAB, getString(R.string.deck_gitlab_tab), showingGitLab, ::showGitLab)
+        fun jiraTab() = Tab(JIRA_TAB, getString(R.string.deck_jira_tab), showingJira, ::showJira)
+        // « Ouvertes », « Pavé » (Mac ou Windows), « Son », puis « Agents », « GitLab » et « Jira » (si l'ordinateur les offre) : ensemble posé après Apps.
+        fun extras() = listOfNotNull(
+            openTab().takeIf { OPEN_TAB !in off },
+            padTab().takeIf { padOn() },
+            mixerTab().takeIf { MIXER_TAB !in off },
+            agentsTab().takeIf { agentsOn },
+            gitlabTab().takeIf { gitlabOn },
+            jiraTab().takeIf { jiraOn },
+        )
         // Par défaut, « Ouvertes » juste après Apps (en premier sans page Apps) : toutes les applis ouvertes, pas seulement les choisies.
         val openAfter = shown.indexOfFirst { pages[it].apps }
         // « Son » juste après.
         if (openAfter < 0) entries += extras()
         shown.forEachIndexed { i, index ->
-            entries += Tab(PAGE_TAB + pages[index].title, pages[index].title, !showingOpen && !showingPad && !showingMixer && !showingAgents && index == pageIndex) { showPage(index) }
+            entries += Tab(PAGE_TAB + pages[index].title, pages[index].title, !showingOpen && !showingPad && !showingMixer && !showingAgents && !showingGitLab && !showingJira && index == pageIndex) { showPage(index) }
             if (i == openAfter) entries += extras()
         }
         // Ordre choisi en déplaçant les onglets ; un onglet jamais placé (page d'appli qui apparaît) garde sa place relative, à la fin.
@@ -464,7 +497,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     }
 
     /** Ce qui change d'un onglet à l'autre, sous la rangée d'onglets. */
-    private fun pageViews() = listOf(audio, appAudio, voiceCard, nowPlaying, mail, grid, openWindows, mixer, agents, pad, status)
+    private fun pageViews() = listOf(audio, appAudio, voiceCard, nowPlaying, mail, grid, openWindows, mixer, agents, gitlab, jira, pad, status)
 
     /** Onglet choisi par balayage : on fait défiler la barre jusqu'à lui. */
     private fun scrollToSelectedTab() {
@@ -577,6 +610,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private fun showOpen() {
         hideMixer()
         hideAgents()
+        hideGitLab()
+        hideJira()
         hidePad()
         showingOpen = true
         grid.visibility = View.GONE
@@ -591,8 +626,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         openWindows.setActive(isResumed && !isHidden)
     }
 
-    /** Le pavé ne se propose que pour un ordinateur qu'on peut piloter (Mac, Windows). */
-    private fun padOn() = Computers.active(requireContext())?.os in setOf("mac", "windows")
+    /** Le pavé ne se propose que pour un ordinateur qu'on peut piloter (Mac, Windows), s'il n'a pas été coupé. */
+    private fun padOn() = Computers.active(requireContext())?.os in setOf("mac", "windows") && PAD_TAB !in off
 
     /** Onglet « Pavé » : la surface tactile prend la place des touches et des barres de son. */
     private fun showPad() {
@@ -602,6 +637,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         }
         hideMixer()
         hideAgents()
+        hideGitLab()
+        hideJira()
         showingPad = true
         grid.visibility = View.GONE
         status.visibility = View.GONE
@@ -627,6 +664,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             openWindows.setActive(false)
         }
         hideAgents()
+        hideGitLab()
+        hideJira()
         hidePad()
         showingMixer = true
         grid.visibility = View.GONE
@@ -655,7 +694,9 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             openWindows.setActive(false)
         }
         hideMixer()
+        hideJira()
         hidePad()
+        hideGitLab()
         showingAgents = true
         pendingAgents = false
         grid.visibility = View.GONE
@@ -675,6 +716,60 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         agents.setActive(false)
     }
 
+    /** Onglet « GitLab » : les MR à la place des touches et des barres de son. */
+    private fun showGitLab() {
+        if (showingOpen) {
+            showingOpen = false
+            openWindows.setActive(false)
+        }
+        hideMixer()
+        hideAgents()
+        hideJira()
+        hidePad()
+        showingGitLab = true
+        grid.visibility = View.GONE
+        status.visibility = View.GONE
+        renderTabs()
+        audio.visibility = View.GONE
+        voiceCard.visibility = View.GONE
+        appAudio.bind(null)
+        nowPlaying.bind(false)
+        gitlab.setActive(isResumed && !isHidden)
+    }
+
+    private fun hideGitLab() {
+        if (!showingGitLab) return
+        showingGitLab = false
+        gitlab.setActive(false)
+    }
+
+    /** Onglet « Jira » : les tickets de l'utilisateur à la place des touches et des barres de son. */
+    private fun showJira() {
+        if (showingOpen) {
+            showingOpen = false
+            openWindows.setActive(false)
+        }
+        hideMixer()
+        hideAgents()
+        hideGitLab()
+        hidePad()
+        showingJira = true
+        grid.visibility = View.GONE
+        status.visibility = View.GONE
+        renderTabs()
+        audio.visibility = View.GONE
+        voiceCard.visibility = View.GONE
+        appAudio.bind(null)
+        nowPlaying.bind(false)
+        jira.setActive(isResumed && !isHidden)
+    }
+
+    private fun hideJira() {
+        if (!showingJira) return
+        showingJira = false
+        jira.setActive(false)
+    }
+
     /** Lumière touchée (ou widget) : l'onglet Agents, dès que l'ordinateur a dit qu'il l'offre. */
     fun openAgentsTab() {
         if (agentsOn) showAgents() else pendingAgents = true
@@ -692,6 +787,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         }
         hideMixer()
         hideAgents()
+        hideGitLab()
+        hideJira()
         hidePad()
         grid.visibility = View.VISIBLE
         val page = pages.getOrNull(index)
@@ -848,10 +945,12 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         const val LIVE_POLL_MS = 4_000L
         const val LIVE_HOLD_MS = 20_000L
         const val MEETING_HOLD_MS = 5_000L
-        /** Clés des onglets (ordre gardé dans Prefs) : « Ouvertes », et une page par son titre. */
+        /** Clés des onglets (ordre gardé dans Prefs) : « Ouvertes », et une page par son titre ; aussi l'id du plugin (`/plugins`). */
         const val OPEN_TAB = "open"
         const val MIXER_TAB = "mixer"
         const val AGENTS_TAB = "agents"
+        const val GITLAB_TAB = "gitlab"
+        const val JIRA_TAB = "jira"
         const val PAD_TAB = "pad"
         const val PAGE_TAB = "page:"
         /** Distance de côté qui change d'onglet. */

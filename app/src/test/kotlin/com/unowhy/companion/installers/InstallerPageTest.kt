@@ -45,14 +45,23 @@ class InstallerPageTest {
     @Test
     fun `installeur de l'OS du visiteur pas encore la mais l'autre oui`() {
         val html = InstallerPage.render(Os.MAC, listOf(windows))
-        assertTrue(html.contains("L'installeur Mac n'est pas encore sur la tablette"))
+        assertTrue(html.contains("L'appli Mac n'est pas encore sur la tablette"))
         assertTrue(html.contains("Télécharger Compagnon-Unowhy-Windows.exe"))
     }
 
     @Test
-    fun `la carte explique la mise a jour d'un compagnon deja installe`() {
+    fun `la carte explique la mise a jour par le panneau d'un compagnon deja lance`() {
         val html = InstallerPage.render(Os.WINDOWS, listOf(windows))
-        assertTrue(html.contains("Déjà installé ?"))
-        assertTrue(html.contains("remplace l&#39;ancien") || html.contains("remplace l'ancien"))
+        assertTrue(html.contains("Déjà lancé ?"))
+        assertTrue(html.contains("Chercher une mise à jour"))
+        assertTrue(html.contains("Retirer l&#39;ancienne installation") || html.contains("Retirer l'ancienne installation"))
+    }
+
+    @Test
+    fun `rien n'est installe et Windows ouvre le pare-feu depuis le panneau`() {
+        val windowsHtml = InstallerPage.render(Os.WINDOWS, listOf(windows))
+        assertTrue(windowsHtml.contains("rien n'est installé") || windowsHtml.contains("rien n&#39;est installé"))
+        assertTrue(windowsHtml.contains("pare-feu"))
+        assertFalse(InstallerPage.render(Os.MAC, listOf(mac)).contains("Applications"))
     }
 }

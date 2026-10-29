@@ -30,6 +30,7 @@ import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
+import com.unowhy.companion.device.Accessibility
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
 import com.unowhy.companion.installers.BackendPlan
@@ -75,6 +76,7 @@ class SettingsFragment : Fragment() {
     private lateinit var wakeWord: SwitchCompat
     private lateinit var wakeStatus: TextView
     private lateinit var weatherLocation: SwitchCompat
+    private lateinit var talkBack: SwitchCompat
     private lateinit var tabletInfo: TextView
     private lateinit var updatesStatus: TextView
     private lateinit var updates: LinearLayout
@@ -95,6 +97,7 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, state: Bundle?) {
         computers = view.findViewById(R.id.settings_computers)
         view.findViewById<Button>(R.id.settings_add_computer).setOnClickListener { adder.search() }
+        view.findViewById<Button>(R.id.settings_plugins).setOnClickListener { main.showPlugins() }
         view.findViewById<Button>(R.id.settings_add_manual).setOnClickListener { adder.manual() }
         kioskCard = view.findViewById(R.id.settings_kiosk_card)
         view.findViewById<View>(R.id.settings_title).setOnLongClickListener { askTechCode(); true }
@@ -130,6 +133,7 @@ class SettingsFragment : Fragment() {
         tabletInfo = view.findViewById(R.id.settings_tablet_info)
         setUpTablet()
         setUpThemes(view.findViewById(R.id.settings_themes))
+        setUpAccessibility(view)
         renderComputers()
         renderWifi()
         renderSwitchApp()
@@ -162,7 +166,13 @@ class SettingsFragment : Fragment() {
             renderKiosk()
             renderSwitchApp()
             loadAutoJoin()
+            renderTalkBack()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        renderTalkBack()
     }
 
     /** État de la liaison changé (MainActivity) : ligne de l'ordinateur actif à jour. */
@@ -295,6 +305,46 @@ class SettingsFragment : Fragment() {
                 else -> getString(R.string.wifi_current, name)
             }
         }
+    }
+
+    // --- Accessibilité (COMP-50) : TalkBack et taille du texte, que le kiosque empêche de régler dans Android
+
+    private fun setUpAccessibility(view: View) {
+        val ctx = requireContext()
+        talkBack = view.findViewById(R.id.settings_talkback)
+        val hint = view.findViewById<TextView>(R.id.settings_talkback_hint)
+        val installed = Accessibility.talkBackInstalled(ctx)
+        val allowed = Accessibility.canConfigure(ctx)
+        talkBack.isEnabled = installed && allowed
+        if (!installed) hint.setText(R.string.a11y_talkback_missing) else if (!allowed) hint.setText(R.string.a11y_talkback_locked)
+        renderTalkBack()
+
+        val row = view.findViewById<LinearLayout>(R.id.settings_text_sizes)
+        val current = Prefs.textScale(ctx)
+        for ((scale, label) in TEXT_SIZES) {
+            val chip = Button(ctx, null, 0, R.style.Chip).apply {
+                setText(label)
+                isSelected = scale == current
+                setOnClickListener {
+                    if (scale == current) return@setOnClickListener
+                    Prefs.setTextScale(context, scale)
+                    requireActivity().recreate()
+                }
+            }
+            row.addView(chip, LinearLayout.LayoutParams(0, dp(48), 1f).apply { if (row.childCount > 0) marginStart = dp(10) })
+        }
+    }
+
+    /**
+     * État réel de TalkBack : il change aussi sans l'interrupteur (raccourci des touches de volume, Paramètres hors
+     * kiosque), relu à chaque retour sur les Réglages. Écouteur retiré le temps de la relecture : rien n'est réécrit.
+     */
+    private fun renderTalkBack() {
+        if (!::talkBack.isInitialized) return
+        val ctx = requireContext()
+        talkBack.setOnCheckedChangeListener(null)
+        talkBack.isChecked = Accessibility.talkBackOn(ctx)
+        talkBack.setOnCheckedChangeListener { _, checked -> Accessibility.setTalkBack(ctx, checked) }
     }
 
     // --- Tablette : luminosité, volume, batterie (cachés par le kiosque)
@@ -526,6 +576,7 @@ class SettingsFragment : Fragment() {
     private suspend fun showEssais() {
         try {
             val list = Updater.essais(requireContext())
+            essais.removeAllViews()
             essaisTitle.visibility = View.VISIBLE
             essaisTitle.setText(if (list.isEmpty()) R.string.essais_none else R.string.essais_title)
             val installed = Updater.installed(requireContext(), Trial.TRIAL)
@@ -581,7 +632,8 @@ class SettingsFragment : Fragment() {
         }
         val installedCode = info?.let { Updater.versionCode(it) }
         val state = UpdatePlan.state(update, installedCode)
-        val plan = essai?.let { EssaiPlan.install(update.versionCode, installedCode) }
+        val installedMr = Prefs.trialMr(ctx)
+        val plan = essai?.let { EssaiPlan.install(update.versionCode, installedCode, essai.mr, installedMr) }
         val texts = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         texts.addView(TextView(ctx).apply {
             textSize = 16f
@@ -591,7 +643,7 @@ class SettingsFragment : Fragment() {
         texts.addView(TextView(ctx).apply {
             textSize = 14f
             setTextColor(themeColor(ctx, if (plan == EssaiPlan.Install.UNINSTALL_FIRST || (essai == null && state == UpdatePlan.State.OLDER)) R.attr.c_warn else R.attr.c_text_dim))
-            text = if (essai != null) essaiState(essai, plan!!, info) else when (state) {
+            text = if (essai != null) essaiState(essai, plan!!, info, installedMr) else when (state) {
                 UpdatePlan.State.NEWER -> if (info == null) getString(R.string.updates_row_absent, sourceName(update.source))
                 else getString(R.string.updates_row_newer, info.versionName, sourceName(update.source))
                 UpdatePlan.State.INSTALLED -> getString(R.string.updates_row_installed)
@@ -625,12 +677,15 @@ class SettingsFragment : Fragment() {
         getString(if (source == UpdateSource.COMPUTER) R.string.updates_source_computer else R.string.updates_source_server)
 
     /** Version, backend, et ce que l'installation fait de l'essai déjà installé. */
-    private fun essaiState(essai: Essai, plan: EssaiPlan.Install, info: android.content.pm.PackageInfo?): String {
+    private fun essaiState(essai: Essai, plan: EssaiPlan.Install, info: android.content.pm.PackageInfo?, installedMr: Int): String {
         val backend = getString(if (essai.hasBackend) R.string.essai_row_backend else R.string.essai_row_no_backend)
         val state = when (plan) {
-            EssaiPlan.Install.NONE -> getString(R.string.updates_row_installed)
-            EssaiPlan.Install.INSTALL -> if (info == null) getString(R.string.essai_row_absent) else getString(R.string.essai_row_replace, info.versionName)
-            EssaiPlan.Install.UNINSTALL_FIRST -> getString(R.string.essai_row_downgrade, info?.versionName)
+            EssaiPlan.Install.NONE -> getString(R.string.essai_row_installed)
+            EssaiPlan.Install.INSTALL -> if (info == null) getString(R.string.essai_row_absent)
+            else if (installedMr != 0) getString(R.string.essai_row_replace_mr, installedMr, info.versionName)
+            else getString(R.string.essai_row_replace, info.versionName)
+            EssaiPlan.Install.UNINSTALL_FIRST -> if (installedMr != 0) getString(R.string.essai_row_downgrade_mr, installedMr, info?.versionName)
+            else getString(R.string.essai_row_downgrade, info?.versionName)
         }
         return getString(R.string.essai_row_version, essai.update.versionName, backend) + "\n" + state
     }
@@ -681,6 +736,8 @@ class SettingsFragment : Fragment() {
                 }
                 showResult(button, bar, ok = true)
                 if (showing()) updatesStatus.setText(R.string.updates_hint)
+                // Les lignes reflètent le nouvel essai installé (« Installée », MR remplacée).
+                if (essai != null && showing()) showEssais()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // Annulé : retour à l'état de départ, rien d'installé.
                 bar.visibility = View.GONE
@@ -789,5 +846,15 @@ class SettingsFragment : Fragment() {
             .setView(android.widget.ScrollView(context).apply { addView(body) })
             .setPositiveButton(R.string.close, null)
             .showImmersive()
+    }
+
+    private companion object {
+        /** Facteurs de la taille du texte, en plus de celle d'Android : jusqu'à une fois et demie. */
+        val TEXT_SIZES = listOf(
+            1f to R.string.a11y_size_normal,
+            1.15f to R.string.a11y_size_large,
+            1.3f to R.string.a11y_size_larger,
+            1.5f to R.string.a11y_size_largest,
+        )
     }
 }
