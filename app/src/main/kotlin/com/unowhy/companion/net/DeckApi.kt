@@ -22,7 +22,8 @@ data class VoiceState(val connected: Boolean, val channel: String?, val people: 
  * `editable` : page Perso (touches à programmer) ; `apps` : page d'applis que l'on complète ;
  * `meeting` : page Réunion, ouverte après « Rejoindre » sur l'Accueil ; `app` : page d'une appli (Discord…),
  * ouverte en touchant l'appli (pas d'onglet), avec son volume propre au-dessus des touches ;
- * `media` : lecture en cours (vidéo, musique) au-dessus des touches.
+ * `media` : lecture en cours (vidéo, musique) au-dessus des touches ; `sound` : barre « Son de l'ordinateur » sur la page
+ * (faux pour Word, Excel…) ; `mail` : page Outlook, courrier du compte Microsoft au-dessus des touches.
  */
 data class DeckPage(
     val title: String,
@@ -32,6 +33,8 @@ data class DeckPage(
     val meeting: Boolean = false,
     val app: String? = null,
     val media: Boolean = false,
+    val sound: Boolean = true,
+    val mail: Boolean = false,
 )
 
 data class TileResult(val windows: WindowsInfo?, val openedApp: String?)
@@ -69,7 +72,9 @@ class DeckApi(private val http: Http) {
             DeckPage(p.getString("title"), (0 until tiles.length()).map { j ->
                 val t = tiles.getJSONObject(j)
                 DeckTile(t.getString("id"), t.getString("label"), t.getString("type"), t.optStringOrNull("glyph"), t.optStringOrNull("color"), t.optStringOrNull("app"), t.optStringOrNull("when"), t.optStringOrNull("lit"))
-            }, p.optBoolean("editable"), p.optBoolean("apps"), p.optBoolean("meeting"), p.optStringOrNull("app"), p.optBoolean("media"))
+            }, p.optBoolean("editable"), p.optBoolean("apps"), p.optBoolean("meeting"), p.optStringOrNull("app"), p.optBoolean("media"),
+                // Ordinateur pas encore à jour (sans `sound`) : barre Son comme avant.
+                p.optBoolean("sound", true), p.optBoolean("mail"))
         }
     }
 

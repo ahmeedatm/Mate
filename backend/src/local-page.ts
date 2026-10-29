@@ -104,6 +104,8 @@ export const LOCAL_PAGE = `<!doctype html>
     <div id="gitlabaccount"></div>
     <div id="gitlabmsg" class="dim" style="margin-top:8px"></div>
   </div>
+  <!-- Compagnon installé : mentions de licences des composants tiers (LICENCES-TIERS.txt, scripts/package.ts). -->
+  <p class="dim" id="licences" hidden><a href="/local/licences" target="_blank">Licences des composants</a></p>
 </main>
 <script>
   const OS = { mac: "macOS", windows: "Windows", other: "Linux (pilotage indisponible)" };
@@ -111,6 +113,7 @@ export const LOCAL_PAGE = `<!doctype html>
     try {
       const s = await (await fetch("/local/status")).json();
       document.getElementById("name").textContent = s.name;
+      document.getElementById("licences").hidden = !s.licences;
       document.getElementById("access").hidden = s.accessibility !== false;
       document.getElementById("os").textContent = "Compagnon prêt · " + (OS[s.os] || s.os);
       document.getElementById("addr").textContent = s.addresses.map((a) => a + ":" + (s.tlsPort || s.port)).join("  ·  ") || "aucune (pas de réseau)";
@@ -145,14 +148,14 @@ export const LOCAL_PAGE = `<!doctype html>
         row.className = "account";
         const label = document.createElement("span");
         label.className = "grow";
-        label.innerHTML = a.expired ? '<span class="ko">⚠</span> ' : '<span class="ok">✓</span> ';
-        label.append(a.label + " · " + a.email + (a.expired ? " (à reconnecter)" : ""));
+        label.innerHTML = a.expired || a.mailMissing ? '<span class="ko">⚠</span> ' : '<span class="ok">✓</span> ';
+        label.append(a.label + " · " + a.email + (a.expired ? " (à reconnecter)" : a.mailMissing ? " (à reconnecter pour le courrier)" : ""));
         const off = document.createElement("button");
         off.className = "ghost";
         off.textContent = "Déconnecter";
         off.onclick = async () => { await fetch("/local/accounts/" + a.provider, { method: "DELETE" }); refresh(); };
         row.append(label);
-        if (a.expired) row.append(connectLink(a.provider, "Reconnecter"));
+        if (a.expired || a.mailMissing) row.append(connectLink(a.provider, "Reconnecter"));
         row.append(off);
         box.append(row);
       }

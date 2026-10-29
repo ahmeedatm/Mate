@@ -84,11 +84,25 @@ export async function isInstalled(name: string) {
   return (await findApp(name)) !== undefined;
 }
 
-/** Comme `open -a` sur Mac : met l'appli devant si elle a une fenêtre, sinon la lance. */
+/** Attente de la fenêtre d'une appli qu'on vient de lancer, pour la mettre devant (Windows la laisse derrière). */
+const LAUNCH_FOCUS_MS = 8_000;
+
+/**
+ * Comme `open -a` sur Mac : met l'appli devant si elle a une fenêtre, sinon la lance puis met sa fenêtre devant dès
+ * qu'elle apparaît. Lancée par le compagnon (processus en arrière-plan), Windows l'ouvrirait derrière la fenêtre active.
+ */
 export async function launchApp(name: string) {
   const app = await requireApp(name);
-  const shown = await call<{ running: boolean }>("windows", { action: "focus", id: app.id, names: [name, app.name] });
-  if (!shown.running) await call("launch", { id: app.id });
+  const focus = () => call<{ running: boolean }>("windows", { action: "focus", id: app.id, names: [name, app.name] });
+  if ((await focus()).running) return;
+  await call("launch", { id: app.id });
+  // Sans attendre la fenêtre : la touche du deck répond tout de suite, la mise devant suit.
+  void (async () => {
+    for (const deadline = Date.now() + LAUNCH_FOCUS_MS; Date.now() < deadline;) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      if ((await focus().catch(() => ({ running: false }))).running) return;
+    }
+  })();
 }
 
 /** Lien ou fichier, ouvert par l'appli associée. */

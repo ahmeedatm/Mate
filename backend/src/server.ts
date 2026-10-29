@@ -25,6 +25,7 @@ import deckRoutes from "./routes/deck.ts";
 import docRoutes from "./routes/docs.ts";
 import gitlabRoutes from "./routes/gitlab.ts";
 import localRoutes from "./routes/local.ts";
+import mailRoutes from "./routes/mail.ts";
 import notificationRoutes from "./routes/notifications.ts";
 import pairingRoutes from "./routes/pairing.ts";
 import pointerRoutes from "./routes/pointer.ts";
@@ -71,7 +72,7 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
   LOOPBACK.has(ip) &&
   LOCAL_HOST.test(host ?? "") &&
   ((method === "GET" &&
-    /^\/(camera(\/stream|\/status)?|local\/status|oauth\/(microsoft|google|gitlab)\/(start|callback))?(\?|$)/.test(url)) ||
+    /^\/(camera(\/stream|\/status)?|local\/(status|licences)|oauth\/(microsoft|google|gitlab)\/(start|callback))?(\?|$)/.test(url)) ||
     (method === "PUT" && url === "/local/calendar") ||
     (method === "POST" && (url === "/system/accessibility" || url === "/local/pair")) ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
@@ -124,6 +125,8 @@ app.addHook("preHandler", async (req, reply) => {
 
 // Images du visualiseur (POST /camera/frame).
 app.addContentTypeParser("image/jpeg", { parseAs: "buffer", bodyLimit: 2 * 1024 * 1024 }, (_req, body, done) => done(null, body));
+// Archive du backend : essai d'une MR (POST /companion/backend/essai) ou release (POST /companion/backend/update).
+app.addContentTypeParser("application/gzip", { parseAs: "buffer", bodyLimit: 100 * 1024 * 1024 }, (_req, body, done) => done(null, body));
 
 // --- Routes, une par domaine dans src/routes/ (les hooks ci-dessus valent pour toutes)
 
@@ -139,6 +142,7 @@ app.register(updateRoutes);
 app.register(browserRoutes);
 app.register(cameraRoutes);
 app.register(calendarRoutes);
+app.register(mailRoutes);
 app.register(taskRoutes);
 app.register(callRoutes);
 app.register(agentRoutes);

@@ -1,5 +1,7 @@
 package com.unowhy.companion.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.media.AudioManager
 import android.os.BatteryManager
@@ -30,15 +32,24 @@ import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
+import com.unowhy.companion.installers.BackendPlan
+import com.unowhy.companion.installers.BackendRelease
+import com.unowhy.companion.installers.CompanionUpdater
+import com.unowhy.companion.installers.InstallerService
 import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.kiosk.UpdatePlan
 import com.unowhy.companion.kiosk.Updater
 import com.unowhy.companion.net.AppUpdate
 import com.unowhy.companion.net.BackendClient
+import com.unowhy.companion.net.Essai
+import com.unowhy.companion.net.Identity
 import com.unowhy.companion.net.Link
 import com.unowhy.companion.net.UpdateSource
 import com.unowhy.companion.net.Wifi
+import com.unowhy.companion.trial.EssaiBackend
+import com.unowhy.companion.trial.EssaiPlan
 import com.unowhy.companion.trial.Trial
+import com.unowhy.companion.voice.WakeModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -61,11 +72,18 @@ class SettingsFragment : Fragment() {
     private lateinit var volume: SeekBar
     private lateinit var nightDim: SwitchCompat
     private lateinit var notifDiscreet: SwitchCompat
+    private lateinit var wakeWord: SwitchCompat
+    private lateinit var wakeStatus: TextView
     private lateinit var tabletInfo: TextView
     private lateinit var updatesStatus: TextView
     private lateinit var updates: LinearLayout
+    private lateinit var essaisTitle: TextView
+    private lateinit var essais: LinearLayout
     private lateinit var switchApp: Button
+    private lateinit var companionStatus: TextView
+    private lateinit var companionUpdate: Button
     private var installing = false
+    private var companionUpdating = false
     private val main get() = requireActivity() as MainActivity
     private val adder by lazy { ComputerAdder(requireActivity(), main.lifecycleScope) { main.onComputerChanged(it) } }
     private val wifi by lazy { WifiPicker(requireActivity(), main.lifecycleScope) { if (view != null) renderWifi() } }
@@ -90,10 +108,14 @@ class SettingsFragment : Fragment() {
         view.findViewById<Button>(R.id.settings_wifi).setOnClickListener { wifi.show() }
         updatesStatus = view.findViewById(R.id.settings_updates_status)
         updates = view.findViewById(R.id.settings_updates)
+        essaisTitle = view.findViewById(R.id.settings_essais_title)
+        essais = view.findViewById(R.id.settings_essais)
+        companionStatus = view.findViewById(R.id.settings_companion_status)
+        companionUpdate = view.findViewById(R.id.settings_companion_update)
         view.findViewById<Button>(R.id.settings_updates_check).setOnClickListener { checkUpdates() }
         switchApp = view.findViewById(R.id.settings_switch_app)
         switchApp.setText(if (BuildConfig.TRIAL) R.string.trial_back else R.string.trial_open)
-        switchApp.setOnClickListener { Trial.switch(requireActivity()) }
+        switchApp.setOnClickListener { if (BuildConfig.TRIAL) backToStable() else openTrial() }
         view.findViewById<View>(R.id.settings_trial_hint).visibility = if (BuildConfig.TRIAL) View.VISIBLE else View.GONE
         battery = view.findViewById(R.id.settings_battery)
         batteryHint = view.findViewById(R.id.settings_battery_hint)
@@ -101,13 +123,17 @@ class SettingsFragment : Fragment() {
         volume = view.findViewById(R.id.settings_volume)
         nightDim = view.findViewById(R.id.settings_night_dim)
         notifDiscreet = view.findViewById(R.id.settings_notif_discreet)
+        wakeWord = view.findViewById(R.id.settings_wake_word)
+        wakeStatus = view.findViewById(R.id.settings_wake_word_status)
         tabletInfo = view.findViewById(R.id.settings_tablet_info)
         setUpTablet()
         setUpThemes(view.findViewById(R.id.settings_themes))
         renderComputers()
         renderWifi()
         renderSwitchApp()
+        checkCompanion()
 
+        view.findViewById<Button>(R.id.settings_licences).setOnClickListener { showLicences() }
         view.findViewById<Button>(R.id.settings_kiosk_exit).setOnClickListener {
             Kiosk.exit(requireActivity())
             renderKiosk()
@@ -151,7 +177,7 @@ class SettingsFragment : Fragment() {
         val all = Computers.all(ctx)
         if (all.isEmpty()) {
             computers.addView(TextView(ctx).apply {
-                text = getString(R.string.computers_empty, BuildConfig.INSTALL_URL)
+                text = getString(R.string.computers_empty, InstallerService.address() ?: getString(R.string.install_address_no_wifi))
                 textSize = 16f
                 setPadding(0, dp(8), 0, 0)
             })
@@ -179,7 +205,8 @@ class SettingsFragment : Fragment() {
                         main.onComputerChanged(Computers.active(ctx))
                     }
                     // Jeton refusé (ordinateur réinstallé) : nouvel appairage, même ordinateur.
-                    link.state == Link.State.UNAUTHORIZED -> adder.pair(c.url, c.name)
+                    // Appairé en HTTP avant le WiFi chiffré : réappairage en HTTPS (`pairUrl`).
+                    link.state == Link.State.UNAUTHORIZED -> adder.pair(c.pairUrl, c.name)
                 }
             }
             val rename = { adder.rename(c) { main.refreshLink(); renderComputers() } }
@@ -320,6 +347,14 @@ class SettingsFragment : Fragment() {
         }
         // Mode discret : lu à chaque bandeau et à chaque affichage de l'historique, rien d'autre à prévenir.
         notifDiscreet.setOnCheckedChangeListener { _, checked -> Prefs.setNotificationsDiscreet(ctx, checked) }
+        // Mot de réveil : l'activer télécharge le modèle s'il manque ; l'écoute suit tout de suite.
+        wakeWord.setOnCheckedChangeListener { _, checked ->
+            Prefs.setWakeWord(ctx, checked)
+            if (checked) WakeModel.ensure(ctx)
+            main.onWakeWordChanged()
+            renderWake()
+        }
+        viewLifecycleOwner.lifecycleScope.launch { WakeModel.state.collect { renderWake() } }
         renderTablet()
     }
 
@@ -332,6 +367,8 @@ class SettingsFragment : Fragment() {
         volume.progress = ctx.getSystemService(AudioManager::class.java).getStreamVolume(AudioManager.STREAM_MUSIC)
         nightDim.isChecked = Prefs.nightDim(ctx)
         notifDiscreet.isChecked = Prefs.notificationsDiscreet(ctx)
+        wakeWord.isChecked = Prefs.wakeWord(ctx)
+        renderWake()
         // Batterie (registerReceiver) et adresse IP (NetworkInterface) : appels système lents, hors thread principal.
         viewLifecycleOwner.lifecycleScope.launch {
             val battery = withContext(Dispatchers.IO) { Tablet.battery(ctx) }
@@ -341,6 +378,22 @@ class SettingsFragment : Fragment() {
             tabletInfo.text = getString(
                 R.string.tablet_info, BuildConfig.VERSION_NAME, ip ?: getString(R.string.tablet_no_address), android.os.Build.MODEL,
             )
+        }
+    }
+
+    /** Ligne d'état du mot de réveil : micro d'abord (sans lui rien ne sert), puis le modèle ; rien quand il est coupé. */
+    private fun renderWake() {
+        val ctx = context ?: return
+        if (view == null) return
+        val on = Prefs.wakeWord(ctx)
+        wakeStatus.visibility = if (on) View.VISIBLE else View.GONE
+        if (!on) return
+        val mic = ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        wakeStatus.text = if (!mic) getString(R.string.wake_no_mic) else when (val model = WakeModel.refresh(ctx)) {
+            WakeModel.State.Ready -> getString(R.string.wake_ready)
+            is WakeModel.State.Downloading -> getString(R.string.wake_downloading, model.percent)
+            WakeModel.State.Absent -> getString(R.string.wake_downloading, 0)
+            WakeModel.State.Failed -> getString(R.string.wake_failed)
         }
     }
 
@@ -382,6 +435,8 @@ class SettingsFragment : Fragment() {
         if (installing) return
         updatesStatus.setText(R.string.updates_checking)
         updates.removeAllViews()
+        essais.removeAllViews()
+        essaisTitle.visibility = View.GONE
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val check = Updater.check(requireContext())
@@ -393,10 +448,117 @@ class SettingsFragment : Fragment() {
             } catch (e: Exception) {
                 updatesStatus.text = errorText(e)
             }
+            // Essais de MR : seulement dans la stable (device owner, qui les installe).
+            if (!BuildConfig.TRIAL) showEssais()
+        }
+        checkCompanion()
+    }
+
+    /** Compagnon de l'ordinateur actif : sa version et, si une plus récente est publiée, le bouton qui l'y met. */
+    private fun checkCompanion() {
+        if (companionUpdating) return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val status = CompanionUpdater.check(requireContext())
+            if (view == null || companionUpdating) return@launch
+            companionUpdate.visibility = View.GONE
+            companionStatus.visibility = if (status == null) View.GONE else View.VISIBLE
+            val identity = status?.identity
+            if (status == null) return@launch
+            if (identity == null) {
+                companionStatus.setText(R.string.companion_state_unreachable)
+                return@launch
+            }
+            val name = identity.name
+            val version = identity.version ?: getString(R.string.companion_version_old)
+            companionStatus.text = when (val d = status.decision) {
+                BackendPlan.Decision.Unreachable -> getString(R.string.companion_state_unreachable)
+                BackendPlan.Decision.FromRepo -> getString(R.string.companion_state_repo, name)
+                BackendPlan.Decision.NothingPublished -> getString(R.string.companion_state_nothing, name, version)
+                BackendPlan.Decision.OnEssai -> getString(R.string.companion_state_essai, name)
+                BackendPlan.Decision.UpToDate -> getString(R.string.companion_state_uptodate, name, version)
+                is BackendPlan.Decision.ComputerNewer -> getString(R.string.companion_state_newer, name, version, d.release.version)
+                is BackendPlan.Decision.NeedsInstaller -> {
+                    showCompanionButton(R.string.companion_update_steps) { main.companionUpdate.showInstallSteps(identity) }
+                    getString(R.string.companion_state_installer, name, version, d.release.version)
+                }
+                is BackendPlan.Decision.Available -> {
+                    showCompanionButton(R.string.companion_update_button) { updateCompanion(identity, d.release) }
+                    getString(R.string.companion_state_available, name, version, d.release.version)
+                }
+            }
         }
     }
 
-    private fun updateRow(update: AppUpdate, info: android.content.pm.PackageInfo?): View {
+    private fun showCompanionButton(text: Int, onClick: () -> Unit) {
+        companionUpdate.setText(text)
+        companionUpdate.isEnabled = true
+        companionUpdate.visibility = View.VISIBLE
+        companionUpdate.setOnClickListener { onClick() }
+    }
+
+    /** Le travail tourne dans la portée de l'activité : les vues ne sont touchées que si les Réglages sont encore là. */
+    private fun updateCompanion(identity: Identity, release: BackendRelease) {
+        val showing = { isAdded && view != null }
+        main.companionUpdate.confirm(identity, release, onState = { text ->
+            companionUpdating = true
+            if (showing()) {
+                companionUpdate.isEnabled = false
+                companionUpdate.text = text
+            }
+        }, onDone = {
+            companionUpdating = false
+            if (showing()) checkCompanion()
+        })
+    }
+
+    /** Une ligne par essai publié, sous les mises à jour. Une erreur s'ajoute à la phrase d'état, sans masquer le reste. */
+    private suspend fun showEssais() {
+        try {
+            val list = Updater.essais(requireContext())
+            essaisTitle.visibility = View.VISIBLE
+            essaisTitle.setText(if (list.isEmpty()) R.string.essais_none else R.string.essais_title)
+            val installed = Updater.installed(requireContext(), Trial.TRIAL)
+            for (essai in list) essais.addView(updateRow(essai.update, installed, essai))
+        } catch (e: Exception) {
+            updatesStatus.text = listOf(updatesStatus.text, getString(R.string.updates_source_error, getString(R.string.updates_source_trials), errorText(e))).joinToString("\n")
+        }
+    }
+
+    /**
+     * « Ouvrir l'essai » : l'ordinateur d'abord sur le backend de la MR installée (ou d'origine si elle ne le touche pas),
+     * puis on passe à l'essai. Erreur : affichée, l'essai ne s'ouvre pas.
+     */
+    private fun openTrial() {
+        val ctx = requireContext().applicationContext
+        switchApp.isEnabled = false
+        updatesStatus.setText(R.string.trial_syncing)
+        val activity = requireActivity()
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val mr = Prefs.trialMr(ctx)
+                if (mr != 0) EssaiBackend.sync(ctx, mr, Prefs.trialHasBackend(ctx))
+                Trial.switch(activity)
+                if (view != null) updatesStatus.setText(R.string.updates_hint)
+            } catch (e: Exception) {
+                if (view != null) updatesStatus.text = errorText(e)
+            } finally {
+                if (view != null) switchApp.isEnabled = true
+            }
+        }
+    }
+
+    /** « Revenir à la stable » : le backend d'origine de l'ordinateur d'abord, la main rendue même s'il ne répond pas. */
+    private fun backToStable() {
+        val ctx = requireContext().applicationContext
+        val activity = requireActivity()
+        switchApp.isEnabled = false
+        main.lifecycleScope.launch {
+            EssaiBackend.restoreOrigin(ctx)
+            Trial.switch(activity)
+        }
+    }
+
+    private fun updateRow(update: AppUpdate, info: android.content.pm.PackageInfo?, essai: Essai? = null): View {
         val ctx = requireContext()
         val block = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -406,20 +568,19 @@ class SettingsFragment : Fragment() {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
         }
-        val state = UpdatePlan.state(update, info?.let { Updater.versionCode(it) })
-        // Le Companion a deux canaux (releases de main, essais d'une MR) : nommé sur chaque ligne pour les distinguer.
-        val channel = if (update.pkg != ctx.packageName) null
-        else getString(if (UpdatePlan.isTrial(update)) R.string.updates_channel_trial else R.string.updates_channel_main)
+        val installedCode = info?.let { Updater.versionCode(it) }
+        val state = UpdatePlan.state(update, installedCode)
+        val plan = essai?.let { EssaiPlan.install(update.versionCode, installedCode) }
         val texts = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         texts.addView(TextView(ctx).apply {
             textSize = 16f
-            text = if (channel == null) getString(R.string.updates_row_title, update.label, update.versionName)
-            else getString(R.string.updates_row_title_channel, update.label, channel, update.versionName)
+            text = if (essai != null) getString(R.string.essai_row_title, essai.mr, essai.title)
+            else getString(R.string.updates_row_title, update.label, update.versionName)
         })
         texts.addView(TextView(ctx).apply {
             textSize = 14f
-            setTextColor(themeColor(ctx, if (state == UpdatePlan.State.OLDER) R.attr.c_warn else R.attr.c_text_dim))
-            text = when (state) {
+            setTextColor(themeColor(ctx, if (plan == EssaiPlan.Install.UNINSTALL_FIRST || (essai == null && state == UpdatePlan.State.OLDER)) R.attr.c_warn else R.attr.c_text_dim))
+            text = if (essai != null) essaiState(essai, plan!!, info) else when (state) {
                 UpdatePlan.State.NEWER -> if (info == null) getString(R.string.updates_row_absent, sourceName(update.source))
                 else getString(R.string.updates_row_newer, info.versionName, sourceName(update.source))
                 UpdatePlan.State.INSTALLED -> getString(R.string.updates_row_installed)
@@ -428,7 +589,7 @@ class SettingsFragment : Fragment() {
         })
         row.addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         block.addView(row)
-        if (state == UpdatePlan.State.NEWER) {
+        if (if (plan != null) plan != EssaiPlan.Install.NONE else state == UpdatePlan.State.NEWER) {
             val button = Button(ctx, null, 0, R.style.PrimaryButton).apply { setText(R.string.updates_install) }
             // Barre épaisse sous la ligne, montrée pendant le téléchargement.
             val bar = android.widget.ProgressBar(ctx, null, 0, android.R.style.Widget_Material_ProgressBar_Horizontal).apply {
@@ -441,7 +602,7 @@ class SettingsFragment : Fragment() {
                 setText(R.string.cancel)
                 visibility = View.GONE
             }
-            button.setOnClickListener { install(update, button, bar, cancel) }
+            button.setOnClickListener { install(update, button, bar, cancel, essai) }
             row.addView(cancel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(52)).apply { marginEnd = dp(8) })
             row.addView(button, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(52)))
             block.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(10)).apply { topMargin = dp(10) })
@@ -450,9 +611,20 @@ class SettingsFragment : Fragment() {
     }
 
     private fun sourceName(source: UpdateSource) =
-        getString(if (source == UpdateSource.SERVER) R.string.updates_source_server else R.string.updates_source_computer)
+        getString(if (source == UpdateSource.COMPUTER) R.string.updates_source_computer else R.string.updates_source_server)
 
-    private fun install(update: AppUpdate, button: Button, bar: android.widget.ProgressBar, cancel: Button) {
+    /** Version, backend, et ce que l'installation fait de l'essai déjà installé. */
+    private fun essaiState(essai: Essai, plan: EssaiPlan.Install, info: android.content.pm.PackageInfo?): String {
+        val backend = getString(if (essai.hasBackend) R.string.essai_row_backend else R.string.essai_row_no_backend)
+        val state = when (plan) {
+            EssaiPlan.Install.NONE -> getString(R.string.updates_row_installed)
+            EssaiPlan.Install.INSTALL -> if (info == null) getString(R.string.essai_row_absent) else getString(R.string.essai_row_replace, info.versionName)
+            EssaiPlan.Install.UNINSTALL_FIRST -> getString(R.string.essai_row_downgrade, info?.versionName)
+        }
+        return getString(R.string.essai_row_version, essai.update.versionName, backend) + "\n" + state
+    }
+
+    private fun install(update: AppUpdate, button: Button, bar: android.widget.ProgressBar, cancel: Button, essai: Essai? = null) {
         if (installing) return
         installing = true
         button.isEnabled = false
@@ -491,6 +663,11 @@ class SettingsFragment : Fragment() {
                         if (showing()) updatesStatus.text = ctx.getString(R.string.updates_committed, installMinutes(update))
                     }
                 })
+                if (essai != null) {
+                    Prefs.setTrial(ctx, essai.mr, essai.hasBackend)
+                    if (showing()) updatesStatus.setText(R.string.trial_syncing)
+                    EssaiBackend.sync(ctx, essai.mr, essai.hasBackend, essai)
+                }
                 showResult(button, bar, ok = true)
                 if (showing()) updatesStatus.setText(R.string.updates_hint)
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -578,5 +755,27 @@ class SettingsFragment : Fragment() {
                 else -> R.string.kiosk_on
             },
         )
+    }
+
+    /**
+     * Mentions de licences des composants tiers (assets/licences.txt, généré par scripts/licences-android.mjs) :
+     * obligatoires pour les bibliothèques Apache 2.0 et les polices OFL embarquées.
+     */
+    private fun showLicences() {
+        val context = requireContext()
+        val text = runCatching { context.assets.open("licences.txt").bufferedReader().use { it.readText() } }.getOrDefault("")
+        val body = TextView(context).apply {
+            this.text = text
+            textSize = 12f
+            typeface = Typeface.MONOSPACE
+            setTextColor(themeColor(context, R.attr.c_text))
+            setTextIsSelectable(false)
+            setPadding(context.dp(24), context.dp(8), context.dp(24), context.dp(8))
+        }
+        AlertDialog.Builder(context)
+            .setTitle(R.string.about_licences)
+            .setView(android.widget.ScrollView(context).apply { addView(body) })
+            .setPositiveButton(R.string.close, null)
+            .showImmersive()
     }
 }

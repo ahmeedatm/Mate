@@ -1,7 +1,9 @@
+import fs from "node:fs";
+import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvider, loginUrl } from "../accounts.ts";
 import { calendarSources, dayRange, getEvents, invalidateCalendar, saveCalendarUrls, savedCalendarUrls } from "../calendar.ts";
-import { config } from "../config.ts";
+import { backendRoot, config } from "../config.ts";
 import { clearGitlabCache } from "../gitlab.ts";
 import { disconnectGitlab, finishGitlabLogin, gitlabAccount, gitlabClientId, gitlabLoginUrl } from "../gitlab-auth.ts";
 import { LOCAL_PAGE } from "../local-page.ts";
@@ -9,9 +11,17 @@ import { accessibility, openTarget } from "../os.ts";
 import { identity, lanAddresses, pendingCode } from "../pairing.ts";
 import { tabletStatus } from "../tablet.ts";
 
+const LICENCES_FILE = path.join(backendRoot, "LICENCES-TIERS.txt");
+
 /** Page d'accueil locale (ouverte dans le navigateur de l'ordinateur), connexion des comptes d'agenda et du compte GitLab. */
 export default async function localRoutes(app: FastifyInstance) {
   app.get("/", async (_req, reply) => reply.type("text/html; charset=utf-8").send(LOCAL_PAGE));
+
+  /** Mentions de licences des composants tiers : écrites dans le compagnon installé par scripts/package.ts. */
+  app.get("/local/licences", async (_req, reply) => {
+    if (!fs.existsSync(LICENCES_FILE)) return reply.code(404).send({ error: "Licences jointes au compagnon installé seulement" });
+    return reply.type("text/plain; charset=utf-8").send(fs.createReadStream(LICENCES_FILE));
+  });
 
   app.get("/local/status", async () => ({
     ...identity(),
@@ -19,6 +29,7 @@ export default async function localRoutes(app: FastifyInstance) {
     addresses: config.loopbackOnly ? ["127.0.0.1"] : lanAddresses(),
     tablet: tabletStatus().connected,
     pairing: pendingCode(),
+    licences: fs.existsSync(LICENCES_FILE),
     // Hôtes seulement : un lien ICS publié donne accès à l'agenda, il ne s'affiche pas en entier.
     calendar: {
       env: config.icsUrls.length,

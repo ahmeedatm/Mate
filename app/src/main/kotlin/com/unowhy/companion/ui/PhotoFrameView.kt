@@ -39,6 +39,12 @@ class PhotoFrameView(private val activity: MainActivity) : FrameLayout(activity)
     private val shuffle = FrameLogic.Shuffle()
     private var loading: Job? = null
     private val advance = Runnable { next() }
+    private val minute: Runnable = object : Runnable {
+        override fun run() {
+            tick()
+            postDelayed(this, MinuteClock.msToNextMinute(System.currentTimeMillis()) + MinuteClock.SLACK_MS)
+        }
+    }
 
     private val clock = TextView(context).apply {
         textSize = 72f
@@ -74,7 +80,8 @@ class PhotoFrameView(private val activity: MainActivity) : FrameLayout(activity)
         files = photos
         if (files.isEmpty()) return
         visibility = VISIBLE
-        tick()
+        removeCallbacks(minute)
+        minute.run()
         next()
     }
 
@@ -87,13 +94,14 @@ class PhotoFrameView(private val activity: MainActivity) : FrameLayout(activity)
     fun hide() {
         if (!isShowing) return
         removeCallbacks(advance)
+        removeCallbacks(minute)
         loading?.cancel()
         visibility = GONE
         // Les bitmaps partent avec le cadre : rien ne reste en mémoire tant qu'il n'est pas affiché.
         images.forEach { it.animate().cancel(); it.setImageDrawable(null); it.alpha = 0f }
     }
 
-    /** Heure et date, à chaque minute (MainActivity) et à chaque photo. */
+    /** Heure et date, à chaque minute pleine tant que le cadre est affiché (`minute`). */
     fun tick() {
         val now = Date()
         clock.text = SimpleDateFormat("HH:mm", Locale.FRANCE).format(now)

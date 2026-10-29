@@ -27,7 +27,9 @@ const deckConfig = JSON.parse(readFileSync(deckFile, "utf8")) as {
     apps?: boolean;
     app?: string;
     media?: boolean;
-    tiles: { label: string; action: { type: string; name?: string } }[];
+    sound?: boolean;
+    mail?: boolean;
+    tiles: { label: string; action: { type: string; name?: string; keys?: string; steps?: { type: string; keys?: string }[] } }[];
   }[];
 };
 const baseApps = deckConfig.pages.find((p) => p.apps)!.tiles.map((t) => t.action.name!);
@@ -287,5 +289,88 @@ describe("homeFeatures", () => {
     process.env.GITLAB_CLIENT_ID = "app-id-de-test";
     assert.equal((await deck.homeFeatures()).gitlab, true);
     delete process.env.GITLAB_CLIENT_ID;
+  });
+});
+
+describe("suite Microsoft dans les decks de départ", () => {
+  const OFFICE = ["Word", "Excel", "PowerPoint", "Outlook"];
+  const examples = ["deck.example.json", "deck.example.windows.json"].map((name) => ({
+    name,
+    deck: JSON.parse(readFileSync(path.join(path.dirname(config.deckExampleFile), name), "utf8")) as typeof deckConfig,
+  }));
+
+  for (const { name, deck: example } of examples) {
+    it(`${name} : une page par appli, ouverte depuis sa tuile de la page Apps, après les pages d'avant`, () => {
+      const appNames = example.pages.find((p) => p.apps)!.tiles.map((t) => t.action.name);
+      const titles = example.pages.map((p) => p.title);
+      // Ajoutées à la fin : les identifiants des tuiles déjà placées sur la tablette (`page-tuile`) ne bougent pas.
+      assert.deepEqual(titles.slice(-OFFICE.length), OFFICE);
+      for (const title of OFFICE) {
+        const page = example.pages.find((p) => p.title === title)!;
+        assert.ok(appNames.includes(page.app), `${title} : ${page.app} dans la page Apps`);
+        assert.ok(page.tiles.length > 0);
+      }
+    });
+  }
+
+  for (const { name, deck: example } of examples) {
+    it(`${name} : pas de barre Son sur les pages Office, courrier au-dessus des touches d'Outlook seulement`, () => {
+      for (const title of OFFICE) {
+        const page = example.pages.find((p) => p.title === title)!;
+        assert.equal(page.sound, false, `${title} : sound`);
+        assert.equal(page.mail === true, title === "Outlook", `${title} : mail`);
+      }
+    });
+
+    it(`${name} : raccourcis écrits avec des touches connues, sans doublon d'étiquette par page`, () => {
+      const modifiers = new Set(["cmd", "ctrl", "alt", "shift"]);
+      const named = new Set([
+        "return",
+        "space",
+        "delete",
+        "del",
+        "insert",
+        "home",
+        "pageup",
+        "pagedown",
+        "end",
+        "left",
+        "right",
+        "escape",
+        "f2",
+        "f5",
+        "f7",
+        "f9",
+        "f11",
+        "f12",
+      ]);
+      for (const title of OFFICE) {
+        const page = example.pages.find((p) => p.title === title)!;
+        const labels = page.tiles.map((t) => t.label);
+        assert.equal(new Set(labels).size, labels.length, `${title} : étiquettes en double`);
+        const steps = page.tiles.flatMap((t) => (t.action.type === "macro" ? t.action.steps! : [t.action]));
+        for (const step of steps.filter((s) => s.type === "keys")) {
+          const parts = step.keys!.split("+");
+          const key = parts.pop()!;
+          assert.ok(
+            parts.every((m) => modifiers.has(m)),
+            `${title} : ${step.keys}`,
+          );
+          assert.ok(key.length === 1 || named.has(key), `${title} : touche ${key} de ${step.keys}`);
+        }
+      }
+    });
+  }
+
+  it("pages ordinaires (pas seulement en appel) quand les applis sont installées", async () => {
+    reset({ installed: baseApps });
+    const pages = await deck.loadDeck();
+    for (const title of OFFICE) {
+      const page = pages.find((p) => p.title === title)!;
+      assert.equal(page.callOnly, undefined, title);
+      // `sound` et `mail` de la config arrivent jusqu'à la page, pour la route /deck.
+      assert.equal(page.sound, false, title);
+      assert.equal(page.mail === true, title === "Outlook", title);
+    }
   });
 });

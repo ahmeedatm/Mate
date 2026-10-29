@@ -3,7 +3,7 @@ import { after, before, beforeEach, describe, it } from "node:test";
 import { startServer, type TestServer } from "./server.ts";
 
 type TileView = { id: string; label: string; type: string; app: string | null };
-type PageView = { title: string; apps: boolean; editable: boolean; app: string | null; tiles: TileView[] };
+type PageView = { title: string; apps: boolean; editable: boolean; app: string | null; sound: boolean; mail: boolean; tiles: TileView[] };
 
 let server: TestServer;
 before(async () => {
@@ -30,6 +30,18 @@ describe("GET /deck", () => {
     assert.equal(perso.tiles.length, 14);
     assert.ok(perso.tiles.every((t) => t.type === "empty" && t.label === ""));
     assert.deepEqual(list.find((p) => p.apps)!.tiles, [], "aucune appli installée : page Apps vide");
+  });
+
+  it("`sound` : barre Son voulue par défaut, coupée sur les pages Office ; `mail` : seulement Outlook", async () => {
+    server.setOs({ installed: ["Microsoft Word", "Microsoft Outlook", "Notes"] });
+    const list = await pages();
+    assert.equal(list.find((p) => p.title === "Discord")!.sound, true);
+    for (const title of ["Word", "Excel", "PowerPoint", "Outlook"]) {
+      const page = list.find((p) => p.title === title)!;
+      assert.equal(page.sound, false, title);
+      assert.equal(page.mail, title === "Outlook", title);
+    }
+    assert.equal(list.filter((p) => p.mail).length, 1);
   });
 
   it("page Apps : applis installées, avec leur nom", async () => {

@@ -17,6 +17,7 @@ import com.unowhy.companion.R
 import com.unowhy.companion.audio.Speaker
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.net.BackendClient
+import com.unowhy.companion.voice.Mic
 import kotlinx.coroutines.launch
 
 /**
@@ -108,6 +109,8 @@ class CallOverlay(private val activity: MainActivity) : FrameLayout(activity) {
         postDelayed(expire, RING_TIMEOUT_MS)
         if (fresh) {
             announced = false
+            // Carte affichée : le mot de réveil se tait jusqu'à sa fermeture.
+            Mic.hold(Mic.CALL)
             visibility = VISIBLE
             bringToFront()
             Screen.touched(activity)
@@ -130,6 +133,7 @@ class CallOverlay(private val activity: MainActivity) : FrameLayout(activity) {
         removeCallbacks(expire)
         app = null
         visibility = GONE
+        Mic.release(Mic.CALL)
         Look.stop(pulse, badge)
         pulse = null
         Speaker.stop()

@@ -28,6 +28,14 @@ data class Computer(
     /** Joint en HTTP en clair sur le WiFi (appairé avant le HTTPS) : à réappairer, le jeton n'est plus envoyé. */
     val needsRepair: Boolean get() = url.startsWith("http://") && !isLocalUrl(url)
 
+    /** Adresse où réappairer : en WiFi, HTTPS sur le port suivant ; le port HTTP n'écoute plus que la tablette en USB. */
+    val pairUrl: String get() {
+        if (!needsRepair) return url
+        val host = url.removePrefix("http://").substringBeforeLast(':')
+        val port = url.substringAfterLast(':').toIntOrNull() ?: 3000
+        return "https://$host:${port + 1}"
+    }
+
     companion object {
         const val PROVISIONAL = "url:"
     }
