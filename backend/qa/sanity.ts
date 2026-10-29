@@ -312,6 +312,21 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "Jira : tickets",
+      run: async () => {
+        // Lecture seule : jamais de transition, ce sont les vrais tickets de l'utilisateur.
+        // Hors Mac et Windows, /deck/features répond 501 : on ne sait plus si Jira est configuré.
+        const features = await call("GET", "/deck/features");
+        const configured = features.status === 200 ? features.json.jira : undefined;
+        const issues = await call("GET", "/jira/issues");
+        if (configured === false || (configured === undefined && issues.status === 501)) {
+          return expectStatus(issues, 501, "/jira/issues sans Jira configuré");
+        }
+        expectStatus(issues, 200, "/jira/issues");
+        expect(Array.isArray(issues.json.columns), "forme de /jira/issues inattendue");
+      },
+    },
+    {
       name: "agenda personnel",
       run: async () => {
         const startMs = Date.now() + 5 * 60_000;

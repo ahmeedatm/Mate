@@ -257,7 +257,7 @@ describe("page Média : sites", () => {
 
 describe("homeFeatures", () => {
   it("bouton Rejoindre de Teams seulement si Teams est dans la page Apps", async () => {
-    assert.deepEqual(await deck.homeFeatures(), { agenda: true, linked: false, meetings: true, teams: false, agents: false });
+    assert.deepEqual(await deck.homeFeatures(), { agenda: true, linked: false, meetings: true, teams: false, agents: false, jira: false });
     await deck.addDeckApp("Microsoft Teams");
     assert.equal((await deck.homeFeatures()).teams, true);
   });
