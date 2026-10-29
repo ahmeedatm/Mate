@@ -9,9 +9,9 @@ import org.junit.Test
 class MoodsTest {
 
     @Test
-    fun `stress et anxiete font d'abord respirer`() {
+    fun `stress et dispersion font d'abord respirer`() {
         assertEquals(Plan.Breathe(Breathing.Pattern.COHERENCE, 5, NoisePlayer.Kind.STORM), Moods.planFor(Mood.STRESSED))
-        assertEquals(Plan.Breathe(Breathing.Pattern.RELAX, 5, NoisePlayer.Kind.SEA), Moods.planFor(Mood.ANXIOUS))
+        assertEquals(Plan.Breathe(Breathing.Pattern.BOX, 3, NoisePlayer.Kind.FOREST), Moods.planFor(Mood.SCATTERED))
     }
 
     @Test

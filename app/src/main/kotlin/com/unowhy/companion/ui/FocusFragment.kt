@@ -87,33 +87,12 @@ class FocusFragment : Fragment() {
             }
         }
 
-        val pomodoro = view.findViewById<View>(R.id.focus_pomodoro)
-        val breathingRoot = view.findViewById<View>(R.id.focus_breathing)
-        breathing = BreathingPanel(breathingRoot) {
-            breathingRoot.visibility = View.GONE
-            pomodoro.visibility = View.VISIBLE
-        }
-        val showBreathing = {
-            pomodoro.visibility = View.GONE
-            breathingRoot.visibility = View.VISIBLE
-        }
-        view.findViewById<Button>(R.id.focus_breathe).setOnClickListener { showBreathing() }
-        view.findViewById<Button>(R.id.focus_mood).setOnClickListener {
-            MoodDialog.show(requireContext()) { plan ->
-                NoisePlayer.play(plan.ambiance)
-                when (plan) {
-                    is Moods.Plan.Breathe -> {
-                        showBreathing()
-                        // L'ambiance de la proposition s'arrête avec l'exercice (si personne ne l'a changée).
-                        breathing.startWith(plan.pattern, plan.minutes) { if (NoisePlayer.kind == plan.ambiance) NoisePlayer.stop() }
-                    }
-                    is Moods.Plan.Work -> {
-                        // Durées du moment seulement : le choix gardé reste celui des pastilles.
-                        FocusTimer.setPreset(plan.preset.focus, plan.preset.pause)
-                        FocusTimer.toggle()
-                    }
-                }
-            }
+        breathing = BreathingPanel(view.findViewById(R.id.focus_breathing))
+        view.findViewById<Button>(R.id.focus_mode_pomodoro).setOnClickListener { showBreathing(false) }
+        view.findViewById<Button>(R.id.focus_mode_breath).setOnClickListener { showBreathing(true) }
+        showBreathing(false)
+        view.findViewById<MoodColumn>(R.id.focus_moods).onPick = { mood ->
+            MoodDialog.propose(requireContext(), mood) { start(Moods.planFor(mood)) }
         }
 
         val noises = view.findViewById<LinearLayout>(R.id.focus_noises)
@@ -141,6 +120,34 @@ class FocusFragment : Fragment() {
     private fun choose(preset: FocusPresets.Preset) {
         Prefs.setFocusPreset(requireContext(), preset)
         FocusTimer.setPreset(preset.focus, preset.pause)
+    }
+
+    /** Pomodoro ou Respiration à la même place ; revenir au Pomodoro arrête l'exercice (le chrono, lui, continue). */
+    private fun showBreathing(on: Boolean) {
+        val view = view ?: return
+        if (!on) breathing.stop()
+        view.findViewById<View>(R.id.focus_pomodoro).visibility = if (on) View.GONE else View.VISIBLE
+        view.findViewById<View>(R.id.focus_breathing).visibility = if (on) View.VISIBLE else View.GONE
+        view.findViewById<View>(R.id.focus_mode_pomodoro).isSelected = !on
+        view.findViewById<View>(R.id.focus_mode_breath).isSelected = on
+    }
+
+    /** Proposition de l'humeur : ambiance lancée, puis respiration ou Pomodoro (l'ambiance reste réglable en dessous). */
+    private fun start(plan: Moods.Plan) {
+        NoisePlayer.play(plan.ambiance)
+        when (plan) {
+            is Moods.Plan.Breathe -> {
+                showBreathing(true)
+                // L'ambiance de la proposition s'arrête avec l'exercice (si personne ne l'a changée).
+                breathing.startWith(plan.pattern, plan.minutes) { if (NoisePlayer.kind == plan.ambiance) NoisePlayer.stop() }
+            }
+            is Moods.Plan.Work -> {
+                showBreathing(false)
+                // Durées du moment seulement : le choix gardé reste celui des pastilles.
+                FocusTimer.setPreset(plan.preset.focus, plan.preset.pause)
+                FocusTimer.toggle()
+            }
+        }
     }
 
     /** Ne pas déranger changé depuis la page de l'ordinateur. */

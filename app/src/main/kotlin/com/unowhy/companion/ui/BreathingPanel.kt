@@ -11,10 +11,10 @@ import com.unowhy.companion.focus.Breathing
 import com.unowhy.companion.focus.FocusTimer
 
 /**
- * Respiration de Focus, à la place du Pomodoro (qui continue derrière) : rythme, durée, puis la consigne suit les
- * ondes. Arrêtée en quittant l'écran Focus ou en revenant au Pomodoro.
+ * Respiration de Focus, à la place du Pomodoro (qui continue derrière) ; l'ambiance reste réglable en dessous : rythme,
+ * durée, puis la consigne suit les ondes. Arrêtée en quittant l'écran Focus ou en revenant au Pomodoro.
  */
-class BreathingPanel(private val root: View, private val onBack: () -> Unit) {
+class BreathingPanel(private val root: View) {
 
     private val context = root.context
     private val waves = root.findViewById<BreathingView>(R.id.breath_waves)
@@ -28,7 +28,6 @@ class BreathingPanel(private val root: View, private val onBack: () -> Unit) {
     private var done = false
 
     init {
-        root.findViewById<View>(R.id.breath_back).setOnClickListener { stop(); onBack() }
         val patterns = root.findViewById<LinearLayout>(R.id.breath_patterns)
         for (p in Breathing.Pattern.entries) {
             patternChips[p] = chip(patterns, context.getString(p.label)) { pattern = p; done = false; render() }
