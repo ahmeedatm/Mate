@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
-import { clearGitlabCache, gitlabConfigured, GitLabError, listMrs, mergeMr, mrUrl, pipelineOf, statusLabel } from "../src/gitlab.ts";
+
+// Dossier de données vide (aucun compte connecté) et pas d'appli OAuth : seul GITLAB_TOKEN ouvre GitLab ici.
+process.env.DATA_DIR = await fs.mkdtemp(path.join(os.tmpdir(), "companion-gitlab-"));
+delete process.env.GITLAB_CLIENT_ID;
+const { clearGitlabCache, gitlabAvailable, GitLabError, listMrs, mergeMr, mrUrl, pipelineOf, statusLabel } =
+  await import("../src/gitlab.ts");
 
 const TOKEN = "glpat-secret-de-test";
 const SHA = "0123456789abcdef0123456789abcdef01234567";
@@ -53,6 +61,7 @@ afterEach(() => {
   if (env.GITLAB_URL === undefined) delete process.env.GITLAB_URL;
 });
 
+const REFUSED = "GitLab refuse l'accès de l'ordinateur : reconnecte-le depuis la page du compagnon";
 const rejectsWith = (p: Promise<unknown>, statusCode: number, message: string) =>
   assert.rejects(p, (e: unknown) => {
     assert.ok(e instanceof GitLabError, `GitLabError attendue, reçu ${String(e)}`);
@@ -154,7 +163,7 @@ describe("gitlab : lecture des MR", () => {
 
   it("listes vides", async () => {
     fakeFetch(() => json(graphql([], [])));
-    assert.deepEqual(await listMrs(), { mine: [], review: [] });
+    assert.deepEqual(await listMrs(), { connected: true, mine: [], review: [] });
   });
 });
 
@@ -366,13 +375,13 @@ describe("gitlab : erreurs de lecture", () => {
   for (const status of [401, 403]) {
     it(`GitLab ${status} → 502 jeton refusé, sans le jeton`, async () => {
       fakeFetch(() => json({ message: `401 Unauthorized ${TOKEN}` }, status));
-      await rejectsWith(listMrs(), 502, "Le jeton GitLab de l'ordinateur est refusé");
+      await rejectsWith(listMrs(), 502, REFUSED);
     });
   }
 
   it("utilisateur absent de la réponse (jeton sans compte) → 502 jeton refusé", async () => {
     fakeFetch(() => json({ data: { currentUser: null } }));
-    await rejectsWith(listMrs(), 502, "Le jeton GitLab de l'ordinateur est refusé");
+    await rejectsWith(listMrs(), 502, REFUSED);
   });
 
   it("HTTP 500 → 502 ne répond pas", async () => {
@@ -409,20 +418,19 @@ describe("gitlab : erreurs de lecture", () => {
 
 describe("gitlab : jeton absent", () => {
   for (const value of [undefined, "", "   "]) {
-    it(`GITLAB_TOKEN = ${JSON.stringify(value)}`, async () => {
+    it(`GITLAB_TOKEN = ${JSON.stringify(value)} : pas connecté, GitLab n'est pas appelé`, async () => {
       if (value === undefined) delete process.env.GITLAB_TOKEN;
       else process.env.GITLAB_TOKEN = value;
       fakeFetch(() => json({}));
-      assert.equal(gitlabConfigured(), false);
-      const message = "GitLab n'est pas réglé sur l'ordinateur (GITLAB_TOKEN dans .env)";
-      await rejectsWith(listMrs(), 503, message);
-      await rejectsWith(mergeMr("a/b", 1, SHA), 503, message);
+      assert.equal(await gitlabAvailable(), false);
+      assert.deepEqual(await listMrs(), { connected: false, expired: false, mine: [], review: [] });
+      await rejectsWith(mergeMr("a/b", 1, SHA), 503, "GitLab n'est pas connecté sur l'ordinateur");
       assert.equal(calls.length, 0);
     });
   }
 
-  it("jeton réglé", () => {
-    assert.equal(gitlabConfigured(), true);
+  it("jeton réglé", async () => {
+    assert.equal(await gitlabAvailable(), true);
   });
 });
 

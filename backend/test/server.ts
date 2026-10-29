@@ -78,6 +78,7 @@ export async function startServer(options: ServerOptions = {}): Promise<TestServ
       // Pas de vrai GitLab : un GITLAB_TOKEN du poste ne doit pas ouvrir l'onglet GitLab ; les tests donnent leur faux serveur.
       GITLAB_TOKEN: "",
       GITLAB_URL: "",
+      GITLAB_CLIENT_ID: "",
       FAKE_OS: options.os ?? "mac",
       FAKE_OS_STATE: osState,
       FAKE_OS_LOG: osLog,

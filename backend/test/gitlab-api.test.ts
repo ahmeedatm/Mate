@@ -101,6 +101,7 @@ describe("GET /gitlab/mrs", () => {
       json.mine.map((m: any) => m.iid),
       [3, 12],
     );
+    assert.equal(json.connected, true);
     assert.equal(json.mine[1].project, "grp/proj");
     assert.equal(json.mine[1].mergeable, true);
     assert.equal(json.mine[1].statusLabel, "Prête à fusionner");
@@ -122,13 +123,13 @@ describe("GET /gitlab/mrs", () => {
     graphqlStatus = 401;
     const { status, json } = await freshRead();
     assert.equal(status, 502);
-    assert.match(json.error, /jeton GitLab de l'ordinateur est refusé/);
+    assert.match(json.error, /GitLab refuse l'accès de l'ordinateur/);
   });
 
-  it("sans GITLAB_TOKEN : 503, GitLab n'est pas appelé", async () => {
+  it("sans compte ni GITLAB_TOKEN : 200 « pas connecté » (la tablette le distingue), GitLab n'est pas appelé", async () => {
     const { status, json } = await noToken.call("GET", "/gitlab/mrs");
-    assert.equal(status, 503);
-    assert.match(json.error, /GITLAB_TOKEN/);
+    assert.equal(status, 200);
+    assert.deepEqual(json, { connected: false, expired: false, mine: [], review: [] });
     assert.equal(seen.length, 0);
   });
 });
@@ -166,7 +167,7 @@ describe("POST /gitlab/mrs/merge", () => {
     });
   }
 
-  it("sans GITLAB_TOKEN : 503", async () => {
+  it("sans compte ni GITLAB_TOKEN : 503", async () => {
     const { status } = await noToken.call("POST", "/gitlab/mrs/merge", { project: "grp/proj", iid: 12, sha: SHA });
     assert.equal(status, 503);
     assert.equal(seen.length, 0);

@@ -277,10 +277,14 @@ describe("homeFeatures", () => {
     assert.equal((await deck.homeFeatures()).agents, false);
   });
 
-  it("gitlab : seulement si GITLAB_TOKEN est réglé", async () => {
+  it("gitlab : jeton GITLAB_TOKEN ou appli OAuth réglée (GITLAB_CLIENT_ID), sinon non", async () => {
+    delete process.env.GITLAB_CLIENT_ID;
     process.env.GITLAB_TOKEN = "glpat-de-test";
     assert.equal((await deck.homeFeatures()).gitlab, true);
     process.env.GITLAB_TOKEN = " ";
     assert.equal((await deck.homeFeatures()).gitlab, false);
+    process.env.GITLAB_CLIENT_ID = "app-id-de-test";
+    assert.equal((await deck.homeFeatures()).gitlab, true);
+    delete process.env.GITLAB_CLIENT_ID;
   });
 });

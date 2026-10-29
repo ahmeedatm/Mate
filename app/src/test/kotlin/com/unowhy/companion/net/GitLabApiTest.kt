@@ -44,6 +44,25 @@ class GitLabApiTest {
     }
 
     @Test
+    fun `connected absent vaut vrai (ancien compagnon)`() {
+        val mrs = parseGitLabMrs(full)
+        assertTrue(mrs.connected)
+        assertFalse(mrs.expired)
+    }
+
+    @Test
+    fun `pas connecte, listes vides, connected faux et expired lu`() {
+        val none = parseGitLabMrs("""{"connected":false,"expired":false,"mine":[],"review":[]}""")
+        assertFalse(none.connected)
+        assertFalse(none.expired)
+        assertTrue(none.mine.isEmpty() && none.review.isEmpty())
+        val expired = parseGitLabMrs("""{"connected":false,"expired":true,"mine":[],"review":[]}""")
+        assertFalse(expired.connected)
+        assertTrue(expired.expired)
+        assertTrue(parseGitLabMrs("""{"connected":true,"mine":[],"review":[]}""").connected)
+    }
+
+    @Test
     fun `chaque pipeline a sa cle, une cle inconnue ou absente vaut none`() {
         for (p in Pipeline.entries) assertEquals(p, Pipeline.of(p.key))
         assertEquals(Pipeline.NONE, Pipeline.of(null))

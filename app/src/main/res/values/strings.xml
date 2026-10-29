@@ -141,6 +141,10 @@
     <string name="gitlab_pipeline_none">Pas de pipeline</string>
     <string name="gitlab_approvals">Approbations %1$s</string>
     <string name="gitlab_approvals_by">Approbations %1$s · %2$s</string>
+    <string name="gitlab_connect">Connecter GitLab</string>
+    <string name="gitlab_connect_text">GitLab n\'est pas connecté sur l\'ordinateur. Connecte-le pour voir et fusionner tes MR depuis la tablette : la connexion se fait dans le navigateur de l\'ordinateur.</string>
+    <string name="gitlab_reconnect_text">La connexion à GitLab n\'est plus valable. Reconnecte-la dans le navigateur de l\'ordinateur.</string>
+    <string name="gitlab_connect_waiting">Connexion ouverte sur l\'ordinateur : autorise l\'accès dans le navigateur. Les MR s\'affichent ici ensuite.</string>
     <string name="gitlab_merge">Fusionner</string>
     <string name="gitlab_merge_hint">Maintenir pour fusionner</string>
     <string name="deck_pad_tab">Pavé</string>

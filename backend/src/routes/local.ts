@@ -2,12 +2,14 @@ import type { FastifyInstance } from "fastify";
 import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvider, loginUrl } from "../accounts.ts";
 import { calendarSources, dayRange, getEvents, invalidateCalendar, saveCalendarUrls, savedCalendarUrls } from "../calendar.ts";
 import { config } from "../config.ts";
+import { clearGitlabCache } from "../gitlab.ts";
+import { disconnectGitlab, finishGitlabLogin, gitlabAccount, gitlabClientId, gitlabLoginUrl } from "../gitlab-auth.ts";
 import { LOCAL_PAGE } from "../local-page.ts";
 import { accessibility, openTarget } from "../os.ts";
 import { identity, lanAddresses, pendingCode } from "../pairing.ts";
 import { tabletStatus } from "../tablet.ts";
 
-/** Page d'accueil locale (ouverte dans le navigateur de l'ordinateur) et connexion des comptes d'agenda. */
+/** Page d'accueil locale (ouverte dans le navigateur de l'ordinateur), connexion des comptes d'agenda et du compte GitLab. */
 export default async function localRoutes(app: FastifyInstance) {
   app.get("/", async (_req, reply) => reply.type("text/html; charset=utf-8").send(LOCAL_PAGE));
 
@@ -23,6 +25,12 @@ export default async function localRoutes(app: FastifyInstance) {
       saved: (await savedCalendarUrls()).map((u) => (u === "demo" ? "agenda d'exemple" : (URL.parse(u)?.host ?? "lien invalide"))),
       accounts: await connectedAccounts(),
       providers: await availableProviders(),
+    },
+    // `available` : l'appli OAuth est réglée (bouton de connexion) ; `token` : GITLAB_TOKEN dans .env (secours).
+    gitlab: {
+      available: !!(await gitlabClientId()),
+      token: !!process.env.GITLAB_TOKEN?.trim(),
+      account: (await gitlabAccount()) ?? null,
     },
   }));
 
@@ -84,6 +92,39 @@ export default async function localRoutes(app: FastifyInstance) {
     },
   );
 
+  // Connexion GitLab (src/gitlab-auth.ts) : même parcours, retour sur la section GitLab de la page. Routes à part : GitLab
+  // n'est pas un fournisseur d'agenda. 127.0.0.1 : adresse déclarée dans l'appli (la variante localhost l'est aussi).
+  app.get("/oauth/gitlab/start", async (_req, reply) => {
+    if (!(await gitlabClientId())) return reply.code(404).send({ error: "Connexion non disponible pour ce compte" });
+    return reply.redirect(await gitlabLoginUrl(`http://127.0.0.1:${config.port}/oauth/gitlab/callback`));
+  });
+
+  app.get<{ Querystring: { code?: string; state?: string; error?: string; error_description?: string } }>(
+    "/oauth/gitlab/callback",
+    async (req, reply) => {
+      const back = (result: string) =>
+        reply.redirect(`http://127.0.0.1:${config.port}/?section=gitlab&gitlab=${encodeURIComponent(result)}`);
+      if (req.query.error || !req.query.code || !req.query.state) {
+        req.log.warn(`Connexion GitLab refusée : ${req.query.error}`);
+        return back(req.query.error === "access_denied" ? "refused" : "error");
+      }
+      try {
+        await finishGitlabLogin(req.query.state, req.query.code);
+        clearGitlabCache();
+        return back("ok");
+      } catch (e) {
+        req.log.error(e);
+        return back("error");
+      }
+    },
+  );
+
+  app.delete("/local/accounts/gitlab", async () => {
+    await disconnectGitlab();
+    clearGitlabCache();
+    return { ok: true };
+  });
+
   app.delete<{ Params: { provider: string } }>("/local/accounts/:provider", async (req, reply) => {
     if (!isProvider(req.params.provider)) return reply.code(404).send({ error: "Compte inconnu" });
     await disconnect(req.params.provider);
@@ -91,12 +132,17 @@ export default async function localRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
-  /** Ouvre la page du compagnon sur l'ordinateur, depuis la tablette (« Relier mon agenda » de l'Accueil). */
-  app.post<{ Body: { section?: "agenda" } }>(
+  /**
+   * Ouvre le compagnon sur l'ordinateur, depuis la tablette : sa page (« Relier mon agenda » de l'Accueil), ou la page
+   * d'autorisation de GitLab (`gitlab`, carte « Connecter GitLab » de l'onglet GitLab).
+   */
+  app.post<{ Body: { section?: "agenda" | "gitlab" } }>(
     "/local/open",
-    { schema: { body: { type: "object", additionalProperties: false, properties: { section: { enum: ["agenda"] } } } } },
+    { schema: { body: { type: "object", additionalProperties: false, properties: { section: { enum: ["agenda", "gitlab"] } } } } },
     async (req) => {
-      await openTarget(`http://127.0.0.1:${config.port}/${req.body?.section ? `?section=${req.body.section}` : ""}`);
+      const section = req.body?.section;
+      const path = section === "gitlab" ? "oauth/gitlab/start" : section ? `?section=${section}` : "";
+      await openTarget(`http://127.0.0.1:${config.port}/${path}`);
       return { ok: true };
     },
   );

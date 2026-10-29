@@ -32,10 +32,19 @@ data class GitLabMr(
     val sha: String,
 )
 
-/** `mine` : MR dont l'utilisateur du jeton est assigné ; `review` : MR qu'il doit relire. */
-data class GitLabMrs(val mine: List<GitLabMr>, val review: List<GitLabMr>)
+/**
+ * `mine` : MR dont l'utilisateur connecté est assigné ; `review` : MR qu'il doit relire. `connected` faux : l'ordinateur n'a
+ * ni compte GitLab connecté ni jeton (réponse normale, pas une erreur) ; `expired` : le compte a été connecté mais GitLab
+ * refuse de le renouveler.
+ */
+data class GitLabMrs(
+    val mine: List<GitLabMr>,
+    val review: List<GitLabMr>,
+    val connected: Boolean = true,
+    val expired: Boolean = false,
+)
 
-/** MR GitLab lues et pilotées par le compagnon de l'ordinateur (jamais de jeton GitLab sur la tablette). */
+/** MR GitLab lues et pilotées par le compagnon de l'ordinateur (jamais de jeton ni de compte GitLab sur la tablette). */
 class GitLabApi(private val http: Http) {
 
     suspend fun mrs(): GitLabMrs = http.io { parseGitLabMrs(http.get("/gitlab/mrs", timeoutMs = 20_000)) }
@@ -77,5 +86,5 @@ internal fun parseGitLabMrs(text: String): GitLabMrs {
             )
         }
     }
-    return GitLabMrs(list("mine"), list("review"))
+    return GitLabMrs(list("mine"), list("review"), json.optBoolean("connected", true), json.optBoolean("expired"))
 }

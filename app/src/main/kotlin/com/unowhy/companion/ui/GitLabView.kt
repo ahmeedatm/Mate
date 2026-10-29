@@ -6,6 +6,7 @@ import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -28,17 +29,28 @@ import kotlinx.coroutines.launch
  * Onglet GitLab du Deck : deux colonnes, « Mes MR » et « À relire », une carte par MR ouverte (pipeline, approbations,
  * état de fusion). Toucher une carte ouvre la MR sur l'ordinateur ; « Fusionner » (appui maintenu) n'est actif que si
  * GitLab dit la MR prête, et renvoie le commit affiché : GitLab refuse si la MR a bougé depuis. Relue toutes les 30 s
- * tant que la vue est affichée. Autonome : aucun accès au Deck, posable ailleurs.
+ * tant que la vue est affichée. Ordinateur sans compte GitLab connecté : une carte « Connecter GitLab » ouvre la connexion
+ * dans le navigateur de l'ordinateur, la vue se remplit seule une fois reliée (relue toutes les 3 s en attendant).
+ * Autonome : aucun accès au Deck, posable ailleurs.
  */
 class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : LinearLayout(context, attrs) {
 
     private val status = TextView(context)
     private val headers = listOf(TextView(context), TextView(context))
     private val lists = listOf(LinearLayout(context), LinearLayout(context))
+    private val board = LinearLayout(context)
+    private val connectHolder = LinearLayout(context)
+    private val connectBox = LinearLayout(context)
+    private val connectText = TextView(context)
+    private val connectButton = Button(context, null, 0, R.style.PrimaryButton)
 
     private lateinit var scope: CoroutineScope
     private var poll: Job? = null
     private var active = false
+    private var connected = true
+
+    /** « Connecter GitLab » touché : la carte dit d'autoriser l'accès dans le navigateur de l'ordinateur. */
+    private var waiting = false
     private var shown: GitLabMrs? = null
     private var signature: List<Any?> = emptyList()
 
@@ -62,7 +74,6 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             visibility = GONE
         }
         addView(status, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        val board = LinearLayout(context)
         for (i in lists.indices) {
             lists[i].orientation = VERTICAL
             headers[i].apply {
@@ -87,6 +98,35 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         }
         addView(board, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(4) })
         showHeaders(0, 0)
+        initConnect()
+    }
+
+    /** Carte affichée à la place des colonnes tant que l'ordinateur n'a pas de compte GitLab connecté. */
+    private fun initConnect() {
+        connectBox.apply {
+            orientation = VERTICAL
+            gravity = Gravity.CENTER
+            setBackgroundResource(R.drawable.row_bg)
+            setPadding(dp(24), dp(20), dp(24), dp(20))
+            visibility = GONE
+        }
+        connectText.apply {
+            textSize = 16f
+            gravity = Gravity.CENTER
+            setTextColor(themeColor(context, R.attr.c_text))
+        }
+        connectButton.apply {
+            setText(R.string.gitlab_connect)
+            setOnClickListener { connect() }
+        }
+        connectBox.addView(connectText, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+        connectBox.addView(connectButton, LayoutParams(LayoutParams.WRAP_CONTENT, dp(48)).apply { topMargin = dp(16) })
+        connectHolder.apply {
+            gravity = Gravity.CENTER
+            visibility = GONE
+            addView(connectBox, LayoutParams(dp(460), LayoutParams.WRAP_CONTENT))
+        }
+        addView(connectHolder, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
     }
 
     fun attach(scope: CoroutineScope) {
@@ -103,7 +143,7 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         poll = scope.launch {
             while (isActive) {
                 refresh()
-                delay(POLL_MS)
+                delay(if (connected) POLL_MS else CONNECT_POLL_MS)
             }
         }
     }
@@ -114,12 +154,51 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             val mrs = BackendClient(context).gitlab.mrs()
             if (id != lastRead) return
             status.visibility = GONE
-            render(mrs)
+            showConnected(mrs.connected)
+            if (mrs.connected) render(mrs) else showConnect(mrs.expired)
         } catch (e: Exception) {
             if (id != lastRead) return
             // Les dernières cartes restent affichées : la lecture suivante rattrape.
             status.text = context.errorText(e)
             status.visibility = VISIBLE
+        }
+    }
+
+    private fun showConnected(connected: Boolean) {
+        this.connected = connected
+        board.visibility = if (connected) VISIBLE else GONE
+        connectHolder.visibility = if (connected) GONE else VISIBLE
+        if (connected) {
+            waiting = false
+            return
+        }
+        // Reconnecté puis déconnecté : les colonnes se redessinent à la prochaine lecture.
+        shown = null
+        signature = emptyList()
+    }
+
+    private fun showConnect(expired: Boolean) {
+        connectBox.visibility = VISIBLE
+        connectText.setText(
+            when {
+                waiting -> R.string.gitlab_connect_waiting
+                expired -> R.string.gitlab_reconnect_text
+                else -> R.string.gitlab_connect_text
+            },
+        )
+    }
+
+    /** Ouvre la connexion dans le navigateur de l'ordinateur ; la lecture suivante (3 s) voit le compte relié. */
+    private fun connect() {
+        scope.launch {
+            try {
+                BackendClient(context).system.openLocalPage("gitlab")
+                waiting = true
+                connectText.setText(R.string.gitlab_connect_waiting)
+            } catch (e: Exception) {
+                status.text = context.errorText(e)
+                status.visibility = VISIBLE
+            }
         }
     }
 
@@ -271,6 +350,7 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     private companion object {
         const val POLL_MS = 30_000L
+        const val CONNECT_POLL_MS = 3_000L
         const val DISABLED_ALPHA = 0.4f
     }
 }

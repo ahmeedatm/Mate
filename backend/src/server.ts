@@ -50,14 +50,15 @@ const LOCAL_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
 const isLocalPage = (method: string, url: string, ip: string, host: string | undefined) =>
   LOOPBACK.has(ip) &&
   LOCAL_HOST.test(host ?? "") &&
-  ((method === "GET" && /^\/(camera(\/stream|\/status)?|local\/status|oauth\/(microsoft|google)\/(start|callback))?(\?|$)/.test(url)) ||
+  ((method === "GET" &&
+    /^\/(camera(\/stream|\/status)?|local\/status|oauth\/(microsoft|google|gitlab)\/(start|callback))?(\?|$)/.test(url)) ||
     (method === "PUT" && url === "/local/calendar") ||
     (method === "POST" && url === "/system/accessibility") ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
     (method === "POST" && (url === "/browser/extension" || url === "/browser/extension/commands")) ||
     // Hooks de Claude Code : pas de jeton d'appairage, un secret propre vérifié par la route (src/agents-sources.ts).
     (method === "POST" && (url === "/agents/hook" || url === "/agents/statusline")) ||
-    (method === "DELETE" && /^\/local\/accounts\/(microsoft|google)$/.test(url)));
+    (method === "DELETE" && /^\/local\/accounts\/(microsoft|google|gitlab)$/.test(url)));
 /** Sans jeton : identité (la tablette reconnaît l'ordinateur) et appairage par code. */
 const PUBLIC = /^\/(health|pair\/request|pair\/confirm)(\?|$)/;
 const authorized = (header: string | undefined) => {
