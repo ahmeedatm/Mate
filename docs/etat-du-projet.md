@@ -1,15 +1,15 @@
 # État du projet
 
-Mis à jour le 28/10/2026 dans la nuit (v0.2.9 : eau de l'Heure réglable, !94 ; tablette passée seule en 0.2.8, puis en 0.2.9). Le 28/10 au soir : tablette passée sur l'APK release signé et mise à jour par tag, vérifié jusqu'à v0.2.2 ; job `release` réparé : !75, !78). Le 28/10 en fin d'après-midi : agents Claude V1 (!59, !61, !62 et !63 ouvertes). Le 28/10 après-midi : widget Lecture en cours sur Mac, tailles des widgets (!51 et !53 fusionnées). Le 28/10 au matin : thème Rétro fusionné, page Média du PC validée. Mis à jour le 27/10/2026 au soir (page Média sur Mac fusionnée, compagnon du PC mis à jour ; travail d'Ahmed récupéré ; étude OBS dans [obs.md](obs.md)). Le 26/10 : Assistant IA retiré ; avant, 5e session du 25/10 : MCP revérifié, extension de navigateur reportée à la vente, poste de dev installé sur le PC perso d'Eliot, sans changement du code). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
+Le 29/10/2026 : direction B2B (note projet UNOMATE) reportée dans la cible, le CLAUDE.md et les specs. Mis à jour le 28/10/2026 dans la nuit (v0.2.9 : eau de l'Heure réglable, !94 ; tablette passée seule en 0.2.8, puis en 0.2.9). Le 28/10 au soir : tablette passée sur l'APK release signé et mise à jour par tag, vérifié jusqu'à v0.2.2 ; job `release` réparé : !75, !78). Le 28/10 en fin d'après-midi : agents Claude V1 (!59, !61, !62 et !63 ouvertes). Le 28/10 après-midi : widget Lecture en cours sur Mac, tailles des widgets (!51 et !53 fusionnées). Le 28/10 au matin : thème Rétro fusionné, page Média du PC validée. Mis à jour le 27/10/2026 au soir (page Média sur Mac fusionnée, compagnon du PC mis à jour ; travail d'Ahmed récupéré ; étude OBS dans [obs.md](obs.md)). Le 26/10 : Assistant IA retiré ; avant, 5e session du 25/10 : MCP revérifié, extension de navigateur reportée à la vente, poste de dev installé sur le PC perso d'Eliot, sans changement du code). À tenir à jour en fin de session : c'est la mémoire partagée du projet (les notes de Claude restent sur l'ordinateur où il tourne).
 
 ## Pourquoi ce projet
 
-Hackathon interne Unowhy. Unowhy a **environ 20 000 tablettes 4.2** en stock. L'objectif réel est de **les vendre**, pas seulement de leur trouver un usage. Unowhy vend aussi des PC : la tablette peut devenir un **accessoire du PC** (posée sur le bureau, sans configuration, en kiosque), sur le modèle du Stream Deck ou du Corsair Xeneon Edge.
+Hackathon interne Unowhy. Unowhy a **18 000 tablettes 4.2** à valoriser (note projet UNOMATE, 29/10/2026). L'objectif réel est de **les vendre**, pas seulement de leur trouver un usage. Unowhy vend aussi des PC : la tablette peut devenir un **accessoire du PC** (posée sur le bureau, sans configuration, en kiosque), sur le modèle du Stream Deck ou du Corsair Xeneon Edge.
 
-Deux publics envisagés au départ (tranché le 28/10/2026 pour les gamers et streamers : [cible-et-positionnement.md](cible-et-positionnement.md)) :
+Direction **B2B** depuis le 29/10/2026 ([cible-et-positionnement.md](cible-et-positionnement.md)) : une nouvelle offre pour les entreprises et les professionnels qui travaillent sur ordinateur, vendue seule ou en pack avec un PC Unowhy, avec un site e-commerce en complément (indépendants, télétravailleurs). Elle remplace le cadrage gamers / streamers du 28/10. Publics envisagés au départ, repris dans ce cadrage :
 
-- **Bureau / maison** : compagnon du PC (agenda, tâches, deck, fenêtres, son, musique, jeux).
-- **École, « console du prof »** : télécommande du PC de la classe, minuteur et surtout **visualiseur de documents**. La caméra filme une feuille, le PC la projette. Les écoles achètent ces appareils entre 100 et 300 € : c'est ce qui donne une valeur matérielle à la tablette.
+- **Bureau / maison** : compagnon du PC (agenda, tâches, deck, fenêtres, son, musique). C'est la cible, avec la réunion comme moment clé.
+- **École, « console du prof »** : télécommande du PC de la classe, minuteur et surtout **visualiseur de documents**. La caméra filme une feuille, le PC la projette. Les écoles achètent ces appareils entre 100 et 300 €. Piste hors cible B2B, le mode Caméra reste dans le produit.
 
 Éléments de pitch déjà validés :
 
@@ -138,7 +138,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 ## Décisions en attente
 
-- Nom du projet. Public cible tranché le 28/10/2026 : gamers, streamers, créateurs de contenu ([cible-et-positionnement.md](cible-et-positionnement.md)).
+- Nom du projet. Public cible : B2B depuis le 29/10/2026 (remplace gamers, streamers, créateurs du 28/10), voir [cible-et-positionnement.md](cible-et-positionnement.md).
 - Le Play Store reste-t-il actif en kiosque ?
 
 ## Avant de livrer ou de faire la démo
