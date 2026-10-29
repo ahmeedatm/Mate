@@ -392,7 +392,7 @@ class TitleView @JvmOverloads constructor(
         if (cadran) {
             setCompoundDrawablesRelative(null, null, null, null)
             isAllCaps = false
-            letterSpacing = Accessibility.letterSpacing(context)
+            letterSpacing = ReadingAids.letterSpacing(context)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, themePx(context, R.attr.c_title_size).toFloat())
             setTextColor(themeColor(context, R.attr.c_text_dim))
         } else if (icon != 0) {

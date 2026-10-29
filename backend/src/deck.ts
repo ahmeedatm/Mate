@@ -24,7 +24,9 @@ import {
 import type { Layout } from "./screens.ts";
 import { loadKeys, loadLinks, loadSavedApps, saveApps, saveLinks, type DeckApp, type DeckLink } from "./perso.ts";
 import { agentsAvailable } from "./agents-sources.ts";
+import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
+import { jiraConfigured } from "./jira.ts";
 import { appPluginOff, pluginOn, pluginsOff } from "./plugins.ts";
 import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
 
@@ -200,8 +202,20 @@ export async function homeFeatures() {
   // (appli ou navigateur) ; `teams` : l'appli Teams est dans le deck (page Réunion et ses raccourcis).
   const teams = names.some((n) => MEETING_APPS.test(n)) && (await pluginOn("teams"));
   // `agents` : onglet et widget des agents Claude (Mac avec Claude Code installé). `off` : plugins coupés (plugins.ts).
+  // `gitlab` : onglet des MR GitLab (jeton GITLAB_TOKEN dans .env, compte connecté par OAuth, ou appli OAuth réglée : la tablette propose de se connecter).
   const agents = agentsAvailable() && (await pluginOn("claude"));
-  return { agenda: true, linked: await hasCalendar(), meetings: canControl, teams, agents, off: await pluginsOff() };
+  // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
+  const jira = jiraConfigured && (await pluginOn("jira"));
+  return {
+    agenda: true,
+    linked: await hasCalendar(),
+    meetings: canControl,
+    teams,
+    agents,
+    gitlab: canControl && (await gitlabAvailable()),
+    jira,
+    off: await pluginsOff(),
+  };
 }
 
 export async function loadDeck(): Promise<DeckPage[]> {

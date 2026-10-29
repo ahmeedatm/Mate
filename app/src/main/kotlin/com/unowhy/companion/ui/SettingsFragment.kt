@@ -30,6 +30,7 @@ import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
+import com.unowhy.companion.device.Accessibility
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
 import com.unowhy.companion.installers.BackendPlan
@@ -75,6 +76,7 @@ class SettingsFragment : Fragment() {
     private lateinit var wakeWord: SwitchCompat
     private lateinit var wakeStatus: TextView
     private lateinit var weatherLocation: SwitchCompat
+    private lateinit var talkBack: SwitchCompat
     private lateinit var tabletInfo: TextView
     private lateinit var updatesStatus: TextView
     private lateinit var updates: LinearLayout
@@ -132,6 +134,7 @@ class SettingsFragment : Fragment() {
         setUpTablet()
         setUpThemes(view.findViewById(R.id.settings_themes))
         setUpAccessibility(view)
+        setUpReadingAids(view)
         renderComputers()
         renderWifi()
         renderSwitchApp()
@@ -164,7 +167,13 @@ class SettingsFragment : Fragment() {
             renderKiosk()
             renderSwitchApp()
             loadAutoJoin()
+            renderTalkBack()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        renderTalkBack()
     }
 
     /** État de la liaison changé (MainActivity) : ligne de l'ordinateur actif à jour. */
@@ -299,6 +308,46 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    // --- Accessibilité (COMP-50) : TalkBack et taille du texte, que le kiosque empêche de régler dans Android
+
+    private fun setUpAccessibility(view: View) {
+        val ctx = requireContext()
+        talkBack = view.findViewById(R.id.settings_talkback)
+        val hint = view.findViewById<TextView>(R.id.settings_talkback_hint)
+        val installed = Accessibility.talkBackInstalled(ctx)
+        val allowed = Accessibility.canConfigure(ctx)
+        talkBack.isEnabled = installed && allowed
+        if (!installed) hint.setText(R.string.a11y_talkback_missing) else if (!allowed) hint.setText(R.string.a11y_talkback_locked)
+        renderTalkBack()
+
+        val row = view.findViewById<LinearLayout>(R.id.settings_text_sizes)
+        val current = Prefs.textScale(ctx)
+        for ((scale, label) in TEXT_SIZES) {
+            val chip = Button(ctx, null, 0, R.style.Chip).apply {
+                setText(label)
+                isSelected = scale == current
+                setOnClickListener {
+                    if (scale == current) return@setOnClickListener
+                    Prefs.setTextScale(context, scale)
+                    requireActivity().recreate()
+                }
+            }
+            row.addView(chip, LinearLayout.LayoutParams(0, dp(48), 1f).apply { if (row.childCount > 0) marginStart = dp(10) })
+        }
+    }
+
+    /**
+     * État réel de TalkBack : il change aussi sans l'interrupteur (raccourci des touches de volume, Paramètres hors
+     * kiosque), relu à chaque retour sur les Réglages. Écouteur retiré le temps de la relecture : rien n'est réécrit.
+     */
+    private fun renderTalkBack() {
+        if (!::talkBack.isInitialized) return
+        val ctx = requireContext()
+        talkBack.setOnCheckedChangeListener(null)
+        talkBack.isChecked = Accessibility.talkBackOn(ctx)
+        talkBack.setOnCheckedChangeListener { _, checked -> Accessibility.setTalkBack(ctx, checked) }
+    }
+
     // --- Tablette : luminosité, volume, batterie (cachés par le kiosque)
 
     /** Une pastille par thème, avec sa couleur ; en choisir un recrée l'activité (les écrans se redessinent). */
@@ -326,26 +375,12 @@ class SettingsFragment : Fragment() {
     }
 
     /**
-     * Accessibilité : une pastille par taille de texte, et les interrupteurs. Taille, police et animations s'appliquent à
-     * la création de l'activité (attachBaseContext, AppTheme.apply, vues animées) : les changer la recrée, comme le
-     * thème. Les bandeaux lus sont relus à chaque bandeau.
+     * Accessibilité, aides à la lecture (ui/ReadingAids.kt) : interrupteurs sous la taille du texte. Police et animations
+     * s'appliquent à la création de l'activité (AppTheme.apply, vues animées) : les changer la recrée, comme le thème.
+     * Les bandeaux lus sont relus à chaque bandeau.
      */
-    private fun setUpAccessibility(view: View) {
+    private fun setUpReadingAids(view: View) {
         val ctx = requireContext()
-        val row = view.findViewById<LinearLayout>(R.id.settings_text_sizes)
-        val current = TextSize.current(ctx)
-        for (size in TextSize.entries) {
-            val chip = Button(ctx, null, 0, R.style.Chip).apply {
-                setText(size.label)
-                isSelected = size == current
-                setOnClickListener {
-                    if (size == current) return@setOnClickListener
-                    Prefs.setTextSize(context, size.name)
-                    requireActivity().recreate()
-                }
-            }
-            row.addView(chip, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { if (row.childCount > 0) marginStart = dp(10) })
-        }
         fun recreating(id: Int, get: (android.content.Context) -> Boolean, set: (android.content.Context, Boolean) -> Unit) {
             view.findViewById<SwitchCompat>(id).apply {
                 isChecked = get(ctx)
@@ -829,5 +864,15 @@ class SettingsFragment : Fragment() {
             .setView(android.widget.ScrollView(context).apply { addView(body) })
             .setPositiveButton(R.string.close, null)
             .showImmersive()
+    }
+
+    private companion object {
+        /** Facteurs de la taille du texte, en plus de celle d'Android : jusqu'à une fois et demie. */
+        val TEXT_SIZES = listOf(
+            1f to R.string.a11y_size_normal,
+            1.15f to R.string.a11y_size_large,
+            1.3f to R.string.a11y_size_larger,
+            1.5f to R.string.a11y_size_largest,
+        )
     }
 }

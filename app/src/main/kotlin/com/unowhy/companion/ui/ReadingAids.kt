@@ -2,27 +2,8 @@ package com.unowhy.companion.ui
 
 import android.app.Activity
 import android.content.Context
-import android.content.res.Configuration
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
-
-/** Réglages > Accessibilité : taille du texte, multipliée à celle choisie dans Android. */
-enum class TextSize(val label: Int, val factor: Float) {
-    NORMAL(R.string.a11y_text_normal, 1f),
-    LARGE(R.string.a11y_text_large, 1.15f),
-    HUGE(R.string.a11y_text_huge, 1.3f),
-    ;
-
-    companion object {
-        /** Nom enregistré inconnu ou absent : normale. */
-        fun of(name: String?): TextSize = entries.firstOrNull { it.name == name } ?: NORMAL
-
-        fun current(context: Context): TextSize = of(Prefs.textSize(context))
-
-        /** Échelle des polices de l'appli : celle d'Android multipliée par la taille choisie. */
-        fun fontScale(system: Float, size: TextSize): Float = system * size.factor
-    }
-}
 
 /**
  * Réduire les animations. Deux niveaux, parce que le kiosque met l'échelle d'animation d'Android à zéro pour la vitesse
@@ -39,17 +20,11 @@ object Motion {
     fun loops(setting: Boolean): Boolean = setting
 }
 
-/** Application des réglages d'accessibilité à l'activité (taille du texte, police lisible). */
-object Accessibility {
-    /** À appeler dans attachBaseContext : contexte dont l'échelle des polices est multipliée (rien si la taille est normale). */
-    fun wrap(base: Context): Context {
-        val size = TextSize.current(base)
-        if (size == TextSize.NORMAL) return base
-        val config = Configuration(base.resources.configuration)
-        config.fontScale = TextSize.fontScale(config.fontScale, size)
-        return base.createConfigurationContext(config)
-    }
-
+/**
+ * Aides à la lecture de Réglages > Accessibilité (police lisible, bandeaux lus). La taille du texte et TalkBack sont
+ * dans MainActivity et com.unowhy.companion.device.Accessibility (COMP-50).
+ */
+object ReadingAids {
     /** Police lisible : polices du thème remplacées par Atkinson Hyperlegible, un peu espacée. Après la palette. */
     fun applyFont(activity: Activity) {
         if (Prefs.legibleFont(activity)) activity.theme.applyStyle(R.style.Fonts_Legible, true)

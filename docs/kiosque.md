@@ -43,8 +43,12 @@ adb shell dumpsys device_policy | grep -i owner      # rien : plus de MDM
 adb shell dumpsys account | grep Accounts            # Accounts: 0
 ./gradlew installDebug
 adb shell dpm set-device-owner com.unowhy.companion/.kiosk.KioskAdminReceiver
+# Accessibilité malgré le kiosque (COMP-50) : TalkBack et son raccourci des touches de volume.
+adb shell pm grant com.unowhy.companion android.permission.WRITE_SECURE_SETTINGS
 adb shell am start -n com.unowhy.companion/.MainActivity
 ```
+
+   **Accessibilité** (obligatoire pour vendre, carte COMP-50) : en kiosque, Paramètres est inaccessible, donc ni TalkBack ni la taille du texte ne se règlent dans Android. La permission accordée ci-dessus (seulement par adb : un device owner ne peut pas se la donner) permet à Companion de régler au démarrage le raccourci d'Android sur TalkBack (maintenir les deux touches de volume 3 secondes : utilisable sans voir l'écran, kiosque compris, sans la boîte de première utilisation) et d'activer TalkBack depuis Réglages > Accessibilité. La taille du texte se règle au même endroit (propre à l'appli, sans permission). Sans la permission, la carte le dit et le raccourci reste à régler à la main. Garder TalkBack (`com.google.android.marvin.talkback`, Android Accessibility Suite) : ne jamais le désactiver à l'étape suivante.
 
 5. Désactiver les applis inutiles (réversible : `pm enable`). Garder l'appli Google (`com.google.android.googlequicksearchbox`) : elle fait la reconnaissance vocale du bouton Parler.
 
@@ -61,7 +65,7 @@ for p in com.android.vending com.android.chrome com.android.calculator2 com.andr
 done
 ```
 
-   Garder : Launcher3 (secours hors kiosque), Google TTS, Play Services, WebView.
+   Garder : Launcher3 (secours hors kiosque), Google TTS, Play Services, WebView, TalkBack.
 
 6. Brancher le WiFi seulement maintenant.
 

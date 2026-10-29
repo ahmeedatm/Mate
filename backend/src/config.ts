@@ -41,6 +41,13 @@ const envToken = process.env.COMPANION_TOKEN;
 const token = envToken !== undefined && envToken.trim() === "" && loopbackOnly ? undefined : envToken?.trim() || identity.token;
 const platform = process.platform === "win32" ? "windows" : "mac";
 
+/**
+ * Identifiants publics des applis OAuth (agenda, GitLab), livrés avec le logiciel ; ACCOUNTS_FILE pour un autre fichier
+ * (tests : identifiants vides). Lu à chaque appel, pas au chargement.
+ */
+export const accountsFile = () =>
+  process.env.ACCOUNTS_FILE ? path.resolve(process.env.ACCOUNTS_FILE) : path.join(backendRoot, "config", "accounts.json");
+
 export const config = {
   host,
   port: Number(process.env.PORT ?? 3000),

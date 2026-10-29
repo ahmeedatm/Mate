@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -17,6 +18,11 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Désinstaller l'essai d'une MR au pipeline plus ancien (Updater.uninstall) : sans confirmation en device owner. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <!-- TalkBack et son raccourci malgré le kiosque (device/Accessibility) : accordée par adb à l'installation
+         du kiosque (docs/kiosque.md), jamais demandée à l'utilisateur. -->
+    <uses-permission
+        android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
 
     <!-- Ordinateurs appairés lus par l'appli d'essai dans la stable (trial/ComputersProvider) : seulement entre applis
          signées par la même clé. Nom fixe, déclaré à l'identique par la stable et l'essai. -->

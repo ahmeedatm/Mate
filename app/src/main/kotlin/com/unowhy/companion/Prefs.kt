@@ -15,12 +15,12 @@ object Prefs {
     private const val KEY_NOTIFICATIONS_DISCREET = "notifications_discreet"
     private const val KEY_WAKE_WORD = "wake_word"
     private const val KEY_WEATHER_LOCATION = "weather_location"
+    private const val KEY_TEXT_SCALE = "text_scale"
     private const val KEY_FRAME_DELAY = "frame_delay_min"
     private const val KEY_FRAME_INTERVAL = "frame_interval_s"
     private const val KEY_TRIAL_MR = "trial_mr"
     private const val KEY_TRIAL_BACKEND = "trial_backend"
     private const val KEY_TRIAL_OPENED = "trial_opened"
-    private const val KEY_TEXT_SIZE = "text_size"
     private const val KEY_LEGIBLE_FONT = "legible_font"
     private const val KEY_REDUCE_MOTION = "reduce_motion"
     private const val KEY_READ_BANNERS = "read_banners"
@@ -111,6 +111,16 @@ object Prefs {
      * Ville de la météo trouvée seule par la position (services de localisation de Google, docs/confidentialite.md).
      * Coupé par défaut ; « Ma position » dans « Choisir ma ville » reste possible, c'est une demande explicite.
      */
+    /**
+     * Taille du texte de l'appli, en plus de celle d'Android (que le kiosque empêche de régler) : 1 = normale.
+     * Appliquée par MainActivity.attachBaseContext ; un changement recrée l'activité.
+     */
+    fun textScale(context: Context): Float = prefs(context).getFloat(KEY_TEXT_SCALE, 1f)
+
+    fun setTextScale(context: Context, value: Float) {
+        prefs(context).edit().putFloat(KEY_TEXT_SCALE, value).apply()
+    }
+
     fun weatherLocation(context: Context): Boolean = prefs(context).getBoolean(KEY_WEATHER_LOCATION, false)
 
     fun setWeatherLocation(context: Context, value: Boolean) {
@@ -121,13 +131,6 @@ object Prefs {
 
     fun setTheme(context: Context, value: String) {
         prefs(context).edit().putString(KEY_THEME, value).apply()
-    }
-
-    /** Accessibilité : taille du texte (nom de TextSize) ; null : normale. */
-    fun textSize(context: Context): String? = prefs(context).getString(KEY_TEXT_SIZE, null)
-
-    fun setTextSize(context: Context, value: String) {
-        prefs(context).edit().putString(KEY_TEXT_SIZE, value).apply()
     }
 
     /** Accessibilité : police Atkinson Hyperlegible à la place de celles du thème. Désactivé par défaut. */

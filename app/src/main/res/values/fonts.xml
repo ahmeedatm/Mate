@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Réglages > Accessibilité > Police lisible (ui/Accessibility.kt) : posé par-dessus la palette du thème. Atkinson
+    <!-- Réglages > Accessibilité > Police lisible (ui/ReadingAids.kt) : posé par-dessus la palette du thème. Atkinson
          Hyperlegible (OFL) remplace toutes les polices du thème, titres Rétro (Abril Fatface) et grands chiffres fins
          compris : elle n'a que deux graisses, le moyen passe en gras et le fin en normal. Lettres et lignes un peu
          plus espacées pour tous les textes (valeur du thème : un style ou une vue qui fixe la sienne la garde). -->

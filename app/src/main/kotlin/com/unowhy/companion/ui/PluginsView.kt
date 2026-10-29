@@ -135,6 +135,7 @@ class PluginsView @JvmOverloads constructor(context: Context, attrs: AttributeSe
             "discord" to R.drawable.ic_chat,
             "teams" to R.drawable.ic_videocam,
             "claude" to R.drawable.ic_agents,
+            "jira" to R.drawable.ic_tasks,
             "open" to R.drawable.ic_tabs,
             "mixer" to R.drawable.ic_volume,
             "pad" to R.drawable.ic_tablet,

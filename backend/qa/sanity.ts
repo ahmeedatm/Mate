@@ -288,7 +288,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
     {
       name: "fenêtres ouvertes",
       run: async () => {
-        // Mac sans Accessibilité (job install-mac) : System Events demanderait une autorisation à l'écran.
+        // Mac sans Accessibilité (install-mac.sh) : System Events demanderait une autorisation à l'écran.
         if (os === "mac" && accessibility === false) throw new Skip("Accessibilité non accordée");
         const open = await call("GET", "/windows/open");
         if (!controlled()) return expectStatus(open, 501, "/windows/open");
@@ -296,6 +296,24 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expect(Array.isArray(open.json.apps) && Array.isArray(open.json.displays), "réponse sans apps ni displays");
         // Sans bureau (conteneur Windows), la liste est vide : accepté.
         return `${open.json.apps.length} applis, ${open.json.displays.length} écrans`;
+      },
+    },
+    {
+      name: "GitLab : MR (lecture seule)",
+      run: async () => {
+        const mrs = await call("GET", "/gitlab/mrs");
+        if (!controlled()) return expectStatus(mrs, 501, "/gitlab/mrs");
+        const features = await call("GET", "/deck/features");
+        expectStatus(features, 200, "/deck/features");
+        expect(typeof features.json.gitlab === "boolean", "/deck/features sans booléen gitlab");
+        // Jeton refusé ou GitLab injoignable depuis cet ordinateur : pas une panne du compagnon.
+        if (mrs.status === 502) throw new Skip(`GitLab inaccessible depuis l'ordinateur (${mrs.json?.error})`);
+        expectStatus(mrs, 200, "/gitlab/mrs");
+        expect(Array.isArray(mrs.json.mine) && Array.isArray(mrs.json.review), "forme de /gitlab/mrs inattendue");
+        // Ni compte connecté ni GITLAB_TOKEN (CI, tests) : réponse normale « pas connecté », jamais de 401. Jamais de fusion ni d'ouverture ici.
+        if (mrs.json.connected === false) return "pas connecté à GitLab";
+        expect(features.json.gitlab === true, "GitLab connecté mais gitlab absent de /deck/features");
+        return `${mrs.json.mine.length} MR à moi, ${mrs.json.review.length} à relire`;
       },
     },
     {
@@ -346,6 +364,25 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         } finally {
           await call("DELETE", `/tasks/${taskId}`);
         }
+      },
+    },
+    {
+      name: "Jira : tickets",
+      run: async () => {
+        // Lecture seule : jamais de transition, ce sont les vrais tickets de l'utilisateur.
+        // Hors Mac et Windows, /deck/features répond 501 : on ne sait plus si Jira est configuré.
+        const features = await call("GET", "/deck/features");
+        const configured = features.status === 200 ? features.json.jira : undefined;
+        const issues = await call("GET", "/jira/issues");
+        if (configured === false || (configured === undefined && issues.status === 501)) {
+          return expectStatus(issues, 501, "/jira/issues sans Jira configuré");
+        }
+        expectStatus(issues, 200, "/jira/issues");
+        expect(Array.isArray(issues.json.columns), "forme de /jira/issues inattendue");
+        expect(typeof issues.json.boardsChosen === "boolean", "boardsChosen absent de /jira/issues");
+        const boards = await call("GET", "/jira/boards");
+        expectStatus(boards, 200, "/jira/boards");
+        expect(Array.isArray(boards.json.boards) && Array.isArray(boards.json.selected), "forme de /jira/boards inattendue");
       },
     },
     {
@@ -478,7 +515,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const res = await call("GET", "/local/licences", undefined, local ? false : true);
         if (!status.json.licences) {
           expectStatus(res, 404, "/local/licences sans fichier");
-          throw new Skip("compagnon lancé depuis le dépôt : licences jointes aux installeurs seulement");
+          throw new Skip("compagnon lancé depuis le dépôt : licences jointes à l'appli portable seulement");
         }
         expectStatus(res, 200, "/local/licences");
         const text = String(res.json);

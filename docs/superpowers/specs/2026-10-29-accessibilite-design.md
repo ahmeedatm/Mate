@@ -26,10 +26,12 @@ correcte (textes courants contrastés ≥ 5:1, taille de police d'Android respec
 
 ## Lot 2 — Réglages > Accessibilité
 
-Nouvelle carte « Accessibilité » dans Réglages, réglages gardés sur la tablette :
+La carte « Accessibilité » des Réglages est arrivée sur `main` avec la MR !135 (COMP-50) : interrupteur **TalkBack**
+(avec le raccourci des touches de volume) et **taille du texte** à quatre niveaux (`Prefs.textScale`, appliquée dans
+`MainActivity.attachBaseContext`). Elles sont gardées telles quelles ; la taille du texte prévue ici (×1, ×1,15, ×1,3)
+est abandonnée au profit de la leur. Nos trois réglages, gardés sur la tablette, sont ajoutés dans cette même carte,
+sous la taille du texte (`ui/ReadingAids.kt`) :
 
-- **Taille du texte** : normale / grande / très grande (×1, ×1,15, ×1,3), multipliée à l'échelle d'Android, appliquée
-  à toute l'appli.
 - **Police lisible** : Atkinson Hyperlegible (OFL, conçue pour la vue faible, aidant aussi à la dyslexie) à la place
   des polices du thème, avec un peu plus d'espacement des lettres et des lignes ; aussi pour les titres Rétro (Abril
   Fatface) et les grands chiffres en graisse fine.

@@ -6,12 +6,12 @@ import { listBackends, listUpdates, updateFile } from "../updates.ts";
 
 /** Redémarrage du compagnon, mises à jour de la tablette, mise à jour du backend et essai du backend d'une MR. */
 export default async function updateRoutes(app: FastifyInstance) {
-  /** Relancé par le lancement automatique (voir /companion/restart) ; après la réponse, pas avant. */
+  /** Relancé par la boucle du lanceur (voir /companion/restart) ; après la réponse, pas avant. */
   const restartSoon = () => setTimeout(() => process.exit(0), 300);
 
   /**
-   * Redémarre le compagnon après une mise à jour de ses fichiers : le lancement automatique (boucle de
-   * lanceur UnowhyCompanion.exe sur Windows, LaunchAgent sur Mac) le relance quelques secondes plus tard. Sous
+   * Redémarre le compagnon après une mise à jour de ses fichiers : la boucle du lanceur (exe portable
+   * sur Windows, « Compagnon Unowhy.app » sur Mac, ou le service du dépôt) le relance quelques secondes plus tard. Sous
    * `npm run dev`, tsx watch attend un changement de fichier avant de relancer.
    */
   app.post("/companion/restart", async (req) => {

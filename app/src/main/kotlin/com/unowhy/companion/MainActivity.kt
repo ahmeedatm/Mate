@@ -1,6 +1,7 @@
 package com.unowhy.companion
 
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
@@ -19,6 +20,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.unowhy.companion.agents.AgentAlerts
 import com.unowhy.companion.audio.Speaker
+import com.unowhy.companion.device.Accessibility
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.device.Tablet
 import com.unowhy.companion.focus.FocusDnd
@@ -37,7 +39,6 @@ import com.unowhy.companion.net.runCatchingCancellable
 import com.unowhy.companion.remote.RemoteLink
 import com.unowhy.companion.trial.EssaiBackend
 import com.unowhy.companion.trial.Trial
-import com.unowhy.companion.ui.Accessibility
 import com.unowhy.companion.ui.AgentAskOverlay
 import com.unowhy.companion.ui.AgentLight
 import com.unowhy.companion.ui.AppTheme
@@ -60,6 +61,7 @@ import com.unowhy.companion.ui.Navigation
 import com.unowhy.companion.ui.PhotoFrameView
 import com.unowhy.companion.ui.PluginsView
 import com.unowhy.companion.ui.Rail
+import com.unowhy.companion.ui.ReadingAids
 import com.unowhy.companion.ui.SettingsFragment
 import com.unowhy.companion.ui.TabletAlerts
 import com.unowhy.companion.ui.TabletStatusView
@@ -147,14 +149,18 @@ class MainActivity : AppCompatActivity() {
         return answer.await()
     }
 
-    /** Taille du texte choisie dans Réglages > Accessibilité : changer la recrée, comme le thème. */
+    /** Taille du texte choisie dans Réglages > Accessibilité, en plus de celle d'Android (COMP-50). */
     override fun attachBaseContext(newBase: Context) {
-        super.attachBaseContext(Accessibility.wrap(newBase))
+        super.attachBaseContext(newBase)
+        val scale = Prefs.textScale(newBase)
+        if (scale != 1f) applyOverrideConfiguration(Configuration().apply { fontScale = newBase.resources.configuration.fontScale * scale })
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppTheme.apply(this)
         super.onCreate(savedInstanceState)
+        // Raccourci des touches de volume réglé sur TalkBack (kiosque : seul moyen de le lancer sans voir l'écran).
+        Accessibility.prepareShortcut(this)
         // Appli d'essai : ordinateurs de la stable repris avant de construire les écrans, sans réappairer.
         Trial.importComputers(this)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -650,7 +656,7 @@ class MainActivity : AppCompatActivity() {
      * l'ordinateur lu par la voix de la tablette. Coupé : rien.
      */
     fun readAloud(banner: String) {
-        if (Prefs.readBanners(this)) Speaker.speak(Accessibility.spoken(banner))
+        if (Prefs.readBanners(this)) Speaker.speak(ReadingAids.spoken(banner))
     }
 
     /**

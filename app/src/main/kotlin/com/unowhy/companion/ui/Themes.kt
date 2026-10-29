@@ -29,7 +29,7 @@ enum class AppTheme(val label: Int, val base: Int, val palette: Int, val swatch:
             val theme = current(activity)
             activity.setTheme(theme.base)
             activity.theme.applyStyle(theme.palette, true)
-            Accessibility.applyFont(activity)
+            ReadingAids.applyFont(activity)
         }
     }
 }

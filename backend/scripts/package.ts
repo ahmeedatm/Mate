@@ -8,14 +8,15 @@ import { bundledPackages, noticeOf, thirdPartyNotices } from "./licences.ts";
 import { WEB_FILES } from "../src/web-style.ts";
 
 /**
- * Installeurs du logiciel de l'ordinateur, sans Node à installer : `npm run package` (Mac ou Linux, dont la CI).
+ * Appli portable du logiciel de l'ordinateur, sans installation ni Node à installer : `npm run package` (Mac ou Linux,
+ * dont la CI).
  *
- * Chacun embarque le serveur regroupé en un fichier (dist/server.mjs, et dist/service.mjs pour le lancement
- * automatique), les fichiers lus à l'exécution (config, UnowhyHelper.exe…), l'extension du navigateur et le node
- * officiel de nodejs.org (signé par l'OpenJS Foundation), vérifié par sa somme SHA-256.
+ * Chacune embarque le serveur regroupé en un fichier (dist/server.mjs), les fichiers lus à l'exécution (config,
+ * UnowhyHelper.exe…), l'extension du navigateur et le node officiel de nodejs.org (signé par l'OpenJS Foundation),
+ * vérifié par sa somme SHA-256. Au premier lancement, le runtime est extrait dans le dossier de l'utilisateur.
  *
- *   ../dist/Compagnon-Unowhy-Windows.exe   installeur NSIS (installer/windows/compagnon.nsi, makensis requis), node.exe x64
- *   ../dist/Compagnon-Unowhy-Mac.zip       « Compagnon Unowhy.app » (installer/mac/), node Apple Silicon et Intel
+ *   ../dist/Compagnon-Unowhy-Windows.exe   le lanceur (src/win/UnowhyCompanion.exe) suivi du zip du runtime, node.exe x64
+ *   ../dist/Compagnon-Unowhy-Mac.zip       « Compagnon Unowhy.app » (portable/mac/), node Apple Silicon et Intel
  * `npm run package -- windows` ou `-- mac` : un seul des deux. Version : tag de la CI (CI_COMMIT_TAG), sinon 0.0.0.
  *
  * `npm run package -- essai` : seulement le backend de chaque plateforme, sans node ni lanceur Windows, en
@@ -87,7 +88,7 @@ function copy(from: string, to: string) {
 
 const xml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-/** Info.plist de l'appli Mac. UnowhyBuild (date du paquet) : le lanceur réinstalle quand il change. */
+/** Info.plist de l'appli Mac. */
 function infoPlist(): string {
   const keys: [string, string | boolean][] = [
     ["CFBundleName", FOLDER],
@@ -103,7 +104,6 @@ function infoPlist(): string {
     // node 22 : macOS 11 au moins.
     ["LSMinimumSystemVersion", "11.0"],
     ["NSHighResolutionCapable", true],
-    ["UnowhyBuild", new Date().toISOString()],
   ];
   const body = keys.map(([k, v]) => `  <key>${k}</key>\n  ${typeof v === "boolean" ? `<${v}/>` : `<string>${xml(v)}</string>`}`).join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -118,14 +118,14 @@ ${body}
 
 async function stage(platform: "windows" | "mac", sums: string, essai = false): Promise<string> {
   const root = path.join(out, platform, FOLDER);
-  // Mac : tout le compagnon dans l'appli ; l'extension reste à côté (le Finder n'ouvre pas une appli pour y choisir un dossier).
+  // Mac : tout le compagnon dans l'appli. Windows : le runtime, zippé à la fin et ajouté à l'exe.
   const bundle = path.join(root, `${FOLDER}.app`, "Contents");
-  const dest = platform === "windows" ? path.join(root, "backend") : path.join(bundle, "Resources", "backend");
+  const dest = platform === "windows" ? path.join(out, platform, "runtime") : path.join(bundle, "Resources", "backend");
   fs.rmSync(path.join(out, platform), { recursive: true, force: true });
 
   const built = await build({
     metafile: true,
-    entryPoints: { server: path.join(backend, "src", "server.ts"), service: path.join(backend, "scripts", "service.ts") },
+    entryPoints: { server: path.join(backend, "src", "server.ts") },
     outdir: path.join(dest, "dist"),
     outExtension: { ".js": ".mjs" },
     bundle: true,
@@ -133,7 +133,7 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
     format: "esm",
     target: "node22",
     legalComments: "none",
-    // Version renvoyée par /health : la tablette propose l'installeur plus récent qu'elle garde.
+    // Version renvoyée par /health : la tablette propose l'appli plus récente qu'elle garde ; le panneau la compare aussi.
     define: { "process.env.COMPANION_VERSION": JSON.stringify(VERSION) },
     logLevel: "warning",
     // Modules CommonJS regroupés dans un fichier ESM : ils attendent require, __filename et __dirname.
@@ -153,18 +153,16 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
   for (const f of WEB_FILES) copy(path.join(backend, "assets", "web", f), path.join(dest, "assets", "web", f));
 
   if (platform === "windows") {
-    // Essai : ni le lanceur (verrouillé tant que le compagnon tourne) ni node, déjà sur l'ordinateur.
-    for (const f of essai ? ["UnowhyHelper.exe"] : ["UnowhyHelper.exe", "UnowhyCompanion.exe"])
-      copy(path.join(backend, "src", "win", f), path.join(dest, "src", "win", f));
+    // Le lanceur n'est pas dans le runtime : c'est l'exe lui-même. Essai : pas de node, déjà sur l'ordinateur.
+    copy(path.join(backend, "src", "win", "UnowhyHelper.exe"), path.join(dest, "src", "win", "UnowhyHelper.exe"));
     copy(path.join(backend, "scripts", "firewall-windows.ps1"), path.join(dest, "scripts", "firewall-windows.ps1"));
-    copy(path.join(backend, "assets", "compagnon.ico"), path.join(dest, "assets", "compagnon.ico"));
     if (!essai) extract(await nodeArchive(sums, "-win-x64.zip"), "node.exe", path.join(dest, "node", "node.exe"));
   } else {
     copy(path.join(backend, "src", "mac", "NowPlaying.dylib"), path.join(dest, "src", "mac", "NowPlaying.dylib"));
     if (!essai) {
       fs.mkdirSync(path.join(bundle, "MacOS"), { recursive: true });
       fs.writeFileSync(path.join(bundle, "Info.plist"), infoPlist());
-      copy(path.join(backend, "installer", "mac", "launcher.sh"), path.join(bundle, "MacOS", FOLDER));
+      copy(path.join(backend, "portable", "mac", "launcher.sh"), path.join(bundle, "MacOS", FOLDER));
       copy(path.join(backend, "assets", "compagnon.icns"), path.join(bundle, "Resources", "compagnon.icns"));
       for (const arch of ["arm64", "x64"]) {
         extract(await nodeArchive(sums, `-darwin-${arch}.tar.gz`), "bin/node", path.join(dest, "node", `darwin-${arch}`, "node"));
@@ -173,14 +171,14 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
   }
 
   // Mentions de licences (scripts/licences.ts) : paquets regroupés par esbuild et node embarqué (même licence sur Windows
-  // et Mac : celle de l'archive Windows). Dans le backend (servi par la page locale) et à la racine du dossier installé.
+  // et Mac : celle de l'archive Windows). Dans le runtime (servi par la page locale) et, sur Mac, à côté de l'appli.
   const packages = bundledPackages(Object.keys(built.metafile.inputs)).map((dir) => noticeOf(path.join(backend, dir)));
   const node = essai
     ? undefined
     : { version: NODE_VERSION, license: member(await nodeArchive(sums, "-win-x64.zip"), "LICENSE").toString("utf8") };
   const notices = thirdPartyNotices(packages, node);
   fs.writeFileSync(path.join(dest, "LICENCES-TIERS.txt"), notices);
-  if (!essai) fs.writeFileSync(path.join(root, "LICENCES-TIERS.txt"), notices);
+  if (!essai && platform === "mac") fs.writeFileSync(path.join(root, "LICENCES-TIERS.txt"), notices);
 
   if (essai) {
     const archive = path.join(out, `backend-${platform}.tar.gz`);
@@ -191,23 +189,24 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
     return archive;
   }
 
-  // Extension du navigateur (onglets et page Média sur la tablette) : à charger depuis ce dossier, mode développeur.
+  // Repère du paquet : le lanceur extrait (Windows) ou recopie (Mac) le runtime quand il diffère de celui en place.
+  fs.writeFileSync(path.join(dest, "runtime.stamp"), `${VERSION}+${new Date().toISOString()}\n`);
+
+  // Extension du navigateur (onglets et page Média sur la tablette) : dans le runtime (chemin stable), à charger en mode développeur.
   for (const f of fs.readdirSync(path.join(backend, "extension")))
-    copy(path.join(backend, "extension", f), path.join(root, "Extension navigateur", f));
+    copy(path.join(backend, "extension", f), path.join(dest, "extension", f));
 
   if (platform === "windows") {
+    // zip (Info-ZIP) du runtime, ajouté au lanceur : [exe][zip][taille du zip sur 8 octets][UNOWHYZ1] (src/win/launcher/Program.cs).
+    const zip = path.join(out, platform, "runtime.zip");
+    execFileSync("zip", ["-r", "-q", "-X", zip, ".", "-x", "*.DS_Store"], { cwd: dest });
+    const payload = fs.readFileSync(zip);
+    const trailer = Buffer.alloc(16);
+    trailer.writeBigInt64LE(BigInt(payload.length), 0);
+    trailer.write("UNOWHYZ1", 8, "ascii");
     const exe = path.join(out, "Compagnon-Unowhy-Windows.exe");
     fs.rmSync(exe, { force: true });
-    const nsi = path.join(backend, "installer", "windows", "compagnon.nsi");
-    try {
-      execFileSync("makensis", ["-V2", "-INPUTCHARSET", "UTF8", `-DSOURCE=${root}`, `-DOUTFILE=${exe}`, `-DVERSION=${VERSION}`, nsi], {
-        stdio: "inherit",
-      });
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code === "ENOENT")
-        throw new Error("makensis introuvable : brew install makensis (Mac), apt-get install nsis (Linux)");
-      throw new Error("makensis a échoué (voir plus haut)");
-    }
+    fs.writeFileSync(exe, Buffer.concat([fs.readFileSync(path.join(backend, "src", "win", "UnowhyCompanion.exe")), payload, trailer]));
     return exe;
   }
 
@@ -219,7 +218,7 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
 }
 
 async function main() {
-  if (process.platform === "win32") throw new Error("À lancer sur le Mac ou sous Linux (zip, unzip, tar, makensis)");
+  if (process.platform === "win32") throw new Error("À lancer sur le Mac ou sous Linux (zip, unzip, tar)");
   // Un job CI par plateforme : artefacts sous la limite de 100 Mo de GitLab.
   const only = process.argv[2];
   const essai = only === "essai";
