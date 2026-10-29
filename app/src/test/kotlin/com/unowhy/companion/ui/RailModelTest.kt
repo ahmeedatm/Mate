@@ -54,6 +54,12 @@ class RailModelTest {
     }
 
     @Test
+    fun `seuls les outils choisis dans Reglages sont dans la barre`() {
+        val entries = RailModel.entries(layout(), inCall = false, tools = listOf(Mode.FOCUS))
+        assertEquals(listOf(RailEntry.Profile(0, false), RailEntry.Profile(1, false), RailEntry.Tool(Mode.FOCUS)), entries)
+    }
+
+    @Test
     fun `direction dit si l'on descend ou monte dans la barre`() {
         assertEquals(1, RailModel.direction(0, 2))
         assertEquals(-1, RailModel.direction(2, 0))

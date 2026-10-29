@@ -10,6 +10,8 @@ object Prefs {
     private const val KEY_NIGHT_DIM = "night_dim"
     private const val KEY_DECK_TABS = "deck_tabs_"
     private const val KEY_THEME = "theme"
+    private const val KEY_RAIL_LABELS = "rail_labels"
+    private const val KEY_RAIL_HIDDEN = "rail_hidden_tools"
     private const val KEY_FOCUS_DND = "focus_dnd"
     private const val KEY_AGENTS_PRIVATE = "agents_private"
     private const val KEY_NOTIFICATIONS_DISCREET = "notifications_discreet"
@@ -70,6 +72,28 @@ object Prefs {
     fun setAllowInstalls(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_ALLOW_INSTALLS, value).apply()
     }
+
+    /** Barre de gauche : noms sous les icônes (Réglages > Barre de gauche). Affichés par défaut. */
+    fun railLabels(context: Context): Boolean = prefs(context).getBoolean(KEY_RAIL_LABELS, true)
+
+    fun setRailLabels(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_RAIL_LABELS, value).apply()
+    }
+
+    /** Outils de la barre de gauche, dans leur ordre : tous sauf ceux masqués dans Réglages. */
+    fun railTools(context: Context): List<Mode> {
+        val hidden = prefs(context).getStringSet(KEY_RAIL_HIDDEN, emptySet()).orEmpty()
+        return RAIL_TOOLS.filter { it.key !in hidden }
+    }
+
+    fun setRailTool(context: Context, tool: Mode, shown: Boolean) {
+        val hidden = prefs(context).getStringSet(KEY_RAIL_HIDDEN, emptySet()).orEmpty().toMutableSet()
+        if (shown) hidden -= tool.key else hidden += tool.key
+        prefs(context).edit().putStringSet(KEY_RAIL_HIDDEN, hidden).apply()
+    }
+
+    /** Outils que la barre de gauche peut montrer. */
+    val RAIL_TOOLS = listOf(Mode.FOCUS, Mode.COMPUTER, Mode.CAMERA)
 
     /** Ordre des onglets du Deck choisi sur la tablette, propre à chaque ordinateur (clés d'onglets, voir DeckFragment). */
     fun deckTabOrder(context: Context): List<String> =

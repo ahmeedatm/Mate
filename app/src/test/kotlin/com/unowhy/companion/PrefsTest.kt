@@ -23,6 +23,18 @@ class PrefsTest {
     }
 
     @Test
+    fun `barre de gauche, noms et outils affiches par defaut, puis retenus`() {
+        assertTrue(Prefs.railLabels(context))
+        assertEquals(listOf(Mode.FOCUS, Mode.COMPUTER, Mode.CAMERA), Prefs.railTools(context))
+        Prefs.setRailLabels(context, false)
+        Prefs.setRailTool(context, Mode.CAMERA, false)
+        assertFalse(Prefs.railLabels(context))
+        assertEquals(listOf(Mode.FOCUS, Mode.COMPUTER), Prefs.railTools(context))
+        Prefs.setRailTool(context, Mode.CAMERA, true)
+        assertEquals(listOf(Mode.FOCUS, Mode.COMPUTER, Mode.CAMERA), Prefs.railTools(context))
+    }
+
+    @Test
     fun `url et jeton viennent de l'ordinateur actif`() {
         Computers.save(context, Computer("a", "Bureau", "http://10.0.0.3:3000", "jeton", "mac"), makeActive = true)
         assertEquals("http://10.0.0.3:3000", Prefs.backendUrl(context))

@@ -1,6 +1,7 @@
 package com.unowhy.companion.ui
 
 import com.unowhy.companion.Mode
+import com.unowhy.companion.Prefs
 import com.unowhy.companion.ui.home.HomeLayout
 
 /** Une entrée de la barre : un profil (page de l'Accueil), « Plus » (la liste des profils) ou un outil (Focus, Ordi, Caméra). */
@@ -20,14 +21,13 @@ sealed interface RailEntry {
 object RailModel {
     const val MAX_PROFILES = 5
 
-    private val TOOLS = listOf(Mode.FOCUS, Mode.COMPUTER, Mode.CAMERA)
-
-    fun entries(layout: HomeLayout, inCall: Boolean): List<RailEntry> {
+    /** `tools` : les outils choisis dans Réglages (Focus, Ordi, Caméra par défaut). */
+    fun entries(layout: HomeLayout, inCall: Boolean, tools: List<Mode> = Prefs.RAIL_TOOLS): List<RailEntry> {
         val call = layout.callProfile.takeIf { inCall && it >= 0 }
         val others = layout.profilesInOrder(inCall).filter { it != call }
         val room = MAX_PROFILES - (if (call != null) 1 else 0)
         val shown = if (others.size > room) others.take(room - 1).map { RailEntry.Profile(it, false) } + RailEntry.More else others.map { RailEntry.Profile(it, false) }
-        return shown + listOfNotNull(call?.let { RailEntry.Profile(it, true) }) + TOOLS.map { RailEntry.Tool(it) }
+        return shown + listOfNotNull(call?.let { RailEntry.Profile(it, true) }) + tools.map { RailEntry.Tool(it) }
     }
 
     /**

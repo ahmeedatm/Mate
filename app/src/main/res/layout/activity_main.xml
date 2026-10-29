@@ -82,8 +82,7 @@
             android:clickable="true"
             android:focusable="true"
             android:gravity="center"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
+            android:minHeight="48dp"
             android:orientation="vertical">
 
             <!-- Ordinateur et son état : le point (vert, orange, gris) posé sur le coin de l'icône, le nom centré dessous. -->
@@ -128,7 +127,6 @@
             style="@style/IconButton.Flat"
             android:layout_width="56dp"
             android:layout_height="48dp"
-            android:layout_marginTop="4dp"
             android:contentDescription="@string/mode_settings"
             android:src="@drawable/ic_settings"
             app:tint="@color/rail_profile_content" />

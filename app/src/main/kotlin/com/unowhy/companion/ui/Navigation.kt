@@ -35,6 +35,9 @@ interface Navigation {
 
     /** Repos (personne ne touche la tablette) : la barre s'efface à moitié, sans disparaître. */
     fun setResting(resting: Boolean)
+
+    /** Réglages de la barre changés (noms, outils affichés) : elle se redessine. */
+    fun applySettings()
 }
 
 /** Temps restant du Pomodoro tant qu'il est lancé ou entamé, sinon null. */

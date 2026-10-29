@@ -673,6 +673,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun homeFragment() = supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment
 
+    /** Réglages > Barre de gauche : noms et outils changés. */
+    fun applyRailSettings() = nav.applySettings()
+
     /** Repos de la barre après [REST_MS] sans toucher ; [wake] la ravive et relance l'attente. */
     private val rest = Runnable { nav.setResting(true) }
 

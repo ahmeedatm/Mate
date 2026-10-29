@@ -7,6 +7,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.dynamicanimation.animation.DynamicAnimation
 import com.unowhy.companion.Mode
+import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.net.Link
@@ -82,8 +83,13 @@ class ProfileRail(
     private fun names(of: HomeLayout = layout) = of.names.toList() to listOf(of.homeProfile, of.deckProfile, of.callProfile, of.gameProfile)
 
     /** Recrée les entrées (profils ajoutés, renommés, retirés, appel commencé ou fini). */
+    override fun applySettings() = render()
+
     private fun render() {
-        entries = RailModel.entries(layout, inCall)
+        val labels = Prefs.railLabels(activity)
+        talk.findViewById<View>(R.id.rail_talk_label).visibility = if (labels) View.VISIBLE else View.GONE
+        statusName.visibility = if (labels) View.VISIBLE else View.GONE
+        entries = RailModel.entries(layout, inCall, Prefs.railTools(activity))
         bar.removeAllViews()
         views.clear()
         for (entry in entries) {
@@ -96,6 +102,11 @@ class ProfileRail(
                 }
             }
             decorate(view, entry)
+            // Sans les noms, la barre ne garde que les icônes, plus serrées.
+            if (!labels) {
+                view.findViewById<View>(R.id.rail_label).visibility = View.GONE
+                view.layoutParams = view.layoutParams.apply { height = view.dp(52) }
+            }
             bar.addView(view)
             views += view
             // Séparateur entre les profils et les outils.
