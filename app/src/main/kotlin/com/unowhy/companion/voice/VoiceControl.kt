@@ -252,7 +252,8 @@ class VoiceControl(
                 val now = System.currentTimeMillis()
                 val meeting = client.calendar.days(days = 1).events.firstOrNull { it.joinable && it.endMs > now && it.startMs - now <= 15 * 60_000 }
                     ?: return Answer(text(R.string.voice_no_meeting), speak = true)
-                if (client.calendar.joinMeeting(meeting.id) == "teams" && client.deck.homeFeatures().teams) activity.showMeetingControls()
+                val kind = client.calendar.joinMeeting(meeting.id)
+                activity.startCall(com.unowhy.companion.ui.CallSession.appOfKind(kind), meeting.endMs)
                 Answer(text(R.string.join_opened, meeting.title))
             }
             VoiceCommand.Drink -> {

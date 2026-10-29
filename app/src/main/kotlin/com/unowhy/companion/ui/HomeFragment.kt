@@ -60,6 +60,12 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private var backup: HomeLayout? = null
     private val widgets = LinkedHashMap<Placed, HomeWidget>()
     private var page = 0
+
+    /** Profil affiché (la barre et la fin d'appel s'en servent). */
+    val shownPage: Int get() = page
+
+    /** Mode Modifier en cours : un appel qui commence ne fait pas changer d'écran. */
+    val editing: Boolean get() = ::grid.isInitialized && grid.editing
     /** Famille de thème Cadran : disposition à part et lignes inégales. */
     private val cadran get() = themeBool(requireContext(), R.attr.c_cadran)
     /** Aucun ordinateur appairé : les widgets qui en ont besoin proposent de le connecter. */
@@ -374,7 +380,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     fun showProfile(index: Int, animate: Boolean = true) {
         deckOverlays?.hideAll()
         profileLoad?.cancel()
-        val order = layout.profilesInOrder(inCall = false)
+        val order = layout.profilesInOrder(inCall = main?.inCall == true)
         val move = RailModel.direction(order.indexOf(page), order.indexOf(index))
         val changed = index != page
         displayProfile(index)
@@ -431,7 +437,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     /** Balayage : profil voisin dans l'ordre de la barre (Réunion n'y est que pendant un appel). */
     override fun onPageSwipe(delta: Int) {
-        val order = layout.profilesInOrder(inCall = false)
+        val order = layout.profilesInOrder(inCall = main?.inCall == true)
         order.getOrNull(order.indexOf(page) + delta)?.let(::showProfile)
     }
 

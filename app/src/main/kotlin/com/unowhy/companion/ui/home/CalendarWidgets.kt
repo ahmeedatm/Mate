@@ -17,6 +17,7 @@ import androidx.core.view.isNotEmpty
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.CalendarEvent
+import com.unowhy.companion.ui.CallSession
 import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.themeBool
@@ -250,8 +251,8 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             try {
                 val kind = BackendClient(context).calendar.joinMeeting(event.id)
                 main?.showBanner(context.getString(R.string.join_opened, event.title), 6)
-                // Page Réunion du deck : raccourcis de Teams, inutiles pour Meet ou Zoom.
-                if (kind == "teams" && host.features.teams) main?.showMeetingControls()
+                // Profil Réunion : micro, caméra, son de l'appel, jusqu'à la fin de l'événement (ou de l'appel vu par l'ordinateur).
+                main?.startCall(CallSession.appOfKind(kind), event.endMs)
             } catch (e: Exception) {
                 main?.showBanner(context.errorText(e), 6)
             }

@@ -40,6 +40,7 @@ import com.unowhy.companion.ui.AgentLight
 import com.unowhy.companion.ui.AppTheme
 import com.unowhy.companion.ui.Banner
 import com.unowhy.companion.ui.CallOverlay
+import com.unowhy.companion.ui.CallSession
 import com.unowhy.companion.ui.CameraFragment
 import com.unowhy.companion.ui.CompanionUpdate
 import com.unowhy.companion.ui.ComputerAdder
@@ -203,6 +204,8 @@ class MainActivity : AppCompatActivity() {
                 alerts.remindWater()
                 followFrame()
                 companionUpdate.onMinute()
+                // « Rejoindre » sans détection de fin : l'appel finit à l'heure de l'événement.
+                if (call.tick()) afterCall()
             }
             onBattery = ::onBattery
         }
@@ -255,6 +258,8 @@ class MainActivity : AppCompatActivity() {
      */
     fun onComputerChanged(computer: Computer?, automatic: Boolean = false) {
         IconCache.clear()
+        // L'appel suivi était celui de l'ordinateur quitté.
+        endCall()
         documentPanel.close()
         val fm = supportFragmentManager
         val tx = fm.beginTransaction()
@@ -415,13 +420,57 @@ class MainActivity : AppCompatActivity() {
         show(Mode.of(name) ?: Mode.HOME)
     }
 
-    /** Deck sur sa page Réunion, pour couper le micro ou raccrocher sans chercher. */
-    fun showMeetingControls() {
-        show(Mode.DECK)
-        // Le deck vient peut-être d'être créé : sa vue doit exister avant de choisir la page.
-        supportFragmentManager.executePendingTransactions()
-        (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.openMeetingPage()
+    // --- Appel en cours : profil Réunion (Deck V2)
+
+    private val call = CallSession()
+
+    /** Écran et profil d'avant la bascule sur Réunion, pour y revenir à la fin de l'appel. */
+    private var beforeCall: Pair<Mode, Int>? = null
+
+    val inCall: Boolean get() = call.active
+
+    /** Ordre `meeting` de l'ordinateur : un appel commence ou finit. */
+    fun onMeeting(state: String, app: String) = if (state == "start") startCall(app) else endCall()
+
+    /**
+     * Un appel commence (ordre de l'ordinateur, ou « Rejoindre » avec la fin de l'événement) : Réunion entre dans la barre,
+     * puis l'écran y passe, sauf pendant une saisie ou dans un écran plein (Caméra, mode Modifier).
+     */
+    fun startCall(app: String, endAtMs: Long? = null) {
+        if (!call.start(app, endAtMs)) return
+        val layout = HomeLayout.load(this, cadran = true)
+        refreshRail(layout)
+        if (layout.callProfile < 0) return
+        val fullScreen = current == Mode.CAMERA || homeFragment()?.editing == true
+        if (!call.shouldSwitch(typing = currentFocus is android.widget.EditText, fullScreen = fullScreen)) return
+        beforeCall = current to (homeFragment()?.shownPage ?: layout.homeProfile)
+        showProfile(layout.callProfile)
     }
+
+    /** Fin d'appel : retour à l'écran d'avant si Réunion est encore affiché, puis Réunion quitte la barre. */
+    fun endCall() {
+        if (!call.active) return
+        call.end()
+        afterCall()
+    }
+
+    private fun afterCall() {
+        val layout = HomeLayout.load(this, cadran = true)
+        val before = beforeCall
+        beforeCall = null
+        val page = homeFragment()?.shownPage?.takeIf { current == Mode.HOME }
+        val back = before?.let { call.returnTo(page, layout.callProfile, it.second) }
+        when {
+            back != null && before.first == Mode.HOME -> showProfile(back)
+            back != null -> show(before.first)
+            // Resté sur Réunion sans écran d'avant connu : il n'est plus dans la barre, on rentre à l'Accueil.
+            page == layout.callProfile -> showProfile(layout.homeProfile)
+        }
+        refreshRail(layout)
+    }
+
+    private fun refreshRail(layout: HomeLayout = HomeLayout.load(this, cadran = true)) =
+        nav.showProfiles(layout, homeFragment()?.shownPage?.takeIf { current == Mode.HOME } ?: layout.homeProfile, call.active)
 
     /** Appel entrant sur l'ordinateur (ordre `call`, voir CallOverlay). */
     fun onCall(state: String, app: String, caller: String?, video: Boolean) = callOverlay.onCall(state, app, caller, video)
@@ -668,7 +717,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** L'Accueil prévient à chaque profil affiché et à chaque changement des profils : la barre suit. */
-    fun onProfileShown(layout: HomeLayout, page: Int) = nav.showProfiles(layout, page, inCall = false)
+    fun onProfileShown(layout: HomeLayout, page: Int) = nav.showProfiles(layout, page, inCall = call.active)
 
     private fun homeFragment() = supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment
 

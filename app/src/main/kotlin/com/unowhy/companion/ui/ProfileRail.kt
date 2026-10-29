@@ -57,10 +57,23 @@ class ProfileRail(
 
     override fun showProfiles(layout: HomeLayout, page: Int, inCall: Boolean) {
         val structure = this.layout !== layout || this.inCall != inCall || names() != names(layout)
+        val callArrives = inCall && !this.inCall
         this.layout = layout
         this.page = page
         this.inCall = inCall
         if (structure) render() else mark(animate = true)
+        if (callArrives) arrive(entries.indexOfFirst { it is RailEntry.Profile && it.isCall })
+    }
+
+    /** Réunion qui entre dans la barre : elle grandit de 0,6 à 1 en fondu (ressorts, jouent aussi en kiosque). */
+    private fun arrive(index: Int) {
+        val view = views.getOrNull(index) ?: return
+        view.scaleX = ARRIVE_SCALE
+        view.scaleY = ARRIVE_SCALE
+        view.alpha = 0f
+        Look.navSpring(view, DynamicAnimation.SCALE_X, Look.SPATIAL_DEFAULT, 1f)
+        Look.navSpring(view, DynamicAnimation.SCALE_Y, Look.SPATIAL_DEFAULT, 1f)
+        Look.navSpring(view, DynamicAnimation.ALPHA, Look.EFFECTS_DEFAULT, 1f)
     }
 
     override fun select(mode: Mode, changed: Boolean) {
@@ -219,5 +232,6 @@ class ProfileRail(
 
     private companion object {
         const val RESTING_ALPHA = 0.4f
+        const val ARRIVE_SCALE = 0.6f
     }
 }
