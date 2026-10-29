@@ -33,7 +33,7 @@ abstract class CallWidget(
     placed: Placed,
     private val select: (DeckPage) -> Boolean,
 ) : HomeWidget(context, host, placed) {
-    override val view = OwnerLinearLayout(context).asCard(12).apply { orientation = LinearLayout.VERTICAL }
+    override val view = LinearLayout(context).asCard(12).apply { orientation = LinearLayout.VERTICAL }
 
     private var page: DeckPage? = null
 

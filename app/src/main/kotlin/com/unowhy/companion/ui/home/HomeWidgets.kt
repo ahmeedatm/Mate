@@ -445,7 +445,7 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
  * Ce qui joue sur l'ordinateur (contrôles multimédias de Windows, MediaRemote sur Mac), comme la page Média ;
  * petit : titre et boutons ; moyen : la lecture sur une ligne ; grand : la même, puis les sites de la page Média
  * (toucher ouvre, appui long retire, « + » du titre ajoute). Pas de barre de son : en 2 × 2 elle prendrait la place
- * des sites, et le widget Son la fait. Le widget garde l'appui long : sinon la grille entrerait en mode Modifier.
+ * des sites, et le widget Son la fait. Seule la grille des sites garde l'appui long (mode Modifier ailleurs).
  */
 class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val playing = NowPlayingView(context).apply { attach(host.scope) }
@@ -468,6 +468,7 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
     init {
         // L'appui long d'un site n'entre pas en mode Modifier ; celui des autres tailles, si.
+        sites.grid.ownsLongPress = true
         sites.grid.onTap = { cell, _ -> sites.tileOf(cell)?.let(::open) }
         sites.grid.onHold = { cell, _ -> sites.tileOf(cell)?.let(::confirmRemove) }
     }

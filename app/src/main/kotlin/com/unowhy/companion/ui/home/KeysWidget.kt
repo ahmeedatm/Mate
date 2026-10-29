@@ -6,6 +6,7 @@ import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
@@ -31,7 +32,8 @@ import kotlinx.coroutines.launch
  * retirer du widget. Les touches sont gardées avec leur nom et leur emoji : elles s'affichent même ordinateur éteint.
  */
 class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    override val view = OwnerLinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+    // Ni la racine ni l'état vide ne gardent l'appui long (mode Modifier) : seules les touches le font.
+    override val view = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
 
     override val hasSettings get() = true
 
@@ -40,7 +42,8 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val grid by lazy {
         TileGridView(context, host.scope).apply {
             onTap = { cell, _ -> if (cell.add) showAddChoice() else run(cell.key.id) }
-            onHold = { cell, _ -> if (!cell.add) hold(cell.key) }
+            onHold = { cell, _ -> hold(cell.key) }
+            ownsLongPress = true
         }
     }
 
@@ -123,7 +126,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         view.addView(grid, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
     }
 
-    /** Touche des rangées : la même case que la grille, cliquable seule. */
+    /** Touche des rangées : la même case que la grille, cliquable seule, dans un cadre qui garde son appui long. */
     private fun rowTile(key: KeyRef): View {
         val tile = TileGridView.newCell(context)
         TileGridView.bind(tile, TileGridView.Cell(key), host.scope)
@@ -137,8 +140,9 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             hold(key)
             true
         }
-        tile.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        return tile
+        return OwnerFrameLayout(context, ownsLongPress = true).apply {
+            addView(tile, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        }
     }
 
     /** Lance la touche. Une appli à plusieurs fenêtres ne se lance pas : l'ordinateur rend ses fenêtres, on les propose. */

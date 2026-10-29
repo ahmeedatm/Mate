@@ -7,11 +7,11 @@ import com.unowhy.companion.net.DeckTile
 
 /**
  * Les applis de la page Apps du Deck, sur un profil : toucher lance l'appli (ou propose ses fenêtres si elle en a
- * plusieurs), appui long = ses fenêtres et « Retirer », « + » du titre = ajouter une appli du catalogue de l'ordinateur. Le
- * widget garde l'appui long : sinon la grille entrerait en mode Modifier.
+ * plusieurs), appui long = ses fenêtres et « Retirer », « + » du titre = ajouter une appli du catalogue de l'ordinateur. Seule
+ * la grille garde l'appui long : sur le titre ou la marge, il entre en mode Modifier.
  */
 class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    override val view = OwnerLinearLayout(context).asCard(12).apply { orientation = LinearLayout.VERTICAL }
+    override val view = LinearLayout(context).asCard(12).apply { orientation = LinearLayout.VERTICAL }
 
     private val section = TileSection(
         context, host, R.string.widget_apps, R.drawable.ic_tabs, R.string.apps_add_tile,
@@ -22,6 +22,7 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     // Hors d'un `apply` sur la section : `::run` y désignerait `TileSection.run`, pas celui du widget.
     init {
         section.grid.onTap = { cell, _ -> section.tileOf(cell)?.let(::run) }
+        section.grid.ownsLongPress = true
         section.grid.onHold = { cell, _ -> section.tileOf(cell)?.let { host.overlays.windows(it, removable = true) { section.reload() } } }
         section.addTo(view)
     }

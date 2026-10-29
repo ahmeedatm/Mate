@@ -2,7 +2,6 @@ package com.unowhy.companion.ui.home
 
 import android.content.Context
 import android.widget.FrameLayout
-import android.widget.LinearLayout
 
 /**
  * Une vue qui garde un geste de la grille des profils : [WidgetGrid] ne l'utilise pas (appui long = mode Modifier,
@@ -21,12 +20,6 @@ open class OwnerFrameLayout(
     override val ownsLongPress: Boolean = true,
     override val ownsSwipe: Boolean = false,
 ) : FrameLayout(context), GestureOwner
-
-open class OwnerLinearLayout(
-    context: Context,
-    override val ownsLongPress: Boolean = true,
-    override val ownsSwipe: Boolean = false,
-) : LinearLayout(context), GestureOwner
 
 object GestureRules {
     /** Faux sur un curseur ou chez un propriétaire d'appui long. */

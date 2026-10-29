@@ -29,8 +29,9 @@ import kotlinx.coroutines.launch
 
 /**
  * Grille de touches d'un widget (Touches, Apps, Discord, Réunion, sites de Média) : colonnes de 96 dp qui se
- * répartissent la largeur, défilement vertical s'il y a plus de touches que de place. Elle garde l'appui long (appui
- * long sur une touche = [onHold], pas le mode Modifier). Le balayage reste à la grille des profils.
+ * répartissent la largeur, défilement vertical s'il y a plus de touches que de place. Le balayage reste à la grille
+ * des profils. L'appui long reste à la grille des profils (mode Modifier) tant que [ownsLongPress] est faux : un widget
+ * dont les touches ont un [onHold] le met à vrai.
  */
 class TileGridView(context: Context, private val scope: CoroutineScope) : GridView(context), GestureOwner {
     /** Une case : la touche, allumée (micro coupé…), « + » d'ajout, ou emplacement libre (`type == EMPTY`). */
@@ -43,9 +44,11 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
         }
 
     var onTap: (Cell, View) -> Unit = { _, _ -> }
-    var onHold: (Cell, View) -> Unit = { _, _ -> }
 
-    override val ownsLongPress = true
+    /** Appui long sur une touche ; null : rien à faire, l'appui long n'est ni consommé ni signalé. */
+    var onHold: ((Cell, View) -> Unit)? = null
+
+    override var ownsLongPress = false
     override val ownsSwipe = false
 
     // Cases enfoncées, seules rendues au relâchement.
@@ -74,9 +77,10 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             cells.getOrNull(position)?.let { onTap(it, view) }
         }
         setOnItemLongClickListener { _, view, position, _ ->
-            val cell = cells.getOrNull(position) ?: return@setOnItemLongClickListener false
+            val hold = onHold ?: return@setOnItemLongClickListener false
+            val cell = cells.getOrNull(position)?.takeUnless { it.add } ?: return@setOnItemLongClickListener false
             view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-            onHold(cell, view)
+            hold(cell, view)
             true
         }
         // Le défilement reprend la main sur le doigt : plus d'appui.
