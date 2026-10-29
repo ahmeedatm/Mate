@@ -37,6 +37,7 @@ import com.unowhy.unomate.ui.home.ProfilesDialog
 import com.unowhy.unomate.ui.home.ROWS
 import com.unowhy.unomate.ui.home.RowProfile
 import com.unowhy.unomate.ui.home.WidgetGrid
+import com.unowhy.unomate.ui.home.WidgetSize
 import com.unowhy.unomate.ui.home.WidgetType
 import com.unowhy.unomate.ui.home.WidgetZoom
 import kotlinx.coroutines.CoroutineScope
@@ -662,9 +663,19 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         grid.invalidate()
     }
 
+    override fun pickSize(placed: Placed, w: Float, h: Float) = layout.pickSize(placed, w, h)
+
+    /** Poignée lâchée : le widget prend la taille choisie, à sa case. */
+    override fun onResize(placed: Placed, size: WidgetSize) {
+        placed.size = size
+        widgets[placed]?.applySize()
+        grid.requestLayout()
+        grid.invalidate()
+    }
+
     /**
-     * Taille suivante qui tient : d'abord depuis la même case, sinon étendue vers la gauche ou le haut, en gardant
-     * toujours la case d'origine (le widget ne saute pas ailleurs).
+     * Action d'accessibilité de la poignée : taille suivante qui tient, d'abord depuis la même case, sinon étendue vers
+     * la gauche ou le haut, en gardant toujours la case d'origine (le widget ne saute pas ailleurs).
      */
     override fun onCycleSize(placed: Placed) {
         val sizes = placed.type.sizes
