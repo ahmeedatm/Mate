@@ -177,7 +177,10 @@ class MainActivity : AppCompatActivity() {
         InstallerService.start(this)
 
         nav = ProfileRail(this, ::showFromRail, ::showProfile, ::openProfiles)
-        findViewById<RailSwipeLayout>(R.id.mode_container).onSwipe = { delta -> railStep(delta) }
+        findViewById<RailSwipeLayout>(R.id.mode_container).apply {
+            onSwipe = { delta -> railStep(delta) }
+            canSwipe = { delta -> railCanStep(delta) }
+        }
         wakeRail()
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
         wake = WakeWord(this, findViewById(R.id.wake_mic)) { voice.start() }
@@ -397,6 +400,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Kiosk.enter(this)
+        Accessibility.applyAnimationScale(this, Prefs.reduceMotion(this))
         Screen.apply(this)
         Screen.applyOrientation(this)
         // Retour de l'essai : si l'ordinateur est resté sur le backend d'une MR (essai planté), on remet le sien.
@@ -603,7 +607,11 @@ class MainActivity : AppCompatActivity() {
         val computer = supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment
         computer?.onNotification()
         // Pastille sur la cloche, sauf si l'historique est déjà sous les yeux.
-        if (computer?.showingNotifications != true || current != Mode.COMPUTER) findViewById<View>(R.id.notif_dot).visibility = View.VISIBLE
+        if (computer?.showingNotifications != true || current != Mode.COMPUTER) {
+            val dot = findViewById<View>(R.id.notif_dot)
+            dot.visibility = View.VISIBLE
+            Look.ring(findViewById(R.id.notif_bell), dot)
+        }
     }
 
     /** Cloche de la barre : Depuis l'ordi > Notifications, pastille retirée. */
@@ -790,6 +798,9 @@ class MainActivity : AppCompatActivity() {
     /** Balayage vertical (Accueil ou autre mode) : entrée voisine de la barre ; faux au bout. */
     fun railStep(delta: Int): Boolean = nav.step(delta)
 
+    /** Une entrée de la barre attend dans ce sens (l'écran suit alors le doigt, sinon il résiste). */
+    fun railCanStep(delta: Int): Boolean = nav.canStep(delta)
+
     private fun show(mode: Mode) {
         if (::frame.isInitialized) closeFrame()
         // Le champ d'un écran masqué garderait sinon le clavier (et la saisie) par-dessus le nouvel écran.
@@ -826,6 +837,8 @@ class MainActivity : AppCompatActivity() {
     private fun slideTo(mode: Mode) {
         supportFragmentManager.executePendingTransactions()
         val into = supportFragmentManager.findFragmentByTag(mode.tag)?.view ?: return
+        // Kiosque : l'Accueil arrive par ses widgets (Look.enterSpring), pas en glissant tout entier par-dessus.
+        if (mode == Mode.HOME && Look.cascadeOnly(this)) return
         Look.sharedAxis(into, fromBelow = nav.lastMove >= 0)
     }
 

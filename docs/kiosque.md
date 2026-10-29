@@ -7,7 +7,9 @@ But : la tablette ne fait tourner que Companion, toute la puissance pour l'appli
 ```bash
 adb shell pm list packages -3                        # applis installées en plus du système
 adb shell pm disable-user --user 0 <package>         # désactiver (réversible : pm enable <package>)
-# Animations coupées : gros gain de fluidité sur une tablette lente
+# Animations du système coupées : gros gain de fluidité sur une tablette lente. Celles de l'appli, elle les règle
+# elle-même : au démarrage, Companion remet animator_duration_scale à 1 (0 avec « Réduire les animations ») et chaque
+# famille se coupe dans Réglages > Animations (device/Accessibility.applyAnimationScale, Prefs.animation).
 adb shell settings put global window_animation_scale 0
 adb shell settings put global transition_animation_scale 0
 adb shell settings put global animator_duration_scale 0

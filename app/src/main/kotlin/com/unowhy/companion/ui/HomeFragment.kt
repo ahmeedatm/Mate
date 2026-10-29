@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import com.unowhy.companion.AnimFamily
 import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.R
@@ -387,7 +388,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     /**
      * Affiche le profil [index] et charge ses widgets (le chargement du profil quitté est annulé).
-     * `animate` : la grille arrive dans le sens du déplacement dans la barre (ordre des profils) ; le chargement attend
+     * `animate` : les widgets arrivent un à un (animateIn), ou la grille dans le sens du déplacement dans la barre si
+     * l'arrivée des widgets est coupée ; le chargement attend
      * la fin du glissement : des widgets qui se redessinent pendant ce temps feraient recalculer le calque à chaque image.
      */
     fun showProfile(index: Int, animate: Boolean = true) {
@@ -398,7 +400,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         val changed = index != page
         displayProfile(index)
         val slide = animate && changed
-        if (slide) Look.sharedAxis(grid, fromBelow = move >= 0)
+        // Arrivée des widgets active (Réglages > Animations) : ils arrivent un à un, comme en venant d'un autre écran,
+        // sans glisser la grille entière par-dessus (son calque serait redessiné à chaque image). Sinon : la grille glisse.
+        if (slide && Look.on(requireContext(), AnimFamily.HOME)) animateIn() else if (slide) Look.sharedAxis(grid, fromBelow = move >= 0)
         profileLoad = scope.launch {
             if (slide) delay(Look.NAV_SETTLE_MS)
             shownWidgets().forEach { it.load() }
@@ -416,7 +420,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     /**
      * Liste des profils. Un changement termine d'abord le mode Modifier en gardant les widgets : `save()` n'écrit rien
      * tant qu'il est actif. Profils ajoutés, déplacés ou retirés : widgets recréés, puis le profil affiché charge ses
-     * données. Renommage ou marquage de jeu : la barre seulement, ni widgets ni réseau.
+     * données. Renommage : la barre seulement, ni widgets ni réseau.
      */
     fun openProfiles() {
         ProfilesDialog(requireContext(), layout, page, ::profileName, !grid.narrow, ::editProfile) { show, structure ->
@@ -453,9 +457,28 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
      * barre (ou profil caché derrière « Plus ») : profil voisin dans l'ordre des profils.
      */
     override fun onPageSwipe(delta: Int) {
+        val root = view ?: return
+        if (!canPage(delta)) return SwipeFollow.release(root)
+        // Le nouvel écran arrive par Look.sharedAxis : celui-ci reprend sa place d'un coup.
+        SwipeFollow.reset(root)
         if (main?.railStep(delta) == true) return
+        neighborProfile(delta)?.let(::showProfile)
+    }
+
+    override fun onPageDrag(dy: Float) {
+        view?.let { SwipeFollow.drag(it, dy, canPage(if (dy < 0) 1 else -1)) }
+    }
+
+    override fun onPageDragEnd() {
+        view?.let(SwipeFollow::release)
+    }
+
+    /** Un écran attend dans ce sens : entrée voisine de la barre, sinon profil voisin (caché derrière « Plus »). */
+    private fun canPage(delta: Int): Boolean = main?.railCanStep(delta) == true || neighborProfile(delta) != null
+
+    private fun neighborProfile(delta: Int): Int? {
         val order = layout.profilesInOrder(inCall = main?.inCall == true)
-        order.getOrNull(order.indexOf(page) + delta)?.let(::showProfile)
+        return order.getOrNull(order.indexOf(page) + delta)
     }
 
     // --- Mode Modifier

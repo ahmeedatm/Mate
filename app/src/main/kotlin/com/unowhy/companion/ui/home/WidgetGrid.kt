@@ -19,6 +19,7 @@ import com.unowhy.companion.R
 import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.ui.themeColor
+import com.unowhy.companion.ui.themeFont
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -37,6 +38,12 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     interface Listener {
         fun onEnterEdit()
         fun onPageSwipe(delta: Int)
+
+        /** Balayage en cours, doigt à `dy` px du départ : l'écran le suit (SwipeFollow). */
+        fun onPageDrag(dy: Float) {}
+
+        /** Balayage lâché trop court ou annulé : l'écran revient en place. */
+        fun onPageDragEnd() {}
         fun onAddAt(col: Int, row: Int)
         fun onRemove(placed: Placed)
         fun onCycleSize(placed: Placed)
@@ -95,6 +102,13 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private val ko = themeColor(context, R.attr.c_ko)
     private val textColor = themeColor(context, R.attr.c_text)
     private val faint = themeColor(context, R.attr.c_text_faint)
+    private val emptyHint = context.getString(R.string.home_empty_hint)
+    private val hintText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        textSize = 18 * resources.displayMetrics.scaledDensity
+        color = themeColor(context, R.attr.c_text_dim)
+        typeface = themeFont(context, R.attr.c_font_regular)
+    }
 
     init {
         setWillNotDraw(false)
@@ -103,6 +117,8 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     }
 
     private fun placedOf(child: View) = child.tag as? Placed
+
+    private fun pageEmpty() = (0 until childCount).none { placedOf(getChildAt(it))?.page == page }
 
     // --- Mesure et placement
 
@@ -152,6 +168,8 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             val placed = placedOf(child) ?: continue
             child.visibility = if (placed.page == page) View.VISIBLE else View.GONE
         }
+        // Écran sans widget : le message dessiné au centre est aussi lu par TalkBack.
+        contentDescription = if (pageEmpty()) emptyHint else null
         requestLayout()
         invalidate()
     }
@@ -250,13 +268,16 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
                     stolen = true
                     swiping = true
                 }
+                if (swiping) listener?.onPageDrag(dy)
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 removeCallbacks(enterEdit)
                 if (swiping && ev.actionMasked == MotionEvent.ACTION_UP) {
                     val dy = ev.y - downY
                     // Vers le haut : profil suivant, qui arrive par le bas (Look.sharedAxis de HomeFragment.showProfile).
-                    if (abs(dy) > height / 8) listener?.onPageSwipe(if (dy < 0) 1 else -1)
+                    if (abs(dy) > height / 8) listener?.onPageSwipe(if (dy < 0) 1 else -1) else listener?.onPageDragEnd()
+                } else if (swiping) {
+                    listener?.onPageDragEnd()
                 }
                 val wasStolen = stolen || ignoreUntilUp
                 stolen = false; swiping = false; ignoreUntilUp = false
@@ -482,6 +503,10 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     override fun dispatchDraw(canvas: Canvas) {
         if (editing && !narrow) drawEmptyCells(canvas)
+        // Écran vide hors mode Modifier : dire comment le remplir, au lieu d'une page blanche.
+        if (!editing && pageEmpty()) {
+            canvas.drawText(emptyHint, width / 2f, height / 2f - (hintText.descent() + hintText.ascent()) / 2, hintText)
+        }
         super.dispatchDraw(canvas)
         if (!editing) return
         for (i in 0 until childCount) {

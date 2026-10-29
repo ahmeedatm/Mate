@@ -66,11 +66,16 @@ class ProfileRail(
     override fun showProfiles(layout: HomeLayout, page: Int, inCall: Boolean) {
         val structure = drawn != RailModel.snapshot(layout, inCall, Prefs.railTools(activity), Prefs.railLabels(activity))
         val callArrives = inCall && !this.inCall
+        val before = entries.filterIsInstance<RailEntry.Profile>().map { it.page }.toSet()
         this.layout = layout
         this.page = page
         this.inCall = inCall
         if (structure) render() else mark(animate = true)
         if (callArrives) arrive(entries.indexOfFirst { it is RailEntry.Profile && it.isCall })
+        // Profil créé : il grandit à sa place dans la barre, comme Réunion à l'appel.
+        if (structure && before.isNotEmpty()) {
+            entries.forEachIndexed { i, entry -> if (entry is RailEntry.Profile && !entry.isCall && entry.page !in before) arrive(i) }
+        }
     }
 
     /** Réunion qui entre dans la barre : elle grandit de 0,6 à 1 en fondu (ressorts, jouent aussi en kiosque). */
@@ -106,7 +111,14 @@ class ProfileRail(
     }
 
     /** Le rouge est réservé au « maintenant » : point vert si l'ordinateur répond, neutre sinon ; sa forme et l'état écrit disent le reste. */
-    override fun showLink(link: Link) = renderLink(activity, statusDot, statusName, statusState, status, link, offline = R.attr.c_text_faint)
+    override fun showLink(link: Link) {
+        renderLink(activity, statusDot, statusName, statusState, status, link, offline = R.attr.c_text_faint)
+        // L'état change (en ligne ↔ injoignable…) : la pastille gonfle une fois, pour qu'on le remarque.
+        if (linkState != null && linkState != link.state) Look.blip(statusDot)
+        linkState = link.state
+    }
+
+    private var linkState: Link.State? = null
 
     /** Recrée les entrées (profils ajoutés, renommés, retirés, appel commencé ou fini). */
     override fun applySettings() = render()
@@ -153,12 +165,15 @@ class ProfileRail(
     }
 
     override fun step(delta: Int): Boolean {
-        // Notifications (cloche) : en pied de barre comme Réglages, hors du balayage.
-        if (notifications && mode == Mode.COMPUTER) return false
-        val entry = RailModel.neighbor(entries, mode, page, delta) ?: return false
+        val entry = neighbor(delta) ?: return false
         open(entry)
         return true
     }
+
+    override fun canStep(delta: Int): Boolean = neighbor(delta) != null
+
+    // Notifications (cloche) : en pied de barre comme Réglages, hors du balayage.
+    private fun neighbor(delta: Int): RailEntry? = if (notifications && mode == Mode.COMPUTER) null else RailModel.neighbor(entries, mode, page, delta)
 
     private fun open(entry: RailEntry) = when (entry) {
         is RailEntry.Profile -> onProfile(entry.page)
@@ -174,15 +189,7 @@ class ProfileRail(
         var now = false
         when (entry) {
             is RailEntry.Profile -> {
-                icon.setImageResource(
-                    when (entry.page) {
-                        layout.homeProfile -> R.drawable.ic_dashboard
-                        layout.deckProfile -> R.drawable.ic_deck
-                        layout.callProfile -> R.drawable.ic_videocam
-                        layout.gameProfile -> R.drawable.ic_gamepad
-                        else -> R.drawable.ic_widgets
-                    },
-                )
+                icon.setImageResource(com.unowhy.companion.ui.home.ProfileIcons.of(layout, entry.page))
                 label.text = layout.nameOf(entry.page, activity.getString(R.string.profile_first), activity.getString(R.string.profile_default))
                 now = entry.isCall
                 val tasks = entry.page == layout.homeProfile && pendingTasks > 0

@@ -205,8 +205,8 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
                 initial.setTextColor(if (cell.lit) themeColor(context, R.attr.c_on_accent) else Look.readableOn(context, tint!!))
             }
 
-            // Symbole de la tablette (Deck V2) : icône monochrome, prioritaire sur l'emoji.
-            TileIcons.drawable(key.symbol)?.let { symbol ->
+            // Symbole de la tablette (Deck V2), ou icône d'un emoji connu : icône monochrome, prioritaire sur l'emoji.
+            TileIcons.of(key.symbol, key.glyph)?.let { symbol ->
                 icon.setImageResource(symbol)
                 val ink = when {
                     cell.lit -> themeColor(context, R.attr.c_on_accent)

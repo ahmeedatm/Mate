@@ -221,6 +221,7 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         signature = sig
         fill(lists[0], mrs.mine)
         fill(lists[1], mrs.review)
+        lists.forEach(Look::revealOnce)
     }
 
     private fun showHeaders(mine: Int, review: Int) {

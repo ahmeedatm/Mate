@@ -29,8 +29,9 @@ import kotlinx.coroutines.launch
 
 /**
  * Lecture en cours de l'ordinateur, dans le header en haut à droite, au style du widget Média : pochette, titre et
- * artiste (sinon la provenance : Spotify, YouTube, nom du site), Précédent, Lecture / Pause, Suivant. Titre trop long :
- * il défile ([MARQUEE_REPEAT] passages à chaque morceau, puis s'arrête sur le début, pour ne pas redessiner sans fin).
+ * artiste (sinon la provenance : Spotify, YouTube, nom du site), Précédent, Lecture / Pause, Suivant. Largeur fixe (le
+ * header ne bouge pas d'un morceau à l'autre) ; titre trop long : il défile [MARQUEE_REPEAT] fois à chaque morceau, puis
+ * s'arrête sur le début, pour ne pas redessiner sans fin sur la tablette.
  * Règles du petit lecteur de COMP-56 ([MiniPlayerLogic]) : ce qui joue d'abord, visible pendant une lecture et dix
  * minutes de pause. Relue toutes les [POLL_MS] (sur Mac, chaque lecture lance un programme), chaque seconde juste après
  * un appui ; pas de relecture tant que [suppressed] (cadre photo, aucun ordinateur).

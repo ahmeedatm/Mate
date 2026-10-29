@@ -102,12 +102,12 @@ class Placed(
 
 /**
  * Disposition complète : widgets et profils. Un profil = une page ; `names[i]` null = pas encore de nom ([nameMissing]
- * lui en donne un, l'interface passe les textes : le modèle ne touche à aucune ressource). `gameProfile` : le profil de jeu (au plus un), -1 si aucun.
+ * lui en donne un, l'interface passe les textes : le modèle ne touche à aucune ressource).
  * Rôles (Deck V2) : `homeProfile` (Accueil, jamais supprimé), `deckProfile` (Deck, -1 s'il a été supprimé), `callProfile`
  * (Réunion : jamais supprimé, absent de la barre et du balayage hors appel). `rolesSet` : rôles déjà posés une fois
  * ([ensureRoles] ne recrée pas un Deck supprimé).
  */
-class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String?>, @set:JvmName("assignGameProfile") var gameProfile: Int = -1) {
+class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String?>) {
 
     /** Profils sans nom : garde les appels qui ne comptent que des pages. */
     constructor(widgets: MutableList<Placed>, pages: Int) : this(widgets, MutableList<String?>(pages.coerceAtLeast(1)) { null })
@@ -119,11 +119,29 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
 
     val pages get() = names.size
 
-    fun copy() = HomeLayout(widgets.map { it.copy() }.toMutableList(), names.toMutableList(), gameProfile).also {
+    /** Icône choisie de chaque profil ([ProfileIcons], null = celle du rôle), dans l'ordre des noms. */
+    val icons: MutableList<String?> = MutableList(names.size) { null }
+
+    fun iconOf(index: Int): String? = icons.getOrNull(index)
+
+    fun setIcon(index: Int, key: String?) {
+        syncIcons()
+        if (index in icons.indices) icons[index] = key
+    }
+
+    /** Une entrée par profil, même si les noms ont changé sans passer par ici. */
+    private fun syncIcons() {
+        while (icons.size < names.size) icons += null
+        while (icons.size > names.size) icons.removeAt(icons.lastIndex)
+    }
+
+    fun copy() = HomeLayout(widgets.map { it.copy() }.toMutableList(), names.toMutableList()).also {
         it.homeProfile = homeProfile
         it.deckProfile = deckProfile
         it.callProfile = callProfile
         it.rolesSet = rolesSet
+        it.icons.clear()
+        it.icons += icons
     }
 
     /**
@@ -164,7 +182,9 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
 
     /** Ajoute un profil à la fin et renvoie son index ; `items` sont recopiés sur sa page. */
     fun addProfile(name: String?, items: List<Placed> = emptyList()): Int {
+        syncIcons()
         names += name
+        icons += null
         val index = names.size - 1
         widgets += items.map { it.copy().also { c -> c.page = index } }
         return index
@@ -197,7 +217,9 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
     /** Remet le profil `from` à la place `to` ; ses widgets et le marquage de jeu le suivent. */
     fun moveProfile(from: Int, to: Int) {
         if (from == to || from !in names.indices || to !in names.indices) return
+        syncIcons()
         names.add(to, names.removeAt(from))
+        icons.add(to, icons.removeAt(from))
         fun moved(p: Int) = when {
             p == from -> to
             from < to && p in from + 1..to -> p - 1
@@ -205,7 +227,6 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
             else -> p
         }
         widgets.forEach { it.page = moved(it.page) }
-        if (gameProfile >= 0) gameProfile = moved(gameProfile)
         homeProfile = moved(homeProfile)
         if (deckProfile >= 0) deckProfile = moved(deckProfile)
         if (callProfile >= 0) callProfile = moved(callProfile)
@@ -214,7 +235,9 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
     /** Retire le profil et ses widgets, les suivants reculent d'une page. Faux (rien ne change) si [canRemove] le refuse. */
     fun removeProfile(index: Int): Boolean {
         if (!canRemove(index)) return false
+        syncIcons()
         names.removeAt(index)
+        icons.removeAt(index)
         widgets.removeAll { it.page == index }
         widgets.filter { it.page > index }.forEach { it.page-- }
         fun after(p: Int) = when {
@@ -222,16 +245,10 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
             p > index -> p - 1
             else -> p
         }
-        gameProfile = after(gameProfile)
         homeProfile = after(homeProfile)
         deckProfile = after(deckProfile)
         callProfile = after(callProfile)
         return true
-    }
-
-    /** Un seul profil de jeu : le nouveau remplace l'ancien, -1 n'en laisse aucun. */
-    fun setGameProfile(index: Int) {
-        gameProfile = index
     }
 
     fun on(page: Int) = widgets.filter { it.page == page }
@@ -256,7 +273,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         .put("v", 2)
         .put("pages", pages)
         .put("names", JSONArray().apply { names.forEach { put(it ?: JSONObject.NULL) } })
-        .put("game", gameProfile)
+        .put("icons", JSONArray().apply { names.indices.forEach { put(iconOf(it) ?: JSONObject.NULL) } })
         .put("home", homeProfile)
         .put("deck", deckProfile)
         .put("call", callProfile)
@@ -305,7 +322,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
                 MutableList<String?>(json.getInt("pages").coerceAtLeast(1)) { null }
             }
             val layout = HomeLayout(mutableListOf(), names)
-            layout.gameProfile = json.optInt("game", -1).takeIf { it in names.indices } ?: -1
+            json.optJSONArray("icons")?.let { saved -> names.indices.forEach { i -> if (i < saved.length() && !saved.isNull(i)) layout.setIcon(i, saved.getString(i)) } }
             layout.homeProfile = json.optInt("home", 0).takeIf { it in names.indices } ?: 0
             layout.deckProfile = json.optInt("deck", -1).takeIf { it in names.indices } ?: -1
             layout.callProfile = json.optInt("call", -1).takeIf { it in names.indices } ?: -1
@@ -343,15 +360,6 @@ enum class Template(
         Placed(WidgetType.FOCUS, WidgetSize.S, 0, 0, 3),
         Placed(WidgetType.WATER, WidgetSize.S, 0, 1, 3),
     )),
-    HOME(R.string.template_home, R.string.template_home_desc, listOf(
-        Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 0),
-        Placed(WidgetType.WEATHER, WidgetSize.M, 0, 2, 0),
-        Placed(WidgetType.AUDIO, WidgetSize.M, 0, 2, 1),
-        Placed(WidgetType.KEYS, WidgetSize.L, 0, 0, 2),
-        Placed(WidgetType.MEDIA, WidgetSize.M, 0, 2, 2),
-        Placed(WidgetType.FOCUS, WidgetSize.S, 0, 2, 3),
-        Placed(WidgetType.WATER, WidgetSize.S, 0, 3, 3),
-    )),
     STANDBY(R.string.template_standby, R.string.template_standby_desc, listOf(
         Placed(WidgetType.CLOCK, WidgetSize.XL, 0, 0, 0),
         Placed(WidgetType.NEXT, WidgetSize.L, 0, 0, 2),
@@ -368,13 +376,6 @@ enum class Template(
         Placed(WidgetType.APPS, WidgetSize.V, 0, 2, 2),
         // Touches remplies d'office (Verrouiller, Couper le micro, Ne pas déranger…) : pas de case vide au premier lancement.
         Placed(WidgetType.KEYS, WidgetSize.V, 0, 3, 2, JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")),
-    ), cadran = true),
-    HOME_CADRAN(R.string.template_home, R.string.template_home_cadran_desc, listOf(
-        Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
-        Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
-        Placed(WidgetType.KEYS, WidgetSize.L, 0, 0, 2),
-        Placed(WidgetType.MEDIA, WidgetSize.M, 0, 2, 2),
-        Placed(WidgetType.AUDIO, WidgetSize.M, 0, 2, 3),
     ), cadran = true),
     STANDBY_CADRAN(R.string.template_standby, R.string.template_standby_cadran_desc, listOf(
         Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
