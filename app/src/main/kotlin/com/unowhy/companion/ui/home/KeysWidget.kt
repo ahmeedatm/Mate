@@ -230,7 +230,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                 box.addView(TitleView(context).apply { text = page.title; setPadding(0, dp(12), 0, dp(4)) })
                 for (tile in tiles) {
                     val check = CheckBox(context).apply {
-                        text = listOfNotNull(tile.glyph, tile.label).joinToString("  ")
+                        text = tile.label
                         textSize = 17f
                         minHeight = dp(44)
                         isChecked = tile.id in selected
