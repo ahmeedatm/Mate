@@ -142,7 +142,7 @@
         <!-- paddingTop : la ligne du haut à droite (lecture en cours, heure, batterie) ne chevauche pas les cartes. -->
         <FrameLayout
             android:id="@+id/mode_container"
-            android:paddingTop="8dp"
+            android:paddingTop="20dp"
             android:defaultFocusHighlightEnabled="false"
             tools:targetApi="o"
             android:focusable="true"
@@ -161,9 +161,9 @@
              batterie de la tablette (barre d'état masquée en kiosque). -->
         <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="32dp"
+            android:layout_height="44dp"
             android:layout_gravity="top|end"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="4dp"
             android:layout_marginEnd="24dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
@@ -171,8 +171,11 @@
             <com.unowhy.companion.ui.MusicChip
                 android:id="@+id/music_chip"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="16dp" />
+                android:layout_height="44dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/music_chip_bg"
+                android:paddingStart="7dp"
+                android:paddingEnd="7dp" />
 
             <com.unowhy.companion.ui.TabletStatusView
                 android:id="@+id/tablet_status"

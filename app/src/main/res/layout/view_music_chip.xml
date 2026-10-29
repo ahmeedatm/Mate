@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Lecture en cours en haut à droite (MusicChip) : vignette, titre et provenance, puis Précédent, Lecture / Pause,
-     Suivant, comme le widget Média (boutons ronds, Lecture plein), en plus petit. -->
+<!-- Lecture en cours en haut à droite (MusicChip) : pochette, titre et provenance, puis Précédent, Lecture / Pause,
+     Suivant, comme le widget Média (boutons ronds, Lecture plein), en plus petit. Toucher la pochette ou le titre :
+     le widget Média en grand dans une carte flottante. -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     tools:parentTag="android.widget.LinearLayout">
 
     <ImageView
         android:id="@+id/chip_thumb"
-        android:layout_width="26dp"
-        android:layout_height="26dp"
-        android:background="@drawable/thumb_bg"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:background="@drawable/cover_bg"
         android:importantForAccessibility="no"
         android:scaleType="centerCrop" />
 

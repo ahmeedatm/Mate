@@ -819,7 +819,7 @@
     <string name="settings_rail">Barre de gauche</string>
     <string name="settings_rail_labels">Noms sous les icônes</string>
     <string name="settings_rail_tools">Outils affichés dans la barre</string>
-    <string name="music_chip_open">%1$s : ouvrir le Deck</string>
+    <string name="music_chip_open">%1$s : afficher la lecture en grand</string>
     <string name="call_profile_preview">Aperçu : ce profil s\'affiche pendant un appel.</string>
     <string name="widget_size_s">Petit</string>
     <string name="widget_size_m">Moyen</string>

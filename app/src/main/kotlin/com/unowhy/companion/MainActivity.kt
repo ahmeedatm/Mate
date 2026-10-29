@@ -196,7 +196,6 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.notif_bell).setOnClickListener { openNotifications() }
         alerts = TabletAlerts(this, banner)
         findViewById<View>(R.id.rail_settings).setOnClickListener { show(Mode.SETTINGS) }
-        findViewById<com.unowhy.companion.ui.MusicChip>(R.id.music_chip).onOpen = { showProfile(HomeLayout.load(this, cadran = true).deckTarget()) }
         findViewById<TabletStatusView>(R.id.tablet_status).apply {
             inline()
             onMinute = {

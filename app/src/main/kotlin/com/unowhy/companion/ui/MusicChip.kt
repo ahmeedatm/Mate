@@ -11,6 +11,7 @@ import android.view.LayoutInflater
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.TextView
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -26,11 +27,10 @@ import kotlinx.coroutines.launch
  * Lecture en cours de l'ordinateur, en haut à droite à côté de l'heure, dans le style du widget Média : vignette,
  * titre et provenance (Spotify, YouTube, nom du site), Précédent, Lecture / Pause, Suivant. Visible seulement quand une
  * session a un titre ; relue toutes les [POLL_MS] tant qu'elle est à l'écran et qu'un ordinateur est appairé.
- * Toucher le titre : [onOpen] (le profil Deck, où est la lecture en grand).
+ * Toucher la pochette ou le titre : le widget Média en grand ([NowPlayingView] : pochette, sources, progression,
+ * commandes) dans une carte flottante, sous la pastille ; un toucher ailleurs la referme.
  */
 class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : LinearLayout(context, attrs) {
-
-    var onOpen: () -> Unit = {}
 
     private val thumb: ImageView
     private val title: TextView
@@ -40,6 +40,7 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
     private var session: MediaSession? = null
     private var thumbKey: String? = null
     private var poll: Job? = null
+    private var card: PopupWindow? = null
 
     init {
         orientation = HORIZONTAL
@@ -52,8 +53,12 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         previous = findViewById(R.id.chip_previous)
         play = findViewById(R.id.chip_play)
         next = findViewById(R.id.chip_next)
-        title.setOnClickListener { onOpen() }
-        thumb.setOnClickListener { onOpen() }
+        thumb.outlineProvider = object : android.view.ViewOutlineProvider() {
+            override fun getOutline(view: android.view.View, outline: android.graphics.Outline) =
+                outline.setRoundRect(0, 0, view.width, view.height, view.dp(8).toFloat())
+        }
+        title.setOnClickListener { toggleCard() }
+        thumb.setOnClickListener { toggleCard() }
         previous.setOnClickListener { control("previous") }
         play.setOnClickListener { control("play-pause") }
         next.setOnClickListener { control("next") }
@@ -70,6 +75,7 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
     }
 
     override fun onDetachedFromWindow() {
+        card?.dismiss()
         poll?.cancel()
         super.onDetachedFromWindow()
     }
@@ -79,6 +85,7 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         val shown = if (Computers.all(context).isEmpty()) null else runCatching { pick(BackendClient(context).system.media()) }.getOrNull()
         session = shown
         visibility = if (shown != null) VISIBLE else GONE
+        if (shown == null) card?.dismiss()
         shown ?: return
         title.text = SpannableStringBuilder(shown.title).apply {
             source(shown)?.let {
@@ -99,6 +106,37 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         }
     }
 
+    /** Carte flottante : la vue du widget Média (mise en page en ligne), relue tant qu'elle est ouverte. */
+    private fun toggleCard() {
+        card?.let {
+            it.dismiss()
+            return
+        }
+        val scope = findViewTreeLifecycleOwner()?.lifecycleScope ?: return
+        val view = NowPlayingView(context).apply {
+            attach(scope)
+            layout(NowPlayingView.Layout.ROW)
+            bind(true)
+            setActive(true)
+        }
+        val box = android.widget.FrameLayout(context).apply {
+            setBackgroundResource(R.drawable.floating_card_bg)
+            setPadding(dp(24), dp(20), dp(24), dp(20))
+            addView(view)
+        }
+        val width = dp(CARD_WIDTH_DP)
+        card = PopupWindow(box, width, LayoutParams.WRAP_CONTENT).apply {
+            isOutsideTouchable = true
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+            setOnDismissListener {
+                view.setActive(false)
+                card = null
+            }
+            // Bord droit aligné sur celui de la pastille, juste dessous.
+            showAsDropDown(this@MusicChip, this@MusicChip.width - width, dp(8))
+        }
+    }
+
     private fun control(action: String) {
         val current = session ?: return
         findViewTreeLifecycleOwner()?.lifecycleScope?.launch {
@@ -109,6 +147,7 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
 
     companion object {
         private const val POLL_MS = 5_000L
+        private const val CARD_WIDTH_DP = 640
 
         /** Session à montrer : la courante de l'ordinateur, sinon celle qui joue, sinon la première ; toujours avec un titre. */
         fun pick(sessions: List<MediaSession>): MediaSession? {
