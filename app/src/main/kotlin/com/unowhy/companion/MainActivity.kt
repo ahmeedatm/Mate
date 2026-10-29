@@ -1,6 +1,7 @@
 package com.unowhy.companion
 
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -22,6 +23,8 @@ import com.unowhy.companion.device.Tablet
 import com.unowhy.companion.focus.FocusDnd
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
+import com.unowhy.companion.frame.FrameCache
+import com.unowhy.companion.frame.FrameLogic
 import com.unowhy.companion.kiosk.AutoUpdater
 import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.net.BackendClient
@@ -47,6 +50,7 @@ import com.unowhy.companion.ui.IconCache
 import com.unowhy.companion.ui.KeyboardControl
 import com.unowhy.companion.ui.MenuPanel
 import com.unowhy.companion.ui.Navigation
+import com.unowhy.companion.ui.PhotoFrameView
 import com.unowhy.companion.ui.Rail
 import com.unowhy.companion.ui.SettingsFragment
 import com.unowhy.companion.ui.TabletAlerts
@@ -59,7 +63,9 @@ import com.unowhy.companion.ui.notificationBannerText
 import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.voice.VoiceControl
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Les écrans qui veulent les boutons de volume de la tablette (ex. le deck pilote le son de l'ordinateur). */
 interface VolumeKeyHandler {
@@ -92,6 +98,12 @@ class MainActivity : AppCompatActivity() {
         private set
     private lateinit var agentAlerts: AgentAlerts
     private lateinit var agentAsk: AgentAskOverlay
+    private lateinit var frame: PhotoFrameView
+    /** Dernier toucher (ou touche de volume) : le cadre photo se lance après Prefs.frameDelayMin sans toucher. */
+    private var lastTouch = SystemClock.elapsedRealtime()
+    /** Toucher qui a fermé le cadre : avalé jusqu'au lever du doigt, l'écran dessous ne le reçoit pas. */
+    private var swallowTouch = false
+    private var battery: Tablet.Battery? = null
     /** Micro refusé hors kiosque (en kiosque, il est accordé d'office) : la commande repart une fois accepté. */
     private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) voice.start() else showBanner(getString(R.string.voice_no_mic), 6)
@@ -127,6 +139,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(agentAsk, android.view.ViewGroup.LayoutParams(-1, -1))
         callOverlay = CallOverlay(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(callOverlay, android.view.ViewGroup.LayoutParams(-1, -1))
+        // Cadre photo juste au-dessus des écrans : lumière des agents, question et appel restent devant.
+        frame = PhotoFrameView(this)
+        findViewById<android.view.ViewGroup>(android.R.id.content).addView(frame, 1, android.view.ViewGroup.LayoutParams(-1, -1))
 
         keyboard.setUp()
 
@@ -158,6 +173,7 @@ class MainActivity : AppCompatActivity() {
             onMinute = {
                 Screen.apply(this@MainActivity)
                 alerts.remindWater()
+                followFrame()
             }
             onBattery = ::onBattery
         }
@@ -304,13 +320,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_DOWN) Screen.touched(this)
+        if (event.action == MotionEvent.ACTION_DOWN) {
+            Screen.touched(this)
+            lastTouch = SystemClock.elapsedRealtime()
+            if (frame.isShowing) {
+                closeFrame()
+                swallowTouch = true
+            }
+        }
+        if (swallowTouch) {
+            if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) swallowTouch = false
+            return true
+        }
         menu?.touched()
         keyboard.onTouch(event)
         return super.dispatchTouchEvent(event)
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        lastTouch = SystemClock.elapsedRealtime()
+        if (frame.isShowing) closeFrame()
         val up = when (event.keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> true
             KeyEvent.KEYCODE_VOLUME_DOWN -> false
@@ -465,7 +494,62 @@ class MainActivity : AppCompatActivity() {
     fun showWelcome() = welcome.show()
 
     /** Bandeau en haut de l'écran, par-dessus le mode courant ; un toucher le ferme. */
-    fun showBanner(text: String, seconds: Int) = banner.show(text, seconds)
+    fun showBanner(text: String, seconds: Int) {
+        // Un message de l'ordinateur ou un rappel se lit : le cadre lui laisse la place.
+        closeFrame()
+        banner.show(text, seconds)
+    }
+
+    /**
+     * Cadre photo, vérifié chaque minute : lancé après le délai sans toucher (photos synchronisées juste avant, au plus
+     * tous les quarts d'heure), arrêté la nuit ou sur batterie faible, liste relue pendant l'affichage.
+     */
+    private fun followFrame() {
+        val night = Prefs.nightDim(this) && Screen.isNight()
+        val state = battery
+        if (frame.isShowing && !FrameLogic.canRun(night, state?.level, state?.charging ?: true)) return closeFrame()
+        val context = FrameLogic.Context(
+            idleMs = SystemClock.elapsedRealtime() - lastTouch,
+            delayMin = Prefs.frameDelayMin(this),
+            night = night,
+            batteryLevel = state?.level,
+            charging = state?.charging ?: true,
+            busy = frameBusy(),
+        )
+        if (!frame.isShowing && !FrameLogic.shouldStart(context)) return
+        lifecycleScope.launch {
+            FrameCache.sync(this@MainActivity)
+            val photos = withContext(Dispatchers.IO) { FrameCache.photos(this@MainActivity) }
+            when {
+                frame.isShowing -> frame.update(photos)
+                // Un toucher pendant la synchro : on reste sur l'écran.
+                SystemClock.elapsedRealtime() - lastTouch >= context.idleMs && !frameBusy() -> openFrame(photos)
+            }
+        }
+    }
+
+    /** Ce qui sert encore, que le cadre ne doit pas cacher. */
+    private fun frameBusy() = callOverlay.visibility == View.VISIBLE || agentAsk.isOpen || welcome.visibility == View.VISIBLE ||
+        menu?.isOpen == true || documentPanel.visibility == View.VISIBLE || current == Mode.CAMERA || FocusTimer.state.running
+
+    /** Lance le cadre tout de suite (Réglages > Cadre photo > Essayer, ou délai écoulé) ; sans photo, rien. */
+    fun openFrame(photos: List<java.io.File>) {
+        if (photos.isEmpty() || frame.isShowing) return
+        keyboard.hide()
+        frame.show(photos)
+        // Écrans dessous masqués : rien à redessiner derrière la photo (horloges, animations de l'Accueil).
+        findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0).visibility = View.INVISIBLE
+        Screen.frameCharging = battery?.charging ?: true
+        Screen.apply(this)
+    }
+
+    fun closeFrame() {
+        if (!frame.isShowing) return
+        frame.hide()
+        findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0).visibility = View.VISIBLE
+        Screen.frameCharging = null
+        Screen.apply(this)
+    }
 
     private fun settings() = supportFragmentManager.findFragmentByTag(Mode.SETTINGS.tag) as? SettingsFragment
 
@@ -476,6 +560,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun show(mode: Mode) {
+        if (::frame.isInitialized) closeFrame()
         // Le champ d'un écran masqué garderait sinon le clavier (et la saisie) par-dessus le nouvel écran.
         keyboard.hide()
         // Document ouvert : en grand dans Depuis l'ordi ; ailleurs à côté, pour laisser voir le mode choisi.
