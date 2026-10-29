@@ -286,6 +286,10 @@ class OpenWindowsView @JvmOverloads constructor(
         pagesBar.visibility = if (data.pages.isEmpty()) GONE else VISIBLE
         if (data.pages.isEmpty()) return
         val severalScreens = data.pages.map { it.display }.distinct().size > 1
+        // Toutes les tuiles dans la largeur (on ne glisse pas vers une tuile hors de l'écran) : plus étroites quand il
+        // y a beaucoup de pages, la bande ne défile qu'au-delà.
+        val available = (if (width > 0) width else resources.displayMetrics.widthPixels) - paddingLeft - paddingRight
+        val tileWidth = (available / (data.pages.size + 1) - dp(8)).coerceIn(dp(96), dp(220))
         data.pages.forEach { page ->
             val owner = windows.firstOrNull { it.second.page == page.id }
             val tile = if (owner != null) {
@@ -308,9 +312,14 @@ class OpenWindowsView @JvmOverloads constructor(
                 }
             }
             tile.acceptPage(page)
-            pagesList.addView(tile, LayoutParams(dp(220), LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
+            pagesList.addView(fit(tile, tileWidth), LayoutParams(tileWidth, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
         }
-        pagesList.addView(newPageTile(), LayoutParams(dp(220), LayoutParams.WRAP_CONTENT))
+        pagesList.addView(fit(newPageTile(), tileWidth), LayoutParams(tileWidth, LayoutParams.WRAP_CONTENT))
+    }
+
+    /** Tuile étroite : sans sous-titre, le nom seul tient. */
+    private fun fit(tile: View, tileWidth: Int) = tile.apply {
+        if (tileWidth < dp(150)) findViewById<View>(R.id.open_title).visibility = GONE
     }
 
     private fun pageTile(icon: Int, name: String, hint: String): View {
