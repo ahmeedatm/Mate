@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvider, loginUrl } from "../accounts.ts";
@@ -7,15 +8,29 @@ import { backendRoot, config } from "../config.ts";
 import { clearGitlabCache } from "../gitlab.ts";
 import { disconnectGitlab, finishGitlabLogin, gitlabAccount, gitlabClientId, gitlabLoginUrl } from "../gitlab-auth.ts";
 import { LOCAL_PAGE } from "../local-page.ts";
+import { WEB_FILES } from "../web-style.ts";
 import { accessibility, openTarget } from "../os.ts";
 import { identity, lanAddresses, pendingCode } from "../pairing.ts";
-import { tabletStatus } from "../tablet.ts";
+import { sendToTablet, tabletStatus, THEMES, type TabletSettings } from "../tablet.ts";
+
+const SETTINGS = ["theme", "brightness", "volume", "nightDim", "focusDnd"] satisfies (keyof TabletSettings)[];
 
 const LICENCES_FILE = path.join(backendRoot, "LICENCES-TIERS.txt");
+/** Politique de confidentialité (même texte dans l'appli, assets/confidentialite.txt ; docs/confidentialite.md). */
+const PRIVACY_FILE = path.join(backendRoot, "config", "confidentialite.txt");
 
 /** Page d'accueil locale (ouverte dans le navigateur de l'ordinateur), connexion des comptes d'agenda et du compte GitLab. */
 export default async function localRoutes(app: FastifyInstance) {
   app.get("/", async (_req, reply) => reply.type("text/html; charset=utf-8").send(LOCAL_PAGE));
+
+  /** Polices des pages web (web-style.ts) : liste fermée, jamais un chemin venu de la requête. */
+  app.get<{ Params: { file: string } }>("/web/:file", async (req, reply) => {
+    if (!WEB_FILES.includes(req.params.file)) return reply.code(404).send({ error: "Fichier inconnu" });
+    const data = await readFile(path.join(backendRoot, "assets", "web", req.params.file));
+    return reply.type("font/ttf").header("cache-control", "max-age=86400").send(data);
+  });
+
+  app.get("/local/confidentialite", async (_req, reply) => reply.type("text/plain; charset=utf-8").send(fs.createReadStream(PRIVACY_FILE)));
 
   /** Mentions de licences des composants tiers : écrites dans le compagnon installé par scripts/package.ts. */
   app.get("/local/licences", async (_req, reply) => {
@@ -28,6 +43,7 @@ export default async function localRoutes(app: FastifyInstance) {
     accessibility: await accessibility().catch(() => null),
     addresses: config.loopbackOnly ? ["127.0.0.1"] : lanAddresses(),
     tablet: tabletStatus().connected,
+    tabletInfo: tabletInfo(),
     pairing: pendingCode(),
     licences: fs.existsSync(LICENCES_FILE),
     // Hôtes seulement : un lien ICS publié donne accès à l'agenda, il ne s'affiche pas en entier.
@@ -69,6 +85,51 @@ export default async function localRoutes(app: FastifyInstance) {
         (e: Error) => ({ ok: false, error: e.message }),
       );
       return { sources: sources.length, ...check };
+    },
+  );
+
+  /** Panneau Tablette : réglages envoyés à la tablette par son canal (ordre `settings`, appliqué par RemoteChannel). */
+  app.put<{ Body: TabletSettings }>(
+    "/local/tablet/settings",
+    {
+      schema: {
+        body: {
+          type: "object",
+          additionalProperties: false,
+          // Au moins un réglage (minProperties ne voit pas les champs inconnus retirés par Fastify).
+          anyOf: SETTINGS.map((key) => ({ required: [key] })),
+          properties: {
+            theme: { enum: THEMES },
+            brightness: { type: "number", minimum: 0.05, maximum: 1 },
+            volume: { type: "number", minimum: 0, maximum: 1 },
+            nightDim: { type: "boolean" },
+            focusDnd: { type: "boolean" },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      if (!tabletStatus().connected) return reply.code(409).send({ error: "Tablette non connectée" });
+      const result = await sendToTablet({ type: "settings", ...req.body });
+      return result.ok ? { ok: true, tablet: tabletInfo() } : reply.code(502).send({ error: result.error });
+    },
+  );
+
+  /**
+   * Mise à jour de l'appli de la tablette (ordre `update`, RemoteUpdate côté tablette). Chercher interroge l'ordinateur et
+   * le serveur central depuis la tablette ; installer rend la main dès le téléchargement lancé.
+   */
+  app.post<{ Body: { action: "check" | "install" } }>(
+    "/local/tablet/update",
+    {
+      schema: {
+        body: { type: "object", required: ["action"], additionalProperties: false, properties: { action: { enum: ["check", "install"] } } },
+      },
+    },
+    async (req, reply) => {
+      if (!tabletStatus().connected) return reply.code(409).send({ error: "Tablette non connectée" });
+      const result = await sendToTablet({ type: "update", action: req.body.action }, 45_000);
+      return result.ok ? { ok: true, tablet: tabletInfo() } : reply.code(502).send({ error: result.error });
     },
   );
 
@@ -157,4 +218,23 @@ export default async function localRoutes(app: FastifyInstance) {
       return { ok: true };
     },
   );
+}
+
+/**
+ * Ce que la page locale montre de la tablette connectée, tiré de l'état qu'elle envoie à chaque poll.
+ * `settings` null : appli trop ancienne pour être réglée depuis l'ordinateur.
+ */
+function tabletInfo() {
+  const { connected, state } = tabletStatus();
+  if (!connected || !state || typeof state !== "object") return null;
+  const s = state as Record<string, unknown>;
+  return {
+    app: s.app ?? null,
+    model: s.model ?? null,
+    screen: s.screen ?? null,
+    battery: s.battery ?? null,
+    settings: s.settings ?? null,
+    // Absent : appli trop ancienne pour être mise à jour d'ici.
+    update: s.update ?? null,
+  };
 }

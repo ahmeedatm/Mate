@@ -79,6 +79,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
     private var gitlabOn = false
     /** Onglet Agents demandé (lumière touchée) avant que l'ordinateur ait dit s'il l'offre. */
     private var pendingAgents = false
+    /** Plugins coupés sur cet ordinateur (écran des plugins) : « Ouvertes », « Pavé », « Son » sans onglet. */
+    private var off: Set<String> = emptySet()
     /** Onglets dans l'ordre affiché (pour le balayage) et celui qui est sélectionné. */
     private var tabActions: List<() -> Unit> = emptyList()
     private var selectedTab = -1
@@ -327,8 +329,9 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                 val features = runCatching { client().deck.homeFeatures() }.getOrNull()
                 agentsOn = features?.agents ?: false
                 gitlabOn = features?.gitlab ?: false
+                off = features?.off.orEmpty()
                 when {
-                    showingOpen -> showOpen()
+                    showingOpen && OPEN_TAB !in off -> showOpen()
                     showingPad && padOn() -> showPad()
                     (showingAgents || pendingAgents) && agentsOn -> showAgents()
                     showingGitLab && gitlabOn -> showGitLab()
@@ -387,7 +390,13 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         fun agentsTab() = Tab(AGENTS_TAB, getString(R.string.deck_agents_tab), showingAgents, ::showAgents)
         fun gitlabTab() = Tab(GITLAB_TAB, getString(R.string.deck_gitlab_tab), showingGitLab, ::showGitLab)
         // « Ouvertes », « Pavé » (Mac ou Windows), « Son », puis « Agents » et « GitLab » (si l'ordinateur les offre) : ensemble posé après Apps.
-        fun extras() = listOfNotNull(openTab(), padTab().takeIf { padOn() }, mixerTab(), agentsTab().takeIf { agentsOn }, gitlabTab().takeIf { gitlabOn })
+        fun extras() = listOfNotNull(
+            openTab().takeIf { OPEN_TAB !in off },
+            padTab().takeIf { padOn() },
+            mixerTab().takeIf { MIXER_TAB !in off },
+            agentsTab().takeIf { agentsOn },
+            gitlabTab().takeIf { gitlabOn },
+        )
         // Par défaut, « Ouvertes » juste après Apps (en premier sans page Apps) : toutes les applis ouvertes, pas seulement les choisies.
         val openAfter = shown.indexOfFirst { pages[it].apps }
         // « Son » juste après.
@@ -604,8 +613,8 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         openWindows.setActive(isResumed && !isHidden)
     }
 
-    /** Le pavé ne se propose que pour un ordinateur qu'on peut piloter (Mac, Windows). */
-    private fun padOn() = Computers.active(requireContext())?.os in setOf("mac", "windows")
+    /** Le pavé ne se propose que pour un ordinateur qu'on peut piloter (Mac, Windows), s'il n'a pas été coupé. */
+    private fun padOn() = Computers.active(requireContext())?.os in setOf("mac", "windows") && PAD_TAB !in off
 
     /** Onglet « Pavé » : la surface tactile prend la place des touches et des barres de son. */
     private fun showPad() {
@@ -891,7 +900,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         const val LIVE_POLL_MS = 4_000L
         const val LIVE_HOLD_MS = 20_000L
         const val MEETING_HOLD_MS = 5_000L
-        /** Clés des onglets (ordre gardé dans Prefs) : « Ouvertes », et une page par son titre. */
+        /** Clés des onglets (ordre gardé dans Prefs) : « Ouvertes », et une page par son titre ; aussi l'id du plugin (`/plugins`). */
         const val OPEN_TAB = "open"
         const val MIXER_TAB = "mixer"
         const val AGENTS_TAB = "agents"

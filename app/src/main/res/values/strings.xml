@@ -534,7 +534,7 @@
     <string name="computer_pick">Toucher l\'ordinateur à ajouter :</string>
     <string name="computer_known">déjà enregistré</string>
     <string name="computer_outdated">compagnon à mettre à jour</string>
-    <string name="computer_outdated_detail">Le compagnon de %1$s est trop ancien pour cette tablette. Mets-le à jour : sur l\'ordinateur, ouvre %2$s et lance le nouvel installeur, puis recommence.</string>
+    <string name="computer_outdated_detail">Le compagnon de %1$s est trop ancien pour cette tablette. Mets-le à jour : sur l\'ordinateur, ouvre %2$s, télécharge la nouvelle appli et lance-la, puis recommence.</string>
     <string name="computer_manual_hint">Adresse affichée sur l\'ordinateur, dans la page du compagnon ouverte à l\'installation. Exemple : 192.168.1.20</string>
     <string name="computer_address_hint">192.168.1.20</string>
     <string name="computer_connect">Se connecter</string>
@@ -655,8 +655,8 @@
     <string name="install_address_no_wifi">connecte d\'abord le WiFi</string>
     <string name="companion_update_available">Nouvelle version du compagnon pour %1$s (%2$s) : touche pour la mettre à jour</string>
     <string name="companion_update_title">Mettre à jour le compagnon de %1$s</string>
-    <string name="companion_update_steps_mac">1. Sur le Mac, ouvre %1$s (bouton « Ouvrir sur l\'ordi »).\n2. Télécharge le zip, ouvre-le, puis ouvre « Compagnon Unowhy » : il remplace l\'ancien dans Applications et redémarre.\n3. Si macOS redemande l\'Accessibilité, accorde-la (Réglages Système > Confidentialité et sécurité > Accessibilité).\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
-    <string name="companion_update_steps_windows">1. Sur le PC, ouvre %1$s (bouton « Ouvrir sur l\'ordi »).\n2. Télécharge et lance l\'installeur : il remplace l\'ancien et redémarre le compagnon.\n3. Si SmartScreen bloque : « Informations complémentaires », puis « Exécuter quand même ».\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
+    <string name="companion_update_steps_mac">1. Sur le Mac, rouvre « Compagnon Unowhy » : le panneau s\'ouvre.\n2. Carte « Cette appli » : « Chercher une mise à jour », puis « Installer ». L\'appli se remplace et redémarre.\n3. Si macOS redemande l\'Accessibilité, accorde-la (Réglages Système > Confidentialité et sécurité > Accessibilité).\n\nPas de panneau (ancienne version) : ouvre %1$s (bouton « Ouvrir sur l\'ordi »), télécharge la nouvelle appli et ouvre-la.\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
+    <string name="companion_update_steps_windows">1. Sur le PC, relance le compagnon : le panneau s\'ouvre.\n2. Carte « Cette appli » : « Chercher une mise à jour », puis « Installer ». Le fichier se remplace et redémarre.\n3. Si SmartScreen bloque : « Informations complémentaires », puis « Exécuter quand même ».\n\nPas de panneau (ancienne installation) : ouvre %1$s (bouton « Ouvrir sur l\'ordi »), télécharge le nouveau fichier, lance-le, puis « Retirer l\'ancienne installation » dans le panneau.\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
     <string name="companion_update_open">Ouvrir sur l\'ordi</string>
     <string name="companion_update_later">Plus tard</string>
     <string name="companion_update_opened">Page ouverte sur l\'ordinateur</string>
@@ -687,6 +687,17 @@
     <string name="welcome_manual">Saisir son adresse</string>
     <string name="welcome_later">Plus tard</string>
     <string name="welcome_done">Connecté à %1$s</string>
+    <string name="plugins_title">Tes plugins</string>
+    <string name="plugins_subtitle">Choisis ce que la tablette fait avec %1$s. Tu pourras changer d\'avis dans Réglages.</string>
+    <string name="plugins_apps">Trouvés sur ton ordinateur</string>
+    <string name="plugins_native">Intégrés</string>
+    <string name="plugins_new">Nouveau</string>
+    <string name="plugins_save">Valider</string>
+    <string name="plugins_no_apps">Aucune appli compatible trouvée (Discord, Teams, Claude Code).</string>
+    <string name="plugins_card">Plugins</string>
+    <string name="plugins_choose">Choisir les plugins</string>
+    <string name="plugins_hint">Applis de l\'ordinateur (Discord, Teams…) et fonctions du Deck à afficher sur la tablette.</string>
+    <string name="plugins_unavailable">Cet ordinateur ne propose pas de plugins : mets à jour le compagnon.</string>
     <string name="connect_title">Aucun ordinateur connecté</string>
     <string name="connect_button">Connecter mon ordinateur</string>
     <string name="connect_deck">Le Deck lance les applis et les raccourcis de ton ordinateur.</string>
@@ -954,6 +965,9 @@
     <string name="widget_weather_no_permission">Localisation refusée : cherche la ville par son nom.</string>
     <string name="widget_weather_no_position">Position introuvable : cherche la ville par son nom.</string>
     <string name="about_title">À propos</string>
+    <string name="weather_location">Trouver la ville de la météo par la position</string>
+    <string name="weather_location_hint">Quand aucune ville n\'est choisie. La position est demandée aux services de localisation de Google de la tablette ; seule la ville trouvée sert à la météo.</string>
+    <string name="about_privacy">Confidentialité</string>
     <string name="about_licences">Licences des composants</string>
     <string name="about_sources">Météo : données de MET Norway (Institut météorologique norvégien), licence CC BY 4.0, mises en forme pour l\'affichage. api.met.no\nVilles : GeoNames, licence CC BY 4.0. geonames.org\nPolices : Outfit, Nunito et Abril Fatface, licence SIL Open Font License 1.1.\nLicence CC BY 4.0 : creativecommons.org/licenses/by/4.0</string>
     <string name="widget_weather_none">Aucune ville trouvée.</string>

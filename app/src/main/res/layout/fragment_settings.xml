@@ -69,6 +69,34 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Plugins de l'ordinateur actif : le même écran qu'à la première utilisation. -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <com.unowhy.companion.ui.TitleView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_widgets"
+                android:text="@string/plugins_card" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/plugins_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/settings_plugins"
+                style="@style/ActionButton"
+                android:layout_marginTop="16dp"
+                android:text="@string/plugins_choose" />
+        </LinearLayout>
+
         <!-- WiFi : en kiosque, Paramètres d'Android est inaccessible. -->
         <LinearLayout
             style="@style/Card"
@@ -245,6 +273,22 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/wake_ready"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_weather_location"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/weather_location"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/weather_location_hint"
                 android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
 
@@ -465,11 +509,20 @@
                 android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
 
-            <Button
-                android:id="@+id/settings_licences"
-                style="@style/ActionButton"
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="@string/about_licences" />
+                android:orientation="horizontal">
+
+                <Button android:id="@+id/settings_privacy" style="@style/ActionButton" android:text="@string/about_privacy" />
+
+                <Button
+                    android:id="@+id/settings_licences"
+                    style="@style/ActionButton"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/about_licences" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 </ScrollView>

@@ -31,8 +31,8 @@ Pas de serveur dans le cloud : chaque ordinateur a son compagnon, la tablette pa
 
 ### Le compagnon de l'ordinateur (`backend/`)
 
-- **Node 22, TypeScript lancé par `tsx`** (pas de compilation), **Fastify**. Démarre seul à l'ouverture de session (`scripts/service.ts` : LaunchAgent sur Mac, clé Run + lanceur sans fenêtre `src/win/UnowhyCompanion.exe` sur Windows).
-- **`server.ts`** vérifie le jeton `Authorization: Bearer`, traduit les erreurs, enregistre les routes et lance les tâches de fond. Les routes (contrat de l'API) sont dans **`routes/`**, un plugin Fastify par domaine (`pairing.ts` pour `/health` et `/pair/*`, `local.ts`, `deck.ts`, `windows.ts`, `system.ts`, `docs.ts`, `browser.ts`, `camera.ts`, `calendar.ts`, `tasks.ts`, `calls.ts`, `tablet.ts`, `updates.ts`) ; les hooks posés dans `server.ts` valent pour tous. Sans jeton : `/health`, `/pair/*`, la page locale `GET /` (seulement depuis l'ordinateur).
+- **Node 22, TypeScript lancé par `tsx`** (pas de compilation), **Fastify**. Appli portable, sans installation : l'exe Windows (`src/win/UnowhyCompanion.exe` + zip du runtime) ou `Compagnon Unowhy.app` extrait son runtime dans le dossier de l'utilisateur, lance le serveur et le relance s'il s'arrête (sortie 75 = quitter, 76 = tout oublier). Le lancement à l'ouverture de session est une case du panneau (`src/portable.ts` : clé Run sous Windows, LaunchAgent sous Mac), rien n'est inscrit avant. Depuis le dépôt : `scripts/service.ts`.
+- **`server.ts`** vérifie le jeton `Authorization: Bearer`, traduit les erreurs, enregistre les routes et lance les tâches de fond. Les routes (contrat de l'API) sont dans **`routes/`**, un plugin Fastify par domaine (`pairing.ts` pour `/health` et `/pair/*`, `local.ts`, `portable.ts` (carte « Cette appli » du panneau), `deck.ts`, `windows.ts`, `system.ts`, `docs.ts`, `browser.ts`, `camera.ts`, `calendar.ts`, `tasks.ts`, `calls.ts`, `tablet.ts`, `updates.ts`) ; les hooks posés dans `server.ts` valent pour tous. Sans jeton : `/health`, `/pair/*`, la page locale `GET /` (seulement depuis l'ordinateur).
 - **`os.ts`** est le seul point d'entrée vers le système : il appelle `mac/` ou `win/` selon l'OS. Ajouter une action système = l'écrire dans les deux.
   - **Mac** (`src/mac/`) : `osascript` en AppleScript ou JXA. Frappes en CGEvent (System Events refuse les saisies), fenêtres par l'Accessibilité + NSScreen + CoreGraphics. Demande l'autorisation Accessibilité.
   - **Windows** (`src/win/`) : un **programme résident `UnowhyHelper.exe`** (C# .NET Framework 4.8, compilé d'avance : `helper/Native*.cs` pour fenêtres, son, frappes, une classe partielle découpée par thème ; `helper/Program.cs` pour l'UI Automation ; `helper/Media.cs` pour les contrôles multimédias WinRT). `helper.ts` lui envoie des commandes JSON ligne par ligne. L'exe est copié dans `%LOCALAPPDATA%\UnowhyCompanion\helper` avant lancement pour ne pas verrouiller l'original. Pas de PowerShell : un script qui compile du C# de frappes à la volée était classé malveillant par Bitdefender.
@@ -46,6 +46,7 @@ Pas de serveur dans le cloud : chaque ordinateur a son compagnon, la tablette pa
 2. La tablette cherche les ordinateurs (`net/Discovery.kt`), ou on saisit l'adresse.
 3. En WiFi, tout passe en HTTPS (certificat auto-signé de l'ordinateur, `tls.ts`) ; le HTTP n'écoute que sur 127.0.0.1. La tablette affiche un code à 6 chiffres, qui mêle l'empreinte du certificat qu'elle voit ; l'utilisateur le saisit sur l'ordinateur (page `http://127.0.0.1:3000/`), la tablette reçoit le jeton et épingle le certificat. Détails et protocole : [securite-appairage.md](securite-appairage.md).
 4. La tablette garde une **liste d'ordinateurs** (`Computers.kt` : id, nom, url, jeton, os, empreinte épinglée) et pilote l'actif. Si l'actif ne répond plus, `net/Connection.kt` retrouve sa nouvelle adresse par la recherche, ou bascule vers un autre ordinateur qui répond.
+5. **Plugins** (première utilisation) : le compagnon propose ses plugins (`plugins.ts`, `GET /plugins`) : applis trouvées sur l'ordinateur (Discord, Teams, Claude Code) et fonctions intégrées (Ouvertes, Son, Pavé, Média). La tablette ouvre l'écran des plugins (`PluginsView`) tant qu'un plugin n'a jamais été proposé : au premier appairage, et quand une appli compatible apparaît ensuite. Les choix (`POST /plugins`, `.data/plugins.json`) valent pour cet ordinateur. Un plugin coupé : sa page disparaît du deck (`/deck`), ses appels ne sonnent plus, ses onglets sont masqués (`off` de `/deck/features`). Jamais choisi = actif. Rouvrable dans Réglages > Plugins.
 
 ### 2. Une requête ordinaire (tablette → ordinateur)
 
@@ -136,7 +137,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | `config.ts` | variables d'environnement (`.env`) |
 | `pairing.ts` | identité, jeton, code d'appairage, découverte UDP |
 | `tls.ts` | certificat auto-signé du WiFi (`.data/tls.json`) et son empreinte |
-| `local-page.ts` | page `http://127.0.0.1:3000/` (adresse, code, agenda) |
+| `local-page.ts` | page `http://127.0.0.1:3000/` (adresse, code, réglages de la tablette connectée, agenda) |
 | `deck.ts`, `perso.ts`, `music.ts` | pages du deck, `runAction`, touches perso, musique |
 | `os.ts` → `mac/`, `win/` | pilotage du système ; `screens.ts` : types d'écrans et fenêtres |
 | `calendar.ts`, `accounts.ts`, `events.ts`, `meetings.ts`, `meeting-links.ts` | agenda et réunions |
@@ -154,7 +155,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | Où | Quoi | Dans git ? |
 |---|---|---|
 | Tablette, préférences de l'appli | ordinateurs appairés et jetons, profils de l'Accueil (noms, widgets, profil de jeu), eau, réglages | non |
-| `backend/.data/` (sur chaque ordinateur) | identité et jeton, agendas reliés, comptes, agenda perso, tâches, touches perso, applis, sites, réunions, mises à jour | non (perso) |
+| `backend/.data/` (sur chaque ordinateur) | identité et jeton, agendas reliés, comptes, agenda perso, tâches, touches perso, applis, sites, réunions, plugins, mises à jour | non (perso) |
 | `backend/config/deck.json`, `tasks.json` | deck et tâches quotidiennes de cet ordinateur | non (perso) |
 | `backend/config/*.example*.json`, `accounts.json` | modèles de départ, identifiants publics OAuth | oui |
 | `backend/.env` | secrets et réglages (`.env.example` pour la liste) | non |

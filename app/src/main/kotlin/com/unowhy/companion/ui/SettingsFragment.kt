@@ -74,6 +74,7 @@ class SettingsFragment : Fragment() {
     private lateinit var notifDiscreet: SwitchCompat
     private lateinit var wakeWord: SwitchCompat
     private lateinit var wakeStatus: TextView
+    private lateinit var weatherLocation: SwitchCompat
     private lateinit var tabletInfo: TextView
     private lateinit var updatesStatus: TextView
     private lateinit var updates: LinearLayout
@@ -94,6 +95,7 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, state: Bundle?) {
         computers = view.findViewById(R.id.settings_computers)
         view.findViewById<Button>(R.id.settings_add_computer).setOnClickListener { adder.search() }
+        view.findViewById<Button>(R.id.settings_plugins).setOnClickListener { main.showPlugins() }
         view.findViewById<Button>(R.id.settings_add_manual).setOnClickListener { adder.manual() }
         kioskCard = view.findViewById(R.id.settings_kiosk_card)
         view.findViewById<View>(R.id.settings_title).setOnLongClickListener { askTechCode(); true }
@@ -125,6 +127,7 @@ class SettingsFragment : Fragment() {
         notifDiscreet = view.findViewById(R.id.settings_notif_discreet)
         wakeWord = view.findViewById(R.id.settings_wake_word)
         wakeStatus = view.findViewById(R.id.settings_wake_word_status)
+        weatherLocation = view.findViewById(R.id.settings_weather_location)
         tabletInfo = view.findViewById(R.id.settings_tablet_info)
         setUpTablet()
         setUpThemes(view.findViewById(R.id.settings_themes))
@@ -133,7 +136,8 @@ class SettingsFragment : Fragment() {
         renderSwitchApp()
         checkCompanion()
 
-        view.findViewById<Button>(R.id.settings_licences).setOnClickListener { showLicences() }
+        view.findViewById<Button>(R.id.settings_licences).setOnClickListener { showText(R.string.about_licences, "licences.txt", monospace = true) }
+        view.findViewById<Button>(R.id.settings_privacy).setOnClickListener { showText(R.string.about_privacy, "confidentialite.txt", monospace = false) }
         view.findViewById<Button>(R.id.settings_kiosk_exit).setOnClickListener {
             Kiosk.exit(requireActivity())
             renderKiosk()
@@ -355,6 +359,8 @@ class SettingsFragment : Fragment() {
             renderWake()
         }
         viewLifecycleOwner.lifecycleScope.launch { WakeModel.state.collect { renderWake() } }
+        // Ville par la position : lu à la prochaine lecture de la météo d'un widget sans ville.
+        weatherLocation.setOnCheckedChangeListener { _, checked -> Prefs.setWeatherLocation(ctx, checked) }
         renderTablet()
     }
 
@@ -369,6 +375,7 @@ class SettingsFragment : Fragment() {
         notifDiscreet.isChecked = Prefs.notificationsDiscreet(ctx)
         wakeWord.isChecked = Prefs.wakeWord(ctx)
         renderWake()
+        weatherLocation.isChecked = Prefs.weatherLocation(ctx)
         // Batterie (registerReceiver) et adresse IP (NetworkInterface) : appels système lents, hors thread principal.
         viewLifecycleOwner.lifecycleScope.launch {
             val battery = withContext(Dispatchers.IO) { Tablet.battery(ctx) }
@@ -379,6 +386,11 @@ class SettingsFragment : Fragment() {
                 R.string.tablet_info, BuildConfig.VERSION_NAME, ip ?: getString(R.string.tablet_no_address), android.os.Build.MODEL,
             )
         }
+    }
+
+    /** Réglages changés depuis la page de l'ordinateur : curseurs et interrupteurs à jour. */
+    fun onRemoteSettings() {
+        if (view != null) renderTablet()
     }
 
     /** Ligne d'état du mot de réveil : micro d'abord (sans lui rien ne sert), puis le modèle ; rien quand il est coupé. */
@@ -758,22 +770,23 @@ class SettingsFragment : Fragment() {
     }
 
     /**
-     * Mentions de licences des composants tiers (assets/licences.txt, généré par scripts/licences-android.mjs) :
-     * obligatoires pour les bibliothèques Apache 2.0 et les polices OFL embarquées.
+     * Texte de l'appli en plein écran : mentions de licences (assets/licences.txt, généré par
+     * scripts/licences-android.mjs, obligatoires pour les bibliothèques Apache 2.0 et les polices OFL) ou politique de
+     * confidentialité (assets/confidentialite.txt, copie de backend/config/confidentialite.txt, docs/confidentialite.md).
      */
-    private fun showLicences() {
+    private fun showText(title: Int, asset: String, monospace: Boolean) {
         val context = requireContext()
-        val text = runCatching { context.assets.open("licences.txt").bufferedReader().use { it.readText() } }.getOrDefault("")
+        val text = runCatching { context.assets.open(asset).bufferedReader().use { it.readText() } }.getOrDefault("")
         val body = TextView(context).apply {
             this.text = text
-            textSize = 12f
-            typeface = Typeface.MONOSPACE
+            textSize = if (monospace) 12f else 14f
+            if (monospace) typeface = Typeface.MONOSPACE else setLineSpacing(0f, 1.15f)
             setTextColor(themeColor(context, R.attr.c_text))
             setTextIsSelectable(false)
             setPadding(context.dp(24), context.dp(8), context.dp(24), context.dp(8))
         }
         AlertDialog.Builder(context)
-            .setTitle(R.string.about_licences)
+            .setTitle(title)
             .setView(android.widget.ScrollView(context).apply { addView(body) })
             .setPositiveButton(R.string.close, null)
             .showImmersive()

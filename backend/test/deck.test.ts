@@ -268,6 +268,7 @@ describe("homeFeatures", () => {
       teams: false,
       agents: false,
       gitlab: false,
+      off: [],
     });
     await deck.addDeckApp("Microsoft Teams");
     assert.equal((await deck.homeFeatures()).teams, true);
