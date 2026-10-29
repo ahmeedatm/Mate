@@ -39,13 +39,25 @@ const SOUNDS = [
     filter:
       "lowpass=f=6000,acompressor=threshold=-36dB:ratio=6:attack=3:release=150:makeup=1",
   },
-  // Japon : un supermarché de Tokyo, « Tokyo - Supermarket » de manuke (Freesound 315897).
+  // Japon, l'été : cigales d'un sanctuaire de Tokyo, « AkasakaHieJinjaCicadas_4mics » de markystar (Freesound 79086),
+  // la porte d'un 7-Eleven, « 7'11 Sliding Door » de plasterbrain (Freesound 399092), et un furin, « Furin japanese
+  // wind chime » d'ayustat2001 (Freesound 501168), de temps en temps.
   {
     name: "japan",
-    url: FREESOUND + "315/315897_5356267-hq.mp3",
+    url: FREESOUND + "79/79086_384438-hq.mp3",
     start: 0,
-    length: 97,
+    length: 134,
     loudness: -30,
+    // Cigales adoucies : leur stridence sans le perçant.
+    filter: "lowpass=f=7000",
+    layers: [
+      { url: FREESOUND + "399/399092_4284968-hq.mp3", at: [38, 101], gain: -6 },
+      {
+        url: FREESOUND + "501/501168_4648939-hq.mp3",
+        at: [14, 70, 118],
+        gain: -9,
+      },
+    ],
   },
   // Mer : « Ocean Waves on a Tropical Beach » de Jarrod Stanley (Wikimedia Commons).
   {
@@ -96,18 +108,41 @@ async function download(url) {
   return file;
 }
 
-/** Extrait mono 22 kHz compressé, en WAV ; `extra` secondes de plus pour le fondu de bouclage. */
-function cut(source, { start, length, filter }, extra, file) {
-  ffmpeg([
+/**
+ * Extrait mono 22 kHz compressé, en WAV ; `extra` secondes de plus pour le fondu de bouclage. `layers` : sons courts
+ * posés par-dessus le fond (fichier téléchargé, instants en secondes depuis le début de l'extrait, gain en dB).
+ */
+function cut(source, { start, length, filter }, extra, file, layers = []) {
+  const mono = "aresample=22050,pan=mono|c0=0.5*c0+0.5*c1";
+  const inputs = [
     "-ss",
     String(start),
     "-t",
     String(length + extra),
     "-i",
     source,
-    "-af",
-    "aresample=22050,pan=mono|c0=0.5*c0+0.5*c1,acompressor=threshold=-28dB:ratio=3:attack=40:release=600" +
-      (filter ? "," + filter : ""),
+  ];
+  const graph = [`[0]${mono}${filter ? "," + filter : ""}[bed]`];
+  const mix = ["[bed]"];
+  layers.forEach((layer, i) => {
+    inputs.push("-i", layer.file);
+    const copies = layer.at.map((_, k) => `[l${i}c${k}]`);
+    graph.push(
+      `[${i + 1}]${mono},volume=${layer.gain}dB,asplit=${layer.at.length}${copies.join("")}`,
+    );
+    layer.at.forEach((at, k) => {
+      graph.push(`${copies[k]}adelay=${Math.round(at * 1000)}[l${i}d${k}]`);
+      mix.push(`[l${i}d${k}]`);
+    });
+  });
+  graph.push(
+    `${mix.join("")}amix=inputs=${mix.length}:normalize=0:duration=first,` +
+      "acompressor=threshold=-28dB:ratio=3:attack=40:release=600",
+  );
+  ffmpeg([
+    ...inputs,
+    "-filter_complex",
+    graph.join(";"),
     "-c:a",
     "pcm_s16le",
     file,
@@ -171,7 +206,10 @@ for (const sound of SOUNDS.filter(
   const source = await download(sound.url);
   const looping = sound.loop !== false;
   const extract = path.join(tmp, `${sound.name}-cut.wav`);
-  cut(source, sound, looping ? FADE : 0, extract);
+  const layers = [];
+  for (const layer of sound.layers ?? [])
+    layers.push({ ...layer, file: await download(layer.url) });
+  cut(source, sound, looping ? FADE : 0, extract, layers);
   let ready = extract;
   if (looping) {
     ready = path.join(tmp, `${sound.name}-loop.wav`);

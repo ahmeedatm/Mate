@@ -90,7 +90,9 @@ extraits, mis en boucle et à un volume bas par scripts/ambiances.mjs)
 - Pluie : « RAIN_Light Thunderstorm, Decrescendo, Water Dripping near Building », HushAndHarmonyNow
   (https://freesound.org/s/851881/)
 - Forêt : « birdsongEvening », tenkism (https://freesound.org/s/350456/)
-- Japon : « Tokyo - Supermarket », manuke (https://freesound.org/s/315897/)
+- Japon : « AkasakaHieJinjaCicadas_4mics », markystar (https://freesound.org/s/79086/) ;
+  « 7'11 Sliding Door », plasterbrain (https://freesound.org/s/399092/) ;
+  « Furin japanese wind chime », ayustat2001 (https://freesound.org/s/501168/)
 - Mer : « Ocean Waves on a Tropical Beach », Jarrod Stanley
   (https://commons.wikimedia.org/wiki/File:Ocean_Waves_on_a_Tropical_Beach.ogg)
 - Lofi : « Chill lofi inspired [loop edit] », qubodup d'après omfgdude

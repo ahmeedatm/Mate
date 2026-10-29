@@ -162,7 +162,7 @@ object VoiceCommands {
             return when {
                 has("arrete", "coupe", "stop", "eteins", "enleve") -> VoiceCommand.Noise(null)
                 has("foret", "oiseau") -> VoiceCommand.Noise("FOREST")
-                has("japon", "magasin", "tokyo") -> VoiceCommand.Noise("JAPAN")
+                has("japon", "cigale", "cigales", "tokyo") -> VoiceCommand.Noise("JAPAN")
                 has("mer", "vague", "ocean", "plage") -> VoiceCommand.Noise("SEA")
                 has("lofi") -> VoiceCommand.Noise("LOFI")
                 else -> VoiceCommand.Noise("STORM")
