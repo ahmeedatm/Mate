@@ -103,7 +103,9 @@ class MainActivity : AppCompatActivity() {
     private var lastTouch = SystemClock.elapsedRealtime()
     /** Toucher qui a fermé le cadre : avalé jusqu'au lever du doigt, l'écran dessous ne le reçoit pas. */
     private var swallowTouch = false
-    private var battery: Tablet.Battery? = null
+    /** Dernier état de la batterie : cadre photo, et état de la tablette envoyé à l'ordinateur. */
+    var battery: Tablet.Battery? = null
+        private set
     /** Micro refusé hors kiosque (en kiosque, il est accordé d'office) : la commande repart une fois accepté. */
     private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) voice.start() else showBanner(getString(R.string.voice_no_mic), 6)
@@ -289,10 +291,6 @@ class MainActivity : AppCompatActivity() {
         Kiosk.enter(this)
         Screen.apply(this)
     }
-
-    /** Dernier état de la batterie (envoyé à l'ordinateur avec l'état de la tablette). */
-    var battery: Tablet.Battery? = null
-        private set
 
     private fun onBattery(state: Tablet.Battery) {
         battery = state
