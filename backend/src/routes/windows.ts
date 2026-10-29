@@ -77,7 +77,7 @@ export default async function windowRoutes(app: FastifyInstance) {
     },
   );
 
-  // Mac : change l'ordre des pages (glisser dans Mission Control, ~3 s).
+  // Mac : change l’ordre des pages (glisser dans Mission Control, ~1 s).
   app.post<{ Body: { page: number; to: number } }>(
     "/windows/page/move",
     {

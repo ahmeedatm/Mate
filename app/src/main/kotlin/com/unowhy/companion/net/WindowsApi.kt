@@ -67,7 +67,7 @@ class WindowsApi(private val http: Http) {
         null
     }
 
-    /** Mac : déplace une page à la place `to` de la bande (le Mac la glisse dans Mission Control, ~3 s). */
+    /** Mac : déplace une page à la place `to` de la bande (le Mac la glisse dans Mission Control, ~1 s). */
     suspend fun movePage(page: ComputerPage, to: Int): OpenWindows? = http.io {
         http.postJson("/windows/page/move", JSONObject().put("page", page.id).put("to", to))
         null

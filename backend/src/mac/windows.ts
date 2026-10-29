@@ -515,22 +515,32 @@ function run(argv) {
   const back = $.CGEventGetLocation($.CGEventCreate(null));
   app.doShellScript('open -b com.apple.exposelauncher');
   try {
-    delay(0.8);
-    const b = bar();
-    if (b.length !== count) throw new Error('Mission Control ne montre pas les mêmes pages');
+    // Vignettes en place : deux lectures identiques de suite (l'ouverture est animée), 1,5 s au plus.
+    let b = null, last = '';
+    for (let i = 0; i < 30; i++) {
+      delay(0.05);
+      try { b = bar(); } catch (e) { continue; }
+      const now = JSON.stringify(b);
+      if (b.length === count && now === last) break;
+      last = now;
+    }
+    if (!b || b.length !== count) throw new Error('Mission Control ne montre pas les mêmes pages');
     const sx = b[from].pos[0] + b[from].size[0] / 2, y = b[from].pos[1] + b[from].size[1] / 2;
     const tx = to > from ? b[to].pos[0] + b[to].size[0] + 12 : b[to].pos[0] - 12;
     mouse(5, sx, y);
-    delay(0.1);
     mouse(1, sx, y);
-    delay(0.2);
-    for (let i = 1; i <= 20; i++) { mouse(6, sx + (tx - sx) * i / 20, y); delay(0.02); }
-    delay(0.4);
+    delay(0.1);
+    for (let i = 1; i <= 8; i++) { mouse(6, sx + (tx - sx) * i / 8, y); delay(0.015); }
+    delay(0.15);
     mouse(2, tx, y);
-    delay(0.6);
+    // Page posée : la barre a changé d'ordre (0,6 s au plus), puis on referme.
+    const before = b.map((x) => x.name).join('|');
+    for (let i = 0; i < 12; i++) {
+      delay(0.05);
+      try { if (bar().map((x) => x.name).join('|') !== before) break; } catch (e) {}
+    }
   } finally {
     app.doShellScript('open -b com.apple.exposelauncher');
-    delay(0.4);
     mouse(5, back.x, back.y);
   }
 }`;
