@@ -2,10 +2,12 @@
  * Pavé tactile de la tablette : paquets UDP de déplacement et de défilement (même port que la découverte, voir
  * pairing.ts). Logique pure : le branchement sur le pilotage de l'ordinateur est fait par l'appelant.
  *
- * Paquet : `UNOWHY-POINTER\n<jeton>\n<seq>\n<json>`, json = {"dx","dy"} (pixels) ou {"sx","sy"} (crans de molette).
- * Un paquet invalide, sans le bon jeton, ancien ou trop fréquent est ignoré sans réponse ; son contenu n'est jamais journalisé.
+ * Paquet : `UNOWHY-POINTER\n<signature>\n<seq>\n<json>`, json = {"dx","dy"} (pixels) ou {"sx","sy"} (crans de molette),
+ * signature = HMAC-SHA256 de `<seq>\n<json>` par le jeton, en hexadécimal : le jeton ne passe jamais sur le réseau
+ * (l'UDP n'est pas chiffré). Un paquet invalide, mal signé, ancien ou trop fréquent est ignoré sans réponse ;
+ * son contenu n'est jamais journalisé.
  */
-import { timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const POINTER_HEADER = "UNOWHY-POINTER\n";
 /** Déplacement maximal par paquet, en pixels, et défilement maximal, en crans (valeur absolue). */
@@ -39,7 +41,11 @@ export const POINTER_GESTURES = [
 ] as const;
 export type PointerGesture = (typeof POINTER_GESTURES)[number];
 
-const sameToken = (given: string, expected: string) => {
+/** Signature d'un paquet (même calcul dans PointerChannel.kt). */
+export const pointerSignature = (token: string, seq: string | number, json: string) =>
+  createHmac("sha256", token).update(`${seq}\n${json}`).digest("hex");
+
+const sameSignature = (given: string, expected: string) => {
   const a = Buffer.from(given);
   const b = Buffer.from(expected);
   return a.length === b.length && timingSafeEqual(a, b);
@@ -48,15 +54,15 @@ const sameToken = (given: string, expected: string) => {
 const within = (v: unknown, max: number): v is number => Number.isInteger(v) && Math.abs(v as number) <= max;
 
 /**
- * Lit un paquet ; null s'il est mal formé, sans le bon jeton (`token` absent : aucun jeton à vérifier, comme en HTTP)
+ * Lit un paquet ; null s'il est mal formé, mal signé (`token` absent : aucune signature à vérifier, comme en HTTP)
  * ou hors bornes. Le débit et la séquence se contrôlent à part (`PointerGate`).
  */
 export function parsePointerPacket(buf: Buffer, token: string | undefined): PointerPacket | null {
   if (buf.length > MAX_PACKET) return null;
   const parts = buf.toString("utf8").split("\n");
   if (parts.length !== 4 || parts[0] + "\n" !== POINTER_HEADER) return null;
-  if (token !== undefined && !sameToken(parts[1], token)) return null;
   if (!/^\d{1,15}$/.test(parts[2])) return null;
+  if (token !== undefined && !sameSignature(parts[1], pointerSignature(token, parts[2], parts[3]))) return null;
   const seq = Number(parts[2]);
   let body: unknown;
   try {

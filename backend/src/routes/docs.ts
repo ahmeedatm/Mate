@@ -1,7 +1,7 @@
 import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
-import { kindOf, listDocs, resolveDoc, savePhoto } from "../docs.ts";
+import { framePhotos, kindOf, listDocs, resolveDoc, savePhoto } from "../docs.ts";
 import { openTarget } from "../os.ts";
 
 export default async function docRoutes(app: FastifyInstance) {
@@ -18,6 +18,9 @@ export default async function docRoutes(app: FastifyInstance) {
     reply.header("Content-Length", stat.size);
     return reply.type(kind in types ? types[kind as keyof typeof types] : "application/octet-stream").send(createReadStream(full));
   });
+
+  // Cadre photo de la tablette : la liste seulement, chaque photo est relue par /docs/file.
+  app.get("/frame", async () => framePhotos());
 
   app.post<{ Body: { path: string } }>(
     "/docs/open",
