@@ -12,6 +12,7 @@ import android.util.AttributeSet
 import android.view.View
 import androidx.core.graphics.ColorUtils
 import com.unowhy.companion.R
+import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.ui.themeColor
 import kotlin.math.PI
@@ -110,7 +111,9 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
         val scale = height / HEIGHT
         canvas.save()
         canvas.scale(scale, scale)
-        val flowed = ((SystemClock.uptimeMillis() * SPEED / 1000.0) % WAVE).toFloat()
+        // Réduire les animations : le liquide ne coule plus (vague figée) ; les images continuent pour que le voile suive
+        // les widgets glissés du mode Modifier.
+        val flowed = if (Look.still(context)) 0f else ((SystemClock.uptimeMillis() * SPEED / 1000.0) % WAVE).toFloat()
         for (tube in tubes) drawTube(canvas, tube, flowed)
         canvas.restore()
         for ((top, bottom) in hiddenBands()) drawVeil(canvas, top, bottom)

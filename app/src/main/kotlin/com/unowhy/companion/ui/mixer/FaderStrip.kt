@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.DrawableCompat
 import com.unowhy.companion.R
+import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.themeColor
 import com.unowhy.companion.ui.themeFont
@@ -48,7 +49,7 @@ class FaderStrip(context: Context) : View(context) {
         set(value) {
             if (field == value) return
             field = value
-            contentDescription = value
+            describe()
             invalidate()
         }
 
@@ -85,6 +86,7 @@ class FaderStrip(context: Context) : View(context) {
         set(value) {
             if (field == value) return
             field = value
+            describe()
             invalidate()
         }
 
@@ -164,7 +166,8 @@ class FaderStrip(context: Context) : View(context) {
         metered = level != null
         targetLeds = MixerMath.ledsLit(level ?: 0, LEDS)
         val now = SystemClock.uptimeMillis()
-        if (targetLeds >= shownLeds) {
+        // Réduire les animations : le vumètre saute au niveau lu, sans retombée animée.
+        if (targetLeds >= shownLeds || Look.still(context)) {
             shownLeds = targetLeds.toFloat()
             heldAt = now
         }
@@ -296,7 +299,10 @@ class FaderStrip(context: Context) : View(context) {
         text.textSize = sp(if (tight) VALUE_TIGHT_SP else 34f)
         text.textAlign = Paint.Align.CENTER
         text.color = if (muted) cMuted else cText
+        // En sourdine, le volume est barré : pas seulement rouge (la touche Muet, elle, s'allume en plein).
+        text.isStrikeThruText = muted
         canvas.drawText(if (v == null) "—" else "$v %", valueX, valueY, text)
+        text.isStrikeThruText = false
 
         drawMute(canvas)
     }
@@ -344,6 +350,11 @@ class FaderStrip(context: Context) : View(context) {
             paint.color = if (on) cLeds[MixerMath.ledZone(i, LEDS)] else cLedOff
             canvas.drawRoundRect(meterX, bottom - ledH, meterX + ledW, bottom, dp(2).toFloat(), dp(2).toFloat(), paint)
         }
+    }
+
+    /** TalkBack : le nom de la tranche, et « son coupé » en sourdine. */
+    private fun describe() {
+        contentDescription = if (muted) context.getString(R.string.mixer_strip_muted, title) else title
     }
 
     /** Touche Muet (pilule) : relief au repos, enfoncée au toucher, éclairée quand le son est coupé. */

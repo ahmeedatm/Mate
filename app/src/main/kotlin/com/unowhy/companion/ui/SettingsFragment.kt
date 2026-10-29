@@ -131,6 +131,7 @@ class SettingsFragment : Fragment() {
         tabletInfo = view.findViewById(R.id.settings_tablet_info)
         setUpTablet()
         setUpThemes(view.findViewById(R.id.settings_themes))
+        setUpAccessibility(view)
         renderComputers()
         renderWifi()
         renderSwitchApp()
@@ -321,6 +322,44 @@ class SettingsFragment : Fragment() {
                 }
             }
             row.addView(chip, LinearLayout.LayoutParams(0, dp(48), 1f).apply { if (row.childCount > 0) marginStart = dp(10) })
+        }
+    }
+
+    /**
+     * Accessibilité : une pastille par taille de texte, et les interrupteurs. Taille, police et animations s'appliquent à
+     * la création de l'activité (attachBaseContext, AppTheme.apply, vues animées) : les changer la recrée, comme le
+     * thème. Les bandeaux lus sont relus à chaque bandeau.
+     */
+    private fun setUpAccessibility(view: View) {
+        val ctx = requireContext()
+        val row = view.findViewById<LinearLayout>(R.id.settings_text_sizes)
+        val current = TextSize.current(ctx)
+        for (size in TextSize.entries) {
+            val chip = Button(ctx, null, 0, R.style.Chip).apply {
+                setText(size.label)
+                isSelected = size == current
+                setOnClickListener {
+                    if (size == current) return@setOnClickListener
+                    Prefs.setTextSize(context, size.name)
+                    requireActivity().recreate()
+                }
+            }
+            row.addView(chip, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { if (row.childCount > 0) marginStart = dp(10) })
+        }
+        fun recreating(id: Int, get: (android.content.Context) -> Boolean, set: (android.content.Context, Boolean) -> Unit) {
+            view.findViewById<SwitchCompat>(id).apply {
+                isChecked = get(ctx)
+                setOnCheckedChangeListener { _, checked ->
+                    set(ctx, checked)
+                    requireActivity().recreate()
+                }
+            }
+        }
+        recreating(R.id.settings_legible_font, Prefs::legibleFont, Prefs::setLegibleFont)
+        recreating(R.id.settings_reduce_motion, Prefs::reduceMotion, Prefs::setReduceMotion)
+        view.findViewById<SwitchCompat>(R.id.settings_read_banners).apply {
+            isChecked = Prefs.readBanners(ctx)
+            setOnCheckedChangeListener { _, checked -> Prefs.setReadBanners(ctx, checked) }
         }
     }
 

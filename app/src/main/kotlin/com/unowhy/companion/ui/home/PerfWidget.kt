@@ -411,6 +411,19 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val perf = last ?: return
         // Dernières valeurs grisées tant que le relevé échoue, ou au retour sur la page avant le premier relevé.
         val stale = error != null || !fresh
+        // Alerte écrite dans l'en-tête en plus du rouge des chiffres (rien sur des valeurs grisées) ; une erreur prime.
+        if (error == null) {
+            val alerts = if (stale) "" else perfAlertText(
+                listOfNotNull(
+                    context.getString(R.string.perf_cpu) to usageLevel(perf.cpu),
+                    perf.gpu?.usage?.let { context.getString(R.string.perf_gpu) to usageLevel(it) },
+                    context.getString(R.string.perf_ram) to usageLevel(perf.ramPercent),
+                    perf.gpu?.tempC?.let { context.getString(R.string.perf_gpu) + " °C" to tempLevel(it) },
+                ),
+                context::getString,
+            )
+            note.set(alerts)
+        }
         show(cpu, perf.cpu, stale)
         show(ram, perf.ramPercent, stale)
         show(gpu, perf.gpu?.usage, stale)

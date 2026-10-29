@@ -46,6 +46,7 @@ class MenuPanel(private val activity: Activity, private val onSelect: (Mode) -> 
     override val status: View = activity.findViewById(R.id.menu_status)
     private val statusDot: View = activity.findViewById(R.id.menu_status_dot)
     private val statusName: TextView = activity.findViewById(R.id.menu_status_name)
+    private val statusState: TextView = activity.findViewById(R.id.menu_status_state)
 
     private val rows = EnumMap<Mode, TextView>(Mode::class.java)
     private val handler = Handler(Looper.getMainLooper())
@@ -249,8 +250,8 @@ class MenuPanel(private val activity: Activity, private val onSelect: (Mode) -> 
     /** Pas de pastille dans le menu : le nombre de tâches restantes est dans la carte Tâches. */
     override fun setPendingTasks(count: Int) = Unit
 
-    /** Le rouge est réservé au « maintenant » : le point est vert si l'ordinateur répond, neutre sinon. */
-    override fun showLink(link: Link) = renderLink(activity, statusDot, statusName, status, link, offline = R.attr.c_text_faint)
+    /** Le rouge est réservé au « maintenant » : le point est vert si l'ordinateur répond, neutre sinon ; sa forme et l'état écrit disent le reste. */
+    override fun showLink(link: Link) = renderLink(activity, statusDot, statusName, statusState, status, link, offline = R.attr.c_text_faint)
 
     private companion object {
         const val AUTO_CLOSE_MS = 6_000L

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Réglages > Accessibilité > Police lisible (ui/Accessibility.kt) : posé par-dessus la palette du thème. Atkinson
+         Hyperlegible (OFL) remplace toutes les polices du thème, titres Rétro (Abril Fatface) et grands chiffres fins
+         compris : elle n'a que deux graisses, le moyen passe en gras et le fin en normal. Lettres et lignes un peu
+         plus espacées pour tous les textes (valeur du thème : un style ou une vue qui fixe la sienne la garde). -->
+    <style name="Fonts.Legible" parent="">
+        <item name="c_font_medium">@font/atkinson_bold</item>
+        <item name="c_font_light">@font/atkinson_regular</item>
+        <item name="c_font_regular">@font/atkinson_regular</item>
+        <item name="c_font_title">@font/atkinson_bold</item>
+        <item name="c_font_display">@font/atkinson_regular</item>
+        <item name="android:fontFamily">@font/atkinson_regular</item>
+        <item name="android:letterSpacing">0.03</item>
+        <item name="android:lineSpacingMultiplier">1.12</item>
+    </style>
+</resources>

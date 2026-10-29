@@ -23,6 +23,7 @@
         <item name="c_ok_soft">#245DD39E</item>
         <item name="c_ko">#FFFF6B6B</item>
         <item name="c_ko_soft">#29FF6B6B</item>
+        <item name="c_on_ko">#FF0C0F14</item>
         <item name="c_warn">#FFF5B85C</item>
         <item name="c_agent_wait">#FFF87171</item>
         <item name="c_agent_done">#FF5DD39E</item>
@@ -79,6 +80,7 @@
         <item name="c_ok_soft">#241C9A61</item>
         <item name="c_ko">#FFE5484D</item>
         <item name="c_ko_soft">#24E5484D</item>
+        <item name="c_on_ko">#FF0C0F14</item>
         <item name="c_warn">#FFD3841A</item>
         <item name="c_agent_wait">#FFDC2626</item>
         <item name="c_agent_done">#FF1C9A61</item>
@@ -152,6 +154,7 @@
         <item name="c_ok_soft">#FFB5EEDD</item>
         <item name="c_ko">#FFBA1A1A</item>
         <item name="c_ko_soft">#24BA1A1A</item>
+        <item name="c_on_ko">#FFFFFFFF</item>
         <item name="c_warn">#FF8A6100</item>
         <item name="c_agent_wait">#FFDC2626</item>
         <item name="c_agent_done">#FF1E8F54</item>
@@ -210,7 +213,7 @@
         <item name="c_surface_pressed">#FF2F2B2B</item>
         <item name="c_stroke">#FF4D4545</item>
         <item name="c_accent">#FFFF5165</item>
-        <item name="c_accent_soft">#FF680018</item>
+        <item name="c_accent_soft">#FF560013</item>
         <item name="c_on_accent">#FF40000B</item>
         <item name="c_text">#FFE9E1E0</item>
         <item name="c_frame_bg">#FF000000</item>
@@ -223,6 +226,7 @@
         <item name="c_ok_soft">#FF00382D</item>
         <item name="c_ko">#FFFFB4AB</item>
         <item name="c_ko_soft">#29FFB4AB</item>
+        <item name="c_on_ko">#FF100D0D</item>
         <item name="c_warn">#FFFFD166</item>
         <item name="c_agent_wait">#FFF87171</item>
         <item name="c_agent_done">#FF5DD39E</item>
@@ -310,6 +314,7 @@
         <item name="c_ok_soft">#FFE6E4A6</item>
         <item name="c_ko">#FFB02600</item>
         <item name="c_ko_soft">#24B02600</item>
+        <item name="c_on_ko">#FFFFFFFF</item>
         <item name="c_warn">#FFA85A00</item>
         <item name="c_agent_wait">#FFB91C1C</item>
         <item name="c_agent_done">#FF2E8B3D</item>

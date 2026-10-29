@@ -20,6 +20,10 @@ object Prefs {
     private const val KEY_TRIAL_MR = "trial_mr"
     private const val KEY_TRIAL_BACKEND = "trial_backend"
     private const val KEY_TRIAL_OPENED = "trial_opened"
+    private const val KEY_TEXT_SIZE = "text_size"
+    private const val KEY_LEGIBLE_FONT = "legible_font"
+    private const val KEY_REDUCE_MOTION = "reduce_motion"
+    private const val KEY_READ_BANNERS = "read_banners"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -117,6 +121,34 @@ object Prefs {
 
     fun setTheme(context: Context, value: String) {
         prefs(context).edit().putString(KEY_THEME, value).apply()
+    }
+
+    /** Accessibilité : taille du texte (nom de TextSize) ; null : normale. */
+    fun textSize(context: Context): String? = prefs(context).getString(KEY_TEXT_SIZE, null)
+
+    fun setTextSize(context: Context, value: String) {
+        prefs(context).edit().putString(KEY_TEXT_SIZE, value).apply()
+    }
+
+    /** Accessibilité : police Atkinson Hyperlegible à la place de celles du thème. Désactivé par défaut. */
+    fun legibleFont(context: Context): Boolean = prefs(context).getBoolean(KEY_LEGIBLE_FONT, false)
+
+    fun setLegibleFont(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_LEGIBLE_FONT, value).apply()
+    }
+
+    /** Accessibilité : ni animations continues ni ressorts (Look.still). Désactivé par défaut. */
+    fun reduceMotion(context: Context): Boolean = prefs(context).getBoolean(KEY_REDUCE_MOTION, false)
+
+    fun setReduceMotion(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_REDUCE_MOTION, value).apply()
+    }
+
+    /** Accessibilité : notifications du PC et messages de l'ordinateur lus à voix haute. Désactivé par défaut. */
+    fun readBanners(context: Context): Boolean = prefs(context).getBoolean(KEY_READ_BANNERS, false)
+
+    fun setReadBanners(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_READ_BANNERS, value).apply()
     }
 
     /** MR de l'essai installé par la stable (0 : aucun, ou installé autrement) et son backend : « Ouvrir l'essai » les relit. */

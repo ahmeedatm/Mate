@@ -5,6 +5,7 @@ import android.text.InputFilter
 import android.text.InputType
 import android.text.TextUtils
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -71,6 +72,7 @@ class ProfilesDialog(
         gravity = Gravity.CENTER_VERTICAL
         addView(ImageView(context).apply {
             setImageResource(R.drawable.ic_gamepad)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             setColorFilter(themeColor(context, R.attr.c_text_dim))
         }, LinearLayout.LayoutParams(context.dp(18), context.dp(18)))
         addView(TextView(context).apply {

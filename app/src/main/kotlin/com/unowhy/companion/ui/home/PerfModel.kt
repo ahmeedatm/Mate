@@ -42,6 +42,20 @@ fun tempLevel(celsius: Int): PerfLevel = when {
     else -> PerfLevel.NORMAL
 }
 
+/** Mot d'une gravité (« en alerte », « critique ») : l'alerte n'est pas dite par la seule couleur. null : rien à dire. */
+fun perfLevelWord(level: PerfLevel): Int? = when (level) {
+    PerfLevel.NORMAL -> null
+    PerfLevel.WARN -> R.string.perf_level_warn
+    PerfLevel.CRITICAL -> R.string.perf_level_critical
+}
+
+/**
+ * Alertes du moment sur une ligne, dans l'ordre reçu : « CPU critique · RAM en alerte » ; vide si tout va bien.
+ * `readings` : (nom de la mesure, gravité) ; `word` : le texte d'une gravité (ressource de [perfLevelWord]).
+ */
+fun perfAlertText(readings: List<Pair<String, PerfLevel>>, word: (Int) -> String): String =
+    readings.mapNotNull { (name, level) -> perfLevelWord(level)?.let { "$name ${word(it)}" } }.joinToString(" · ")
+
 /** Dernières mesures pour les courbes ; les plus anciennes sortent au-delà de `capacity`. `gpu` null : pas de carte lisible. */
 class PerfHistory(val capacity: Int = 30) {
     private val cpuValues = ArrayDeque<Int>()

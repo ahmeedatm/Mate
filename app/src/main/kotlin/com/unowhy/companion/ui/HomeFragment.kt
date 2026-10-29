@@ -499,6 +499,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             setPadding(dp(16), dp(12), dp(16), dp(12))
             addView(ImageView(ctx).apply {
                 setImageResource(type.icon)
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
                 setColorFilter(themeColor(ctx, R.attr.c_accent))
             }, LinearLayout.LayoutParams(dp(28), dp(28)))
             addView(LinearLayout(ctx).apply {

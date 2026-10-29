@@ -1,5 +1,6 @@
 package com.unowhy.companion
 
+import android.content.Context
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
@@ -36,6 +37,7 @@ import com.unowhy.companion.net.runCatchingCancellable
 import com.unowhy.companion.remote.RemoteLink
 import com.unowhy.companion.trial.EssaiBackend
 import com.unowhy.companion.trial.Trial
+import com.unowhy.companion.ui.Accessibility
 import com.unowhy.companion.ui.AgentAskOverlay
 import com.unowhy.companion.ui.AgentLight
 import com.unowhy.companion.ui.AppTheme
@@ -143,6 +145,11 @@ class MainActivity : AppCompatActivity() {
         locationAnswer = answer
         locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
         return answer.await()
+    }
+
+    /** Taille du texte choisie dans Réglages > Accessibilité : changer la recrée, comme le thème. */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(Accessibility.wrap(newBase))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -517,10 +524,13 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Notification arrivée sur l'ordinateur (ordre `notification`) : bandeau quel que soit l'écran (sans le texte en
-     * mode discret), et liste de Depuis l'ordi relue si elle est affichée.
+     * mode discret), lu à voix haute si Réglages > Accessibilité le demande, et liste de Depuis l'ordi relue si elle
+     * est affichée.
      */
     fun onNotification(n: PcNotification) {
-        showBanner(notificationBannerText(n, Prefs.notificationsDiscreet(this)), NOTIFICATION_SECONDS)
+        val text = notificationBannerText(n, Prefs.notificationsDiscreet(this))
+        showBanner(text, NOTIFICATION_SECONDS)
+        readAloud(text)
         val computer = supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment
         computer?.onNotification()
         // Pastille sur la cloche, sauf si l'historique est déjà sous les yeux.
@@ -633,6 +643,14 @@ class MainActivity : AppCompatActivity() {
         // Un message de l'ordinateur ou un rappel se lit : le cadre lui laisse la place.
         closeFrame()
         banner.show(text, seconds, onTap)
+    }
+
+    /**
+     * Réglages > Accessibilité > Lire les bandeaux à voix haute : bandeau d'une notification ou d'un message de
+     * l'ordinateur lu par la voix de la tablette. Coupé : rien.
+     */
+    fun readAloud(banner: String) {
+        if (Prefs.readBanners(this)) Speaker.speak(Accessibility.spoken(banner))
     }
 
     /**

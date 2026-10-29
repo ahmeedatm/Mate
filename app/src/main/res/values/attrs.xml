@@ -23,6 +23,8 @@
     <attr name="c_ok_soft" format="color" />
     <attr name="c_ko" format="color" />
     <attr name="c_ko_soft" format="color" />
+    <!-- Texte posé sur c_ko (pastille du nombre de tâches) : 4,5:1 au moins dans chaque palette. -->
+    <attr name="c_on_ko" format="color" />
     <attr name="c_warn" format="color" />
     <attr name="c_paper" format="color" />
     <!-- Agents Claude : une session attend (ambre), a fini (vert), a atteint sa limite (bleu). Signaux, pas décor : lisibles sur chaque thème. -->

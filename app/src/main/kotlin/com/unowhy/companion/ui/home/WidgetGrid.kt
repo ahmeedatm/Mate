@@ -415,9 +415,9 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             val child = getChildAt(i)
             val placed = placedOf(child) ?: continue
             if (child.visibility != View.VISIBLE) continue
-            if (removeRect(child).contains(x, y)) return Hit.Remove(placed)
-            if (placed.type.sizes.size > 1 && sizeRect(child, placed).contains(x, y)) return Hit.Size(placed)
-            if (listener?.hasSettings(placed) == true && settingsRect(child).contains(x, y)) return Hit.Settings(placed)
+            if (removeRect(child).touchable().contains(x, y)) return Hit.Remove(placed)
+            if (placed.type.sizes.size > 1 && sizeRect(child, placed).touchable().contains(x, y)) return Hit.Size(placed)
+            if (listener?.hasSettings(placed) == true && settingsRect(child).touchable().contains(x, y)) return Hit.Settings(placed)
         }
         for (i in childCount - 1 downTo 0) {
             val child = getChildAt(i)
@@ -432,6 +432,11 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     // Boutons du mode Modifier, posés sur les coins du widget (grandes cibles : la tablette se touche de loin).
     private val button = dp(44)
     private val inset = dp(8)
+
+    /** Zone de toucher d'un bouton : 2 dp de plus de chaque côté que le dessin (44 dp), soit 48 dp. */
+    private val touchSlack = (dp(48) - button) / 2f
+
+    private fun RectF.touchable() = apply { inset(-touchSlack, -touchSlack) }
 
     /** Thèmes Cadran : ✕ et puce de taille sont centrés sur le bord haut du widget et laissent son titre lisible. */
     private val cadran = themeBool(context, R.attr.c_cadran)

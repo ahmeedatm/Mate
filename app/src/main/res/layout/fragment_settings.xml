@@ -152,6 +152,84 @@
                 android:orientation="horizontal" />
         </LinearLayout>
 
+        <!-- Accessibilité (ui/Accessibility.kt) : taille du texte (pastilles ajoutées par SettingsFragment), police
+             lisible, animations réduites, bandeaux lus. Tout est gardé sur la tablette ; texte, police et animations
+             recréent l'activité comme le thème. -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <com.unowhy.companion.ui.TitleView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_accessibility"
+                android:text="@string/a11y_title" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/a11y_text_size"
+                android:textSize="16sp" />
+
+            <LinearLayout
+                android:id="@+id/settings_text_sizes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_legible_font"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/a11y_legible_font"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/a11y_legible_font_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_reduce_motion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/a11y_reduce_motion"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/a11y_reduce_motion_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_read_banners"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/a11y_read_banners"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/a11y_read_banners_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+        </LinearLayout>
+
         <!-- Tablette : ce que le kiosque cache (batterie, luminosité, volume, version, adresse). -->
         <LinearLayout
             style="@style/Card"
