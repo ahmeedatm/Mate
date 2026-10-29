@@ -120,6 +120,12 @@ class WidgetModelTest {
     }
 
     @Test
+    fun `Agents Claude seulement si l'ordinateur les offre (Mac avec Claude Code)`() {
+        assertFalse(WidgetType.AGENTS.offered(HomeFeatures()))
+        assertTrue(WidgetType.AGENTS.offered(HomeFeatures(agents = true)))
+    }
+
+    @Test
     fun `un plugin coupe retire son widget du catalogue, les autres restent`() {
         val off = HomeFeatures(off = setOf("open", "mixer", "pad"))
         assertFalse(WidgetType.OPEN.offered(off))
