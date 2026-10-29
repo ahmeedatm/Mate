@@ -345,9 +345,11 @@ function spaces(all) {
       // « Main » quand les écrans partagent leurs pages (réglage « Les écrans disposent de Spaces distincts » coupé).
       const s = all.length === 1 ? all[0] : all.find((x) => uuid(x.id) === d['Display Identifier']);
       const current = d['Current Space'] && d['Current Space'].ManagedSpaceID;
+      // Écran partagé (deux applis sur une page plein écran) : pid est une liste, une fenêtre par appli.
       d.Spaces.forEach((sp) => pages.push({
         id: sp.ManagedSpaceID, display: s ? s.id : null, fullscreen: sp.type === 4, current: sp.ManagedSpaceID === current,
-        pid: sp.pid, wid: sp.fs_wid,
+        pids: [].concat(sp.pid || []),
+        wids: sp.TileLayoutManager && sp.TileLayoutManager.TileSpaces ? sp.TileLayoutManager.TileSpaces.map((t) => t.TileWindowID) : [sp.fs_wid],
       }));
     });
     return pages;
@@ -360,23 +362,31 @@ function spaces(all) {
 // que celle du serveur de fenêtres quand il est lisible (Enregistrement de l'écran), sinon la seule ou la première.
 function assignPages(apps, pages, cg) {
   pages.filter((pg) => pg.fullscreen).forEach((pg) => {
-    const app = apps.find((a) => a.pid === pg.pid);
-    if (!app) return;
-    pg.app = app.name;
-    const free = app.windows.filter((w) => w.page === undefined && (w.fullscreen || w.elsewhere));
-    const known = ((cg && cg[pg.pid]) || []).find((c) => c.wid === pg.wid);
-    const name = known && known.name;
-    const w = (name && free.find((x) => sameTitle(x.title, name) || sameTitle(name, x.title))) ||
-      free.find((x) => x.fullscreen) || free[0];
-    if (w) w.page = pg.id;
+    const names = [];
+    pg.pids.forEach((pid) => {
+      const app = apps.find((a) => a.pid === pid);
+      if (!app) return;
+      names.push(app.name);
+      const free = app.windows.filter((w) => w.page === undefined && (w.fullscreen || w.elsewhere));
+      const known = ((cg && cg[pid]) || []).find((c) => pg.wids.includes(c.wid));
+      const name = known && known.name;
+      const w = (name && free.find((x) => sameTitle(x.title, name) || sameTitle(name, x.title))) ||
+        free.find((x) => x.fullscreen) || free[0];
+      if (w) w.page = pg.id;
+    });
+    if (names.length) pg.app = names.join(' & ');
   });
-  pages.forEach((pg) => { delete pg.pid; delete pg.wid; });
+  pages.forEach((pg) => { delete pg.pids; delete pg.wids; });
 }
 
 function run(argv) {
   const req = JSON.parse(argv[0]);
   const all = screens();
-  if (req.op === 'pages') return JSON.stringify(spaces(all));
+  if (req.op === 'pages') {
+    const pages = spaces(all);
+    if (pages) pages.forEach((pg) => { delete pg.pids; delete pg.wids; });
+    return JSON.stringify(pages);
+  }
   const se = Application('System Events');
   if (req.op === 'all') {
     const cg = cgAll();
@@ -476,6 +486,8 @@ export async function listOpenWindows(): Promise<OpenWindows> {
 // Ctrl + flèche de Mission Control : macOS n'y réagit que si la flèche porte, comme celles du clavier, les drapeaux
 // fn et pavé numérique (sans eux, l'événement est ignoré). Un pas = Ctrl appuyé, flèche, Ctrl relâché.
 const PAGE_SCRIPT = `ObjC.import('CoreGraphics');
+ObjC.bindFunction('CGSMainConnectionID', ['int', []]);
+ObjC.bindFunction('CGSGetActiveSpace', ['unsigned long long', ['int']]);
 function post(key, down, flags) {
   const ev = $.CGEventCreateKeyboardEvent(null, key, down);
   $.CGEventSetFlags(ev, flags);
@@ -485,12 +497,15 @@ function post(key, down, flags) {
 function run(argv) {
   const arrow = argv[0] === 'right' ? 124 : 123;
   const CTRL = 0x40000, ARROW = CTRL | 0x800000 | 0x200000;
+  const cid = $.CGSMainConnectionID();
   for (let i = 0; i < parseInt(argv[1], 10); i++) {
+    const before = $.CGSGetActiveSpace(cid);
     post(59, true, CTRL);
     post(arrow, true, ARROW);
     post(arrow, false, ARROW);
     post(59, false, 0);
-    delay(0.15);
+    // Pas suivant une fois la page changée (un pas envoyé pendant l'animation était perdu), 1 s au plus.
+    for (let k = 0; k < 20 && $.CGSGetActiveSpace(cid) === before; k++) delay(0.05);
   }
 }`;
 
@@ -501,33 +516,45 @@ const MOVE_PAGE_SCRIPT = `ObjC.import('CoreGraphics');
 function mouse(type, x, y) {
   $.CGEventPost(0, $.CGEventCreateMouseEvent(null, type, $.CGPointMake(x, y), 0));
 }
+// Mission Control ouvert : le Dock n'a de groupe que pendant Mission Control. Ouvrir ou fermer se fait par la même
+// bascule : jamais sans regarder d'abord (un Mission Control resté ouvert inversait tous les essais suivants).
+function isOpen() {
+  try { return Application('System Events').processes.byName('Dock').groups.length > 0; } catch (e) { return false; }
+}
+function toggle(app, open) {
+  if (isOpen() === open) return;
+  app.doShellScript('open -b com.apple.exposelauncher');
+  for (let i = 0; i < 40 && isOpen() !== open; i++) delay(0.05);
+}
 // Barre des pages de Mission Control (nom traduit selon la langue : trouvée par sa forme, une liste de boutons).
 function bar() {
-  const mc = Application('System Events').processes.byName('Dock').groups.byName('Mission Control');
+  const mc = Application('System Events').processes.byName('Dock').groups[0];
   const group = mc.groups[0].groups().find((g) => { try { return g.lists.length > 0; } catch (e) { return false; } });
   if (!group) throw new Error('Mission Control ne montre pas ses pages');
   return group.lists[0].buttons().map((b) => ({ name: b.name(), pos: b.position(), size: b.size() }));
 }
 function run(argv) {
   const from = parseInt(argv[0], 10), to = parseInt(argv[1], 10), count = parseInt(argv[2], 10);
+  const shown = parseInt(argv[3], 10);
+  let closed = false;
   const app = Application.currentApplication();
   app.includeStandardAdditions = true;
   const back = $.CGEventGetLocation($.CGEventCreate(null));
-  app.doShellScript('open -b com.apple.exposelauncher');
+  toggle(app, true);
   try {
-    // Vignettes en place : deux lectures identiques de suite, 2,5 s au plus. Lue pendant l'animation d'ouverture,
+    // Vignettes en place : deux lectures identiques de suite, 4 s au plus (ouverture plus lente depuis le Bureau). Lue pendant l'animation d'ouverture,
     // la barre répond en plus d'une seconde : première lecture une fois l'animation passée.
     const start = Date.now();
     let b = null, last = '';
     delay(0.3);
-    while (Date.now() - start < 2500) {
+    while (Date.now() - start < 4000) {
       try { b = bar(); } catch (e) { delay(0.05); continue; }
       const now = JSON.stringify(b);
-      if (b.length === count && now === last) break;
+      if (b.length === count && b[0].pos[1] >= 0 && now === last) break;
       last = now;
       delay(0.05);
     }
-    if (!b || b.length !== count) throw new Error('Mission Control ne montre pas les mêmes pages');
+    if (!b || b.length !== count || b[0].pos[1] < 0) throw new Error('Mission Control ne montre pas les mêmes pages');
     const sx = b[from].pos[0] + b[from].size[0] / 2, y = b[from].pos[1] + b[from].size[1] / 2;
     const tx = to > from ? b[to].pos[0] + b[to].size[0] + 12 : b[to].pos[0] - 12;
     mouse(5, sx, y);
@@ -536,11 +563,26 @@ function run(argv) {
     for (let i = 1; i <= 8; i++) { mouse(6, sx + (tx - sx) * i / 8, y); delay(0.015); }
     delay(0.15);
     mouse(2, tx, y);
-    // Laisser macOS poser la page avant de refermer. Pas de relecture de la barre : pendant l'animation, chaque
-    // lecture prend jusqu'à 250 ms.
+    // Laisser macOS poser la page, puis refermer en touchant la page qui était affichée : refermé par la bascule,
+    // Mission Control restait sur une autre page (le Bureau).
     delay(0.2);
+    // Parti du Bureau, Mission Control se referme seul au lâcher : rien à toucher (movePage vérifie la page).
+    if (shown >= 0 && isOpen()) {
+      try {
+        const order = [...Array(count).keys()];
+        order.splice(to, 0, order.splice(from, 1)[0]);
+        const after = bar()[order.indexOf(shown)];
+        const cx = after.pos[0] + after.size[0] / 2, cy = after.pos[1] + after.size[1] / 2;
+        mouse(5, cx, cy);
+        mouse(1, cx, cy);
+        mouse(2, cx, cy);
+        // Le toucher referme Mission Control sur cette page ; sinon, la bascule le referme.
+        for (let i = 0; i < 20 && isOpen(); i++) delay(0.05);
+      } catch (e) {}
+    }
+    closed = !isOpen();
   } finally {
-    app.doShellScript('open -b com.apple.exposelauncher');
+    if (!closed) toggle(app, false);
     mouse(5, back.x, back.y);
   }
 }`;
@@ -550,14 +592,28 @@ function run(argv) {
  * Control. Un seul écran à pages : avec plusieurs, la barre à prendre n'est pas sûre.
  */
 export async function movePage(id: number, to: number) {
-  const pages = JSON.parse(await osascript(SCRIPT, [JSON.stringify({ op: "pages" })], "JavaScript")) as Page[] | null;
+  const read = async () => JSON.parse(await osascript(SCRIPT, [JSON.stringify({ op: "pages" })], "JavaScript")) as Page[] | null;
+  let pages = await read();
   const target = pages?.find((p) => p.id === id);
   if (!pages || !target) throw new Error("Page introuvable sur le Mac");
   if (new Set(pages.map((p) => p.display)).size > 1) throw new Error("Pages de plusieurs écrans : à ranger sur le Mac");
-  const from = pages.indexOf(target);
   if (to < 0 || to >= pages.length) throw new Error("Place introuvable sur le Mac");
-  if (to === from) return;
-  await run("osascript", ["-l", "JavaScript", "-e", MOVE_PAGE_SCRIPT, String(from), String(to), String(pages.length)], 20_000);
+  if (to === pages.indexOf(target)) return;
+  const shown = pages.find((p) => p.current);
+  // Depuis le Bureau, la barre de Mission Control est repliée et le glisser n'est pas fiable (une page lâchée sur une
+  // autre les a fusionnées) : on part d'une page plein écran, puis on revient.
+  if (shown && !shown.fullscreen) {
+    const start = pages.find((p) => p.fullscreen && p.id !== id) ?? pages.find((p) => p.fullscreen);
+    if (!start) throw new Error("Pas de page plein écran sur le Mac");
+    await showPage(start.id);
+    pages = (await read()) ?? pages;
+  }
+  const order = pages.map((p) => p.id);
+  const args = [order.indexOf(id), to, order.length, pages.findIndex((p) => p.current)].map(String);
+  await run("osascript", ["-l", "JavaScript", "-e", MOVE_PAGE_SCRIPT, ...args], 20_000);
+  // Toujours sur la page affichée avant : Mission Control a pu se refermer ailleurs.
+  if (shown) await showPage(shown.id);
+  if (((await read()) ?? pages).length < pages.length) throw new Error("Deux pages se sont réunies en écran partagé sur le Mac");
 }
 
 /**
