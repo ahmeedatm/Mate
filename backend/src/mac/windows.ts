@@ -121,9 +121,12 @@ function cgAll() {
     ObjC.castRefToObject($.CGWindowListCopyWindowInfo($.kCGWindowListOptionAll | $.kCGWindowListExcludeDesktopElements, 0)).js.forEach((d) => {
       const o = ObjC.deepUnwrap(d);
       const b = o.kCGWindowBounds;
-      // Couche 0 et assez grande : pas les barres d'outils ni les fenêtres techniques.
-      if (o.kCGWindowLayer !== 0 || b.Width < 200 || b.Height < 200) return;
-      (out[o.kCGWindowOwnerPID] = out[o.kCGWindowOwnerPID] || []).push({ pos: [b.X, b.Y], size: [b.Width, b.Height], name: o.kCGWindowName || null, wid: o.kCGWindowNumber });
+      // Couche 0 et assez grande : pas les barres d'outils ni les fenêtres techniques. Une appli qui n'a que de
+      // petites fenêtres garde une liste vide : sans entrée du tout, elle n'a aucune fenêtre (réduites comprises).
+      if (o.kCGWindowLayer !== 0) return;
+      out[o.kCGWindowOwnerPID] = out[o.kCGWindowOwnerPID] || [];
+      if (b.Width < 200 || b.Height < 200) return;
+      out[o.kCGWindowOwnerPID].push({ pos: [b.X, b.Y], size: [b.Width, b.Height], name: o.kCGWindowName || null, wid: o.kCGWindowNumber });
     });
     return out;
   } catch (e) {
@@ -298,28 +301,44 @@ function displaysOf(all) {
 
 // Vue « Ouvertes » : toutes les applis qui ont une fenêtre, y compris sur les autres bureaux (plein
 // écran…). Le menu Fenêtre est lent à lire : seulement pour les applis dont le serveur de fenêtres
-// connaît une fenêtre que l'Accessibilité ne voit pas.
-function allApps(se, all, cg) {
+// connaît une fenêtre que l'Accessibilité ne voit pas. Chaque question à System Events coûte un aller-retour
+// vers l'appli : nom, bundle et premier plan viennent de NSWorkspace, et une appli sans aucune fenêtre au
+// serveur de fenêtres n'est pas interrogée. skip : applis muettes (voir slow), sautées un moment.
+function allApps(se, all, cg, skip, slow) {
+  const ws = $.NSWorkspace.sharedWorkspace;
+  const frontPid = ws.frontmostApplication.processIdentifier;
+  const info = {};
+  ws.runningApplications.js.forEach((a) => {
+    // Nom de l'appli (Visual Studio Code), pas celui du processus (Code) : il sert à retrouver son icône.
+    const file = ObjC.unwrap(a.bundleURL.lastPathComponent);
+    info[a.processIdentifier] = { name: file ? file.replace(/[.]app$/, '') : ObjC.unwrap(a.localizedName), bundle: ObjC.unwrap(a.bundleIdentifier) };
+  });
   const apps = [];
   let failed = null;
-  se.applicationProcesses.whose({ backgroundOnly: false })().forEach((p) => {
+  const query = se.applicationProcesses.whose({ backgroundOnly: false });
+  const pids = query.unixId();
+  query().forEach((p, i) => {
+    const pid = pids[i];
+    if ((cg && !cg[pid]) || skip.includes(pid)) return;
     // Fenêtre ou appli disparue pendant la lecture (plein écran qui s'anime, appli qui quitte : -1728, -1719) :
     // appli sautée pour cette fois, la liste suivante la reprend.
     try {
     let list, away = [];
+    const t = Date.now();
     try { list = windowsOf(p); } catch (e) { return; }
+    // Aucune fenêtre au bout d'une seconde (appli iOS sur Mac…) : chaque question attend la fin du délai de
+    // l'Accessibilité, le menu Fenêtre compris. Signalée pour être sautée aux lectures suivantes.
+    if (!list.length && Date.now() - t > 1000) return slow.push(pid);
     try {
-      const mine = cg ? cg[p.unixId()] || [] : [];
+      const mine = cg ? cg[pid] : [];
       const frames = list.map((e) => ({ pos: e.w.position(), size: e.w.size() }));
       if (unmatched(mine, frames).length) away = elsewhereWindows(p, list, all, mine);
     } catch (e) {}
     if (!list.length && !away.length) return;
-    // Nom de l'appli (Visual Studio Code), pas celui du processus (Code) : il sert à retrouver son icône.
-    let name;
-    try { name = String(p.applicationFile().name()).replace(/[.]app$/, ''); } catch (e) { name = p.name(); }
+    const meta = info[pid] || { name: p.name() };
     // Sans identifiant de bundle (émulateur…) : désignée par son processus.
-    const front = p.frontmost();
-    apps.push({ key: p.bundleIdentifier() || 'pid:' + p.unixId(), name: name, front: front, pid: p.unixId(), windows: list.map((e) => describe(all, e, front)).concat(away.map((e) => ({
+    const front = pid === frontPid;
+    apps.push({ key: meta.bundle || 'pid:' + pid, name: meta.name, front: front, pid: pid, windows: list.map((e) => describe(all, e, front)).concat(away.map((e) => ({
       index: 0, title: e.title, minimized: false, fullscreen: false, display: e.display, elsewhere: true, front: false, maximized: false,
     }))) });
     } catch (e) {
@@ -390,10 +409,11 @@ function run(argv) {
   const se = Application('System Events');
   if (req.op === 'all') {
     const cg = cgAll();
-    const apps = allApps(se, all, cg);
+    const slow = [];
+    const apps = allApps(se, all, cg, req.skip || [], slow);
     const pages = spaces(all);
     if (pages) assignPages(apps, pages, cg);
-    return JSON.stringify({ apps: apps, displays: displaysOf(all), pages: pages });
+    return JSON.stringify({ apps: apps, displays: displaysOf(all), pages: pages, slow: slow });
   }
   // Sans appli (écrans seulement) : System Events n'est pas interrogé, macOS ne demande aucune autorisation.
   const procs = req.pid ? se.applicationProcesses.whose({ unixId: req.pid })() : req.bundleId ? se.applicationProcesses.whose({ bundleIdentifier: req.bundleId })() : [];
@@ -471,14 +491,25 @@ export function placeWindow(app: string, opts: { window?: WindowTarget; display?
   return call(app, { op: "place", ...opts });
 }
 
+/**
+ * Applis qui ne répondent pas à l'Accessibilité (appli iOS sur Mac : plus d'une seconde par question, sans fenêtre lisible) :
+ * sautées pendant une minute, sinon chaque relecture d'« Ouvertes » (toutes les 5 s, après chaque geste) prend 3 à 8 s.
+ */
+const slowApps = new Map<number, number>();
+const SLOW_APP_SKIP_MS = 60_000;
+
 /** Toutes les applis qui ont une fenêtre affichée (vue « Ouvertes »), la plus en avant d'abord ; `key` : identifiant de bundle. */
 export async function listOpenWindows(): Promise<OpenWindows> {
-  const raw = await osascript(SCRIPT, [JSON.stringify({ op: "all" })], "JavaScript");
+  const now = Date.now();
+  for (const [pid, until] of slowApps) if (until < now) slowApps.delete(pid);
+  const raw = await osascript(SCRIPT, [JSON.stringify({ op: "all", skip: [...slowApps.keys()] })], "JavaScript");
   const parsed = JSON.parse(raw) as {
     apps: (OpenApp & { front: boolean; pid: number })[];
     displays: RawScreen[];
     pages: Page[] | null;
+    slow: number[];
   };
+  for (const pid of parsed.slow) slowApps.set(pid, now + SLOW_APP_SKIP_MS);
   const apps = parsed.apps.sort((a, b) => Number(b.front) - Number(a.front)).map(({ front: _, pid: __, ...app }) => app);
   return { apps, displays: labelDisplays(parsed.displays), ...(parsed.pages ? { pages: parsed.pages } : {}) };
 }
