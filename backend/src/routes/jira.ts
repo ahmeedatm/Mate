@@ -1,6 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import { runAction } from "../deck.ts";
-import { issueTransitions, issueUrl, JiraFieldsError, jiraConfigured, myIssues, transitionIssue } from "../jira.ts";
+import {
+  issueTransitions,
+  issueUrl,
+  JiraFieldsError,
+  jiraConfigured,
+  myBoards,
+  myIssues,
+  selectBoards,
+  selectedBoards,
+  transitionIssue,
+} from "../jira.ts";
 
 const keyParams = {
   type: "object",
@@ -13,7 +23,26 @@ export default async function jiraRoutes(app: FastifyInstance) {
     if (!jiraConfigured) return reply.code(501).send({ error: "Jira n'est pas configuré sur l'ordinateur." });
   });
 
-  app.get("/jira/issues", async () => ({ columns: await myIssues() }));
+  app.get("/jira/boards", async () => ({ boards: await myBoards(), selected: await selectedBoards() }));
+
+  app.post<{ Body: { ids: number[] } }>(
+    "/jira/boards",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["ids"],
+          properties: { ids: { type: "array", maxItems: 10, items: { type: "integer", minimum: 1 } } },
+        },
+      },
+    },
+    async (req) => {
+      await selectBoards(req.body.ids);
+      return { ok: true };
+    },
+  );
+
+  app.get("/jira/issues", async () => myIssues());
 
   app.get<{ Params: { key: string } }>("/jira/issues/:key/transitions", { schema: { params: keyParams } }, async (req) => ({
     transitions: await issueTransitions(req.params.key),
