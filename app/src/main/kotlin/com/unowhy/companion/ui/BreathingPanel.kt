@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.annotation.StringRes
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.Breathing
 import com.unowhy.companion.focus.FocusTimer
@@ -41,8 +42,25 @@ class BreathingPanel(private val root: View, private val onBack: () -> Unit) {
             step.setText(m.step.label)
             seconds.text = context.getString(R.string.breath_seconds_left, m.secondsLeft, FocusTimer.format(waves.remainingMs()))
         }
-        waves.onEnd = { finished -> done = finished; render() }
+        waves.onEnd = { finished ->
+            done = finished
+            render()
+            onEnd?.invoke()
+            onEnd = null
+        }
         render()
+    }
+
+    /** Fin de l'exercice lancé par [startWith] (au bout ou arrêté), une seule fois. */
+    private var onEnd: (() -> Unit)? = null
+
+    /** Exercice proposé par l'humeur : rythme et durée choisis, lancé tout de suite. */
+    fun startWith(pattern: Breathing.Pattern, minutes: Int, onEnd: () -> Unit) {
+        stop()
+        this.pattern = pattern
+        this.minutes = minutes
+        this.onEnd = onEnd
+        begin()
     }
 
     private fun begin() {
@@ -85,13 +103,6 @@ class BreathingPanel(private val root: View, private val onBack: () -> Unit) {
             Breathing.Step.HOLD_IN, Breathing.Step.HOLD_OUT -> R.string.breath_hold
         }
 
-    private val Breathing.Pattern.label
-        get() = when (this) {
-            Breathing.Pattern.COHERENCE -> R.string.breath_coherence
-            Breathing.Pattern.BOX -> R.string.breath_box
-            Breathing.Pattern.RELAX -> R.string.breath_relax
-        }
-
     private val Breathing.Pattern.hint
         get() = when (this) {
             Breathing.Pattern.COHERENCE -> R.string.breath_coherence_hint
@@ -99,3 +110,12 @@ class BreathingPanel(private val root: View, private val onBack: () -> Unit) {
             Breathing.Pattern.RELAX -> R.string.breath_relax_hint
         }
 }
+
+/** Nom court d'un rythme (pastilles de la respiration, proposition de l'humeur). */
+@get:StringRes
+val Breathing.Pattern.label: Int
+    get() = when (this) {
+        Breathing.Pattern.COHERENCE -> R.string.breath_coherence
+        Breathing.Pattern.BOX -> R.string.breath_box
+        Breathing.Pattern.RELAX -> R.string.breath_relax
+    }

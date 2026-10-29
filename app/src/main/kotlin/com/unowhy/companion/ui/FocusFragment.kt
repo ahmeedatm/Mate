@@ -17,6 +17,7 @@ import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.FocusPresets
 import com.unowhy.companion.focus.FocusTimer
+import com.unowhy.companion.focus.Moods
 import com.unowhy.companion.focus.NoisePlayer
 
 /** Nom court d'un son d'ambiance (pastilles Focus, carte de l'Accueil). */
@@ -92,9 +93,27 @@ class FocusFragment : Fragment() {
             breathingRoot.visibility = View.GONE
             pomodoro.visibility = View.VISIBLE
         }
-        view.findViewById<Button>(R.id.focus_breathe).setOnClickListener {
+        val showBreathing = {
             pomodoro.visibility = View.GONE
             breathingRoot.visibility = View.VISIBLE
+        }
+        view.findViewById<Button>(R.id.focus_breathe).setOnClickListener { showBreathing() }
+        view.findViewById<Button>(R.id.focus_mood).setOnClickListener {
+            MoodDialog.show(requireContext()) { plan ->
+                NoisePlayer.play(plan.ambiance)
+                when (plan) {
+                    is Moods.Plan.Breathe -> {
+                        showBreathing()
+                        // L'ambiance de la proposition s'arrête avec l'exercice (si personne ne l'a changée).
+                        breathing.startWith(plan.pattern, plan.minutes) { if (NoisePlayer.kind == plan.ambiance) NoisePlayer.stop() }
+                    }
+                    is Moods.Plan.Work -> {
+                        // Durées du moment seulement : le choix gardé reste celui des pastilles.
+                        FocusTimer.setPreset(plan.preset.focus, plan.preset.pause)
+                        FocusTimer.toggle()
+                    }
+                }
+            }
         }
 
         val noises = view.findViewById<LinearLayout>(R.id.focus_noises)
