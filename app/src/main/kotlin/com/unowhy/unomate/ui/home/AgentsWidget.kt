@@ -21,8 +21,9 @@ import java.util.Locale
 
 /**
  * Agents Claude : les compteurs (travaillent, surveillent, attendent, finis) et, en L, la liste courte des sessions qui
- * comptent ; toucher ouvre le tableau en plein écran. En XL, le tableau lui-même ([AgentsView]) : ses colonnes défilent,
- * le widget garde l'appui long et le balayage. Relu tant que la page de l'Accueil est à l'écran.
+ * comptent ; toucher ouvre le tableau en plein écran. À partir de 3 cases de large (3 × 2, Très grand, 3 × 4, plein
+ * écran), le tableau lui-même ([AgentsView]) : ses colonnes défilent, le widget garde l'appui long et le balayage ; sur
+ * 2 lignes seulement il se resserre (`compact`). Relu tant que la page de l'Accueil est à l'écran.
  */
 class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val counters = LinearLayout(context)
@@ -45,7 +46,7 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         addView(note)
     }
 
-    private val full get() = placed.size == WidgetSize.XL
+    private val full get() = placed.size.w >= 3
 
     override val view = object : OwnerFrameLayout(context) {
         // Seul le tableau garde les gestes de la grille ; les compteurs laissent l'appui long au mode Modifier.
@@ -65,6 +66,7 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         } else {
             view.setOnClickListener { host.overlays.agentsBoard(host.owner) }
         }
+        board.compact = placed.size.h < 3
         counters.orientation = if (placed.size == WidgetSize.V) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
         last?.let(::render)
         follow()
@@ -75,7 +77,7 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         follow()
     }
 
-    /** Un seul abonné à la fois : le tableau en XL, les compteurs sinon ; aucun hors du profil affiché. */
+    /** Un seul abonné à la fois : le tableau dès 3 cases de large, les compteurs sinon ; aucun hors du profil affiché. */
     private fun follow() {
         if (followed == active to full) return
         followed = active to full
