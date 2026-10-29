@@ -1,0 +1,274 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; font-family: "Outfit", sans-serif; color: #1e1b1b; }
+    #d-fond { position: absolute; inset: 0; background: #faf2f1; }
+    #d-tabw { position: absolute; left: 150.0px; top: 120.0px; width: 1000px; height: 646.0px; }
+    #d-cadre { position: absolute; inset: 0; border-radius: 30px; background: #0e0d0d; border: 2px solid #4d4545; }
+    #d-ecran { position: absolute; left: 28.0px; top: 28.0px; width: 1280px; height: 800px; transform: scale(0.73746); transform-origin: 0 0; overflow: hidden; border-radius: 4px; background: #faf2f1; }
+    .ecran { position: absolute; left: 0; top: 0; width: 1280px; height: 800px; }
+    .onde { position: absolute; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; border: 4px solid #8c8181; opacity: 0; }
+    .zoom { position: absolute; overflow: hidden; border-radius: 18px; border: 2px solid #d0c4c3; background: #faf2f1; }
+    .zoom.nuit { border-color: #4d4545; background: #100d0d; }
+    .zoom img { position: absolute; }
+    .col { position: absolute; left: 1230px; top: 150px; width: 498px; }
+    .col .nom { font-weight: 300; font-size: 64px; line-height: 70px; letter-spacing: -0.03em; }
+    .col .metier { margin-top: 10px; font-weight: 400; font-size: 30px; line-height: 38px; color: #4d4545; }
+    .col .cit { margin-top: 40px; font-weight: 300; font-size: 36px; line-height: 46px; }
+    .col .lab { opacity: 0; position: absolute; left: 0; top: 470px; width: 498px; font-weight: 500; font-size: 30px; line-height: 38px; }
+    .col .lab::before { content: ""; display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #ca0538; margin-right: 14px; vertical-align: 3px; }
+    .col.nuit { color: #e9e1e0; }
+    .col.nuit .metier { color: #d0c4c3; }
+    .col.nuit .lab::before { background: #ff5165; }
+    #d-som { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+    #d-piste { position: absolute; left: 192px; top: 878px; width: 1536px; height: 4px; border-radius: 2px; background: #8c8181; transform-origin: 0 50%; }
+    .spt { position: absolute; top: 880px; width: 0; height: 0; }
+    .spt i { position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; background: #8c8181; }
+    .spt b { position: absolute; left: -100px; top: 22px; width: 200px; text-align: center; font-weight: 400; font-size: 28px; color: #6f6666; }
+    #d-maint { position: absolute; top: 880px; left: 0; width: 0; height: 0; }
+    #d-maint i { position: absolute; left: -13px; top: -13px; width: 26px; height: 26px; border-radius: 50%; background: #ca0538; }
+    #d-titre { position: absolute; left: 1230px; top: 250px; width: 498px; }
+    #d-titre h1 { font-weight: 300; font-size: 72px; line-height: 80px; letter-spacing: -0.035em; }
+    #d-titre p { margin-top: 24px; font-weight: 400; font-size: 32px; line-height: 40px; color: #4d4545; }
+    #d-fin { position: absolute; left: 1230px; top: 230px; width: 498px; }
+    #d-fin svg { width: 132px; height: 132px; display: block; }
+    #d-fin .nom { margin-top: 28px; font-weight: 300; font-size: 72px; line-height: 78px; letter-spacing: -0.035em; }
+    #d-fin img { display: block; height: 30px; margin-top: 14px; }
+    #d-fin p { margin-top: 40px; font-weight: 400; font-size: 32px; line-height: 42px; color: #4d4545; }
+  </style>
+  <div id="root" data-composition-id="parcours" data-width="1920" data-height="1080">
+    <div id="d-fond"></div>
+    <div id="d-tabw">
+      <div id="d-cadre"></div>
+      <div id="d-ecran">
+        <img id="d-e-ouv" class="clip ecran" src="assets/screens/commun-accueil-cadran-jour.png" alt="" data-start="0" data-duration="4.4" data-track-index="2" />
+        <img id="d-e-sylvie-A" class="clip ecran" src="assets/screens/sylvie-deck-perso.png" alt="" data-start="4.0" data-duration="5.6" data-track-index="2" />
+        <div id="d-o-sylvie-A" class="onde" style="left:130px;top:150px"></div>
+        <img id="d-e-sylvie-B" class="clip ecran" src="assets/screens/sylvie-keyeditor-macro.png" alt="" data-start="9.6" data-duration="6.800000000000001" data-track-index="2" />
+        <video id="d-e-camille-A" class="clip ecran" src="assets/screens/commun-geste-balayage-profils.mp4" data-start="16.0" data-duration="5.6" data-media-start="0.3" data-track-index="2" muted playsinline></video>
+        <img id="d-e-camille-B" class="clip ecran" src="assets/screens/camille-reunion-micro-coupe.png" alt="" data-start="21.6" data-duration="6.800000000000001" data-track-index="2" />
+        <div id="d-o-camille-B" class="onde" style="left:130px;top:474px"></div>
+        <img id="d-e-gwen-A" class="clip ecran" src="assets/screens/julie-deck-apps.png" alt="" data-start="28.0" data-duration="5.6" data-track-index="2" />
+        <div id="d-o-gwen-A" class="onde" style="left:482px;top:162px"></div>
+        <img id="d-e-gwen-B" class="clip ecran" src="assets/screens/julie-accueil-rejoindre.png" alt="" data-start="33.6" data-duration="6.800000000000001" data-track-index="2" />
+        <div id="d-o-gwen-B" class="onde" style="left:178px;top:646px"></div>
+        <img id="d-e-aimee-A" class="clip ecran" src="assets/screens/thomas-accueil.png" alt="" data-start="40.0" data-duration="5.6" data-track-index="2" />
+        <img id="d-e-aimee-B" class="clip ecran" src="assets/screens/thomas-fichiers-ordi.png" alt="" data-start="45.6" data-duration="6.800000000000001" data-track-index="2" />
+        <img id="d-e-sam-A" class="clip ecran" src="assets/screens/karim-accueil-contraste.png" alt="" data-start="52.0" data-duration="5.6" data-track-index="2" />
+        <img id="d-e-sam-B" class="clip ecran" src="assets/screens/karim-reglages-texte-grand.png" alt="" data-start="57.6" data-duration="6.800000000000001" data-track-index="2" />
+        <div id="d-o-sam-B" class="onde" style="left:1186px;top:501px"></div>
+        <img id="d-e-sacha-A" class="clip ecran" src="assets/screens/leo-deck-agents.png" alt="" data-start="64.0" data-duration="5.6" data-track-index="2" />
+        <div id="d-o-sacha-A" class="onde" style="left:790px;top:260px"></div>
+        <img id="d-e-sacha-B" class="clip ecran" src="assets/screens/leo-deck-gitlab.png" alt="" data-start="69.6" data-duration="6.4" data-track-index="2" />
+        <img id="d-e-fin" class="clip ecran" src="assets/screens/commun-accueil-cadran-jour.png" alt="" data-start="76.0" data-duration="8.0" data-track-index="2" />
+      </div>
+    </div>
+    <div id="d-z-sylvie-A" class="clip zoom" data-start="6.00" data-duration="3.4" data-track-index="3" style="left:120.0px;top:304.9px;width:1060.0px;height:276.1px">
+      <img src="assets/screens/sylvie-deck-perso.png" alt="" style="left:-49.9px;top:-74.8px;width:1140.2px;height:712.6px" />
+    </div>
+    <div id="d-z-sylvie-B" class="clip zoom" data-start="11.20" data-duration="3.4" data-track-index="3" style="left:314.5px;top:172.0px;width:671.1px;height:542.0px">
+      <img src="assets/screens/sylvie-keyeditor-macro.png" alt="" style="left:-98.1px;top:-154.9px;width:1651.9px;height:1032.4px" />
+    </div>
+    <div id="d-z-camille-B" class="clip zoom" data-start="23.20" data-duration="3.4" data-track-index="3" style="left:146.7px;top:275.2px;width:1006.6px;height:335.5px">
+      <img src="assets/screens/camille-reunion-micro-coupe.png" alt="" style="left:-64.5px;top:-382.0px;width:1651.9px;height:1032.4px" />
+    </div>
+    <div id="d-z-gwen-A" class="clip zoom" data-start="30.00" data-duration="3.4" data-track-index="3" style="left:120.0px;top:309.4px;width:1060.0px;height:267.2px">
+      <img src="assets/screens/julie-deck-apps.png" alt="" style="left:-49.9px;top:-74.8px;width:1140.2px;height:712.6px" />
+    </div>
+    <div id="d-z-gwen-B" class="clip zoom" data-start="35.20" data-duration="3.4" data-track-index="3" style="left:471.3px;top:213.9px;width:357.5px;height:458.1px">
+      <img src="assets/screens/julie-accueil-rejoindre.png" alt="" style="left:-108.4px;top:-533.0px;width:1651.9px;height:1032.4px" />
+    </div>
+    <div id="d-z-aimee-A" class="clip zoom" data-start="42.00" data-duration="3.4" data-track-index="3" style="left:471.3px;top:213.9px;width:357.5px;height:458.1px">
+      <img src="assets/screens/thomas-accueil.png" alt="" style="left:-108.4px;top:-533.0px;width:1651.9px;height:1032.4px" />
+    </div>
+    <div id="d-z-aimee-B" class="clip zoom" data-start="47.20" data-duration="3.4" data-track-index="3" style="left:198.3px;top:172.0px;width:903.4px;height:542.0px">
+      <img src="assets/screens/thomas-fichiers-ordi.png" alt="" style="left:-72.3px;top:-25.8px;width:1651.9px;height:1032.4px" />
+    </div>
+    <div id="d-z-sam-A" class="clip zoom" data-start="54.00" data-duration="3.4" data-track-index="3" style="left:471.3px;top:213.9px;width:357.5px;height:458.1px">
+      <img src="assets/screens/karim-accueil-contraste.png" alt="" style="left:-1242.8px;top:-533.0px;width:1651.9px;height:1032.4px" />
+    </div>
+    <div id="d-z-sam-B" class="clip zoom" data-start="59.20" data-duration="3.4" data-track-index="3" style="left:120.0px;top:310.5px;width:1060.0px;height:265.0px">
+      <img src="assets/screens/karim-reglages-texte-grand.png" alt="" style="left:-49.5px;top:-123.7px;width:1130.7px;height:706.7px" />
+    </div>
+    <div id="d-z-sacha-A" class="clip zoom nuit" data-start="66.00" data-duration="3.4" data-track-index="3" style="left:120.0px;top:310.5px;width:1060.0px;height:265.0px">
+      <img src="assets/screens/leo-deck-agents.png" alt="" style="left:-49.5px;top:-141.3px;width:1130.7px;height:706.7px" />
+    </div>
+    <div id="d-z-sacha-B" class="clip zoom nuit" data-start="71.20" data-duration="3.4" data-track-index="3" style="left:120.0px;top:257.5px;width:1060.0px;height:371.0px">
+      <img src="assets/screens/leo-deck-gitlab.png" alt="" style="left:-49.5px;top:-84.8px;width:1130.7px;height:706.7px" />
+    </div>
+    <div id="d-titre" class="clip" data-start="0" data-duration="4.0" data-track-index="4"><h1>Six personnes, une tablette</h1><p>UnoMate, le compagnon de bureau Unowhy</p></div>
+    <div id="d-c-sylvie" class="clip col" data-start="4.0" data-duration="12.0" data-track-index="4">
+      <div class="nom">Sylvie, 48 ans</div><div class="metier">Comptable en cabinet</div><div class="cit">« En période de clôture, chaque clic économisé compte. »</div>
+      <div class="lab lab-a">Ses touches de clôture, prêtes au cabinet</div><div class="lab lab-b" data-layout-allow-overlap>Une touche : Excel, Alt+F, E, puis le nom du fichier</div>
+    </div>
+    <div id="d-c-camille" class="clip col" data-start="16.0" data-duration="12.0" data-track-index="4">
+      <div class="nom">Camille, 41 ans</div><div class="metier">Cheffe de projet, en télétravail</div><div class="cit">« Une touche, et je retrouve mon bureau là où je l'avais laissé. »</div>
+      <div class="lab lab-a">Un profil Travail, un profil Perso, d'un balayage</div><div class="lab lab-b" data-layout-allow-overlap>L'enfant arrive : micro coupé d'une touche</div>
+    </div>
+    <div id="d-c-gwen" class="clip col" data-start="28.0" data-duration="12.0" data-track-index="4">
+      <div class="nom">Gwen, 36 ans</div><div class="metier">Responsable marketing</div><div class="cit">« J'ai douze outils ouverts ; maintenant, chacun est à une touche. »</div>
+      <div class="lab lab-a">Canva, HubSpot, Teams : une touche chacun</div><div class="lab lab-b" data-layout-allow-overlap>Le webinaire, rejoint depuis la tablette</div>
+    </div>
+    <div id="d-c-aimee" class="clip col" data-start="40.0" data-duration="12.0" data-track-index="4">
+      <div class="nom">Aimée</div><div class="metier">Chargé de projets en agence</div><div class="cit">« Je ne cherche plus mes fichiers : ils sont sous mes yeux. »</div>
+      <div class="lab lab-a">La prochaine réunion, dans 1 min</div><div class="lab lab-b" data-layout-allow-overlap>Les fichiers de l'ordi, sur la tablette</div>
+    </div>
+    <div id="d-c-sam" class="clip col" data-start="52.0" data-duration="12.0" data-track-index="4">
+      <div class="nom">Sam, 44 ans</div><div class="metier">Gestionnaire administratif</div><div class="cit">« Ce sont les outils qui s'adaptent à moi, et non l'inverse. »</div>
+      <div class="lab lab-a">Contraste élevé, lisible de loin</div><div class="lab lab-b" data-layout-allow-overlap>Taille du texte et thème, réglés ici</div>
+    </div>
+    <div id="d-c-sacha" class="clip col nuit" data-start="64.0" data-duration="12.0" data-track-index="4">
+      <div class="nom">Sacha, 32 ans</div><div class="metier">Développeur full-stack</div><div class="cit">« Si je peux le scripter, je l'adopte. »</div>
+      <div class="lab lab-a">Ses agents Claude, d'un coup d'œil</div><div class="lab lab-b" data-layout-allow-overlap>Ses MR GitLab, sans quitter le code</div>
+    </div>
+    <div id="d-fin" class="clip" data-start="76.0" data-duration="8.0" data-track-index="4">
+      <svg viewBox="0 0 256 256"><rect width="256" height="256" rx="60" fill="#CA0538" /><path d="M48 128 H152" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" /><path d="M152 128 H208" stroke="#FFFFFF" stroke-opacity=".4" stroke-width="14" stroke-linecap="round" /><circle cx="152" cy="128" r="40" fill="none" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="7" /><circle cx="152" cy="128" r="20" fill="#FFFFFF" /></svg>
+      <div class="nom">UnoMate</div><img src="assets/brand/unowhy.svg" alt="Unowhy" />
+      <p>Mac et Windows, en WiFi.<br />Sur la tablette Unowhy 4.2.</p>
+    </div>
+    <div id="d-som">
+      <div id="d-piste"></div>
+      <div id="d-s-sylvie" class="spt" style="left:256.0px"><i></i><b>Sylvie</b></div>
+      <div id="d-s-camille" class="spt" style="left:480.0px"><i></i><b>Camille</b></div>
+      <div id="d-s-gwen" class="spt" style="left:576.0px"><i></i><b>Gwen</b></div>
+      <div id="d-s-aimee" class="spt" style="left:1021.8px"><i></i><b>Aimée</b></div>
+      <div id="d-s-sam" class="spt" style="left:1216.0px"><i></i><b>Sam</b></div>
+      <div id="d-s-sacha" class="spt" style="left:1621.4px"><i></i><b>Sacha</b></div>
+      <div id="d-maint" style="left:256.0px"><i></i></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#d-piste", { scaleX: 0 }, { scaleX: 1, duration: 1.2, ease: "expo.out" }, 0.3);
+    tl.fromTo(".spt", { opacity: 0 }, { opacity: 1, duration: 0.25, stagger: 0.08, ease: "none" }, 0.6);
+    tl.fromTo("#d-maint i", { scale: 0 }, { scale: 1, duration: 0.4, ease: "back.out(1.6)" }, 1.4);
+    tl.fromTo("#d-titre h1", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 0.4);
+    tl.fromTo("#d-titre p", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 0.8);
+    tl.to("#d-titre", { opacity: 0, filter: "blur(8px)", duration: 0.2, ease: "power2.in" }, 3.65);
+    tl.fromTo("#d-s-sylvie b", { color: "#6f6666" }, { color: "#1e1b1b", duration: 0.3, ease: "none", immediateRender: false }, 4.0);
+    tl.fromTo("#d-c-sylvie .nom", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 4.15);
+    tl.fromTo("#d-c-sylvie .metier", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 4.27);
+    tl.fromTo("#d-c-sylvie .cit", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 4.39);
+    tl.to("#d-c-sylvie > *", { opacity: 0, filter: "blur(6px)", duration: 0.2, ease: "power2.in" }, 15.70);
+    tl.fromTo("#d-e-sylvie-A", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, 4.00);
+    tl.fromTo("#d-c-sylvie .lab-a", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out", immediateRender: false }, 4.60);
+    tl.to("#d-c-sylvie .lab-a", { opacity: 0, duration: 0.15, ease: "power2.in" }, 9.45);
+    tl.fromTo("#d-o-sylvie-A", { opacity: 0.9, scale: 0.6 }, { opacity: 0, scale: 2.2, duration: 0.5, ease: "power2.out", immediateRender: false }, 5.30);
+    tl.fromTo("#d-z-sylvie-A", { x: 8.1, y: -118.7, scale: 0.828, opacity: 0 }, { x: 0, y: 0, scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 6.00);
+    tl.to("#d-z-sylvie-A", { x: 8.1, y: -118.7, scale: 0.828, opacity: 0, duration: 0.4, ease: "power2.in" }, 8.95);
+    tl.to("#d-tabw", { opacity: 0.3, duration: 0.4, ease: "power2.out" }, 6.00);
+    tl.to("#d-tabw", { opacity: 1, duration: 0.35, ease: "power2.in" }, 8.95);
+    tl.fromTo("#d-e-sylvie-B", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, 9.60);
+    tl.fromTo("#d-c-sylvie .lab-b", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out", immediateRender: false }, 10.20);
+    tl.fromTo("#d-z-sylvie-B", { x: -224.2, y: -51.6, scale: 0.571, opacity: 0 }, { x: 0, y: 0, scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 11.20);
+    tl.to("#d-z-sylvie-B", { x: -224.2, y: -51.6, scale: 0.571, opacity: 0, duration: 0.4, ease: "power2.in" }, 14.15);
+    tl.to("#d-tabw", { opacity: 0.3, duration: 0.4, ease: "power2.out" }, 11.20);
+    tl.to("#d-tabw", { opacity: 1, duration: 0.35, ease: "power2.in" }, 14.15);
+    tl.to("#d-maint", { x: 224.0, duration: 0.6, ease: "power3.inOut" }, 15.7);
+    tl.fromTo("#d-s-camille b", { color: "#6f6666" }, { color: "#1e1b1b", duration: 0.3, ease: "none", immediateRender: false }, 16.0);
+    tl.fromTo("#d-c-camille .nom", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 16.15);
+    tl.fromTo("#d-c-camille .metier", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 16.27);
+    tl.fromTo("#d-c-camille .cit", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 16.39);
+    tl.to("#d-c-camille > *", { opacity: 0, filter: "blur(6px)", duration: 0.2, ease: "power2.in" }, 27.70);
+    tl.fromTo("#d-e-camille-A", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, 16.00);
+    tl.fromTo("#d-c-camille .lab-a", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out", immediateRender: false }, 16.60);
+    tl.to("#d-c-camille .lab-a", { opacity: 0, duration: 0.15, ease: "power2.in" }, 21.45);
+    tl.fromTo("#d-e-camille-B", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, 21.60);
+    tl.fromTo("#d-c-camille .lab-b", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out", immediateRender: false }, 22.20);
+    tl.fromTo("#d-o-camille-B", { opacity: 0.9, scale: 0.6 }, { opacity: 0, scale: 2.2, duration: 0.5, ease: "power2.out", immediateRender: false }, 22.90);
+    tl.fromTo("#d-z-camille-B", { x: -147.5, y: 19.2, scale: 0.571, opacity: 0 }, { x: 0, y: 0, scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 23.20);
+    tl.to("#d-z-camille-B", { x: -147.5, y: 19.2, scale: 0.571, opacity: 0, duration: 0.4, ease: "power2.in" }, 26.15);
+    tl.to("#d-tabw", { opacity: 0.3, duration: 0.4, ease: "power2.out" }, 23.20);
+    tl.to("#d-tabw", { opacity: 1, duration: 0.35, ease: "power2.in" }, 26.15);
+    tl.to("#d-maint", { x: 320.0, duration: 0.6, ease: "power3.inOut" }, 27.7);
+    tl.fromTo("#d-s-gwen b", { color: "#6f6666" }, { color: "#1e1b1b", duration: 0.3, ease: "none", immediateRender: false }, 28.0);
+    tl.fromTo("#d-c-gwen .nom", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 28.15);
+    tl.fromTo("#d-c-gwen .metier", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 28.27);
+    tl.fromTo("#d-c-gwen .cit", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 28.39);
+    tl.to("#d-c-gwen > *", { opacity: 0, filter: "blur(6px)", duration: 0.2, ease: "power2.in" }, 39.70);
+    tl.fromTo("#d-e-gwen-A", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, 28.00);
+    tl.fromTo("#d-c-gwen .lab-a", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out", immediateRender: false }, 28.60);
+    tl.to("#d-c-gwen .lab-a", { opacity: 0, duration: 0.15, ease: "power2.in" }, 33.45);
+    tl.fromTo("#d-o-gwen-A", { opacity: 0.9, scale: 0.6 }, { opacity: 0, scale: 2.2, duration: 0.5, ease: "power2.out", immediateRender: false }, 29.30);
+    tl.fromTo("#d-z-gwen-A", { x: 8.1, y: -122.4, scale: 0.828, opacity: 0 }, { x: 0, y: 0, scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 30.00);
+    tl.to("#d-z-gwen-A", { x: 8.1, y: -122.4, scale: 0.828, opacity: 0, duration: 0.4, ease: "power2.in" }, 32.95);
+    tl.to("#d-tabw", { opacity: 0.3, duration: 0.4, ease: "power2.out" }, 30.00);
+    tl.to("#d-tabw", { opacity: 1, duration: 0.35, ease: "power2.in" }, 32.95);
+    tl.fromTo("#d-e-gwen-B", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, 33.60);
+    tl.fromTo("#d-c-gwen .lab-b", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out", immediateRender: false }, 34.20);
+    tl.fromTo("#d-o-gwen-B", { opacity: 0.9, scale: 0.6 }, { opacity: 0, scale: 2.2, duration: 0.5, ease: "power2.out", immediateRender: false }, 34.90);
+    tl.fromTo("#d-z-gwen-B", { x: -307.9, y: 140.5, scale: 0.571, opacity: 0 }, { x: 0, y: 0, scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 35.20);
+    tl.to("#d-z-gwen-B", { x: -307.9, y: 140.5, scale: 0.571, opacity: 0, duration: 0.4, ease: "power2.in" }, 38.15);
+    tl.to("#d-tabw", { opacity: 0.3, duration: 0.4, ease: "power2.out" }, 35.20);
+    tl.to("#d-tabw", { opacity: 1, duration: 0.35, ease: "power2.in" }, 38.15);
+    tl.to("#d-maint", { x: 765.8, duration: 0.6, ease: "power3.inOut" }, 39.7);
+    tl.fromTo("#d-s-aimee b", { color: "#6f6666" }, { color: "#1e1b1b", duration: 0.3, ease: "none", immediateRender: false }, 40.0);
+    tl.fromTo("#d-c-aimee .nom", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 40.15);
+    tl.fromTo("#d-c-aimee .metier", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 40.27);
+    tl.fromTo("#d-c-aimee .cit", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 40.39);
+    tl.to("#d-c-aimee > *", { opacity: 0, filter: "blur(6px)", duration: 0.2, ease: "power2.in" }, 51.70);
+    tl.fromTo("#d-e-aimee-A", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, 40.00);
+    tl.fromTo("#d-c-aimee .lab-a", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out", immediateRender: false }, 40.60);
+    tl.to("#d-c-aimee .lab-a", { opacity: 0, duration: 0.15, ease: "power2.in" }, 45.45);
+    tl.fromTo("#d-z-aimee-A", { x: -307.9, y: 140.5, scale: 0.571, opacity: 0 }, { x: 0, y: 0, scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 42.00);
+    tl.to("#d-z-aimee-A", { x: -307.9, y: 140.5, scale: 0.571, opacity: 0, duration: 0.4, ease: "power2.in" }, 44.95);
+    tl.to("#d-tabw", { opacity: 0.3, duration: 0.4, ease: "power2.out" }, 42.00);
+    tl.to("#d-tabw", { opacity: 1, duration: 0.35, ease: "power2.in" }, 44.95);
+    tl.fromTo("#d-e-aimee-B", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, 45.60);
+    tl.fromTo("#d-c-aimee .lab-b", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out", immediateRender: false }, 46.20);
+    tl.fromTo("#d-z-aimee-B", { x: -172.6, y: -125.4, scale: 0.571, opacity: 0 }, { x: 0, y: 0, scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 47.20);
+    tl.to("#d-z-aimee-B", { x: -172.6, y: -125.4, scale: 0.571, opacity: 0, duration: 0.4, ease: "power2.in" }, 50.15);
+    tl.to("#d-tabw", { opacity: 0.3, duration: 0.4, ease: "power2.out" }, 47.20);
+    tl.to("#d-tabw", { opacity: 1, duration: 0.35, ease: "power2.in" }, 50.15);
+    tl.to("#d-maint", { x: 960.0, duration: 0.6, ease: "power3.inOut" }, 51.7);
+    tl.fromTo("#d-s-sam b", { color: "#6f6666" }, { color: "#1e1b1b", duration: 0.3, ease: "none", immediateRender: false }, 52.0);
+    tl.fromTo("#d-c-sam .nom", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 52.15);
+    tl.fromTo("#d-c-sam .metier", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 52.27);
+    tl.fromTo("#d-c-sam .cit", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 52.39);
+    tl.to("#d-c-sam > *", { opacity: 0, filter: "blur(6px)", duration: 0.2, ease: "power2.in" }, 63.70);
+    tl.fromTo("#d-e-sam-A", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, 52.00);
+    tl.fromTo("#d-c-sam .lab-a", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out", immediateRender: false }, 52.60);
+    tl.to("#d-c-sam .lab-a", { opacity: 0, duration: 0.15, ease: "power2.in" }, 57.45);
+    tl.fromTo("#d-z-sam-A", { x: 340.3, y: 140.5, scale: 0.571, opacity: 0 }, { x: 0, y: 0, scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 54.00);
+    tl.to("#d-z-sam-A", { x: 340.3, y: 140.5, scale: 0.571, opacity: 0, duration: 0.4, ease: "power2.in" }, 56.95);
+    tl.to("#d-tabw", { opacity: 0.3, duration: 0.4, ease: "power2.out" }, 54.00);
+    tl.to("#d-tabw", { opacity: 1, duration: 0.35, ease: "power2.in" }, 56.95);
+    tl.fromTo("#d-e-sam-B", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, 57.60);
+    tl.fromTo("#d-c-sam .lab-b", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out", immediateRender: false }, 58.20);
+    tl.fromTo("#d-o-sam-B", { opacity: 0.9, scale: 0.6 }, { opacity: 0, scale: 2.2, duration: 0.5, ease: "power2.out", immediateRender: false }, 58.90);
+    tl.fromTo("#d-z-sam-B", { x: 11.8, y: -81.1, scale: 0.835, opacity: 0 }, { x: 0, y: 0, scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 59.20);
+    tl.to("#d-z-sam-B", { x: 11.8, y: -81.1, scale: 0.835, opacity: 0, duration: 0.4, ease: "power2.in" }, 62.15);
+    tl.to("#d-tabw", { opacity: 0.3, duration: 0.4, ease: "power2.out" }, 59.20);
+    tl.to("#d-tabw", { opacity: 1, duration: 0.35, ease: "power2.in" }, 62.15);
+    tl.to("#d-maint", { x: 1365.4, duration: 0.6, ease: "power3.inOut" }, 63.7);
+    tl.fromTo("#d-s-sacha b", { color: "#6f6666" }, { color: "#e9e1e0", duration: 0.3, ease: "none", immediateRender: false }, 64.0);
+    tl.fromTo("#d-c-sacha .nom", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 64.15);
+    tl.fromTo("#d-c-sacha .metier", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 64.27);
+    tl.fromTo("#d-c-sacha .cit", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 64.39);
+    tl.to("#d-c-sacha > *", { opacity: 0, filter: "blur(6px)", duration: 0.2, ease: "power2.in" }, 75.70);
+    tl.fromTo("#d-e-sacha-A", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, 64.00);
+    tl.fromTo("#d-c-sacha .lab-a", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out", immediateRender: false }, 64.60);
+    tl.to("#d-c-sacha .lab-a", { opacity: 0, duration: 0.15, ease: "power2.in" }, 69.45);
+    tl.fromTo("#d-o-sacha-A", { opacity: 0.9, scale: 0.6 }, { opacity: 0, scale: 2.2, duration: 0.5, ease: "power2.out", immediateRender: false }, 65.30);
+    tl.fromTo("#d-z-sacha-A", { x: 11.8, y: -66.4, scale: 0.835, opacity: 0 }, { x: 0, y: 0, scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 66.00);
+    tl.to("#d-z-sacha-A", { x: 11.8, y: -66.4, scale: 0.835, opacity: 0, duration: 0.4, ease: "power2.in" }, 68.95);
+    tl.to("#d-tabw", { opacity: 0.3, duration: 0.4, ease: "power2.out" }, 66.00);
+    tl.to("#d-tabw", { opacity: 1, duration: 0.35, ease: "power2.in" }, 68.95);
+    tl.fromTo("#d-e-sacha-B", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, 69.60);
+    tl.fromTo("#d-c-sacha .lab-b", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out", immediateRender: false }, 70.20);
+    tl.fromTo("#d-z-sacha-B", { x: 11.8, y: -69.3, scale: 0.835, opacity: 0 }, { x: 0, y: 0, scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 71.20);
+    tl.to("#d-z-sacha-B", { x: 11.8, y: -69.3, scale: 0.835, opacity: 0, duration: 0.4, ease: "power2.in" }, 74.15);
+    tl.to("#d-tabw", { opacity: 0.3, duration: 0.4, ease: "power2.out" }, 71.20);
+    tl.to("#d-tabw", { opacity: 1, duration: 0.35, ease: "power2.in" }, 74.15);
+    tl.to("#d-fond", { backgroundColor: "#100d0d", duration: 0.5, ease: "power2.inOut" }, 63.80);
+    tl.to(".spt b", { color: "#998e8e", duration: 0.5, ease: "none" }, 63.80);
+    tl.to("#d-fond", { backgroundColor: "#faf2f1", duration: 0.5, ease: "power2.inOut" }, 75.70);
+    tl.to("#d-maint i", { scale: 0, duration: 0.25, ease: "power2.in" }, 75.9);
+    tl.to(".spt i", { backgroundColor: "#ca0538", scale: 1.25, duration: 0.3, stagger: 0.1, ease: "back.out(1.6)" }, 76.2);
+    tl.to(".spt b", { color: "#1e1b1b", duration: 0.3, stagger: 0.1, ease: "none" }, 76.2);
+    tl.fromTo("#d-e-fin", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.4, ease: "expo.out" }, 76.0);
+    tl.fromTo("#d-fin svg", { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.2)" }, 76.9);
+    tl.fromTo("#d-fin .nom, #d-fin img", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.6, ease: "power3.inOut" }, 77.3);
+    tl.fromTo("#d-fin p", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 78.1);
+    window.__timelines["parcours"] = tl;
+  </script>
+</template>
