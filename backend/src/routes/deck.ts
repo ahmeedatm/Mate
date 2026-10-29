@@ -8,6 +8,7 @@ import {
   findTile,
   homeFeatures,
   LINK_SUGGESTIONS,
+  liveDeckApps,
   loadDeck,
   removeDeckApp,
   removeDeckLink,
@@ -18,8 +19,6 @@ import {
 import { openMediaLink } from "../music.ts";
 import {
   focusWindow,
-  isAppInCall,
-  isAppRunning,
   launchApp,
   listApps,
   listButtons,
@@ -155,18 +154,7 @@ export default async function deckRoutes(app: FastifyInstance) {
   app.get("/deck/features", () => homeFeatures());
 
   // Applis des pages d'appli (Discord, Teams) en appel en ce moment (micro utilisé) : la tablette leur donne un onglet.
-  app.get("/deck/live", { logLevel: "warn" }, async () => {
-    const pages = (await loadDeck()).filter((p) => p.app);
-    const apps = [...new Set(pages.map((p) => p.app as string))];
-    // Applis hors de la page Apps : onglet seulement pendant un appel, pas tant qu'elles tournent.
-    const callOnly = new Set(apps.filter((a) => pages.filter((p) => p.app === a).every((p) => p.callOnly)));
-    // `open` : l'appli tourne (onglet affiché) ; `apps` : elle utilise le micro, donc en appel.
-    const [open, live] = await Promise.all([
-      Promise.all(apps.map((a) => (callOnly.has(a) ? false : isAppRunning(a).catch(() => false)))),
-      Promise.all(apps.map((a) => isAppInCall(a).catch(() => false))),
-    ]);
-    return { apps: apps.filter((_, i) => live[i]), open: apps.filter((_, i) => open[i] || live[i]) };
-  });
+  app.get("/deck/live", { logLevel: "warn" }, () => liveDeckApps());
 
   /** Boutons cliquables d'une appli ouverte (Windows) : de quoi écrire une étape « appuyer sur un bouton ». */
   app.get<{ Querystring: { app: string; detail?: boolean } }>(

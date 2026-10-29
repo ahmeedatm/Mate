@@ -12,7 +12,9 @@ import { startAutoJoin } from "./meetings.ts";
 import { notificationHistory, watchNotifications } from "./notifications.ts";
 import { canControl, clipboardStamp, getClipboard, isMac, osName, readNotifications } from "./os.ts";
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
-import { sendToTablet } from "./tablet.ts";
+import { sendToTablet, tabletStatus } from "./tablet.ts";
+import { startMeetingWatch } from "./meeting-watch.ts";
+import { callingDeckApps } from "./deck.ts";
 import { loadTls } from "./tls.ts";
 import { startReminders } from "./tasks.ts";
 import agentRoutes from "./routes/agents.ts";
@@ -153,6 +155,13 @@ startReminders(remind);
 startEventReminders(remind);
 // Appel entrant : prévenir la tablette sans attendre sa réponse (la sonnerie ne doit pas bloquer la surveillance).
 void startCallWatch((event) => void sendToTablet({ type: "call", ...event }, 30_000));
+// Réunion en cours : la tablette passe sur son profil Réunion (et en revient), seulement tant qu'elle est connectée.
+if (canControl) {
+  startMeetingWatch((event) => void sendToTablet({ type: "meeting", ...event }), {
+    connected: () => tabletStatus().connected,
+    liveApps: callingDeckApps,
+  });
+}
 // Notifications de l'ordinateur : base du système relue toutes les 2 s, chaque nouvelle envoyée à la tablette sans attendre.
 if (canControl) {
   watchNotifications(
