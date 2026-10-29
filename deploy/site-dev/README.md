@@ -8,7 +8,7 @@ Jobs `site-downloads` puis `site-image` (`.gitlab-ci.yml`, stage `site`) :
 
 | Pipeline | Image |
 |---|---|
-| MR qui touche `site/` | construite, pas poussée (vérifie le Dockerfile) |
+| MR qui touche `site/` | `:<branche>` (ex. `:feat-site-image`) et `:<commit>`, jamais `:main` |
 | main, si `site/` change | `harbor.unowhy.dev/squads/mate-site:main` et `:<commit>` |
 | tag `vX.Y.Z` | `:main`, `:<commit>` et `:vX.Y.Z`, avec les installeurs de ce tag |
 
@@ -22,6 +22,8 @@ kubectl -n mate rollout status deployment/mate-site
 ```
 
 Ensuite, chaque image `main` poussée est reprise par Keel dans la minute. Pour voir ce que donnent les manifestes sans rien appliquer : `kubectl kustomize deploy/site-dev`.
+
+Essayer l'image d'une MR sans fusionner : `kubectl -n mate set image deployment/mate-site site=harbor.unowhy.dev/squads/mate-site:<branche>`, puis revenir avec `kubectl apply -k deploy/site-dev` (Keel ne suit que `:main`).
 
 ## À demander une fois à l'équipe plateforme
 

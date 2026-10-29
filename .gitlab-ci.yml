@@ -420,7 +420,8 @@ site-downloads:
     expire_in: 1 day
 
 # Tags de l'image : main (suivi par Keel sur le cluster dev, deploy/site-dev/deployment.yaml) et le commit ; sur un tag
-# de version, vX.Y.Z aussi. En MR : construite, jamais poussée (vérifie le Dockerfile).
+# de version, vX.Y.Z aussi. En MR : poussée sous le nom de la branche (ex. feat-site-image) et le commit, pour l'essayer
+# sans fusionner ; jamais « main », que suit le cluster.
 site-image:
   extends: .zone-site
   stage: site
@@ -439,9 +440,10 @@ site-image:
       docker info >/dev/null
     - docker build --label org.opencontainers.image.revision=$CI_COMMIT_SHA --label org.opencontainers.image.source=$CI_PROJECT_URL -t site site
     - |
-      if [ "$CI_PIPELINE_SOURCE" = "merge_request_event" ]; then echo "MR : image construite, pas poussée."; exit 0; fi
-      test -n "$HARBOR_REGISTRY_USERNAME" || { echo "HARBOR_REGISTRY_USERNAME / HARBOR_REGISTRY_PASSWORD absentes des variables CI"; exit 1; }
+      test -n "$HARBOR_REGISTRY_USERNAME" || { echo "HARBOR_REGISTRY_USERNAME / HARBOR_REGISTRY_PASSWORD absentes des variables CI (protégées : branche non protégée ?)"; exit 1; }
       echo "$HARBOR_REGISTRY_PASSWORD" | docker login -u "$HARBOR_REGISTRY_USERNAME" --password-stdin harbor.unowhy.dev
       TAGS="$CI_COMMIT_SHORT_SHA"
-      if [ -n "$CI_COMMIT_TAG" ]; then TAGS="$TAGS $CI_COMMIT_TAG main"; else TAGS="$TAGS main"; fi
+      if [ "$CI_PIPELINE_SOURCE" = "merge_request_event" ]; then TAGS="$TAGS $CI_COMMIT_REF_SLUG"
+      elif [ -n "$CI_COMMIT_TAG" ]; then TAGS="$TAGS $CI_COMMIT_TAG main"
+      else TAGS="$TAGS main"; fi
       for t in $TAGS; do docker tag site "$SITE_IMAGE:$t" && docker push "$SITE_IMAGE:$t"; done
