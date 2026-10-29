@@ -23,6 +23,7 @@ import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.ui.IconCache
 import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.dp
+import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.ui.themeColor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -59,12 +60,13 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
         override fun getItem(position: Int) = cells[position]
         override fun getItemId(position: Int) = position.toLong()
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
-            (convertView ?: newCell(context)).also { bind(it, cells[position]) }
+            (convertView ?: newCell(context, metrics(context))).also { bind(it, cells[position]) }
     }
 
     init {
+        val metrics = metrics(context)
         numColumns = AUTO_FIT
-        setColumnWidth(dp(COLUMN_DP))
+        setColumnWidth(dp(metrics.columnDp))
         stretchMode = STRETCH_COLUMN_WIDTH
         horizontalSpacing = dp(8)
         verticalSpacing = dp(8)
@@ -123,31 +125,33 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
 
     companion object {
         const val EMPTY = "empty"
-        private const val COLUMN_DP = 96
-        private const val CELL_DP = 100
-        private const val PLATE_DP = 52
-        private const val RADIUS_DP = 22
+
+        /** Cotes du thème : grandes en Contraste élevé (`c_big_keys`). */
+        fun metrics(context: Context) = TileMetrics.of(themeBool(context, R.attr.c_big_keys))
 
         /**
          * Vue d'une case, au style Cadran de `KeysWidget.tile` : sans cadre, icône de 52 dp à coins arrondis, libellé
-         * de 13 sp, appui sur ressort. `item_tile` fait 136 dp : ici 100 dp, assez pour deux lignes de libellé.
+         * de 13 sp, appui sur ressort. `item_tile` fait 136 dp : ici 100 dp, assez pour deux lignes de libellé. [metrics]
+         * donne les grandes cotes aux grilles du thème Contraste élevé ; les rangées du widget gardent les normales.
          */
-        fun newCell(context: Context): View {
+        fun newCell(context: Context, metrics: TileMetrics = TileMetrics.NORMAL): View {
             val view = LayoutInflater.from(context).inflate(R.layout.item_tile, null)
-            view.layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(CELL_DP))
+            view.layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(metrics.cellDp))
             view.background = null
             view.stateListAnimator = null
             view.setPadding(0, 0, 0, 0)
             val plate = view.findViewById<ImageView>(R.id.tile_icon).parent as View
-            plate.layoutParams = LinearLayout.LayoutParams(context.dp(PLATE_DP), context.dp(PLATE_DP))
+            plate.layoutParams = LinearLayout.LayoutParams(context.dp(metrics.plateDp), context.dp(metrics.plateDp))
             view.findViewById<TextView>(R.id.tile_label).apply {
-                textSize = 13f
+                textSize = metrics.labelSp
                 (layoutParams as LinearLayout.LayoutParams).topMargin = context.dp(6)
             }
+            view.findViewById<TextView>(R.id.tile_initial).textSize = metrics.initialSp
+            val radius = context.dp(TileMetrics.radiusFor(metrics.plateDp)).toFloat()
             view.findViewById<ImageView>(R.id.tile_icon).apply {
                 clipToOutline = true
                 outlineProvider = object : ViewOutlineProvider() {
-                    override fun getOutline(v: View, outline: Outline) = outline.setRoundRect(0, 0, v.width, v.height, context.dp(RADIUS_DP).toFloat())
+                    override fun getOutline(v: View, outline: Outline) = outline.setRoundRect(0, 0, v.width, v.height, radius)
                 }
             }
             return view
@@ -188,7 +192,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             val tint = if (cell.lit) themeColor(context, R.attr.c_ko) else custom
             val plain = tint == null
             plate.background = tint?.let {
-                GradientDrawable().apply { setColor(it); cornerRadius = context.dp(RADIUS_DP).toFloat() }
+                GradientDrawable().apply { setColor(it); cornerRadius = TileMetrics.radiusFor(plate.layoutParams.width).toFloat() }
             }
             val inset = if (plain) 0 else context.dp(8)
             icon.setPadding(inset, inset, inset, inset)
