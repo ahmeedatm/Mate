@@ -945,7 +945,6 @@
     <string name="profile_call">Réunion</string>
     <string name="rail_more">Plus</string>
     <string name="rail_add">Écran</string>
-    <string name="profile_icon">Icône de l\'écran</string>
     <string name="profile_icon_title">Icône de « %1$s »</string>
     <string name="profile_icon_default">Par défaut</string>
     <string name="profile_icon_row">Icône de « %1$s » : changer</string>
