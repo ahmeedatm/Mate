@@ -17,20 +17,21 @@ scripts/  Sauvegarde (bundle git + données perso)
 [travailler dessus et sauvegarder](docs/developpement.md) ·
 [la tablette 4.2](docs/tablette-4.2.md) ·
 [kiosque](docs/kiosque.md) ·
-[agenda par compte Microsoft/Google](docs/agenda-comptes.md)
+[agenda par compte Microsoft/Google](docs/agenda-comptes.md) ·
+[GitLab par connexion au compte](docs/gitlab-oauth.md)
 
 ## Installation (Mac ou Windows)
 
 Sur chaque ordinateur à piloter (une fois) :
 
-1. Télécharger l'installeur : le plus simple est la tablette, qui les sert sur le WiFi (`http://<ip de la tablette>:8080`, affichée sur l'écran Bienvenue ; la page propose celui de l'ordinateur qui la visite). Sinon, celui de la dernière release (`npm run package` pour le fabriquer, voir [développement](docs/developpement.md)). Node y est embarqué, rien d'autre à installer.
-   - **Windows** : lancer **`Compagnon-Unowhy-Windows.exe`** (sans droits d'administrateur ; non signé : SmartScreen > « Informations complémentaires » > « Exécuter quand même »). Désinstallation : Paramètres > Applications > Compagnon Unowhy.
-   - **Mac** : extraire `Compagnon-Unowhy-Mac.zip`, ouvrir **Compagnon Unowhy** (non notarisée : la première fois, Réglages Système > Confidentialité et sécurité > « Ouvrir quand même »). Elle se copie dans Applications et s'ouvre de là ; la rouvrir rouvre la page.
-2. Le compagnon démarre et se relancera tout seul à chaque ouverture de session : plus de terminal à garder ouvert. Mettre à jour = relancer l'installeur d'une version plus récente. Depuis ce dépôt, sans installeur : Node.js 22 ou plus, puis `npm install && npm run service:install` dans `backend/`.
-3. La page **http://127.0.0.1:3000/** s'ouvre : adresse de l'ordinateur, case où saisir le code d'appairage affiché par la tablette, agenda.
+1. Télécharger l'appli : le plus simple est la tablette, qui les sert sur le WiFi (`http://<ip de la tablette>:8080`, affichée sur l'écran Bienvenue ; la page propose celle de l'ordinateur qui la visite). Sinon, celle de la dernière release (`npm run package` pour la fabriquer, voir [développement](docs/developpement.md)). Node y est embarqué, rien d'autre à installer, et rien ne s'installe : l'appli reste où on la met.
+   - **Windows** : lancer **`Compagnon-Unowhy-Windows.exe`** (un seul fichier, sans droits d'administrateur ; non signé : SmartScreen > « Informations complémentaires » > « Exécuter quand même »).
+   - **Mac** : extraire `Compagnon-Unowhy-Mac.zip`, ouvrir **Compagnon Unowhy** (non notarisée : la première fois, Réglages Système > Confidentialité et sécurité > « Ouvrir quand même »).
+2. Le compagnon tourne tant qu'on ne le quitte pas ; relancer l'appli rouvre la page. Pour qu'il démarre à l'ouverture de session, cocher « Lancer au démarrage » dans la page (rien n'est inscrit avant). Mettre à jour : bouton « Chercher une mise à jour » de la page (l'appli vient de la tablette). Depuis ce dépôt, sans l'appli : Node.js 22 ou plus, puis `npm install && npm run service:install` dans `backend/`.
+3. La page **http://127.0.0.1:3000/** (le panneau) s'ouvre : adresse de l'ordinateur, case où saisir le code d'appairage affiché par la tablette, agenda, et la carte « Cette appli » (lancement au démarrage, pare-feu, mise à jour, ancienne installation, quitter, tout oublier).
 4. Autorisations, une fois :
-   - **Mac** : Réglages Système > Confidentialité et sécurité > **Accessibilité** > ajouter `node` (le Finder l'affiche, dans l'appli) pour les raccourcis, macros et fenêtres.
-   - **Windows** : accepter la demande d'administrateur de l'installeur pour le **pare-feu** sur les réseaux **privés** ; le WiFi doit être en profil « Privé ».
+   - **Mac** : Réglages Système > Confidentialité et sécurité > **Accessibilité** > ajouter `node` (bouton « Ouvrir le réglage » du panneau ; `node` est dans `~/Library/Application Support/UnowhyCompanion/runtime`) pour les raccourcis, macros et fenêtres.
+   - **Windows** : « Ouvrir le pare-feu » dans le panneau (demande d'administrateur) pour les réseaux **privés** ; le WiFi doit être en profil « Privé ».
 
 Sur la tablette : au premier lancement, l'écran **Bienvenue** guide en trois étapes (WiFi, adresse de la tablette à ouvrir sur l'ordinateur pour y télécharger le logiciel, `http://<ip>:8080`, ordinateurs trouvés sur le WiFi). Ensuite : **Réglages > Ordinateurs > Ajouter un ordinateur**, toucher l'ordinateur trouvé sur le WiFi, puis saisir sur l'ordinateur (page du compagnon, qui s'ouvre seule) le code à 6 chiffres affiché par la tablette. C'est tout : le jeton arrive une fois le code accepté. Ordinateur introuvable (autre réseau, diffusion bloquée) : « Saisir l'adresse » avec celle de la page.
 

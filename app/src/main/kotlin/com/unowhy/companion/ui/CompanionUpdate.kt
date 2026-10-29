@@ -15,8 +15,9 @@ import kotlinx.coroutines.launch
 /**
  * Compagnon de l'ordinateur actif, vérifié tous les quarts d'heure. Mise à jour publiée et compagnon qui sait la
  * recevoir : bandeau une fois par version, qui la lance après confirmation (installers/CompanionUpdater). Compagnon
- * plus ancien : comparé à l'installeur gardé par la tablette, bandeau qui ouvre les étapes (lien à ouvrir sur
- * l'ordinateur, d'un bouton) ; une fois les étapes ouvertes, vérifié chaque minute jusqu'à la nouvelle version.
+ * plus ancien : comparé à l'appli gardée par la tablette, bandeau qui ouvre les étapes (panneau de l'appli, ou lien
+ * à ouvrir sur l'ordinateur, d'un bouton) ; une fois les étapes ouvertes, vérifié chaque minute jusqu'à la nouvelle
+ * version.
  */
 class CompanionUpdate(private val activity: MainActivity) {
 

@@ -185,6 +185,26 @@
             android:layout_weight="1"
             android:visibility="gone" />
 
+        <!-- Onglet « GitLab » : mes MR et les MR à relire, avec pipeline, approbations et fusion. -->
+        <com.unowhy.companion.ui.GitLabView
+            android:id="@+id/deck_gitlab"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"
+            android:layout_weight="1"
+            android:visibility="gone" />
+
+        <!-- Onglet « Jira » : les tickets assignés à l'utilisateur, une colonne par statut. -->
+        <com.unowhy.companion.ui.JiraView
+            android:id="@+id/deck_jira"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"
+            android:layout_weight="1"
+            android:visibility="gone" />
+
         <!-- Onglet « Pavé » : la tablette devient le pavé tactile de l'ordinateur. -->
         <com.unowhy.companion.ui.pointer.PadView
             android:id="@+id/deck_pad"

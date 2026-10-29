@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
-    Lanceur du compagnon sous Windows (voir Program.cs), sans fenêtre, sans PowerShell. .NET Framework 4.8. Compilé avec le pilote : npm run build:helper (dans backend/).
+    Compagnon Unowhy sous Windows, un exe sans installation (voir Program.cs), sans fenêtre, sans PowerShell. .NET Framework 4.8. Compilé avec le pilote : npm run build:helper (dans backend/).
   -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -23,6 +23,8 @@
     <SatelliteResourceLanguages>fr</SatelliteResourceLanguages>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Web.Extensions" />

@@ -31,8 +31,8 @@ Pas de serveur dans le cloud : chaque ordinateur a son compagnon, la tablette pa
 
 ### Le compagnon de l'ordinateur (`backend/`)
 
-- **Node 22, TypeScript lancé par `tsx`** (pas de compilation), **Fastify**. Démarre seul à l'ouverture de session (`scripts/service.ts` : LaunchAgent sur Mac, clé Run + lanceur sans fenêtre `src/win/UnowhyCompanion.exe` sur Windows).
-- **`server.ts`** vérifie le jeton `Authorization: Bearer`, traduit les erreurs, enregistre les routes et lance les tâches de fond. Les routes (contrat de l'API) sont dans **`routes/`**, un plugin Fastify par domaine (`pairing.ts` pour `/health` et `/pair/*`, `local.ts`, `deck.ts`, `windows.ts`, `system.ts`, `docs.ts`, `browser.ts`, `camera.ts`, `calendar.ts`, `tasks.ts`, `calls.ts`, `tablet.ts`, `updates.ts`) ; les hooks posés dans `server.ts` valent pour tous. Sans jeton : `/health`, `/pair/*`, la page locale `GET /` (seulement depuis l'ordinateur).
+- **Node 22, TypeScript lancé par `tsx`** (pas de compilation), **Fastify**. Appli portable, sans installation : l'exe Windows (`src/win/UnowhyCompanion.exe` + zip du runtime) ou `Compagnon Unowhy.app` extrait son runtime dans le dossier de l'utilisateur, lance le serveur et le relance s'il s'arrête (sortie 75 = quitter, 76 = tout oublier). Le lancement à l'ouverture de session est une case du panneau (`src/portable.ts` : clé Run sous Windows, LaunchAgent sous Mac), rien n'est inscrit avant. Depuis le dépôt : `scripts/service.ts`.
+- **`server.ts`** vérifie le jeton `Authorization: Bearer`, traduit les erreurs, enregistre les routes et lance les tâches de fond. Les routes (contrat de l'API) sont dans **`routes/`**, un plugin Fastify par domaine (`pairing.ts` pour `/health` et `/pair/*`, `local.ts`, `portable.ts` (carte « Cette appli » du panneau), `deck.ts`, `windows.ts`, `system.ts`, `docs.ts`, `browser.ts`, `camera.ts`, `calendar.ts`, `tasks.ts`, `calls.ts`, `tablet.ts`, `updates.ts`) ; les hooks posés dans `server.ts` valent pour tous. Sans jeton : `/health`, `/pair/*`, la page locale `GET /` (seulement depuis l'ordinateur).
 - **`os.ts`** est le seul point d'entrée vers le système : il appelle `mac/` ou `win/` selon l'OS. Ajouter une action système = l'écrire dans les deux.
   - **Mac** (`src/mac/`) : `osascript` en AppleScript ou JXA. Frappes en CGEvent (System Events refuse les saisies), fenêtres par l'Accessibilité + NSScreen + CoreGraphics. Demande l'autorisation Accessibilité.
   - **Windows** (`src/win/`) : un **programme résident `UnowhyHelper.exe`** (C# .NET Framework 4.8, compilé d'avance : `helper/Native*.cs` pour fenêtres, son, frappes, une classe partielle découpée par thème ; `helper/Program.cs` pour l'UI Automation ; `helper/Media.cs` pour les contrôles multimédias WinRT). `helper.ts` lui envoie des commandes JSON ligne par ligne. L'exe est copié dans `%LOCALAPPDATA%\UnowhyCompanion\helper` avant lancement pour ne pas verrouiller l'original. Pas de PowerShell : un script qui compile du C# de frappes à la volée était classé malveillant par Bitdefender.
@@ -68,6 +68,7 @@ La tablette n'ouvre aucun port. `remote/RemoteChannel.kt` garde une requête `PO
 
 - Agenda (`calendar.ts`) = liens ICS (`.data/calendar.json`) + comptes Microsoft/Google (`accounts.ts`, OAuth, pas encore activé : identifiant d'appli à obtenir) + agenda personnel noté depuis la tablette (`events.ts`). Réunions en ligne détectées dans les événements (`meeting-links.ts`), ouvertes sur l'ordinateur par `POST /calendar/join`.
 - Tâches (`tasks.ts`) : ponctuelles, récurrentes (créées depuis la tablette), ou quotidiennes écrites dans `config/tasks.json` (exemple : saisir son temps dans Jira, cochée seule via `jira.ts`). Les rappels partent de l'ordinateur par le canal `/tablet` et sont lus à voix haute par la tablette (`audio/Speaker`).
+- Onglet Jira du Deck (`routes/jira.ts`, tablette `ui/JiraView`, `net/JiraApi`) : tickets assignés en colonnes : l'union des colonnes des tableaux Jira choisis sur la tablette (API Agile, `GET/POST /jira/boards`, choix dans `.data/jira.json`), terminés des 7 derniers jours compris, ticket placé par l'id de son statut ; sans tableau choisi, une colonne par statut (à faire puis en cours). Toucher un ticket = ses transitions Jira ; une transition qui demande un champ (`needsJira`, ou Jira répond 400 → 409) se finit dans Jira, ouvert sur l'ordinateur. Proposé seulement si Jira est configuré (`/deck/features` → `jira`).
 - Eau et Focus (Pomodoro, ambiance) sont **sur la tablette seulement** (`focus/`).
 
 ### 6. Visualiseur (mode Caméra)
@@ -141,7 +142,10 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | `deck.ts`, `perso.ts`, `music.ts` | pages du deck, `runAction`, touches perso, musique |
 | `os.ts` → `mac/`, `win/` | pilotage du système ; `screens.ts` : types d'écrans et fenêtres |
 | `calendar.ts`, `accounts.ts`, `events.ts`, `meetings.ts`, `meeting-links.ts` | agenda et réunions |
-| `tasks.ts`, `jira.ts` | tâches et rappels |
+| `tasks.ts` | tâches et rappels |
+| `jira.ts`, `routes/jira.ts` | Jira du compte du `.env` : temps saisi du jour (worklog), tickets assignés et leurs transitions (onglet Jira) |
+| `gitlab.ts`, `routes/gitlab.ts` | onglet GitLab : mes MR et celles à relire (une requête GraphQL, gardée 20 s), fusion au `sha` affiché, ouverture de la MR sur l'ordinateur |
+| `gitlab-auth.ts` | connexion GitLab par OAuth (code + PKCE, sans secret) : jetons sur l'ordinateur, renouvellement seul ; `GITLAB_TOKEN` en secours ([gitlab-oauth.md](gitlab-oauth.md)) |
 | `tablet.ts`, `mcp.ts` | canal vers la tablette, extension Claude |
 | `calls.ts` (+ `config/calls.json`) | appels entrants : surveillance des fenêtres, Répondre / Ignorer / Raccrocher |
 | `agents.ts`, `agents-sources.ts`, `agents-secret.ts`, `agents-hooks.ts`, `routes/agents.ts` | agents Claude : état et réponses, lecture de `claude` et d'Orca, secret des hooks, bloc de hooks (`scripts/agents-hooks.ts`) |
