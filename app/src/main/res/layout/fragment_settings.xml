@@ -19,12 +19,104 @@
             android:text="@string/mode_settings"
             android:textSize="28sp" />
 
-        <!-- Ordinateurs appairés (bureau, maison…) : celui que la tablette pilote, les autres en relais. -->
+        <!-- Mises à jour (moteur web, UnoMate) depuis le « serveur Unowhy » simulé par l'ordinateur. -->
         <LinearLayout
             style="@style/Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.unowhy.unomate.ui.TitleView
+                    style="@style/CardTitle"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_refresh"
+                    android:text="@string/updates_title" />
+
+                <!-- Stable : « Ouvrir l'essai » si l'appli d'essai est installée ; essai : « Revenir à la stable ». -->
+                <Button
+                    android:id="@+id/settings_switch_app"
+                    style="@style/ActionButton"
+                    android:layout_marginEnd="12dp"
+                    android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/settings_updates_check"
+                    style="@style/ActionButton"
+                    android:text="@string/updates_check" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/settings_updates_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/updates_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/settings_trial_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/trial_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/settings_updates"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <!-- Compagnon de l'ordinateur actif : version, mise à jour envoyée par la tablette (installers/CompanionUpdater). -->
+            <TextView
+                android:id="@+id/settings_companion_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/settings_companion_update"
+                style="@style/PrimaryButton"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/settings_essais_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:textColor="?attr/c_text"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/settings_essais"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
+
+        <!-- Ordinateurs appairés (bureau, maison…) : celui que la tablette pilote, les autres en relais. -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
             android:orientation="vertical">
 
             <com.unowhy.unomate.ui.TitleView
@@ -544,98 +636,6 @@
                 android:textColor="?attr/c_text_faint"
                 android:textIsSelectable="false"
                 android:textSize="13sp" />
-        </LinearLayout>
-
-        <!-- Mises à jour (moteur web, UnoMate) depuis le « serveur Unowhy » simulé par l'ordinateur. -->
-        <LinearLayout
-            style="@style/Card"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="vertical">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <com.unowhy.unomate.ui.TitleView
-                    style="@style/CardTitle"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:drawableStart="@drawable/ic_refresh"
-                    android:text="@string/updates_title" />
-
-                <!-- Stable : « Ouvrir l'essai » si l'appli d'essai est installée ; essai : « Revenir à la stable ». -->
-                <Button
-                    android:id="@+id/settings_switch_app"
-                    style="@style/ActionButton"
-                    android:layout_marginEnd="12dp"
-                    android:visibility="gone" />
-
-                <Button
-                    android:id="@+id/settings_updates_check"
-                    style="@style/ActionButton"
-                    android:text="@string/updates_check" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/settings_updates_status"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:text="@string/updates_hint"
-                android:textColor="?attr/c_text_dim"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/settings_trial_hint"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="@string/trial_hint"
-                android:textColor="?attr/c_text_dim"
-                android:textSize="14sp"
-                android:visibility="gone" />
-
-            <LinearLayout
-                android:id="@+id/settings_updates"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
-
-            <!-- Compagnon de l'ordinateur actif : version, mise à jour envoyée par la tablette (installers/CompanionUpdater). -->
-            <TextView
-                android:id="@+id/settings_companion_status"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:textColor="?attr/c_text_dim"
-                android:textSize="14sp"
-                android:visibility="gone" />
-
-            <Button
-                android:id="@+id/settings_companion_update"
-                style="@style/PrimaryButton"
-                android:layout_marginTop="8dp"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/settings_essais_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:textColor="?attr/c_text"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:visibility="gone" />
-
-            <LinearLayout
-                android:id="@+id/settings_essais"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
         </LinearLayout>
 
         <!-- Réunions Teams de l'agenda : seulement si l'ordinateur a Teams dans sa page Apps. -->

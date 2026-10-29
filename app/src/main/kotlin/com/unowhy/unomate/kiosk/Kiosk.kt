@@ -12,6 +12,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.UserManager
 import android.provider.Settings
+import com.unowhy.companion.kiosk.KioskAdminReceiver
 import com.unowhy.unomate.Prefs
 import com.unowhy.unomate.trial.Trial
 
@@ -59,7 +60,7 @@ object Kiosk {
 
     private fun dpm(context: Context) = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
     private fun admin(context: Context) = ComponentName(context, KioskAdminReceiver::class.java)
-    private fun homeAlias(context: Context) = ComponentName(context.packageName, context.packageName + ".HomeAlias")
+    private fun homeAlias(context: Context) = ComponentName(context.packageName, "com.unowhy.companion.HomeAlias")
 
     fun isDeviceOwner(context: Context) = dpm(context).isDeviceOwnerApp(context.packageName)
 

@@ -26,7 +26,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 
 const BACKEND_PLATFORMS = ["mac", "windows"];
-const ESSAI_PACKAGE = "com.unowhy.unomate.essai";
+const ESSAI_PACKAGE = "com.unowhy.companion.essai";
 const MAX_TITLE = 200;
 const INSTALLERS = {
   mac: "UnoMate-Mac.zip",

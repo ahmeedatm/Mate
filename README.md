@@ -170,7 +170,7 @@ Sur la tablette : Paramètres > À propos > taper 7 fois sur « Numéro de build
 adb devices                              # la tablette doit apparaître en "device"
 ./gradlew installDebug                   # build + installation
 adb reverse tcp:3000 tcp:3000            # la tablette joint le backend de l'ordinateur via USB
-adb shell am start -n com.unowhy.unomate/.MainActivity
+adb shell am start -n com.unowhy.companion/com.unowhy.unomate.MainActivity
 ```
 
 `adb reverse` est à relancer après chaque rebranchement du câble. En USB, ajouter l'ordinateur avec « Saisir l'adresse » : `127.0.0.1` (appairage par code comme en WiFi).
@@ -190,8 +190,8 @@ Autres commandes utiles :
 
 ```bash
 ./gradlew assembleDebug                  # APK dans app/build/outputs/apk/debug/
-adb logcat --pid=$(adb shell pidof com.unowhy.unomate)   # logs de l'appli
-adb uninstall com.unowhy.unomate
+adb logcat --pid=$(adb shell pidof com.unowhy.companion)   # logs de l'appli
+adb uninstall com.unowhy.companion
 ```
 
 **Deux « ordinateurs » sur un même Mac** (tester la bascule) : `PORT=3011 DATA_DIR=/tmp/a COMPUTER_NAME="Mac du bureau" npx tsx src/server.ts` et un second avec un autre port et dossier ; les ajouter depuis l'émulateur par `adb reverse tcp:3011 tcp:3011` et `127.0.0.1:3011`, puis arrêter l'actif.

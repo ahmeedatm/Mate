@@ -6,7 +6,7 @@ set -eu
 
 root=$(git rev-parse --show-toplevel)
 adb="$HOME/Library/Android/sdk/platform-tools/adb"
-pkg_app=com.unowhy.unomate
+pkg_app=com.unowhy.companion
 
 if [ "${APK:-1}" != 0 ]; then
   serial=${ANDROID_SERIAL:-$("$adb" devices | awk 'NR>1 && $2=="device" && $1 !~ /^emulator-/ {print $1; exit}')}
