@@ -114,6 +114,12 @@ data class KeyRef(val id: String, val label: String, val glyph: String? = null, 
 /** Numéro d'emplacement d'une touche perso (tuile "k-<slot>"), null pour toute autre tuile. */
 fun slotOf(id: String): Int? = if (id.startsWith("k-")) id.removePrefix("k-").toIntOrNull() else null
 
+/** Page de touches nommée (rang, emplacement) d'une tuile `k<rang + 1>-<emplacement>`, null pour toute autre tuile. */
+fun pageSlotOf(id: String): Pair<Int, Int>? {
+    val (page, slot) = Regex("k(\\d+)-(\\d+)").matchEntire(id)?.destructured ?: return null
+    return (page.toInt() - 1).takeIf { it >= 0 }?.let { it to slot.toInt() }
+}
+
 /** Premier emplacement vide de la page Perso (`editable`), null s'il n'y en a pas. */
 fun nextFreeSlot(pages: List<DeckPage>): Int? =
     pages.firstOrNull { it.editable }?.tiles?.firstOrNull { it.type == "empty" }?.let { slotOf(it.id) }

@@ -80,6 +80,11 @@ async function choices(): Promise<Record<string, boolean>> {
   return cache;
 }
 
+/** Fichier réécrit hors de ce module (démo) : les choix sont relus au prochain appel. */
+export function forgetPluginChoices() {
+  cache = undefined;
+}
+
 /** Un plugin est actif tant qu'il n'a pas été coupé depuis la tablette. */
 export async function pluginOn(id: string) {
   return (await choices())[id] !== false;

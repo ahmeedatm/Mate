@@ -51,6 +51,7 @@ import com.unowhy.companion.net.Wifi
 import com.unowhy.companion.trial.EssaiBackend
 import com.unowhy.companion.trial.EssaiPlan
 import com.unowhy.companion.trial.Trial
+import com.unowhy.companion.ui.home.Demo
 import com.unowhy.companion.voice.WakeModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -99,6 +100,13 @@ class SettingsFragment : Fragment() {
         computers = view.findViewById(R.id.settings_computers)
         view.findViewById<Button>(R.id.settings_add_computer).setOnClickListener { adder.search() }
         view.findViewById<Button>(R.id.settings_plugins).setOnClickListener { main.showPlugins() }
+        view.findViewById<Button>(R.id.settings_demo).setOnClickListener { DemoDialog(requireActivity()).show() }
+        Demo.active(requireContext())?.let {
+            view.findViewById<TextView>(R.id.settings_demo_status).apply {
+                text = getString(R.string.demo_active, getString(it.title))
+                visibility = View.VISIBLE
+            }
+        }
         view.findViewById<Button>(R.id.settings_add_manual).setOnClickListener { adder.manual() }
         kioskCard = view.findViewById(R.id.settings_kiosk_card)
         view.findViewById<View>(R.id.settings_title).setOnLongClickListener { askTechCode(); true }

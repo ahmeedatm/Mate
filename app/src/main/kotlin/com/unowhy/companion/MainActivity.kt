@@ -68,6 +68,7 @@ import com.unowhy.companion.ui.TabletStatusView
 import com.unowhy.companion.ui.WelcomeView
 import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.errorText
+import com.unowhy.companion.ui.home.Demo
 import com.unowhy.companion.ui.home.Down
 import com.unowhy.companion.ui.home.HomeLayout
 import com.unowhy.companion.ui.home.LinkWatch
@@ -258,7 +259,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         val restored = savedInstanceState?.getString(STATE_MODE)?.let(Mode::of)
-        show(restored ?: Mode.HOME)
+        // Un persona de la démo vient d'être choisi (Réglages > Démo) : on arrive sur son écran.
+        show(Demo.takeArrival(this) ?: restored ?: Mode.HOME)
         // Premier lancement (ou plus aucun ordinateur) : écran de bienvenue.
         if (savedInstanceState == null && Computers.all(this).isEmpty()) welcome.show()
         // Tablette déjà appairée qui n'a jamais vu la visite (mise à jour) : elle la voit une fois.

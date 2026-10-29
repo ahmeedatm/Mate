@@ -164,10 +164,11 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
     }
 
-    /** Appui long : l'éditeur pour une touche perso, sinon la retirer du widget (la touche reste dans le Deck). */
+    /** Appui long : l'éditeur pour une touche perso ou d'une page de touches nommée, sinon la retirer du widget. */
     private fun hold(key: KeyRef) {
         val slot = slotOf(key.id)
         if (slot != null) return host.overlays.editKey(slot) { reload() }
+        pageSlotOf(key.id)?.let { (page, pageSlot) -> return host.overlays.editKey(pageSlot, page) { reload() } }
         AlertDialog.Builder(context)
             .setMessage(context.getString(R.string.widget_keys_remove, key.label))
             .setNegativeButton(R.string.cancel, null)
