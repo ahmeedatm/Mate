@@ -32,6 +32,7 @@ import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.Link
 import com.unowhy.companion.net.PcNotification
 import com.unowhy.companion.remote.RemoteLink
+import com.unowhy.companion.trial.EssaiBackend
 import com.unowhy.companion.trial.Trial
 import com.unowhy.companion.ui.AgentAskOverlay
 import com.unowhy.companion.ui.AgentLight
@@ -288,6 +289,11 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         Kiosk.enter(this)
         Screen.apply(this)
+        // Retour de l'essai : si l'ordinateur est resté sur le backend d'une MR (essai planté), on remet le sien.
+        if (!BuildConfig.TRIAL && Prefs.trialOpened(this)) {
+            Prefs.setTrialOpened(this, false)
+            lifecycleScope.launch { EssaiBackend.restoreOrigin(applicationContext) }
+        }
     }
 
     private fun onBattery(state: Tablet.Battery) {

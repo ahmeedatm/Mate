@@ -1,10 +1,14 @@
 import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
+import { applyEssai, backendState, restoreOrigin } from "../essai-backend.ts";
 import { listUpdates, updateFile } from "../updates.ts";
 
-/** Redémarrage du compagnon et mises à jour de la tablette. */
+/** Redémarrage du compagnon, mises à jour de la tablette et essai du backend d'une MR. */
 export default async function updateRoutes(app: FastifyInstance) {
+  /** Relancé par le lancement automatique (voir /companion/restart) ; après la réponse, pas avant. */
+  const restartSoon = () => setTimeout(() => process.exit(0), 300);
+
   /**
    * Redémarre le compagnon après une mise à jour de ses fichiers : le lancement automatique (boucle de
    * lanceur UnowhyCompanion.exe sur Windows, LaunchAgent sur Mac) le relance quelques secondes plus tard. Sous
@@ -12,8 +16,44 @@ export default async function updateRoutes(app: FastifyInstance) {
    */
   app.post("/companion/restart", async (req) => {
     req.log.info("redémarrage demandé");
-    setTimeout(() => process.exit(0), 300);
+    restartSoon();
     return { ok: true };
+  });
+
+  // --- Essai du backend d'une MR (voir essai-backend.ts) : envoyé par la tablette, jamais téléchargé ici.
+
+  app.get("/companion/backend", async () => backendState());
+
+  app.post<{ Body: Buffer; Querystring: { mr: number; sha256?: string } }>(
+    "/companion/backend/essai",
+    {
+      logLevel: "warn",
+      schema: {
+        querystring: {
+          type: "object",
+          required: ["mr"],
+          additionalProperties: false,
+          properties: { mr: { type: "integer", minimum: 1 }, sha256: { type: "string", pattern: "^[0-9a-fA-F]{64}$" } },
+        },
+      },
+    },
+    async (req, reply) => {
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0) return reply.code(415).send({ error: "Corps application/gzip attendu" });
+      applyEssai(req.body, req.query.mr, req.query.sha256);
+      req.log.info({ mr: req.query.mr }, "backend d'essai posé, redémarrage");
+      restartSoon();
+      return { ok: true };
+    },
+  );
+
+  /** Retour au backend d'origine ; sans essai en cours, rien à faire (et pas de redémarrage). */
+  app.post("/companion/backend/origin", async (req) => {
+    const changed = restoreOrigin();
+    if (changed) {
+      req.log.info("backend d'origine restauré, redémarrage");
+      restartSoon();
+    }
+    return { ok: true, changed };
   });
 
   // --- Mises à jour de la tablette (« serveur Unowhy » simulé, voir updates.ts)

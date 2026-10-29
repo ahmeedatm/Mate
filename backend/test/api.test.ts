@@ -1,12 +1,11 @@
 import assert from "node:assert/strict";
-import { execFile, execFileSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
-import { promisify } from "node:util";
 import { pairingCode, startServer, TOKEN, type TestServer } from "./server.ts";
 
 let server: TestServer;
@@ -231,70 +230,6 @@ describe("mises à jour de la tablette", () => {
 
     const res = await fetch(`${server.url}/updates/file/companion-1.2.4.apk`, { headers: { authorization: `Bearer ${TOKEN}` } });
     assert.equal(await res.text(), "apk 1.2.4");
-  });
-
-  it("updates:essai dépose l'essai du registre à côté de la stable, et refuse un APK abîmé, un jeton absent ou le paquet de la stable", async () => {
-    // Faux paquet générique companion-updates/essai : manifest.json + APK, lus avec le jeton personnel.
-    const apk = "apk essai";
-    const update = {
-      package: "com.unowhy.companion.essai",
-      label: "Companion essai",
-      versionCode: 2170,
-      versionName: "0.0.2-essai.169",
-      file: "companion-0.0.2-essai.169.apk",
-      size: apk.length,
-      sha256: createHash("sha256").update(apk).digest("hex"),
-    };
-    let served = apk;
-    let announced = update;
-    const registry = http.createServer((req, res) => {
-      if (req.headers["private-token"] !== "jeton") return res.writeHead(401).end();
-      if (req.url === "/essai/manifest.json") return res.end(JSON.stringify({ updates: [announced] }));
-      if (req.url === `/essai/${update.file}`) return res.end(served);
-      res.writeHead(404).end();
-    });
-    await new Promise<void>((resolve) => registry.listen(0, "127.0.0.1", resolve));
-    const { port } = registry.address() as { port: number };
-    const run = (env: Record<string, string>) =>
-      promisify(execFile)(process.execPath, ["--import", "tsx", "scripts/updates.ts", "essai"], {
-        cwd: path.resolve(import.meta.dirname, ".."),
-        env: {
-          ...process.env,
-          DATA_DIR: server.dataDir,
-          UPDATES_URL: `http://127.0.0.1:${port}/essai`,
-          GITLAB_TOKEN: "",
-          UPDATE_DEPLOY_TOKEN: "",
-          ...env,
-        },
-      });
-    const announcedOf = async (pkg: string) => (await server.call("GET", "/updates")).json.updates.find((u: any) => u.package === pkg);
-    const companion = () => announcedOf("com.unowhy.companion.essai");
-    const stable = await announcedOf("com.unowhy.companion");
-    try {
-      await assert.rejects(run({}), /Jeton absent/);
-      await assert.rejects(run({ GITLAB_TOKEN: "faux" }), /jeton refusé/);
-      served = "apk abîmé";
-      await assert.rejects(run({ GITLAB_TOKEN: "jeton" }), /SHA-256/);
-      assert.equal(await companion(), undefined, "rien n'est changé");
-
-      // Ancien essai au paquet de la stable : il la remplacerait sur la tablette, sans retour possible.
-      served = apk;
-      announced = { ...update, package: "com.unowhy.companion" };
-      await assert.rejects(run({ GITLAB_TOKEN: "jeton" }), /com\.unowhy\.companion\.essai/);
-      assert.deepEqual(await announcedOf("com.unowhy.companion"), stable, "stable intacte");
-
-      announced = update;
-      await run({ GITLAB_TOKEN: "jeton" });
-      assert.deepEqual(await announcedOf("com.unowhy.companion"), stable, "stable annoncée à côté de l'essai");
-      const added = await companion();
-      assert.equal(added.versionCode, 2170);
-      assert.equal(added.versionName, "0.0.2-essai.169");
-      assert.equal(added.sha256, update.sha256);
-      const res = await fetch(`${server.url}/updates/file/${update.file}`, { headers: { authorization: `Bearer ${TOKEN}` } });
-      assert.equal(await res.text(), apk);
-    } finally {
-      registry.close();
-    }
   });
 });
 

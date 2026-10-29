@@ -9,8 +9,8 @@ push / MR) et sur la ligne « Ne rien commit sans demande explicite » du CLAUDE
   dépôt : titre en français, sans préfixe, puis 1 à 3 lignes sur le pourquoi.
 - **Push** de la branche, et à chaque correction.
 - **MR** : création, mise à jour, suivi du pipeline. Tout passe par `/ship`.
-- **Fusion** : jamais d'auto-merge. Pipeline vert → mise à jour d'essai publiée pour la tablette (et compagnon
-  du Mac si `backend/` change), l'utilisateur la teste, et je fusionne seulement après son go (`/ship`, étapes 6-7).
+- **Fusion** : jamais d'auto-merge. Pipeline vert → mise à jour d'essai publiée pour la tablette (avec le
+  backend de la MR si `backend/` change), l'utilisateur la teste, et je fusionne seulement après son go (`/ship`, étapes 6-7).
 - **`/ship` se lance seul** dès qu'une étape est terminée et vérifiée, sans attendre qu'on le demande.
   Un hook `Stop` le rappelle s'il reste du travail non livré à la fin d'un tour.
 - Pipeline rouge : lire le log du job, corriger, repousser. Sans attendre ni demander.

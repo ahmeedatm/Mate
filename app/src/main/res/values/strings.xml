@@ -566,9 +566,6 @@
     <string name="updates_checking">Recherche des mises à jour…</string>
     <string name="updates_none">Aucune mise à jour annoncée.</string>
     <string name="updates_row_title">%1$s · %2$s</string>
-    <string name="updates_row_title_channel">%1$s · %2$s · %3$s</string>
-    <string name="updates_channel_main">main</string>
-    <string name="updates_channel_trial">essai</string>
     <string name="updates_row_newer">Installée : %1$s · %2$s</string>
     <string name="updates_row_absent">Pas installée · %1$s</string>
     <string name="updates_row_installed">Version installée.</string>
@@ -600,6 +597,20 @@
     <string name="duration_seconds">%1$d s</string>
     <string name="duration_minutes">%1$d min</string>
     <string name="updates_downloading_short">Téléchargement…</string>
+    <string name="updates_source_trials">essais de MR</string>
+    <string name="essais_title">Essais de MR</string>
+    <string name="essais_none">Aucun essai de MR publié.</string>
+    <string name="essai_row_title">!%1$d %2$s</string>
+    <string name="essai_row_version">%1$s · %2$s</string>
+    <string name="essai_row_backend">backend de l\'ordinateur remplacé</string>
+    <string name="essai_row_no_backend">sans backend</string>
+    <string name="essai_row_absent">Pas installé.</string>
+    <string name="essai_row_replace">Remplace l\'essai installé (%1$s).</string>
+    <string name="essai_row_downgrade">Plus ancien que l\'essai installé (%1$s) : désinstallé d\'abord, puis installé.</string>
+    <string name="update_uninstall_failed">Impossible de désinstaller l\'essai installé (code %1$d).</string>
+    <string name="trial_syncing">Backend de l\'ordinateur en cours de changement…</string>
+    <string name="trial_backend_gone">Cet essai n\'est plus publié : son backend ne peut plus être envoyé à l\'ordinateur.</string>
+    <string name="trial_backend_os">Cet essai n\'a pas de backend pour cet ordinateur (%1$s).</string>
     <string name="kiosk_title">Mode kiosque</string>
     <string name="kiosk_off">Inactif : la tablette n\'a pas été préparée en kiosque (docs/kiosque.md).</string>
     <!-- Premier lancement (WelcomeView) et écrans sans ordinateur -->
@@ -981,5 +992,5 @@
     <!-- Appli d'essai depuis une MR, installée à côté de la stable (trial/Trial.kt) -->
     <string name="trial_open">Ouvrir l\'essai</string>
     <string name="trial_back">Revenir à la stable</string>
-    <string name="trial_hint">Version d\'essai d\'une MR, installée à côté du Companion. Mises à jour, WiFi et kiosque se règlent dans le Companion.</string>
+    <string name="trial_hint">Version d\'essai d\'une MR, installée à côté du Companion. Mises à jour, WiFi et kiosque se règlent dans le Companion. Le backend de l\'ordinateur revient à l\'origine quand tu reviens à la stable.</string>
 </resources>

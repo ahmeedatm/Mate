@@ -2,7 +2,8 @@
 # En MR, seuls les jobs de la zone touchée tournent (rules:changes, voir docs/developpement.md, section CI) ;
 # sur main et sur un tag, tout tourne.
 # Tag vX.Y.Z : mêmes tests, puis installeurs de l'ordinateur, APK signé et release GitLab.
-# Branche protégée essai/* : seulement l'APK signé d'essai, job manuel (docs/developpement.md, section Release).
+# Branche protégée essai/mr-<iid> : l'APK signé d'essai (job manuel) et, si backend/ change, l'archive du backend, publiés
+# dans le paquet commun companion-updates/essais, une entrée par MR (docs/developpement.md, section Release).
 
 workflow:
   rules:
@@ -257,8 +258,9 @@ updates:
 # Essai de l'appli tablette depuis une MR, sans fusion ni tag : branche protégée essai/mr-<iid> poussée depuis la branche
 # de la MR, puis job manuel. Version X.Y.Z-essai.N (X.Y.Z = dernier tag de la branche, N = numéro du pipeline) : code
 # entre ce tag et le suivant. Version en -essai.N = autre appli, com.unowhy.companion.essai « Companion essai »
-# (app/build.gradle.kts), installée par la stable à côté d'elle : la stable reste device owner, on revient à elle sans
+# (app/build.gradle.kts), installée par la stable à côté d'elle : la stable reste device owner et revient à elle sans
 # réinstaller. Branche non protégée : pas de job (clé invisible).
+# dist/backend-changed : backend/ diffère de main, donc essai-backend fabrique l'archive du backend de la MR.
 essai-android:
   extends: .android
   stage: build
@@ -276,28 +278,51 @@ essai-android:
       || { echo "Aucun tag vX.Y.Z dans l'historique de la branche"; exit 1; }
     - VERSION=${TAG#v}-essai.$CI_PIPELINE_IID
     - !reference [.android-signed, script]
+    - git fetch --quiet origin main:refs/remotes/origin/main
+    - CHANGED=$(git diff --name-only origin/main...HEAD -- backend/)
+    - test -z "$CHANGED" || touch dist/backend-changed
   # APK signé par la clé de release : gardé peu de temps.
   artifacts:
     paths:
       - dist/companion-*
+      - dist/backend-changed
     expire_in: 1 day
 
-# Paquet companion-updates/essai, jamais latest (aucune tablette ne le lit seule). Un seul essai : le dernier remplace.
-essai-updates:
-  stage: release
-  image: node:22.22-bookworm-slim
+# Archive du backend de la MR (sans node ni lanceur Windows), pour les deux plateformes : la tablette l'envoie à
+# l'ordinateur (backend/src/essai-backend.ts). Seulement si backend/ diffère de main.
+essai-backend:
+  extends: .node
+  stage: build
   needs: [essai-android]
   rules:
     - if: $CI_COMMIT_BRANCH =~ /^essai\// && $CI_COMMIT_REF_PROTECTED == "true"
-  variables:
-    UPDATES_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/companion-updates/essai
+  before_script: []
   script:
-    - node scripts/updates-publish.mjs dist updates
     - |
-      echo "Essai publié. Sur l'ordinateur de la tablette, dans backend/ (GITLAB_TOKEN ou UPDATE_DEPLOY_TOKEN dans backend/.env) :"
-      echo "  npm run updates:essai                  # compagnon lancé depuis le dépôt"
-      echo "  DATA_DIR=paquet npm run updates:essai  # compagnon installé par paquet"
-      echo "Puis sur la tablette : Réglages > Mises à jour."
+      test -f dist/backend-changed || { echo "backend/ identique à main, pas d'archive backend."; exit 0; }
+    - cd backend
+    - npm ci --prefer-offline --no-audit --no-fund
+    - npm run package -- essai
+  artifacts:
+    paths:
+      - dist/backend-*.tar.gz
+    expire_in: 1 day
+
+# Paquet companion-updates/essais, jamais latest (aucune tablette ne le lit seule) : une entrée par MR dans manifest.json,
+# la MR ne remplace que la sienne. resource_group : les publications se suivent (lecture puis écriture du manifest).
+# Titre de la MR : variable MR_TITLE du pipeline, posée par .claude/skills/ship/essai.sh.
+essai-updates:
+  stage: release
+  image: node:22.22-bookworm-slim
+  needs: [essai-android, essai-backend]
+  resource_group: essais
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^essai\// && $CI_COMMIT_REF_PROTECTED == "true"
+  variables:
+    UPDATES_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/companion-updates/essais
+  script:
+    - node scripts/updates-publish.mjs --essai "${CI_COMMIT_BRANCH#essai/mr-}" dist updates
+    - echo "Essai publié. Sur la tablette, Réglages > Mises à jour > Rechercher, puis choisir la MR."
 
 # Release GitLab : liens vers les fichiers des jobs du tag, pas de copie dans le registre (le zip Mac y reçoit un 500
 # avec le jeton du job). Fichiers gardés : dernière pipeline réussie du tag (« Keep artifacts from most recent successful jobs »).
