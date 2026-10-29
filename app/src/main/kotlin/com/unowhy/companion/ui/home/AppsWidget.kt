@@ -10,7 +10,7 @@ import com.unowhy.companion.ui.themeBool
 /**
  * Les applis de la page Apps du Deck, sur un profil : toucher lance l'appli (ou propose ses fenêtres si elle en a
  * plusieurs), appui long = ses fenêtres et « Retirer », bouton du titre = toutes les applis de l'ordinateur (lancer, épingler ici). Seule
- * la grille garde l'appui long : sur le titre ou la marge, il entre en mode Modifier.
+ * la grille garde l'appui long : sur le titre ou la marge, le widget s'agrandit.
  */
 class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     override val view = LinearLayout(context).asCard(12).apply { orientation = LinearLayout.VERTICAL }
@@ -32,6 +32,16 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         // agrandit la ligne de titre : 11 dp en haut au lieu de 24 ; en bas, la place reste aux noms des applis.
         if (placed.size == WidgetSize.V && themeBool(context, R.attr.c_cadran)) view.setPadding(view.dp(24), view.dp(11), view.dp(24), view.dp(12))
         section.addTo(view)
+        // Bandeau sur la ligne fine (92 dp) : pas la place pour le titre au-dessus des applis.
+        view.addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
+            val short = bottom - top in 1 until view.dp(SHORT_DP)
+            if (short != section.headerHidden) view.post { section.headerHidden = short }
+        }
+    }
+
+    private companion object {
+        /** Hauteur sous laquelle le titre laisse la place aux applis. */
+        const val SHORT_DP = 130
     }
 
     override suspend fun load() = section.load()
