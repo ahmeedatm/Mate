@@ -13,7 +13,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.unowhy.unomate.Computers
 import com.unowhy.unomate.R
-import com.unowhy.unomate.net.BackendClient
 import com.unowhy.unomate.net.DeckPage
 import com.unowhy.unomate.net.DeckTile
 import com.unowhy.unomate.net.runCatchingCancellable
@@ -41,7 +40,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     private val grid by lazy {
         TileGridView(context, host.scope).apply {
-            onTap = { cell, _ -> if (cell.add) showAddChoice() else run(cell.key.id) }
+            onTap = { cell, _ -> if (cell.add) showAddChoice() else run(cell.key) }
             onHold = { cell, _ -> hold(cell.key) }
             ownsLongPress = true
         }
@@ -139,7 +138,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         Look.pressSpring(tile)
         tile.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-            run(key.id)
+            run(key)
         }
         tile.setOnLongClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
@@ -152,15 +151,15 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
 
     /** Lance la touche. Une appli à plusieurs fenêtres ne se lance pas : l'ordinateur rend ses fenêtres, on les propose. */
-    private fun run(id: String) {
+    private fun run(key: KeyRef) {
         host.scope.launch {
-            val result = runCatchingCancellable { BackendClient(context).deck.runTile(id) }
+            val result = runTileSpoken(context, key.id, key.label)
             result.onFailure {
                 Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show()
                 return@launch
             }
             val windows = result.getOrNull()?.windows ?: return@launch
-            val tile = runCatchingCancellable { host.deckPages() }.getOrNull()?.flatMap { it.tiles }?.firstOrNull { it.id == id } ?: return@launch
+            val tile = runCatchingCancellable { host.deckPages() }.getOrNull()?.flatMap { it.tiles }?.firstOrNull { it.id == key.id } ?: return@launch
             host.overlays.windows(tile, windows)
         }
     }

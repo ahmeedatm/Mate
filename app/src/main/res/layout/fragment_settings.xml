@@ -262,6 +262,22 @@
                 android:text="@string/a11y_read_banners_hint"
                 android:textColor="?attr/c_text_dim"
                 android:textSize="14sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_speak_actions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/a11y_speak_actions"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/a11y_speak_actions_hint"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
         </LinearLayout>
 
         <!-- Animations, famille par famille (Prefs.animation, ui/Look.on) ; interrupteurs ajoutés par SettingsFragment.

@@ -54,6 +54,7 @@ object Prefs {
     private const val KEY_LEGIBLE_FONT = "legible_font"
     private const val KEY_REDUCE_MOTION = "reduce_motion"
     private const val KEY_READ_BANNERS = "read_banners"
+    private const val KEY_SPEAK_ACTIONS = "speak_actions"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -265,6 +266,13 @@ object Prefs {
 
     fun setReadBanners(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_READ_BANNERS, value).apply()
+    }
+
+    /** Accessibilité : chaque touche lancée depuis la tablette est annoncée à voix haute (ui/ActionSpeech). Désactivé par défaut. */
+    fun speakActions(context: Context): Boolean = prefs(context).getBoolean(KEY_SPEAK_ACTIONS, false)
+
+    fun setSpeakActions(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_SPEAK_ACTIONS, value).apply()
     }
 
     /** MR de l'essai installé par la stable (0 : aucun, ou installé autrement) et son backend : « Ouvrir l'essai » les relit. */

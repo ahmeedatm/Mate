@@ -334,6 +334,28 @@ class PersonasTest {
     }
 
     @Test
+    fun `Sam allume le retour parle, quitter rend la valeur d'avant`() {
+        assertEquals(true, Persona.SAM.speakActions)
+        for (persona in Persona.entries - Persona.SAM) assertNull(persona.id, persona.speakActions)
+
+        val context = FakeContext()
+        assertFalse(Prefs.speakActions(context))
+        Demo.start(context, Persona.SAM, layout(Persona.SAM), cadran = true)
+        assertTrue(Prefs.speakActions(context))
+        Demo.start(context, Persona.NOUR, layout(Persona.NOUR), cadran = true)
+        assertFalse(Prefs.speakActions(context))
+        Demo.start(context, Persona.SAM, layout(Persona.SAM), cadran = true)
+        assertTrue(Demo.quit(context, cadran = true))
+        assertFalse(Prefs.speakActions(context))
+
+        // Allumé avant la démo : il le reste après.
+        Prefs.setSpeakActions(context, true)
+        Demo.start(context, Persona.SAM, layout(Persona.SAM), cadran = true)
+        assertTrue(Demo.quit(context, cadran = true))
+        assertTrue(Prefs.speakActions(context))
+    }
+
+    @Test
     fun `l'arrivee sur l'Accueil se lit une seule fois`() {
         val context = FakeContext()
         assertNull(Demo.takeArrival(context))

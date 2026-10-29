@@ -26,6 +26,7 @@ import com.unowhy.unomate.net.ComputerWindow
 import com.unowhy.unomate.net.DeckTile
 import com.unowhy.unomate.net.OpenApp
 import com.unowhy.unomate.net.OpenWindows
+import com.unowhy.unomate.ui.ActionSpeech
 import com.unowhy.unomate.ui.Look
 import com.unowhy.unomate.ui.errorText
 import com.unowhy.unomate.ui.showForTyping
@@ -193,17 +194,21 @@ class VoiceControl(
             // Texte à copier sur l'ordinateur : jamais dans le journal (ni la phrase entendue, qui le contient).
             if (command is VoiceCommand.CopyToComputer) android.util.Log.i("Voice", "copie sur l'ordi (${command.text.length} caractères)")
             else android.util.Log.i("Voice", "heard $candidates → $command")
+            var failed = false
             val answer = if (command == null) {
                 Answer(activity.getString(R.string.voice_not_understood), speak = true)
             } else {
                 try {
                     run(command)
                 } catch (e: Exception) {
+                    failed = true
                     Answer(activity.errorText(e))
                 }
             }
             activity.showBanner(if (command is VoiceCommand.Help) answer.text else "« $said » · ${answer.text}", if (command is VoiceCommand.Help) 15 else 6)
             if (answer.speak) Speaker.speak(answer.text)
+            // Touche du Deck lancée à la voix : même retour parlé que d'un toucher (Réglages > Accessibilité).
+            else if (command is VoiceCommand.Tile) ActionSpeech.announce(activity, command.tile.label, ok = !failed)
         }.invokeOnCompletion { activity.runOnUiThread(::idle) }
     }
 
