@@ -205,6 +205,7 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         shown = issues
         board.removeAllViews()
         showStatus(if (columns.isEmpty()) context.getString(R.string.jira_empty) else null)
+        if (columns.isNotEmpty()) Look.revealOnce(board)
         for ((i, column) in columns.withIndex()) {
             val view = columnView(column)
             board.addView(view, LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { if (i > 0) marginStart = dp(COLUMN_GAP_DP) })

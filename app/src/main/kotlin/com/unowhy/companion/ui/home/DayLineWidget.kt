@@ -2,6 +2,8 @@ package com.unowhy.companion.ui.home
 
 import android.content.Context
 import android.view.View
+import com.unowhy.companion.AnimFamily
+import com.unowhy.companion.ui.Look
 
 /** Ligne du jour de l'Accueil (DA Cadran) : [DayLineView] sans fond, qui avance d'un battement chaque minute. */
 class DayLineWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
@@ -25,5 +27,8 @@ class DayLineWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     }
 
     /** Arrivée de l'écran, appelée par l'Accueil après chaque retour sur la page. */
-    fun arrive() = line.arrive()
+    /** Arrivée de l'Accueil : la ligne se dessine, sauf si l'arrivée des widgets est coupée (Réglages > Animations). */
+    fun arrive() {
+        if (Look.on(line.context, AnimFamily.HOME)) line.arrive()
+    }
 }

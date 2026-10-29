@@ -894,6 +894,19 @@
     <!-- Accessibilité (lot 2) : aides à la lecture, dans la carte Accessibilité de COMP-50 (ui/ReadingAids.kt) -->
     <string name="a11y_legible_font">Police lisible</string>
     <string name="a11y_legible_font_hint">Atkinson Hyperlegible, lettres faciles à distinguer, un peu plus espacées</string>
+    <string name="anim_title">Animations</string>
+    <string name="anim_hint">Coupe celles qui te gênent ou ralentissent la tablette. « Réduire les animations » (Accessibilité) les coupe toutes.</string>
+    <string name="anim_hint_reduced">Toutes coupées par « Réduire les animations » (carte Accessibilité).</string>
+    <string name="anim_navigation">Changement d\'écran</string>
+    <string name="anim_navigation_hint">L\'écran glisse, et suit le doigt quand tu balaies vers le haut ou le bas</string>
+    <string name="anim_home">Arrivée des widgets</string>
+    <string name="anim_home_hint">Les widgets de l\'Accueil arrivent un à un ; coupée, l\'Accueil s\'affiche plus vite</string>
+    <string name="anim_dialogs">Boîtes de dialogue</string>
+    <string name="anim_dialogs_hint">Elles apparaissent en fondu, avec un léger zoom</string>
+    <string name="anim_alerts">Alertes</string>
+    <string name="anim_alerts_hint">La cloche sonne, le bandeau glisse, le point de l\'ordinateur réagit</string>
+    <string name="anim_details">Petits détails</string>
+    <string name="anim_details_hint">Rebonds, contenus qui apparaissent en fondu, dernières secondes du Pomodoro</string>
     <string name="a11y_reduce_motion">Réduire les animations</string>
     <string name="a11y_reduce_motion_hint">Plus rien ne bouge en continu (tubes Rétro, voyants des agents), pas de glissés ni de rebonds</string>
     <string name="a11y_read_banners">Lire les bandeaux à voix haute</string>

@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.widget.ImageViewCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.unowhy.companion.AnimFamily
 import com.unowhy.companion.BuildConfig
 import com.unowhy.companion.Computer
 import com.unowhy.companion.Computers
@@ -159,6 +160,7 @@ class SettingsFragment : Fragment() {
         setUpRail(view)
         setUpAccessibility(view)
         setUpReadingAids(view)
+        setUpAnimations(view)
         renderComputers()
         renderWifi()
         renderSwitchApp()
@@ -451,6 +453,39 @@ class SettingsFragment : Fragment() {
         view.findViewById<SwitchCompat>(R.id.settings_read_banners).apply {
             isChecked = Prefs.readBanners(ctx)
             setOnCheckedChangeListener { _, checked -> Prefs.setReadBanners(ctx, checked) }
+        }
+    }
+
+    /**
+     * Carte Animations : un interrupteur par famille (lu au moment de jouer, rien à relancer). Avec Réduire les
+     * animations, ils sont grisés : tout est déjà coupé.
+     */
+    private fun setUpAnimations(view: View) {
+        val ctx = requireContext()
+        val card = view.findViewById<LinearLayout>(R.id.settings_animations)
+        val reduced = Prefs.reduceMotion(ctx)
+        if (reduced) view.findViewById<TextView>(R.id.settings_animations_hint).setText(R.string.anim_hint_reduced)
+        val rows = listOf(
+            AnimFamily.NAVIGATION to (R.string.anim_navigation to R.string.anim_navigation_hint),
+            AnimFamily.HOME to (R.string.anim_home to R.string.anim_home_hint),
+            AnimFamily.DIALOGS to (R.string.anim_dialogs to R.string.anim_dialogs_hint),
+            AnimFamily.ALERTS to (R.string.anim_alerts to R.string.anim_alerts_hint),
+            AnimFamily.DETAILS to (R.string.anim_details to R.string.anim_details_hint),
+        )
+        for ((family, texts) in rows) {
+            card.addView(SwitchCompat(ctx).apply {
+                setText(texts.first)
+                textSize = 16f
+                minHeight = ctx.dp(48)
+                isChecked = Prefs.animation(ctx, family)
+                isEnabled = !reduced
+                setOnCheckedChangeListener { _, checked -> Prefs.setAnimation(ctx, family, checked) }
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = ctx.dp(12) })
+            card.addView(TextView(ctx).apply {
+                setText(texts.second)
+                textSize = 14f
+                setTextColor(themeColor(ctx, R.attr.c_text_dim))
+            })
         }
     }
 

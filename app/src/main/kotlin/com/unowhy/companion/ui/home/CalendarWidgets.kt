@@ -18,6 +18,7 @@ import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.CalendarEvent
 import com.unowhy.companion.ui.CallSession
+import com.unowhy.companion.ui.Look
 import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.themeBool
@@ -220,6 +221,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         todayCount.text = if (today > 0) context.getString(R.string.next_today, today) else ""
         bigTime.text = upcoming?.let { timeFormat.format(Date(it.startMs)) } ?: ""
         after.removeAllViews()
+        if (upcoming != null) Look.revealOnce(after)
         val following = events.filter { !it.allDay && it.endMs > now && it !== upcoming }.take(if (cadran) FOLLOWING_CADRAN else 2)
         // Cadran : sans suivant, ni filet ni bloc ; avec, autant de lignes que la place en laisse (fitFollowing).
         val show = if (cadran && following.isEmpty()) View.GONE else View.VISIBLE
@@ -305,6 +307,7 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         val events = host.events
         list.removeAllViews()
         if (events.isEmpty()) return list.addView(note(R.string.agenda_empty))
+        Look.revealOnce(list)
         // Un événement commencé avant aujourd'hui (journée entière sur plusieurs jours) est rangé aujourd'hui.
         val byDay = events.groupBy { daysFrom(now, it.startMs).coerceAtLeast(0) }.toSortedMap()
             .let { if (today) it.headMap(1) else it }

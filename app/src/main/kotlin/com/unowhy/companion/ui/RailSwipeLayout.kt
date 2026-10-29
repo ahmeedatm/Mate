@@ -1,5 +1,6 @@
 package com.unowhy.companion.ui
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AttributeSet
 import android.view.MotionEvent
@@ -7,6 +8,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import androidx.core.view.isVisible
 import kotlin.math.abs
 
 /**
@@ -18,6 +20,9 @@ import kotlin.math.abs
 class RailSwipeLayout @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : FrameLayout(context, attrs) {
     var swipeEnabled = false
     var onSwipe: ((Int) -> Unit)? = null
+
+    /** Une entrée attend dans ce sens : l'écran suit le doigt, sinon il résiste (SwipeFollow). */
+    var canSwipe: ((Int) -> Boolean)? = null
 
     private val slop = ViewConfiguration.get(context).scaledTouchSlop
     private var downX = 0f
@@ -51,13 +56,30 @@ class RailSwipeLayout @JvmOverloads constructor(context: Context, attrs: Attribu
         return false
     }
 
+    /**
+     * Geste repris (onInterceptTouchEvent) : l'écran affiché suit le doigt, puis change ou revient en place. Pas de
+     * performClick : ce n'est pas un clic, et chaque écran reste atteignable par les boutons de la barre (TalkBack).
+     */
+    @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(ev: MotionEvent): Boolean {
-        if (ev.actionMasked == MotionEvent.ACTION_UP) {
-            val dy = ev.y - downY
-            if (abs(dy) > height / 8) onSwipe?.invoke(if (dy < 0) 1 else -1)
+        val shown = shownChild() ?: return true
+        val dy = ev.y - downY
+        val delta = if (dy < 0) 1 else -1
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_MOVE -> SwipeFollow.drag(shown, dy, canSwipe?.invoke(delta) == true)
+            MotionEvent.ACTION_UP -> if (abs(dy) > height / 8 && canSwipe?.invoke(delta) == true) {
+                SwipeFollow.reset(shown)
+                onSwipe?.invoke(delta)
+            } else {
+                SwipeFollow.release(shown)
+            }
+            MotionEvent.ACTION_CANCEL -> SwipeFollow.release(shown)
         }
         return true
     }
+
+    /** L'écran du mode affiché : les autres sont masqués (GONE) par MainActivity.show. */
+    private fun shownChild(): View? = (childCount - 1 downTo 0).map(::getChildAt).firstOrNull { it.isVisible }
 
     private fun scrollsAt(group: ViewGroup, x: Float, y: Float, direction: Int): Boolean {
         for (i in group.childCount - 1 downTo 0) {

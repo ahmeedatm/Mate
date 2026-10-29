@@ -27,6 +27,9 @@ interface Navigation {
     /** Balayage vertical : ouvre l'entrée voisine de la barre (+1 suivante, -1 précédente) ; faux s'il n'y en a pas. */
     fun step(delta: Int): Boolean = false
 
+    /** Une entrée attend dans ce sens : l'écran suit le doigt (sinon il résiste, voir [SwipeFollow]). */
+    fun canStep(delta: Int): Boolean = false
+
     /** Temps restant du Pomodoro à la place du libellé Focus, visible depuis n'importe quel écran. */
     fun showFocus(state: FocusTimer.State)
 
