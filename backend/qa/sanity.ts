@@ -146,6 +146,27 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "réunion en cours (profil Réunion de la tablette)",
+      run: async () => {
+        // Deck V2 : la veille des réunions (src/meeting-watch.ts) lit les applis en appel comme /deck/live.
+        // L'ordre meeting n'est poussé que par l'ordinateur : refusé s'il vient de l'extérieur.
+        expectStatus(
+          await call("POST", "/tablet/command", { type: "meeting", state: "start", app: "Sanity" }),
+          400,
+          "ordre meeting de l'extérieur",
+        );
+        const live = await call("GET", "/deck/live");
+        // Hors Mac et Windows, le pilotage répond 501 : pas de veille des réunions.
+        if (!controlled()) {
+          expectStatus(live, 501, "/deck/live hors Mac et Windows");
+          return "pas de pilotage ici (501)";
+        }
+        expectStatus(live, 200, "/deck/live");
+        expect(Array.isArray(live.json.apps) && Array.isArray(live.json.open), "/deck/live sans listes apps et open");
+        return live.json.apps.length ? `en appel : ${live.json.apps.join(", ")}` : "aucun appel en cours";
+      },
+    },
+    {
       name: "touches perso au-delà de 14",
       run: async () => {
         const slot = 14;

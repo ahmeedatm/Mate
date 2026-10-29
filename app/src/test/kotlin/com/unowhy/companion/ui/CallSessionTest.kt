@@ -104,4 +104,28 @@ class CallSessionTest {
         assertEquals(listOf("r-2"), fallback.tiles.map { it.id })
         assertNull(CallSession.fallbackPage(pages.take(4)))
     }
+
+    @Test
+    fun `appel de l'ordinateur fini pendant une coupure, la relecture sans appel le termine`() {
+        session.start("Discord")
+        assertTrue(session.endsOnResync(emptyList()))
+        assertFalse(session.endsOnResync(listOf("Discord")))
+    }
+
+    @Test
+    fun `reunion rejointe sans detection, la relecture ne la termine pas`() {
+        session.start("Zoom", endAtMs = 9_000L)
+        assertFalse(session.endsOnResync(emptyList()))
+        session.end()
+        assertFalse(session.endsOnResync(emptyList()))
+    }
+
+    @Test
+    fun `secours micro, seulement une commande systeme, jamais un bouton d'appli`() {
+        val withPress = listOf(
+            page("Réunion", "Microsoft Teams", meeting = true, tiles = listOf(DeckTile("m-1", "Micro", "press", null, null, symbol = "mic_off"))),
+            page("Raccourcis", null, tiles = listOf(DeckTile("r-2", "Couper le micro", "system", null, null, symbol = "mic_off"))),
+        )
+        assertEquals(listOf("r-2"), CallSession.fallbackPage(withPress)!!.tiles.map { it.id })
+    }
 }

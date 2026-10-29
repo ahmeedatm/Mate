@@ -45,6 +45,12 @@ class CallSession(private val now: () -> Long = System::currentTimeMillis) {
         return true
     }
 
+    /**
+     * Retour en ligne, l'ordinateur ne voit plus d'appel : un appel qu'il avait signalé (sans heure de fin) a fini pendant
+     * la coupure, son ordre `end` s'est perdu.
+     */
+    fun endsOnResync(live: List<String>): Boolean = active && endAtMs == null && live.isEmpty()
+
     /** Passer sur Réunion ? Jamais pendant une saisie ni dans un écran plein (Caméra, mode Modifier). */
     fun shouldSwitch(typing: Boolean, fullScreen: Boolean): Boolean = active && !typing && !fullScreen
 
@@ -70,7 +76,8 @@ class CallSession(private val now: () -> Long = System::currentTimeMillis) {
 
         /** Appli sans page (Meet, Zoom, Webex) : ce que l'ordinateur sait faire partout, la touche « Couper le micro ». */
         fun fallbackPage(pages: List<DeckPage>): DeckPage? {
-            val tiles = pages.flatMap { it.tiles }.filter { it.symbol == "mic_off" }.distinctBy { it.id }.take(1)
+            // Commande système seulement : « Micro » de Teams ou « Couper mon micro » de Discord appuient dans leur appli.
+            val tiles = pages.flatMap { it.tiles }.filter { it.symbol == "mic_off" && it.type == "system" }.distinctBy { it.id }.take(1)
             return if (tiles.isEmpty()) null else DeckPage("Réunion", tiles, false, false, false, null, false, true, false)
         }
     }

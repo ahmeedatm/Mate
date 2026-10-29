@@ -1,8 +1,10 @@
 package com.unowhy.companion.ui
 
 import com.unowhy.companion.Mode
+import com.unowhy.companion.Prefs
 import com.unowhy.companion.ui.home.HomeLayout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 class RailModelTest {
@@ -72,5 +74,22 @@ class RailModelTest {
     fun `un profil cache derriere More selectionne More`() {
         val entries = RailModel.entries(HomeLayout(mutableListOf(), 7), inCall = false)
         assertEquals(entries.indexOf(RailEntry.More), RailModel.selected(entries, Mode.HOME, page = 6))
+    }
+
+    @Test
+    fun `l'instantane de la barre change quand un profil est renomme sur place`() {
+        val l = layout()
+        val before = RailModel.snapshot(l, inCall = false, tools = Prefs.RAIL_TOOLS, labels = true)
+        l.renameProfile(1, "Mon Deck")
+        assertNotEquals(before, RailModel.snapshot(l, inCall = false, tools = Prefs.RAIL_TOOLS, labels = true))
+    }
+
+    @Test
+    fun `l'instantane change quand le Deck est supprime ou qu'un appel commence`() {
+        val l = layout()
+        val before = RailModel.snapshot(l, inCall = false, tools = Prefs.RAIL_TOOLS, labels = true)
+        assertNotEquals(before, RailModel.snapshot(l, inCall = true, tools = Prefs.RAIL_TOOLS, labels = true))
+        l.removeProfile(l.deckProfile)
+        assertNotEquals(before, RailModel.snapshot(l, inCall = false, tools = Prefs.RAIL_TOOLS, labels = true))
     }
 }

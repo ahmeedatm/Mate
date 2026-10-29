@@ -44,6 +44,10 @@ class ProfileRail(
     private var focus: String? = null
     private var pendingTasks = 0
     private var placed = false
+
+    /** Ce que la barre montre : elle ne se redessine que si la disposition, l'appel ou les réglages changent. */
+    private var drawn: RailModel.Snapshot? = null
+    private var waitingLayout = false
     private val fontRegular = themeFont(activity, R.attr.c_font_regular)
     private val fontMedium = themeFont(activity, R.attr.c_font_medium)
     private var marked = -1
@@ -56,7 +60,7 @@ class ProfileRail(
     }
 
     override fun showProfiles(layout: HomeLayout, page: Int, inCall: Boolean) {
-        val structure = this.layout !== layout || this.inCall != inCall || names() != names(layout)
+        val structure = drawn != RailModel.snapshot(layout, inCall, Prefs.railTools(activity), Prefs.railLabels(activity))
         val callArrives = inCall && !this.inCall
         this.layout = layout
         this.page = page
@@ -93,8 +97,6 @@ class ProfileRail(
 
     override fun showLink(link: Link) = renderLink(activity, statusDot, statusName, status, link, offline = R.attr.c_text_faint)
 
-    private fun names(of: HomeLayout = layout) = of.names.toList() to listOf(of.homeProfile, of.deckProfile, of.callProfile, of.gameProfile)
-
     /** Recrée les entrées (profils ajoutés, renommés, retirés, appel commencé ou fini). */
     override fun applySettings() = render()
 
@@ -107,6 +109,7 @@ class ProfileRail(
 
     private fun render() {
         val labels = Prefs.railLabels(activity)
+        drawn = RailModel.snapshot(layout, inCall, Prefs.railTools(activity), labels)
         talk.findViewById<View>(R.id.rail_talk_label).visibility = if (labels) View.VISIBLE else View.GONE
         statusName.visibility = if (labels) View.VISIBLE else View.GONE
         entries = RailModel.entries(layout, inCall, Prefs.railTools(activity))
@@ -214,7 +217,17 @@ class ProfileRail(
         }
         // Avant la première mise en page, les positions ne sont pas connues : on place sans animer, après la mesure.
         if (target.height == 0) {
-            target.post { mark(animate = false) }
+            // Barre pas encore mesurée (ou masquée par le clavier) : on attend sa prochaine mise en page, une fois.
+            if (!waitingLayout) {
+                waitingLayout = true
+                bar.addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
+                    override fun onLayoutChange(v: View, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or: Int, ob: Int) {
+                        bar.removeOnLayoutChangeListener(this)
+                        waitingLayout = false
+                        mark(animate = false)
+                    }
+                })
+            }
             return
         }
         // Le repère se centre sur l'entrée (icône et libellé), au bord gauche.

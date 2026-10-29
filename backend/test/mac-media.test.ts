@@ -44,14 +44,21 @@ describe("lecture en cours (Mac)", () => {
     assert.equal(s.durationMs, 63_161);
   });
 
-  it("titre générique sans site connu : onglet actif et domaine du site", () => {
+  it("titre générique sans site connu : rien n'est montré d'un onglet quelconque (confidentialité)", () => {
     const tabs = [
-      { app: "Safari", url: "https://radio.example.fr/", tabTitle: "Autre navigateur", active: true },
-      { app: "Google Chrome", url: "https://www.radiofrance.fr/fip", tabTitle: "FIP en direct", active: true },
+      { app: "Google Chrome", url: "https://intranet.example.fr/rh/salaires", tabTitle: "Grille des salaires 2027", active: true },
+    ];
+    assert.deepEqual(enrichBrowserSession(generic, tabs), generic);
+  });
+
+  it("plusieurs sites connus : l'onglet actif d'abord", () => {
+    const tabs = [
+      { app: "Google Chrome", url: "https://www.youtube.com/watch?v=a", tabTitle: "Vieux clip - YouTube", active: false },
+      { app: "Google Chrome", url: "https://www.twitch.tv/x", tabTitle: "Live du soir - Twitch", active: true },
     ];
     const s = enrichBrowserSession(generic, tabs);
-    assert.equal(s.title, "FIP en direct");
-    assert.equal(s.name, "radiofrance.fr");
+    assert.equal(s.name, "Twitch");
+    assert.equal(s.title, "Live du soir");
   });
 
   it("un vrai titre (Spotify, YouTube avec Media Session) reste tel quel", () => {

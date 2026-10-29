@@ -256,4 +256,18 @@ class TileLogicTest {
         assertNull(TileIcons.drawable("fusee"))
         assertNull(TileIcons.drawable(null))
     }
+
+    @Test
+    fun `touches de depart, les essentielles bureau d'abord, quel que soit l'ordre de la page`() {
+        val tiles = listOf(
+            DeckTile("r-0", "Play / Pause", "media", null, null, symbol = "play_pause"),
+            DeckTile("r-1", "Capture zone", "keys", null, null, symbol = "screenshot"),
+            DeckTile("r-2", "Verrouiller", "system", null, null, symbol = "lock"),
+            DeckTile("r-3", "Couper le micro", "system", null, null, symbol = "mic_off"),
+            DeckTile("r-4", "Ne pas déranger", "system", null, null, symbol = "dnd"),
+        )
+        val pages = listOf(DeckPage("Raccourcis", tiles, false, false, false, null, false, true, false))
+        val seeded = KeyRef.seed(JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis"), "mac", pages)!!
+        assertEquals(listOf("r-2", "r-3", "r-4", "r-1", "r-0"), seeded.map { it.id })
+    }
 }

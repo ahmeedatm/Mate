@@ -54,6 +54,9 @@ data class KeyRef(val id: String, val label: String, val glyph: String? = null, 
         /** Touches de départ au plus : une grille de 3 × 3 dans le widget en L du profil Deck. */
         const val SEED_MAX = 9
 
+        /** Ordre des touches de départ par symbole ; les autres suivent, dans l'ordre de la page. */
+        private val SEED_PRIORITY = listOf("lock", "mic_off", "dnd", "screenshot", "clipboard", "windows", "search", "play_pause", "skip_previous", "skip_next")
+
         /**
          * Touches de départ d'un ordinateur : les [SEED_MAX] premières de la page [DEFAULT_PAGE], une seule fois (dès que
          * l'ordinateur a ses touches dans la config, même vidées, plus rien n'est posé). Null : rien à poser.
@@ -62,7 +65,9 @@ data class KeyRef(val id: String, val label: String, val glyph: String? = null, 
             if (computerId == null || config.optJSONObject(BY_COMPUTER)?.has(computerId) == true) return null
             val title = config.optString(DEFAULT_PAGE).takeIf { it.isNotEmpty() } ?: return null
             val page = pages.firstOrNull { it.title == title } ?: return null
-            return page.tiles.filter { it.type != "empty" }.take(SEED_MAX).map(::of).takeIf { it.isNotEmpty() }
+            // Essentielles bureau d'abord (Verrouiller, micro, Ne pas déranger…), quel que soit l'ordre de la page.
+            val rank = { t: DeckTile -> SEED_PRIORITY.indexOf(t.symbol).let { if (it < 0) SEED_PRIORITY.size else it } }
+            return page.tiles.filter { it.type != "empty" }.sortedBy(rank).take(SEED_MAX).map(::of).takeIf { it.isNotEmpty() }
         }
 
         fun list(config: JSONObject): List<KeyRef> {

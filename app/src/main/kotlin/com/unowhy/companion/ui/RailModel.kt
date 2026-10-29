@@ -21,6 +21,20 @@ sealed interface RailEntry {
 object RailModel {
     const val MAX_PROFILES = 5
 
+    /**
+     * Ce que la barre a dessiné : noms, rôles, appel, outils et noms affichés. Copié, pas l'objet vivant : la liste des
+     * profils modifie la disposition sur place, la barre doit voir la différence.
+     */
+    data class Snapshot(val names: List<String?>, val roles: List<Int>, val inCall: Boolean, val tools: List<Mode>, val labels: Boolean)
+
+    fun snapshot(layout: HomeLayout, inCall: Boolean, tools: List<Mode>, labels: Boolean) = Snapshot(
+        layout.names.toList(),
+        listOf(layout.homeProfile, layout.deckProfile, layout.callProfile, layout.gameProfile),
+        inCall,
+        tools.toList(),
+        labels,
+    )
+
     /** `tools` : les outils choisis dans Réglages (Focus, Ordi, Caméra par défaut). */
     fun entries(layout: HomeLayout, inCall: Boolean, tools: List<Mode> = Prefs.RAIL_TOOLS): List<RailEntry> {
         val call = layout.callProfile.takeIf { inCall && it >= 0 }

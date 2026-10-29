@@ -209,7 +209,7 @@ class MainActivity : AppCompatActivity() {
                 welcome.visibility == View.VISIBLE -> Unit
                 agentAsk.isOpen -> agentAsk.close()
                 documentPanel.visibility == View.VISIBLE -> documentPanel.close()
-                current != Mode.HOME -> show(Mode.HOME)
+                current != Mode.HOME || homeFragment()?.shownPage != shownLayout().homeProfile -> showProfile(shownLayout().homeProfile)
             }
         }
 
@@ -405,9 +405,10 @@ class MainActivity : AppCompatActivity() {
         get() = documentPanel.currentPath
 
     fun showMode(name: String) {
-        // Ancien mode Deck : le profil Deck. Nom inconnu (« tasks », ancien « chat ») : l'Accueil.
-        if (name.equals(Mode.DECK_KEY, ignoreCase = true)) return showProfile(HomeLayout.load(this, cadran = true).deckTarget())
-        show(Mode.of(name) ?: Mode.HOME)
+        // Ancien mode Deck : le profil Deck. Accueil ou nom inconnu (« tasks », ancien « chat ») : le profil Accueil.
+        if (name.equals(Mode.DECK_KEY, ignoreCase = true)) return showProfile(shownLayout().deckTarget())
+        val mode = Mode.of(name) ?: Mode.HOME
+        if (mode == Mode.HOME) showProfile(shownLayout().homeProfile) else show(mode)
     }
 
     // --- Appel en cours : profil Réunion (Deck V2)
@@ -431,11 +432,13 @@ class MainActivity : AppCompatActivity() {
      */
     fun startCall(app: String, endAtMs: Long? = null) {
         if (!call.start(app, endAtMs)) return
-        val layout = HomeLayout.load(this, cadran = true)
+        val layout = shownLayout()
         refreshRail(layout)
         if (layout.callProfile < 0) return
         val fullScreen = current == Mode.CAMERA || homeFragment()?.editing == true
-        if (!call.shouldSwitch(typing = currentFocus is android.widget.EditText, fullScreen = fullScreen)) return
+        val typing = com.unowhy.companion.ui.Typing.active(focusIsEditText = currentFocus is android.widget.EditText)
+        // État sauvegardé (appli en arrière-plan) : pas de changement d'écran, la barre suffit.
+        if (supportFragmentManager.isStateSaved || !call.shouldSwitch(typing = typing, fullScreen = fullScreen)) return
         beforeCall = current to (homeFragment()?.shownPage ?: layout.homeProfile)
         showProfile(layout.callProfile)
     }
@@ -448,7 +451,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun afterCall() {
-        val layout = HomeLayout.load(this, cadran = true)
+        val layout = shownLayout()
+        // État sauvegardé (appli en arrière-plan, appli d'essai devant) : pas de transaction, la barre seulement.
+        if (supportFragmentManager.isStateSaved) {
+            beforeCall = null
+            refreshRail(layout)
+            return
+        }
         val before = beforeCall
         beforeCall = null
         val page = homeFragment()?.shownPage?.takeIf { current == Mode.HOME }
@@ -462,7 +471,10 @@ class MainActivity : AppCompatActivity() {
         refreshRail(layout)
     }
 
-    private fun refreshRail(layout: HomeLayout = HomeLayout.load(this, cadran = true)) =
+    /** La disposition que l'Accueil affiche (celle que la barre doit suivre), sinon celle enregistrée. */
+    private fun shownLayout(): HomeLayout = homeFragment()?.shownLayout ?: HomeLayout.load(this, cadran = true)
+
+    private fun refreshRail(layout: HomeLayout = shownLayout()) =
         nav.showProfiles(layout, homeFragment()?.shownPage?.takeIf { current == Mode.HOME } ?: layout.homeProfile, call.active)
 
     /** Appel entrant sur l'ordinateur (ordre `call`, voir CallOverlay). */
@@ -497,18 +509,19 @@ class MainActivity : AppCompatActivity() {
 
     val agentAskOpen get() = agentAsk.isOpen
 
-    /** Demande d'agent en attente depuis avant la connexion : lumière rallumée (voir AgentAlerts.resync). */
     /**
-     * Retour en ligne (lancement, relance de l'appli, réseau revenu) : un appel déjà en cours sur l'ordinateur ne serait
-     * pas redit par l'ordre `meeting` (il ne prévient qu'au changement) ; on le relit une fois.
+     * Retour en ligne (lancement, relance de l'appli, réseau revenu) : l'ordre `meeting` ne prévient qu'au changement,
+     * on relit donc l'appel une fois. Un appel déjà en cours reprend ; un appel signalé par l'ordinateur et fini pendant
+     * la coupure (son `end` perdu) se termine.
      */
     private fun resyncCall() {
         lifecycleScope.launch {
             val live = runCatching { BackendClient(this@MainActivity).deck.liveApps() }.getOrNull() ?: return@launch
-            live.live.firstOrNull()?.let { startCall(it) }
+            if (call.endsOnResync(live.live)) endCall() else live.live.firstOrNull()?.let { startCall(it) }
         }
     }
 
+    /** Demande d'agent en attente depuis avant la connexion : lumière rallumée (voir AgentAlerts.resync). */
     private fun resyncAgents() {
         lifecycleScope.launch {
             val ask = runCatching { BackendClient(this@MainActivity).agents.state() }.getOrNull()?.sessions?.firstNotNullOfOrNull { it.askId }

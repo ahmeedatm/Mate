@@ -281,7 +281,6 @@ class SettingsFragment : Fragment() {
 
     // --- Tablette : luminosité, volume, batterie (cachés par le kiosque)
 
-    /** Une pastille par thème, avec sa couleur ; en choisir un recrée l'activité (les écrans se redessinent). */
     /** Barre de gauche : noms sous les icônes et outils affichés, appliqués tout de suite. */
     private fun setUpRail(view: View) {
         val main = activity as? MainActivity
@@ -305,6 +304,7 @@ class SettingsFragment : Fragment() {
             }
     }
 
+    /** Une pastille par thème, avec sa couleur ; en choisir un recrée l'activité (les écrans se redessinent). */
     private fun setUpThemes(row: LinearLayout) {
         val current = AppTheme.current(requireContext())
         for (theme in AppTheme.entries) {

@@ -248,8 +248,9 @@ async function fallback(): Promise<MediaSession[]> {
 const GENERIC_TITLE = /un site est en train de lire|lit du contenu multimédia|a site is playing|is playing media/i;
 
 /**
- * Session d'un navigateur au titre générique : titre de l'onglet et nom du site à la place. D'abord un onglet d'un site
- * connu ([siteName]) de ce navigateur, sinon l'onglet actif d'une de ses fenêtres (nom = domaine). Rien de lisible : inchangée.
+ * Session d'un navigateur au titre générique : titre de l'onglet et nom du site à la place, seulement pour un site de
+ * lecture connu ([siteName]) de ce navigateur, l'onglet actif d'abord. Jamais un onglet quelconque : son titre (un
+ * document, un intranet) s'afficherait sur la tablette posée sur le bureau. Rien de connu : inchangée.
  */
 export function enrichBrowserSession(
   session: MediaSession,
@@ -257,14 +258,13 @@ export function enrichBrowserSession(
 ): MediaSession {
   if (!GENERIC_TITLE.test(session.title)) return session;
   const mine = tabs.filter((t) => t.app === session.name || session.name.startsWith(t.app));
-  for (const t of mine) {
+  // L'onglet actif d'abord : c'est le plus souvent celui qui joue.
+  for (const t of [...mine.filter((t) => t.active), ...mine.filter((t) => !t.active)]) {
     const site = siteName(t.url);
     const title = site && tabTitle(t.tabTitle, site);
     if (site && title) return { ...session, name: site, title };
   }
-  const active = mine.find((t) => t.active && t.tabTitle.trim());
-  const host = active && URL.parse(active.url)?.host.replace(/^www\.|^m\./, "");
-  return active && host ? { ...session, name: host, title: active.tabTitle.trim() } : session;
+  return session;
 }
 
 // --- Interface du Mac pour os.ts

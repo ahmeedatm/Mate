@@ -50,17 +50,17 @@
     {
       "title": "Raccourcis",
       "tiles": [
-        { "label": "Verrouiller", "symbol": "lock", "glyph": "🔒", "action": { "type": "system", "command": "lock" } },
-        { "label": "Couper le micro", "symbol": "mic_off", "glyph": "🎙", "action": { "type": "system", "command": "mute-mic" } },
-        { "label": "Ne pas déranger", "symbol": "dnd", "glyph": "⛔", "action": { "type": "system", "command": "dnd" } },
         { "label": "Capture zone", "symbol": "screenshot", "glyph": "✂️", "action": { "type": "keys", "keys": "win+shift+s" } },
         { "label": "Écran → presse-papiers", "symbol": "clipboard", "glyph": "📋", "action": { "type": "system", "command": "screenshot-clipboard" } },
         { "label": "Vue des tâches", "symbol": "windows", "glyph": "🗂", "action": { "type": "keys", "keys": "win+tab" } },
+        { "label": "Bureau", "glyph": "🖼", "action": { "type": "keys", "keys": "win+d" } },
+        { "label": "Barre de jeu", "glyph": "🎮", "action": { "type": "keys", "keys": "win+g" } },
         { "label": "Rechercher", "symbol": "search", "glyph": "🔍", "action": { "type": "keys", "keys": "win+s" } },
         { "label": "Mode sombre", "symbol": "dark_mode", "glyph": "🌙", "action": { "type": "system", "command": "toggle-dark-mode" } },
         { "label": "Veille écran", "symbol": "bedtime", "glyph": "💤", "action": { "type": "system", "command": "sleep-display" } },
-        { "label": "Bureau", "glyph": "🖼", "action": { "type": "keys", "keys": "win+d" } },
-        { "label": "Barre de jeu", "glyph": "🎮", "action": { "type": "keys", "keys": "win+g" } }
+        { "label": "Verrouiller", "symbol": "lock", "glyph": "🔒", "action": { "type": "system", "command": "lock" } },
+        { "label": "Couper le micro", "symbol": "mic_off", "glyph": "🎙", "action": { "type": "system", "command": "mute-mic" } },
+        { "label": "Ne pas déranger", "symbol": "dnd", "glyph": "⛔", "action": { "type": "system", "command": "dnd" } }
       ]
     },
     {

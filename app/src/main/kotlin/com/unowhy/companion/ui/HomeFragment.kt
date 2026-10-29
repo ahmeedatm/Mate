@@ -64,6 +64,12 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     /** Profil affiché (la barre et la fin d'appel s'en servent). */
     val shownPage: Int get() = page
 
+    /** La disposition affichée (l'objet vivant : la barre et l'appel en cours s'en servent), null avant le chargement. */
+    val shownLayout: HomeLayout? get() = if (::layout.isInitialized) layout else null
+
+    /** Premier affichage de cet écran : il s'ouvre sur le profil Accueil, pas sur la première page. */
+    private var pageChosen = false
+
     /** Mode Modifier en cours : un appel qui commence ne fait pas changer d'écran. */
     val editing: Boolean get() = ::grid.isInitialized && grid.editing
     /** Famille de thème Cadran : disposition à part et lignes inégales. */
@@ -123,6 +129,10 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         // Rôles posés une fois (Deck V2) : Deck après l'Accueil, Réunion pour les appels. `or` : les deux s'appliquent.
         if (nameProfiles() or (cadran && layout.ensureRoles(getString(R.string.profile_deck), getString(R.string.profile_call)))) {
             HomeLayout.save(requireContext(), layout, cadran)
+        }
+        if (!pageChosen) {
+            page = layout.homeProfile
+            pageChosen = true
         }
         build()
 
