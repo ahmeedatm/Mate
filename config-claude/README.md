@@ -1,7 +1,7 @@
 # Config Claude Code du projet
 
 La config Claude Code utilisée pour développer le compagnon : Claude cadre la tâche avec toi, code dans
-un worktree, vérifie, ouvre la MR, suit le pipeline et publie un essai sur la tablette. Il fusionne
+un worktree, vérifie (format + typecheck), ouvre la MR et publie un essai sur la tablette sans attendre le pipeline. Il fusionne
 seulement après ton go.
 
 ## Installer
@@ -15,7 +15,7 @@ gardé et signalé (`--force` pour écraser).
 
 | Source | Installé dans | Contenu |
 |---|---|---|
-| `projet/` | `<dépôt>/.claude/` (non versionné) | règle d'autonomie, skills `/ship` et `/design-companion`, workflow `tache`, hook Stop, réglages |
+| `projet/` | `<dépôt>/.claude/` (non versionné) | règle d'autonomie, skills `/ship`, `/essai-local` et `/design-companion`, workflow `tache`, hook Stop, réglages |
 | `global/scripts/` | `~/.claude/scripts/` | `wait-until.sh` et `gitlab-status.sh`, attente bornée du pipeline |
 | `global/agents/` | `~/.claude/agents/` | agent `implementer`, appelé par le workflow `tache` |
 | `global/output-styles/` | `~/.claude/output-styles/` | style de sortie Concis (facultatif, à choisir dans `/config`) |
@@ -38,7 +38,7 @@ Pour retirer l'essai d'une MR fusionnée ou abandonnée : `GITLAB_TOKEN` (jeton 
   « Ouvrir l'essai ». Si la MR touche le backend, celui de l'ordinateur est remplacé seul (compagnon installé par
   paquet) et remis à l'origine par « Revenir à la stable ». Un retour = une correction sur la même branche, nouvel essai.
 - **Fusionner** : répondre « go ». Jamais de fusion sans ça.
-- **`/ship`** : livre à la main le travail en cours (vérif locale, commit, push, MR, pipeline, essai).
+- **`/ship`** : livre à la main le travail en cours (vérif locale rapide, commit, push, MR, essai ; pipeline vert exigé avant la fusion).
   Le hook Stop le rappelle s'il reste du travail non poussé.
 - **`/design-companion critique <écran>`** : passe qualité UX/UI d'un écran (aussi `polish`, `etats`,
   `harden`, `distill`, `animate`).
