@@ -2,70 +2,136 @@ package com.unowhy.companion.ui.home
 
 import android.content.Context
 import androidx.annotation.StringRes
+import com.unowhy.companion.Mode
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
+import com.unowhy.companion.ui.DeckFragment
+
+private const val PAGE = DeckFragment.PAGE_TAB
+private const val OPEN = DeckFragment.OPEN_TAB
+private const val AGENTS = DeckFragment.AGENTS_TAB
+
+/** Taille de texte la plus grande de Réglages > Accessibilité (`SettingsFragment.TEXT_SIZES`). */
+private const val MAX_TEXT_SCALE = 1.5f
 
 /**
- * Personas de la démo produit : un Accueil à un seul profil, nommé d'après le persona. `id` est celui de la route
- * `POST /demo/persona` du compagnon, qui pose les touches, applis, tâches et agenda fictifs ; les touches du widget
- * Touches sont celles qu'il rend. `theme` : nom d'un [com.unowhy.companion.ui.AppTheme] à appliquer avec le persona
- * (aucun pour l'instant, le thème contraste élevé de Karim s'y branchera).
+ * Un widget d'un profil du persona : taille et case. `pick` : pour le widget Touches, rangs des touches du persona
+ * qu'il montre (toutes par défaut).
+ */
+class Slot(val type: WidgetType, val size: WidgetSize, val col: Int, val row: Int, val pick: List<Int>? = null)
+
+/** Un profil de l'Accueil du persona : son nom et ses widgets. */
+class Profile(@StringRes val name: Int, val slots: List<Slot>)
+
+/**
+ * Personas de la démo produit. `id` est celui de la route `POST /demo/persona` du compagnon, qui pose les touches, pages
+ * de touches, applis, plugins, tâches et agenda fictifs ; les touches du widget Touches sont celles qu'il rend. Chaque
+ * persona change toute l'expérience de la tablette :
+ * - `profiles` : son Accueil (un ou plusieurs profils nommés) ;
+ * - `arrival` : l'écran où l'on arrive après le choix ;
+ * - `deckTabs` : onglets du Deck dans l'ordre (clés de DeckFragment : `page:<titre>` pour une page de touches, dont les
+ *   titres sont ceux de backend/src/demo.ts, ou celle d'un onglet comme `open`, `agents`) ; le premier présent sur
+ *   l'ordinateur s'ouvre au départ, ceux qui n'existent pas sont ignorés ;
+ * - `textScale` : taille du texte (1 = normale) ; `wakeWord` : mot d'éveil (null : celui d'avant la démo) ;
+ * - `theme` : nom d'un [com.unowhy.companion.ui.AppTheme] à appliquer avec le persona (aucun pour l'instant).
  */
 enum class Persona(
     val id: String,
     @StringRes val title: Int,
     @StringRes val description: Int,
-    private val items: List<Placed>,
+    val profiles: List<Profile>,
+    val arrival: Mode = Mode.HOME,
+    val deckTabs: List<String> = emptyList(),
+    val textScale: Float = 1f,
+    val wakeWord: Boolean? = null,
     val theme: String? = null,
 ) {
     SYLVIE("sylvie", R.string.persona_sylvie, R.string.persona_sylvie_desc, listOf(
-        Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
-        Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
-        Placed(WidgetType.APPS, WidgetSize.L, 0, 0, 2),
-        Placed(WidgetType.KEYS, WidgetSize.L, 0, 2, 2),
-    )),
+        Profile(R.string.persona_sylvie, listOf(
+            Slot(WidgetType.TASKS, WidgetSize.L, 0, 0),
+            Slot(WidgetType.AGENDA, WidgetSize.L, 2, 0),
+            Slot(WidgetType.KEYS, WidgetSize.XL, 0, 2),
+        )),
+    ), arrival = Mode.DECK, deckTabs = listOf(PAGE + "Raccourcis Excel", PAGE + "Libellés", PAGE + "Dossiers clients")),
     JULIE("julie", R.string.persona_julie, R.string.persona_julie_desc, listOf(
-        Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
-        Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
-        Placed(WidgetType.KEYS, WidgetSize.L, 0, 0, 2),
-        Placed(WidgetType.MEETING, WidgetSize.M, 0, 2, 2),
-        Placed(WidgetType.NEXT, WidgetSize.M, 0, 2, 3),
-    )),
+        Profile(R.string.persona_julie_daily, listOf(
+            Slot(WidgetType.HERO, WidgetSize.W, 0, 0),
+            Slot(WidgetType.DAYLINE, WidgetSize.W, 0, 1),
+            Slot(WidgetType.KEYS, WidgetSize.L, 0, 2, pick = listOf(0, 1, 2, 3)),
+            Slot(WidgetType.MEETING, WidgetSize.M, 2, 2),
+            Slot(WidgetType.NEXT, WidgetSize.M, 2, 3),
+        )),
+        Profile(R.string.persona_julie_spring, listOf(
+            Slot(WidgetType.NOTE, WidgetSize.L, 0, 0),
+            Slot(WidgetType.TASKS, WidgetSize.L, 2, 0),
+            Slot(WidgetType.KEYS, WidgetSize.XL, 0, 2, pick = listOf(0, 4, 1, 2)),
+        )),
+        Profile(R.string.persona_julie_webinar, listOf(
+            Slot(WidgetType.MEETING, WidgetSize.L, 0, 0),
+            Slot(WidgetType.NEXT, WidgetSize.L, 2, 0),
+            Slot(WidgetType.NOTE, WidgetSize.L, 0, 2),
+            Slot(WidgetType.KEYS, WidgetSize.L, 2, 2, pick = listOf(5, 3)),
+        )),
+    ), deckTabs = listOf(PAGE + "Diapos", PAGE + "Réseaux", PAGE + "Modèles")),
     CAMILLE("camille", R.string.persona_camille, R.string.persona_camille_desc, listOf(
-        Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
-        Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
-        Placed(WidgetType.MEETING, WidgetSize.M, 0, 0, 2),
-        Placed(WidgetType.KEYS, WidgetSize.M, 0, 0, 3),
-        Placed(WidgetType.FOCUS, WidgetSize.L, 0, 2, 2),
-    )),
+        Profile(R.string.persona_camille_work, listOf(
+            Slot(WidgetType.MEETING, WidgetSize.L, 0, 0),
+            Slot(WidgetType.NEXT, WidgetSize.L, 2, 0),
+            Slot(WidgetType.FOCUS, WidgetSize.L, 0, 2),
+            Slot(WidgetType.KEYS, WidgetSize.L, 2, 2, pick = listOf(0, 1, 2)),
+        )),
+        Profile(R.string.persona_camille_home, listOf(
+            Slot(WidgetType.HERO, WidgetSize.W, 0, 0),
+            Slot(WidgetType.DAYLINE, WidgetSize.W, 0, 1),
+            Slot(WidgetType.WEATHER, WidgetSize.M, 0, 2),
+            Slot(WidgetType.MEDIA, WidgetSize.M, 2, 2),
+            Slot(WidgetType.WATER, WidgetSize.S, 0, 3),
+            Slot(WidgetType.FOCUS, WidgetSize.S, 1, 3),
+        )),
+    ), deckTabs = listOf(PAGE + "Travail", PAGE + "Maison")),
     THOMAS("thomas", R.string.persona_thomas, R.string.persona_thomas_desc, listOf(
-        Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
-        Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
-        Placed(WidgetType.NEXT, WidgetSize.V, 0, 0, 2),
-        Placed(WidgetType.TASKS, WidgetSize.V, 0, 1, 2),
-        Placed(WidgetType.OPEN, WidgetSize.L, 0, 2, 2),
-    )),
+        Profile(R.string.persona_thomas, listOf(
+            Slot(WidgetType.NEXT, WidgetSize.M, 0, 0),
+            Slot(WidgetType.TASKS, WidgetSize.L, 0, 1),
+            Slot(WidgetType.KEYS, WidgetSize.M, 0, 3),
+            Slot(WidgetType.AGENDA, WidgetSize.L, 2, 0),
+            Slot(WidgetType.OPEN, WidgetSize.L, 2, 2),
+        )),
+    ), deckTabs = listOf(OPEN, PAGE + "Projets")),
     KARIM("karim", R.string.persona_karim, R.string.persona_karim_desc, listOf(
-        Placed(WidgetType.KEYS, WidgetSize.XL, 0, 0, 0),
-        Placed(WidgetType.APPS, WidgetSize.L, 0, 0, 2),
-        Placed(WidgetType.TASKS, WidgetSize.L, 0, 2, 2),
-    )),
+        Profile(R.string.persona_karim, listOf(
+            Slot(WidgetType.KEYS, WidgetSize.XL, 0, 0),
+            Slot(WidgetType.APPS, WidgetSize.L, 0, 2),
+            Slot(WidgetType.TASKS, WidgetSize.L, 2, 2),
+        )),
+    ), deckTabs = listOf(PAGE + "Perso"), textScale = MAX_TEXT_SCALE, wakeWord = true),
     LEO("leo", R.string.persona_leo, R.string.persona_leo_desc, listOf(
-        Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
-        Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
-        Placed(WidgetType.KEYS, WidgetSize.L, 0, 0, 2),
-        Placed(WidgetType.AGENTS, WidgetSize.M, 0, 2, 2),
-        Placed(WidgetType.TASKS, WidgetSize.M, 0, 2, 3),
-    ));
+        Profile(R.string.persona_leo, listOf(
+            Slot(WidgetType.AGENTS, WidgetSize.XL, 0, 0),
+            Slot(WidgetType.KEYS, WidgetSize.L, 0, 2),
+            Slot(WidgetType.TASKS, WidgetSize.L, 2, 2),
+        )),
+    ), arrival = Mode.DECK, deckTabs = listOf(AGENTS, PAGE + "Git", PAGE + "Tests", PAGE + "Déploiement"));
 
     /**
-     * L'Accueil du persona : un profil nommé `name`, ses widgets, et pour le widget Touches les `keys` posées sur
-     * l'ordinateur `computerId` (les touches d'un widget sont rangées par ordinateur, voir [KeyRef.putFor]).
+     * L'Accueil du persona : un profil par entrée de [profiles], nommé d'après `names` (même ordre), et pour les widgets
+     * Touches les `keys` posées sur l'ordinateur `computerId` (les touches d'un widget sont rangées par ordinateur, voir
+     * [KeyRef.putFor]).
      */
-    fun layout(name: String, keys: List<KeyRef>, computerId: String?): HomeLayout {
-        val widgets = items.map { it.copy() }
-        widgets.filter { it.type == WidgetType.KEYS }.forEach { KeyRef.putFor(it.config, computerId, keys) }
-        return HomeLayout(widgets.toMutableList(), mutableListOf(name))
+    fun layout(names: List<String>, keys: List<KeyRef>, computerId: String?): HomeLayout {
+        require(names.size == profiles.size)
+        val layout = HomeLayout(mutableListOf(), mutableListOf())
+        profiles.forEachIndexed { page, profile ->
+            val items = profile.slots.map { slot ->
+                Placed(slot.type, slot.size, page, slot.col, slot.row).also {
+                    if (slot.type == WidgetType.KEYS) {
+                        KeyRef.putFor(it.config, computerId, slot.pick?.mapNotNull { keys.getOrNull(it) } ?: keys)
+                    }
+                }
+            }
+            layout.addProfile(names[page], items)
+        }
+        return layout
     }
 
     companion object {
@@ -74,8 +140,8 @@ enum class Persona(
 }
 
 /**
- * Démo en cours sur la tablette : l'Accueil et le thème d'avant sont gardés au premier persona choisi et rendus par
- * [quit]. Changer de persona garde la sauvegarde d'origine.
+ * Démo en cours sur la tablette : l'Accueil, le thème, l'ordre des onglets du Deck, la taille du texte et le mot d'éveil
+ * d'avant sont gardés au premier persona choisi et rendus par [quit]. Changer de persona garde la sauvegarde d'origine.
  */
 object Demo {
     private const val FILE = "companion"
@@ -83,12 +149,21 @@ object Demo {
     private const val KEY_SAVED = "demo_saved"
     private const val KEY_LAYOUT = "demo_saved_layout"
     private const val KEY_THEME = "demo_saved_theme"
+    private const val KEY_TABS = "demo_saved_tabs"
+    private const val KEY_SCALE = "demo_saved_scale"
+    private const val KEY_WAKE = "demo_saved_wake"
+    private const val KEY_ARRIVAL = "demo_arrival"
+    private const val KEY_START = "demo_start_tabs"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
     fun active(context: Context): Persona? = Persona.of(prefs(context).getString(KEY_PERSONA, null))
 
-    /** Pose `layout` comme Accueil, et le thème du persona s'il en a un. L'activité doit être recréée ensuite. */
+    /**
+     * Pose `layout` comme Accueil, l'ordre des onglets du Deck, la taille du texte et le mot d'éveil du persona, et son
+     * thème s'il en a un. L'écran d'arrivée et l'onglet de départ du Deck se lisent une fois ([takeArrival],
+     * [takeStartTabs]). L'activité doit être recréée ensuite.
+     */
     fun start(context: Context, persona: Persona, layout: HomeLayout, cadran: Boolean) {
         val prefs = prefs(context)
         if (!prefs.getBoolean(KEY_SAVED, false)) {
@@ -96,20 +171,50 @@ object Demo {
                 .putBoolean(KEY_SAVED, true)
                 .putString(KEY_LAYOUT, HomeLayout.raw(context, cadran))
                 .putString(KEY_THEME, Prefs.theme(context))
+                .putString(KEY_TABS, Prefs.deckTabOrder(context).joinToString("\n"))
+                .putFloat(KEY_SCALE, Prefs.textScale(context))
+                .putBoolean(KEY_WAKE, Prefs.wakeWord(context))
                 .apply()
         }
-        prefs.edit().putString(KEY_PERSONA, persona.id).apply()
+        prefs.edit()
+            .putString(KEY_PERSONA, persona.id)
+            .putString(KEY_ARRIVAL, persona.arrival.key)
+            .putString(KEY_START, persona.deckTabs.joinToString("\n"))
+            .apply()
         HomeLayout.save(context, layout, cadran)
         persona.theme?.let { Prefs.setTheme(context, it) }
+        Prefs.setDeckTabOrder(context, persona.deckTabs)
+        Prefs.setTextScale(context, persona.textScale)
+        Prefs.setWakeWord(context, persona.wakeWord ?: prefs.getBoolean(KEY_WAKE, true))
     }
 
-    /** Rend l'Accueil et le thème d'avant la démo. Faux s'il n'y avait pas de démo. */
+    /** Écran d'arrivée demandé par le dernier choix de persona, une seule fois ; null s'il n'y en a pas. */
+    fun takeArrival(context: Context): Mode? {
+        val prefs = prefs(context)
+        val key = prefs.getString(KEY_ARRIVAL, null) ?: return null
+        prefs.edit().remove(KEY_ARRIVAL).apply()
+        return Mode.of(key)
+    }
+
+    /** Onglets du Deck à ouvrir au départ (le premier présent), une seule fois ; vide s'il n'y en a pas. */
+    fun takeStartTabs(context: Context): List<String> {
+        val prefs = prefs(context)
+        val raw = prefs.getString(KEY_START, null) ?: return emptyList()
+        prefs.edit().remove(KEY_START).apply()
+        return raw.split('\n').filter { it.isNotEmpty() }
+    }
+
+    /** Rend ce qui était réglé avant la démo. Faux s'il n'y avait pas de démo. */
     fun quit(context: Context, cadran: Boolean): Boolean {
         val prefs = prefs(context)
         if (!prefs.getBoolean(KEY_SAVED, false)) return false
         HomeLayout.restore(context, cadran, prefs.getString(KEY_LAYOUT, null))
         Prefs.setTheme(context, prefs.getString(KEY_THEME, null))
-        prefs.edit().remove(KEY_SAVED).remove(KEY_LAYOUT).remove(KEY_THEME).remove(KEY_PERSONA).apply()
+        Prefs.setDeckTabOrder(context, prefs.getString(KEY_TABS, null).orEmpty().split('\n').filter { it.isNotEmpty() })
+        Prefs.setTextScale(context, prefs.getFloat(KEY_SCALE, 1f))
+        Prefs.setWakeWord(context, prefs.getBoolean(KEY_WAKE, true))
+        prefs.edit().remove(KEY_SAVED).remove(KEY_LAYOUT).remove(KEY_THEME).remove(KEY_TABS).remove(KEY_SCALE).remove(KEY_WAKE)
+            .remove(KEY_PERSONA).remove(KEY_ARRIVAL).remove(KEY_START).apply()
         return true
     }
 }

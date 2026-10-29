@@ -197,6 +197,9 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           expect(set.json.keys?.[0]?.id === "k-0", "touches du persona absentes de la réponse");
           const key = await call("GET", "/deck/keys/0");
           expect(key.json.key?.label === set.json.keys[0].label, "la touche k-0 n'est pas celle du persona");
+          const deck = await call("GET", "/deck");
+          const named = (deck.json.pages as { title: string; keyPage: number | null }[]).find((p) => p.keyPage === 0);
+          expect(named?.title === "Git", "page de touches nommée du persona absente du deck");
         } finally {
           const quit = await call("DELETE", "/demo");
           expectStatus(quit, 200, "DELETE /demo");

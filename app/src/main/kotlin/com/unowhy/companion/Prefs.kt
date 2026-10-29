@@ -78,8 +78,10 @@ object Prefs {
     fun deckTabOrder(context: Context): List<String> =
         prefs(context).getString(KEY_DECK_TABS + Computers.active(context)?.id.orEmpty(), null)?.split('\n').orEmpty()
 
+    /** Liste vide : retour à l'ordre par défaut. */
     fun setDeckTabOrder(context: Context, keys: List<String>) {
-        prefs(context).edit().putString(KEY_DECK_TABS + Computers.active(context)?.id.orEmpty(), keys.joinToString("\n")).apply()
+        val key = KEY_DECK_TABS + Computers.active(context)?.id.orEmpty()
+        prefs(context).edit().apply { if (keys.isEmpty()) remove(key) else putString(key, keys.joinToString("\n")) }.apply()
     }
 
     /** Thème choisi dans Réglages (nom d'AppTheme) ; null : Nuit. */

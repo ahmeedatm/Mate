@@ -22,7 +22,7 @@ import {
   type SystemCommand,
 } from "./os.ts";
 import type { Layout } from "./screens.ts";
-import { loadKeys, loadLinks, loadSavedApps, saveApps, saveLinks, type DeckApp, type DeckLink } from "./perso.ts";
+import { loadKeyPages, loadKeys, loadLinks, loadSavedApps, saveApps, saveLinks, type DeckApp, type DeckLink } from "./perso.ts";
 import { agentsAvailable } from "./agents-sources.ts";
 import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
@@ -97,6 +97,8 @@ export type Tile = TileConfig & { id: string };
 export type DeckPage = {
   title: string;
   editable?: boolean;
+  /** Page de touches nommée éditable (voir perso.ts) : son rang ; absent pour Perso. */
+  keyPage?: number;
   apps?: boolean;
   meeting?: boolean;
   app?: string;
@@ -254,16 +256,16 @@ export async function loadDeck(): Promise<DeckPage[]> {
             },
     )
     .filter((_, p) => present[p]);
-  const keys = await loadKeys();
-  pages.push({
-    title: "Perso",
-    editable: true,
-    tiles: keys.map((key, slot) => {
-      const id = `${PERSO_PREFIX}${slot}`;
+  const keyTiles = (keys: Awaited<ReturnType<typeof loadKeys>>, prefix: string): DeckPage["tiles"] =>
+    keys.map((key, slot) => {
+      const id = `${prefix}${slot}`;
       if (!key) return { id, empty: true as const };
       const action: Action = key.steps.length === 1 ? key.steps[0] : { type: "macro", steps: key.steps };
       return { id, label: key.label, glyph: key.glyph, color: key.color, action };
-    }),
+    });
+  pages.push({ title: "Perso", editable: true, tiles: keyTiles(await loadKeys(), PERSO_PREFIX) });
+  (await loadKeyPages()).forEach((page, n) => {
+    pages.push({ title: page.title, editable: true, keyPage: n, tiles: keyTiles(page.keys, `k${n + 1}-`) });
   });
   return pages;
 }

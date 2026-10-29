@@ -33,6 +33,7 @@ import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DeckPage
 import com.unowhy.companion.net.DeckTile
 import com.unowhy.companion.net.VoiceState
+import com.unowhy.companion.ui.home.Demo
 import com.unowhy.companion.ui.mixer.MixerView
 import com.unowhy.companion.ui.pointer.PadView
 import kotlinx.coroutines.Job
@@ -164,7 +165,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         grid.setOnItemClickListener { _, tileView, position, _ ->
             val tile = adapter.getItem(position)
             when (tile.type) {
-                "empty" -> editor.show(slotOf(tile))
+                "empty" -> editor.show(slotOf(tile), pages.getOrNull(pageIndex)?.keyPage)
                 ADD -> if (isMediaPage()) linkAdder.show() else adder.show(currentApps())
                 else -> {
                     // Appli qui a sa page (Discord) : on y va, en la lançant si elle est fermée ; sur sa page, la tuile la met devant.
@@ -180,7 +181,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         grid.setOnItemLongClickListener { _, tileView, position, _ ->
             val tile = adapter.getItem(position)
             when {
-                pages.getOrNull(pageIndex)?.editable == true -> editor.show(slotOf(tile))
+                pages.getOrNull(pageIndex)?.editable == true -> editor.show(slotOf(tile), pages.getOrNull(pageIndex)?.keyPage)
                 tile.type == "app" -> picker.show(tile, removable = isAppsPage())
                 isMediaPage() && tile.type != ADD -> confirmRemoveLink(tile)
                 else -> return@setOnItemLongClickListener false
@@ -340,6 +341,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
                 off = features?.off.orEmpty()
                 jiraOn = features?.jira == true
                 when {
+                    openStartTab(Demo.takeStartTabs(requireContext())) -> Unit
                     showingOpen && OPEN_TAB !in off -> showOpen()
                     showingPad && padOn() -> showPad()
                     (showingAgents || pendingAgents) && agentsOn -> showAgents()
@@ -358,6 +360,27 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
             val missing = runCatching { client().pairing.identity().accessibility == false }.getOrDefault(false)
             access.visibility = if (missing) View.VISIBLE else View.GONE
         }
+    }
+
+    /**
+     * Après le choix d'un persona de la démo : ouvre le premier onglet de `keys` (clés d'onglets) que cet ordinateur offre.
+     * Faux si la liste est vide ou si aucun n'existe.
+     */
+    private fun openStartTab(keys: List<String>): Boolean {
+        for (key in keys) {
+            when {
+                key == OPEN_TAB && OPEN_TAB !in off -> showOpen()
+                key == AGENTS_TAB && agentsOn -> showAgents()
+                key.startsWith(PAGE_TAB) -> {
+                    val index = pages.indexOfFirst { it.app == null && it.title == key.removePrefix(PAGE_TAB) }
+                    if (index < 0) continue
+                    showPage(index)
+                }
+                else -> continue
+            }
+            return true
+        }
+        return false
     }
 
     /** Après « Rejoindre » sur l'Accueil : page Réunion (micro, caméra, raccrocher). */
@@ -937,9 +960,10 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         .mapNotNull { t -> t.app?.let { it to t.id } }.toMap()
 
     /** Numéro d'emplacement d'une touche perso (tuile "k-<slot>"). */
-    private fun slotOf(tile: DeckTile) = tile.id.removePrefix("k-").toInt()
+    /** Emplacement d'une touche de Perso (`k-3`) ou d'une page de touches nommée (`k2-3`). */
+    private fun slotOf(tile: DeckTile) = tile.id.substringAfterLast('-').toInt()
 
-    private companion object {
+    companion object {
         /** Tuile « Ajouter » des pages Apps et Média (créée sur la tablette, inconnue de l'ordinateur). */
         const val ADD = "add"
         const val LIVE_POLL_MS = 4_000L

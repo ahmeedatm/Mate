@@ -29,7 +29,7 @@ import {
   placeWindow,
   voiceState,
 } from "../os.ts";
-import { keySchema, loadKeys, saveKey, MAX_SLOTS, type PersoKey } from "../perso.ts";
+import { keySchema, loadKeyPages, loadKeys, saveKey, saveKeyPage, MAX_SLOTS, type PersoKey } from "../perso.ts";
 import type { Layout, WindowTarget } from "../screens.ts";
 import { windowTarget } from "./windows.ts";
 
@@ -41,6 +41,7 @@ export default async function deckRoutes(app: FastifyInstance) {
       pages: pages.map((p) => ({
         title: p.title,
         editable: p.editable ?? false,
+        keyPage: p.keyPage ?? null,
         apps: p.apps ?? false,
         meeting: p.meeting ?? false,
         app: p.app ?? null,
@@ -229,6 +230,35 @@ export default async function deckRoutes(app: FastifyInstance) {
 
   app.delete<{ Params: { slot: number } }>("/deck/keys/:slot", { schema: { params: slotParam } }, async (req) => {
     await saveKey(req.params.slot, null);
+    return { ok: true };
+  });
+
+  // Pages de touches nommées (page `n` de /deck : `keyPage`), mêmes touches que Perso
+
+  const pageSlotParams = {
+    type: "object",
+    required: ["page", "slot"],
+    properties: { page: { type: "integer", minimum: 0, maximum: 49 }, slot: slotParam.properties.slot },
+  };
+  type PageSlot = { page: number; slot: number };
+
+  app.get<{ Params: PageSlot }>("/deck/pages/:page/keys/:slot", { schema: { params: pageSlotParams } }, async (req, reply) => {
+    const page = (await loadKeyPages())[req.params.page];
+    if (!page) return reply.code(404).send({ error: "Page inconnue" });
+    return { key: page.keys[req.params.slot] ?? null };
+  });
+
+  app.put<{ Params: PageSlot; Body: PersoKey }>(
+    "/deck/pages/:page/keys/:slot",
+    { schema: { params: pageSlotParams, body: keySchema } },
+    async (req, reply) => {
+      if (!(await saveKeyPage(req.params.page, req.params.slot, req.body))) return reply.code(404).send({ error: "Page inconnue" });
+      return { ok: true };
+    },
+  );
+
+  app.delete<{ Params: PageSlot }>("/deck/pages/:page/keys/:slot", { schema: { params: pageSlotParams } }, async (req, reply) => {
+    if (!(await saveKeyPage(req.params.page, req.params.slot, null))) return reply.code(404).send({ error: "Page inconnue" });
     return { ok: true };
   });
 

@@ -18,9 +18,10 @@ import com.unowhy.companion.ui.home.Persona
 import kotlinx.coroutines.launch
 
 /**
- * Démo produit (Réglages > Démo) : la liste des personas ; en choisir un remplace l'Accueil par un profil à son nom et
- * pose ses données fictives sur l'ordinateur, « Quitter la démo » rend l'état d'avant (src/demo.ts). L'activité est
- * recréée ensuite pour relire l'Accueil, le Deck, les tâches et l'agenda.
+ * Démo produit (Réglages > Démo) : la liste des personas ; en choisir un remplace l'Accueil par ses profils, change l'ordre des onglets
+ * du Deck, la taille du texte et le mot d'éveil, et pose ses données fictives sur l'ordinateur (touches, pages de
+ * touches, plugins, tâches, agenda). « Quitter la démo » rend l'état d'avant (src/demo.ts). L'activité est recréée
+ * ensuite et arrive sur l'écran du persona.
  */
 class DemoDialog(private val activity: FragmentActivity) {
 
@@ -76,7 +77,7 @@ class DemoDialog(private val activity: FragmentActivity) {
         activity.lifecycleScope.launch {
             runCatchingCancellable { BackendClient(activity).demo.setPersona(persona.id) }
                 .onSuccess { keys ->
-                    val layout = persona.layout(activity.getString(persona.title), keys.map { KeyRef(it.id, it.label, it.glyph, it.color) }, computer.id)
+                    val layout = persona.layout(persona.profiles.map { activity.getString(it.name) }, keys.map { KeyRef(it.id, it.label, it.glyph, it.color) }, computer.id)
                     Demo.start(activity, persona, layout, cadran)
                     activity.recreate()
                 }
