@@ -24,6 +24,7 @@ class Profile(@StringRes val name: Int, val slots: List<Slot>)
  * - `profiles` : ses écrans, dans l'ordre de la barre (Deck V2) ; le premier est l'Accueil et l'écran d'arrivée. Écran
  *   Réunion standard en plus, hors barre : il ne s'affiche que pendant un appel ;
  * - `textScale` : taille du texte (1 = normale) ; `wakeWord` : mot d'éveil (null : celui d'avant la démo) ;
+ * - `meetingAlert` : alerte plein écran avant une réunion (Réglages > Tablette ; null : celle d'avant la démo) ;
  * - `theme` : nom d'un [com.unowhy.unomate.ui.AppTheme] à appliquer avec le persona (Sam : CONTRASTE ; les autres, un thème de démo).
  */
 enum class Persona(
@@ -33,6 +34,7 @@ enum class Persona(
     val profiles: List<Profile>,
     val textScale: Float = 1f,
     val wakeWord: Boolean? = null,
+    val meetingAlert: Boolean? = null,
     val theme: String? = null,
 ) {
     NOUR("nour", R.string.persona_nour, R.string.persona_nour_desc, listOf(
@@ -91,7 +93,7 @@ enum class Persona(
         Profile(R.string.demo_screen_jira, listOf(
             Slot(WidgetType.JIRA, WidgetSize.XL, 0, 0),
         )),
-    ), theme = "TABLEAU"),
+    ), meetingAlert = true, theme = "TABLEAU"),
     SAM("sam", R.string.persona_sam, R.string.persona_sam_desc, listOf(
         Profile(R.string.profile_first, listOf(
             Slot(WidgetType.KEYS, WidgetSize.XL, 0, 0, page = "Mes touches"),
@@ -155,6 +157,7 @@ object Demo {
     private const val KEY_THEME = "demo_saved_theme"
     private const val KEY_SCALE = "demo_saved_scale"
     private const val KEY_WAKE = "demo_saved_wake"
+    private const val KEY_MEETING_ALERT = "demo_saved_meeting_alert"
     private const val KEY_ARRIVAL = "demo_arrival"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -175,6 +178,7 @@ object Demo {
                 .putString(KEY_THEME, Prefs.theme(context))
                 .putFloat(KEY_SCALE, Prefs.textScale(context))
                 .putBoolean(KEY_WAKE, Prefs.wakeWord(context))
+                .putBoolean(KEY_MEETING_ALERT, Prefs.meetingAlert(context))
                 .apply()
         }
         prefs.edit()
@@ -186,6 +190,7 @@ object Demo {
         Prefs.setTheme(context, persona.theme ?: prefs.getString(KEY_THEME, null))
         Prefs.setTextScale(context, persona.textScale)
         Prefs.setWakeWord(context, persona.wakeWord ?: prefs.getBoolean(KEY_WAKE, true))
+        Prefs.setMeetingAlert(context, persona.meetingAlert ?: prefs.getBoolean(KEY_MEETING_ALERT, false))
     }
 
     /** Écran d'arrivée demandé par le dernier choix de persona (l'Accueil), une seule fois ; null s'il n'y en a pas. */
@@ -204,7 +209,8 @@ object Demo {
         Prefs.setTheme(context, prefs.getString(KEY_THEME, null))
         Prefs.setTextScale(context, prefs.getFloat(KEY_SCALE, 1f))
         Prefs.setWakeWord(context, prefs.getBoolean(KEY_WAKE, true))
-        prefs.edit().remove(KEY_SAVED).remove(KEY_LAYOUT).remove(KEY_THEME).remove(KEY_SCALE).remove(KEY_WAKE)
+        Prefs.setMeetingAlert(context, prefs.getBoolean(KEY_MEETING_ALERT, false))
+        prefs.edit().remove(KEY_SAVED).remove(KEY_LAYOUT).remove(KEY_THEME).remove(KEY_SCALE).remove(KEY_WAKE).remove(KEY_MEETING_ALERT)
             .remove(KEY_PERSONA).remove(KEY_ARRIVAL).apply()
         return true
     }

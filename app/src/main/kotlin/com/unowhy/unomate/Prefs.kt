@@ -42,6 +42,8 @@ object Prefs {
     private const val KEY_AGENTS_PRIVATE = "agents_private"
     private const val KEY_NOTIFICATIONS_DISCREET = "notifications_discreet"
     private const val KEY_WAKE_WORD = "wake_word"
+    private const val KEY_MEETING_ALERT = "meeting_alert"
+    private const val KEY_MEETING_ALERT_SEEN = "meeting_alert_seen"
     private const val KEY_WEATHER_LOCATION = "weather_location"
     private const val KEY_TEXT_SCALE = "text_scale"
     private const val KEY_FRAME_DELAY = "frame_delay_min"
@@ -187,6 +189,20 @@ object Prefs {
 
     fun setNotificationsDiscreet(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_NOTIFICATIONS_DISCREET, value).apply()
+    }
+
+    /** Alerte plein écran 5 min avant une réunion de l'agenda (ui/MeetingAlertOverlay). Coupée par défaut. */
+    fun meetingAlert(context: Context): Boolean = prefs(context).getBoolean(KEY_MEETING_ALERT, false)
+
+    fun setMeetingAlert(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_MEETING_ALERT, value).apply()
+    }
+
+    /** Réunions déjà annoncées (clés de MeetingAlertModel) : une seule alerte par réunion, même après un redémarrage de l'appli. */
+    fun meetingAlertSeen(context: Context): Set<String> = prefs(context).getStringSet(KEY_MEETING_ALERT_SEEN, emptySet()).orEmpty()
+
+    fun setMeetingAlertSeen(context: Context, value: Set<String>) {
+        prefs(context).edit().putStringSet(KEY_MEETING_ALERT_SEEN, value).apply()
     }
 
     /** Mot de réveil « Mate » : écoute du mot quand UnoMate est à l'écran (voice/WakeWord). Activé par défaut. */

@@ -433,6 +433,12 @@
     <string name="notif_clear">Tout effacer</string>
     <string name="notif_clear_title">Effacer toutes les notifications ?</string>
     <string name="notif_clear_message">La liste de la tablette est vidée. Les notifications restent dans le centre de notifications de l\'ordi.</string>
+    <string name="meeting_alert">Alerte avant une réunion</string>
+    <string name="meeting_alert_hint">Un plein écran avec compte à rebours 5 min avant un rendez-vous de l\'agenda</string>
+    <string name="meeting_alert_start">Début à %1$s</string>
+    <string name="meeting_alert_close">Touche l\'écran pour fermer</string>
+    <string name="meeting_alert_desc">Réunion %1$s dans %2$d min. Touche l\'écran pour fermer.</string>
+    <string name="meeting_alert_desc_soon">Réunion %1$s dans moins d\'une minute. Touche l\'écran pour fermer.</string>
     <string name="notif_discreet">Mode discret</string>
     <string name="notif_discreet_hint">Notifications du PC : appli et titre seulement, sans le texte</string>
     <string name="wake_word">Mot de réveil « Mate »</string>

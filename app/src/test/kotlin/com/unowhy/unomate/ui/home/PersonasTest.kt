@@ -265,6 +265,29 @@ class PersonasTest {
     }
 
     @Test
+    fun `Aimee allume l'alerte de reunion, quitter rend la valeur d'avant`() {
+        assertEquals(true, Persona.AIMEE.meetingAlert)
+        for (persona in Persona.entries - Persona.AIMEE) assertNull(persona.id, persona.meetingAlert)
+
+        // Coupée avant la démo : Aimée l'allume, un autre persona rend la valeur d'avant, quitter aussi.
+        val context = FakeContext()
+        assertFalse(Prefs.meetingAlert(context))
+        Demo.start(context, Persona.AIMEE, layout(Persona.AIMEE), cadran = true)
+        assertTrue(Prefs.meetingAlert(context))
+        Demo.start(context, Persona.NOUR, layout(Persona.NOUR), cadran = true)
+        assertFalse(Prefs.meetingAlert(context))
+        Demo.start(context, Persona.AIMEE, layout(Persona.AIMEE), cadran = true)
+        assertTrue(Demo.quit(context, cadran = true))
+        assertFalse(Prefs.meetingAlert(context))
+
+        // Allumée avant la démo : elle le reste après.
+        Prefs.setMeetingAlert(context, true)
+        Demo.start(context, Persona.AIMEE, layout(Persona.AIMEE), cadran = true)
+        assertTrue(Demo.quit(context, cadran = true))
+        assertTrue(Prefs.meetingAlert(context))
+    }
+
+    @Test
     fun `l'arrivee sur l'Accueil se lit une seule fois`() {
         val context = FakeContext()
         assertNull(Demo.takeArrival(context))

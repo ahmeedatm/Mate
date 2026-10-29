@@ -83,6 +83,7 @@ class SettingsFragment : Fragment() {
     private lateinit var volume: SeekBar
     private lateinit var nightDim: SwitchCompat
     private lateinit var notifDiscreet: SwitchCompat
+    private lateinit var meetingAlert: SwitchCompat
     private lateinit var wakeWord: SwitchCompat
     private lateinit var wakeStatus: TextView
     private lateinit var weatherLocation: SwitchCompat
@@ -105,6 +106,9 @@ class SettingsFragment : Fragment() {
         inflater.inflate(R.layout.fragment_settings, container, false)
 
     override fun onViewCreated(view: View, state: Bundle?) {
+        // Interrupteurs rendus depuis Prefs ou l'appareil : sans état de vue gardé. Sinon, à la recréation (choix d'un
+        // persona, thème), Android y remet l'ancien état après le rendu et leur écouteur réécrit la valeur d'avant.
+        forgetSwitchStates(view)
         computers = view.findViewById(R.id.settings_computers)
         view.findViewById<Button>(R.id.settings_add_computer).setOnClickListener { adder.search() }
         view.findViewById<Button>(R.id.settings_plugins).setOnClickListener { main.showPlugins() }
@@ -151,6 +155,7 @@ class SettingsFragment : Fragment() {
         volume = view.findViewById(R.id.settings_volume)
         nightDim = view.findViewById(R.id.settings_night_dim)
         notifDiscreet = view.findViewById(R.id.settings_notif_discreet)
+        meetingAlert = view.findViewById(R.id.settings_meeting_alert)
         wakeWord = view.findViewById(R.id.settings_wake_word)
         wakeStatus = view.findViewById(R.id.settings_wake_word_status)
         weatherLocation = view.findViewById(R.id.settings_weather_location)
@@ -516,6 +521,8 @@ class SettingsFragment : Fragment() {
         }
         // Mode discret : lu à chaque bandeau et à chaque affichage de l'historique, rien d'autre à prévenir.
         notifDiscreet.setOnCheckedChangeListener { _, checked -> Prefs.setNotificationsDiscreet(ctx, checked) }
+        // Alerte de réunion : lue à la vérification de chaque minute, rien d'autre à prévenir.
+        meetingAlert.setOnCheckedChangeListener { _, checked -> Prefs.setMeetingAlert(ctx, checked) }
         // Mot de réveil : l'activer télécharge le modèle s'il manque ; l'écoute suit tout de suite.
         wakeWord.setOnCheckedChangeListener { _, checked ->
             Prefs.setWakeWord(ctx, checked)
@@ -529,6 +536,11 @@ class SettingsFragment : Fragment() {
         renderTablet()
     }
 
+    private fun forgetSwitchStates(view: View) {
+        if (view is android.widget.CompoundButton) view.isSaveEnabled = false
+        if (view is ViewGroup) for (i in 0 until view.childCount) forgetSwitchStates(view.getChildAt(i))
+    }
+
     private fun renderTablet() {
         val ctx = requireContext()
         val chosen = Prefs.brightness(ctx)
@@ -538,6 +550,7 @@ class SettingsFragment : Fragment() {
         volume.progress = ctx.getSystemService(AudioManager::class.java).getStreamVolume(AudioManager.STREAM_MUSIC)
         nightDim.isChecked = Prefs.nightDim(ctx)
         notifDiscreet.isChecked = Prefs.notificationsDiscreet(ctx)
+        meetingAlert.isChecked = Prefs.meetingAlert(ctx)
         wakeWord.isChecked = Prefs.wakeWord(ctx)
         renderWake()
         weatherLocation.isChecked = Prefs.weatherLocation(ctx)
