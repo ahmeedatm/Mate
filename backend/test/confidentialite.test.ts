@@ -26,8 +26,7 @@ describe("confidentialité (docs/confidentialite.md)", () => {
   it("les flux retirés ne reviennent pas sans mettre la politique à jour", () => {
     const sources = fs.readdirSync(path.join(backend, "src"), { recursive: true, encoding: "utf8" }).filter((f) => f.endsWith(".ts"));
     const code = sources.map((f) => fs.readFileSync(path.join(backend, "src", f), "utf8")).join("\n");
-    // Nom des sites du Deck chez Google, titre et artiste chez Apple : retirés le 29/10/2026 plutôt que déclarés.
+    // Nom des sites du Deck chez Google : retiré le 29/10/2026 plutôt que déclaré.
     assert.ok(!code.includes("google.com/s2/favicons"), "service d'icônes de Google");
-    assert.ok(!code.includes("itunes.apple.com"), "recherche de pochettes d'Apple");
   });
 });

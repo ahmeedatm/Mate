@@ -17,7 +17,7 @@ Commande vocale. Quand vous touchez « Parler », votre voix est transcrite par 
 
 Météo. La tablette demande la météo de la ville choisie à l'Institut météorologique norvégien (MET Norway), qui reçoit les coordonnées de cette ville et l'adresse IP de la connexion. Si vous l'activez dans les Réglages, ou si vous touchez « Ma position », la tablette trouve la ville la plus proche grâce aux services de localisation de Google, qui reçoivent les réseaux WiFi visibles ; seule la ville trouvée est ensuite utilisée, jamais votre position exacte.
 
-Page Média. Sur Mac, pour afficher l'image d'une vidéo YouTube en cours, l'ordinateur la demande à YouTube avec l'identifiant de la vidéo.
+Page Média. Sur Mac, pour afficher la pochette du morceau en cours, l'ordinateur peut transmettre son titre et son artiste à Apple, ou l'identifiant de la vidéo à YouTube.
 
 Comptes que vous reliez. Si vous reliez un compte Microsoft ou Google, l'ordinateur lit votre agenda directement chez ce fournisseur, et, pour Microsoft, l'expéditeur, l'objet et la date de vos derniers courriels (jamais leur contenu). Vous pouvez délier le compte à tout moment.
 
@@ -25,7 +25,7 @@ Mises à jour. La tablette interroge le serveur de mises à jour d'Unowhy. Il ne
 
 Ce que vous ouvrez. Les pages web, liens d'agenda, réunions et services que vous choisissez (par exemple une recherche faite à la voix, ouverte dans le navigateur de l'ordinateur) sont contactés directement depuis vos appareils.
 
-Ces services appliquent leur propre politique de confidentialité. Google et Microsoft peuvent traiter des données hors de l'Union européenne, dans le cadre de leurs engagements de transfert.
+Ces services appliquent leur propre politique de confidentialité. Google, Apple et Microsoft peuvent traiter des données hors de l'Union européenne, dans le cadre de leurs engagements de transfert.
 
 BASES LÉGALES
 
