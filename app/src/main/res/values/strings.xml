@@ -897,7 +897,7 @@
     <string name="theme_cadran_nuit">Cadran nuit</string>
     <string name="theme_retro">Rétro</string>
     <string name="theme_contraste">Contraste élevé</string>
-    <!-- Thèmes de la démo : jamais affichés dans le choix des Réglages, seulement nommés ici (AppTheme.label). -->
+    <!-- Thèmes des personas : seconde ligne du choix des Réglages (AppTheme.demo). -->
     <string name="theme_registre">Registre</string>
     <string name="theme_studio">Studio</string>
     <string name="theme_maison">Maison</string>

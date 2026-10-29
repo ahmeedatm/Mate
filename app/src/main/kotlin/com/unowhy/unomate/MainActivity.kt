@@ -293,6 +293,7 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null) maybeTour()
         showLink(Link(Computers.active(this), Link.State.OFFLINE))
         remote.restart()
+        quitStrayDemo()
     }
 
     private fun showLink(link: Link) {
@@ -323,6 +324,16 @@ class MainActivity : AppCompatActivity() {
         remote.restart()
         if (automatic && computer != null) showBanner(getString(R.string.computer_switched, computer.name), 6)
         offerPlugins()
+        quitStrayDemo()
+    }
+
+    /**
+     * Tablette sans persona (essai ↔ stable, réinstallation) : l'ordinateur ne doit pas garder une démo, ses touches,
+     * tâches et agenda d'origine lui sont rendus. Sans effet s'il n'y en a pas ; silencieux si l'ordinateur ne répond pas.
+     */
+    private fun quitStrayDemo() {
+        if (Demo.active(this) != null || Computers.active(this) == null) return
+        lifecycleScope.launch { runCatchingCancellable { BackendClient(this@MainActivity).demo.quit() } }
     }
 
     /** Chaque écran est recréé : il relit le deck, l'agenda, les tâches et les documents de l'ordinateur actif. */
