@@ -68,6 +68,7 @@ La tablette n'ouvre aucun port. `remote/RemoteChannel.kt` garde une requête `PO
 
 - Agenda (`calendar.ts`) = liens ICS (`.data/calendar.json`) + comptes Microsoft/Google (`accounts.ts`, OAuth, pas encore activé : identifiant d'appli à obtenir) + agenda personnel noté depuis la tablette (`events.ts`). Réunions en ligne détectées dans les événements (`meeting-links.ts`), ouvertes sur l'ordinateur par `POST /calendar/join`.
 - Tâches (`tasks.ts`) : ponctuelles, récurrentes (créées depuis la tablette), ou quotidiennes écrites dans `config/tasks.json` (exemple : saisir son temps dans Jira, cochée seule via `jira.ts`). Les rappels partent de l'ordinateur par le canal `/tablet` et sont lus à voix haute par la tablette (`audio/Speaker`).
+- Onglet Jira du Deck (`routes/jira.ts`, tablette `ui/JiraView`, `net/JiraApi`) : tickets assignés en colonnes : l'union des colonnes des tableaux Jira choisis sur la tablette (API Agile, `GET/POST /jira/boards`, choix dans `.data/jira.json`), terminés des 7 derniers jours compris, ticket placé par l'id de son statut ; sans tableau choisi, une colonne par statut (à faire puis en cours). Toucher un ticket = ses transitions Jira ; une transition qui demande un champ (`needsJira`, ou Jira répond 400 → 409) se finit dans Jira, ouvert sur l'ordinateur. Proposé seulement si Jira est configuré (`/deck/features` → `jira`).
 - Eau et Focus (Pomodoro, ambiance) sont **sur la tablette seulement** (`focus/`).
 
 ### 6. Visualiseur (mode Caméra)
@@ -141,7 +142,8 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | `deck.ts`, `perso.ts`, `music.ts` | pages du deck, `runAction`, touches perso, musique |
 | `os.ts` → `mac/`, `win/` | pilotage du système ; `screens.ts` : types d'écrans et fenêtres |
 | `calendar.ts`, `accounts.ts`, `events.ts`, `meetings.ts`, `meeting-links.ts` | agenda et réunions |
-| `tasks.ts`, `jira.ts` | tâches et rappels |
+| `tasks.ts` | tâches et rappels |
+| `jira.ts`, `routes/jira.ts` | Jira du compte du `.env` : temps saisi du jour (worklog), tickets assignés et leurs transitions (onglet Jira) |
 | `tablet.ts`, `mcp.ts` | canal vers la tablette, extension Claude |
 | `calls.ts` (+ `config/calls.json`) | appels entrants : surveillance des fenêtres, Répondre / Ignorer / Raccrocher |
 | `agents.ts`, `agents-sources.ts`, `agents-secret.ts`, `agents-hooks.ts`, `routes/agents.ts` | agents Claude : état et réponses, lecture de `claude` et d'Orca, secret des hooks, bloc de hooks (`scripts/agents-hooks.ts`) |

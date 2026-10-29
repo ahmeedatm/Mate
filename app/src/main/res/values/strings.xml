@@ -128,6 +128,7 @@
     <string name="deck_open_tab">Ouvertes</string>
     <string name="deck_mixer_tab">Son</string>
     <string name="deck_agents_tab">Agents</string>
+    <string name="deck_jira_tab">Jira</string>
     <string name="deck_pad_tab">Pavé</string>
     <string name="pad_hint">Un doigt pour bouger, deux pour défiler · pince pour zoomer · 3 doigts : fenêtres · touche pour cliquer</string>
     <string name="pad_left_click">Clic gauche</string>
@@ -171,6 +172,16 @@
     <string name="agent_worked_short">Travaillé moins d\'1 min</string>
     <string name="agent_tool">Outil : %1$s</string>
     <string name="agents_empty">Aucune session Claude Code ouverte sur l\'ordinateur.</string>
+    <string name="jira_empty">Aucun ticket ouvert</string>
+    <string name="jira_col_header">%1$s · %2$d</string>
+    <string name="jira_transitions_loading">Lecture des transitions…</string>
+    <string name="jira_transitions_none">Aucune transition possible.</string>
+    <string name="jira_pill_finish">%1$s · À finir dans Jira</string>
+    <string name="jira_moved">%1$s : %2$s</string>
+    <string name="jira_boards_button">Tableaux</string>
+    <string name="jira_boards_title">Tableaux Jira</string>
+    <string name="jira_boards_hint">Coche les tableaux dont tu veux les colonnes (%1$d sur %2$d au plus). Le premier coché de la liste donne l\'ordre des colonnes.</string>
+    <string name="jira_boards_none">Aucun tableau trouvé pour tes projets.</string>
     <string name="agents_hooks_hint">Pour répondre d\'ici : poser les hooks sur l\'ordinateur (npm run agents:hooks).</string>
     <string name="agents_focus_hint">Toucher une session l\'amène devant sur l\'ordinateur.</string>
     <string name="agents_focused">%1$s est devant sur l\'ordinateur</string>

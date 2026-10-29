@@ -1,6 +1,7 @@
 import path from "node:path";
 import { agentsAvailable } from "./agents-sources.ts";
 import { config } from "./config.ts";
+import { jiraConfigured } from "./jira.ts";
 import { canMedia, isInstalled, osName } from "./os.ts";
 import { readJson, updateJson } from "./store.ts";
 
@@ -47,6 +48,13 @@ const CATALOG: PluginDef[] = [
     name: "Claude Code",
     description: "Suivre les agents et leur répondre depuis la tablette",
     present: agentsAvailable,
+  },
+  {
+    id: "jira",
+    kind: "app",
+    name: "Jira",
+    description: "Voir ses tickets en colonnes et changer leur statut",
+    present: () => jiraConfigured,
   },
   {
     id: "open",

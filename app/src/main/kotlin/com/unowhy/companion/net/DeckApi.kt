@@ -44,13 +44,14 @@ data class LiveApps(val open: List<String>, val live: List<String>)
 /** Cartes de l'Accueil selon les applis du deck : agenda (Outlook, Calendrier…), bouton Rejoindre (Teams). */
 /** `linked` : l'ordinateur a un agenda relié (lien ICS, compte) en plus de l'agenda personnel. */
 /** `meetings` : Rejoindre (tout lien de visio) ; `teams` : Teams dans le deck, sa page Réunion après Rejoindre. */
-/** `agents` : agents Claude Code (Mac avec Claude Code installé) : onglet Agents du Deck. */
+/** `agents` : agents Claude Code (Mac avec Claude Code installé) : onglet Agents du Deck. `jira` : Jira configuré sur l'ordinateur : onglet Jira. */
 data class HomeFeatures(
     val agenda: Boolean = true,
     val meetings: Boolean = true,
     val linked: Boolean = true,
     val teams: Boolean = false,
     val agents: Boolean = false,
+    val jira: Boolean = false,
     /** Plugins coupés sur cet ordinateur (`open`, `mixer`, `pad`…) : leurs onglets ne sont pas affichés. */
     val off: Set<String> = emptySet(),
 )
@@ -92,7 +93,7 @@ class DeckApi(private val http: Http) {
         JSONObject(http.get("/deck/features")).let {
             // Ordinateur pas encore à jour (sans `teams`) : `meetings` y voulait dire « Teams dans le deck ».
             val off = it.optJSONArray("off")?.let { a -> (0 until a.length()).map { i -> a.getString(i) }.toSet() }.orEmpty()
-            HomeFeatures(it.optBoolean("agenda", true), it.optBoolean("meetings", true), it.optBoolean("linked", true), it.optBoolean("teams", it.optBoolean("meetings", true)), it.optBoolean("agents"), off)
+            HomeFeatures(it.optBoolean("agenda", true), it.optBoolean("meetings", true), it.optBoolean("linked", true), it.optBoolean("teams", it.optBoolean("meetings", true)), it.optBoolean("agents"), it.optBoolean("jira"), off)
         }
     }
 
