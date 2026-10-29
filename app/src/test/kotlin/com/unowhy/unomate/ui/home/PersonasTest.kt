@@ -68,7 +68,7 @@ class PersonasTest {
         assertEquals(setOf(WidgetType.AGENTS, WidgetType.KEYS, WidgetType.GITLAB, WidgetType.JIRA, WidgetType.TASKS), types(Persona.SACHA))
         assertEquals(setOf(WidgetType.KEYS, WidgetType.APPS), types(Persona.SAM))
         assertEquals(setOf(WidgetType.FOCUS, WidgetType.NEXT, WidgetType.KEYS, WidgetType.MEDIA, WidgetType.TASKS), types(Persona.CAMILLE))
-        assertEquals(setOf(WidgetType.AGENDA, WidgetType.TASKS, WidgetType.KEYS, WidgetType.MEDIA, WidgetType.APPS), types(Persona.GWEN))
+        assertEquals(setOf(WidgetType.AGENDA, WidgetType.TASKS, WidgetType.KEYS, WidgetType.MEDIA, WidgetType.APPS, WidgetType.PRESENT), types(Persona.GWEN))
         // Les personas ne se ressemblent pas, et aucun n'a le héros ni la ligne du jour.
         assertEquals(Persona.entries.size, Persona.entries.map { p -> p.profiles.map { pr -> pr.slots.map { it.type to it.size } } }.toSet().size)
         assertTrue(Persona.entries.none { WidgetType.HERO in types(it) || WidgetType.DAYLINE in types(it) })
@@ -122,6 +122,20 @@ class PersonasTest {
         assertTrue(shown.flatten().all { it.symbol == "lock" })
         val sacha = layout(Persona.SACHA).widgets.filter { it.page == 0 && it.type == WidgetType.KEYS }.map { w -> KeyRef.listFor(w.config, "ordi").map { it.label } }
         assertEquals(listOf(pages["Git"], pages["Tests"], pages["Déploiement"]).map { p -> p!!.map { it.label } }, sacha)
+    }
+
+    @Test
+    fun `Gwen a le widget Presentation en XL sur son ecran Presentation, au-dessus du Media`() {
+        val layout = layout(Persona.GWEN)
+        val slides = layout.widgets.filter { it.page == 1 }
+        val present = slides.single { it.type == WidgetType.PRESENT }
+        assertEquals(WidgetSize.XL, present.size)
+        assertEquals(0, present.row)
+        assertTrue(slides.none { it.type == WidgetType.KEYS })
+        val media = slides.single { it.type == WidgetType.MEDIA }
+        assertTrue(media.row >= present.row + present.size.h)
+        // Le widget ne demande aucune page de touches : rien à lire côté compagnon.
+        assertEquals(emptyList<KeyRef>(), KeyRef.listFor(present.config, "ordi"))
     }
 
     @Test

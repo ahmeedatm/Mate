@@ -188,6 +188,15 @@ class WidgetModelTest {
     }
 
     @Test
+    fun `widget Presentation, en XL et L, propose a tous et a besoin de l'ordinateur`() {
+        assertEquals(WidgetType.PRESENT, WidgetType.of("present"))
+        assertEquals(listOf(WidgetSize.XL, WidgetSize.L), WidgetType.PRESENT.sizes)
+        assertTrue(WidgetType.PRESENT.computer)
+        assertTrue(WidgetType.PRESENT.offered(HomeFeatures()))
+        assertTrue(WidgetType.PRESENT.offered(HomeFeatures(off = setOf("open", "mixer", "pad"))))
+    }
+
+    @Test
     fun `config de base bureau, les touches de l'Accueil et du Deck arrivent remplies`() {
         for (template in listOf(Template.WORK_CADRAN, Template.DECK_CADRAN)) {
             val keys = template.build().widgets.single { it.type == WidgetType.KEYS }
