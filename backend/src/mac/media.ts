@@ -88,8 +88,8 @@ export function sessionOfNowPlaying(raw: RawNowPlaying, nowMs = Date.now()): Med
   };
 }
 
-/** Durée pendant laquelle une lecture qui vient de jouer reste affichée (changement de morceau). */
-export const HOLD_MS = 15_000;
+/** Durée pendant laquelle une lecture qui vient de jouer reste affichée (changement de morceau ; plusieurs Précédent de suite dans un navigateur lent dépassent 15 s). */
+export const HOLD_MS = 30_000;
 
 /**
  * Au changement de morceau d'un site (YouTube Music dans Opera GX), MediaRemote ne dit rien puis rend la main ~5 s à
