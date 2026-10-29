@@ -5,6 +5,7 @@ import android.content.Context
 import android.util.Log
 import com.unowhy.companion.BuildConfig
 import com.unowhy.companion.Computers
+import com.unowhy.companion.Prefs
 import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.kiosk.Updater
 
@@ -29,7 +30,10 @@ object Trial {
     fun switch(activity: Activity): Boolean {
         val intent = activity.packageManager.getLaunchIntentForPackage(other) ?: return false
         // Essai installé après le dernier passage en kiosque : micro et caméra accordés avant qu'il les demande.
-        if (!BuildConfig.TRIAL) Kiosk.grantPermissions(activity, TRIAL)
+        if (!BuildConfig.TRIAL) {
+            Kiosk.grantPermissions(activity, TRIAL)
+            Prefs.setTrialOpened(activity, true)
+        }
         activity.startActivity(intent)
         if (BuildConfig.TRIAL) activity.finishAndRemoveTask()
         return true

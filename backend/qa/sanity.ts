@@ -89,6 +89,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expectStatus(open, 200, "/health sans jeton");
         expect(open.json.service === "unowhy-companion", `service inattendu : ${open.json.service}`);
         expect(open.json.auth === false, "/health sans jeton devrait dire auth: false");
+        expect(/^(\d+\.\d+\.\d+|dev)$/.test(open.json.version ?? ""), `version du paquet inattendue : ${open.json.version}`);
         if (opts.os) expect(open.json.os === opts.os, `système annoncé « ${open.json.os} », attendu « ${opts.os} »`);
         os = open.json.os === "mac" || open.json.os === "windows" ? open.json.os : "other";
         id = open.json.id;
@@ -368,6 +369,36 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           await call("PUT", "/local/calendar", { urls: [] });
           ics.close();
         }
+      },
+    },
+    {
+      name: "courrier Outlook (page du Deck)",
+      run: async () => {
+        // Sans compte Microsoft relié : no-account ; relié sans Mail.Read : reconnect ; sinon les compteurs.
+        const mail = await call("GET", "/mail/summary");
+        expectStatus(mail, 200, "/mail/summary");
+        const status = mail.json.status;
+        expect(["no-account", "reconnect", "ok"].includes(status), `état du courrier inconnu : ${status}`);
+        if (status === "ok") {
+          expect(
+            ["unread", "junk", "drafts", "sent"].every((k) => Number.isInteger(mail.json[k])),
+            "compteurs du courrier absents",
+          );
+          expect(Array.isArray(mail.json.recent) && mail.json.recent.length <= 5, "derniers non lus invalides");
+        }
+        return status;
+      },
+    },
+    {
+      name: "essai du backend",
+      run: async () => {
+        const state = await call("GET", "/companion/backend");
+        expectStatus(state, 200, "/companion/backend");
+        expect(state.json.mode === "origin" && typeof state.json.packaged === "boolean", `état inattendu : ${JSON.stringify(state.json)}`);
+        // Rien à restaurer : ni changement, ni redémarrage.
+        const origin = await call("POST", "/companion/backend/origin", {});
+        expectStatus(origin, 200, "/companion/backend/origin");
+        expect(origin.json.changed === false, "le compagnon dit avoir restauré un backend");
       },
     },
     {

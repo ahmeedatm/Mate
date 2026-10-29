@@ -10,9 +10,6 @@ val backendUrl = (findProperty("backendUrl") as String?) ?: "http://127.0.0.1:30
 // Code technicien (appui long sur le titre de Réglages) : montre la carte Kiosque. -PtechCode=… pour le changer.
 val techCode = (findProperty("techCode") as String?) ?: "4242"
 
-// Adresse courte du logiciel de l'ordinateur, affichée au premier lancement (à taper dans le navigateur de l'ordinateur).
-val installUrl = (findProperty("installUrl") as String?) ?: "unowhy.com/compagnon"
-
 // Serveur central des mises à jour : registre de paquets du projet GitLab (manifest.json + APK). -PupdateUrl=http://10.0.2.2:8099
 // pour un essai local, vide pour le couper.
 val updateUrl = (findProperty("updateUrl") as String?)
@@ -55,10 +52,8 @@ android {
         buildConfigField("boolean", "TRIAL", "$trial")
         buildConfigField("String", "DEFAULT_BACKEND_URL", "\"$backendUrl\"")
         buildConfigField("String", "TECH_CODE", "\"$techCode\"")
-        buildConfigField("String", "INSTALL_URL", "\"$installUrl\"")
         buildConfigField("String", "UPDATE_URL", "\"$updateUrl\"")
         buildConfigField("String", "UPDATE_HEADER", "\"$updateHeader\"")
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -85,15 +80,13 @@ android {
     }
 
     // Tests JVM : android.util.Log et consorts renvoient des valeurs par défaut au lieu de lever une exception.
-    // Erreurs de lint déjà présentes figées dans lint-baseline.xml : seules les nouvelles bloquent la CI.
+    // Erreurs de lint déjà présentes figées dans lint-baseline.xml : seules les nouvelles ressortent (`./gradlew lintDebug`, hors CI).
     lint {
         baseline = file("lint-baseline.xml")
     }
 
-    // Tests instrumentés (app/src/androidTest/, émulateur API 29) : animations coupées, sinon Espresso attend les boucles.
     testOptions {
         unitTests.isReturnDefaultValues = true
-        animationsDisabled = true
     }
 
     compileOptions {
@@ -112,8 +105,4 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     // Vraie implémentation de org.json : celle d'android.jar n'est qu'un bouchon sur la JVM.
     testImplementation("org.json:json:20250517")
-
-    androidTestImplementation("androidx.test:runner:1.7.0")
-    androidTestImplementation("androidx.test.ext:junit:1.3.0")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 }

@@ -15,6 +15,9 @@ object Prefs {
     private const val KEY_NOTIFICATIONS_DISCREET = "notifications_discreet"
     private const val KEY_FRAME_DELAY = "frame_delay_min"
     private const val KEY_FRAME_INTERVAL = "frame_interval_s"
+    private const val KEY_TRIAL_MR = "trial_mr"
+    private const val KEY_TRIAL_BACKEND = "trial_backend"
+    private const val KEY_TRIAL_OPENED = "trial_opened"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -96,4 +99,20 @@ object Prefs {
     fun setTheme(context: Context, value: String) {
         prefs(context).edit().putString(KEY_THEME, value).apply()
     }
+
+    /** MR de l'essai installé par la stable (0 : aucun, ou installé autrement) et son backend : « Ouvrir l'essai » les relit. */
+    fun trialMr(context: Context): Int = prefs(context).getInt(KEY_TRIAL_MR, 0)
+
+    fun trialHasBackend(context: Context): Boolean = prefs(context).getBoolean(KEY_TRIAL_BACKEND, false)
+
+    fun setTrial(context: Context, mr: Int, hasBackend: Boolean) {
+        prefs(context).edit().putInt(KEY_TRIAL_MR, mr).putBoolean(KEY_TRIAL_BACKEND, hasBackend).apply()
+    }
+
+    /** La stable a ouvert l'essai : à son retour, elle remet le backend d'origine de l'ordinateur si l'essai n'a pas pu. */
+    fun setTrialOpened(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_TRIAL_OPENED, value).apply()
+    }
+
+    fun trialOpened(context: Context): Boolean = prefs(context).getBoolean(KEY_TRIAL_OPENED, false)
 }
