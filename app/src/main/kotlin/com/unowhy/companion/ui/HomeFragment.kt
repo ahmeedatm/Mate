@@ -157,7 +157,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     override fun onStop() {
         started = false
-        deckOverlays?.hideAll()
+        // Les autres panneaux restent : l'écran qui s'éteint ne doit pas perdre une macro à moitié saisie.
+        deckOverlays?.hideAgentsBoard()
         widgets.values.forEach { it.setActive(false) }
         loop?.cancel()
         super.onStop()

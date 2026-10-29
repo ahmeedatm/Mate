@@ -59,6 +59,11 @@ class DeckOverlays(private val root: FrameLayout, private val scope: CoroutineSc
         board.show(owner)
     }
 
+    /** Seul le tableau des agents : il est relu tant qu'il est ouvert. */
+    fun hideAgentsBoard() {
+        agentsBoard?.hide()
+    }
+
     fun hideAll() {
         keyEditor?.hide()
         appAdder?.hide()
