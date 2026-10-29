@@ -13,7 +13,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Météo de la ville choisie, lue par la tablette chez Open-Meteo (gratuit, sans clé ni compte), toutes les 30 min.
+ * Météo de la ville choisie, lue par la tablette chez MET Norway (gratuit, sans clé ni compte, voir Weather), toutes les 30 min.
  * Petit : emoji et température ; moyen : en plus le temps qu'il fait, min / max du jour et la ville ; grand : en plus
  * les 4 jours suivants.
  */
@@ -23,6 +23,9 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     private val sky = label(17f).apply { maxLines = 2 }
     private val range = label(15f, R.attr.c_text_dim).apply { isSingleLine = true }
     private val city = label(14f, R.attr.c_text_faint).apply { isSingleLine = true }
+
+    /** Petit : la colonne de détails n'a pas la place, la ville passe sous la température (trouvée seule, elle doit se voir). */
+    private val smallCity = label(14f, R.attr.c_text_faint).apply { isSingleLine = true }
     private val details = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         addView(sky)
@@ -43,6 +46,7 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
         addView(now, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        addView(smallCity)
         addView(days, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(24) })
         setOnClickListener { if (!placed.config.has("lat")) showSettings() }
     }
@@ -65,6 +69,7 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     override fun applySize() {
         val small = placed.size == WidgetSize.S
         details.visibility = if (small) android.view.View.GONE else android.view.View.VISIBLE
+        smallCity.visibility = if (small) android.view.View.VISIBLE else android.view.View.GONE
         emoji.textSize = if (small) 34f else 44f
         temp.textSize = if (small) 34f else 40f
         days.visibility = if (placed.size == WidgetSize.L) android.view.View.VISIBLE else android.view.View.GONE
@@ -72,6 +77,8 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     }
 
     override suspend fun load() {
+        // Pas encore de ville : celle de la position de la tablette, sinon « Choisir ma ville ».
+        if (!placed.config.has("lat") && Weather.autoCity(context, placed.config)) host.save()
         if (!placed.config.has("lat")) return render()
         if (current != null && SystemClock.elapsedRealtime() - fetchedAt < Weather.REFRESH_MS) return
         current = runCatching { Weather.forecast(placed.config.getDouble("lat"), placed.config.getDouble("lon")) }.getOrNull() ?: current
@@ -88,10 +95,16 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
             sky.setText(R.string.widget_weather_choose)
             range.text = ""
             city.text = ""
+            smallCity.visibility = android.view.View.GONE
             details.visibility = android.view.View.VISIBLE
             return
         }
         city.text = name
+        smallCity.text = name
+        // Sans ville, les détails s'affichent même en petit (« Choisir ma ville ») : la ville trouvée, on revient à la taille.
+        val small = placed.size == WidgetSize.S
+        details.visibility = if (small) android.view.View.GONE else android.view.View.VISIBLE
+        smallCity.visibility = if (small) android.view.View.VISIBLE else android.view.View.GONE
         if (f == null) {
             emoji.text = "…"
             temp.text = ""

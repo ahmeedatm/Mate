@@ -40,7 +40,7 @@ Pour la suite (activités en direct, calme, son, techniques) : [`plus-loin.md`](
    dans le menu (ou en cas de problème, comme le bandeau batterie faible). Sans toucher, l'écran
    se repose : seules l'heure et la ligne du jour restent.
 6. **Le jour, la nuit.** Papier le jour, graphite la nuit. La bascule suit le vrai coucher du
-   soleil (Open-Meteo le donne déjà pour la météo), en fondu de 1,6 s.
+   soleil (à calculer sur la tablette : MET Norway, la source météo, ne le donne pas), en fondu de 1,6 s.
 
 ## Bâtie sur de vrais design systems
 
