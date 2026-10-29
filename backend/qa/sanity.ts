@@ -55,8 +55,11 @@ type Check = { name: string; run: () => Promise<string | void> };
 export async function runSanity(opts: { url: string; token: string; os?: Os; hookSecret?: string }): Promise<Result[]> {
   const base = opts.url.replace(/\/$/, "");
   const local = /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i.test(base);
+  // Persona annoncé comme le fait la tablette (X-Demo-Persona) : les données fictives ne servent que lui.
+  let persona: string | undefined;
   const call: Call = async (method, route, body, auth = true) => {
     const headers: Record<string, string> = {};
+    if (persona) headers["x-demo-persona"] = persona;
     if (auth) headers.authorization = `Bearer ${opts.token}`;
     if (body !== undefined) headers["content-type"] = "application/json";
     const res = await fetch(base + route, {
@@ -233,6 +236,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         try {
           const set = await call("POST", "/demo/persona", { persona: "sacha" });
           expectStatus(set, 200, "POST /demo/persona");
+          persona = "sacha";
           expect(set.json.keys?.[0]?.id === "k-0", "touches du persona absentes de la réponse");
           const key = await call("GET", "/deck/keys/0");
           expect(key.json.key?.label === set.json.keys[0].label, "la touche k-0 n'est pas celle du persona");
@@ -250,6 +254,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           expectStatus(sessions, 200, "GET /agents en démo");
           expect(sessions.json.sessions?.[0]?.id?.startsWith("demo-"), "sessions fictives absentes en démo");
         } finally {
+          persona = undefined;
           const quit = await call("DELETE", "/demo");
           expectStatus(quit, 200, "DELETE /demo");
           expect(quit.json.restored === true, "la démo n'a pas été rendue");

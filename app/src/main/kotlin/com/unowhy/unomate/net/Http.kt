@@ -20,11 +20,15 @@ class HttpException(val code: Int, val reason: String) : IOException("HTTP $code
  *
  * `trust` : certificat de l'ordinateur épinglé à l'appairage (HTTPS en WiFi) ; null pour un serveur à certificat
  * classique (mises à jour). Le jeton ne part jamais en HTTP en clair hors de la tablette elle-même (USB).
+ *
+ * `persona` : persona de la démo choisi sur la tablette, lu à chaque requête et envoyé en `X-Demo-Persona` ; sans lui,
+ * l'ordinateur répond avec ses vraies données (backend/src/demo-mock.ts).
  */
 class Http(
     private val baseUrl: String, private val token: String, private val connectTimeoutMs: Int,
     private val headers: Map<String, String> = emptyMap(),
     private val trust: PinnedTrust? = null,
+    private val persona: () -> String? = { null },
 ) {
     private val cleartextRefused = token.isNotEmpty() && baseUrl.startsWith("http://") && !isLocalUrl(baseUrl)
 
@@ -73,6 +77,7 @@ class Http(
         conn.readTimeout = timeoutMs
         if (token.isNotEmpty()) conn.setRequestProperty("Authorization", "Bearer $token")
         headers.forEach { (name, value) -> conn.setRequestProperty(name, value) }
+        persona()?.let { conn.setRequestProperty(PERSONA_HEADER, it) }
         if (body != null) {
             conn.doOutput = true
             conn.setRequestProperty("Content-Type", contentType)
@@ -92,6 +97,7 @@ class Http(
 
     private companion object {
         const val JSON = "application/json; charset=utf-8"
+        const val PERSONA_HEADER = "X-Demo-Persona"
     }
 }
 
