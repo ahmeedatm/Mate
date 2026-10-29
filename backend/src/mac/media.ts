@@ -88,6 +88,23 @@ export function sessionOfNowPlaying(raw: RawNowPlaying, nowMs = Date.now()): Med
   };
 }
 
+/** Durée pendant laquelle une lecture qui vient de jouer reste affichée (changement de morceau ; plusieurs Précédent de suite dans un navigateur lent dépassent 15 s). */
+export const HOLD_MS = 30_000;
+
+/**
+ * Au changement de morceau d'un site (YouTube Music dans Opera GX), MediaRemote ne dit rien puis rend la main ~5 s à
+ * la dernière appli qui avait une lecture (Spotify en pause, relevé du 29/10) : pendant `HOLD_MS` après la dernière
+ * lecture vue, une autre appli en pause ou rien ne la remplacent pas. Une autre appli qui joue passe devant.
+ */
+export function heldSession(
+  playing: { session: MediaSession; atMs: number } | undefined,
+  fresh: MediaSession | undefined,
+  nowMs: number,
+): MediaSession | undefined {
+  if (fresh?.status === "playing" || !playing || nowMs - playing.atMs > HOLD_MS) return fresh;
+  return fresh && fresh.app === playing.session.app ? fresh : playing.session;
+}
+
 /** Image de la vidéo YouTube d'un onglet (aussi pour YouTube Music), connue par son adresse. */
 export function youtubeThumb(url: string): string | undefined {
   const u = URL.parse(url);
@@ -230,12 +247,17 @@ async function fallback(): Promise<MediaSession[]> {
 let pending: Promise<MediaSession[]> | undefined;
 /** Dernière lecture vue, pour la pochette (`/system/media/thumb` ne donne que l'appli). */
 let last: MediaSession | undefined;
+/** Dernière lecture que MediaRemote a vue jouer (voir `heldSession`). */
+let lastPlaying: { session: MediaSession; atMs: number } | undefined;
 
 /** Relu chaque seconde par la tablette : deux demandes simultanées partagent la même lecture. */
 export function mediaSessions(): Promise<MediaSession[]> {
   pending ??= (async () => {
     const raw = await nowPlaying<RawNowPlaying>("get");
-    const session = raw && sessionOfNowPlaying(raw);
+    const now = Date.now();
+    const fresh = raw && sessionOfNowPlaying(raw, now);
+    if (fresh?.status === "playing") lastPlaying = { session: fresh, atMs: now };
+    const session = heldSession(lastPlaying, fresh, now);
     const sessions = session ? [session] : await fallback();
     last = sessions.find((s) => s.current);
     return sessions;

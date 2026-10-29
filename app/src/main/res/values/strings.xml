@@ -504,6 +504,8 @@
     <string name="computer_none_found">Aucun ordinateur trouvé. Le compagnon doit être installé sur l\'ordinateur, et les deux appareils sur le même WiFi. Sinon, saisis son adresse.</string>
     <string name="computer_pick">Toucher l\'ordinateur à ajouter :</string>
     <string name="computer_known">déjà enregistré</string>
+    <string name="computer_outdated">compagnon à mettre à jour</string>
+    <string name="computer_outdated_detail">Le compagnon de %1$s est trop ancien pour cette tablette. Mets-le à jour : sur l\'ordinateur, ouvre %2$s et lance le nouvel installeur, puis recommence.</string>
     <string name="computer_manual_hint">Adresse affichée sur l\'ordinateur, dans la page du compagnon ouverte à l\'installation. Exemple : 192.168.1.20</string>
     <string name="computer_address_hint">192.168.1.20</string>
     <string name="computer_connect">Se connecter</string>
@@ -567,9 +569,6 @@
     <string name="updates_checking">Recherche des mises à jour…</string>
     <string name="updates_none">Aucune mise à jour annoncée.</string>
     <string name="updates_row_title">%1$s · %2$s</string>
-    <string name="updates_row_title_channel">%1$s · %2$s · %3$s</string>
-    <string name="updates_channel_main">main</string>
-    <string name="updates_channel_trial">essai</string>
     <string name="updates_row_newer">Installée : %1$s · %2$s</string>
     <string name="updates_row_absent">Pas installée · %1$s</string>
     <string name="updates_row_installed">Version installée.</string>
@@ -601,6 +600,20 @@
     <string name="duration_seconds">%1$d s</string>
     <string name="duration_minutes">%1$d min</string>
     <string name="updates_downloading_short">Téléchargement…</string>
+    <string name="updates_source_trials">essais de MR</string>
+    <string name="essais_title">Essais de MR</string>
+    <string name="essais_none">Aucun essai de MR publié.</string>
+    <string name="essai_row_title">!%1$d %2$s</string>
+    <string name="essai_row_version">%1$s · %2$s</string>
+    <string name="essai_row_backend">backend de l\'ordinateur remplacé</string>
+    <string name="essai_row_no_backend">sans backend</string>
+    <string name="essai_row_absent">Pas installé.</string>
+    <string name="essai_row_replace">Remplace l\'essai installé (%1$s).</string>
+    <string name="essai_row_downgrade">Plus ancien que l\'essai installé (%1$s) : désinstallé d\'abord, puis installé.</string>
+    <string name="update_uninstall_failed">Impossible de désinstaller l\'essai installé (code %1$d).</string>
+    <string name="trial_syncing">Backend de l\'ordinateur en cours de changement…</string>
+    <string name="trial_backend_gone">Cet essai n\'est plus publié : son backend ne peut plus être envoyé à l\'ordinateur.</string>
+    <string name="trial_backend_os">Cet essai n\'a pas de backend pour cet ordinateur (%1$s).</string>
     <string name="kiosk_title">Mode kiosque</string>
     <string name="kiosk_off">Inactif : la tablette n\'a pas été préparée en kiosque (docs/kiosque.md).</string>
     <!-- Premier lancement (WelcomeView) et écrans sans ordinateur -->
@@ -610,6 +623,15 @@
     <string name="welcome_wifi_text">Connecte la tablette au WiFi de la maison ou du bureau, le même que celui de l\'ordinateur.</string>
     <string name="welcome_install_title">Sur l\'ordinateur</string>
     <string name="welcome_install_text">Ouvre cette adresse dans le navigateur de l\'ordinateur et lance l\'installation :</string>
+    <string name="install_address_no_wifi">connecte d\'abord le WiFi</string>
+    <string name="companion_update_available">Nouvelle version du compagnon pour %1$s (%2$s) : touche pour la mettre à jour</string>
+    <string name="companion_update_title">Mettre à jour le compagnon de %1$s</string>
+    <string name="companion_update_steps_mac">1. Sur le Mac, ouvre %1$s (bouton « Ouvrir sur l\'ordi »).\n2. Télécharge le zip, ouvre-le, puis ouvre « Compagnon Unowhy » : il remplace l\'ancien dans Applications et redémarre.\n3. Si macOS redemande l\'Accessibilité, accorde-la (Réglages Système > Confidentialité et sécurité > Accessibilité).\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
+    <string name="companion_update_steps_windows">1. Sur le PC, ouvre %1$s (bouton « Ouvrir sur l\'ordi »).\n2. Télécharge et lance l\'installeur : il remplace l\'ancien et redémarre le compagnon.\n3. Si SmartScreen bloque : « Informations complémentaires », puis « Exécuter quand même ».\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
+    <string name="companion_update_open">Ouvrir sur l\'ordi</string>
+    <string name="companion_update_later">Plus tard</string>
+    <string name="companion_update_opened">Page ouverte sur l\'ordinateur</string>
+    <string name="companion_updated">Compagnon de %1$s à jour (%2$s)</string>
     <string name="welcome_install_os">Mac ou PC Windows</string>
     <string name="welcome_connect_title">Connecter</string>
     <string name="welcome_connect_text">Ton ordinateur apparaît ici dès que le compagnon est installé. Touche-le, puis saisis le code qu\'il affiche.</string>
@@ -684,6 +706,25 @@
     <string name="calendars_unlink_title">Délier %1$s ?</string>
     <string name="calendars_unlink_message">Ses rendez-vous ne s\'afficheront plus sur la tablette. Tu pourras le relier à nouveau depuis « Relier un autre agenda ».</string>
     <string name="agenda_setup_opened">Page ouverte sur l\'ordinateur : connecte ton agenda.</string>
+
+    <!-- Page Outlook du Deck : courrier du compte Microsoft relié -->
+    <string name="mail_title">Courrier</string>
+    <string name="mail_count">%d</string>
+    <string name="mail_unread">Non lus</string>
+    <string name="mail_junk">Indésirables</string>
+    <string name="mail_drafts">Brouillons</string>
+    <string name="mail_sent">Envoyés</string>
+    <string name="mail_no_unread">Aucun message non lu</string>
+    <string name="mail_no_subject">(sans objet)</string>
+    <string name="mail_private_hidden">Contenu masqué (mode privé)</string>
+    <string name="mail_next">Prochain rendez-vous : %1$s, %2$s</string>
+    <string name="mail_next_private">Prochain rendez-vous : %1$s</string>
+    <string name="mail_next_none">Aucun rendez-vous à venir</string>
+    <string name="mail_no_account">Relie ton compte Microsoft pour voir ton courrier et ton prochain rendez-vous ici.</string>
+    <string name="mail_connect">Relier mon compte Microsoft</string>
+    <string name="mail_reconnect">Reconnecte ton compte Microsoft : l\'accès au courrier lui manque ou a expiré.</string>
+    <string name="mail_reconnect_button">Reconnecter mon compte Microsoft</string>
+    <string name="mail_setup_opened">Page ouverte sur l\'ordinateur : connecte ton compte Microsoft.</string>
     <string name="tablet_title">Tablette</string>
     <string name="tablet_battery_state">Batterie de la tablette : %1$d %%</string>
     <string name="tablet_battery_charging">Batterie : %1$d %% · en charge (%2$s)</string>
@@ -963,5 +1004,5 @@
     <!-- Appli d'essai depuis une MR, installée à côté de la stable (trial/Trial.kt) -->
     <string name="trial_open">Ouvrir l\'essai</string>
     <string name="trial_back">Revenir à la stable</string>
-    <string name="trial_hint">Version d\'essai d\'une MR, installée à côté du Companion. Mises à jour, WiFi et kiosque se règlent dans le Companion.</string>
+    <string name="trial_hint">Version d\'essai d\'une MR, installée à côté du Companion. Mises à jour, WiFi et kiosque se règlent dans le Companion. Le backend de l\'ordinateur revient à l\'origine quand tu reviens à la stable.</string>
 </resources>

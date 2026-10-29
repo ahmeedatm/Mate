@@ -23,6 +23,7 @@ import cameraRoutes from "./routes/camera.ts";
 import deckRoutes from "./routes/deck.ts";
 import docRoutes from "./routes/docs.ts";
 import localRoutes from "./routes/local.ts";
+import mailRoutes from "./routes/mail.ts";
 import notificationRoutes from "./routes/notifications.ts";
 import pairingRoutes from "./routes/pairing.ts";
 import pointerRoutes from "./routes/pointer.ts";
@@ -120,6 +121,8 @@ app.addHook("preHandler", async (req, reply) => {
 
 // Images du visualiseur (POST /camera/frame).
 app.addContentTypeParser("image/jpeg", { parseAs: "buffer", bodyLimit: 2 * 1024 * 1024 }, (_req, body, done) => done(null, body));
+// Archive du backend d'une MR (POST /companion/backend/essai).
+app.addContentTypeParser("application/gzip", { parseAs: "buffer", bodyLimit: 100 * 1024 * 1024 }, (_req, body, done) => done(null, body));
 
 // --- Routes, une par domaine dans src/routes/ (les hooks ci-dessus valent pour toutes)
 
@@ -135,6 +138,7 @@ app.register(updateRoutes);
 app.register(browserRoutes);
 app.register(cameraRoutes);
 app.register(calendarRoutes);
+app.register(mailRoutes);
 app.register(taskRoutes);
 app.register(callRoutes);
 app.register(agentRoutes);

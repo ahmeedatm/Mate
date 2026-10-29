@@ -74,11 +74,12 @@
         android:layout_marginTop="20dp"
         android:layout_weight="1">
 
-        <!-- Écran de départ : les trois usages, expliqués. -->
+        <!-- Écran de départ : les quatre usages, expliqués, en cartes de même hauteur. -->
         <LinearLayout
             android:id="@+id/docs_choice"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
             android:gravity="center"
             android:orientation="horizontal">
 
@@ -86,7 +87,7 @@
                 android:id="@+id/docs_choose_files"
                 style="@style/Card"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:clickable="true"
@@ -126,7 +127,7 @@
                 android:id="@+id/docs_choose_web"
                 style="@style/Card"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_marginStart="12dp"
                 android:layout_weight="1"
                 android:clickable="true"
@@ -166,7 +167,7 @@
                 android:id="@+id/docs_choose_clipboard"
                 style="@style/Card"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_marginStart="24dp"
                 android:layout_weight="1"
                 android:clickable="true"
@@ -206,7 +207,7 @@
                 android:id="@+id/docs_choose_frame"
                 style="@style/Card"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_marginStart="24dp"
                 android:layout_weight="1"
                 android:clickable="true"

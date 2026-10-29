@@ -8,11 +8,18 @@ class Banner(private val view: TextView) {
 
     private val hide = Runnable { view.visibility = View.GONE }
 
+    private var onTap: (() -> Unit)? = null
+
     init {
-        view.setOnClickListener { hide.run() }
+        view.setOnClickListener {
+            hide.run()
+            onTap?.invoke()
+        }
     }
 
-    fun show(text: String, seconds: Int) {
+    /** `onTap` : en plus de la fermer, un toucher fait cette action. */
+    fun show(text: String, seconds: Int, onTap: (() -> Unit)? = null) {
+        this.onTap = onTap
         view.text = text
         view.visibility = View.VISIBLE
         view.removeCallbacks(hide)

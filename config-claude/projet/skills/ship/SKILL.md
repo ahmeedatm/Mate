@@ -22,7 +22,7 @@ Fichiers : `git diff --name-only origin/main...HEAD` + `git status --porcelain`.
 | Touché | Commande |
 |---|---|
 | `backend/` | `cd backend && npm run format && npm run lint && npm test` |
-| `app/`, `*.gradle*` | `./gradlew ktlintFormat ktlintCheck testDebugUnitTest lintDebug` |
+| `app/`, `*.gradle*` | `./gradlew ktlintFormat ktlintCheck testDebugUnitTest` |
 | `backend/src/win/helper/`, `native.cs` | `cd backend && npm run build:helper` (exe gardés dans le dépôt) |
 | docs seules | rien |
 
@@ -81,16 +81,22 @@ environ) :
 @REPO@/.claude/skills/ship/essai.sh
 ```
 
-Il pousse `essai/mr-<iid>`, lance le job manuel `essai-android`, attend `essai-updates`, annonce l'essai par le
-compagnon du Mac (`DATA_DIR=paquet npm run updates:essai`) et, si `backend/` a changé, passe le compagnon du Mac sur
-la branche. Dernière ligne utile : `com.unowhy.companion.essai X.Y.Z-essai.N … annoncé`.
+Il pousse `essai/mr-<iid>` (le titre de la MR part en variable de pipeline `MR_TITLE`), lance le job manuel
+`essai-android` et attend `essai-updates`, qui dépose l'essai dans le paquet `companion-updates/essais` : une entrée
+par MR, avec l'archive du backend (Mac et Windows) si `backend/` diffère de `main`. Il ne touche ni à la tablette ni
+au compagnon du Mac. Dernière ligne utile : `essai X.Y.Z-essai.N de la MR !<iid> publié (backend : oui|non)`.
 
-- Un seul essai à la fois (paquet `companion-updates/essai`, compagnon du Mac) : le dernier publié remplace le
-  précédent, quelle que soit la session. Toujours dire quelle MR est sur la tablette.
+- Plusieurs essais coexistent (une entrée par MR) : republier la même MR remplace seulement la sienne. Le choix se
+  fait sur la tablette, Réglages > Mises à jour.
+- Prérequis, à dire à l'utilisateur au premier essai : la tablette et ses ordinateurs doivent avoir cette version
+  (liste des essais, bascule du backend) en stable avant de pouvoir choisir une MR. Mettre à jour le PC d'Eliot
+  seulement avec l'accord de l'utilisateur.
 - Sortie non nulle : lire le message (job en échec : `glab ci trace <id>`), corriger, reprendre à l'étape 2.
 - Docs seules, CI seule, `.claude/` : pas d'essai, étape 7 en le disant.
 - L'essai n'est pas device owner : Mises à jour, WiFi et carte Kiosque ne s'y testent pas. Si la tâche les touche,
   le dire ; test par adb seulement avec une tablette en APK debug (`deploy-tablette.sh`).
+- Backend d'une MR : ordinateur installé par paquet seulement (lancé depuis le dépôt, la tablette affiche un refus
+  clair). L'ordinateur garde son backend d'origine et le retrouve avec « Revenir à la stable ».
 
 ## 7. Retours de l'utilisateur, puis fusion
 
@@ -99,21 +105,20 @@ travail, pas de liste de fichiers, pas de compte rendu (étape 8), pas de pipeli
 
 ```
 C'est fini. Essai X.Y.Z-essai.N à installer (MR !<iid>).
-Installer : Réglages > Mises à jour > Rechercher, « Mettre à jour » sur Companion essai, puis « Ouvrir l'essai ».
+Installer : Réglages > Mises à jour > Rechercher, section « Essais de MR », « Mettre à jour » sur la ligne « !<iid> … », puis « Ouvrir l'essai » (backend de l'ordinateur basculé seul si la MR le touche).
 Tester : <1 à 3 lignes : où aller, quel geste, ce qui doit se passer>
 ```
 
-Une ligne `⚠️` en plus seulement si quelque chose ne se teste pas dans l'essai (device owner, Mac à relancer).
+Une ligne `⚠️` en plus seulement si quelque chose ne se teste pas dans l'essai (device owner, ordinateur lancé depuis le dépôt).
 
 - **Retour** : corriger sur la même branche, reprendre à l'étape 2 (nouvel essai), même message. Pas de nouvelle
   salve de questions, sauf si le retour change le besoin.
 - **Go** (« go », « ok », « c'est bon », « fusionne ») : vérifier pipeline vert et pas de conflit, puis
-  `glab mr merge <iid> --yes` (sans `--auto-merge`), supprimer la branche d'essai
-  (`glab api -X DELETE projects/efreifer%2Funowhy-companion/repository/branches/essai%2Fmr-<iid>`), revenir sur
-  `main` à jour.
-- **Abandon** : supprimer la branche d'essai de la même façon ; si le Mac porte la branche, le remettre sur `main` :
-  `git -C @REPO@ pull --ff-only` puis, depuis ce dossier,
-  `BACKEND=1 APK=0 .claude/skills/ship/deploy-tablette.sh`. Sur la tablette, « Revenir à la stable » dans l'essai.
+  `glab mr merge <iid> --yes` (sans `--auto-merge`), retirer l'essai de la MR
+  (`@REPO@/.claude/skills/ship/essai.sh --retire <iid>` : branche `essai/mr-<iid>` supprimée et entrée du manifest
+  retirée, `GITLAB_TOKEN` dans l'environnement), revenir sur `main` à jour.
+- **Abandon** : retirer l'essai de la même façon. Sur la tablette, « Revenir à la stable » dans l'essai remet le
+  backend d'origine de l'ordinateur.
 
 ## 8. Compte rendu
 

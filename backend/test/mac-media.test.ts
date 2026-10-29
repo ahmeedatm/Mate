@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { fallbackSessions, playerScript, playingApps, sessionOfNowPlaying, siteName, tabTitle, thumbOfTabs } from "../src/mac/media.ts";
+import {
+  fallbackSessions,
+  HOLD_MS,
+  heldSession,
+  type MediaSession,
+  playerScript,
+  playingApps,
+  sessionOfNowPlaying,
+  siteName,
+  tabTitle,
+  thumbOfTabs,
+} from "../src/mac/media.ts";
 
 describe("lecture en cours (Mac)", () => {
   it("Spotify et Musique pilotés par AppleScript, les autres non", () => {
@@ -33,6 +44,23 @@ describe("lecture en cours (Mac)", () => {
     assert.equal(sessionOfNowPlaying({}), undefined);
     // `playing` (MediaRemote) l'emporte sur la vitesse de lecture.
     assert.equal(sessionOfNowPlaying({ ...raw, rate: 1, playing: false })?.status, "paused");
+  });
+
+  it("changement de morceau : Spotify en pause ne remplace pas YouTube Music pendant quelques secondes", () => {
+    // Relevé du 29/10 : Opera GX « LOST. » qui joue, rien, Spotify « unravel » en pause ~5 s, puis le morceau suivant.
+    const s = (app: string, title: string, status: string) => ({ app, title, status }) as MediaSession;
+    const opera = s("com.operasoftware.OperaGX", "LOST.", "playing");
+    const playing = { session: opera, atMs: 1_000_000 };
+    const spotify = s("com.spotify.client", "unravel", "paused");
+    assert.equal(heldSession(playing, undefined, 1_001_000), opera);
+    assert.equal(heldSession(playing, spotify, 1_005_000), opera);
+    // Le même site mis en pause, une autre appli qui joue, ou la pause qui dure : la lecture fraîche l'emporte.
+    const paused = s("com.operasoftware.OperaGX", "LOST.", "paused");
+    assert.equal(heldSession(playing, paused, 1_002_000), paused);
+    const music = s("com.spotify.client", "unravel", "playing");
+    assert.equal(heldSession(playing, music, 1_002_000), music);
+    assert.equal(heldSession(playing, spotify, 1_000_000 + HOLD_MS + 1), spotify);
+    assert.equal(heldSession(undefined, spotify, 1_000_000), spotify);
   });
 
   it("pochette de secours : image YouTube de l'onglet du même titre", () => {
