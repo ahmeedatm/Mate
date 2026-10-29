@@ -776,6 +776,9 @@
     <string name="widget_discord_desc">L\'appel Discord : micro, sourdine, quitter l\'appel</string>
     <string name="widget_meeting">Réunion</string>
     <string name="widget_meeting_desc">La réunion en ligne : rejoindre, micro, caméra, quitter</string>
+    <string name="widget_pad">Pavé tactile</string>
+    <string name="widget_pad_desc">Piloter le pointeur de l\'ordi du doigt : bouger, défiler, cliquer</string>
+    <string name="pad_unsupported">Le pavé marche avec un Mac ou un PC Windows</string>
     <string name="call_idle">Pas d\'appel</string>
     <string name="call_lobby">Avant la réunion</string>
     <string name="call_no_page">Pas de page pour ce widget dans le Deck</string>

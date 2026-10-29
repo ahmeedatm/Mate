@@ -57,7 +57,8 @@ enum class WidgetType(
     OPEN("open", R.string.widget_open, R.string.widget_open_desc, R.drawable.ic_display, listOf(WidgetSize.XL, WidgetSize.L), true),
     APPS("apps", R.string.widget_apps, R.string.widget_apps_desc, R.drawable.ic_tabs, listOf(WidgetSize.L, WidgetSize.M, WidgetSize.XL), true),
     DISCORD("discord", R.string.widget_discord, R.string.widget_discord_desc, R.drawable.ic_call, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
-    MEETING("meeting", R.string.widget_meeting, R.string.widget_meeting_desc, R.drawable.ic_videocam, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true);
+    MEETING("meeting", R.string.widget_meeting, R.string.widget_meeting_desc, R.drawable.ic_videocam, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
+    PAD("pad", R.string.widget_pad, R.string.widget_pad_desc, R.drawable.ic_tablet, listOf(WidgetSize.XL, WidgetSize.L), true);
 
     /** Sans fond de carte, posé à même l'écran : les tubes du thème Rétro y passent derrière un voile. */
     val bare get() = this == HERO || this == DAYLINE
