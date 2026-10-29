@@ -643,15 +643,14 @@ class MainActivity : AppCompatActivity() {
             documentPanel.setExpanded(mode == Mode.COMPUTER, splittable = mode != Mode.COMPUTER)
         }
         val changed = current != mode
-        val previous = current
         current = mode
         val fm = supportFragmentManager
         // Un écran ajouté juste avant (ex. recréé par onComputerChanged) doit exister pour être masqué.
         fm.executePendingTransactions()
         val tx = fm.beginTransaction()
-        // L'écran quitté reste visible le temps de s'effacer (Look.sharedAxis), puis il est masqué.
-        val leaving = fm.findFragmentByTag(previous.tag)?.takeIf { changed && it.isVisible && it.view != null }
-        fm.fragments.forEach { if (it !== leaving) tx.hide(it) }
+        // L'écran quitté est masqué tout de suite : deux écrans en fondu l'un sur l'autre se mêlent (double image), et
+        // remettre l'ancien à 100 % à la fin de son fondu le montrait en entier une image avant son masquage (flash).
+        fm.fragments.forEach { tx.hide(it) }
         // Sans ordinateur, un mode qui en a besoin n'est pas créé (caméra, requêtes) : renderNoComputer le remplace.
         val needsComputer = mode.connect != null && Computers.all(this).isEmpty()
         val existing = fm.findFragmentByTag(mode.tag)
@@ -660,26 +659,14 @@ class MainActivity : AppCompatActivity() {
 
         nav.select(mode, changed)
         renderNoComputer()
-        if (changed) slideTo(mode, leaving)
+        if (changed) slideTo(mode)
     }
 
-    /**
-     * Arrivée de l'écran `mode` dans le sens du déplacement dans la barre ; l'écran quitté s'efface, puis il est masqué
-     * (sauf s'il est redevenu l'écran affiché entre-temps). Ressorts qui jouent aussi en kiosque.
-     */
-    private fun slideTo(mode: Mode, leaving: Fragment?) {
-        val fm = supportFragmentManager
-        fm.executePendingTransactions()
-        val into = fm.findFragmentByTag(mode.tag)?.view
-        if (into == null) {
-            leaving?.let { fm.beginTransaction().hide(it).commitAllowingStateLoss() }
-            return
-        }
-        Look.sharedAxis(leaving?.view, into, fromBelow = nav.lastMove >= 0) {
-            val out = leaving ?: return@sharedAxis
-            out.view?.alpha = 1f
-            if (out.tag != current.tag && !fm.isDestroyed) fm.beginTransaction().hide(out).commitAllowingStateLoss()
-        }
+    /** Arrivée de l'écran `mode` dans le sens du déplacement dans la barre. Ressorts qui jouent aussi en kiosque. */
+    private fun slideTo(mode: Mode) {
+        supportFragmentManager.executePendingTransactions()
+        val into = supportFragmentManager.findFragmentByTag(mode.tag)?.view ?: return
+        Look.sharedAxis(into, fromBelow = nav.lastMove >= 0)
     }
 
     /** Entrée de profil de la barre : l'Accueil, sur ce profil (créé au besoin : sa vue doit exister avant). */

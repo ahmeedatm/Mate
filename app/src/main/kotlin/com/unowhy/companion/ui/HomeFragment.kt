@@ -398,7 +398,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         val changed = index != page
         displayProfile(index)
         val slide = animate && changed
-        if (slide) Look.sharedAxis(null, grid, fromBelow = move >= 0)
+        if (slide) Look.sharedAxis(grid, fromBelow = move >= 0)
         profileLoad = scope.launch {
             if (slide) delay(Look.NAV_SETTLE_MS)
             shownWidgets().forEach { it.load() }

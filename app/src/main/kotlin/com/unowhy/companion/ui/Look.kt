@@ -269,18 +269,11 @@ object Look {
         }
 
     /**
-     * Changement d'écran par la barre (axe partagé vertical) : l'écran quitté s'efface vite (`out`, ressort rapide),
-     * le nouveau arrive de 24 dp dans le sens du déplacement (`fromBelow` : on est descendu dans la barre, il monte) en
-     * fondu. Calque matériel le temps du mouvement. `onOutDone` : l'écran quitté est effacé (le masquer).
+     * Changement d'écran ou de profil par la barre (axe partagé vertical) : le nouveau arrive de 24 dp dans le sens du
+     * déplacement (`fromBelow` : on est descendu dans la barre, il monte) en fondu, sur le fond de l'écran. L'ancien est
+     * déjà masqué : pas de fondu croisé, qui mêle deux écrans chargés. Calque matériel le temps du mouvement.
      */
-    fun sharedAxis(out: View?, into: View, fromBelow: Boolean, onOutDone: (() -> Unit)? = null) {
-        if (out != null) {
-            out.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-            navSpring(out, DynamicAnimation.ALPHA, EFFECTS_FAST, 0f) {
-                out.setLayerType(View.LAYER_TYPE_NONE, null)
-                onOutDone?.invoke()
-            }
-        }
+    fun sharedAxis(into: View, fromBelow: Boolean) {
         into.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         into.alpha = 0f
         into.translationY = into.dp(NAV_AXIS_DP) * if (fromBelow) 1f else -1f
