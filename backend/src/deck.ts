@@ -378,13 +378,13 @@ const IMAGE_MAX_BYTES = 2_000_000;
 const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
 
 /**
- * Icône d'un site : les PNG déclarés par la page et par son manifeste, puis /apple-touch-icon.png, puis le service
- * d'icônes de Google. On garde la première entre 96 et 512 px (Twitch ne déclare que du 32 px mais a un
+ * Icône d'un site : les PNG déclarés par la page et par son manifeste, puis /apple-touch-icon.png, tous lus sur le
+ * site lui-même (pas de service d'icônes tiers : son nom ne part chez personne, docs/confidentialite.md). On garde la première entre 96 et 512 px (Twitch ne déclare que du 32 px mais a un
  * apple-touch-icon en 180 ; Canal+ déclare du 2048, trop lourd pour la tablette), sinon la plus proche ;
  * sous 48 px (Arte : 16 px partout), pas d'icône : la tablette affiche l'initiale plutôt qu'une image floue.
  */
 async function siteIcon(site: URL, out: string): Promise<boolean> {
-  // Site du réseau local : pas d'icône (et son nom n'est pas transmis au service d'icônes de Google).
+  // Site du réseau local : pas d'icône.
   await assertPublicUrl(site);
   const declared: { url: string; size: number }[] = [];
   const get = (url: string | URL, maxBytes: number) => fetchPublic(url, { maxBytes, headers: { "user-agent": BROWSER_UA } });
@@ -420,11 +420,7 @@ async function siteIcon(site: URL, out: string): Promise<boolean> {
   // Tailles utiles d'abord (la plus petite au-dessus de 96 px), puis les autres de la plus grande à la plus petite.
   const fits = (size: number) => size >= 96 && size <= 512;
   declared.sort((a, b) => (fits(a.size) !== fits(b.size) ? (fits(a.size) ? -1 : 1) : fits(a.size) ? a.size - b.size : b.size - a.size));
-  const candidates = [
-    ...declared.map((d) => d.url),
-    new URL("/apple-touch-icon.png", site).href,
-    `https://www.google.com/s2/favicons?domain=${encodeURIComponent(site.hostname)}&sz=128`,
-  ];
+  const candidates = [...declared.map((d) => d.url), new URL("/apple-touch-icon.png", site).href];
 
   let best: { data: Buffer; width: number } | undefined;
   for (const url of [...new Set(candidates)]) {

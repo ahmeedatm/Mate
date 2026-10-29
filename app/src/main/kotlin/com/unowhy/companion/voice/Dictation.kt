@@ -31,10 +31,14 @@ class Dictation(private val activity: MainActivity) {
             }
 
             override fun onResults(results: Bundle) {
+                Mic.release(Mic.DICTATION)
                 results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull { it.isNotBlank() }?.let(onResult) ?: onError(SpeechRecognizer.ERROR_NO_MATCH)
             }
 
-            override fun onError(error: Int) = onError(error)
+            override fun onError(error: Int) {
+                Mic.release(Mic.DICTATION)
+                onError(error)
+            }
 
             override fun onReadyForSpeech(params: Bundle?) = Unit
             override fun onBeginningOfSpeech() = Unit
@@ -43,6 +47,8 @@ class Dictation(private val activity: MainActivity) {
             override fun onEndOfSpeech() = Unit
             override fun onEvent(eventType: Int, params: Bundle?) = Unit
         })
+        // Micro pris avant l'écoute : le mot de réveil le rend tout de suite.
+        Mic.hold(Mic.DICTATION)
         r.startListening(
             Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
                 .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -61,5 +67,6 @@ class Dictation(private val activity: MainActivity) {
     fun release() {
         recognizer?.destroy()
         recognizer = null
+        Mic.release(Mic.DICTATION)
     }
 }

@@ -10,6 +10,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.widget.TextViewCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.unowhy.companion.MainActivity
@@ -338,7 +339,9 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 textSize = 15f
                 typeface = themeFont(context, R.attr.c_font_medium)
                 setTextColor(themeColor(context, R.attr.c_text))
-                setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_claude, 0, 0, 0)
+                // Icône neutre, jamais le logo d'Anthropic (marque déposée, pas de licence pour un produit vendu).
+                setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_agents, 0, 0, 0)
+                TextViewCompat.setCompoundDrawableTintList(this, themeColorList(context, R.attr.c_text_dim))
                 compoundDrawablePadding = dp(8)
                 gravity = Gravity.CENTER_VERTICAL
             },

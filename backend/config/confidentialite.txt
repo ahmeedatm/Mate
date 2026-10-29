@@ -1,0 +1,36 @@
+Companion Unowhy : politique de confidentialité
+Version du 29 octobre 2026
+
+Companion Unowhy est édité par Unowhy (www.unowhy.com). Il se compose d'une appli pour tablette et d'un logiciel pour ordinateur, le « compagnon ». Pour toute question sur vos données ou pour exercer vos droits, contactez Unowhy depuis son site.
+
+VOS DONNÉES RESTENT CHEZ VOUS
+
+La tablette et l'ordinateur communiquent directement sur votre réseau local, de façon chiffrée. Vos tâches, votre agenda, vos raccourcis et vos réglages sont enregistrés sur votre tablette et sur votre ordinateur, pas chez Unowhy. Companion ne contient ni publicité, ni mesure d'audience, ni rapport de plantage, et ne demande aucun compte Unowhy.
+
+CE QUI EST ENREGISTRÉ SUR VOS APPAREILS
+
+Sur la tablette : les ordinateurs reliés, la disposition de l'écran d'accueil, la ville de la météo et vos réglages. Sur l'ordinateur : l'agenda et les tâches que vous saisissez, les liens d'agenda que vous collez, vos raccourcis, et, si vous reliez un compte Microsoft ou Google, une autorisation d'accès conservée sur l'ordinateur. L'historique du presse-papiers (une heure au plus) et les notifications de l'ordinateur (une journée au plus) ne sont gardés qu'en mémoire, le temps de leur affichage sur la tablette, et disparaissent à l'arrêt du compagnon. Tout s'efface en désinstallant l'appli et le logiciel.
+
+CE QUI PART VERS D'AUTRES SERVICES, ET POURQUOI
+
+Commande vocale. Quand vous touchez « Parler », votre voix est transcrite par le service de reconnaissance vocale de Google intégré à la tablette, qui reçoit l'enregistrement. Les rappels et réponses lus à voix haute utilisent le moteur de synthèse vocale de la tablette.
+
+Météo. La tablette demande la météo de la ville choisie à l'Institut météorologique norvégien (MET Norway), qui reçoit les coordonnées de cette ville et l'adresse IP de la connexion. Si vous l'activez dans les Réglages, ou si vous touchez « Ma position », la tablette trouve la ville la plus proche grâce aux services de localisation de Google, qui reçoivent les réseaux WiFi visibles ; seule la ville trouvée est ensuite utilisée, jamais votre position exacte.
+
+Page Média. Sur Mac, pour afficher la pochette du morceau en cours, l'ordinateur peut transmettre son titre et son artiste à Apple, ou l'identifiant de la vidéo à YouTube.
+
+Comptes que vous reliez. Si vous reliez un compte Microsoft ou Google, l'ordinateur lit votre agenda directement chez ce fournisseur, et, pour Microsoft, l'expéditeur, l'objet et la date de vos derniers courriels (jamais leur contenu). Vous pouvez délier le compte à tout moment.
+
+Mises à jour. La tablette interroge le serveur de mises à jour d'Unowhy. Il ne reçoit aucune information sur vous, seulement l'adresse IP nécessaire à la connexion.
+
+Ce que vous ouvrez. Les pages web, liens d'agenda, réunions et services que vous choisissez (par exemple une recherche faite à la voix, ouverte dans le navigateur de l'ordinateur) sont contactés directement depuis vos appareils.
+
+Ces services appliquent leur propre politique de confidentialité. Google, Apple et Microsoft peuvent traiter des données hors de l'Union européenne, dans le cadre de leurs engagements de transfert.
+
+BASES LÉGALES
+
+La météo, la commande vocale et la lecture des comptes reliés servent à fournir le service que vous demandez. La recherche de la ville par la position repose sur votre accord (option des Réglages, ou bouton « Ma position »). Les mises à jour reposent sur l'intérêt légitime de garder l'appli sûre.
+
+VOS DROITS
+
+Vous disposez des droits d'accès, de rectification, d'effacement, d'opposition et de limitation sur vos données. Elles sont sur vos appareils : vous pouvez les supprimer vous-même à tout moment. Pour les services tiers, adressez-vous à eux. Vous pouvez aussi saisir la CNIL (www.cnil.fr).

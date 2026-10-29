@@ -15,6 +15,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- Mises à jour installées par le Companion (device owner : sans confirmation) : moteur web, Companion. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Désinstaller l'essai d'une MR au pipeline plus ancien (Updater.uninstall) : sans confirmation en device owner. -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
     <!-- Ordinateurs appairés lus par l'appli d'essai dans la stable (trial/ComputersProvider) : seulement entre applis
          signées par la même clé. Nom fixe, déclaré à l'identique par la stable et l'essai. -->
