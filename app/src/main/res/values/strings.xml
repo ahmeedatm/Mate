@@ -647,8 +647,11 @@
     <string name="essai_row_version">%1$s · %2$s</string>
     <string name="essai_row_backend">backend de l\'ordinateur remplacé</string>
     <string name="essai_row_no_backend">sans backend</string>
+    <string name="essai_row_installed">Installée.</string>
     <string name="essai_row_absent">Pas installé.</string>
     <string name="essai_row_replace">Remplace l\'essai installé (%1$s).</string>
+    <string name="essai_row_replace_mr">Remplace l\'essai de la !%1$d (%2$s).</string>
+    <string name="essai_row_downgrade_mr">Plus ancien que l\'essai de la !%1$d (%2$s) : désinstallé d\'abord, puis installé.</string>
     <string name="essai_row_downgrade">Plus ancien que l\'essai installé (%1$s) : désinstallé d\'abord, puis installé.</string>
     <string name="update_uninstall_failed">Impossible de désinstaller l\'essai installé (code %1$d).</string>
     <string name="trial_syncing">Backend de l\'ordinateur en cours de changement…</string>
