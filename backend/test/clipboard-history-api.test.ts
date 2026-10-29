@@ -57,6 +57,9 @@ describe("historique du presse-papiers en HTTP", () => {
     server.clearOsCalls();
     assert.deepEqual((await server.call("POST", `/system/clipboard/history/${code.id}/copy`)).json, { ok: true });
     assert.deepEqual(server.osCalls(), [{ fn: "setClipboardText", args: ["code-1234"] }]);
+    // La surveillance voit la recopie (même entrée remontée en haut) : sans cette attente, elle pouvait la rajouter
+    // après le « Tout effacer » qui suit.
+    await copy("code-1234");
 
     assert.equal((await server.call("DELETE", `/system/clipboard/history/${code.id}`)).status, 200);
     assert.equal((await server.call("DELETE", `/system/clipboard/history/${code.id}`)).status, 404);

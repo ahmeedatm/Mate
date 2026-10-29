@@ -23,16 +23,16 @@ scripts/  Sauvegarde (bundle git + données perso)
 
 Sur chaque ordinateur à piloter (une fois) :
 
-1. Télécharger l'installeur de la dernière release (`npm run package` pour le fabriquer, voir [développement](docs/developpement.md)) : Node y est embarqué, rien d'autre à installer.
+1. Télécharger l'installeur : le plus simple est la tablette, qui les sert sur le WiFi (`http://<ip de la tablette>:8080`, affichée sur l'écran Bienvenue ; la page propose celui de l'ordinateur qui la visite). Sinon, celui de la dernière release (`npm run package` pour le fabriquer, voir [développement](docs/developpement.md)). Node y est embarqué, rien d'autre à installer.
    - **Windows** : lancer **`Compagnon-Unowhy-Windows.exe`** (sans droits d'administrateur ; non signé : SmartScreen > « Informations complémentaires » > « Exécuter quand même »). Désinstallation : Paramètres > Applications > Compagnon Unowhy.
    - **Mac** : extraire `Compagnon-Unowhy-Mac.zip`, ouvrir **Compagnon Unowhy** (non notarisée : la première fois, Réglages Système > Confidentialité et sécurité > « Ouvrir quand même »). Elle se copie dans Applications et s'ouvre de là ; la rouvrir rouvre la page.
 2. Le compagnon démarre et se relancera tout seul à chaque ouverture de session : plus de terminal à garder ouvert. Mettre à jour = relancer l'installeur d'une version plus récente. Depuis ce dépôt, sans installeur : Node.js 22 ou plus, puis `npm install && npm run service:install` dans `backend/`.
-3. La page **http://127.0.0.1:3000/** s'ouvre : adresse de l'ordinateur, code d'appairage, agenda.
+3. La page **http://127.0.0.1:3000/** s'ouvre : adresse de l'ordinateur, case où saisir le code d'appairage affiché par la tablette, agenda.
 4. Autorisations, une fois :
    - **Mac** : Réglages Système > Confidentialité et sécurité > **Accessibilité** > ajouter `node` (le Finder l'affiche, dans l'appli) pour les raccourcis, macros et fenêtres.
    - **Windows** : accepter la demande d'administrateur de l'installeur pour le **pare-feu** sur les réseaux **privés** ; le WiFi doit être en profil « Privé ».
 
-Sur la tablette : au premier lancement, l'écran **Bienvenue** guide en trois étapes (WiFi, adresse du logiciel à ouvrir sur l'ordinateur — `INSTALL_URL`, `-PinstallUrl=…` —, ordinateurs trouvés sur le WiFi). Ensuite : **Réglages > Ordinateurs > Ajouter un ordinateur**, toucher l'ordinateur trouvé sur le WiFi, saisir le code à 6 chiffres affiché sur l'ordinateur. C'est tout : le jeton arrive avec le code. Ordinateur introuvable (autre réseau, diffusion bloquée) : « Saisir l'adresse » avec celle de la page.
+Sur la tablette : au premier lancement, l'écran **Bienvenue** guide en trois étapes (WiFi, adresse de la tablette à ouvrir sur l'ordinateur pour y télécharger le logiciel, `http://<ip>:8080`, ordinateurs trouvés sur le WiFi). Ensuite : **Réglages > Ordinateurs > Ajouter un ordinateur**, toucher l'ordinateur trouvé sur le WiFi, puis saisir sur l'ordinateur (page du compagnon, qui s'ouvre seule) le code à 6 chiffres affiché par la tablette. C'est tout : le jeton arrive une fois le code accepté. Ordinateur introuvable (autre réseau, diffusion bloquée) : « Saisir l'adresse » avec celle de la page.
 
 **Plusieurs ordinateurs** (bureau le jour, maison le soir) : appairer chacun une fois. La tablette pilote l'ordinateur en gras ; quand il ne répond plus, elle cherche les autres ordinateurs enregistrés et bascule sur celui qui répond (bandeau « Connecté à … »), et retrouve un ordinateur dont l'adresse IP a changé. Changer à la main : toucher le nom de l'ordinateur en bas de la barre latérale, ou Réglages. ✎ pour renommer (« Mac du bureau », « PC maison »). Chaque ordinateur garde ses propres données : agenda, tâches, deck, touches perso, applis et écrans (lus en direct). Le deck de départ ne montre que les applis installées sur cet ordinateur.
 
@@ -172,7 +172,7 @@ adb shell am start -n com.unowhy.companion/.MainActivity
 
 `adb reverse` est à relancer après chaque rebranchement du câble. En USB, ajouter l'ordinateur avec « Saisir l'adresse » : `127.0.0.1` (appairage par code comme en WiFi).
 
-En WiFi, rien à configurer au build : Réglages > Ordinateurs > Ajouter (voir Installation). Depuis l'**émulateur**, l'ordinateur hôte est `10.0.2.2` (« Saisir l'adresse », la recherche WiFi ne traverse pas l'émulateur).
+En WiFi, rien à configurer au build : Réglages > Ordinateurs > Ajouter (voir Installation). Depuis l'**émulateur**, comme en USB : `adb reverse tcp:3000 tcp:3000` puis « Saisir l'adresse » `127.0.0.1` (la recherche WiFi ne traverse pas l'émulateur ; l'appli n'envoie pas son jeton en clair à `10.0.2.2`).
 
 ### Tester sans tablette (émulateur Android 10)
 
@@ -191,11 +191,11 @@ adb logcat --pid=$(adb shell pidof com.unowhy.companion)   # logs de l'appli
 adb uninstall com.unowhy.companion
 ```
 
-**Deux « ordinateurs » sur un même Mac** (tester la bascule) : `PORT=3011 DATA_DIR=/tmp/a COMPUTER_NAME="Mac du bureau" npx tsx src/server.ts` et un second avec un autre port et dossier ; les ajouter depuis l'émulateur par `10.0.2.2:3011`, puis arrêter l'actif.
+**Deux « ordinateurs » sur un même Mac** (tester la bascule) : `PORT=3011 DATA_DIR=/tmp/a COMPUTER_NAME="Mac du bureau" npx tsx src/server.ts` et un second avec un autre port et dossier ; les ajouter depuis l'émulateur par `adb reverse tcp:3011 tcp:3011` et `127.0.0.1:3011`, puis arrêter l'actif.
 
 **Mode kiosque** : voir [docs/kiosque.md](docs/kiosque.md).
 
-> Le HTTP en clair est autorisé en debug et en release (`res/xml/network_security_config.xml`) : réseau local, protégé par le jeton d'appairage. En production : HTTPS épinglé à l'appairage.
+> En WiFi, la tablette parle à l'ordinateur en HTTPS, certificat épinglé à l'appairage ; le HTTP en clair ne sert qu'en local (USB, page de l'ordinateur). Voir [docs/securite-appairage.md](docs/securite-appairage.md).
 
 ## Où en est le projet
 

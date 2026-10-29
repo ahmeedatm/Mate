@@ -1,6 +1,6 @@
 /**
  * Page http://127.0.0.1:3000/ ouverte sur l'ordinateur (ouverte par l'installation) : état du compagnon,
- * marche à suivre sur la tablette et, pendant un appairage, le code à saisir en grand.
+ * marche à suivre sur la tablette et, pendant un appairage, la case où saisir le code affiché par la tablette.
  * Lue sans jeton, en local seulement (voir isLocalPage dans server.ts).
  */
 export const LOCAL_PAGE = `<!doctype html>
@@ -21,7 +21,7 @@ export const LOCAL_PAGE = `<!doctype html>
   .dot.on { background: var(--ok); }
   code { font-size: 15px; }
   ol { margin: 8px 0 0; padding-left: 22px; }
-  #code { font: 600 64px/1.1 ui-monospace, "SF Mono", Consolas, monospace; letter-spacing: 6px; color: var(--accent); margin: 8px 0; }
+  #paircode { font: 600 40px/1.2 ui-monospace, "SF Mono", Consolas, monospace; letter-spacing: 6px; text-align: center; color: var(--accent); }
   #pairing { display: none; border: 2px solid var(--accent); }
   input { width: 100%; box-sizing: border-box; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--dim); background: var(--bg); color: var(--text); margin-top: 10px; }
   button { font: inherit; padding: 8px 16px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; margin-top: 10px; cursor: pointer; }
@@ -51,10 +51,14 @@ export const LOCAL_PAGE = `<!doctype html>
     <button id="accessopen" style="margin-top:12px">Ouvrir le réglage</button>
   </div>
 
+  <!-- Le code vient de la tablette : il prouve qu'elle parle bien à cet ordinateur (voir src/pairing.ts). -->
   <div class="card" id="pairing">
-    <div>Code à saisir sur <b id="tablet">la tablette</b> :</div>
-    <div id="code"></div>
-    <div class="dim">Valable 2 minutes.</div>
+    <div><b id="tablet">La tablette</b> demande à se connecter. Saisis le code affiché sur la tablette :</div>
+    <form id="pairform">
+      <input id="paircode" inputmode="numeric" autocomplete="off" maxlength="7" placeholder="000 000" aria-label="Code affiché sur la tablette">
+      <button type="submit">Connecter la tablette</button>
+    </form>
+    <div class="dim" id="pairmsg">Valable 2 minutes. Ne saisis ici qu'un code affiché par ta tablette.</div>
   </div>
 
   <div class="card">
@@ -67,7 +71,7 @@ export const LOCAL_PAGE = `<!doctype html>
     <ol>
       <li>Tablette et ordinateur sur le même WiFi.</li>
       <li>Sur la tablette : <b>Réglages › Ordinateurs › Ajouter</b>, puis toucher cet ordinateur.</li>
-      <li>Saisir le code qui s'affiche ici.</li>
+      <li>Saisir ici le code qui s'affiche sur la tablette.</li>
     </ol>
     <div class="dim" style="margin-top:8px">Ordinateur absent de la liste : « Saisir l'adresse » avec l'adresse ci-dessus.</div>
   </div>
@@ -92,6 +96,9 @@ export const LOCAL_PAGE = `<!doctype html>
       </details>
     </details>
   </div>
+
+  <!-- Compagnon installé : mentions de licences des composants tiers (LICENCES-TIERS.txt, scripts/package.ts). -->
+  <p class="dim" id="licences" hidden><a href="/local/licences" target="_blank">Licences des composants</a></p>
 </main>
 <script>
   const OS = { mac: "macOS", windows: "Windows", other: "Linux (pilotage indisponible)" };
@@ -99,20 +106,22 @@ export const LOCAL_PAGE = `<!doctype html>
     try {
       const s = await (await fetch("/local/status")).json();
       document.getElementById("name").textContent = s.name;
+      document.getElementById("licences").hidden = !s.licences;
       document.getElementById("access").hidden = s.accessibility !== false;
       document.getElementById("os").textContent = "Compagnon prêt · " + (OS[s.os] || s.os);
-      document.getElementById("addr").textContent = s.addresses.map((a) => a + ":" + s.port).join("  ·  ") || "aucune (pas de réseau)";
+      document.getElementById("addr").textContent = s.addresses.map((a) => a + ":" + (s.tlsPort || s.port)).join("  ·  ") || "aucune (pas de réseau)";
       document.getElementById("dot").className = "dot" + (s.tablet ? " on" : "");
       document.getElementById("state").textContent = s.tablet ? "Tablette connectée" : "Tablette non connectée";
       const c = s.calendar, n = c.env + c.saved.length + c.accounts.length;
       document.getElementById("calstate").textContent = n === 0 ? "Aucun agenda : la tablette propose de le relier."
         : (c.saved.length ? "Lien enregistré : " + c.saved.join(", ") : "") + (c.env ? (c.saved.length ? " · " : "") + c.env + " lien(s) dans .env" : "");
       renderAccounts(c);
-      const p = s.pairing;
-      document.getElementById("pairing").style.display = p ? "block" : "none";
+      const p = s.pairing, card = document.getElementById("pairing");
+      const shown = card.style.display === "block";
+      card.style.display = p ? "block" : "none";
       if (p) {
-        document.getElementById("code").textContent = p.code.slice(0, 3) + " " + p.code.slice(3);
         document.getElementById("tablet").textContent = p.tablet;
+        if (!shown) document.getElementById("paircode").focus();
       }
     } catch (e) {
       document.getElementById("os").textContent = "Compagnon arrêté";
@@ -131,14 +140,14 @@ export const LOCAL_PAGE = `<!doctype html>
         row.className = "account";
         const label = document.createElement("span");
         label.className = "grow";
-        label.innerHTML = a.expired ? '<span class="ko">⚠</span> ' : '<span class="ok">✓</span> ';
-        label.append(a.label + " · " + a.email + (a.expired ? " (à reconnecter)" : ""));
+        label.innerHTML = a.expired || a.mailMissing ? '<span class="ko">⚠</span> ' : '<span class="ok">✓</span> ';
+        label.append(a.label + " · " + a.email + (a.expired ? " (à reconnecter)" : a.mailMissing ? " (à reconnecter pour le courrier)" : ""));
         const off = document.createElement("button");
         off.className = "ghost";
         off.textContent = "Déconnecter";
         off.onclick = async () => { await fetch("/local/accounts/" + a.provider, { method: "DELETE" }); refresh(); };
         row.append(label);
-        if (a.expired) row.append(connectLink(a.provider, "Reconnecter"));
+        if (a.expired || a.mailMissing) row.append(connectLink(a.provider, "Reconnecter"));
         row.append(off);
         box.append(row);
       }
@@ -187,6 +196,18 @@ export const LOCAL_PAGE = `<!doctype html>
       msg.textContent = "Compagnon injoignable";
     }
   }
+  document.getElementById("pairform").onsubmit = async (e) => {
+    e.preventDefault();
+    const input = document.getElementById("paircode"), msg = document.getElementById("pairmsg");
+    try {
+      const res = await fetch("/local/pair", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code: input.value }) });
+      const json = await res.json();
+      msg.textContent = res.ok ? "Tablette connectée : « " + json.tablet + " »." : json.error;
+      if (res.ok) input.value = "";
+    } catch (err) {
+      msg.textContent = "Compagnon injoignable";
+    }
+  };
   document.getElementById("accessopen").onclick = async () => {
     await fetch("/system/accessibility", { method: "POST" });
   };

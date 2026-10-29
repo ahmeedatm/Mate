@@ -1,5 +1,6 @@
 package com.unowhy.companion.net
 
+import com.unowhy.companion.frame.FramePhoto
 import org.json.JSONObject
 import java.io.File
 
@@ -28,6 +29,14 @@ class DocsApi(private val http: Http) {
     suspend fun downloadDoc(path: String, dest: File) = http.io {
         val conn = http.request("GET", "/docs/file?path=" + http.encode(path))
         try { conn.inputStream.use { input -> dest.outputStream().use { input.copyTo(it) } } } finally { conn.disconnect() }
+    }
+
+    /** Photos du dossier « Cadre photo » (créé par l'ordinateur s'il manque) ; chacune se télécharge par [downloadDoc]. */
+    suspend fun framePhotos(): List<FramePhoto> = http.io {
+        val photos = JSONObject(http.get("/frame")).getJSONArray("photos")
+        (0 until photos.length()).map { i ->
+            photos.getJSONObject(i).let { FramePhoto(it.getString("path"), it.getLong("size"), it.getLong("mtimeMs")) }
+        }
     }
 
     suspend fun openOnComputer(path: String) = http.io { http.postJson("/docs/open", JSONObject().put("path", path)); Unit }

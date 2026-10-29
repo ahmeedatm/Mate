@@ -1,12 +1,14 @@
 package com.unowhy.companion
 
 import android.content.Context
+import com.unowhy.companion.net.isLocalUrl
 import org.json.JSONArray
 import org.json.JSONObject
 
 /**
  * Un ordinateur appairé. `id` : identifiant donné par son backend (il reste le même si son adresse IP change) ;
- * `os` : "mac" ou "windows" (raccourcis proposés dans l'éditeur de touches).
+ * `os` : "mac" ou "windows" (raccourcis proposés dans l'éditeur de touches) ; `pin` : empreinte de son certificat,
+ * retenue à l'appairage (HTTPS en WiFi, voir net/Pinning.kt).
  */
 data class Computer(
     val id: String,
@@ -15,12 +17,24 @@ data class Computer(
     val token: String,
     val os: String,
     val lastUsedMs: Long = 0,
+    val pin: String? = null,
 ) {
     /** Enregistré avant l'appairage par code (adresse saisie, ancienne version) : `id` à remplacer par le vrai. */
     val provisional: Boolean get() = id.startsWith(PROVISIONAL)
 
-    /** Adresse lisible : "192.168.1.20:3000". */
+    /** Adresse lisible : "192.168.1.20:3001". */
     val address: String get() = url.removePrefix("http://").removePrefix("https://")
+
+    /** Joint en HTTP en clair sur le WiFi (appairé avant le HTTPS) : à réappairer, le jeton n'est plus envoyé. */
+    val needsRepair: Boolean get() = url.startsWith("http://") && !isLocalUrl(url)
+
+    /** Adresse où réappairer : en WiFi, HTTPS sur le port suivant ; le port HTTP n'écoute plus que la tablette en USB. */
+    val pairUrl: String get() {
+        if (!needsRepair) return url
+        val host = url.removePrefix("http://").substringBeforeLast(':')
+        val port = url.substringAfterLast(':').toIntOrNull() ?: 3000
+        return "https://$host:${port + 1}"
+    }
 
     companion object {
         const val PROVISIONAL = "url:"
@@ -76,7 +90,7 @@ object Computers {
         val wasActive = active(context)?.id == old.id
         remove(context, old.id)
         val known = all(context).firstOrNull { it.id == id }
-        val adopted = (known ?: old).copy(id = id, name = if (known != null) known.name else name, os = os, url = old.url, token = old.token)
+        val adopted = (known ?: old).copy(id = id, name = if (known != null) known.name else name, os = os, url = old.url, token = old.token, pin = old.pin)
         save(context, adopted, makeActive = wasActive)
         return adopted
     }
@@ -104,7 +118,10 @@ object Computers {
 
     private fun parse(array: JSONArray): List<Computer> = (0 until array.length()).map { i ->
         val j = array.getJSONObject(i)
-        Computer(j.getString("id"), j.getString("name"), j.getString("url"), j.optString("token"), j.optString("os"), j.optLong("lastUsedMs"))
+        Computer(
+            j.getString("id"), j.getString("name"), j.getString("url"), j.optString("token"), j.optString("os"), j.optLong("lastUsedMs"),
+            j.optString("pin").ifEmpty { null },
+        )
     }
 
     private fun toJson(list: List<Computer>): JSONArray {
@@ -112,7 +129,7 @@ object Computers {
         list.sortedByDescending { it.lastUsedMs }.forEach {
             array.put(
                 JSONObject().put("id", it.id).put("name", it.name).put("url", it.url).put("token", it.token)
-                    .put("os", it.os).put("lastUsedMs", it.lastUsedMs),
+                    .put("os", it.os).put("lastUsedMs", it.lastUsedMs).put("pin", it.pin),
             )
         }
         return array
@@ -137,13 +154,17 @@ object Computers {
         p.edit().putString(KEY_LIST, list.toString()).remove("backend_url").remove("token").apply()
     }
 
-    /** "192.168.1.20", "192.168.1.20:3000" ou une URL complète → "http://192.168.1.20:3000". */
+    /**
+     * Adresse saisie → URL : "192.168.1.20" ou "192.168.1.20:3001" → "https://192.168.1.20:3001" (le WiFi passe en HTTPS) ;
+     * la tablette elle-même (USB, adb reverse) → "http://127.0.0.1:3000" ; une URL complète reste telle quelle.
+     */
     fun normalizeUrl(input: String): String {
         var url = input.trim().trimEnd('/')
-        if (!url.contains("://")) url = "http://$url"
+        if (!url.contains("://")) url = "https://$url"
+        if (isLocalUrl(url.replaceFirst("https://", "http://"))) url = url.replaceFirst("https://", "http://")
         val host = url.substringAfter("://")
         // Pas de port : celui du backend par défaut (le crochet fermant d'une IPv6 n'en est pas un).
-        if (!host.substringAfterLast(']').contains(':')) url += ":3000"
+        if (!host.substringAfterLast(']').contains(':')) url += if (url.startsWith("https://")) ":3001" else ":3000"
         return url
     }
 }

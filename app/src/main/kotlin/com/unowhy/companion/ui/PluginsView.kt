@@ -134,7 +134,7 @@ class PluginsView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         val ICONS = mapOf(
             "discord" to R.drawable.ic_chat,
             "teams" to R.drawable.ic_videocam,
-            "claude" to R.drawable.ic_claude,
+            "claude" to R.drawable.ic_agents,
             "open" to R.drawable.ic_tabs,
             "mixer" to R.drawable.ic_volume,
             "pad" to R.drawable.ic_tablet,

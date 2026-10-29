@@ -11,6 +11,8 @@ import {
   type WindowTarget,
 } from "../screens.ts";
 import { parseCombo, planAudio, sortedNames, whenClipboardAvailable } from "../driver-common.ts";
+import { appNameFromId, type NotificationBatch } from "../notifications.ts";
+import { readWindowsNotifications } from "./notifications.ts";
 import type { AudioChange, AudioState, ClipboardContent, MediaCommand, MixerChange, MixerState, SystemCommand } from "../screens.ts";
 import type { GpuPerf } from "../perf.ts";
 import type { PointerAction, PointerButton } from "../pointer.ts";
@@ -52,6 +54,14 @@ function pick(apps: StartApp[], name: string): StartApp | undefined {
   );
 }
 
+/** Notifications arrivées depuis `cursor` (src/win/notifications.ts), nommées comme dans le menu Démarrer. */
+export async function readNotifications(cursor?: string): Promise<NotificationBatch> {
+  return readWindowsNotifications(cursor, async (id) => {
+    const apps = await startApps().catch(() => [] as StartApp[]);
+    return apps.find((a) => a.id.toLowerCase() === id.toLowerCase())?.name ?? appNameFromId(id);
+  });
+}
+
 /** Appli du menu Démarrer d'après son nom ; la liste est relue (au plus toutes les 30 s) si le nom est inconnu. */
 export async function findApp(name: string): Promise<StartApp | undefined> {
   const found = pick(await startApps(), name);
@@ -74,11 +84,25 @@ export async function isInstalled(name: string) {
   return (await findApp(name)) !== undefined;
 }
 
-/** Comme `open -a` sur Mac : met l'appli devant si elle a une fenêtre, sinon la lance. */
+/** Attente de la fenêtre d'une appli qu'on vient de lancer, pour la mettre devant (Windows la laisse derrière). */
+const LAUNCH_FOCUS_MS = 8_000;
+
+/**
+ * Comme `open -a` sur Mac : met l'appli devant si elle a une fenêtre, sinon la lance puis met sa fenêtre devant dès
+ * qu'elle apparaît. Lancée par le compagnon (processus en arrière-plan), Windows l'ouvrirait derrière la fenêtre active.
+ */
 export async function launchApp(name: string) {
   const app = await requireApp(name);
-  const shown = await call<{ running: boolean }>("windows", { action: "focus", id: app.id, names: [name, app.name] });
-  if (!shown.running) await call("launch", { id: app.id });
+  const focus = () => call<{ running: boolean }>("windows", { action: "focus", id: app.id, names: [name, app.name] });
+  if ((await focus()).running) return;
+  await call("launch", { id: app.id });
+  // Sans attendre la fenêtre : la touche du deck répond tout de suite, la mise devant suit.
+  void (async () => {
+    for (const deadline = Date.now() + LAUNCH_FOCUS_MS; Date.now() < deadline;) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      if ((await focus().catch(() => ({ running: false }))).running) return;
+    }
+  })();
 }
 
 /** Lien ou fichier, ouvert par l'appli associée. */

@@ -11,8 +11,8 @@ import java.net.InetAddress
 import java.net.NetworkInterface
 import java.net.SocketTimeoutException
 
-/** Ordinateur qui a répondu à la recherche sur le WiFi. */
-data class FoundComputer(val id: String, val name: String, val os: String, val url: String)
+/** Ordinateur qui a répondu à la recherche sur le WiFi ; `outdated` : compagnon d'avant le HTTPS, à mettre à jour. */
+data class FoundComputer(val id: String, val name: String, val os: String, val url: String, val outdated: Boolean = false)
 
 /**
  * Recherche des ordinateurs du compagnon sur le réseau local : diffusion UDP "UNOWHY-COMPANION?" sur le port
@@ -44,15 +44,24 @@ object Discovery {
                 } catch (e: SocketTimeoutException) {
                     continue
                 }
-                val j = runCatching { JSONObject(String(packet.data, 0, packet.length, Charsets.UTF_8)) }.getOrNull() ?: continue
-                if (j.optString("service") != "unowhy-companion" || !j.has("id")) continue
                 val host = packet.address.hostAddress ?: continue
-                found[j.getString("id")] = FoundComputer(
-                    j.getString("id"), j.optString("name", host), j.optString("os"), "http://$host:${j.optInt("port", port)}",
-                )
+                val computer = parse(String(packet.data, 0, packet.length, Charsets.UTF_8), host, port) ?: continue
+                found[computer.id] = computer
             }
         }
         found.values.toList()
+    }
+
+    /**
+     * Réponse d'un ordinateur, null si ce n'en est pas une. HTTPS (`tlsPort`) en WiFi ; un compagnon d'avant le HTTPS
+     * n'en a pas : il ne sait pas appairer cette tablette (`outdated`).
+     */
+    fun parse(reply: String, host: String, port: Int = DEFAULT_PORT): FoundComputer? {
+        val j = runCatching { JSONObject(reply) }.getOrNull() ?: return null
+        if (j.optString("service") != "unowhy-companion" || !j.has("id")) return null
+        val tlsPort = j.optInt("tlsPort")
+        val url = if (tlsPort > 0) "https://$host:$tlsPort" else "http://$host:${j.optInt("port", port)}"
+        return FoundComputer(j.getString("id"), j.optString("name", host), j.optString("os"), url, outdated = tlsPort <= 0)
     }
 
     /** Adresses de diffusion des réseaux de la tablette (ex. 192.168.1.255) : certaines box ignorent 255.255.255.255. */

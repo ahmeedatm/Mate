@@ -1,6 +1,7 @@
 package com.unowhy.companion
 
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -22,13 +23,18 @@ import com.unowhy.companion.device.Tablet
 import com.unowhy.companion.focus.FocusDnd
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
+import com.unowhy.companion.frame.FrameCache
+import com.unowhy.companion.frame.FrameLogic
+import com.unowhy.companion.installers.InstallerService
 import com.unowhy.companion.kiosk.AutoUpdater
 import com.unowhy.companion.kiosk.Kiosk
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.Link
+import com.unowhy.companion.net.PcNotification
 import com.unowhy.companion.net.runCatchingCancellable
 import com.unowhy.companion.remote.RemoteLink
+import com.unowhy.companion.trial.EssaiBackend
 import com.unowhy.companion.trial.Trial
 import com.unowhy.companion.ui.AgentAskOverlay
 import com.unowhy.companion.ui.AgentLight
@@ -36,6 +42,7 @@ import com.unowhy.companion.ui.AppTheme
 import com.unowhy.companion.ui.Banner
 import com.unowhy.companion.ui.CallOverlay
 import com.unowhy.companion.ui.CameraFragment
+import com.unowhy.companion.ui.CompanionUpdate
 import com.unowhy.companion.ui.ComputerAdder
 import com.unowhy.companion.ui.DeckFragment
 import com.unowhy.companion.ui.DocumentPanel
@@ -46,7 +53,9 @@ import com.unowhy.companion.ui.HomeFragment
 import com.unowhy.companion.ui.IconCache
 import com.unowhy.companion.ui.KeyboardControl
 import com.unowhy.companion.ui.MenuPanel
+import com.unowhy.companion.ui.MiniPlayerView
 import com.unowhy.companion.ui.Navigation
+import com.unowhy.companion.ui.PhotoFrameView
 import com.unowhy.companion.ui.PluginsView
 import com.unowhy.companion.ui.Rail
 import com.unowhy.companion.ui.SettingsFragment
@@ -57,11 +66,16 @@ import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.home.Down
 import com.unowhy.companion.ui.home.LinkWatch
+import com.unowhy.companion.ui.notificationBannerText
 import com.unowhy.companion.ui.showImmersive
 import com.unowhy.companion.ui.themeBool
 import com.unowhy.companion.voice.VoiceControl
+import com.unowhy.companion.voice.WakeWord
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Les écrans qui veulent les boutons de volume de la tablette (ex. le deck pilote le son de l'ordinateur). */
 interface VolumeKeyHandler {
@@ -93,13 +107,40 @@ class MainActivity : AppCompatActivity() {
         private set
     private val linkWatch = LinkWatch()
     private lateinit var voice: VoiceControl
+    /** Mot de réveil « Mate » : lance la même commande vocale que « Parler », sans toucher l'écran. */
+    private lateinit var wake: WakeWord
     lateinit var callOverlay: CallOverlay
         private set
     private lateinit var agentAlerts: AgentAlerts
     private lateinit var agentAsk: AgentAskOverlay
+    private lateinit var frame: PhotoFrameView
+    private lateinit var miniPlayer: MiniPlayerView
+
+    /** Largeur du petit lecteur, réservée au bout de la ligne de titre de chaque écran (vue marquée [MEDIA_SPACE]). */
+    private var mediaSpace = 0
+    /** Dernier toucher (ou touche de volume) : le cadre photo se lance après Prefs.frameDelayMin sans toucher. */
+    private var lastTouch = SystemClock.elapsedRealtime()
+    /** Toucher qui a fermé le cadre : avalé jusqu'au lever du doigt, l'écran dessous ne le reçoit pas. */
+    private var swallowTouch = false
+    private var battery: Tablet.Battery? = null
+    val companionUpdate = CompanionUpdate(this)
     /** Micro refusé hors kiosque (en kiosque, il est accordé d'office) : la commande repart une fois accepté. */
     private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) voice.start() else showBanner(getString(R.string.voice_no_mic), 6)
+    }
+
+    /** Localisation hors kiosque (en kiosque, accordée d'office) : demandée seulement par « Ma position » de la météo. */
+    private var locationAnswer: CompletableDeferred<Boolean>? = null
+    private val locationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        locationAnswer?.complete(granted)
+        locationAnswer = null
+    }
+
+    suspend fun requestLocationPermission(): Boolean {
+        val answer = CompletableDeferred<Boolean>()
+        locationAnswer = answer
+        locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+        return answer.await()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -112,6 +153,7 @@ class MainActivity : AppCompatActivity() {
         Grain.applyTo(findViewById(android.R.id.content))
         Speaker.init(this)
         AutoUpdater.start(this)
+        InstallerService.start(this)
 
         val cadran = themeBool(this, R.attr.c_cadran)
         if (cadran) {
@@ -123,6 +165,7 @@ class MainActivity : AppCompatActivity() {
             nav = Rail(this, ::show)
         }
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon), onPressed = { menu?.close() })
+        wake = WakeWord(this, findViewById(R.id.wake_mic)) { voice.start() }
         // Lumière des agents Claude sous la carte d'appel : un appel prime sur tout.
         val agentLight = AgentLight(this)
         agentAsk = AgentAskOverlay(this)
@@ -132,6 +175,22 @@ class MainActivity : AppCompatActivity() {
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(agentAsk, android.view.ViewGroup.LayoutParams(-1, -1))
         callOverlay = CallOverlay(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(callOverlay, android.view.ViewGroup.LayoutParams(-1, -1))
+        // Cadre photo juste au-dessus des écrans : lumière des agents, question et appel restent devant.
+        frame = PhotoFrameView(this)
+        findViewById<android.view.ViewGroup>(android.R.id.content).addView(frame, 1, android.view.ViewGroup.LayoutParams(-1, -1))
+        // Petit lecteur en haut à droite, sur la ligne de titre comme la cloche à gauche (padding 24 dp, hauteur 48 dp).
+        miniPlayer = MiniPlayerView(this, ::mediaPlayerHidden, ::showMediaPage) { px ->
+            mediaSpace = px
+            applyMediaSpace()
+        }
+        findViewById<android.widget.FrameLayout>(R.id.mode_area).addView(
+            miniPlayer,
+            android.widget.FrameLayout.LayoutParams(-2, dp(48), android.view.Gravity.TOP or android.view.Gravity.END).apply {
+                topMargin = dp(24)
+                marginEnd = dp(24)
+            },
+        )
+        miniPlayer.attach(this)
 
         keyboard.setUp()
 
@@ -153,6 +212,7 @@ class MainActivity : AppCompatActivity() {
             showComputerPicker()
         }
         banner = Banner(findViewById(R.id.remote_banner))
+        findViewById<View>(R.id.notif_bell).setOnClickListener { openNotifications() }
         alerts = TabletAlerts(this, banner)
         findViewById<TabletStatusView>(R.id.tablet_status).apply {
             setOnClickListener {
@@ -162,6 +222,8 @@ class MainActivity : AppCompatActivity() {
             onMinute = {
                 Screen.apply(this@MainActivity)
                 alerts.remindWater()
+                followFrame()
+                companionUpdate.onMinute()
             }
             onBattery = ::onBattery
         }
@@ -319,9 +381,22 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         Kiosk.enter(this)
         Screen.apply(this)
+        // Retour de l'essai : si l'ordinateur est resté sur le backend d'une MR (essai planté), on remet le sien.
+        if (!BuildConfig.TRIAL && Prefs.trialOpened(this)) {
+            Prefs.setTrialOpened(this, false)
+            lifecycleScope.launch { EssaiBackend.restoreOrigin(applicationContext) }
+        }
+        wake.resume()
+    }
+
+    /** Companion quitte l'écran (écran éteint, autre appli) : le mot de réveil n'écoute plus. */
+    override fun onPause() {
+        wake.pause()
+        super.onPause()
     }
 
     private fun onBattery(state: Tablet.Battery) {
+        battery = state
         alerts.onBattery(state)
         settings()?.onBattery(state)
     }
@@ -335,6 +410,7 @@ class MainActivity : AppCompatActivity() {
         documentPanel.close()
         if (isFinishing) NoisePlayer.stop()
         voice.release()
+        wake.release()
         super.onDestroy()
     }
 
@@ -346,13 +422,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_DOWN) Screen.touched(this)
+        if (event.action == MotionEvent.ACTION_DOWN) {
+            Screen.touched(this)
+            lastTouch = SystemClock.elapsedRealtime()
+            if (frame.isShowing) {
+                closeFrame()
+                swallowTouch = true
+            }
+        }
+        if (swallowTouch) {
+            if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) swallowTouch = false
+            return true
+        }
         menu?.touched()
         keyboard.onTouch(event)
         return super.dispatchTouchEvent(event)
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        lastTouch = SystemClock.elapsedRealtime()
+        if (frame.isShowing) closeFrame()
         val up = when (event.keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> true
             KeyEvent.KEYCODE_VOLUME_DOWN -> false
@@ -410,6 +499,28 @@ class MainActivity : AppCompatActivity() {
     /** Appel entrant sur l'ordinateur (ordre `call`, voir CallOverlay). */
     fun onCall(state: String, app: String, caller: String?, video: Boolean) = callOverlay.onCall(state, app, caller, video)
 
+    /**
+     * Notification arrivée sur l'ordinateur (ordre `notification`) : bandeau quel que soit l'écran (sans le texte en
+     * mode discret), et liste de Depuis l'ordi relue si elle est affichée.
+     */
+    fun onNotification(n: PcNotification) {
+        showBanner(notificationBannerText(n, Prefs.notificationsDiscreet(this)), NOTIFICATION_SECONDS)
+        val computer = supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment
+        computer?.onNotification()
+        // Pastille sur la cloche, sauf si l'historique est déjà sous les yeux.
+        if (computer?.showingNotifications != true || current != Mode.COMPUTER) findViewById<View>(R.id.notif_dot).visibility = View.VISIBLE
+    }
+
+    /** Cloche en haut à gauche : Depuis l'ordi > Notifications, pastille retirée. */
+    private fun openNotifications() {
+        menu?.close()
+        findViewById<View>(R.id.notif_dot).visibility = View.GONE
+        show(Mode.COMPUTER)
+        // Le mode vient peut-être d'être créé : sa vue doit exister avant de choisir l'écran.
+        supportFragmentManager.executePendingTransactions()
+        (supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment)?.openNotifications()
+    }
+
     /** Un agent Claude attend, a fini ou a atteint sa limite (ordre `agent`, voir AgentAlerts). */
     fun onAgent(kind: String, askId: String?, waiting: Int) = agentAlerts.onOrder(kind, askId, waiting)
 
@@ -428,6 +539,9 @@ class MainActivity : AppCompatActivity() {
 
     /** Commande vocale lancée d'ailleurs que le bouton Parler (carte d'une demande d'agent). */
     fun startVoice() = voice.start()
+
+    /** Réglage du mot de réveil changé : écoute ou non tout de suite. */
+    fun onWakeWordChanged() = wake.sync()
 
     /**
      * Commande vocale pour les agents Claude ; rend la phrase à afficher. Elle n'agit que sur la carte ouverte (on voit ce
@@ -454,6 +568,34 @@ class MainActivity : AppCompatActivity() {
         (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.openAgentsTab()
     }
 
+    /** Deck sur sa page Média (toucher le titre du petit lecteur). */
+    private fun showMediaPage() {
+        show(Mode.DECK)
+        supportFragmentManager.executePendingTransactions()
+        (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.openMediaPage()
+    }
+
+    /**
+     * Page du deck ou mode Modifier de l'Accueil changé : le petit lecteur se cache sur la page Média, qui fait la même
+     * chose en grand, et pendant le mode Modifier, dont la barre (Ajouter, Annuler, Terminé) est à sa place.
+     */
+    fun refreshMiniPlayer() {
+        if (::miniPlayer.isInitialized) miniPlayer.update()
+    }
+
+    private fun mediaPlayerHidden(): Boolean = frame.isShowing || Computers.all(this).isEmpty() ||
+        (current == Mode.DECK && (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.isMediaPageShown() == true) ||
+        (current == Mode.HOME && (supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment)?.isEditing() == true)
+
+    /** Place du petit lecteur au bout de la ligne de titre de chaque écran, créé ou non (rien de masqué dessous). */
+    private fun applyMediaSpace() {
+        for (fragment in supportFragmentManager.fragments) {
+            val space = fragment.view?.findViewWithTag<View>(MEDIA_SPACE) ?: continue
+            if (space.layoutParams.width == mediaSpace) continue
+            space.layoutParams = space.layoutParams.apply { width = mediaSpace }
+        }
+    }
+
     /** Deck sur la page de l'appli (Discord) : micro, sourdine, Quitter l'appel. */
     fun showAppControls(app: String) {
         show(Mode.DECK)
@@ -471,7 +613,65 @@ class MainActivity : AppCompatActivity() {
     fun showWelcome() = welcome.show()
 
     /** Bandeau en haut de l'écran, par-dessus le mode courant ; un toucher le ferme. */
-    fun showBanner(text: String, seconds: Int) = banner.show(text, seconds)
+    fun showBanner(text: String, seconds: Int, onTap: (() -> Unit)? = null) {
+        // Un message de l'ordinateur ou un rappel se lit : le cadre lui laisse la place.
+        closeFrame()
+        banner.show(text, seconds, onTap)
+    }
+
+    /**
+     * Cadre photo, vérifié chaque minute : lancé après le délai sans toucher (photos synchronisées juste avant, au plus
+     * tous les quarts d'heure), arrêté la nuit ou sur batterie faible, liste relue pendant l'affichage.
+     */
+    private fun followFrame() {
+        val night = Prefs.nightDim(this) && Screen.isNight()
+        val state = battery
+        if (frame.isShowing && !FrameLogic.canRun(night, state?.level, state?.charging ?: true)) return closeFrame()
+        val context = FrameLogic.Context(
+            idleMs = SystemClock.elapsedRealtime() - lastTouch,
+            delayMin = Prefs.frameDelayMin(this),
+            night = night,
+            batteryLevel = state?.level,
+            charging = state?.charging ?: true,
+            busy = frameBusy(),
+        )
+        if (!frame.isShowing && !FrameLogic.shouldStart(context)) return
+        lifecycleScope.launch {
+            FrameCache.sync(this@MainActivity)
+            val photos = withContext(Dispatchers.IO) { FrameCache.photos(this@MainActivity) }
+            when {
+                frame.isShowing -> frame.update(photos)
+                // Un toucher pendant la synchro : on reste sur l'écran.
+                SystemClock.elapsedRealtime() - lastTouch >= context.idleMs && !frameBusy() -> openFrame(photos)
+            }
+        }
+    }
+
+    /** Ce qui sert encore, que le cadre ne doit pas cacher. */
+    private fun frameBusy() = callOverlay.visibility == View.VISIBLE || agentAsk.isOpen || welcome.visibility == View.VISIBLE ||
+        plugins.visibility == View.VISIBLE ||
+        menu?.isOpen == true || documentPanel.visibility == View.VISIBLE || current == Mode.CAMERA || FocusTimer.state.running
+
+    /** Lance le cadre tout de suite (Réglages > Cadre photo > Essayer, ou délai écoulé) ; sans photo, rien. */
+    fun openFrame(photos: List<java.io.File>) {
+        if (photos.isEmpty() || frame.isShowing) return
+        keyboard.hide()
+        frame.show(photos)
+        miniPlayer.update()
+        // Écrans dessous masqués : rien à redessiner derrière la photo (horloges, animations de l'Accueil).
+        findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0).visibility = View.INVISIBLE
+        Screen.frameCharging = battery?.charging ?: true
+        Screen.apply(this)
+    }
+
+    fun closeFrame() {
+        if (!frame.isShowing) return
+        frame.hide()
+        miniPlayer.update()
+        findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0).visibility = View.VISIBLE
+        Screen.frameCharging = null
+        Screen.apply(this)
+    }
 
     private fun settings() = supportFragmentManager.findFragmentByTag(Mode.SETTINGS.tag) as? SettingsFragment
 
@@ -482,6 +682,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun show(mode: Mode) {
+        if (::frame.isInitialized) closeFrame()
         // Le champ d'un écran masqué garderait sinon le clavier (et la saisie) par-dessus le nouvel écran.
         keyboard.hide()
         // Document ouvert : en grand dans Depuis l'ordi ; ailleurs à côté, pour laisser voir le mode choisi.
@@ -503,6 +704,10 @@ class MainActivity : AppCompatActivity() {
         val needsComputer = mode.connect != null && Computers.all(this).isEmpty()
         val existing = fm.findFragmentByTag(mode.tag)
         if (existing != null) tx.show(existing) else if (!needsComputer) tx.add(R.id.mode_container, create(mode), mode.tag)
+        tx.runOnCommit {
+            applyMediaSpace()
+            if (::miniPlayer.isInitialized) miniPlayer.update()
+        }
         tx.commit()
 
         nav.select(mode, changed)
@@ -527,5 +732,11 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val STATE_MODE = "mode"
+
+        /** Tag de la vue vide au bout de la ligne de titre des écrans, élargie de la place du petit lecteur. */
+        const val MEDIA_SPACE = "media_space"
+
+        /** Bandeau d'une notification de l'ordinateur : le temps de lire l'appli, le titre et le début du texte. */
+        private const val NOTIFICATION_SECONDS = 8
     }
 }

@@ -14,6 +14,9 @@
         <item name="c_accent_soft">#246CB4FF</item>
         <item name="c_on_accent">#FF0C0F14</item>
         <item name="c_text">#FFE9EDF2</item>
+        <item name="c_frame_bg">#FF000000</item>
+        <item name="c_frame_text">#FFFFFFFF</item>
+        <item name="c_frame_shadow">#99000000</item>
         <item name="c_text_dim">#FF8B95A5</item>
         <item name="c_text_faint">#FF566070</item>
         <item name="c_ok">#FF5DD39E</item>
@@ -67,6 +70,9 @@
         <item name="c_accent_soft">#221F6FEB</item>
         <item name="c_on_accent">#FFFFFFFF</item>
         <item name="c_text">#FF141A22</item>
+        <item name="c_frame_bg">#FF000000</item>
+        <item name="c_frame_text">#FFFFFFFF</item>
+        <item name="c_frame_shadow">#99000000</item>
         <item name="c_text_dim">#FF5A6473</item>
         <item name="c_text_faint">#FF98A1AE</item>
         <item name="c_ok">#FF1C9A61</item>
@@ -136,6 +142,9 @@
         <item name="c_accent_soft">#FFFFDADA</item>
         <item name="c_on_accent">#FFFFFFFF</item>
         <item name="c_text">#FF1E1B1B</item>
+        <item name="c_frame_bg">#FF000000</item>
+        <item name="c_frame_text">#FFFFFFFF</item>
+        <item name="c_frame_shadow">#99000000</item>
         <item name="c_text_dim">#FF4D4545</item>
         <item name="c_text_faint">#FF6F6666</item>
         <item name="c_graphic">#FF8C8181</item>
@@ -204,6 +213,9 @@
         <item name="c_accent_soft">#FF680018</item>
         <item name="c_on_accent">#FF40000B</item>
         <item name="c_text">#FFE9E1E0</item>
+        <item name="c_frame_bg">#FF000000</item>
+        <item name="c_frame_text">#FFFFFFFF</item>
+        <item name="c_frame_shadow">#99000000</item>
         <item name="c_text_dim">#FFD0C4C3</item>
         <item name="c_text_faint">#FF998E8E</item>
         <item name="c_graphic">#FF776D6D</item>
@@ -288,6 +300,9 @@
         <item name="c_accent_soft">#FFFFD9C2</item>
         <item name="c_on_accent">#FFFBF2B7</item>
         <item name="c_text">#FF552805</item>
+        <item name="c_frame_bg">#FF000000</item>
+        <item name="c_frame_text">#FFFFFFFF</item>
+        <item name="c_frame_shadow">#99000000</item>
         <item name="c_text_dim">#FF66380F</item>
         <item name="c_text_faint">#FF7A4A1E</item>
         <item name="c_graphic">#FFA0714A</item>

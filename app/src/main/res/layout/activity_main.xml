@@ -98,8 +98,10 @@
         android:layout_height="match_parent"
         android:layout_weight="1">
 
+        <!-- paddingStart : place de la cloche des notifications, en haut à gauche de chaque écran. -->
         <FrameLayout
             android:id="@+id/mode_container"
+            android:paddingStart="40dp"
             android:defaultFocusHighlightEnabled="false"
             tools:targetApi="o"
             android:focusable="true"
@@ -113,6 +115,48 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:visibility="gone" />
+
+        <!-- Cloche : notifications de l'ordinateur (Depuis l'ordi > Notifications) ; pastille : arrivées depuis la
+             dernière ouverture. Alignée sur la ligne de titre des écrans (padding 24 dp, hauteur 48 dp). -->
+        <FrameLayout
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="24dp">
+
+            <ImageButton
+                android:id="@+id/notif_bell"
+                style="@style/IconButton.Flat"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:contentDescription="@string/notif_open"
+                android:src="@drawable/ic_notifications" />
+
+            <View
+                android:id="@+id/notif_dot"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="10dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/dot"
+                android:backgroundTint="?attr/c_accent"
+                android:importantForAccessibility="no"
+                android:visibility="gone" />
+        </FrameLayout>
+
+        <!-- Voyant du mot de réveil « Mate », sous la cloche, dans la marge des écrans (voice/WakeWord) : atténué =
+             écoute le mot, accent = « Mate » entendu ou commande en cours, absent = coupé ou en pause. -->
+        <ImageView
+            android:id="@+id/wake_mic"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="22dp"
+            android:layout_marginTop="76dp"
+            android:contentDescription="@string/wake_listening"
+            android:src="@drawable/ic_mic"
+            android:visibility="gone"
+            app:tint="?attr/c_text_faint" />
     </FrameLayout>
 
     <com.unowhy.companion.ui.DocumentPanel

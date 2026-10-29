@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
+import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { beforeEach, test } from "node:test";
 
 process.env.DATA_DIR = await fs.mkdtemp(path.join(os.tmpdir(), "companion-pairing-"));
-const { confirmPairing, pendingCode, requestPairing, resetPairing } = await import("../src/pairing.ts");
+const { approvePairing, confirmPairing, pairingCode, pendingCode, requestPairing, resetPairing, revealPairing } =
+  await import("../src/pairing.ts");
 
 let dialogs = 0;
 const show = async () => void dialogs++;
@@ -18,56 +20,120 @@ const status = (fn: () => unknown) => {
   }
 };
 
+/** Côté tablette : nombre secret et son engagement. */
+const secret = () => {
+  const nonce = randomBytes(32).toString("base64url");
+  return { nonce, commit: createHash("sha256").update(nonce).digest("base64url") };
+};
+const FP = "aa".repeat(32);
+
+/** Parcours de la tablette jusqu'au code qu'elle affiche (calculé avec l'empreinte qu'elle a vue). */
+function pairUntilCode(ip = "192.168.1.20", seenFingerprint = FP, channel = FP) {
+  const t = secret();
+  const { request, nonce } = requestPairing("Tablette d'Eliot", ip, t.commit, channel);
+  revealPairing(request, t.nonce, show);
+  return { request, code: pairingCode(seenFingerprint, t.nonce, nonce) };
+}
+
 beforeEach(() => {
   resetPairing();
   dialogs = 0;
 });
 
-test("parcours normal : une demande, un dialogue, le bon code donne le jeton", () => {
-  const { request, expiresInMs } = requestPairing("Tablette d'Eliot", "192.168.1.20", show);
-  assert.ok(expiresInMs > 0);
+test("parcours normal : la tablette affiche le code, l'ordinateur le reçoit, la tablette reçoit le jeton et l'empreinte", () => {
+  const { request, code } = pairUntilCode();
   assert.equal(dialogs, 1);
-  const out = confirmPairing(request, pendingCode()!.code);
-  assert.equal(out.service, "unowhy-companion");
+  assert.deepEqual(pendingCode(), { tablet: "Tablette d'Eliot" });
+  assert.deepEqual(confirmPairing(request, FP), { waiting: true });
+  approvePairing(code.slice(0, 3) + " " + code.slice(3));
+  const out = confirmPairing(request, FP);
+  assert.ok("token" in out);
+  assert.equal(out.fingerprint, FP);
   assert.equal(pendingCode(), null);
+  assert.equal(
+    status(() => confirmPairing(request, FP)),
+    410,
+  );
 });
 
-test("un code en attente valide n'est pas écrasé par une autre adresse", () => {
-  const first = requestPairing("Tablette", "192.168.1.20", show);
-  const code = pendingCode()!.code;
+test("intercepteur avec son propre certificat : les deux codes diffèrent, le jeton n'est jamais donné", () => {
+  // La tablette voit le certificat de l'intercepteur, l'ordinateur calcule avec le sien.
+  const { request, code } = pairUntilCode("192.168.1.20", "bb".repeat(32), FP);
+  for (let i = 0; i < 3; i++)
+    assert.equal(
+      status(() => approvePairing(code)),
+      403,
+    );
   assert.equal(
-    status(() => requestPairing("Intrus", "192.168.1.99", show)),
+    status(() => confirmPairing(request, FP)),
+    410,
+  );
+});
+
+test("la tablette ne peut pas changer de nombre après s'être engagée", () => {
+  const t = secret();
+  const { request } = requestPairing("Tablette", "192.168.1.20", t.commit, FP);
+  assert.equal(
+    status(() => revealPairing(request, secret().nonce, show)),
+    403,
+  );
+  assert.equal(dialogs, 0);
+  assert.equal(
+    status(() => revealPairing(request, t.nonce, show)),
+    410,
+  );
+});
+
+test("le code ne se donne qu'une fois dévoilé, et ne sort jamais par la page locale", () => {
+  const t = secret();
+  requestPairing("Tablette", "192.168.1.20", t.commit, FP);
+  assert.equal(pendingCode(), null);
+  assert.equal(
+    status(() => approvePairing("000000")),
+    410,
+  );
+  assert.ok(!JSON.stringify(pendingCode()).match(/\d{6}/));
+});
+
+test("une demande en cours n'est pas écrasée par une autre adresse ; la même adresse repart de zéro", () => {
+  const first = pairUntilCode();
+  assert.equal(
+    status(() => requestPairing("Intrus", "192.168.1.99", secret().commit, FP)),
     409,
   );
-  assert.equal(pendingCode()!.code, code);
-  assert.equal(dialogs, 1);
-  assert.ok(confirmPairing(first.request, code));
+  approvePairing(first.code);
+  assert.ok("token" in confirmPairing(first.request, FP));
+
+  const again = requestPairing("Tablette", "192.168.1.20", secret().commit, FP);
+  const restarted = requestPairing("Tablette", "192.168.1.20", secret().commit, FP);
+  assert.notEqual(restarted.request, again.request);
 });
 
-test("la même tablette qui redemande retrouve sa demande, sans second dialogue", () => {
-  const first = requestPairing("Tablette", "192.168.1.20", show);
-  const again = requestPairing("Tablette", "192.168.1.20", show);
-  assert.equal(again.request, first.request);
-  assert.equal(dialogs, 1);
+test("rafale depuis des adresses différentes : aucun dialogue tant que personne n'a dévoilé son nombre", () => {
+  for (let i = 0; i < 100; i++) status(() => requestPairing("Spam", `10.0.0.${i}`, secret().commit, FP));
+  assert.equal(dialogs, 0);
 });
 
-test("rafale depuis des adresses différentes : un seul dialogue", () => {
-  for (let i = 0; i < 100; i++) status(() => requestPairing("Spam", `10.0.0.${i}`, show));
-  assert.equal(dialogs, 1);
-});
-
-test("la limite est par adresse : un abus n'empêche pas une autre tablette", () => {
-  const spam = requestPairing("Spam", "10.0.0.5", show);
-  for (let i = 0; i < 4; i++) requestPairing("Spam", "10.0.0.5", show);
+test("la limite est par adresse ; trois mauvais codes annulent la demande et libèrent la place", () => {
+  for (let i = 0; i < 5; i++) requestPairing("Spam", "10.0.0.5", secret().commit, FP);
   assert.equal(
-    status(() => requestPairing("Spam", "10.0.0.5", show)),
+    status(() => requestPairing("Spam", "10.0.0.5", secret().commit, FP)),
     429,
   );
-  // le code du spam est épuisé (3 mauvais essais) : la vraie tablette demande à son tour
-  for (let i = 0; i < 3; i++) status(() => confirmPairing(spam.request, "xxxxxx"));
+  resetPairing();
+  pairUntilCode("10.0.0.6");
+  for (let i = 0; i < 3; i++) status(() => approvePairing("xxxxxx"));
   assert.equal(pendingCode(), null);
   assert.equal(
-    status(() => requestPairing("Tablette", "192.168.1.20", show)),
+    status(() => requestPairing("Tablette", "192.168.1.20", secret().commit, FP)),
     200,
   );
+});
+
+test("code : 6 chiffres, dépend de chaque entrée", () => {
+  const base = pairingCode(FP, "a", "b");
+  assert.match(base, /^\d{6}$/);
+  assert.notEqual(pairingCode("", "a", "b"), base);
+  assert.notEqual(pairingCode(FP, "c", "b"), base);
+  assert.notEqual(pairingCode(FP, "a", "c"), base);
 });

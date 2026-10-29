@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { expect, test } from "./fixtures.ts";
 
 /** Retour de Microsoft/Google après la connexion d'un agenda : chaque échec ramène sur la page locale avec un message. */
@@ -36,5 +38,39 @@ test.describe("retour OAuth /oauth/:provider/callback", () => {
     const res = await request.get("/oauth/google/start", { maxRedirects: 0 });
     expect(res.status()).toBe(404);
     expect((await res.json()).error).toBe("Connexion non disponible pour ce compte");
+  });
+});
+
+/** Compte Microsoft relié avant la page Outlook du Deck : sans l'accès au courrier, la page propose de le reconnecter. */
+test.describe("compte Microsoft et courrier", () => {
+  const link = (server: { dataDir: string }, account: object) =>
+    fs.writeFileSync(
+      path.join(server.dataDir, "accounts.json"),
+      JSON.stringify({ microsoft: { email: "moi@exemple.fr", refreshToken: "r1", ...account } }),
+    );
+
+  test("sans Mail.Read : à reconnecter pour le courrier", async ({ page, server }) => {
+    link(server, {});
+    try {
+      await page.goto("/");
+      const row = page.locator("#accounts .account");
+      await expect(row).toContainText("Microsoft · moi@exemple.fr (à reconnecter pour le courrier)");
+      await expect(row.getByRole("link", { name: "Reconnecter" })).toHaveAttribute("href", "/oauth/microsoft/start");
+    } finally {
+      fs.rmSync(path.join(server.dataDir, "accounts.json"), { force: true });
+    }
+  });
+
+  test("avec Mail.Read : rien à reconnecter", async ({ page, server }) => {
+    link(server, { mail: true });
+    try {
+      await page.goto("/");
+      const row = page.locator("#accounts .account");
+      await expect(row).toContainText("Microsoft · moi@exemple.fr");
+      await expect(row).not.toContainText("à reconnecter");
+      await expect(row.getByRole("link", { name: "Reconnecter" })).toHaveCount(0);
+    } finally {
+      fs.rmSync(path.join(server.dataDir, "accounts.json"), { force: true });
+    }
   });
 });

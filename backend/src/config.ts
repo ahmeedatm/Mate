@@ -44,6 +44,8 @@ const platform = process.platform === "win32" ? "windows" : "mac";
 export const config = {
   host,
   port: Number(process.env.PORT ?? 3000),
+  /** HTTPS pour le WiFi (le port HTTP n'écoute plus qu'en local). */
+  tlsPort: Number(process.env.TLS_PORT ?? Number(process.env.PORT ?? 3000) + 1),
   token,
   /** Identifiant stable de cet ordinateur (la tablette le retrouve même si son IP change). */
   computerId: identity.id,
@@ -54,7 +56,7 @@ export const config = {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
-  /** Deck de cet ordinateur ; DECK_FILE pour un autre fichier (deck de test de l'émulateur). */
+  /** Deck de cet ordinateur ; DECK_FILE pour un autre fichier (deck de test). */
   deckFile: process.env.DECK_FILE ? path.resolve(process.env.DECK_FILE) : path.join(backendRoot, "config", "deck.json"),
   /** Deck de départ adapté à l'ordinateur (applis et raccourcis de macOS ou de Windows). */
   deckExampleFile: path.join(backendRoot, "config", platform === "windows" ? "deck.example.windows.json" : "deck.example.json"),

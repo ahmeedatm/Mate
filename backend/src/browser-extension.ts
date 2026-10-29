@@ -82,9 +82,18 @@ export function waitCommands(browser: string, signal?: AbortSignal, holdMs = HOL
   });
 }
 
+/**
+ * Clé de l'extension qui écoute pour ce navigateur : le nom exact, sinon un nom plus long (le secours du Mac lit
+ * « Opera » dans AppleScript et `pmset`, l'extension d'Opera GX écoute sous « Opera GX »).
+ */
+function listeningKey(key: string): string {
+  if (waiting.has(key) || polledAt.has(key)) return key;
+  return [...polledAt.keys()].find((k) => k.startsWith(`${key} `)) ?? key;
+}
+
 /** Ordre pour l'extension de ce navigateur ; false si elle n'écoute pas (pas installée, navigateur fermé). */
 export function sendToExtension(browser: string, command: ExtensionCommand): boolean {
-  const key = browserKey(browser);
+  const key = listeningKey(browserKey(browser));
   const waiter = waiting.get(key);
   if (waiter) {
     waiter([command]);
