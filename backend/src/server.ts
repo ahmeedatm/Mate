@@ -13,6 +13,7 @@ import { notificationHistory, watchNotifications } from "./notifications.ts";
 import { canControl, clipboardStamp, getClipboard, isMac, osName, readNotifications } from "./os.ts";
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
 import { sendToTablet } from "./tablet.ts";
+import { startMenuBar } from "./mac/menubar.ts";
 import { loadTls } from "./tls.ts";
 import { startReminders } from "./tasks.ts";
 import agentRoutes from "./routes/agents.ts";
@@ -183,6 +184,7 @@ if (localHttp) {
   await app.listen({ port: config.port, host: config.host });
 }
 startDiscovery((msg) => app.log.warn(msg));
+if (isMac) startMenuBar((msg) => app.log.warn(msg));
 const where = config.loopbackOnly
   ? "USB seulement (adb reverse)"
   : `WiFi en HTTPS : ${lanAddresses()
