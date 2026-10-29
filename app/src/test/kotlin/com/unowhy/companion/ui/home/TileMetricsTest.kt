@@ -32,4 +32,14 @@ class TileMetricsTest {
         assertEquals(22, TileMetrics.radiusFor(52))
         assertEquals(33, TileMetrics.radiusFor(78))
     }
+
+    @Test
+    fun `symbole lisible, plus de la moitié de la plaque, sur plaque couleur comme sans`() {
+        for (plate in listOf(TileMetrics.NORMAL.plateDp, TileMetrics.LARGE.plateDp)) {
+            val icon = plate - 2 * TileMetrics.symbolPadFor(plate)
+            assertTrue("icône de $icon dp sur $plate", icon * 100 >= plate * 52)
+            assertTrue("icône de $icon dp sur $plate", icon <= plate * 2 / 3)
+        }
+        assertEquals(28, TileMetrics.NORMAL.plateDp - 2 * TileMetrics.symbolPadFor(TileMetrics.NORMAL.plateDp))
+    }
 }

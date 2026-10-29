@@ -17,33 +17,41 @@ class ProfilesTest {
         context.getSharedPreferences("companion", 0).edit().putString("home_layout_cadran", v1).apply()
         val layout = HomeLayout.load(context, cadran = true)
         assertEquals(listOf<String?>(null, null), layout.names)
-        assertEquals(-1, layout.gameProfile)
         assertEquals(1, layout.widgets.single().page)
     }
 
     @Test
-    fun `noms et profil de jeu survivent a l'enregistrement`() {
+    fun `noms survivent a l'enregistrement`() {
         val context = FakeContext()
-        val layout = HomeLayout(mutableListOf(), mutableListOf("Bureau", "Gamer"), 1)
+        val layout = HomeLayout(mutableListOf(), mutableListOf("Bureau", "Maison"))
         HomeLayout.save(context, layout, cadran = true)
         val back = HomeLayout.load(context, cadran = true)
-        assertEquals(listOf<String?>("Bureau", "Gamer"), back.names)
-        assertEquals(1, back.gameProfile)
+        assertEquals(listOf<String?>("Bureau", "Maison"), back.names)
+    }
+
+    @Test
+    fun `une disposition enregistree avec un profil de jeu se relit sans lui`() {
+        val context = FakeContext()
+        val old = """{"v":2,"pages":2,"names":["Bureau","Maison"],"game":1,"widgets":[]}"""
+        context.getSharedPreferences("companion", 0).edit().putString("home_layout_cadran", old).apply()
+        val back = HomeLayout.load(context, cadran = true)
+        assertEquals(listOf<String?>("Bureau", "Maison"), back.names)
+        assertFalse(back.toJson().contains("\"game\""))
     }
 
     @Test
     fun `un nom absent reste null apres enregistrement`() {
         val context = FakeContext()
-        HomeLayout.save(context, HomeLayout(mutableListOf(), mutableListOf(null, "Gamer"), -1), cadran = true)
-        assertEquals(listOf<String?>(null, "Gamer"), HomeLayout.load(context, cadran = true).names)
+        HomeLayout.save(context, HomeLayout(mutableListOf(), mutableListOf(null, "Maison")), cadran = true)
+        assertEquals(listOf<String?>(null, "Maison"), HomeLayout.load(context, cadran = true).names)
     }
 
     @Test
     fun `ajouter un profil le met a la fin avec ses widgets`() {
         val layout = Template.WORK_CADRAN.build()
-        val items = Template.HOME_CADRAN.widgets(0)
-        assertEquals(1, layout.addProfile("Gamer", items))
-        assertEquals(listOf<String?>(null, "Gamer"), layout.names)
+        val items = Template.STANDBY_CADRAN.widgets(0)
+        assertEquals(1, layout.addProfile("Maison", items))
+        assertEquals(listOf<String?>(null, "Maison"), layout.names)
         assertEquals(items.size, layout.on(1).size)
         assertTrue(layout.on(1).all { it.page == 1 })
     }
@@ -74,22 +82,6 @@ class ProfilesTest {
     }
 
     @Test
-    fun `supprimer le profil de jeu retire le marquage`() {
-        val layout = layoutOf(3)
-        layout.gameProfile = 1
-        layout.removeProfile(1)
-        assertEquals(-1, layout.gameProfile)
-    }
-
-    @Test
-    fun `supprimer avant le profil de jeu le suit`() {
-        val layout = layoutOf(3)
-        layout.gameProfile = 2
-        layout.removeProfile(0)
-        assertEquals(1, layout.gameProfile)
-    }
-
-    @Test
     fun `le dernier profil ne se supprime pas`() {
         val layout = layoutOf(1)
         assertFalse(layout.removeProfile(0))
@@ -97,48 +89,36 @@ class ProfilesTest {
     }
 
     @Test
-    fun `deplacer un profil emporte ses widgets et le marquage`() {
+    fun `deplacer un profil emporte ses widgets`() {
         val note = Placed(WidgetType.NOTE, WidgetSize.S, 0, 0, 0)
-        val layout = HomeLayout(mutableListOf(note), mutableListOf("A", "B", "C"), 0)
+        val layout = HomeLayout(mutableListOf(note), mutableListOf("A", "B", "C"))
         layout.moveProfile(0, 2)
         assertEquals(2, note.page)
-        assertEquals(2, layout.gameProfile)
         assertEquals(listOf<String?>("B", "C", "A"), layout.names)
     }
 
     @Test
-    fun `deplacer un profil vers le haut emporte ses widgets et le marquage`() {
+    fun `deplacer un profil vers le haut emporte ses widgets`() {
         val first = Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 0)
         val third = Placed(WidgetType.NOTE, WidgetSize.S, 2, 0, 0)
-        val layout = HomeLayout(mutableListOf(first, third), mutableListOf("A", "B", "C"), 2)
+        val layout = HomeLayout(mutableListOf(first, third), mutableListOf("A", "B", "C"))
         layout.moveProfile(2, 0)
         assertEquals(0, third.page)
         assertEquals(1, first.page)
-        assertEquals(0, layout.gameProfile)
         assertEquals(listOf<String?>("C", "A", "B"), layout.names)
-    }
-
-    @Test
-    fun `un seul profil de jeu`() {
-        val layout = layoutOf(3)
-        layout.setGameProfile(1)
-        layout.setGameProfile(2)
-        assertEquals(2, layout.gameProfile)
     }
 
     @Test
     fun `renommer change le nom du profil`() {
         val layout = layoutOf(2)
-        layout.renameProfile(1, "Gamer")
-        assertEquals(listOf<String?>(null, "Gamer"), layout.names)
+        layout.renameProfile(1, "Maison")
+        assertEquals(listOf<String?>(null, "Maison"), layout.names)
     }
 
     @Test
     fun `copy est independant`() {
         val layout = layoutOf(1)
-        layout.gameProfile = 0
         val copy = layout.copy()
-        assertEquals(0, copy.gameProfile)
         copy.renameProfile(0, "X")
         assertEquals(listOf<String?>(null), layout.names)
         val widget = Placed(WidgetType.NOTE, WidgetSize.S, 0, 1, 0)
@@ -182,9 +162,7 @@ class ProfilesTest {
     @Test
     fun `ensureRoles laisse les autres profils a leur place`() {
         val layout = layoutOf(2, Placed(WidgetType.NOTE, WidgetSize.S, 1, 0, 0))
-        layout.gameProfile = 1
         layout.ensureRoles("Réunion")
-        assertEquals(1, layout.gameProfile)
         assertEquals(1, layout.widgets.single { it.type == WidgetType.NOTE }.page)
         assertEquals(2, layout.callProfile)
     }

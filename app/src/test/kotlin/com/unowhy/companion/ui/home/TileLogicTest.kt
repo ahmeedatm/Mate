@@ -9,6 +9,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class TileLogicTest {
 
@@ -262,7 +263,12 @@ class TileLogicTest {
     @Test
     fun `chaque symbole du backend a son icone`() {
         for (name in TileIcons.NAMES) assertTrue(name, TileIcons.drawable(name) != null)
-        assertEquals(22, TileIcons.NAMES.size)
+        // La liste du compagnon (TILE_SYMBOLS de backend/src/screens.ts) et celle de la tablette sont les mêmes.
+        val backend = Regex("""TILE_SYMBOLS = \[(.*?)] as const""", RegexOption.DOT_MATCHES_ALL)
+            .find(File("../backend/src/screens.ts").readText())!!.groupValues[1]
+            .let { list -> Regex(""""([a-z_]+)"""").findAll(list).map { it.groupValues[1] }.toSet() }
+        assertTrue(backend.size > 40)
+        assertEquals(backend, TileIcons.NAMES)
         assertNull(TileIcons.drawable("fusee"))
         assertNull(TileIcons.drawable(null))
     }

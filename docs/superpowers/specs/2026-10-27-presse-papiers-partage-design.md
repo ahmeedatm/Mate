@@ -5,8 +5,8 @@
 ## Pourquoi
 
 Faire passer du texte et des photos entre le PC et la tablette par un copier-coller, sans câble, sans mail à soi-même,
-sans aller chercher un fichier. Utile aux deux publics du projet : au bureau (coller un schéma dans Teams, garder un
-code sous les yeux) et à l'école (le prof photographie la copie d'un élève et la colle dans sa présentation).
+sans aller chercher un fichier. Utile d'abord à la cible B2B, au bureau (coller un schéma dans Teams, garder un
+code sous les yeux) ; l'usage à l'école (le prof photographie la copie d'un élève et la colle dans sa présentation) reste valable, hors cible.
 
 ## Objectifs (les trois usages, par ordre d'intérêt)
 

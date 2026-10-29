@@ -183,6 +183,7 @@ class FocusFragment : Fragment() {
         phase.setText(if (focus) R.string.focus_phase_work else R.string.focus_phase_break)
         phase.setTextColor(color)
         time.text = FocusTimer.format(state.remainingMs)
+        Look.countdown(time, state.remainingMs, state.running)
         ring.color = color
         ring.progress = (state.durationMs - state.remainingMs).toFloat() / state.durationMs.coerceAtLeast(1)
         start.setImageResource(if (state.running) R.drawable.ic_pause else R.drawable.ic_play)

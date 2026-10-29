@@ -24,7 +24,7 @@ class Profile(@StringRes val name: Int, val slots: List<Slot>)
  * - `profiles` : ses écrans, dans l'ordre de la barre (Deck V2) ; le premier est l'Accueil et l'écran d'arrivée. Écran
  *   Réunion standard en plus, hors barre : il ne s'affiche que pendant un appel ;
  * - `textScale` : taille du texte (1 = normale) ; `wakeWord` : mot d'éveil (null : celui d'avant la démo) ;
- * - `theme` : nom d'un [com.unowhy.companion.ui.AppTheme] à appliquer avec le persona (Sam : CONTRASTE).
+ * - `theme` : nom d'un [com.unowhy.companion.ui.AppTheme] à appliquer avec le persona (Sam : CONTRASTE ; les autres, un thème de démo).
  */
 enum class Persona(
     val id: String,
@@ -49,7 +49,7 @@ enum class Persona(
             Slot(WidgetType.AGENDA, WidgetSize.L, 2, 0),
             Slot(WidgetType.NEXT, WidgetSize.L, 2, 2),
         )),
-    )),
+    ), theme = "REGISTRE"),
     GWEN("gwen", R.string.persona_gwen, R.string.persona_gwen_desc, listOf(
         Profile(R.string.profile_first, listOf(
             Slot(WidgetType.AGENDA, WidgetSize.L, 0, 0),
@@ -65,7 +65,7 @@ enum class Persona(
             Slot(WidgetType.KEYS, WidgetSize.L, 2, 0, page = "Modèles"),
             Slot(WidgetType.APPS, WidgetSize.XL, 0, 2),
         )),
-    )),
+    ), theme = "STUDIO"),
     CAMILLE("camille", R.string.persona_camille, R.string.persona_camille_desc, listOf(
         Profile(R.string.demo_screen_work, listOf(
             Slot(WidgetType.FOCUS, WidgetSize.L, 0, 0),
@@ -77,7 +77,7 @@ enum class Persona(
             Slot(WidgetType.MEDIA, WidgetSize.L, 2, 0),
             Slot(WidgetType.TASKS, WidgetSize.L, 0, 2),
         )),
-    )),
+    ), theme = "MAISON"),
     AIMEE("aimee", R.string.persona_aimee, R.string.persona_aimee_desc, listOf(
         Profile(R.string.profile_first, listOf(
             Slot(WidgetType.NEXT, WidgetSize.L, 0, 0),
@@ -91,7 +91,7 @@ enum class Persona(
         Profile(R.string.demo_screen_jira, listOf(
             Slot(WidgetType.JIRA, WidgetSize.XL, 0, 0),
         )),
-    )),
+    ), theme = "TABLEAU"),
     SAM("sam", R.string.persona_sam, R.string.persona_sam_desc, listOf(
         Profile(R.string.profile_first, listOf(
             Slot(WidgetType.KEYS, WidgetSize.XL, 0, 0, page = "Mes touches"),
@@ -114,7 +114,7 @@ enum class Persona(
         Profile(R.string.profile_first, listOf(
             Slot(WidgetType.TASKS, WidgetSize.L, 0, 0),
         )),
-    ));
+    ), theme = "TERMINAL");
 
     /**
      * La disposition du persona : un profil par entrée de [profiles], nommé d'après `names` (même ordre), puis l'écran
