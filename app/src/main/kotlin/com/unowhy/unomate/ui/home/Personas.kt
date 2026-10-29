@@ -92,7 +92,7 @@ enum class Persona(
             Slot(WidgetType.KEYS, WidgetSize.XL, 0, 2, page = "Modèles"),
         )),
         Profile(R.string.demo_screen_slides, listOf(
-            Slot(WidgetType.KEYS, WidgetSize.XL, 0, 0, page = "Diapos"),
+            Slot(WidgetType.PRESENT, WidgetSize.XL, 0, 0),
             Slot(WidgetType.MEDIA, WidgetSize.L, 0, 2),
         )),
         Profile(R.string.demo_screen_campaigns, listOf(

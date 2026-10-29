@@ -70,7 +70,7 @@ const server = await startServer({
 
 server.setOs({
   installed: ["Discord", "Microsoft Teams", "Spotify", "Google Chrome", "Visual Studio Code", "Notepad"],
-  running: ["Discord", "Microsoft Teams", "Spotify", "Google Chrome", "Visual Studio Code"],
+  running: ["Discord", "Microsoft Teams", "Spotify", "Google Chrome", "Visual Studio Code", "Microsoft PowerPoint"],
   inCall: ["Discord"],
   mixer: {
     master: channel("master", "Sortie", 65, 40),

@@ -36,6 +36,7 @@ import notificationRoutes from "./routes/notifications.ts";
 import pairingRoutes from "./routes/pairing.ts";
 import pluginRoutes from "./routes/plugins.ts";
 import pointerRoutes from "./routes/pointer.ts";
+import presentRoutes from "./routes/present.ts";
 import portableRoutes from "./routes/portable.ts";
 import systemRoutes from "./routes/system.ts";
 import tabletRoutes from "./routes/tablet.ts";
@@ -136,6 +137,7 @@ app.addHook("preHandler", async (req, reply) => {
     ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) ||
       req.url.startsWith("/system") ||
       req.url.startsWith("/pointer") ||
+      req.url.startsWith("/present") ||
       req.url.startsWith("/gitlab") ||
       req.url.startsWith("/notifications"))
   ) {
@@ -159,6 +161,7 @@ app.register(demoRoutes);
 app.register(windowRoutes);
 app.register(systemRoutes);
 app.register(pointerRoutes);
+app.register(presentRoutes);
 app.register(notificationRoutes);
 app.register(docRoutes);
 app.register(updateRoutes);

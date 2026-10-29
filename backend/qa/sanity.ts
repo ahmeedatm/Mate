@@ -398,6 +398,14 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "présentation (action inconnue refusée)",
+      run: async () => {
+        // Jamais une vraie action : une appli de diapos ouverte sur l'ordinateur recevrait des touches.
+        // Refusée par la validation avant tout pilotage : 400 aussi sur un ordinateur non pilotable.
+        expectStatus(await call("POST", "/present/inconnue"), 400, "/present/inconnue");
+      },
+    },
+    {
       name: "garde de /docs/open (refuse un .exe)",
       run: async () => {
         const res = await call("POST", "/docs/open", { path: "sanity.exe" });
