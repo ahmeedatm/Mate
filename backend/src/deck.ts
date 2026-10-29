@@ -26,6 +26,7 @@ import { loadKeys, loadLinks, loadSavedApps, saveApps, saveLinks, type DeckApp, 
 import { agentsAvailable } from "./agents-sources.ts";
 import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
+import { jiraConfigured } from "./jira.ts";
 import { appPluginOff, pluginOn, pluginsOff } from "./plugins.ts";
 import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
 
@@ -203,6 +204,8 @@ export async function homeFeatures() {
   // `agents` : onglet et widget des agents Claude (Mac avec Claude Code installé). `off` : plugins coupés (plugins.ts).
   // `gitlab` : onglet des MR GitLab (jeton GITLAB_TOKEN dans .env, compte connecté par OAuth, ou appli OAuth réglée : la tablette propose de se connecter).
   const agents = agentsAvailable() && (await pluginOn("claude"));
+  // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
+  const jira = jiraConfigured && (await pluginOn("jira"));
   return {
     agenda: true,
     linked: await hasCalendar(),
@@ -210,6 +213,7 @@ export async function homeFeatures() {
     teams,
     agents,
     gitlab: canControl && (await gitlabAvailable()),
+    jira,
     off: await pluginsOff(),
   };
 }
