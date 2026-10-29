@@ -177,11 +177,10 @@
             android:layout_height="match_parent"
             android:layout_gravity="end" />
 
-        <!-- paddingTop : la ligne du haut à droite (lecture en cours, heure, batterie) ne chevauche pas les cartes. -->
-        <!-- Balayage vertical entre les entrées de la barre (ui/RailSwipeLayout). -->
+        <!-- Sous le bandeau du haut : rien ne défile dessous. Balayage vertical entre les entrées de la barre (ui/RailSwipeLayout). -->
         <com.unowhy.unomate.ui.RailSwipeLayout
             android:id="@+id/mode_container"
-            android:paddingTop="20dp"
+            android:layout_marginTop="@dimen/top_bar_height"
             android:defaultFocusHighlightEnabled="false"
             tools:targetApi="o"
             android:focusable="true"
@@ -194,45 +193,16 @@
             layout="@layout/view_connect"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:layout_marginTop="@dimen/top_bar_height"
             android:visibility="gone" />
 
-        <!-- En haut à droite, sur une ligne : voyant « Mate », lecture en cours de l'ordinateur (cachée sans lecture), puis
-             heure, WiFi et batterie de la tablette (barre d'état masquée en kiosque). -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="44dp"
-            android:layout_gravity="top|end"
-            android:layout_marginTop="4dp"
-            android:layout_marginEnd="24dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <!-- Voyant du mot de réveil « Mate » (voice/WakeWord) : atténué = écoute le mot, accent = « Mate » entendu ou
-                 commande en cours, absent = coupé ou en pause. -->
-            <ImageView
-                android:id="@+id/wake_mic"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginEnd="12dp"
-                android:contentDescription="@string/wake_listening"
-                android:src="@drawable/ic_mic"
-                android:visibility="gone"
-                app:tint="?attr/c_text_faint" />
-
-            <com.unowhy.unomate.ui.MusicChip
-                android:id="@+id/music_chip"
-                android:layout_width="360dp"
-                android:layout_height="32dp"
-                android:layout_marginEnd="16dp"
-                android:background="@drawable/music_chip_bg"
-                android:paddingStart="5dp"
-                android:paddingEnd="5dp" />
-
-            <com.unowhy.unomate.ui.TabletStatusView
-                android:id="@+id/tablet_status"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
+        <!-- Bandeau du haut, fixe (ui/topbar/TopBar) : en-tête de l'écran à gauche, éléments choisis à droite (lecture en
+             cours, heure, WiFi, batterie…) ; la barre d'état d'Android est masquée en kiosque. -->
+        <com.unowhy.unomate.ui.topbar.TopBar
+            android:id="@+id/top_bar"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/top_bar_height"
+            android:layout_gravity="top" />
 
     </FrameLayout>
 

@@ -10,7 +10,7 @@
         android:orientation="vertical"
         android:padding="24dp">
 
-        <!-- Appui long : code technicien, qui montre la carte Kiosque. -->
+        <!-- Appui long : code technicien, qui montre la carte Kiosque. Posé dans le bandeau du haut (TopHeader). -->
         <TextView
             android:id="@+id/settings_title"
             android:layout_width="wrap_content"
