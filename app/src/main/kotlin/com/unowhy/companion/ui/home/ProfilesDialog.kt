@@ -13,6 +13,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Space
 import android.widget.TextView
 import androidx.annotation.AttrRes
 import androidx.annotation.DrawableRes
@@ -31,7 +32,7 @@ import com.unowhy.companion.ui.themeColor
 import com.unowhy.companion.ui.themeFont
 
 /**
- * Liste des profils de l'Accueil : afficher, modifier les widgets, marquer le profil de jeu, monter, renommer, supprimer, en ajouter un
+ * Liste des profils de l'Accueil : afficher, changer l'icône, modifier les widgets, monter, descendre, renommer, supprimer, en ajouter un
  * (vide ou depuis un modèle). `current` : le profil affiché ; `onChanged(show, structure)` est appelé après chaque
  * changement, la disposition est déjà modifiée, avec le profil à afficher. `structure` : des profils ont été ajoutés,
  * déplacés ou retirés (les widgets sont à recréer) ; faux pour un renommage ou le marquage de jeu. `onEdit(index)` :
@@ -55,7 +56,7 @@ class ProfilesDialog(
 
     /**
      * Une carte large aux formes de Cadran : en-tête (titre, fermer), les profils, puis « Nouveau profil » en tuiles
-     * (vide ou un modèle, un seul toucher) et l'explication de la manette.
+     * (vide ou un modèle, un seul toucher).
      */
     fun show() {
         val content = LinearLayout(context).apply {
@@ -66,7 +67,6 @@ class ProfilesDialog(
             addView(list, wide(top = 10))
             addView(section(R.string.profiles_add), wide(top = 24))
             addView(templates(), wide(top = 10))
-            addView(caption(), wide(top = 16))
         }
         dialog = AlertDialog.Builder(context)
             .setView(ScrollView(context).apply { addView(content) })
@@ -107,34 +107,21 @@ class ProfilesDialog(
     /** Petit titre de section, comme ceux des cartes. */
     private fun section(@StringRes text: Int) = TextView(context, null, 0, R.style.CardTitle).apply { setText(text) }
 
-    /** Explique l'icône du profil de jeu. */
-    private fun caption() = LinearLayout(context).apply {
-        gravity = Gravity.CENTER_VERTICAL
-        addView(ImageView(context).apply {
-            setImageResource(R.drawable.ic_gamepad)
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            setColorFilter(themeColor(context, R.attr.c_text_dim))
-        }, LinearLayout.LayoutParams(context.dp(18), context.dp(18)))
-        addView(TextView(context).apply {
-            setText(R.string.profile_game_hint)
-            textSize = 13f
-            setTextColor(themeColor(context, R.attr.c_text_dim))
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = context.dp(8) })
-    }
-
     private fun render() {
         list.removeAllViews()
-        for (i in 0 until layout.pages) {
-            list.addView(row(i), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(64)).apply { if (i > 0) topMargin = context.dp(8) })
+        // Dans l'ordre de la barre, Réunion (caché hors appel) à la fin.
+        val shown = layout.profilesInOrder(inCall = false) + listOfNotNull(layout.callProfile.takeIf { it >= 0 })
+        shown.forEachIndexed { n, i ->
+            list.addView(row(i), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(64)).apply { if (n > 0) topMargin = context.dp(8) })
         }
     }
 
-    /** Pastille du profil : Accueil, Réunion, profil de jeu, sinon une grille de widgets. */
-    private fun profileIcon(i: Int): Pair<Int, Int> = when (i) {
-        layout.callProfile -> R.drawable.ic_call to R.attr.c_hue_violet
-        layout.homeProfile -> R.drawable.ic_dashboard to R.attr.c_hue_blue
-        layout.gameProfile -> R.drawable.ic_gamepad to R.attr.c_hue_pink
-        else -> R.drawable.ic_widgets to R.attr.c_hue_green
+    /** Pastille de l'écran : son icône ([ProfileIcons], choisie sinon celle du rôle), teinte du rôle. */
+    private fun profileIcon(i: Int): Pair<Int, Int> = ProfileIcons.of(layout, i) to when (i) {
+        layout.callProfile -> R.attr.c_hue_violet
+        layout.homeProfile -> R.attr.c_hue_blue
+        layout.gameProfile -> R.attr.c_hue_pink
+        else -> R.attr.c_hue_green
     }
 
     private fun row(i: Int) = LinearLayout(context).apply {
@@ -147,9 +134,11 @@ class ProfilesDialog(
         // Le nom (avec sa pastille) prend la place restante : le toucher affiche le profil.
         addView(LinearLayout(context).apply {
             gravity = Gravity.CENTER_VERTICAL
+            // La pastille (icône de la barre de gauche) : la toucher en choisit une autre.
             addView(ImageView(context).apply {
                 setImageDrawable(Look.badge(context, icon, themeColor(context, hue), sizeDp = 40, iconDp = 22))
-                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                contentDescription = context.getString(R.string.profile_icon_row, name(i))
+                setOnClickListener { chooseIcon(i) }
             }, LinearLayout.LayoutParams(context.dp(40), context.dp(40)))
             addView(TextView(context).apply {
                 text = name(i)
@@ -170,22 +159,30 @@ class ProfilesDialog(
                 onChanged(i, false)
             }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
-        val game = layout.gameProfile == i
         if (canEdit) {
             addView(iconButton(R.drawable.ic_widgets, R.string.profile_edit, R.attr.c_text_dim) {
                 dialog.dismiss()
                 onEdit(i)
             }.also { TooltipCompat.setTooltipText(it, context.getString(R.string.profile_edit)) })
         }
-        addView(iconButton(R.drawable.ic_gamepad, R.string.profile_game, if (game) R.attr.c_accent else R.attr.c_text_faint) {
-            layout.setGameProfile(if (game) -1 else i)
-            changed(structure = false)
-        })
-        // Réunion ne se déplace pas : il n'est ni dans la barre ni dans le balayage hors appel.
-        if (i > 0 && i != layout.callProfile) addView(iconButton(R.drawable.ic_arrow_up, R.string.profile_move_up, R.attr.c_text_dim) { moveUp(i) })
+        // Monter / descendre parmi les écrans de la barre (Réunion, caché hors appel, est sauté et ne bouge pas). Colonnes
+        // fixes : un bouton absent garde sa place, les boutons restent alignés d'une ligne à l'autre.
+        val order = layout.profilesInOrder(inCall = false)
+        val pos = order.indexOf(i)
+        slot(if (pos > 0) iconButton(R.drawable.ic_arrow_up, R.string.profile_move_up, R.attr.c_text_dim) { move(i, order[pos - 1]) } else null)
+        slot(
+            if (pos in 0 until order.lastIndex) {
+                iconButton(R.drawable.ic_arrow_up, R.string.profile_move_down, R.attr.c_text_dim) { move(i, order[pos + 1]) }.apply { rotation = 180f }
+            } else {
+                null
+            },
+        )
         addView(iconButton(R.drawable.ic_edit, R.string.profile_rename, R.attr.c_text_dim) { rename(i) })
-        if (layout.canRemove(i)) addView(iconButton(R.drawable.ic_delete, R.string.profile_delete, R.attr.c_text_dim) { confirmDelete(i) })
+        slot(if (layout.canRemove(i)) iconButton(R.drawable.ic_delete, R.string.profile_delete, R.attr.c_text_dim) { confirmDelete(i) } else null)
     }
+
+    /** Le bouton, ou une place vide de même taille. */
+    private fun LinearLayout.slot(button: ImageButton?) = addView(button ?: Space(context).apply { layoutParams = LinearLayout.LayoutParams(context.dp(48), context.dp(48)) })
 
     /** Étiquette « Affiché » du profil à l'écran : texte de l'accent sur une pilule de l'accent atténué. */
     private fun shownTag() = TextView(context).apply {
@@ -265,6 +262,56 @@ class ProfilesDialog(
         setOnClickListener { onClick() }
     }
 
+    /**
+     * Grille des icônes ([ProfileIcons]), centrée : l'actuelle (choisie, sinon celle du rôle) en rouge ; « Par défaut »
+     * remet celle du rôle (maison pour l'Accueil).
+     */
+    private fun chooseIcon(i: Int) {
+        val grid = android.widget.GridLayout(context).apply { columnCount = ICON_COLUMNS }
+        lateinit var picker: AlertDialog
+        val shown = ProfileIcons.keyOf(layout, i)
+        for (icon in ProfileIcons.ALL) {
+            val isShown = icon.key == shown
+            val label = context.getString(icon.label)
+            grid.addView(
+                iconButton(icon.drawable, icon.label, if (isShown) R.attr.c_accent else R.attr.c_text) {
+                    layout.setIcon(i, icon.key)
+                    picker.dismiss()
+                    changed(structure = false)
+                }.apply {
+                    contentDescription = if (isShown) context.getString(R.string.profile_icon_chosen, label) else label
+                    setBackgroundResource(if (isShown) R.drawable.chip_bg else R.drawable.flat_bg)
+                    isSelected = isShown
+                    layoutParams = android.widget.GridLayout.LayoutParams().apply {
+                        width = context.dp(52)
+                        height = context.dp(52)
+                        setMargins(context.dp(4), context.dp(4), context.dp(4), context.dp(4))
+                    }
+                },
+            )
+        }
+        picker = AlertDialog.Builder(context)
+            .setTitle(context.getString(R.string.profile_icon_title, name(i)))
+            .setView(
+                ScrollView(context).apply {
+                    addView(
+                        LinearLayout(context).apply {
+                            gravity = Gravity.CENTER_HORIZONTAL
+                            setPadding(context.dp(16), context.dp(8), context.dp(16), 0)
+                            addView(grid, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                        },
+                    )
+                },
+            )
+            .setNegativeButton(R.string.cancel, null)
+            .setNeutralButton(R.string.profile_icon_default) { _, _ ->
+                layout.setIcon(i, null)
+                changed(structure = false)
+            }
+            .create()
+        picker.showImmersive()
+    }
+
     /** Relit la liste et prévient l'écran des profils : le profil affiché reste `current`. */
     private fun changed(structure: Boolean) {
         render()
@@ -277,11 +324,13 @@ class ProfilesDialog(
         onChanged(index, true)
     }
 
-    private fun moveUp(i: Int) {
-        layout.moveProfile(i, i - 1)
-        current = when (current) {
-            i -> i - 1
-            i - 1 -> i
+    /** Met le profil `from` à la place de `to` ; le profil affiché suit ([HomeLayout.moveProfile] décale ceux d'entre les deux). */
+    private fun move(from: Int, to: Int) {
+        layout.moveProfile(from, to)
+        current = when {
+            current == from -> to
+            from < to && current in from + 1..to -> current - 1
+            from > to && current in to until from -> current + 1
             else -> current
         }
         changed(structure = true)
@@ -332,6 +381,9 @@ class ProfilesDialog(
 
     private companion object {
         const val NAME_MAX = 30
+
+        /** Icônes par ligne dans la grille de choix. */
+        const val ICON_COLUMNS = 8
 
         /** Largeur de la boîte : les cinq tuiles de création tiennent sur une ligne. */
         const val WIDTH_DP = 820

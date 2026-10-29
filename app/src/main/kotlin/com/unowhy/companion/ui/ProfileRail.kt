@@ -174,15 +174,7 @@ class ProfileRail(
         var now = false
         when (entry) {
             is RailEntry.Profile -> {
-                icon.setImageResource(
-                    when (entry.page) {
-                        layout.homeProfile -> R.drawable.ic_dashboard
-                        layout.deckProfile -> R.drawable.ic_deck
-                        layout.callProfile -> R.drawable.ic_videocam
-                        layout.gameProfile -> R.drawable.ic_gamepad
-                        else -> R.drawable.ic_widgets
-                    },
-                )
+                icon.setImageResource(com.unowhy.companion.ui.home.ProfileIcons.of(layout, entry.page))
                 label.text = layout.nameOf(entry.page, activity.getString(R.string.profile_first), activity.getString(R.string.profile_default))
                 now = entry.isCall
                 val tasks = entry.page == layout.homeProfile && pendingTasks > 0

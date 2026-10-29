@@ -197,7 +197,7 @@
 
             <com.unowhy.companion.ui.MusicChip
                 android:id="@+id/music_chip"
-                android:layout_width="wrap_content"
+                android:layout_width="360dp"
                 android:layout_height="32dp"
                 android:layout_marginEnd="16dp"
                 android:background="@drawable/music_chip_bg"

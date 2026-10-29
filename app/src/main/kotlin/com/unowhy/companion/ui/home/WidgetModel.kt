@@ -119,11 +119,29 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
 
     val pages get() = names.size
 
+    /** Icône choisie de chaque profil ([ProfileIcons], null = celle du rôle), dans l'ordre des noms. */
+    val icons: MutableList<String?> = MutableList(names.size) { null }
+
+    fun iconOf(index: Int): String? = icons.getOrNull(index)
+
+    fun setIcon(index: Int, key: String?) {
+        syncIcons()
+        if (index in icons.indices) icons[index] = key
+    }
+
+    /** Une entrée par profil, même si les noms ont changé sans passer par ici. */
+    private fun syncIcons() {
+        while (icons.size < names.size) icons += null
+        while (icons.size > names.size) icons.removeAt(icons.lastIndex)
+    }
+
     fun copy() = HomeLayout(widgets.map { it.copy() }.toMutableList(), names.toMutableList(), gameProfile).also {
         it.homeProfile = homeProfile
         it.deckProfile = deckProfile
         it.callProfile = callProfile
         it.rolesSet = rolesSet
+        it.icons.clear()
+        it.icons += icons
     }
 
     /**
@@ -164,7 +182,9 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
 
     /** Ajoute un profil à la fin et renvoie son index ; `items` sont recopiés sur sa page. */
     fun addProfile(name: String?, items: List<Placed> = emptyList()): Int {
+        syncIcons()
         names += name
+        icons += null
         val index = names.size - 1
         widgets += items.map { it.copy().also { c -> c.page = index } }
         return index
@@ -197,7 +217,9 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
     /** Remet le profil `from` à la place `to` ; ses widgets et le marquage de jeu le suivent. */
     fun moveProfile(from: Int, to: Int) {
         if (from == to || from !in names.indices || to !in names.indices) return
+        syncIcons()
         names.add(to, names.removeAt(from))
+        icons.add(to, icons.removeAt(from))
         fun moved(p: Int) = when {
             p == from -> to
             from < to && p in from + 1..to -> p - 1
@@ -214,7 +236,9 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
     /** Retire le profil et ses widgets, les suivants reculent d'une page. Faux (rien ne change) si [canRemove] le refuse. */
     fun removeProfile(index: Int): Boolean {
         if (!canRemove(index)) return false
+        syncIcons()
         names.removeAt(index)
+        icons.removeAt(index)
         widgets.removeAll { it.page == index }
         widgets.filter { it.page > index }.forEach { it.page-- }
         fun after(p: Int) = when {
@@ -256,6 +280,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         .put("v", 2)
         .put("pages", pages)
         .put("names", JSONArray().apply { names.forEach { put(it ?: JSONObject.NULL) } })
+        .put("icons", JSONArray().apply { names.indices.forEach { put(iconOf(it) ?: JSONObject.NULL) } })
         .put("game", gameProfile)
         .put("home", homeProfile)
         .put("deck", deckProfile)
@@ -305,6 +330,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
                 MutableList<String?>(json.getInt("pages").coerceAtLeast(1)) { null }
             }
             val layout = HomeLayout(mutableListOf(), names)
+            json.optJSONArray("icons")?.let { saved -> names.indices.forEach { i -> if (i < saved.length() && !saved.isNull(i)) layout.setIcon(i, saved.getString(i)) } }
             layout.gameProfile = json.optInt("game", -1).takeIf { it in names.indices } ?: -1
             layout.homeProfile = json.optInt("home", 0).takeIf { it in names.indices } ?: 0
             layout.deckProfile = json.optInt("deck", -1).takeIf { it in names.indices } ?: -1
