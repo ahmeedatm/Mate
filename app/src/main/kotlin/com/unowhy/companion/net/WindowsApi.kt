@@ -7,17 +7,24 @@ import org.json.JSONObject
 data class ComputerDisplay(val id: Int, val label: String, val main: Boolean, val x: Int, val y: Int, val w: Int, val h: Int)
 /**
  * `elsewhere` : sur un autre bureau du Mac, sans écran connu (`index` 0, retrouvée par son titre).
- * `front`, `maximized` (vue « Ouvertes ») : au premier plan de l'ordinateur, agrandie.
+ * `front`, `maximized` (vue « Ouvertes ») : au premier plan de l'ordinateur, agrandie ; `page` : page plein écran
+ * du Mac qu'elle occupe (ComputerPage.id).
  */
 data class ComputerWindow(
     val index: Int, val title: String, val minimized: Boolean, val fullscreen: Boolean, val display: Int?,
-    val elsewhere: Boolean = false, val front: Boolean = false, val maximized: Boolean = false,
+    val elsewhere: Boolean = false, val front: Boolean = false, val maximized: Boolean = false, val page: Int? = null,
 )
+/**
+ * Mac : page du balayage à trois doigts, dans l'ordre du balayage ; `display` null : écrans qui partagent leurs pages ;
+ * `app` : appli d'une page plein écran.
+ */
+data class ComputerPage(val id: Int, val display: Int?, val fullscreen: Boolean, val current: Boolean, val app: String?)
 data class WindowsInfo(val running: Boolean, val windows: List<ComputerWindow>, val displays: List<ComputerDisplay>)
 
 /** Vue « Ouvertes » : une appli de l'ordinateur et ses fenêtres ; `key` la désigne pour la piloter. */
 data class OpenApp(val key: String, val name: String, val windows: List<ComputerWindow>)
-data class OpenWindows(val apps: List<OpenApp>, val displays: List<ComputerDisplay>)
+/** `pages` : Mac seulement (vide ailleurs, ou si le Mac ne les lit pas). */
+data class OpenWindows(val apps: List<OpenApp>, val displays: List<ComputerDisplay>, val pages: List<ComputerPage> = emptyList())
 
 /** Fenêtres de l'ordinateur : celles d'une tuile du deck, et la vue « Ouvertes » (toutes les applis ouvertes). */
 class WindowsApi(private val http: Http) {
@@ -54,6 +61,18 @@ class WindowsApi(private val http: Http) {
         JSONObject(http.postJson("/windows/open", body)).takeIf { it.has("apps") }?.let(::parseOpenWindows)
     }
 
+    /** Mac : passe sur une page du balayage à trois doigts (comme Ctrl + flèche). */
+    suspend fun showPage(page: ComputerPage): OpenWindows? = http.io {
+        http.postJson("/windows/page", JSONObject().put("page", page.id))
+        null
+    }
+
+    /** Mac : déplace une page à la place `to` de la bande (le Mac la glisse dans Mission Control, ~1 s). */
+    suspend fun movePage(page: ComputerPage, to: Int): OpenWindows? = http.io {
+        http.postJson("/windows/page/move", JSONObject().put("page", page.id).put("to", to))
+        null
+    }
+
     /** Icône PNG d'une appli de l'ordinateur d'après son nom, ou null si elle n'en a pas. */
     suspend fun appIcon(name: String): ByteArray? = http.io { http.bytesOrNull("/windows/icon?name=" + http.encode(name)) }
 
@@ -65,6 +84,15 @@ class WindowsApi(private val http: Http) {
                 OpenApp(a.getString("key"), a.getString("name"), parseWindowList(a.getJSONArray("windows")))
             },
             parseDisplays(j.getJSONArray("displays")),
+            j.optJSONArray("pages")?.let { pages ->
+                (0 until pages.length()).map { i ->
+                    val p = pages.getJSONObject(i)
+                    ComputerPage(
+                        p.getInt("id"), if (p.isNull("display")) null else p.getInt("display"), p.getBoolean("fullscreen"),
+                        p.getBoolean("current"), p.optString("app").ifEmpty { null },
+                    )
+                }
+            }.orEmpty(),
         )
     }
 }
@@ -78,7 +106,7 @@ private fun parseWindowList(windows: JSONArray) = (0 until windows.length()).map
     ComputerWindow(
         w.getInt("index"), w.getString("title"), w.getBoolean("minimized"), w.getBoolean("fullscreen"),
         if (w.isNull("display")) null else w.getInt("display"), w.optBoolean("elsewhere"),
-        w.optBoolean("front"), w.optBoolean("maximized"),
+        w.optBoolean("front"), w.optBoolean("maximized"), if (w.has("page")) w.getInt("page") else null,
     )
 }
 

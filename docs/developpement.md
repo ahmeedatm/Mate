@@ -276,11 +276,11 @@ Le compagnon redémarre seul en ~9 s. Vérifier ensuite une route Windows (`/sys
 **Mac** (dossier `~/Documents/Compagnon-Unowhy-Mac/Compagnon Unowhy`, service launchd `com.unowhy.companion`) :
 
 ```bash
-rsync -rt --exclude node --exclude .DS_Store "dist/mac/Compagnon Unowhy/" ~/Documents/Compagnon-Unowhy-Mac/"Compagnon Unowhy"/
+rsync -rt --exclude node --exclude .DS_Store "dist/mac/Compagnon Unowhy/Compagnon Unowhy.app/Contents/Resources/backend/" ~/Documents/Compagnon-Unowhy-Mac/"Compagnon Unowhy"/backend/
 launchctl kickstart -k gui/$(id -u)/com.unowhy.companion
 ```
 
-Garder le même dossier : l'Accessibilité est accordée au chemin du `node` du paquet. `config/tasks.json` (worklog) est dans le dossier du paquet, rsync ne l'efface pas. Journal : `~/Library/Logs/UnowhyCompanion/backend.log`. `npm run dev` ne peut pas tourner en même temps (port 3000, le service redémarre seul) : pour revenir au dev, `node/darwin-arm64/node dist/service.mjs uninstall` dans le paquet, puis appairer de nouveau (identité du dev dans `backend/.data`). Le serveur MCP `tablette` lit le jeton du paquet (`DATA_DIR` dans `.mcp.json`).
+Le paquet range le serveur dans `Compagnon Unowhy.app/Contents/Resources/backend` ; ce Mac tourne encore sur l'ancien dossier `backend/` (service launchd), d'où ce chemin. Garder le même dossier : l'Accessibilité est accordée au chemin du `node` du paquet. `config/tasks.json` (worklog) est dans le dossier du paquet, rsync ne l'efface pas. Journal : `~/Library/Logs/UnowhyCompanion/backend.log`. `npm run dev` ne peut pas tourner en même temps (port 3000, le service redémarre seul) : pour revenir au dev, `node/darwin-arm64/node dist/service.mjs uninstall` dans le paquet, puis appairer de nouveau (identité du dev dans `backend/.data`). Le serveur MCP `tablette` lit le jeton du paquet (`DATA_DIR` dans `.mcp.json`).
 
 ## Agents Claude (hooks)
 

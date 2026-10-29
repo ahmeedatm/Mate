@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Page du Mac dans la vue « Ouvertes » : comme row_bg, cerclée quand elle est affichée sur l'ordinateur (isSelected). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="?attr/c_surface_pressed" /><corners android:radius="14dp" /></shape></item>
+    <item android:state_selected="true"><shape android:shape="rectangle"><solid android:color="?attr/c_surface_raised" /><stroke android:width="2dp" android:color="?attr/c_primary" /><corners android:radius="14dp" /></shape></item>
+    <item><shape android:shape="rectangle"><solid android:color="?attr/c_surface_raised" /><corners android:radius="14dp" /></shape></item>
+</selector>

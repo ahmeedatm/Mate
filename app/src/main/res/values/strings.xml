@@ -270,6 +270,13 @@
     <string name="trash_release">Lâche pour fermer</string>
     <string name="trash_done">Miam !</string>
     <string name="open_none">Aucune fenêtre ouverte sur l\'ordinateur</string>
+    <!-- Pages du Mac (balayage à trois doigts) dans la vue « Ouvertes ». -->
+    <string name="open_page_desktop">Bureau</string>
+    <string name="open_page_desktop_n">Bureau %1$d</string>
+    <string name="open_page_shown">affiché sur l\'ordi</string>
+    <string name="open_page_go">toucher pour y aller</string>
+    <string name="open_page_new">Plein écran</string>
+    <string name="open_page_new_hint">glisser une fenêtre ici</string>
     <string name="deck_media_hint">Appui long sur un site pour le retirer</string>
     <string name="links_add_title">Ajouter un site</string>
     <string name="links_custom">Autre site</string>

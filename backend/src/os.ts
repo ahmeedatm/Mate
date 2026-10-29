@@ -386,6 +386,18 @@ export function controlOpenWindow(key: string, window: WindowTarget, action: Ope
   unsupported();
 }
 
+/** Mac : déplace une page du balayage à trois doigts à la place `to` (Mission Control). */
+export function movePage(id: number, to: number) {
+  if (isMac) return macWindows.movePage(id, to);
+  unsupported();
+}
+
+/** Mac : passe sur une page du balayage à trois doigts (vue « Ouvertes »). */
+export function showPage(id: number) {
+  if (isMac) return macWindows.showPage(id);
+  unsupported();
+}
+
 export async function systemCommand(command: SystemCommand) {
   if (isWindows) return win.systemCommand(command);
   if (isMac) return macSystem.systemCommand(command);

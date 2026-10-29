@@ -1,7 +1,7 @@
 import { createReadStream } from "node:fs";
 import type { FastifyInstance } from "fastify";
 import { appIconFile } from "../deck.ts";
-import { controlOpenWindow, listOpenWindows } from "../os.ts";
+import { controlOpenWindow, listOpenWindows, movePage, showPage } from "../os.ts";
 import type { Layout, OpenAction, WindowTarget } from "../screens.ts";
 
 /** Fenêtre visée (vue « Ouvertes » et fenêtres d'une tuile du deck). */
@@ -14,7 +14,9 @@ export const windowTarget = {
 
 /** Vue « Ouvertes » : toutes les applis ouvertes sur l'ordinateur et l'écran de chacune de leurs fenêtres. */
 export default async function windowRoutes(app: FastifyInstance) {
-  // Une action à la fois : deux gestes rapprochés visaient la même fenêtre en même temps (plein écran animé…).
+  // Une chose à la fois, relecture de la liste comprise : deux gestes rapprochés visaient la même fenêtre en même
+  // temps (plein écran animé…), et sur Mac la liste (plusieurs secondes) et Mission Control passent par la même file
+  // de System Events : un geste lancé pendant une relecture n'avait pas sa barre de Mission Control à temps.
   let queue: Promise<unknown> = Promise.resolve();
   function oneAtATime<T>(task: () => Promise<T>): Promise<T> {
     const run = queue.then(task, task);
@@ -22,7 +24,7 @@ export default async function windowRoutes(app: FastifyInstance) {
     return run;
   }
 
-  app.get("/windows/open", async () => listOpenWindows());
+  app.get("/windows/open", async () => oneAtATime(() => listOpenWindows()));
 
   app.get<{ Querystring: { name: string } }>(
     "/windows/icon",
@@ -64,10 +66,54 @@ export default async function windowRoutes(app: FastifyInstance) {
     },
     async (req) => {
       const { key, action, window, display, layout, list } = req.body;
-      await oneAtATime(() =>
-        controlOpenWindow(key, window, action, action === "place" ? { display, layout: layout ?? "keep" } : undefined),
-      );
+      try {
+        await oneAtATime(() =>
+          controlOpenWindow(key, window, action, action === "place" ? { display, layout: layout ?? "keep" } : undefined),
+        );
+      } catch (e) {
+        // Quelle fenêtre a échoué (sans son titre, qui peut être privé) : pour retrouver le cas dans le journal.
+        req.log.warn({ key, action, index: window.index }, "action de fenêtre échouée");
+        throw e;
+      }
       return list === false ? { ok: true } : listOpenWindows();
+    },
+  );
+
+  // Mac : change l’ordre des pages (glisser dans Mission Control, ~1 s).
+  app.post<{ Body: { page: number; to: number } }>(
+    "/windows/page/move",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["page", "to"],
+          additionalProperties: false,
+          properties: { page: { type: "integer", minimum: 0 }, to: { type: "integer", minimum: 0, maximum: 50 } },
+        },
+      },
+    },
+    async (req) => {
+      await oneAtATime(() => movePage(req.body.page, req.body.to));
+      return { ok: true };
+    },
+  );
+
+  // Mac : page du balayage à trois doigts ; réponse dès les touches envoyées, l'animation suit.
+  app.post<{ Body: { page: number } }>(
+    "/windows/page",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["page"],
+          additionalProperties: false,
+          properties: { page: { type: "integer", minimum: 0 } },
+        },
+      },
+    },
+    async (req) => {
+      await oneAtATime(() => showPage(req.body.page));
+      return { ok: true };
     },
   );
 }
