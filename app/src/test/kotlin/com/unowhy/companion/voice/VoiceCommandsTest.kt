@@ -39,7 +39,7 @@ class VoiceCommandsTest {
         assertEquals(VoiceCommand.Noise("STORM"), parse("lance le bruit de pluie"))
         assertEquals(VoiceCommand.Noise("FOREST"), parse("ambiance forêt"))
         assertEquals(VoiceCommand.Noise("JAPAN"), parse("mets l'ambiance du Japon"))
-        assertEquals(VoiceCommand.Noise("JAPAN"), parse("ambiance cigales"))
+        assertEquals(VoiceCommand.Noise("JAPAN"), parse("ambiance samouraï"))
         assertEquals(VoiceCommand.Noise("SEA"), parse("ambiance mer"))
         assertEquals(VoiceCommand.Noise("LOFI"), parse("mets du lofi"))
         assertEquals(VoiceCommand.Noise(null), parse("coupe l'ambiance"))

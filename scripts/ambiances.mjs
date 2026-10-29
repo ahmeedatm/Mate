@@ -28,36 +28,28 @@ const SOUNDS = [
     length: 150,
     loudness: -30,
   },
-  // Forêt : petits chants d'oiseaux, sans vent ni circulation, « birdsongEvening » de tenkism (Freesound 350456).
+  // Forêt : oiseaux et insectes d'un été calme, « Forest_Summer_Day_Quiet_Calm_Birds_Insects_Atmo_Nowind_Finland » de
+  // Villehardt (Freesound 613995), avec dessous le vent dans les arbres, « Wind Through Trees » de Yoyodaman234
+  // (Freesound 335889). 4 min : la boucle se remarque moins.
   {
     name: "forest",
-    url: FREESOUND + "350/350456_2422703-hq.mp3",
-    start: 0,
-    length: 138,
+    url: FREESOUND + "613/613995_713006-hq.mp3",
+    start: 30,
+    length: 240,
     loudness: -32,
-    // Chants adoucis : aigus perçants retirés, pics rapprochés du fond.
-    filter:
-      "lowpass=f=6000,acompressor=threshold=-36dB:ratio=6:attack=3:release=150:makeup=1",
-  },
-  // Japon, l'été : cigales d'un sanctuaire de Tokyo, « AkasakaHieJinjaCicadas_4mics » de markystar (Freesound 79086),
-  // la porte d'un 7-Eleven, « 7'11 Sliding Door » de plasterbrain (Freesound 399092), et un furin, « Furin japanese
-  // wind chime » d'ayustat2001 (Freesound 501168), de temps en temps.
-  {
-    name: "japan",
-    url: FREESOUND + "79/79086_384438-hq.mp3",
-    start: 0,
-    length: 134,
-    loudness: -30,
-    // Cigales adoucies : leur stridence sans le perçant.
+    // Chants adoucis : aigus perçants retirés.
     filter: "lowpass=f=7000",
     layers: [
-      { url: FREESOUND + "399/399092_4284968-hq.mp3", at: [38, 101], gain: -6 },
-      {
-        url: FREESOUND + "501/501168_4648939-hq.mp3",
-        at: [14, 70, 118],
-        gain: -9,
-      },
+      { url: FREESOUND + "335/335889_2792951-hq.mp3", at: [0], gain: -24 },
     ],
+  },
+  // Japon : lofi japonais posé pour étudier, « Japanese Lofi HipHop Track » de pickentcode (OpenGameArt).
+  {
+    name: "japan",
+    url: OGA + "gods_notebook_-_main_theme.mp3",
+    start: 0,
+    length: 146,
+    loudness: -27,
   },
   // Mer : « Ocean Waves on a Tropical Beach » de Jarrod Stanley (Wikimedia Commons).
   {
