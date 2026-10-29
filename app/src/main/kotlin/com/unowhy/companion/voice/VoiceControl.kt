@@ -2,9 +2,11 @@ package com.unowhy.companion.voice
 
 import android.Manifest
 import android.animation.ValueAnimator
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -53,9 +55,6 @@ class VoiceControl(
     private class Answer(val text: String, val speak: Boolean = false)
 
     private var recognizer: SpeechRecognizer? = null
-
-    /** L'écoute en cours est un essai hors ligne ([Recognition]). */
-    private var offlineAttempt = false
     private var listening = false
     private var pulse: ValueAnimator? = null
     /** Variantes entendues de la dernière phrase : les noms d'applis sont cherchés dans toutes. */
@@ -90,8 +89,12 @@ class VoiceControl(
             it.setRecognitionListener(listener)
             recognizer = it
         }
-        offlineAttempt = Recognition.tryOffline
-        val intent = Recognition.intent(activity.packageName, maxResults = 5, offline = offlineAttempt)
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fr-FR")
+            .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
+            .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, activity.packageName)
         setListening(true)
         activity.showBanner(activity.getString(R.string.voice_listening), 10)
         r.startListening(intent)
@@ -130,14 +133,11 @@ class VoiceControl(
 
         override fun onResults(results: Bundle) {
             setListening(false)
-            if (offlineAttempt) Recognition.offlineWorked()
             handle(results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty())
         }
 
         override fun onError(error: Int) {
             setListening(false)
-            // Pas de modèle hors ligne : on relance aussitôt en ligne, sans rien afficher.
-            if (offlineAttempt && Recognition.offlineUnavailable(error)) return start()
             val text = when (error) {
                 SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> R.string.voice_nothing
                 SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT, SpeechRecognizer.ERROR_SERVER -> R.string.voice_offline

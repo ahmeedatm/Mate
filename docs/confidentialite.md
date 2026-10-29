@@ -5,7 +5,6 @@ Audit de vendabilité du 29/10/2026 : aucune politique de confidentialité, et d
 **Fait le 29/10/2026** (branche `fix/confidentialite`) :
 - deux flux **supprimés** plutôt que déclarés : le nom des sites du Deck n'est plus envoyé au service d'icônes de Google, le titre et l'artiste du morceau ne sont plus envoyés à Apple (un test du backend empêche leur retour) ;
 - **localisation** : la ville de la météo n'est plus trouvée seule que si l'option des Réglages est activée (coupée par défaut) ; « Ma position » reste un geste explicite ;
-- **reconnaissance vocale** : hors ligne d'abord (`voice/Recognition.kt`), Google seulement si le modèle français n'est pas sur la tablette ;
 - **politique de confidentialité** affichée dans Réglages > À propos > « Confidentialité » et sur la page locale de l'ordinateur (`/local/confidentialite`), un seul texte : `backend/config/confidentialite.txt`, copié dans `app/src/main/assets/` (vérifié par `PrivacyTest`).
 
 **Reste au juridique** : valider le texte, le compléter (raison sociale, adresse, contact DPO : introuvables dans le dépôt et sur le web, le texte renvoie au site d'Unowhy), et confirmer bases légales et transferts hors UE.
@@ -25,7 +24,7 @@ Le principe du produit est bon : les données restent chez l'utilisateur. La tab
 
 | Destinataire | Quand | Ce qui part | Où dans le code |
 |---|---|---|---|
-| **Google** (reconnaissance vocale d'Android) | bouton Parler, dictée, réponse vocale aux agents, **si le modèle français hors ligne n'est pas sur la tablette** | **l'enregistrement de la voix** et la langue ; traité par l'appli Google de la tablette | `voice/Recognition.kt` (hors ligne d'abord), `VoiceControl.kt`, `Dictation.kt` |
+| **Google** (reconnaissance vocale d'Android) | bouton Parler, dictée, réponse vocale aux agents | **l'enregistrement de la voix** et la langue ; traité par l'appli Google de la tablette | `voice/VoiceControl.kt`, `voice/Dictation.kt` (`SpeechRecognizer`) |
 | **Google** (services de localisation d'Android) | météo sans ville choisie **si l'option des Réglages est activée** (coupée par défaut), bouton « Ma position » | réseaux WiFi visibles et signal, envoyés par le système pour obtenir la position | `device/Position.kt` |
 | **Google** (synthèse vocale d'Android) | rappels parlés, réponses de la commande vocale | le texte à prononcer, **si** le moteur utilise une voix en ligne (selon ses réglages) | `audio/Speaker.kt` |
 | **Google** (recherche) | commande vocale « cherche … » | le texte cherché, ouvert dans le navigateur de l'ordinateur | `voice/VoiceControl.kt` |
@@ -48,4 +47,3 @@ Le texte affiché aux utilisateurs est `backend/config/confidentialite.txt` (cop
 
 1. Raison sociale, adresse et contact DPO d'Unowhy à ajouter au texte ; bases légales et cadre des transferts hors UE à confirmer.
 2. Public : Companion vise les gamers, streamers et créateurs (`cible-et-positionnement.md`) ; les tablettes viennent du parc scolaire. Si des mineurs peuvent l'utiliser, la reconnaissance vocale et la localisation demandent une attention particulière.
-3. Reconnaissance vocale hors ligne : vérifier sur la tablette 4.2 que le modèle français est installé (sinon la voix part chez Google, ce que le texte dit) ; pas vérifiable sans parler à la tablette.

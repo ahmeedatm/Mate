@@ -141,7 +141,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 
 ## Pour la vente (pas nécessaire à la démo)
 
-- **Confidentialité** (COMP-49, 29/10, branche `fix/confidentialite`) : inventaire des données et des flux vérifié dans le code ([confidentialite.md](confidentialite.md)) ; flux supprimés (icônes de sites par Google, pochettes par Apple) ; localisation pour la météo devenue une option coupée par défaut ; reconnaissance vocale hors ligne d'abord ; politique de confidentialité dans Réglages > À propos et sur la page locale. Vérifié sur la tablette (option, texte). Reste : validation du texte par le juridique et le DPO (raison sociale, contact DPO), reconnaissance hors ligne pas vérifiable sans parler à la tablette.
+- **Confidentialité** (COMP-49, 29/10, branche `fix/confidentialite`) : inventaire des données et des flux vérifié dans le code ([confidentialite.md](confidentialite.md)) ; flux supprimés (icônes de sites par Google, pochettes par Apple) ; localisation pour la météo devenue une option coupée par défaut ; politique de confidentialité dans Réglages > À propos et sur la page locale. Vérifié sur la tablette (option, texte). Reste : validation du texte par le juridique et le DPO (raison sociale, contact DPO).
 
 - **Extension de navigateur** (bouton Onglets de « Page de l'ordi » sur Windows ; sur Mac, AppleScript suffit sauf Firefox). Aujourd'hui chargée en mode développeur, ce qui suffit pour la démo. Pour un client :
   - **Publier** avec un compte Unowhy : Chrome Web Store (5 $ une fois ; couvre Chrome, Brave, Vivaldi, et Opera par son module « Installer des extensions Chrome »), Edge Add-ons (gratuit), addons.mozilla.org (gratuit, signature obligatoire). Hors boutique, Chrome refuse l'extension sur Windows.
