@@ -24,6 +24,7 @@ import {
 import type { Layout } from "./screens.ts";
 import { loadKeys, loadLinks, loadSavedApps, saveApps, saveLinks, type DeckApp, type DeckLink } from "./perso.ts";
 import { agentsAvailable } from "./agents-sources.ts";
+import { gitlabConfigured } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
 import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
 
@@ -184,7 +185,15 @@ export async function homeFeatures() {
   // (appli ou navigateur) ; `teams` : l'appli Teams est dans le deck (page Réunion et ses raccourcis).
   const teams = names.some((n) => MEETING_APPS.test(n));
   // `agents` : onglet et widget des agents Claude (Mac avec Claude Code installé).
-  return { agenda: true, linked: await hasCalendar(), meetings: canControl, teams, agents: agentsAvailable() };
+  // `gitlab` : onglet des MR GitLab (jeton GITLAB_TOKEN réglé dans .env de l'ordinateur).
+  return {
+    agenda: true,
+    linked: await hasCalendar(),
+    meetings: canControl,
+    teams,
+    agents: agentsAvailable(),
+    gitlab: canControl && gitlabConfigured(),
+  };
 }
 
 export async function loadDeck(): Promise<DeckPage[]> {

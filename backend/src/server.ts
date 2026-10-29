@@ -5,6 +5,7 @@ import { config } from "./config.ts";
 import { startCallWatch } from "./calls.ts";
 import { clipboardHistory, watchClipboard } from "./clipboard-history.ts";
 import { startEventReminders } from "./events.ts";
+import { GitLabError } from "./gitlab.ts";
 import { setLogger } from "./log.ts";
 import { startAutoJoin } from "./meetings.ts";
 import { canControl, clipboardStamp, getClipboard, isMac, osName } from "./os.ts";
@@ -18,6 +19,7 @@ import callRoutes from "./routes/calls.ts";
 import cameraRoutes from "./routes/camera.ts";
 import deckRoutes from "./routes/deck.ts";
 import docRoutes from "./routes/docs.ts";
+import gitlabRoutes from "./routes/gitlab.ts";
 import localRoutes from "./routes/local.ts";
 import pairingRoutes from "./routes/pairing.ts";
 import pointerRoutes from "./routes/pointer.ts";
@@ -73,7 +75,7 @@ app.addHook("onRequest", async (req, reply) => {
  * (sortie d'osascript, erreur système de Node, requête mal formée) reste dans le journal de l'ordinateur.
  */
 app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validation?: unknown; technical?: boolean }, req, reply) => {
-  if (err instanceof PairingError) return reply.code(err.statusCode).send({ error: err.message });
+  if (err instanceof PairingError || err instanceof GitLabError) return reply.code(err.statusCode).send({ error: err.message });
   if (err.validation) return reply.code(400).send({ error: "Demande invalide : mets à jour l'appli de la tablette" });
   const status = err.statusCode && err.statusCode >= 400 ? err.statusCode : 500;
   if (status >= 500 && (err.technical || (typeof err.code === "string" && /^E[A-Z]/.test(err.code)))) {
@@ -89,7 +91,10 @@ const DECK_ANYWHERE = /^\/deck(\/keys\/\d+|\/run)?(\?|$)/;
 app.addHook("preHandler", async (req, reply) => {
   if (
     !canControl &&
-    ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) || req.url.startsWith("/system") || req.url.startsWith("/pointer"))
+    ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) ||
+      req.url.startsWith("/system") ||
+      req.url.startsWith("/pointer") ||
+      req.url.startsWith("/gitlab"))
   ) {
     return reply.code(501).send({ error: "Pilotage disponible sur macOS et Windows seulement" });
   }
@@ -114,6 +119,7 @@ app.register(calendarRoutes);
 app.register(taskRoutes);
 app.register(callRoutes);
 app.register(agentRoutes);
+app.register(gitlabRoutes);
 app.register(tabletRoutes);
 
 // --- Tâches de fond

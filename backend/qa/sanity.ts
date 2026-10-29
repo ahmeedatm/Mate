@@ -271,6 +271,27 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "GitLab : MR (lecture seule)",
+      run: async () => {
+        const mrs = await call("GET", "/gitlab/mrs");
+        if (!controlled()) return expectStatus(mrs, 501, "/gitlab/mrs");
+        const features = await call("GET", "/deck/features");
+        expectStatus(features, 200, "/deck/features");
+        expect(typeof features.json.gitlab === "boolean", "/deck/features sans booléen gitlab");
+        // Compagnon sans GITLAB_TOKEN (CI, tests) : 503 et pas d'onglet. Jamais de fusion ni d'ouverture ici.
+        if (mrs.status === 503) {
+          expect(features.json.gitlab === false, "gitlab annoncé alors que le jeton manque");
+          return "503 sans jeton GitLab";
+        }
+        // Jeton refusé ou GitLab injoignable depuis cet ordinateur : pas une panne du compagnon.
+        if (mrs.status === 502) throw new Skip(`GitLab inaccessible depuis l'ordinateur (${mrs.json?.error})`);
+        expectStatus(mrs, 200, "/gitlab/mrs");
+        expect(features.json.gitlab === true, "jeton réglé mais gitlab absent de /deck/features");
+        expect(Array.isArray(mrs.json.mine) && Array.isArray(mrs.json.review), "forme de /gitlab/mrs inattendue");
+        return `${mrs.json.mine.length} MR à moi, ${mrs.json.review.length} à relire`;
+      },
+    },
+    {
       name: "pointeur",
       run: async () => {
         // Déplacement nul seulement : jamais de clic sur un ordinateur qui sert à autre chose.

@@ -13,6 +13,7 @@ const dir = await fs.mkdtemp(path.join(os.tmpdir(), "companion-deck-"));
 process.env.DATA_DIR = dir;
 process.env.CALENDAR_ICS_URLS = "";
 process.env.CLAUDE_BIN = "/inexistant";
+process.env.GITLAB_TOKEN = "";
 const { config } = await import("../src/config.ts");
 const deck = await import("../src/deck.ts");
 const { saveKey } = await import("../src/perso.ts");
@@ -257,7 +258,14 @@ describe("page Média : sites", () => {
 
 describe("homeFeatures", () => {
   it("bouton Rejoindre de Teams seulement si Teams est dans la page Apps", async () => {
-    assert.deepEqual(await deck.homeFeatures(), { agenda: true, linked: false, meetings: true, teams: false, agents: false });
+    assert.deepEqual(await deck.homeFeatures(), {
+      agenda: true,
+      linked: false,
+      meetings: true,
+      teams: false,
+      agents: false,
+      gitlab: false,
+    });
     await deck.addDeckApp("Microsoft Teams");
     assert.equal((await deck.homeFeatures()).teams, true);
   });
@@ -267,5 +275,12 @@ describe("homeFeatures", () => {
     assert.equal((await deck.homeFeatures()).agents, true);
     process.env.CLAUDE_BIN = "/inexistant";
     assert.equal((await deck.homeFeatures()).agents, false);
+  });
+
+  it("gitlab : seulement si GITLAB_TOKEN est réglé", async () => {
+    process.env.GITLAB_TOKEN = "glpat-de-test";
+    assert.equal((await deck.homeFeatures()).gitlab, true);
+    process.env.GITLAB_TOKEN = " ";
+    assert.equal((await deck.homeFeatures()).gitlab, false);
   });
 });
