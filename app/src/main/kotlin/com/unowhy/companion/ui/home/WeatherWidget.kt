@@ -97,8 +97,11 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
             city.text = ""
             smallCity.visibility = android.view.View.GONE
             details.visibility = android.view.View.VISIBLE
+            // Grand sans ville : pas de rangée des jours vide sous l'invitation, qui reste au milieu de la carte.
+            days.visibility = android.view.View.GONE
             return
         }
+        days.visibility = if (placed.size == WidgetSize.L) android.view.View.VISIBLE else android.view.View.GONE
         city.text = name
         smallCity.text = name
         // Sans ville, les détails s'affichent même en petit (« Choisir ma ville ») : la ville trouvée, on revient à la taille.

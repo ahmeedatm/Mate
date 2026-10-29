@@ -89,7 +89,8 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         view.background = null
         view.setPadding(0, 0, 0, 0)
         val keys = keys()
-        if (inGrid) return renderGrid(keys)
+        // Grille vide (Grand, Très grand) : la même invitation au milieu que les petites tailles, pas un « + » perdu dans un coin.
+        if (inGrid && keys.isNotEmpty()) return renderGrid(keys)
         if (keys.isEmpty()) {
             view.addView(LinearLayout(context).apply {
                 setBackgroundResource(R.drawable.tile_empty_bg)
@@ -97,7 +98,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                 orientation = LinearLayout.VERTICAL
                 addView(label(30f, R.attr.c_text_faint).apply { text = "+"; gravity = Gravity.CENTER })
                 addView(label(16f, R.attr.c_text_dim).apply { setText(R.string.widget_keys_choose); gravity = Gravity.CENTER })
-                setOnClickListener { showSettings() }
+                setOnClickListener { if (inGrid) showAddChoice() else showSettings() }
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             return
         }
