@@ -141,13 +141,17 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         return tile
     }
 
+    /** Lance la touche. Une appli à plusieurs fenêtres ne se lance pas : l'ordinateur rend ses fenêtres, on les propose. */
     private fun run(id: String) {
         host.scope.launch {
-            try {
-                BackendClient(context).deck.runTile(id)
-            } catch (e: Exception) {
-                Toast.makeText(context, context.errorText(e), Toast.LENGTH_LONG).show()
+            val result = runCatchingCancellable { BackendClient(context).deck.runTile(id) }
+            result.onFailure {
+                Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show()
+                return@launch
             }
+            val windows = result.getOrNull()?.windows ?: return@launch
+            val tile = runCatchingCancellable { host.deckPages() }.getOrNull()?.flatMap { it.tiles }?.firstOrNull { it.id == id } ?: return@launch
+            host.overlays.windows(tile, windows)
         }
     }
 
