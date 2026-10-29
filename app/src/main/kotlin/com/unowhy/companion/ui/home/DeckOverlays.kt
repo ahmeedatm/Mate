@@ -29,10 +29,11 @@ class DeckOverlays(private val root: FrameLayout, private val scope: CoroutineSc
         get() = keyEditor?.isShowing == true || appAdder?.isShowing == true ||
             linkAdder?.visibility == View.VISIBLE || windowPicker?.isShowing == true || agentsBoard?.isShowing == true
 
-    fun editKey(slot: Int, onChanged: () -> Unit) {
+    /** `page` : rang de la page de touches nommée de la touche, null pour Perso. */
+    fun editKey(slot: Int, page: Int? = null, onChanged: () -> Unit) {
         val editor = keyEditor ?: KeyEditor(root.context).also { keyEditor = it; add(it) }
         editor.attach(scope, onChanged)
-        editor.show(slot)
+        editor.show(slot, page)
     }
 
     fun addApps(present: Map<String, String>, onChanged: () -> Unit) {

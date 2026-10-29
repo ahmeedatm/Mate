@@ -31,12 +31,14 @@
       "tiles": [
         {
           "label": "Rejoindre maintenant",
+          "symbol": "call",
           "glyph": "✅",
           "when": "lobby",
           "action": { "type": "press", "app": "Microsoft Teams", "names": ["Rejoindre maintenant", "Join now"] }
         },
         {
           "label": "Micro",
+          "symbol": "mic_off",
           "glyph": "🎤",
           "when": "call",
           "lit": "muted",
@@ -48,6 +50,7 @@
         },
         {
           "label": "Caméra",
+          "symbol": "videocam_off",
           "glyph": "📷",
           "when": "call",
           "lit": "camera",
@@ -59,12 +62,14 @@
         },
         {
           "label": "Partager l'écran",
+          "symbol": "present",
           "glyph": "🖥",
           "when": "share",
           "action": { "type": "press", "app": "Microsoft Teams", "names": ["Partager", "Share"] }
         },
         {
           "label": "Arrêter le partage",
+          "symbol": "present",
           "glyph": "🛑",
           "when": "streaming",
           "action": {
@@ -75,12 +80,14 @@
         },
         {
           "label": "Lever la main",
+          "symbol": "hand",
           "glyph": "✋",
           "when": "call",
           "action": { "type": "keys", "keys": "cmd+shift+k", "app": "Microsoft Teams" }
         },
         {
           "label": "Quitter l'appel",
+          "symbol": "call_end",
           "glyph": "📴",
           "color": "#C62828",
           "when": "call",
@@ -95,6 +102,7 @@
         { "label": "Ouvrir Discord", "action": { "type": "app", "name": "Discord" } },
         {
           "label": "Couper mon micro",
+          "symbol": "mic_off",
           "glyph": "🎤",
           "when": "call",
           "lit": "muted",
@@ -102,6 +110,7 @@
         },
         {
           "label": "Sourdine (casque)",
+          "symbol": "volume_off",
           "glyph": "🎧",
           "when": "call",
           "lit": "deafened",
@@ -109,6 +118,7 @@
         },
         {
           "label": "Quitter l'appel",
+          "symbol": "call_end",
           "glyph": "📴",
           "when": "call",
           "action": { "type": "press", "app": "Discord", "names": ["Déconnecter", "Disconnect"] }
@@ -118,16 +128,18 @@
     {
       "title": "Raccourcis",
       "tiles": [
-        { "label": "Play / Pause", "glyph": "⏯", "action": { "type": "media", "command": "play-pause" } },
-        { "label": "Précédent", "glyph": "⏮", "action": { "type": "media", "command": "previous" } },
-        { "label": "Suivant", "glyph": "⏭", "action": { "type": "media", "command": "next" } },
-        { "label": "Capture zone", "glyph": "✂️", "action": { "type": "keys", "keys": "cmd+shift+4" } },
-        { "label": "Écran → presse-papiers", "glyph": "📋", "action": { "type": "system", "command": "screenshot-clipboard" } },
-        { "label": "Mission Control", "glyph": "🗂", "action": { "type": "keys", "keys": "ctrl+up" } },
-        { "label": "Spotlight", "glyph": "🔍", "action": { "type": "keys", "keys": "cmd+space" } },
-        { "label": "Mode sombre", "glyph": "🌙", "action": { "type": "system", "command": "toggle-dark-mode" } },
-        { "label": "Veille écran", "glyph": "💤", "action": { "type": "system", "command": "sleep-display" } },
-        { "label": "Verrouiller", "glyph": "🔒", "color": "#37474F", "action": { "type": "system", "command": "lock" } }
+        { "label": "Play / Pause", "symbol": "play_pause", "glyph": "⏯", "action": { "type": "media", "command": "play-pause" } },
+        { "label": "Précédent", "symbol": "skip_previous", "glyph": "⏮", "action": { "type": "media", "command": "previous" } },
+        { "label": "Suivant", "symbol": "skip_next", "glyph": "⏭", "action": { "type": "media", "command": "next" } },
+        { "label": "Capture zone", "symbol": "screenshot", "glyph": "✂️", "action": { "type": "keys", "keys": "cmd+shift+4" } },
+        { "label": "Écran → presse-papiers", "symbol": "clipboard", "glyph": "📋", "action": { "type": "system", "command": "screenshot-clipboard" } },
+        { "label": "Mission Control", "symbol": "windows", "glyph": "🗂", "action": { "type": "keys", "keys": "ctrl+up" } },
+        { "label": "Spotlight", "symbol": "search", "glyph": "🔍", "action": { "type": "keys", "keys": "cmd+space" } },
+        { "label": "Mode sombre", "symbol": "dark_mode", "glyph": "🌙", "action": { "type": "system", "command": "toggle-dark-mode" } },
+        { "label": "Veille écran", "symbol": "bedtime", "glyph": "💤", "action": { "type": "system", "command": "sleep-display" } },
+        { "label": "Verrouiller", "symbol": "lock", "glyph": "🔒", "action": { "type": "system", "command": "lock" } },
+        { "label": "Couper le micro", "symbol": "mic_off", "glyph": "🎙", "action": { "type": "system", "command": "mute-mic" } },
+        { "label": "Ne pas déranger", "symbol": "dnd", "glyph": "⛔", "action": { "type": "system", "command": "dnd" } }
       ]
     },
     {

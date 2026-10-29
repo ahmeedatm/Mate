@@ -1,5 +1,6 @@
 package com.unowhy.companion.ui.home
 
+import com.unowhy.companion.net.HomeFeatures
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -57,11 +58,55 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `la taille V est acceptee par Agenda, Taches, Focus et Touches`() {
-        for (type in listOf(WidgetType.NEXT, WidgetType.TASKS, WidgetType.FOCUS, WidgetType.KEYS)) {
+    fun `la taille V est acceptee par Agenda, Taches, Focus, Applis et Touches`() {
+        for (type in listOf(WidgetType.NEXT, WidgetType.TASKS, WidgetType.FOCUS, WidgetType.APPS, WidgetType.KEYS)) {
             assertTrue("$type", WidgetSize.V in type.sizes)
             assertFalse("$type : V ne doit pas etre la taille d'un ajout", type.sizes.first() == WidgetSize.V)
         }
+    }
+
+    @Test
+    fun `Accueil de bureau, les applis du travail a la place du Focus`() {
+        val bottom = Template.WORK_CADRAN.build().widgets.filter { it.row == 2 }.sortedBy { it.col }.map { it.type to it.size }
+        assertEquals(
+            listOf(WidgetType.NEXT, WidgetType.TASKS, WidgetType.APPS, WidgetType.KEYS).map { it to WidgetSize.V },
+            bottom,
+        )
+    }
+
+    @Test
+    fun `Accueil de bureau, Ma journee a la place de la grande heure`() {
+        val top = Template.WORK_CADRAN.build().widgets.single { it.row == 0 }
+        assertEquals(WidgetType.DAY to WidgetSize.W, top.type to top.size)
+        assertEquals(WidgetType.DAY, WidgetType.of("day"))
+        assertEquals(listOf(WidgetSize.W), WidgetType.DAY.sizes)
+        assertFalse(WidgetType.DAY.computer)
+        assertTrue(WidgetType.DAY.bare)
+    }
+
+    @Test
+    fun `Jira et GitLab, widgets du Deck en XL ou L, seulement si l'ordinateur les offre`() {
+        assertEquals(WidgetType.JIRA, WidgetType.of("jira"))
+        assertEquals(WidgetType.GITLAB, WidgetType.of("gitlab"))
+        for (type in listOf(WidgetType.JIRA, WidgetType.GITLAB)) {
+            assertEquals(listOf(WidgetSize.XL, WidgetSize.L), type.sizes)
+            assertTrue(type.computer)
+        }
+        assertFalse(WidgetType.JIRA.offered(HomeFeatures()))
+        assertFalse(WidgetType.GITLAB.offered(HomeFeatures()))
+        assertTrue(WidgetType.JIRA.offered(HomeFeatures(jira = true)))
+        assertTrue(WidgetType.GITLAB.offered(HomeFeatures(gitlab = true)))
+    }
+
+    @Test
+    fun `un plugin coupe retire son widget du catalogue, les autres restent`() {
+        val off = HomeFeatures(off = setOf("open", "mixer", "pad"))
+        assertFalse(WidgetType.OPEN.offered(off))
+        assertFalse(WidgetType.MIXER.offered(off))
+        assertFalse(WidgetType.PAD.offered(off))
+        assertTrue(WidgetType.OPEN.offered(HomeFeatures()))
+        assertTrue(WidgetType.CLOCK.offered(off))
+        assertTrue(WidgetType.KEYS.offered(off))
     }
 
     @Test
@@ -93,10 +138,10 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `chaque modele Cadran commence par le heros puis la ligne du jour`() {
-        for (template in Template.entries.filter { it.cadran }) {
+    fun `chaque modele Cadran commence par un bandeau (heure ou Ma journee) puis la ligne du jour`() {
+        for (template in Template.entries.filter { it.cadran && !it.role }) {
             val widgets = template.build().widgets
-            val hero = widgets.single { it.type == WidgetType.HERO }
+            val hero = widgets.single { it.type == WidgetType.HERO || it.type == WidgetType.DAY }
             val line = widgets.single { it.type == WidgetType.DAYLINE }
             assertEquals("$template heros", Triple(WidgetSize.W, 0, 0), Triple(hero.size, hero.col, hero.row))
             assertEquals("$template ligne du jour", Triple(WidgetSize.W, 0, 1), Triple(line.size, line.col, line.row))
@@ -106,8 +151,15 @@ class WidgetModelTest {
     @Test
     fun `les trois modeles existent aussi en Cadran, avec les memes titres`() {
         val plain = Template.entries.filter { !it.cadran }.map { it.title }
-        val cadran = Template.entries.filter { it.cadran }.map { it.title }
+        val cadran = Template.entries.filter { it.cadran && !it.role }.map { it.title }
         assertEquals(plain, cadran)
+    }
+
+    @Test
+    fun `le modele Deck remplit toute la grille, sans case vide`() {
+        val layout = Template.DECK_CADRAN.build()
+        for (r in 0 until ROWS) for (c in 0 until COLS) assertTrue("case $c,$r", layout.widgets.any { it.covers(c, r) })
+        assertTrue(layout.widgets.all { it.size in it.type.sizes })
     }
 
     @Test
@@ -124,5 +176,29 @@ class WidgetModelTest {
         assertEquals(listOf(WidgetSize.W), WidgetType.DAYLINE.sizes)
         assertFalse(WidgetType.HERO.computer)
         assertFalse(WidgetType.DAYLINE.computer)
+    }
+
+    @Test
+    fun `widget d'appel generique, en XL et L, remplit le modele Reunion`() {
+        assertEquals(WidgetType.CALL, WidgetType.of("call"))
+        assertEquals(listOf(WidgetSize.XL, WidgetSize.L), WidgetType.CALL.sizes)
+        val layout = Template.CALL_CADRAN.build()
+        assertTrue(layout.widgets.any { it.type == WidgetType.CALL && it.size == WidgetSize.XL })
+        for (r in 0 until ROWS) for (c in 0 until COLS) assertTrue("case $c,$r", layout.widgets.any { it.covers(c, r) })
+    }
+
+    @Test
+    fun `config de base bureau, les touches de l'Accueil et du Deck arrivent remplies`() {
+        for (template in listOf(Template.WORK_CADRAN, Template.DECK_CADRAN)) {
+            val keys = template.build().widgets.single { it.type == WidgetType.KEYS }
+            assertEquals("$template", "Raccourcis", keys.config.optString(KeyRef.DEFAULT_PAGE))
+        }
+    }
+
+    @Test
+    fun `config de base bureau, le Deck montre les fenetres, la musique reste dans le header`() {
+        val deck = Template.DECK_CADRAN.build().widgets.map { it.type }
+        assertTrue(WidgetType.OPEN in deck)
+        assertFalse(WidgetType.MEDIA in deck)
     }
 }

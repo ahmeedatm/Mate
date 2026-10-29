@@ -68,6 +68,19 @@ describe("runAction", () => {
     ]);
   });
 
+  it("système : mute-mic bascule la sourdine du micro, dnd bascule Ne pas déranger", async () => {
+    reset({ dnd: false });
+    await deck.runAction({ type: "system", command: "mute-mic" });
+    await deck.runAction({ type: "system", command: "dnd" });
+    assert.deepEqual(calls, [
+      { fn: "setAudio", args: [{ micMuted: true }] },
+      { fn: "setDnd", args: [true] },
+    ]);
+    reset({ dnd: true });
+    await deck.runAction({ type: "system", command: "dnd" });
+    assert.deepEqual(calls, [{ fn: "setDnd", args: [false] }]);
+  });
+
   it("enchaîne les étapes d'une macro dans l'ordre", async () => {
     await deck.runAction({
       type: "macro",

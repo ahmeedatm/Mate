@@ -57,6 +57,11 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         // Sans ordinateur actif, rien n'est lu ni écrit : le deck lu ne serait celui de personne.
         val id = computerId ?: return
         if (KeyRef.adopt(placed.config, id)) host.save()
+        // Profil Deck : ses touches de départ arrivent avec l'ordinateur (page Raccourcis de son deck).
+        KeyRef.seed(placed.config, id, pages)?.let {
+            store(it)
+            return
+        }
         reconcileKeys(keys(), pages)?.let { store(it) }
     }
 
@@ -159,10 +164,11 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
     }
 
-    /** Appui long : l'éditeur pour une touche perso, sinon la retirer du widget (la touche reste dans le Deck). */
+    /** Appui long : l'éditeur pour une touche perso ou d'une page de touches nommée, sinon la retirer du widget. */
     private fun hold(key: KeyRef) {
         val slot = slotOf(key.id)
         if (slot != null) return host.overlays.editKey(slot) { reload() }
+        pageSlotOf(key.id)?.let { (page, pageSlot) -> return host.overlays.editKey(pageSlot, page) { reload() } }
         AlertDialog.Builder(context)
             .setMessage(context.getString(R.string.widget_keys_remove, key.label))
             .setNegativeButton(R.string.cancel, null)

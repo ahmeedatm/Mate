@@ -29,8 +29,9 @@ fun tileLit(tile: DeckTile, voice: VoiceState?) = voice?.connected == true && wh
 }
 
 /** Touche choisie dans un widget : assez pour la dessiner sans relire le deck. Le JSON garde l'ancien format de KeysWidget. */
-data class KeyRef(val id: String, val label: String, val glyph: String? = null, val color: String? = null) {
+data class KeyRef(val id: String, val label: String, val glyph: String? = null, val color: String? = null, val symbol: String? = null) {
     fun toJson(): JSONObject = JSONObject().put("id", id).put("label", label).put("glyph", glyph ?: "").put("color", color ?: "")
+        .apply { symbol?.let { put("symbol", it) } }
 
     companion object {
         /** Null pour un élément sans id : une config abîmée ne doit pas faire planter le rendu. */
@@ -41,10 +42,33 @@ data class KeyRef(val id: String, val label: String, val glyph: String? = null, 
                 json.optString("label"),
                 json.optString("glyph").takeIf { it.isNotEmpty() },
                 json.optString("color").takeIf { it.isNotEmpty() },
+                json.optString("symbol").takeIf { it.isNotEmpty() },
             )
         }
 
-        fun of(tile: DeckTile) = KeyRef(tile.id, tile.label, tile.glyph, tile.color)
+        fun of(tile: DeckTile) = KeyRef(tile.id, tile.label, tile.glyph, tile.color, tile.symbol)
+
+        /** Config d'un widget Touches : titre de la page du deck dont il prend ses touches de départ (profil Deck). */
+        const val DEFAULT_PAGE = "defaultPage"
+
+        /** Touches de départ au plus : une grille de 3 × 3 dans le widget en L du profil Deck. */
+        const val SEED_MAX = 9
+
+        /** Ordre des touches de départ par symbole ; les autres suivent, dans l'ordre de la page. */
+        private val SEED_PRIORITY = listOf("lock", "mic_off", "dnd", "screenshot", "clipboard", "windows", "search", "play_pause", "skip_previous", "skip_next")
+
+        /**
+         * Touches de départ d'un ordinateur : les [SEED_MAX] premières de la page [DEFAULT_PAGE], une seule fois (dès que
+         * l'ordinateur a ses touches dans la config, même vidées, plus rien n'est posé). Null : rien à poser.
+         */
+        fun seed(config: JSONObject, computerId: String?, pages: List<DeckPage>): List<KeyRef>? {
+            if (computerId == null || config.optJSONObject(BY_COMPUTER)?.has(computerId) == true) return null
+            val title = config.optString(DEFAULT_PAGE).takeIf { it.isNotEmpty() } ?: return null
+            val page = pages.firstOrNull { it.title == title } ?: return null
+            // Essentielles bureau d'abord (Verrouiller, micro, Ne pas déranger…), quel que soit l'ordre de la page.
+            val rank = { t: DeckTile -> SEED_PRIORITY.indexOf(t.symbol).let { if (it < 0) SEED_PRIORITY.size else it } }
+            return page.tiles.filter { it.type != "empty" }.sortedBy(rank).take(SEED_MAX).map(::of).takeIf { it.isNotEmpty() }
+        }
 
         fun list(config: JSONObject): List<KeyRef> {
             val array = config.optJSONArray("keys") ?: return emptyList()
@@ -89,6 +113,12 @@ data class KeyRef(val id: String, val label: String, val glyph: String? = null, 
 
 /** Numéro d'emplacement d'une touche perso (tuile "k-<slot>"), null pour toute autre tuile. */
 fun slotOf(id: String): Int? = if (id.startsWith("k-")) id.removePrefix("k-").toIntOrNull() else null
+
+/** Page de touches nommée (rang, emplacement) d'une tuile `k<rang + 1>-<emplacement>`, null pour toute autre tuile. */
+fun pageSlotOf(id: String): Pair<Int, Int>? {
+    val (page, slot) = Regex("k(\\d+)-(\\d+)").matchEntire(id)?.destructured ?: return null
+    return (page.toInt() - 1).takeIf { it >= 0 }?.let { it to slot.toInt() }
+}
 
 /** Premier emplacement vide de la page Perso (`editable`), null s'il n'y en a pas. */
 fun nextFreeSlot(pages: List<DeckPage>): Int? =

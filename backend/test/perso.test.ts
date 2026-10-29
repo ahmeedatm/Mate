@@ -96,6 +96,7 @@ describe("touches perso : routes", () => {
       id: "k-0",
       label: "Réunion",
       type: "macro",
+      symbol: null,
       glyph: "📅",
       color: "#3366CC",
       when: null,
@@ -122,6 +123,14 @@ describe("touches perso : routes", () => {
     assert.deepEqual((await server.call("GET", "/deck/keys/2")).json.key.steps, [{ type: "url", url: "https://example.com" }]);
   });
 
+  it("garde le symbole d'une touche et accepte les commandes micro et Ne pas déranger", async () => {
+    const key = { label: "Micro", symbol: "mic_off", steps: [{ type: "system", command: "mute-mic" }] };
+    assert.equal((await put(4, key)).status, 200);
+    assert.deepEqual((await server.call("GET", "/deck/keys/4")).json.key, key);
+    const tile = (await server.call("GET", "/deck")).json.pages.at(-1).tiles[4];
+    assert.equal(tile.symbol, "mic_off");
+  });
+
   it("refuse les touches mal formées", async () => {
     const bad: [string, unknown][] = [
       ["sans étape", { label: "Vide", steps: [] }],
@@ -132,6 +141,7 @@ describe("touches perso : routes", () => {
       ["attente trop longue", { label: "X", steps: [{ type: "wait", ms: 60_000 }] }],
       ["couleur invalide", { label: "X", color: "red", steps: [{ type: "keys", keys: "cmd+a" }] }],
       ["commande système inconnue", { label: "X", steps: [{ type: "system", command: "shutdown" }] }],
+      ["symbole inconnu", { label: "X", symbol: "fusee", steps: [{ type: "keys", keys: "cmd+a" }] }],
       ["plus de 20 étapes", { label: "X", steps: Array(21).fill({ type: "keys", keys: "a" }) }],
     ];
     for (const [why, body] of bad) assert.equal((await put(3, body)).status, 400, why);

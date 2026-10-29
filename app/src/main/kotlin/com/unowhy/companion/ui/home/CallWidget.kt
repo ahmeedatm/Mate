@@ -14,6 +14,7 @@ import com.unowhy.companion.net.DeckTile
 import com.unowhy.companion.net.VoiceState
 import com.unowhy.companion.net.runCatchingCancellable
 import com.unowhy.companion.ui.AppAudioView
+import com.unowhy.companion.ui.CallSession
 import com.unowhy.companion.ui.errorText
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -71,7 +72,7 @@ abstract class CallWidget(
         view.removeAllViews()
         val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
         val match = ViewGroup.LayoutParams.MATCH_PARENT
-        val large = placed.size == WidgetSize.L
+        val large = placed.size == WidgetSize.L || placed.size == WidgetSize.XL
         view.addView(header, LinearLayout.LayoutParams(match, wrap))
         if (large) view.addView(people, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(4) })
         view.addView(grid, LinearLayout.LayoutParams(match, 0, 1f))
@@ -104,11 +105,14 @@ abstract class CallWidget(
         }
     }
 
+    /** Page de ce widget parmi celles du deck. */
+    protected open fun pickPage(pages: List<DeckPage>): DeckPage? = pages.firstOrNull(select)
+
     /** Vrai si les pages ont été lues (même sans page pour ce widget : l'état d'appel est alors oublié). */
     private suspend fun readPage(): Boolean {
         val pages = runCatchingCancellable { host.deckPages() }.getOrNull() ?: return false
         read = true
-        val next = pages.firstOrNull(select)
+        val next = pickPage(pages)
         if (next?.app != page?.app) voice = null
         page = next
         appAudio.bind(next?.app.takeIf { placed.size == WidgetSize.L })
@@ -189,3 +193,14 @@ class DiscordWidget(context: Context, host: HomeHost, placed: Placed) :
 /** La page Réunion du Deck (Teams) : micro, caméra, partage, quitter ; « Rejoindre maintenant » dans la salle d'attente. */
 class MeetingWidget(context: Context, host: HomeHost, placed: Placed) :
     CallWidget(context, host, placed, { it.meeting })
+
+/**
+ * Appel en cours, quelle que soit l'appli (profil Réunion, Deck V2) : la page Réunion pour Teams, celle de Discord, et
+ * pour une appli sans page (Meet, Zoom, Webex) la touche « Couper le micro » du deck. Hors appel : l'aperçu vide.
+ */
+class AnyCallWidget(context: Context, host: HomeHost, placed: Placed) : CallWidget(context, host, placed, { false }) {
+    override fun pickPage(pages: List<DeckPage>): DeckPage? {
+        val app = host.main?.callApp ?: return null
+        return CallSession.pageFor(app, pages) ?: CallSession.fallbackPage(pages)
+    }
+}

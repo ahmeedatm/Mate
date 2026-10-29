@@ -28,6 +28,7 @@ import com.unowhy.companion.BuildConfig
 import com.unowhy.companion.Computer
 import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
+import com.unowhy.companion.Mode
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.device.Accessibility
@@ -142,6 +143,7 @@ class SettingsFragment : Fragment() {
         tabletInfo = view.findViewById(R.id.settings_tablet_info)
         setUpTablet()
         setUpThemes(view.findViewById(R.id.settings_themes))
+        setUpRail(view)
         setUpAccessibility(view)
         setUpReadingAids(view)
         renderComputers()
@@ -358,6 +360,29 @@ class SettingsFragment : Fragment() {
     }
 
     // --- Tablette : luminosité, volume, batterie (cachés par le kiosque)
+
+    /** Barre de gauche : noms sous les icônes et outils affichés, appliqués tout de suite. */
+    private fun setUpRail(view: View) {
+        val main = activity as? MainActivity
+        view.findViewById<SwitchCompat>(R.id.settings_rail_labels).apply {
+            isChecked = Prefs.railLabels(context)
+            setOnCheckedChangeListener { _, on ->
+                Prefs.setRailLabels(context, on)
+                main?.applyRailSettings()
+            }
+        }
+        val shown = Prefs.railTools(requireContext())
+        mapOf(R.id.settings_rail_focus to Mode.FOCUS, R.id.settings_rail_computer to Mode.COMPUTER, R.id.settings_rail_camera to Mode.CAMERA)
+            .forEach { (id, tool) ->
+                view.findViewById<SwitchCompat>(id).apply {
+                    isChecked = tool in shown
+                    setOnCheckedChangeListener { _, on ->
+                        Prefs.setRailTool(context, tool, on)
+                        main?.applyRailSettings()
+                    }
+                }
+            }
+    }
 
     /** Une pastille par thème, avec sa couleur ; en choisir un recrée l'activité (les écrans se redessinent). */
     private fun setUpThemes(row: LinearLayout) {

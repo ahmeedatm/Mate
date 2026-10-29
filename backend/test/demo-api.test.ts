@@ -46,6 +46,13 @@ describe("démo : personas", () => {
     assert.equal(set.json.persona, "nour");
     assert.equal(set.json.keys[0].id, "k-0");
     assert.ok(set.json.keys.length >= 6);
+    // Les touches des pages nommées, que lisent les widgets Touches des écrans du persona.
+    assert.deepEqual(
+      set.json.pages.map((p: { title: string }) => p.title),
+      ["Excel", "Libellés", "Dossiers clients"],
+    );
+    assert.equal(set.json.pages[1].keys[0].id, "k2-0");
+    assert.equal(set.json.pages[0].keys.find((k: { label: string }) => k.label === "Rechercher").symbol, "search");
     assert.deepEqual(
       await persoLabels(s),
       set.json.keys.map((k: { label: string }) => k.label),
@@ -386,15 +393,18 @@ describe("démo : données fictives à la place de celles de l'ordinateur", () =
     assert.equal(await exists(s, "mixer.json"), false);
   });
 
-  it("page Réunion, courrier, notifications, presse-papiers et agenda du persona", async () => {
+  it("aucun appel, courrier, notifications, presse-papiers et agenda du persona", async () => {
     const s = await start();
     assert.deepEqual((await s.call("GET", "/deck/live")).json.apps, []);
     s.setOs({ clipboard: { kind: "text", text: "Presse-papiers privé" } });
 
-    await s.call("POST", "/demo/persona", { persona: "gwen" });
-    assert.deepEqual((await s.call("GET", "/deck/live")).json.apps, ["Microsoft Teams"]);
+    // Pas d'appel en démo, même chez un persona qui a Teams : la tablette ne passe pas seule sur Réunion.
+    for (const persona of ["gwen", "camille", "aimee"]) {
+      await s.call("POST", "/demo/persona", { persona });
+      const live = (await s.call("GET", "/deck/live")).json;
+      assert.deepEqual([live.apps, live.open], [[], []]);
+    }
     await s.call("POST", "/demo/persona", { persona: "nour" });
-    assert.deepEqual((await s.call("GET", "/deck/live")).json.apps, []);
 
     const mail = (await s.call("GET", "/mail/summary")).json;
     assert.equal(mail.status, "ok");

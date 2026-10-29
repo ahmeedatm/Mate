@@ -17,8 +17,8 @@ import type { LocalEvent } from "./events.ts";
  * dure, les routes qui lisent l'ordinateur (GitLab, Jira, agents, fenêtres, média, son, courrier…) rendent aussi les
  * données fictives du persona : voir demo-mock.ts.
  *
- * `keys` : page Perso (et widget Touches de l'Accueil) ; `pages` : pages de touches nommées après Perso, leurs titres
- * sont ceux que la tablette met dans l'ordre des onglets (ui/home/Personas.kt) ; `off` : plugins coupés (plugins.ts).
+ * `keys` : page Perso ; `pages` : pages de touches nommées après Perso, dont les touches vont aux widgets Touches des
+ * écrans du persona (leurs titres sont ceux que lit ui/home/Personas.kt) ; `off` : plugins coupés (plugins.ts).
  */
 
 export const PERSONA_IDS = ["nour", "gwen", "camille", "aimee", "sam", "sacha"] as const;
@@ -43,6 +43,8 @@ const keys = (combo: string, inApp?: string): Step => ({ type: "keys", keys: com
 const text = (value: string): Step => ({ type: "text", text: value });
 const place = (name: string, layout: "left" | "right" | "max"): Step => ({ type: "window", app: name, layout });
 const key = (label: string, glyph: string, color: string, ...steps: Step[]): PersoKey => ({ label, glyph, color, steps });
+/** Icône Material de la touche (`symbol`, liste TILE_SYMBOLS) ; l'emoji reste en secours, comme dans le deck de départ. */
+const sym = (symbol: string, k: PersoKey): PersoKey => ({ ...k, symbol });
 const page = (title: string, ...keys: PersoKey[]): DemoPage => ({ title, keys });
 const site = (url: string): Step => ({ type: "url", url });
 const term = (name: string, glyph: string, color: string, command: string) =>
@@ -99,7 +101,7 @@ const PERSONAS: Record<PersonaId, Persona> = {
       page(
         "Excel",
         key("Enregistrer", "💾", "#1D6F42", keys("cmd+s", EXCEL)),
-        key("Rechercher", "🔍", "#4A5568", keys("cmd+f", EXCEL)),
+        sym("search", key("Rechercher", "🔍", "#4A5568", keys("cmd+f", EXCEL))),
         key("Format cellule", "🔢", "#4A5568", keys("cmd+1", EXCEL)),
         key("Annuler", "↩️", "#C05621", keys("cmd+z", EXCEL)),
         key("Rétablir", "↪️", "#C05621", keys("cmd+y", EXCEL)),
@@ -224,8 +226,8 @@ const PERSONAS: Record<PersonaId, Persona> = {
     keys: [
       key("Mon espace", "🏠", "#2B6CB0", app(OUTLOOK), app(TEAMS), place(OUTLOOK, "left"), place(TEAMS, "right")),
       key("Réunion", "🎥", "#2F855A", app(TEAMS)),
-      key("Couper le micro", "🎙", "#C53030", keys("cmd+shift+m", TEAMS)),
-      key("Écran verrouillé", "🔒", "#6B46C1", { type: "system", command: "lock" }),
+      sym("mic_off", key("Couper le micro", "🎙", "#C53030", keys("cmd+shift+m", TEAMS))),
+      sym("lock", key("Écran verrouillé", "🔒", "#6B46C1", { type: "system", command: "lock" })),
     ],
     pages: [
       page(
@@ -233,15 +235,15 @@ const PERSONAS: Record<PersonaId, Persona> = {
         key("Mode travail", "💼", "#4A5568", app(OUTLOOK), app(TEAMS), app(CHROME)),
         key("Mon espace", "🏠", "#2B6CB0", app(OUTLOOK), app(TEAMS), place(OUTLOOK, "left"), place(TEAMS, "right")),
         key("Réunion", "🎥", "#2F855A", app(TEAMS)),
-        key("Couper le micro", "🎙", "#C53030", keys("cmd+shift+m", TEAMS)),
-        key("Lever la main", "✋", "#B7791F", keys("cmd+shift+k", TEAMS)),
+        sym("mic_off", key("Couper le micro", "🎙", "#C53030", keys("cmd+shift+m", TEAMS))),
+        sym("hand", key("Lever la main", "✋", "#B7791F", keys("cmd+shift+k", TEAMS))),
         key("Compte rendu", "🗒", "#6B46C1", text("Compte rendu : décisions, actions (qui, quoi, pour quand), prochaine réunion.")),
       ),
       page(
         "Maison",
         key("Mode perso", "🌿", "#B83280", app(CHROME), { type: "media", command: "play-pause" }),
-        key("Musique", "🎵", "#2B6CB0", { type: "media", command: "play-pause" }),
-        key("Suivant", "⏭", "#2B6CB0", { type: "media", command: "next" }),
+        sym("play_pause", key("Musique", "🎵", "#2B6CB0", { type: "media", command: "play-pause" })),
+        sym("skip_next", key("Suivant", "⏭", "#2B6CB0", { type: "media", command: "next" })),
         key("Recettes", "🍲", "#C05621", site("https://www.marmiton.org")),
         key("Courses", "🛒", "#2F855A", site("https://www.carrefour.fr")),
         key("École", "🎒", "#6B46C1", site("https://www.ecoledirecte.com")),
@@ -265,7 +267,7 @@ const PERSONAS: Record<PersonaId, Persona> = {
       key("Projet Atlas", "🧭", "#2B6CB0", app(CHROME), app("Notion"), place(CHROME, "left"), place("Notion", "right")),
       key("Projet Boréal", "❄️", "#00A3A3", app(CHROME), app("Slack"), place(CHROME, "left"), place("Slack", "right")),
       key("Plein écran", "⛶", "#4A5568", place(CHROME, "max")),
-      key("Capture", "📸", "#B7791F", { type: "system", command: "screenshot-clipboard" }),
+      sym("screenshot", key("Capture", "📸", "#B7791F", { type: "system", command: "screenshot-clipboard" })),
       key("Note rapide", "📝", "#6B46C1", text("À faire : ")),
     ],
     pages: [
@@ -375,7 +377,9 @@ const stateFile = file("demo.json");
 type DemoState = { persona: PersonaId; backup: Record<string, object | null> };
 
 /** Touches posées, telles que la tablette les affiche (`k-<emplacement>`). */
-export type DemoKey = { id: string; label: string; glyph: string | undefined; color: string | undefined };
+export type DemoKey = { id: string; label: string; symbol: string | undefined; glyph: string | undefined; color: string | undefined };
+/** Page de touches nommée posée, avec ses touches (`k<rang + 1>-<emplacement>`) : celles du widget Touches de la tablette. */
+export type DemoPageKeys = { title: string; keys: DemoKey[] };
 
 const at = (day: number, hhmm: string) => {
   const d = new Date();
@@ -417,7 +421,7 @@ function eventsOf(id: PersonaId, data: Persona): { items: LocalEvent[] } {
  * démo. La page Apps ne garde que les applis installées sur l'ordinateur (elle retombe sur le profil de base si aucune).
  * Les plugins sont tous choisis (coupés ou gardés) : la tablette ne propose pas l'écran de première utilisation.
  */
-export async function setPersona(id: PersonaId): Promise<DemoKey[]> {
+export async function setPersona(id: PersonaId): Promise<{ keys: DemoKey[]; pages: DemoPageKeys[] }> {
   const data = PERSONAS[id];
   const previous = await readJson<Partial<DemoState>>(stateFile, () => ({}));
   const backup = previous.backup ?? {};
@@ -435,7 +439,9 @@ export async function setPersona(id: PersonaId): Promise<DemoKey[]> {
   activateMock(id);
   await writeJson(file("tasks.json"), tasksOf(id, data));
   await writeJson(file("events.json"), eventsOf(id, data));
-  return data.keys.map((k, slot) => ({ id: `k-${slot}`, label: k.label, glyph: k.glyph, color: k.color }));
+  const tiles = (list: PersoKey[], prefix: string): DemoKey[] =>
+    list.map((k, slot) => ({ id: `${prefix}${slot}`, label: k.label, symbol: k.symbol, glyph: k.glyph, color: k.color }));
+  return { keys: tiles(data.keys, "k-"), pages: data.pages.map((p, n) => ({ title: p.title, keys: tiles(p.keys, `k${n + 1}-`) })) };
 }
 
 /** Rend les fichiers d'avant la démo. Faux s'il n'y avait pas de démo en cours. */

@@ -3,7 +3,6 @@
 
     <!-- Modes -->
     <string name="mode_home">Profils</string>
-    <string name="menu_open">Ouvrir le menu</string>
     <string name="menu_computer">Depuis l\'ordi</string>
     <string name="mode_deck">Deck</string>
     <string name="mode_computer">Ordi</string>
@@ -105,7 +104,6 @@
     <string name="media_play_pause">Lecture / pause</string>
     <string name="media_next">Morceau suivant</string>
     <string name="media_previous">Morceau précédent</string>
-    <string name="mini_player_open">Ouvrir la page Média</string>
     <string name="system_sleep">Veille de l\'écran</string>
     <string name="system_dark">Mode sombre</string>
     <string name="system_screenshot">Capture → presse-papiers</string>
@@ -119,6 +117,10 @@
     <string name="deck_apps_hint">Appui long sur une appli : ses fenêtres, ou la retirer du deck</string>
     <string name="apps_add_tile">Ajouter</string>
     <string name="apps_add_title">Ajouter une appli de l\'ordinateur</string>
+    <string name="apps_all_title">Toutes les applis</string>
+    <string name="apps_all">Toutes les applis de l\'ordinateur</string>
+    <string name="apps_pin">Épingler %1$s sur la carte</string>
+    <string name="apps_unpin">Retirer %1$s de la carte</string>
     <string name="apps_reset">Profil de base</string>
     <string name="apps_reset_confirm">Revenir aux applis du profil de base ? Tes ajouts et retraits seront perdus.</string>
     <string name="apps_added">✓ %1$s · toucher pour retirer</string>
@@ -863,10 +865,8 @@
 
     <!-- Accueil à widgets -->
     <string name="home_edit_hint">Glisse un widget pour le déplacer, touche + pour en ajouter.</string>
-    <string name="profile_first">Bureau</string>
+    <string name="profile_first">Accueil</string>
     <string name="profile_default">Profil %d</string>
-    <string name="profile_prev">Profil précédent</string>
-    <string name="profile_next">Profil suivant</string>
     <string name="profiles_title">Profils</string>
     <string name="profile_new_empty">Nouveau profil vide</string>
     <string name="profile_new_template">Depuis un modèle</string>
@@ -889,12 +889,12 @@
     <string name="template_home">Gamer</string>
     <string name="template_home_desc">Heure, météo, son de l\'ordi, touches du deck, lecture en cours, Focus et eau.</string>
     <string name="template_standby">Veille</string>
-    <string name="template_work_cadran_desc">Heure, ligne du jour, prochain rendez-vous, tâches, Focus et touches.</string>
+    <string name="template_work_cadran_desc">Ma journée, ligne du jour, prochain rendez-vous, tâches, applis et touches.</string>
     <string name="template_home_cadran_desc">Heure, ligne du jour, touches du deck, lecture en cours et son de l\'ordi.</string>
     <string name="template_standby_cadran_desc">L\'heure et la ligne du jour, rien d\'autre : lisible de loin.</string>
     <string name="template_standby_desc">Très grande heure, prochain rendez-vous, Focus et eau : lisible de loin.</string>
     <string name="demo_card">Démo</string>
-    <string name="demo_hint">Choisis un persona : l\'Accueil, les onglets du Deck et les réglages de la tablette, puis les touches, plugins, tâches et agenda de l\'ordinateur, prennent ses données fictives. « Quitter la démo » rend l\'état d\'avant.</string>
+    <string name="demo_hint">Choisis un persona : les écrans de la barre et les réglages de la tablette, puis les touches, plugins, tâches et agenda de l\'ordinateur, prennent ses données fictives. « Quitter la démo » rend l\'état d\'avant.</string>
     <string name="demo_choose">Choisir un persona</string>
     <string name="demo_title">Démo : choisis un persona</string>
     <string name="demo_quit">Quitter la démo</string>
@@ -903,13 +903,18 @@
     <string name="persona_nour">Nour</string>
     <string name="persona_nour_desc">Comptable, 48 ans. Tableurs et logiciel comptable, raccourcis Excel, libellés récurrents, bascule entre dossiers clients. « En période de clôture, chaque clic économisé compte. »</string>
     <string name="persona_gwen">Gwen</string>
-    <string name="persona_gwen_daily">Quotidien</string>
-    <string name="persona_gwen_spring">Printemps</string>
-    <string name="persona_gwen_webinar">Webinaire</string>
-    <string name="persona_gwen_desc">Responsable marketing, 36 ans. CRM, e-mailing, Canva, réseaux sociaux, tableau de bord, visio, diapositives, modèles de messages et un profil par projet.</string>
+    <string name="persona_gwen_desc">Responsable marketing, 36 ans. CRM, e-mailing, Canva, réseaux sociaux, tableau de bord, visio, diapositives, modèles de messages : un écran pour le quotidien, un pour présenter, un pour les campagnes.</string>
     <string name="persona_camille">Camille</string>
-    <string name="persona_camille_work">Travail</string>
-    <string name="persona_camille_home">Maison</string>
+    <string name="demo_screen_excel">Excel</string>
+    <string name="demo_screen_files">Dossiers</string>
+    <string name="demo_screen_slides">Présentation</string>
+    <string name="demo_screen_campaigns">Campagnes</string>
+    <string name="demo_screen_work">Travail</string>
+    <string name="demo_screen_house">Maison</string>
+    <string name="demo_screen_projects">Projets</string>
+    <string name="demo_screen_jira">Jira</string>
+    <string name="demo_screen_code">Code</string>
+    <string name="demo_screen_gitlab">GitLab</string>
     <string name="persona_camille_desc">Cheffe de projet, 41 ans, parent au temps morcelé. Retrouver son espace en un geste, rejoindre une réunion, couper le micro, minuteur Focus.</string>
     <string name="persona_aimee">Aimée</string>
     <string name="persona_aimee_desc">Chargée de projets, 29 ans. Elle garde une vingtaine d\'onglets ouverts et perd ses fenêtres : prochaines réunions et tâches du jour, dossiers d\'un projet en un geste, fenêtres à réorganiser, rappels bien visibles.</string>
@@ -917,6 +922,33 @@
     <string name="persona_sam_desc">Gestionnaire administratif en situation de handicap, 44 ans. De grosses touches à la place des combinaisons, applis et modèles de courriers, thème à fort contraste, texte agrandi et commande vocale.</string>
     <string name="persona_sacha">Sacha</string>
     <string name="persona_sacha_desc">Développeur full-stack, 32 ans. Tests, compilations, commandes Git, bascule dev et prod, déploiement, tickets et revues de code.</string>
+    <string name="template_deck">Deck</string>
+    <string name="template_deck_desc">Applis, son de l\'ordi, touches et lecture en cours : agir sur l\'ordinateur.</string>
+    <string name="template_call">Réunion</string>
+    <string name="template_call_desc">Micro, caméra, partage et son de l\'appel : s\'affiche pendant un appel.</string>
+    <string name="profile_deck">Deck</string>
+    <string name="profile_call">Réunion</string>
+    <string name="rail_more">Plus</string>
+    <string name="rail_add">Écran</string>
+    <string name="rail_add_desc">Ajouter un écran</string>
+    <string name="tour_counter">%1$d sur %2$d</string>
+    <string name="tour_skip">Passer</string>
+    <string name="tour_next">Suivant</string>
+    <string name="tour_done">C\'est parti</string>
+    <string name="tour_home_title">Accueil</string>
+    <string name="tour_home_body">Ta journée d\'un coup d\'œil : le prochain rendez-vous, tes tâches, tes applis et les touches essentielles.</string>
+    <string name="tour_screens_title">Plusieurs écrans</string>
+    <string name="tour_screens_body">Un seul écran pour commencer. Touche + pour en ajouter un (vide ou depuis un modèle), par exemple pour piloter le son et tes fenêtres.</string>
+    <string name="tour_talk_title">Parler</string>
+    <string name="tour_talk_body">Demande à voix haute : « ouvre Outlook », « coupe le micro », « rejoins la réunion ». Appui long pour l\'écrire.</string>
+    <string name="tour_customize_title">À ta façon</string>
+    <string name="tour_customize_body">Pendant un appel, Réunion apparaît tout seul dans la barre. Appui long sur un écran pour le modifier, sur Accueil ou Deck pour gérer tes profils.</string>
+    <string name="next_not_linked">Agenda pas encore relié</string>
+    <string name="agenda_link_now">Relier mon agenda</string>
+    <string name="settings_rail">Barre de gauche</string>
+    <string name="settings_rail_labels">Noms sous les icônes</string>
+    <string name="settings_rail_tools">Outils affichés dans la barre</string>
+    <string name="call_profile_preview">Aperçu : ce profil s\'affiche pendant un appel.</string>
     <string name="widget_size_s">Petit</string>
     <string name="widget_size_m">Moyen</string>
     <string name="widget_size_l">Grand</string>
@@ -927,6 +959,24 @@
     <string name="widget_needs_computer">%1$s : connecte ton ordinateur</string>
     <string name="widget_hero">Heure du jour</string>
     <string name="widget_hero_desc">L\'heure en grand, le prochain rendez-vous, la météo et l\'eau</string>
+    <string name="widget_jira">Jira</string>
+    <string name="widget_jira_desc">Tes tickets en colonnes ; toucher un ticket pour le faire avancer</string>
+    <string name="widget_gitlab">GitLab</string>
+    <string name="widget_gitlab_desc">Tes MR et celles à relire, pipeline et fusion</string>
+    <string name="widget_day">Ma journée</string>
+    <string name="widget_day_desc">Bonjour, la date, la prochaine réunion en grand avec Rejoindre, la météo et l\'eau</string>
+    <string name="day_morning">Bonjour</string>
+    <string name="day_afternoon">Bon après-midi</string>
+    <string name="day_evening">Bonsoir</string>
+    <string name="day_free">Aucune réunion aujourd\'hui</string>
+    <string name="day_free_after">Plus de réunion aujourd\'hui</string>
+    <!-- Après « Aucune réunion aujourd'hui » : la prochaine, « demain à 9 h 30 · Daily ». -->
+    <string name="day_later">%1$s · %2$s</string>
+    <string name="day_focus">Focus %1$d min</string>
+    <string name="day_focus_running">Focus · encore %1$d min</string>
+    <string name="day_focus_paused">Reprendre le Focus · %1$d min</string>
+    <string name="day_focus_break">Pause · %1$d min</string>
+    <string name="day_dnd">Ne pas déranger</string>
     <string name="widget_dayline">Ligne du jour</string>
     <string name="widget_dayline_desc">Les rendez-vous de 8 h à 20 h, le présent en rouge</string>
     <string name="next_prefix">Ensuite</string>
@@ -970,6 +1020,8 @@
     <string name="widget_discord_desc">L\'appel Discord : micro, sourdine, quitter l\'appel</string>
     <string name="widget_meeting">Réunion</string>
     <string name="widget_meeting_desc">La réunion en ligne : rejoindre, micro, caméra, quitter</string>
+    <string name="widget_call">Appel en cours</string>
+    <string name="widget_call_desc">L\'appel du moment, quelle que soit l\'appli : micro, caméra, partage, quitter</string>
     <string name="widget_pad">Pavé tactile</string>
     <string name="widget_pad_desc">Piloter le pointeur de l\'ordi du doigt : bouger, défiler, cliquer</string>
     <string name="pad_unsupported">Le pavé marche avec un Mac ou un PC Windows</string>

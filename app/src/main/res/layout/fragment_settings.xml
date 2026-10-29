@@ -285,6 +285,61 @@
                 android:orientation="horizontal" />
         </LinearLayout>
 
+        <!-- Barre de gauche : noms sous les icônes, outils affichés (Prefs.railLabels, railTools). -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <com.unowhy.companion.ui.TitleView
+                style="@style/CardTitle"
+                android:drawableStart="@drawable/ic_dashboard"
+                android:text="@string/settings_rail" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_rail_labels"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/settings_rail_labels"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/settings_rail_tools"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_rail_focus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/mode_focus"
+                android:textSize="16sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_rail_computer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/mode_computer"
+                android:textSize="16sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/settings_rail_camera"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/mode_camera"
+                android:textSize="16sp" />
+        </LinearLayout>
+
         <!-- Tablette : ce que le kiosque cache (batterie, luminosité, volume, version, adresse). -->
         <LinearLayout
             style="@style/Card"

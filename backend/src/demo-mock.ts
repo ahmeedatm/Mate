@@ -59,8 +59,6 @@ type PersonaMock = {
   media: { app: string; name: string; tracks: Track[] };
   /** Applis du mélangeur, en plus de celle du média. */
   sound: string[];
-  /** Page Réunion : en appel Teams tant que la démo dure. */
-  call: boolean;
   perf: { cpu: number; ram: number };
   notifications: MockNotification[];
   mail: MockMail;
@@ -104,7 +102,6 @@ const MOCKS: Record<PersonaId, PersonaMock> = {
       ],
     },
     sound: [TEAMS],
-    call: false,
     perf: { cpu: 18, ram: 46 },
     notifications: [
       { app: "Outlook", title: "Cabinet partenaire", body: "Pièces de la clôture reçues", minutes: 6 },
@@ -146,7 +143,6 @@ const MOCKS: Record<PersonaId, PersonaMock> = {
       ],
     },
     sound: [TEAMS],
-    call: true,
     perf: { cpu: 27, ram: 58 },
     notifications: [
       { app: "Teams", title: "Atelier réseaux sociaux", body: "La salle est ouverte", minutes: 4 },
@@ -188,7 +184,6 @@ const MOCKS: Record<PersonaId, PersonaMock> = {
       ],
     },
     sound: [TEAMS],
-    call: true,
     perf: { cpu: 22, ram: 51 },
     notifications: [
       { app: "Teams", title: "Équipe projet", body: "Réunion dans 5 minutes", minutes: 3 },
@@ -233,7 +228,6 @@ const MOCKS: Record<PersonaId, PersonaMock> = {
       ],
     },
     sound: [TEAMS, "Slack"],
-    call: true,
     perf: { cpu: 41, ram: 78 },
     notifications: [
       { app: "Teams", title: "Point Atlas", body: "Réunion dans 10 minutes", minutes: 1 },
@@ -278,7 +272,6 @@ const MOCKS: Record<PersonaId, PersonaMock> = {
       ],
     },
     sound: [TEAMS],
-    call: false,
     perf: { cpu: 14, ram: 39 },
     notifications: [
       { app: "Outlook", title: "Service achats", body: "Demande de convocation", minutes: 9 },
@@ -318,7 +311,6 @@ const MOCKS: Record<PersonaId, PersonaMock> = {
       ],
     },
     sound: ["Slack"],
-    call: false,
     perf: { cpu: 52, ram: 71 },
     notifications: [
       { app: "GitLab", title: "Pipeline", body: "Le pipeline de la MR « Relances » est passé", minutes: 3 },
@@ -870,8 +862,9 @@ const HANDLERS: Record<string, Handler> = {
   "GET /browser/page": ({ s }) => ({ url: s.mock.tabs[0].url, title: s.mock.tabs[0].title, browser: "Chrome" }),
   "POST /browser/open": () => ok,
 
-  // Seulement la page Réunion : une page d'appli ouverte (Excel…) ferait un onglet de plus que ceux du persona.
-  "GET /deck/live": ({ s }) => ({ apps: s.mock.call ? [TEAMS] : [], open: s.mock.call ? [TEAMS] : [] }),
+  // Jamais d'appel en démo : la tablette passerait seule sur son écran Réunion à chaque connexion (Deck V2) et quitterait
+  // l'écran d'arrivée du persona. La veille des réunions suit (server.ts).
+  "GET /deck/live": () => ({ apps: [], open: [] }),
   "GET /deck/voice": () => ({ voice: null }),
 
   // Agenda : l'agenda personnel posé par la démo (`.data/events.json`), jamais les agendas reliés de l'ordinateur.

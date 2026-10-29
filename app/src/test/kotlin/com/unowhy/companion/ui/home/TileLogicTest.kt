@@ -168,6 +168,16 @@ class TileLogicTest {
         assertNull(slotOf("k-x"))
     }
 
+    @Test
+    fun `pageSlotOf lit les touches des pages de touches nommees`() {
+        assertEquals(0 to 3, pageSlotOf("k1-3"))
+        assertEquals(2 to 12, pageSlotOf("k3-12"))
+        assertNull(pageSlotOf("k-3"))
+        assertNull(pageSlotOf("k0-3"))
+        assertNull(pageSlotOf("2-4"))
+        assertNull(pageSlotOf("k2-"))
+    }
+
     private fun slot(n: Int, label: String? = null) =
         if (label == null) DeckTile("k-$n", "", "empty", null, null) else DeckTile("k-$n", label, "keys", null, null)
 
@@ -214,5 +224,60 @@ class TileLogicTest {
     @Test
     fun `reconcile ne touche a rien quand les pages ne sont pas lues`() {
         assertNull(reconcileKeys(listOf(KeyRef("k-0", "A"), KeyRef("k-3", "B")), emptyList()))
+    }
+
+    // Deck V2 : symboles des tuiles et touches de départ du profil Deck.
+
+    private fun page(title: String, n: Int) =
+        DeckPage(title, (1..n).map { DeckTile("r-$it", "Touche $it", "system", "🔒", null, symbol = "lock") }, false, false, false, null, false, true, false)
+
+    @Test
+    fun `le symbole d'une touche suit la tuile et survit au JSON`() {
+        val key = KeyRef.of(DeckTile("r-1", "Verrouiller", "system", "🔒", null, symbol = "lock"))
+        assertEquals("lock", key.symbol)
+        assertEquals(key, KeyRef.of(key.toJson()))
+        assertNull(KeyRef.of(JSONObject().put("id", "x").put("label", "X"))!!.symbol)
+    }
+
+    @Test
+    fun `touches de depart, la page Raccourcis, une seule fois par ordinateur`() {
+        val config = JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")
+        val pages = listOf(page("Apps", 3), page("Raccourcis", 12))
+        val seeded = KeyRef.seed(config, "mac", pages)!!
+        assertEquals(KeyRef.SEED_MAX, seeded.size)
+        assertEquals("r-1", seeded.first().id)
+        KeyRef.putFor(config, "mac", emptyList())
+        assertNull("déjà posées, même vidées ensuite", KeyRef.seed(config, "mac", pages))
+        assertEquals(KeyRef.SEED_MAX, KeyRef.seed(config, "pc", pages)!!.size)
+    }
+
+    @Test
+    fun `pas de touches de depart sans page choisie, sans la page ou sans ordinateur`() {
+        val pages = listOf(page("Raccourcis", 4))
+        assertNull(KeyRef.seed(JSONObject(), "mac", pages))
+        assertNull(KeyRef.seed(JSONObject().put(KeyRef.DEFAULT_PAGE, "Absente"), "mac", pages))
+        assertNull(KeyRef.seed(JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis"), null, pages))
+    }
+
+    @Test
+    fun `chaque symbole du backend a son icone`() {
+        for (name in TileIcons.NAMES) assertTrue(name, TileIcons.drawable(name) != null)
+        assertEquals(22, TileIcons.NAMES.size)
+        assertNull(TileIcons.drawable("fusee"))
+        assertNull(TileIcons.drawable(null))
+    }
+
+    @Test
+    fun `touches de depart, les essentielles bureau d'abord, quel que soit l'ordre de la page`() {
+        val tiles = listOf(
+            DeckTile("r-0", "Play / Pause", "media", null, null, symbol = "play_pause"),
+            DeckTile("r-1", "Capture zone", "keys", null, null, symbol = "screenshot"),
+            DeckTile("r-2", "Verrouiller", "system", null, null, symbol = "lock"),
+            DeckTile("r-3", "Couper le micro", "system", null, null, symbol = "mic_off"),
+            DeckTile("r-4", "Ne pas déranger", "system", null, null, symbol = "dnd"),
+        )
+        val pages = listOf(DeckPage("Raccourcis", tiles, false, false, false, null, false, true, false))
+        val seeded = KeyRef.seed(JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis"), "mac", pages)!!
+        assertEquals(listOf("r-2", "r-3", "r-4", "r-1", "r-0"), seeded.map { it.id })
     }
 }

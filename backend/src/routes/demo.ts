@@ -15,7 +15,7 @@ export default async function demoRoutes(app: FastifyInstance) {
         },
       },
     },
-    async (req) => ({ persona: req.body.persona, keys: await setPersona(req.body.persona) }),
+    async (req) => ({ persona: req.body.persona, ...(await setPersona(req.body.persona)) }),
   );
 
   app.delete("/demo", async () => ({ restored: await quitDemo() }));

@@ -9,8 +9,9 @@ import com.unowhy.companion.Mode
 import com.unowhy.companion.R
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.net.Link
+import com.unowhy.companion.ui.home.HomeLayout
 
-/** Ce que MainActivity demande à la navigation entre modes : barre latérale (thèmes d'origine) ou menu caché (Cadran). */
+/** Ce que MainActivity demande à la navigation : la barre fixe ([ProfileRail]). */
 interface Navigation {
     /** Commandes vocales. */
     val talk: View
@@ -27,6 +28,21 @@ interface Navigation {
     fun setPendingTasks(count: Int)
 
     fun showLink(link: Link)
+
+    /** Profils de la barre (noms, rôles, Réunion pendant un appel) et profil affiché. */
+    fun showProfiles(layout: HomeLayout, page: Int, inCall: Boolean)
+
+    /** Sens du dernier changement dans la barre ([RailModel.direction]) : l'écran suivant arrive de ce côté. */
+    val lastMove: Int
+
+    /** Repos (personne ne touche la tablette) : la barre s'efface à moitié, sans disparaître. */
+    fun setResting(resting: Boolean)
+
+    /** Réglages de la barre changés (noms, outils affichés) : elle se redessine. */
+    fun applySettings()
+
+    /** Vue que la visite guidée éclaire pour une étape (null : bulle au centre). */
+    fun tourAnchor(step: TourModel.Step): View?
 }
 
 /** Temps restant du Pomodoro tant qu'il est lancé ou entamé, sinon null. */
