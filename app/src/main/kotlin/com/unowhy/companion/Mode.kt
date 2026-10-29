@@ -10,7 +10,7 @@ import java.util.Locale
  * `connect` : sans ordinateur, le mode est remplacé par « Aucun ordinateur connecté » et ce texte.
  */
 enum class Mode(val key: String, val icon: Int, val label: Int, val connect: Int? = null) {
-    HOME("home", R.drawable.ic_home, R.string.mode_home),
+    HOME("home", R.drawable.ic_dashboard, R.string.mode_home),
     DECK("deck", R.drawable.ic_deck, R.string.mode_deck, R.string.connect_deck),
     COMPUTER("docs", R.drawable.ic_folder, R.string.mode_computer, R.string.connect_computer),
     FOCUS("focus", R.drawable.ic_timer, R.string.mode_focus),
