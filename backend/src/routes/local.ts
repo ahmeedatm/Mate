@@ -10,10 +10,14 @@ import { identity, lanAddresses, pendingCode } from "../pairing.ts";
 import { tabletStatus } from "../tablet.ts";
 
 const LICENCES_FILE = path.join(backendRoot, "LICENCES-TIERS.txt");
+/** Politique de confidentialité (même texte dans l'appli, assets/confidentialite.txt ; docs/confidentialite.md). */
+const PRIVACY_FILE = path.join(backendRoot, "config", "confidentialite.txt");
 
 /** Page d'accueil locale (ouverte dans le navigateur de l'ordinateur) et connexion des comptes d'agenda. */
 export default async function localRoutes(app: FastifyInstance) {
   app.get("/", async (_req, reply) => reply.type("text/html; charset=utf-8").send(LOCAL_PAGE));
+
+  app.get("/local/confidentialite", async (_req, reply) => reply.type("text/plain; charset=utf-8").send(fs.createReadStream(PRIVACY_FILE)));
 
   /** Mentions de licences des composants tiers : écrites dans le compagnon installé par scripts/package.ts. */
   app.get("/local/licences", async (_req, reply) => {

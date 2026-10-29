@@ -1,11 +1,9 @@
 package com.unowhy.companion.voice
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import androidx.core.content.ContextCompat
 import com.unowhy.companion.MainActivity
@@ -25,6 +23,7 @@ class Dictation(private val activity: MainActivity) {
         if (!available) return false
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return false
         val r = recognizer ?: SpeechRecognizer.createSpeechRecognizer(activity).also { recognizer = it }
+        val offlineAttempt = Recognition.tryOffline
         r.setRecognitionListener(object : RecognitionListener {
             override fun onPartialResults(partialResults: Bundle) {
                 partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let(onPartial)
@@ -32,12 +31,14 @@ class Dictation(private val activity: MainActivity) {
 
             override fun onResults(results: Bundle) {
                 Mic.release(Mic.DICTATION)
+                if (offlineAttempt) Recognition.offlineWorked()
                 results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull { it.isNotBlank() }?.let(onResult) ?: onError(SpeechRecognizer.ERROR_NO_MATCH)
             }
 
             override fun onError(error: Int) {
                 Mic.release(Mic.DICTATION)
-                onError(error)
+                // Pas de modèle hors ligne : relancée en ligne (voir Recognition).
+                if (offlineAttempt && Recognition.offlineUnavailable(error)) start(onPartial, onResult, onError) else onError(error)
             }
 
             override fun onReadyForSpeech(params: Bundle?) = Unit
@@ -49,14 +50,7 @@ class Dictation(private val activity: MainActivity) {
         })
         // Micro pris avant l'écoute : le mot de réveil le rend tout de suite.
         Mic.hold(Mic.DICTATION)
-        r.startListening(
-            Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fr-FR")
-                .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, activity.packageName),
-        )
+        r.startListening(Recognition.intent(activity.packageName, maxResults = 1, offline = offlineAttempt))
         return true
     }
 

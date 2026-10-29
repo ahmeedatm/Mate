@@ -398,31 +398,18 @@ export async function mediaControl(action: MediaAction, app?: string, positionMs
   return true;
 }
 
-/** Pochette d'un morceau dans la recherche publique d'Apple (sans clé) : titre + artiste. */
-async function storeArtwork(title: string, artist: string): Promise<string | undefined> {
-  const url = new URL("https://itunes.apple.com/search");
-  url.search = new URLSearchParams({ term: `${title} ${artist}`, entity: "song", limit: "1" }).toString();
-  const res = await fetchPublic(url, { maxBytes: 200_000, timeoutMs: 5000 }).catch(() => null);
-  if (!res?.ok) return undefined;
-  try {
-    const art: unknown = JSON.parse(res.data.toString("utf8")).results?.[0]?.artworkUrl100;
-    return typeof art === "string" ? art.replace(/\/\d+x\d+bb\./, "/600x600bb.") : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 /**
  * Pochette d'une lecture (`app`, sinon celle de devant), écrite dans `out` : celle de MediaRemote pour sa lecture (les
- * navigateurs ne la donnent pas toujours), sinon l'image YouTube de l'onglet du même titre, sinon, pour un morceau
- * avec artiste, celle de la recherche d'Apple.
+ * navigateurs ne la donnent pas toujours), sinon l'image YouTube de l'onglet du même titre. Pas de recherche chez un
+ * tiers (Apple) par le titre et l'artiste : ce qu'on écoute ne quitte pas l'ordinateur (docs/confidentialite.md) ;
+ * sans pochette, la tablette affiche l'icône.
  */
 export async function mediaThumb(app: string, out: string): Promise<boolean> {
   const session = known.find((s) => s.app === app) ?? known.find((s) => s.current);
   if (!session) return false;
   if (session.app === remoteApp && (await nowPlaying<{ ok?: boolean }>("art", out))?.ok === true) return true;
   const tabs = (await playersAndTabs()).filter((r): r is RawTab => r.kind === "tab");
-  const url = thumbOfTabs(tabs, session.title) ?? (session.artist ? await storeArtwork(session.title, session.artist) : undefined);
+  const url = thumbOfTabs(tabs, session.title);
   if (!url) return false;
   const res = await fetchPublic(url, { maxBytes: 2_000_000, timeoutMs: 5000 }).catch(() => null);
   if (!res?.ok || res.truncated) return false;
