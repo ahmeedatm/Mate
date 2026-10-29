@@ -48,4 +48,11 @@ class InstallerPageTest {
         assertTrue(html.contains("L'installeur Mac n'est pas encore sur la tablette"))
         assertTrue(html.contains("Télécharger Compagnon-Unowhy-Windows.exe"))
     }
+
+    @Test
+    fun `la carte explique la mise a jour d'un compagnon deja installe`() {
+        val html = InstallerPage.render(Os.WINDOWS, listOf(windows))
+        assertTrue(html.contains("Déjà installé ?"))
+        assertTrue(html.contains("remplace l&#39;ancien") || html.contains("remplace l'ancien"))
+    }
 }

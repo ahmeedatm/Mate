@@ -610,7 +610,14 @@
     <string name="welcome_install_title">Sur l\'ordinateur</string>
     <string name="welcome_install_text">Ouvre cette adresse dans le navigateur de l\'ordinateur et lance l\'installation :</string>
     <string name="install_address_no_wifi">connecte d\'abord le WiFi</string>
-    <string name="companion_update_available">Nouvelle version du compagnon pour %1$s (%2$s) : ouvre %3$s sur l\'ordinateur</string>
+    <string name="companion_update_available">Nouvelle version du compagnon pour %1$s (%2$s) : touche pour la mettre à jour</string>
+    <string name="companion_update_title">Mettre à jour le compagnon de %1$s</string>
+    <string name="companion_update_steps_mac">1. Sur le Mac, ouvre %1$s (bouton « Ouvrir sur l\'ordi »).\n2. Télécharge le zip, ouvre-le, puis ouvre « Compagnon Unowhy » : il remplace l\'ancien dans Applications et redémarre.\n3. Si macOS redemande l\'Accessibilité, accorde-la (Réglages Système > Confidentialité et sécurité > Accessibilité).\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
+    <string name="companion_update_steps_windows">1. Sur le PC, ouvre %1$s (bouton « Ouvrir sur l\'ordi »).\n2. Télécharge et lance l\'installeur : il remplace l\'ancien et redémarre le compagnon.\n3. Si SmartScreen bloque : « Informations complémentaires », puis « Exécuter quand même ».\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
+    <string name="companion_update_open">Ouvrir sur l\'ordi</string>
+    <string name="companion_update_later">Plus tard</string>
+    <string name="companion_update_opened">Page ouverte sur l\'ordinateur</string>
+    <string name="companion_updated">Compagnon de %1$s à jour (%2$s)</string>
     <string name="welcome_install_os">Mac ou PC Windows</string>
     <string name="welcome_connect_title">Connecter</string>
     <string name="welcome_connect_text">Ton ordinateur apparaît ici dès que le compagnon est installé. Touche-le, puis saisis le code qu\'il affiche.</string>

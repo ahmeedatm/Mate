@@ -40,12 +40,12 @@ object InstallerService {
     /** `http://<ip de la tablette>:8080`, null sans réseau. Affiché sur Bienvenue et dans Réglages. */
     fun address(): String? = Tablet.ipAddress()?.let { "http://$it:$PORT" }
 
-    /** Installeur plus récent que le compagnon de l'ordinateur actif, avec son identité ; null s'il est à jour ou injoignable. */
-    suspend fun newerForActive(context: Context): Pair<Identity, Installer>? {
+    /** Identité de l'ordinateur actif et installeur plus récent que son compagnon (null : à jour) ; null s'il est injoignable. */
+    suspend fun check(context: Context): Pair<Identity, Installer?>? {
         if (BuildConfig.TRIAL) return null
         val identity = runCatching { BackendClient(context).pairing.identity() }.getOrNull() ?: return null
         val onDisk = withContext(Dispatchers.IO) { store(context).onDisk() }
-        return InstallerPlan.newerFor(identity.os, identity.version, onDisk)?.let { identity to it }
+        return identity to InstallerPlan.newerFor(identity.os, identity.version, onDisk)
     }
 
     /** Vérifie le manifeste du serveur central et met à jour les fichiers ; appelée à chaque vérification des mises à jour. */

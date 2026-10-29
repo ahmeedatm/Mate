@@ -17,6 +17,12 @@ object InstallerPage {
         ),
     )
 
+    /** Compagnon déjà installé : le nouvel installeur le remplace. */
+    private val UPDATE = mapOf(
+        Os.MAC to "Ouvre la nouvelle appli : elle remplace l'ancienne dans Applications et redémarre. Réglages et appairage sont gardés ; redonne l'Accessibilité si macOS la redemande.",
+        Os.WINDOWS to "Lance le nouvel installeur : il remplace l'ancien et redémarre le compagnon. Réglages et appairage sont gardés.",
+    )
+
     private val NAMES = mapOf(Os.MAC to "Mac", Os.WINDOWS to "PC Windows")
 
     private const val STYLE = "body{font:18px/1.5 system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 20px;color:#1c1b1f}" +
@@ -50,7 +56,8 @@ object InstallerPage {
     private fun card(i: Installer): String {
         val steps = STEPS.getValue(i.os).joinToString("") { "<li>${esc(it)}</li>" }
         return "<div class=\"card\"><h2>Pour ton ${NAMES.getValue(i.os)}</h2>" +
-            "<a class=\"dl\" href=\"/${esc(i.file)}\">Télécharger ${esc(i.file)} (${megabytes(i.size)} Mo)</a><ol>$steps</ol></div>"
+            "<a class=\"dl\" href=\"/${esc(i.file)}\">Télécharger ${esc(i.file)} (${megabytes(i.size)} Mo)</a><ol>$steps</ol>" +
+            "<p><b>Déjà installé ?</b> ${esc(UPDATE.getValue(i.os))}</p></div>"
     }
 
     private fun megabytes(size: Long) = (size + 500_000) / 1_000_000
