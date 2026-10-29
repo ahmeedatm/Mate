@@ -723,7 +723,7 @@ class DeckFragment : Fragment(), VolumeKeyHandler {
         appAudio.bind(page?.app.takeIf { sound })
         nowPlaying.bind(page?.media == true)
         mail.bind(page?.mail == true)
-        (activity as? MainActivity)?.onDeckPageChanged()
+        (activity as? MainActivity)?.refreshMiniPlayer()
     }
 
     private fun runTile(tileView: View, tile: DeckTile) {

@@ -510,13 +510,17 @@ class MainActivity : AppCompatActivity() {
         (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.openMediaPage()
     }
 
-    /** Page du deck changée : le petit lecteur se cache sur la page Média, qui fait la même chose en grand. */
-    fun onDeckPageChanged() {
+    /**
+     * Page du deck ou mode Modifier de l'Accueil changé : le petit lecteur se cache sur la page Média, qui fait la même
+     * chose en grand, et pendant le mode Modifier, dont la barre (Ajouter, Annuler, Terminé) est à sa place.
+     */
+    fun refreshMiniPlayer() {
         if (::miniPlayer.isInitialized) miniPlayer.update()
     }
 
     private fun mediaPlayerHidden(): Boolean = frame.isShowing || Computers.all(this).isEmpty() ||
-        (current == Mode.DECK && (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.isMediaPageShown() == true)
+        (current == Mode.DECK && (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.isMediaPageShown() == true) ||
+        (current == Mode.HOME && (supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment)?.isEditing() == true)
 
     /** Place du petit lecteur au bout de la ligne de titre de chaque écran, créé ou non (rien de masqué dessous). */
     private fun applyMediaSpace() {

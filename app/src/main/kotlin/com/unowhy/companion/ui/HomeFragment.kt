@@ -451,13 +451,17 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         backup = layout.copy()
         grid.editing = true
         editBar.visibility = View.VISIBLE
+        (activity as? MainActivity)?.refreshMiniPlayer()
     }
+
+    fun isEditing() = view != null && grid.editing
 
     private fun endEdit(keep: Boolean) {
         if (!grid.editing) return
         deckOverlays?.hideAll()
         grid.editing = false
         editBar.visibility = View.GONE
+        (activity as? MainActivity)?.refreshMiniPlayer()
         val previous = backup
         backup = null
         if (!keep && previous != null) {
