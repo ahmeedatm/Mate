@@ -31,6 +31,15 @@ fun AlertDialog.showForTyping(input: EditText?, keyboard: Boolean = true) {
         setSoftInputMode(state or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
     }
     show()
+    // Saisie en cours tant que la boîte est là (un appel qui commence ne fait pas changer l'écran derrière).
+    Typing.opened()
+    window?.decorView?.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(v: android.view.View) = Unit
+        override fun onViewDetachedFromWindow(v: android.view.View) {
+            v.removeOnAttachStateChangeListener(this)
+            Typing.closed()
+        }
+    })
     // Comme l'écran derrière : pas de barre d'état (sinon une bande noire vide en kiosque). Barres rendues par un
     // balayage seulement : par défaut (Android 10), le premier toucher les rappelle et n'atteint pas la boîte.
     window?.let {

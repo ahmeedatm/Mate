@@ -119,7 +119,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                             AgentsFeed.replay()
                         }
                     },
-                    LayoutParams(LayoutParams.WRAP_CONTENT, dp(40)),
+                    LayoutParams(LayoutParams.WRAP_CONTENT, dp(48)),
                 )
             },
             LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT),
@@ -304,7 +304,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                     setBackgroundResource(R.drawable.agent_action_bg)
                     setOnClickListener { onClick() }
                 },
-                LayoutParams(LayoutParams.WRAP_CONTENT, dp(44)).apply { marginEnd = dp(8) },
+                LayoutParams(LayoutParams.WRAP_CONTENT, dp(48)).apply { marginEnd = dp(8) },
             )
         }
     }
@@ -318,7 +318,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             .setPositiveButton(R.string.agent_interrupt) { _, _ ->
                 call(s) {
                     BackendClient(context).agents.interrupt(s.id)
-                    (context as? MainActivity)?.showBanner(context.getString(R.string.agent_interrupted, s.name), 3)
+                    (context as? MainActivity)?.showBanner(context.getString(R.string.agent_interrupted, s.name), AGENT_CONFIRM_SECONDS)
                 }
             }
             .showImmersive()
@@ -430,7 +430,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     private fun send(s: AgentSession, text: String) = call(s) {
         BackendClient(context).agents.send(s.id, text)
-        (context as? MainActivity)?.showBanner(context.getString(R.string.agent_sent, s.name), 3)
+        (context as? MainActivity)?.showBanner(context.getString(R.string.agent_sent, s.name), AGENT_CONFIRM_SECONDS)
     }
 
     private fun resume(s: AgentSession, armed: Boolean, time: String) = call(s) {
@@ -461,7 +461,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         owner.lifecycleScope.launch {
             try {
                 BackendClient(context).agents.focus(s.id)
-                (context as? MainActivity)?.showBanner(context.getString(R.string.agents_focused, s.name), 3)
+                (context as? MainActivity)?.showBanner(context.getString(R.string.agents_focused, s.name), AGENT_CONFIRM_SECONDS)
             } catch (e: Exception) {
                 (context as? MainActivity)?.showBanner(context.errorText(e), 6)
             }

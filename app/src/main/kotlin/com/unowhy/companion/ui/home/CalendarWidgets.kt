@@ -17,6 +17,7 @@ import androidx.core.view.isNotEmpty
 import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.CalendarEvent
+import com.unowhy.companion.ui.CallSession
 import com.unowhy.companion.ui.TitleView
 import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.themeBool
@@ -53,6 +54,24 @@ internal fun NextLine.whenText(context: Context): String = when (this) {
     )
 }
 
+/** « Rejoindre » : l'ordinateur ouvre la réunion, puis le profil Réunion s'affiche jusqu'à la fin de l'événement. */
+internal fun joinMeeting(host: HomeHost, event: CalendarEvent, button: View) {
+    val context = button.context
+    button.isEnabled = false
+    host.scope.launch {
+        val main = host.main
+        try {
+            val kind = BackendClient(context).calendar.joinMeeting(event.id)
+            main?.showBanner(context.getString(R.string.join_opened, event.title), 6)
+            // Profil Réunion : micro, caméra, son de l'appel, jusqu'à la fin de l'événement (ou de l'appel vu par l'ordinateur).
+            main?.startCall(CallSession.appOfKind(kind), event.endMs)
+        } catch (e: Exception) {
+            main?.showBanner(context.errorText(e), 6)
+        }
+        button.isEnabled = true
+    }
+}
+
 /**
  * Prochain rendez-vous (ou la réunion touchée dans l'agenda), avec « Rejoindre » pour une réunion en ligne (Teams,
  * Meet, Zoom, Webex) à partir de 15 min avant. Moyen : le bouton à droite du titre ; petit et grand : en dessous ;
@@ -79,7 +98,8 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val add = Button(context, null, 0, R.style.ActionButton).apply {
         setText(R.string.event_add)
         visibility = View.GONE
-        setOnClickListener { host.editEvent(null) }
+        // Sans agenda relié, le plus utile au bureau : relier Outlook ou Google (page ouverte sur l'ordinateur).
+        setOnClickListener { if (host.features.linked) host.editEvent(null) else host.showCalendars() }
     }
     private val texts = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
     /** Vertical : nombre de rendez-vous du jour (en tête), heure en grand, les deux suivants (en bas). */
@@ -172,9 +192,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val chosen = upcoming?.takeIf { it.id == host.chosenId }
         // Vertical : titre « Agenda » sur une ligne, le compteur du jour à droite.
         labelView.setText(if (chosen != null) R.string.chosen_label else if (placed.size == WidgetSize.V) R.string.today else R.string.next_label)
-        // « Rejoindre » à partir de 15 min avant : plus tôt, un toucher par erreur ouvrirait Teams pour rien.
-        // Une réunion choisie dans l'agenda peut être rejointe tout de suite (le choix est volontaire).
-        joinable = upcoming?.takeIf { host.features.meetings && it.joinable && (chosen != null || it.startMs - now <= JOIN_EARLY_MS) }
+        joinable = upcoming?.takeIf { DayBrief.canJoin(it, now, chosen != null, host.features.meetings) }
         join.visibility = if (joinable == null) View.GONE else View.VISIBLE
         if (placed.size == WidgetSize.V) renderVertical(events, upcoming, now)
         // Cadran, rien de prévu : l'action pour noter un rendez-vous. Ordinateur injoignable et rien de lu : on ne dit pas « rien de prévu ».
@@ -183,7 +201,8 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         whenText.visibility = if (cadran && upcoming == null) View.GONE else View.VISIBLE
         if (upcoming == null) {
             if (cadran) {
-                title.text = if (empty) context.getString(R.string.next_none_today) else ""
+                add.setText(if (host.features.linked) R.string.event_add else R.string.agenda_link_now)
+                title.text = if (!empty) "" else context.getString(if (host.features.linked) R.string.next_none_today else R.string.next_not_linked)
             } else {
                 title.setText(R.string.next_none)
                 whenText.setText(R.string.next_none_hint)
@@ -243,24 +262,10 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
 
     private fun joinNext() {
-        val event = joinable ?: return
-        join.isEnabled = false
-        host.scope.launch {
-            val main = host.main
-            try {
-                val kind = BackendClient(context).calendar.joinMeeting(event.id)
-                main?.showBanner(context.getString(R.string.join_opened, event.title), 6)
-                // Page Réunion du deck : raccourcis de Teams, inutiles pour Meet ou Zoom.
-                if (kind == "teams" && host.features.teams) main?.showMeetingControls()
-            } catch (e: Exception) {
-                main?.showBanner(context.errorText(e), 6)
-            }
-            join.isEnabled = true
-        }
+        joinable?.let { joinMeeting(host, it, join) }
     }
 
     private companion object {
-        const val JOIN_EARLY_MS = 15 * 60_000L
         const val FOLLOWING_CADRAN = 4
     }
 }

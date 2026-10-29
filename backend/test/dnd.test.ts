@@ -8,7 +8,7 @@ import { calls, state } from "./fake-os.ts";
 
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), "companion-dnd-"));
 process.env.DATA_DIR = dir;
-const { focusDnd } = await import("../src/dnd.ts");
+const { focusDnd, manualDnd } = await import("../src/dnd.ts");
 
 const file = path.join(dir, "dnd.json");
 const ours = async () => JSON.parse(await fs.readFile(file, "utf8")).ours;
@@ -59,5 +59,29 @@ describe("Ne pas déranger pendant le Focus", () => {
     while (setDndCalls().length < 2 && performance.now() < deadline) await new Promise((r) => setImmediate(r));
     assert.deepEqual(setDndCalls(), [true, false]);
     assert.equal(state.dnd, false);
+  });
+});
+
+describe("Ne pas déranger à la main (Accueil de la tablette)", () => {
+  beforeEach(async () => {
+    calls.length = 0;
+    await fs.rm(file, { force: true });
+  });
+  afterEach(() => focusDnd(false));
+
+  it("pose l'état demandé et le rend", async () => {
+    state.dnd = false;
+    assert.deepEqual(await manualDnd(true), { on: true });
+    assert.deepEqual(await manualDnd(false), { on: false });
+    assert.deepEqual(setDndCalls(), [true, false]);
+  });
+
+  it("allumé par le Focus puis repris à la main : la fin du Focus ne l'éteint plus", async () => {
+    state.dnd = false;
+    await focusDnd(true, 25);
+    assert.deepEqual(await manualDnd(true), { on: true });
+    assert.equal(await ours(), false);
+    assert.deepEqual(await focusDnd(false), { on: true });
+    assert.equal(setDndCalls().includes(false), false, "jamais éteint par la fin du Focus");
   });
 });

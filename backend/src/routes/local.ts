@@ -205,12 +205,16 @@ export default async function localRoutes(app: FastifyInstance) {
   });
 
   /**
-   * Ouvre le compagnon sur l'ordinateur, depuis la tablette : sa page (« Relier mon agenda » de l'Accueil), ou la page
-   * d'autorisation de GitLab (`gitlab`, carte « Connecter GitLab » de l'onglet GitLab).
+   * Ouvre le compagnon sur l'ordinateur, depuis la tablette : sa page (« Relier mon agenda » de l'Accueil, « Régler depuis
+   * l'ordi » des Réglages), ou la page d'autorisation de GitLab (`gitlab`, carte « Connecter GitLab » de l'onglet GitLab).
    */
-  app.post<{ Body: { section?: "agenda" | "gitlab" } }>(
+  app.post<{ Body: { section?: "agenda" | "gitlab" | "tablette" } }>(
     "/local/open",
-    { schema: { body: { type: "object", additionalProperties: false, properties: { section: { enum: ["agenda", "gitlab"] } } } } },
+    {
+      schema: {
+        body: { type: "object", additionalProperties: false, properties: { section: { enum: ["agenda", "gitlab", "tablette"] } } },
+      },
+    },
     async (req) => {
       const section = req.body?.section;
       const path = section === "gitlab" ? "oauth/gitlab/start" : section ? `?section=${section}` : "";
@@ -230,6 +234,8 @@ function tabletInfo() {
   const s = state as Record<string, unknown>;
   return {
     app: s.app ?? null,
+    // Nom donné à l'appairage (« Tablette <modèle> ») ; absent d'une appli plus ancienne : le modèle.
+    name: s.name ?? s.model ?? null,
     model: s.model ?? null,
     screen: s.screen ?? null,
     battery: s.battery ?? null,

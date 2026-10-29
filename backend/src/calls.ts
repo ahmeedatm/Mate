@@ -78,6 +78,10 @@ async function isRinging(rule: CallRule): Promise<boolean> {
   return !text || buttons.some((b) => text.test(b));
 }
 
+/** Tour de surveillance en cours (tests : attendre sa fin plutôt qu'un nombre de tours de la boucle d'événements). */
+let watching: Promise<void> = Promise.resolve();
+export const callWatchSettled = () => watching;
+
 export async function startCallWatch(notify: (event: CallEvent) => void) {
   if (!isWindows && !isMac) return;
   const os = isMac ? "mac" : "windows";
@@ -116,7 +120,9 @@ export async function startCallWatch(notify: (event: CallEvent) => void) {
       busy = false;
     }
   };
-  setInterval(() => void tick().catch((e) => logFailure("Surveillance des appels", e)), 2_000);
+  setInterval(() => {
+    watching = tick().catch((e) => logFailure("Surveillance des appels", e));
+  }, 2_000);
 }
 
 async function press(app: string, kind: "answer" | "video" | "decline" | "hangup") {

@@ -16,8 +16,14 @@ class ModeTest {
     }
 
     @Test
-    fun `cles des modes inchangees pour l'ordinateur`() {
-        assertEquals(listOf("home", "deck", "docs", "focus", "camera", "settings"), Mode.entries.map { it.key })
+    fun `cles des modes inchangees pour l'ordinateur, le Deck est devenu un profil`() {
+        assertEquals(listOf("home", "docs", "focus", "camera", "settings"), Mode.entries.map { it.key })
+    }
+
+    @Test
+    fun `deck n'est plus un mode, MainActivity le mene au profil Deck`() {
+        assertNull(Mode.of("deck"))
+        assertEquals("deck", Mode.DECK_KEY)
     }
 
     @Test

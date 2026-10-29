@@ -11,6 +11,7 @@ import com.unowhy.companion.BuildConfig
 import com.unowhy.companion.Computer
 import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
+import com.unowhy.companion.R
 import com.unowhy.companion.audio.Speaker
 import com.unowhy.companion.device.Screen
 import com.unowhy.companion.focus.FocusTimer
@@ -117,8 +118,11 @@ class RemoteChannel(private val activity: MainActivity) {
         "message" -> {
             val text = command.getString("text")
             activity.showBanner(text, command.optInt("seconds", 10))
-            if (command.optBoolean("speak") && !Speaker.speak(text)) {
-                error("Message affiché, mais la synthèse vocale est indisponible (pas de voix française ?)")
+            if (command.optBoolean("speak")) {
+                if (!Speaker.speak(text)) error("Message affiché, mais la synthèse vocale est indisponible (pas de voix française ?)")
+            } else {
+                // Réglages > Accessibilité > Lire les bandeaux : lu aussi sans `speak` (une seule fois avec).
+                activity.readAloud(text)
             }
             null
         }
@@ -167,6 +171,10 @@ class RemoteChannel(private val activity: MainActivity) {
             activity.onCall(command.getString("state"), command.getString("app"), command.optString("caller").takeIf { command.has("caller") && !command.isNull("caller") }, command.optBoolean("video"))
             null
         }
+        "meeting" -> {
+            activity.onMeeting(command.getString("state"), command.getString("app"))
+            null
+        }
         "agent" -> {
             activity.onAgent(command.getString("kind"), command.optString("askId").takeIf { command.has("askId") && !command.isNull("askId") }, command.optInt("waiting"))
             null
@@ -208,6 +216,7 @@ class RemoteChannel(private val activity: MainActivity) {
             .put("voice", Speaker.ready)
             .put("screen", "${metrics.widthPixels}x${metrics.heightPixels}")
             .put("app", BuildConfig.VERSION_NAME)
+            .put("name", activity.getString(R.string.tablet_name, Build.MODEL))
             .put("model", Build.MODEL)
             .put("battery", activity.battery?.let { JSONObject().put("level", it.level).put("charging", it.charging) } ?: JSONObject.NULL)
             .put("settings", TabletSettings.read(activity, systemBrightness, volume))

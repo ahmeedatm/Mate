@@ -57,6 +57,11 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         // Sans ordinateur actif, rien n'est lu ni écrit : le deck lu ne serait celui de personne.
         val id = computerId ?: return
         if (KeyRef.adopt(placed.config, id)) host.save()
+        // Profil Deck : ses touches de départ arrivent avec l'ordinateur (page Raccourcis de son deck).
+        KeyRef.seed(placed.config, id, pages)?.let {
+            store(it)
+            return
+        }
         reconcileKeys(keys(), pages)?.let { store(it) }
     }
 

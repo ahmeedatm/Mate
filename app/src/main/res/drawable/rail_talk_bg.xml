@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Parler, en tête de la barre fixe : bouton plein, l'action principale ; rouge pendant l'écoute (VoiceControl : isSelected). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true"><shape android:shape="rectangle"><solid android:color="?attr/c_accent" /><corners android:radius="18dp" /></shape></item>
+    <item><shape android:shape="rectangle"><solid android:color="?attr/c_text" /><corners android:radius="18dp" /></shape></item>
+</selector>

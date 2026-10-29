@@ -28,6 +28,7 @@ import com.unowhy.companion.BuildConfig
 import com.unowhy.companion.Computer
 import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
+import com.unowhy.companion.Mode
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.R
 import com.unowhy.companion.device.Accessibility
@@ -110,6 +111,7 @@ class SettingsFragment : Fragment() {
         autoJoinHint = view.findViewById(R.id.settings_autojoin_hint)
         wifiStatus = view.findViewById(R.id.settings_wifi_status)
         view.findViewById<Button>(R.id.settings_wifi).setOnClickListener { wifi.show() }
+        view.findViewById<Button>(R.id.settings_tablet_remote).setOnClickListener { openOnComputer() }
         updatesStatus = view.findViewById(R.id.settings_updates_status)
         updates = view.findViewById(R.id.settings_updates)
         essaisTitle = view.findViewById(R.id.settings_essais_title)
@@ -133,7 +135,9 @@ class SettingsFragment : Fragment() {
         tabletInfo = view.findViewById(R.id.settings_tablet_info)
         setUpTablet()
         setUpThemes(view.findViewById(R.id.settings_themes))
+        setUpRail(view)
         setUpAccessibility(view)
+        setUpReadingAids(view)
         renderComputers()
         renderWifi()
         renderSwitchApp()
@@ -349,6 +353,29 @@ class SettingsFragment : Fragment() {
 
     // --- Tablette : luminosité, volume, batterie (cachés par le kiosque)
 
+    /** Barre de gauche : noms sous les icônes et outils affichés, appliqués tout de suite. */
+    private fun setUpRail(view: View) {
+        val main = activity as? MainActivity
+        view.findViewById<SwitchCompat>(R.id.settings_rail_labels).apply {
+            isChecked = Prefs.railLabels(context)
+            setOnCheckedChangeListener { _, on ->
+                Prefs.setRailLabels(context, on)
+                main?.applyRailSettings()
+            }
+        }
+        val shown = Prefs.railTools(requireContext())
+        mapOf(R.id.settings_rail_focus to Mode.FOCUS, R.id.settings_rail_computer to Mode.COMPUTER, R.id.settings_rail_camera to Mode.CAMERA)
+            .forEach { (id, tool) ->
+                view.findViewById<SwitchCompat>(id).apply {
+                    isChecked = tool in shown
+                    setOnCheckedChangeListener { _, on ->
+                        Prefs.setRailTool(context, tool, on)
+                        main?.applyRailSettings()
+                    }
+                }
+            }
+    }
+
     /** Une pastille par thème, avec sa couleur ; en choisir un recrée l'activité (les écrans se redessinent). */
     private fun setUpThemes(row: LinearLayout) {
         val current = AppTheme.current(requireContext())
@@ -370,6 +397,30 @@ class SettingsFragment : Fragment() {
                 }
             }
             row.addView(chip, LinearLayout.LayoutParams(0, dp(48), 1f).apply { if (row.childCount > 0) marginStart = dp(10) })
+        }
+    }
+
+    /**
+     * Accessibilité, aides à la lecture (ui/ReadingAids.kt) : interrupteurs sous la taille du texte. Police et animations
+     * s'appliquent à la création de l'activité (AppTheme.apply, vues animées) : les changer la recrée, comme le thème.
+     * Les bandeaux lus sont relus à chaque bandeau.
+     */
+    private fun setUpReadingAids(view: View) {
+        val ctx = requireContext()
+        fun recreating(id: Int, get: (android.content.Context) -> Boolean, set: (android.content.Context, Boolean) -> Unit) {
+            view.findViewById<SwitchCompat>(id).apply {
+                isChecked = get(ctx)
+                setOnCheckedChangeListener { _, checked ->
+                    set(ctx, checked)
+                    requireActivity().recreate()
+                }
+            }
+        }
+        recreating(R.id.settings_legible_font, Prefs::legibleFont, Prefs::setLegibleFont)
+        recreating(R.id.settings_reduce_motion, Prefs::reduceMotion, Prefs::setReduceMotion)
+        view.findViewById<SwitchCompat>(R.id.settings_read_banners).apply {
+            isChecked = Prefs.readBanners(ctx)
+            setOnCheckedChangeListener { _, checked -> Prefs.setReadBanners(ctx, checked) }
         }
     }
 
@@ -434,6 +485,19 @@ class SettingsFragment : Fragment() {
             tabletInfo.text = getString(
                 R.string.tablet_info, BuildConfig.VERSION_NAME, ip ?: getString(R.string.tablet_no_address), android.os.Build.MODEL,
             )
+        }
+    }
+
+    /** Ouvre sur l'ordinateur la page du compagnon, carte Réglages de la tablette en avant. */
+    private fun openOnComputer() {
+        val ctx = requireContext()
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                BackendClient(ctx).system.openLocalPage("tablette")
+                main.showBanner(getString(R.string.tablet_remote_opened), 6)
+            } catch (e: Exception) {
+                main.showBanner(errorText(e), 6)
+            }
         }
     }
 

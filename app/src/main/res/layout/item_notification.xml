@@ -69,10 +69,10 @@
     <ImageButton
         android:id="@+id/notif_remove"
         style="@style/IconButton.Flat"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:layout_marginStart="8dp"
-        android:padding="12dp"
+        android:padding="14dp"
         android:contentDescription="@string/notif_remove"
         android:focusable="false"
         android:src="@drawable/ic_close" />

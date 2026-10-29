@@ -23,6 +23,7 @@
         <item name="c_ok_soft">#245DD39E</item>
         <item name="c_ko">#FFFF6B6B</item>
         <item name="c_ko_soft">#29FF6B6B</item>
+        <item name="c_on_ko">#FF0C0F14</item>
         <item name="c_warn">#FFF5B85C</item>
         <item name="c_agent_wait">#FFF87171</item>
         <item name="c_agent_done">#FF5DD39E</item>
@@ -79,6 +80,7 @@
         <item name="c_ok_soft">#241C9A61</item>
         <item name="c_ko">#FFE5484D</item>
         <item name="c_ko_soft">#24E5484D</item>
+        <item name="c_on_ko">#FF0C0F14</item>
         <item name="c_warn">#FFD3841A</item>
         <item name="c_agent_wait">#FFDC2626</item>
         <item name="c_agent_done">#FF1C9A61</item>
@@ -152,6 +154,7 @@
         <item name="c_ok_soft">#FFB5EEDD</item>
         <item name="c_ko">#FFBA1A1A</item>
         <item name="c_ko_soft">#24BA1A1A</item>
+        <item name="c_on_ko">#FFFFFFFF</item>
         <item name="c_warn">#FF8A6100</item>
         <item name="c_agent_wait">#FFDC2626</item>
         <item name="c_agent_done">#FF1E8F54</item>
@@ -210,7 +213,7 @@
         <item name="c_surface_pressed">#FF2F2B2B</item>
         <item name="c_stroke">#FF4D4545</item>
         <item name="c_accent">#FFFF5165</item>
-        <item name="c_accent_soft">#FF680018</item>
+        <item name="c_accent_soft">#FF560013</item>
         <item name="c_on_accent">#FF40000B</item>
         <item name="c_text">#FFE9E1E0</item>
         <item name="c_frame_bg">#FF000000</item>
@@ -223,6 +226,7 @@
         <item name="c_ok_soft">#FF00382D</item>
         <item name="c_ko">#FFFFB4AB</item>
         <item name="c_ko_soft">#29FFB4AB</item>
+        <item name="c_on_ko">#FF100D0D</item>
         <item name="c_warn">#FFFFD166</item>
         <item name="c_agent_wait">#FFF87171</item>
         <item name="c_agent_done">#FF5DD39E</item>
@@ -310,6 +314,7 @@
         <item name="c_ok_soft">#FFE6E4A6</item>
         <item name="c_ko">#FFB02600</item>
         <item name="c_ko_soft">#24B02600</item>
+        <item name="c_on_ko">#FFFFFFFF</item>
         <item name="c_warn">#FFA85A00</item>
         <item name="c_agent_wait">#FFB91C1C</item>
         <item name="c_agent_done">#FF2E8B3D</item>
@@ -343,6 +348,85 @@
         <item name="c_mx_engrave">?attr/c_text_faint</item>
         <item name="c_mx_shadow">#2E552805</item>
         <item name="c_mx_highlight">#FFFFFBEA</item>
+        <item name="c_mx_key_top">?attr/c_surface</item>
+        <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
+    </style>
+
+    <!-- Contraste élevé : Cadran jour (mêmes formes, Outfit, une seule couleur vivante) en lisibilité maximale.
+         Textes, rouge, vert et alertes au moins 7:1 (WCAG AAA) sur le fond, la tuile et le relief ; textes secondaires
+         et tertiaires aussi ; signaux des agents et traits qui portent un sens au moins 4,5:1 sur les quatre fonds
+         (ContrastPaletteTest). Tuiles à filet de 2 dp (contraste_tile_bg), grandes touches (c_big_keys). -->
+    <style name="Palette.Contraste" parent="">
+        <item name="c_cadran">true</item>
+        <item name="c_big_keys">true</item>
+        <item name="c_card_bg">@drawable/contraste_tile_bg</item>
+        <item name="c_tile_bg">@drawable/contraste_tile_bg</item>
+        <item name="c_home_card_bg">@drawable/contraste_tile_bg</item>
+        <item name="c_card_pad">24dp</item>
+        <item name="c_title_size">18sp</item>
+        <item name="c_primary">?attr/c_text</item>
+        <item name="c_on_primary">?attr/c_bg</item>
+        <item name="c_primary_pressed">?attr/c_text_dim</item>
+        <item name="c_font_medium">@font/outfit_500</item>
+        <item name="c_font_light">@font/outfit_400</item>
+        <item name="c_font_regular">@font/outfit_400</item>
+        <item name="c_font_title">@font/outfit_500</item>
+        <item name="c_font_display">@font/outfit_500</item>
+        <item name="android:fontFamily">@font/outfit_400</item>
+        <item name="c_bg">#FFFFFFFF</item>
+        <item name="c_rail">#FFFFFFFF</item>
+        <item name="c_surface">#FFFFFFFF</item>
+        <item name="c_surface_raised">#FFF1EAEA</item>
+        <item name="c_surface_pressed">#FFE4D9D9</item>
+        <item name="c_stroke">#FF4D4545</item>
+        <item name="c_accent">#FF960026</item>
+        <item name="c_accent_soft">#FFFFE3E5</item>
+        <item name="c_on_accent">#FFFFFFFF</item>
+        <item name="c_text">#FF140F0F</item>
+        <item name="c_frame_bg">#FF000000</item>
+        <item name="c_frame_text">#FFFFFFFF</item>
+        <item name="c_frame_shadow">#99000000</item>
+        <item name="c_text_dim">#FF2E2727</item>
+        <item name="c_text_faint">#FF3F3737</item>
+        <item name="c_graphic">#FF574D4D</item>
+        <item name="c_ok">#FF174A3D</item>
+        <item name="c_ok_soft">#FFC6F0E2</item>
+        <item name="c_ko">#FF860000</item>
+        <!-- Blanc sur c_ko : 10,4:1. -->
+        <item name="c_on_ko">#FFFFFFFF</item>
+        <item name="c_ko_soft">#24860000</item>
+        <item name="c_warn">#FF5A3E00</item>
+        <item name="c_agent_wait">#FF9B1010</item>
+        <item name="c_agent_done">#FF115C2A</item>
+        <item name="c_agent_limit">#FF124A9C</item>
+        <item name="c_agent_work">#FF8F2D00</item>
+        <item name="c_agent_monitor">#FF684A00</item>
+        <item name="c_paper">#FFFFFFFF</item>
+        <item name="c_scrim">#8C000000</item>
+        <item name="c_hue_orange">#FF2E2727</item>
+        <item name="c_hue_cyan">#FF174A3D</item>
+        <item name="c_hue_violet">#FF2E2727</item>
+        <item name="c_hue_pink">#FF2E2727</item>
+        <item name="c_hue_yellow">#FF2E2727</item>
+        <item name="c_hue_blue">#FF2E2727</item>
+        <item name="c_hue_red">#FF960026</item>
+        <item name="c_hue_green">#FF174A3D</item>
+        <item name="c_mx_plate_top">?attr/c_surface</item>
+        <item name="c_mx_plate_bottom">?attr/c_bg</item>
+        <item name="c_mx_lcd_bg">?attr/c_text</item>
+        <item name="c_mx_lcd_text">#FFC6F0E2</item>
+        <item name="c_mx_text">?attr/c_text</item>
+        <item name="c_mx_slot">?attr/c_text</item>
+        <item name="c_mx_cap_top">?attr/c_text_dim</item>
+        <item name="c_mx_cap_bottom">?attr/c_text</item>
+        <item name="c_mx_cap_line">?attr/c_surface</item>
+        <item name="c_mx_led_off">?attr/c_graphic</item>
+        <item name="c_mx_led_low">?attr/c_ok</item>
+        <item name="c_mx_led_mid">?attr/c_warn</item>
+        <item name="c_mx_led_high">?attr/c_accent</item>
+        <item name="c_mx_engrave">?attr/c_text_faint</item>
+        <item name="c_mx_shadow">#33000000</item>
+        <item name="c_mx_highlight">#FFFFFFFF</item>
         <item name="c_mx_key_top">?attr/c_surface</item>
         <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
     </style>

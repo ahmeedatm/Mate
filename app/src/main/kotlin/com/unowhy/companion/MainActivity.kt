@@ -45,10 +45,10 @@ import com.unowhy.companion.ui.AgentLight
 import com.unowhy.companion.ui.AppTheme
 import com.unowhy.companion.ui.Banner
 import com.unowhy.companion.ui.CallOverlay
+import com.unowhy.companion.ui.CallSession
 import com.unowhy.companion.ui.CameraFragment
 import com.unowhy.companion.ui.CompanionUpdate
 import com.unowhy.companion.ui.ComputerAdder
-import com.unowhy.companion.ui.DeckFragment
 import com.unowhy.companion.ui.DocumentPanel
 import com.unowhy.companion.ui.FocusFragment
 import com.unowhy.companion.ui.FromComputerFragment
@@ -56,12 +56,13 @@ import com.unowhy.companion.ui.Grain
 import com.unowhy.companion.ui.HomeFragment
 import com.unowhy.companion.ui.IconCache
 import com.unowhy.companion.ui.KeyboardControl
-import com.unowhy.companion.ui.MenuPanel
-import com.unowhy.companion.ui.MiniPlayerView
+import com.unowhy.companion.ui.Look
+import com.unowhy.companion.ui.MusicChip
 import com.unowhy.companion.ui.Navigation
 import com.unowhy.companion.ui.PhotoFrameView
 import com.unowhy.companion.ui.PluginsView
-import com.unowhy.companion.ui.Rail
+import com.unowhy.companion.ui.ProfileRail
+import com.unowhy.companion.ui.ReadingAids
 import com.unowhy.companion.ui.SettingsFragment
 import com.unowhy.companion.ui.TabletAlerts
 import com.unowhy.companion.ui.TabletStatusView
@@ -69,6 +70,7 @@ import com.unowhy.companion.ui.WelcomeView
 import com.unowhy.companion.ui.dp
 import com.unowhy.companion.ui.errorText
 import com.unowhy.companion.ui.home.Down
+import com.unowhy.companion.ui.home.HomeLayout
 import com.unowhy.companion.ui.home.LinkWatch
 import com.unowhy.companion.ui.notificationBannerText
 import com.unowhy.companion.ui.showImmersive
@@ -91,9 +93,8 @@ class MainActivity : AppCompatActivity() {
 
     private val rehide = Runnable { hideSystemBars() }
     private var current = Mode.HOME
-    /** Barre latérale, ou menu caché (thèmes Cadran). */
+    /** Barre fixe à gauche : Parler, profils, outils, ordinateur, Réglages. */
     private lateinit var nav: Navigation
-    private var menu: MenuPanel? = null
     private lateinit var documentPanel: DocumentPanel
     private lateinit var banner: Banner
     private lateinit var alerts: TabletAlerts
@@ -118,10 +119,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var agentAlerts: AgentAlerts
     private lateinit var agentAsk: AgentAskOverlay
     private lateinit var frame: PhotoFrameView
-    private lateinit var miniPlayer: MiniPlayerView
-
-    /** Largeur du petit lecteur, réservée au bout de la ligne de titre de chaque écran (vue marquée [MEDIA_SPACE]). */
-    private var mediaSpace = 0
     /** Dernier toucher (ou touche de volume) : le cadre photo se lance après Prefs.frameDelayMin sans toucher. */
     private var lastTouch = SystemClock.elapsedRealtime()
     /** Toucher qui a fermé le cadre : avalé jusqu'au lever du doigt, l'écran dessous ne le reçoit pas. */
@@ -172,16 +169,9 @@ class MainActivity : AppCompatActivity() {
         AutoUpdater.start(this)
         InstallerService.start(this)
 
-        val cadran = themeBool(this, R.attr.c_cadran)
-        if (cadran) {
-            findViewById<View>(R.id.rail).visibility = View.GONE
-            // Plus de barre à contourner : le bandeau garde une marge ordinaire.
-            findViewById<View>(R.id.remote_banner).apply { layoutParams = (layoutParams as android.widget.FrameLayout.LayoutParams).also { it.marginStart = dp(24) } }
-            nav = MenuPanel(this, ::show).also { menu = it }
-        } else {
-            nav = Rail(this, ::show)
-        }
-        voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon), onPressed = { menu?.close() })
+        nav = ProfileRail(this, ::show, ::showProfile, ::openProfiles)
+        wakeRail()
+        voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
         wake = WakeWord(this, findViewById(R.id.wake_mic)) { voice.start() }
         // Lumière des agents Claude sous la carte d'appel : un appel prime sur tout.
         val agentLight = AgentLight(this)
@@ -192,22 +182,16 @@ class MainActivity : AppCompatActivity() {
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(agentAsk, android.view.ViewGroup.LayoutParams(-1, -1))
         callOverlay = CallOverlay(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(callOverlay, android.view.ViewGroup.LayoutParams(-1, -1))
+        tour = com.unowhy.companion.ui.TourOverlay(this) { nav.tourAnchor(it) }
+        tour.onDone = { offerPlugins() }
+        findViewById<android.view.ViewGroup>(android.R.id.content).addView(tour, android.view.ViewGroup.LayoutParams(-1, -1))
         // Cadre photo juste au-dessus des écrans : lumière des agents, question et appel restent devant.
         frame = PhotoFrameView(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(frame, 1, android.view.ViewGroup.LayoutParams(-1, -1))
-        // Petit lecteur en haut à droite, sur la ligne de titre comme la cloche à gauche (padding 24 dp, hauteur 48 dp).
-        miniPlayer = MiniPlayerView(this, ::mediaPlayerHidden, ::showMediaPage) { px ->
-            mediaSpace = px
-            applyMediaSpace()
+        // Lecture en cours du header : rien à relire sous le cadre photo ni sans ordinateur ; cachée en mode Modifier (COMP-63).
+        findViewById<MusicChip>(R.id.music_chip).suppressed = {
+            frame.isShowing || Computers.all(this).isEmpty() || (current == Mode.HOME && homeFragment()?.isEditing() == true)
         }
-        findViewById<android.widget.FrameLayout>(R.id.mode_area).addView(
-            miniPlayer,
-            android.widget.FrameLayout.LayoutParams(-2, dp(48), android.view.Gravity.TOP or android.view.Gravity.END).apply {
-                topMargin = dp(24)
-                marginEnd = dp(24)
-            },
-        )
-        miniPlayer.attach(this)
 
         keyboard.setUp()
 
@@ -225,22 +209,21 @@ class MainActivity : AppCompatActivity() {
             findViewById<View>(R.id.mode_area).visibility = if (expanded) View.GONE else View.VISIBLE
         }
         nav.status.setOnClickListener {
-            menu?.close()
             showComputerPicker()
         }
         banner = Banner(findViewById(R.id.remote_banner))
         findViewById<View>(R.id.notif_bell).setOnClickListener { openNotifications() }
         alerts = TabletAlerts(this, banner)
+        findViewById<View>(R.id.rail_settings).setOnClickListener { show(Mode.SETTINGS) }
         findViewById<TabletStatusView>(R.id.tablet_status).apply {
-            setOnClickListener {
-                menu?.close()
-                show(Mode.SETTINGS)
-            }
+            inline()
             onMinute = {
                 Screen.apply(this@MainActivity)
                 alerts.remindWater()
                 followFrame()
                 companionUpdate.onMinute()
+                // « Rejoindre » sans détection de fin : l'appel finit à l'heure de l'événement.
+                if (call.tick()) afterCall()
             }
             onBattery = ::onBattery
         }
@@ -252,12 +235,19 @@ class MainActivity : AppCompatActivity() {
             onComputerChanged(computer)
             show(Mode.HOME)
             showBanner(getString(R.string.welcome_done, computer.name), 6)
+            maybeTour()
         }
         plugins = findViewById(R.id.plugins)
         plugins.attach(
             this,
-            onLater = { Computers.active(this)?.let { pluginsLater += it.id } },
-            onSaved = ::recreateScreens,
+            onLater = {
+                Computers.active(this)?.let { pluginsLater += it.id }
+                maybeTour()
+            },
+            onSaved = {
+                recreateScreens()
+                maybeTour()
+            },
         )
 
         // Retour ne quitte jamais l'appli : il ferme le document ouvert, sinon ramène à l'accueil.
@@ -265,9 +255,8 @@ class MainActivity : AppCompatActivity() {
             when {
                 welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE -> Unit
                 agentAsk.isOpen -> agentAsk.close()
-                menu?.isOpen == true -> menu?.close()
                 documentPanel.visibility == View.VISIBLE -> documentPanel.close()
-                current != Mode.HOME -> show(Mode.HOME)
+                current != Mode.HOME || homeFragment()?.shownPage != shownLayout().homeProfile -> showProfile(shownLayout().homeProfile)
             }
         }
 
@@ -275,12 +264,17 @@ class MainActivity : AppCompatActivity() {
         show(restored ?: Mode.HOME)
         // Premier lancement (ou plus aucun ordinateur) : écran de bienvenue.
         if (savedInstanceState == null && Computers.all(this).isEmpty()) welcome.show()
+        // Tablette déjà appairée qui n'a jamais vu la visite (mise à jour) : elle la voit une fois.
+        if (savedInstanceState == null) maybeTour()
         showLink(Link(Computers.active(this), Link.State.OFFLINE))
         remote.restart()
     }
 
     private fun showLink(link: Link) {
-        if (link.state == Link.State.ONLINE && this.link.state != Link.State.ONLINE) resyncAgents()
+        if (link.state == Link.State.ONLINE && this.link.state != Link.State.ONLINE) {
+            resyncAgents()
+            resyncCall()
+        }
         this.link = link
         linkWatch.onLink(link.computer?.id, link.state, System.currentTimeMillis())
         nav.showLink(link)
@@ -309,6 +303,8 @@ class MainActivity : AppCompatActivity() {
     /** Chaque écran est recréé : il relit le deck, l'agenda, les tâches et les documents de l'ordinateur actif. */
     private fun recreateScreens() {
         IconCache.clear()
+        // L'appel suivi était celui de l'ordinateur quitté.
+        endCall()
         documentPanel.close()
         val fm = supportFragmentManager
         val tx = fm.beginTransaction()
@@ -323,10 +319,11 @@ class MainActivity : AppCompatActivity() {
      */
     private fun offerPlugins() {
         val computer = Computers.active(this) ?: return
-        if (computer.id in pluginsLater || welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE) return
+        // Jamais par-dessus la visite guidée : proposé à sa fin (tour.onDone).
+        if (computer.id in pluginsLater || welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE || tour.visibility == View.VISIBLE) return
         lifecycleScope.launch {
             val list = runCatchingCancellable { BackendClient(this@MainActivity).plugins.list() }.getOrNull() ?: return@launch
-            if (list.any { it.fresh } && Computers.active(this@MainActivity)?.id == computer.id && welcome.visibility != View.VISIBLE) {
+            if (list.any { it.fresh } && Computers.active(this@MainActivity)?.id == computer.id && welcome.visibility != View.VISIBLE && tour.visibility != View.VISIBLE) {
                 plugins.show(computer.name, list, offered = true)
             }
         }
@@ -442,6 +439,7 @@ class MainActivity : AppCompatActivity() {
         if (event.action == MotionEvent.ACTION_DOWN) {
             Screen.touched(this)
             lastTouch = SystemClock.elapsedRealtime()
+            wakeRail()
             if (frame.isShowing) {
                 closeFrame()
                 swallowTouch = true
@@ -451,7 +449,6 @@ class MainActivity : AppCompatActivity() {
             if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) swallowTouch = false
             return true
         }
-        menu?.touched()
         keyboard.onTouch(event)
         return super.dispatchTouchEvent(event)
     }
@@ -515,36 +512,98 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun showMode(name: String) {
-        // Nom inconnu (« tasks », ancien « chat ») : l'Accueil.
-        show(Mode.of(name) ?: Mode.HOME)
+        // Ancien mode Deck : le profil Deck. Accueil ou nom inconnu (« tasks », ancien « chat ») : le profil Accueil.
+        if (name.equals(Mode.DECK_KEY, ignoreCase = true)) return showProfile(shownLayout().deckTarget())
+        val mode = Mode.of(name) ?: Mode.HOME
+        if (mode == Mode.HOME) showProfile(shownLayout().homeProfile) else show(mode)
     }
 
-    /** Deck sur sa page Réunion, pour couper le micro ou raccrocher sans chercher. */
-    fun showMeetingControls() {
-        show(Mode.DECK)
-        // Le deck vient peut-être d'être créé : sa vue doit exister avant de choisir la page.
-        supportFragmentManager.executePendingTransactions()
-        (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.openMeetingPage()
+    // --- Appel en cours : profil Réunion (Deck V2)
+
+    private val call = CallSession()
+
+    /** Écran et profil d'avant la bascule sur Réunion, pour y revenir à la fin de l'appel. */
+    private var beforeCall: Pair<Mode, Int>? = null
+
+    val inCall: Boolean get() = call.active
+
+    /** Appli de l'appel en cours (widget d'appel du profil Réunion), null hors appel. */
+    val callApp: String? get() = call.app
+
+    /** Ordre `meeting` de l'ordinateur : un appel commence ou finit. */
+    fun onMeeting(state: String, app: String) = if (state == "start") startCall(app) else endCall()
+
+    /**
+     * Un appel commence (ordre de l'ordinateur, ou « Rejoindre » avec la fin de l'événement) : Réunion entre dans la barre,
+     * puis l'écran y passe, sauf pendant une saisie ou dans un écran plein (Caméra, mode Modifier).
+     */
+    fun startCall(app: String, endAtMs: Long? = null) {
+        if (!call.start(app, endAtMs)) return
+        val layout = shownLayout()
+        refreshRail(layout)
+        if (layout.callProfile < 0) return
+        val fullScreen = current == Mode.CAMERA || homeFragment()?.editing == true
+        val typing = com.unowhy.companion.ui.Typing.active(focusIsEditText = currentFocus is android.widget.EditText)
+        // État sauvegardé (appli en arrière-plan) : pas de changement d'écran, la barre suffit.
+        if (supportFragmentManager.isStateSaved || !call.shouldSwitch(typing = typing, fullScreen = fullScreen)) return
+        beforeCall = current to (homeFragment()?.shownPage ?: layout.homeProfile)
+        showProfile(layout.callProfile)
     }
+
+    /** Fin d'appel : retour à l'écran d'avant si Réunion est encore affiché, puis Réunion quitte la barre. */
+    fun endCall() {
+        if (!call.active) return
+        call.end()
+        afterCall()
+    }
+
+    private fun afterCall() {
+        val layout = shownLayout()
+        // État sauvegardé (appli en arrière-plan, appli d'essai devant) : pas de transaction, la barre seulement.
+        if (supportFragmentManager.isStateSaved) {
+            beforeCall = null
+            refreshRail(layout)
+            return
+        }
+        val before = beforeCall
+        beforeCall = null
+        val page = homeFragment()?.shownPage?.takeIf { current == Mode.HOME }
+        val back = before?.let { call.returnTo(page, layout.callProfile, it.second) }
+        when {
+            back != null && before.first == Mode.HOME -> showProfile(back)
+            back != null -> show(before.first)
+            // Resté sur Réunion sans écran d'avant connu : il n'est plus dans la barre, on rentre à l'Accueil.
+            page == layout.callProfile -> showProfile(layout.homeProfile)
+        }
+        refreshRail(layout)
+    }
+
+    /** La disposition que l'Accueil affiche (celle que la barre doit suivre), sinon celle enregistrée. */
+    private fun shownLayout(): HomeLayout = homeFragment()?.shownLayout ?: HomeLayout.load(this, cadran = true)
+
+    private fun refreshRail(layout: HomeLayout = shownLayout()) =
+        nav.showProfiles(layout, homeFragment()?.shownPage?.takeIf { current == Mode.HOME } ?: layout.homeProfile, call.active)
 
     /** Appel entrant sur l'ordinateur (ordre `call`, voir CallOverlay). */
     fun onCall(state: String, app: String, caller: String?, video: Boolean) = callOverlay.onCall(state, app, caller, video)
 
     /**
      * Notification arrivée sur l'ordinateur (ordre `notification`) : bandeau quel que soit l'écran (sans le texte en
-     * mode discret), et liste de Depuis l'ordi relue si elle est affichée.
+     * mode discret), lu à voix haute si Réglages > Accessibilité le demande, et liste de Depuis l'ordi relue si elle
+     * est affichée.
      */
     fun onNotification(n: PcNotification) {
-        showBanner(notificationBannerText(n, Prefs.notificationsDiscreet(this)), NOTIFICATION_SECONDS)
+        val text = notificationBannerText(n, Prefs.notificationsDiscreet(this))
+        showBanner(text, NOTIFICATION_SECONDS)
+        readAloud(text)
         val computer = supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment
         computer?.onNotification()
         // Pastille sur la cloche, sauf si l'historique est déjà sous les yeux.
         if (computer?.showingNotifications != true || current != Mode.COMPUTER) findViewById<View>(R.id.notif_dot).visibility = View.VISIBLE
     }
 
-    /** Cloche en haut à gauche : Depuis l'ordi > Notifications, pastille retirée. */
+    /** Cloche de la barre : Depuis l'ordi > Notifications, pastille retirée. */
     private fun openNotifications() {
-        menu?.close()
         findViewById<View>(R.id.notif_dot).visibility = View.GONE
         show(Mode.COMPUTER)
         // Le mode vient peut-être d'être créé : sa vue doit exister avant de choisir l'écran.
@@ -559,6 +618,18 @@ class MainActivity : AppCompatActivity() {
     fun openAgentAsk(id: String) = agentAsk.open(id)
 
     val agentAskOpen get() = agentAsk.isOpen
+
+    /**
+     * Retour en ligne (lancement, relance de l'appli, réseau revenu) : l'ordre `meeting` ne prévient qu'au changement,
+     * on relit donc l'appel une fois. Un appel déjà en cours reprend ; un appel signalé par l'ordinateur et fini pendant
+     * la coupure (son `end` perdu) se termine.
+     */
+    private fun resyncCall() {
+        lifecycleScope.launch {
+            val live = runCatching { BackendClient(this@MainActivity).deck.liveApps() }.getOrNull() ?: return@launch
+            if (call.endsOnResync(live.live)) endCall() else live.live.firstOrNull()?.let { startCall(it) }
+        }
+    }
 
     /** Demande d'agent en attente depuis avant la connexion : lumière rallumée (voir AgentAlerts.resync). */
     private fun resyncAgents() {
@@ -592,47 +663,20 @@ class MainActivity : AppCompatActivity() {
         return getString(R.string.agent_voice_opened)
     }
 
-    /** Deck sur l'onglet Agents. */
+    /** Tableau des agents Claude, par-dessus le profil Deck. */
     fun showAgents() {
-        show(Mode.DECK)
-        supportFragmentManager.executePendingTransactions()
-        (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.openAgentsTab()
+        showProfile(HomeLayout.load(this, cadran = true).deckTarget())
+        homeFragment()?.showAgentsBoard()
     }
 
-    /** Deck sur sa page Média (toucher le titre du petit lecteur). */
-    private fun showMediaPage() {
-        show(Mode.DECK)
-        supportFragmentManager.executePendingTransactions()
-        (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.openMediaPage()
-    }
+    /** Appel décroché sur la tablette : profil Réunion, avec les touches de l'appli (Discord : micro, sourdine, quitter). */
+    fun showAppControls(app: String) = startCall(app)
 
     /**
-     * Page du deck ou mode Modifier de l'Accueil changé : le petit lecteur se cache sur la page Média, qui fait la même
-     * chose en grand, et pendant le mode Modifier, dont la barre (Ajouter, Annuler, Terminé) est à sa place.
+     * Mode Modifier de l'Accueil changé (COMP-63) : la lecture en cours du header se cache pendant le mode Modifier, dont
+     * la barre (Ajouter, Annuler, Terminé) est à sa place.
      */
-    fun refreshMiniPlayer() {
-        if (::miniPlayer.isInitialized) miniPlayer.update()
-    }
-
-    private fun mediaPlayerHidden(): Boolean = frame.isShowing || Computers.all(this).isEmpty() ||
-        (current == Mode.DECK && (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.isMediaPageShown() == true) ||
-        (current == Mode.HOME && (supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment)?.isEditing() == true)
-
-    /** Place du petit lecteur au bout de la ligne de titre de chaque écran, créé ou non (rien de masqué dessous). */
-    private fun applyMediaSpace() {
-        for (fragment in supportFragmentManager.fragments) {
-            val space = fragment.view?.findViewWithTag<View>(MEDIA_SPACE) ?: continue
-            if (space.layoutParams.width == mediaSpace) continue
-            space.layoutParams = space.layoutParams.apply { width = mediaSpace }
-        }
-    }
-
-    /** Deck sur la page de l'appli (Discord) : micro, sourdine, Quitter l'appel. */
-    fun showAppControls(app: String) {
-        show(Mode.DECK)
-        supportFragmentManager.executePendingTransactions()
-        (supportFragmentManager.findFragmentByTag(Mode.DECK.tag) as? DeckFragment)?.openAppPage(app)
-    }
+    fun refreshMiniPlayer() = findViewById<MusicChip>(R.id.music_chip).update()
 
     fun closeDocument() {
         documentPanel.close()
@@ -648,6 +692,14 @@ class MainActivity : AppCompatActivity() {
         // Un message de l'ordinateur ou un rappel se lit : le cadre lui laisse la place.
         closeFrame()
         banner.show(text, seconds, onTap)
+    }
+
+    /**
+     * Réglages > Accessibilité > Lire les bandeaux à voix haute : bandeau d'une notification ou d'un message de
+     * l'ordinateur lu par la voix de la tablette. Coupé : rien.
+     */
+    fun readAloud(banner: String) {
+        if (Prefs.readBanners(this)) Speaker.speak(ReadingAids.spoken(banner))
     }
 
     /**
@@ -681,7 +733,7 @@ class MainActivity : AppCompatActivity() {
     /** Ce qui sert encore, que le cadre ne doit pas cacher. */
     private fun frameBusy() = callOverlay.visibility == View.VISIBLE || agentAsk.isOpen || welcome.visibility == View.VISIBLE ||
         plugins.visibility == View.VISIBLE ||
-        menu?.isOpen == true || documentPanel.visibility == View.VISIBLE || current == Mode.CAMERA || FocusTimer.state.running ||
+        documentPanel.visibility == View.VISIBLE || current == Mode.CAMERA || FocusTimer.state.running ||
         Breathing.running
 
     /** Lance le cadre tout de suite (Réglages > Cadre photo > Essayer, ou délai écoulé) ; sans photo, rien. */
@@ -689,7 +741,6 @@ class MainActivity : AppCompatActivity() {
         if (photos.isEmpty() || frame.isShowing) return
         keyboard.hide()
         frame.show(photos)
-        miniPlayer.update()
         // Écrans dessous masqués : rien à redessiner derrière la photo (horloges, animations de l'Accueil).
         findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0).visibility = View.INVISIBLE
         Screen.frameCharging = battery?.charging ?: true
@@ -699,7 +750,6 @@ class MainActivity : AppCompatActivity() {
     fun closeFrame() {
         if (!frame.isShowing) return
         frame.hide()
-        miniPlayer.update()
         findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0).visibility = View.VISIBLE
         Screen.frameCharging = null
         Screen.apply(this)
@@ -727,23 +777,72 @@ class MainActivity : AppCompatActivity() {
         // Un écran ajouté juste avant (ex. recréé par onComputerChanged) doit exister pour être masqué.
         fm.executePendingTransactions()
         val tx = fm.beginTransaction()
-        if (changed) {
-            // Cadran : fondu enchaîné (sortie, puis entrée avec échelle) ; sinon fondu et légère montée.
-            if (menu != null) tx.setCustomAnimations(R.animator.cadran_in, R.animator.cadran_out) else tx.setCustomAnimations(R.animator.mode_in, 0)
-        }
+        // L'écran quitté est masqué tout de suite : deux écrans en fondu l'un sur l'autre se mêlent (double image), et
+        // remettre l'ancien à 100 % à la fin de son fondu le montrait en entier une image avant son masquage (flash).
         fm.fragments.forEach { tx.hide(it) }
         // Sans ordinateur, un mode qui en a besoin n'est pas créé (caméra, requêtes) : renderNoComputer le remplace.
         val needsComputer = mode.connect != null && Computers.all(this).isEmpty()
         val existing = fm.findFragmentByTag(mode.tag)
         if (existing != null) tx.show(existing) else if (!needsComputer) tx.add(R.id.mode_container, create(mode), mode.tag)
-        tx.runOnCommit {
-            applyMediaSpace()
-            if (::miniPlayer.isInitialized) miniPlayer.update()
-        }
         tx.commit()
 
         nav.select(mode, changed)
         renderNoComputer()
+        if (changed) slideTo(mode)
+    }
+
+    /** Arrivée de l'écran `mode` dans le sens du déplacement dans la barre. Ressorts qui jouent aussi en kiosque. */
+    private fun slideTo(mode: Mode) {
+        supportFragmentManager.executePendingTransactions()
+        val into = supportFragmentManager.findFragmentByTag(mode.tag)?.view ?: return
+        Look.sharedAxis(into, fromBelow = nav.lastMove >= 0)
+    }
+
+    /** Entrée de profil de la barre : l'Accueil, sur ce profil (créé au besoin : sa vue doit exister avant). */
+    private fun showProfile(page: Int) {
+        // Déjà sur l'Accueil : seul le profil change (et glisse) ; sinon l'écran arrive en entier, sur ce profil.
+        val within = current == Mode.HOME
+        show(Mode.HOME)
+        supportFragmentManager.executePendingTransactions()
+        homeFragment()?.showProfile(page, animate = within)
+    }
+
+    /** Appui long sur un profil de la barre, ou « Plus » : la liste des profils, depuis l'Accueil. */
+    private fun openProfiles() {
+        show(Mode.HOME)
+        supportFragmentManager.executePendingTransactions()
+        homeFragment()?.openProfiles()
+    }
+
+    /** L'Accueil prévient à chaque profil affiché et à chaque changement des profils : la barre suit. */
+    fun onProfileShown(layout: HomeLayout, page: Int) = nav.showProfiles(layout, page, inCall = call.active)
+
+    private fun homeFragment() = supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment
+
+    private lateinit var tour: com.unowhy.companion.ui.TourOverlay
+
+    /**
+     * Visite guidée, une fois, après l'appairage (laisse le temps aux écrans de se poser). Jamais par-dessus l'écran des
+     * plugins : relancée à sa fermeture.
+     */
+    private fun maybeTour() {
+        if (welcome.visibility == View.VISIBLE || tour.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE) return
+        if (!com.unowhy.companion.ui.TourModel.shouldShow(this, Computers.all(this).isNotEmpty())) return
+        window.decorView.postDelayed({
+            if (welcome.visibility != View.VISIBLE && plugins.visibility != View.VISIBLE && tour.visibility != View.VISIBLE) tour.start()
+        }, TOUR_DELAY_MS)
+    }
+
+    /** Réglages > Barre de gauche : noms et outils changés. */
+    fun applyRailSettings() = nav.applySettings()
+
+    /** Repos de la barre après [REST_MS] sans toucher ; [wakeRail] la ravive et relance l'attente. */
+    private val rest = Runnable { nav.setResting(true) }
+
+    private fun wakeRail() {
+        nav.setResting(false)
+        window.decorView.removeCallbacks(rest)
+        window.decorView.postDelayed(rest, REST_MS)
     }
 
     /** Modes qui ont besoin de l'ordinateur : « Aucun ordinateur connecté » par-dessus, tant qu'il n'y en a pas. */
@@ -755,7 +854,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun create(mode: Mode): Fragment = when (mode) {
         Mode.HOME -> HomeFragment()
-        Mode.DECK -> DeckFragment()
         Mode.COMPUTER -> FromComputerFragment()
         Mode.FOCUS -> FocusFragment()
         Mode.CAMERA -> CameraFragment()
@@ -765,8 +863,11 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val STATE_MODE = "mode"
 
-        /** Tag de la vue vide au bout de la ligne de titre des écrans, élargie de la place du petit lecteur. */
-        const val MEDIA_SPACE = "media_space"
+        /** Délai avant la visite guidée : l'Accueil a le temps d'arriver. */
+        private const val TOUR_DELAY_MS = 900L
+
+        /** Sans toucher pendant ce temps, la barre passe au repos (atténuée). */
+        private const val REST_MS = 60_000L
 
         /** Bandeau d'une notification de l'ordinateur : le temps de lire l'appli, le titre et le début du texte. */
         private const val NOTIFICATION_SECONDS = 8

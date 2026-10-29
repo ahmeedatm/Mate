@@ -1,0 +1,26 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: mate-site
+  annotations:
+    external-dns.alpha.kubernetes.io/use-external-dns: "true"
+spec:
+  # Passerelle du cluster hisqool-dev qui accepte *.integration.unowhy.dev, avec son certificat (comme
+  # power.integration.unowhy.dev) ; *.development.unowhy.dev n'y est servi par aucune passerelle.
+  gateways:
+    - devops-core/devops-hisqool-gateway
+  hosts:
+    - mate.integration.unowhy.dev
+  http:
+    - name: mate-site
+      route:
+        - destination:
+            host: mate-site.mate.svc.cluster.local
+            port:
+              number: 80
+      retries:
+        attempts: 2
+        perTryTimeout: 3s
+        retryOn: retriable-4xx,5xx
+      # Installeurs de plusieurs dizaines de Mo : délai large.
+      timeout: 120s

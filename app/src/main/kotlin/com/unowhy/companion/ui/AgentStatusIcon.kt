@@ -58,7 +58,9 @@ class AgentStatusIcon @JvmOverloads constructor(context: Context, attrs: Attribu
     }
 
     override fun onDraw(canvas: Canvas) {
-        val now = SystemClock.uptimeMillis()
+        // Réduire les animations : roue arrêtée, voyant allumé en plein (pulsation à son maximum), pas d'image suivante.
+        val still = Look.still(context)
+        val now = if (still) 0L else SystemClock.uptimeMillis()
         val w = width.toFloat()
         val h = height.toFloat()
         val s = minOf(w, h)
@@ -98,7 +100,7 @@ class AgentStatusIcon @JvmOverloads constructor(context: Context, attrs: Attribu
                 canvas.drawCircle(w / 2, h / 2, s * 0.32f, paint)
             }
         }
-        if (animated && isShown) postInvalidateDelayed(FRAME_MS)
+        if (animated && isShown && !still) postInvalidateDelayed(FRAME_MS)
     }
 
     override fun onVisibilityChanged(changedView: View, visibility: Int) {

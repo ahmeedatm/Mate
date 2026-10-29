@@ -3,7 +3,6 @@
 
     <!-- Modes -->
     <string name="mode_home">Profils</string>
-    <string name="menu_open">Ouvrir le menu</string>
     <string name="menu_computer">Depuis l\'ordi</string>
     <string name="mode_deck">Deck</string>
     <string name="mode_computer">Ordi</string>
@@ -105,7 +104,6 @@
     <string name="media_play_pause">Lecture / pause</string>
     <string name="media_next">Morceau suivant</string>
     <string name="media_previous">Morceau précédent</string>
-    <string name="mini_player_open">Ouvrir la page Média</string>
     <string name="system_sleep">Veille de l\'écran</string>
     <string name="system_dark">Mode sombre</string>
     <string name="system_screenshot">Capture → presse-papiers</string>
@@ -119,6 +117,10 @@
     <string name="deck_apps_hint">Appui long sur une appli : ses fenêtres, ou la retirer du deck</string>
     <string name="apps_add_tile">Ajouter</string>
     <string name="apps_add_title">Ajouter une appli de l\'ordinateur</string>
+    <string name="apps_all_title">Toutes les applis</string>
+    <string name="apps_all">Toutes les applis de l\'ordinateur</string>
+    <string name="apps_pin">Épingler %1$s sur la carte</string>
+    <string name="apps_unpin">Retirer %1$s de la carte</string>
     <string name="apps_reset">Profil de base</string>
     <string name="apps_reset_confirm">Revenir aux applis du profil de base ? Tes ajouts et retraits seront perdus.</string>
     <string name="apps_added">✓ %1$s · toucher pour retirer</string>
@@ -843,6 +845,8 @@
     <string name="mail_reconnect_button">Reconnecter mon compte Microsoft</string>
     <string name="mail_setup_opened">Page ouverte sur l\'ordinateur : connecte ton compte Microsoft.</string>
     <string name="tablet_title">Tablette</string>
+    <string name="tablet_remote">Régler depuis l\'ordi</string>
+    <string name="tablet_remote_opened">Page ouverte sur l\'ordinateur : règle la tablette depuis la carte.</string>
     <string name="tablet_battery_state">Batterie de la tablette : %1$d %%</string>
     <string name="tablet_battery_charging">Batterie : %1$d %% · en charge (%2$s)</string>
     <string name="tablet_battery_discharging">Batterie : %1$d %% · sur batterie</string>
@@ -883,6 +887,14 @@
     <string name="theme_cadran">Cadran</string>
     <string name="theme_cadran_nuit">Cadran nuit</string>
     <string name="theme_retro">Rétro</string>
+    <string name="theme_contraste">Contraste élevé</string>
+    <!-- Accessibilité (lot 2) : aides à la lecture, dans la carte Accessibilité de COMP-50 (ui/ReadingAids.kt) -->
+    <string name="a11y_legible_font">Police lisible</string>
+    <string name="a11y_legible_font_hint">Atkinson Hyperlegible, lettres faciles à distinguer, un peu plus espacées</string>
+    <string name="a11y_reduce_motion">Réduire les animations</string>
+    <string name="a11y_reduce_motion_hint">Plus rien ne bouge en continu (tubes Rétro, voyants des agents), pas de glissés ni de rebonds</string>
+    <string name="a11y_read_banners">Lire les bandeaux à voix haute</string>
+    <string name="a11y_read_banners_hint">Notifications du PC et messages de l\'ordinateur lus par la tablette (en mode discret : appli et titre seulement)</string>
     <string name="tablet_info">Version %1$s · Adresse %2$s · %3$s</string>
     <string name="tablet_no_address">aucune</string>
     <string name="tech_code_title">Code technicien</string>
@@ -899,10 +911,8 @@
 
     <!-- Accueil à widgets -->
     <string name="home_edit_hint">Glisse un widget pour le déplacer, touche + pour en ajouter.</string>
-    <string name="profile_first">Bureau</string>
+    <string name="profile_first">Accueil</string>
     <string name="profile_default">Profil %d</string>
-    <string name="profile_prev">Profil précédent</string>
-    <string name="profile_next">Profil suivant</string>
     <string name="profiles_title">Profils</string>
     <string name="profile_new_empty">Nouveau profil vide</string>
     <string name="profile_new_template">Depuis un modèle</string>
@@ -925,10 +935,37 @@
     <string name="template_home">Gamer</string>
     <string name="template_home_desc">Heure, météo, son de l\'ordi, touches du deck, lecture en cours, Focus et eau.</string>
     <string name="template_standby">Veille</string>
-    <string name="template_work_cadran_desc">Heure, ligne du jour, prochain rendez-vous, tâches, Focus et touches.</string>
+    <string name="template_work_cadran_desc">Ma journée, ligne du jour, prochain rendez-vous, tâches, applis et touches.</string>
     <string name="template_home_cadran_desc">Heure, ligne du jour, touches du deck, lecture en cours et son de l\'ordi.</string>
     <string name="template_standby_cadran_desc">L\'heure et la ligne du jour, rien d\'autre : lisible de loin.</string>
     <string name="template_standby_desc">Très grande heure, prochain rendez-vous, Focus et eau : lisible de loin.</string>
+    <string name="template_deck">Deck</string>
+    <string name="template_deck_desc">Applis, son de l\'ordi, touches et lecture en cours : agir sur l\'ordinateur.</string>
+    <string name="template_call">Réunion</string>
+    <string name="template_call_desc">Micro, caméra, partage et son de l\'appel : s\'affiche pendant un appel.</string>
+    <string name="profile_deck">Deck</string>
+    <string name="profile_call">Réunion</string>
+    <string name="rail_more">Plus</string>
+    <string name="rail_add">Écran</string>
+    <string name="rail_add_desc">Ajouter un écran</string>
+    <string name="tour_counter">%1$d sur %2$d</string>
+    <string name="tour_skip">Passer</string>
+    <string name="tour_next">Suivant</string>
+    <string name="tour_done">C\'est parti</string>
+    <string name="tour_home_title">Accueil</string>
+    <string name="tour_home_body">Ta journée d\'un coup d\'œil : le prochain rendez-vous, tes tâches, tes applis et les touches essentielles.</string>
+    <string name="tour_screens_title">Plusieurs écrans</string>
+    <string name="tour_screens_body">Un seul écran pour commencer. Touche + pour en ajouter un (vide ou depuis un modèle), par exemple pour piloter le son et tes fenêtres.</string>
+    <string name="tour_talk_title">Parler</string>
+    <string name="tour_talk_body">Demande à voix haute : « ouvre Outlook », « coupe le micro », « rejoins la réunion ». Appui long pour l\'écrire.</string>
+    <string name="tour_customize_title">À ta façon</string>
+    <string name="tour_customize_body">Pendant un appel, Réunion apparaît tout seul dans la barre. Appui long sur un écran pour le modifier, sur Accueil ou Deck pour gérer tes profils.</string>
+    <string name="next_not_linked">Agenda pas encore relié</string>
+    <string name="agenda_link_now">Relier mon agenda</string>
+    <string name="settings_rail">Barre de gauche</string>
+    <string name="settings_rail_labels">Noms sous les icônes</string>
+    <string name="settings_rail_tools">Outils affichés dans la barre</string>
+    <string name="call_profile_preview">Aperçu : ce profil s\'affiche pendant un appel.</string>
     <string name="widget_size_s">Petit</string>
     <string name="widget_size_m">Moyen</string>
     <string name="widget_size_l">Grand</string>
@@ -939,6 +976,24 @@
     <string name="widget_needs_computer">%1$s : connecte ton ordinateur</string>
     <string name="widget_hero">Heure du jour</string>
     <string name="widget_hero_desc">L\'heure en grand, le prochain rendez-vous, la météo et l\'eau</string>
+    <string name="widget_jira">Jira</string>
+    <string name="widget_jira_desc">Tes tickets en colonnes ; toucher un ticket pour le faire avancer</string>
+    <string name="widget_gitlab">GitLab</string>
+    <string name="widget_gitlab_desc">Tes MR et celles à relire, pipeline et fusion</string>
+    <string name="widget_day">Ma journée</string>
+    <string name="widget_day_desc">Bonjour, la date, la prochaine réunion en grand avec Rejoindre, la météo et l\'eau</string>
+    <string name="day_morning">Bonjour</string>
+    <string name="day_afternoon">Bon après-midi</string>
+    <string name="day_evening">Bonsoir</string>
+    <string name="day_free">Aucune réunion aujourd\'hui</string>
+    <string name="day_free_after">Plus de réunion aujourd\'hui</string>
+    <!-- Après « Aucune réunion aujourd'hui » : la prochaine, « demain à 9 h 30 · Daily ». -->
+    <string name="day_later">%1$s · %2$s</string>
+    <string name="day_focus">Focus %1$d min</string>
+    <string name="day_focus_running">Focus · encore %1$d min</string>
+    <string name="day_focus_paused">Reprendre le Focus · %1$d min</string>
+    <string name="day_focus_break">Pause · %1$d min</string>
+    <string name="day_dnd">Ne pas déranger</string>
     <string name="widget_dayline">Ligne du jour</string>
     <string name="widget_dayline_desc">Les rendez-vous de 8 h à 20 h, le présent en rouge</string>
     <string name="next_prefix">Ensuite</string>
@@ -982,6 +1037,8 @@
     <string name="widget_discord_desc">L\'appel Discord : micro, sourdine, quitter l\'appel</string>
     <string name="widget_meeting">Réunion</string>
     <string name="widget_meeting_desc">La réunion en ligne : rejoindre, micro, caméra, quitter</string>
+    <string name="widget_call">Appel en cours</string>
+    <string name="widget_call_desc">L\'appel du moment, quelle que soit l\'appli : micro, caméra, partage, quitter</string>
     <string name="widget_pad">Pavé tactile</string>
     <string name="widget_pad_desc">Piloter le pointeur de l\'ordi du doigt : bouger, défiler, cliquer</string>
     <string name="pad_unsupported">Le pavé marche avec un Mac ou un PC Windows</string>
@@ -1141,4 +1198,21 @@
     <string name="trial_open">Ouvrir l\'essai</string>
     <string name="trial_back">Revenir à la stable</string>
     <string name="trial_hint">Version d\'essai d\'une MR, installée à côté du Companion. Mises à jour, WiFi et kiosque se règlent dans le Companion. Le backend de l\'ordinateur revient à l\'origine quand tu reviens à la stable.</string>
+    <!-- Accessibilité (lot 1) : états écrits en plus de la couleur, noms pour TalkBack -->
+    <string name="link_state_online">en ligne</string>
+    <string name="link_state_unauthorized">non autorisé</string>
+    <string name="link_state_offline">hors ligne</string>
+    <string name="color_default">Couleur par défaut</string>
+    <string name="color_red">Rouge</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_green">Vert</string>
+    <string name="color_blue">Bleu</string>
+    <string name="color_violet">Violet</string>
+    <string name="color_grey">Gris</string>
+    <string name="wifi_weak">WiFi faible</string>
+    <string name="tablet_battery_state_charging">Batterie de la tablette : %1$d %%, en charge</string>
+    <string name="tablet_battery_state_low">Batterie de la tablette faible : %1$d %%</string>
+    <string name="mixer_strip_muted">%1$s, son coupé</string>
+    <string name="perf_level_warn">en alerte</string>
+    <string name="perf_level_critical">critique</string>
 </resources>

@@ -146,6 +146,45 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "réunion en cours (profil Réunion de la tablette)",
+      run: async () => {
+        // Deck V2 : la veille des réunions (src/meeting-watch.ts) lit les applis en appel comme /deck/live.
+        // L'ordre meeting n'est poussé que par l'ordinateur : refusé s'il vient de l'extérieur.
+        expectStatus(
+          await call("POST", "/tablet/command", { type: "meeting", state: "start", app: "Sanity" }),
+          400,
+          "ordre meeting de l'extérieur",
+        );
+        const live = await call("GET", "/deck/live");
+        // Hors Mac et Windows, le pilotage répond 501 : pas de veille des réunions.
+        if (!controlled()) {
+          expectStatus(live, 501, "/deck/live hors Mac et Windows");
+          return "pas de pilotage ici (501)";
+        }
+        expectStatus(live, 200, "/deck/live");
+        expect(Array.isArray(live.json.apps) && Array.isArray(live.json.open), "/deck/live sans listes apps et open");
+        return live.json.apps.length ? `en appel : ${live.json.apps.join(", ")}` : "aucun appel en cours";
+      },
+    },
+    {
+      name: "Ne pas déranger à la main (pastille de l'Accueil)",
+      run: async () => {
+        expectStatus(await call("PUT", "/system/dnd", { on: "oui" }), 400, "PUT /system/dnd invalide");
+        const read = await call("GET", "/system/dnd");
+        if (!controlled()) {
+          expectStatus(read, 501, "/system/dnd hors Mac et Windows");
+          return "pas de pilotage ici (501)";
+        }
+        expectStatus(read, 200, "GET /system/dnd");
+        if (typeof read.json.on !== "boolean") return "état illisible sur cet ordinateur";
+        // L'état actuel reposé tel quel : la route marche sans rien changer pour l'utilisateur.
+        const put = await call("PUT", "/system/dnd", { on: read.json.on });
+        expectStatus(put, 200, "PUT /system/dnd");
+        expect(put.json.on === read.json.on, "PUT /system/dnd n'a pas rendu l'état demandé");
+        return read.json.on ? "activé" : "désactivé";
+      },
+    },
+    {
       name: "plugins de première utilisation",
       run: async () => {
         const res = await call("GET", "/plugins");

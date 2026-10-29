@@ -18,7 +18,8 @@ scripts/  Sauvegarde (bundle git + données perso)
 [la tablette 4.2](docs/tablette-4.2.md) ·
 [kiosque](docs/kiosque.md) ·
 [agenda par compte Microsoft/Google](docs/agenda-comptes.md) ·
-[GitLab par connexion au compte](docs/gitlab-oauth.md)
+[GitLab par connexion au compte](docs/gitlab-oauth.md) ·
+[ouverture aux développeurs : deck.json, touches perso, API, MCP](docs/ouverture-developpeurs.md)
 
 ## Installation (Mac ou Windows)
 
@@ -35,7 +36,7 @@ Sur chaque ordinateur à piloter (une fois) :
 
 Sur la tablette : au premier lancement, l'écran **Bienvenue** guide en trois étapes (WiFi, adresse de la tablette à ouvrir sur l'ordinateur pour y télécharger le logiciel, `http://<ip>:8080`, ordinateurs trouvés sur le WiFi). Ensuite : **Réglages > Ordinateurs > Ajouter un ordinateur**, toucher l'ordinateur trouvé sur le WiFi, puis saisir sur l'ordinateur (page du compagnon, qui s'ouvre seule) le code à 6 chiffres affiché par la tablette. C'est tout : le jeton arrive une fois le code accepté. Ordinateur introuvable (autre réseau, diffusion bloquée) : « Saisir l'adresse » avec celle de la page.
 
-**Plusieurs ordinateurs** (bureau le jour, maison le soir) : appairer chacun une fois. La tablette pilote l'ordinateur en gras ; quand il ne répond plus, elle cherche les autres ordinateurs enregistrés et bascule sur celui qui répond (bandeau « Connecté à … »), et retrouve un ordinateur dont l'adresse IP a changé. Changer à la main : toucher le nom de l'ordinateur en bas de la barre latérale, ou Réglages. ✎ pour renommer (« Mac du bureau », « PC maison »). Chaque ordinateur garde ses propres données : agenda, tâches, deck, touches perso, applis et écrans (lus en direct). Le deck de départ ne montre que les applis installées sur cet ordinateur.
+**Plusieurs ordinateurs** (bureau le jour, maison le soir) : appairer chacun une fois. La tablette pilote l'ordinateur en gras ; quand il ne répond plus, elle cherche les autres ordinateurs enregistrés et bascule sur celui qui répond (bandeau « Connecté à … »), et retrouve un ordinateur dont l'adresse IP a changé. Changer à la main : toucher le nom de l'ordinateur en bas de la barre de gauche, ou Réglages. ✎ pour renommer (« Mac du bureau », « PC maison »). Chaque ordinateur garde ses propres données : agenda, tâches, deck, touches perso, applis et écrans (lus en direct). Le deck de départ ne montre que les applis installées sur cet ordinateur.
 
 **Agenda** : sur la page http://127.0.0.1:3000/ de l'ordinateur, « Se connecter avec Microsoft / Google » (appli à enregistrer une fois par Unowhy : `docs/agenda-comptes.md`), ou coller le lien ICS de l'agenda (Outlook, Google Agenda, iCloud : marche à suivre sur la page). Sans agenda, les cartes Agenda et Prochain rendez-vous sont masquées sur la tablette.
 

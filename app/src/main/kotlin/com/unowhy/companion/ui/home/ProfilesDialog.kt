@@ -5,6 +5,7 @@ import android.text.InputFilter
 import android.text.InputType
 import android.text.TextUtils
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -71,6 +72,7 @@ class ProfilesDialog(
         gravity = Gravity.CENTER_VERTICAL
         addView(ImageView(context).apply {
             setImageResource(R.drawable.ic_gamepad)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             setColorFilter(themeColor(context, R.attr.c_text_dim))
         }, LinearLayout.LayoutParams(context.dp(18), context.dp(18)))
         addView(TextView(context).apply {
@@ -116,9 +118,10 @@ class ProfilesDialog(
             layout.setGameProfile(if (game) -1 else i)
             changed(structure = false)
         })
-        if (i > 0) addView(iconButton(R.drawable.ic_arrow_up, R.string.profile_move_up, R.attr.c_text_dim) { moveUp(i) })
+        // Réunion ne se déplace pas : il n'est ni dans la barre ni dans le balayage hors appel.
+        if (i > 0 && i != layout.callProfile) addView(iconButton(R.drawable.ic_arrow_up, R.string.profile_move_up, R.attr.c_text_dim) { moveUp(i) })
         addView(iconButton(R.drawable.ic_edit, R.string.profile_rename, R.attr.c_text_dim) { rename(i) })
-        if (layout.pages > 1) addView(iconButton(R.drawable.ic_delete, R.string.profile_delete, R.attr.c_text_dim) { confirmDelete(i) })
+        if (layout.canRemove(i)) addView(iconButton(R.drawable.ic_delete, R.string.profile_delete, R.attr.c_text_dim) { confirmDelete(i) })
     }
 
     private fun iconButton(@DrawableRes icon: Int, @StringRes description: Int, @AttrRes tint: Int, onClick: () -> Unit) = ImageButton(context).apply {
@@ -207,7 +210,7 @@ class ProfilesDialog(
             .setView(ScrollView(context).apply { addView(choices) })
             .setNegativeButton(R.string.cancel, null)
             .create()
-        Template.entries.filter { it.cadran }.forEachIndexed { n, template ->
+        Template.entries.filter { it.cadran && it.listed }.forEachIndexed { n, template ->
             val card = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 setBackgroundResource(R.drawable.row_bg)

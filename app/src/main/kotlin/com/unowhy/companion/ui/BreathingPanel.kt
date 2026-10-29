@@ -89,7 +89,7 @@ class BreathingPanel(private val root: View, private val onBack: () -> Unit) {
             setOnClickListener { onClick() }
             row.addView(
                 this,
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, context.dp(44)).apply {
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, context.dp(48)).apply {
                     marginStart = context.dp(4)
                     marginEnd = context.dp(4)
                 },

@@ -26,7 +26,7 @@ class LicencesTest {
         assertTrue("Apache 2.0", "TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION" in licences)
         assertTrue("OFL 1.1", "SIL OPEN FONT LICENSE Version 1.1" in licences)
         val fonts = File("src/main/res/font").list()!!.map { it.substringBefore('_') }.toSet()
-        val cited = mapOf("outfit" to "Outfit", "nunito" to "Nunito", "abril" to "Abril Fatface")
+        val cited = mapOf("outfit" to "Outfit", "nunito" to "Nunito", "abril" to "Abril Fatface", "atkinson" to "Atkinson Hyperlegible")
         for (font in fonts) assertTrue("police $font", cited[font]?.let { "- $it :" in licences } == true)
     }
 }
