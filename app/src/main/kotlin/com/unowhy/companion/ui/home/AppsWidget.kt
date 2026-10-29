@@ -17,10 +17,13 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         context, host, R.string.widget_apps, R.drawable.ic_tabs, R.string.apps_add_tile,
         tilesOf = { pages -> pages.firstOrNull { it.apps }?.tiles.orEmpty() },
         onAdd = ::addApps,
-    ).apply {
-        grid.onTap = { cell, _ -> tileOf(cell)?.let(::run) }
-        grid.onHold = { cell, _ -> tileOf(cell)?.let { host.overlays.windows(it, removable = true) { reload() } } }
-        addTo(view)
+    )
+
+    // Hors d'un `apply` sur la section : `::run` y désignerait `TileSection.run`, pas celui du widget.
+    init {
+        section.grid.onTap = { cell, _ -> section.tileOf(cell)?.let(::run) }
+        section.grid.onHold = { cell, _ -> section.tileOf(cell)?.let { host.overlays.windows(it, removable = true) { section.reload() } } }
+        section.addTo(view)
     }
 
     override suspend fun load() = section.load()
