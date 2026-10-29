@@ -11,21 +11,28 @@ class RailModelTest {
 
     private val tools = listOf(RailEntry.Tool(Mode.FOCUS), RailEntry.Tool(Mode.COMPUTER), RailEntry.Tool(Mode.CAMERA))
 
-    /** Accueil, Deck, Réunion (rôles posés), puis `extra` profils de plus. */
+    /** Accueil, un écran ajouté (Deck), Réunion (rôle), puis `extra` profils de plus. */
     private fun layout(extra: Int = 0) = HomeLayout(mutableListOf(), 1).apply {
-        ensureRoles("Deck", "Réunion")
+        addProfile("Deck")
+        ensureRoles("Réunion")
         repeat(extra) { addProfile("P$it") }
     }
 
     @Test
-    fun `trois profils hors appel`() {
-        assertEquals(listOf(RailEntry.Profile(0, false), RailEntry.Profile(1, false)) + tools, RailModel.entries(layout(), inCall = false))
+    fun `trois profils hors appel, puis + pour ajouter un ecran`() {
+        assertEquals(listOf(RailEntry.Profile(0, false), RailEntry.Profile(1, false), RailEntry.Add) + tools, RailModel.entries(layout(), inCall = false))
+    }
+
+    @Test
+    fun `de base un seul ecran, l'Accueil, puis +`() {
+        val single = HomeLayout(mutableListOf(), 1).apply { ensureRoles("Réunion") }
+        assertEquals(listOf(RailEntry.Profile(0, false), RailEntry.Add) + tools, RailModel.entries(single, inCall = false))
     }
 
     @Test
     fun `en appel Reunion suit les profils, marquee isCall`() {
         assertEquals(
-            listOf(RailEntry.Profile(0, false), RailEntry.Profile(1, false), RailEntry.Profile(2, true)) + tools,
+            listOf(RailEntry.Profile(0, false), RailEntry.Profile(1, false), RailEntry.Profile(2, true), RailEntry.Add) + tools,
             RailModel.entries(layout(), inCall = true),
         )
     }
@@ -58,7 +65,7 @@ class RailModelTest {
     @Test
     fun `seuls les outils choisis dans Reglages sont dans la barre`() {
         val entries = RailModel.entries(layout(), inCall = false, tools = listOf(Mode.FOCUS))
-        assertEquals(listOf(RailEntry.Profile(0, false), RailEntry.Profile(1, false), RailEntry.Tool(Mode.FOCUS)), entries)
+        assertEquals(listOf(RailEntry.Profile(0, false), RailEntry.Profile(1, false), RailEntry.Add, RailEntry.Tool(Mode.FOCUS)), entries)
     }
 
     @Test
@@ -85,11 +92,11 @@ class RailModelTest {
     }
 
     @Test
-    fun `l'instantane change quand le Deck est supprime ou qu'un appel commence`() {
+    fun `l'instantane change quand un ecran est supprime ou qu'un appel commence`() {
         val l = layout()
         val before = RailModel.snapshot(l, inCall = false, tools = Prefs.RAIL_TOOLS, labels = true)
         assertNotEquals(before, RailModel.snapshot(l, inCall = true, tools = Prefs.RAIL_TOOLS, labels = true))
-        l.removeProfile(l.deckProfile)
+        l.removeProfile(1)
         assertNotEquals(before, RailModel.snapshot(l, inCall = false, tools = Prefs.RAIL_TOOLS, labels = true))
     }
 }

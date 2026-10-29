@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Lecture en cours dans le header (MusicChip) : pochette, titre et artiste (qui défilent s'ils sont trop longs), puis
-     Précédent, Lecture / Pause, Suivant, comme le widget Média (boutons ronds, Lecture plein), en plus petit. -->
+     Précédent, Lecture / Pause, Suivant, comme le widget Média (boutons ronds, Lecture plein), en plus petit, sur 32 dp de haut. -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     tools:parentTag="android.widget.LinearLayout">
 
     <ImageView
         android:id="@+id/chip_thumb"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
         android:background="@drawable/cover_bg"
         android:importantForAccessibility="no"
         android:scaleType="centerCrop" />
@@ -17,39 +17,39 @@
         android:id="@+id/chip_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
+        android:layout_marginStart="8dp"
         android:fontFamily="?attr/c_font_regular"
         android:maxWidth="280dp"
         android:textColor="?attr/c_text"
-        android:textSize="13sp" />
+        android:textSize="12sp" />
 
     <ImageButton
         android:id="@+id/chip_previous"
         style="@style/IconButton"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
-        android:layout_marginStart="12dp"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginStart="10dp"
         android:contentDescription="@string/media_previous"
-        android:padding="6dp"
+        android:padding="5dp"
         android:src="@drawable/ic_skip_previous" />
 
     <ImageButton
         android:id="@+id/chip_play"
         style="@style/IconButton.Primary"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
         android:layout_marginStart="6dp"
         android:contentDescription="@string/media_play_pause"
-        android:padding="7dp"
+        android:padding="6dp"
         android:src="@drawable/ic_play" />
 
     <ImageButton
         android:id="@+id/chip_next"
         style="@style/IconButton"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
         android:layout_marginStart="6dp"
         android:contentDescription="@string/media_next"
-        android:padding="6dp"
+        android:padding="5dp"
         android:src="@drawable/ic_skip" />
 </merge>

@@ -194,11 +194,11 @@
             <com.unowhy.companion.ui.MusicChip
                 android:id="@+id/music_chip"
                 android:layout_width="wrap_content"
-                android:layout_height="44dp"
+                android:layout_height="32dp"
                 android:layout_marginEnd="16dp"
                 android:background="@drawable/music_chip_bg"
-                android:paddingStart="7dp"
-                android:paddingEnd="7dp" />
+                android:paddingStart="5dp"
+                android:paddingEnd="5dp" />
 
             <com.unowhy.companion.ui.TabletStatusView
                 android:id="@+id/tablet_status"

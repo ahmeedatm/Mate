@@ -127,20 +127,27 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
     }
 
     /**
-     * Pose une fois les rôles : Deck juste après l'Accueil (les profils suivants reculent d'une page), Réunion en dernier,
-     * chacun depuis son modèle. Vrai si la disposition a changé. Ne recrée jamais un rôle supprimé ensuite.
+     * Pose une fois les rôles : Réunion en dernier, depuis son modèle (affiché seulement pendant un appel). De base, un
+     * seul écran : l'Accueil ; d'autres seulement si l'utilisateur en ajoute. Vrai si la disposition a changé.
      */
-    fun ensureRoles(deckName: String, callName: String): Boolean {
+    fun ensureRoles(callName: String): Boolean {
         if (rolesSet) return false
         rolesSet = true
-        val deck = homeProfile + 1
-        widgets.filter { it.page >= deck }.forEach { it.page++ }
-        names.add(deck, deckName)
-        fun shifted(p: Int) = if (p >= deck) p + 1 else p
-        if (gameProfile >= 0) gameProfile = shifted(gameProfile)
-        widgets += Template.DECK_CADRAN.widgets(deck)
-        deckProfile = deck
         callProfile = addProfile(callName, Template.CALL_CADRAN.widgets(0))
+        return true
+    }
+
+    /**
+     * Le premier Deck V2 posait un profil Deck d'office : retiré s'il est resté tel que posé (mêmes widgets aux mêmes
+     * places, réglages compris les touches remplies), sinon gardé comme un écran ordinaire. Une seule fois : ensuite
+     * plus de rôle Deck. Vrai si la disposition a changé.
+     */
+    fun dropDefaultDeck(): Boolean {
+        val deck = deckProfile.takeIf { it >= 0 } ?: return false
+        fun shape(list: List<Placed>) = list.map { listOf(it.type, it.size, it.col, it.row) }.sortedBy { it.toString() }
+        val untouched = shape(on(deck)) == shape(Template.DECK_CADRAN.widgets(deck))
+        if (untouched && removeProfile(deck)) return true
+        deckProfile = -1
         return true
     }
 

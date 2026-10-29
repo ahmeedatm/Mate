@@ -165,85 +165,110 @@ class ProfilesTest {
         assertFalse(layout.nameMissing("Bureau", "Profil %d"))
     }
 
-    // Rôles des profils (Deck V2) : Accueil, Deck, Réunion.
+    // Rôles des profils : Accueil et Réunion. Un seul écran de base ; d'autres seulement si on en ajoute.
 
     @Test
-    fun `ensureRoles sur une disposition d'un seul profil ajoute Deck en 2e et Reunion en dernier`() {
+    fun `ensureRoles sur un seul profil n'ajoute que Reunion, en dernier`() {
         val layout = layoutOf(1, Placed(WidgetType.NOTE, WidgetSize.S, 0, 0, 0))
-        assertTrue(layout.ensureRoles("Deck", "Réunion"))
-        assertEquals(listOf<String?>(null, "Deck", "Réunion"), layout.names)
+        assertTrue(layout.ensureRoles("Réunion"))
+        assertEquals(listOf<String?>(null, "Réunion"), layout.names)
         assertEquals(0, layout.homeProfile)
-        assertEquals(1, layout.deckProfile)
-        assertEquals(2, layout.callProfile)
-        assertTrue(layout.on(1).any { it.type == WidgetType.APPS })
-        assertFalse(layout.ensureRoles("Deck", "Réunion"))
-        assertEquals(3, layout.pages)
+        assertEquals(-1, layout.deckProfile)
+        assertEquals(1, layout.callProfile)
+        assertFalse(layout.ensureRoles("Réunion"))
+        assertEquals(2, layout.pages)
     }
 
     @Test
-    fun `ensureRoles decale le profil de jeu place apres l'Accueil`() {
+    fun `ensureRoles laisse les autres profils a leur place`() {
         val layout = layoutOf(2, Placed(WidgetType.NOTE, WidgetSize.S, 1, 0, 0))
         layout.gameProfile = 1
-        layout.ensureRoles("Deck", "Réunion")
-        assertEquals(2, layout.gameProfile)
-        assertEquals(2, layout.widgets.single { it.type == WidgetType.NOTE }.page)
-        assertEquals(1, layout.deckProfile)
-        assertEquals(3, layout.callProfile)
+        layout.ensureRoles("Réunion")
+        assertEquals(1, layout.gameProfile)
+        assertEquals(1, layout.widgets.single { it.type == WidgetType.NOTE }.page)
+        assertEquals(2, layout.callProfile)
+    }
+
+    /** Disposition du premier Deck V2 : Accueil, Deck (rôle), Réunion. */
+    private fun withDeck(vararg extra: Placed) = HomeLayout(mutableListOf(), mutableListOf(null, "Deck", "Réunion")).apply {
+        widgets += Template.DECK_CADRAN.widgets(1)
+        widgets += Template.CALL_CADRAN.widgets(2)
+        widgets += extra
+        deckProfile = 1
+        callProfile = 2
+        rolesSet = true
     }
 
     @Test
-    fun `ensureRoles ne recree pas un Deck supprime`() {
-        val layout = layoutOf(1)
-        layout.ensureRoles("Deck", "Réunion")
-        assertTrue(layout.removeProfile(layout.deckProfile))
-        assertFalse(layout.ensureRoles("Deck", "Réunion"))
+    fun `un Deck jamais modifie est retire, une seule fois`() {
+        val layout = withDeck()
+        assertTrue(layout.dropDefaultDeck())
+        assertEquals(listOf<String?>(null, "Réunion"), layout.names)
         assertEquals(-1, layout.deckProfile)
+        assertEquals(1, layout.callProfile)
+        assertTrue(layout.on(1).any { it.type == WidgetType.CALL })
+        assertFalse(layout.dropDefaultDeck())
+    }
+
+    @Test
+    fun `un Deck aux touches deja remplies compte comme jamais modifie, donc retire`() {
+        val layout = withDeck()
+        layout.on(1).single { it.type == WidgetType.KEYS }.config.put("byComputer", org.json.JSONObject())
+        assertTrue(layout.dropDefaultDeck())
         assertEquals(2, layout.pages)
+    }
+
+    @Test
+    fun `un Deck personnalise reste, comme un ecran ordinaire`() {
+        val layout = withDeck(Placed(WidgetType.NOTE, WidgetSize.S, 1, 0, 0))
+        layout.widgets.removeAll { it.page == 1 && it.type == WidgetType.OPEN }
+        assertTrue(layout.dropDefaultDeck())
+        assertEquals(listOf<String?>(null, "Deck", "Réunion"), layout.names)
+        assertEquals(-1, layout.deckProfile)
+        assertTrue(layout.canRemove(1))
+        assertFalse(layout.dropDefaultDeck())
     }
 
     @Test
     fun `roles survivent a l'enregistrement`() {
         val context = FakeContext()
         val layout = layoutOf(1)
-        layout.ensureRoles("Deck", "Réunion")
+        layout.ensureRoles("Réunion")
         HomeLayout.save(context, layout, cadran = true)
         val back = HomeLayout.load(context, cadran = true)
         assertEquals(0, back.homeProfile)
-        assertEquals(1, back.deckProfile)
-        assertEquals(2, back.callProfile)
-        assertFalse(back.ensureRoles("Deck", "Réunion"))
+        assertEquals(-1, back.deckProfile)
+        assertEquals(1, back.callProfile)
+        assertFalse(back.ensureRoles("Réunion"))
     }
 
     @Test
-    fun `Accueil et Reunion ne se suppriment pas`() {
+    fun `Accueil et Reunion ne se suppriment pas, un ecran ajoute si`() {
         val layout = layoutOf(1)
-        layout.ensureRoles("Deck", "Réunion")
+        layout.ensureRoles("Réunion")
+        val maison = layout.addProfile("Maison")
         assertFalse(layout.canRemove(layout.homeProfile))
         assertFalse(layout.canRemove(layout.callProfile))
-        assertTrue(layout.canRemove(layout.deckProfile))
+        assertTrue(layout.canRemove(maison))
         assertFalse(layout.removeProfile(layout.callProfile))
         assertFalse(layout.removeProfile(layout.homeProfile))
         assertEquals(3, layout.pages)
     }
 
     @Test
-    fun `supprimer le Deck renvoie deckTarget vers l'Accueil`() {
+    fun `sans Deck, deckTarget est l'Accueil`() {
         val layout = layoutOf(1)
-        layout.ensureRoles("Deck", "Réunion")
-        assertEquals(1, layout.deckTarget())
-        layout.removeProfile(layout.deckProfile)
-        assertEquals(-1, layout.deckProfile)
+        layout.ensureRoles("Réunion")
         assertEquals(layout.homeProfile, layout.deckTarget())
-        assertEquals(1, layout.callProfile)
     }
 
     @Test
     fun `profilesInOrder cache Reunion hors appel`() {
         val layout = layoutOf(1)
-        layout.ensureRoles("Deck", "Réunion")
+        layout.ensureRoles("Réunion")
         layout.addProfile("Maison")
-        assertEquals(listOf(0, 1, 3), layout.profilesInOrder(inCall = false))
-        assertEquals(listOf(0, 1, 3, 2), layout.profilesInOrder(inCall = true))
+        assertEquals(listOf(0, 2), layout.profilesInOrder(inCall = false))
+        assertEquals(listOf(0, 2, 1), layout.profilesInOrder(inCall = true))
     }
 
     @Test
@@ -257,10 +282,10 @@ class ProfilesTest {
     @Test
     fun `deplacer un profil suit les roles`() {
         val layout = layoutOf(1)
-        layout.ensureRoles("Deck", "Réunion")
-        layout.moveProfile(1, 0)
+        layout.ensureRoles("Réunion")
+        layout.addProfile("Maison")
+        layout.moveProfile(2, 0)
         assertEquals(1, layout.homeProfile)
-        assertEquals(0, layout.deckProfile)
         assertEquals(2, layout.callProfile)
     }
 }

@@ -9,16 +9,18 @@ import com.unowhy.companion.ui.themeBool
 
 /**
  * Les applis de la page Apps du Deck, sur un profil : toucher lance l'appli (ou propose ses fenêtres si elle en a
- * plusieurs), appui long = ses fenêtres et « Retirer », « + » du titre = ajouter une appli du catalogue de l'ordinateur. Seule
+ * plusieurs), appui long = ses fenêtres et « Retirer », bouton du titre = toutes les applis de l'ordinateur (lancer, épingler ici). Seule
  * la grille garde l'appui long : sur le titre ou la marge, il entre en mode Modifier.
  */
 class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     override val view = LinearLayout(context).asCard(12).apply { orientation = LinearLayout.VERTICAL }
 
     private val section = TileSection(
-        context, host, R.string.widget_apps, R.drawable.ic_tabs, R.string.apps_add_tile,
+        context, host, R.string.widget_apps, R.drawable.ic_tabs, R.string.apps_all,
         tilesOf = { pages -> pages.firstOrNull { it.apps }?.tiles },
         onAdd = ::addApps,
+        // Toutes les applis de l'ordinateur : les lancer, ou les épingler sur la carte.
+        addIcon = R.drawable.ic_apps,
     )
 
     // Hors d'un `apply` sur la section : `::run` y désignerait `TileSection.run`, pas celui du widget.

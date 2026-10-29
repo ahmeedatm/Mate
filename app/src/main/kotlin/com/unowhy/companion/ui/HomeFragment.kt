@@ -126,8 +126,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             grid.clipChildren = false
         }
         layout = HomeLayout.load(requireContext(), cadran)
-        // Rôles posés une fois (Deck V2) : Deck après l'Accueil, Réunion pour les appels. `or` : les deux s'appliquent.
-        if (nameProfiles() or (cadran && layout.ensureRoles(getString(R.string.profile_deck), getString(R.string.profile_call)))) {
+        // `or` : tout s'applique. Réunion posé une fois ; le Deck d'office du premier Deck V2 retiré s'il n'a pas été touché.
+        if (nameProfiles() or (cadran && (layout.ensureRoles(getString(R.string.profile_call)) or layout.dropDefaultDeck()))) {
             HomeLayout.save(requireContext(), layout, cadran)
         }
         if (!pageChosen) {

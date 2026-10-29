@@ -12,7 +12,7 @@ class TourModelTest {
     @Test
     fun `visite en quatre etapes, dans l'ordre de la barre`() {
         assertEquals(
-            listOf(TourModel.Step.HOME, TourModel.Step.DECK, TourModel.Step.TALK, TourModel.Step.CUSTOMIZE),
+            listOf(TourModel.Step.HOME, TourModel.Step.SCREENS, TourModel.Step.TALK, TourModel.Step.CUSTOMIZE),
             TourModel.STEPS,
         )
     }

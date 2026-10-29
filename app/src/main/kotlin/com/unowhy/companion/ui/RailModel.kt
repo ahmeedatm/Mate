@@ -4,18 +4,24 @@ import com.unowhy.companion.Mode
 import com.unowhy.companion.Prefs
 import com.unowhy.companion.ui.home.HomeLayout
 
-/** Une entrée de la barre : un profil (page de l'Accueil), « Plus » (la liste des profils) ou un outil (Focus, Ordi, Caméra). */
+/**
+ * Une entrée de la barre : un profil (page de l'Accueil), « Plus » (la liste des profils), « + » (ajouter un écran) ou
+ * un outil (Focus, Ordi, Caméra).
+ */
 sealed interface RailEntry {
     data class Profile(val page: Int, val isCall: Boolean) : RailEntry
 
     data object More : RailEntry
+
+    data object Add : RailEntry
 
     data class Tool(val mode: Mode) : RailEntry
 }
 
 /**
  * Ce que la barre fixe affiche, sans vue : les profils dans leur ordre (Réunion seulement pendant un appel, en dernier),
- * au plus [MAX_PROFILES] places (« Plus » remplace les derniers, jamais Réunion), puis les outils. Parler, les
+ * au plus [MAX_PROFILES] places (« Plus » remplace les derniers, jamais Réunion), « + » tant qu'il reste une place
+ * (ajouter un écran : de base il n'y a que l'Accueil), puis les outils. Parler, les
  * notifications, l'ordinateur et Réglages ont leur place fixe dans la vue.
  */
 object RailModel {
@@ -41,7 +47,8 @@ object RailModel {
         val others = layout.profilesInOrder(inCall).filter { it != call }
         val room = MAX_PROFILES - (if (call != null) 1 else 0)
         val shown = if (others.size > room) others.take(room - 1).map { RailEntry.Profile(it, false) } + RailEntry.More else others.map { RailEntry.Profile(it, false) }
-        return shown + listOfNotNull(call?.let { RailEntry.Profile(it, true) }) + tools.map { RailEntry.Tool(it) }
+        val add = RailEntry.Add.takeIf { others.size < room }
+        return shown + listOfNotNull(call?.let { RailEntry.Profile(it, true) }, add) + tools.map { RailEntry.Tool(it) }
     }
 
     /**

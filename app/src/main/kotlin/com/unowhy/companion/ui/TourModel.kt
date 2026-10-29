@@ -8,7 +8,7 @@ import com.unowhy.companion.Prefs
  * plus jamais (passée ou finie). Montrée par [TourOverlay].
  */
 object TourModel {
-    enum class Step { HOME, DECK, TALK, CUSTOMIZE }
+    enum class Step { HOME, SCREENS, TALK, CUSTOMIZE }
 
     val STEPS = Step.entries.toList()
 

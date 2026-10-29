@@ -58,7 +58,7 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         LayoutInflater.from(context).inflate(R.layout.view_music_chip, this, true)
         thumb = findViewById(R.id.chip_thumb)
         thumb.outlineProvider = object : ViewOutlineProvider() {
-            override fun getOutline(view: View, outline: Outline) = outline.setRoundRect(0, 0, view.width, view.height, view.dp(8).toFloat())
+            override fun getOutline(view: View, outline: Outline) = outline.setRoundRect(0, 0, view.width, view.height, view.dp(6).toFloat())
         }
         thumb.clipToOutline = true
         title = findViewById(R.id.chip_title)

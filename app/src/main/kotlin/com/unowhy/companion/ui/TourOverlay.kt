@@ -149,7 +149,7 @@ class TourOverlay(context: Context, private val anchor: (TourModel.Step) -> View
 
         val TEXTS = mapOf(
             TourModel.Step.HOME to (R.string.tour_home_title to R.string.tour_home_body),
-            TourModel.Step.DECK to (R.string.tour_deck_title to R.string.tour_deck_body),
+            TourModel.Step.SCREENS to (R.string.tour_screens_title to R.string.tour_screens_body),
             TourModel.Step.TALK to (R.string.tour_talk_title to R.string.tour_talk_body),
             TourModel.Step.CUSTOMIZE to (R.string.tour_customize_title to R.string.tour_customize_body),
         )

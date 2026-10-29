@@ -104,7 +104,7 @@ class ProfileRail(
 
     override fun tourAnchor(step: TourModel.Step): View? = when (step) {
         TourModel.Step.HOME -> views.getOrNull(entries.indexOfFirst { it is RailEntry.Profile && it.page == layout.homeProfile })
-        TourModel.Step.DECK -> views.getOrNull(entries.indexOfFirst { it is RailEntry.Profile && it.page == layout.deckProfile })
+        TourModel.Step.SCREENS -> views.getOrNull(entries.indexOf(RailEntry.Add))
         TourModel.Step.TALK -> talk
         TourModel.Step.CUSTOMIZE -> null
     }
@@ -143,7 +143,7 @@ class ProfileRail(
 
     private fun open(entry: RailEntry) = when (entry) {
         is RailEntry.Profile -> onProfile(entry.page)
-        RailEntry.More -> onProfiles()
+        RailEntry.More, RailEntry.Add -> onProfiles()
         is RailEntry.Tool -> onMode(entry.mode)
     }
 
@@ -174,6 +174,10 @@ class ProfileRail(
                 icon.setImageResource(R.drawable.ic_more)
                 label.setText(R.string.rail_more)
             }
+            RailEntry.Add -> {
+                icon.setImageResource(R.drawable.ic_add)
+                label.setText(R.string.rail_add)
+            }
             is RailEntry.Tool -> {
                 icon.setImageResource(entry.mode.icon)
                 val remaining = focus.takeIf { entry.mode == Mode.FOCUS }
@@ -181,7 +185,7 @@ class ProfileRail(
                 now = remaining != null
             }
         }
-        view.contentDescription = label.text
+        view.contentDescription = if (entry == RailEntry.Add) activity.getString(R.string.rail_add_desc) else label.text
         if (now) {
             val red = themeColor(activity, R.attr.c_accent)
             icon.imageTintList = android.content.res.ColorStateList.valueOf(red)
