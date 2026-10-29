@@ -339,6 +339,11 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    /** Réglages changés depuis la page de l'ordinateur : curseurs et interrupteurs à jour. */
+    fun onRemoteSettings() {
+        if (view != null) renderTablet()
+    }
+
     /** Batterie changée (MainActivity, barre latérale) : détail à jour si les Réglages sont affichés. */
     fun onBattery(state: Tablet.Battery) {
         if (view == null) return

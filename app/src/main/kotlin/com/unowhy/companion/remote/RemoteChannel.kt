@@ -2,13 +2,17 @@ package com.unowhy.companion.remote
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.media.AudioManager
+import android.os.Build
 import android.os.SystemClock
+import android.provider.Settings
 import android.util.Base64
 import com.unowhy.companion.BuildConfig
 import com.unowhy.companion.Computer
 import com.unowhy.companion.Computers
 import com.unowhy.companion.MainActivity
 import com.unowhy.companion.audio.Speaker
+import com.unowhy.companion.device.Screen
 import com.unowhy.companion.focus.FocusTimer
 import com.unowhy.companion.focus.NoisePlayer
 import com.unowhy.companion.net.BackendClient
@@ -135,6 +139,17 @@ class RemoteChannel(private val activity: MainActivity) {
             null
         }
         "screenshot" -> screenshot()
+        "settings" -> {
+            if (command.has("volume")) {
+                val audio = activity.getSystemService(AudioManager::class.java)
+                val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                audio.setStreamVolume(AudioManager.STREAM_MUSIC, Math.round(command.getDouble("volume") * max).toInt(), 0)
+            }
+            val themeChanged = TabletSettings.save(activity, command)
+            Screen.apply(activity)
+            activity.onRemoteSettings(themeChanged)
+            null
+        }
         "call" -> {
             activity.onCall(command.getString("state"), command.getString("app"), command.optString("caller").takeIf { command.has("caller") && !command.isNull("caller") }, command.optBoolean("video"))
             null
@@ -165,9 +180,12 @@ class RemoteChannel(private val activity: MainActivity) {
         return JSONObject().put("jpeg", jpeg).put("width", root.width).put("height", root.height)
     }
 
-    /** Ce que Claude voit avec l'outil tablette_etat. */
+    /** Ce que Claude voit avec l'outil tablette_etat, et la carte Tablette de la page de l'ordinateur. */
     private fun state(): JSONObject {
         val metrics = activity.resources.displayMetrics
+        val audio = activity.getSystemService(AudioManager::class.java)
+        val volume = audio.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+        val systemBrightness = Settings.System.getInt(activity.contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128) / 255f
         return JSONObject()
             .put("mode", activity.modeName)
             .put("document", activity.documentPath ?: JSONObject.NULL)
@@ -177,6 +195,9 @@ class RemoteChannel(private val activity: MainActivity) {
             .put("voice", Speaker.ready)
             .put("screen", "${metrics.widthPixels}x${metrics.heightPixels}")
             .put("app", BuildConfig.VERSION_NAME)
+            .put("model", Build.MODEL)
+            .put("battery", activity.battery?.let { JSONObject().put("level", it.level).put("charging", it.charging) } ?: JSONObject.NULL)
+            .put("settings", TabletSettings.read(activity, systemBrightness, volume))
     }
 
     private companion object {

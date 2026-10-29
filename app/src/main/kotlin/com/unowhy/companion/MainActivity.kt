@@ -271,7 +271,12 @@ class MainActivity : AppCompatActivity() {
         Screen.apply(this)
     }
 
+    /** Dernier état de la batterie (envoyé à l'ordinateur avec l'état de la tablette). */
+    var battery: Tablet.Battery? = null
+        private set
+
     private fun onBattery(state: Tablet.Battery) {
+        battery = state
         alerts.onBattery(state)
         settings()?.onBattery(state)
     }
@@ -343,6 +348,20 @@ class MainActivity : AppCompatActivity() {
 
     val documentPath: String?
         get() = documentPanel.currentPath
+
+    /**
+     * Réglages changés depuis la page de l'ordinateur (ordre `settings`). Nouveau thème : écran recréé un peu après,
+     * le temps de renvoyer le résultat ; s'il se perd, l'ordre revient et ne recrée plus rien (thème déjà en place).
+     */
+    fun onRemoteSettings(themeChanged: Boolean) {
+        if (themeChanged) {
+            window.decorView.postDelayed({ if (!isFinishing) recreate() }, 500)
+            return
+        }
+        settings()?.onRemoteSettings()
+        (supportFragmentManager.findFragmentByTag(Mode.FOCUS.tag) as? FocusFragment)?.onRemoteSettings()
+        followFocusDnd(FocusTimer.state)
+    }
 
     fun showMode(name: String) {
         // Nom inconnu (« tasks », ancien « chat ») : l'Accueil.
