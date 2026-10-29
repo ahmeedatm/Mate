@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cadre photo (Depuis l'ordi) : deux tuiles Cadran côte à côte. « Photos » montre celles copiées sur la tablette
+     (vignettes), ouvre le dossier sur l'ordinateur et lance le cadre ; « Quand » règle le délai et la durée d'une photo.
+     Géré par FrameSettingsView. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:baselineAligned="false"
+    android:orientation="horizontal">
+
+    <LinearLayout
+        style="@style/Card"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="16dp"
+        android:layout_weight="3"
+        android:orientation="vertical">
+
+        <com.unowhy.companion.ui.TitleView
+            style="@style/CardTitle"
+            android:drawableStart="@drawable/ic_image"
+            android:text="@string/frame_photos" />
+
+        <TextView
+            android:id="@+id/frame_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="?attr/c_text_dim"
+            android:textSize="16sp" />
+
+        <!-- Vignettes ajoutées par FrameSettingsView (deux rangées de quatre au plus). -->
+        <LinearLayout
+            android:id="@+id/frame_thumbs"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/frame_folder"
+                style="@style/ActionButton"
+                android:text="@string/frame_open_folder" />
+
+            <Button
+                android:id="@+id/frame_try"
+                style="@style/PrimaryButton"
+                android:layout_marginStart="12dp"
+                android:text="@string/frame_try" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        style="@style/Card"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="2"
+        android:orientation="vertical">
+
+        <com.unowhy.companion.ui.TitleView
+            style="@style/CardTitle"
+            android:text="@string/frame_when" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="@string/frame_after"
+            android:textSize="16sp" />
+
+        <LinearLayout
+            android:id="@+id/frame_delays"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="@string/frame_every"
+            android:textSize="16sp" />
+
+        <LinearLayout
+            android:id="@+id/frame_intervals"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="@string/frame_hint"
+            android:textColor="?attr/c_text_dim"
+            android:textSize="14sp" />
+    </LinearLayout>
+</LinearLayout>

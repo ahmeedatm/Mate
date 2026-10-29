@@ -13,6 +13,8 @@ object Prefs {
     private const val KEY_FOCUS_DND = "focus_dnd"
     private const val KEY_AGENTS_PRIVATE = "agents_private"
     private const val KEY_NOTIFICATIONS_DISCREET = "notifications_discreet"
+    private const val KEY_FRAME_DELAY = "frame_delay_min"
+    private const val KEY_FRAME_INTERVAL = "frame_interval_s"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -43,6 +45,20 @@ object Prefs {
 
     fun setFocusDnd(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_FOCUS_DND, value).apply()
+    }
+
+    /** Cadre photo : minutes sans toucher avant qu'il se lance (0 = jamais). 5 par défaut ; sans photo, il ne se lance pas. */
+    fun frameDelayMin(context: Context): Int = prefs(context).getInt(KEY_FRAME_DELAY, 5)
+
+    fun setFrameDelayMin(context: Context, value: Int) {
+        prefs(context).edit().putInt(KEY_FRAME_DELAY, value).apply()
+    }
+
+    /** Cadre photo : secondes par photo. */
+    fun frameIntervalS(context: Context): Int = prefs(context).getInt(KEY_FRAME_INTERVAL, 60)
+
+    fun setFrameIntervalS(context: Context, value: Int) {
+        prefs(context).edit().putInt(KEY_FRAME_INTERVAL, value).apply()
     }
 
     /** Kiosque : installations permises (mise à jour de l'appli par adb). Bloquées par défaut. */

@@ -13,6 +13,10 @@
     <attr name="c_accent_soft" format="color" />
     <attr name="c_on_accent" format="color" />
     <attr name="c_text" format="color" />
+    <!-- Cadre photo : fond autour d'une photo en portrait, heure par-dessus les photos et son ombre. -->
+    <attr name="c_frame_bg" format="color" />
+    <attr name="c_frame_text" format="color" />
+    <attr name="c_frame_shadow" format="color" />
     <attr name="c_text_dim" format="color" />
     <attr name="c_text_faint" format="color" />
     <attr name="c_ok" format="color" />
