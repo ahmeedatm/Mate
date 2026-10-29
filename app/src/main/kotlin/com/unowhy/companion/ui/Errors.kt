@@ -8,9 +8,11 @@ import com.unowhy.companion.Computers
 import com.unowhy.companion.R
 import com.unowhy.companion.UserFacingException
 import com.unowhy.companion.net.HttpException
+import com.unowhy.companion.net.InsecureComputerException
 import org.json.JSONException
 import java.io.IOException
 import java.util.concurrent.CancellationException
+import javax.net.ssl.SSLException
 
 /**
  * Phrase à afficher pour une erreur : jamais de texte technique (anglais, nom d'exception) à l'écran,
@@ -30,6 +32,8 @@ fun Context.errorText(e: Throwable?): String {
             e.reason.isNotBlank() -> e.reason
             else -> getString(R.string.error_computer)
         }
+        // Appairé avant le HTTPS, ou certificat qui n'est plus celui de l'appairage : réappairer (net/Pinning.kt).
+        is InsecureComputerException, is SSLException -> getString(R.string.error_insecure, computer?.name ?: getString(R.string.computer_generic))
         // Connexion refusée, délai dépassé, réseau absent…
         is IOException ->
             if (computer == null) getString(R.string.error_no_computer)

@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { execFile, execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
 import { promisify } from "node:util";
-import { startServer, TOKEN, type TestServer } from "./server.ts";
+import { pairingCode, startServer, TOKEN, type TestServer } from "./server.ts";
 
 let server: TestServer;
 before(async () => {
@@ -50,31 +50,33 @@ describe("santé et jeton", () => {
 });
 
 describe("appairage", () => {
-  it("donne le jeton contre le code affiché sur la page locale", async () => {
-    const req = await server.call("POST", "/pair/request", { tablet: "Tablette CI" }, false);
+  it("en local (USB) : code affiché par la tablette, saisi sur la page locale, puis jeton et empreinte", async () => {
+    const tablet = randomBytes(32).toString("base64url");
+    const commit = createHash("sha256").update(tablet).digest("base64url");
+    const req = await server.call("POST", "/pair/request", { tablet: "Tablette CI", commit }, false);
     assert.equal(req.status, 200);
+    assert.equal((await server.call("POST", "/pair/reveal", { request: req.json.request, nonce: tablet }, false)).status, 200);
     const local = await server.call("GET", "/local/status", undefined, false);
-    assert.equal(local.status, 200);
-    assert.equal(local.json.pairing.tablet, "Tablette CI");
-    const code: string = local.json.pairing.code;
-    assert.match(code, /^\d{6}$/);
+    assert.deepEqual(local.json.pairing, { tablet: "Tablette CI" });
 
+    // En HTTP local, pas de certificat : l'empreinte du calcul est vide.
+    const code = pairingCode("", tablet, req.json.nonce);
+    assert.deepEqual((await server.call("POST", "/pair/confirm", { request: req.json.request }, false)).json, { waiting: true });
     const wrong = String((Number(code) + 1) % 1_000_000).padStart(6, "0");
-    const bad = await server.call("POST", "/pair/confirm", { request: req.json.request, code: wrong }, false);
-    assert.equal(bad.status, 403);
+    assert.equal((await server.call("POST", "/local/pair", { code: wrong }, false)).status, 403);
+    assert.equal((await server.call("POST", "/local/pair", { code: `${code.slice(0, 3)} ${code.slice(3)}` }, false)).status, 200);
 
-    const ok = await server.call(
-      "POST",
-      "/pair/confirm",
-      { request: req.json.request, code: `${code.slice(0, 3)} ${code.slice(3)}` },
-      false,
-    );
+    const ok = await server.call("POST", "/pair/confirm", { request: req.json.request }, false);
     assert.equal(ok.status, 200);
     assert.equal(ok.json.token, TOKEN);
     assert.equal(ok.json.name, "Ordi de test");
+    assert.equal(ok.json.tlsPort, null);
+    assert.equal((await server.call("POST", "/pair/confirm", { request: req.json.request }, false)).status, 410);
+  });
 
-    const again = await server.call("POST", "/pair/confirm", { request: req.json.request, code }, false);
-    assert.equal(again.status, 410);
+  it("refuse un engagement mal formé et un ancien appairage par code", async () => {
+    assert.equal((await server.call("POST", "/pair/request", { tablet: "Ancienne appli" }, false)).status, 400);
+    assert.equal((await server.call("POST", "/pair/request", { tablet: "x", commit: "court" }, false)).status, 400);
   });
 });
 

@@ -20,6 +20,7 @@ import com.unowhy.companion.net.Connection
 import com.unowhy.companion.net.DocEntry
 import com.unowhy.companion.net.HttpException
 import com.unowhy.companion.net.Link
+import com.unowhy.companion.net.parseNotification
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -58,7 +59,7 @@ class RemoteChannel(private val activity: MainActivity) {
                 delay(5_000)
                 continue
             }
-            val client = BackendClient(computer.url, computer.token)
+            val client = BackendClient(computer)
             val commands = try {
                 // Pastille à jour tout de suite, sans attendre la fin d'un poll (jusqu'à 25 s).
                 if (!online) {
@@ -148,6 +149,11 @@ class RemoteChannel(private val activity: MainActivity) {
             val themeChanged = TabletSettings.save(activity, command)
             Screen.apply(activity)
             activity.onRemoteSettings(themeChanged)
+            null
+        }
+        "notification" -> {
+            // Envoyé sans attendre par le compagnon : une entrée incomplète est ignorée, pas une erreur.
+            parseNotification(command)?.let(activity::onNotification)
             null
         }
         "call" -> {

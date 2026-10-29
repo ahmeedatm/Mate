@@ -44,6 +44,8 @@ const platform = process.platform === "win32" ? "windows" : "mac";
 export const config = {
   host,
   port: Number(process.env.PORT ?? 3000),
+  /** HTTPS pour le WiFi (le port HTTP n'écoute plus qu'en local). */
+  tlsPort: Number(process.env.TLS_PORT ?? Number(process.env.PORT ?? 3000) + 1),
   token,
   /** Identifiant stable de cet ordinateur (la tablette le retrouve même si son IP change). */
   computerId: identity.id,

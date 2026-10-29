@@ -123,8 +123,10 @@ export default async function tabletRoutes(app: FastifyInstance) {
           break;
         case "call":
         case "agent":
+        case "notification":
         case "settings":
-          // Envoyés seulement par la surveillance des appels (src/calls.ts), les agents Claude (src/agents.ts) et la page locale.
+          // Envoyés seulement par la surveillance des appels (src/calls.ts), les agents Claude (src/agents.ts), celle
+          // des notifications (src/notifications.ts) et la page locale.
           return reply.code(400).send({ error: "Ordre réservé à l'ordinateur" });
       }
       const result = await sendToTablet(command, b.type === "screenshot" ? 30_000 : 15_000);

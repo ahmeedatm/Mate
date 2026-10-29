@@ -41,6 +41,8 @@ export type TabletCommand =
   | ({ type: "settings" } & TabletSettings)
   /** Appel entrant (src/calls.ts) : carte Répondre / Ignorer sur la tablette, retirée à `ended`. */
   | { type: "call"; state: "ringing" | "ended"; app: string; caller: string | null; video: boolean }
+  /** Notification de l'ordinateur (src/notifications.ts), affichée en bandeau et gardée dans l'historique. */
+  | { type: "notification"; id: string; app: string; title: string; body: string; at: number }
   /** Agent Claude (src/agents.ts) : une session attend, a fini ou a atteint sa limite ; `clear` : plus rien n'attend. */
   | { type: "agent"; kind: "waiting" | "done" | "limit" | "clear"; session?: string; name?: string; askId?: string; waiting: number };
 

@@ -12,6 +12,7 @@ object Prefs {
     private const val KEY_THEME = "theme"
     private const val KEY_FOCUS_DND = "focus_dnd"
     private const val KEY_AGENTS_PRIVATE = "agents_private"
+    private const val KEY_NOTIFICATIONS_DISCREET = "notifications_discreet"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -19,6 +20,9 @@ object Prefs {
     fun backendUrl(context: Context): String = Computers.active(context)?.url ?: BuildConfig.DEFAULT_BACKEND_URL
 
     fun token(context: Context): String = Computers.active(context)?.token.orEmpty()
+
+    /** Empreinte du certificat de l'ordinateur actif, retenue à l'appairage (null : USB ou ancien appairage). */
+    fun pin(context: Context): String? = Computers.active(context)?.pin
 
     /** Luminosité de l'écran choisie dans Réglages (0,05 à 1) ; -1 : celle du système. */
     fun brightness(context: Context): Float = prefs(context).getFloat(KEY_BRIGHTNESS, -1f)
@@ -62,6 +66,13 @@ object Prefs {
 
     fun setAgentsPrivate(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_AGENTS_PRIVATE, value).apply()
+    }
+
+    /** Notifications de l'ordinateur : appli et titre seulement, sans le texte (bandeau et historique). Désactivé par défaut. */
+    fun notificationsDiscreet(context: Context): Boolean = prefs(context).getBoolean(KEY_NOTIFICATIONS_DISCREET, false)
+
+    fun setNotificationsDiscreet(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_NOTIFICATIONS_DISCREET, value).apply()
     }
 
     fun theme(context: Context): String? = prefs(context).getString(KEY_THEME, null)

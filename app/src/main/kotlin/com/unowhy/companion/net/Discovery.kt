@@ -47,9 +47,9 @@ object Discovery {
                 val j = runCatching { JSONObject(String(packet.data, 0, packet.length, Charsets.UTF_8)) }.getOrNull() ?: continue
                 if (j.optString("service") != "unowhy-companion" || !j.has("id")) continue
                 val host = packet.address.hostAddress ?: continue
-                found[j.getString("id")] = FoundComputer(
-                    j.getString("id"), j.optString("name", host), j.optString("os"), "http://$host:${j.optInt("port", port)}",
-                )
+                // HTTPS (`tlsPort`) en WiFi ; un ancien compagnon n'en a pas : HTTP, refusé ensuite (à mettre à jour).
+                val url = if (j.optInt("tlsPort") > 0) "https://$host:${j.getInt("tlsPort")}" else "http://$host:${j.optInt("port", port)}"
+                found[j.getString("id")] = FoundComputer(j.getString("id"), j.optString("name", host), j.optString("os"), url)
             }
         }
         found.values.toList()
