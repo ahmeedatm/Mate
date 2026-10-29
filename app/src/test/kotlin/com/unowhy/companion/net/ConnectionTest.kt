@@ -125,6 +125,19 @@ class ConnectionTest {
     }
 
     @Test
+    fun `un ordinateur epingle ne prend jamais une adresse en clair venue de la recherche`() = runBlocking {
+        val url = "https://192.168.1.20:3001"
+        Computers.save(context, computer("a", url).copy(pin = "aa".repeat(32)), makeActive = true)
+        Connection.resolve(context, allowSwitch = false) { listOf(FoundComputer("a", "Intrus", "windows", "http://192.168.1.66:3000")) }
+        assertEquals(url, Computers.active(context)?.url)
+    }
+
+    @Test
+    fun `appaire en clair sur le WiFi, a reappairer sans envoyer le jeton`() = runBlocking {
+        assertEquals(Connection.Probe.Unauthorized, Connection.probe(context, computer("a", "http://192.168.1.20:3000")))
+    }
+
+    @Test
     fun `resolve ignore une recherche WiFi en echec`() = runBlocking {
         Computers.save(context, computer("a", backend("a")), makeActive = true)
         assertEquals("a", Connection.resolve(context) { throw IOException("pas de WiFi") }?.id)

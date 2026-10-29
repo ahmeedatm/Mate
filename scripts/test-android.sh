@@ -12,7 +12,7 @@
 # - Avec un JDK : ./gradlew connectedDebugAndroidTest (rapport JUnit). Sans : APK compilés dans l'image Docker
 #   de la CI, tests lancés par am instrument, avec un cache Gradle propre au worktree (volume Docker, amorcé depuis
 #   companion-gradle s'il existe).
-# - Backend réel pour les tests du Deck (backend/test/deck-emulateur.ts, joint par 10.0.2.2, ports passés aux tests) :
+# - Backend réel pour les tests du Deck (backend/test/deck-emulateur.ts, joint en 127.0.0.1 par adb reverse, ports passés aux tests) :
 #   pilotage simulé sans contrôle (toucher une touche répond 501), rien n'agit sur la machine.
 #   node 22 du système, sinon (image Android de la CI) celui de nodejs.org (version de backend/scripts/package.ts).
 # Résultats, journal du backend et capture de l'écran de bienvenue dans app/build/test-android/.
@@ -171,6 +171,10 @@ boot() {
   for a in window_animation_scale transition_animation_scale animator_duration_scale; do
     $ADB shell settings put global $a 0
   done
+  # Backend joint en 127.0.0.1, comme une tablette en USB : l'appli n'envoie jamais son jeton en HTTP en clair
+  # à une autre adresse (net/Pinning.kt), 10.0.2.2 compris.
+  $ADB reverse tcp:$DECK_PORT tcp:$DECK_PORT
+  $ADB reverse tcp:$DECK_CONTROL_PORT tcp:$DECK_CONTROL_PORT
 }
 
 mkdir -p "$OUT"

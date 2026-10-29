@@ -8,15 +8,26 @@ import org.junit.Test
 class PointerChannelTest {
 
     @Test
-    fun `paquet de deplacement`() {
-        val bytes = PointerPackets.encode("tok", 7, PointerMessage.Move(-3, 12))
-        assertEquals("UNOWHY-POINTER\ntok\n7\n{\"dx\":-3,\"dy\":12}", String(bytes, Charsets.UTF_8))
+    fun `paquet de deplacement signe, sans le jeton`() {
+        val text = String(PointerPackets.encode("tok", 7, PointerMessage.Move(-3, 12)), Charsets.UTF_8)
+        val json = "{\"dx\":-3,\"dy\":12}"
+        assertEquals("UNOWHY-POINTER\n${PointerPackets.signature("tok", 7, json)}\n7\n$json", text)
+        assertFalse(text.contains("\ntok\n"))
     }
 
     @Test
     fun `paquet de defilement`() {
-        val bytes = PointerPackets.encode("tok", 8, PointerMessage.Scroll(0, -2))
-        assertEquals("UNOWHY-POINTER\ntok\n8\n{\"sx\":0,\"sy\":-2}", String(bytes, Charsets.UTF_8))
+        val text = String(PointerPackets.encode("tok", 8, PointerMessage.Scroll(0, -2)), Charsets.UTF_8)
+        assertTrue(text.endsWith("\n8\n{\"sx\":0,\"sy\":-2}"))
+    }
+
+    @Test
+    fun `signature identique a celle du backend`() {
+        // Valeur calculée par pointerSignature (backend/src/pointer.ts).
+        assertEquals(
+            "44929821dd4090e39ee3d44ec21f3420d4c5365631d7e135460fde5db3087da6",
+            PointerPackets.signature("jeton", 7, "{\"dx\":5,\"dy\":-3}"),
+        )
     }
 
     @Test

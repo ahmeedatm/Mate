@@ -2,7 +2,6 @@ package com.unowhy.companion.ui
 
 import android.content.Context
 import android.os.Build
-import android.text.InputFilter
 import android.text.InputType
 import android.view.Gravity
 import android.view.KeyEvent
@@ -19,12 +18,20 @@ import com.unowhy.companion.R
 import com.unowhy.companion.net.BackendClient
 import com.unowhy.companion.net.Discovery
 import com.unowhy.companion.net.HttpException
+import com.unowhy.companion.net.InsecureComputerException
+import com.unowhy.companion.net.Pairing
+import com.unowhy.companion.net.PairingCode
+import com.unowhy.companion.net.PinnedTrust
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import javax.net.ssl.SSLException
 
 /**
- * Boîtes de dialogue des ordinateurs. Ajout : recherche sur le WiFi (ou adresse saisie), puis code à 6 chiffres affiché sur
- * l'ordinateur. Rien à recopier d'autre : le jeton arrive avec le code. `onAdded` : enregistré et devenu l'actif.
+ * Boîtes de dialogue des ordinateurs. Ajout : recherche sur le WiFi (ou adresse saisie), puis code à 6 chiffres affiché par
+ * la tablette et saisi sur l'ordinateur. Rien à recopier d'autre : le jeton arrive une fois le code accepté. `onAdded` : enregistré et devenu l'actif.
  * `scope` : celui de l'activité, pour survivre à la recréation des écrans quand l'ordinateur change.
  */
 class ComputerAdder(private val context: Context, private val scope: CoroutineScope, private val onAdded: (Computer) -> Unit) {
@@ -89,9 +96,11 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
                 form.message.setText(R.string.computer_connecting)
                 scope.launch {
                     try {
-                        val identity = BackendClient(url, connectTimeoutMs = 4_000).pairing.identity()
+                        // Même certificat retenu du premier contact jusqu'au jeton.
+                        val trust = PinnedTrust(null)
+                        val identity = BackendClient(url, connectTimeoutMs = 4_000, trust = trust).pairing.identity()
                         dialog.dismiss()
-                        pair(url, identity.name)
+                        pair(url, identity.name, trust)
                     } catch (e: Exception) {
                         form.message.text = context.getString(R.string.computer_unreachable, url.substringAfter("://"))
                     } finally {
@@ -105,77 +114,75 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
         showWithKeyboard(dialog, input)
     }
 
-    /** Demande un code à l'ordinateur (il l'affiche), puis l'envoie : la réponse contient le jeton. */
-    fun pair(url: String, name: String) {
+    /**
+     * Appairage (protocole : backend/src/pairing.ts) : la tablette affiche un code, l'utilisateur le saisit sur
+     * l'ordinateur, la tablette reçoit alors le jeton. Le code mêle l'empreinte du certificat vu par la tablette :
+     * s'il passe par un intercepteur, l'ordinateur refuse le code et le jeton ne part jamais. `trust` : certificat
+     * déjà vu (adresse saisie), sinon retenu à la première requête.
+     */
+    fun pair(url: String, name: String, trust: PinnedTrust = PinnedTrust(null)) {
         val form = form()
-        val input = context.inputField(form.body, R.string.computer_code_hint, InputType.TYPE_CLASS_NUMBER).apply {
-            textSize = 30f
-            letterSpacing = 0.3f
+        val code = TextView(context).apply {
+            textSize = 44f
+            letterSpacing = 0.15f
             gravity = Gravity.CENTER
-            filters = arrayOf(InputFilter.LengthFilter(6))
-            isEnabled = false
+            typeface = themeFont(context, R.attr.c_font_display)
+            setTextColor(themeColor(context, R.attr.c_text))
+            visibility = View.GONE
         }
+        form.body.addView(code)
         val dialog = AlertDialog.Builder(context)
             .setTitle(context.getString(R.string.computer_pair_title, name))
             .setView(form.root)
             .setNegativeButton(R.string.cancel, null)
             .setNeutralButton(R.string.computer_new_code, null)
-            .setPositiveButton(R.string.computer_pair, null)
             .create()
-        val client = BackendClient(url, connectTimeoutMs = 4_000)
-        var request: String? = null
-        var busy = false
-        val ask = {
-            request = null
-            input.isEnabled = false
+        val client = BackendClient(url, connectTimeoutMs = 4_000, trust = trust)
+        var job: Job? = null
+        val start = {
+            job?.cancel()
+            code.visibility = View.GONE
             form.message.text = context.getString(R.string.computer_requesting, name)
-            scope.launch {
+            job = scope.launch {
                 try {
-                    request = client.pairing.requestPairing(context.getString(R.string.tablet_name, Build.MODEL))
-                    input.setText("")
-                    input.isEnabled = true
-                    input.requestFocus()
-                    form.message.text = context.getString(R.string.computer_code_prompt, name)
-                } catch (e: Exception) {
-                    form.message.text = reason(e)
-                }
-            }
-            Unit
-        }
-        val confirm = confirm@{
-            val req = request ?: return@confirm
-            if (busy) return@confirm
-            val code = input.text.toString().filter(Char::isDigit)
-            if (code.length != 6) return@confirm form.message.setText(R.string.computer_code_short)
-            form.message.setText(R.string.computer_checking)
-            busy = true
-            scope.launch {
-                try {
-                    val p = client.pairing.confirmPairing(req, code)
-                    // Déjà connu (nouvel appairage) : on garde le nom choisi sur la tablette.
-                    val known = Computers.all(context).firstOrNull { it.id == p.id }
-                    val computer = Computer(p.id, known?.name ?: p.name, url, p.token, p.os)
+                    val secret = PairingCode.newSecret()
+                    val (request, computerNonce) = client.pairing.request(context.getString(R.string.tablet_name, Build.MODEL), secret.commit)
+                    client.pairing.reveal(request, secret.nonce)
+                    // En HTTP local (USB), pas de certificat : "" comme sur l'ordinateur.
+                    val channel = if (url.startsWith("https://")) trust.seen.orEmpty() else ""
+                    code.text = PairingCode.spaced(PairingCode.code(channel, secret.nonce, computerNonce))
+                    code.visibility = View.VISIBLE
+                    form.message.text = context.getString(R.string.computer_code_show, name)
+                    var pairing: Pairing? = null
+                    while (pairing == null) {
+                        delay(1_000)
+                        if (!dialog.isShowing) return@launch
+                        pairing = client.pairing.confirm(request)
+                    }
+                    // En WiFi, l'ordinateur annonce le certificat que la tablette a vu ; en USB, elle le découvre ici.
+                    if (channel.isNotEmpty() && pairing.fingerprint != channel) throw InsecureComputerException()
+                    val known = Computers.all(context).firstOrNull { it.id == pairing.id }
+                    val computer = Computer(
+                        pairing.id, known?.name ?: pairing.name, url, pairing.token, pairing.os,
+                        pin = channel.ifEmpty { pairing.fingerprint.ifEmpty { null } },
+                    )
                     Computers.save(context, computer, makeActive = true)
                     dialog.dismiss()
                     onAdded(Computers.active(context) ?: computer)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
+                    code.visibility = View.GONE
                     form.message.text = reason(e)
-                    // Code expiré ou trop d'essais : il faut en redemander un.
-                    if (e is HttpException && e.code != 403) request = null
-                    else if (e is HttpException) input.setText("")
-                } finally {
-                    busy = false
                 }
             }
-            Unit
         }
-        onDone(input) { confirm() }
         dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener { ask() }
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener { confirm() }
-            ask()
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener { start() }
+            start()
         }
-        showWithKeyboard(dialog, input)
+        dialog.setOnDismissListener { job?.cancel() }
+        dialog.showImmersive()
     }
 
     /** Renommer un ordinateur : nom affiché sur la tablette seulement (barre latérale, liste). */
@@ -212,6 +219,7 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
 
     private fun reason(e: Exception): String = when (e) {
         is HttpException -> e.reason
+        is InsecureComputerException, is SSLException -> context.getString(R.string.computer_insecure)
         else -> context.getString(R.string.computer_lost)
     }
 

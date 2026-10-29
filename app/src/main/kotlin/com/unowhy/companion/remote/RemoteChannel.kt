@@ -55,7 +55,7 @@ class RemoteChannel(private val activity: MainActivity) {
                 delay(5_000)
                 continue
             }
-            val client = BackendClient(computer.url, computer.token)
+            val client = BackendClient(computer)
             val commands = try {
                 // Pastille à jour tout de suite, sans attendre la fin d'un poll (jusqu'à 25 s).
                 if (!online) {

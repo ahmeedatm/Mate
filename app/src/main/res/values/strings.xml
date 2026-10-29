@@ -16,6 +16,7 @@
     <string name="error_unreachable">%1$s ne répond pas : vérifie qu\'il est allumé, pas en veille, et sur le même WiFi que la tablette.</string>
     <string name="error_reauth">%1$s ne reconnaît plus la tablette : Réglages › Ordinateurs, puis l\'ajouter à nouveau.</string>
     <string name="error_computer">L\'ordinateur n\'a pas pu le faire.</string>
+    <string name="error_insecure">%1$s doit être appairé à nouveau (connexion sécurisée) : Réglages › Ordinateurs › Ajouter.</string>
     <string name="error_bad_reply">Réponse inattendue de l\'ordinateur : mets à jour le compagnon sur l\'ordinateur.</string>
     <string name="error_generic">Un problème est survenu. Réessaie.</string>
     <string name="computer_generic">L\'ordinateur</string>
@@ -509,12 +510,9 @@
     <string name="computer_unreachable">Pas de compagnon à %1$s : vérifie l\'adresse, et qu\'il tourne sur l\'ordinateur.</string>
     <string name="computer_pair_title">Appairer %1$s</string>
     <string name="computer_requesting">Demande d\'un code à %1$s…</string>
-    <string name="computer_code_prompt">Saisis le code à 6 chiffres affiché sur %1$s.</string>
-    <string name="computer_code_hint">000000</string>
-    <string name="computer_code_short">Le code a 6 chiffres.</string>
-    <string name="computer_checking">Vérification…</string>
     <string name="computer_new_code">Nouveau code</string>
-    <string name="computer_pair">Valider</string>
+    <string name="computer_code_show">Saisis ce code sur %1$s, dans la page du compagnon qui vient de s\'y ouvrir.</string>
+    <string name="computer_insecure">Connexion non sécurisée refusée : mets à jour le compagnon de l\'ordinateur, puis recommence.</string>
     <string name="computer_lost">Ordinateur injoignable, réessaie.</string>
     <string name="computer_online">connecté</string>
     <string name="computer_offline">injoignable</string>

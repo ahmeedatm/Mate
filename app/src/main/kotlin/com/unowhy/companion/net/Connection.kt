@@ -27,8 +27,10 @@ object Connection {
 
     /** Lève une exception si l'ordinateur ne répond pas. */
     suspend fun probe(context: Context, computer: Computer, connectTimeoutMs: Int = 5_000): Probe {
+        // Appairé en HTTP en clair : le jeton ne part plus sur le WiFi, il faut réappairer (net/Pinning.kt).
+        if (computer.needsRepair) return Probe.Unauthorized
         val identity = try {
-            BackendClient(computer.url, computer.token, connectTimeoutMs).pairing.identity()
+            BackendClient(computer, connectTimeoutMs).pairing.identity()
         } catch (e: HttpException) {
             if (e.code == 401) return Probe.Unauthorized else throw e
         }
@@ -51,10 +53,13 @@ object Connection {
         discover: suspend () -> List<FoundComputer> = { Discovery.find() },
     ): Computer? = coroutineScope {
         if (Computers.all(context).isEmpty()) return@coroutineScope null
-        // Adresses à jour d'après le WiFi (DHCP : l'IP d'un ordinateur change d'un jour à l'autre).
+        // Adresses à jour d'après le WiFi (DHCP : l'IP d'un ordinateur change d'un jour à l'autre). N'importe qui peut
+        // répondre à la recherche avec l'id d'un ordinateur : sans danger, l'empreinte épinglée refuse un autre certificat
+        // avant l'envoi du jeton ; une adresse en clair n'est jamais prise pour un ordinateur épinglé.
         val found = runCatching { discover() }.getOrDefault(emptyList())
         for (f in found) {
-            Computers.all(context).firstOrNull { it.id == f.id && it.url != f.url }?.let { Computers.save(context, it.copy(url = f.url)) }
+            Computers.all(context).firstOrNull { it.id == f.id && it.url != f.url && (it.pin == null || f.url.startsWith("https://")) }
+                ?.let { Computers.save(context, it.copy(url = f.url)) }
         }
         val activeId = Computers.active(context)?.id
         val candidates = Computers.all(context).filter { allowSwitch || it.id == activeId }.sortedByDescending { if (it.id == activeId) Long.MAX_VALUE else it.lastUsedMs }

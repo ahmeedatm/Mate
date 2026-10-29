@@ -21,6 +21,9 @@ object Prefs {
 
     fun token(context: Context): String = Computers.active(context)?.token.orEmpty()
 
+    /** Empreinte du certificat de l'ordinateur actif, retenue à l'appairage (null : USB ou ancien appairage). */
+    fun pin(context: Context): String? = Computers.active(context)?.pin
+
     /** Luminosité de l'écran choisie dans Réglages (0,05 à 1) ; -1 : celle du système. */
     fun brightness(context: Context): Float = prefs(context).getFloat(KEY_BRIGHTNESS, -1f)
 
