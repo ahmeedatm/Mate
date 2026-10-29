@@ -25,4 +25,5 @@ class BackendClient(baseUrl: String, token: String = "", connectTimeoutMs: Int =
     val updates = UpdatesApi(http)
     val tablet = TabletApi(http)
     val agents = AgentsApi(http)
+    val jira = JiraApi(http)
 }
