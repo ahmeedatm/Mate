@@ -13,8 +13,8 @@ class AppThemeTest {
     private val context = FakeContext()
 
     @Test
-    fun `Cadran, Cadran nuit, Retro et Contraste sont les seuls themes des Reglages`() {
-        assertEquals(listOf(AppTheme.CADRAN, AppTheme.CADRAN_NUIT, AppTheme.RETRO, AppTheme.CONTRASTE), AppTheme.choosable)
+    fun `Cadran, Cadran nuit, Retro et Contraste d'abord, puis les themes des personas`() {
+        assertEquals(listOf(AppTheme.CADRAN, AppTheme.CADRAN_NUIT, AppTheme.RETRO, AppTheme.CONTRASTE), AppTheme.entries.filter { !it.demo })
         assertEquals(
             listOf(AppTheme.REGISTRE, AppTheme.STUDIO, AppTheme.MAISON, AppTheme.TABLEAU, AppTheme.TERMINAL),
             AppTheme.entries.filter { it.demo },
@@ -33,11 +33,21 @@ class AppThemeTest {
     }
 
     @Test
-    fun `un theme de demo enregistre sans demo retombe sur Cadran`() {
+    fun `un theme de persona choisi sans demo est garde`() {
         for (theme in AppTheme.entries.filter { it.demo }) {
             Prefs.setTheme(context, theme.name)
-            assertEquals(theme.name, AppTheme.CADRAN, AppTheme.current(context))
+            assertEquals(theme, AppTheme.current(context))
         }
+    }
+
+    @Test
+    fun `quitter la demo rend le theme de persona choisi avant`() {
+        Prefs.setTheme(context, AppTheme.STUDIO.name)
+        val persona = Persona.SACHA
+        Demo.start(context, persona, persona.layout(persona.profiles.map { it.name.toString() }, "Réunion", emptyMap(), null), cadran = true)
+        assertEquals(AppTheme.TERMINAL, AppTheme.current(context))
+        assertTrue(Demo.quit(context, cadran = true))
+        assertEquals(AppTheme.STUDIO, AppTheme.current(context))
     }
 
     @Test

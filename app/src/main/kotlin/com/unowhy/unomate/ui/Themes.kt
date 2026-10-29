@@ -8,7 +8,6 @@ import android.util.TypedValue
 import androidx.core.content.res.ResourcesCompat
 import com.unowhy.unomate.Prefs
 import com.unowhy.unomate.R
-import com.unowhy.unomate.ui.home.Demo
 
 /**
  * Thèmes de la DA Cadran (docs/ui-ux/da), choisis dans Réglages : jour, nuit, Rétro (Cadran habillé années 70,
@@ -18,9 +17,9 @@ import com.unowhy.unomate.ui.home.Demo
  * changer de thème recrée l'activité. Les thèmes clairs ont leur propre base AppCompat (dialogues et champs clairs).
  * Un ancien thème enregistré (Nuit, Clair, Néon, Chaud) retombe sur Cadran.
  *
- * Thèmes de démo (`demo`) : un par persona (Registre, Studio, Maison, Tableau, Terminal), posés avec le persona
- * (`Persona.theme`) et rendus par Quitter la démo. Absents du choix de Réglages et de l'ordre `settings`
- * ([choosable]) ; enregistrés sans démo active, ils retombent sur Cadran.
+ * Thèmes des personas (`demo`) : un par persona (Registre, Studio, Maison, Tableau, Terminal), posés avec le persona
+ * (`Persona.theme`) et rendus par Quitter la démo. Choisissables aussi hors démo, dans Réglages (seconde ligne) et par
+ * l'ordre `settings`.
  */
 enum class AppTheme(val label: Int, val base: Int, val palette: Int, val swatch: Int, val demo: Boolean = false) {
     CADRAN(R.string.theme_cadran, R.style.Theme_CompanionLight, R.style.Palette_Cadran, 0xFFCA0538.toInt()),
@@ -34,13 +33,7 @@ enum class AppTheme(val label: Int, val base: Int, val palette: Int, val swatch:
     TERMINAL(R.string.theme_terminal, R.style.Theme_Companion, R.style.Palette_Terminal, 0xFF43E188.toInt(), demo = true);
 
     companion object {
-        /** Thèmes proposés dans Réglages et acceptés par l'ordre `settings` : tous sauf ceux de la démo. */
-        val choosable: List<AppTheme> get() = entries.filter { !it.demo }
-
-        fun current(context: Context): AppTheme {
-            val saved = entries.firstOrNull { it.name == Prefs.theme(context) } ?: return CADRAN
-            return if (saved.demo && Demo.active(context) == null) CADRAN else saved
-        }
+        fun current(context: Context): AppTheme = entries.firstOrNull { it.name == Prefs.theme(context) } ?: CADRAN
 
         /** À appeler avant super.onCreate. Police lisible (Réglages > Accessibilité) par-dessus la palette. */
         fun apply(activity: Activity) {
