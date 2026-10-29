@@ -86,14 +86,10 @@ beforeEach(() => {
   server.clearOsCalls();
 });
 
-/** Lecture sur un serveur neuf : son cache de 20 s est vide. */
+/** Lecture qui va jusqu'à GitLab : une fusion, même refusée, vide le cache de 20 s du serveur. */
 const freshRead = async () => {
-  const s = await startServer({ env: { GITLAB_URL: gitlabUrl, GITLAB_TOKEN } });
-  try {
-    return await s.call("GET", "/gitlab/mrs");
-  } finally {
-    await s.stop();
-  }
+  await server.call("POST", "/gitlab/mrs/merge", { project: "grp/proj", iid: 12, sha: SHA });
+  return server.call("GET", "/gitlab/mrs");
 };
 
 describe("GET /gitlab/mrs", () => {
@@ -263,19 +259,15 @@ describe("le jeton GitLab ne sort pas", () => {
   it("ni dans une réponse, ni dans le journal du serveur", async () => {
     graphqlStatus = 401;
     mergeStatus = 403;
-    const s = await startServer({ env: { GITLAB_URL: gitlabUrl, GITLAB_TOKEN } });
-    try {
-      const answers = [
-        await s.call("GET", "/gitlab/mrs"),
-        await s.call("POST", "/gitlab/mrs/merge", { project: "grp/proj", iid: 12, sha: SHA }),
-        await s.call("GET", "/deck/features"),
-        await s.call("POST", "/gitlab/mrs/open", { project: "grp/proj", iid: 12 }),
-      ];
-      for (const a of answers) assert.ok(!JSON.stringify(a.json).includes(GITLAB_TOKEN));
-      assert.ok(!s.output().includes(GITLAB_TOKEN));
-    } finally {
-      await s.stop();
-    }
+    // La fusion refusée passe en premier : elle vide le cache, la lecture va donc jusqu'à GitLab.
+    const answers = [
+      await server.call("POST", "/gitlab/mrs/merge", { project: "grp/proj", iid: 12, sha: SHA }),
+      await server.call("GET", "/gitlab/mrs"),
+      await server.call("GET", "/deck/features"),
+      await server.call("POST", "/gitlab/mrs/open", { project: "grp/proj", iid: 12 }),
+    ];
+    assert.equal(answers[1].status, 502);
+    for (const a of answers) assert.ok(!JSON.stringify(a.json).includes(GITLAB_TOKEN));
     assert.ok(!server.output().includes(GITLAB_TOKEN));
   });
 });
