@@ -86,7 +86,6 @@ Légende de la colonne « Droits » :
 | Pavé tactile | souris depuis la tablette, signé par HMAC | Libre |
 | Son de l'ordinateur | volume, sortie, micro coupé | Libre |
 | Notifications | notifications de l'ordinateur sur la tablette, en mémoire 24 h | Libre |
-| Courrier | expéditeur, objet, compteurs (jamais le corps) | Droit (Microsoft Graph), inactif |
 | Appels entrants | sonnerie Teams et Discord, décrocher, refuser, raccrocher | Risque (automatisation des clients, marques) |
 | Rejoindre une réunion | lien Teams, Meet, Zoom, Webex ouvert sur l'ordinateur | Libre (on ouvre un lien) |
 
@@ -150,7 +149,7 @@ Classé du plus bloquant pour la vente au moins bloquant.
 | 2 | **Services Google de la tablette** | commande vocale, dictée, synthèse vocale, « Ma position » | licence GMS de l'image Unowhy : vérifier qu'elle couvre la revente des tablettes hors école, en B2B ; conditions Google sur la voix envoyée | à faire valider (juridique) ; Vosk hors ligne déjà en place pour le mot de réveil |
 | 3 | **Nom UnoMate** | tout le produit | recherche d'antériorité et dépôt de marque (INPI, EUIPO) | non fait à notre connaissance |
 | 4 | **Parc de tablettes** | kiosque | accord interne pour retirer le MDM SQOOL et réinitialiser les 18 000 tablettes | décision Unowhy |
-| 5 | **Microsoft Graph** | agenda Outlook relié, courrier | appli Entra ID multi-locataire, vérification de l'éditeur, consentement de l'admin chez chaque client | inactif (`config/accounts.json` vide) |
+| 5 | **Microsoft Graph** | agenda Outlook relié | appli Entra ID multi-locataire, vérification de l'éditeur, consentement de l'admin chez chaque client | inactif (`config/accounts.json` vide) |
 | 6 | **Google Agenda** | agenda Google relié | projet Google Cloud, écran de consentement, vérification par Google de la portée agenda (sinon 100 utilisateurs et avertissement « appli non validée ») | inactif |
 | 7 | **Jira** | widget Jira, worklog | licence Atlassian et jeton API de l'utilisateur ; marque Atlassian | marche avec le compte du client |
 | 8 | **GitLab** | widgets GitLab et Pipelines, fusion | appli OAuth créée par l'admin de l'instance du client, compte utilisateur | `gitlab.clientId` vide tant que l'admin ne l'a pas créée |
@@ -162,9 +161,8 @@ Classé du plus bloquant pour la vente au moins bloquant.
 | 14 | **Aperçus YouTube** | Média sur Mac | conditions de YouTube pour l'image d'aperçu | à faire relire |
 | 15 | **Extension du navigateur** | Page de l'ordi, Onglets, commandes média | chargée à la main aujourd'hui ; la publier = compte développeur Chrome Web Store et Edge Add-ons | non publiée |
 | 16 | **PowerPoint, Keynote, Office** | Présentation | licences de l'utilisateur | rien à faire de notre côté |
-| 17 | **Données personnelles** | voix, localisation, agenda, courrier | RGPD : politique à compléter (raison sociale, DPO, transferts hors UE) | `docs/confidentialite.md`, partie 4 |
+| 17 | **Données personnelles** | voix, localisation, agenda | RGPD : politique à compléter (raison sociale, DPO, transferts hors UE) | `docs/confidentialite.md`, partie 4 |
 
 ## 4. À corriger dans le dépôt
 
-- Citer le modèle Vosk `vosk-model-small-fr-0.22` (Alpha Cephei, Apache 2.0) dans `licences.txt` via `scripts/licences-android.mjs`.
-- Déclarer le téléchargement du modèle depuis alphacephei.com (adresse IP de la tablette, une fois) dans `docs/confidentialite.md` et `backend/config/confidentialite.txt`.
+Rien depuis le 30/10/2026 : le modèle Vosk `vosk-model-small-fr-0.22` (Alpha Cephei, Apache 2.0) est cité dans `licences.txt`, et son téléchargement depuis alphacephei.com est déclaré dans `docs/confidentialite.md` et `backend/config/confidentialite.txt`.
