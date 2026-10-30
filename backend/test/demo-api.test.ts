@@ -370,6 +370,7 @@ describe("démo : données fictives à la place de celles de l'ordinateur", () =
     await s.call("POST", "/demo/persona", { persona: "sacha" });
     const agents = (await s.call("GET", "/agents")).json;
     assert.ok(agents.sessions.length >= 4);
+    assert.equal(typeof agents.voice, "boolean", "micro des sessions annoncé aussi en démo");
     for (const state of ["working", "waiting", "done"])
       assert.ok(
         agents.sessions.some((a: { state: string }) => a.state === state),

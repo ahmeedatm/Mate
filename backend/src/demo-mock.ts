@@ -7,6 +7,7 @@ import { readJson } from "./store.ts";
 import { resumeAway, startAway, type AwayDeps, type Saved } from "./away.ts";
 import type { PersonaId } from "./demo.ts";
 import type { AppWindow, AudioState, Display, MixerChannel, MixerState, OpenApp } from "./screens.ts";
+import { voiceAvailable } from "./transcribe.ts";
 
 /**
  * Données fictives de la démo : tant qu'un persona est actif (`.data/demo.json`) et que la tablette envoie le même (en-tête
@@ -700,7 +701,8 @@ function agentsOf(s: State) {
         ageMs: 60_000,
       }
     : null;
-  return { sessions, counts, total: sessions.length, hooks: true, quota, available: s.agents.length > 0, now };
+  // `voice` : le micro des sessions comme hors démo (whisper-cli sur l'ordinateur ; la transcription reste réelle).
+  return { sessions, counts, total: sessions.length, hooks: true, quota, available: s.agents.length > 0, voice: voiceAvailable(), now };
 }
 
 function mediaOf(s: State) {
