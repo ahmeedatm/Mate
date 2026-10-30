@@ -33,7 +33,7 @@ class DayLineView(context: Context) : View(context) {
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    // Rétro : tubes derrière, textes un peu plus grands et détourés.
+    // Thèmes à tubes (Rétro, Cadran) : tubes derrière, textes un peu plus grands et détourés.
     private val retro = themeBool(context, R.attr.c_flow)
     private val hourPaint = textPaint(if (retro) 13f else 12f)
     private val eventPaint = textPaint(if (retro) 14f else 13f)

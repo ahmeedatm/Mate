@@ -51,7 +51,9 @@ class ContrastPaletteTest {
     fun `chaque attribut de la palette Cadran est defini`() {
         val cadran = File("src/main/res/values/palettes.xml").readText()
             .substringAfter("""<style name="Palette.Cadran"""").substringBefore("</style>")
-        val expected = Regex("""<item name="(c_\w+)">""").findAll(cadran).map { it.groupValues[1] }.toSet()
+        // Sans tubes ni grain : rien ne bouge ni ne brouille derrière les textes.
+        val expected = Regex("""<item name="(c_\w+)">""").findAll(cadran).map { it.groupValues[1] }
+            .filterNot { it.startsWith("c_flow") || it.startsWith("c_grain_") }.toSet()
         val contraste = File("src/main/res/values/palettes.xml").readText()
             .substringAfter("""<style name="Palette.Contraste"""").substringBefore("</style>")
         val defined = Regex("""<item name="(c_\w+)">""").findAll(contraste).map { it.groupValues[1] }.toSet()

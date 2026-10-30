@@ -23,11 +23,11 @@ import kotlin.math.roundToInt
 import kotlin.math.sign
 
 /**
- * Bande du thème Rétro derrière tous les écrans, calée à droite (MainActivity), d'après le dessin d'Eliot (328 × 800, toute la hauteur) : deux tubes
+ * Bande des thèmes à tubes (Rétro, Cadran, Cadran nuit) derrière tous les écrans, calée à droite (MainActivity), d'après le dessin d'Eliot (328 × 800, toute la hauteur) : deux tubes
  * de trois bandes qui font une boucle tous les 400, détourée d'un liseré du fond. Un liquide y coule lentement vers
  * le bas : une vague plus claire glisse dans chaque bande (dégradé linéaire décalé dans les tiges, dégradé circulaire
  * qui tourne dans les boucles, en phase avec la tige au point où ils se touchent). Rien que des rectangles et des
- * disques, 30 images/s, arrêtée dès qu'elle n'est plus à l'écran. Masquée hors thème Rétro (`c_flow`).
+ * disques, 30 images/s, arrêtée dès qu'elle n'est plus à l'écran. Masquée dans les autres thèmes (`c_flow`).
  * Voilée derrière les widgets sans fond ([hidden]) comme à travers une carte, relus à chaque image : ils suivent
  * un glisser du mode Modifier. Les écrans sont comme empilés le long des tubes : passer à l'écran ou au profil suivant de
  * la barre fait défiler les tubes d'un écran entier ([travel]).
