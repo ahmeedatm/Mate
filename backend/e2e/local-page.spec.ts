@@ -10,8 +10,19 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#addr")).toHaveText(`127.0.0.1:${new URL(server.url).port}`);
     await expect(page.locator("#state")).toHaveText("Tablette non connectée");
     await expect(page.locator("#pairing")).toBeHidden();
-    // Police Cadran servie par le compagnon lui-même (hors ligne).
-    expect(await page.evaluate(async () => (await document.fonts.load("16px Outfit")).length)).toBeGreaterThan(0);
+    // Police Figtree servie par le compagnon lui-même (hors ligne).
+    expect(await page.evaluate(async () => (await document.fonts.load("16px Figtree")).length)).toBeGreaterThan(0);
+  });
+
+  test("jetons Console : fond ardoise la nuit, papier chaud le jour, police Figtree", async ({ page }) => {
+    const style = () =>
+      page.evaluate(() => ({ bg: getComputedStyle(document.body).backgroundColor, font: getComputedStyle(document.body).fontFamily }));
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.goto("/");
+    expect(await style()).toMatchObject({ bg: "rgb(23, 24, 27)" });
+    expect((await style()).font).toContain("Figtree");
+    await page.emulateMedia({ colorScheme: "light" });
+    expect(await style()).toMatchObject({ bg: "rgb(244, 242, 238)" });
   });
 
   test("barre de gauche : sans tablette, « Connecter une tablette » en tête, le trait suit la section", async ({ page }) => {
@@ -163,7 +174,7 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#tabletcard")).toBeHidden();
 
     // Fausse tablette : un poll ouvert, chaque ordre exécuté sur son état puis renvoyé avec le résultat.
-    let settings = { theme: "CADRAN", brightness: 0.6, volume: 0.4, nightDim: true, focusDnd: true };
+    let settings = { theme: "CONSOLE", brightness: 0.6, volume: 0.4, nightDim: true, focusDnd: true };
     const received: Record<string, unknown>[] = [];
     const state = () => ({
       mode: "home",
@@ -194,25 +205,25 @@ test.describe("page locale GET /", () => {
     expect(await top("#tabletcard")).toBeLessThan(await top("#connect"));
     await expect(page.locator("#tabletname")).toHaveText("Tablette 4.2");
     await expect(page.locator("#menu a").first()).toHaveText("Tablette");
-    await expect(page.getByRole("button", { name: "Cadran", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "Console", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator("#brightnessvalue")).toHaveText("60 %");
     await expect(page.locator("#nightdim")).toBeChecked();
 
-    await page.getByRole("button", { name: "Rétro" }).click();
+    await page.getByRole("button", { name: "Console jour" }).click();
     await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");
-    await expect(page.getByRole("button", { name: "Rétro" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "Console jour" })).toHaveAttribute("aria-pressed", "true");
 
     // Un seul bouton reste pressé.
     await page.getByRole("button", { name: "Contraste élevé" }).click();
     await expect(page.getByRole("button", { name: "Contraste élevé" })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByRole("button", { name: "Rétro" })).toHaveAttribute("aria-pressed", "false");
+    await expect(page.getByRole("button", { name: "Console jour" })).toHaveAttribute("aria-pressed", "false");
 
     await page.locator("#nightdim").uncheck();
     await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");
     await page.locator("#volume").fill("75");
     await expect(page.locator("#volumevalue")).toHaveText("75 %");
     await expect.poll(() => received.length).toBe(4);
-    expect(received).toEqual([{ theme: "RETRO" }, { theme: "CONTRASTE" }, { nightDim: false }, { volume: 0.75 }]);
+    expect(received).toEqual([{ theme: "CONSOLE_JOUR" }, { theme: "CONTRASTE" }, { nightDim: false }, { volume: 0.75 }]);
     await expect(page.locator("#nightdim")).not.toBeChecked();
 
     // Ouverte depuis « Régler depuis l'ordi » : la carte est mise en avant.

@@ -26,7 +26,7 @@ class ContrastPaletteTest {
     private val backgrounds = listOf("c_bg", "c_surface", "c_surface_raised")
 
     @Test
-    fun `textes et couleurs de sens au moins 7 sur fond, tuile et relief`() {
+    fun `textes, accent et couleurs de sens au moins 7 sur fond, tuile et relief`() {
         for (fg in listOf("c_text", "c_text_dim", "c_text_faint", "c_accent", "c_ok", "c_ko", "c_warn")) {
             for (bg in backgrounds) assertTrue("$fg sur $bg : ${ratio(fg, bg)}", ratio(fg, bg) >= 7.0)
         }
@@ -40,7 +40,7 @@ class ContrastPaletteTest {
     }
 
     @Test
-    fun `texte sur le rouge et sur les fonds teintes`() {
+    fun `texte sur l'accent et sur les fonds teintes`() {
         assertTrue(ratio("c_on_accent", "c_accent") >= 7.0)
         assertTrue(ratio("c_accent", "c_accent_soft") >= 7.0)
         assertTrue(ratio("c_ok", "c_ok_soft") >= 7.0)
@@ -48,15 +48,11 @@ class ContrastPaletteTest {
     }
 
     @Test
-    fun `chaque attribut de la palette Cadran est defini`() {
-        val cadran = File("src/main/res/values/palettes.xml").readText()
-            .substringAfter("""<style name="Palette.Cadran"""").substringBefore("</style>")
-        // Sans tubes ni grain : rien ne bouge ni ne brouille derrière les textes.
-        val expected = Regex("""<item name="(c_\w+)">""").findAll(cadran).map { it.groupValues[1] }
-            .filterNot { it.startsWith("c_flow") || it.startsWith("c_grain_") }.toSet()
-        val contraste = File("src/main/res/values/palettes.xml").readText()
-            .substringAfter("""<style name="Palette.Contraste"""").substringBefore("</style>")
-        val defined = Regex("""<item name="(c_\w+)">""").findAll(contraste).map { it.groupValues[1] }.toSet()
-        assertTrue("manquants : ${expected - defined}", (expected - defined).isEmpty())
+    fun `chaque attribut de Console jour est defini`() {
+        val xml = File("src/main/res/values/palettes.xml").readText()
+        val jour = xml.substringAfter("""<style name="Palette.ConsoleJour"""").substringBefore("</style>")
+        val contraste = xml.substringAfter("""<style name="Palette.Contraste"""").substringBefore("</style>")
+        val names = { style: String -> Regex("""<item name="(c_\w+)">""").findAll(style).map { it.groupValues[1] }.toSet() }
+        assertTrue("manquants : ${names(jour) - names(contraste)}", (names(jour) - names(contraste)).isEmpty())
     }
 }

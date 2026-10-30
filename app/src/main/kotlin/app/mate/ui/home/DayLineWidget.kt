@@ -5,7 +5,7 @@ import android.view.View
 import app.mate.AnimFamily
 import app.mate.ui.Look
 
-/** Ligne du jour de l'Accueil (DA Cadran) : [DayLineView] sans fond, qui avance d'un battement chaque minute. */
+/** Ligne du jour de l'Accueil (DA Console douce) : [DayLineView] sans fond, qui avance d'un battement chaque minute. */
 class DayLineWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val line = DayLineView(context)
     override val view: View = line

@@ -12,7 +12,7 @@ data class Down(val name: String, val sinceMs: Long?) {
 }
 
 /**
- * Suit les états de la liaison pour dire à l'Accueil Cadran « <nom> ne répond pas depuis HH:MM »
+ * Suit les états de la liaison pour dire à l'Accueil « <nom> ne répond pas depuis HH:MM »
  * (sans l'heure si l'ordinateur n'a jamais répondu à la tablette). Une coupure ne compte
  * qu'après [GRACE_MS] : l'état injoignable posé au lancement et à chaque changement d'ordinateur dure le temps du
  * premier essai. Un autre ordinateur, ou un retour en ligne, repart de zéro. Un jeton refusé n'est pas une coupure.

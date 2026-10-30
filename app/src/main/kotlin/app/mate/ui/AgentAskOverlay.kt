@@ -76,7 +76,7 @@ class AgentAskOverlay(private val activity: MainActivity) : FrameLayout(activity
         isClickable = true // les touchers ne passent pas à l'écran dessous
         visibility = GONE
         card.orientation = LinearLayout.VERTICAL
-        card.setBackgroundResource(R.drawable.card_bg)
+        card.setBackgroundResource(R.drawable.console_tile_bg)
         card.setPadding(dp(32), dp(24), dp(32), dp(28))
         addView(card, LayoutParams(dp(CARD_WIDTH_DP), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
     }

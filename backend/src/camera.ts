@@ -1,5 +1,5 @@
 import type { ServerResponse } from "node:http";
-import { CADRAN_NIGHT_CSS, FAVICON } from "./web-style.ts";
+import { CONSOLE_NIGHT_CSS, FAVICON } from "./web-style.ts";
 
 /**
  * Visualiseur : la tablette, posée au-dessus d'une feuille, envoie des JPEG 720p (POST /camera/frame)
@@ -67,12 +67,12 @@ export const VIEWER_PAGE = `<!doctype html>
 <title>Visualiseur</title>
 ${FAVICON}
 <style>
-  ${CADRAN_NIGHT_CSS}
-  /* Noms du visualiseur rapportés aux tokens Cadran nuit (web-style.ts). */
-  :root { --pill: rgba(34, 31, 31, .88); --text: var(--ink); --dim: var(--ink-3); --faint: var(--line); --warn: #FFD166; --accent: var(--now);
-    --surface: var(--tile); --raised: var(--tile-high); --pressed: #2F2B2B; }
+  ${CONSOLE_NIGHT_CSS}
+  /* Noms du visualiseur rapportés aux tokens Console (nuit) (web-style.ts). */
+  :root { --pill: rgba(35, 37, 42, .88); --text: var(--ink); --dim: var(--ink-3); --faint: var(--line); --warn: #FFC24B; --accent: var(--now);
+    --surface: var(--tile); --raised: var(--tile-high); --pressed: #31343B; }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 400 16px/1.4 Outfit, system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 400 16px/1.4 Figtree, system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
   #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
   #frame { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform .2s; }
   #frame.sideways { max-width: 100vh; max-height: 100vw; }
@@ -87,7 +87,7 @@ ${FAVICON}
   .bar { position: fixed; top: 16px; display: flex; gap: 8px; transition: opacity .3s; }
   #status { left: 16px; }
   #tools { right: 16px; }
-  .pill { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 24px; background: var(--pill); border: 0; color: var(--text); font: 500 15px Outfit, sans-serif; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 24px; background: var(--pill); border: 0; color: var(--text); font: 500 15px Figtree, sans-serif; }
   button.pill { cursor: pointer; }
   button.pill:hover { background: var(--tile-high); }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--dim); }

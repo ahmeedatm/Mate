@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Une tâche de la carte Tâches en thème Cadran : case ronde, libellé, détail éventuel. Cibles de 48 dp, 8 dp entre deux
+<!-- Une tâche de la carte Tâches en thème Console : case ronde, libellé, détail éventuel. Cibles de 48 dp, 8 dp entre deux
      lignes ; la zone de la case déborde de 12 dp sous le début du libellé (le rond reste à la même place). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"

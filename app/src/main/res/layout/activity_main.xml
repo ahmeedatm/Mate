@@ -147,14 +147,6 @@
         android:layout_height="match_parent"
         android:layout_weight="1">
 
-        <!-- Thème Rétro seulement (sinon GONE) : tubes qui coulent sur toute la hauteur, derrière tous les écrans, à droite ;
-             ils défilent d'un écran quand on passe à l'entrée voisine de la barre (ui/home/FlowBandView). -->
-        <app.mate.ui.home.FlowBandView
-            android:id="@+id/flow"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_gravity="end" />
-
         <!-- Sous le bandeau du haut : rien ne défile dessous. Balayage vertical entre les entrées de la barre (ui/RailSwipeLayout). -->
         <app.mate.ui.RailSwipeLayout
             android:id="@+id/mode_container"

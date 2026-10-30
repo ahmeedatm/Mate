@@ -12,13 +12,12 @@ import app.mate.R
 import app.mate.net.CalendarEvent
 import app.mate.ui.Look
 import app.mate.ui.dp
-import app.mate.ui.themeBool
 import app.mate.ui.themeColor
 import app.mate.ui.themeFont
 import kotlin.math.roundToInt
 
 /**
- * La ligne du jour (DA Cadran) : de 8 h à 20 h, les rendez-vous en barres, le passé effacé, un point rouge pour
+ * La ligne du jour (DA Console douce) : de 8 h à 20 h, les rendez-vous en barres, le passé effacé, un point rouge pour
  * maintenant. Un seul `View` dessiné à la main, sans enfant, qui ne se redessine qu'au battement de la minute et à
  * l'arrivée de l'écran. Il ne prend aucun toucher : l'appui long du mode Modifier et le balayage des pages restent libres.
  */
@@ -33,10 +32,8 @@ class DayLineView(context: Context) : View(context) {
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    // Thèmes à tubes (Rétro, Cadran) : tubes derrière, textes un peu plus grands et détourés.
-    private val retro = themeBool(context, R.attr.c_flow)
-    private val hourPaint = textPaint(if (retro) 13f else 12f)
-    private val eventPaint = textPaint(if (retro) 14f else 13f)
+    private val hourPaint = textPaint(12f)
+    private val eventPaint = textPaint(13f)
 
     private var events: List<CalendarEvent> = emptyList()
     private var now = System.currentTimeMillis()
@@ -74,7 +71,6 @@ class DayLineView(context: Context) : View(context) {
     private fun textPaint(sp: Float) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = themeFont(context, R.attr.c_font_medium)
         textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, resources.displayMetrics)
-        Look.halo(context, this)
     }
 
     /** Agenda et heure : les barres sont recalculées. `animate` : le point avance sur son ressort et émet l'onde. */

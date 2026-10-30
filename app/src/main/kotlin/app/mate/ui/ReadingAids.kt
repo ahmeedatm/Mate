@@ -30,7 +30,7 @@ object ReadingAids {
         if (Prefs.legibleFont(activity)) activity.theme.applyStyle(R.style.Fonts_Legible, true)
     }
 
-    /** Espacement des lettres d'un texte qui fixe le sien à zéro (titres Cadran) : celui de la police lisible (res/values/fonts.xml). */
+    /** Espacement des lettres d'un texte qui fixe le sien à zéro (titres) : celui de la police lisible (res/values/fonts.xml). */
     fun letterSpacing(context: Context): Float = if (Prefs.legibleFont(context)) LEGIBLE_LETTER_SPACING else 0f
 
     private const val LEGIBLE_LETTER_SPACING = 0.03f

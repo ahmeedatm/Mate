@@ -75,11 +75,11 @@ enum class WidgetType(
     AWAY("away", R.string.widget_away, R.string.widget_away_desc, R.drawable.ic_cafe, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     PIPELINES("pipelines", R.string.widget_pipelines, R.string.widget_pipelines_desc, R.drawable.ic_tile_rocket_launch, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true);
 
-    /** Sans fond de carte, posé à même l'écran : les tubes du thème Rétro y passent derrière un voile. */
-    val bare get() = this == HERO || this == DAY || this == DAYLINE
-
     /** Taille de l'exemplaire agrandi (widget maintenu, [WidgetZoom]) : la plus grande, la plus large à surface égale. */
     val zoomSize get() = sizes.maxWith(compareBy<WidgetSize>({ it.w * it.h }, { it.w }))
+
+    /** Sans fond de carte, posé à même l'écran. */
+    val bare get() = this == HERO || this == DAY || this == DAYLINE
 
     /** Maintenir le widget l'agrandit : pas ceux sans carte (héros, journée, ligne du jour), rien de plus à y voir. */
     val zoomable get() = !bare

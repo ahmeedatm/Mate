@@ -17,8 +17,8 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Héros de l'Accueil (DA Cadran) : taille de l'heure selon la place, sans fond. Pleine hauteur (une ligne de l'Accueil
- * Cadran) : l'heure à 184 px, la date, « Ensuite … » et les complications. Plus bas (autres thèmes, panneau document
+ * Héros de l'Accueil (DA Console douce) : taille de l'heure selon la place, sans fond. Pleine hauteur (une ligne de l'Accueil
+ * profil à lignes inégales) : l'heure à 184 px, la date, « Ensuite … » et les complications. Plus bas (panneau document
  * ouvert) : l'heure et la date, la météo et l'eau seulement s'il y a la largeur.
  */
 class HeroView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : FrameLayout(context, attrs) {

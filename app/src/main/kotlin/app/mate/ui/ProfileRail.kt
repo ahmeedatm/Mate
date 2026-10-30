@@ -243,9 +243,9 @@ class ProfileRail(
         }
         view.contentDescription = if (entry == RailEntry.Add) activity.getString(R.string.rail_add_desc) else label.text
         if (now) {
-            val red = themeColor(activity, R.attr.c_accent)
-            icon.imageTintList = android.content.res.ColorStateList.valueOf(red)
-            label.setTextColor(red)
+            val accent = themeColor(activity, R.attr.c_accent)
+            icon.imageTintList = android.content.res.ColorStateList.valueOf(accent)
+            label.setTextColor(accent)
         } else {
             icon.imageTintList = androidx.core.content.ContextCompat.getColorStateList(activity, R.color.rail_profile_content)
             label.setTextColor(androidx.core.content.ContextCompat.getColorStateList(activity, R.color.rail_profile_content))

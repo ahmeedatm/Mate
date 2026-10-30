@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Bouton en pilule de la DA Cadran (rayon = moitié des 48 dp) : relief sur la tuile, appui = ton voisin, sans filet rouge
+<!-- Bouton en pilule de la DA Console douce (rayon = moitié des 48 dp) : relief sur la tuile, appui = ton voisin, sans filet rouge
      (le rouge est réservé au « maintenant »). -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_enabled="false"><shape android:shape="rectangle"><solid android:color="?attr/c_surface_raised" /><corners android:radius="24dp" /></shape></item>

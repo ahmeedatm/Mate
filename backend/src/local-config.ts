@@ -17,9 +17,9 @@ const COMMON_CSS = `
   [id^="pf-"] input[type=checkbox]:disabled { opacity: .4; cursor: default; }
   .pf-contents { display: contents; }
   .label + .row::before, .label + div > .row:first-child::before, .group > .row[hidden] + .row::before { display: none; }
-  .pf-h3 { font: 500 16px/1.25 Outfit, sans-serif; margin: 0 0 10px 4px; }
+  .pf-h3 { font: 500 16px/1.25 Figtree, sans-serif; margin: 0 0 10px 4px; }
   .pf-h3:not(:first-of-type) { margin-top: 28px; }
-  .pf-h { margin: 0 0 8px; font: 500 14px/1.3 Outfit, sans-serif; color: var(--ink-2); }
+  .pf-h { margin: 0 0 8px; font: 500 14px/1.3 Figtree, sans-serif; color: var(--ink-2); }
   .pf-h:not(:first-child) { margin-top: 22px; }
   .pf-msg { flex: 1 1 160px; min-width: 0; margin: 0; font-size: 14px; color: var(--ink-2); }
   .pf-msg[data-kind=ok] { color: var(--ok); }
@@ -28,7 +28,7 @@ const COMMON_CSS = `
   p.pf-msg:empty { display: none; }
   .pf-sel { position: relative; flex: 1 1 180px; min-width: 0; }
   .pf-sel select { appearance: none; -webkit-appearance: none; width: 100%; height: 46px; padding: 0 44px 0 20px; border: 0; border-radius: 23px; cursor: pointer;
-    box-shadow: inset 0 0 0 1px var(--line); background: var(--bg); color: var(--ink); font: 400 15px Outfit, sans-serif; text-overflow: ellipsis; }
+    box-shadow: inset 0 0 0 1px var(--line); background: var(--bg); color: var(--ink); font: 400 15px Figtree, sans-serif; text-overflow: ellipsis; }
   .pf-sel select:focus { outline: 0; box-shadow: inset 0 0 0 2px var(--ink); }
   .pf-sel select:disabled { opacity: .4; cursor: default; }
   .pf-sel::after { content: ""; position: absolute; right: 20px; top: 50%; width: 7px; height: 7px; border: solid var(--ink-2); border-width: 0 1.5px 1.5px 0;

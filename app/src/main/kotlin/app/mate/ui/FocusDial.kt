@@ -14,7 +14,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Cadran du Focus (DA Cadran) : une graduation par minute de la séance, les dernières allumées.
+ * Cadran du Focus (DA Console douce) : une graduation par minute de la séance, les dernières allumées.
  * Un changement passe en cascade, 18 ms d'une graduation à l'autre (pause : elles s'éteignent, reprise : elles se
  * rallument). Redessiné seulement pendant la cascade : rien ne bouge le reste du temps.
  */

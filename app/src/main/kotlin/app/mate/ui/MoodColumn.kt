@@ -19,15 +19,9 @@ class MoodColumn @JvmOverloads constructor(context: Context, attrs: AttributeSet
     init {
         orientation = VERTICAL
         gravity = Gravity.CENTER
-        val tubes = themeBool(context, R.attr.c_flow)
         addView(
             TitleView(context).apply {
                 setText(R.string.mood_title)
-                // Sur les tubes : posé sur une pastille translucide, comme les boutons.
-                if (tubes) {
-                    setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
-                    setPadding(context.dp(14), context.dp(6), context.dp(14), context.dp(6))
-                }
             },
             LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { bottomMargin = context.dp(8) },
         )
@@ -46,6 +40,5 @@ class MoodColumn @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 LayoutParams(context.dp(108), context.dp(108)).apply { topMargin = context.dp(5); bottomMargin = context.dp(5) },
             )
         }
-        if (tubes) Look.haloTexts(this)
     }
 }

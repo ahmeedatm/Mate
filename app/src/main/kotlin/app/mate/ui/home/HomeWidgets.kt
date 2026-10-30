@@ -68,7 +68,7 @@ interface HomeHost {
     val features: HomeFeatures
     /** Erreur ou provenance de l'agenda (« Agenda d'exemple »), vide sinon. */
     val calendarNote: String
-    /** Thèmes Cadran : l'ordinateur ne répond plus ; l'Accueil le dit une fois, dans le héros. Null : il répond. */
+    /** Console : l'ordinateur ne répond plus ; l'Accueil le dit une fois, dans le héros. Null : il répond. */
     val unreachable: Down?
     /** Réunion touchée dans l'agenda, montrée par « Prochain rendez-vous » jusqu'à sa fin. */
     var chosenId: String?
@@ -225,7 +225,7 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 
     init {
-        // La hauteur dépend de la ligne de l'Accueil (232, 92 ou 184 dp en Cadran) : l'heure s'y ajuste.
+        // La hauteur dépend de la ligne de l'Accueil (232, 92 ou 184 dp en Console) : l'heure s'y ajuste.
         view.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
             if (bottom - top != oldBottom - oldTop) view.post(::fitHeight)
         }
@@ -261,7 +261,7 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 
     private companion object {
-        /** En dessous de cette hauteur, la ligne est « basse » (la fine de l'Accueil Cadran fait 92 dp). */
+        /** En dessous de cette hauteur, la ligne est « basse » (la fine de l'Accueil fait 92 dp). */
         const val SHORT_DP = 130
 
         /** Hauteur d'une ligne de chiffres, en tailles de texte. */
@@ -270,7 +270,7 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 }
 
 /**
- * Minuteur Focus (DA Cadran) : cadran de 25 graduations, une par minute, allumées pendant le chrono et éteintes en
+ * Minuteur Focus (DA Console douce) : cadran de 25 graduations, une par minute, allumées pendant le chrono et éteintes en
  * cascade à la pause. Toucher = mode Focus, bouton = démarrer / pause. Grand : cadran plus grand et ambiances à
  * choisir dessous. Rien ne bouge en dehors des changements.
  */

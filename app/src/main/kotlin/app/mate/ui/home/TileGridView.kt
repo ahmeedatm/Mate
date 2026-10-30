@@ -130,7 +130,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
         fun metrics(context: Context) = TileMetrics.of(themeBool(context, R.attr.c_big_keys))
 
         /**
-         * Vue d'une case, au style Cadran de `KeysWidget.tile` : sans cadre, icône de 52 dp à coins arrondis, libellé
+         * Vue d'une case, au style Console de `KeysWidget.tile` : sans cadre, icône de 52 dp à coins arrondis, libellé
          * de 13 sp, appui sur ressort. `item_tile` fait 136 dp : ici 100 dp, assez pour deux lignes de libellé. [metrics]
          * donne les grandes cotes aux grilles du thème Contraste élevé ; les rangées du widget gardent les normales.
          * Plaque en haut de la case, libellé dessous : toutes les plaques d'une rangée sont alignées, quel que soit le nombre

@@ -17,11 +17,11 @@ import androidx.appcompat.app.AlertDialog
 import app.mate.R
 
 /**
- * Boîte aux formes de Cadran, comme Profils et Ordinateurs : carte au fond du thème arrondie à 28 dp, en-tête (pastille
+ * Boîte aux formes de Console, comme Profils et Ordinateurs : carte au fond du thème arrondie à 28 dp, en-tête (pastille
  * d'icône facultative, grand titre, phrase d'aide, croix pour fermer), le contenu, puis les boutons en bas à droite
  * (Annuler en contour, le principal plein). Le contenu défile si la boîte dépasse l'écran.
  */
-fun showCadranDialog(
+fun showConsoleDialog(
     context: Context,
     title: CharSequence,
     body: View,
@@ -36,16 +36,16 @@ fun showCadranDialog(
     val content = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(context.dp(28), context.dp(24), context.dp(28), context.dp(24))
-        addView(cadranHeader(context, title, subtitle, icon) { dialog.dismiss() })
+        addView(consoleHeader(context, title, subtitle, icon) { dialog.dismiss() })
         addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = context.dp(20) })
         if (cancel != null || primary != null) {
             addView(
                 LinearLayout(context).apply {
                     gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                    if (cancel != null) addView(cadranButton(context, R.style.ActionButton, cancel) { dialog.dismiss() })
+                    if (cancel != null) addView(consoleButton(context, R.style.ActionButton, cancel) { dialog.dismiss() })
                     if (primary != null) {
                         addView(
-                            cadranButton(context, R.style.PrimaryButton, primary) {
+                            consoleButton(context, R.style.PrimaryButton, primary) {
                                 dialog.dismiss()
                                 onPrimary()
                             },
@@ -71,8 +71,8 @@ fun showCadranDialog(
     return dialog
 }
 
-/** En-tête des boîtes Cadran : pastille d'icône (si donnée), titre en police de titre, phrase d'aide, croix. */
-fun cadranHeader(context: Context, title: CharSequence, subtitle: CharSequence?, icon: Drawable?, onClose: () -> Unit) = LinearLayout(context).apply {
+/** En-tête des boîtes Console : pastille d'icône (si donnée), titre en police de titre, phrase d'aide, croix. */
+fun consoleHeader(context: Context, title: CharSequence, subtitle: CharSequence?, icon: Drawable?, onClose: () -> Unit) = LinearLayout(context).apply {
     gravity = Gravity.CENTER_VERTICAL
     if (icon != null) {
         addView(
@@ -120,7 +120,7 @@ fun cadranHeader(context: Context, title: CharSequence, subtitle: CharSequence?,
     )
 }
 
-private fun cadranButton(context: Context, style: Int, @StringRes text: Int, onClick: () -> Unit) = Button(context, null, 0, style).apply {
+private fun consoleButton(context: Context, style: Int, @StringRes text: Int, onClick: () -> Unit) = Button(context, null, 0, style).apply {
     setText(text)
     minHeight = context.dp(52)
     setOnClickListener { onClick() }

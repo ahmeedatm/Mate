@@ -30,10 +30,10 @@ class TabletSettingsTest {
 
     @Test
     fun `un nouveau theme demande de recreer l'ecran, le meme non`() {
-        assertTrue(TabletSettings.save(context, JSONObject().put("theme", "RETRO")))
-        assertEquals("RETRO", Prefs.theme(context))
+        assertTrue(TabletSettings.save(context, JSONObject().put("theme", "CONSOLE_JOUR")))
+        assertEquals("CONSOLE_JOUR", Prefs.theme(context))
         // Ordre renvoyé après la recréation (résultat perdu) : rien à refaire.
-        assertFalse(TabletSettings.save(context, JSONObject().put("theme", "RETRO")))
+        assertFalse(TabletSettings.save(context, JSONObject().put("theme", "CONSOLE_JOUR")))
     }
 
     @Test
@@ -53,7 +53,7 @@ class TabletSettingsTest {
     @Test
     fun `lit les reglages, luminosite du systeme tant qu'aucune n'est choisie`() {
         val first = TabletSettings.read(context, systemBrightness = 0.5f, volume = 0.4f)
-        assertEquals("CLAIR", first.getString("theme"))
+        assertEquals("CONSOLE", first.getString("theme"))
         assertEquals(0.5, first.getDouble("brightness"), 0.001)
         assertEquals(0.4, first.getDouble("volume"), 0.001)
         assertTrue(first.getBoolean("nightDim"))

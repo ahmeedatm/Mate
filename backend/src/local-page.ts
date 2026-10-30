@@ -1,5 +1,5 @@
 import { CONFIG_CSS, CONFIG_HTML, CONFIG_JS } from "./local-config.ts";
-import { CADRAN_CSS, FAVICON, ICON_SVG } from "./web-style.ts";
+import { CONSOLE_CSS, FAVICON, ICON_SVG } from "./web-style.ts";
 
 /**
  * Page http://127.0.0.1:3000/ ouverte sur l'ordinateur (le panneau de l'appli : relancer « Mate » la rouvre) :
@@ -17,12 +17,12 @@ export const LOCAL_PAGE = `<!doctype html>
 <title>Mate</title>
 ${FAVICON}
 <style>
-  ${CADRAN_CSS}
+  ${CONSOLE_CSS}
   * { box-sizing: border-box; }
   /* Les display posés plus bas (boutons, lignes) ne doivent pas l'emporter sur l'attribut hidden. */
   [hidden] { display: none !important; }
   html { scroll-behavior: smooth; scroll-padding-top: 32px; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.5 Outfit, system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.5 Figtree, system-ui, sans-serif; -webkit-font-smoothing: antialiased;
     display: grid; grid-template-columns: 272px minmax(0, 1fr); min-height: 100vh; }
   ::selection { background: var(--now-soft); color: var(--ink); }
   :focus-visible { outline: 2px solid var(--now); outline-offset: 2px; }
@@ -31,7 +31,7 @@ ${FAVICON}
   a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--line); }
   .dim { color: var(--ink-2); font-size: 14px; }
   .ok { color: var(--ok); } .ko { color: var(--ko); }
-  code { font: 500 14px Outfit, sans-serif; font-feature-settings: "tnum"; color: var(--ink); background: var(--tile-high); padding: 3px 9px; border-radius: 8px; overflow-wrap: anywhere; }
+  code { font: 500 14px Figtree, sans-serif; font-feature-settings: "tnum"; color: var(--ink); background: var(--tile-high); padding: 3px 9px; border-radius: 8px; overflow-wrap: anywhere; }
   svg.i { width: 20px; height: 20px; fill: currentColor; flex: none; }
   .dot { width: 8px; height: 8px; border-radius: 4px; background: var(--ink-3); flex: none; display: inline-block; }
   .dot.on { background: var(--ok); }
@@ -77,9 +77,9 @@ ${FAVICON}
   .mcp pre { margin: 0 26px 14px; padding: 12px 14px; border-radius: 12px; background: var(--tile-high); font: 400 13px/1.5 ui-monospace, Menlo, Consolas, monospace;
     color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
   .mcp .row code { font: 400 13px ui-monospace, Menlo, Consolas, monospace; }
-  /* Contrôles : pilules, interrupteurs et curseurs habillés en Cadran. */
+  /* Contrôles : pilules, interrupteurs et curseurs habillés en Console douce. */
   button, a.button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 18px; border-radius: 20px; border: 0;
-    font: 500 14px Outfit, sans-serif; background: var(--ink); color: var(--bg); cursor: pointer; text-decoration: none; white-space: nowrap; transition: transform 160ms cubic-bezier(.2, .8, .2, 1), opacity 160ms; }
+    font: 500 14px Figtree, sans-serif; background: var(--ink); color: var(--bg); cursor: pointer; text-decoration: none; white-space: nowrap; transition: transform 160ms cubic-bezier(.2, .8, .2, 1), opacity 160ms; }
   button:hover, a.button:hover { opacity: .88; }
   button:active, a.button:active { transform: scale(.97); }
   button.ghost { background: var(--tile-high); color: var(--ink); }
@@ -94,7 +94,7 @@ ${FAVICON}
   input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--line); }
   input[type=range]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--ink); }
   input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 9px; background: var(--now); }
-  input[type=text], input:not([type]) { width: 100%; font: 400 15px Outfit, sans-serif; height: 46px; padding: 0 20px; border-radius: 23px; border: 0;
+  input[type=text], input:not([type]) { width: 100%; font: 400 15px Figtree, sans-serif; height: 46px; padding: 0 20px; border-radius: 23px; border: 0;
     box-shadow: inset 0 0 0 1px var(--line); background: var(--bg); color: var(--ink); }
   input::placeholder { color: var(--ink-3); }
   input:not([type=checkbox]):not([type=range]):focus { outline: 0; box-shadow: inset 0 0 0 2px var(--ink); }
@@ -102,7 +102,7 @@ ${FAVICON}
   /* Code d'appairage : grands chiffres fins, et la ligne du jour qui avance pendant ses 2 minutes. */
   #pairing { display: none; margin-bottom: 48px; padding: 30px 36px 28px; box-shadow: 0 0 0 2px var(--now); }
   #pairing h2 { font-size: 20px; }
-  #paircode { font: 300 72px/1.1 Outfit, sans-serif; font-feature-settings: "tnum"; letter-spacing: .04em; height: auto; padding: 14px 0 18px;
+  #paircode { font: 300 72px/1.1 Figtree, sans-serif; font-feature-settings: "tnum"; letter-spacing: .04em; height: auto; padding: 14px 0 18px;
     border-radius: 0; box-shadow: none; background: transparent; margin: 0; }
   #paircode:focus { box-shadow: none; }
   #paircode::placeholder { color: var(--line); }
@@ -119,8 +119,8 @@ ${FAVICON}
   /* Tablette : son aperçu dessiné à gauche (thème et luminosité suivis en direct), ses réglages à droite. */
   .twin-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 28px; align-items: start; }
   .twin { margin: 0; position: sticky; top: 32px; }
-  .device { background: #1A1717; border-radius: 26px; padding: 18px; box-shadow: 0 24px 48px -28px rgba(30, 10, 10, .5), 0 0 0 1px var(--line); }
-  .screen { --t-bg: #FAF2F1; --t-tile: #FFFFFF; --t-ink: #1E1B1B; --t-ink2: #4D4545; --t-now: #CA0538; --t-line: #D0C4C3;
+  .device { background: #0E0F11; border-radius: 26px; padding: 18px; box-shadow: 0 24px 48px -28px rgba(0, 0, 0, .5), 0 0 0 1px var(--line); }
+  .screen { --t-bg: #17181B; --t-tile: #23252A; --t-ink: #ECEDEF; --t-ink2: #B4B8C0; --t-now: #B8F34A; --t-line: #3A3D44; --t-on: #16210A;
     aspect-ratio: 16 / 10; border-radius: 8px; overflow: hidden; background: var(--t-bg); color: var(--t-ink); container-type: inline-size;
     display: grid; grid-template-columns: 9% 1fr; transition: background 300ms, color 300ms, filter 250ms; }
   .screen .rl { display: flex; flex-direction: column; align-items: center; gap: 5cqw; padding-top: 4.5cqw; }
@@ -153,11 +153,11 @@ ${FAVICON}
   .pair .ptitle { font-size: 4.4cqw; font-weight: 500; }
   .pair .prow { background: var(--t-tile); border-radius: 2.6cqw; padding: 2.6cqw 3cqw; display: flex; align-items: center; justify-content: space-between; gap: 2cqw; font-size: 2.4cqw; line-height: 1.3; color: var(--t-ink2); }
   .pair .prow b { color: var(--t-ink); font-size: 2.8cqw; }
-  .pair .prow i { font-style: normal; font-weight: 500; background: var(--t-now); color: #FFF; padding: 1cqw 2.6cqw; border-radius: 3cqw; }
+  .pair .prow i { font-style: normal; font-weight: 500; background: var(--t-now); color: var(--t-on); padding: 1cqw 2.6cqw; border-radius: 3cqw; }
   .pair .pcode { font-size: 2.4cqw; color: var(--t-ink2); }
   .steps { list-style: none; margin: 0; padding: 10px 26px 6px; counter-reset: s; display: grid; gap: 4px; }
   .steps li { counter-increment: s; display: flex; gap: 16px; align-items: baseline; padding: 8px 0; color: var(--ink-2); }
-  .steps li::before { content: counter(s); font: 300 28px/1 Outfit, sans-serif; color: var(--ink); width: 22px; flex: none; }
+  .steps li::before { content: counter(s); font: 300 28px/1 Figtree, sans-serif; color: var(--ink); width: 22px; flex: none; }
   .steps b { color: var(--ink); }
 
   .account { display: flex; align-items: center; gap: 10px; }
@@ -193,9 +193,9 @@ ${FAVICON}
   .cx:disabled:active { transform: none; }
   .cx .soon { padding: 2px 10px; border-radius: 10px; background: var(--tile-high); }
   .cxdialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0; border: 0; border-radius: 28px; background: var(--tile); color: var(--ink);
-    box-shadow: 0 30px 80px -20px rgba(20, 8, 8, .45); overflow: auto; }
+    box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .45); overflow: auto; }
   .cxdialog[open] { animation: cxin 220ms cubic-bezier(.16, 1, .3, 1); }
-  .cxdialog::backdrop { background: rgba(20, 10, 10, .45); }
+  .cxdialog::backdrop { background: rgba(14, 15, 17, .45); }
   @keyframes cxin { from { opacity: 0; transform: translateY(8px) scale(.98); } }
   .cxbody { padding: 22px 28px 28px; }
   .cxhead { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
@@ -212,7 +212,7 @@ ${FAVICON}
   .cxsteps h3 { font-size: 18px; font-weight: 500; margin: 0 0 6px; }
   .cxsteps ol { list-style: none; counter-reset: s; margin: 0; padding: 0; display: grid; gap: 2px; }
   .cxsteps li { counter-increment: s; display: flex; gap: 14px; align-items: baseline; padding: 6px 0; color: var(--ink-2); }
-  .cxsteps li::before { content: counter(s); font: 300 24px/1 Outfit, sans-serif; color: var(--ink); width: 18px; flex: none; }
+  .cxsteps li::before { content: counter(s); font: 300 24px/1 Figtree, sans-serif; color: var(--ink); width: 18px; flex: none; }
   .cxsteps p:empty, .cxsteps .actions:empty { display: none; }
   ${CONFIG_CSS}
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
@@ -296,8 +296,7 @@ ${FAVICON}
         <div id="tabletsettings">
           <div class="label">Thème</div>
           <div class="themes">
-            <button data-theme="CLAIR"><span></span>Clair</button><button data-theme="SOMBRE"><span></span>Sombre</button><button data-theme="CADRAN"><span></span>Cadran</button><button data-theme="CADRAN_NUIT"><span></span>Cadran nuit</button><button data-theme="RETRO"><span></span>Rétro</button>
-            <button data-theme="CONTRASTE"><span></span>Contraste élevé</button>
+            <button data-theme="CONSOLE"><span></span>Console</button><button data-theme="CONSOLE_JOUR"><span></span>Console jour</button><button data-theme="CONTRASTE"><span></span>Contraste élevé</button>
           </div>
           <div class="row"><label for="brightness">Luminosité de l'écran</label><input type="range" id="brightness" min="5" max="100"><span class="value" id="brightnessvalue"></span></div>
           <div class="row"><label for="volume">Volume du haut-parleur</label><input type="range" id="volume" min="0" max="100"><span class="value" id="volumevalue"></span></div>
@@ -794,22 +793,19 @@ ${FAVICON}
     return d;
   }
 
-  // Aperçu de la tablette : couleurs des thèmes (fond, tuile, texte, texte 2, maintenant, filet, principale), d'après palettes.xml.
+  // Aperçu de la tablette : couleurs des thèmes (fond, tuile, texte, texte 2, accent, filet, texte sur l'accent), d'après palettes.xml.
   const THEMES = {
-    CADRAN: ["#EEE0DA", "#FCF5F1", "#2B1E1F", "#5A4746", "#CA0538", "#D6C1B9", "#2B1E1F"],
-    CADRAN_NUIT: ["#1D1617", "#2A2122", "#EBDDD9", "#CFC0BC", "#FF5165", "#574849", "#EBDDD9"],
-    CLAIR: ["#FAF2F1", "#FFFFFF", "#1E1B1B", "#4D4545", "#CA0538", "#D0C4C3", "#1E1B1B"],
-    SOMBRE: ["#100D0D", "#221F1F", "#E9E1E0", "#D0C4C3", "#FF5165", "#4D4545", "#E9E1E0"],
-    RETRO: ["#F3DECB", "#FBEFE3", "#552805", "#7A4A25", "#B82800", "#D9B99A", "#552805"],
-    CONTRASTE: ["#FFFFFF", "#F2F2F2", "#140F0F", "#140F0F", "#960026", "#140F0F", "#140F0F"],
+    CONSOLE: ["#17181B", "#23252A", "#ECEDEF", "#B4B8C0", "#B8F34A", "#3A3D44", "#16210A"],
+    CONSOLE_JOUR: ["#F4F2EE", "#FFFFFF", "#1B1C1F", "#474B54", "#3F6B00", "#D8D3CA", "#FFFFFF"],
+    CONTRASTE: ["#FFFFFF", "#EDEDE8", "#111214", "#25272C", "#2A4A00", "#45474D", "#FFFFFF"],
   };
-  const VARS = ["bg", "tile", "ink", "ink2", "now", "line"];
+  const VARS = ["bg", "tile", "ink", "ink2", "now", "line", "on"];
   for (const btn of document.querySelectorAll(".themes button")) {
     const c = THEMES[btn.dataset.theme];
-    if (c) btn.querySelector("span").style.background = "linear-gradient(135deg, " + c[0] + " 0 42%, " + c[6] + " 42% 68%, " + c[4] + " 68%)";
+    if (c) btn.querySelector("span").style.background = "linear-gradient(135deg, " + c[0] + " 0 42%, " + c[2] + " 42% 68%, " + c[4] + " 68%)";
   }
   function showTwin(theme) {
-    const c = THEMES[theme] || THEMES.CLAIR, twin = document.getElementById("twin");
+    const c = THEMES[theme] || THEMES.CONSOLE, twin = document.getElementById("twin");
     VARS.forEach((v, i) => twin.style.setProperty("--t-" + v, c[i]));
     const btn = document.querySelector('.themes button[data-theme="' + theme + '"]');
     document.getElementById("twintheme").textContent = btn ? btn.textContent : "";

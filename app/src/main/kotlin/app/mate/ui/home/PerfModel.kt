@@ -12,7 +12,7 @@ enum class PerfSeries { CPU, GPU, RAM }
 enum class PerfMark { VALUE, FILL, LINE }
 
 /**
- * Couleur (attribut de thème) d'un élément du widget, dans l'esprit Cadran : tout reste neutre et le rouge d'alerte
+ * Couleur (attribut de thème) d'un élément du widget, dans l'esprit Console : tout reste neutre et le rouge d'alerte
  * (`c_accent`, seule couleur vivante) signale l'alerte, critique comprise (pas d'orange). Neutre : chiffre en `c_text`,
  * remplissage en `c_text_dim` (comme la suite de la ligne du jour : le chiffre mène, la jauge l'accompagne), trait du
  * processeur en `c_text` et de la carte graphique en `c_text_faint` pour les distinguer. Mesure ancienne (`stale`) :

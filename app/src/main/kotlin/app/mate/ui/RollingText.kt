@@ -27,7 +27,7 @@ fun changedCells(old: String, new: String): List<Int> {
 
 /**
  * Texte en cellules de largeur fixe (chaque glyphe centré dans la sienne : les chiffres ne sautent pas) : une cellule qui change bascule, l'ancien glyphe sort par
- * le haut pendant que le nouveau monte du bas (DA Cadran). Un seul `View` dessiné à la main, pas un `TextView` par
+ * le haut pendant que le nouveau monte du bas (DA Console douce). Un seul `View` dessiné à la main, pas un `TextView` par
  * chiffre ; il ne se redessine que pendant la bascule (400 à 800 ms), jamais entre deux changements.
  *
  * Entrée : translation 62 % de la hauteur → 0 (ressort par défaut) et fondu ; sortie : 62 % vers le haut (ressort rapide)
@@ -56,7 +56,7 @@ class RollingText @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private var boxHeightPx = 0
     /**
      * Largeur d'une cellule de chiffre, en em, au moins : élargie au chiffre le plus large de la police ([digitEm]),
-     * sinon le « 0 » d'Outfit débordait de sa case, rognée, et le premier chiffre de l'heure paraissait coupé. Les deux
+     * sinon le « 0 » de la police débordait de sa case, rognée, et le premier chiffre de l'heure paraissait coupé. Les deux
      * points n'en prennent que [separatorEm].
      */
     var cellEm = 0.56f

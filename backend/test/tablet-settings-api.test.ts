@@ -12,7 +12,7 @@ after(async () => {
   await server.stop();
 });
 
-const SETTINGS = { theme: "CADRAN", brightness: 0.6, volume: 0.4, nightDim: true, focusDnd: true };
+const SETTINGS = { theme: "CONSOLE", brightness: 0.6, volume: 0.4, nightDim: true, focusDnd: true };
 const STATE = {
   mode: "home",
   app: "1.4.0",
@@ -49,19 +49,19 @@ describe("panneau Tablette", () => {
       update: null,
     });
 
-    const put = server.call("PUT", "/local/tablet/settings", { theme: "RETRO", brightness: 0.3 }, false);
+    const put = server.call("PUT", "/local/tablet/settings", { theme: "CONSOLE_JOUR", brightness: 0.3 }, false);
     const [order] = (await polling).json.commands;
-    assert.deepEqual(order.command, { type: "settings", theme: "RETRO", brightness: 0.3 });
+    assert.deepEqual(order.command, { type: "settings", theme: "CONSOLE_JOUR", brightness: 0.3 });
 
-    const state = { ...STATE, settings: { ...SETTINGS, theme: "RETRO", brightness: 0.3 } };
+    const state = { ...STATE, settings: { ...SETTINGS, theme: "CONSOLE_JOUR", brightness: 0.3 } };
     await server.call("POST", "/tablet/result", { id: order.id, ok: true, state });
     const done = await put;
     assert.equal(done.status, 200);
     // Réponse avec l'état renvoyé par la tablette : la page se met à jour sans attendre le poll suivant.
-    assert.equal(done.json.tablet.settings.theme, "RETRO");
+    assert.equal(done.json.tablet.settings.theme, "CONSOLE_JOUR");
   });
 
-  for (const theme of ["CONTRASTE", "CADRAN_NUIT"]) {
+  for (const theme of ["CONTRASTE", "CONSOLE_JOUR"]) {
     it(`accepte le thème ${theme}`, async () => {
       const polling = server.call("POST", "/tablet/poll", { state: STATE });
       await new Promise((r) => setTimeout(r, 300));

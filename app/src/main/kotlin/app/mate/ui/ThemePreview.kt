@@ -11,13 +11,12 @@ import app.mate.R
 
 /**
  * Vignette d'un thème dans Réglages > Personnalisation : un petit écran peint avec ses propres couleurs (fond, barre de
- * gauche, carte avec « Aa » dans sa police de titres, pastille d'accent) et ses tubes s'il en a. Choisi : cadre de
- * l'accent du thème affiché. Dessinée une fois, rien ne bouge.
+ * gauche, carte avec « Aa » dans sa police de titres, pastille d'accent). Choisi : cadre de l'accent du thème
+ * affiché. Dessinée une fois, rien ne bouge.
  */
 class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolean) : View(context) {
-    // Depuis le contexte de l'appli, pas celui de l'écran : un thème part de zéro, sans hériter des tubes ou du grain
-    // du thème affiché.
-    private val themed = ContextThemeWrapper(context.applicationContext, theme.base).apply { this.theme.applyStyle(theme.palette, true) }
+    // Depuis le contexte de l'appli, pas celui de l'écran : un thème part de zéro, sans hériter du thème affiché.
+    private val themed = ContextThemeWrapper(context.applicationContext, theme.base).apply { theme.palette?.let { this.theme.applyStyle(it, true) } }
     private fun color(attr: Int) = themeColor(themed, attr)
 
     private val bg = color(R.attr.c_bg)
@@ -26,14 +25,10 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
     private val accent = color(R.attr.c_accent)
     private val text = color(R.attr.c_text)
     private val dim = color(R.attr.c_text_dim)
-    private val flow = if (themeBool(themed, R.attr.c_flow)) {
-        listOf(R.attr.c_flow_dark, R.attr.c_flow_red, R.attr.c_flow_orange, R.attr.c_flow_cream).map(::color)
-    } else {
-        emptyList()
-    }
 
     /** Cadre du thème choisi : accent du thème affiché (celui des Réglages), pas celui de la vignette. */
     private val frame = themeColor(context, R.attr.c_accent)
+    private val outline = themeColor(context, R.attr.c_stroke)
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -69,12 +64,6 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
         canvas.drawRect(pad, pad, pad + w * 0.12f, pad + h, fill)
         fill.color = accent
         canvas.drawRoundRect(pad + w * 0.04f, pad + h * 0.2f, pad + w * 0.08f, pad + h * 0.38f, 2 * d, 2 * d, fill)
-        // Tubes à droite : trois bandes de leurs couleurs.
-        flow.take(3).forEachIndexed { i, c ->
-            fill.color = c
-            val band = w * 0.06f
-            canvas.drawRect(pad + w * 0.8f + i * band, pad, pad + w * 0.8f + (i + 1) * band, pad + h, fill)
-        }
         // Carte : « Aa » en couleur de texte, pastille d'accent, ligne de texte secondaire.
         fill.color = surface
         rect.set(pad + w * 0.18f, pad + h * 0.16f, pad + w * 0.76f, pad + h * 0.84f)
@@ -86,6 +75,14 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
         fill.color = dim
         canvas.drawRoundRect(rect.left + 10 * d, rect.bottom - 14 * d, rect.left + rect.width() * 0.6f, rect.bottom - 10 * d, 2 * d, 2 * d, fill)
         canvas.restore()
+        if (!chosen) {
+            // Filet fin : une vignette claire (Contraste élevé) ne se perd pas sur une carte blanche.
+            stroke.color = outline
+            stroke.strokeWidth = d
+            rect.set(pad, pad, pad + w, pad + h)
+            canvas.drawRoundRect(rect, radius, radius, stroke)
+            stroke.strokeWidth = 3 * d
+        }
         if (chosen) {
             stroke.color = frame
             rect.set(pad / 2 + 1.5f * d, pad / 2 + 1.5f * d, width - pad / 2 - 1.5f * d, height - pad / 2 - 1.5f * d)

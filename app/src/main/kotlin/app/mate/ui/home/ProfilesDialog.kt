@@ -55,7 +55,7 @@ class ProfilesDialog(
     private val fontMedium = themeFont(context, R.attr.c_font_medium)
 
     /**
-     * Une carte large aux formes de Cadran : en-tête (titre, fermer), les profils, puis « Nouveau profil » en tuiles
+     * Une carte large aux formes de Console : en-tête (titre, fermer), les profils, puis « Nouveau profil » en tuiles
      * (vide ou un modèle, un seul toucher).
      */
     fun show() {

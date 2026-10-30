@@ -13,7 +13,7 @@ import androidx.dynamicanimation.animation.SpringAnimation
 import app.mate.R
 
 /**
- * Case ronde d'une tâche (Cadran) : 24 dp, contour `c_text_faint` ; cochée, aplat `c_ok` et coche qui se trace
+ * Case ronde d'une tâche : 24 dp, contour `c_text_faint` ; cochée, aplat `c_ok` et coche qui se trace
  * (ressort 1600 / 1) pendant que la case reprend sa taille (ressort 1400 / 0,9). La zone touchable déborde de 12 dp
  * à droite et en hauteur ; seul le rond de 24 dp est dessiné, calé à gauche.
  */
@@ -87,7 +87,7 @@ class TaskCheck @JvmOverloads constructor(context: Context, attrs: AttributeSet?
     }
 }
 
-/** Libellé d'une tâche (Cadran) : une barre de 1,5 dp se dessine de gauche à droite quand elle est faite (ressort 1400 / 0,9). */
+/** Libellé d'une tâche : une barre de 1,5 dp se dessine de gauche à droite quand elle est faite (ressort 1400 / 0,9). */
 class StrikeText @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : AppCompatTextView(context, attrs) {
     private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = themeColor(context, R.attr.c_text_faint) }
     private var strike = 0f

@@ -184,12 +184,12 @@ describe("pages locales", () => {
     assert.match(json, /<html/i);
   });
 
-  it("sert les polices Outfit des pages sans jeton, et rien d'autre", async () => {
-    const font = await fetch(`${server.url}/web/outfit-400.ttf`);
+  it("sert les polices Figtree des pages sans jeton, et rien d'autre", async () => {
+    const font = await fetch(`${server.url}/web/figtree-400.ttf`);
     assert.equal(font.status, 200);
     assert.equal(font.headers.get("content-type"), "font/ttf");
     assert.ok((await font.arrayBuffer()).byteLength > 10_000);
-    assert.equal((await fetch(`${server.url}/web/outfit-900.ttf`)).status, 401);
+    assert.equal((await fetch(`${server.url}/web/figtree-900.ttf`)).status, 401);
     assert.equal((await server.call("GET", "/web/..%2Fconfig.ts")).status, 404);
   });
 

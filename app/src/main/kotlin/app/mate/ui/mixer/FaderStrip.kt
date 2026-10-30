@@ -31,8 +31,8 @@ import kotlin.math.max
 
 /**
  * Tranche de console de l'onglet Son : vis, icône, nom sur un afficheur, graduations, curseur à saisir, vumètre à
- * LED, volume en gros et touche Muet éclairée. Objets de console, mais aux tons, à la police (Outfit) et aux formes
- * de Cadran (docs/ui-ux/da). Dessinée à la main (une seule vue par tranche, rien à gonfler : la tablette est lente) ;
+ * LED, volume en gros et touche Muet éclairée. Objets de console, mais aux tons, à la police (Figtree) et aux formes
+ * de Console (docs/ui-ux/da). Dessinée à la main (une seule vue par tranche, rien à gonfler : la tablette est lente) ;
  * la plaque est celle de [MixerView], derrière.
  *
  * Sous [TIGHT_DP] de hauteur (console d'un profil de l'Accueil), la tranche est resserrée : ni vis ni icône, le nom
@@ -131,7 +131,7 @@ class FaderStrip(context: Context) : View(context) {
     private var cap: Bitmap? = null
     private var muteFace: LinearGradient? = null
 
-    // Couleurs du thème (palettes.xml, tirées des tons de Cadran).
+    // Couleurs du thème (palettes.xml, tirées des tons de Console).
     private val cText = themeColor(context, R.attr.c_mx_text)
     private val cEngrave = themeColor(context, R.attr.c_mx_engrave)
     private val cSlot = themeColor(context, R.attr.c_mx_slot)

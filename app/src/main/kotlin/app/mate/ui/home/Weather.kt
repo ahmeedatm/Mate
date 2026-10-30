@@ -57,7 +57,7 @@ object Weather {
     class Day(val date: String, val code: Int, val min: Double, val max: Double)
     class Place(val name: String, val label: String, val lat: Double, val lon: Double)
 
-    /** Le temps qu'il fait : emoji (widget Météo), icône monochrome (héros Cadran) et libellé. */
+    /** Le temps qu'il fait : emoji (widget Météo), icône monochrome (héros) et libellé. */
     class Sky(val emoji: String, @DrawableRes val icon: Int, @StringRes val text: Int)
 
     /** MET Norway refuse plus de 4 décimales (et elles suffisent : 11 m). */

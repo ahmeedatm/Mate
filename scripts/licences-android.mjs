@@ -81,9 +81,7 @@ ICÔNES
 Icônes Material Symbols et Material Icons, Copyright Google LLC, licence Apache 2.0 (texte plus bas).
 
 POLICES (SIL Open Font License 1.1, texte plus bas)
-- Outfit : Copyright 2021 The Outfit Project Authors (https://github.com/Outfitio/Outfit-Fonts)
-- Nunito : Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
-- Abril Fatface : Copyright (c) 2011, TypeTogether (www.type-together.com), noms de police réservés « Abril » et « Abril Fatface »
+- Figtree : Copyright 2022 The Figtree Project Authors (https://github.com/erikdkennedy/figtree)
 - Atkinson Hyperlegible : Copyright 2020 Braille Institute of America, Inc. (https://github.com/googlefonts/atkinson-hyperlegible)
 
 DONNÉES

@@ -460,34 +460,17 @@ class SettingsFragment :
     }
 
     /**
-     * Thèmes en vignettes (ui/ThemePreview : chacune peinte de ses couleurs), en groupes titrés. Toucher une vignette
+     * Thèmes en vignettes (ui/ThemePreview : chacune peinte de ses couleurs), sur une rangée. Toucher une vignette
      * applique le thème (l'activité est recréée).
      */
     private fun setUpThemes(rows: LinearLayout) {
         val ctx = requireContext()
         val current = AppTheme.current(ctx)
-        val groups = AppTheme.entries.groupBy { it.group }.toSortedMap()
-        // Même largeur de vignette dans tous les groupes : les plus petits sont complétés de places vides.
-        val columns = groups.values.maxOf { it.size }
-        for ((index, entry) in groups.entries.withIndex()) {
-            val (group, themes) = entry
-            rows.addView(
-                TextView(ctx).apply {
-                    setText(group.label)
-                    setTextColor(themeColor(ctx, R.attr.c_text_dim))
-                    textSize = 14f
-                },
-                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                    if (index > 0) topMargin = dp(18)
-                },
-            )
-            val row = LinearLayout(ctx)
-            for (theme in themes) row.addView(themeTile(theme, theme == current), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            repeat(columns - themes.size) { row.addView(View(ctx), LinearLayout.LayoutParams(0, 0, 1f)) }
-            rows.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(8)
-            })
-        }
+        val row = LinearLayout(ctx)
+        for (theme in AppTheme.entries) row.addView(themeTile(theme, theme == current), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        rows.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(8)
+        })
     }
 
     private fun themeTile(theme: AppTheme, chosen: Boolean): View {

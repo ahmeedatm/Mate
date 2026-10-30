@@ -110,7 +110,7 @@ avec de la marge (un cahier ouvert sur deux pages demande environ 35 cm). En 720
 
 ## Mesures de performance
 
-27/10/2026, prototype de la DA d'alors (`docs/ui-ux/da/accueil.html`) dans Chrome 81 sur la tablette, intervalle
+27/10/2026, prototype HTML de la DA d'alors (retiré depuis) dans Chrome 81 sur la tablette, intervalle
 entre images mesuré par `requestAnimationFrame` :
 
 | Situation | Images/s | Intervalle médian | Images au-dessus de 33 ms |

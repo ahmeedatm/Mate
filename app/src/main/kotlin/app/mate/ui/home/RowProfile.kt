@@ -1,6 +1,6 @@
 package app.mate.ui.home
 
-/** Hauteurs des lignes de l'Accueil : égales par défaut, proportionnelles à des poids pour le profil Cadran. */
+/** Hauteurs des lignes de l'Accueil : égales par défaut, proportionnelles à des poids pour le profil à lignes inégales. */
 object RowProfile {
     /** Héros, ligne du jour, deux rangées de tuiles : 232 / 92 / 184 / 184 sur 740 de hauteur utile. */
     val CADRAN_ROWS = intArrayOf(232, 92, 184, 184)

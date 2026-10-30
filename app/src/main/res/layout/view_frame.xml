@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Cadre photo (Depuis l'ordi) : deux tuiles Cadran côte à côte. « Photos » montre celles copiées sur la tablette
+<!-- Cadre photo (Depuis l'ordi) : deux tuile Console côte à côte. « Photos » montre celles copiées sur la tablette
      (vignettes), ouvre le dossier sur l'ordinateur et lance le cadre ; « Quand » règle le délai et la durée d'une photo.
      Géré par FrameSettingsView. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"

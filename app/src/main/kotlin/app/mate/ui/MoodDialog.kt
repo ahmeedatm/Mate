@@ -23,7 +23,7 @@ object MoodDialog {
             setPadding(context.dp(20), context.dp(16), context.dp(20), context.dp(16))
             this.text = describe(context, plan)
         }
-        showCadranDialog(
+        showConsoleDialog(
             context,
             title = context.getString(mood.label),
             subtitle = context.getString(mood.intro),

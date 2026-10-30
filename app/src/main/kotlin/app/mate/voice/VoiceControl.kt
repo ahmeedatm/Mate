@@ -48,7 +48,7 @@ class VoiceControl(
     private val activity: MainActivity,
     private val button: View,
     private val icon: View,
-    /** Le bouton est touché (le menu Cadran se referme pour montrer le résultat). */
+    /** Le bouton est touché (le menu se referme pour montrer le résultat). */
     private val onPressed: () -> Unit = {},
 ) {
 

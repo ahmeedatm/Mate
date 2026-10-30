@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Carte Tâches en thème Cadran : titre et « N restantes » sur une ligne, cases rondes, « + Nouvelle tâche » en dernière ligne. -->
+<!-- Carte Tâches en thème Console : titre et « N restantes » sur une ligne, cases rondes, « + Nouvelle tâche » en dernière ligne. -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 

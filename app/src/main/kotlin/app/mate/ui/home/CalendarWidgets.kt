@@ -225,7 +225,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
 
     /**
-     * Cadran, vertical : cache les rendez-vous suivants qui ne tiennent pas entre le contenu du haut et le bas de la
+     * Vertical : cache les rendez-vous suivants qui ne tiennent pas entre le contenu du haut et le bas de la
      * tuile (le filet disparaît s'il n'en tient aucun). La place ne dépend pas des lignes cachées : la décision est stable.
      */
     private fun fitFollowing() {

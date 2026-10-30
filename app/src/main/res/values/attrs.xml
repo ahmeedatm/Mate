@@ -7,7 +7,7 @@
     <attr name="c_surface_raised" format="color" />
     <attr name="c_surface_pressed" format="color" />
     <attr name="c_stroke" format="color" />
-    <!-- Ton des traits qui portent un sens (graduations éteintes, piste, poignée) : ≥ 3:1 dans les thèmes Cadran, c_stroke ailleurs. -->
+    <!-- Ton des traits qui portent un sens (graduations éteintes, piste, poignée) : ≥ 3:1 sur le fond, la tuile et le relief. -->
     <attr name="c_graphic" format="color" />
     <attr name="c_accent" format="color" />
     <attr name="c_accent_soft" format="color" />
@@ -44,13 +44,13 @@
     <attr name="c_hue_pink" format="color" />
     <attr name="c_hue_yellow" format="color" />
     <attr name="c_hue_blue" format="color" />
-    <!-- Habillage Cadran : les thèmes de base posent les valeurs d'origine, les palettes Cadran les remplacent. -->
+    <!-- Habillage des tuiles : posé par chaque palette (palettes.xml). -->
     <attr name="c_card_bg" format="reference" />
     <attr name="c_tile_bg" format="reference" />
     <attr name="c_card_pad" format="dimension" />
-    <!-- Fond des widgets de l'Accueil : celui des tuiles, translucide dans les thèmes à tubes (Rétro, Cadran, Cadran nuit). -->
+    <!-- Fond des widgets de l'Accueil : celui des tuiles. -->
     <attr name="c_home_card_bg" format="reference" />
-    <!-- Taille des titres de carte en Cadran (TitleView) : un peu plus grande en Rétro, l'Abril Fatface étant petite. -->
+    <!-- Taille des titres de carte (TitleView) : 15 sp, 18 sp en Contraste élevé. -->
     <attr name="c_title_size" format="dimension" />
     <!-- Contraste élevé : grandes touches (cases de 148 dp, libellé de 18 sp) dans les grilles de touches (ui/home/TileGridView). -->
     <attr name="c_big_keys" format="boolean" />
@@ -64,16 +64,7 @@
     <attr name="c_font_title" format="reference|string" />
     <!-- Grands chiffres (heure, chrono, température) et titre de bienvenue. -->
     <attr name="c_font_display" format="reference|string" />
-    <!-- Rétro, Cadran et Cadran nuit : tube qui coule en L à droite et en bas de l'Accueil (ui/home/FlowBandView), ses quatre couleurs, et grain
-         de deux couleurs par-dessus tout l'écran (ui/Grain.kt ; absentes = pas de grain). -->
-    <attr name="c_flow" format="boolean" />
-    <attr name="c_flow_dark" format="color" />
-    <attr name="c_flow_red" format="color" />
-    <attr name="c_flow_orange" format="color" />
-    <attr name="c_flow_cream" format="color" />
-    <attr name="c_grain_light" format="color" />
-    <attr name="c_grain_dark" format="color" />
-    <!-- Console de l'onglet Son du deck (plaque, afficheurs, curseurs, LED), tirées des tons de Cadran : ui/mixer/. -->
+    <!-- Console de l'onglet Son du deck (plaque, afficheurs, curseurs, LED), aux tons de Console douce : ui/mixer/. -->
     <attr name="c_mx_plate_top" format="color" />
     <attr name="c_mx_plate_bottom" format="color" />
     <attr name="c_mx_lcd_bg" format="color" />

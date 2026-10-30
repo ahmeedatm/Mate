@@ -38,33 +38,6 @@ import kotlin.math.abs
  * sur un calque matériel, et les boucles s'arrêtent dès que l'écran n'est plus affiché.
  */
 object Look {
-    /**
-     * Thèmes à tubes (Rétro, Cadran, Cadran nuit) : halo de la couleur des cartes autour d'un texte dessiné à la main,
-     * pour le lire sur les tubes qui coulent derrière.
-     */
-    fun halo(context: Context, paint: Paint) {
-        if (themeBool(context, R.attr.c_flow)) paint.setShadowLayer(HALO_RADIUS, 0f, 0f, themeColor(context, R.attr.c_surface))
-    }
-
-    /**
-     * Thèmes à tubes : halo de la couleur des cartes autour des textes sous [root] (Accueil, tubes derrière) qui
-     * tranchent sur elle (foncés en thème clair, clairs la nuit) ; jamais autour d'un texte posé sur un fond coloré
-     * (tuile, bouton plein), qu'il brouillerait.
-     */
-    fun haloTexts(root: View) {
-        if (root is TextView) {
-            val surface = themeColor(root.context, R.attr.c_surface)
-            val dark = ColorUtils.calculateLuminance(root.currentTextColor) < DARK_TEXT
-            val onCard = dark != ColorUtils.calculateLuminance(surface) < DARK_TEXT
-            val halo = if (onCard) surface else 0
-            if (root.shadowColor != halo) root.setShadowLayer(if (onCard) HALO_RADIUS else 0f, 0f, 0f, halo)
-        }
-        if (root is ViewGroup) for (i in 0 until root.childCount) haloTexts(root.getChildAt(i))
-    }
-
-    private const val HALO_RADIUS = 8f
-    private const val DARK_TEXT = 0.3
-
     private val HUES = intArrayOf(
         R.attr.c_hue_orange, R.attr.c_hue_green, R.attr.c_hue_cyan, R.attr.c_hue_violet,
         R.attr.c_hue_red, R.attr.c_hue_pink, R.attr.c_hue_yellow, R.attr.c_hue_blue,
@@ -456,7 +429,7 @@ object Look {
      */
     fun cascadeOnly(context: Context): Boolean = reduced(context) && !still(context)
 
-    /** Arrivée d'un élément de l'Accueil Cadran : il monte de `dy` dp (ressort par défaut) en fondu, après `delayMs`. */
+    /** Arrivée d'un élément de l'Accueil : il monte de `dy` dp (ressort par défaut) en fondu, après `delayMs`. */
     fun enterSpring(view: View, delayMs: Long, dy: Int) {
         view.animate().cancel()
         if (!on(view.context, AnimFamily.HOME)) {
@@ -510,7 +483,7 @@ object Look {
 
     private const val SHARED_AXIS_DP = 30
 
-    /** Appui (DA Cadran) : la vue s'enfonce à 0,96 puis revient sur un ressort. Le clic n'est pas consommé. */
+    /** Appui (DA Console douce) : la vue s'enfonce à 0,96 puis revient sur un ressort. Le clic n'est pas consommé. */
     @SuppressLint("ClickableViewAccessibility")
     fun pressSpring(view: View) {
         if (still(view.context)) return

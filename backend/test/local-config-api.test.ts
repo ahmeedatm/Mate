@@ -31,7 +31,7 @@ beforeEach(async () => {
 
 // La page locale n'a pas de jeton : `auth: false`.
 const local = (method: string, route: string, body?: unknown) => server.call(method, `/local/config/${route}`, body, false);
-const key = (label: string) => ({ label, symbol: "lock", color: "#CA0538", steps: [{ type: "text", text: "bonjour" }] });
+const key = (label: string) => ({ label, symbol: "lock", color: "#B8F34A", steps: [{ type: "text", text: "bonjour" }] });
 const message = "Demande invalide : mets à jour l'appli de la tablette";
 
 describe("sans jeton, en local seulement", () => {
@@ -81,7 +81,7 @@ describe("touches", () => {
   it("enregistre puis vide une touche Perso : même fichier que la tablette", async () => {
     assert.equal((await local("PUT", "keys/2", key("Salut"))).status, 200);
     assert.equal((await server.call("GET", "/deck/keys/2")).json.key.label, "Salut");
-    assert.equal((await local("GET", "keys")).json.perso.keys[2].color, "#CA0538");
+    assert.equal((await local("GET", "keys")).json.perso.keys[2].color, "#B8F34A");
     assert.equal((await local("DELETE", "keys/2")).status, 200);
     assert.equal((await server.call("GET", "/deck/keys/2")).json.key, null);
   });

@@ -28,7 +28,7 @@ class LicencesTest {
         assertTrue("OFL 1.1", "SIL OPEN FONT LICENSE Version 1.1" in licences)
         // Préfixe du nom de fichier (res/font/<préfixe><graisse>.ttf) -> nom cité ; le préfixe le plus long l'emporte.
         val cited = mapOf(
-            "outfit_" to "Outfit", "nunito_" to "Nunito", "abril_" to "Abril Fatface", "atkinson_" to "Atkinson Hyperlegible",
+            "figtree_" to "Figtree", "atkinson_" to "Atkinson Hyperlegible",
         )
         for (file in File("src/main/res/font").list()!!) {
             val name = cited.entries.filter { file.startsWith(it.key) }.maxByOrNull { it.key.length }?.value

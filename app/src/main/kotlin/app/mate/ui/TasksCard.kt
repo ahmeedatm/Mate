@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
  * Carte « Tâches du jour » de l'Accueil, stockées sur l'ordinateur : récurrentes (créées ici avec ⏰, ou dans
  * config/tasks.json comme le worklog Jira, cochée toute seule quand la journée est saisie) et ponctuelles (ici ou
  * par Claude), avec rappel parlé. 🔁 : toutes les récurrentes, même celles qui ne tombent pas aujourd'hui.
- * Thèmes Cadran : en-tête « Tâches / N restantes », cases rondes, pas de croix par ligne (toucher la ligne ouvre la
+ * Console : en-tête « Tâches / N restantes », cases rondes, pas de croix par ligne (toucher la ligne ouvre la
  * suppression ; l'appui long est pris par le mode Modifier de l'Accueil), toucher « Tâches » ouvre les récurrentes,
  * toucher le compteur relit les tâches, « + Nouvelle tâche » en dernière ligne.
  */
@@ -269,7 +269,7 @@ class TasksCard @JvmOverloads constructor(
         /** Largeur de ligne sous laquelle le détail d'une tâche se cache (carte Vertical : ~270 dp). */
         const val NARROW_ROW_DP = 340
 
-        /** Thèmes Cadran : dernière liste lue par ordinateur, pour un écran recréé pendant une coupure. */
+        /** Console : dernière liste lue par ordinateur, pour un écran recréé pendant une coupure. */
         val lastRead = HashMap<String, List<TaskItem>>()
     }
 }

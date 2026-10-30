@@ -53,7 +53,7 @@ class CallOverlay(private val activity: MainActivity) : FrameLayout(activity) {
         val card = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            setBackgroundResource(R.drawable.card_bg)
+            setBackgroundResource(R.drawable.console_tile_bg)
             setPadding(dp(48), dp(36), dp(48), dp(36))
             addView(badge)
             addView(label, LinearLayout.LayoutParams(WRAP, WRAP).apply { topMargin = dp(20) })

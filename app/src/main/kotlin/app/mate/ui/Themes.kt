@@ -10,40 +10,30 @@ import app.mate.Prefs
 import app.mate.R
 
 /**
- * Thèmes de la DA Cadran (docs/ui-ux/da), choisis dans Réglages : jour et nuit (grain et tubes de Rétro aux couleurs de
- * Cadran), Clair et Sombre (les mêmes sans texture, blanc et noir francs), Rétro (Cadran habillé années 70,
- * grain et bande qui coule) et Contraste élevé (Cadran jour en lisibilité maximale, grandes touches). Un thème
- * s'applique aussi par code : `Prefs.setTheme(context, AppTheme.CONTRASTE.name)` puis `recreate()` (ou l'ordre
- * `settings` de la page de l'ordinateur, `{"theme": "CONTRASTE"}`). Les couleurs et polices sont des attributs (`?attr/c_…`, res/values/palettes.xml) :
- * changer de thème recrée l'activité. Les thèmes clairs ont leur propre base AppCompat (dialogues et champs clairs).
- * Clair est le thème par défaut (premier de la liste) : sans choix, ou un ancien thème enregistré (Nuit, Néon, Chaud).
- * Choix des Réglages en groupes ([ThemeGroup]) : sobres (Clair, Sombre), rétro (les texturés : Cadran, Cadran nuit,
- * Rétro), accessibilité (Contraste élevé).
+ * Thèmes de la DA Console douce (docs/ui-ux/da), choisis dans Réglages : Console (nuit, par défaut), Console jour
+ * et Contraste élevé (Console jour en lisibilité maximale, grandes touches). Un thème s'applique aussi par code :
+ * `Prefs.setTheme(context, AppTheme.CONTRASTE.name)` puis `recreate()` (ou l'ordre `settings` de la page de
+ * l'ordinateur, `{"theme": "CONTRASTE"}`). Les couleurs et polices sont des attributs (`?attr/c_…`,
+ * res/values/palettes.xml) : changer de thème recrée l'activité. Les thèmes clairs ont leur propre base AppCompat
+ * (dialogues et champs clairs) ; la palette de Console et de Console jour est celle de leur base, Contraste élevé en
+ * pose une par-dessus (une palette à parent AppCompat écraserait colorAccent et colorControlActivated de la base).
+ * Console est le thème par défaut : sans choix, ou avec un thème enregistré qui n'existe plus (Clair, Sombre,
+ * Cadran, Rétro, Nuit…).
  */
-/** Groupes du choix des Réglages, dans cet ordre. */
-enum class ThemeGroup(val label: Int) {
-    SOBRE(R.string.theme_group_sober),
-    RETRO(R.string.theme_group_retro),
-    ACCESSIBILITE(R.string.theme_group_a11y),
-}
-
-enum class AppTheme(val label: Int, val base: Int, val palette: Int, val swatch: Int, val group: ThemeGroup) {
-    CLAIR(R.string.theme_clair, R.style.Theme_CompanionLight, R.style.Palette_CadranClair, 0xFFCA0538.toInt(), ThemeGroup.SOBRE),
-    SOMBRE(R.string.theme_sombre, R.style.Theme_Companion, R.style.Palette_CadranSombre, 0xFFFF5165.toInt(), ThemeGroup.SOBRE),
-    CADRAN(R.string.theme_cadran, R.style.Theme_CompanionLight, R.style.Palette_Cadran, 0xFFCA0538.toInt(), ThemeGroup.RETRO),
-    CADRAN_NUIT(R.string.theme_cadran_nuit, R.style.Theme_Companion, R.style.Palette_CadranNuit, 0xFFFF5165.toInt(), ThemeGroup.RETRO),
-    RETRO(R.string.theme_retro, R.style.Theme_CompanionLight, R.style.Palette_Retro, 0xFFFC9303.toInt(), ThemeGroup.RETRO),
-    CONTRASTE(R.string.theme_contraste, R.style.Theme_CompanionLight, R.style.Palette_Contraste, 0xFF140F0F.toInt(), ThemeGroup.ACCESSIBILITE),
+enum class AppTheme(val label: Int, val base: Int, val palette: Int? = null) {
+    CONSOLE(R.string.theme_console, R.style.Theme_Companion),
+    CONSOLE_JOUR(R.string.theme_console_jour, R.style.Theme_CompanionLight),
+    CONTRASTE(R.string.theme_contraste, R.style.Theme_CompanionLight, R.style.Palette_Contraste),
     ;
 
     companion object {
-        fun current(context: Context): AppTheme = entries.firstOrNull { it.name == Prefs.theme(context) } ?: CLAIR
+        fun current(context: Context): AppTheme = entries.firstOrNull { it.name == Prefs.theme(context) } ?: CONSOLE
 
         /** À appeler avant super.onCreate. Police lisible (Réglages > Accessibilité) par-dessus la palette. */
         fun apply(activity: Activity) {
             val theme = current(activity)
             activity.setTheme(theme.base)
-            activity.theme.applyStyle(theme.palette, true)
+            theme.palette?.let { activity.theme.applyStyle(it, true) }
             ReadingAids.applyFont(activity)
         }
     }
@@ -58,7 +48,7 @@ fun themeColor(context: Context, attr: Int): Int {
 
 fun themeColorList(context: Context, attr: Int): ColorStateList = ColorStateList.valueOf(themeColor(context, attr))
 
-/** Booléen du thème (absent = faux) : `themeBool(context, R.attr.c_flow)`. */
+/** Booléen du thème (absent = faux) : `themeBool(context, R.attr.c_big_keys)`. */
 fun themeBool(context: Context, attr: Int): Boolean {
     val value = TypedValue()
     return context.theme.resolveAttribute(attr, value, true) && value.data != 0

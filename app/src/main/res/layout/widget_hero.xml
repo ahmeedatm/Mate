@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Héros de l'Accueil (HeroWidget, DA Cadran) : heure en grand qui bascule, date, « Ensuite … », météo et eau à droite.
+<!-- Héros de l'Accueil (HeroWidget, DA Console douce) : heure en grand qui bascule, date, « Ensuite … », météo et eau à droite.
      Sans fond : le héros n'est pas une tuile. Il déborde de quelques dp sous sa ligne, comme dans la maquette. -->
 <app.mate.ui.home.HeroView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/hero"

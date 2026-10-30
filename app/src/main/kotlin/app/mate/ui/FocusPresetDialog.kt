@@ -40,7 +40,7 @@ object FocusPresetDialog {
             stepper(R.string.focus_phase_break, { pause }) { up -> pause = FocusPresets.stepPause(pause, up) },
             LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = context.dp(8) },
         )
-        showCadranDialog(
+        showConsoleDialog(
             context,
             title = context.getString(R.string.focus_custom_title),
             subtitle = context.getString(R.string.focus_custom_subtitle),

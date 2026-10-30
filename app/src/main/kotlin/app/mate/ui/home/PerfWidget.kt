@@ -36,7 +36,7 @@ import kotlin.math.sqrt
  * Performances de l'ordinateur en direct : processeur, mémoire et carte graphique (avec sa température et son
  * ventilateur quand elle les donne), relevés toutes les 2 s tant que la page est à l'écran.
  * Moyen : quatre chiffres et la courbe de la dernière minute ; grand : trois anneaux ; bandeau : trois barres.
- * DA Cadran : chiffres fins et graphiques neutres, le rouge d'alerte seulement pour une alerte ; un relevé remplace les
+ * DA Console douce : chiffres fins et graphiques neutres, le rouge d'alerte seulement pour une alerte ; un relevé remplace les
  * valeurs sans animation (comme le chrono du Focus). Les tailles suivent la hauteur de la ligne de l'Accueil (lignes
  * inégales) : sur une ligne basse, le titre et la courbe laissent la place aux chiffres, rangés sur une seule ligne.
  */
@@ -85,7 +85,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** Met la vue courante à la taille de la place intérieure de la tuile (hauteur, largeur), à chaque mesure. */
     private var fitter: (Int, Int) -> Unit = { _, _ -> }
 
-    // Mesures d'un chiffre (Outfit 300 à chiffres tabulaires, sans marge de police), par pixel de corps.
+    // Mesures d'un chiffre (Figtree 300 à chiffres tabulaires, sans marge de police), par pixel de corps.
     private val figurePaint = Paint().apply {
         typeface = themeFont(context, R.attr.c_font_light)
         textSize = 100f
@@ -356,7 +356,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     /**
      * Température et ventilateur de la carte graphique (« GPU 81 °C », « Ventilateur 1 850 tr/min ») en texte simple :
-     * ils ne se touchent pas, donc pas de pilule (réservée aux boutons et aux puces dans Cadran).
+     * ils ne se touchent pas, donc pas de pilule (réservée aux boutons et aux puces dans Console).
      */
     private fun chips(direction: Int): LinearLayout {
         fun chip(name: Int): Chip {
@@ -465,13 +465,13 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     // ---- Textes et mesures ----
 
-    /** Libellé (« CPU », « Ventilateur ») : 14 sp, Outfit 400. */
+    /** Libellé (« CPU », « Ventilateur ») : 14 sp, Figtree 400. */
     private fun caption(text: String, colorId: Int = R.attr.c_text_dim) = label(14f, colorId).apply {
         this.text = text
         isSingleLine = true
     }
 
-    /** Grand chiffre : Outfit 300 à chiffres tabulaires, sans marge de police ; sa taille vient de `fitter`. */
+    /** Grand chiffre : Figtree 300 à chiffres tabulaires, sans marge de police ; sa taille vient de `fitter`. */
     private fun figure(gravity: Int) = label(MAX_FIGURE_SP, light = true).apply {
         fontFeatureSettings = "tnum"
         includeFontPadding = false
@@ -547,7 +547,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
 /**
  * Tuile qui met son contenu à la taille de la place reçue juste avant de se mesurer, comme HeroView : les lignes de
- * l'Accueil Cadran n'ont pas toutes la même hauteur. `fit` reçoit la hauteur et la largeur intérieures (sans la marge).
+ * l'Accueil n'ont pas toutes la même hauteur. `fit` reçoit la hauteur et la largeur intérieures (sans la marge).
  */
 @SuppressLint("ViewConstructor")
 private class FittingCard(context: Context, private val fit: (Int, Int) -> Unit) : LinearLayout(context) {

@@ -137,22 +137,26 @@ describe("réglages", () => {
 
   it("sans tablette, les réglages le disent", async () => {
     assert.equal(json(await call("tablette_reglages")).connectee, false);
-    const res = await call("tablette_regler", { theme: "RETRO" });
+    const res = await call("tablette_regler", { theme: "CONSOLE_JOUR" });
     assert.equal(res.isError, true);
     assert.equal(res.content[0].text, "Tablette non connectée");
   });
 
   it("change le thème et la luminosité de la tablette connectée", async () => {
-    const settings = { theme: "CADRAN", brightness: 0.6, volume: 0.4, nightDim: true, focusDnd: true };
+    const settings = { theme: "CONSOLE", brightness: 0.6, volume: 0.4, nightDim: true, focusDnd: true };
     const state = { mode: "home", app: "1.4.0", name: "Tablette", model: "Tab 4.2", settings };
     const polling = server.call("POST", "/tablet/poll", { state });
     await new Promise((r) => setTimeout(r, 300));
 
-    const result = call("tablette_regler", { theme: "RETRO", luminosite: 30 });
+    const result = call("tablette_regler", { theme: "CONSOLE_JOUR", luminosite: 30 });
     const [order] = (await polling).json.commands;
-    assert.deepEqual(order.command, { type: "settings", theme: "RETRO", brightness: 0.3 });
-    await server.call("POST", "/tablet/result", { id: order.id, ok: true, state: { ...state, settings: { ...settings, theme: "RETRO" } } });
-    assert.equal(json(await result).reglages.theme, "RETRO");
+    assert.deepEqual(order.command, { type: "settings", theme: "CONSOLE_JOUR", brightness: 0.3 });
+    await server.call("POST", "/tablet/result", {
+      id: order.id,
+      ok: true,
+      state: { ...state, settings: { ...settings, theme: "CONSOLE_JOUR" } },
+    });
+    assert.equal(json(await result).reglages.theme, "CONSOLE_JOUR");
   });
 
   it("refuse un changement de profils vide", async () => {
@@ -173,7 +177,7 @@ describe("pont stdio (Claude Desktop)", () => {
       const names = (await desktop.listTools()).tools.map((t) => t.name);
       assert.ok(names.includes("profils_ecrire"));
       const res = (await desktop.callTool({ name: "tablette_reglages", arguments: {} })) as Result;
-      assert.ok(json(res).themes.includes("RETRO"));
+      assert.ok(json(res).themes.includes("CONSOLE_JOUR"));
     } finally {
       await desktop.close();
     }
