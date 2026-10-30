@@ -117,7 +117,7 @@ class TourOverlay(context: Context, private val anchor: (TourModel.Step) -> View
         invalidate()
         bubble.post {
             val h = hole
-            val x = if (h != null) h.right + dp(20) else (width - bubble.width) / 2f
+            val x = if (h != null) TourModel.bubbleX(h.left, h.right, bubble.width.toFloat(), width.toFloat(), dp(20).toFloat(), dp(16).toFloat()) else (width - bubble.width) / 2f
             val y = if (h != null) (h.centerY() - bubble.height / 2f).coerceIn(dp(16).toFloat(), (height - bubble.height - dp(16)).toFloat()) else (height - bubble.height) / 2f
             // La bulle est posée en haut à gauche : sa place passe par la translation (x = gauche + translation).
             // Elle arrive de la barre : 16 dp avant sa place, en fondu.

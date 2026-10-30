@@ -35,15 +35,15 @@ function pom(group, artifact, version) {
 
 const tag = (xml, name) => xml.match(new RegExp(`<${name}>\\s*([^<]*?)\\s*</${name}>`))?.[1];
 
-/** Licence du POM, sinon de son parent ; « Apache-2.0 » pour les noms usuels de l'Apache 2.0. */
-function licenceOf(group, artifact, version, depth = 0) {
+/** Licences du POM, sinon de son parent ; « Apache-2.0 » pour les noms usuels de l'Apache 2.0. */
+function licencesOf(group, artifact, version, depth = 0) {
   const xml = pom(group, artifact, version);
   if (!xml) return null;
-  const block = xml.match(/<licenses>([\s\S]*?)<\/licenses>/)?.[1];
-  const name = block && tag(block, "name");
-  if (name) return /apache/i.test(name) && /2/.test(name) ? "Apache-2.0" : name;
+  const block = xml.match(/<licenses>([\s\S]*?)<\/licenses>/)?.[1] ?? "";
+  const names = [...block.matchAll(/<name>\s*([^<]*?)\s*<\/name>/g)].map((m) => (/apache/i.test(m[1]) && /2/.test(m[1]) ? "Apache-2.0" : m[1]));
+  if (names.length) return names;
   const parent = xml.match(/<parent>([\s\S]*?)<\/parent>/)?.[1];
-  if (parent && depth < 4) return licenceOf(tag(parent, "groupId"), tag(parent, "artifactId"), tag(parent, "version"), depth + 1);
+  if (parent && depth < 4) return licencesOf(tag(parent, "groupId"), tag(parent, "artifactId"), tag(parent, "version"), depth + 1);
   return null;
 }
 
@@ -52,7 +52,11 @@ const libs = [...coords]
   .sort()
   .map((c) => {
     const [group, artifact, version] = c.split(":");
-    return { coord: c, licence: licenceOf(group, artifact, version) };
+    const names = licencesOf(group, artifact, version);
+    // Double licence au choix (JNA : LGPL ou Apache 2.0) : Apache 2.0 retenue.
+    const licence = names && (names.includes("Apache-2.0") ? "Apache-2.0" : names[0]);
+    const choice = names && names.length > 1 && licence === "Apache-2.0" ? names.filter((n) => n !== licence) : [];
+    return { coord: c, licence, choice };
   });
 const unknown = libs.filter((l) => !l.licence);
 if (unknown.length) throw new Error(`Licence introuvable : ${unknown.map((l) => l.coord).join(", ")} (lancer d'abord ./gradlew assembleRelease)`);
@@ -68,9 +72,10 @@ L'appli utilise les composants suivants. Leur licence demande d'en citer l'auteu
 c'est l'objet de ce fichier (généré par scripts/licences-android.mjs).
 
 BIBLIOTHÈQUES (licence Apache 2.0, texte plus bas)
-${libs.map((l) => `- ${l.coord}`).join("\n")}
+${libs.map((l) => `- ${l.coord}${l.choice.length ? ` (double licence ${l.choice.join(" / ")} / Apache 2.0 : Apache 2.0 retenue)` : ""}`).join("\n")}
 Auteurs : The Android Open Source Project / Google LLC (androidx, listenablefuture), JetBrains s.r.o. et
-contributeurs Kotlin (kotlin, kotlinx, annotations), The JSpecify Authors (jspecify).
+contributeurs Kotlin (kotlin, kotlinx, annotations), The JSpecify Authors (jspecify), Alpha Cephei Inc. (vosk-android),
+contributeurs de JNA (jna).
 
 ICÔNES
 Icônes Material Symbols et Material Icons, Copyright Google LLC, licence Apache 2.0 (texte plus bas).
@@ -94,6 +99,8 @@ DONNÉES
 - Prévisions météo : MET Norway (Institut météorologique norvégien), licence CC BY 4.0,
   https://creativecommons.org/licenses/by/4.0/ ; mises en forme pour l'affichage.
 - Liste des villes : GeoNames (https://www.geonames.org), licence CC BY 4.0 ; extraite et réduite.
+- Modèle vocal du mot de réveil : vosk-model-small-fr-0.22, Alpha Cephei (https://alphacephei.com/vosk/models),
+  licence Apache 2.0 ; téléchargé à la première activation, pas dans l'APK.
 
 SONS D'AMBIANCE (domaine public, CC0 1.0 : https://creativecommons.org/publicdomain/zero/1.0/ ;
 extraits, mis en boucle et à un volume bas par scripts/ambiances.mjs)

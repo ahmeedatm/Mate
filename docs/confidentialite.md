@@ -27,6 +27,7 @@ Le principe du produit est bon : les données restent chez l'utilisateur. La tab
 |---|---|---|---|
 | **Google** (reconnaissance vocale d'Android) | bouton Parler, dictée, réponse vocale aux agents (si l'ordinateur n'a pas whisper.cpp) | **l'enregistrement de la voix** et la langue ; traité par l'appli Google de la tablette | `voice/VoiceControl.kt`, `voice/Dictation.kt` (`SpeechRecognizer`) |
 | **Hugging Face** (dépôt de whisper.cpp) | première dictée d'un message à un agent Claude, une fois | adresse IP (téléchargement du modèle de voix, 574 Mo) ; aucune voix ne part : la transcription se fait sur l'ordinateur | `backend/src/transcribe.ts` |
+| **Alpha Cephei** (alphacephei.com) | activation du mot de réveil « Mate », une fois | adresse IP (téléchargement du modèle vocal Vosk) ; aucune voix ne part : le mot est reconnu sur la tablette | `voice/WakeModel.kt` |
 | **Google** (services de localisation d'Android) | météo sans ville choisie **si l'option des Réglages est activée** (coupée par défaut), bouton « Ma position » | réseaux WiFi visibles et signal, envoyés par le système pour obtenir la position | `device/Position.kt` |
 | **Google** (synthèse vocale d'Android) | rappels parlés, réponses de la commande vocale | le texte à prononcer, **si** le moteur utilise une voix en ligne (selon ses réglages) | `audio/Speaker.kt` |
 | **Google** (recherche) | commande vocale « cherche … » | le texte cherché, ouvert dans le navigateur de l'ordinateur | `voice/VoiceControl.kt` |

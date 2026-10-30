@@ -14,7 +14,8 @@ class LicencesTest {
     fun `chaque dependance de l'appli est citee avec sa version`() {
         val declared = Regex("""^\s*implementation\("([^"]+)"\)""", RegexOption.MULTILINE)
             .findAll(File("build.gradle.kts").readText())
-            .map { it.groupValues[1] }
+            // « @aar » : type d'artefact, absent de l'arbre des dépendances que lit le script.
+            .map { it.groupValues[1].substringBefore('@') }
             .toList()
         assertTrue(declared.isNotEmpty())
         val missing = declared.filter { "- $it" !in licences }
