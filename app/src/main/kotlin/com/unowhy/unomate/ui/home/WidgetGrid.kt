@@ -70,7 +70,14 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     /** Widget qui ne répond plus au toucher (ordinateur injoignable) : il reste affiché, l'appui long et le balayage restent à la grille. */
     var blocked: (Placed) -> Boolean = { false }
     var editing = false
-        set(value) { field = value; endDrag(); a11y.invalidateRoot(); invalidate() }
+        set(value) {
+            field = value
+            endDrag()
+            // Le fournisseur d'accessibilité remplace les vrais widgets pour TalkBack : seulement en mode Modifier.
+            ViewCompat.setAccessibilityDelegate(this, if (value) a11y else null)
+            a11y.invalidateRoot()
+            invalidate()
+        }
     var page = 0
         set(value) { field = value; showPage() }
     var narrow = false
@@ -168,11 +175,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         }
     }
 
-    init {
-        ViewCompat.setAccessibilityDelegate(this, a11y)
-    }
-
-    override fun dispatchHoverEvent(event: MotionEvent): Boolean = a11y.dispatchHoverEvent(event) || super.dispatchHoverEvent(event)
+    override fun dispatchHoverEvent(event: MotionEvent): Boolean = (editing && a11y.dispatchHoverEvent(event)) || super.dispatchHoverEvent(event)
 
     private fun placedOf(child: View) = child.tag as? Placed
 
