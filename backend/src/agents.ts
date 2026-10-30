@@ -5,9 +5,11 @@ import path from "node:path";
  * Agents Claude Code : l'état des sessions de l'ordinateur et les réponses depuis la tablette.
  *
  * Trois sources, aucune installation obligatoire pour lire :
- * - `claude agents --json` (filet, toutes les 4 s, seulement tablette connectée) : toutes les sessions, terminal compris ;
+ * - `claude agents --json` (filet, toutes les 4 s, 8 s sous Windows, seulement tablette connectée) : toutes les sessions,
+ *   terminal compris ;
  * - les hooks HTTP de Claude Code (`POST /agents/hook`) : l'instant exact, la commande ou la question en attente ;
  * - `orca worktree ps --json` si Orca est là : branche, dernier outil, terminal à qui écrire.
+ * Sous Windows, hors Orca, la fenêtre du terminal de chaque session (`deps.desktop`, src/agents-desktop.ts).
  *
  * L'état vit en mémoire, rien n'est écrit sur disque. Le texte venu de l'agent est tronqué, jamais interprété.
  * Une requête de hook qui attend une décision (permission, question) reste ouverte jusqu'à la réponse de la
@@ -129,6 +131,16 @@ export type AgentsDeps = {
   interruptSession: (handle: string) => Promise<void>;
   /** Amène une session devant sur l'ordinateur (terminal Orca, chat Orca, ou Orca seulement). */
   focusSession: (target: FocusTarget) => Promise<void>;
+  /**
+   * Windows, sessions hors Orca : la fenêtre de leur terminal, retrouvée par leur pid (src/agents-desktop.ts). `locate` à
+   * chaque relecture ; écrire ou interrompre seulement si `canSend`, revérifié avant chaque frappe. Absent sur Mac.
+   */
+  desktop?: {
+    locate: (pid: number, names: string[]) => Promise<{ canSend: boolean } | null>;
+    focus: (pid: number, names: string[]) => Promise<void>;
+    send: (pid: number, names: string[], line: string) => Promise<void>;
+    interrupt: (pid: number, names: string[]) => Promise<void>;
+  };
 };
 
 type Question = { question: string; header: string; multi: boolean; options: { label: string; description: string }[] };
@@ -188,6 +200,8 @@ type Session = {
   project: string | null;
   /** État vu par Orca (`working`, `done`) : il voit aussi les tâches de fond (surveillance de pipeline), que `claude agents` ne compte pas. */
   orcaState: string | null;
+  /** Windows hors Orca : fenêtre du terminal trouvée (amener devant) et sûre pour y taper (`desktop.locate`). */
+  desk: { canSend: boolean } | null;
   /** Dernier hook reçu : le filet `claude agents` ne contredit pas un hook de moins de 6 s. */
   hookAt: number;
   missing: number;
@@ -262,36 +276,91 @@ const RISKY_BASH = [
   /\bnpm\s+publish\b/,
 ];
 
+/**
+ * Windows (outil PowerShell, cmd, ou les mêmes commandes passées par Git Bash) : effacer, formater, registre, arrêt,
+ * droits, services, script téléchargé puis exécuté. Sans casse : PowerShell et cmd l'ignorent.
+ */
+const RISKY_WINDOWS = [
+  /\b(Remove-Item|rd|rmdir|del|erase)\s/i,
+  /\b(Format-Volume|Clear-Disk|Remove-Partition|Initialize-Disk|diskpart|bcdedit|vssadmin)\b/i,
+  /\bformat(\.com)?\s+[a-z]:/i,
+  /\bcipher\s+\/w/i,
+  /\breg(\.exe)?\s+(delete|add|import|load|unload|restore)\b/i,
+  /\b(Remove-ItemProperty|Set-ItemProperty|New-ItemProperty|Remove-Item)\b[^;|]*\b(HK(LM|CU|CR|U|CC):|Registry::)/i,
+  /\bSet-ExecutionPolicy\b/i,
+  /\b(Stop-Computer|Restart-Computer|shutdown(\.exe)?)\b/i,
+  /\b(Stop-Process|taskkill|Stop-Service|Set-Service)\b/i,
+  /\bsc(\.exe)?\s+(stop|delete|config)\b/i,
+  /\b(takeown|icacls|Set-Acl)\b/i,
+  /\bStart-Process\b[^;|]*-Verb\s+RunAs\b/i,
+  /\b(iwr|irm|curl|wget|Invoke-WebRequest|Invoke-RestMethod)\b[^;]*\|\s*(iex|Invoke-Expression)\b/i,
+];
+
 /** Commandes qui écrivent : risquées quand une de leurs cibles est hors du dossier du projet. */
 const WRITE_CMD = /\b(cp|mv|tee|mkdir|touch|ln|rsync|install|dd|chmod|chown|sed\s+-i)\b/;
+const WRITE_CMD_WINDOWS =
+  /\b(Copy-Item|Move-Item|Rename-Item|Set-Content|Add-Content|Out-File|New-Item|Tee-Object|copy|xcopy|robocopy|move|ren|md|mklink)\b/i;
+/** Redirection vers un chemin absolu : `> /x`, `> ~/x`, `> C:\x`, `> \\serveur\x`, `> %APPDATA%\x`, `> $env:APPDATA\x`. */
+const REDIRECT_ABS = />\s*["']?([~/]|[A-Za-z]:[\\/]|\\\\|%[A-Za-z_]+%|\$env:|\$HOME\b)/i;
 /** Dossiers où écrire reste sans conséquence. */
 const SCRATCH = ["/tmp/", "/private/tmp/", "/var/folders/", "/dev/null"];
+/** Windows : dossier temporaire (par sa variable ou son chemin) et `NUL`. */
+const SCRATCH_WINDOWS =
+  /^(%(temp|tmp)%|\$env:(temp|tmp))([\\/]|$)|^[a-z]:[\\/](windows[\\/]temp|users[\\/][^\\/]+[\\/]appdata[\\/]local[\\/]temp)([\\/]|$)|^nul$/i;
+const WINDOWS_ABS = /^([A-Za-z]:[\\/]|\\\\)/;
 
-/** Chemin absolu ou `~` cité dans la commande, hors du dossier du projet et des dossiers temporaires. */
+/**
+ * `target` (chemin Windows) hors de `cwd` ; une variable (`%APPDATA%`, `$env:…`, `$HOME`) est hors du projet. Le dossier
+ * temporaire compte comme le projet pour une commande (`scratch`), pas pour un fichier écrit par Write ou Edit (comme sur Mac).
+ */
+function outsideWindows(target: string, cwd: string, scratch = true): boolean {
+  if (scratch && SCRATCH_WINDOWS.test(target)) return false;
+  if (!WINDOWS_ABS.test(target)) return true;
+  const rel = path.win32.relative(cwd.toLowerCase(), path.win32.resolve(cwd, target).toLowerCase());
+  return rel.startsWith("..") || path.win32.isAbsolute(rel);
+}
+
+/** Chemin absolu, `~` ou variable de dossier cités dans la commande, hors du dossier du projet et des dossiers temporaires. */
 function writesOutside(command: string, cwd: string): boolean {
+  const windowsCmd = WRITE_CMD_WINDOWS.test(command);
   const targets = command.match(/(?:^|[\s=])(~[^\s'";|&<>]*|\/[^\s'";|&<>]*)/g) ?? [];
-  return targets.some((raw) => {
+  const posix = targets.some((raw) => {
     const target = raw.trim().replace(/^=/, "");
     if (target.startsWith("~")) return true;
+    // Options de cmd (`xcopy a b /E /I`, `robocopy … /MIR`) : pas des chemins.
+    if (windowsCmd && /^\/[A-Za-z?]{1,4}(:\S*)?$/.test(target)) return false;
     if (SCRATCH.some((dir) => target === dir.replace(/\/$/, "") || target.startsWith(dir))) return false;
     const rel = path.relative(cwd, target);
     return rel.startsWith("..") || path.isAbsolute(rel);
   });
+  const windows = [
+    ...command.matchAll(
+      /(?:^|[\s="'(,])([A-Za-z]:[\\/][^\s'";|&<>,)]*|\\\\[^\s'";|&<>,)]+|%[A-Za-z_]+%[^\s'";|&<>,)]*|\$env:[A-Za-z_]+[^\s'";|&<>,)]*|\$HOME\b[^\s'";|&<>,)]*)/gi,
+    ),
+  ].some((m) => outsideWindows(m[1], cwd));
+  return posix || windows;
 }
 
-const CLAUDE_PLAN = /\/(\.claude|claude-profiles\/[^/]+\/home)\/plans\/[^/]+\.md$/;
+const CLAUDE_PLAN = /[\\/](\.claude|claude-profiles[\\/][^\\/]+[\\/]home)[\\/]plans[\\/][^\\/]+\.md$/;
+
+/** Outils qui lancent une commande : `Bash`, et `PowerShell` de Claude Code sous Windows. */
+const SHELL_TOOLS = new Set(["Bash", "PowerShell"]);
 
 export function isRisky(tool: string, input: Record<string, unknown>, cwd: string): boolean {
-  if (tool === "Bash") {
+  if (SHELL_TOOLS.has(tool)) {
     const command = String(input.command ?? "");
     return (
-      RISKY_BASH.some((re) => re.test(command)) || ((WRITE_CMD.test(command) || />\s*[~/]/.test(command)) && writesOutside(command, cwd))
+      RISKY_BASH.some((re) => re.test(command)) ||
+      RISKY_WINDOWS.some((re) => re.test(command)) ||
+      ((WRITE_CMD.test(command) || WRITE_CMD_WINDOWS.test(command) || REDIRECT_ABS.test(command)) && writesOutside(command, cwd))
     );
   }
   const file = typeof input.file_path === "string" ? input.file_path : typeof input.notebook_path === "string" ? input.notebook_path : null;
   if (file) {
     // Fichier de plan que Claude écrit lui-même en mode plan : pas une écriture du projet, pas un risque.
     if (CLAUDE_PLAN.test(file)) return false;
+    // Chemins Windows (`C:\…`) : comparés à la façon de Windows, sans casse, quel que soit le système du compagnon.
+    if (WINDOWS_ABS.test(file) || WINDOWS_ABS.test(cwd)) return outsideWindows(path.win32.resolve(cwd, file), cwd, false);
     const rel = path.relative(cwd, path.resolve(cwd, file));
     return rel.startsWith("..") || path.isAbsolute(rel);
   }
@@ -416,6 +485,7 @@ export function createAgents(deps: AgentsDeps) {
     orcaTab: null,
     project: null,
     orcaState: null,
+    desk: null,
     hookAt: 0,
     missing: 0,
     alerted: false,
@@ -733,9 +803,9 @@ export function createAgents(deps: AgentsDeps) {
       resumeArmed: state === "limit" && s.resumeArmed,
       askId: s.ask?.id ?? null,
       askKind: s.ask?.kind ?? null,
-      canSend: Boolean(s.handle || chatSession(s)) && state !== "working" && state !== "waiting",
-      canFocus: Boolean(s.handle) || s.inOrca,
-      canInterrupt: Boolean(s.handle) && state === "working",
+      canSend: (reachable(s) || Boolean(chatSession(s))) && state !== "working" && state !== "waiting",
+      canFocus: Boolean(s.handle) || s.inOrca || Boolean(s.desk),
+      canInterrupt: reachable(s) && state === "working",
     };
   }
 
@@ -886,6 +956,14 @@ export function createAgents(deps: AgentsDeps) {
         if (t - Math.max(s.hookAt, s.since) > SILENT_TTL_MS) remove(s);
       }
       if (orca) joinOrca(orca);
+      if (deps.desktop && live) {
+        // Fenêtre du terminal de chaque session hors Orca (Windows) : une photo des processus et des fenêtres par session.
+        await Promise.all(
+          [...sessions.values()].map(async (s) => {
+            s.desk = !s.handle && !s.inOrca && s.pid ? await deps.desktop!.locate(s.pid, namesOf(s)).catch(() => null) : null;
+          }),
+        );
+      }
       if (deps.transcriptInfo) {
         await Promise.all(
           [...sessions.values()].map(async (s) => {
@@ -984,28 +1062,52 @@ export function createAgents(deps: AgentsDeps) {
     return s ? { handle: s.handle, inOrca: s.inOrca, state: effectiveState(s) } : null;
   }
 
-  /** Message rapide à une session au repos : dans son terminal Orca, ou dans son chat Orca. */
+  /** Noms que Claude donne à la session (titre de son terminal) : pas le nom de dossier mis à défaut. */
+  function namesOf(s: Session): string[] {
+    const folder = s.cwd.split(/[\\/]/).filter(Boolean).pop();
+    return [s.title, s.name].filter((n): n is string => Boolean(n) && n !== folder);
+  }
+
+  /** On sait écrire à la session de façon fiable : terminal Orca, ou (Windows) fenêtre de terminal sûre. */
+  function reachable(s: Session): boolean {
+    return Boolean(s.handle) || (Boolean(deps.desktop && s.pid) && s.desk?.canSend === true);
+  }
+
+  /** Écrit une ligne et l'envoie : par Orca, sinon dans la fenêtre du terminal (Windows), sinon null. */
+  function writer(s: Session): ((line: string) => Promise<void>) | null {
+    const handle = s.handle;
+    if (handle) return (line) => deps.sendText(handle, line);
+    const pid = s.pid;
+    if (deps.desktop && pid && s.desk?.canSend) return (line) => deps.desktop!.send(pid, namesOf(s), line);
+    return null;
+  }
+
+  const UNREACHABLE = "Cette session n'est ni dans Orca ni dans une fenêtre de terminal sûre";
+
+  /** Message rapide à une session au repos : terminal Orca, chat Orca, ou (Windows) fenêtre de terminal sûre. */
   async function send(sessionId: string, text: string) {
     const s = find(sessionId);
     if (!s) throw new AnswerError("Cette session n'existe plus", 404);
     const state = effectiveState(s);
     if (state === "working" || state === "waiting") throw new AnswerError("La session travaille : attends qu'elle ait fini", 409);
+    const write = writer(s);
     const chat = chatSession(s);
-    if (!s.handle && !chat) throw new AnswerError("Cette session n'est pas dans Orca : impossible de lui écrire d'ici", 409);
+    if (!write && !chat) throw new AnswerError(`${UNREACHABLE} : impossible de lui écrire d'ici`, 409);
     const line = cut(text.replace(/[\r\n]+/g, " "), LIMITS.message);
     if (!line) throw new AnswerError("Message vide");
-    if (s.handle) await deps.sendText(s.handle, line);
+    if (write) await write(line);
     else if (chat) await deps.sendChat(chat, line);
     setState(s, "working", true);
   }
 
-  /** Interrompt le tour en cours (Échap) ; seulement une session qui travaille, dans un terminal Orca. */
+  /** Interrompt le tour en cours (Échap) ; seulement une session qui travaille, qu'on sait joindre. */
   async function interrupt(sessionId: string) {
     const s = find(sessionId);
     if (!s) throw new AnswerError("Cette session n'existe plus", 404);
     if (effectiveState(s) !== "working") throw new AnswerError("Cette session ne travaille pas", 409);
-    if (!s.handle) throw new AnswerError("Cette session n'est pas dans un terminal Orca : impossible de l'interrompre d'ici", 409);
-    await deps.interruptSession(s.handle);
+    if (s.handle) await deps.interruptSession(s.handle);
+    else if (deps.desktop && s.pid && s.desk?.canSend) await deps.desktop.interrupt(s.pid, namesOf(s));
+    else throw new AnswerError(`${UNREACHABLE} : impossible de l'interrompre d'ici`, 409);
     // Pas de hook Stop après une interruption : la session est au repos.
     s.turnStartedAt = null;
     setState(s, "idle", true);
@@ -1020,8 +1122,9 @@ export function createAgents(deps: AgentsDeps) {
   async function focus(sessionId: string) {
     const s = find(sessionId);
     if (!s) throw new AnswerError("Cette session n'existe plus", 404);
-    if (!s.handle && !s.inOrca) throw new AnswerError("Je ne sais pas où est cette session sur l'ordinateur", 409);
-    await deps.focusSession({ handle: s.handle, worktree: s.orcaTree, tab: s.orcaTab });
+    if (s.handle || s.inOrca) return deps.focusSession({ handle: s.handle, worktree: s.orcaTree, tab: s.orcaTab });
+    if (deps.desktop && s.pid && s.desk) return deps.desktop.focus(s.pid, namesOf(s));
+    throw new AnswerError("Je ne sais pas où est cette session sur l'ordinateur", 409);
   }
 
   /** Arme (ou désarme) l'envoi de « continue » à l'heure de reprise d'une limite : décision prise sur la tablette. */
@@ -1032,17 +1135,17 @@ export function createAgents(deps: AgentsDeps) {
     s.resumeTimer = null;
     s.resumeArmed = false;
     if (!armed) return;
-    if (!s.handle) throw new AnswerError("Cette session n'est pas dans un terminal Orca : impossible de la relancer d'ici", 409);
+    if (!reachable(s)) throw new AnswerError(`${UNREACHABLE} : impossible de la relancer d'ici`, 409);
     if (!s.resumeAt) throw new AnswerError("Heure de reprise inconnue", 409);
     s.resumeArmed = true;
     // La reprise se déclenche seule, pourvu que la session soit toujours en limite et son terminal toujours là.
     s.resumeTimer = setTimeout(
       () => {
         s.resumeTimer = null;
-        if (s.state !== "limit" || !s.resumeArmed || !s.handle) return;
+        const write = writer(s);
+        if (s.state !== "limit" || !s.resumeArmed || !write) return;
         s.resumeArmed = false;
-        deps
-          .sendText(s.handle, "continue")
+        write("continue")
           .then(() => setState(s, "working", true))
           .catch(() => {});
       },

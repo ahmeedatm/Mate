@@ -3,6 +3,7 @@ import { AnswerError, createAgents, type QuestionAnswer } from "../agents.ts";
 import { hookSecret, hookSecretOk } from "../agents-secret.ts";
 import {
   agentsAvailable,
+  desktopAgents,
   focusSession,
   frontIsClaude,
   interruptSession,
@@ -13,7 +14,7 @@ import {
   sendText,
   transcriptInfo,
 } from "../agents-sources.ts";
-import { isMac } from "../os.ts";
+import { isMac, isWindows } from "../os.ts";
 import { sendToTablet, tabletStatus } from "../tablet.ts";
 import { transcribe, voiceAvailable } from "../transcribe.ts";
 
@@ -23,6 +24,13 @@ const alwaysAlert = process.env.AGENTS_ALWAYS_ALERT === "1";
 /** Attente d'une réponse à une question posée par l'outil MCP (AGENTS_ASK_S, 3 min par défaut). */
 const askTabletMs = Math.max(5, Number(process.env.AGENTS_ASK_S) || 180) * 1000;
 const holdMs = Math.max(5, Number(process.env.AGENTS_HOLD_S) || 90) * 1000;
+/** Agents proposés sur Mac et Windows ; ailleurs, `/agents/*` répondent 501. */
+const supported = isMac || isWindows;
+/**
+ * Relecture de `claude agents --json` (le filet, tablette connectée) : AGENTS_POLL_MS, sinon 4 s sur Mac et 8 s sous
+ * Windows, où chaque appel prend près d'une seconde (0,24 s sur Mac) ; les hooks donnent l'instant exact de toute façon.
+ */
+const pollMs = Math.max(1, Number(process.env.AGENTS_POLL_MS) || (isWindows ? 8000 : 4000));
 
 /** Agents Claude Code (src/agents.ts) : `POST /agents/hook` pour Claude Code, le reste pour la tablette. */
 export default async function agentRoutes(app: FastifyInstance) {
@@ -40,14 +48,17 @@ export default async function agentRoutes(app: FastifyInstance) {
     sendChat,
     interruptSession,
     focusSession,
+    // Windows, hors Orca : fenêtre du terminal de la session, retrouvée par son pid (src/agents-desktop.ts).
+    desktop: isWindows ? desktopAgents : undefined,
   });
-  if (isMac) hookSecret(); // créé au démarrage : `npm run agents:hooks` et les contrôles de sanity le lisent
-  if (isMac) agents.start(Math.max(1, Number(process.env.AGENTS_POLL_MS) || 4000));
+  if (supported) hookSecret(); // créé au démarrage : `npm run agents:hooks` et les contrôles de sanity le lisent
+  if (supported) agents.start(pollMs);
   app.addHook("onClose", async () => agents.stop());
 
-  // Mac seulement pour l'instant : `agents` est absent de /deck/features ailleurs.
+  // Ni Mac ni Windows : `agents` est absent de /deck/features.
   app.addHook("preHandler", async (req, reply) => {
-    if (req.url.startsWith("/agents") && !isMac) return reply.code(501).send({ error: "Agents Claude disponibles sur macOS seulement" });
+    if (req.url.startsWith("/agents") && !supported)
+      return reply.code(501).send({ error: "Agents Claude disponibles sur macOS et Windows seulement" });
   });
 
   app.post<{ Body: Record<string, unknown> }>(

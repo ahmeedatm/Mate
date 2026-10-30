@@ -420,9 +420,28 @@ export async function systemCommand(command: SystemCommand) {
   unsupported();
 }
 
-/** Appli au premier plan de l'ordinateur (Mac seulement : sert aux alertes des agents Claude). */
+/** Appli au premier plan de l'ordinateur (sert aux alertes des agents Claude) ; Windows : `bundleId` = nom de l'exe en minuscules. */
 export async function frontApp(): Promise<{ name: string; bundleId: string }> {
   if (isMac) return macSystem.frontApp();
+  if (isWindows) return win.frontApp();
+  unsupported();
+}
+
+/** Windows : fenêtre au premier plan (agents Claude : vérifiée juste avant de taper dans le terminal d'une session). */
+export async function frontWindow(): Promise<win.WinWindow> {
+  if (isWindows) return win.frontWindow();
+  unsupported();
+}
+
+/** Windows : fenêtre du terminal d'un processus (sa console, ses parents) et hôte de secours parmi `hosts`. */
+export async function processWindows(pid: number, hosts: string[]): Promise<win.ProcessWindows> {
+  if (isWindows) return win.processWindows(pid, hosts);
+  unsupported();
+}
+
+/** Windows : amène une fenêtre devant par son handle, rend la fenêtre de devant obtenue. */
+export async function raiseWindow(hwnd: number): Promise<win.WinWindow> {
+  if (isWindows) return win.raiseWindow(hwnd);
   unsupported();
 }
 

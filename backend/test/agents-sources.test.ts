@@ -17,11 +17,13 @@ const {
   agentsAvailable,
   claudeBin,
   claudeConfigDirs,
+  findBinary,
   frontIsClaude,
   listClaude,
   listOrca,
   projectSlug,
   readTranscriptTail,
+  splitDirs,
   transcriptInfo,
 } = await import("../src/agents-sources.ts");
 const { hookSecret, hookSecretOk } = await import("../src/agents-secret.ts");
@@ -160,5 +162,29 @@ describe("sources des agents", () => {
     assert.equal(hookSecretOk(secret + "x"), false);
     assert.equal(hookSecretOk(undefined), false);
     assert.equal(fs.statSync(path.join(dir, "agents-hook.json")).mode & 0o077, 0, "lisible par l'utilisateur seulement");
+  });
+
+  it("Windows : claude.exe avant claude.cmd, PATH séparé par « ; », fichier sans droit d'exécution trouvé", () => {
+    const a = fs.mkdtempSync(path.join(dir, "path-a-"));
+    const b = fs.mkdtempSync(path.join(dir, "path-b-"));
+    const extra = fs.mkdtempSync(path.join(dir, "extra-"));
+    fs.writeFileSync(path.join(a, "claude.cmd"), "@echo off\n", { mode: 0o644 });
+    const opts = { windows: true, pathVar: `${a};${b}`, delimiter: ";" };
+    const forced = process.env.CLAUDE_BIN;
+    delete process.env.CLAUDE_BIN;
+    try {
+      assert.equal(findBinary(["claude.exe", "claude.cmd"], "CLAUDE_BIN", [extra], opts), path.join(a, "claude.cmd"));
+      fs.writeFileSync(path.join(extra, "claude.exe"), "", { mode: 0o644 });
+      assert.equal(findBinary(["claude.exe", "claude.cmd"], "CLAUDE_BIN", [extra], opts), path.join(extra, "claude.exe"), ".exe d'abord");
+      assert.equal(findBinary(["absent.exe"], "CLAUDE_BIN", [extra], opts), null);
+    } finally {
+      if (forced !== undefined) process.env.CLAUDE_BIN = forced;
+    }
+  });
+
+  it("AGENTS_CLAUDE_CONFIG_DIRS : « ; » sous Windows (les chemins ont un « : »), « : » ailleurs", () => {
+    assert.deepEqual(splitDirs("C:\\Users\\x\\.claude-a; D:\\profils\\b ;", ";"), ["C:\\Users\\x\\.claude-a", "D:\\profils\\b"]);
+    assert.deepEqual(splitDirs("/a:/b", ":"), ["/a", "/b"]);
+    assert.deepEqual(splitDirs(undefined), []);
   });
 });

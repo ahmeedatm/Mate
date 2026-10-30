@@ -3,7 +3,7 @@ import { clipboardUnavailable } from "../src/driver-common.ts";
 import { checkOpenTarget } from "../src/open-guard.ts";
 import type { NotificationBatch, RawNotification } from "../src/notifications.ts";
 import type { Perf } from "../src/perf.ts";
-import type { MediaSession, VoiceState } from "../src/win/index.ts";
+import type { MediaSession, ProcessWindows, VoiceState, WinWindow } from "../src/win/index.ts";
 import type {
   AudioChange,
   ClipboardContent,
@@ -61,6 +61,12 @@ export type FakeState = {
   mixer?: MixerState;
   /** Appli au premier plan (frontApp) ; absente : Safari. */
   front?: { name: string; bundleId: string };
+  /** Windows : fenêtre au premier plan (frontWindow, frontApp) ; absente : Chrome. */
+  frontWindow?: WinWindow;
+  /** Windows : fenêtres de chaque processus (processWindows), par pid. */
+  processWindows?: Record<string, ProcessWindows>;
+  /** Windows : raiseWindow ne change pas la fenêtre de devant (premier plan refusé). */
+  frontStuck?: boolean;
   /** Fonctions qui échouent (« Appli absente ») : `"sendKeys"`, ou `"openTarget msteams:"` pour un début de premier argument. */
   fail?: string[];
 };
@@ -282,8 +288,41 @@ export async function isAppRunning(app: string) {
 }
 
 export async function frontApp(): Promise<{ name: string; bundleId: string }> {
+  if (isWindows) {
+    const w = frontWin();
+    const exe = w.exe.split(/[\\/]/).pop()!.toLowerCase();
+    return { name: exe.replace(/\.exe$/, ""), bundleId: exe };
+  }
   if (!isMac) unsupported();
-  return read().front ?? { name: "Safari", bundleId: "com.apple.Safari" };
+  const front = read().front;
+  return front ? { name: front.name, bundleId: front.bundleId } : { name: "Safari", bundleId: "com.apple.Safari" };
+}
+
+/** Windows : fenêtre de devant (`frontWindow` de l'état) ; absente : Chrome. */
+const frontWin = (): WinWindow =>
+  read().frontWindow ?? { hwnd: 1, pid: 1, exe: "C:\\Chrome\\chrome.exe", title: "Chrome", cls: "Chrome_WidgetWin_1" };
+
+export async function frontWindow(): Promise<WinWindow> {
+  if (!isWindows) unsupported();
+  return frontWin();
+}
+
+export async function processWindows(pid: number, _hosts: string[]): Promise<ProcessWindows> {
+  if (!isWindows) unsupported();
+  return read().processWindows?.[String(pid)] ?? { console: null, chain: [], fallback: null };
+}
+
+/** Met la fenêtre devant : elle devient `frontWindow`, sauf `frontStuck` (Windows refuse le premier plan). */
+export async function raiseWindow(hwnd: number): Promise<WinWindow> {
+  if (!isWindows) unsupported();
+  record("raiseWindow", hwnd);
+  const s = read();
+  const all = Object.values(s.processWindows ?? {}).flatMap((p) => [p.console, ...p.chain, p.fallback]);
+  const target = all.find((w) => w?.hwnd === hwnd);
+  if (!target) throw new Error("Fenêtre introuvable");
+  if (!s.frontStuck)
+    write({ ...s, frontWindow: { hwnd: target.hwnd, pid: target.pid, exe: target.exe, title: target.title, cls: target.cls } });
+  return frontWin();
 }
 
 export async function accessibility(): Promise<boolean | null> {

@@ -972,7 +972,7 @@ ${FAVICON}
   // La liste vient de /local/config/plugins, absentes comprises : une appli non installée garde sa tuile.
   let plugins = [];
   const NOT_FOUND = {
-    claude: "Claude Code n'est pas trouvé sur cet ordinateur (Mac seulement) : installe-le pour l'activer.",
+    claude: "Claude Code n'est pas trouvé sur cet ordinateur (Mac ou Windows) : installe-le pour l'activer.",
     jira: "Jira n'est pas relié : suis les étapes ci-dessus, puis reviens ici pour l'activer.",
   };
   async function loadPlugins() {

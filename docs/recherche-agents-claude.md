@@ -275,6 +275,20 @@ Constats en plus :
 | Interrompre une session (terminal Orca) | `orca terminal send --text $'\e'` (Échap) interrompt le tour en cours (`busy` → `idle`, pas de `Stop`), sans risque de quitter Claude. `--interrupt` le fait aussi mais envoie Ctrl-C (deux de suite quittent Claude). Le texte du tour interrompu revient dans la zone de saisie : avant d'écrire un message, l'effacer (`\x15`) |
 | Quota 5 h / 7 j | La statusline reçoit `rate_limits` : `five_hour` et `seven_day`, chacun `used_percentage` et `resets_at` (secondes) ; absent tant qu'aucune réponse de l'API n'est arrivée dans la session. Aucun hook ne le donne |
 
+## Windows (30/10/2026, Claude Code 2.1.260 et 2.1.309, PC de Bruno)
+
+- `claude agents --json` : même format, 0,9 à 1,3 s par appel (0,24 s sur Mac) : relecture toutes les 8 s sous Windows.
+- Les hooks `command` sont lancés par **Git Bash** (essai : un `SessionStart` dans un `--settings` à part, `CLAUDE_CONFIG_DIR`
+  vide, sans compte : rien n'est facturé) : `BASH_VERSION` 5.2.37, `SHELL` = `/bin/bash.exe`. La statusline enveloppée en
+  `sh` marche donc telle quelle (supposé : même lanceur que les hooks).
+- Claude Desktop lance la CLI (`claude.exe`) sur une console cachée : sa fenêtre est celle de Claude Desktop, parent direct.
+- Sous Windows 11, une console ouverte depuis le menu Démarrer est confiée à Windows Terminal (« terminal par défaut ») :
+  Terminal n'est pas un parent du shell. La console d'un processus donne pourtant sa fenêtre : pseudo-fenêtre ConPTY
+  (`PseudoConsoleWindow`, qui se dit visible) dont le propriétaire est la fenêtre de Terminal.
+- Claude Code règle le titre du terminal (titre de session, titre généré, sinon « Claude Code ») : seul moyen de savoir
+  quel onglet de Terminal est affiché. Titre réel d'une session dans Terminal : pas encore vu.
+- Détail et règles : [spec](superpowers/specs/2026-10-30-agents-windows-design.md).
+
 ## Questions pour toi
 
 1. **Positionnement.** Orca a une appli mobile, Claude Code a Remote Control. On vend la tablette comme écran de bureau local, sans compte et sans nuage ?

@@ -1,7 +1,7 @@
 // Pilotage de Windows pour le compagnon : compilé dans UnowhyHelper.exe (npm run build:helper), appelé ligne par
 // ligne par src/win/helper.ts. Écrit en C# 7.3. Classe partielle : ici la lecture des requêtes et l'aiguillage,
 // un fichier Native.<thème>.cs par thème (Apps, Icons, Windows, OpenWindows, Keys, Audio, AppAudio, System, Perf,
-// Clipboard).
+// Clipboard, Processes).
 //
 // Requête : {"op": "...", ...} ; réponse : {"ok": true, "result": ...} ou {"ok": false, "error": "..."}.
 
@@ -66,6 +66,9 @@ namespace UnoMate
                 case "clipseq": return ClipboardSequence();
                 case "clipset": ClipboardSetText(Str(req, "text")); return true;
                 case "clipimage": ClipboardSetImage(Str(req, "path")); return true;
+                case "front": return Front();
+                case "ancestors": return Ancestors(req);
+                case "raise": return Raise(req);
                 default: return Program.Dispatch(op, req);
             }
         }

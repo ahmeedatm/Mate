@@ -2,63 +2,111 @@ import { execFile } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { frontApp, isMac } from "./os.ts";
+import { createDesktop, WINDOWS_HOSTS } from "./agents-desktop.ts";
+import { focusWindow, frontApp, frontWindow, isMac, isWindows, processWindows, raiseWindow, sendKeys, typeText } from "./os.ts";
 import { parseOrcaQuota, type ClaudeSession, type FocusTarget, type OrcaInfo, type Quota, type TranscriptInfo } from "./agents.ts";
 
 /**
  * Ce que les agents Claude lisent sur l'ordinateur : `claude agents --json`, la CLI d'Orca, l'appli de devant.
  * Les chemins se cherchent dans le PATH puis dans les dossiers d'installation usuels : un service lancé au
  * démarrage de session n'a pas le PATH d'un terminal. `CLAUDE_BIN` et `ORCA_BIN` forcent un chemin (tests).
+ * Windows : `claude.exe` (installeur natif, `%USERPROFILE%\.local\bin`) avant `claude.cmd` (npm, `%APPDATA%\npm`).
  */
 
-const exists = (file: string) => {
+/** Système de fichiers de Windows : le bit d'exécution n'y veut rien dire, on vérifie que le fichier existe. */
+const onWindows = process.platform === "win32";
+
+const exists = (file: string, windows = onWindows) => {
   try {
-    fs.accessSync(file, fs.constants.X_OK);
+    fs.accessSync(file, windows ? fs.constants.F_OK : fs.constants.X_OK);
     return fs.statSync(file).isFile();
   } catch {
     return false;
   }
 };
 
-function findBinary(name: string, envVar: string, extra: string[]): string | null {
+/** Premier de `names` trouvé dans le PATH puis dans `extra` ; `opts` sert aux tests (règles de Windows sur un autre système). */
+export function findBinary(
+  names: string[],
+  envVar: string,
+  extra: string[],
+  opts: { windows?: boolean; pathVar?: string; delimiter?: string } = {},
+): string | null {
+  const windows = opts.windows ?? onWindows;
   const forced = process.env[envVar]?.trim();
-  if (forced) return exists(forced) ? forced : null;
-  const dirs = [...(process.env.PATH ?? "").split(path.delimiter), ...extra].filter(Boolean);
-  for (const dir of dirs) {
-    const candidate = path.join(dir, name);
-    if (exists(candidate)) return candidate;
+  if (forced) return exists(forced, windows) ? forced : null;
+  const dirs = [...(opts.pathVar ?? process.env.PATH ?? "").split(opts.delimiter ?? path.delimiter), ...extra].filter(Boolean);
+  for (const name of names) {
+    for (const dir of dirs) {
+      const candidate = path.join(dir, name);
+      if (exists(candidate, windows)) return candidate;
+    }
   }
   return null;
 }
 
 const home = os.homedir();
-export const claudeBin = () =>
-  findBinary("claude", "CLAUDE_BIN", [
-    path.join(home, ".claude", "local"),
-    path.join(home, ".local", "bin"),
-    "/opt/homebrew/bin",
-    "/usr/local/bin",
-  ]);
-export const orcaBin = () =>
-  findBinary("orca", "ORCA_BIN", ["/Applications/Orca.app/Contents/Resources/bin", "/usr/local/bin", "/opt/homebrew/bin"]);
+const appData = process.env.APPDATA ?? path.join(home, "AppData", "Roaming");
+const localAppData = process.env.LOCALAPPDATA ?? path.join(home, "AppData", "Local");
 
-/** Les agents sont proposés sur Mac, quand Claude Code est installé. Windows : `claude agents` et les hooks n'y sont pas essayés. */
-export const agentsAvailable = () => isMac && claudeBin() !== null;
+export const claudeBin = () =>
+  onWindows
+    ? findBinary(["claude.exe", "claude.cmd"], "CLAUDE_BIN", [
+        path.join(home, ".local", "bin"),
+        path.join(home, ".claude", "local"),
+        path.join(appData, "npm"),
+      ])
+    : findBinary(["claude"], "CLAUDE_BIN", [
+        path.join(home, ".claude", "local"),
+        path.join(home, ".local", "bin"),
+        "/opt/homebrew/bin",
+        "/usr/local/bin",
+      ]);
+// Orca sous Windows : pas essayé (absent du PC de développement). Dossier d'installation par utilisateur des applis
+// Electron (`%LOCALAPPDATA%\Programs\<appli>`) supposé ; sa CLI est d'abord cherchée dans le PATH.
+export const orcaBin = () =>
+  onWindows
+    ? findBinary(["orca.exe", "orca.cmd"], "ORCA_BIN", [path.join(localAppData, "Programs", "orca", "resources", "bin")])
+    : findBinary(["orca"], "ORCA_BIN", ["/Applications/Orca.app/Contents/Resources/bin", "/usr/local/bin", "/opt/homebrew/bin"]);
+
+/** Les agents sont proposés sur Mac et Windows, quand Claude Code est installé. */
+export const agentsAvailable = () => (isMac || isWindows) && claudeBin() !== null;
+
+/** Arguments permis pour un `.cmd` : Node (≥ 20.12) ne le lance que par le shell, qui interpréterait le reste. */
+const SHELL_SAFE = /^[\w:./=-]+$/;
 
 function exec(bin: string, args: string[], timeoutMs: number, env?: NodeJS.ProcessEnv): Promise<string> {
+  const viaShell = /\.(cmd|bat)$/i.test(bin);
+  if (viaShell && !args.every((a) => SHELL_SAFE.test(a))) return Promise.reject(new Error("Argument refusé pour un script .cmd"));
   return new Promise((resolve, reject) => {
-    execFile(bin, args, { timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024, env }, (err, stdout) => (err ? reject(err) : resolve(stdout)));
+    execFile(
+      viaShell ? `"${bin}"` : bin,
+      args,
+      { timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024, env, shell: viaShell, windowsHide: true },
+      (err, stdout) => (err ? reject(err) : resolve(stdout)),
+    );
   });
+}
+
+/** Liste de dossiers d'une variable d'environnement : séparés par « ; » sous Windows (chemins en `C:\…`), « : » ailleurs. */
+export function splitDirs(value: string | undefined, delimiter = path.delimiter): string[] {
+  return (value ?? "")
+    .split(delimiter)
+    .map((d) => d.trim())
+    .filter(Boolean);
 }
 
 /**
  * Dossiers de config de Claude Code à lire : chaque dossier a ses propres sessions. Celui du compagnon (par défaut
  * `~/.claude`), ceux des profils d'Orca (ses sessions tournent avec `CLAUDE_CONFIG_DIR` = `…/orca/claude-profiles/<id>/home`,
- * invisibles depuis `~/.claude`), et ceux de `AGENTS_CLAUDE_CONFIG_DIRS` (liste séparée par « : »).
+ * invisibles depuis `~/.claude` ; sous Windows, `%APPDATA%\orca` supposé comme pour toute appli Electron, pas vérifié), et
+ * ceux de `AGENTS_CLAUDE_CONFIG_DIRS` (liste séparée par « : », « ; » sous Windows).
  */
 export function claudeConfigDirs(): string[] {
   const dirs = [process.env.CLAUDE_CONFIG_DIR?.trim() || path.join(home, ".claude")];
-  const profiles = path.join(home, "Library", "Application Support", "orca", "claude-profiles");
+  const profiles = onWindows
+    ? path.join(appData, "orca", "claude-profiles")
+    : path.join(home, "Library", "Application Support", "orca", "claude-profiles");
   try {
     for (const id of fs.readdirSync(profiles)) {
       const dir = path.join(profiles, id, "home");
@@ -67,12 +115,7 @@ export function claudeConfigDirs(): string[] {
   } catch {
     // Pas d'Orca sur cet ordinateur.
   }
-  dirs.push(
-    ...(process.env.AGENTS_CLAUDE_CONFIG_DIRS ?? "")
-      .split(":")
-      .map((d) => d.trim())
-      .filter(Boolean),
-  );
+  dirs.push(...splitDirs(process.env.AGENTS_CLAUDE_CONFIG_DIRS));
   const real = (d: string) => {
     try {
       return fs.realpathSync(d);
@@ -151,8 +194,12 @@ export async function listOrca(): Promise<OrcaInfo | null> {
   }
 }
 
-/** Applis où tourne Claude Code : terminaux, Orca, éditeurs. Devant l'une d'elles, l'utilisateur est « sur Claude ». */
+/**
+ * Applis où tourne Claude Code : terminaux, Orca, éditeurs. Devant l'une d'elles, l'utilisateur est « sur Claude ».
+ * Mac : identifiants d'appli ; Windows : nom de l'exe en minuscules (`frontApp` le rend comme `bundleId`).
+ */
 const HOSTS = new Set([
+  ...WINDOWS_HOSTS,
   "com.stablyai.orca",
   "com.apple.Terminal",
   "com.googlecode.iterm2",
@@ -209,21 +256,29 @@ export async function interruptSession(handle: string): Promise<void> {
 
 /**
  * Session devant dans Orca (son terminal, sinon son worktree et son onglet de chat), puis Orca devant. Si Orca ne
- * répond pas, Orca devant seulement.
+ * répond pas, Orca devant seulement. Windows : la fenêtre d'Orca par son nom d'appli (pas essayé, Orca absent du PC).
  */
 export async function focusSession({ handle, worktree, tab }: FocusTarget): Promise<void> {
   const bin = orcaBin();
   if (bin && handle && HANDLE.test(handle)) await exec(bin, ["terminal", "switch", "--terminal", handle], 6_000).catch(() => {});
   else if (bin && worktree) await showOrcaChat(bin, worktree, tab).catch(() => {});
-  await exec("open", ["-a", "Orca"], 6_000).catch(() => {
+  const raise = isWindows ? (async () => focusWindow("Orca"))() : exec("open", ["-a", "Orca"], 6_000);
+  await raise.catch(() => {
     throw new Error("Impossible d'amener Orca devant");
   });
 }
 
+/** Windows, sessions hors Orca : la fenêtre de leur terminal, trouvée et vérifiée par le pilote (src/agents-desktop.ts). */
+export const desktopAgents = createDesktop({ processWindows, frontWindow, raiseWindow, typeText, sendKeys: (combo) => sendKeys(combo) });
+
 const CHAT_TAB = /^agent-session:[\w-]+$/;
 
-/** Lance un script du client du runtime d'Orca, comme sa CLI : par l'exécutable d'Orca en mode Node. */
+/**
+ * Lance un script du client du runtime d'Orca, comme sa CLI : par l'exécutable d'Orca en mode Node. Mac seulement : sous
+ * Windows l'emplacement du client n'est pas connu, chat et quota d'Orca y sont absents (quota : par la statusline).
+ */
 async function orcaRuntime(bin: string, script: string, env: NodeJS.ProcessEnv = {}): Promise<string | null> {
+  if (onWindows) return null;
   const app = /^(.*?\.app)\//.exec(fs.realpathSync(bin))?.[1];
   if (!app) return null;
   return exec(path.join(app, "Contents", "MacOS", "Orca"), ["-e", script], 8_000, {
