@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Process
+import com.unowhy.unomate.BuildConfig
 import com.unowhy.unomate.MainActivity
 import com.unowhy.unomate.Prefs
 import com.unowhy.unomate.voice.WakeModel
@@ -36,6 +37,8 @@ object FreshStart {
     /** Efface tout, puis relance l'appli dans un nouveau processus (aucun état en mémoire ne survit). */
     fun run(activity: Activity) {
         wipe(activity)
+        // Essai : sans ça, il reprendrait au redémarrage les ordinateurs de la stable et sauterait le premier lancement.
+        if (BuildConfig.TRIAL) Prefs.markTrialFresh(activity)
         val intent = Intent(activity, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         val pending = PendingIntent.getActivity(activity, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_CANCEL_CURRENT)
         activity.getSystemService(AlarmManager::class.java).set(AlarmManager.RTC, System.currentTimeMillis() + RESTART_MS, pending)
