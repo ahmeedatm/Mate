@@ -1119,7 +1119,7 @@
     <string name="tour_talk_title">Parler</string>
     <string name="tour_talk_body">Demande à voix haute : « ouvre Outlook », « coupe le micro », « rejoins la réunion ». Appui long pour l\'écrire.</string>
     <string name="tour_notifications_title">Notifications</string>
-    <string name="tour_notifications_body">La cloche montre ce qui est arrivé sur l\'ordi ; un point s\'y allume quand il y a du nouveau. « Terminer » te ramène où tu étais.</string>
+    <string name="tour_notifications_body">La cloche, en haut à droite, montre ce qui est arrivé sur l\'ordi ; un point s\'y allume quand il y a du nouveau.</string>
     <string name="tour_customize_title">À ta façon</string>
     <string name="tour_customize_body">Pendant un appel, Réunion apparaît tout seul dans la barre. Maintiens un widget pour l\'agrandir ; le crayon, en bas de la barre, pour modifier l\'écran ; + pour renommer, ranger, changer l\'icône ou supprimer tes écrans.</string>
     <string name="next_not_linked">Agenda pas encore relié</string>
@@ -1455,6 +1455,7 @@
     <string name="top_call_desc">Pendant un appel, ou micro coupé : toucher = couper ou rouvrir le micro</string>
     <string name="top_agents">Agents en attente</string>
     <string name="top_agents_desc">Agents Claude qui attendent ta réponse (Mac) ; toucher = le tableau</string>
+    <string name="top_notifications_desc">La cloche : ce qui est arrivé sur l\'ordi, un point quand il y a du nouveau</string>
     <string name="top_weather">Météo</string>
     <string name="top_weather_desc">Le temps et la température de ta ville</string>
     <string name="top_date">Date</string>

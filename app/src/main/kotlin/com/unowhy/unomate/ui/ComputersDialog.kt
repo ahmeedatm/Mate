@@ -41,6 +41,7 @@ class ComputersDialog(
     private val onSwitch: (Computer) -> Unit,
     private val onRename: (Computer) -> Unit,
     private val onSettings: () -> Unit,
+    private val onClosed: () -> Unit = {},
 ) {
 
     private lateinit var dialog: AlertDialog
@@ -71,6 +72,7 @@ class ComputersDialog(
         dialog = AlertDialog.Builder(activity)
             .setView(ScrollView(activity).apply { addView(content) })
             .create()
+        dialog.setOnDismissListener { onClosed() }
         dialog.window?.setBackgroundDrawable(GradientDrawable().apply {
             setColor(themeColor(activity, R.attr.c_bg))
             cornerRadius = activity.dp(28).toFloat()

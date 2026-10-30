@@ -413,6 +413,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         val order = layout.profilesInOrder(inCall = main?.inCall == true)
         val move = RailModel.direction(order.indexOf(page), order.indexOf(index))
         val changed = index != page
+        // Changer de profil termine le mode Modifier (gardé), comme quitter l'Accueil.
+        if (changed && grid.editing) endEdit(keep = true)
         displayProfile(index)
         val slide = animate && changed
         // Arrivée des widgets active (Réglages > Animations) : ils arrivent un à un, comme en venant d'un autre écran,

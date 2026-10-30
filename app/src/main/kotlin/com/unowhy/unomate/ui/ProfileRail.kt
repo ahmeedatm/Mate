@@ -30,7 +30,6 @@ class ProfileRail(
     private val bar: LinearLayout = activity.findViewById(R.id.mode_bar)
     private val indicator: View = activity.findViewById(R.id.rail_indicator)
     private val settings: View = activity.findViewById(R.id.rail_settings)
-    private val bell: View = activity.findViewById(R.id.notif_bell)
     private val items: View = activity.findViewById(R.id.rail_items)
     private val statusDot: View = activity.findViewById(R.id.status_dot)
     private val statusName: TextView = activity.findViewById(R.id.status_name)
@@ -61,6 +60,15 @@ class ProfileRail(
 
     init {
         render()
+        // La fenêtre passe en plein écran après la première mise en page (barres d'Android retirées) : la barre grandit
+        // et ses pieds descendent, le repère est recalé sur place.
+        rail.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+            if (placed && bottom - top != oldBottom - oldTop) mark(animate = false)
+        }
+        // Place des entrées changée (plein écran, barre d'Android, clavier) : elles se resserrent ou se détendent.
+        items.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+            if (bottom - top != oldBottom - oldTop) items.post { fit() }
+        }
     }
 
     override fun showProfiles(layout: HomeLayout, page: Int, inCall: Boolean) {
@@ -128,7 +136,8 @@ class ProfileRail(
         TourModel.Step.SCREENS -> views.getOrNull(entries.indexOf(RailEntry.Add))
         TourModel.Step.SWIPE -> bar
         TourModel.Step.TALK -> talk
-        TourModel.Step.NOTIFICATIONS -> bell
+        // Cloche dans le bandeau du haut : MainActivity la donne.
+        TourModel.Step.NOTIFICATIONS -> null
         TourModel.Step.CUSTOMIZE -> null
     }
 
@@ -150,19 +159,40 @@ class ProfileRail(
                 }
             }
             decorate(view, entry)
-            // Sans les noms, la barre ne garde que les icônes, plus serrées.
-            if (!labels) {
-                view.findViewById<View>(R.id.rail_label).visibility = View.GONE
-                view.layoutParams = view.layoutParams.apply { height = view.dp(52) }
-            }
             bar.addView(view)
             views += view
             // Séparateur entre les profils et les outils.
             if (entry !is RailEntry.Tool && entries.getOrNull(entries.indexOf(entry) + 1) is RailEntry.Tool) bar.addView(separator())
         }
         placed = false
+        drawnLabels = null
+        fit()
         mark(animate = false)
     }
+
+    /**
+     * Hauteur des entrées : 60 dp avec les noms, 52 sans. Trop d'entrées pour la place (profils, outils, crayon et roue
+     * empilés) : elles se resserrent, sans les noms, jusqu'à [MIN_ENTRY_DP] (dessous, la fin est rognée).
+     */
+    private fun fit() {
+        if (views.isEmpty()) return
+        val labels = Prefs.railLabels(activity)
+        val normal = activity.dp(if (labels) ENTRY_DP else ENTRY_BARE_DP)
+        val separators = (bar.childCount - views.size) * activity.dp(SEPARATOR_DP)
+        val room = items.height
+        val height = if (room <= 0) normal else ((room - separators) / views.size).coerceIn(activity.dp(MIN_ENTRY_DP), normal)
+        val shown = labels && height == normal
+        if (views.all { it.layoutParams.height == height } && drawnLabels == shown) return
+        drawnLabels = shown
+        views.forEach { view ->
+            view.findViewById<View>(R.id.rail_label).visibility = if (shown) View.VISIBLE else View.GONE
+            view.layoutParams = view.layoutParams.apply { this.height = height }
+        }
+        if (room > 0) bar.post { mark(animate = false) }
+    }
+
+    /** Noms affichés sous les icônes des entrées (pas resserrées). */
+    private var drawnLabels: Boolean? = null
 
     override fun step(delta: Int): Boolean {
         val entry = neighbor(delta) ?: return false
@@ -225,7 +255,7 @@ class ProfileRail(
     private fun separator() = View(activity).apply {
         setBackgroundColor(themeColor(activity, R.attr.c_stroke))
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        layoutParams = LinearLayout.LayoutParams(dp(32), dp(2)).apply {
+        layoutParams = LinearLayout.LayoutParams(dp(32), dp(SEPARATOR_DP - 16)).apply {
             gravity = android.view.Gravity.CENTER_HORIZONTAL
             topMargin = dp(8)
             bottomMargin = dp(8)
@@ -243,9 +273,9 @@ class ProfileRail(
             v.findViewById<TextView>(R.id.rail_label).typeface = if (i == selected) fontMedium else fontRegular
         }
         settings.isSelected = mode == Mode.SETTINGS
-        bell.isSelected = bellShown
-        // La cloche et la roue sont en pied de barre, hors de la liste des entrées : le repère descend jusqu'à elles.
-        val target = views.getOrNull(selected) ?: bell.takeIf { bellShown } ?: settings.takeIf { mode == Mode.SETTINGS }
+        // La roue est en pied de barre, hors de la liste des entrées : le repère descend jusqu'à elle. Notifications : la
+        // cloche est dans le bandeau du haut, aucun repère dans la barre.
+        val target = views.getOrNull(selected) ?: settings.takeIf { mode == Mode.SETTINGS }
         if (target == null) {
             Look.navSpring(indicator, DynamicAnimation.ALPHA, Look.EFFECTS_DEFAULT, 0f)
             return
@@ -299,5 +329,11 @@ class ProfileRail(
     private companion object {
         const val RESTING_ALPHA = 0.4f
         const val ARRIVE_SCALE = 0.6f
+        const val ENTRY_DP = 60
+        const val ENTRY_BARE_DP = 52
+        const val MIN_ENTRY_DP = 40
+
+        /** Séparateur entre profils et outils : 2 dp et 8 dp de marge de chaque côté. */
+        const val SEPARATOR_DP = 18
     }
 }

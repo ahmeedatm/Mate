@@ -25,7 +25,8 @@
         android:paddingBottom="16dp">
 
         <!-- Parler (ajouté en tête par ProfileRail), puis les entrées (profils, « Plus », outils) ; la pastille de
-             l'élément choisi glisse derrière elles, et jusqu'à la cloche et la roue du pied (pas de découpe). -->
+             l'élément choisi glisse derrière elles, et jusqu'à la roue du pied (pas de découpe). La cloche des
+             notifications est dans le bandeau du haut (TopItem.NOTIFICATIONS). -->
         <FrameLayout
             android:id="@+id/rail_items"
             android:layout_width="76dp"
@@ -46,34 +47,6 @@
                 android:layout_width="76dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
-        </FrameLayout>
-
-        <!-- Cloche : notifications de l'ordinateur (Depuis l'ordi > Notifications), en texte plein quand elles sont
-             affichées ; pastille : arrivées depuis la dernière ouverture. -->
-        <FrameLayout
-            android:layout_width="48dp"
-            android:layout_height="48dp">
-
-            <ImageButton
-                android:id="@+id/notif_bell"
-                style="@style/IconButton.Flat"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:contentDescription="@string/notif_open"
-                android:src="@drawable/ic_notifications"
-                app:tint="@color/rail_profile_content" />
-
-            <View
-                android:id="@+id/notif_dot"
-                android:layout_width="10dp"
-                android:layout_height="10dp"
-                android:layout_gravity="top|end"
-                android:layout_marginTop="10dp"
-                android:layout_marginEnd="10dp"
-                android:background="@drawable/dot"
-                android:backgroundTint="?attr/c_accent"
-                android:importantForAccessibility="no"
-                android:visibility="gone" />
         </FrameLayout>
 
         <!-- Ordinateur piloté et pastille de connexion ; toucher : changer d'ordinateur. -->
@@ -136,30 +109,25 @@
         </LinearLayout>
 
         <!-- Crayon : mode Modifier du profil affiché (l'appui long agrandit un widget), plein pendant le mode Modifier ;
-             puis Réglages : la roue, en texte plein quand Réglages est affiché. Côte à côte : la barre est pleine en hauteur. -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
+             puis Réglages : la roue, en texte plein quand Réglages est affiché. L'un sous l'autre, dans l'axe de la barre. -->
+        <ImageButton
+            android:id="@+id/rail_edit"
+            style="@style/IconButton.Flat"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:contentDescription="@string/home_edit_open"
+            android:src="@drawable/ic_edit"
+            app:tint="@color/rail_profile_content" />
 
-            <ImageButton
-                android:id="@+id/rail_edit"
-                style="@style/IconButton.Flat"
-                android:layout_width="44dp"
-                android:layout_height="48dp"
-                android:contentDescription="@string/home_edit_open"
-                android:src="@drawable/ic_edit"
-                app:tint="@color/rail_profile_content" />
+        <ImageButton
+            android:id="@+id/rail_settings"
+            style="@style/IconButton.Flat"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:contentDescription="@string/mode_settings"
+            android:src="@drawable/ic_settings"
+            app:tint="@color/rail_profile_content" />
 
-            <ImageButton
-                android:id="@+id/rail_settings"
-                style="@style/IconButton.Flat"
-                android:layout_width="44dp"
-                android:layout_height="48dp"
-                android:contentDescription="@string/mode_settings"
-                android:src="@drawable/ic_settings"
-                app:tint="@color/rail_profile_content" />
-        </LinearLayout>
     </LinearLayout>
 
     <!-- Écran du mode ; par-dessus, « Aucun ordinateur connecté » pour les modes qui en ont besoin. -->

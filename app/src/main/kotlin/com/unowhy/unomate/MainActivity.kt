@@ -116,8 +116,6 @@ class MainActivity : AppCompatActivity() {
     private val keyboard = KeyboardControl(this)
     private val focusDnd = FocusDnd(this)
     private val remote = RemoteLink(this, ::showLink) { computer -> onComputerChanged(computer, automatic = true) }
-    /** Écran montré avant la cloche, quand il n'était pas Depuis l'ordi : « Terminer » des notifications y revient. */
-    private var beforeNotifications: Mode? = null
     private val computerDialogs by lazy { ComputerAdder(this, lifecycleScope) { onComputerChanged(it) } }
     /** Dernier état de la liaison, repris par les Réglages et le sélecteur d'ordinateur. */
     var link = Link(null, Link.State.NONE)
@@ -217,7 +215,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(agentAsk, android.view.ViewGroup.LayoutParams(-1, -1))
         callOverlay = CallOverlay(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(callOverlay, android.view.ViewGroup.LayoutParams(-1, -1))
-        tour = com.unowhy.unomate.ui.TourOverlay(this) { nav.tourAnchor(it) }
+        tour = com.unowhy.unomate.ui.TourOverlay(this) {
+            if (it == com.unowhy.unomate.ui.TourModel.Step.NOTIFICATIONS) topBar.notifications else nav.tourAnchor(it)
+        }
         tour.onDone = { offerPlugins() }
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(tour, android.view.ViewGroup.LayoutParams(-1, -1))
         // Cadre photo juste au-dessus des écrans : lumière des agents, question et appel restent devant.
@@ -243,7 +243,6 @@ class MainActivity : AppCompatActivity() {
             showComputerPicker()
         }
         banner = Banner(findViewById(R.id.remote_banner))
-        findViewById<View>(R.id.notif_bell).setOnClickListener { openNotifications() }
         alerts = TabletAlerts(this, banner)
         findViewById<View>(R.id.rail_settings).setOnClickListener { show(Mode.SETTINGS) }
         findViewById<View>(R.id.rail_edit).setOnClickListener { editProfile() }
@@ -408,7 +407,25 @@ class MainActivity : AppCompatActivity() {
                 }
             },
             onSettings = { show(Mode.SETTINGS) },
+            onClosed = {
+                pickerOpen = false
+                renderEditButton()
+            },
         ).show()
+        pickerOpen = true
+        renderEditButton()
+    }
+
+    /** Liste des ordinateurs ouverte (pied de barre) : le crayon est grisé pendant ce temps. */
+    private var pickerOpen = false
+
+    /** Notifications de Depuis l'ordi affichées (la cloche est marquée). */
+    private var notificationsShown = false
+
+    /** Crayon grisé sur les écrans du pied de barre (notifications, ordinateurs, Réglages) : rien à y modifier. */
+    private fun renderEditButton() {
+        findViewById<View>(R.id.rail_edit).isEnabled =
+            !pickerOpen && current != Mode.SETTINGS && !(current == Mode.COMPUTER && notificationsShown)
     }
 
     private val focusListener: (FocusTimer.State) -> Unit = { state ->
@@ -667,20 +684,18 @@ class MainActivity : AppCompatActivity() {
         readAloud(text)
         val computer = supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment
         computer?.onNotification()
-        // Pastille sur la cloche, sauf si l'historique est déjà sous les yeux.
+        // Point sur la cloche du bandeau, sauf si l'historique est déjà sous les yeux.
         if (computer?.showingNotifications != true || current != Mode.COMPUTER) {
-            val dot = findViewById<View>(R.id.notif_dot)
-            dot.visibility = View.VISIBLE
-            Look.ring(findViewById(R.id.notif_bell), dot)
+            notificationsUnread = true
+            topBar.notificationsChanged(ring = true)
         }
     }
 
-    /** Cloche de la barre : Depuis l'ordi > Notifications, pastille retirée. */
+    /** Cloche du bandeau : Depuis l'ordi > Notifications, point retiré. On en sort par la barre de gauche. */
     private fun openNotifications() {
-        findViewById<View>(R.id.notif_dot).visibility = View.GONE
-        val from = current
+        notificationsUnread = false
+        topBar.notificationsChanged()
         show(Mode.COMPUTER)
-        beforeNotifications = from.takeIf { it != Mode.COMPUTER }
         // Le mode vient peut-être d'être créé : sa vue doit exister avant de choisir l'écran.
         supportFragmentManager.executePendingTransactions()
         (supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment)?.openNotifications()
@@ -689,14 +704,13 @@ class MainActivity : AppCompatActivity() {
     /** Depuis l'ordi entre dans ses notifications ou en sort : la barre marque la cloche à la place de « Depuis l'ordi ». */
     fun onNotificationsShown(shown: Boolean) {
         if (::nav.isInitialized) nav.showNotifications(shown)
+        notificationsShown = shown
+        renderEditButton()
+        if (::topBar.isInitialized) topBar.notificationsChanged()
     }
 
-    /** « Terminer » des notifications : retour à l'écran d'avant la cloche (rien s'il s'agissait de Depuis l'ordi). */
-    fun notificationsClosed() {
-        val mode = beforeNotifications ?: return
-        beforeNotifications = null
-        if (current == Mode.COMPUTER) show(mode)
-    }
+    /** Notifications arrivées depuis la dernière ouverture : point sur la cloche du bandeau. */
+    private var notificationsUnread = false
 
     /** Mode choisi dans la barre (toucher ou balayage) : « Depuis l'ordi » quitte ses notifications, ouvertes par la cloche. */
     private fun showFromRail(mode: Mode) {
@@ -874,8 +888,6 @@ class MainActivity : AppCompatActivity() {
         }
         val changed = current != mode
         current = mode
-        // Parti ailleurs que par la cloche : « Terminer » des notifications ne ramène plus à l'écran d'avant.
-        if (mode != Mode.COMPUTER) beforeNotifications = null
         val fm = supportFragmentManager
         // Un écran ajouté juste avant (ex. recréé par onComputerChanged) doit exister pour être masqué.
         fm.executePendingTransactions()
@@ -890,6 +902,8 @@ class MainActivity : AppCompatActivity() {
         tx.commit()
 
         nav.select(mode, changed)
+        renderEditButton()
+        if (::topBar.isInitialized) topBar.notificationsChanged()
         // L'Accueil a son propre balayage (WidgetGrid) ; Réglages n'est pas dans la barre.
         // Caméra : hors barre, et ses gestes (zoom) restent à elle.
         findViewById<RailSwipeLayout>(R.id.mode_container).swipeEnabled = mode != Mode.HOME && mode != Mode.SETTINGS && mode != Mode.CAMERA
@@ -930,6 +944,9 @@ class MainActivity : AppCompatActivity() {
         override fun callActive() = call.active
         override fun agentsOffered() = homeFragment()?.features?.agents == true
         override fun openAgents() = showAgents()
+        override fun openNotifications() = this@MainActivity.openNotifications()
+        override fun notificationsUnread() = notificationsUnread
+        override fun notificationsShown() = current == Mode.COMPUTER && notificationsShown
 
         override fun joinMeeting(event: CalendarEvent) {
             lifecycleScope.launch {

@@ -410,6 +410,8 @@ class SettingsFragment :
                 setOnClickListener {
                     if (scale == current) return@setOnClickListener
                     Prefs.setTextScale(context, scale)
+                    // En plus grand, les noms ne tiennent plus sous les icônes de la barre : retirés (Barre de gauche les rend).
+                    if (scale == TEXT_SIZES.last().first) Prefs.setRailLabels(context, false)
                     requireActivity().recreate()
                 }
             }

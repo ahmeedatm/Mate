@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Barre fixe : l'élément choisi en texte plein, les autres en secondaire. Le rouge reste au « maintenant » (Focus, appel). -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="?attr/c_text_faint" android:state_enabled="false" />
     <item android:color="?attr/c_text" android:state_selected="true" />
     <item android:color="?attr/c_text_dim" />
 </selector>
