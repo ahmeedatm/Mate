@@ -219,6 +219,11 @@ test.describe("page locale GET /", () => {
       while (running) {
         const { json } = await server.call("POST", "/tablet/poll", { state: state() });
         for (const { id, command } of json.commands ?? []) {
+          // Les autres ordres (disposition lue par la carte Profils) ne comptent pas ici.
+          if (command.type !== "update") {
+            await server.call("POST", "/tablet/result", { id, ok: true, state: state() });
+            continue;
+          }
           actions.push(command.action);
           const available = app === "0.2.11" ? "0.2.12" : null;
           update = command.action === "check" ? { ...update, checked: true, available } : { ...update, installing: true };

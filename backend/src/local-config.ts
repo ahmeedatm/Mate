@@ -1,4 +1,5 @@
 import { DECK_CSS, DECK_HTML, DECK_JS } from "./local-config-deck.ts";
+import { PROFILES_CSS, PROFILES_HTML, PROFILES_JS } from "./local-config-profiles.ts";
 
 /**
  * Panneau de configuration de la page locale (local-page.ts) : une `<section id="pf-…" data-title="…">` par partie, qui
@@ -86,6 +87,6 @@ const COMMON_JS = `
   }
 `;
 
-export const CONFIG_CSS = COMMON_CSS + DECK_CSS;
-export const CONFIG_HTML = DECK_HTML;
-export const CONFIG_JS = COMMON_JS + DECK_JS;
+export const CONFIG_CSS = COMMON_CSS + PROFILES_CSS + DECK_CSS;
+export const CONFIG_HTML = PROFILES_HTML + DECK_HTML;
+export const CONFIG_JS = COMMON_JS + PROFILES_JS + DECK_JS;

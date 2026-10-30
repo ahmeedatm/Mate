@@ -424,6 +424,21 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         }
     }
 
+    /**
+     * Disposition changée depuis la page de l'ordinateur (déjà enregistrée) : relue, widgets recréés. Le mode Modifier en
+     * cours est abandonné, ce qu'y a fait l'utilisateur ne doit pas écraser l'envoi.
+     */
+    fun reloadLayout() {
+        if (view == null) return
+        if (grid.editing) endEdit(keep = false)
+        layout = HomeLayout.load(requireContext(), cadran)
+        if (nameProfiles() or (cadran && layout.ensureRoles(getString(R.string.profile_call)))) {
+            HomeLayout.save(requireContext(), layout, cadran)
+        }
+        build()
+        if (!isHidden) refreshAll()
+    }
+
     /** Widgets sans fond du profil affiché (héros, ligne du jour) : les tubes du Rétro passent voilés derrière (FlowBandView). */
     fun bareWidgets(): List<View> =
         widgets.mapNotNull { (placed, widget) -> widget.view.takeIf { placed.page == page && placed.type.bare } }

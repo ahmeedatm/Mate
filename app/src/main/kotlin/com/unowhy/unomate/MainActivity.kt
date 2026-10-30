@@ -562,6 +562,17 @@ class MainActivity : AppCompatActivity() {
         followFocusDnd(FocusTimer.state)
     }
 
+    /**
+     * Profils, bandeau du haut ou barre de gauche changés depuis la page de l'ordinateur (ordre `layout`, déjà enregistrés) :
+     * l'Accueil relit sa disposition, le bandeau et la barre se redessinent.
+     */
+    fun onRemoteLayout() {
+        homeFragment()?.reloadLayout()
+        topBar.reload()
+        nav.applySettings()
+        refreshRail()
+    }
+
     fun showMode(name: String) {
         // Ancien mode Deck : le profil Deck. Accueil ou nom inconnu (« tasks », ancien « chat ») : le profil Accueil.
         if (name.equals(Mode.DECK_KEY, ignoreCase = true)) return showProfile(shownLayout().deckTarget())
