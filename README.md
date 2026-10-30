@@ -14,7 +14,6 @@ scripts/  Sauvegarde (bundle git + données perso)
 **Documentation** :
 [comment ça marche](docs/architecture.md) ·
 [état du projet](docs/etat-du-projet.md) (fait, pas testé, à faire) ·
-[cible et positionnement](docs/cible-et-positionnement.md) (direction B2B) ·
 [travailler dessus et sauvegarder](docs/developpement.md) ·
 [la tablette 4.2](docs/tablette-4.2.md) ·
 [kiosque](docs/kiosque.md) ·
