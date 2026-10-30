@@ -1,6 +1,8 @@
 # CI de la copie GitHub (ahmeedatm/Mate) : mêmes tests que le stage test de .gitlab-ci.yml, mêmes images.
 # Sur chaque PR, seuls les jobs de la zone touchée tournent ; sur master, tout tourne.
 # Le job « ci » rassemble les résultats : c'est le seul contrôle exigé par la règle de master.
+# Runner : celui du NAS d'Ahmed (label nas, stack gh-runner de nas-stacks), un job à la fois, Docker des jobs plafonné
+# à 3 Go : les runners de GitHub refusent les jobs depuis l'échec de paiement du compte (2026-10).
 # Pas de release, d'essais ni de site publié ici : ils dépendent du registre de paquets GitLab, de la clé de signature
 # et de Harbor (.github/copie-github.md).
 
@@ -23,7 +25,7 @@ jobs:
   # Zones du dépôt touchées par la PR. Le commit de fusion de la PR a pour premier parent la tête de la base :
   # le diff entre les deux = ce que la PR change. Changer la CI relance tout.
   changes:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, nas]
     timeout-minutes: 5
     outputs:
       backend: ${{ steps.zones.outputs.backend }}
@@ -54,7 +56,7 @@ jobs:
   backend:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, nas]
     timeout-minutes: 20
     container: node:22.22-bookworm
     defaults:
@@ -89,7 +91,7 @@ jobs:
   e2e:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, nas]
     timeout-minutes: 20
     container:
       image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:47b510dd9230bf0b9bfc9b20102241e577ea7a99334ab4c3ca19f19770e9b8ea
@@ -118,7 +120,7 @@ jobs:
   android:
     needs: changes
     if: needs.changes.outputs.android == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, nas]
     timeout-minutes: 30
     container: ghcr.io/cirruslabs/android-sdk:36@sha256:f9b3ea9ed2b5fc9522adae82c7b4622ab7aa54207ef532c8e615a347dca08f31
     steps:
@@ -146,7 +148,7 @@ jobs:
   site:
     needs: changes
     if: needs.changes.outputs.site == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, nas]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -156,7 +158,7 @@ jobs:
   ci:
     if: always()
     needs: [changes, backend, e2e, android, site]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, nas]
     timeout-minutes: 5
     steps:
       - env:
