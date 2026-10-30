@@ -1,19 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Boîte Perso de Focus : une durée (concentration ou pause), − / +. -->
+<!-- Boîte Perso de Focus : une durée (concentration ou pause), − / +, en ligne comme celles de la boîte Profils. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@drawable/row_bg"
     android:gravity="center_vertical"
-    android:minHeight="64dp"
-    android:orientation="horizontal">
+    android:minHeight="72dp"
+    android:orientation="horizontal"
+    android:paddingStart="20dp"
+    android:paddingEnd="12dp">
 
     <TextView
         android:id="@+id/focus_stepper_label"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:textColor="?attr/c_text_dim"
-        android:textSize="16sp" />
+        android:fontFamily="?attr/c_font_medium"
+        android:textColor="?attr/c_text"
+        android:textSize="18sp" />
 
     <ImageButton
         android:id="@+id/focus_stepper_minus"

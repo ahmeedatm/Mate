@@ -276,7 +276,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
  * Agenda : aujourd'hui et les 7 jours suivants, agendas reliés (Outlook, Google, ICS) et agenda personnel (+ pour
  * noter un rendez-vous, toucher un des siens pour le modifier). Toucher une réunion d'un agenda relié la met dans
  * « Prochain rendez-vous » (pour rejoindre une autre réunion), la toucher à nouveau l'enlève. Moyen : aujourd'hui
- * seulement, sans la source ni « Mes agendas ».
+ * seulement, sans la source ni « Mes agendas » ; Vertical (une colonne) : les 7 jours, sans la source ni « Mes agendas ».
  */
 class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     override val view: View = LayoutInflater.from(context).inflate(R.layout.widget_agenda, null)
@@ -292,9 +292,12 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
 
     private val today get() = placed.size == WidgetSize.M
 
+    /** Moyen ou une seule colonne : pas de place pour la source et « Mes agendas ». */
+    private val compact get() = today || placed.size == WidgetSize.V
+
     override fun applySize() {
-        source.visibility = if (today) View.GONE else View.VISIBLE
-        link.visibility = if (today) View.GONE else View.VISIBLE
+        source.visibility = if (compact) View.GONE else View.VISIBLE
+        link.visibility = if (compact) View.GONE else View.VISIBLE
         onCalendar()
     }
 

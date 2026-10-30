@@ -292,7 +292,7 @@ ${FAVICON}
         <div id="tabletsettings">
           <div class="label">Thème</div>
           <div class="themes">
-            <button data-theme="CADRAN"><span></span>Cadran</button><button data-theme="CADRAN_NUIT"><span></span>Cadran nuit</button><button data-theme="CLAIR"><span></span>Clair</button><button data-theme="SOMBRE"><span></span>Sombre</button><button data-theme="RETRO"><span></span>Rétro</button>
+            <button data-theme="CLAIR"><span></span>Clair</button><button data-theme="SOMBRE"><span></span>Sombre</button><button data-theme="CADRAN"><span></span>Cadran</button><button data-theme="CADRAN_NUIT"><span></span>Cadran nuit</button><button data-theme="RETRO"><span></span>Rétro</button>
             <button data-theme="CONTRASTE"><span></span>Contraste élevé</button><button data-theme="REGISTRE"><span></span>Registre</button><button data-theme="STUDIO"><span></span>Studio</button>
             <button data-theme="MAISON"><span></span>Maison</button><button data-theme="TABLEAU"><span></span>Tableau</button><button data-theme="TERMINAL"><span></span>Terminal</button>
           </div>
@@ -789,7 +789,7 @@ ${FAVICON}
     if (c) btn.querySelector("span").style.background = "linear-gradient(135deg, " + c[0] + " 0 42%, " + c[6] + " 42% 68%, " + c[4] + " 68%)";
   }
   function showTwin(theme) {
-    const c = THEMES[theme] || THEMES.CADRAN, twin = document.getElementById("twin");
+    const c = THEMES[theme] || THEMES.CLAIR, twin = document.getElementById("twin");
     VARS.forEach((v, i) => twin.style.setProperty("--t-" + v, c[i]));
     const btn = document.querySelector('.themes button[data-theme="' + theme + '"]');
     document.getElementById("twintheme").textContent = btn ? btn.textContent : "";

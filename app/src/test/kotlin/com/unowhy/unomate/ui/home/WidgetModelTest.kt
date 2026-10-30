@@ -59,25 +59,25 @@ class WidgetModelTest {
 
     @Test
     fun `la taille V est acceptee par Agenda, Taches, Focus, Applis et Touches`() {
-        for (type in listOf(WidgetType.NEXT, WidgetType.TASKS, WidgetType.FOCUS, WidgetType.APPS, WidgetType.KEYS)) {
+        for (type in listOf(WidgetType.NEXT, WidgetType.AGENDA, WidgetType.TASKS, WidgetType.FOCUS, WidgetType.APPS, WidgetType.KEYS)) {
             assertTrue("$type", WidgetSize.V in type.sizes)
             assertFalse("$type : V ne doit pas etre la taille d'un ajout", type.sizes.first() == WidgetSize.V)
         }
     }
 
     @Test
-    fun `Accueil de bureau, les applis du travail a la place du Focus`() {
+    fun `Accueil de bureau, agenda, Focus, applis et touches sous l'heure`() {
         val bottom = Template.WORK_CADRAN.build().widgets.filter { it.row == 2 }.sortedBy { it.col }.map { it.type to it.size }
         assertEquals(
-            listOf(WidgetType.NEXT, WidgetType.TASKS, WidgetType.APPS, WidgetType.KEYS).map { it to WidgetSize.V },
+            listOf(WidgetType.AGENDA, WidgetType.FOCUS, WidgetType.APPS, WidgetType.KEYS).map { it to WidgetSize.V },
             bottom,
         )
     }
 
     @Test
-    fun `Accueil de bureau, Ma journee a la place de la grande heure`() {
+    fun `Accueil de bureau, la grande heure en haut`() {
         val top = Template.WORK_CADRAN.build().widgets.single { it.row == 0 }
-        assertEquals(WidgetType.DAY to WidgetSize.W, top.type to top.size)
+        assertEquals(WidgetType.HERO to WidgetSize.W, top.type to top.size)
         assertEquals(WidgetType.DAY, WidgetType.of("day"))
         assertEquals(listOf(WidgetSize.W), WidgetType.DAY.sizes)
         assertFalse(WidgetType.DAY.computer)
@@ -193,7 +193,7 @@ class WidgetModelTest {
     fun `le modele par defaut de Cadran est Travail Cadran, celui des autres reste Travail`() {
         assertTrue(Template.defaultFor(true).cadran)
         assertEquals(Template.WORK.title, Template.defaultFor(true).title)
-        assertEquals(WidgetType.NEXT to WidgetSize.V, Template.defaultFor(true).build().widgets.single { it.type == WidgetType.NEXT }.let { it.type to it.size })
+        assertEquals(WidgetType.AGENDA to WidgetSize.V, Template.defaultFor(true).build().widgets.single { it.type == WidgetType.AGENDA }.let { it.type to it.size })
         assertEquals(Template.WORK, Template.defaultFor(false))
     }
 
@@ -297,15 +297,15 @@ class WidgetModelTest {
     fun `la poignee choisit la taille permise la plus proche de la zone tiree`() {
         val jira = Placed(WidgetType.JIRA, WidgetSize.L, 0, 0, 0)
         val layout = HomeLayout(mutableListOf(jira), 1)
-        assertEquals(WidgetSize.L3, layout.pickSize(jira, 3f, 2f))
-        assertEquals(WidgetSize.FULL, layout.pickSize(jira, 4f, 4f))
-        assertEquals(WidgetSize.T3, layout.pickSize(jira, 3.1f, 3.7f))
-        assertEquals(WidgetSize.XL, layout.pickSize(jira, 3.6f, 1.2f))
-        assertEquals(WidgetSize.L, layout.pickSize(jira, 0.5f, 0.5f))
+        assertEquals(WidgetSize.L3, layout.pick(jira, 3f, 2f))
+        assertEquals(WidgetSize.FULL, layout.pick(jira, 4f, 4f))
+        assertEquals(WidgetSize.T3, layout.pick(jira, 3.1f, 3.7f))
+        assertEquals(WidgetSize.XL, layout.pick(jira, 3.6f, 1.2f))
+        assertEquals(WidgetSize.L, layout.pick(jira, 0.5f, 0.5f))
         // Taille refusée par le widget : jamais choisie (une horloge n'a pas de plein écran).
         val clock = Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 2)
         layout.widgets += clock
-        assertEquals(WidgetSize.XL, layout.pickSize(clock, 4f, 4f))
+        assertEquals(WidgetSize.XL, layout.pick(clock, 4f, 4f))
     }
 
     @Test
@@ -314,12 +314,12 @@ class WidgetModelTest {
         val neighbour = Placed(WidgetType.CLOCK, WidgetSize.S, 0, 3, 0)
         val layout = HomeLayout(mutableListOf(agents, neighbour), 1)
         // 4 × 2 et le plein écran touchent la case voisine : la plus proche qui tient est 3 × 4.
-        assertEquals(WidgetSize.T3, layout.pickSize(agents, 4f, 4f))
-        assertEquals(WidgetSize.L3, layout.pickSize(agents, 4f, 2f))
-        // Case en haut à gauche gardée : un widget en bas à droite ne grandit pas vers le haut.
+        assertEquals(WidgetSize.T3, layout.pick(agents, 4f, 4f))
+        assertEquals(WidgetSize.L3, layout.pick(agents, 4f, 2f))
+        // Zone tirée vers le bas et la droite : un widget en bas à droite ne grandit pas vers le haut.
         val corner = Placed(WidgetType.GITLAB, WidgetSize.L, 0, 2, 2)
         layout.widgets += corner
-        assertEquals(WidgetSize.L, layout.pickSize(corner, 4f, 4f))
+        assertEquals(WidgetSize.L, layout.pick(corner, 4f, 4f))
     }
 
     @Test
@@ -327,15 +327,30 @@ class WidgetModelTest {
         val mixer = Placed(WidgetType.MIXER, WidgetSize.XL, 0, 0, 0)
         val layout = HomeLayout(mutableListOf(mixer), 1)
         // 3 × 2 et 4 × 2 sont à égale distance de 3,5 × 2.
-        assertEquals(WidgetSize.L3, layout.pickSize(mixer, 3.5f, 2f))
+        assertEquals(WidgetSize.L3, layout.pick(mixer, 3.5f, 2f))
     }
 
     @Test
     fun `aucune taille ne tient, rien ne change`() {
-        val open = Placed(WidgetType.OPEN, WidgetSize.XL, 0, 0, 0)
-        val layout = HomeLayout(mutableListOf(open), 1)
-        // Colonne 3 : aucune taille d'Ouvertes (2 cases de large au moins) ne tient.
-        open.col = 3
-        assertNull(layout.pickSize(open, 4f, 4f))
+        val open = Placed(WidgetType.OPEN, WidgetSize.L, 0, 3, 0)
+        // Colonne 2 prise de haut en bas : aucune taille d'Ouvertes (2 cases de large au moins) ne tient.
+        val layout = HomeLayout(mutableListOf(open, Placed(WidgetType.FOCUS, WidgetSize.V, 0, 2, 0), Placed(WidgetType.FOCUS, WidgetSize.V, 0, 2, 2)), 1)
+        assertNull(layout.pick(open, 4f, 4f))
     }
+
+    @Test
+    fun `au bord droit la poignee tiree vers la gauche agrandit vers la gauche`() {
+        val keys = Placed(WidgetType.KEYS, WidgetSize.S, 0, 3, 1)
+        val layout = HomeLayout(mutableListOf(keys), 1)
+        // Doigt dans la colonne 2 : Moyen, case d'origine gardée à droite.
+        assertEquals(Fit(WidgetSize.M, 2, 1), layout.pickSize(keys, 2.2f, 1f, 4f, 2f))
+        // Doigt en haut à gauche : Grand, qui couvre encore la case d'origine.
+        assertEquals(Fit(WidgetSize.L, 2, 0), layout.pickSize(keys, 2f, 0.1f, 4f, 2f))
+        // Doigt dans la case d'origine : la taille ne change pas.
+        assertEquals(Fit(WidgetSize.S, 3, 1), layout.pickSize(keys, 3f, 1f, 4f, 2f))
+    }
+
+    /** Zone tirée depuis la case du widget vers la droite et le bas (`w` × `h` cases) ; seule la taille compte. */
+    private fun HomeLayout.pick(placed: Placed, w: Float, h: Float) =
+        pickSize(placed, placed.col.toFloat(), placed.row.toFloat(), placed.col + w, placed.row + h)?.size
 }

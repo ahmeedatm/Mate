@@ -493,6 +493,7 @@
     <string name="focus_custom_value">Perso · %1$d / %2$d min</string>
     <string name="focus_custom_title">Mon Pomodoro</string>
     <string name="focus_custom_apply">Choisir</string>
+    <string name="focus_custom_subtitle">Durées de concentration et de pause, à ton rythme.</string>
     <string name="focus_minutes">%1$d min</string>
     <string name="focus_less">Moins</string>
     <string name="focus_more">Plus</string>
@@ -859,6 +860,8 @@
     <string name="mail_setup_opened">Page ouverte sur l\'ordinateur : connecte ton compte Microsoft.</string>
     <string name="tablet_title">Tablette</string>
     <string name="tablet_remote">Régler depuis l\'ordi</string>
+    <string name="tablet_remote_title">Plus simple sur le grand écran</string>
+    <string name="tablet_remote_hint">Thème, écrans, barres et touches se règlent aussi depuis ton ordinateur.</string>
     <string name="tablet_remote_opened">Page ouverte sur l\'ordinateur : règle la tablette depuis la carte.</string>
     <string name="tablet_battery_state">Batterie de la tablette : %1$d %%</string>
     <string name="tablet_battery_charging">Batterie : %1$d %% · en charge (%2$s)</string>
@@ -901,7 +904,9 @@
     <string name="theme_cadran_nuit">Cadran nuit</string>
     <string name="theme_clair">Clair</string>
     <string name="theme_sombre">Sombre</string>
-    <string name="theme_group_main">Thèmes</string>
+    <string name="theme_group_sober">Sobres</string>
+    <string name="theme_group_retro">Rétro</string>
+    <string name="theme_group_a11y">Accessibilité</string>
     <string name="theme_group_personas">Thèmes des personas</string>
     <string name="theme_tile">Thème %s</string>
     <string name="theme_tile_chosen">Thème %s, choisi</string>
@@ -991,7 +996,7 @@
     <string name="template_work">Bureau</string>
     <string name="template_work_desc">Heure, agenda, prochain rendez-vous, tâches, Focus et eau.</string>
     <string name="template_standby">Veille</string>
-    <string name="template_work_cadran_desc">Ma journée, ligne du jour, prochain rendez-vous, tâches, applis et touches.</string>
+    <string name="template_work_cadran_desc">Heure, ligne du jour, agenda, Focus, applis et touches.</string>
     <string name="template_standby_cadran_desc">L\'heure et la ligne du jour, rien d\'autre : lisible de loin.</string>
     <string name="template_standby_desc">Très grande heure, prochain rendez-vous, Focus et eau : lisible de loin.</string>
     <string name="demo_card">Démo</string>

@@ -128,23 +128,26 @@ class ProfilesTest {
     }
 
     @Test
-    fun `un nouvel ecran prend le numero de sa place, ou le suivant libre`() {
-        val layout = HomeLayout(mutableListOf(), mutableListOf("Accueil", "Écran 2", "Écran 3"))
+    fun `un nouvel ecran prend le plus petit numero libre`() {
+        val layout = HomeLayout(mutableListOf(), mutableListOf("Accueil", "Écran 1", "Écran 2", "Deck"))
         layout.addProfile(null)
         assertTrue(layout.nameMissing("Accueil", "Écran %d"))
-        assertEquals("Écran 4", layout.names[3])
+        assertEquals("Écran 3", layout.names[4])
+        // Écran 1 et 2 supprimés : les suivants les reprennent, pas « Écran 4 » et « Écran 5 ».
+        layout.removeProfile(1)
         layout.removeProfile(1)
         layout.addProfile(null)
+        layout.addProfile(null)
         layout.nameMissing("Accueil", "Écran %d")
-        assertEquals(listOf<String?>("Accueil", "Écran 3", "Écran 4", "Écran 5"), layout.names)
-        assertEquals("Écran 2", layout.freeName("Écran %d"))
+        assertEquals(listOf<String?>("Accueil", "Deck", "Écran 3", "Écran 1", "Écran 2"), layout.names)
+        assertEquals("Écran 4", layout.freeName("Écran %d"))
     }
 
     @Test
     fun `les anciens noms automatiques Profil N deviennent Ecran N`() {
         val layout = HomeLayout(mutableListOf(), mutableListOf("Bureau", "Profil 2", null))
         assertTrue(layout.nameMissing("Accueil", "Écran %d"))
-        assertEquals(listOf<String?>("Bureau", "Écran 2", "Écran 3"), layout.names)
+        assertEquals(listOf<String?>("Bureau", "Écran 2", "Écran 1"), layout.names)
         assertFalse(layout.nameMissing("Accueil", "Écran %d"))
     }
 
@@ -164,10 +167,10 @@ class ProfilesTest {
     }
 
     @Test
-    fun `une disposition sans nom donne Bureau au premier puis Profil 2 et Profil 3`() {
+    fun `une disposition sans nom donne Bureau au premier puis Profil 1 et Profil 2`() {
         val layout = layoutOf(3)
         assertTrue(layout.nameMissing("Bureau", "Profil %d"))
-        assertEquals(listOf<String?>("Bureau", "Profil 2", "Profil 3"), layout.names)
+        assertEquals(listOf<String?>("Bureau", "Profil 1", "Profil 2"), layout.names)
         assertFalse(layout.nameMissing("Bureau", "Profil %d"))
     }
 
