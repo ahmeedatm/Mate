@@ -400,13 +400,14 @@ class ProfilesDialog(
             .showImmersive()
     }
 
-    private companion object {
+    companion object {
+        /** Longueur maximale d'un nom de profil (aussi vérifiée pour ceux envoyés depuis l'ordinateur, LayoutConfig). */
         const val NAME_MAX = 30
 
         /** Icônes par ligne dans la grille de choix. */
-        const val ICON_COLUMNS = 8
+        private const val ICON_COLUMNS = 8
 
         /** Largeur de la boîte : les cinq tuiles de création tiennent sur une ligne. */
-        const val WIDTH_DP = 820
+        private const val WIDTH_DP = 820
     }
 }

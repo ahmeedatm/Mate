@@ -1,3 +1,4 @@
+import { CONFIG_CSS, CONFIG_HTML, CONFIG_JS } from "./local-config.ts";
 import { CADRAN_CSS, FAVICON, ICON_SVG } from "./web-style.ts";
 
 /**
@@ -198,6 +199,9 @@ ${FAVICON}
   .cxhead .close { width: 40px; min-height: 40px; padding: 0; border-radius: 20px; background: var(--tile-high); color: var(--ink); }
   .cxdialog .card { padding: 0; border-radius: 0; background: none; }
   .cxdialog .card.focus { box-shadow: none; }
+  .connectors + .pf-h3 { margin-top: 28px; }
+  .cxplug { margin-top: 18px; }
+  .cxplug .row, .cxplug .note { padding-left: 0; padding-right: 0; }
   .cxsteps { padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
   .cxsteps:last-child, .cxsteps:has(+ .dim:empty) { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
   .cxpanel > .dim:empty { display: none; }
@@ -206,7 +210,7 @@ ${FAVICON}
   .cxsteps li { counter-increment: s; display: flex; gap: 14px; align-items: baseline; padding: 6px 0; color: var(--ink-2); }
   .cxsteps li::before { content: counter(s); font: 300 24px/1 Outfit, sans-serif; color: var(--ink); width: 18px; flex: none; }
   .cxsteps p:empty, .cxsteps .actions:empty { display: none; }
-  /* CONFIG_CSS */
+  ${CONFIG_CSS}
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
   @media (max-width: 1100px) { .twin-grid { grid-template-columns: 1fr; } .twin { position: static; max-width: 520px; } }
   @media (max-width: 820px) {
@@ -301,7 +305,7 @@ ${FAVICON}
       </div>
     </div>
   </section>
-  <!-- CONFIG_HTML -->
+  ${CONFIG_HTML}
 
   <section id="connect" data-title="Connecter une tablette" data-icon="add" data-group="Cet ordinateur">
     <div class="sechead"><h2 id="connecttitle">Connecter une tablette</h2></div>
@@ -329,19 +333,28 @@ ${FAVICON}
   </section>
 
   <!-- Connecteurs : un service par icône ; toucher une icône relie le service (connexion dans le navigateur) ou ouvre son détail dessous.
-       Logos : simple-icons (CC0), sauf Microsoft (quatre carrés dessinés ici) et Slack (icône neutre, logo retiré de simple-icons). -->
+       Logos : simple-icons (CC0), sauf Microsoft, Google et Slack (logos officiels des marques, dessinés ici).
+       Discord et Claude Code sont aussi des plugins de la tablette : leur tuile montre s'ils sont installés et actifs ;
+       Teams (Microsoft) et Jira se règlent dans la modale de leur connecteur. -->
   <section id="connecteurs" data-title="Connecteurs" data-icon="link" data-group="Cet ordinateur">
-    <div class="sechead"><h2>Connecteurs</h2><span class="dim">Touche une icône pour relier un service à cet ordinateur.</span></div>
+    <div class="sechead"><h2>Connecteurs</h2><span class="dim">Touche une icône pour relier un service ou une appli à cet ordinateur, et choisir ce que la tablette en fait.</span></div>
     <div class="connectors">
         <button class="cx" data-cx="microsoft"><svg viewBox="0 0 24 24" class="logo" aria-hidden="true"><path fill="#F25022" d="M1 1h10.5v10.5H1z"/><path fill="#7FBA00" d="M12.5 1H23v10.5H12.5z"/><path fill="#00A4EF" d="M1 12.5h10.5V23H1z"/><path fill="#FFB900" d="M12.5 12.5H23V23H12.5z"/></svg><b>Microsoft</b><small><span class="dot" id="cxdot-microsoft"></span><span id="cxtext-microsoft">…</span></small></button>
-        <button class="cx" data-cx="google"><svg viewBox="0 0 24 24" class="logo" style="fill:#4285F4" aria-hidden="true"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/></svg><b>Google</b><small><span class="dot" id="cxdot-google"></span><span id="cxtext-google">…</span></small></button>
+        <button class="cx" data-cx="google"><svg viewBox="0 0 48 48" class="logo" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg><b>Google</b><small><span class="dot" id="cxdot-google"></span><span id="cxtext-google">…</span></small></button>
         <button class="cx" data-cx="ics"><svg viewBox="0 0 24 24" class="logo ink" aria-hidden="true"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg><b>Lien d'agenda</b><small><span class="dot" id="cxdot-ics"></span><span id="cxtext-ics">…</span></small></button>
         <button class="cx" data-cx="gitlab"><svg viewBox="0 0 24 24" class="logo" style="fill:#FC6D26" aria-hidden="true"><path d="m23.6004 9.5927-.0337-.0862L20.3.9814a.851.851 0 0 0-.3362-.405.8748.8748 0 0 0-.9997.0539.8748.8748 0 0 0-.29.4399l-2.2055 6.748H7.5375l-2.2057-6.748a.8573.8573 0 0 0-.29-.4412.8748.8748 0 0 0-.9997-.0537.8585.8585 0 0 0-.3362.4049L.4332 9.5015l-.0325.0862a6.0657 6.0657 0 0 0 2.0119 7.0105l.0113.0087.03.0213 4.976 3.7264 2.462 1.8633 1.4995 1.1321a1.0085 1.0085 0 0 0 1.2197 0l1.4995-1.1321 2.4619-1.8633 5.006-3.7489.0125-.01a6.0682 6.0682 0 0 0 2.0094-7.003z"/></svg><b>GitLab</b><small><span class="dot" id="cxdot-gitlab"></span><span id="cxtext-gitlab">…</span></small></button>
         <button class="cx" data-cx="jira"><svg viewBox="0 0 24 24" class="logo" style="fill:#0052CC" aria-hidden="true"><path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0Z"/></svg><b>Jira</b><small><span class="dot" id="cxdot-jira"></span><span id="cxtext-jira">…</span></small></button>
+        <button class="cx" data-cx="discord"><svg viewBox="0 0 24 24" class="logo" style="fill:#5865F2" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg><b>Discord</b><small><span class="dot" id="cxdot-discord"></span><span id="cxtext-discord">…</span></small></button>
+        <button class="cx" data-cx="claude"><svg viewBox="0 0 24 24" class="logo" style="fill:#D97757" aria-hidden="true"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg><b>Claude Code</b><small><span class="dot" id="cxdot-claude"></span><span id="cxtext-claude">…</span></small></button>
         <button class="cx" disabled><svg viewBox="0 0 24 24" class="logo" style="fill:#F24E1E" aria-hidden="true"><path d="M15.852 8.981h-4.588V0h4.588c2.476 0 4.49 2.014 4.49 4.49s-2.014 4.491-4.49 4.491zM12.735 7.51h3.117c1.665 0 3.019-1.355 3.019-3.019s-1.355-3.019-3.019-3.019h-3.117V7.51zm0 1.471H8.148c-2.476 0-4.49-2.014-4.49-4.49S5.672 0 8.148 0h4.588v8.981zm-4.587-7.51c-1.665 0-3.019 1.355-3.019 3.019s1.354 3.02 3.019 3.02h3.117V1.471H8.148zm4.587 15.019H8.148c-2.476 0-4.49-2.014-4.49-4.49s2.014-4.49 4.49-4.49h4.588v8.98zM8.148 8.981c-1.665 0-3.019 1.355-3.019 3.019s1.355 3.019 3.019 3.019h3.117V8.981H8.148zM8.172 24c-2.489 0-4.515-2.014-4.515-4.49s2.014-4.49 4.49-4.49h4.588v4.441c0 2.503-2.047 4.539-4.563 4.539zm-.024-7.51a3.023 3.023 0 0 0-3.019 3.019c0 1.665 1.365 3.019 3.044 3.019 1.705 0 3.093-1.376 3.093-3.068v-2.97H8.148zm7.704 0h-.098c-2.476 0-4.49-2.014-4.49-4.49s2.014-4.49 4.49-4.49h.098c2.476 0 4.49 2.014 4.49 4.49s-2.014 4.49-4.49 4.49zm-.097-7.509c-1.665 0-3.019 1.355-3.019 3.019s1.355 3.019 3.019 3.019h.098c1.665 0 3.019-1.355 3.019-3.019s-1.355-3.019-3.019-3.019h-.098z"/></svg><b>Figma</b><small><span class="soon">Bientôt</span></small></button>
         <button class="cx" disabled><svg viewBox="0 0 24 24" class="logo ink" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg><b>GitHub</b><small><span class="soon">Bientôt</span></small></button>
         <button class="cx" disabled><svg viewBox="0 0 24 24" class="logo ink" aria-hidden="true"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/></svg><b>Notion</b><small><span class="soon">Bientôt</span></small></button>
-        <button class="cx" disabled><svg viewBox="0 0 24 24" class="logo ink" aria-hidden="true"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg><b>Slack</b><small><span class="soon">Bientôt</span></small></button>
+        <button class="cx" disabled><svg viewBox="0 0 122.8 122.8" class="logo" aria-hidden="true"><path fill="#E01E5A" d="M25.8 77.6c0 7.1-5.8 12.9-12.9 12.9S0 84.7 0 77.6s5.8-12.9 12.9-12.9h12.9v12.9zm6.5 0c0-7.1 5.8-12.9 12.9-12.9s12.9 5.8 12.9 12.9v32.3c0 7.1-5.8 12.9-12.9 12.9s-12.9-5.8-12.9-12.9V77.6z"/><path fill="#36C5F0" d="M45.2 25.8c-7.1 0-12.9-5.8-12.9-12.9S38.1 0 45.2 0s12.9 5.8 12.9 12.9v12.9H45.2zm0 6.5c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9H12.9C5.8 58.1 0 52.3 0 45.2s5.8-12.9 12.9-12.9h32.3z"/><path fill="#2EB67D" d="M97 45.2c0-7.1 5.8-12.9 12.9-12.9s12.9 5.8 12.9 12.9-5.8 12.9-12.9 12.9H97V45.2zm-6.5 0c0 7.1-5.8 12.9-12.9 12.9s-12.9-5.8-12.9-12.9V12.9C64.7 5.8 70.5 0 77.6 0s12.9 5.8 12.9 12.9v32.3z"/><path fill="#ECB22E" d="M77.6 97c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9-12.9-5.8-12.9-12.9V97h12.9zm0-6.5c-7.1 0-12.9-5.8-12.9-12.9s5.8-12.9 12.9-12.9h32.3c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9H77.6z"/></svg><b>Slack</b><small><span class="soon">Bientôt</span></small></button>
+    </div>
+    <h3 class="pf-h3">Fonctions de la tablette</h3>
+    <div class="card group">
+      <div id="fnlist"></div>
+      <div class="dim note pf-msg" id="fnmsg" role="status"></div>
     </div>
     <!-- Modale du connecteur touché : étapes pour le relier, ou son compte. Fermée par la croix, Échap ou un clic à côté. -->
     <dialog class="cxdialog" id="cxdialog" aria-labelledby="cxtitle">
@@ -381,6 +394,14 @@ ${FAVICON}
     </div>
     <div class="card cxpanel" id="jira" hidden>
       <div class="dim" id="jirastate"></div>
+    </div>
+    <div class="card cxpanel" id="plugin" hidden>
+      <div class="dim" id="plugindesc"></div>
+    </div>
+    <!-- Interrupteur du plugin de la tuile ouverte (Discord, Claude Code, Jira ; Teams dans Microsoft) : ce que la tablette en fait. -->
+    <div class="card group cxplug" id="cxplug" hidden>
+      <div class="row"><label for="plugon" id="pluglabel">Actif sur la tablette</label><input type="checkbox" id="plugon"></div>
+      <div class="dim note pf-msg" id="plugmsg" role="status"></div>
     </div>
     </div>
     </dialog>
@@ -846,7 +867,9 @@ ${FAVICON}
         "Relance UnoMate : tes tickets arrivent dans le widget Jira de la tablette."],
     },
   };
-  const PANEL = { microsoft: "agenda", google: "agenda", ics: "agenda", gitlab: "gitlab", jira: "jira" };
+  const PANEL = { microsoft: "agenda", google: "agenda", ics: "agenda", gitlab: "gitlab", jira: "jira", discord: "plugin", claude: "plugin" };
+  // Plugin réglé dans la modale d'un autre connecteur : Teams fait partie de Microsoft.
+  const PLUGIN_OF = { microsoft: "teams" };
   let openCx = null, openName = null, stepsKey = "";
   const dialog = document.getElementById("cxdialog");
   const TITLES = { agenda: "Agenda", gitlab: "GitLab", jira: "Jira" };
@@ -860,6 +883,8 @@ ${FAVICON}
     document.getElementById("ics").hidden = name === "agenda" && openCx !== "ics";
     stepsKey = "";
     renderSteps();
+    renderPluginSwitch();
+    loadPlugins();
   }
   // Pas relié : titre, étapes et bouton de connexion en tête du panneau ; relié : le compte suffit, les étapes se cachent.
   function renderSteps() {
@@ -908,6 +933,93 @@ ${FAVICON}
       }
     };
   }
+
+  // Plugins de la tablette : applis (tuiles Discord, Claude Code ; Teams et Jira dans la modale de Microsoft et de Jira) et fonctions du compagnon (liste sous la grille).
+  // La liste vient de /local/config/plugins, absentes comprises : une appli non installée garde sa tuile.
+  let plugins = [];
+  const NOT_FOUND = {
+    claude: "Claude Code n'est pas trouvé sur cet ordinateur (Mac seulement) : installe-le pour l'activer.",
+    jira: "Jira n'est pas relié : suis les étapes ci-dessus, puis reviens ici pour l'activer.",
+  };
+  async function loadPlugins() {
+    try {
+      const res = await fetch("/local/config/plugins");
+      if (res.ok) renderPlugins((await res.json()).plugins);
+    } catch (e) { /* compagnon arrêté : la page le dit déjà */ }
+  }
+  async function setPlugin(id, on, msgId) {
+    const choices = {};
+    choices[id] = on;
+    const name = plugins.find((p) => p.id === id).name;
+    let ok = false;
+    try {
+      const res = await fetch("/local/config/plugins", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ choices: choices }) });
+      const json = await res.json().catch(() => ({}));
+      ok = res.ok;
+      if (ok) renderPlugins(json.plugins);
+      else pfSay(document.getElementById(msgId), json.error || "Erreur " + res.status, "ko");
+    } catch (e) {
+      pfSay(document.getElementById(msgId), "Le compagnon ne répond pas", "ko");
+    }
+    if (!ok) return loadPlugins();
+    pfSay(document.getElementById(msgId), name + (on ? " activé." : " coupé."), "ok");
+    // Une appli activée s'ajoute à la liste des applis du Deck.
+    pfDeckLoadApps();
+  }
+  function renderPlugins(list) {
+    plugins = list;
+    for (const p of list) {
+      if (p.kind !== "app" || !document.querySelector('.cx[data-cx="' + p.id + '"]') || p.id === "jira") continue;
+      if (!p.present) setTile(p.id, "na", "Non installé");
+      else setTile(p.id, p.on ? "on" : "off", p.on ? "Actif" : "Coupé");
+    }
+    const box = document.getElementById("fnlist");
+    box.replaceChildren();
+    const fns = list.filter((p) => p.kind === "native" && p.present);
+    if (fns.length === 0) {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.append(Object.assign(document.createElement("span"), { className: "grow dim", textContent: "Aucune fonction sur cet ordinateur." }));
+      box.append(row);
+    }
+    for (const p of fns) {
+      const row = document.createElement("div"), label = document.createElement("label"), sub = document.createElement("span"), input = document.createElement("input");
+      row.className = "row";
+      input.type = "checkbox";
+      input.id = "fn-" + p.id;
+      input.checked = p.on;
+      input.setAttribute("aria-label", p.name);
+      input.onchange = () => setPlugin(p.id, input.checked, "fnmsg");
+      label.htmlFor = input.id;
+      label.className = "grow";
+      label.append(document.createTextNode(p.name));
+      sub.className = "pf-sub-row";
+      sub.textContent = p.description;
+      label.append(sub);
+      row.append(label, input);
+      box.append(row);
+    }
+    renderPluginSwitch();
+  }
+  // Interrupteur de la modale ouverte ; l'appli absente le laisse éteint et dit comment l'activer.
+  function renderPluginSwitch() {
+    const id = PLUGIN_OF[openCx] || openCx;
+    const p = plugins.find((x) => x.id === id && x.kind === "app");
+    document.getElementById("cxplug").hidden = !p;
+    if (!p) return;
+    const input = document.getElementById("plugon");
+    input.checked = p.on && p.present;
+    input.disabled = !p.present;
+    input.setAttribute("aria-label", p.name + " actif sur la tablette");
+    // Dans la modale d'un autre connecteur, l'interrupteur dit de quelle appli il s'agit.
+    document.getElementById("pluglabel").textContent = id === openCx ? "Actif sur la tablette" : p.name + " sur la tablette";
+    input.onchange = () => setPlugin(p.id, input.checked, "plugmsg");
+    document.getElementById("plugindesc").textContent = p.description + ".";
+    const note = document.getElementById("plugmsg");
+    if (p.present) pfSay(note, "", "");
+    else pfSay(note, NOT_FOUND[p.id] || p.name + " n'est pas installé sur cet ordinateur : installe-le pour l'activer.", "");
+  }
+  loadPlugins();
 
   // Sans tablette, « Connecter une tablette » passe en tête de page ; avec, elle rejoint « Cet ordinateur ».
   let connectTop = null;
@@ -991,7 +1103,7 @@ ${FAVICON}
     openPanel(section, section === "agenda" ? "ics" : "gitlab");
     document.getElementById(section).classList.add("focus");
   }
-  /* CONFIG_JS */
+  ${CONFIG_JS}
   tickTwin();
   setInterval(tickTwin, 15000);
   refresh();

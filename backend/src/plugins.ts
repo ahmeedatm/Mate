@@ -102,19 +102,29 @@ export async function appPluginOff(app: string) {
   return def !== undefined && !(await pluginOn(def.id));
 }
 
-/** Plugins proposés sur cet ordinateur : applis installées et fonctions qu'il sait faire. */
-export async function listPlugins() {
+/**
+ * Plugins proposés sur cet ordinateur : applis installées et fonctions qu'il sait faire. `withAbsent` (page locale) :
+ * tous ceux du catalogue, avec `present` ; la tablette ne reçoit que les présents, sans ce champ.
+ */
+export async function listPlugins(withAbsent = false) {
   const chosen = await choices();
   const present = await Promise.all(CATALOG.map((p) => p.present()));
-  return CATALOG.filter((_, i) => present[i]).map((p) => ({
-    id: p.id,
-    kind: p.kind,
-    name: p.name,
-    description: p.description,
-    app: p.app ?? null,
-    on: chosen[p.id] !== false,
-    fresh: !(p.id in chosen),
-  }));
+  return CATALOG.flatMap((p, i) =>
+    present[i] || withAbsent
+      ? [
+          {
+            id: p.id,
+            kind: p.kind,
+            name: p.name,
+            description: p.description,
+            app: p.app ?? null,
+            on: chosen[p.id] !== false,
+            fresh: !(p.id in chosen),
+            ...(withAbsent ? { present: present[i] } : {}),
+          },
+        ]
+      : [],
+  );
 }
 
 /** Enregistre les choix envoyés (les autres sont gardés) ; renvoie les plugins applis qui viennent d'être activés. */

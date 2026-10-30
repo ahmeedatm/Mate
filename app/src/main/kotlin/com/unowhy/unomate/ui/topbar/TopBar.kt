@@ -194,6 +194,12 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
         }
     }
 
+    /** Éléments changés depuis la page de l'ordinateur : relus des préférences. */
+    fun reload() {
+        items = TopBarModel.parse(Prefs.topBar(context))
+        rebuild()
+    }
+
     private fun rebuild() {
         val wanted = items.toSet()
         for ((item, element) in elements.entries.toList()) {

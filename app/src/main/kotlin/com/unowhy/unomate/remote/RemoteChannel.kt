@@ -162,6 +162,11 @@ class RemoteChannel(private val activity: MainActivity) {
             }
             RemoteUpdate.state(activity)
         }
+        "layout" -> when (command.getString("action")) {
+            "get" -> TabletLayout.get(activity)
+            "set" -> TabletLayout.set(activity, command)
+            else -> error("Action inconnue pour l'ordre layout (mettre à jour l'appli ?)")
+        }
         "notification" -> {
             // Envoyé sans attendre par le compagnon : une entrée incomplète est ignorée, pas une erreur.
             parseNotification(command)?.let(activity::onNotification)

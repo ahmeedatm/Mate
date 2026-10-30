@@ -40,6 +40,17 @@ export type TabletSettings = {
   focusDnd?: boolean;
 };
 
+/**
+ * Profils et barres de la tablette changés depuis la page de l'ordinateur (routes/local-profiles.ts) : `layout` est la
+ * disposition v2 de l'Accueil (HomeLayout.toJson), `topBar` les clés du bandeau du haut dans l'ordre, `rail` la barre de
+ * gauche. La tablette vérifie tout et rend son état (`get`) dans `data`.
+ */
+export type TabletLayoutChange = {
+  layout?: Record<string, unknown>;
+  topBar?: string[];
+  rail?: { labels?: boolean; tools?: string[] };
+};
+
 export type TabletDoc = { name: string; path: string; kind: string; size: number; mtimeMs: number };
 
 export type TabletCommand =
@@ -51,6 +62,9 @@ export type TabletCommand =
   | { type: "screenshot" }
   /** Panneau Tablette de la page locale (routes/local.ts). */
   | ({ type: "settings" } & TabletSettings)
+  /** Profils et barres de la page locale : lire l'état de la tablette, ou lui envoyer une configuration. */
+  | { type: "layout"; action: "get" }
+  | ({ type: "layout"; action: "set" } & TabletLayoutChange)
   /** Mise à jour du UnoMate depuis la page locale : chercher, ou installer la version trouvée. */
   | { type: "update"; action: "check" | "install" }
   /** Appel entrant (src/calls.ts) : carte Répondre / Ignorer sur la tablette, retirée à `ended`. */
