@@ -21,6 +21,21 @@ fun notificationHeading(n: PcNotification): String {
     return if (title.isEmpty()) n.app else "${n.app} · $title"
 }
 
+/**
+ * Bandeau d'une notification : icône et nom de l'appli, objet = le titre, corps = le texte (rien en mode discret).
+ * Sans titre, le texte devient l'objet ; sans titre ni texte, l'objet est le nom de l'appli, sans le rappeler au-dessus.
+ */
+fun notificationBanner(n: PcNotification, discreet: Boolean): BannerContent {
+    val title = n.title.trim()
+    val body = notificationBody(n, discreet)
+    val icon = BannerIcon.App(n.app)
+    return when {
+        title.isNotEmpty() -> BannerContent(title, body, n.app, icon)
+        body != null -> BannerContent(body, null, n.app, icon)
+        else -> BannerContent(n.app, null, null, icon)
+    }
+}
+
 /** Texte de la notification pour la liste ; null en mode discret ou s'il est vide. */
 fun notificationBody(n: PcNotification, discreet: Boolean): String? =
     if (discreet) null else n.body.trim().ifEmpty { null }

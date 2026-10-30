@@ -94,7 +94,7 @@ class CallOverlay(private val activity: MainActivity) : FrameLayout(activity) {
         if (state == "ended") {
             if (this.app == app) {
                 hide()
-                activity.showBanner(context.getString(R.string.call_missed, this.caller ?: app, app), 60)
+                activity.showBanner(context.getString(R.string.call_missed, this.caller ?: app, app), 60, icon = BannerIcon.App(app))
             }
             return
         }

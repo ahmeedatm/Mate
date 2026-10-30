@@ -420,6 +420,7 @@
     <string name="notif_open">Notifications de l\'ordi</string>
     <string name="notif_subtitle">Ce qui est arrivé sur l\'ordi, la plus récente en haut</string>
     <string name="notif_on_computer">Sur l\'ordi</string>
+    <string name="banner_now">· à l\'instant</string>
     <string name="notif_reading">Lecture des notifications de l\'ordi…</string>
     <string name="notif_empty">Aucune notification sur l\'ordi depuis 24 h</string>
     <string name="notif_unavailable">Notifications indisponibles sur l\'ordi</string>

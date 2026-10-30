@@ -196,53 +196,8 @@
         android:layout_height="match_parent"
         android:visibility="gone" />
 
-    <!-- Bandeau d'un message ou d'une notification : objet (titre, une ligne) et, pour une notification, corps en dessous
-         (deux lignes au plus, coupé par « … »). Centré en haut, borné pour ne pas déborder. Un toucher le ferme (Banner). -->
-    <LinearLayout
-        android:id="@+id/remote_banner"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|center_horizontal"
-        android:layout_marginTop="24dp"
-        android:background="@drawable/remote_banner_bg"
-        android:clickable="true"
-        android:elevation="12dp"
-        android:focusable="true"
-        android:gravity="center_horizontal"
-        android:orientation="vertical"
-        android:paddingStart="32dp"
-        android:paddingTop="16dp"
-        android:paddingEnd="32dp"
-        android:paddingBottom="16dp"
-        android:visibility="gone">
-
-        <TextView
-            android:id="@+id/banner_objet"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:fontFamily="?attr/c_font_medium"
-            android:gravity="center"
-            android:maxLines="1"
-            android:maxWidth="560dp"
-            android:textAlignment="center"
-            android:textColor="?attr/c_text"
-            android:textSize="17sp" />
-
-        <TextView
-            android:id="@+id/banner_corps"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:ellipsize="end"
-            android:gravity="center"
-            android:maxLines="3"
-            android:maxWidth="560dp"
-            android:textAlignment="center"
-            android:textColor="?attr/c_text_dim"
-            android:textSize="14sp"
-            android:visibility="gone" />
-    </LinearLayout>
+    <!-- Bandeau d'un message ou d'une notification, sous la cloche (banner.xml, géré par Banner). -->
+    <include layout="@layout/banner" />
 
     <!-- Écran de démarrage (cold start) : logo centré sur le fond du thème, estompé par Look.splash pour révéler l'appli.
          Masqué tout de suite à la recréation (changement de thème) pour ne pas rejouer. -->

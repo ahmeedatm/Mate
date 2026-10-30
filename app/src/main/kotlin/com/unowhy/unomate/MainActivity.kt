@@ -46,6 +46,8 @@ import com.unowhy.unomate.ui.AgentAskOverlay
 import com.unowhy.unomate.ui.AgentLight
 import com.unowhy.unomate.ui.AppTheme
 import com.unowhy.unomate.ui.Banner
+import com.unowhy.unomate.ui.BannerContent
+import com.unowhy.unomate.ui.BannerIcon
 import com.unowhy.unomate.ui.CallOverlay
 import com.unowhy.unomate.ui.CallSession
 import com.unowhy.unomate.ui.CameraFragment
@@ -77,9 +79,9 @@ import com.unowhy.unomate.ui.home.Down
 import com.unowhy.unomate.ui.home.FlowBandView
 import com.unowhy.unomate.ui.home.HomeLayout
 import com.unowhy.unomate.ui.home.LinkWatch
+import com.unowhy.unomate.ui.notificationBanner
 import com.unowhy.unomate.ui.notificationBannerText
 import com.unowhy.unomate.ui.notificationBody
-import com.unowhy.unomate.ui.notificationHeading
 import com.unowhy.unomate.ui.showImmersive
 import com.unowhy.unomate.ui.themeBool
 import com.unowhy.unomate.ui.topbar.TopBar
@@ -247,7 +249,7 @@ class MainActivity : AppCompatActivity() {
         nav.status.setOnClickListener {
             showComputerPicker()
         }
-        banner = Banner(findViewById(R.id.remote_banner))
+        banner = Banner(findViewById(R.id.remote_banner), lifecycleScope)
         alerts = TabletAlerts(this, banner)
         findViewById<View>(R.id.rail_settings).setOnClickListener { show(Mode.SETTINGS) }
         findViewById<View>(R.id.rail_edit).setOnClickListener { editProfile() }
@@ -708,9 +710,9 @@ class MainActivity : AppCompatActivity() {
      */
     fun onNotification(n: PcNotification) {
         val discreet = Prefs.notificationsDiscreet(this)
-        // Objet = appli · titre ; corps = le texte (coupé par le bandeau s'il dépasse), rien en mode discret.
+        // Icône et nom de l'appli, objet = le titre ; corps = le texte (coupé par le bandeau s'il dépasse), rien en mode discret.
         closeFrame()
-        banner.show(notificationHeading(n), notificationBody(n, discreet), NOTIFICATION_SECONDS)
+        banner.show(notificationBanner(n, discreet), NOTIFICATION_SECONDS)
         readAloud(notificationBannerText(n, discreet))
         val computer = supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment
         computer?.onNotification()
@@ -827,10 +829,10 @@ class MainActivity : AppCompatActivity() {
     fun showWelcome() = welcome.show()
 
     /** Bandeau en haut de l'écran, par-dessus le mode courant ; un toucher le ferme. */
-    fun showBanner(text: String, seconds: Int, onTap: (() -> Unit)? = null) {
+    fun showBanner(text: String, seconds: Int, icon: BannerIcon = BannerIcon.MESSAGE, onTap: (() -> Unit)? = null) {
         // Un message de l'ordinateur ou un rappel se lit : le cadre lui laisse la place. Pas de corps (objet seul).
         closeFrame()
-        banner.show(text, null, seconds, onTap)
+        banner.show(BannerContent(text, icon = icon), seconds, onTap)
     }
 
     /**
