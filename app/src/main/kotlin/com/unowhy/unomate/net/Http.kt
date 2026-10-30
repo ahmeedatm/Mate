@@ -11,6 +11,11 @@ import java.net.URLEncoder
 import java.util.UUID
 import javax.net.ssl.HttpsURLConnection
 
+/** Réponse 423 : ordinateur verrouillé (backend/src/screen-lock.ts). MainActivity y pose l'écran bloquant. */
+object ComputerLocked {
+    @Volatile var listener: (() -> Unit)? = null
+}
+
 /** `reason` : message de l'ordinateur, rédigé pour être affiché (voir ui/errorText). */
 class HttpException(val code: Int, val reason: String) : IOException("HTTP $code $reason".trim())
 
@@ -90,6 +95,7 @@ class Http(
             conn.disconnect()
             // Fastify : { error: "Internal Server Error", message: <la vraie raison> } ; nos erreurs : { error }.
             val message = runCatching { JSONObject(error).let { it.optString("message").ifEmpty { it.optString("error") } } }.getOrNull()
+            if (code == 423) ComputerLocked.listener?.invoke()
             throw HttpException(code, message ?: error.take(200))
         }
         return conn
