@@ -15,4 +15,10 @@ Ce sont les fichiers de la release (`npm run package`, paquet `companion-updates
 
 Essai en local : `python3 -m http.server -d site 8765`.
 
-DA : Cadran (`docs/ui-ux/da/README.md`). Logo : variante « visage ». Section « Un écran à l'image de chaque poste » : défilé de captures des personas de la démo (`docs/personas.md`), chacune sur la palette de son thème (`res/values/palettes.xml`) avec sa police de titre ; ni persona, ni métier, ni thème nommés, l'écran parle de lui-même. Captures : `video/captures/` (`video/scripts/captures.mjs`, émulateur, données fictives). Polices (SIL OFL) copiées de `app/src/main/res/font/`.
+DA : Cadran (`docs/ui-ux/da/README.md`), Outfit seule. Composition « la page est l'objet » (refonte du 30/10, journal des passes de skills dans `docs/ui-ux/site-vitrine.md`) :
+
+- héros = la vraie coque de la tablette 4.2 (`assets/img/tablette.webp`, tirée de `video/demo/assets/brand/tablette-4.2.png`) avec ses vrais écrans, pilotée par la ligne du jour : six moments (boutons radio, l'écran change en CSS `:has()` sans script), point rouge à l'heure du visiteur ; zone d'écran reprise de `video/demo/SPEC.md` ;
+- feuilles empilées des fonctions, chacune aux couleurs du thème de démo de sa capture (`app/src/main/res/values/palettes.xml`) ; boucle `assets/video/absence.*` découpée dans le film de démo (`video/demo`, 28 à 40 s, zone de la tablette, sans son) ;
+- captures des personas : `video/demo/assets/screens/` (émulateur, données fictives) ; ni persona, ni métier, ni thème nommés.
+
+Polices (SIL OFL) copiées de `app/src/main/res/font/`.

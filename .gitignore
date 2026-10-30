@@ -40,3 +40,7 @@ shared/*
 .impeccable/review/
 .impeccable/questions/
 .playwright-mcp/
+
+# Captures et mesures des skills de design (design-taste-frontend)
+.taste-skill/
+.impeccable/
