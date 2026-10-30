@@ -487,11 +487,14 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 /**
  * Ce qui joue sur l'ordinateur (contrôles multimédias de Windows, MediaRemote sur Mac), comme la page Média ;
  * petit : titre et boutons ; moyen : la lecture sur une ligne ; grand : la même, puis les sites de la page Média
- * (toucher ouvre, appui long retire, « + » du titre ajoute). Pas de barre de son : en 2 × 2 elle prendrait la place
- * des sites, et le widget Son la fait. Seule la grille des sites garde l'appui long (mode Modifier ailleurs).
+ * (toucher ouvre, appui long retire, « + » du titre ajoute). Ni pastilles des lectures (toucher la ligne de l'appli
+ * passe à la suivante) ni barre de son : elles tronquaient la lecture et les sites, et le widget Son règle le volume. Seule la grille des sites garde l'appui long (mode Modifier ailleurs).
  */
 class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val playing = NowPlayingView(context).apply { attach(host.scope) }
+    private val playing = NowPlayingView(context).apply {
+        attach(host.scope)
+        compact = true
+    }
 
     private val sites: TileSection = TileSection(
         context, host, R.string.widget_media_sites, R.drawable.ic_link, R.string.links_add_title,
@@ -499,15 +502,11 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         onAdd = { host.overlays.addLinks { sites.reload() } },
     )
 
-    /** Son de l'ordinateur, en Grand (et agrandi) : on règle le volume sans changer de widget. */
-    private val volume = ComputerAudioView(context).apply { attach(host.scope) }
-
     override val view = LinearLayout(context).asCard(16).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
         playing.bind(true)
         addView(playing, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        addView(volume, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
         sites.addTo(this, headerTopMarginDp = 8)
     }
 
@@ -523,7 +522,6 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     override fun applySize() {
         playing.layout(if (placed.size == WidgetSize.S) NowPlayingView.Layout.SMALL else NowPlayingView.Layout.ROW)
         sites.shown = big
-        volume.visibility = if (big) View.VISIBLE else View.GONE
         if (big) host.scope.launch { load() }
     }
 

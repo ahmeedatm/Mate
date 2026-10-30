@@ -59,6 +59,16 @@ class NowPlayingView @JvmOverloads constructor(
     private var seeking = false
     private var mode = Layout.ROW
 
+    /**
+     * Widget de profil : pas de pastilles (elles mangeaient la hauteur et tronquaient le reste) ; avec plusieurs
+     * lectures, toucher la ligne de l'appli passe à la suivante.
+     */
+    var compact = false
+        set(value) {
+            field = value
+            source.isClickable = value
+        }
+
     init {
         orientation = VERTICAL
         LayoutInflater.from(context).inflate(R.layout.view_now_playing, this, true)
@@ -76,6 +86,9 @@ class NowPlayingView @JvmOverloads constructor(
         play = findViewById(R.id.media_play)
         next = findViewById(R.id.media_next)
 
+        source.setOnClickListener { nextSession() }
+        source.compoundDrawableTintList = themeColorList(context, R.attr.c_text_dim)
+        source.compoundDrawablePadding = context.dp(6)
         previous.setOnClickListener { control("previous") }
         next.setOnClickListener { control("next") }
         play.setOnClickListener {
@@ -195,6 +208,10 @@ class NowPlayingView @JvmOverloads constructor(
             return
         }
         source.text = context.getString(if (s.playing) R.string.media_playing else R.string.media_paused, s.name)
+        val switchable = compact && sessions.size > 1
+        if (switchable) source.append(context.getString(R.string.media_session_count, sessions.indexOf(s) + 1, sessions.size))
+        source.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, if (switchable) R.drawable.ic_tile_swap_horiz else 0, 0)
+        source.contentDescription = if (switchable) context.getString(R.string.media_session_next, source.text) else null
         title.text = s.title.ifEmpty { s.name }
         artist.text = s.artist
         play.setImageResource(if (s.playing) R.drawable.ic_pause else R.drawable.ic_play)
@@ -221,7 +238,7 @@ class NowPlayingView @JvmOverloads constructor(
     }
 
     private fun renderSessions(selected: MediaSession?) {
-        if (sessions.size < 2 || mode == Layout.SMALL) {
+        if (sessions.size < 2 || mode == Layout.SMALL || compact) {
             sessionsBar.visibility = GONE
             return
         }
@@ -240,6 +257,14 @@ class NowPlayingView @JvmOverloads constructor(
             }
             sessionsRow.addView(chip, LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { marginEnd = dp(8) })
         }
+    }
+
+    /** Lecture suivante de la liste (widget compact). */
+    private fun nextSession() {
+        if (!compact || sessions.size < 2) return
+        val current = sessions.indexOfFirst { it.app == selected()?.app }
+        chosenApp = sessions[(current + 1) % sessions.size].app
+        render()
     }
 
     private fun enable(button: ImageButton, enabled: Boolean) {

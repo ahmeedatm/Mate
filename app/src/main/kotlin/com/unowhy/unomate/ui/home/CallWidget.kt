@@ -5,6 +5,7 @@ import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.Toast
 import com.unowhy.unomate.R
@@ -25,8 +26,8 @@ import kotlinx.coroutines.launch
  * État de l'appel et touches d'une appli d'appel (page Discord ou Réunion du Deck) sur un profil. Les touches sont
  * celles de la page, montrées selon l'appel (`tileShown`) et allumées quand le micro est coupé (`tileLit`). L'appel est
  * relu toutes les 4 s tant que le profil est affiché, et 700 ms après un toucher. Pas de bouton Décrocher : la carte
- * d'appel plein écran s'en charge. S : une seule touche ; M : titre, état et touches ; L : en plus les participants et
- * le son propre à l'appli.
+ * d'appel plein écran s'en charge. S : titre et une seule touche ; M : titre, état et touches ; L : en plus les
+ * participants et le son propre à l'appli.
  */
 abstract class CallWidget(
     context: Context,
@@ -57,16 +58,22 @@ abstract class CallWidget(
         onTap = { cell, _ -> page?.tiles?.firstOrNull { it.id == cell.key.id }?.let(::run) }
     }
 
-    /** Titre et état. En S, seulement quand il n'y a aucune touche à montrer : sinon la carte resterait vide, sans dire à quoi elle sert. */
+    /** État de l'appel, sous le titre ; en S, caché dès qu'une touche est montrée (le titre dit à quoi elle sert). */
+    private val stateRow = LinearLayout(context).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
+        addView(state, LinearLayout.LayoutParams(0, wrap, 1f))
+        addView(flag, LinearLayout.LayoutParams(wrap, wrap).apply { marginStart = dp(8) })
+    }
+
     private val header = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
-        val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
-        val row = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
-        row.addView(state, LinearLayout.LayoutParams(0, wrap, 1f))
-        row.addView(flag, LinearLayout.LayoutParams(wrap, wrap).apply { marginStart = dp(8) })
-        addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, wrap))
-        addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, wrap).apply { topMargin = dp(2) })
+        addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        addView(stateRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(2) })
     }
+
+    /** Place sous l'en-tête : les touches y sont centrées en hauteur (plus de vide sous elles en Grand). */
+    private val keys = FrameLayout(context)
 
     override fun applySize() {
         view.removeAllViews()
@@ -75,7 +82,9 @@ abstract class CallWidget(
         val large = placed.size == WidgetSize.L || placed.size == WidgetSize.XL
         view.addView(header, LinearLayout.LayoutParams(match, wrap))
         if (large) view.addView(people, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(4) })
-        view.addView(grid, LinearLayout.LayoutParams(match, 0, 1f))
+        (grid.parent as? ViewGroup)?.removeView(grid)
+        keys.addView(grid, FrameLayout.LayoutParams(match, wrap, Gravity.CENTER_VERTICAL))
+        view.addView(keys, LinearLayout.LayoutParams(match, 0, 1f))
         if (large) view.addView(appAudio, LinearLayout.LayoutParams(match, wrap))
         appAudio.bind(page?.app.takeIf { large })
         render()
@@ -135,7 +144,7 @@ abstract class CallWidget(
             drawn = next
             grid.cells = next.map { (tile, lit) -> TileGridView.Cell(KeyRef.of(tile), lit, type = tile.type) }
         }
-        header.visibility = if (placed.size == WidgetSize.S && tiles.isNotEmpty()) View.GONE else View.VISIBLE
+        stateRow.visibility = if (placed.size == WidgetSize.S && tiles.isNotEmpty()) View.GONE else View.VISIBLE
         renderState()
     }
 

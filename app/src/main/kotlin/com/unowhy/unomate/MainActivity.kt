@@ -423,6 +423,8 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
         FocusTimer.observe(focusListener)
         topBar.setRunning(true)
+        // Après une recréation (thème), l'écran restauré n'a sa vue qu'ici : son en-tête n'était pas encore là dans show().
+        showTopHeader()
         offerPlugins()
     }
 
