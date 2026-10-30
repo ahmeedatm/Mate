@@ -9,7 +9,7 @@ import com.unowhy.unomate.R
 import kotlin.random.Random
 
 /**
- * Grain « vintage » du thème Rétro, par-dessus tout l'écran : l'effet Noise de la maquette (deux couleurs, densité
+ * Grain « vintage » de Rétro, Cadran et Cadran nuit, par-dessus tout l'écran : l'effet Noise de la maquette (deux couleurs, densité
  * 73 %, grain d'un pixel). Une tuile de bruit fixe répétée en avant-plan de la vue : rien n'est recalculé ensuite.
  * Sans `c_grain_*` dans le thème, rien n'est posé.
  */

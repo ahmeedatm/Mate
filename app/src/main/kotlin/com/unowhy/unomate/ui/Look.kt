@@ -38,20 +38,26 @@ import kotlin.math.abs
  * sur un calque matériel, et les boucles s'arrêtent dès que l'écran n'est plus affiché.
  */
 object Look {
-    /** Rétro : halo crème autour d'un texte dessiné à la main, pour le lire sur les tubes qui coulent derrière. */
+    /**
+     * Thèmes à tubes (Rétro, Cadran, Cadran nuit) : halo de la couleur des cartes autour d'un texte dessiné à la main,
+     * pour le lire sur les tubes qui coulent derrière.
+     */
     fun halo(context: Context, paint: Paint) {
         if (themeBool(context, R.attr.c_flow)) paint.setShadowLayer(HALO_RADIUS, 0f, 0f, themeColor(context, R.attr.c_surface))
     }
 
     /**
-     * Rétro : halo crème autour des textes foncés sous [root] (Accueil, tubes derrière) ; jamais autour d'un texte
-     * clair, posé sur un fond coloré (tuile, bouton plein), qu'il brouillerait.
+     * Thèmes à tubes : halo de la couleur des cartes autour des textes sous [root] (Accueil, tubes derrière) qui
+     * tranchent sur elle (foncés en thème clair, clairs la nuit) ; jamais autour d'un texte posé sur un fond coloré
+     * (tuile, bouton plein), qu'il brouillerait.
      */
     fun haloTexts(root: View) {
         if (root is TextView) {
+            val surface = themeColor(root.context, R.attr.c_surface)
             val dark = ColorUtils.calculateLuminance(root.currentTextColor) < DARK_TEXT
-            val halo = if (dark) themeColor(root.context, R.attr.c_surface) else 0
-            if (root.shadowColor != halo) root.setShadowLayer(if (dark) HALO_RADIUS else 0f, 0f, 0f, halo)
+            val onCard = dark != ColorUtils.calculateLuminance(surface) < DARK_TEXT
+            val halo = if (onCard) surface else 0
+            if (root.shadowColor != halo) root.setShadowLayer(if (onCard) HALO_RADIUS else 0f, 0f, 0f, halo)
         }
         if (root is ViewGroup) for (i in 0 until root.childCount) haloTexts(root.getChildAt(i))
     }

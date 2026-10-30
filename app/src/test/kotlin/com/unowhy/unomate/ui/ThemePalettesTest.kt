@@ -39,7 +39,8 @@ class ThemePalettesTest {
 
     @Test
     fun `chaque attribut de Palette Cadran est defini dans chaque palette de demo`() {
-        val expected = values("Cadran").keys
+        // Tubes et grain : propres à chaque thème (motif vérifié plus bas).
+        val expected = values("Cadran").keys.filterNot { it.startsWith("c_flow") || it.startsWith("c_grain_") }.toSet()
         for (name in names) assertEquals("manquants dans $name", emptySet<String>(), expected - values(name).keys)
     }
 
