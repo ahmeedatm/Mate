@@ -159,7 +159,7 @@ Un tag `vX.Y.Z` posé sur `main` lance les mêmes tests, puis :
 | `android-release` | `companion-X.Y.Z.apk` signé, et `companion-X.Y.Z.json` : son entrée pour le « serveur Unowhy » |
 | `package-backend` | `backend-mac.tar.gz` et `backend-windows.tar.gz` (`npm run package -- essai` sur le tag : backend sans node ni lanceur, version = le tag), pour la mise à jour de l'ordinateur depuis la tablette |
 | `updates` | serveur central des mises à jour de la tablette (registre de paquets du projet) : `manifest.json`, l'APK de la dernière version, les deux applis de l'ordinateur et les deux archives du backend |
-| `release` | release GitLab du tag, liens vers les fichiers des jobs (gardés : dernière pipeline réussie du tag) |
+| `release` | release GitLab « UnoMate vX.Y.Z », liens vers les fichiers des jobs (gardés : dernière pipeline réussie du tag) ; notes = `docs/notes-de-version/vX.Y.Z.md` s'il existe, sinon une phrase générique |
 
 ```bash
 git tag v1.2.0 origin/main && git push origin v1.2.0
@@ -167,7 +167,7 @@ git tag v1.2.0 origin/main && git push origin v1.2.0
 
 Version de l'appli : `versionName` = `X.Y.Z` du tag, `versionCode` = (X × 10000 + Y × 100 + Z) × 1000 (Y et Z sous 100), donnés à Gradle par `-PappVersion=X.Y.Z`. Les 999 codes entre deux tags servent aux essais depuis une MR (`-PappVersion=X.Y.Z-essai.N` : code du dernier tag + 1 + N mod 999). Sans ce paramètre : `0.0.0` (code 1, Android refuse 0). La tablette n'installe une mise à jour que si son `versionCode` est plus grand : chaque tag doit être supérieur au précédent.
 
-Numérotation : `v0.0.1` (code 1) et `v0.0.2` (2) ont été publiés avant le × 1000 ; la suite part de `v0.0.3` (3000), toujours au-dessus. `v0.1.0` = 100000. Pas de `v1.0.0` tant qu'il n'y a pas de MVP concret. Vérifié en local (manifeste fusionné) : `0.0.3` → 3000, `0.1.0` → 100000, `0.0.2-essai.169` → 2170, sans paramètre → 1. Attention : un APK construit sans `-PappVersion` porte le code par défaut de `app/build.gradle.kts`, pas celui d'un tag : la tablette refuse toute mise à jour dont le code n'est pas strictement plus grand que celui de l'APK installé.
+Numérotation : `v0.0.1` (code 1) et `v0.0.2` (2) ont été publiés avant le × 1000 ; la suite part de `v0.0.3` (3000), toujours au-dessus. `v0.1.0` = 100000, `v1.0.0` = 10000000 (au-dessus de toute la série 0.x). Vérifié en local (manifeste fusionné) : `0.0.3` → 3000, `0.1.0` → 100000, `0.0.2-essai.169` → 2170, sans paramètre → 1. Attention : un APK construit sans `-PappVersion` porte le code par défaut de `app/build.gradle.kts`, pas celui d'un tag : la tablette refuse toute mise à jour dont le code n'est pas strictement plus grand que celui de l'APK installé.
 
 **Clé de signature**, jamais dans le dépôt. Variables CI du projet, protégées et masquées : `RELEASE_KEYSTORE_BASE64` (fichier PKCS12 en base64, sur une ligne) et `RELEASE_KEYSTORE_PASSWORD` (mot de passe du fichier et de la clé, alias `companion`). Une variable protégée n'existe que pour une branche ou un tag protégé : protéger les tags `v*` (Settings > Repository > Protected tags), sinon `android-release` échoue (« Clé de signature absente »). Créer la clé une fois, puis la garder hors du dépôt (perdue = plus aucune mise à jour possible des tablettes) :
 

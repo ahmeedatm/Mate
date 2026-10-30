@@ -129,6 +129,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 - Lot 4 : abandonné (détection de jeu et profil de jeu retirés le 29/10 avec les composants gaming).
 - Lot 5 : widgets Caméra, Ordi et Réglages.
 
+0. **v1.0.0 (préparée le 30/10)** : taguée sur `main` le 30/10 après !202 et !198. Notes de la release GitLab : `docs/notes-de-version/v1.0.0.md`. Audit sur l'émulateur fait le 30/10 : corrigés dans la même branche, plantage au choix d'un persona, widgets invisibles pour TalkBack (poignée de redimensionnement) et bulle 5 de la visite hors écran ; restent le widget Pipelines vide en démo (Sacha) et les tâches de la démo affichées hors ligne après « Quitter la démo ».
 0. Bug des onglets du Deck (voir plus haut) s'il revient.
 0. **À voir sur la tablette (v0.2.25, 30/10)** : vignettes des thèmes, Clair et Sombre, heure entière sur l'Accueil dans chaque thème, volume dans le bandeau, widget Média en M avec une vignette (avancement visible). Mac : fermer depuis Ouvertes la dernière fenêtre d'une appli la quitte (Discord, Books…), le Finder jamais ; si les lâchers ratés sur la corbeille continuent, l'agrandir pendant le glisser (elle est collée sous la bande des pages).
 0. **Vumètres du mixage sur Mac** : le compagnon du Mac ne remonte aucun niveau (`level` vide), les LED ne bougent pas, quel que soit le thème. Proposé à Eliot : les griser avec « niveau indisponible sur Mac » (lire le son demanderait un accès micro permanent).

@@ -394,9 +394,14 @@ release:
         companion-$VERSION.apk:android-release companion-$VERSION.json:android-release; do
         LINKS="$LINKS{\"name\":\"${f%%:*}\",\"url\":\"$BASE/${f%%:*}?job=${f##*:}\",\"link_type\":\"package\"},"
       done
-      glab release create "$CI_COMMIT_TAG" --ref "$CI_COMMIT_SHA" --name "Compagnon $CI_COMMIT_TAG" \
-        --notes "Applis portables de l'ordinateur (Windows, Mac) et APK de la tablette. Mise à jour de la tablette par le « serveur Unowhy » : docs/developpement.md, section Release." \
-        --assets-links "[${LINKS%,}]"
+      # Notes de version : docs/notes-de-version/<tag>.md s'il existe, sinon la phrase de toujours.
+      NOTES=docs/notes-de-version/$CI_COMMIT_TAG.md
+      if [ ! -f "$NOTES" ]; then
+        NOTES=/tmp/notes.md
+        echo "Applis portables de l'ordinateur (Windows, Mac) et APK de la tablette. Mise à jour de la tablette par le « serveur Unowhy » : docs/developpement.md, section Release." > "$NOTES"
+      fi
+      glab release create "$CI_COMMIT_TAG" --ref "$CI_COMMIT_SHA" --name "UnoMate $CI_COMMIT_TAG" \
+        --notes-file "$NOTES" --assets-links "[${LINKS%,}]"
 
 # --- Site vitrine Mate (site/) : image nginx dans Harbor (harbor.unowhy.dev/squads/mate-site), déployée à la main sur le
 # cluster dev avec deploy/site-dev/ (VirtualService Istio, mate.integration.unowhy.dev). Même façon de faire que les
