@@ -33,6 +33,43 @@ import { keySchema, loadKeyPages, loadKeys, saveKey, saveKeyPage, MAX_SLOTS, typ
 import type { Layout, WindowTarget } from "../screens.ts";
 import { windowTarget } from "./windows.ts";
 
+export const appNameBody = {
+  type: "object",
+  required: ["name"],
+  properties: { name: { type: "string", minLength: 1, maxLength: 200 } },
+};
+
+export const linkBody = {
+  type: "object",
+  required: ["url"],
+  properties: { url: { type: "string", minLength: 1, maxLength: 2000 }, label: { type: "string", maxLength: 40 } },
+};
+
+export const slotParam = {
+  type: "object",
+  required: ["slot"],
+  properties: { slot: { type: "integer", minimum: 0, maximum: MAX_SLOTS - 1 } },
+};
+
+export const pageSlotParams = {
+  type: "object",
+  required: ["page", "slot"],
+  properties: { page: { type: "integer", minimum: 0, maximum: 49 }, slot: slotParam.properties.slot },
+};
+export type PageSlot = { page: number; slot: number };
+
+/** De quoi remplir l'éditeur de touche : applis installées, raccourcis Apple (Mac), écrans. */
+export async function deckCatalog() {
+  const [apps, shortcuts, displays] = await Promise.all([
+    listApps(),
+    listShortcuts(),
+    Promise.resolve()
+      .then(listDisplays)
+      .catch(() => []),
+  ]);
+  return { os: osName, apps, shortcuts, displays: displays.map((d) => d.label) };
+}
+
 /** Deck : pages et tuiles, page Apps, page Média, touches perso, fenêtres de l'appli d'une tuile, commande vocale « ouvre X ». */
 export default async function deckRoutes(app: FastifyInstance) {
   app.get("/deck", async () => {
@@ -97,25 +134,17 @@ export default async function deckRoutes(app: FastifyInstance) {
 
   // --- Page Apps : profil de base, complété depuis la tablette par les applis installées sur le Mac
 
-  app.post<{ Body: { name: string } }>(
-    "/deck/apps",
-    { schema: { body: { type: "object", required: ["name"], properties: { name: { type: "string", minLength: 1, maxLength: 200 } } } } },
-    async (req, reply) => {
-      if (!(await listApps()).includes(req.body.name)) return reply.code(404).send({ error: "Appli introuvable sur l'ordinateur" });
-      return { ok: true, id: await addDeckApp(req.body.name) };
-    },
-  );
+  app.post<{ Body: { name: string } }>("/deck/apps", { schema: { body: appNameBody } }, async (req, reply) => {
+    if (!(await listApps()).includes(req.body.name)) return reply.code(404).send({ error: "Appli introuvable sur l'ordinateur" });
+    return { ok: true, id: await addDeckApp(req.body.name) };
+  });
 
   /** Commande vocale « ouvre X » : appli installée qui n'est pas dans le deck. */
-  app.post<{ Body: { name: string } }>(
-    "/apps/launch",
-    { schema: { body: { type: "object", required: ["name"], properties: { name: { type: "string", minLength: 1, maxLength: 200 } } } } },
-    async (req, reply) => {
-      if (!(await listApps()).includes(req.body.name)) return reply.code(404).send({ error: "Appli introuvable sur l'ordinateur" });
-      await launchApp(req.body.name);
-      return { ok: true };
-    },
-  );
+  app.post<{ Body: { name: string } }>("/apps/launch", { schema: { body: appNameBody } }, async (req, reply) => {
+    if (!(await listApps()).includes(req.body.name)) return reply.code(404).send({ error: "Appli introuvable sur l'ordinateur" });
+    await launchApp(req.body.name);
+    return { ok: true };
+  });
 
   app.delete<{ Params: { id: string } }>("/deck/apps/:id", async (req) => {
     await removeDeckApp(req.params.id);
@@ -126,25 +155,13 @@ export default async function deckRoutes(app: FastifyInstance) {
 
   app.get("/deck/links", async () => ({ links: await deckLinks(), suggestions: LINK_SUGGESTIONS }));
 
-  app.post<{ Body: { url: string; label?: string } }>(
-    "/deck/links",
-    {
-      schema: {
-        body: {
-          type: "object",
-          required: ["url"],
-          properties: { url: { type: "string", minLength: 1, maxLength: 2000 }, label: { type: "string", maxLength: 40 } },
-        },
-      },
-    },
-    async (req, reply) => {
-      try {
-        return { ok: true, id: await addDeckLink(req.body.url, req.body.label) };
-      } catch {
-        return reply.code(400).send({ error: "Adresse invalide (ex. netflix.com)" });
-      }
-    },
-  );
+  app.post<{ Body: { url: string; label?: string } }>("/deck/links", { schema: { body: linkBody } }, async (req, reply) => {
+    try {
+      return { ok: true, id: await addDeckLink(req.body.url, req.body.label) };
+    } catch {
+      return reply.code(400).send({ error: "Adresse invalide (ex. netflix.com)" });
+    }
+  });
 
   app.delete<{ Params: { id: string } }>("/deck/links/:id", async (req) => {
     await removeDeckLink(req.params.id);
@@ -191,19 +208,7 @@ export default async function deckRoutes(app: FastifyInstance) {
 
   // --- Touches perso (page Perso du deck), modifiables depuis la tablette et par Claude
 
-  const slotParam = { type: "object", required: ["slot"], properties: { slot: { type: "integer", minimum: 0, maximum: MAX_SLOTS - 1 } } };
-
-  /** De quoi remplir l'éditeur de touche : applis installées, raccourcis Apple (Mac), écrans. */
-  app.get("/deck/catalog", async () => {
-    const [apps, shortcuts, displays] = await Promise.all([
-      listApps(),
-      listShortcuts(),
-      Promise.resolve()
-        .then(listDisplays)
-        .catch(() => []),
-    ]);
-    return { os: osName, apps, shortcuts, displays: displays.map((d) => d.label) };
-  });
+  app.get("/deck/catalog", deckCatalog);
 
   app.get<{ Params: { slot: number } }>("/deck/keys/:slot", { schema: { params: slotParam } }, async (req) => ({
     key: (await loadKeys())[req.params.slot] ?? null,
@@ -224,13 +229,6 @@ export default async function deckRoutes(app: FastifyInstance) {
   });
 
   // Pages de touches nommées (page `n` de /deck : `keyPage`), mêmes touches que Perso
-
-  const pageSlotParams = {
-    type: "object",
-    required: ["page", "slot"],
-    properties: { page: { type: "integer", minimum: 0, maximum: 49 }, slot: slotParam.properties.slot },
-  };
-  type PageSlot = { page: number; slot: number };
 
   app.get<{ Params: PageSlot }>("/deck/pages/:page/keys/:slot", { schema: { params: pageSlotParams } }, async (req, reply) => {
     const page = (await loadKeyPages())[req.params.page];

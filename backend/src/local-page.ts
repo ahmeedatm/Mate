@@ -1,3 +1,4 @@
+import { CONFIG_CSS, CONFIG_HTML, CONFIG_JS } from "./local-config.ts";
 import { CADRAN_CSS, FAVICON, ICON_SVG } from "./web-style.ts";
 
 /**
@@ -206,7 +207,7 @@ ${FAVICON}
   .cxsteps li { counter-increment: s; display: flex; gap: 14px; align-items: baseline; padding: 6px 0; color: var(--ink-2); }
   .cxsteps li::before { content: counter(s); font: 300 24px/1 Outfit, sans-serif; color: var(--ink); width: 18px; flex: none; }
   .cxsteps p:empty, .cxsteps .actions:empty { display: none; }
-  /* CONFIG_CSS */
+  ${CONFIG_CSS}
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
   @media (max-width: 1100px) { .twin-grid { grid-template-columns: 1fr; } .twin { position: static; max-width: 520px; } }
   @media (max-width: 820px) {
@@ -301,7 +302,7 @@ ${FAVICON}
       </div>
     </div>
   </section>
-  <!-- CONFIG_HTML -->
+  ${CONFIG_HTML}
 
   <section id="connect" data-title="Connecter une tablette" data-icon="add" data-group="Cet ordinateur">
     <div class="sechead"><h2 id="connecttitle">Connecter une tablette</h2></div>
@@ -991,7 +992,7 @@ ${FAVICON}
     openPanel(section, section === "agenda" ? "ics" : "gitlab");
     document.getElementById(section).classList.add("focus");
   }
-  /* CONFIG_JS */
+  ${CONFIG_JS}
   tickTwin();
   setInterval(tickTwin, 15000);
   refresh();

@@ -32,6 +32,7 @@ import docRoutes from "./routes/docs.ts";
 import gitlabRoutes from "./routes/gitlab.ts";
 import jiraRoutes from "./routes/jira.ts";
 import localRoutes from "./routes/local.ts";
+import localConfigRoutes from "./routes/local-config.ts";
 import mailRoutes from "./routes/mail.ts";
 import notificationRoutes from "./routes/notifications.ts";
 import pairingRoutes from "./routes/pairing.ts";
@@ -86,6 +87,10 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
       url,
     )) ||
     (method === "PUT" && (url === "/local/calendar" || url === "/local/tablet/settings")) ||
+    // Panneau de configuration (routes/local-config.ts) : écritures en JSON seulement (PUT,
+    // DELETE et POST à corps objet), pas envoyables par un autre site sans pré-vérification CORS.
+    (method === "GET" && /^\/local\/config\/[a-z0-9/-]+(\?|$)/.test(url)) ||
+    (/^(POST|PUT|DELETE)$/.test(method) && /^\/local\/config\/[a-z0-9/-]+$/.test(url)) ||
     (method === "POST" && (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update")) ||
     // Panneau de l'appli portable (routes/portable.ts) : corps JSON exigé, pas envoyable par un autre site.
     (method === "POST" && /^\/local\/(autostart|firewall|legacy\/remove|forget|quit|update)$/.test(url)) ||
@@ -156,6 +161,7 @@ app.addContentTypeParser("application/gzip", { parseAs: "buffer", bodyLimit: 100
 
 app.register(pairingRoutes, { authorized, fingerprint: tls?.fingerprint ?? null });
 app.register(localRoutes);
+app.register(localConfigRoutes);
 app.register(portableRoutes);
 app.register(deckRoutes);
 app.register(pluginRoutes);
