@@ -28,12 +28,15 @@ object VoicePrompt {
 
     fun phaseOf(sessionId: String): Phase? = if (session == sessionId) phase else null
 
+    /** Niveau de la voix pendant l'écoute (0 à 1, tous les 100 ms) : halo des micros affichés. */
+    val levels = LinkedHashSet<(Float) -> Unit>()
+
     /** Micro d'une session touché : écoute, ou fin de l'écoute si c'est elle qui écoute. Rien pendant un envoi ou une autre dictée. */
     fun toggle(activity: MainActivity, s: AgentSession) {
         if (session == s.id && phase == Phase.LISTENING) return recorder?.stop() ?: Unit
         if (session != null) return
         val rec = PromptRecorder(activity)
-        if (!rec.start { wav -> recorded(activity, s, wav) }) return activity.showBanner(activity.getString(R.string.voice_no_mic), 6)
+        if (!rec.start(onLevel = { v -> levels.toList().forEach { it(v) } }) { wav -> recorded(activity, s, wav) }) return activity.showBanner(activity.getString(R.string.voice_no_mic), 6)
         recorder = rec
         session = s.id
         change(Phase.LISTENING)

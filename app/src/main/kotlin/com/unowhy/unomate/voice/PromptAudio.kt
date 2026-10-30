@@ -2,6 +2,7 @@ package com.unowhy.unomate.voice
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlin.math.log10
 import kotlin.math.sqrt
 
 /** Dictée d'un prompt pour une session Claude : 16 kHz mono 16 bits, ce qu'attend whisper.cpp sur l'ordinateur. */
@@ -30,6 +31,12 @@ object PromptAudio {
             putInt(pcm.size)
             put(pcm)
         }.array()
+
+    /** Niveau affiché (halo du micro) entre 0 et 1 : 0 au seuil de la parole, 1 à 30 dB au-dessus. */
+    fun level(rms: Double): Float {
+        if (rms <= SilenceGate.MIN_SPEECH) return 0f
+        return (20 * log10(rms / SilenceGate.MIN_SPEECH) / 30).toFloat().coerceIn(0f, 1f)
+    }
 
     /** Niveau efficace des `n` premiers échantillons. */
     fun rms(samples: ShortArray, n: Int = samples.size): Double {

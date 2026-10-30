@@ -321,12 +321,12 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private fun bindActions(row: View, s: AgentSession) {
         val box = row.findViewById<LinearLayout>(R.id.agent_actions)
         box.removeAllViews()
-        // Icônes seules : les libellés ne tiennent pas dans une carte étroite ; le nom reste pour TalkBack.
+        // Une session au repos ne garde qu'un geste : lui parler. Interrompre (terminal) et la reprise après une limite
+        // n'apparaissent que dans leur état.
         if (s.canInterrupt) box.addView(action(R.drawable.ic_tile_stop, R.string.agent_interrupt) { confirmInterrupt(s) })
-        if (s.canSend && (s.state == AgentState.DONE || s.state == AgentState.IDLE)) {
-            box.addView(action(R.drawable.ic_play, R.string.agent_continue) { send(s, "continue") })
-            if (AgentsFeed.last?.state?.voice == true) box.addView(talkButton(s))
-            box.addView(action(R.drawable.ic_edit, R.string.agent_write) { write(s) })
+        if (s.canSend && (s.state == AgentState.DONE || s.state == AgentState.IDLE) && AgentsFeed.last?.state?.voice == true) {
+            val size = dp(TalkButton.SIZE_DP)
+            box.addView(TalkButton(context, VoicePrompt.phaseOf(s.id)) { talk(s) }, LayoutParams(size, size))
         }
         val at = s.resumeAt
         if (s.state == AgentState.LIMIT && s.canSend && at != null) {
@@ -349,19 +349,6 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         contentDescription = context.getString(label)
         setOnClickListener { onClick() }
         layoutParams = LayoutParams(dp(48), dp(48)).apply { marginEnd = dp(8) }
-    }
-
-    /** Micro : écoute (carré plein pour finir), puis envoi grisé pendant la transcription ; le texte part seul à Claude. */
-    private fun talkButton(s: AgentSession) = when (VoicePrompt.phaseOf(s.id)) {
-        VoicePrompt.Phase.LISTENING -> action(R.drawable.ic_tile_stop, R.string.agent_talk_stop) { talk(s) }.apply {
-            setBackgroundResource(R.drawable.round_primary_bg)
-            ImageViewCompat.setImageTintList(this, themeColorList(context, R.attr.c_on_primary))
-        }
-        VoicePrompt.Phase.SENDING -> action(R.drawable.ic_tile_send, R.string.agent_talk_sending) {}.apply {
-            isEnabled = false
-            alpha = 0.5f
-        }
-        null -> action(R.drawable.ic_mic, R.string.agent_talk) { talk(s) }
     }
 
     /** Interrompre se confirme : le travail en cours s'arrête. */
@@ -481,17 +468,6 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     private fun talk(s: AgentSession) {
         (context as? MainActivity)?.let { VoicePrompt.toggle(it, s) }
-    }
-
-    private fun write(s: AgentSession) {
-        (context as? MainActivity)?.askAgentText(context.getString(R.string.agent_write_title, s.name), R.string.agent_write_hint, "") { text ->
-            if (text.isNotBlank()) send(s, text.trim())
-        }
-    }
-
-    private fun send(s: AgentSession, text: String) = call(s) {
-        BackendClient(context).agents.send(s.id, text)
-        (context as? MainActivity)?.showBanner(context.getString(R.string.agent_sent, s.name), AGENT_CONFIRM_SECONDS)
     }
 
     private fun resume(s: AgentSession, armed: Boolean, time: String) = call(s) {

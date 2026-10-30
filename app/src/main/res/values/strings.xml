@@ -250,7 +250,6 @@
     <string name="agent_ask_send">Envoyer</string>
     <string name="agent_ask_back">Retour</string>
     <string name="agent_ask_ok">OK</string>
-    <string name="agent_continue">Continue</string>
     <string name="agent_interrupt">Interrompre</string>
     <string name="agent_interrupt_title">Interrompre %1$s ?</string>
     <string name="agent_interrupt_text">Le tour en cours s\'arrête, comme Échap au clavier. La session reste ouverte.</string>
@@ -278,9 +277,6 @@
     <string name="agent_voice_permission">Dis « autorise » ou « refuse la commande »</string>
     <string name="agent_voice_next">Question suivante</string>
     <string name="agent_voice_no_session">Aucune session finie à relancer d\'ici</string>
-    <string name="agent_write">Écrire…</string>
-    <string name="agent_write_title">Écrire à %1$s</string>
-    <string name="agent_write_hint">Ton message</string>
     <string name="agent_talk">Parler</string>
     <string name="agent_voice_listening">J\'écoute… je m\'arrête quand tu te tais</string>
     <string name="agent_voice_stop">Arrêter</string>

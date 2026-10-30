@@ -14,6 +14,7 @@ import java.io.ByteArrayOutputStream
  * Enregistre un prompt dicté pour une session Claude (transcrit ensuite par whisper.cpp sur l'ordinateur) : 16 kHz mono,
  * fil à part, arrêt seul au silence ([SilenceGate]) ou par [stop]. Micro pris par [Mic] pendant l'écoute (le mot de
  * réveil le rend). `onEnd` (fil principal) reçoit le WAV, ou null si rien n'a été enregistré ; jamais après [cancel].
+ * `onLevel` (fil principal, tous les 100 ms) : niveau de la voix entre 0 et 1 ([PromptAudio.level]).
  */
 class PromptRecorder(private val activity: Activity) {
 
@@ -24,7 +25,7 @@ class PromptRecorder(private val activity: Activity) {
     val recording get() = thread != null
 
     /** `false` : micro pas autorisé ou indisponible ; rien n'est lancé. */
-    fun start(onEnd: (ByteArray?) -> Unit): Boolean {
+    fun start(onLevel: (Float) -> Unit = {}, onEnd: (ByteArray?) -> Unit): Boolean {
         if (thread != null) return false
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return false
         stopping = false
@@ -37,7 +38,7 @@ class PromptRecorder(private val activity: Activity) {
             return false
         }
         thread = Thread({
-            val pcm = capture(record)
+            val pcm = capture(record, onLevel)
             activity.runOnUiThread {
                 thread = null
                 Mic.release(Mic.DICTATION)
@@ -82,7 +83,7 @@ class PromptRecorder(private val activity: Activity) {
     }
 
     /** Échantillons enregistrés (petit-boutiste), null si aucun. */
-    private fun capture(record: AudioRecord): ByteArray? {
+    private fun capture(record: AudioRecord, onLevel: (Float) -> Unit): ByteArray? {
         val out = ByteArrayOutputStream()
         val gate = SilenceGate()
         val frame = ShortArray(PromptAudio.FRAME_SAMPLES)
@@ -101,7 +102,10 @@ class PromptRecorder(private val activity: Activity) {
                     out.write(frame[i].toInt() and 0xff)
                     out.write(frame[i].toInt() shr 8 and 0xff)
                 }
-                if (gate.feed(PromptAudio.rms(frame, n)) == SilenceGate.Verdict.DONE) break
+                val rms = PromptAudio.rms(frame, n)
+                val level = PromptAudio.level(rms)
+                activity.runOnUiThread { if (!stopping) onLevel(level) }
+                if (gate.feed(rms) == SilenceGate.Verdict.DONE) break
             }
         } catch (e: IllegalStateException) {
             Log.w(TAG, "enregistrement interrompu", e)

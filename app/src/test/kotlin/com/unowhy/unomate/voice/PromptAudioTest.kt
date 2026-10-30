@@ -35,6 +35,14 @@ class PromptAudioTest {
         assertEquals(0.0, PromptAudio.rms(ShortArray(0)), 0.0)
     }
 
+    @Test
+    fun `niveau du halo entre 0 et 1, 0 sous le seuil de la parole`() {
+        assertEquals(0f, PromptAudio.level(100.0), 0f)
+        assertEquals(0f, PromptAudio.level(SilenceGate.MIN_SPEECH), 0f)
+        assertEquals(0.5f, PromptAudio.level(SilenceGate.MIN_SPEECH * Math.pow(10.0, 0.75)), 0.001f)
+        assertEquals(1f, PromptAudio.level(32_000.0), 0f)
+    }
+
     /** Envoie `ms` de niveau `rms` ; rend le dernier verdict. */
     private fun SilenceGate.during(ms: Int, rms: Double): Verdict {
         var v = Verdict.LISTEN
