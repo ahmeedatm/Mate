@@ -134,7 +134,7 @@ class LayoutConfigTest {
     fun `describe rend le catalogue avec offered, les tailles et les barres`() {
         val labels = LayoutConfig.Labels({ "w-${it.key}" }, { "s-${it.name}" }, { "t-${it.key}" }, { "o-${it.key}" })
         val data = LayoutConfig.describe(
-            current(), true, "pc-1", HomeFeatures(agents = false, jira = true),
+            current(), "pc-1", HomeFeatures(agents = false, jira = true),
             listOf(TopItem.CLOCK), railLabels = false, railShown = listOf(Mode.FOCUS), labels = labels,
         )
         assertEquals("pc-1", data.getString("computerId"))

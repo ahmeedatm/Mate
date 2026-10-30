@@ -25,10 +25,6 @@ class DeckOverlays(private val root: FrameLayout, private val scope: CoroutineSc
     private var windowPicker: WindowPicker? = null
     private var agentsBoard: AgentsBoard? = null
 
-    val anyShowing: Boolean
-        get() = keyEditor?.isShowing == true || appAdder?.isShowing == true ||
-            linkAdder?.visibility == View.VISIBLE || windowPicker?.isShowing == true || agentsBoard?.isShowing == true
-
     /** `page` : rang de la page de touches nommée de la touche, null pour Perso. */
     fun editKey(slot: Int, page: Int? = null, onChanged: () -> Unit) {
         val editor = keyEditor ?: KeyEditor(root.context).also { keyEditor = it; add(it) }

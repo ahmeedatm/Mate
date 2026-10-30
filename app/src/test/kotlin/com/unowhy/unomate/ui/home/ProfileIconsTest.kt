@@ -14,8 +14,8 @@ class ProfileIconsTest {
         val context = FakeContext()
         val layout = layout("Bureau", "Musique", "Réunion")
         layout.setIcon(1, "music")
-        HomeLayout.save(context, layout, cadran = true)
-        val back = HomeLayout.load(context, cadran = true)
+        HomeLayout.save(context, layout)
+        val back = HomeLayout.load(context)
         assertEquals(listOf(null, "music", null), back.names.indices.map { back.iconOf(it) })
     }
 
@@ -29,7 +29,7 @@ class ProfileIconsTest {
         val context = FakeContext()
         val old = """{"v":2,"pages":2,"names":["Bureau","Jeux"],"widgets":[]}"""
         context.getSharedPreferences("companion", 0).edit().putString("home_layout_cadran", old).apply()
-        val back = HomeLayout.load(context, cadran = true)
+        val back = HomeLayout.load(context)
         assertNull(back.iconOf(0))
         assertNull(back.iconOf(1))
     }

@@ -25,8 +25,6 @@ import kotlinx.coroutines.launch
  */
 class DemoDialog(private val activity: FragmentActivity) {
 
-    private val cadran get() = themeBool(activity, R.attr.c_cadran)
-
     fun show() {
         val list = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
@@ -79,7 +77,7 @@ class DemoDialog(private val activity: FragmentActivity) {
                 .onSuccess { setup ->
                     val pages = setup.pages.mapValues { (_, keys) -> keys.map { KeyRef(it.id, it.label, it.glyph, it.color, it.symbol) } }
                     val layout = persona.layout(persona.profiles.map { activity.getString(it.name) }, activity.getString(R.string.profile_call), pages, computer.id)
-                    Demo.start(activity, persona, layout, cadran)
+                    Demo.start(activity, persona, layout)
                     activity.recreate()
                 }
                 .onFailure(::fail)
@@ -90,7 +88,7 @@ class DemoDialog(private val activity: FragmentActivity) {
         activity.lifecycleScope.launch {
             runCatchingCancellable { BackendClient(activity).demo.quit() }
                 .onSuccess {
-                    Demo.quit(activity, cadran)
+                    Demo.quit(activity)
                     activity.recreate()
                 }
                 .onFailure(::fail)

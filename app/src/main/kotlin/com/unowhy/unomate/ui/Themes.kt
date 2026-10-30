@@ -71,7 +71,7 @@ fun themeColor(context: Context, attr: Int): Int {
 
 fun themeColorList(context: Context, attr: Int): ColorStateList = ColorStateList.valueOf(themeColor(context, attr))
 
-/** Booléen du thème (absent = faux) : `themeBool(context, R.attr.c_cadran)`. */
+/** Booléen du thème (absent = faux) : `themeBool(context, R.attr.c_flow)`. */
 fun themeBool(context: Context, attr: Int): Boolean {
     val value = TypedValue()
     return context.theme.resolveAttribute(attr, value, true) && value.data != 0

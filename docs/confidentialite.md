@@ -31,7 +31,7 @@ Le principe du produit est bon : les données restent chez l'utilisateur. La tab
 | **Apple** (recherche iTunes, Mac) | page Média, morceau sans pochette | **titre et artiste** du morceau en cours | `backend/src/mac/media.ts` (`storeArtwork`) |
 | **YouTube / Google** (Mac) | page Média, vidéo YouTube en cours | l'identifiant de la vidéo (image d'aperçu) | `backend/src/mac/media.ts` |
 | **MET Norway** (Norvège, EEE) | météo, toutes les 30 min | coordonnées **de la ville** (jamais la position exacte), adresse IP, identifiant de l'appli | `ui/home/Weather.kt` |
-| **Microsoft** (Graph) — inactif | si l'appli Azure est enregistrée et un compte relié | agenda ; **courrier** : expéditeur, objet, date, compteurs (jamais le corps) | `backend/src/accounts.ts`, `mail.ts` ; inactif tant que `config/accounts.json` est vide |
+| **Microsoft** (Graph) — inactif | si l'appli Azure est enregistrée et un compte relié | agenda | `backend/src/accounts.ts` ; inactif tant que `config/accounts.json` est vide |
 | **Google** (Agenda) — inactif | si l'appli Google est enregistrée et un compte relié | agenda | `backend/src/accounts.ts` ; même condition |
 | **Unowhy** (serveur de mises à jour) | toutes les 6 h et au démarrage ; installeurs tous les quarts d'heure en WiFi | adresse IP, jeton de lecture des paquets ; rien sur l'utilisateur | `kiosk/AutoUpdater.kt`, `installers/` |
 | **IA de bureau choisie par l'utilisateur** (Claude, Cursor…) | s'il la branche sur `/mcp` (carte « Connecter une IA ») et lui demande d'agir | ce que les outils lisent (réglages, profils, touches, tâches, agenda perso, capture de la tablette…) part chez le fournisseur de cette IA ; le compagnon n'appelle lui-même aucun service | `backend/src/mcp-tools.ts`, `routes/mcp.ts` |

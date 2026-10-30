@@ -78,7 +78,7 @@ class CallSession(private val now: () -> Long = System::currentTimeMillis) {
         fun fallbackPage(pages: List<DeckPage>): DeckPage? {
             // Commande système seulement : « Micro » de Teams ou « Couper mon micro » de Discord appuient dans leur appli.
             val tiles = pages.flatMap { it.tiles }.filter { it.symbol == "mic_off" && it.type == "system" }.distinctBy { it.id }.take(1)
-            return if (tiles.isEmpty()) null else DeckPage("Réunion", tiles, false, false, false, null, false, true, false)
+            return if (tiles.isEmpty()) null else DeckPage("Réunion", tiles, false, false, false, null, false, true)
         }
     }
 }

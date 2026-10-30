@@ -40,7 +40,7 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
     /** Compteurs et liste d'un Agents M, L ou V. */
     private val summary = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
-        addView(cardTitle(R.string.agents_title, R.drawable.ic_agents))
+        addView(cardTitle(R.string.agents_title))
         addView(counters, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
         addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(8) })
         addView(note)

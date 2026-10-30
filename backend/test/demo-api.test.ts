@@ -468,7 +468,7 @@ describe("démo : données fictives à la place de celles de l'ordinateur", () =
     assert.equal(await exists(s, "mixer.json"), false);
   });
 
-  it("aucun appel, courrier, notifications, presse-papiers et agenda du persona", async () => {
+  it("aucun appel, notifications, presse-papiers et agenda du persona", async () => {
     const s = await start();
     assert.deepEqual((await s.call("GET", "/deck/live")).json.apps, []);
     s.setOs({ clipboard: { kind: "text", text: "Presse-papiers privé" } });
@@ -481,9 +481,6 @@ describe("démo : données fictives à la place de celles de l'ordinateur", () =
     }
     await s.call("POST", "/demo/persona", { persona: "nour" });
 
-    const mail = (await s.call("GET", "/mail/summary")).json;
-    assert.equal(mail.status, "ok");
-    assert.ok(mail.unread > 0 && mail.recent.length >= 2);
     const notes = (await s.call("GET", "/notifications")).json.items;
     assert.ok(notes.length >= 2);
     assert.equal((await s.call("DELETE", `/notifications/${notes[0].id}`)).status, 200);
@@ -499,7 +496,6 @@ describe("démo : données fictives à la place de celles de l'ordinateur", () =
 
     await s.call("DELETE", "/demo");
     assert.equal((await s.call("GET", "/system/clipboard")).json.text, "Presse-papiers privé");
-    assert.equal((await s.call("GET", "/mail/summary")).json.status, "no-account");
   });
 
   it("les données fictives ne servent que la tablette qui annonce le persona actif, les autres lisent l'ordinateur", async () => {
@@ -524,7 +520,6 @@ describe("démo : données fictives à la place de celles de l'ordinateur", () =
       windows: (await s.call("GET", "/windows/open")).json.apps[0].name,
       media: await mediaTitle(s),
       clipboard: (await s.call("GET", "/system/clipboard")).json.text,
-      mail: (await s.call("GET", "/mail/summary")).json.status,
     });
 
     // En-tête correct : les mocks.
@@ -536,7 +531,6 @@ describe("démo : données fictives à la place de celles de l'ordinateur", () =
     assert.notEqual(mocked.windows, "Vrai");
     assert.notEqual(mocked.media, "Morceau privé");
     assert.notEqual(mocked.clipboard, "Presse-papiers privé");
-    assert.equal(mocked.mail, "ok");
 
     // Sans en-tête (tablette sans persona : essai, réinstallation) et avec celui d'un autre persona : les vraies données.
     for (const persona of [null, "nour"]) {
@@ -549,7 +543,6 @@ describe("démo : données fictives à la place de celles de l'ordinateur", () =
       assert.equal(real.windows, "Vrai", `${persona} fenêtres`);
       assert.equal(real.media, "Morceau privé", `${persona} média`);
       assert.equal(real.clipboard, "Presse-papiers privé", `${persona} presse-papiers`);
-      assert.equal(real.mail, "no-account", `${persona} courrier`);
       assert.equal((await s.call("GET", "/calendar?days=7")).json.source, "local");
     }
 

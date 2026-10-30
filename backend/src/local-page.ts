@@ -509,14 +509,13 @@ ${FAVICON}
         row.className = "account";
         const label = document.createElement("span");
         label.className = "grow";
-        label.append(stateDot(!(a.expired || a.mailMissing)),
-          a.label + " · " + a.email + (a.expired ? " (à reconnecter)" : a.mailMissing ? " (à reconnecter pour le courrier)" : ""));
+        label.append(stateDot(!a.expired), a.label + " · " + a.email + (a.expired ? " (à reconnecter)" : ""));
         const off = document.createElement("button");
         off.className = "ghost";
         off.textContent = "Déconnecter";
         off.onclick = async () => { await fetch("/local/accounts/" + a.provider, { method: "DELETE" }); refresh(); };
         row.append(label);
-        if (a.expired || a.mailMissing) row.append(connectLink(a.provider, "Reconnecter"));
+        if (a.expired) row.append(connectLink(a.provider, "Reconnecter"));
         row.append(off);
         box.append(row);
       }
@@ -858,7 +857,7 @@ ${FAVICON}
     // État affiché : seulement « Connecté » ou « Non connecté » (un compte expiré ne marche plus : non connecté).
     for (const p of ["microsoft", "google"]) {
       const a = c.accounts.find((x) => x.provider === p);
-      if (a && !a.expired) setTile(p, "on", a.mailMissing ? "Non connecté" : "Connecté", a.mailMissing);
+      if (a && !a.expired) setTile(p, "on", "Connecté");
       else setTile(p, c.providers.some((x) => x.provider === p) ? "off" : "na", "Non connecté", !!a);
     }
     setTile("ics", c.saved.length + c.env ? "on" : "off", c.saved.length + c.env ? "Connecté" : "Non connecté");
@@ -875,7 +874,7 @@ ${FAVICON}
     microsoft: {
       title: "Relier Microsoft",
       steps: ["Touche « Se connecter avec Microsoft » : la page de connexion s'ouvre.", "Connecte-toi avec ton compte Microsoft, pro ou personnel.",
-        "Accepte l'accès à ton agenda et à ton courrier.", "Tu reviens ici : ton agenda arrive sur la tablette dans la minute."],
+        "Accepte l'accès à ton agenda.", "Tu reviens ici : ton agenda arrive sur la tablette dans la minute."],
       action: "Se connecter avec Microsoft",
     },
     google: {

@@ -159,7 +159,6 @@
       "title": "Outlook",
       "app": "Outlook",
       "sound": false,
-      "mail": true,
       "tiles": [
         { "label": "Nouveau message", "glyph": "✉️", "action": { "type": "keys", "keys": "ctrl+n", "app": "Outlook" } },
         { "label": "Répondre", "glyph": "↩️", "action": { "type": "keys", "keys": "ctrl+r", "app": "Outlook" } },

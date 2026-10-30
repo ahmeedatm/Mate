@@ -600,11 +600,8 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     private fun RectF.touchable() = apply { inset(-touchSlack, -touchSlack) }
 
-    /** Thèmes Cadran : ✕ et ⚙ sont centrés sur le bord haut du widget et laissent son titre lisible. */
-    private val cadran = themeBool(context, R.attr.c_cadran)
-
-    /** Haut des boutons du haut : dans le widget, ou à cheval sur son bord haut en Cadran. */
-    private fun topButtonsY(v: View) = if (cadran) v.top - button / 2 else v.top + inset
+    /** Haut des boutons du haut (✕ et ⚙) : à cheval sur le bord haut du widget, son titre reste lisible. */
+    private fun topButtonsY(v: View) = v.top - button / 2
 
     private fun removeRect(v: View) = RectF((v.left + inset).toFloat(), topButtonsY(v).toFloat(), (v.left + inset + button).toFloat(), (topButtonsY(v) + button).toFloat())
 

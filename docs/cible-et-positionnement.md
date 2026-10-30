@@ -73,7 +73,7 @@ Briques de l'ancien cadrage gamers / streamers, **mises de côté** (B2C seconda
 | Brique | Détail |
 |---|---|
 | Soundboard | Étape `sound` dans `Step` (`backend/src/deck.ts`) |
-| Page OBS | Voir [obs.md](obs.md) |
+| Page OBS | Étude `docs/obs.md` retirée le 30/10, dans l'historique git |
 | Onglet web du Deck | Tableau de bord SimHub dans « Page de l'ordi » |
 | Chat Twitch | Lecture seule, anonyme |
 

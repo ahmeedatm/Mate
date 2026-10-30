@@ -28,7 +28,6 @@ const deckConfig = JSON.parse(readFileSync(deckFile, "utf8")) as {
     app?: string;
     media?: boolean;
     sound?: boolean;
-    mail?: boolean;
     tiles: { label: string; action: { type: string; name?: string; keys?: string; steps?: { type: string; keys?: string }[] } }[];
   }[];
 };
@@ -329,11 +328,10 @@ describe("suite Microsoft dans les decks de départ", () => {
   }
 
   for (const { name, deck: example } of examples) {
-    it(`${name} : pas de barre Son sur les pages Office, courrier au-dessus des touches d'Outlook seulement`, () => {
+    it(`${name} : pas de barre Son sur les pages Office`, () => {
       for (const title of OFFICE) {
         const page = example.pages.find((p) => p.title === title)!;
         assert.equal(page.sound, false, `${title} : sound`);
-        assert.equal(page.mail === true, title === "Outlook", `${title} : mail`);
       }
     });
 
@@ -383,9 +381,8 @@ describe("suite Microsoft dans les decks de départ", () => {
     for (const title of OFFICE) {
       const page = pages.find((p) => p.title === title)!;
       assert.equal(page.callOnly, undefined, title);
-      // `sound` et `mail` de la config arrivent jusqu'à la page, pour la route /deck.
+      // `sound` de la config arrive jusqu'à la page, pour la route /deck.
       assert.equal(page.sound, false, title);
-      assert.equal(page.mail === true, title === "Outlook", title);
     }
   });
 });

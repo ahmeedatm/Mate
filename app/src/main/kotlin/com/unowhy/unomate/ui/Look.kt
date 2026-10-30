@@ -70,18 +70,6 @@ object Look {
         R.attr.c_hue_red, R.attr.c_hue_pink, R.attr.c_hue_yellow, R.attr.c_hue_blue,
     )
 
-    /** Teinte de la fonction que représente l'icône d'un titre. */
-    fun iconHue(icon: Int): Int = when (icon) {
-        R.drawable.ic_event, R.drawable.ic_alarm -> R.attr.c_hue_orange
-        R.drawable.ic_tasks, R.drawable.ic_repeat, R.drawable.ic_tablet, R.drawable.ic_tile_check_circle -> R.attr.c_hue_green
-        R.drawable.ic_water, R.drawable.ic_refresh -> R.attr.c_hue_cyan
-        R.drawable.ic_volume, R.drawable.ic_display -> R.attr.c_hue_violet
-        R.drawable.ic_timer, R.drawable.ic_lock -> R.attr.c_hue_red
-        R.drawable.ic_play, R.drawable.ic_videocam, R.drawable.ic_palette -> R.attr.c_hue_pink
-        R.drawable.ic_edit -> R.attr.c_hue_yellow
-        else -> R.attr.c_hue_blue
-    }
-
     /** Couleurs connues des applis courantes ; les autres noms tirent une teinte stable. */
     private val BRANDS = listOf(
         "teams" to R.attr.c_hue_violet, "discord" to R.attr.c_hue_violet, "code" to R.attr.c_hue_blue,
@@ -543,33 +531,18 @@ object Look {
 }
 
 /**
- * Titre de carte (style CardTitle) : son icône (`android:drawableStart`) devient une pastille de la teinte de la fonction.
- * Dans le code : `TitleView(context)` puis [setIcon]. En Cadran : texte simple, sans icône ni majuscules.
+ * Titre de carte (style CardTitle) : texte simple, sans icône ni majuscules (un `android:drawableStart` du XML est retiré).
  */
 class TitleView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0, defStyleRes: Int = R.style.CardTitle,
 ) : TextView(context, attrs, defStyleAttr, defStyleRes) {
-    private val cadran = themeBool(context, R.attr.c_cadran)
-
     init {
-        val a = context.obtainStyledAttributes(attrs, intArrayOf(android.R.attr.drawableStart), defStyleAttr, defStyleRes)
-        val icon = a.getResourceId(0, 0)
-        a.recycle()
         // TalkBack : titre de section, atteint par la navigation de titre en titre.
         ViewCompat.setAccessibilityHeading(this, true)
-        if (cadran) {
-            setCompoundDrawablesRelative(null, null, null, null)
-            isAllCaps = false
-            letterSpacing = ReadingAids.letterSpacing(context)
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, themePx(context, R.attr.c_title_size).toFloat())
-            setTextColor(themeColor(context, R.attr.c_text_dim))
-        } else if (icon != 0) {
-            setIcon(icon)
-        }
-    }
-
-    fun setIcon(icon: Int, hue: Int = Look.iconHue(icon)) {
-        if (cadran) return
-        setCompoundDrawablesRelative(Look.badge(context, icon, themeColor(context, hue)), null, null, null)
+        setCompoundDrawablesRelative(null, null, null, null)
+        isAllCaps = false
+        letterSpacing = ReadingAids.letterSpacing(context)
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, themePx(context, R.attr.c_title_size).toFloat())
+        setTextColor(themeColor(context, R.attr.c_text_dim))
     }
 }

@@ -216,12 +216,12 @@ object Demo {
      * s'il n'en a pas). L'arrivée sur l'Accueil, premier écran du persona, se lit une fois ([takeArrival]). L'activité
      * doit être recréée ensuite.
      */
-    fun start(context: Context, persona: Persona, layout: HomeLayout, cadran: Boolean) {
+    fun start(context: Context, persona: Persona, layout: HomeLayout) {
         val prefs = prefs(context)
         if (!prefs.getBoolean(KEY_SAVED, false)) {
             prefs.edit()
                 .putBoolean(KEY_SAVED, true)
-                .putString(KEY_LAYOUT, HomeLayout.raw(context, cadran))
+                .putString(KEY_LAYOUT, HomeLayout.raw(context))
                 .putString(KEY_THEME, Prefs.theme(context))
                 .putFloat(KEY_SCALE, Prefs.textScale(context))
                 .putBoolean(KEY_WAKE, Prefs.wakeWord(context))
@@ -233,7 +233,7 @@ object Demo {
             .putString(KEY_PERSONA, persona.id)
             .putString(KEY_ARRIVAL, Mode.HOME.key)
             .apply()
-        HomeLayout.save(context, layout, cadran)
+        HomeLayout.save(context, layout)
         // Un persona sans thème rend celui d'avant la démo (le précédent persona a pu en poser un).
         Prefs.setTheme(context, persona.theme ?: prefs.getString(KEY_THEME, null))
         Prefs.setTextScale(context, persona.textScale)
@@ -251,10 +251,10 @@ object Demo {
     }
 
     /** Rend ce qui était réglé avant la démo. Faux s'il n'y avait pas de démo. */
-    fun quit(context: Context, cadran: Boolean): Boolean {
+    fun quit(context: Context): Boolean {
         val prefs = prefs(context)
         if (!prefs.getBoolean(KEY_SAVED, false)) return false
-        HomeLayout.restore(context, cadran, prefs.getString(KEY_LAYOUT, null))
+        HomeLayout.restore(context, prefs.getString(KEY_LAYOUT, null))
         Prefs.setTheme(context, prefs.getString(KEY_THEME, null))
         Prefs.setTextScale(context, prefs.getFloat(KEY_SCALE, 1f))
         Prefs.setWakeWord(context, prefs.getBoolean(KEY_WAKE, true))

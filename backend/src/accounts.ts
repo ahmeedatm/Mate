@@ -16,15 +16,12 @@ import { readJson, updateJson } from "./store.ts";
 
 export type Provider = "microsoft" | "google";
 
-// Microsoft : agenda seul pour un compte relié avant le courrier (`Stored.mail` absent) ; la page Courrier du Deck demande en plus Mail.Read.
-const MICROSOFT_CALENDAR_SCOPE = "openid email offline_access https://graph.microsoft.com/Calendars.Read";
-
 const PROVIDERS: Record<Provider, { label: string; authUrl: string; tokenUrl: string; scope: string; extra: Record<string, string> }> = {
   microsoft: {
     label: "Microsoft",
     authUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
     tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
-    scope: `${MICROSOFT_CALENDAR_SCOPE} https://graph.microsoft.com/Mail.Read`,
+    scope: "openid email offline_access https://graph.microsoft.com/Calendars.Read",
     extra: { prompt: "select_account" },
   },
   google: {
@@ -65,8 +62,7 @@ export async function availableProviders(): Promise<{ provider: Provider; label:
 
 // --- Comptes connectés (.data/accounts.json)
 
-/** `mail` : le compte a accordé Mail.Read (absent : relié avant le courrier, à reconnecter pour la page Outlook du Deck). */
-type Stored = { email: string; refreshToken: string; expired?: boolean; mail?: boolean };
+type Stored = { email: string; refreshToken: string; expired?: boolean };
 const storeFile = path.join(config.dataDir, "accounts.json");
 
 async function load(): Promise<Partial<Record<Provider, Stored>>> {
@@ -79,17 +75,13 @@ function edit<R = void>(change: (accounts: Partial<Record<Provider, Stored>>) =>
 }
 
 /** `expired` : le compte a refusé le renouvellement (mot de passe changé, accès retiré) : se reconnecter. */
-/** `mailMissing` : compte Microsoft relié avant le courrier (sans Mail.Read) : à reconnecter pour la page Outlook du Deck. */
-export async function connectedAccounts(): Promise<
-  { provider: Provider; label: string; email: string; expired: boolean; mailMissing: boolean }[]
-> {
+export async function connectedAccounts(): Promise<{ provider: Provider; label: string; email: string; expired: boolean }[]> {
   const accounts = await load();
   return (Object.keys(accounts) as Provider[]).map((p) => ({
     provider: p,
     label: PROVIDERS[p].label,
     email: accounts[p]!.email,
     expired: !!accounts[p]!.expired,
-    mailMissing: p === "microsoft" && !accounts[p]!.mail,
   }));
 }
 
@@ -140,23 +132,17 @@ export async function finishLogin(state: string, code: string): Promise<{ provid
   });
   if (!tokens.refresh_token) throw new Error("Le compte n'a pas donné d'accès durable : recommence");
   const email = emailFromIdToken(tokens.id_token) ?? PROVIDERS[login.provider].label;
-  const mail = /(^|\s)(https:\/\/graph\.microsoft\.com\/)?Mail\.Read(\s|$)/i.test(tokens.scope ?? "");
-  await edit((accounts) => void (accounts[login.provider] = { email, refreshToken: tokens.refresh_token!, ...(mail ? { mail } : {}) }));
+  await edit((accounts) => void (accounts[login.provider] = { email, refreshToken: tokens.refresh_token! }));
   accessTokens.set(login.provider, { token: tokens.access_token, expires: Date.now() + (tokens.expires_in - 60) * 1000 });
   return { provider: login.provider, email };
 }
 
-type TokenResponse = { access_token: string; refresh_token?: string; id_token?: string; expires_in: number; scope?: string };
+type TokenResponse = { access_token: string; refresh_token?: string; id_token?: string; expires_in: number };
 
-async function tokenRequest(
-  provider: Provider,
-  app: ClientConfig,
-  params: Record<string, string>,
-  scope = PROVIDERS[provider].scope,
-): Promise<TokenResponse> {
+async function tokenRequest(provider: Provider, app: ClientConfig, params: Record<string, string>): Promise<TokenResponse> {
   const body = new URLSearchParams({ client_id: app.clientId, ...params });
   if (app.clientSecret) body.set("client_secret", app.clientSecret);
-  if (provider === "microsoft") body.set("scope", scope);
+  if (provider === "microsoft") body.set("scope", PROVIDERS[provider].scope);
   const res = await fetch(PROVIDERS[provider].tokenUrl, { method: "POST", body, signal: AbortSignal.timeout(15_000) });
   const json = (await res.json().catch(() => ({}))) as TokenResponse & { error?: string; error_description?: string };
   if (!res.ok) throw Object.assign(new Error(json.error_description || json.error || `HTTP ${res.status}`), { oauthError: json.error });
@@ -179,9 +165,7 @@ async function accessToken(provider: Provider, stored: Stored): Promise<string> 
   const app = await client(provider);
   if (!app) throw new Error(`Connexion ${PROVIDERS[provider].label} non configurée`);
   try {
-    // Compte relié sans Mail.Read : renouvelé pour l'agenda seul (redemander Mail.Read ferait refuser le renouvellement).
-    const scope = provider === "microsoft" && !stored.mail ? MICROSOFT_CALENDAR_SCOPE : undefined;
-    const tokens = await tokenRequest(provider, app, { grant_type: "refresh_token", refresh_token: stored.refreshToken }, scope);
+    const tokens = await tokenRequest(provider, app, { grant_type: "refresh_token", refresh_token: stored.refreshToken });
     accessTokens.set(provider, { token: tokens.access_token, expires: Date.now() + (tokens.expires_in - 60) * 1000 });
     // Microsoft renouvelle aussi le jeton de renouvellement : on garde le dernier.
     if (tokens.refresh_token && tokens.refresh_token !== stored.refreshToken) {
@@ -213,19 +197,6 @@ export async function accountEvents(from: Date, to: Date): Promise<CalendarEvent
     events.push(...(provider === "microsoft" ? await microsoftEvents(token, from, to) : await googleEvents(token, from, to)));
   }
   return events;
-}
-
-/** Accès Graph au courrier du compte Microsoft : `reconnect` s'il a expiré ou n'a pas accordé Mail.Read. */
-export async function microsoftMailAccess(): Promise<{ state: "no-account" | "reconnect" } | { state: "ok"; token: string }> {
-  const stored = (await load()).microsoft;
-  if (!stored) return { state: "no-account" };
-  if (stored.expired || !stored.mail) return { state: "reconnect" };
-  try {
-    return { state: "ok", token: await accessToken("microsoft", stored) };
-  } catch (e) {
-    if ((e as { oauthError?: string }).oauthError === "invalid_grant") return { state: "reconnect" };
-    throw e;
-  }
 }
 
 async function getJson(url: string, token: string, headers: Record<string, string> = {}) {

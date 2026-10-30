@@ -206,12 +206,12 @@ class ProfilesDialog(
     private fun templates() = LinearLayout(context).apply {
         val choices = listOf<Triple<Int, Int, () -> Unit>>(
             Triple(R.string.profile_blank, R.string.profile_blank_desc) { added(layout.addProfile(null)) },
-        ) + Template.entries.filter { it.cadran && it.listed }.map { template ->
+        ) + Template.entries.filter { it.listed }.map { template ->
             Triple(template.title, template.description) {
                 added(layout.addProfile(layout.uniqueName(context.getString(template.title)), template.widgets(layout.pages)))
             }
         }
-        val icons = listOf(R.drawable.ic_add to R.attr.c_hue_green) + Template.entries.filter { it.cadran && it.listed }.map(::templateIcon)
+        val icons = listOf(R.drawable.ic_add to R.attr.c_hue_green) + Template.entries.filter { it.listed }.map(::templateIcon)
         choices.forEachIndexed { n, (title, description, create) ->
             addView(tile(icons[n].first, icons[n].second, title, description, create), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
                 if (n > 0) marginStart = context.dp(10)
@@ -220,8 +220,8 @@ class ProfilesDialog(
     }
 
     private fun templateIcon(template: Template): Pair<Int, Int> = when (template) {
-        Template.WORK_CADRAN, Template.WORK -> R.drawable.ic_tasks to R.attr.c_hue_blue
-        Template.STANDBY_CADRAN, Template.STANDBY -> R.drawable.ic_clock to R.attr.c_hue_orange
+        Template.WORK_CADRAN -> R.drawable.ic_tasks to R.attr.c_hue_blue
+        Template.STANDBY_CADRAN -> R.drawable.ic_clock to R.attr.c_hue_orange
         Template.DECK_CADRAN -> R.drawable.ic_deck to R.attr.c_hue_red
         else -> R.drawable.ic_widgets to R.attr.c_hue_violet
     }

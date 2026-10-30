@@ -106,7 +106,6 @@ object LayoutConfig {
     /** Ce que `get` rend : disposition, catalogue, bandeau du haut et barre de gauche, tels qu'ils sont réglés. */
     fun describe(
         layout: HomeLayout,
-        cadran: Boolean,
         computerId: String?,
         features: HomeFeatures,
         topItems: List<TopItem>,
@@ -117,7 +116,6 @@ object LayoutConfig {
         fun size(s: WidgetSize) = JSONObject().put("key", s.name).put("w", s.w).put("h", s.h).put("label", labels.size(s))
         return JSONObject()
             .put("layout", JSONObject(layout.toJson()))
-            .put("cadran", cadran)
             .put("computerId", computerId ?: JSONObject.NULL)
             .put("nameMax", ProfilesDialog.NAME_MAX)
             .put("cols", COLS)

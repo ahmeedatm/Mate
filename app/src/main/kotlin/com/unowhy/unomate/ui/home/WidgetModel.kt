@@ -356,28 +356,27 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
     companion object {
         private const val PREFS = "companion"
 
-        /** Les thèmes Cadran ont leur propre disposition : leurs lignes inégales ne vont pas aux autres thèmes. */
-        fun key(cadran: Boolean) = if (cadran) "home_layout_cadran" else "home_layout"
+        /** Clé gardée depuis la séparation des thèmes : les dispositions enregistrées restent lues. */
+        const val KEY = "home_layout_cadran"
 
-        fun load(context: Context, cadran: Boolean): HomeLayout {
-            val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(key(cadran), null)
-            return raw?.let { runCatching { parse(it) }.getOrNull() } ?: Template.defaultFor(cadran).build()
+        fun load(context: Context): HomeLayout {
+            val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
+            return raw?.let { runCatching { parse(it) }.getOrNull() } ?: Template.WORK_CADRAN.build()
         }
 
-        /** Ce widget est-il sur l'Accueil (disposition du thème, modèle par défaut si rien n'est enregistré) ? */
-        fun has(context: Context, cadran: Boolean, type: WidgetType) = load(context, cadran).widgets.any { it.type == type }
+        /** Ce widget est-il sur l'Accueil (modèle par défaut si rien n'est enregistré) ? */
+        fun has(context: Context, type: WidgetType) = load(context).widgets.any { it.type == type }
 
-        fun save(context: Context, layout: HomeLayout, cadran: Boolean) {
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(key(cadran), layout.toJson()).apply()
+        fun save(context: Context, layout: HomeLayout) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, layout.toJson()).apply()
         }
 
         /** Disposition enregistrée telle quelle (null : jamais enregistrée, le modèle par défaut s'applique). */
-        fun raw(context: Context, cadran: Boolean): String? =
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(key(cadran), null)
+        fun raw(context: Context): String? = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
 
         /** Remet une disposition lue par [raw] ; null efface l'enregistrée. */
-        fun restore(context: Context, cadran: Boolean, raw: String?) {
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(key(cadran), raw).apply()
+        fun restore(context: Context, raw: String?) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, raw).apply()
         }
 
         /** Disposition invalide (widget inconnu, chevauchement) : on la refuse en entier, le modèle la remplace. */
@@ -410,30 +409,15 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
 }
 
 /**
- * Modèles prêts à l'emploi : le défaut (Travail) ressemble à l'ancien Accueil. `listed` : proposé à la création d'un
+ * Modèles prêts à l'emploi : le défaut est Travail. `listed` : proposé à la création d'un
  * profil (Réunion ne l'est pas : il n'existe qu'une fois, posé par [HomeLayout.ensureRoles]).
  */
 enum class Template(
     @StringRes val title: Int,
     @StringRes val description: Int,
     private val items: List<Placed>,
-    val cadran: Boolean = false,
     val listed: Boolean = true,
 ) {
-    WORK(R.string.template_work, R.string.template_work_desc, listOf(
-        Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 0),
-        Placed(WidgetType.AGENDA, WidgetSize.L, 0, 2, 0),
-        Placed(WidgetType.NEXT, WidgetSize.M, 0, 0, 2),
-        Placed(WidgetType.TASKS, WidgetSize.L, 0, 2, 2),
-        Placed(WidgetType.FOCUS, WidgetSize.S, 0, 0, 3),
-        Placed(WidgetType.WATER, WidgetSize.S, 0, 1, 3),
-    )),
-    STANDBY(R.string.template_standby, R.string.template_standby_desc, listOf(
-        Placed(WidgetType.CLOCK, WidgetSize.XL, 0, 0, 0),
-        Placed(WidgetType.NEXT, WidgetSize.L, 0, 0, 2),
-        Placed(WidgetType.FOCUS, WidgetSize.S, 0, 2, 2),
-        Placed(WidgetType.WATER, WidgetSize.M, 0, 2, 3),
-    )),
     WORK_CADRAN(R.string.template_work, R.string.template_work_cadran_desc, listOf(
         // La grande heure (météo, eau) en haut, puis l'agenda, le Focus, les applis du travail (Teams, Outlook, Chrome…).
         Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
@@ -443,11 +427,11 @@ enum class Template(
         Placed(WidgetType.APPS, WidgetSize.V, 0, 2, 2),
         // Touches remplies d'office (Verrouiller, Couper le micro, Ne pas déranger…) : pas de case vide au premier lancement.
         Placed(WidgetType.KEYS, WidgetSize.V, 0, 3, 2, JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")),
-    ), cadran = true),
+    )),
     STANDBY_CADRAN(R.string.template_standby, R.string.template_standby_cadran_desc, listOf(
         Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
         Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
-    ), cadran = true),
+    )),
 
     // Deck : agir sur l'ordinateur. Applis sur la haute ligne, son de l'ordinateur sur la ligne fine, touches et fenêtres
     // dessous (la musique est dans le header, MusicChip : pas de doublon).
@@ -456,14 +440,14 @@ enum class Template(
         Placed(WidgetType.AUDIO, WidgetSize.W, 0, 0, 1),
         Placed(WidgetType.KEYS, WidgetSize.L, 0, 0, 2, JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")),
         Placed(WidgetType.OPEN, WidgetSize.L, 0, 2, 2),
-    ), cadran = true),
+    )),
 
     // Réunion : piloter l'appel en cours. Affiché seulement pendant un appel.
     CALL_CADRAN(R.string.template_call, R.string.template_call_desc, listOf(
         Placed(WidgetType.CALL, WidgetSize.XL, 0, 0, 0),
         Placed(WidgetType.NEXT, WidgetSize.L, 0, 0, 2),
         Placed(WidgetType.AUDIO, WidgetSize.L, 0, 2, 2),
-    ), cadran = true, listed = false);
+    ), listed = false);
 
     /** Modèle d'un rôle (Deck, Réunion) : une page pour agir, pas un Accueil (ni héros ni ligne du jour). */
     val role get() = this == DECK_CADRAN || this == CALL_CADRAN
@@ -472,9 +456,4 @@ enum class Template(
     fun widgets(page: Int) = items.map { it.copy().also { c -> c.page = page } }
 
     fun build() = HomeLayout(widgets(0).toMutableList(), 1)
-
-    companion object {
-        /** Modèle d'un premier lancement : Travail (celui de la famille Cadran, quand il existe). */
-        fun defaultFor(cadran: Boolean) = entries.firstOrNull { it.cadran == cadran } ?: WORK
-    }
 }
