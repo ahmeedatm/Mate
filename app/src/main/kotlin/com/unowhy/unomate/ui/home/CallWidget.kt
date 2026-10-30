@@ -48,7 +48,7 @@ abstract class CallWidget(
     /** Touches dessinées dans la grille, avec leur allumage : la grille n'est refaite que si elles changent. */
     private var drawn: List<Pair<DeckTile, Boolean>> = emptyList()
 
-    private val title = cardTitle(placed.type.title, placed.type.icon)
+    private val title = cardTitle(placed.type.title)
     private val state = label(14f, R.attr.c_text_dim).apply { isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
     private val flag = label(14f, R.attr.c_ko).apply { isSingleLine = true }
     private val people = label(14f, R.attr.c_text_dim).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END }

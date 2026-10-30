@@ -665,7 +665,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** La disposition que l'Accueil affiche (celle que la barre doit suivre), sinon celle enregistrée. */
-    private fun shownLayout(): HomeLayout = homeFragment()?.shownLayout ?: HomeLayout.load(this, cadran = true)
+    private fun shownLayout(): HomeLayout = homeFragment()?.shownLayout ?: HomeLayout.load(this)
 
     private fun refreshRail(layout: HomeLayout = shownLayout()) =
         nav.showProfiles(layout, homeFragment()?.shownPage?.takeIf { current == Mode.HOME } ?: layout.homeProfile, call.active)
@@ -772,7 +772,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Tableau des agents Claude, par-dessus le profil Deck. */
     fun showAgents() {
-        showProfile(HomeLayout.load(this, cadran = true).deckTarget())
+        showProfile(HomeLayout.load(this).deckTarget())
         homeFragment()?.showAgentsBoard()
     }
 
@@ -962,7 +962,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun showError(e: Throwable) = showBanner(errorText(e), 6)
 
-        override fun homeCity(): JSONObject? = HomeLayout.load(this@MainActivity, cadran = true).widgets
+        override fun homeCity(): JSONObject? = HomeLayout.load(this@MainActivity).widgets
             .firstOrNull { it.config.has("lat") }?.config
     }
 

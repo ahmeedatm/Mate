@@ -240,7 +240,6 @@
       "title": "Outlook",
       "app": "Microsoft Outlook",
       "sound": false,
-      "mail": true,
       "tiles": [
         { "label": "Nouveau message", "glyph": "✉️", "action": { "type": "keys", "keys": "cmd+n", "app": "Microsoft Outlook" } },
         { "label": "Répondre", "glyph": "↩️", "action": { "type": "keys", "keys": "cmd+r", "app": "Microsoft Outlook" } },

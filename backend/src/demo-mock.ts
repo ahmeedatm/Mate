@@ -11,7 +11,7 @@ import type { AppWindow, AudioState, Display, MixerChannel, MixerState, OpenApp 
 /**
  * Données fictives de la démo : tant qu'un persona est actif (`.data/demo.json`) et que la tablette envoie le même (en-tête
  * `X-Demo-Persona`, voir `demoPersonaOf`), les routes qui LISENT l'ordinateur
- * (GitLab, Jira, agents Claude, fenêtres ouvertes, lecture en cours, son, performances, courrier, notifications,
+ * (GitLab, Jira, agents Claude, fenêtres ouvertes, lecture en cours, son, performances, notifications,
  * presse-papiers, onglets du navigateur, appels, agenda) répondent avec les données du persona, jamais avec celles de
  * l'ordinateur. Les actions sur ces données répondent ok sans toucher à l'ordinateur et changent l'état fictif
  * (volume, muet, lecture, fenêtre devant, ticket déplacé, MR fusionnée). Les touches et macros du deck, elles, restent
@@ -58,13 +58,6 @@ type MockAgent = {
   worked?: number;
 };
 type MockNotification = { app: string; title: string; body: string; minutes: number };
-type MockMail = {
-  unread: number;
-  junk: number;
-  drafts: number;
-  sent: number;
-  recent: { from: string; subject: string; minutes: number }[];
-};
 
 type PersonaMock = {
   screens: 1 | 2;
@@ -74,7 +67,6 @@ type PersonaMock = {
   sound: string[];
   perf: { cpu: number; ram: number };
   notifications: MockNotification[];
-  mail: MockMail;
   clipboard: string[];
   tabs: { title: string; url: string }[];
   jira?: Column[];
@@ -121,17 +113,6 @@ const MOCKS: Record<PersonaId, PersonaMock> = {
       { app: "Outlook", title: "Cliente (dossier 14)", body: "Relevé de banque en pièce jointe", minutes: 41 },
       { app: "Calendrier", title: "Point clôture mensuelle", body: "Dans 10 minutes", minutes: 2 },
     ],
-    mail: {
-      unread: 14,
-      junk: 3,
-      drafts: 2,
-      sent: 31,
-      recent: [
-        { from: "Cabinet partenaire", subject: "Pièces de la clôture", minutes: 6 },
-        { from: "Cliente (dossier 14)", subject: "Relevé de banque d'octobre", minutes: 41 },
-        { from: "Banque", subject: "Avis d'opéré", minutes: 95 },
-      ],
-    },
     clipboard: ["Règlement reçu par virement, lettrage effectué sur le compte client.", "FR76 0000 0000 0000 0000 0000 000"],
     tabs: [tab("Rapprochement bancaire", "banque"), tab("Plan comptable", "compta")],
   },
@@ -162,17 +143,6 @@ const MOCKS: Record<PersonaId, PersonaMock> = {
       { app: "Outlook", title: "Agence créative", body: "Visuels de la newsletter prêts", minutes: 18 },
       { app: "Slack", title: "Équipe contenu", body: "Le calendrier éditorial est à jour", minutes: 52 },
     ],
-    mail: {
-      unread: 22,
-      junk: 7,
-      drafts: 4,
-      sent: 58,
-      recent: [
-        { from: "Agence créative", subject: "Visuels de la newsletter", minutes: 18 },
-        { from: "Équipe contenu", subject: "Calendrier éditorial", minutes: 52 },
-        { from: "Intervenante du webinaire", subject: "Diapositives", minutes: 130 },
-      ],
-    },
     clipboard: ["Merci d'avoir participé au webinaire, le replay arrive dans la journée.", "https://newsletter.example.org/printemps"],
     tabs: [
       tab("Tableau de bord des campagnes", "campagnes"),
@@ -202,16 +172,6 @@ const MOCKS: Record<PersonaId, PersonaMock> = {
       { app: "Teams", title: "Équipe projet", body: "Réunion dans 5 minutes", minutes: 3 },
       { app: "Messages", title: "École", body: "Rendez-vous jeudi à 17 h 30", minutes: 33 },
     ],
-    mail: {
-      unread: 9,
-      junk: 1,
-      drafts: 1,
-      sent: 24,
-      recent: [
-        { from: "Comité de pilotage", subject: "Ordre du jour", minutes: 12 },
-        { from: "École", subject: "Réunion parents", minutes: 33 },
-      ],
-    },
     clipboard: ["Compte rendu : décisions, actions (qui, quoi, pour quand), prochaine réunion."],
     tabs: [tab("Planning du projet", "planning"), tab("Recette de la semaine", "recettes")],
   },
@@ -248,17 +208,6 @@ const MOCKS: Record<PersonaId, PersonaMock> = {
       { app: "Outlook", title: "Fournisseur du lot 2", body: "Devis mis à jour", minutes: 25 },
       { app: "Notion", title: "Projet Boréal", body: "3 tâches ont changé d'état", minutes: 47 },
     ],
-    mail: {
-      unread: 37,
-      junk: 5,
-      drafts: 6,
-      sent: 41,
-      recent: [
-        { from: "Fournisseur du lot 2", subject: "Devis mis à jour", minutes: 25 },
-        { from: "Cliente d'Atlas", subject: "Validation du planning", minutes: 70 },
-        { from: "Équipe Boréal", subject: "Salle du comité", minutes: 110 },
-      ],
-    },
     clipboard: ["À faire : ", "Envoyer le compte rendu de la réunion Atlas"],
     tabs: Array.from({ length: 20 }, (_, i) =>
       tab(
@@ -290,16 +239,6 @@ const MOCKS: Record<PersonaId, PersonaMock> = {
       { app: "Outlook", title: "Service achats", body: "Demande de convocation", minutes: 9 },
       { app: "Calendrier", title: "Réunion de service", body: "Dans 15 minutes", minutes: 5 },
     ],
-    mail: {
-      unread: 11,
-      junk: 2,
-      drafts: 3,
-      sent: 19,
-      recent: [
-        { from: "Service achats", subject: "Demande de convocation", minutes: 9 },
-        { from: "Fournisseur", subject: "Pièces à fournir", minutes: 62 },
-      ],
-    },
     clipboard: ["Madame, Monsieur, nous accusons réception de votre demande."],
     tabs: [tab("Demandes à traiter", "demandes"), tab("Tableau de suivi", "suivi")],
   },
@@ -330,16 +269,6 @@ const MOCKS: Record<PersonaId, PersonaMock> = {
       { app: "Slack", title: "Équipe technique", body: "Mise en production à 16 h", minutes: 14 },
       { app: "Jira", title: "FACT-236", body: "Priorité relevée à Haute", minutes: 38 },
     ],
-    mail: {
-      unread: 6,
-      junk: 0,
-      drafts: 1,
-      sent: 12,
-      recent: [
-        { from: "Intégration continue", subject: "Pipeline passé sur la MR Relances", minutes: 3 },
-        { from: "Équipe technique", subject: "Compte rendu du daily", minutes: 80 },
-      ],
-    },
     clipboard: ["npm test -- --coverage", "git log --oneline -10"],
     tabs: [tab("Revue de code : relances", "revues"), tab("Tableau de bord des tests", "tests"), tab("Documentation de l'API", "docs")],
     jira: [
@@ -901,20 +830,6 @@ const HANDLERS: Record<string, Handler> = {
   "DELETE /notifications": ({ s }) => {
     s.notifications = [];
     return ok;
-  },
-
-  "GET /mail/summary": ({ s }) => {
-    const now = Date.now();
-    const m = s.mock.mail;
-    return {
-      status: "ok",
-      unread: m.unread,
-      junk: m.junk,
-      drafts: m.drafts,
-      sent: m.sent,
-      recent: m.recent.map((r) => ({ from: r.from, subject: r.subject, receivedMs: now - r.minutes * 60_000 })),
-      next: null,
-    };
   },
 
   "GET /browser/tabs": ({ s }) => ({

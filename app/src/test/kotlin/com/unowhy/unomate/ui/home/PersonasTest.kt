@@ -42,9 +42,9 @@ class PersonasTest {
             assertEquals(persona.profiles.map { "${persona.name} ${it.name}" } + "Réunion", layout.names)
             assertTrue(persona.profiles.all { it.slots.isNotEmpty() })
             val context = FakeContext()
-            HomeLayout.save(context, layout, cadran = true)
+            HomeLayout.save(context, layout)
             // `parse` refuse un widget hors grille ou qui en chevauche un autre : la taille de chacun est aussi gardée.
-            val back = HomeLayout.load(context, cadran = true)
+            val back = HomeLayout.load(context)
             assertEquals(persona.name, layout.widgets.size, back.widgets.size)
             assertEquals(layout.widgets.map { it.size }, back.widgets.map { it.size })
             assertEquals(layout.widgets.map { it.page }, back.widgets.map { it.page })
@@ -110,8 +110,8 @@ class PersonasTest {
     @Test
     fun `les roles survivent a l'enregistrement`() {
         val context = FakeContext()
-        HomeLayout.save(context, layout(Persona.SACHA), cadran = true)
-        val back = HomeLayout.load(context, cadran = true)
+        HomeLayout.save(context, layout(Persona.SACHA))
+        val back = HomeLayout.load(context)
         assertEquals(0, back.homeProfile)
         assertEquals(4, back.callProfile)
         assertEquals(-1, back.deckProfile)
@@ -256,54 +256,54 @@ class PersonasTest {
         mine.ensureRoles("Réunion")
         mine.deckProfile = 1
         mine.homeProfile = 0
-        HomeLayout.save(context, mine, cadran = true)
-        val before = HomeLayout.raw(context, cadran = true)
+        HomeLayout.save(context, mine)
+        val before = HomeLayout.raw(context)
         Prefs.setTheme(context, "RETRO")
 
-        Demo.start(context, Persona.NOUR, layout(Persona.NOUR), cadran = true)
+        Demo.start(context, Persona.NOUR, layout(Persona.NOUR))
         assertEquals(Persona.NOUR, Demo.active(context))
-        assertEquals(layout(Persona.NOUR).names, HomeLayout.load(context, cadran = true).names)
+        assertEquals(layout(Persona.NOUR).names, HomeLayout.load(context).names)
 
         // Un autre persona garde la sauvegarde d'origine.
-        Demo.start(context, Persona.SAM, layout(Persona.SAM), cadran = true)
+        Demo.start(context, Persona.SAM, layout(Persona.SAM))
         assertEquals(Persona.SAM, Demo.active(context))
 
-        assertTrue(Demo.quit(context, cadran = true))
+        assertTrue(Demo.quit(context))
         assertNull(Demo.active(context))
-        assertEquals(before, HomeLayout.raw(context, cadran = true))
-        val back = HomeLayout.load(context, cadran = true)
+        assertEquals(before, HomeLayout.raw(context))
+        val back = HomeLayout.load(context)
         assertEquals(mine.names, back.names)
         assertEquals(1, back.deckProfile)
         assertEquals(3, back.callProfile)
         assertEquals("RETRO", Prefs.theme(context))
-        assertFalse(Demo.quit(context, cadran = true))
+        assertFalse(Demo.quit(context))
     }
 
     @Test
     fun `quitter rend le modele par defaut quand rien n'etait enregistre`() {
         val context = FakeContext()
-        Demo.start(context, Persona.SACHA, layout(Persona.SACHA), cadran = true)
-        assertTrue(Demo.quit(context, cadran = true))
-        assertNull(HomeLayout.raw(context, cadran = true))
+        Demo.start(context, Persona.SACHA, layout(Persona.SACHA))
+        assertTrue(Demo.quit(context))
+        assertNull(HomeLayout.raw(context))
         assertNull(Prefs.theme(context))
-        assertEquals(Template.defaultFor(true).build().widgets.map { it.type }, HomeLayout.load(context, cadran = true).widgets.map { it.type })
+        assertEquals(Template.WORK_CADRAN.build().widgets.map { it.type }, HomeLayout.load(context).widgets.map { it.type })
     }
 
     @Test
     fun `le theme du persona s'applique puis est rendu`() {
         val context = FakeContext()
         Prefs.setTheme(context, "CADRAN")
-        Demo.start(context, Persona.AIMEE, layout(Persona.AIMEE), cadran = true)
+        Demo.start(context, Persona.AIMEE, layout(Persona.AIMEE))
         assertEquals("TABLEAU", Prefs.theme(context))
         // Sam reçoit le thème Contraste élevé, chaque autre persona le sien (thèmes de démo, voir AppThemeTest).
         assertEquals("CONTRASTE", Persona.SAM.theme)
         assertTrue(Persona.entries.all { it.theme != null })
-        Demo.start(context, Persona.SAM, layout(Persona.SAM), cadran = true)
+        Demo.start(context, Persona.SAM, layout(Persona.SAM))
         assertEquals("CONTRASTE", Prefs.theme(context))
-        Demo.start(context, Persona.NOUR, layout(Persona.NOUR), cadran = true)
+        Demo.start(context, Persona.NOUR, layout(Persona.NOUR))
         assertEquals("REGISTRE", Prefs.theme(context))
-        Demo.start(context, Persona.SAM, layout(Persona.SAM), cadran = true)
-        Demo.quit(context, cadran = true)
+        Demo.start(context, Persona.SAM, layout(Persona.SAM))
+        Demo.quit(context)
         assertEquals("CADRAN", Prefs.theme(context))
     }
 
@@ -313,16 +313,16 @@ class PersonasTest {
         Prefs.setTextScale(context, 1.15f)
         Prefs.setWakeWord(context, false)
 
-        Demo.start(context, Persona.SAM, layout(Persona.SAM), cadran = true)
+        Demo.start(context, Persona.SAM, layout(Persona.SAM))
         assertEquals(1.5f, Prefs.textScale(context))
         assertTrue(Prefs.wakeWord(context))
 
         // Un persona sans mot d'éveil rend celui d'avant la démo ; le texte redevient normal.
-        Demo.start(context, Persona.AIMEE, layout(Persona.AIMEE), cadran = true)
+        Demo.start(context, Persona.AIMEE, layout(Persona.AIMEE))
         assertEquals(1f, Prefs.textScale(context))
         assertFalse(Prefs.wakeWord(context))
 
-        assertTrue(Demo.quit(context, cadran = true))
+        assertTrue(Demo.quit(context))
         assertEquals(1.15f, Prefs.textScale(context))
         assertFalse(Prefs.wakeWord(context))
     }
@@ -335,18 +335,18 @@ class PersonasTest {
         // Coupée avant la démo : Aimée l'allume, un autre persona rend la valeur d'avant, quitter aussi.
         val context = FakeContext()
         assertFalse(Prefs.meetingAlert(context))
-        Demo.start(context, Persona.AIMEE, layout(Persona.AIMEE), cadran = true)
+        Demo.start(context, Persona.AIMEE, layout(Persona.AIMEE))
         assertTrue(Prefs.meetingAlert(context))
-        Demo.start(context, Persona.NOUR, layout(Persona.NOUR), cadran = true)
+        Demo.start(context, Persona.NOUR, layout(Persona.NOUR))
         assertFalse(Prefs.meetingAlert(context))
-        Demo.start(context, Persona.AIMEE, layout(Persona.AIMEE), cadran = true)
-        assertTrue(Demo.quit(context, cadran = true))
+        Demo.start(context, Persona.AIMEE, layout(Persona.AIMEE))
+        assertTrue(Demo.quit(context))
         assertFalse(Prefs.meetingAlert(context))
 
         // Allumée avant la démo : elle le reste après.
         Prefs.setMeetingAlert(context, true)
-        Demo.start(context, Persona.AIMEE, layout(Persona.AIMEE), cadran = true)
-        assertTrue(Demo.quit(context, cadran = true))
+        Demo.start(context, Persona.AIMEE, layout(Persona.AIMEE))
+        assertTrue(Demo.quit(context))
         assertTrue(Prefs.meetingAlert(context))
     }
 
@@ -357,18 +357,18 @@ class PersonasTest {
 
         val context = FakeContext()
         assertFalse(Prefs.speakActions(context))
-        Demo.start(context, Persona.SAM, layout(Persona.SAM), cadran = true)
+        Demo.start(context, Persona.SAM, layout(Persona.SAM))
         assertTrue(Prefs.speakActions(context))
-        Demo.start(context, Persona.NOUR, layout(Persona.NOUR), cadran = true)
+        Demo.start(context, Persona.NOUR, layout(Persona.NOUR))
         assertFalse(Prefs.speakActions(context))
-        Demo.start(context, Persona.SAM, layout(Persona.SAM), cadran = true)
-        assertTrue(Demo.quit(context, cadran = true))
+        Demo.start(context, Persona.SAM, layout(Persona.SAM))
+        assertTrue(Demo.quit(context))
         assertFalse(Prefs.speakActions(context))
 
         // Allumé avant la démo : il le reste après.
         Prefs.setSpeakActions(context, true)
-        Demo.start(context, Persona.SAM, layout(Persona.SAM), cadran = true)
-        assertTrue(Demo.quit(context, cadran = true))
+        Demo.start(context, Persona.SAM, layout(Persona.SAM))
+        assertTrue(Demo.quit(context))
         assertTrue(Prefs.speakActions(context))
     }
 
@@ -377,13 +377,13 @@ class PersonasTest {
         val context = FakeContext()
         assertNull(Demo.takeArrival(context))
 
-        Demo.start(context, Persona.SACHA, layout(Persona.SACHA), cadran = true)
+        Demo.start(context, Persona.SACHA, layout(Persona.SACHA))
         assertEquals(Mode.HOME, Demo.takeArrival(context))
         assertNull(Demo.takeArrival(context))
 
-        Demo.start(context, Persona.GWEN, layout(Persona.GWEN), cadran = true)
+        Demo.start(context, Persona.GWEN, layout(Persona.GWEN))
         // Quitter efface ce qui n'a pas été lu.
-        Demo.quit(context, cadran = true)
+        Demo.quit(context)
         assertNull(Demo.takeArrival(context))
     }
 }

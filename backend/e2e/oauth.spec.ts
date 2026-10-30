@@ -41,31 +41,31 @@ test.describe("retour OAuth /oauth/:provider/callback", () => {
   });
 });
 
-/** Compte Microsoft relié avant la page Outlook du Deck : sans l'accès au courrier, la page propose de le reconnecter. */
-test.describe("compte Microsoft et courrier", () => {
+/** Compte Microsoft relié : la page dit s'il faut le reconnecter. */
+test.describe("compte Microsoft", () => {
   const link = (server: { dataDir: string }, account: object) =>
     fs.writeFileSync(
       path.join(server.dataDir, "accounts.json"),
       JSON.stringify({ microsoft: { email: "moi@exemple.fr", refreshToken: "r1", ...account } }),
     );
 
-  test("sans Mail.Read : à reconnecter pour le courrier", async ({ page, server }) => {
-    link(server, {});
+  test("compte expiré : à reconnecter", async ({ page, server }) => {
+    link(server, { expired: true });
     try {
       await page.goto("/");
       const tile = page.locator(".cx", { hasText: "Microsoft" });
       await expect(tile).toContainText("Non connecté");
       await tile.click();
       const row = page.locator("#accounts .account");
-      await expect(row).toContainText("Microsoft · moi@exemple.fr (à reconnecter pour le courrier)");
+      await expect(row).toContainText("Microsoft · moi@exemple.fr (à reconnecter)");
       await expect(row.getByRole("link", { name: "Reconnecter" })).toHaveAttribute("href", "/oauth/microsoft/start");
     } finally {
       fs.rmSync(path.join(server.dataDir, "accounts.json"), { force: true });
     }
   });
 
-  test("avec Mail.Read : rien à reconnecter", async ({ page, server }) => {
-    link(server, { mail: true });
+  test("compte relié : rien à reconnecter", async ({ page, server }) => {
+    link(server, {});
     try {
       await page.goto("/");
       await expect(page.locator(".cx", { hasText: "Microsoft" })).toContainText("Connecté");

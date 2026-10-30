@@ -80,7 +80,7 @@ class CallSessionTest {
     }
 
     private fun page(title: String, app: String?, meeting: Boolean = false, tiles: List<DeckTile> = emptyList()) =
-        DeckPage(title, tiles, false, false, meeting, app, false, true, false)
+        DeckPage(title, tiles, false, false, meeting, app, false, true)
 
     private val pages = listOf(
         page("Apps", null),

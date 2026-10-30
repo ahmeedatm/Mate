@@ -14,7 +14,7 @@ import type { LocalEvent } from "./events.ts";
  * plugins, tâches, agenda) à la place de celles de l'ordinateur. Les fichiers d'origine sont gardés dans .data/demo.json
  * au premier choix et rendus par `quitDemo`. Passer d'un persona à l'autre garde la sauvegarde d'avant la démo. Rien
  * ici n'est un vrai compte ni un vrai document, et aucune touche n'exécute de commande destructrice. Tant que la démo
- * dure, les routes qui lisent l'ordinateur (GitLab, Jira, agents, fenêtres, média, son, courrier…) rendent aussi les
+ * dure, les routes qui lisent l'ordinateur (GitLab, Jira, agents, fenêtres, média, son…) rendent aussi les
  * données fictives du persona : voir demo-mock.ts.
  *
  * `keys` : page Perso ; `pages` : pages de touches nommées après Perso, dont les touches vont aux widgets Touches des

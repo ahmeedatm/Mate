@@ -41,7 +41,7 @@ import kotlin.math.sqrt
  * inégales) : sur une ligne basse, le titre et la courbe laissent la place aux chiffres, rangés sur une seule ligne.
  */
 class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val title = cardTitle(R.string.widget_perf, R.drawable.ic_speed)
+    private val title = cardTitle(R.string.widget_perf)
     private val note = label(14f, R.attr.c_text_faint).apply {
         isSingleLine = true
         ellipsize = TextUtils.TruncateAt.END

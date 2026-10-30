@@ -44,7 +44,6 @@ function fakeTablet(server: TestServer) {
   const pick = (map: Record<string, string>, keys: string[]) => keys.map((key) => ({ key, label: map[key] }));
   const data = () => ({
     layout,
-    cadran: true,
     computerId: "pc-1",
     nameMax: 30,
     cols: 4,

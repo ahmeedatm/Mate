@@ -37,7 +37,7 @@ class ProfileRail(
     override val status: View = activity.findViewById(R.id.status)
     override val talk: View = activity.layoutInflater.inflate(R.layout.item_rail_talk, rail, false).also { rail.addView(it, 0) }
 
-    private var layout = HomeLayout.load(activity, cadran = true)
+    private var layout = HomeLayout.load(activity)
     private var page = layout.homeProfile
     private var inCall = false
     private var mode = Mode.HOME

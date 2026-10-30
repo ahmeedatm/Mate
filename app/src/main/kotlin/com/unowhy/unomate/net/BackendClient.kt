@@ -33,7 +33,6 @@ class BackendClient(
     val pointer = PointerApi(http)
     val docs = DocsApi(http)
     val calendar = CalendarApi(http)
-    val mail = MailApi(http)
     val tasks = TasksApi(http)
     val camera = CameraApi(http)
     val updates = UpdatesApi(http)

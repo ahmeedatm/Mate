@@ -101,12 +101,12 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             return
         }
-        // Cadran, vertical : les touches dans une tuile titrée, comme les autres cartes de l'Accueil.
-        if (placed.size == WidgetSize.V && themeBool(context, R.attr.c_cadran)) {
+        // Vertical : les touches dans une tuile titrée, comme les autres cartes de l'Accueil.
+        if (placed.size == WidgetSize.V) {
             view.setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
             view.setPadding(dp(24), dp(24), dp(24), dp(20))
             view.addView(
-                cardTitle(R.string.widget_keys_title, R.drawable.ic_deck),
+                cardTitle(R.string.widget_keys_title),
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(12) },
             )
         }

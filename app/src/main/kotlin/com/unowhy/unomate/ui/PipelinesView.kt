@@ -64,7 +64,6 @@ class PipelinesView @JvmOverloads constructor(context: Context, attrs: Attribute
         visibility = GONE
         title.apply {
             setText(R.string.widget_pipelines)
-            setIcon(R.drawable.ic_tile_rocket_launch)
         }
         addView(title, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         status.apply {

@@ -42,10 +42,6 @@ class ComputerAudioView @JvmOverloads constructor(
     private var dragging = false
     private val sender by lazy { LatestSender<Int>(scope) { render(BackendClient(context).system.setAudio(output = it)) } }
 
-    /** Dans le Deck : nom de la barre, pour la distinguer de celle d'une appli. */
-    fun showLabel() {
-        findViewById<View>(R.id.audio_label).visibility = VISIBLE
-    }
     private var state: AudioState? = null
     private var compacted = false
 

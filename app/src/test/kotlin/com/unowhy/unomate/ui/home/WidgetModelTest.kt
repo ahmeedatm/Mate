@@ -40,7 +40,7 @@ class WidgetModelTest {
 
     @Test
     fun `aucune case libre sur une page pleine`() {
-        val layout = Template.WORK.build()
+        val layout = Template.DECK_CADRAN.build()
         assertNull(layout.freeSpot(0, WidgetSize.L))
     }
 
@@ -105,8 +105,8 @@ class WidgetModelTest {
         assertTrue(WidgetType.AWAY.computer)
         assertTrue(WidgetType.AWAY.offered(HomeFeatures(off = setOf("open", "mixer", "pad"))))
         val context = com.unowhy.unomate.FakeContext()
-        HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.AWAY, WidgetSize.L, 0, 1, 0)), 1), cadran = true)
-        assertEquals(listOf(WidgetType.AWAY to WidgetSize.L), HomeLayout.load(context, cadran = true).widgets.map { it.type to it.size })
+        HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.AWAY, WidgetSize.L, 0, 1, 0)), 1))
+        assertEquals(listOf(WidgetType.AWAY to WidgetSize.L), HomeLayout.load(context).widgets.map { it.type to it.size })
     }
 
     @Test
@@ -152,34 +152,27 @@ class WidgetModelTest {
     fun `une disposition enregistree sans V se relit a l'identique`() {
         val old = """{"v":1,"pages":1,"widgets":[{"t":"clock","s":"L","p":0,"c":0,"r":0,"cfg":{}},{"t":"focus","s":"S","p":0,"c":0,"r":3,"cfg":{}}]}"""
         val context = com.unowhy.unomate.FakeContext()
-        context.getSharedPreferences("companion", 0).edit().putString("home_layout", old).apply()
-        val layout = HomeLayout.load(context, cadran = false)
+        context.getSharedPreferences("companion", 0).edit().putString(HomeLayout.KEY, old).apply()
+        val layout = HomeLayout.load(context)
         assertEquals(listOf(WidgetType.CLOCK to WidgetSize.L, WidgetType.FOCUS to WidgetSize.S), layout.widgets.map { it.type to it.size })
     }
 
     @Test
     fun `une taille V enregistree se relit`() {
         val context = com.unowhy.unomate.FakeContext()
-        HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.FOCUS, WidgetSize.V, 0, 3, 2)), 1), cadran = true)
-        assertEquals(WidgetSize.V, HomeLayout.load(context, cadran = true).widgets.single().size)
+        HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.FOCUS, WidgetSize.V, 0, 3, 2)), 1))
+        assertEquals(WidgetSize.V, HomeLayout.load(context).widgets.single().size)
     }
 
     @Test
-    fun `chaque modele Cadran commence par un bandeau (heure ou Ma journee) puis la ligne du jour`() {
-        for (template in Template.entries.filter { it.cadran && !it.role }) {
+    fun `chaque modele d'Accueil commence par un bandeau (heure ou Ma journee) puis la ligne du jour`() {
+        for (template in Template.entries.filter { !it.role }) {
             val widgets = template.build().widgets
             val hero = widgets.single { it.type == WidgetType.HERO || it.type == WidgetType.DAY }
             val line = widgets.single { it.type == WidgetType.DAYLINE }
             assertEquals("$template heros", Triple(WidgetSize.W, 0, 0), Triple(hero.size, hero.col, hero.row))
             assertEquals("$template ligne du jour", Triple(WidgetSize.W, 0, 1), Triple(line.size, line.col, line.row))
         }
-    }
-
-    @Test
-    fun `les deux modeles existent aussi en Cadran, avec les memes titres`() {
-        val plain = Template.entries.filter { !it.cadran }.map { it.title }
-        val cadran = Template.entries.filter { it.cadran && !it.role }.map { it.title }
-        assertEquals(plain, cadran)
     }
 
     @Test
@@ -190,11 +183,10 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `le modele par defaut de Cadran est Travail Cadran, celui des autres reste Travail`() {
-        assertTrue(Template.defaultFor(true).cadran)
-        assertEquals(Template.WORK.title, Template.defaultFor(true).title)
-        assertEquals(WidgetType.AGENDA to WidgetSize.V, Template.defaultFor(true).build().widgets.single { it.type == WidgetType.AGENDA }.let { it.type to it.size })
-        assertEquals(Template.WORK, Template.defaultFor(false))
+    fun `le modele par defaut est Travail`() {
+        val layout = HomeLayout.load(com.unowhy.unomate.FakeContext())
+        assertEquals(Template.WORK_CADRAN.build().widgets.map { it.type }, layout.widgets.map { it.type })
+        assertEquals(WidgetType.AGENDA to WidgetSize.V, layout.widgets.single { it.type == WidgetType.AGENDA }.let { it.type to it.size })
     }
 
     @Test
@@ -258,8 +250,8 @@ class WidgetModelTest {
         assertEquals(WidgetSize.T, WidgetType.CHECKLIST.zoomSize)
         val config = Checklist.config("Bilan", 1_800_000_000_000L, listOf(ChecklistStep("Balance", true), ChecklistStep("TVA")))
         val context = com.unowhy.unomate.FakeContext()
-        HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.CHECKLIST, WidgetSize.T, 0, 0, 0, config)), 1), cadran = true)
-        val back = HomeLayout.load(context, cadran = true).widgets.single()
+        HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.CHECKLIST, WidgetSize.T, 0, 0, 0, config)), 1))
+        val back = HomeLayout.load(context).widgets.single()
         assertEquals(WidgetType.CHECKLIST, back.type)
         assertEquals(Checklist.read(config), Checklist.read(back.config))
     }
@@ -286,8 +278,8 @@ class WidgetModelTest {
     fun `une taille inconnue relue retombe sur la premiere taille du widget`() {
         val context = com.unowhy.unomate.FakeContext()
         val json = """{"v":2,"pages":1,"widgets":[{"t":"jira","s":"GEANT","p":0,"c":0,"r":0,"cfg":{}},{"t":"clock","s":"FULL","p":0,"c":0,"r":2,"cfg":{}}]}"""
-        context.getSharedPreferences("companion", 0).edit().putString(HomeLayout.key(cadran = true), json).apply()
-        val widgets = HomeLayout.load(context, cadran = true).widgets
+        context.getSharedPreferences("companion", 0).edit().putString(HomeLayout.KEY, json).apply()
+        val widgets = HomeLayout.load(context).widgets
         assertEquals(WidgetType.JIRA.sizes.first(), widgets.single { it.type == WidgetType.JIRA }.size)
         // Une taille connue mais refusée par ce widget : la première aussi.
         assertEquals(WidgetType.CLOCK.sizes.first(), widgets.single { it.type == WidgetType.CLOCK }.size)

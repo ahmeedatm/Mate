@@ -62,7 +62,7 @@ class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
         val header = LinearLayout(context).apply {
             gravity = Gravity.CENTER_VERTICAL
-            addView(cardTitle(placed.type.title, placed.type.icon), LinearLayout.LayoutParams(0, wrap, 1f))
+            addView(cardTitle(placed.type.title), LinearLayout.LayoutParams(0, wrap, 1f))
             addView(chrono, LinearLayout.LayoutParams(wrap, wrap))
         }
         view.addView(header, LinearLayout.LayoutParams(match, wrap))

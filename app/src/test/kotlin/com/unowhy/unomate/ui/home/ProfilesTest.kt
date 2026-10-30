@@ -15,7 +15,7 @@ class ProfilesTest {
         val context = FakeContext()
         val v1 = """{"v":1,"pages":2,"widgets":[{"t":"note","s":"S","p":1,"c":0,"r":0,"cfg":{}}]}"""
         context.getSharedPreferences("companion", 0).edit().putString("home_layout_cadran", v1).apply()
-        val layout = HomeLayout.load(context, cadran = true)
+        val layout = HomeLayout.load(context)
         assertEquals(listOf<String?>(null, null), layout.names)
         assertEquals(1, layout.widgets.single().page)
     }
@@ -24,8 +24,8 @@ class ProfilesTest {
     fun `noms survivent a l'enregistrement`() {
         val context = FakeContext()
         val layout = HomeLayout(mutableListOf(), mutableListOf("Bureau", "Maison"))
-        HomeLayout.save(context, layout, cadran = true)
-        val back = HomeLayout.load(context, cadran = true)
+        HomeLayout.save(context, layout)
+        val back = HomeLayout.load(context)
         assertEquals(listOf<String?>("Bureau", "Maison"), back.names)
     }
 
@@ -34,7 +34,7 @@ class ProfilesTest {
         val context = FakeContext()
         val old = """{"v":2,"pages":2,"names":["Bureau","Maison"],"game":1,"widgets":[]}"""
         context.getSharedPreferences("companion", 0).edit().putString("home_layout_cadran", old).apply()
-        val back = HomeLayout.load(context, cadran = true)
+        val back = HomeLayout.load(context)
         assertEquals(listOf<String?>("Bureau", "Maison"), back.names)
         assertFalse(back.toJson().contains("\"game\""))
     }
@@ -42,8 +42,8 @@ class ProfilesTest {
     @Test
     fun `un nom absent reste null apres enregistrement`() {
         val context = FakeContext()
-        HomeLayout.save(context, HomeLayout(mutableListOf(), mutableListOf(null, "Maison")), cadran = true)
-        assertEquals(listOf<String?>(null, "Maison"), HomeLayout.load(context, cadran = true).names)
+        HomeLayout.save(context, HomeLayout(mutableListOf(), mutableListOf(null, "Maison")))
+        assertEquals(listOf<String?>(null, "Maison"), HomeLayout.load(context).names)
     }
 
     @Test
@@ -61,8 +61,8 @@ class ProfilesTest {
         val context = FakeContext()
         val layout = Template.WORK_CADRAN.build()
         layout.addProfile(null)
-        HomeLayout.save(context, layout, cadran = true)
-        assertEquals(2, HomeLayout.load(context, cadran = true).pages)
+        HomeLayout.save(context, layout)
+        assertEquals(2, HomeLayout.load(context).pages)
     }
 
     @Test
@@ -241,8 +241,8 @@ class ProfilesTest {
         val context = FakeContext()
         val layout = layoutOf(1)
         layout.ensureRoles("Réunion")
-        HomeLayout.save(context, layout, cadran = true)
-        val back = HomeLayout.load(context, cadran = true)
+        HomeLayout.save(context, layout)
+        val back = HomeLayout.load(context)
         assertEquals(0, back.homeProfile)
         assertEquals(-1, back.deckProfile)
         assertEquals(1, back.callProfile)

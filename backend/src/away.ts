@@ -36,16 +36,6 @@ export const fileStore = (): Pick<AwayDeps, "load" | "save" | "clear"> => ({
   clear: () => removeJson(file()),
 });
 
-/** Sauvegarde en mémoire (démo) : rien n'est écrit sur l'ordinateur. */
-export function memoryStore(): Pick<AwayDeps, "load" | "save" | "clear"> {
-  let kept: Saved | null = null;
-  return {
-    load: async () => kept,
-    save: async (saved) => void (kept = saved),
-    clear: async () => void (kept = null),
-  };
-}
-
 /** Fenêtres à garder, de l'arrière vers l'avant : celle de devant en dernier. */
 export function snapshot(open: OpenWindows): SavedWindow[] {
   const wins = open.apps.flatMap((app) =>
