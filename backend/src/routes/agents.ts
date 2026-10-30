@@ -9,6 +9,7 @@ import {
   listClaude,
   listOrca,
   orcaQuota,
+  sendChat,
   sendText,
   transcriptInfo,
 } from "../agents-sources.ts";
@@ -36,6 +37,7 @@ export default async function agentRoutes(app: FastifyInstance) {
     notify: (alert) => void sendToTablet({ type: "agent", ...alert }, 20_000),
     holdMs,
     sendText,
+    sendChat,
     interruptSession,
     focusSession,
   });
