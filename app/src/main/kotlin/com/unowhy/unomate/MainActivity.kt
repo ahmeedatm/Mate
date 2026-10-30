@@ -397,6 +397,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val list = runCatchingCancellable { BackendClient(this@MainActivity).plugins.list() }.getOrNull() ?: return@launch
             if (list.any { it.fresh } && Computers.active(this@MainActivity)?.id == computer.id && welcome.visibility != View.VISIBLE && tour.visibility != View.VISIBLE) {
+                banner.hideNow()
                 plugins.show(computer.name, list, offered = true)
             }
         }
@@ -408,7 +409,12 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val list = BackendClient(this@MainActivity).plugins.list()
-                if (list.isEmpty()) showBanner(getString(R.string.plugins_unavailable), 6) else plugins.show(computer.name, list, offered = false)
+                if (list.isEmpty()) {
+                    showBanner(getString(R.string.plugins_unavailable), 6)
+                } else {
+                    banner.hideNow()
+                    plugins.show(computer.name, list, offered = false)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -719,8 +725,11 @@ class MainActivity : AppCompatActivity() {
         val discreet = Prefs.notificationsDiscreet(this)
         // Icône et nom de l'appli, objet = le titre ; corps = le texte (coupé par le bandeau s'il dépasse), rien en mode discret.
         closeFrame()
-        banner.show(notificationBanner(n, discreet), NOTIFICATION_SECONDS)
-        readAloud(notificationBannerText(n, discreet))
+        // Pas de bandeau par-dessus l'onboarding (il couvrirait le bouton « Plus tard ») : la notification reste dans la cloche.
+        if (!onboardingUp()) {
+            banner.show(notificationBanner(n, discreet), NOTIFICATION_SECONDS)
+            readAloud(notificationBannerText(n, discreet))
+        }
         val computer = supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment
         computer?.onNotification()
         // Point sur la cloche du bandeau, sauf si l'historique est déjà sous les yeux.
@@ -833,14 +842,22 @@ class MainActivity : AppCompatActivity() {
     fun requestMicPermission() = micPermission.launch(android.Manifest.permission.RECORD_AUDIO)
 
     /** Écran de bienvenue (WiFi, installation, connexion), depuis un mode sans ordinateur. */
-    fun showWelcome() = welcome.show()
+    fun showWelcome() {
+        banner.hideNow()
+        welcome.show()
+    }
 
     /** Bandeau en haut de l'écran, par-dessus le mode courant ; un toucher le ferme. */
     fun showBanner(text: String, seconds: Int, icon: BannerIcon = BannerIcon.MESSAGE, onTap: (() -> Unit)? = null) {
         // Un message de l'ordinateur ou un rappel se lit : le cadre lui laisse la place. Pas de corps (objet seul).
+        if (onboardingUp()) return
         closeFrame()
         banner.show(BannerContent(text, icon = icon), seconds, onTap)
     }
+
+    /** Un écran modal d'accueil est ouvert (premier lancement, « Tes plugins », visite guidée) : le bandeau le couvrirait. */
+    private fun onboardingUp() =
+        welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE || tour.visibility == View.VISIBLE
 
     /**
      * Réglages > Accessibilité > Lire les bandeaux à voix haute : bandeau d'une notification ou d'un message de
