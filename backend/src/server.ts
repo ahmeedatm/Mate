@@ -11,7 +11,7 @@ import { startEventReminders } from "./events.ts";
 import { GitLabError } from "./gitlab.ts";
 import { setLogger } from "./log.ts";
 import { startAutoJoin } from "./meetings.ts";
-import { notificationHistory, watchNotifications } from "./notifications.ts";
+import { notificationHistory, setNotificationsRead, watchNotifications } from "./notifications.ts";
 import { canControl, clipboardStamp, getClipboard, isMac, osName, readNotifications } from "./os.ts";
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
 import { sendToTablet, tabletStatus } from "./tablet.ts";
@@ -210,12 +210,15 @@ if (canControl) {
 }
 // Notifications de l'ordinateur : base du système relue toutes les 2 s, chaque nouvelle envoyée à la tablette sans attendre.
 if (canControl) {
+  // Les supprimées (empreintes seulement) tiennent après un redémarrage : sinon le 1er passage les remonterait du système.
+  notificationHistory.setStore(config.dataDir);
   watchNotifications(
     readNotifications,
     notificationHistory,
     ({ id, app: name, title, body, at }) => void sendToTablet({ type: "notification", id, app: name, title, body, at }),
     Number(process.env.NOTIFICATIONS_POLL_MS) || 2000,
     (e) => app.log.warn(`Notifications de l'ordinateur illisibles : ${e.message}`),
+    (ok, e) => setNotificationsRead(ok, e),
   );
 }
 // Historique du presse-papiers : repère relu chaque seconde (2 s sur Mac, un osascript à chaque fois).

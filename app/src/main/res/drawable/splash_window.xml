@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fond de la fenêtre de lancement (cold start), montré par le système avant que l'appli dessine : logo centré sur le
+     fond du thème, pour ne pas laisser un écran vide. Remplacé par le vrai thème dès onCreate (AppTheme.apply). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/c_bg" />
+        </shape>
+    </item>
+    <item
+        android:width="124dp"
+        android:height="124dp"
+        android:drawable="@drawable/ic_launcher"
+        android:gravity="center" />
+</layer-list>

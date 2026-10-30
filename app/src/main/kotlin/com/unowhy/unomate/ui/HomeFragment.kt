@@ -542,6 +542,13 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     // --- Mode Modifier
 
+    /** Retour en arrière pendant le mode Modifier : annule (sans garder les changements). Vrai si on était en train de modifier. */
+    fun cancelEdit(): Boolean {
+        if (!editing) return false
+        endEdit(keep = false)
+        return true
+    }
+
     /** Crayon de la barre : commence le mode Modifier, ou le termine (en gardant) s'il est en cours. */
     fun toggleEdit() {
         if (grid.editing) {

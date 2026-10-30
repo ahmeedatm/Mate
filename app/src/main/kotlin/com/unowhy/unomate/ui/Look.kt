@@ -191,20 +191,55 @@ object Look {
      * Bandeau qui arrive (`show`) d'en haut en fondu, ou repart vers le haut puis disparaît ; `onGone` une fois masqué.
      * Réduire les animations : affiché ou masqué tout de suite.
      */
+    /**
+     * Écran de démarrage (cold start) : le logo apparaît en fondu et grandit depuis 82 %, puis l'écran s'efface pour
+     * révéler l'appli. Un filet de sécurité le masque dans tous les cas (jamais coincé dessus). Réduire les animations :
+     * court, sans mouvement. Ressorts : jouent aussi en kiosque.
+     */
+    fun splash(cover: View, logo: View) {
+        if (still(cover.context)) return
+        logo.alpha = 0f
+        logo.scaleX = SPLASH_LOGO_FROM
+        logo.scaleY = SPLASH_LOGO_FROM
+        navSpring(logo, DynamicAnimation.ALPHA, EFFECTS_DEFAULT, 1f)
+        navSpring(logo, DynamicAnimation.SCALE_X, SPATIAL_DEFAULT, 1f)
+        navSpring(logo, DynamicAnimation.SCALE_Y, SPATIAL_DEFAULT, 1f)
+    }
+
+    /** Masque l'écran de démarrage (une fois l'appli dessinée) : fondu puis retiré, instantané si animations réduites. */
+    fun hideSplash(cover: View) {
+        if (cover.visibility != View.VISIBLE) return
+        if (still(cover.context)) {
+            cover.visibility = View.GONE
+            return
+        }
+        navSpring(cover, DynamicAnimation.ALPHA, EFFECTS_DEFAULT, 0f) { cover.visibility = View.GONE }
+    }
+
     fun slideBanner(view: View, show: Boolean, onGone: () -> Unit = {}) {
         val away = -view.dp(BANNER_AWAY_DP).toFloat()
         if (!on(view.context, AnimFamily.ALERTS)) {
             view.translationY = 0f
             view.alpha = 1f
+            view.scaleX = 1f
+            view.scaleY = 1f
             if (!show) onGone()
             return
         }
+        // Il pivote depuis son bord haut : à l'arrivée il « tombe » et rebondit doucement (ressort peu amorti), avec un
+        // léger grandissement et un fondu ; au départ il remonte et s'efface en se réduisant un peu.
+        view.pivotY = 0f
+        view.pivotX = (if (view.width > 0) view.width else view.dp(BANNER_AWAY_DP) * 8) / 2f
         if (show && view.alpha == 1f && view.translationY == 0f) {
             view.translationY = away
             view.alpha = 0f
+            view.scaleX = BANNER_POP
+            view.scaleY = BANNER_POP
         }
         navSpring(view, DynamicAnimation.ALPHA, EFFECTS_DEFAULT, if (show) 1f else 0f)
-        navSpring(view, DynamicAnimation.TRANSLATION_Y, SPATIAL_DEFAULT, if (show) 0f else away) { if (!show) onGone() }
+        navSpring(view, DynamicAnimation.SCALE_X, if (show) BANNER_DROP else SPATIAL_FAST, if (show) 1f else BANNER_POP)
+        navSpring(view, DynamicAnimation.SCALE_Y, if (show) BANNER_DROP else SPATIAL_FAST, if (show) 1f else BANNER_POP)
+        navSpring(view, DynamicAnimation.TRANSLATION_Y, if (show) BANNER_DROP else SPATIAL_DEFAULT, if (show) 0f else away) { if (!show) onGone() }
     }
 
     /** Flottement lent, en boucle : à arrêter avec [stop]. Réduire les animations : immobile (pas lancé). */
@@ -394,8 +429,15 @@ object Look {
     private const val COUNTDOWN_SECONDS = 10
     private const val COUNTDOWN_SCALE = 1.08f
 
+    /** Écran de démarrage : échelle de départ du logo (il grandit en apparaissant). */
+    private const val SPLASH_LOGO_FROM = 0.82f
+
     /** Course du bandeau qui arrive d'en haut. */
     private const val BANNER_AWAY_DP = 72
+
+    /** Arrivée du bandeau : échelle de départ (il grandit un peu) et ressort peu amorti pour un léger rebond à l'atterrissage. */
+    private const val BANNER_POP = 0.94f
+    private val BANNER_DROP = Spring(520f, 0.68f)
 
     /** Balancement de la cloche : vitesse de départ (°/s), ressort peu amorti (quelques allers-retours, < 1 s). */
     private const val RING_VELOCITY = 900f

@@ -78,6 +78,8 @@ import com.unowhy.unomate.ui.home.FlowBandView
 import com.unowhy.unomate.ui.home.HomeLayout
 import com.unowhy.unomate.ui.home.LinkWatch
 import com.unowhy.unomate.ui.notificationBannerText
+import com.unowhy.unomate.ui.notificationBody
+import com.unowhy.unomate.ui.notificationHeading
 import com.unowhy.unomate.ui.showImmersive
 import com.unowhy.unomate.ui.themeBool
 import com.unowhy.unomate.ui.topbar.TopBar
@@ -112,6 +114,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var plugins: PluginsView
     /** Ordinateurs dont l'écran des plugins a été fermé par « Plus tard » : plus proposé avant le prochain lancement. */
     private val pluginsLater = mutableSetOf<String>()
+
+    /** Écran de démarrage encore affiché : retiré au premier affichage de l'appli (onWindowFocusChanged) puis oublié. */
+    private var splashPending = false
     private lateinit var noComputer: View
     private val keyboard = KeyboardControl(this)
     private val focusDnd = FocusDnd(this)
@@ -285,12 +290,16 @@ class MainActivity : AppCompatActivity() {
             when {
                 welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE -> Unit
                 agentAsk.isOpen -> agentAsk.close()
+                current == Mode.HOME && homeFragment()?.cancelEdit() == true -> Unit
                 current == Mode.HOME && homeFragment()?.closeZoom() == true -> Unit
                 documentPanel.visibility == View.VISIBLE -> documentPanel.close()
                 current != Mode.HOME || homeFragment()?.shownPage != shownLayout().homeProfile -> showProfile(shownLayout().homeProfile)
             }
         }
 
+        // Recréation (changement de thème…) : on garde les ordinateurs dont les plugins ont été repoussés, sinon
+        // l'écran « Tes plugins » reviendrait à chaque changement de thème.
+        savedInstanceState?.getStringArrayList(STATE_PLUGINS_LATER)?.let { pluginsLater += it }
         val restored = savedInstanceState?.getString(STATE_MODE)?.let(Mode::of)
         // Un persona de la démo vient d'être choisi (Réglages > Démo) : on arrive sur son écran.
         show(Demo.takeArrival(this) ?: restored ?: Mode.HOME)
@@ -298,6 +307,17 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null && Computers.all(this).isEmpty()) welcome.show()
         // Tablette déjà appairée qui n'a jamais vu la visite (mise à jour) : elle la voit une fois.
         if (savedInstanceState == null) maybeTour()
+        // Écran de démarrage : logo + nom de l'appli sur le fond du thème, seulement à l'ouverture (cold start), pas à la
+        // recréation (changement de thème). Retiré une fois l'appli dessinée (onWindowFocusChanged) ou par filet de sécurité.
+        findViewById<android.widget.TextView>(R.id.splash_name).text = packageManager.getApplicationLabel(applicationInfo)
+        val splash = findViewById<View>(R.id.splash)
+        if (savedInstanceState == null) {
+            splashPending = true
+            Look.splash(splash, findViewById(R.id.splash_group))
+            splash.postDelayed({ hideSplash() }, SPLASH_SAFETY_MS)
+        } else {
+            splash.visibility = View.GONE
+        }
         showLink(Link(Computers.active(this), Link.State.OFFLINE))
         remote.restart()
         quitStrayDemo()
@@ -422,10 +442,9 @@ class MainActivity : AppCompatActivity() {
     /** Notifications de Depuis l'ordi affichées (la cloche est marquée). */
     private var notificationsShown = false
 
-    /** Crayon grisé sur les écrans du pied de barre (notifications, ordinateurs, Réglages) : rien à y modifier. */
+    /** Crayon affiché seulement sur l'Accueil (les profils à widgets) : ailleurs il n'y a rien à modifier, il est masqué. */
     private fun renderEditButton() {
-        findViewById<View>(R.id.rail_edit).isEnabled =
-            !pickerOpen && current != Mode.SETTINGS && !(current == Mode.COMPUTER && notificationsShown)
+        findViewById<View>(R.id.rail_edit).visibility = if (current == Mode.HOME && !pickerOpen) View.VISIBLE else View.GONE
     }
 
     private val focusListener: (FocusTimer.State) -> Unit = { state ->
@@ -477,9 +496,16 @@ class MainActivity : AppCompatActivity() {
         settings()?.onBattery(state)
     }
 
+    private fun hideSplash() {
+        if (!splashPending) return
+        splashPending = false
+        Look.hideSplash(findViewById(R.id.splash))
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString(STATE_MODE, current.tag)
+        outState.putStringArrayList(STATE_PLUGINS_LATER, ArrayList(pluginsLater))
     }
 
     override fun onDestroy() {
@@ -499,6 +525,8 @@ class MainActivity : AppCompatActivity() {
         // ils comptent quand même pour le délai du cadre photo, qui ne part pas à la fermeture d'une longue boîte.
         lastTouch = SystemClock.elapsedRealtime()
         if (!hasFocus) return
+        // L'appli est dessinée et prête : on laisse voir le logo un instant, puis on retire l'écran de démarrage.
+        if (splashPending) findViewById<View>(R.id.splash).postDelayed({ hideSplash() }, SPLASH_HOLD_MS)
         hideSystemBars()
         keyboard.closeOrphan()
     }
@@ -679,9 +707,11 @@ class MainActivity : AppCompatActivity() {
      * est affichée.
      */
     fun onNotification(n: PcNotification) {
-        val text = notificationBannerText(n, Prefs.notificationsDiscreet(this))
-        showBanner(text, NOTIFICATION_SECONDS)
-        readAloud(text)
+        val discreet = Prefs.notificationsDiscreet(this)
+        // Objet = appli · titre ; corps = le texte (coupé par le bandeau s'il dépasse), rien en mode discret.
+        closeFrame()
+        banner.show(notificationHeading(n), notificationBody(n, discreet), NOTIFICATION_SECONDS)
+        readAloud(notificationBannerText(n, discreet))
         val computer = supportFragmentManager.findFragmentByTag(Mode.COMPUTER.tag) as? FromComputerFragment
         computer?.onNotification()
         // Point sur la cloche du bandeau, sauf si l'historique est déjà sous les yeux.
@@ -798,9 +828,9 @@ class MainActivity : AppCompatActivity() {
 
     /** Bandeau en haut de l'écran, par-dessus le mode courant ; un toucher le ferme. */
     fun showBanner(text: String, seconds: Int, onTap: (() -> Unit)? = null) {
-        // Un message de l'ordinateur ou un rappel se lit : le cadre lui laisse la place.
+        // Un message de l'ordinateur ou un rappel se lit : le cadre lui laisse la place. Pas de corps (objet seul).
         closeFrame()
-        banner.show(text, seconds, onTap)
+        banner.show(text, null, seconds, onTap)
     }
 
     /**
@@ -1071,6 +1101,11 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val STATE_MODE = "mode"
+        private const val STATE_PLUGINS_LATER = "plugins_later"
+
+        /** Écran de démarrage : tenue du logo après le premier affichage, et filet de sécurité qui le retire dans tous les cas. */
+        private const val SPLASH_HOLD_MS = 600L
+        private const val SPLASH_SAFETY_MS = 4000L
 
         /** Délai avant la visite guidée : l'Accueil a le temps d'arriver. */
         private const val TOUR_DELAY_MS = 900L

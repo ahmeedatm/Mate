@@ -220,8 +220,8 @@ object Prefs {
         prefs(context).edit().putStringSet(KEY_MEETING_ALERT_SEEN, value).apply()
     }
 
-    /** Mot de réveil « Mate » : écoute du mot quand UnoMate est à l'écran (voice/WakeWord). Activé par défaut. */
-    fun wakeWord(context: Context): Boolean = prefs(context).getBoolean(KEY_WAKE_WORD, true)
+    /** Mot de réveil « Mate » : écoute du mot quand UnoMate est à l'écran (voice/WakeWord). Désactivé par défaut. */
+    fun wakeWord(context: Context): Boolean = prefs(context).getBoolean(KEY_WAKE_WORD, false)
 
     fun setWakeWord(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_WAKE_WORD, value).apply()
