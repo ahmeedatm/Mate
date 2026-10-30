@@ -30,11 +30,46 @@ export const PROFILES_CSS = `
   .pf-cells button.pf-free { background: transparent; border: 1px dashed var(--t-line); }
   .pf-cells button.pf-free:hover { background: var(--t-tile); }
   .pf-board .card .row .grow b { font-weight: 500; }
+  #pf-profiles .row:has(> .pf-msg:not(:empty)), #pf-bars .row:has(> .pf-msg:not(:empty)) { flex-wrap: wrap; }
+  .row > .pf-msg:not(:empty) { flex-basis: 100%; }
+
+  /* Glisser-déposer (Pointer Events) : poignée, ombre de la place visée, repère d'insertion. */
+  body.pf-dragging { user-select: none; -webkit-user-select: none; cursor: grabbing; }
+  [data-drag=on] .pf-cells button:not(.pf-free), [data-drag=on] #pf-chips .cx, [data-drag=on] .pf-pill-main, [data-drag=on] button.pf-pill { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .pf-tiles, .pf-strip, .pf-cells { position: relative; }
+  .pf-cells button.pf-lift { z-index: 4; transition: none; cursor: grabbing; box-shadow: 0 1.2cqw 3cqw -1cqw rgba(0, 0, 0, .45), 0 0 0 .4cqw var(--t-now); }
+  .pf-cells button.pf-back { z-index: 4; transition: transform 200ms cubic-bezier(.16, 1, .3, 1); }
+  .pf-shadow { position: absolute; z-index: 1; pointer-events: none; border-radius: 1.6cqw; background: color-mix(in srgb, var(--t-now) 16%, transparent); box-shadow: inset 0 0 0 .4cqw var(--t-now);
+    transition: left 150ms cubic-bezier(.16, 1, .3, 1), top 150ms cubic-bezier(.16, 1, .3, 1), width 150ms, height 150ms, background 150ms, box-shadow 150ms; }
+  .pf-shadow.pf-bad { background: color-mix(in srgb, var(--ko) 18%, transparent); box-shadow: inset 0 0 0 .4cqw var(--ko); }
+  .pf-ghost { position: fixed; z-index: 60; margin: 0; pointer-events: none; transition: none; box-shadow: 0 14px 30px -12px rgba(30, 10, 10, .5), 0 0 0 1px var(--line); opacity: .96; }
+  .pf-ph { color: transparent; background: color-mix(in srgb, var(--now-soft) 55%, transparent); box-shadow: inset 0 0 0 1.5px var(--now); }
+  .cx.pf-ph { background: color-mix(in srgb, var(--now-soft) 55%, transparent); }
+  .pf-ph > * { visibility: hidden; }
+  .pf-src { opacity: .45; }
+
+  /* Bandeau du haut : une bande de pastilles dans l'ordre, une réserve dessous. */
+  .pf-band { padding: 10px 26px 6px; }
+  .pf-band .pf-hint { margin: 10px 4px 0; }
+  .pf-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 66px; padding: 13px; border-radius: 20px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line);
+    transition: background 200ms cubic-bezier(.16, 1, .3, 1), box-shadow 200ms cubic-bezier(.16, 1, .3, 1); }
+  .pf-strip.pf-reserve { background: transparent; box-shadow: none; border: 1.5px dashed var(--line); min-height: 64px; padding: 11.5px; }
+  .pf-strip.pf-over { background: var(--now-soft); border-color: var(--now); }
+  .pf-strip:has(.pf-ph) .pf-empty { display: none; }
+  .pf-empty { padding: 0 6px; color: var(--ink-2); font-size: 14px; }
+  .pf-pill { display: inline-flex; align-items: center; min-height: 40px; border-radius: 20px; background: var(--tile); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); font: 400 14px Outfit, sans-serif; white-space: nowrap; }
+  .pf-pill .pf-pill-main { min-height: 40px; padding: 0 6px 0 16px; border-radius: 20px 0 0 20px; background: transparent; color: inherit; font-weight: 400; }
+  .pf-pill .pf-pill-x { width: 40px; padding: 0; border-radius: 0 20px 20px 0; background: transparent; color: var(--ink-2); }
+  .pf-pill .pf-pill-x:hover { color: var(--ko); }
+  button.pf-pill { padding: 0 16px 0 12px; gap: 6px; font-weight: 400; }
+  button.pf-pill svg.i { width: 16px; height: 16px; }
+  div.pf-pill:not(.pf-ph) .pf-pill-main:only-child { border-radius: 20px; padding-right: 16px; }
+  div.pf-pill.pf-ph { padding: 0 16px; }
   @media (max-width: 560px) { .pf-screen { aspect-ratio: 4 / 3; } }
 `;
 
 export const PROFILES_HTML = `
-  <section id="pf-profiles" data-title="Profils" data-icon="grid" hidden>
+  <section id="pf-profiles" data-title="Profils" data-icon="grid" data-drag="off" hidden>
     <div class="sechead"><h2>Profils de la tablette</h2><span class="dim">Chaque profil est une page de widgets de l'Accueil. Prépare tes changements, puis envoie-les.</span></div>
     <div class="pf-tiles" role="group" aria-label="Profils de la tablette">
       <div class="pf-contents" id="pf-chips"></div>
@@ -50,7 +85,7 @@ export const PROFILES_HTML = `
       <div class="card group">
         <div class="row pf-ro" id="pf-banner" hidden><span class="dot"></span><span class="grow dim" id="pf-banner-text"></span></div>
         <div class="row"><span class="grow"><b id="pf-cur"></b><span class="pf-hint" id="pf-cur-meta"></span></span><button type="button" class="ghost" id="pf-rename">Renommer</button></div>
-        <div class="row"><span class="grow">Changer l'ordre</span><button type="button" class="ghost" id="pf-up">Monter</button><button type="button" class="ghost" id="pf-down">Descendre</button></div>
+        <div class="row"><span class="grow">Changer l'ordre<span class="pf-hint">Glisse une tuile, ou utilise ces boutons.</span></span><button type="button" class="ghost" id="pf-up">Monter</button><button type="button" class="ghost" id="pf-down">Descendre</button></div>
         <div class="row"><span class="grow">Supprimer ce profil<span class="pf-hint" id="pf-del-hint"></span></span><button type="button" class="danger" id="pf-del">Supprimer</button></div>
         <div class="row"><span class="grow" id="pf-sel-text"></span><button type="button" class="ghost" id="pf-sel-edit" hidden>Régler le widget</button></div>
         <div class="row"><div class="pf-sel"><select id="pf-add" aria-label="Widget à ajouter"></select></div><button type="button" class="ghost" id="pf-add-go">Ajouter</button></div>
@@ -71,13 +106,17 @@ export const PROFILES_HTML = `
       </form>
     </dialog>
   </section>
-  <section id="pf-bars" data-title="Barres" data-icon="bars" hidden>
+  <section id="pf-bars" data-title="Barres" data-icon="bars" data-drag="off" hidden>
     <div class="sechead"><h2>Barres de la tablette</h2><span class="dim">Le bandeau du haut et la barre de gauche.</span></div>
     <div class="card group">
       <div class="row pf-ro" id="pf-bars-banner" hidden><span class="dot"></span><span class="grow dim" id="pf-bars-banner-text"></span></div>
       <div class="label">Bandeau du haut</div>
-      <div id="pf-top"></div>
-      <div class="row"><div class="pf-sel"><select id="pf-top-add" aria-label="Élément à ajouter au bandeau"></select></div><button type="button" class="ghost" id="pf-top-go">Ajouter</button></div>
+      <div class="pf-band">
+        <div class="pf-strip" id="pf-strip" role="group" aria-label="Bandeau du haut"></div>
+        <span class="pf-hint" id="pf-top-hint">Glisse un élément pour le déplacer, l'ajouter ou le retirer. Au clavier : flèches gauche et droite pour l'ordre, Suppr pour le retirer.</span>
+        <p class="pf-h">Éléments à ajouter</p>
+        <div class="pf-strip pf-reserve" id="pf-reserve" role="group" aria-label="Éléments à ajouter"></div>
+      </div>
       <div class="label">Barre de gauche</div>
       <div id="pf-rail"></div>
       <div class="row"><span class="pf-msg" id="pf-bars-msg" role="status"></span><button type="button" class="ghost" id="pf-bars-reset">Annuler les changements</button><button type="button" id="pf-bars-send">Envoyer à la tablette</button></div>
@@ -87,7 +126,7 @@ export const PROFILES_HTML = `
 
 export const PROFILES_JS = `
   (function () {
-    var S = { base: null, layout: null, top: null, rail: null, page: 0, sel: -1, ro: true, connected: null, busy: false };
+    var S = { base: null, layout: null, top: null, rail: null, page: 0, sel: -1, ro: true, connected: null, busy: false, drag: false, focus: null };
     var $ = function (id) { return document.getElementById(id); };
     var clone = function (x) { return JSON.parse(JSON.stringify(x)); };
     var same = function (a, b) { return JSON.stringify(a) === JSON.stringify(b); };
@@ -163,6 +202,223 @@ export const PROFILES_JS = `
       );
     }
 
+    // --- Glisser (Pointer Events : souris et doigt). Sous 6 px de mouvement, c'est un toucher.
+
+    var PATH_X = "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z";
+    var PATH_PLUS = "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z";
+    var EASE = "cubic-bezier(.16, 1, .3, 1)";
+
+    // h.start() au franchissement du seuil, h.move(dx, dy, x, y) ensuite, h.end(true) au lâcher, h.end(false) si annulé (Échap, pointercancel).
+    function track(e, h) {
+      if (S.ro || S.drag || (e.pointerType === "mouse" && e.button !== 0)) return;
+      var id = e.pointerId, x0 = e.clientX, y0 = e.clientY, on = false;
+      function off() {
+        document.removeEventListener("pointermove", move);
+        document.removeEventListener("pointerup", up);
+        document.removeEventListener("pointercancel", abort);
+        document.removeEventListener("keydown", key);
+      }
+      function move(ev) {
+        if (ev.pointerId !== id) return;
+        var dx = ev.clientX - x0, dy = ev.clientY - y0;
+        if (!on) {
+          if (Math.hypot(dx, dy) < 6) return;
+          on = true;
+          S.drag = true;
+          document.body.classList.add("pf-dragging");
+          h.start();
+        }
+        h.move(dx, dy, ev.clientX, ev.clientY);
+      }
+      function finish(commit) {
+        off();
+        if (!on) return;
+        S.drag = false;
+        document.body.classList.remove("pf-dragging");
+        // Le clic qui suit le lâcher ne doit ni sélectionner ni ajouter.
+        var stop = function (ev) { ev.stopPropagation(); ev.stopImmediatePropagation(); ev.preventDefault(); };
+        document.addEventListener("click", stop, true);
+        setTimeout(function () { document.removeEventListener("click", stop, true); }, 30);
+        h.end(commit);
+      }
+      function up(ev) { if (ev.pointerId === id) finish(true); }
+      function abort(ev) { if (ev.pointerId === id) finish(false); }
+      function key(ev) { if (ev.key === "Escape") finish(false); }
+      document.addEventListener("pointermove", move);
+      document.addEventListener("pointerup", up);
+      document.addEventListener("pointercancel", abort);
+      document.addEventListener("keydown", key);
+    }
+
+    // Les voisins glissent vers leur nouvelle place quand mutate() change l'ordre du DOM.
+    function flip(nodes, mutate) {
+      var before = nodes.map(function (n) { return n.getBoundingClientRect(); });
+      mutate();
+      var moved = [];
+      nodes.forEach(function (n, i) {
+        if (!n.isConnected) return;
+        n.style.transition = "none";
+        n.style.transform = "";
+        var a = n.getBoundingClientRect();
+        var dx = before[i].left - a.left, dy = before[i].top - a.top;
+        if (dx || dy) { n.style.transform = "translate(" + dx + "px," + dy + "px)"; moved.push(n); }
+      });
+      if (!moved.length) return;
+      moved[0].getBoundingClientRect();
+      moved.forEach(function (n) {
+        n.style.transition = "transform 200ms " + EASE;
+        n.style.transform = "";
+        setTimeout(function () { n.style.transition = ""; }, 220);
+      });
+    }
+
+    // Copie qui suit le pointeur ; l'original reste en place, devenu le repère d'insertion.
+    function ghostOf(node) {
+      var r = node.getBoundingClientRect();
+      var g = node.cloneNode(true);
+      g.removeAttribute("id");
+      g.setAttribute("aria-hidden", "true");
+      g.classList.add("pf-ghost");
+      g.style.left = r.left + "px";
+      g.style.top = r.top + "px";
+      g.style.width = r.width + "px";
+      g.style.height = r.height + "px";
+      document.body.appendChild(g);
+      return g;
+    }
+    function shift(g, dx, dy) { g.style.transform = "translate(" + dx + "px," + dy + "px)"; }
+
+    // Élément le plus proche du point (x, y), en coordonnées de la mise en page (sans les décalages en cours d'animation).
+    function nearest(list, x, y) {
+      var best = -1, bd = Infinity;
+      list.forEach(function (n, k) {
+        var d = Math.hypot(n.offsetLeft + n.offsetWidth / 2 - x, n.offsetTop + n.offsetHeight / 2 - y);
+        if (d < bd) { bd = d; best = k; }
+      });
+      return best;
+    }
+
+    // Widget : suit le pointeur, une ombre montre la case haut-gauche visée ; place invalide = retour.
+    function gridGeo() {
+      var g = $("pf-grid"), r = g.getBoundingClientRect(), cs = getComputedStyle(g);
+      var pl = parseFloat(cs.paddingLeft), pt = parseFloat(cs.paddingTop), gx = parseFloat(cs.columnGap) || 0, gy = parseFloat(cs.rowGap) || 0;
+      var iw = r.width - pl - parseFloat(cs.paddingRight), ih = r.height - pt - parseFloat(cs.paddingBottom);
+      return { left: r.left, top: r.top, pl: pl, pt: pt, gx: gx, gy: gy, cw: (iw - gx * (cols() - 1)) / cols(), ch: (ih - gy * (rows() - 1)) / rows() };
+    }
+    function dragWidget(e, cell, index) {
+      var w = L().widgets[index];
+      if (!w) return;
+      var s = sizeOf(w.s), geo, r0, shadow, at = null;
+      track(e, {
+        start: function () {
+          geo = gridGeo();
+          r0 = cell.getBoundingClientRect();
+          cell.classList.remove("pf-back");
+          cell.classList.add("pf-lift");
+          shadow = el("div", "pf-shadow");
+          $("pf-grid").appendChild(shadow);
+        },
+        move: function (dx, dy) {
+          shift(cell, dx, dy);
+          var c = Math.round((r0.left + dx - geo.left - geo.pl) / (geo.cw + geo.gx));
+          var r = Math.round((r0.top + dy - geo.top - geo.pt) / (geo.ch + geo.gy));
+          var ok = fits(w.p, c, r, s, index);
+          at = { c: c, r: r, ok: ok };
+          var cc = Math.min(Math.max(c, 0), cols() - s.w), rr = Math.min(Math.max(r, 0), rows() - s.h);
+          shadow.style.left = (geo.pl + cc * (geo.cw + geo.gx)) + "px";
+          shadow.style.top = (geo.pt + rr * (geo.ch + geo.gy)) + "px";
+          shadow.style.width = (s.w * geo.cw + (s.w - 1) * geo.gx) + "px";
+          shadow.style.height = (s.h * geo.ch + (s.h - 1) * geo.gy) + "px";
+          shadow.classList.toggle("pf-bad", !ok);
+        },
+        end: function (commit) {
+          shadow.remove();
+          if (commit && at && at.ok) {
+            w.c = at.c;
+            w.r = at.r;
+            S.sel = index;
+            say("pf-msg", "");
+            renderProfiles();
+            return;
+          }
+          if (commit && at) say("pf-msg", "Ce widget (" + s.w + " × " + s.h + ") ne tient pas à cet endroit.", "ko");
+          cell.classList.remove("pf-lift");
+          cell.classList.add("pf-back");
+          cell.style.transform = "";
+          setTimeout(function () { cell.classList.remove("pf-back"); }, 220);
+        }
+      });
+    }
+
+    // Tuile de profil : les autres s'écartent, l'ordre est celui du DOM au lâcher.
+    function dragTile(e, tile, from) {
+      var box = $("pf-chips"), ghost;
+      var tiles = function () { return Array.prototype.slice.call(box.children); };
+      track(e, {
+        start: function () { ghost = ghostOf(tile); tile.classList.add("pf-ph"); },
+        move: function (dx, dy, x, y) {
+          shift(ghost, dx, dy);
+          var host = box.parentNode.getBoundingClientRect();
+          var list = tiles(), best = nearest(list, x - host.left, y - host.top), cur = list.indexOf(tile);
+          if (best < 0 || best === cur) return;
+          flip(list, function () { box.insertBefore(tile, best > cur ? list[best].nextSibling : list[best]); });
+        },
+        end: function (commit) {
+          ghost.remove();
+          if (commit) {
+            var to = tiles().indexOf(tile);
+            if (to !== from) moveProfile(from, to); else S.page = from;
+          }
+          renderProfiles();
+        }
+      });
+    }
+
+    // Pastille du bandeau (ou de la réserve) : lâchée dans la bande = insérée là ; lâchée ailleurs = retirée si elle venait de la bande.
+    function dragPill(e, pill, key, fromStrip) {
+      var strip = $("pf-strip"), reserve = $("pf-reserve"), ghost, ph;
+      var pills = function () { return Array.prototype.slice.call(strip.children).filter(function (n) { return n.classList.contains("pf-pill"); }); };
+      track(e, {
+        start: function () {
+          ghost = ghostOf(pill);
+          if (fromStrip) { ph = pill; pill.classList.add("pf-ph"); }
+          else { ph = el("div", "pf-pill pf-ph", labelOfTop(key)); pill.classList.add("pf-src"); }
+        },
+        move: function (dx, dy, x, y) {
+          shift(ghost, dx, dy);
+          var sr = strip.getBoundingClientRect(), pad = 14;
+          var inside = x >= sr.left - pad && x <= sr.right + pad && y >= sr.top - pad && y <= sr.bottom + pad;
+          reserve.classList.toggle("pf-over", fromStrip && !inside);
+          var list = pills(), cur = list.indexOf(ph);
+          if (!inside) {
+            if (cur >= 0) flip(list, function () { strip.removeChild(ph); });
+            return;
+          }
+          var px = x - sr.left, py = y - sr.top, best = nearest(list, px, py);
+          if (cur >= 0) {
+            if (best < 0 || best === cur) return;
+            flip(list, function () { strip.insertBefore(ph, best > cur ? list[best].nextSibling : list[best]); });
+          } else if (best < 0) {
+            flip(list, function () { strip.appendChild(ph); });
+          } else {
+            var n = list[best], after = px > n.offsetLeft + n.offsetWidth / 2;
+            flip(list, function () { strip.insertBefore(ph, after ? n.nextSibling : n); });
+          }
+        },
+        end: function (commit) {
+          ghost.remove();
+          reserve.classList.remove("pf-over");
+          if (commit) {
+            var at = pills().indexOf(ph);
+            var keys = S.top.filter(function (k) { return k !== key; });
+            if (at >= 0) { keys.splice(at, 0, key); S.top = keys; }
+            else if (fromStrip) S.top = keys;
+          }
+          renderBars();
+        }
+      });
+    }
+
     // --- Profils : changements du brouillon
 
     function moveProfile(from, to) {
@@ -229,6 +485,7 @@ export const PROFILES_JS = `
         small.append(dot(n > 0), role + (n === 0 ? "Vide" : n + (n > 1 ? " widgets" : " widget")));
         tile.append(pfSvg(ICONS.grid, "logo ink"), el("b", "", nameOf(i)), small);
         tile.onclick = function () { S.page = i; S.sel = -1; renderProfiles(); };
+        tile.onpointerdown = function (e) { dragTile(e, tile, i); };
         tiles.appendChild(tile);
       });
       $("pf-new").disabled = S.ro;
@@ -269,6 +526,7 @@ export const PROFILES_JS = `
         cell.setAttribute("aria-pressed", i === S.sel ? "true" : "false");
         cell.setAttribute("aria-label", titleOf(w.t) + ", " + s.label);
         cell.onclick = function () { S.sel = i; say("pf-msg", ""); renderProfiles(); };
+        cell.onpointerdown = function (e) { dragWidget(e, cell, i); };
         grid.appendChild(cell);
       });
       for (var r = 0; r < rows(); r++) {
@@ -304,7 +562,7 @@ export const PROFILES_JS = `
       var w = L().widgets[S.sel];
       if (!w || w.p !== S.page) {
         S.sel = -1;
-        text.textContent = "Touche un widget de l'aperçu pour le régler, puis une case libre pour le déplacer.";
+        text.textContent = "Touche un widget de l'aperçu pour le régler. Glisse-le, ou touche une case libre, pour le déplacer.";
         text.className = "grow dim";
         $("pf-sel-edit").hidden = true;
         return;
@@ -466,35 +724,63 @@ export const PROFILES_JS = `
       return key;
     }
     function renderBars() {
-      var top = $("pf-top");
-      clear(top);
-      if (!S.top.length) {
-        var empty = el("div", "row");
-        empty.appendChild(el("span", "grow dim", "Le bandeau est vide."));
-        top.appendChild(empty);
+      var strip = $("pf-strip"), reserve = $("pf-reserve");
+      clear(strip);
+      clear(reserve);
+      if (!S.top.length) strip.appendChild(el("span", "pf-empty", "Le bandeau est vide : glisse un élément ici."));
+      S.top.forEach(function (key) {
+        var name = labelOfTop(key);
+        var pill = el("div", "pf-pill");
+        pill.dataset.key = key;
+        var main = el("button", "pf-pill-main", name);
+        main.type = "button";
+        main.disabled = S.ro;
+        main.setAttribute("aria-describedby", "pf-top-hint");
+        main.onpointerdown = function (e) { dragPill(e, pill, key, true); };
+        main.onkeydown = function (e) {
+          var i = S.top.indexOf(key);
+          if (S.ro || i < 0) return;
+          var swap = e.key === "ArrowLeft" ? -1 : e.key === "ArrowRight" ? 1 : 0;
+          if (swap) {
+            e.preventDefault();
+            if (i + swap < 0 || i + swap >= S.top.length) return;
+            S.top.splice(i + swap, 0, S.top.splice(i, 1)[0]);
+            S.focus = key;
+            renderBars();
+          } else if (e.key === "Delete" || e.key === "Backspace") {
+            e.preventDefault();
+            S.top.splice(i, 1);
+            S.focus = S.top[Math.min(i, S.top.length - 1)] || null;
+            renderBars();
+          }
+        };
+        var x = el("button", "pf-pill-x");
+        x.type = "button";
+        x.disabled = S.ro;
+        x.setAttribute("aria-label", "Retirer " + name);
+        x.append(pfSvg(PATH_X));
+        x.onclick = function () { S.top = S.top.filter(function (k) { return k !== key; }); renderBars(); };
+        pill.append(main, x);
+        strip.appendChild(pill);
+      });
+      var more = S.base.topBar.items.concat(S.base.topBar.addable).filter(function (it) { return S.top.indexOf(it.key) < 0; });
+      if (!more.length) reserve.appendChild(el("span", "pf-empty", "Tous les éléments sont dans le bandeau."));
+      more.forEach(function (it) {
+        var b = el("button", "pf-pill");
+        b.type = "button";
+        b.disabled = S.ro;
+        b.dataset.key = it.key;
+        b.setAttribute("aria-label", "Ajouter " + it.label);
+        b.append(pfSvg(PATH_PLUS), document.createTextNode(it.label));
+        b.onclick = function () { S.top.unshift(it.key); renderBars(); };
+        b.onpointerdown = function (e) { dragPill(e, b, it.key, false); };
+        reserve.appendChild(b);
+      });
+      if (S.focus) {
+        var f = strip.querySelector('[data-key="' + S.focus + '"] .pf-pill-main');
+        if (f) f.focus();
+        S.focus = null;
       }
-      S.top.forEach(function (key, i) {
-        var row = el("div", "row");
-        row.appendChild(el("span", "grow", labelOfTop(key)));
-        var up = pfIconButton(PF_PATHS.up, "Monter " + labelOfTop(key), function () { S.top.splice(i - 1, 0, S.top.splice(i, 1)[0]); renderBars(); });
-        up.disabled = S.ro || i === 0;
-        var down = pfIconButton(PF_PATHS.down, "Descendre " + labelOfTop(key), function () { S.top.splice(i + 1, 0, S.top.splice(i, 1)[0]); renderBars(); });
-        down.disabled = S.ro || i === S.top.length - 1;
-        var del = button("Retirer", "ghost", function () { S.top.splice(i, 1); renderBars(); }, "Retirer " + labelOfTop(key));
-        del.disabled = S.ro;
-        row.append(up, down, del);
-        top.appendChild(row);
-      });
-      var select = $("pf-top-add");
-      clear(select);
-      S.base.topBar.items.concat(S.base.topBar.addable).forEach(function (it) {
-        if (S.top.indexOf(it.key) >= 0) return;
-        var o = el("option", "", it.label);
-        o.value = it.key;
-        select.appendChild(o);
-      });
-      select.disabled = S.ro;
-      $("pf-top-go").disabled = S.ro || !select.firstChild;
 
       var rail = $("pf-rail");
       clear(rail);
@@ -551,6 +837,8 @@ export const PROFILES_JS = `
       $("pf-profiles").hidden = !has;
       $("pf-bars").hidden = !has;
       if (!has) return;
+      $("pf-profiles").dataset.drag = S.ro ? "off" : "on";
+      $("pf-bars").dataset.drag = S.ro ? "off" : "on";
       var text = "";
       if (S.ro) text = S.base.error ? "La tablette n'a pas répondu : " + S.base.error + ". Dernière disposition connue, en lecture seule." : "Tablette non connectée : dernière disposition connue, en lecture seule.";
       for (var id of ["pf-banner", "pf-bars-banner"]) {
@@ -618,17 +906,12 @@ export const PROFILES_JS = `
     $("pf-add-go").onclick = addWidget;
     $("pf-send").onclick = function () { send({ layout: S.layout }, ["layout"], "pf-msg"); };
     $("pf-reset").onclick = function () { adopt(S.base, ["layout"]); say("pf-msg", ""); render(); };
-    $("pf-top-go").onclick = function () {
-      var key = $("pf-top-add").value;
-      if (key) S.top.unshift(key);
-      renderBars();
-    };
     $("pf-bars-send").onclick = function () { send({ topBar: S.top, rail: S.rail }, ["bars"], "pf-bars-msg"); };
     $("pf-bars-reset").onclick = function () { adopt(S.base, ["bars"]); say("pf-bars-msg", ""); render(); };
 
     // La tablette se connecte ou se déconnecte : relue, sauf si des changements attendent leur envoi.
     setInterval(function () {
-      if (document.hidden || S.busy) return;
+      if (document.hidden || S.busy || S.drag) return;
       fetch("/local/status")
         .then(function (r) { return r.json(); })
         .then(function (s) {

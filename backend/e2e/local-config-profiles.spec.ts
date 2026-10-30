@@ -300,16 +300,19 @@ test.describe("page locale : profils et barres", () => {
     const tablet = connected(server);
     {
       await page.goto("/");
-      await expect(page.locator("#pf-top .row")).toHaveCount(1);
-      await expect(page.locator("#pf-top-add option")).toHaveText(["Lecture en cours", "Date", "WiFi"]);
-      await page.locator("#pf-top-add").selectOption("date");
-      await page.locator("#pf-top-go").click();
-      await page.locator("#pf-top-add").selectOption("wifi");
-      await page.locator("#pf-top-go").click();
+      const pills = page.locator("#pf-strip .pf-pill");
+      await expect(pills).toHaveCount(1);
+      await expect(page.locator("#pf-reserve .pf-pill")).toHaveText(["Lecture en cours", "Date", "WiFi"]);
+      await page.getByRole("button", { name: "Ajouter Date" }).click();
+      await page.getByRole("button", { name: "Ajouter WiFi" }).click();
       // Ajoutés au début, comme sur la tablette : WiFi, Date, Heure.
-      await expect(page.locator("#pf-top .row .grow")).toHaveText(["WiFi", "Date", "Heure"]);
+      await expect(pills).toHaveText(["WiFi", "Date", "Heure"]);
       await page.getByRole("button", { name: "Retirer Date" }).click();
-      await page.getByRole("button", { name: "Descendre WiFi" }).click();
+      // Flèche droite : WiFi passe après Heure, et garde le focus.
+      await pills.first().locator(".pf-pill-main").focus();
+      await page.keyboard.press("ArrowRight");
+      await expect(pills).toHaveText(["Heure", "WiFi"]);
+      await expect(pills.nth(1).locator(".pf-pill-main")).toBeFocused();
 
       await page.getByLabel("Noms sous les icônes").uncheck();
       await page.getByLabel("Outil Ordi").check();
@@ -324,4 +327,204 @@ test.describe("page locale : profils et barres", () => {
       await expect(page.locator("#pf-bars-send")).toBeDisabled();
     }
   });
+
+  test("glisse un widget : ombre calée sur la grille, place invalide = retour, toucher = sélection", async ({ page, server }) => {
+    const tablet = connected(server);
+    {
+      await page.goto("/");
+      const widget = page.getByRole("button", { name: "Horloge, Grand" });
+      await expect(widget).toBeVisible();
+      await centered(page, "#pf-grid");
+      const geo = await gridGeometry(page);
+      const box = (await widget.boundingBox())!;
+      const grab = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+
+      // Sous le seuil de 6 px : c'est un toucher, le widget est choisi et ne bouge pas.
+      await page.mouse.move(grab.x, grab.y);
+      await page.mouse.down();
+      await page.mouse.move(grab.x + 3, grab.y + 2);
+      await page.mouse.up();
+      await expect(widget).toHaveAttribute("aria-pressed", "true");
+      await expect(page.locator(".pf-shadow")).toHaveCount(0);
+      await expect(page.locator("#pf-send")).toBeDisabled();
+
+      // Glisser vers le bas (colonne 1, ligne 3) : l'ombre se cale sur ces cases, le widget suit le pointeur.
+      const target = cellBox(geo, 0, 2);
+      await page.mouse.move(grab.x, grab.y);
+      await page.mouse.down();
+      await page.mouse.move(grab.x + (target.x - box.x) + 7, grab.y + (target.y - box.y) - 5, { steps: 6 });
+      const shadow = page.locator(".pf-shadow");
+      await expect(shadow).toBeVisible();
+      await expect(shadow).not.toHaveClass(/pf-bad/);
+      // L'ombre glisse vers sa case (150 ms) : on attend qu'elle y soit.
+      await expect
+        .poll(async () => {
+          const sb = (await shadow.boundingBox())!;
+          return Math.round(Math.abs(sb.x - target.x) + Math.abs(sb.y - target.y));
+        })
+        .toBeLessThan(3);
+      const lifted = (await widget.boundingBox())!;
+      expect(lifted.y).toBeGreaterThan(box.y + 50);
+      await page.mouse.up();
+      await expect(page.locator(".pf-shadow")).toHaveCount(0);
+      await expect(widget).toHaveCSS("grid-row-start", "3");
+      await expect(widget).toHaveCSS("grid-column-start", "1");
+      await page.locator("#pf-send").click();
+      await expect(page.locator("#pf-msg")).toHaveText("Envoyé à la tablette.");
+      const sent = tablet.sets.at(-1).layout.widgets.find((w: any) => w.t === "clock");
+      expect([sent.c, sent.r]).toEqual([0, 2]);
+
+      // Sur le widget Touches (colonne 3, ligne 1) : chevauchement, ombre rouge, retour à sa place.
+      const moved = (await widget.boundingBox())!;
+      const from = { x: moved.x + moved.width / 2, y: moved.y + moved.height / 2 };
+      const over = cellBox(geo, 2, 0);
+      await page.mouse.move(from.x, from.y);
+      await page.mouse.down();
+      await page.mouse.move(from.x + (over.x - moved.x), from.y + (over.y - moved.y), { steps: 6 });
+      await expect(shadow).toHaveClass(/pf-bad/);
+      await page.mouse.up();
+      await expect(page.locator("#pf-msg")).toHaveText("Ce widget (2 × 2) ne tient pas à cet endroit.");
+      await expect(widget).toHaveCSS("grid-row-start", "3");
+      await expect(page.locator("#pf-send")).toBeDisabled();
+
+      // Hors de la grille : même chose (une fois le retour fini, 200 ms).
+      await expect(widget).toHaveCSS("transform", "none");
+      await page.mouse.move(from.x, from.y);
+      await page.mouse.down();
+      await page.mouse.move(geo.x + geo.width + 40, from.y, { steps: 6 });
+      await expect(shadow).toHaveClass(/pf-bad/);
+      await page.mouse.up();
+      await expect(widget).toHaveCSS("grid-column-start", "1");
+      await expect(page.locator("#pf-send")).toBeDisabled();
+      // Rien n'a bougé côté tablette.
+      expect(tablet.sets.at(-1).layout.widgets.find((w: any) => w.t === "clock").r).toBe(2);
+    }
+  });
+
+  test("glisse les pastilles du bandeau : ajouter à l'endroit lâché, réordonner, retirer", async ({ page, server }) => {
+    const tablet = connected(server);
+    {
+      await page.goto("/");
+      const pills = page.locator("#pf-strip .pf-pill");
+      await expect(pills).toHaveText(["Heure", "WiFi"]);
+      await centered(page, "#pf-top-hint");
+
+      // De la réserve vers la bande, avant WiFi.
+      const date = page.getByRole("button", { name: "Ajouter Date" });
+      const wifi = (await pills.nth(1).boundingBox())!;
+      await dragBetween(page, date, { x: wifi.x + 4, y: wifi.y + wifi.height / 2 });
+      await expect(pills).toHaveText(["Heure", "Date", "WiFi"]);
+
+      // Dans la bande : WiFi passe avant Heure.
+      const first = (await pills.first().boundingBox())!;
+      await dragBetween(page, pills.nth(2).locator(".pf-pill-main"), { x: first.x + 4, y: first.y + first.height / 2 });
+      await expect(pills).toHaveText(["WiFi", "Heure", "Date"]);
+
+      // Hors de la bande : retiré, la réserve s'allume pendant le glisser.
+      const heure = pills.nth(1).locator(".pf-pill-main");
+      const hb = (await heure.boundingBox())!;
+      const res = (await page.locator("#pf-reserve").boundingBox())!;
+      await page.mouse.move(hb.x + 10, hb.y + 10);
+      await page.mouse.down();
+      await page.mouse.move(res.x + 40, res.y + res.height / 2, { steps: 8 });
+      await expect(page.locator("#pf-reserve")).toHaveClass(/pf-over/);
+      await expect(page.locator(".pf-ghost")).toBeVisible();
+      await page.mouse.up();
+      await expect(pills).toHaveText(["WiFi", "Date"]);
+      await expect(page.locator("#pf-reserve .pf-pill")).toHaveText(["Heure", "Lecture en cours"]);
+
+      // Rien n'est parti avant « Envoyer ».
+      const sets = tablet.sets.length;
+      await page.locator("#pf-bars-send").click();
+      await expect(page.locator("#pf-bars-msg")).toHaveText("Envoyé à la tablette.");
+      expect(tablet.sets).toHaveLength(sets + 1);
+      expect(tablet.sets.at(-1).topBar).toEqual(["wifi", "date"]);
+    }
+  });
+
+  test("glisse les profils pour changer l'ordre ; Accueil et Réunion suivent leur profil", async ({ page, server }) => {
+    const tablet = connected(server);
+    {
+      await page.goto("/");
+      const chips = page.locator("#pf-chips .cx");
+      await expect(chips).toHaveCount(2);
+      await page.locator("#pf-new").click();
+      await expect(chips).toHaveCount(3);
+      await centered(page, "#pf-chips .cx >> nth=1");
+      const newTile = page.locator("#pf-new");
+      const newBefore = (await newTile.boundingBox())!;
+
+      // Profil 2 passe entre Accueil et Réunion : un repère marque la place pendant le glisser.
+      const a = (await chips.nth(1).boundingBox())!;
+      const b = (await chips.nth(2).boundingBox())!;
+      await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2, { steps: 8 });
+      await expect(page.locator("#pf-chips .pf-ph")).toHaveCount(1);
+      await expect(page.locator(".pf-ghost")).toBeVisible();
+      expect(await newTile.boundingBox()).toEqual(newBefore);
+      await page.mouse.up();
+      await expect(chips).toHaveText([/Accueil/, /Profil 2/, /Réunion/]);
+      await page.locator("#pf-send").click();
+      await expect(page.locator("#pf-msg")).toHaveText("Envoyé à la tablette.");
+      let sent = tablet.sets.at(-1).layout;
+      expect(sent.names).toEqual(["Accueil", "Profil 2", "Réunion"]);
+      expect([sent.home, sent.call]).toEqual([0, 2]);
+
+      // Accueil, avec son widget, passe en dernier : home et call suivent.
+      await centered(page, "#pf-chips .cx >> nth=1");
+      const home = (await chips.nth(0).boundingBox())!;
+      const last = (await chips.nth(2).boundingBox())!;
+      await page.mouse.move(home.x + home.width / 2, home.y + home.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(last.x + last.width / 2, last.y + last.height / 2, { steps: 10 });
+      await page.mouse.up();
+      await expect(chips).toHaveText([/Profil 2/, /Réunion/, /Accueil/]);
+      await expect(page.locator("#pf-send")).toBeEnabled();
+      await page.locator("#pf-send").click();
+      await expect(page.locator("#pf-msg")).toHaveText("Envoyé à la tablette.");
+      sent = tablet.sets.at(-1).layout;
+      expect(sent.names).toEqual(["Profil 2", "Réunion", "Accueil"]);
+      expect([sent.home, sent.call]).toEqual([2, 1]);
+      expect(sent.widgets.filter((w: any) => w.p === 2).length).toBeGreaterThan(0);
+      expect(sent.widgets.filter((w: any) => w.p === 0)).toHaveLength(0);
+
+      // Un simple clic sur une tuile la choisit toujours.
+      await chips.nth(0).click();
+      await expect(chips.nth(0)).toHaveAttribute("aria-pressed", "true");
+    }
+  });
 });
+
+/** Place l'élément au milieu de la fenêtre : la souris de Playwright ne défile pas toute seule. */
+const centered = (page: Page, selector: string) =>
+  page.locator(selector).evaluate((e) => e.scrollIntoView({ block: "center", behavior: "instant" }));
+
+/** Cases de la grille de l'aperçu : même calcul que la page (marges et espaces lus dans le style). */
+async function gridGeometry(page: Page) {
+  return page.evaluate(() => {
+    const g = document.getElementById("pf-grid")!;
+    const r = g.getBoundingClientRect();
+    const cs = getComputedStyle(g);
+    const pl = parseFloat(cs.paddingLeft);
+    const pt = parseFloat(cs.paddingTop);
+    const gx = parseFloat(cs.columnGap);
+    const gy = parseFloat(cs.rowGap);
+    const cw = (r.width - pl - parseFloat(cs.paddingRight) - gx * 3) / 4;
+    const ch = (r.height - pt - parseFloat(cs.paddingBottom) - gy * 3) / 4;
+    return { x: r.left, y: r.top, width: r.width, left: r.left + pl, top: r.top + pt, cw, ch, gx, gy };
+  });
+}
+const cellBox = (g: Awaited<ReturnType<typeof gridGeometry>>, c: number, r: number) => ({
+  x: g.left + c * (g.cw + g.gx),
+  y: g.top + r * (g.ch + g.gy),
+});
+
+/** Prend l'élément en son centre et le lâche au point donné (par étapes, comme un doigt). */
+async function dragBetween(page: Page, source: ReturnType<Page["locator"]>, to: { x: number; y: number }) {
+  const b = (await source.boundingBox())!;
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 10 });
+  await page.mouse.up();
+}
