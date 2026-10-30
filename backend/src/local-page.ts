@@ -73,6 +73,10 @@ ${FAVICON}
   .note { padding: 0 26px 14px; }
   .group .dim.note:empty { display: none; }
 
+  /* Connecter une IA : configuration à copier, sur plusieurs lignes. */
+  .mcp pre { margin: 0 26px 14px; padding: 12px 14px; border-radius: 12px; background: var(--tile-high); font: 400 13px/1.5 ui-monospace, Menlo, Consolas, monospace;
+    color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .mcp .row code { font: 400 13px ui-monospace, Menlo, Consolas, monospace; }
   /* Contrôles : pilules, interrupteurs et curseurs habillés en Cadran. */
   button, a.button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 18px; border-radius: 20px; border: 0;
     font: 500 14px Outfit, sans-serif; background: var(--ink); color: var(--bg); cursor: pointer; text-decoration: none; white-space: nowrap; transition: transform 160ms cubic-bezier(.2, .8, .2, 1), opacity 160ms; }
@@ -407,6 +411,20 @@ ${FAVICON}
     </dialog>
   </section>
 
+  <!-- Porte MCP du compagnon (src/routes/mcp.ts) : une IA de bureau règle la tablette avec les outils de src/mcp-tools.ts.
+       Claude Desktop ne sait que lancer un programme : le pont src/mcp-bridge.ts, avec le node du compagnon. -->
+  <section id="ia" data-title="Connecter une IA" data-icon="extension" data-group="Cet ordinateur">
+    <div class="sechead"><h2>Connecter une IA</h2><span class="dim">Demande à ton IA de régler la tablette : thème, profils, widgets, touches, plugins. Elle passe par cet ordinateur, l'adresse ne marche pas ailleurs.</span></div>
+    <div class="card group mcp">
+      <div class="row"><span class="grow"><b>Claude Desktop</b><br><span class="dim">Réglages › Développeur › Modifier la configuration : coller dans claude_desktop_config.json, puis relancer Claude.</span></span><button class="ghost" data-copy="mcpdesktop">Copier</button></div>
+      <pre id="mcpdesktop">…</pre>
+      <div class="row"><span class="grow"><b>Claude Code</b><br><code id="mcpcode">…</code></span><button class="ghost" data-copy="mcpcode">Copier</button></div>
+      <div class="row"><span class="grow"><b>Cursor, VS Code et autres</b><br><span class="dim">Serveur MCP de type HTTP, à l'adresse</span> <code id="mcpurl">…</code></span><button class="ghost" data-copy="mcpurl">Copier</button></div>
+      <div class="dim note">ChatGPT ne joint que des adresses publiques sur Internet : pas encore possible.</div>
+      <div class="dim note" id="mcpmsg" role="status"></div>
+    </div>
+  </section>
+
   <!-- Appli portable seulement (voir src/routes/portable.ts) : rien n'est installé, ces réglages sont ceux de l'utilisateur. -->
   <section id="panel" data-title="Cette appli" data-icon="power" data-group="Cet ordinateur" hidden>
     <div class="sechead"><h2>Cette appli</h2><span class="dim" id="appinfo"></span></div>
@@ -454,6 +472,7 @@ ${FAVICON}
       renderAccounts(c);
       renderGitlab(s.gitlab);
       renderConnectors(s);
+      renderMcp(s.mcp);
       renderSteps();
       renderTablet(s.tabletInfo);
       placeConnect(!!s.tabletInfo);
@@ -546,6 +565,22 @@ ${FAVICON}
   let tabletBusyUntil = 0;
   const percent = (v) => Math.round(v * 100);
   let tabletFocused = false;
+  // Connecter une IA : textes posés seulement s'ils changent (la page se rafraîchit toutes les 1,5 s, une sélection resterait).
+  function renderMcp(m) {
+    const desktop = JSON.stringify({ mcpServers: { unomate: m.desktop } }, null, 2);
+    const texts = { mcpdesktop: desktop, mcpcode: "claude mcp add --transport http unomate " + m.url, mcpurl: m.url };
+    for (const [id, text] of Object.entries(texts)) if ($(id).textContent !== text) $(id).textContent = text;
+  }
+  for (const b of document.querySelectorAll("[data-copy]")) {
+    b.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText($(b.dataset.copy).textContent);
+        $("mcpmsg").textContent = "Copié.";
+      } catch (e) {
+        $("mcpmsg").textContent = "Copie impossible : sélectionne le texte à la main.";
+      }
+    };
+  }
   function renderTablet(t) {
     document.getElementById("tabletcard").hidden = !t;
     if (!t) return;
@@ -1046,6 +1081,7 @@ ${FAVICON}
     add: "M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z",
     calendar: "M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z",
     merge: "M17 20.41L18.41 19 15 15.59 13.59 17 17 20.41zM7.5 8H11v5.59L5.59 19 7 20.41l6-6V8h3.5L12 3.5 7.5 8z",
+    extension: "M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z",
     power: "M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z",
   };
   const SVG_NS = "http://www.w3.org/2000/svg";

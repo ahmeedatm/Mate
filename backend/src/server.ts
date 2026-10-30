@@ -34,6 +34,7 @@ import jiraRoutes from "./routes/jira.ts";
 import localRoutes from "./routes/local.ts";
 import localConfigRoutes from "./routes/local-config.ts";
 import localProfileRoutes from "./routes/local-profiles.ts";
+import mcpRoutes from "./routes/mcp.ts";
 import mailRoutes from "./routes/mail.ts";
 import notificationRoutes from "./routes/notifications.ts";
 import pairingRoutes from "./routes/pairing.ts";
@@ -98,6 +99,8 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     (method === "POST" && /^\/local\/(autostart|firewall|legacy\/remove|forget|quit|update)$/.test(url)) ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
     (method === "POST" && (url === "/browser/extension" || url === "/browser/extension/commands")) ||
+    // Porte MCP des IA de bureau (routes/mcp.ts) : corps JSON exigé par le SDK, pas envoyable par un autre site.
+    (/^(GET|POST|DELETE)$/.test(method) && url === "/mcp") ||
     // Hooks de Claude Code : pas de jeton d'appairage, un secret propre vérifié par la route (src/agents-sources.ts).
     (method === "POST" && (url === "/agents/hook" || url === "/agents/statusline")) ||
     (method === "DELETE" && /^\/local\/accounts\/(microsoft|google|gitlab)$/.test(url)));
@@ -165,6 +168,7 @@ app.register(pairingRoutes, { authorized, fingerprint: tls?.fingerprint ?? null 
 app.register(localRoutes);
 app.register(localProfileRoutes);
 app.register(localConfigRoutes);
+app.register(mcpRoutes);
 app.register(portableRoutes);
 app.register(deckRoutes);
 app.register(pluginRoutes);

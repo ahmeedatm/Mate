@@ -117,13 +117,27 @@ Une route par domaine dans `backend/src/routes/` : `deck`, `system` (son), `cale
 
 ## 4. Outil MCP
 
-`backend/src/mcp.ts` est un serveur MCP en stdio, déclaré dans `.mcp.json` à la racine sous le nom `tablette`. Il relaie vers le
-compagnon déjà démarré : tout client MCP (Claude Code, Claude Desktop) pilote alors la tablette. Première fois : `cd backend && npm ci`,
-puis lancer le compagnon (`npm run dev` ou le service).
+Une IA de bureau (Claude Desktop, Claude Code, Cursor, VS Code) pilote et **règle** la tablette par MCP. Deux portes, mêmes outils
+(`backend/src/mcp-tools.ts`), qui appellent l'API HTTP du compagnon :
 
-Outils : `tablette_etat`, `tablette_capture`, `tablette_afficher_mode`, `tablette_message`, `tablette_document`, `tablette_focus`,
-`tablette_ambiance`, `tablette_demander`, `docs_lister`, `taches_lister`, `tache_ajouter`, `tache_cocher`, `agenda_ajouter`,
-`deck_touches_lister`, `deck_touche_affecter`, `deck_touche_effacer`, `agents_lister`.
+- **compagnon installé** : `http://127.0.0.1:<port>/mcp` (Streamable HTTP, sans état, `backend/src/routes/mcp.ts`). En local
+  seulement, sans jeton, comme la page locale. La carte « Connecter une IA » de la page locale donne l'adresse et la configuration à
+  copier. Claude Desktop ne sait que lancer un programme : pont stdio `dist/mcp-bridge.mjs` (`src/mcp-bridge.ts`), lancé avec le node
+  du compagnon, rien à installer ;
+- **depuis le dépôt** : `backend/src/mcp.ts` en stdio, déclaré dans `.mcp.json` sous le nom `tablette`. Première fois :
+  `cd backend && npm ci`, puis lancer le compagnon (`npm run dev` ou le service).
+
+ChatGPT n'est pas branché : ses connecteurs MCP ne joignent qu'une adresse publique en HTTPS.
+
+Outils de pilotage : `tablette_etat`, `tablette_capture`, `tablette_afficher_mode`, `tablette_message`, `tablette_document`,
+`tablette_focus`, `tablette_ambiance`, `tablette_demander`, `docs_lister`, `taches_lister`, `tache_ajouter`, `tache_cocher`,
+`agenda_ajouter`, `agents_lister`.
+
+Outils de réglage (ceux de la page locale) : `tablette_reglages`, `tablette_regler` (thème, luminosité, volume, nuit, Ne pas
+déranger), `profils_lire`, `profils_ecrire` (profils, widgets, bandeau du haut, barre de gauche ; la tablette vérifie tout avant
+d'écrire), `deck_touches_lister`, `deck_touche_affecter`, `deck_touche_effacer` (page Perso ou page nommée), `plugins_lister`,
+`plugins_choisir`, `deck_applis_lister`, `deck_appli_ajouter`, `deck_appli_retirer`, `deck_applis_reinitialiser`,
+`deck_sites_lister`, `deck_site_ajouter`, `deck_site_retirer`. Ceux qui suppriment sont marqués `destructiveHint`.
 
 Programmer une touche en une phrase à Claude : « Affecte la touche 1 du deck : VS Code en grand, Teams à gauche ». Il appelle :
 
@@ -143,7 +157,7 @@ Programmer une touche en une phrase à Claude : « Affecte la touche 1 du deck :
 }
 ```
 
-⚠️ L'outil numérote à partir de 1, l'API à partir de 0 : `numero: 1` écrit `PUT /deck/keys/0` (touche `k-0`).
+⚠️ L'outil numérote à partir de 1, l'API à partir de 0 : `numero: 1` écrit `PUT /local/config/keys/0` (touche `k-0`).
 
 ## Démo
 
@@ -162,3 +176,8 @@ Le 29/10/2026, sur un compagnon de test isolé (Mac, `HOST=127.0.0.1`, port et d
 
 ⚠️ Non vérifié : l'exécution réelle des étapes `window`, `keys`, `app`, `text` et `url` des exemples (elles pilotent l'ordinateur),
 Windows, et la remise d'un ordre à une vraie tablette (`/tablet/command` a répondu 502, aucune tablette connectée).
+
+Le 30/10/2026, sur un compagnon de test isolé (Mac, port 3917, données à part) : un vrai Claude Code branché sur `/mcp` (HTTP) a
+ajouté un site à la page Média et programmé une touche Perso avec une icône ; par le pont stdio compilé (chemin de Claude Desktop), il
+a retiré le site et lu les thèmes. ⚠️ Non vérifié : Claude Desktop lui-même, Cursor, VS Code, et `tablette_regler` /
+`profils_ecrire` contre une vraie tablette (couverts par les tests avec une tablette simulée).
