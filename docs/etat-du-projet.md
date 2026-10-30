@@ -118,6 +118,7 @@ Unowhy 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **Andro
 - Comptes Microsoft/Google pour l'agenda : le code est prêt, mais il faut enregistrer l'appli (Azure bloqué pour le compte Unowhy ; message préparé pour l'informatique). Voir [agenda-comptes.md](agenda-comptes.md).
 - Coche automatique du worklog par Jira (il faut remplir les identifiants dans `.env`).
 - Clavier dans KeyEditor, LinkAdder, WiFi et code d'appairage ; atténuation de nuit réelle ; rappels avec la vraie voix ; option « rejoindre automatiquement ».
+- Micro des sessions Claude (« Parler », transcription whisper.cpp sur le Mac) : transcription vérifiée sur le Mac, pas encore avec le micro de la vraie tablette (seuil d'arrêt au silence à confirmer).
 - WiFi de la tablette (mauvais mot de passe, retour arrière), boutons Média (Pause, barre, Suivant), « Page de l'ordi » avec Edge ou Firefox, Annuler pendant une mise à jour.
 
 ## À faire, dans l'ordre

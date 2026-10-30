@@ -70,6 +70,8 @@ data class AgentsState(
     val hooks: Boolean,
     val now: Long,
     val quota: AgentQuota? = null,
+    /** Micro des sessions : l'ordinateur transcrit (whisper.cpp), `POST /agents/transcribe`. */
+    val voice: Boolean = false,
 )
 
 data class AgentOption(val label: String, val description: String)
@@ -148,6 +150,11 @@ class AgentsApi(private val http: Http) {
         Unit
     }
 
+    /** Texte d'un prompt dicté (WAV 16 kHz), transcrit sur l'ordinateur ; vide si rien n'a été compris. */
+    suspend fun transcribe(wav: ByteArray): String = http.io {
+        JSONObject(http.text(http.request("POST", "/agents/transcribe", wav, "audio/wav", timeoutMs = 150_000))).optString("text")
+    }
+
     /** Interrompt le tour en cours (Échap dans son terminal). */
     suspend fun interrupt(session: String) = http.io {
         http.postJson("/agents/interrupt", JSONObject().put("session", session))
@@ -199,6 +206,7 @@ internal fun parseAgents(text: String): AgentsState {
         ),
         total = json.optInt("total", list.length()),
         hooks = json.optBoolean("hooks"),
+        voice = json.optBoolean("voice"),
         now = json.optLong("now"),
         quota = json.optJSONObject("quota")?.let { q ->
             fun window(key: String) = q.optJSONObject(key)?.let { w -> QuotaWindow(w.optInt("used"), if (w.isNull("resetsAt")) null else w.optLong("resetsAt")) }

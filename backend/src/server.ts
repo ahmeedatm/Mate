@@ -158,6 +158,8 @@ app.addHook("preHandler", async (req, reply) => {
 
 // Images du visualiseur (POST /camera/frame).
 app.addContentTypeParser("image/jpeg", { parseAs: "buffer", bodyLimit: 2 * 1024 * 1024 }, (_req, body, done) => done(null, body));
+// Dictée d'un prompt pour une session Claude (POST /agents/transcribe), 60 s au plus.
+app.addContentTypeParser("audio/wav", { parseAs: "buffer", bodyLimit: 2 * 1024 * 1024 }, (_req, body, done) => done(null, body));
 // Archive du backend : essai d'une MR (POST /companion/backend/essai) ou release (POST /companion/backend/update).
 app.addContentTypeParser("application/gzip", { parseAs: "buffer", bodyLimit: 100 * 1024 * 1024 }, (_req, body, done) => done(null, body));
 

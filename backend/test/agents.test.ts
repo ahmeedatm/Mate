@@ -48,6 +48,7 @@ const deps = (holdMs = 5_000): AgentsDeps => ({
   notify: (a) => alerts.push(a),
   holdMs,
   sendText: async (handle, text) => void sent.push({ handle, text }),
+  sendChat: async (session, text) => void sent.push({ handle: `chat:${session}`, text }),
   interruptSession: async (handle) => void sent.push({ handle, text: "<Échap>" }),
   focusSession: async (target) => void focused.push(target),
 });
@@ -660,7 +661,7 @@ describe("Orca", () => {
     assert.equal(s.canSend, true);
   });
 
-  it("une session de chat Orca n'a pas de terminal : pas de message", async () => {
+  it("une session de chat Orca reçoit le message dans son chat, pas dans un terminal", async () => {
     const a = createAgents(deps());
     orca = info([{ paneKey: "structured-agent-session-claude_x:y", state: null, toolName: null, lastMessage: null, structured: true }]);
     await a.hook(event("Stop", { last_assistant_message: "ok" }), {});
@@ -668,7 +669,15 @@ describe("Orca", () => {
     await a.refresh();
     const s = a.list().sessions[0];
     assert.equal(s.branch, "feat/x");
-    assert.equal(s.canSend, false);
+    assert.equal(s.canSend, true);
+    assert.equal(s.canInterrupt, false, "Échap : terminal seulement");
+    await a.send("s1", "lance les tests\ndu backend");
+    assert.deepEqual(sent, [{ handle: "chat:claude_x", text: "lance les tests du backend" }]);
+    assert.equal(a.list().sessions[0].state, "working");
+    // Un prompt dicté d'une minute passe entier.
+    await a.hook(event("Stop", { last_assistant_message: "ok" }), {});
+    await a.send("s1", "x".repeat(1500));
+    assert.equal(sent.at(-1)?.text.length, 1500);
   });
 
   it("deux agents dans le worktree et pas de volet connu : pas de jonction hasardeuse", async () => {
@@ -718,7 +727,7 @@ describe("message rapide et session devant", () => {
   it("refuse : session qui travaille, hors terminal Orca, inconnue, message vide", async () => {
     const a = createAgents(deps());
     await a.hook(event("Stop", { last_assistant_message: "ok" }), {});
-    await assert.rejects(a.send("s1", "continue"), /pas dans un terminal Orca/);
+    await assert.rejects(a.send("s1", "continue"), /pas dans Orca/);
     await assert.rejects(a.send("inconnue", "continue"), (e: AnswerError) => e.statusCode === 404);
     await restingInOrca(a);
     await assert.rejects(a.send("s1", "  \n "), /vide/);

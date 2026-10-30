@@ -18,13 +18,15 @@ Le principe du produit est bon : les données restent chez l'utilisateur. La tab
 | Tablette (préférences de l'appli) | ordinateurs appairés (nom, adresse, jeton, empreinte du certificat), profils et widgets de l'Accueil, ville de la météo et ses coordonnées, verres d'eau, réglages | jusqu'à la désinstallation ou la réinitialisation |
 | Ordinateur, `backend/.data/` | identité et jeton du compagnon, certificat, agendas reliés (lien ICS), agenda perso, tâches et rappels, touches perso et macros, applis et sites du Deck, scènes de son, réglages de réunions ; si un compte Microsoft ou Google est relié : jeton de renouvellement (`accounts.json`, droits 600) | jusqu'à la désinstallation ou la suppression du dossier |
 | Ordinateur, en mémoire seulement | historique du presse-papiers (20 textes, 1 h), notifications du système (100, 24 h), état des sessions Claude Code, appel en cours | jusqu'à l'arrêt du compagnon ; jamais écrit sur le disque ni dans le journal |
+| Ordinateur, fichier temporaire | message dicté à un agent Claude (WAV, 60 s au plus), transcrit par whisper.cpp | effacé dès la transcription faite ; le texte revient à la tablette, rien n'est gardé |
 | Ordinateur, journal du compagnon | événements techniques ; jamais le contenu du presse-papiers, des notifications ou des commandes des agents | à préciser (aucune rotation aujourd'hui) |
 
 ## 2. Données qui partent chez des tiers
 
 | Destinataire | Quand | Ce qui part | Où dans le code |
 |---|---|---|---|
-| **Google** (reconnaissance vocale d'Android) | bouton Parler, dictée, réponse vocale aux agents | **l'enregistrement de la voix** et la langue ; traité par l'appli Google de la tablette | `voice/VoiceControl.kt`, `voice/Dictation.kt` (`SpeechRecognizer`) |
+| **Google** (reconnaissance vocale d'Android) | bouton Parler, dictée, réponse vocale aux agents (si l'ordinateur n'a pas whisper.cpp) | **l'enregistrement de la voix** et la langue ; traité par l'appli Google de la tablette | `voice/VoiceControl.kt`, `voice/Dictation.kt` (`SpeechRecognizer`) |
+| **Hugging Face** (dépôt de whisper.cpp) | première dictée d'un message à un agent Claude, une fois | adresse IP (téléchargement du modèle de voix, 574 Mo) ; aucune voix ne part : la transcription se fait sur l'ordinateur | `backend/src/transcribe.ts` |
 | **Google** (services de localisation d'Android) | météo sans ville choisie **si l'option des Réglages est activée** (coupée par défaut), bouton « Ma position » | réseaux WiFi visibles et signal, envoyés par le système pour obtenir la position | `device/Position.kt` |
 | **Google** (synthèse vocale d'Android) | rappels parlés, réponses de la commande vocale | le texte à prononcer, **si** le moteur utilise une voix en ligne (selon ses réglages) | `audio/Speaker.kt` |
 | **Google** (recherche) | commande vocale « cherche … » | le texte cherché, ouvert dans le navigateur de l'ordinateur | `voice/VoiceControl.kt` |

@@ -273,6 +273,8 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         }
         expectStatus(agents, 200, "/agents");
         expect(Array.isArray(agents.json.sessions) && typeof agents.json.counts?.working === "number", "forme de /agents inattendue");
+        // Micro des sessions : vrai seulement avec whisper-cli sur l'ordinateur (brew install whisper-cpp).
+        expect(typeof agents.json.voice === "boolean", "`voice` absent de /agents");
         // Usage Claude (Orca ou statusline) : absent tant qu'aucune source ne l'a donné, sinon des pourcentages.
         const quota = agents.json.quota;
         const pct = (w: any) => w === null || (Number.isInteger(w?.used) && w.used >= 0 && w.used <= 100);

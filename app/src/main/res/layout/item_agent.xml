@@ -95,12 +95,13 @@
             android:textColor="?attr/c_text_dim"
             android:textSize="13sp" />
 
-        <!-- Actions de la session : continue, écrire, reprise après limite. -->
+        <!-- Actions de la session, à droite : micro (au repos), interrompre (terminal), reprise après limite. -->
         <LinearLayout
             android:id="@+id/agent_actions"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="2dp"
+            android:gravity="end|center_vertical"
             android:orientation="horizontal"
             android:visibility="gone" />
     </LinearLayout>

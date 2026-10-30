@@ -119,6 +119,8 @@ export type AgentsDeps = {
   holdMs: number;
   /** Écrit une ligne dans le terminal d'une session (`orca terminal send`). */
   sendText: (handle: string, text: string) => Promise<void>;
+  /** Envoie un message dans un chat Orca (`agentSession.send`), `session` = `claude_<…>` de la clé de son volet. */
+  sendChat: (session: string, text: string) => Promise<void>;
   /** Interrompt le tour en cours d'une session (Échap dans son terminal Orca). */
   interruptSession: (handle: string) => Promise<void>;
   /** Amène une session devant sur l'ordinateur (terminal Orca, chat Orca, ou Orca seulement). */
@@ -208,6 +210,8 @@ export const LIMITS = {
   description: 120,
   line: 120,
   free: 500,
+  /** Message rapide à une session : un prompt dicté d'une minute tient dedans (la route en accepte autant). */
+  message: 2000,
 };
 
 /** Texte venu de l'agent : sans caractères de contrôle, tronqué. */
@@ -223,6 +227,9 @@ export function chatTab(paneKey: string): string | null {
   const m = /^structured-agent-session-([\w-]+):/.exec(paneKey);
   return m ? `agent-session:${m[1]}` : null;
 }
+
+/** Session d'un chat Orca, d'après son onglet : `agent-session:<id>` → `<id>`. */
+const chatSession = (s: { orcaTab: string | null }) => s.orcaTab?.slice("agent-session:".length) || null;
 
 export function ticketOf(branch: string | null): string | null {
   return /(?:^|[/_-])([A-Z][A-Z0-9]+-\d+)(?=$|[/_-])/.exec(branch ?? "")?.[1] ?? null;
@@ -715,7 +722,7 @@ export function createAgents(deps: AgentsDeps) {
       resumeArmed: state === "limit" && s.resumeArmed,
       askId: s.ask?.id ?? null,
       askKind: s.ask?.kind ?? null,
-      canSend: Boolean(s.handle) && state !== "working" && state !== "waiting",
+      canSend: Boolean(s.handle || chatSession(s)) && state !== "working" && state !== "waiting",
       canFocus: Boolean(s.handle) || s.inOrca,
       canInterrupt: Boolean(s.handle) && state === "working",
     };
@@ -939,16 +946,18 @@ export function createAgents(deps: AgentsDeps) {
     return s ? { handle: s.handle, inOrca: s.inOrca, state: effectiveState(s) } : null;
   }
 
-  /** Message rapide à une session au repos, seulement si on sait la joindre de façon fiable (terminal Orca). */
+  /** Message rapide à une session au repos : dans son terminal Orca, ou dans son chat Orca. */
   async function send(sessionId: string, text: string) {
     const s = sessions.get(sessionId);
     if (!s) throw new AnswerError("Cette session n'existe plus", 404);
     const state = effectiveState(s);
     if (state === "working" || state === "waiting") throw new AnswerError("La session travaille : attends qu'elle ait fini", 409);
-    if (!s.handle) throw new AnswerError("Cette session n'est pas dans un terminal Orca : impossible de lui écrire d'ici", 409);
-    const line = cut(text.replace(/[\r\n]+/g, " "), LIMITS.free);
+    const chat = chatSession(s);
+    if (!s.handle && !chat) throw new AnswerError("Cette session n'est pas dans Orca : impossible de lui écrire d'ici", 409);
+    const line = cut(text.replace(/[\r\n]+/g, " "), LIMITS.message);
     if (!line) throw new AnswerError("Message vide");
-    await deps.sendText(s.handle, line);
+    if (s.handle) await deps.sendText(s.handle, line);
+    else if (chat) await deps.sendChat(chat, line);
     setState(s, "working", true);
   }
 
