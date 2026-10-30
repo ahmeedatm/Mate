@@ -75,7 +75,7 @@ class SettingsFragment :
     private lateinit var tabs: List<Pair<View, View>>
 
     /** Onglet Personnalisation affiché (sinon Configuration) ; gardé quand un thème recrée l'écran. */
-    private var optionsTab = false
+    private var optionsTab = true
     private lateinit var kioskStatus: TextView
     private lateinit var kioskActions: View
     private lateinit var allowInstalls: SwitchCompat
@@ -128,7 +128,8 @@ class SettingsFragment :
             view.findViewById<View>(R.id.settings_tab_options) to view.findViewById(R.id.settings_options),
         )
         tabs.forEachIndexed { i, (tab, _) -> tab.setOnClickListener { showTab(options = i == 1) } }
-        showTab(options = state?.getBoolean(KEY_OPTIONS_TAB) ?: false)
+        // Personnalisation d'abord : c'est l'onglet qu'on ouvre le plus.
+        showTab(options = state?.getBoolean(KEY_OPTIONS_TAB) ?: true)
         computers = view.findViewById(R.id.settings_computers)
         view.findViewById<Button>(R.id.settings_add_computer).setOnClickListener { adder.search() }
         view.findViewById<Button>(R.id.settings_plugins).setOnClickListener { main.showPlugins() }
@@ -158,6 +159,9 @@ class SettingsFragment :
         wifiStatus = view.findViewById(R.id.settings_wifi_status)
         view.findViewById<Button>(R.id.settings_wifi).setOnClickListener { wifi.show() }
         view.findViewById<Button>(R.id.settings_tablet_remote).setOnClickListener { openOnComputer() }
+        view.findViewById<ImageView>(R.id.settings_remote_icon)
+            .setImageDrawable(Look.badge(requireContext(), R.drawable.ic_laptop, themeColor(requireContext(), R.attr.c_hue_violet), sizeDp = 48, iconDp = 26))
+        renderRemote()
         updatesStatus = view.findViewById(R.id.settings_updates_status)
         updates = view.findViewById(R.id.settings_updates)
         essaisTitle = view.findViewById(R.id.settings_essais_title)
@@ -244,6 +248,7 @@ class SettingsFragment :
             renderSwitchApp()
             loadAutoJoin()
             renderTalkBack()
+            renderRemote()
         }
     }
 
@@ -460,10 +465,14 @@ class SettingsFragment :
     private fun setUpThemes(rows: LinearLayout) {
         val ctx = requireContext()
         val current = AppTheme.current(ctx)
-        for ((index, group) in AppTheme.entries.partition { !it.demo }.toList().withIndex()) {
+        val groups = AppTheme.entries.groupBy { it.group }.toSortedMap()
+        // Même largeur de vignette dans tous les groupes : les plus petits sont complétés de places vides.
+        val columns = groups.values.maxOf { it.size }
+        for ((index, entry) in groups.entries.withIndex()) {
+            val (group, themes) = entry
             rows.addView(
                 TextView(ctx).apply {
-                    setText(if (index == 0) R.string.theme_group_main else R.string.theme_group_personas)
+                    setText(group.label)
                     setTextColor(themeColor(ctx, R.attr.c_text_dim))
                     textSize = 14f
                 },
@@ -472,10 +481,8 @@ class SettingsFragment :
                 },
             )
             val row = LinearLayout(ctx)
-            // Même largeur de vignette dans les deux groupes : le plus petit est complété de places vides.
-            val columns = AppTheme.entries.partition { !it.demo }.toList().maxOf { it.size }
-            for (theme in group) row.addView(themeTile(theme, theme == current), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            repeat(columns - group.size) { row.addView(View(ctx), LinearLayout.LayoutParams(0, 0, 1f)) }
+            for (theme in themes) row.addView(themeTile(theme, theme == current), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            repeat(columns - themes.size) { row.addView(View(ctx), LinearLayout.LayoutParams(0, 0, 1f)) }
             rows.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(8)
             })
@@ -700,6 +707,12 @@ class SettingsFragment :
     }
 
     /** Ouvre sur l'ordinateur la page du compagnon, carte Réglages de la tablette en avant. */
+    /** « Régler depuis l'ordi » en tête de Personnalisation, seulement avec un ordinateur appairé. */
+    private fun renderRemote() {
+        view?.findViewById<View>(R.id.settings_remote_card)?.visibility =
+            if (Computers.active(requireContext()) != null) View.VISIBLE else View.GONE
+    }
+
     private fun openOnComputer() {
         val ctx = requireContext()
         viewLifecycleOwner.lifecycleScope.launch {

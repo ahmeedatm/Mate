@@ -460,12 +460,21 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
                 if (placed.size == WidgetSize.S) compact()
             }
             audio = bar
+            // W (ligne basse du profil Deck) : titre et barre côte à côte, empilés ils ne tiennent pas en hauteur.
+            val wide = placed.size == WidgetSize.W
             view.addView(
                 LinearLayout(context).asCard(16).apply {
-                    orientation = LinearLayout.VERTICAL
+                    orientation = if (wide) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
                     gravity = Gravity.CENTER_VERTICAL
                     addView(cardTitle(R.string.computer_volume, R.drawable.ic_volume))
-                    addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+                    addView(
+                        bar,
+                        if (wide) {
+                            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(16) }
+                        } else {
+                            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) }
+                        },
+                    )
                 },
                 fill,
             )

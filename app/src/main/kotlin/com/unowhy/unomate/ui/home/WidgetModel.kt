@@ -47,7 +47,7 @@ enum class WidgetType(
 ) {
     CLOCK("clock", R.string.widget_clock, R.string.widget_clock_desc, R.drawable.ic_clock, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.S, WidgetSize.M, WidgetSize.W), false),
     NEXT("next", R.string.widget_next, R.string.widget_next_desc, R.drawable.ic_event, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.V, WidgetSize.S), true),
-    AGENDA("agenda", R.string.widget_agenda, R.string.widget_agenda_desc, R.drawable.ic_event, listOf(WidgetSize.L, WidgetSize.T, WidgetSize.M), true),
+    AGENDA("agenda", R.string.widget_agenda, R.string.widget_agenda_desc, R.drawable.ic_event, listOf(WidgetSize.L, WidgetSize.T, WidgetSize.M, WidgetSize.V), true),
     TASKS("tasks", R.string.widget_tasks, R.string.widget_tasks_desc, R.drawable.ic_tasks, listOf(WidgetSize.L, WidgetSize.T, WidgetSize.V, WidgetSize.M), true),
     FOCUS("focus", R.string.widget_focus, R.string.widget_focus_desc, R.drawable.ic_timer, listOf(WidgetSize.S, WidgetSize.V, WidgetSize.L), false),
     WATER("water", R.string.widget_water, R.string.widget_water_desc, R.drawable.ic_water, listOf(WidgetSize.S, WidgetSize.M), false),
@@ -104,6 +104,9 @@ enum class WidgetType(
 }
 
 /** Un widget posé : page, case en haut à gauche, taille, réglages propres (touches choisies, ville, texte). */
+/** Taille et case où la poignée calerait un widget ([HomeLayout.pickSize]). */
+data class Fit(val size: WidgetSize, val col: Int, val row: Int)
+
 class Placed(
     val type: WidgetType,
     var size: WidgetSize,
@@ -219,17 +222,17 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         names[index] = name
     }
 
-    /** Premier nom du modèle `pattern` (« Écran %d ») numéroté à partir de `from` que aucun profil ne porte. */
-    fun freeName(pattern: String, from: Int = 2): String =
-        generateSequence(from) { it + 1 }.map { pattern.format(it) }.first { it !in names }
+    /** Premier nom du modèle `pattern` (« Écran %d ») qu'aucun profil ne porte, du plus petit numéro : un numéro libéré resert. */
+    fun freeName(pattern: String): String =
+        generateSequence(1) { it + 1 }.map { pattern.format(it) }.first { it !in names }
 
     /** `base` s'il est libre, sinon « base 2 », « base 3 »… (deux profils créés du même modèle). */
     fun uniqueName(base: String): String =
         if (base !in names) base else generateSequence(2) { it + 1 }.map { "$base $it" }.first { it !in names }
 
     /**
-     * Donne un nom à chaque profil qui n'en a pas : `first` au premier, aux autres le numéro de leur place (ou le
-     * suivant libre) : le 3e écran créé s'appelle « Écran 3 ». Renomme aussi les noms automatiques d'avant : « Profil 2 »
+     * Donne un nom à chaque profil qui n'en a pas : `first` au premier, aux autres le plus petit numéro libre (Écran 1
+     * et 2 supprimés, le suivant créé reprend « Écran 1 », pas la place dans la liste où comptent Deck et Réunion). Renomme aussi les noms automatiques d'avant : « Profil 2 »
      * au modèle `pattern`, même numéro, et « Bureau » de l'Accueil en `first`. Vrai si un nom a été posé.
      */
     fun nameMissing(first: String, pattern: String): Boolean {
@@ -247,7 +250,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         }
         for (i in names.indices) {
             if (names[i] == null) {
-                names[i] = if (i == 0) first else freeName(pattern, from = i + 1)
+                names[i] = if (i == 0) first else freeName(pattern)
                 named = true
             }
         }
@@ -304,14 +307,29 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
     }
 
     /**
-     * Taille de `placed` la plus proche de la zone tirée (`w` × `h` cases, fractions admises) parmi celles que son type
-     * accepte et qui tiennent à sa case (haut gauche gardé) sans chevaucher ; à distance égale, la plus petite. Null si
-     * aucune ne tient.
+     * Taille et case de `placed` les plus proches de la zone tirée (bords `left`, `top`, `right`, `bottom` en cases,
+     * fractions admises) parmi les tailles que son type accepte, placées sans chevaucher et en gardant sa case en haut à
+     * gauche : un widget du bord droit ou du bas grandit vers la gauche ou le haut. À distance égale, la plus petite.
+     * Null si aucune ne tient.
      */
-    fun pickSize(placed: Placed, w: Float, h: Float): WidgetSize? =
+    fun pickSize(placed: Placed, left: Float, top: Float, right: Float, bottom: Float): Fit? =
         placed.type.sizes
-            .filter { fits(placed.page, placed.col, placed.row, it, ignore = placed) }
-            .minWithOrNull(compareBy({ (it.w - w) * (it.w - w) + (it.h - h) * (it.h - h) }, { it.w * it.h }))
+            .flatMap { size ->
+                (placed.row downTo placed.row - size.h + 1).flatMap { r -> (placed.col downTo placed.col - size.w + 1).map { c -> Fit(size, c, r) } }
+            }
+            .filter { fits(placed.page, it.col, it.row, it.size, ignore = placed) }
+            .minWithOrNull(
+                compareBy(
+                    {
+                        val dl = it.col - left
+                        val dt = it.row - top
+                        val dr = it.col + it.size.w - right
+                        val db = it.row + it.size.h - bottom
+                        dl * dl + dt * dt + dr * dr + db * db
+                    },
+                    { it.size.w * it.size.h },
+                ),
+            )
 
     /** Première case libre (lecture de gauche à droite, de haut en bas) où `size` tient, ou null. */
     fun freeSpot(page: Int, size: WidgetSize, ignore: Placed? = null): Pair<Int, Int>? {
@@ -417,12 +435,11 @@ enum class Template(
         Placed(WidgetType.WATER, WidgetSize.M, 0, 2, 3),
     )),
     WORK_CADRAN(R.string.template_work, R.string.template_work_cadran_desc, listOf(
-        // L'heure est déjà en haut à droite : la journée (salutation, prochaine réunion) plutôt qu'une grande heure.
-        Placed(WidgetType.DAY, WidgetSize.W, 0, 0, 0),
+        // La grande heure (météo, eau) en haut, puis l'agenda, le Focus, les applis du travail (Teams, Outlook, Chrome…).
+        Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
         Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
-        Placed(WidgetType.NEXT, WidgetSize.V, 0, 0, 2),
-        Placed(WidgetType.TASKS, WidgetSize.V, 0, 1, 2),
-        // Les applis du travail (Teams, Outlook, Chrome, VS Code…) plutôt que le Focus, qui reste dans la barre.
+        Placed(WidgetType.AGENDA, WidgetSize.V, 0, 0, 2),
+        Placed(WidgetType.FOCUS, WidgetSize.V, 0, 1, 2),
         Placed(WidgetType.APPS, WidgetSize.V, 0, 2, 2),
         // Touches remplies d'office (Verrouiller, Couper le micro, Ne pas déranger…) : pas de case vide au premier lancement.
         Placed(WidgetType.KEYS, WidgetSize.V, 0, 3, 2, JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")),

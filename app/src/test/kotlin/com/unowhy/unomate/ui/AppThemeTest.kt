@@ -14,8 +14,19 @@ class AppThemeTest {
     private val context = FakeContext()
 
     @Test
-    fun `Cadran, Cadran nuit, Retro et Contraste d'abord, puis les themes des personas`() {
-        assertEquals(listOf(AppTheme.CADRAN, AppTheme.CADRAN_NUIT, AppTheme.CLAIR, AppTheme.SOMBRE, AppTheme.RETRO, AppTheme.CONTRASTE), AppTheme.entries.filter { !it.demo })
+    fun `Clair d'abord, puis par groupe, sobres, retro, accessibilite et personas`() {
+        assertEquals(AppTheme.CLAIR, AppTheme.entries.first())
+        assertEquals(
+            mapOf(
+                ThemeGroup.SOBRE to listOf(AppTheme.CLAIR, AppTheme.SOMBRE),
+                ThemeGroup.RETRO to listOf(AppTheme.CADRAN, AppTheme.CADRAN_NUIT, AppTheme.RETRO),
+                ThemeGroup.ACCESSIBILITE to listOf(AppTheme.CONTRASTE),
+                ThemeGroup.PERSONAS to listOf(AppTheme.REGISTRE, AppTheme.STUDIO, AppTheme.MAISON, AppTheme.TABLEAU, AppTheme.TERMINAL),
+            ),
+            AppTheme.entries.groupBy { it.group },
+        )
+        // Groupes dans l'ordre de la liste : chaque groupe d'un seul tenant.
+        assertEquals(AppTheme.entries.map { it.group }.sorted(), AppTheme.entries.map { it.group })
         assertEquals(
             listOf(AppTheme.REGISTRE, AppTheme.STUDIO, AppTheme.MAISON, AppTheme.TABLEAU, AppTheme.TERMINAL),
             AppTheme.entries.filter { it.demo },
@@ -52,28 +63,28 @@ class AppThemeTest {
     }
 
     @Test
-    fun `le theme du persona s'applique pendant la demo et Cadran revient en la quittant`() {
+    fun `le theme du persona s'applique pendant la demo et Clair revient en la quittant`() {
         for (persona in Persona.entries.filter { it.theme != "CONTRASTE" }) {
             val layout = persona.layout(persona.profiles.map { it.name.toString() }, "Réunion", emptyMap(), null)
             Demo.start(context, persona, layout, cadran = true)
             assertEquals(persona.theme, AppTheme.current(context).name)
             assertTrue(AppTheme.current(context).demo)
             assertTrue(Demo.quit(context, cadran = true))
-            assertEquals(AppTheme.CADRAN, AppTheme.current(context))
+            assertEquals(AppTheme.CLAIR, AppTheme.current(context))
         }
         assertFalse(Demo.quit(context, cadran = true))
     }
 
     @Test
-    fun `sans choix enregistre, Cadran`() {
-        assertEquals(AppTheme.CADRAN, AppTheme.current(context))
+    fun `sans choix enregistre, Clair`() {
+        assertEquals(AppTheme.CLAIR, AppTheme.current(context))
     }
 
     @Test
-    fun `un ancien theme enregistre retombe sur Cadran`() {
+    fun `un ancien theme enregistre retombe sur Clair`() {
         for (old in listOf("NUIT", "NEON", "CHAUD")) {
             Prefs.setTheme(context, old)
-            assertEquals(AppTheme.CADRAN, AppTheme.current(context))
+            assertEquals(AppTheme.CLAIR, AppTheme.current(context))
         }
     }
 
@@ -104,8 +115,8 @@ class AppThemeTest {
     }
 
     @Test
-    fun `un nom de theme inconnu retombe sur Cadran`() {
+    fun `un nom de theme inconnu retombe sur Clair`() {
         Prefs.setTheme(context, "CONTRASTE_ELEVE")
-        assertEquals(AppTheme.CADRAN, AppTheme.current(context))
+        assertEquals(AppTheme.CLAIR, AppTheme.current(context))
     }
 }

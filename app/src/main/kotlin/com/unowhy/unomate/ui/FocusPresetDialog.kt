@@ -6,7 +6,6 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.StringRes
-import androidx.appcompat.app.AlertDialog
 import com.unowhy.unomate.Prefs
 import com.unowhy.unomate.R
 import com.unowhy.unomate.focus.FocusPresets
@@ -22,8 +21,7 @@ object FocusPresetDialog {
         val start = if (FocusPresets.isFixed(current)) Prefs.focusCustom(context) else current
         var focus = start.focus
         var pause = start.pause
-        val pad = context.dp(24)
-        val box = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; setPadding(pad, pad / 3, pad, 0) }
+        val box = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         val inflater = LayoutInflater.from(context)
 
         fun stepper(@StringRes label: Int, value: () -> Int, change: (Boolean) -> Unit): View {
@@ -38,12 +36,21 @@ object FocusPresetDialog {
         }
 
         box.addView(stepper(R.string.focus_phase_work, { focus }) { up -> focus = FocusPresets.stepFocus(focus, up) })
-        box.addView(stepper(R.string.focus_phase_break, { pause }) { up -> pause = FocusPresets.stepPause(pause, up) })
-        AlertDialog.Builder(context)
-            .setTitle(R.string.focus_custom_title)
-            .setView(box)
-            .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.focus_custom_apply) { _, _ -> onChosen(FocusPresets.Preset(focus, pause)) }
-            .showImmersive()
+        box.addView(
+            stepper(R.string.focus_phase_break, { pause }) { up -> pause = FocusPresets.stepPause(pause, up) },
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = context.dp(8) },
+        )
+        showCadranDialog(
+            context,
+            title = context.getString(R.string.focus_custom_title),
+            subtitle = context.getString(R.string.focus_custom_subtitle),
+            icon = Look.badge(context, R.drawable.ic_timer, themeColor(context, R.attr.c_hue_red), sizeDp = 48, iconDp = 26),
+            body = box,
+            primary = R.string.focus_custom_apply,
+            widthDp = WIDTH_DP,
+        ) { onChosen(FocusPresets.Preset(focus, pause)) }
     }
+
+    /** Assez large pour le titre, l'aide et les deux lignes − / + sans tasser les chiffres. */
+    private const val WIDTH_DP = 560
 }

@@ -53,7 +53,7 @@ class TabletSettingsTest {
     @Test
     fun `lit les reglages, luminosite du systeme tant qu'aucune n'est choisie`() {
         val first = TabletSettings.read(context, systemBrightness = 0.5f, volume = 0.4f)
-        assertEquals("CADRAN", first.getString("theme"))
+        assertEquals("CLAIR", first.getString("theme"))
         assertEquals(0.5, first.getDouble("brightness"), 0.001)
         assertEquals(0.4, first.getDouble("volume"), 0.001)
         assertTrue(first.getBoolean("nightDim"))

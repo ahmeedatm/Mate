@@ -29,6 +29,7 @@ import com.unowhy.unomate.ui.home.DayLineWidget
 import com.unowhy.unomate.ui.home.DeckOverlays
 import com.unowhy.unomate.ui.home.DeckPagesCache
 import com.unowhy.unomate.ui.home.Down
+import com.unowhy.unomate.ui.home.Fit
 import com.unowhy.unomate.ui.home.HomeHost
 import com.unowhy.unomate.ui.home.HomeLayout
 import com.unowhy.unomate.ui.home.HomeWidget
@@ -678,11 +679,13 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         grid.invalidate()
     }
 
-    override fun pickSize(placed: Placed, w: Float, h: Float) = layout.pickSize(placed, w, h)
+    override fun pickSize(placed: Placed, left: Float, top: Float, right: Float, bottom: Float) = layout.pickSize(placed, left, top, right, bottom)
 
-    /** Poignée lâchée : le widget prend la taille choisie, à sa case. */
-    override fun onResize(placed: Placed, size: WidgetSize) {
-        placed.size = size
+    /** Poignée lâchée : le widget prend la taille et la case choisies (sa case d'origine reste couverte). */
+    override fun onResize(placed: Placed, fit: Fit) {
+        placed.size = fit.size
+        placed.col = fit.col
+        placed.row = fit.row
         widgets[placed]?.applySize()
         grid.requestLayout()
         grid.invalidate()
