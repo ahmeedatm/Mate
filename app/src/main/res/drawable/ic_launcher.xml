@@ -1,19 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Icône de l'appli (même dessin que backend/assets/compagnon.svg). Android 8+ : drawable-anydpi-v26/ic_launcher.xml. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="48dp" android:height="48dp"
-    android:viewportWidth="256" android:viewportHeight="256">
-    <path android:pathData="M64,8 h128 a56,56 0 0 1 56,56 v128 a56,56 0 0 1 -56,56 h-128 a56,56 0 0 1 -56,-56 v-128 a56,56 0 0 1 56,-56 z">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="linear" android:startX="8" android:startY="8" android:endX="248" android:endY="248">
-                <item android:offset="0" android:color="#FF6C5CE7" />
-                <item android:offset="1" android:color="#FF1FC7A8" />
-            </gradient>
-        </aapt:attr>
-    </path>
-    <path android:fillColor="#FFFFFF" android:pathData="M70,58 h116 a30,30 0 0 1 30,30 v62 a30,30 0 0 1 -30,30 h-74 l-34,26 l6,-26 h-14 a30,30 0 0 1 -30,-30 v-62 a30,30 0 0 1 30,-30 z" />
-    <path android:fillColor="#3B2F8F" android:pathData="M104,94 a10,10 0 0 1 10,10 v14 a10,10 0 0 1 -20,0 v-14 a10,10 0 0 1 10,-10 z M152,94 a10,10 0 0 1 10,10 v14 a10,10 0 0 1 -20,0 v-14 a10,10 0 0 1 10,-10 z" />
-    <path android:strokeColor="#3B2F8F" android:strokeWidth="10" android:strokeLineCap="round" android:pathData="M100,146 q28,22 56,0" />
-    <path android:fillColor="#FFD84D" android:pathData="M206,30 q4,18 20,22 q-16,4 -20,22 q-4,-18 -20,-22 q16,-4 20,-22 z" />
+    android:viewportWidth="512" android:viewportHeight="512">
+    <path android:fillColor="#CA0730" android:pathData="M114,2 h284 a112,112 0 0 1 112,112 v284 a112,112 0 0 1 -112,112 h-284 a112,112 0 0 1 -112,-112 v-284 a112,112 0 0 1 112,-112 z" />
+    <group android:translateX="95.12" android:translateY="132.98" android:scaleX="1.5544" android:scaleY="1.5544">
+        <path android:fillColor="#FFFFFF" android:pathData="M51.5,0 h14 a4,4 0 0 1 4,4 v35.5 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-35.5 a4,4 0 0 1 4,-4 z M141.5,0 h14 a4,4 0 0 1 4,4 v35.5 a4,4 0 0 1 -4,4 h-14 a4,4 0 0 1 -4,-4 v-35.5 a4,4 0 0 1 4,-4 z" />
+        <group android:translateY="68">
+            <path android:fillColor="#FFFFFF" android:strokeColor="#FFFFFF" android:strokeWidth="4" android:strokeLineJoin="round" android:pathData="M9,4 L27.5,4 L27.5,36 L103.5,74.5 L179.5,36 L179.5,4 L198,4 L198,48 L103.5,96.4 L9,48 Z" />
+        </group>
+    </group>
 </vector>

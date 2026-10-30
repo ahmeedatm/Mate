@@ -5,6 +5,7 @@ import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import { config } from "./config.ts";
 import { startCallWatch } from "./calls.ts";
+import { activePersona, demoAnswer } from "./demo-mock.ts";
 import { clipboardHistory, watchClipboard } from "./clipboard-history.ts";
 import { startEventReminders } from "./events.ts";
 import { GitLabError } from "./gitlab.ts";
@@ -13,25 +14,32 @@ import { startAutoJoin } from "./meetings.ts";
 import { notificationHistory, watchNotifications } from "./notifications.ts";
 import { canControl, clipboardStamp, getClipboard, isMac, osName, readNotifications } from "./os.ts";
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
-import { sendToTablet } from "./tablet.ts";
+import { sendToTablet, tabletStatus } from "./tablet.ts";
+import { startMeetingWatch } from "./meeting-watch.ts";
+import { callingDeckApps } from "./deck.ts";
 import { startMenuBar } from "./mac/menubar.ts";
 import { loadTls } from "./tls.ts";
 import { startReminders } from "./tasks.ts";
 import agentRoutes from "./routes/agents.ts";
+import awayRoutes from "./routes/away.ts";
 import browserRoutes from "./routes/browser.ts";
 import calendarRoutes from "./routes/calendar.ts";
 import callRoutes from "./routes/calls.ts";
 import cameraRoutes from "./routes/camera.ts";
 import deckRoutes from "./routes/deck.ts";
+import demoRoutes from "./routes/demo.ts";
 import docRoutes from "./routes/docs.ts";
 import gitlabRoutes from "./routes/gitlab.ts";
 import jiraRoutes from "./routes/jira.ts";
 import localRoutes from "./routes/local.ts";
+import localConfigRoutes from "./routes/local-config.ts";
+import localProfileRoutes from "./routes/local-profiles.ts";
 import mailRoutes from "./routes/mail.ts";
 import notificationRoutes from "./routes/notifications.ts";
 import pairingRoutes from "./routes/pairing.ts";
 import pluginRoutes from "./routes/plugins.ts";
 import pointerRoutes from "./routes/pointer.ts";
+import presentRoutes from "./routes/present.ts";
 import portableRoutes from "./routes/portable.ts";
 import systemRoutes from "./routes/system.ts";
 import tabletRoutes from "./routes/tablet.ts";
@@ -80,6 +88,11 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
       url,
     )) ||
     (method === "PUT" && (url === "/local/calendar" || url === "/local/tablet/settings")) ||
+    // Panneau de configuration (routes/local-profiles.ts, routes/local-config.ts) : écritures en JSON seulement (PUT,
+    // DELETE et POST à corps objet), pas envoyables par un autre site sans pré-vérification CORS.
+    (method === "GET" && /^\/local\/(tablet\/layout|config\/[a-z0-9/-]+)(\?|$)/.test(url)) ||
+    (method === "PUT" && url === "/local/tablet/layout") ||
+    (/^(POST|PUT|DELETE)$/.test(method) && /^\/local\/config\/[a-z0-9/-]+$/.test(url)) ||
     (method === "POST" && (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update")) ||
     // Panneau de l'appli portable (routes/portable.ts) : corps JSON exigé, pas envoyable par un autre site.
     (method === "POST" && /^\/local\/(autostart|firewall|legacy\/remove|forget|quit|update)$/.test(url)) ||
@@ -115,6 +128,15 @@ app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validat
   reply.send(err);
 });
 
+// Démo (src/demo-mock.ts) : tant qu'un persona est actif ET que la tablette envoie le même (en-tête X-Demo-Persona), les
+// routes qui lisent l'ordinateur répondent avec ses données fictives, et leurs actions changent cet état fictif sans
+// toucher à l'ordinateur. Tablette sans persona ou avec un autre : les vraies données. Avant le contrôle de l'OS : la démo
+// marche aussi sur un ordinateur que le compagnon ne pilote pas.
+app.addHook("preHandler", async (req, reply) => {
+  const answer = await demoAnswer(req.method, req.routeOptions.url ?? "", req);
+  if (answer !== undefined) return reply.send(answer);
+});
+
 // Pilotage de l'ordinateur (deck d'applis et de raccourcis, son, micro) : macOS et Windows seulement.
 // Ailleurs, le deck se lit et ses touches perso se modifient ; toucher une touche répond 501 (os.ts : unsupported).
 const DECK_ANYWHERE = /^\/deck(\/keys\/\d+|\/run)?(\?|$)/;
@@ -124,6 +146,7 @@ app.addHook("preHandler", async (req, reply) => {
     ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) ||
       req.url.startsWith("/system") ||
       req.url.startsWith("/pointer") ||
+      req.url.startsWith("/present") ||
       req.url.startsWith("/gitlab") ||
       req.url.startsWith("/notifications"))
   ) {
@@ -140,12 +163,17 @@ app.addContentTypeParser("application/gzip", { parseAs: "buffer", bodyLimit: 100
 
 app.register(pairingRoutes, { authorized, fingerprint: tls?.fingerprint ?? null });
 app.register(localRoutes);
+app.register(localProfileRoutes);
+app.register(localConfigRoutes);
 app.register(portableRoutes);
 app.register(deckRoutes);
 app.register(pluginRoutes);
+app.register(demoRoutes);
 app.register(windowRoutes);
+app.register(awayRoutes);
 app.register(systemRoutes);
 app.register(pointerRoutes);
+app.register(presentRoutes);
 app.register(notificationRoutes);
 app.register(docRoutes);
 app.register(updateRoutes);
@@ -168,6 +196,14 @@ startReminders(remind);
 startEventReminders(remind);
 // Appel entrant : prévenir la tablette sans attendre sa réponse (la sonnerie ne doit pas bloquer la surveillance).
 void startCallWatch((event) => void sendToTablet({ type: "call", ...event }, 30_000));
+// Réunion en cours : la tablette passe sur son profil Réunion (et en revient), seulement tant qu'elle est connectée.
+if (canControl) {
+  startMeetingWatch((event) => void sendToTablet({ type: "meeting", ...event }), {
+    connected: () => tabletStatus().connected,
+    // Démo : aucun appel (le vrai appel de l'ordinateur ferait quitter l'écran d'arrivée du persona).
+    liveApps: async () => ((await activePersona()) ? [] : callingDeckApps()),
+  });
+}
 // Notifications de l'ordinateur : base du système relue toutes les 2 s, chaque nouvelle envoyée à la tablette sans attendre.
 if (canControl) {
   watchNotifications(

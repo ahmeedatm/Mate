@@ -1,3 +1,4 @@
+import { TILE_SYMBOLS } from "../screens.ts";
 import { createReadStream } from "node:fs";
 import type { FastifyInstance } from "fastify";
 import {
@@ -7,6 +8,7 @@ import {
   findTile,
   homeFeatures,
   LINK_SUGGESTIONS,
+  liveDeckApps,
   loadDeck,
   removeDeckApp,
   removeDeckLink,
@@ -17,8 +19,6 @@ import {
 import { openMediaLink } from "../music.ts";
 import {
   focusWindow,
-  isAppInCall,
-  isAppRunning,
   launchApp,
   listApps,
   listButtons,
@@ -29,9 +29,46 @@ import {
   placeWindow,
   voiceState,
 } from "../os.ts";
-import { keySchema, loadKeys, saveKey, MAX_SLOTS, type PersoKey } from "../perso.ts";
+import { keySchema, loadKeyPages, loadKeys, saveKey, saveKeyPage, MAX_SLOTS, type PersoKey } from "../perso.ts";
 import type { Layout, WindowTarget } from "../screens.ts";
 import { windowTarget } from "./windows.ts";
+
+export const appNameBody = {
+  type: "object",
+  required: ["name"],
+  properties: { name: { type: "string", minLength: 1, maxLength: 200 } },
+};
+
+export const linkBody = {
+  type: "object",
+  required: ["url"],
+  properties: { url: { type: "string", minLength: 1, maxLength: 2000 }, label: { type: "string", maxLength: 40 } },
+};
+
+export const slotParam = {
+  type: "object",
+  required: ["slot"],
+  properties: { slot: { type: "integer", minimum: 0, maximum: MAX_SLOTS - 1 } },
+};
+
+export const pageSlotParams = {
+  type: "object",
+  required: ["page", "slot"],
+  properties: { page: { type: "integer", minimum: 0, maximum: 49 }, slot: slotParam.properties.slot },
+};
+export type PageSlot = { page: number; slot: number };
+
+/** De quoi remplir l'éditeur de touche : applis installées, raccourcis Apple (Mac), écrans. */
+export async function deckCatalog() {
+  const [apps, shortcuts, displays] = await Promise.all([
+    listApps(),
+    listShortcuts(),
+    Promise.resolve()
+      .then(listDisplays)
+      .catch(() => []),
+  ]);
+  return { os: osName, apps, shortcuts, displays: displays.map((d) => d.label) };
+}
 
 /** Deck : pages et tuiles, page Apps, page Média, touches perso, fenêtres de l'appli d'une tuile, commande vocale « ouvre X ». */
 export default async function deckRoutes(app: FastifyInstance) {
@@ -41,6 +78,7 @@ export default async function deckRoutes(app: FastifyInstance) {
       pages: pages.map((p) => ({
         title: p.title,
         editable: p.editable ?? false,
+        keyPage: p.keyPage ?? null,
         apps: p.apps ?? false,
         meeting: p.meeting ?? false,
         app: p.app ?? null,
@@ -54,6 +92,7 @@ export default async function deckRoutes(app: FastifyInstance) {
                 id: t.id,
                 label: t.label,
                 type: t.action.type,
+                symbol: t.symbol && (TILE_SYMBOLS as readonly string[]).includes(t.symbol) ? t.symbol : null,
                 glyph: t.glyph ?? null,
                 color: t.color ?? null,
                 when: t.when ?? null,
@@ -95,25 +134,17 @@ export default async function deckRoutes(app: FastifyInstance) {
 
   // --- Page Apps : profil de base, complété depuis la tablette par les applis installées sur le Mac
 
-  app.post<{ Body: { name: string } }>(
-    "/deck/apps",
-    { schema: { body: { type: "object", required: ["name"], properties: { name: { type: "string", minLength: 1, maxLength: 200 } } } } },
-    async (req, reply) => {
-      if (!(await listApps()).includes(req.body.name)) return reply.code(404).send({ error: "Appli introuvable sur l'ordinateur" });
-      return { ok: true, id: await addDeckApp(req.body.name) };
-    },
-  );
+  app.post<{ Body: { name: string } }>("/deck/apps", { schema: { body: appNameBody } }, async (req, reply) => {
+    if (!(await listApps()).includes(req.body.name)) return reply.code(404).send({ error: "Appli introuvable sur l'ordinateur" });
+    return { ok: true, id: await addDeckApp(req.body.name) };
+  });
 
   /** Commande vocale « ouvre X » : appli installée qui n'est pas dans le deck. */
-  app.post<{ Body: { name: string } }>(
-    "/apps/launch",
-    { schema: { body: { type: "object", required: ["name"], properties: { name: { type: "string", minLength: 1, maxLength: 200 } } } } },
-    async (req, reply) => {
-      if (!(await listApps()).includes(req.body.name)) return reply.code(404).send({ error: "Appli introuvable sur l'ordinateur" });
-      await launchApp(req.body.name);
-      return { ok: true };
-    },
-  );
+  app.post<{ Body: { name: string } }>("/apps/launch", { schema: { body: appNameBody } }, async (req, reply) => {
+    if (!(await listApps()).includes(req.body.name)) return reply.code(404).send({ error: "Appli introuvable sur l'ordinateur" });
+    await launchApp(req.body.name);
+    return { ok: true };
+  });
 
   app.delete<{ Params: { id: string } }>("/deck/apps/:id", async (req) => {
     await removeDeckApp(req.params.id);
@@ -124,25 +155,13 @@ export default async function deckRoutes(app: FastifyInstance) {
 
   app.get("/deck/links", async () => ({ links: await deckLinks(), suggestions: LINK_SUGGESTIONS }));
 
-  app.post<{ Body: { url: string; label?: string } }>(
-    "/deck/links",
-    {
-      schema: {
-        body: {
-          type: "object",
-          required: ["url"],
-          properties: { url: { type: "string", minLength: 1, maxLength: 2000 }, label: { type: "string", maxLength: 40 } },
-        },
-      },
-    },
-    async (req, reply) => {
-      try {
-        return { ok: true, id: await addDeckLink(req.body.url, req.body.label) };
-      } catch {
-        return reply.code(400).send({ error: "Adresse invalide (ex. netflix.com)" });
-      }
-    },
-  );
+  app.post<{ Body: { url: string; label?: string } }>("/deck/links", { schema: { body: linkBody } }, async (req, reply) => {
+    try {
+      return { ok: true, id: await addDeckLink(req.body.url, req.body.label) };
+    } catch {
+      return reply.code(400).send({ error: "Adresse invalide (ex. netflix.com)" });
+    }
+  });
 
   app.delete<{ Params: { id: string } }>("/deck/links/:id", async (req) => {
     await removeDeckLink(req.params.id);
@@ -150,21 +169,10 @@ export default async function deckRoutes(app: FastifyInstance) {
   });
 
   /** Cartes de l'Accueil à afficher selon les applis du deck. */
-  app.get("/deck/features", () => homeFeatures());
+  app.get("/deck/features", (req) => homeFeatures(req.headers));
 
   // Applis des pages d'appli (Discord, Teams) en appel en ce moment (micro utilisé) : la tablette leur donne un onglet.
-  app.get("/deck/live", { logLevel: "warn" }, async () => {
-    const pages = (await loadDeck()).filter((p) => p.app);
-    const apps = [...new Set(pages.map((p) => p.app as string))];
-    // Applis hors de la page Apps : onglet seulement pendant un appel, pas tant qu'elles tournent.
-    const callOnly = new Set(apps.filter((a) => pages.filter((p) => p.app === a).every((p) => p.callOnly)));
-    // `open` : l'appli tourne (onglet affiché) ; `apps` : elle utilise le micro, donc en appel.
-    const [open, live] = await Promise.all([
-      Promise.all(apps.map((a) => (callOnly.has(a) ? false : isAppRunning(a).catch(() => false)))),
-      Promise.all(apps.map((a) => isAppInCall(a).catch(() => false))),
-    ]);
-    return { apps: apps.filter((_, i) => live[i]), open: apps.filter((_, i) => open[i] || live[i]) };
-  });
+  app.get("/deck/live", { logLevel: "warn" }, () => liveDeckApps());
 
   /** Boutons cliquables d'une appli ouverte (Windows) : de quoi écrire une étape « appuyer sur un bouton ». */
   app.get<{ Querystring: { app: string; detail?: boolean } }>(
@@ -200,19 +208,7 @@ export default async function deckRoutes(app: FastifyInstance) {
 
   // --- Touches perso (page Perso du deck), modifiables depuis la tablette et par Claude
 
-  const slotParam = { type: "object", required: ["slot"], properties: { slot: { type: "integer", minimum: 0, maximum: MAX_SLOTS - 1 } } };
-
-  /** De quoi remplir l'éditeur de touche : applis installées, raccourcis Apple (Mac), écrans. */
-  app.get("/deck/catalog", async () => {
-    const [apps, shortcuts, displays] = await Promise.all([
-      listApps(),
-      listShortcuts(),
-      Promise.resolve()
-        .then(listDisplays)
-        .catch(() => []),
-    ]);
-    return { os: osName, apps, shortcuts, displays: displays.map((d) => d.label) };
-  });
+  app.get("/deck/catalog", deckCatalog);
 
   app.get<{ Params: { slot: number } }>("/deck/keys/:slot", { schema: { params: slotParam } }, async (req) => ({
     key: (await loadKeys())[req.params.slot] ?? null,
@@ -229,6 +225,28 @@ export default async function deckRoutes(app: FastifyInstance) {
 
   app.delete<{ Params: { slot: number } }>("/deck/keys/:slot", { schema: { params: slotParam } }, async (req) => {
     await saveKey(req.params.slot, null);
+    return { ok: true };
+  });
+
+  // Pages de touches nommées (page `n` de /deck : `keyPage`), mêmes touches que Perso
+
+  app.get<{ Params: PageSlot }>("/deck/pages/:page/keys/:slot", { schema: { params: pageSlotParams } }, async (req, reply) => {
+    const page = (await loadKeyPages())[req.params.page];
+    if (!page) return reply.code(404).send({ error: "Page inconnue" });
+    return { key: page.keys[req.params.slot] ?? null };
+  });
+
+  app.put<{ Params: PageSlot; Body: PersoKey }>(
+    "/deck/pages/:page/keys/:slot",
+    { schema: { params: pageSlotParams, body: keySchema } },
+    async (req, reply) => {
+      if (!(await saveKeyPage(req.params.page, req.params.slot, req.body))) return reply.code(404).send({ error: "Page inconnue" });
+      return { ok: true };
+    },
+  );
+
+  app.delete<{ Params: PageSlot }>("/deck/pages/:page/keys/:slot", { schema: { params: pageSlotParams } }, async (req, reply) => {
+    if (!(await saveKeyPage(req.params.page, req.params.slot, null))) return reply.code(404).send({ error: "Page inconnue" });
     return { ok: true };
   });
 

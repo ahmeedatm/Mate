@@ -9,7 +9,7 @@ import { backendRoot as backend, dataDir } from "../src/paths.ts";
  * portable (paquet client) n'utilise pas ce script : son lanceur et son panneau s'en chargent (src/portable.ts).
  * - macOS : agent launchd (~/Library/LaunchAgents), relancé s'il s'arrête ;
  * - Windows : entrée « Exécuter » de la session (HKCU\…\Run), lanceur sans fenêtre qui relance node
- *   (src/win/UnowhyCompanion.exe avec --node --backend : pas de PowerShell caché, que les antivirus bloquent).
+ *   (src/win/UnoMate.exe avec --node --backend : pas de PowerShell caché, que les antivirus bloquent).
  *
  *   npm run service:install     installe et démarre
  *   npm run service:stop        arrête (pour lancer `npm run dev` à la place)
@@ -19,16 +19,16 @@ import { backendRoot as backend, dataDir } from "../src/paths.ts";
  */
 
 const port = Number(process.env.PORT ?? 3000);
-const LABEL = "com.unowhy.companion";
+const LABEL = "com.unowhy.unomate";
 const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-const RUN_VALUE = "UnowhyCompanion";
+const RUN_VALUE = "UnoMate";
 const isMac = process.platform === "darwin";
 const isWindows = process.platform === "win32";
 
 const plist = path.join(os.homedir(), "Library", "LaunchAgents", `${LABEL}.plist`);
 const logDir = isWindows
-  ? path.join(process.env.LOCALAPPDATA ?? os.homedir(), "UnowhyCompanion")
-  : path.join(os.homedir(), "Library", "Logs", "UnowhyCompanion");
+  ? path.join(process.env.LOCALAPPDATA ?? os.homedir(), "UnoMate")
+  : path.join(os.homedir(), "Library", "Logs", "UnoMate");
 const pidFile = path.join(dataDir, "service.pid");
 const pidFiles = [...new Set([pidFile, path.join(backend, ".data", "service.pid")])];
 
@@ -133,7 +133,7 @@ ${env}
 
 // --- Windows
 
-const LAUNCHER = "UnowhyCompanion.exe";
+const LAUNCHER = "UnoMate.exe";
 
 /** Ligne de commande du lanceur, la même dans la clé Run et au démarrage. */
 function windowsCommand(node: string) {

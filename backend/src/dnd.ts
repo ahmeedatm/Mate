@@ -40,3 +40,15 @@ export async function focusDnd(on: boolean, minutes = 60): Promise<{ on: boolean
   }
   return { on: await getDnd() };
 }
+
+/**
+ * Ne pas déranger posé à la main (pastille de l'Accueil) : l'utilisateur en prend la main, la fin du Focus ne l'éteint
+ * plus et le minuteur de secours s'arrête.
+ */
+export async function manualDnd(on: boolean): Promise<{ on: boolean }> {
+  clearTimeout(safety);
+  safety = undefined;
+  await setDnd(on);
+  await setOurs(false);
+  return { on };
+}

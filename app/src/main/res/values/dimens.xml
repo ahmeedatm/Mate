@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Bandeau du haut (ui/topbar/TopBar) : l'écran du mode commence dessous. -->
+    <dimen name="top_bar_height">60dp</dimen>
+</resources>

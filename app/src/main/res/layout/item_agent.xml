@@ -9,7 +9,7 @@
     android:orientation="horizontal"
     android:padding="12dp">
 
-    <com.unowhy.companion.ui.AgentStatusIcon
+    <com.unowhy.unomate.ui.AgentStatusIcon
         android:id="@+id/agent_status_icon"
         android:layout_width="20dp"
         android:layout_height="20dp"

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 /**
  * Compile le pilote Windows (src/win/helper/) et le lanceur (src/win/launcher/), C# .NET Framework 4.8, en
- * src/win/UnowhyHelper.exe et src/win/UnowhyCompanion.exe, depuis le Mac ou Windows. Demande le SDK .NET 8
+ * src/win/UnowhyHelper.exe et src/win/UnoMate.exe, depuis le Mac ou Windows. Demande le SDK .NET 8
  * (`dotnet` dans le PATH ou dans ~/.dotnet), figé par backend/global.json (lancé depuis backend/). Les exe sont gardés dans le dépôt : le compagnon et le paquet s'en
  * servent sans SDK.
  */
@@ -20,7 +20,7 @@ function dotnet(): string {
 
 for (const [dir, exe] of [
   ["helper", "UnowhyHelper.exe"],
-  ["launcher", "UnowhyCompanion.exe"],
+  ["launcher", "UnoMate.exe"],
 ]) {
   const project = path.join(backend, "src", "win", dir);
   const out = path.join(project, "bin", "Release");

@@ -55,8 +55,11 @@ type Check = { name: string; run: () => Promise<string | void> };
 export async function runSanity(opts: { url: string; token: string; os?: Os; hookSecret?: string }): Promise<Result[]> {
   const base = opts.url.replace(/\/$/, "");
   const local = /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i.test(base);
+  // Persona annoncé comme le fait la tablette (X-Demo-Persona) : les données fictives ne servent que lui.
+  let persona: string | undefined;
   const call: Call = async (method, route, body, auth = true) => {
     const headers: Record<string, string> = {};
+    if (persona) headers["x-demo-persona"] = persona;
     if (auth) headers.authorization = `Bearer ${opts.token}`;
     if (body !== undefined) headers["content-type"] = "application/json";
     const res = await fetch(base + route, {
@@ -146,6 +149,45 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "réunion en cours (profil Réunion de la tablette)",
+      run: async () => {
+        // Deck V2 : la veille des réunions (src/meeting-watch.ts) lit les applis en appel comme /deck/live.
+        // L'ordre meeting n'est poussé que par l'ordinateur : refusé s'il vient de l'extérieur.
+        expectStatus(
+          await call("POST", "/tablet/command", { type: "meeting", state: "start", app: "Sanity" }),
+          400,
+          "ordre meeting de l'extérieur",
+        );
+        const live = await call("GET", "/deck/live");
+        // Hors Mac et Windows, le pilotage répond 501 : pas de veille des réunions.
+        if (!controlled()) {
+          expectStatus(live, 501, "/deck/live hors Mac et Windows");
+          return "pas de pilotage ici (501)";
+        }
+        expectStatus(live, 200, "/deck/live");
+        expect(Array.isArray(live.json.apps) && Array.isArray(live.json.open), "/deck/live sans listes apps et open");
+        return live.json.apps.length ? `en appel : ${live.json.apps.join(", ")}` : "aucun appel en cours";
+      },
+    },
+    {
+      name: "Ne pas déranger à la main (pastille de l'Accueil)",
+      run: async () => {
+        expectStatus(await call("PUT", "/system/dnd", { on: "oui" }), 400, "PUT /system/dnd invalide");
+        const read = await call("GET", "/system/dnd");
+        if (!controlled()) {
+          expectStatus(read, 501, "/system/dnd hors Mac et Windows");
+          return "pas de pilotage ici (501)";
+        }
+        expectStatus(read, 200, "GET /system/dnd");
+        if (typeof read.json.on !== "boolean") return "état illisible sur cet ordinateur";
+        // L'état actuel reposé tel quel : la route marche sans rien changer pour l'utilisateur.
+        const put = await call("PUT", "/system/dnd", { on: read.json.on });
+        expectStatus(put, 200, "PUT /system/dnd");
+        expect(put.json.on === read.json.on, "PUT /system/dnd n'a pas rendu l'état demandé");
+        return read.json.on ? "activé" : "désactivé";
+      },
+    },
+    {
       name: "plugins de première utilisation",
       run: async () => {
         const res = await call("GET", "/plugins");
@@ -185,6 +227,40 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const gone = await call("GET", `/deck/keys/${slot}`);
         expectStatus(gone, 200, "GET /deck/keys/14");
         expect(gone.json.key === null, "la touche 14 n'est pas vidée");
+      },
+    },
+    {
+      name: "démo : persona posé puis rendu",
+      run: async () => {
+        const before = await call("GET", "/deck/keys/0");
+        try {
+          const set = await call("POST", "/demo/persona", { persona: "sacha" });
+          expectStatus(set, 200, "POST /demo/persona");
+          persona = "sacha";
+          expect(set.json.keys?.[0]?.id === "k-0", "touches du persona absentes de la réponse");
+          const key = await call("GET", "/deck/keys/0");
+          expect(key.json.key?.label === set.json.keys[0].label, "la touche k-0 n'est pas celle du persona");
+          const deck = await call("GET", "/deck");
+          const named = (deck.json.pages as { title: string; keyPage: number | null }[]).find((p) => p.keyPage === 0);
+          expect(named?.title === "Git", "page de touches nommée du persona absente du deck");
+          // Données fictives : GitLab, Jira et agents répondent par le persona, pas par l'ordinateur.
+          const mrs = await call("GET", "/gitlab/mrs");
+          expectStatus(mrs, 200, "GET /gitlab/mrs en démo");
+          expect(mrs.json.connected === true && mrs.json.mine?.length > 0, "MR fictives absentes en démo");
+          const issues = await call("GET", "/jira/issues");
+          expectStatus(issues, 200, "GET /jira/issues en démo");
+          expect(issues.json.columns?.length > 0, "tickets fictifs absents en démo");
+          const sessions = await call("GET", "/agents");
+          expectStatus(sessions, 200, "GET /agents en démo");
+          expect(sessions.json.sessions?.[0]?.id?.startsWith("demo-"), "sessions fictives absentes en démo");
+        } finally {
+          persona = undefined;
+          const quit = await call("DELETE", "/demo");
+          expectStatus(quit, 200, "DELETE /demo");
+          expect(quit.json.restored === true, "la démo n'a pas été rendue");
+        }
+        const after = await call("GET", "/deck/keys/0");
+        expect(JSON.stringify(after.json) === JSON.stringify(before.json), "la touche k-0 d'avant la démo n'est pas rendue");
       },
     },
     {
@@ -299,6 +375,16 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "absence : état gardé (lecture seule)",
+      run: async () => {
+        // Jamais de start ni de resume ici : ils pilotent les fenêtres réelles.
+        const res = await call("GET", "/away");
+        expectStatus(res, 200, "GET /away");
+        expect(typeof res.json.saved === "boolean" && typeof res.json.count === "number", "réponse sans saved ni count");
+        return res.json.saved ? `${res.json.count} fenêtres gardées` : "rien de gardé";
+      },
+    },
+    {
       name: "GitLab : MR (lecture seule)",
       run: async () => {
         const mrs = await call("GET", "/gitlab/mrs");
@@ -317,6 +403,18 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "GitLab : pipelines (lecture seule)",
+      run: async () => {
+        const res = await call("GET", "/gitlab/pipelines");
+        if (!controlled()) return expectStatus(res, 501, "/gitlab/pipelines");
+        if (res.status === 502) throw new Skip(`GitLab inaccessible depuis l'ordinateur (${res.json?.error})`);
+        expectStatus(res, 200, "/gitlab/pipelines");
+        expect(Array.isArray(res.json.pipelines), "forme de /gitlab/pipelines inattendue");
+        if (res.json.connected === false) return "pas connecté à GitLab";
+        return `${res.json.pipelines.length} pipelines`;
+      },
+    },
+    {
       name: "pointeur",
       run: async () => {
         // Déplacement nul seulement : jamais de clic sur un ordinateur qui sert à autre chose.
@@ -324,6 +422,14 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const res = await call("POST", "/pointer/move", { dx: 0, dy: 0 });
         if (!controlled()) return expectStatus(res, 501, "/pointer/move");
         expectStatus(res, 200, "POST /pointer/move");
+      },
+    },
+    {
+      name: "présentation (action inconnue refusée)",
+      run: async () => {
+        // Jamais une vraie action : une appli de diapos ouverte sur l'ordinateur recevrait des touches.
+        // Refusée par la validation avant tout pilotage : 400 aussi sur un ordinateur non pilotable.
+        expectStatus(await call("POST", "/present/inconnue"), 400, "/present/inconnue");
       },
     },
     {
@@ -489,7 +595,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       run: async () => {
         const page = await call("GET", "/", undefined, local ? false : true);
         expectStatus(page, 200, "/");
-        expect(/<title>Compagnon Unowhy<\/title>/.test(page.json), "page locale inattendue");
+        expect(/<title>UnoMate<\/title>/.test(page.json), "page locale inattendue");
         const status = await call("GET", "/local/status");
         expectStatus(status, 200, "/local/status");
         expect(Array.isArray(status.json.addresses) && status.json.addresses.length > 0, "aucune adresse affichée");
@@ -504,7 +610,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       run: async () => {
         const res = await call("GET", "/local/confidentialite", undefined, local ? false : true);
         expectStatus(res, 200, "/local/confidentialite");
-        expect(String(res.json).startsWith("Companion Unowhy : politique de confidentialité"), "politique de confidentialité inattendue");
+        expect(String(res.json).startsWith("UnoMate : politique de confidentialité"), "politique de confidentialité inattendue");
       },
     },
     {
@@ -519,7 +625,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         }
         expectStatus(res, 200, "/local/licences");
         const text = String(res.json);
-        expect(text.startsWith("Compagnon Unowhy : composants tiers et licences"), "fichier de licences inattendu");
+        expect(text.startsWith("UnoMate : composants tiers et licences"), "fichier de licences inattendu");
         expect(/^- Node\.js v/m.test(text) && /^- fastify /m.test(text), "node ou fastify absents des licences");
         return `${text.split("\n").filter((l) => /^- /.test(l)).length} lignes de composants`;
       },

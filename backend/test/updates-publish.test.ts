@@ -80,7 +80,7 @@ function dist(version: string, { code = 1000, pkg = "com.unowhy.companion.essai"
   fs.writeFileSync(path.join(dir, `companion-${version}.apk`), `apk ${version}`);
   fs.writeFileSync(
     path.join(dir, `companion-${version}.json`),
-    JSON.stringify({ package: pkg, label: "Companion essai", versionCode: code, versionName: version, file: `companion-${version}.apk` }),
+    JSON.stringify({ package: pkg, label: "UnoMate essai", versionCode: code, versionName: version, file: `companion-${version}.apk` }),
   );
   for (const platform of backend) fs.writeFileSync(path.join(dir, `backend-${platform}.tar.gz`), `backend ${platform} ${version}`);
   return dir;
@@ -228,19 +228,19 @@ describe("publication d'une release", () => {
 
   it("dépose les installeurs de l'ordinateur avant le manifest et les décrit dans `installers`", async () => {
     const dir = dist("0.3.0", { code: 300_000, pkg: "com.unowhy.companion" });
-    fs.writeFileSync(path.join(dir, "Compagnon-Unowhy-Mac.zip"), "zip");
-    fs.writeFileSync(path.join(dir, "Compagnon-Unowhy-Windows.exe"), "exe!");
+    fs.writeFileSync(path.join(dir, "UnoMate-Mac.zip"), "zip");
+    fs.writeFileSync(path.join(dir, "UnoMate-Windows.exe"), "exe!");
     const local = out();
     await publish([dir, local], { UPDATES_URL: urlOf("latest") });
     const { installers } = registry.manifest("companion-updates/latest");
     assert.deepEqual(installers, [
-      { os: "mac", file: "Compagnon-Unowhy-Mac.zip", size: 3, sha256: sha("zip"), version: "0.3.0" },
-      { os: "windows", file: "Compagnon-Unowhy-Windows.exe", size: 4, sha256: sha("exe!"), version: "0.3.0" },
+      { os: "mac", file: "UnoMate-Mac.zip", size: 3, sha256: sha("zip"), version: "0.3.0" },
+      { os: "windows", file: "UnoMate-Windows.exe", size: 4, sha256: sha("exe!"), version: "0.3.0" },
     ]);
-    assert.equal(fs.readFileSync(path.join(local, "Compagnon-Unowhy-Windows.exe"), "utf8"), "exe!");
+    assert.equal(fs.readFileSync(path.join(local, "UnoMate-Windows.exe"), "utf8"), "exe!");
     assert.deepEqual(registry.names("companion-updates/latest"), [
-      "Compagnon-Unowhy-Mac.zip",
-      "Compagnon-Unowhy-Windows.exe",
+      "UnoMate-Mac.zip",
+      "UnoMate-Windows.exe",
       "companion-0.3.0.apk",
       "manifest.json",
     ]);

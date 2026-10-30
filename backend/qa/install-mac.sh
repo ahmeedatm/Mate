@@ -1,22 +1,22 @@
 #!/bin/bash
 # Test de l'appli portable sur Mac, sur le Mac d'un développeur où tourne son vrai compagnon. À la main : plus de job CI.
 # Instance de test à part : port, données, runtime, journal et dossier de l'appli propres au test, rien d'affiché à
-# l'écran (COMPANION_HEADLESS). Le vrai compagnon (agent com.unowhy.companion, port 3000, données) est relevé avant et
+# l'écran (COMPANION_HEADLESS). Le vrai compagnon (agent com.unowhy.unomate, port 3000, données) est relevé avant et
 # après : la moindre différence fait échouer le test. Rien ne doit être inscrit dans LaunchAgents.
 # Jamais de lecture dans ~/Desktop, ~/Documents… : macOS (TCC) y bloque le runner en attendant une autorisation.
 #
-#   backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip [sanity.xml]
+#   backend/qa/install-mac.sh run dist/UnoMate-Mac.zip [sanity.xml]
 #                                     lance l'appli, vérifie, sanity (backend/qa/sanity.ts), panneau, quitter
 #   backend/qa/install-mac.sh cleanup                             retire l'instance de test après un échec
 set -euo pipefail
 
-REAL_LABEL=com.unowhy.companion
+REAL_LABEL=com.unowhy.unomate
 REAL_PORT=3000
 ID=${CI_JOB_ID:-local}
 WORK=/tmp/companion-ci-$ID
 PORT=$((41000 + ${ID//[!0-9]/0} % 1000))
 SANITY="$(cd "$(dirname "$0")" && pwd)/sanity.ts"
-APP="$WORK/install/Compagnon Unowhy/Compagnon Unowhy.app"
+APP="$WORK/install/UnoMate/UnoMate.app"
 RUNTIME=$WORK/runtime
 NODE="$RUNTIME/node/darwin-$([[ $(uname -m) == arm64 ]] && echo arm64 || echo x64)/node"
 
@@ -31,7 +31,8 @@ sha() { [[ -f $1 ]] && shasum -a 256 "$1" | cut -c1-16 || echo absent; }
 listener() { lsof -nP -iTCP:"$1" -sTCP:LISTEN -t 2>/dev/null | head -1 || true; }
 health() { curl -fsS --max-time 3 "http://127.0.0.1:$1/health" 2>/dev/null || true; }
 agent() { launchctl print "gui/$UID/$1" 2>/dev/null | awk -F' = ' '/^\tstate = /{s=$2} /^\tpid = /{p=$2} END{print (s ? s " pid " p : "absent")}'; }
-post() { curl -fsS --max-time 5 -X POST -H 'content-type: application/json' -d "${2:-{\}}" "http://127.0.0.1:$PORT$1"; }
+# Corps par défaut {} : écrit "${2:-{\}}", le \ restait entre guillemets doubles (JSON invalide, 400).
+post() { local body=${2:-'{}'}; curl -fsS --max-time 5 -X POST -H 'content-type: application/json' -d "$body" "http://127.0.0.1:$PORT$1"; }
 
 # État du vrai compagnon, comparé avant / après. Sans PID : une tablette connectée peut le relancer pendant le test
 # (essai de backend d'une MR, mise à jour à distance) ; ce qui compte, c'est qu'il tourne, sur le même port et la même identité.
@@ -40,7 +41,7 @@ real_state() {
   echo "plist : $(sha ~/Library/LaunchAgents/$REAL_LABEL.plist)"
   echo "LaunchAgents : $(ls ~/Library/LaunchAgents 2>/dev/null | shasum | cut -c1-16)"
   echo "port $REAL_PORT : $([[ -n $(listener $REAL_PORT) ]] && echo écoute || echo muet), $(health $REAL_PORT | grep -o '"id":"[^"]*"' || echo 'pas de réponse')"
-  echo "données : $(sha ~/Library/Application\ Support/UnowhyCompanion/identity.json)"
+  echo "données : $(sha ~/Library/Application\ Support/UnoMate/identity.json)"
 }
 
 check_real() {
@@ -82,7 +83,7 @@ run() {
   step "Lancement de l'appli ($WORK, port $PORT)"
   unzip -q "$zip" -d "$WORK/install"
   # Exécutable de l'appli, comme au double-clic : runtime recopié, serveur lancé, rend la main quand il répond.
-  "$APP/Contents/MacOS/Compagnon Unowhy" < /dev/null || { cat "$WORK/logs/backend.log" 2>/dev/null; fail "lancement"; }
+  "$APP/Contents/MacOS/UnoMate" < /dev/null || { cat "$WORK/logs/backend.log" 2>/dev/null; fail "lancement"; }
   [[ -x $NODE ]] || fail "runtime absent : $NODE"
   [[ ! -e $RUNTIME/node/darwin-$([[ $(uname -m) == arm64 ]] && echo x64 || echo arm64) ]] || fail "node de l'autre architecture recopié"
   local pid; pid=$(listener "$PORT")
@@ -100,7 +101,7 @@ run() {
   [[ -z $(ls ~/Library/LaunchAgents 2>/dev/null | grep -F "$ID" || true) ]] || fail "agent inscrit dans LaunchAgents"
 
   step "Appli relancée : rouvre seulement la page"
-  "$APP/Contents/MacOS/Compagnon Unowhy" < /dev/null || fail "relance de l'appli"
+  "$APP/Contents/MacOS/UnoMate" < /dev/null || fail "relance de l'appli"
   [[ $(listener "$PORT") == "$pid" ]] || fail "second serveur lancé"
 
   step "Relance par la boucle après un arrêt (mise à jour à distance)"

@@ -1,11 +1,11 @@
-Companion Unowhy : politique de confidentialité
+UnoMate : politique de confidentialité
 Version du 29 octobre 2026
 
-Companion Unowhy est édité par Unowhy (www.unowhy.com). Il se compose d'une appli pour tablette et d'un logiciel pour ordinateur, le « compagnon ». Pour toute question sur vos données ou pour exercer vos droits, contactez Unowhy depuis son site.
+UnoMate est édité par Unowhy (www.unowhy.com). Il se compose d'une appli pour tablette et d'un logiciel pour ordinateur, le « compagnon ». Pour toute question sur vos données ou pour exercer vos droits, contactez Unowhy depuis son site.
 
 VOS DONNÉES RESTENT CHEZ VOUS
 
-La tablette et l'ordinateur communiquent directement sur votre réseau local, de façon chiffrée. Vos tâches, votre agenda, vos raccourcis et vos réglages sont enregistrés sur votre tablette et sur votre ordinateur, pas chez Unowhy. Companion ne contient ni publicité, ni mesure d'audience, ni rapport de plantage, et ne demande aucun compte Unowhy.
+La tablette et l'ordinateur communiquent directement sur votre réseau local, de façon chiffrée. Vos tâches, votre agenda, vos raccourcis et vos réglages sont enregistrés sur votre tablette et sur votre ordinateur, pas chez Unowhy. UnoMate ne contient ni publicité, ni mesure d'audience, ni rapport de plantage, et ne demande aucun compte Unowhy.
 
 CE QUI EST ENREGISTRÉ SUR VOS APPAREILS
 

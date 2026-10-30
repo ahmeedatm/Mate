@@ -57,14 +57,14 @@ const server = new McpServer(
     instructions:
       "Pilote la tablette Unowhy posée sur le bureau (compagnon de l'ordinateur, Mac ou PC Windows). Écran paysage 1280×800, " +
       "modes : accueil (tableau de bord : heure, prochain rendez-vous, agenda, tâches dont le worklog Jira, Focus, son de l'ordinateur), " +
-      "deck (raccourcis de l'ordinateur, touches perso à affecter : deck_touche_*), docs (dossier partagé de l'ordinateur), focus (Pomodoro, sons d'ambiance), camera (visualiseur : la caméra filme une feuille, image projetée depuis l'ordinateur sur /camera), réglages. Commencer par tablette_etat ; tablette_capture montre l'écran. " +
+      "deck (profil Deck de l'Accueil : applis, son, raccourcis de l'ordinateur, touches perso à affecter : deck_touche_*), docs (dossier partagé de l'ordinateur), focus (Pomodoro, sons d'ambiance), camera (visualiseur : la caméra filme une feuille, image projetée depuis l'ordinateur sur /camera), réglages. Commencer par tablette_etat ; tablette_capture montre l'écran. " +
       "Textes affichés en français, courts : la tablette est lue de loin.",
   },
 );
 
 const MODES = { accueil: "home", deck: "deck", docs: "docs", focus: "focus", camera: "camera", reglages: "settings" } as const;
 const FOCUS = { demarrer: "start", pause: "pause", reinitialiser: "reset", passer: "skip" } as const;
-const NOISES = { brun: "brown", rose: "pink", blanc: "white", silence: "off" } as const;
+const NOISES = { pluie: "storm", foret: "forest", japon: "japan", mer: "sea", lofi: "lofi", silence: "off" } as const;
 const keys = <T extends object>(o: T) => Object.keys(o) as [keyof T & string, ...(keyof T & string)[]];
 
 server.registerTool(
@@ -167,7 +167,8 @@ server.registerTool(
   "tablette_ambiance",
   {
     title: "Son d'ambiance",
-    description: "Lance un bruit d'ambiance généré sur le haut-parleur de la tablette (brun : grave, rose : pluie), ou le coupe.",
+    description:
+      "Lance une ambiance sonore douce sur le haut-parleur de la tablette (gouttes de pluie et tonnerre lointain, oiseaux et vent en forêt, lofi japonais, mer, lofi), ou la coupe.",
     inputSchema: { son: z.enum(keys(NOISES)), volume: z.number().int().min(0).max(100).optional().describe("En %") },
   },
   ({ son, volume }) =>
@@ -268,7 +269,10 @@ const STEP = z.discriminatedUnion("type", [
   z.object({ type: z.literal("url"), url: z.string().describe("http(s), mailto, msteams, slack, vscode, x-apple…") }),
   z.object({ type: z.literal("shortcut"), name: z.string().describe("Raccourci de l'appli Raccourcis (Mac seulement)") }),
   z.object({ type: z.literal("media"), command: z.enum(["play-pause", "next", "previous"]) }),
-  z.object({ type: z.literal("system"), command: z.enum(["sleep-display", "toggle-dark-mode", "screenshot-clipboard", "lock"]) }),
+  z.object({
+    type: z.literal("system"),
+    command: z.enum(["sleep-display", "toggle-dark-mode", "screenshot-clipboard", "lock", "mute-mic", "dnd"]),
+  }),
   z.object({ type: z.literal("wait"), ms: z.number().int().min(0).max(10_000) }),
   z.object({
     type: z.literal("window"),

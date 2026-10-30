@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { listMrs, mergeMr, mrUrl } from "../gitlab.ts";
+import { listMrs, listPipelines, mergeMr, mrUrl, pipelineUrl } from "../gitlab.ts";
 import { openTarget } from "../os.ts";
 
 // Chemin complet d'un projet GitLab (`groupe/sous-groupe/projet`) : jamais de `..`, ni de segment vide ou commençant par `.` ou `-`.
@@ -40,6 +40,22 @@ export default async function gitlabRoutes(app: FastifyInstance) {
     },
     async (req) => {
       await openTarget(mrUrl(req.body.project, req.body.iid));
+      return { ok: true };
+    },
+  );
+
+  // Derniers pipelines des projets de mes MR (lecture seule).
+  app.get("/gitlab/pipelines", async () => listPipelines());
+
+  app.post<{ Body: { project: string; id: number } }>(
+    "/gitlab/pipelines/open",
+    {
+      schema: {
+        body: { type: "object", required: ["project", "id"], additionalProperties: false, properties: { project: PROJECT, id: IID } },
+      },
+    },
+    async (req) => {
+      await openTarget(pipelineUrl(req.body.project, req.body.id));
       return { ok: true };
     },
   );

@@ -61,7 +61,7 @@ if (others.length) throw new Error(`Licence autre qu'Apache 2.0, à ajouter à l
 
 const text = (file) => fs.readFileSync(path.join(texts, file), "utf8").trim();
 const rule = "=".repeat(56);
-const content = `Companion Unowhy : composants tiers et licences
+const content = `UnoMate : composants tiers et licences
 ${rule}
 
 L'appli utilise les composants suivants. Leur licence demande d'en citer l'auteur et d'en joindre le texte :
@@ -80,11 +80,32 @@ POLICES (SIL Open Font License 1.1, texte plus bas)
 - Nunito : Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
 - Abril Fatface : Copyright (c) 2011, TypeTogether (www.type-together.com), noms de police réservés « Abril » et « Abril Fatface »
 - Atkinson Hyperlegible : Copyright 2020 Braille Institute of America, Inc. (https://github.com/googlefonts/atkinson-hyperlegible)
+- IBM Plex Sans : Copyright © 2017 IBM Corp. with Reserved Font Name "Plex"
+- IBM Plex Mono : Copyright © 2017 IBM Corp. with Reserved Font Name "Plex"
+- Instrument Serif : Copyright 2022 The Instrument Serif Project Authors (https://github.com/Instrument/instrument-serif)
+- Instrument Sans : Copyright 2022 The Instrument Sans Project Authors (https://github.com/Instrument/instrument-sans)
+- Young Serif : Copyright 2023 The Young Serif Project Authors (https://github.com/noirblancrouge/YoungSerif)
+- Figtree : Copyright 2022 The Figtree Project Authors (https://github.com/erikdkennedy/figtree)
+- Barlow : Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
+- Barlow Semi Condensed : Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
+- JetBrains Mono : Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
 
 DONNÉES
 - Prévisions météo : MET Norway (Institut météorologique norvégien), licence CC BY 4.0,
   https://creativecommons.org/licenses/by/4.0/ ; mises en forme pour l'affichage.
 - Liste des villes : GeoNames (https://www.geonames.org), licence CC BY 4.0 ; extraite et réduite.
+
+SONS D'AMBIANCE (domaine public, CC0 1.0 : https://creativecommons.org/publicdomain/zero/1.0/ ;
+extraits, mis en boucle et à un volume bas par scripts/ambiances.mjs)
+- Pluie : « RAIN_Light Thunderstorm, Decrescendo, Water Dripping near Building », HushAndHarmonyNow
+  (https://freesound.org/s/851881/)
+- Forêt : « Forest_Summer_Day_Quiet_Calm_Birds_Insects_Atmo_Nowind_Finland », Villehardt
+  (https://freesound.org/s/613995/) ; « Wind Through Trees », Yoyodaman234 (https://freesound.org/s/335889/)
+- Japon : « Japanese Lofi HipHop Track », pickentcode (https://opengameart.org/content/japanese-lofi-hiphop-track)
+- Mer : « Ocean Waves on a Tropical Beach », Jarrod Stanley
+  (https://commons.wikimedia.org/wiki/File:Ocean_Waves_on_a_Tropical_Beach.ogg)
+- Lofi : « Chill lofi inspired [loop edit] », qubodup d'après omfgdude
+  (https://opengameart.org/content/chill-lofi-inspired-loop-edit)
 
 ${rule}
 Apache License 2.0

@@ -117,7 +117,7 @@ Constats :
 7. **Lampe d'ambiance** : l'écran vire à l'ambre quand quelque chose attend, utile à un joueur dont le jeu est en plein écran. À rapprocher du modèle de l'Accueil Veille.
 8. **Commandes vocales** (sans IA, tournures connues dans `VoiceCommands`) : « autorise », « refuse », « option deux », « premier choix ».
 9. **Focus** : pendant la concentration, seuls les « attend toi » sonnent ; pas de son pour « fini ».
-10. **Mode privé** : texte des commandes et des questions masqué (streamers : la tablette peut passer à l'écran).
+10. **Mode privé** : texte des commandes et des questions masqué (écran partagé ou projeté en réunion : la tablette peut passer à l'écran).
 11. **Message rapide** à une session au repos (« continue », une phrase dictée) : par `orca terminal send`, donc sessions Orca seulement.
 12. **Outil MCP `agents_list`** dans `mcp.ts` : Claude lui-même peut lire l'état des autres sessions.
 
@@ -177,7 +177,7 @@ Backend :
 | `backend/test/agents.test.ts` | machine à états, décisions JSON, délais, refus de réponse inconnue |
 | `backend/qa/sanity.ts` | un contrôle : faux événements de hook, état attendu |
 
-Android (`app/src/main/kotlin/com/unowhy/companion/`) :
+Android (`app/src/main/kotlin/com/unowhy/unomate/`) :
 
 | Fichier | Rôle |
 |---|---|
@@ -282,7 +282,7 @@ Constats en plus :
 3. **Délai d'attente avant retour au terminal** : 90 s ? Et la tablette ne répond-elle que quand tu es « absent » (réglage, ou détection par écran de l'ordinateur verrouillé) ?
 4. **Quelles permissions la tablette peut-elle autoriser ?** Tout avec appui maintenu pour le risqué (proposé), ou jamais `Bash` ?
 5. **Réveil de l'écran** pour une alerte, malgré l'atténuation de nuit et le kiosque ?
-6. **Mode privé par défaut** pour les streamers, ou seulement sur demande ?
+6. **Mode privé par défaut** pour les salariés en réunion (écran partagé), ou seulement sur demande ?
 7. **Claude seulement**, ou aussi Codex et les autres agents d'Orca (`worktree ps` les voit, mais pas les hooks) ?
 8. **Angle de la démo** : développeur multi-sessions, ou joueur qui lance un agent et joue pendant ce temps ?
 9. **Plans à approuver** (`ExitPlanMode`) dans la première version, ou plus tard ?

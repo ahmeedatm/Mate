@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mate-site
+spec:
+  # Port 80 vers le 8080 de nginx, comme les fronts de sqool-deploy ; nommé http pour qu'Istio le traite en HTTP.
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

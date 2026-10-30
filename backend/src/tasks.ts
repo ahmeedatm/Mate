@@ -11,7 +11,7 @@ import { readJson, updateJson } from "./store.ts";
  * l'ordinateur ; la tablette affiche.
  */
 
-type DailyTask = {
+export type DailyTask = {
   id: string;
   label: string;
   /** Jours de la semaine, 1 = lundi … 7 = dimanche (défaut : tous). */
@@ -27,7 +27,7 @@ type DailyTask = {
 };
 
 /** `remindAtMs` : rappel unique (date et heure) ; `remindedMs` : rappel déjà fait. */
-type OneOffTask = { id: string; label: string; createdMs: number; doneMs?: number; remindAtMs?: number; remindedMs?: number };
+export type OneOffTask = { id: string; label: string; createdMs: number; doneMs?: number; remindAtMs?: number; remindedMs?: number };
 /** `recurring` : tâches récurrentes créées depuis la tablette (mêmes champs que config/tasks.json). */
 type Store = { done: Record<string, string[]>; items: OneOffTask[]; recurring?: DailyTask[] };
 

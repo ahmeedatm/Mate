@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Barre de modes à gauche (tablette en paysage), écran du mode au centre,
+<!-- Barre fixe à gauche (Parler, profils, outils ; tablette en paysage), écran du mode au centre,
      panneau document à droite (masqué tant qu'aucun document n'est ouvert),
      bandeau de message de l'ordinateur par-dessus. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -15,123 +15,44 @@
 
     <LinearLayout
         android:id="@+id/rail"
-        android:layout_width="96dp"
+        android:layout_width="84dp"
+        android:clipChildren="false"
         android:layout_height="match_parent"
         android:background="?attr/c_rail"
         android:gravity="center_horizontal"
         android:orientation="vertical"
-        android:paddingTop="16dp"
-        android:paddingBottom="20dp">
+        android:paddingTop="24dp"
+        android:paddingBottom="16dp">
 
-        <!-- Boutons de mode, ajoutés par MainActivity. -->
-        <LinearLayout
-            android:id="@+id/mode_bar"
-            android:layout_width="wrap_content"
+        <!-- Parler (ajouté en tête par ProfileRail), puis les entrées (profils, « Plus », outils) ; la pastille de
+             l'élément choisi glisse derrière elles, et jusqu'à la cloche et la roue du pied (pas de découpe). -->
+        <FrameLayout
+            android:id="@+id/rail_items"
+            android:layout_width="76dp"
+            android:clipChildren="false"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="vertical" />
+            android:layout_weight="1">
 
-        <!-- Heure, WiFi, batterie de la tablette (barre d'état masquée en kiosque) ; toucher : Réglages. -->
-        <com.unowhy.companion.ui.TabletStatusView
-            android:id="@+id/tablet_status"
-            android:layout_width="88dp"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="4dp"
-            android:background="@drawable/rail_item_bg"
-            android:clickable="true"
-            android:focusable="true"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp" />
-
-        <!-- Ordinateur piloté et pastille de connexion ; toucher : changer d'ordinateur. -->
-        <LinearLayout
-            android:id="@+id/status"
-            android:layout_width="88dp"
-            android:layout_height="wrap_content"
-            android:background="@drawable/rail_item_bg"
-            android:clickable="true"
-            android:focusable="true"
-            android:gravity="center"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:orientation="vertical">
-
-            <ImageView
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_link"
-                app:tint="?attr/c_text_faint" />
+            <View
+                android:id="@+id/rail_indicator"
+                android:layout_width="4dp"
+                android:layout_height="36dp"
+                android:alpha="0"
+                android:background="@drawable/rail_indicator_bg"
+                android:importantForAccessibility="no" />
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:id="@+id/mode_bar"
+                android:layout_width="76dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:orientation="vertical" />
+        </FrameLayout>
 
-                <View
-                    android:id="@+id/status_dot"
-                    android:layout_width="10dp"
-                    android:layout_height="10dp"
-                    android:layout_marginEnd="6dp"
-                    android:background="@drawable/dot" />
-
-                <TextView
-                    android:id="@+id/status_name"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:maxWidth="70dp"
-                    android:ellipsize="end"
-                    android:gravity="center"
-                    android:maxLines="2"
-                    android:textColor="?attr/c_text_faint"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-            <!-- État écrit (« hors ligne »…) : la pastille ne le dit pas par sa seule couleur. -->
-            <TextView
-                android:id="@+id/status_state"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:singleLine="true"
-                android:textColor="?attr/c_text_faint"
-                android:textSize="11sp" />
-        </LinearLayout>
-    </LinearLayout>
-
-    <!-- Écran du mode ; par-dessus, « Aucun ordinateur connecté » pour les modes qui en ont besoin. -->
-    <FrameLayout
-        android:id="@+id/mode_area"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1">
-
-        <!-- paddingStart : place de la cloche des notifications, en haut à gauche de chaque écran. -->
-        <FrameLayout
-            android:id="@+id/mode_container"
-            android:paddingStart="40dp"
-            android:defaultFocusHighlightEnabled="false"
-            tools:targetApi="o"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-        <include
-            android:id="@+id/no_computer"
-            layout="@layout/view_connect"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:visibility="gone" />
-
-        <!-- Cloche : notifications de l'ordinateur (Depuis l'ordi > Notifications) ; pastille : arrivées depuis la
-             dernière ouverture. Alignée sur la ligne de titre des écrans (padding 24 dp, hauteur 48 dp). -->
+        <!-- Cloche : notifications de l'ordinateur (Depuis l'ordi > Notifications), en texte plein quand elles sont
+             affichées ; pastille : arrivées depuis la dernière ouverture. -->
         <FrameLayout
             android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginTop="24dp">
+            android:layout_height="48dp">
 
             <ImageButton
                 android:id="@+id/notif_bell"
@@ -139,7 +60,8 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:contentDescription="@string/notif_open"
-                android:src="@drawable/ic_notifications" />
+                android:src="@drawable/ic_notifications"
+                app:tint="@color/rail_profile_content" />
 
             <View
                 android:id="@+id/notif_dot"
@@ -154,21 +76,137 @@
                 android:visibility="gone" />
         </FrameLayout>
 
-        <!-- Voyant du mot de réveil « Mate », sous la cloche, dans la marge des écrans (voice/WakeWord) : atténué =
-             écoute le mot, accent = « Mate » entendu ou commande en cours, absent = coupé ou en pause. -->
-        <ImageView
-            android:id="@+id/wake_mic"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:layout_marginStart="22dp"
-            android:layout_marginTop="76dp"
-            android:contentDescription="@string/wake_listening"
-            android:src="@drawable/ic_mic"
-            android:visibility="gone"
-            app:tint="?attr/c_text_faint" />
+        <!-- Ordinateur piloté et pastille de connexion ; toucher : changer d'ordinateur. -->
+        <LinearLayout
+            android:id="@+id/status"
+            android:layout_width="88dp"
+            android:layout_height="wrap_content"
+            android:background="@drawable/rail_item_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:minHeight="48dp"
+            android:orientation="vertical">
+
+            <!-- Ordinateur et son état : le point (vert, orange, gris) posé sur le coin de l'icône, le nom centré dessous. -->
+            <FrameLayout
+                android:layout_width="30dp"
+                android:layout_height="26dp">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_laptop"
+                    app:tint="?attr/c_text_dim" />
+
+                <View
+                    android:id="@+id/status_dot"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_gravity="top|end"
+                    android:background="@drawable/dot" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/status_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:fontFamily="?attr/c_font_regular"
+                android:gravity="center"
+                android:maxLines="2"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="11sp" />
+
+            <!-- État écrit (« hors ligne »…) : la pastille ne le dit pas par sa seule couleur (accessibilité). -->
+            <TextView
+                android:id="@+id/status_state"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="?attr/c_font_regular"
+                android:gravity="center"
+                android:singleLine="true"
+                android:textColor="?attr/c_text_faint"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <!-- Crayon : mode Modifier du profil affiché (l'appui long agrandit un widget), plein pendant le mode Modifier ;
+             puis Réglages : la roue, en texte plein quand Réglages est affiché. Côte à côte : la barre est pleine en hauteur. -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/rail_edit"
+                style="@style/IconButton.Flat"
+                android:layout_width="44dp"
+                android:layout_height="48dp"
+                android:contentDescription="@string/home_edit_open"
+                android:src="@drawable/ic_edit"
+                app:tint="@color/rail_profile_content" />
+
+            <ImageButton
+                android:id="@+id/rail_settings"
+                style="@style/IconButton.Flat"
+                android:layout_width="44dp"
+                android:layout_height="48dp"
+                android:contentDescription="@string/mode_settings"
+                android:src="@drawable/ic_settings"
+                app:tint="@color/rail_profile_content" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Écran du mode ; par-dessus, « Aucun ordinateur connecté » pour les modes qui en ont besoin. -->
+    <FrameLayout
+        android:id="@+id/mode_area"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1">
+
+        <!-- Thème Rétro seulement (sinon GONE) : tubes qui coulent sur toute la hauteur, derrière tous les écrans, à droite ;
+             ils défilent d'un écran quand on passe à l'entrée voisine de la barre (ui/home/FlowBandView). -->
+        <com.unowhy.unomate.ui.home.FlowBandView
+            android:id="@+id/flow"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="end" />
+
+        <!-- Sous le bandeau du haut : rien ne défile dessous. Balayage vertical entre les entrées de la barre (ui/RailSwipeLayout). -->
+        <com.unowhy.unomate.ui.RailSwipeLayout
+            android:id="@+id/mode_container"
+            android:layout_marginTop="@dimen/top_bar_height"
+            android:defaultFocusHighlightEnabled="false"
+            tools:targetApi="o"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <include
+            android:id="@+id/no_computer"
+            layout="@layout/view_connect"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="@dimen/top_bar_height"
+            android:visibility="gone" />
+
+        <!-- Bandeau du haut, fixe (ui/topbar/TopBar) : en-tête de l'écran à gauche, éléments choisis à droite (lecture en
+             cours, heure, WiFi, batterie…) ; la barre d'état d'Android est masquée en kiosque. -->
+        <com.unowhy.unomate.ui.topbar.TopBar
+            android:id="@+id/top_bar"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/top_bar_height"
+            android:layout_gravity="top" />
+
     </FrameLayout>
 
-    <com.unowhy.companion.ui.DocumentPanel
+    <com.unowhy.unomate.ui.DocumentPanel
         android:id="@+id/document_panel"
         android:layout_width="0dp"
         android:layout_height="match_parent"
@@ -176,62 +214,15 @@
         android:visibility="gone" />
 </LinearLayout>
 
-    <!-- Thèmes Cadran : menu caché (poignée au bord gauche, voile, panneau), géré par MenuPanel. Autres thèmes : absent. -->
-    <FrameLayout
-        android:id="@+id/menu_host"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone">
-
-        <!-- Départ du glisser : les 16 premiers dp du bord, sur toute la hauteur. -->
-        <View
-            android:id="@+id/menu_edge"
-            android:layout_width="16dp"
-            android:layout_height="match_parent"
-            android:importantForAccessibility="no" />
-
-        <!-- Cible du toucher : 48 x 96 dp centrée sur la poignée ; hors d'elle, les touchers passent à l'écran dessous. -->
-        <FrameLayout
-            android:id="@+id/menu_handle"
-            android:layout_width="48dp"
-            android:layout_height="96dp"
-            android:layout_gravity="center_vertical"
-            android:contentDescription="@string/menu_open">
-
-            <View
-                android:layout_width="5dp"
-                android:layout_height="56dp"
-                android:layout_gravity="center_vertical"
-                android:layout_marginStart="7dp"
-                android:background="@drawable/menu_handle_bg" />
-        </FrameLayout>
-
-        <View
-            android:id="@+id/menu_scrim"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:alpha="0"
-            android:background="?attr/c_scrim"
-            android:importantForAccessibility="no"
-            android:visibility="gone" />
-
-        <include
-            layout="@layout/view_menu_panel"
-            android:layout_width="300dp"
-            android:layout_height="match_parent"
-            android:layout_margin="12dp"
-            android:visibility="gone" />
-    </FrameLayout>
-
     <!-- Premier lancement : tant qu'aucun ordinateur n'est appairé. -->
-    <com.unowhy.companion.ui.WelcomeView
+    <com.unowhy.unomate.ui.WelcomeView
         android:id="@+id/welcome"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone" />
 
     <!-- Plugins de l'ordinateur actif : première utilisation, appli compatible apparue, ou Réglages. -->
-    <com.unowhy.companion.ui.PluginsView
+    <com.unowhy.unomate.ui.PluginsView
         android:id="@+id/plugins"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

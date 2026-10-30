@@ -160,6 +160,16 @@ describe("canal tablette", () => {
     assert.equal(sent.json.received, true);
   });
 
+  it("refuse les anciens bruits d'ambiance (brun, rose, blanc)", async () => {
+    const old = await server.call("POST", "/tablet/command", { type: "noise", kind: "brown" });
+    assert.equal(old.status, 400);
+  });
+
+  it("refuse l'ordre meeting venu de l'extérieur : seul l'ordinateur le pousse", async () => {
+    const { status } = await server.call("POST", "/tablet/command", { type: "meeting", state: "start", app: "Microsoft Teams" });
+    assert.equal(status, 400);
+  });
+
   it("refuse un ordre sans son champ requis", async () => {
     const { status, json } = await server.call("POST", "/tablet/command", { type: "noise" });
     assert.equal(status, 400);
@@ -205,10 +215,7 @@ describe("mises à jour de la tablette", () => {
     const file = `companion-${version}.apk`;
     fs.writeFileSync(path.join(dir, file), `apk ${version}`);
     const entry = path.join(dir, `companion-${version}.json`);
-    fs.writeFileSync(
-      entry,
-      JSON.stringify({ package: "com.unowhy.companion", label: "Companion", versionCode, versionName: version, file }),
-    );
+    fs.writeFileSync(entry, JSON.stringify({ package: "com.unowhy.companion", label: "UnoMate", versionCode, versionName: version, file }));
     execFileSync(process.execPath, ["--import", "tsx", "scripts/updates.ts", "add", entry], {
       cwd: path.resolve(import.meta.dirname, ".."),
       env: { ...process.env, DATA_DIR: server.dataDir },

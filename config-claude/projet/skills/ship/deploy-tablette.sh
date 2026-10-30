@@ -28,13 +28,13 @@ if [ "${BACKEND:-}" != 1 ] && [ -z "$(git -C "$root" diff --name-only origin/mai
 fi
 
 # Dossier backend installé, lu dans le LaunchAgent (WorkingDirectory) : celui de l'appli
-# (Compagnon Unowhy.app/Contents/Resources/backend) ou d'un ancien paquet zip (<paquet>/backend).
-plist="$HOME/Library/LaunchAgents/com.unowhy.companion.plist"
+# (UnoMate.app/Contents/Resources/backend) ou d'un ancien paquet zip (<paquet>/backend).
+plist="$HOME/Library/LaunchAgents/com.unowhy.unomate.plist"
 backend_dir=$(plutil -extract WorkingDirectory raw "$plist")
 (cd "$root/backend" && npm run -s package -- mac)
 rsync -rt --exclude node --exclude .DS_Store \
-  "$root/dist/mac/Compagnon Unowhy/Compagnon Unowhy.app/Contents/Resources/backend/" "$backend_dir/"
-launchctl kickstart -k "gui/$(id -u)/com.unowhy.companion"
+  "$root/dist/mac/UnoMate/UnoMate.app/Contents/Resources/backend/" "$backend_dir/"
+launchctl kickstart -k "gui/$(id -u)/com.unowhy.unomate"
 for _ in $(seq 30); do
   if curl -sf http://127.0.0.1:3000/health >/dev/null; then
     echo "✅ compagnon du Mac relancé sur la branche ($backend_dir)"
@@ -42,5 +42,5 @@ for _ in $(seq 30); do
   fi
   sleep 1
 done
-echo "❌ le compagnon du Mac ne répond pas : ~/Library/Logs/UnowhyCompanion/backend.log"
+echo "❌ le compagnon du Mac ne répond pas : ~/Library/Logs/UnoMate/backend.log"
 exit 1

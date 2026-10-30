@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-30T00:36:25.408239Z",
+  "title": "Design System: UnoMate, pages web du compagnon",
+  "extensions": {
+    "colorMeta": {
+      "now-day": {
+        "role": "primary",
+        "displayName": "Rouge Maintenant",
+        "canonical": "#CA0538",
+        "tonalRamp": [
+          "#3A0010",
+          "#680018",
+          "#930026",
+          "#CA0538",
+          "#E8334F",
+          "#FF5165",
+          "#FF8A96",
+          "#FFDADA"
+        ]
+      },
+      "ok-day": {
+        "role": "secondary",
+        "displayName": "Vert Accord",
+        "canonical": "#31685A",
+        "tonalRamp": [
+          "#0E2B23",
+          "#1B3A32",
+          "#22504A",
+          "#31685A",
+          "#5A8E7F",
+          "#9AD2C1",
+          "#C4E6DB",
+          "#D6EDE6"
+        ]
+      },
+      "bg-day": {
+        "role": "neutral",
+        "displayName": "Fond rosé",
+        "canonical": "#FAF2F1",
+        "tonalRamp": [
+          "#100D0D",
+          "#221F1F",
+          "#4D4545",
+          "#6E6464",
+          "#998E8E",
+          "#D0C4C3",
+          "#EEE6E6",
+          "#FAF2F1"
+        ]
+      },
+      "ink-day": {
+        "role": "neutral",
+        "displayName": "Encre",
+        "canonical": "#1E1B1B",
+        "tonalRamp": [
+          "#1E1B1B",
+          "#2F2A2A",
+          "#4D4545",
+          "#6E6464",
+          "#998E8E",
+          "#B8ADAC",
+          "#D0C4C3",
+          "#E9E1E0"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Titre de section",
+        "purpose": "h2 de section."
+      },
+      "title": {
+        "displayName": "Titre",
+        "purpose": "Nom du compagnon dans la barre."
+      },
+      "body": {
+        "displayName": "Texte",
+        "purpose": "Texte courant."
+      },
+      "label": {
+        "displayName": "Libellé",
+        "purpose": "Boutons, menu, code en ligne."
+      },
+      "figure": {
+        "displayName": "Grand chiffre",
+        "purpose": "Code d'appairage."
+      }
+    },
+    "shadows": [
+      {
+        "name": "anneau-now",
+        "value": "0 0 0 2px var(--now)",
+        "purpose": "Carte mise en avant, code d'appairage."
+      },
+      {
+        "name": "boitier-tablette",
+        "value": "0 24px 48px -28px rgba(30,10,10,.5), 0 0 0 1px var(--line)",
+        "purpose": "Boîtier de la tablette dessinée."
+      },
+      {
+        "name": "pouce-interrupteur",
+        "value": "0 1px 3px rgba(0,0,0,.25)",
+        "purpose": "Pouce de l'interrupteur."
+      }
+    ],
+    "motion": [
+      {
+        "name": "trait-barre",
+        "value": "320ms cubic-bezier(.16, 1, .3, 1)",
+        "purpose": "Trait rouge qui glisse sur la section courante."
+      },
+      {
+        "name": "ressort-controle",
+        "value": "160ms cubic-bezier(.2, .8, .2, 1)",
+        "purpose": "Appui des boutons, pouce d'interrupteur (200ms)."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "aperçu-empilé",
+        "value": "1100px"
+      },
+      {
+        "name": "mobile",
+        "value": "820px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Bouton principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Action courante, pilule encre.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Appairer</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 18px;border:0;border-radius:20px;font:500 14px Outfit,system-ui,sans-serif;cursor:pointer;transition:transform 160ms cubic-bezier(.2,.8,.2,1),opacity 160ms}.ds-btn:hover{opacity:.88}.ds-btn:active{transform:scale(.97)}.ds-btn:focus-visible{outline:2px solid #CA0538;outline-offset:2px}.ds-btn-primary{background:#1E1B1B;color:#FAF2F1}"
+    },
+    {
+      "name": "Bouton discret",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Action secondaire sur tuile haute.",
+      "html": "<button class=\"ds-btn ds-btn-ghost\">Actualiser</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 18px;border:0;border-radius:20px;font:500 14px Outfit,system-ui,sans-serif;cursor:pointer;transition:transform 160ms cubic-bezier(.2,.8,.2,1),opacity 160ms}.ds-btn:hover{opacity:.88}.ds-btn:active{transform:scale(.97)}.ds-btn:focus-visible{outline:2px solid #CA0538;outline-offset:2px}.ds-btn-ghost{background:#EEE6E6;color:#1E1B1B}"
+    },
+    {
+      "name": "Bouton destructif",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Déconnecter, retirer.",
+      "html": "<button class=\"ds-btn ds-btn-danger\">Déconnecter</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 18px;border:0;border-radius:20px;font:500 14px Outfit,system-ui,sans-serif;cursor:pointer;transition:transform 160ms cubic-bezier(.2,.8,.2,1),opacity 160ms}.ds-btn:hover{opacity:.88}.ds-btn:active{transform:scale(.97)}.ds-btn:focus-visible{outline:2px solid #CA0538;outline-offset:2px}.ds-btn-danger{background:transparent;color:#BA1A1A;box-shadow:inset 0 0 0 1px #D0C4C3}"
+    },
+    {
+      "name": "Champ",
+      "kind": "input",
+      "refersTo": "input-text",
+      "description": "Champ pilule, filet intérieur, focus encre.",
+      "html": "<input class=\"ds-input\" placeholder=\"Adresse\">",
+      "css": ".ds-input{width:240px;height:46px;padding:0 20px;border:0;border-radius:23px;font:400 15px Outfit,system-ui,sans-serif;background:#FAF2F1;color:#1E1B1B;box-shadow:inset 0 0 0 1px #D0C4C3}.ds-input::placeholder{color:#6E6464}.ds-input:focus{outline:0;box-shadow:inset 0 0 0 2px #1E1B1B}"
+    },
+    {
+      "name": "Interrupteur",
+      "kind": "custom",
+      "description": "44x26, actif en rouge Maintenant.",
+      "html": "<input class=\"ds-switch\" type=\"checkbox\" checked>",
+      "css": ".ds-switch{appearance:none;width:44px;height:26px;border-radius:13px;background:#D0C4C3;position:relative;cursor:pointer;margin:0;transition:background 200ms}.ds-switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform 200ms cubic-bezier(.2,.8,.2,1)}.ds-switch:checked{background:#CA0538}.ds-switch:checked::after{transform:translateX(18px)}.ds-switch:focus-visible{outline:2px solid #CA0538;outline-offset:2px}"
+    },
+    {
+      "name": "Entrée de menu",
+      "kind": "nav",
+      "refersTo": "nav-item-current",
+      "description": "Barre de gauche, section courante avec trait rouge.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-item\" href=\"#\">Tablette</a><a class=\"ds-item\" aria-current=\"true\" href=\"#\">Comptes</a></nav>",
+      "css": ".ds-nav{position:relative;display:flex;flex-direction:column;gap:2px;width:240px;background:#F3E9E8;padding:12px;border-radius:12px}.ds-item{display:flex;align-items:center;min-height:40px;padding:8px 12px 8px 16px;border-radius:12px;color:#4D4545;font:400 14px Outfit,system-ui,sans-serif;text-decoration:none}.ds-item:hover{background:#EEE6E6;color:#1E1B1B}.ds-item[aria-current=true]{background:#fff;color:#1E1B1B;font-weight:500;box-shadow:inset 3px 0 0 #CA0538}.ds-item:focus-visible{outline:2px solid #CA0538;outline-offset:2px}"
+    },
+    {
+      "name": "Choix de thème",
+      "kind": "chip",
+      "refersTo": "theme-choice-selected",
+      "description": "Pastille de couleur + nom, sélectionné en rouge doux.",
+      "html": "<button class=\"ds-theme\"><span></span>Cadran</button><button class=\"ds-theme\" aria-pressed=\"true\"><span></span>Nuit</button>",
+      "css": ".ds-theme{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;margin-right:8px;border:0;border-radius:14px;background:#EEE6E6;color:#1E1B1B;font:400 14px Outfit,system-ui,sans-serif;cursor:pointer}.ds-theme span{width:16px;height:16px;border-radius:8px;background:#CA0538;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}.ds-theme[aria-pressed=true]{background:#FFDADA;box-shadow:inset 0 0 0 1.5px #CA0538;font-weight:500}.ds-theme:focus-visible{outline:2px solid #CA0538;outline-offset:2px}"
+    },
+    {
+      "name": "Carte",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Tuile arrondie, anneau rouge quand mise en avant.",
+      "html": "<div class=\"ds-card\"><b>Agenda</b><p>Relier un agenda.</p></div>",
+      "css": ".ds-card{background:#fff;border-radius:24px;padding:22px 26px;width:280px;color:#1E1B1B;font:400 15px Outfit,system-ui,sans-serif}.ds-card p{margin:6px 0 0;color:#4D4545;font-size:14px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Le Cadran déplié",
+    "overview": "La page locale est la tablette vue depuis l'ordinateur : mêmes tokens jour et nuit, même police, même geste de sélection (un trait rouge qui glisse). Elle ne ressemble pas à une page d'admin faite de cartes centrées. Une barre de gauche teintée porte l'identité, l'état et les sections ; à droite, des listes groupées sur fond de tuile.\n\nLe ton est calme, dense sans être serré, lisible de loin. Le rouge « maintenant » est rare : il marque ce qui demande une action et ce qui est sélectionné. Le jour ou la nuit suit le mode de l'ordinateur ; le visualiseur est toujours en nuit.",
+    "keyCharacteristics": [
+      "Deux palettes Cadran (jour, nuit) portées par des variables CSS.",
+      "Outfit 300 / 400 / 500, servie par le compagnon (hors ligne).",
+      "Aucun ombrage structurel : la profondeur vient du ton (fond, tuile, tuile haute).",
+      "Pilules, interrupteurs et curseurs habillés, aucun contrôle natif brut.",
+      "Signature : la tablette dessinée à l'échelle 16:10, qui reflète thème et luminosité en direct."
+    ],
+    "rules": [
+      {
+        "name": "The Rouge Rare Rule",
+        "body": "Le rouge `now` ne marque que l'état qui demande une action et la sélection. Jamais de décor, jamais en fond large (sauf `now-soft` pour l'autorisation manquante).",
+        "section": "colors"
+      },
+      {
+        "name": "The Token Pair Rule",
+        "body": "Toute couleur vient d'une variable qui existe en jour et en nuit. Pas de hex en dur dans une section de la page.",
+        "section": "colors"
+      },
+      {
+        "name": "The Weight Not Family Rule",
+        "body": "On distingue par le poids d'Outfit, pas en ajoutant une police. Chiffres alignés par `tnum`.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tonal Depth Rule",
+        "body": "Une surface se distingue par son ton, pas par une ombre portée. Pas d'ombre dure décalée.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do passer chaque couleur par une variable jour / nuit de `web-style.ts`.",
+      "Do réserver le rouge `now` à l'action requise et à la sélection.",
+      "Do donner aux contrôles 40px de haut au moins et un focus visible de 2px `now`.",
+      "Do couper les transitions sous `prefers-reduced-motion`.",
+      "Do tester jour, nuit et mobile (820px) pour toute nouvelle section."
+    ],
+    "donts": [
+      "Don't empiler des cartes centrées comme une page d'admin : listes groupées sur `tile` dans la barre + contenu.",
+      "Don't introduire une seconde police ni un poids hors 300 / 400 / 500.",
+      "Don't utiliser de contrôle natif non habillé (case, curseur, champ).",
+      "Don't teinter de larges aplats en rouge."
+    ]
+  }
+}

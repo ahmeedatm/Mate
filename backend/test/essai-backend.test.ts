@@ -50,7 +50,7 @@ function install(platform: Layout["platform"]): Layout {
       "config/deck.json": "deck de l'ordinateur",
       "config/tasks.json": "tâches de l'ordinateur",
       "node/node.exe": "node verrouillé",
-      ...(platform === "windows" ? { "src/win/UnowhyCompanion.exe": "lanceur verrouillé" } : {}),
+      ...(platform === "windows" ? { "src/win/UnoMate.exe": "lanceur verrouillé" } : {}),
       ".env": "COMPANION_TOKEN=secret",
     }),
   );
@@ -73,7 +73,7 @@ describe("essai du backend d'une MR", () => {
       assert.equal(read(layout.root, "config/deck.json"), "deck de l'ordinateur");
       assert.equal(read(layout.root, "config/tasks.json"), "tâches de l'ordinateur");
       assert.equal(read(layout.root, "node/node.exe"), "node verrouillé");
-      if (platform === "windows") assert.equal(read(layout.root, "src/win/UnowhyCompanion.exe"), "lanceur verrouillé");
+      if (platform === "windows") assert.equal(read(layout.root, "src/win/UnoMate.exe"), "lanceur verrouillé");
       assert.equal(read(layout.root, ".env"), "COMPANION_TOKEN=secret");
       // Copie d'origine : le backend installé, sans les données de l'ordinateur.
       const copy = path.join(layout.dataDir, "backend-origin");
@@ -200,7 +200,7 @@ describe("mise à jour stable du backend", () => {
       assert.equal(read(layout.root, "config/deck.json"), "deck de l'ordinateur");
       assert.equal(read(layout.root, "config/tasks.json"), "tâches de l'ordinateur");
       assert.equal(read(layout.root, "node/node.exe"), "node verrouillé");
-      if (platform === "windows") assert.equal(read(layout.root, "src/win/UnowhyCompanion.exe"), "lanceur verrouillé");
+      if (platform === "windows") assert.equal(read(layout.root, "src/win/UnoMate.exe"), "lanceur verrouillé");
       assert.equal(read(layout.root, ".env"), "COMPANION_TOKEN=secret");
       assert.equal(exists(layout.dataDir, "backend-origin"), false, "pas de copie d'origine");
       assert.equal(backendState(layout).mode, "origin");

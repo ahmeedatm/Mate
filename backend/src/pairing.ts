@@ -126,7 +126,7 @@ export class PairingError extends Error {
 const askCode = async (text: string) => {
   if (process.env.NO_ALERT || process.env.COMPANION_HEADLESS === "1") return;
   await openTarget(`http://127.0.0.1:${config.port}/?section=pairing`).catch((e) => logFailure("Page d'appairage", e));
-  await alert("Compagnon Unowhy", text);
+  await alert("UnoMate", text);
 };
 
 /**

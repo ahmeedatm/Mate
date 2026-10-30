@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace Companion
+namespace UnoMate
 {
     public static partial class Native
     {

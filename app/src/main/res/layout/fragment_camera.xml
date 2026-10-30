@@ -7,7 +7,9 @@
     android:orientation="vertical"
     android:padding="24dp">
 
+    <!-- En-tête : posé dans le bandeau du haut (TopHeader). -->
     <LinearLayout
+        android:id="@+id/camera_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
@@ -43,12 +45,6 @@
             style="@style/ActionButton"
             android:drawableStart="@drawable/ic_back"
             android:text="@string/camera_back" />
-
-        <!-- Place du petit lecteur de musique (MainActivity.MEDIA_SPACE), 0 quand il est caché. -->
-        <Space
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:tag="media_space" />
     </LinearLayout>
 
     <FrameLayout

@@ -61,19 +61,21 @@ describe("panneau Tablette", () => {
     assert.equal(done.json.tablet.settings.theme, "RETRO");
   });
 
-  it("accepte le thème Contraste élevé", async () => {
-    const polling = server.call("POST", "/tablet/poll", { state: STATE });
-    await new Promise((r) => setTimeout(r, 300));
-    const put = server.call("PUT", "/local/tablet/settings", { theme: "CONTRASTE" }, false);
-    const [order] = (await polling).json.commands;
-    assert.deepEqual(order.command, { type: "settings", theme: "CONTRASTE" });
-    await server.call("POST", "/tablet/result", {
-      id: order.id,
-      ok: true,
-      state: { ...STATE, settings: { ...SETTINGS, theme: "CONTRASTE" } },
+  for (const theme of ["CONTRASTE", "TERMINAL"]) {
+    it(`accepte le thème ${theme}`, async () => {
+      const polling = server.call("POST", "/tablet/poll", { state: STATE });
+      await new Promise((r) => setTimeout(r, 300));
+      const put = server.call("PUT", "/local/tablet/settings", { theme }, false);
+      const [order] = (await polling).json.commands;
+      assert.deepEqual(order.command, { type: "settings", theme });
+      await server.call("POST", "/tablet/result", {
+        id: order.id,
+        ok: true,
+        state: { ...STATE, settings: { ...SETTINGS, theme } },
+      });
+      assert.equal((await put).status, 200);
     });
-    assert.equal((await put).status, 200);
-  });
+  }
 
   it("rend l'erreur de la tablette", async () => {
     const polling = server.call("POST", "/tablet/poll", { state: STATE });

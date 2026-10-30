@@ -30,7 +30,7 @@ val appVersionCode = versionParts.let { (x, y, z, n) ->
     val tag = (x.toInt() * 10000 + y.toInt() * 100 + z.toInt()) * 1000
     (if (n.isEmpty()) tag else tag + 1 + n.toInt() % 999).coerceAtLeast(1)
 }
-// Un essai est une autre appli (com.unowhy.companion.essai, « Companion essai »), installée à côté de la stable : la
+// Un essai est une autre appli (com.unowhy.companion.essai, « UnoMate essai »), installée à côté de la stable : la
 // stable reste device owner et kiosque, et on revient à elle sans réinstaller (docs/developpement.md, section Release).
 val trial = versionParts.component4().isNotEmpty()
 
@@ -38,17 +38,19 @@ val trial = versionParts.component4().isNotEmpty()
 val releaseKeystore = providers.environmentVariable("RELEASE_KEYSTORE").orNull
 
 android {
-    namespace = "com.unowhy.companion"
+    namespace = "com.unowhy.unomate"
     compileSdk = 36
 
     defaultConfig {
+        // Identité Android d'avant le renommage UnoMate, à ne jamais changer : les tablettes en kiosque ne se mettent à
+        // jour que vers leur propre paquet (device owner, AutoUpdater). Le code, lui, est dans com.unowhy.unomate.
         applicationId = "com.unowhy.companion"
         minSdk = 24
         targetSdk = 34
         versionCode = appVersionCode
         versionName = appVersion
         if (trial) applicationIdSuffix = ".essai"
-        manifestPlaceholders["appLabel"] = if (trial) "Companion essai" else "Companion"
+        manifestPlaceholders["appLabel"] = if (trial) "UnoMate essai" else "UnoMate"
         buildConfigField("boolean", "TRIAL", "$trial")
         buildConfigField("String", "DEFAULT_BACKEND_URL", "\"$backendUrl\"")
         buildConfigField("String", "TECH_CODE", "\"$techCode\"")

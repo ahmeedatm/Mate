@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Une entrée de la barre fixe (profil, « Plus » ou outil) : icône dans la zone de la pastille (56 × 32), libellé
+     dessous. L'élément choisi (isSelected) passe en texte plein ; la pastille, elle, glisse derrière (ProfileRail). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="76dp"
+    android:layout_height="60dp"
+    android:stateListAnimator="@animator/press"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:layout_width="56dp"
+            android:layout_height="32dp">
+
+            <ImageView
+                android:id="@+id/rail_icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                app:tint="@color/rail_profile_content" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/rail_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:fontFamily="?attr/c_font_regular"
+            android:maxWidth="76dp"
+            android:singleLine="true"
+            android:textColor="@color/rail_profile_content"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/rail_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="18dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="2dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/badge_bg"
+        android:gravity="center"
+        android:minWidth="18dp"
+        android:paddingStart="5dp"
+        android:paddingEnd="5dp"
+        android:textColor="?attr/c_on_ko"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+</FrameLayout>

@@ -169,12 +169,12 @@ async function authHeaders(): Promise<{ read?: Auth; write?: Auth }> {
 }
 
 /** Appel GitLab : tout échec réseau ou délai devient « ne répond pas ». */
-async function call(path: string, method: "POST" | "PUT", body: object, auth: Auth): Promise<Response> {
+async function call(path: string, method: "GET" | "POST" | "PUT", body: object | undefined, auth: Auth): Promise<Response> {
   try {
     return await fetch(gitlabBaseUrl() + path, {
       method,
       headers: { ...auth, "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify(body),
+      body: body && JSON.stringify(body),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch {
@@ -211,6 +211,8 @@ let inflight: Promise<MrLists> | undefined;
 export const clearGitlabCache = () => {
   cache = undefined;
   inflight = undefined;
+  pipelinesCache = undefined;
+  pipelinesInflight = undefined;
 };
 
 export type MrLists = { mine: Mr[]; review: Mr[] };
@@ -265,4 +267,123 @@ export async function mergeMr(project: string, iid: number, sha: string): Promis
   clearGitlabCache();
   if (res.status === 401) forgetGitlabAccessToken();
   if (!res.ok) throw MERGE_ERRORS[res.status] ?? UNREACHABLE;
+}
+
+// --- Pipelines (console de déploiement) : le dernier pipeline de la branche par défaut de chaque projet de mes MR.
+
+export type PipelineRow = {
+  project: string;
+  ref: string;
+  id: number;
+  pipeline: Pipeline;
+  /** Durée du pipeline terminé ; null tant qu'il tourne. */
+  durationSec: number | null;
+  /** Âge à la lecture : depuis la fin, ou depuis le départ s'il tourne. */
+  ageSec: number;
+  /** Jobs en échec (3 au plus), vide hors échec. */
+  failedJobs: string[];
+};
+export type PipelinesAnswer = { connected: true; pipelines: PipelineRow[] } | { connected: false; expired: boolean; pipelines: [] };
+
+const MAX_PIPELINES = 8;
+const MAX_FAILED_JOBS = 3;
+
+export const pipelineUrl = (project: string, id: number) => `${gitlabBaseUrl()}/${project}/-/pipelines/${id}`;
+
+/** En cours d'abord, puis les échecs, puis le reste ; du plus récent au plus ancien dans chaque groupe. */
+export function sortPipelines<T extends { pipeline: Pipeline; ageSec: number }>(rows: T[]): T[] {
+  const rank = (r: T) => (r.pipeline === "running" ? 0 : r.pipeline === "failed" ? 1 : 2);
+  return [...rows].sort((a, b) => rank(a) - rank(b) || a.ageSec - b.ageSec);
+}
+
+type PipelineJson = {
+  id: number;
+  ref: string;
+  status: string;
+  created_at?: string | null;
+  started_at?: string | null;
+  finished_at?: string | null;
+  duration?: number | null;
+};
+
+/** Accès refusé : le jeton d'accès est oublié (le prochain appel en renouvelle un), la tablette ne reçoit jamais de 401. */
+function refuseIfDenied(res: Response) {
+  if (res.status === 401 || res.status === 403) {
+    forgetGitlabAccessToken();
+    throw TOKEN_REFUSED;
+  }
+}
+
+async function failedJobs(project: string, id: number, auth: Auth): Promise<string[]> {
+  try {
+    const res = await call(
+      `/api/v4/projects/${encodeURIComponent(project)}/pipelines/${id}/jobs?scope[]=failed&per_page=${MAX_FAILED_JOBS}`,
+      "GET",
+      undefined,
+      auth,
+    );
+    if (!res.ok) return [];
+    const jobs = (await res.json()) as { name?: string }[];
+    return jobs.flatMap((j) => (j.name ? [j.name] : [])).slice(0, MAX_FAILED_JOBS);
+  } catch (e) {
+    // Détail secondaire : la ligne s'affiche sans les jobs.
+    logFailure("Jobs en échec d'un pipeline GitLab", e);
+    return [];
+  }
+}
+
+/** Dernier pipeline de la branche par défaut du projet ; null si le projet n'en a aucun (404). */
+async function latestPipeline(project: string, auth: Auth): Promise<PipelineRow | null> {
+  const res = await call(`/api/v4/projects/${encodeURIComponent(project)}/pipelines/latest`, "GET", undefined, auth);
+  refuseIfDenied(res);
+  if (res.status === 404) return null;
+  if (!res.ok) throw UNREACHABLE;
+  let p: PipelineJson;
+  try {
+    p = await res.json();
+  } catch {
+    throw UNREACHABLE;
+  }
+  const status = pipelineOf(p.status.toUpperCase());
+  const finished = Date.parse(p.finished_at ?? "");
+  const since = Date.parse(p.finished_at ?? p.started_at ?? p.created_at ?? "");
+  return {
+    project,
+    ref: p.ref,
+    id: p.id,
+    pipeline: status,
+    durationSec: status === "running" || !Number.isFinite(finished) ? null : Math.round(p.duration ?? 0),
+    ageSec: Number.isFinite(since) ? Math.max(0, Math.round((Date.now() - since) / 1000)) : 0,
+    failedJobs: status === "failed" ? await failedJobs(project, p.id, auth) : [],
+  };
+}
+
+async function readPipelines(auth: Auth, lists: MrLists): Promise<PipelineRow[]> {
+  const newest = [...lists.mine, ...lists.review].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+  const projects = [...new Set(newest.map((m) => m.project))].slice(0, MAX_PIPELINES);
+  const rows = await Promise.all(projects.map((p) => latestPipeline(p, auth)));
+  return sortPipelines(rows.filter((r): r is PipelineRow => r !== null));
+}
+
+let pipelinesCache: { at: number; value: PipelineRow[] } | undefined;
+let pipelinesInflight: Promise<PipelineRow[]> | undefined;
+
+/** Les pipelines qui comptent pour l'utilisateur. Même cache (20 s) et mêmes erreurs que les MR ; pas connecté : réponse normale. */
+export async function listPipelines(): Promise<PipelinesAnswer> {
+  const { read: auth } = await authHeaders();
+  if (!auth) return { connected: false, expired: !!(await gitlabAccount())?.expired, pipelines: [] };
+  if (pipelinesCache && Date.now() - pipelinesCache.at < CACHE_MS) return { connected: true, pipelines: pipelinesCache.value };
+  if (!pipelinesInflight) {
+    const run: Promise<PipelineRow[]> = read(auth)
+      .then((lists) => readPipelines(auth, lists))
+      .then((value) => {
+        if (pipelinesInflight === run) pipelinesCache = { at: Date.now(), value };
+        return value;
+      })
+      .finally(() => {
+        if (pipelinesInflight === run) pipelinesInflight = undefined;
+      });
+    pipelinesInflight = run;
+  }
+  return { connected: true, pipelines: await pipelinesInflight };
 }

@@ -1,5 +1,5 @@
 ﻿# Pilote Windows et lanceur recompilés sur Windows (job helper-windows ou à la main) :
-# échoue si le C# ne compile pas, ou si src/win/UnowhyHelper.exe et src/win/UnowhyCompanion.exe ne sont plus ceux
+# échoue si le C# ne compile pas, ou si src/win/UnowhyHelper.exe et src/win/UnoMate.exe ne sont plus ceux
 # que donnent les sources (C# modifié sans `npm run build:helper`, ou compilé avec un autre SDK que global.json).
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File backend\qa\build-helper-windows.ps1
@@ -47,7 +47,7 @@ try {
   & $dotnet --version
   if ($LASTEXITCODE) { Fail "SDK $version introuvable" }
 
-  foreach ($p in @(@("helper", "UnowhyHelper.exe"), @("launcher", "UnowhyCompanion.exe"))) {
+  foreach ($p in @(@("helper", "UnowhyHelper.exe"), @("launcher", "UnoMate.exe"))) {
     $dir, $exe = $p
     Step "Compilation de src\win\$dir"
     $out = Join-Path $Work "out\$dir"
@@ -57,7 +57,7 @@ try {
   }
 
   Step "Exe du dépôt comparés aux sources"
-  git -c safe.directory=* diff --stat --exit-code -- src/win/UnowhyHelper.exe src/win/UnowhyCompanion.exe
+  git -c safe.directory=* diff --stat --exit-code -- src/win/UnowhyHelper.exe src/win/UnoMate.exe
   if ($LASTEXITCODE) {
     Fail "exe du dépôt différents des sources : lancer npm run build:helper (dans backend/, SDK $version) et commiter les exe"
   }

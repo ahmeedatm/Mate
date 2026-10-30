@@ -53,6 +53,9 @@ test.describe("compte Microsoft et courrier", () => {
     link(server, {});
     try {
       await page.goto("/");
+      const tile = page.locator(".cx", { hasText: "Microsoft" });
+      await expect(tile).toContainText("Non connecté");
+      await tile.click();
       const row = page.locator("#accounts .account");
       await expect(row).toContainText("Microsoft · moi@exemple.fr (à reconnecter pour le courrier)");
       await expect(row.getByRole("link", { name: "Reconnecter" })).toHaveAttribute("href", "/oauth/microsoft/start");
@@ -65,6 +68,7 @@ test.describe("compte Microsoft et courrier", () => {
     link(server, { mail: true });
     try {
       await page.goto("/");
+      await expect(page.locator(".cx", { hasText: "Microsoft" })).toContainText("Connecté");
       const row = page.locator("#accounts .account");
       await expect(row).toContainText("Microsoft · moi@exemple.fr");
       await expect(row).not.toContainText("à reconnecter");
