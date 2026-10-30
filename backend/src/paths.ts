@@ -29,11 +29,15 @@ export const dataDir = path.resolve(envDataDir || (packaged ? appDataDir() : pat
  * Données d'un paquet d'avant, recopiées une fois, sinon la tablette verrait un nouvel ordinateur (autre identité,
  * appairage perdu) et l'agenda, les tâches, les touches et les connexions seraient perdus : dossier d'avant le
  * renommage UnoMate (« UnowhyCompanion », 29/10/2026, mis à jour en place par la tablette), puis .data à côté du
- * serveur (paquet d'avant les données hors du dossier). Les originaux restent en place.
+ * serveur (paquet d'avant les données hors du dossier). Les originaux restent en place. Aussi pour le serveur MCP
+ * lancé depuis le dépôt sur les données du paquet (`.mcp.json`).
  */
 export function adoptOldData() {
-  if (!packaged || process.env.DATA_DIR) return;
-  for (const old of [appDataDir("UnowhyCompanion"), path.join(backendRoot, ".data")]) if (adoptData(old, dataDir)) return;
+  // Données du paquet seulement : le paquet lui-même, ou le serveur MCP du dépôt branché dessus (DATA_DIR=paquet), qui
+  // sinon y créerait une identité neuve avant que le compagnon ne reprenne la sienne.
+  if (process.env.DATA_DIR ? process.env.DATA_DIR !== "paquet" : !packaged) return;
+  const olds = [appDataDir("UnowhyCompanion"), ...(packaged ? [path.join(backendRoot, ".data")] : [])];
+  for (const old of olds) if (adoptData(old, dataDir)) return;
 }
 
 /** Recopie `from` dans `to` si `to` n'a pas encore d'identité et que `from` en a une ; vrai si recopié. */

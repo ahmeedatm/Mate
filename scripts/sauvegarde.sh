@@ -23,13 +23,18 @@ perso=""
 for f in backend/.env backend/.data backend/config/deck.json backend/config/tasks.json local.properties; do
   [ -e "$f" ] && perso="$perso $f"
 done
-# Compagnon installé par paquet sur ce Mac : ses données sont hors du dépôt (src/paths.ts).
-app="$HOME/Library/Application Support/UnoMate"
-if [ -n "$perso" ] || [ -d "$app" ]; then
+# Compagnon installé par paquet sur ce Mac : ses données sont hors du dépôt (src/paths.ts), dans « UnoMate » ou, avant le
+# renommage (29/10/2026), « UnowhyCompanion ».
+support="$HOME/Library/Application Support"
+apps=""
+for d in UnoMate UnowhyCompanion; do
+  [ -d "$support/$d" ] && apps="$apps $d"
+done
+if [ -n "$perso" ] || [ -n "$apps" ]; then
   archive="$dest/unomate-donnees-perso-$day.tgz"
   # shellcheck disable=SC2086
-  if [ -d "$app" ]; then
-    tar czf "$archive" --exclude backend/.data/updates $perso -C "$(dirname "$app")" UnoMate
+  if [ -n "$apps" ]; then
+    tar czf "$archive" --exclude backend/.data/updates --exclude updates $perso -C "$support" $apps
   else
     tar czf "$archive" --exclude backend/.data/updates $perso
   fi
