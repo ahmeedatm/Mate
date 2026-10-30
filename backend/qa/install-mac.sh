@@ -31,7 +31,8 @@ sha() { [[ -f $1 ]] && shasum -a 256 "$1" | cut -c1-16 || echo absent; }
 listener() { lsof -nP -iTCP:"$1" -sTCP:LISTEN -t 2>/dev/null | head -1 || true; }
 health() { curl -fsS --max-time 3 "http://127.0.0.1:$1/health" 2>/dev/null || true; }
 agent() { launchctl print "gui/$UID/$1" 2>/dev/null | awk -F' = ' '/^\tstate = /{s=$2} /^\tpid = /{p=$2} END{print (s ? s " pid " p : "absent")}'; }
-post() { curl -fsS --max-time 5 -X POST -H 'content-type: application/json' -d "${2:-{\}}" "http://127.0.0.1:$PORT$1"; }
+# Corps par défaut {} : écrit "${2:-{\}}", le \ restait entre guillemets doubles (JSON invalide, 400).
+post() { local body=${2:-'{}'}; curl -fsS --max-time 5 -X POST -H 'content-type: application/json' -d "$body" "http://127.0.0.1:$PORT$1"; }
 
 # État du vrai compagnon, comparé avant / après. Sans PID : une tablette connectée peut le relancer pendant le test
 # (essai de backend d'une MR, mise à jour à distance) ; ce qui compte, c'est qu'il tourne, sur le même port et la même identité.
