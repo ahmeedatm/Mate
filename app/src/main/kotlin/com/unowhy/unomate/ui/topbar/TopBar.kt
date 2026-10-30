@@ -48,6 +48,11 @@ interface TopBarHost {
     fun callActive(): Boolean
     fun agentsOffered(): Boolean
     fun openAgents()
+
+    /** Cloche : Depuis l'ordi > Notifications ; point allumé tant que des arrivées n'ont pas été vues. */
+    fun openNotifications()
+    fun notificationsUnread(): Boolean
+    fun notificationsShown(): Boolean
     fun joinMeeting(event: CalendarEvent)
     fun showError(e: Throwable)
 
@@ -154,6 +159,14 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
     fun attach(host: TopBarHost) {
         this.host = host
         rebuild()
+    }
+
+    /** Cloche des notifications, si elle est dans le bandeau (visite guidée). */
+    val notifications: View? get() = (elements[TopItem.NOTIFICATIONS] as? NotificationsElement)?.view
+
+    /** Notification arrivée, vue ou affichée : la cloche se redessine (et sonne une fois si [ring]). */
+    fun notificationsChanged(ring: Boolean = false) {
+        (elements[TopItem.NOTIFICATIONS] as? NotificationsElement)?.render(ring)
     }
 
     /** Pastille Lecture en cours, si elle est dans le bandeau (relue tout de suite après un changement d'état). */
@@ -393,6 +406,7 @@ object TopItems {
         TopItem.CALL -> R.string.top_call
         TopItem.VOLUME -> R.string.top_volume
         TopItem.AGENTS -> R.string.top_agents
+        TopItem.NOTIFICATIONS -> R.string.notif_open
         TopItem.WEATHER -> R.string.top_weather
         TopItem.DATE -> R.string.top_date
         TopItem.CLOCK -> R.string.top_clock
@@ -407,6 +421,7 @@ object TopItems {
         TopItem.CALL -> R.string.top_call_desc
         TopItem.VOLUME -> R.string.top_volume_desc
         TopItem.AGENTS -> R.string.top_agents_desc
+        TopItem.NOTIFICATIONS -> R.string.top_notifications_desc
         TopItem.WEATHER -> R.string.top_weather_desc
         TopItem.DATE -> R.string.top_date_desc
         TopItem.CLOCK -> R.string.top_clock_desc
@@ -421,6 +436,7 @@ object TopItems {
         TopItem.CALL -> R.drawable.ic_mic
         TopItem.VOLUME -> R.drawable.ic_volume
         TopItem.AGENTS -> R.drawable.ic_agents
+        TopItem.NOTIFICATIONS -> R.drawable.ic_notifications
         TopItem.WEATHER -> R.drawable.ic_cloud
         TopItem.DATE -> R.drawable.ic_event
         TopItem.CLOCK -> R.drawable.ic_clock

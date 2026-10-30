@@ -16,27 +16,41 @@ import com.unowhy.unomate.R
  * s'applique aussi par code : `Prefs.setTheme(context, AppTheme.CONTRASTE.name)` puis `recreate()` (ou l'ordre
  * `settings` de la page de l'ordinateur, `{"theme": "CONTRASTE"}`). Les couleurs et polices sont des attributs (`?attr/c_…`, res/values/palettes.xml) :
  * changer de thème recrée l'activité. Les thèmes clairs ont leur propre base AppCompat (dialogues et champs clairs).
- * Un ancien thème enregistré (Nuit, Néon, Chaud) retombe sur Cadran ; l'ancien Clair est le Clair d'aujourd'hui.
+ * Clair est le thème par défaut (premier de la liste) : sans choix, ou un ancien thème enregistré (Nuit, Néon, Chaud).
+ * Choix des Réglages en groupes ([ThemeGroup]) : sobres (Clair, Sombre), rétro (les texturés : Cadran, Cadran nuit,
+ * Rétro), accessibilité (Contraste élevé), personas.
  *
  * Thèmes des personas (`demo`) : un par persona (Registre, Studio, Maison, Tableau, Terminal), posés avec le persona
- * (`Persona.theme`) et rendus par Quitter la démo. Choisissables aussi hors démo, dans Réglages (seconde ligne) et par
+ * (`Persona.theme`) et rendus par Quitter la démo. Choisissables aussi hors démo, dans Réglages (dernier groupe) et par
  * l'ordre `settings`.
  */
-enum class AppTheme(val label: Int, val base: Int, val palette: Int, val swatch: Int, val demo: Boolean = false) {
-    CADRAN(R.string.theme_cadran, R.style.Theme_CompanionLight, R.style.Palette_Cadran, 0xFFCA0538.toInt()),
-    CADRAN_NUIT(R.string.theme_cadran_nuit, R.style.Theme_Companion, R.style.Palette_CadranNuit, 0xFFFF5165.toInt()),
-    CLAIR(R.string.theme_clair, R.style.Theme_CompanionLight, R.style.Palette_CadranClair, 0xFFCA0538.toInt()),
-    SOMBRE(R.string.theme_sombre, R.style.Theme_Companion, R.style.Palette_CadranSombre, 0xFFFF5165.toInt()),
-    RETRO(R.string.theme_retro, R.style.Theme_CompanionLight, R.style.Palette_Retro, 0xFFFC9303.toInt()),
-    CONTRASTE(R.string.theme_contraste, R.style.Theme_CompanionLight, R.style.Palette_Contraste, 0xFF140F0F.toInt()),
-    REGISTRE(R.string.theme_registre, R.style.Theme_CompanionLight, R.style.Palette_Registre, 0xFF175E34.toInt(), demo = true),
-    STUDIO(R.string.theme_studio, R.style.Theme_CompanionLight, R.style.Palette_Studio, 0xFF513FFF.toInt(), demo = true),
-    MAISON(R.string.theme_maison, R.style.Theme_CompanionLight, R.style.Palette_Maison, 0xFF456179.toInt(), demo = true),
-    TABLEAU(R.string.theme_tableau, R.style.Theme_CompanionLight, R.style.Palette_Tableau, 0xFF005592.toInt(), demo = true),
-    TERMINAL(R.string.theme_terminal, R.style.Theme_Companion, R.style.Palette_Terminal, 0xFF43E188.toInt(), demo = true);
+/** Groupes du choix des Réglages, dans cet ordre. */
+enum class ThemeGroup(val label: Int) {
+    SOBRE(R.string.theme_group_sober),
+    RETRO(R.string.theme_group_retro),
+    ACCESSIBILITE(R.string.theme_group_a11y),
+    PERSONAS(R.string.theme_group_personas),
+}
+
+enum class AppTheme(val label: Int, val base: Int, val palette: Int, val swatch: Int, val group: ThemeGroup) {
+    CLAIR(R.string.theme_clair, R.style.Theme_CompanionLight, R.style.Palette_CadranClair, 0xFFCA0538.toInt(), ThemeGroup.SOBRE),
+    SOMBRE(R.string.theme_sombre, R.style.Theme_Companion, R.style.Palette_CadranSombre, 0xFFFF5165.toInt(), ThemeGroup.SOBRE),
+    CADRAN(R.string.theme_cadran, R.style.Theme_CompanionLight, R.style.Palette_Cadran, 0xFFCA0538.toInt(), ThemeGroup.RETRO),
+    CADRAN_NUIT(R.string.theme_cadran_nuit, R.style.Theme_Companion, R.style.Palette_CadranNuit, 0xFFFF5165.toInt(), ThemeGroup.RETRO),
+    RETRO(R.string.theme_retro, R.style.Theme_CompanionLight, R.style.Palette_Retro, 0xFFFC9303.toInt(), ThemeGroup.RETRO),
+    CONTRASTE(R.string.theme_contraste, R.style.Theme_CompanionLight, R.style.Palette_Contraste, 0xFF140F0F.toInt(), ThemeGroup.ACCESSIBILITE),
+    REGISTRE(R.string.theme_registre, R.style.Theme_CompanionLight, R.style.Palette_Registre, 0xFF175E34.toInt(), ThemeGroup.PERSONAS),
+    STUDIO(R.string.theme_studio, R.style.Theme_CompanionLight, R.style.Palette_Studio, 0xFF513FFF.toInt(), ThemeGroup.PERSONAS),
+    MAISON(R.string.theme_maison, R.style.Theme_CompanionLight, R.style.Palette_Maison, 0xFF456179.toInt(), ThemeGroup.PERSONAS),
+    TABLEAU(R.string.theme_tableau, R.style.Theme_CompanionLight, R.style.Palette_Tableau, 0xFF005592.toInt(), ThemeGroup.PERSONAS),
+    TERMINAL(R.string.theme_terminal, R.style.Theme_Companion, R.style.Palette_Terminal, 0xFF43E188.toInt(), ThemeGroup.PERSONAS),
+    ;
+
+    /** Thème d'un persona : posé avec lui, rendu par Quitter la démo. */
+    val demo get() = group == ThemeGroup.PERSONAS
 
     companion object {
-        fun current(context: Context): AppTheme = entries.firstOrNull { it.name == Prefs.theme(context) } ?: CADRAN
+        fun current(context: Context): AppTheme = entries.firstOrNull { it.name == Prefs.theme(context) } ?: CLAIR
 
         /** À appeler avant super.onCreate. Police lisible (Réglages > Accessibilité) par-dessus la palette. */
         fun apply(activity: Activity) {

@@ -64,7 +64,7 @@ class FromComputerFragment :
     private var dir = ""
     private var screen = Screen.CHOICE
 
-    /** Écran d'ici montré avant les notifications : « Terminer » ou « Depuis l'ordi » dans la barre y revient. */
+    /** Écran d'ici montré avant les notifications : « Depuis l'ordi » dans la barre y revient. */
     private var beforeNotifications = Screen.CHOICE
     /** Liste des fichiers affichée. */
     private val browsing get() = screen == Screen.FILES
@@ -104,7 +104,7 @@ class FromComputerFragment :
         }
         up.setOnClickListener { load(dir.substringBeforeLast('/', "")) }
         refresh.setOnClickListener { load(dir) }
-        back.setOnClickListener { if (screen == Screen.NOTIFICATIONS) closeNotifications() else show(Screen.CHOICE) }
+        back.setOnClickListener { show(Screen.CHOICE) }
         view.findViewById<View>(R.id.docs_choose_files).setOnClickListener { show(Screen.FILES) }
         view.findViewById<View>(R.id.docs_choose_web).setOnClickListener { (requireActivity() as MainActivity).openComputerPage() }
         view.findViewById<View>(R.id.docs_choose_clipboard).setOnClickListener { show(Screen.CLIPBOARD) }
@@ -140,12 +140,6 @@ class FromComputerFragment :
         }
     }
 
-    /** « Terminer » des notifications : l'écran d'avant ici, et l'écran d'avant la cloche s'il était ailleurs. */
-    private fun closeNotifications() {
-        show(beforeNotifications)
-        (activity as? MainActivity)?.notificationsClosed()
-    }
-
     /** « Depuis l'ordi » touché dans la barre (ou atteint par balayage) : on quitte les notifications pour le choix. */
     fun leaveNotifications() {
         if (view != null && screen == Screen.NOTIFICATIONS) show(beforeNotifications)
@@ -178,7 +172,8 @@ class FromComputerFragment :
         frameRoot.visibility = if (next == Screen.FRAME) View.VISIBLE else View.GONE
         notificationsRoot.visibility = if (next == Screen.NOTIFICATIONS) View.VISIBLE else View.GONE
         refresh.visibility = files.visibility
-        back.visibility = if (next == Screen.CHOICE) View.GONE else View.VISIBLE
+        // Notifications : pas de « Terminer », on en sort par la barre de gauche.
+        back.visibility = if (next == Screen.CHOICE || next == Screen.NOTIFICATIONS) View.GONE else View.VISIBLE
         when (next) {
             Screen.FILES -> load("")
             Screen.CHOICE -> {

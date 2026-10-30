@@ -29,6 +29,7 @@ import com.unowhy.unomate.ui.home.DayLineWidget
 import com.unowhy.unomate.ui.home.DeckOverlays
 import com.unowhy.unomate.ui.home.DeckPagesCache
 import com.unowhy.unomate.ui.home.Down
+import com.unowhy.unomate.ui.home.Fit
 import com.unowhy.unomate.ui.home.HomeHost
 import com.unowhy.unomate.ui.home.HomeLayout
 import com.unowhy.unomate.ui.home.HomeWidget
@@ -412,6 +413,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         val order = layout.profilesInOrder(inCall = main?.inCall == true)
         val move = RailModel.direction(order.indexOf(page), order.indexOf(index))
         val changed = index != page
+        // Changer de profil termine le mode Modifier (gardé), comme quitter l'Accueil.
+        if (changed && grid.editing) endEdit(keep = true)
         displayProfile(index)
         val slide = animate && changed
         // Arrivée des widgets active (Réglages > Animations) : ils arrivent un à un, comme en venant d'un autre écran,
@@ -678,11 +681,13 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         grid.invalidate()
     }
 
-    override fun pickSize(placed: Placed, w: Float, h: Float) = layout.pickSize(placed, w, h)
+    override fun pickSize(placed: Placed, left: Float, top: Float, right: Float, bottom: Float) = layout.pickSize(placed, left, top, right, bottom)
 
-    /** Poignée lâchée : le widget prend la taille choisie, à sa case. */
-    override fun onResize(placed: Placed, size: WidgetSize) {
-        placed.size = size
+    /** Poignée lâchée : le widget prend la taille et la case choisies (sa case d'origine reste couverte). */
+    override fun onResize(placed: Placed, fit: Fit) {
+        placed.size = fit.size
+        placed.col = fit.col
+        placed.row = fit.row
         widgets[placed]?.applySize()
         grid.requestLayout()
         grid.invalidate()

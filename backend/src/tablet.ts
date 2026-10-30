@@ -14,12 +14,12 @@ import { randomUUID } from "node:crypto";
 export const MODES = ["home", "deck", "docs", "focus", "camera", "tasks", "settings"] as const;
 export const NOISES = ["storm", "forest", "japan", "sea", "lofi", "off"] as const;
 export const FOCUS_ACTIONS = ["start", "pause", "reset", "skip"] as const;
-/** Thèmes de la tablette (AppTheme dans ui/Themes.kt) : de base, puis ceux des personas. */
+/** Thèmes de la tablette (AppTheme dans ui/Themes.kt), dans son ordre : Clair (par défaut) et Sombre, les rétro, Contraste, puis ceux des personas. */
 export const THEMES = [
-  "CADRAN",
-  "CADRAN_NUIT",
   "CLAIR",
   "SOMBRE",
+  "CADRAN",
+  "CADRAN_NUIT",
   "RETRO",
   "CONTRASTE",
   "REGISTRE",

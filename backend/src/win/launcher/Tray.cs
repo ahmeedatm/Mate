@@ -1,6 +1,6 @@
 // Icône du compagnon dans la zone de notification : un clic ouvre la page locale, le menu (clic droit) montre l'état de
-// la tablette, lu sur GET /local/status, et « Ouvrir les réglages de la tablette ». Icône Cadran monochrome
-// (docs/ui-ux/da/icone-mono.svg), blanche ou noire selon le thème de la barre des tâches.
+// la tablette, lu sur GET /local/status, et « Ouvrir les réglages de la tablette ». Visage UnoMate monochrome
+// (docs/ui-ux/da/icone-visage-mono.svg), blanc ou noir selon le thème de la barre des tâches.
 
 using System;
 using System.Collections.Generic;
@@ -111,7 +111,18 @@ namespace UnoMate
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         static extern bool DestroyIcon(IntPtr handle);
 
-        // Repère 24 × 24 du SVG.
+        static GraphicsPath RoundedRect(float x, float y, float w, float h, float r)
+        {
+            var path = new GraphicsPath();
+            path.AddArc(x, y, 2 * r, 2 * r, 180, 90);
+            path.AddArc(x + w - 2 * r, y, 2 * r, 2 * r, 270, 90);
+            path.AddArc(x + w - 2 * r, y + h - 2 * r, 2 * r, 2 * r, 0, 90);
+            path.AddArc(x, y + h - 2 * r, 2 * r, 2 * r, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+
+        // Visage du SVG (repère du groupe de icone-visage.svg : x 7..200, y 0..166,4), centré, ~86 % de la largeur.
         static Icon Draw(Color color)
         {
             var size = SystemInformation.SmallIconSize.Width;
@@ -119,18 +130,27 @@ namespace UnoMate
             using (var g = Graphics.FromImage(bitmap))
             {
                 g.SmoothingMode = SmoothingMode.AntiAlias;
-                float k = size / 24f;
-                Action<float, float, int, float> line = (x1, x2, alpha, width) =>
-                {
-                    using (var pen = new Pen(Color.FromArgb(alpha, color), width * k) { StartCap = LineCap.Round, EndCap = LineCap.Round })
-                        g.DrawLine(pen, x1 * k, 12 * k, x2 * k, 12 * k);
-                };
-                line(2.5f, 13.5f, 255, 2.2f);
-                line(13.5f, 21.5f, 102, 2.2f);
-                using (var pen = new Pen(Color.FromArgb(140, color), 1.4f * k))
-                    g.DrawEllipse(pen, (13.5f - 4.3f) * k, (12 - 4.3f) * k, 8.6f * k, 8.6f * k);
+                float k = size * 0.86f / 193f;
+                g.TranslateTransform((size - 193 * k) / 2 - 7 * k, (size - 166.4f * k) / 2);
+                g.ScaleTransform(k, k);
                 using (var brush = new SolidBrush(color))
-                    g.FillEllipse(brush, (13.5f - 2.3f) * k, (12 - 2.3f) * k, 4.6f * k, 4.6f * k);
+                using (var pen = new Pen(color, 4) { LineJoin = LineJoin.Round })
+                {
+                    foreach (var x in new[] { 47.5f, 137.5f })
+                        using (var eye = RoundedRect(x, 0, 22, 43.5f, 4))
+                            g.FillPath(brush, eye);
+                    using (var mouth = new GraphicsPath())
+                    {
+                        mouth.AddPolygon(new[]
+                        {
+                            new PointF(9, 72), new PointF(27.5f, 72), new PointF(27.5f, 104), new PointF(103.5f, 142.5f),
+                            new PointF(179.5f, 104), new PointF(179.5f, 72), new PointF(198, 72), new PointF(198, 116),
+                            new PointF(103.5f, 164.4f), new PointF(9, 116)
+                        });
+                        g.FillPath(brush, mouth);
+                        g.DrawPath(pen, mouth);
+                    }
+                }
                 var handle = bitmap.GetHicon();
                 using (var temporary = Icon.FromHandle(handle))
                 {

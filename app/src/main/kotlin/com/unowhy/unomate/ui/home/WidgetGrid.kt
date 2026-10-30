@@ -25,6 +25,8 @@ import com.unowhy.unomate.ui.themeBool
 import com.unowhy.unomate.ui.themeColor
 import com.unowhy.unomate.ui.themeFont
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
@@ -52,9 +54,9 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         fun onAddAt(col: Int, row: Int)
         fun onRemove(placed: Placed)
 
-        /** Taille permise de `placed` la plus proche de la zone tirée (`w` × `h` cases) qui tient à sa case, null si aucune. */
-        fun pickSize(placed: Placed, w: Float, h: Float): WidgetSize?
-        fun onResize(placed: Placed, size: WidgetSize)
+        /** Taille et case permises de `placed` les plus proches de la zone tirée (bords en cases), null si aucune. */
+        fun pickSize(placed: Placed, left: Float, top: Float, right: Float, bottom: Float): Fit?
+        fun onResize(placed: Placed, fit: Fit)
 
         /** Action d'accessibilité de la poignée : taille suivante qui tient. */
         fun onCycleSize(placed: Placed)
@@ -453,7 +455,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     /** Poignée tirée : widget, zone brute sous le doigt (px de la grille) et taille qui s'y calerait. */
     private var resizeView: View? = null
     private var resizing = false
-    private var resizePick: WidgetSize? = null
+    private var resizePick: Fit? = null
     private val resizeZone = RectF()
 
     private sealed class Hit {
@@ -499,10 +501,10 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             MotionEvent.ACTION_UP -> {
                 val hit = pressed
                 val resized = resizeView?.takeIf { resizing }?.let(::placedOf)
-                val size = resizePick
+                val fit = resizePick
                 if (resizeView != null) {
                     endDrag()
-                    if (resized != null && size != null && size != resized.size) listener?.onResize(resized, size)
+                    if (resized != null && fit != null && fit != Fit(resized.size, resized.col, resized.row)) listener?.onResize(resized, fit)
                 } else if (dragging) {
                     val placed = dragView?.let { placedOf(it) }
                     val ok = dropOk
@@ -534,11 +536,21 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             resizing = true
             view.alpha = 0.85f
         }
-        val right = (view.right + dx).coerceAtLeast(view.left.toFloat())
-        val bottom = (view.bottom + dy).coerceAtLeast(view.top.toFloat())
-        resizeZone.set(view.left.toFloat(), view.top.toFloat(), right, bottom)
-        val w = (right - view.left + gap) / (cellW + gap)
-        resizePick = listener?.pickSize(placed, w, cellsSpanned(placed.row, bottom - paddingTop))
+        // Zone entre la case en haut à gauche du widget et le doigt, dans tous les sens : vers la gauche ou le haut,
+        // un widget collé au bord droit ou en bas peut quand même grandir.
+        val x = view.right + dx
+        val y = view.bottom + dy
+        val origin = cellFrame(placed.col, placed.row, WidgetSize.S)
+        resizeZone.set(min(origin.left, x), min(origin.top, y), max(origin.right, x), max(origin.bottom, y))
+        val fx = (x - paddingLeft + gap) / (cellW + gap)
+        val fy = cellsSpanned(0, y - paddingTop)
+        resizePick = listener?.pickSize(
+            placed,
+            min(placed.col.toFloat(), fx),
+            min(placed.row.toFloat(), fy),
+            max(placed.col + 1f, fx),
+            max(placed.row + 1f, fy),
+        )
         invalidate()
     }
 
@@ -641,13 +653,13 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             canvas.drawRoundRect(rect, 20 * density, 20 * density, stroke)
         }
         if (resizing) {
-            val placed = resizeView?.let { placedOf(it) } ?: return
+            if (resizeView?.let { placedOf(it) } == null) return
             // Zone sous le doigt en pointillés ; la taille permise où elle se calera, pleine.
             dashed.color = accent
             canvas.drawRoundRect(resizeZone, 20 * density, 20 * density, dashed)
             dashed.color = themeColor(context, R.attr.c_stroke)
-            resizePick?.let { size ->
-                val rect = cellFrame(placed.col, placed.row, size)
+            resizePick?.let { fit ->
+                val rect = cellFrame(fit.col, fit.row, fit.size)
                 stroke.color = accent
                 fill.color = accent and 0x33FFFFFF
                 canvas.drawRoundRect(rect, 20 * density, 20 * density, fill)

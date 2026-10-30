@@ -6,7 +6,6 @@ import android.widget.TextView
 import androidx.annotation.AttrRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import com.unowhy.unomate.R
 import com.unowhy.unomate.focus.Moods
@@ -15,21 +14,24 @@ import com.unowhy.unomate.focus.Moods
 object MoodDialog {
     fun propose(context: Context, mood: Moods.Mood, onGo: () -> Unit) {
         val plan = Moods.planFor(mood)
-        val pad = context.dp(24)
+        // Le programme dans une ligne comme celles de la boîte Profils ; l'intention en phrase d'aide sous le titre.
         val text = TextView(context).apply {
-            textSize = 22f
+            textSize = 20f
             typeface = themeFont(context, R.attr.c_font_regular)
             setTextColor(themeColor(context, R.attr.c_text))
-            setPadding(pad, pad / 3, pad, 0)
-            this.text = context.getString(mood.intro) + "\n\n" + describe(context, plan)
+            setBackgroundResource(R.drawable.row_bg)
+            setPadding(context.dp(20), context.dp(16), context.dp(20), context.dp(16))
+            this.text = describe(context, plan)
         }
-        AlertDialog.Builder(context)
-            .setTitle(mood.label)
-            .setIcon(mood.drawable(context, context.dp(32)))
-            .setView(text)
-            .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.mood_go) { _, _ -> onGo() }
-            .showImmersive()
+        showCadranDialog(
+            context,
+            title = context.getString(mood.label),
+            subtitle = context.getString(mood.intro),
+            icon = Look.badge(context, mood.icon, themeColor(context, mood.hue), sizeDp = 48, iconDp = 26),
+            body = text,
+            primary = R.string.mood_go,
+            widthDp = 560,
+        ) { onGo() }
     }
 
     private fun describe(context: Context, plan: Moods.Plan): String {

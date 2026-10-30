@@ -11,6 +11,7 @@ enum class TopItem(val key: String, val computer: Boolean, val self: Boolean) {
     CALL("call", true, true),
     VOLUME("volume", true, false),
     AGENTS("agents", true, true),
+    NOTIFICATIONS("notifications", true, false),
     WEATHER("weather", false, false),
     DATE("date", false, false),
     CLOCK("clock", false, false),
@@ -25,8 +26,18 @@ enum class TopItem(val key: String, val computer: Boolean, val self: Boolean) {
 
 /** Liste des éléments du bandeau, dans l'ordre affiché (de gauche à droite) : lecture, ajout, retrait, rangement, place. */
 object TopBarModel {
-    /** Le bandeau d'avant sa personnalisation : lecture en cours, heure, WiFi, batterie. */
-    val DEFAULT = listOf(TopItem.MUSIC, TopItem.CLOCK, TopItem.WIFI, TopItem.BATTERY)
+    /** Le bandeau d'avant sa personnalisation : lecture en cours, cloche des notifications, heure, WiFi, batterie. */
+    val DEFAULT = listOf(TopItem.MUSIC, TopItem.NOTIFICATIONS, TopItem.CLOCK, TopItem.WIFI, TopItem.BATTERY)
+
+    /**
+     * La cloche, venue de la barre de gauche (30/10) : ajoutée une fois aux bandeaux déjà réglés, juste avant l'heure
+     * (au bout s'il n'y a pas d'heure).
+     */
+    fun withNotifications(items: List<TopItem>): List<TopItem> {
+        if (TopItem.NOTIFICATIONS in items) return items
+        val at = items.indexOf(TopItem.CLOCK).takeIf { it >= 0 } ?: items.size
+        return items.toMutableList().apply { add(at, TopItem.NOTIFICATIONS) }
+    }
 
     /** Clés séparées par des virgules ; null (jamais réglé) : [DEFAULT]. Clé inconnue ou en double ignorée. */
     fun parse(text: String?): List<TopItem> = text?.split(',')?.mapNotNull { TopItem.of(it.trim()) }?.distinct() ?: DEFAULT
