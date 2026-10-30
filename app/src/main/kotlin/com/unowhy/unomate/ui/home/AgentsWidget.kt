@@ -11,6 +11,7 @@ import com.unowhy.unomate.R
 import com.unowhy.unomate.agents.AgentsFeed
 import com.unowhy.unomate.agents.sessionTitle
 import com.unowhy.unomate.agents.shortList
+import com.unowhy.unomate.agents.without
 import com.unowhy.unomate.net.AgentState
 import com.unowhy.unomate.ui.AgentStatusIcon
 import com.unowhy.unomate.ui.AgentsView
@@ -94,7 +95,7 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
     }
 
     private fun render(snapshot: AgentsFeed.Snapshot) {
-        val state = snapshot.state
+        val state = snapshot.state?.without(Prefs.agentsHiddenProjects(context))
         counters.removeAllViews()
         list.removeAllViews()
         if (state == null) {

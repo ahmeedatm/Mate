@@ -265,6 +265,8 @@
     <string name="agent_voice_next">Question suivante</string>
     <string name="agent_voice_no_session">Aucune session finie à relancer d\'ici</string>
     <string name="agent_talk">Parler</string>
+    <string name="agents_projects">Projets affichés</string>
+    <string name="agents_projects_ok">Afficher</string>
     <string name="agent_voice_listening">J\'écoute… je m\'arrête quand tu te tais</string>
     <string name="agent_voice_stop">Arrêter</string>
     <string name="agent_voice_transcribing">Transcription sur l\'ordinateur…</string>

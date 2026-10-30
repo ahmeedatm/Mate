@@ -49,6 +49,7 @@ object Prefs {
     private const val KEY_WAKE_WORD = "wake_word"
     private const val KEY_MEETING_ALERT = "meeting_alert"
     private const val KEY_MEETING_ALERT_SEEN = "meeting_alert_seen"
+    private const val KEY_AGENTS_HIDDEN_PROJECTS = "agents_hidden_projects"
     private const val KEY_WEATHER_LOCATION = "weather_location"
     private const val KEY_TEXT_SCALE = "text_scale"
     private const val KEY_FRAME_DELAY = "frame_delay_min"
@@ -210,6 +211,13 @@ object Prefs {
 
     fun setMeetingAlert(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_MEETING_ALERT, value).apply()
+    }
+
+    /** Projets dont les sessions Claude sont cachées sur cette tablette (menu ⋯ du tableau Agents). */
+    fun agentsHiddenProjects(context: Context): Set<String> = prefs(context).getStringSet(KEY_AGENTS_HIDDEN_PROJECTS, emptySet()).orEmpty()
+
+    fun setAgentsHiddenProjects(context: Context, value: Set<String>) {
+        prefs(context).edit().putStringSet(KEY_AGENTS_HIDDEN_PROJECTS, value).apply()
     }
 
     /** Réunions déjà annoncées (clés de MeetingAlertModel) : une seule alerte par réunion, même après un redémarrage de l'appli. */

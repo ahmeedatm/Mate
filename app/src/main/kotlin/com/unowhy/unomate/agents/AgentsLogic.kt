@@ -1,7 +1,9 @@
 package com.unowhy.unomate.agents
 
+import com.unowhy.unomate.net.AgentCounts
 import com.unowhy.unomate.net.AgentSession
 import com.unowhy.unomate.net.AgentState
+import com.unowhy.unomate.net.AgentsState
 import java.util.Calendar
 import java.util.TimeZone
 
@@ -69,3 +71,26 @@ fun columnCounts(c: com.unowhy.unomate.net.AgentCounts): Map<Column, Int> = mapO
     Column.YOU to c.waiting + c.limit,
     Column.DONE to c.done + c.idle,
 )
+
+/** Sessions des projets cachés sur la tablette retirées, compteurs et total refaits sur ce qui reste. */
+fun AgentsState.without(hidden: Set<String>): AgentsState {
+    if (hidden.isEmpty()) return this
+    val kept = sessions.filter { it.project !in hidden }
+    fun count(state: AgentState, monitoring: Boolean = false) = kept.count { it.state == state && (state != AgentState.WORKING || it.monitoring == monitoring) }
+    return copy(
+        sessions = kept,
+        counts = AgentCounts(
+            working = count(AgentState.WORKING),
+            waiting = count(AgentState.WAITING),
+            done = count(AgentState.DONE),
+            limit = count(AgentState.LIMIT),
+            idle = count(AgentState.IDLE),
+            monitoring = count(AgentState.WORKING, monitoring = true),
+        ),
+        total = kept.size,
+    )
+}
+
+/** Projets du menu ⋯ : ceux des sessions et ceux déjà cachés (pour pouvoir les remontrer), par ordre alphabétique. */
+fun projectsOf(state: AgentsState, hidden: Set<String>): List<String> =
+    (state.sessions.map { it.project } + hidden).filter { it.isNotBlank() }.distinct().sortedBy { it.lowercase() }
