@@ -19,6 +19,8 @@ const LOCAL_HTTP = /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i;
 const base = rawSite && (LOCAL_HTTP.test(rawSite) ? rawSite : `https://${rawSite.replace(/^https?:\/\//i, "")}`);
 
 export const jiraConfigured = Boolean(base && email && token);
+/** Hôte du site Jira relié (page locale) : jamais l'e-mail ni le jeton. */
+export const jiraSite = jiraConfigured && base ? new URL(base).host : null;
 
 /** Jira refuse la transition : un champ obligatoire reste à remplir (le drapeau `required` peut être incomplet). */
 export class JiraFieldsError extends Error {
