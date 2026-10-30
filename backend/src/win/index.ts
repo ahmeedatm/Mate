@@ -446,6 +446,11 @@ export async function systemCommand(command: SystemCommand) {
 }
 
 /** Ne pas déranger : lu dans les réglages, sans rien ouvrir (null : inconnu). */
+/** Session verrouillée ou prise par un autre utilisateur (op `locked` de helper/Native.System.cs) ; null : illisible. */
+export async function screenLocked(): Promise<boolean | null> {
+  return (await call<{ locked: boolean | null }>("locked", {})).locked;
+}
+
 export async function getDnd(): Promise<boolean | null> {
   return (await call<{ on: boolean | null }>("dnd", {})).on;
 }

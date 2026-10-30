@@ -12,10 +12,11 @@ import { GitLabError } from "./gitlab.ts";
 import { setLogger } from "./log.ts";
 import { startAutoJoin } from "./meetings.ts";
 import { notificationHistory, setNotificationsRead, watchNotifications } from "./notifications.ts";
-import { canControl, clipboardStamp, getClipboard, isMac, osName, readNotifications } from "./os.ts";
+import { canControl, clipboardStamp, getClipboard, isMac, osName, readNotifications, screenLocked } from "./os.ts";
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
 import { sendToTablet, tabletStatus } from "./tablet.ts";
 import { startMeetingWatch } from "./meeting-watch.ts";
+import { isScreenLocked, startScreenLockWatch } from "./screen-lock.ts";
 import { callingDeckApps } from "./deck.ts";
 import { startMenuBar } from "./mac/menubar.ts";
 import { loadTls } from "./tls.ts";
@@ -110,9 +111,14 @@ const authorized = (header: string | undefined) => {
   const given = Buffer.from(header ?? "");
   return given.length === expectedAuth.length && timingSafeEqual(given, expectedAuth);
 };
+/** Ordinateur verrouillé : seul le canal /tablet reste ouvert (la tablette y apprend le déverrouillage). */
+const WHILE_LOCKED = /^\/tablet\/(poll|result)(\?|$)/;
 app.addHook("onRequest", async (req, reply) => {
   if (PUBLIC.test(req.url) || isLocalPage(req.method, req.url, req.ip, req.headers.host)) return;
   if (!authorized(req.headers.authorization)) return reply.code(401).send({ error: "Jeton invalide : appairer à nouveau la tablette" });
+  if (isScreenLocked() && !WHILE_LOCKED.test(req.url)) {
+    return reply.code(423).send({ error: "Ordinateur verrouillé : déverrouille-le pour continuer", locked: true });
+  }
 });
 
 /**
@@ -208,6 +214,16 @@ if (canControl) {
     liveApps: async () => ((await activePersona()) ? [] : callingDeckApps()),
   });
 }
+// Ordinateur verrouillé : la tablette se bloque, l'API se ferme (hook ci-dessus). Relu même sans tablette.
+startScreenLockWatch(async (locked) => (await sendToTablet({ type: "lock", locked })).received === true, {
+  read: screenLocked,
+  connected: () => tabletStatus().connected,
+  tabletLocked: () => {
+    const shown = (tabletStatus().state as { locked?: unknown } | null)?.locked;
+    return typeof shown === "boolean" ? shown : undefined;
+  },
+  intervalMs: Number(process.env.SCREEN_LOCK_POLL_MS) || undefined,
+});
 // Notifications de l'ordinateur : base du système relue toutes les 2 s, chaque nouvelle envoyée à la tablette sans attendre.
 if (canControl) {
   // Les supprimées (empreintes seulement) tiennent après un redémarrage : sinon le 1er passage les remonterait du système.

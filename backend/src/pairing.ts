@@ -6,6 +6,7 @@ import { logFailure } from "./log.ts";
 import { packaged } from "./paths.ts";
 import { alert, computerName, openTarget, osName, pointerMove, pointerScroll } from "./os.ts";
 import { handlePointerDatagram, POINTER_HEADER, PointerGate } from "./pointer.ts";
+import { isScreenLocked } from "./screen-lock.ts";
 
 /**
  * Appairage d'une tablette sans rien recopier à la main (protocole détaillé : docs/securite-appairage.md) :
@@ -66,7 +67,8 @@ function listenUdp(port: number, gate: PointerGate, log: (msg: string) => void) 
   socket.on("message", (msg, from) => {
     // Pavé tactile : paquets de déplacement ; tout le reste de la découverte est inchangé (src/pointer.ts).
     if (msg.subarray(0, POINTER_HEADER.length).toString("utf8") === POINTER_HEADER) {
-      void handlePointerDatagram(gate, msg, from, config.token, { move: pointerMove, scroll: pointerScroll });
+      // Ordinateur verrouillé : le pointeur ne bouge pas, comme toute l'API (server.ts).
+      if (!isScreenLocked()) void handlePointerDatagram(gate, msg, from, config.token, { move: pointerMove, scroll: pointerScroll });
       return;
     }
     if (msg.toString("utf8").trim() !== PROBE) return;
