@@ -44,6 +44,7 @@ import com.unowhy.unomate.installers.BackendPlan
 import com.unowhy.unomate.installers.BackendRelease
 import com.unowhy.unomate.installers.CompanionUpdater
 import com.unowhy.unomate.installers.InstallerService
+import com.unowhy.unomate.kiosk.FreshStart
 import com.unowhy.unomate.kiosk.Kiosk
 import com.unowhy.unomate.kiosk.UpdatePlan
 import com.unowhy.unomate.kiosk.Updater
@@ -215,6 +216,14 @@ class SettingsFragment :
                 .setMessage(R.string.kiosk_remove_confirm)
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(R.string.confirm) { _, _ -> Kiosk.remove(requireActivity()); renderKiosk() }
+                .showImmersive()
+        }
+        view.findViewById<Button>(R.id.settings_fresh_start).setOnClickListener {
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.fresh_start)
+                .setMessage(R.string.fresh_start_confirm)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.fresh_start) { _, _ -> FreshStart.run(requireActivity()) }
                 .showImmersive()
         }
         renderKiosk()

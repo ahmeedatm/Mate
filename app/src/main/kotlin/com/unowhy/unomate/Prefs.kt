@@ -25,10 +25,13 @@ enum class AnimFamily(val key: String) {
 }
 
 object Prefs {
-    private const val FILE = "companion"
+    const val FILE = "companion"
     private const val KEY_ALLOW_INSTALLS = "allow_installs"
     private const val KEY_EXIT_LOCK = "exit_lock"
     private const val KEY_POWER_MENU = "power_menu"
+
+    /** Réglages du technicien (carte Kiosque) : gardés par la remise à neuf ([com.unowhy.unomate.kiosk.FreshStart]). */
+    val KIOSK_KEYS = setOf(KEY_ALLOW_INSTALLS, KEY_EXIT_LOCK, KEY_POWER_MENU)
     private const val KEY_LANDSCAPE_LOCKED = "landscape_locked"
     private const val KEY_BRIGHTNESS = "brightness"
     private const val KEY_NIGHT_DIM = "night_dim"

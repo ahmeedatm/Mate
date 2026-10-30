@@ -978,6 +978,9 @@
     <string name="kiosk_reboot_failed">Android a refusé de redémarrer.</string>
     <string name="kiosk_exit">Quitter le kiosque</string>
     <string name="kiosk_remove">Retirer le mode kiosque</string>
+    <string name="fresh_start">Remettre à neuf</string>
+    <string name="fresh_start_hint">Comme une tablette neuve : ordinateurs appairés, thème, écrans, réglages et photos effacés. Le kiosque et le WiFi restent.</string>
+    <string name="fresh_start_confirm">Tout effacer et repartir comme une tablette neuve ? Il faudra réappairer l\'ordinateur.</string>
     <string name="kiosk_remove_confirm">L\'appli ne sera plus device owner. Pour réactiver le kiosque, il faudra refaire la commande adb (et peut-être réinitialiser la tablette). Continuer ?</string>
     <string name="cancel">Annuler</string>
     <string name="confirm">Confirmer</string>
