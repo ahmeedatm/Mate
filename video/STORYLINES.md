@@ -8,11 +8,11 @@ L'Accueil (Profils) sert de scène de retour. Chaque persona ouvre un chapitre :
 
 | Chapitre | Fonctions montrées |
 |---|---|
-| Thomas | ligne du jour, agenda, tâches, rappel parlé, Fichiers de l'ordi |
-| Camille | profils travail / perso, Ouvertes, micro coupé, Focus et Ne pas déranger |
-| Julie | page Apps, « Rejoindre », page Réunion |
-| Sylvie | touche perso en macro (raccourci Excel + libellé) |
-| Karim | Contraste élevé, grandes touches, taille du texte, commande vocale |
-| Léo | Agents Claude, GitLab, Jira |
+| Nour | touches Excel et libellés, widget Clôture (étapes, échéance) |
+| Gwen | touches Réseaux et Modèles, widget Présentation (diapos, chrono, micro) |
+| Camille | Je m'absente / Reprendre (micro, Focus, fenêtres) |
+| Aimée | prochaine réunion, alerte plein écran 5 min avant |
+| Sam | Contraste élevé, grandes touches, texte agrandi, retour parlé des actions |
+| Sacha | agents Claude, widget Pipelines (GitLab) |
 
 Forme recommandée : un seul cadre qui se réarrange (la tablette ne quitte jamais l'image, les pages glissent comme dans l'appli). Autre forme possible : chapitres coupés franc, chacun dans son monde.
