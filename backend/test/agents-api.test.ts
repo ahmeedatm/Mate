@@ -6,11 +6,12 @@ import path from "node:path";
 import { after, before, describe, it } from "node:test";
 import { startServer, type TestServer } from "./server.ts";
 
-/** Faux `claude` : `claude agents --json` rend le contenu du fichier. */
+/** Faux `claude` : `claude agents --json` rend le contenu du fichier (un `.cmd` sur un PC Windows, lancé par le shell). */
 const bin = fs.mkdtempSync(path.join(os.tmpdir(), "companion-claude-"));
 const sessionsFile = path.join(bin, "sessions.json");
-const claude = path.join(bin, "claude");
-fs.writeFileSync(claude, `#!/bin/sh\ncat "${sessionsFile}"\n`, { mode: 0o755 });
+const onWindows = process.platform === "win32";
+const claude = path.join(bin, onWindows ? "claude.cmd" : "claude");
+fs.writeFileSync(claude, onWindows ? `@type "${sessionsFile}"\r\n` : `#!/bin/sh\ncat "${sessionsFile}"\n`, { mode: 0o755 });
 fs.writeFileSync(sessionsFile, "[]");
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-test-"));
 const SECRET = "secret-de-test";
@@ -205,7 +206,7 @@ describe("agents Claude : message, session devant, reprise", () => {
     await hook({ hook_event_name: "Stop", last_assistant_message: "ok" });
     const send = await server.call("POST", "/agents/send", { session: "s1", text: "continue" });
     assert.equal(send.status, 409);
-    assert.match(send.json.error, /pas dans un terminal Orca/);
+    assert.match(send.json.error, /ni dans un terminal Orca/);
     assert.equal((await server.call("GET", "/agents")).json.sessions[0].canSend, false);
     await hook({ hook_event_name: "SessionEnd" });
   });
@@ -255,14 +256,108 @@ describe("agents Claude : statusline et interruption", () => {
   });
 });
 
-describe("agents Claude : ailleurs que sur Mac", () => {
-  it("Windows : 501 et agents absent de /deck/features", async () => {
-    const win = await startServer({ os: "windows", env: { CLAUDE_BIN: claude } });
-    try {
-      assert.equal((await win.call("GET", "/agents")).status, 501);
-      assert.equal((await win.call("GET", "/deck/features")).json.agents, false);
-    } finally {
-      await win.stop();
-    }
+describe("agents Claude : Windows", () => {
+  // Une session dans Windows Terminal (pid 4242) dont l'onglet affiché est le sien (titre réglé par Claude), une dans
+  // VS Code (pid 4343) : la première se pilote, la seconde vient seulement devant.
+  const terminal = {
+    hwnd: 11,
+    pid: 900,
+    exe: "C:\\WT\\WindowsTerminal.exe",
+    title: "✳ Corrige le parseur",
+    cls: "CASCADIA_HOSTING_WINDOW_CLASS",
+  };
+  const code = { hwnd: 12, pid: 901, exe: "C:\\Code\\Code.exe", title: "projet - Visual Studio Code", cls: "Chrome_WidgetWin_1" };
+  const winState = (front = terminal) => ({
+    frontWindow: front,
+    processWindows: {
+      "4242": { console: terminal, chain: [], fallback: null },
+      "4343": { console: null, chain: [{ ...code, ppid: 1 }], fallback: null },
+    },
+  });
+  let win: TestServer;
+  const winHook = (body: Record<string, unknown>) =>
+    fetch(`${win.url}/agents/hook`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-companion-hook": SECRET },
+      body: JSON.stringify({ cwd: "C:\\work\\projet", ...body }),
+    });
+  /** Long-polling de la tablette lancé sans l'attendre : la tablette est connectée tant qu'il est ouvert. */
+  const winPoll = () =>
+    win.call("POST", "/tablet/poll", { state: {} }).then(async ({ json }) => {
+      for (const c of json.commands) await win.call("POST", "/tablet/result", { id: c.id, ok: true });
+      return json.commands.map((c: any) => c.command) as any[];
+    });
+  const winDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-test-win-"));
+  fs.writeFileSync(path.join(winDir, "agents-hook.json"), JSON.stringify({ secret: SECRET }));
+
+  before(async () => {
+    win = await startServer({ os: "windows", dataDir: winDir, env: { CLAUDE_BIN: claude, AGENTS_POLL_MS: "100", AGENTS_HOLD_S: "5" } });
+  });
+  after(async () => {
+    await win?.stop();
+    fs.rmSync(winDir, { recursive: true, force: true });
+    fs.writeFileSync(sessionsFile, "[]");
+  });
+
+  it("proposés avec Claude Code installé : /agents et agents dans /deck/features", async () => {
+    assert.equal((await win.call("GET", "/agents")).status, 200);
+    assert.equal((await win.call("GET", "/deck/features")).json.agents, true);
+  });
+
+  it("terminal devant (Windows Terminal) : pas d'alerte ; navigateur devant : alerte", async () => {
+    win.setOs(winState());
+    const poll = winPoll();
+    await new Promise((r) => setTimeout(r, 200));
+    await winHook({ hook_event_name: "UserPromptSubmit", session_id: "w0" });
+    await winHook({ hook_event_name: "Stop", session_id: "w0", last_assistant_message: "ok" });
+    const early = await Promise.race([poll.then(() => "ordre"), new Promise((r) => setTimeout(() => r("rien"), 400))]);
+    assert.equal(early, "rien", "l'utilisateur est devant Claude : pas d'alerte");
+    win.setOs(winState({ ...code, exe: "C:\\Chrome\\chrome.exe", cls: "Chrome_WidgetWin_1" }));
+    await winHook({ hook_event_name: "UserPromptSubmit", session_id: "w0" });
+    await winHook({ hook_event_name: "Stop", session_id: "w0", last_assistant_message: "ok" });
+    assert.ok((await poll).some((o) => o.type === "agent" && o.kind === "done"));
+    await winHook({ hook_event_name: "SessionEnd", session_id: "w0" });
+  });
+
+  it("fenêtre du terminal par le pid : devant, message tapé seulement dans le bon onglet", async () => {
+    win.setOs(winState(code));
+    fs.writeFileSync(
+      sessionsFile,
+      JSON.stringify([
+        { sessionId: "w1", cwd: "C:\\work\\projet", pid: 4242, name: "Corrige le parseur", status: "idle" },
+        { sessionId: "w2", cwd: "C:\\work\\autre", pid: 4343, name: "Autre chose", status: "idle" },
+      ]),
+    );
+    const view = async (id: string) => (await win.call("GET", "/agents")).json.sessions.find((s: any) => s.id === id);
+    void winPoll().catch(() => {}); // tablette connectée : le filet tourne
+    await until(async () => (await view("w1"))?.canSend === true && (await view("w2"))?.canFocus === true);
+    assert.equal((await view("w2")).canSend, false, "VS Code : jamais taper");
+    win.clearOsCalls();
+    assert.equal((await win.call("POST", "/agents/focus", { session: "w2" })).status, 200);
+    assert.equal((await win.call("POST", "/agents/send", { session: "w1", text: "continue" })).status, 200);
+    assert.deepEqual(win.osCalls(), [
+      { fn: "raiseWindow", args: [12] },
+      { fn: "raiseWindow", args: [11] },
+      { fn: "sendKeys", args: ["ctrl+u"] },
+      { fn: "typeText", args: ["continue"] },
+      { fn: "sendKeys", args: ["enter"] },
+    ]);
+    const refused = await win.call("POST", "/agents/send", { session: "w2", text: "continue" });
+    assert.equal(refused.status, 409);
+    // Premier plan refusé par Windows : rien n'est tapé.
+    win.setOs({ ...winState(code), frontStuck: true });
+    fs.writeFileSync(
+      sessionsFile,
+      JSON.stringify([{ sessionId: "w3", cwd: "C:\\w", pid: 4242, name: "Corrige le parseur", status: "idle" }]),
+    );
+    await until(async () => (await view("w3"))?.canSend === true);
+    win.clearOsCalls();
+    const stuck = await win.call("POST", "/agents/send", { session: "w3", text: "continue" });
+    assert.equal(stuck.status, 409);
+    assert.match(stuck.json.error, /rien n'a été tapé/);
+    assert.deepEqual(
+      win.osCalls().map((c) => c.fn),
+      ["raiseWindow"],
+    );
   });
 });

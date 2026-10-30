@@ -68,7 +68,8 @@ const WRAPPED =
 
 /**
  * Commande qui envoie l'entrée de la statusline au compagnon puis la passe à `original` (rien : statusline vide). La commande
- * d'origine est sur sa propre ligne : un `#` ou un `&` final ne casse pas l'enveloppe.
+ * d'origine est sur sa propre ligne : un `#` ou un `&` final ne casse pas l'enveloppe. Sous Windows, Claude Code lance les
+ * commandes par Git Bash (vu le 30/10/2026 avec un hook `command`, Claude Code 2.1.260) : même enveloppe, `curl` de Git.
  */
 export function statusLineCommand(opts: { port: number; secret: string }, original: string | undefined): string {
   const post = `curl -s -m 2 -o /dev/null -X POST -H 'Content-Type: application/json' -H 'X-Companion-Hook: ${opts.secret}' --data-binary @- http://127.0.0.1:${opts.port}/agents/statusline`;

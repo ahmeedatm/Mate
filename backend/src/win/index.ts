@@ -180,6 +180,32 @@ export async function typeText(text: string) {
   await call("text", { text });
 }
 
+// --- Agents Claude : fenêtre d'une session (ops `front`, `ancestors`, `raise` de helper/Native.Processes.cs)
+
+/** Fenêtre principale : handle, processus qui la possède, son exe (chemin complet), titre et classe. */
+export type WinWindow = { hwnd: number; pid: number; exe: string; title: string; cls: string };
+/** `console` : terminal qui affiche la console du processus ; `chain` : lui et ses parents ; `fallback` : hôte de secours. */
+export type ProcessWindows = { console: WinWindow | null; chain: (WinWindow & { ppid: number })[]; fallback: WinWindow | null };
+
+export function frontWindow(): Promise<WinWindow> {
+  return call<WinWindow>("front");
+}
+
+/** Appli de devant comme sur Mac : `bundleId` = nom de l'exe en minuscules (`windowsterminal.exe`), `name` sans `.exe`. */
+export async function frontApp(): Promise<{ name: string; bundleId: string }> {
+  const w = await frontWindow();
+  const exe = w.exe.split(/[\\/]/).pop()?.toLowerCase() ?? "";
+  return { name: exe.replace(/\.exe$/, "") || w.title, bundleId: exe };
+}
+
+export function processWindows(pid: number, hosts: string[]): Promise<ProcessWindows> {
+  return call<ProcessWindows>("ancestors", { pid, hosts });
+}
+
+export function raiseWindow(hwnd: number): Promise<WinWindow> {
+  return call<WinWindow>("raise", { hwnd });
+}
+
 // --- Presse-papiers
 
 export async function getClipboard(): Promise<ClipboardContent> {

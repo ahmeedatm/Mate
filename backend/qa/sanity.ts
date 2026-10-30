@@ -267,9 +267,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       name: "agents Claude : hooks et état",
       run: async () => {
         const agents = await call("GET", "/agents");
-        if (os !== "mac") {
-          expectStatus(agents, 501, "/agents hors Mac");
-          return "501 hors Mac";
+        // Mac et Windows : contrôle complet ; ailleurs, 501.
+        if (!controlled()) {
+          expectStatus(agents, 501, "/agents hors Mac et Windows");
+          return "501 hors Mac et Windows";
         }
         expectStatus(agents, 200, "/agents");
         expect(Array.isArray(agents.json.sessions) && typeof agents.json.counts?.working === "number", "forme de /agents inattendue");

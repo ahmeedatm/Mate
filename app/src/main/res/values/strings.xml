@@ -1449,7 +1449,7 @@
     <string name="top_volume_unmute">Remettre le son de l\'ordinateur</string>
     <string name="top_call_desc">Pendant un appel, ou micro coupé : toucher = couper ou rouvrir le micro</string>
     <string name="top_agents">Agents en attente</string>
-    <string name="top_agents_desc">Agents Claude qui attendent ta réponse (Mac) ; toucher = le tableau</string>
+    <string name="top_agents_desc">Agents Claude qui attendent ta réponse ; toucher = le tableau</string>
     <string name="top_weather">Météo</string>
     <string name="top_weather_desc">Le temps et la température de ta ville</string>
     <string name="top_date">Date</string>
