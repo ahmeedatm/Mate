@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Refait toutes les captures d'écran de l'appli UnoMate (émulateur, backend de démo) pour les vidéos.
+ * Refait toutes les captures d'écran de l'appli UnoMate (émulateur, démo par personas de l'appli) pour les vidéos.
  * Voir video/scripts/captures.md. Lancer depuis n'importe où : `node video/scripts/captures.mjs [options]`.
  *
  *   --no-build           garde l'APK debug déjà construit
- *   --only sylvie,sam    seulement ces phases (sylvie gwen camille aimee sam sacha commun)
+ *   --only nour,sam      seulement ces phases (commun nour gwen camille aimee sam sacha)
  *   --date 2026-10-29    jour affiché par la tablette (défaut : jour de l'ordinateur, l'agenda de démo suit)
  *   --serial emulator-N  réutilise un émulateur déjà lancé (jamais arrêté par le script)
  *
@@ -42,13 +42,19 @@ const only = opt("--only")?.split(",");
 const reuseSerial = opt("--serial");
 const dateArg = opt("--date");
 const today = new Date();
-const DAY = dateArg ?? `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+const DAY =
+  dateArg ?? `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 if (!/^\d{4}-\d{2}-\d{2}$/.test(DAY)) throw new Error(`--date attendu AAAA-MM-JJ, reçu ${DAY}`);
-if (reuseSerial && !/^emulator-\d+$/.test(reuseSerial)) throw new Error("--serial doit être de la forme emulator-<port> (jamais une vraie tablette)");
+if (reuseSerial && !/^emulator-\d+$/.test(reuseSerial))
+  throw new Error("--serial doit être de la forme emulator-<port> (jamais une vraie tablette)");
 
 const log = (msg) => console.log(`[${new Date().toTimeString().slice(0, 8)}] ${msg}`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const sdk = fs.readFileSync(path.join(ROOT, "local.properties"), "utf8").match(/^sdk\.dir=(.*)$/m)?.[1]?.trim() ?? path.join(os.homedir(), "Library/Android/sdk");
+const sdk =
+  fs
+    .readFileSync(path.join(ROOT, "local.properties"), "utf8")
+    .match(/^sdk\.dir=(.*)$/m)?.[1]
+    ?.trim() ?? path.join(os.homedir(), "Library/Android/sdk");
 const ADB = path.join(sdk, "platform-tools", "adb");
 const EMULATOR = path.join(sdk, "emulator", "emulator");
 
@@ -84,7 +90,7 @@ function descendants(pid) {
   }
   const out = [];
   const queue = [pid];
-  while (queue.length) for (const c of children.get(queue.shift()) ?? []) out.push(c), queue.push(c);
+  while (queue.length) for (const c of children.get(queue.shift()) ?? []) (out.push(c), queue.push(c));
   return out;
 }
 
@@ -104,7 +110,14 @@ function stopProc(p, graceMs = 10_000) {
     if (alive(p.pid)) process.kill(p.pid, "SIGKILL");
   }
   // Seulement les descendants encore rattachés au processus arrêté (ou orphelins) : un PID réutilisé n'est jamais touché.
-  const ours = (k) => [p.pid, 1, ...kids].includes(Number(spawnSync("ps", ["-o", "ppid=", "-p", String(k)], { encoding: "utf8" }).stdout.trim()));
+  const ours = (k) =>
+    [p.pid, 1, ...kids].includes(
+      Number(
+        spawnSync("ps", ["-o", "ppid=", "-p", String(k)], {
+          encoding: "utf8",
+        }).stdout.trim(),
+      ),
+    );
   for (const k of kids) {
     if (alive(k) && ours(k)) {
       try {
@@ -139,7 +152,9 @@ function cleanup() {
           // Heure de l'ordinateur remise (l'heure automatique ne se resynchronise pas toujours seule).
           const n = new Date();
           const two = (v) => String(v).padStart(2, "0");
-          shell(`date ${two(n.getMonth() + 1)}${two(n.getDate())}${two(n.getHours())}${two(n.getMinutes())}${n.getFullYear()}.${two(n.getSeconds())}`);
+          shell(
+            `date ${two(n.getMonth() + 1)}${two(n.getDate())}${two(n.getHours())}${two(n.getMinutes())}${n.getFullYear()}.${two(n.getSeconds())}`,
+          );
         }
       } catch (e) {
         log(`remise en état partielle : ${e.message}`);
@@ -170,7 +185,12 @@ for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) {
 /** Seule porte vers adb : impose `-s emulator-<port>`. */
 function adb(a, { timeout = 30_000, binary = false, input } = {}) {
   if (!/^emulator-\d+$/.test(SERIAL)) throw new Error(`série d'émulateur invalide : « ${SERIAL} »`);
-  const r = spawnSync(ADB, ["-s", SERIAL, ...a], { encoding: binary ? "buffer" : "utf8", timeout, maxBuffer: 1 << 28, input });
+  const r = spawnSync(ADB, ["-s", SERIAL, ...a], {
+    encoding: binary ? "buffer" : "utf8",
+    timeout,
+    maxBuffer: 1 << 28,
+    input,
+  });
   if (r.error) throw r.error;
   return binary ? r.stdout : r.stdout.toString();
 }
@@ -178,7 +198,10 @@ const shell = (cmd, o) => adb(["shell", cmd], o);
 
 function freePort(start, end, step = 1, extra = 0) {
   const tryBind = (host, port) => {
-    const r = spawnSync(process.execPath, ["-e", `const s=require("net").createServer();s.on("error",()=>process.exit(1));s.listen(${port},"${host}",()=>s.close(()=>process.exit(0)))`]);
+    const r = spawnSync(process.execPath, [
+      "-e",
+      `const s=require("net").createServer();s.on("error",()=>process.exit(1));s.listen(${port},"${host}",()=>s.close(()=>process.exit(0)))`,
+    ]);
     return r.status === 0;
   };
   for (let p = start; p <= end; p += step) {
@@ -216,8 +239,23 @@ async function startEmulator() {
   // -read-only : l'AVD de l'autre session n'est pas touché, l'état repart de zéro à chaque lancement.
   const child = spawn(
     EMULATOR,
-    ["-avd", AVD, "-port", String(port), "-no-window", "-no-audio", "-no-boot-anim", "-no-snapshot", "-read-only", "-gpu", "swiftshader_indirect"],
-    { stdio: ["ignore", fd, fd], env: { ...process.env, ANDROID_SDK_ROOT: sdk } },
+    [
+      "-avd",
+      AVD,
+      "-port",
+      String(port),
+      "-no-window",
+      "-no-audio",
+      "-no-boot-anim",
+      "-no-snapshot",
+      "-read-only",
+      "-gpu",
+      "swiftshader_indirect",
+    ],
+    {
+      stdio: ["ignore", fd, fd],
+      env: { ...process.env, ANDROID_SDK_ROOT: sdk },
+    },
   );
   owned.push({ name: "émulateur", pid: child.pid });
   log(`émulateur ${AVD} lancé sur ${SERIAL} (PID ${child.pid}, journal ${logFile})`);
@@ -269,35 +307,29 @@ let ports = null;
 let backend = null;
 let backendInfo = null;
 
-async function startBackend(persona, { hh, mm }) {
+async function startBackend(persona, at) {
   await stopBackend();
-  ports ??= (() => {
-    const main = freePort(3970, 3999);
-    const rest = [];
-    let from = main + 1;
-    for (let i = 0; i < 4; i++) {
-      const p = freePort(from, 3999);
-      rest.push(p);
-      from = p + 1;
-    }
-    return { main, ics: rest[0], control: rest[1], jira: rest[2], gitlab: rest[3] };
-  })();
+  ports ??= { main: freePort(3970, 3999) };
   const dir = path.join(TMP, "backend");
+  fs.rmSync(dir, { recursive: true, force: true });
   const env = {
     ...process.env,
-    DEMO_PERSONA: persona,
     DEMO_PORT: String(ports.main),
-    DEMO_ICS_PORT: String(ports.ics),
-    DEMO_CONTROL_PORT: String(ports.control),
-    DEMO_JIRA_PORT: String(ports.jira),
-    DEMO_GITLAB_PORT: String(ports.gitlab),
     DEMO_DIR: dir,
     DEMO_NAME: "PC du bureau",
-    DEMO_NOW: `${DAY}T${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:00`,
+    ...(at
+      ? {
+          DEMO_NOW: `${DAY}T${String(at.hh).padStart(2, "0")}:${String(at.mm).padStart(2, "0")}:00`,
+        }
+      : {}),
   };
-  const logFile = path.join(TMP, `backend-${persona}.log`);
+  const logFile = path.join(TMP, `backend-${persona.toLowerCase()}.log`);
   const fd = fs.openSync(logFile, "w");
-  const child = spawn(process.execPath, ["--import", "tsx", "../video/demo-backend.mts"], { cwd: BACKEND_DIR, env, stdio: ["ignore", fd, fd] });
+  const child = spawn(process.execPath, ["--import", "tsx", "../video/demo-backend.mts"], {
+    cwd: BACKEND_DIR,
+    env,
+    stdio: ["ignore", fd, fd],
+  });
   const proc = { name: `backend ${persona}`, pid: child.pid, kids: [] };
   owned.push(proc);
   backend = proc;
@@ -331,20 +363,30 @@ async function stopBackend() {
 const api = async (method, route, body) => {
   const res = await fetch(`http://127.0.0.1:${ports.main}${route}`, {
     method,
-    headers: { authorization: `Bearer ${TOKEN}`, ...(body ? { "content-type": "application/json" } : {}) },
+    headers: {
+      authorization: `Bearer ${TOKEN}`,
+      ...(body ? { "content-type": "application/json" } : {}),
+    },
     body: body ? JSON.stringify(body) : undefined,
   });
   return res.json().catch(() => ({}));
 };
-const control = (route, body) =>
-  fetch(`http://127.0.0.1:${ports.control}${route}`, { method: "POST", body: JSON.stringify(body) }).then((r) => r.text());
-
 // -------------------------------------------------------------------------------------------- préférences de la tablette
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-/** Écrit shared_prefs/companion.xml : ordinateur appairé (adresse locale + jeton), thème, disposition de l'Accueil. */
-function writePrefs({ theme, scale, layout, reduceMotion = true }) {
-  const comp = [{ id: backendInfo.id, name: backendInfo.name, url: `http://127.0.0.1:${ports.main}`, token: TOKEN, os: backendInfo.os, lastUsedMs: 1788000000000, pin: null }];
+/** Écrit shared_prefs/companion.xml : ordinateur appairé (adresse locale + jeton), thème. Le persona est choisi ensuite dans l'appli. */
+function writePrefs({ theme = "CADRAN", scale = 1.0, reduceMotion = true } = {}) {
+  const comp = [
+    {
+      id: backendInfo.id,
+      name: backendInfo.name,
+      url: `http://127.0.0.1:${ports.main}`,
+      token: TOKEN,
+      os: backendInfo.os,
+      lastUsedMs: 1788000000000,
+      pin: null,
+    },
+  ];
   const items = [
     `<string name="computers">${esc(JSON.stringify(comp))}</string>`,
     `<string name="active_computer">${backendInfo.id}</string>`,
@@ -355,52 +397,16 @@ function writePrefs({ theme, scale, layout, reduceMotion = true }) {
     `<boolean name="tour_done" value="true" />`,
     // Sans animation continue : uiautomator ne peut lire l'écran d'un appel en cours autrement (« could not get idle state »).
     `<boolean name="reduce_motion" value="${reduceMotion}" />`,
-    `<string name="home_layout_cadran">${esc(layout(backendInfo.id))}</string>`,
   ];
   const xml = `<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n  ${items.join("\n  ")}\n</map>\n`;
   shell(`am force-stop ${PKG}`);
   adb(["push", writeTmp("companion.xml", xml), "/data/local/tmp/companion.xml"]);
   const uid = shell(`stat -c %u /data/data/${PKG}`).trim();
   const d = `/data/data/${PKG}/shared_prefs`;
-  shell(`mkdir -p ${d} && rm -f ${d}/*.xml && cp /data/local/tmp/companion.xml ${d}/companion.xml && chown ${uid}:${uid} ${d} ${d}/companion.xml && chmod 660 ${d}/companion.xml && restorecon -R ${d}`);
+  shell(
+    `mkdir -p ${d} && rm -f ${d}/*.xml && cp /data/local/tmp/companion.xml ${d}/companion.xml && chown ${uid}:${uid} ${d} ${d}/companion.xml && chmod 660 ${d}/companion.xml && restorecon -R ${d}`,
+  );
 }
-
-// Dispositions de l'Accueil (JSON v2 de HomeLayout). Réunion est ajoutée par l'appli (rôles non posés).
-const CITY = { city: "Lyon", lat: 45.7491, lon: 4.8479 };
-const wd = (t, s, p, c, r, cfg = {}) => ({ t, s, p, c, r, cfg });
-const kref = (slot, label, glyph, color = "") => ({ id: `k-${slot}`, label, glyph, color });
-const keysCfg = (comp, keys) => ({ byComputer: { [comp]: { keys } } });
-const layoutJson = (names, widgets) => JSON.stringify({ v: 2, pages: names.length, names, game: -1, home: 0, deck: -1, call: -1, roles: false, widgets });
-/** Page « Ma journée » : salutation, ligne du jour, prochain rendez-vous, tâches, applis, touches. */
-const journee = (p, keys) => [
-  wd("day", "W", p, 0, 0, CITY),
-  wd("dayline", "W", p, 0, 1),
-  wd("next", "V", p, 0, 2),
-  wd("tasks", "V", p, 1, 2),
-  wd("apps", "V", p, 2, 2),
-  wd("keys", "V", p, 3, 2, keys),
-];
-const defaultKeys = { defaultPage: "Raccourcis" };
-
-const SYLVIE_KEYS = [
-  kref(0, "Export FEC", "📤", "#1565C0"),
-  kref(1, "Somme auto", "∑"),
-  kref(2, "Filtre", "🔎"),
-  kref(3, "Rapprochement", "🏦", "#2E7D32"),
-  kref(4, "Libellé TVA", "%"),
-  kref(5, "Relance client", "✉"),
-  kref(6, "Libellé acompte", "€"),
-  kref(7, "Dossier suivant", "🗂"),
-  kref(8, "Capture", "📷"),
-];
-const SAM_KEYS = [
-  kref(0, "Courrier type", "✉", "#1565C0"),
-  kref(1, "Accusé réception", "✔", "#2E7D32"),
-  kref(2, "Signature", "✍"),
-  kref(3, "Enregistrer", "💾"),
-  kref(4, "Copier", "⎘"),
-  kref(5, "Coller", "⎗"),
-];
 
 // ------------------------------------------------------------------------------------------------- lecture de l'écran
 const decode = (s) =>
@@ -416,7 +422,9 @@ const decode = (s) =>
 function dumpNodes(tries = 3) {
   let last = "";
   for (let i = 0; i < tries; i++) {
-    const out = adb(["exec-out", "uiautomator", "dump", "/dev/stdout"], { timeout: 20_000 });
+    const out = adb(["exec-out", "uiautomator", "dump", "/dev/stdout"], {
+      timeout: 20_000,
+    });
     const xml = out.slice(0, out.lastIndexOf("</hierarchy>") + 12);
     last = out.slice(0, 200);
     if (xml.includes("<hierarchy")) {
@@ -425,7 +433,12 @@ function dumpNodes(tries = 3) {
         const attr = (k) => decode(m[0].match(new RegExp(` ${k}="([^"]*)"`))?.[1] ?? "");
         const b = attr("bounds").match(/\d+/g)?.map(Number);
         if (!b) continue;
-        nodes.push({ text: attr("text"), desc: attr("content-desc"), clickable: attr("clickable") === "true", b });
+        nodes.push({
+          text: attr("text"),
+          desc: attr("content-desc"),
+          clickable: attr("clickable") === "true",
+          b,
+        });
       }
       return nodes;
     }
@@ -450,6 +463,9 @@ const label = (sel) => (typeof sel === "string" || sel instanceof RegExp ? Strin
 
 class ScreenError extends Error {}
 
+/** Places des entrées de la barre (description vers bornes), relevées à l'arrivée du persona. */
+const railSpots = new Map();
+
 /** Dernier toucher : la barre fixe s'efface à moitié après 60 s sans toucher. */
 let touched = Date.now();
 const touch = () => (touched = Date.now());
@@ -466,7 +482,14 @@ function toolkit() {
         const hits = dumpNodes().filter(m);
         // Les nœuds à cheval sur le bord sont écartés au profit d'un nœud entièrement visible.
         if (hits[nth]) return hits[nth];
-        if (Date.now() > end) throw new ScreenError(`introuvable à l'écran : ${label(sel)}`);
+        if (Date.now() > end) {
+          const seen = dumpNodes(1)
+            .map((n) => n.text || n.desc)
+            .filter(Boolean)
+            .slice(0, 40)
+            .join(" | ");
+          throw new ScreenError(`introuvable à l'écran : ${label(sel)} (visible : ${seen})`);
+        }
         await sleep(600);
       }
     },
@@ -518,8 +541,21 @@ function toolkit() {
       }
     },
     key: (k) => shell(`input keyevent ${k}`),
-    /** Page du rail (profil nommé). */
-    profile: (name) => t.tap({ desc: name }),
+    /**
+     * Page du rail (profil nommé). Un écran qui bouge sans cesse (lecture, chrono) peut empêcher uiautomator de lire
+     * l'écran : on touche alors la place relevée à l'arrivée du persona.
+     */
+    async profile(name) {
+      try {
+        await t.tap({ desc: name }, 4000);
+      } catch (e) {
+        const b = railSpots.get(name);
+        if (!b) throw e;
+        shell(`input tap ${Math.round((b[0] + b[2]) / 2)} ${Math.round((b[1] + b[3]) / 2)}`);
+        touch();
+        await sleep(900);
+      }
+    },
   };
   return t;
 }
@@ -534,7 +570,7 @@ function decodePng(buf) {
   const bpp = colorType === 6 ? 4 : colorType === 2 ? 3 : 0;
   if (bitDepth !== 8 || !bpp) throw new Error(`PNG ${bitDepth} bits, type ${colorType} non géré`);
   const idat = [];
-  for (let p = 8; p < buf.length; ) {
+  for (let p = 8; p < buf.length;) {
     const len = buf.readUInt32BE(p);
     if (buf.toString("latin1", p + 4, p + 8) === "IDAT") idat.push(buf.subarray(p + 8, p + 8 + len));
     p += 12 + len;
@@ -549,11 +585,22 @@ function decodePng(buf) {
       const a = x >= bpp ? px[y * stride + x - bpp] : 0;
       const b = y > 0 ? px[(y - 1) * stride + x] : 0;
       const c = x >= bpp && y > 0 ? px[(y - 1) * stride + x - bpp] : 0;
-      const pr = f === 0 ? 0 : f === 1 ? a : f === 2 ? b : f === 3 ? (a + b) >> 1 : (() => {
-        const p = a + b - c;
-        const pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
-        return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
-      })();
+      const pr =
+        f === 0
+          ? 0
+          : f === 1
+            ? a
+            : f === 2
+              ? b
+              : f === 3
+                ? (a + b) >> 1
+                : (() => {
+                    const p = a + b - c;
+                    const pa = Math.abs(p - a),
+                      pb = Math.abs(p - b),
+                      pc = Math.abs(p - c);
+                    return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+                  })();
       px[y * stride + x] = (line[x] + pr) & 255;
     }
   }
@@ -569,13 +616,19 @@ function inspect(buf) {
   } catch (e) {
     return { ok: false, why: `PNG illisible (${e.message})` };
   }
-  if (img.width !== W || img.height !== H) return { ok: false, why: `taille ${img.width}×${img.height} au lieu de ${W}×${H}` };
+  if (img.width !== W || img.height !== H)
+    return {
+      ok: false,
+      why: `taille ${img.width}×${img.height} au lieu de ${W}×${H}`,
+    };
   const colors = new Set();
   let sum = 0;
   let sum2 = 0;
   let n = 0;
   for (let i = 0; i < img.px.length; i += img.bpp * 7) {
-    const r = img.px[i], g = img.px[i + 1], b = img.px[i + 2];
+    const r = img.px[i],
+      g = img.px[i + 1],
+      b = img.px[i + 2];
     colors.add(((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3));
     const l = 0.299 * r + 0.587 * g + 0.114 * b;
     sum += l;
@@ -584,7 +637,11 @@ function inspect(buf) {
   }
   const mean = sum / n;
   const sd = Math.sqrt(Math.max(0, sum2 / n - mean * mean));
-  if (colors.size < 25 || sd < 6) return { ok: false, why: `image quasi unie (${colors.size} couleurs, écart-type ${sd.toFixed(1)})` };
+  if (colors.size < 25 || sd < 6)
+    return {
+      ok: false,
+      why: `image quasi unie (${colors.size} couleurs, écart-type ${sd.toFixed(1)})`,
+    };
   return { ok: true };
 }
 
@@ -604,14 +661,25 @@ async function capture(file, screen, ph, { brandsOk = [] } = {}) {
   // Barre fixe au repos : un toucher dans la marge la réveille (jamais juste après un toucher : il fermerait une boîte de dialogue).
   if (Date.now() - touched > 40_000) shell(`input tap ${W - 8} ${H - 8}`);
   await sleep(1800);
-  const entry = { file: `${file}.png`, screen, persona: ph.persona, time: ph.timeLabel, status: "OK", note: "" };
+  const entry = {
+    file: `${file}.png`,
+    screen,
+    persona: ph.persona ?? "—",
+    time: ph.timeLabel,
+    status: "OK",
+    note: "",
+  };
   try {
     let nodes = [];
     try {
       nodes = dumpNodes(1);
     } catch {}
     let buf = Buffer.alloc(0);
-    for (let i = 0; i < 3 && !buf.length; i++) buf = adb(["exec-out", "screencap", "-p"], { binary: true, timeout: 30_000 });
+    for (let i = 0; i < 3 && !buf.length; i++)
+      buf = adb(["exec-out", "screencap", "-p"], {
+        binary: true,
+        timeout: 30_000,
+      });
     const tmp = path.join(OUT, `${file}.png.tmp`);
     fs.writeFileSync(tmp, buf);
     const check = inspect(buf);
@@ -628,9 +696,9 @@ async function capture(file, screen, ph, { brandsOk = [] } = {}) {
       fs.renameSync(tmp, path.join(OUT, `${file}.png`));
       hashes.set(`${file}.png`, hash);
       const found = brandsOn(nodes);
-      const expected = found.filter((b) => brandsOk.includes(b));
-      const stray = found.filter((b) => !brandsOk.includes(b));
-      if (expected.length) entry.note = `marque du code de l'appli : ${expected.join(", ")}`;
+      const expected = found.filter((b) => brandsOk === "all" || brandsOk.includes(b));
+      const stray = found.filter((b) => brandsOk !== "all" && !brandsOk.includes(b));
+      if (expected.length) entry.note = `marques de la démo de l'appli : ${expected.join(", ")}`;
       if (stray.length) {
         entry.status = "À VÉRIFIER";
         entry.note = `marque à l'écran : ${stray.join(", ")}${expected.length ? ` (+ ${entry.note})` : ""}`;
@@ -648,212 +716,241 @@ async function capture(file, screen, ph, { brandsOk = [] } = {}) {
 
 // ----------------------------------------------------------------------------------------------------------------- phases
 /**
- * Une phase = un backend de démo (persona), une heure, un thème, une disposition, puis des écrans.
- * Chaque écran : { file, name, run(t, ph), brandsOk? } ; une erreur de navigation = ÉCHEC dans l'index, la phase continue.
+ * Une phase = un backend de démo, une heure (`live` : l'heure réelle, pour l'alerte de réunion « dans N min » que le
+ * backend calcule sur sa propre horloge), puis des écrans. Le persona est choisi dans l'appli (Réglages > Démo) : c'est
+ * elle qui pose écrans de la barre, thème, texte, touches, agenda, GitLab, Jira. Les écrans se suivent sans relancer
+ * l'appli (une relance effacerait le choix). Chaque écran : { file, name, run(t, ph) } ; une erreur de navigation =
+ * ÉCHEC dans l'index, la phase continue. Les marques viennent des données de démo de l'appli : notées dans l'index.
  */
 const PHASES = [
   {
-    id: "sylvie",
-    persona: "sylvie",
-    time: [8, 30],
-    layout: (c) => layoutJson(["Ma journée", "Deck"], [...journee(0, keysCfg(c, SYLVIE_KEYS.slice(0, 6))), wd("apps", "W", 1, 0, 0), wd("dayline", "W", 1, 0, 1), wd("keys", "XL", 1, 0, 2, keysCfg(c, SYLVIE_KEYS))]),
+    id: "commun",
+    persona: null,
+    time: [9, 0],
     screens: [
-      { file: "sylvie-accueil-ma-journee", name: "Accueil, Ma journée", run: async () => {} },
-      { file: "sylvie-deck-touches-compta", name: "Profil Deck, touches de comptabilité", run: async (t) => t.profile("Deck") },
       {
-        file: "sylvie-editeur-touche-macro",
-        name: "Éditeur de la macro Export FEC",
-        restart: true,
-        run: async (t, ph) => {
-          await control("/media", { on: false });
-          await t.profile("Deck");
-          await t.longPress({ text: "Export FEC" });
-          await t.find(/enregistrer/i);
+        file: "commun-choix-persona",
+        name: "Réglages > Démo : les six personas",
+        run: async (t) => {
+          await openPersonaDialog(t);
+          touch();
         },
-        after: async () => control("/media", { on: true }),
+      },
+    ],
+  },
+  {
+    id: "nour",
+    persona: "Nour",
+    time: [8, 30],
+    screens: [
+      {
+        file: "nour-excel",
+        name: "Écran Excel : touches Excel, libellés, fenêtres",
+        run: async () => {},
+      },
+      {
+        file: "nour-dossiers",
+        name: "Écran Dossiers : touches, applis, fenêtres",
+        run: async (t) => t.profile("Dossiers"),
+      },
+      {
+        file: "nour-cloture",
+        name: "Accueil : widget Clôture (checklist, échéance)",
+        run: async (t) => t.profile("Accueil"),
       },
     ],
   },
   {
     id: "gwen",
-    persona: "gwen",
+    persona: "Gwen",
     time: [10, 30],
-    layout: (c) => layoutJson(["Ma journée", "Outils"], [...journee(0, defaultKeys), wd("apps", "XL", 1, 0, 0), wd("agenda", "L", 1, 0, 2), wd("tasks", "L", 1, 2, 2)]),
     screens: [
-      { file: "gwen-accueil-rejoindre", name: "Agenda, bouton Rejoindre le webinaire", run: async (t) => t.find(/rejoindre/i) },
-      { file: "gwen-applis", name: "Profil Outils, toutes les applis", run: async (t) => t.profile("Outils") },
       {
-        file: "gwen-reunion-en-appel",
-        name: "Réunion en appel",
-        restart: true,
-        run: async (t) => {
-          await control("/os", {
-            inCall: ["Visio"],
-            voice: { Visio: { found: true, connected: true, streaming: false, channel: null, people: [], muted: false, deafened: false, mic: null, deaf: null } },
-          });
-          // L'écran d'un appel actif bouge en continu : pas de lecture par uiautomator, l'appli bascule seule sur Réunion.
-          await t.sleep(9000);
-        },
-        after: async () => control("/os", { inCall: [], voice: {} }),
+        file: "gwen-accueil",
+        name: "Accueil : agenda, tâches, modèles de messages",
+        run: async () => {},
+      },
+      {
+        file: "gwen-presentation",
+        name: "Écran Présentation : diapos, chrono, micro",
+        run: async (t) => t.profile("Présentation"),
+      },
+      {
+        file: "gwen-campagnes",
+        name: "Écran Campagnes : réseaux, modèles, applis",
+        run: async (t) => t.profile("Campagnes"),
       },
     ],
   },
   {
     id: "camille",
-    persona: "camille",
+    persona: "Camille",
     time: [12, 30],
-    layout: (c) =>
-      layoutJson(["Travail", "Perso"], [
-        ...journee(0, defaultKeys),
-        wd("hero", "W", 1, 0, 0, CITY),
-        wd("dayline", "W", 1, 0, 1),
-        wd("focus", "V", 1, 0, 2),
-        wd("media", "M", 1, 1, 2),
-        wd("weather", "M", 1, 1, 3, CITY),
-        wd("water", "S", 1, 3, 2),
-      ]),
     screens: [
-      { file: "camille-profil-travail", name: "Profil Travail", run: async () => {} },
-      { file: "camille-profil-perso", name: "Profil Perso", run: async (t) => t.profile("Perso") },
       {
-        file: "camille-reunion-micro-coupe",
-        name: "Réunion, micro coupé",
-        restart: true,
-        run: async (t) => {
-          await control("/os", {
-            inCall: ["Visio"],
-            voice: { Visio: { found: true, connected: true, streaming: false, channel: null, people: [], muted: true, deafened: false, mic: null, deaf: null } },
-          });
-          await t.sleep(5000);
-          await t.find(/micro/i, 20_000);
-        },
-        after: async () => control("/os", { inCall: [], voice: {} }),
+        file: "camille-travail",
+        name: "Écran Travail : Je m'absente, Focus, prochain rendez-vous",
+        run: async () => {},
       },
-      { file: "camille-focus", name: "Focus 25:00", restart: true, run: async (t) => (await t.tap({ desc: "Focus" }), t.find("25:00")) },
+      {
+        file: "camille-absente",
+        name: "Je m'absente : absence en cours, Reprendre",
+        run: async (t) => {
+          // Le titre du widget porte le même texte : le bouton est le second.
+          await t.tap({ text: "Je m'absente", nth: 1 });
+          await t.find("Reprendre");
+        },
+      },
+      {
+        file: "camille-maison",
+        name: "Écran Maison : touches de la maison, média, tâches",
+        run: async (t) => {
+          await t.tap("Reprendre");
+          await t.profile("Maison");
+        },
+      },
     ],
   },
   {
     id: "aimee",
-    persona: "aimee",
+    persona: "Aimée",
     time: [14, 29],
-    layout: (c) => layoutJson(["Ma journée", "Fenêtres"], [...journee(0, defaultKeys), wd("apps", "W", 1, 0, 0), wd("dayline", "W", 1, 0, 1), wd("open", "XL", 1, 0, 2)]),
+    // L'horloge tourne librement : l'alerte part à 14:30, 5 min avant la réunion déplacée à 14:35.
+    flow: true,
+    async afterChoose(t) {
+      // La démo pose « Point client Boréal » 6 min après le choix, à l'heure de l'ordinateur : on le remet à 14:35 du jour affiché.
+      const { events = [] } = await api("GET", "/calendar?days=1");
+      const ev = events.find((e) => e.title === "Point client Boréal" && e.localId);
+      if (!ev) throw new Error("réunion « Point client Boréal » introuvable dans l'agenda");
+      const start = new Date(`${DAY}T14:35:00`).getTime();
+      await api("PUT", `/calendar/events/${encodeURIComponent(ev.localId)}`, {
+        title: ev.title,
+        startMs: start,
+        endMs: start + 30 * 60_000,
+        allDay: false,
+      });
+      // L'appli relit l'agenda au démarrage : relance sans toucher aux préférences (le persona reste choisi).
+      setTime(14, 29);
+      await launchApp(t);
+      await sleep(3000);
+    },
     screens: [
-      { file: "aimee-accueil-ma-journee", name: "Ma journée, réunion dans 1 min", run: async (t) => t.find(/dans 1 min/i) },
       {
-        file: "aimee-fichiers-ordi",
-        name: "Fichiers de l'ordi",
-        restart: true,
+        file: "aimee-accueil",
+        name: "Accueil : prochaine réunion, agenda, tâches",
+        run: async () => {},
+      },
+      {
+        file: "aimee-alerte",
+        name: "Alerte plein écran 5 min avant la réunion",
         run: async (t) => {
-          await t.tap({ desc: "Ordi" });
-          await t.tap("Fichiers de l'ordi");
-          await t.find("Dossier partagé");
+          await t.find("Touche l'écran pour fermer", 150_000);
+          // Pas de toucher de réveil de la barre avant la capture : il fermerait l'alerte.
+          touch();
         },
       },
-      { file: "aimee-ouvertes", name: "Fenêtres ouvertes sur les écrans", run: async (t) => t.profile("Fenêtres") },
+      {
+        file: "aimee-projets",
+        name: "Écran Projets : dossiers d'un projet, fenêtres",
+        run: async (t) => {
+          shell(`input tap ${W / 2} ${H / 2}`);
+          await t.sleep(1200);
+          await t.profile("Projets");
+        },
+      },
+      {
+        file: "aimee-jira",
+        name: "Écran Jira : tickets en colonnes",
+        run: async (t) => t.profile("Jira"),
+      },
     ],
   },
   {
     id: "sam",
-    persona: "sam",
+    persona: "Sam",
     time: [17, 0],
-    theme: "CONTRASTE",
-    layout: (c) => layoutJson(["Accueil", "Touches"], [...journee(0, keysCfg(c, SAM_KEYS)), wd("apps", "W", 1, 0, 0), wd("dayline", "W", 1, 0, 1), wd("keys", "XL", 1, 0, 2, keysCfg(c, SAM_KEYS))]),
     screens: [
-      { file: "sam-accueil-contraste", name: "Accueil, Contraste élevé", run: async () => {} },
-      { file: "sam-grandes-touches", name: "Grandes touches, Contraste élevé", run: async (t) => t.profile("Touches") },
       {
-        file: "sam-reglages-accessibilite",
-        name: "Réglages, Accessibilité, taille du texte",
-        restart: true,
-        reduceMotion: false,
-        run: async (t) => {
-          await t.tap({ desc: "Réglages" });
-          await t.scrollTo("Taille du texte");
-          await t.alignTop({ text: "Accessibilité" });
-        },
+        file: "sam-accueil",
+        name: "Accueil : Contraste élevé, texte agrandi, grandes touches",
+        run: async () => {},
       },
       {
-        file: "sam-reglages-texte-grand",
-        name: "Réglages, texte « Très grande »",
-        restart: true,
-        reduceMotion: false,
+        file: "sam-reglages-retour-parle",
+        name: "Réglages, Accessibilité : retour parlé, taille du texte",
         run: async (t) => {
-          await t.tap({ desc: "Réglages" });
-          await t.scrollTo("Taille du texte");
-          await t.tap("Très grande");
-          await t.sleep(2500);
-          await t.scrollTo("Taille du texte");
-          await t.alignTop({ text: "Accessibilité" });
+          await openSettings();
+          // Les interrupteurs n'exposent pas leur libellé à uiautomator : on cherche le texte d'aide sous l'interrupteur.
+          await t.scrollTo(/Chaque touche lancée est annoncée/);
+          await t.alignTop(/Lire les bandeaux à voix haute|Plus rien ne bouge en continu/);
         },
-        after: async () => shell(`am force-stop ${PKG}`),
       },
     ],
-    // Le texte « Très grande » est enregistré : l'écran suivant repart d'une préférence neuve.
   },
   {
     id: "sacha",
-    persona: "sacha",
+    persona: "Sacha",
     time: [19, 10],
-    theme: "CADRAN_NUIT",
-    layout: (c) =>
-      layoutJson(["Accueil", "Agents", "Revues", "Tickets"], [
-        ...journee(0, defaultKeys),
-        wd("hero", "W", 1, 0, 0, CITY),
-        wd("dayline", "W", 1, 0, 1),
-        wd("agents", "XL", 1, 0, 2),
-        wd("hero", "W", 2, 0, 0, CITY),
-        wd("dayline", "W", 2, 0, 1),
-        wd("gitlab", "XL", 2, 0, 2),
-        wd("hero", "W", 3, 0, 0, CITY),
-        wd("dayline", "W", 3, 0, 1),
-        wd("jira", "XL", 3, 0, 2),
-      ]),
     screens: [
-      { file: "sacha-agents", name: "Agents Claude Code", brandsOk: ["claude"], run: async (t) => t.profile("Agents") },
-      { file: "sacha-gitlab", name: "GitLab : mes MR et à relire", brandsOk: ["gitlab"], run: async (t) => t.profile("Revues") },
-      { file: "sacha-jira", name: "Jira : tickets en colonnes", brandsOk: ["jira"], run: async (t) => t.profile("Tickets") },
-    ],
-  },
-  {
-    id: "commun",
-    persona: "gwen",
-    time: [11, 0],
-    layout: (c) =>
-      layoutJson(["Ma journée", "Son"], [
-        ...journee(0, defaultKeys),
-        wd("mixer", "XL", 1, 0, 0),
-        wd("media", "L", 1, 0, 2),
-        wd("focus", "L", 1, 2, 2),
-      ]),
-    screens: [
-      { file: "commun-accueil-jour", name: "Accueil, Cadran jour", run: async () => {} },
-      { file: "commun-barre-profils", name: "Barre et liste des profils", restart: true, run: async (t) => t.tap({ desc: "Ajouter un écran" }) },
       {
-        file: "commun-modeles-profil",
-        name: "Ajouter un écran, modèles",
-        restart: true,
-        run: async (t) => {
-          await t.tap({ desc: "Ajouter un écran" });
-          await t.tap(/depuis un modèle/i);
-          await t.find("Bureau");
-        },
+        file: "sacha-code",
+        name: "Écran Code : touches Git, tests, déploiement, agents",
+        run: async () => {},
       },
-      { file: "commun-son", name: "Son : console de mixage", restart: true, run: async (t) => t.profile("Son") },
-    ],
-  },
-  {
-    id: "commun-nuit",
-    persona: "sacha",
-    time: [19, 10],
-    theme: "CADRAN_NUIT",
-    layout: (c) =>
-      layoutJson(["Ma journée", "Média"], [...journee(0, defaultKeys), wd("hero", "W", 1, 0, 0, CITY), wd("dayline", "W", 1, 0, 1), wd("media", "L", 1, 0, 2), wd("weather", "M", 1, 2, 2, CITY), wd("water", "M", 1, 2, 3)]),
-    screens: [
-      { file: "commun-accueil-nuit", name: "Accueil, Cadran nuit", run: async () => {} },
-      { file: "commun-media", name: "Média : lecture en cours", restart: true, run: async (t) => t.profile("Média") },
+      {
+        file: "sacha-gitlab",
+        name: "Écran GitLab : MR et pipelines (console de déploiement)",
+        run: async (t) => t.profile("GitLab"),
+      },
+      {
+        file: "sacha-jira",
+        name: "Écran Jira : tickets en colonnes",
+        run: async (t) => t.profile("Jira"),
+      },
     ],
   },
 ];
+
+/** L'icône des Réglages est rognée en bas de la barre (le toucher n'y arrive pas) : l'ordre `mode` du compagnon l'ouvre. */
+async function openSettings() {
+  await waitFor(
+    async () => (await api("POST", "/tablet/command", { type: "mode", mode: "settings" })).ok,
+    30_000,
+    "ouverture des Réglages",
+    2000,
+  );
+  await sleep(1500);
+}
+
+/** Réglages > Démo > Choisir un persona : ouvre la boîte des six personas. */
+async function openPersonaDialog(t) {
+  await openSettings();
+  await t.scrollTo("Choisir un persona");
+  // Le défilement a de l'élan : on retouche le bouton tant que la boîte des personas n'est pas ouverte.
+  await waitFor(
+    async () => {
+      await sleep(1200);
+      if (await t.has(/choisis un persona/)) return true;
+      await t.tap("Choisir un persona");
+      return t.has(/choisis un persona/, 3000);
+    },
+    40_000,
+    "boîte des personas",
+    500,
+  );
+}
+
+/** Réglages > Démo > Choisir un persona : l'appli pose écrans, thème, texte et réglages, le compagnon pose les données. */
+async function choosePersona(t, name) {
+  await openPersonaDialog(t);
+  await t.tap({ text: name });
+  // L'activité est recréée : on attend la barre, puis la fin des chargements (agenda, GitLab, Jira).
+  await sleep(2500);
+  await waitFor(() => dumpNodes().some(matcher({ desc: "Parler" })), 40_000, "retour sur l'Accueil du persona");
+  railSpots.clear();
+  for (const n of dumpNodes()) if (n.desc && n.b[0] < 130) railSpots.set(n.desc, n.b);
+  await sleep(4000);
+}
 
 async function launchApp(t) {
   shell(`am force-stop ${PKG}`);
@@ -864,43 +961,48 @@ async function launchApp(t) {
 }
 
 async function runPhase(ph) {
-  const [hh, mm] = ph.time;
-  ph.timeLabel = `${hh}:${String(mm).padStart(2, "0")}`;
-  log(`=== ${ph.id} (${ph.persona}, ${ph.timeLabel}${ph.theme ? `, ${ph.theme}` : ""}) ===`);
-  await startBackend(ph.persona, { hh, mm });
+  const live = ph.time === "live";
+  const now = new Date();
+  const [hh, mm] = live ? [now.getHours(), now.getMinutes()] : ph.time;
+  ph.timeLabel = live ? "heure réelle" : `${hh}:${String(mm).padStart(2, "0")}`;
+  log(`=== ${ph.id} (${ph.persona ?? "sans persona"}, ${ph.timeLabel}) ===`);
+  await startBackend(ph.persona ?? "commun", live ? null : { hh, mm });
+  // Plugins déjà choisis : sinon l'écran de première utilisation recouvre l'appli. Le persona coupe ensuite les siens.
   const choices = Object.fromEntries(((await api("GET", "/plugins")).plugins ?? []).map((p) => [p.id, true]));
   await api("POST", "/plugins", { choices });
   adb(["reverse", `tcp:${ports.main}`, `tcp:${ports.main}`]);
   reversed = ports.main;
   const t = toolkit();
-  const prefs = (screen = {}) => writePrefs({ theme: ph.theme ?? "CADRAN", scale: 1.0, layout: ph.layout, reduceMotion: screen.reduceMotion ?? true });
-  prefs();
+  writePrefs();
+  // L'heure réelle n'est posée qu'une fois : la refixer à chaque écran arrêterait l'horloge de la tablette.
+  const pin = () => !live && !ph.flow && setTime(hh, mm);
   setTime(hh, mm);
   await launchApp(t);
-  let fresh = true;
+  if (ph.persona) {
+    try {
+      await choosePersona(t, ph.persona);
+    } catch (e) {
+      throw new Error(`choix du persona ${ph.persona} : ${e.message}`);
+    }
+  }
+  await ph.afterChoose?.(t);
   for (const s of ph.screens) {
     log(`-- ${s.file}`);
     try {
-      if (s.restart && (!fresh || s.reduceMotion === false)) {
-        prefs(s);
-        setTime(hh, mm);
-        await launchApp(t);
-      }
-      setTime(hh, mm);
+      pin();
       await sleep(1200);
-      fresh = false;
       await s.run(t, ph);
-      await capture(s.file, s.name, ph, { brandsOk: s.brandsOk });
+      await capture(s.file, s.name, ph, { brandsOk: "all" });
     } catch (e) {
       log(`ÉCHEC ${s.file} : ${e.message}`);
-      index.push({ file: `${s.file}.png`, screen: s.name, persona: ph.persona, time: ph.timeLabel, status: "ÉCHEC", note: e.message.split("\n")[0] });
-      fresh = false;
-      try {
-        prefs();
-        await launchApp(t);
-      } catch {}
-    } finally {
-      await s.after?.();
+      index.push({
+        file: `${s.file}.png`,
+        screen: s.name,
+        persona: ph.persona ?? "—",
+        time: ph.timeLabel,
+        status: "ÉCHEC",
+        note: e.message.split("\n")[0],
+      });
     }
   }
 }
@@ -912,7 +1014,15 @@ function previousRows() {
   const rows = new Map();
   for (const line of fs.readFileSync(file, "utf8").split("\n")) {
     const m = line.match(/^\| (\S+\.png) \| (.*?) \| (\S+) \| (\S+) \| (.*?) \| (.*?) \|$/);
-    if (m) rows.set(m[1], { file: m[1], screen: m[2], persona: m[3], time: m[4], status: m[5], note: m[6] });
+    if (m)
+      rows.set(m[1], {
+        file: m[1],
+        screen: m[2],
+        persona: m[3],
+        time: m[4],
+        status: m[5],
+        note: m[6],
+      });
   }
   return rows;
 }
@@ -940,11 +1050,14 @@ ${rows.map((e) => `| ${e.file} | ${e.screen} | ${e.persona} | ${e.time} | ${e.st
 async function main() {
   const started = Date.now();
   fs.mkdirSync(OUT, { recursive: true });
-  const phases = only ? PHASES.filter((p) => only.includes(p.id) || (p.id.startsWith("commun") && only.includes("commun"))) : PHASES;
+  const phases = only ? PHASES.filter((p) => only.includes(p.id)) : PHASES;
   if (!phases.length) throw new Error(`aucune phase pour --only ${only}`);
   if (!flag("--no-build")) {
     log("construction de l'APK debug (Gradle)");
-    const r = spawnSync("./gradlew", [":app:assembleDebug", "-q"], { cwd: ROOT, stdio: "inherit" });
+    const r = spawnSync("./gradlew", [":app:assembleDebug", "-q"], {
+      cwd: ROOT,
+      stdio: "inherit",
+    });
     if (r.status !== 0) throw new Error("Gradle a échoué");
   }
   if (!fs.existsSync(APK)) throw new Error(`APK introuvable : ${APK}`);
@@ -959,11 +1072,18 @@ async function main() {
     } catch (e) {
       log(`phase ${ph.id} interrompue : ${e.message}`);
       for (const s of ph.screens.filter((s) => !index.some((i) => i.file === `${s.file}.png`)))
-        index.push({ file: `${s.file}.png`, screen: s.name, persona: ph.persona, time: ph.timeLabel ?? "", status: "ÉCHEC", note: `phase interrompue : ${e.message.split("\n")[0]}` });
+        index.push({
+          file: `${s.file}.png`,
+          screen: s.name,
+          persona: ph.persona ?? "—",
+          time: ph.timeLabel ?? "",
+          status: "ÉCHEC",
+          note: `phase interrompue : ${e.message.split("\n")[0]}`,
+        });
     }
   }
   writeIndex((Date.now() - started) / 1000);
-  const bad = index.filter((e) => e.status !== "OK" && !e.note.startsWith("marque du code"));
+  const bad = index.filter((e) => e.status !== "OK" && !e.note.startsWith("marques de la démo"));
   keepTmp = bad.length > 0;
   log(`terminé en ${Math.round((Date.now() - started) / 1000)} s : ${index.length - bad.length} sur ${index.length} captures OK`);
   for (const e of bad) log(`  ${e.status} ${e.file} : ${e.note}`);

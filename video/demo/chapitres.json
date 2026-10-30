@@ -2,153 +2,162 @@
   "_note": "Chapitres de la démo, dans l'ordre de la journée. img/vid = nom de fichier dans assets/screens (captures réelles), tap = point touché (px de la capture 1280×800), zoom = [x, y, largeur, hauteur] du gros plan, h = heure sur le sommaire. Régénérer : python3 ../scripts/demo-parcours.py depuis video/demo.",
   "chapitres": [
     {
-      "id": "sylvie",
-      "nom": "Sylvie, 48 ans",
+      "id": "nour",
+      "nom": "Nour, 48 ans",
       "metier": "Comptable en cabinet",
       "h": 8.5,
       "cit": "« En période de clôture, chaque clic économisé compte. »",
       "A": {
-        "img": "sylvie-deck-perso",
+        "img": "nour-excel",
         "tap": [
-          130,
-          150
+          200,
+          86
         ],
         "zoom": [
-          56,
-          84,
-          1190,
-          310
+          140,
+          48,
+          1100,
+          230
         ],
-        "lab": "Ses touches de clôture, prêtes au cabinet"
+        "lab": "Raccourcis Excel et libellés : une touche chacun"
       },
       "B": {
-        "img": "sylvie-keyeditor-macro",
+        "img": "nour-cloture",
         "zoom": [
-          76,
-          120,
-          520,
+          140,
+          48,
+          542,
           420
         ],
-        "lab": "Une touche : Excel, Alt+F, E, puis le nom du fichier"
-      }
-    },
-    {
-      "id": "camille",
-      "nom": "Camille, 41 ans",
-      "metier": "Cheffe de projet, en télétravail",
-      "h": 10.25,
-      "cit": "« Une touche, et je retrouve mon bureau là où je l'avais laissé. »",
-      "A": {
-        "vid": "commun-geste-balayage-profils",
-        "ms": 0.3,
-        "lab": "Un profil Travail, un profil Perso, d'un balayage"
-      },
-      "B": {
-        "img": "camille-reunion-micro-coupe",
-        "tap": [
-          130,
-          474
-        ],
-        "zoom": [
-          50,
-          296,
-          780,
-          260
-        ],
-        "lab": "L'enfant arrive : micro coupé d'une touche"
+        "lab": "Sa clôture : étapes cochées, échéance à J-2"
       }
     },
     {
       "id": "gwen",
       "nom": "Gwen, 36 ans",
       "metier": "Responsable marketing",
-      "h": 11,
+      "h": 10.5,
       "cit": "« J'ai douze outils ouverts ; maintenant, chacun est à une touche. »",
       "A": {
-        "img": "julie-deck-apps",
+        "img": "gwen-campagnes",
         "tap": [
-          482,
-          162
+          200,
+          86
         ],
         "zoom": [
-          56,
-          84,
-          1190,
-          300
+          140,
+          48,
+          1100,
+          230
         ],
-        "lab": "Canva, HubSpot, Teams : une touche chacun"
+        "lab": "Réseaux et modèles de messages, à une touche"
       },
       "B": {
-        "img": "julie-accueil-rejoindre",
+        "img": "gwen-presentation",
         "tap": [
-          178,
-          646
+          620,
+          222
         ],
         "zoom": [
-          84,
-          413,
-          277,
-          355
+          140,
+          48,
+          1100,
+          330
         ],
-        "lab": "Le webinaire, rejoint depuis la tablette"
+        "lab": "Diapos, chrono et micro, sous la main"
+      }
+    },
+    {
+      "id": "camille",
+      "nom": "Camille, 41 ans",
+      "metier": "Cheffe de projet, en télétravail",
+      "h": 12.5,
+      "cit": "« Une touche, et je retrouve mon bureau là où je l'avais laissé. »",
+      "A": {
+        "img": "camille-travail",
+        "tap": [
+          690,
+          260
+        ],
+        "zoom": [
+          420,
+          48,
+          540,
+          330
+        ],
+        "lab": "L'école appelle : « Je m'absente »"
+      },
+      "B": {
+        "img": "camille-absente",
+        "zoom": [
+          420,
+          48,
+          540,
+          330
+        ],
+        "lab": "Micro coupé, Focus en pause, fenêtres gardées"
       }
     },
     {
       "id": "aimee",
-      "nom": "Aimée",
-      "metier": "Chargé de projets en agence",
+      "nom": "Aimée, 29 ans",
+      "metier": "Chargée de projets en agence",
       "h": 14.483,
       "cit": "« Je ne cherche plus mes fichiers : ils sont sous mes yeux. »",
       "A": {
-        "img": "thomas-accueil",
+        "img": "aimee-accueil",
         "zoom": [
-          84,
-          413,
-          277,
-          355
+          150,
+          160,
+          480,
+          110
         ],
-        "lab": "La prochaine réunion, dans 1 min"
+        "lab": "Sa prochaine réunion, toujours en vue"
       },
       "B": {
-        "img": "thomas-fichiers-ordi",
+        "img": "aimee-alerte",
         "zoom": [
-          56,
-          20,
-          700,
-          420
+          380,
+          240,
+          520,
+          320
         ],
-        "lab": "Les fichiers de l'ordi, sur la tablette"
+        "lab": "5 min avant : impossible de la rater"
       }
     },
     {
       "id": "sam",
       "nom": "Sam, 44 ans",
       "metier": "Gestionnaire administratif",
-      "h": 16,
+      "h": 17,
       "cit": "« Ce sont les outils qui s'adaptent à moi, et non l'inverse. »",
       "A": {
-        "img": "karim-accueil-contraste",
-        "zoom": [
-          963,
-          413,
-          277,
-          355
+        "img": "sam-accueil",
+        "tap": [
+          778,
+          100
         ],
-        "lab": "Contraste élevé, lisible de loin"
+        "zoom": [
+          140,
+          48,
+          1100,
+          330
+        ],
+        "lab": "Grandes touches, fort contraste, texte agrandi"
       },
       "B": {
-        "img": "karim-reglages-texte-grand",
+        "img": "sam-reglages-retour-parle",
         "tap": [
-          1186,
-          501
+          1214,
+          210
         ],
         "zoom": [
-          56,
-          140,
-          1200,
-          300
+          120,
+          110,
+          1140,
+          160
         ],
-        "lab": "Taille du texte et thème, réglés ici"
+        "lab": "Chaque touche lancée est dite à voix haute"
       }
     },
     {
@@ -159,28 +168,24 @@
       "nuit": true,
       "cit": "« Si je peux le scripter, je l'adopte. »",
       "A": {
-        "img": "leo-deck-agents",
-        "tap": [
-          790,
-          260
-        ],
+        "img": "sacha-code",
         "zoom": [
-          56,
-          160,
-          1200,
-          300
+          700,
+          395,
+          540,
+          320
         ],
         "lab": "Ses agents Claude, d'un coup d'œil"
       },
       "B": {
-        "img": "leo-deck-gitlab",
+        "img": "sacha-gitlab",
         "zoom": [
-          56,
-          96,
-          1200,
-          420
+          140,
+          395,
+          1100,
+          320
         ],
-        "lab": "Ses MR GitLab, sans quitter le code"
+        "lab": "Ses pipelines : la console de déploiement"
       }
     }
   ]

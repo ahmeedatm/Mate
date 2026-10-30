@@ -1,8 +1,17 @@
 # Écrit compositions/parcours.html de la démo produit : tablette fixe à gauche, chapitre par persona à droite.
-S = 1000 / 1356            # échelle de la tablette
-TAB_L, TAB_T = 150, 120    # coin haut gauche de la tablette
-SX, SY = TAB_L + 38 * S, TAB_T + 38 * S   # origine de l'écran
-CX, CY = TAB_L + 500, TAB_T + 876 * S / 2  # centre de la tablette
+# Tablette : la coque de la V4.2 vue de face (assets/brand/tablette-4.2.png), les captures posées dans sa zone d'écran.
+IMG = (2100, 1527)                     # taille de l'image
+SCR = (264.5, 278.0, 1570.5, 972.0)    # zone d'écran dans l'image : x, y, largeur, hauteur
+TAB_W = 1040                           # largeur de la tablette à l'image
+G = TAB_W / IMG[0]
+TAB_H = IMG[1] * G
+TAB_L, TAB_T = 150, 80                 # coin haut gauche de la tablette
+S = min(SCR[2] * G / 1280, SCR[3] * G / 800)   # échelle des captures (1280 × 800)
+EX = SCR[0] * G + (SCR[2] * G - 1280 * S) / 2  # origine de l'écran dans la tablette
+EY = SCR[1] * G + (SCR[3] * G - 800 * S) / 2
+SX, SY = TAB_L + EX, TAB_T + EY        # origine de l'écran à l'image
+CX, CY = SX + 640 * S, SY + 400 * S    # centre de l'écran
+ZOOM_MAX = 1.29                        # grossissement maximal d'un gros plan (px de capture vers px de l'image)
 
 def fx(x): return SX + x * S
 def fy(y): return SY + y * S
@@ -18,9 +27,9 @@ w('''<template>
   <style>
     #root { position: absolute; inset: 0; overflow: hidden; font-family: "Outfit", sans-serif; color: #1e1b1b; }
     #d-fond { position: absolute; inset: 0; background: #faf2f1; }
-    #d-tabw { position: absolute; left: %.1fpx; top: %.1fpx; width: 1000px; height: %.1fpx; }
-    #d-cadre { position: absolute; inset: 0; border-radius: 30px; background: #0e0d0d; border: 2px solid #4d4545; }
-    #d-ecran { position: absolute; left: %.1fpx; top: %.1fpx; width: 1280px; height: 800px; transform: scale(%.5f); transform-origin: 0 0; overflow: hidden; border-radius: 4px; background: #faf2f1; }
+    #d-tabw { position: absolute; left: %.1fpx; top: %.1fpx; width: %.1fpx; height: %.1fpx; }
+    #d-cadre { position: absolute; left: 0; top: 0; width: 100%%; height: 100%%; }
+    #d-ecran { position: absolute; left: %.1fpx; top: %.1fpx; width: 1280px; height: 800px; transform: scale(%.5f); transform-origin: 0 0; overflow: hidden; border-radius: 2px; background: #2d2d2d; }
     .ecran { position: absolute; left: 0; top: 0; width: 1280px; height: 800px; }
     .onde { position: absolute; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%%; border: 4px solid #8c8181; opacity: 0; }
     .zoom { position: absolute; overflow: hidden; border-radius: 18px; border: 2px solid #d0c4c3; background: #faf2f1; }
@@ -53,10 +62,11 @@ w('''<template>
   </style>
   <div id="root" data-composition-id="parcours" data-width="1920" data-height="1080">
     <div id="d-fond"></div>
-''' % (TAB_L, TAB_T, 876 * S, 38 * S, 38 * S, S))
+''' % (TAB_L, TAB_T, TAB_W, TAB_H, EX, EY, S))
 # Tablette et écrans
-w(f'    <div id="d-tabw">\n      <div id="d-cadre"></div>\n      <div id="d-ecran">\n')
-w(f'        <img id="d-e-ouv" class="clip ecran" src="assets/screens/commun-accueil-cadran-jour.png" alt="" data-start="0" data-duration="{OUV + 0.4}" data-track-index="2" />\n')
+w(f'    <div id="d-tabw">\n      <img id="d-cadre" src="assets/brand/tablette-4.2.png" alt="" />\n      <div id="d-ecran">\n')
+# Ouverture : écran éteint, il s'allume sur le premier persona.
+w(f'        <div id="d-e-ouv" class="clip ecran" style="background:#2d2d2d" data-start="0" data-duration="{OUV + 0.4}" data-track-index="2"></div>\n')
 for i, c in enumerate(CH):
     t0 = OUV + i * DUR
     for k, (sub, st, du) in enumerate([("A", t0, 5.6), ("B", t0 + 5.6, DUR - 5.6 + (0.4 if i < 5 else 0))]):
@@ -68,7 +78,7 @@ for i, c in enumerate(CH):
         if "tap" in e:
             x, y = e["tap"]
             w(f'        <div id="d-o-{c["id"]}-{sub}" class="onde" style="left:{x}px;top:{y}px"></div>\n')
-w(f'        <img id="d-e-fin" class="clip ecran" src="assets/screens/commun-accueil-cadran-jour.png" alt="" data-start="{FIN}" data-duration="{TOTAL - FIN}" data-track-index="2" />\n')
+w(f'        <img id="d-e-fin" class="clip ecran" src="assets/screens/commun-choix-persona.png" alt="" data-start="{FIN}" data-duration="{TOTAL - FIN}" data-track-index="2" />\n')
 w('      </div>\n    </div>\n')
 # Gros plans
 for i, c in enumerate(CH):
@@ -78,7 +88,7 @@ for i, c in enumerate(CH):
         if "zoom" not in e:
             continue
         x, y, zw, zh = e["zoom"]
-        k = min(1.75 * S, 1060 / zw, 600 / zh)
+        k = min(ZOOM_MAX, 1060 / zw, 600 / zh)
         W, H = zw * k, zh * k
         L, T = CX - W / 2, CY - H / 2
         cls = "zoom nuit" if c.get("nuit") else "zoom"
@@ -98,7 +108,7 @@ for i, c in enumerate(CH):
     w(f'      <div class="lab lab-a">{la}</div><div class="lab lab-b" data-layout-allow-overlap>{lb}</div>\n    </div>\n')
 # Fin
 w(f'''    <div id="d-fin" class="clip" data-start="{FIN}" data-duration="{TOTAL - FIN}" data-track-index="4">
-      <svg viewBox="0 0 256 256"><rect width="256" height="256" rx="60" fill="#CA0538" /><path d="M48 128 H152" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" /><path d="M152 128 H208" stroke="#FFFFFF" stroke-opacity=".4" stroke-width="14" stroke-linecap="round" /><circle cx="152" cy="128" r="40" fill="none" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="7" /><circle cx="152" cy="128" r="20" fill="#FFFFFF" /></svg>
+      <svg viewBox="0 0 512 512"><rect x="2" y="2" width="508" height="508" rx="112" fill="#CA0730"/><g transform="translate(95.12,132.98) scale(1.5544)"><rect x="47.5" y="0" width="22" height="43.5" rx="4" fill="#FFFFFF"/><rect x="137.5" y="0" width="22" height="43.5" rx="4" fill="#FFFFFF"/><path d="M9,4 L27.5,4 L27.5,36 L103.5,74.5 L179.5,36 L179.5,4 L198,4 L198,48 L103.5,96.4 L9,48 Z" transform="translate(0,68)" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round"/></g></svg>
       <div class="nom">UnoMate</div><img src="assets/brand/unowhy.svg" alt="Unowhy" />
       <p>Mac et Windows, en WiFi.<br />Sur la tablette Unowhy 4.2.</p>
     </div>
@@ -114,7 +124,7 @@ J = lambda s: w('    ' + s + '\n')
 J('tl.fromTo("#d-piste", { scaleX: 0 }, { scaleX: 1, duration: 1.2, ease: "expo.out" }, 0.3);')
 J('tl.fromTo(".spt", { opacity: 0 }, { opacity: 1, duration: 0.25, stagger: 0.08, ease: "none" }, 0.6);')
 J('tl.fromTo("#d-maint i", { scale: 0 }, { scale: 1, duration: 0.4, ease: "back.out(1.6)" }, 1.4);')
-J('tl.fromTo("#d-titre h1", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 0.4);')
+# Le titre est là dès l'image 0 (vignette des lecteurs), l'écran de la tablette éteint.
 J('tl.fromTo("#d-titre p", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 0.8);')
 J(f'tl.to("#d-titre", {{ opacity: 0, filter: "blur(8px)", duration: 0.2, ease: "power2.in" }}, {OUV - 0.35});')
 for i, c in enumerate(CH):
