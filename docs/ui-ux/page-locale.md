@@ -1,7 +1,7 @@
 # Page du compagnon : guide de design pour y ajouter des sections
 
 Pour qui ajoute une section à la page locale (`GET /`, `backend/src/local-page.ts`), en premier lieu la
-configuration des profils, touches, plugins, applis et barres de la tablette depuis l'ordinateur.
+configuration des profils, touches, applis et barres de la tablette depuis l'ordinateur.
 
 Sources : [`DESIGN.md`](../../DESIGN.md) (tokens, typo, composants) et [`PRODUCT.md`](../../PRODUCT.md)
 (public, principes). Ce guide dit comment s'y brancher sans casser la page.

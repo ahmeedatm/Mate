@@ -52,12 +52,12 @@ export default async function localConfigRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
-  // --- Plugins
+  // --- Plugins : aussi ceux dont l'appli est absente (`present: false`), pour les tuiles de la section Connecteurs
 
-  app.get("/local/config/plugins", async () => ({ plugins: await listPlugins() }));
+  app.get("/local/config/plugins", async () => ({ plugins: await listPlugins(true) }));
 
   app.put<{ Body: { choices: Record<string, boolean> } }>("/local/config/plugins", { schema: { body: pluginChoicesBody } }, async (req) =>
-    applyPluginChoices(req.body.choices),
+    applyPluginChoices(req.body.choices, true),
   );
 
   // --- Applis du Deck (page Apps) : liste actuelle et applis installées que l'on peut ajouter

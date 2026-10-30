@@ -1,5 +1,5 @@
 /**
- * Panneau de configuration, partie ordinateur : touches et macros, plugins, applis et sites du Deck. Branché par local-config.ts.
+ * Panneau de configuration, partie ordinateur : touches et macros, applis et sites du Deck (les plugins sont dans la section Connecteurs de local-page.ts). Branché par local-config.ts.
  * Routes : src/routes/local-config.ts. Le JS client tient dans un template literal : pas de backtick, de `${` ni d'antislash.
  * Aucun innerHTML : les textes viennent du compagnon.
  */
@@ -47,13 +47,6 @@ export const DECK_HTML = `
         <div id="pf-deck-editor"></div>
       </div>
     </dialog>
-  </section>
-  <section id="pf-plugins" data-title="Plugins" data-icon="plug">
-    <div class="sechead"><h2>Plugins</h2><span class="dim">Les applis et fonctions que le Deck propose sur cet ordinateur.</span></div>
-    <div class="card group">
-      <div id="pf-deck-plugins"></div>
-      <div class="dim note pf-msg" id="pf-deck-plugins-msg" role="status"></div>
-    </div>
   </section>
   <section id="pf-applis" data-title="Applis et sites" data-icon="apps">
     <div class="sechead"><h2>Applis et sites</h2><span class="dim">Ce que le Deck lance, et les sites de la page Média.</span></div>
@@ -364,42 +357,6 @@ export const DECK_JS = `
     pfDeckRenderGrid();
   }
 
-  // --- Plugins
-
-  function pfDeckRenderPlugins(plugins) {
-    const box = document.getElementById("pf-deck-plugins");
-    box.replaceChildren();
-    if (plugins.length === 0) return box.append(pfDeckEl("div", { className: "row" }, [pfDeckEl("span", { className: "grow dim", text: "Aucun plugin sur cet ordinateur." })]));
-    plugins.forEach((p) => {
-      const input = pfDeckEl("input", { type: "checkbox", checked: p.on, "aria-label": p.name, id: "pf-deck-plugin-" + p.id });
-      input.onchange = () => pfDeckSetPlugin(p.id, input.checked);
-      box.append(pfDeckEl("div", { className: "row" }, [
-        pfDeckEl("label", { for: input.id, className: "grow" }, [document.createTextNode(p.name), pfDeckEl("span", { className: "pf-sub-row", text: p.description })]),
-        input,
-      ]));
-    });
-  }
-
-  async function pfDeckLoadPlugins() {
-    const r = await pfDeckApi("GET", "plugins");
-    if (!r.ok) return pfDeckSay("pf-deck-plugins-msg", r.error, "ko");
-    pfDeckRenderPlugins(r.json.plugins);
-  }
-
-  async function pfDeckSetPlugin(id, on) {
-    const choices = {};
-    choices[id] = on;
-    const r = await pfDeckApi("PUT", "plugins", { choices: choices });
-    if (!r.ok) {
-      pfDeckSay("pf-deck-plugins-msg", r.error, "ko");
-      return pfDeckLoadPlugins();
-    }
-    pfDeckRenderPlugins(r.json.plugins);
-    pfDeckSay("pf-deck-plugins-msg", "Plugin " + (on ? "activé" : "coupé") + ".", "ok");
-    // Un plugin appli activé s'ajoute à la liste des applis.
-    pfDeckLoadApps();
-  }
-
   // --- Applis et sites du Deck
 
   function pfDeckRemovable(items, empty, path, msgId, reload, subtitle) {
@@ -491,7 +448,6 @@ export const DECK_JS = `
   };
 
   pfDeckLoadKeys();
-  pfDeckLoadPlugins();
   pfDeckLoadApps();
   pfDeckLoadLinks();
 `;

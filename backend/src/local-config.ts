@@ -6,7 +6,7 @@ import { PROFILES_CSS, PROFILES_HTML, PROFILES_JS } from "./local-config-profile
  * réutilise les classes de la page (card group, row, ghost, danger, interrupteurs, tuiles .cx, modale .cxdialog), `.pf-`
  * seulement pour ce qui est propre à ces sections, et les tokens de web-style.ts. La grille de tuiles est refaite en
  * `.pf-tiles` / `.pf-slots` : e2e/local-page.spec.ts compte les `.connectors`, réservés aux connecteurs.
- * Profils et barres de la tablette (local-config-profiles.ts), touches, plugins, applis et sites de l'ordinateur
+ * Profils et barres de la tablette (local-config-profiles.ts), touches, applis et sites de l'ordinateur
  * (local-config-deck.ts). Le JS tient dans un template literal : pas de backtick, de `${` ni d'antislash.
  */
 

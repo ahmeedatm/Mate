@@ -17,9 +17,9 @@ export const pluginChoicesBody = {
 };
 
 /** Enregistre les choix. Appli activée : ajoutée à la page Apps, sa page du deck devient un onglet tant qu'elle tourne. */
-export async function applyPluginChoices(choices: Record<string, boolean>) {
+export async function applyPluginChoices(choices: Record<string, boolean>, withAbsent = false) {
   for (const name of await savePlugins(choices)) if (await isInstalled(name).catch(() => false)) await addDeckApp(name);
-  return { plugins: await listPlugins() };
+  return { plugins: await listPlugins(withAbsent) };
 }
 
 /** Plugins de la tablette (src/plugins.ts) : proposés à la première utilisation, puis depuis les Réglages. */

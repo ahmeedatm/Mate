@@ -103,18 +103,60 @@ test.describe("page locale : touches", () => {
   });
 });
 
-test.describe("page locale : plugins", () => {
-  test("coupe puis rallume un plugin", async ({ page, server }) => {
+test.describe("page locale : plugins dans les connecteurs", () => {
+  const tabletPlugin = async (server: { call: (m: string, p: string) => Promise<{ json: any }> }, id: string) =>
+    (await server.call("GET", "/plugins")).json.plugins.find((p: { id: string }) => p.id === id);
+
+  test("appli absente : Teams dans la modale Microsoft, interrupteur désactivé avec la phrase pour l'installer", async ({
+    page,
+    server,
+  }) => {
     await page.goto("/");
-    const mixer = page.locator("#pf-plugins").getByLabel("Mixage du son");
+    await expect(page.locator(".cx", { hasText: "Teams" })).toHaveCount(0);
+    await page.locator('.cx[data-cx="microsoft"]').click();
+    await expect(page.locator("#pluglabel")).toHaveText("Teams sur la tablette");
+    await expect(page.locator("#plugon")).toBeDisabled();
+    await expect(page.locator("#plugon")).not.toBeChecked();
+    await expect(page.locator("#plugmsg")).toHaveText("Teams n'est pas installé sur cet ordinateur : installe-le pour l'activer.");
+    expect(await tabletPlugin(server, "teams")).toBeUndefined();
+  });
+
+  test("appli installée : coupe puis rallume Discord depuis sa modale", async ({ page, server }) => {
+    await page.goto("/");
+    const discord = page.locator(".cx", { hasText: "Discord" });
+    await expect(discord).toContainText("Actif");
+    await discord.click();
+    const on = page.locator("#plugon");
+    await expect(on).toBeEnabled();
+    await expect(on).toBeChecked();
+    await on.uncheck();
+    await expect(page.locator("#plugmsg")).toHaveText("Discord coupé.");
+    await expect(discord).toContainText("Coupé");
+    expect((await tabletPlugin(server, "discord")).on).toBe(false);
+    await page.reload();
+    await expect(page.locator(".cx", { hasText: "Discord" })).toContainText("Coupé");
+    await page.locator(".cx", { hasText: "Discord" }).click();
+    await expect(page.locator("#plugon")).not.toBeChecked();
+    await page.locator("#plugon").check();
+    await expect(page.locator("#plugmsg")).toHaveText("Discord activé.");
+    await expect(page.locator(".cx", { hasText: "Discord" })).toContainText("Actif");
+    expect((await tabletPlugin(server, "discord")).on).toBe(true);
+  });
+
+  test("fonctions de la tablette : coupe puis rallume le mixage du son", async ({ page, server }) => {
+    await page.goto("/");
+    await expect(page.locator("#pf-plugins")).toHaveCount(0);
+    const list = page.locator("#connecteurs").getByRole("heading", { name: "Fonctions de la tablette" });
+    await expect(list).toBeVisible();
+    const mixer = page.locator("#fnlist").getByLabel("Mixage du son");
     await expect(mixer).toBeChecked();
     await mixer.uncheck();
-    await expect(page.locator("#pf-deck-plugins-msg")).toHaveText("Plugin coupé.");
+    await expect(page.locator("#fnmsg")).toHaveText("Mixage du son coupé.");
     expect((await server.call("GET", "/deck/features")).json.off).toEqual(["mixer"]);
     await page.reload();
-    await expect(page.locator("#pf-plugins").getByLabel("Mixage du son")).not.toBeChecked();
-    await page.locator("#pf-plugins").getByLabel("Mixage du son").check();
-    await expect(page.locator("#pf-deck-plugins-msg")).toHaveText("Plugin activé.");
+    await expect(page.locator("#fnlist").getByLabel("Mixage du son")).not.toBeChecked();
+    await page.locator("#fnlist").getByLabel("Mixage du son").check();
+    await expect(page.locator("#fnmsg")).toHaveText("Mixage du son activé.");
     expect((await server.call("GET", "/deck/features")).json.off).toEqual([]);
   });
 });

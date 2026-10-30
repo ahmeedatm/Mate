@@ -141,6 +141,17 @@ describe("plugins", () => {
     assert.deepEqual((await server.call("GET", "/deck/features")).json.off, []);
   });
 
+  it("rend aussi les applis absentes avec present: false ; la tablette ne reçoit que les présentes, sans ce champ", async () => {
+    const all = (await local("GET", "plugins")).json.plugins as { id: string; present: boolean }[];
+    assert.equal(all.find((p) => p.id === "discord")?.present, true);
+    assert.equal(all.find((p) => p.id === "teams")?.present, false);
+    const tablet = (await server.call("GET", "/plugins")).json.plugins as Record<string, unknown>[];
+    assert.ok(!tablet.some((p) => p.id === "teams"));
+    assert.ok(tablet.every((p) => !("present" in p)));
+    const put = (await local("PUT", "plugins", { choices: { mixer: true } })).json.plugins as { id: string }[];
+    assert.ok(put.some((p) => p.id === "teams"));
+  });
+
   it("appli activée et installée : ajoutée à la page Apps", async () => {
     await local("PUT", "plugins", { choices: { discord: true } });
     const names = (await local("GET", "apps")).json.apps.map((a: { name: string }) => a.name);
