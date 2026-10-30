@@ -303,8 +303,15 @@ class MainActivity : AppCompatActivity() {
         // l'écran « Tes plugins » reviendrait à chaque changement de thème.
         savedInstanceState?.getStringArrayList(STATE_PLUGINS_LATER)?.let { pluginsLater += it }
         val restored = savedInstanceState?.getString(STATE_MODE)?.let(Mode::of)
-        // Un persona de la démo vient d'être choisi (Réglages > Démo) : on arrive sur son écran.
-        show(Demo.takeArrival(this) ?: restored ?: Mode.HOME)
+        // Un persona de la démo vient d'être choisi (Réglages > Démo) : on arrive sur son écran. Les écrans restaurés
+        // n'ont pas encore leur vue : les cacher ou les montrer ici les ferait planter, ils sont recréés.
+        val arrival = Demo.takeArrival(this)
+        if (arrival != null && arrival != restored) {
+            val tx = supportFragmentManager.beginTransaction()
+            supportFragmentManager.fragments.forEach { tx.remove(it) }
+            tx.commitNow()
+        }
+        show(arrival ?: restored ?: Mode.HOME)
         // Premier lancement (ou plus aucun ordinateur) : écran de bienvenue.
         if (savedInstanceState == null && Computers.all(this).isEmpty()) welcome.show()
         // Tablette déjà appairée qui n'a jamais vu la visite (mise à jour) : elle la voit une fois.
