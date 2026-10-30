@@ -86,6 +86,13 @@ class Banner(private val view: View, private val scope: LifecycleCoroutineScope)
         view.postDelayed(hide, seconds * 1_000L)
     }
 
+    /** Fait disparaître le bandeau tout de suite, sans animation : un écran modal (onboarding) s'ouvre par-dessus. */
+    fun hideNow() {
+        view.removeCallbacks(hide)
+        leaving = false
+        view.visibility = View.GONE
+    }
+
     /** Pose l'icône et rend la teinte du trait d'accent. */
     private fun showIcon(icon: BannerIcon): Int {
         val context = view.context
