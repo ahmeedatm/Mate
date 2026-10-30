@@ -12,10 +12,11 @@ tablette est native Android (vues XML, Kotlin) : sa finition passe par la skill
 
 ## Users
 
-- **Le pro**, employé qui travaille sur Mac ou PC Windows avec une tablette Mate posée sur son
-  bureau. Sur l'ordinateur, il appaire la tablette, règle la tablette (thème, écran, son), relie son
-  agenda et GitLab, puis revient rarement sur la page.
-- **L'IT ou l'admin**, qui installe le compagnon sur des postes pour d'autres et vérifie que tout
+- **L'utilisateur**, qui a un Mac ou un PC Windows et une tablette 4.2 posée à côté, au bureau ou à
+  la maison : joueur, amateur de domotique casual, ou simple curieux. Sur l'ordinateur, il appaire la
+  tablette, règle la tablette (thème, écran, son), relie son agenda et GitLab, puis revient
+  rarement sur la page.
+- **Celui qui dépanne**, qui installe le compagnon pour un proche ou un collègue et vérifie que tout
   marche (pare-feu, Accessibilité Mac, mise à jour).
 
 ## Product Purpose
@@ -30,9 +31,8 @@ et la tablette marchent, et il règle depuis l'ordinateur ce qui est pénible au
 
 ## Positioning
 
-Un accessoire de productivité personnalisable, polyvalent et robuste, destiné d'abord aux
-professionnels (B2B), vendu seul ou avec un PC Unowhy. Il réutilise des tablettes existantes
-(18 000 à valoriser) au lieu d'un nouveau matériel. B2C (indépendants, télétravail) en complément.
+Un accessoire personnalisable, polyvalent et robuste, qui réutilise une tablette existante au lieu
+d'un nouveau matériel. Pas de positionnement commercial.
 
 ## Operating Context
 
@@ -48,7 +48,7 @@ professionnels (B2B), vendu seul ou avec un PC Unowhy. Il réutilise des tablett
 - Sections actuelles : état du compagnon et de la tablette, adresse, appairage, réglages de la
   tablette connectée (thème, luminosité, volume, nuit, Ne pas déranger, mise à jour), agenda
   (comptes Microsoft / Google, lien ICS), GitLab (connexion OAuth), « Cette appli » (lancement au
-  démarrage, pare-feu, ancienne installation, mise à jour, extension, quitter, tout oublier),
+  démarrage, pare-feu, mise à jour, extension, quitter, tout oublier),
   Accessibilité Mac.
 - Visée (30/10/2026) : devenir un panneau de configuration complet, dont la configuration des
   profils de deck depuis l'ordinateur (travail mené à part, worktree `config-profils-deck-pc`).
@@ -61,16 +61,16 @@ professionnels (B2B), vendu seul ou avec un PC Unowhy. Il réutilise des tablett
 ## Brand Commitments
 
 - Nom : **Mate** (badge « Mate »).
-- La page doit sembler venir du même produit que la tablette : tokens Cadran (jour / nuit, rouge
-  Unowhy `#CA0538` = « maintenant ») et police Outfit, communs avec l'appli
+- La page doit sembler venir du même produit que la tablette : tokens de la DA « Console douce »
+  (thèmes Console et Console jour, voir `DESIGN.md`) et police communs avec l'appli
   (`app/src/main/res/values/palettes.xml`, `backend/src/web-style.ts`).
-- Icône Mate « visage » (`docs/ui-ux/da/icone-visage.svg`) sur les pages web du compagnon ; icône Cadran (`docs/ui-ux/da/icone.svg`) ailleurs.
+- Icône Mate « visage » (`docs/ui-ux/da/icone-visage.svg`) sur les pages web du compagnon ; icône de l'appli (`docs/ui-ux/da/icone.svg`) ailleurs.
 - Textes en français, tutoiement, mêmes mots que sur la tablette (« Réglages › Ordinateurs ›
   Ajouter », « Saisir l'adresse »).
 
 ## Evidence on Hand
 
-- DA Cadran : `docs/ui-ux/da/` (README, maquettes, captures, vidéo).
+- DA : `DESIGN.md` et `docs/ui-ux/da/`.
 - Critique précédente de la page : `docs/team/design-companion/premiere-passe.md`.
 - Aucun témoignage, client, chiffre ni prix dans le dépôt : ne pas en inventer.
 
@@ -85,5 +85,5 @@ professionnels (B2B), vendu seul ou avec un PC Unowhy. Il réutilise des tablett
 
 ## Accessibility & Inclusion
 
-Accessibilité obligatoire pour vendre (COMP-50) : contraste du texte 4,5:1 au moins dans les deux
+Accessibilité : contraste du texte 4,5:1 au moins dans les deux
 modes, navigation au clavier avec focus visible, structure de titres lisible par un lecteur d'écran.

@@ -2,36 +2,23 @@
 
 Pour reprendre le code sur un autre ordinateur ou le confier à un collègue. Pour comprendre comment le tout fonctionne : [architecture.md](architecture.md). Pour savoir où on en est : [etat-du-projet.md](etat-du-projet.md).
 
-## Récupérer le projet (sans dépôt distant)
+## Récupérer le projet
 
-Le projet n'est publié sur aucun serveur git. On le transporte avec un **bundle git**, un fichier unique qui contient tout l'historique.
-
-**Créer la sauvegarde** (sur l'ordinateur qui a le projet) :
+Le dépôt est un GitHub privé, `ahmeedatm/Mate`. La branche par défaut est `master`.
 
 ```bash
-scripts/sauvegarde.sh            # dans ~/Desktop ; ou scripts/sauvegarde.sh /chemin/du/dossier
+git clone git@github.com:ahmeedatm/Mate.git
+cd Mate
 ```
 
-Le script crée deux fichiers :
+**Données de cet ordinateur** (secrets, jeton d'appairage, agendas…) : elles ne sont pas dans git. `scripts/sauvegarde.sh` (dans `~/Desktop`, ou `scripts/sauvegarde.sh /chemin/du/dossier`) crée :
 
 | Fichier | Contenu | À qui |
 |---|---|---|
-| `mate-AAAA-MM-JJ.bundle` | tout le code et l'historique (commits seulement) | à partager avec les collègues |
+| `mate-AAAA-MM-JJ.bundle` | tout le code et l'historique (commits seulement) | copie de secours du code |
 | `mate-donnees-perso-AAAA-MM-JJ.tgz` | `backend/.env`, `backend/.data/` (jeton d'appairage, agendas reliés, tâches, touches…), deck et tâches perso | **à garder pour soi** : il contient des secrets |
 
-Seul ce qui est commité part dans le bundle : il faut commiter avant.
-
-**Récupérer sur un autre ordinateur** :
-
-```bash
-git clone mate-2026-10-24.bundle unowhy-companion
-cd unowhy-companion
-tar xzf ../mate-donnees-perso-2026-10-24.tgz   # seulement pour retrouver SES données
-```
-
-**Mettre à jour une copie existante** avec un bundle plus récent : `git pull ../mate-AAAA-MM-JJ.bundle main`.
-
-Plus tard, pour publier : `git remote add origin <url>` puis `git push -u origin main`. L'historique est conservé.
+Pour retrouver SES données sur un autre ordinateur : `tar xzf ../mate-donnees-perso-AAAA-MM-JJ.tgz` dans le clone. Pour restaurer le code depuis un bundle : `git clone mate-AAAA-MM-JJ.bundle Mate`.
 
 ## Ce qui n'est pas dans git (et comment le recréer)
 
@@ -83,22 +70,21 @@ adb -s <série> install -r app/build/outputs/apk/debug/app-debug.apk   # un appa
 
 **Captures de la tablette** : `adb exec-out screencap -p > capture.png`. Une capture noire veut dire que l'écran est éteint : l'appli est alors en pause et n'écoute plus l'ordinateur.
 
-## Branches, MR et CI
+## Branches, PR et CI
 
-`main` est protégée : on n'y pousse plus directement. Une branche par changement (`feat/…`, `fix/…`, `docs/…`, `ci/…`), puis une MR vers `main`. Elle se fusionne quand le pipeline est vert et les discussions résolues.
+`master` est protégée : on n'y pousse plus directement. Une branche par changement (`feat/…`, `fix/…`, `docs/…`, `ci/…`), puis une PR vers `master`. Elle se fusionne quand la CI GitHub Actions (`.github/workflows/`) est verte.
 
-Le pipeline (`.gitlab-ci.yml`) reste court : seulement des jobs rapides, sur le runner Linux. Rien de lourd en MR (ni émulateur, ni installation sur un vrai ordinateur, ni compilation Windows) ; ce qui sert à la release tourne sur un tag.
+La CI reste courte : seulement des jobs rapides. Rien de lourd en PR (ni émulateur, ni installation sur un vrai ordinateur, ni compilation Windows) ; ce qui sert à la release tourne sur un tag.
 
-| Job | Vérifie |
+| Contrôle | Vérifie |
 |---|---|
 | `backend` | `npm run lint` (format prettier, puis typecheck), puis `npm run coverage` : tests unitaires et d'intégration (`backend/test/`) sous seuil de couverture (voir plus bas), le vrai serveur démarre avec un dossier de données vide et répond à de vraies requêtes HTTP ; le pilotage de l'ordinateur y est simulé (voir plus bas). Comprend la sanity (`test/sanity.test.ts`) |
 | `e2e` | pages web du backend dans Chromium (Playwright, `backend/e2e/`) : page locale (adresse, saisie du code d'appairage, lien ICS), visualiseur `/camera`, retours d'erreur de `/oauth/:provider/callback`. Même serveur que les tests d'intégration. Artefacts : `e2e-results/junit.xml` et traces des tests en échec |
-| `android` | style Kotlin (`ktlintCheck`), tests JVM (`app/src/test/` : `Computers`, `Prefs`, `Connection` contre de petits serveurs HTTP locaux, `FocusTimer`, `Water`, ordre `focus`, modes, widgets, commande vocale ; contexte simulé `FakeContext`), APK debug (téléchargeable dans les artefacts du job, à installer sur la tablette) |
-| `zones` | rien : garde un pipeline aux MR qui ne touchent aucune zone (sans pipeline, la MR ne fusionne pas) |
+| `android` | style Kotlin (`ktlintCheck`), tests JVM (`app/src/test/` : `Computers`, `Prefs`, `Connection` contre de petits serveurs HTTP locaux, `FocusTimer`, `Water`, ordre `focus`, modes, widgets, commande vocale ; contexte simulé `FakeContext`), APK debug (téléchargeable dans les artefacts, à installer sur la tablette) |
 
-**Ciblage par zone.** En MR, un job ne tourne que si sa zone a bougé (`rules:changes`, ancres `.files-*` en tête du fichier). Sur `main` et sur un tag, tout tourne. Toucher `.gitlab-ci.yml` relance tout.
+**Ciblage par zone.** En PR, un contrôle ne tourne que si sa zone a bougé. Sur `master` et sur un tag, tout tourne. Toucher les workflows relance tout.
 
-| Zone | Fichiers | Jobs |
+| Zone | Fichiers | Contrôles |
 |---|---|---|
 | backend | `backend/**` | `backend`, `e2e` |
 | android | `app/**`, `*.gradle*`, `gradle/**`, `gradlew*` | `android` |
@@ -108,12 +94,8 @@ Sur un tag `vX.Y.Z` seulement : `package-windows`, `package-mac`, `helper-window
 **Tests d'installation, à la main.** Plus en CI. À lancer avant une release ou quand l'installation, `backend/src/mac/`, `backend/src/win/`, `os.ts` ou `service.ts` changent :
 
 - Mac : `cd backend && npm run package -- mac && cd .. && backend/qa/install-mac.sh run dist/Mate-Mac.zip` (instance de test isolée du vrai compagnon : port, données et runtime à part, rien dans LaunchAgents ; `install-mac.sh cleanup` après un échec).
-- Windows : `powershell -ExecutionPolicy Bypass -File backend\qa\install-windows.ps1 -Exe <exe> -Root <dossier> -Port <port>` (exe lancé seul, rien d'inscrit, runtime extrait, lancement au démarrage coché puis décoché, sanity, pilote, relance de l'exe, quitter ; `-Nettoyage` ensuite). Sur le PC du runner 976, toujours un autre `-Root` et un autre `-Port` que les valeurs par défaut.
-- Pilote Windows : `cd backend && npm run build:helper` après un changement de `src/win/helper/` ou `src/win/launcher/`, puis commiter les exe. `helper-windows` (tag seulement) échoue si les exe du dépôt ne sont plus ceux des sources.
-
-Le runner Mac 1584 (`scripts/runner-mac.sh`) n'a plus de job : `sudo scripts/runner-mac.sh retour --supprimer` le retire du Mac.
-
-**Site vitrine** (`site/`, zone `site/**`) : `site-downloads` puis `site-image`, au stage `site`. L'image nginx du site, installeurs de la dernière release compris (`scripts/site-downloads.mjs`, paquet `companion-updates/latest`), est construite en docker-in-docker comme dans `sqool-deploy` ; en MR, poussée sous le nom de la branche (jamais `main`) ; sur main (si `site/` change) et sur un tag, poussée dans `harbor.unowhy.dev/squads/mate-site` (variables `HARBOR_REGISTRY_USERNAME` / `HARBOR_REGISTRY_PASSWORD`). Le déploiement sur le cluster dev se fait à la main : `deploy/site-dev/README.md`.
+- Windows : `powershell -ExecutionPolicy Bypass -File backend\qa\install-windows.ps1 -Exe <exe> -Root <dossier> -Port <port>` (exe lancé seul, rien d'inscrit, runtime extrait, lancement au démarrage coché puis décoché, sanity, pilote, relance de l'exe, quitter ; `-Nettoyage` ensuite). Sur un PC qui fait tourner un vrai compagnon, toujours un autre `-Root` et un autre `-Port` que les valeurs par défaut.
+- Pilote Windows : `cd backend && npm run build:helper` après un changement de `src/win/helper/` ou `src/win/launcher/`, puis commiter les exe. Le contrôle `helper-windows` (tag seulement) échoue si les exe du dépôt ne sont plus ceux des sources.
 
 **Sanity** (`backend/qa/sanity.ts`) : un contrôle par feature contre un compagnon réel déjà démarré : santé et identité, appairage par code (sans boîte avec `COMPANION_HEADLESS=1` ou `NO_ALERT=1`), deck et deck de départ filtré aux applis installées, son, fenêtres ouvertes, absence gardée (lecture seule : jamais de start ni de resume), refus d'un `.exe` par `/docs/open`, presse-papiers (écrit un texte accentué, le relit à l'identique et remet l'ancien texte ; passe son tour seulement sur un 503 « pas de session de bureau » ; image, contenu protégé, autre format et texte coupé sont en lecture seule : le contrôle n'écrit jamais dessus), tâches, agenda personnel, agenda ICS (fichier servi en local, seulement si aucun agenda n'est relié), GitLab (lecture seule : 503 sans jeton, sinon `mine` et `review` en tableaux ; jamais de fusion ni d'ouverture), `/camera`, page locale. Réponse attendue selon le système : hors Mac et Windows, le deck se lit et le reste du pilotage répond 501. Ce qu'il crée est retiré à la fin. Sans dépendance : le node du paquet le lance tel quel.
 
@@ -145,11 +127,11 @@ Le tag de l'image du job `e2e` suit la version exacte de `@playwright/test` (`ba
 
 **Pilotage simulé dans les tests** : `backend/test/fake-os.ts` remplace `src/os.ts` (hook de résolution `test/fake-os-hook.ts`) ; aucun test ne lance d'appli, n'envoie de touches ni n'ouvre de fenêtre. Il note chaque action (`calls`) et répond selon un scénario (`state` : applis installées, fenêtres, boutons, Ne pas déranger, échecs). Serveur de `test/server.ts` : toujours simulé (`startServer({ os: "windows" })` pour Windows), scénario par `server.setOs(...)`, actions par `server.osCalls()`. Test unitaire d'un module qui pilote l'ordinateur : `import "./fake-os-hook.ts"` en tête, puis le module en import dynamique (`await import("../src/deck.ts")`). Un export ajouté à `os.ts` doit l'être aussi au faux, sinon les tests échouent au chargement.
 
-Ce que la CI ne voit pas : l'appli Android lancée (ni émulateur ni tablette en CI : écrans et parcours se vérifient par l'essai sur la tablette), l'installation et le pilotage réels du Mac et de Windows (simulés dans les tests), la vraie tablette (perfs, kiosque, micro, caméra). Ils restent testés à la main (case « Testé sur » de la MR).
+Ce que la CI ne voit pas : l'appli Android lancée (ni émulateur ni tablette en CI : écrans et parcours se vérifient par l'essai sur la tablette), l'installation et le pilotage réels du Mac et de Windows (simulés dans les tests), la vraie tablette (perfs, kiosque, micro, caméra). Ils restent testés à la main (case « Testé sur » de la PR).
 
 ## Release (tag vX.Y.Z)
 
-**Mentions de licences** (obligatoires pour vendre, carte COMP-51) : l'appli affiche `app/src/main/assets/licences.txt` (Réglages > À propos > Licences des composants), à régénérer après tout ajout ou changement de dépendance Android : `node scripts/licences-android.mjs` (licences lues dans les POM du cache Gradle ; le script s'arrête sur une licence autre qu'Apache 2.0, à traiter à la main ; `LicencesTest` échoue si une dépendance de `app/build.gradle.kts` manque). Côté ordinateur, rien à faire : `npm run package` écrit `LICENCES-TIERS.txt` (paquets npm réellement regroupés par esbuild, texte de leur licence, licence de node) dans le dossier installé.
+**Mentions de licences** : l'appli affiche `app/src/main/assets/licences.txt` (Réglages > À propos > Licences des composants), à régénérer après tout ajout ou changement de dépendance Android : `node scripts/licences-android.mjs` (licences lues dans les POM du cache Gradle ; le script s'arrête sur une licence autre qu'Apache 2.0, à traiter à la main ; `LicencesTest` échoue si une dépendance de `app/build.gradle.kts` manque). Côté ordinateur, rien à faire : `npm run package` écrit `LICENCES-TIERS.txt` (paquets npm réellement regroupés par esbuild, texte de leur licence, licence de node) dans le dossier installé.
 
 Une release enchaîne ces étapes (le workflow GitHub qui les lance viendra dans `.github/` ; ce sont ses commandes) :
 
@@ -189,7 +171,7 @@ Sur un poste de dev, `./gradlew assembleRelease` sans `RELEASE_KEYSTORE` donne u
 
 La tablette lit par l'API GitHub (`net/GitHubReleases.kt`, point d'accès unique `UpdatesApi.server()` et `UpdatesApi.essais()`) : `GET /repos/<repo>/releases/tags/<tag>` donne les assets (nom, id), puis `GET /repos/<repo>/releases/assets/<id>` avec `Accept: application/octet-stream` donne le fichier. GitHub répond 302 vers un stockage signé : la tablette suit la redirection à la main et n'envoie le jeton qu'à `api.github.com` (jamais à un autre hôte). 401, 404 ou release absente : « aucune mise à jour », sans erreur.
 
-Le jeton est `BuildConfig.UPDATE_TOKEN`, donné au build par `-PupdateToken=` (vide en debug : aucune mise à jour vue). Le dépôt est privé : fine-grained personal access token limité à `ahmeedatm/Mate`, permission **Contents: read-only** (la plus basse qui lit les releases d'un dépôt privé). La CI le lit dans un secret Actions masqué (`UPDATE_TOKEN`) et le donne à Gradle (`-PupdateToken="$UPDATE_TOKEN"`). Il est dans l'APK, donc lisible par qui a l'APK, et donne la lecture du dépôt. Le révoquer ou le laisser expirer = plus aucune mise à jour pour les tablettes déjà installées : noter sa date d'expiration. `-PupdateRepo=` change le dépôt (vide : source coupée). `-PupdateUrl=http://10.0.2.2:8099` remplace GitHub par un serveur HTTP simple (essai local, essais sous `/essais`).
+Le jeton est `BuildConfig.UPDATE_TOKEN`, donné au build par `-PupdateToken=` (vide en debug : aucune mise à jour vue). Le dépôt est privé : jeton fine-grained limité à `ahmeedatm/Mate`, permission **Contents: read-only** (la plus basse qui lit les releases d'un dépôt privé). La CI le lit dans un secret Actions masqué (`UPDATE_TOKEN`) et le donne à Gradle (`-PupdateToken="$UPDATE_TOKEN"`). Il est dans l'APK, donc lisible par qui a l'APK, et donne la lecture du dépôt. Le révoquer ou le laisser expirer = plus aucune mise à jour pour les tablettes déjà installées : noter sa date d'expiration. `-PupdateRepo=` change le dépôt (vide : source coupée). `-PupdateUrl=http://10.0.2.2:8099` remplace GitHub par un serveur HTTP simple (essai local, essais sous `/essais`).
 
 `scripts/updates-publish.mjs` (à la racine) lit l'entrée `companion-X.Y.Z.json`, calcule taille et SHA-256, écrit dans `<sortie>/` l'APK, les installeurs trouvés dans `dist/` (`Mate-Mac.zip`, `Mate-Windows.exe`) et les archives du backend, puis `manifest.json`. Avec `UPDATES_REPO`, il publie par la CLI `gh` : crée la release `latest` si elle manque, envoie les fichiers (`--clobber`) puis `manifest.json` (le manifest ne désigne jamais un fichier absent), et supprime les assets que le manifest ne nomme plus : seule la dernière version reste, installeurs compris. Le manifest décrit les installeurs dans une clé `installers` à côté de `updates` : `[{"os":"mac"|"windows","file":…,"size":…,"sha256":…,"version":"X.Y.Z"}]` (absente d'un essai). Test : `backend/test/updates-publish.test.ts`, contre une fausse CLI `gh`. Essai local sans dépôt : `node scripts/updates-publish.mjs dist updates` (sans `UPDATES_REPO`, n'écrit que `updates/`).
 
@@ -243,7 +225,7 @@ Sécurité : l'APK d'essai porte la clé de release et le jeton de lecture des t
 
 ## Mettre à jour les ordinateurs de test (installés par paquet)
 
-Le PC d'Eliot et le Mac tournent depuis le paquet (pas depuis le dépôt). Le plus simple : « Chercher une mise à jour » dans le panneau (l'appli vient de la tablette), ou lancer la nouvelle appli (elle demande à l'ancienne de quitter, données gardées). Un ordinateur encore installé par l'ancien installeur (NSIS, Applications) : lancer la nouvelle appli puis « Retirer l'ancienne installation » ; l'identité est gardée ; sur Mac, l'Accessibilité est à redonner une fois (nouveau chemin de node), puis elle reste d'une version à l'autre. Sans l'appli, pour aller vite : `cd backend && npm run package`, le dossier `dist/windows/runtime/` (Windows) ou `dist/mac/Mate/Mate.app/Contents/Resources/backend/` (Mac) est le contenu préparé, puis rsync comme ci-dessous.
+Le PC d'Eliot et le Mac tournent depuis le paquet (pas depuis le dépôt). Le plus simple : « Chercher une mise à jour » dans le panneau (l'appli vient de la tablette), ou lancer la nouvelle appli (elle demande à l'ancienne de quitter, données gardées). Sur Mac, l'Accessibilité reste accordée d'une version à l'autre (chemin de node stable). Sans l'appli, pour aller vite : `cd backend && npm run package`, le dossier `dist/windows/runtime/` (Windows) ou `dist/mac/Mate/Mate.app/Contents/Resources/backend/` (Mac) est le contenu préparé, puis rsync comme ci-dessous.
 
 **PC Windows**, par le partage SMB `Compagnon` (= dossier `Documents\Companion-PC\Companion` du PC) monté sur le Mac :
 
@@ -277,17 +259,17 @@ Essai sans toucher à son `settings.json` : `npm run agents:hooks -- --install -
 
 `src/mac/NowPlaying.dylib` (arm64 + x86_64) est compilée par `npm run build:nowplaying` (clang des Command Line Tools) depuis `src/mac/nowplaying/NowPlaying.m` et gardée dans le dépôt ; recompiler après toute modification. Elle est chargée par `/usr/bin/perl` (`DynaLoader`), qui fait partie des programmes d'Apple encore admis par MediaRemote depuis macOS 15.4 : une action par lancement (`NP_ACTION` = `get`, `art`, `play-pause`, `next`, `previous`, `seek`). Infos par `MRNowPlayingRequest` (immédiat) ; `MRMediaRemoteGetNowPlayingInfo` ne rappelle pas toujours (Opera en lecture), il ne sert qu'à la pochette, 1,5 s au plus. Essai à la main : `/usr/bin/perl -e '$ENV{NP_ACTION}="get"; require DynaLoader; DynaLoader::dl_load_file($ARGV[0])' "$PWD/src/mac/NowPlaying.dylib"` (chemin absolu obligatoire). En production, signer la bibliothèque (Developer ID) pour ne pas alerter un antivirus d'entreprise.
 
-Icône de la barre des menus du Mac : `src/mac/UnowhyMenu` (arm64 + x86_64, signature ad hoc) est compilée par `npm run build:menubar` (swiftc des Command Line Tools) depuis `src/mac/menubar/MenuBar.swift` et gardée dans le dépôt ; recompiler après toute modification. Le compagnon la lance au démarrage (`src/mac/menubar.ts`, absente des instances `COMPANION_HEADLESS` et `NO_ALERT`) ; elle s'arrête quand son parent disparaît. Windows : même rôle pour le lanceur (`src/win/launcher/Tray.cs`), recompilé par `npm run build:helper`.
+Icône de la barre des menus du Mac : `src/mac/MateMenu` (arm64 + x86_64, signature ad hoc) est compilée par `npm run build:menubar` (swiftc des Command Line Tools) depuis `src/mac/menubar/MenuBar.swift` et gardée dans le dépôt ; recompiler après toute modification. Le compagnon la lance au démarrage (`src/mac/menubar.ts`, absente des instances `COMPANION_HEADLESS` et `NO_ALERT`) ; elle s'arrête quand son parent disparaît. Windows : même rôle pour le lanceur (`src/win/launcher/Tray.cs`), recompilé par `npm run build:helper`.
 
 ## Fabriquer les applis portables (sans installation ni Node à installer)
 
 Sur le Mac (ou sous Linux, comme le job `package` d'une release ; `zip`, `unzip` et `tar` requis), dans `backend/` : `npm run package` (`scripts/package.ts`). Résultat dans `dist/` à la racine (ignoré par git). Rien ne s'installe : ni copie dans Applications, ni Programmes et fonctionnalités, ni clé Run ou LaunchAgent tant que la case « Lancer au démarrage » du panneau n'est pas cochée.
 
-- `Mate-Windows.exe` (~34 Mo) : un seul fichier = le lanceur C# (`src/win/Mate.exe`, `src/win/launcher/Program.cs`) suivi du zip du runtime (node, `dist/server.mjs`, `UnowhyHelper.exe`, config, `firewall-windows.ps1`, extension du navigateur, `runtime.stamp`) et d'un pied de 16 octets (taille du zip, `UNOWHYZ1`). Au lancement, le lanceur extrait le zip dans `%LOCALAPPDATA%\Mate\runtime` si son `runtime.stamp` diffère de celui en place (`.env` et `.cache` gardés), lance `node.exe` depuis là et le relance s'il s'arrête, puis ouvre le panneau. L'exe lui-même n'est donc jamais verrouillé par node. Déjà lancé avec le même build : il rouvre seulement la page. Autre build ou ancienne installation en marche : il lui demande de quitter (`POST /local/quit`) ; à défaut, il arrête la boucle d'une ancienne installation NSIS (jamais un compagnon lancé depuis le dépôt). `--demarrage` (clé Run) : pas de page ouverte. Les arguments `--node --backend --logs --data` gardent le mode dépôt de `service.ts` ;
+- `Mate-Windows.exe` (~34 Mo) : un seul fichier = le lanceur C# (`src/win/Mate.exe`, `src/win/launcher/Program.cs`) suivi du zip du runtime (node, `dist/server.mjs`, `MateHelper.exe`, config, `firewall-windows.ps1`, extension du navigateur, `runtime.stamp`) et d'un pied de 16 octets (taille du zip, `MATEZIP1`). Au lancement, le lanceur extrait le zip dans `%LOCALAPPDATA%\Mate\runtime` si son `runtime.stamp` diffère de celui en place (`.env` et `.cache` gardés), lance `node.exe` depuis là et le relance s'il s'arrête, puis ouvre le panneau. L'exe lui-même n'est donc jamais verrouillé par node. Déjà lancé avec le même build : il rouvre seulement la page. Autre build en marche : il lui demande de quitter (`POST /local/quit`). `--demarrage` (clé Run) : pas de page ouverte. Les arguments `--node --backend --logs --data` gardent le mode dépôt de `service.ts` ;
 - `Mate-Mac.zip` (~77 Mo) : dossier « Mate » avec « Mate.app » (exécutable `backend/portable/mac/launcher.sh`, `Info.plist` écrit par `package.ts`, icône `backend/assets/compagnon.icns`), qui reste où l'utilisateur la met. Au lancement, `launcher.sh` recopie `Contents/Resources/backend` (sans le node de l'autre architecture) dans `~/Library/Application Support/Mate/runtime` quand `runtime.stamp` diffère : chemin de node stable, l'Accessibilité reste accordée d'une version à l'autre et à l'endroit où l'appli est rangée. Il lance une boucle (`--boucle`, détachée) qui relance le serveur ; `--demarrage` (agent posé par le panneau) la garde au premier plan ;
-- dans chacune : `backend/dist/server.mjs` (sources regroupées par esbuild, plus de `service.mjs`), `backend/config` (sans `deck.json` ni `tasks.json`), `UnowhyHelper.exe` pour Windows, et le node officiel de nodejs.org (ligne 22, téléchargé une fois dans `backend/.cache/node`, vérifié par SHA-256).
+- dans chacune : `backend/dist/server.mjs` (sources regroupées par esbuild, plus de `service.mjs`), `backend/config` (sans `deck.json` ni `tasks.json`), `MateHelper.exe` pour Windows, et le node officiel de nodejs.org (ligne 22, téléchargé une fois dans `backend/.cache/node`, vérifié par SHA-256).
 
-**Panneau** (page locale `http://127.0.0.1:3000/`, `src/local-page.ts`, rouverte en relançant l'appli) : carte « Cette appli » visible seulement lancé par l'appli portable (`COMPANION_APP`, posé par le lanceur ; `routes/portable.ts`, `src/portable.ts`, `src/app-update.ts`) : « Lancer au démarrage » (clé Run `"<exe>" --demarrage` ou LaunchAgent `app.mate.demarrage`, décochée par défaut), pare-feu Windows (`firewall-windows.ps1` : demande d'administrateur à ce moment-là, `-Retirer` pour la règle), « Retirer l'ancienne installation » (NSIS : clé de désinstallation, dossier `Programs\Mate`, clé Run, raccourcis ; Mac : LaunchAgent `app.mate` du paquet installé, copie dans Applications ; données gardées ; un agent ou une clé Run du dépôt n'est jamais touché), « Chercher une mise à jour » puis « Installer » (voir plus bas), « Quitter » (sortie 75) et « Tout oublier » (lancement au démarrage, règle de pare-feu, données et runtime effacés, sortie 76 ; le dossier Partage tablette reste). Les actions sont des `POST` JSON : un autre site ne peut pas les envoyer à `127.0.0.1` sans l'accord du navigateur.
+**Panneau** (page locale `http://127.0.0.1:3000/`, `src/local-page.ts`, rouverte en relançant l'appli) : carte « Cette appli » visible seulement lancé par l'appli portable (`COMPANION_APP`, posé par le lanceur ; `routes/portable.ts`, `src/portable.ts`, `src/app-update.ts`) : « Lancer au démarrage » (clé Run `"<exe>" --demarrage` ou LaunchAgent `app.mate.demarrage`, décochée par défaut), pare-feu Windows (`firewall-windows.ps1` : demande d'administrateur à ce moment-là, `-Retirer` pour la règle), « Chercher une mise à jour » puis « Installer » (voir plus bas), « Quitter » (sortie 75) et « Tout oublier » (lancement au démarrage, règle de pare-feu, données et runtime effacés, sortie 76 ; le dossier Partage tablette reste). Les actions sont des `POST` JSON : un autre site ne peut pas les envoyer à `127.0.0.1` sans l'accord du navigateur.
 
 **Mise à jour depuis la tablette** : la tablette sert sur le WiFi, port 8080, `GET /installers.json` (version, taille, SHA-256 de chaque appli qu'elle garde) et les fichiers. Le panneau lit l'adresse de la tablette (dernier `POST /tablet/poll`, WiFi seulement), prend l'appli de son système, la télécharge, vérifie taille et SHA-256, puis remplace l'exe (renommé `.old`) ou l'appli (zip extrait à côté, ancienne appli en `.old`) et la relance ; le nouveau lanceur demande à l'ancien de quitter, extrait son runtime et efface le `.old`. La page se recharge quand la version change. L'empreinte vient de la tablette, sur le réseau local : elle protège d'un fichier abîmé, pas d'un réseau hostile.
 
@@ -295,7 +277,7 @@ Depuis le dépôt (sans l'appli) : `npm run service:install` dans `backend/`, av
 
 Données d'un ordinateur lancé par l'appli : hors du runtime, dans `%LOCALAPPDATA%\Mate\data` (Windows) ou `~/Library/Application Support/Mate` (Mac) (`src/paths.ts`). Mettre à jour : l'identité est gardée, la tablette retrouve l'ordinateur. Le dossier Partage est `Documents\Partage tablette` (Documents lu dans le registre sous Windows, OneDrive compris). Sur Mac, l'autorisation Accessibilité est donnée au node du runtime. Sur Windows, le pare-feu s'ouvre depuis le panneau au `node.exe` du runtime (règle « Mate », réseaux privés).
 
-Vérifié le 29/10 : build local des deux paquets (structure du zip ajouté à l'exe lue à la main) ; appli Mac lancée depuis un dossier temporaire (extraction du runtime, relance, build différent remplacé, `--demarrage`, lancement au démarrage coché puis décoché, quitter, tout oublier). Pas encore vu : l'exe Windows (à lancer sur le PC de QA avec `backend\qa\install-windows.ps1 -Exe <exe>`), le pare-feu, la mise à jour depuis une vraie tablette, le retrait d'une ancienne installation. Non signés : la signature Authenticode des exe n'existe pas encore dans le dépôt (SmartScreen : « Informations complémentaires » > « Exécuter quand même ») ; l'appli Mac n'est ni signée ni notarisée (compte Apple Developer requis ; Gatekeeper : Réglages Système > Confidentialité et sécurité > « Ouvrir quand même »).
+Vérifié le 29/10 : build local des deux paquets (structure du zip ajouté à l'exe lue à la main) ; appli Mac lancée depuis un dossier temporaire (extraction du runtime, relance, build différent remplacé, `--demarrage`, lancement au démarrage coché puis décoché, quitter, tout oublier). Pas encore vu : l'exe Windows (à lancer sur le PC de QA avec `backend\qa\install-windows.ps1 -Exe <exe>`), le pare-feu, la mise à jour depuis une vraie tablette. Non signés : la signature Authenticode des exe n'existe pas encore dans le dépôt (SmartScreen : « Informations complémentaires » > « Exécuter quand même ») ; l'appli Mac n'est ni signée ni notarisée (compte Apple Developer requis ; Gatekeeper : Réglages Système > Confidentialité et sécurité > « Ouvrir quand même »).
 
 ## Pièges connus
 
@@ -312,4 +294,4 @@ Vérifié le 29/10 : build local des deux paquets (structure du zip ajouté à l
 
 **Passe qualité d'un écran** : skill Claude `design-companion` (`.claude/skills/`, non versionné comme `/ship` : installé depuis [config-claude/](../config-claude/README.md)) (`critique`, `etats`, `polish`, `distill`, `harden`, `animate`), pour l'appli et les pages du backend ; première passe dans `docs/team/design-companion/premiere-passe.md`.
 
-**Changer d'ordinateur de développement** (par exemple du Mac au PC Windows, avec un autre compte Claude) : commiter, `scripts/sauvegarde.sh`, et joindre les notes de Claude (`~/.claude/projects/<projet>/memory/`, zippées) au bundle et aux données perso. Sur l'autre ordinateur, on clone le bundle, puis on demande à Claude de recopier les notes dans sa propre mémoire. Pour revenir : commiter, `git bundle create retour.bundle --all`, rezipper les notes, puis `git pull retour.bundle main` et fusionner les notes sur l'ordinateur d'origine. Le serveur MCP `tablette` lit les données du paquet installé sur Mac comme sur Windows (`DATA_DIR=paquet` dans `.mcp.json`). Sur Windows, sa commande `backend/node_modules/.bin/tsx` (script shell) peut ne pas démarrer : s'il n'apparaît pas, le déclarer en local avec `claude mcp add`, sans modifier `.mcp.json`.
+**Changer d'ordinateur de développement** (par exemple du Mac au PC Windows, avec un autre compte Claude) : commiter, `scripts/sauvegarde.sh`, et joindre les notes de Claude (`~/.claude/projects/<projet>/memory/`, zippées) au bundle et aux données perso. Sur l'autre ordinateur, on clone le bundle, puis on demande à Claude de recopier les notes dans sa propre mémoire. Pour revenir : commiter, `git bundle create retour.bundle --all`, rezipper les notes, puis `git pull retour.bundle master` et fusionner les notes sur l'ordinateur d'origine. Le serveur MCP `tablette` lit les données du paquet installé sur Mac comme sur Windows (`DATA_DIR=paquet` dans `.mcp.json`). Sur Windows, sa commande `backend/node_modules/.bin/tsx` (script shell) peut ne pas démarrer : s'il n'apparaît pas, le déclarer en local avec `claude mcp add`, sans modifier `.mcp.json`.

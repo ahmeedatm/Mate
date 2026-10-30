@@ -28,7 +28,7 @@ Claude, à corriger.
 
 - **Déplacements et défilement par UDP**, sur le port UDP que le compagnon écoute déjà pour la découverte
   (`backend/src/pairing.ts`, même port que HTTP) : un paquet ne fait que quelques octets, rien n'attend une réponse,
-  une perte n'est pas grave. Format : `UNOWHY-POINTER\n<jeton>\n<seq>\n<json>` avec `{"dx":int,"dy":int}` ou
+  une perte n'est pas grave. Format : `MATE-POINTER\n<jeton>\n<seq>\n<json>` avec `{"dx":int,"dy":int}` ou
   `{"sx":int,"sy":int}` (défilement, en crans). Le compagnon vérifie le jeton (comparaison à temps constant), ignore un
   `seq` déjà vu ou plus ancien (par adresse source), borne les valeurs (|d| ≤ 2000 px, |s| ≤ 50) et le débit (≤ 200
   paquets/s par source). Paquet invalide → ignoré sans réponse et sans journal de son contenu.

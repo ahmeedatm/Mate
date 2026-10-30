@@ -1,6 +1,6 @@
 # GitLab dans le Deck — conception
 
-29/10/2026 · Ahmed · branche `plugin-gitlab` (depuis `origin/main` 940bfd5) · carte COMP-37 du board
+29/10/2026 · Ahmed · branche `plugin-gitlab` (depuis `origin/main` 940bfd5)
 
 ## Pourquoi
 
@@ -32,7 +32,7 @@ la tablette, widget de profil. Possibles plus tard.
 
 ## Choix techniques (Claude)
 
-- **Accès** : `GITLAB_URL` (défaut `https://gitlab.unowhy.dev`) et `GITLAB_TOKEN` (portée `api`, nécessaire à la
+- **Accès** : `GITLAB_URL` (défaut `https://gitlab.com`) et `GITLAB_TOKEN` (portée `api`, nécessaire à la
   fusion) dans `backend/.env`, sur le modèle de `jira.ts`. Pas de `glab` : le lancement automatique ne voit pas la
   variable du shell et `glab` n'existe pas sur Windows.
 - **Lecture** : une seule requête GraphQL (`currentUser { assignedMergeRequests, reviewRequestedMergeRequests }`,

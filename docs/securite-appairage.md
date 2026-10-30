@@ -1,6 +1,6 @@
 # Sécurité du lien tablette ↔ ordinateur
 
-Le jeton donné à l'appairage est la seule protection du pilotage de l'ordinateur (touches perso, macros, applis, presse-papiers). Il ne doit jamais pouvoir être lu ni obtenu par quelqu'un d'autre sur le même WiFi. Correctif de la carte COMP-48 (audit de vendabilité du 29/10/2026).
+Le jeton donné à l'appairage est la seule protection du pilotage de l'ordinateur (touches perso, macros, applis, presse-papiers). Il ne doit jamais pouvoir être lu ni obtenu par quelqu'un d'autre sur le même WiFi. Correctif du 29/10/2026.
 
 ## Ce qui était possible avant
 
@@ -33,7 +33,7 @@ tablette                                   ordinateur
   vérifie fingerprint = F_vu, épingle F_vu
 ```
 
-`code = 6 chiffres de SHA-256("unowhy-pair-1\n" + F + "\n" + t + "\n" + o)` (`pairingCode` dans `src/pairing.ts`, `PairingCode.code` sur la tablette ; mêmes valeurs vérifiées par les tests des deux côtés). `F` = empreinte du certificat de la connexion, vide en HTTP local (USB : rien à intercepter ; la tablette épingle alors l'empreinte reçue dans la réponse, pour le WiFi ensuite).
+`code = 6 chiffres de SHA-256("mate-pair-1\n" + F + "\n" + t + "\n" + o)` (`pairingCode` dans `src/pairing.ts`, `PairingCode.code` sur la tablette ; mêmes valeurs vérifiées par les tests des deux côtés). `F` = empreinte du certificat de la connexion, vide en HTTP local (USB : rien à intercepter ; la tablette épingle alors l'empreinte reçue dans la réponse, pour le WiFi ensuite).
 
 Un intercepteur montre son propre certificat à la tablette : les deux codes diffèrent, l'ordinateur refuse, le jeton n'est jamais donné. L'engagement l'empêche d'essayer des nombres jusqu'à tomber sur le même code : une chance sur un million par appairage, trois essais par code, deux minutes, cinq demandes par adresse et par cinq minutes. La saisie (`/local/pair`) n'est acceptée que depuis la page locale (127.0.0.1, nom d'hôte local, corps JSON).
 

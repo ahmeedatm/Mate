@@ -1,6 +1,6 @@
 # Mate
 
-Compagnon de bureau pour tablettes Unowhy 4.2 (Android 10), posé à côté de l'ordinateur (**Mac ou PC Windows**). La tablette est une interface légère ; le backend tourne sur l'ordinateur et sert d'agent de pilotage. Pas d'IA. Une tablette peut connaître plusieurs ordinateurs (bureau, maison) et passe toute seule à celui qui répond.
+Compagnon de bureau pour tablettes 4.2 (Android 10), posé à côté de l'ordinateur (**Mac ou PC Windows**). La tablette est une interface légère ; le backend tourne sur l'ordinateur et sert d'agent de pilotage. Pas d'IA. Une tablette peut connaître plusieurs ordinateurs (bureau, maison) et passe toute seule à celui qui répond.
 
 **Modes** : Profils (ex-Accueil : un profil nommé par page de widgets à disposer : heure, météo, agenda, tâches, eau, Focus, son de l'ordinateur) · Deck (applis, raccourcis, touches perso et macros, Média, toutes les fenêtres ouvertes sur le schéma des écrans, son et micro ; les boutons de volume de la tablette pilotent l'ordinateur) · Depuis l'ordi (« Ordi » dans la barre : fichiers du dossier partagé, page web de l'ordinateur) · Focus (Pomodoro + ambiance) · Caméra (visualiseur de documents, photo → ordinateur) · Réglages. La tablette tourne en kiosque : le bouton Retour ne quitte jamais l'appli.
 
@@ -29,7 +29,7 @@ Sur chaque ordinateur à piloter (une fois) :
    - **Windows** : lancer **`Mate-Windows.exe`** (un seul fichier, sans droits d'administrateur ; non signé : SmartScreen > « Informations complémentaires » > « Exécuter quand même »).
    - **Mac** : extraire `Mate-Mac.zip`, ouvrir **Mate** (non notarisée : la première fois, Réglages Système > Confidentialité et sécurité > « Ouvrir quand même »).
 2. Le compagnon tourne tant qu'on ne le quitte pas ; relancer l'appli rouvre la page. Pour qu'il démarre à l'ouverture de session, cocher « Lancer au démarrage » dans la page (rien n'est inscrit avant). Mettre à jour : bouton « Chercher une mise à jour » de la page (l'appli vient de la tablette). Depuis ce dépôt, sans l'appli : Node.js 22 ou plus, puis `npm install && npm run service:install` dans `backend/`.
-3. La page **http://127.0.0.1:3000/** (le panneau) s'ouvre : adresse de l'ordinateur, case où saisir le code d'appairage affiché par la tablette, agenda, et la carte « Cette appli » (lancement au démarrage, pare-feu, mise à jour, ancienne installation, quitter, tout oublier).
+3. La page **http://127.0.0.1:3000/** (le panneau) s'ouvre : adresse de l'ordinateur, case où saisir le code d'appairage affiché par la tablette, agenda, et la carte « Cette appli » (lancement au démarrage, pare-feu, mise à jour, quitter, tout oublier).
 4. Autorisations, une fois :
    - **Mac** : Réglages Système > Confidentialité et sécurité > **Accessibilité** > ajouter `node` (bouton « Ouvrir le réglage » du panneau ; `node` est dans `~/Library/Application Support/Mate/runtime`) pour les raccourcis, macros et fenêtres.
    - **Windows** : « Ouvrir le pare-feu » dans le panneau (demande d'administrateur) pour les réseaux **privés** ; le WiFi doit être en profil « Privé ».
@@ -38,7 +38,7 @@ Sur la tablette : au premier lancement, l'écran **Bienvenue** guide en trois é
 
 **Plusieurs ordinateurs** (bureau le jour, maison le soir) : appairer chacun une fois. La tablette pilote l'ordinateur en gras ; quand il ne répond plus, elle cherche les autres ordinateurs enregistrés et bascule sur celui qui répond (bandeau « Connecté à … »), et retrouve un ordinateur dont l'adresse IP a changé. Changer à la main : toucher le nom de l'ordinateur en bas de la barre de gauche, ou Réglages. ✎ pour renommer (« Mac du bureau », « PC maison »). Chaque ordinateur garde ses propres données : agenda, tâches, deck, touches perso, applis et écrans (lus en direct). Le deck de départ ne montre que les applis installées sur cet ordinateur.
 
-**Agenda** : sur la page http://127.0.0.1:3000/ de l'ordinateur, « Se connecter avec Microsoft / Google » (appli à enregistrer une fois par Unowhy : `docs/agenda-comptes.md`), ou coller le lien ICS de l'agenda (Outlook, Google Agenda, iCloud : marche à suivre sur la page). Sans agenda, les cartes Agenda et Prochain rendez-vous sont masquées sur la tablette.
+**Agenda** : sur la page http://127.0.0.1:3000/ de l'ordinateur, « Se connecter avec Microsoft / Google » (appli à enregistrer une fois par le projet : `docs/agenda-comptes.md`), ou coller le lien ICS de l'agenda (Outlook, Google Agenda, iCloud : marche à suivre sur la page). Sans agenda, les cartes Agenda et Prochain rendez-vous sont masquées sur la tablette.
 
 | | Commande (dans `backend/`) |
 |---|---|

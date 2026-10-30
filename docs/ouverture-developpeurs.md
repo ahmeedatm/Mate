@@ -1,6 +1,6 @@
 # Ouverture : le compagnon est programmable
 
-Pour les développeurs (démo Sacha). Trois portes vers la même mécanique : le deck de l'ordinateur. Une touche = une liste d'étapes
+Pour les développeurs. Trois portes vers la même mécanique : le deck de l'ordinateur. Une touche = une liste d'étapes
 (`runAction`, `backend/src/deck.ts`), qu'on la déclare dans un fichier, par l'API HTTP ou en le demandant à Claude.
 
 | Porte | Où | Pour qui |
@@ -159,7 +159,7 @@ Programmer une touche en une phrase à Claude : « Affecte la touche 1 du deck :
 
 ⚠️ L'outil numérote à partir de 1, l'API à partir de 0 : `numero: 1` écrit `PUT /local/config/keys/0` (touche `k-0`).
 
-## Démo
+## Exemple pas à pas
 
 1. `GET /deck` : montrer les pages et les ids.
 2. Éditer `deck.json` (ajouter la macro « Tests »), recharger le deck sur la tablette.

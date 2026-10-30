@@ -1,15 +1,15 @@
-# Tablette Unowhy 4.2 : spec matérielle
+# Tablette 4.2 : spec matérielle
 
 Mate ne tourne que sur ce matériel. Toute décision technique (dépendance, animation, page web,
 format média) se vérifie contre cette fiche, pas contre l'émulateur ni un téléphone récent.
 
 Relevés par adb :
 
-- 23/10/2026 : tablette d'Eliot, image SQOOL d'origine (MDM, caméras).
+- 23/10/2026 : tablette d'Eliot, image constructeur d'origine (MDM, caméras).
 - 27/10/2026 : tablette `77332110160003967`, Mate device owner en kiosque (le reste).
 
 ```bash
-adb shell getprop ro.build.display.id                 # firmware Unowhy
+adb shell getprop ro.build.display.id                 # firmware constructeur
 adb shell 'grep "CPU part" /proc/cpuinfo; cat /sys/devices/system/cpu/online'
 adb shell dumpsys SurfaceFlinger | grep -m1 ^GLES     # GPU
 adb shell dumpsys display | grep -m1 -o 'fps=[0-9.]*' # fréquence de l'écran
@@ -29,7 +29,7 @@ adb shell dumpsys thermalservice | grep Temperature   # températures
 | Firmware | `S10G001S4M_V1.4_20200713`, build `user` / `release-keys`, correctif de sécurité 2020-06-05 |
 | Android / API | 10 / 29 (le parc va d'Android 8 à 11 selon les lots) |
 | Noyau | Linux 4.14.141 |
-| Bootloader | Verrouillé, déverrouillage OEM non autorisé : flash uniquement avec les outils Unowhy |
+| Bootloader | Verrouillé, déverrouillage OEM non autorisé : flash uniquement avec les outils du constructeur |
 | Stockage | 32 Go, 25 Go pour `/data` (0,9 Go utilisés en kiosque) |
 | Batterie | Li-ion, `charge_full` = 7 794 mAh, recharge 5 V ; `cycle_count` vaut 0 (compteur non tenu) |
 
@@ -103,15 +103,14 @@ avec de la marge (un cahier ouvert sur deux pages demande environ 35 cm). En 720
 | Chrome | 81.0.4044.138, désactivé en kiosque |
 | Services Google | Play Services, Play Store, appli Google 10.97 (reconnaissance vocale de la commande vocale) |
 | Synthèse vocale | Google TTS 3.20 ; voix française à confirmer |
-| Lanceur | Launcher3 d'Android (pas de lanceur SQOOL) ; Mate le remplace en kiosque |
-| MDM d'origine | `com.hisqool.devicemanager`, **profile owner** (pas device owner), restriction `no_add_user` ; effacé par la réinitialisation du kiosque |
-| Agent SQOOL dans l'image | `com.unowhy.sqoolota` (`/product/priv-app/SqoolOTA`, UID système) : réinstalle le MDM dès qu'il a du réseau ; masqué par Mate en kiosque |
-| Applis SQOOL | `com.sqool.student`, `com.hisqool.rooms`, `com.hisqool.authentication`, `com.unowhy.sqoolclasse`, `com.unowhy.sqool.sqpa`, `com.unowhy.projection`… (toutes dans `/data/app`) |
+| Lanceur | Launcher3 d'Android (pas de lanceur du constructeur) ; Mate le remplace en kiosque |
+| MDM du constructeur | `com.hisqool.devicemanager`, **profile owner** (pas device owner), restriction `no_add_user` ; effacé par la réinitialisation du kiosque |
+| Agent de provisionnement du constructeur | `com.unowhy.sqoolota` (`/product/priv-app/`, UID système) : réinstalle le MDM dès qu'il a du réseau ; masqué par Mate en kiosque |
 | Comptes | Aucun |
 
 ## Mesures de performance
 
-27/10/2026, prototype Cadran (`docs/ui-ux/da/accueil.html`, branche `docs/da-cadran`) dans Chrome 81 sur la tablette, intervalle
+27/10/2026, prototype de la DA d'alors (`docs/ui-ux/da/accueil.html`) dans Chrome 81 sur la tablette, intervalle
 entre images mesuré par `requestAnimationFrame` :
 
 | Situation | Images/s | Intervalle médian | Images au-dessus de 33 ms |
@@ -133,7 +132,7 @@ appli Google 102 Mo.
   Pas de `gap` en flexbox (Chrome 84), pas de `inset` (Chrome 87), pas de `:is()` / `:where()`
   (Chrome 88), pas d'`aspect-ratio` (Chrome 88), pas de `:has()` ni de `@container`.
 - **Animations système à 0 en kiosque** (`docs/kiosque.md`, étape 1) : `animator_duration_scale = 0`
-  coupe les `ValueAnimator`. ⚠️ À trancher avant le passage de Cadran dans l'appli, dont la DA
+  coupe les `ValueAnimator`. ⚠️ À garder en tête : la DA (`DESIGN.md`)
   repose sur les animations et les coupe justement quand cette échelle vaut 0. Exception : le
   changement d'onglet du Deck (`TabStrip`, `Look.slideIn`) joue quand même (ressorts de
   `dynamicanimation`, qui ne lisent pas l'échelle avant l'API 33).
@@ -143,7 +142,7 @@ appli Google 102 Mo.
 - **Pas de vibreur** : aucun retour haptique à prévoir (la vibration du `TrashZone` ne fait rien ici).
 - **mdpi** : 1 dp = 1 px, les cibles tactiles de 48 dp font 48 px, soit environ 8 mm sur cet écran (149 pixels par pouce réels).
 - adb et l'installation par adb marchent : on teste sans reflasher.
-- Le mode kiosque (device owner) exige une réinitialisation hors ligne sans provisionnement SQOOL
+- Le mode kiosque (device owner) exige une réinitialisation hors ligne sans provisionnement du constructeur
   (`docs/kiosque.md`).
 
 ## Reste à relever
@@ -155,5 +154,5 @@ appli Google 102 Mo.
   batterie 27 °C au repos en kiosque (27/10/2026).
 - [ ] Luminosité maximale de l'écran et lisibilité au soleil.
 - [ ] Vibreur : confirmer l'absence en appelant `Vibrator.hasVibrator()` depuis l'appli.
-- [x] Tablette sans MDM : réinitialisée le 23/10/2026, Mate device owner, SqoolOTA masqué,
+- [x] Tablette sans MDM : réinitialisée le 23/10/2026, Mate device owner, agent de provisionnement masqué,
   24 applis désactivées (`docs/kiosque.md`).

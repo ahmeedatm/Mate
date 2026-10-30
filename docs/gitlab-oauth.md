@@ -4,13 +4,13 @@ Sur la tablette, l'onglet **GitLab** (Deck) montre les MR de l'utilisateur et fu
 se **connecte une fois dans le navigateur de l'ordinateur**, comme l'agenda ([agenda-comptes.md](agenda-comptes.md)) : plus de
 jeton à créer et à copier dans `.env`.
 
-Parcours : onglet GitLab › carte **Connecter GitLab** › la page d'autorisation de `gitlab.unowhy.dev` s'ouvre sur l'ordinateur ›
+Parcours : onglet GitLab › carte **Connecter GitLab** › la page d'autorisation de l'instance GitLab (par défaut `gitlab.com`) s'ouvre sur l'ordinateur ›
 **Autoriser** › l'onglet se remplit seul (relu toutes les 3 s en attendant). « Déconnecter GitLab » : page du compagnon
 (http://127.0.0.1:3000/), carte **GitLab**.
 
-## Ce que l'admin GitLab crée (une fois, pour toute l'instance ou le groupe)
+## Ce qu'il faut créer sur GitLab (une fois)
 
-**Admin** › **Applications** › **Nouvelle application** (ou, au niveau d'un groupe : **Paramètres** › **Applications**) :
+Sur gitlab.com : **Préférences** › **Applications** › **Ajouter une nouvelle application** (ou, pour un groupe : **Paramètres** › **Applications**). Sur une instance auto-hébergée : **Admin** › **Applications** › **Nouvelle application** :
 
 | Champ | Valeur |
 |---|---|
@@ -33,9 +33,9 @@ Puis **Enregistrer** et copier l'**ID de l'application** (*Application ID*). Le 
 | `read_api` | lire les MR (liste, état, approbations) et les ouvrir sur l'ordinateur ; **pas** de fusion |
 | `api` | tout ce qui précède, plus fusionner depuis la tablette |
 
-L'appli de `gitlab.unowhy.dev` n'a que `read_api`, `openid`, `profile`, `email` (`api` demandée : « The requested scope is invalid, unknown, or malformed »). Le compagnon
-demande donc `read_api` : portée `gitlab.scope` de `backend/config/accounts.json` (défaut `read_api` si la clé manque). Si un admin
-ajoute `api` à l'application, passer `"scope": "api"` dans ce fichier puis **reconnecter** le compte (la portée se décide à la
+Une appli créée avec seulement `read_api`, `openid`, `profile`, `email` refuse `api` (« The requested scope is invalid, unknown, or malformed »). Le compagnon
+demande donc `read_api` : portée `gitlab.scope` de `backend/config/accounts.json` (défaut `read_api` si la clé manque). Si l'appli
+reçoit `api`, passer `"scope": "api"` dans ce fichier puis **reconnecter** le compte (la portée se décide à la
 connexion).
 
 Le compagnon garde la portée **réellement accordée** (champ `scope` de la réponse du jeton, à la connexion et à chaque
@@ -47,7 +47,7 @@ du `.env` (supposé `api`) ; sinon impossible. La lecture reste faite avec le co
 à la place du bouton à appui maintenu, et `POST /gitlab/mrs/merge` répond 409 « La connexion GitLab est en lecture seule :
 fusionne sur l'ordinateur » sans appeler GitLab.
 
-## Ce que fait Unowhy ensuite
+## Ensuite
 
 Coller l'ID (public) dans `backend/config/accounts.json` ; il est livré avec le logiciel :
 
@@ -56,7 +56,7 @@ Coller l'ID (public) dans `backend/config/accounts.json` ; il est livré avec le
 ```
 
 Le fichier est relu à chaque appel : pas de redémarrage. Pour un essai sans toucher au fichier : `GITLAB_CLIENT_ID` dans `.env`.
-`GITLAB_URL` (défaut `https://gitlab.unowhy.dev`) désigne l'instance.
+`GITLAB_URL` (défaut `https://gitlab.com`) désigne l'instance.
 
 ID vide : pas de bouton de connexion, l'onglet n'apparaît que si `GITLAB_TOKEN` est réglé.
 
