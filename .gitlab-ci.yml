@@ -1,8 +1,10 @@
 # CI : sur chaque MR, sur main et sur les tags. Rien n'arrive sur main sans pipeline vert.
 # En MR, seuls les jobs de la zone touchée tournent (rules:changes, voir docs/developpement.md, section CI) ;
 # sur main et sur un tag, tout tourne.
-# Tag vX.Y.Z : mêmes tests, puis installeurs de l'ordinateur, APK signé et release GitLab.
-# Branche protégée essai/* : seulement l'APK signé d'essai, job manuel (docs/developpement.md, section Release).
+# Tag vX.Y.Z : mêmes tests, puis applis portables de l'ordinateur, APK signé et release GitLab.
+# Branche protégée essai/mr-<iid> : l'APK signé d'essai (job manuel) et, si backend/ change, l'archive du backend, publiés
+# dans le paquet commun companion-updates/essais, une entrée par MR (docs/developpement.md, section Release).
+# Sur main, purge-essais retire de ce paquet les entrées des MR fusionnées.
 
 workflow:
   rules:
@@ -16,8 +18,8 @@ workflow:
 stages:
   - test
   - build
-  - install
   - release
+  - site
 
 default:
   interruptible: true
@@ -34,38 +36,15 @@ default:
 .files-backend: &files-backend
   - backend/**/*
   - .gitlab-ci.yml
+.files-site: &files-site
+  - site/**/*
+  - scripts/site-downloads.mjs
+  - .gitlab-ci.yml
 .files-android: &files-android
   - app/**/*
   - "*.gradle*"
   - gradle/**/*
   - gradlew*
-  - scripts/test-android.sh
-  - .gitlab-ci.yml
-# Backend du Deck sur émulateur (android-emulateur) : serveur, faux pilotage, deck de test.
-.files-deck-backend: &files-deck-backend
-  - backend/src/**/*
-  - backend/test/server.ts
-  - backend/test/fake-os*.ts
-  - backend/test/deck-emulateur.*
-  - backend/package-lock.json
-# Installation : pilote, lancement automatique, paquets, installeurs, aiguillage par système, sanity.
-.files-install-common: &files-install-common
-  - backend/scripts/**/*
-  - backend/installer/**/*
-  - backend/src/os.ts
-  - backend/src/paths.ts
-  - backend/package-lock.json
-  - backend/qa/**/*
-  - .gitlab-ci.yml
-.files-install-windows: &files-install-windows
-  - backend/src/win/**/*
-# Pilote Windows et lanceur (C#) : sources, SDK, icône, fins de ligne.
-.files-helper-windows: &files-helper-windows
-  - backend/src/win/**/*
-  - backend/global.json
-  - backend/assets/compagnon.ico
-  - backend/qa/build-helper-windows.ps1
-  - .gitattributes
   - .gitlab-ci.yml
 
 # En MR : seulement si la zone a bougé. Ailleurs (main, tag) : toujours.
@@ -74,22 +53,19 @@ default:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes: *files-backend
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
+# Site vitrine : en MR, image construite sans être poussée ; sur main, poussée si site/ change ; sur un tag de version,
+# toujours (nouveaux installeurs dans l'image).
+.zone-site:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: *files-site
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *files-site
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
 .zone-android:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes: *files-android
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
-.zone-install-windows:
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes: *files-install-common
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes: *files-install-windows
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
-.zone-helper-windows:
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes: *files-helper-windows
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
 
 # Toujours là : une MR qui ne touche aucune zone (docs) a quand même un pipeline, sans lequel elle ne fusionne pas.
@@ -118,6 +94,8 @@ zones:
 backend:
   extends: [.node, .zone-backend]
   stage: test
+  # Image avec git : le test de purge-essais lit un vrai historique git (la slim n'en a pas).
+  image: node:22.22-bookworm
   script:
     # Format (prettier --check) puis typecheck.
     - npm run lint
@@ -180,102 +158,25 @@ android:
   extends: [.android, .zone-android]
   stage: test
   script:
-    - ./gradlew --no-daemon --console=plain ktlintCheck testDebugUnitTest lintDebug assembleDebug
+    - ./gradlew --no-daemon --console=plain ktlintCheck testDebugUnitTest assembleDebug
   artifacts:
     when: always
     name: companion-debug-$CI_COMMIT_SHORT_SHA
     paths:
       - app/build/outputs/apk/debug/app-debug.apk
-      - app/build/reports/lint-results-debug.html
     reports:
       junit: app/build/test-results/testDebugUnitTest/*.xml
     expire_in: 2 weeks
 
-# Installation du paquet Mac sur le Mac d'un développeur (runner shell, tag macos) : backend/qa/install-mac.sh.
-# Instance de test isolée de son vrai compagnon (agent, port, données à part), rien ne s'affiche à l'écran.
-# Obligatoire seulement si l'installation ou le pilotage du Mac ont bougé (Mac éteint = job en attente) ;
-# sur les autres MR, à lancer à la main.
-install-mac:
-  stage: test
-  tags: [macos]
-  needs: []
-  interruptible: true
-  variables:
-    npm_config_cache: $CI_PROJECT_DIR/.npm
-  cache:
-    key: install-mac
-    paths:
-      - .npm/
-      - backend/.cache/node/
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes:
-        - backend/src/mac/**/*
-        - backend/src/os.ts
-        - backend/src/paths.ts
-        - backend/scripts/service.ts
-        - backend/scripts/package.ts
-        - backend/installer/mac/**/*
-        - backend/assets/compagnon.icns
-        - backend/package-lock.json
-        - backend/qa/install-mac.sh
-        - backend/qa/sanity.ts
-      allow_failure: false
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: manual
-      allow_failure: true
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
-  script:
-    # node@18 passe avant dans le PATH du runner : celui de Homebrew (22 ou plus).
-    - export PATH="/opt/homebrew/bin:$PATH"
-    - node --version
-    - node -e 'process.exit(Number(+process.versions.node.split(".")[0] < 22))'
-    - (cd backend && npm ci --prefer-offline --no-audit --no-fund && npm run package -- mac)
-    - backend/qa/install-mac.sh run dist/Compagnon-Unowhy-Mac.zip sanity-mac.xml
-  after_script:
-    - backend/qa/install-mac.sh cleanup
-  artifacts:
-    when: always
-    paths:
-      - install-mac-backend.log
-    reports:
-      junit: sanity-mac.xml
-    expire_in: 1 week
-
-# Tests instrumentés (app/src/androidTest/) sur un émulateur Android 10 sans services Google, 1280×800.
-# Le runner Kubernetes partagé expose /dev/kvm (pod privilégié) : démarrage en ~25 s. Même script qu'en local.
-android-emulateur:
-  extends: .android
-  stage: test
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes: *files-android
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      changes: *files-deck-backend
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
-  timeout: 30m
-  cache:
-    policy: pull
-  script:
-    - scripts/test-android.sh
-  artifacts:
-    when: always
-    paths:
-      - app/build/test-android/
-      - app/build/reports/androidTests/
-    reports:
-      junit: app/build/outputs/androidTest-results/connected/debug/*.xml
-    expire_in: 2 weeks
-
-# Installeurs de l'ordinateur (node embarqué) : backend/scripts/package.ts. Un job par plateforme : les deux
-# ensemble dépassent la limite d'artefacts par défaut (100 Mo). Consommés par les tests d'installation et la release.
-# nsis : makensis compile l'installeur Windows (Debian bookworm : NSIS 3.08).
+# Applis portables de l'ordinateur, sans installation (node embarqué) : backend/scripts/package.ts. Un job par
+# plateforme : les deux ensemble dépassent la limite d'artefacts par défaut (100 Mo). Seulement sur un tag de version,
+# pour la release. zip et unzip : le runtime Windows est zippé puis ajouté à l'exe, l'appli Mac est zippée.
 .package:
-  extends: .node
+  extends: [.node, .release-tag]
   stage: build
   dependencies: []
   before_script:
-    - apt-get update -qq && apt-get install -y -qq --no-install-recommends zip unzip nsis > /dev/null
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends zip unzip > /dev/null
     - !reference [.node, before_script]
   script:
     - npm run package -- $PLATFORM
@@ -286,53 +187,34 @@ android-emulateur:
     expire_in: 1 week
 
 package-windows:
-  extends: [.package, .zone-install-windows]
+  extends: .package
   variables:
     PLATFORM: windows
 
-# install-mac fabrique son propre paquet : celui-ci sert à la release (et tourne sur main).
 package-mac:
   extends: .package
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_TAG
   variables:
     PLATFORM: mac
 
-# Installeur Windows lancé sur un vrai PC (runner « Local QA runner », shell PowerShell, session de bureau ouverte) :
-# installation silencieuse, lancement automatique, sanity, pilote, désinstalleur. Tout est propre au test
-# (backend/qa/install-windows.ps1) ; after_script nettoie même après un échec : le PC sert aussi aux tests UEM.
-install-windows:
-  # Runner 976 en ref_protected : en MR, seulement depuis une branche ci/* (protégée), sinon le job attendrait
-  # sans fin et bloquerait la MR. Les autres MR de la zone le voient tourner sur main.
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME !~ /^ci\//
-      when: never
-    - !reference [.zone-install-windows, rules]
-  stage: install
-  tags: [local-runner]
-  image: null
-  needs: [package-windows]
-  variables:
-    GIT_DEPTH: 1
-  before_script:
-    - '& backend\qa\install-windows.ps1 -Nettoyage'
+# Archives du backend de la release (sans node ni lanceur, version du tag) : la tablette en envoie une à l'ordinateur
+# actif, qui se met à jour sans installeur (backend/src/essai-backend.ts, applyUpdate).
+package-backend:
+  extends: [.node, .release-tag]
+  stage: build
+  dependencies: []
   script:
-    - '& backend\qa\install-windows.ps1 -Installeur dist\Compagnon-Unowhy-Windows.exe -Junit sanity-windows.xml -Logs install-logs'
-  after_script:
-    - '& backend\qa\install-windows.ps1 -Nettoyage'
+    - npm run package -- essai
   artifacts:
-    when: always
     paths:
-      - install-logs/
-    reports:
-      junit: sanity-windows.xml
+      - dist/backend-*.tar.gz
     expire_in: 1 week
 
 # Pilote et lanceur recompilés sous Windows : échoue si le C# ne compile pas ou si les exe commités ne sont plus
 # ceux des sources (backend/qa/build-helper-windows.ps1). Runner partagé « HiSqool Windows » (Docker, Server Core,
 # sans bureau : suffit pour compiler) ; image au SDK exact de backend/global.json, à monter ensemble.
+# Seulement sur un tag de version : en MR, `npm run build:helper` en local (/ship).
 helper-windows:
-  extends: .zone-helper-windows
+  extends: .release-tag
   stage: test
   tags: [windows, docker]
   image: mcr.microsoft.com/dotnet/sdk:8.0.427-windowsservercore-ltsc2019@sha256:3c439035c6dd8087f43a034da64271af7e41e552b059cacc33ad23a164988b60
@@ -366,8 +248,8 @@ helper-windows:
       -PupdateUrl="$UPDATES_URL" -PupdateHeader="Deploy-Token: $UPDATE_DEPLOY_TOKEN"
     - mkdir -p dist && cp app/build/outputs/apk/release/app-release.apk dist/companion-$VERSION.apk
     - $ANDROID_HOME/build-tools/36.0.0/apksigner verify --print-certs dist/companion-$VERSION.apk
-    # Paquet, libellé et code lus dans l'APK : com.unowhy.companion « Companion », ou l'essai com.unowhy.companion.essai
-    # « Companion essai », appli à part installée à côté (app/build.gradle.kts).
+    # Paquet, libellé et code lus dans l'APK : com.unowhy.companion « UnoMate », ou l'essai com.unowhy.companion.essai
+    # « UnoMate essai », appli à part installée à côté (app/build.gradle.kts).
     - $ANDROID_HOME/build-tools/36.0.0/aapt2 dump badging dist/companion-$VERSION.apk > /tmp/badging.txt
     - PKG=$(sed -n "1s/^package:.name='\([^']*\)'.*/\1/p" /tmp/badging.txt)
     - CODE=$(sed -n "1s/.*versionCode='\([0-9]*\)'.*/\1/p" /tmp/badging.txt)
@@ -393,21 +275,24 @@ android-release:
       - dist/companion-*
     expire_in: 1 week
 
-# Serveur central des mises à jour de la tablette : manifest.json + l'APK de la dernière version déposés dans
-# le paquet générique UPDATES_URL (jeton du job), anciens fichiers supprimés. Voir docs/developpement.md, section Release.
+# Serveur central des mises à jour de la tablette : manifest.json, l'APK de la dernière version, les applis de
+# l'ordinateur (que la tablette télécharge puis sert sur son WiFi) et les archives du backend (mise à jour de
+# l'ordinateur depuis la tablette) déposés dans le paquet générique UPDATES_URL (jeton
+# du job), anciens fichiers supprimés. Voir docs/developpement.md, section Release.
 updates:
   extends: .release-tag
   stage: release
   image: node:22.22-bookworm-slim
-  needs: [android-release]
+  needs: [android-release, package-windows, package-mac, package-backend]
   script:
     - node scripts/updates-publish.mjs dist updates
 
 # Essai de l'appli tablette depuis une MR, sans fusion ni tag : branche protégée essai/mr-<iid> poussée depuis la branche
 # de la MR, puis job manuel. Version X.Y.Z-essai.N (X.Y.Z = dernier tag de la branche, N = numéro du pipeline) : code
-# entre ce tag et le suivant. Version en -essai.N = autre appli, com.unowhy.companion.essai « Companion essai »
-# (app/build.gradle.kts), installée par la stable à côté d'elle : la stable reste device owner, on revient à elle sans
+# entre ce tag et le suivant. Version en -essai.N = autre appli, com.unowhy.companion.essai « UnoMate essai »
+# (app/build.gradle.kts), installée par la stable à côté d'elle : la stable reste device owner et revient à elle sans
 # réinstaller. Branche non protégée : pas de job (clé invisible).
+# dist/backend-changed : backend/ diffère de main, donc essai-backend fabrique l'archive du backend de la MR.
 essai-android:
   extends: .android
   stage: build
@@ -425,28 +310,68 @@ essai-android:
       || { echo "Aucun tag vX.Y.Z dans l'historique de la branche"; exit 1; }
     - VERSION=${TAG#v}-essai.$CI_PIPELINE_IID
     - !reference [.android-signed, script]
+    - git fetch --quiet origin main:refs/remotes/origin/main
+    - CHANGED=$(git diff --name-only origin/main...HEAD -- backend/)
+    - test -z "$CHANGED" || touch dist/backend-changed
   # APK signé par la clé de release : gardé peu de temps.
   artifacts:
     paths:
       - dist/companion-*
+      - dist/backend-changed
     expire_in: 1 day
 
-# Paquet companion-updates/essai, jamais latest (aucune tablette ne le lit seule). Un seul essai : le dernier remplace.
-essai-updates:
-  stage: release
-  image: node:22.22-bookworm-slim
+# Archive du backend de la MR (sans node ni lanceur Windows), pour les deux plateformes : la tablette l'envoie à
+# l'ordinateur (backend/src/essai-backend.ts). Seulement si backend/ diffère de main.
+essai-backend:
+  extends: .node
+  stage: build
   needs: [essai-android]
   rules:
     - if: $CI_COMMIT_BRANCH =~ /^essai\// && $CI_COMMIT_REF_PROTECTED == "true"
-  variables:
-    UPDATES_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/companion-updates/essai
+  before_script: []
   script:
-    - node scripts/updates-publish.mjs dist updates
     - |
-      echo "Essai publié. Sur l'ordinateur de la tablette, dans backend/ (GITLAB_TOKEN ou UPDATE_DEPLOY_TOKEN dans backend/.env) :"
-      echo "  npm run updates:essai                  # compagnon lancé depuis le dépôt"
-      echo "  DATA_DIR=paquet npm run updates:essai  # compagnon installé par paquet"
-      echo "Puis sur la tablette : Réglages > Mises à jour."
+      test -f dist/backend-changed || { echo "backend/ identique à main, pas d'archive backend."; exit 0; }
+    - cd backend
+    - npm ci --prefer-offline --no-audit --no-fund
+    - npm run package -- essai
+  artifacts:
+    paths:
+      - dist/backend-*.tar.gz
+    expire_in: 1 day
+
+# Paquet companion-updates/essais, jamais latest (aucune tablette ne le lit seule) : une entrée par MR dans manifest.json,
+# la MR ne remplace que la sienne. resource_group : les publications se suivent (lecture puis écriture du manifest).
+# Titre de la MR : variable MR_TITLE du pipeline, posée par .claude/skills/ship/essai.sh.
+essai-updates:
+  stage: release
+  image: node:22.22-bookworm-slim
+  needs: [essai-android, essai-backend]
+  resource_group: essais
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^essai\// && $CI_COMMIT_REF_PROTECTED == "true"
+  variables:
+    UPDATES_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/companion-updates/essais
+  script:
+    - node scripts/updates-publish.mjs --essai "${CI_COMMIT_BRANCH#essai/mr-}" dist updates
+    - echo "Essai publié. Sur la tablette, Réglages > Mises à jour > Rechercher, puis choisir la MR."
+
+# Essais des MR fusionnées : sur main, retire de companion-updates/essais les entrées dont la MR figure dans l'historique
+# (lignes « See merge request <projet>!N »), donc plus listées dans Réglages > Mises à jour. Historique complet, et image
+# avec git (la slim n'en a pas). Même resource_group que essai-updates : jamais pendant une publication.
+purge-essais:
+  stage: release
+  image: node:22.22-bookworm
+  needs: []
+  interruptible: false
+  resource_group: essais
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  variables:
+    GIT_DEPTH: "0"
+    UPDATES_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/companion-updates/essais
+  script:
+    - node scripts/updates-publish.mjs --purge-fusionnes updates
 
 # Release GitLab : liens vers les fichiers des jobs du tag, pas de copie dans le registre (le zip Mac y reçoit un 500
 # avec le jeton du job). Fichiers gardés : dernière pipeline réussie du tag (« Keep artifacts from most recent successful jobs »).
@@ -465,10 +390,60 @@ release:
       VERSION=${CI_COMMIT_TAG#v}
       BASE="$CI_PROJECT_URL/-/jobs/artifacts/$CI_COMMIT_TAG/raw/dist"
       LINKS=""
-      for f in Compagnon-Unowhy-Windows.exe:package-windows Compagnon-Unowhy-Mac.zip:package-mac \
+      for f in UnoMate-Windows.exe:package-windows UnoMate-Mac.zip:package-mac \
         companion-$VERSION.apk:android-release companion-$VERSION.json:android-release; do
         LINKS="$LINKS{\"name\":\"${f%%:*}\",\"url\":\"$BASE/${f%%:*}?job=${f##*:}\",\"link_type\":\"package\"},"
       done
       glab release create "$CI_COMMIT_TAG" --ref "$CI_COMMIT_SHA" --name "Compagnon $CI_COMMIT_TAG" \
-        --notes "Installeurs de l'ordinateur (Windows, Mac) et APK de la tablette. Mise à jour de la tablette par le « serveur Unowhy » : docs/developpement.md, section Release." \
+        --notes "Applis portables de l'ordinateur (Windows, Mac) et APK de la tablette. Mise à jour de la tablette par le « serveur Unowhy » : docs/developpement.md, section Release." \
         --assets-links "[${LINKS%,}]"
+
+# --- Site vitrine Mate (site/) : image nginx dans Harbor (harbor.unowhy.dev/squads/mate-site), déployée à la main sur le
+# cluster dev avec deploy/site-dev/ (VirtualService Istio, mate.integration.unowhy.dev). Même façon de faire que les
+# images des squads (sqool-deploy) : docker-in-docker du proxy Harbor, connexion par HARBOR_REGISTRY_USERNAME /
+# HARBOR_REGISTRY_PASSWORD (variables CI masquées, à demander à l'équipe plateforme). La CI construit et pousse seulement.
+
+# Installeurs de la dernière release (scripts/site-downloads.mjs), mis dans l'image. Sur un tag : après leur publication.
+site-downloads:
+  extends: .zone-site
+  stage: site
+  image: node:22.22-bookworm-slim
+  needs:
+    - { job: updates, optional: true }
+  variables:
+    UPDATES_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/companion-updates/latest
+  script:
+    - node scripts/site-downloads.mjs site/downloads
+  artifacts:
+    paths:
+      - site/downloads/
+    expire_in: 1 day
+
+# Tags de l'image : main (suivi par Keel sur le cluster dev, deploy/site-dev/deployment.yaml) et le commit ; sur un tag
+# de version, vX.Y.Z aussi. En MR : poussée sous le nom de la branche (ex. feat-site-image) et le commit, pour l'essayer
+# sans fusionner ; jamais « main », que suit le cluster.
+site-image:
+  extends: .zone-site
+  stage: site
+  needs: [site-downloads]
+  image: harbor.unowhy.dev/docker-hub-proxy/library/docker:27.5.1-dind@sha256:aa3df78ecf320f5fafdce71c659f1629e96e9de0968305fe1de670e0ca9176ce
+  services:
+    - name: harbor.unowhy.dev/docker-hub-proxy/library/docker:27.5.1-dind@sha256:aa3df78ecf320f5fafdce71c659f1629e96e9de0968305fe1de670e0ca9176ce
+  timeout: 10 minutes
+  variables:
+    DOCKER_HOST: tcp://localhost:2375
+    DOCKER_TLS_CERTDIR: ""
+    SITE_IMAGE: harbor.unowhy.dev/squads/mate-site
+  script:
+    - |
+      for i in $(seq 20); do docker info >/dev/null 2>&1 && break; echo "Attente de docker…"; sleep 1; done
+      docker info >/dev/null
+    - docker build --label org.opencontainers.image.revision=$CI_COMMIT_SHA --label org.opencontainers.image.source=$CI_PROJECT_URL -t site site
+    - |
+      test -n "$HARBOR_REGISTRY_USERNAME" || { echo "HARBOR_REGISTRY_USERNAME / HARBOR_REGISTRY_PASSWORD absentes des variables CI (protégées : branche non protégée ?)"; exit 1; }
+      echo "$HARBOR_REGISTRY_PASSWORD" | docker login -u "$HARBOR_REGISTRY_USERNAME" --password-stdin harbor.unowhy.dev
+      TAGS="$CI_COMMIT_SHORT_SHA"
+      if [ "$CI_PIPELINE_SOURCE" = "merge_request_event" ]; then TAGS="$TAGS $CI_COMMIT_REF_SLUG"
+      elif [ -n "$CI_COMMIT_TAG" ]; then TAGS="$TAGS $CI_COMMIT_TAG main"
+      else TAGS="$TAGS main"; fi
+      for t in $TAGS; do docker tag site "$SITE_IMAGE:$t" && docker push "$SITE_IMAGE:$t"; done

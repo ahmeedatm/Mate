@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import net from "node:net";
 import os from "node:os";
@@ -10,9 +10,21 @@ import type { FakeCall, FakeState } from "./fake-os.ts";
 const backendDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const TOKEN = "jeton-de-test";
 
+/** Code d'appairage, recalculé par les tests comme le fait la tablette (PairingCode.kt) : vérifie aussi la formule. */
+export const pairingCode = (channel: string, tablet: string, computer: string) =>
+  String(createHash("sha256").update(`unowhy-pair-1\n${channel}\n${tablet}\n${computer}`).digest().readUInt32BE(0) % 1_000_000).padStart(
+    6,
+    "0",
+  );
+
 export type TestServer = {
   url: string;
   dataDir: string;
+  /**
+   * Persona que la « tablette » annonce (en-tête X-Demo-Persona) : posé par un `POST /demo/persona` réussi, retiré par
+   * `DELETE /demo`, comme la tablette. À fixer à la main pour simuler une autre tablette (`null` = sans persona).
+   */
+  persona: string | null;
   /** Requête avec le jeton ; `auth: false` pour l'envoyer sans. */
   call: (method: string, route: string, body?: unknown, auth?: boolean) => Promise<{ status: number; json: any }>;
   /** Scénario du faux pilotage (test/fake-os.ts), relu par le serveur à chaque appel. */
@@ -37,7 +49,7 @@ export type ServerOptions = {
   env?: Record<string, string>;
 };
 
-function freePort(): Promise<number> {
+export function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const srv = net.createServer();
     srv.once("error", reject);
@@ -93,6 +105,11 @@ async function startOnce(options: ServerOptions, port: number): Promise<TestServ
       // Pas de vrai Claude Code ni de vrai Orca dans les tests (src/agents-sources.ts) ; les tests des agents donnent leurs faux.
       CLAUDE_BIN: "/inexistant",
       ORCA_BIN: "/inexistant",
+      // Pas de vrai GitLab : un GITLAB_TOKEN du poste ne doit pas ouvrir l'onglet GitLab ; les tests donnent leur faux serveur.
+      GITLAB_TOKEN: "",
+      GITLAB_URL: "",
+      GITLAB_CLIENT_ID: "",
+      ACCOUNTS_FILE: path.join(backendDir, "test", "accounts-vide.json"),
       FAKE_OS: options.os ?? "mac",
       FAKE_OS_STATE: osState,
       FAKE_OS_LOG: osLog,
@@ -103,8 +120,10 @@ async function startOnce(options: ServerOptions, port: number): Promise<TestServ
   child.stdout!.on("data", (d) => (output += d));
   child.stderr!.on("data", (d) => (output += d));
 
+  let persona: string | null = null;
   const call: TestServer["call"] = async (method, route, body, auth = true) => {
     const headers: Record<string, string> = {};
+    if (persona) headers["x-demo-persona"] = persona;
     if (auth) headers.authorization = `Bearer ${TOKEN}`;
     if (body !== undefined) headers["content-type"] = "application/json";
     const res = await fetch(url + route, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -115,6 +134,8 @@ async function startOnce(options: ServerOptions, port: number): Promise<TestServ
     } catch {
       // Page HTML : texte brut.
     }
+    if (route === "/demo/persona" && res.ok) persona = (body as { persona: string }).persona;
+    if (method === "DELETE" && route === "/demo" && res.ok) persona = null;
     return { status: res.status, json };
   };
 
@@ -163,5 +184,20 @@ async function startOnce(options: ServerOptions, port: number): Promise<TestServ
           .map((l) => JSON.parse(l))
       : [];
   const clearOsCalls = () => fs.rmSync(osLog, { force: true });
-  return { url, dataDir, call, setOs, osCalls, clearOsCalls, output: () => output, stop };
+  return {
+    url,
+    dataDir,
+    call,
+    get persona() {
+      return persona;
+    },
+    set persona(value) {
+      persona = value;
+    },
+    setOs,
+    osCalls,
+    clearOsCalls,
+    output: () => output,
+    stop,
+  };
 }

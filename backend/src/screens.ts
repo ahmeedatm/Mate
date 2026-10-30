@@ -105,4 +105,82 @@ export type ClipboardContent =
 
 export type MediaCommand = "play-pause" | "next" | "previous";
 
-export type SystemCommand = "sleep-display" | "toggle-dark-mode" | "screenshot-clipboard" | "lock";
+export type SystemCommand = "sleep-display" | "toggle-dark-mode" | "screenshot-clipboard" | "lock" | "mute-mic" | "dnd";
+
+/** Commandes `system` acceptées dans le deck et les touches perso. `mute-mic` et `dnd` basculent l'état courant. */
+export const SYSTEM_COMMANDS: SystemCommand[] = ["sleep-display", "toggle-dark-mode", "screenshot-clipboard", "lock", "mute-mic", "dnd"];
+
+/**
+ * Symboles d'une tuile (`symbol`) : icônes vectorielles fournies avec la tablette (Material Symbols), affichées à la
+ * place de l'emoji (`glyph`, gardé en secours pour les tablettes d'avant les symboles).
+ */
+export const TILE_SYMBOLS = [
+  "lock",
+  "screenshot",
+  "dnd",
+  "mic_off",
+  "videocam_off",
+  "clipboard",
+  "windows",
+  "dark_mode",
+  "bedtime",
+  "play_pause",
+  "skip_next",
+  "skip_previous",
+  "volume_up",
+  "volume_off",
+  "present",
+  "hand",
+  "call_end",
+  "keyboard",
+  "link",
+  "apps",
+  "search",
+  "call",
+  "alarm",
+  "videocam",
+  "event",
+  "play",
+  "close",
+  "add",
+  "save",
+  "undo",
+  "redo",
+  "folder",
+  "table_chart",
+  "filter_alt",
+  "vertical_split",
+  "check_circle",
+  "attach_file",
+  "receipt_long",
+  "account_balance",
+  "palette",
+  "groups",
+  "bar_chart",
+  "slideshow",
+  "work",
+  "image",
+  "thumb_up",
+  "edit_note",
+  "mail",
+  "campaign",
+  "description",
+  "home",
+  "restaurant",
+  "shopping_cart",
+  "school",
+  "fullscreen",
+  "content_copy",
+  "content_paste",
+  "science",
+  "build",
+  "code",
+  "swap_horiz",
+  "account_tree",
+  "download",
+  "history",
+  "rocket_launch",
+  "deployed_code",
+  "sell",
+  "visibility",
+] as const;

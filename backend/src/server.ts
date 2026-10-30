@@ -1,28 +1,46 @@
 import { timingSafeEqual } from "node:crypto";
+import http from "node:http";
+import https from "node:https";
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import { config } from "./config.ts";
 import { startCallWatch } from "./calls.ts";
+import { activePersona, demoAnswer } from "./demo-mock.ts";
 import { clipboardHistory, watchClipboard } from "./clipboard-history.ts";
 import { startEventReminders } from "./events.ts";
+import { GitLabError } from "./gitlab.ts";
 import { setLogger } from "./log.ts";
 import { startAutoJoin } from "./meetings.ts";
-import { notificationHistory, watchNotifications } from "./notifications.ts";
+import { notificationHistory, setNotificationsRead, watchNotifications } from "./notifications.ts";
 import { canControl, clipboardStamp, getClipboard, isMac, osName, readNotifications } from "./os.ts";
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
-import { sendToTablet } from "./tablet.ts";
+import { sendToTablet, tabletStatus } from "./tablet.ts";
+import { startMeetingWatch } from "./meeting-watch.ts";
+import { callingDeckApps } from "./deck.ts";
+import { startMenuBar } from "./mac/menubar.ts";
+import { loadTls } from "./tls.ts";
 import { startReminders } from "./tasks.ts";
 import agentRoutes from "./routes/agents.ts";
+import awayRoutes from "./routes/away.ts";
 import browserRoutes from "./routes/browser.ts";
 import calendarRoutes from "./routes/calendar.ts";
 import callRoutes from "./routes/calls.ts";
 import cameraRoutes from "./routes/camera.ts";
 import deckRoutes from "./routes/deck.ts";
+import demoRoutes from "./routes/demo.ts";
 import docRoutes from "./routes/docs.ts";
+import gitlabRoutes from "./routes/gitlab.ts";
+import jiraRoutes from "./routes/jira.ts";
 import localRoutes from "./routes/local.ts";
+import localConfigRoutes from "./routes/local-config.ts";
+import localProfileRoutes from "./routes/local-profiles.ts";
+import mcpRoutes from "./routes/mcp.ts";
 import notificationRoutes from "./routes/notifications.ts";
 import pairingRoutes from "./routes/pairing.ts";
+import pluginRoutes from "./routes/plugins.ts";
 import pointerRoutes from "./routes/pointer.ts";
+import presentRoutes from "./routes/present.ts";
+import portableRoutes from "./routes/portable.ts";
 import systemRoutes from "./routes/system.ts";
 import tabletRoutes from "./routes/tablet.ts";
 import taskRoutes from "./routes/tasks.ts";
@@ -35,7 +53,22 @@ if (!config.loopbackOnly && !config.token) {
   process.exit(1);
 }
 
-const app = Fastify({ logger: { level: "info" } });
+/**
+ * WiFi : HTTPS seulement (certificat épinglé par la tablette à l'appairage, src/tls.ts) ; le HTTP en clair n'écoute plus
+ * que sur 127.0.0.1 (page locale, extension du navigateur, hooks, MCP, tablette en USB par adb reverse) : rien ne passe
+ * en clair sur le réseau. En local seulement (HOST=127.0.0.1) : HTTP comme avant.
+ */
+const tls = config.loopbackOnly ? null : loadTls(config.dataDir);
+let localHttp: http.Server | undefined;
+const app = Fastify({
+  logger: { level: "info" },
+  ...(tls && {
+    serverFactory: (handler: http.RequestListener) => {
+      localHttp = http.createServer(handler);
+      return https.createServer({ key: tls.key, cert: tls.cert }, handler);
+    },
+  }),
+});
 setLogger({ warn: (msg) => app.log.warn(msg) });
 await app.register(multipart, { limits: { fileSize: 20 * 1024 * 1024, files: 1 } });
 
@@ -50,16 +83,28 @@ const LOCAL_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
 const isLocalPage = (method: string, url: string, ip: string, host: string | undefined) =>
   LOOPBACK.has(ip) &&
   LOCAL_HOST.test(host ?? "") &&
-  ((method === "GET" && /^\/(camera(\/stream|\/status)?|local\/status|oauth\/(microsoft|google)\/(start|callback))?(\?|$)/.test(url)) ||
-    (method === "PUT" && url === "/local/calendar") ||
-    (method === "POST" && url === "/system/accessibility") ||
+  ((method === "GET" &&
+    /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite|panel|update)|web\/outfit-[345]00\.ttf|oauth\/(microsoft|google|gitlab)\/(start|callback))?(\?|$)/.test(
+      url,
+    )) ||
+    (method === "PUT" && (url === "/local/calendar" || url === "/local/tablet/settings")) ||
+    // Panneau de configuration (routes/local-profiles.ts, routes/local-config.ts) : écritures en JSON seulement (PUT,
+    // DELETE et POST à corps objet), pas envoyables par un autre site sans pré-vérification CORS.
+    (method === "GET" && /^\/local\/(tablet\/layout|config\/[a-z0-9/-]+)(\?|$)/.test(url)) ||
+    (method === "PUT" && url === "/local/tablet/layout") ||
+    (/^(POST|PUT|DELETE)$/.test(method) && /^\/local\/config\/[a-z0-9/-]+$/.test(url)) ||
+    (method === "POST" && (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update")) ||
+    // Panneau de l'appli portable (routes/portable.ts) : corps JSON exigé, pas envoyable par un autre site.
+    (method === "POST" && /^\/local\/(autostart|firewall|legacy\/remove|forget|quit|update)$/.test(url)) ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
     (method === "POST" && (url === "/browser/extension" || url === "/browser/extension/commands")) ||
+    // Porte MCP des IA de bureau (routes/mcp.ts) : corps JSON exigé par le SDK, pas envoyable par un autre site.
+    (/^(GET|POST|DELETE)$/.test(method) && url === "/mcp") ||
     // Hooks de Claude Code : pas de jeton d'appairage, un secret propre vérifié par la route (src/agents-sources.ts).
     (method === "POST" && (url === "/agents/hook" || url === "/agents/statusline")) ||
-    (method === "DELETE" && /^\/local\/accounts\/(microsoft|google)$/.test(url)));
+    (method === "DELETE" && /^\/local\/accounts\/(microsoft|google|gitlab)$/.test(url)));
 /** Sans jeton : identité (la tablette reconnaît l'ordinateur) et appairage par code. */
-const PUBLIC = /^\/(health|pair\/request|pair\/confirm)(\?|$)/;
+const PUBLIC = /^\/(health|pair\/request|pair\/reveal|pair\/confirm)(\?|$)/;
 const authorized = (header: string | undefined) => {
   if (!expectedAuth) return true;
   const given = Buffer.from(header ?? "");
@@ -75,7 +120,7 @@ app.addHook("onRequest", async (req, reply) => {
  * (sortie d'osascript, erreur système de Node, requête mal formée) reste dans le journal de l'ordinateur.
  */
 app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validation?: unknown; technical?: boolean }, req, reply) => {
-  if (err instanceof PairingError) return reply.code(err.statusCode).send({ error: err.message });
+  if (err instanceof PairingError || err instanceof GitLabError) return reply.code(err.statusCode).send({ error: err.message });
   if (err.validation) return reply.code(400).send({ error: "Demande invalide : mets à jour l'appli de la tablette" });
   const status = err.statusCode && err.statusCode >= 400 ? err.statusCode : 500;
   if (status >= 500 && (err.technical || (typeof err.code === "string" && /^E[A-Z]/.test(err.code)))) {
@@ -83,6 +128,15 @@ app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validat
     return reply.code(status).send({ error: "L'ordinateur n'a pas pu le faire (détail dans son journal)" });
   }
   reply.send(err);
+});
+
+// Démo (src/demo-mock.ts) : tant qu'un persona est actif ET que la tablette envoie le même (en-tête X-Demo-Persona), les
+// routes qui lisent l'ordinateur répondent avec ses données fictives, et leurs actions changent cet état fictif sans
+// toucher à l'ordinateur. Tablette sans persona ou avec un autre : les vraies données. Avant le contrôle de l'OS : la démo
+// marche aussi sur un ordinateur que le compagnon ne pilote pas.
+app.addHook("preHandler", async (req, reply) => {
+  const answer = await demoAnswer(req.method, req.routeOptions.url ?? "", req);
+  if (answer !== undefined) return reply.send(answer);
 });
 
 // Pilotage de l'ordinateur (deck d'applis et de raccourcis, son, micro) : macOS et Windows seulement.
@@ -94,6 +148,8 @@ app.addHook("preHandler", async (req, reply) => {
     ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) ||
       req.url.startsWith("/system") ||
       req.url.startsWith("/pointer") ||
+      req.url.startsWith("/present") ||
+      req.url.startsWith("/gitlab") ||
       req.url.startsWith("/notifications"))
   ) {
     return reply.code(501).send({ error: "Pilotage disponible sur macOS et Windows seulement" });
@@ -102,15 +158,27 @@ app.addHook("preHandler", async (req, reply) => {
 
 // Images du visualiseur (POST /camera/frame).
 app.addContentTypeParser("image/jpeg", { parseAs: "buffer", bodyLimit: 2 * 1024 * 1024 }, (_req, body, done) => done(null, body));
+// Dictée d'un prompt pour une session Claude (POST /agents/transcribe), 60 s au plus.
+app.addContentTypeParser("audio/wav", { parseAs: "buffer", bodyLimit: 2 * 1024 * 1024 }, (_req, body, done) => done(null, body));
+// Archive du backend : essai d'une MR (POST /companion/backend/essai) ou release (POST /companion/backend/update).
+app.addContentTypeParser("application/gzip", { parseAs: "buffer", bodyLimit: 100 * 1024 * 1024 }, (_req, body, done) => done(null, body));
 
 // --- Routes, une par domaine dans src/routes/ (les hooks ci-dessus valent pour toutes)
 
-app.register(pairingRoutes, { authorized });
+app.register(pairingRoutes, { authorized, fingerprint: tls?.fingerprint ?? null });
 app.register(localRoutes);
+app.register(localProfileRoutes);
+app.register(localConfigRoutes);
+app.register(mcpRoutes);
+app.register(portableRoutes);
 app.register(deckRoutes);
+app.register(pluginRoutes);
+app.register(demoRoutes);
 app.register(windowRoutes);
+app.register(awayRoutes);
 app.register(systemRoutes);
 app.register(pointerRoutes);
+app.register(presentRoutes);
 app.register(notificationRoutes);
 app.register(docRoutes);
 app.register(updateRoutes);
@@ -118,8 +186,10 @@ app.register(browserRoutes);
 app.register(cameraRoutes);
 app.register(calendarRoutes);
 app.register(taskRoutes);
+app.register(jiraRoutes);
 app.register(callRoutes);
 app.register(agentRoutes);
+app.register(gitlabRoutes);
 app.register(tabletRoutes);
 
 // --- Tâches de fond
@@ -130,14 +200,25 @@ startReminders(remind);
 startEventReminders(remind);
 // Appel entrant : prévenir la tablette sans attendre sa réponse (la sonnerie ne doit pas bloquer la surveillance).
 void startCallWatch((event) => void sendToTablet({ type: "call", ...event }, 30_000));
+// Réunion en cours : la tablette passe sur son profil Réunion (et en revient), seulement tant qu'elle est connectée.
+if (canControl) {
+  startMeetingWatch((event) => void sendToTablet({ type: "meeting", ...event }), {
+    connected: () => tabletStatus().connected,
+    // Démo : aucun appel (le vrai appel de l'ordinateur ferait quitter l'écran d'arrivée du persona).
+    liveApps: async () => ((await activePersona()) ? [] : callingDeckApps()),
+  });
+}
 // Notifications de l'ordinateur : base du système relue toutes les 2 s, chaque nouvelle envoyée à la tablette sans attendre.
 if (canControl) {
+  // Les supprimées (empreintes seulement) tiennent après un redémarrage : sinon le 1er passage les remonterait du système.
+  notificationHistory.setStore(config.dataDir);
   watchNotifications(
     readNotifications,
     notificationHistory,
     ({ id, app: name, title, body, at }) => void sendToTablet({ type: "notification", id, app: name, title, body, at }),
     Number(process.env.NOTIFICATIONS_POLL_MS) || 2000,
     (e) => app.log.warn(`Notifications de l'ordinateur illisibles : ${e.message}`),
+    (ok, e) => setNotificationsRead(ok, e),
   );
 }
 // Historique du presse-papiers : repère relu chaque seconde (2 s sur Mac, un osascript à chaque fois).
@@ -147,12 +228,20 @@ if (canControl) {
 }
 if (canControl) startAutoJoin((text) => sendToTablet({ type: "message", text, seconds: 60 }));
 
-await app.listen({ port: config.port, host: config.host });
+if (localHttp) {
+  const server = localHttp;
+  app.addHook("onClose", (_app, done) => void server.close(() => done()));
+  await new Promise<void>((resolve, reject) => server.once("error", reject).listen(config.port, "127.0.0.1", resolve));
+  await app.listen({ port: config.tlsPort, host: config.host });
+} else {
+  await app.listen({ port: config.port, host: config.host });
+}
 startDiscovery((msg) => app.log.warn(msg));
+if (isMac) startMenuBar((msg) => app.log.warn(msg));
 const where = config.loopbackOnly
   ? "USB seulement (adb reverse)"
-  : `WiFi : ${lanAddresses()
-      .map((a) => `${a}:${config.port}`)
-      .join(", ")}`;
+  : `WiFi en HTTPS : ${lanAddresses()
+      .map((a) => `${a}:${config.tlsPort}`)
+      .join(", ")}, empreinte ${tls!.fingerprint.slice(0, 16)}…`;
 app.log.info(`Compagnon prêt sur « ${identity().name} » (${osName}), ${where}, documents dans ${config.docsDir}`);
 app.log.info(`Appairer une tablette : Réglages > Ordinateurs > Ajouter ; page d'aide : http://127.0.0.1:${config.port}/`);

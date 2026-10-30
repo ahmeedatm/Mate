@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- HTTP en clair autorisé : le backend de l'ordinateur est joint en http://<IP du réseau local>:3000
-     (une plage d'adresses ne peut pas s'écrire ici). Ce qui protège l'ordinateur : le jeton donné à l'appairage. -->
+<!-- HTTP en clair laissé permis pour les pages web du WebView (« Page de l'ordi ») et l'USB (127.0.0.1).
+     L'ordinateur, lui, est joint en HTTPS épinglé en WiFi ; net/Http.kt n'envoie jamais le jeton en clair
+     hors de 127.0.0.1 (docs/securite-appairage.md). -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

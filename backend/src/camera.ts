@@ -1,4 +1,5 @@
 import type { ServerResponse } from "node:http";
+import { CADRAN_NIGHT_CSS, FAVICON } from "./web-style.ts";
 
 /**
  * Visualiseur : la tablette, posée au-dessus d'une feuille, envoie des JPEG 720p (POST /camera/frame)
@@ -64,16 +65,20 @@ export const VIEWER_PAGE = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Visualiseur</title>
+${FAVICON}
 <style>
-  :root { color-scheme: dark; --bg: #000; --pill: rgba(23, 28, 36, .85); --text: #e9edf2; --dim: #8b95a5; --faint: #566070; --ok: #5dd39e; --warn: #f5b85c; --ko: #ff6b6b; --accent: #6cb4ff; --surface: #171c24; --raised: #212833; --pressed: #2c3543; }
+  ${CADRAN_NIGHT_CSS}
+  /* Noms du visualiseur rapportés aux tokens Cadran nuit (web-style.ts). */
+  :root { --pill: rgba(34, 31, 31, .88); --text: var(--ink); --dim: var(--ink-3); --faint: var(--line); --warn: #FFD166; --accent: var(--now);
+    --surface: var(--tile); --raised: var(--tile-high); --pressed: #2F2B2B; }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 16px/1.4 -apple-system, system-ui, sans-serif; overflow: hidden; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 400 16px/1.4 Outfit, system-ui, sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
   #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
   #frame { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform .2s; }
   #frame.sideways { max-width: 100vh; max-height: 100vw; }
   #empty { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 8px; color: var(--dim); text-align: center; padding: 16px; font-size: 20px; }
   #empty svg { width: min(360px, 60vw); height: auto; margin-bottom: 24px; }
-  #empty strong { color: var(--text); font-size: 36px; font-weight: 600; }
+  #empty strong { color: var(--text); font-size: 36px; font-weight: 500; }
   .z { animation: doze 3s ease-in-out infinite; }
   .z2 { animation-delay: .4s; }
   .z3 { animation-delay: .8s; }
@@ -82,11 +87,11 @@ export const VIEWER_PAGE = `<!doctype html>
   .bar { position: fixed; top: 16px; display: flex; gap: 8px; transition: opacity .3s; }
   #status { left: 16px; }
   #tools { right: 16px; }
-  .pill { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 20px; background: var(--pill); border: 0; color: var(--text); font: inherit; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 22px; border-radius: 24px; background: var(--pill); border: 0; color: var(--text); font: 500 15px Outfit, sans-serif; }
   button.pill { cursor: pointer; }
-  button.pill:hover { background: rgba(44, 53, 67, .95); }
+  button.pill:hover { background: var(--tile-high); }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--dim); }
-  .live .dot { background: var(--ko); }
+  .live .dot { background: var(--now); }
   .frozen .dot { background: var(--warn); }
   body.idle .bar { opacity: 0; }
   body.idle { cursor: none; }

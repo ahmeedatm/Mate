@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { describe, it } from "node:test";
 import {
   appNameFromId,
@@ -6,7 +9,9 @@ import {
   NOTIFICATIONS_MAX,
   NOTIFICATIONS_TTL_MS,
   NotificationHistory,
+  notificationsRead,
   parseToast,
+  setNotificationsRead,
   watchNotifications,
   type NotificationBatch,
   type NotificationItem,
@@ -79,6 +84,60 @@ describe("historique des notifications", () => {
     now += NOTIFICATIONS_TTL_MS;
     assert.deepEqual(history.list(), []);
   });
+
+  it("une notification supprimée ne revient pas si le système la redonne", () => {
+    const history = new NotificationHistory(() => 10_000);
+    const a = history.add(n("Teams", 1000, "Marie"))!;
+    assert.equal(history.remove(a.id), true);
+    // La surveillance relit le système et la redonne (même contenu) : ignorée.
+    assert.equal(history.add(n("Teams", 1000, "Marie")), undefined);
+    assert.deepEqual(history.list(), []);
+    // Une autre notification de la même appli passe toujours.
+    assert.ok(history.add(n("Teams", 2000, "Léa")));
+  });
+
+  it("tout effacer garde les supprimées ignorées", () => {
+    const history = new NotificationHistory(() => 10_000);
+    history.add(n("a", 1000));
+    history.add(n("b", 2000));
+    history.clear();
+    assert.equal(history.add(n("a", 1000)), undefined);
+    assert.equal(history.add(n("b", 2000)), undefined);
+  });
+
+  it("les supprimées tiennent après un redémarrage (empreintes sur le disque)", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "unomate-dismiss-"));
+    try {
+      const before = new NotificationHistory(() => 10_000);
+      before.setStore(dir);
+      const a = before.add(n("Teams", 1000, "Marie"))!;
+      before.remove(a.id);
+      // « Redémarrage » : une nouvelle instance relit le fichier d'empreintes.
+      const after = new NotificationHistory(() => 10_000);
+      after.setStore(dir);
+      assert.equal(after.add(n("Teams", 1000, "Marie")), undefined);
+      assert.ok(after.add(n("Teams", 2000, "Léa")));
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("l'empreinte d'une supprimée est purgée après 24 h", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "unomate-dismiss-"));
+    try {
+      let now = NOTIFICATIONS_TTL_MS * 2;
+      const history = new NotificationHistory(() => now);
+      history.setStore(dir);
+      const a = history.add(n("Teams", now - 1000, "Marie"))!;
+      history.remove(a.id);
+      now += NOTIFICATIONS_TTL_MS + 2000; // l'empreinte a plus de 24 h
+      history.list(); // purge
+      // Une notification de même contenu mais récente repasse (l'ancienne empreinte a été oubliée).
+      assert.ok(history.add(n("Teams", now - 500, "Marie")));
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("surveillance des notifications", () => {
@@ -137,5 +196,42 @@ describe("surveillance des notifications", () => {
     } finally {
       stop();
     }
+  });
+
+  it("signale la lisibilité à chaque passage (vrai si lu, faux + l'erreur sinon)", async () => {
+    let failing = true;
+    const read = async (): Promise<NotificationBatch> => {
+      if (failing) throw Object.assign(new Error("accès complet au disque à donner"), { statusCode: 503 });
+      return { cursor: "0", items: [] };
+    };
+    const states: { ok: boolean; code?: number }[] = [];
+    const stop = watchNotifications(
+      read,
+      new NotificationHistory(),
+      () => {},
+      10,
+      () => {},
+      (ok, e) => states.push({ ok, code: (e as { statusCode?: number } | undefined)?.statusCode }),
+    );
+    try {
+      await tick();
+      assert.deepEqual(states.at(-1), { ok: false, code: 503 });
+      failing = false;
+      await tick();
+      assert.deepEqual(states.at(-1), { ok: true, code: undefined });
+    } finally {
+      stop();
+    }
+  });
+
+  it("mémorise la dernière lisibilité pour la route (raison + code)", () => {
+    setNotificationsRead(true);
+    assert.deepEqual(notificationsRead(), { ok: true, reason: "", code: 0 });
+    setNotificationsRead(false, Object.assign(new Error("accès complet au disque"), { statusCode: 503 }));
+    assert.deepEqual(notificationsRead(), { ok: false, reason: "accès complet au disque", code: 503 });
+    // Système non pris en charge : code 501 transmis tel quel.
+    setNotificationsRead(false, Object.assign(new Error("non pris en charge"), { statusCode: 501 }));
+    assert.equal(notificationsRead().code, 501);
+    setNotificationsRead(true);
   });
 });

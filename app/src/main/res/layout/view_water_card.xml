@@ -11,13 +11,13 @@
         <LinearLayout
             android:id="@+id/water_header"
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="48dp"
             android:layout_weight="1"
             android:background="@drawable/flat_bg"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <com.unowhy.companion.ui.TitleView
+            <com.unowhy.unomate.ui.TitleView
                 style="@style/CardTitle"
                 android:drawableStart="@drawable/ic_water"
                 android:text="@string/water_title"
@@ -35,17 +35,17 @@
         <ImageButton
             android:id="@+id/water_bell"
             style="@style/IconButton.Flat"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:padding="11dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="13dp"
             android:src="@drawable/ic_alarm_off" />
 
         <ImageButton
             android:id="@+id/water_minus"
             style="@style/IconButton.Flat"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:padding="11dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="13dp"
             android:contentDescription="@string/water_minus"
             android:src="@drawable/ic_remove" />
 

@@ -13,12 +13,18 @@
     <attr name="c_accent_soft" format="color" />
     <attr name="c_on_accent" format="color" />
     <attr name="c_text" format="color" />
+    <!-- Cadre photo : fond autour d'une photo en portrait, heure par-dessus les photos et son ombre. -->
+    <attr name="c_frame_bg" format="color" />
+    <attr name="c_frame_text" format="color" />
+    <attr name="c_frame_shadow" format="color" />
     <attr name="c_text_dim" format="color" />
     <attr name="c_text_faint" format="color" />
     <attr name="c_ok" format="color" />
     <attr name="c_ok_soft" format="color" />
     <attr name="c_ko" format="color" />
     <attr name="c_ko_soft" format="color" />
+    <!-- Texte posé sur c_ko (pastille du nombre de tâches) : 4,5:1 au moins dans chaque palette. -->
+    <attr name="c_on_ko" format="color" />
     <attr name="c_warn" format="color" />
     <attr name="c_paper" format="color" />
     <!-- Agents Claude : une session attend (ambre), a fini (vert), a atteint sa limite (bleu). Signaux, pas décor : lisibles sur chaque thème. -->
@@ -39,14 +45,15 @@
     <attr name="c_hue_yellow" format="color" />
     <attr name="c_hue_blue" format="color" />
     <!-- Habillage Cadran : les thèmes de base posent les valeurs d'origine, les palettes Cadran les remplacent. -->
-    <attr name="c_cadran" format="boolean" />
     <attr name="c_card_bg" format="reference" />
     <attr name="c_tile_bg" format="reference" />
     <attr name="c_card_pad" format="dimension" />
-    <!-- Fond des widgets de l'Accueil : celui des tuiles, translucide en Rétro (les tubes passent derrière). -->
+    <!-- Fond des widgets de l'Accueil : celui des tuiles, translucide dans les thèmes à tubes (Rétro, Cadran, Cadran nuit). -->
     <attr name="c_home_card_bg" format="reference" />
     <!-- Taille des titres de carte en Cadran (TitleView) : un peu plus grande en Rétro, l'Abril Fatface étant petite. -->
     <attr name="c_title_size" format="dimension" />
+    <!-- Contraste élevé : grandes touches (cases de 148 dp, libellé de 18 sp) dans les grilles de touches (ui/home/TileGridView). -->
+    <attr name="c_big_keys" format="boolean" />
     <attr name="c_primary" format="color" />
     <attr name="c_on_primary" format="color" />
     <attr name="c_primary_pressed" format="color" />
@@ -57,7 +64,7 @@
     <attr name="c_font_title" format="reference|string" />
     <!-- Grands chiffres (heure, chrono, température) et titre de bienvenue. -->
     <attr name="c_font_display" format="reference|string" />
-    <!-- Thème Rétro : tube qui coule en L à droite et en bas de l'Accueil (ui/home/FlowBandView), ses quatre couleurs, et grain
+    <!-- Rétro, Cadran et Cadran nuit : tube qui coule en L à droite et en bas de l'Accueil (ui/home/FlowBandView), ses quatre couleurs, et grain
          de deux couleurs par-dessus tout l'écran (ui/Grain.kt ; absentes = pas de grain). -->
     <attr name="c_flow" format="boolean" />
     <attr name="c_flow_dark" format="color" />
@@ -66,6 +73,16 @@
     <attr name="c_flow_cream" format="color" />
     <attr name="c_grain_light" format="color" />
     <attr name="c_grain_dark" format="color" />
+    <!-- Thèmes de démo : motif dessiné une fois par-dessus l'écran (ui/ThemePattern), de la couleur c_pattern_color (alpha compris) :
+         filets de registre, forme d'accent, trame de tableau, lignes de scan. Absent = aucun. -->
+    <attr name="c_pattern" format="enum">
+        <enum name="none" value="0" />
+        <enum name="ledger" value="1" />
+        <enum name="accent" value="2" />
+        <enum name="grid" value="3" />
+        <enum name="scan" value="4" />
+    </attr>
+    <attr name="c_pattern_color" format="color" />
     <!-- Console de l'onglet Son du deck (plaque, afficheurs, curseurs, LED), tirées des tons de Cadran : ui/mixer/. -->
     <attr name="c_mx_plate_top" format="color" />
     <attr name="c_mx_plate_bottom" format="color" />

@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#FAF2F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#100D0D" media="(prefers-color-scheme: dark)">
+<title>UnoMate : l'écran tactile qui pilote votre ordinateur</title>
+<meta name="description" content="UnoMate est un écran tactile de 10,1 pouces posé à côté du Mac ou du PC. Applis, raccourcis, réunions et fenêtres se commandent d'un toucher. Pour les entreprises, seul ou avec un PC Unowhy.">
+<meta property="og:title" content="UnoMate : l'écran tactile qui pilote votre ordinateur">
+<meta property="og:description" content="Un écran tactile posé à côté du Mac ou du PC : raccourcis, réunions, concentration, accessibilité. Adapté à chaque métier, sur une tablette robuste déjà fabriquée.">
+<meta property="og:type" content="website">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="assets/img/mate.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/outfit_300.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="style.css">
+<script>document.documentElement.classList.add("js")</script>
+</head>
+<body>
+
+<header class="top">
+  <a class="marque" href="#" aria-label="UnoMate, haut de page">
+    <img src="assets/img/mate.svg" width="36" height="36" alt="">
+    <span class="mot">UNOMATE</span>
+  </a>
+  <nav aria-label="Sections">
+    <a href="#journee">Usages</a>
+    <a href="#fonctions">Fonctions</a>
+    <a href="#entreprises">Entreprises</a>
+    <a class="btn" href="#telecharger">Télécharger</a>
+  </nav>
+</header>
+
+<main>
+  <!-- Le héros est l'objet : la vraie coque de la tablette 4.2 et sa ligne du jour. Sans JS, les boutons radio et :has()
+       changent l'écran ; le script place seulement le point « maintenant » et choisit le moment le plus proche de l'heure. -->
+  <section class="hero" aria-labelledby="titre">
+    <h1 id="titre" class="apparait">Votre ordinateur, au bout des doigts.</h1>
+    <p class="chapo apparait">UnoMate est un écran tactile de 10,1 pouces posé à côté du Mac ou du PC. Applis, raccourcis, réunions et fenêtres se commandent d'un toucher, en WiFi.</p>
+    <p class="actions apparait">
+      <a class="btn" href="#entreprises">Équiper vos postes</a>
+      <a class="lien" href="#telecharger">Télécharger le logiciel</a>
+    </p>
+
+    <figure class="objet" id="journee">
+      <div class="coque">
+        <img class="coque-img" src="assets/img/tablette.webp" width="1400" height="1018" alt="">
+        <div class="ecran">
+          <img data-m="1" src="assets/img/compta.png" width="1280" height="800" alt="Écran de clôture du mois : étapes à cocher, échéance à J-2, agenda et tâches.">
+          <img data-m="2" src="assets/img/marketing.png" width="1280" height="800" alt="Écran Présentation : diapo précédente et suivante, début, fin, chrono et micro.">
+          <img data-m="3" src="assets/img/teletravail.jpg" width="1280" height="800" alt="Écran Travail : Focus, bouton Je m'absente, prochain rendez-vous, touches et tâches.">
+          <img data-m="4" src="assets/img/projets.png" width="1280" height="800" alt="Alerte plein écran avant une réunion : Point client Boréal, compte à rebours 04:55.">
+          <img data-m="5" src="assets/img/amenage.png" width="1280" height="800" alt="Écran à fort contraste : grandes touches Copier, Coller, Enregistrer, Courrier type et applis.">
+          <img data-m="6" src="assets/img/dev.png" width="1280" height="800" alt="Écran sombre : merge requests à fusionner et à relire, pipelines par projet.">
+        </div>
+      </div>
+
+      <fieldset class="jour" data-ui>
+        <legend>Une journée avec UnoMate : choisissez un moment</legend>
+        <div class="jour-piste" aria-hidden="true"><i class="passe"></i><b class="maintenant"></b></div>
+        <div class="moments">
+          <label style="--h: 8.5"><input type="radio" name="moment" value="1" checked><span class="t">08:30</span><span class="n">Clôture</span></label>
+          <label style="--h: 10.5"><input type="radio" name="moment" value="2"><span class="t">10:30</span><span class="n">Présentation</span></label>
+          <label style="--h: 12.5"><input type="radio" name="moment" value="3"><span class="t">12:30</span><span class="n">Pause</span></label>
+          <label style="--h: 14.5"><input type="radio" name="moment" value="4"><span class="t">14:30</span><span class="n">Réunion</span></label>
+          <label style="--h: 17"><input type="radio" name="moment" value="5"><span class="t">17:00</span><span class="n">Grandes touches</span></label>
+          <label style="--h: 19.17"><input type="radio" name="moment" value="6"><span class="t">19:10</span><span class="n">Déploiements</span></label>
+        </div>
+      </fieldset>
+
+      <figcaption class="legendes" aria-live="polite">
+        <p data-m="1"><b>Clôture du mois.</b> Les étapes à cocher et le compte à rebours de l'échéance restent affichés à côté du tableur.</p>
+        <p data-m="2"><b>Présentation.</b> Diapo suivante, chrono et micro sous la main : vous gardez les yeux sur le public.</p>
+        <p data-m="3"><b>Pause.</b> « Je m'absente » coupe le micro, met le minuteur en pause et garde vos fenêtres. « Reprendre » remet tout en place.</p>
+        <p data-m="4"><b>Réunion.</b> Cinq minutes avant, l'écran entier vous prévient, avec un compte à rebours.</p>
+        <p data-m="5"><b>Grandes touches.</b> Fort contraste, texte agrandi et touches annoncées à voix haute, pour les postes aménagés.</p>
+        <p data-m="6"><b>Déploiements.</b> Les revues de code GitLab en attente et l'état du dernier déploiement de chaque projet.</p>
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- Fonctions : feuilles empilées, chacune aux couleurs du thème de l'écran qu'elle montre (res/values/palettes.xml). -->
+  <section id="fonctions" class="fonctions" aria-labelledby="t-fonctions">
+    <h2 id="t-fonctions" class="apparait">Tout se commande d'un toucher</h2>
+    <div class="feuilles">
+      <article class="feuille" data-p="compta">
+        <h3>Raccourcis et macros</h3>
+        <p>Une touche ouvre une appli, envoie un raccourci clavier ou tape un texte que vous saisissez dix fois par jour. Plusieurs étapes à la suite font une macro. Chacun crée ses touches sur l'écran lui-même.</p>
+        <img src="assets/img/nour-excel.webp" width="1280" height="800" loading="lazy" alt="Touches Excel d'UnoMate : Enregistrer, Rechercher, Format cellule, Annuler, Rétablir, Somme auto, Filtrer.">
+      </article>
+      <article class="feuille" data-p="projets">
+        <h3>Réunions</h3>
+        <p>L'agenda Outlook ou Google s'affiche sur l'écran. Un toucher rejoint la réunion Teams, Meet, Zoom ou Webex, puis coupe le micro, la caméra ou raccroche.</p>
+        <img src="assets/img/aimee-accueil.webp" width="1280" height="800" loading="lazy" alt="Prochain rendez-vous Point client Boréal dans 5 minutes, et l'agenda de la journée.">
+      </article>
+      <article class="feuille" data-p="teletravail">
+        <h3>Concentration</h3>
+        <p>Un minuteur de concentration avec une ambiance sonore active Ne pas déranger sur l'ordinateur. Pour une pause, « Je m'absente » coupe le micro et garde vos fenêtres pour la reprise.</p>
+        <button class="lecture" type="button" aria-pressed="false" hidden>Mettre en pause</button>
+        <video src="assets/video/absence.mp4" poster="assets/video/absence.jpg" width="832" height="604" muted loop playsinline preload="none" aria-label="La touche Je m'absente puis Reprendre, filmées sur la tablette.">
+          <source src="assets/video/absence.webm" type="video/webm">
+          <source src="assets/video/absence.mp4" type="video/mp4">
+        </video>
+      </article>
+      <article class="feuille" data-p="amenage">
+        <h3>Accessibilité</h3>
+        <p>Contraste élevé, texte agrandi jusqu'à une fois et demie, grandes touches et lecteur d'écran. Chaque action peut être annoncée à voix haute, et la voix lance une touche par son nom.</p>
+        <img src="assets/img/sam-reglages-retour-parle.webp" width="1280" height="800" loading="lazy" alt="Réglage Retour parlé des actions : chaque touche lancée est annoncée à voix haute.">
+      </article>
+      <article class="feuille" data-p="dev">
+        <h3>Équipes techniques</h3>
+        <p>Revues de code GitLab, déploiements et tickets Jira sous les yeux, avec des touches pour Git, les tests et la mise en production. La configuration s'écrit aussi en fichiers, sur Mac comme sur Windows.</p>
+        <img src="assets/img/sacha-code.webp" width="1280" height="800" loading="lazy" alt="Écran Code en thème sombre : touches Git Status, Diff, Pull, Log, Branches, Build, et l'état des tâches en cours.">
+      </article>
+    </div>
+  </section>
+
+  <!-- L'équipement : un registre aligné sur la virgule. -->
+  <section class="registre" aria-labelledby="t-registre">
+    <div class="registre-texte">
+      <h2 id="t-registre" class="apparait">Robuste, et déjà fabriqué.</h2>
+      <p class="apparait">UnoMate fonctionne sur la tablette Unowhy 4.2, avec son pied intégré. Le logiciel donne une seconde vie à du matériel existant au lieu d'en fabriquer du neuf.</p>
+    </div>
+    <dl class="chiffres apparait">
+      <div><dt><span class="e">10</span><span class="d">,1</span></dt><dd>pouces, écran tactile</dd></div>
+      <div><dt><span class="e">IP52</span></dt><dd>protection contre la poussière et les projections d'eau</dd></div>
+      <div><dt><span class="e">IK06</span></dt><dd>résistance aux chocs</dd></div>
+      <div><dt><span class="e">5</span></dt><dd>mégapixels : la caméra arrière filme un document et l'affiche sur l'ordinateur</dd></div>
+    </dl>
+    <p class="source petit">IP52, IK06 : indices de la fiche produit de la tablette Unowhy 4.2.</p>
+  </section>
+
+  <!-- Entreprises : une lettre sur une feuille au bord festonné, avec son talon à détacher. -->
+  <section id="entreprises" class="entreprises" aria-labelledby="t-entreprises">
+    <div class="lettre apparait">
+      <h2 id="t-entreprises">Pour les entreprises</h2>
+      <p>UnoMate est vendu par les équipes commerciales d'Unowhy, seul ou avec un PC Unowhy. Il s'ajoute aux ordinateurs déjà en place, Mac ou Windows, sans changer vos outils.</p>
+      <p><b>Sécurité.</b> L'écran et l'ordinateur échangent directement sur votre WiFi, en HTTPS, après un code d'appairage. Aucun compte à créer, aucune IA.</p>
+      <p><b>Déploiement.</b> Sur l'ordinateur, un seul fichier à lancer, sans installateur. L'écran est verrouillé sur UnoMate et se met à jour seul.</p>
+      <p><b>Postes aménagés.</b> Grandes commandes, lecture à voix haute et contraste réglable : une solution à étudier avec votre référent handicap.</p>
+      <p><b>Prise en main.</b> Des modèles d'écrans prêts à l'emploi, Bureau, Deck, Réunion et Veille, que chacun ajuste ensuite.</p>
+      <p class="signature">Les équipes Unowhy</p>
+      <div class="talon">
+        <svg class="perfo" aria-hidden="true" focusable="false"><defs><pattern id="perfo" width="16" height="8" patternUnits="userSpaceOnUse"><circle cx="8" cy="4" r="3.5"/></pattern></defs><rect width="100%" height="8" fill="url(#perfo)"/></svg>
+        <svg class="festons-bas" aria-hidden="true" focusable="false"><defs><pattern id="feston-bas" width="28" height="14" patternUnits="userSpaceOnUse"><circle cx="14" cy="14" r="9"/></pattern></defs><rect width="100%" height="14" fill="url(#feston-bas)"/></svg>
+        <span>Vous équipez une équipe ou un site&nbsp;?</span>
+        <a class="btn" href="https://www.unowhy.com">Contacter Unowhy</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Installation : trois phrases, une par étape. Le code d'appairage est un fragment de l'interface réelle. -->
+  <section id="installation" class="etapes" aria-labelledby="t-etapes">
+    <h2 id="t-etapes" class="apparait">Installé en trois étapes</h2>
+    <ol>
+      <li class="apparait"><h3>Installez le logiciel.</h3><p>Sur le Mac ou le PC à piloter. Il peut se lancer seul à chaque ouverture de session.</p></li>
+      <li class="apparait"><h3>Allumez l'écran.</h3><p>Posez-le sur le bureau, sur le même WiFi. Il trouve l'ordinateur tout seul.</p></li>
+      <li class="apparait"><h3>Saisissez le code.</h3><p>L'écran affiche six chiffres, valables deux minutes. Saisissez-les sur la page qui s'ouvre sur l'ordinateur.</p>
+        <div class="code" data-ui aria-hidden="true">
+          <span class="code-titre">Code d'appairage</span>
+          <span class="code-chiffres">482 913</span>
+          <span class="code-piste"><i></i><b></b></span>
+          <span class="code-reste">Valable 2 minutes</span>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- Télécharger : une carte-réponse posée de biais sur un aplat, coupée par le bas de la section. -->
+  <section id="telecharger" class="reponse" aria-labelledby="t-dl">
+    <p class="reponse-texte apparait">Le logiciel n'est pas encore signé : macOS et Windows demandent une confirmation au premier lancement. La marche à suivre est sous chaque bouton.</p>
+    <div class="carte apparait">
+      <h2 id="t-dl">Télécharger UnoMate</h2>
+      <p class="mobile-seul">Le logiciel s'installe sur le Mac ou le PC à piloter, pas sur un téléphone.</p>
+      <a class="btn mobile-seul" href="mailto:?subject=T%C3%A9l%C3%A9charger%20UnoMate&amp;body=https%3A%2F%2Fmate.integration.unowhy.dev%2F%23telecharger">Recevoir le lien par e-mail</a>
+      <div class="dl">
+        <div data-os="mac">
+          <a class="btn" href="downloads/UnoMate-Mac.zip" download>Télécharger pour Mac</a>
+          <p class="petit">Apple Silicon et Intel</p>
+          <ol class="premiere" aria-label="Première ouverture sur Mac">
+              <li>Extrayez le zip et ouvrez <b>UnoMate</b>.</li>
+              <li>macOS refuse : ouvrez Réglages Système, Confidentialité et sécurité, puis <b>Ouvrir quand même</b>.</li>
+              <li>Autorisez l'<b>Accessibilité</b> : elle sert aux raccourcis, aux macros et aux fenêtres.</li>
+          </ol>
+        </div>
+        <div data-os="win">
+          <a class="btn" href="downloads/UnoMate-Windows.exe" download>Télécharger pour Windows</a>
+          <p class="petit">Windows 10 et 11, 64 bits</p>
+          <ol class="premiere" aria-label="Première ouverture sur Windows">
+              <li>Lancez <b>UnoMate-Windows.exe</b>.</li>
+              <li>SmartScreen : cliquez sur <b>Informations complémentaires</b>, puis <b>Exécuter quand même</b>.</li>
+              <li>Acceptez la demande du pare-feu. Le WiFi doit être en profil privé.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Questions : lues d'un coup d'œil, sans accordéon. -->
+  <section class="questions" aria-labelledby="t-questions">
+    <h2 id="t-questions" class="apparait">Questions</h2>
+    <div class="reponses">
+      <p class="apparait"><b>Les données restent-elles dans l'entreprise&nbsp;?</b> Le pilotage, oui : l'écran et l'ordinateur échangent directement sur votre WiFi, en HTTPS, sans compte ni IA. Trois fonctions passent par un service extérieur : la commande vocale (reconnaissance vocale de Google), la météo (MET Norway, sans compte) et les mises à jour (serveur d'Unowhy).</p>
+      <p class="apparait"><b>Quels ordinateurs sont compatibles&nbsp;?</b> Les Mac, Apple Silicon ou Intel, et les PC sous Windows 10 ou 11 en 64 bits, sur le même WiFi que l'écran. L'écran est pensé pour rester branché sur le bureau.</p>
+      <p class="apparait"><b>Comment l'acheter&nbsp;?</b> Auprès des équipes commerciales d'Unowhy, seul ou avec un PC Unowhy.</p>
+      <p class="apparait"><b>Un écran peut-il servir sur plusieurs ordinateurs&nbsp;?</b> Oui. Chaque ordinateur s'appaire une fois, par exemple celui du bureau et celui de la maison. UnoMate passe seul à celui qui répond, et chacun garde son agenda, ses tâches et ses touches.</p>
+      <p class="apparait"><b>Faut-il tout paramétrer soi-même&nbsp;?</b> Non. Les modèles Bureau, Deck, Réunion et Veille se posent en un geste. Le crayon ouvre ensuite le mode Modifier : on déplace, agrandit ou retire un élément du doigt.</p>
+      <p class="apparait"><b>Quels agendas peut-on relier&nbsp;?</b> Outlook, Google Agenda ou iCloud, par le lien de partage de l'agenda (format ICS). Le lien de la réunion reste sur l'ordinateur : l'écran affiche seulement le bouton pour la rejoindre.</p>
+      <p class="apparait"><b>Que montre l'écran des fenêtres ouvertes&nbsp;?</b> Toutes les fenêtres de l'ordinateur, sur un plan de ses écrans. Un toucher en met une au premier plan, un glissé la déplace sur un autre écran.</p>
+      <p class="apparait"><b>Comment se font les mises à jour&nbsp;?</b> Celles de l'écran s'installent seules. Le logiciel de l'ordinateur se met à jour depuis l'écran, d'un toucher.</p>
+      <p class="apparait"><b>Pourquoi une confirmation au premier lancement&nbsp;?</b> Le logiciel n'est pas encore signé. macOS et Windows demandent donc une autorisation une seule fois, expliquée sous chaque bouton de téléchargement.</p>
+    </div>
+  </section>
+</main>
+
+<!-- Le pied est le dos de la carte. -->
+<footer class="pied">
+  <div class="dos">
+    <svg class="festons" aria-hidden="true" focusable="false"><defs><pattern id="feston" width="80" height="24" patternUnits="userSpaceOnUse"><circle cx="40" cy="40" r="40"/></pattern></defs><rect width="100%" height="24" fill="url(#feston)"/></svg>
+    <div class="dos-message">
+      <p class="dos-titre">UnoMate, par Unowhy</p>
+      <p>Le logiciel qui fait de la tablette Unowhy 4.2 un écran de commande pour le Mac ou le PC posé à côté.</p>
+    </div>
+    <ul class="dos-adresse">
+      <li><a href="https://www.unowhy.com">unowhy.com</a></li>
+      <li><a href="#telecharger">Télécharger pour Mac ou Windows</a></li>
+      <li><a href="#entreprises">Équiper vos postes</a></li>
+    </ul>
+    <img class="timbre" src="assets/img/mate.svg" width="72" height="72" alt="">
+    <p class="imprime">Météo : MET Norway, licence CC BY 4.0. Police : Outfit, licence OFL. Données des captures fictives.</p>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+</body>
+</html>

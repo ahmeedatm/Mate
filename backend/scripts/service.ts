@@ -2,49 +2,38 @@ import { execFile, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { backendRoot as backend, dataDir, packaged as bundled, userFolder } from "../src/paths.ts";
+import { backendRoot as backend, dataDir } from "../src/paths.ts";
 
 /**
- * Lancement automatique du backend à l'ouverture de session, sans terminal :
+ * Lancement automatique du backend depuis le dépôt (développeurs), à l'ouverture de session et sans terminal. L'appli
+ * portable (paquet client) n'utilise pas ce script : son lanceur et son panneau s'en chargent (src/portable.ts).
  * - macOS : agent launchd (~/Library/LaunchAgents), relancé s'il s'arrête ;
  * - Windows : entrée « Exécuter » de la session (HKCU\…\Run), lanceur sans fenêtre qui relance node
- *   (src/win/UnowhyCompanion.exe : pas de PowerShell caché, que les antivirus bloquent).
+ *   (src/win/UnoMate.exe avec --node --backend : pas de PowerShell caché, que les antivirus bloquent).
  *
  *   npm run service:install     installe et démarre
  *   npm run service:stop        arrête (pour lancer `npm run dev` à la place)
  *   npm run service:start       redémarre
  *   npm run service:status      état
  *   npm run service:uninstall   retire le lancement automatique
- *
- * Instance de test à côté du vrai compagnon (CI, jobs install-mac et install-windows) : COMPANION_LABEL (autre agent
- * launchd, qui garde PORT, HOST, DATA_DIR, DOCS_DIR et COMPANION_HEADLESS ; sous Windows, autre valeur de la clé Run),
- * COMPANION_LOG_DIR, et COMPANION_HEADLESS=1 : ni fenêtre, ni page ouverte, ni raccourci sur le Bureau.
  */
 
 const port = Number(process.env.PORT ?? 3000);
-const LABEL = process.env.COMPANION_LABEL || "com.unowhy.companion";
-const headless = process.env.COMPANION_HEADLESS === "1";
+const LABEL = "com.unowhy.unomate";
 const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-// Instance de test (job install-windows) : sa propre valeur dans la clé Run, celle du vrai compagnon n'est pas touchée.
-const RUN_VALUE = process.env.COMPANION_LABEL || "UnowhyCompanion";
+const RUN_VALUE = "UnoMate";
 const isMac = process.platform === "darwin";
 const isWindows = process.platform === "win32";
 
 const plist = path.join(os.homedir(), "Library", "LaunchAgents", `${LABEL}.plist`);
-const logDir = process.env.COMPANION_LOG_DIR
-  ? path.resolve(process.env.COMPANION_LOG_DIR)
-  : isWindows
-    ? path.join(process.env.LOCALAPPDATA ?? os.homedir(), "UnowhyCompanion")
-    : path.join(os.homedir(), "Library", "Logs", "UnowhyCompanion");
+const logDir = isWindows
+  ? path.join(process.env.LOCALAPPDATA ?? os.homedir(), "UnoMate")
+  : path.join(os.homedir(), "Library", "Logs", "UnoMate");
 const pidFile = path.join(dataDir, "service.pid");
-// Boucle lancée avant les données hors du dossier du paquet (ou en dev) : PID noté dans backend/.data.
 const pidFiles = [...new Set([pidFile, path.join(backend, ".data", "service.pid")])];
 
-// Paquet client (scripts/package.ts) : ce script et le serveur sont regroupés dans dist/, avec un node embarqué.
 // Arguments de node : un seul processus (pas de surveillance des fichiers comme `npm run dev`).
-const NODE_ARGS = bundled
-  ? ["--env-file-if-exists=.env", "dist/server.mjs"]
-  : ["--env-file-if-exists=.env", "--import", "tsx", "src/server.ts"];
+const NODE_ARGS = ["--env-file-if-exists=.env", "--import", "tsx", "src/server.ts"];
 
 function sh(cmd: string, args: string[]): Promise<{ ok: boolean; out: string }> {
   return new Promise((resolve) => {
@@ -101,11 +90,7 @@ async function macInstall() {
   const args = [node, ...NODE_ARGS].map((a) => `    <string>${xml(a)}</string>`).join("\n");
   // PATH : osascript, open, mdfind… sont dans /usr/bin ; node peut être ailleurs (Homebrew, nvm).
   const envPath = [path.dirname(node), "/usr/local/bin", "/opt/homebrew/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"].join(":");
-  // Instance de test seulement : le vrai compagnon relit PORT, HOST… dans .env à chaque démarrage.
-  const passed = process.env.COMPANION_LABEL ? ["PORT", "HOST", "DATA_DIR", "DOCS_DIR", "COMPANION_HEADLESS"] : [];
-  const env = [["PATH", envPath], ...passed.filter((k) => process.env[k]).map((k) => [k, process.env[k] as string])]
-    .map(([k, v]) => `    <key>${k}</key>\n    <string>${xml(v)}</string>`)
-    .join("\n");
+  const env = `    <key>PATH</key>\n    <string>${xml(envPath)}</string>`;
   fs.writeFileSync(
     plist,
     `<?xml version="1.0" encoding="UTF-8"?>
@@ -148,9 +133,9 @@ ${env}
 
 // --- Windows
 
-const LAUNCHER = "UnowhyCompanion.exe";
+const LAUNCHER = "UnoMate.exe";
 
-/** Ligne de commande du lanceur, la même dans la clé Run et au démarrage par l'installeur. */
+/** Ligne de commande du lanceur, la même dans la clé Run et au démarrage. */
 function windowsCommand(node: string) {
   const exe = path.join(backend, "src", "win", LAUNCHER);
   const args = ["--node", node, "--backend", backend, "--logs", logDir, "--data", dataDir];
@@ -197,42 +182,6 @@ async function winInstall() {
   return node;
 }
 
-// --- Raccourcis vers la page de l'ordinateur (adresse, code d'appairage, agenda)
-
-const SHORTCUT = "Compagnon Unowhy";
-
-function shortcutFiles(): string[] {
-  const home = os.homedir();
-  if (isMac) return [path.join(home, "Desktop", `${SHORTCUT}.webloc`)];
-  const programs = path.join(
-    process.env.APPDATA ?? path.join(home, "AppData", "Roaming"),
-    "Microsoft",
-    "Windows",
-    "Start Menu",
-    "Programs",
-  );
-  return [
-    path.join(userFolder("Desktop", path.join(home, "Desktop")), `${SHORTCUT}.url`),
-    path.join(userFolder("Programs", programs), `${SHORTCUT}.url`),
-  ];
-}
-
-/** Bureau (et menu Démarrer sous Windows) ; un échec ne bloque pas l'installation. */
-function addShortcuts(page: string) {
-  // Icône du compagnon (assets/compagnon.svg, rendue en .ico multi-tailles) ; sinon celle du navigateur.
-  const icon = path.join(backend, "assets", "compagnon.ico");
-  const body = isMac
-    ? `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>URL</key><string>${xml(page)}</string></dict></plist>\n`
-    : `[InternetShortcut]\r\nURL=${page}\r\n` + (fs.existsSync(icon) ? `IconFile=${icon}\r\nIconIndex=0\r\n` : "");
-  for (const file of shortcutFiles()) {
-    try {
-      fs.writeFileSync(file, body);
-    } catch {
-      // Dossier protégé ou absent : la page reste à l'adresse affichée.
-    }
-  }
-}
-
 // --- Commandes
 
 async function install() {
@@ -251,7 +200,6 @@ async function install() {
   }
   console.log(`\n✓ Compagnon prêt sur « ${h.name} ». Il démarrera tout seul à chaque ouverture de session.\n`);
   console.log("Sur la tablette : Réglages > Ordinateurs > Ajouter, puis saisir le code affiché ici.");
-  if (headless) return;
   if (isMac) {
     console.log(
       `\nPour les raccourcis, macros et fenêtres, macOS demande l'accès Accessibilité pour node :\n` +
@@ -267,10 +215,8 @@ async function install() {
     );
   }
   const page = `http://127.0.0.1:${port}/`;
-  addShortcuts(page);
   await sh(isMac ? "open" : "explorer.exe", [page]);
   console.log(`\nPage d'aide (adresse, code d'appairage, agenda) : ${page}`);
-  console.log(`Pour la rouvrir : raccourci « ${SHORTCUT} » sur le Bureau${isWindows ? " et dans le menu Démarrer" : ""}.`);
 }
 
 async function uninstall() {
@@ -281,7 +227,6 @@ async function uninstall() {
     await winStop();
     await sh("reg", ["delete", RUN_KEY, "/v", RUN_VALUE, "/f"]);
   }
-  if (!headless) for (const file of shortcutFiles()) fs.rmSync(file, { force: true });
   console.log("Lancement automatique retiré.");
 }
 

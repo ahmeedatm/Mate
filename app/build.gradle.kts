@@ -10,9 +10,6 @@ val backendUrl = (findProperty("backendUrl") as String?) ?: "http://127.0.0.1:30
 // Code technicien (appui long sur le titre de Réglages) : montre la carte Kiosque. -PtechCode=… pour le changer.
 val techCode = (findProperty("techCode") as String?) ?: "4242"
 
-// Adresse courte du logiciel de l'ordinateur, affichée au premier lancement (à taper dans le navigateur de l'ordinateur).
-val installUrl = (findProperty("installUrl") as String?) ?: "unowhy.com/compagnon"
-
 // Serveur central des mises à jour : registre de paquets du projet GitLab (manifest.json + APK). -PupdateUrl=http://10.0.2.2:8099
 // pour un essai local, vide pour le couper.
 val updateUrl = (findProperty("updateUrl") as String?)
@@ -33,7 +30,7 @@ val appVersionCode = versionParts.let { (x, y, z, n) ->
     val tag = (x.toInt() * 10000 + y.toInt() * 100 + z.toInt()) * 1000
     (if (n.isEmpty()) tag else tag + 1 + n.toInt() % 999).coerceAtLeast(1)
 }
-// Un essai est une autre appli (com.unowhy.companion.essai, « Companion essai »), installée à côté de la stable : la
+// Un essai est une autre appli (com.unowhy.companion.essai, « UnoMate essai »), installée à côté de la stable : la
 // stable reste device owner et kiosque, et on revient à elle sans réinstaller (docs/developpement.md, section Release).
 val trial = versionParts.component4().isNotEmpty()
 
@@ -41,24 +38,33 @@ val trial = versionParts.component4().isNotEmpty()
 val releaseKeystore = providers.environmentVariable("RELEASE_KEYSTORE").orNull
 
 android {
-    namespace = "com.unowhy.companion"
+    namespace = "com.unowhy.unomate"
     compileSdk = 36
 
     defaultConfig {
+        // Identité Android d'avant le renommage UnoMate, à ne jamais changer : les tablettes en kiosque ne se mettent à
+        // jour que vers leur propre paquet (device owner, AutoUpdater). Le code, lui, est dans com.unowhy.unomate.
         applicationId = "com.unowhy.companion"
         minSdk = 24
         targetSdk = 34
         versionCode = appVersionCode
         versionName = appVersion
         if (trial) applicationIdSuffix = ".essai"
-        manifestPlaceholders["appLabel"] = if (trial) "Companion essai" else "Companion"
+        manifestPlaceholders["appLabel"] = if (trial) "UnoMate essai" else "UnoMate"
         buildConfigField("boolean", "TRIAL", "$trial")
         buildConfigField("String", "DEFAULT_BACKEND_URL", "\"$backendUrl\"")
         buildConfigField("String", "TECH_CODE", "\"$techCode\"")
-        buildConfigField("String", "INSTALL_URL", "\"$installUrl\"")
         buildConfigField("String", "UPDATE_URL", "\"$updateUrl\"")
         buildConfigField("String", "UPDATE_HEADER", "\"$updateHeader\"")
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Bibliothèques natives de Vosk (10 Mo par ABI) : la tablette (arm64-v8a), les lots 32 bits (armeabi-v7a) et
+        // l'émulateur (x86_64) ; x86, armeabi et mips n'ont pas de Vosk de toute façon.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
+    }
+
+    // Bibliothèques natives compressées dans l'APK (décompressées à l'installation) : APK de 17 Mo au lieu de 48,
+    // c'est lui que les mises à jour téléchargent.
+    packaging {
+        jniLibs.useLegacyPackaging = true
     }
 
     buildFeatures {
@@ -80,20 +86,18 @@ android {
             signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 
     // Tests JVM : android.util.Log et consorts renvoient des valeurs par défaut au lieu de lever une exception.
-    // Erreurs de lint déjà présentes figées dans lint-baseline.xml : seules les nouvelles bloquent la CI.
+    // Erreurs de lint déjà présentes figées dans lint-baseline.xml : seules les nouvelles ressortent (`./gradlew lintDebug`, hors CI).
     lint {
         baseline = file("lint-baseline.xml")
     }
 
-    // Tests instrumentés (app/src/androidTest/, émulateur API 29) : animations coupées, sinon Espresso attend les boucles.
     testOptions {
         unitTests.isReturnDefaultValues = true
-        animationsDisabled = true
     }
 
     compileOptions {
@@ -108,12 +112,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     // Ressorts (SpringAnimation) : mouvement de la DA Cadran.
     implementation("androidx.dynamicanimation:dynamicanimation:1.1.0")
+    // Mot de réveil « Mate » : reconnaissance hors ligne sur la tablette (Apache 2.0, sans clé ni compte). JNA en aar,
+    // comme la démo Android de Vosk : ses bibliothèques natives par ABI, à la version que demande vosk-android.
+    implementation("com.alphacephei:vosk-android:0.3.75")
+    implementation("net.java.dev.jna:jna:5.18.1@aar")
 
     testImplementation("junit:junit:4.13.2")
     // Vraie implémentation de org.json : celle d'android.jar n'est qu'un bouchon sur la JVM.
     testImplementation("org.json:json:20250517")
-
-    androidTestImplementation("androidx.test:runner:1.7.0")
-    androidTestImplementation("androidx.test.ext:junit:1.3.0")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 }

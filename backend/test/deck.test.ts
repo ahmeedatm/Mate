@@ -13,6 +13,8 @@ const dir = await fs.mkdtemp(path.join(os.tmpdir(), "companion-deck-"));
 process.env.DATA_DIR = dir;
 process.env.CALENDAR_ICS_URLS = "";
 process.env.CLAUDE_BIN = "/inexistant";
+process.env.GITLAB_TOKEN = "";
+process.env.ACCOUNTS_FILE = new URL("./accounts-vide.json", import.meta.url).pathname;
 const { config } = await import("../src/config.ts");
 const deck = await import("../src/deck.ts");
 const { saveKey } = await import("../src/perso.ts");
@@ -25,7 +27,8 @@ const deckConfig = JSON.parse(readFileSync(deckFile, "utf8")) as {
     apps?: boolean;
     app?: string;
     media?: boolean;
-    tiles: { label: string; action: { type: string; name?: string } }[];
+    sound?: boolean;
+    tiles: { label: string; action: { type: string; name?: string; keys?: string; steps?: { type: string; keys?: string }[] } }[];
   }[];
 };
 const baseApps = deckConfig.pages.find((p) => p.apps)!.tiles.map((t) => t.action.name!);
@@ -62,6 +65,19 @@ describe("runAction", () => {
       { fn: "systemCommand", args: ["lock"] },
       { fn: "openTarget", args: ["https://example.com"] },
     ]);
+  });
+
+  it("système : mute-mic bascule la sourdine du micro, dnd bascule Ne pas déranger", async () => {
+    reset({ dnd: false });
+    await deck.runAction({ type: "system", command: "mute-mic" });
+    await deck.runAction({ type: "system", command: "dnd" });
+    assert.deepEqual(calls, [
+      { fn: "setAudio", args: [{ micMuted: true }] },
+      { fn: "setDnd", args: [true] },
+    ]);
+    reset({ dnd: true });
+    await deck.runAction({ type: "system", command: "dnd" });
+    assert.deepEqual(calls, [{ fn: "setDnd", args: [false] }]);
   });
 
   it("enchaîne les étapes d'une macro dans l'ordre", async () => {
@@ -257,7 +273,16 @@ describe("page Média : sites", () => {
 
 describe("homeFeatures", () => {
   it("bouton Rejoindre de Teams seulement si Teams est dans la page Apps", async () => {
-    assert.deepEqual(await deck.homeFeatures(), { agenda: true, linked: false, meetings: true, teams: false, agents: false });
+    assert.deepEqual(await deck.homeFeatures(), {
+      agenda: true,
+      linked: false,
+      meetings: true,
+      teams: false,
+      agents: false,
+      gitlab: false,
+      jira: false,
+      off: [],
+    });
     await deck.addDeckApp("Microsoft Teams");
     assert.equal((await deck.homeFeatures()).teams, true);
   });
@@ -267,5 +292,97 @@ describe("homeFeatures", () => {
     assert.equal((await deck.homeFeatures()).agents, true);
     process.env.CLAUDE_BIN = "/inexistant";
     assert.equal((await deck.homeFeatures()).agents, false);
+  });
+
+  it("gitlab : jeton GITLAB_TOKEN ou appli OAuth réglée (GITLAB_CLIENT_ID), sinon non", async () => {
+    delete process.env.GITLAB_CLIENT_ID;
+    process.env.GITLAB_TOKEN = "glpat-de-test";
+    assert.equal((await deck.homeFeatures()).gitlab, true);
+    process.env.GITLAB_TOKEN = " ";
+    assert.equal((await deck.homeFeatures()).gitlab, false);
+    process.env.GITLAB_CLIENT_ID = "app-id-de-test";
+    assert.equal((await deck.homeFeatures()).gitlab, true);
+    delete process.env.GITLAB_CLIENT_ID;
+  });
+});
+
+describe("suite Microsoft dans les decks de départ", () => {
+  const OFFICE = ["Word", "Excel", "PowerPoint", "Outlook"];
+  const examples = ["deck.example.json", "deck.example.windows.json"].map((name) => ({
+    name,
+    deck: JSON.parse(readFileSync(path.join(path.dirname(config.deckExampleFile), name), "utf8")) as typeof deckConfig,
+  }));
+
+  for (const { name, deck: example } of examples) {
+    it(`${name} : une page par appli, ouverte depuis sa tuile de la page Apps, après les pages d'avant`, () => {
+      const appNames = example.pages.find((p) => p.apps)!.tiles.map((t) => t.action.name);
+      const titles = example.pages.map((p) => p.title);
+      // Ajoutées à la fin : les identifiants des tuiles déjà placées sur la tablette (`page-tuile`) ne bougent pas.
+      assert.deepEqual(titles.slice(-OFFICE.length), OFFICE);
+      for (const title of OFFICE) {
+        const page = example.pages.find((p) => p.title === title)!;
+        assert.ok(appNames.includes(page.app), `${title} : ${page.app} dans la page Apps`);
+        assert.ok(page.tiles.length > 0);
+      }
+    });
+  }
+
+  for (const { name, deck: example } of examples) {
+    it(`${name} : pas de barre Son sur les pages Office`, () => {
+      for (const title of OFFICE) {
+        const page = example.pages.find((p) => p.title === title)!;
+        assert.equal(page.sound, false, `${title} : sound`);
+      }
+    });
+
+    it(`${name} : raccourcis écrits avec des touches connues, sans doublon d'étiquette par page`, () => {
+      const modifiers = new Set(["cmd", "ctrl", "alt", "shift"]);
+      const named = new Set([
+        "return",
+        "space",
+        "delete",
+        "del",
+        "insert",
+        "home",
+        "pageup",
+        "pagedown",
+        "end",
+        "left",
+        "right",
+        "escape",
+        "f2",
+        "f5",
+        "f7",
+        "f9",
+        "f11",
+        "f12",
+      ]);
+      for (const title of OFFICE) {
+        const page = example.pages.find((p) => p.title === title)!;
+        const labels = page.tiles.map((t) => t.label);
+        assert.equal(new Set(labels).size, labels.length, `${title} : étiquettes en double`);
+        const steps = page.tiles.flatMap((t) => (t.action.type === "macro" ? t.action.steps! : [t.action]));
+        for (const step of steps.filter((s) => s.type === "keys")) {
+          const parts = step.keys!.split("+");
+          const key = parts.pop()!;
+          assert.ok(
+            parts.every((m) => modifiers.has(m)),
+            `${title} : ${step.keys}`,
+          );
+          assert.ok(key.length === 1 || named.has(key), `${title} : touche ${key} de ${step.keys}`);
+        }
+      }
+    });
+  }
+
+  it("pages ordinaires (pas seulement en appel) quand les applis sont installées", async () => {
+    reset({ installed: baseApps });
+    const pages = await deck.loadDeck();
+    for (const title of OFFICE) {
+      const page = pages.find((p) => p.title === title)!;
+      assert.equal(page.callOnly, undefined, title);
+      // `sound` de la config arrive jusqu'à la page, pour la route /deck.
+      assert.equal(page.sound, false, title);
+    }
   });
 });

@@ -16,7 +16,7 @@
         android:minHeight="40dp"
         android:orientation="horizontal">
 
-        <com.unowhy.companion.ui.TitleView
+        <com.unowhy.unomate.ui.TitleView
             style="@style/CardTitle"
             android:drawableStart="@drawable/ic_event"
             android:text="@string/today" />
@@ -37,7 +37,7 @@
         <Button
             android:id="@+id/widget_agenda_link"
             style="@style/Chip"
-            android:layout_height="36dp"
+            android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:text="@string/agenda_link"
             android:textSize="13sp" />
@@ -45,10 +45,10 @@
         <ImageButton
             android:id="@+id/widget_agenda_add"
             style="@style/IconButton.Flat"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginStart="4dp"
-            android:padding="8dp"
+            android:padding="12dp"
             android:contentDescription="@string/event_new"
             android:src="@drawable/ic_add" />
     </LinearLayout>

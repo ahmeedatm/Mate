@@ -1,18 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 256 256">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#6C5CE7"/>
-      <stop offset="1" stop-color="#1FC7A8"/>
-    </linearGradient>
-  </defs>
-  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#bg)"/>
-  <!-- bulle -->
-  <path d="M70 58 h116 a30 30 0 0 1 30 30 v62 a30 30 0 0 1 -30 30 h-74 l-34 26 l6 -26 h-14 a30 30 0 0 1 -30 -30 v-62 a30 30 0 0 1 30 -30 z" fill="#FFFFFF"/>
-  <!-- yeux -->
-  <rect x="94" y="94" width="20" height="34" rx="10" fill="#3B2F8F"/>
-  <rect x="142" y="94" width="20" height="34" rx="10" fill="#3B2F8F"/>
-  <!-- sourire -->
-  <path d="M100 146 q28 22 56 0" stroke="#3B2F8F" stroke-width="10" fill="none" stroke-linecap="round"/>
-  <!-- étincelle -->
-  <path d="M206 30 q4 18 20 22 q-16 4 -20 22 q-4 -18 -20 -22 q16 -4 20 -22 z" fill="#FFD84D"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect x="2" y="2" width="508" height="508" rx="112" fill="#CA0730"/><g transform="translate(95.12,132.98) scale(1.5544)"><rect x="47.5" y="0" width="22" height="43.5" rx="4" fill="#FFFFFF"/><rect x="137.5" y="0" width="22" height="43.5" rx="4" fill="#FFFFFF"/><path d="M9,4 L27.5,4 L27.5,36 L103.5,74.5 L179.5,36 L179.5,4 L198,4 L198,48 L103.5,96.4 L9,48 Z" transform="translate(0,68)" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round"/></g></svg>

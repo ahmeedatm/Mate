@@ -7,7 +7,9 @@
     android:orientation="vertical"
     android:padding="24dp">
 
+    <!-- En-tête : posé dans le bandeau du haut (TopHeader). -->
     <LinearLayout
+        android:id="@+id/camera_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"

@@ -1,18 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Écran Profils (HomeFragment, WidgetGrid) : barre de profil en haut (flèches, nom, pastilles), appui long sur la
+<!-- Écran Profils (HomeFragment, WidgetGrid) : le profil se choisit dans la barre fixe de gauche, appui long sur la
      grille = mode Modifier, avec sa barre. Panneau document ouvert : 2 colonnes, la page défile. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/home_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-
-    <!-- Thème Rétro seulement (sinon GONE) : tubes qui coulent sur toute la hauteur, derrière les widgets, à droite
-         (voilés derrière le héros et la ligne du jour, sans fond : FlowBandView.hidden). -->
-    <com.unowhy.companion.ui.home.FlowBandView
-        android:id="@+id/home_flow"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_gravity="end" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -57,65 +49,6 @@
                 android:text="@string/home_edit_done" />
         </LinearLayout>
 
-        <LinearLayout
-            android:id="@+id/home_profile_bar"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp">
-
-            <ImageButton
-                android:id="@+id/home_profile_prev"
-                style="@style/IconButton.Flat"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:contentDescription="@string/profile_prev"
-                android:src="@drawable/ic_chevron_left" />
-
-            <!-- Nom en haut, pastilles décoratives collées en bas ; toucher le titre ouvre la liste des profils. -->
-            <FrameLayout
-                android:id="@+id/home_profile_title"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:background="@drawable/flat_bg"
-                android:contentDescription="@string/profiles_title"
-                android:stateListAnimator="@animator/press">
-
-                <TextView
-                    android:id="@+id/home_profile_name"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="top|center_horizontal"
-                    android:layout_marginTop="4dp"
-                    android:ellipsize="end"
-                    android:fontFamily="?attr/c_font_title"
-                    android:maxLines="1"
-                    android:textColor="?attr/c_text"
-                    android:textSize="22sp" />
-
-                <!-- Une pastille par profil, sur une seule ligne. -->
-                <LinearLayout
-                    android:id="@+id/home_dots"
-                    android:layout_width="wrap_content"
-                    android:layout_height="8dp"
-                    android:layout_gravity="bottom|center_horizontal"
-                    android:layout_marginBottom="4dp"
-                    android:orientation="horizontal" />
-            </FrameLayout>
-
-            <ImageButton
-                android:id="@+id/home_profile_next"
-                style="@style/IconButton.Flat"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:contentDescription="@string/profile_next"
-                android:rotation="180"
-                android:src="@drawable/ic_chevron_left" />
-        </LinearLayout>
-
         <ScrollView
             android:id="@+id/home_scroll"
             android:layout_width="match_parent"
@@ -123,7 +56,7 @@
             android:layout_weight="1"
             android:fillViewport="true">
 
-            <com.unowhy.companion.ui.home.WidgetGrid
+            <com.unowhy.unomate.ui.home.WidgetGrid
                 android:id="@+id/home_grid"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

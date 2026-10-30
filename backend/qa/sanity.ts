@@ -8,6 +8,7 @@
  * Ce qu'il crée (tâche, rendez-vous, agenda ICS) est retiré à la fin ; un agenda déjà relié n'est pas touché.
  * Appairage sans boîte de dialogue : compagnon démarré avec COMPANION_HEADLESS=1 (instance de test) ou NO_ALERT=1.
  */
+import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
@@ -54,8 +55,11 @@ type Check = { name: string; run: () => Promise<string | void> };
 export async function runSanity(opts: { url: string; token: string; os?: Os; hookSecret?: string }): Promise<Result[]> {
   const base = opts.url.replace(/\/$/, "");
   const local = /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i.test(base);
+  // Persona annoncé comme le fait la tablette (X-Demo-Persona) : les données fictives ne servent que lui.
+  let persona: string | undefined;
   const call: Call = async (method, route, body, auth = true) => {
     const headers: Record<string, string> = {};
+    if (persona) headers["x-demo-persona"] = persona;
     if (auth) headers.authorization = `Bearer ${opts.token}`;
     if (body !== undefined) headers["content-type"] = "application/json";
     const res = await fetch(base + route, {
@@ -88,6 +92,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expectStatus(open, 200, "/health sans jeton");
         expect(open.json.service === "unowhy-companion", `service inattendu : ${open.json.service}`);
         expect(open.json.auth === false, "/health sans jeton devrait dire auth: false");
+        expect(/^(\d+\.\d+\.\d+|dev)$/.test(open.json.version ?? ""), `version du paquet inattendue : ${open.json.version}`);
         if (opts.os) expect(open.json.os === opts.os, `système annoncé « ${open.json.os} », attendu « ${opts.os} »`);
         os = open.json.os === "mac" || open.json.os === "windows" ? open.json.os : "other";
         id = open.json.id;
@@ -101,17 +106,24 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
     {
       name: "appairage par code",
       run: async () => {
-        const req = await call("POST", "/pair/request", { tablet: "Sanity CI" }, false);
+        // Comme une tablette en USB : HTTP local, donc empreinte vide dans le calcul du code (src/pairing.ts).
+        const secret = randomBytes(32).toString("base64url");
+        const commit = createHash("sha256").update(secret).digest("base64url");
+        const req = await call("POST", "/pair/request", { tablet: "Sanity CI", commit }, false);
         if (req.status === 409) throw new Skip("un autre appairage est en cours");
         expectStatus(req, 200, "/pair/request");
+        expectStatus(await call("POST", "/pair/reveal", { request: req.json.request, nonce: secret }, false), 200, "/pair/reveal");
         const status = await call("GET", "/local/status");
         expectStatus(status, 200, "/local/status");
-        const code: string | undefined = status.json.pairing?.code;
-        expect(/^\d{6}$/.test(code ?? ""), "code d'appairage absent de la page locale");
-        const ok = await call("POST", "/pair/confirm", { request: req.json.request, code }, false);
+        expect(status.json.pairing?.tablet === "Sanity CI", "la page locale n'annonce pas la tablette qui attend");
+        expect(!/\d{6}/.test(JSON.stringify(status.json.pairing)), "la page locale ne doit jamais montrer le code");
+        const n = createHash("sha256").update(`unowhy-pair-1\n\n${secret}\n${req.json.nonce}`).digest().readUInt32BE(0) % 1_000_000;
+        expectStatus(await call("POST", "/local/pair", { code: String(n).padStart(6, "0") }, false), 200, "/local/pair");
+        const ok = await call("POST", "/pair/confirm", { request: req.json.request }, false);
         expectStatus(ok, 200, "/pair/confirm");
         expect(ok.json.token === opts.token, "le jeton donné à l'appairage n'est pas celui de l'ordinateur");
         expect(ok.json.id === id, "l'appairage renvoie une autre identité que /health");
+        if (ok.json.tlsPort) expect(/^[0-9a-f]{64}$/.test(ok.json.fingerprint), "empreinte du certificat absente");
       },
     },
     {
@@ -134,6 +146,64 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const missing = shown.filter((a) => !installed.some((i) => i === a.toLowerCase() || i.includes(a.toLowerCase())));
         expect(missing.length === 0, `applis du deck absentes de l'ordinateur : ${missing.join(", ")}`);
         return `${pages.length} pages, ${shown.length} applis sur ${installed.length} installées`;
+      },
+    },
+    {
+      name: "réunion en cours (profil Réunion de la tablette)",
+      run: async () => {
+        // Deck V2 : la veille des réunions (src/meeting-watch.ts) lit les applis en appel comme /deck/live.
+        // L'ordre meeting n'est poussé que par l'ordinateur : refusé s'il vient de l'extérieur.
+        expectStatus(
+          await call("POST", "/tablet/command", { type: "meeting", state: "start", app: "Sanity" }),
+          400,
+          "ordre meeting de l'extérieur",
+        );
+        const live = await call("GET", "/deck/live");
+        // Hors Mac et Windows, le pilotage répond 501 : pas de veille des réunions.
+        if (!controlled()) {
+          expectStatus(live, 501, "/deck/live hors Mac et Windows");
+          return "pas de pilotage ici (501)";
+        }
+        expectStatus(live, 200, "/deck/live");
+        expect(Array.isArray(live.json.apps) && Array.isArray(live.json.open), "/deck/live sans listes apps et open");
+        return live.json.apps.length ? `en appel : ${live.json.apps.join(", ")}` : "aucun appel en cours";
+      },
+    },
+    {
+      name: "Ne pas déranger à la main (pastille de l'Accueil)",
+      run: async () => {
+        expectStatus(await call("PUT", "/system/dnd", { on: "oui" }), 400, "PUT /system/dnd invalide");
+        const read = await call("GET", "/system/dnd");
+        if (!controlled()) {
+          expectStatus(read, 501, "/system/dnd hors Mac et Windows");
+          return "pas de pilotage ici (501)";
+        }
+        expectStatus(read, 200, "GET /system/dnd");
+        if (typeof read.json.on !== "boolean") return "état illisible sur cet ordinateur";
+        // L'état actuel reposé tel quel : la route marche sans rien changer pour l'utilisateur.
+        const put = await call("PUT", "/system/dnd", { on: read.json.on });
+        expectStatus(put, 200, "PUT /system/dnd");
+        expect(put.json.on === read.json.on, "PUT /system/dnd n'a pas rendu l'état demandé");
+        return read.json.on ? "activé" : "désactivé";
+      },
+    },
+    {
+      name: "plugins de première utilisation",
+      run: async () => {
+        const res = await call("GET", "/plugins");
+        expectStatus(res, 200, "/plugins");
+        const plugins: { id: string; kind: string; on: boolean }[] = res.json.plugins;
+        const natives = plugins.filter((p) => p.kind === "native").map((p) => p.id);
+        // Ordinateur non pilotable : aucun plugin, et /deck/features répond 501.
+        if (!controlled()) return expect(plugins.length === 0, "plugins proposés sur un ordinateur non pilotable");
+        expect(
+          ["open", "mixer", "pad"].every((id) => natives.includes(id)),
+          `plugins intégrés manquants : ${natives.join(", ")}`,
+        );
+        const features = await call("GET", "/deck/features");
+        expect(Array.isArray(features.json.off), "/deck/features sans la liste des plugins coupés");
+        const apps = plugins.filter((p) => p.kind === "app").map((p) => p.id);
+        return `${natives.length} intégrés, applis trouvées : ${apps.join(", ") || "aucune"}`;
       },
     },
     {
@@ -160,6 +230,40 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "démo : persona posé puis rendu",
+      run: async () => {
+        const before = await call("GET", "/deck/keys/0");
+        try {
+          const set = await call("POST", "/demo/persona", { persona: "sacha" });
+          expectStatus(set, 200, "POST /demo/persona");
+          persona = "sacha";
+          expect(set.json.keys?.[0]?.id === "k-0", "touches du persona absentes de la réponse");
+          const key = await call("GET", "/deck/keys/0");
+          expect(key.json.key?.label === set.json.keys[0].label, "la touche k-0 n'est pas celle du persona");
+          const deck = await call("GET", "/deck");
+          const named = (deck.json.pages as { title: string; keyPage: number | null }[]).find((p) => p.keyPage === 0);
+          expect(named?.title === "Git", "page de touches nommée du persona absente du deck");
+          // Données fictives : GitLab, Jira et agents répondent par le persona, pas par l'ordinateur.
+          const mrs = await call("GET", "/gitlab/mrs");
+          expectStatus(mrs, 200, "GET /gitlab/mrs en démo");
+          expect(mrs.json.connected === true && mrs.json.mine?.length > 0, "MR fictives absentes en démo");
+          const issues = await call("GET", "/jira/issues");
+          expectStatus(issues, 200, "GET /jira/issues en démo");
+          expect(issues.json.columns?.length > 0, "tickets fictifs absents en démo");
+          const sessions = await call("GET", "/agents");
+          expectStatus(sessions, 200, "GET /agents en démo");
+          expect(sessions.json.sessions?.[0]?.id?.startsWith("demo-"), "sessions fictives absentes en démo");
+        } finally {
+          persona = undefined;
+          const quit = await call("DELETE", "/demo");
+          expectStatus(quit, 200, "DELETE /demo");
+          expect(quit.json.restored === true, "la démo n'a pas été rendue");
+        }
+        const after = await call("GET", "/deck/keys/0");
+        expect(JSON.stringify(after.json) === JSON.stringify(before.json), "la touche k-0 d'avant la démo n'est pas rendue");
+      },
+    },
+    {
       name: "agents Claude : hooks et état",
       run: async () => {
         const agents = await call("GET", "/agents");
@@ -169,6 +273,8 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         }
         expectStatus(agents, 200, "/agents");
         expect(Array.isArray(agents.json.sessions) && typeof agents.json.counts?.working === "number", "forme de /agents inattendue");
+        // Micro des sessions : vrai seulement avec whisper-cli sur l'ordinateur (brew install whisper-cpp).
+        expect(typeof agents.json.voice === "boolean", "`voice` absent de /agents");
         // Usage Claude (Orca ou statusline) : absent tant qu'aucune source ne l'a donné, sinon des pourcentages.
         const quota = agents.json.quota;
         const pct = (w: any) => w === null || (Number.isInteger(w?.used) && w.used >= 0 && w.used <= 100);
@@ -260,7 +366,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
     {
       name: "fenêtres ouvertes",
       run: async () => {
-        // Mac sans Accessibilité (job install-mac) : System Events demanderait une autorisation à l'écran.
+        // Mac sans Accessibilité (install-mac.sh) : System Events demanderait une autorisation à l'écran.
         if (os === "mac" && accessibility === false) throw new Skip("Accessibilité non accordée");
         const open = await call("GET", "/windows/open");
         if (!controlled()) return expectStatus(open, 501, "/windows/open");
@@ -268,6 +374,46 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expect(Array.isArray(open.json.apps) && Array.isArray(open.json.displays), "réponse sans apps ni displays");
         // Sans bureau (conteneur Windows), la liste est vide : accepté.
         return `${open.json.apps.length} applis, ${open.json.displays.length} écrans`;
+      },
+    },
+    {
+      name: "absence : état gardé (lecture seule)",
+      run: async () => {
+        // Jamais de start ni de resume ici : ils pilotent les fenêtres réelles.
+        const res = await call("GET", "/away");
+        expectStatus(res, 200, "GET /away");
+        expect(typeof res.json.saved === "boolean" && typeof res.json.count === "number", "réponse sans saved ni count");
+        return res.json.saved ? `${res.json.count} fenêtres gardées` : "rien de gardé";
+      },
+    },
+    {
+      name: "GitLab : MR (lecture seule)",
+      run: async () => {
+        const mrs = await call("GET", "/gitlab/mrs");
+        if (!controlled()) return expectStatus(mrs, 501, "/gitlab/mrs");
+        const features = await call("GET", "/deck/features");
+        expectStatus(features, 200, "/deck/features");
+        expect(typeof features.json.gitlab === "boolean", "/deck/features sans booléen gitlab");
+        // Jeton refusé ou GitLab injoignable depuis cet ordinateur : pas une panne du compagnon.
+        if (mrs.status === 502) throw new Skip(`GitLab inaccessible depuis l'ordinateur (${mrs.json?.error})`);
+        expectStatus(mrs, 200, "/gitlab/mrs");
+        expect(Array.isArray(mrs.json.mine) && Array.isArray(mrs.json.review), "forme de /gitlab/mrs inattendue");
+        // Ni compte connecté ni GITLAB_TOKEN (CI, tests) : réponse normale « pas connecté », jamais de 401. Jamais de fusion ni d'ouverture ici.
+        if (mrs.json.connected === false) return "pas connecté à GitLab";
+        expect(features.json.gitlab === true, "GitLab connecté mais gitlab absent de /deck/features");
+        return `${mrs.json.mine.length} MR à moi, ${mrs.json.review.length} à relire`;
+      },
+    },
+    {
+      name: "GitLab : pipelines (lecture seule)",
+      run: async () => {
+        const res = await call("GET", "/gitlab/pipelines");
+        if (!controlled()) return expectStatus(res, 501, "/gitlab/pipelines");
+        if (res.status === 502) throw new Skip(`GitLab inaccessible depuis l'ordinateur (${res.json?.error})`);
+        expectStatus(res, 200, "/gitlab/pipelines");
+        expect(Array.isArray(res.json.pipelines), "forme de /gitlab/pipelines inattendue");
+        if (res.json.connected === false) return "pas connecté à GitLab";
+        return `${res.json.pipelines.length} pipelines`;
       },
     },
     {
@@ -281,6 +427,14 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "présentation (action inconnue refusée)",
+      run: async () => {
+        // Jamais une vraie action : une appli de diapos ouverte sur l'ordinateur recevrait des touches.
+        // Refusée par la validation avant tout pilotage : 400 aussi sur un ordinateur non pilotable.
+        expectStatus(await call("POST", "/present/inconnue"), 400, "/present/inconnue");
+      },
+    },
+    {
       name: "garde de /docs/open (refuse un .exe)",
       run: async () => {
         const res = await call("POST", "/docs/open", { path: "sanity.exe" });
@@ -289,6 +443,15 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         // Message en français dans `message` (erreur 400 de Fastify), lu en premier par la tablette.
         const message = res.json.message ?? res.json.error;
         expect(/programme ou un script/.test(message ?? ""), `refus inattendu : ${message}`);
+      },
+    },
+    {
+      name: "cadre photo : liste du dossier",
+      run: async () => {
+        const res = await call("GET", "/frame");
+        expectStatus(res, 200, "GET /frame");
+        expect(Array.isArray(res.json.photos), "réponse sans photos");
+        return `${res.json.photos.length} photos`;
       },
     },
     {
@@ -309,6 +472,25 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         } finally {
           await call("DELETE", `/tasks/${taskId}`);
         }
+      },
+    },
+    {
+      name: "Jira : tickets",
+      run: async () => {
+        // Lecture seule : jamais de transition, ce sont les vrais tickets de l'utilisateur.
+        // Hors Mac et Windows, /deck/features répond 501 : on ne sait plus si Jira est configuré.
+        const features = await call("GET", "/deck/features");
+        const configured = features.status === 200 ? features.json.jira : undefined;
+        const issues = await call("GET", "/jira/issues");
+        if (configured === false || (configured === undefined && issues.status === 501)) {
+          return expectStatus(issues, 501, "/jira/issues sans Jira configuré");
+        }
+        expectStatus(issues, 200, "/jira/issues");
+        expect(Array.isArray(issues.json.columns), "forme de /jira/issues inattendue");
+        expect(typeof issues.json.boardsChosen === "boolean", "boardsChosen absent de /jira/issues");
+        const boards = await call("GET", "/jira/boards");
+        expectStatus(boards, 200, "/jira/boards");
+        expect(Array.isArray(boards.json.boards) && Array.isArray(boards.json.selected), "forme de /jira/boards inattendue");
       },
     },
     {
@@ -354,6 +536,35 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "essai du backend",
+      run: async () => {
+        const state = await call("GET", "/companion/backend");
+        expectStatus(state, 200, "/companion/backend");
+        expect(state.json.mode === "origin" && typeof state.json.packaged === "boolean", `état inattendu : ${JSON.stringify(state.json)}`);
+        // Rien à restaurer : ni changement, ni redémarrage.
+        const origin = await call("POST", "/companion/backend/origin", {});
+        expectStatus(origin, 200, "/companion/backend/origin");
+        expect(origin.json.changed === false, "le compagnon dit avoir restauré un backend");
+      },
+    },
+    {
+      name: "mise à jour du backend depuis la tablette",
+      run: async () => {
+        const health = await call("GET", "/health");
+        const packaged = (await call("GET", "/companion/backend")).json.packaged;
+        expect(health.json.backendUpdate === packaged, `backendUpdate ${health.json.backendUpdate}, paquet ${packaged}`);
+        // Version 0.0.0 : jamais plus récente, refusée avant de lire l'archive (ou lancé depuis le dépôt), rien n'est posé.
+        const res = await fetch(`${base}/companion/backend/update?version=0.0.0&sha256=${"0".repeat(64)}`, {
+          method: "POST",
+          headers: { "content-type": "application/gzip", authorization: `Bearer ${opts.token}` },
+          body: "x",
+          signal: AbortSignal.timeout(45_000),
+        });
+        expect(res.status === 409, `mise à jour en 0.0.0 : HTTP ${res.status}, 409 attendu`);
+        return packaged ? "installé par paquet" : "lancé depuis le dépôt";
+      },
+    },
+    {
       name: "visualiseur /camera",
       run: async () => {
         const page = await call("GET", "/camera");
@@ -368,10 +579,58 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       run: async () => {
         const page = await call("GET", "/", undefined, local ? false : true);
         expectStatus(page, 200, "/");
-        expect(/<title>Compagnon Unowhy<\/title>/.test(page.json), "page locale inattendue");
+        expect(/<title>UnoMate<\/title>/.test(page.json), "page locale inattendue");
         const status = await call("GET", "/local/status");
         expectStatus(status, 200, "/local/status");
         expect(Array.isArray(status.json.addresses) && status.json.addresses.length > 0, "aucune adresse affichée");
+        expect("tabletInfo" in status.json, "état de la tablette absent de /local/status");
+        // Réglage vide : refusé avant d'atteindre une tablette peut-être réelle.
+        expectStatus(await call("PUT", "/local/tablet/settings", {}), 400, "PUT /local/tablet/settings vide");
+        expectStatus(await call("POST", "/local/tablet/update", { action: "rollback" }), 400, "POST /local/tablet/update inconnue");
+      },
+    },
+    {
+      name: "porte MCP (IA de bureau, lecture seule)",
+      run: async () => {
+        if (!local) throw new Skip("porte MCP en local seulement");
+        const res = await fetch(base + "/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+          signal: AbortSignal.timeout(15_000),
+        });
+        expect(res.status === 200, `POST /mcp : ${res.status} au lieu de 200`);
+        const names = ((await res.json()).result?.tools ?? []).map((t: { name: string }) => t.name);
+        for (const name of ["tablette_regler", "profils_ecrire", "deck_touche_affecter"])
+          expect(names.includes(name), `outil ${name} absent`);
+        const status = await call("GET", "/local/status");
+        expect(status.json.mcp?.url === base + "/mcp", "adresse de la porte MCP absente de /local/status");
+        return `${names.length} outils`;
+      },
+    },
+    {
+      name: "politique de confidentialité",
+      run: async () => {
+        const res = await call("GET", "/local/confidentialite", undefined, local ? false : true);
+        expectStatus(res, 200, "/local/confidentialite");
+        expect(String(res.json).startsWith("UnoMate : politique de confidentialité"), "politique de confidentialité inattendue");
+      },
+    },
+    {
+      name: "mentions de licences",
+      run: async () => {
+        // Compagnon installé : LICENCES-TIERS.txt joint par scripts/package.ts ; lancé depuis le dépôt, pas de fichier.
+        const status = await call("GET", "/local/status");
+        const res = await call("GET", "/local/licences", undefined, local ? false : true);
+        if (!status.json.licences) {
+          expectStatus(res, 404, "/local/licences sans fichier");
+          throw new Skip("compagnon lancé depuis le dépôt : licences jointes à l'appli portable seulement");
+        }
+        expectStatus(res, 200, "/local/licences");
+        const text = String(res.json);
+        expect(text.startsWith("UnoMate : composants tiers et licences"), "fichier de licences inattendu");
+        expect(/^- Node\.js v/m.test(text) && /^- fastify /m.test(text), "node ou fastify absents des licences");
+        return `${text.split("\n").filter((l) => /^- /.test(l)).length} lignes de composants`;
       },
     },
   ];

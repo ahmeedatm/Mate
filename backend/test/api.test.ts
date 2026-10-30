@@ -1,13 +1,12 @@
 import assert from "node:assert/strict";
-import { execFile, execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
-import { promisify } from "node:util";
-import { startServer, TOKEN, type TestServer } from "./server.ts";
+import { pairingCode, startServer, TOKEN, type TestServer } from "./server.ts";
 
 let server: TestServer;
 before(async () => {
@@ -24,6 +23,7 @@ describe("santé et jeton", () => {
     assert.equal(json.ok, true);
     assert.equal(json.name, "Ordi de test");
     assert.equal(json.auth, false);
+    assert.equal(json.version, "dev");
   });
 
   it("/health signale un jeton valide", async () => {
@@ -50,31 +50,36 @@ describe("santé et jeton", () => {
 });
 
 describe("appairage", () => {
-  it("donne le jeton contre le code affiché sur la page locale", async () => {
-    const req = await server.call("POST", "/pair/request", { tablet: "Tablette CI" }, false);
+  it("en local (USB) : code affiché par la tablette, saisi sur la page locale, puis jeton et empreinte", async () => {
+    const tablet = randomBytes(32).toString("base64url");
+    const commit = createHash("sha256").update(tablet).digest("base64url");
+    const req = await server.call("POST", "/pair/request", { tablet: "Tablette CI", commit }, false);
     assert.equal(req.status, 200);
+    assert.equal((await server.call("POST", "/pair/reveal", { request: req.json.request, nonce: tablet }, false)).status, 200);
     const local = await server.call("GET", "/local/status", undefined, false);
-    assert.equal(local.status, 200);
-    assert.equal(local.json.pairing.tablet, "Tablette CI");
-    const code: string = local.json.pairing.code;
-    assert.match(code, /^\d{6}$/);
+    const { tablet: waiting, remainingS, ttlS } = local.json.pairing;
+    assert.equal(waiting, "Tablette CI");
+    assert.equal(ttlS, 120);
+    assert.ok(remainingS > 0 && remainingS <= 120);
 
+    // En HTTP local, pas de certificat : l'empreinte du calcul est vide.
+    const code = pairingCode("", tablet, req.json.nonce);
+    assert.deepEqual((await server.call("POST", "/pair/confirm", { request: req.json.request }, false)).json, { waiting: true });
     const wrong = String((Number(code) + 1) % 1_000_000).padStart(6, "0");
-    const bad = await server.call("POST", "/pair/confirm", { request: req.json.request, code: wrong }, false);
-    assert.equal(bad.status, 403);
+    assert.equal((await server.call("POST", "/local/pair", { code: wrong }, false)).status, 403);
+    assert.equal((await server.call("POST", "/local/pair", { code: `${code.slice(0, 3)} ${code.slice(3)}` }, false)).status, 200);
 
-    const ok = await server.call(
-      "POST",
-      "/pair/confirm",
-      { request: req.json.request, code: `${code.slice(0, 3)} ${code.slice(3)}` },
-      false,
-    );
+    const ok = await server.call("POST", "/pair/confirm", { request: req.json.request }, false);
     assert.equal(ok.status, 200);
     assert.equal(ok.json.token, TOKEN);
     assert.equal(ok.json.name, "Ordi de test");
+    assert.equal(ok.json.tlsPort, null);
+    assert.equal((await server.call("POST", "/pair/confirm", { request: req.json.request }, false)).status, 410);
+  });
 
-    const again = await server.call("POST", "/pair/confirm", { request: req.json.request, code }, false);
-    assert.equal(again.status, 410);
+  it("refuse un engagement mal formé et un ancien appairage par code", async () => {
+    assert.equal((await server.call("POST", "/pair/request", { tablet: "Ancienne appli" }, false)).status, 400);
+    assert.equal((await server.call("POST", "/pair/request", { tablet: "x", commit: "court" }, false)).status, 400);
   });
 });
 
@@ -155,6 +160,16 @@ describe("canal tablette", () => {
     assert.equal(sent.json.received, true);
   });
 
+  it("refuse les anciens bruits d'ambiance (brun, rose, blanc)", async () => {
+    const old = await server.call("POST", "/tablet/command", { type: "noise", kind: "brown" });
+    assert.equal(old.status, 400);
+  });
+
+  it("refuse l'ordre meeting venu de l'extérieur : seul l'ordinateur le pousse", async () => {
+    const { status } = await server.call("POST", "/tablet/command", { type: "meeting", state: "start", app: "Microsoft Teams" });
+    assert.equal(status, 400);
+  });
+
   it("refuse un ordre sans son champ requis", async () => {
     const { status, json } = await server.call("POST", "/tablet/command", { type: "noise" });
     assert.equal(status, 400);
@@ -167,6 +182,15 @@ describe("pages locales", () => {
     const { status, json } = await server.call("GET", "/", undefined, false);
     assert.equal(status, 200);
     assert.match(json, /<html/i);
+  });
+
+  it("sert les polices Outfit des pages sans jeton, et rien d'autre", async () => {
+    const font = await fetch(`${server.url}/web/outfit-400.ttf`);
+    assert.equal(font.status, 200);
+    assert.equal(font.headers.get("content-type"), "font/ttf");
+    assert.ok((await font.arrayBuffer()).byteLength > 10_000);
+    assert.equal((await fetch(`${server.url}/web/outfit-900.ttf`)).status, 401);
+    assert.equal((await server.call("GET", "/web/..%2Fconfig.ts")).status, 404);
   });
 
   it("refuse la page locale demandée sous un autre nom d'hôte (DNS rebinding)", async () => {
@@ -191,10 +215,7 @@ describe("mises à jour de la tablette", () => {
     const file = `companion-${version}.apk`;
     fs.writeFileSync(path.join(dir, file), `apk ${version}`);
     const entry = path.join(dir, `companion-${version}.json`);
-    fs.writeFileSync(
-      entry,
-      JSON.stringify({ package: "com.unowhy.companion", label: "Companion", versionCode, versionName: version, file }),
-    );
+    fs.writeFileSync(entry, JSON.stringify({ package: "com.unowhy.companion", label: "UnoMate", versionCode, versionName: version, file }));
     execFileSync(process.execPath, ["--import", "tsx", "scripts/updates.ts", "add", entry], {
       cwd: path.resolve(import.meta.dirname, ".."),
       env: { ...process.env, DATA_DIR: server.dataDir },
@@ -231,68 +252,36 @@ describe("mises à jour de la tablette", () => {
     assert.equal(await res.text(), "apk 1.2.4");
   });
 
-  it("updates:essai dépose l'essai du registre à côté de la stable, et refuse un APK abîmé, un jeton absent ou le paquet de la stable", async () => {
-    // Faux paquet générique companion-updates/essai : manifest.json + APK, lus avec le jeton personnel.
-    const apk = "apk essai";
-    const update = {
-      package: "com.unowhy.companion.essai",
-      label: "Companion essai",
-      versionCode: 2170,
-      versionName: "0.0.2-essai.169",
-      file: "companion-0.0.2-essai.169.apk",
-      size: apk.length,
-      sha256: createHash("sha256").update(apk).digest("hex"),
-    };
-    let served = apk;
-    let announced = update;
-    const registry = http.createServer((req, res) => {
-      if (req.headers["private-token"] !== "jeton") return res.writeHead(401).end();
-      if (req.url === "/essai/manifest.json") return res.end(JSON.stringify({ updates: [announced] }));
-      if (req.url === `/essai/${update.file}`) return res.end(served);
-      res.writeHead(404).end();
-    });
-    await new Promise<void>((resolve) => registry.listen(0, "127.0.0.1", resolve));
-    const { port } = registry.address() as { port: number };
-    const run = (env: Record<string, string>) =>
-      promisify(execFile)(process.execPath, ["--import", "tsx", "scripts/updates.ts", "essai"], {
+  it("annonce l'archive du backend ajoutée, une par plateforme, et la sert", async () => {
+    const add = (file: string) => {
+      const archive = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "companion-backend-")), file);
+      fs.writeFileSync(archive, `archive ${file}`);
+      execFileSync(process.execPath, ["--import", "tsx", "scripts/updates.ts", "add", archive], {
         cwd: path.resolve(import.meta.dirname, ".."),
-        env: {
-          ...process.env,
-          DATA_DIR: server.dataDir,
-          UPDATES_URL: `http://127.0.0.1:${port}/essai`,
-          GITLAB_TOKEN: "",
-          UPDATE_DEPLOY_TOKEN: "",
-          ...env,
-        },
+        env: { ...process.env, DATA_DIR: server.dataDir },
       });
-    const announcedOf = async (pkg: string) => (await server.call("GET", "/updates")).json.updates.find((u: any) => u.package === pkg);
-    const companion = () => announcedOf("com.unowhy.companion.essai");
-    const stable = await announcedOf("com.unowhy.companion");
-    try {
-      await assert.rejects(run({}), /Jeton absent/);
-      await assert.rejects(run({ GITLAB_TOKEN: "faux" }), /jeton refusé/);
-      served = "apk abîmé";
-      await assert.rejects(run({ GITLAB_TOKEN: "jeton" }), /SHA-256/);
-      assert.equal(await companion(), undefined, "rien n'est changé");
+    };
+    add("backend-1.2.3-mac.tar.gz");
+    add("backend-1.2.4-mac.tar.gz");
+    add("backend-1.2.4-windows.tar.gz");
 
-      // Ancien essai au paquet de la stable : il la remplacerait sur la tablette, sans retour possible.
-      served = apk;
-      announced = { ...update, package: "com.unowhy.companion" };
-      await assert.rejects(run({ GITLAB_TOKEN: "jeton" }), /com\.unowhy\.companion\.essai/);
-      assert.deepEqual(await announcedOf("com.unowhy.companion"), stable, "stable intacte");
-
-      announced = update;
-      await run({ GITLAB_TOKEN: "jeton" });
-      assert.deepEqual(await announcedOf("com.unowhy.companion"), stable, "stable annoncée à côté de l'essai");
-      const added = await companion();
-      assert.equal(added.versionCode, 2170);
-      assert.equal(added.versionName, "0.0.2-essai.169");
-      assert.equal(added.sha256, update.sha256);
-      const res = await fetch(`${server.url}/updates/file/${update.file}`, { headers: { authorization: `Bearer ${TOKEN}` } });
-      assert.equal(await res.text(), apk);
-    } finally {
-      registry.close();
-    }
+    const { json } = await server.call("GET", "/updates");
+    assert.equal(json.updates.length, 2, "les APK restent");
+    assert.deepEqual(
+      json.backends.map((b: any) => [b.os, b.file, b.version, b.sha256]),
+      [
+        ["mac", "backend-1.2.4-mac.tar.gz", "1.2.4", createHash("sha256").update("archive backend-1.2.4-mac.tar.gz").digest("hex")],
+        [
+          "windows",
+          "backend-1.2.4-windows.tar.gz",
+          "1.2.4",
+          createHash("sha256").update("archive backend-1.2.4-windows.tar.gz").digest("hex"),
+        ],
+      ],
+    );
+    assert.equal(fs.existsSync(path.join(server.dataDir, "updates", "backend-1.2.3-mac.tar.gz")), false, "ancienne archive retirée");
+    const res = await fetch(`${server.url}/updates/file/backend-1.2.4-mac.tar.gz`, { headers: { authorization: `Bearer ${TOKEN}` } });
+    assert.equal(await res.text(), "archive backend-1.2.4-mac.tar.gz");
   });
 });
 

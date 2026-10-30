@@ -2,6 +2,7 @@
  * Backend de démonstration pour les captures des widgets du Deck sur émulateur : données réalistes sur le faux pilotage
  * (test/fake-os.ts), jeton connu (`jeton-de-test`), données dans un dossier temporaire supprimé à l'arrêt.
  * DEMO_PORT (3920) : le backend. L'émulateur le joint par 10.0.2.2:<port>.
+ * DEMO_ID : identité à reprendre (émulateur déjà appairé à un backend de démo).
  * DEMO_OS (mac) : les agents Claude n'existent que sur Mac (/agents répond 501 ailleurs) ; `windows` pour le reste du Deck seul.
  * DEMO_DECK (deck.example.windows.json) : le deck de config/ ; `deck.example.json` (celui du Mac) a les touches « Rejoindre maintenant »
  * (`lobby`) et Caméra de Teams, que celui de Windows n'a pas.
@@ -61,6 +62,11 @@ const openApps: OpenApp[] = [
 const claudeStub = path.join(dataDir, "claude-factice.sh");
 fs.writeFileSync(claudeStub, "#!/bin/sh\nexit 1\n", { mode: 0o755 });
 
+// DEMO_ID : identité d'un backend de démo déjà appairé à l'émulateur, pour qu'il le retrouve sans réappairage.
+if (process.env.DEMO_ID) {
+  fs.writeFileSync(path.join(dataDir, "identity.json"), JSON.stringify({ id: process.env.DEMO_ID, token: TOKEN }));
+}
+
 const server = await startServer({
   os: demoOs,
   port: PORT,
@@ -70,7 +76,7 @@ const server = await startServer({
 
 server.setOs({
   installed: ["Discord", "Microsoft Teams", "Spotify", "Google Chrome", "Visual Studio Code", "Notepad"],
-  running: ["Discord", "Microsoft Teams", "Spotify", "Google Chrome", "Visual Studio Code"],
+  running: ["Discord", "Microsoft Teams", "Spotify", "Google Chrome", "Visual Studio Code", "Microsoft PowerPoint"],
   inCall: ["Discord"],
   mixer: {
     master: channel("master", "Sortie", 65, 40),
@@ -88,7 +94,7 @@ server.setOs({
       connected: true,
       streaming: false,
       channel: "Salon vocal",
-      people: ["Léa", "Karim", "Moi"],
+      people: ["Léa", "Malo", "Moi"],
       muted: true,
       deafened: false,
       mic: "Micro coupé",

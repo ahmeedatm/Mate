@@ -14,10 +14,10 @@ export const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.u
 export const packaged = import.meta.url.endsWith(".mjs");
 
 /** Données du paquet hors du dossier extrait : une nouvelle version (autre dossier) les retrouve. */
-function appDataDir() {
+function appDataDir(name = "UnoMate") {
   return process.platform === "win32"
-    ? path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), "AppData", "Local"), "UnowhyCompanion", "data")
-    : path.join(os.homedir(), "Library", "Application Support", "UnowhyCompanion");
+    ? path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), "AppData", "Local"), name, "data")
+    : path.join(os.homedir(), "Library", "Application Support", name);
 }
 
 // DATA_DIR : autre dossier de données (tests : deux « ordinateurs » sur la même machine) ; « paquet » = celles du
@@ -26,14 +26,26 @@ const envDataDir = process.env.DATA_DIR === "paquet" ? appDataDir() : process.en
 export const dataDir = path.resolve(envDataDir || (packaged ? appDataDir() : path.join(backendRoot, ".data")));
 
 /**
- * Paquet installé avant les données hors du dossier (.data à côté du serveur) : on les recopie une fois,
- * sinon la tablette verrait un nouvel ordinateur. Le .data d'origine reste en place.
+ * Données d'un paquet d'avant, recopiées une fois, sinon la tablette verrait un nouvel ordinateur (autre identité,
+ * appairage perdu) et l'agenda, les tâches, les touches et les connexions seraient perdus : dossier d'avant le
+ * renommage UnoMate (« UnowhyCompanion », 29/10/2026, mis à jour en place par la tablette), puis .data à côté du
+ * serveur (paquet d'avant les données hors du dossier). Les originaux restent en place. Aussi pour le serveur MCP
+ * lancé depuis le dépôt sur les données du paquet (`.mcp.json`).
  */
 export function adoptOldData() {
-  const old = path.join(backendRoot, ".data");
-  if (!packaged || process.env.DATA_DIR || old === dataDir) return;
-  if (fs.existsSync(path.join(dataDir, "identity.json")) || !fs.existsSync(path.join(old, "identity.json"))) return;
-  fs.cpSync(old, dataDir, { recursive: true, filter: (src) => path.basename(src) !== "service.pid" });
+  // Données du paquet seulement : le paquet lui-même, ou le serveur MCP du dépôt branché dessus (DATA_DIR=paquet), qui
+  // sinon y créerait une identité neuve avant que le compagnon ne reprenne la sienne.
+  if (process.env.DATA_DIR ? process.env.DATA_DIR !== "paquet" : !packaged) return;
+  const olds = [appDataDir("UnowhyCompanion"), ...(packaged ? [path.join(backendRoot, ".data")] : [])];
+  for (const old of olds) if (adoptData(old, dataDir)) return;
+}
+
+/** Recopie `from` dans `to` si `to` n'a pas encore d'identité et que `from` en a une ; vrai si recopié. */
+export function adoptData(from: string, to: string): boolean {
+  if (path.resolve(from) === path.resolve(to)) return false;
+  if (fs.existsSync(path.join(to, "identity.json")) || !fs.existsSync(path.join(from, "identity.json"))) return false;
+  fs.cpSync(from, to, { recursive: true, filter: (src) => path.basename(src) !== "service.pid" });
+  return true;
 }
 
 /**
@@ -59,7 +71,7 @@ export function userFolder(kind: "Personal" | "Desktop" | "Programs", fallback: 
 
 /**
  * Dossier partagé avec la tablette : dans Documents pour le paquet (gardé d'une version à l'autre), à la racine du dépôt en dev.
- * Pas « Compagnon Unowhy » : c'est le nom du dossier du zip, souvent extrait dans Documents.
+ * Pas « UnoMate » : c'est le nom du dossier du zip, souvent extrait dans Documents.
  */
 export function sharedDir(): string {
   const old = path.resolve(backendRoot, "..", "shared");

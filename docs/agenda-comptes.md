@@ -15,7 +15,7 @@ jetons de renouvellement dans `backend/.data/accounts.json` (sur l'ordinateur, j
 
 1. Ouvrir **https://portal.azure.com** › rechercher **Inscriptions d'applications** (*App registrations*) › **Nouvelle inscription**.
 2. Remplir :
-   - **Nom** : `Unowhy Companion`
+   - **Nom** : `UnoMate`
    - **Types de comptes pris en charge** : *Comptes dans un annuaire organisationnel (tout locataire Microsoft Entra ID)
      et comptes Microsoft personnels* (Microsoft 365 de n'importe quelle entreprise + Outlook.com).
    - **URI de redirection** : plateforme **Client public/natif (mobile et bureau)**, adresse exacte :
@@ -41,7 +41,7 @@ Si ça bloque :
 
 ## Google (Google Agenda) : facultatif, environ 15 minutes
 
-1. **https://console.cloud.google.com** › nouveau projet `Unowhy Companion`.
+1. **https://console.cloud.google.com** › nouveau projet `UnoMate`.
 2. **API et services** › **Bibliothèque** › activer **Google Calendar API**.
 3. **Écran de consentement OAuth** : type **Externe**, nom de l'appli, e-mail ; champ d'application
    `.../auth/calendar.readonly` ; tant que l'appli est « En test », ajouter les comptes autorisés dans **Utilisateurs test**

@@ -8,6 +8,13 @@ description: Pose l'appli d'une MR sur la tablette branchée en adb, tout en loc
 Plus rapide que l'essai de `/ship` (étape 6) : pas de branche `essai/*`, pas de pipeline, pas d'annonce par Mises à
 jour. Même résultat sur la tablette : l'essai, signé comme la stable, reprend ses ordinateurs.
 
+## Une seule fois par session
+
+La première demande de la session se lance sans demander. Ensuite, après une correction ou un nouveau commit, ne
+pas reposer l'essai de soi-même : demander d'abord (`AskUserQuestion`, « Reposer l'essai de la MR !<iid> sur la
+tablette ? », oui en premier choix). Seule exception : l'utilisateur redemande lui-même l'essai dans son message.
+Un essai déjà posé sert peut-être à un test en cours sur la tablette ; le remplacer sans prévenir le coupe.
+
 ## Lancer
 
 En arrière-plan (`run_in_background: true`, 3 à 6 min) :
@@ -16,7 +23,7 @@ En arrière-plan (`run_in_background: true`, 3 à 6 min) :
 @REPO@/.claude/skills/essai-local/essai-local.sh <iid>
 ```
 
-- Avec `<iid>` : tête de la MR (`refs/merge-requests/<iid>/head`, marche aussi pour une MR d'Eliot), construite dans
+- Avec `<iid>` : tête de la MR (`refs/merge-requests/<iid>/head`, marche aussi pour une MR d'un collègue), construite dans
   le worktree détaché `~/orca/workspaces/unowhy-companion/essai-mr`, réutilisé d'une fois à l'autre.
 - Sans argument, lancé depuis un worktree : ce worktree tel quel, modifs non commitées comprises.
 - Plusieurs tablettes : `ANDROID_SERIAL=<série>`. Les émulateurs sont ignorés.

@@ -87,7 +87,7 @@ cert() { "$tools/apksigner" verify --print-certs "$1" | sed -n 's/.*SHA-256 dige
 
 "$adb" -s "$serial" install -r "$apk" >/dev/null
 "$adb" -s "$serial" shell monkey -p "$essai" -c android.intent.category.LAUNCHER 1 >/dev/null
-echo "✅ tablette $serial : Companion essai $version installé et ouvert"
+echo "✅ tablette $serial : UnoMate essai $version installé et ouvert"
 
 # 6. Compagnon du Mac sur le backend des mêmes sources.
 cd "$root/backend"

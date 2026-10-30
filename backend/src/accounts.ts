@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import path from "node:path";
-import { backendRoot, config } from "./config.ts";
+import { accountsFile, config } from "./config.ts";
 import type { CalendarEvent } from "./calendar.ts";
 import { meetingLink } from "./meeting-links.ts";
 import { readJson, updateJson } from "./store.ts";
@@ -40,7 +40,7 @@ type ClientConfig = { clientId: string; clientSecret?: string };
 
 /** Identifiants des applis enregistrées (config/accounts.json, livré avec le logiciel ; .env pour tester). */
 async function client(provider: Provider): Promise<ClientConfig | undefined> {
-  const file = await readJson<Partial<Record<Provider, ClientConfig>>>(path.join(backendRoot, "config", "accounts.json"), () => ({}), {
+  const file = await readJson<Partial<Record<Provider, ClientConfig>>>(accountsFile(), () => ({}), {
     quarantine: false,
   });
   const fromFile = file[provider];
@@ -142,7 +142,7 @@ type TokenResponse = { access_token: string; refresh_token?: string; id_token?: 
 async function tokenRequest(provider: Provider, app: ClientConfig, params: Record<string, string>): Promise<TokenResponse> {
   const body = new URLSearchParams({ client_id: app.clientId, ...params });
   if (app.clientSecret) body.set("client_secret", app.clientSecret);
-  if (provider === "microsoft") body.set("scope", PROVIDERS.microsoft.scope);
+  if (provider === "microsoft") body.set("scope", PROVIDERS[provider].scope);
   const res = await fetch(PROVIDERS[provider].tokenUrl, { method: "POST", body, signal: AbortSignal.timeout(15_000) });
   const json = (await res.json().catch(() => ({}))) as TokenResponse & { error?: string; error_description?: string };
   if (!res.ok) throw Object.assign(new Error(json.error_description || json.error || `HTTP ${res.status}`), { oauthError: json.error });
@@ -224,7 +224,7 @@ type GraphEvent = {
   bodyPreview?: string;
 };
 
-async function microsoftEvents(token: string, from: Date, to: Date): Promise<CalendarEvent[]> {
+export async function microsoftEvents(token: string, from: Date, to: Date): Promise<CalendarEvent[]> {
   const select = "iCalUId,subject,isAllDay,isCancelled,showAs,start,end,location,onlineMeeting,bodyPreview";
   let url: string | undefined =
     "https://graph.microsoft.com/v1.0/me/calendarView?" +

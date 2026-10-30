@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Boîte Perso de Focus : une durée (concentration ou pause), − / +, en ligne comme celles de la boîte Profils. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/row_bg"
+    android:gravity="center_vertical"
+    android:minHeight="72dp"
+    android:orientation="horizontal"
+    android:paddingStart="20dp"
+    android:paddingEnd="12dp">
+
+    <TextView
+        android:id="@+id/focus_stepper_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:fontFamily="?attr/c_font_medium"
+        android:textColor="?attr/c_text"
+        android:textSize="18sp" />
+
+    <ImageButton
+        android:id="@+id/focus_stepper_minus"
+        style="@style/IconButton.Flat"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:padding="12dp"
+        android:contentDescription="@string/focus_less"
+        android:src="@drawable/ic_remove" />
+
+    <TextView
+        android:id="@+id/focus_stepper_value"
+        android:layout_width="96dp"
+        android:layout_height="wrap_content"
+        android:fontFamily="?attr/c_font_medium"
+        android:gravity="center"
+        android:textColor="?attr/c_text"
+        android:textSize="22sp" />
+
+    <ImageButton
+        android:id="@+id/focus_stepper_plus"
+        style="@style/IconButton.Primary"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:padding="13dp"
+        android:contentDescription="@string/focus_more"
+        android:src="@drawable/ic_add" />
+</LinearLayout>

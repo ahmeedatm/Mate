@@ -16,7 +16,7 @@ import { backendRoot } from "../config.ts";
 const HERE = path.join(backendRoot, "src", "win");
 const EXE = "UnowhyHelper.exe";
 /** Dossier fixe des copies (pas le dossier temporaire, où un antivirus se méfie d'un programme apparu). */
-const RUN_ROOT = path.join(process.env.LOCALAPPDATA ?? os.tmpdir(), "UnowhyCompanion", "helper");
+const RUN_ROOT = path.join(process.env.LOCALAPPDATA ?? os.tmpdir(), "UnoMate", "helper");
 const STARTUP_TIMEOUT_MS = 30_000;
 const REQUEST_TIMEOUT_MS = 30_000;
 

@@ -5,6 +5,7 @@ import {
   FOCUS_ACTIONS,
   MODES,
   NOISES,
+  noteTabletAddress,
   pollCommands,
   reportState,
   sendToTablet,
@@ -18,6 +19,7 @@ export default async function tabletRoutes(app: FastifyInstance) {
     "/tablet/poll",
     { logLevel: "warn", schema: { body: { type: "object", properties: { state: { type: "object" } } } } },
     async (req, reply) => {
+      noteTabletAddress(req.ip);
       const closed = new AbortController();
       reply.raw.on("close", () => closed.abort());
       return { commands: await pollCommands(req.body.state ?? null, 25_000, closed.signal) };
@@ -124,8 +126,12 @@ export default async function tabletRoutes(app: FastifyInstance) {
         case "call":
         case "agent":
         case "notification":
-          // Envoyés seulement par la surveillance des appels (src/calls.ts), les agents Claude (src/agents.ts) et celle
-          // des notifications (src/notifications.ts).
+        case "meeting":
+        case "settings":
+        case "layout":
+        case "update":
+          // Envoyés seulement par la surveillance des appels (src/calls.ts), les agents Claude (src/agents.ts), celle
+          // des notifications (src/notifications.ts), celle des réunions (src/meeting-watch.ts) et la page locale.
           return reply.code(400).send({ error: "Ordre réservé à l'ordinateur" });
       }
       const result = await sendToTablet(command, b.type === "screenshot" ? 30_000 : 15_000);

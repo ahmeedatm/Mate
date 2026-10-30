@@ -7,16 +7,19 @@ import { readJson } from "./store.ts";
 
 /**
  * « Serveur Unowhy » de mises à jour, simulé par le backend pour la démo du hackathon : la tablette (device owner)
- * y trouve les nouvelles versions du moteur web (WebView) et du Companion, les télécharge et les installe seule,
+ * y trouve les nouvelles versions du moteur web (WebView) et du UnoMate, les télécharge et les installe seule,
  * en kiosque. En production, ce serait l'infrastructure SQOOL (MDM, OTA) d'Unowhy.
  *
  * Dossier .data/updates/ : les APK et manifest.json, écrit à la main :
  * { "updates": [{ "package": "com.google.android.webview", "label": "Navigateur web", "versionCode": 1, "versionName": "…", "file": "webview.apk" }] }
  * Empreinte SHA-256 et taille calculées ici : la tablette vérifie le fichier reçu, Android vérifie la signature.
+ * Clé `backends` (npm run updates:add -- backend-X.Y.Z-mac.tar.gz) : archives du backend d'une release, même forme que
+ * dans le manifest du serveur central ; la tablette en envoie une à l'ordinateur actif (POST /companion/backend/update).
  */
 const dir = path.join(config.dataDir, "updates");
 
 export type Update = { package: string; label: string; versionCode: number; versionName: string; file: string };
+export type Backend = { os: "mac" | "windows"; file: string; version: string };
 
 const hashes = new Map<string, { mtimeMs: number; size: number; sha256: string }>();
 
@@ -32,19 +35,33 @@ async function fingerprint(file: string) {
   return entry;
 }
 
-async function manifest(): Promise<Update[]> {
+// Nom de fichier simple seulement : pas de chemin qui sortirait du dossier.
+const plain = (file: string | undefined) => !!file && path.basename(file) === file;
+
+async function manifest(): Promise<{ updates: Update[]; backends: Backend[] }> {
   // Écrit à la main : un fichier abîmé est signalé, jamais déplacé.
-  const manifest = await readJson<{ updates?: Update[] }>(path.join(dir, "manifest.json"), () => ({}), { quarantine: false });
-  // Nom de fichier simple seulement : pas de chemin qui sortirait du dossier.
-  return (manifest.updates ?? []).filter((u) => u.file && path.basename(u.file) === u.file);
+  const manifest = await readJson<{ updates?: Update[]; backends?: Backend[] }>(path.join(dir, "manifest.json"), () => ({}), {
+    quarantine: false,
+  });
+  return {
+    updates: (manifest.updates ?? []).filter((u) => plain(u.file)),
+    backends: (manifest.backends ?? []).filter((b) => plain(b.file) && (b.os === "mac" || b.os === "windows")),
+  };
 }
+
+const withFingerprint = <T extends { file: string }>(entries: T[]) =>
+  Promise.all(entries.map(async (e) => ({ ...e, ...(await fingerprint(e.file).then(({ size, sha256 }) => ({ size, sha256 }))) })));
 
 export async function listUpdates() {
-  const updates = await manifest();
-  return Promise.all(updates.map(async (u) => ({ ...u, ...(await fingerprint(u.file).then(({ size, sha256 }) => ({ size, sha256 }))) })));
+  return withFingerprint((await manifest()).updates);
 }
 
-/** Chemin du fichier d'une mise à jour annoncée, undefined sinon. */
+export async function listBackends() {
+  return withFingerprint((await manifest()).backends);
+}
+
+/** Chemin du fichier d'une mise à jour ou d'une archive annoncée, undefined sinon. */
 export async function updateFile(file: string) {
-  return (await manifest()).some((u) => u.file === file) ? path.join(dir, file) : undefined;
+  const { updates, backends } = await manifest();
+  return [...updates, ...backends].some((u) => u.file === file) ? path.join(dir, file) : undefined;
 }

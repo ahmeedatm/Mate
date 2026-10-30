@@ -11,11 +11,11 @@
         { "label": "Firefox", "action": { "type": "app", "name": "Firefox" } },
         { "label": "VS Code", "action": { "type": "app", "name": "Visual Studio Code" } },
         { "label": "Discord", "action": { "type": "app", "name": "Discord" } },
-        { "label": "Steam", "action": { "type": "app", "name": "Steam" } },
         { "label": "Spotify", "action": { "type": "app", "name": "Spotify" } },
         { "label": "WhatsApp", "action": { "type": "app", "name": "WhatsApp" } },
         { "label": "Word", "action": { "type": "app", "name": "Word" } },
-        { "label": "Excel", "action": { "type": "app", "name": "Excel" } }
+        { "label": "Excel", "action": { "type": "app", "name": "Excel" } },
+        { "label": "PowerPoint", "action": { "type": "app", "name": "PowerPoint" } }
       ]
     },
     {
@@ -30,8 +30,8 @@
       "tiles": [
         { "label": "Micro Teams", "glyph": "🎤", "lit": "muted", "action": { "type": "keys", "keys": "ctrl+shift+m", "app": "Microsoft Teams" } },
         { "label": "Caméra Teams", "glyph": "📷", "action": { "type": "keys", "keys": "ctrl+shift+o", "app": "Microsoft Teams" } },
-        { "label": "Lever la main", "glyph": "✋", "action": { "type": "keys", "keys": "ctrl+shift+k", "app": "Microsoft Teams" } },
-        { "label": "Partager l'écran", "glyph": "🖥", "action": { "type": "keys", "keys": "ctrl+shift+e", "app": "Microsoft Teams" } },
+        { "label": "Lever la main", "symbol": "hand", "glyph": "✋", "action": { "type": "keys", "keys": "ctrl+shift+k", "app": "Microsoft Teams" } },
+        { "label": "Partager l'écran", "symbol": "present", "glyph": "🖥", "action": { "type": "keys", "keys": "ctrl+shift+e", "app": "Microsoft Teams" } },
         { "label": "Raccrocher", "glyph": "📞", "color": "#C62828", "action": { "type": "keys", "keys": "ctrl+shift+h", "app": "Microsoft Teams" } }
       ]
     },
@@ -40,24 +40,140 @@
       "app": "Discord",
       "tiles": [
         { "label": "Ouvrir Discord", "action": { "type": "app", "name": "Discord" } },
-        { "label": "Couper mon micro", "glyph": "🎤", "when": "call", "lit": "muted", "action": { "type": "press", "app": "Discord", "names": ["Rendre muet", "Ne plus rendre muet", "Mute", "Unmute"] } },
-        { "label": "Sourdine (casque)", "glyph": "🎧", "when": "call", "lit": "deafened", "action": { "type": "press", "app": "Discord", "names": ["Mettre en sourdine", "Ne plus mettre en sourdine", "Deafen", "Undeafen"] } },
-        { "label": "Arrêter le partage", "glyph": "🛑", "when": "streaming", "action": { "type": "press", "app": "Discord", "names": ["Arrêter de streamer", "Stop Streaming"] } },
-        { "label": "Quitter l'appel", "glyph": "📴", "when": "call", "action": { "type": "press", "app": "Discord", "names": ["Déconnecter", "Disconnect"] } }
+        { "label": "Couper mon micro", "symbol": "mic_off", "glyph": "🎤", "when": "call", "lit": "muted", "action": { "type": "press", "app": "Discord", "names": ["Rendre muet", "Ne plus rendre muet", "Mute", "Unmute"] } },
+        { "label": "Sourdine (casque)", "symbol": "volume_off", "glyph": "🎧", "when": "call", "lit": "deafened", "action": { "type": "press", "app": "Discord", "names": ["Mettre en sourdine", "Ne plus mettre en sourdine", "Deafen", "Undeafen"] } },
+        { "label": "Arrêter le partage", "symbol": "present", "glyph": "🛑", "when": "streaming", "action": { "type": "press", "app": "Discord", "names": ["Arrêter de streamer", "Stop Streaming"] } },
+        { "label": "Quitter l'appel", "symbol": "call_end", "glyph": "📴", "when": "call", "action": { "type": "press", "app": "Discord", "names": ["Déconnecter", "Disconnect"] } }
       ]
     },
     {
       "title": "Raccourcis",
       "tiles": [
-        { "label": "Capture zone", "glyph": "✂️", "action": { "type": "keys", "keys": "win+shift+s" } },
-        { "label": "Écran → presse-papiers", "glyph": "📋", "action": { "type": "system", "command": "screenshot-clipboard" } },
-        { "label": "Vue des tâches", "glyph": "🗂", "action": { "type": "keys", "keys": "win+tab" } },
+        { "label": "Capture zone", "symbol": "screenshot", "glyph": "✂️", "action": { "type": "keys", "keys": "win+shift+s" } },
+        { "label": "Écran → presse-papiers", "symbol": "clipboard", "glyph": "📋", "action": { "type": "system", "command": "screenshot-clipboard" } },
+        { "label": "Vue des tâches", "symbol": "windows", "glyph": "🗂", "action": { "type": "keys", "keys": "win+tab" } },
         { "label": "Bureau", "glyph": "🖼", "action": { "type": "keys", "keys": "win+d" } },
-        { "label": "Barre de jeu", "glyph": "🎮", "action": { "type": "keys", "keys": "win+g" } },
-        { "label": "Rechercher", "glyph": "🔍", "action": { "type": "keys", "keys": "win+s" } },
-        { "label": "Mode sombre", "glyph": "🌙", "action": { "type": "system", "command": "toggle-dark-mode" } },
-        { "label": "Veille écran", "glyph": "💤", "action": { "type": "system", "command": "sleep-display" } },
-        { "label": "Verrouiller", "glyph": "🔒", "color": "#37474F", "action": { "type": "system", "command": "lock" } }
+        { "label": "Rechercher", "symbol": "search", "glyph": "🔍", "action": { "type": "keys", "keys": "win+s" } },
+        { "label": "Mode sombre", "symbol": "dark_mode", "glyph": "🌙", "action": { "type": "system", "command": "toggle-dark-mode" } },
+        { "label": "Veille écran", "symbol": "bedtime", "glyph": "💤", "action": { "type": "system", "command": "sleep-display" } },
+        { "label": "Verrouiller", "symbol": "lock", "glyph": "🔒", "action": { "type": "system", "command": "lock" } },
+        { "label": "Couper le micro", "symbol": "mic_off", "glyph": "🎙", "action": { "type": "system", "command": "mute-mic" } },
+        { "label": "Ne pas déranger", "symbol": "dnd", "glyph": "⛔", "action": { "type": "system", "command": "dnd" } }
+      ]
+    },
+    {
+      "title": "Word",
+      "app": "Word",
+      "sound": false,
+      "tiles": [
+        { "label": "Enregistrer", "glyph": "💾", "action": { "type": "keys", "keys": "ctrl+s", "app": "Word" } },
+        { "label": "Annuler", "glyph": "↩️", "action": { "type": "keys", "keys": "ctrl+z", "app": "Word" } },
+        { "label": "Rétablir", "glyph": "↪️", "action": { "type": "keys", "keys": "ctrl+y", "app": "Word" } },
+        { "label": "Rechercher", "glyph": "🔍", "action": { "type": "keys", "keys": "ctrl+f", "app": "Word" } },
+        { "label": "Nouveau document", "glyph": "📄", "action": { "type": "keys", "keys": "ctrl+n", "app": "Word" } },
+        { "label": "Imprimer", "glyph": "🖨", "action": { "type": "keys", "keys": "ctrl+p", "app": "Word" } },
+        { "label": "Enregistrer sous", "glyph": "🗂", "action": { "type": "keys", "keys": "f12", "app": "Word" } },
+        { "label": "Copier", "glyph": "📋", "action": { "type": "keys", "keys": "ctrl+c", "app": "Word" } },
+        { "label": "Coller", "glyph": "📌", "action": { "type": "keys", "keys": "ctrl+v", "app": "Word" } },
+        { "label": "Couper", "glyph": "✂️", "action": { "type": "keys", "keys": "ctrl+x", "app": "Word" } },
+        { "label": "Coller sans mise en forme", "glyph": "🧹", "action": { "type": "keys", "keys": "ctrl+shift+v", "app": "Word" } },
+        { "label": "Tout sélectionner", "glyph": "🔲", "action": { "type": "keys", "keys": "ctrl+a", "app": "Word" } },
+        { "label": "Italique", "glyph": "🇮", "action": { "type": "keys", "keys": "ctrl+i", "app": "Word" } },
+        { "label": "Souligné", "glyph": "🇺", "action": { "type": "keys", "keys": "ctrl+u", "app": "Word" } },
+        { "label": "Centrer", "glyph": "⏺", "action": { "type": "keys", "keys": "ctrl+e", "app": "Word" } },
+        { "label": "Justifier", "glyph": "☰", "action": { "type": "keys", "keys": "ctrl+j", "app": "Word" } },
+        { "label": "Liste à puces", "glyph": "•", "action": { "type": "keys", "keys": "ctrl+shift+l", "app": "Word" } },
+        { "label": "Titre 1", "glyph": "1️⃣", "action": { "type": "keys", "keys": "ctrl+alt+1", "app": "Word" } },
+        { "label": "Titre 2", "glyph": "2️⃣", "action": { "type": "keys", "keys": "ctrl+alt+2", "app": "Word" } },
+        { "label": "Commentaire", "glyph": "💬", "action": { "type": "keys", "keys": "ctrl+alt+m", "app": "Word" } },
+        { "label": "Suivi des modifications", "glyph": "📝", "action": { "type": "keys", "keys": "ctrl+shift+e", "app": "Word" } },
+        { "label": "Remplacer", "glyph": "🔁", "action": { "type": "keys", "keys": "ctrl+h", "app": "Word" } },
+        { "label": "Orthographe", "glyph": "🔤", "action": { "type": "keys", "keys": "f7", "app": "Word" } },
+        { "label": "Saut de page", "glyph": "📄", "action": { "type": "keys", "keys": "ctrl+return", "app": "Word" } },
+        { "label": "Zoom 100 %", "glyph": "🔎", "action": { "type": "keys", "keys": "ctrl+0", "app": "Word" } }
+      ]
+    },
+    {
+      "title": "Excel",
+      "app": "Excel",
+      "sound": false,
+      "tiles": [
+        { "label": "Enregistrer", "glyph": "💾", "action": { "type": "keys", "keys": "ctrl+s", "app": "Excel" } },
+        { "label": "Annuler", "glyph": "↩️", "action": { "type": "keys", "keys": "ctrl+z", "app": "Excel" } },
+        { "label": "Rétablir", "glyph": "↪️", "action": { "type": "keys", "keys": "ctrl+y", "app": "Excel" } },
+        { "label": "Rechercher", "glyph": "🔍", "action": { "type": "keys", "keys": "ctrl+f", "app": "Excel" } },
+        { "label": "Somme auto", "glyph": "∑", "action": { "type": "keys", "keys": "alt+=", "app": "Excel" } },
+        { "label": "Feuille précédente", "glyph": "⬅️", "action": { "type": "keys", "keys": "ctrl+pageup", "app": "Excel" } },
+        { "label": "Feuille suivante", "glyph": "➡️", "action": { "type": "keys", "keys": "ctrl+pagedown", "app": "Excel" } },
+        { "label": "Enregistrer sous", "glyph": "🗂", "action": { "type": "keys", "keys": "f12", "app": "Excel" } },
+        { "label": "Copier", "glyph": "📋", "action": { "type": "keys", "keys": "ctrl+c", "app": "Excel" } },
+        { "label": "Coller", "glyph": "📌", "action": { "type": "keys", "keys": "ctrl+v", "app": "Excel" } },
+        { "label": "Couper", "glyph": "✂️", "action": { "type": "keys", "keys": "ctrl+x", "app": "Excel" } },
+        { "label": "Tout sélectionner", "glyph": "🔲", "action": { "type": "keys", "keys": "ctrl+a", "app": "Excel" } },
+        { "label": "Format de cellule", "glyph": "🔢", "action": { "type": "keys", "keys": "ctrl+1", "app": "Excel" } },
+        { "label": "Italique", "glyph": "🇮", "action": { "type": "keys", "keys": "ctrl+i", "app": "Excel" } },
+        { "label": "Souligné", "glyph": "🇺", "action": { "type": "keys", "keys": "ctrl+u", "app": "Excel" } },
+        { "label": "Remplir vers le bas", "glyph": "⬇️", "action": { "type": "keys", "keys": "ctrl+d", "app": "Excel" } },
+        { "label": "Remplir vers la droite", "glyph": "➡️", "action": { "type": "keys", "keys": "ctrl+r", "app": "Excel" } },
+        { "label": "Filtre", "glyph": "🔽", "action": { "type": "keys", "keys": "ctrl+shift+l", "app": "Excel" } },
+        { "label": "Modifier la cellule", "glyph": "✏️", "action": { "type": "keys", "keys": "f2", "app": "Excel" } },
+        { "label": "Note", "glyph": "🗒", "action": { "type": "keys", "keys": "shift+f2", "app": "Excel" } },
+        { "label": "Commentaire", "glyph": "💬", "action": { "type": "keys", "keys": "ctrl+shift+f2", "app": "Excel" } },
+        { "label": "Ligne entière", "glyph": "↔️", "action": { "type": "keys", "keys": "shift+space", "app": "Excel" } },
+        { "label": "Colonne entière", "glyph": "↕️", "action": { "type": "keys", "keys": "ctrl+space", "app": "Excel" } },
+        { "label": "Lien", "glyph": "🔗", "action": { "type": "keys", "keys": "ctrl+k", "app": "Excel" } },
+        { "label": "Nouvelle feuille", "glyph": "➕", "action": { "type": "keys", "keys": "shift+f11", "app": "Excel" } },
+        { "label": "Remplacer", "glyph": "🔁", "action": { "type": "keys", "keys": "ctrl+h", "app": "Excel" } }
+      ]
+    },
+    {
+      "title": "PowerPoint",
+      "app": "PowerPoint",
+      "sound": false,
+      "tiles": [
+        { "label": "Lancer le diaporama", "glyph": "▶️", "action": { "type": "keys", "keys": "f5", "app": "PowerPoint" } },
+        { "label": "Depuis cette diapo", "glyph": "⏯", "action": { "type": "keys", "keys": "shift+f5", "app": "PowerPoint" } },
+        { "label": "Diapo précédente", "glyph": "⬅️", "action": { "type": "keys", "keys": "left" } },
+        { "label": "Diapo suivante", "glyph": "➡️", "action": { "type": "keys", "keys": "right" } },
+        { "label": "Écran noir", "glyph": "⬛", "action": { "type": "keys", "keys": "." } },
+        { "label": "Quitter le diaporama", "glyph": "⏹", "action": { "type": "keys", "keys": "escape" } },
+        { "label": "Écran blanc", "glyph": "⬜", "action": { "type": "keys", "keys": "w" } },
+        { "label": "Pointeur laser", "glyph": "🔴", "action": { "type": "keys", "keys": "ctrl+l" } },
+        { "label": "Stylo", "glyph": "🖊", "action": { "type": "keys", "keys": "ctrl+p" } },
+        { "label": "Pointeur flèche", "glyph": "↖️", "action": { "type": "keys", "keys": "ctrl+a" } },
+        { "label": "Effacer le tracé", "glyph": "🧽", "action": { "type": "keys", "keys": "e" } },
+        { "label": "Masquer le pointeur", "glyph": "🙈", "action": { "type": "keys", "keys": "ctrl+h" } },
+        { "label": "Vue présentateur", "glyph": "🎤", "action": { "type": "keys", "keys": "alt+f5", "app": "PowerPoint" } },
+        { "label": "Première diapo", "glyph": "⏮", "action": { "type": "keys", "keys": "home" } },
+        { "label": "Dernière diapo", "glyph": "⏭", "action": { "type": "keys", "keys": "end" } },
+        { "label": "Nouvelle diapo", "glyph": "➕", "action": { "type": "keys", "keys": "ctrl+m", "app": "PowerPoint" } },
+        { "label": "Dupliquer l'objet", "glyph": "📑", "action": { "type": "keys", "keys": "ctrl+d", "app": "PowerPoint" } },
+        { "label": "Commentaire", "glyph": "💬", "action": { "type": "keys", "keys": "ctrl+alt+m", "app": "PowerPoint" } },
+        { "label": "Enregistrer", "glyph": "💾", "action": { "type": "keys", "keys": "ctrl+s", "app": "PowerPoint" } },
+        { "label": "Annuler", "glyph": "↩️", "action": { "type": "keys", "keys": "ctrl+z", "app": "PowerPoint" } },
+        { "label": "Zoom ajusté", "glyph": "🔎", "action": { "type": "keys", "keys": "ctrl+alt+o", "app": "PowerPoint" } },
+        { "label": "Grille", "glyph": "▦", "action": { "type": "keys", "keys": "shift+f9", "app": "PowerPoint" } }
+      ]
+    },
+    {
+      "title": "Outlook",
+      "app": "Outlook",
+      "sound": false,
+      "tiles": [
+        { "label": "Nouveau message", "glyph": "✉️", "action": { "type": "keys", "keys": "ctrl+n", "app": "Outlook" } },
+        { "label": "Répondre", "glyph": "↩️", "action": { "type": "keys", "keys": "ctrl+r", "app": "Outlook" } },
+        { "label": "Répondre à tous", "glyph": "⏪", "action": { "type": "keys", "keys": "ctrl+shift+r", "app": "Outlook" } },
+        { "label": "Transférer", "glyph": "↪️", "action": { "type": "keys", "keys": "ctrl+f", "app": "Outlook" } },
+        { "label": "Envoyer", "glyph": "📤", "action": { "type": "keys", "keys": "ctrl+return", "app": "Outlook" } },
+        { "label": "Courrier", "glyph": "📥", "action": { "type": "keys", "keys": "ctrl+1", "app": "Outlook" } },
+        { "label": "Calendrier", "glyph": "📅", "action": { "type": "keys", "keys": "ctrl+2", "app": "Outlook" } },
+        { "label": "Synchroniser", "glyph": "🔄", "action": { "type": "keys", "keys": "f9", "app": "Outlook" } },
+        { "label": "Marquer lu", "glyph": "👁", "action": { "type": "keys", "keys": "ctrl+q", "app": "Outlook" } },
+        { "label": "Marquer non lu", "glyph": "🔵", "action": { "type": "keys", "keys": "ctrl+u", "app": "Outlook" } },
+        { "label": "Signaler", "glyph": "🚩", "action": { "type": "keys", "keys": "insert", "app": "Outlook" } },
+        { "label": "Supprimer", "glyph": "🗑", "action": { "type": "keys", "keys": "del", "app": "Outlook" } },
+        { "label": "Rechercher", "glyph": "🔍", "action": { "type": "keys", "keys": "ctrl+e", "app": "Outlook" } },
+        { "label": "Nouveau rendez-vous", "glyph": "🗓", "action": { "type": "macro", "steps": [{ "type": "keys", "keys": "ctrl+2", "app": "Outlook" }, { "type": "wait", "ms": 600 }, { "type": "keys", "keys": "ctrl+n" }] } }
       ]
     }
   ]

@@ -19,7 +19,7 @@
         android:orientation="vertical"
         tools:ignore="NestedWeights">
 
-        <com.unowhy.companion.ui.TitleView
+        <com.unowhy.unomate.ui.TitleView
             style="@style/CardTitle"
             android:text="@string/clip_on_computer" />
 
@@ -88,7 +88,7 @@
         android:orientation="vertical"
         tools:ignore="NestedWeights">
 
-        <com.unowhy.companion.ui.TitleView
+        <com.unowhy.unomate.ui.TitleView
             style="@style/CardTitle"
             android:text="@string/clip_to_computer" />
 
@@ -139,7 +139,7 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <com.unowhy.companion.ui.TitleView
+            <com.unowhy.unomate.ui.TitleView
                 style="@style/CardTitle"
                 android:layout_width="0dp"
                 android:layout_weight="1"

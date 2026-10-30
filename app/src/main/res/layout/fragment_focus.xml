@@ -1,153 +1,210 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Une seule colonne centrée : tient aussi quand le panneau document occupe la moitié de l'écran. -->
+<!--
+    Focus : en haut, Pomodoro ou Respiration (l'un à la place de l'autre) ; en bas, l'ambiance, toujours là ; à droite,
+    l'humeur (une proposition pour chaque visage).
+    Une seule colonne centrée : tient aussi quand le panneau document occupe la moitié de l'écran.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:orientation="horizontal">
 
-    <FrameLayout
-        android:layout_width="280dp"
-        android:layout_height="280dp">
+    <LinearLayout
+        android:id="@+id/focus_column"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="16dp">
 
-        <com.unowhy.companion.ui.ProgressRing
-            android:id="@+id/focus_ring"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
+        <!-- Choix du mode (sélectionné = isSelected). -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="horizontal">
 
-            <com.unowhy.companion.ui.TitleView
-                android:id="@+id/focus_phase"
-                style="@style/CardTitle" />
-
-            <TextView
-                android:id="@+id/focus_time"
+            <Button
+                android:id="@+id/focus_mode_pomodoro"
+                style="@style/Chip"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="?attr/c_font_display"
-                android:includeFontPadding="false"
-                android:singleLine="true"
-                android:textSize="72sp" />
+                android:layout_height="48dp"
+                android:minWidth="140dp"
+                android:text="@string/focus_mode_pomodoro" />
 
-            <TextView
-                android:id="@+id/focus_count"
+            <Button
+                android:id="@+id/focus_mode_breath"
+                style="@style/Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:minWidth="140dp"
+                android:text="@string/focus_mode_breath" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <LinearLayout
+                android:id="@+id/focus_pomodoro"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <FrameLayout
+                    android:layout_width="256dp"
+                    android:layout_height="256dp">
+
+                    <com.unowhy.unomate.ui.ProgressRing
+                        android:id="@+id/focus_ring"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <com.unowhy.unomate.ui.TitleView
+                            android:id="@+id/focus_phase"
+                            style="@style/CardTitle" />
+
+                        <TextView
+                            android:id="@+id/focus_time"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="?attr/c_font_display"
+                            android:includeFontPadding="false"
+                            android:singleLine="true"
+                            android:textSize="72sp" />
+                    </LinearLayout>
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/focus_reset"
+                        style="@style/IconButton"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:padding="15dp"
+                        android:contentDescription="@string/focus_reset"
+                        android:src="@drawable/ic_replay" />
+
+                    <ImageButton
+                        android:id="@+id/focus_start"
+                        style="@style/IconButton.Primary"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:layout_marginStart="28dp"
+                        android:layout_marginEnd="28dp"
+                        android:padding="22dp"
+                        android:contentDescription="@string/focus_start"
+                        android:src="@drawable/ic_play" />
+
+                    <ImageButton
+                        android:id="@+id/focus_skip"
+                        style="@style/IconButton"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:padding="15dp"
+                        android:contentDescription="@string/focus_skip"
+                        android:src="@drawable/ic_skip" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/focus_presets"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal" />
+
+                <!-- Ne pas déranger sur l'ordinateur pendant la concentration (sélectionné = activé). -->
+                <Button
+                    android:id="@+id/focus_dnd"
+                    style="@style/Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/focus_dnd" />
+            </LinearLayout>
+
+            <include
+                android:id="@+id/focus_breathing"
+                layout="@layout/view_breathing"
+                android:visibility="gone" />
+        </FrameLayout>
+
+        <!-- Ambiance : reste à l'écran avec la respiration, pour changer de son à tout moment. Fond des widgets de
+             l'Accueil : translucide dans les thèmes à tubes, qui passent derrière. -->
+        <LinearLayout
+            style="@style/Card"
+            android:layout_width="wrap_content"
+            android:background="?attr/c_home_card_bg"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minWidth="480dp"
+            android:orientation="vertical"
+            android:paddingTop="12dp"
+            android:paddingBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.unowhy.unomate.ui.TitleView
+                    style="@style/CardTitle"
+                    android:drawableStart="@drawable/ic_wave"
+                    android:text="@string/ambiance" />
+
+                <Space
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:minWidth="16dp" />
+
+                <!-- Haut-parleur = silence (l'ambiance choisie reste sélectionnée). -->
+                <ImageButton
+                    android:id="@+id/focus_mute"
+                    style="@style/IconButton.Flat"
+                    android:contentDescription="@string/noise_mute"
+                    android:src="@drawable/ic_volume" />
+
+                <SeekBar
+                    android:id="@+id/focus_volume"
+                    style="@style/Slider"
+                    android:layout_width="180dp"
+                    android:max="100"
+                    android:progress="50" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/focus_noises"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:textColor="?attr/c_text_dim"
-                android:textSize="14sp" />
+                android:orientation="horizontal" />
         </LinearLayout>
-    </FrameLayout>
-
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <ImageButton
-            android:id="@+id/focus_reset"
-            style="@style/IconButton"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:padding="15dp"
-            android:contentDescription="@string/focus_reset"
-            android:src="@drawable/ic_replay" />
-
-        <ImageButton
-            android:id="@+id/focus_start"
-            style="@style/IconButton.Primary"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:layout_marginStart="28dp"
-            android:layout_marginEnd="28dp"
-            android:padding="22dp"
-            android:contentDescription="@string/focus_start"
-            android:src="@drawable/ic_play" />
-
-        <ImageButton
-            android:id="@+id/focus_skip"
-            style="@style/IconButton"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:padding="15dp"
-            android:contentDescription="@string/focus_skip"
-            android:src="@drawable/ic_skip" />
     </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/focus_presets"
+    <com.unowhy.unomate.ui.MoodColumn
+        android:id="@+id/focus_moods"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:orientation="horizontal" />
-
-    <!-- Ne pas déranger sur l'ordinateur pendant la concentration (sélectionné = activé). -->
-    <Button
-        android:id="@+id/focus_dnd"
-        style="@style/Chip"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="@string/focus_dnd" />
-
-    <!-- Ambiance -->
-    <LinearLayout
-        style="@style/Card"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:minWidth="480dp"
-        android:orientation="vertical"
-        android:paddingTop="12dp"
-        android:paddingBottom="16dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <com.unowhy.companion.ui.TitleView
-                style="@style/CardTitle"
-                android:drawableStart="@drawable/ic_wave"
-                android:text="@string/ambiance" />
-
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:minWidth="16dp" />
-
-            <!-- Haut-parleur = silence (l'ambiance choisie reste sélectionnée). -->
-            <ImageButton
-                android:id="@+id/focus_mute"
-                style="@style/IconButton.Flat"
-                android:contentDescription="@string/noise_mute"
-                android:src="@drawable/ic_volume" />
-
-            <SeekBar
-                android:id="@+id/focus_volume"
-                style="@style/Slider"
-                android:layout_width="180dp"
-                android:max="100"
-                android:progress="50" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/focus_noises"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:orientation="horizontal" />
-    </LinearLayout>
+        android:layout_height="match_parent"
+        android:layout_marginEnd="24dp" />
 </LinearLayout>
