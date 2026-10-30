@@ -63,6 +63,12 @@ function post(code, down, flags) {
   $.CGEventPost(0, ev);
   delay(0.01);
 }
+// Le clavier du Mac envoie les flèches avec fn et pavé numérique, les touches F avec fn : sans ces drapeaux, macOS
+// ignore ses propres raccourcis (Ctrl + flèche de Mission Control).
+function keyFlags(code) {
+  if (code >= 123 && code <= 126) return 0x800000 | 0x200000;
+  return [122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111].indexOf(code) >= 0 ? 0x800000 : 0;
+}
 function run(argv) {
   var key = argv[0];
   var code = /^#\\d+$/.test(key) ? parseInt(key.slice(1), 10) : -1;
@@ -77,8 +83,8 @@ function run(argv) {
   var mods = argv.slice(1).map(function (m) { return MODS[m]; });
   var flags = 0;
   mods.forEach(function (m) { flags |= m[1]; post(m[0], true, flags); });
-  post(code, true, flags);
-  post(code, false, flags);
+  post(code, true, flags | keyFlags(code));
+  post(code, false, flags | keyFlags(code));
   mods.reverse().forEach(function (m) { flags &= ~m[1]; post(m[0], false, flags); });
 }`;
 
