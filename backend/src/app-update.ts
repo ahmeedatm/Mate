@@ -68,7 +68,7 @@ export async function checkUpdate(current: string): Promise<{ current: string; a
 }
 
 /** Télécharge dans `file`, taille et SHA-256 vérifiés ; le fichier est supprimé s'ils ne correspondent pas. */
-async function download(url: string, file: string, expected: Installer) {
+export async function download(url: string, file: string, expected: { size: number; sha256: string }) {
   const res = await fetch(url, { signal: AbortSignal.timeout(10 * 60_000) });
   if (!res.ok || !res.body) fail(`Téléchargement impossible (HTTP ${res.status})`, 502);
   const hash = createHash("sha256");
