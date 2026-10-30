@@ -210,6 +210,8 @@ export const LIMITS = {
   description: 120,
   line: 120,
   free: 500,
+  /** Message rapide à une session : un prompt dicté d'une minute tient dedans (la route en accepte autant). */
+  message: 2000,
 };
 
 /** Texte venu de l'agent : sans caractères de contrôle, tronqué. */
@@ -952,7 +954,7 @@ export function createAgents(deps: AgentsDeps) {
     if (state === "working" || state === "waiting") throw new AnswerError("La session travaille : attends qu'elle ait fini", 409);
     const chat = chatSession(s);
     if (!s.handle && !chat) throw new AnswerError("Cette session n'est pas dans Orca : impossible de lui écrire d'ici", 409);
-    const line = cut(text.replace(/[\r\n]+/g, " "), LIMITS.free);
+    const line = cut(text.replace(/[\r\n]+/g, " "), LIMITS.message);
     if (!line) throw new AnswerError("Message vide");
     if (s.handle) await deps.sendText(s.handle, line);
     else if (chat) await deps.sendChat(chat, line);

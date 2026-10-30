@@ -285,6 +285,10 @@
     <string name="agent_voice_listening">J\'écoute… je m\'arrête quand tu te tais</string>
     <string name="agent_voice_stop">Arrêter</string>
     <string name="agent_voice_transcribing">Transcription sur l\'ordinateur…</string>
+    <string name="agent_talk_stop">Arrêter l\'écoute et envoyer</string>
+    <string name="agent_talk_sending">Envoi à Claude…</string>
+    <string name="agent_talk_listening">Parle à %1$s : j\'envoie quand tu te tais</string>
+    <string name="agent_talk_sent">%1$s : « %2$s »</string>
     <string name="agent_sent">Message envoyé à %1$s</string>
     <string name="agent_resume_at">Reprendre à %1$s</string>
     <string name="agent_resume_armed">Reprise à %1$s · annuler</string>

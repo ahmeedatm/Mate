@@ -7,9 +7,11 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.widget.ImageViewCompat
 import androidx.core.widget.TextViewCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -19,6 +21,7 @@ import com.unowhy.unomate.R
 import com.unowhy.unomate.agents.Age
 import com.unowhy.unomate.agents.AgentsFeed
 import com.unowhy.unomate.agents.Column
+import com.unowhy.unomate.agents.VoicePrompt
 import com.unowhy.unomate.agents.Waiting
 import com.unowhy.unomate.agents.age
 import com.unowhy.unomate.agents.columnCounts
@@ -254,7 +257,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         // Place comptée : l'astuce du bas n'apprend rien de neuf, les cartes passent avant.
         status.visibility = if (compact && state.sessions.isNotEmpty() && state.hooks) GONE else VISIBLE
         // Le mode privé change le rendu : il fait partie de la signature, sinon une autre vue (tableau ouvert depuis un widget) le laisse périmé.
-        val sig = listOf(Prefs.agentsPrivate(context), state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId, it.canSend, it.resumeAt, it.resumeArmed, it.canInterrupt, it.title, it.ticket, it.mr, it.monitoring) }, state.voice)
+        val sig = listOf(Prefs.agentsPrivate(context), state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId, it.canSend, it.resumeAt, it.resumeArmed, it.canInterrupt, it.title, it.ticket, it.mr, it.monitoring, VoicePrompt.phaseOf(it.id)) }, state.voice)
         if (sig != signature) {
             signature = sig
             columns.values.forEach { it.removeAllViews() }
@@ -318,34 +321,47 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private fun bindActions(row: View, s: AgentSession) {
         val box = row.findViewById<LinearLayout>(R.id.agent_actions)
         box.removeAllViews()
-        val actions = mutableListOf<Pair<String, () -> Unit>>()
-        if (s.canInterrupt) actions += context.getString(R.string.agent_interrupt) to { confirmInterrupt(s) }
+        // Icônes seules : les libellés ne tiennent pas dans une carte étroite ; le nom reste pour TalkBack.
+        if (s.canInterrupt) box.addView(action(R.drawable.ic_tile_stop, R.string.agent_interrupt) { confirmInterrupt(s) })
         if (s.canSend && (s.state == AgentState.DONE || s.state == AgentState.IDLE)) {
-            actions += context.getString(R.string.agent_continue) to { send(s, "continue") }
-            if (AgentsFeed.last?.state?.voice == true) actions += context.getString(R.string.agent_talk) to { talk(s) }
-            actions += context.getString(R.string.agent_write) to { write(s) }
+            box.addView(action(R.drawable.ic_play, R.string.agent_continue) { send(s, "continue") })
+            if (AgentsFeed.last?.state?.voice == true) box.addView(talkButton(s))
+            box.addView(action(R.drawable.ic_edit, R.string.agent_write) { write(s) })
         }
         val at = s.resumeAt
         if (s.state == AgentState.LIMIT && s.canSend && at != null) {
             val time = clock.format(Date(at))
-            actions += context.getString(if (s.resumeArmed) R.string.agent_resume_armed else R.string.agent_resume_at, time) to { resume(s, !s.resumeArmed, time) }
-        }
-        box.visibility = if (actions.isEmpty()) GONE else VISIBLE
-        for ((label, onClick) in actions) {
             box.addView(
                 Button(context, null, 0, R.style.Chip).apply {
-                    text = label
+                    text = context.getString(if (s.resumeArmed) R.string.agent_resume_armed else R.string.agent_resume_at, time)
                     setBackgroundResource(R.drawable.agent_action_bg)
-                    if (label == context.getString(R.string.agent_talk)) {
-                        setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_mic, 0, 0, 0)
-                        TextViewCompat.setCompoundDrawableTintList(this, textColors)
-                        compoundDrawablePadding = dp(6)
-                    }
-                    setOnClickListener { onClick() }
+                    setOnClickListener { resume(s, !s.resumeArmed, time) }
                 },
                 LayoutParams(LayoutParams.WRAP_CONTENT, dp(48)).apply { marginEnd = dp(8) },
             )
         }
+        box.visibility = if (box.childCount == 0) GONE else VISIBLE
+    }
+
+    private fun action(icon: Int, label: Int, onClick: () -> Unit) = ImageButton(context, null, 0, R.style.IconButton).apply {
+        setImageResource(icon)
+        setBackgroundResource(R.drawable.agent_action_bg)
+        contentDescription = context.getString(label)
+        setOnClickListener { onClick() }
+        layoutParams = LayoutParams(dp(48), dp(48)).apply { marginEnd = dp(8) }
+    }
+
+    /** Micro : écoute (carré plein pour finir), puis envoi grisé pendant la transcription ; le texte part seul à Claude. */
+    private fun talkButton(s: AgentSession) = when (VoicePrompt.phaseOf(s.id)) {
+        VoicePrompt.Phase.LISTENING -> action(R.drawable.ic_tile_stop, R.string.agent_talk_stop) { talk(s) }.apply {
+            setBackgroundResource(R.drawable.round_primary_bg)
+            ImageViewCompat.setImageTintList(this, themeColorList(context, R.attr.c_on_primary))
+        }
+        VoicePrompt.Phase.SENDING -> action(R.drawable.ic_tile_send, R.string.agent_talk_sending) {}.apply {
+            isEnabled = false
+            alpha = 0.5f
+        }
+        null -> action(R.drawable.ic_mic, R.string.agent_talk) { talk(s) }
     }
 
     /** Interrompre se confirme : le travail en cours s'arrête. */
@@ -463,11 +479,8 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         }
     }
 
-    /** Micro : la boîte « Écrire » s'ouvre en écoute, le texte transcrit s'y relit avant l'envoi. */
     private fun talk(s: AgentSession) {
-        (context as? MainActivity)?.askAgentText(context.getString(R.string.agent_write_title, s.name), R.string.agent_write_hint, "", listenNow = true) { text ->
-            if (text.isNotBlank()) send(s, text.trim())
-        }
+        (context as? MainActivity)?.let { VoicePrompt.toggle(it, s) }
     }
 
     private fun write(s: AgentSession) {

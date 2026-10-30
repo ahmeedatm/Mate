@@ -15,10 +15,10 @@ import kotlinx.coroutines.launch
 /**
  * Texte libre pour un agent Claude (réponse « Autre », message à une session) : écrit au clavier, ou dicté par « Dicter ».
  * Dictée transcrite sur l'ordinateur par whisper.cpp quand il l'offre (`voice` de `GET /agents`), sinon par la
- * reconnaissance d'Android si elle est là. `listenNow` : la boîte s'ouvre en écoute, sans clavier (micro d'une session).
+ * reconnaissance d'Android si elle est là.
  * `onOk` reçoit le texte tel quel (éventuellement vide : à l'appelant d'en juger).
  */
-fun MainActivity.askAgentText(title: String, hint: Int, initial: String, listenNow: Boolean = false, onOk: (String) -> Unit) {
+fun MainActivity.askAgentText(title: String, hint: Int, initial: String, onOk: (String) -> Unit) {
     val recorder = if (AgentsFeed.last?.state?.voice == true) PromptRecorder(this) else null
     val dictation = if (recorder == null) Dictation(this) else null
     val input = layoutInflater.inflate(R.layout.item_input, null) as EditText
@@ -33,7 +33,7 @@ fun MainActivity.askAgentText(title: String, hint: Int, initial: String, listenN
         .setPositiveButton(R.string.agent_ask_ok, null)
         .apply { if (recorder != null || dictation?.available == true) setNeutralButton(R.string.agent_ask_dictate, null) }
         .create()
-    dialog.showForTyping(input, keyboard = !(listenNow && recorder != null))
+    dialog.showForTyping(input)
     dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
         dialog.dismiss()
         onOk(input.text.toString())
@@ -86,7 +86,6 @@ fun MainActivity.askAgentText(title: String, hint: Int, initial: String, listenN
         ) == true
         if (!started) showBanner(getString(R.string.voice_no_mic), 6)
     }
-    if (listenNow && recorder != null) listen(recorder)
     dialog.setOnDismissListener {
         recorder?.cancel()
         dictation?.release()

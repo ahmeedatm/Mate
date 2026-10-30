@@ -674,6 +674,10 @@ describe("Orca", () => {
     await a.send("s1", "lance les tests\ndu backend");
     assert.deepEqual(sent, [{ handle: "chat:claude_x", text: "lance les tests du backend" }]);
     assert.equal(a.list().sessions[0].state, "working");
+    // Un prompt dicté d'une minute passe entier.
+    await a.hook(event("Stop", { last_assistant_message: "ok" }), {});
+    await a.send("s1", "x".repeat(1500));
+    assert.equal(sent.at(-1)?.text.length, 1500);
   });
 
   it("deux agents dans le worktree et pas de volet connu : pas de jonction hasardeuse", async () => {
