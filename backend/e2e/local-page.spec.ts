@@ -29,7 +29,7 @@ test.describe("page locale GET /", () => {
     await page.goto("/");
     await expect(page.locator("#os")).toContainText("Compagnon prêt");
     await page.route("**/local/status", (route) => route.abort());
-    await expect(page.locator("#os")).toHaveText("Compagnon arrêté : rouvre « UnoMate »");
+    await expect(page.locator("#os")).toHaveText("Compagnon arrêté : rouvre « Mate »");
     await expect(page.locator("#srvdot")).toHaveClass(/ko/);
     await expect(page.locator("#state")).toHaveText("Tablette : état inconnu");
     await expect(page.locator("body")).toHaveClass(/down/);
@@ -41,10 +41,10 @@ test.describe("page locale GET /", () => {
     const url = `http://127.0.0.1:${new URL(server.url).port}/mcp`;
     await expect(page.locator("#menu a", { hasText: "Connecter une IA" })).toHaveAttribute("href", "#ia");
     await expect(page.locator("#mcpurl")).toHaveText(url);
-    await expect(page.locator("#mcpcode")).toHaveText(`claude mcp add --transport http unomate ${url}`);
+    await expect(page.locator("#mcpcode")).toHaveText(`claude mcp add --transport http mate ${url}`);
     const desktop = JSON.parse((await page.locator("#mcpdesktop").textContent())!);
-    expect(desktop.mcpServers.unomate.args).toContain(url);
-    expect(desktop.mcpServers.unomate.args[0]).toMatch(/mcp-bridge\.(ts|mjs)$/);
+    expect(desktop.mcpServers.mate.args).toContain(url);
+    expect(desktop.mcpServers.mate.args[0]).toMatch(/mcp-bridge\.(ts|mjs)$/);
     await page.locator('[data-copy="mcpurl"]').click();
     await expect(page.locator("#mcpmsg")).toHaveText("Copié.");
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
@@ -168,8 +168,8 @@ test.describe("page locale GET /", () => {
     const state = () => ({
       mode: "home",
       app: "1.4.0",
-      name: "Tablette Unowhy 4.2",
-      model: "Unowhy 4.2",
+      name: "Tablette 4.2",
+      model: "Tab 4.2",
       battery: { level: 82, charging: true },
       settings,
     });
@@ -187,12 +187,12 @@ test.describe("page locale GET /", () => {
     })();
 
     await expect(page.locator("#tabletcard")).toBeVisible();
-    await expect(page.locator("#tabletinfo")).toHaveText("Unowhy 4.2 · appli 1.4.0 · batterie 82 % (en charge)");
+    await expect(page.locator("#tabletinfo")).toHaveText("Tab 4.2 · appli 1.4.0 · batterie 82 % (en charge)");
     // Tablette connectée : sa carte passe avant l'état et l'adresse, et l'onglet porte son nom.
-    await expect(page).toHaveTitle("Compagnon · Tablette Unowhy 4.2");
+    await expect(page).toHaveTitle("Compagnon · Tablette 4.2");
     const top = (id: string) => page.locator(id).evaluate((el) => el.getBoundingClientRect().top);
     expect(await top("#tabletcard")).toBeLessThan(await top("#connect"));
-    await expect(page.locator("#tabletname")).toHaveText("Tablette Unowhy 4.2");
+    await expect(page.locator("#tabletname")).toHaveText("Tablette 4.2");
     await expect(page.locator("#menu a").first()).toHaveText("Tablette");
     await expect(page.getByRole("button", { name: "Cadran", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator("#brightnessvalue")).toHaveText("60 %");
@@ -230,7 +230,7 @@ test.describe("page locale GET /", () => {
     let app = "0.2.11";
     let update = { checked: false, available: null as string | null, installing: false, error: null, kiosk: true };
     const actions: string[] = [];
-    const state = () => ({ mode: "home", app, model: "Unowhy 4.2", battery: null, settings: null, update });
+    const state = () => ({ mode: "home", app, model: "Tab 4.2", battery: null, settings: null, update });
     let running = true;
     const tablet = (async () => {
       while (running) {

@@ -7,7 +7,7 @@ using System.IO;
 using Windows.Foundation;
 using Windows.Media.Control;
 
-namespace UnoMate
+namespace Mate
 {
     static class Media
     {

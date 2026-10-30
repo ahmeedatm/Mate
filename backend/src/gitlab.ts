@@ -13,7 +13,7 @@ import { logFailure } from "./log.ts";
  * fusion d'une MR prête. Optionnel. Accès : le compte connecté par OAuth (src/gitlab-auth.ts, prioritaire), sinon
  * GITLAB_TOKEN dans .env (jeton personnel, secours). Lire suffit avec `read_api` ; fusionner demande `api` : le compte
  * connecté s'il l'a reçue, sinon GITLAB_TOKEN (supposé `api`), sinon la fusion est refusée. GITLAB_URL : défaut
- * https://gitlab.unowhy.dev. Aucun jeton ne quitte l'ordinateur : ni réponse, ni message d'erreur, ni journal.
+ * https://gitlab.com. Aucun jeton ne quitte l'ordinateur : ni réponse, ni message d'erreur, ni journal.
  * Config lue à chaque appel (les tests posent l'environnement).
  */
 
@@ -55,7 +55,7 @@ export async function gitlabAvailable(): Promise<boolean> {
 
 export const mrUrl = (project: string, iid: number) => `${gitlabBaseUrl()}/${project}/-/merge_requests/${iid}`;
 
-// Valeurs de DetailedMergeStatus relevées par introspection sur gitlab.unowhy.dev (18.10.8-ee), le 29/10/2026.
+// Valeurs de DetailedMergeStatus relevées par introspection sur gitlab.com (18.10.8-ee), le 29/10/2026.
 const LABELS: Record<string, string> = {
   mergeable: "Prête à fusionner",
   not_approved: "Approbation manquante",

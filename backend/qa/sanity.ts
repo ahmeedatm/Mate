@@ -90,7 +90,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       run: async () => {
         const open = await call("GET", "/health", undefined, false);
         expectStatus(open, 200, "/health sans jeton");
-        expect(open.json.service === "unowhy-companion", `service inattendu : ${open.json.service}`);
+        expect(open.json.service === "mate", `service inattendu : ${open.json.service}`);
         expect(open.json.auth === false, "/health sans jeton devrait dire auth: false");
         expect(/^(\d+\.\d+\.\d+|dev)$/.test(open.json.version ?? ""), `version du paquet inattendue : ${open.json.version}`);
         if (opts.os) expect(open.json.os === opts.os, `système annoncé « ${open.json.os} », attendu « ${opts.os} »`);
@@ -117,7 +117,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expectStatus(status, 200, "/local/status");
         expect(status.json.pairing?.tablet === "Sanity CI", "la page locale n'annonce pas la tablette qui attend");
         expect(!/\d{6}/.test(JSON.stringify(status.json.pairing)), "la page locale ne doit jamais montrer le code");
-        const n = createHash("sha256").update(`unowhy-pair-1\n\n${secret}\n${req.json.nonce}`).digest().readUInt32BE(0) % 1_000_000;
+        const n = createHash("sha256").update(`mate-pair-1\n\n${secret}\n${req.json.nonce}`).digest().readUInt32BE(0) % 1_000_000;
         expectStatus(await call("POST", "/local/pair", { code: String(n).padStart(6, "0") }, false), 200, "/local/pair");
         const ok = await call("POST", "/pair/confirm", { request: req.json.request }, false);
         expectStatus(ok, 200, "/pair/confirm");
@@ -590,7 +590,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       run: async () => {
         const page = await call("GET", "/", undefined, local ? false : true);
         expectStatus(page, 200, "/");
-        expect(/<title>UnoMate<\/title>/.test(page.json), "page locale inattendue");
+        expect(/<title>Mate<\/title>/.test(page.json), "page locale inattendue");
         const status = await call("GET", "/local/status");
         expectStatus(status, 200, "/local/status");
         expect(Array.isArray(status.json.addresses) && status.json.addresses.length > 0, "aucune adresse affichée");
@@ -624,7 +624,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       run: async () => {
         const res = await call("GET", "/local/confidentialite", undefined, local ? false : true);
         expectStatus(res, 200, "/local/confidentialite");
-        expect(String(res.json).startsWith("UnoMate : politique de confidentialité"), "politique de confidentialité inattendue");
+        expect(String(res.json).startsWith("Mate : politique de confidentialité"), "politique de confidentialité inattendue");
       },
     },
     {
@@ -639,7 +639,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         }
         expectStatus(res, 200, "/local/licences");
         const text = String(res.json);
-        expect(text.startsWith("UnoMate : composants tiers et licences"), "fichier de licences inattendu");
+        expect(text.startsWith("Mate : composants tiers et licences"), "fichier de licences inattendu");
         expect(/^- Node\.js v/m.test(text) && /^- fastify /m.test(text), "node ou fastify absents des licences");
         return `${text.split("\n").filter((l) => /^- /.test(l)).length} lignes de composants`;
       },

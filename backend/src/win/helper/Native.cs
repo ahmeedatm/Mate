@@ -1,4 +1,4 @@
-// Pilotage de Windows pour le compagnon : compilé dans UnowhyHelper.exe (npm run build:helper), appelé ligne par
+// Pilotage de Windows pour le compagnon : compilé dans MateHelper.exe (npm run build:helper), appelé ligne par
 // ligne par src/win/helper.ts. Écrit en C# 7.3. Classe partielle : ici la lecture des requêtes et l'aiguillage,
 // un fichier Native.<thème>.cs par thème (Apps, Icons, Windows, OpenWindows, Keys, Audio, AppAudio, System, Perf,
 // Clipboard, Processes).
@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Web.Script.Serialization;
 
-namespace UnoMate
+namespace Mate
 {
     public static partial class Native
     {

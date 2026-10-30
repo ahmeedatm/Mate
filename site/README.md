@@ -8,8 +8,8 @@ Page statique, sans build.
 
 Pour le bucket, les deux installeurs sont à déposer à la main dans `downloads/` (ignorés par git ; l'image les récupère seule) :
 
-- `downloads/UnoMate-Mac.zip`
-- `downloads/UnoMate-Windows.exe`
+- `downloads/Mate-Mac.zip`
+- `downloads/Mate-Windows.exe`
 
 Ce sont les fichiers de la release (`npm run package`, paquet `companion-updates/latest`).
 

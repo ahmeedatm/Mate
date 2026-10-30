@@ -89,7 +89,7 @@ function ffmpeg(args) {
 
 async function download(url) {
   const res = await fetch(url, {
-    headers: { "User-Agent": "UnoMate/1.0 (https://www.unowhy.com)" },
+    headers: { "User-Agent": "Mate/1.0 (+https://github.com/ahmeedatm/Mate)" },
   });
   if (!res.ok) throw new Error(`${url} : HTTP ${res.status}`);
   const file = path.join(

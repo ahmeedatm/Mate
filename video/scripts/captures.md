@@ -1,6 +1,6 @@
 # Captures de l'émulateur : `captures.mjs`
 
-Refait les captures d'écran de l'appli UnoMate (1280×800) pour les vidéos, à partir de la démo par personas de l'appli (Réglages > Démo). À lancer après chaque changement d'écrans, de thèmes ou de données de démo.
+Refait les captures d'écran de l'appli Mate (1280×800) pour les vidéos, à partir de la démo par personas de l'appli (Réglages > Démo). À lancer après chaque changement d'écrans, de thèmes ou de données de démo.
 
 ```bash
 node video/scripts/captures.mjs                    # tout : build, émulateur, 7 phases, INDEX.md

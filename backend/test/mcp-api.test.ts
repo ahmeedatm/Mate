@@ -144,7 +144,7 @@ describe("réglages", () => {
 
   it("change le thème et la luminosité de la tablette connectée", async () => {
     const settings = { theme: "CADRAN", brightness: 0.6, volume: 0.4, nightDim: true, focusDnd: true };
-    const state = { mode: "home", app: "1.4.0", name: "Tablette", model: "Unowhy 4.2", settings };
+    const state = { mode: "home", app: "1.4.0", name: "Tablette", model: "Tab 4.2", settings };
     const polling = server.call("POST", "/tablet/poll", { state });
     await new Promise((r) => setTimeout(r, 300));
 
@@ -181,7 +181,7 @@ describe("pont stdio (Claude Desktop)", () => {
 
   it("compagnon arrêté : le client reçoit une erreur lisible", async () => {
     const desktop = new Client({ name: "claude-desktop", version: "1.0.0" });
-    await assert.rejects(desktop.connect(bridge("http://127.0.0.1:9/mcp")), /Compagnon UnoMate injoignable/);
+    await assert.rejects(desktop.connect(bridge("http://127.0.0.1:9/mcp")), /Compagnon Mate injoignable/);
     await desktop.close();
   });
 });

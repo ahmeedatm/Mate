@@ -215,7 +215,7 @@ describe("mises à jour de la tablette", () => {
     const file = `companion-${version}.apk`;
     fs.writeFileSync(path.join(dir, file), `apk ${version}`);
     const entry = path.join(dir, `companion-${version}.json`);
-    fs.writeFileSync(entry, JSON.stringify({ package: "com.unowhy.companion", label: "UnoMate", versionCode, versionName: version, file }));
+    fs.writeFileSync(entry, JSON.stringify({ package: "app.mate", label: "Mate", versionCode, versionName: version, file }));
     execFileSync(process.execPath, ["--import", "tsx", "scripts/updates.ts", "add", entry], {
       cwd: path.resolve(import.meta.dirname, ".."),
       env: { ...process.env, DATA_DIR: server.dataDir },
@@ -241,7 +241,7 @@ describe("mises à jour de la tablette", () => {
     const { json } = await server.call("GET", "/updates");
     assert.deepEqual(
       json.updates.map((u: any) => u.package),
-      ["com.google.android.webview", "com.unowhy.companion"],
+      ["com.google.android.webview", "app.mate"],
     );
     const companion = json.updates[1];
     assert.equal(companion.versionCode, 10204);

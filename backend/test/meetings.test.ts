@@ -15,7 +15,7 @@ const { autoJoinEnabled, joinMeeting, setAutoJoin } = await import("../src/meeti
 const { dayRange, getEvents } = await import("../src/calendar.ts");
 
 const TEAMS = "https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc%40thread.v2/0?context=%7b%7d";
-const ZOOM = "https://unowhy.zoom.us/j/123456789?pwd=Ab.c-1";
+const ZOOM = "https://acme.zoom.us/j/123456789?pwd=Ab.c-1";
 const MEET = "https://meet.google.com/abc-defg-hij";
 
 describe("liens de visio", () => {

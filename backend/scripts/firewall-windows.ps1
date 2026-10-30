@@ -2,7 +2,7 @@
 # reseaux prives seulement. Lance par le panneau (backend/src/portable.ts) : demande l'accord administrateur si la
 # regle manque ou vise un autre dossier. -Retirer supprime la regle. Code de sortie 0 = fait.
 param([switch] $Retirer)
-$name = 'UnoMate'
+$name = 'Mate'
 $node = Join-Path (Split-Path -Parent $PSScriptRoot) 'node\node.exe'
 
 $existing = Get-NetFirewallRule -DisplayName $name -ErrorAction SilentlyContinue

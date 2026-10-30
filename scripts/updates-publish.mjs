@@ -7,7 +7,7 @@
 //
 // Release : lit l'entrée companion-X.Y.Z.json produite par android-release, copie l'APK qu'elle nomme dans <sortie>/ et
 // écrit <sortie>/manifest.json (même forme que GET /updates du backend, taille et SHA-256 compris). Les installeurs de
-// l'ordinateur présents dans <dist> (UnoMate-Mac.zip, UnoMate-Windows.exe) sont copiés aussi et décrits
+// l'ordinateur présents dans <dist> (Mate-Mac.zip, Mate-Windows.exe) sont copiés aussi et décrits
 // dans manifest.json, clé `installers` : la tablette les télécharge pour les servir sur le WiFi. Les archives du backend
 // (dist/backend-mac.tar.gz et backend-windows.tar.gz du job package-backend, les deux ou aucune) deviennent
 // backend-X.Y.Z-<os>.tar.gz, clé `backends` : la tablette en envoie une à l'ordinateur actif, qui se met à jour seul.
@@ -26,11 +26,11 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 
 const BACKEND_PLATFORMS = ["mac", "windows"];
-const ESSAI_PACKAGE = "com.unowhy.companion.essai";
+const ESSAI_PACKAGE = "app.mate.essai";
 const MAX_TITLE = 200;
 const INSTALLERS = {
-  mac: "UnoMate-Mac.zip",
-  windows: "UnoMate-Windows.exe",
+  mac: "Mate-Mac.zip",
+  windows: "Mate-Windows.exe",
 };
 
 const fingerprint = (buf) => ({

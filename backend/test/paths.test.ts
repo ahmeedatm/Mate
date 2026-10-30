@@ -6,7 +6,7 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import { adoptData } from "../src/paths.ts";
 
-// Données d'un paquet d'avant (dossier « UnowhyCompanion » d'avant le renommage UnoMate, .data à côté du serveur) :
+// Données d'un paquet d'avant (dossier « UnowhyCompanion » d'avant le renommage Mate, .data à côté du serveur) :
 // recopiées une fois, pour que la tablette retrouve le même ordinateur.
 
 function dir(files: Record<string, string> = {}) {
@@ -18,7 +18,7 @@ function dir(files: Record<string, string> = {}) {
 describe("reprise des données d'un paquet d'avant", () => {
   it("recopie identité et données dans un dossier neuf, sans service.pid, et garde l'original", () => {
     const old = dir({ "identity.json": '{"id":"a"}', "tasks.json": "[]", "service.pid": "42" });
-    const fresh = path.join(dir(), "UnoMate", "data");
+    const fresh = path.join(dir(), "Mate", "data");
     assert.equal(adoptData(old, fresh), true);
     assert.equal(fs.readFileSync(path.join(fresh, "identity.json"), "utf8"), '{"id":"a"}');
     assert.equal(fs.existsSync(path.join(fresh, "tasks.json")), true);
@@ -45,6 +45,6 @@ describe("reprise des données d'un paquet d'avant", () => {
       env: { ...process.env, HOME: home, DATA_DIR: "paquet" },
     });
     assert.equal(run.status, 0, run.stderr.toString());
-    assert.equal(fs.readFileSync(path.join(home, "Library", "Application Support", "UnoMate", "identity.json"), "utf8"), '{"id":"mac"}');
+    assert.equal(fs.readFileSync(path.join(home, "Library", "Application Support", "Mate", "identity.json"), "utf8"), '{"id":"mac"}');
   });
 });

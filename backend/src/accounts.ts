@@ -10,7 +10,7 @@ import { readJson, updateJson } from "./store.ts";
  *
  * Connexion OAuth « appli de bureau » : code d'autorisation + PKCE, retour sur http://localhost:<port>/oauth/…/callback
  * (page ouverte dans le navigateur de l'ordinateur). Aucun secret côté client : l'identifiant de l'appli (enregistrée
- * une fois par Unowhy chez Microsoft et Google) est public, dans config/accounts.json. Le jeton de renouvellement
+ * une fois chez Microsoft et Google) est public, dans config/accounts.json. Le jeton de renouvellement
  * reste dans .data/accounts.json, sur l'ordinateur ; la tablette ne voit que les événements.
  */
 

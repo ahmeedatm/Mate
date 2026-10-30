@@ -18,7 +18,7 @@ after(async () => {
   fs.rmSync(dataDir, { recursive: true, force: true });
 });
 
-const STATE = { mode: "home", app: "1.4.0", name: "Tablette", model: "Unowhy 4.2", screen: "1280x800", battery: null, settings: {} };
+const STATE = { mode: "home", app: "1.4.0", name: "Tablette", model: "Tab 4.2", screen: "1280x800", battery: null, settings: {} };
 const LAYOUT = {
   v: 2,
   pages: 2,

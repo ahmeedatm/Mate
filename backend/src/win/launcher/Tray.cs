@@ -1,5 +1,5 @@
 // Icône du compagnon dans la zone de notification : un clic ouvre la page locale, le menu (clic droit) montre l'état de
-// la tablette, lu sur GET /local/status, et « Ouvrir les réglages de la tablette ». Visage UnoMate monochrome
+// la tablette, lu sur GET /local/status, et « Ouvrir les réglages de la tablette ». Visage Mate monochrome
 // (docs/ui-ux/da/icone-visage-mono.svg), blanc ou noir selon le thème de la barre des tâches.
 
 using System;
@@ -13,7 +13,7 @@ using System.Web.Script.Serialization;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
-namespace UnoMate
+namespace Mate
 {
     sealed class Tray : ApplicationContext
     {
@@ -85,7 +85,7 @@ namespace UnoMate
             if (battery.Visible) battery.Text = "Batterie " + Get(b, "level") + " %" + (Get(b, "charging") is bool && (bool)Get(b, "charging") ? " (en charge)" : "");
             settings.Enabled = connected;
             // Info-bulle : 63 caractères au plus.
-            var tip = "UnoMate · " + state.Text;
+            var tip = "Mate · " + state.Text;
             icon.Text = tip.Length > 63 ? tip.Substring(0, 63) : tip;
             var nowLight = TaskbarIsLight();
             if (icon.Icon == null || nowLight != light)

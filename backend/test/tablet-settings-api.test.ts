@@ -16,8 +16,8 @@ const SETTINGS = { theme: "CADRAN", brightness: 0.6, volume: 0.4, nightDim: true
 const STATE = {
   mode: "home",
   app: "1.4.0",
-  name: "Tablette Unowhy 4.2",
-  model: "Unowhy 4.2",
+  name: "Tablette 4.2",
+  model: "Tab 4.2",
   screen: "1280x800",
   battery: { level: 82, charging: true },
   settings: SETTINGS,
@@ -41,8 +41,8 @@ describe("panneau Tablette", () => {
     const status = await server.call("GET", "/local/status", undefined, false);
     assert.deepEqual(status.json.tabletInfo, {
       app: "1.4.0",
-      name: "Tablette Unowhy 4.2",
-      model: "Unowhy 4.2",
+      name: "Tablette 4.2",
+      model: "Tab 4.2",
       screen: "1280x800",
       battery: { level: 82, charging: true },
       settings: SETTINGS,

@@ -1,7 +1,7 @@
 // Icône du compagnon dans la barre des menus du Mac. Un clic ouvre la page locale ; le clic droit (ou Ctrl + clic)
 // montre l'état de la tablette (lu sur GET /local/status) et « Ouvrir les réglages de la tablette ».
 // Lancé par le compagnon (src/mac/menubar.ts) avec `--port <port>` ; s'arrête dès que le compagnon qui l'a lancé
-// disparaît. Compilé par `npm run build:menubar` en src/mac/UnowhyMenu, gardé dans le dépôt.
+// disparaît. Compilé par `npm run build:menubar` en src/mac/MateMenu, gardé dans le dépôt.
 import AppKit
 
 let args = CommandLine.arguments
@@ -15,7 +15,7 @@ struct Status {
   var battery: (level: Int, charging: Bool)?
 }
 
-/// Visage UnoMate seul, monochrome (docs/ui-ux/da/icone-visage-mono.svg, repère du groupe de icone-visage.svg) :
+/// Visage Mate seul, monochrome (docs/ui-ux/da/icone-visage-mono.svg, repère du groupe de icone-visage.svg) :
 /// image modèle, le système la teinte.
 func icon() -> NSImage {
   let image = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { rect in
@@ -85,7 +85,7 @@ final class Controller: NSObject {
       }
       DispatchQueue.main.async {
         self.status = next
-        self.item.button?.toolTip = "UnoMate · " + self.summary()
+        self.item.button?.toolTip = "Mate · " + self.summary()
       }
     }.resume()
   }

@@ -5,7 +5,7 @@ import path from "node:path";
 import { backendRoot, dataDir, userFolder } from "./paths.ts";
 
 /**
- * Appli portable (un seul .exe sous Windows, « UnoMate.app » sous Mac) : rien n'est installé ni inscrit. Le
+ * Appli portable (un seul .exe sous Windows, « Mate.app » sous Mac) : rien n'est installé ni inscrit. Le
  * lanceur extrait le runtime dans le dossier de l'utilisateur et pose `COMPANION_APP` (chemin de l'exe ou de l'appli).
  * Ce module porte ce que le panneau (page locale) change sur l'ordinateur : lancement au démarrage, pare-feu, ancienne
  * installation, tout oublier. Rien n'est fait de lui-même : chaque fonction répond à un bouton.
@@ -23,17 +23,17 @@ export const FORGET_CODE = 76;
 
 /** Instance de test (qa/) : sa propre entrée de démarrage, celle du vrai compagnon n'est pas touchée. */
 const LABEL = process.env.COMPANION_LABEL || "";
-const MAC_LABEL = LABEL || "com.unowhy.unomate.demarrage";
+const MAC_LABEL = LABEL || "app.mate.demarrage";
 const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-const RUN_VALUE = LABEL || "UnoMate";
+const RUN_VALUE = LABEL || "Mate";
 const UNINSTALL_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\UnowhyCompanion";
-const LEGACY_MAC_LABEL = "com.unowhy.companion";
+const LEGACY_MAC_LABEL = "app.mate";
 const LEGACY_RUN_VALUE = LABEL || "UnowhyCompanion";
 const LEGACY_SHORTCUT = "Compagnon Unowhy";
-const FIREWALL_RULE = "UnoMate";
-// Noms d'avant le renommage UnoMate (29/10/2026) : un compagnon mis à jour en place par la tablette les a encore. Reconnus
+const FIREWALL_RULE = "Mate";
+// Noms d'avant le renommage Mate (29/10/2026) : un compagnon mis à jour en place par la tablette les a encore. Reconnus
 // comme les siens (même appli, même runtime), remplacés au prochain réglage. Pas pour une instance de test (qa/).
-const PRE_RENAME_MAC_LABEL = LABEL ? undefined : "com.unowhy.companion.demarrage";
+const PRE_RENAME_MAC_LABEL = LABEL ? undefined : "app.mate.demarrage";
 const PRE_RENAME_RUN_VALUE = LABEL ? undefined : "UnowhyCompanion";
 const PRE_RENAME_FIREWALL_RULE = "Compagnon Unowhy";
 const home = os.homedir();
@@ -79,10 +79,10 @@ export function macLaunchAgent(label: string, executable: string): string {
 export const isLegacyMacAgent = (plist: string) => plist.includes("Contents/Resources/backend");
 export const isLegacyRun = (value: string) => value.includes("--backend") && /\\node\\node\.exe/i.test(value);
 
-/** Exécutable de l'appli lancée : « UnoMate », ou « Compagnon Unowhy » pour une appli d'avant le renommage mise à jour en place. */
+/** Exécutable de l'appli lancée : « Mate », ou « Compagnon Unowhy » pour une appli d'avant le renommage mise à jour en place. */
 const macExecutable = () =>
-  ["UnoMate", "Compagnon Unowhy"].map((name) => path.join(appPath!, "Contents", "MacOS", name)).find((f) => fs.existsSync(f)) ??
-  path.join(appPath!, "Contents", "MacOS", "UnoMate");
+  ["Mate", "Compagnon Unowhy"].map((name) => path.join(appPath!, "Contents", "MacOS", name)).find((f) => fs.existsSync(f)) ??
+  path.join(appPath!, "Contents", "MacOS", "Mate");
 const macPlist = (label: string) => path.join(home, "Library", "LaunchAgents", `${label}.plist`);
 
 // --- Lancement au démarrage
@@ -122,7 +122,7 @@ export async function setAutostart(on: boolean) {
 const firewallScript = path.join(backendRoot, "scripts", "firewall-windows.ps1");
 let firewallCache: { value: boolean; at: number } | undefined;
 
-/** Règle « UnoMate » (ou « Compagnon Unowhy », d'avant le renommage) visant le node de ce runtime. Lue par netsh (pas de PowerShell), gardée 15 s. */
+/** Règle « Mate » (ou « Compagnon Unowhy », d'avant le renommage) visant le node de ce runtime. Lue par netsh (pas de PowerShell), gardée 15 s. */
 export async function firewallOpen(): Promise<boolean | null> {
   if (!isWindows) return null;
   if (firewallCache && Date.now() - firewallCache.at < 15_000) return firewallCache.value;

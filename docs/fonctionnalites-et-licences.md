@@ -1,6 +1,6 @@
 # Fonctionnalités et licences
 
-Inventaire au 30/10/2026 (main après v0.2.25) de ce que fait UnoMate, et pour chaque fonctionnalité ce qu'il faut en droits pour la vendre. Sources : le code, `app/src/main/assets/licences.txt`, `backend/package.json`, `docs/confidentialite.md`. Ce document n'est pas un avis juridique : la colonne « Droits » dit ce qu'il faut faire valider, pas ce qui est validé.
+Inventaire au 30/10/2026 (main après v0.2.25) de ce que fait Mate, et pour chaque fonctionnalité ce qu'il faut en droits pour la vendre. Sources : le code, `app/src/main/assets/licences.txt`, `backend/package.json`, `docs/confidentialite.md`. Ce document n'est pas un avis juridique : la colonne « Droits » dit ce qu'il faut faire valider, pas ce qui est validé.
 
 Légende de la colonne « Droits » :
 
@@ -15,7 +15,7 @@ Légende de la colonne « Droits » :
 
 | Fonctionnalité | Ce qu'elle fait | Droits |
 |---|---|---|
-| Mode kiosque | UnoMate device owner, lanceur unique, installations bloquées, carte cachée par code technicien | Libre (API Android) ; sortie du MDM SQOOL = accord interne Unowhy |
+| Mode kiosque | Mate device owner, lanceur unique, installations bloquées, carte cachée par code technicien | Libre (API Android) ; sortie du MDM SQOOL = accord interne Unowhy |
 | Mises à jour silencieuses | APK lus dans le registre GitLab d'Unowhy ou sur l'ordinateur, installés seuls toutes les 6 h | Libre |
 | Essais de MR | appli d'essai à côté de la stable, choisie dans Réglages > Mises à jour | Libre |
 | Appairage sécurisé | recherche UDP, code à 6 chiffres, HTTPS auto-signé, empreinte épinglée | Libre |
@@ -104,7 +104,7 @@ Légende de la colonne « Droits » :
 |---|---|---|
 | Appli portable Mac et Windows | sans installateur, node embarqué, lancement au démarrage au choix | Libre ; distribution : signature (Droit) |
 | Pilote Windows | `UnowhyHelper.exe` en C# (.NET Framework 4.8 de Windows) | Libre |
-| Icône dans la barre de menus | visage UnoMate (Mac et zone de notification Windows) | Libre |
+| Icône dans la barre de menus | visage Mate (Mac et zone de notification Windows) | Libre |
 | Page locale / panneau de configuration | appairage, réglages de la tablette, profils, barres, touches, connecteurs | Libre |
 | Mises à jour du compagnon | poussées par la tablette, SHA-256 vérifié | Libre |
 | Extension MCP | une IA de bureau pilote et règle la tablette | Libre (SDK MIT) ; l'IA choisie relève de l'abonnement de l'utilisateur |
@@ -147,7 +147,7 @@ Classé du plus bloquant pour la vente au moins bloquant.
 |---|---|---|---|---|
 | 1 | **Signature des paquets** | appli Mac et Windows | Apple Developer Program et notarisation pour le Mac ; certificat de signature de code Authenticode pour Windows (sinon Gatekeeper, SmartScreen et antivirus bloquent ou alertent) | aucune signature dans `scripts/package.ts` ni la CI |
 | 2 | **Services Google de la tablette** | commande vocale, dictée, synthèse vocale, « Ma position » | licence GMS de l'image Unowhy : vérifier qu'elle couvre la revente des tablettes hors école, en B2B ; conditions Google sur la voix envoyée | à faire valider (juridique) ; Vosk hors ligne déjà en place pour le mot de réveil |
-| 3 | **Nom UnoMate** | tout le produit | recherche d'antériorité et dépôt de marque (INPI, EUIPO) | non fait à notre connaissance |
+| 3 | **Nom Mate** | tout le produit | recherche d'antériorité et dépôt de marque (INPI, EUIPO) | non fait à notre connaissance |
 | 4 | **Parc de tablettes** | kiosque | accord interne pour retirer le MDM SQOOL et réinitialiser les 18 000 tablettes | décision Unowhy |
 | 5 | **Microsoft Graph** | agenda Outlook relié | appli Entra ID multi-locataire, vérification de l'éditeur, consentement de l'admin chez chaque client | inactif (`config/accounts.json` vide) |
 | 6 | **Google Agenda** | agenda Google relié | projet Google Cloud, écran de consentement, vérification par Google de la portée agenda (sinon 100 utilisateurs et avertissement « appli non validée ») | inactif |

@@ -4,11 +4,11 @@ import path from "node:path";
 import { backendRoot, config } from "../config.ts";
 
 /**
- * Icône du compagnon dans la barre des menus du Mac (src/mac/menubar/MenuBar.swift, compilé en src/mac/UnowhyMenu) :
+ * Icône du compagnon dans la barre des menus du Mac (src/mac/menubar/MenuBar.swift, compilé en src/mac/MateMenu) :
  * un clic ouvre la page locale, le clic droit montre l'état de la tablette. Lancée avec le compagnon, elle lit
  * GET /local/status et s'arrête seule quand le compagnon disparaît. Sous Windows, c'est le lanceur qui porte l'icône.
  */
-const PROGRAM = path.join(backendRoot, "src", "mac", "UnowhyMenu");
+const PROGRAM = path.join(backendRoot, "src", "mac", "MateMenu");
 const RESTART_MS = 10_000;
 
 /** Instance de test ou sans écran (COMPANION_HEADLESS, NO_ALERT) : aucune icône. */

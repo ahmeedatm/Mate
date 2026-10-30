@@ -25,14 +25,14 @@ MOTION:
 - Changement de chapitre : la colonne de droite sort en 9 images, la suivante entre en 15, décalage de 3 images par ligne ; le point du sommaire glisse.
 
 SHOTS (secondes, une seule scène `parcours`, chapitres dans l'ordre de la journée ; chaque persona est choisi dans Réglages > Démo, son thème de démo habille la tablette):
-- 0-4 : ouverture. Écran de la tablette éteint, « Six personnes, une tablette » puis « UnoMate : chaque utilisateur configure son Mate. », le sommaire se dessine ; l'écran s'allume sur Nour.
+- 0-4 : ouverture. Écran de la tablette éteint, « Six personnes, une tablette » puis « Mate : chaque utilisateur configure son Mate. », le sommaire se dessine ; l'écran s'allume sur Nour.
 - 4-16 : Nour (Registre). Écran Excel (toucher Enregistrer, gros plan des touches Excel et Libellés), puis Accueil : widget Clôture en gros plan (étapes, J-2).
 - 16-28 : Gwen (Studio). Écran Campagnes (gros plan des touches Réseaux et Modèles), puis écran Présentation : toucher Suivante, gros plan du widget Présentation.
 - 28-40 : Camille (Maison). Écran Travail, toucher « Je m'absente » (gros plan), puis l'absence en cours : Reprendre (gros plan).
 - 40-52 : Aimée (Tableau). Accueil 14:29, « Point client Boréal dans 5 min » en gros plan, puis l'alerte plein écran 5 min avant (gros plan du compte à rebours).
 - 52-64 : Sam (Contraste élevé, texte ×1,5). Accueil (toucher Courrier type, gros plan des grandes touches), puis Réglages > Accessibilité : retour parlé des actions (gros plan).
 - 64-76 : Sacha (Terminal). Fond en nuit, écran Code : agents Claude en gros plan, puis écran GitLab : widget Pipelines en gros plan.
-- 76-84 : fin. Boîte des six personas, les six points rouges, icône, « UnoMate », logo Unowhy, « Mac et Windows, en WiFi. Sur la tablette Unowhy 4.2. ».
+- 76-84 : fin. Boîte des six personas, les six points rouges, icône, « Mate », logo Unowhy, « Mac et Windows, en WiFi. Sur la tablette Unowhy 4.2. ».
 
 SOUND: musique HeyGen calme, sans voix, fondus 1 s / 2 s. Clic doux à chaque toucher.
 

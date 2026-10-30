@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <com.unowhy.unomate.ui.TitleView
+    <app.mate.ui.TitleView
         android:id="@+id/notif_title"
         style="@style/CardTitle"
         android:text="@string/notif_on_computer" />

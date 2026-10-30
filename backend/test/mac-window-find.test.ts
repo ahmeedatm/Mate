@@ -24,21 +24,21 @@ const find = new Function(`${fn("suffix")}\n${fn("sameTitle")}\n${fn("find")}\nr
 ) => Entry | undefined;
 
 const win = (index: number, title: string): Entry => ({ index, w: { name: () => title } });
-const list = [win(1, "Téléchargements"), win(2, "Compagnon Unowhy"), win(3, "deck.ts — unowhy-companion")];
+const list = [win(1, "Téléchargements"), win(2, "Réglages du compagnon"), win(3, "deck.ts — mate")];
 
 describe("fenêtre visée sur Mac", () => {
   it("retrouve la fenêtre par son titre, y compris raccourci par le menu Fenêtre", () => {
-    assert.equal(find(list, { index: 9, title: "Compagnon Unowhy" })?.index, 2);
+    assert.equal(find(list, { index: 9, title: "Réglages du compagnon" })?.index, 2);
     assert.equal(find([win(1, "Page - Google Chrome – Profil")], { index: 0, title: "Page" }, true)?.index, 1);
   });
 
   it("fermeture : jamais une autre fenêtre quand le titre n'est plus là", () => {
     assert.equal(find(list, { index: 2, title: "Onglet qui a changé" }, true), undefined);
-    assert.equal(find(list, { index: 0, title: "README.md — unowhy-companion" }, true), undefined);
+    assert.equal(find(list, { index: 0, title: "README.md — mate" }, true), undefined);
   });
 
   it("autres gestes : le rang ou la fin du titre servent encore de repli", () => {
     assert.equal(find(list, { index: 2, title: "Onglet qui a changé" })?.index, 2);
-    assert.equal(find(list, { index: 0, title: "README.md — unowhy-companion" })?.index, 3);
+    assert.equal(find(list, { index: 0, title: "README.md — mate" })?.index, 3);
   });
 });

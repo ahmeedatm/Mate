@@ -14,7 +14,7 @@ export const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.u
 export const packaged = import.meta.url.endsWith(".mjs");
 
 /** Données du paquet hors du dossier extrait : une nouvelle version (autre dossier) les retrouve. */
-function appDataDir(name = "UnoMate") {
+function appDataDir(name = "Mate") {
   return process.platform === "win32"
     ? path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), "AppData", "Local"), name, "data")
     : path.join(os.homedir(), "Library", "Application Support", name);
@@ -28,7 +28,7 @@ export const dataDir = path.resolve(envDataDir || (packaged ? appDataDir() : pat
 /**
  * Données d'un paquet d'avant, recopiées une fois, sinon la tablette verrait un nouvel ordinateur (autre identité,
  * appairage perdu) et l'agenda, les tâches, les touches et les connexions seraient perdus : dossier d'avant le
- * renommage UnoMate (« UnowhyCompanion », 29/10/2026, mis à jour en place par la tablette), puis .data à côté du
+ * renommage Mate (« UnowhyCompanion », 29/10/2026, mis à jour en place par la tablette), puis .data à côté du
  * serveur (paquet d'avant les données hors du dossier). Les originaux restent en place. Aussi pour le serveur MCP
  * lancé depuis le dépôt sur les données du paquet (`.mcp.json`).
  */
@@ -71,7 +71,7 @@ export function userFolder(kind: "Personal" | "Desktop" | "Programs", fallback: 
 
 /**
  * Dossier partagé avec la tablette : dans Documents pour le paquet (gardé d'une version à l'autre), à la racine du dépôt en dev.
- * Pas « UnoMate » : c'est le nom du dossier du zip, souvent extrait dans Documents.
+ * Pas « Mate » : c'est le nom du dossier du zip, souvent extrait dans Documents.
  */
 export function sharedDir(): string {
   const old = path.resolve(backendRoot, "..", "shared");

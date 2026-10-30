@@ -106,7 +106,7 @@ describe("historique des notifications", () => {
   });
 
   it("les supprimées tiennent après un redémarrage (empreintes sur le disque)", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "unomate-dismiss-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mate-dismiss-"));
     try {
       const before = new NotificationHistory(() => 10_000);
       before.setStore(dir);
@@ -123,7 +123,7 @@ describe("historique des notifications", () => {
   });
 
   it("l'empreinte d'une supprimée est purgée après 24 h", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "unomate-dismiss-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mate-dismiss-"));
     try {
       let now = NOTIFICATIONS_TTL_MS * 2;
       const history = new NotificationHistory(() => now);

@@ -66,7 +66,7 @@ export type TabletCommand =
   /** Profils et barres de la page locale : lire l'état de la tablette, ou lui envoyer une configuration. */
   | { type: "layout"; action: "get" }
   | ({ type: "layout"; action: "set" } & TabletLayoutChange)
-  /** Mise à jour du UnoMate depuis la page locale : chercher, ou installer la version trouvée. */
+  /** Mise à jour du Mate depuis la page locale : chercher, ou installer la version trouvée. */
   | { type: "update"; action: "check" | "install" }
   /** Appel entrant (src/calls.ts) : carte Répondre / Ignorer sur la tablette, retirée à `ended`. */
   | { type: "call"; state: "ringing" | "ended"; app: string; caller: string | null; video: boolean }

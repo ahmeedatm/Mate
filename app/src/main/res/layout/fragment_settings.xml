@@ -63,7 +63,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- Mises à jour (moteur web, UnoMate) depuis le « serveur Unowhy » simulé par l'ordinateur. -->
+                <!-- Mises à jour (moteur web, Mate) depuis le « serveur Unowhy » simulé par l'ordinateur. -->
                 <LinearLayout
                     style="@style/Card"
                     android:layout_width="match_parent"
@@ -77,7 +77,7 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <com.unowhy.unomate.ui.TitleView
+                        <app.mate.ui.TitleView
                             style="@style/CardTitle"
                             android:layout_width="0dp"
                             android:layout_weight="1"
@@ -163,7 +163,7 @@
                     android:layout_marginTop="16dp"
                     android:orientation="vertical">
 
-                    <com.unowhy.unomate.ui.TitleView
+                    <app.mate.ui.TitleView
                         style="@style/CardTitle"
                         android:drawableStart="@drawable/ic_display"
                         android:text="@string/computers_title" />
@@ -220,7 +220,7 @@
                         android:layout_weight="1"
                         android:orientation="vertical">
 
-                        <com.unowhy.unomate.ui.TitleView
+                        <app.mate.ui.TitleView
                             style="@style/CardTitle"
                             android:drawableStart="@drawable/ic_wifi"
                             android:text="@string/wifi_title" />
@@ -247,7 +247,7 @@
                     android:layout_marginTop="16dp"
                     android:orientation="vertical">
 
-                    <com.unowhy.unomate.ui.TitleView
+                    <app.mate.ui.TitleView
                         style="@style/CardTitle"
                         android:drawableStart="@drawable/ic_widgets"
                         android:text="@string/plugins_card" />
@@ -275,7 +275,7 @@
                     android:layout_marginTop="16dp"
                     android:orientation="vertical">
 
-                    <com.unowhy.unomate.ui.TitleView
+                    <app.mate.ui.TitleView
                         style="@style/CardTitle"
                         android:drawableStart="@drawable/ic_widgets"
                         android:text="@string/demo_card" />
@@ -314,7 +314,7 @@
                     android:layout_marginTop="16dp"
                     android:orientation="vertical">
 
-                    <com.unowhy.unomate.ui.TitleView
+                    <app.mate.ui.TitleView
                         style="@style/CardTitle"
                         android:drawableStart="@drawable/ic_lock"
                         android:text="@string/kiosk_title" />
@@ -473,7 +473,7 @@
                     android:layout_marginTop="16dp"
                     android:orientation="vertical">
 
-                    <com.unowhy.unomate.ui.TitleView
+                    <app.mate.ui.TitleView
                         style="@style/CardTitle"
                         android:drawableStart="@drawable/ic_info"
                         android:text="@string/about_title" />
@@ -565,7 +565,7 @@
                     android:layout_marginTop="16dp"
                     android:orientation="vertical">
 
-                    <com.unowhy.unomate.ui.TitleView
+                    <app.mate.ui.TitleView
                         style="@style/CardTitle"
                         android:drawableStart="@drawable/ic_palette"
                         android:text="@string/theme_title" />
@@ -586,7 +586,7 @@
                     android:layout_marginTop="16dp"
                     android:orientation="vertical">
 
-                    <com.unowhy.unomate.ui.TitleView
+                    <app.mate.ui.TitleView
                         style="@style/CardTitle"
                         android:drawableStart="@drawable/ic_dashboard"
                         android:text="@string/settings_rail" />
@@ -635,7 +635,7 @@
                     android:layout_marginTop="16dp"
                     android:orientation="vertical">
 
-                    <com.unowhy.unomate.ui.TitleView
+                    <app.mate.ui.TitleView
                         style="@style/CardTitle"
                         android:drawableStart="@drawable/ic_speed"
                         android:text="@string/anim_title" />
@@ -658,7 +658,7 @@
                     android:layout_marginTop="16dp"
                     android:orientation="vertical">
 
-                    <com.unowhy.unomate.ui.TitleView
+                    <app.mate.ui.TitleView
                         style="@style/CardTitle"
                         android:drawableStart="@drawable/ic_tablet"
                         android:text="@string/tablet_title" />
@@ -841,7 +841,7 @@
                     android:layout_marginTop="16dp"
                     android:orientation="vertical">
 
-                    <com.unowhy.unomate.ui.TitleView
+                    <app.mate.ui.TitleView
                         style="@style/CardTitle"
                         android:drawableStart="@drawable/ic_videocam"
                         android:text="@string/settings_meetings" />
@@ -874,7 +874,7 @@
                     android:layout_marginTop="16dp"
                     android:orientation="vertical">
 
-                    <com.unowhy.unomate.ui.TitleView
+                    <app.mate.ui.TitleView
                         style="@style/CardTitle"
                         android:drawableStart="@drawable/ic_accessibility"
                         android:text="@string/a11y_title" />

@@ -5,7 +5,7 @@ import { handlePointerDatagram, MAX_RATE, parsePointerPacket, pointerSignature, 
 /** Paquet signé par `token` ("" : signature vide, comme une tablette sans jeton). */
 const packet = (token: string, seq: number | string, body: unknown) => {
   const json = JSON.stringify(body);
-  return Buffer.from(`UNOWHY-POINTER\n${token && pointerSignature(token, seq, json)}\n${seq}\n${json}`);
+  return Buffer.from(`MATE-POINTER\n${token && pointerSignature(token, seq, json)}\n${seq}\n${json}`);
 };
 
 describe("parsePointerPacket", () => {
@@ -37,17 +37,17 @@ describe("parsePointerPacket", () => {
 
   it("refuse les paquets mal formés", () => {
     for (const bad of [
-      "UNOWHY-POINTER\nt\n1",
-      "UNOWHY-POINTER\nt\n1\n{pas du json",
-      "UNOWHY-POINTER\nt\n1\n[]",
-      "UNOWHY-POINTER\nt\n1\nnull",
-      "UNOWHY-POINTER\nt\n1\n{}",
-      'UNOWHY-POINTER\nt\n1\n{"dx":1}',
-      'UNOWHY-POINTER\nt\n1\n{"dx":1.5,"dy":0}',
-      'UNOWHY-POINTER\nt\n1\n{"dx":"1","dy":0}',
-      'UNOWHY-POINTER\nt\n-1\n{"dx":1,"dy":0}',
-      'UNOWHY-POINTER\nt\nabc\n{"dx":1,"dy":0}',
-      'UNOWHY-POINTER\nt\n1\n{"dx":1,"dy":0}\nen trop',
+      "MATE-POINTER\nt\n1",
+      "MATE-POINTER\nt\n1\n{pas du json",
+      "MATE-POINTER\nt\n1\n[]",
+      "MATE-POINTER\nt\n1\nnull",
+      "MATE-POINTER\nt\n1\n{}",
+      'MATE-POINTER\nt\n1\n{"dx":1}',
+      'MATE-POINTER\nt\n1\n{"dx":1.5,"dy":0}',
+      'MATE-POINTER\nt\n1\n{"dx":"1","dy":0}',
+      'MATE-POINTER\nt\n-1\n{"dx":1,"dy":0}',
+      'MATE-POINTER\nt\nabc\n{"dx":1,"dy":0}',
+      'MATE-POINTER\nt\n1\n{"dx":1,"dy":0}\nen trop',
       'AUTRE\nt\n1\n{"dx":1,"dy":0}',
       "",
     ]) {

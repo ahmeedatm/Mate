@@ -30,7 +30,7 @@ const ORIGIN = "backend-origin";
 /** Remplacés par l'essai. Pas node/ (verrouillé en marche) ni .env, .cache : à l'ordinateur. */
 const MANAGED = ["dist", "src", "scripts", "assets", "config"];
 /** Le lanceur Windows est verrouillé tant que le compagnon tourne. */
-const LOCKED = ["src/win/UnoMate.exe"];
+const LOCKED = ["src/win/Mate.exe"];
 /** Données de l'ordinateur dans config/ : jamais copiées ni remplacées. */
 const USER_FILES = ["config/deck.json", "config/tasks.json"];
 
@@ -102,7 +102,7 @@ function replaceManaged(from: string, to: string) {
 }
 
 /** Fichier propre à la plateforme : une archive de l'autre plateforme n'est jamais posée. */
-const expected = (platform: Layout["platform"]) => (platform === "windows" ? "src/win/UnowhyHelper.exe" : "src/mac/NowPlaying.dylib");
+const expected = (platform: Layout["platform"]) => (platform === "windows" ? "src/win/MateHelper.exe" : "src/mac/NowPlaying.dylib");
 
 /** Revient au backend d'origine. Faux (rien fait) si l'ordinateur n'est pas sur un essai. */
 export function restoreOrigin(layout: Layout = defaultLayout()): boolean {

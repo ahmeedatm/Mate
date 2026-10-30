@@ -5,7 +5,7 @@
 ## Pourquoi
 
 Rendre l'appli utilisable par le plus grand nombre : daltonisme, dyslexie, vue faible, motricité fine, attention.
-Bruno n'a pas de personne précise en tête : on vise le grand public. La note projet UNOMATE (29/10) en fait aussi un argument B2B : faciliter certains usages des travailleurs en situation de handicap (interfaces simplifiées, grandes commandes tactiles). Aucun test avec des personnes concernées à ce jour. Un état des lieux (29/10) a montré une base
+Bruno n'a pas de personne précise en tête : on vise le grand public. La note projet MATE (29/10) en fait aussi un argument B2B : faciliter certains usages des travailleurs en situation de handicap (interfaces simplifiées, grandes commandes tactiles). Aucun test avec des personnes concernées à ce jour. Un état des lieux (29/10) a montré une base
 correcte (textes courants contrastés ≥ 5:1, taille de police d'Android respectée presque partout) et des manques :
 états portés par la seule couleur, pas d'option d'accessibilité, TalkBack très partiel.
 

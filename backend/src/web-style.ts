@@ -27,7 +27,7 @@ export const CADRAN_CSS = `${FONTS}
 export const CADRAN_NIGHT_CSS = `${FONTS}
   :root { color-scheme: dark; ${NIGHT} }`;
 
-/** Icône UnoMate « visage » (docs/ui-ux/da/icone-visage.svg) : en tête de page et en favicon. */
+/** Icône Mate « visage » (docs/ui-ux/da/icone-visage.svg) : en tête de page et en favicon. */
 export const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" viewBox="0 0 512 512"><rect x="2" y="2" width="508" height="508" rx="112" fill="#CA0730"/><g transform="translate(95.12,132.98) scale(1.5544)"><rect x="47.5" y="0" width="22" height="43.5" rx="4" fill="#FFFFFF"/><rect x="137.5" y="0" width="22" height="43.5" rx="4" fill="#FFFFFF"/><path d="M9,4 L27.5,4 L27.5,36 L103.5,74.5 L179.5,36 L179.5,4 L198,4 L198,48 L103.5,96.4 L9,48 Z" transform="translate(0,68)" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round"/></g></svg>`;
 
 /** Favicon en data: : aucune requête (le navigateur la demanderait sans jeton). */

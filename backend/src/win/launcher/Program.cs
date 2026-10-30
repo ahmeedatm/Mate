@@ -1,11 +1,11 @@
-// UnoMate sous Windows : un seul exe, sans installation. Le runtime (node, serveur, pilote, config) est un zip
-// ajouté en fin de fichier (scripts/package.ts). Au lancement, l'exe l'extrait dans %LOCALAPPDATA%\UnoMate\runtime
+// Mate sous Windows : un seul exe, sans installation. Le runtime (node, serveur, pilote, config) est un zip
+// ajouté en fin de fichier (scripts/package.ts). Au lancement, l'exe l'extrait dans %LOCALAPPDATA%\Mate\runtime
 // (chemin stable, l'exe lui-même n'est jamais verrouillé par node), lance le serveur, le relance s'il s'arrête, et
 // ouvre le panneau (page locale). Rien n'est inscrit dans Windows : le lancement au démarrage se coche dans le panneau.
 // Programme sans fenêtre : pas de PowerShell caché, que les antivirus prennent pour un logiciel malveillant.
 //
-//   UnoMate.exe [--demarrage]          appli portable ; --demarrage : ouverture de session, sans ouvrir la page
-//   UnoMate.exe --node <node.exe> --backend <dossier backend> --logs <dossier> --data <dossier>
+//   Mate.exe [--demarrage]          appli portable ; --demarrage : ouverture de session, sans ouvrir la page
+//   Mate.exe --node <node.exe> --backend <dossier backend> --logs <dossier> --data <dossier>
 //                                              lancé depuis le dépôt par scripts/service.ts : relance seulement
 //
 // Sortie du serveur : 75 = quitter (panneau), 76 = quitter et effacer le runtime (« tout oublier »), autre = relancer.
@@ -26,13 +26,13 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace UnoMate
+namespace Mate
 {
     static class Launcher
     {
         const int QuitCode = 75;
         const int ForgetCode = 76;
-        const string Magic = "UNOWHYZ1";
+        const string Magic = "MATEZIP1";
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         static extern int MessageBox(IntPtr window, string text, string caption, uint type);
@@ -50,7 +50,7 @@ namespace UnoMate
 
         static void Alert(string text)
         {
-            if (!Headless) MessageBox(IntPtr.Zero, text, "UnoMate", 0x10);
+            if (!Headless) MessageBox(IntPtr.Zero, text, "Mate", 0x10);
         }
 
         static int Main(string[] argv)
@@ -72,7 +72,7 @@ namespace UnoMate
         static int Portable(bool startup)
         {
             var self = Assembly.GetExecutingAssembly().Location;
-            var root = Path.Combine(Environment.GetEnvironmentVariable("LOCALAPPDATA") ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "UnoMate");
+            var root = Path.Combine(Environment.GetEnvironmentVariable("LOCALAPPDATA") ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Mate");
             var runtime = Environment.GetEnvironmentVariable("COMPANION_RUNTIME_DIR");
             if (string.IsNullOrEmpty(runtime)) runtime = Path.Combine(root, "runtime");
             var data = Path.Combine(root, "data");
@@ -82,7 +82,7 @@ namespace UnoMate
             var zip = OpenPayload(self, out stamp);
             if (zip == null)
             {
-                Alert("Cet exécutable ne contient pas le compagnon : télécharge « UnoMate-Windows.exe » depuis la tablette.");
+                Alert("Cet exécutable ne contient pas le compagnon : télécharge « Mate-Windows.exe » depuis la tablette.");
                 return 2;
             }
 
@@ -119,7 +119,7 @@ namespace UnoMate
             return Supervise(Path.Combine(runtime, "node", "node.exe"), runtime, string.IsNullOrEmpty(logDir) ? root : logDir, data, runtime);
         }
 
-        /// <summary>Zip du runtime ajouté à l'exe : [zip][taille du zip, 8 octets][UNOWHYZ1]. Null sans runtime.</summary>
+        /// <summary>Zip du runtime ajouté à l'exe : [zip][taille du zip, 8 octets][MATEZIP1]. Null sans runtime.</summary>
         static ZipArchive OpenPayload(string exe, out string stamp)
         {
             stamp = null;

@@ -33,7 +33,7 @@ test("connecter, voir le compte, déconnecter", async ({ page }) => {
   await expect(card.locator("#gitlabstate")).toHaveText("Non connecté.");
 
   await card.getByRole("link", { name: "Se connecter avec GitLab" }).click();
-  await expect(page.getByRole("heading", { name: "Autoriser UnoMate ?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Autoriser Mate ?" })).toBeVisible();
   await page.getByRole("link", { name: "Autoriser" }).click();
 
   await expect(page).toHaveURL(/\/\?section=gitlab&gitlab=ok$/);
@@ -53,7 +53,7 @@ test("connecter, voir le compte, déconnecter", async ({ page }) => {
   await expect(page.locator("#cxtitle")).toHaveText("Relier GitLab");
   await expect(card.locator("#cxlist li")).toHaveCount(4);
   await card.getByRole("link", { name: "Se connecter avec GitLab" }).click();
-  await expect(page.getByRole("heading", { name: "Autoriser UnoMate ?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Autoriser Mate ?" })).toBeVisible();
 });
 
 test("autorisation refusée sur GitLab : message d'annulation, pas de compte", async ({ page }) => {

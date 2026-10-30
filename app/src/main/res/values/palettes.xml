@@ -117,7 +117,7 @@
         <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
     </style>
 
-    <!-- Cadran (docs/ui-ux/da) : rôles Material 3 générés depuis le rouge Unowhy, une seule couleur vivante.
+    <!-- Cadran (docs/ui-ux/da) : rôles Material 3 générés depuis le rouge d'alerte, une seule couleur vivante.
          Les teintes par fonction deviennent neutres, sauf rouge (maintenant) et vert (fait).
          Cadran jour (30/10) : texture de Rétro (grain, tubes qui coulent à droite, widgets de l'Accueil translucides, halo des
          textes) aux couleurs de Cadran (bordeaux, rouge, corail, rose de la DA) ; papier rosé plutôt que blanc, texte

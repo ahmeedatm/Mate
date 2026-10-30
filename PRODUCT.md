@@ -12,7 +12,7 @@ tablette est native Android (vues XML, Kotlin) : sa finition passe par la skill
 
 ## Users
 
-- **Le pro**, employé qui travaille sur Mac ou PC Windows avec une tablette UnoMate posée sur son
+- **Le pro**, employé qui travaille sur Mac ou PC Windows avec une tablette Mate posée sur son
   bureau. Sur l'ordinateur, il appaire la tablette, règle la tablette (thème, écran, son), relie son
   agenda et GitLab, puis revient rarement sur la page.
 - **L'IT ou l'admin**, qui installe le compagnon sur des postes pour d'autres et vérifie que tout
@@ -20,7 +20,7 @@ tablette est native Android (vues XML, Kotlin) : sa finition passe par la skill
 
 ## Product Purpose
 
-UnoMate transforme une tablette Unowhy 4.2 en écran de contrôle tactile relié en WiFi à un Mac ou un
+Mate transforme une tablette 4.2 en écran de contrôle tactile relié en WiFi à un Mac ou un
 PC Windows : piloter l'ordinateur, ses applis et ses fenêtres, voir son agenda, ses tâches, ses MR,
 lancer des macros, sur le modèle du Stream Deck. Le compagnon de l'ordinateur exécute ce que la
 tablette demande. Sa page locale est le panneau de configuration côté ordinateur.
@@ -37,7 +37,7 @@ professionnels (B2B), vendu seul ou avec un PC Unowhy. Il réutilise des tablett
 ## Operating Context
 
 - Page ouverte dans le navigateur de l'ordinateur sur `http://127.0.0.1:<port>/`, sans jeton, en
-  local seulement. Relancer l'appli « UnoMate » la rouvre.
+  local seulement. Relancer l'appli « Mate » la rouvre.
 - Moments d'usage : première installation et appairage (code à 6 chiffres affiché par la tablette,
   valable 2 minutes), réglages ponctuels, dépannage quand la tablette ne trouve plus l'ordinateur.
 - La tablette peut ouvrir la page sur une section précise (`?section=agenda`, `gitlab`).
@@ -60,11 +60,11 @@ professionnels (B2B), vendu seul ou avec un PC Unowhy. Il réutilise des tablett
 
 ## Brand Commitments
 
-- Nom : **UnoMate** (badge « Mate »).
+- Nom : **Mate** (badge « Mate »).
 - La page doit sembler venir du même produit que la tablette : tokens Cadran (jour / nuit, rouge
   Unowhy `#CA0538` = « maintenant ») et police Outfit, communs avec l'appli
   (`app/src/main/res/values/palettes.xml`, `backend/src/web-style.ts`).
-- Icône UnoMate « visage » (`docs/ui-ux/da/icone-visage.svg`) sur les pages web du compagnon ; icône Cadran (`docs/ui-ux/da/icone.svg`) ailleurs.
+- Icône Mate « visage » (`docs/ui-ux/da/icone-visage.svg`) sur les pages web du compagnon ; icône Cadran (`docs/ui-ux/da/icone.svg`) ailleurs.
 - Textes en français, tutoiement, mêmes mots que sur la tablette (« Réglages › Ordinateurs ›
   Ajouter », « Saisir l'adresse »).
 

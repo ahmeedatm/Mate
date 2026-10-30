@@ -248,14 +248,14 @@ helper-windows:
       -PupdateUrl="$UPDATES_URL" -PupdateHeader="Deploy-Token: $UPDATE_DEPLOY_TOKEN"
     - mkdir -p dist && cp app/build/outputs/apk/release/app-release.apk dist/companion-$VERSION.apk
     - $ANDROID_HOME/build-tools/36.0.0/apksigner verify --print-certs dist/companion-$VERSION.apk
-    # Paquet, libellé et code lus dans l'APK : com.unowhy.companion « UnoMate », ou l'essai com.unowhy.companion.essai
-    # « UnoMate essai », appli à part installée à côté (app/build.gradle.kts).
+    # Paquet, libellé et code lus dans l'APK : app.mate « Mate », ou l'essai app.mate.essai
+    # « Mate essai », appli à part installée à côté (app/build.gradle.kts).
     - $ANDROID_HOME/build-tools/36.0.0/aapt2 dump badging dist/companion-$VERSION.apk > /tmp/badging.txt
     - PKG=$(sed -n "1s/^package:.name='\([^']*\)'.*/\1/p" /tmp/badging.txt)
     - CODE=$(sed -n "1s/.*versionCode='\([0-9]*\)'.*/\1/p" /tmp/badging.txt)
     - LABEL=$(sed -n "s/^application-label:'\(.*\)'$/\1/p" /tmp/badging.txt)
     # Un essai qui porterait le paquet de la stable la remplacerait sur la tablette, sans retour possible.
-    - case "$VERSION" in *-essai.*) WANT=com.unowhy.companion.essai ;; *) WANT=com.unowhy.companion ;; esac
+    - case "$VERSION" in *-essai.*) WANT=app.mate.essai ;; *) WANT=app.mate ;; esac
     - test "$PKG" = "$WANT" || { echo "Paquet « $PKG » pour la version $VERSION, attendu $WANT"; exit 1; }
     - jq -n --arg p "$PKG" --arg l "$LABEL" --arg v "$VERSION" --argjson c "$CODE" --arg f "companion-$VERSION.apk"
       '{package:$p, label:$l, versionCode:$c, versionName:$v, file:$f}'
@@ -289,7 +289,7 @@ updates:
 
 # Essai de l'appli tablette depuis une MR, sans fusion ni tag : branche protégée essai/mr-<iid> poussée depuis la branche
 # de la MR, puis job manuel. Version X.Y.Z-essai.N (X.Y.Z = dernier tag de la branche, N = numéro du pipeline) : code
-# entre ce tag et le suivant. Version en -essai.N = autre appli, com.unowhy.companion.essai « UnoMate essai »
+# entre ce tag et le suivant. Version en -essai.N = autre appli, app.mate.essai « Mate essai »
 # (app/build.gradle.kts), installée par la stable à côté d'elle : la stable reste device owner et revient à elle sans
 # réinstaller. Branche non protégée : pas de job (clé invisible).
 # dist/backend-changed : backend/ diffère de main, donc essai-backend fabrique l'archive du backend de la MR.
@@ -390,7 +390,7 @@ release:
       VERSION=${CI_COMMIT_TAG#v}
       BASE="$CI_PROJECT_URL/-/jobs/artifacts/$CI_COMMIT_TAG/raw/dist"
       LINKS=""
-      for f in UnoMate-Windows.exe:package-windows UnoMate-Mac.zip:package-mac \
+      for f in Mate-Windows.exe:package-windows Mate-Mac.zip:package-mac \
         companion-$VERSION.apk:android-release companion-$VERSION.json:android-release; do
         LINKS="$LINKS{\"name\":\"${f%%:*}\",\"url\":\"$BASE/${f%%:*}?job=${f##*:}\",\"link_type\":\"package\"},"
       done
@@ -400,7 +400,7 @@ release:
         NOTES=/tmp/notes.md
         echo "Applis portables de l'ordinateur (Windows, Mac) et APK de la tablette. Mise à jour de la tablette par le « serveur Unowhy » : docs/developpement.md, section Release." > "$NOTES"
       fi
-      glab release create "$CI_COMMIT_TAG" --ref "$CI_COMMIT_SHA" --name "UnoMate $CI_COMMIT_TAG" \
+      glab release create "$CI_COMMIT_TAG" --ref "$CI_COMMIT_SHA" --name "Mate $CI_COMMIT_TAG" \
         --notes-file "$NOTES" --assets-links "[${LINKS%,}]"
 
 # --- Site vitrine Mate (site/) : image nginx dans Harbor (harbor.unowhy.dev/squads/mate-site), déployée à la main sur le

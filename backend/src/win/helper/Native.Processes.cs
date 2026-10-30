@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
-namespace UnoMate
+namespace Mate
 {
     public static partial class Native
     {

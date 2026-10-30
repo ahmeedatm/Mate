@@ -149,14 +149,14 @@
 
         <!-- Thème Rétro seulement (sinon GONE) : tubes qui coulent sur toute la hauteur, derrière tous les écrans, à droite ;
              ils défilent d'un écran quand on passe à l'entrée voisine de la barre (ui/home/FlowBandView). -->
-        <com.unowhy.unomate.ui.home.FlowBandView
+        <app.mate.ui.home.FlowBandView
             android:id="@+id/flow"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_gravity="end" />
 
         <!-- Sous le bandeau du haut : rien ne défile dessous. Balayage vertical entre les entrées de la barre (ui/RailSwipeLayout). -->
-        <com.unowhy.unomate.ui.RailSwipeLayout
+        <app.mate.ui.RailSwipeLayout
             android:id="@+id/mode_container"
             android:layout_marginTop="@dimen/top_bar_height"
             android:defaultFocusHighlightEnabled="false"
@@ -176,7 +176,7 @@
 
         <!-- Bandeau du haut, fixe (ui/topbar/TopBar) : en-tête de l'écran à gauche, éléments choisis à droite (lecture en
              cours, heure, WiFi, batterie…) ; la barre d'état d'Android est masquée en kiosque. -->
-        <com.unowhy.unomate.ui.topbar.TopBar
+        <app.mate.ui.topbar.TopBar
             android:id="@+id/top_bar"
             android:layout_width="match_parent"
             android:layout_height="@dimen/top_bar_height"
@@ -184,7 +184,7 @@
 
     </FrameLayout>
 
-    <com.unowhy.unomate.ui.DocumentPanel
+    <app.mate.ui.DocumentPanel
         android:id="@+id/document_panel"
         android:layout_width="0dp"
         android:layout_height="match_parent"
@@ -193,14 +193,14 @@
 </LinearLayout>
 
     <!-- Premier lancement : tant qu'aucun ordinateur n'est appairé. -->
-    <com.unowhy.unomate.ui.WelcomeView
+    <app.mate.ui.WelcomeView
         android:id="@+id/welcome"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone" />
 
     <!-- Plugins de l'ordinateur actif : première utilisation, appli compatible apparue, ou Réglages. -->
-    <com.unowhy.unomate.ui.PluginsView
+    <app.mate.ui.PluginsView
         android:id="@+id/plugins"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

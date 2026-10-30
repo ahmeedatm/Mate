@@ -1,6 +1,6 @@
 # Public cible et positionnement
 
-> 29/10/2026 : direction **B2B**, d'après la note projet UNOMATE (voir Sources). Elle remplace le cadrage gamers / streamers (« régie de poche ») décidé les 27 et 28/10, gardé plus bas en pistes écartées. Les chiffres commerciaux de la note (prix, chiffre d'affaires, tailles de marché, prix des concurrents) ne sont volontairement pas dans le dépôt.
+> 29/10/2026 : direction **B2B**, d'après la note projet MATE (voir Sources). Elle remplace le cadrage gamers / streamers (« régie de poche ») décidé les 27 et 28/10, gardé plus bas en pistes écartées. Les chiffres commerciaux de la note (prix, chiffre d'affaires, tailles de marché, prix des concurrents) ne sont volontairement pas dans le dépôt.
 
 Doc de cadrage produit : à qui vendre la tablette, pour quoi faire, et ce qu'il reste à prouver. Les offres et les canaux sont des hypothèses à tester.
 
@@ -8,11 +8,11 @@ Doc de cadrage produit : à qui vendre la tablette, pour quoi faire, et ce qu'il
 
 Unowhy a **18 000 tablettes 4.2** à valoriser (note, section 3). L'objectif est de créer de la valeur par le logiciel, sans nouveau matériel, et d'ouvrir une **nouvelle offre B2B**, vendue seule ou en complément des PC Unowhy, avec un élargissement possible au grand public ([etat-du-projet.md](etat-du-projet.md), section Pourquoi ce projet).
 
-Nom du produit : **UnoMate** (la note écrit « UNO-Mate »).
+Nom du produit : **Mate** (la note écrit « UNO-Mate »).
 
 ## Le cadre : un accessoire de productivité personnalisable
 
-UnoMate transforme une tablette 4.2 en un **écran de contrôle tactile personnalisable**, relié en WiFi à un Mac ou un PC Windows. Il sert à piloter l'ordinateur, accéder à ses outils et automatiser ses actions, sur le modèle du Stream Deck.
+Mate transforme une tablette 4.2 en un **écran de contrôle tactile personnalisable**, relié en WiFi à un Mac ou un PC Windows. Il sert à piloter l'ordinateur, accéder à ses outils et automatiser ses actions, sur le modèle du Stream Deck.
 
 Positionnement retenu par la note :
 
@@ -50,7 +50,7 @@ Le moment où la tablette compte le plus pour un salarié de bureau est la **ré
 
 Concurrents cités par la note : Elgato (Stream Deck), Logitech (MX Creative Console), Corsair (Xeneon Edge). Tous permettent d'accéder vite aux applis et d'automatiser des tâches.
 
-Cinq atouts d'UnoMate d'après la note :
+Cinq atouts de Mate d'après la note :
 
 | Atout | État |
 |---|---|
@@ -96,7 +96,7 @@ Hypothèses, à confirmer avec l'équipe.
 
 Déjà suivis dans [etat-du-projet.md](etat-du-projet.md) :
 
-- exe Windows (`UnowhyHelper.exe`, `UnoMate.exe`) à signer avec un certificat Unowhy (section Pourquoi ce projet) ;
+- exe Windows (`UnowhyHelper.exe`, `Mate.exe`) à signer avec un certificat Unowhy (section Pourquoi ce projet) ;
 - kiosque à poser en usine par Unowhy, à confirmer avec eux (section Avant de livrer, [kiosque.md](kiosque.md)).
 
 ## Points non vérifiés
@@ -123,7 +123,7 @@ Le cadrage précédent visait la « régie de poche » : piloter un direct sans 
 
 ## Sources
 
-- Note projet UNOMATE (`UNOMATE_Note Projet.docx`, en-tête « Janvier 2024 »), sections 1 à 4. Annexes absentes.
+- Note projet MATE (`MATE_Note Projet.docx`, en-tête « Janvier 2024 »), sections 1 à 4. Annexes absentes.
 - [Spec Deck V2](superpowers/specs/2026-10-29-deck-v2-barre-profils-design.md) : cible B2B et moment de la réunion.
 - SimHub sur une tablette : https://simxpro.com/blogs/guides/simhub-dashboard-on-a-tablet-cheap-second-screen-setup-that-works
 - Corsair Xeneon Edge pour le simracing : https://www.corsair.com/us/lt/explorer/gamer/monitors/how-to-use-xeneon-edge-as-a-dashboard-for-sim-racing/

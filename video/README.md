@@ -1,6 +1,6 @@
 # Vidéo de démo
 
-Film HyperFrames sur UnoMate (le UnoMate), construit sur les personas de [../docs/personas.md](../docs/personas.md).
+Film HyperFrames sur Mate (le Mate), construit sur les personas de [../docs/personas.md](../docs/personas.md).
 
 | Dossier | Film | Durée |
 |---|---|---|

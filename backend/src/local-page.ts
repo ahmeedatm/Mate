@@ -2,7 +2,7 @@ import { CONFIG_CSS, CONFIG_HTML, CONFIG_JS } from "./local-config.ts";
 import { CADRAN_CSS, FAVICON, ICON_SVG } from "./web-style.ts";
 
 /**
- * Page http://127.0.0.1:3000/ ouverte sur l'ordinateur (le panneau de l'appli : relancer « UnoMate » la rouvre) :
+ * Page http://127.0.0.1:3000/ ouverte sur l'ordinateur (le panneau de l'appli : relancer « Mate » la rouvre) :
  * barre de gauche (état du compagnon et de la tablette, sections), puis les sections l'une sous l'autre : réglages de la
  * tablette connectée avec son aperçu dessiné, connexion d'une tablette (code d'appairage affiché par la tablette),
  * agenda, GitLab et la carte « Cette appli » (lancement au démarrage, pare-feu, ancienne installation, mise à jour,
@@ -14,7 +14,7 @@ export const LOCAL_PAGE = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>UnoMate</title>
+<title>Mate</title>
 ${FAVICON}
 <style>
   ${CADRAN_CSS}
@@ -239,7 +239,7 @@ ${FAVICON}
 <nav aria-label="Sections">
   <div class="who">
     <span class="logo">${ICON_SVG}</span>
-    <div><h1 id="name">UnoMate</h1><p><span class="dot on" id="srvdot"></span><span id="os"></span></p></div>
+    <div><h1 id="name">Mate</h1><p><span class="dot on" id="srvdot"></span><span id="os"></span></p></div>
   </div>
   <div class="health">
     <div><span class="dot" id="dot"></span><span id="state">Tablette non connectée</span></div>
@@ -430,7 +430,7 @@ ${FAVICON}
     <div class="sechead"><h2>Cette appli</h2><span class="dim" id="appinfo"></span></div>
     <div class="card group">
       <div class="row"><label for="autostart">Lancer au démarrage de l'ordinateur</label><input type="checkbox" id="autostart"></div>
-      <div class="dim note">Rien n'est inscrit tant que la case n'est pas cochée. Sinon, rouvre « UnoMate » quand tu en as besoin.</div>
+      <div class="dim note">Rien n'est inscrit tant que la case n'est pas cochée. Sinon, rouvre « Mate » quand tu en as besoin.</div>
       <div id="firewallrow" hidden>
         <div class="row"><span class="grow" id="firewallstate"></span><button id="firewallopen">Ouvrir le pare-feu</button></div>
         <div class="dim note">Réseaux privés seulement. Windows demande l'accord d'un administrateur.</div>
@@ -477,7 +477,7 @@ ${FAVICON}
       renderTablet(s.tabletInfo);
       placeConnect(!!s.tabletInfo);
       buildRail();
-      document.title = s.tabletInfo ? "Compagnon · " + (s.tabletInfo.name || "tablette") : "UnoMate";
+      document.title = s.tabletInfo ? "Compagnon · " + (s.tabletInfo.name || "tablette") : "Mate";
       const p = s.pairing, card = document.getElementById("pairing");
       const shown = card.style.display === "block";
       card.style.display = p ? "block" : "none";
@@ -491,7 +491,7 @@ ${FAVICON}
       // Plus de réponse : la page le dit partout (barre, état) et cache ce qui ferait croire le contraire (code, réglages).
       document.body.classList.add("down");
       document.getElementById("srvdot").className = "dot ko";
-      document.getElementById("os").textContent = "Compagnon arrêté : rouvre « UnoMate »";
+      document.getElementById("os").textContent = "Compagnon arrêté : rouvre « Mate »";
       document.getElementById("dot").className = "dot";
       document.getElementById("state").textContent = "Tablette : état inconnu";
     }
@@ -566,8 +566,8 @@ ${FAVICON}
   let tabletFocused = false;
   // Connecter une IA : textes posés seulement s'ils changent (la page se rafraîchit toutes les 1,5 s, une sélection resterait).
   function renderMcp(m) {
-    const desktop = JSON.stringify({ mcpServers: { unomate: m.desktop } }, null, 2);
-    const texts = { mcpdesktop: desktop, mcpcode: "claude mcp add --transport http unomate " + m.url, mcpurl: m.url };
+    const desktop = JSON.stringify({ mcpServers: { mate: m.desktop } }, null, 2);
+    const texts = { mcpdesktop: desktop, mcpcode: "claude mcp add --transport http mate " + m.url, mcpurl: m.url };
     for (const [id, text] of Object.entries(texts)) if ($(id).textContent !== text) $(id).textContent = text;
   }
   for (const b of document.querySelectorAll("[data-copy]")) {
@@ -790,7 +790,7 @@ ${FAVICON}
     $("appupdatestate").textContent = r.available ? "Version " + r.available + " sur la tablette (tu as la " + r.current + ")." : "À jour (version " + r.current + ").";
   });
   $("updateinstall").onclick = () => act(() => post("/local/update"), (r) => "Version " + r.version + " téléchargée : l'appli redémarre, la page se recharge.", true);
-  $("quit").onclick = () => act(() => post("/local/quit"), () => "Compagnon arrêté. Rouvre « UnoMate » pour le relancer.", true);
+  $("quit").onclick = () => act(() => post("/local/quit"), () => "Compagnon arrêté. Rouvre « Mate » pour le relancer.", true);
   $("forget").onclick = () => {
     if (confirm("Tout oublier ? La tablette devra être appairée à nouveau, l'agenda et les tâches de cet ordinateur sont effacés.")) {
       act(() => post("/local/forget", { sure: true }), () => "Tout est oublié. Tu peux supprimer l'appli.", true);
@@ -891,14 +891,14 @@ ${FAVICON}
     gitlab: {
       title: "Relier GitLab",
       steps: ["Touche « Se connecter avec GitLab » : GitLab s'ouvre dans le navigateur.", "Connecte-toi à ton compte GitLab si besoin.",
-        "Touche « Autoriser » : UnoMate lit tes MR et tes pipelines.", "Tu reviens ici : les widgets GitLab de la tablette se remplissent."],
+        "Touche « Autoriser » : Mate lit tes MR et tes pipelines.", "Tu reviens ici : les widgets GitLab de la tablette se remplissent."],
       action: "Se connecter avec GitLab",
     },
     jira: {
       title: "Relier Jira",
       steps: ["Crée un jeton d'API sur id.atlassian.com › Sécurité › Jetons d'API.",
         "Ouvre le fichier .env du compagnon et renseigne JIRA_SITE (ton site Atlassian), JIRA_EMAIL et JIRA_API_TOKEN.",
-        "Relance UnoMate : tes tickets arrivent dans le widget Jira de la tablette."],
+        "Relance Mate : tes tickets arrivent dans le widget Jira de la tablette."],
     },
   };
   const PANEL = { microsoft: "agenda", google: "agenda", ics: "agenda", gitlab: "gitlab", jira: "jira", discord: "plugin", claude: "plugin" };

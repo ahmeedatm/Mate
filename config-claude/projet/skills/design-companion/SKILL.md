@@ -1,6 +1,6 @@
 ---
 name: design-companion
-description: Passe qualité UX/UI écran par écran du UnoMate (appli Android en vues XML sur la tablette 4.2, pages web servies par le backend). Commandes critique, polish, distill, harden, animate, etats. Utiliser pour relire, finir ou durcir un écran existant, chercher les anti-motifs « look IA », inventorier les états (sans ordinateur, injoignable, vide, erreur, kiosque), vérifier contrastes, cibles tactiles et animations sur ce matériel. Ne crée pas de direction artistique.
+description: Passe qualité UX/UI écran par écran du Mate (appli Android en vues XML sur la tablette 4.2, pages web servies par le backend). Commandes critique, polish, distill, harden, animate, etats. Utiliser pour relire, finir ou durcir un écran existant, chercher les anti-motifs « look IA », inventorier les états (sans ordinateur, injoignable, vide, erreur, kiosque), vérifier contrastes, cibles tactiles et animations sur ce matériel. Ne crée pas de direction artistique.
 argument-hint: "<critique|polish|distill|harden|animate|etats> <écran ou fichier>"
 ---
 

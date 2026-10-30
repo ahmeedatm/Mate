@@ -13,7 +13,7 @@ val techCode = (findProperty("techCode") as String?) ?: "4242"
 // Serveur central des mises à jour : registre de paquets du projet GitLab (manifest.json + APK). -PupdateUrl=http://10.0.2.2:8099
 // pour un essai local, vide pour le couper.
 val updateUrl = (findProperty("updateUrl") as String?)
-    ?: "https://gitlab.unowhy.dev/api/v4/projects/891/packages/generic/companion-updates/latest"
+    ?: "https://gitlab.com/api/v4/projects/891/packages/generic/companion-updates/latest"
 // En-tête envoyé au seul serveur central, « Nom: valeur ». La CI release passe « Deploy-Token: … » (lecture seule du registre) ;
 // vide en debug : le registre répond 401, la tablette n'y voit aucune mise à jour.
 val updateHeader = (findProperty("updateHeader") as String?) ?: ""
@@ -30,7 +30,7 @@ val appVersionCode = versionParts.let { (x, y, z, n) ->
     val tag = (x.toInt() * 10000 + y.toInt() * 100 + z.toInt()) * 1000
     (if (n.isEmpty()) tag else tag + 1 + n.toInt() % 999).coerceAtLeast(1)
 }
-// Un essai est une autre appli (com.unowhy.companion.essai, « UnoMate essai »), installée à côté de la stable : la
+// Un essai est une autre appli (app.mate.essai, « Mate essai »), installée à côté de la stable : la
 // stable reste device owner et kiosque, et on revient à elle sans réinstaller (docs/developpement.md, section Release).
 val trial = versionParts.component4().isNotEmpty()
 
@@ -38,19 +38,19 @@ val trial = versionParts.component4().isNotEmpty()
 val releaseKeystore = providers.environmentVariable("RELEASE_KEYSTORE").orNull
 
 android {
-    namespace = "com.unowhy.unomate"
+    namespace = "app.mate"
     compileSdk = 36
 
     defaultConfig {
-        // Identité Android d'avant le renommage UnoMate, à ne jamais changer : les tablettes en kiosque ne se mettent à
-        // jour que vers leur propre paquet (device owner, AutoUpdater). Le code, lui, est dans com.unowhy.unomate.
-        applicationId = "com.unowhy.companion"
+        // Identité Android d'avant le renommage Mate, à ne jamais changer : les tablettes en kiosque ne se mettent à
+        // jour que vers leur propre paquet (device owner, AutoUpdater). Le code, lui, est dans app.mate.
+        applicationId = "app.mate"
         minSdk = 24
         targetSdk = 34
         versionCode = appVersionCode
         versionName = appVersion
         if (trial) applicationIdSuffix = ".essai"
-        manifestPlaceholders["appLabel"] = if (trial) "UnoMate essai" else "UnoMate"
+        manifestPlaceholders["appLabel"] = if (trial) "Mate essai" else "Mate"
         buildConfigField("boolean", "TRIAL", "$trial")
         buildConfigField("String", "DEFAULT_BACKEND_URL", "\"$backendUrl\"")
         buildConfigField("String", "TECH_CODE", "\"$techCode\"")

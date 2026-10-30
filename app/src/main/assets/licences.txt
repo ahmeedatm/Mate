@@ -1,4 +1,4 @@
-UnoMate : composants tiers et licences
+Mate : composants tiers et licences
 ========================================================
 
 L'appli utilise les composants suivants. Leur licence demande d'en citer l'auteur et d'en joindre le texte :

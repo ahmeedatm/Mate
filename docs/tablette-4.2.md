@@ -1,12 +1,12 @@
 # Tablette Unowhy 4.2 : spec matérielle
 
-UnoMate ne tourne que sur ce matériel. Toute décision technique (dépendance, animation, page web,
+Mate ne tourne que sur ce matériel. Toute décision technique (dépendance, animation, page web,
 format média) se vérifie contre cette fiche, pas contre l'émulateur ni un téléphone récent.
 
 Relevés par adb :
 
 - 23/10/2026 : tablette d'Eliot, image SQOOL d'origine (MDM, caméras).
-- 27/10/2026 : tablette `77332110160003967`, UnoMate device owner en kiosque (le reste).
+- 27/10/2026 : tablette `77332110160003967`, Mate device owner en kiosque (le reste).
 
 ```bash
 adb shell getprop ro.build.display.id                 # firmware Unowhy
@@ -17,7 +17,7 @@ adb shell pm list features                            # capteurs, radios, Vulkan
 adb shell dumpsys sensorservice | grep '^0x'          # capteurs
 adb shell dumpsys media.audio_policy | grep 'type: AUDIO_DEVICE'
 adb shell dumpsys webviewupdate | grep 'Current WebView'
-adb shell dumpsys device_policy | grep -A3 Owner      # MDM ou UnoMate
+adb shell dumpsys device_policy | grep -A3 Owner      # MDM ou Mate
 adb shell dumpsys thermalservice | grep Temperature   # températures
 ```
 
@@ -72,7 +72,7 @@ adb shell dumpsys thermalservice | grep Temperature   # températures
 ## Caméras
 
 Relevé avec `adb shell dumpsys media.camera` (Camera2, niveau `LIMITED` pour les deux caméras).
-Appli système `com.mediatek.camera`, inutile à UnoMate (il passe par Camera2).
+Appli système `com.mediatek.camera`, inutile à Mate (il passe par Camera2).
 
 | | Arrière | Avant |
 |---|---|---|
@@ -103,9 +103,9 @@ avec de la marge (un cahier ouvert sur deux pages demande environ 35 cm). En 720
 | Chrome | 81.0.4044.138, désactivé en kiosque |
 | Services Google | Play Services, Play Store, appli Google 10.97 (reconnaissance vocale de la commande vocale) |
 | Synthèse vocale | Google TTS 3.20 ; voix française à confirmer |
-| Lanceur | Launcher3 d'Android (pas de lanceur SQOOL) ; UnoMate le remplace en kiosque |
+| Lanceur | Launcher3 d'Android (pas de lanceur SQOOL) ; Mate le remplace en kiosque |
 | MDM d'origine | `com.hisqool.devicemanager`, **profile owner** (pas device owner), restriction `no_add_user` ; effacé par la réinitialisation du kiosque |
-| Agent SQOOL dans l'image | `com.unowhy.sqoolota` (`/product/priv-app/SqoolOTA`, UID système) : réinstalle le MDM dès qu'il a du réseau ; masqué par UnoMate en kiosque |
+| Agent SQOOL dans l'image | `com.unowhy.sqoolota` (`/product/priv-app/SqoolOTA`, UID système) : réinstalle le MDM dès qu'il a du réseau ; masqué par Mate en kiosque |
 | Applis SQOOL | `com.sqool.student`, `com.hisqool.rooms`, `com.hisqool.authentication`, `com.unowhy.sqoolclasse`, `com.unowhy.sqool.sqpa`, `com.unowhy.projection`… (toutes dans `/data/app`) |
 | Comptes | Aucun |
 
@@ -119,10 +119,10 @@ entre images mesuré par `requestAnimationFrame` :
 | Repos (horloge, chrono Focus) | 55,2 | 18,2 ms | 0 sur 331 |
 | Animations (tâches, eau, pause) | 54,5 | 18,2 ms | 3 sur 654, dont une à 109 ms |
 
-Mémoire au même moment (PSS) : UnoMate 67 Mo, Chrome 92 Mo + 84 Mo, `system_server` 147 Mo,
+Mémoire au même moment (PSS) : Mate 67 Mo, Chrome 92 Mo + 84 Mo, `system_server` 147 Mo,
 appli Google 102 Mo.
 
-## Ce que ça impose à UnoMate
+## Ce que ça impose à Mate
 
 - **Une image = 18,2 ms** (écran à 55 Hz). Les budgets d'animation et les mesures `gfxinfo` se lisent
   sur cette base, pas sur 16,7 ms.
@@ -155,5 +155,5 @@ appli Google 102 Mo.
   batterie 27 °C au repos en kiosque (27/10/2026).
 - [ ] Luminosité maximale de l'écran et lisibilité au soleil.
 - [ ] Vibreur : confirmer l'absence en appelant `Vibrator.hasVibrator()` depuis l'appli.
-- [x] Tablette sans MDM : réinitialisée le 23/10/2026, UnoMate device owner, SqoolOTA masqué,
+- [x] Tablette sans MDM : réinitialisée le 23/10/2026, Mate device owner, SqoolOTA masqué,
   24 applis désactivées (`docs/kiosque.md`).

@@ -96,7 +96,7 @@ for i, c in enumerate(CH):
         w(f'      <img src="assets/screens/{e["img"]}.png" alt="" style="left:{-x * k:.1f}px;top:{-y * k:.1f}px;width:{1280 * k:.1f}px;height:{800 * k:.1f}px" />\n    </div>\n')
         e["_z"] = (zs, (fx(x) + zw * S / 2) - CX, (fy(y) + zh * S / 2) - CY, S / k)
 # Ouverture
-w(f'    <div id="d-titre" class="clip" data-start="0" data-duration="{OUV}" data-track-index="4"><h1>Six personnes, une tablette</h1><p>UnoMate : chaque utilisateur configure son Mate.</p></div>\n')
+w(f'    <div id="d-titre" class="clip" data-start="0" data-duration="{OUV}" data-track-index="4"><h1>Six personnes, une tablette</h1><p>Mate : chaque utilisateur configure son Mate.</p></div>\n')
 # Colonnes
 for i, c in enumerate(CH):
     t0 = OUV + i * DUR
@@ -109,7 +109,7 @@ for i, c in enumerate(CH):
 # Fin
 w(f'''    <div id="d-fin" class="clip" data-start="{FIN}" data-duration="{TOTAL - FIN}" data-track-index="4">
       <svg viewBox="0 0 512 512"><rect x="2" y="2" width="508" height="508" rx="112" fill="#CA0730"/><g transform="translate(95.12,132.98) scale(1.5544)"><rect x="47.5" y="0" width="22" height="43.5" rx="4" fill="#FFFFFF"/><rect x="137.5" y="0" width="22" height="43.5" rx="4" fill="#FFFFFF"/><path d="M9,4 L27.5,4 L27.5,36 L103.5,74.5 L179.5,36 L179.5,4 L198,4 L198,48 L103.5,96.4 L9,48 Z" transform="translate(0,68)" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round"/></g></svg>
-      <div class="nom">UnoMate</div><img src="assets/brand/unowhy.svg" alt="Unowhy" />
+      <div class="nom">Mate</div><img src="assets/brand/unowhy.svg" alt="Unowhy" />
       <p>Mac et Windows, en WiFi.<br />Sur la tablette Unowhy 4.2.</p>
     </div>
 ''')

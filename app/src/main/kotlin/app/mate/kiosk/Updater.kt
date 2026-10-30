@@ -1,0 +1,243 @@
+package app.mate.kiosk
+
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageInfo
+import android.content.pm.PackageInstaller
+import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
+import androidx.core.content.ContextCompat
+import app.mate.Computers
+import app.mate.Prefs
+import app.mate.R
+import app.mate.UserFacingException
+import app.mate.net.AppUpdate
+import app.mate.net.BackendClient
+import app.mate.net.Essai
+import app.mate.net.HttpException
+import app.mate.net.UpdateSource
+import app.mate.net.UpdatesApi
+import app.mate.trial.EssaiPlan
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import org.json.JSONException
+import java.io.File
+import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
+
+/**
+ * Mises à jour installées par le Mate lui-même, sans personne : moteur web (WebView, figé en 81 par le kiosque)
+ * et le Mate. Deux sources : l'ordinateur relié (« serveur Unowhy » simulé) et le serveur central (GitLab Pages,
+ * `BuildConfig.UPDATE_URL`), qui marche sans ordinateur. Device owner : Android installe sans demander de
+ * confirmation. Sécurité : empreinte SHA-256 du fichier comparée à celle annoncée, puis Android refuse toute
+ * mise à jour qui n'est pas signée par le même éditeur (Google pour le WebView).
+ */
+object Updater {
+
+    /** Version installée d'un paquet, null s'il est absent. */
+    fun installed(context: Context, pkg: String): PackageInfo? =
+        try { context.packageManager.getPackageInfo(pkg, 0) } catch (e: PackageManager.NameNotFoundException) { null }
+
+    @Suppress("DEPRECATION")
+    fun versionCode(info: PackageInfo): Long = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
+
+    /** Résultat d'une recherche : annonces fusionnées (voir [UpdatePlan.merge]), sources interrogées et sources en erreur. */
+    class Check(val updates: List<Pair<AppUpdate, PackageInfo?>>, val attempted: Set<UpdateSource>, val errors: Map<UpdateSource, Exception>)
+
+    /** Une seule installation à la fois : bouton de Réglages et [AutoUpdater]. */
+    private val busy = AtomicBoolean(false)
+
+    /** Interroge les deux sources en parallèle ; l'ordinateur seulement s'il y en a un d'appairé. */
+    suspend fun check(context: Context): Check = coroutineScope {
+        val computer = if (Computers.all(context).isEmpty()) null else async { fetch { BackendClient(context).updates.list() } }
+        val server = UpdatesApi.server()?.let { api -> async { fetch { serverList(api) } } }
+        val results = mapOf(UpdateSource.COMPUTER to computer?.await(), UpdateSource.SERVER to server?.await())
+        val merged = UpdatePlan.merge(*results.values.map { it?.getOrNull().orEmpty() }.toTypedArray())
+        Check(
+            merged.map { it to installed(context, it.pkg) },
+            results.mapNotNull { (source, r) -> if (r != null) source else null }.toSet(),
+            results.mapNotNull { (source, r) -> r?.exceptionOrNull()?.let { source to it as Exception } }.toMap(),
+        )
+    }
+
+    private suspend fun fetch(block: suspend () -> List<AppUpdate>): Result<List<AppUpdate>> =
+        try { Result.success(block()) } catch (e: CancellationException) { throw e } catch (e: Exception) { Result.failure(e) }
+
+    /**
+     * Serveur central. Rien de publié (404) ou Pages privées (redirection vers la page de connexion GitLab, donc du
+     * HTML) : aucune mise à jour, pas une erreur. Réseau absent : phrase propre au serveur (errorText parlerait de l'ordinateur).
+     */
+    private suspend fun serverList(api: UpdatesApi): List<AppUpdate> = lenient { api.list() }
+
+    /** Essais de MR publiés dans le registre, la plus récente d'abord ; aucun si rien n'est publié. */
+    suspend fun essais(context: Context): List<Essai> {
+        val api = UpdatesApi.essais() ?: return emptyList()
+        return lenient { api.essais() }
+    }
+
+    private suspend fun <T> lenient(block: suspend () -> List<T>): List<T> = try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: HttpException) {
+        if (e.code in 300..499) emptyList<T>().also { Log.i("Updater", "Serveur central : rien de publié (${e.code})") } else throw serverError(e)
+    } catch (e: JSONException) {
+        Log.i("Updater", "Serveur central : pas de manifest lisible", e)
+        emptyList()
+    } catch (e: Exception) {
+        throw serverError(e)
+    }
+
+    private fun serverError(e: Exception): UserFacingException {
+        Log.w("Updater", "Serveur central injoignable", e)
+        return UserFacingException(R.string.update_server_unreachable)
+    }
+
+    private fun api(context: Context, source: UpdateSource): UpdatesApi = when (source) {
+        UpdateSource.COMPUTER -> BackendClient(context).updates
+        UpdateSource.SERVER -> UpdatesApi.server() ?: throw UserFacingException(R.string.update_server_unreachable)
+        UpdateSource.TRIALS -> UpdatesApi.essais() ?: throw UserFacingException(R.string.update_server_unreachable)
+    }
+
+    /**
+     * Télécharge, vérifie et installe. `progress` : 0 à 100 pendant le téléchargement (hors du fil principal) ;
+     * `committed` : le fichier est confié à Android, on ne peut plus annuler. Annulable (coroutine) jusque-là.
+     */
+    suspend fun install(context: Context, update: AppUpdate, progress: (Int) -> Unit, committed: () -> Unit = {}) {
+        if (!Kiosk.isDeviceOwner(context)) throw UserFacingException(R.string.update_needs_kiosk)
+        if (!busy.compareAndSet(false, true)) throw UserFacingException(R.string.update_busy)
+        try {
+            download(context.applicationContext, update, progress, committed)
+        } finally {
+            busy.set(false)
+        }
+    }
+
+    /**
+     * Désinstalle un paquet sans confirmation (device owner) : l'essai d'une MR au pipeline plus ancien que l'essai
+     * installé, qu'Android refuserait de remplacer. Ses données partent avec ; il reprend les ordinateurs de la stable.
+     * Appelé pendant [install], installations déjà permises ([Kiosk.lockApps]).
+     */
+    private suspend fun uninstall(app: Context, pkg: String) {
+        val action = "${app.packageName}.UNINSTALL_RESULT_$pkg"
+        val result = CompletableDeferred<Intent>()
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, intent: Intent) { result.complete(intent) }
+        }
+        ContextCompat.registerReceiver(app, receiver, IntentFilter(action), ContextCompat.RECEIVER_NOT_EXPORTED)
+        try {
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
+            val pending = PendingIntent.getBroadcast(app, 0, Intent(action).setPackage(app.packageName), flags)
+            app.packageManager.packageInstaller.uninstall(pkg, pending.intentSender)
+            val intent = withTimeoutOrNull(2 * 60_000L) { result.await() }
+            val status = intent?.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+            if ((intent == null && installed(app, pkg) != null) || (status != null && status != PackageInstaller.STATUS_SUCCESS)) {
+                throw UserFacingException(R.string.update_uninstall_failed, status ?: -1)
+            }
+        } finally {
+            app.unregisterReceiver(receiver)
+        }
+    }
+
+    private suspend fun download(app: Context, update: AppUpdate, progress: (Int) -> Unit, committed: () -> Unit) {
+        val file = File(app.cacheDir, "updates").apply { mkdirs() }.resolve("update.apk")
+        try {
+            // Le téléchargement est une boucle bloquante : l'annulation y est vérifiée à chaque pour cent.
+            val job = currentCoroutineContext()[Job]
+            val sha256 = try {
+                api(app, update.source).download(update, file) { percent ->
+                    if (job?.isActive == false) throw CancellationException("Download cancelled")
+                    progress(percent)
+                }
+            } catch (e: IOException) {
+                // Le serveur central répond en HTML (page d'erreur GitLab) : jamais affiché tel quel.
+                if (update.source != UpdateSource.SERVER) throw e
+                Log.w("Updater", "Téléchargement depuis le serveur central impossible", e)
+                throw UserFacingException(R.string.update_server_download_failed)
+            }
+            if (!sha256.equals(update.sha256, ignoreCase = true)) throw UserFacingException(R.string.update_file_corrupt)
+            // Le blocage des installations s'applique aussi au device owner : levé le temps de l'installation.
+            Kiosk.lockApps(app, false)
+            try {
+                // Essai d'une MR au pipeline plus ancien que l'essai installé : Android refuse la version plus basse.
+                // Après le téléchargement vérifié : un échec avant ne coûte pas l'essai installé.
+                val installedCode = installed(app, update.pkg)?.let { versionCode(it) }
+                if (update.source == UpdateSource.TRIALS && EssaiPlan.install(update.versionCode, installedCode) == EssaiPlan.Install.UNINSTALL_FIRST) {
+                    uninstall(app, update.pkg)
+                }
+                installApk(app, file, update, committed)
+            } finally {
+                Kiosk.lockApps(app, !Prefs.allowInstalls(app))
+            }
+        } finally {
+            file.delete()
+        }
+    }
+
+    private suspend fun installApk(context: Context, file: File, update: AppUpdate, committed: () -> Unit) {
+        val pkg = update.pkg
+        val installer = context.packageManager.packageInstaller
+        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
+            setAppPackageName(pkg)
+            setSize(file.length())
+        }
+        val id = installer.createSession(params)
+        val action = "${context.packageName}.INSTALL_RESULT_$id"
+        val result = CompletableDeferred<Intent>()
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, intent: Intent) { result.complete(intent) }
+        }
+        ContextCompat.registerReceiver(context, receiver, IntentFilter(action), ContextCompat.RECEIVER_NOT_EXPORTED)
+        try {
+            try {
+                withContext(Dispatchers.IO) {
+                    installer.openSession(id).use { session ->
+                        session.openWrite("update.apk", 0, file.length()).use { out ->
+                            file.inputStream().use { it.copyTo(out) }
+                            session.fsync(out)
+                        }
+                        // Mutable : l'installateur y ajoute le résultat.
+                        val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
+                        val pending = PendingIntent.getBroadcast(context, id, Intent(action).setPackage(context.packageName), flags)
+                        currentCoroutineContext()[Job]?.let { if (!it.isActive) throw CancellationException("Install cancelled") }
+                        session.commit(pending.intentSender)
+                    }
+                }
+            } catch (e: Exception) {
+                // Annulé ou échoué avant d'être confié à Android : la session est jetée.
+                runCatching { installer.abandonSession(id) }
+                throw e
+            }
+            committed()
+            // Android installe une appli à la fois (le Play Store peut passer avant) et prépare le code : long
+            // sur cette tablette. Sans réponse au bout de 15 min, on regarde la version réellement installée.
+            val intent = withTimeoutOrNull(15 * 60_000L) { result.await() }
+            if (intent == null) {
+                val info = installed(context, pkg)
+                if (info != null && versionCode(info) >= update.versionCode) return
+                throw UserFacingException(R.string.update_unfinished)
+            }
+            when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
+                PackageInstaller.STATUS_SUCCESS -> Unit
+                PackageInstaller.STATUS_PENDING_USER_ACTION -> throw UserFacingException(R.string.update_needs_confirmation)
+                else -> {
+                    Log.w("Updater", "Installation refusée ($status) : ${intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)}")
+                    throw UserFacingException(R.string.update_install_failed, status)
+                }
+            }
+        } finally {
+            context.unregisterReceiver(receiver)
+        }
+    }
+}

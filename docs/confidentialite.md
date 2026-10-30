@@ -51,4 +51,4 @@ Le texte affiché aux utilisateurs est `backend/config/confidentialite.txt` (cop
 ## 4. Reste à décider (juridique et DPO)
 
 1. Raison sociale, adresse et contact DPO d'Unowhy à ajouter au texte ; bases légales et cadre des transferts hors UE à confirmer.
-2. Public : UnoMate vise le B2B, les entreprises et leurs salariés, avec une vente B2C en complément (`cible-et-positionnement.md`) ; les tablettes viennent du parc scolaire. Si des mineurs peuvent l'utiliser, la reconnaissance vocale et la localisation demandent une attention particulière.
+2. Public : Mate vise le B2B, les entreprises et leurs salariés, avec une vente B2C en complément (`cible-et-positionnement.md`) ; les tablettes viennent du parc scolaire. Si des mineurs peuvent l'utiliser, la reconnaissance vocale et la localisation demandent une attention particulière.

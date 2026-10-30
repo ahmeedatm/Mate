@@ -59,7 +59,7 @@
         android:gravity="end"
         android:orientation="vertical">
 
-        <com.unowhy.unomate.ui.home.GlassBars
+        <app.mate.ui.home.GlassBars
             android:id="@+id/hero_glasses"
             android:layout_width="wrap_content"
             android:layout_height="0dp"
@@ -73,7 +73,7 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <com.unowhy.unomate.ui.RollingText
+            <app.mate.ui.RollingText
                 android:id="@+id/hero_glasses_count"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />

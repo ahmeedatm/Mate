@@ -11,7 +11,7 @@ export default async function updateRoutes(app: FastifyInstance) {
 
   /**
    * Redémarre le compagnon après une mise à jour de ses fichiers : la boucle du lanceur (exe portable
-   * sur Windows, « UnoMate.app » sur Mac, ou le service du dépôt) le relance quelques secondes plus tard. Sous
+   * sur Windows, « Mate.app » sur Mac, ou le service du dépôt) le relance quelques secondes plus tard. Sous
    * `npm run dev`, tsx watch attend un changement de fichier avant de relancer.
    */
   app.post("/companion/restart", async (req) => {

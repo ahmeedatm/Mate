@@ -12,7 +12,7 @@ export const TOKEN = "jeton-de-test";
 
 /** Code d'appairage, recalculé par les tests comme le fait la tablette (PairingCode.kt) : vérifie aussi la formule. */
 export const pairingCode = (channel: string, tablet: string, computer: string) =>
-  String(createHash("sha256").update(`unowhy-pair-1\n${channel}\n${tablet}\n${computer}`).digest().readUInt32BE(0) % 1_000_000).padStart(
+  String(createHash("sha256").update(`mate-pair-1\n${channel}\n${tablet}\n${computer}`).digest().readUInt32BE(0) % 1_000_000).padStart(
     6,
     "0",
   );

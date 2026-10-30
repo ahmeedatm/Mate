@@ -7,8 +7,8 @@ import { readJson } from "./store.ts";
 
 /**
  * « Serveur Unowhy » de mises à jour, simulé par le backend pour la démo du hackathon : la tablette (device owner)
- * y trouve les nouvelles versions du moteur web (WebView) et du UnoMate, les télécharge et les installe seule,
- * en kiosque. En production, ce serait l'infrastructure SQOOL (MDM, OTA) d'Unowhy.
+ * y trouve les nouvelles versions du moteur web (WebView) et du Mate, les télécharge et les installe seule,
+ * en kiosque.
  *
  * Dossier .data/updates/ : les APK et manifest.json, écrit à la main :
  * { "updates": [{ "package": "com.google.android.webview", "label": "Navigateur web", "versionCode": 1, "versionName": "…", "file": "webview.apk" }] }

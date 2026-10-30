@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace UnoMate
+namespace Mate
 {
     public static partial class Native
     {

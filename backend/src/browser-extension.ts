@@ -1,7 +1,7 @@
 import type { BrowserTab } from "./screens.ts";
 
 /**
- * Onglets envoyés par l'extension « UnoMate » (backend/extension/) de chaque navigateur Chromium de
+ * Onglets envoyés par l'extension « Mate » (backend/extension/) de chaque navigateur Chromium de
  * l'ordinateur. Sur Windows, seule source fiable : UI Automation ne voit rien quand Chromium coupe son accessibilité
  * (Opera GX), et le fichier de session est verrouillé tant que le navigateur tourne.
  */

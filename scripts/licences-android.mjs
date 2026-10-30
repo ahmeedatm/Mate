@@ -65,7 +65,7 @@ if (others.length) throw new Error(`Licence autre qu'Apache 2.0, à ajouter à l
 
 const text = (file) => fs.readFileSync(path.join(texts, file), "utf8").trim();
 const rule = "=".repeat(56);
-const content = `UnoMate : composants tiers et licences
+const content = `Mate : composants tiers et licences
 ${rule}
 
 L'appli utilise les composants suivants. Leur licence demande d'en citer l'auteur et d'en joindre le texte :

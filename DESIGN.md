@@ -1,5 +1,5 @@
 ---
-name: UnoMate, pages web du compagnon
+name: Mate, pages web du compagnon
 description: Panneau de l'ordinateur qui se lit comme la tablette elle-même : Cadran jour et nuit, Outfit, un seul rouge d'état.
 colors:
   bg-day: "#FAF2F1"
@@ -118,7 +118,7 @@ components:
     rounded: "{rounded.lg}"
 ---
 
-# Design System: UnoMate, pages web du compagnon
+# Design System: Mate, pages web du compagnon
 
 Périmètre : les pages web servies par le compagnon de l'ordinateur (`backend/src/local-page.ts`, visualiseur `/camera`). L'appli Android garde sa propre doc. Source des tokens : `backend/src/web-style.ts`, miroir de `app/src/main/res/values/palettes.xml`.
 

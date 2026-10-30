@@ -69,7 +69,7 @@ describe("historique du presse-papiers", () => {
       "deux mots 42",
       "https://exemple.fr/a1",
       "www.exemple.fr",
-      "bruno@unowhy.com",
+      "bruno@example.com",
       "a".repeat(30) + "1".repeat(35),
     ]) {
       assert.equal(looksSecret(text), false, text);

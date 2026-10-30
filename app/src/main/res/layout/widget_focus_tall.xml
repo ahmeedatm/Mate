@@ -27,7 +27,7 @@
         android:layout_height="176dp"
         android:layout_marginTop="12dp">
 
-        <com.unowhy.unomate.ui.FocusDial
+        <app.mate.ui.FocusDial
             android:id="@+id/widget_focus_dial"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />

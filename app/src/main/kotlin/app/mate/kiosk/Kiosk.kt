@@ -1,0 +1,212 @@
+package app.mate.kiosk
+
+import android.Manifest
+import android.app.Activity
+import android.app.ActivityManager
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.UserManager
+import android.provider.Settings
+import app.mate.Prefs
+import app.mate.kiosk.KioskAdminReceiver
+import app.mate.trial.Trial
+
+/**
+ * Mode kiosque. Ne fait rien tant que l'appli n'est pas device owner (voir docs/kiosque.md) :
+ * aucun risque de bloquer la tablette pendant le développement. Seule exception, l'appli d'essai (trial/Trial.kt) :
+ * jamais device owner, elle se verrouille à l'écran si la stable l'y autorise.
+ */
+object Kiosk {
+
+    /** Aucune appli ne s'installe ni ne se désinstalle, adb compris : le MDM du fabricant ne peut pas revenir par le réseau. */
+    private val APP_RESTRICTIONS = listOf(
+        UserManager.DISALLOW_INSTALL_APPS,
+        UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
+        UserManager.DISALLOW_UNINSTALL_APPS,
+    )
+
+    /** Anti-sortie : ni réinitialisation d'usine depuis Android, ni mode sans échec (qui suspendrait le kiosque). */
+    private val EXIT_RESTRICTIONS = listOf(
+        UserManager.DISALLOW_FACTORY_RESET,
+        UserManager.DISALLOW_SAFE_BOOT,
+    )
+
+    /** Agent du fabricant des tablettes 4.2 (dans l'image : réinstalle son MDM) et ce MDM : masqués en device owner. */
+    private val HIDDEN_PACKAGES = listOf("com.unowhy.sqoolota", "com.hisqool.devicemanager")
+
+    /** Accueil de secours d'Android (FallbackHome) : jamais masqué, il attend sur un écran vide qu'un accueil revienne. */
+    private const val FALLBACK_HOME = "com.android.settings"
+
+    /**
+     * Accordées d'office : en kiosque, Paramètres est inaccessible, un refus (« Ne plus demander ») serait sans retour.
+     * La localisation est accordée par Wifi (exigée pour lister les réseaux).
+     */
+    /** Localisation : la ville de la météo (device/Position), à la ville près. */
+    private val GRANTED_PERMISSIONS = listOf(
+        Manifest.permission.RECORD_AUDIO,
+        Manifest.permission.CAMERA,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+    )
+
+    /** "Quitter le kiosque" : suspendu jusqu'au prochain démarrage de l'appli. */
+    var suspended = false
+        private set
+
+    private fun dpm(context: Context) = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+    private fun admin(context: Context) = ComponentName(context, KioskAdminReceiver::class.java)
+    private fun homeAlias(context: Context) = ComponentName(context.packageName, "app.mate.HomeAlias")
+
+    fun isDeviceOwner(context: Context) = dpm(context).isDeviceOwnerApp(context.packageName)
+
+    fun isLocked(context: Context): Boolean {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        return am.lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE
+    }
+
+    /** À appeler dans onResume : verrouille l'appli à l'écran et en fait l'écran d'accueil. */
+    fun enter(activity: Activity) {
+        if (!isDeviceOwner(activity)) {
+            // Essai ouvert depuis la stable en kiosque : verrouillé lui aussi, sans accueil ni réglages du device owner.
+            if (dpm(activity).isLockTaskPermitted(activity.packageName) && !isLocked(activity)) activity.startLockTask()
+            return
+        }
+        // Le blocage des installations reste actif même kiosque suspendu.
+        lockApps(activity, !Prefs.allowInstalls(activity))
+        lockExit(activity, Prefs.exitLock(activity))
+        hideVendorAgents(activity, true)
+        grantPermissions(activity, activity.packageName)
+        grantPermissions(activity, Trial.TRIAL)
+        // Pas d'écran de verrouillage à faire glisser après une mise en veille (aucun code n'est défini).
+        runCatching { dpm(activity).setKeyguardDisabled(admin(activity), true) }
+        autoTime(activity)
+        if (suspended) return
+        val dpm = dpm(activity)
+        // L'appli et son essai (installé à côté, ouvert depuis Réglages) : la caméra passe par Camera2 (mode Caméra),
+        // plus par l'appli photo du système.
+        dpm.setLockTaskPackages(admin(activity), arrayOf(activity.packageName, Trial.TRIAL))
+        applyLockTaskFeatures(activity)
+        setHome(activity, true)
+        hideLaunchers(activity, true)
+        if (!isLocked(activity)) activity.startLockTask()
+    }
+
+    fun exit(activity: Activity) {
+        suspended = true
+        hideLaunchers(activity, false)
+        // Plus aucune appli autorisée : l'essai ouvert ensuite ne se verrouille pas à la place de la stable.
+        runCatching { dpm(activity).setLockTaskPackages(admin(activity), emptyArray()) }
+        if (isLocked(activity)) activity.stopLockTask()
+    }
+
+    /** Rend la main au système : plus de lock task, plus d'écran d'accueil, plus device owner. */
+    fun remove(activity: Activity) {
+        exit(activity)
+        setHome(activity, false)
+        lockApps(activity, false)
+        lockExit(activity, false)
+        hideVendorAgents(activity, false)
+        runCatching { dpm(activity).setKeyguardDisabled(admin(activity), false) }
+        dpm(activity).clearDeviceOwnerApp(activity.packageName)
+    }
+
+    /** Bloque (ou permet) l'installation et la désinstallation d'applis. Sans effet si l'appli n'est pas device owner. */
+    fun lockApps(context: Context, locked: Boolean) {
+        if (!isDeviceOwner(context)) return
+        val dpm = dpm(context)
+        for (restriction in APP_RESTRICTIONS) {
+            if (locked) dpm.addUserRestriction(admin(context), restriction)
+            else dpm.clearUserRestriction(admin(context), restriction)
+        }
+    }
+
+    /** Interdit (ou permet) la réinitialisation d'usine et le mode sans échec. Sans effet si l'appli n'est pas device owner. */
+    fun lockExit(context: Context, locked: Boolean) {
+        if (!isDeviceOwner(context)) return
+        val dpm = dpm(context)
+        for (restriction in EXIT_RESTRICTIONS) {
+            if (locked) dpm.addUserRestriction(admin(context), restriction)
+            else dpm.clearUserRestriction(admin(context), restriction)
+        }
+    }
+
+    /** Fonctions d'Android gardées en verrouillage d'écran : aucune, sauf le menu du bouton marche/arrêt si permis. */
+    fun lockTaskFeatures(powerMenu: Boolean): Int =
+        if (powerMenu) DevicePolicyManager.LOCK_TASK_FEATURE_GLOBAL_ACTIONS else DevicePolicyManager.LOCK_TASK_FEATURE_NONE
+
+    /** Applique [lockTaskFeatures] selon le réglage. Sans effet hors device owner, ou avant Android 9. */
+    fun applyLockTaskFeatures(context: Context) {
+        if (!isDeviceOwner(context) || Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
+        runCatching { dpm(context).setLockTaskFeatures(admin(context), lockTaskFeatures(Prefs.powerMenu(context))) }
+    }
+
+    /** Redémarre la tablette. false si l'appli n'est pas device owner ou si Android refuse (appel en cours). */
+    fun reboot(context: Context): Boolean {
+        if (!isDeviceOwner(context)) return false
+        return runCatching { dpm(context).reboot(admin(context)) }.isSuccess
+    }
+
+    /**
+     * Heure et fuseau donnés par le réseau : une tablette sortie du stock a souvent une heure fausse, et l'agenda,
+     * les rappels et l'atténuation de nuit en dépendent. Personne ne peut les régler en kiosque.
+     */
+    private fun autoTime(context: Context) {
+        for (setting in listOf(Settings.Global.AUTO_TIME, Settings.Global.AUTO_TIME_ZONE)) {
+            runCatching { dpm(context).setGlobalSetting(admin(context), setting, "1") }
+        }
+    }
+
+    /** Micro, caméra et localisation accordés à `pkg` (l'appli ou son essai). Sans effet hors device owner ou paquet absent. */
+    fun grantPermissions(context: Context, pkg: String) {
+        if (!isDeviceOwner(context)) return
+        val dpm = dpm(context)
+        for (permission in GRANTED_PERMISSIONS) {
+            runCatching {
+                dpm.setPermissionGrantState(admin(context), pkg, permission, DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED)
+            }
+        }
+    }
+
+    private fun hideVendorAgents(context: Context, hidden: Boolean) {
+        val dpm = dpm(context)
+        for (pkg in HIDDEN_PACKAGES) {
+            // Paquet absent : rien à masquer.
+            runCatching { dpm.setApplicationHidden(admin(context), pkg, hidden) }
+        }
+    }
+
+    /**
+     * Accueils d'Android (Launcher3…) masqués pendant le kiosque : pendant une mise à jour de l'appli, Android l'arrête
+     * et affichait le sien quelques secondes, utilisable, avant que [UpdatedReceiver] la relance. Ainsi, écran vide.
+     */
+    private fun hideLaunchers(context: Context, hidden: Boolean) {
+        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+        // MATCH_UNINSTALLED_PACKAGES : les accueils déjà masqués restent listés, pour les rendre visibles.
+        val launchers = context.packageManager.queryIntentActivities(home, PackageManager.MATCH_UNINSTALLED_PACKAGES)
+            .map { it.activityInfo.packageName }
+            .filter { it != context.packageName && it != FALLBACK_HOME }
+            .toSet()
+        val dpm = dpm(context)
+        for (pkg in launchers) runCatching { dpm.setApplicationHidden(admin(context), pkg, hidden) }
+    }
+
+    private fun setHome(context: Context, enabled: Boolean) {
+        val state = if (enabled) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        context.packageManager.setComponentEnabledSetting(homeAlias(context), state, PackageManager.DONT_KILL_APP)
+        val dpm = dpm(context)
+        if (enabled) {
+            val filter = IntentFilter(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+                addCategory(Intent.CATEGORY_DEFAULT)
+            }
+            dpm.addPersistentPreferredActivity(admin(context), filter, homeAlias(context))
+        } else {
+            dpm.clearPackagePersistentPreferredActivities(admin(context), context.packageName)
+        }
+    }
+}
