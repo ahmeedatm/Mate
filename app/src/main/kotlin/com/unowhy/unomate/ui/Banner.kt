@@ -2,9 +2,17 @@ package com.unowhy.unomate.ui
 
 import android.view.View
 import android.widget.TextView
+import com.unowhy.unomate.R
 
-/** Bandeau en haut de l'écran, par-dessus le mode courant ; un toucher le ferme. Il arrive d'en haut et y repart (Look.slideBanner). */
-class Banner(private val view: TextView) {
+/**
+ * Bandeau en haut de l'écran, par-dessus le mode courant ; un toucher le ferme. Il arrive d'en haut et y repart
+ * (Look.slideBanner). Deux lignes : l'objet (titre, toujours là) et, pour une notification, le corps en dessous (masqué
+ * si vide, coupé s'il dépasse — mise en forme dans le layout).
+ */
+class Banner(private val view: View) {
+
+    private val objet: TextView = view.findViewById(R.id.banner_objet)
+    private val corps: TextView = view.findViewById(R.id.banner_corps)
 
     /** En train de repartir : un nouveau message le fait revenir avant qu'il soit masqué. */
     private var leaving = false
@@ -26,10 +34,13 @@ class Banner(private val view: TextView) {
         }
     }
 
-    /** `onTap` : en plus de la fermer, un toucher fait cette action. */
-    fun show(text: String, seconds: Int, onTap: (() -> Unit)? = null) {
+    /** `objet` : titre toujours affiché ; `corps` : texte sous le titre, masqué s'il est vide. `onTap` : action en plus de fermer. */
+    fun show(objet: String, corps: String?, seconds: Int, onTap: (() -> Unit)? = null) {
         this.onTap = onTap
-        view.text = text
+        this.objet.text = objet
+        val body = corps?.trim().orEmpty()
+        this.corps.text = body
+        this.corps.visibility = if (body.isEmpty()) View.GONE else View.VISIBLE
         val arriving = view.visibility != View.VISIBLE || leaving
         leaving = false
         view.visibility = View.VISIBLE
