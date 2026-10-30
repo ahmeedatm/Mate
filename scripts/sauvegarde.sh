@@ -23,13 +23,10 @@ perso=""
 for f in backend/.env backend/.data backend/config/deck.json backend/config/tasks.json local.properties; do
   [ -e "$f" ] && perso="$perso $f"
 done
-# Compagnon installé par paquet sur ce Mac : ses données sont hors du dépôt (src/paths.ts), dans « Mate » ou, avant le
-# renommage (29/10/2026), « UnowhyCompanion ».
+# Compagnon installé par paquet sur ce Mac : ses données sont hors du dépôt (src/paths.ts), dans « Mate ».
 support="$HOME/Library/Application Support"
 apps=""
-for d in Mate UnowhyCompanion; do
-  [ -d "$support/$d" ] && apps="$apps $d"
-done
+[ -d "$support/Mate" ] && apps=" Mate"
 if [ -n "$perso" ] || [ -n "$apps" ]; then
   archive="$dest/mate-donnees-perso-$day.tgz"
   # shellcheck disable=SC2086

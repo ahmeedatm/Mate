@@ -2,13 +2,13 @@ import { execFile } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { backendRoot, dataDir, userFolder } from "./paths.ts";
+import { backendRoot, dataDir } from "./paths.ts";
 
 /**
  * Appli portable (un seul .exe sous Windows, « Mate.app » sous Mac) : rien n'est installé ni inscrit. Le
  * lanceur extrait le runtime dans le dossier de l'utilisateur et pose `COMPANION_APP` (chemin de l'exe ou de l'appli).
- * Ce module porte ce que le panneau (page locale) change sur l'ordinateur : lancement au démarrage, pare-feu, ancienne
- * installation, tout oublier. Rien n'est fait de lui-même : chaque fonction répond à un bouton.
+ * Ce module porte ce que le panneau (page locale) change sur l'ordinateur : lancement au démarrage, pare-feu, tout oublier.
+ * Rien n'est fait de lui-même : chaque fonction répond à un bouton.
  */
 
 /** Chemin de l'exe ou de l'appli lancée ; absent lancé depuis le dépôt (`npm run dev`, service.ts). */
@@ -26,18 +26,7 @@ const LABEL = process.env.COMPANION_LABEL || "";
 const MAC_LABEL = LABEL || "app.mate.demarrage";
 const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 const RUN_VALUE = LABEL || "Mate";
-const UNINSTALL_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\UnowhyCompanion";
-const LEGACY_MAC_LABEL = "app.mate";
-const LEGACY_RUN_VALUE = LABEL || "UnowhyCompanion";
-const LEGACY_SHORTCUT = "Compagnon Unowhy";
 const FIREWALL_RULE = "Mate";
-// Noms d'avant le renommage Mate (29/10/2026) : un compagnon mis à jour en place par la tablette les a encore. Reconnus
-// comme les siens (même appli, même runtime), remplacés au prochain réglage. Pas pour une instance de test (qa/).
-const PRE_RENAME_MAC_LABEL = LABEL ? undefined : "app.mate.demarrage";
-const PRE_RENAME_RUN_VALUE = LABEL ? undefined : "UnowhyCompanion";
-const PRE_RENAME_FIREWALL_RULE = "Compagnon Unowhy";
-const home = os.homedir();
-const reg = async (args: string[]) => void (await sh("reg", args));
 
 export function sh(cmd: string, args: string[], timeout = 30_000): Promise<{ ok: boolean; out: string }> {
   return new Promise((resolve) => {
@@ -75,42 +64,25 @@ export function macLaunchAgent(label: string, executable: string): string {
 `;
 }
 
-/** Agent ou clé Run d'une installation faite par l'ancien installeur : le paquet installé (node embarqué), pas le dépôt. */
-export const isLegacyMacAgent = (plist: string) => plist.includes("Contents/Resources/backend");
-export const isLegacyRun = (value: string) => value.includes("--backend") && /\\node\\node\.exe/i.test(value);
-
-/** Exécutable de l'appli lancée : « Mate », ou « Compagnon Unowhy » pour une appli d'avant le renommage mise à jour en place. */
-const macExecutable = () =>
-  ["Mate", "Compagnon Unowhy"].map((name) => path.join(appPath!, "Contents", "MacOS", name)).find((f) => fs.existsSync(f)) ??
-  path.join(appPath!, "Contents", "MacOS", "Mate");
-const macPlist = (label: string) => path.join(home, "Library", "LaunchAgents", `${label}.plist`);
+/** Exécutable de l'appli lancée. */
+const macExecutable = () => path.join(appPath!, "Contents", "MacOS", "Mate");
+const macPlist = (label: string) => path.join(os.homedir(), "Library", "LaunchAgents", `${label}.plist`);
 
 // --- Lancement au démarrage
 
-const macAgentIsOurs = (label: string) =>
-  fs.existsSync(macPlist(label)) && fs.readFileSync(macPlist(label), "utf8").includes(xml(macExecutable()));
-const runIsOurs = async (value: string) => {
-  const r = await sh("reg", ["query", RUN_KEY, "/v", value]);
-  return r.ok && r.out.includes(windowsRunCommand(appPath!));
-};
-
 export async function autostartEnabled(): Promise<boolean> {
-  if (isMac) return [MAC_LABEL, PRE_RENAME_MAC_LABEL].some((label) => label !== undefined && macAgentIsOurs(label));
-  for (const value of [RUN_VALUE, PRE_RENAME_RUN_VALUE]) if (value !== undefined && (await runIsOurs(value))) return true;
-  return false;
+  if (isMac) return fs.existsSync(macPlist(MAC_LABEL)) && fs.readFileSync(macPlist(MAC_LABEL), "utf8").includes(xml(macExecutable()));
+  const r = await sh("reg", ["query", RUN_KEY, "/v", RUN_VALUE]);
+  return r.ok && r.out.includes(windowsRunCommand(appPath!));
 }
 
 export async function setAutostart(on: boolean) {
   if (isMac) {
-    // L'entrée d'avant le renommage est remplacée par la nouvelle (jamais les deux : deux lancements à la session).
-    if (PRE_RENAME_MAC_LABEL && macAgentIsOurs(PRE_RENAME_MAC_LABEL)) fs.rmSync(macPlist(PRE_RENAME_MAC_LABEL), { force: true });
     // Pas de launchctl : l'agent chargé tourne peut-être déjà (c'est lui qui a lancé ce compagnon) ; il compte à la prochaine session.
     if (!on) return fs.rmSync(macPlist(MAC_LABEL), { force: true });
     fs.mkdirSync(path.dirname(macPlist(MAC_LABEL)), { recursive: true });
     return fs.writeFileSync(macPlist(MAC_LABEL), macLaunchAgent(MAC_LABEL, macExecutable()));
   }
-  // Valeur d'avant le renommage retirée seulement si c'est la nôtre (celle de l'ancien installeur est « ancienne installation »).
-  if (PRE_RENAME_RUN_VALUE && (await runIsOurs(PRE_RENAME_RUN_VALUE))) await reg(["delete", RUN_KEY, "/v", PRE_RENAME_RUN_VALUE, "/f"]);
   const r = on
     ? await sh("reg", ["add", RUN_KEY, "/v", RUN_VALUE, "/t", "REG_SZ", "/d", windowsRunCommand(appPath!), "/f"])
     : await sh("reg", ["delete", RUN_KEY, "/v", RUN_VALUE, "/f"]);
@@ -122,20 +94,13 @@ export async function setAutostart(on: boolean) {
 const firewallScript = path.join(backendRoot, "scripts", "firewall-windows.ps1");
 let firewallCache: { value: boolean; at: number } | undefined;
 
-/** Règle « Mate » (ou « Compagnon Unowhy », d'avant le renommage) visant le node de ce runtime. Lue par netsh (pas de PowerShell), gardée 15 s. */
+/** Règle « Mate » visant le node de ce runtime. Lue par netsh (pas de PowerShell), gardée 15 s. */
 export async function firewallOpen(): Promise<boolean | null> {
   if (!isWindows) return null;
   if (firewallCache && Date.now() - firewallCache.at < 15_000) return firewallCache.value;
   const node = path.join(backendRoot, "node", "node.exe").toLowerCase();
-  let value = false;
-  // Règle d'avant le renommage : celle d'un compagnon mis à jour en place, pour le même node.
-  for (const rule of [FIREWALL_RULE, PRE_RENAME_FIREWALL_RULE]) {
-    const r = await sh("netsh", ["advfirewall", "firewall", "show", "rule", `name=${rule}`, "verbose"]);
-    if (r.ok && r.out.toLowerCase().includes(node)) {
-      value = true;
-      break;
-    }
-  }
+  const r = await sh("netsh", ["advfirewall", "firewall", "show", "rule", `name=${FIREWALL_RULE}`, "verbose"]);
+  const value = r.ok && r.out.toLowerCase().includes(node);
   firewallCache = { value, at: Date.now() };
   return value;
 }
@@ -146,92 +111,6 @@ export async function setFirewall(open: boolean): Promise<boolean> {
   const r = await sh("powershell.exe", args, 120_000);
   firewallCache = undefined;
   return r.ok;
-}
-
-// --- Ancienne installation (NSIS sous Windows, appli copiée dans Applications + LaunchAgent sous Mac)
-
-type Leftover = { label: string; remove: () => Promise<void> | void };
-
-async function leftovers(): Promise<Leftover[]> {
-  const found: Leftover[] = [];
-  const rm = (p: string) => fs.rmSync(p, { recursive: true, force: true });
-  if (isMac) {
-    const agent = macPlist(LEGACY_MAC_LABEL);
-    if (fs.existsSync(agent) && isLegacyMacAgent(fs.readFileSync(agent, "utf8"))) {
-      found.push({
-        label: "lancement automatique de l'ancienne installation",
-        remove: async () => {
-          await sh("launchctl", ["bootout", `gui/${process.getuid?.()}/${LEGACY_MAC_LABEL}`]);
-          rm(agent);
-        },
-      });
-    }
-    for (const dir of ["/Applications", path.join(home, "Applications")]) {
-      const copy = path.join(dir, "Compagnon Unowhy.app");
-      if (fs.existsSync(path.join(copy, "Contents", "Resources", "backend", "dist", "service.mjs")) && !sameFile(copy, appPath!)) {
-        found.push({ label: `appli copiée dans ${dir}`, remove: () => rm(copy) });
-      }
-    }
-    const stamp = path.join(dataDir, "app-Info.plist");
-    if (fs.existsSync(stamp)) found.push({ label: "repère de l'ancien installeur", remove: () => rm(stamp) });
-    // Raccourci de l'ancien installeur : retiré avec lui seulement (le dépôt en pose aussi, vers la même page).
-    const webloc = path.join(home, "Desktop", `${LEGACY_SHORTCUT}.webloc`);
-    if (found.length > 0 && fs.existsSync(webloc)) found.push({ label: "raccourci du Bureau", remove: () => rm(webloc) });
-    return found;
-  }
-
-  const run = await sh("reg", ["query", RUN_KEY, "/v", LEGACY_RUN_VALUE]);
-  if (run.ok && isLegacyRun(run.out)) {
-    found.push({
-      label: "lancement automatique de l'ancienne installation",
-      remove: () => reg(["delete", RUN_KEY, "/v", LEGACY_RUN_VALUE, "/f"]),
-    });
-  }
-  if ((await sh("reg", ["query", UNINSTALL_KEY])).ok) {
-    found.push({ label: "entrée de Programmes et fonctionnalités", remove: () => reg(["delete", UNINSTALL_KEY, "/f"]) });
-  }
-  const localAppData = process.env.LOCALAPPDATA ?? path.join(home, "AppData", "Local");
-  const installed = path.join(localAppData, "Programs", "Compagnon Unowhy");
-  const inside =
-    appPath !== undefined &&
-    path
-      .resolve(appPath)
-      .toLowerCase()
-      .startsWith(installed.toLowerCase() + path.sep);
-  if (fs.existsSync(path.join(installed, "backend", "node", "node.exe")) && !inside) {
-    found.push({ label: `dossier ${installed}`, remove: () => rm(installed) });
-  }
-  const shortcuts = [
-    path.join(userFolder("Desktop", path.join(home, "Desktop")), `${LEGACY_SHORTCUT}.url`),
-    path.join(
-      userFolder(
-        "Programs",
-        path.join(process.env.APPDATA ?? path.join(home, "AppData", "Roaming"), "Microsoft", "Windows", "Start Menu", "Programs"),
-      ),
-      `${LEGACY_SHORTCUT}.url`,
-    ),
-  ].filter((f) => fs.existsSync(f));
-  if (found.length > 0) for (const f of shortcuts) found.push({ label: `raccourci ${path.basename(f)}`, remove: () => rm(f) });
-  return found;
-}
-
-export async function legacyFound(): Promise<string[]> {
-  return (await leftovers()).map((l) => l.label);
-}
-
-/** Retire l'ancienne installation, données gardées. Rend ce qui n'a pas pu l'être. */
-export async function removeLegacy(): Promise<{ removed: string[]; failed: string[] }> {
-  const removed: string[] = [];
-  const failed: string[] = [];
-  for (const l of await leftovers()) {
-    try {
-      await l.remove();
-      removed.push(l.label);
-    } catch {
-      failed.push(l.label);
-    }
-  }
-  return { removed, failed };
 }
 
 // --- Tout oublier

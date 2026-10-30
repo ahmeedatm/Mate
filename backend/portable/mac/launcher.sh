@@ -63,15 +63,9 @@ rm -rf "$app.old" 2>/dev/null
 
 if healthy; then
   if same_build; then open_page; exit 0; fi
-  # Autre build, ou ancienne installation : on lui demande de quitter ; sinon son agent launchd, s'il vient de l'ancien
-  # installeur (appli dans Contents/Resources/backend), est arrêté pour la session. Un compagnon lancé depuis le dépôt n'est jamais touché.
+  # Autre build : on lui demande de quitter. Un compagnon lancé depuis le dépôt n'est jamais touché.
   curl -fsS --max-time 3 -X POST -H 'content-type: application/json' -d '{}' "http://127.0.0.1:$port/local/quit" >/dev/null 2>&1
-  if ! wait_down 15; then
-    if grep -qF "Contents/Resources/backend" "$HOME/Library/LaunchAgents/app.mate.plist" 2>/dev/null; then
-      launchctl bootout "gui/$(id -u)/app.mate" 2>/dev/null
-    fi
-    wait_down 10 || { alert "Un compagnon tourne déjà sur le port $port (autre version, ou lancé depuis le dépôt) : arrête-le, puis rouvre l'appli."; exit 1; }
-  fi
+  wait_down 25 || { alert "Un compagnon tourne déjà sur le port $port (autre version, ou lancé depuis le dépôt) : arrête-le, puis rouvre l'appli."; exit 1; }
 fi
 
 if ! same_build || [ ! -x "$node" ]; then

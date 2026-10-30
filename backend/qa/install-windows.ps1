@@ -93,7 +93,7 @@ try {
   if (RunValue) { throw "clé Run $Name inscrite sans demande" }
   $panel = Invoke-RestMethod "$base/local/panel"
   if (-not $panel.portable -or $panel.autostart) { throw "/local/panel : portable=$($panel.portable) autostart=$($panel.autostart)" }
-  "panneau : version $($panel.version), pare-feu $($panel.firewall), ancienne installation : $(@($panel.legacy).Count)"
+  "panneau : version $($panel.version), pare-feu $($panel.firewall)"
 
   Step "Lancement au démarrage (panneau)"
   $null = Post "/local/autostart" @{ on = $true }

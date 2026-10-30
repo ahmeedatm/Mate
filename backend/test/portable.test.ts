@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { isNewer, pickInstaller } from "../src/app-update.ts";
-import { isLegacyMacAgent, isLegacyRun, macLaunchAgent, windowsRunCommand } from "../src/portable.ts";
+import { macLaunchAgent, windowsRunCommand } from "../src/portable.ts";
 
-// Appli portable : commandes de démarrage, reconnaissance de l'ancienne installation, choix de l'installeur annoncé par la tablette.
+// Appli portable : commandes de démarrage, choix de l'installeur annoncé par la tablette.
 
 const sha = "a".repeat(64);
 const entry = (over: Record<string, unknown> = {}) => ({
@@ -28,23 +28,6 @@ describe("lancement au démarrage", () => {
     assert.match(plist, /<key>RunAtLoad<\/key>\s*<true\/>/);
     assert.match(plist, /<string>\/Users\/a&amp;b\/Mate\.app\/Contents\/MacOS\/Mate<\/string>\s*<string>--demarrage<\/string>/);
     assert.ok(!plist.includes("KeepAlive"));
-  });
-});
-
-describe("ancienne installation", () => {
-  it("Mac : l'agent du paquet installé, pas celui du dépôt (npm run service:install)", () => {
-    assert.ok(isLegacyMacAgent("<string>/Applications/Mate.app/Contents/Resources/backend/node/darwin-arm64/node</string>"));
-    assert.ok(!isLegacyMacAgent("<string>/Users/a/dev/mate/backend/node_modules/.bin/tsx</string>"));
-  });
-
-  it("Windows : la clé Run de l'ancien lanceur avec le node embarqué, pas celle du dépôt ni la nouvelle", () => {
-    const legacy =
-      '"C:\\Users\\a\\AppData\\Local\\Programs\\Mate\\backend\\src\\win\\Mate.exe" --node "C:\\Users\\a\\AppData\\Local\\Programs\\Mate\\backend\\node\\node.exe" --backend "C:\\x\\backend" --logs l --data d';
-    assert.ok(isLegacyRun(legacy));
-    assert.ok(
-      !isLegacyRun('"C:\\dev\\backend\\src\\win\\Mate.exe" --node "C:\\Program Files\\nodejs\\node.exe" --backend "C:\\dev\\backend"'),
-    );
-    assert.ok(!isLegacyRun(windowsRunCommand("C:\\x\\Compagnon.exe")));
   });
 });
 

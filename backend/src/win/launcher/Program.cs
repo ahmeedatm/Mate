@@ -95,7 +95,7 @@ namespace Mate
                     if (!startup) OpenPage();
                     return 0;
                 }
-                if (!TakeOver(data))
+                if (!TakeOver())
                 {
                     Alert("Un compagnon tourne déjà sur le port " + Port + " (autre version, ou lancé depuis le dépôt) : arrête-le, puis rouvre l'appli.");
                     return 1;
@@ -168,32 +168,13 @@ namespace Mate
         }
 
         /// <summary>
-        /// Un autre compagnon occupe le port : on lui demande de quitter (panneau d'une autre version) ; sinon c'est une
-        /// ancienne installation, dont la boucle (UnowhyCompanion.exe du dossier Programs) est arrêtée pour la session.
+        /// Un autre compagnon occupe le port : on lui demande de quitter (panneau d'une autre version).
         /// Un compagnon lancé depuis le dépôt n'est jamais touché.
         /// </summary>
-        static bool TakeOver(string data)
+        static bool TakeOver()
         {
             Http("POST", "/local/quit", "{}");
-            if (WaitDown(15)) return true;
-            try
-            {
-                var pidFile = Path.Combine(data, "service.pid");
-                int pid;
-                if (File.Exists(pidFile) && int.TryParse(File.ReadAllText(pidFile).Trim(), out pid))
-                {
-                    var process = Process.GetProcessById(pid);
-                    var exe = process.MainModule.FileName;
-                    var installed = Path.Combine(Path.GetDirectoryName(exe), "..", "..", "node", "node.exe");
-                    if (process.ProcessName == "UnowhyCompanion" && File.Exists(installed) && pid != Process.GetCurrentProcess().Id)
-                    {
-                        var kill = Process.Start(new ProcessStartInfo("taskkill", "/F /T /PID " + pid) { CreateNoWindow = true, UseShellExecute = false });
-                        kill.WaitForExit();
-                    }
-                }
-            }
-            catch (Exception) { }
-            return WaitDown(10);
+            return WaitDown(25);
         }
 
         static bool WaitDown(int seconds)
