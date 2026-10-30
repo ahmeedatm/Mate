@@ -899,6 +899,12 @@
     <string name="theme_title">Thème</string>
     <string name="theme_cadran">Cadran</string>
     <string name="theme_cadran_nuit">Cadran nuit</string>
+    <string name="theme_clair">Clair</string>
+    <string name="theme_sombre">Sombre</string>
+    <string name="theme_group_main">Thèmes</string>
+    <string name="theme_group_personas">Thèmes des personas</string>
+    <string name="theme_tile">Thème %s</string>
+    <string name="theme_tile_chosen">Thème %s, choisi</string>
     <string name="theme_retro">Rétro</string>
     <string name="theme_contraste">Contraste élevé</string>
     <!-- Thèmes des personas : seconde ligne du choix des Réglages (AppTheme.demo). -->
@@ -1424,6 +1430,10 @@
     <string name="top_focus">Chrono Focus</string>
     <string name="top_focus_desc">Minutes restantes pendant un Focus ; toucher = pause ou reprise</string>
     <string name="top_call">Micro de l\'ordi</string>
+    <string name="top_volume">Volume de l\'ordi</string>
+    <string name="top_volume_desc">Barre du son de l\'ordinateur ; toucher le haut-parleur = couper ou remettre le son</string>
+    <string name="top_volume_mute">Couper le son de l\'ordinateur</string>
+    <string name="top_volume_unmute">Remettre le son de l\'ordinateur</string>
     <string name="top_call_desc">Pendant un appel, ou micro coupé : toucher = couper ou rouvrir le micro</string>
     <string name="top_agents">Agents en attente</string>
     <string name="top_agents_desc">Agents Claude qui attendent ta réponse (Mac) ; toucher = le tableau</string>

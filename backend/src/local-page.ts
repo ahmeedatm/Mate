@@ -117,7 +117,7 @@ ${FAVICON}
       <div id="tabletsettings">
         <div class="label">Thème</div>
         <div class="themes">
-          <button data-theme="CADRAN">Cadran</button><button data-theme="CADRAN_NUIT">Cadran nuit</button><button data-theme="RETRO">Rétro</button><button data-theme="CONTRASTE">Contraste élevé</button>
+          <button data-theme="CADRAN">Cadran</button><button data-theme="CADRAN_NUIT">Cadran nuit</button><button data-theme="CLAIR">Clair</button><button data-theme="SOMBRE">Sombre</button><button data-theme="RETRO">Rétro</button><button data-theme="CONTRASTE">Contraste élevé</button>
         </div>
         <div class="themes">
           <button data-theme="REGISTRE">Registre</button><button data-theme="STUDIO">Studio</button><button data-theme="MAISON">Maison</button><button data-theme="TABLEAU">Tableau</button><button data-theme="TERMINAL">Terminal</button>
