@@ -606,6 +606,25 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "porte MCP (IA de bureau, lecture seule)",
+      run: async () => {
+        if (!local) throw new Skip("porte MCP en local seulement");
+        const res = await fetch(base + "/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+          signal: AbortSignal.timeout(15_000),
+        });
+        expect(res.status === 200, `POST /mcp : ${res.status} au lieu de 200`);
+        const names = ((await res.json()).result?.tools ?? []).map((t: { name: string }) => t.name);
+        for (const name of ["tablette_regler", "profils_ecrire", "deck_touche_affecter"])
+          expect(names.includes(name), `outil ${name} absent`);
+        const status = await call("GET", "/local/status");
+        expect(status.json.mcp?.url === base + "/mcp", "adresse de la porte MCP absente de /local/status");
+        return `${names.length} outils`;
+      },
+    },
+    {
       name: "politique de confidentialité",
       run: async () => {
         const res = await call("GET", "/local/confidentialite", undefined, local ? false : true);

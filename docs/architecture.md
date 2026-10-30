@@ -146,7 +146,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 | `jira.ts`, `routes/jira.ts` | Jira du compte du `.env` : temps saisi du jour (worklog), tickets assignés et leurs transitions (onglet Jira) |
 | `gitlab.ts`, `routes/gitlab.ts` | onglet GitLab : mes MR et celles à relire (une requête GraphQL, gardée 20 s), fusion au `sha` affiché, ouverture de la MR sur l'ordinateur |
 | `gitlab-auth.ts` | connexion GitLab par OAuth (code + PKCE, sans secret) : jetons sur l'ordinateur, renouvellement seul ; `GITLAB_TOKEN` en secours ([gitlab-oauth.md](gitlab-oauth.md)) |
-| `tablet.ts`, `mcp.ts` | canal vers la tablette, extension Claude |
+| `tablet.ts`, `mcp.ts`, `mcp-tools.ts`, `routes/mcp.ts`, `mcp-bridge.ts` | canal vers la tablette ; outils MCP, en stdio (dépôt) et en HTTP local `/mcp` (compagnon installé, pont stdio pour Claude Desktop) |
 | `calls.ts` (+ `config/calls.json`) | appels entrants : surveillance des fenêtres, Répondre / Ignorer / Raccrocher |
 | `agents.ts`, `agents-sources.ts`, `agents-secret.ts`, `agents-hooks.ts`, `routes/agents.ts` | agents Claude : état et réponses, lecture de `claude` et d'Orca, secret des hooks, bloc de hooks (`scripts/agents-hooks.ts`) |
 | `camera.ts`, `docs.ts` | visualiseur, dossier partagé |
@@ -168,7 +168,7 @@ La tablette montre les sessions Claude Code de l'ordinateur (qui travaille, qui 
 - **Nouvelle route** : la déclarer dans le plugin de son domaine sous `routes/` (avec son schéma ; nouveau plugin = `app.register` dans `server.ts`), l'appeler dans le client de son domaine (`net/*Api.kt`). Erreur pour l'utilisateur = `throw new Error("phrase en français")`.
 - **Nouvelle action système** : l'ajouter à `os.ts`, l'écrire dans `mac/` **et** `win/` (C# 7.3 dans `win/helper/`, `Native.<thème>.cs` pour le pilotage, puis `npm run build:helper`).
 - **Nouvelle étape de touche** : type dans `deck.ts` (`runAction`), et dans `KeyEditor` si elle se règle depuis la tablette.
-- **Nouvel ordre vers la tablette** : type dans `tablet.ts` + schéma dans `routes/tablet.ts` + outil dans `mcp.ts` + branche dans `RemoteChannel.execute`.
+- **Nouvel ordre vers la tablette** : type dans `tablet.ts` + schéma dans `routes/tablet.ts` + outil dans `mcp-tools.ts` + branche dans `RemoteChannel.execute`.
 - **Nouveau widget d'Accueil (Profils)** : le déclarer dans `WidgetModel`, le construire dans `HomeWidgets` (ou un fichier dédié de `ui/home/`).
 - **Nouveau texte** : `strings.xml`, en français, court (la tablette est lue de loin), « ordinateur » (« ordi » sur les boutons courts).
 

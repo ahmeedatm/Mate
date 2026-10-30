@@ -125,7 +125,8 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
 
   const built = await build({
     metafile: true,
-    entryPoints: { server: path.join(backend, "src", "server.ts") },
+    // mcp-bridge : pont stdio de Claude Desktop vers la porte MCP (routes/mcp.ts), lancé avec le node embarqué.
+    entryPoints: { server: path.join(backend, "src", "server.ts"), "mcp-bridge": path.join(backend, "src", "mcp-bridge.ts") },
     outdir: path.join(dest, "dist"),
     outExtension: { ".js": ".mjs" },
     bundle: true,

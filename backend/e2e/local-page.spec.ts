@@ -35,6 +35,21 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("body")).toHaveClass(/down/);
   });
 
+  test("Connecter une IA : adresse de la porte MCP et configurations à copier", async ({ page, server, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.goto("/");
+    const url = `http://127.0.0.1:${new URL(server.url).port}/mcp`;
+    await expect(page.locator("#menu a", { hasText: "Connecter une IA" })).toHaveAttribute("href", "#ia");
+    await expect(page.locator("#mcpurl")).toHaveText(url);
+    await expect(page.locator("#mcpcode")).toHaveText(`claude mcp add --transport http unomate ${url}`);
+    const desktop = JSON.parse((await page.locator("#mcpdesktop").textContent())!);
+    expect(desktop.mcpServers.unomate.args).toContain(url);
+    expect(desktop.mcpServers.unomate.args[0]).toMatch(/mcp-bridge\.(ts|mjs)$/);
+    await page.locator('[data-copy="mcpurl"]').click();
+    await expect(page.locator("#mcpmsg")).toHaveText("Copié.");
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
+  });
+
   test("cache la carte « Cette appli » hors appli portable", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#state")).toHaveText("Tablette non connectée");

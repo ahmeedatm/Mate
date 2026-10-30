@@ -12,6 +12,7 @@ import { LOCAL_PAGE } from "../local-page.ts";
 import { WEB_FILES } from "../web-style.ts";
 import { accessibility, openTarget } from "../os.ts";
 import { identity, lanAddresses, pendingCode } from "../pairing.ts";
+import { mcpInfo } from "./mcp.ts";
 import { sendToTablet, tabletStatus, THEMES, type TabletSettings } from "../tablet.ts";
 
 const SETTINGS = ["theme", "brightness", "volume", "nightDim", "focusDnd"] satisfies (keyof TabletSettings)[];
@@ -47,6 +48,8 @@ export default async function localRoutes(app: FastifyInstance) {
     tabletInfo: tabletInfo(),
     pairing: pendingCode(),
     licences: fs.existsSync(LICENCES_FILE),
+    // Brancher une IA de bureau sur la porte MCP (carte « Connecter une IA »).
+    mcp: mcpInfo(),
     // Hôtes seulement : un lien ICS publié donne accès à l'agenda, il ne s'affiche pas en entier.
     calendar: {
       env: config.icsUrls.length,
