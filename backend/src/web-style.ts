@@ -14,9 +14,9 @@ const FONTS = [300, 400, 500]
   .join("\n  ");
 
 const DAY =
-  "--bg: #FAF2F1; --tile: #FFFFFF; --tile-high: #EEE6E6; --ink: #1E1B1B; --ink-2: #4D4545; --ink-3: #7C7272; --line: #D0C4C3; --now: #CA0538; --on-now: #FFFFFF; --now-soft: #FFDADA; --ok: #31685A; --ko: #BA1A1A;";
+  "--bg: #FAF2F1; --tile: #FFFFFF; --tile-high: #EEE6E6; --ink: #1E1B1B; --ink-2: #4D4545; --ink-3: #6E6464; --line: #D0C4C3; --now: #CA0538; --on-now: #FFFFFF; --now-soft: #FFDADA; --ok: #31685A; --ok-soft: #D6EDE6; --ko: #BA1A1A; --rail: #F3E9E8;";
 const NIGHT =
-  "--bg: #100D0D; --tile: #221F1F; --tile-high: #282525; --ink: #E9E1E0; --ink-2: #D0C4C3; --ink-3: #998E8E; --line: #4D4545; --now: #FF5165; --on-now: #2A0006; --now-soft: #680018; --ok: #9AD2C1; --ko: #FFB4AB;";
+  "--bg: #100D0D; --tile: #221F1F; --tile-high: #282525; --ink: #E9E1E0; --ink-2: #D0C4C3; --ink-3: #998E8E; --line: #4D4545; --now: #FF5165; --on-now: #2A0006; --now-soft: #680018; --ok: #9AD2C1; --ok-soft: #1B3A32; --ko: #FFB4AB; --rail: #181414;";
 
 /** Jour ou nuit selon le mode clair ou sombre de l'ordinateur. */
 export const CADRAN_CSS = `${FONTS}
@@ -27,8 +27,8 @@ export const CADRAN_CSS = `${FONTS}
 export const CADRAN_NIGHT_CSS = `${FONTS}
   :root { color-scheme: dark; ${NIGHT} }`;
 
-/** Icône Cadran (docs/ui-ux/da/icone.svg) : en tête de page et en favicon. */
-export const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" aria-hidden="true"><rect width="256" height="256" rx="60" fill="#CA0538"/><path d="M48 128 H152" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round"/><path d="M152 128 H208" stroke="#FFFFFF" stroke-opacity=".4" stroke-width="14" stroke-linecap="round"/><circle cx="152" cy="128" r="40" fill="none" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="7"/><circle cx="152" cy="128" r="20" fill="#FFFFFF"/></svg>`;
+/** Icône UnoMate « visage » (docs/ui-ux/da/icone-visage.svg) : en tête de page et en favicon. */
+export const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" viewBox="0 0 512 512"><rect x="2" y="2" width="508" height="508" rx="112" fill="#CA0730"/><g transform="translate(95.12,132.98) scale(1.5544)"><rect x="47.5" y="0" width="22" height="43.5" rx="4" fill="#FFFFFF"/><rect x="137.5" y="0" width="22" height="43.5" rx="4" fill="#FFFFFF"/><path d="M9,4 L27.5,4 L27.5,36 L103.5,74.5 L179.5,36 L179.5,4 L198,4 L198,48 L103.5,96.4 L9,48 Z" transform="translate(0,68)" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round"/></g></svg>`;
 
 /** Favicon en data: : aucune requête (le navigateur la demanderait sans jeton). */
 export const FAVICON = `<link rel="icon" href="data:image/svg+xml,${encodeURIComponent(ICON_SVG)}">`;

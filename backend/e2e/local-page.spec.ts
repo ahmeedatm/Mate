@@ -14,6 +14,27 @@ test.describe("page locale GET /", () => {
     expect(await page.evaluate(async () => (await document.fonts.load("16px Outfit")).length)).toBeGreaterThan(0);
   });
 
+  test("barre de gauche : sans tablette, « Connecter une tablette » en tête, le trait suit la section", async ({ page }) => {
+    await page.goto("/");
+    const links = page.locator("#menu a");
+    await expect(links.first()).toHaveText("Connecter une tablette");
+    await expect(links.filter({ hasText: "Tablette" })).toHaveCount(1);
+    await expect(page.locator("#menu a", { hasText: "Connecteurs" })).toHaveAttribute("href", "#connecteurs");
+    await page.setViewportSize({ width: 1280, height: 400 });
+    await page.locator("#menu a", { hasText: "Connecteurs" }).click();
+    await expect(page.locator("#menu a", { hasText: "Connecteurs" })).toHaveAttribute("aria-current", "true");
+  });
+
+  test("compagnon arrêté : la page le dit et cache le code et les réglages", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("#os")).toContainText("Compagnon prêt");
+    await page.route("**/local/status", (route) => route.abort());
+    await expect(page.locator("#os")).toHaveText("Compagnon arrêté : rouvre « UnoMate »");
+    await expect(page.locator("#srvdot")).toHaveClass(/ko/);
+    await expect(page.locator("#state")).toHaveText("Tablette : état inconnu");
+    await expect(page.locator("body")).toHaveClass(/down/);
+  });
+
   test("cache la carte « Cette appli » hors appli portable", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#state")).toHaveText("Tablette non connectée");
@@ -50,8 +71,44 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#pairing")).toBeHidden();
   });
 
+  test("connecteurs : Microsoft pas encore disponible, Figma bientôt, Jira à régler sur l'ordinateur", async ({ page }) => {
+    await page.goto("/");
+    const tile = (name: string) => page.locator(".cx", { hasText: name });
+    await expect(tile("Microsoft")).toContainText("Non connecté");
+    await expect(tile("Microsoft")).toHaveClass(/na/);
+    await expect(tile("Figma")).toBeDisabled();
+    await expect(tile("Figma")).toContainText("Bientôt");
+    await expect(page.locator(".cxpanel:visible")).toHaveCount(0);
+
+    await tile("Microsoft").click();
+    await expect(page.locator("#agenda")).toBeVisible();
+    await expect(tile("Microsoft")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#cxtitle")).toHaveText("Relier Microsoft");
+    await expect(page.locator("#cxnote")).toHaveText("Cette connexion n'est pas encore disponible sur cet ordinateur.");
+    await page.getByRole("button", { name: "Relier par un lien d'agenda" }).click();
+    await expect(tile("Lien d'agenda")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#cxlist li")).toHaveCount(3);
+    await expect(page.locator("#calurl")).toBeFocused();
+
+    // La modale se ferme par Échap ; une autre icône en ouvre une nouvelle.
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#cxdialog")).toBeHidden();
+    await expect(tile("Lien d'agenda")).toHaveAttribute("aria-pressed", "false");
+    await expect(tile("Jira")).toContainText("Non connecté");
+    await tile("Jira").click();
+    await expect(page.locator("#cxdialog")).toBeVisible();
+    await expect(page.locator("#agenda")).toBeHidden();
+    await expect(page.locator("#cxtitle")).toHaveText("Relier Jira");
+    await expect(page.locator("#jira #cxlist li")).toHaveCount(3);
+    await expect(page.locator("#jirastate")).toBeHidden();
+    // Aucun détail technique dans les états des icônes.
+    await expect(page.locator(".connectors")).not.toContainText(".env");
+  });
+
   test("enregistre, refuse puis retire un lien ICS", async ({ page }) => {
     await page.goto("/");
+    await page.locator(".cx", { hasText: "Lien d'agenda" }).click();
+    await expect(page.locator("#calurl")).toBeFocused();
     await expect(page.locator("#calstate")).toHaveText("Aucun agenda : la tablette propose de le relier.");
     // Sans compte Microsoft/Google configuré, le lien ICS est la seule voie : déjà déplié.
     await expect(page.locator("#ics")).toHaveAttribute("open", "");
@@ -64,6 +121,7 @@ test.describe("page locale GET /", () => {
     await page.getByRole("button", { name: "Enregistrer" }).click();
     await expect(page.locator("#calmsg")).toHaveText(/^Agenda enregistré : \d+ événement\(s\) aujourd'hui\.$/);
     await expect(page.locator("#calstate")).toHaveText("Lien enregistré : agenda d'exemple");
+    await expect(page.locator(".cx", { hasText: "Lien d'agenda" })).toContainText("Connecté");
     await expect(page.locator("#calurl")).toHaveValue("");
 
     await page.getByRole("button", { name: "Retirer" }).click();
@@ -116,7 +174,9 @@ test.describe("page locale GET /", () => {
     // Tablette connectée : sa carte passe avant l'état et l'adresse, et l'onglet porte son nom.
     await expect(page).toHaveTitle("Compagnon · Tablette Unowhy 4.2");
     const top = (id: string) => page.locator(id).evaluate((el) => el.getBoundingClientRect().top);
-    expect(await top("#tabletcard")).toBeLessThan(await top("#state"));
+    expect(await top("#tabletcard")).toBeLessThan(await top("#connect"));
+    await expect(page.locator("#tabletname")).toHaveText("Tablette Unowhy 4.2");
+    await expect(page.locator("#menu a").first()).toHaveText("Tablette");
     await expect(page.getByRole("button", { name: "Cadran", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator("#brightnessvalue")).toHaveText("60 %");
     await expect(page.locator("#nightdim")).toBeChecked();

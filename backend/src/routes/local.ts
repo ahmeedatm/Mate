@@ -6,6 +6,7 @@ import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvi
 import { calendarSources, dayRange, getEvents, invalidateCalendar, saveCalendarUrls, savedCalendarUrls } from "../calendar.ts";
 import { backendRoot, config } from "../config.ts";
 import { clearGitlabCache } from "../gitlab.ts";
+import { jiraConfigured, jiraSite } from "../jira.ts";
 import { disconnectGitlab, finishGitlabLogin, gitlabAccount, gitlabClientId, gitlabLoginUrl } from "../gitlab-auth.ts";
 import { LOCAL_PAGE } from "../local-page.ts";
 import { WEB_FILES } from "../web-style.ts";
@@ -59,6 +60,8 @@ export default async function localRoutes(app: FastifyInstance) {
       token: !!process.env.GITLAB_TOKEN?.trim(),
       account: (await gitlabAccount()) ?? null,
     },
+    // Jira se règle dans le .env de l'ordinateur : la page dit seulement s'il est relié, et à quel site.
+    jira: { configured: jiraConfigured, site: jiraSite },
   }));
 
   /** Lien(s) d'agenda collé(s) dans la page locale ; webcal:// devient https://. Liste vide : retire l'agenda. */

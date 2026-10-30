@@ -66,11 +66,14 @@ function sameTitle(ax, menu) {
   return menu.endsWith('…') && menu.length > 1 && ax.startsWith(menu.slice(0, -1));
 }
 
-function find(list, target) {
+// \`strict\` (fermeture) : seulement une fenêtre de ce titre ; sans lui, le rang ou la fin du titre pouvaient désigner une
+// autre fenêtre (onglet de Chrome qui a changé de titre entre la lecture et l'action) et la fermer à sa place.
+function find(list, target, strict) {
   let named = list.filter((e) => e.w.name() === target.title);
   if (!named.length) named = list.filter((e) => sameTitle(e.w.name(), target.title));
-  return named.find((e) => e.index === target.index) || named[0] ||
-    list.find((e) => e.index === target.index && target.index > 0) ||
+  const same = named.find((e) => e.index === target.index) || named[0];
+  if (same || strict) return same;
+  return list.find((e) => e.index === target.index && target.index > 0) ||
     list.find((e) => suffix(e.w.name()) === suffix(target.title));
 }
 
@@ -180,10 +183,11 @@ function elsewhereWindows(proc, list, all, cg = cgWindows(proc)) {
 }
 
 /** Passe sur le bureau d'une fenêtre par le menu Fenêtre, puis la retrouve par l'Accessibilité. */
-function reach(proc, all, title) {
+function reach(proc, all, title, strict) {
   const entries = elsewhereWindows(proc, windowsOf(proc), all);
   const entry = entries.find((e) => e.title === title) ||
-    (entries.length === 1 ? entries[0] : entries.find((e) => suffix(e.title) === suffix(title)));
+    entries.find((e) => sameTitle(title, e.title)) ||
+    (strict ? undefined : entries.length === 1 ? entries[0] : entries.find((e) => suffix(e.title) === suffix(title)));
   if (!entry) return undefined;
   entry.item.click();
   proc.frontmost = true;
@@ -271,6 +275,27 @@ function closeWindow(w) {
   if (!close.length) throw new Error("Cette fenêtre ne peut pas être fermée d’ici");
   close[0].click();
   delay(0.3);
+}
+
+// Fermer la dernière fenêtre d'une appli la quitte, comme sous Windows : sur Mac l'appli restait lancée (point dans le
+// Dock), et Discord, qui se masque sans fermer sa fenêtre, « se rouvrait » dans la liste. Quittée comme par Cmd-Q (une
+// appli qui a quelque chose à enregistrer le demande encore) seulement s'il ne lui reste aucune fenêtre, ni ici ni sur
+// un autre bureau (menu Fenêtre). Une fenêtre fermée encore là dans une appli visible attend une réponse (enregistrer ?) :
+// rien n'est quitté. Le Finder n'est jamais quitté.
+function quitIfLastWindow(proc, titles) {
+  if (proc.bundleIdentifier() === 'com.apple.finder') return false;
+  delay(0.3);
+  try {
+    const list = windowsOf(proc);
+    const names = list.map((e) => e.w.name() || '');
+    if (names.some((n) => titles.includes(n)) && proc.visible()) return false;
+    const others = names.filter((n) => !titles.includes(n));
+    const away = menuWindows(proc, names).filter((e) => !titles.some((t) => sameTitle(t, e.title)) && !others.some((t) => sameTitle(t, e.title)));
+    if (others.length || away.length) return false;
+    return !!$.NSRunningApplication.runningApplicationWithProcessIdentifier(proc.unixId()).terminate;
+  } catch (e) {
+    return false;
+  }
 }
 
 function zoom(w, all) {
@@ -421,13 +446,19 @@ function run(argv) {
 
   if (proc && req.op !== 'list') {
     const list = windowsOf(proc);
-    let targets = req.window ? [find(list, req.window)].filter(Boolean) : list;
-    if (req.window && !targets.length) targets = [reach(proc, all, req.window.title)].filter(Boolean);
+    const strict = req.op === 'close';
+    let targets = req.window ? [find(list, req.window, strict)].filter(Boolean) : list;
+    if (req.window && !targets.length) targets = [reach(proc, all, req.window.title, strict)].filter(Boolean);
     if (req.window && !targets.length) throw new Error('Fenêtre introuvable');
     if (req.op === 'place') targets.forEach((e) => place(e.w, all, req.display, req.layout));
     if (req.op === 'zoom' && targets.length) zoom(targets[0].w, all);
     if (req.op === 'minimize') targets.forEach((e) => { e.w.attributes.byName('AXMinimized').value = true; });
-    else if (req.op === 'close') targets.forEach((e) => closeWindow(e.w));
+    else if (req.op === 'close') {
+      const titles = targets.map((e) => e.w.name());
+      targets.forEach((e) => closeWindow(e.w));
+      // Appli quittée : plus rien à relire chez elle.
+      if (quitIfLastWindow(proc, titles)) return JSON.stringify({ running: false, windows: [], displays: displaysOf(all) });
+    }
     else if (req.op === 'fullscreen') { if (targets.length) toggleFullscreen(proc, targets[0].w); }
     else if (targets.length) {
       const title = targets[0].w.name();

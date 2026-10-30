@@ -256,6 +256,14 @@ after(async () => {
 });
 
 describe("jira : API", () => {
+  it("/local/status dit si Jira est relié, avec l'hôte seulement (ni e-mail ni jeton)", async () => {
+    const on = await server.call("GET", "/local/status", undefined, false);
+    assert.deepEqual(on.json.jira, { configured: true, site: new URL(site).host });
+    assert.ok(!JSON.stringify(on.json).includes(API_TOKEN));
+    const off = await bare.call("GET", "/local/status", undefined, false);
+    assert.deepEqual(off.json.jira, { configured: false, site: null });
+  });
+
   it("/deck/features annonce jira seulement si configuré", async () => {
     assert.equal((await server.call("GET", "/deck/features")).json.jira, true);
     assert.equal((await bare.call("GET", "/deck/features")).json.jira, false);

@@ -30,7 +30,7 @@ test("connecter, voir le compte, déconnecter", async ({ page }) => {
   const card = page.locator("#gitlab");
   await expect(card).toBeVisible();
   await expect(card).toHaveClass(/focus/);
-  await expect(card.locator("#gitlabstate")).toHaveText("Pas connecté.");
+  await expect(card.locator("#gitlabstate")).toHaveText("Non connecté.");
 
   await card.getByRole("link", { name: "Se connecter avec GitLab" }).click();
   await expect(page.getByRole("heading", { name: "Autoriser UnoMate ?" })).toBeVisible();
@@ -44,6 +44,16 @@ test("connecter, voir le compte, déconnecter", async ({ page }) => {
   await card.getByRole("button", { name: "Déconnecter GitLab" }).click();
   await expect(card.locator(".account")).toHaveCount(0);
   await expect(card.getByRole("link", { name: "Se connecter avec GitLab" })).toBeVisible();
+
+  // L'icône du connecteur ouvre la modale des étapes, puis le bouton ouvre la connexion.
+  await page.getByRole("button", { name: "Fermer" }).click();
+  const tile = page.locator(".cx", { hasText: "GitLab" });
+  await expect(tile).toContainText("Non connecté");
+  await tile.click();
+  await expect(page.locator("#cxtitle")).toHaveText("Relier GitLab");
+  await expect(card.locator("#cxlist li")).toHaveCount(4);
+  await card.getByRole("link", { name: "Se connecter avec GitLab" }).click();
+  await expect(page.getByRole("heading", { name: "Autoriser UnoMate ?" })).toBeVisible();
 });
 
 test("autorisation refusée sur GitLab : message d'annulation, pas de compte", async ({ page }) => {
@@ -60,14 +70,16 @@ test("retour en erreur : message d'échec", async ({ page }) => {
   await expect(page.locator("#gitlabmsg")).toHaveText("La connexion à GitLab a échoué. Réessaie.");
 });
 
-test("carte GitLab masquée quand rien n'est réglé", async ({ page }) => {
+test("icône GitLab grisée quand rien n'est réglé", async ({ page }) => {
   const bare = await startServer({ env: { GITLAB_TOKEN: "" } });
   try {
     await page.goto(bare.url + "/");
     await expect(page.locator("#name")).toHaveText("Ordi de test");
-    await expect(page.locator("#gitlab")).toBeHidden();
-    // La carte Agenda, elle, reste là.
-    await expect(page.locator("#agenda")).toBeVisible();
+    const tile = page.locator(".cx", { hasText: "GitLab" });
+    await expect(tile).toContainText("Non connecté");
+    await expect(tile).toHaveClass(/na/);
+    await tile.click();
+    await expect(page.locator("#gitlabstate")).toHaveText("Non connecté.");
   } finally {
     await bare.stop();
   }
