@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bandeau d'un message ou d'une notification : carte compacte à droite, sous la cloche du bandeau du haut. Trait de la
+     couleur de l'appli à gauche, icône, l'appli et « à l'instant », l'objet (deux lignes) et le texte (trois lignes).
+     Un toucher le ferme (Banner). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/remote_banner"
+    android:layout_width="400dp"
+    android:layout_height="wrap_content"
+    android:layout_gravity="top|end"
+    android:layout_marginTop="68dp"
+    android:layout_marginEnd="16dp"
+    android:background="@drawable/remote_banner_bg"
+    android:clickable="true"
+    android:elevation="12dp"
+    android:focusable="true"
+    android:orientation="horizontal"
+    android:paddingStart="10dp"
+    android:paddingTop="14dp"
+    android:paddingEnd="18dp"
+    android:paddingBottom="14dp"
+    android:visibility="gone">
+
+    <View
+        android:id="@+id/banner_accent"
+        android:layout_width="4dp"
+        android:layout_height="match_parent"
+        android:background="@drawable/banner_line" />
+
+        <FrameLayout
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="12dp">
+
+            <ImageView
+                android:id="@+id/banner_icon"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:importantForAccessibility="no"
+                android:scaleType="centerCrop" />
+
+            <TextView
+                android:id="@+id/banner_initial"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fontFamily="?attr/c_font_medium"
+                android:gravity="center"
+                android:importantForAccessibility="no"
+                android:textSize="17sp"
+                android:visibility="gone" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/banner_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="?attr/c_font_medium"
+                    android:maxWidth="320dp"
+                    android:singleLine="true"
+                    android:textColor="?attr/c_text_dim"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/banner_when"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:singleLine="true"
+                    android:text="@string/banner_now"
+                    android:textColor="?attr/c_text_faint"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/banner_objet"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="?attr/c_font_medium"
+                android:maxLines="2"
+                android:textColor="?attr/c_text"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/banner_corps"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="3"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp"
+                android:visibility="gone" />
+        </LinearLayout>
+</LinearLayout>

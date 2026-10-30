@@ -48,6 +48,19 @@ class NotificationsModelTest {
     }
 
     @Test
+    fun `bandeau en direct appli au dessus titre et texte`() {
+        assertEquals(BannerContent("Marie Dupont", "Réunion déplacée à 15 h", "Outlook", BannerIcon.App("Outlook")), notificationBanner(n(), discreet = false))
+        assertEquals(BannerContent("Marie Dupont", null, "Outlook", BannerIcon.App("Outlook")), notificationBanner(n(), discreet = true))
+    }
+
+    @Test
+    fun `bandeau en direct sans titre le texte devient l objet`() {
+        assertEquals(BannerContent("Réunion déplacée à 15 h", null, "Outlook", BannerIcon.App("Outlook")), notificationBanner(n(title = " "), discreet = false))
+        // Discret et sans titre : le nom de l'appli seul, sans le répéter au-dessus.
+        assertEquals(BannerContent("Outlook", null, null, BannerIcon.App("Outlook")), notificationBanner(n(title = ""), discreet = true))
+    }
+
+    @Test
     fun `heure seule le jour meme et jour en plus la veille`() {
         val paris = TimeZone.getTimeZone("Europe/Paris")
         // 29/10/2026 14:32 et 28/10/2026 23:05, heure de Paris (UTC+1).
