@@ -51,6 +51,8 @@ data class AgentSession(
     val mr: Int? = null,
     /** Travaille sur une tâche de fond (surveillance d'un pipeline), comme Orca l'affiche. */
     val monitoring: Boolean = false,
+    /** Projet : dépôt Orca du worktree, sinon nom du dossier ; la tablette peut en cacher (menu ⋯ du tableau). */
+    val project: String = dir,
 )
 
 /** `monitoring` : sessions qui surveillent une tâche de fond, comptées à part de `working`. */
@@ -198,6 +200,7 @@ internal fun parseAgents(text: String): AgentsState {
                 ticket = s.optStringOrNull("ticket"),
                 mr = if (s.isNull("mr") || !s.has("mr")) null else s.optInt("mr"),
                 monitoring = s.optBoolean("monitoring"),
+                project = s.optString("project").ifEmpty { s.optString("dir") },
             )
         },
         counts = AgentCounts(

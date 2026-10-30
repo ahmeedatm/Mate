@@ -124,6 +124,9 @@ export async function listOrca(): Promise<OrcaInfo | null> {
       worktrees: trees.map((w) => ({
         path: String(w.path ?? ""),
         branch: typeof w.branch === "string" ? w.branch.replace(/^refs\/heads\//, "") : null,
+        repo: typeof w.repo === "string" ? w.repo : null,
+        name: typeof w.displayName === "string" ? w.displayName : null,
+        activityAt: typeof w.lastActivityAt === "number" ? w.lastActivityAt : null,
         ticket: ((w.linkedItems ?? []) as Record<string, any>[]).find((i) => typeof i.jiraIdentifier === "string")?.jiraIdentifier ?? null,
         mr:
           typeof w.linkedGitLabMR === "number"

@@ -28,8 +28,10 @@ import com.unowhy.unomate.agents.columnCounts
 import com.unowhy.unomate.agents.columnOf
 import com.unowhy.unomate.agents.daysUntil
 import com.unowhy.unomate.agents.elapsedMs
+import com.unowhy.unomate.agents.projectsOf
 import com.unowhy.unomate.agents.sessionTitle
 import com.unowhy.unomate.agents.waitingKind
+import com.unowhy.unomate.agents.without
 import com.unowhy.unomate.net.AgentSession
 import com.unowhy.unomate.net.AgentState
 import com.unowhy.unomate.net.BackendClient
@@ -93,6 +95,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private val columns = HashMap<Column, LinearLayout>()
     private val status = TextView(context)
     private val privateButton = Button(context, null, 0, R.style.Chip)
+    private val projectsButton = ImageButton(context, null, 0, R.style.IconButton_Flat)
     private val rows = LinkedHashMap<String, View>()
     private var signature: List<Any?> = emptyList()
     private val clock = SimpleDateFormat("H 'h' mm", Locale.FRENCH)
@@ -133,6 +136,15 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                         }
                     },
                     LayoutParams(LayoutParams.WRAP_CONTENT, dp(48)),
+                )
+                // Projets à montrer sur cette tablette (cases par projet).
+                addView(
+                    projectsButton.apply {
+                        setImageResource(R.drawable.ic_more)
+                        contentDescription = context.getString(R.string.agents_projects)
+                        setOnClickListener { chooseProjects() }
+                    },
+                    LayoutParams(dp(48), dp(48)).apply { marginStart = dp(4) },
                 )
             },
             LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT),
@@ -239,7 +251,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private fun render(snapshot: AgentsFeed.Snapshot) {
         last = snapshot
         privateButton.isSelected = Prefs.agentsPrivate(context)
-        val state = snapshot.state
+        val state = snapshot.state?.without(Prefs.agentsHiddenProjects(context))
         if (state == null) {
             status.text = context.errorText(snapshot.error)
             status.visibility = VISIBLE
@@ -349,6 +361,25 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         contentDescription = context.getString(label)
         setOnClickListener { onClick() }
         layoutParams = LayoutParams(dp(48), dp(48)).apply { marginEnd = dp(8) }
+    }
+
+    /** Cases par projet : décoché = ses sessions cachées sur cette tablette (tableau, widget, compteurs). */
+    private fun chooseProjects() {
+        val state = last?.state ?: return
+        val hidden = Prefs.agentsHiddenProjects(context).toMutableSet()
+        val projects = projectsOf(state, hidden)
+        if (projects.isEmpty()) return
+        androidx.appcompat.app.AlertDialog.Builder(context)
+            .setTitle(R.string.agents_projects)
+            .setMultiChoiceItems(projects.toTypedArray(), projects.map { it !in hidden }.toBooleanArray()) { _, i, shown ->
+                if (shown) hidden -= projects[i] else hidden += projects[i]
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.agents_projects_ok) { _, _ ->
+                Prefs.setAgentsHiddenProjects(context, hidden)
+                AgentsFeed.replay()
+            }
+            .showImmersive()
     }
 
     /** Interrompre se confirme : le travail en cours s'arrête. */

@@ -3,6 +3,7 @@ package com.unowhy.unomate.agents
 import com.unowhy.unomate.net.AgentCounts
 import com.unowhy.unomate.net.AgentSession
 import com.unowhy.unomate.net.AgentState
+import com.unowhy.unomate.net.AgentsState
 import com.unowhy.unomate.net.parseAgents
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -13,6 +14,40 @@ import org.junit.Test
 class AgentsLogicTest {
 
     private fun session(id: String, state: AgentState) = AgentSession(id, id, "dir", null, state, 0, null, null, emptyList(), null, null, false)
+
+    @Test
+    fun `un projet cache retire ses sessions et refait les compteurs`() {
+        val state = AgentsState(
+            sessions = listOf(
+                session("a", AgentState.WORKING).copy(project = "UnoMate"),
+                session("b", AgentState.WORKING).copy(project = "robot-framework", monitoring = true),
+                session("c", AgentState.DONE).copy(project = "robot-framework"),
+                session("d", AgentState.WAITING).copy(project = "hisqool"),
+                session("e", AgentState.IDLE).copy(project = "ahmedatmane"),
+            ),
+            counts = AgentCounts(working = 1, waiting = 1, done = 1, limit = 0, idle = 1, monitoring = 1),
+            total = 5,
+            hooks = true,
+            now = 0,
+        )
+        assertEquals(state, state.without(emptySet()))
+        val shown = state.without(setOf("robot-framework", "ahmedatmane"))
+        assertEquals(listOf("a", "d"), shown.sessions.map { it.id })
+        assertEquals(AgentCounts(working = 1, waiting = 1, done = 0, limit = 0, idle = 0, monitoring = 0), shown.counts)
+        assertEquals(2, shown.total)
+    }
+
+    @Test
+    fun `projets du menu - ceux des sessions plus ceux caches, par ordre alphabetique`() {
+        val state = AgentsState(
+            sessions = listOf(session("a", AgentState.DONE).copy(project = "UnoMate"), session("b", AgentState.DONE).copy(project = "hisqool")),
+            counts = AgentCounts(0, 0, 2, 0, 0),
+            total = 2,
+            hooks = true,
+            now = 0,
+        )
+        assertEquals(listOf("hisqool", "robot-framework", "UnoMate"), projectsOf(state, setOf("robot-framework")))
+    }
 
     @Test
     fun `le mode prive remplace le titre automatique par le dossier`() {

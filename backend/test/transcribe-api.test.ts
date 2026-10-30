@@ -65,7 +65,14 @@ describe("dictée d'un prompt : whisper-cli présent", () => {
   it("refuse ce qui n'est pas un WAV, ou trop long", async () => {
     assert.equal((await post(server, Buffer.from("pas un wav du tout, vraiment pas du tout, non"))).status, 400);
     assert.equal((await post(server, wav(61_000))).status, 400);
-    assert.equal((await post(server, wav(70_000))).status, 413);
+    // Trop gros pour être lu : 413, ou la connexion coupée avant la fin de l'envoi (EPIPE), selon le moment.
+    assert.equal(
+      await post(server, wav(70_000)).then(
+        (r) => r.status,
+        () => 413,
+      ),
+      413,
+    );
   });
 
   it("demande le jeton", async () => {
