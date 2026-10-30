@@ -56,6 +56,7 @@ object Prefs {
     private const val KEY_TRIAL_MR = "trial_mr"
     private const val KEY_TRIAL_BACKEND = "trial_backend"
     private const val KEY_TRIAL_OPENED = "trial_opened"
+    private const val KEY_TRIAL_FRESH = "trial_fresh"
     private const val KEY_LEGIBLE_FONT = "legible_font"
     private const val KEY_REDUCE_MOTION = "reduce_motion"
     private const val KEY_READ_BANNERS = "read_banners"
@@ -341,6 +342,16 @@ object Prefs {
     }
 
     fun trialOpened(context: Context): Boolean = prefs(context).getBoolean(KEY_TRIAL_OPENED, false)
+
+    /**
+     * Essai remis à neuf : il ne reprend plus les ordinateurs de la stable et s'appaire comme une tablette neuve.
+     * `commit` : écrit avant l'arrêt du processus qui suit la remise à neuf.
+     */
+    fun markTrialFresh(context: Context) {
+        prefs(context).edit().putBoolean(KEY_TRIAL_FRESH, true).commit()
+    }
+
+    fun trialFresh(context: Context): Boolean = prefs(context).getBoolean(KEY_TRIAL_FRESH, false)
 
     /** Absence en cours (widget « Je m'absente ») : survit à la recréation de l'activité ; null si aucune. */
     fun away(context: Context): AwayState? = prefs(context).let {

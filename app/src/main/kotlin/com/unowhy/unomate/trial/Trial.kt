@@ -40,11 +40,11 @@ object Trial {
     }
 
     /**
-     * Essai : ordinateurs de la stable repris tant qu'il n'en a aucun, sans réappairer. Lus par son ContentProvider,
+     * Essai : ordinateurs de la stable repris tant qu'il n'en a aucun, sans réappairer, sauf après « Remettre à neuf ». Lus par son ContentProvider,
      * protégé par une permission signature : refusé (SecurityException) si les deux applis n'ont pas la même clé.
      */
     fun importComputers(context: Context): Boolean {
-        if (!BuildConfig.TRIAL || Computers.all(context).isNotEmpty()) return false
+        if (!BuildConfig.TRIAL || Prefs.trialFresh(context) || Computers.all(context).isNotEmpty()) return false
         return try {
             val raw = context.contentResolver.query(ComputersProvider.uri(STABLE), null, null, null, null)
                 ?.use { if (it.moveToFirst()) it.getString(0) else null }

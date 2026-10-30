@@ -709,7 +709,8 @@
     <string name="welcome_wifi_title">Le WiFi</string>
     <string name="welcome_wifi_text">Connecte la tablette au WiFi de la maison ou du bureau, le même que celui de l\'ordinateur.</string>
     <string name="welcome_install_title">Sur l\'ordinateur</string>
-    <string name="welcome_install_text">Ouvre cette adresse dans le navigateur de l\'ordinateur et lance l\'installation :</string>
+    <string name="welcome_install_text">Dans le navigateur de l\'ordinateur, ouvre ce site et télécharge UnoMate :</string>
+    <string name="site_url" translatable="false">mate.integration.unowhy.dev</string>
     <string name="install_address_no_wifi">connecte d\'abord le WiFi</string>
     <string name="companion_update_available">Nouvelle version du compagnon pour %1$s (%2$s) : touche pour la mettre à jour</string>
     <string name="companion_update_title">Mettre à jour le compagnon de %1$s</string>
@@ -736,9 +737,9 @@
     <string name="companion_state_uptodate">Compagnon de %1$s à jour (%2$s).</string>
     <string name="companion_state_newer">Compagnon de %1$s (%2$s) plus récent que la dernière version publiée (%3$s).</string>
     <string name="companion_state_available">Compagnon de %1$s en %2$s : la version %3$s est disponible.</string>
-    <string name="welcome_install_os">Mac ou PC Windows</string>
+    <string name="welcome_install_os">Mac ou PC Windows. Une fois lancé, UnoMate ouvre sa page sur l\'ordinateur.</string>
     <string name="welcome_connect_title">Connecter</string>
-    <string name="welcome_connect_text">Ton ordinateur apparaît ici dès que le compagnon est installé. Touche-le, puis saisis le code qu\'il affiche.</string>
+    <string name="welcome_connect_text">L\'ordinateur apparaît ici dès qu\'UnoMate y tourne. Touche-le : la tablette affiche un code, saisis-le dans la page d\'UnoMate sur l\'ordinateur.</string>
     <string name="welcome_searching">Recherche sur le WiFi…</string>
     <string name="welcome_need_wifi">Connecte d\'abord le WiFi (étape 1).</string>
     <string name="welcome_tap">Toucher pour connecter</string>

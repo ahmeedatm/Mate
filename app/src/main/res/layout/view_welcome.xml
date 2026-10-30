@@ -104,13 +104,17 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:background="@drawable/input_bg"
-                    android:fontFamily="monospace"
+                    android:fontFamily="?attr/c_font_medium"
                     android:gravity="center"
+                    android:maxLines="2"
+                    android:paddingStart="12dp"
                     android:paddingTop="18dp"
+                    android:paddingEnd="12dp"
                     android:paddingBottom="18dp"
+                    android:text="@string/site_url"
                     android:textColor="?attr/c_accent"
                     android:textIsSelectable="false"
-                    android:textSize="24sp" />
+                    android:textSize="20sp" />
 
                 <TextView
                     android:layout_width="match_parent"
