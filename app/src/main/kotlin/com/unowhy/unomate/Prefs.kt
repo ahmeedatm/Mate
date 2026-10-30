@@ -63,6 +63,7 @@ object Prefs {
     private const val KEY_AWAY_FOCUS = "away_focus_by_us"
     private const val KEY_SPEAK_ACTIONS = "speak_actions"
     private const val KEY_TOP_BAR = "top_bar"
+    private const val KEY_TOP_BELL = "top_bar_bell"
     private const val KEY_TOP_WEATHER = "top_weather"
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -298,8 +299,18 @@ object Prefs {
         prefs(context).edit().putBoolean(KEY_SPEAK_ACTIONS, value).apply()
     }
 
-    /** Éléments du bandeau du haut, dans l'ordre (clés de TopItem séparées par des virgules) ; null : jamais réglé. */
-    fun topBar(context: Context): String? = prefs(context).getString(KEY_TOP_BAR, null)
+    /**
+     * Éléments du bandeau du haut, dans l'ordre (clés de TopItem séparées par des virgules) ; null : jamais réglé.
+     * La cloche, venue de la barre de gauche (30/10), est ajoutée une fois aux bandeaux déjà réglés (TopBarModel.withNotifications).
+     */
+    fun topBar(context: Context): String? {
+        val prefs = prefs(context)
+        val saved = prefs.getString(KEY_TOP_BAR, null)
+        if (saved == null || prefs.getBoolean(KEY_TOP_BELL, false)) return saved
+        val withBell = com.unowhy.unomate.ui.topbar.TopBarModel.run { serialize(withNotifications(parse(saved))) }
+        prefs.edit().putString(KEY_TOP_BAR, withBell).putBoolean(KEY_TOP_BELL, true).apply()
+        return withBell
+    }
 
     fun setTopBar(context: Context, value: String) {
         prefs(context).edit().putString(KEY_TOP_BAR, value).apply()

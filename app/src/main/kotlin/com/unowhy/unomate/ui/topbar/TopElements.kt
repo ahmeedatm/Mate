@@ -93,6 +93,7 @@ abstract class TopElement(val item: TopItem, protected val host: TopBarHost) {
             TopItem.CALL -> CallElement(host)
             TopItem.VOLUME -> VolumeElement(host)
             TopItem.AGENTS -> AgentsElement(host)
+            TopItem.NOTIFICATIONS -> NotificationsElement(host)
             TopItem.WEATHER -> WeatherElement(host)
             TopItem.DATE -> DateElement(host)
             TopItem.CLOCK -> ClockElement(host)
@@ -233,6 +234,44 @@ class BatteryElement(host: TopBarHost) : TopElement(TopItem.BATTERY, host) {
             },
             state.level,
         )
+    }
+}
+
+/** Cloche : les notifications de l'ordinateur (Depuis l'ordi > Notifications), point quand du nouveau est arrivé. */
+class NotificationsElement(host: TopBarHost) : TopElement(TopItem.NOTIFICATIONS, host) {
+    private val bell = ImageView(context).apply {
+        setImageResource(R.drawable.ic_notifications)
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        ImageViewCompat.setImageTintList(this, androidx.core.content.ContextCompat.getColorStateList(context, R.color.rail_profile_content))
+    }
+    private val dot = View(context).apply {
+        setBackgroundResource(R.drawable.dot)
+        backgroundTintList = ColorStateList.valueOf(themeColor(context, R.attr.c_accent))
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        visibility = View.GONE
+    }
+    override val view: View = android.widget.FrameLayout(context).apply {
+        setBackgroundResource(R.drawable.rail_item_bg)
+        contentDescription = context.getString(R.string.notif_open)
+        layoutParams = LinearLayout.LayoutParams(context.dp(40), context.dp(40))
+        addView(bell, android.widget.FrameLayout.LayoutParams(context.dp(22), context.dp(22), Gravity.CENTER))
+        addView(
+            dot,
+            android.widget.FrameLayout.LayoutParams(context.dp(9), context.dp(9), Gravity.TOP or Gravity.END).apply {
+                topMargin = context.dp(8)
+                marginEnd = context.dp(8)
+            },
+        )
+        setOnClickListener { host.openNotifications() }
+    }
+
+    override fun start() = render(ring = false)
+
+    fun render(ring: Boolean) {
+        view.isSelected = host.notificationsShown()
+        bell.isSelected = view.isSelected
+        dot.visibility = if (host.notificationsUnread()) View.VISIBLE else View.GONE
+        if (ring && dot.visibility == View.VISIBLE) com.unowhy.unomate.ui.Look.ring(bell, dot)
     }
 }
 

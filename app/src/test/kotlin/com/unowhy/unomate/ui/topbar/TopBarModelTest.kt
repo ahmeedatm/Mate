@@ -8,9 +8,23 @@ import org.junit.Test
 class TopBarModelTest {
     @Test
     fun `jamais regle, le bandeau d'avant, vide reste vide, inconnu et doublon ignores`() {
-        assertEquals(listOf(TopItem.MUSIC, TopItem.CLOCK, TopItem.WIFI, TopItem.BATTERY), TopBarModel.parse(null))
+        assertEquals(
+            listOf(TopItem.MUSIC, TopItem.NOTIFICATIONS, TopItem.CLOCK, TopItem.WIFI, TopItem.BATTERY),
+            TopBarModel.parse(null),
+        )
         assertEquals(emptyList<TopItem>(), TopBarModel.parse(""))
         assertEquals(listOf(TopItem.WEATHER, TopItem.CLOCK), TopBarModel.parse("weather,game, clock,weather"))
+    }
+
+    @Test
+    fun `cloche ajoutee juste avant l'heure, au bout sans heure, jamais en double`() {
+        assertEquals(
+            listOf(TopItem.MUSIC, TopItem.NOTIFICATIONS, TopItem.CLOCK, TopItem.BATTERY),
+            TopBarModel.withNotifications(listOf(TopItem.MUSIC, TopItem.CLOCK, TopItem.BATTERY)),
+        )
+        assertEquals(listOf(TopItem.DATE, TopItem.NOTIFICATIONS), TopBarModel.withNotifications(listOf(TopItem.DATE)))
+        val already = listOf(TopItem.NOTIFICATIONS, TopItem.CLOCK)
+        assertEquals(already, TopBarModel.withNotifications(already))
     }
 
     @Test
