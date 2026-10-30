@@ -40,6 +40,9 @@ Pour retirer l'essai d'une MR fusionnée ou abandonnée : `GITLAB_TOKEN` (jeton 
 - **Fusionner** : répondre « go ». Jamais de fusion sans ça.
 - **`/ship`** : livre à la main le travail en cours (vérif locale rapide, commit, push, MR, essai ; pipeline vert exigé avant la fusion).
   Le hook Stop le rappelle s'il reste du travail non poussé.
+- **`/essai-local <iid>`** : pose l'appli d'une MR sur la tablette branchée en adb, construite sur le Mac
+  (sans pipeline), et passe le compagnon du Mac sur la MR. Rôle Maintainer requis la première fois
+  (clé de release copiée dans le trousseau).
 - **`/design-companion critique <écran>`** : passe qualité UX/UI d'un écran (aussi `polish`, `etats`,
   `harden`, `distill`, `animate`).
 
