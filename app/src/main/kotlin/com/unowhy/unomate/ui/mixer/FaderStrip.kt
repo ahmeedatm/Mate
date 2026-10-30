@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.RectF
@@ -17,6 +18,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.DrawableCompat
 import com.unowhy.unomate.R
@@ -342,15 +344,18 @@ class FaderStrip(context: Context) : View(context) {
             postInvalidateOnAnimation()
         }
         val lit = shownLeds.toInt()
-        paint.color = cSlot
+        paint.color = grayed(cSlot)
         canvas.drawRoundRect(meterX - dp(3), faderArea.top - dp(3), meterX + ledW + dp(3), faderArea.bottom + dp(3), dp(5).toFloat(), dp(5).toFloat(), paint)
         for (i in 0 until LEDS) {
             val bottom = faderArea.bottom - i * (ledH + ledGap)
             val on = metered && i < lit
-            paint.color = if (on) cLeds[MixerMath.ledZone(i, LEDS)] else cLedOff
+            paint.color = if (on) cLeds[MixerMath.ledZone(i, LEDS)] else grayed(cLedOff)
             canvas.drawRoundRect(meterX, bottom - ledH, meterX + ledW, bottom, dp(2).toFloat(), dp(2).toFloat(), paint)
         }
     }
+
+    /** Sans niveau lu (Mac) : le vumètre est estompé, pour ne pas passer pour un silence. */
+    private fun grayed(color: Int) = if (metered) color else ColorUtils.setAlphaComponent(color, Color.alpha(color) * UNMETERED_ALPHA / 255)
 
     /** TalkBack : le nom de la tranche, et « son coupé » en sourdine. */
     private fun describe() {
@@ -464,6 +469,9 @@ class FaderStrip(context: Context) : View(context) {
 
     companion object {
         private const val LEDS = 24
+
+        /** Opacité du vumètre sans niveau lu (35 %). */
+        private const val UNMETERED_ALPHA = 0x59
         /** Sous cette hauteur (dp), tranche resserrée : la console d'un profil de l'Accueil. */
         const val TIGHT_DP = 380
         private const val VALUE_TIGHT_SP = 22f
