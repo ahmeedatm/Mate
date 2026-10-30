@@ -196,25 +196,43 @@
         android:layout_height="match_parent"
         android:visibility="gone" />
 
-    <TextView
-        android:id="@+id/remote_banner"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|center_horizontal"
-        android:layout_marginStart="120dp"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="24dp"
-        android:background="@drawable/banner_bg"
-        android:drawableStart="@drawable/ic_chat"
-        android:drawablePadding="16dp"
-        android:drawableTint="?attr/c_accent"
-        android:elevation="12dp"
-        android:gravity="center_vertical"
-        android:paddingStart="24dp"
-        android:paddingTop="20dp"
-        android:paddingEnd="28dp"
-        android:paddingBottom="20dp"
-        android:textColor="?attr/c_text"
-        android:textSize="24sp"
-        android:visibility="gone" />
+    <!-- Bandeau d'un message ou d'une notification, sous la cloche (banner.xml, géré par Banner). -->
+    <include layout="@layout/banner" />
+
+    <!-- Écran de démarrage (cold start) : logo centré sur le fond du thème, estompé par Look.splash pour révéler l'appli.
+         Masqué tout de suite à la recréation (changement de thème) pour ne pas rejouer. -->
+    <FrameLayout
+        android:id="@+id/splash"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/c_bg"
+        android:clickable="true"
+        android:elevation="24dp"
+        android:focusable="true">
+
+        <LinearLayout
+            android:id="@+id/splash_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <ImageView
+                android:layout_width="124dp"
+                android:layout_height="124dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_launcher" />
+
+            <TextView
+                android:id="@+id/splash_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:fontFamily="?attr/c_font_display"
+                android:letterSpacing="0.02"
+                android:textColor="?attr/c_text"
+                android:textSize="34sp" />
+        </LinearLayout>
+    </FrameLayout>
 </FrameLayout>

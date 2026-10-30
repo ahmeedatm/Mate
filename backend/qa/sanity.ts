@@ -274,6 +274,8 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         }
         expectStatus(agents, 200, "/agents");
         expect(Array.isArray(agents.json.sessions) && typeof agents.json.counts?.working === "number", "forme de /agents inattendue");
+        // Micro des sessions : vrai seulement avec whisper-cli sur l'ordinateur (brew install whisper-cpp).
+        expect(typeof agents.json.voice === "boolean", "`voice` absent de /agents");
         // Usage Claude (Orca ou statusline) : absent tant qu'aucune source ne l'a donné, sinon des pourcentages.
         const quota = agents.json.quota;
         const pct = (w: any) => w === null || (Number.isInteger(w?.used) && w.used >= 0 && w.used <= 100);
@@ -532,24 +534,6 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           await call("PUT", "/local/calendar", { urls: [] });
           ics.close();
         }
-      },
-    },
-    {
-      name: "courrier Outlook (page du Deck)",
-      run: async () => {
-        // Sans compte Microsoft relié : no-account ; relié sans Mail.Read : reconnect ; sinon les compteurs.
-        const mail = await call("GET", "/mail/summary");
-        expectStatus(mail, 200, "/mail/summary");
-        const status = mail.json.status;
-        expect(["no-account", "reconnect", "ok"].includes(status), `état du courrier inconnu : ${status}`);
-        if (status === "ok") {
-          expect(
-            ["unread", "junk", "drafts", "sent"].every((k) => Number.isInteger(mail.json[k])),
-            "compteurs du courrier absents",
-          );
-          expect(Array.isArray(mail.json.recent) && mail.json.recent.length <= 5, "derniers non lus invalides");
-        }
-        return status;
       },
     },
     {

@@ -13,7 +13,7 @@ Sur la tablette : les ordinateurs reliés, la disposition de l'écran d'accueil,
 
 CE QUI PART VERS D'AUTRES SERVICES, ET POURQUOI
 
-Commande vocale. Quand vous touchez « Parler », votre voix est transcrite par le service de reconnaissance vocale de Google intégré à la tablette, qui reçoit l'enregistrement. Les rappels et réponses lus à voix haute utilisent le moteur de synthèse vocale de la tablette.
+Commande vocale. Quand vous touchez « Parler », votre voix est transcrite par le service de reconnaissance vocale de Google intégré à la tablette, qui reçoit l'enregistrement. Les messages dictés aux agents Claude sont, eux, transcrits sur l'ordinateur quand Whisper y est installé : l'enregistrement va seulement de la tablette à l'ordinateur et n'est pas conservé ; le modèle de voix est téléchargé une fois depuis Hugging Face, qui ne reçoit que l'adresse IP. Les rappels et réponses lus à voix haute utilisent le moteur de synthèse vocale de la tablette.
 
 Météo. La tablette demande la météo de la ville choisie à l'Institut météorologique norvégien (MET Norway), qui reçoit les coordonnées de cette ville et l'adresse IP de la connexion. Si vous l'activez dans les Réglages, ou si vous touchez « Ma position », la tablette trouve la ville la plus proche grâce aux services de localisation de Google, qui reçoivent les réseaux WiFi visibles ; seule la ville trouvée est ensuite utilisée, jamais votre position exacte.
 

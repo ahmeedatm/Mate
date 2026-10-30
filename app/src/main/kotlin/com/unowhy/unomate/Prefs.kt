@@ -25,10 +25,13 @@ enum class AnimFamily(val key: String) {
 }
 
 object Prefs {
-    private const val FILE = "companion"
+    const val FILE = "companion"
     private const val KEY_ALLOW_INSTALLS = "allow_installs"
     private const val KEY_EXIT_LOCK = "exit_lock"
     private const val KEY_POWER_MENU = "power_menu"
+
+    /** Réglages du technicien (carte Kiosque) : gardés par la remise à neuf ([com.unowhy.unomate.kiosk.FreshStart]). */
+    val KIOSK_KEYS = setOf(KEY_ALLOW_INSTALLS, KEY_EXIT_LOCK, KEY_POWER_MENU)
     private const val KEY_LANDSCAPE_LOCKED = "landscape_locked"
     private const val KEY_BRIGHTNESS = "brightness"
     private const val KEY_NIGHT_DIM = "night_dim"
@@ -46,6 +49,7 @@ object Prefs {
     private const val KEY_WAKE_WORD = "wake_word"
     private const val KEY_MEETING_ALERT = "meeting_alert"
     private const val KEY_MEETING_ALERT_SEEN = "meeting_alert_seen"
+    private const val KEY_AGENTS_HIDDEN_PROJECTS = "agents_hidden_projects"
     private const val KEY_WEATHER_LOCATION = "weather_location"
     private const val KEY_TEXT_SCALE = "text_scale"
     private const val KEY_FRAME_DELAY = "frame_delay_min"
@@ -53,6 +57,7 @@ object Prefs {
     private const val KEY_TRIAL_MR = "trial_mr"
     private const val KEY_TRIAL_BACKEND = "trial_backend"
     private const val KEY_TRIAL_OPENED = "trial_opened"
+    private const val KEY_TRIAL_FRESH = "trial_fresh"
     private const val KEY_LEGIBLE_FONT = "legible_font"
     private const val KEY_REDUCE_MOTION = "reduce_motion"
     private const val KEY_READ_BANNERS = "read_banners"
@@ -209,6 +214,13 @@ object Prefs {
         prefs(context).edit().putBoolean(KEY_MEETING_ALERT, value).apply()
     }
 
+    /** Projets dont les sessions Claude sont cachées sur cette tablette (menu ⋯ du tableau Agents). */
+    fun agentsHiddenProjects(context: Context): Set<String> = prefs(context).getStringSet(KEY_AGENTS_HIDDEN_PROJECTS, emptySet()).orEmpty()
+
+    fun setAgentsHiddenProjects(context: Context, value: Set<String>) {
+        prefs(context).edit().putStringSet(KEY_AGENTS_HIDDEN_PROJECTS, value).apply()
+    }
+
     /** Réunions déjà annoncées (clés de MeetingAlertModel) : une seule alerte par réunion, même après un redémarrage de l'appli. */
     fun meetingAlertSeen(context: Context): Set<String> = prefs(context).getStringSet(KEY_MEETING_ALERT_SEEN, emptySet()).orEmpty()
 
@@ -216,8 +228,8 @@ object Prefs {
         prefs(context).edit().putStringSet(KEY_MEETING_ALERT_SEEN, value).apply()
     }
 
-    /** Mot de réveil « Mate » : écoute du mot quand UnoMate est à l'écran (voice/WakeWord). Activé par défaut. */
-    fun wakeWord(context: Context): Boolean = prefs(context).getBoolean(KEY_WAKE_WORD, true)
+    /** Mot de réveil « Mate » : écoute du mot quand UnoMate est à l'écran (voice/WakeWord). Désactivé par défaut. */
+    fun wakeWord(context: Context): Boolean = prefs(context).getBoolean(KEY_WAKE_WORD, false)
 
     fun setWakeWord(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_WAKE_WORD, value).apply()
@@ -338,6 +350,16 @@ object Prefs {
     }
 
     fun trialOpened(context: Context): Boolean = prefs(context).getBoolean(KEY_TRIAL_OPENED, false)
+
+    /**
+     * Essai remis à neuf : il ne reprend plus les ordinateurs de la stable et s'appaire comme une tablette neuve.
+     * `commit` : écrit avant l'arrêt du processus qui suit la remise à neuf.
+     */
+    fun markTrialFresh(context: Context) {
+        prefs(context).edit().putBoolean(KEY_TRIAL_FRESH, true).commit()
+    }
+
+    fun trialFresh(context: Context): Boolean = prefs(context).getBoolean(KEY_TRIAL_FRESH, false)
 
     /** Absence en cours (widget « Je m'absente ») : survit à la recréation de l'activité ; null si aucune. */
     fun away(context: Context): AwayState? = prefs(context).let {

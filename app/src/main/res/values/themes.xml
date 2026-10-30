@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Thème de lancement (MainActivity) : fenêtre système montrée pendant le cold start avec le logo, avant qu'onCreate
+         pose le vrai thème (AppTheme.apply). Évite l'écran vide au démarrage. -->
+    <style name="Theme.Companion.Launch" parent="Theme.Companion">
+        <item name="android:windowBackground">@drawable/splash_window</item>
+    </style>
+
     <style name="Theme.Companion" parent="Palette.Nuit">
         <item name="colorPrimary">?attr/c_accent</item>
         <item name="colorAccent">?attr/c_accent</item>
@@ -176,29 +182,6 @@
     <style name="Card">
         <item name="android:background">?attr/c_card_bg</item>
         <item name="android:padding">?attr/c_card_pad</item>
-    </style>
-
-    <!-- Compteur de la carte Courrier (page Outlook du Deck) : chiffre au-dessus de son libellé. -->
-    <style name="MailCounter">
-        <item name="android:layout_width">0dp</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_weight">1</item>
-        <item name="android:orientation">vertical</item>
-    </style>
-
-    <style name="MailCounter.Value">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:textColor">?attr/c_text</item>
-        <item name="android:textSize">26sp</item>
-        <item name="android:textStyle">bold</item>
-    </style>
-
-    <style name="MailCounter.Label">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:textColor">?attr/c_text_dim</item>
-        <item name="android:textSize">14sp</item>
     </style>
 
     <style name="CardTitle">

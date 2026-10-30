@@ -38,7 +38,6 @@ import java.util.Locale
  */
 class ChecklistWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val title = TitleView(context).apply {
-        setIcon(R.drawable.ic_tile_check_circle)
         isSingleLine = true
         ellipsize = TextUtils.TruncateAt.END
     }

@@ -25,7 +25,7 @@ import java.util.zip.ZipInputStream
  */
 object WakeModel {
     private const val TAG = "WakeModel"
-    private const val NAME = "vosk-model-small-fr-0.22"
+    const val NAME = "vosk-model-small-fr-0.22"
     private const val URL_ZIP = "https://alphacephei.com/vosk/models/$NAME.zip"
     /** Empreinte du zip relevée le 29/10/2026 (42 233 323 octets). */
     private const val SHA256 = "cabf6180e177eb9b3a9a9d43a437bd5e549f3a7d09525e5d69a3fed787be12ad"

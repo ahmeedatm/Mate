@@ -26,7 +26,7 @@ data class VoiceState(val connected: Boolean, val channel: String?, val people: 
  * `meeting` : page Réunion, ouverte après « Rejoindre » sur l'Accueil ; `app` : page d'une appli (Discord…),
  * ouverte en touchant l'appli (pas d'onglet), avec son volume propre au-dessus des touches ;
  * `media` : lecture en cours (vidéo, musique) au-dessus des touches ; `sound` : barre « Son de l'ordinateur » sur la page
- * (faux pour Word, Excel…) ; `mail` : page Outlook, courrier du compte Microsoft au-dessus des touches.
+ * (faux pour Word, Excel…).
  */
 data class DeckPage(
     val title: String,
@@ -37,7 +37,6 @@ data class DeckPage(
     val app: String? = null,
     val media: Boolean = false,
     val sound: Boolean = true,
-    val mail: Boolean = false,
     val keyPage: Int? = null,
 )
 
@@ -81,7 +80,7 @@ class DeckApi(private val http: Http) {
                 DeckTile(t.getString("id"), t.getString("label"), t.getString("type"), t.optStringOrNull("glyph"), t.optStringOrNull("color"), t.optStringOrNull("app"), t.optStringOrNull("when"), t.optStringOrNull("lit"), t.optStringOrNull("symbol"))
             }, p.optBoolean("editable"), p.optBoolean("apps"), p.optBoolean("meeting"), p.optStringOrNull("app"), p.optBoolean("media"),
                 // Ordinateur pas encore à jour (sans `sound`) : barre Son comme avant.
-                p.optBoolean("sound", true), p.optBoolean("mail"), p.optInt("keyPage", -1).takeIf { it >= 0 })
+                p.optBoolean("sound", true), p.optInt("keyPage", -1).takeIf { it >= 0 })
         }
     }
 

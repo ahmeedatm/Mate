@@ -75,8 +75,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     /** Mode Modifier en cours : un appel qui commence ne fait pas changer d'écran. */
     val editing: Boolean get() = ::grid.isInitialized && grid.editing
-    /** Famille de thème Cadran : disposition à part et lignes inégales. */
-    private val cadran get() = themeBool(requireContext(), R.attr.c_cadran)
     /** Aucun ordinateur appairé : les widgets qui en ont besoin proposent de le connecter. */
     private var noComputer = false
     private var loop: Job? = null
@@ -128,18 +126,16 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
         // Écran recréé quand l'ordinateur change (MainActivity.onComputerChanged) : lu une fois ici.
         noComputer = Computers.all(requireContext()).isEmpty()
-        if (cadran) {
-            unreachable = main?.unreachable()
-            grid.setPadding(dp(44), dp(28), dp(40), dp(32))
-            grid.gap = dp(16)
-            grid.rowWeights = RowProfile.CADRAN_ROWS
-            // L'heure déborde de quelques dp sous sa ligne, comme dans la maquette.
-            grid.clipChildren = false
-        }
-        layout = HomeLayout.load(requireContext(), cadran)
+        unreachable = main?.unreachable()
+        grid.setPadding(dp(44), dp(28), dp(40), dp(32))
+        grid.gap = dp(16)
+        grid.rowWeights = RowProfile.CADRAN_ROWS
+        // L'heure déborde de quelques dp sous sa ligne, comme dans la maquette.
+        grid.clipChildren = false
+        layout = HomeLayout.load(requireContext())
         // `or` : tout s'applique. Réunion posé une fois ; le Deck d'office du premier Deck V2 retiré s'il n'a pas été touché.
-        if (nameProfiles() or (cadran && (layout.ensureRoles(getString(R.string.profile_call)) or layout.dropDefaultDeck()))) {
-            HomeLayout.save(requireContext(), layout, cadran)
+        if (nameProfiles() or layout.ensureRoles(getString(R.string.profile_call)) or layout.dropDefaultDeck()) {
+            HomeLayout.save(requireContext(), layout)
         }
         if (!pageChosen) {
             page = layout.homeProfile
@@ -195,12 +191,11 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     }
 
     /**
-     * Les widgets de la page arrivent l'un après l'autre, de haut en bas puis de gauche à droite. Cadran : le héros
+     * Les widgets de la page arrivent l'un après l'autre, de haut en bas puis de gauche à droite : le héros
      * descend d'un cran, la ligne du jour se dessine, les tuiles montent de 50 ms en 50 ms (ressorts).
      */
     private fun animateIn() {
         val shown = widgets.keys.filter { it.page == page }.sortedWith(compareBy({ it.row }, { it.col }))
-        if (!cadran) return shown.forEachIndexed { i, placed -> widgets[placed]?.let { Look.enter(it.view, i) } }
         var tiles = 0
         for (placed in shown) {
             val widget = widgets[placed] ?: continue
@@ -308,11 +303,11 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private fun dependsOnComputer(placed: Placed) = placed.type.computer || placed.type == WidgetType.DAYLINE
 
     /**
-     * Thèmes Cadran : la liaison a changé. Un seul message dans le héros, les widgets qui dépendent de l'ordinateur
+     * La liaison a changé. Un seul message dans le héros, les widgets qui dépendent de l'ordinateur
      * s'atténuent et ne répondent plus au toucher ; dès qu'il répond, tout est relu.
      */
     fun onLinkChanged() {
-        if (view == null || !cadran) return
+        if (view == null) return
         val down = main?.unreachable()
         if (down == unreachable) return
         val recovered = down == null
@@ -389,7 +384,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     /** Réglage d'un widget changé hors mode Modifier ; en mode Modifier, « Terminé » enregistre. */
     override fun save() {
-        if (!grid.editing) HomeLayout.save(requireContext(), layout, cadran)
+        if (!grid.editing) HomeLayout.save(requireContext(), layout)
     }
 
     // --- Profils
@@ -434,9 +429,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     fun reloadLayout() {
         if (view == null) return
         if (grid.editing) endEdit(keep = false)
-        layout = HomeLayout.load(requireContext(), cadran)
-        if (nameProfiles() or (cadran && layout.ensureRoles(getString(R.string.profile_call)))) {
-            HomeLayout.save(requireContext(), layout, cadran)
+        layout = HomeLayout.load(requireContext())
+        if (nameProfiles() or layout.ensureRoles(getString(R.string.profile_call))) {
+            HomeLayout.save(requireContext(), layout)
         }
         build()
         if (!isHidden) refreshAll()
@@ -547,6 +542,13 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     // --- Mode Modifier
 
+    /** Retour en arrière pendant le mode Modifier : annule (sans garder les changements). Vrai si on était en train de modifier. */
+    fun cancelEdit(): Boolean {
+        if (!editing) return false
+        endEdit(keep = false)
+        return true
+    }
+
     /** Crayon de la barre : commence le mode Modifier, ou le termine (en gardant) s'il est en cours. */
     fun toggleEdit() {
         if (grid.editing) {
@@ -597,7 +599,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             refreshAll()
             return
         }
-        HomeLayout.save(requireContext(), layout, cadran)
+        HomeLayout.save(requireContext(), layout)
         displayProfile(page)
     }
 

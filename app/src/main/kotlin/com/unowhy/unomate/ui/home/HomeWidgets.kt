@@ -115,9 +115,8 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
         setPadding(px, px, px, px)
     }
 
-    protected fun cardTitle(text: Int, icon: Int) = TitleView(context).apply {
+    protected fun cardTitle(text: Int) = TitleView(context).apply {
         setText(text)
-        setIcon(icon)
     }
 
     protected fun label(size: Float, colorId: Int = R.attr.c_text, light: Boolean = false) = TextView(context).apply {
@@ -291,7 +290,6 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private var tall = false
     private var big = false
     private var small = false
-    private val cadran = themeBool(context, R.attr.c_cadran)
 
     init {
         bind()
@@ -318,10 +316,8 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         toggleIcon = inner.findViewById(R.id.widget_focus_toggle_icon)
         toggle = inner.findViewById(R.id.widget_focus_toggle)
         if (small) shrink(inner)
-        if (cadran) {
-            capToDial(time, if (tall || big) 40f else if (small) 26f else 30f)
-            capToDial(phase, if (tall || big) 13f else if (small) 11f else 12f)
-        }
+        capToDial(time, if (tall || big) 40f else if (small) 26f else 30f)
+        capToDial(phase, if (tall || big) 13f else if (small) 11f else 12f)
         inner.setOnClickListener { host.main?.showMode("focus") }
         toggle.setOnClickListener { FocusTimer.toggle() }
         Look.pressSpring(inner)
@@ -388,7 +384,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         Look.countdown(time, state.remainingMs, state.running)
         phase.setText(when {
             !started -> R.string.focus_ready
-            !state.running && cadran -> R.string.focus_paused
+            !state.running -> R.string.focus_paused
             focus -> R.string.focus_phase_work
             else -> R.string.focus_phase_break
         })
@@ -446,7 +442,7 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             view.addView(
                 LinearLayout(context).asCard(16).apply {
                     orientation = LinearLayout.VERTICAL
-                    addView(cardTitle(R.string.computer_volume, R.drawable.ic_volume))
+                    addView(cardTitle(R.string.computer_volume))
                     addView(
                         ScrollView(context).apply { isVerticalScrollBarEnabled = false; addView(list) },
                         LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(8) },
@@ -466,7 +462,7 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
                 LinearLayout(context).asCard(16).apply {
                     orientation = if (wide) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
                     gravity = Gravity.CENTER_VERTICAL
-                    addView(cardTitle(R.string.computer_volume, R.drawable.ic_volume))
+                    addView(cardTitle(R.string.computer_volume))
                     addView(
                         bar,
                         if (wide) {
@@ -506,7 +502,7 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 
     private val sites: TileSection = TileSection(
-        context, host, R.string.widget_media_sites, R.drawable.ic_link, R.string.links_add_title,
+        context, host, R.string.widget_media_sites, R.string.links_add_title,
         tilesOf = { pages -> pages.firstOrNull { it.media }?.tiles },
         onAdd = { host.overlays.addLinks { sites.reload() } },
     )
@@ -586,7 +582,7 @@ class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     override val view = LinearLayout(context).asCard().apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(20), dp(16), dp(20), dp(16))
-        addView(cardTitle(R.string.widget_note, R.drawable.ic_edit))
+        addView(cardTitle(R.string.widget_note))
         addView(text, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(6) })
         setOnClickListener { showSettings() }
     }

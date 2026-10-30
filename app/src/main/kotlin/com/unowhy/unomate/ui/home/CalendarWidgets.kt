@@ -79,23 +79,21 @@ internal fun joinMeeting(host: HomeHost, event: CalendarEvent, button: View) {
  * vertical : l'heure en grand, puis les deux rendez-vous suivants.
  */
 class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val cadran = themeBool(context, R.attr.c_cadran)
     private val labelView = TitleView(context).apply {
-        setIcon(R.drawable.ic_event)
         setTextColor(color(R.attr.c_hue_orange))
     }
     private val title = label(22f).apply {
         ellipsize = TextUtils.TruncateAt.END
         typeface = themeFont(context, R.attr.c_font_medium)
     }
-    private val whenText = label(17f, if (cadran) R.attr.c_accent else R.attr.c_hue_orange).apply { isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
+    private val whenText = label(17f, R.attr.c_accent).apply { isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
     private val join = Button(context, null, 0, R.style.NowButton).apply {
         setText(R.string.join_meeting)
         setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_videocam, 0, 0, 0)
         visibility = View.GONE
         setOnClickListener { joinNext() }
     }
-    /** Thèmes Cadran, rien de prévu : l'action visible pour noter un rendez-vous (prend la place de « Rejoindre »). */
+    /** Rien de prévu : l'action visible pour noter un rendez-vous (prend la place de « Rejoindre »). */
     private val add = Button(context, null, 0, R.style.ActionButton).apply {
         setText(R.string.event_add)
         visibility = View.GONE
@@ -110,19 +108,9 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val spacer = View(context)
     private val divider = View(context).apply { setBackgroundColor(color(R.attr.c_stroke)) }
     override val view = LinearLayout(context).apply {
-        if (cadran) {
-            addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fitFollowing() }
-            setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
-            themePx(context, R.attr.c_card_pad).let { setPadding(it, it, it, it) }
-        } else {
-            // Fond teinté de la couleur de l'agenda (orange), comme la pastille du titre.
-            background = GradientDrawable().apply {
-                cornerRadius = dp(20).toFloat()
-                setColor(ColorUtils.compositeColors(ColorUtils.setAlphaComponent(color(R.attr.c_hue_orange), 0x26), color(R.attr.c_surface)))
-                setStroke(dp(1), ColorUtils.setAlphaComponent(color(R.attr.c_hue_orange), 0x55))
-            }
-            setPadding(dp(20), dp(16), dp(20), dp(16))
-        }
+        addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fitFollowing() }
+        setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
+        themePx(context, R.attr.c_card_pad).let { setPadding(it, it, it, it) }
     }
     private var joinable: CalendarEvent? = null
 
@@ -156,7 +144,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         } else {
             labelView.visibility = View.VISIBLE
             whenText.textSize = 17f
-            whenText.setTextColor(color(if (cadran) R.attr.c_accent else R.attr.c_hue_orange))
+            whenText.setTextColor(color(R.attr.c_accent))
             texts.addView(labelView)
             texts.addView(title, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(8) })
             texts.addView(whenText, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(2) })
@@ -196,18 +184,13 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         joinable = upcoming?.takeIf { DayBrief.canJoin(it, now, chosen != null, host.features.meetings) }
         join.visibility = if (joinable == null) View.GONE else View.VISIBLE
         if (placed.size == WidgetSize.V) renderVertical(events, upcoming, now)
-        // Cadran, rien de prévu : l'action pour noter un rendez-vous. Ordinateur injoignable et rien de lu : on ne dit pas « rien de prévu ».
-        val empty = cadran && upcoming == null && host.unreachable == null
+        // Rien de prévu : l'action pour noter un rendez-vous. Ordinateur injoignable et rien de lu : on ne dit pas « rien de prévu ».
+        val empty = upcoming == null && host.unreachable == null
         add.visibility = if (empty) View.VISIBLE else View.GONE
-        whenText.visibility = if (cadran && upcoming == null) View.GONE else View.VISIBLE
+        whenText.visibility = if (upcoming == null) View.GONE else View.VISIBLE
         if (upcoming == null) {
-            if (cadran) {
-                add.setText(if (host.features.linked) R.string.event_add else R.string.agenda_link_now)
-                title.text = if (!empty) "" else context.getString(if (host.features.linked) R.string.next_none_today else R.string.next_not_linked)
-            } else {
-                title.setText(R.string.next_none)
-                whenText.setText(R.string.next_none_hint)
-            }
+            add.setText(if (host.features.linked) R.string.event_add else R.string.agenda_link_now)
+            title.text = if (!empty) "" else context.getString(if (host.features.linked) R.string.next_none_today else R.string.next_not_linked)
             return
         }
         title.text = upcoming.title
@@ -222,9 +205,9 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         bigTime.text = upcoming?.let { timeFormat.format(Date(it.startMs)) } ?: ""
         after.removeAllViews()
         if (upcoming != null) Look.revealOnce(after)
-        val following = events.filter { !it.allDay && it.endMs > now && it !== upcoming }.take(if (cadran) FOLLOWING_CADRAN else 2)
-        // Cadran : sans suivant, ni filet ni bloc ; avec, autant de lignes que la place en laisse (fitFollowing).
-        val show = if (cadran && following.isEmpty()) View.GONE else View.VISIBLE
+        val following = events.filter { !it.allDay && it.endMs > now && it !== upcoming }.take(FOLLOWING_CADRAN)
+        // Sans suivant, ni filet ni bloc ; avec, autant de lignes que la place en laisse (fitFollowing).
+        val show = if (following.isEmpty()) View.GONE else View.VISIBLE
         divider.visibility = show
         after.visibility = show
         for (event in following) after.addView(LinearLayout(context).apply {

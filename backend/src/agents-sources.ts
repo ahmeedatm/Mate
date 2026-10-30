@@ -167,6 +167,9 @@ export async function listOrca(): Promise<OrcaInfo | null> {
       worktrees: trees.map((w) => ({
         path: String(w.path ?? ""),
         branch: typeof w.branch === "string" ? w.branch.replace(/^refs\/heads\//, "") : null,
+        repo: typeof w.repo === "string" ? w.repo : null,
+        name: typeof w.displayName === "string" ? w.displayName : null,
+        activityAt: typeof w.lastActivityAt === "number" ? w.lastActivityAt : null,
         ticket: ((w.linkedItems ?? []) as Record<string, any>[]).find((i) => typeof i.jiraIdentifier === "string")?.jiraIdentifier ?? null,
         mr:
           typeof w.linkedGitLabMR === "number"
@@ -300,6 +303,31 @@ const { worktree, tab } = JSON.parse(process.env.ORCA_FOCUS);
   await orcaRuntime(bin, script, {
     ORCA_FOCUS: JSON.stringify({ worktree: `path:${worktree}`, tab: tab && CHAT_TAB.test(tab) ? tab : null }),
   });
+}
+
+/**
+ * Message dans un chat Orca : la CLI n'y écrit pas, on passe par `agentSession.send` du client du runtime, avec le
+ * message et son empreinte construits par le module d'Orca lui-même (`structured-agent-session-send-mutation.js`).
+ * Interne à Orca : une mise à jour d'Orca peut le casser, et l'échec se dit alors en une phrase.
+ */
+export async function sendChat(session: string, text: string): Promise<void> {
+  const bin = orcaBin();
+  if (!bin || !/^[\w-]+$/.test(session)) throw new Error("Orca est introuvable");
+  const script = `const path = require("path");
+const { RuntimeClient } = require(process.env.ORCA_CLIENT);
+const send = require(path.join(path.dirname(process.env.ORCA_CLIENT), "..", "shared", "structured-agent-session-send-mutation.js"));
+const { session, text } = JSON.parse(process.env.ORCA_SEND);
+const operation = Date.now() + "-" + require("crypto").randomBytes(16).toString("hex");
+const params = send.structuredAgentSessionMessageSendMutation({
+  sessionId: session, clientOperationId: operation, expectedRuntimeFence: 1, body: send.structuredAgentSessionSendBody(text, []),
+});
+new RuntimeClient().call("agentSession.send", params).then(
+  (r) => { process.stdout.write(r?.ok && r.result?.ok !== false ? "ok" : String(r?.result?.refusal?.details?.reason ?? r?.result?.refusal?.code ?? "refus")); process.exit(0); },
+  () => process.exit(1),
+);`;
+  const out = await orcaRuntime(bin, script, { ORCA_SEND: JSON.stringify({ session, text }) }).catch(() => null);
+  if (out === "ok") return;
+  throw new Error(out === "sessionNotAttached" ? "Ce chat n'est plus ouvert dans Orca" : "Orca n'a pas pu envoyer le message dans le chat");
 }
 
 /**

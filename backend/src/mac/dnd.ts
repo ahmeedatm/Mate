@@ -4,7 +4,7 @@ import { osascript } from "./run.ts";
  * Ne pas déranger sur Mac : macOS n'a pas de commande pour la concentration. Le compagnon passe par le Centre de
  * contrôle (Accessibilité, déjà accordée pour les fenêtres) : il l'ouvre, bascule l'entrée Ne pas déranger du
  * détail de la Concentration et le referme (~1 s à l'écran). Éléments trouvés par leur identifiant, pas par leur
- * texte : marche quelle que soit la langue du Mac (vérifié sur macOS 15).
+ * texte : marche quelle que soit la langue du Mac (vérifié sur macOS 15 et 26).
  * État lu : la tuile Concentration (une autre concentration déjà active compte comme « déjà au calme », on n'y
  * touche pas).
  * Le panneau s'ouvre à chaque lecture : l'état n'est lu qu'une fois, puis gardé en mémoire et suivi par ce que le
@@ -13,6 +13,11 @@ import { osascript } from "./run.ts";
  * connexion de la tablette se renvoyaient le panneau, resté ouvert.
  */
 const SCRIPT = `
+// « Afficher les détails » : seule action propre à la tuile, les standard commencent par AX (macOS 26 en ajoute :
+// AXShowMenu, AXIncrement…). Son nom est traduit.
+function details(actions) {
+  return actions.find((a) => !a.name().startsWith("AX"));
+}
 function run(argv) {
   const want = argv[0];
   const p = Application("System Events").processes.byName("ControlCenter");
@@ -28,8 +33,7 @@ function run(argv) {
     const tile = find("controlcenter-focus-modes");
     if (!tile) throw new Error("no-focus-tile");
     if (want === "get") return JSON.stringify({ on: tile.value() === 1 });
-    // « Afficher les détails » : seule action de la tuile autre qu'AXPress (son nom est traduit).
-    tile.actions().find((a) => a.name() !== "AXPress").perform();
+    details(tile.actions()).perform();
     const dnd = find("focus-mode-activity-com.apple.donotdisturb.mode.default");
     if (!dnd) throw new Error("no-dnd-entry");
     if ((dnd.value() === 1) !== (want === "on")) dnd.actions["AXPress"].perform();

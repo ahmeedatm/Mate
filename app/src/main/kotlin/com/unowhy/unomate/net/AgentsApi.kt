@@ -51,6 +51,8 @@ data class AgentSession(
     val mr: Int? = null,
     /** Travaille sur une tâche de fond (surveillance d'un pipeline), comme Orca l'affiche. */
     val monitoring: Boolean = false,
+    /** Projet : dépôt Orca du worktree, sinon nom du dossier ; la tablette peut en cacher (menu ⋯ du tableau). */
+    val project: String = dir,
 )
 
 /** `monitoring` : sessions qui surveillent une tâche de fond, comptées à part de `working`. */
@@ -70,6 +72,8 @@ data class AgentsState(
     val hooks: Boolean,
     val now: Long,
     val quota: AgentQuota? = null,
+    /** Micro des sessions : l'ordinateur transcrit (whisper.cpp), `POST /agents/transcribe`. */
+    val voice: Boolean = false,
 )
 
 data class AgentOption(val label: String, val description: String)
@@ -148,6 +152,11 @@ class AgentsApi(private val http: Http) {
         Unit
     }
 
+    /** Texte d'un prompt dicté (WAV 16 kHz), transcrit sur l'ordinateur ; vide si rien n'a été compris. */
+    suspend fun transcribe(wav: ByteArray): String = http.io {
+        JSONObject(http.text(http.request("POST", "/agents/transcribe", wav, "audio/wav", timeoutMs = 150_000))).optString("text")
+    }
+
     /** Interrompt le tour en cours (Échap dans son terminal). */
     suspend fun interrupt(session: String) = http.io {
         http.postJson("/agents/interrupt", JSONObject().put("session", session))
@@ -191,6 +200,7 @@ internal fun parseAgents(text: String): AgentsState {
                 ticket = s.optStringOrNull("ticket"),
                 mr = if (s.isNull("mr") || !s.has("mr")) null else s.optInt("mr"),
                 monitoring = s.optBoolean("monitoring"),
+                project = s.optString("project").ifEmpty { s.optString("dir") },
             )
         },
         counts = AgentCounts(
@@ -199,6 +209,7 @@ internal fun parseAgents(text: String): AgentsState {
         ),
         total = json.optInt("total", list.length()),
         hooks = json.optBoolean("hooks"),
+        voice = json.optBoolean("voice"),
         now = json.optLong("now"),
         quota = json.optJSONObject("quota")?.let { q ->
             fun window(key: String) = q.optJSONObject(key)?.let { w -> QuotaWindow(w.optInt("used"), if (w.isNull("resetsAt")) null else w.optLong("resetsAt")) }

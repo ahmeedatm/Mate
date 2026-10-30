@@ -202,11 +202,11 @@ describe("agents Claude : message, session devant, reprise", () => {
     assert.equal((await server.call("POST", "/agents/send", { text: "continue" })).status, 400);
   });
 
-  it("une session sans terminal Orca : pas de message, c'est dit", async () => {
+  it("une session hors d'Orca : pas de message, c'est dit", async () => {
     await hook({ hook_event_name: "Stop", last_assistant_message: "ok" });
     const send = await server.call("POST", "/agents/send", { session: "s1", text: "continue" });
     assert.equal(send.status, 409);
-    assert.match(send.json.error, /ni dans un terminal Orca/);
+    assert.match(send.json.error, /ni dans Orca/);
     assert.equal((await server.call("GET", "/agents")).json.sessions[0].canSend, false);
     await hook({ hook_event_name: "SessionEnd" });
   });
@@ -251,7 +251,7 @@ describe("agents Claude : statusline et interruption", () => {
     await hook({ hook_event_name: "UserPromptSubmit" });
     const res = await server.call("POST", "/agents/interrupt", { session: "s1" });
     assert.equal(res.status, 409);
-    assert.match(res.json.error, /terminal Orca/);
+    assert.match(res.json.error, /ni dans Orca/);
     await hook({ hook_event_name: "SessionEnd" });
   });
 });

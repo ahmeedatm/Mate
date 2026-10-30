@@ -25,15 +25,14 @@ internal object TabletLayout {
     suspend fun get(activity: MainActivity): JSONObject = read(activity)
 
     suspend fun set(activity: MainActivity, command: JSONObject): JSONObject {
-        val cadran = themeBool(activity, R.attr.c_cadran)
         // Tout est lu et vérifié avant d'écrire : un ordre refusé ne change rien.
-        val layout = command.optJSONObject("layout")?.let { LayoutConfig.parseLayout(it, HomeLayout.load(activity, cadran)) }
+        val layout = command.optJSONObject("layout")?.let { LayoutConfig.parseLayout(it, HomeLayout.load(activity)) }
         val topBar = command.optJSONArray("topBar")?.let(LayoutConfig::parseTopBar)
         val rail = command.optJSONObject("rail")
         val labels = rail?.takeIf { it.has("labels") }?.getBoolean("labels")
         val tools = rail?.optJSONArray("tools")?.let(LayoutConfig::parseRailTools)
 
-        layout?.let { HomeLayout.save(activity, it, cadran) }
+        layout?.let { HomeLayout.save(activity, it) }
         topBar?.let { Prefs.setTopBar(activity, TopBarModel.serialize(it)) }
         labels?.let { Prefs.setRailLabels(activity, it) }
         tools?.let { shown -> Prefs.RAIL_TOOLS.forEach { Prefs.setRailTool(activity, it, it in shown) } }
@@ -42,7 +41,6 @@ internal object TabletLayout {
     }
 
     private suspend fun read(activity: MainActivity): JSONObject {
-        val cadran = themeBool(activity, R.attr.c_cadran)
         val computer = Computers.active(activity)
         val features = try {
             if (computer == null) HomeFeatures() else BackendClient(activity).deck.homeFeatures()
@@ -51,12 +49,12 @@ internal object TabletLayout {
         } catch (e: Exception) {
             HomeFeatures()
         }
-        return describe(activity, HomeLayout.load(activity, cadran), cadran, computer?.id, features)
+        return describe(activity, HomeLayout.load(activity), computer?.id, features)
     }
 
-    private fun describe(context: Context, layout: HomeLayout, cadran: Boolean, computerId: String?, features: HomeFeatures) =
+    private fun describe(context: Context, layout: HomeLayout, computerId: String?, features: HomeFeatures) =
         LayoutConfig.describe(
-            layout, cadran, computerId, features,
+            layout, computerId, features,
             topItems = TopBarModel.parse(Prefs.topBar(context)),
             railLabels = Prefs.railLabels(context),
             railShown = Prefs.railTools(context),

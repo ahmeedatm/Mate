@@ -24,17 +24,6 @@
     </issue>
 
     <issue
-        id="UnusedAttribute"
-        message="Attribute `defaultFocusHighlightEnabled` is only used in API level 26 and higher (current min is 24)"
-        errorLine1="            android:defaultFocusHighlightEnabled=&quot;false&quot;"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/fragment_chat.xml"
-            line="16"
-            column="13"/>
-    </issue>
-
-    <issue
         id="InflateParams"
         message="Avoid passing `null` as the view root (needed to resolve layout parameters on the inflated layout&apos;s root element)"
         errorLine1="    override val view: View = LayoutInflater.from(context).inflate(R.layout.widget_agenda, null)"
@@ -54,28 +43,6 @@
             file="src/main/kotlin/com/unowhy/unomate/ui/ComputerAdder.kt"
             line="219"
             column="84"/>
-    </issue>
-
-    <issue
-        id="InflateParams"
-        message="Avoid passing `null` as the view root (needed to resolve layout parameters on the inflated layout&apos;s root element)"
-        errorLine1="    override val view: View = LayoutInflater.from(context).inflate(R.layout.widget_focus, null)"
-        errorLine2="                                                                                          ~~~~">
-        <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/home/HomeWidgets.kt"
-            line="172"
-            column="91"/>
-    </issue>
-
-    <issue
-        id="InflateParams"
-        message="Avoid passing `null` as the view root (needed to resolve layout parameters on the inflated layout&apos;s root element)"
-        errorLine1="        val view = LayoutInflater.from(context).inflate(R.layout.item_tile, null)"
-        errorLine2="                                                                            ~~~~">
-        <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/home/KeysWidget.kt"
-            line="76"
-            column="77"/>
     </issue>
 
     <issue
@@ -387,17 +354,6 @@
     </issue>
 
     <issue
-        id="UseCompoundDrawables"
-        message="This tag and its children can be replaced by one `&lt;TextView/>` and a compound drawable"
-        errorLine1="    &lt;LinearLayout"
-        errorLine2="     ~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/item_rail.xml"
-            line="13"
-            column="6"/>
-    </issue>
-
-    <issue
         id="MergeRootFrame"
         message="This `&lt;FrameLayout>` can be replaced with a `&lt;merge>` tag"
         errorLine1="&lt;FrameLayout xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
@@ -416,17 +372,6 @@
         <location
             file="src/main/res/layout/fragment_camera.xml"
             line="62"
-            column="10"/>
-    </issue>
-
-    <issue
-        id="DisableBaselineAlignment"
-        message="Set `android:baselineAligned=&quot;false&quot;` on this element for better performance"
-        errorLine1="        &lt;LinearLayout"
-        errorLine2="         ~~~~~~~~~~~~">
-        <location
-            file="src/main/res/layout/fragment_from_computer.xml"
-            line="70"
             column="10"/>
     </issue>
 
@@ -497,105 +442,6 @@
     </issue>
 
     <issue
-        id="UnusedResources"
-        message="The resource `R.drawable.ill_camera_sleep` appears to be unused"
-        errorLine1="&lt;vector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
-        errorLine2="^">
-        <location
-            file="src/main/res/drawable/ill_camera_sleep.xml"
-            line="3"
-            column="1"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.no_more_events` appears to be unused"
-        errorLine1="    &lt;string name=&quot;no_more_events&quot;>Plus rien aujourd\&apos;hui&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="42"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.no_events` appears to be unused"
-        errorLine1="    &lt;string name=&quot;no_events&quot;>Aucun événement&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="43"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.free_time` appears to be unused"
-        errorLine1="    &lt;string name=&quot;free_time&quot;>Le reste de la journée est libre&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="44"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.volume_na` appears to be unused"
-        errorLine1="    &lt;string name=&quot;volume_na&quot;>Volume non pilotable sur cette sortie&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="174"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.focus_resume` appears to be unused"
-        errorLine1="    &lt;string name=&quot;focus_resume&quot;>Reprendre&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="250"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.volume` appears to be unused"
-        errorLine1="    &lt;string name=&quot;volume&quot;>Volume&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="260"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.string.task_options` appears to be unused"
-        errorLine1="    &lt;string name=&quot;task_options&quot;>Répéter ou rappeler&lt;/string>"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/strings.xml"
-            line="278"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UnusedResources"
-        message="The resource `R.style.SectionTitle` appears to be unused"
-        errorLine1="    &lt;style name=&quot;SectionTitle&quot; parent=&quot;CardTitle&quot; />"
-        errorLine2="           ~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/res/values/themes.xml"
-            line="113"
-            column="12"/>
-    </issue>
-
-    <issue
         id="MonochromeLauncherIcon"
         message="The application adaptive icon is missing a monochrome tag"
         errorLine1="&lt;adaptive-icon xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;>"
@@ -615,17 +461,6 @@
             file="src/main/res/layout/item_input.xml"
             line="4"
             column="2"/>
-    </issue>
-
-    <issue
-        id="Autofill"
-        message="Missing `autofillHints` attribute"
-        errorLine1="        &lt;EditText"
-        errorLine2="         ~~~~~~~~">
-        <location
-            file="src/main/res/layout/fragment_chat.xml"
-            line="93"
-            column="10"/>
     </issue>
 
     <issue
@@ -740,17 +575,6 @@
 
     <issue
         id="UseKtx"
-        message="Use the KTX extension function `String.toColorInt` instead?"
-        errorLine1="            val custom = tile.color?.let { runCatching { Color.parseColor(it) }.getOrNull() }"
-        errorLine2="                                                         ~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/DeckFragment.kt"
-            line="521"
-            column="58"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
         message="Use the KTX extension function `String.toUri` instead?"
         errorLine1="                override fun shouldOverrideUrlLoading(v: WebView, url: String) = Uri.parse(url).scheme !in WEB_SCHEMES"
         errorLine2="                                                                                 ~~~~~~~~~~~~~~">
@@ -795,17 +619,6 @@
 
     <issue
         id="UseKtx"
-        message="Use the KTX extension function `String.toColorInt` instead?"
-        errorLine1="                if (hex == null) setBackgroundResource(R.drawable.swatch) else background = swatchDrawable(Color.parseColor(hex))"
-        errorLine2="                                                                                                           ~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/KeyEditor.kt"
-            line="92"
-            column="108"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
         message="Use the KTX extension property `View.isVisible` instead?"
         errorLine1="    val isShowing get() = visibility == VISIBLE"
         errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~">
@@ -813,17 +626,6 @@
             file="src/main/kotlin/com/unowhy/unomate/ui/KeyEditor.kt"
             line="108"
             column="27"/>
-    </issue>
-
-    <issue
-        id="UseKtx"
-        message="Use the KTX extension function `String.toColorInt` instead?"
-        errorLine1="        key.optString(&quot;color&quot;).takeIf { it.isNotBlank() }?.let { runCatching { Color.parseColor(it) }.getOrNull() }?.let { view.background.mutate().setTint(it) }"
-        errorLine2="                                                                               ~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/home/KeysWidget.kt"
-            line="81"
-            column="80"/>
     </issue>
 
     <issue
@@ -1058,28 +860,6 @@
     </issue>
 
     <issue
-        id="ClickableViewAccessibility"
-        message="`onTouch` lambda should call `View#performClick` when a click is detected"
-        errorLine1="        tab.setOnTouchListener { v, e ->"
-        errorLine2="                               ^">
-        <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/DeckFragment.kt"
-            line="358"
-            column="32"/>
-    </issue>
-
-    <issue
-        id="ClickableViewAccessibility"
-        message="`onTouch` lambda should call `View#performClick` when a click is detected"
-        errorLine1="        view.setOnTouchListener { v, e ->"
-        errorLine2="                                ^">
-        <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/DeckFragment.kt"
-            line="412"
-            column="33"/>
-    </issue>
-
-    <issue
         id="KeyboardInaccessibleWidget"
         message="&apos;clickable&apos; attribute found, please also add &apos;focusable&apos;"
         errorLine1="        android:clickable=&quot;true&quot;"
@@ -1132,17 +912,6 @@
             file="src/main/res/layout/item_input.xml"
             line="4"
             column="2"/>
-    </issue>
-
-    <issue
-        id="SetTextI18n"
-        message="Number formatting does not take into account locale settings. Consider using `String.format` instead."
-        errorLine1="        badge.text = count.toString()"
-        errorLine2="                     ~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/Rail.kt"
-            line="60"
-            column="22"/>
     </issue>
 
     <issue

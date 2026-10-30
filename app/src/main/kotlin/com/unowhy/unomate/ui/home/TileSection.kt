@@ -29,7 +29,6 @@ class TileSection(
     private val context: Context,
     private val host: HomeHost,
     @StringRes title: Int,
-    @DrawableRes icon: Int,
     @StringRes addDescription: Int,
     private val tilesOf: (List<DeckPage>) -> List<DeckTile>?,
     onAdd: () -> Unit,
@@ -51,7 +50,7 @@ class TileSection(
 
     val header = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
-        addView(TitleView(context).apply { setText(title); setIcon(icon) }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        addView(TitleView(context).apply { setText(title) }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         addView(addButton, LinearLayout.LayoutParams(context.dp(BUTTON_DP), context.dp(BUTTON_DP)))
     }
 

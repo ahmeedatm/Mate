@@ -48,6 +48,7 @@ const deps = (holdMs = 5_000): AgentsDeps => ({
   notify: (a) => alerts.push(a),
   holdMs,
   sendText: async (handle, text) => void sent.push({ handle, text }),
+  sendChat: async (session, text) => void sent.push({ handle: `chat:${session}`, text }),
   interruptSession: async (handle) => void sent.push({ handle, text: "<Échap>" }),
   focusSession: async (target) => void focused.push(target),
 });
@@ -567,18 +568,18 @@ describe("filet claude agents --json", () => {
     assert.equal(a.list().sessions[0].state, "done");
   });
 
-  it("trie : attend, limite, fini, travaille, inactif ; au plus 10 sessions", async () => {
+  it("trie : attend, limite, fini, travaille, inactif ; au plus 40 sessions (la tablette filtre par projet)", async () => {
     const a = createAgents(deps());
-    live = Array.from({ length: 12 }, (_, i) => ({
+    live = Array.from({ length: 42 }, (_, i) => ({
       sessionId: `s${i}`,
       cwd: `/x/${i}`,
-      status: i === 11 ? ("waiting" as const) : ("idle" as const),
+      status: i === 41 ? ("waiting" as const) : ("idle" as const),
     }));
     await a.refresh();
     const list = a.list();
-    assert.equal(list.sessions.length, 10);
-    assert.equal(list.total, 12);
-    assert.equal(list.sessions[0].id, "s11");
+    assert.equal(list.sessions.length, 40);
+    assert.equal(list.total, 42);
+    assert.equal(list.sessions[0].id, "s41");
   });
 });
 
@@ -660,7 +661,7 @@ describe("Orca", () => {
     assert.equal(s.canSend, true);
   });
 
-  it("une session de chat Orca n'a pas de terminal : pas de message", async () => {
+  it("une session de chat Orca reçoit le message dans son chat, pas dans un terminal", async () => {
     const a = createAgents(deps());
     orca = info([{ paneKey: "structured-agent-session-claude_x:y", state: null, toolName: null, lastMessage: null, structured: true }]);
     await a.hook(event("Stop", { last_assistant_message: "ok" }), {});
@@ -668,7 +669,70 @@ describe("Orca", () => {
     await a.refresh();
     const s = a.list().sessions[0];
     assert.equal(s.branch, "feat/x");
-    assert.equal(s.canSend, false);
+    assert.equal(s.canSend, true);
+    assert.equal(s.canInterrupt, false, "Échap : terminal seulement");
+    await a.send("s1", "lance les tests\ndu backend");
+    assert.deepEqual(sent, [{ handle: "chat:claude_x", text: "lance les tests du backend" }]);
+    assert.equal(a.list().sessions[0].state, "working");
+    // Un prompt dicté d'une minute passe entier.
+    await a.hook(event("Stop", { last_assistant_message: "ok" }), {});
+    await a.send("s1", "x".repeat(1500));
+    assert.equal(sent.at(-1)?.text.length, 1500);
+  });
+
+  it("un chat Orca stoppé (sans processus Claude) reste affiché, avec son projet, et le message le relance", async () => {
+    const a = createAgents(deps());
+    orca = {
+      worktrees: [
+        {
+          path: "/work/vieux",
+          branch: "fix/ancien",
+          repo: "robot-framework",
+          name: "Ancien chantier",
+          activityAt: 900_000,
+          agents: [
+            {
+              paneKey: "structured-agent-session-claude_old:z",
+              state: "done",
+              toolName: null,
+              lastMessage: "Tout est vert.",
+              structured: true,
+            },
+          ],
+        },
+      ],
+      handles: new Map(),
+    };
+    live = [];
+    await a.refresh();
+    const s = a.list().sessions[0];
+    assert.equal(s.id, "orca:claude_old");
+    assert.equal(s.name, "Ancien chantier");
+    assert.equal(s.project, "robot-framework");
+    assert.equal(s.state, "done");
+    assert.equal(s.since, 900_000);
+    assert.deepEqual(s.lines, ["Tout est vert."]);
+    assert.equal(s.canSend, true);
+    assert.equal(a.list().counts.done, 1);
+    await a.send("orca:claude_old", "relance les tests");
+    assert.deepEqual(sent, [{ handle: "chat:claude_old", text: "relance les tests" }]);
+  });
+
+  it("un chat Orca dont la session tourne n'est pas compté deux fois ; projet = dossier hors Orca", async () => {
+    const a = createAgents(deps());
+    orca = info([{ paneKey: "structured-agent-session-claude_x:y", state: "done", toolName: null, lastMessage: null, structured: true }]);
+    orca.worktrees[0].repo = "UnoMate";
+    await a.hook(event("Stop", { last_assistant_message: "ok" }), {});
+    await a.hook({ ...event("Stop", { last_assistant_message: "ok" }), session_id: "s2", cwd: "/Users/moi" }, {});
+    live = [
+      { sessionId: "s1", cwd: "/work/projet", status: "idle" },
+      { sessionId: "s2", cwd: "/Users/moi", status: "idle" },
+    ];
+    await a.refresh();
+    const list = a.list().sessions;
+    assert.equal(list.length, 2);
+    assert.equal(list.find((s) => s.id === "s1")?.project, "UnoMate");
+    assert.equal(list.find((s) => s.id === "s2")?.project, "moi");
   });
 
   it("deux agents dans le worktree et pas de volet connu : pas de jonction hasardeuse", async () => {
@@ -718,7 +782,7 @@ describe("message rapide et session devant", () => {
   it("refuse : session qui travaille, hors terminal Orca, inconnue, message vide", async () => {
     const a = createAgents(deps());
     await a.hook(event("Stop", { last_assistant_message: "ok" }), {});
-    await assert.rejects(a.send("s1", "continue"), /ni dans un terminal Orca/);
+    await assert.rejects(a.send("s1", "continue"), /ni dans Orca/);
     await assert.rejects(a.send("inconnue", "continue"), (e: AnswerError) => e.statusCode === 404);
     await restingInOrca(a);
     await assert.rejects(a.send("s1", "  \n "), /vide/);
@@ -838,7 +902,7 @@ describe("interrompre et quota", () => {
     const a = createAgents(deps());
     await a.hook(event("UserPromptSubmit"), {});
     assert.equal(a.list().sessions[0].canInterrupt, false);
-    await assert.rejects(a.interrupt("s1"), /ni dans un terminal Orca/);
+    await assert.rejects(a.interrupt("s1"), /ni dans Orca/);
   });
 
   it("garde le quota de la statusline 3 h, avec son âge, rien d'autre", async () => {
@@ -983,7 +1047,7 @@ describe("reprise après limite", () => {
     const a = createAgents(deps());
     almost3pm();
     await a.hook(event("StopFailure", limit), {});
-    assert.throws(() => a.resume("s1", true), /ni dans un terminal Orca/);
+    assert.throws(() => a.resume("s1", true), /ni dans Orca/);
     await a.hook(event("StopFailure", { ...limit, last_assistant_message: "limit reached" }), {});
     await restingInOrca(a, { ...limit, last_assistant_message: "limit reached" });
     assert.throws(() => a.resume("s1", true), /Heure de reprise inconnue/);

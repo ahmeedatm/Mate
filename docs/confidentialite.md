@@ -16,22 +16,24 @@ Le principe du produit est bon : les données restent chez l'utilisateur. La tab
 | Où | Quoi | Durée |
 |---|---|---|
 | Tablette (préférences de l'appli) | ordinateurs appairés (nom, adresse, jeton, empreinte du certificat), profils et widgets de l'Accueil, ville de la météo et ses coordonnées, verres d'eau, réglages | jusqu'à la désinstallation ou la réinitialisation |
-| Ordinateur, `backend/.data/` | identité et jeton du compagnon, certificat, agendas reliés (lien ICS), agenda perso, tâches et rappels, touches perso et macros, applis et sites du Deck, scènes de son, réglages de réunions ; si un compte Microsoft ou Google est relié : jeton de renouvellement (`accounts.json`, droits 600) | jusqu'à la désinstallation ou la suppression du dossier |
-| Ordinateur, en mémoire seulement | historique du presse-papiers (20 textes, 1 h), notifications du système (100, 24 h), état des sessions Claude Code, appel en cours | jusqu'à l'arrêt du compagnon ; jamais écrit sur le disque ni dans le journal |
+| Ordinateur, `backend/.data/` | identité et jeton du compagnon, certificat, agendas reliés (lien ICS), agenda perso, tâches et rappels, touches perso et macros, applis et sites du Deck, scènes de son, réglages de réunions ; empreintes opaques (sans texte) des notifications supprimées sur la tablette (`notifications-dismissed.json`, droits 600, purgées après 24 h) ; si un compte Microsoft ou Google est relié : jeton de renouvellement (`accounts.json`, droits 600) | jusqu'à la désinstallation ou la suppression du dossier |
+| Ordinateur, en mémoire seulement | historique du presse-papiers (20 textes, 1 h), notifications du système (100, 24 h), état des sessions Claude Code, appel en cours | jusqu'à l'arrêt du compagnon ; le contenu des notifications n'est jamais écrit sur le disque ni dans le journal (seule trace sur le disque : l'empreinte opaque des supprimées, ci-dessus) |
+| Ordinateur, fichier temporaire | message dicté à un agent Claude (WAV, 60 s au plus), transcrit par whisper.cpp | effacé dès la transcription faite ; le texte revient à la tablette, rien n'est gardé |
 | Ordinateur, journal du compagnon | événements techniques ; jamais le contenu du presse-papiers, des notifications ou des commandes des agents | à préciser (aucune rotation aujourd'hui) |
 
 ## 2. Données qui partent chez des tiers
 
 | Destinataire | Quand | Ce qui part | Où dans le code |
 |---|---|---|---|
-| **Google** (reconnaissance vocale d'Android) | bouton Parler, dictée, réponse vocale aux agents | **l'enregistrement de la voix** et la langue ; traité par l'appli Google de la tablette | `voice/VoiceControl.kt`, `voice/Dictation.kt` (`SpeechRecognizer`) |
+| **Google** (reconnaissance vocale d'Android) | bouton Parler, dictée, réponse vocale aux agents (si l'ordinateur n'a pas whisper.cpp) | **l'enregistrement de la voix** et la langue ; traité par l'appli Google de la tablette | `voice/VoiceControl.kt`, `voice/Dictation.kt` (`SpeechRecognizer`) |
+| **Hugging Face** (dépôt de whisper.cpp) | première dictée d'un message à un agent Claude, une fois | adresse IP (téléchargement du modèle de voix, 574 Mo) ; aucune voix ne part : la transcription se fait sur l'ordinateur | `backend/src/transcribe.ts` |
 | **Google** (services de localisation d'Android) | météo sans ville choisie **si l'option des Réglages est activée** (coupée par défaut), bouton « Ma position » | réseaux WiFi visibles et signal, envoyés par le système pour obtenir la position | `device/Position.kt` |
 | **Google** (synthèse vocale d'Android) | rappels parlés, réponses de la commande vocale | le texte à prononcer, **si** le moteur utilise une voix en ligne (selon ses réglages) | `audio/Speaker.kt` |
 | **Google** (recherche) | commande vocale « cherche … » | le texte cherché, ouvert dans le navigateur de l'ordinateur | `voice/VoiceControl.kt` |
 | **Apple** (recherche iTunes, Mac) | page Média, morceau sans pochette | **titre et artiste** du morceau en cours | `backend/src/mac/media.ts` (`storeArtwork`) |
 | **YouTube / Google** (Mac) | page Média, vidéo YouTube en cours | l'identifiant de la vidéo (image d'aperçu) | `backend/src/mac/media.ts` |
 | **MET Norway** (Norvège, EEE) | météo, toutes les 30 min | coordonnées **de la ville** (jamais la position exacte), adresse IP, identifiant de l'appli | `ui/home/Weather.kt` |
-| **Microsoft** (Graph) — inactif | si l'appli Azure est enregistrée et un compte relié | agenda ; **courrier** : expéditeur, objet, date, compteurs (jamais le corps) | `backend/src/accounts.ts`, `mail.ts` ; inactif tant que `config/accounts.json` est vide |
+| **Microsoft** (Graph) — inactif | si l'appli Azure est enregistrée et un compte relié | agenda | `backend/src/accounts.ts` ; inactif tant que `config/accounts.json` est vide |
 | **Google** (Agenda) — inactif | si l'appli Google est enregistrée et un compte relié | agenda | `backend/src/accounts.ts` ; même condition |
 | **Unowhy** (serveur de mises à jour) | toutes les 6 h et au démarrage ; installeurs tous les quarts d'heure en WiFi | adresse IP, jeton de lecture des paquets ; rien sur l'utilisateur | `kiosk/AutoUpdater.kt`, `installers/` |
 | **IA de bureau choisie par l'utilisateur** (Claude, Cursor…) | s'il la branche sur `/mcp` (carte « Connecter une IA ») et lui demande d'agir | ce que les outils lisent (réglages, profils, touches, tâches, agenda perso, capture de la tablette…) part chez le fournisseur de cette IA ; le compagnon n'appelle lui-même aucun service | `backend/src/mcp-tools.ts`, `routes/mcp.ts` |

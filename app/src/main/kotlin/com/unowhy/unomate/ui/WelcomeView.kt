@@ -14,7 +14,6 @@ import androidx.lifecycle.lifecycleScope
 import com.unowhy.unomate.Computer
 import com.unowhy.unomate.MainActivity
 import com.unowhy.unomate.R
-import com.unowhy.unomate.installers.InstallerService
 import com.unowhy.unomate.net.Discovery
 import com.unowhy.unomate.net.FoundComputer
 import com.unowhy.unomate.net.Wifi
@@ -23,8 +22,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Premier lancement, par-dessus tout l'écran tant qu'aucun ordinateur n'est appairé : 1. WiFi, 2. adresse du logiciel
- * à ouvrir sur l'ordinateur, 3. ordinateurs trouvés sur le WiFi (recherche répétée), touchés pour saisir le code.
+ * Premier lancement, par-dessus tout l'écran tant qu'aucun ordinateur n'est appairé : 1. WiFi, 2. site où télécharger
+ * UnoMate sur l'ordinateur (lancé, il ouvre sa page locale), 3. ordinateurs trouvés sur le WiFi (recherche répétée),
+ * touchés pour afficher le code à saisir dans cette page.
  * « Plus tard » laisse l'heure et le Focus utilisables ; les autres modes proposent d'y revenir.
  */
 class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : FrameLayout(context, attrs) {
@@ -35,7 +35,6 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private val wifiStep: TextView
     private val wifiStatus: TextView
     private val installStep: TextView
-    private val installUrl: TextView
     private val connectStep: TextView
     private val found: LinearLayout
     private val searchStatus: TextView
@@ -53,7 +52,6 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         connectStep = findViewById(R.id.welcome_step_connect)
         found = findViewById(R.id.welcome_found)
         searchStatus = findViewById(R.id.welcome_search_status)
-        installUrl = findViewById(R.id.welcome_install_url)
     }
 
     /** `onAdded` : ordinateur appairé (MainActivity ferme cet écran et recrée les modes). */
@@ -129,7 +127,6 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         wifiStatus.setTextColor(color)
         wifiStatus.compoundDrawablesRelative[0]?.mutate()?.setTint(color)
         markStep(wifiStep, "1", done = name != null)
-        installUrl.text = InstallerService.address() ?: context.getString(R.string.install_address_no_wifi)
     }
 
     /** Étape faite : pastille verte avec ✓ à la place du numéro. */

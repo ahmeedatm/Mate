@@ -32,7 +32,6 @@ const LAYOUT = {
 };
 const DATA = {
   layout: LAYOUT,
-  cadran: true,
   computerId: "pc-1",
   nameMax: 30,
   cols: 4,

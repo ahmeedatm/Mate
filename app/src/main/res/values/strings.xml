@@ -3,8 +3,6 @@
 
     <!-- Modes -->
     <string name="mode_home">Écrans</string>
-    <string name="menu_computer">Depuis l\'ordi</string>
-    <string name="mode_deck">Deck</string>
     <string name="mode_computer">Ordi</string>
     <string name="mode_focus">Focus</string>
     <string name="mode_camera">Caméra</string>
@@ -115,10 +113,6 @@
     <string name="sum_shortcut">Raccourci « %1$s »</string>
     <string name="sum_wait">Attendre %1$s</string>
     <string name="sum_window">%1$s → %2$s, %3$s</string>
-    <string name="deck_edit_hint">Appui long sur une touche pour la modifier</string>
-    <string name="deck_apps_hint">Appui long sur une appli : ses fenêtres, ou la retirer du deck</string>
-    <string name="apps_add_tile">Ajouter</string>
-    <string name="apps_add_title">Ajouter une appli de l\'ordinateur</string>
     <string name="apps_all_title">Toutes les applis</string>
     <string name="apps_all">Toutes les applis de l\'ordinateur</string>
     <string name="apps_pin">Épingler %1$s sur la carte</string>
@@ -129,10 +123,6 @@
     <string name="apps_added_status">%1$s ajoutée au deck</string>
     <string name="apps_removed_status">%1$s retirée du deck</string>
     <string name="apps_remove">Retirer</string>
-    <string name="deck_open_tab">Ouvertes</string>
-    <string name="deck_mixer_tab">Son</string>
-    <string name="deck_agents_tab">Agents</string>
-    <string name="deck_gitlab_tab">GitLab</string>
     <string name="gitlab_mine">Mes MR</string>
     <string name="gitlab_review">À relire</string>
     <string name="gitlab_col_header">%1$s · %2$d</string>
@@ -154,8 +144,6 @@
     <string name="gitlab_merge">Fusionner</string>
     <string name="gitlab_merge_on_computer">Fusionner sur l\'ordi</string>
     <string name="gitlab_merge_hint">Maintenir pour fusionner</string>
-    <string name="deck_jira_tab">Jira</string>
-    <string name="deck_pad_tab">Pavé</string>
     <string name="pad_hint">Un doigt pour bouger, deux pour défiler · pince pour zoomer · 3 doigts : fenêtres · touche pour cliquer</string>
     <string name="pad_left_click">Clic gauche</string>
     <string name="pad_right_click">Clic droit</string>
@@ -215,7 +203,6 @@
         <item quantity="one">+ %1$d autre</item>
         <item quantity="other">+ %1$d autres</item>
     </plurals>
-    <string name="agent_counter">%1$d %2$s</string>
     <string name="agents_light_description">Un agent Claude attend</string>
     <string name="agent_answer_hint">Toucher pour répondre</string>
     <string name="agent_ask_permission">%1$s demande une permission</string>
@@ -250,7 +237,6 @@
     <string name="agent_ask_send">Envoyer</string>
     <string name="agent_ask_back">Retour</string>
     <string name="agent_ask_ok">OK</string>
-    <string name="agent_continue">Continue</string>
     <string name="agent_interrupt">Interrompre</string>
     <string name="agent_interrupt_title">Interrompre %1$s ?</string>
     <string name="agent_interrupt_text">Le tour en cours s\'arrête, comme Échap au clavier. La session reste ouverte.</string>
@@ -278,9 +264,16 @@
     <string name="agent_voice_permission">Dis « autorise » ou « refuse la commande »</string>
     <string name="agent_voice_next">Question suivante</string>
     <string name="agent_voice_no_session">Aucune session finie à relancer d\'ici</string>
-    <string name="agent_write">Écrire…</string>
-    <string name="agent_write_title">Écrire à %1$s</string>
-    <string name="agent_write_hint">Ton message</string>
+    <string name="agent_talk">Parler</string>
+    <string name="agents_projects">Projets affichés</string>
+    <string name="agents_projects_ok">Afficher</string>
+    <string name="agent_voice_listening">J\'écoute… je m\'arrête quand tu te tais</string>
+    <string name="agent_voice_stop">Arrêter</string>
+    <string name="agent_voice_transcribing">Transcription sur l\'ordinateur…</string>
+    <string name="agent_talk_stop">Arrêter l\'écoute et envoyer</string>
+    <string name="agent_talk_sending">Envoi à Claude…</string>
+    <string name="agent_talk_listening">Parle à %1$s : j\'envoie quand tu te tais</string>
+    <string name="agent_talk_sent">%1$s : « %2$s »</string>
     <string name="agent_sent">Message envoyé à %1$s</string>
     <string name="agent_resume_at">Reprendre à %1$s</string>
     <string name="agent_resume_armed">Reprise à %1$s · annuler</string>
@@ -316,7 +309,6 @@
     <string name="open_page_go">toucher pour y aller</string>
     <string name="open_page_new">Plein écran</string>
     <string name="open_page_new_hint">glisser une fenêtre ici</string>
-    <string name="deck_media_hint">Appui long sur un site pour le retirer</string>
     <string name="links_add_title">Ajouter un site</string>
     <string name="links_custom">Autre site</string>
     <string name="links_name_hint">Nom (facultatif)</string>
@@ -326,7 +318,6 @@
     <string name="links_url_missing">Tape l\'adresse du site</string>
     <string name="links_added_status">%1$s ajouté à Média</string>
     <string name="links_removed_status">%1$s retiré de Média</string>
-    <string name="links_remove_confirm">Retirer %1$s de la page Média ?</string>
 
     <!-- Son de l'ordinateur (Accueil et Deck) -->
     <string name="computer_volume">Son de l\'ordinateur</string>
@@ -429,6 +420,7 @@
     <string name="notif_open">Notifications de l\'ordi</string>
     <string name="notif_subtitle">Ce qui est arrivé sur l\'ordi, la plus récente en haut</string>
     <string name="notif_on_computer">Sur l\'ordi</string>
+    <string name="banner_now">· à l\'instant</string>
     <string name="notif_reading">Lecture des notifications de l\'ordi…</string>
     <string name="notif_empty">Aucune notification sur l\'ordi depuis 24 h</string>
     <string name="notif_unavailable">Notifications indisponibles sur l\'ordi</string>
@@ -542,8 +534,6 @@
     <string name="noise_playing">Son : %1$s</string>
 
     <!-- Tâches (carte de l'Accueil) -->
-    <string name="tasks_today">Tâches du jour</string>
-    <string name="tasks_left">%1$d à faire</string>
     <string name="tasks_all_done">Tout est fait</string>
     <plurals name="tasks_remaining">
         <item quantity="one">%1$d restante</item>
@@ -554,7 +544,6 @@
     <string name="task_hint">Nouvelle tâche…</string>
     <string name="add">Ajouter</string>
     <string name="delete">Supprimer</string>
-    <string name="task_daily">Chaque jour</string>
     <string name="task_new">Nouvelle tâche</string>
     <string name="task_repeat">Répéter</string>
     <string name="task_repeat_once">Une fois</string>
@@ -727,7 +716,8 @@
     <string name="welcome_wifi_title">Le WiFi</string>
     <string name="welcome_wifi_text">Connecte la tablette au WiFi de la maison ou du bureau, le même que celui de l\'ordinateur.</string>
     <string name="welcome_install_title">Sur l\'ordinateur</string>
-    <string name="welcome_install_text">Ouvre cette adresse dans le navigateur de l\'ordinateur et lance l\'installation :</string>
+    <string name="welcome_install_text">Dans le navigateur de l\'ordinateur, ouvre ce site et télécharge UnoMate :</string>
+    <string name="site_url" translatable="false">mate.integration.unowhy.dev</string>
     <string name="install_address_no_wifi">connecte d\'abord le WiFi</string>
     <string name="companion_update_available">Nouvelle version du compagnon pour %1$s (%2$s) : touche pour la mettre à jour</string>
     <string name="companion_update_title">Mettre à jour le compagnon de %1$s</string>
@@ -754,9 +744,9 @@
     <string name="companion_state_uptodate">Compagnon de %1$s à jour (%2$s).</string>
     <string name="companion_state_newer">Compagnon de %1$s (%2$s) plus récent que la dernière version publiée (%3$s).</string>
     <string name="companion_state_available">Compagnon de %1$s en %2$s : la version %3$s est disponible.</string>
-    <string name="welcome_install_os">Mac ou PC Windows</string>
+    <string name="welcome_install_os">Mac ou PC Windows. Une fois lancé, UnoMate ouvre sa page sur l\'ordinateur.</string>
     <string name="welcome_connect_title">Connecter</string>
-    <string name="welcome_connect_text">Ton ordinateur apparaît ici dès que le compagnon est installé. Touche-le, puis saisis le code qu\'il affiche.</string>
+    <string name="welcome_connect_text">L\'ordinateur apparaît ici dès qu\'UnoMate y tourne. Touche-le : la tablette affiche un code, saisis-le dans la page d\'UnoMate sur l\'ordinateur.</string>
     <string name="welcome_searching">Recherche sur le WiFi…</string>
     <string name="welcome_need_wifi">Connecte d\'abord le WiFi (étape 1).</string>
     <string name="welcome_tap">Toucher pour connecter</string>
@@ -776,7 +766,6 @@
     <string name="plugins_unavailable">Cet ordinateur ne propose pas de plugins : mets à jour le compagnon.</string>
     <string name="connect_title">Aucun ordinateur connecté</string>
     <string name="connect_button">Connecter mon ordinateur</string>
-    <string name="connect_deck">La tablette lance les applis et les raccourcis de ton ordinateur.</string>
     <string name="connect_computer">Depuis l\'ordi affiche les fichiers et la page web de ton ordinateur.</string>
     <string name="connect_camera">Le visualiseur montre sur l\'écran de ton ordinateur ce que filme la tablette.</string>
     <!-- Tablette : état caché par le kiosque (barre latérale, Réglages) -->
@@ -801,10 +790,8 @@
     <string name="agenda_nothing_today">Rien aujourd\'hui</string>
     <string name="agenda_empty">Rien de prévu. Touche + pour noter un rendez-vous.</string>
     <string name="next_today" tools:ignore="PluralsCandidate">%1$d aujourd\'hui</string>
-    <string name="next_none">Rien de prévu</string>
     <string name="next_none_today">Rien de prévu aujourd\'hui</string>
     <string name="event_add">Noter un rendez-vous</string>
-    <string name="next_none_hint">Note un rendez-vous avec + dans l\'agenda</string>
     <string name="tomorrow_at">demain à %1$s</string>
     <string name="day_at">%1$s à %2$s</string>
     <string name="water_title">Eau</string>
@@ -840,24 +827,6 @@
     <string name="calendars_unlink_message">Ses rendez-vous ne s\'afficheront plus sur la tablette. Tu pourras le relier à nouveau depuis « Relier un autre agenda ».</string>
     <string name="agenda_setup_opened">Page ouverte sur l\'ordinateur : connecte ton agenda.</string>
 
-    <!-- Page Outlook du Deck : courrier du compte Microsoft relié -->
-    <string name="mail_title">Courrier</string>
-    <string name="mail_count">%d</string>
-    <string name="mail_unread">Non lus</string>
-    <string name="mail_junk">Indésirables</string>
-    <string name="mail_drafts">Brouillons</string>
-    <string name="mail_sent">Envoyés</string>
-    <string name="mail_no_unread">Aucun message non lu</string>
-    <string name="mail_no_subject">(sans objet)</string>
-    <string name="mail_private_hidden">Contenu masqué (mode privé)</string>
-    <string name="mail_next">Prochain rendez-vous : %1$s, %2$s</string>
-    <string name="mail_next_private">Prochain rendez-vous : %1$s</string>
-    <string name="mail_next_none">Aucun rendez-vous à venir</string>
-    <string name="mail_no_account">Relie ton compte Microsoft pour voir ton courrier et ton prochain rendez-vous ici.</string>
-    <string name="mail_connect">Relier mon compte Microsoft</string>
-    <string name="mail_reconnect">Reconnecte ton compte Microsoft : l\'accès au courrier lui manque ou a expiré.</string>
-    <string name="mail_reconnect_button">Reconnecter mon compte Microsoft</string>
-    <string name="mail_setup_opened">Page ouverte sur l\'ordinateur : connecte ton compte Microsoft.</string>
     <string name="tablet_title">Tablette</string>
     <string name="tablet_remote">Régler depuis l\'ordi</string>
     <string name="tablet_remote_title">Plus simple sur le grand écran</string>
@@ -978,6 +947,9 @@
     <string name="kiosk_reboot_failed">Android a refusé de redémarrer.</string>
     <string name="kiosk_exit">Quitter le kiosque</string>
     <string name="kiosk_remove">Retirer le mode kiosque</string>
+    <string name="fresh_start">Remettre à neuf</string>
+    <string name="fresh_start_hint">Comme une tablette neuve : ordinateurs appairés, thème, écrans, réglages et photos effacés. Le kiosque et le WiFi restent.</string>
+    <string name="fresh_start_confirm">Tout effacer et repartir comme une tablette neuve ? Il faudra réappairer l\'ordinateur.</string>
     <string name="kiosk_remove_confirm">L\'appli ne sera plus device owner. Pour réactiver le kiosque, il faudra refaire la commande adb (et peut-être réinitialiser la tablette). Continuer ?</string>
     <string name="cancel">Annuler</string>
     <string name="confirm">Confirmer</string>
@@ -1007,11 +979,9 @@
     <string name="home_no_room">Plus de place sur cet écran : retire ou réduis un widget.</string>
     <string name="home_no_room_size">Pas assez de place autour pour une autre taille : déplace ou retire un widget voisin.</string>
     <string name="template_work">Bureau</string>
-    <string name="template_work_desc">Heure, agenda, prochain rendez-vous, tâches, Focus et eau.</string>
     <string name="template_standby">Veille</string>
     <string name="template_work_cadran_desc">Heure, ligne du jour, agenda, Focus, applis et touches.</string>
     <string name="template_standby_cadran_desc">L\'heure et la ligne du jour, rien d\'autre : lisible de loin.</string>
-    <string name="template_standby_desc">Très grande heure, prochain rendez-vous, Focus et eau : lisible de loin.</string>
     <string name="demo_card">Démo</string>
     <string name="demo_hint">Choisis un persona : les écrans de la barre et les réglages de la tablette, puis les touches, plugins, tâches et agenda de l\'ordinateur, prennent ses données fictives. « Quitter la démo » rend l\'état d\'avant.</string>
     <string name="demo_choose">Choisir un persona</string>
@@ -1022,7 +992,7 @@
     <string name="persona_nour">Nour</string>
     <string name="persona_nour_desc">Comptable, 48 ans. Tableurs et logiciel comptable, raccourcis Excel, libellés récurrents, bascule entre dossiers clients. « En période de clôture, chaque clic économisé compte. »</string>
     <string name="persona_gwen">Gwen</string>
-    <string name="persona_gwen_desc">Responsable marketing, 36 ans. CRM, e-mailing, Canva, réseaux sociaux, tableau de bord, visio, diapositives, modèles de messages : un écran pour le quotidien, un pour présenter, un pour les campagnes.</string>
+    <string name="persona_gwen_desc">Responsable marketing, 25 ans. CRM, e-mailing, Canva, réseaux sociaux, tableau de bord, visio, diapositives, modèles de messages : un écran pour le quotidien, un pour présenter, un pour les campagnes.</string>
     <string name="persona_camille">Camille</string>
     <string name="demo_screen_excel">Excel</string>
     <string name="demo_screen_files">Dossiers</string>
@@ -1034,18 +1004,17 @@
     <string name="demo_screen_jira">Jira</string>
     <string name="demo_screen_code">Code</string>
     <string name="demo_screen_gitlab">GitLab</string>
-    <string name="persona_camille_desc">Cheffe de projet, 41 ans, parent au temps morcelé. Retrouver son espace en un geste, rejoindre une réunion, couper le micro, minuteur Focus.</string>
+    <string name="persona_camille_desc">Cheffe de projet, 30 ans, parent au temps morcelé. Retrouver son espace en un geste, rejoindre une réunion, couper le micro, minuteur Focus.</string>
     <string name="persona_aimee">Aimée</string>
     <string name="persona_aimee_desc">Chargée de projets, 29 ans. Elle garde une vingtaine d\'onglets ouverts et perd ses fenêtres : prochaines réunions et tâches du jour, dossiers d\'un projet en un geste, fenêtres à réorganiser, rappels bien visibles.</string>
     <string name="persona_sam">Sam</string>
     <string name="persona_sam_desc">Gestionnaire administratif en situation de handicap, 44 ans. De grosses touches à la place des combinaisons, applis et modèles de courriers, thème à fort contraste, texte agrandi et commande vocale.</string>
     <string name="persona_sacha">Sacha</string>
-    <string name="persona_sacha_desc">Développeur full-stack, 32 ans. Tests, compilations, commandes Git, bascule dev et prod, déploiement, tickets et revues de code.</string>
+    <string name="persona_sacha_desc">Développeur full-stack, 27 ans. Tests, compilations, commandes Git, bascule dev et prod, déploiement, tickets et revues de code.</string>
     <string name="template_deck">Deck</string>
     <string name="template_deck_desc">Applis, son de l\'ordi, touches et lecture en cours : agir sur l\'ordinateur.</string>
     <string name="template_call">Réunion</string>
     <string name="template_call_desc">Micro, caméra, partage et son de l\'appel : s\'affiche pendant un appel.</string>
-    <string name="profile_deck">Deck</string>
     <string name="profile_call">Réunion</string>
     <string name="rail_more">Plus</string>
     <string name="rail_add">Écran</string>
@@ -1336,9 +1305,6 @@
     <string name="checklist_step_hint">Nom de l\'étape</string>
     <string name="checklist_step_rename">Renommer l\'étape %1$s</string>
     <string name="checklist_step_remove">Retirer l\'étape %1$s</string>
-    <string name="deck_access_missing">Le Mac n\'a pas encore autorisé le compagnon : les fenêtres et les raccourcis ne marchent pas. Active « Accessibilité » pour lui sur le Mac.</string>
-    <string name="deck_access_open">Ouvrir le réglage sur le Mac</string>
-    <string name="deck_access_opened">Sur le Mac : active l\'interrupteur du compagnon, puis reviens ici.</string>
     <string name="media_opened_app">Ouvert dans l\'appli %1$s</string>
 
     <!-- Commandes vocales (bouton Parler de la barre latérale) -->

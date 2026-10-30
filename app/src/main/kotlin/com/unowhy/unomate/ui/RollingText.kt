@@ -69,7 +69,6 @@ class RollingText @JvmOverloads constructor(context: Context, attrs: AttributeSe
     var minCells = 1
     var color = Color.BLACK
         set(value) { field = value; invalidate() }
-    val textSizePx: Float get() = paint.textSize
     var typeface: Typeface?
         get() = paint.typeface
         set(value) { paint.typeface = value; digitEm = -1f; requestLayout(); invalidate() }

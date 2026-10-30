@@ -230,7 +230,7 @@ class TileLogicTest {
     // Deck V2 : symboles des tuiles et touches de départ du profil Deck.
 
     private fun page(title: String, n: Int) =
-        DeckPage(title, (1..n).map { DeckTile("r-$it", "Touche $it", "system", "🔒", null, symbol = "lock") }, false, false, false, null, false, true, false)
+        DeckPage(title, (1..n).map { DeckTile("r-$it", "Touche $it", "system", "🔒", null, symbol = "lock") }, false, false, false, null, false, true)
 
     @Test
     fun `le symbole d'une touche suit la tuile et survit au JSON`() {
@@ -282,7 +282,7 @@ class TileLogicTest {
             DeckTile("r-3", "Couper le micro", "system", null, null, symbol = "mic_off"),
             DeckTile("r-4", "Ne pas déranger", "system", null, null, symbol = "dnd"),
         )
-        val pages = listOf(DeckPage("Raccourcis", tiles, false, false, false, null, false, true, false))
+        val pages = listOf(DeckPage("Raccourcis", tiles, false, false, false, null, false, true))
         val seeded = KeyRef.seed(JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis"), "mac", pages)!!
         assertEquals(listOf("r-2", "r-3", "r-4", "r-1", "r-0"), seeded.map { it.id })
     }

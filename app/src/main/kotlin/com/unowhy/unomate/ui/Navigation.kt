@@ -58,10 +58,6 @@ interface Navigation {
 internal fun focusRemaining(state: FocusTimer.State): String? =
     if (state.running || state.remainingMs < state.durationMs) FocusTimer.format(state.remainingMs) else null
 
-/** Libellé du mode Focus : le temps restant tant qu'un Pomodoro est lancé ou entamé. */
-internal fun focusLabel(activity: Activity, state: FocusTimer.State): String =
-    focusRemaining(state) ?: activity.getString(R.string.mode_focus)
-
 /** Forme de la pastille de connexion : l'état se lit sans la couleur (vert et rouge ont la même luminance). */
 internal enum class LinkShape(@DrawableRes val drawable: Int) {
     /** Pleine : l'ordinateur répond. */

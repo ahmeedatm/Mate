@@ -447,6 +447,22 @@
                             android:text="@string/kiosk_remove"
                             android:textColor="?attr/c_ko" />
                     </LinearLayout>
+
+                    <!-- Remettre à neuf (kiosk/FreshStart) : comme une tablette neuve, kiosque gardé. Montré avec la carte. -->
+                    <Button
+                        android:id="@+id/settings_fresh_start"
+                        style="@style/ActionButton"
+                        android:layout_marginTop="16dp"
+                        android:text="@string/fresh_start"
+                        android:textColor="?attr/c_ko" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/fresh_start_hint"
+                        android:textColor="?attr/c_text_dim"
+                        android:textSize="14sp" />
                 </LinearLayout>
 
                 <!-- À propos : sources des données et licences à citer (météo, villes, polices). -->

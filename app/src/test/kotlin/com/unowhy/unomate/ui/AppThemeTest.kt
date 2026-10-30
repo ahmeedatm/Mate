@@ -56,9 +56,9 @@ class AppThemeTest {
     fun `quitter la demo rend le theme de persona choisi avant`() {
         Prefs.setTheme(context, AppTheme.STUDIO.name)
         val persona = Persona.SACHA
-        Demo.start(context, persona, persona.layout(persona.profiles.map { it.name.toString() }, "Réunion", emptyMap(), null), cadran = true)
+        Demo.start(context, persona, persona.layout(persona.profiles.map { it.name.toString() }, "Réunion", emptyMap(), null))
         assertEquals(AppTheme.TERMINAL, AppTheme.current(context))
-        assertTrue(Demo.quit(context, cadran = true))
+        assertTrue(Demo.quit(context))
         assertEquals(AppTheme.STUDIO, AppTheme.current(context))
     }
 
@@ -66,13 +66,13 @@ class AppThemeTest {
     fun `le theme du persona s'applique pendant la demo et Clair revient en la quittant`() {
         for (persona in Persona.entries.filter { it.theme != "CONTRASTE" }) {
             val layout = persona.layout(persona.profiles.map { it.name.toString() }, "Réunion", emptyMap(), null)
-            Demo.start(context, persona, layout, cadran = true)
+            Demo.start(context, persona, layout)
             assertEquals(persona.theme, AppTheme.current(context).name)
             assertTrue(AppTheme.current(context).demo)
-            assertTrue(Demo.quit(context, cadran = true))
+            assertTrue(Demo.quit(context))
             assertEquals(AppTheme.CLAIR, AppTheme.current(context))
         }
-        assertFalse(Demo.quit(context, cadran = true))
+        assertFalse(Demo.quit(context))
     }
 
     @Test

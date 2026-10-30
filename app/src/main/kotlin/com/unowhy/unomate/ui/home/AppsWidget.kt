@@ -16,7 +16,7 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     override val view = LinearLayout(context).asCard(12).apply { orientation = LinearLayout.VERTICAL }
 
     private val section = TileSection(
-        context, host, R.string.widget_apps, R.drawable.ic_tabs, R.string.apps_all,
+        context, host, R.string.widget_apps, R.string.apps_all,
         tilesOf = { pages -> pages.firstOrNull { it.apps }?.tiles },
         onAdd = ::addApps,
         // Toutes les applis de l'ordinateur : les lancer, ou les épingler sur la carte.
@@ -28,9 +28,9 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         section.grid.onTap = { cell, _ -> section.tileOf(cell)?.let(::run) }
         section.grid.ownsLongPress = true
         section.grid.onHold = { cell, _ -> section.tileOf(cell)?.let { host.overlays.windows(it, removable = true) { section.reload() } } }
-        // Cadran, vertical (Accueil) : titre aligné sur ceux des cartes voisines (Agenda, Tâches, Touches). Le « + » de 48 dp
+        // Vertical (Accueil) : titre aligné sur ceux des cartes voisines (Agenda, Tâches, Touches). Le « + » de 48 dp
         // agrandit la ligne de titre : 11 dp en haut au lieu de 24 ; en bas, la place reste aux noms des applis.
-        if (placed.size == WidgetSize.V && themeBool(context, R.attr.c_cadran)) view.setPadding(view.dp(24), view.dp(11), view.dp(24), view.dp(12))
+        if (placed.size == WidgetSize.V) view.setPadding(view.dp(24), view.dp(11), view.dp(24), view.dp(12))
         section.addTo(view)
         // Bandeau sur la ligne fine (92 dp) : pas la place pour le titre au-dessus des applis.
         view.addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->

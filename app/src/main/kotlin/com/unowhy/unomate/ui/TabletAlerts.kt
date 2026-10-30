@@ -14,18 +14,17 @@ class TabletAlerts(private val context: Context, private val banner: Banner) {
     /** Bandeau « batterie faible » déjà montré (de nouveau après une recharge). */
     private var lowBatteryWarned = false
 
-    /** « Pense à boire » : bandeau et voix ; vérifié chaque minute. Seulement si l'Accueil montre l'eau (widget Eau, ou l'Heure de Cadran). */
+    /** « Pense à boire » : bandeau et voix ; vérifié chaque minute. Seulement si l'Accueil montre l'eau (widget Eau, Heure ou Ma journée). */
     fun remindWater() {
-        val cadran = themeBool(context, R.attr.c_cadran)
-        val shown = HomeLayout.has(context, cadran, WidgetType.WATER) || (cadran && (HomeLayout.has(context, true, WidgetType.HERO) || HomeLayout.has(context, true, WidgetType.DAY)))
+        val shown = HomeLayout.load(context).widgets.any { it.type == WidgetType.WATER || it.type == WidgetType.HERO || it.type == WidgetType.DAY }
         if (!shown || !Water.reminderDue(context)) return
         val state = Water.state(context)
-        banner.show(context.getString(R.string.water_remind_banner, state.glasses, state.goal), 30)
+        banner.show(BannerContent(context.getString(R.string.water_remind_banner, state.glasses, state.goal), icon = BannerIcon.Symbol(R.drawable.ic_water, R.attr.c_hue_cyan)), 30)
         Speaker.speak(context.getString(R.string.water_remind_text))
     }
 
     fun onBattery(state: Tablet.Battery) {
-        if (state.low && !lowBatteryWarned) banner.show(context.getString(R.string.tablet_battery_low, state.level), 10)
+        if (state.low && !lowBatteryWarned) banner.show(BannerContent(context.getString(R.string.tablet_battery_low, state.level), icon = BannerIcon.Symbol(R.drawable.ic_battery_alert, R.attr.c_hue_red)), 10)
         lowBatteryWarned = state.low || (lowBatteryWarned && !state.charging)
     }
 }

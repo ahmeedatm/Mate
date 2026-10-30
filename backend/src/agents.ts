@@ -40,6 +40,10 @@ export type OrcaInfo = {
     /** Ticket Jira lié au worktree (`SQOOL-12256`) et MR GitLab liée (numéro). */
     ticket?: string | null;
     mr?: number | null;
+    /** Dépôt du worktree (projet de ses sessions), nom affiché et dernière activité (ms) dans Orca. */
+    repo?: string | null;
+    name?: string | null;
+    activityAt?: number | null;
     agents: {
       paneKey: string;
       state: string | null;
@@ -121,6 +125,8 @@ export type AgentsDeps = {
   holdMs: number;
   /** Écrit une ligne dans le terminal d'une session (`orca terminal send`). */
   sendText: (handle: string, text: string) => Promise<void>;
+  /** Envoie un message dans un chat Orca (`agentSession.send`), `session` = `claude_<…>` de la clé de son volet. */
+  sendChat: (session: string, text: string) => Promise<void>;
   /** Interrompt le tour en cours d'une session (Échap dans son terminal Orca). */
   interruptSession: (handle: string) => Promise<void>;
   /** Amène une session devant sur l'ordinateur (terminal Orca, chat Orca, ou Orca seulement). */
@@ -190,6 +196,8 @@ type Session = {
   /** Worktree Orca de la session et, pour une session de chat, son onglet (`agent-session:<id>`). */
   orcaTree: string | null;
   orcaTab: string | null;
+  /** Projet de la session : dépôt Orca de son worktree (null hors Orca : le nom de son dossier en tient lieu). */
+  project: string | null;
   /** État vu par Orca (`working`, `done`) : il voit aussi les tâches de fond (surveillance de pipeline), que `claude agents` ne compte pas. */
   orcaState: string | null;
   /** Windows hors Orca : fenêtre du terminal trouvée (amener devant) et sûre pour y taper (`desktop.locate`). */
@@ -222,6 +230,8 @@ export const LIMITS = {
   description: 120,
   line: 120,
   free: 500,
+  /** Message rapide à une session : un prompt dicté d'une minute tient dedans (la route en accepte autant). */
+  message: 2000,
 };
 
 /** Texte venu de l'agent : sans caractères de contrôle, tronqué. */
@@ -237,6 +247,9 @@ export function chatTab(paneKey: string): string | null {
   const m = /^structured-agent-session-([\w-]+):/.exec(paneKey);
   return m ? `agent-session:${m[1]}` : null;
 }
+
+/** Session d'un chat Orca, d'après son onglet : `agent-session:<id>` → `<id>`. */
+const chatSession = (s: { orcaTab: string | null }) => s.orcaTab?.slice("agent-session:".length) || null;
 
 export function ticketOf(branch: string | null): string | null {
   return /(?:^|[/_-])([A-Z][A-Z0-9]+-\d+)(?=$|[/_-])/.exec(branch ?? "")?.[1] ?? null;
@@ -438,6 +451,9 @@ export function createAgents(deps: AgentsDeps) {
   let timer: NodeJS.Timeout | undefined;
   let refreshing = false;
   let lastOrca = 0;
+  /** Chats Orca sans processus Claude (stoppés), relus avec Orca : au repos ; un message les relance (Orca les reprend). */
+  let stopped: Session[] = [];
+  const find = (id: string) => sessions.get(id) ?? stopped.find((s) => s.id === id);
 
   const blank = (id: string, cwd: string): Session => ({
     id,
@@ -467,6 +483,7 @@ export function createAgents(deps: AgentsDeps) {
     inOrca: false,
     orcaTree: null,
     orcaTab: null,
+    project: null,
     orcaState: null,
     desk: null,
     hookAt: 0,
@@ -770,6 +787,7 @@ export function createAgents(deps: AgentsDeps) {
       title: cut(s.title || s.name, 90),
       agent: "claude",
       dir: cut(path.basename(s.cwd), LIMITS.dir),
+      project: cut(s.project || path.basename(s.cwd) || "session", LIMITS.dir),
       branch: s.branch ? cut(s.branch, LIMITS.name) : null,
       ticket: s.ticket ?? ticketOf(s.branch),
       mr: s.mr,
@@ -785,14 +803,14 @@ export function createAgents(deps: AgentsDeps) {
       resumeArmed: state === "limit" && s.resumeArmed,
       askId: s.ask?.id ?? null,
       askKind: s.ask?.kind ?? null,
-      canSend: reachable(s) && state !== "working" && state !== "waiting",
+      canSend: (reachable(s) || Boolean(chatSession(s))) && state !== "working" && state !== "waiting",
       canFocus: Boolean(s.handle) || s.inOrca || Boolean(s.desk),
       canInterrupt: reachable(s) && state === "working",
     };
   }
 
   function list() {
-    const all = [...sessions.values()].sort((a, b) => ORDER[effectiveState(a)] - ORDER[effectiveState(b)] || b.since - a.since);
+    const all = [...sessions.values(), ...stopped].sort((a, b) => ORDER[effectiveState(a)] - ORDER[effectiveState(b)] || b.since - a.since);
     // `monitoring` : sessions qui surveillent une tâche de fond, comptées à part de celles qui travaillent (comme Orca).
     const counts = { working: 0, monitoring: 0, waiting: 0, done: 0, limit: 0, idle: 0 };
     for (const s of all) {
@@ -800,7 +818,8 @@ export function createAgents(deps: AgentsDeps) {
       if (state === "working" && s.monitoring) counts.monitoring++;
       else counts[state]++;
     }
-    return { sessions: all.slice(0, 10).map(view), counts, total: all.length, hooks: hooksSeen, quota: quotaView() };
+    // La tablette filtre par projet : assez de sessions pour qu'il en reste après le filtre.
+    return { sessions: all.slice(0, 40).map(view), counts, total: all.length, hooks: hooksSeen, quota: quotaView() };
   }
 
   /**
@@ -967,6 +986,7 @@ export function createAgents(deps: AgentsDeps) {
       s.handle = null;
       s.orcaTree = null;
       s.orcaTab = null;
+      s.project = null;
       s.orcaState = null;
       s.monitoring = false;
       // Volet exact donné par le hook (le dossier de la session peut différer de celui du worktree) ; sinon le dossier,
@@ -977,6 +997,7 @@ export function createAgents(deps: AgentsDeps) {
       if (!tree) continue;
       s.inOrca = true;
       s.orcaTree = tree.path;
+      s.project = tree.repo ?? null;
       s.branch = tree.branch;
       s.ticket = tree.ticket ?? s.ticket;
       if (tree.mr) s.mr = tree.mr;
@@ -996,6 +1017,30 @@ export function createAgents(deps: AgentsDeps) {
       if (!agent.structured) s.handle = orca.handles.get(agent.paneKey) ?? null;
       else s.orcaTab = chatTab(agent.paneKey);
     }
+    // Chat qu'aucune session vivante ne tient : stoppé. Pas dans un worktree où une session tourne sans volet connu
+    // (elle est peut-être ce chat) ; jamais un chat qu'Orca voit travailler.
+    const claimed = new Set([...sessions.values()].map((s) => s.orcaTab));
+    const unsure = new Set([...sessions.values()].filter((s) => s.inOrca && !s.orcaTab && !s.handle).map((s) => norm(s.orcaTree ?? "")));
+    stopped = orca.worktrees.flatMap((w) =>
+      w.agents.flatMap((a) => {
+        const tab = a.structured ? chatTab(a.paneKey) : null;
+        if (!tab || claimed.has(tab) || unsure.has(norm(w.path)) || a.state === "working") return [];
+        const s = blank(`orca:${tab.slice("agent-session:".length)}`, w.path);
+        s.name = w.name || path.basename(w.path);
+        s.state = a.state === "done" ? "done" : "idle";
+        s.since = w.activityAt ?? 0;
+        s.message = a.lastMessage ? cut(a.lastMessage, 1000) : null;
+        s.branch = w.branch;
+        s.ticket = w.ticket ?? null;
+        s.mr = w.mr ?? null;
+        s.inOrca = true;
+        s.orcaTree = w.path;
+        s.orcaTab = tab;
+        s.project = w.repo ?? null;
+        s.orcaState = a.state;
+        return [s];
+      }),
+    );
   }
 
   function start(intervalMs = 4_000) {
@@ -1013,7 +1058,7 @@ export function createAgents(deps: AgentsDeps) {
 
   /** Terminal d'une session, pour lui écrire ou l'amener devant. */
   function handleOf(sessionId: string): { handle: string | null; inOrca: boolean; state: AgentState } | null {
-    const s = sessions.get(sessionId);
+    const s = find(sessionId);
     return s ? { handle: s.handle, inOrca: s.inOrca, state: effectiveState(s) } : null;
   }
 
@@ -1037,25 +1082,27 @@ export function createAgents(deps: AgentsDeps) {
     return null;
   }
 
-  const UNREACHABLE = "Cette session n'est ni dans un terminal Orca ni dans une fenêtre de terminal sûre";
+  const UNREACHABLE = "Cette session n'est ni dans Orca ni dans une fenêtre de terminal sûre";
 
-  /** Message rapide à une session au repos, seulement si on sait la joindre de façon fiable. */
+  /** Message rapide à une session au repos : terminal Orca, chat Orca, ou (Windows) fenêtre de terminal sûre. */
   async function send(sessionId: string, text: string) {
-    const s = sessions.get(sessionId);
+    const s = find(sessionId);
     if (!s) throw new AnswerError("Cette session n'existe plus", 404);
     const state = effectiveState(s);
     if (state === "working" || state === "waiting") throw new AnswerError("La session travaille : attends qu'elle ait fini", 409);
     const write = writer(s);
-    if (!write) throw new AnswerError(`${UNREACHABLE} : impossible de lui écrire d'ici`, 409);
-    const line = cut(text.replace(/[\r\n]+/g, " "), LIMITS.free);
+    const chat = chatSession(s);
+    if (!write && !chat) throw new AnswerError(`${UNREACHABLE} : impossible de lui écrire d'ici`, 409);
+    const line = cut(text.replace(/[\r\n]+/g, " "), LIMITS.message);
     if (!line) throw new AnswerError("Message vide");
-    await write(line);
+    if (write) await write(line);
+    else if (chat) await deps.sendChat(chat, line);
     setState(s, "working", true);
   }
 
   /** Interrompt le tour en cours (Échap) ; seulement une session qui travaille, qu'on sait joindre. */
   async function interrupt(sessionId: string) {
-    const s = sessions.get(sessionId);
+    const s = find(sessionId);
     if (!s) throw new AnswerError("Cette session n'existe plus", 404);
     if (effectiveState(s) !== "working") throw new AnswerError("Cette session ne travaille pas", 409);
     if (s.handle) await deps.interruptSession(s.handle);
@@ -1073,7 +1120,7 @@ export function createAgents(deps: AgentsDeps) {
   }
 
   async function focus(sessionId: string) {
-    const s = sessions.get(sessionId);
+    const s = find(sessionId);
     if (!s) throw new AnswerError("Cette session n'existe plus", 404);
     if (s.handle || s.inOrca) return deps.focusSession({ handle: s.handle, worktree: s.orcaTree, tab: s.orcaTab });
     if (deps.desktop && s.pid && s.desk) return deps.desktop.focus(s.pid, namesOf(s));
@@ -1082,7 +1129,7 @@ export function createAgents(deps: AgentsDeps) {
 
   /** Arme (ou désarme) l'envoi de « continue » à l'heure de reprise d'une limite : décision prise sur la tablette. */
   function resume(sessionId: string, armed: boolean) {
-    const s = sessions.get(sessionId);
+    const s = find(sessionId);
     if (!s || s.state !== "limit") throw new AnswerError("Cette session n'est pas en limite", 409);
     clearTimeout(s.resumeTimer ?? undefined);
     s.resumeTimer = null;

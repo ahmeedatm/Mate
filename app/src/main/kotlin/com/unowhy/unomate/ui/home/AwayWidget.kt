@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
 class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     override val view = LinearLayout(context).asCard(16).apply { orientation = LinearLayout.VERTICAL }
 
-    private val title = cardTitle(R.string.widget_away, R.drawable.ic_cafe)
+    private val title = cardTitle(R.string.widget_away)
     private val status = label(14f, R.attr.c_text_dim)
     private val leave = button(R.style.ActionButton, R.string.away_leave) { leave() }
     private val back = button(R.style.PrimaryButton, R.string.away_resume) { resume() }

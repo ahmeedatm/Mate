@@ -10,11 +10,13 @@ import {
   listClaude,
   listOrca,
   orcaQuota,
+  sendChat,
   sendText,
   transcriptInfo,
 } from "../agents-sources.ts";
 import { isMac, isWindows } from "../os.ts";
 import { sendToTablet, tabletStatus } from "../tablet.ts";
+import { transcribe, voiceAvailable } from "../transcribe.ts";
 
 /** Attente maximale d'une réponse de la tablette avant de rendre la main au terminal (AGENTS_HOLD_S, 90 s par défaut). */
 /** AGENTS_ALWAYS_ALERT=1 : alerter même si le terminal est devant (essais depuis un terminal). */
@@ -43,6 +45,7 @@ export default async function agentRoutes(app: FastifyInstance) {
     notify: (alert) => void sendToTablet({ type: "agent", ...alert }, 20_000),
     holdMs,
     sendText,
+    sendChat,
     interruptSession,
     focusSession,
     // Windows, hors Orca : fenêtre du terminal de la session, retrouvée par son pid (src/agents-desktop.ts).
@@ -86,7 +89,13 @@ export default async function agentRoutes(app: FastifyInstance) {
     },
   );
 
-  app.get("/agents", { logLevel: "warn" }, async () => ({ ...agents.list(), available: agentsAvailable(), now: Date.now() }));
+  app.get("/agents", { logLevel: "warn" }, async () => ({
+    ...agents.list(),
+    available: agentsAvailable(),
+    // `voice` : micro des sessions (whisper-cli sur l'ordinateur).
+    voice: voiceAvailable(),
+    now: Date.now(),
+  }));
 
   app.get<{ Querystring: { id: string } }>(
     "/agents/ask",
@@ -162,6 +171,17 @@ export default async function agentRoutes(app: FastifyInstance) {
     },
     (req, reply) => guarded(reply, () => agents.send(req.body.session, req.body.text)),
   );
+
+  // Prompt dicté sur la tablette (WAV 16 kHz) : transcrit sur l'ordinateur, rendu à la tablette pour relecture.
+  app.post<{ Body: Buffer }>("/agents/transcribe", async (req, reply) => {
+    if (!Buffer.isBuffer(req.body)) return reply.code(415).send({ error: "Audio attendu (audio/wav)" });
+    try {
+      return { text: await transcribe(req.body) };
+    } catch (e) {
+      if (e instanceof AnswerError) return reply.code(e.statusCode).send({ error: e.message });
+      throw e;
+    }
+  });
 
   // Interrompt le tour en cours (Échap), après confirmation sur la tablette.
   app.post<{ Body: { session: string } }>(

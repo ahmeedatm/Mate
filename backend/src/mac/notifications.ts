@@ -1,14 +1,19 @@
 import { execFile } from "node:child_process";
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { appNameFromId, type NotificationBatch, type RawNotification } from "../notifications.ts";
 
 /**
- * Notifications du Mac : base de `usernoted`, lue en lecture seule. Table record (rec_id croissant, app_id,
- * delivered_date en secondes depuis 2001, data = plist binaire { req: { titl, subt, body } }) jointe à app (identifier =
- * bundle id). Demande l'accès complet au disque pour node (Réglages Système > Confidentialité) : sans lui, l'ouverture
- * échoue et la route répond 503. Pas de Mac ici : écrit, non vérifié.
+ * Notifications du Mac : base de `usernoted`. Table record (rec_id croissant, app_id, delivered_date en secondes depuis
+ * 2001, data = plist binaire { req: { titl, subt, body } }) jointe à app (identifier = bundle id). Demande l'accès
+ * complet au disque pour node (Réglages Système > Confidentialité) : sans lui, l'ouverture échoue et la route répond 503.
+ *
+ * La base est en mode WAL : les notifications récentes sont dans le fichier `-wal` tant qu'il n'est pas intégré à `db`
+ * (parfois des jours). Une connexion en lecture seule ne lit que `db` et les manquerait toutes. On lit donc un instantané
+ * (copie de db + -wal + -shm dans un dossier temporaire, ouverte à part) : le WAL y est pris en compte, sans jamais
+ * ouvrir ni modifier la base du système. Pas de Mac ici : écrit, non vérifié.
  */
 
 const DB_FILE = path.join(os.homedir(), "Library", "Group Containers", "group.com.apple.usernoted", "db2", "db");
@@ -17,25 +22,57 @@ const SINCE_FIRST_MS = 24 * 60 * 60 * 1000;
 
 let Database: typeof DatabaseSync | undefined;
 
-/** Plist binaire → objet, par plutil (fourni avec macOS). */
-function plist(data: Uint8Array): Promise<Record<string, unknown>> {
+/**
+ * Plist binaire → XML, par plutil (fourni avec macOS). Pas en JSON : une notification contient une date (et parfois des
+ * données), que « plutil -convert json » refuse (« Invalid object in plist for JSON format ») ; en XML tout passe.
+ */
+function plistXml(data: Uint8Array): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = execFile(
       "plutil",
-      ["-convert", "json", "-o", "-", "--", "-"],
-      { timeout: 5_000, maxBuffer: 1024 * 1024 },
-      (error, stdout) => (error ? reject(new Error("Notification illisible")) : resolve(JSON.parse(stdout) as Record<string, unknown>)),
+      ["-convert", "xml1", "-o", "-", "--", "-"],
+      { timeout: 5_000, maxBuffer: 2 * 1024 * 1024 },
+      (error, stdout) => (error ? reject(new Error("Notification illisible")) : resolve(stdout)),
     );
     child.stdin?.end(Buffer.from(data));
   });
 }
 
+const XML_ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
+
+/** Entités d'un texte de plist XML décodées (le reste est déjà en UTF-8). */
+export function unentity(text: string): string {
+  return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, code: string) => {
+    if (code[0] !== "#") return XML_ENTITIES[code.toLowerCase()] ?? whole;
+    const n = code[1] === "x" || code[1] === "X" ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+    return Number.isFinite(n) && n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : whole;
+  });
+}
+
+/** Valeur texte d'une clé d'un plist XML (`<key>titl</key><string>…</string>`) ; absente ou non-texte : "". */
+export function plistString(xml: string, key: string): string {
+  const match = xml.match(new RegExp(`<key>${key}</key>\\s*<string>([\\s\\S]*?)</string>`));
+  return match ? unentity(match[1]) : "";
+}
+
 /** Les noms d'applis du Mac (« Microsoft Outlook ») viennent de leur bundle id faute de mieux : com.microsoft.Outlook → Outlook. */
 export async function readMacNotifications(cursor?: string): Promise<NotificationBatch> {
   let db: DatabaseSync;
+  let snapshot: string;
   try {
     Database ??= (await import("node:sqlite")).DatabaseSync;
-    db = new Database(DB_FILE, { readOnly: true });
+    // Instantané : la vraie base n'est jamais ouverte en écriture. La copie est ouverte sans `readOnly` pour que SQLite
+    // y rejoue le -wal (les notifications récentes), ce qu'une connexion en lecture seule ne ferait pas.
+    snapshot = fs.mkdtempSync(path.join(os.tmpdir(), "unomate-notif-"));
+    fs.copyFileSync(DB_FILE, path.join(snapshot, "db"));
+    for (const suffix of ["-wal", "-shm"]) {
+      try {
+        fs.copyFileSync(DB_FILE + suffix, path.join(snapshot, "db" + suffix));
+      } catch {
+        // -wal/-shm absents (base déjà intégrée) : la copie de db suffit.
+      }
+    }
+    db = new Database(path.join(snapshot, "db"));
   } catch {
     throw Object.assign(new Error("Notifications du Mac illisibles : donner l'accès complet au disque au compagnon (node)"), {
       statusCode: 503,
@@ -56,13 +93,15 @@ export async function readMacNotifications(cursor?: string): Promise<Notificatio
     if (cursor === undefined) top = Number((db.prepare("SELECT MAX(rec_id) AS top FROM record").get() as { top: number | null }).top ?? 0);
   } finally {
     db.close();
+    fs.rmSync(snapshot, { recursive: true, force: true });
   }
   const items: RawNotification[] = [];
   for (const row of rows) {
-    const req = ((await plist(row.data).catch(() => ({}))) as { req?: Record<string, unknown> }).req ?? {};
-    const text = (key: string) => (typeof req[key] === "string" ? (req[key] as string) : "");
-    const body = [text("subt"), text("body")].filter(Boolean).join("\n");
-    items.push({ app: appNameFromId(row.app), title: text("titl"), body, at: Math.round(row.at * 1000 + COCOA_EPOCH_MS) });
+    // titl/subt/body sont des textes dans le sous-dictionnaire `req` ; l'extraction cible ces clés (une seule par
+    // notification). Notification illisible : titre et texte vides, elle sera ignorée par l'historique.
+    const xml = await plistXml(row.data).catch(() => "");
+    const body = [plistString(xml, "subt"), plistString(xml, "body")].filter(Boolean).join("\n");
+    items.push({ app: appNameFromId(row.app), title: plistString(xml, "titl"), body, at: Math.round(row.at * 1000 + COCOA_EPOCH_MS) });
   }
   return { cursor: String(Math.max(top, rows.at(-1)?.id ?? 0, Number(cursor ?? 0))), items };
 }

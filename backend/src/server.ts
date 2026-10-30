@@ -11,7 +11,7 @@ import { startEventReminders } from "./events.ts";
 import { GitLabError } from "./gitlab.ts";
 import { setLogger } from "./log.ts";
 import { startAutoJoin } from "./meetings.ts";
-import { notificationHistory, watchNotifications } from "./notifications.ts";
+import { notificationHistory, setNotificationsRead, watchNotifications } from "./notifications.ts";
 import { canControl, clipboardStamp, getClipboard, isMac, osName, readNotifications } from "./os.ts";
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
 import { sendToTablet, tabletStatus } from "./tablet.ts";
@@ -35,7 +35,6 @@ import localRoutes from "./routes/local.ts";
 import localConfigRoutes from "./routes/local-config.ts";
 import localProfileRoutes from "./routes/local-profiles.ts";
 import mcpRoutes from "./routes/mcp.ts";
-import mailRoutes from "./routes/mail.ts";
 import notificationRoutes from "./routes/notifications.ts";
 import pairingRoutes from "./routes/pairing.ts";
 import pluginRoutes from "./routes/plugins.ts";
@@ -159,6 +158,8 @@ app.addHook("preHandler", async (req, reply) => {
 
 // Images du visualiseur (POST /camera/frame).
 app.addContentTypeParser("image/jpeg", { parseAs: "buffer", bodyLimit: 2 * 1024 * 1024 }, (_req, body, done) => done(null, body));
+// Dictée d'un prompt pour une session Claude (POST /agents/transcribe), 60 s au plus.
+app.addContentTypeParser("audio/wav", { parseAs: "buffer", bodyLimit: 2 * 1024 * 1024 }, (_req, body, done) => done(null, body));
 // Archive du backend : essai d'une MR (POST /companion/backend/essai) ou release (POST /companion/backend/update).
 app.addContentTypeParser("application/gzip", { parseAs: "buffer", bodyLimit: 100 * 1024 * 1024 }, (_req, body, done) => done(null, body));
 
@@ -184,7 +185,6 @@ app.register(updateRoutes);
 app.register(browserRoutes);
 app.register(cameraRoutes);
 app.register(calendarRoutes);
-app.register(mailRoutes);
 app.register(taskRoutes);
 app.register(jiraRoutes);
 app.register(callRoutes);
@@ -210,12 +210,15 @@ if (canControl) {
 }
 // Notifications de l'ordinateur : base du système relue toutes les 2 s, chaque nouvelle envoyée à la tablette sans attendre.
 if (canControl) {
+  // Les supprimées (empreintes seulement) tiennent après un redémarrage : sinon le 1er passage les remonterait du système.
+  notificationHistory.setStore(config.dataDir);
   watchNotifications(
     readNotifications,
     notificationHistory,
     ({ id, app: name, title, body, at }) => void sendToTablet({ type: "notification", id, app: name, title, body, at }),
     Number(process.env.NOTIFICATIONS_POLL_MS) || 2000,
     (e) => app.log.warn(`Notifications de l'ordinateur illisibles : ${e.message}`),
+    (ok, e) => setNotificationsRead(ok, e),
   );
 }
 // Historique du presse-papiers : repère relu chaque seconde (2 s sur Mac, un osascript à chaque fois).

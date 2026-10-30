@@ -42,7 +42,7 @@ class CompanionUpdate(private val activity: MainActivity) {
             val id = identity.id ?: return
             if (!notified.add("$id:${decision.release.version}")) return
             val text = activity.getString(R.string.companion_update_available, identity.name, decision.release.version)
-            activity.showBanner(text, 20) { confirm(identity, decision.release) }
+            activity.showBanner(text, 20, BannerIcon.Symbol(R.drawable.ic_laptop, R.attr.c_hue_blue)) { confirm(identity, decision.release) }
             return
         }
         // Compagnon qui se met à jour depuis la tablette : à jour, sur un essai ou plus récent, rien à proposer.
@@ -59,7 +59,7 @@ class CompanionUpdate(private val activity: MainActivity) {
         }
         if (!notified.add("$id:${installer.version}")) return
         val text = activity.getString(R.string.companion_update_available, identity.name, installer.version)
-        activity.showBanner(text, 20) {
+        activity.showBanner(text, 20, BannerIcon.Symbol(R.drawable.ic_laptop, R.attr.c_hue_blue)) {
             if (showInstallSteps(identity)) pending[id] = installer.version
         }
     }

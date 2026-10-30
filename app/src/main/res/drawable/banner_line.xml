@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Trait d'accent du bandeau, bouts arrondis ; teinté par Banner (couleur de l'appli ou de la fonction). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="?attr/c_text" />
+    <corners android:radius="2dp" />
+</shape>
