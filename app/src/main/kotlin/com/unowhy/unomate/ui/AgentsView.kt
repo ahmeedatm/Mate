@@ -254,7 +254,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         // Place comptée : l'astuce du bas n'apprend rien de neuf, les cartes passent avant.
         status.visibility = if (compact && state.sessions.isNotEmpty() && state.hooks) GONE else VISIBLE
         // Le mode privé change le rendu : il fait partie de la signature, sinon une autre vue (tableau ouvert depuis un widget) le laisse périmé.
-        val sig = listOf(Prefs.agentsPrivate(context), state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId, it.canSend, it.resumeAt, it.resumeArmed, it.canInterrupt, it.title, it.ticket, it.mr, it.monitoring) })
+        val sig = listOf(Prefs.agentsPrivate(context), state.sessions.map { listOf(it.id, it.state, it.name, it.branch, it.waitingFor, it.tool, it.lines, it.workedMs, it.limit, it.canFocus, it.askId, it.canSend, it.resumeAt, it.resumeArmed, it.canInterrupt, it.title, it.ticket, it.mr, it.monitoring) }, state.voice)
         if (sig != signature) {
             signature = sig
             columns.values.forEach { it.removeAllViews() }
@@ -322,6 +322,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         if (s.canInterrupt) actions += context.getString(R.string.agent_interrupt) to { confirmInterrupt(s) }
         if (s.canSend && (s.state == AgentState.DONE || s.state == AgentState.IDLE)) {
             actions += context.getString(R.string.agent_continue) to { send(s, "continue") }
+            if (AgentsFeed.last?.state?.voice == true) actions += context.getString(R.string.agent_talk) to { talk(s) }
             actions += context.getString(R.string.agent_write) to { write(s) }
         }
         val at = s.resumeAt
@@ -335,6 +336,11 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 Button(context, null, 0, R.style.Chip).apply {
                     text = label
                     setBackgroundResource(R.drawable.agent_action_bg)
+                    if (label == context.getString(R.string.agent_talk)) {
+                        setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_mic, 0, 0, 0)
+                        TextViewCompat.setCompoundDrawableTintList(this, textColors)
+                        compoundDrawablePadding = dp(6)
+                    }
                     setOnClickListener { onClick() }
                 },
                 LayoutParams(LayoutParams.WRAP_CONTENT, dp(48)).apply { marginEnd = dp(8) },
@@ -454,6 +460,13 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                     LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) },
                 )
             }
+        }
+    }
+
+    /** Micro : la boîte « Écrire » s'ouvre en écoute, le texte transcrit s'y relit avant l'envoi. */
+    private fun talk(s: AgentSession) {
+        (context as? MainActivity)?.askAgentText(context.getString(R.string.agent_write_title, s.name), R.string.agent_write_hint, "", listenNow = true) { text ->
+            if (text.isNotBlank()) send(s, text.trim())
         }
     }
 

@@ -281,6 +281,10 @@
     <string name="agent_write">Écrire…</string>
     <string name="agent_write_title">Écrire à %1$s</string>
     <string name="agent_write_hint">Ton message</string>
+    <string name="agent_talk">Parler</string>
+    <string name="agent_voice_listening">J\'écoute… je m\'arrête quand tu te tais</string>
+    <string name="agent_voice_stop">Arrêter</string>
+    <string name="agent_voice_transcribing">Transcription sur l\'ordinateur…</string>
     <string name="agent_sent">Message envoyé à %1$s</string>
     <string name="agent_resume_at">Reprendre à %1$s</string>
     <string name="agent_resume_armed">Reprise à %1$s · annuler</string>
