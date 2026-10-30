@@ -1,6 +1,7 @@
 package com.unowhy.unomate
 
 import android.content.Context
+import com.unowhy.unomate.audio.VoiceChoice
 import com.unowhy.unomate.away.AwayState
 import com.unowhy.unomate.focus.FocusPresets
 
@@ -55,6 +56,8 @@ object Prefs {
     private const val KEY_LEGIBLE_FONT = "legible_font"
     private const val KEY_REDUCE_MOTION = "reduce_motion"
     private const val KEY_READ_BANNERS = "read_banners"
+    private const val KEY_TTS_VOICE = "tts_voice"
+    private const val KEY_TTS_RATE = "tts_rate"
     private const val KEY_AWAY_SINCE = "away_since"
     private const val KEY_AWAY_MIC = "away_mic_by_us"
     private const val KEY_AWAY_FOCUS = "away_focus_by_us"
@@ -272,6 +275,20 @@ object Prefs {
 
     fun setReadBanners(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_READ_BANNERS, value).apply()
+    }
+
+    /** Accessibilité : voix de la synthèse vocale (nom donné par le moteur) ; null = automatique (celle du moteur). */
+    fun ttsVoice(context: Context): String? = prefs(context).getString(KEY_TTS_VOICE, null)
+
+    fun setTtsVoice(context: Context, value: String?) {
+        prefs(context).edit().apply { if (value == null) remove(KEY_TTS_VOICE) else putString(KEY_TTS_VOICE, value) }.apply()
+    }
+
+    /** Accessibilité : débit de la synthèse vocale (1 = celui du moteur). 0,9 par défaut (VoiceChoice.DEFAULT_RATE). */
+    fun ttsRate(context: Context): Float = prefs(context).getFloat(KEY_TTS_RATE, VoiceChoice.DEFAULT_RATE)
+
+    fun setTtsRate(context: Context, value: Float) {
+        prefs(context).edit().putFloat(KEY_TTS_RATE, value).apply()
     }
 
     /** Accessibilité : chaque touche lancée depuis la tablette est annoncée à voix haute (ui/ActionSpeech). Désactivé par défaut. */

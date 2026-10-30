@@ -935,6 +935,19 @@
     <string name="a11y_read_banners_hint">Notifications du PC et messages de l\'ordinateur lus par la tablette (en mode discret : appli et titre seulement)</string>
     <string name="a11y_speak_actions">Retour parlé des actions</string>
     <string name="a11y_speak_actions_hint">Chaque touche lancée est annoncée à voix haute : son nom, ou « n\'a pas marché » (coupé quand TalkBack est actif)</string>
+    <!-- Voix (accessibilité) -->
+    <string name="voice_title">Voix</string>
+    <string name="voice_auto">Automatique</string>
+    <string name="voice_numbered">Voix %1$d</string>
+    <string name="voice_rate">Débit</string>
+    <string name="voice_rate_slow">Lent</string>
+    <string name="voice_rate_soft">Doux</string>
+    <string name="voice_rate_normal">Normal</string>
+    <string name="voice_hint">Touche une voix pour l\'écouter.</string>
+    <string name="voice_loading">Chargement des voix…</string>
+    <string name="voice_unavailable">Synthèse vocale indisponible sur cette tablette.</string>
+    <string name="voice_none_offline">Aucune voix française hors ligne : la voix par défaut est utilisée.</string>
+    <string name="voice_preview_text">Bonjour, je lirai tes notifications avec cette voix.</string>
     <string name="action_failed">%1$s n\'a pas marché</string>
     <string name="tablet_info">Version %1$s · Adresse %2$s · %3$s</string>
     <string name="tablet_no_address">aucune</string>
