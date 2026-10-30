@@ -54,9 +54,16 @@ class RollingText @JvmOverloads constructor(context: Context, attrs: AttributeSe
     /** Hauteur de la vue, et hauteur de la case où le texte est centré (la case peut dépasser la vue : l'excédent est rogné). */
     private var viewHeightPx = 0
     private var boxHeightPx = 0
-    /** Largeur d'une cellule de chiffre, en em ; les deux points n'en prennent que [separatorEm]. */
+    /**
+     * Largeur d'une cellule de chiffre, en em, au moins : élargie au chiffre le plus large de la police ([digitEm]),
+     * sinon le « 0 » d'Outfit débordait de sa case, rognée, et le premier chiffre de l'heure paraissait coupé. Les deux
+     * points n'en prennent que [separatorEm].
+     */
     var cellEm = 0.56f
         set(value) { field = value; requestLayout() }
+
+    /** Chiffre le plus large de la police, en em (ne dépend pas de la taille) ; recalculé au changement de police. */
+    private var digitEm = -1f
     var separatorEm = 0.26f
     /** Nombre de cellules au moins (compteur de deux chiffres : « 9 » garde sa cellule vide à gauche). */
     var minCells = 1
@@ -65,7 +72,7 @@ class RollingText @JvmOverloads constructor(context: Context, attrs: AttributeSe
     val textSizePx: Float get() = paint.textSize
     var typeface: Typeface?
         get() = paint.typeface
-        set(value) { paint.typeface = value; invalidate() }
+        set(value) { paint.typeface = value; digitEm = -1f; requestLayout(); invalidate() }
 
     /**
      * Taille du texte, hauteur de la vue et de la case du texte (0 : 1 em), en pixels. Sans `requestLayout` : à appeler
@@ -154,7 +161,17 @@ class RollingText @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
     private fun cellHeight() = if (boxHeightPx > 0) boxHeightPx.toFloat() else paint.textSize
 
-    private fun cellWidth(cell: Cell) = (if (cell.cur == SEPARATOR) separatorEm else cellEm) * paint.textSize
+    private fun cellWidth(cell: Cell) = (if (cell.cur == SEPARATOR) separatorEm else maxOf(cellEm, widestDigit())) * paint.textSize
+
+    private fun widestDigit(): Float {
+        if (digitEm < 0f) {
+            val size = paint.textSize
+            paint.textSize = MEASURE_PX
+            digitEm = DIGITS.maxOf { paint.measureText(it.toString()) } / MEASURE_PX * DIGIT_MARGIN
+            paint.textSize = size
+        }
+        return digitEm
+    }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val w = cells.sumOf { cellWidth(it).toDouble() }.roundToInt()
@@ -194,5 +211,10 @@ class RollingText @JvmOverloads constructor(context: Context, attrs: AttributeSe
         const val SEPARATOR = ':'
         const val SHIFT = 0.62f
         const val STAGGER_MS = 30L
+        const val DIGITS = "0123456789"
+        const val MEASURE_PX = 100f
+
+        /** Un peu d'air autour du chiffre le plus large : l'antialiasing de ses bords ne touche pas la case. */
+        const val DIGIT_MARGIN = 1.04f
     }
 }

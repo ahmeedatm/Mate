@@ -190,7 +190,7 @@ export async function setClipboardImage(fullPath: string) {
 }
 
 export async function getAudio() {
-  return { output: 50, muted: false, micMuted: false };
+  return { output: 50, muted: false, input: 80, micMuted: false };
 }
 
 export async function setAudio(change: AudioChange) {

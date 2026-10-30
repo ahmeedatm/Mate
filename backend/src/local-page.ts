@@ -288,7 +288,7 @@ ${FAVICON}
         <div id="tabletsettings">
           <div class="label">Thème</div>
           <div class="themes">
-            <button data-theme="CADRAN"><span></span>Cadran</button><button data-theme="CADRAN_NUIT"><span></span>Cadran nuit</button><button data-theme="RETRO"><span></span>Rétro</button>
+            <button data-theme="CADRAN"><span></span>Cadran</button><button data-theme="CADRAN_NUIT"><span></span>Cadran nuit</button><button data-theme="CLAIR"><span></span>Clair</button><button data-theme="SOMBRE"><span></span>Sombre</button><button data-theme="RETRO"><span></span>Rétro</button>
             <button data-theme="CONTRASTE"><span></span>Contraste élevé</button><button data-theme="REGISTRE"><span></span>Registre</button><button data-theme="STUDIO"><span></span>Studio</button>
             <button data-theme="MAISON"><span></span>Maison</button><button data-theme="TABLEAU"><span></span>Tableau</button><button data-theme="TERMINAL"><span></span>Terminal</button>
           </div>
@@ -750,8 +750,10 @@ ${FAVICON}
 
   // Aperçu de la tablette : couleurs des thèmes (fond, tuile, texte, texte 2, maintenant, filet, principale), d'après palettes.xml.
   const THEMES = {
-    CADRAN: ["#FAF2F1", "#FFFFFF", "#1E1B1B", "#4D4545", "#CA0538", "#D0C4C3", "#1E1B1B"],
-    CADRAN_NUIT: ["#100D0D", "#221F1F", "#E9E1E0", "#D0C4C3", "#FF5165", "#4D4545", "#E9E1E0"],
+    CADRAN: ["#EEE0DA", "#FCF5F1", "#2B1E1F", "#5A4746", "#CA0538", "#D6C1B9", "#2B1E1F"],
+    CADRAN_NUIT: ["#1D1617", "#2A2122", "#EBDDD9", "#CFC0BC", "#FF5165", "#574849", "#EBDDD9"],
+    CLAIR: ["#FAF2F1", "#FFFFFF", "#1E1B1B", "#4D4545", "#CA0538", "#D0C4C3", "#1E1B1B"],
+    SOMBRE: ["#100D0D", "#221F1F", "#E9E1E0", "#D0C4C3", "#FF5165", "#4D4545", "#E9E1E0"],
     RETRO: ["#F3DECB", "#FBEFE3", "#552805", "#7A4A25", "#B82800", "#D9B99A", "#552805"],
     CONTRASTE: ["#FFFFFF", "#F2F2F2", "#140F0F", "#140F0F", "#960026", "#140F0F", "#140F0F"],
     REGISTRE: ["#F8F3E5", "#FFFDF6", "#1D1C14", "#4A4838", "#B3261E", "#D6CFB8", "#175E34"],

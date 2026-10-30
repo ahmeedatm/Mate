@@ -520,6 +520,8 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 
     override fun applySize() {
+        // Moyen (une ligne de cases) : titre sur une ligne, l'avancement reste dans la carte.
+        playing.titleLines = if (placed.size == WidgetSize.M) 1 else 2
         playing.layout(if (placed.size == WidgetSize.S) NowPlayingView.Layout.SMALL else NowPlayingView.Layout.ROW)
         sites.shown = big
         if (big) host.scope.launch { load() }

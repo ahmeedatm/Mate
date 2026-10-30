@@ -67,6 +67,18 @@ class NowPlayingView @JvmOverloads constructor(
         set(value) {
             field = value
             source.isClickable = value
+            // Vignette plus petite : en 128 × 72, la colonne de texte s'étroitisait et la barre de progression sortait de la carte.
+            thumb.layoutParams = thumb.layoutParams.apply {
+                width = context.dp(if (value) 88 else 128)
+                height = context.dp(if (value) 50 else 72)
+            }
+        }
+
+    /** Lignes du titre (2 par défaut, 1 en petit) : un widget peu haut en demande 1 pour garder l'avancement visible. */
+    var titleLines = 2
+        set(value) {
+            field = value
+            if (mode != Layout.SMALL) title.maxLines = value
         }
 
     init {
@@ -143,7 +155,7 @@ class NowPlayingView @JvmOverloads constructor(
         val small = mode == Layout.SMALL
         fitThumb(!small && thumb.drawable != null)
         source.visibility = if (small) GONE else VISIBLE
-        title.maxLines = if (small) 1 else 2
+        title.maxLines = if (small) 1 else titleLines
         if (small) {
             timeline.visibility = GONE
             sessionsBar.visibility = GONE
@@ -275,7 +287,7 @@ class NowPlayingView @JvmOverloads constructor(
     /** Vignette affichée seulement quand il y a une image ; sans elle, les textes partent du bord de la carte. */
     private fun fitThumb(shown: Boolean) {
         thumb.visibility = if (shown) VISIBLE else GONE
-        (title.parent as View).let { (it.layoutParams as MarginLayoutParams).marginStart = if (shown) context.dp(16) else 0 }
+        (title.parent as View).let { (it.layoutParams as MarginLayoutParams).marginStart = if (shown) context.dp(if (compact) 12 else 16) else 0 }
     }
 
     /** Vignette rechargée seulement quand le morceau ou la vidéo change. */

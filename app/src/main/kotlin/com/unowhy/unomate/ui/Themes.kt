@@ -10,12 +10,13 @@ import com.unowhy.unomate.Prefs
 import com.unowhy.unomate.R
 
 /**
- * Thèmes de la DA Cadran (docs/ui-ux/da), choisis dans Réglages : jour, nuit, Rétro (Cadran habillé années 70,
+ * Thèmes de la DA Cadran (docs/ui-ux/da), choisis dans Réglages : jour et nuit (grain et tubes de Rétro aux couleurs de
+ * Cadran), Clair et Sombre (les mêmes sans texture, blanc et noir francs), Rétro (Cadran habillé années 70,
  * grain et bande qui coule) et Contraste élevé (Cadran jour en lisibilité maximale, grandes touches). Un thème
  * s'applique aussi par code : `Prefs.setTheme(context, AppTheme.CONTRASTE.name)` puis `recreate()` (ou l'ordre
  * `settings` de la page de l'ordinateur, `{"theme": "CONTRASTE"}`). Les couleurs et polices sont des attributs (`?attr/c_…`, res/values/palettes.xml) :
  * changer de thème recrée l'activité. Les thèmes clairs ont leur propre base AppCompat (dialogues et champs clairs).
- * Un ancien thème enregistré (Nuit, Clair, Néon, Chaud) retombe sur Cadran.
+ * Un ancien thème enregistré (Nuit, Néon, Chaud) retombe sur Cadran ; l'ancien Clair est le Clair d'aujourd'hui.
  *
  * Thèmes des personas (`demo`) : un par persona (Registre, Studio, Maison, Tableau, Terminal), posés avec le persona
  * (`Persona.theme`) et rendus par Quitter la démo. Choisissables aussi hors démo, dans Réglages (seconde ligne) et par
@@ -24,6 +25,8 @@ import com.unowhy.unomate.R
 enum class AppTheme(val label: Int, val base: Int, val palette: Int, val swatch: Int, val demo: Boolean = false) {
     CADRAN(R.string.theme_cadran, R.style.Theme_CompanionLight, R.style.Palette_Cadran, 0xFFCA0538.toInt()),
     CADRAN_NUIT(R.string.theme_cadran_nuit, R.style.Theme_Companion, R.style.Palette_CadranNuit, 0xFFFF5165.toInt()),
+    CLAIR(R.string.theme_clair, R.style.Theme_CompanionLight, R.style.Palette_CadranClair, 0xFFCA0538.toInt()),
+    SOMBRE(R.string.theme_sombre, R.style.Theme_Companion, R.style.Palette_CadranSombre, 0xFFFF5165.toInt()),
     RETRO(R.string.theme_retro, R.style.Theme_CompanionLight, R.style.Palette_Retro, 0xFFFC9303.toInt()),
     CONTRASTE(R.string.theme_contraste, R.style.Theme_CompanionLight, R.style.Palette_Contraste, 0xFF140F0F.toInt()),
     REGISTRE(R.string.theme_registre, R.style.Theme_CompanionLight, R.style.Palette_Registre, 0xFF175E34.toInt(), demo = true),

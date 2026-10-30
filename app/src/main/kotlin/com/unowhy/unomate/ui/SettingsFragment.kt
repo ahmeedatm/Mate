@@ -8,6 +8,7 @@ import android.os.BatteryManager
 import android.os.Bundle
 import android.provider.Settings
 import android.text.InputType
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -450,32 +451,62 @@ class SettingsFragment :
      * Une pastille par thème, avec sa couleur, sur deux lignes : thèmes de base, puis ceux des personas. En choisir un
      * recrée l'activité (les écrans se redessinent).
      */
+    /**
+     * Thèmes en vignettes (ui/ThemePreview : chacune peinte de ses couleurs), en deux groupes titrés : ceux de tous les
+     * jours, puis ceux des personas. Toucher une vignette applique le thème (l'activité est recréée).
+     */
     private fun setUpThemes(rows: LinearLayout) {
-        val current = AppTheme.current(requireContext())
+        val ctx = requireContext()
+        val current = AppTheme.current(ctx)
         for ((index, group) in AppTheme.entries.partition { !it.demo }.toList().withIndex()) {
-            val row = LinearLayout(requireContext())
-            for (theme in group) {
-                val chip = Button(requireContext(), null, 0, R.style.Chip).apply {
-                    setText(theme.label)
-                    isSelected = theme == current
-                    compoundDrawablePadding = dp(10)
-                    setCompoundDrawablesRelative(
-                        ContextCompat.getDrawable(context, R.drawable.dot)!!.mutate().also {
-                            it.setTint(theme.swatch)
-                            it.setBounds(0, 0, dp(14), dp(14))
-                        }, null, null, null,
-                    )
-                    setOnClickListener {
-                        if (theme == current) return@setOnClickListener
-                        Prefs.setTheme(context, theme.name)
-                        requireActivity().recreate()
-                    }
-                }
-                row.addView(chip, LinearLayout.LayoutParams(0, dp(48), 1f).apply { if (row.childCount > 0) marginStart = dp(10) })
-            }
+            rows.addView(
+                TextView(ctx).apply {
+                    setText(if (index == 0) R.string.theme_group_main else R.string.theme_group_personas)
+                    setTextColor(themeColor(ctx, R.attr.c_text_dim))
+                    textSize = 14f
+                },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    if (index > 0) topMargin = dp(18)
+                },
+            )
+            val row = LinearLayout(ctx)
+            // Même largeur de vignette dans les deux groupes : le plus petit est complété de places vides.
+            val columns = AppTheme.entries.partition { !it.demo }.toList().maxOf { it.size }
+            for (theme in group) row.addView(themeTile(theme, theme == current), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            repeat(columns - group.size) { row.addView(View(ctx), LinearLayout.LayoutParams(0, 0, 1f)) }
             rows.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                if (index > 0) topMargin = dp(10)
+                topMargin = dp(8)
             })
+        }
+    }
+
+    private fun themeTile(theme: AppTheme, chosen: Boolean): View {
+        val ctx = requireContext()
+        return LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(4), 0, dp(4), 0)
+            isClickable = true
+            isFocusable = true
+            isSelected = chosen
+            stateListAnimator = android.animation.AnimatorInflater.loadStateListAnimator(ctx, R.animator.press)
+            contentDescription = getString(if (chosen) R.string.theme_tile_chosen else R.string.theme_tile, getString(theme.label))
+            addView(ThemePreview(ctx, theme, chosen), LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(96)))
+            addView(TextView(ctx).apply {
+                setText(theme.label)
+                gravity = Gravity.CENTER
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                textSize = 14f
+                setTextColor(themeColor(ctx, if (chosen) R.attr.c_accent else R.attr.c_text))
+                typeface = themeFont(ctx, if (chosen) R.attr.c_font_medium else R.attr.c_font_regular)
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
+            setOnClickListener {
+                if (chosen) return@setOnClickListener
+                Prefs.setTheme(ctx, theme.name)
+                requireActivity().recreate()
+            }
         }
     }
 

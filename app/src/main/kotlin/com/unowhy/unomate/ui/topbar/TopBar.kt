@@ -385,6 +385,7 @@ object TopItems {
         TopItem.MEETING -> R.string.top_meeting
         TopItem.FOCUS -> R.string.top_focus
         TopItem.CALL -> R.string.top_call
+        TopItem.VOLUME -> R.string.top_volume
         TopItem.AGENTS -> R.string.top_agents
         TopItem.WEATHER -> R.string.top_weather
         TopItem.DATE -> R.string.top_date
@@ -398,6 +399,7 @@ object TopItems {
         TopItem.MEETING -> R.string.top_meeting_desc
         TopItem.FOCUS -> R.string.top_focus_desc
         TopItem.CALL -> R.string.top_call_desc
+        TopItem.VOLUME -> R.string.top_volume_desc
         TopItem.AGENTS -> R.string.top_agents_desc
         TopItem.WEATHER -> R.string.top_weather_desc
         TopItem.DATE -> R.string.top_date_desc
@@ -411,6 +413,7 @@ object TopItems {
         TopItem.MEETING -> R.drawable.ic_event
         TopItem.FOCUS -> R.drawable.ic_timer
         TopItem.CALL -> R.drawable.ic_mic
+        TopItem.VOLUME -> R.drawable.ic_volume
         TopItem.AGENTS -> R.drawable.ic_agents
         TopItem.WEATHER -> R.drawable.ic_cloud
         TopItem.DATE -> R.drawable.ic_event

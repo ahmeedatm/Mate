@@ -6,6 +6,7 @@ import android.view.Gravity
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.SeekBar
 import android.widget.TextView
 import androidx.core.widget.ImageViewCompat
 import com.unowhy.unomate.Prefs
@@ -15,9 +16,11 @@ import com.unowhy.unomate.agents.Column
 import com.unowhy.unomate.agents.columnCounts
 import com.unowhy.unomate.device.Tablet
 import com.unowhy.unomate.focus.FocusTimer
+import com.unowhy.unomate.net.AudioState
 import com.unowhy.unomate.net.BackendClient
 import com.unowhy.unomate.net.CalendarEvent
 import com.unowhy.unomate.net.runCatchingCancellable
+import com.unowhy.unomate.ui.LatestSender
 import com.unowhy.unomate.ui.MusicChip
 import com.unowhy.unomate.ui.dp
 import com.unowhy.unomate.ui.home.DayBrief
@@ -88,6 +91,7 @@ abstract class TopElement(val item: TopItem, protected val host: TopBarHost) {
             TopItem.MEETING -> MeetingElement(host)
             TopItem.FOCUS -> FocusElement(host)
             TopItem.CALL -> CallElement(host)
+            TopItem.VOLUME -> VolumeElement(host)
             TopItem.AGENTS -> AgentsElement(host)
             TopItem.WEATHER -> WeatherElement(host)
             TopItem.DATE -> DateElement(host)
@@ -370,6 +374,96 @@ class CallElement(host: TopBarHost) : TopElement(TopItem.CALL, host) {
     private companion object {
         const val CALL_POLL_MS = 4_000L
         const val IDLE_POLL_MS = 30_000L
+    }
+}
+
+/**
+ * Son de l'ordinateur : haut-parleur (toucher = couper ou remettre) et barre de la sortie. Glisser envoie le plus récent
+ * sans empiler ([LatestSender]) ; relu toutes les 10 s hors glisser, pour suivre un réglage fait sur l'ordinateur.
+ */
+class VolumeElement(host: TopBarHost) : TopElement(TopItem.VOLUME, host) {
+    private val speaker = icon(R.drawable.ic_volume, R.attr.c_text, 20)
+    // Construite sans style (le style Slider seul, sans parent, perdait la piste et le curseur d'Android) : ses teintes à la main.
+    private val bar = SeekBar(context).apply {
+        max = 100
+        progressTintList = ColorStateList.valueOf(themeColor(context, R.attr.c_accent))
+        thumbTintList = ColorStateList.valueOf(themeColor(context, R.attr.c_accent))
+        progressBackgroundTintList = ColorStateList.valueOf(themeColor(context, R.attr.c_text_faint))
+        contentDescription = context.getString(R.string.top_volume)
+        layoutParams = LinearLayout.LayoutParams(context.dp(BAR_DP), context.dp(36))
+    }
+    private val mute = row(speaker) { toggle() }
+    override val view = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        addView(mute)
+        addView(bar)
+    }
+    private var state: AudioState? = null
+    private var dragging = false
+    private var job: Job? = null
+    private val sender = LatestSender<Int>(host.scope) { value ->
+        state = BackendClient(context).system.setAudio(output = value)
+    }
+
+    init {
+        view.visibility = View.GONE
+        bar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                if (fromUser) sender.offer(progress)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar) {
+                dragging = true
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar) {
+                dragging = false
+                sender.offer(seekBar.progress)
+            }
+        })
+    }
+
+    override fun start() {
+        job = host.scope.launch {
+            while (isActive) {
+                if (host.hasComputer() && !dragging) {
+                    runCatchingCancellable { BackendClient(context).system.audio() }.onSuccess { state = it }
+                }
+                render()
+                delay(POLL_MS)
+            }
+        }
+    }
+
+    override fun stop() {
+        job?.cancel()
+    }
+
+    private fun render() {
+        val s = state
+        // Sortie illisible (output null) : rien à régler, l'élément se cache.
+        view.visibility = if (host.hasComputer() && s?.output != null) View.VISIBLE else View.GONE
+        if (s?.output == null) return
+        if (!dragging) bar.progress = s.output
+        speaker.setImageResource(if (s.muted) R.drawable.ic_volume_off else R.drawable.ic_volume)
+        tint(speaker, if (s.muted) R.attr.c_ko else R.attr.c_text)
+        mute.contentDescription = context.getString(if (s.muted) R.string.top_volume_unmute else R.string.top_volume_mute)
+    }
+
+    private fun toggle() {
+        val wanted = !(state?.muted ?: false)
+        host.scope.launch {
+            runCatchingCancellable { BackendClient(context).system.setAudio(muted = wanted) }
+                .onSuccess { state = it }
+                .onFailure { host.showError(it) }
+            render()
+        }
+    }
+
+    private companion object {
+        const val POLL_MS = 10_000L
+        const val BAR_DP = 140
     }
 }
 

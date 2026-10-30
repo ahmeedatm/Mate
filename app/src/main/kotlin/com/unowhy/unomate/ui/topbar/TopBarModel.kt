@@ -9,6 +9,7 @@ enum class TopItem(val key: String, val computer: Boolean, val self: Boolean) {
     MEETING("meeting", true, true),
     FOCUS("focus", false, true),
     CALL("call", true, true),
+    VOLUME("volume", true, false),
     AGENTS("agents", true, true),
     WEATHER("weather", false, false),
     DATE("date", false, false),

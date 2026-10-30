@@ -2,6 +2,7 @@ package com.unowhy.unomate.ui
 
 import com.unowhy.unomate.FakeContext
 import com.unowhy.unomate.Prefs
+import com.unowhy.unomate.R
 import com.unowhy.unomate.ui.home.Demo
 import com.unowhy.unomate.ui.home.Persona
 import org.junit.Assert.assertEquals
@@ -14,7 +15,7 @@ class AppThemeTest {
 
     @Test
     fun `Cadran, Cadran nuit, Retro et Contraste d'abord, puis les themes des personas`() {
-        assertEquals(listOf(AppTheme.CADRAN, AppTheme.CADRAN_NUIT, AppTheme.RETRO, AppTheme.CONTRASTE), AppTheme.entries.filter { !it.demo })
+        assertEquals(listOf(AppTheme.CADRAN, AppTheme.CADRAN_NUIT, AppTheme.CLAIR, AppTheme.SOMBRE, AppTheme.RETRO, AppTheme.CONTRASTE), AppTheme.entries.filter { !it.demo })
         assertEquals(
             listOf(AppTheme.REGISTRE, AppTheme.STUDIO, AppTheme.MAISON, AppTheme.TABLEAU, AppTheme.TERMINAL),
             AppTheme.entries.filter { it.demo },
@@ -70,10 +71,18 @@ class AppThemeTest {
 
     @Test
     fun `un ancien theme enregistre retombe sur Cadran`() {
-        for (old in listOf("NUIT", "CLAIR", "NEON", "CHAUD")) {
+        for (old in listOf("NUIT", "NEON", "CHAUD")) {
             Prefs.setTheme(context, old)
             assertEquals(AppTheme.CADRAN, AppTheme.current(context))
         }
+    }
+
+    @Test
+    fun `Clair et Sombre sont les Cadran d avant la texture`() {
+        Prefs.setTheme(context, "CLAIR")
+        assertEquals(AppTheme.CLAIR, AppTheme.current(context))
+        assertEquals(R.style.Palette_CadranClair, AppTheme.CLAIR.palette)
+        assertEquals(R.style.Palette_CadranSombre, AppTheme.SOMBRE.palette)
     }
 
     @Test
