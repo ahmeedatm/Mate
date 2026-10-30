@@ -8,14 +8,14 @@ TIME: 84 s × 30 = 2520 images. Ouverture 4 s, six chapitres de 12 s (360 images
 
 LOOK:
 - Sol : Cadran jour `#FAF2F1` plein cadre (nuit `#100D0D` pour Sacha), aplat, grain 1 %. Aucun dégradé.
-- Héros : la tablette Unowhy 4.2, sa vraie coque vue de face (`assets/brand/tablette-4.2.png`, tirée de la photo produit SQOOL_FACE-EMPTY_SCREEN), 1040 px de large, coin haut gauche (150, 80). Dans sa zone d'écran : uniquement les captures et enregistrements réels de `../captures/`.
+- Héros : la tablette Unowhy 4.2, sa vraie coque vue de face (`assets/brand/tablette-4.2.png`, tirée de la photo produit SQOOL_FACE-EMPTY_SCREEN, plaque SQOOL effacée), 1040 px de large, coin haut gauche (150, 80). Dans sa zone d'écran : uniquement les captures et enregistrements réels de `../captures/`.
 - Colonne de droite (x 1340 à 1824) : le chapitre de la persona. Prénom et âge en Outfit 300 72 px, métier en Outfit 400 30 px `#4D4545`, citation en Outfit 300 40 px, 3 lignes au plus.
 - Gros plan : la partie de l'écran qui porte l'action sort de la tablette à 1,6 à 2× (tuile, touche, carte), garde ses vrais libellés, puis y retourne.
 - Accent `#CA0538` seulement sur le point « maintenant » de la ligne du jour qui sert de sommaire.
 
 OBJECTS:
-- La tablette Unowhy 4.2 (coque blanche, plaque SQOOL).
-- Le sommaire : la ligne du jour en bas du cadre (y 1000), 8 h à 20 h, six points pour les six personas ; le point du chapitre en cours est rouge.
+- La tablette Unowhy 4.2 (coque blanche, sans plaque).
+- Le sommaire : la ligne du jour en bas du cadre (y 1000), six points à égale distance pour les six personas ; le point du chapitre en cours est rouge.
 - Le toucher : l'onde neutre de la DA (cercle 44 px qui s'ouvre à 120 px en 12 images).
 
 MOTION:
@@ -25,7 +25,7 @@ MOTION:
 - Changement de chapitre : la colonne de droite sort en 9 images, la suivante entre en 15, décalage de 3 images par ligne ; le point du sommaire glisse.
 
 SHOTS (secondes, une seule scène `parcours`, chapitres dans l'ordre de la journée ; chaque persona est choisi dans Réglages > Démo, son thème de démo habille la tablette):
-- 0-4 : ouverture. Écran de la tablette éteint, « Six personnes, une tablette », le sommaire se dessine ; l'écran s'allume sur Nour.
+- 0-4 : ouverture. Écran de la tablette éteint, « Six personnes, une tablette » puis « UnoMate : chaque utilisateur configure son Mate. », le sommaire se dessine ; l'écran s'allume sur Nour.
 - 4-16 : Nour (Registre). Écran Excel (toucher Enregistrer, gros plan des touches Excel et Libellés), puis Accueil : widget Clôture en gros plan (étapes, J-2).
 - 16-28 : Gwen (Studio). Écran Campagnes (gros plan des touches Réseaux et Modèles), puis écran Présentation : toucher Suivante, gros plan du widget Présentation.
 - 28-40 : Camille (Maison). Écran Travail, toucher « Je m'absente » (gros plan), puis l'absence en cours : Reprendre (gros plan).

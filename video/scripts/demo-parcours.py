@@ -20,7 +20,7 @@ import json
 CH = json.load(open("chapitres.json"))["chapitres"]
 OUV, DUR, FIN = 4.0, 12.0, 76.0
 TOTAL = 84.0
-def sx_h(h): return 192 + (h - 8) / 12 * 1536
+def sx(i): return 192 + (i + 0.5) * 1536 / len(CH)   # points du sommaire, à égale distance
 
 o = []; w = o.append
 w('''<template>
@@ -96,7 +96,7 @@ for i, c in enumerate(CH):
         w(f'      <img src="assets/screens/{e["img"]}.png" alt="" style="left:{-x * k:.1f}px;top:{-y * k:.1f}px;width:{1280 * k:.1f}px;height:{800 * k:.1f}px" />\n    </div>\n')
         e["_z"] = (zs, (fx(x) + zw * S / 2) - CX, (fy(y) + zh * S / 2) - CY, S / k)
 # Ouverture
-w(f'    <div id="d-titre" class="clip" data-start="0" data-duration="{OUV}" data-track-index="4"><h1>Six personnes, une tablette</h1><p>UnoMate, le compagnon de bureau Unowhy</p></div>\n')
+w(f'    <div id="d-titre" class="clip" data-start="0" data-duration="{OUV}" data-track-index="4"><h1>Six personnes, une tablette</h1><p>UnoMate : chaque utilisateur configure son Mate.</p></div>\n')
 # Colonnes
 for i, c in enumerate(CH):
     t0 = OUV + i * DUR
@@ -115,9 +115,9 @@ w(f'''    <div id="d-fin" class="clip" data-start="{FIN}" data-duration="{TOTAL 
 ''')
 # Sommaire
 w('    <div id="d-som">\n      <div id="d-piste"></div>\n')
-for c in CH:
-    w(f'      <div id="d-s-{c["id"]}" class="spt" style="left:{sx_h(c["h"]):.1f}px"><i></i><b>{c["nom"].split(",")[0]}</b></div>\n')
-w(f'      <div id="d-maint" style="left:{sx_h(CH[0]["h"]):.1f}px"><i></i></div>\n    </div>\n')
+for i, c in enumerate(CH):
+    w(f'      <div id="d-s-{c["id"]}" class="spt" style="left:{sx(i):.1f}px"><i></i><b>{c["nom"].split(",")[0]}</b></div>\n')
+w(f'      <div id="d-maint" style="left:{sx(0):.1f}px"><i></i></div>\n    </div>\n')
 w('  </div>\n  <script>\n    const tl = gsap.timeline({ paused: true });\n')
 J = lambda s: w('    ' + s + '\n')
 # Ouverture
@@ -132,7 +132,7 @@ for i, c in enumerate(CH):
     cid = c["id"]
     # Le point « maintenant » glisse vers la persona.
     if i > 0:
-        J(f'tl.to("#d-maint", {{ x: {sx_h(c["h"]) - sx_h(CH[0]["h"]):.1f}, duration: 0.6, ease: "power3.inOut" }}, {t0 - 0.3});')
+        J(f'tl.to("#d-maint", {{ x: {sx(i) - sx(0):.1f}, duration: 0.6, ease: "power3.inOut" }}, {t0 - 0.3});')
     J(f'tl.fromTo("#d-s-{cid} b", {{ color: "#6f6666" }}, {{ color: "{"#e9e1e0" if c.get("nuit") else "#1e1b1b"}", duration: 0.3, ease: "none", immediateRender: false }}, {t0});')
     # Colonne : nom, métier, citation, mot à mot de bloc en bloc.
     for j, sel in enumerate([".nom", ".metier", ".cit"]):
