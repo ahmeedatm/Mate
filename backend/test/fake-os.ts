@@ -33,6 +33,8 @@ export type FakeState = {
   running?: string[];
   inCall?: string[];
   dnd?: boolean | null;
+  /** Session de l'ordinateur verrouillée (screenLocked) ; absente : déverrouillée. */
+  locked?: boolean | null;
   /** Autorisation Accessibilité du Mac (accessibility) ; absente : accordée. */
   accessibility?: boolean;
   /** Presse-papiers de l'ordinateur (getClipboard) ; les écritures le remplacent. Vide par défaut. */
@@ -211,6 +213,10 @@ export async function getPerf(): Promise<Perf> {
 
 export async function getPerfDetail(): Promise<unknown> {
   return { gpu: null };
+}
+
+export async function screenLocked(): Promise<boolean | null> {
+  return read().locked ?? false;
 }
 
 export async function getDnd(): Promise<boolean | null> {

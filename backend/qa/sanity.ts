@@ -170,6 +170,16 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "ordinateur verrouillé (écran bloquant de la tablette)",
+      run: async () => {
+        // L'ordre lock n'est poussé que par la veille du verrouillage (src/screen-lock.ts) : refusé de l'extérieur.
+        expectStatus(await call("POST", "/tablet/command", { type: "lock", locked: true }), 400, "ordre lock de l'extérieur");
+        // Instance de test : jamais verrouillée, l'API reste ouverte (423 sinon).
+        expectStatus(await call("GET", "/deck"), 200, "GET /deck (ordinateur vu verrouillé ?)");
+        return "API ouverte";
+      },
+    },
+    {
       name: "Ne pas déranger à la main (pastille de l'Accueil)",
       run: async () => {
         expectStatus(await call("PUT", "/system/dnd", { on: "oui" }), 400, "PUT /system/dnd invalide");

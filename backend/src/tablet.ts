@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isScreenLocked } from "./screen-lock.ts";
 
 /**
  * Canal Mac → tablette. La tablette ne peut pas être appelée (pas de serveur dessus) :
@@ -71,6 +72,8 @@ export type TabletCommand =
   | { type: "call"; state: "ringing" | "ended"; app: string; caller: string | null; video: boolean }
   /** Réunion en cours (src/meeting-watch.ts) : la tablette passe sur son profil Réunion à `start`, en revient à `end`. */
   | { type: "meeting"; state: "start" | "end"; app: string }
+  /** Ordinateur verrouillé ou non (src/screen-lock.ts) : la tablette se couvre d'un écran bloquant, l'enlève au déverrouillage. */
+  | { type: "lock"; locked: boolean }
   /** Notification de l'ordinateur (src/notifications.ts), affichée en bandeau et gardée dans l'historique. */
   | { type: "notification"; id: string; app: string; title: string; body: string; at: number }
   /** Agent Claude (src/agents.ts) : une session attend, a fini ou a atteint sa limite ; `clear` : plus rien n'attend. */
@@ -119,8 +122,14 @@ function drop(id: string) {
   if (i >= 0) pending.splice(i, 1);
 }
 
+/** Seuls ordres remis pendant le verrouillage : rien de ce qui montre ou dit un contenu (rappels redonnés après). */
+const WHILE_LOCKED = new Set<TabletCommand["type"]>(["lock", "meeting"]);
+
 /** Envoie un ordre et attend la réponse de la tablette. */
 export function sendToTablet(command: TabletCommand, timeoutMs = 15_000): Promise<TabletResult> {
+  if (isScreenLocked() && !WHILE_LOCKED.has(command.type)) {
+    return Promise.resolve({ ok: false, error: "Ordinateur verrouillé : la tablette n'affiche rien" });
+  }
   if (!isConnected()) {
     return Promise.resolve({ ok: false, error: "Tablette non connectée (appli fermée, ou backend injoignable depuis la tablette)" });
   }

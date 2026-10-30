@@ -110,6 +110,16 @@
 
         <!-- Crayon : mode Modifier du profil affiché (l'appui long agrandit un widget), plein pendant le mode Modifier ;
              puis Réglages : la roue, en texte plein quand Réglages est affiché. L'un sous l'autre, dans l'axe de la barre. -->
+        <!-- Cadenas : verrouille la tablette, levé par son code (ui/LockScreen). -->
+        <ImageButton
+            android:id="@+id/rail_lock"
+            style="@style/IconButton.Flat"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:contentDescription="@string/rail_lock"
+            android:src="@drawable/ic_lock"
+            app:tint="@color/rail_profile_content" />
+
         <ImageButton
             android:id="@+id/rail_edit"
             style="@style/IconButton.Flat"

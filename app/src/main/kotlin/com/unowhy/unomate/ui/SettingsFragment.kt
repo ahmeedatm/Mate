@@ -99,6 +99,7 @@ class SettingsFragment :
     private lateinit var nightDim: SwitchCompat
     private lateinit var notifDiscreet: SwitchCompat
     private lateinit var meetingAlert: SwitchCompat
+    private lateinit var lockCode: Button
     private lateinit var wakeWord: SwitchCompat
     private lateinit var wakeStatus: TextView
     private lateinit var weatherLocation: SwitchCompat
@@ -181,6 +182,7 @@ class SettingsFragment :
         nightDim = view.findViewById(R.id.settings_night_dim)
         notifDiscreet = view.findViewById(R.id.settings_notif_discreet)
         meetingAlert = view.findViewById(R.id.settings_meeting_alert)
+        lockCode = view.findViewById(R.id.settings_lock_code)
         wakeWord = view.findViewById(R.id.settings_wake_word)
         wakeStatus = view.findViewById(R.id.settings_wake_word_status)
         weatherLocation = view.findViewById(R.id.settings_weather_location)
@@ -674,6 +676,7 @@ class SettingsFragment :
         notifDiscreet.setOnCheckedChangeListener { _, checked -> Prefs.setNotificationsDiscreet(ctx, checked) }
         // Alerte de réunion : lue à la vérification de chaque minute, rien d'autre à prévenir.
         meetingAlert.setOnCheckedChangeListener { _, checked -> Prefs.setMeetingAlert(ctx, checked) }
+        lockCode.setOnClickListener { main.lockScreen.chooseCode { renderLockCode() } }
         // Mot de réveil : l'activer télécharge le modèle s'il manque ; l'écoute suit tout de suite.
         wakeWord.setOnCheckedChangeListener { _, checked ->
             Prefs.setWakeWord(ctx, checked)
@@ -702,6 +705,7 @@ class SettingsFragment :
         nightDim.isChecked = Prefs.nightDim(ctx)
         notifDiscreet.isChecked = Prefs.notificationsDiscreet(ctx)
         meetingAlert.isChecked = Prefs.meetingAlert(ctx)
+        renderLockCode()
         wakeWord.isChecked = Prefs.wakeWord(ctx)
         renderWake()
         weatherLocation.isChecked = Prefs.weatherLocation(ctx)
@@ -1102,6 +1106,10 @@ class SettingsFragment :
                 input.error = getString(R.string.tech_code_wrong)
             }
         }
+    }
+
+    private fun renderLockCode() {
+        lockCode.setText(if (Prefs.lockCodeHash(requireContext()) == null) R.string.lock_code_choose else R.string.lock_code_change)
     }
 
     private fun renderKiosk() {

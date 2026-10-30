@@ -12,6 +12,7 @@ import * as macCalls from "./mac/calls.ts";
 import * as macDnd from "./mac/dnd.ts";
 import { extensionFrontPage, extensionTabs } from "./browser-extension.ts";
 import * as macKeys from "./mac/keys.ts";
+import * as macLock from "./mac/lock.ts";
 import * as macMedia from "./mac/media.ts";
 import * as macPointer from "./mac/pointer.ts";
 import * as macSystem from "./mac/system.ts";
@@ -206,6 +207,12 @@ export function setAudio(change: AudioChange) {
 }
 
 /** Ne pas déranger de l'ordinateur. null : état inconnu. */
+/** Session de l'ordinateur verrouillée (src/screen-lock.ts) ; null : illisible. Jamais sur une instance de test ni hors Mac et Windows. */
+export async function screenLocked(): Promise<boolean | null> {
+  if (headless || !canControl) return false;
+  return isMac ? macLock.screenLocked() : win.screenLocked();
+}
+
 export async function getDnd(): Promise<boolean | null> {
   if (isWindows) return win.getDnd();
   if (isMac) return macDnd.getDnd();

@@ -48,6 +48,10 @@ object Prefs {
     private const val KEY_NOTIFICATIONS_DISCREET = "notifications_discreet"
     private const val KEY_WAKE_WORD = "wake_word"
     private const val KEY_MEETING_ALERT = "meeting_alert"
+    private const val KEY_COMPUTER_LOCKED = "computer_locked"
+    private const val KEY_TABLET_LOCKED = "tablet_locked"
+    private const val KEY_LOCK_CODE = "lock_code"
+    private const val KEY_LOCK_SALT = "lock_salt"
     private const val KEY_MEETING_ALERT_SEEN = "meeting_alert_seen"
     private const val KEY_AGENTS_HIDDEN_PROJECTS = "agents_hidden_projects"
     private const val KEY_WEATHER_LOCATION = "weather_location"
@@ -205,6 +209,31 @@ object Prefs {
 
     fun setNotificationsDiscreet(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_NOTIFICATIONS_DISCREET, value).apply()
+    }
+
+    /** Ordinateur actif verrouillé : écran bloquant (ui/ComputerLockScreen), gardé hors ligne et après une relance. */
+    fun computerLocked(context: Context): Boolean = prefs(context).getBoolean(KEY_COMPUTER_LOCKED, false)
+
+    fun setComputerLocked(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_COMPUTER_LOCKED, value).apply()
+    }
+
+    /** Tablette verrouillée à la main (cadenas de la barre) : levé seulement par son code (ui/LockScreen). */
+    fun tabletLocked(context: Context): Boolean = prefs(context).getBoolean(KEY_TABLET_LOCKED, false)
+
+    fun setTabletLocked(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_TABLET_LOCKED, value).apply()
+    }
+
+    /** Empreinte salée du code de verrouillage (lock/LockLogic.hash) ; null : aucun code choisi. */
+    fun lockCodeHash(context: Context): String? = prefs(context).getString(KEY_LOCK_CODE, null)
+
+    /** Sel du code, tiré une fois par tablette. */
+    fun lockSalt(context: Context): String = prefs(context).getString(KEY_LOCK_SALT, null)
+        ?: java.util.UUID.randomUUID().toString().also { prefs(context).edit().putString(KEY_LOCK_SALT, it).apply() }
+
+    fun setLockCodeHash(context: Context, value: String) {
+        prefs(context).edit().putString(KEY_LOCK_CODE, value).apply()
     }
 
     /** Alerte plein écran 5 min avant une réunion de l'agenda (ui/MeetingAlertOverlay). Coupée par défaut. */

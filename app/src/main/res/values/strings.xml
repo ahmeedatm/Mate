@@ -927,6 +927,25 @@
     <string name="tablet_no_address">aucune</string>
     <string name="tech_code_title">Code technicien</string>
     <string name="tech_code_wrong">Code incorrect</string>
+    <!-- Verrou de la tablette (ui/LockScreen) : à la main par le cadenas, ou ordinateur verrouillé. -->
+    <string name="lock_tablet_title">Tablette verrouillée</string>
+    <string name="lock_tablet_body">Tape ton code pour la déverrouiller.</string>
+    <string name="lock_computer_title">Ordinateur verrouillé</string>
+    <string name="lock_computer_body">Déverrouille %1$s pour utiliser la tablette.</string>
+    <string name="lock_computer_fallback">ton ordinateur</string>
+    <string name="lock_delete">Effacer</string>
+    <string name="lock_typed">%1$d chiffres sur %2$d</string>
+    <string name="lock_code_wrong">Code incorrect</string>
+    <string name="lock_wait">Trop d\'essais : réessaie dans %1$d s</string>
+    <string name="lock_code_title">Code de verrouillage</string>
+    <string name="lock_code_hint_new">Nouveau code à 4 chiffres</string>
+    <string name="lock_code_hint_again">Le même, encore une fois</string>
+    <string name="lock_code_invalid">Il faut 4 chiffres</string>
+    <string name="lock_code_mismatch">Les deux codes ne sont pas les mêmes</string>
+    <string name="lock_code_choose">Choisir le code de verrouillage</string>
+    <string name="lock_code_change">Changer le code de verrouillage</string>
+    <string name="lock_code_settings_hint">Le cadenas de la barre de gauche verrouille la tablette ; ce code la déverrouille.</string>
+    <string name="rail_lock">Verrouiller la tablette</string>
     <string name="kiosk_on">Actif : l\'appli est verrouillée à l\'écran et sert d\'écran d\'accueil.</string>
     <string name="kiosk_paused">Suspendu jusqu\'au prochain redémarrage de l\'appli.</string>
     <string name="kiosk_allow_installs">Autoriser les installations</string>

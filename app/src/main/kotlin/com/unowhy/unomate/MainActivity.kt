@@ -35,6 +35,7 @@ import com.unowhy.unomate.kiosk.AutoUpdater
 import com.unowhy.unomate.kiosk.Kiosk
 import com.unowhy.unomate.net.BackendClient
 import com.unowhy.unomate.net.CalendarEvent
+import com.unowhy.unomate.net.ComputerLocked
 import com.unowhy.unomate.net.DocEntry
 import com.unowhy.unomate.net.Link
 import com.unowhy.unomate.net.PcNotification
@@ -61,6 +62,7 @@ import com.unowhy.unomate.ui.Grain
 import com.unowhy.unomate.ui.HomeFragment
 import com.unowhy.unomate.ui.IconCache
 import com.unowhy.unomate.ui.KeyboardControl
+import com.unowhy.unomate.ui.LockScreen
 import com.unowhy.unomate.ui.Look
 import com.unowhy.unomate.ui.Navigation
 import com.unowhy.unomate.ui.PhotoFrameView
@@ -139,6 +141,8 @@ class MainActivity : AppCompatActivity() {
     /** Minute, batterie et WiFi de la tablette, pour les tâches de chaque minute et les éléments du bandeau. */
     private val signals by lazy { TabletSignals(this) }
     lateinit var callOverlay: CallOverlay
+    /** Tablette verrouillée, à la main ou parce que l'ordinateur l'est (ui/LockScreen). */
+    lateinit var lockScreen: LockScreen
         private set
     private lateinit var agentAlerts: AgentAlerts
     private lateinit var agentAsk: AgentAskOverlay
@@ -208,7 +212,8 @@ class MainActivity : AppCompatActivity() {
         topBar = findViewById(R.id.top_bar)
         topBar.attach(topHost)
         topBar.onEditDone = { if (current == Mode.HOME && homeFragment()?.isEditing() == true) homeFragment()?.toggleEdit() }
-        wake = WakeWord(this, topBar.wakeMic) { voice.start() }
+        // Tablette verrouillée : le mot de réveil ne lance rien.
+        wake = WakeWord(this, topBar.wakeMic) { if (!lockScreen.isShown) voice.start() }
         // Lumière des agents Claude sous la carte d'appel : un appel prime sur tout.
         // L'alerte de réunion est tout en bas des calques : lumière des agents, question et appel passent devant.
         meetingAlert = com.unowhy.unomate.ui.MeetingAlertOverlay(this)
@@ -233,6 +238,11 @@ class MainActivity : AppCompatActivity() {
 
         keyboard.setUp()
 
+        // Par-dessus tout, boîtes comprises ; revient après une recréation. Un 423 de l'ordinateur le pose aussi.
+        lockScreen = LockScreen(this)
+        ComputerLocked.listener = { runOnUiThread { if (!isDestroyed) lockScreen.setComputerLocked(true) } }
+        lockScreen.restore()
+
         @Suppress("DEPRECATION") // seul moyen fiable d'être prévenu sur API 24
         window.decorView.setOnSystemUiVisibilityChangeListener { flags ->
             if (flags and View.SYSTEM_UI_FLAG_FULLSCREEN == 0) {
@@ -253,6 +263,7 @@ class MainActivity : AppCompatActivity() {
         alerts = TabletAlerts(this, banner)
         findViewById<View>(R.id.rail_settings).setOnClickListener { show(Mode.SETTINGS) }
         findViewById<View>(R.id.rail_edit).setOnClickListener { editProfile() }
+        findViewById<View>(R.id.rail_lock).setOnClickListener { lockScreen.lockTablet() }
         signals.onMinute {
             Screen.apply(this@MainActivity)
             alerts.remindWater()
@@ -530,6 +541,8 @@ class MainActivity : AppCompatActivity() {
         if (isFinishing) NoisePlayer.stop()
         voice.release()
         wake.release()
+        lockScreen.dismiss()
+        ComputerLocked.listener = null
         signals.stop()
         super.onDestroy()
     }

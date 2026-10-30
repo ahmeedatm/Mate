@@ -15,6 +15,7 @@ import {
   transcriptInfo,
 } from "../agents-sources.ts";
 import { isMac, isWindows } from "../os.ts";
+import { isScreenLocked } from "../screen-lock.ts";
 import { sendToTablet, tabletStatus } from "../tablet.ts";
 import { transcribe, voiceAvailable } from "../transcribe.ts";
 
@@ -40,7 +41,8 @@ export default async function agentRoutes(app: FastifyInstance) {
     readQuota: orcaQuota,
     transcriptInfo,
     frontIsClaude: alwaysAlert ? async () => false : frontIsClaude,
-    tabletConnected: () => tabletStatus().connected,
+    // Ordinateur verrouillé : la tablette ne peut rien répondre, la demande revient tout de suite au terminal.
+    tabletConnected: () => tabletStatus().connected && !isScreenLocked(),
     // Prévenir la tablette sans attendre : l'alerte ne doit jamais retarder un hook.
     notify: (alert) => void sendToTablet({ type: "agent", ...alert }, 20_000),
     holdMs,

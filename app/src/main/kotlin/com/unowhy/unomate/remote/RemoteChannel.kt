@@ -11,6 +11,7 @@ import com.unowhy.unomate.BuildConfig
 import com.unowhy.unomate.Computer
 import com.unowhy.unomate.Computers
 import com.unowhy.unomate.MainActivity
+import com.unowhy.unomate.Prefs
 import com.unowhy.unomate.R
 import com.unowhy.unomate.audio.Speaker
 import com.unowhy.unomate.device.Screen
@@ -180,6 +181,7 @@ class RemoteChannel(private val activity: MainActivity) {
             activity.onMeeting(command.getString("state"), command.getString("app"))
             null
         }
+        "lock" -> activity.lockScreen.setComputerLocked(command.getBoolean("locked")).let { null }
         "agent" -> {
             activity.onAgent(command.getString("kind"), command.optString("askId").takeIf { command.has("askId") && !command.isNull("askId") }, command.optInt("waiting"))
             null
@@ -214,6 +216,8 @@ class RemoteChannel(private val activity: MainActivity) {
         val systemBrightness = Settings.System.getInt(activity.contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128) / 255f
         return JSONObject()
             .put("mode", activity.modeName)
+            // Écran bloquant affiché : l'ordinateur le compare à son état (backend/src/screen-lock.ts).
+            .put("locked", Prefs.computerLocked(activity))
             .put("document", activity.documentPath ?: JSONObject.NULL)
             .put("focus", focusState())
             .put("noise", NoisePlayer.kind?.name?.lowercase(Locale.ROOT) ?: JSONObject.NULL)
