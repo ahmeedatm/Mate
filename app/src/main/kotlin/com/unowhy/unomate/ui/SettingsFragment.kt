@@ -16,6 +16,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -68,6 +69,10 @@ class SettingsFragment :
         private set
 
     private lateinit var kioskCard: View
+    private lateinit var tabs: List<Pair<View, View>>
+
+    /** Onglet Personnalisation affiché (sinon Configuration) ; gardé quand un thème recrée l'écran. */
+    private var optionsTab = false
     private lateinit var kioskStatus: TextView
     private lateinit var kioskActions: View
     private lateinit var allowInstalls: SwitchCompat
@@ -115,6 +120,12 @@ class SettingsFragment :
         // Interrupteurs rendus depuis Prefs ou l'appareil : sans état de vue gardé. Sinon, à la recréation (choix d'un
         // persona, thème), Android y remet l'ancien état après le rendu et leur écouteur réécrit la valeur d'avant.
         forgetSwitchStates(view)
+        tabs = listOf(
+            view.findViewById<View>(R.id.settings_tab_setup) to view.findViewById(R.id.settings_setup),
+            view.findViewById<View>(R.id.settings_tab_options) to view.findViewById(R.id.settings_options),
+        )
+        tabs.forEachIndexed { i, (tab, _) -> tab.setOnClickListener { showTab(options = i == 1) } }
+        showTab(options = state?.getBoolean(KEY_OPTIONS_TAB) ?: false)
         computers = view.findViewById(R.id.settings_computers)
         view.findViewById<Button>(R.id.settings_add_computer).setOnClickListener { adder.search() }
         view.findViewById<Button>(R.id.settings_plugins).setOnClickListener { main.showPlugins() }
@@ -201,6 +212,22 @@ class SettingsFragment :
         }
         renderKiosk()
         loadAutoJoin()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(KEY_OPTIONS_TAB, optionsTab)
+    }
+
+    /** Configuration (ordinateurs, WiFi, plugins, démo, kiosque…) ou Personnalisation (thème, options) ; remonte en haut. */
+    private fun showTab(options: Boolean) {
+        optionsTab = options
+        tabs.forEachIndexed { i, (tab, cards) ->
+            val on = (i == 1) == options
+            tab.isSelected = on
+            cards.visibility = if (on) View.VISIBLE else View.GONE
+        }
+        view?.findViewById<ScrollView>(R.id.settings_scroll)?.scrollTo(0, 0)
     }
 
     override fun onHiddenChanged(hidden: Boolean) {
@@ -956,6 +983,7 @@ class SettingsFragment :
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
             if (input.text.toString() == BuildConfig.TECH_CODE) {
                 dialog.dismiss()
+                showTab(options = false)
                 kioskCard.visibility = View.VISIBLE
                 renderKiosk()
             } else {
@@ -1045,6 +1073,8 @@ class SettingsFragment :
     }
 
     private companion object {
+        const val KEY_OPTIONS_TAB = "settings_options_tab"
+
         /** Facteurs de la taille du texte, en plus de celle d'Android : jusqu'à une fois et demie. */
         val TEXT_SIZES = listOf(
             1f to R.string.a11y_size_normal,

@@ -117,6 +117,10 @@ class Placed(
     fun covers(c: Int, r: Int) = c in col until col + size.w && r in row until row + size.h
 }
 
+/** Noms automatiques d'avant « Accueil » et « Écran N » (dispositions v1 relues, 29/10). */
+private val LEGACY_NAME = Regex("Profil (\\d+)")
+private const val LEGACY_FIRST = "Bureau"
+
 /**
  * Disposition complète : widgets et profils. Un profil = une page ; `names[i]` null = pas encore de nom ([nameMissing]
  * lui en donne un, l'interface passe les textes : le modèle ne touche à aucune ressource).
@@ -215,16 +219,35 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         names[index] = name
     }
 
-    /** Premier nom « Profil N » (N ≥ 2) que aucun profil ne porte ; `pattern` est le modèle de nom (« Profil %d »). */
-    fun freeName(pattern: String): String =
-        generateSequence(2) { it + 1 }.map { pattern.format(it) }.first { it !in names }
+    /** Premier nom du modèle `pattern` (« Écran %d ») numéroté à partir de `from` que aucun profil ne porte. */
+    fun freeName(pattern: String, from: Int = 2): String =
+        generateSequence(from) { it + 1 }.map { pattern.format(it) }.first { it !in names }
 
-    /** Donne un nom à chaque profil qui n'en a pas : `first` au premier, le premier numéro libre aux autres. Vrai si un nom a été posé. */
+    /** `base` s'il est libre, sinon « base 2 », « base 3 »… (deux profils créés du même modèle). */
+    fun uniqueName(base: String): String =
+        if (base !in names) base else generateSequence(2) { it + 1 }.map { "$base $it" }.first { it !in names }
+
+    /**
+     * Donne un nom à chaque profil qui n'en a pas : `first` au premier, aux autres le numéro de leur place (ou le
+     * suivant libre) : le 3e écran créé s'appelle « Écran 3 ». Renomme aussi les noms automatiques d'avant : « Profil 2 »
+     * au modèle `pattern`, même numéro, et « Bureau » de l'Accueil en `first`. Vrai si un nom a été posé.
+     */
     fun nameMissing(first: String, pattern: String): Boolean {
         var named = false
+        if (rolesSet && names.getOrNull(homeProfile) == LEGACY_FIRST && first !in names) {
+            names[homeProfile] = first
+            named = true
+        }
+        for (i in names.indices) {
+            val old = names[i]?.let { LEGACY_NAME.matchEntire(it) }?.groupValues?.get(1)?.toInt()
+            if (old != null && pattern.format(old) != names[i] && pattern.format(old) !in names) {
+                names[i] = pattern.format(old)
+                named = true
+            }
+        }
         for (i in names.indices) {
             if (names[i] == null) {
-                names[i] = if (i == 0) first else freeName(pattern)
+                names[i] = if (i == 0) first else freeName(pattern, from = i + 1)
                 named = true
             }
         }

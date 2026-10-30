@@ -9,6 +9,8 @@
     <string name="mode_focus">Focus</string>
     <string name="mode_camera">Caméra</string>
     <string name="mode_settings">Réglages</string>
+    <string name="settings_tab_setup">Configuration</string>
+    <string name="settings_tab_options">Personnalisation</string>
 
     <!-- Commun -->
     <string name="error_no_computer">Aucun ordinateur connecté : Réglages › Ordinateurs › Ajouter.</string>
@@ -350,6 +352,8 @@
     <string name="media_empty_hint">Lance une vidéo YouTube ou Twitch, ou de la musique, sur l\'ordinateur</string>
     <string name="media_playing">%1$s · En lecture</string>
     <string name="media_paused">%1$s · En pause</string>
+    <string name="media_session_count">\u0020· %1$d/%2$d</string>
+    <string name="media_session_next">%1$s. Toucher pour passer à la lecture suivante</string>
     <string name="media_time">%1$s / %2$s</string>
 
     <!-- Depuis l'ordi (ancien Partage) -->

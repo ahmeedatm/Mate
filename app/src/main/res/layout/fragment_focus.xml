@@ -148,10 +148,12 @@
                 android:visibility="gone" />
         </FrameLayout>
 
-        <!-- Ambiance : reste à l'écran avec la respiration, pour changer de son à tout moment. -->
+        <!-- Ambiance : reste à l'écran avec la respiration, pour changer de son à tout moment. Fond des widgets de
+             l'Accueil : translucide dans les thèmes à tubes, qui passent derrière. -->
         <LinearLayout
             style="@style/Card"
             android:layout_width="wrap_content"
+            android:background="?attr/c_home_card_bg"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:minWidth="480dp"

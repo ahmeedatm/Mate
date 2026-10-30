@@ -208,7 +208,7 @@ class ProfilesDialog(
             Triple(R.string.profile_blank, R.string.profile_blank_desc) { added(layout.addProfile(null)) },
         ) + Template.entries.filter { it.cadran && it.listed }.map { template ->
             Triple(template.title, template.description) {
-                added(layout.addProfile(context.getString(template.title), template.widgets(layout.pages)))
+                added(layout.addProfile(layout.uniqueName(context.getString(template.title)), template.widgets(layout.pages)))
             }
         }
         val icons = listOf(R.drawable.ic_add to R.attr.c_hue_green) + Template.entries.filter { it.cadran && it.listed }.map(::templateIcon)

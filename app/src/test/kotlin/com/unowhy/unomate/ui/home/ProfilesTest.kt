@@ -128,13 +128,39 @@ class ProfilesTest {
     }
 
     @Test
-    fun `un nouveau nom par defaut prend le premier numero libre`() {
-        val layout = HomeLayout(mutableListOf(), mutableListOf("Bureau", "Profil 2", "Profil 3"))
+    fun `un nouvel ecran prend le numero de sa place, ou le suivant libre`() {
+        val layout = HomeLayout(mutableListOf(), mutableListOf("Accueil", "Écran 2", "Écran 3"))
+        layout.addProfile(null)
+        assertTrue(layout.nameMissing("Accueil", "Écran %d"))
+        assertEquals("Écran 4", layout.names[3])
         layout.removeProfile(1)
         layout.addProfile(null)
-        assertTrue(layout.nameMissing("Bureau", "Profil %d"))
-        assertEquals(listOf<String?>("Bureau", "Profil 3", "Profil 2"), layout.names)
-        assertEquals("Profil 4", layout.freeName("Profil %d"))
+        layout.nameMissing("Accueil", "Écran %d")
+        assertEquals(listOf<String?>("Accueil", "Écran 3", "Écran 4", "Écran 5"), layout.names)
+        assertEquals("Écran 2", layout.freeName("Écran %d"))
+    }
+
+    @Test
+    fun `les anciens noms automatiques Profil N deviennent Ecran N`() {
+        val layout = HomeLayout(mutableListOf(), mutableListOf("Bureau", "Profil 2", null))
+        assertTrue(layout.nameMissing("Accueil", "Écran %d"))
+        assertEquals(listOf<String?>("Bureau", "Écran 2", "Écran 3"), layout.names)
+        assertFalse(layout.nameMissing("Accueil", "Écran %d"))
+    }
+
+    @Test
+    fun `l Accueil nomme Bureau par l ancien format devient Accueil`() {
+        val layout = HomeLayout(mutableListOf(), mutableListOf("Bureau", "Profil 2"))
+        layout.rolesSet = true
+        assertTrue(layout.nameMissing("Accueil", "Écran %d"))
+        assertEquals(listOf<String?>("Accueil", "Écran 2"), layout.names)
+    }
+
+    @Test
+    fun `deux ecrans du meme modele sont numerotes`() {
+        val layout = HomeLayout(mutableListOf(), mutableListOf("Accueil", "Bureau"))
+        assertEquals("Bureau 2", layout.uniqueName("Bureau"))
+        assertEquals("Veille", layout.uniqueName("Veille"))
     }
 
     @Test
