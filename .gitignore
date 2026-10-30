@@ -35,3 +35,8 @@ backend/config/tasks.json
 backend/.data/
 shared/*
 !shared/.gitkeep
+
+# Fichiers de travail d'Impeccable et du MCP Playwright
+.impeccable/review/
+.impeccable/questions/
+.playwright-mcp/
