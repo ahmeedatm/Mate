@@ -17,7 +17,7 @@ class PrivacyTest {
 
     @Test
     fun `chaque destinataire de donnees est nomme`() {
-        for (recipient in listOf("Google", "MET Norway", "YouTube", "Microsoft", "serveur de mises à jour d'Unowhy")) {
+        for (recipient in listOf("Google", "MET Norway", "YouTube", "Microsoft", "GitHub")) {
             assertTrue(recipient, recipient in app)
         }
     }

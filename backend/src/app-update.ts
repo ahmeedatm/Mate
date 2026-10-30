@@ -8,7 +8,7 @@ import { tabletAddress } from "./tablet.ts";
 
 /**
  * Mise à jour de l'appli portable depuis la tablette : elle sert sur le WiFi (port 8080) les installeurs qu'elle a
- * téléchargés du serveur central, avec leur version et leur SHA-256 (`/installers.json`). Le panneau télécharge celui de
+ * téléchargés de GitHub, avec leur version et leur SHA-256 (`/installers.json`). Le panneau télécharge celui de
  * ce système, vérifie taille et empreinte, remplace l'exe ou l'appli sur place et la relance : le nouveau lanceur
  * demande à l'ancien de quitter (POST /local/quit) puis extrait son runtime.
  * L'empreinte vient de la tablette elle-même, sur le réseau local : elle protège d'un fichier abîmé, pas d'un réseau hostile.

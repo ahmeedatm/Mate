@@ -13,15 +13,15 @@ import java.io.File
 import java.io.IOException
 
 /**
- * Backend de l'ordinateur actif pour l'essai d'une MR. Les archives viennent du registre (jeton de lecture de la
+ * Backend de l'ordinateur actif pour l'essai d'une PR. Les archives viennent de la release `essais` (jeton de lecture de la
  * tablette) et sont envoyées à l'ordinateur par son jeton d'appairage : aucun secret ne passe à l'ordinateur.
  * L'ordinateur garde seul la copie de son backend d'origine (backend/src/essai-backend.ts).
  */
 object EssaiBackend {
 
     /**
-     * Met l'ordinateur actif sur le backend de la MR `mr` (`hasBackend`), ou sur son origine sinon. `essai` : l'entrée
-     * du registre si on l'a déjà, sinon relue. Sans ordinateur appairé, rien à faire. Sans backend à poser,
+     * Met l'ordinateur actif sur le backend de la PR `mr` (`hasBackend`), ou sur son origine sinon. `essai` : l'entrée
+     * de la release si on l'a déjà, sinon relue. Sans ordinateur appairé, rien à faire. Sans backend à poser,
      * un ordinateur injoignable n'arrête rien : il n'y a rien à lui reprendre.
      */
     suspend fun sync(context: Context, mr: Int, hasBackend: Boolean, essai: Essai? = null) {
@@ -34,7 +34,7 @@ object EssaiBackend {
         val state = updates.backendState()
         val entry = essai ?: Updater.essais(context).firstOrNull { it.mr == mr }
         if (entry == null) {
-            // MR retirée du registre : le backend déjà posé reste, il n'y a rien d'autre à envoyer.
+            // PR retirée de la release : le backend déjà posé reste, il n'y a rien d'autre à envoyer.
             if (state.mode == "essai" && state.mr == mr) return
             throw UserFacingException(R.string.trial_backend_gone)
         }

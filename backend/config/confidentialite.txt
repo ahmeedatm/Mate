@@ -1,11 +1,11 @@
 Mate : politique de confidentialité
 Version du 29 octobre 2026
 
-Mate est édité par Unowhy (www.unowhy.com). Il se compose d'une appli pour tablette et d'un logiciel pour ordinateur, le « compagnon ». Pour toute question sur vos données ou pour exercer vos droits, contactez Unowhy depuis son site.
+Mate est un projet indépendant. Il se compose d'une appli pour tablette et d'un logiciel pour ordinateur, le « compagnon ». Pour toute question sur vos données ou pour exercer vos droits, contactez le projet depuis sa page GitHub : https://github.com/ahmeedatm/Mate.
 
 VOS DONNÉES RESTENT CHEZ VOUS
 
-La tablette et l'ordinateur communiquent directement sur votre réseau local, de façon chiffrée. Vos tâches, votre agenda, vos raccourcis et vos réglages sont enregistrés sur votre tablette et sur votre ordinateur, pas chez Unowhy. Mate ne contient ni publicité, ni mesure d'audience, ni rapport de plantage, et ne demande aucun compte Unowhy.
+La tablette et l'ordinateur communiquent directement sur votre réseau local, de façon chiffrée. Vos tâches, votre agenda, vos raccourcis et vos réglages sont enregistrés sur votre tablette et sur votre ordinateur, pas chez un tiers. Mate ne contient ni publicité, ni mesure d'audience, ni rapport de plantage, et ne demande aucun compte.
 
 CE QUI EST ENREGISTRÉ SUR VOS APPAREILS
 
@@ -21,7 +21,7 @@ Page Média. Sur Mac, pour afficher la pochette du morceau en cours, l'ordinateu
 
 Comptes que vous reliez. Si vous reliez un compte Microsoft ou Google, l'ordinateur lit votre agenda directement chez ce fournisseur, et, pour Microsoft, l'expéditeur, l'objet et la date de vos derniers courriels (jamais leur contenu). Vous pouvez délier le compte à tout moment.
 
-Mises à jour. La tablette interroge le serveur de mises à jour d'Unowhy. Il ne reçoit aucune information sur vous, seulement l'adresse IP nécessaire à la connexion.
+Mises à jour. La tablette interroge GitHub (releases du projet). GitHub ne reçoit aucune information sur vous, seulement l'adresse IP nécessaire à la connexion.
 
 Ce que vous ouvrez. Les pages web, liens d'agenda, réunions et services que vous choisissez (par exemple une recherche faite à la voix, ouverte dans le navigateur de l'ordinateur) sont contactés directement depuis vos appareils.
 

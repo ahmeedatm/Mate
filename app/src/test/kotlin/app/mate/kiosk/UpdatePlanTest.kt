@@ -2,7 +2,6 @@ package app.mate.kiosk
 
 import app.mate.net.AppUpdate
 import app.mate.net.UpdateSource
-import app.mate.net.UpdatesApi
 import app.mate.net.parseUpdates
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -77,9 +76,9 @@ class UpdatePlanTest {
 
     @Test
     fun `reachedAnySource faux quand toutes les sources echouent`() {
-        // Démarrage hors ligne : la seule source tentée (serveur central) est en erreur réseau.
+        // Démarrage hors ligne : la seule source tentée (GitHub) est en erreur réseau.
         assertFalse(UpdatePlan.reachedAnySource(attempted = 1, errored = 1))
-        // Ordinateur + serveur, les deux injoignables.
+        // Ordinateur + GitHub, les deux injoignables.
         assertFalse(UpdatePlan.reachedAnySource(attempted = 2, errored = 2))
     }
 
@@ -87,27 +86,20 @@ class UpdatePlanTest {
     fun `reachedAnySource vrai des qu'une source repond`() {
         // Une source a répondu (même « rien à installer », même 401/404 hors erreurs).
         assertTrue(UpdatePlan.reachedAnySource(attempted = 1, errored = 0))
-        // Ordinateur injoignable mais serveur central joignable.
+        // Ordinateur injoignable mais GitHub joignable.
         assertTrue(UpdatePlan.reachedAnySource(attempted = 2, errored = 1))
         // Aucune source configurée (build debug sans URL ni ordinateur) : rien à réessayer.
         assertTrue(UpdatePlan.reachedAnySource(attempted = 0, errored = 0))
     }
 
     @Test
-    fun `parseUpdates lit le manifest du serveur central`() {
+    fun `parseUpdates lit le manifest de GitHub`() {
         val json = """{"updates":[{"package":"app.mate","label":"Mate","versionCode":10300,"versionName":"1.3.0",
             "file":"companion-1.3.0.apk","size":4200000,"sha256":"0f"}]}"""
         assertEquals(
             listOf(AppUpdate(companion, "Mate", 10300, "1.3.0", "companion-1.3.0.apk", 4_200_000, "0f", UpdateSource.SERVER)),
             parseUpdates(json, UpdateSource.SERVER),
         )
-    }
-
-    @Test
-    fun `parseHeader lit Nom deux-points valeur`() {
-        assertEquals(mapOf("Deploy-Token" to "abc:def"), UpdatesApi.parseHeader("Deploy-Token: abc:def"))
-        assertEquals(emptyMap<String, String>(), UpdatesApi.parseHeader(""))
-        assertEquals(emptyMap<String, String>(), UpdatesApi.parseHeader("sans-separateur"))
     }
 
     @Test

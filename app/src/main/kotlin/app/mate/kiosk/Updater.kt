@@ -38,8 +38,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Mises à jour installées par le Mate lui-même, sans personne : moteur web (WebView, figé en 81 par le kiosque)
- * et le Mate. Deux sources : l'ordinateur relié (« serveur Unowhy » simulé) et le serveur central (GitLab Pages,
- * `BuildConfig.UPDATE_URL`), qui marche sans ordinateur. Device owner : Android installe sans demander de
+ * et le Mate. Deux sources : l'ordinateur relié et les releases GitHub du projet (`BuildConfig.UPDATE_REPO`, lues
+ * par l'API avec `UPDATE_TOKEN`), qui marchent sans ordinateur. Device owner : Android installe sans demander de
  * confirmation. Sécurité : empreinte SHA-256 du fichier comparée à celle annoncée, puis Android refuse toute
  * mise à jour qui n'est pas signée par le même éditeur (Google pour le WebView).
  */
@@ -75,12 +75,12 @@ object Updater {
         try { Result.success(block()) } catch (e: CancellationException) { throw e } catch (e: Exception) { Result.failure(e) }
 
     /**
-     * Serveur central. Rien de publié (404) ou Pages privées (redirection vers la page de connexion GitLab, donc du
-     * HTML) : aucune mise à jour, pas une erreur. Réseau absent : phrase propre au serveur (errorText parlerait de l'ordinateur).
+     * GitHub. Rien de publié (404), jeton absent ou refusé (401, 404 sur un dépôt privé) : aucune mise à jour, pas
+     * une erreur. Réseau absent : phrase propre à GitHub (errorText parlerait de l'ordinateur).
      */
     private suspend fun serverList(api: UpdatesApi): List<AppUpdate> = lenient { api.list() }
 
-    /** Essais de MR publiés dans le registre, la plus récente d'abord ; aucun si rien n'est publié. */
+    /** Essais de PR publiés dans la release `essais`, la plus récente d'abord ; aucun si rien n'est publié. */
     suspend fun essais(context: Context): List<Essai> {
         val api = UpdatesApi.essais() ?: return emptyList()
         return lenient { api.essais() }
@@ -91,16 +91,16 @@ object Updater {
     } catch (e: CancellationException) {
         throw e
     } catch (e: HttpException) {
-        if (e.code in 300..499) emptyList<T>().also { Log.i("Updater", "Serveur central : rien de publié (${e.code})") } else throw serverError(e)
+        if (e.code in 300..499) emptyList<T>().also { Log.i("Updater", "GitHub : rien de publié (${e.code})") } else throw serverError(e)
     } catch (e: JSONException) {
-        Log.i("Updater", "Serveur central : pas de manifest lisible", e)
+        Log.i("Updater", "GitHub : pas de manifest lisible", e)
         emptyList()
     } catch (e: Exception) {
         throw serverError(e)
     }
 
     private fun serverError(e: Exception): UserFacingException {
-        Log.w("Updater", "Serveur central injoignable", e)
+        Log.w("Updater", "GitHub injoignable", e)
         return UserFacingException(R.string.update_server_unreachable)
     }
 
@@ -125,7 +125,7 @@ object Updater {
     }
 
     /**
-     * Désinstalle un paquet sans confirmation (device owner) : l'essai d'une MR au pipeline plus ancien que l'essai
+     * Désinstalle un paquet sans confirmation (device owner) : l'essai d'une PR à la version plus ancienne que l'essai
      * installé, qu'Android refuserait de remplacer. Ses données partent avec ; il reprend les ordinateurs de la stable.
      * Appelé pendant [install], installations déjà permises ([Kiosk.lockApps]).
      */
@@ -161,16 +161,16 @@ object Updater {
                     progress(percent)
                 }
             } catch (e: IOException) {
-                // Le serveur central répond en HTML (page d'erreur GitLab) : jamais affiché tel quel.
+                // Erreur de GitHub (réponse HTTP, JSON) : jamais affichée telle quelle.
                 if (update.source != UpdateSource.SERVER) throw e
-                Log.w("Updater", "Téléchargement depuis le serveur central impossible", e)
+                Log.w("Updater", "Téléchargement depuis GitHub impossible", e)
                 throw UserFacingException(R.string.update_server_download_failed)
             }
             if (!sha256.equals(update.sha256, ignoreCase = true)) throw UserFacingException(R.string.update_file_corrupt)
             // Le blocage des installations s'applique aussi au device owner : levé le temps de l'installation.
             Kiosk.lockApps(app, false)
             try {
-                // Essai d'une MR au pipeline plus ancien que l'essai installé : Android refuse la version plus basse.
+                // Essai d'une PR à la version plus ancienne que l'essai installé : Android refuse la version plus basse.
                 // Après le téléchargement vérifié : un échec avant ne coûte pas l'essai installé.
                 val installedCode = installed(app, update.pkg)?.let { versionCode(it) }
                 if (update.source == UpdateSource.TRIALS && EssaiPlan.install(update.versionCode, installedCode) == EssaiPlan.Install.UNINSTALL_FIRST) {

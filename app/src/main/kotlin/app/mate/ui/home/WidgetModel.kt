@@ -374,11 +374,6 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         /** Disposition enregistrée telle quelle (null : jamais enregistrée, le modèle par défaut s'applique). */
         fun raw(context: Context): String? = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
 
-        /** Remet une disposition lue par [raw] ; null efface l'enregistrée. */
-        fun restore(context: Context, raw: String?) {
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, raw).apply()
-        }
-
         /** Disposition invalide (widget inconnu, chevauchement) : on la refuse en entier, le modèle la remplace. */
         private fun parse(raw: String): HomeLayout {
             val json = JSONObject(raw)

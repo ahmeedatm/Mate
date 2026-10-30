@@ -5,7 +5,7 @@ import { CADRAN_CSS, FAVICON, ICON_SVG } from "./web-style.ts";
  * Page http://127.0.0.1:3000/ ouverte sur l'ordinateur (le panneau de l'appli : relancer « Mate » la rouvre) :
  * barre de gauche (état du compagnon et de la tablette, sections), puis les sections l'une sous l'autre : réglages de la
  * tablette connectée avec son aperçu dessiné, connexion d'une tablette (code d'appairage affiché par la tablette),
- * agenda, GitLab et la carte « Cette appli » (lancement au démarrage, pare-feu, ancienne installation, mise à jour,
+ * agenda, GitLab et la carte « Cette appli » (lancement au démarrage, pare-feu, mise à jour,
  * quitter, tout oublier). La barre liste les `main > section[data-title]` dans l'ordre de la page.
  * Lue sans jeton, en local seulement (voir isLocalPage dans server.ts).
  */
@@ -297,8 +297,7 @@ ${FAVICON}
           <div class="label">Thème</div>
           <div class="themes">
             <button data-theme="CLAIR"><span></span>Clair</button><button data-theme="SOMBRE"><span></span>Sombre</button><button data-theme="CADRAN"><span></span>Cadran</button><button data-theme="CADRAN_NUIT"><span></span>Cadran nuit</button><button data-theme="RETRO"><span></span>Rétro</button>
-            <button data-theme="CONTRASTE"><span></span>Contraste élevé</button><button data-theme="REGISTRE"><span></span>Registre</button><button data-theme="STUDIO"><span></span>Studio</button>
-            <button data-theme="MAISON"><span></span>Maison</button><button data-theme="TABLEAU"><span></span>Tableau</button><button data-theme="TERMINAL"><span></span>Terminal</button>
+            <button data-theme="CONTRASTE"><span></span>Contraste élevé</button>
           </div>
           <div class="row"><label for="brightness">Luminosité de l'écran</label><input type="range" id="brightness" min="5" max="100"><span class="value" id="brightnessvalue"></span></div>
           <div class="row"><label for="volume">Volume du haut-parleur</label><input type="range" id="volume" min="0" max="100"><span class="value" id="volumevalue"></span></div>
@@ -434,10 +433,6 @@ ${FAVICON}
       <div id="firewallrow" hidden>
         <div class="row"><span class="grow" id="firewallstate"></span><button id="firewallopen">Ouvrir le pare-feu</button></div>
         <div class="dim note">Réseaux privés seulement. Windows demande l'accord d'un administrateur.</div>
-      </div>
-      <div id="legacyrow" hidden>
-        <div class="row"><span class="grow"><b>Ancienne installation trouvée</b><br><span class="dim" id="legacylist"></span></span><button id="legacyremove">Retirer</button></div>
-        <div class="dim note">Tes réglages, ton agenda et l'appairage de la tablette sont gardés.</div>
       </div>
       <div class="row"><span class="grow" id="appupdatestate">Mise à jour depuis la tablette (même WiFi).</span><button class="ghost" id="updatecheck">Chercher</button><button id="updateinstall" hidden>Installer</button></div>
       <div class="row"><span class="grow">Extension du navigateur (onglets, page Média) : à charger en mode développeur depuis <code id="extpath"></code></span></div>
@@ -765,8 +760,6 @@ ${FAVICON}
       $("firewallrow").hidden = p.firewall === null;
       $("firewallstate").textContent = p.firewall ? "Pare-feu ouvert : la tablette peut joindre ce PC." : "Pare-feu fermé : la tablette ne trouvera pas ce PC.";
       $("firewallopen").hidden = p.firewall === true;
-      $("legacyrow").hidden = p.legacy.length === 0;
-      $("legacylist").textContent = p.legacy.join(" · ");
       $("extpath").textContent = p.extension;
     } catch (e) {
       $("panel").hidden = true;
@@ -781,8 +774,6 @@ ${FAVICON}
   $("autostart").onchange = (e) => act(() => post("/local/autostart", { on: e.target.checked }),
     (r) => r.autostart ? "Lancement au démarrage activé." : "Lancement au démarrage retiré.");
   $("firewallopen").onclick = () => act(() => post("/local/firewall"), (r) => r.ok ? "Pare-feu ouvert." : "Pare-feu inchangé : l'accord administrateur a été refusé.");
-  $("legacyremove").onclick = () => act(() => post("/local/legacy/remove"),
-    (r) => r.failed.length ? "Pas pu retirer : " + r.failed.join(", ") : "Ancienne installation retirée.");
   $("updatecheck").onclick = () => act(async () => {
     const r = await (await fetch("/local/update")).json().then((j) => j.error ? Promise.reject(new Error(j.error)) : j);
     $("updateinstall").hidden = !r.available;
@@ -811,11 +802,6 @@ ${FAVICON}
     SOMBRE: ["#100D0D", "#221F1F", "#E9E1E0", "#D0C4C3", "#FF5165", "#4D4545", "#E9E1E0"],
     RETRO: ["#F3DECB", "#FBEFE3", "#552805", "#7A4A25", "#B82800", "#D9B99A", "#552805"],
     CONTRASTE: ["#FFFFFF", "#F2F2F2", "#140F0F", "#140F0F", "#960026", "#140F0F", "#140F0F"],
-    REGISTRE: ["#F8F3E5", "#FFFDF6", "#1D1C14", "#4A4838", "#B3261E", "#D6CFB8", "#175E34"],
-    STUDIO: ["#F6F3F6", "#FFFFFF", "#1B1B1E", "#4A4850", "#C0153A", "#D4D0D8", "#513FFF"],
-    MAISON: ["#FFF1E7", "#FFFAF5", "#211A14", "#5A4A3E", "#B3412F", "#E3CDBD", "#456179"],
-    TABLEAU: ["#F4F3F5", "#FFFFFF", "#1A1C1D", "#44484C", "#C62828", "#C9CDD2", "#005592"],
-    TERMINAL: ["#0C0F0C", "#171B17", "#E2E3DD", "#A9AFA3", "#FFB000", "#2E352E", "#43E188"],
   };
   const VARS = ["bg", "tile", "ink", "ink2", "now", "line"];
   for (const btn of document.querySelectorAll(".themes button")) {

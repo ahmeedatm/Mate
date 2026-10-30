@@ -75,14 +75,12 @@ import app.mate.ui.RailSwipeLayout
 import app.mate.ui.ReadingAids
 import app.mate.ui.SettingsFragment
 import app.mate.ui.TabletAlerts
-import app.mate.ui.ThemePattern
 import app.mate.ui.TourModel
 import app.mate.ui.TourOverlay
 import app.mate.ui.Typing
 import app.mate.ui.WelcomeView
 import app.mate.ui.dp
 import app.mate.ui.errorText
-import app.mate.ui.home.Demo
 import app.mate.ui.home.Down
 import app.mate.ui.home.FlowBandView
 import app.mate.ui.home.HomeLayout
@@ -198,7 +196,6 @@ class MainActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContentView(R.layout.activity_main)
         Grain.applyTo(findViewById(android.R.id.content))
-        ThemePattern.applyTo(findViewById(android.R.id.content))
         Speaker.init(this)
         Prefs.focusPreset(this).let { FocusTimer.restore(it.focus, it.pause) }
         NoisePlayer.init(this)
@@ -320,15 +317,7 @@ class MainActivity : AppCompatActivity() {
         // l'écran « Tes plugins » reviendrait à chaque changement de thème.
         savedInstanceState?.getStringArrayList(STATE_PLUGINS_LATER)?.let { pluginsLater += it }
         val restored = savedInstanceState?.getString(STATE_MODE)?.let(Mode::of)
-        // Un persona de la démo vient d'être choisi (Réglages > Démo) : on arrive sur son écran. Les écrans restaurés
-        // n'ont pas encore leur vue : les cacher ou les montrer ici les ferait planter, ils sont recréés.
-        val arrival = Demo.takeArrival(this)
-        if (arrival != null && arrival != restored) {
-            val tx = supportFragmentManager.beginTransaction()
-            supportFragmentManager.fragments.forEach { tx.remove(it) }
-            tx.commitNow()
-        }
-        show(arrival ?: restored ?: Mode.HOME)
+        show(restored ?: Mode.HOME)
         // Premier lancement (ou plus aucun ordinateur) : écran de bienvenue.
         if (savedInstanceState == null && Computers.all(this).isEmpty()) welcome.show()
         // Tablette déjà appairée qui n'a jamais vu la visite (mise à jour) : elle la voit une fois.
@@ -346,7 +335,6 @@ class MainActivity : AppCompatActivity() {
         }
         showLink(Link(Computers.active(this), Link.State.OFFLINE))
         remote.restart()
-        quitStrayDemo()
     }
 
     private fun showLink(link: Link) {
@@ -378,16 +366,6 @@ class MainActivity : AppCompatActivity() {
         topBar.restart()
         if (automatic && computer != null) showBanner(getString(R.string.computer_switched, computer.name), 6)
         offerPlugins()
-        quitStrayDemo()
-    }
-
-    /**
-     * Tablette sans persona (essai ↔ stable, réinstallation) : l'ordinateur ne doit pas garder une démo, ses touches,
-     * tâches et agenda d'origine lui sont rendus. Sans effet s'il n'y en a pas ; silencieux si l'ordinateur ne répond pas.
-     */
-    private fun quitStrayDemo() {
-        if (Demo.active(this) != null || Computers.active(this) == null) return
-        lifecycleScope.launch { runCatchingCancellable { BackendClient(this@MainActivity).demo.quit() } }
     }
 
     /** Chaque écran est recréé : il relit le deck, l'agenda, les tâches et les documents de l'ordinateur actif. */

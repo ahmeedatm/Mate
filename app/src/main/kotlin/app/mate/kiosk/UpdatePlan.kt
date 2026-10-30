@@ -10,7 +10,7 @@ object UpdatePlan {
 
     /**
      * Par paquet, dans l'ordre d'arrivée : la plus haute versionCode. À égalité, celle de la première liste (l'ordinateur,
-     * sur le réseau local, télécharge plus vite). Les essais de MR n'en font pas partie (registre à part, voir `trial/`).
+     * sur le réseau local, télécharge plus vite). Les essais de PR n'en font pas partie (release à part, voir `trial/`).
      */
     fun merge(vararg sources: List<AppUpdate>): List<AppUpdate> =
         sources.flatMap { it }.groupBy { it.pkg }.values.map { same -> same.maxBy { it.versionCode } }
@@ -35,7 +35,7 @@ object UpdatePlan {
     /**
      * Une vérification a abouti dès qu'au moins une source a répondu : on peut attendre l'intervalle plein avant la
      * suivante. Démarrage hors ligne, toutes les sources tentées en erreur : rien n'a abouti, à refaire au tick suivant.
-     * Un 401/404 du serveur central n'est pas une erreur (aucune mise à jour) ; aucune source tentée non plus.
+     * Un 401/404 de GitHub n'est pas une erreur (aucune mise à jour) ; aucune source tentée non plus.
      */
     fun reachedAnySource(attempted: Int, errored: Int): Boolean = attempted == 0 || errored < attempted
 }

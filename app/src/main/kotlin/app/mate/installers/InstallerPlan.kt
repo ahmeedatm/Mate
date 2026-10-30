@@ -5,7 +5,7 @@ import org.json.JSONObject
 
 enum class Os(val key: String) { MAC("mac"), WINDOWS("windows") }
 
-/** Installeur de l'ordinateur annoncé par le serveur central (clé `installers` de manifest.json) ou gardé sur la tablette. */
+/** Installeur de l'ordinateur annoncé par GitHub (clé `installers` de manifest.json) ou gardé sur la tablette. */
 data class Installer(val os: Os, val file: String, val size: Long, val sha256: String, val version: String)
 
 /** Choix des installeurs à télécharger et de l'OS du visiteur, sans Android (testé dans app/src/test). */

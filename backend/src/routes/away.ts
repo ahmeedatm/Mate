@@ -2,10 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { fileStore, resumeAway, startAway, type AwayDeps } from "../away.ts";
 import { controlOpenWindow, listOpenWindows } from "../os.ts";
 
-/**
- * Absence de la tablette (src/away.ts). En démo, `demoAnswer` répond avant ces routes : les fenêtres fictives du persona,
- * jamais celles de l'ordinateur.
- */
+/** Absence de la tablette (src/away.ts). */
 export default async function awayRoutes(app: FastifyInstance) {
   const deps: AwayDeps = { list: listOpenWindows, control: controlOpenWindow, ...fileStore() };
 

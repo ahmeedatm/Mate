@@ -61,7 +61,7 @@ describe("panneau Tablette", () => {
     assert.equal(done.json.tablet.settings.theme, "RETRO");
   });
 
-  for (const theme of ["CONTRASTE", "TERMINAL"]) {
+  for (const theme of ["CONTRASTE", "CADRAN_NUIT"]) {
     it(`accepte le thème ${theme}`, async () => {
       const polling = server.call("POST", "/tablet/poll", { state: STATE });
       await new Promise((r) => setTimeout(r, 300));

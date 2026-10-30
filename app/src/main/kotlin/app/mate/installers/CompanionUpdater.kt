@@ -18,8 +18,8 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Mise à jour du compagnon de l'ordinateur actif depuis la tablette : archive du backend de la dernière release (serveur
- * central, ou « serveur Unowhy » de l'ordinateur), vérifiée puis envoyée par le jeton d'appairage
+ * Mise à jour du compagnon de l'ordinateur actif depuis la tablette : archive du backend de la dernière release (GitHub,
+ * ou l'ordinateur), vérifiée puis envoyée par le jeton d'appairage
  * (POST /companion/backend/update) ; l'ordinateur la pose et redémarre. Aucun secret ne passe à l'ordinateur.
  */
 object CompanionUpdater {

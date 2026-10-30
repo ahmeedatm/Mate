@@ -73,16 +73,6 @@
     <attr name="c_flow_cream" format="color" />
     <attr name="c_grain_light" format="color" />
     <attr name="c_grain_dark" format="color" />
-    <!-- Thèmes de démo : motif dessiné une fois par-dessus l'écran (ui/ThemePattern), de la couleur c_pattern_color (alpha compris) :
-         filets de registre, forme d'accent, trame de tableau, lignes de scan. Absent = aucun. -->
-    <attr name="c_pattern" format="enum">
-        <enum name="none" value="0" />
-        <enum name="ledger" value="1" />
-        <enum name="accent" value="2" />
-        <enum name="grid" value="3" />
-        <enum name="scan" value="4" />
-    </attr>
-    <attr name="c_pattern_color" format="color" />
     <!-- Console de l'onglet Son du deck (plaque, afficheurs, curseurs, LED), tirées des tons de Cadran : ui/mixer/. -->
     <attr name="c_mx_plate_top" format="color" />
     <attr name="c_mx_plate_bottom" format="color" />

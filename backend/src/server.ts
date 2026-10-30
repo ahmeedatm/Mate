@@ -5,7 +5,6 @@ import Fastify from "fastify";
 import multipart from "@fastify/multipart";
 import { config } from "./config.ts";
 import { startCallWatch } from "./calls.ts";
-import { activePersona, demoAnswer } from "./demo-mock.ts";
 import { clipboardHistory, watchClipboard } from "./clipboard-history.ts";
 import { startEventReminders } from "./events.ts";
 import { GitLabError } from "./gitlab.ts";
@@ -28,7 +27,6 @@ import calendarRoutes from "./routes/calendar.ts";
 import callRoutes from "./routes/calls.ts";
 import cameraRoutes from "./routes/camera.ts";
 import deckRoutes from "./routes/deck.ts";
-import demoRoutes from "./routes/demo.ts";
 import docRoutes from "./routes/docs.ts";
 import gitlabRoutes from "./routes/gitlab.ts";
 import jiraRoutes from "./routes/jira.ts";
@@ -96,7 +94,7 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     (/^(POST|PUT|DELETE)$/.test(method) && /^\/local\/config\/[a-z0-9/-]+$/.test(url)) ||
     (method === "POST" && (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update")) ||
     // Panneau de l'appli portable (routes/portable.ts) : corps JSON exigé, pas envoyable par un autre site.
-    (method === "POST" && /^\/local\/(autostart|firewall|legacy\/remove|forget|quit|update)$/.test(url)) ||
+    (method === "POST" && /^\/local\/(autostart|firewall|forget|quit|update)$/.test(url)) ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
     (method === "POST" && (url === "/browser/extension" || url === "/browser/extension/commands")) ||
     // Porte MCP des IA de bureau (routes/mcp.ts) : corps JSON exigé par le SDK, pas envoyable par un autre site.
@@ -136,15 +134,6 @@ app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validat
   reply.send(err);
 });
 
-// Démo (src/demo-mock.ts) : tant qu'un persona est actif ET que la tablette envoie le même (en-tête X-Demo-Persona), les
-// routes qui lisent l'ordinateur répondent avec ses données fictives, et leurs actions changent cet état fictif sans
-// toucher à l'ordinateur. Tablette sans persona ou avec un autre : les vraies données. Avant le contrôle de l'OS : la démo
-// marche aussi sur un ordinateur que le compagnon ne pilote pas.
-app.addHook("preHandler", async (req, reply) => {
-  const answer = await demoAnswer(req.method, req.routeOptions.url ?? "", req);
-  if (answer !== undefined) return reply.send(answer);
-});
-
 // Pilotage de l'ordinateur (deck d'applis et de raccourcis, son, micro) : macOS et Windows seulement.
 // Ailleurs, le deck se lit et ses touches perso se modifient ; toucher une touche répond 501 (os.ts : unsupported).
 const DECK_ANYWHERE = /^\/deck(\/keys\/\d+|\/run)?(\?|$)/;
@@ -179,7 +168,6 @@ app.register(mcpRoutes);
 app.register(portableRoutes);
 app.register(deckRoutes);
 app.register(pluginRoutes);
-app.register(demoRoutes);
 app.register(windowRoutes);
 app.register(awayRoutes);
 app.register(systemRoutes);
@@ -210,8 +198,7 @@ void startCallWatch((event) => void sendToTablet({ type: "call", ...event }, 30_
 if (canControl) {
   startMeetingWatch((event) => void sendToTablet({ type: "meeting", ...event }), {
     connected: () => tabletStatus().connected,
-    // Démo : aucun appel (le vrai appel de l'ordinateur ferait quitter l'écran d'arrivée du persona).
-    liveApps: async () => ((await activePersona()) ? [] : callingDeckApps()),
+    liveApps: callingDeckApps,
   });
 }
 // Ordinateur verrouillé : la tablette se bloque, l'API se ferme (hook ci-dessus). Relu même sans tablette.

@@ -14,7 +14,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Installeurs de l'ordinateur (Mac, Windows) : téléchargés d'avance depuis le serveur central quand une release en
+ * Installeurs de l'ordinateur (Mac, Windows) : téléchargés d'avance depuis GitHub quand une release en
  * publie de nouveaux (empreinte SHA-256 vérifiée, seule la dernière version gardée), puis servis sur le WiFi par
  * [InstallerHttpServer]. Sur le WiFi seulement (aucun forfait n'est entamé) ; jamais d'erreur à l'écran.
  */
@@ -48,7 +48,7 @@ object InstallerService {
         return identity to InstallerPlan.newerFor(identity.os, identity.version, onDisk)
     }
 
-    /** Vérifie le manifeste du serveur central et met à jour les fichiers ; appelée à chaque vérification des mises à jour. */
+    /** Vérifie le manifeste de GitHub et met à jour les fichiers ; appelée à chaque vérification des mises à jour. */
     suspend fun sync(context: Context) {
         if (BuildConfig.TRIAL || Wifi.current(context) == null) return
         val api = UpdatesApi.server() ?: return
@@ -61,7 +61,7 @@ object InstallerService {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Manifeste absent (404, Pages privées), réseau coupé, disque plein : réessai à la prochaine vérification.
+            // Manifeste absent (404), réseau coupé, disque plein : réessai à la prochaine vérification.
             Log.i(TAG, "Installeurs non mis à jour", e)
         }
     }

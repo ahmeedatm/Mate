@@ -10,7 +10,7 @@ import app.mate.kiosk.Kiosk
 import app.mate.kiosk.Updater
 
 /**
- * Appli d'essai d'une MR (`app.mate.essai`, version X.Y.Z-essai.N), installée à côté de la stable.
+ * Appli d'essai d'une PR (`app.mate.essai`, version X.Y.Z-essai.N), installée à côté de la stable.
  * La stable reste device owner : elle installe l'essai (Réglages > Mises à jour), l'autorise en kiosque
  * ([Kiosk.enter]) et l'ouvre. L'essai reprend les ordinateurs appairés de la stable et lui rend la main.
  */

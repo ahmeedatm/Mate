@@ -45,9 +45,9 @@ class TabletSettingsTest {
     }
 
     @Test
-    fun `un theme de persona est accepte depuis la page de l'ordinateur, hors demo`() {
-        assertTrue(TabletSettings.save(context, JSONObject().put("theme", "TERMINAL")))
-        assertEquals("TERMINAL", TabletSettings.read(context, 0.5f, 0.4f).getString("theme"))
+    fun `un theme de la page de l'ordinateur est accepte`() {
+        assertTrue(TabletSettings.save(context, JSONObject().put("theme", "CONTRASTE")))
+        assertEquals("CONTRASTE", TabletSettings.read(context, 0.5f, 0.4f).getString("theme"))
     }
 
     @Test

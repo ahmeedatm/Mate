@@ -1,25 +1,24 @@
-// Serveur central des mises à jour de la tablette. Trois usages :
+// Mises à jour de la tablette, publiées dans des releases GitHub. Quatre usages :
 //
-//   node scripts/updates-publish.mjs dist updates                  release : paquet …/companion-updates/latest
-//   node scripts/updates-publish.mjs --essai <iid> dist essais     essai de la MR <iid> : paquet …/companion-updates/essais
-//   node scripts/updates-publish.mjs --retire <iid> essais         retire l'essai de la MR <iid> (fusion ou abandon)
-//   node scripts/updates-publish.mjs --purge-fusionnes essais      retire les essais des MR fusionnées dans la branche courante
+//   node scripts/updates-publish.mjs dist updates                  release : tag `latest`
+//   node scripts/updates-publish.mjs --essai <pr> dist essais      essai de la PR <pr> : tag `essais` (pré-release)
+//   node scripts/updates-publish.mjs --retire <pr> essais          retire l'essai de la PR <pr> (fusion ou abandon)
+//   node scripts/updates-publish.mjs --purge-fermees essais        retire les essais des PR qui ne sont plus ouvertes
 //
-// Release : lit l'entrée companion-X.Y.Z.json produite par android-release, copie l'APK qu'elle nomme dans <sortie>/ et
-// écrit <sortie>/manifest.json (même forme que GET /updates du backend, taille et SHA-256 compris). Les installeurs de
-// l'ordinateur présents dans <dist> (Mate-Mac.zip, Mate-Windows.exe) sont copiés aussi et décrits
+// Release : lit l'entrée companion-X.Y.Z.json produite par la compilation de l'APK, copie l'APK qu'elle nomme dans
+// <sortie>/ et écrit <sortie>/manifest.json (même forme que GET /updates du backend, taille et SHA-256 compris). Les
+// installeurs de l'ordinateur présents dans <dist> (Mate-Mac.zip, Mate-Windows.exe) sont copiés aussi et décrits
 // dans manifest.json, clé `installers` : la tablette les télécharge pour les servir sur le WiFi. Les archives du backend
-// (dist/backend-mac.tar.gz et backend-windows.tar.gz du job package-backend, les deux ou aucune) deviennent
-// backend-X.Y.Z-<os>.tar.gz, clé `backends` : la tablette en envoie une à l'ordinateur actif, qui se met à jour seul.
-// Essai : même entrée (companion-X.Y.Z-essai.N.json d'essai-android), plus dist/backend-mac.tar.gz et
-// dist/backend-windows.tar.gz si le backend de la MR a changé. Le manifest {"essais":[…]} a une entrée par MR (numéro,
-// titre MR_TITLE, version, APK, backends) : une MR ne remplace que la sienne.
-// Avec UPDATES_URL (paquet générique du registre, …/packages/generic/<nom>/<version>), dépose les fichiers puis
-// manifest.json et supprime les fichiers que le manifest ne nomme plus. Essai : le manifest du registre est lu puis
-// réécrit ; les jobs essai-updates se suivent (resource_group), --retire se lance quand aucun ne publie.
-// --purge-fusionnes (job purge-essais de main, même resource_group) retire d'un coup les entrées dont la MR figure dans
-// l'historique git (lignes « See merge request <projet>!N » des messages de fusion) : historique complet requis.
-// Jeton : CI_JOB_TOKEN en CI, GITLAB_TOKEN (jeton personnel, scope api) en local.
+// (dist/backend-mac.tar.gz et backend-windows.tar.gz, les deux ou aucune) deviennent backend-X.Y.Z-<os>.tar.gz, clé
+// `backends` : la tablette en envoie une à l'ordinateur actif, qui se met à jour seul.
+// Essai : même entrée (companion-X.Y.Z-essai.N.json), plus dist/backend-mac.tar.gz et dist/backend-windows.tar.gz si le
+// backend de la PR a changé. Le manifest {"essais":[…]} a une entrée par PR (clé `mr` = numéro de la PR, titre PR_TITLE,
+// version, APK, backends) : une PR ne remplace que la sienne.
+// Avec UPDATES_REPO (« propriétaire/dépôt »), publie par la CLI `gh` (GH_TOKEN en CI, ou `gh auth login` en local) : crée
+// la release du tag si elle manque, envoie les fichiers (--clobber) puis manifest.json, et supprime les assets que le
+// manifest ne nomme plus. Essai : le manifest de la release est lu puis réécrit ; les publications doivent se suivre
+// (`concurrency` du workflow), --retire aussi. Sans UPDATES_REPO, une release n'écrit que <sortie> (essai local).
+// --purge-fermees retire d'un coup les entrées dont la PR n'est plus ouverte (`gh pr view`, fusionnée ou fermée).
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
@@ -41,9 +40,9 @@ const fingerprint = (buf) => ({
 function usage() {
   console.error(
     "Usage : node scripts/updates-publish.mjs <dist> <sortie>\n" +
-      "        node scripts/updates-publish.mjs --essai <iid> <dist> <sortie>\n" +
-      "        node scripts/updates-publish.mjs --retire <iid> <sortie>\n" +
-      "        node scripts/updates-publish.mjs --purge-fusionnes <sortie>",
+      "        node scripts/updates-publish.mjs --essai <pr> <dist> <sortie>\n" +
+      "        node scripts/updates-publish.mjs --retire <pr> <sortie>\n" +
+      "        node scripts/updates-publish.mjs --purge-fermees <sortie>",
   );
   process.exit(1);
 }
@@ -83,79 +82,104 @@ function readEntry(distDir, essai) {
   return { package: pkg, label, versionCode, versionName, file };
 }
 
-/** Paquet générique du registre : dépôt, lecture, suppression. */
-function registry(url) {
-  const match = url
-    .replace(/\/+$/, "")
-    .match(/^(.+\/projects\/[^/]+)\/packages\/generic\/([^/]+)\/([^/]+)$/);
-  if (!match)
-    throw new Error(
-      `UPDATES_URL « ${url} » : attendu …/projects/<id>/packages/generic/<nom>/<version>`,
-    );
-  const [, projectApi, name, version] = match;
-  const base = `${projectApi}/packages/generic/${name}/${version}`;
-  const auth = process.env.CI_JOB_TOKEN
-    ? { "JOB-TOKEN": process.env.CI_JOB_TOKEN }
-    : { "PRIVATE-TOKEN": process.env.GITLAB_TOKEN ?? "" };
+const TAGS = {
+  latest: { title: "Mate : dernière version", prerelease: false },
+  essais: { title: "Mate : essais de PR", prerelease: true },
+};
 
-  async function api(method, target, body, okCodes = []) {
-    const res = await fetch(target, { method, headers: auth, body });
-    if (!res.ok && !okCodes.includes(res.status))
-      throw new Error(
-        `${method} ${target.replace(projectApi, "")} : HTTP ${res.status}`,
-      );
-    return res;
-  }
+/** Release GitHub d'un tag (`latest` ou `essais`), pilotée par la CLI `gh`. */
+function release(repo, tag) {
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo))
+    throw new Error(`UPDATES_REPO « ${repo} » : attendu propriétaire/dépôt`);
 
-  async function pages(target) {
-    const all = [];
-    for (let page = 1; ; page++) {
-      const batch = await (
-        await api(
-          "GET",
-          `${target}${target.includes("?") ? "&" : "?"}per_page=100&page=${page}`,
-        )
-      ).json();
-      all.push(...batch);
-      if (batch.length < 100) return all;
+  const gh = (args) =>
+    execFileSync("gh", [...args, "-R", repo], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 1 << 28,
+    });
+  const notFound = (e) => /release not found|not found/i.test(`${e.stderr}`);
+
+  /** Noms des assets, null si la release n'existe pas. */
+  function assets() {
+    try {
+      return JSON.parse(
+        gh(["release", "view", tag, "--json", "assets"]),
+      ).assets.map((a) => a.name);
+    } catch (e) {
+      if (notFound(e)) return null;
+      throw e;
     }
   }
 
   return {
-    base,
-    put: (file, body) => api("PUT", `${base}/${file}`, body),
     /** Manifest déjà publié, null s'il n'y en a pas. */
-    async manifest() {
-      const res = await api("GET", `${base}/manifest.json`, undefined, [404]);
-      return res.status === 404 ? null : res.json();
+    manifest() {
+      if (!assets()?.includes("manifest.json")) return null;
+      return JSON.parse(
+        gh([
+          "release",
+          "download",
+          tag,
+          "--pattern",
+          "manifest.json",
+          "--output",
+          "-",
+        ]),
+      );
     },
-    /** Supprime les fichiers du paquet que `keep` ne nomme pas, et les anciens doublons d'un même nom (le dernier déposé est servi). */
-    async prune(keep) {
-      const packages = await pages(
-        `${projectApi}/packages?package_type=generic&package_name=${name}`,
-      );
-      const found = packages.find(
-        (p) => p.name === name && p.version === version,
-      );
-      if (!found)
-        throw new Error(`paquet ${name}/${version} introuvable après dépôt`);
-      const files = await pages(
-        `${projectApi}/packages/${found.id}/package_files`,
-      );
-      const latest = new Map();
-      for (const f of files)
-        if (keep.has(f.file_name))
-          latest.set(f.file_name, Math.max(latest.get(f.file_name) ?? 0, f.id));
-      for (const f of files.filter((f) => latest.get(f.file_name) !== f.id)) {
-        await api(
-          "DELETE",
-          `${projectApi}/packages/${found.id}/package_files/${f.id}`,
-        );
-        console.log(`supprimé : ${f.file_name} (${f.id})`);
+    /** Envoie `files` (chemins) puis `manifestPath` : le manifest ne désigne jamais un fichier absent. */
+    publish(files, manifestPath) {
+      if (assets() === null)
+        gh([
+          "release",
+          "create",
+          tag,
+          "--title",
+          TAGS[tag].title,
+          "--notes",
+          "Fichiers lus par les tablettes Mate (scripts/updates-publish.mjs) : ne pas modifier à la main.",
+          ...(TAGS[tag].prerelease ? ["--prerelease"] : []),
+          "--latest=false",
+        ]);
+      if (files.length) gh(["release", "upload", tag, ...files, "--clobber"]);
+      gh(["release", "upload", tag, manifestPath, "--clobber"]);
+    },
+    /** Supprime les assets que `keep` ne nomme pas. */
+    prune(keep) {
+      for (const name of assets() ?? []) {
+        if (keep.has(name)) continue;
+        gh(["release", "delete-asset", tag, name, "--yes"]);
+        console.log(`supprimé : ${name}`);
       }
-      console.log(`publié : ${base}/manifest.json`);
+      console.log(`publié : ${repo} ${tag}`);
     },
   };
+}
+
+/** La PR n'est plus ouverte (fusionnée ou fermée) ; une PR illisible reste (dite sur stderr). */
+function prClosed(repo, number) {
+  try {
+    const state = execFileSync(
+      "gh",
+      [
+        "pr",
+        "view",
+        String(number),
+        "--json",
+        "state",
+        "--jq",
+        ".state",
+        "-R",
+        repo,
+      ],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    ).trim();
+    return state !== "OPEN";
+  } catch (e) {
+    console.error(`PR #${number} illisible, essai gardé : ${e.stderr}`.trim());
+    return false;
+  }
 }
 
 /**
@@ -188,33 +212,20 @@ function writeOut(outDir, files) {
     fs.writeFileSync(path.join(outDir, name), content);
 }
 
-/** Numéros des MR fusionnées dans l'historique git courant (« See merge request <projet>!N », jamais !12 pour !123). */
-function mergedRequests() {
-  const log = execFileSync("git", ["log", "--format=%B"], {
-    encoding: "utf8",
-    maxBuffer: 1 << 28,
-  });
-  return new Set(
-    [...log.matchAll(/^See merge request \S*!(\d+)\s*$/gm)].map((m) =>
-      Number(m[1]),
-    ),
-  );
-}
-
 const arg = process.argv.slice(2);
 const mode =
   arg[0] === "--essai"
     ? "essai"
     : arg[0] === "--retire"
       ? "retire"
-      : arg[0] === "--purge-fusionnes"
+      : arg[0] === "--purge-fermees"
         ? "purge"
         : "release";
 if (mode !== "release") arg.shift();
-const iid =
+const pr =
   mode === "essai" || mode === "retire" ? Number(arg.shift()) : undefined;
-if (iid !== undefined && !(Number.isInteger(iid) && iid > 0)) usage();
-const url = process.env.UPDATES_URL;
+if (pr !== undefined && !(Number.isInteger(pr) && pr > 0)) usage();
+const repo = process.env.UPDATES_REPO;
 
 if (mode === "release") {
   const [distDir, outDir] = arg;
@@ -255,27 +266,31 @@ if (mode === "release") {
     console.log(`installeurs : ${installers.map((i) => i.file).join(", ")}`);
   if (backends.length)
     console.log(`backends : ${backends.map((b) => b.file).join(", ")}`);
-  if (url) {
-    const reg = registry(url);
-    // Fichiers d'abord : le manifest ne désigne jamais un fichier absent.
-    for (const [file, data] of Object.entries(files)) await reg.put(file, data);
-    await reg.put("manifest.json", manifest);
-    await reg.prune(new Set(["manifest.json", ...Object.keys(files)]));
+  if (repo) {
+    const rel = release(repo, "latest");
+    rel.publish(
+      Object.keys(files).map((f) => path.join(outDir, f)),
+      path.join(outDir, "manifest.json"),
+    );
+    rel.prune(new Set(["manifest.json", ...Object.keys(files)]));
   }
 } else {
-  if (!url) {
-    console.error(
-      "UPDATES_URL : paquet des essais attendu (…/packages/generic/companion-updates/essais)",
-    );
+  if (!repo) {
+    console.error("UPDATES_REPO : dépôt attendu (propriétaire/dépôt)");
     process.exit(1);
   }
-  const reg = registry(url);
-  const published = (await reg.manifest())?.essais ?? [];
-  const gone = mode === "purge" ? mergedRequests() : new Set([iid]);
+  const rel = release(repo, "essais");
+  const published = rel.manifest()?.essais ?? [];
+  const gone =
+    mode === "purge"
+      ? new Set(published.filter((e) => prClosed(repo, e.mr)).map((e) => e.mr))
+      : new Set([pr]);
   const essais = published.filter((e) => !gone.has(e.mr));
   const files = {};
+  let outDir;
   if (mode === "essai") {
-    const [distDir, outDir] = arg;
+    let distDir;
+    [distDir, outDir] = arg;
     if (!distDir || !outDir) usage();
     const entry = readEntry(distDir, true);
     const apk = fs.readFileSync(path.join(distDir, entry.file));
@@ -288,34 +303,34 @@ if (mode === "release") {
     )) {
       backend[os] = { file, size, sha256 };
     }
-    const title = (process.env.MR_TITLE ?? "").trim().slice(0, MAX_TITLE);
+    const title = (process.env.PR_TITLE ?? "").trim().slice(0, MAX_TITLE);
     essais.push({
-      mr: iid,
+      mr: pr,
       title,
       ...entry,
       ...fingerprint(apk),
       ...(Object.keys(backend).length ? { backend } : {}),
     });
     essais.sort((a, b) => a.mr - b.mr);
-    console.log(JSON.stringify(essais.find((e) => e.mr === iid)));
-    const manifest = JSON.stringify({ essais }, null, 2) + "\n";
-    writeOut(outDir, { ...files, "manifest.json": manifest });
-    // Fichiers d'abord : le manifest ne désigne jamais un fichier absent.
-    for (const [file, data] of Object.entries(files)) await reg.put(file, data);
-    await reg.put("manifest.json", manifest);
+    console.log(JSON.stringify(essais.find((e) => e.mr === pr)));
   } else {
-    const [outDir] = arg;
+    [outDir] = arg;
     if (!outDir) usage();
-    const manifest = JSON.stringify({ essais }, null, 2) + "\n";
-    writeOut(outDir, { "manifest.json": manifest });
-    await reg.put("manifest.json", manifest);
+  }
+  const manifest = JSON.stringify({ essais }, null, 2) + "\n";
+  writeOut(outDir, { ...files, "manifest.json": manifest });
+  rel.publish(
+    Object.keys(files).map((f) => path.join(outDir, f)),
+    path.join(outDir, "manifest.json"),
+  );
+  if (mode !== "essai") {
     const retired = published
       .filter((e) => gone.has(e.mr))
-      .map((e) => `!${e.mr}`);
+      .map((e) => `#${e.mr}`);
     console.log(
       mode === "purge"
-        ? `essais retirés (MR fusionnées) : ${retired.join(", ") || "aucun"} (${essais.length} restant(s))`
-        : `MR !${iid} retirée des essais (${essais.length} restant(s))`,
+        ? `essais retirés (PR fermées) : ${retired.join(", ") || "aucun"} (${essais.length} restant(s))`
+        : `PR #${pr} retirée des essais (${essais.length} restant(s))`,
     );
   }
   const keep = new Set(["manifest.json"]);
@@ -323,5 +338,5 @@ if (mode === "release") {
     keep.add(e.file);
     for (const b of Object.values(e.backend ?? {})) keep.add(b.file);
   }
-  await reg.prune(keep);
+  rel.prune(keep);
 }

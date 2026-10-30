@@ -58,7 +58,6 @@ import app.mate.net.Wifi
 import app.mate.trial.EssaiBackend
 import app.mate.trial.EssaiPlan
 import app.mate.trial.Trial
-import app.mate.ui.home.Demo
 import app.mate.ui.topbar.TopHeader
 import app.mate.voice.WakeModel
 import kotlinx.coroutines.Dispatchers
@@ -123,7 +122,7 @@ class SettingsFragment :
 
     override fun onViewCreated(view: View, state: Bundle?) {
         // Interrupteurs rendus depuis Prefs ou l'appareil : sans état de vue gardé. Sinon, à la recréation (choix d'un
-        // persona, thème), Android y remet l'ancien état après le rendu et leur écouteur réécrit la valeur d'avant.
+        // thème), Android y remet l'ancien état après le rendu et leur écouteur réécrit la valeur d'avant.
         forgetSwitchStates(view)
         tabs = listOf(
             view.findViewById<View>(R.id.settings_tab_setup) to view.findViewById(R.id.settings_setup),
@@ -135,13 +134,6 @@ class SettingsFragment :
         computers = view.findViewById(R.id.settings_computers)
         view.findViewById<Button>(R.id.settings_add_computer).setOnClickListener { adder.search() }
         view.findViewById<Button>(R.id.settings_plugins).setOnClickListener { main.showPlugins() }
-        view.findViewById<Button>(R.id.settings_demo).setOnClickListener { DemoDialog(requireActivity()).show() }
-        Demo.active(requireContext())?.let {
-            view.findViewById<TextView>(R.id.settings_demo_status).apply {
-                text = getString(R.string.demo_active, getString(it.title))
-                visibility = View.VISIBLE
-            }
-        }
         view.findViewById<Button>(R.id.settings_add_manual).setOnClickListener { adder.manual() }
         kioskCard = view.findViewById(R.id.settings_kiosk_card)
         topHeader = view.findViewById<View>(R.id.settings_title).apply { setOnLongClickListener { askTechCode(); true } }
@@ -468,12 +460,8 @@ class SettingsFragment :
     }
 
     /**
-     * Une pastille par thème, avec sa couleur, sur deux lignes : thèmes de base, puis ceux des personas. En choisir un
-     * recrée l'activité (les écrans se redessinent).
-     */
-    /**
-     * Thèmes en vignettes (ui/ThemePreview : chacune peinte de ses couleurs), en deux groupes titrés : ceux de tous les
-     * jours, puis ceux des personas. Toucher une vignette applique le thème (l'activité est recréée).
+     * Thèmes en vignettes (ui/ThemePreview : chacune peinte de ses couleurs), en groupes titrés. Toucher une vignette
+     * applique le thème (l'activité est recréée).
      */
     private fun setUpThemes(rows: LinearLayout) {
         val ctx = requireContext()

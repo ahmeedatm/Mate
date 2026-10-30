@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import app.mate.Computer
 import app.mate.MainActivity
 import app.mate.R
+import app.mate.installers.InstallerService
 import app.mate.net.Discovery
 import app.mate.net.FoundComputer
 import app.mate.net.Wifi
@@ -116,6 +117,15 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         markStep(connectStep, "3", done = computers.isNotEmpty())
     }
 
+    /** Page d'installation servie par la tablette elle-même ; sans réseau, pas d'adresse à montrer. */
+    private fun renderInstallAddress() {
+        val address = InstallerService.address()
+        findViewById<TextView>(R.id.welcome_install_url).apply {
+            text = address
+            visibility = if (address == null) View.GONE else View.VISIBLE
+        }
+    }
+
     private fun renderWifi() {
         val name = Wifi.current(context)
         wifiStatus.text = when {
@@ -127,6 +137,7 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         wifiStatus.setTextColor(color)
         wifiStatus.compoundDrawablesRelative[0]?.mutate()?.setTint(color)
         markStep(wifiStep, "1", done = name != null)
+        renderInstallAddress()
     }
 
     /** Étape faite : pastille verte avec ✓ à la place du numéro. */

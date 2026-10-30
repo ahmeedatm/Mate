@@ -123,7 +123,7 @@ export default async function localRoutes(app: FastifyInstance) {
 
   /**
    * Mise à jour de l'appli de la tablette (ordre `update`, RemoteUpdate côté tablette). Chercher interroge l'ordinateur et
-   * le serveur central depuis la tablette ; installer rend la main dès le téléchargement lancé.
+   * GitHub depuis la tablette ; installer rend la main dès le téléchargement lancé.
    */
   app.post<{ Body: { action: "check" | "install" } }>(
     "/local/tablet/update",

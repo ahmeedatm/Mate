@@ -16,7 +16,7 @@ Légende de la colonne « Droits » :
 | Fonctionnalité | Ce qu'elle fait | Droits |
 |---|---|---|
 | Mode kiosque | Mate device owner, lanceur unique, installations bloquées, carte cachée par code technicien | Libre (API Android) ; sortie du MDM SQOOL = accord interne Unowhy |
-| Mises à jour silencieuses | APK lus dans le registre GitLab d'Unowhy ou sur l'ordinateur, installés seuls toutes les 6 h | Libre |
+| Mises à jour silencieuses | APK lus dans les releases GitHub du projet ou sur l'ordinateur, installés seuls toutes les 6 h | Libre |
 | Essais de MR | appli d'essai à côté de la stable, choisie dans Réglages > Mises à jour | Libre |
 | Appairage sécurisé | recherche UDP, code à 6 chiffres, HTTPS auto-signé, empreinte épinglée | Libre |
 | Plusieurs ordinateurs | liste, renommage, bascule si l'actif ne répond plus | Libre |

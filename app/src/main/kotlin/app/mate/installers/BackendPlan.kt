@@ -5,7 +5,7 @@ import app.mate.net.Identity
 import app.mate.net.UpdateSource
 import org.json.JSONObject
 
-/** Archive du backend d'une release (clé `backends` du manifest), lue sur le serveur central ou sur l'ordinateur. */
+/** Archive du backend d'une release (clé `backends` du manifest), lue sur GitHub ou sur l'ordinateur. */
 data class BackendRelease(val os: String, val file: String, val size: Long, val sha256: String, val version: String, val source: UpdateSource)
 
 /** Ce que la tablette peut faire pour le compagnon de l'ordinateur actif, sans Android (testé dans app/src/test). */
@@ -24,7 +24,7 @@ object BackendPlan {
         /** Compagnon d'avant la mise à jour depuis la tablette : l'installeur une dernière fois. */
         data class NeedsInstaller(val release: BackendRelease) : Decision()
 
-        /** Essai de MR posé (tablette stable) : « Revenir à la stable » d'abord. */
+        /** Essai de PR posé (tablette stable) : « Revenir à la stable » d'abord. */
         object OnEssai : Decision()
         object UpToDate : Decision()
 

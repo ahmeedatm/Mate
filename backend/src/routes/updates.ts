@@ -4,7 +4,7 @@ import type { FastifyInstance } from "fastify";
 import { applyEssai, applyUpdate, backendState, restoreOrigin } from "../essai-backend.ts";
 import { listBackends, listUpdates, updateFile } from "../updates.ts";
 
-/** Redémarrage du compagnon, mises à jour de la tablette, mise à jour du backend et essai du backend d'une MR. */
+/** Redémarrage du compagnon, mises à jour de la tablette, mise à jour du backend et essai du backend d'une PR. */
 export default async function updateRoutes(app: FastifyInstance) {
   /** Relancé par la boucle du lanceur (voir /companion/restart) ; après la réponse, pas avant. */
   const restartSoon = () => setTimeout(() => process.exit(0), 300);
@@ -20,7 +20,7 @@ export default async function updateRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
-  // --- Essai du backend d'une MR (voir essai-backend.ts) : envoyé par la tablette, jamais téléchargé ici.
+  // --- Essai du backend d'une PR (voir essai-backend.ts) : envoyé par la tablette, jamais téléchargé ici.
 
   app.get("/companion/backend", async () => backendState());
 
@@ -85,7 +85,7 @@ export default async function updateRoutes(app: FastifyInstance) {
     return { ok: true, changed };
   });
 
-  // --- Mises à jour de la tablette (« serveur Unowhy » simulé, voir updates.ts)
+  // --- Mises à jour de la tablette (serveur simulé par l'ordinateur, voir updates.ts)
 
   app.get("/updates", async () => ({ updates: await listUpdates(), backends: await listBackends() }));
 

@@ -109,7 +109,7 @@ data class Checklist(val title: String = "", val dueMs: Long? = null, val steps:
             )
         }
 
-        /** Config d'un widget posé avec ses étapes (persona, modèle). */
+        /** Config d'un widget posé avec ses étapes (tests). */
         fun config(title: String, dueMs: Long?, steps: List<ChecklistStep>) = JSONObject().also { Checklist(title, dueMs, steps).writeTo(it) }
     }
 }
