@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -32,5 +33,18 @@ describe("reprise des données d'un paquet d'avant", () => {
     assert.equal(fs.readFileSync(path.join(current, "identity.json"), "utf8"), '{"id":"actuel"}');
     assert.equal(adoptData(dir({ "tasks.json": "[]" }), path.join(dir(), "neuf")), false);
     assert.equal(adoptData(old, old), false);
+  });
+
+  it("serveur MCP du dépôt sur les données du paquet (DATA_DIR=paquet) : reprend l'ancien dossier au lieu d'une identité neuve", () => {
+    const home = dir();
+    const old = path.join(home, "Library", "Application Support", "UnowhyCompanion");
+    fs.mkdirSync(old, { recursive: true });
+    fs.writeFileSync(path.join(old, "identity.json"), '{"id":"mac"}');
+    const run = spawnSync(process.execPath, ["--import", "tsx", "-e", 'import("./src/paths.ts").then((m) => m.adoptOldData())'], {
+      cwd: path.resolve(import.meta.dirname, ".."),
+      env: { ...process.env, HOME: home, DATA_DIR: "paquet" },
+    });
+    assert.equal(run.status, 0, run.stderr.toString());
+    assert.equal(fs.readFileSync(path.join(home, "Library", "Application Support", "UnoMate", "identity.json"), "utf8"), '{"id":"mac"}');
   });
 });
