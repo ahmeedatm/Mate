@@ -15,29 +15,30 @@ struct Status {
   var battery: (level: Int, charging: Bool)?
 }
 
-/// Icône Cadran monochrome (docs/ui-ux/da/icone-mono.svg, repère 24 × 24) : image modèle, le système la teinte.
+/// Visage UnoMate seul, monochrome (docs/ui-ux/da/icone-visage-mono.svg, repère du groupe de icone-visage.svg) :
+/// image modèle, le système la teinte.
 func icon() -> NSImage {
   let image = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { rect in
-    let k = rect.width / 24
+    // Glyphe : x 7..200, y 0..166,4 (trait de la bouche compris), centré, 16 pt de large.
+    let k = 16 / 193 * rect.width / 18
+    let tx = (rect.width - 193 * k) / 2 - 7 * k
+    let ty = (rect.height - 166.4 * k) / 2
+    func pt(_ x: CGFloat, _ y: CGFloat) -> NSPoint { NSPoint(x: tx + x * k, y: ty + y * k) }
+    NSColor.black.setFill()
     NSColor.black.setStroke()
-    NSColor.black.setFill()
-    func line(_ x1: CGFloat, _ x2: CGFloat, alpha: CGFloat) {
-      let path = NSBezierPath()
-      path.move(to: NSPoint(x: x1 * k, y: 12 * k))
-      path.line(to: NSPoint(x: x2 * k, y: 12 * k))
-      path.lineWidth = 2 * k
-      path.lineCapStyle = .round
-      NSColor.black.withAlphaComponent(alpha).setStroke()
-      path.stroke()
+    for x in [47.5, 137.5] as [CGFloat] {
+      NSBezierPath(roundedRect: NSRect(x: tx + x * k, y: ty, width: 22 * k, height: 43.5 * k), xRadius: 4 * k, yRadius: 4 * k).fill()
     }
-    line(2.5, 13.5, alpha: 1)
-    line(13.5, 21.5, alpha: 0.4)
-    let ring = NSBezierPath(ovalIn: NSRect(x: (13.5 - 4.3) * k, y: (12 - 4.3) * k, width: 8.6 * k, height: 8.6 * k))
-    ring.lineWidth = 1.2 * k
-    NSColor.black.withAlphaComponent(0.55).setStroke()
-    ring.stroke()
-    NSColor.black.setFill()
-    NSBezierPath(ovalIn: NSRect(x: (13.5 - 2.3) * k, y: (12 - 2.3) * k, width: 4.6 * k, height: 4.6 * k)).fill()
+    let mouth = NSBezierPath()
+    mouth.move(to: pt(9, 72))
+    for (x, y) in [(27.5, 72), (27.5, 104), (103.5, 142.5), (179.5, 104), (179.5, 72), (198, 72), (198, 116), (103.5, 164.4), (9, 116)] as [(CGFloat, CGFloat)] {
+      mouth.line(to: pt(x, y))
+    }
+    mouth.close()
+    mouth.lineWidth = 4 * k
+    mouth.lineJoinStyle = .round
+    mouth.fill()
+    mouth.stroke()
     return true
   }
   image.isTemplate = true
