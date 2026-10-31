@@ -85,7 +85,7 @@ export const DECK_JS = `
   ];
   const pfDeckMedia = [["play-pause", "Lecture ou pause"], ["next", "Suivant"], ["previous", "Précédent"]];
   const pfDeckSystemNames = {
-    "sleep-display": "Éteindre l'écran", "toggle-dark-mode": "Mode sombre", "screenshot-clipboard": "Capture d'écran vers le presse-papiers",
+    "sleep-display": "Éteindre l'écran", "toggle-dark-mode": "Mode sombre", "screenshot-clipboard": "Capture d'écran",
     lock: "Verrouiller", "mute-mic": "Couper ou rétablir le micro", dnd: "Ne pas déranger",
   };
   const pfDeckLayouts = [["keep", "Même place"], ["left", "Moitié gauche"], ["right", "Moitié droite"], ["max", "Plein écran"]];
