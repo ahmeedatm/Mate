@@ -8,6 +8,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+<!-- Fond animé de Hush (c_backdrop), derrière tout ; masqué dans les autres thèmes. -->
+<app.mate.ui.HushBackdrop
+    android:id="@+id/backdrop"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" />
+
 <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="match_parent"

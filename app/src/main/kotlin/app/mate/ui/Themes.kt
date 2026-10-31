@@ -10,13 +10,14 @@ import app.mate.Prefs
 import app.mate.R
 
 /**
- * Thèmes de la DA Console douce (docs/ui-ux/da), choisis dans Réglages : Console (nuit, par défaut), Console jour
- * et Contraste élevé (Console jour en lisibilité maximale, grandes touches). Un thème s'applique aussi par code :
+ * Thèmes de la DA Console douce (docs/ui-ux/da), choisis dans Réglages : Console (nuit, par défaut), Console jour,
+ * Contraste élevé (Console jour en lisibilité maximale, grandes touches) et Hush (nuit noire, reflets rose et violet
+ * animés derrière les écrans, tuiles en verre : ui/HushBackdrop). Un thème s'applique aussi par code :
  * `Prefs.setTheme(context, AppTheme.CONTRASTE.name)` puis `recreate()` (ou l'ordre `settings` de la page de
  * l'ordinateur, `{"theme": "CONTRASTE"}`). Les couleurs et polices sont des attributs (`?attr/c_…`,
  * res/values/palettes.xml) : changer de thème recrée l'activité. Les thèmes clairs ont leur propre base AppCompat
- * (dialogues et champs clairs) ; la palette de Console et de Console jour est celle de leur base, Contraste élevé en
- * pose une par-dessus (une palette à parent AppCompat écraserait colorAccent et colorControlActivated de la base).
+ * (dialogues et champs clairs) ; la palette de Console et de Console jour est celle de leur base, Contraste élevé et
+ * Hush en posent une par-dessus (une palette à parent AppCompat écraserait colorAccent et colorControlActivated de la base).
  * Console est le thème par défaut : sans choix, ou avec un thème enregistré qui n'existe plus (Clair, Sombre,
  * Cadran, Rétro, Nuit…).
  */
@@ -24,6 +25,7 @@ enum class AppTheme(val label: Int, val base: Int, val palette: Int? = null) {
     CONSOLE(R.string.theme_console, R.style.Theme_Companion),
     CONSOLE_JOUR(R.string.theme_console_jour, R.style.Theme_CompanionLight),
     CONTRASTE(R.string.theme_contraste, R.style.Theme_CompanionLight, R.style.Palette_Contraste),
+    HUSH(R.string.theme_hush, R.style.Theme_Companion, R.style.Palette_Hush),
     ;
 
     companion object {

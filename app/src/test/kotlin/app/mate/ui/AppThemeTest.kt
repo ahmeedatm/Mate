@@ -10,8 +10,8 @@ class AppThemeTest {
     private val context = FakeContext()
 
     @Test
-    fun `Console d'abord, puis Console jour et Contraste eleve`() {
-        assertEquals(listOf(AppTheme.CONSOLE, AppTheme.CONSOLE_JOUR, AppTheme.CONTRASTE), AppTheme.entries)
+    fun `Console d'abord, puis Console jour, Contraste eleve et Hush`() {
+        assertEquals(listOf(AppTheme.CONSOLE, AppTheme.CONSOLE_JOUR, AppTheme.CONTRASTE, AppTheme.HUSH), AppTheme.entries)
     }
 
     @Test
@@ -28,6 +28,8 @@ class AppThemeTest {
         assertEquals(null, AppTheme.CONSOLE_JOUR.palette)
         assertEquals(R.style.Theme_CompanionLight, AppTheme.CONTRASTE.base)
         assertEquals(R.style.Palette_Contraste, AppTheme.CONTRASTE.palette)
+        assertEquals(R.style.Theme_Companion, AppTheme.HUSH.base)
+        assertEquals(R.style.Palette_Hush, AppTheme.HUSH.palette)
     }
 
     @Test
@@ -48,6 +50,12 @@ class AppThemeTest {
     fun `Contraste enregistre est garde`() {
         Prefs.setTheme(context, "CONTRASTE")
         assertEquals(AppTheme.CONTRASTE, AppTheme.current(context))
+    }
+
+    @Test
+    fun `Hush enregistre est garde`() {
+        Prefs.setTheme(context, "HUSH")
+        assertEquals(AppTheme.HUSH, AppTheme.current(context))
     }
 
     @Test
