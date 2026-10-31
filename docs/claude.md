@@ -27,9 +27,12 @@ ici, ce que `.claude/` ajoute et comment s'en servir.
 
 ## Deux niveaux de sévérité
 
-- `bloquant` : se corrige avant la PR prête. Le contrôle mécanique et les relecteurs en produisent.
-- `important` et `mineur` : l'humain tranche ; ce qui sort de la demande devient une note « à faire
-  dans une autre branche ».
+1. Erreurs mécaniques (couleur, texte ou police écrits en dur) : le contrôle les refuse tout seul, par
+   le hook à chaque `Edit` / `Write` et par `--diff` dans la `relecture`.
+2. Le reste (goût, périmètre, qualité, bugs) : les relecteurs le signalent avec les étiquettes
+   `bloquant`, `important` ou `mineur`, et l'humain décide. Par défaut, Claude corrige les `bloquant`
+   avant de marquer la PR prête, sauf si l'humain en décide autrement ; ce qui sort de la demande
+   devient une note « à faire dans une autre branche ».
 
 ## Faux positif du contrôle
 

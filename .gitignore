@@ -45,7 +45,8 @@ shared/*
 .taste-skill/
 .impeccable/
 
-# Dossier .claude/ et docs/claude.md partagés (un gitignore global peut les ignorer) ; réglages personnels exclus
+# Fichiers partagés de Claude : un gitignore global peut les ignorer
 !/.claude/
 !/docs/claude.md
+# Réglages personnels de Claude, jamais commités
 /.claude/settings.local.json
