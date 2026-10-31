@@ -282,6 +282,8 @@ class WidgetModelTest {
         val mixer = Placed(WidgetType.MIXER, WidgetSize.XL, 0, 0, 1)
         val layout = HomeLayout(mutableListOf(mixer), 1)
         assertEquals(WidgetSize.XL3, layout.pick(mixer, 4f, 3f))
+        // En bas : une rangée reste libre au-dessus, la taille tient jusqu'à la dernière rangée.
+        assertEquals(ROWS, mixer.row + WidgetSize.XL3.h)
     }
 
     @Test

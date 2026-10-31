@@ -19,7 +19,7 @@ const val ROWS = 4
 /**
  * Tailles en cases (largeur × hauteur). `L3` (3 × 2), `T3` (3 × 4) et `FULL` (4 × 4, tout l'écran) ne sont proposées qu'aux
  * tableaux (Agents, Jira, GitLab, Pipelines, Ouvertes, Son) : ceux-là ont de quoi remplir la place. `XL3` (4 × 3, le bas de la
- * page sous une rangée) n'est proposée qu'au mixeur.
+ * page sous une rangée si on la pose en bas) n'est proposée qu'au mixeur.
  */
 enum class WidgetSize(val w: Int, val h: Int, @StringRes val label: Int) {
     S(1, 1, R.string.widget_size_s),
