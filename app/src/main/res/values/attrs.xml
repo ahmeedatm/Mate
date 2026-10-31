@@ -66,7 +66,7 @@
     <attr name="c_font_title" format="reference|string" />
     <!-- Grands chiffres (heure, chrono, température) et titre de bienvenue. -->
     <attr name="c_font_display" format="reference|string" />
-    <!-- Console de l'onglet Son du deck (plaque, afficheurs, curseurs, LED), aux tons de Console douce : ui/mixer/. -->
+    <!-- Console de l'onglet Son du deck (plaque unie, afficheurs, curseurs, LED) : ui/mixer/. -->
     <attr name="c_mx_plate" format="color" />
     <attr name="c_mx_lcd_bg" format="color" />
     <attr name="c_mx_lcd_text" format="color" />

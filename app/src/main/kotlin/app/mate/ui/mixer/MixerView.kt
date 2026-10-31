@@ -39,7 +39,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
- * Onglet « Son » du deck : console de mixage de l'ordinateur, en métal brossé. En haut, les scènes (volumes
+ * Onglet « Son » du deck : console de mixage de l'ordinateur, sur fond uni. En haut, les scènes (volumes
  * enregistrés, rappelés en un toucher) ; dessous, une tranche par source : sortie, micro, puis chaque appli qui a du
  * son (Windows ; le Mac n'a pas de volume par appli). Relue 4 fois par seconde tant qu'elle est à l'écran, pour les
  * vumètres.
@@ -71,7 +71,7 @@ class MixerView @JvmOverloads constructor(
     /** Console basse (widget d'un profil) : rangée des scènes et tranches resserrées. */
     private var tight = false
 
-    // Plaque de métal brossé, dessinée derrière tout.
+    // Plaque unie (c_mx_plate), dessinée derrière tout.
     private val plate = Paint().apply { color = themeColor(context, R.attr.c_mx_plate) }
     private val brush = Paint()
     private val cShadow = themeColor(context, R.attr.c_mx_shadow)
