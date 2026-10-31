@@ -86,6 +86,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private var ram = Reading(View(context), TextView(context), PerfSeries.RAM)
     private var ramGb: TextView? = null
     private var extras: TextView? = null
+    private var extrasKey = ""
 
     /** Vrai si la courbe a quelque chose à tracer (processeur ou carte graphique coché). */
     private var curve = true
@@ -124,6 +125,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         body.removeAllViews()
         ramGb = null
         extras = null
+        extrasKey = ""
         spark = null
         body.addView(when (placed.size) {
             WidgetSize.L -> gauges()
@@ -419,7 +421,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                     if (cpuOn) context.getString(R.string.perf_cpu) to usageLevel(perf.cpu) else null,
                     if (gpuOn) context.getString(R.string.perf_gpu) to usageLevel(perf.gpu!!.usage) else null,
                     if (ramOn) context.getString(R.string.perf_ram) to usageLevel(perf.ramPercent) else null,
-                    if (PerfOption.GPU_TEMP in choice) perf.gpu?.tempC?.let { context.getString(R.string.perf_gpu) + " °C" to tempLevel(it) } else null,
+                    if (PerfOption.GPU_TEMP in choice) perf.gpu?.tempC?.let { context.getString(R.string.perf_gpu_temp_alert) to tempLevel(it) } else null,
                 ),
                 context::getString,
             )
@@ -429,7 +431,13 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         show(ram, perf.ramPercent.takeIf { ramOn }, stale)
         show(gpu, perf.gpu?.usage?.takeIf { gpuOn }, stale)
         ramGb?.set(context.getString(R.string.perf_ram_gb, perfNumber(perf.ramUsedGb), perfNumber(perf.ramTotalGb)))
-        extras?.let { it.text = extrasText(perf, stale) }
+        extras?.let { line ->
+            val list = extras(perf, stale)
+            // Seulement s'il change (texte ou ton) : un relevé toutes les 2 s ne doit pas refaire la mise en page.
+            val key = list.joinToString("|") { it.text + it.tone }
+            if (key != extrasKey) line.text = extrasText(list)
+            extrasKey = key
+        }
         curve = cpuOn || gpuOn
         val gpuLevel = perf.gpu?.usage?.let { usageLevel(it) } ?: PerfLevel.NORMAL
         spark?.set(
@@ -450,10 +458,10 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
 
     /** Les infos cochées et lisibles qui ne passent pas par un anneau ou une barre, sur une ligne (Bandeau : une par ligne). */
-    private fun extrasText(perf: PcPerf, stale: Boolean): CharSequence {
-        val separator = if (placed.size == WidgetSize.W) "\n" else "  ·  "
+    private fun extrasText(list: List<Extra>): CharSequence {
+        val separator = if (placed.size == WidgetSize.W) "\n" else context.getString(R.string.perf_extras_separator)
         val out = SpannableStringBuilder()
-        for (extra in extras(perf, stale)) {
+        for (extra in list) {
             if (out.isNotEmpty()) out.append(separator)
             val start = out.length
             out.append(extra.text)
@@ -465,14 +473,13 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun extras(perf: PcPerf, stale: Boolean): List<Extra> = PerfOption.entries.mapNotNull { option ->
         if (option !in choice || !option.readable(perf)) return@mapNotNull null
         val calm = if (stale) R.attr.c_text_faint else R.attr.c_text_dim
-        val gpuName = context.getString(R.string.perf_gpu)
         when (option) {
-            PerfOption.CPU_FREQ -> Extra(context.getString(R.string.perf_cpu) + " " + context.getString(R.string.perf_freq, perfNumber(perf.cpuMhz!! / 1000.0)), calm)
-            PerfOption.GPU_TEMP -> perf.gpu!!.tempC!!.let { Extra("$gpuName $it °C", perfColorAttr(PerfSeries.GPU, PerfMark.VALUE, tempLevel(it), stale)) }
+            PerfOption.CPU_FREQ -> Extra(context.getString(R.string.perf_cpu_freq_line, perfNumber(perf.cpuMhz!! / 1000.0)), calm)
+            PerfOption.GPU_TEMP -> perf.gpu!!.tempC!!.let { Extra(context.getString(R.string.perf_gpu_temp_line, it), perfColorAttr(PerfSeries.GPU, PerfMark.VALUE, tempLevel(it), stale)) }
             PerfOption.GPU_FAN -> perf.gpu!!.fanRpm!!.let {
                 // « Arrêté » est un texte tertiaire ; le ventilateur n'est jamais en alerte.
                 val text = if (it == 0) context.getString(R.string.perf_fan_stopped) else context.getString(R.string.perf_fan_rpm, RPM_FORMAT.format(it))
-                Extra(context.getString(R.string.perf_fan) + " " + text, if (stale || it == 0) R.attr.c_text_faint else R.attr.c_text)
+                Extra(context.getString(R.string.perf_fan_line, text), if (stale || it == 0) R.attr.c_text_faint else R.attr.c_text)
             }
             PerfOption.GPU_VRAM -> Extra(context.getString(R.string.perf_vram, perfNumber(perf.gpu!!.vramUsedMb!! / 1024.0), perfNumber(perf.gpu.vramTotalMb!! / 1024.0)), calm)
             PerfOption.DISK_FREE -> Extra(context.getString(R.string.perf_disk_free, perfNumber(perf.disk!!.freeGb)), calm)
@@ -500,16 +507,17 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             orientation = LinearLayout.VERTICAL
             setPadding(dp(24), dp(4), dp(24), dp(8))
         }
+        val reading = host.scope.launch {
+            val latest = try { BackendClient(context).system.perf() } catch (e: Exception) { return@launch }
+            fillSettings(box, computerId, latest)
+        }
         AlertDialog.Builder(context)
             .setTitle(R.string.widget_perf)
             .setView(ScrollView(context).apply { addView(box) })
             .setPositiveButton(R.string.close, null)
+            .setOnDismissListener { reading.cancel() }
             .showImmersive()
         fillSettings(box, computerId, last)
-        host.scope.launch {
-            val latest = try { BackendClient(context).system.perf() } catch (e: Exception) { return@launch }
-            if (box.isAttachedToWindow) fillSettings(box, computerId, latest)
-        }
     }
 
     private fun fillSettings(box: LinearLayout, computerId: String, perf: PcPerf?) {
@@ -531,9 +539,12 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                 else -> null
             }
             box.addView(CheckBox(context).apply {
-                text = context.getString(option.label) + (note?.let { " ($it)" } ?: "")
+                text = note?.let { context.getString(R.string.perf_option_note, context.getString(option.label), it) } ?: context.getString(option.label)
+                typeface = themeFont(context, R.attr.c_font_regular)
+                textSize = 16f
                 setTextColor(color(if (readable) R.attr.c_text else R.attr.c_text_faint))
                 isEnabled = readable
+                minHeight = dp(48)
                 // Une info illisible reste dans le choix (elle reviendra si l'ordinateur la lit) mais s'affiche décochée.
                 isChecked = readable && option in PerfChoice.read(placed.config, computerId)
                 setOnCheckedChangeListener { _, on ->
@@ -542,7 +553,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                     host.save()
                     render()
                 }
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
     }
 

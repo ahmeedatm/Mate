@@ -1192,9 +1192,15 @@
     <string name="perf_fan_rpm">%1$s tr/min</string>
     <string name="perf_fan_stopped">Arrêté</string>
     <string name="perf_unavailable">Non disponible sur cet ordinateur</string>
-    <string name="perf_settings_hint">Coche ce que le widget montre. Une info grisée n\'est pas lisible sur cet ordinateur.</string>
-    <string name="perf_option_unreadable">illisible sur cet ordinateur</string>
+    <string name="perf_settings_hint">Coche ce que le widget montre.</string>
+    <string name="perf_option_note">%1$s (%2$s)</string>
+    <string name="perf_option_unreadable">indisponible</string>
     <string name="perf_option_soon">arrive bientôt</string>
+    <string name="perf_gpu_temp_alert">GPU °C</string>
+    <string name="perf_extras_separator">"  ·  "</string>
+    <string name="perf_gpu_temp_line">GPU %1$d °C</string>
+    <string name="perf_fan_line">Ventilateur %1$s</string>
+    <string name="perf_cpu_freq_line">CPU %1$s GHz</string>
     <string name="perf_group_cpu">Processeur</string>
     <string name="perf_group_gpu">Carte graphique</string>
     <string name="perf_group_ram">Mémoire</string>
@@ -1214,7 +1220,6 @@
     <string name="perf_opt_net_up">Envoi</string>
     <string name="perf_opt_net_down">Réception</string>
     <string name="perf_opt_fps">Images par seconde</string>
-    <string name="perf_freq">%1$s GHz</string>
     <string name="perf_vram">Vidéo %1$s / %2$s Go</string>
     <string name="perf_disk_free">Disque %1$s Go libres</string>
     <string name="perf_disk_activity">Disque %1$d %%</string>

@@ -195,6 +195,7 @@ async function winCounter(path: string): Promise<number | null> {
   return (await win.counters([path]))[path] ?? null;
 }
 
+// shortcut: somme toutes les interfaces (hors boucle locale et isatap) : une carte virtuelle (Hyper-V, VPN, WSL) peut compter le trafic deux fois, à revoir si un PC affiche un débit trop haut.
 async function winNet(): Promise<NetPerf | null> {
   const values = await win.counters([NET_RECEIVED, NET_SENT]);
   const received = values[NET_RECEIVED];

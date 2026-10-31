@@ -470,16 +470,19 @@ namespace Mate
         static Dictionary<string, double?> CounterValues(string[] paths, string luid)
         {
             CounterSet set;
+            List<KeyValuePair<string, double>>[] last;
             var key = string.Join("|", paths);
             lock (counterLock)
             {
                 if (!counterSets.TryGetValue(key, out set)) counterSets[key] = set = OpenCounterSet(paths);
                 if (set.SampledAt < 0 || gpuClock.ElapsedMilliseconds - set.SampledAt >= MinSampleMs) SampleCounterSet(set);
+                // Copie sous le verrou : un autre appel peut remettre `Last` à null pendant la lecture ci-dessous.
+                last = set.Last;
             }
             var res = new Dictionary<string, double?>();
             for (int i = 0; i < paths.Length; i++)
             {
-                var items = set.Last == null ? null : set.Last[i];
+                var items = last == null ? null : last[i];
                 double? sum = null;
                 if (items != null)
                     foreach (var item in items)
