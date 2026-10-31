@@ -250,16 +250,46 @@ class ProfilesTest {
     }
 
     @Test
-    fun `Accueil et Reunion ne se suppriment pas, un ecran ajoute si`() {
+    fun `l'Accueil ne se supprime pas, Reunion et un ecran ajoute si`() {
         val layout = layoutOf(1)
         layout.ensureRoles("Réunion")
         val maison = layout.addProfile("Maison")
         assertFalse(layout.canRemove(layout.homeProfile))
-        assertFalse(layout.canRemove(layout.callProfile))
+        assertTrue(layout.canRemove(layout.callProfile))
         assertTrue(layout.canRemove(maison))
-        assertFalse(layout.removeProfile(layout.callProfile))
         assertFalse(layout.removeProfile(layout.homeProfile))
         assertEquals(3, layout.pages)
+    }
+
+    @Test
+    fun `Reunion supprime n'est pas recree et plus aucun ecran d'appel`() {
+        val context = FakeContext()
+        val layout = layoutOf(1)
+        layout.ensureRoles("Réunion")
+        val maison = layout.addProfile("Maison")
+        assertTrue(layout.removeProfile(layout.callProfile))
+        assertEquals(-1, layout.callProfile)
+        assertEquals(listOf(0, 1), layout.profilesInOrder(inCall = true))
+        assertEquals(0, layout.homeProfile)
+        assertEquals("Maison", layout.names[maison - 1])
+        HomeLayout.save(context, layout)
+        val back = HomeLayout.load(context)
+        assertFalse(back.ensureRoles("Réunion"))
+        assertEquals(-1, back.callProfile)
+        assertEquals(2, back.pages)
+    }
+
+    @Test
+    fun `recreer Reunion depuis le modele reprend le role d'appel, une seule fois`() {
+        val layout = layoutOf(1)
+        layout.ensureRoles("Réunion")
+        layout.removeProfile(layout.callProfile)
+        val index = layout.addFromTemplate(Template.CALL_CADRAN, "Réunion")
+        assertEquals(index, layout.callProfile)
+        assertTrue(layout.on(index).any { it.type == WidgetType.CALL })
+        val second = layout.addFromTemplate(Template.CALL_CADRAN, "Réunion")
+        assertEquals(index, layout.callProfile)
+        assertEquals("Réunion 2", layout.names[second])
     }
 
     @Test
