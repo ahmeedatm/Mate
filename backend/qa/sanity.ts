@@ -319,6 +319,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expect(res.json.master?.id === "master" && res.json.mic?.id === "mic", "sortie ou micro absent");
         const scenes = await call("GET", "/system/mixer/scenes");
         expectStatus(scenes, 200, "/system/mixer/scenes");
+        // Ordre des scènes : renvoyer l'ordre actuel ne change rien (lecture seule en pratique).
+        const ids = scenes.json.scenes.map((s: { id: string }) => s.id);
+        const order = await call("PUT", "/system/mixer/scenes/order", { ids });
+        expectStatus(order, 200, "/system/mixer/scenes/order");
         return res.json.apps ? `${res.json.apps.length} applis avec du son` : "sortie et micro (pas de volume par appli)";
       },
     },

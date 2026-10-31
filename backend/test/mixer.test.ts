@@ -89,4 +89,28 @@ describe("Scènes", () => {
   it("refuse un nom vide", async () => {
     assert.equal((await server.call("POST", "/system/mixer/scenes", { name: "   " })).status, 400);
   });
+
+  it("réordonne : l'ordre donné d'abord, les oubliées à la suite, les inconnues ignorées", async () => {
+    const ids: string[] = [];
+    for (const name of ["Jeu", "Travail", "Nuit"]) ids.push((await server.call("POST", "/system/mixer/scenes", { name })).json.id);
+    const res = await server.call("PUT", "/system/mixer/scenes/order", { ids: [ids[2], "nope", ids[0]] });
+    assert.equal(res.status, 200);
+    const names = (s: { name: string }[]) => s.map((x) => x.name);
+    assert.deepEqual(names(res.json.scenes), ["Nuit", "Jeu", "Travail"]);
+    assert.deepEqual(names((await server.call("GET", "/system/mixer/scenes")).json.scenes), ["Nuit", "Jeu", "Travail"]);
+  });
+
+  it("mettre à jour une scène (même nom) garde sa place", async () => {
+    for (const name of ["Jeu", "Travail"]) await server.call("POST", "/system/mixer/scenes", { name });
+    await server.call("POST", "/system/mixer/scenes", { name: "Jeu" });
+    assert.deepEqual(
+      (await server.call("GET", "/system/mixer/scenes")).json.scenes.map((s: { name: string }) => s.name),
+      ["Jeu", "Travail"],
+    );
+  });
+
+  it("refuse un ordre mal formé", async () => {
+    assert.equal((await server.call("PUT", "/system/mixer/scenes/order", {})).status, 400);
+    assert.equal((await server.call("PUT", "/system/mixer/scenes/order", { ids: [{ id: "Jeu" }] })).status, 400);
+  });
 });

@@ -7,7 +7,7 @@ import { clipboardHistory } from "../clipboard-history.ts";
 import { config } from "../config.ts";
 import { focusDnd, manualDnd } from "../dnd.ts";
 import { resolveDoc } from "../docs.ts";
-import { applyScene, deleteScene, listScenes, saveScene } from "../mixer.ts";
+import { applyScene, deleteScene, listScenes, MAX_SCENES, orderScenes, saveScene } from "../mixer.ts";
 import {
   appAudio,
   getAudio,
@@ -219,6 +219,22 @@ export default async function systemRoutes(app: FastifyInstance) {
       },
     },
     async (req) => saveScene(req.body.name),
+  );
+
+  // Ordre choisi en mode édition (glisser les scènes sur la tablette).
+  app.put<{ Body: { ids: string[] } }>(
+    "/system/mixer/scenes/order",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["ids"],
+          additionalProperties: false,
+          properties: { ids: { type: "array", maxItems: MAX_SCENES, items: { type: "string", maxLength: 40 } } },
+        },
+      },
+    },
+    async (req) => ({ scenes: await orderScenes(req.body.ids) }),
   );
 
   app.delete<{ Params: { id: string } }>("/system/mixer/scenes/:id", async (req) => {
