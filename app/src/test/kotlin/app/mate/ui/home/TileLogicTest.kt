@@ -253,6 +253,31 @@ class TileLogicTest {
     }
 
     @Test
+    fun `une touche de depart se retire du widget et ne revient pas`() {
+        val config = JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")
+        val pages = listOf(page("Raccourcis", 4))
+        val seeded = KeyRef.seed(config, "mac", pages)!!
+        KeyRef.putFor(config, "mac", seeded)
+        val removed = KeyRef.without(KeyRef.listFor(config, "mac"), "r-2")
+        assertEquals(seeded.size - 1, removed.size)
+        assertFalse(removed.any { it.id == "r-2" })
+        KeyRef.putFor(config, "mac", removed)
+        // « Après redémarrage » : la config relue, le deck relu, rien ne remet la touche.
+        val reloaded = KeyRef.listFor(config, "mac")
+        assertNull(KeyRef.seed(config, "mac", pages))
+        assertNull(reconcileKeys(reloaded, pages))
+        assertFalse(reloaded.any { it.id == "r-2" })
+    }
+
+    @Test
+    fun `une touche perso ou d'une page nommee se retire aussi du widget`() {
+        val keys = listOf(KeyRef("k-0", "Perso"), KeyRef("2-4", "Nommée"), KeyRef("r-1", "Départ"))
+        assertEquals(listOf(KeyRef("2-4", "Nommée"), KeyRef("r-1", "Départ")), KeyRef.without(keys, "k-0"))
+        assertEquals(listOf(KeyRef("k-0", "Perso"), KeyRef("r-1", "Départ")), KeyRef.without(keys, "2-4"))
+        assertEquals("id inconnu : rien ne change", keys, KeyRef.without(keys, "x"))
+    }
+
+    @Test
     fun `pas de touches de depart sans page choisie, sans la page ou sans ordinateur`() {
         val pages = listOf(page("Raccourcis", 4))
         assertNull(KeyRef.seed(JSONObject(), "mac", pages))

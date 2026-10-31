@@ -1204,7 +1204,8 @@
     <string name="widget_keys_no_perso">Ce deck n\'a pas de page de touches perso.</string>
     <string name="widget_keys_full">Les emplacements des touches perso sont tous pris.</string>
     <string name="widget_keys_remove">Retirer « %1$s » de ce widget ?</string>
-    <string name="widget_keys_remove_yes">Retirer</string>
+    <string name="widget_keys_remove_yes">Retirer du widget</string>
+    <string name="widget_keys_edit">Modifier</string>
     <string name="widget_weather">Météo</string>
     <string name="widget_weather_desc">Le temps qu\'il fait dans ta ville</string>
     <string name="widget_weather_choose">Choisir ma ville</string>
