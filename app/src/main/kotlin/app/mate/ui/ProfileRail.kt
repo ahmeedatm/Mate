@@ -144,6 +144,7 @@ class ProfileRail(
     private fun render() {
         val labels = Prefs.railLabels(activity)
         drawn = RailModel.snapshot(layout, inCall, Prefs.railTools(activity), labels)
+        talk.visibility = if (Prefs.railTalk(activity)) View.VISIBLE else View.GONE
         talk.findViewById<View>(R.id.rail_talk_label).visibility = if (labels) View.VISIBLE else View.GONE
         statusName.visibility = if (labels) View.VISIBLE else View.GONE
         entries = RailModel.entries(layout, inCall, Prefs.railTools(activity))
