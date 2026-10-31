@@ -39,6 +39,10 @@ import kotlin.math.max
  * Sous [TIGHT_DP] de hauteur (console d'un profil de l'Accueil), la tranche est resserrée : ni vis ni icône, le nom
  * seul sur l'afficheur, le volume et Muet sur une même rangée, un capuchon plus court : le curseur garde sa course.
  *
+ * Table nue (`c_mx_bare`, Hush) : style « fil et pastille » (maquette B, d'après Elgato Wave Link) : icône et nom en
+ * haut, rail fin et pastille ronde, vumètre fin et continu, volume en bas ; ni vis, ni afficheur, ni graduations, ni
+ * touche Muet : toucher l'icône coupe ou rend le son (pictogramme barré en rouge).
+ *
  * Le curseur se saisit sans sauter : glisser n'importe où dans sa colonne le déplace d'autant (pas de saut de
  * volume en touchant la piste). Un glisser de côté laisse défiler la console.
  */
@@ -64,8 +68,11 @@ class FaderStrip(context: Context) : View(context) {
             invalidate()
         }
 
-    /** Table nue (`c_mx_bare`, Hush) : ni vis ni filet après la dernière tranche. */
+    /** Table nue (`c_mx_bare`, Hush) : style « fil et pastille », pas de filet après la dernière tranche. */
     private val bare = themeBool(context, R.attr.c_mx_bare)
+    private val cAccent = themeColor(context, R.attr.c_accent)
+    private val cThumb = themeColor(context, R.attr.c_mx_cap_top)
+    private var thumbR = 0f
 
     /** Icône de l'appli (bitmap de l'ordinateur) ou d'une tranche fixe (sortie, micro). */
     var icon: Bitmap? = null
@@ -194,6 +201,7 @@ class FaderStrip(context: Context) : View(context) {
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         tight = h < dp(TIGHT_DP)
+        if (bare) return layoutBare(w, h)
         capH = dp(if (tight) 28 else 60).toFloat()
         valueX = w / 2f
         if (tight) {
@@ -222,6 +230,31 @@ class FaderStrip(context: Context) : View(context) {
         ledH = (faderArea.height() + ledGap) / LEDS - ledGap
         cap = buildCap()
         muteFace = LinearGradient(0f, muteBox.top, 0f, muteBox.bottom, cKeyTop, cKeyBottom, Shader.TileMode.CLAMP)
+    }
+
+    /** Table nue : icône (et sa zone Muet) puis nom en haut, rail et vumètre au milieu, volume en bas. */
+    private fun layoutBare(w: Int, h: Int) {
+        thumbR = dp(if (tight) 13 else 16).toFloat()
+        valueX = w / 2f
+        if (tight) {
+            val icon = dp(22)
+            iconBox.set(dp(14).toFloat(), dp(10).toFloat(), (dp(14) + icon).toFloat(), (dp(10) + icon).toFloat())
+            muteBox.set(0f, 0f, iconBox.right + dp(10), iconBox.bottom + dp(10))
+            text.textSize = sp(VALUE_TIGHT_SP)
+            valueY = h - dp(10).toFloat()
+            faderArea.set(0f, muteBox.bottom + dp(6), w.toFloat(), valueY - dp(30))
+        } else {
+            val icon = dp(28)
+            iconBox.set(w / 2f - icon / 2f, pad + dp(14), w / 2f + icon / 2f, pad + dp(14) + icon)
+            muteBox.set(w / 2f - dp(32), 0f, w / 2f + dp(32), iconBox.bottom + dp(16))
+            lcd.set(0f, iconBox.bottom + dp(12), w.toFloat(), iconBox.bottom + dp(36))
+            valueY = h - pad - dp(6)
+            faderArea.set(0f, lcd.bottom + dp(16), w.toFloat(), valueY - dp(46))
+        }
+        cx = w / 2f - dp(8)
+        meterX = cx + dp(16)
+        travelTop = faderArea.top + thumbR
+        travelBottom = faderArea.bottom - thumbR
     }
 
     /** Capuchon du curseur, dessiné une fois : léger dégradé, stries de prise, trait d'index au milieu. */
@@ -265,11 +298,10 @@ class FaderStrip(context: Context) : View(context) {
             paint.color = cHighlight
             canvas.drawRect(w - dp(1), groove, w, h - groove, paint)
         }
+        if (bare) return drawBare(canvas)
         if (!tight) {
-            if (!bare) {
-                screw(canvas, pad + dp(2), pad + dp(2))
-                screw(canvas, w - pad - dp(4), pad + dp(2))
-            }
+            screw(canvas, pad + dp(2), pad + dp(2))
+            screw(canvas, w - pad - dp(4), pad + dp(2))
             drawIcon(canvas)
         }
 
@@ -316,7 +348,12 @@ class FaderStrip(context: Context) : View(context) {
         cap?.let { canvas.drawBitmap(it, cx - capW / 2, y - capH / 2, paint) }
         paint.alpha = 255
 
-        // Volume en gros, chiffres fins (comme les valeurs de l'Accueil).
+        drawValue(canvas, v)
+        drawMute(canvas)
+    }
+
+    /** Volume en gros, chiffres fins (comme les valeurs de l'Accueil). */
+    private fun drawValue(canvas: Canvas, v: Int?) {
         text.typeface = light
         text.textSize = sp(if (tight) VALUE_TIGHT_SP else 34f)
         text.textAlign = Paint.Align.CENTER
@@ -327,8 +364,101 @@ class FaderStrip(context: Context) : View(context) {
         canvas.drawText(if (v == null) "—" else "$v %", valueX, valueY, text)
         text.clearShadowLayer()
         text.isStrikeThruText = false
+    }
 
-        drawMute(canvas)
+    /** Table nue : pictogramme Muet, nom, rail rempli jusqu'à la pastille, vumètre continu, volume. */
+    private fun drawBare(canvas: Canvas) {
+        drawBareIcon(canvas)
+        text.typeface = medium
+        text.color = cLcdText
+        text.textSize = sp(if (tight) 13f else 15f)
+        if (tight) {
+            text.textAlign = Paint.Align.LEFT
+            val room = width - iconBox.right - dp(20)
+            val name = TextUtils.ellipsize(title, text, room, TextUtils.TruncateAt.END).toString()
+            canvas.drawText(name, iconBox.right + dp(10), iconBox.centerY() - (text.ascent() + text.descent()) / 2, text)
+        } else {
+            text.textAlign = Paint.Align.CENTER
+            val name = TextUtils.ellipsize(title, text, width - dp(16).toFloat(), TextUtils.TruncateAt.END).toString()
+            canvas.drawText(name, lcd.centerX(), lcd.centerY() - (text.ascent() + text.descent()) / 2, text)
+        }
+
+        // Rail : fin, rempli d'accent sous la pastille (gris en sourdine).
+        val railW = dp(4).toFloat()
+        val v = volume
+        val y = capY(v ?: 0)
+        paint.color = cSlot
+        canvas.drawRoundRect(cx - railW / 2, travelTop, cx + railW / 2, travelBottom, railW / 2, railW / 2, paint)
+        if (v != null) {
+            paint.color = if (muted) cEngrave else cAccent
+            canvas.drawRoundRect(cx - railW / 2, y, cx + railW / 2, travelBottom, railW / 2, railW / 2, paint)
+        }
+
+        // Vumètre continu : fond discret, zones de couleur coupées au niveau.
+        advanceMeter()
+        val meterW = dp(4).toFloat()
+        paint.color = grayed(cLedOff)
+        canvas.drawRoundRect(meterX, travelTop, meterX + meterW, travelBottom, meterW / 2, meterW / 2, paint)
+        if (metered) {
+            val span = travelBottom - travelTop
+            for (s in MixerMath.meterSpans(shownLeds, LEDS)) {
+                paint.color = cLeds[s.zone]
+                canvas.drawRoundRect(meterX, travelBottom - s.to * span, meterX + meterW, travelBottom - s.from * span, meterW / 2, meterW / 2, paint)
+            }
+        }
+
+        // Pastille : halo d'accent, ombre douce, disque clair (estompé si la tranche ne se pilote pas).
+        paint.color = cAccent
+        paint.alpha = HALO_ALPHA
+        canvas.drawCircle(cx, y, thumbR + dp(6), paint)
+        paint.color = cShadow
+        canvas.drawCircle(cx, y + dp(2), thumbR, paint)
+        paint.color = cThumb
+        if (v == null) paint.alpha = 90
+        canvas.drawCircle(cx, y, thumbR, paint)
+        paint.alpha = 255
+
+        drawValue(canvas, v)
+    }
+
+    /** Pictogramme de la voie = touche Muet : barré et rouge en sourdine, halo d'accent pendant l'appui, sans relief. */
+    private fun drawBareIcon(canvas: Canvas) {
+        val r = iconBox.width() / 2 + dp(if (tight) 7 else 14)
+        if (muted || pressingMute) {
+            paint.color = if (pressingMute) cAccent else cMuted
+            paint.alpha = if (pressingMute) PRESS_ALPHA else MUTED_ALPHA
+            canvas.drawCircle(iconBox.centerX(), iconBox.centerY(), r, paint)
+            paint.alpha = 255
+        }
+        val bitmap = icon
+        val drawable = iconDrawable
+        when {
+            bitmap != null -> {
+                paint.alpha = if (muted) 110 else 255
+                canvas.drawBitmap(bitmap, null, iconBox, paint)
+                paint.alpha = 255
+            }
+            drawable != null -> {
+                DrawableCompat.setTint(drawable, if (muted) cMuted else cText)
+                drawable.setBounds(iconBox.left.toInt(), iconBox.top.toInt(), iconBox.right.toInt(), iconBox.bottom.toInt())
+                drawable.draw(canvas)
+            }
+            else -> {
+                text.typeface = medium
+                text.color = if (muted) cMuted else cText
+                text.textSize = sp(if (tight) 15f else 18f)
+                text.textAlign = Paint.Align.CENTER
+                canvas.drawText(title.take(1).uppercase(), iconBox.centerX(), iconBox.centerY() - (text.ascent() + text.descent()) / 2, text)
+            }
+        }
+        if (muted) {
+            // Barre du pictogramme : se lit sans la couleur.
+            paint.color = cMuted
+            paint.strokeWidth = dpf(2.5f)
+            paint.strokeCap = Paint.Cap.ROUND
+            val i = dp(2).toFloat()
+            canvas.drawLine(iconBox.left - i, iconBox.top - i, iconBox.right + i, iconBox.bottom + i, paint)
+        }
     }
 
     private fun drawIcon(canvas: Canvas) {
@@ -357,14 +487,18 @@ class FaderStrip(context: Context) : View(context) {
         }
     }
 
-    private fun drawMeter(canvas: Canvas) {
+    /** Retombée après la tenue : environ 12 LED par seconde, comme l'aiguille d'un vrai vumètre. */
+    private fun advanceMeter() {
         val now = SystemClock.uptimeMillis()
-        // Retombée après la tenue : environ 12 LED par seconde, comme l'aiguille d'un vrai vumètre.
         if (shownLeds > targetLeds) {
             if (now - heldAt >= HOLD_MS) shownLeds = max(targetLeds.toFloat(), shownLeds - (now - lastFrame) * FALL_PER_MS)
             lastFrame = now
             postInvalidateOnAnimation()
         }
+    }
+
+    private fun drawMeter(canvas: Canvas) {
+        advanceMeter()
         val lit = shownLeds.toInt()
         paint.color = grayed(cSlot)
         canvas.drawRoundRect(meterX - dp(3), faderArea.top - dp(3), meterX + ledW + dp(3), faderArea.bottom + dp(3), dp(5).toFloat(), dp(5).toFloat(), paint)
@@ -492,6 +626,11 @@ class FaderStrip(context: Context) : View(context) {
     companion object {
         private const val LEDS = 24
         private const val SHADOW_RADIUS_PX = 6f
+
+        /** Table nue : halo de la pastille (18 %), fond de l'icône à l'appui (22 %, comme hush_press) et en sourdine (14 %). */
+        private const val HALO_ALPHA = 46
+        private const val PRESS_ALPHA = 56
+        private const val MUTED_ALPHA = 36
 
         /** Opacité du vumètre sans niveau lu (35 %). */
         private const val UNMETERED_ALPHA = 0x59

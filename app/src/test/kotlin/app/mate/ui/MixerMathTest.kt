@@ -34,4 +34,19 @@ class MixerMathTest {
         val zones = (0 until 20).map { MixerMath.ledZone(it, 20) }
         assertEquals(List(13) { 0 } + List(4) { 1 } + List(3) { 2 }, zones)
     }
+
+    @Test
+    fun `vumetre continu - des tranches de couleur coupees au niveau`() {
+        // 24 LED : vert jusqu'à 17/24, jaune jusqu'à 21/24, rouge au-dessus.
+        assertEquals(emptyList<MixerMath.Span>(), MixerMath.meterSpans(0f, 24))
+        assertEquals(listOf(MixerMath.Span(0f, 0.5f, 0)), MixerMath.meterSpans(12f, 24))
+        assertEquals(
+            listOf(MixerMath.Span(0f, 17 / 24f, 0), MixerMath.Span(17 / 24f, 19 / 24f, 1)),
+            MixerMath.meterSpans(19f, 24),
+        )
+        assertEquals(
+            listOf(MixerMath.Span(0f, 17 / 24f, 0), MixerMath.Span(17 / 24f, 21 / 24f, 1), MixerMath.Span(21 / 24f, 1f, 2)),
+            MixerMath.meterSpans(24f, 24),
+        )
+    }
 }

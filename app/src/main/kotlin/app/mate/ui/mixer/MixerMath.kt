@@ -28,4 +28,17 @@ object MixerMath {
         index >= leds - 7 -> 1
         else -> 0
     }
+
+    /** Morceau du vumètre continu (Hush) : de `from` à `to` (fractions de la hauteur), couleur de [ledZone] `zone`. */
+    data class Span(val from: Float, val to: Float, val zone: Int)
+
+    /** Vumètre continu à `lit` LED allumées sur `leds` : les zones de [ledZone], coupées au niveau. */
+    fun meterSpans(lit: Float, leds: Int): List<Span> {
+        val top = (lit / leds).coerceIn(0f, 1f)
+        val bounds = listOf(0f, (leds - 7f) / leds, (leds - 3f) / leds, 1f)
+        return (0..2).mapNotNull { zone ->
+            val from = bounds[zone]
+            if (top <= from) null else Span(from, minOf(top, bounds[zone + 1]), zone)
+        }
+    }
 }
