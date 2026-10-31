@@ -478,7 +478,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             PerfOption.CPU_FREQ -> Extra(context.getString(R.string.perf_cpu_freq_line, perfNumber(perf.cpuMhz!! / 1000.0)), calm)
             PerfOption.CPU_TEMP -> perf.cpuTempC!!.let { Extra(context.getString(R.string.perf_cpu_temp_line, it), perfColorAttr(PerfSeries.CPU, PerfMark.VALUE, tempLevel(it), stale)) }
             // Aucun jeu mesuré : « — », jamais 0.
-            PerfOption.FPS -> Extra(context.getString(R.string.perf_fps_line, perf.fps?.toString() ?: "—"), if (perf.fps == null) R.attr.c_text_faint else calm)
+            PerfOption.FPS -> Extra(perf.fps?.let { context.getString(R.string.perf_fps_line, it.toString()) } ?: context.getString(R.string.perf_fps_none), if (perf.fps == null) R.attr.c_text_faint else calm)
             PerfOption.GPU_TEMP -> perf.gpu!!.tempC!!.let { Extra(context.getString(R.string.perf_gpu_temp_line, it), perfColorAttr(PerfSeries.GPU, PerfMark.VALUE, tempLevel(it), stale)) }
             PerfOption.GPU_FAN -> perf.gpu!!.fanRpm!!.let {
                 // « Arrêté » est un texte tertiaire ; le ventilateur n'est jamais en alerte.

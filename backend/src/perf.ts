@@ -24,8 +24,10 @@ export type DiskPerf = { freeGb: number; totalGb: number; activity?: number };
 /** Débit du réseau en Ko/s entiers. */
 export type NetPerf = { upKBps: number; downKBps: number };
 /** Les champs facultatifs sont absents quand la lecture est impossible, jamais inventés. */
-/** `cpuTempC` : température du processeur en °C entiers ; absente quand aucun lecteur fiable n'existe. */
-/** `fps` : images par seconde du jeu au premier plan ; `null` quand le lecteur marche mais qu'aucun jeu n'est mesuré (jamais 0) ; absent sans lecteur. */
+/**
+ * `cpuTempC` : température du processeur en °C entiers ; absente quand aucun lecteur fiable n'existe. `fps` : images par
+ * seconde du jeu au premier plan ; `null` quand le lecteur marche mais qu'aucun jeu n'est mesuré (jamais 0).
+ */
 export type Perf = {
   cpu: number;
   cpuMhz?: number;

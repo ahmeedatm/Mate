@@ -10,7 +10,8 @@ namespace Mate
         // chiffre que l'overlay d'AMD Software: Adrenalin Edition. La DLL (amdadlx64.dll) est installée avec le pilote
         // AMD : on la charge à l'exécution et on appelle les tables de fonctions de ses interfaces COM-like, sans rien
         // livrer. Sans carte AMD (DLL absente) : null, le widget n'a pas de FPS. Indices des fonctions : SDK/Include
-        // d'ADLX (ISystem.h, IPerformanceMonitoring.h), tables « Vtbl » en C.
+        // d'ADLX 2.0.0.125 (SDK/Include/ISystem.h, IPerformanceMonitoring.h), tables « Vtbl » en C ; vérifiés sur un PC à
+        // carte AMD (RX 6750 XT) : 224 à 277 FPS dans un jeu au premier plan.
 
         const ulong AdlxVersion = 2UL << 48 | 125UL; // ADLX 2.0.0.125, celui des en-têtes lus
         const int AdlxOk = 0;
@@ -39,6 +40,10 @@ namespace Mate
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         delegate int AdlxIntFn(IntPtr self, out int value);
 
+        // shortcut: l'objet système d'ADLX et la DLL restent chargés jusqu'à la fin du pilote (ni Release ni ADLXTerminate),
+        // à revoir si le pilote doit un jour se fermer avant le compagnon ; version minimale : celle des en-têtes, un pilote
+        // plus ancien est lu comme « pas de lecteur ».
+        static IntPtr adlxSystem;
         static IntPtr adlxServices;
         static int adlxTriedAt;
         static bool adlxTried;
@@ -58,14 +63,19 @@ namespace Mate
             adlxTried = true;
             adlxTriedAt = Environment.TickCount;
             // Chemin complet du dossier système : pas de recherche de DLL dans un dossier modifiable.
-            IntPtr dll = LoadLibraryW(System.IO.Path.Combine(Environment.SystemDirectory, "amdadlx64.dll"));
-            if (dll == IntPtr.Zero) return IntPtr.Zero;
-            IntPtr init = GetProcAddress(dll, "ADLXInitialize");
-            if (init == IntPtr.Zero) return IntPtr.Zero;
-            IntPtr system;
-            if (((AdlxInitializeFn)Marshal.GetDelegateForFunctionPointer(init, typeof(AdlxInitializeFn)))(AdlxVersion, out system) != AdlxOk) return IntPtr.Zero;
+            // ADLX n'est initialisée qu'une fois : réessayer seulement l'étape qui a échoué (pas de fuite à chaque essai).
+            if (adlxSystem == IntPtr.Zero)
+            {
+                IntPtr dll = LoadLibraryW(System.IO.Path.Combine(Environment.SystemDirectory, "amdadlx64.dll"));
+                if (dll == IntPtr.Zero) return IntPtr.Zero;
+                IntPtr init = GetProcAddress(dll, "ADLXInitialize");
+                if (init == IntPtr.Zero) return IntPtr.Zero;
+                IntPtr system;
+                if (((AdlxInitializeFn)Marshal.GetDelegateForFunctionPointer(init, typeof(AdlxInitializeFn)))(AdlxVersion, out system) != AdlxOk) return IntPtr.Zero;
+                adlxSystem = system;
+            }
             IntPtr services;
-            if (AdlxMethod<AdlxGetInterfaceFn>(system, AdlxSystemGetPerformanceMonitoringServices)(system, out services) != AdlxOk) return IntPtr.Zero;
+            if (AdlxMethod<AdlxGetInterfaceFn>(adlxSystem, AdlxSystemGetPerformanceMonitoringServices)(adlxSystem, out services) != AdlxOk) return IntPtr.Zero;
             adlxServices = services;
             return services;
         }
@@ -80,10 +90,20 @@ namespace Mate
             if (services == IntPtr.Zero) return null;
             object fps = null;
             IntPtr sample;
-            if (AdlxMethod<AdlxGetInterfaceFn>(services, AdlxServicesGetCurrentFps)(services, out sample) == AdlxOk && sample != IntPtr.Zero)
+            if (AdlxMethod<AdlxGetInterfaceFn>(services, AdlxServicesGetCurrentFps)(services, out sample) != AdlxOk || sample == IntPtr.Zero)
+            {
+                // Services devenus inutilisables (pilote redémarré ou mis à jour) : rouverts au prochain essai.
+                adlxServices = IntPtr.Zero;
+                adlxTried = false;
+                return null;
+            }
+            try
             {
                 int value;
                 if (AdlxMethod<AdlxIntFn>(sample, AdlxFpsValue)(sample, out value) == AdlxOk && value > 0) fps = value;
+            }
+            finally
+            {
                 AdlxMethod<AdlxReleaseFn>(sample, AdlxRelease)(sample);
             }
             return new Dictionary<string, object> { { "fps", fps } };
