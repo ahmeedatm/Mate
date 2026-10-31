@@ -94,7 +94,7 @@ Compléter le corps de la PR : « Comment tester » (gestes et résultat attendu
 (cocher ce qui a vraiment été essayé, laisser le reste décoché), captures par thème pour un écran
 (jamais commitées). `gh` ne sait pas joindre d'images : les glisser dans la description de la PR
 sur github.com, ou le demander à l'humain, et le dire dans la ligne `⚠️` si ce n'est pas fait. Mettre à jour avec `gh pr edit <n> --body-file <fichier>`,
-puis `gh pr ready <n>`. Terminer par une ligne `⚠️` sur ce qui n'a pas été fait ou vérifié.
+puis `gh pr ready <n>` et `gh pr edit <n> --add-reviewer EliotFreifer,crimson-king-5` (relecteurs de toute PR ; si l'auteur est l'un des deux, ajouter l'autre seulement, GitHub refuse l'auteur). Terminer par une ligne `⚠️` sur ce qui n'a pas été fait ou vérifié.
 La fusion reste à la CI verte et à l'équipe (`CLAUDE.md`, § Règles de travail).
 
 ## Un 2e sujet en cours de route
