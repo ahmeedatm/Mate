@@ -38,6 +38,7 @@ object Prefs {
     private const val KEY_THEME = "theme"
     private const val KEY_RAIL_LABELS = "rail_labels"
     private const val KEY_TOUR_DONE = "tour_done"
+    private const val KEY_RAIL_TALK = "rail_talk"
     private const val KEY_RAIL_HIDDEN = "rail_hidden_tools"
     private const val KEY_FOCUS_DND = "focus_dnd"
     private const val KEY_FOCUS_MINUTES = "focus_minutes"
@@ -180,6 +181,13 @@ object Prefs {
 
     fun setRailLabels(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_RAIL_LABELS, value).apply()
+    }
+
+    /** Bouton Parler en tête de la barre de gauche (Réglages > Barre de gauche). Affiché par défaut. */
+    fun railTalk(context: Context): Boolean = prefs(context).getBoolean(KEY_RAIL_TALK, true)
+
+    fun setRailTalk(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_RAIL_TALK, value).apply()
     }
 
     /** Outils de la barre de gauche, dans leur ordre : tous sauf ceux masqués dans Réglages. */

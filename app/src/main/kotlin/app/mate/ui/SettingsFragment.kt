@@ -448,6 +448,13 @@ class SettingsFragment :
                 main?.applyRailSettings()
             }
         }
+        view.findViewById<SwitchCompat>(R.id.settings_rail_talk).apply {
+            isChecked = Prefs.railTalk(context)
+            setOnCheckedChangeListener { _, on ->
+                Prefs.setRailTalk(context, on)
+                main?.applyRailSettings()
+            }
+        }
         val shown = Prefs.railTools(requireContext())
         mapOf(R.id.settings_rail_focus to Mode.FOCUS, R.id.settings_rail_computer to Mode.COMPUTER)
             .forEach { (id, tool) ->

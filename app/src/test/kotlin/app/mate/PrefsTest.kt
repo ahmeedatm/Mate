@@ -55,6 +55,15 @@ class PrefsTest {
     }
 
     @Test
+    fun `bouton Parler affiche par defaut, puis retenu`() {
+        assertTrue(Prefs.railTalk(context))
+        Prefs.setRailTalk(context, false)
+        assertFalse(Prefs.railTalk(context))
+        Prefs.setRailTalk(context, true)
+        assertTrue(Prefs.railTalk(context))
+    }
+
+    @Test
     fun `url et jeton viennent de l'ordinateur actif`() {
         Computers.save(context, Computer("a", "Bureau", "http://10.0.0.3:3000", "jeton", "mac"), makeActive = true)
         assertEquals("http://10.0.0.3:3000", Prefs.backendUrl(context))
