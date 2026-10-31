@@ -117,11 +117,10 @@ class FaderStrip(context: Context) : View(context) {
     private var lastFrame = 0L
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val text = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-        // Hush : sans plaque, les chiffres passent devant les reflets ; même ombre que ses textes (Widget.Hush.Text).
-        val shadow = themeColor(context, R.attr.c_text_shadow)
-        if (Color.alpha(shadow) != 0) setShadowLayer(SHADOW_RADIUS_PX, 0f, 1f, shadow)
-    }
+    private val text = TextPaint(Paint.ANTI_ALIAS_FLAG)
+
+    /** Hush : sans plaque, le gros volume passe devant les reflets ; même ombre que ses textes (Widget.Hush.Text). Lui seul, pour ne pas flouter tous les textes à chaque image du vumètre. */
+    private val cTextShadow = themeColor(context, R.attr.c_text_shadow)
     private val rect = RectF()
     private val medium = themeFont(context, R.attr.c_font_medium)
     private val light = themeFont(context, R.attr.c_font_light)
@@ -324,7 +323,9 @@ class FaderStrip(context: Context) : View(context) {
         text.color = if (muted) cMuted else cText
         // En sourdine, le volume est barré : pas seulement rouge (la touche Muet, elle, s'allume en plein).
         text.isStrikeThruText = muted
+        if (Color.alpha(cTextShadow) != 0) text.setShadowLayer(SHADOW_RADIUS_PX, 0f, 1f, cTextShadow)
         canvas.drawText(if (v == null) "—" else "$v %", valueX, valueY, text)
+        text.clearShadowLayer()
         text.isStrikeThruText = false
 
         drawMute(canvas)

@@ -170,6 +170,7 @@ class MixerView @JvmOverloads constructor(
             strips.removeAllViews()
             channels.forEach { c -> views[c.id] = reuse[c.id] ?: newStrip(c) }
             views.values.forEach { strips.addView(it, LinearLayout.LayoutParams(dp(MIN_STRIP_DP), ViewGroup.LayoutParams.MATCH_PARENT)) }
+            // La note du Mac (« Volume par appli… ») n'est pas une voie : pas de trait avant elle sur une table nue.
             views.values.forEachIndexed { i, strip -> strip.last = i == views.size - 1 }
             if (next.apps == null) strips.addView(note, LinearLayout.LayoutParams(dp(320), ViewGroup.LayoutParams.MATCH_PARENT))
             fitStrips()

@@ -30,6 +30,8 @@ class MixerPlateTest {
     fun `hush transparent et nu`() {
         assertEquals("#00000000", plate("Hush"))
         assertEquals("true", item("Hush", "c_mx_bare"))
+        // Nom sur verre (c_surface translucide, comme les fenêtres), plus sur un afficheur noir.
+        assertEquals("?attr/c_surface", item("Hush", "c_mx_lcd_bg"))
     }
 
     @Test
