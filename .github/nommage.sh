@@ -5,7 +5,7 @@ BRANCHE=$1
 TITRE=$2
 ERREUR=0
 
-if ! [[ $BRANCHE =~ ^(feat|fix|docs|test|ci)/[a-z0-9]+(-[a-z0-9]+)*$ || $BRANCHE == sync/gitlab ]]; then
+if ! [[ $BRANCHE =~ ^(feat|fix|docs|test|ci)/[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
   echo "Branche « $BRANCHE » : attendu feat|fix|docs|test|ci/ puis ce qui change, en minuscules et tirets."
   echo "  Ex. : feat/bouton-supprimer-tache, fix/heure-figee-accueil"
   ERREUR=1

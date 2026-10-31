@@ -114,4 +114,4 @@ ne dit rien des performances) et avec les animations désactivées.
   référence, et rend une liste ordonnée de corrections (8 au plus) ou « rien à corriger ». Pas
   d'éloge, pas de résumé.
 - Une modification de code suit les règles du dépôt : tests (`app/src/test/`, `backend/e2e/`),
-  `ktlintFormat` / `npm run format`, puis `/ship`.
+  `ktlintFormat` / `npm run format`, puis une PR sur `master`.
