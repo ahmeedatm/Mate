@@ -2,6 +2,7 @@ package com.unowhy.unomate.net
 
 import android.content.Context
 import com.unowhy.unomate.Prefs
+import com.unowhy.unomate.github.Forge
 import com.unowhy.unomate.ui.home.Demo
 
 /**
@@ -39,10 +40,14 @@ class BackendClient(
     val tablet = TabletApi(http)
     val agents = AgentsApi(http)
     val gitlab = GitLabApi(http)
+    val github = GitHubApi(http)
     val jira = JiraApi(http)
     val plugins = PluginsApi(http)
     val present = PresentApi(http)
     val demo = DemoApi(http)
     val notifications = NotificationsApi(http)
     val away = AwayApi(http)
+
+    /** Client des widgets de forge : MR GitLab ou PR GitHub, mêmes réponses. */
+    fun forge(forge: Forge): ForgeApi = if (forge == Forge.GITHUB) github else gitlab
 }

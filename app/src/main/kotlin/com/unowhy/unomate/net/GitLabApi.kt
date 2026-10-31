@@ -54,7 +54,8 @@ data class GitLabMrs(
 data class GitLabPipeline(
     val project: String,
     val ref: String,
-    val id: Int,
+    /** Long : les identifiants de runs GitHub Actions dépassent un Int. */
+    val id: Long,
     val status: Pipeline,
     val durationSec: Int?,
     val ageSec: Int,
@@ -65,26 +66,26 @@ data class GitLabPipeline(
 data class GitLabPipelines(val pipelines: List<GitLabPipeline>, val connected: Boolean = true, val expired: Boolean = false)
 
 /** MR GitLab lues et pilotées par le compagnon de l'ordinateur (jamais de jeton ni de compte GitLab sur la tablette). */
-class GitLabApi(private val http: Http) {
+class GitLabApi(private val http: Http) : ForgeApi {
 
-    suspend fun mrs(): GitLabMrs = http.io { parseGitLabMrs(http.get("/gitlab/mrs", timeoutMs = 20_000)) }
+    override suspend fun mrs(): GitLabMrs = http.io { parseGitLabMrs(http.get("/gitlab/mrs", timeoutMs = 20_000)) }
 
-    suspend fun pipelines(): GitLabPipelines = http.io { parseGitLabPipelines(http.get("/gitlab/pipelines", timeoutMs = 20_000)) }
+    override suspend fun pipelines(): GitLabPipelines = http.io { parseGitLabPipelines(http.get("/gitlab/pipelines", timeoutMs = 20_000)) }
 
     /** Ouvre la page du pipeline dans le navigateur de l'ordinateur. */
-    suspend fun openPipeline(project: String, id: Int) = http.io {
+    override suspend fun openPipeline(project: String, id: Long) = http.io {
         http.postJson("/gitlab/pipelines/open", JSONObject().put("project", project).put("id", id))
         Unit
     }
 
     /** Ouvre la MR dans le navigateur de l'ordinateur. */
-    suspend fun open(project: String, iid: Int) = http.io {
+    override suspend fun open(project: String, iid: Int) = http.io {
         http.postJson("/gitlab/mrs/open", JSONObject().put("project", project).put("iid", iid))
         Unit
     }
 
     /** Fusionne la MR si son commit est encore `sha` (GitLab refuse sinon). */
-    suspend fun merge(project: String, iid: Int, sha: String) = http.io {
+    override suspend fun merge(project: String, iid: Int, sha: String) = http.io {
         http.postJson("/gitlab/mrs/merge", JSONObject().put("project", project).put("iid", iid).put("sha", sha))
         Unit
     }
@@ -126,7 +127,7 @@ internal fun parseGitLabPipelines(text: String): GitLabPipelines {
         GitLabPipeline(
             project = p.getString("project"),
             ref = p.optString("ref"),
-            id = p.getInt("id"),
+            id = p.getLong("id"),
             status = Pipeline.of(p.optStringOrNull("pipeline")),
             durationSec = if (p.isNull("durationSec")) null else p.optInt("durationSec"),
             ageSec = p.optInt("ageSec"),

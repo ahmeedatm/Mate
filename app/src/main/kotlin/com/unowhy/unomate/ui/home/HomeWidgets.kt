@@ -29,6 +29,7 @@ import com.unowhy.unomate.R
 import com.unowhy.unomate.focus.FocusTicks
 import com.unowhy.unomate.focus.FocusTimer
 import com.unowhy.unomate.focus.NoisePlayer
+import com.unowhy.unomate.github.Forge
 import com.unowhy.unomate.net.BackendClient
 import com.unowhy.unomate.net.CalendarEvent
 import com.unowhy.unomate.net.DeckPage
@@ -162,6 +163,8 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.PRESENT -> PresentWidget(context, host, placed)
                 WidgetType.AWAY -> AwayWidget(context, host, placed)
                 WidgetType.PIPELINES -> pipelinesWidget(context, host, placed)
+                WidgetType.GITHUB -> gitLabWidget(context, host, placed, Forge.GITHUB)
+                WidgetType.ACTIONS -> pipelinesWidget(context, host, placed, Forge.GITHUB)
             }
     }
 }

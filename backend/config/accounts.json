@@ -1,6 +1,7 @@
 {
-  "_comment": "Identifiants PUBLICS des applis enregistrées par Unowhy (agenda : docs/agenda-comptes.md ; GitLab : docs/gitlab-oauth.md). Vide : bouton masqué (agenda : lien ICS seulement ; GitLab : GITLAB_TOKEN du .env en secours).",
+  "_comment": "Identifiants PUBLICS des applis enregistrées par Unowhy (agenda : docs/agenda-comptes.md ; GitLab : docs/gitlab-oauth.md ; GitHub : docs/github-oauth.md). Vide : bouton masqué (agenda : lien ICS seulement ; GitLab, GitHub : GITLAB_TOKEN, GITHUB_TOKEN du .env en secours).",
   "microsoft": { "clientId": "" },
   "google": { "clientId": "", "clientSecret": "" },
-  "gitlab": { "clientId": "0f60e99488cca258993614febdde65088a2a8903f67b988032ee11b8ebb6feaf", "scope": "read_api" }
+  "gitlab": { "clientId": "0f60e99488cca258993614febdde65088a2a8903f67b988032ee11b8ebb6feaf", "scope": "read_api" },
+  "github": { "clientId": "", "scope": "repo" }
 }

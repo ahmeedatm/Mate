@@ -7,12 +7,14 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.unowhy.unomate.R
+import com.unowhy.unomate.github.Forge
+import com.unowhy.unomate.github.connectSection
 import com.unowhy.unomate.net.BackendClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
- * Carte « Connecter GitLab » (GitLab et Pipelines, quand l'ordinateur n'a pas de compte connecté) : le bouton ouvre la
+ * Carte « Connecter GitLab » ou « Connecter GitHub » (`forge` ; GitLab, Pipelines, GitHub et Actions, quand l'ordinateur n'a pas de compte connecté) : le bouton ouvre la
  * connexion dans le navigateur de l'ordinateur, le texte dit alors d'autoriser l'accès. La vue qui l'affiche relit
  * toutes les 3 s en attendant et la cache une fois reliée. `compact` : prend toute la largeur (widget L), sinon 460 dp.
  */
@@ -21,7 +23,9 @@ class GitLabConnectCard(
     private val scope: () -> CoroutineScope,
     private val fail: (Exception) -> Unit,
     compact: Boolean = false,
+    private val forge: Forge = Forge.GITLAB,
 ) : LinearLayout(context) {
+    private val texts = forgeTexts(forge)
     private val box = LinearLayout(context)
     private val text = TextView(context)
     private val button = Button(context, null, 0, R.style.PrimaryButton)
@@ -44,7 +48,7 @@ class GitLabConnectCard(
             setTextColor(themeColor(context, R.attr.c_text))
         }
         button.apply {
-            setText(R.string.gitlab_connect)
+            setText(texts.connect)
             setOnClickListener { connect() }
         }
         box.addView(text, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
@@ -56,9 +60,9 @@ class GitLabConnectCard(
     fun show(expired: Boolean) {
         text.setText(
             when {
-                waiting -> R.string.gitlab_connect_waiting
-                expired -> R.string.gitlab_reconnect_text
-                else -> R.string.gitlab_connect_text
+                waiting -> texts.connectWaiting
+                expired -> texts.reconnectText
+                else -> texts.connectText
             },
         )
     }
@@ -71,9 +75,9 @@ class GitLabConnectCard(
     private fun connect() {
         scope().launch {
             try {
-                BackendClient(context).system.openLocalPage("gitlab")
+                BackendClient(context).system.openLocalPage(connectSection(forge))
                 waiting = true
-                text.setText(R.string.gitlab_connect_waiting)
+                text.setText(texts.connectWaiting)
             } catch (e: Exception) {
                 fail(e)
             }

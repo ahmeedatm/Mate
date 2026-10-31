@@ -92,7 +92,7 @@ class GitLabApiTest {
         val answer = parseGitLabPipelines(json)
         assertTrue(answer.connected)
         val (running, failed, unknown) = answer.pipelines
-        assertEquals(GitLabPipeline("equipe-demo/facturation", "main", 8841, Pipeline.RUNNING, null, 240, emptyList()), running)
+        assertEquals(GitLabPipeline("equipe-demo/facturation", "main", 8841L, Pipeline.RUNNING, null, 240, emptyList()), running)
         assertEquals(GitLabPipeline("equipe-demo/facturation", "fix/x", 8839, Pipeline.FAILED, 148, 1320, listOf("tests-unitaires", "tests-e2e")), failed)
         assertEquals(Pipeline.NONE, unknown.status)
         assertEquals(0, unknown.durationSec)

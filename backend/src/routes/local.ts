@@ -5,6 +5,8 @@ import type { FastifyInstance } from "fastify";
 import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvider, loginUrl } from "../accounts.ts";
 import { calendarSources, dayRange, getEvents, invalidateCalendar, saveCalendarUrls, savedCalendarUrls } from "../calendar.ts";
 import { backendRoot, config } from "../config.ts";
+import { clearGithubCache } from "../github.ts";
+import { disconnectGithub, githubAccount, githubClientId, githubLogin, startGithubLogin } from "../github-auth.ts";
 import { clearGitlabCache } from "../gitlab.ts";
 import { jiraConfigured, jiraSite } from "../jira.ts";
 import { disconnectGitlab, finishGitlabLogin, gitlabAccount, gitlabClientId, gitlabLoginUrl } from "../gitlab-auth.ts";
@@ -62,6 +64,13 @@ export default async function localRoutes(app: FastifyInstance) {
       available: !!(await gitlabClientId()),
       token: !!process.env.GITLAB_TOKEN?.trim(),
       account: (await gitlabAccount()) ?? null,
+    },
+    // Même chose pour GitHub ; `login` : code à saisir sur GitHub tant qu'une connexion attend, sinon son dernier résultat.
+    github: {
+      available: !!(await githubClientId()),
+      token: !!process.env.GITHUB_TOKEN?.trim(),
+      account: (await githubAccount()) ?? null,
+      login: githubLogin(),
     },
     // Jira se règle dans le .env de l'ordinateur : la page dit seulement s'il est relié, et à quel site.
     jira: { configured: jiraConfigured, site: jiraSite },
@@ -203,6 +212,25 @@ export default async function localRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
+  // Connexion GitHub (src/github-auth.ts, device flow) : demande un code à GitHub, puis la page montre ce code et le lien de
+  // GitHub (`login` de /local/status) ; le compagnon attend l'autorisation seul. GET : ouverte aussi depuis la tablette.
+  app.get("/oauth/github/start", async (req, reply) => {
+    if (!(await githubClientId())) return reply.code(404).send({ error: "Connexion non disponible pour ce compte" });
+    try {
+      await startGithubLogin();
+    } catch (e) {
+      req.log.error(e);
+      return reply.redirect(`http://127.0.0.1:${config.port}/?section=github&github=error`);
+    }
+    return reply.redirect(`http://127.0.0.1:${config.port}/?section=github`);
+  });
+
+  app.delete("/local/accounts/github", async () => {
+    await disconnectGithub();
+    clearGithubCache();
+    return { ok: true };
+  });
+
   app.delete<{ Params: { provider: string } }>("/local/accounts/:provider", async (req, reply) => {
     if (!isProvider(req.params.provider)) return reply.code(404).send({ error: "Compte inconnu" });
     await disconnect(req.params.provider);
@@ -212,18 +240,23 @@ export default async function localRoutes(app: FastifyInstance) {
 
   /**
    * Ouvre le compagnon sur l'ordinateur, depuis la tablette : sa page (« Relier mon agenda » de l'Accueil, « Régler depuis
-   * l'ordi » des Réglages), ou la page d'autorisation de GitLab (`gitlab`, carte « Connecter GitLab » de l'onglet GitLab).
+   * l'ordi » des Réglages), ou la page d'autorisation de GitLab (`gitlab`, carte « Connecter GitLab » de l'onglet GitLab),
+   * ou la connexion GitHub (`github` : code à saisir sur GitHub, montré par la page).
    */
-  app.post<{ Body: { section?: "agenda" | "gitlab" | "tablette" } }>(
+  app.post<{ Body: { section?: "agenda" | "gitlab" | "github" | "tablette" } }>(
     "/local/open",
     {
       schema: {
-        body: { type: "object", additionalProperties: false, properties: { section: { enum: ["agenda", "gitlab", "tablette"] } } },
+        body: {
+          type: "object",
+          additionalProperties: false,
+          properties: { section: { enum: ["agenda", "gitlab", "github", "tablette"] } },
+        },
       },
     },
     async (req) => {
       const section = req.body?.section;
-      const path = section === "gitlab" ? "oauth/gitlab/start" : section ? `?section=${section}` : "";
+      const path = section === "gitlab" || section === "github" ? `oauth/${section}/start` : section ? `?section=${section}` : "";
       await openTarget(`http://127.0.0.1:${config.port}/${path}`);
       return { ok: true };
     },

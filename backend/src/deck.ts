@@ -30,6 +30,7 @@ import {
 import type { Layout } from "./screens.ts";
 import { loadKeyPages, loadKeys, loadLinks, loadSavedApps, saveApps, saveLinks, type DeckApp, type DeckLink } from "./perso.ts";
 import { agentsAvailable } from "./agents-sources.ts";
+import { githubAvailable } from "./github.ts";
 import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
 import { demoFeatures, type PersonaHeaders } from "./demo-mock.ts";
@@ -211,6 +212,7 @@ export async function homeFeatures(headers?: PersonaHeaders) {
   const teams = names.some((n) => MEETING_APPS.test(n)) && (await pluginOn("teams"));
   // `agents` : onglet et widget des agents Claude (Mac avec Claude Code installé). `off` : plugins coupés (plugins.ts).
   // `gitlab` : onglet des MR GitLab (jeton GITLAB_TOKEN dans .env, compte connecté par OAuth, ou appli OAuth réglée : la tablette propose de se connecter).
+  // `github` : widgets GitHub et Actions (GITHUB_TOKEN dans .env, compte connecté, ou appli OAuth réglée), jamais en démo.
   const agents = agentsAvailable() && (await pluginOn("claude"));
   // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
   const jira = jiraConfigured && (await pluginOn("jira"));
@@ -223,6 +225,7 @@ export async function homeFeatures(headers?: PersonaHeaders) {
     teams,
     agents: demo ? demo.agents : agents,
     gitlab: demo ? demo.gitlab : canControl && (await gitlabAvailable()),
+    github: demo ? false : canControl && (await githubAvailable()),
     jira: demo ? demo.jira : jira,
     off: await pluginsOff(),
   };

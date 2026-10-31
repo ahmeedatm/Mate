@@ -18,7 +18,7 @@ const val ROWS = 4
 
 /**
  * Tailles en cases (largeur × hauteur). `L3` (3 × 2), `T3` (3 × 4) et `FULL` (4 × 4, tout l'écran) ne sont proposées qu'aux
- * tableaux (Agents, Jira, GitLab, Pipelines, Ouvertes, Son) : ceux-là ont de quoi remplir la place.
+ * tableaux (Agents, Jira, GitLab, Pipelines, GitHub, Actions, Ouvertes, Son) : ceux-là ont de quoi remplir la place.
  */
 enum class WidgetSize(val w: Int, val h: Int, @StringRes val label: Int) {
     S(1, 1, R.string.widget_size_s),
@@ -73,7 +73,9 @@ enum class WidgetType(
     GITLAB("gitlab", R.string.widget_gitlab, R.string.widget_gitlab_desc, R.drawable.ic_merge, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
     CHECKLIST("checklist", R.string.widget_checklist, R.string.widget_checklist_desc, R.drawable.ic_tile_check_circle, listOf(WidgetSize.L, WidgetSize.T), false),
     AWAY("away", R.string.widget_away, R.string.widget_away_desc, R.drawable.ic_cafe, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
-    PIPELINES("pipelines", R.string.widget_pipelines, R.string.widget_pipelines_desc, R.drawable.ic_tile_rocket_launch, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true);
+    PIPELINES("pipelines", R.string.widget_pipelines, R.string.widget_pipelines_desc, R.drawable.ic_tile_rocket_launch, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
+    GITHUB("github", R.string.widget_github, R.string.widget_github_desc, R.drawable.ic_code, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
+    ACTIONS("actions", R.string.widget_actions, R.string.widget_actions_desc, R.drawable.ic_tile_deployed_code, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true);
 
     /** Sans fond de carte, posé à même l'écran : les tubes du thème Rétro y passent derrière un voile. */
     val bare get() = this == HERO || this == DAY || this == DAYLINE
@@ -85,13 +87,14 @@ enum class WidgetType(
     val zoomable get() = !bare
 
     /**
-     * Proposé dans le catalogue de l'ordinateur actif : Agents, Jira, GitLab et Pipelines seulement s'il les offre (Agents :
+     * Proposé dans le catalogue de l'ordinateur actif : Agents, Jira, GitLab, Pipelines, GitHub et Actions seulement s'il les offre (Agents :
      * Mac avec Claude Code), Ouvertes, Son et Pavé seulement si leur plugin n'est pas coupé (écran des plugins).
      */
     fun offered(features: HomeFeatures) = when (this) {
         AGENTS -> features.agents
         JIRA -> features.jira
         GITLAB, PIPELINES -> features.gitlab
+        GITHUB, ACTIONS -> features.github
         OPEN -> "open" !in features.off
         MIXER -> "mixer" !in features.off
         PAD -> "pad" !in features.off

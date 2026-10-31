@@ -36,13 +36,14 @@ Le principe du produit est bon : les données restent chez l'utilisateur. La tab
 | **MET Norway** (Norvège, EEE) | météo, toutes les 30 min | coordonnées **de la ville** (jamais la position exacte), adresse IP, identifiant de l'appli | `ui/home/Weather.kt` |
 | **Microsoft** (Graph) — inactif | si l'appli Azure est enregistrée et un compte relié | agenda | `backend/src/accounts.ts` ; inactif tant que `config/accounts.json` est vide |
 | **Google** (Agenda) — inactif | si l'appli Google est enregistrée et un compte relié | agenda | `backend/src/accounts.ts` ; même condition |
+| **GitHub** (États-Unis) — si relié | widgets GitHub et Actions, si un compte GitHub est connecté sur la page de l'ordinateur (ou `GITHUB_TOKEN`) ; lu au plus toutes les 20 s tant qu'un widget est affiché | depuis l'ordinateur seulement : le jeton (gardé dans `.data/github.json`, 0600), lecture des PR, de leurs contrôles et des runs Actions des dépôts de ces PR, fusion d'une PR à la demande ; rien ne part de la tablette vers GitHub | `backend/src/github.ts`, `github-auth.ts` |
 | **Unowhy** (serveur de mises à jour) | toutes les 6 h et au démarrage ; installeurs tous les quarts d'heure en WiFi | adresse IP, jeton de lecture des paquets ; rien sur l'utilisateur | `kiosk/AutoUpdater.kt`, `installers/` |
 | **IA de bureau choisie par l'utilisateur** (Claude, Cursor…) | s'il la branche sur `/mcp` (carte « Connecter une IA ») et lui demande d'agir | ce que les outils lisent (réglages, profils, touches, tâches, agenda perso, capture de la tablette…) part chez le fournisseur de cette IA ; le compagnon n'appelle lui-même aucun service | `backend/src/mcp-tools.ts`, `routes/mcp.ts` |
 | Services **choisis par l'utilisateur** | à sa demande | l'ordinateur lit le lien d'agenda collé (Outlook, Google, iCloud…), Jira si configuré, l'icône d'un site sur le site lui-même ; la tablette ouvre la page affichée sur l'ordinateur (« Page de l'ordi ») et contacte donc ce site | `calendar.ts`, `jira.ts`, `deck.ts`, `ui/DocumentPanel.kt` |
 
 Open-Meteo, cité par l'audit, n'est plus utilisé depuis COMP-52 ; le service d'icônes de Google a été retiré le 29/10/2026. Discord, Teams et les agents Claude sont pilotés sur l'ordinateur, sans rien envoyer hors de l'ordinateur et de la tablette.
 
-Destinataires hors de l'Union européenne : Google, Apple et Microsoft (États-Unis) ; à couvrir dans la politique (cadre de transfert à préciser par le juridique).
+Destinataires hors de l'Union européenne : Google, Apple, Microsoft et GitHub (États-Unis) ; à couvrir dans la politique (cadre de transfert à préciser par le juridique).
 
 ## 3. Politique de confidentialité
 

@@ -428,6 +428,25 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "GitHub : PR et Actions (lecture seule)",
+      run: async () => {
+        const prs = await call("GET", "/github/prs");
+        if (!controlled()) return expectStatus(prs, 501, "/github/prs");
+        const features = await call("GET", "/deck/features");
+        expect(typeof features.json.github === "boolean", "/deck/features sans booléen github");
+        if (prs.status === 502) throw new Skip(`GitHub inaccessible depuis l'ordinateur (${prs.json?.error})`);
+        expectStatus(prs, 200, "/github/prs");
+        expect(Array.isArray(prs.json.mine) && Array.isArray(prs.json.review), "forme de /github/prs inattendue");
+        // Ni compte connecté ni GITHUB_TOKEN : « pas connecté », jamais de 401. Jamais de fusion ni d'ouverture ici.
+        if (prs.json.connected === false) return "pas connecté à GitHub";
+        expect(features.json.github === true, "GitHub connecté mais github absent de /deck/features");
+        const runs = await call("GET", "/github/actions");
+        expectStatus(runs, 200, "/github/actions");
+        expect(Array.isArray(runs.json.pipelines), "forme de /github/actions inattendue");
+        return `${prs.json.mine.length} PR à moi, ${prs.json.review.length} à relire, ${runs.json.pipelines.length} runs`;
+      },
+    },
+    {
       name: "pointeur",
       run: async () => {
         // Déplacement nul seulement : jamais de clic sur un ordinateur qui sert à autre chose.
