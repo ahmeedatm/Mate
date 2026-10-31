@@ -44,6 +44,18 @@ export async function saveScene(name: string): Promise<Scene> {
   });
 }
 
+/** Ordre des scènes choisi sur la tablette : `ids` d'abord (inconnus ignorés), les scènes oubliées à la suite. */
+export async function orderScenes(ids: string[]): Promise<Scene[]> {
+  const rank = (id: string) => (ids.includes(id) ? ids.indexOf(id) : ids.length);
+  return updateJson(storeFile, empty, (store) => {
+    store.scenes = store.scenes
+      .map((scene, i) => ({ scene, i }))
+      .sort((a, b) => rank(a.scene.id) - rank(b.scene.id) || a.i - b.i)
+      .map((x) => x.scene);
+    return store.scenes;
+  });
+}
+
 export async function deleteScene(id: string) {
   await updateJson(storeFile, empty, (store) => {
     store.scenes = store.scenes.filter((s) => s.id !== id);

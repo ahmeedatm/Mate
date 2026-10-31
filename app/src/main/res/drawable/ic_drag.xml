@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Poignée à six points : glisser pour déplacer (scènes du mélangeur en mode édition). Teinte posée dans le code. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M9,4.5a1.5,1.5 0,1 1,0 3a1.5,1.5 0,1 1,0 -3zM15,4.5a1.5,1.5 0,1 1,0 3a1.5,1.5 0,1 1,0 -3zM9,10.5a1.5,1.5 0,1 1,0 3a1.5,1.5 0,1 1,0 -3zM15,10.5a1.5,1.5 0,1 1,0 3a1.5,1.5 0,1 1,0 -3zM9,16.5a1.5,1.5 0,1 1,0 3a1.5,1.5 0,1 1,0 -3zM15,16.5a1.5,1.5 0,1 1,0 3a1.5,1.5 0,1 1,0 -3z" />
+</vector>

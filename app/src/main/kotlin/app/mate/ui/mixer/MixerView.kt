@@ -1,22 +1,30 @@
 package app.mate.ui.mixer
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Canvas
 import android.graphics.Outline
 import android.graphics.Paint
 import android.os.SystemClock
 import android.text.InputType
 import android.util.AttributeSet
+import android.view.DragEvent
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
+import android.widget.Button
 import android.widget.EditText
 import android.widget.HorizontalScrollView
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.core.widget.ImageViewCompat
 import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.HttpException
@@ -67,6 +75,9 @@ class MixerView @JvmOverloads constructor(
     private var scenes: List<MixerScene> = emptyList()
     private var litScene: String? = null
     private var state: MixerState? = null
+
+    /** Mode édition des scènes ouvert par le crayon. */
+    private var editing = false
 
     /** Console basse (widget d'un profil) : rangée des scènes et tranches resserrées. */
     private var tight = false
@@ -269,6 +280,8 @@ class MixerView @JvmOverloads constructor(
             setTextColor(themeColor(context, R.attr.c_mx_text))
             setPadding(0, 0, dp(16), dp(3))
         })
+        if (editing && scenes.isEmpty()) editing = false
+        if (editing) return renderEditing()
         scenes.forEach { scene ->
             sceneRow.addView(ConsoleKey(context).apply {
                 text = scene.name
@@ -283,7 +296,115 @@ class MixerView @JvmOverloads constructor(
             setPadding(dp(18), 0, dp(18), dp(3))
             setOnClickListener { askSceneName() }
         }, keyParams())
+        if (scenes.isNotEmpty()) {
+            sceneRow.addView(iconButton(R.drawable.ic_edit, R.attr.c_text_dim, context.getString(R.string.mixer_scenes_edit)) {
+                editing = true
+                renderScenes()
+            })
+        }
         if (scenes.isEmpty()) sceneRow.addView(engraved(R.string.mixer_scenes_hint).apply { setPadding(dp(6), 0, 0, dp(3)) })
+    }
+
+    // --- Mode édition des scènes (crayon) : glisser pour déplacer, ⟳ mettre à jour, ✕ supprimer, « Terminé ».
+
+    private fun renderEditing() {
+        scenes.forEach { sceneRow.addView(editChip(it), keyParams()) }
+        sceneRow.addView(Button(context, null, 0, R.style.PrimaryButton).apply {
+            setText(R.string.mixer_scenes_done)
+            setOnClickListener {
+                editing = false
+                renderScenes()
+            }
+        }, keyParams())
+        sceneRow.addView(engraved(R.string.mixer_scenes_edit_hint).apply { setPadding(dp(6), 0, 0, dp(3)) })
+    }
+
+    /** Pilule d'une scène en édition : poignée (on la tient pour glisser), nom, ⟳ et ✕. `tag` = id, lu à la fin du glisser. */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun editChip(scene: MixerScene): View = LinearLayout(context).apply {
+        orientation = HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setBackgroundResource(R.drawable.chip_bg)
+        setPadding(dp(4), 0, dp(2), 0)
+        tag = scene.id
+        val chip = this
+        addView(ImageView(context).apply {
+            setImageResource(R.drawable.ic_drag)
+            ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(themeColor(context, R.attr.c_text_faint)))
+            contentDescription = context.getString(R.string.mixer_scene_drag, scene.name)
+            setPadding(dp(8), dp(12), dp(4), dp(12))
+            setOnTouchListener { _, e ->
+                if (e.actionMasked != MotionEvent.ACTION_DOWN) return@setOnTouchListener false
+                chip.startDragAndDrop(null, View.DragShadowBuilder(chip), chip, 0)
+                true
+            }
+        }, LinearLayout.LayoutParams(dp(36), ViewGroup.LayoutParams.MATCH_PARENT))
+        addView(TextView(context).apply {
+            text = scene.name
+            typeface = themeFont(context, R.attr.c_font_medium)
+            textSize = 16f
+            setTextColor(themeColor(context, R.attr.c_mx_text))
+            setPadding(dp(2), 0, dp(4), 0)
+        })
+        addView(iconButton(R.drawable.ic_refresh, R.attr.c_accent, context.getString(R.string.mixer_scene_update, scene.name)) { confirmUpdate(scene) })
+        addView(iconButton(R.drawable.ic_close, R.attr.c_ko, context.getString(R.string.mixer_scene_remove, scene.name)) { confirmDelete(scene) })
+        setOnDragListener(sceneDrag)
+    }
+
+    /** Glisser une pilule sur une autre la met à sa place ; à la fin, l'ordre lu sur l'écran part à l'ordinateur. */
+    private val sceneDrag = View.OnDragListener { target, event ->
+        val dragged = event.localState as? View ?: return@OnDragListener false
+        when (event.action) {
+            DragEvent.ACTION_DRAG_STARTED -> if (target === dragged) dragged.alpha = DRAGGED_ALPHA
+            DragEvent.ACTION_DRAG_ENTERED -> if (target !== dragged) {
+                val to = sceneRow.indexOfChild(target)
+                sceneRow.removeView(dragged)
+                sceneRow.addView(dragged, to)
+            }
+            DragEvent.ACTION_DRAG_ENDED -> if (target === dragged) {
+                dragged.alpha = 1f
+                saveOrder()
+            }
+        }
+        true
+    }
+
+    private fun saveOrder() {
+        val ids = (0 until sceneRow.childCount).mapNotNull { sceneRow.getChildAt(it).tag as? String }
+        if (ids == scenes.map { it.id }) return
+        scope.launch {
+            try {
+                scenes = BackendClient(context).system.orderMixerScenes(ids)
+                renderScenes()
+            } catch (e: Exception) {
+                showStatus(context.errorText(e), ERROR)
+                loadScenes()
+            }
+        }
+    }
+
+    private fun confirmUpdate(scene: MixerScene) {
+        AlertDialog.Builder(context)
+            .setMessage(context.getString(R.string.mixer_scene_update_confirm, scene.name))
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.mixer_scene_update_ok) { _, _ ->
+                scope.launch {
+                    // Même nom : le compagnon remplace la scène à sa place (mixer.ts, saveScene).
+                    runCatching { BackendClient(context).system.saveMixerScene(scene.name) }
+                        .onFailure { showStatus(context.errorText(it), ERROR) }
+                    loadScenes()
+                }
+            }
+            .showImmersive()
+    }
+
+    private fun iconButton(icon: Int, tint: Int, label: String, onClick: () -> Unit) = ImageButton(context, null, 0, R.style.IconButton_Flat).apply {
+        setImageResource(icon)
+        // `tint` du style n'est lu que par les vues AppCompat gonflées depuis le XML.
+        ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(themeColor(context, tint)))
+        contentDescription = label
+        setOnClickListener { onClick() }
+        layoutParams = LinearLayout.LayoutParams(dp(44), dp(44))
     }
 
     private fun keyParams() = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(if (tight) 40 else 48)).apply { marginEnd = dp(10) }
@@ -399,6 +520,7 @@ class MixerView @JvmOverloads constructor(
 
     private companion object {
         const val SCENES_DP = 66
+        const val DRAGGED_ALPHA = 0.35f
         const val SCENES_TIGHT_DP = 52
         const val MIN_STRIP_DP = 140
         const val MAX_STRIP_DP = 280

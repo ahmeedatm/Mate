@@ -1,5 +1,6 @@
 package app.mate.net
 
+import org.json.JSONArray
 import org.json.JSONObject
 
 data class AudioState(val output: Int?, val muted: Boolean, val input: Int, val micMuted: Boolean)
@@ -172,6 +173,12 @@ class SystemApi(private val http: Http) {
     }
 
     suspend fun deleteMixerScene(id: String) = http.io { http.delete("/system/mixer/scenes/" + http.encode(id)) }
+
+    /** Ordre des scènes choisi en mode édition ; rend la liste dans le nouvel ordre. */
+    suspend fun orderMixerScenes(ids: List<String>): List<MixerScene> = http.io {
+        val scenes = JSONObject(http.putJson("/system/mixer/scenes/order", JSONObject().put("ids", JSONArray(ids)))).getJSONArray("scenes")
+        (0 until scenes.length()).map { i -> scenes.getJSONObject(i).let { MixerScene(it.getString("id"), it.getString("name")) } }
+    }
 
     /** Rappelle une scène ; `second` : applis de la scène sans son en ce moment (laissées telles quelles). */
     suspend fun applyMixerScene(id: String): Pair<MixerState, List<String>> = http.io {
