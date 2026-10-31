@@ -65,8 +65,11 @@ Sinon, pour chaque `NOM` d'`AppTheme` :
    `shared_prefs/companion.xml`, clé `theme` : remplacer `<string name="theme">…</string>` par
    `<string name="theme">NOM</string>`, ou l'ajouter dans `<map>` ; si le fichier manque, le créer
    avec `<?xml version='1.0' encoding='utf-8' standalone='yes' ?><map><string name="theme">NOM</string></map>`.
-   Autre voie, tablette connectée au compagnon : `PUT /local/tablet/settings` avec `{"theme": "NOM"}`
-   (127.0.0.1), l'ordre `settings` change le thème sans toucher au fichier.
+   `run-as` ne marche que sur un APK debug (émulateur, tablette de développement).
+   Sur une tablette en release, seule reste la voie `PUT /local/tablet/settings` avec
+   `{"theme": "NOM"}` (127.0.0.1, ordre `settings`) ; sinon demander les captures à l'humain.
+   Cette route n'accepte que les thèmes de `THEMES` dans `backend/src/tablet.ts` (409 si aucune
+   tablette n'est connectée) : un thème ajouté à `AppTheme` doit aussi y être ajouté. Préférer `run-as`.
 3. `adb shell am start -n app.mate/app.mate.MainActivity`, attendre que l'écran soit affiché.
 4. Aller sur l'écran voulu, puis `adb exec-out screencap -p > captures/<écran>-<thème>.png`.
 

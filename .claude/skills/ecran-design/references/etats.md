@@ -24,7 +24,7 @@ ou gère mal.
 | Clavier ouvert | champ d'une boîte | `showForTyping` : la boîte en haut, au-dessus du clavier ; barre latérale cachée |
 | Accessibilité Mac refusée | Mac sans l'autorisation | bandeau dans le Deck et carte sur la page locale, bouton qui ouvre le réglage ; disparaît dès l'autorisation donnée |
 | Pilotage indisponible (Linux, 501) | backend `os: other` | phrase claire, pas de bouton mort |
-| Kiosque | tablette device owner | pas de barre d'état : heure, WiFi, batterie lisibles dans `TabletStatusView` ; aucune sortie vers le système sans le code technicien |
+| Kiosque | tablette device owner | pas de barre d'état : heure, WiFi, batterie lisibles dans `device/TabletSignals` ; aucune sortie vers le système sans le code technicien |
 | WiFi coupé | désactiver le WiFi | bannière WiFi, recherche relancée au retour ; ne pas confondre avec « ordinateur éteint » |
 | Batterie faible | `adb shell dumpsys battery set level 10` | bandeau batterie ; rétablir avec `dumpsys battery reset` |
 | Nuit (22 h – 7 h) | changer l'heure de l'émulateur | luminosité atténuée ; un toucher rallume ; rien qui clignote |

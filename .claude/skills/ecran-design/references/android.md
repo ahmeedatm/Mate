@@ -10,8 +10,8 @@ Fiche complète : `docs/tablette-4.2.md`. Ce qui compte pour le design :
 | Écran 10,1" 1280×800 à 160 dpi (1 dp = 1 px) | une seule classe d'écran, en paysage ; ce qu'on voit dans la capture est la taille réelle |
 | Android 10 (API 29), `minSdk 24` | pas de Material You dynamique, pas de Compose |
 | Posée sur un bureau, lue en passant | lisible d'un coup d'œil, de plus loin qu'un téléphone tenu en main |
-| Kiosque : barre d'état masquée | heure, WiFi, batterie viennent de `TabletStatusView` (barre latérale), pas du système |
-| Branchée en permanence, allumée toute la journée | thèmes sombres par défaut, luminosité atténuée 22 h – 7 h (`device/Screen`), pas de boucle qui tourne pour rien |
+| Kiosque : barre d'état masquée | heure, WiFi, batterie viennent de `device/TabletSignals` (bandeau du haut), pas du système |
+| Branchée en permanence, allumée toute la journée | thème par défaut = celui que `AppTheme.current` rend sans réglage (le lire, ne pas le supposer), luminosité atténuée 22 h – 7 h (`device/Screen`), pas de boucle qui tourne pour rien |
 
 L'émulateur donne la mise en page et les couleurs, jamais les performances ni le toucher. Dire
 d'où vient chaque preuve.
@@ -26,13 +26,13 @@ d'où vient chaque preuve.
 - Rôles : `c_bg` < `c_rail` < `c_surface` < `c_surface_raised` < `c_surface_pressed` (élévation par
   la teinte, pas par l'ombre) ; `c_text` / `c_text_dim` / `c_text_faint` ; `c_accent` +
   `c_on_accent` ; `c_ok`, `c_ko`, `c_warn` (+ `_soft`) ; teintes de fonction `c_hue_*`.
-- `ui/Look.kt` : une teinte par fonction (`iconHue`, `nameHue`), pastilles (`badge`), arrivée
-  décalée (`enter`), `pop`, boucles `float` / `pulse` à arrêter avec `stop`. `TitleView` pour tout
+- `ui/Look.kt` : une teinte par fonction (`nameHue`, teintes `c_hue_*`), pastilles (`badge`), arrivée
+  décalée (`enter`, ressort `enterSpring`), `pop`, boucles `float` / `pulse` à arrêter avec `stop`. `TitleView` pour tout
   titre de carte.
 - Styles de `themes.xml` : `Card`, `CardTitle`, `Chip` (état via `isSelected`), `ActionButton`,
   `PrimaryButton`, `IconButton` (+ `.Flat`, `.Primary`), `Input`, `Slider`. Un nouveau bouton
   hérite d'un de ces styles.
-- Appui : `@animator/press` (déjà dans les styles de boutons). Arrivée d'un mode : `@animator/mode_in`.
+- Appui : `@animator/press` (déjà dans les styles de boutons). Changement d'écran : `Look.sharedAxis` (ressorts, voir `CLAUDE.md` § Conventions du code).
 - Icônes : vecteurs `res/drawable/ic_*` (Material, un seul jeu). Pas d'emoji ni de caractère
   Unicode à la place d'une icône.
 - Textes : `res/values/strings.xml`, en français, tutoiement. Les boutons courts disent « ordi »,
@@ -76,8 +76,9 @@ de 4,5:1 du texte.
 
 ### Budget d'animation
 
-Règles tirées du matériel ci-dessus et des valeurs déjà en place (`press.xml` 90 / 260 ms,
-`mode_in.xml` 200 / 240 ms, `Look.enter` 260 ms + 45 ms par élément). La cadence réelle de
+Règles tirées du matériel ci-dessus et des valeurs déjà en place (`res/animator/press.xml` 90 / 260 ms ; les autres mouvements sont des ressorts
+dont les jetons sont dans `ui/Look.kt`, `enter` décale de 45 ms par élément : les lire là avant d'en
+choisir un). La cadence réelle de
 l'écran et le taux d'images en retard ne sont pas encore mesurés : à relever sur la tablette avec
 `adb shell dumpsys gfxinfo app.mate` avant de pousser plus loin.
 
@@ -96,7 +97,7 @@ l'écran et le taux d'images en retard ne sont pas encore mesurés : à relever 
 - Une boucle infinie (`float`, `pulse`) seulement si elle porte un état vivant (chrono qui tourne) ;
   arrêtée dès que la vue quitte l'écran. Une seule visible à la fois.
 - Pas d'animation de fenêtre (`windowAnimationStyle` = `@null`, déjà en place).
-- Animations désactivées (Réglages > Accessibilité > Supprimer les animations, ou
+- Animations désactivées (Réglages > Accessibilité > Réduire les animations, ou
   `adb shell settings put global animator_duration_scale 0`) : l'écran reste juste, rien ne reste
   à `alpha = 0`.
 
