@@ -296,7 +296,7 @@ ${FAVICON}
         <div id="tabletsettings">
           <div class="label">Thème</div>
           <div class="themes">
-            <button data-theme="CONSOLE"><span></span>Console</button><button data-theme="CONSOLE_JOUR"><span></span>Console jour</button><button data-theme="CONTRASTE"><span></span>Contraste élevé</button>
+            <button data-theme="CONSOLE"><span></span>Console</button><button data-theme="CONSOLE_JOUR"><span></span>Console jour</button><button data-theme="CONTRASTE"><span></span>Contraste élevé</button><button data-theme="HUSH"><span></span>Hush</button>
           </div>
           <div class="row"><label for="brightness">Luminosité de l'écran</label><input type="range" id="brightness" min="5" max="100"><span class="value" id="brightnessvalue"></span></div>
           <div class="row"><label for="volume">Volume du haut-parleur</label><input type="range" id="volume" min="0" max="100"><span class="value" id="volumevalue"></span></div>
@@ -798,6 +798,8 @@ ${FAVICON}
     CONSOLE: ["#17181B", "#23252A", "#ECEDEF", "#B4B8C0", "#B8F34A", "#3A3D44", "#16210A"],
     CONSOLE_JOUR: ["#F4F2EE", "#FFFFFF", "#1B1C1F", "#474B54", "#3F6B00", "#D8D3CA", "#FFFFFF"],
     CONTRASTE: ["#FFFFFF", "#EDEDE8", "#111214", "#25272C", "#2A4A00", "#45474D", "#FFFFFF"],
+    // Tuile de Hush : son verre (#B8150F1C) posé sur le fond noir.
+    HUSH: ["#070509", "#110C17", "#F6F0F8", "#CBC0D3", "#FF6EB4", "#46384F", "#22030F"],
   };
   const VARS = ["bg", "tile", "ink", "ink2", "now", "line", "on"];
   for (const btn of document.querySelectorAll(".themes button")) {
