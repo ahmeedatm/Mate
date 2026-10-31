@@ -174,9 +174,14 @@ class HushPaletteTest {
 
     @Test
     fun `traits au moins 3 et signaux des agents au moins 2,4 sur le pire point`() {
-        // Table de mixage sans plaque : rail du curseur et LED éteintes posés sur le fond animé (ui/mixer, c_mx_bare).
-        assertOn(listOf("c_graphic", "c_mx_slot", "c_mx_led_off"), 3.0)
+        // Table de mixage sans plaque : le rail du curseur, posé sur le fond animé, se voit (ui/mixer, c_mx_bare).
+        assertOn(listOf("c_graphic", "c_mx_slot"), 3.0)
         assertOn(hush.keys.filter { it.startsWith("c_agent_") }, 2.4)
+    }
+
+    @Test
+    fun `vumetre eteint discret, pour ne pas faire un deuxieme rail`() {
+        assertTrue(parse(argb("c_mx_led_off"))[0] < 0.25)
     }
 
     @Test
