@@ -15,13 +15,13 @@ par réflexe, il se réécrit.
 | Cartes dans des cartes | carte qui contient des lignes en `c_surface_raised` qui contiennent des pastilles | un seul niveau de conteneur, le reste par l'espacement |
 | Étiquette en capitales au-dessus d'un titre | `CardTitle` + un sous-titre qui répète | le titre de carte suffit ; pas de second libellé |
 | Gros chiffre + petit libellé + chiffres annexes | widget « métrique » sans décision derrière | seulement si le chiffre fait agir (verres d'eau, minutes de Focus) |
-| Halo, lueur, dégradé violet ou cyan | ombres colorées, fonds néon | élévation par la teinte (`c_surface_*`), pas par la lueur ; Néon reste un thème, pas un effet |
+| Halo, lueur, dégradé violet ou cyan | ombres colorées, fonds fluo | élévation par la teinte (`c_surface_*`), pas par la lueur ; un thème peut être vif, la lueur n'est pas un effet |
 | Texte en dégradé | — | couleur pleine, emphase par la graisse |
 | Bordure colorée sur un côté | ligne de liste « accentuée » | pastille `TitleView`, ou rien |
 | Emoji ou caractère à la place d'une icône | `✓`, `✎`, `💧` dans un texte ou une alerte | icône `ic_*` du jeu Material |
 | Monospace pour faire « technique » | adresse, code | monospace seulement pour un code ou une adresse à recopier |
 | Rebond partout, point qui pulse | `Overshoot` sur chaque arrivée, `pulse` décoratif | budget de `android.md` ; une boucle = un état vivant |
-| Thème sombre par habitude | — | ici justifié par la scène (bureau, soir, écran allumé tout le jour) ; Clair doit rester aussi soigné |
+| Thème sombre par habitude | — | justifié ici par la scène (bureau, soir, écran allumé tout le jour) ; chaque thème, clair compris, reste aussi soigné |
 | Mots creux, formules à effet | « Boostez votre productivité » | dire ce que fait le bouton |
 
 ## Dark patterns et fatigue (Intent, ce qui s'applique ici)

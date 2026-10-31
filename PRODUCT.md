@@ -8,7 +8,7 @@ web
 
 Ce fichier sert aux pages web servies par le compagnon de l'ordinateur (`backend/`). L'appli de la
 tablette est native Android (vues XML, Kotlin) : sa finition passe par la skill
-`.claude/skills/design-companion`, pas par ce fichier.
+`.claude/skills/ecran-design`, pas par ce fichier.
 
 ## Users
 

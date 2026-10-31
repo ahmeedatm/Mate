@@ -54,12 +54,12 @@ Structure et texte
 Mouvement et contenu
 - [ ] Rebond ou élastique ; point qui pulse sans donnée vivante derrière ; défilement automatique.
 - [ ] Contenu invisible au repos (opacité 0 qui attend un script).
-- [ ] Image cassée, erreur JavaScript au chargement (console du navigateur).
+- [ ] Image cassée, erreur JavaScript au chargement (journal d'erreurs du navigateur).
 
 Ce que le navigateur dessine seul
 - [ ] Anneau de focus supprimé (`outline: none`) sans remplaçant visible au clavier.
 - [ ] Champ, bouton, `details` sans style de focus ou d'état désactivé.
-- [ ] Favicon absent (erreur 401 / 404 en console sur chaque page).
+- [ ] Favicon absent (erreur 401 / 404 dans le journal du navigateur sur chaque page).
 
 Copie
 - [ ] Mots creux de marketing, tirets cadratins en série, formules en « Pas X. Juste Y. ».
