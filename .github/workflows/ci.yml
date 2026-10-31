@@ -1,0 +1,166 @@
+# CI de la copie GitHub (ahmeedatm/Mate) : mêmes tests que le stage test de .gitlab-ci.yml, mêmes images.
+# Sur chaque PR, seuls les jobs de la zone touchée tournent ; sur master, tout tourne.
+# Le job « ci » rassemble les résultats : c'est le seul contrôle exigé par la règle de master.
+# Pas de release, d'essais ni de site publié ici : ils dépendent du registre de paquets GitLab, de la clé de signature
+# et de Harbor (.github/copie-github.md).
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+# Un nouveau push sur une PR annule son pipeline en cours ; master va toujours au bout.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Zones du dépôt touchées par la PR. Le commit de fusion de la PR a pour premier parent la tête de la base :
+  # le diff entre les deux = ce que la PR change. Changer la CI relance tout.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.zones.outputs.backend }}
+      android: ${{ steps.zones.outputs.android }}
+      site: ${{ steps.zones.outputs.site }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 2
+      - id: zones
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+            printf 'backend=true\nandroid=true\nsite=true\n' | tee -a "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          FILES=$(git diff --name-only HEAD^1 HEAD)
+          zone() {
+            if printf '%s\n' "$FILES" | grep -qE "$2|^\.github/workflows/"; then V=true; else V=false; fi
+            echo "$1=$V" | tee -a "$GITHUB_OUTPUT"
+          }
+          zone backend '^backend/'
+          zone android '^(app/|gradle/|gradlew|[^/]*\.gradle)'
+          zone site '^(site/|scripts/site-downloads\.mjs$)'
+
+  # Format (prettier --check), typecheck, puis tests d'intégration sous c8 : échoue si la couverture passe sous les
+  # seuils de backend/.c8rc.json. Image avec git : le test de purge-essais lit un vrai historique git.
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: node:22.22-bookworm
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .npm
+          key: npm-${{ hashFiles('backend/package-lock.json') }}
+      - run: npm ci --prefer-offline --no-audit --no-fund --cache "$GITHUB_WORKSPACE/.npm"
+      - run: npm run lint
+      - run: >-
+          npx c8 node --import tsx --test --test-reporter=spec --test-reporter-destination=stdout
+          --test-reporter=junit --test-reporter-destination=junit.xml "test/**/*.test.ts"
+      - name: Couverture dans le résumé
+        if: always()
+        run: test -f coverage/cobertura-coverage.xml && npx c8 report --reporter=text-summary >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: backend-tests
+          path: |
+            backend/junit.xml
+            backend/coverage/cobertura-coverage.xml
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # Pages web du backend dans Chromium. Tag de l'image = version exacte de @playwright/test dans backend/package.json :
+  # les monter ensemble.
+  e2e:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:47b510dd9230bf0b9bfc9b20102241e577ea7a99334ab4c3ca19f19770e9b8ea
+      options: --ipc=host
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .npm
+          key: npm-${{ hashFiles('backend/package-lock.json') }}
+      - run: npm ci --prefer-offline --no-audit --no-fund --cache "$GITHUB_WORKSPACE/.npm"
+      - run: npm run test:e2e
+      # junit.xml + traces des tests en échec (npx playwright show-trace <trace.zip>).
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: e2e-results
+          path: backend/e2e-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # ktlint, tests JVM et APK debug.
+  android:
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container: ghcr.io/cirruslabs/android-sdk:36@sha256:f9b3ea9ed2b5fc9522adae82c7b4622ab7aa54207ef532c8e615a347dca08f31
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: echo "GRADLE_USER_HOME=$GITHUB_WORKSPACE/.gradle-home" >> "$GITHUB_ENV"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .gradle-home/caches/
+            .gradle-home/wrapper/
+          key: gradle-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'app/build.gradle.kts') }}
+      - run: ./gradlew --no-daemon --console=plain ktlintCheck testDebugUnitTest assembleDebug
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: companion-debug-${{ github.sha }}
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/test-results/testDebugUnitTest/*.xml
+          retention-days: 14
+          if-no-files-found: ignore
+
+  # Site vitrine : image construite, jamais poussée (Harbor n'est joignable que depuis la CI GitLab). Sans les
+  # installeurs de la release (downloads/ vide), comme en local.
+  site:
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker build --label org.opencontainers.image.revision="$GITHUB_SHA" -t site site
+
+  # Seul contrôle exigé par la règle de master : vert si chaque job a réussi ou n'avait pas à tourner.
+  ci:
+    if: always()
+    needs: [changes, backend, e2e, android, site]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$NEEDS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")' > /dev/null

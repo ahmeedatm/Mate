@@ -1,0 +1,26 @@
+# Nom de branche et titre de PR : contrôle exigé par la règle de master. À part de ci.yml pour être relancé quand on
+# modifie le titre, sans relancer les tests.
+
+name: Nommage
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  nommage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/nommage.sh
+          sparse-checkout-cone-mode: false
+      # Titre et branche passés par l'environnement, jamais dans le script : ils viennent de l'auteur de la PR.
+      - env:
+          BRANCHE: ${{ github.head_ref }}
+          TITRE: ${{ github.event.pull_request.title }}
+        run: bash .github/nommage.sh "$BRANCHE" "$TITRE"
