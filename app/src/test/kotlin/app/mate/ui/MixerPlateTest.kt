@@ -5,20 +5,41 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 import java.io.File
 
-/** Plaque du mixeur : une seule couleur unie par thème (noir en sombre, fond du thème en clair), sans dégradé ni brossage. */
+/**
+ * Plaque du mixeur : une seule couleur unie par thème (noir en sombre, fond du thème en clair), sans dégradé ni brossage ;
+ * transparente dans Hush, où la table est nue (ni vis ni filet après la dernière tranche) comme ses widgets.
+ */
 class MixerPlateTest {
     private val xml = File("src/main/res/values/palettes.xml").readText()
     private val view = File("src/main/kotlin/app/mate/ui/mixer/MixerView.kt").readText()
 
-    private fun plate(palette: String): String {
+    private fun item(palette: String, attr: String): String {
         val body = xml.substringAfter("""<style name="Palette.$palette"""").substringBefore("</style>")
-        return Regex("""<item name="c_mx_plate">([^<]*)</item>""").find(body)?.groupValues?.get(1)
-            ?: error("c_mx_plate absent de Palette.$palette")
+        return Regex("""<item name="$attr">([^<]*)</item>""").find(body)?.groupValues?.get(1)
+            ?: error("$attr absent de Palette.$palette")
+    }
+
+    private fun plate(palette: String) = item(palette, "c_mx_plate")
+
+    @Test
+    fun `console noir uni`() {
+        assertEquals("#FF000000", plate("Console"))
     }
 
     @Test
-    fun `themes sombres noir uni`() {
-        for (name in listOf("Console", "Hush")) assertEquals(name, "#FF000000", plate(name))
+    fun `hush transparent et nu`() {
+        assertEquals("#00000000", plate("Hush"))
+        assertEquals("true", item("Hush", "c_mx_bare"))
+        // Nom sur verre (c_surface translucide, comme les fenêtres), plus sur un afficheur noir.
+        assertEquals("?attr/c_surface", item("Hush", "c_mx_lcd_bg"))
+    }
+
+    @Test
+    fun `les autres themes gardent vis et filets`() {
+        for (name in listOf("Console", "ConsoleJour", "Contraste")) {
+            val body = xml.substringAfter("""<style name="Palette.$name"""").substringBefore("</style>")
+            assertFalse(name, body.contains("""<item name="c_mx_bare">true</item>"""))
+        }
     }
 
     @Test
