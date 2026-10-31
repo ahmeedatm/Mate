@@ -127,12 +127,13 @@ export default async function tabletRoutes(app: FastifyInstance) {
         case "agent":
         case "notification":
         case "meeting":
+        case "foreground":
         case "lock":
         case "settings":
         case "layout":
         case "update":
           // Envoyés seulement par la surveillance des appels (src/calls.ts), les agents Claude (src/agents.ts), celle
-          // des notifications (src/notifications.ts), celle des réunions (src/meeting-watch.ts), celle du verrouillage
+          // des notifications (src/notifications.ts), celle des réunions (src/meeting-watch.ts), celle du premier plan (src/foreground-watch.ts), celle du verrouillage
           // (src/screen-lock.ts) et la page locale.
           return reply.code(400).send({ error: "Ordre réservé à l'ordinateur" });
       }

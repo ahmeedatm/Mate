@@ -11,9 +11,10 @@ import { GitLabError } from "./gitlab.ts";
 import { setLogger } from "./log.ts";
 import { startAutoJoin } from "./meetings.ts";
 import { notificationHistory, setNotificationsRead, watchNotifications } from "./notifications.ts";
-import { canControl, clipboardStamp, getClipboard, isMac, osName, readNotifications, screenLocked } from "./os.ts";
+import { canControl, clipboardStamp, frontApp, getClipboard, isMac, osName, readNotifications, screenLocked } from "./os.ts";
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
 import { sendToTablet, tabletStatus } from "./tablet.ts";
+import { startForegroundWatch } from "./foreground-watch.ts";
 import { startMeetingWatch } from "./meeting-watch.ts";
 import { isScreenLocked, startScreenLockWatch } from "./screen-lock.ts";
 import { callingDeckApps } from "./deck.ts";
@@ -199,6 +200,11 @@ if (canControl) {
   startMeetingWatch((event) => void sendToTablet({ type: "meeting", ...event }), {
     connected: () => tabletStatus().connected,
     liveApps: callingDeckApps,
+  });
+  // Appli au premier plan : la tablette passe sur son écran de jeu quand c'en est une de sa liste (et en revient).
+  startForegroundWatch((event) => void sendToTablet({ type: "foreground", ...event }), {
+    connected: () => tabletStatus().connected,
+    front: frontApp,
   });
 }
 // Ordinateur verrouillé : la tablette se bloque, l'API se ferme (hook ci-dessus). Relu même sans tablette.

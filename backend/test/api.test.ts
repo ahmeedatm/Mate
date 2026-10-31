@@ -170,6 +170,11 @@ describe("canal tablette", () => {
     assert.equal(status, 400);
   });
 
+  it("refuse l'ordre foreground venu de l'extérieur : seul l'ordinateur le pousse", async () => {
+    const { status } = await server.call("POST", "/tablet/command", { type: "foreground", app: "Steam", bundleId: "steam" });
+    assert.equal(status, 400);
+  });
+
   it("refuse un ordre sans son champ requis", async () => {
     const { status, json } = await server.call("POST", "/tablet/command", { type: "noise" });
     assert.equal(status, 400);

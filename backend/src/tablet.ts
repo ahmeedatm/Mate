@@ -60,6 +60,8 @@ export type TabletCommand =
   | { type: "call"; state: "ringing" | "ended"; app: string; caller: string | null; video: boolean }
   /** Réunion en cours (src/meeting-watch.ts) : la tablette passe sur son profil Réunion à `start`, en revient à `end`. */
   | { type: "meeting"; state: "start" | "end"; app: string }
+  /** Appli au premier plan de l'ordinateur (src/foreground-watch.ts) : la tablette la compare à sa liste d'applis de jeu. */
+  | { type: "foreground"; app: string; bundleId: string }
   /** Ordinateur verrouillé ou non (src/screen-lock.ts) : la tablette se couvre d'un écran bloquant, l'enlève au déverrouillage. */
   | { type: "lock"; locked: boolean }
   /** Notification de l'ordinateur (src/notifications.ts), affichée en bandeau et gardée dans l'historique. */
