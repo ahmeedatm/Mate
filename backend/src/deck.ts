@@ -33,7 +33,6 @@ import { agentsAvailable } from "./agents-sources.ts";
 import { githubAvailable } from "./github.ts";
 import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
-import { demoFeatures, type PersonaHeaders } from "./demo-mock.ts";
 import { jiraConfigured } from "./jira.ts";
 import { appPluginOff, pluginOn, pluginsOff } from "./plugins.ts";
 import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
@@ -205,28 +204,26 @@ const MEETING_APPS = /^(Microsoft )?Teams/i;
  * Cartes de l'Accueil selon cet ordinateur : agenda toujours (agenda personnel rempli depuis la tablette), `linked` s'il
  * a aussi un agenda relié (lien ICS, compte), bouton Rejoindre si Teams est dans la page Apps.
  */
-export async function homeFeatures(headers?: PersonaHeaders) {
+export async function homeFeatures() {
   const names = (await deckApps(await loadConfig())).map((a) => a.name);
   // `meetings` : bouton Rejoindre et option d'ouverture automatique. Toute réunion avec un lien de visio s'ouvre
   // (appli ou navigateur) ; `teams` : l'appli Teams est dans le deck (page Réunion et ses raccourcis).
   const teams = names.some((n) => MEETING_APPS.test(n)) && (await pluginOn("teams"));
   // `agents` : onglet et widget des agents Claude (Mac avec Claude Code installé). `off` : plugins coupés (plugins.ts).
   // `gitlab` : onglet des MR GitLab (jeton GITLAB_TOKEN dans .env, compte connecté par OAuth, ou appli OAuth réglée : la tablette propose de se connecter).
-  // `github` : widgets GitHub et Actions (GITHUB_TOKEN dans .env, compte connecté, ou appli OAuth réglée), jamais en démo.
+  // `github` : widgets GitHub et Actions (GITHUB_TOKEN dans .env, compte connecté, ou appli OAuth réglée).
   const agents = agentsAvailable() && (await pluginOn("claude"));
   // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
   const jira = jiraConfigured && (await pluginOn("jira"));
-  // Démo : GitLab, Jira et agents suivent les données fictives du persona de la tablette, pas l'ordinateur (jeton, Claude Code).
-  const demo = await demoFeatures(headers);
   return {
     agenda: true,
     linked: await hasCalendar(),
     meetings: canControl,
     teams,
-    agents: demo ? demo.agents : agents,
-    gitlab: demo ? demo.gitlab : canControl && (await gitlabAvailable()),
-    github: demo ? false : canControl && (await githubAvailable()),
-    jira: demo ? demo.jira : jira,
+    agents,
+    gitlab: canControl && (await gitlabAvailable()),
+    github: canControl && (await githubAvailable()),
+    jira,
     off: await pluginsOff(),
   };
 }

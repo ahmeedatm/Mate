@@ -1,12 +1,12 @@
 # Deck V2 : barre fixe et profils Accueil, Deck, Réunion
 
-Conception du 29/10/2026, ticket COMP-40 (porté par Momo). Fait suite au lot 1 d'Ahmed (Accueil devenu Profils, 28/10) et aux widgets venus du Deck (29/10). Prototype cliquable validé : barre « A » (rail étiqueté de 96 dp) et profils Accueil / Deck / Réunion.
+Conception du 29/10/2026 (portée par Momo). Fait suite au lot 1 d'Ahmed (Accueil devenu Profils, 28/10) et aux widgets venus du Deck (29/10). Prototype cliquable validé : barre « A » (rail étiqueté de 96 dp) et profils Accueil / Deck / Réunion.
 
 ## Pourquoi
 
 Aujourd'hui, la navigation est cachée : une poignée de 4 px au bord gauche, un panneau qui se referme seul après 6 s, deux touchers et une attente pour passer de l'Accueil au Deck (premier toucher souvent raté sur la 4.2). Le Deck empile 8 onglets de natures différentes (lancer, piloter, surveiller), avec des cases « Libre » vides, des modes d'emploi en texte et un bouton ⟳. Les profils d'Ahmed apportent un bon moteur (pages de widgets, un seul geste de personnalisation), mais on y circule par une barre de flèches en haut, et le plan prévoyait de supprimer le Deck sans le remplacer par une destination claire.
 
-La cible est le **B2B : salariés de bureau** (Mac, Windows). Pour eux, le moment où l'écran de l'ordinateur est bloqué, et où la tablette vaut le plus, c'est la **réunion** (écran partagé ou projeté). `docs/cible-et-positionnement.md` a été repris le 29/10/2026 pour le B2B (note projet UNOMATE) ; il reprend cette hypothèse de la réunion, non prouvée.
+La cible est **le bureau** (Mac, Windows). Pour elle, le moment où l'écran de l'ordinateur est bloqué, et où la tablette vaut le plus, c'est la **réunion** (écran partagé ou projeté). Cette hypothèse de la réunion n'est pas prouvée.
 
 ## Objectifs
 
@@ -102,7 +102,7 @@ Trois profils sont créés au premier lancement. Les noms et le contenu sont **m
 
 **Ce qui compte comme un appel** : toute appli dont le backend sait dire que le micro est utilisé (Teams, Discord aujourd'hui), et toute réunion lancée par « Rejoindre » sur la tablette (Teams, Meet, Zoom, Webex).
 - Une réunion lancée par « Rejoindre » sans détection de fin (Meet, Zoom, Webex sans page) se termine à l'**heure de fin de l'événement**, au toucher de « Quitter », ou quand l'utilisateur va ailleurs et n'y revient pas avant la fin.
-- Un salon vocal Discord compte aussi : sans risque en B2B, et utile.
+- Un salon vocal Discord compte aussi : sans risque au bureau, et utile.
 
 **Widget d'appel générique `CALL`** (le seul nouveau type) : il affiche les commandes de l'appli de l'appel en cours.
 - Il reprend `MEETING` pour Teams et `DISCORD` pour Discord, en réutilisant la logique de `CallWidget`.

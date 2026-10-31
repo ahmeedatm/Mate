@@ -2,11 +2,11 @@
 # est lancé de n'importe quel dossier, rien ne s'inscrit dans Windows, le runtime est extrait, le backend répond, sanity,
 # pilote, panneau (lancement au démarrage coché puis décoché), relance de l'exe, « Quitter ».
 #
-#   powershell -NoProfile -ExecutionPolicy Bypass -File backend\qa\install-windows.ps1 -Exe dist\UnoMate-Windows.exe
+#   powershell -NoProfile -ExecutionPolicy Bypass -File backend\qa\install-windows.ps1 -Exe dist\Mate-Windows.exe
 #   powershell -NoProfile -ExecutionPolicy Bypass -File backend\qa\install-windows.ps1 -Nettoyage   (après un échec)
 #
 # Le PC sert à d'autres tests : tout est propre au test (port, DATA_DIR, journaux, LOCALAPPDATA, valeur de la clé Run
-# « UnoMateCI »), sous un seul dossier supprimé à la fin, et rien ne s'affiche (COMPANION_HEADLESS).
+# « MateCI »), sous un seul dossier supprimé à la fin, et rien ne s'affiche (COMPANION_HEADLESS).
 # Un compagnon déjà lancé n'est pas touché.
 # Windows PowerShell 5.1 ou PowerShell 7. Script de test : le compagnon, lui, ne lance PowerShell que pour le pare-feu, à la demande.
 param(
@@ -20,10 +20,10 @@ param(
 $ErrorActionPreference = "Stop"
 # Chemin absolu depuis le dossier courant de PowerShell ([IO.Path]::GetFullPath part de celui du processus en 5.1).
 function Full([string] $p) { $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($p) }
-$Name = "UnoMateCI"
+$Name = "MateCI"
 $Root = Full $Root
 $appDir = Join-Path $Root "app"
-$app = Join-Path $appDir "UnoMate-Windows.exe"
+$app = Join-Path $appDir "Mate-Windows.exe"
 $base = "http://127.0.0.1:$Port"
 $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
 
@@ -38,7 +38,7 @@ $env:COMPANION_LABEL = $Name       # valeur de la clé Run propre au test (panne
 # Ni page ouverte ni boîte de message ; le code d'appairage est lu sur la page locale par la sanity.
 $env:COMPANION_HEADLESS = "1"
 $env:NO_ALERT = "1"
-$runtime = Join-Path $env:LOCALAPPDATA "UnoMate\runtime"
+$runtime = Join-Path $env:LOCALAPPDATA "Mate\runtime"
 $node = Join-Path $runtime "node\node.exe"
 
 function Step([string] $title) { Write-Host "`n== $title" }
@@ -67,7 +67,7 @@ if ($Nettoyage) {
   exit 0
 }
 
-if (-not $Exe) { throw "-Exe <UnoMate-Windows.exe> attendu (ou -Nettoyage)" }
+if (-not $Exe) { throw "-Exe <Mate-Windows.exe> attendu (ou -Nettoyage)" }
 $Exe = Full $Exe
 $Junit = Full $Junit
 $Logs = Full $Logs
@@ -84,7 +84,7 @@ try {
   # Le lanceur reste en marche (il relance le serveur) : pas d'attente de sa fin.
   $launcher = Start-Process -FilePath $app -PassThru
   if (-not (WaitUntil { Health } 60)) { throw "pas de réponse sur $base" }
-  foreach ($f in @($node, (Join-Path $runtime "dist\server.mjs"), (Join-Path $runtime "src\win\UnowhyHelper.exe"), (Join-Path $runtime "runtime.stamp"))) {
+  foreach ($f in @($node, (Join-Path $runtime "dist\server.mjs"), (Join-Path $runtime "src\win\MateHelper.exe"), (Join-Path $runtime "runtime.stamp"))) {
     if (-not (Test-Path $f)) { throw "absent après le lancement : $f" }
   }
   "node $(& $node --version), PowerShell $($PSVersionTable.PSVersion)"
@@ -93,7 +93,7 @@ try {
   if (RunValue) { throw "clé Run $Name inscrite sans demande" }
   $panel = Invoke-RestMethod "$base/local/panel"
   if (-not $panel.portable -or $panel.autostart) { throw "/local/panel : portable=$($panel.portable) autostart=$($panel.autostart)" }
-  "panneau : version $($panel.version), pare-feu $($panel.firewall), ancienne installation : $(@($panel.legacy).Count)"
+  "panneau : version $($panel.version), pare-feu $($panel.firewall)"
 
   Step "Lancement au démarrage (panneau)"
   $null = Post "/local/autostart" @{ on = $true }
@@ -119,8 +119,8 @@ try {
   $sanityCode = $LASTEXITCODE
 
   Step "Pilote Windows"
-  $helper = @(Leftovers | Where-Object { $_.Name -eq "UnowhyHelper" })
-  if ($helper.Count -eq 0) { throw "UnowhyHelper.exe du test ne tourne pas" }
+  $helper = @(Leftovers | Where-Object { $_.Name -eq "MateHelper" })
+  if ($helper.Count -eq 0) { throw "MateHelper.exe du test ne tourne pas" }
   $auth = @{ Authorization = "Bearer $token" }
   $open = Invoke-RestMethod "$base/windows/open" -Headers $auth -TimeoutSec 45
   $audio = Invoke-RestMethod "$base/system/audio" -Headers $auth -TimeoutSec 45

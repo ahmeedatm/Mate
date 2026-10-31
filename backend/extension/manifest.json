@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "UnoMate",
+  "name": "Mate",
   "version": "1.2.1",
-  "description": "Montre sur la tablette Unowhy les onglets ouverts dans ce navigateur (Page de l'ordi) et pilote la vidéo ou la musique (page Média). Rien ne quitte l'ordinateur.",
+  "description": "Montre sur la tablette les onglets ouverts dans ce navigateur (Page de l'ordi) et pilote la vidéo ou la musique (page Média). Rien ne quitte l'ordinateur.",
   "permissions": ["tabs", "alarms", "storage", "scripting"],
   "host_permissions": [
     "http://127.0.0.1/*",

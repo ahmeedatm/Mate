@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Widget de l'Accueil en Rétro : la tuile Cadran (rayon 32, appui = ton voisin) en translucide, pour deviner les
-     tubes qui coulent derrière (ui/home/FlowBandView, même opacité que son voile CARD_ALPHA). -->
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="@color/home_card_pressed" /><corners android:radius="32dp" /></shape></item>
-    <item><shape android:shape="rectangle"><solid android:color="@color/home_card" /><corners android:radius="32dp" /></shape></item>
-</selector>

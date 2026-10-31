@@ -50,7 +50,7 @@ describe("jira : groupement en colonnes", () => {
 
 const cols = (...names: string[]): BoardColumn[] => names.map((name, i) => ({ name, statusIds: [String(i)] }));
 const QA_COLUMNS = cols("To Do", "In Progress", "BLOCKED/Stand By", "Done", "REJECTED", "En attente de réponse");
-const SQOOL_COLUMNS = cols("Backlog", "TO DO", "IN PROGRESS", "BLOCKED / Standing by", "IN REVIEW", "READY / GO QA", "IN QA", "DONE");
+const TECH_COLUMNS = cols("Backlog", "TO DO", "IN PROGRESS", "BLOCKED / Standing by", "IN REVIEW", "READY / GO QA", "IN QA", "DONE");
 
 describe("jira : clé de fusion et union des colonnes", () => {
   it("columnKey : mot-clé, sinon nom normalisé", () => {
@@ -77,8 +77,8 @@ describe("jira : clé de fusion et union des colonnes", () => {
     for (const [name, key] of keys) assert.equal(columnKey(name), key, name);
   });
 
-  it("mergeBoardColumns : SQOOL puis QA, fusion par mot-clé, colonnes QA insérées après Done", () => {
-    const merged = mergeBoardColumns([SQOOL_COLUMNS, QA_COLUMNS]);
+  it("mergeBoardColumns : TECH puis QA, fusion par mot-clé, colonnes QA insérées après Done", () => {
+    const merged = mergeBoardColumns([TECH_COLUMNS, QA_COLUMNS]);
     assert.deepEqual(
       merged.map((c) => c.title),
       [
@@ -101,8 +101,8 @@ describe("jira : clé de fusion et union des colonnes", () => {
     assert.deepEqual(merged, [{ title: "To Do", statusIds: ["1", "2", "3"] }]);
   });
 
-  it("mergeBoardColumns : QA en premier, les colonnes SQOOL s'insèrent à leur place", () => {
-    const merged = mergeBoardColumns([QA_COLUMNS, SQOOL_COLUMNS]);
+  it("mergeBoardColumns : QA en premier, les colonnes TECH s'insèrent à leur place", () => {
+    const merged = mergeBoardColumns([QA_COLUMNS, TECH_COLUMNS]);
     assert.deepEqual(
       merged.map((c) => c.title),
       [
@@ -137,9 +137,9 @@ let transitionStatus = 204;
 let issueStatus = 404;
 let withOutsider = false;
 const BOARD_PAGES: Record<string, { id: number; name: string }[]> = {
-  SQOOL: [
-    { id: 1, name: "SQOOL Kanban" },
-    { id: 2, name: "SQOOL Scrum" },
+  TECH: [
+    { id: 1, name: "TECH Kanban" },
+    { id: 2, name: "TECH Scrum" },
     { id: 3, name: "QA" },
   ],
   QA: [
@@ -184,7 +184,7 @@ const jiraServer = http.createServer((req, res) => {
       if (JSON.parse(raw).jql.includes("statusCategory = Done")) {
         return send(200, {
           issues: [
-            issue("SQOOL-9", "Terminé", "done"),
+            issue("TECH-9", "Terminé", "done"),
             {
               ...issue("QA-5", "Done", "done"),
               fields: { ...issue("QA-5", "Done", "done").fields, status: { id: "40", name: "Done", statusCategory: { key: "done" } } },
@@ -194,10 +194,10 @@ const jiraServer = http.createServer((req, res) => {
       }
       return send(200, {
         issues: [
-          issue("SQOOL-2", "En cours", "indeterminate"),
-          issue("SQOOL-1", "À faire", "new"),
-          issue("SQOOL-3", "En cours", "indeterminate"),
-          ...(withOutsider ? [issue("SQOOL-4", "Bizarre", "indeterminate")] : []),
+          issue("TECH-2", "En cours", "indeterminate"),
+          issue("TECH-1", "À faire", "new"),
+          issue("TECH-3", "En cours", "indeterminate"),
+          ...(withOutsider ? [issue("TECH-4", "Bizarre", "indeterminate")] : []),
         ],
       });
     }
@@ -212,9 +212,9 @@ const jiraServer = http.createServer((req, res) => {
       const columns = BOARD_CONFIGS[boardConfig[1]];
       return columns ? send(200, { columnConfig: { columns } }) : send(404, {});
     }
-    if (url.startsWith("/rest/api/3/issue/SQOOL-1?")) return send(200, { fields: { status: { id: "10", name: "À faire" } } });
-    if (url.startsWith("/rest/api/3/issue/SQOOL-404")) return send(issueStatus, {});
-    if (url.startsWith("/rest/api/3/issue/SQOOL-1/transitions?")) {
+    if (url.startsWith("/rest/api/3/issue/TECH-1?")) return send(200, { fields: { status: { id: "10", name: "À faire" } } });
+    if (url.startsWith("/rest/api/3/issue/TECH-404")) return send(issueStatus, {});
+    if (url.startsWith("/rest/api/3/issue/TECH-1/transitions?")) {
       return send(200, {
         transitions: [
           { id: "11", name: "Démarrer", to: { id: "11", name: "En cours" }, isAvailable: true, fields: { x: { required: false } } },
@@ -235,7 +235,7 @@ const jiraServer = http.createServer((req, res) => {
         ],
       });
     }
-    if (req.method === "POST" && url === "/rest/api/3/issue/SQOOL-1/transitions") return send(transitionStatus);
+    if (req.method === "POST" && url === "/rest/api/3/issue/TECH-1/transitions") return send(transitionStatus);
     send(500, {});
   });
 });
@@ -277,11 +277,11 @@ describe("jira : API", () => {
     assert.deepEqual(
       json.columns.map((c: any) => [c.title, c.issues.map((i: any) => i.key)]),
       [
-        ["À faire", ["SQOOL-1"]],
-        ["En cours", ["SQOOL-2", "SQOOL-3"]],
+        ["À faire", ["TECH-1"]],
+        ["En cours", ["TECH-2", "TECH-3"]],
       ],
     );
-    assert.deepEqual(json.columns[0].issues[0], { key: "SQOOL-1", summary: "Titre SQOOL-1", type: "Tâche", priority: "High", done: false });
+    assert.deepEqual(json.columns[0].issues[0], { key: "TECH-1", summary: "Titre TECH-1", type: "Tâche", priority: "High", done: false });
     assert.equal(seen.length, 1, "pas de requête sur les terminés sans tableau choisi");
     assert.deepEqual(seen[0].body, {
       jql: "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC",
@@ -295,9 +295,9 @@ describe("jira : API", () => {
     assert.equal(status, 200);
     assert.deepEqual(json, {
       boards: [
-        { id: 1, name: "SQOOL Kanban", project: "SQOOL" },
-        { id: 2, name: "SQOOL Scrum", project: "SQOOL" },
-        { id: 3, name: "QA", project: "SQOOL" },
+        { id: 1, name: "TECH Kanban", project: "TECH" },
+        { id: 2, name: "TECH Scrum", project: "TECH" },
+        { id: 3, name: "QA", project: "TECH" },
         { id: 4, name: "QA bis", project: "QA" },
       ],
       selected: [],
@@ -335,12 +335,12 @@ describe("jira : API", () => {
       json.columns.map((c: any) => [c.title, c.issues.map((i: any) => [i.key, i.done])]),
       [
         ["Backlog", []],
-        ["TO DO", [["SQOOL-1", false]]],
+        ["TO DO", [["TECH-1", false]]],
         [
           "IN PROGRESS",
           [
-            ["SQOOL-2", false],
-            ["SQOOL-3", false],
+            ["TECH-2", false],
+            ["TECH-3", false],
           ],
         ],
         ["BLOCKED / Standing by", []],
@@ -350,7 +350,7 @@ describe("jira : API", () => {
         [
           "DONE",
           [
-            ["SQOOL-9", true],
+            ["TECH-9", true],
             ["QA-5", true],
           ],
         ],
@@ -358,7 +358,7 @@ describe("jira : API", () => {
         ["En attente de réponse", []],
       ],
     );
-    assert.deepEqual(json.columns[1].issues[0], { key: "SQOOL-1", summary: "Titre SQOOL-1", type: "Tâche", priority: "High", done: false });
+    assert.deepEqual(json.columns[1].issues[0], { key: "TECH-1", summary: "Titre TECH-1", type: "Tâche", priority: "High", done: false });
     const searches = seen.filter((r) => r.url === "/rest/api/3/search/jql").map((r) => r.body.jql);
     assert.equal(searches.length, 2);
     assert.ok(searches.includes("assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC"));
@@ -384,7 +384,7 @@ describe("jira : API", () => {
     assert.equal(last.title, "Bizarre");
     assert.deepEqual(
       last.issues.map((i: any) => i.key),
-      ["SQOOL-4"],
+      ["TECH-4"],
     );
   });
 
@@ -403,7 +403,7 @@ describe("jira : API", () => {
   });
 
   it("GET transitions : needsJira, statut courant et transitions indisponibles exclus", async () => {
-    const { status, json } = await server.call("GET", "/jira/issues/SQOOL-1/transitions");
+    const { status, json } = await server.call("GET", "/jira/issues/TECH-1/transitions");
     assert.equal(status, 200);
     assert.deepEqual(json.transitions, [
       { id: "11", name: "Démarrer", to: "En cours", needsJira: false },
@@ -415,7 +415,7 @@ describe("jira : API", () => {
   it("POST transition : envoie { transition: { id } } à Jira", async () => {
     seen.length = 0;
     transitionStatus = 204;
-    const res = await server.call("POST", "/jira/issues/SQOOL-1/transitions", { id: "11" });
+    const res = await server.call("POST", "/jira/issues/TECH-1/transitions", { id: "11" });
     assert.deepEqual([res.status, res.json], [200, { ok: true }]);
     const post = seen.find((r) => r.method === "POST");
     assert.deepEqual(post?.body, { transition: { id: "11" } });
@@ -423,14 +423,14 @@ describe("jira : API", () => {
 
   it("Jira répond 400 : 409 « À finir dans Jira »", async () => {
     transitionStatus = 400;
-    const res = await server.call("POST", "/jira/issues/SQOOL-1/transitions", { id: "12" });
+    const res = await server.call("POST", "/jira/issues/TECH-1/transitions", { id: "12" });
     transitionStatus = 204;
     assert.equal(res.status, 409);
     assert.match(res.json.error, /^À finir dans Jira/);
   });
 
   it("ticket inconnu : message en français", async () => {
-    const res = await server.call("GET", "/jira/issues/SQOOL-404/transitions");
+    const res = await server.call("GET", "/jira/issues/TECH-404/transitions");
     assert.equal(res.status, 500);
     assert.equal(res.json.message, "Ticket introuvable dans Jira.");
   });
@@ -456,19 +456,19 @@ describe("jira : API", () => {
 
   it("clé ou identifiant de transition invalide : 400, Jira n'est pas appelé", async () => {
     seen.length = 0;
-    assert.equal((await server.call("GET", "/jira/issues/sqool-1/transitions")).status, 400);
-    assert.equal((await server.call("GET", "/jira/issues/SQOOL-1;x/transitions")).status, 400);
-    assert.equal((await server.call("POST", "/jira/issues/SQOOL-1/transitions", { id: "abc" })).status, 400);
-    assert.equal((await server.call("POST", "/jira/issues/SQOOL-1/transitions", { id: "" })).status, 400);
-    assert.equal((await server.call("POST", "/jira/issues/SQOOL-1/transitions", {})).status, 400);
+    assert.equal((await server.call("GET", "/jira/issues/tech-1/transitions")).status, 400);
+    assert.equal((await server.call("GET", "/jira/issues/TECH-1;x/transitions")).status, 400);
+    assert.equal((await server.call("POST", "/jira/issues/TECH-1/transitions", { id: "abc" })).status, 400);
+    assert.equal((await server.call("POST", "/jira/issues/TECH-1/transitions", { id: "" })).status, 400);
+    assert.equal((await server.call("POST", "/jira/issues/TECH-1/transitions", {})).status, 400);
     assert.deepEqual(seen, []);
   });
 
   it("POST open : ouvre la page du ticket sur l'ordinateur", async () => {
     server.clearOsCalls();
-    const res = await server.call("POST", "/jira/issues/SQOOL-1/open");
+    const res = await server.call("POST", "/jira/issues/TECH-1/open");
     assert.deepEqual([res.status, res.json], [200, { ok: true }]);
-    assert.deepEqual(server.osCalls(), [{ fn: "openTarget", args: [`${site}/browse/SQOOL-1`] }]);
+    assert.deepEqual(server.osCalls(), [{ fn: "openTarget", args: [`${site}/browse/TECH-1`] }]);
   });
 
   it("Jira non configuré : 501 sur toutes les routes", async () => {
@@ -477,9 +477,9 @@ describe("jira : API", () => {
       ["GET", "/jira/issues"],
       ["GET", "/jira/boards"],
       ["POST", "/jira/boards", { ids: [1] }],
-      ["GET", "/jira/issues/SQOOL-1/transitions"],
-      ["POST", "/jira/issues/SQOOL-1/transitions", { id: "11" }],
-      ["POST", "/jira/issues/SQOOL-1/open"],
+      ["GET", "/jira/issues/TECH-1/transitions"],
+      ["POST", "/jira/issues/TECH-1/transitions", { id: "11" }],
+      ["POST", "/jira/issues/TECH-1/open"],
     ] as const) {
       const res = await bare.call(method, route, body);
       assert.deepEqual([res.status, res.json], [501, message], `${method} ${route}`);

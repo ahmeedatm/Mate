@@ -28,7 +28,7 @@ export default async function browserRoutes(app: FastifyInstance) {
     };
   });
 
-  /** Onglets envoyés par l'extension « UnoMate » du navigateur (en local, sans jeton). */
+  /** Onglets envoyés par l'extension « Mate » du navigateur (en local, sans jeton). */
   app.post<{ Body: ExtensionReport }>(
     "/browser/extension",
     {

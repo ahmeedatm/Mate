@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { isNewer, pickInstaller } from "../src/app-update.ts";
-import { isLegacyMacAgent, isLegacyRun, macLaunchAgent, windowsRunCommand } from "../src/portable.ts";
+import { macLaunchAgent, windowsRunCommand } from "../src/portable.ts";
 
-// Appli portable : commandes de démarrage, reconnaissance de l'ancienne installation, choix de l'installeur annoncé par la tablette.
+// Appli portable : commandes de démarrage, choix de l'installeur annoncé par la tablette.
 
 const sha = "a".repeat(64);
 const entry = (over: Record<string, unknown> = {}) => ({
   os: "windows",
-  file: "UnoMate-Windows.exe",
+  file: "Mate-Windows.exe",
   size: 23_000_000,
   sha256: sha,
   version: "1.3.0",
@@ -24,35 +24,18 @@ describe("lancement au démarrage", () => {
   });
 
   it("Mac : agent lancé à l'ouverture de session, sans relance launchd (la boucle du lanceur s'en charge)", () => {
-    const plist = macLaunchAgent("com.unowhy.unomate.demarrage", "/Users/a&b/UnoMate.app/Contents/MacOS/UnoMate");
+    const plist = macLaunchAgent("app.mate.demarrage", "/Users/a&b/Mate.app/Contents/MacOS/Mate");
     assert.match(plist, /<key>RunAtLoad<\/key>\s*<true\/>/);
-    assert.match(plist, /<string>\/Users\/a&amp;b\/UnoMate\.app\/Contents\/MacOS\/UnoMate<\/string>\s*<string>--demarrage<\/string>/);
+    assert.match(plist, /<string>\/Users\/a&amp;b\/Mate\.app\/Contents\/MacOS\/Mate<\/string>\s*<string>--demarrage<\/string>/);
     assert.ok(!plist.includes("KeepAlive"));
-  });
-});
-
-describe("ancienne installation", () => {
-  it("Mac : l'agent du paquet installé, pas celui du dépôt (npm run service:install)", () => {
-    assert.ok(isLegacyMacAgent("<string>/Applications/UnoMate.app/Contents/Resources/backend/node/darwin-arm64/node</string>"));
-    assert.ok(!isLegacyMacAgent("<string>/Users/a/dev/unowhy-companion/backend/node_modules/.bin/tsx</string>"));
-  });
-
-  it("Windows : la clé Run de l'ancien lanceur avec le node embarqué, pas celle du dépôt ni la nouvelle", () => {
-    const legacy =
-      '"C:\\Users\\a\\AppData\\Local\\Programs\\UnoMate\\backend\\src\\win\\UnoMate.exe" --node "C:\\Users\\a\\AppData\\Local\\Programs\\UnoMate\\backend\\node\\node.exe" --backend "C:\\x\\backend" --logs l --data d';
-    assert.ok(isLegacyRun(legacy));
-    assert.ok(
-      !isLegacyRun('"C:\\dev\\backend\\src\\win\\UnoMate.exe" --node "C:\\Program Files\\nodejs\\node.exe" --backend "C:\\dev\\backend"'),
-    );
-    assert.ok(!isLegacyRun(windowsRunCommand("C:\\x\\Compagnon.exe")));
   });
 });
 
 describe("mise à jour depuis la tablette", () => {
   it("prend l'installeur du système demandé", () => {
-    const json = { installers: [entry({ os: "mac", file: "UnoMate-Mac.zip" }), entry()] };
-    assert.equal(pickInstaller(json, "windows")?.file, "UnoMate-Windows.exe");
-    assert.equal(pickInstaller(json, "mac")?.file, "UnoMate-Mac.zip");
+    const json = { installers: [entry({ os: "mac", file: "Mate-Mac.zip" }), entry()] };
+    assert.equal(pickInstaller(json, "windows")?.file, "Mate-Windows.exe");
+    assert.equal(pickInstaller(json, "mac")?.file, "Mate-Mac.zip");
     assert.equal(pickInstaller({ installers: [entry()] }, "mac"), undefined);
   });
 

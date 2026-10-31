@@ -15,20 +15,8 @@ import { isScreenLocked } from "./screen-lock.ts";
 export const MODES = ["home", "deck", "docs", "focus", "camera", "tasks", "settings"] as const;
 export const NOISES = ["storm", "forest", "japan", "sea", "lofi", "off"] as const;
 export const FOCUS_ACTIONS = ["start", "pause", "reset", "skip"] as const;
-/** Thèmes de la tablette (AppTheme dans ui/Themes.kt), dans son ordre : Clair (par défaut) et Sombre, les rétro, Contraste, puis ceux des personas. */
-export const THEMES = [
-  "CLAIR",
-  "SOMBRE",
-  "CADRAN",
-  "CADRAN_NUIT",
-  "RETRO",
-  "CONTRASTE",
-  "REGISTRE",
-  "STUDIO",
-  "MAISON",
-  "TABLEAU",
-  "TERMINAL",
-] as const;
+/** Thèmes de la tablette (AppTheme dans ui/Themes.kt), dans son ordre : Console (par défaut, nuit), Console jour, Contraste élevé. */
+export const THEMES = ["CONSOLE", "CONSOLE_JOUR", "CONTRASTE"] as const;
 
 /** Réglages de la tablette changés depuis la page de l'ordinateur ; un champ absent reste tel quel. */
 export type TabletSettings = {
@@ -66,7 +54,7 @@ export type TabletCommand =
   /** Profils et barres de la page locale : lire l'état de la tablette, ou lui envoyer une configuration. */
   | { type: "layout"; action: "get" }
   | ({ type: "layout"; action: "set" } & TabletLayoutChange)
-  /** Mise à jour du UnoMate depuis la page locale : chercher, ou installer la version trouvée. */
+  /** Mise à jour du Mate depuis la page locale : chercher, ou installer la version trouvée. */
   | { type: "update"; action: "check" | "install" }
   /** Appel entrant (src/calls.ts) : carte Répondre / Ignorer sur la tablette, retirée à `ended`. */
   | { type: "call"; state: "ringing" | "ended"; app: string; caller: string | null; video: boolean }

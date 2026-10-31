@@ -19,13 +19,13 @@ export const DECK_CSS = `
   .pf-keydialog .pf-where { margin: -6px 0 0; }
   .pf-steps { list-style: none; counter-reset: s; margin: 0; padding: 0; }
   .pf-steps li { counter-increment: s; position: relative; padding: 16px 0 18px 38px; border-top: 1px solid var(--line); }
-  .pf-steps li::before { content: counter(s); position: absolute; left: 0; top: 16px; font: 300 24px/40px Outfit, sans-serif; color: var(--ink); }
+  .pf-steps li::before { content: counter(s); position: absolute; left: 0; top: 16px; font: 300 24px/40px Figtree, sans-serif; color: var(--ink); }
   .pf-stephead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .pf-stephead .pf-sel { flex: 1 1 200px; }
   .pf-steps .pf-field:first-of-type { margin-top: 12px; }
   @media (max-width: 820px) { .pf-stephead .pf-sel { flex-basis: 100%; } }
   .pf-keydialog textarea { width: 100%; min-height: 96px; padding: 12px 20px; border: 0; border-radius: 20px; resize: vertical; box-shadow: inset 0 0 0 1px var(--line);
-    background: var(--bg); color: var(--ink); font: 400 15px/1.5 Outfit, sans-serif; }
+    background: var(--bg); color: var(--ink); font: 400 15px/1.5 Figtree, sans-serif; }
   .pf-keydialog textarea:focus { outline: 0; box-shadow: inset 0 0 0 2px var(--ink); }
   .pf-keydialog input[type=color] { appearance: none; -webkit-appearance: none; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 20px; background: none; cursor: pointer; flex: none; }
   .pf-keydialog input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
@@ -286,7 +286,7 @@ export const DECK_JS = `
     box.append(pfDeckField("Symbole", pfDeckWrapSel(pfDeckSelect([["", "Aucun"]].concat(pfDeckData.symbols.map((s) => [s, s])), d.symbol, (v) => { d.symbol = v; }))));
 
     const useColor = pfDeckEl("input", { type: "checkbox", checked: d.color !== "", id: "pf-deck-use-color" });
-    const color = pfDeckEl("input", { type: "color", value: d.color || "#CA0538", "aria-label": "Couleur de la touche", disabled: d.color === "" });
+    const color = pfDeckEl("input", { type: "color", value: d.color || "#B8F34A", "aria-label": "Couleur de la touche", disabled: d.color === "" });
     useColor.onchange = () => { color.disabled = !useColor.checked; d.color = useColor.checked ? color.value : ""; };
     color.oninput = () => { d.color = color.value; };
     box.append(pfDeckEl("div", { className: "pf-list" }, [

@@ -15,8 +15,8 @@ import { config } from "../src/config.ts";
  *   --file <chemin>   autre settings.json ; --port <n>, --hold <s>
  *
  * Le secret et le port viennent des données de CET ordinateur : pour un compagnon installé par paquet,
- * lancer avec son dossier de données : Mac `DATA_DIR="$HOME/Library/Application Support/UnoMate" PORT=3000 npm run agents:hooks`,
- * Windows (Git Bash) `DATA_DIR="$LOCALAPPDATA/UnoMate/data" PORT=3000 npm run agents:hooks`.
+ * lancer avec son dossier de données : Mac `DATA_DIR="$HOME/Library/Application Support/Mate" PORT=3000 npm run agents:hooks`,
+ * Windows (Git Bash) `DATA_DIR="$LOCALAPPDATA/Mate/data" PORT=3000 npm run agents:hooks`.
  * Windows : Claude Code lance la commande de la statusline par Git Bash (vérifié pour les hooks `command`), qui a `curl` ;
  * l'enveloppe est la même que sur Mac. Les hooks du compagnon sont de type `http` : aucun shell.
  */

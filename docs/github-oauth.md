@@ -19,13 +19,13 @@ remplit seul (relu toutes les 3 s en attendant). Aucune adresse de retour : le c
 
 | Champ | Valeur |
 |---|---|
-| Application name | `UnoMate` |
-| Homepage URL | `https://mate.integration.unowhy.dev` |
+| Application name | `Mate` |
+| Homepage URL | `https://github.com/ahmeedatm/Mate` |
 | Authorization callback URL | `http://127.0.0.1:3000/` (exigée par le formulaire, pas utilisée par le device flow) |
 | **Enable Device Flow** | **cochée** |
 
 Puis copier le **Client ID**. Le **secret n'est pas utilisé** : ne pas en générer. Une organisation qui restreint les applis OAuth
-doit approuver UnoMate (Settings › Third-party access).
+doit approuver Mate (Settings › Third-party access).
 
 Coller l'ID (public) dans `backend/config/accounts.json` ; il est livré avec le logiciel :
 

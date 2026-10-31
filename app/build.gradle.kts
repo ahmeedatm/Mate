@@ -10,17 +10,17 @@ val backendUrl = (findProperty("backendUrl") as String?) ?: "http://127.0.0.1:30
 // Code technicien (appui long sur le titre de Réglages) : montre la carte Kiosque. -PtechCode=… pour le changer.
 val techCode = (findProperty("techCode") as String?) ?: "4242"
 
-// Serveur central des mises à jour : registre de paquets du projet GitLab (manifest.json + APK). -PupdateUrl=http://10.0.2.2:8099
-// pour un essai local, vide pour le couper.
-val updateUrl = (findProperty("updateUrl") as String?)
-    ?: "https://gitlab.unowhy.dev/api/v4/projects/891/packages/generic/companion-updates/latest"
-// En-tête envoyé au seul serveur central, « Nom: valeur ». La CI release passe « Deploy-Token: … » (lecture seule du registre) ;
-// vide en debug : le registre répond 401, la tablette n'y voit aucune mise à jour.
-val updateHeader = (findProperty("updateHeader") as String?) ?: ""
+// Mises à jour : assets des releases GitHub du dépôt `updateRepo` (tag `latest` : stables, tag `essais` : essais de PR),
+// lus par l'API GitHub avec `updateToken`, jeton en lecture seule du dépôt (privé). Le jeton est dans l'APK, jamais dans
+// le dépôt : la CI release le passe (-PupdateToken=…), vide en debug (aucune mise à jour vue). -PupdateRepo= (vide) coupe la source.
+val updateRepo = (findProperty("updateRepo") as String?) ?: "ahmeedatm/Mate"
+val updateToken = (findProperty("updateToken") as String?) ?: ""
+// Serveur HTTP simple à la place de GitHub, pour un essai local : -PupdateUrl=http://10.0.2.2:8099 (essais sous /essais).
+val updateUrl = (findProperty("updateUrl") as String?) ?: ""
 
 // Version : celle du tag vX.Y.Z en CI (-PappVersion=X.Y.Z). versionCode = (X × 10000 + Y × 100 + Z) × 1000, toujours croissant.
-// Essai depuis une MR (job essai-android) : -PappVersion=X.Y.Z-essai.N, X.Y.Z = dernier tag de la branche, N = numéro
-// du pipeline ; code = celui du tag + 1 + N mod 999 : au-dessus du tag, sous le suivant.
+// Essai depuis une PR : -PappVersion=X.Y.Z-essai.N, X.Y.Z = dernier tag de la branche, N = numéro
+// d'exécution de la CI ; code = celui du tag + 1 + N mod 999 : au-dessus du tag, sous le suivant.
 // Sans tag : 0.0.0, code 1 (Android refuse 0) : une build locale ne bloque aucun tag, et un APK debug ne reçoit
 // de toute façon pas un APK release (signature différente).
 val appVersion = (findProperty("appVersion") as String?) ?: "0.0.0"
@@ -30,7 +30,7 @@ val appVersionCode = versionParts.let { (x, y, z, n) ->
     val tag = (x.toInt() * 10000 + y.toInt() * 100 + z.toInt()) * 1000
     (if (n.isEmpty()) tag else tag + 1 + n.toInt() % 999).coerceAtLeast(1)
 }
-// Un essai est une autre appli (com.unowhy.companion.essai, « UnoMate essai »), installée à côté de la stable : la
+// Un essai est une autre appli (app.mate.essai, « Mate essai »), installée à côté de la stable : la
 // stable reste device owner et kiosque, et on revient à elle sans réinstaller (docs/developpement.md, section Release).
 val trial = versionParts.component4().isNotEmpty()
 
@@ -38,24 +38,25 @@ val trial = versionParts.component4().isNotEmpty()
 val releaseKeystore = providers.environmentVariable("RELEASE_KEYSTORE").orNull
 
 android {
-    namespace = "com.unowhy.unomate"
+    namespace = "app.mate"
     compileSdk = 36
 
     defaultConfig {
-        // Identité Android d'avant le renommage UnoMate, à ne jamais changer : les tablettes en kiosque ne se mettent à
-        // jour que vers leur propre paquet (device owner, AutoUpdater). Le code, lui, est dans com.unowhy.unomate.
-        applicationId = "com.unowhy.companion"
+        // Identité Android d'avant le renommage Mate, à ne jamais changer : les tablettes en kiosque ne se mettent à
+        // jour que vers leur propre paquet (device owner, AutoUpdater). Le code, lui, est dans app.mate.
+        applicationId = "app.mate"
         minSdk = 24
         targetSdk = 34
         versionCode = appVersionCode
         versionName = appVersion
         if (trial) applicationIdSuffix = ".essai"
-        manifestPlaceholders["appLabel"] = if (trial) "UnoMate essai" else "UnoMate"
+        manifestPlaceholders["appLabel"] = if (trial) "Mate essai" else "Mate"
         buildConfigField("boolean", "TRIAL", "$trial")
         buildConfigField("String", "DEFAULT_BACKEND_URL", "\"$backendUrl\"")
         buildConfigField("String", "TECH_CODE", "\"$techCode\"")
         buildConfigField("String", "UPDATE_URL", "\"$updateUrl\"")
-        buildConfigField("String", "UPDATE_HEADER", "\"$updateHeader\"")
+        buildConfigField("String", "UPDATE_REPO", "\"$updateRepo\"")
+        buildConfigField("String", "UPDATE_TOKEN", "\"$updateToken\"")
         // Bibliothèques natives de Vosk (10 Mo par ABI) : la tablette (arm64-v8a), les lots 32 bits (armeabi-v7a) et
         // l'émulateur (x86_64) ; x86, armeabi et mips n'ont pas de Vosk de toute façon.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }

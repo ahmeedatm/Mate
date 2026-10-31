@@ -103,7 +103,7 @@ type TokenAnswer = { access_token?: string; scope?: string; error?: string; inte
 async function post<T>(url: string, params: Record<string, string>): Promise<{ status: number; json: T }> {
   const res = await fetch(url, {
     method: "POST",
-    headers: { accept: "application/json", "content-type": "application/x-www-form-urlencoded", "user-agent": "UnoMate" },
+    headers: { accept: "application/json", "content-type": "application/x-www-form-urlencoded", "user-agent": "Mate" },
     body: new URLSearchParams(params),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
@@ -180,7 +180,7 @@ async function waitForToken(id: number, clientId: string, deviceCode: string, in
 async function userName(token: string): Promise<string> {
   try {
     const res = await fetch(`${githubApiUrl()}/user`, {
-      headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json", "user-agent": "UnoMate" },
+      headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json", "user-agent": "Mate" },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     const json = (await res.json()) as { login?: unknown };

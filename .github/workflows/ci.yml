@@ -1,8 +1,8 @@
 # CI de la copie GitHub (ahmeedatm/Mate) : mêmes tests que le stage test de .gitlab-ci.yml, mêmes images.
 # Sur chaque PR, seuls les jobs de la zone touchée tournent ; sur master, tout tourne.
 # Le job « ci » rassemble les résultats : c'est le seul contrôle exigé par la règle de master.
-# Pas de release, d'essais ni de site publié ici : ils dépendent du registre de paquets GitLab, de la clé de signature
-# et de Harbor (.github/copie-github.md).
+# Pas de release ni d'essais ici : ils dépendent du registre de paquets GitLab et de la clé de signature
+# (.github/copie-github.md).
 
 name: CI
 
@@ -28,7 +28,6 @@ jobs:
     outputs:
       backend: ${{ steps.zones.outputs.backend }}
       android: ${{ steps.zones.outputs.android }}
-      site: ${{ steps.zones.outputs.site }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: github.event_name == 'pull_request'
@@ -37,7 +36,7 @@ jobs:
       - id: zones
         run: |
           if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
-            printf 'backend=true\nandroid=true\nsite=true\n' | tee -a "$GITHUB_OUTPUT"
+            printf 'backend=true\nandroid=true\n' | tee -a "$GITHUB_OUTPUT"
             exit 0
           fi
           FILES=$(git diff --name-only HEAD^1 HEAD)
@@ -47,7 +46,6 @@ jobs:
           }
           zone backend '^backend/'
           zone android '^(app/|gradle/|gradlew|[^/]*\.gradle)'
-          zone site '^(site/|scripts/site-downloads\.mjs$)'
 
   # Format (prettier --check), typecheck, puis tests d'intégration sous c8 : échoue si la couverture passe sous les
   # seuils de backend/.c8rc.json. Image avec git : le test de purge-essais lit un vrai historique git.
@@ -141,21 +139,10 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
-  # Site vitrine : image construite, jamais poussée (Harbor n'est joignable que depuis la CI GitLab). Sans les
-  # installeurs de la release (downloads/ vide), comme en local.
-  site:
-    needs: changes
-    if: needs.changes.outputs.site == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: docker build --label org.opencontainers.image.revision="$GITHUB_SHA" -t site site
-
   # Seul contrôle exigé par la règle de master : vert si chaque job a réussi ou n'avait pas à tourner.
   ci:
     if: always()
-    needs: [changes, backend, e2e, android, site]
+    needs: [changes, backend, e2e, android]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

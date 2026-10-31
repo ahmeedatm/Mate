@@ -105,7 +105,7 @@ export function transcribe(wav: Buffer): Promise<string> {
 }
 
 async function runWhisper(bin: string, model: string, wav: Buffer): Promise<string> {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "unomate-voix-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mate-voix-"));
   const file = path.join(dir, "prompt.wav");
   try {
     fs.writeFileSync(file, wav, { mode: 0o600 });

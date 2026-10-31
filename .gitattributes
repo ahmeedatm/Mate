@@ -5,4 +5,4 @@ backend/src/win/**/*.csproj text eol=lf
 backend/src/win/**/*.manifest text eol=lf
 *.exe binary
 *.ico binary
-backend/src/mac/UnowhyMenu binary
+backend/src/mac/MateMenu binary

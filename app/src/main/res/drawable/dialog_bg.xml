@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Fond des boîtes de dialogue : celui du thème, arrondi comme les boîtes Profils et Ordinateurs (CadranDialog). -->
+<!-- Fond des boîtes de dialogue : celui du thème, arrondi comme les boîtes Profils et Ordinateurs (ConsoleDialog). -->
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
     android:insetLeft="16dp"
     android:insetTop="16dp"

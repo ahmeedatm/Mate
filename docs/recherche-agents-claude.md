@@ -177,7 +177,7 @@ Backend :
 | `backend/test/agents.test.ts` | machine à états, décisions JSON, délais, refus de réponse inconnue |
 | `backend/qa/sanity.ts` | un contrôle : faux événements de hook, état attendu |
 
-Android (`app/src/main/kotlin/com/unowhy/unomate/`) :
+Android (`app/src/main/kotlin/app/mate/`) :
 
 | Fichier | Rôle |
 |---|---|

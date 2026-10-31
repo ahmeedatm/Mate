@@ -110,7 +110,7 @@ if (/^failed/.test(ship.pipeline || '')) fin.push(`⚠️ pipeline de la MR roug
 const message = ship.essai
   ? [
       `C'est fini. Essai ${ship.essai} à installer (MR !${ship.mr}).`,
-      "Installer : Réglages > Mises à jour > Rechercher, « Mettre à jour » sur UnoMate essai, puis « Ouvrir l'essai ».",
+      "Installer : Réglages > Mises à jour > Rechercher, « Mettre à jour » sur Mate essai, puis « Ouvrir l'essai ».",
       `Tester : ${code.aTester}`,
       ...fin,
     ].join('\n')

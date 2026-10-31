@@ -1,7 +1,7 @@
 #!/bin/bash
-# Exécutable de « UnoMate.app » (Contents/MacOS), copié par scripts/package.ts. Rien n'est installé : l'appli
+# Exécutable de « Mate.app » (Contents/MacOS), copié par scripts/package.ts. Rien n'est installé : l'appli
 # reste où l'utilisateur l'a mise. Au lancement, elle recopie son runtime (Resources/backend) dans
-# ~/Library/Application Support/UnoMate/runtime (chemin stable : l'Accessibilité accordée à node reste valable
+# ~/Library/Application Support/Mate/runtime (chemin stable : l'Accessibilité accordée à node reste valable
 # d'une version à l'autre), lance le serveur dans une boucle qui le relance s'il s'arrête, puis ouvre le panneau (page
 # locale). Relancée alors que son compagnon tourne : rouvre seulement la page.
 # Sortie du serveur : 75 = quitter (panneau), 76 = quitter et effacer le runtime (« tout oublier »), autre = relancer.
@@ -15,8 +15,8 @@ app="$(cd "$(dirname "$0")/../.." && pwd -P)"
 source_dir="$app/Contents/Resources/backend"
 arch="$([ "$(uname -m)" = arm64 ] && echo arm64 || echo x64)"
 other="$([ "$arch" = arm64 ] && echo x64 || echo arm64)"
-runtime="${COMPANION_RUNTIME_DIR:-$HOME/Library/Application Support/UnoMate/runtime}"
-logs="${COMPANION_LOG_DIR:-$HOME/Library/Logs/UnoMate}"
+runtime="${COMPANION_RUNTIME_DIR:-$HOME/Library/Application Support/Mate/runtime}"
+logs="${COMPANION_LOG_DIR:-$HOME/Library/Logs/Mate}"
 node="$runtime/node/darwin-$arch/node"
 port="${PORT:-3000}"
 headless="${COMPANION_HEADLESS:-}"
@@ -26,7 +26,7 @@ alert() {
   [ -n "$headless" ] && { echo "$1" >&2; return; }
   osascript - "$1" <<'OSA' >/dev/null 2>&1
 on run argv
-  display dialog (item 1 of argv) with title "UnoMate" buttons {"OK"} default button 1 with icon caution
+  display dialog (item 1 of argv) with title "Mate" buttons {"OK"} default button 1 with icon caution
 end run
 OSA
 }
@@ -63,15 +63,9 @@ rm -rf "$app.old" 2>/dev/null
 
 if healthy; then
   if same_build; then open_page; exit 0; fi
-  # Autre build, ou ancienne installation : on lui demande de quitter ; sinon son agent launchd, s'il vient de l'ancien
-  # installeur (appli dans Contents/Resources/backend), est arrêté pour la session. Un compagnon lancé depuis le dépôt n'est jamais touché.
+  # Autre build : on lui demande de quitter. Un compagnon lancé depuis le dépôt n'est jamais touché.
   curl -fsS --max-time 3 -X POST -H 'content-type: application/json' -d '{}' "http://127.0.0.1:$port/local/quit" >/dev/null 2>&1
-  if ! wait_down 15; then
-    if grep -qF "Contents/Resources/backend" "$HOME/Library/LaunchAgents/com.unowhy.unomate.plist" 2>/dev/null; then
-      launchctl bootout "gui/$(id -u)/com.unowhy.unomate" 2>/dev/null
-    fi
-    wait_down 10 || { alert "Un compagnon tourne déjà sur le port $port (autre version, ou lancé depuis le dépôt) : arrête-le, puis rouvre l'appli."; exit 1; }
-  fi
+  wait_down 25 || { alert "Un compagnon tourne déjà sur le port $port (autre version, ou lancé depuis le dépôt) : arrête-le, puis rouvre l'appli."; exit 1; }
 fi
 
 if ! same_build || [ ! -x "$node" ]; then
@@ -89,7 +83,7 @@ $(printf '%s' "$out" | tail -n 6)"
 fi
 
 if [ "$mode" = --demarrage ]; then boucle; fi
-nohup "$app/Contents/MacOS/UnoMate" --boucle >/dev/null 2>&1 &
+nohup "$app/Contents/MacOS/Mate" --boucle >/dev/null 2>&1 &
 disown 2>/dev/null
 
 for _ in $(seq 60); do healthy && break; sleep 0.5; done

@@ -88,7 +88,7 @@ export function thirdPartyNotices(notices: Notice[], node?: { version: string; l
   const sections = unique.map((n) => `${RULE}\n${n.name} ${n.version} (${n.license})\n${RULE}\n\n${n.text}\n`);
   if (node) sections.unshift(`${RULE}\nNode.js ${node.version}\n${RULE}\n\n${node.license.trim()}\n`);
   return [
-    "UnoMate : composants tiers et licences",
+    "Mate : composants tiers et licences",
     RULE,
     "",
     "Le compagnon de l'ordinateur contient les composants suivants. Leur licence demande d'en citer les auteurs et",

@@ -7,7 +7,7 @@
         errorLine1="        return ssid?.takeUnless { it == WifiManager.UNKNOWN_SSID.removeSurrounding(&quot;\&quot;&quot;) || it == &quot;&lt;unknown ssid>&quot; } ?: &quot;&quot;"
         errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/net/Wifi.kt"
+            file="src/main/kotlin/app/mate/net/Wifi.kt"
             line="69"
             column="41"/>
     </issue>
@@ -29,7 +29,7 @@
         errorLine1="    override val view: View = LayoutInflater.from(context).inflate(R.layout.widget_agenda, null)"
         errorLine2="                                                                                           ~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/home/CalendarWidgets.kt"
+            file="src/main/kotlin/app/mate/ui/home/CalendarWidgets.kt"
             line="156"
             column="92"/>
     </issue>
@@ -40,7 +40,7 @@
         errorLine1="        val root = LayoutInflater.from(context).inflate(R.layout.view_dialog_form, null)"
         errorLine2="                                                                                   ~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/ComputerAdder.kt"
+            file="src/main/kotlin/app/mate/ui/ComputerAdder.kt"
             line="219"
             column="84"/>
     </issue>
@@ -51,7 +51,7 @@
         errorLine1="        val root = LayoutInflater.from(context).inflate(R.layout.view_dialog_form, null)"
         errorLine2="                                                                                   ~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/WifiPicker.kt"
+            file="src/main/kotlin/app/mate/ui/WifiPicker.kt"
             line="190"
             column="84"/>
     </issue>
@@ -62,7 +62,7 @@
         errorLine1=") : TextView(context, attrs, defStyleAttr, defStyleRes) {"
         errorLine2="    ~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/Look.kt"
+            file="src/main/kotlin/app/mate/ui/Look.kt"
             line="154"
             column="5"/>
     </issue>
@@ -326,7 +326,7 @@
         errorLine1="            view.settings.javaScriptEnabled = true"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/DocumentPanel.kt"
+            file="src/main/kotlin/app/mate/ui/DocumentPanel.kt"
             line="182"
             column="13"/>
     </issue>
@@ -491,7 +491,7 @@
         errorLine1="class CallOverlay(private val activity: MainActivity) : FrameLayout(activity) {"
         errorLine2="      ~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/CallOverlay.kt"
+            file="src/main/kotlin/app/mate/ui/CallOverlay.kt"
             line="28"
             column="7"/>
     </issue>
@@ -502,7 +502,7 @@
         errorLine1="class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) : FrameLayout(context) {"
         errorLine2="      ~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/TrashZone.kt"
+            file="src/main/kotlin/app/mate/ui/TrashZone.kt"
             line="33"
             column="7"/>
     </issue>
@@ -513,7 +513,7 @@
         errorLine1="    val isShowing get() = visibility == VISIBLE"
         errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/AppAdder.kt"
+            file="src/main/kotlin/app/mate/ui/AppAdder.kt"
             line="78"
             column="27"/>
     </issue>
@@ -524,7 +524,7 @@
         errorLine1="        val host = Uri.parse(tab.url).host?.removePrefix(&quot;www.&quot;)"
         errorLine2="                   ~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/BrowserTabsDialog.kt"
+            file="src/main/kotlin/app/mate/ui/BrowserTabsDialog.kt"
             line="64"
             column="20"/>
     </issue>
@@ -535,7 +535,7 @@
         errorLine1="        if (makeActive) prefs(context).edit().putString(KEY_ACTIVE, saved.id).apply()"
         errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/Computers.kt"
+            file="src/main/kotlin/app/mate/Computers.kt"
             line="62"
             column="25"/>
     </issue>
@@ -546,7 +546,7 @@
         errorLine1="        if (prefs(context).getString(KEY_ACTIVE, null) == id) prefs(context).edit().remove(KEY_ACTIVE).apply()"
         errorLine2="                                                              ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/Computers.kt"
+            file="src/main/kotlin/app/mate/Computers.kt"
             line="75"
             column="63"/>
     </issue>
@@ -557,7 +557,7 @@
         errorLine1="        prefs(context).edit().putString(KEY_LIST, array.toString()).apply()"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/Computers.kt"
+            file="src/main/kotlin/app/mate/Computers.kt"
             line="96"
             column="9"/>
     </issue>
@@ -568,7 +568,7 @@
         errorLine1="        p.edit().putString(KEY_LIST, list.toString()).remove(&quot;backend_url&quot;).remove(&quot;token&quot;).apply()"
         errorLine2="        ~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/Computers.kt"
+            file="src/main/kotlin/app/mate/Computers.kt"
             line="111"
             column="9"/>
     </issue>
@@ -579,7 +579,7 @@
         errorLine1="                override fun shouldOverrideUrlLoading(v: WebView, url: String) = Uri.parse(url).scheme !in WEB_SCHEMES"
         errorLine2="                                                                                 ~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/DocumentPanel.kt"
+            file="src/main/kotlin/app/mate/ui/DocumentPanel.kt"
             line="196"
             column="82"/>
     </issue>
@@ -590,7 +590,7 @@
         errorLine1="                override fun shouldOverrideUrlLoading(v: WebView, url: String) = Uri.parse(url).scheme !in WEB_SCHEMES"
         errorLine2="                                                                                 ~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/DocumentPanel.kt"
+            file="src/main/kotlin/app/mate/ui/DocumentPanel.kt"
             line="196"
             column="82"/>
     </issue>
@@ -601,7 +601,7 @@
         errorLine1="            val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)"
         errorLine2="                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/DocumentPanel.kt"
+            file="src/main/kotlin/app/mate/ui/DocumentPanel.kt"
             line="252"
             column="23"/>
     </issue>
@@ -612,7 +612,7 @@
         errorLine1="                if (hex == null) setBackgroundResource(R.drawable.swatch) else background = swatchDrawable(Color.parseColor(hex))"
         errorLine2="                                                                                                           ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/KeyEditor.kt"
+            file="src/main/kotlin/app/mate/ui/KeyEditor.kt"
             line="92"
             column="108"/>
     </issue>
@@ -623,7 +623,7 @@
         errorLine1="    val isShowing get() = visibility == VISIBLE"
         errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/KeyEditor.kt"
+            file="src/main/kotlin/app/mate/ui/KeyEditor.kt"
             line="108"
             column="27"/>
     </issue>
@@ -634,7 +634,7 @@
         errorLine1="                welcome.visibility == View.VISIBLE -> Unit"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/MainActivity.kt"
+            file="src/main/kotlin/app/mate/MainActivity.kt"
             line="181"
             column="17"/>
     </issue>
@@ -645,7 +645,7 @@
         errorLine1="                documentPanel.visibility == View.VISIBLE -> documentPanel.close()"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/MainActivity.kt"
+            file="src/main/kotlin/app/mate/MainActivity.kt"
             line="182"
             column="17"/>
     </issue>
@@ -656,7 +656,7 @@
         errorLine1="        if (::documentPanel.isInitialized &amp;&amp; documentPanel.visibility == View.VISIBLE) {"
         errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/MainActivity.kt"
+            file="src/main/kotlin/app/mate/MainActivity.kt"
             line="512"
             column="46"/>
     </issue>
@@ -667,7 +667,7 @@
         errorLine1="        prefs(context).edit().putBoolean(KEY_SPEAK, value).apply()"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/Prefs.kt"
+            file="src/main/kotlin/app/mate/Prefs.kt"
             line="26"
             column="9"/>
     </issue>
@@ -678,7 +678,7 @@
         errorLine1="        prefs(context).edit().putFloat(KEY_BRIGHTNESS, value).apply()"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/Prefs.kt"
+            file="src/main/kotlin/app/mate/Prefs.kt"
             line="33"
             column="9"/>
     </issue>
@@ -689,7 +689,7 @@
         errorLine1="        prefs(context).edit().putBoolean(KEY_NIGHT_DIM, value).apply()"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/Prefs.kt"
+            file="src/main/kotlin/app/mate/Prefs.kt"
             line="40"
             column="9"/>
     </issue>
@@ -700,7 +700,7 @@
         errorLine1="        prefs(context).edit().putBoolean(KEY_FOCUS_DND, value).apply()"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/Prefs.kt"
+            file="src/main/kotlin/app/mate/Prefs.kt"
             line="47"
             column="9"/>
     </issue>
@@ -711,7 +711,7 @@
         errorLine1="        prefs(context).edit().putBoolean(KEY_ALLOW_INSTALLS, value).apply()"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/Prefs.kt"
+            file="src/main/kotlin/app/mate/Prefs.kt"
             line="54"
             column="9"/>
     </issue>
@@ -722,7 +722,7 @@
         errorLine1="        prefs(context).edit().putString(KEY_DECK_TABS + Computers.active(context)?.id.orEmpty(), keys.joinToString(&quot;\n&quot;)).apply()"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/Prefs.kt"
+            file="src/main/kotlin/app/mate/Prefs.kt"
             line="62"
             column="9"/>
     </issue>
@@ -733,7 +733,7 @@
         errorLine1="        prefs(context).edit().putString(KEY_THEME, value).apply()"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/Prefs.kt"
+            file="src/main/kotlin/app/mate/Prefs.kt"
             line="69"
             column="9"/>
     </issue>
@@ -744,7 +744,7 @@
         errorLine1="        val bitmap = Bitmap.createBitmap(root.width, root.height, Bitmap.Config.RGB_565)"
         errorLine2="                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/remote/RemoteChannel.kt"
+            file="src/main/kotlin/app/mate/remote/RemoteChannel.kt"
             line="163"
             column="22"/>
     </issue>
@@ -755,7 +755,7 @@
         errorLine1="            row.addView(chip, LinearLayout.LayoutParams(0, dp(48), 1f).apply { if (row.childCount > 0) marginStart = dp(10) })"
         errorLine2="                                                                                   ~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/SettingsFragment.kt"
+            file="src/main/kotlin/app/mate/ui/SettingsFragment.kt"
             line="275"
             column="84"/>
     </issue>
@@ -766,7 +766,7 @@
         errorLine1="        val edit = prefs(context).edit().putString(&quot;day&quot;, today()).putInt(&quot;glasses&quot;, glasses)"
         errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/focus/Water.kt"
+            file="src/main/kotlin/app/mate/focus/Water.kt"
             line="39"
             column="20"/>
     </issue>
@@ -777,7 +777,7 @@
         errorLine1="        prefs(context).edit().putInt(&quot;goal&quot;, goal).putBoolean(&quot;reminder&quot;, reminder).putInt(&quot;interval&quot;, intervalMinutes).apply()"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/focus/Water.kt"
+            file="src/main/kotlin/app/mate/focus/Water.kt"
             line="46"
             column="9"/>
     </issue>
@@ -788,7 +788,7 @@
         errorLine1="        p.edit().putLong(&quot;reminded&quot;, now.timeInMillis).apply()"
         errorLine2="        ~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/focus/Water.kt"
+            file="src/main/kotlin/app/mate/focus/Water.kt"
             line="64"
             column="9"/>
     </issue>
@@ -799,7 +799,7 @@
         errorLine1="            if (child.visibility == View.GONE) continue"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/home/WidgetGrid.kt"
+            file="src/main/kotlin/app/mate/ui/home/WidgetGrid.kt"
             line="114"
             column="17"/>
     </issue>
@@ -810,7 +810,7 @@
         errorLine1="            if (child.visibility == View.GONE) continue"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/home/WidgetGrid.kt"
+            file="src/main/kotlin/app/mate/ui/home/WidgetGrid.kt"
             line="128"
             column="17"/>
     </issue>
@@ -821,7 +821,7 @@
         errorLine1="            if (child.visibility == View.VISIBLE &amp;&amp; x >= child.left &amp;&amp; x &lt; child.right &amp;&amp; y >= child.top &amp;&amp; y &lt; child.bottom) return Hit.Body(child, placed)"
         errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/home/WidgetGrid.kt"
+            file="src/main/kotlin/app/mate/ui/home/WidgetGrid.kt"
             line="342"
             column="17"/>
     </issue>
@@ -832,7 +832,7 @@
         errorLine1="            canvas.save()"
         errorLine2="            ~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/home/WidgetGrid.kt"
+            file="src/main/kotlin/app/mate/ui/home/WidgetGrid.kt"
             line="375"
             column="13"/>
     </issue>
@@ -843,7 +843,7 @@
         errorLine1="            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, layout.toJson()).apply()"
         errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/home/WidgetModel.kt"
+            file="src/main/kotlin/app/mate/ui/home/WidgetModel.kt"
             line="121"
             column="13"/>
     </issue>
@@ -854,7 +854,7 @@
         errorLine1="    val isShowing get() = visibility == VISIBLE"
         errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/WindowPicker.kt"
+            file="src/main/kotlin/app/mate/ui/WindowPicker.kt"
             line="92"
             column="27"/>
     </issue>
@@ -920,7 +920,7 @@
         errorLine1="            (listOf(w.title.ifBlank { context.getString(R.string.windows_untitled) }) + meta).joinToString(&quot; · &quot;)"
         errorLine2="             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
-            file="src/main/kotlin/com/unowhy/unomate/ui/OpenWindowsView.kt"
+            file="src/main/kotlin/app/mate/ui/OpenWindowsView.kt"
             line="179"
             column="14"/>
     </issue>

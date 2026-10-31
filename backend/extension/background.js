@@ -1,4 +1,4 @@
-// Extension « UnoMate » : envoie la liste des onglets de ce navigateur au compagnon de l'ordinateur
+// Extension « Mate » : envoie la liste des onglets de ce navigateur au compagnon de l'ordinateur
 // (http://127.0.0.1:3000, jamais ailleurs), pour le bouton Onglets de « Page de l'ordi » sur la tablette, et
 // exécute les ordres de lecture de la page Média (Lecture/Pause, Suivant, Précédent, position) dans l'onglet qui joue.
 // À chaque changement d'onglet ou de fenêtre (regroupés sur 300 ms), et toutes les minutes : le compagnon oublie
@@ -131,14 +131,14 @@ function controlPage(action, seconds) {
   if (action === "next" || action === "previous") {
     // Action déclarée par le site (media-session.js), sinon son bouton.
     const name = action === "next" ? "nexttrack" : "previoustrack";
-    const handler = navigator.mediaSession?.__unowhy?.[name];
+    const handler = navigator.mediaSession?.__mate?.[name];
     if (handler) {
       handler({ action: name });
       return "media session";
     }
     const button = document.querySelector(buttons[action]);
     button?.click();
-    const seen = navigator.mediaSession?.__unowhy ? Object.keys(navigator.mediaSession.__unowhy).join(",") : "script absent";
+    const seen = navigator.mediaSession?.__mate ? Object.keys(navigator.mediaSession.__mate).join(",") : "script absent";
     return button ? "bouton" : `pas de bouton (actions : ${seen})`;
   }
   if (!media && action === "play-pause") {
@@ -149,7 +149,7 @@ function controlPage(action, seconds) {
       return `${location.host} bouton`;
     }
     const state = navigator.mediaSession?.playbackState;
-    const handler = navigator.mediaSession?.__unowhy?.[state === "playing" ? "pause" : "play"];
+    const handler = navigator.mediaSession?.__mate?.[state === "playing" ? "pause" : "play"];
     if (state !== "none" && handler) {
       handler({ action: state === "playing" ? "pause" : "play" });
       return `${location.host} media session`;

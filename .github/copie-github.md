@@ -2,7 +2,7 @@
 
 Dépôt privé `ahmeedatm/Mate` : copie du projet GitLab `efreifer/unowhy-companion`, branche par défaut `master` (= `main` de GitLab). Le dossier `.github/` n'existe que sur GitHub. Tout y arrive par PR, y compris `main` de GitLab : `git push https://github.com/ahmeedatm/Mate.git origin/main:refs/heads/sync/gitlab`, puis une PR de `sync/gitlab` vers `master`.
 
-CI : `.github/workflows/ci.yml`, mêmes jobs `backend`, `e2e` et `android` que le stage test de `.gitlab-ci.yml`, mêmes images, même ciblage par zone en PR (toucher `.github/workflows/` relance tout), plus `site` (image construite, jamais poussée). Le job `ci` rassemble les résultats : vert si chaque job a réussi ou n'avait pas à tourner. Pas de release, d'essais, de purge ni de `helper-windows` : ils dépendent du registre de paquets GitLab, de la clé de signature, de Harbor et du runner Windows.
+CI : `.github/workflows/ci.yml`, mêmes jobs `backend`, `e2e` et `android` que le stage test de `.gitlab-ci.yml`, mêmes images, même ciblage par zone en PR (toucher `.github/workflows/` relance tout). Le job `ci` rassemble les résultats : vert si chaque job a réussi ou n'avait pas à tourner. Pas de release, d'essais, de purge ni de `helper-windows` : ils dépendent du registre de paquets GitLab, de la clé de signature, de Harbor et du runner Windows.
 
 Règle « master » (Settings > Rules) : PR obligatoire avec une approbation, celle d'un propriétaire de `.github/CODEOWNERS` si la PR touche `.github/`, discussions résolues, contrôles `ci` et `nommage` verts, fusion en squash seulement, ni force push ni suppression ; personne ne la contourne.
 

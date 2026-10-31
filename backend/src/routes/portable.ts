@@ -9,10 +9,8 @@ import {
   firewallOpen,
   FORGET_CODE,
   forgetEverything,
-  legacyFound,
   portable,
   QUIT_CODE,
-  removeLegacy,
   setAutostart,
   setFirewall,
 } from "../portable.ts";
@@ -37,7 +35,6 @@ export default async function portableRoutes(app: FastifyInstance) {
       version: identity().version,
       autostart: await autostartEnabled(),
       firewall: await firewallOpen(),
-      legacy: await legacyFound(),
       extension: path.join(backendRoot, "extension"),
     };
   });
@@ -55,11 +52,6 @@ export default async function portableRoutes(app: FastifyInstance) {
   app.post("/local/firewall", { schema: { body: object } }, async () => {
     onlyPortable();
     return { ok: await setFirewall(true), firewall: await firewallOpen() };
-  });
-
-  app.post("/local/legacy/remove", { schema: { body: object } }, async () => {
-    onlyPortable();
-    return { ok: true, ...(await removeLegacy()) };
   });
 
   app.post<{ Body: { sure: true } }>(

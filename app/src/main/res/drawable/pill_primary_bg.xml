@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pilule de l'action principale (Cadran : encre du texte sur la tuile). -->
+<!-- Pilule de l'action principale (accent plein). -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_enabled="false"><shape android:shape="rectangle"><solid android:color="?attr/c_surface_raised" /><corners android:radius="24dp" /></shape></item>
     <item android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="?attr/c_primary_pressed" /><corners android:radius="24dp" /></shape></item>

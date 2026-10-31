@@ -169,7 +169,7 @@ describe("gitlab : lecture des MR", () => {
 });
 
 describe("gitlab : libellés et pipelines", () => {
-  // Valeurs de DetailedMergeStatus relevées par introspection sur gitlab.unowhy.dev (18.10.8-ee), le 29/10/2026.
+  // Valeurs de DetailedMergeStatus relevées par introspection sur gitlab.com (18.10.8-ee), le 29/10/2026.
   const known = [
     "UNCHECKED",
     "CHECKING",
@@ -438,12 +438,12 @@ describe("gitlab : jeton absent", () => {
 describe("gitlab : mrUrl", () => {
   it("GITLAB_URL par défaut", () => {
     delete process.env.GITLAB_URL;
-    assert.equal(mrUrl("a/b", 3), "https://gitlab.unowhy.dev/a/b/-/merge_requests/3");
+    assert.equal(mrUrl("a/b", 3), "https://gitlab.com/a/b/-/merge_requests/3");
   });
 
   it("GITLAB_URL vide : défaut", () => {
     process.env.GITLAB_URL = "  ";
-    assert.equal(mrUrl("a/b", 3), "https://gitlab.unowhy.dev/a/b/-/merge_requests/3");
+    assert.equal(mrUrl("a/b", 3), "https://gitlab.com/a/b/-/merge_requests/3");
   });
 
   it("« / » final retiré", () => {

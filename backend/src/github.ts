@@ -156,7 +156,7 @@ async function call(path: string, method: "GET" | "POST" | "PUT", body: object |
         authorization: `Bearer ${a.token}`,
         accept: "application/vnd.github+json",
         "x-github-api-version": "2022-11-28",
-        "user-agent": "UnoMate",
+        "user-agent": "Mate",
         "content-type": "application/json",
       },
       body: body && JSON.stringify(body),

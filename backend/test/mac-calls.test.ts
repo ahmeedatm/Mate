@@ -11,7 +11,7 @@ describe("état d'un appel Teams (Mac)", () => {
   });
 
   it("écran d'avant-réunion : pas encore en appel, mais lobby", () => {
-    const lobby = { title: "Rejoindre la réunion | DSM SQOOL", text: "", buttons: ["Annuler", "Rejoindre maintenant"] };
+    const lobby = { title: "Rejoindre la réunion | DSM TECH", text: "", buttons: ["Annuler", "Rejoindre maintenant"] };
     const state = callStateOf({ windows: [chat, lobby] });
     assert.equal(state?.connected, false);
     assert.equal(state?.lobby, true);
@@ -46,20 +46,20 @@ describe("état d'un appel Teams (Mac)", () => {
 
   it("en appel : salon, micro coupé, partage", () => {
     const call = {
-      title: "Affichage compact de réunion | DSM SQOOL",
+      title: "Affichage compact de réunion | DSM TECH",
       text: "",
       buttons: ["Réduire", "Activer le micro", "Arrêter le partage", "Quitter"],
     };
     const state = callStateOf({ windows: [chat, call] });
     assert.deepEqual(
       { connected: state?.connected, channel: state?.channel, muted: state?.muted, streaming: state?.streaming },
-      { connected: true, channel: "DSM SQOOL", muted: true, streaming: true },
+      { connected: true, channel: "DSM TECH", muted: true, streaming: true },
     );
   });
 
   it("caméra : coupée avec « Activer la caméra », allumée avec « Désactiver la caméra », inconnue sans bouton", () => {
     const call = (camera: string[]) => ({
-      title: "Affichage compact de réunion | DSM SQOOL",
+      title: "Affichage compact de réunion | DSM TECH",
       text: "",
       buttons: ["Réduire", ...camera, "Couper le micro", "Quitter"],
     });

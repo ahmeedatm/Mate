@@ -18,7 +18,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
-    <com.unowhy.unomate.ui.TitleView
+    <app.mate.ui.TitleView
         style="@style/CardTitle"
         android:layout_marginTop="20dp"
         android:drawableStart="@drawable/ic_repeat"
@@ -46,7 +46,7 @@
         android:orientation="horizontal"
         android:visibility="gone" />
 
-    <com.unowhy.unomate.ui.TitleView
+    <app.mate.ui.TitleView
         style="@style/CardTitle"
         android:layout_marginTop="20dp"
         android:drawableStart="@drawable/ic_alarm"

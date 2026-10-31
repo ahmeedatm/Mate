@@ -111,7 +111,6 @@
                     android:paddingTop="18dp"
                     android:paddingEnd="12dp"
                     android:paddingBottom="18dp"
-                    android:text="@string/site_url"
                     android:textColor="?attr/c_accent"
                     android:textIsSelectable="false"
                     android:textSize="20sp" />

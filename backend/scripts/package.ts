@@ -12,11 +12,11 @@ import { WEB_FILES } from "../src/web-style.ts";
  * dont la CI).
  *
  * Chacune embarque le serveur regroupé en un fichier (dist/server.mjs), les fichiers lus à l'exécution (config,
- * UnowhyHelper.exe…), l'extension du navigateur et le node officiel de nodejs.org (signé par l'OpenJS Foundation),
+ * MateHelper.exe…), l'extension du navigateur et le node officiel de nodejs.org (signé par l'OpenJS Foundation),
  * vérifié par sa somme SHA-256. Au premier lancement, le runtime est extrait dans le dossier de l'utilisateur.
  *
- *   ../dist/UnoMate-Windows.exe   le lanceur (src/win/UnoMate.exe) suivi du zip du runtime, node.exe x64
- *   ../dist/UnoMate-Mac.zip       « UnoMate.app » (portable/mac/), node Apple Silicon et Intel
+ *   ../dist/Mate-Windows.exe   le lanceur (src/win/Mate.exe) suivi du zip du runtime, node.exe x64
+ *   ../dist/Mate-Mac.zip       « Mate.app » (portable/mac/), node Apple Silicon et Intel
  * `npm run package -- windows` ou `-- mac` : un seul des deux. Version : tag de la CI (CI_COMMIT_TAG), sinon 0.0.0.
  *
  * `npm run package -- essai` : seulement le backend de chaque plateforme, sans node ni lanceur Windows, en
@@ -31,7 +31,7 @@ const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const repo = path.resolve(backend, "..");
 const out = path.join(repo, "dist");
 const cache = path.join(backend, ".cache", "node");
-const FOLDER = "UnoMate";
+const FOLDER = "Mate";
 const VERSION = /^v\d+\.\d+\.\d+$/.test(process.env.CI_COMMIT_TAG ?? "") ? process.env.CI_COMMIT_TAG!.slice(1) : "0.0.0";
 
 /** Fichiers de config livrés : pas deck.json ni tasks.json (données de l'ordinateur, créées sur place). */
@@ -93,7 +93,7 @@ function infoPlist(): string {
   const keys: [string, string | boolean][] = [
     ["CFBundleName", FOLDER],
     ["CFBundleDisplayName", FOLDER],
-    ["CFBundleIdentifier", "com.unowhy.unomate.app"],
+    ["CFBundleIdentifier", "app.mate.app"],
     ["CFBundleExecutable", FOLDER],
     ["CFBundleIconFile", "compagnon"],
     ["CFBundlePackageType", "APPL"],
@@ -155,12 +155,12 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
 
   if (platform === "windows") {
     // Le lanceur n'est pas dans le runtime : c'est l'exe lui-même. Essai : pas de node, déjà sur l'ordinateur.
-    copy(path.join(backend, "src", "win", "UnowhyHelper.exe"), path.join(dest, "src", "win", "UnowhyHelper.exe"));
+    copy(path.join(backend, "src", "win", "MateHelper.exe"), path.join(dest, "src", "win", "MateHelper.exe"));
     copy(path.join(backend, "scripts", "firewall-windows.ps1"), path.join(dest, "scripts", "firewall-windows.ps1"));
     if (!essai) extract(await nodeArchive(sums, "-win-x64.zip"), "node.exe", path.join(dest, "node", "node.exe"));
   } else {
     copy(path.join(backend, "src", "mac", "NowPlaying.dylib"), path.join(dest, "src", "mac", "NowPlaying.dylib"));
-    copy(path.join(backend, "src", "mac", "UnowhyMenu"), path.join(dest, "src", "mac", "UnowhyMenu"));
+    copy(path.join(backend, "src", "mac", "MateMenu"), path.join(dest, "src", "mac", "MateMenu"));
     if (!essai) {
       fs.mkdirSync(path.join(bundle, "MacOS"), { recursive: true });
       fs.writeFileSync(path.join(bundle, "Info.plist"), infoPlist());
@@ -199,21 +199,21 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
     copy(path.join(backend, "extension", f), path.join(dest, "extension", f));
 
   if (platform === "windows") {
-    // zip (Info-ZIP) du runtime, ajouté au lanceur : [exe][zip][taille du zip sur 8 octets][UNOWHYZ1] (src/win/launcher/Program.cs).
+    // zip (Info-ZIP) du runtime, ajouté au lanceur : [exe][zip][taille du zip sur 8 octets][MATEZIP1] (src/win/launcher/Program.cs).
     const zip = path.join(out, platform, "runtime.zip");
     execFileSync("zip", ["-r", "-q", "-X", zip, ".", "-x", "*.DS_Store"], { cwd: dest });
     const payload = fs.readFileSync(zip);
     const trailer = Buffer.alloc(16);
     trailer.writeBigInt64LE(BigInt(payload.length), 0);
-    trailer.write("UNOWHYZ1", 8, "ascii");
-    const exe = path.join(out, "UnoMate-Windows.exe");
+    trailer.write("MATEZIP1", 8, "ascii");
+    const exe = path.join(out, "Mate-Windows.exe");
     fs.rmSync(exe, { force: true });
-    fs.writeFileSync(exe, Buffer.concat([fs.readFileSync(path.join(backend, "src", "win", "UnoMate.exe")), payload, trailer]));
+    fs.writeFileSync(exe, Buffer.concat([fs.readFileSync(path.join(backend, "src", "win", "Mate.exe")), payload, trailer]));
     return exe;
   }
 
   // zip (Info-ZIP) : lisible par le Finder, droits d'exécution gardés, sans __MACOSX.
-  const zip = path.join(out, "UnoMate-Mac.zip");
+  const zip = path.join(out, "Mate-Mac.zip");
   fs.rmSync(zip, { force: true });
   execFileSync("zip", ["-r", "-q", zip, FOLDER, "-x", "*.DS_Store"], { cwd: path.join(out, platform) });
   return zip;

@@ -49,11 +49,11 @@ const win = (index: number, title: string, display: number, front = false): AppW
 });
 const openApps: OpenApp[] = [
   { key: "Discord.exe", name: "Discord", windows: [win(101, "Général | Les Copains - Discord", 2, true)] },
-  { key: "chrome.exe", name: "Google Chrome", windows: [win(201, "Unowhy", 1), win(202, "Documentation Fastify", 1)] },
+  { key: "chrome.exe", name: "Google Chrome", windows: [win(201, "Accueil", 1), win(202, "Documentation Fastify", 1)] },
   {
     key: "Code.exe",
     name: "Visual Studio Code",
-    windows: [win(301, "deck.ts - unowhy-companion", 1), win(302, "README.md - unowhy-companion", 2)],
+    windows: [win(301, "deck.ts - mate", 1), win(302, "README.md - mate", 2)],
   },
   { key: "Spotify.exe", name: "Spotify", windows: [win(401, "Spotify", 2)] },
 ];
@@ -115,7 +115,7 @@ server.setOs({
   },
   windows: {
     Discord: [{ title: "Salon vocal | Les Copains - Discord" }],
-    "Google Chrome": [{ title: "Unowhy" }, { title: "Documentation Fastify" }],
+    "Google Chrome": [{ title: "Accueil" }, { title: "Documentation Fastify" }],
   },
   openWindows: { apps: openApps, displays },
   media: [
@@ -181,7 +181,7 @@ async function fill() {
       });
       if (!res.ok) throw new Error(`hook ${JSON.stringify(body)} : HTTP ${res.status}`);
     };
-    const travaille = { session_id: "demo-travaille", cwd: "/Users/demo/unowhy-companion", session_title: "Widgets du Deck" };
+    const travaille = { session_id: "demo-travaille", cwd: "/Users/demo/mate", session_title: "Widgets du Deck" };
     await hook({ ...travaille, hook_event_name: "UserPromptSubmit" });
     await hook({
       ...travaille,
@@ -189,7 +189,7 @@ async function fill() {
       tool_name: "Edit",
       tool_input: { file_path: "app/src/main/kotlin/HomeFragment.kt" },
     });
-    const fini = { session_id: "demo-fini", cwd: "/Users/demo/sqool-api", session_title: "Correctif export CSV" };
+    const fini = { session_id: "demo-fini", cwd: "/Users/demo/tech-api", session_title: "Correctif export CSV" };
     await hook({ ...fini, hook_event_name: "UserPromptSubmit" });
     await hook({ ...fini, hook_event_name: "Stop", last_assistant_message: "Export corrigé, tests verts." });
   }
