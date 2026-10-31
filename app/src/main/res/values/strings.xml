@@ -1202,10 +1202,12 @@
     <string name="perf_settings_hint">Coche ce que le widget montre.</string>
     <string name="perf_option_note">%1$s (%2$s)</string>
     <string name="perf_option_unreadable">indisponible</string>
-    <string name="perf_option_soon">arrive bientôt</string>
+    <string name="perf_option_fps_unreadable">carte AMD sous Windows seulement</string>
     <string name="perf_gpu_temp_alert">GPU °C</string>
     <string name="perf_cpu_temp_alert">CPU °C</string>
     <string name="perf_extras_separator">"  ·  "</string>
+    <string name="perf_fps_line">%1$s FPS</string>
+    <string name="perf_fps_none">— FPS</string>
     <string name="perf_cpu_temp_line">CPU %1$d °C</string>
     <string name="perf_gpu_temp_line">GPU %1$d °C</string>
     <string name="perf_fan_line">Ventilateur %1$s</string>

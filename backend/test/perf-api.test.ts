@@ -58,6 +58,20 @@ describe("GET /system/perf", () => {
     }
   });
 
+  it("garde fps : le chiffre du jeu, ou null quand aucun jeu n'est mesuré", async () => {
+    for (const fps of [144, null]) {
+      const perf = { cpu: 40, fps, ram: { used: 8, total: 16, percent: 50 } };
+      server.setOs({ perf });
+      try {
+        const { status, json } = await server.call("GET", "/system/perf");
+        assert.equal(status, 200);
+        assert.deepEqual(json, perf);
+      } finally {
+        server.setOs({});
+      }
+    }
+  });
+
   it("répond 501 hors Mac et Windows", async () => {
     const linux = await startServer({ os: "other" });
     try {

@@ -24,8 +24,20 @@ export type DiskPerf = { freeGb: number; totalGb: number; activity?: number };
 /** Débit du réseau en Ko/s entiers. */
 export type NetPerf = { upKBps: number; downKBps: number };
 /** Les champs facultatifs sont absents quand la lecture est impossible, jamais inventés. */
-/** `cpuTempC` : température du processeur en °C entiers ; absente quand aucun lecteur fiable n'existe. */
-export type Perf = { cpu: number; cpuMhz?: number; cpuTempC?: number; ram: RamUsage; gpu?: GpuPerf; disk?: DiskPerf; net?: NetPerf };
+/**
+ * `cpuTempC` : température du processeur en °C entiers ; absente quand aucun lecteur fiable n'existe. `fps` : images par
+ * seconde du jeu au premier plan ; `null` quand le lecteur marche mais qu'aucun jeu n'est mesuré (jamais 0).
+ */
+export type Perf = {
+  cpu: number;
+  cpuMhz?: number;
+  cpuTempC?: number;
+  fps?: number | null;
+  ram: RamUsage;
+  gpu?: GpuPerf;
+  disk?: DiskPerf;
+  net?: NetPerf;
+};
 export type DiskRaw = { freeBytes: number; totalBytes: number; activity?: number | null };
 export type CpuTimes = { idle: number; total: number };
 
@@ -43,6 +55,8 @@ export type PerfSources = {
   cpuMhz?: () => Promise<number | null>;
   /** Température du processeur en °C ; absente ou `null` : pas de lecteur fiable (jamais de valeur inventée). */
   cpuTemp?: () => Promise<number | null>;
+  /** Images par seconde du jeu en cours (`fps` nul : aucun jeu mesuré) ; `null` ou absente : pas de lecteur sur cette machine. */
+  fps?: () => Promise<{ fps: number | null } | null>;
   disk?: () => Promise<DiskRaw | null>;
   net?: () => Promise<NetPerf | null>;
   now: () => number;
@@ -90,6 +104,11 @@ function normalizeCpuMhz(mhz: number): number | undefined {
 /** Une température hors 10–150 °C est une lecture ratée (0 = capteur illisible). */
 function normalizeTemp(c: number): number | undefined {
   return Number.isFinite(c) && c >= 10 && c <= 150 ? Math.round(c) : undefined;
+}
+
+/** Entier d'images par seconde ; 0, négatif ou illisible : aucun jeu mesuré (`null`), jamais un 0 affiché. */
+function normalizeFps(raw: { fps: number | null }): number | null {
+  return typeof raw.fps === "number" && Number.isFinite(raw.fps) && raw.fps >= 0.5 ? Math.round(raw.fps) : null;
 }
 
 function normalizeDisk(raw: DiskRaw): DiskPerf | undefined {
@@ -199,6 +218,7 @@ export function perfSampler(sources: PerfSources): () => Promise<Perf> {
   const gpuRead = sources.gpu && bounded(sources.gpu, GPU_WAIT_MS);
   const readMhz = optional(sources.cpuMhz, normalizeCpuMhz);
   const readTemp = optional(sources.cpuTemp, normalizeTemp);
+  const readFps = optional(sources.fps, normalizeFps);
   const readDisk = optional(sources.disk, normalizeDisk);
   const readNet = optional(sources.net, normalizeNet);
 
@@ -244,18 +264,20 @@ export function perfSampler(sources: PerfSources): () => Promise<Perf> {
   }
 
   async function measure(): Promise<Perf> {
-    const [cpu, memory, gpu, cpuMhz, cpuTempC, disk, net] = await Promise.all([
+    const [cpu, memory, gpu, cpuMhz, cpuTempC, fps, disk, net] = await Promise.all([
       readCpu(),
       sources.memory(),
       readGpu(),
       readMhz(),
       readTemp(),
+      readFps(),
       readDisk(),
       readNet(),
     ]);
     const perf: Perf = { cpu, ram: ramUsage(memory.total, memory.available) };
     if (cpuMhz !== undefined) perf.cpuMhz = cpuMhz;
     if (cpuTempC !== undefined) perf.cpuTempC = cpuTempC;
+    if (fps !== undefined) perf.fps = fps;
     if (gpu) perf.gpu = gpu;
     if (disk) perf.disk = disk;
     if (net) perf.net = net;

@@ -328,7 +328,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const perf = await call("GET", "/system/perf");
         if (!controlled()) return expectStatus(perf, 501, "/system/perf");
         expectStatus(perf, 200, "/system/perf");
-        const { cpu, ram, gpu, cpuMhz, cpuTempC, disk, net } = perf.json;
+        const { cpu, ram, gpu, cpuMhz, cpuTempC, fps, disk, net } = perf.json;
         expect(typeof cpu === "number" && cpu >= 0 && cpu <= 100, `processeur hors 0-100 : ${cpu}`);
         expect(ram?.total > 0, "mémoire totale absente");
         // Champs facultatifs : absents si illisibles, mais bien typés et bornés quand ils sont là.
@@ -339,6 +339,8 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           cpuTempC === undefined || (count(cpuTempC) && cpuTempC >= 10 && cpuTempC <= 150),
           `température du processeur invalide : ${cpuTempC}`,
         );
+        // Images par seconde : absentes sans lecteur (Mac, carte non AMD), null sans jeu mesuré, jamais 0.
+        expect(fps === undefined || fps === null || (count(fps) && fps > 0), `images par seconde invalides : ${fps}`);
         expect(
           gpu?.vramUsedMb === undefined || (count(gpu.vramUsedMb) && gpu.vramUsedMb <= (gpu.vramTotalMb ?? Infinity)),
           `mémoire vidéo utilisée invalide : ${gpu?.vramUsedMb}`,
@@ -360,6 +362,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const extras = [
           cpuMhz && `${cpuMhz} MHz`,
           cpuTempC && `processeur ${cpuTempC} °C`,
+          fps !== undefined && (fps === null ? "fps : aucun jeu" : `${fps} fps`),
           disk && `disque ${disk.freeGb}/${disk.totalGb} Go`,
           net && `réseau ${net.downKBps}/${net.upKBps} Ko/s`,
           gpu?.vramTotalMb && `vram ${gpu.vramUsedMb ?? "?"}/${gpu.vramTotalMb} Mo`,

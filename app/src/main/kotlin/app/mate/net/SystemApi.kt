@@ -48,7 +48,10 @@ data class DiskPerf(val freeGb: Double, val totalGb: Double, val activity: Int?)
 /** Débits du réseau en Ko/s : envoi (`up`) et réception (`down`). */
 data class NetPerf(val upKBps: Int, val downKBps: Int)
 
-/** Performances de l'ordinateur ; `gpu`, `cpuMhz`, `cpuTempC` (°C), `disk` et `net` absents quand l'ordinateur ne sait pas les lire. */
+/**
+ * Performances de l'ordinateur ; `gpu`, `cpuMhz`, `cpuTempC` (°C), `disk` et `net` absents quand l'ordinateur ne sait pas les lire.
+ * `fpsReadable` : l'ordinateur sait lire les images par seconde ; `fps` est alors nul tant qu'aucun jeu n'est mesuré.
+ */
 data class PcPerf(
     val cpu: Int,
     val ramPercent: Int,
@@ -59,6 +62,8 @@ data class PcPerf(
     val disk: DiskPerf? = null,
     val net: NetPerf? = null,
     val cpuTempC: Int? = null,
+    val fps: Int? = null,
+    val fpsReadable: Boolean = false,
 )
 
 private fun JSONObject.intOrNull(key: String): Int? = if (isNull(key)) null else getInt(key)
@@ -74,7 +79,7 @@ fun parsePerf(json: String): PcPerf {
     }
     val disk = j.optJSONObject("disk")?.let { d -> DiskPerf(d.getDouble("freeGb"), d.getDouble("totalGb"), d.intOrNull("activity")) }
     val net = j.optJSONObject("net")?.let { n -> NetPerf(n.getInt("upKBps"), n.getInt("downKBps")) }
-    return PcPerf(j.getInt("cpu"), ram.getInt("percent"), ram.getDouble("used"), ram.getDouble("total"), gpu, j.intOrNull("cpuMhz"), disk, net, j.intOrNull("cpuTempC"))
+    return PcPerf(j.getInt("cpu"), ram.getInt("percent"), ram.getDouble("used"), ram.getDouble("total"), gpu, j.intOrNull("cpuMhz"), disk, net, j.intOrNull("cpuTempC"), j.intOrNull("fps"), j.has("fps"))
 }
 
 /**

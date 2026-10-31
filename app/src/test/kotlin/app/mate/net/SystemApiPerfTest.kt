@@ -79,6 +79,20 @@ class SystemApiPerfMoreTest {
     }
 
     @Test
+    fun `parsePerf lit les images par seconde, null sans jeu, absentes sans lecteur`() {
+        val ram = """"ram":{"used":8,"total":16,"percent":50}"""
+        val playing = parsePerf("""{"cpu":10,"fps":144,$ram}""")
+        assertEquals(144, playing.fps)
+        assertTrue(playing.fpsReadable)
+        val idle = parsePerf("""{"cpu":10,"fps":null,$ram}""")
+        assertNull(idle.fps)
+        assertTrue(idle.fpsReadable)
+        val none = parsePerf("""{"cpu":10,$ram}""")
+        assertNull(none.fps)
+        assertFalse(none.fpsReadable)
+    }
+
+    @Test
     fun `parsePerf lit la temperature du processeur, absente sinon`() {
         val ram = """"ram":{"used":8,"total":16,"percent":50}"""
         assertEquals(64, parsePerf("""{"cpu":10,"cpuTempC":64,$ram}""").cpuTempC)
