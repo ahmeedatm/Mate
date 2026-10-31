@@ -6,14 +6,20 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import android.text.SpannableStringBuilder
+import android.text.Spanned
 import android.text.TextUtils
+import android.text.style.ForegroundColorSpan
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.CheckBox
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import app.mate.Computers
 import app.mate.R
 import app.mate.net.BackendClient
@@ -21,6 +27,7 @@ import app.mate.net.HttpException
 import app.mate.net.PcPerf
 import app.mate.ui.ProgressRing
 import app.mate.ui.errorText
+import app.mate.ui.showImmersive
 import app.mate.ui.themeFont
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -78,9 +85,15 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private var gpu = Reading(View(context), TextView(context), PerfSeries.GPU)
     private var ram = Reading(View(context), TextView(context), PerfSeries.RAM)
     private var ramGb: TextView? = null
-    private var temp: Chip? = null
-    private var fan: Chip? = null
+    private var extras: TextView? = null
+    private var extrasKey = ""
+
+    /** Vrai si la courbe a quelque chose à tracer (processeur ou carte graphique coché). */
+    private var curve = true
     private var spark: PerfSparkline? = null
+
+    /** Infos cochées pour l'ordinateur actif, relues à chaque mesure (réglages changés, autre ordinateur). */
+    private var choice: Set<PerfOption> = PerfChoice.DEFAULT
 
     /** Met la vue courante à la taille de la place intérieure de la tuile (hauteur, largeur), à chaque mesure. */
     private var fitter: (Int, Int) -> Unit = { _, _ -> }
@@ -102,14 +115,17 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
      */
     private class Reading(val box: View, val value: TextView, val series: PerfSeries, val meter: ((Float, Int) -> Unit)? = null)
 
-    private class Chip(val box: View, val value: TextView)
+    /** Une info en texte (« GPU 81 °C ») : `tone` est l'attribut de couleur de son texte. */
+    private class Extra(val text: String, val tone: Int)
+
+    override val hasSettings get() = true
 
     override fun applySize() {
         title.text = context.getString(R.string.perf_title, Computers.active(context)?.name ?: context.getString(R.string.computer_generic))
         body.removeAllViews()
         ramGb = null
-        temp = null
-        fan = null
+        extras = null
+        extrasKey = ""
         spark = null
         body.addView(when (placed.size) {
             WidgetSize.L -> gauges()
@@ -180,19 +196,22 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val cpuColumn = column(context.getString(R.string.perf_cpu), perfColorAttr(PerfSeries.CPU, PerfMark.LINE, PerfLevel.NORMAL))
         val gpuColumn = column(context.getString(R.string.perf_gpu), perfColorAttr(PerfSeries.GPU, PerfMark.LINE, PerfLevel.NORMAL))
         val ramColumn = column(context.getString(R.string.perf_ram), R.attr.c_text_dim)
-        val tempColumn = column(context.getString(R.string.perf_gpu) + " °C", R.attr.c_text_dim)
         cpu = Reading(cpuColumn.box, cpuColumn.value, PerfSeries.CPU)
         gpu = Reading(gpuColumn.box, gpuColumn.value, PerfSeries.GPU)
         ram = Reading(ramColumn.box, ramColumn.value, PerfSeries.RAM)
-        temp = Chip(tempColumn.box, tempColumn.value)
+        val line = extrasView(14f, maxLines = 1)
+        extras = line
         val sparkline = PerfSparkline(context, history.capacity)
         spark = sparkline
         val nameGap = dp(8)
         fitter = { height, width ->
-            val fixed = headerHeight + dp(HEADER_GAP) + captionHeight + dp(CURVE_GAP) + dp(CURVE_MIN)
+            val hasExtras = line.text.isNotEmpty()
+            val extrasRoom = if (hasExtras) naturalHeight(line, width) + dp(CURVE_GAP) else 0
+            val fixed = headerHeight + dp(HEADER_GAP) + captionHeight + dp(CURVE_GAP) + dp(CURVE_MIN) + extrasRoom
             val compact = height < fixed + figureLine * sp(MIN_FIGURE_SP)
             showHeader(!compact)
-            sparkline.shown(!compact)
+            sparkline.shown(!compact && curve)
+            line.shown(hasExtras && !compact)
             val count = columns.count { it.box.visibility != View.GONE }.coerceAtLeast(1)
             val columnWidth = width / count - dp(COLUMN_GAP)
             val nameWidth = if (compact) columns.maxOf { naturalWidth(it.name) } + nameGap else 0
@@ -217,6 +236,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
             addView(row)
+            addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(CURVE_GAP) })
             addView(sparkline, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(CURVE_GAP) })
         }
     }
@@ -256,12 +276,14 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         cpu = gauge(R.string.perf_cpu, PerfSeries.CPU, caption(" "))
         gpu = gauge(R.string.perf_gpu, PerfSeries.GPU, caption(" "))
         ram = gauge(R.string.perf_ram, PerfSeries.RAM, gb)
-        val chips = chips(LinearLayout.HORIZONTAL)
+        val line = extrasView(16f, maxLines = 3).apply { gravity = Gravity.CENTER }
+        extras = line
         val minStroke = dp(4).toFloat()
         fitter = { height, width ->
             showHeader(true)
-            // Rangée du bas vide (ni température ni ventilateur) : hauteur nulle, l'écart reste.
-            val chipsHeight = natural(chips) + dp(CHIPS_GAP)
+            // Pas d'info en texte : hauteur nulle, et plus d'écart.
+            line.shown(line.text.isNotEmpty())
+            val chipsHeight = if (line.text.isEmpty()) 0 else naturalHeight(line, width) + dp(CHIPS_GAP)
             val count = columns.count { it.visibility != View.GONE }.coerceAtLeast(1)
             val ringRoom = height - headerHeight - dp(HEADER_GAP) - dp(RING_TOP) - captionHeight - dp(4) - chipsHeight
             val diameter = minOf(width / count - dp(8), ringRoom).toFloat()
@@ -272,7 +294,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             addView(rings, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(RING_TOP) })
-            addView(chips, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(CHIPS_GAP) })
+            addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(CHIPS_GAP) })
         }
     }
 
@@ -316,26 +338,27 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         // Libellés de même largeur : les barres commencent toutes au même endroit.
         val nameWidth = names.maxOf { naturalWidth(it) }
         names.forEach { it.layoutParams = LinearLayout.LayoutParams(nameWidth, ViewGroup.LayoutParams.WRAP_CONTENT) }
-        val chips = chips(LinearLayout.VERTICAL)
+        val line = extrasView(14f, maxLines = 4)
+        extras = line
         val boxes = listOf(cpu.box, gpu.box, ram.box)
         fitter = { height, width ->
             val compact = height < headerHeight + dp(HEADER_GAP) + boxes.size * maxOf(captionHeight.toFloat(), figureLine * sp(MIN_BAR_SP))
             showHeader(!compact)
-            // Ligne basse : les trois barres côte à côte, température et ventilateur l'un à côté de l'autre.
+            // Ligne basse : les trois barres côte à côte, les infos en texte sur deux lignes au plus.
             if ((rows.orientation == LinearLayout.HORIZONTAL) != compact) {
                 rows.orientation = if (compact) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
-                chips.orientation = rows.orientation
-                chipSpacing(chips)
                 boxes.forEachIndexed { i, box ->
                     box.layoutParams =
                         if (compact) LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { if (i > 0) marginStart = dp(BAR_GROUP_GAP) }
                         else LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
                 }
             }
+            line.maxLines = if (compact) 2 else 4
+            line.shown(line.text.isNotEmpty())
             val count = boxes.count { it.visibility != View.GONE }.coerceAtLeast(1)
             val fitted = if (compact) {
                 // Le chiffre laisse au moins 48 dp à sa barre.
-                val group = (width - naturalWidth(chips) - dp(CHIPS_START)) / count - dp(BAR_GROUP_GAP)
+                val group = (width - (if (line.text.isEmpty()) 0 else naturalWidth(line) + dp(CHIPS_START))) / count - dp(BAR_GROUP_GAP)
                 minOf(height / figureLine, (group - nameWidth - dp(24) - dp(BAR_MIN)) / figureWidth)
             } else {
                 (height - headerHeight - dp(HEADER_GAP)).toFloat() / count * BAR_FIGURE_SHARE / figureLine
@@ -350,44 +373,16 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
         return LinearLayout(context).apply {
             addView(rows, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
-            addView(chips, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT).apply { marginStart = dp(CHIPS_START) })
+            addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT).apply { marginStart = dp(CHIPS_START) })
         }
     }
 
-    /**
-     * Température et ventilateur de la carte graphique (« GPU 81 °C », « Ventilateur 1 850 tr/min ») en texte simple :
-     * ils ne se touchent pas, donc pas de pilule (réservée aux boutons et aux puces dans Console).
-     */
-    private fun chips(direction: Int): LinearLayout {
-        fun chip(name: Int): Chip {
-            val value = label(CHIP_SP).apply {
-                fontFeatureSettings = "tnum"
-                isSingleLine = true
-            }
-            val box = LinearLayout(context).apply {
-                addView(caption(context.getString(name)))
-                addView(value, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
-            }
-            return Chip(box, value)
-        }
-        val tempChip = chip(R.string.perf_gpu)
-        val fanChip = chip(R.string.perf_fan)
-        temp = tempChip
-        fan = fanChip
-        return LinearLayout(context).apply {
-            orientation = direction
-            gravity = Gravity.CENTER
-            addView(tempChip.box)
-            addView(fanChip.box)
-            chipSpacing(this)
-        }
-    }
-
-    /** Écart entre température et ventilateur : 24 dp côte à côte, 8 dp l'un sous l'autre. */
-    private fun chipSpacing(chips: LinearLayout) {
-        chips.getChildAt(1).layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            if (chips.orientation == LinearLayout.HORIZONTAL) marginStart = dp(24) else topMargin = dp(8)
-        }
+    /** Zone de texte des infos qui n'ont ni anneau ni barre (température, fréquence, disque…), remplie par `render`. */
+    private fun extrasView(size: Float, maxLines: Int) = label(size, R.attr.c_text_dim).apply {
+        this.maxLines = maxLines
+        ellipsize = TextUtils.TruncateAt.END
+        fontFeatureSettings = "tnum"
+        visibility = View.GONE
     }
 
     /** Titre (et message d'erreur) au-dessus du contenu, ou masqués sur une ligne basse. */
@@ -404,51 +399,50 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     // ---- Affichage de la dernière mesure ----
 
     private fun render() {
-        unavailable.shown(notAvailable)
+        choice = PerfChoice.read(placed.config, Computers.active(context)?.id.orEmpty())
+        val perf = last
+        // Rien de coché qui soit lisible : une phrase au lieu de libellés sans chiffre.
+        val nothing = perf != null && PerfOption.entries.none { it in choice && it.readable(perf) }
+        unavailable.setText(if (notAvailable) R.string.perf_unavailable else R.string.perf_none_checked)
+        unavailable.shown(notAvailable || nothing)
         // Rien à montrer avant la première mesure (des libellés sans chiffre).
-        body.visibility = if (notAvailable) View.GONE else if (last == null) View.INVISIBLE else View.VISIBLE
+        body.visibility = if (notAvailable || nothing) View.GONE else if (perf == null) View.INVISIBLE else View.VISIBLE
         note.set(error.orEmpty())
-        val perf = last ?: return
+        if (perf == null) return
         // Dernières valeurs grisées tant que le relevé échoue, ou au retour sur la page avant le premier relevé.
         val stale = error != null || !fresh
+        val cpuOn = PerfOption.CPU in choice
+        val gpuOn = PerfOption.GPU in choice && perf.gpu != null
+        val ramOn = PerfOption.RAM in choice
         // Alerte écrite dans l'en-tête en plus du rouge des chiffres (rien sur des valeurs grisées) ; une erreur prime.
         if (error == null) {
             val alerts = if (stale) "" else perfAlertText(
                 listOfNotNull(
-                    context.getString(R.string.perf_cpu) to usageLevel(perf.cpu),
-                    perf.gpu?.usage?.let { context.getString(R.string.perf_gpu) to usageLevel(it) },
-                    context.getString(R.string.perf_ram) to usageLevel(perf.ramPercent),
-                    perf.gpu?.tempC?.let { context.getString(R.string.perf_gpu) + " °C" to tempLevel(it) },
+                    if (cpuOn) context.getString(R.string.perf_cpu) to usageLevel(perf.cpu) else null,
+                    if (gpuOn) context.getString(R.string.perf_gpu) to usageLevel(perf.gpu!!.usage) else null,
+                    if (ramOn) context.getString(R.string.perf_ram) to usageLevel(perf.ramPercent) else null,
+                    if (PerfOption.GPU_TEMP in choice) perf.gpu?.tempC?.let { context.getString(R.string.perf_gpu_temp_alert) to tempLevel(it) } else null,
                 ),
                 context::getString,
             )
             note.set(alerts)
         }
-        show(cpu, perf.cpu, stale)
-        show(ram, perf.ramPercent, stale)
-        show(gpu, perf.gpu?.usage, stale)
-        ramGb?.set(context.getString(R.string.perf_ram_gb, gigabytes(perf.ramUsedGb), gigabytes(perf.ramTotalGb)))
-        val tempC = perf.gpu?.tempC
-        temp?.let { chip ->
-            chip.box.shown(tempC != null)
-            if (tempC != null) {
-                chip.value.set(if (placed.size == WidgetSize.M) "$tempC°" else "$tempC °C")
-                chip.value.setTextColor(color(perfColorAttr(PerfSeries.GPU, PerfMark.VALUE, tempLevel(tempC), stale)))
-            }
+        show(cpu, perf.cpu.takeIf { cpuOn }, stale)
+        show(ram, perf.ramPercent.takeIf { ramOn }, stale)
+        show(gpu, perf.gpu?.usage?.takeIf { gpuOn }, stale)
+        ramGb?.set(context.getString(R.string.perf_ram_gb, perfNumber(perf.ramUsedGb), perfNumber(perf.ramTotalGb)))
+        extras?.let { line ->
+            val list = extras(perf, stale)
+            // Seulement s'il change (texte ou ton) : un relevé toutes les 2 s ne doit pas refaire la mise en page.
+            val key = list.joinToString("|") { it.text + it.tone }
+            if (key != extrasKey) line.text = extrasText(list)
+            extrasKey = key
         }
-        val rpm = perf.gpu?.fanRpm
-        fan?.let { chip ->
-            chip.box.shown(rpm != null)
-            if (rpm != null) {
-                chip.value.set(if (rpm == 0) context.getString(R.string.perf_fan_stopped) else context.getString(R.string.perf_fan_rpm, RPM_FORMAT.format(rpm)))
-                // Ventilateur jamais en alerte ; « Arrêté » est un texte tertiaire.
-                chip.value.setTextColor(color(if (stale || rpm == 0) R.attr.c_text_faint else R.attr.c_text))
-            }
-        }
+        curve = cpuOn || gpuOn
         val gpuLevel = perf.gpu?.usage?.let { usageLevel(it) } ?: PerfLevel.NORMAL
         spark?.set(
-            history.cpu,
-            history.gpu,
+            if (cpuOn) history.cpu else emptyList(),
+            if (gpuOn) history.gpu else emptyList(),
             color(perfColorAttr(PerfSeries.CPU, PerfMark.LINE, usageLevel(perf.cpu), stale)),
             color(perfColorAttr(PerfSeries.GPU, PerfMark.LINE, gpuLevel, stale)),
         )
@@ -461,6 +455,106 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         reading.value.set("$percent%")
         reading.value.setTextColor(color(perfColorAttr(reading.series, PerfMark.VALUE, level, stale)))
         reading.meter?.invoke(percent / 100f, color(perfColorAttr(reading.series, PerfMark.FILL, level, stale)))
+    }
+
+    /** Les infos cochées et lisibles qui ne passent pas par un anneau ou une barre, sur une ligne (Bandeau : une par ligne). */
+    private fun extrasText(list: List<Extra>): CharSequence {
+        val separator = if (placed.size == WidgetSize.W) "\n" else context.getString(R.string.perf_extras_separator)
+        val out = SpannableStringBuilder()
+        for (extra in list) {
+            if (out.isNotEmpty()) out.append(separator)
+            val start = out.length
+            out.append(extra.text)
+            out.setSpan(ForegroundColorSpan(color(extra.tone)), start, out.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        return out
+    }
+
+    private fun extras(perf: PcPerf, stale: Boolean): List<Extra> = PerfOption.entries.mapNotNull { option ->
+        if (option !in choice || !option.readable(perf)) return@mapNotNull null
+        val calm = if (stale) R.attr.c_text_faint else R.attr.c_text_dim
+        when (option) {
+            PerfOption.CPU_FREQ -> Extra(context.getString(R.string.perf_cpu_freq_line, perfNumber(perf.cpuMhz!! / 1000.0)), calm)
+            PerfOption.GPU_TEMP -> perf.gpu!!.tempC!!.let { Extra(context.getString(R.string.perf_gpu_temp_line, it), perfColorAttr(PerfSeries.GPU, PerfMark.VALUE, tempLevel(it), stale)) }
+            PerfOption.GPU_FAN -> perf.gpu!!.fanRpm!!.let {
+                // « Arrêté » est un texte tertiaire ; le ventilateur n'est jamais en alerte.
+                val text = if (it == 0) context.getString(R.string.perf_fan_stopped) else context.getString(R.string.perf_fan_rpm, RPM_FORMAT.format(it))
+                Extra(context.getString(R.string.perf_fan_line, text), if (stale || it == 0) R.attr.c_text_faint else R.attr.c_text)
+            }
+            PerfOption.GPU_VRAM -> Extra(context.getString(R.string.perf_vram, perfNumber(perf.gpu!!.vramUsedMb!! / 1024.0), perfNumber(perf.gpu.vramTotalMb!! / 1024.0)), calm)
+            PerfOption.DISK_FREE -> Extra(context.getString(R.string.perf_disk_free, perfNumber(perf.disk!!.freeGb)), calm)
+            PerfOption.DISK_ACTIVITY -> Extra(context.getString(R.string.perf_disk_activity, perf.disk!!.activity!!), calm)
+            PerfOption.NET_UP -> Extra(context.getString(R.string.perf_net_up, rate(perf.net!!.upKBps)), calm)
+            PerfOption.NET_DOWN -> Extra(context.getString(R.string.perf_net_down, rate(perf.net!!.downKBps)), calm)
+            else -> null
+        }
+    }
+
+    private fun rate(kBps: Int): String = perfRate(kBps).let {
+        context.getString(if (it.mega) R.string.perf_rate_mb else R.string.perf_rate_kb, perfNumber(it.value))
+    }
+
+    // ---- Réglages : la liste à cocher ----
+
+    /**
+     * Liste des infos par groupe, cochées selon le choix de l'ordinateur actif. La mesure du moment (un relevé fait à
+     * l'ouverture, la page pouvant être inactive en mode Modifier) dit lesquelles sont lisibles ; les autres sont grisées
+     * avec la raison. Impossible de lire (ordinateur injoignable) : tout reste cochable.
+     */
+    override fun showSettings() {
+        val computerId = Computers.active(context)?.id ?: return
+        val box = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(4), dp(24), dp(8))
+        }
+        val reading = host.scope.launch {
+            val latest = try { BackendClient(context).system.perf() } catch (e: Exception) { return@launch }
+            fillSettings(box, computerId, latest)
+        }
+        AlertDialog.Builder(context)
+            .setTitle(R.string.widget_perf)
+            .setView(ScrollView(context).apply { addView(box) })
+            .setPositiveButton(R.string.close, null)
+            .setOnDismissListener { reading.cancel() }
+            .showImmersive()
+        fillSettings(box, computerId, last)
+    }
+
+    private fun fillSettings(box: LinearLayout, computerId: String, perf: PcPerf?) {
+        box.removeAllViews()
+        box.addView(label(14f, R.attr.c_text_dim).apply { setText(R.string.perf_settings_hint) })
+        var group: PerfGroup? = null
+        for (option in PerfOption.entries) {
+            if (option.group != group) {
+                group = option.group
+                box.addView(label(14f, R.attr.c_text_faint).apply {
+                    setText(option.group.title)
+                    setPadding(0, dp(12), 0, dp(2))
+                })
+            }
+            val readable = perf?.let { option.readable(it) } ?: !option.soon
+            val note = when {
+                option.soon -> context.getString(R.string.perf_option_soon)
+                !readable -> context.getString(R.string.perf_option_unreadable)
+                else -> null
+            }
+            box.addView(CheckBox(context).apply {
+                text = note?.let { context.getString(R.string.perf_option_note, context.getString(option.label), it) } ?: context.getString(option.label)
+                typeface = themeFont(context, R.attr.c_font_regular)
+                textSize = 16f
+                setTextColor(color(if (readable) R.attr.c_text else R.attr.c_text_faint))
+                isEnabled = readable
+                minHeight = dp(48)
+                // Une info illisible reste dans le choix (elle reviendra si l'ordinateur la lit) mais s'affiche décochée.
+                isChecked = readable && option in PerfChoice.read(placed.config, computerId)
+                setOnCheckedChangeListener { _, on ->
+                    val now = PerfChoice.read(placed.config, computerId)
+                    PerfChoice.write(placed.config, computerId, if (on) now + option else now - option)
+                    host.save()
+                    render()
+                }
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
     }
 
     // ---- Textes et mesures ----
@@ -486,6 +580,12 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     private fun natural(view: View): Int {
         view.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+        return view.measuredHeight
+    }
+
+    /** Hauteur d'un texte qui peut passer à la ligne, pour une largeur donnée. */
+    private fun naturalHeight(view: View, width: Int): Int {
+        view.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.AT_MOST), View.MeasureSpec.UNSPECIFIED)
         return view.measuredHeight
     }
 
@@ -521,7 +621,6 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         /** Plus petit chiffre du Bandeau sur trois lignes ; en dessous, les barres passent côte à côte. */
         private const val MIN_BAR_SP = 18f
         private const val MIN_SP = 12f
-        private const val CHIP_SP = 18f
 
         /** Part de la hauteur d'une ligne du Bandeau occupée par son chiffre. */
         private const val BAR_FIGURE_SHARE = 0.8f
@@ -538,10 +637,6 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         private const val BAR_GROUP_GAP = 24
         private const val BAR_THICKNESS = 8
         private const val BAR_MIN = 48
-
-        /** « 20,1 » ; une valeur ronde s'écrit sans décimale (« 32 »). */
-        private fun gigabytes(value: Double): String =
-            if (value % 1.0 == 0.0) value.toInt().toString() else String.format(Locale.FRANCE, "%.1f", value)
     }
 }
 
