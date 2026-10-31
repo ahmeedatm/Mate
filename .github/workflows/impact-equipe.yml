@@ -14,9 +14,9 @@ on:
 permissions:
   pull-requests: read
 
-# Un seul passage à la fois par PR, le plus récent gagne : il relit l'état courant (étiquettes, avis).
+# Un seul passage à la fois par commit de la PR, le plus récent gagne : il relit l'état courant (étiquettes, avis).
 concurrency:
-  group: impact-equipe-${{ github.event.pull_request.number }}
+  group: impact-equipe-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -38,12 +38,16 @@ jobs:
             exit 0
           fi
           auteur=$(jq -r '.user.login' <<<"$pr")
-          # Dernier avis de chaque personne, auteur exclu ; un simple commentaire ne remplace pas un avis.
+          tete=$(jq -r '.head.sha' <<<"$pr")
+          # Dernier avis de chaque personne sur le commit de tête, auteur et robots exclus ; un simple commentaire
+          # ne remplace pas un avis. Un avis sur un commit plus ancien ne compte pas, sans attendre que GitHub le
+          # périme après un push.
           approbations=$(gh api --paginate "repos/$DEPOT/pulls/$PR/reviews" \
             --jq '.[] | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED" or .state == "DISMISSED")
-                  | {u: .user.login, s: .state}' |
-            jq -s --arg auteur "$auteur" \
-              'reduce .[] as $a ({}; .[$a.u] = $a.s) | del(.[$auteur]) | [.[] | select(. == "APPROVED")] | length')
+                  | select(.user.type == "User") | {u: .user.login, s: .state, c: .commit_id}' |
+            jq -s --arg auteur "$auteur" --arg tete "$tete" \
+              '[.[] | select(.c == $tete)] | reduce .[] as $a ({}; .[$a.u] = $a.s) | del(.[$auteur])
+               | [.[] | select(. == "APPROVED")] | length')
           if [ "$approbations" -lt 1 ]; then
             echo "::error::Étiquette impact-equipe : cette PR change les habitudes de l'équipe, il faut l'approbation d'une autre personne."
             exit 1

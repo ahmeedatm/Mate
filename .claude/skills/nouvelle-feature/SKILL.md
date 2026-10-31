@@ -103,7 +103,8 @@ impact-equipe`, « Impact équipe : oui » dans le corps avec la raison en une p
 une option que chacun active s'il veut : « non », pas d'étiquette.
 
 Terminer par une ligne `⚠️` sur ce qui n'a pas été fait ou vérifié.
-La fusion reste à la CI verte et à l'équipe (`CLAUDE.md`, § Règles de travail).
+La fusion reste à la CI verte, et à l'approbation d'une autre personne si la PR porte `impact-equipe`
+(`CLAUDE.md`, § Règles de travail).
 
 ## Un 2e sujet en cours de route
 
