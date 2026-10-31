@@ -154,6 +154,9 @@ class ProfilesDialog(
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0f).apply {
                 marginStart = context.dp(14)
             })
+            if (layout.gameProfile == i) addView(gameTag(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                marginStart = context.dp(10)
+            })
             if (shown) addView(shownTag(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 marginStart = context.dp(10)
             })
@@ -197,6 +200,9 @@ class ProfilesDialog(
 
     /** Le bouton, ou une place vide de même taille. */
     private fun LinearLayout.slot(button: ImageButton?) = addView(button ?: Space(context).apply { layoutParams = LinearLayout.LayoutParams(context.dp(48), context.dp(48)) })
+
+    /** Étiquette « Jeu » de l'écran qui s'affiche tout seul quand on joue : l'état se lit sans la couleur de la manette. */
+    private fun gameTag() = shownTag().apply { setText(R.string.profile_game_tag) }
 
     /** Étiquette « Affiché » du profil à l'écran : texte de l'accent sur une pilule de l'accent atténué. */
     private fun shownTag() = TextView(context).apply {

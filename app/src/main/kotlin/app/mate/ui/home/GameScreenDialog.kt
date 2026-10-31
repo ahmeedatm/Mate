@@ -54,7 +54,15 @@ class GameScreenDialog(
             addView(ScrollView(context).apply { addView(rows) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(280)))
         }
         render(layout.gameApps.sortedBy { it.lowercase() }, loading = true)
+        val loader = (context as? LifecycleOwner)?.lifecycleScope?.launch {
+            try {
+                render((BackendClient(context).deck.catalog().apps + checked).distinct().sortedBy { it.lowercase() }, loading = false)
+            } catch (e: Exception) {
+                render(checked.sortedBy { it.lowercase() }, loading = false, error = context.errorText(e))
+            }
+        }
         AlertDialog.Builder(context)
+            .setOnDismissListener { loader?.cancel() }
             .setTitle(context.getString(R.string.game_title, name))
             .setView(form)
             .setNegativeButton(R.string.cancel, null)
@@ -65,13 +73,6 @@ class GameScreenDialog(
                 onSaved()
             }
             .show()
-        (context as? LifecycleOwner)?.lifecycleScope?.launch {
-            try {
-                render((BackendClient(context).deck.catalog().apps + checked).distinct().sortedBy { it.lowercase() }, loading = false)
-            } catch (e: Exception) {
-                render(checked.sortedBy { it.lowercase() }, loading = false, error = context.errorText(e))
-            }
-        }
     }
 
     private fun render(apps: List<String>, loading: Boolean, error: String? = null) {

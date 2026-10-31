@@ -124,6 +124,8 @@ class LayoutConfigTest {
     fun `un ecran de jeu inexistant ou une liste mal formee est refuse`() {
         assertTrue(refused(json(extra = """"home":0,"call":1,"roles":true,"gameScreen":5""")).contains("jeu"))
         assertTrue(refused(json(extra = """"home":0,"call":1,"roles":true,"gameApps":[3]""")).contains("jeu"))
+        assertTrue(refused(json(extra = """"home":0,"call":1,"roles":true,"gameScreen":1""")).contains("Réunion"))
+        assertTrue(refused(json(extra = """"home":0,"call":1,"roles":true,"gameScreen":"0"""")).contains("jeu"))
     }
 
     @Test

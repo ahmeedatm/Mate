@@ -73,4 +73,20 @@ class GameSessionTest {
         assertEquals(0, session.returnTo(currentPage = 2, gamePage = 2, previousPage = 0))
         assertEquals(null, session.returnTo(currentPage = 1, gamePage = 2, previousPage = 0))
     }
+
+    @Test
+    fun `revenir dans le jeu puis le quitter de nouveau finit bien le jeu`() {
+        session.onForeground("Steam", "steam", "", games)
+        session.onForeground("Finder", "finder", "", games)
+        session.onForeground("Steam", "steam", "", games)
+        session.onForeground("Finder", "finder", "", games)
+        assertTrue(session.endIfLeft())
+    }
+
+    @Test
+    fun `apres une bascule refusee, la prochaine appli de jeu relance`() {
+        session.onForeground("Steam", "steam", "", games)
+        session.reset()
+        assertEquals(GameSession.Step.START, session.onForeground("Steam", "steam", "", games))
+    }
 }

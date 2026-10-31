@@ -46,8 +46,10 @@ object LayoutConfig {
         layout.deckProfile = role(json, "deck", names.size, required = false)
         layout.callProfile = role(json, "call", names.size, required = false)
         layout.rolesSet = json.optBoolean("roles", false)
-        layout.gameProfile = json.optInt("gameScreen", -1)
-        if (layout.gameProfile !in -1 until names.size) fail("Disposition invalide : l'écran de jeu n'existe pas.")
+        layout.gameProfile = if (json.has("gameScreen")) (json.opt("gameScreen") as? Int ?: -2) else -1
+        if (layout.gameProfile !in -1 until names.size || (layout.gameProfile >= 0 && layout.gameProfile == layout.callProfile)) {
+            fail("Disposition invalide : l'écran de jeu n'existe pas ou est Réunion.")
+        }
         json.optJSONArray("gameApps")?.let { apps ->
             for (i in 0 until apps.length()) {
                 val app = (apps.opt(i) as? String)?.trim()

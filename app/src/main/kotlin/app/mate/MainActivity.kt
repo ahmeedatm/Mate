@@ -728,9 +728,12 @@ class MainActivity : AppCompatActivity() {
         val fullScreen = current == Mode.CAMERA || homeFragment()?.editing == true
         val typing = Typing.active(focusIsEditText = currentFocus is android.widget.EditText)
         // État sauvegardé (appli en arrière-plan) : pas de changement d'écran.
-        if (supportFragmentManager.isStateSaved || !game.shouldSwitch(typing, fullScreen, inCall = call.active)) return
         val page = homeFragment()?.shownPage?.takeIf { current == Mode.HOME }
-        if (page == layout.gameProfile) return
+        // Bascule refusée (ou déjà sur l'écran de jeu) : pas de jeu en cours, la prochaine appli devant retentera.
+        if (supportFragmentManager.isStateSaved || !game.shouldSwitch(typing, fullScreen, inCall = call.active) || page == layout.gameProfile) {
+            game.reset()
+            return
+        }
         beforeGame = current to (homeFragment()?.shownPage ?: layout.homeProfile)
         showProfile(layout.gameProfile)
     }
