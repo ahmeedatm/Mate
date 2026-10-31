@@ -192,6 +192,8 @@ class MainActivity : AppCompatActivity() {
         // Appli d'essai : ordinateurs de la stable repris avant de construire les écrans, sans réappairer.
         Trial.importComputers(this)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // Plein écran : sans cela la fenêtre garde vide la place des barres système cachées (bandes noires).
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_main)
         Speaker.init(this)
         Prefs.focusPreset(this).let { FocusTimer.restore(it.focus, it.pause) }
