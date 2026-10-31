@@ -85,8 +85,9 @@ function fakeTablet(server: TestServer) {
       try {
         const res = await server.call("POST", "/tablet/poll", { state: STATE });
         for (const order of res.json.commands ?? []) {
-          if (order.command.type === "layout")
-            await server.call("POST", "/tablet/result", { id: order.id, ...apply(order.command), state: STATE });
+          // Les autres ordres de l'ordinateur (appli au premier plan) reçoivent un simple accusé.
+          const result = order.command.type === "layout" ? apply(order.command) : { ok: true };
+          await server.call("POST", "/tablet/result", { id: order.id, ...result, state: STATE });
         }
       } catch {
         await new Promise((r) => setTimeout(r, 200));
