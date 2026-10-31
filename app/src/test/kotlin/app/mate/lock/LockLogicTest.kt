@@ -17,6 +17,12 @@ class LockLogicTest {
     }
 
     @Test
+    fun `blocage par l'ordinateur coupe, seul le verrou a la main reste`() {
+        assertEquals(LockKind.NONE, LockLogic.kind(tablet = false, computer = true, blockOnComputer = false))
+        assertEquals(LockKind.TABLET, LockLogic.kind(tablet = true, computer = true, blockOnComputer = false))
+    }
+
+    @Test
     fun `code a 4 chiffres seulement`() {
         assertTrue(LockLogic.validCode("0042"))
         assertFalse(LockLogic.validCode("042"))

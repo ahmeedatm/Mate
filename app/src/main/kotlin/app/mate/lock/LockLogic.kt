@@ -11,10 +11,13 @@ enum class LockKind { NONE, TABLET, COMPUTER }
 object LockLogic {
     const val CODE_LENGTH = 4
 
-    /** Le verrou à la main d'abord : son code se tape sur l'écran, celui de l'ordinateur suit s'il reste. */
-    fun kind(tablet: Boolean, computer: Boolean): LockKind = when {
+    /**
+     * Le verrou à la main d'abord : son code se tape sur l'écran, celui de l'ordinateur suit s'il reste.
+     * `blockOnComputer` faux (Prefs.blockOnComputerLock) : l'ordinateur verrouillé ne bloque plus la tablette.
+     */
+    fun kind(tablet: Boolean, computer: Boolean, blockOnComputer: Boolean = true): LockKind = when {
         tablet -> LockKind.TABLET
-        computer -> LockKind.COMPUTER
+        computer && blockOnComputer -> LockKind.COMPUTER
         else -> LockKind.NONE
     }
 

@@ -31,7 +31,8 @@ import app.mate.lock.LockLogic
  * préférences (tenus hors ligne et après une relance de l'appli) :
  * - à la main, par le cadenas de la barre : pavé à 4 chiffres, levé seulement par le code ;
  * - ordinateur actif verrouillé : ordre `lock` (backend/src/screen-lock.ts) ou réponse 423, levé quand l'ordinateur se
- *   dit déverrouillé.
+ *   dit déverrouillé. Ce blocage se coupe dans Réglages > Tablette (Prefs.blockOnComputerLock) : la tablette reste
+ *   utilisable, la pastille de la barre dit « verrouillé ».
  * Sortie de secours (code oublié, ordinateur disparu) : appui long, puis code technicien, qui lève les deux.
  */
 class LockScreen(private val activity: MainActivity) {
@@ -48,7 +49,16 @@ class LockScreen(private val activity: MainActivity) {
     fun restore() = render()
 
     fun setComputerLocked(locked: Boolean) {
+        val changed = locked != Prefs.computerLocked(activity)
         Prefs.setComputerLocked(activity, locked)
+        render()
+        // La pastille de la barre dit « verrouillé » (ui/Navigation.renderLink).
+        if (changed) activity.refreshLink()
+    }
+
+    /** Réglages > Tablette : coupé, l'écran plein de l'ordinateur verrouillé part tout de suite ; remis, il revient. */
+    fun setBlockOnComputerLock(block: Boolean) {
+        Prefs.setBlockOnComputerLock(activity, block)
         render()
     }
 
@@ -94,7 +104,7 @@ class LockScreen(private val activity: MainActivity) {
     }
 
     private fun render() {
-        val kind = LockLogic.kind(Prefs.tabletLocked(activity), Prefs.computerLocked(activity))
+        val kind = LockLogic.kind(Prefs.tabletLocked(activity), Prefs.computerLocked(activity), Prefs.blockOnComputerLock(activity))
         if (kind == LockKind.NONE) return dismiss()
         if (activity.isFinishing || activity.isDestroyed) return
         if (kind == shownKind && isShown) return
@@ -253,8 +263,7 @@ class LockScreen(private val activity: MainActivity) {
             if (input.text.toString() == BuildConfig.TECH_CODE) {
                 ask.dismiss()
                 Prefs.setTabletLocked(activity, false)
-                Prefs.setComputerLocked(activity, false)
-                render()
+                setComputerLocked(false)
             } else {
                 input.setText("")
                 input.error = activity.getString(R.string.tech_code_wrong)
