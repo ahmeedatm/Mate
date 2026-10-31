@@ -1,2 +1,4 @@
 # CI, règles et modèles de la copie GitHub : toute modification demande l'approbation d'un propriétaire.
 /.github/ @ahmeedatm
+# Règles, agents, skills et contrôle du Claude commun : réservés à Ahmed.
+/.claude/ @ahmeedatm
