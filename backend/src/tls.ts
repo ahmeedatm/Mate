@@ -25,7 +25,7 @@ const ECDSA_SHA256 = seq(oid([0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02]));
 const COMMON_NAME = [0x55, 0x04, 0x03]; // 2.5.4.3
 const utcTime = (d: Date) => der(0x17, Buffer.from(d.toISOString().replace(/[-:T]/g, "").slice(2, 14) + "Z"));
 
-export function createCertificate(name = "UnoMate", now = new Date()): Omit<Tls, "fingerprint"> {
+export function createCertificate(name = "Mate", now = new Date()): Omit<Tls, "fingerprint"> {
   const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
   const subject = seq(der(0x31, seq(oid(COMMON_NAME), der(0x0c, Buffer.from(name)))));
   // Numéro de série positif (bit de poids fort à 0), jamais nul.

@@ -33,7 +33,7 @@ async function forward(line: string) {
       else fail(message?.error ?? `HTTP ${res.status}`);
     }
   } catch {
-    fail("Compagnon UnoMate injoignable : rouvre « UnoMate » sur cet ordinateur.");
+    fail("Compagnon Mate injoignable : rouvre « Mate » sur cet ordinateur.");
   }
 }
 

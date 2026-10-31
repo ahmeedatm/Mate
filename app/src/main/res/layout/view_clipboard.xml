@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Presse-papiers (Depuis l'ordi) : deux tuiles Cadran côte à côte. « Sur l'ordi » montre ce qui est copié sur
+<!-- Presse-papiers (Depuis l'ordi) : deux tuile Console côte à côte. « Sur l'ordi » montre ce qui est copié sur
      l'ordinateur, lu à l'ouverture et sur Actualiser seulement ; « Vers l'ordi » envoie un texte écrit ou dicté.
      Géré par ClipboardView. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -19,7 +19,7 @@
         android:orientation="vertical"
         tools:ignore="NestedWeights">
 
-        <com.unowhy.unomate.ui.TitleView
+        <app.mate.ui.TitleView
             style="@style/CardTitle"
             android:text="@string/clip_on_computer" />
 
@@ -88,7 +88,7 @@
         android:orientation="vertical"
         tools:ignore="NestedWeights">
 
-        <com.unowhy.unomate.ui.TitleView
+        <app.mate.ui.TitleView
             style="@style/CardTitle"
             android:text="@string/clip_to_computer" />
 
@@ -139,7 +139,7 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <com.unowhy.unomate.ui.TitleView
+            <app.mate.ui.TitleView
                 style="@style/CardTitle"
                 android:layout_width="0dp"
                 android:layout_weight="1"

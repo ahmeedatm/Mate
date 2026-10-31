@@ -7,7 +7,7 @@ import { config } from "./config.ts";
 import { backendRoot, packaged } from "./paths.ts";
 
 /**
- * Essai du backend d'une MR : la tablette envoie l'archive du backend de la MR (npm run package -- essai : sans node
+ * Essai du backend d'une PR : la tablette envoie l'archive du backend de la PR (npm run package -- essai : sans node
  * ni lanceur Windows), cet ordinateur garde une copie de son backend installé, le remplace, puis redémarre.
  * Une seule copie, celle d'origine : un essai suivant ne l'écrase pas, seul le retour à l'origine la supprime.
  * Mise à jour stable (applyUpdate) : même archive, celle d'une release ; elle remplace le backend installé, sans copie.
@@ -22,7 +22,7 @@ export type Layout = {
   packaged: boolean;
 };
 
-/** `sha256` : empreinte de l'archive posée, pour qu'une MR republiée soit renvoyée par la tablette. */
+/** `sha256` : empreinte de l'archive posée, pour qu'une PR republiée soit renvoyée par la tablette. */
 export type BackendState = { packaged: boolean; mode: "origin" | "essai"; mr: number | null; sha256: string | null };
 
 const MARKER = "essai-backend.json";
@@ -30,7 +30,7 @@ const ORIGIN = "backend-origin";
 /** Remplacés par l'essai. Pas node/ (verrouillé en marche) ni .env, .cache : à l'ordinateur. */
 const MANAGED = ["dist", "src", "scripts", "assets", "config"];
 /** Le lanceur Windows est verrouillé tant que le compagnon tourne. */
-const LOCKED = ["src/win/UnoMate.exe"];
+const LOCKED = ["src/win/Mate.exe"];
 /** Données de l'ordinateur dans config/ : jamais copiées ni remplacées. */
 const USER_FILES = ["config/deck.json", "config/tasks.json"];
 
@@ -53,7 +53,7 @@ const serverSha = (layout: Layout) =>
     .digest("hex");
 
 /**
- * Essai en cours d'après la marque `essai-backend.json` (MR, empreinte de l'archive et du serveur posé). Serveur différent : le
+ * Essai en cours d'après la marque `essai-backend.json` (PR, empreinte de l'archive et du serveur posé). Serveur différent : le
  * compagnon a été réinstallé depuis (nouvel installeur), la marque et la copie d'origine sont périmées, on les oublie.
  */
 export function backendState(layout: Layout = defaultLayout()): BackendState {
@@ -102,7 +102,7 @@ function replaceManaged(from: string, to: string) {
 }
 
 /** Fichier propre à la plateforme : une archive de l'autre plateforme n'est jamais posée. */
-const expected = (platform: Layout["platform"]) => (platform === "windows" ? "src/win/UnowhyHelper.exe" : "src/mac/NowPlaying.dylib");
+const expected = (platform: Layout["platform"]) => (platform === "windows" ? "src/win/MateHelper.exe" : "src/mac/NowPlaying.dylib");
 
 /** Revient au backend d'origine. Faux (rien fait) si l'ordinateur n'est pas sur un essai. */
 export function restoreOrigin(layout: Layout = defaultLayout()): boolean {
@@ -143,7 +143,7 @@ const notPackaged = (what: string) =>
   fail(`Ce compagnon est lancé depuis le dépôt : ${what} marche seulement avec le compagnon installé par paquet.`, 409);
 
 /**
- * Remplace le backend par celui de la MR `mr`. Archive vérifiée (SHA-256 si donné, fichiers attendus) et extraite à
+ * Remplace le backend par celui de la PR `mr`. Archive vérifiée (SHA-256 si donné, fichiers attendus) et extraite à
  * part avant de toucher à quoi que ce soit ; un échec en cours de remplacement remet le backend d'origine.
  * L'appelant redémarre le compagnon.
  */
@@ -186,7 +186,7 @@ const newer = (a: number[], b: number[]) => a[0] - b[0] || a[1] - b[1] || a[2] -
 
 /**
  * Mise à jour stable : remplace le backend installé par celui de la release `version` (archive de la release, sans node
- * ni lanceur). SHA-256 exigée. Version pas plus récente que `current` (celle qui tourne) : refus (409). Un essai de MR
+ * ni lanceur). SHA-256 exigée. Version pas plus récente que `current` (celle qui tourne) : refus (409). Un essai de PR
  * posé est oublié (marque et copie d'origine) : la nouvelle version devient l'origine. Copie temporaire de l'installation
  * pendant le remplacement, remise si une copie échoue. L'appelant redémarre le compagnon.
  */

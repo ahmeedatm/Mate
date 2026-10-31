@@ -1,15 +1,15 @@
-# Confidentialité : données, flux et projet de politique (COMP-49)
+# Confidentialité : données, flux et projet de politique
 
-Audit de vendabilité du 29/10/2026 : aucune politique de confidentialité, et des données qui partent chez des tiers sans être déclarées. Ce document recense ce qui est stocké et ce qui part, **vérifié dans le code le 29/10/2026** (avec le fichier en cause), et ce qui a été fait.
+Audit du 29/10/2026 : aucune politique de confidentialité, et des données qui partent chez des tiers sans être déclarées. Ce document recense ce qui est stocké et ce qui part, **vérifié dans le code le 29/10/2026** (avec le fichier en cause), et ce qui a été fait.
 
 **Fait le 29/10/2026** (branche `fix/confidentialite`) :
 - un flux **supprimé** plutôt que déclaré : le nom des sites du Deck n'est plus envoyé au service d'icônes de Google (un test du backend empêche son retour) ;
 - **localisation** : la ville de la météo n'est plus trouvée seule que si l'option des Réglages est activée (coupée par défaut) ; « Ma position » reste un geste explicite ;
 - **politique de confidentialité** affichée dans Réglages > À propos > « Confidentialité » et sur la page locale de l'ordinateur (`/local/confidentialite`), un seul texte : `backend/config/confidentialite.txt`, copié dans `app/src/main/assets/` (vérifié par `PrivacyTest`).
 
-**Reste au juridique** : valider le texte, le compléter (raison sociale, adresse, contact DPO : introuvables dans le dépôt et sur le web, le texte renvoie au site d'Unowhy), et confirmer bases légales et transferts hors UE.
+**Reste au juridique** : valider le texte, le compléter (raison sociale, adresse, contact DPO : introuvables dans le dépôt et sur le web, le texte renvoie à la page GitHub du projet), et confirmer bases légales et transferts hors UE.
 
-Le principe du produit est bon : les données restent chez l'utilisateur. La tablette parle à l'ordinateur sur le réseau local (chiffré depuis COMP-48), le compagnon garde ses données sur l'ordinateur, et il n'y a **ni mesure d'audience, ni rapport de plantage, ni publicité, ni compte Unowhy**.
+Le principe du produit est bon : les données restent chez l'utilisateur. La tablette parle à l'ordinateur sur le réseau local (chiffré), le compagnon garde ses données sur l'ordinateur, et il n'y a **ni mesure d'audience, ni rapport de plantage, ni publicité, ni compte**.
 
 ## 1. Données stockées
 
@@ -36,11 +36,11 @@ Le principe du produit est bon : les données restent chez l'utilisateur. La tab
 | **MET Norway** (Norvège, EEE) | météo, toutes les 30 min | coordonnées **de la ville** (jamais la position exacte), adresse IP, identifiant de l'appli | `ui/home/Weather.kt` |
 | **Microsoft** (Graph) — inactif | si l'appli Azure est enregistrée et un compte relié | agenda | `backend/src/accounts.ts` ; inactif tant que `config/accounts.json` est vide |
 | **Google** (Agenda) — inactif | si l'appli Google est enregistrée et un compte relié | agenda | `backend/src/accounts.ts` ; même condition |
-| **Unowhy** (serveur de mises à jour) | toutes les 6 h et au démarrage ; installeurs tous les quarts d'heure en WiFi | adresse IP, jeton de lecture des paquets ; rien sur l'utilisateur | `kiosk/AutoUpdater.kt`, `installers/` |
+| **GitHub** (releases du projet, Microsoft) | toutes les 6 h et au démarrage ; installeurs tous les quarts d'heure en WiFi | adresse IP, jeton de lecture du dépôt (injecté au build, ne donne accès qu'aux releases du projet) ; rien sur l'utilisateur | `kiosk/AutoUpdater.kt`, `installers/`, `net/GitHubReleases.kt` |
 | **IA de bureau choisie par l'utilisateur** (Claude, Cursor…) | s'il la branche sur `/mcp` (carte « Connecter une IA ») et lui demande d'agir | ce que les outils lisent (réglages, profils, touches, tâches, agenda perso, capture de la tablette…) part chez le fournisseur de cette IA ; le compagnon n'appelle lui-même aucun service | `backend/src/mcp-tools.ts`, `routes/mcp.ts` |
 | Services **choisis par l'utilisateur** | à sa demande | l'ordinateur lit le lien d'agenda collé (Outlook, Google, iCloud…), Jira si configuré, l'icône d'un site sur le site lui-même ; la tablette ouvre la page affichée sur l'ordinateur (« Page de l'ordi ») et contacte donc ce site | `calendar.ts`, `jira.ts`, `deck.ts`, `ui/DocumentPanel.kt` |
 
-Open-Meteo, cité par l'audit, n'est plus utilisé depuis COMP-52 ; le service d'icônes de Google a été retiré le 29/10/2026. Discord, Teams et les agents Claude sont pilotés sur l'ordinateur, sans rien envoyer hors de l'ordinateur et de la tablette.
+Open-Meteo, cité par l'audit, n'est plus utilisé ; le service d'icônes de Google a été retiré le 29/10/2026. Discord, Teams et les agents Claude sont pilotés sur l'ordinateur, sans rien envoyer hors de l'ordinateur et de la tablette.
 
 Destinataires hors de l'Union européenne : Google, Apple et Microsoft (États-Unis) ; à couvrir dans la politique (cadre de transfert à préciser par le juridique).
 
@@ -50,5 +50,5 @@ Le texte affiché aux utilisateurs est `backend/config/confidentialite.txt` (cop
 
 ## 4. Reste à décider (juridique et DPO)
 
-1. Raison sociale, adresse et contact DPO d'Unowhy à ajouter au texte ; bases légales et cadre des transferts hors UE à confirmer.
-2. Public : UnoMate vise le B2B, les entreprises et leurs salariés, avec une vente B2C en complément (`cible-et-positionnement.md`) ; les tablettes viennent du parc scolaire. Si des mineurs peuvent l'utiliser, la reconnaissance vocale et la localisation demandent une attention particulière.
+1. Raison sociale, adresse et contact DPO de l'éditeur à ajouter au texte ; bases légales et cadre des transferts hors UE à confirmer.
+2. Public : Mate vise des gens qui ont un Mac ou un PC Windows et une tablette 4.2, au bureau ou à la maison ; ces tablettes viennent du parc scolaire. Si des mineurs peuvent l'utiliser, la reconnaissance vocale et la localisation demandent une attention particulière.

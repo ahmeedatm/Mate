@@ -5,7 +5,7 @@ import type { TestServer } from "../test/server.ts";
 // Page locale, sections Profils et Barres : une fausse tablette répond aux ordres `layout` (get / set) du compagnon.
 // Les sections restent masquées (et hors de la barre de gauche) tant qu'aucune disposition n'a été lue.
 
-const STATE = { mode: "home", app: "1.4.0", name: "Tablette", model: "Unowhy 4.2", screen: "1280x800", battery: null, settings: {} };
+const STATE = { mode: "home", app: "1.4.0", name: "Tablette", model: "Tab 4.2", screen: "1280x800", battery: null, settings: {} };
 const SIZES = [
   { key: "S", w: 1, h: 1, label: "Petit" },
   { key: "M", w: 2, h: 1, label: "Moyen" },

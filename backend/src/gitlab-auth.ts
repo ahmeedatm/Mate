@@ -12,7 +12,7 @@ import { readJson, updateJson } from "./store.ts";
  * réponse, ni message d'erreur, ni journal, ni tablette.
  */
 
-const DEFAULT_URL = "https://gitlab.unowhy.dev";
+const DEFAULT_URL = "https://gitlab.com";
 const DEFAULT_SCOPE = "read_api";
 const TIMEOUT_MS = 15_000;
 

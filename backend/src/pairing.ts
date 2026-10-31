@@ -10,7 +10,7 @@ import { isScreenLocked } from "./screen-lock.ts";
 
 /**
  * Appairage d'une tablette sans rien recopier à la main (protocole détaillé : docs/securite-appairage.md) :
- * 1. Découverte : la tablette envoie "UNOWHY-COMPANION?" en diffusion UDP sur le port du serveur ;
+ * 1. Découverte : la tablette envoie "MATE?" en diffusion UDP sur le port du serveur ;
  *    chaque ordinateur du réseau répond avec son identité (id, nom, système, ports).
  * 2. Code : en WiFi, la tablette parle en HTTPS (`tlsPort`) et retient le certificat qu'elle voit. Elle s'engage
  *    sur un nombre secret (`commit` = SHA-256 du nombre), reçoit celui de l'ordinateur, puis dévoile le sien.
@@ -22,7 +22,7 @@ import { isScreenLocked } from "./screen-lock.ts";
  * Une demande encore valide n'est jamais remplacée par une autre adresse : elle attend.
  */
 
-export const PROBE = "UNOWHY-COMPANION?";
+export const PROBE = "MATE?";
 const CODE_TTL_MS = 2 * 60_000;
 const MAX_ATTEMPTS = 3;
 
@@ -31,7 +31,7 @@ export const name = computerName();
 /** `tlsPort` : HTTPS pour le WiFi ; null quand le serveur n'écoute qu'en local (USB). */
 export function identity() {
   return {
-    service: "unowhy-companion",
+    service: "mate",
     id: config.computerId,
     name,
     os: osName,
@@ -103,7 +103,7 @@ const sha256 = (s: string) => createHash("sha256").update(s).digest();
 
 /** Code à 6 chiffres commun aux deux côtés (même calcul dans PairingCode.kt). */
 export function pairingCode(channel: string, tabletNonce: string, computerNonce: string) {
-  const n = sha256(`unowhy-pair-1\n${channel}\n${tabletNonce}\n${computerNonce}`).readUInt32BE(0) % 1_000_000;
+  const n = sha256(`mate-pair-1\n${channel}\n${tabletNonce}\n${computerNonce}`).readUInt32BE(0) % 1_000_000;
   return String(n).padStart(6, "0");
 }
 /** Demandes récentes par adresse (sans compter les adresses qui n'ont plus rien de récent). */
@@ -128,7 +128,7 @@ export class PairingError extends Error {
 const askCode = async (text: string) => {
   if (process.env.NO_ALERT || process.env.COMPANION_HEADLESS === "1") return;
   await openTarget(`http://127.0.0.1:${config.port}/?section=pairing`).catch((e) => logFailure("Page d'appairage", e));
-  await alert("UnoMate", text);
+  await alert("Mate", text);
 };
 
 /**

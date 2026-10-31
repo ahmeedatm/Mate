@@ -4,7 +4,7 @@ Sur la page du compagnon (http://127.0.0.1:3000/), carte **Agenda** : « Se conn
 L'utilisateur se connecte dans son navigateur, l'agenda arrive sur la tablette dans la minute (réunions récurrentes
 dépliées, lien Teams ou Meet pour « Rejoindre »). Le lien ICS reste en repli (« Autre agenda : lien ICS »).
 
-Le client n'a rien à configurer. **Unowhy** enregistre l'appli **une fois** chez Microsoft et chez Google, et livre
+L'utilisateur n'a rien à configurer. **Le projet** enregistre l'appli **une fois** chez Microsoft et chez Google, et livre
 les identifiants (publics, pas des secrets) dans `backend/config/accounts.json`. Identifiant vide : bouton masqué.
 Le fichier est relu à chaque connexion : pas besoin de redémarrer le compagnon.
 
@@ -15,7 +15,7 @@ jetons de renouvellement dans `backend/.data/accounts.json` (sur l'ordinateur, j
 
 1. Ouvrir **https://portal.azure.com** › rechercher **Inscriptions d'applications** (*App registrations*) › **Nouvelle inscription**.
 2. Remplir :
-   - **Nom** : `UnoMate`
+   - **Nom** : `Mate`
    - **Types de comptes pris en charge** : *Comptes dans un annuaire organisationnel (tout locataire Microsoft Entra ID)
      et comptes Microsoft personnels* (Microsoft 365 de n'importe quelle entreprise + Outlook.com).
    - **URI de redirection** : plateforme **Client public/natif (mobile et bureau)**, adresse exacte :
@@ -35,13 +35,13 @@ Si ça bloque :
 | Message | Cause | Solution |
 |---|---|---|
 | « Vous ne pouvez pas inscrire d'applications » | l'entreprise interdit les inscriptions aux utilisateurs | demander au service informatique, ou inscrire l'appli avec un compte Microsoft personnel (Azure gratuit) : elle marche pour tous les comptes |
-| « Approbation de l'administrateur requise » à la connexion | l'entreprise n'autorise pas ses utilisateurs à accepter une appli | un administrateur accepte une fois pour tous (bouton dans *Autorisations d'API*) ; pour une démo, un compte Outlook.com marche |
+| « Approbation de l'administrateur requise » à la connexion | l'entreprise n'autorise pas ses utilisateurs à accepter une appli | un administrateur accepte une fois pour tous (bouton dans *Autorisations d'API*) ; pour un essai, un compte Outlook.com marche |
 | `AADSTS7000218` (client_secret demandé) | appli vue comme confidentielle | *Authentification* › **Autoriser les flux clients publics** : Oui |
 | `AADSTS50011` (redirect URI) | adresse de retour différente | ajouter exactement l'adresse affichée dans l'erreur (autre port que 3000 : `PORT` dans `.env`) |
 
 ## Google (Google Agenda) : facultatif, environ 15 minutes
 
-1. **https://console.cloud.google.com** › nouveau projet `UnoMate`.
+1. **https://console.cloud.google.com** › nouveau projet `Mate`.
 2. **API et services** › **Bibliothèque** › activer **Google Calendar API**.
 3. **Écran de consentement OAuth** : type **Externe**, nom de l'appli, e-mail ; champ d'application
    `.../auth/calendar.readonly` ; tant que l'appli est « En test », ajouter les comptes autorisés dans **Utilisateurs test**
@@ -55,7 +55,7 @@ Si ça bloque :
 
 ## Pour la production
 
-- Les applis Microsoft et Google sont enregistrées au nom d'Unowhy (éditeur vérifié chez Microsoft, vérification
+- Les applis Microsoft et Google sont enregistrées au nom du projet (éditeur vérifié chez Microsoft, vérification
   Google de l'appli) : plus d'avertissement « appli non vérifiée », plus de limite de 100 comptes Google.
 - Les clients d'entreprise dont l'administrateur bloque les applis tierces : consentement administrateur une fois
   pour l'entreprise, ou lien ICS.

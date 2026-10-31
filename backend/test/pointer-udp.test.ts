@@ -23,7 +23,7 @@ const send = (text: string) =>
 /** Paquet signé par `token`, comme la tablette (le jeton lui-même ne part jamais). */
 const pointer = (token: string, seq: number, body: unknown) => {
   const json = JSON.stringify(body);
-  return send(`UNOWHY-POINTER\n${pointerSignature(token, seq, json)}\n${seq}\n${json}`);
+  return send(`MATE-POINTER\n${pointerSignature(token, seq, json)}\n${seq}\n${json}`);
 };
 /** UDP sans accusé : attendre que le serveur ait traité (ou ignoré) ce qui précède. */
 const settle = () => new Promise((r) => setTimeout(r, 400));
@@ -48,7 +48,7 @@ describe("pavé tactile en UDP", () => {
     await pointer(TOKEN, 11, { dx: 1, dy: 1 });
     await pointer(TOKEN, 12, { dx: 99999, dy: 0 });
     await pointer("faux", 13, { dx: 1, dy: 1 });
-    await send(`UNOWHY-POINTER\n${TOKEN}\n14\n{"dx":1,"dy":1}`);
+    await send(`MATE-POINTER\n${TOKEN}\n14\n{"dx":1,"dy":1}`);
     await settle();
     assert.deepEqual(server.osCalls(), [], "seq ancien, valeur hors bornes, mauvaise clé ou jeton en clair (ancien format)");
   });
@@ -63,8 +63,8 @@ describe("pavé tactile en UDP", () => {
       const probe = dgram.createSocket("udp4");
       const timer = setTimeout(() => (probe.close(), reject(new Error("pas de réponse de découverte"))), 3000);
       probe.once("message", (m) => (clearTimeout(timer), probe.close(), resolve(m.toString())));
-      probe.send("UNOWHY-COMPANION?", port, "127.0.0.1");
+      probe.send("MATE?", port, "127.0.0.1");
     });
-    assert.equal(JSON.parse(reply).service, "unowhy-companion");
+    assert.equal(JSON.parse(reply).service, "mate");
   });
 });

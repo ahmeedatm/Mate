@@ -2,14 +2,14 @@
  * Pavé tactile de la tablette : paquets UDP de déplacement et de défilement (même port que la découverte, voir
  * pairing.ts). Logique pure : le branchement sur le pilotage de l'ordinateur est fait par l'appelant.
  *
- * Paquet : `UNOWHY-POINTER\n<signature>\n<seq>\n<json>`, json = {"dx","dy"} (pixels) ou {"sx","sy"} (crans de molette),
+ * Paquet : `MATE-POINTER\n<signature>\n<seq>\n<json>`, json = {"dx","dy"} (pixels) ou {"sx","sy"} (crans de molette),
  * signature = HMAC-SHA256 de `<seq>\n<json>` par le jeton, en hexadécimal : le jeton ne passe jamais sur le réseau
  * (l'UDP n'est pas chiffré). Un paquet invalide, mal signé, ancien ou trop fréquent est ignoré sans réponse ;
  * son contenu n'est jamais journalisé.
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-export const POINTER_HEADER = "UNOWHY-POINTER\n";
+export const POINTER_HEADER = "MATE-POINTER\n";
 /** Déplacement maximal par paquet, en pixels, et défilement maximal, en crans (valeur absolue). */
 export const MAX_MOVE = 2000;
 export const MAX_SCROLL = 50;

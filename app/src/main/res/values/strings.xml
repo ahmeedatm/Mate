@@ -365,7 +365,7 @@
     <string name="web_tabs">Onglets</string>
     <string name="web_tabs_title">Onglets ouverts sur l\'ordi</string>
     <string name="web_tabs_hint">Touche un onglet pour l\'afficher ici.</string>
-    <string name="web_tabs_extension">Pour voir ici les onglets du PC, ajoute l\'extension « UnoMate » à ton navigateur (dossier « Extension navigateur » du compagnon), puis touche un onglet sur le PC.</string>
+    <string name="web_tabs_extension">Pour voir ici les onglets du PC, ajoute l\'extension « Mate » à ton navigateur (dossier « Extension navigateur » du compagnon), puis touche un onglet sur le PC.</string>
     <string name="web_tabs_none">Aucun onglet ouvert dans un navigateur de l\'ordi.</string>
     <string name="web_tab_front">Affiché sur l\'ordi en ce moment</string>
     <string name="web_tab_shown">Affiché dans sa fenêtre</string>
@@ -656,7 +656,7 @@
     <string name="wifi_forget_confirm">Oublier le réseau %1$s ? Il faudra retaper son mot de passe.</string>
     <string name="updates_title">Mises à jour</string>
     <string name="updates_check">Rechercher</string>
-    <string name="updates_hint">Le moteur web et UnoMate se mettent à jour depuis le serveur Unowhy ou l\'ordinateur, sans quitter le kiosque. En kiosque, le UnoMate installe seul les versions de main (au démarrage puis toutes les 6 h) ; un essai s\'installe seulement avec son bouton.</string>
+    <string name="updates_hint">Le moteur web et Mate se mettent à jour depuis GitHub ou l\'ordinateur, sans quitter le kiosque. En kiosque, le Mate installe seul les versions publiées (au démarrage puis toutes les 6 h) ; un essai s\'installe seulement avec son bouton.</string>
     <string name="updates_checking">Recherche des mises à jour…</string>
     <string name="updates_none">Aucune mise à jour annoncée.</string>
     <string name="updates_row_title">%1$s · %2$s</string>
@@ -664,9 +664,9 @@
     <string name="updates_row_absent">Pas installée · %1$s</string>
     <string name="updates_row_installed">Version installée.</string>
     <string name="updates_row_older">Pas installable : plus ancienne que la version installée (%1$s). Android refuse de revenir à une version plus basse.</string>
-    <string name="updates_source_server">serveur Unowhy</string>
+    <string name="updates_source_server">GitHub</string>
     <string name="updates_source_computer">ordinateur</string>
-    <string name="updates_source_error">Depuis le %1$s : %2$s</string>
+    <string name="updates_source_error">Source %1$s : %2$s</string>
     <string name="updates_install">Mettre à jour</string>
     <string name="updates_downloading">Téléchargement %1$d %%</string>
     <string name="updates_installing">Installation…</string>
@@ -676,8 +676,8 @@
     <string name="update_unfinished">Android n\'a pas fini l\'installation : réessaie plus tard.</string>
     <string name="update_needs_confirmation">Android demande une confirmation : installation annulée.</string>
     <string name="update_busy">Une mise à jour est déjà en cours : réessaie dans quelques minutes.</string>
-    <string name="update_server_download_failed">Téléchargement impossible depuis le serveur Unowhy : réessaie plus tard.</string>
-    <string name="update_server_unreachable">serveur Unowhy injoignable, vérifie le WiFi.</string>
+    <string name="update_server_download_failed">Téléchargement impossible depuis GitHub : réessaie plus tard.</string>
+    <string name="update_server_unreachable">GitHub injoignable, vérifie le WiFi.</string>
     <string name="update_install_failed">Échec de l\'installation (code %1$d).</string>
     <string name="wifi_refused">Android a refusé ce réseau.</string>
     <string name="camera_busy">Caméra prise par une autre appli</string>
@@ -691,18 +691,18 @@
     <string name="duration_seconds">%1$d s</string>
     <string name="duration_minutes">%1$d min</string>
     <string name="updates_downloading_short">Téléchargement…</string>
-    <string name="updates_source_trials">essais de MR</string>
-    <string name="essais_title">Essais de MR</string>
-    <string name="essais_none">Aucun essai de MR publié.</string>
-    <string name="essai_row_title">!%1$d %2$s</string>
+    <string name="updates_source_trials">essais de PR</string>
+    <string name="essais_title">Essais de PR</string>
+    <string name="essais_none">Aucun essai de PR publié.</string>
+    <string name="essai_row_title">#%1$d %2$s</string>
     <string name="essai_row_version">%1$s · %2$s</string>
     <string name="essai_row_backend">backend de l\'ordinateur remplacé</string>
     <string name="essai_row_no_backend">sans backend</string>
     <string name="essai_row_installed">Installée.</string>
     <string name="essai_row_absent">Pas installé.</string>
     <string name="essai_row_replace">Remplace l\'essai installé (%1$s).</string>
-    <string name="essai_row_replace_mr">Remplace l\'essai de la !%1$d (%2$s).</string>
-    <string name="essai_row_downgrade_mr">Plus ancien que l\'essai de la !%1$d (%2$s) : désinstallé d\'abord, puis installé.</string>
+    <string name="essai_row_replace_mr">Remplace l\'essai de la PR #%1$d (%2$s).</string>
+    <string name="essai_row_downgrade_mr">Plus ancien que l\'essai de la PR #%1$d (%2$s) : désinstallé d\'abord, puis installé.</string>
     <string name="essai_row_downgrade">Plus ancien que l\'essai installé (%1$s) : désinstallé d\'abord, puis installé.</string>
     <string name="update_uninstall_failed">Impossible de désinstaller l\'essai installé (code %1$d).</string>
     <string name="trial_syncing">Backend de l\'ordinateur en cours de changement…</string>
@@ -716,12 +716,11 @@
     <string name="welcome_wifi_title">Le WiFi</string>
     <string name="welcome_wifi_text">Connecte la tablette au WiFi de la maison ou du bureau, le même que celui de l\'ordinateur.</string>
     <string name="welcome_install_title">Sur l\'ordinateur</string>
-    <string name="welcome_install_text">Dans le navigateur de l\'ordinateur, ouvre ce site et télécharge UnoMate :</string>
-    <string name="site_url" translatable="false">mate.integration.unowhy.dev</string>
+    <string name="welcome_install_text">Dans le navigateur de l\'ordinateur, ouvre cette adresse et télécharge Mate :</string>
     <string name="install_address_no_wifi">connecte d\'abord le WiFi</string>
     <string name="companion_update_available">Nouvelle version du compagnon pour %1$s (%2$s) : touche pour la mettre à jour</string>
     <string name="companion_update_title">Mettre à jour le compagnon de %1$s</string>
-    <string name="companion_update_steps_mac">1. Sur le Mac, rouvre « UnoMate » : le panneau s\'ouvre.\n2. Carte « Cette appli » : « Chercher une mise à jour », puis « Installer ». L\'appli se remplace et redémarre.\n3. Si macOS redemande l\'Accessibilité, accorde-la (Réglages Système > Confidentialité et sécurité > Accessibilité).\n\nPas de panneau (ancienne version) : ouvre %1$s (bouton « Ouvrir sur l\'ordi »), télécharge la nouvelle appli et ouvre-la.\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
+    <string name="companion_update_steps_mac">1. Sur le Mac, rouvre « Mate » : le panneau s\'ouvre.\n2. Carte « Cette appli » : « Chercher une mise à jour », puis « Installer ». L\'appli se remplace et redémarre.\n3. Si macOS redemande l\'Accessibilité, accorde-la (Réglages Système > Confidentialité et sécurité > Accessibilité).\n\nPas de panneau (ancienne version) : ouvre %1$s (bouton « Ouvrir sur l\'ordi »), télécharge la nouvelle appli et ouvre-la.\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
     <string name="companion_update_steps_windows">1. Sur le PC, relance le compagnon : le panneau s\'ouvre.\n2. Carte « Cette appli » : « Chercher une mise à jour », puis « Installer ». Le fichier se remplace et redémarre.\n3. Si SmartScreen bloque : « Informations complémentaires », puis « Exécuter quand même ».\n\nPas de panneau (ancienne installation) : ouvre %1$s (bouton « Ouvrir sur l\'ordi »), télécharge le nouveau fichier, lance-le, puis « Retirer l\'ancienne installation » dans le panneau.\n\nRéglages et appairage sont gardés : rien à refaire sur la tablette.</string>
     <string name="companion_update_open">Ouvrir sur l\'ordi</string>
     <string name="companion_update_later">Plus tard</string>
@@ -740,13 +739,13 @@
     <string name="companion_state_repo">Compagnon de %1$s lancé depuis le dépôt : il se met à jour par git.</string>
     <string name="companion_state_nothing">Compagnon de %1$s (%2$s) : aucune version publiée pour cet ordinateur.</string>
     <string name="companion_state_installer">Compagnon de %1$s (%2$s) trop ancien pour se mettre à jour depuis la tablette : installe la version %3$s une dernière fois, la suite se fera d\'ici.</string>
-    <string name="companion_state_essai">Compagnon de %1$s sur l\'essai d\'une MR : reviens à la stable pour le mettre à jour.</string>
+    <string name="companion_state_essai">Compagnon de %1$s sur l\'essai d\'une PR : reviens à la stable pour le mettre à jour.</string>
     <string name="companion_state_uptodate">Compagnon de %1$s à jour (%2$s).</string>
     <string name="companion_state_newer">Compagnon de %1$s (%2$s) plus récent que la dernière version publiée (%3$s).</string>
     <string name="companion_state_available">Compagnon de %1$s en %2$s : la version %3$s est disponible.</string>
-    <string name="welcome_install_os">Mac ou PC Windows. Une fois lancé, UnoMate ouvre sa page sur l\'ordinateur.</string>
+    <string name="welcome_install_os">Mac ou PC Windows. Une fois lancé, Mate ouvre sa page sur l\'ordinateur.</string>
     <string name="welcome_connect_title">Connecter</string>
-    <string name="welcome_connect_text">L\'ordinateur apparaît ici dès qu\'UnoMate y tourne. Touche-le : la tablette affiche un code, saisis-le dans la page d\'UnoMate sur l\'ordinateur.</string>
+    <string name="welcome_connect_text">L\'ordinateur apparaît ici dès qu\'Mate y tourne. Touche-le : la tablette affiche un code, saisis-le dans la page d\'Mate sur l\'ordinateur.</string>
     <string name="welcome_searching">Recherche sur le WiFi…</string>
     <string name="welcome_need_wifi">Connecte d\'abord le WiFi (étape 1).</string>
     <string name="welcome_tap">Toucher pour connecter</string>
@@ -869,24 +868,11 @@
     <string name="frame_open_folder">Ouvrir le dossier sur l\'ordi</string>
     <string name="frame_try">Essayer</string>
     <string name="theme_title">Thème</string>
-    <string name="theme_cadran">Cadran</string>
-    <string name="theme_cadran_nuit">Cadran nuit</string>
-    <string name="theme_clair">Clair</string>
-    <string name="theme_sombre">Sombre</string>
-    <string name="theme_group_sober">Sobres</string>
-    <string name="theme_group_retro">Rétro</string>
-    <string name="theme_group_a11y">Accessibilité</string>
-    <string name="theme_group_personas">Thèmes des personas</string>
+    <string name="theme_console">Console</string>
+    <string name="theme_console_jour">Console jour</string>
     <string name="theme_tile">Thème %s</string>
     <string name="theme_tile_chosen">Thème %s, choisi</string>
-    <string name="theme_retro">Rétro</string>
     <string name="theme_contraste">Contraste élevé</string>
-    <!-- Thèmes des personas : seconde ligne du choix des Réglages (AppTheme.demo). -->
-    <string name="theme_registre">Registre</string>
-    <string name="theme_studio">Studio</string>
-    <string name="theme_maison">Maison</string>
-    <string name="theme_tableau">Tableau</string>
-    <string name="theme_terminal">Terminal</string>
     <!-- Accessibilité (lot 2) : aides à la lecture, dans la carte Accessibilité de COMP-50 (ui/ReadingAids.kt) -->
     <string name="a11y_legible_font">Police lisible</string>
     <string name="a11y_legible_font_hint">Atkinson Hyperlegible, lettres faciles à distinguer, un peu plus espacées</string>
@@ -1001,35 +987,6 @@
     <string name="template_standby">Veille</string>
     <string name="template_work_cadran_desc">Heure, ligne du jour, agenda, Focus, applis et touches.</string>
     <string name="template_standby_cadran_desc">L\'heure et la ligne du jour, rien d\'autre : lisible de loin.</string>
-    <string name="demo_card">Démo</string>
-    <string name="demo_hint">Choisis un persona : les écrans de la barre et les réglages de la tablette, puis les touches, plugins, tâches et agenda de l\'ordinateur, prennent ses données fictives. « Quitter la démo » rend l\'état d\'avant.</string>
-    <string name="demo_choose">Choisir un persona</string>
-    <string name="demo_title">Démo : choisis un persona</string>
-    <string name="demo_quit">Quitter la démo</string>
-    <string name="demo_active">Démo en cours : %1$s</string>
-    <string name="demo_no_computer">Connecte un ordinateur pour lancer la démo.</string>
-    <string name="persona_nour">Nour</string>
-    <string name="persona_nour_desc">Comptable, 48 ans. Tableurs et logiciel comptable, raccourcis Excel, libellés récurrents, bascule entre dossiers clients. « En période de clôture, chaque clic économisé compte. »</string>
-    <string name="persona_gwen">Gwen</string>
-    <string name="persona_gwen_desc">Responsable marketing, 25 ans. CRM, e-mailing, Canva, réseaux sociaux, tableau de bord, visio, diapositives, modèles de messages : un écran pour le quotidien, un pour présenter, un pour les campagnes.</string>
-    <string name="persona_camille">Camille</string>
-    <string name="demo_screen_excel">Excel</string>
-    <string name="demo_screen_files">Dossiers</string>
-    <string name="demo_screen_slides">Présentation</string>
-    <string name="demo_screen_campaigns">Campagnes</string>
-    <string name="demo_screen_work">Travail</string>
-    <string name="demo_screen_house">Maison</string>
-    <string name="demo_screen_projects">Projets</string>
-    <string name="demo_screen_jira">Jira</string>
-    <string name="demo_screen_code">Code</string>
-    <string name="demo_screen_gitlab">GitLab</string>
-    <string name="persona_camille_desc">Cheffe de projet, 30 ans, parent au temps morcelé. Retrouver son espace en un geste, rejoindre une réunion, couper le micro, minuteur Focus.</string>
-    <string name="persona_aimee">Aimée</string>
-    <string name="persona_aimee_desc">Chargée de projets, 29 ans. Elle garde une vingtaine d\'onglets ouverts et perd ses fenêtres : prochaines réunions et tâches du jour, dossiers d\'un projet en un geste, fenêtres à réorganiser, rappels bien visibles.</string>
-    <string name="persona_sam">Sam</string>
-    <string name="persona_sam_desc">Gestionnaire administratif en situation de handicap, 44 ans. De grosses touches à la place des combinaisons, applis et modèles de courriers, thème à fort contraste, texte agrandi et commande vocale.</string>
-    <string name="persona_sacha">Sacha</string>
-    <string name="persona_sacha_desc">Développeur full-stack, 27 ans. Tests, compilations, commandes Git, bascule dev et prod, déploiement, tickets et revues de code.</string>
     <string name="template_deck">Deck</string>
     <string name="template_deck_desc">Applis, son de l\'ordi, touches et lecture en cours : agir sur l\'ordinateur.</string>
     <string name="template_call">Réunion</string>
@@ -1403,10 +1360,10 @@
         <item quantity="one">Et %1$d tâche à faire.</item>
         <item quantity="other">Et %1$d tâches à faire.</item>
     </plurals>
-    <!-- Appli d'essai depuis une MR, installée à côté de la stable (trial/Trial.kt) -->
+    <!-- Appli d'essai depuis une PR, installée à côté de la stable (trial/Trial.kt) -->
     <string name="trial_open">Ouvrir l\'essai</string>
     <string name="trial_back">Revenir à la stable</string>
-    <string name="trial_hint">Version d\'essai d\'une MR, installée à côté du UnoMate. Mises à jour, WiFi et kiosque se règlent dans le UnoMate. Le backend de l\'ordinateur revient à l\'origine quand tu reviens à la stable.</string>
+    <string name="trial_hint">Version d\'essai d\'une PR, installée à côté du Mate. Mises à jour, WiFi et kiosque se règlent dans le Mate. Le backend de l\'ordinateur revient à l\'origine quand tu reviens à la stable.</string>
     <!-- Accessibilité (lot 1) : états écrits en plus de la couleur, noms pour TalkBack -->
     <string name="link_state_online">en ligne</string>
     <string name="link_state_unauthorized">non autorisé</string>

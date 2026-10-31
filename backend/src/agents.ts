@@ -37,7 +37,7 @@ export type OrcaInfo = {
   worktrees: {
     path: string;
     branch: string | null;
-    /** Ticket Jira lié au worktree (`SQOOL-12256`) et MR GitLab liée (numéro). */
+    /** Ticket Jira lié au worktree (`TECH-12256`) et MR GitLab liée (numéro). */
     ticket?: string | null;
     mr?: number | null;
     /** Dépôt du worktree (projet de ses sessions), nom affiché et dernière activité (ms) dans Orca. */
@@ -241,7 +241,7 @@ export function cut(value: unknown, max: number): string {
   return clean.length > max ? clean.slice(0, max - 1) + "…" : clean;
 }
 
-/** Ticket cité dans un nom de branche : `auto-test/SQOOL-12256-catalog` → `SQOOL-12256`. */
+/** Ticket cité dans un nom de branche : `auto-test/TECH-12256-catalog` → `TECH-12256`. */
 /** Onglet d'un chat Orca d'après la clé de son volet : `structured-agent-session-<id>:<…>` → `agent-session:<id>`. */
 export function chatTab(paneKey: string): string | null {
   const m = /^structured-agent-session-([\w-]+):/.exec(paneKey);

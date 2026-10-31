@@ -5,7 +5,7 @@
 ## Pourquoi
 
 Rendre l'appli utilisable par le plus grand nombre : daltonisme, dyslexie, vue faible, motricité fine, attention.
-Bruno n'a pas de personne précise en tête : on vise le grand public. La note projet UNOMATE (29/10) en fait aussi un argument B2B : faciliter certains usages des travailleurs en situation de handicap (interfaces simplifiées, grandes commandes tactiles). Aucun test avec des personnes concernées à ce jour. Un état des lieux (29/10) a montré une base
+Bruno n'a pas de personne précise en tête : on vise le grand public. Faciliter certains usages des personnes en situation de handicap est un objectif en soi (interfaces simplifiées, grandes commandes tactiles). Aucun test avec des personnes concernées à ce jour. Un état des lieux (29/10) a montré une base
 correcte (textes courants contrastés ≥ 5:1, taille de police d'Android respectée presque partout) et des manques :
 états portés par la seule couleur, pas d'option d'accessibilité, TalkBack très partiel.
 
@@ -26,7 +26,7 @@ correcte (textes courants contrastés ≥ 5:1, taille de police d'Android respec
 
 ## Lot 2 — Réglages > Accessibilité
 
-La carte « Accessibilité » des Réglages est arrivée sur `main` avec la MR !135 (COMP-50) : interrupteur **TalkBack**
+La carte « Accessibilité » des Réglages est arrivée sur `main` avec la MR !135 : interrupteur **TalkBack**
 (avec le raccourci des touches de volume) et **taille du texte** à quatre niveaux (`Prefs.textScale`, appliquée dans
 `MainActivity.attachBaseContext`). Elles sont gardées telles quelles ; la taille du texte prévue ici (×1, ×1,15, ×1,3)
 est abandonnée au profit de la leur. Nos trois réglages, gardés sur la tablette, sont ajoutés dans cette même carte,

@@ -7,8 +7,8 @@ Recherche du 26/10/2026. But : une UI de produit fini, épurée, animée sans sa
 
 1. **Rester en vues XML.** Compose ajoute ~800 Ko à l'APK et un démarrage plus lent sans gain prouvé
    sur ce matériel ; nos animations tiennent avec `ViewPropertyAnimator` (déjà dans `ui/Look.kt`).
-2. **Adopter la DA Cadran** ([`da/README.md`](da/README.md)) : tokens générés depuis la charte
-   Unowhy avec les outils de Material 3, posés dans `palettes.xml`. Les attributs `?attr/c_…`
+2. **Une DA en jetons** ([`da/README.md`](da/README.md), aujourd'hui Console douce) : tokens posés dans
+   `palettes.xml` avec les outils de Material 3. Les attributs `?attr/c_…`
    existent déjà : on change des valeurs, pas l'architecture.
 3. **Installer peu** : fait le 27/10/2026, voir la fin du document.
 
@@ -47,9 +47,8 @@ Doc d'installation : [plugins](https://code.claude.com/docs/en/plugins/install.m
 
 ## Direction artistique
 
-Une seule direction, **Cadran** : [`da/README.md`](da/README.md). Elle est bâtie sur la charte
-Unowhy, Material Design 3 (couleur HCT, composants, ressorts) et les règles de finesse de l'Apple
-HIG, avec un prototype animé et une vidéo.
+Direction actuelle, **Console douce** : [`da/README.md`](da/README.md). Elle s'appuie sur Material Design 3
+(couleur HCT, composants, ressorts) et les règles de finesse de l'Apple HIG.
 
 Trois premières pistes (Console, Signal, Veille douce) ont été écartées le 26/10/2026. Elles
 faisaient « générées » : couleurs et polices choisies à l'œil, pas de design system derrière.
@@ -78,7 +77,7 @@ faisaient « générées » : couleurs et polices choisies à l'œil, pas de des
 | `TransitionManager`, `MotionLayout` | relayout, lourd | oui / oui | éviter |
 | `RenderEffect` (flou, glow) | GPU | API 31+ | indisponible |
 
-Mesure : `adb shell dumpsys gfxinfo com.unowhy.companion reset`, faire le geste, puis `dumpsys gfxinfo com.unowhy.companion` (images saccadées, 90e centile) ; [doc dumpsys](https://developer.android.com/tools/dumpsys), [rendu lent](https://developer.android.com/topic/performance/vitals/render). L'émulateur rend sur le GPU du Mac : il valide l'absence de relayout, pas les 60 i/s. Seule la vraie tablette tranche ; le skill `android-profiler` de Google lit les traces Perfetto.
+Mesure : `adb shell dumpsys gfxinfo app.mate reset`, faire le geste, puis `dumpsys gfxinfo app.mate` (images saccadées, 90e centile) ; [doc dumpsys](https://developer.android.com/tools/dumpsys), [rendu lent](https://developer.android.com/topic/performance/vitals/render). L'émulateur rend sur le GPU du Mac : il valide l'absence de relayout, pas les 60 i/s. Seule la vraie tablette tranche ; le skill `android-profiler` de Google lit les traces Perfetto.
 
 ## Polices sur Android
 

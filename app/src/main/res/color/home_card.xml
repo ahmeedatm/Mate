@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Fond translucide des widgets de l'Accueil en Rétro (drawable/retro_home_card_bg). -->
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:alpha="0.8" android:color="?attr/c_surface" />
-</selector>

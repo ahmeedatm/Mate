@@ -45,7 +45,7 @@ test.describe("page locale : touches", () => {
     await expect(touches.getByRole("button", { name: "Touche 1 : Réunion" })).toContainText("Macro, 3 étapes");
 
     const saved = (await server.call("GET", "/deck/keys/0")).json.key;
-    expect(saved).toMatchObject({ label: "Réunion", symbol: "videocam", color: "#ca0538" });
+    expect(saved).toMatchObject({ label: "Réunion", symbol: "videocam", color: "#b8f34a" });
     expect(saved.steps).toEqual([
       { type: "window", app: "Safari", layout: "left" },
       { type: "url", url: "https://exemple.test/salle" },

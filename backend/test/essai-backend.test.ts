@@ -26,7 +26,7 @@ function files(platform: Layout["platform"], v: string, extra: Record<string, st
   return {
     "dist/server.mjs": `serveur ${v}`,
     "config/calls.json": `calls ${v}`,
-    ...(platform === "windows" ? { "src/win/UnowhyHelper.exe": `pilote ${v}` } : { "src/mac/NowPlaying.dylib": `dylib ${v}` }),
+    ...(platform === "windows" ? { "src/win/MateHelper.exe": `pilote ${v}` } : { "src/mac/NowPlaying.dylib": `dylib ${v}` }),
     ...extra,
   };
 }
@@ -50,7 +50,7 @@ function install(platform: Layout["platform"]): Layout {
       "config/deck.json": "deck de l'ordinateur",
       "config/tasks.json": "tâches de l'ordinateur",
       "node/node.exe": "node verrouillé",
-      ...(platform === "windows" ? { "src/win/UnoMate.exe": "lanceur verrouillé" } : {}),
+      ...(platform === "windows" ? { "src/win/Mate.exe": "lanceur verrouillé" } : {}),
       ".env": "COMPANION_TOKEN=secret",
     }),
   );
@@ -73,7 +73,7 @@ describe("essai du backend d'une MR", () => {
       assert.equal(read(layout.root, "config/deck.json"), "deck de l'ordinateur");
       assert.equal(read(layout.root, "config/tasks.json"), "tâches de l'ordinateur");
       assert.equal(read(layout.root, "node/node.exe"), "node verrouillé");
-      if (platform === "windows") assert.equal(read(layout.root, "src/win/UnoMate.exe"), "lanceur verrouillé");
+      if (platform === "windows") assert.equal(read(layout.root, "src/win/Mate.exe"), "lanceur verrouillé");
       assert.equal(read(layout.root, ".env"), "COMPANION_TOKEN=secret");
       // Copie d'origine : le backend installé, sans les données de l'ordinateur.
       const copy = path.join(layout.dataDir, "backend-origin");
@@ -157,7 +157,7 @@ describe("essai du backend d'une MR", () => {
     assert.throws(() => applyEssai(Buffer.from("pas une archive"), 109, undefined, layout), /illisible/);
     assert.throws(() => applyEssai(archive("mac", "mr109"), 109, undefined, layout), /pas un backend pour cet ordinateur/);
     const noServer = fs.mkdtempSync(path.join(tmp, "src-"));
-    write(noServer, { "src/win/UnowhyHelper.exe": "pilote" });
+    write(noServer, { "src/win/MateHelper.exe": "pilote" });
     const out = path.join(tmp, "sans-serveur.tar.gz");
     execFileSync("tar", ["-czf", out, "-C", noServer, "."]);
     assert.throws(() => applyEssai(fs.readFileSync(out), 109, undefined, layout), /pas un backend pour cet ordinateur/);
@@ -200,7 +200,7 @@ describe("mise à jour stable du backend", () => {
       assert.equal(read(layout.root, "config/deck.json"), "deck de l'ordinateur");
       assert.equal(read(layout.root, "config/tasks.json"), "tâches de l'ordinateur");
       assert.equal(read(layout.root, "node/node.exe"), "node verrouillé");
-      if (platform === "windows") assert.equal(read(layout.root, "src/win/UnoMate.exe"), "lanceur verrouillé");
+      if (platform === "windows") assert.equal(read(layout.root, "src/win/Mate.exe"), "lanceur verrouillé");
       assert.equal(read(layout.root, ".env"), "COMPANION_TOKEN=secret");
       assert.equal(exists(layout.dataDir, "backend-origin"), false, "pas de copie d'origine");
       assert.equal(backendState(layout).mode, "origin");

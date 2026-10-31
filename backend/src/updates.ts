@@ -6,15 +6,15 @@ import { config } from "./config.ts";
 import { readJson } from "./store.ts";
 
 /**
- * « Serveur Unowhy » de mises à jour, simulé par le backend pour la démo du hackathon : la tablette (device owner)
- * y trouve les nouvelles versions du moteur web (WebView) et du UnoMate, les télécharge et les installe seule,
- * en kiosque. En production, ce serait l'infrastructure SQOOL (MDM, OTA) d'Unowhy.
+ * Serveur de mises à jour simulé par le backend (la tablette lit aussi les releases GitHub du projet) : la tablette
+ * (device owner) y trouve les nouvelles versions du moteur web (WebView) et du Mate, les télécharge et les installe seule,
+ * en kiosque.
  *
  * Dossier .data/updates/ : les APK et manifest.json, écrit à la main :
  * { "updates": [{ "package": "com.google.android.webview", "label": "Navigateur web", "versionCode": 1, "versionName": "…", "file": "webview.apk" }] }
  * Empreinte SHA-256 et taille calculées ici : la tablette vérifie le fichier reçu, Android vérifie la signature.
  * Clé `backends` (npm run updates:add -- backend-X.Y.Z-mac.tar.gz) : archives du backend d'une release, même forme que
- * dans le manifest du serveur central ; la tablette en envoie une à l'ordinateur actif (POST /companion/backend/update).
+ * dans le manifest de la release GitHub ; la tablette en envoie une à l'ordinateur actif (POST /companion/backend/update).
  */
 const dir = path.join(config.dataDir, "updates");
 

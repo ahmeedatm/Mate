@@ -72,11 +72,11 @@ describe("sources des agents", () => {
           {
             path: "/w/p",
             branch: "refs/heads/feat/x",
-            repo: "UnoMate",
+            repo: "Mate",
             displayName: "Micro des sessions",
             lastActivityAt: 1_700_000_000_000,
             linkedGitLabMR: 394,
-            linkedItems: [{ provider: "jira", jiraIdentifier: "SQOOL-1" }],
+            linkedItems: [{ provider: "jira", jiraIdentifier: "TECH-1" }],
             agents: [
               {
                 agentType: "claude",
@@ -103,9 +103,9 @@ describe("sources des agents", () => {
       {
         path: "/w/p",
         branch: "feat/x",
-        ticket: "SQOOL-1",
+        ticket: "TECH-1",
         mr: 394,
-        repo: "UnoMate",
+        repo: "Mate",
         name: "Micro des sessions",
         activityAt: 1_700_000_000_000,
         agents: [{ paneKey: "t:l", state: "done", monitoring: true, toolName: "Edit", lastMessage: "ok", structured: false }],

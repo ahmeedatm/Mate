@@ -72,7 +72,7 @@
 
         <!-- Écran de départ : les six usages entre la tablette et l'ordi, expliqués, en un bloc de 3 × 2 cases coupé par des
              sillons (cases translucides en Rétro) ; les deux de la caméra ouvrent le mode Caméra. -->
-        <com.unowhy.unomate.ui.TileBlockLayout
+        <app.mate.ui.TileBlockLayout
             android:id="@+id/docs_choice"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
@@ -308,7 +308,7 @@
                     android:textColor="?attr/c_text_dim"
                     android:textSize="16sp" />
             </LinearLayout>
-        </com.unowhy.unomate.ui.TileBlockLayout>
+        </app.mate.ui.TileBlockLayout>
 
         <!-- Cadre photo : photos de l'ordi qui défilent quand la tablette ne sert pas, et quand. -->
         <include

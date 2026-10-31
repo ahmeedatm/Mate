@@ -63,7 +63,7 @@ export async function readMacNotifications(cursor?: string): Promise<Notificatio
     Database ??= (await import("node:sqlite")).DatabaseSync;
     // Instantané : la vraie base n'est jamais ouverte en écriture. La copie est ouverte sans `readOnly` pour que SQLite
     // y rejoue le -wal (les notifications récentes), ce qu'une connexion en lecture seule ne ferait pas.
-    snapshot = fs.mkdtempSync(path.join(os.tmpdir(), "unomate-notif-"));
+    snapshot = fs.mkdtempSync(path.join(os.tmpdir(), "mate-notif-"));
     fs.copyFileSync(DB_FILE, path.join(snapshot, "db"));
     for (const suffix of ["-wal", "-shm"]) {
       try {

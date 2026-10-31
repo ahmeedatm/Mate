@@ -26,7 +26,6 @@ describe("panneau hors appli portable", () => {
     for (const [route, body] of [
       ["/local/autostart", { on: true }],
       ["/local/firewall", {}],
-      ["/local/legacy/remove", {}],
       ["/local/forget", { sure: true }],
       ["/local/quit", {}],
       ["/local/update", {}],

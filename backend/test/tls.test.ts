@@ -22,7 +22,7 @@ describe("certificat de l'ordinateur", () => {
     const { cert } = createCertificate();
     const x = new X509Certificate(cert);
     assert.ok(x.verify(x.publicKey));
-    assert.equal(x.subject, "CN=UnoMate");
+    assert.equal(x.subject, "CN=Mate");
     assert.equal(new Date(x.validTo).getUTCFullYear(), 2049);
     assert.notEqual(fingerprintOf(cert), fingerprintOf(createCertificate().cert));
   });

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Notifications (Depuis l'ordi) : historique des notifications de l'ordinateur dans une tuile Cadran, la plus récente
+<!-- Notifications (Depuis l'ordi) : historique des notifications de l'ordinateur dans une tuile Console, la plus récente
      en haut. Lu à l'ouverture, sur Actualiser et à l'arrivée d'une notification ; géré par NotificationsView. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     style="@style/Card"
@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <com.unowhy.unomate.ui.TitleView
+    <app.mate.ui.TitleView
         android:id="@+id/notif_title"
         style="@style/CardTitle"
         android:text="@string/notif_on_computer" />

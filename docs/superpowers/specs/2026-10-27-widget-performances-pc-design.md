@@ -6,7 +6,7 @@
 
 Voir d'un coup d'œil, sur la tablette posée à côté du PC, si l'ordinateur **chauffe ou sature** — en jeu comme au
 bureau — sans Alt+Tab ni Gestionnaire des tâches. C'est l'usage « moniteur » du Corsair Xeneon Edge cité dans le pitch
-([etat-du-projet.md](../../etat-du-projet.md)), et un argument de vente visible en démo.
+([etat-du-projet.md](../../etat-du-projet.md)), et visible d'un coup d'œil.
 
 ## Objectifs
 
@@ -55,7 +55,7 @@ pastilles colorées. Le texte de cette fiche l'emporte sur les maquettes en cas 
 
 - **Seuils d'alerte** : utilisation (processeur, carte graphique, RAM) en alerte à partir de 85 % (critique à partir de
   95 %) ; température de la carte graphique en alerte à partir de 80 °C (critique à partir de 90 °C). Ventilateur :
-  jamais en alerte. Alerte et critique ont la même couleur, le rouge Unowhy (`c_accent`) : Cadran n'a pas d'orange.
+  jamais en alerte. Alerte et critique ont la même couleur, l'accent (`c_accent`), sans orange.
   Couleurs détaillées dans « Apparence (DA Cadran) ».
 - **Rafraîchissement** : toutes les 2 s, **seulement quand la page de l'Accueil qui porte le widget est à l'écran**
   (`setActive`). Courbe de la vue Moyen : les 30 dernières mesures (1 min), gardées en mémoire dans le widget, perdues
@@ -89,7 +89,7 @@ Le widget suit la DA Cadran ([docs/ui-ux/da](../../ui-ux/da/README.md)), thèmes
 - **Tuile** : habillage commun (`asCard` : `c_card_bg`, rayon 32, marge intérieure `c_card_pad` 24), sans ombre ni
   dégradé. En tête, le titre « PC · *nom* » des tuiles Cadran (`TitleView` : 15 sp, Outfit 500, `c_text_dim`, sans
   pastille ni capitales) ; à droite, le message d'erreur en `c_text_faint` (14 sp).
-- **Une seule couleur vivante** : tout est neutre, le rouge Unowhy (`c_accent`) ne sert qu'à l'alerte (chiffre et
+- **Une seule couleur vivante** : tout est neutre, l'accent (`c_accent`) ne sert qu'à l'alerte (chiffre et
   remplissage ou trait de la valeur en alerte). Aucune `c_hue_*`, aucune couleur écrite en dur (`perfColorAttr`).
   - chiffres en `c_text`, libellés en `c_text_dim`, texte tertiaire (« 13,8 / 15,5 Go », « Arrêté ») en `c_text_faint` ;
   - anneaux et barres : piste en `c_stroke` (comme les verres d'eau), remplissage en `c_text_dim` (comme la suite de la
@@ -119,7 +119,7 @@ Le widget suit la DA Cadran ([docs/ui-ux/da](../../ui-ux/da/README.md)), thèmes
 
 - **Une seule porte vers le système** : `backend/src/os.ts`, qui appelle `mac/` ou `win/`. La tablette ne parle qu'au
   compagnon, en HTTP avec le jeton (route protégée comme les autres).
-- **Windows** : tout le natif passe par `UnowhyHelper.exe` (C# .NET Framework 4.8, `backend/src/win/helper/`). Pas de
+- **Windows** : tout le natif passe par `MateHelper.exe` (C# .NET Framework 4.8, `backend/src/win/helper/`). Pas de
   PowerShell, pas de commande lancée à la volée (classées malveillantes par Bitdefender). L'exe est **versionné** et la
   CI (`helper-windows`) échoue s'il ne correspond plus aux sources : toute modification du pilote se termine par
   `npm run build:helper`, qui demande le **SDK .NET 8** (absent du PC de Bruno aujourd'hui : runtime seul ;

@@ -2,10 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { randomBytes, randomUUID } from "node:crypto";
-import { adoptOldData, backendRoot, dataDir, sharedDir } from "./paths.ts";
+import { backendRoot, dataDir, sharedDir } from "./paths.ts";
 
 export { backendRoot };
-adoptOldData();
 
 function expandHome(p: string) {
   return p.startsWith("~/") || p.startsWith("~\\") ? path.join(os.homedir(), p.slice(2)) : p;

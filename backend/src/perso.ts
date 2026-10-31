@@ -48,7 +48,7 @@ export async function saveKey(slot: number, key: PersoKey | null) {
 
 /**
  * Pages de touches nommées (.data/pages.json) : comme Perso, éditables depuis la tablette. Elles s'affichent après
- * Perso, la `n`-ième a les touches `k<n+1>-<emplacement>`. Posées par la démo (src/demo.ts).
+ * Perso, la `n`-ième a les touches `k<n+1>-<emplacement>`.
  */
 export type KeyPage = { title: string; slots: Slots };
 export const pagesFile = path.join(config.dataDir, "pages.json");

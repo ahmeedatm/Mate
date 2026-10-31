@@ -41,7 +41,7 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <com.unowhy.unomate.ui.TitleView
+                <app.mate.ui.TitleView
                     style="@style/CardTitle"
                     android:drawableStart="@drawable/ic_laptop"
                     android:text="@string/plugins_apps" />
@@ -68,7 +68,7 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <com.unowhy.unomate.ui.TitleView
+                <app.mate.ui.TitleView
                     style="@style/CardTitle"
                     android:drawableStart="@drawable/ic_tablet"
                     android:text="@string/plugins_native" />

@@ -79,7 +79,7 @@ de 4,5:1 du texte.
 Règles tirées du matériel ci-dessus et des valeurs déjà en place (`press.xml` 90 / 260 ms,
 `mode_in.xml` 200 / 240 ms, `Look.enter` 260 ms + 45 ms par élément). La cadence réelle de
 l'écran et le taux d'images en retard ne sont pas encore mesurés : à relever sur la tablette avec
-`adb shell dumpsys gfxinfo com.unowhy.companion` avant de pousser plus loin.
+`adb shell dumpsys gfxinfo app.mate` avant de pousser plus loin.
 
 | Usage | Durée |
 |---|---|

@@ -721,7 +721,7 @@ describe("Orca", () => {
   it("un chat Orca dont la session tourne n'est pas compté deux fois ; projet = dossier hors Orca", async () => {
     const a = createAgents(deps());
     orca = info([{ paneKey: "structured-agent-session-claude_x:y", state: "done", toolName: null, lastMessage: null, structured: true }]);
-    orca.worktrees[0].repo = "UnoMate";
+    orca.worktrees[0].repo = "Mate";
     await a.hook(event("Stop", { last_assistant_message: "ok" }), {});
     await a.hook({ ...event("Stop", { last_assistant_message: "ok" }), session_id: "s2", cwd: "/Users/moi" }, {});
     live = [
@@ -731,7 +731,7 @@ describe("Orca", () => {
     await a.refresh();
     const list = a.list().sessions;
     assert.equal(list.length, 2);
-    assert.equal(list.find((s) => s.id === "s1")?.project, "UnoMate");
+    assert.equal(list.find((s) => s.id === "s1")?.project, "Mate");
     assert.equal(list.find((s) => s.id === "s2")?.project, "moi");
   });
 
@@ -836,8 +836,8 @@ describe("titre, ticket, MR, surveillance", () => {
       worktrees: [
         {
           path: "/work/projet",
-          branch: "auto-test/SQOOL-12256-catalog",
-          ticket: "SQOOL-12256",
+          branch: "auto-test/TECH-12256-catalog",
+          ticket: "TECH-12256",
           mr: 394,
           agents: [{ paneKey: "tab:leaf", state: "working", monitoring: true, toolName: null, lastMessage: null, structured: false }],
         },
@@ -851,7 +851,7 @@ describe("titre, ticket, MR, surveillance", () => {
     assert.equal(s.title, "Agents Claude : première version");
     assert.equal(s.name, "agents-claude-v1-33");
     assert.equal(s.agent, "claude");
-    assert.equal(s.ticket, "SQOOL-12256");
+    assert.equal(s.ticket, "TECH-12256");
     assert.equal(s.mr, 74, "la MR du journal, plus récente, passe devant celle du worktree");
     assert.equal(s.state, "working");
     assert.equal(s.monitoring, true);
@@ -868,7 +868,7 @@ describe("titre, ticket, MR, surveillance", () => {
   });
 
   it("ticketOf : clé Jira dans la branche", () => {
-    assert.equal(ticketOf("auto-test/SQOOL-12256-catalog-settings"), "SQOOL-12256");
+    assert.equal(ticketOf("auto-test/TECH-12256-catalog-settings"), "TECH-12256");
     assert.equal(ticketOf("feat/QA-12_x"), "QA-12");
     assert.equal(ticketOf("feat/agents-claude"), null);
     assert.equal(ticketOf(null), null);

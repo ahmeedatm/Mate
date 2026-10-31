@@ -5,7 +5,7 @@
 ## Pourquoi
 
 Faire passer du texte et des photos entre le PC et la tablette par un copier-coller, sans câble, sans mail à soi-même,
-sans aller chercher un fichier. Utile d'abord à la cible B2B, au bureau (coller un schéma dans Teams, garder un
+sans aller chercher un fichier. Utile d'abord au bureau (coller un schéma dans Teams, garder un
 code sous les yeux) ; l'usage à l'école (le prof photographie la copie d'un élève et la colle dans sa présentation) reste valable, hors cible.
 
 ## Objectifs (les trois usages, par ordre d'intérêt)
@@ -88,7 +88,7 @@ code sous les yeux) ; l'usage à l'école (le prof photographie la copie d'un é
 
 ## Contraintes du projet
 
-- Tout accès système par `backend/src/os.ts` → `mac/` ou `win/` ; Windows natif uniquement dans `UnowhyHelper.exe`
+- Tout accès système par `backend/src/os.ts` → `mac/` ou `win/` ; Windows natif uniquement dans `MateHelper.exe`
   (C# .NET 4.8, versionné, recompilé par `npm run build:helper`, job CI `helper-windows`). Le pilote a déjà
   `SetClipboard` avec reprises (`Native.Keys.cs`) et `Clipboard.SetImage` (`Native.System.cs`), et tourne en STA.
 - Mac : `pbcopy`/`pbpaste` déjà utilisés (`mac/keys.ts`) ; l'image et les types de presse-papiers passent par JXA

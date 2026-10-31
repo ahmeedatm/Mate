@@ -7,7 +7,7 @@ using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
-namespace UnoMate
+namespace Mate
 {
     public static partial class Native
     {
