@@ -29,7 +29,7 @@ et les captures fournies.
 - Anti-motifs du fichier ci-dessus : chaque motif présent est une remarque.
 - Accessibilité : `contentDescription` ou texte sur tout élément touchable, cibles assez
   grandes pour un doigt, état non porté par la seule couleur. Si `palettes.xml` change, les
-  contrastes sont vérifiés par `ConsolePaletteTest` et `ContrastPaletteTest` : les lancer
+  contrastes sont vérifiés par les tests `*PaletteTest` : les lancer
   (`./gradlew testDebugUnitTest --tests '*PaletteTest'`) ou le dire en `⚠️`.
 - Captures : l'appelant en fournit une par thème de la liste. Regarde-les toutes (lecture
   d'image) : texte coupé, chevauchement, contraste faible, hiérarchie plate, élément

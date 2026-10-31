@@ -23,8 +23,8 @@ Tu relis le code Android de Mate (tablette lente : Android 10, 2 Go de RAM, WebV
 - Bugs : cycle de vie (Activity recréée, Fragment détaché, coroutine non annulée), travail réseau
   ou disque sur le fil principal, vue ou contexte retenu après sa destruction (fuite), écouteur ou
   boucle non arrêtés hors écran, accès à `view` après `onDestroyView`.
-- Légèreté : allocations dans `onDraw` ou dans une boucle d'image, vue inutilement imbriquée,
-  travail répété à chaque rafraîchissement. Toute décision se juge contre la tablette cible.
+- Légèreté : vue inutilement imbriquée, travail répété à chaque rafraîchissement. Toute décision
+  se juge contre la tablette cible.
 - Logique pure (calcul, décision, analyse de texte) ajoutée ou changée sans test JVM dans
   `app/src/test/` : remarque `important`.
 - Textes de l'UI dans `res/values/strings.xml`, en français, avec les accents.

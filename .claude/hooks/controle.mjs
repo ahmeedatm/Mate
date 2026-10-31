@@ -18,7 +18,7 @@ import { relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PERMIS = "controle: permis";
-const OPTIONS_GIT = ["-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff", "--src-prefix=a/", "--dst-prefix=b/", "--unified=0"];
+const OPTIONS_GIT = ["-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff", "--src-prefix=a/", "--dst-prefix=b/", "--unified=0", "-w"];
 const SAUT_LIGNE = /\r?\n/;
 const MAX_LIGNE = 100;
 const FIN_MESSAGE =
@@ -30,7 +30,7 @@ const FIX_COULEUR_KT = `Utiliser themeColor(context, R.attr.c_…) et ${PALETTES
 const FIX_TEXTE = "Ajouter le texte dans res/values/strings.xml puis utiliser @string/… ou getString(R.string.…)";
 const FIX_POLICE = "Utiliser le rôle du thème : ?attr/c_font_… en XML, themeFont(context, R.attr.c_font_…) en Kotlin";
 
-const XML_VALEUR = /^res\/(?:layout|drawable|values)[^/]*\/(?!palettes\.xml$|colors\.xml$)[^/]+\.xml$/;
+const XML_VALEUR = /^res\/(?:layout|drawable|color|values)[^/]*\/(?!palettes\.xml$|colors\.xml$)[^/]+\.xml$/;
 const XML_DRAWABLE = /^res\/drawable[^/]*\//;
 const XML_LAYOUT = /^res\/layout[^/]*\/[^/]+\.xml$/;
 const XML_RES = /^res\/.*\.xml$/;
@@ -41,12 +41,8 @@ const ATTR_VECTORIEL = /android:(?:fillColor|strokeColor)="[^"]*"/g;
 const COULEUR_XML = /"#[0-9A-Fa-f]{3,8}"/;
 const COULEUR_VALEUR = />\s*#[0-9A-Fa-f]{3,8}\s*</;
 const COULEUR_KT = new RegExp(
-  [
-    String.raw`Color\.parseColor\("`,
-    String.raw`Color\.(?:rgb|argb)\(\s*\d`,
-    String.raw`Color\.(?:BLACK|WHITE|RED|GREEN|BLUE|GRAY|DKGRAY|LTGRAY|YELLOW|CYAN|MAGENTA)\b`,
-    String.raw`\b0x[Ff]{2}[0-9A-Fa-f]{6}\b`,
-  ].join("|"),
+  [String.raw`Color\.parseColor\("`, String.raw`Color\.(?:rgb|argb)\(\s*\d`, String.raw`\b0x[Ff]{2}[0-9A-Fa-f]{6}\b`,
+    String.raw`Color\.(?:BLACK|WHITE|RED|GREEN|BLUE|GRAY|DKGRAY|LTGRAY|YELLOW|CYAN|MAGENTA)\b`].join("|"),
 );
 
 const CHAINE = String.raw`"((?:[^"\\]|\\.)*)"`;
@@ -58,7 +54,11 @@ const TEXTE_KT = [
 ];
 
 const aUneLettre = (s) => /\p{L}/u.test(s);
-const sansGabarit = (s) => s.replace(/\\./g, "").replace(/\$\{[^}]*\}/g, "").replace(/\$[A-Za-z_]\w*/g, "");
+const sansGabarit = (s) => s.replace(/\\u[0-9A-Fa-f]{4}|\\./g, "").replace(/\$[A-Za-z_]\w*/g, "");
+
+// Retire les `${…}` d'une ligne Kotlin, du plus profond au plus externe (guillemets imbriqués compris).
+// shortcut: une accolade dans une chaîne imbriquée fausse le retrait, à revoir si ça arrive.
+const sansAccolades = (s) => (/\$\{[^${}]*\}/.test(s) ? sansAccolades(s.replace(/\$\{[^${}]*\}/g, "")) : s);
 const captures = (re, ligne) => [...ligne.matchAll(re)].map((m) => m[1]);
 
 // Règles : `applique` choisit les fichiers (chemin relatif à app/src/main/),
@@ -88,7 +88,7 @@ const REGLES = [
     rule: "texte-en-dur",
     fix: FIX_TEXTE,
     applique: (rel) => KOTLIN.test(rel),
-    viole: (ligne) => TEXTE_KT.some((re) => captures(re, ligne).some((x) => aUneLettre(sansGabarit(x)))),
+    viole: (ligne) => TEXTE_KT.some((re) => captures(re, sansAccolades(ligne)).some((x) => aUneLettre(sansGabarit(x)))),
   },
   {
     rule: "police-en-dur",

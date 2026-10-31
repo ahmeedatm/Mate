@@ -30,10 +30,9 @@ Tu relis le compagnon de l'ordinateur de Mate (`backend/` : Node 22, TypeScript,
 - Tests : tout nouveau comportement a un test dans `backend/test/` ; une page web servie par le
   backend a un test dans `backend/e2e/` ; une nouvelle feature a son contrôle dans
   `backend/qa/sanity.ts`. Test absent : `important`.
-- Nouvel ordre vers la tablette ou nouveau réglage de la page locale : type dans `tablet.ts`,
-  schéma dans `routes/tablet.ts`, outil dans `mcp-tools.ts` (suppressions marquées
-  `destructiveHint`), branche dans `RemoteChannel.execute` côté Android. Un maillon manquant
-  est `important`.
+- Nouvel ordre vers la tablette ou nouveau réglage de la page locale : tous les maillons de
+  `CLAUDE.md`, § Conventions du code (« Nouvel ordre vers la tablette »), outils de suppression
+  marqués `destructiveHint`. Un maillon manquant est `important`.
 - Mac et Windows : une fonction qui n'existe que sur un système répond clairement (501 ou
   `null`), elle ne plante pas sur l'autre.
 - Fichiers sous `src/mac/`, `src/win/`, `service.ts` ou `os.ts` touchés : rappeler en `⚠️` les

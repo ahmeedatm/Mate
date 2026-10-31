@@ -70,9 +70,8 @@ Règles transverses, une ligne chacune ; le détail de chaque fonction est dans 
 - JDK 21, Node 22, adb 1.0.41.
 
 ## Où trouver le reste
-- Documentation : `docs/architecture.md` (fonctionnement), `docs/developpement.md` (travailler dessus, sauvegarde), `docs/etat-du-projet.md` (fait, pas testé, à faire : à tenir à jour en fin de session).
-- `docs/architecture.md`, section « Détail par fonction » : le détail de chaque fonction (Deck V2, Agents Claude, Jira, Caméra, Verrou, Commande vocale, Plugins, MCP…).
+- `docs/architecture.md` (fonctionnement), section « Détail par fonction » : le détail de chaque fonction (Deck V2, Agents Claude, Jira, Caméra, Verrou, Commande vocale, Plugins, MCP…).
 - `docs/developpement.md` : travailler dessus, sauvegarde, branches, PR et CI, release.
 - `docs/claude.md` : le circuit Claude (skills, agents, contrôle bloquant).
 - `DESIGN.md` et `docs/ui-ux/da/` : direction artistique et maquettes.
-- `docs/etat-du-projet.md` : fait, pas testé, à faire.
+- `docs/etat-du-projet.md` : fait, pas testé, à faire ; à tenir à jour en fin de session.

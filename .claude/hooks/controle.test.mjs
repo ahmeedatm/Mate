@@ -80,6 +80,20 @@ test("gabarit Kotlin", () => {
   assert.deepEqual(rules(KT, ['contentDescription = "Volume $niveau"']), ["texte-en-dur"]);
 });
 
+test("gabarit Kotlin imbriqué", () => {
+  const ligne = 'view.contentDescription = "${config.optString("city")} : ${context.getString(sky.text)}, ${text.text}"';
+  assert.deepEqual(rules(KT, [ligne]), []);
+  assert.deepEqual(rules(KT, ['contentDescription = "${a} Bonjour"']), ["texte-en-dur"]);
+});
+
+test("échappement unicode Kotlin", () => {
+  assert.deepEqual(rules(KT, ['text = "\\u00B7"']), []);
+});
+
+test("couleur dans res/color", () => {
+  assert.deepEqual(rules("app/src/main/res/color/x.xml", ['<item android:color="#FF0000"/>']), ["couleur-en-dur"]);
+});
+
 test("bloque setText littéral", () => {
   assert.deepEqual(rules(KT, ['label.setText("Valider")']), ["texte-en-dur"]);
   assert.deepEqual(rules(KT, ['label.setText(getString(R.string.valider))']), []);
@@ -177,6 +191,20 @@ test("--diff : lignes ajoutées seulement, sortie 1 puis 0", () => {
   assert.doesNotMatch(ko.stdout, /FF0000/);
   const env = { ...process.env, GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: "diff.noprefix", GIT_CONFIG_VALUE_0: "true" };
   assert.equal(lancer(["--diff", "master"], "", { cwd: dir, env }).status, 1);
+});
+
+test("--diff : une ré-indentation seule n'est pas une ligne ajoutée", () => {
+  const dir = dirTemp();
+  const git = (...a) => execFileSync("git", a, { cwd: dir, encoding: "utf8" });
+  git("init", "-q", "-b", "master");
+  const f = join(dir, KT);
+  mkdirSync(dirname(f), { recursive: true });
+  writeFileSync(f, "fun f() {\n  val c = Color.BLACK\n}\n");
+  git("add", ".");
+  git("-c", "commit.gpgsign=false", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "base");
+  writeFileSync(f, "fun f() {\n        val c = Color.BLACK\n}\n");
+  const r = lancer(["--diff", "master"], "", { cwd: dir });
+  assert.equal(r.status, 0, r.stdout);
 });
 
 test("--diff : base introuvable sort en 2", () => {

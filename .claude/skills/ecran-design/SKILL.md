@@ -166,6 +166,6 @@ ne dit rien des performances) et avec les animations désactivées.
 
 - Relecture finale par `relecteur-design` (jamais par l'auteur du code) : il reçoit le diff, une
   capture par thème et la demande, et rend une liste ordonnée de remarques ou « Rien d'autre ».
-  Corriger tout `bloquant` et `important` avant de dire « fini ».
+  Corriger tout `bloquant` avant de dire « fini » ; présenter les `important` à l'humain, qui tranche.
 - Une modification de code suit les règles du dépôt : tests (`app/src/test/`, `backend/e2e/`),
   `ktlintFormat` / `npm run format`, puis une PR sur `master`.
