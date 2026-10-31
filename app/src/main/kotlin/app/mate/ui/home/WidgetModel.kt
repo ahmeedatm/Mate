@@ -18,7 +18,8 @@ const val ROWS = 4
 
 /**
  * Tailles en cases (largeur × hauteur). `L3` (3 × 2), `T3` (3 × 4) et `FULL` (4 × 4, tout l'écran) ne sont proposées qu'aux
- * tableaux (Agents, Jira, GitLab, Pipelines, Ouvertes, Son) : ceux-là ont de quoi remplir la place.
+ * tableaux (Agents, Jira, GitLab, Pipelines, Ouvertes, Son) : ceux-là ont de quoi remplir la place. `XL3` (4 × 3, le bas de la
+ * page sous une rangée) n'est proposée qu'au mixeur.
  */
 enum class WidgetSize(val w: Int, val h: Int, @StringRes val label: Int) {
     S(1, 1, R.string.widget_size_s),
@@ -30,6 +31,7 @@ enum class WidgetSize(val w: Int, val h: Int, @StringRes val label: Int) {
     V(1, 2, R.string.widget_size_v),
     L3(3, 2, R.string.widget_size_l3),
     T3(3, 4, R.string.widget_size_t3),
+    XL3(4, 3, R.string.widget_size_xl3),
     FULL(4, 4, R.string.widget_size_full),
 }
 
@@ -61,7 +63,7 @@ enum class WidgetType(
     DAY("day", R.string.widget_day, R.string.widget_day_desc, R.drawable.ic_event, listOf(WidgetSize.W), false),
     DAYLINE("dayline", R.string.widget_dayline, R.string.widget_dayline_desc, R.drawable.ic_alarm, listOf(WidgetSize.W), false),
     AGENTS("agents", R.string.widget_agents, R.string.widget_agents_desc, R.drawable.ic_agents, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.V, WidgetSize.XL, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
-    MIXER("mixer", R.string.widget_mixer, R.string.widget_mixer_desc, R.drawable.ic_wave, listOf(WidgetSize.XL, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
+    MIXER("mixer", R.string.widget_mixer, R.string.widget_mixer_desc, R.drawable.ic_wave, listOf(WidgetSize.XL, WidgetSize.L3, WidgetSize.XL3, WidgetSize.T3, WidgetSize.FULL), true),
     OPEN("open", R.string.widget_open, R.string.widget_open_desc, R.drawable.ic_display, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
     APPS("apps", R.string.widget_apps, R.string.widget_apps_desc, R.drawable.ic_tabs, listOf(WidgetSize.L, WidgetSize.M, WidgetSize.XL, WidgetSize.W, WidgetSize.V), true),
     DISCORD("discord", R.string.widget_discord, R.string.widget_discord_desc, R.drawable.ic_call, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
