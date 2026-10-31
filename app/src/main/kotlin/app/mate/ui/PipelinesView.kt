@@ -12,6 +12,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.widget.ImageViewCompat
 import app.mate.R
+import app.mate.github.Forge
 import app.mate.gitlab.PipelineMark
 import app.mate.gitlab.PipelineTime
 import app.mate.gitlab.Span
@@ -35,9 +36,16 @@ import kotlinx.coroutines.launch
  * Console de déploiement (widget Pipelines) : une ligne par projet des MR de l'utilisateur, avec le dernier pipeline de sa
  * branche par défaut (en cours, échecs, le reste), état en icône et en couleur. Toucher une ligne ouvre le pipeline sur
  * l'ordinateur. Lecture seule. Relue à l'ouverture puis toutes les 30 s tant que la vue est affichée. Ordinateur sans
- * compte GitLab : la carte « Connecter GitLab » (relue toutes les 3 s en attendant). Autonome, comme [GitLabView].
+ * compte GitLab : la carte « Connecter GitLab » (relue toutes les 3 s en attendant). Autonome, comme [GitLabView]. Sert aussi
+ * au widget Actions (`forge` GitHub) : dernier run GitHub Actions de la branche par défaut des dépôts de mes PR.
  */
-class PipelinesView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : LinearLayout(context, attrs) {
+class PipelinesView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    private val forge: Forge = Forge.GITLAB,
+) : LinearLayout(context, attrs) {
+
+    private val texts = forgeTexts(forge)
 
     private val title = TitleView(context)
     private val status = TextView(context)
@@ -46,7 +54,7 @@ class PipelinesView @JvmOverloads constructor(context: Context, attrs: Attribute
     private var columns = 1
     private val scroll = ScrollView(context)
     private val empty = TextView(context)
-    private val connectCard = GitLabConnectCard(context, { scope }, ::showError, compact = true)
+    private val connectCard = GitLabConnectCard(context, { scope }, ::showError, compact = true, forge = forge)
 
     private lateinit var scope: CoroutineScope
     private var poll: Job? = null
@@ -63,7 +71,7 @@ class PipelinesView @JvmOverloads constructor(context: Context, attrs: Attribute
         orientation = VERTICAL
         visibility = GONE
         title.apply {
-            setText(R.string.widget_pipelines)
+            setText(texts.boardTitle)
         }
         addView(title, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         status.apply {
@@ -81,7 +89,7 @@ class PipelinesView @JvmOverloads constructor(context: Context, attrs: Attribute
         }
         addView(scroll, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(8) })
         empty.apply {
-            setText(R.string.pipelines_empty)
+            setText(texts.boardEmpty)
             textSize = 15f
             gravity = Gravity.CENTER
             setTextColor(themeColor(context, R.attr.c_text_faint))
@@ -113,7 +121,7 @@ class PipelinesView @JvmOverloads constructor(context: Context, attrs: Attribute
     private suspend fun refresh() {
         val id = ++lastRead
         try {
-            val answer = BackendClient(context).gitlab.pipelines()
+            val answer = BackendClient(context).forge(forge).pipelines()
             if (id != lastRead) return
             status.visibility = GONE
             showConnected(answer.connected)
@@ -189,13 +197,13 @@ class PipelinesView @JvmOverloads constructor(context: Context, attrs: Attribute
         val time = timeText(timeOf(p))
         row.findViewById<TextView>(R.id.pipeline_time).text = time
         // TalkBack lit l'état (l'icône n'est pas lue) puis la ligne.
-        row.contentDescription = context.getString(R.string.pipelines_row_cd, context.getString(labelOf(p.status)), pipelineTitle(p), time)
+        row.contentDescription = context.getString(R.string.pipelines_row_cd, context.getString(texts.pipeline(p.status)), pipelineTitle(p), time)
     }
 
     private fun open(p: GitLabPipeline) {
         scope.launch {
             try {
-                BackendClient(context).gitlab.openPipeline(p.project, p.id)
+                BackendClient(context).forge(forge).openPipeline(p.project, p.id)
             } catch (e: Exception) {
                 showError(e)
             }
@@ -230,14 +238,6 @@ class PipelinesView @JvmOverloads constructor(context: Context, attrs: Attribute
         PipelineMark.SYNC -> R.drawable.ic_refresh
         PipelineMark.CANCELED -> R.drawable.ic_tile_block
         PipelineMark.NONE -> R.drawable.ic_remove
-    }
-
-    private fun labelOf(p: Pipeline) = when (p) {
-        Pipeline.SUCCESS -> R.string.gitlab_pipeline_success
-        Pipeline.RUNNING -> R.string.gitlab_pipeline_running
-        Pipeline.FAILED -> R.string.gitlab_pipeline_failed
-        Pipeline.CANCELED -> R.string.gitlab_pipeline_canceled
-        Pipeline.NONE -> R.string.gitlab_pipeline_none
     }
 
     private companion object {

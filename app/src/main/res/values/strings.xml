@@ -130,7 +130,6 @@
     <string name="gitlab_col_header">%1$s · %2$d</string>
     <string name="gitlab_empty">Aucune MR</string>
     <string name="gitlab_draft">Brouillon</string>
-    <string name="gitlab_ref">%1$s!%2$d</string>
     <string name="gitlab_author">par %1$s</string>
     <string name="gitlab_pipeline_success">Pipeline réussi</string>
     <string name="gitlab_pipeline_running">Pipeline en cours</string>
@@ -146,6 +145,17 @@
     <string name="gitlab_merge">Fusionner</string>
     <string name="gitlab_merge_on_computer">Fusionner sur l\'ordi</string>
     <string name="gitlab_merge_hint">Maintenir pour fusionner</string>
+    <string name="github_mine">Mes PR</string>
+    <string name="github_empty">Aucune PR</string>
+    <string name="github_checks_success">Contrôles réussis</string>
+    <string name="github_checks_running">Contrôles en cours</string>
+    <string name="github_checks_failed">Contrôles échoués</string>
+    <string name="github_checks_canceled">Contrôles annulés</string>
+    <string name="github_checks_none">Pas de contrôles</string>
+    <string name="github_connect">Connecter GitHub</string>
+    <string name="github_connect_text">GitHub n\'est pas connecté sur l\'ordinateur. Connecte-le pour voir et fusionner tes PR depuis la tablette : la connexion se fait dans le navigateur de l\'ordinateur.</string>
+    <string name="github_reconnect_text">La connexion à GitHub n\'est plus valable. Reconnecte-la dans le navigateur de l\'ordinateur.</string>
+    <string name="github_connect_waiting">Connexion ouverte sur l\'ordinateur : saisis le code affiché sur GitHub et autorise l\'accès. Les PR s\'affichent ici ensuite.</string>
     <string name="pad_hint">Un doigt pour bouger, deux pour défiler · pince pour zoomer · 3 doigts : fenêtres · touche pour cliquer</string>
     <string name="pad_left_click">Clic gauche</string>
     <string name="pad_right_click">Clic droit</string>
@@ -1103,6 +1113,11 @@
     <string name="widget_jira_desc">Tes tickets en colonnes ; toucher un ticket pour le faire avancer</string>
     <string name="widget_gitlab">GitLab</string>
     <string name="widget_gitlab_desc">Tes MR et celles à relire, pipeline et fusion</string>
+    <string name="widget_github">GitHub</string>
+    <string name="widget_github_desc">Tes pull requests et celles à relire, contrôles et fusion</string>
+    <string name="widget_actions">Actions</string>
+    <string name="widget_actions_desc">Le dernier run GitHub Actions de tes dépôts : en cours, échecs, durée</string>
+    <string name="actions_empty">Aucun run</string>
     <string name="widget_day">Ma journée</string>
     <string name="widget_day_desc">Bonjour, la date, la prochaine réunion en grand avec Rejoindre, la météo et l\'eau</string>
     <string name="day_morning">Bonjour</string>

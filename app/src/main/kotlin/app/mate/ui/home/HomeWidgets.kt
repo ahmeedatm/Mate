@@ -29,6 +29,7 @@ import app.mate.R
 import app.mate.focus.FocusTicks
 import app.mate.focus.FocusTimer
 import app.mate.focus.NoisePlayer
+import app.mate.github.Forge
 import app.mate.net.BackendClient
 import app.mate.net.CalendarEvent
 import app.mate.net.DeckPage
@@ -162,6 +163,8 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.PRESENT -> PresentWidget(context, host, placed)
                 WidgetType.AWAY -> AwayWidget(context, host, placed)
                 WidgetType.PIPELINES -> pipelinesWidget(context, host, placed)
+                WidgetType.GITHUB -> gitLabWidget(context, host, placed, Forge.GITHUB)
+                WidgetType.ACTIONS -> pipelinesWidget(context, host, placed, Forge.GITHUB)
             }
     }
 }

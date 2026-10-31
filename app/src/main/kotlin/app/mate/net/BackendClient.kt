@@ -2,6 +2,7 @@ package app.mate.net
 
 import android.content.Context
 import app.mate.Prefs
+import app.mate.github.Forge
 
 /**
  * Point d'accès au backend (agent sur l'ordinateur) : un client par domaine, sur une même connexion
@@ -36,9 +37,13 @@ class BackendClient(
     val tablet = TabletApi(http)
     val agents = AgentsApi(http)
     val gitlab = GitLabApi(http)
+    val github = GitHubApi(http)
     val jira = JiraApi(http)
     val plugins = PluginsApi(http)
     val present = PresentApi(http)
     val notifications = NotificationsApi(http)
     val away = AwayApi(http)
+
+    /** Client des widgets de forge : MR GitLab ou PR GitHub, mêmes réponses. */
+    fun forge(forge: Forge): ForgeApi = if (forge == Forge.GITHUB) github else gitlab
 }

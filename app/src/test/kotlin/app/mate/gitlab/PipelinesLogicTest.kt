@@ -16,7 +16,7 @@ class PipelinesLogicTest {
         duration: Int? = null,
         age: Int = 0,
         jobs: List<String> = emptyList(),
-    ) = GitLabPipeline(project, ref, id, status, duration, age, jobs)
+    ) = GitLabPipeline(project, ref, id.toLong(), status, duration, age, jobs)
 
     @Test
     fun `chaque statut a sa propre icone`() {
@@ -76,7 +76,7 @@ class PipelinesLogicTest {
     @Test
     fun `au plus 8 lignes, dans l'ordre du compagnon`() {
         val rows = (1..10).map { pipeline(id = it) }
-        assertEquals((1..8).toList(), visiblePipelines(rows).map { it.id })
+        assertEquals((1L..8L).toList(), visiblePipelines(rows).map { it.id })
         assertEquals(emptyList<GitLabPipeline>(), visiblePipelines(emptyList()))
     }
 }

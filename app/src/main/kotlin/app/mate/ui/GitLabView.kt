@@ -11,12 +11,13 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import app.mate.R
+import app.mate.github.Forge
+import app.mate.github.changeRef
 import app.mate.gitlab.MergeAction
 import app.mate.gitlab.approvalsText
 import app.mate.gitlab.mergeAction
 import app.mate.gitlab.mergeEnabled
 import app.mate.gitlab.mrKey
-import app.mate.gitlab.shortProject
 import app.mate.net.BackendClient
 import app.mate.net.GitLabMr
 import app.mate.net.GitLabMrs
@@ -35,15 +36,21 @@ import kotlinx.coroutines.launch
  * il ouvre la MR sur l'ordinateur, comme le toucher de la carte. Relue toutes les 30 s
  * tant que la vue est affichée. Ordinateur sans compte GitLab connecté : une carte « Connecter GitLab » ouvre la connexion
  * dans le navigateur de l'ordinateur, la vue se remplit seule une fois reliée (relue toutes les 3 s en attendant).
- * Autonome : aucun accès au Deck, posable ailleurs.
+ * Autonome : aucun accès au Deck, posable ailleurs. Sert aussi au widget GitHub (`forge`) : PR, contrôles du dernier commit.
  */
-class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : LinearLayout(context, attrs) {
+class GitLabView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    private val forge: Forge = Forge.GITLAB,
+) : LinearLayout(context, attrs) {
+
+    private val texts = forgeTexts(forge)
 
     private val status = TextView(context)
     private val headers = listOf(TextView(context), TextView(context))
     private val lists = listOf(LinearLayout(context), LinearLayout(context))
     private val board = LinearLayout(context)
-    private val connectCard = GitLabConnectCard(context, { scope }, ::showError)
+    private val connectCard = GitLabConnectCard(context, { scope }, ::showError, forge = forge)
 
     private lateinit var scope: CoroutineScope
     private var poll: Job? = null
@@ -131,7 +138,7 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private suspend fun refresh() {
         val id = ++lastRead
         try {
-            val mrs = BackendClient(context).gitlab.mrs()
+            val mrs = BackendClient(context).forge(forge).mrs()
             if (id != lastRead) return
             status.visibility = GONE
             showConnected(mrs.connected)
@@ -172,7 +179,7 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
     }
 
     private fun showHeaders(mine: Int, review: Int) {
-        for ((header, pair) in headers.zip(listOf(R.string.gitlab_mine to mine, R.string.gitlab_review to review))) {
+        for ((header, pair) in headers.zip(listOf(texts.mine to mine, R.string.gitlab_review to review))) {
             header.text = context.getString(R.string.gitlab_col_header, context.getString(pair.first), pair.second)
             header.setTextColor(themeColor(context, if (pair.second == 0) R.attr.c_text_faint else R.attr.c_text))
         }
@@ -183,7 +190,7 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         if (mrs.isEmpty()) {
             list.addView(
                 TextView(context).apply {
-                    setText(R.string.gitlab_empty)
+                    setText(texts.empty)
                     textSize = 14f
                     setTextColor(themeColor(context, R.attr.c_text_faint))
                     setPadding(dp(4), dp(8), 0, 0)
@@ -201,7 +208,7 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     private fun bind(card: View, mr: GitLabMr) {
         val key = mrKey(mr)
-        card.findViewById<TextView>(R.id.gitlab_ref).text = context.getString(R.string.gitlab_ref, shortProject(mr.project), mr.iid)
+        card.findViewById<TextView>(R.id.gitlab_ref).text = changeRef(forge, mr.project, mr.iid)
         card.findViewById<View>(R.id.gitlab_draft).visibility = if (mr.draft) VISIBLE else GONE
         card.findViewById<TextView>(R.id.gitlab_title).text = mr.title
         card.findViewById<TextView>(R.id.gitlab_author).text = context.getString(R.string.gitlab_author, mr.author)
@@ -209,7 +216,7 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             shape = GradientDrawable.OVAL
             setColor(themeColor(context, pipelineColor(mr.pipeline)))
         }
-        card.findViewById<TextView>(R.id.gitlab_pipeline).setText(pipelineLabel(mr.pipeline))
+        card.findViewById<TextView>(R.id.gitlab_pipeline).setText(texts.pipeline(mr.pipeline))
         card.findViewById<TextView>(R.id.gitlab_approvals).apply {
             val approvals = approvalsText(mr.approvalsGiven, mr.approvalsRequired)
             text = when {
@@ -271,14 +278,6 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         Pipeline.CANCELED, Pipeline.NONE -> R.attr.c_text_faint
     }
 
-    private fun pipelineLabel(p: Pipeline) = when (p) {
-        Pipeline.SUCCESS -> R.string.gitlab_pipeline_success
-        Pipeline.RUNNING -> R.string.gitlab_pipeline_running
-        Pipeline.FAILED -> R.string.gitlab_pipeline_failed
-        Pipeline.CANCELED -> R.string.gitlab_pipeline_canceled
-        Pipeline.NONE -> R.string.gitlab_pipeline_none
-    }
-
     /** Redessine les cartes avec l'état courant (fusion en cours, message) sans attendre la lecture suivante. */
     private fun redraw() {
         shown?.let(::render)
@@ -288,7 +287,7 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         val key = mrKey(mr)
         scope.launch {
             try {
-                BackendClient(context).gitlab.open(mr.project, mr.iid)
+                BackendClient(context).forge(forge).open(mr.project, mr.iid)
             } catch (e: Exception) {
                 messages[key] = context.errorText(e)
                 redraw()
@@ -303,7 +302,7 @@ class GitLabView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         redraw()
         scope.launch {
             try {
-                BackendClient(context).gitlab.merge(mr.project, mr.iid, mr.sha)
+                BackendClient(context).forge(forge).merge(mr.project, mr.iid, mr.sha)
             } catch (e: Exception) {
                 messages[key] = context.errorText(e)
             } finally {

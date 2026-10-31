@@ -19,9 +19,9 @@ Météo. La tablette demande la météo de la ville choisie à l'Institut mété
 
 Page Média. Sur Mac, pour afficher la pochette du morceau en cours, l'ordinateur peut transmettre son titre et son artiste à Apple, ou l'identifiant de la vidéo à YouTube.
 
-Comptes que vous reliez. Si vous reliez un compte Microsoft ou Google, l'ordinateur lit votre agenda directement chez ce fournisseur, et, pour Microsoft, l'expéditeur, l'objet et la date de vos derniers courriels (jamais leur contenu). Vous pouvez délier le compte à tout moment.
+Comptes que vous reliez. Si vous reliez un compte Microsoft ou Google, l'ordinateur lit votre agenda directement chez ce fournisseur, et, pour Microsoft, l'expéditeur, l'objet et la date de vos derniers courriels (jamais leur contenu). Si vous reliez un compte GitHub (ou indiquez un jeton GitHub sur l'ordinateur), l'ordinateur lit chez GitHub, avec ce compte, vos pull requests, leurs vérifications et les exécutions GitHub Actions de leurs dépôts, et fusionne une pull request quand vous le demandez depuis la tablette ; l'autorisation reste sur l'ordinateur. Vous pouvez délier le compte à tout moment.
 
-Mises à jour. La tablette interroge GitHub (releases du projet). GitHub ne reçoit aucune information sur vous, seulement l'adresse IP nécessaire à la connexion.
+Mises à jour. La tablette interroge GitHub (releases du projet). Pour cela, GitHub ne reçoit aucune information sur vous, seulement l'adresse IP nécessaire à la connexion.
 
 Ce que vous ouvrez. Les pages web, liens d'agenda, réunions et services que vous choisissez (par exemple une recherche faite à la voix, ouverte dans le navigateur de l'ordinateur) sont contactés directement depuis vos appareils.
 

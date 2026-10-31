@@ -40,6 +40,7 @@ import {
   type DeckLink,
 } from "./perso.ts";
 import { agentsAvailable } from "./agents-sources.ts";
+import { githubAvailable } from "./github.ts";
 import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
 import { jiraConfigured } from "./jira.ts";
@@ -231,6 +232,7 @@ export async function homeFeatures() {
   const teams = names.some((n) => MEETING_APPS.test(n)) && (await pluginOn("teams"));
   // `agents` : onglet et widget des agents Claude (Mac avec Claude Code installé). `off` : plugins coupés (plugins.ts).
   // `gitlab` : onglet des MR GitLab (jeton GITLAB_TOKEN dans .env, compte connecté par OAuth, ou appli OAuth réglée : la tablette propose de se connecter).
+  // `github` : widgets GitHub et Actions (GITHUB_TOKEN dans .env, compte connecté, ou appli OAuth réglée).
   const agents = agentsAvailable() && (await pluginOn("claude"));
   // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
   const jira = jiraConfigured && (await pluginOn("jira"));
@@ -241,6 +243,7 @@ export async function homeFeatures() {
     teams,
     agents,
     gitlab: canControl && (await gitlabAvailable()),
+    github: canControl && (await githubAvailable()),
     jira,
     off: await pluginsOff(),
   };

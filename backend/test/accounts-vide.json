@@ -1,1 +1,6 @@
-{ "microsoft": { "clientId": "" }, "google": { "clientId": "", "clientSecret": "" }, "gitlab": { "clientId": "" } }
+{
+  "microsoft": { "clientId": "" },
+  "google": { "clientId": "", "clientSecret": "" },
+  "gitlab": { "clientId": "" },
+  "github": { "clientId": "" }
+}

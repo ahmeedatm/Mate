@@ -14,6 +14,8 @@ process.env.DATA_DIR = dir;
 process.env.CALENDAR_ICS_URLS = "";
 process.env.CLAUDE_BIN = "/inexistant";
 process.env.GITLAB_TOKEN = "";
+process.env.GITHUB_TOKEN = "";
+delete process.env.GITHUB_CLIENT_ID;
 process.env.ACCOUNTS_FILE = new URL("./accounts-vide.json", import.meta.url).pathname;
 const { config } = await import("../src/config.ts");
 const deck = await import("../src/deck.ts");
@@ -281,6 +283,7 @@ describe("homeFeatures", () => {
       teams: false,
       agents: false,
       gitlab: false,
+      github: false,
       jira: false,
       off: [],
     });

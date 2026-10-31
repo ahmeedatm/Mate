@@ -5,7 +5,7 @@ import { CONSOLE_CSS, FAVICON, ICON_SVG } from "./web-style.ts";
  * Page http://127.0.0.1:3000/ ouverte sur l'ordinateur (le panneau de l'appli : relancer « Mate » la rouvre) :
  * barre de gauche (état du compagnon et de la tablette, sections), puis les sections l'une sous l'autre : réglages de la
  * tablette connectée avec son aperçu dessiné, connexion d'une tablette (code d'appairage affiché par la tablette),
- * agenda, GitLab et la carte « Cette appli » (lancement au démarrage, pare-feu, mise à jour,
+ * agenda, GitLab, GitHub et la carte « Cette appli » (lancement au démarrage, pare-feu, mise à jour,
  * quitter, tout oublier). La barre liste les `main > section[data-title]` dans l'ordre de la page.
  * Lue sans jeton, en local seulement (voir isLocalPage dans server.ts).
  */
@@ -162,8 +162,11 @@ ${FAVICON}
 
   .account { display: flex; align-items: center; gap: 10px; }
   .account .grow { display: flex; align-items: center; gap: 10px; }
-  #accounts, #gitlabaccount { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 14px; }
-  #accounts:empty, #gitlabaccount:empty { display: none; }
+  #accounts, #gitlabaccount, #githubaccount { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 14px; }
+  #accounts:empty, #gitlabaccount:empty, #githubaccount:empty { display: none; }
+  #githubcode { margin-top: 14px; }
+  #githubcode code { font-size: 28px; letter-spacing: .08em; padding: 6px 14px; }
+  #githubcode .actions { margin-top: 12px; }
   details { margin-top: 14px; }
   summary { cursor: pointer; color: var(--ink-2); font-size: 14px; width: fit-content; list-style: none; display: flex; align-items: center; gap: 10px; }
   summary::-webkit-details-marker { display: none; }
@@ -349,7 +352,7 @@ ${FAVICON}
         <button class="cx" data-cx="discord"><svg viewBox="0 0 24 24" class="logo" style="fill:#5865F2" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg><b>Discord</b><small><span class="dot" id="cxdot-discord"></span><span id="cxtext-discord">…</span></small></button>
         <button class="cx" data-cx="claude"><svg viewBox="0 0 24 24" class="logo" style="fill:#D97757" aria-hidden="true"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg><b>Claude Code</b><small><span class="dot" id="cxdot-claude"></span><span id="cxtext-claude">…</span></small></button>
         <button class="cx" disabled><svg viewBox="0 0 24 24" class="logo" style="fill:#F24E1E" aria-hidden="true"><path d="M15.852 8.981h-4.588V0h4.588c2.476 0 4.49 2.014 4.49 4.49s-2.014 4.491-4.49 4.491zM12.735 7.51h3.117c1.665 0 3.019-1.355 3.019-3.019s-1.355-3.019-3.019-3.019h-3.117V7.51zm0 1.471H8.148c-2.476 0-4.49-2.014-4.49-4.49S5.672 0 8.148 0h4.588v8.981zm-4.587-7.51c-1.665 0-3.019 1.355-3.019 3.019s1.354 3.02 3.019 3.02h3.117V1.471H8.148zm4.587 15.019H8.148c-2.476 0-4.49-2.014-4.49-4.49s2.014-4.49 4.49-4.49h4.588v8.98zM8.148 8.981c-1.665 0-3.019 1.355-3.019 3.019s1.355 3.019 3.019 3.019h3.117V8.981H8.148zM8.172 24c-2.489 0-4.515-2.014-4.515-4.49s2.014-4.49 4.49-4.49h4.588v4.441c0 2.503-2.047 4.539-4.563 4.539zm-.024-7.51a3.023 3.023 0 0 0-3.019 3.019c0 1.665 1.365 3.019 3.044 3.019 1.705 0 3.093-1.376 3.093-3.068v-2.97H8.148zm7.704 0h-.098c-2.476 0-4.49-2.014-4.49-4.49s2.014-4.49 4.49-4.49h.098c2.476 0 4.49 2.014 4.49 4.49s-2.014 4.49-4.49 4.49zm-.097-7.509c-1.665 0-3.019 1.355-3.019 3.019s1.355 3.019 3.019 3.019h.098c1.665 0 3.019-1.355 3.019-3.019s-1.355-3.019-3.019-3.019h-.098z"/></svg><b>Figma</b><small><span class="soon">Bientôt</span></small></button>
-        <button class="cx" disabled><svg viewBox="0 0 24 24" class="logo ink" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg><b>GitHub</b><small><span class="soon">Bientôt</span></small></button>
+        <button class="cx" data-cx="github"><svg viewBox="0 0 24 24" class="logo ink" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg><b>GitHub</b><small><span class="dot" id="cxdot-github"></span><span id="cxtext-github">…</span></small></button>
         <button class="cx" disabled><svg viewBox="0 0 24 24" class="logo ink" aria-hidden="true"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/></svg><b>Notion</b><small><span class="soon">Bientôt</span></small></button>
         <button class="cx" disabled><svg viewBox="0 0 122.8 122.8" class="logo" aria-hidden="true"><path fill="#E01E5A" d="M25.8 77.6c0 7.1-5.8 12.9-12.9 12.9S0 84.7 0 77.6s5.8-12.9 12.9-12.9h12.9v12.9zm6.5 0c0-7.1 5.8-12.9 12.9-12.9s12.9 5.8 12.9 12.9v32.3c0 7.1-5.8 12.9-12.9 12.9s-12.9-5.8-12.9-12.9V77.6z"/><path fill="#36C5F0" d="M45.2 25.8c-7.1 0-12.9-5.8-12.9-12.9S38.1 0 45.2 0s12.9 5.8 12.9 12.9v12.9H45.2zm0 6.5c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9H12.9C5.8 58.1 0 52.3 0 45.2s5.8-12.9 12.9-12.9h32.3z"/><path fill="#2EB67D" d="M97 45.2c0-7.1 5.8-12.9 12.9-12.9s12.9 5.8 12.9 12.9-5.8 12.9-12.9 12.9H97V45.2zm-6.5 0c0 7.1-5.8 12.9-12.9 12.9s-12.9-5.8-12.9-12.9V12.9C64.7 5.8 70.5 0 77.6 0s12.9 5.8 12.9 12.9v32.3z"/><path fill="#ECB22E" d="M77.6 97c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9-12.9-5.8-12.9-12.9V97h12.9zm0-6.5c-7.1 0-12.9-5.8-12.9-12.9s5.8-12.9 12.9-12.9h32.3c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9H77.6z"/></svg><b>Slack</b><small><span class="soon">Bientôt</span></small></button>
     </div>
@@ -387,6 +390,17 @@ ${FAVICON}
       <div class="dim" id="gitlabstate"></div>
       <div id="gitlabaccount"></div>
       <div id="gitlabmsg" class="dim" style="margin-top:8px"></div>
+    </div>
+    <div class="card cxpanel" id="github" hidden>
+      <div class="dim" id="githubstate"></div>
+      <!-- Connexion en attente (device flow) : le code à saisir sur GitHub. -->
+      <div id="githubcode" hidden>
+        <div>Saisis ce code sur GitHub, puis autorise Mate :</div>
+        <p><code id="githubusercode"></code></p>
+        <div class="actions"><a class="button" id="githubopen" target="_blank" rel="noopener">Ouvrir GitHub</a><button class="ghost" id="githubcopy">Copier le code</button></div>
+      </div>
+      <div id="githubaccount"></div>
+      <div id="githubmsg" class="dim" style="margin-top:8px"></div>
     </div>
     <!-- Étapes du connecteur touché : placées en tête du panneau ouvert (renderSteps). -->
     <div class="cxsteps" id="cxsteps" hidden>
@@ -469,6 +483,7 @@ ${FAVICON}
         : c.saved.length ? "Lien enregistré : " + c.saved.join(", ") : "Connecté.";
       renderAccounts(c);
       renderGitlab(s.gitlab);
+      renderGithub(s.github);
       renderConnectors(s);
       renderMcp(s.mcp);
       renderSteps();
@@ -558,6 +573,58 @@ ${FAVICON}
       state.textContent = g.token ? "Connecté." : "Non connecté.";
     }
   }
+  // GitHub : même carte que GitLab, plus le code à saisir sur GitHub tant que la connexion attend (device flow).
+  let githubKey = "";
+  const GITHUB_MSG = {
+    ok: "✓ GitHub connecté : les widgets GitHub de la tablette se remplissent dans quelques secondes.",
+    refused: "Connexion annulée.",
+    expired: "Le code a expiré : recommence.",
+    error: "La connexion à GitHub a échoué. Réessaie.",
+  };
+  function renderGithub(g) {
+    if (!g) return;
+    const key = JSON.stringify(g);
+    if (key === githubKey) return;
+    githubKey = key;
+    const waiting = g.login && g.login.state === "waiting";
+    document.getElementById("githubcode").hidden = !waiting;
+    if (waiting) {
+      document.getElementById("githubusercode").textContent = g.login.userCode;
+      document.getElementById("githubopen").href = g.login.verificationUri;
+    }
+    const result = new URLSearchParams(location.search).get("github") || (g.login && g.login.state);
+    document.getElementById("githubmsg").textContent = (!waiting && GITHUB_MSG[result]) || "";
+    const box = document.getElementById("githubaccount");
+    box.replaceChildren();
+    const state = document.getElementById("githubstate");
+    if (g.account) {
+      state.textContent = "La tablette lit et fusionne tes PR avec ce compte.";
+      const row = document.createElement("div");
+      row.className = "account";
+      const label = document.createElement("span");
+      label.className = "grow";
+      label.append(stateDot(!g.account.expired),
+        "GitHub" + (g.account.username ? " · " + g.account.username : "") + (g.account.expired ? " (à reconnecter)" : ""));
+      const off = document.createElement("button");
+      off.className = "ghost";
+      off.textContent = "Déconnecter GitHub";
+      off.onclick = async () => { await fetch("/local/accounts/github", { method: "DELETE" }); refresh(); };
+      row.append(label);
+      if (g.account.expired && !waiting) row.append(connectLink("github", "Reconnecter"));
+      row.append(off);
+      box.append(row);
+    } else {
+      state.textContent = waiting ? "" : g.token ? "Connecté." : "Non connecté.";
+    }
+  }
+  document.getElementById("githubcopy").onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(document.getElementById("githubusercode").textContent);
+      document.getElementById("githubcopy").textContent = "Copié";
+    } catch (e) {
+      document.getElementById("githubcopy").textContent = "Sélectionne le code";
+    }
+  };
   // Réglages de la tablette : pas réécrits pendant un réglage en cours (curseur tenu, envoi pas encore fini).
   let tabletBusyUntil = 0;
   const percent = (v) => Math.round(v * 100);
@@ -855,6 +922,9 @@ ${FAVICON}
     setTile("ics", c.saved.length + c.env ? "on" : "off", c.saved.length + c.env ? "Connecté" : "Non connecté");
     if ((g.account && !g.account.expired) || (!g.account && g.token)) setTile("gitlab", "on", "Connecté");
     else setTile("gitlab", g.available ? "off" : "na", "Non connecté", !!g.account);
+    const h = s.github;
+    if ((h.account && !h.account.expired) || (!h.account && h.token)) setTile("github", "on", "Connecté");
+    else setTile("github", h.available ? "off" : "na", "Non connecté", !!h.account);
     const j = s.jira || { configured: false };
     setTile("jira", j.configured ? "on" : "off", j.configured ? "Connecté" : "Non connecté");
     // Pas relié : les étapes suffisent, l'état est déjà sur l'icône.
@@ -886,6 +956,12 @@ ${FAVICON}
         "Touche « Autoriser » : Mate lit tes MR et tes pipelines.", "Tu reviens ici : les widgets GitLab de la tablette se remplissent."],
       action: "Se connecter avec GitLab",
     },
+    github: {
+      title: "Relier GitHub",
+      steps: ["Touche « Se connecter avec GitHub » : un code s'affiche ici.", "Touche « Ouvrir GitHub » et connecte-toi à ton compte si besoin.",
+        "Saisis le code, puis touche « Authorize » : Mate lit tes PR et tes runs GitHub Actions.", "Les widgets GitHub de la tablette se remplissent seuls."],
+      action: "Se connecter avec GitHub",
+    },
     jira: {
       title: "Relier Jira",
       steps: ["Crée un jeton d'API sur id.atlassian.com › Sécurité › Jetons d'API.",
@@ -893,12 +969,12 @@ ${FAVICON}
         "Relance Mate : tes tickets arrivent dans le widget Jira de la tablette."],
     },
   };
-  const PANEL = { microsoft: "agenda", google: "agenda", ics: "agenda", gitlab: "gitlab", jira: "jira", discord: "plugin", claude: "plugin" };
+  const PANEL = { microsoft: "agenda", google: "agenda", ics: "agenda", gitlab: "gitlab", github: "github", jira: "jira", discord: "plugin", claude: "plugin" };
   // Plugin réglé dans la modale d'un autre connecteur : Teams fait partie de Microsoft.
   const PLUGIN_OF = { microsoft: "teams" };
   let openCx = null, openName = null, stepsKey = "";
   const dialog = document.getElementById("cxdialog");
-  const TITLES = { agenda: "Agenda", gitlab: "GitLab", jira: "Jira" };
+  const TITLES = { agenda: "Agenda", gitlab: "GitLab", github: "GitHub", jira: "Jira" };
   function openPanel(name, cx) {
     openCx = cx === undefined ? (name === "agenda" ? "ics" : name) : cx;
     openName = name;
@@ -1126,8 +1202,9 @@ ${FAVICON}
   const section = new URLSearchParams(location.search).get("section");
   if (accountResult) openPanel("agenda", null);
   if (gitlabResult) openPanel("gitlab", "gitlab");
-  if (section === "agenda" || section === "gitlab") {
-    openPanel(section, section === "agenda" ? "ics" : "gitlab");
+  if (new URLSearchParams(location.search).get("github")) openPanel("github", "github");
+  if (section === "agenda" || section === "gitlab" || section === "github") {
+    openPanel(section, section === "agenda" ? "ics" : section);
     document.getElementById(section).classList.add("focus");
   }
   ${CONFIG_JS}

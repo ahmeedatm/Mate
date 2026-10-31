@@ -104,6 +104,10 @@ async function startOnce(options: ServerOptions, port: number): Promise<TestServ
       GITLAB_TOKEN: "",
       GITLAB_URL: "",
       GITLAB_CLIENT_ID: "",
+      // Pas de vrai GitHub non plus.
+      GITHUB_TOKEN: "",
+      GITHUB_URL: "",
+      GITHUB_CLIENT_ID: "",
       ACCOUNTS_FILE: path.join(backendDir, "test", "accounts-vide.json"),
       FAKE_OS: options.os ?? "mac",
       FAKE_OS_STATE: osState,
