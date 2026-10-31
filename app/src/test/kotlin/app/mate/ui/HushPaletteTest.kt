@@ -51,8 +51,8 @@ class HushPaletteTest {
     private fun sky(now: Long, px: Float, py: Float): List<Double> {
         val (w, h) = screen
         return HushGlow.HALOS.fold(parse(argb("c_bg"))) { under, halo ->
-            val (x, y, scale) = HushGlow.haloAt(halo, now)
-            val f = Math.hypot((px - w * x).toDouble(), (py - h * y).toDouble()) / (w * halo.radius * scale)
+            val (x, y) = HushGlow.haloX(halo, now) to HushGlow.haloY(halo, now)
+            val f = Math.hypot((px - w * x).toDouble(), (py - h * y).toDouble()) / (w * halo.radius * HushGlow.haloScale(halo, now))
             over(under, parse(argb(tints.getValue(halo.tint))), halo.alpha * HushGlow.falloff(f.toFloat()).toDouble())
         }
     }
@@ -93,6 +93,12 @@ class HushPaletteTest {
         assertEquals(1.0, parse(argb("c_bg"))[0], 0.0)
         assertTrue(parse(argb("c_surface"))[0] < 1.0)
         assertEquals(0.0, parse(argb("c_rail"))[0], 0.0)
+    }
+
+    @Test
+    fun `une tuile en verre se detache du fond au moins autant que la tuile de Console`() {
+        val glass = over(parse(argb("c_bg")), parse(argb("c_surface")))
+        assertTrue(ratio(glass, parse(argb("c_bg"))) >= 1.15)
     }
 
     @Test

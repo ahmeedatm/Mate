@@ -246,7 +246,7 @@
         <item name="c_primary_pressed">?attr/c_text</item>
         <item name="c_bg">#FF070509</item>
         <item name="c_rail">#00070509</item>
-        <item name="c_surface">#B8150F1C</item>
+        <item name="c_surface">#B82C2238</item>
         <item name="c_surface_raised">#FF251C2E</item>
         <item name="c_surface_pressed">#FF30253B</item>
         <item name="c_stroke">#FF46384F</item>

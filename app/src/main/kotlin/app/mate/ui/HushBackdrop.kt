@@ -17,10 +17,11 @@ import app.mate.ui.HushGlow.Tint
 
 /**
  * Fond animé du thème Hush (attribut c_backdrop, absent ailleurs : la vue reste masquée), derrière tous les écrans de
- * MainActivity : l'aura et les éclats de HushGlow. Dessiné à la main à 30 i/s, calé sur les images de l'écran
- * (Choreographer : le kiosque coupe les animateurs d'Android ; un minuteur, lui, tomberait entre deux images et en
- * ferait attendre une). Pas de flou ni de bitmap : des dégradés créés une fois à la taille de l'écran, seulement
- * déplacés ensuite. Toujours en mouvement, la nuit comme sur batterie ; Réduire les animations le fige.
+ * MainActivity : l'aura et les éclats de HushGlow. Dessiné à la main une image sur deux, calé sur les images de
+ * l'écran (Choreographer : le kiosque coupe les animateurs d'Android ; un minuteur, lui, tomberait entre deux images
+ * et en ferait attendre une). Pas de flou ni de bitmap plein écran : des dégradés créés une fois à la taille de
+ * l'écran, seulement déplacés ensuite. Toujours en mouvement, la nuit comme sur batterie ; Réduire les animations
+ * le fige (seul interrupteur, choix d'Ahmed). En pause sous un écran qui le cache : boîte, verrou, ou [coveredBy].
  */
 class HushBackdrop(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
     private val still = Look.still(context)
@@ -32,13 +33,14 @@ class HushBackdrop(context: Context, attrs: AttributeSet? = null) : View(context
     private val sprite = Paint(Paint.FILTER_BITMAP_FLAG)
 
     /**
-     * Éclats peints une fois chacun dans une petite image (losange étiré, corps violet sombre, arête rose) : la déplacer et la
-     * pencher à chaque image ne coûte presque rien, alors qu'un tracé redessiné penché coûtait 50 ms par image sur
-     * l'émulateur. Faites au premier dessin : rien dans les autres thèmes, où la vue reste masquée.
+     * Éclats peints une fois chacun dans une petite image (losange étiré, corps violet sombre, arête rose), à la taille
+     * de l'écran : la déplacer et la pencher à chaque image ne coûte presque rien, alors qu'un tracé redessiné penché
+     * coûtait 50 ms par image sur l'émulateur.
      */
-    private val shards by lazy {
-        HushGlow.SHARDS.map { shard -> shardBitmap(shard) }
-    }
+    private var shards = emptyList<Bitmap>()
+
+    /** Écran posé par-dessus dans la même fenêtre (Bienvenue, Plugins) : le fond ne se redessine pas dessous. */
+    var coveredBy: () -> Boolean = { false }
 
     private fun shardBitmap(shard: HushGlow.Shard): Bitmap {
         val s = shard.size * density
@@ -66,22 +68,17 @@ class HushBackdrop(context: Context, attrs: AttributeSet? = null) : View(context
         }
     }
 
-    private var lastFrame = 0L
     private var ticking = false
 
-    /** Une image sur deux à 55 Hz : redessine seulement si FRAME_MS est passé, puis attend l'image suivante. */
+    /** Une image sur deux : redessine si rien ne cache le fond, puis redemande une image après FRAME_DELAY_MS. */
     private val tick = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
             if (!live()) {
                 ticking = false
                 return
             }
-            val now = frameTimeNanos / 1_000_000
-            if (now - lastFrame >= HushGlow.FRAME_MS - 2) {
-                lastFrame = now
-                invalidate()
-            }
-            Choreographer.getInstance().postFrameCallback(this)
+            if (hasWindowFocus() && !coveredBy()) invalidate()
+            Choreographer.getInstance().postFrameCallbackDelayed(this, HushGlow.FRAME_DELAY_MS)
         }
     }
 
@@ -104,8 +101,9 @@ class HushBackdrop(context: Context, attrs: AttributeSet? = null) : View(context
         Choreographer.getInstance().postFrameCallback(tick)
     }
 
-    /** Halos centrés sur l'origine, même teinte transparente au bord (pas de liseré gris). */
+    /** Halos centrés sur l'origine, même teinte transparente au bord (pas de liseré gris) ; éclats peints une fois. */
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        if (shards.isEmpty()) shards = HushGlow.SHARDS.map { shardBitmap(it) }
         HushGlow.HALOS.forEachIndexed { i, halo ->
             radii[i] = w * halo.radius
             halos[i].shader = RadialGradient(
@@ -119,16 +117,18 @@ class HushBackdrop(context: Context, attrs: AttributeSet? = null) : View(context
         val now = if (still) HushGlow.STILL_AT_MS else SystemClock.uptimeMillis()
         val w = width.toFloat()
         val h = height.toFloat()
-        HushGlow.HALOS.forEachIndexed { i, halo ->
-            val (x, y, scale) = HushGlow.haloAt(halo, now)
+        for (i in HushGlow.HALOS.indices) {
+            val halo = HushGlow.HALOS[i]
+            val scale = HushGlow.haloScale(halo, now)
             canvas.save()
-            canvas.translate(w * x, h * y)
+            canvas.translate(w * HushGlow.haloX(halo, now), h * HushGlow.haloY(halo, now))
             canvas.scale(scale, scale)
             canvas.drawCircle(0f, 0f, radii[i], halos[i])
             canvas.restore()
         }
         // Éclats tenus en l'air : ils flottent et penchent, sans jamais tomber.
-        HushGlow.SHARDS.forEachIndexed { i, shard ->
+        for (i in shards.indices) {
+            val shard = HushGlow.SHARDS[i]
             canvas.save()
             canvas.translate(w * shard.x, h * shard.y + shard.bob * density * HushGlow.wave(now, shard.bobMs))
             canvas.rotate(shard.tilt * HushGlow.wave(now, shard.tiltMs))
@@ -141,6 +141,11 @@ class HushBackdrop(context: Context, attrs: AttributeSet? = null) : View(context
     override fun onVisibilityChanged(changedView: View, visibility: Int) {
         super.onVisibilityChanged(changedView, visibility)
         if (isShown) invalidate()
+    }
+
+    override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
+        super.onWindowFocusChanged(hasWindowFocus)
+        if (hasWindowFocus) invalidate()
     }
 
     override fun onWindowVisibilityChanged(visibility: Int) {

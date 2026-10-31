@@ -10,8 +10,11 @@ import kotlin.math.sin
  * d'instants pour trouver son point le plus clair, sur lequel l'accent rose doit garder 4,5:1.
  */
 object HushGlow {
-    /** 30 images par seconde : un fond lent n'a pas besoin des 55 de l'écran (18,2 ms par image, docs/tablette-4.2.md). */
-    const val FRAME_MS = 33L
+    /**
+     * Attente avant de redemander une image : plus qu'un rafraîchissement, moins que deux, donc une image sur deux
+     * (27 i/s à 55 Hz sur la tablette, 30 à 60 Hz). Un fond lent n'a pas besoin des 55 (docs/tablette-4.2.md).
+     */
+    const val FRAME_DELAY_MS = 20L
 
     /** Instant figé quand Réduire les animations est choisi : une image fixe où les halos sont bien répartis. */
     const val STILL_AT_MS = 7_000L
@@ -49,14 +52,17 @@ object HushGlow {
     val HALO_STOPS = floatArrayOf(0f, 0.45f, 1f)
     val HALO_STRENGTH = floatArrayOf(1f, 0.45f, 0f)
 
-    /** Éclat de cristal posé en (`x`, `y`), de `size` dp, qui flotte de `bob` dp et oscille de `tilt` degrés. */
+    /**
+     * Éclat de cristal posé en (`x`, `y`), de `size` dp, qui flotte de `bob` dp et oscille de `tilt` degrés. Places
+     * choisies hors du contenu habituel : marge du haut, à droite de l'heure, creux de la barre de gauche.
+     */
     data class Shard(val x: Float, val y: Float, val size: Float, val bob: Float, val bobMs: Long, val tilt: Float, val tiltMs: Long)
 
     val SHARDS = listOf(
         Shard(0.9f, 0.3f, 11f, 6f, 6_200L, 14f, 9_000L),
         Shard(0.63f, 0.1f, 7f, 5f, 5_300L, -18f, 7_400L),
-        Shard(0.47f, 0.47f, 9f, 7f, 7_100L, 12f, 11_000L),
-        Shard(0.97f, 0.93f, 8f, 5f, 4_700L, -16f, 8_300L),
+        Shard(0.72f, 0.22f, 9f, 7f, 7_100L, 12f, 11_000L),
+        Shard(0.033f, 0.58f, 8f, 5f, 4_700L, -16f, 8_300L),
     )
 
     /**
@@ -72,12 +78,12 @@ object HushGlow {
     /** Onde de -1 à 1 sur `periodMs`. */
     fun wave(now: Long, periodMs: Long): Float = sin(2 * PI * phase(now, periodMs)).toFloat()
 
-    /** Centre (fractions de l'écran) et échelle d'un halo à l'instant `now`. */
-    fun haloAt(halo: Halo, now: Long) = Triple(
-        halo.x + halo.driftX * wave(now, halo.periodX),
-        halo.y + halo.driftY * wave(now, halo.periodY),
-        1f + halo.breath * wave(now, halo.breathMs),
-    )
+    /** Centre (fractions de l'écran) et échelle d'un halo à l'instant `now` ; trois fonctions, rien d'alloué par image. */
+    fun haloX(halo: Halo, now: Long): Float = halo.x + halo.driftX * wave(now, halo.periodX)
+
+    fun haloY(halo: Halo, now: Long): Float = halo.y + halo.driftY * wave(now, halo.periodY)
+
+    fun haloScale(halo: Halo, now: Long): Float = 1f + halo.breath * wave(now, halo.breathMs)
 
     /** Opacité relative d'un halo à la distance `f` de son centre (fraction de son rayon), comme son RadialGradient. */
     fun falloff(f: Float): Float {
