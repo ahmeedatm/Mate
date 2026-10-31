@@ -447,6 +447,10 @@ ${FAVICON}
         <div class="row"><span class="grow" id="firewallstate"></span><button id="firewallopen">Ouvrir le pare-feu</button></div>
         <div class="dim note">Réseaux privés seulement. Windows demande l'accord d'un administrateur.</div>
       </div>
+      <div id="capteursrow" hidden>
+        <div class="row"><span class="grow" id="capteursstate"></span><button id="capteursopen">Activer</button></div>
+        <div class="dim note">Installe le pilote PawnIO (namazso/PawnIO.Setup) et un petit programme lancé à l'ouverture de session. Windows demande l'accord d'un administrateur, une seule fois.</div>
+      </div>
       <div class="row"><span class="grow" id="appupdatestate">Mise à jour depuis la tablette (même WiFi).</span><button class="ghost" id="updatecheck">Chercher</button><button id="updateinstall" hidden>Installer</button></div>
       <div class="row"><span class="grow">Extension du navigateur (onglets, page Média) : à charger en mode développeur depuis <code id="extpath"></code></span></div>
       <div class="row"><span class="grow dim">Tout oublier retire le lancement au démarrage, l'appairage, l'agenda et les tâches de cet ordinateur.</span><button class="ghost" id="quit">Quitter</button><button class="danger" id="forget">Tout oublier</button></div>
@@ -826,6 +830,9 @@ ${FAVICON}
       $("firewallrow").hidden = p.firewall === null;
       $("firewallstate").textContent = p.firewall ? "Pare-feu ouvert : la tablette peut joindre ce PC." : "Pare-feu fermé : la tablette ne trouvera pas ce PC.";
       $("firewallopen").hidden = p.firewall === true;
+      $("capteursrow").hidden = p.capteurs === null;
+      $("capteursstate").textContent = p.capteurs ? "Température du processeur activée dans le widget Performances." : "Température du processeur : désactivée.";
+      $("capteursopen").hidden = p.capteurs === true;
       $("extpath").textContent = p.extension;
     } catch (e) {
       $("panel").hidden = true;
@@ -840,6 +847,7 @@ ${FAVICON}
   $("autostart").onchange = (e) => act(() => post("/local/autostart", { on: e.target.checked }),
     (r) => r.autostart ? "Lancement au démarrage activé." : "Lancement au démarrage retiré.");
   $("firewallopen").onclick = () => act(() => post("/local/firewall"), (r) => r.ok ? "Pare-feu ouvert." : "Pare-feu inchangé : l'accord administrateur a été refusé.");
+  $("capteursopen").onclick = () => act(() => post("/local/capteurs"), (r) => r.ok ? "Température du processeur activée." : "Température inchangée : l'accord administrateur a été refusé ou l'installation du pilote a échoué.");
   $("updatecheck").onclick = () => act(async () => {
     const r = await (await fetch("/local/update")).json().then((j) => j.error ? Promise.reject(new Error(j.error)) : j);
     $("updateinstall").hidden = !r.available;

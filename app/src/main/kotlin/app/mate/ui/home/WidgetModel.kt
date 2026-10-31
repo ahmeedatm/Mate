@@ -146,6 +146,10 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
     var callProfile = -1
     var rolesSet = false
 
+    /** Écran de jeu choisi par l'utilisateur (n'importe quel profil, -1 : aucun) et ses applis de jeu (noms du catalogue). */
+    var gameProfile = -1
+    val gameApps: MutableList<String> = mutableListOf()
+
     val pages get() = names.size
 
     /** Icône choisie de chaque profil ([ProfileIcons], null = celle du rôle), dans l'ordre des noms. */
@@ -169,6 +173,8 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         it.deckProfile = deckProfile
         it.callProfile = callProfile
         it.rolesSet = rolesSet
+        it.gameProfile = gameProfile
+        it.gameApps += gameApps
         it.icons.clear()
         it.icons += icons
     }
@@ -289,6 +295,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         homeProfile = moved(homeProfile)
         if (deckProfile >= 0) deckProfile = moved(deckProfile)
         if (callProfile >= 0) callProfile = moved(callProfile)
+        if (gameProfile >= 0) gameProfile = moved(gameProfile)
     }
 
     /** Retire le profil et ses widgets, les suivants reculent d'une page. Faux (rien ne change) si [canRemove] le refuse. */
@@ -307,6 +314,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         homeProfile = after(homeProfile)
         deckProfile = after(deckProfile)
         callProfile = after(callProfile)
+        gameProfile = after(gameProfile)
         return true
     }
 
@@ -362,6 +370,8 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         .put("deck", deckProfile)
         .put("call", callProfile)
         .put("roles", rolesSet)
+        .put("gameScreen", gameProfile)
+        .put("gameApps", JSONArray(gameApps))
         .put("widgets", JSONArray().apply {
             widgets.forEach {
                 put(JSONObject().put("t", it.type.key).put("s", it.size.name).put("p", it.page).put("c", it.col).put("r", it.row).put("cfg", it.config))
@@ -405,6 +415,8 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
             layout.deckProfile = json.optInt("deck", -1).takeIf { it in names.indices } ?: -1
             layout.callProfile = json.optInt("call", -1).takeIf { it in names.indices } ?: -1
             layout.rolesSet = json.optBoolean("roles", false)
+            layout.gameProfile = json.optInt("gameScreen", -1).takeIf { it in names.indices } ?: -1
+            json.optJSONArray("gameApps")?.let { apps -> for (i in 0 until apps.length()) layout.gameApps += apps.optString(i) }
             val list = json.getJSONArray("widgets")
             for (i in 0 until list.length()) {
                 val w = list.getJSONObject(i)

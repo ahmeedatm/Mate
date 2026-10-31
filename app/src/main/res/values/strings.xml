@@ -987,6 +987,12 @@
     <string name="profile_blank_desc">Une grille vide, à remplir de widgets.</string>
     <string name="profile_edit">Modifier cet écran</string>
     <string name="profile_rename">Nom et icône</string>
+    <string name="profile_game">Réglage de jeu</string>
+    <string name="profile_game_tag">Jeu</string>
+    <string name="game_title">Jeu : %1$s</string>
+    <string name="game_show">Afficher quand je joue</string>
+    <string name="game_hint">Active, puis coche les applis. Quand une des applis cochées est devant sur l\'ordinateur, la tablette passe sur cet écran, puis revient à l\'écran d\'avant quand tu la quittes.</string>
+    <string name="game_none">Aucune appli trouvée sur l\'ordinateur.</string>
     <string name="profile_rename_hint">Nom de l\'écran</string>
     <string name="profile_delete">Supprimer</string>
     <string name="profile_delete_confirm">Supprimer l\'écran « %s » et ses widgets ?</string>
@@ -1211,9 +1217,13 @@
     <string name="perf_settings_hint">Coche ce que le widget montre.</string>
     <string name="perf_option_note">%1$s (%2$s)</string>
     <string name="perf_option_unreadable">indisponible</string>
-    <string name="perf_option_soon">arrive bientôt</string>
+    <string name="perf_option_fps_unreadable">carte AMD sous Windows seulement</string>
     <string name="perf_gpu_temp_alert">GPU °C</string>
+    <string name="perf_cpu_temp_alert">CPU °C</string>
     <string name="perf_extras_separator">"  ·  "</string>
+    <string name="perf_fps_line">%1$s FPS</string>
+    <string name="perf_fps_none">— FPS</string>
+    <string name="perf_cpu_temp_line">CPU %1$d °C</string>
     <string name="perf_gpu_temp_line">GPU %1$d °C</string>
     <string name="perf_fan_line">Ventilateur %1$s</string>
     <string name="perf_cpu_freq_line">CPU %1$s GHz</string>
@@ -1285,7 +1295,7 @@
     <string name="a11y_size_larger">Très grande</string>
     <string name="a11y_size_largest">Maximale</string>
     <string name="about_licences">Licences des composants</string>
-    <string name="about_sources">Météo : données de MET Norway (Institut météorologique norvégien), licence CC BY 4.0, mises en forme pour l\'affichage. api.met.no\nVilles : GeoNames, licence CC BY 4.0. geonames.org\nPolices : Outfit, Nunito et Abril Fatface, licence SIL Open Font License 1.1.\nSons d\'ambiance : Freesound, OpenGameArt et Wikimedia Commons, domaine public (CC0).\nLicence CC BY 4.0 : creativecommons.org/licenses/by/4.0</string>
+    <string name="about_sources">Météo : données de MET Norway (Institut météorologique norvégien), licence CC BY 4.0, mises en forme pour l\'affichage. api.met.no\nVilles : GeoNames, licence CC BY 4.0. geonames.org\nPolices : Figtree, Atkinson Hyperlegible, Chakra Petch et Share Tech Mono, licence SIL Open Font License 1.1.\nSons d\'ambiance : Freesound, OpenGameArt et Wikimedia Commons, domaine public (CC0).\nLicence CC BY 4.0 : creativecommons.org/licenses/by/4.0</string>
     <string name="widget_weather_none">Aucune ville trouvée.</string>
     <string name="sky_clear">Ciel dégagé</string>
     <string name="sky_partly">Quelques nuages</string>

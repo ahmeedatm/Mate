@@ -67,6 +67,30 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#panel")).toBeHidden();
   });
 
+  test("carte « Cette appli » : la ligne de la température du processeur suit l'état du capteur", async ({ page }) => {
+    const panel = (capteurs: boolean | null) =>
+      page.route("**/local/panel", (route) =>
+        route.fulfill({
+          json: { portable: true, app: "C:/Mate", version: "1", autostart: false, firewall: null, capteurs, extension: "x" },
+        }),
+      );
+    const check = async (capteurs: boolean | null) => {
+      await page.unroute("**/local/panel");
+      await panel(capteurs);
+      await page.goto("/");
+      await expect(page.locator("#panel")).toBeVisible();
+    };
+    await check(null);
+    await expect(page.locator("#capteursrow")).toBeHidden();
+    await check(false);
+    await expect(page.locator("#capteursrow")).toBeVisible();
+    await expect(page.locator("#capteursstate")).toContainText("désactivée");
+    await expect(page.locator("#capteursopen")).toBeVisible();
+    await check(true);
+    await expect(page.locator("#capteursstate")).toContainText("activée dans le widget");
+    await expect(page.locator("#capteursopen")).toBeHidden();
+  });
+
   test("reçoit le code affiché par la tablette et la connecte", async ({ page, server }) => {
     await page.goto("/");
     await expect(page.locator("#pairing")).toBeHidden();
@@ -189,6 +213,11 @@ test.describe("page locale GET /", () => {
       while (running) {
         const { json } = await server.call("POST", "/tablet/poll", { state: state() });
         for (const { id, command } of json.commands ?? []) {
+          // Les ordres venus de l'ordinateur (disposition, appli au premier plan) ne sont pas des réglages.
+          if (command.type !== "settings") {
+            await server.call("POST", "/tablet/result", { id, ok: true, state: state() });
+            continue;
+          }
           const { type, ...change } = command;
           received.push(change);
           settings = { ...settings, ...change };

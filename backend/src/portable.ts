@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { backendRoot, dataDir } from "./paths.ts";
+import { CAPTEURS_TASK } from "./win/capteurs.ts";
 
 /**
  * Appli portable (un seul .exe sous Windows, « Mate.app » sous Mac) : rien n'est installé ni inscrit. Le
@@ -113,6 +114,22 @@ export async function setFirewall(open: boolean): Promise<boolean> {
   return r.ok;
 }
 
+// --- Température du processeur (Windows)
+
+const capteursScript = path.join(backendRoot, "scripts", "capteurs-windows.ps1");
+
+/** Tâche « MateCapteurs » créée ; `null` hors Windows (sur Mac, `macmon` suffit, rien à activer). */
+export async function capteursActive(): Promise<boolean | null> {
+  if (!isWindows) return null;
+  return (await sh("schtasks", ["/query", "/tn", CAPTEURS_TASK])).ok;
+}
+
+/** Lance le script du capteur : pilote PawnIO + tâche planifiée, accord administrateur (UAC) demandé à ce moment-là. Faux si refusé. */
+export async function setCapteurs(on: boolean): Promise<boolean> {
+  const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", capteursScript, ...(on ? [] : ["-Retirer"])];
+  return (await sh("powershell.exe", args, 300_000)).ok;
+}
+
 // --- Tout oublier
 
 /**
@@ -122,6 +139,7 @@ export async function setFirewall(open: boolean): Promise<boolean> {
 export async function forgetEverything() {
   await setAutostart(false).catch(() => undefined);
   if (isWindows && (await firewallOpen())) await setFirewall(false);
+  if (isWindows && (await capteursActive())) await setCapteurs(false);
   for (const name of fs.readdirSync(dataDir)) {
     const p = path.join(dataDir, name);
     if (!sameFile(p, backendRoot)) fs.rmSync(p, { recursive: true, force: true });

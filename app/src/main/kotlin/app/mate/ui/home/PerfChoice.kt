@@ -18,13 +18,12 @@ enum class PerfGroup(@StringRes val title: Int) {
 }
 
 /**
- * Infos que le widget Performances peut montrer. `soon` : lue par une autre issue (température du processeur, images par
- * seconde), la place est prévue mais grisée tant qu'elle n'est pas lue ; une option ne se coche jamais avant.
+ * Infos que le widget Performances peut montrer.
  */
-enum class PerfOption(val key: String, val group: PerfGroup, @StringRes val label: Int, val soon: Boolean = false) {
+enum class PerfOption(val key: String, val group: PerfGroup, @StringRes val label: Int) {
     CPU("cpu", PerfGroup.CPU, R.string.perf_opt_cpu),
     CPU_FREQ("cpu_freq", PerfGroup.CPU, R.string.perf_opt_cpu_freq),
-    CPU_TEMP("cpu_temp", PerfGroup.CPU, R.string.perf_opt_cpu_temp, soon = true),
+    CPU_TEMP("cpu_temp", PerfGroup.CPU, R.string.perf_opt_cpu_temp),
     GPU("gpu", PerfGroup.GPU, R.string.perf_opt_gpu),
     GPU_TEMP("gpu_temp", PerfGroup.GPU, R.string.perf_opt_gpu_temp),
     GPU_FAN("gpu_fan", PerfGroup.GPU, R.string.perf_opt_gpu_fan),
@@ -34,9 +33,9 @@ enum class PerfOption(val key: String, val group: PerfGroup, @StringRes val labe
     DISK_ACTIVITY("disk_activity", PerfGroup.DISK, R.string.perf_opt_disk_activity),
     NET_UP("net_up", PerfGroup.NET, R.string.perf_opt_net_up),
     NET_DOWN("net_down", PerfGroup.NET, R.string.perf_opt_net_down),
-    FPS("fps", PerfGroup.GAME, R.string.perf_opt_fps, soon = true);
+    FPS("fps", PerfGroup.GAME, R.string.perf_opt_fps);
 
-    /** Vrai si l'ordinateur a donné cette mesure dans `perf` ; une option à venir n'est jamais lisible. */
+    /** Vrai si l'ordinateur a donné cette mesure dans `perf`. */
     fun readable(perf: PcPerf): Boolean = when (this) {
         CPU, RAM -> true
         CPU_FREQ -> perf.cpuMhz != null
@@ -47,11 +46,12 @@ enum class PerfOption(val key: String, val group: PerfGroup, @StringRes val labe
         DISK_FREE -> perf.disk != null
         DISK_ACTIVITY -> perf.disk?.activity != null
         NET_UP, NET_DOWN -> perf.net != null
-        CPU_TEMP, FPS -> false
+        CPU_TEMP -> perf.cpuTempC != null
+        FPS -> perf.fpsReadable
     }
 
     companion object {
-        fun of(key: String) = entries.firstOrNull { it.key == key && !it.soon }
+        fun of(key: String) = entries.firstOrNull { it.key == key }
     }
 }
 

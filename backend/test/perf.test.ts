@@ -379,3 +379,38 @@ test("parseVmStat : libre + inactive + spéculative + purgeable, à la taille de
 test("parseVmStat : sans taille de page, 4096 ; ligne absente, 0", () => {
   assert.equal(parseVmStat("Pages free: 10.\nPages inactive: 5."), 15 * 4096);
 });
+
+test("cpuTempC : arrondie à l'entier ; absente sans source, hors 10–150 °C, en NaN, nulle ou en échec", async () => {
+  assert.equal((await perfOf({ cpuTemp: async () => 64.4 })).cpuTempC, 64);
+  assert.equal((await perfOf({ cpuTemp: async () => 150 })).cpuTempC, 150);
+  assert.equal((await perfOf({})).cpuTempC, undefined);
+  for (const value of [NaN, Infinity, 0, 9, 151, -5, null]) {
+    assert.equal((await perfOf({ cpuTemp: async () => value })).cpuTempC, undefined, String(value));
+  }
+  const failing = await perfOf({
+    cpuTemp: async () => {
+      throw new Error("lecteur");
+    },
+  });
+  assert.equal(failing.cpuTempC, undefined);
+  assert.equal(failing.cpu, 75);
+});
+
+test("fps : entier du jeu en cours ; null quand aucun jeu n'est mesuré ; absent sans lecteur, illisible ou en échec", async () => {
+  assert.equal((await perfOf({ fps: async () => ({ fps: 143.6 }) })).fps, 144);
+  const noGame = await perfOf({ fps: async () => ({ fps: null }) });
+  assert.equal(noGame.fps, null);
+  assert.ok("fps" in noGame);
+  assert.ok(!("fps" in (await perfOf({}))));
+  for (const value of [{ fps: 0 }, { fps: -3 }, { fps: NaN }, { fps: Infinity }]) {
+    assert.equal((await perfOf({ fps: async () => value })).fps, null, JSON.stringify(value));
+  }
+  assert.ok(!("fps" in (await perfOf({ fps: async () => null }))));
+  const failing = await perfOf({
+    fps: async () => {
+      throw new Error("lecteur");
+    },
+  });
+  assert.ok(!("fps" in failing));
+  assert.equal(failing.cpu, 75);
+});

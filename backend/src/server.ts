@@ -12,9 +12,10 @@ import { GitLabError } from "./gitlab.ts";
 import { setLogger } from "./log.ts";
 import { startAutoJoin } from "./meetings.ts";
 import { notificationHistory, setNotificationsRead, watchNotifications } from "./notifications.ts";
-import { canControl, clipboardStamp, getClipboard, isMac, osName, readNotifications, screenLocked } from "./os.ts";
+import { canControl, clipboardStamp, frontApp, getClipboard, isMac, osName, readNotifications, screenLocked } from "./os.ts";
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
 import { sendToTablet, tabletStatus } from "./tablet.ts";
+import { startForegroundWatch } from "./foreground-watch.ts";
 import { startMeetingWatch } from "./meeting-watch.ts";
 import { isScreenLocked, startScreenLockWatch } from "./screen-lock.ts";
 import { callingDeckApps } from "./deck.ts";
@@ -96,7 +97,7 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     (/^(POST|PUT|DELETE)$/.test(method) && /^\/local\/config\/[a-z0-9/-]+$/.test(url)) ||
     (method === "POST" && (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update")) ||
     // Panneau de l'appli portable (routes/portable.ts) : corps JSON exigé, pas envoyable par un autre site.
-    (method === "POST" && /^\/local\/(autostart|firewall|forget|quit|update)$/.test(url)) ||
+    (method === "POST" && /^\/local\/(autostart|firewall|capteurs|forget|quit|update)$/.test(url)) ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
     (method === "POST" && (url === "/browser/extension" || url === "/browser/extension/commands")) ||
     // Porte MCP des IA de bureau (routes/mcp.ts) : corps JSON exigé par le SDK, pas envoyable par un autre site.
@@ -204,6 +205,11 @@ if (canControl) {
   startMeetingWatch((event) => void sendToTablet({ type: "meeting", ...event }), {
     connected: () => tabletStatus().connected,
     liveApps: callingDeckApps,
+  });
+  // Appli au premier plan : la tablette passe sur son écran de jeu quand c'en est une de sa liste (et en revient).
+  startForegroundWatch((event) => void sendToTablet({ type: "foreground", ...event }), {
+    connected: () => tabletStatus().connected,
+    front: frontApp,
   });
 }
 // Ordinateur verrouillé : la tablette se bloque, l'API se ferme (hook ci-dessus). Relu même sans tablette.

@@ -50,6 +50,8 @@
     <attr name="c_card_pad" format="dimension" />
     <!-- Fond des widgets de l'Accueil : celui des tuiles. -->
     <attr name="c_home_card_bg" format="reference" />
+    <!-- Plaque ronde derrière l'icône d'une touche sans couleur (ui/home/TileGridView) ; rien dans Hush. -->
+    <attr name="c_key_plate" format="reference" />
     <!-- Taille des titres de carte (TitleView) : 15 sp, 18 sp en Contraste élevé. -->
     <attr name="c_title_size" format="dimension" />
     <!-- Contraste élevé : grandes touches (cases de 148 dp, libellé de 18 sp) dans les grilles de touches (ui/home/TileGridView). -->
@@ -66,6 +68,12 @@
     <attr name="c_font_title" format="reference|string" />
     <!-- Grands chiffres (heure, chrono, température) et titre de bienvenue. -->
     <attr name="c_font_display" format="reference|string" />
+    <!-- Petites étiquettes (titres de widgets et de cartes) ; reprend c_font_title hors Hush. -->
+    <attr name="c_font_label" format="reference|string" />
+    <!-- Étiquettes en majuscules (Hush). -->
+    <attr name="c_label_caps" format="boolean" />
+    <!-- Ombre sous les textes (Hush : Widget.Hush.Text, RollingText) ; transparente ailleurs. -->
+    <attr name="c_text_shadow" format="color" />
     <!-- Console de l'onglet Son du deck (plaque unie, afficheurs, curseurs, LED) : ui/mixer/. -->
     <attr name="c_mx_plate" format="color" />
     <attr name="c_mx_lcd_bg" format="color" />

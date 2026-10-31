@@ -17,8 +17,10 @@ import * as macLock from "./mac/lock.ts";
 import * as macMedia from "./mac/media.ts";
 import * as macPointer from "./mac/pointer.ts";
 import * as macSystem from "./mac/system.ts";
+import * as macTemperature from "./mac/temperature.ts";
 import * as macWindows from "./mac/windows.ts";
 import * as win from "./win/index.ts";
+import * as winCapteurs from "./win/capteurs.ts";
 import { checkOpenTarget } from "./open-guard.ts";
 import { perfSampler, type DiskRaw, type NetPerf, type Perf } from "./perf.ts";
 import type { PointerAction, PointerButton, PointerGesture } from "./pointer.ts";
@@ -213,6 +215,8 @@ export function getPerf(): Promise<Perf> {
       : async () => ({ total: os.totalmem(), available: os.freemem() }),
     cpuPercent: isWindows ? win.cpuUtility : null,
     gpu: isWindows ? win.gpuPerf : null,
+    cpuTemp: isWindows ? winCapteurs.cpuTemperature : macTemperature.cpuTemperature,
+    fps: isWindows ? win.gameFps : undefined,
     cpuMhz: isWindows ? () => winCounter(CPU_FREQUENCY) : undefined,
     disk: diskPerf,
     net: isWindows ? winNet : macSystem.netThroughput,
@@ -457,7 +461,7 @@ export async function systemCommand(command: SystemCommand) {
 }
 
 /** Appli au premier plan de l'ordinateur (sert aux alertes des agents Claude) ; Windows : `bundleId` = nom de l'exe en minuscules. */
-export async function frontApp(): Promise<{ name: string; bundleId: string }> {
+export async function frontApp(): Promise<{ name: string; bundleId: string; file?: string }> {
   if (isMac) return macSystem.frontApp();
   if (isWindows) return win.frontApp();
   unsupported();

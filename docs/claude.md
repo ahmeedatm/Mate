@@ -23,7 +23,8 @@ ici, ce que `.claude/` ajoute et comment s'en servir.
 3. Skill de zone, puis test rouge d'abord et code minimal (TDD).
 4. `relecture` : contrôle mécanique, puis les agents adaptés au diff, en parallèle.
 5. PR prête : « Comment tester », « Testé sur », captures par thème pour un écran.
-6. CI verte et approbation de l'équipe, puis fusion. Une demande = une branche = un sujet.
+6. CI verte, puis fusion. Approbation d'une autre personne seulement si la PR porte l'étiquette
+   `impact-equipe` (elle change un réglage par défaut ou une habitude des autres). Une demande = une branche = un sujet.
 
 ## Deux niveaux de sévérité
 

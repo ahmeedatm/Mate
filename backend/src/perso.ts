@@ -1,4 +1,5 @@
 import { SYSTEM_COMMANDS, TILE_SYMBOLS } from "./screens.ts";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { config } from "./config.ts";
 import { readJson, removeJson, updateJson, writeJson } from "./store.ts";
@@ -126,6 +127,25 @@ export async function loadSavedApps(): Promise<DeckApp[] | undefined> {
 export async function saveApps(apps: DeckApp[] | null) {
   if (!apps) return removeJson(appsFile);
   await writeJson(appsFile, { apps });
+}
+
+/**
+ * Retire une fois de la liste enregistrée les applis dont `retired(name)` est vrai (Office retiré du deck, #18),
+ * puis note la migration faite : ce que l'utilisateur rajoute ensuite reste.
+ */
+let retiring: Promise<void> | undefined;
+export function retireSavedApps(retired: (name: string) => boolean) {
+  // Appels simultanés (/deck, accueil) : une seule migration en vol, sinon le second écraserait un ajout fait entre-temps.
+  retiring ??= retireOnce(retired).finally(() => (retiring = undefined));
+  return retiring;
+}
+
+async function retireOnce(retired: (name: string) => boolean) {
+  const marker = path.join(config.dataDir, "apps-office-retire.json");
+  if (existsSync(marker)) return;
+  const saved = await loadSavedApps();
+  if (saved?.some((a) => retired(a.name))) await saveApps(saved.filter((a) => !retired(a.name)));
+  await writeJson(marker, { done: true });
 }
 
 /** Page Média : sites ajoutés depuis la tablette (YouTube, Netflix…), vide au départ, dans .data/links.json. */

@@ -133,6 +133,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           pages.some((p) => p.editable && p.title === "Perso"),
           "page Perso absente",
         );
+        expect(!pages.some((p) => /^(word|excel|powerpoint|outlook)$/i.test(p.title)), "page Office encore au deck");
         // Sans pilotage, le deck se lit mais ce qui touche à l'ordinateur répond 501.
         if (!controlled()) return expectStatus(await call("GET", "/deck/catalog"), 501, "/deck/catalog");
         const catalog = await call("GET", "/deck/catalog");
@@ -164,6 +165,27 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expectStatus(live, 200, "/deck/live");
         expect(Array.isArray(live.json.apps) && Array.isArray(live.json.open), "/deck/live sans listes apps et open");
         return live.json.apps.length ? `en appel : ${live.json.apps.join(", ")}` : "aucun appel en cours";
+      },
+    },
+    {
+      name: "écran de jeu (appli au premier plan)",
+      run: async () => {
+        // La veille (src/foreground-watch.ts) pousse l'appli devant ; la tablette la compare à sa liste de jeux, choisie
+        // parmi les applis du catalogue. L'ordre foreground est refusé s'il vient de l'extérieur.
+        expectStatus(
+          await call("POST", "/tablet/command", { type: "foreground", app: "Sanity", bundleId: "sanity" }),
+          400,
+          "ordre foreground de l'extérieur",
+        );
+        const catalog = await call("GET", "/deck/catalog");
+        // Hors Mac et Windows, le pilotage répond 501 : pas de veille ni de liste d'applis.
+        if (!controlled()) {
+          expectStatus(catalog, 501, "/deck/catalog hors Mac et Windows");
+          return "pas de pilotage ici (501)";
+        }
+        expectStatus(catalog, 200, "/deck/catalog");
+        expect(Array.isArray(catalog.json.apps), "/deck/catalog sans liste d'applis");
+        return `${catalog.json.apps.length} applis à choisir`;
       },
     },
     {
@@ -306,12 +328,19 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const perf = await call("GET", "/system/perf");
         if (!controlled()) return expectStatus(perf, 501, "/system/perf");
         expectStatus(perf, 200, "/system/perf");
-        const { cpu, ram, gpu, cpuMhz, disk, net } = perf.json;
+        const { cpu, ram, gpu, cpuMhz, cpuTempC, fps, disk, net } = perf.json;
         expect(typeof cpu === "number" && cpu >= 0 && cpu <= 100, `processeur hors 0-100 : ${cpu}`);
         expect(ram?.total > 0, "mémoire totale absente");
         // Champs facultatifs : absents si illisibles, mais bien typés et bornés quand ils sont là.
         const count = (n: unknown) => Number.isInteger(n) && (n as number) >= 0;
         expect(cpuMhz === undefined || (count(cpuMhz) && cpuMhz > 0), `fréquence invalide : ${cpuMhz}`);
+        // Température du processeur : absente sans lecteur (macmon, capteur Windows), jamais une valeur inventée.
+        expect(
+          cpuTempC === undefined || (count(cpuTempC) && cpuTempC >= 10 && cpuTempC <= 150),
+          `température du processeur invalide : ${cpuTempC}`,
+        );
+        // Images par seconde : absentes sans lecteur (Mac, carte non AMD), null sans jeu mesuré, jamais 0.
+        expect(fps === undefined || fps === null || (count(fps) && fps > 0), `images par seconde invalides : ${fps}`);
         expect(
           gpu?.vramUsedMb === undefined || (count(gpu.vramUsedMb) && gpu.vramUsedMb <= (gpu.vramTotalMb ?? Infinity)),
           `mémoire vidéo utilisée invalide : ${gpu?.vramUsedMb}`,
@@ -332,6 +361,8 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expect(net === undefined || (count(net.upKBps) && count(net.downKBps)), `réseau invalide : ${JSON.stringify(net)}`);
         const extras = [
           cpuMhz && `${cpuMhz} MHz`,
+          cpuTempC && `processeur ${cpuTempC} °C`,
+          fps !== undefined && (fps === null ? "fps : aucun jeu" : `${fps} fps`),
           disk && `disque ${disk.freeGb}/${disk.totalGb} Go`,
           net && `réseau ${net.downKBps}/${net.upKBps} Ko/s`,
           gpu?.vramTotalMb && `vram ${gpu.vramUsedMb ?? "?"}/${gpu.vramTotalMb} Mo`,

@@ -35,7 +35,7 @@ fun usageLevel(percent: Int): PerfLevel = when {
     else -> PerfLevel.NORMAL
 }
 
-/** Température de la carte graphique en °C : alerte dès 80, critique dès 90. */
+/** Température du processeur ou de la carte graphique en °C : alerte dès 80, critique dès 90. */
 fun tempLevel(celsius: Int): PerfLevel = when {
     celsius >= 90 -> PerfLevel.CRITICAL
     celsius >= 80 -> PerfLevel.WARN

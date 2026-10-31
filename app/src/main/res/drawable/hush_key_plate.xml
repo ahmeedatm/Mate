@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Plaque d'une touche de Hush : rien au repos, l'icône et le nom restent seuls ; l'appui allume le halo rose (@color/hush_press). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true"><shape android:shape="oval"><solid android:color="@color/hush_press" /></shape></item>
+    <item><shape android:shape="oval" /></item>
+</selector>

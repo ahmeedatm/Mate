@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Halo rose d'un appui sur un widget de Hush : c_accent à 22 %, par-dessus le fond animé (HushPaletteTest). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="?attr/c_accent" android:alpha="0.22" />
+</selector>
