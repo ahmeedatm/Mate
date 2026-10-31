@@ -6,12 +6,14 @@ import { identity } from "../pairing.ts";
 import {
   appPath,
   autostartEnabled,
+  capteursActive,
   firewallOpen,
   FORGET_CODE,
   forgetEverything,
   portable,
   QUIT_CODE,
   setAutostart,
+  setCapteurs,
   setFirewall,
 } from "../portable.ts";
 
@@ -35,6 +37,7 @@ export default async function portableRoutes(app: FastifyInstance) {
       version: identity().version,
       autostart: await autostartEnabled(),
       firewall: await firewallOpen(),
+      capteurs: await capteursActive(),
       extension: path.join(backendRoot, "extension"),
     };
   });
@@ -52,6 +55,13 @@ export default async function portableRoutes(app: FastifyInstance) {
   app.post("/local/firewall", { schema: { body: object } }, async () => {
     onlyPortable();
     return { ok: await setFirewall(true), firewall: await firewallOpen() };
+  });
+
+  app.post("/local/capteurs", { schema: { body: object } }, async () => {
+    onlyPortable();
+    if ((await capteursActive()) === null)
+      throw Object.assign(new Error("Température du processeur : rien à activer sur ce système"), { statusCode: 501 });
+    return { ok: await setCapteurs(true), capteurs: await capteursActive() };
   });
 
   app.post<{ Body: { sure: true } }>(

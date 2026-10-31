@@ -38,10 +38,11 @@ describe("GET /system/perf", () => {
     }
   });
 
-  it("garde les champs facultatifs fournis (fréquence, mémoire vidéo, disque, réseau)", async () => {
+  it("garde les champs facultatifs fournis (fréquence, température du processeur, mémoire vidéo, disque, réseau)", async () => {
     const perf = {
       cpu: 40,
       cpuMhz: 3200,
+      cpuTempC: 64,
       ram: { used: 8, total: 16, percent: 50 },
       gpu: { name: "Carte de test", usage: 70, dedicated: true, vramUsedMb: 2048, vramTotalMb: 8192 },
       disk: { freeGb: 120.5, totalGb: 476.9, activity: 12 },

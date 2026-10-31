@@ -1198,7 +1198,9 @@
     <string name="perf_option_unreadable">indisponible</string>
     <string name="perf_option_soon">arrive bientôt</string>
     <string name="perf_gpu_temp_alert">GPU °C</string>
+    <string name="perf_cpu_temp_alert">CPU °C</string>
     <string name="perf_extras_separator">"  ·  "</string>
+    <string name="perf_cpu_temp_line">CPU %1$d °C</string>
     <string name="perf_gpu_temp_line">GPU %1$d °C</string>
     <string name="perf_fan_line">Ventilateur %1$s</string>
     <string name="perf_cpu_freq_line">CPU %1$s GHz</string>

@@ -421,6 +421,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                     if (cpuOn) context.getString(R.string.perf_cpu) to usageLevel(perf.cpu) else null,
                     if (gpuOn) context.getString(R.string.perf_gpu) to usageLevel(perf.gpu!!.usage) else null,
                     if (ramOn) context.getString(R.string.perf_ram) to usageLevel(perf.ramPercent) else null,
+                    if (PerfOption.CPU_TEMP in choice) perf.cpuTempC?.let { context.getString(R.string.perf_cpu_temp_alert) to tempLevel(it) } else null,
                     if (PerfOption.GPU_TEMP in choice) perf.gpu?.tempC?.let { context.getString(R.string.perf_gpu_temp_alert) to tempLevel(it) } else null,
                 ),
                 context::getString,
@@ -475,6 +476,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val calm = if (stale) R.attr.c_text_faint else R.attr.c_text_dim
         when (option) {
             PerfOption.CPU_FREQ -> Extra(context.getString(R.string.perf_cpu_freq_line, perfNumber(perf.cpuMhz!! / 1000.0)), calm)
+            PerfOption.CPU_TEMP -> perf.cpuTempC!!.let { Extra(context.getString(R.string.perf_cpu_temp_line, it), perfColorAttr(PerfSeries.CPU, PerfMark.VALUE, tempLevel(it), stale)) }
             PerfOption.GPU_TEMP -> perf.gpu!!.tempC!!.let { Extra(context.getString(R.string.perf_gpu_temp_line, it), perfColorAttr(PerfSeries.GPU, PerfMark.VALUE, tempLevel(it), stale)) }
             PerfOption.GPU_FAN -> perf.gpu!!.fanRpm!!.let {
                 // « Arrêté » est un texte tertiaire ; le ventilateur n'est jamais en alerte.

@@ -307,12 +307,17 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const perf = await call("GET", "/system/perf");
         if (!controlled()) return expectStatus(perf, 501, "/system/perf");
         expectStatus(perf, 200, "/system/perf");
-        const { cpu, ram, gpu, cpuMhz, disk, net } = perf.json;
+        const { cpu, ram, gpu, cpuMhz, cpuTempC, disk, net } = perf.json;
         expect(typeof cpu === "number" && cpu >= 0 && cpu <= 100, `processeur hors 0-100 : ${cpu}`);
         expect(ram?.total > 0, "mémoire totale absente");
         // Champs facultatifs : absents si illisibles, mais bien typés et bornés quand ils sont là.
         const count = (n: unknown) => Number.isInteger(n) && (n as number) >= 0;
         expect(cpuMhz === undefined || (count(cpuMhz) && cpuMhz > 0), `fréquence invalide : ${cpuMhz}`);
+        // Température du processeur : absente sans lecteur (macmon, capteur Windows), jamais une valeur inventée.
+        expect(
+          cpuTempC === undefined || (count(cpuTempC) && cpuTempC >= 10 && cpuTempC <= 150),
+          `température du processeur invalide : ${cpuTempC}`,
+        );
         expect(
           gpu?.vramUsedMb === undefined || (count(gpu.vramUsedMb) && gpu.vramUsedMb <= (gpu.vramTotalMb ?? Infinity)),
           `mémoire vidéo utilisée invalide : ${gpu?.vramUsedMb}`,
@@ -333,6 +338,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expect(net === undefined || (count(net.upKBps) && count(net.downKBps)), `réseau invalide : ${JSON.stringify(net)}`);
         const extras = [
           cpuMhz && `${cpuMhz} MHz`,
+          cpuTempC && `processeur ${cpuTempC} °C`,
           disk && `disque ${disk.freeGb}/${disk.totalGb} Go`,
           net && `réseau ${net.downKBps}/${net.upKBps} Ko/s`,
           gpu?.vramTotalMb && `vram ${gpu.vramUsedMb ?? "?"}/${gpu.vramTotalMb} Mo`,

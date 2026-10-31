@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 /**
  * Compile le pilote Windows (src/win/helper/) et le lanceur (src/win/launcher/), C# .NET Framework 4.8, en
- * src/win/MateHelper.exe et src/win/Mate.exe, depuis le Mac ou Windows. Demande le SDK .NET 8
+ * src/win/MateHelper.exe, src/win/Mate.exe et src/win/MateCapteurs/, depuis le Mac ou Windows. Demande le SDK .NET 8
  * (`dotnet` dans le PATH ou dans ~/.dotnet), figé par backend/global.json (lancé depuis backend/). Les exe sont gardés dans le dépôt : le compagnon et le paquet s'en
  * servent sans SDK.
  */
@@ -31,4 +31,20 @@ for (const [dir, exe] of [
   });
   fs.copyFileSync(path.join(out, exe), path.join(backend, "src", "win", exe));
   console.log(`src/win/${exe} à jour`);
+}
+
+// Capteur de température : un exe et ses DLL (LibreHardwareMonitorLib), copiés tels quels dans src/win/MateCapteurs/.
+{
+  const project = path.join(backend, "src", "win", "capteurs");
+  const out = path.join(project, "bin", "Release");
+  execFileSync(dotnet(), ["build", project, "-c", "Release", "-o", out, "--nologo"], {
+    cwd: backend,
+    stdio: "inherit",
+    env: { ...process.env, DOTNET_CLI_TELEMETRY_OPTOUT: "1", DOTNET_NOLOGO: "1" },
+  });
+  const dest = path.join(backend, "src", "win", "MateCapteurs");
+  fs.rmSync(dest, { recursive: true, force: true });
+  fs.mkdirSync(dest, { recursive: true });
+  for (const f of fs.readdirSync(out)) if (/\.(exe|dll|config)$/.test(f)) fs.copyFileSync(path.join(out, f), path.join(dest, f));
+  console.log("src/win/MateCapteurs/ à jour");
 }

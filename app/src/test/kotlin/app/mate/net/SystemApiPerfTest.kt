@@ -77,4 +77,11 @@ class SystemApiPerfMoreTest {
         assertNull(p.net)
         assertNull(p.disk!!.activity)
     }
+
+    @Test
+    fun `parsePerf lit la temperature du processeur, absente sinon`() {
+        val ram = """"ram":{"used":8,"total":16,"percent":50}"""
+        assertEquals(64, parsePerf("""{"cpu":10,"cpuTempC":64,$ram}""").cpuTempC)
+        assertNull(parsePerf("""{"cpu":10,$ram}""").cpuTempC)
+    }
 }

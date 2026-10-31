@@ -94,7 +94,7 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     (/^(POST|PUT|DELETE)$/.test(method) && /^\/local\/config\/[a-z0-9/-]+$/.test(url)) ||
     (method === "POST" && (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update")) ||
     // Panneau de l'appli portable (routes/portable.ts) : corps JSON exigé, pas envoyable par un autre site.
-    (method === "POST" && /^\/local\/(autostart|firewall|forget|quit|update)$/.test(url)) ||
+    (method === "POST" && /^\/local\/(autostart|firewall|capteurs|forget|quit|update)$/.test(url)) ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
     (method === "POST" && (url === "/browser/extension" || url === "/browser/extension/commands")) ||
     // Porte MCP des IA de bureau (routes/mcp.ts) : corps JSON exigé par le SDK, pas envoyable par un autre site.

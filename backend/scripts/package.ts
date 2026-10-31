@@ -157,6 +157,10 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
     // Le lanceur n'est pas dans le runtime : c'est l'exe lui-même. Essai : pas de node, déjà sur l'ordinateur.
     copy(path.join(backend, "src", "win", "MateHelper.exe"), path.join(dest, "src", "win", "MateHelper.exe"));
     copy(path.join(backend, "scripts", "firewall-windows.ps1"), path.join(dest, "scripts", "firewall-windows.ps1"));
+    copy(path.join(backend, "scripts", "capteurs-windows.ps1"), path.join(dest, "scripts", "capteurs-windows.ps1"));
+    for (const f of fs.readdirSync(path.join(backend, "src", "win", "MateCapteurs"))) {
+      copy(path.join(backend, "src", "win", "MateCapteurs", f), path.join(dest, "src", "win", "MateCapteurs", f));
+    }
     if (!essai) extract(await nodeArchive(sums, "-win-x64.zip"), "node.exe", path.join(dest, "node", "node.exe"));
   } else {
     copy(path.join(backend, "src", "mac", "NowPlaying.dylib"), path.join(dest, "src", "mac", "NowPlaying.dylib"));
