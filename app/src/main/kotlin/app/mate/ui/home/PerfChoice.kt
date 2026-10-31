@@ -18,7 +18,8 @@ enum class PerfGroup(@StringRes val title: Int) {
 }
 
 /**
- * Infos que le widget Performances peut montrer. `soon` : lue par une autre issue (images par seconde), la place est prévue mais grisée tant qu'elle n'est pas lue ; une option ne se coche jamais avant.
+ * Infos que le widget Performances peut montrer. `soon` : lue par une autre issue (images par
+ * seconde), la place est prévue mais grisée tant qu'elle n'est pas lue ; une option ne se coche jamais avant.
  */
 enum class PerfOption(val key: String, val group: PerfGroup, @StringRes val label: Int, val soon: Boolean = false) {
     CPU("cpu", PerfGroup.CPU, R.string.perf_opt_cpu),

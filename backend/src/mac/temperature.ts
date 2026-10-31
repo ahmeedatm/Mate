@@ -21,10 +21,11 @@ export function parseMacmonTemp(output: string): number | null {
   }
 }
 
-let binary: string | null | undefined;
+let binary: string | undefined;
 
 export async function cpuTemperature(): Promise<number | null> {
-  binary ??= CANDIDATES.find((p) => fs.existsSync(p)) ?? null;
+  // Cherché à chaque lecture tant qu'il manque : un macmon installé après le démarrage du compagnon est pris sans le relancer.
+  binary ??= CANDIDATES.find((p) => fs.existsSync(p));
   if (!binary) return null;
   return parseMacmonTemp(await run(binary, ["pipe", "-s", "1", "-i", INTERVAL_MS], READ_TIMEOUT_MS));
 }

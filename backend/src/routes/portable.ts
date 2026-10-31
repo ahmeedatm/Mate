@@ -59,6 +59,8 @@ export default async function portableRoutes(app: FastifyInstance) {
 
   app.post("/local/capteurs", { schema: { body: object } }, async () => {
     onlyPortable();
+    if ((await capteursActive()) === null)
+      throw Object.assign(new Error("Température du processeur : rien à activer sur ce système"), { statusCode: 501 });
     return { ok: await setCapteurs(true), capteurs: await capteursActive() };
   });
 
