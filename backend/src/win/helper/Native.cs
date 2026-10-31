@@ -59,6 +59,7 @@ namespace Mate
                 case "mixer": return Mixer(req);
                 case "perf": return Perf(req);
                 case "cpu": return Cpu();
+                case "fps": return Fps();
                 case "counters": return Counters(req);
                 case "system": SystemCommand(Str(req, "command")); return true;
                 case "locked": return SessionLocked();

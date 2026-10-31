@@ -245,6 +245,11 @@ export function gpuPerf(): Promise<GpuPerf | null> {
   return call<GpuPerf | null>("perf");
 }
 
+/** FPS du jeu en cours lus par ADLX (carte AMD) : `{ fps }`, `fps` nul sans jeu ; null sans carte AMD ni pilote. */
+export function gameFps(): Promise<{ fps: number | null } | null> {
+  return call<{ fps: number | null } | null>("fps");
+}
+
 /** Activité du processeur (0-100) selon le Gestionnaire des tâches (« % Processor Utility ») ; null si le compteur est illisible. */
 export function cpuUtility(): Promise<number | null> {
   return call<number | null>("cpu");

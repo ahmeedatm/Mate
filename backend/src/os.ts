@@ -216,6 +216,7 @@ export function getPerf(): Promise<Perf> {
     cpuPercent: isWindows ? win.cpuUtility : null,
     gpu: isWindows ? win.gpuPerf : null,
     cpuTemp: isWindows ? winCapteurs.cpuTemperature : macTemperature.cpuTemperature,
+    fps: isWindows ? win.gameFps : undefined,
     cpuMhz: isWindows ? () => winCounter(CPU_FREQUENCY) : undefined,
     disk: diskPerf,
     net: isWindows ? winNet : macSystem.netThroughput,

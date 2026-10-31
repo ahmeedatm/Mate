@@ -395,3 +395,22 @@ test("cpuTempC : arrondie à l'entier ; absente sans source, hors 10–150 °C, 
   assert.equal(failing.cpuTempC, undefined);
   assert.equal(failing.cpu, 75);
 });
+
+test("fps : entier du jeu en cours ; null quand aucun jeu n'est mesuré ; absent sans lecteur, illisible ou en échec", async () => {
+  assert.equal((await perfOf({ fps: async () => ({ fps: 143.6 }) })).fps, 144);
+  const noGame = await perfOf({ fps: async () => ({ fps: null }) });
+  assert.equal(noGame.fps, null);
+  assert.ok("fps" in noGame);
+  assert.ok(!("fps" in (await perfOf({}))));
+  for (const value of [{ fps: 0 }, { fps: -3 }, { fps: NaN }, { fps: Infinity }]) {
+    assert.equal((await perfOf({ fps: async () => value })).fps, null, JSON.stringify(value));
+  }
+  assert.ok(!("fps" in (await perfOf({ fps: async () => null }))));
+  const failing = await perfOf({
+    fps: async () => {
+      throw new Error("lecteur");
+    },
+  });
+  assert.ok(!("fps" in failing));
+  assert.equal(failing.cpu, 75);
+});
