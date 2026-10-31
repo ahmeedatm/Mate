@@ -178,6 +178,11 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           "ordre foreground de l'extérieur",
         );
         const catalog = await call("GET", "/deck/catalog");
+        // Hors Mac et Windows, le pilotage répond 501 : pas de veille ni de liste d'applis.
+        if (!controlled()) {
+          expectStatus(catalog, 501, "/deck/catalog hors Mac et Windows");
+          return "pas de pilotage ici (501)";
+        }
         expectStatus(catalog, 200, "/deck/catalog");
         expect(Array.isArray(catalog.json.apps), "/deck/catalog sans liste d'applis");
         return `${catalog.json.apps.length} applis à choisir`;
