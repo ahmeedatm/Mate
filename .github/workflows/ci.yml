@@ -1,8 +1,7 @@
-# CI de la copie GitHub (ahmeedatm/Mate) : mêmes tests que le stage test de .gitlab-ci.yml, mêmes images.
+# CI du dépôt GitHub (ahmeedatm/Mate).
 # Sur chaque PR, seuls les jobs de la zone touchée tournent ; sur master, tout tourne.
 # Le job « ci » rassemble les résultats : c'est le seul contrôle exigé par la règle de master.
-# Pas de release ni d'essais ici : ils dépendent du registre de paquets GitLab et de la clé de signature
-# (.github/copie-github.md).
+# Pas encore de release ni d'essais ici (.github/copie-github.md).
 
 name: CI
 
