@@ -237,7 +237,7 @@ Les puces ci-dessous sont reprises mot pour mot de l'ancien `CLAUDE.md` (« Conv
 
 ### Verrou de la tablette
 
-- **Verrou de la tablette** (`ui/LockScreen`, `lock/LockLogic`, `Prefs.computerLocked/tabletLocked/lockCodeHash`) : écran plein dans sa propre fenêtre (`Dialog`), au-dessus des boîtes ; ordinateur verrouillé = `backend/src/screen-lock.ts` (relu chaque seconde, `screenLocked` de `os.ts` : `mac/lock.ts` par `ioreg`, op `locked` de `helper/Native.System.cs`), 423 sur toute route à jeton sauf `/tablet/poll|result`, ordre `lock` (seul avec `meeting` remis pendant le verrou), `locked` dans l'état du poll ; à la main = cadenas `rail_lock`, code à 4 chiffres (Réglages > Tablette) ; levé par l'ordinateur ou par le code, jamais l'un par l'autre ; secours : appui long + code technicien.
+- **Verrou de la tablette** (`ui/LockScreen`, `lock/LockLogic`, `Prefs.computerLocked/tabletLocked/lockCodeHash/blockOnComputerLock`) : écran plein (celui de l'ordinateur verrouillé se coupe dans Réglages > Tablette : pastille « verrouillé » par `linkMark`, 423 traduit par `errorText`) dans sa propre fenêtre (`Dialog`), au-dessus des boîtes ; ordinateur verrouillé = `backend/src/screen-lock.ts` (relu chaque seconde, `screenLocked` de `os.ts` : `mac/lock.ts` par `ioreg`, op `locked` de `helper/Native.System.cs`), 423 sur toute route à jeton sauf `/tablet/poll|result`, ordre `lock` (seul avec `meeting` remis pendant le verrou), `locked` dans l'état du poll ; à la main = cadenas `rail_lock`, code à 4 chiffres (Réglages > Tablette) ; levé par l'ordinateur ou par le code, jamais l'un par l'autre ; secours : appui long + code technicien.
 
 ### Commande vocale
 

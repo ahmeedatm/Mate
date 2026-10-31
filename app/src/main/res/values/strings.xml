@@ -934,7 +934,7 @@
     <string name="lock_code_choose">Choisir le code de verrouillage</string>
     <string name="lock_code_change">Changer le code de verrouillage</string>
     <string name="block_on_computer_lock">Bloquer la tablette quand l\'ordinateur est verrouillé</string>
-    <string name="block_on_computer_lock_hint">Coupé, la tablette reste utilisable ; ce qui touche l\'ordinateur attend qu\'il soit déverrouillé.</string>
+    <string name="block_on_computer_lock_hint">Activé : écran bloqué tant que l\'ordinateur l\'est. Coupé : la tablette reste utilisable ; ce qui touche l\'ordinateur répond qu\'il est verrouillé.</string>
     <string name="lock_code_settings_hint">Le cadenas de la barre de gauche verrouille la tablette ; ce code la déverrouille.</string>
     <string name="rail_lock">Verrouiller la tablette</string>
     <string name="kiosk_on">Actif : l\'appli est verrouillée à l\'écran et sert d\'écran d\'accueil.</string>

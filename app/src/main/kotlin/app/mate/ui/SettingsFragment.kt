@@ -649,7 +649,10 @@ class SettingsFragment :
         notifDiscreet.setOnCheckedChangeListener { _, checked -> Prefs.setNotificationsDiscreet(ctx, checked) }
         // Alerte de réunion : lue à la vérification de chaque minute, rien d'autre à prévenir.
         meetingAlert.setOnCheckedChangeListener { _, checked -> Prefs.setMeetingAlert(ctx, checked) }
-        blockOnComputerLock.setOnCheckedChangeListener { _, checked -> main.lockScreen.setBlockOnComputerLock(checked) }
+        // Relu à chaque affichage des Réglages (isChecked) : l'écran du verrou ne bouge que sur un vrai changement.
+        blockOnComputerLock.setOnCheckedChangeListener { _, checked ->
+            if (checked != Prefs.blockOnComputerLock(ctx)) main.lockScreen.setBlockOnComputerLock(checked)
+        }
         lockCode.setOnClickListener { main.lockScreen.chooseCode { renderLockCode() } }
         // Mot de réveil : l'activer télécharge le modèle s'il manque ; l'écoute suit tout de suite.
         wakeWord.setOnCheckedChangeListener { _, checked ->

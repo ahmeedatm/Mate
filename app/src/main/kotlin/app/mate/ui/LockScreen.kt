@@ -49,11 +49,12 @@ class LockScreen(private val activity: MainActivity) {
     fun restore() = render()
 
     fun setComputerLocked(locked: Boolean) {
-        val changed = locked != Prefs.computerLocked(activity)
-        Prefs.setComputerLocked(activity, locked)
+        // Chaque 423 redit « verrouillé » : préférence et pastille (ui/Navigation.renderLink) touchées au seul changement.
+        if (locked != Prefs.computerLocked(activity)) {
+            Prefs.setComputerLocked(activity, locked)
+            activity.refreshLink()
+        }
         render()
-        // La pastille de la barre dit « verrouillé » (ui/Navigation.renderLink).
-        if (changed) activity.refreshLink()
     }
 
     /** Réglages > Tablette : coupé, l'écran plein de l'ordinateur verrouillé part tout de suite ; remis, il revient. */
