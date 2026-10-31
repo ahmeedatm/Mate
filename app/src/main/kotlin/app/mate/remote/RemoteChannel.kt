@@ -182,7 +182,7 @@ class RemoteChannel(private val activity: MainActivity) {
             null
         }
         "foreground" -> {
-            activity.onForeground(command.getString("app"), command.optString("bundleId"))
+            activity.onForeground(command.getString("app"), command.optString("bundleId"), command.optString("file"))
             null
         }
         "lock" -> activity.lockScreen.setComputerLocked(command.getBoolean("locked")).let { null }

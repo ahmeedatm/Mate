@@ -117,8 +117,9 @@ export async function isAppInCall(app: string): Promise<boolean> {
 }
 
 /** Appli au premier plan (sans permission : NSWorkspace). */
-export async function frontApp(): Promise<{ name: string; bundleId: string }> {
+/** `file` : nom du fichier .app sans l'extension, celui du catalogue des applis (`localizedName` change avec la langue du Mac). */
+export async function frontApp(): Promise<{ name: string; bundleId: string; file: string }> {
   const script =
-    'ObjC.import("AppKit"); const a = $.NSWorkspace.sharedWorkspace.frontmostApplication; JSON.stringify({ name: ObjC.unwrap(a.localizedName) || "", bundleId: ObjC.unwrap(a.bundleIdentifier) || "" })';
+    'ObjC.import("AppKit"); const a = $.NSWorkspace.sharedWorkspace.frontmostApplication; JSON.stringify({ name: ObjC.unwrap(a.localizedName) || "", bundleId: ObjC.unwrap(a.bundleIdentifier) || "", file: (a.bundleURL ? ObjC.unwrap(a.bundleURL.lastPathComponent) : "").replace(/\\.app$/, "") })';
   return JSON.parse(await osascript(script, [], "JavaScript"));
 }

@@ -16,9 +16,12 @@ class GameSession {
     /** Appli de jeu quittée, délai de grâce en cours. */
     private var leaving = false
 
-    /** Une appli au premier plan : `name` et `bundleId` (Windows : nom de l'exe) se comparent à la liste, sans casse. */
-    fun onForeground(name: String, bundleId: String, games: List<String>): Step {
-        val isGame = isGame(name, bundleId, games)
+    /**
+     * Une appli au premier plan : `name`, `bundleId` (Windows : nom de l'exe) et `file` (Mac : nom du .app, celui du
+     * catalogue même quand le système est dans une autre langue) se comparent à la liste, sans casse.
+     */
+    fun onForeground(name: String, bundleId: String, file: String, games: List<String>): Step {
+        val isGame = isGame(name, bundleId, file, games)
         return when {
             isGame && !active -> Step.START.also { active = true; leaving = false }
             isGame && leaving -> Step.RETURN.also { leaving = false }
@@ -45,8 +48,8 @@ class GameSession {
     /** Fin de jeu : page où revenir (celle d'avant) si l'écran montre encore l'écran de jeu, null s'il est parti ailleurs. */
     fun returnTo(currentPage: Int?, gamePage: Int, previousPage: Int): Int? = previousPage.takeIf { currentPage == gamePage }
 
-    private fun isGame(name: String, bundleId: String, games: List<String>): Boolean {
-        val front = setOf(stem(name), stem(bundleId))
+    private fun isGame(name: String, bundleId: String, file: String, games: List<String>): Boolean {
+        val front = setOf(stem(name), stem(bundleId), stem(file)) - ""
         return games.any { stem(it) in front }
     }
 

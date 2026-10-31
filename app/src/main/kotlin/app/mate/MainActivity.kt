@@ -713,10 +713,10 @@ class MainActivity : AppCompatActivity() {
      * Ordre `foreground` de l'ordinateur : l'appli au premier plan. Une appli de la liste de jeu bascule sur l'écran de
      * jeu choisi (sauf saisie, écran plein ou appel) ; la quitter plus de [GAME_GRACE_MS] revient à l'écran d'avant.
      */
-    fun onForeground(app: String, bundleId: String) {
+    fun onForeground(app: String, bundleId: String, file: String = "") {
         val layout = shownLayout()
         val games = if (layout.gameProfile < 0 || layout.gameProfile == layout.callProfile) emptyList() else layout.gameApps
-        when (game.onForeground(app, bundleId, games)) {
+        when (game.onForeground(app, bundleId, file, games)) {
             GameSession.Step.START -> startGame(layout)
             GameSession.Step.LEAVE -> window.decorView.postDelayed(gameLeft, GAME_GRACE_MS)
             GameSession.Step.RETURN -> window.decorView.removeCallbacks(gameLeft)

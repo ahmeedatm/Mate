@@ -12,43 +12,49 @@ class GameSessionTest {
 
     @Test
     fun `une appli de la liste au premier plan lance le jeu, une seule fois`() {
-        assertEquals(GameSession.Step.START, session.onForeground("Steam", "com.valvesoftware.steam", games))
+        assertEquals(GameSession.Step.START, session.onForeground("Steam", "com.valvesoftware.steam", "", games))
         assertTrue(session.active)
-        assertEquals(GameSession.Step.NONE, session.onForeground("Steam", "com.valvesoftware.steam", games))
+        assertEquals(GameSession.Step.NONE, session.onForeground("Steam", "com.valvesoftware.steam", "", games))
     }
 
     @Test
     fun `une appli hors liste ne fait rien`() {
-        assertEquals(GameSession.Step.NONE, session.onForeground("Finder", "com.apple.finder", games))
+        assertEquals(GameSession.Step.NONE, session.onForeground("Finder", "com.apple.finder", "", games))
         assertFalse(session.active)
     }
 
     @Test
     fun `la liste vide ne lance rien`() {
-        assertEquals(GameSession.Step.NONE, session.onForeground("Steam", "steam", emptyList()))
+        assertEquals(GameSession.Step.NONE, session.onForeground("Steam", "steam", "", emptyList()))
     }
 
     @Test
     fun `le nom se compare sans casse, et Windows par le nom de l'exe`() {
-        assertEquals(GameSession.Step.START, session.onForeground("steam", "steam.exe", listOf("STEAM")))
+        assertEquals(GameSession.Step.START, session.onForeground("steam", "steam.exe", "", listOf("STEAM")))
         session.reset()
-        assertEquals(GameSession.Step.START, session.onForeground("Autre", "minecraft.exe", listOf("Minecraft.exe")))
+        assertEquals(GameSession.Step.START, session.onForeground("Autre", "minecraft.exe", "", listOf("Minecraft.exe")))
+    }
+
+    @Test
+    fun `un Mac en francais, le nom du fichier du catalogue reconnait l appli`() {
+        val step = session.onForeground("Moniteur d'activité", "com.apple.ActivityMonitor", "Activity Monitor", listOf("Activity Monitor"))
+        assertEquals(GameSession.Step.START, step)
     }
 
     @Test
     fun `quitter le jeu attend le delai, y revenir avant l'annule`() {
-        session.onForeground("Steam", "steam", games)
-        assertEquals(GameSession.Step.LEAVE, session.onForeground("Finder", "finder", games))
-        assertEquals(GameSession.Step.NONE, session.onForeground("Mail", "mail", games))
-        assertEquals(GameSession.Step.RETURN, session.onForeground("Minecraft", "minecraft", games))
+        session.onForeground("Steam", "steam", "", games)
+        assertEquals(GameSession.Step.LEAVE, session.onForeground("Finder", "finder", "", games))
+        assertEquals(GameSession.Step.NONE, session.onForeground("Mail", "mail", "", games))
+        assertEquals(GameSession.Step.RETURN, session.onForeground("Minecraft", "minecraft", "", games))
         assertFalse(session.endIfLeft())
         assertTrue(session.active)
     }
 
     @Test
     fun `le delai ecoule, le jeu finit`() {
-        session.onForeground("Steam", "steam", games)
-        session.onForeground("Finder", "finder", games)
+        session.onForeground("Steam", "steam", "", games)
+        session.onForeground("Finder", "finder", "", games)
         assertTrue(session.endIfLeft())
         assertFalse(session.active)
         assertFalse(session.endIfLeft())

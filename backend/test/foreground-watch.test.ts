@@ -74,4 +74,17 @@ describe("appli au premier plan : l'ordinateur prévient la tablette", () => {
     stop();
     assert.deepEqual(events, [front("Steam"), front("Finder")]);
   });
+
+  it("garde le nom du fichier de l'appli quand le système le donne (Mac en français)", async () => {
+    const events: ForegroundEvent[] = [];
+    let reads = 0;
+    const stop = startForegroundWatch((e) => events.push(e), {
+      intervalMs: 1,
+      connected: () => true,
+      front: async () => (reads++, { name: "Moniteur d'activité", bundleId: "com.apple.ActivityMonitor", file: "Activity Monitor" }),
+    });
+    await until(() => reads >= 3);
+    stop();
+    assert.deepEqual(events, [{ app: "Moniteur d'activité", bundleId: "com.apple.ActivityMonitor", file: "Activity Monitor" }]);
+  });
 });

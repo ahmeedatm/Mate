@@ -293,7 +293,7 @@ export async function isAppRunning(app: string) {
   return (read().running ?? []).includes(app);
 }
 
-export async function frontApp(): Promise<{ name: string; bundleId: string }> {
+export async function frontApp(): Promise<{ name: string; bundleId: string; file?: string }> {
   if (isWindows) {
     const w = frontWin();
     const exe = w.exe.split(/[\\/]/).pop()!.toLowerCase();
