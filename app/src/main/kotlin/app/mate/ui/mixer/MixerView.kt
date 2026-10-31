@@ -2,10 +2,8 @@ package app.mate.ui.mixer
 
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.LinearGradient
 import android.graphics.Outline
 import android.graphics.Paint
-import android.graphics.Shader
 import android.os.SystemClock
 import android.text.InputType
 import android.util.AttributeSet
@@ -39,10 +37,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 
 /**
- * Onglet « Son » du deck : console de mixage de l'ordinateur, en métal brossé. En haut, les scènes (volumes
+ * Onglet « Son » du deck : console de mixage de l'ordinateur, sur fond uni. En haut, les scènes (volumes
  * enregistrés, rappelés en un toucher) ; dessous, une tranche par source : sortie, micro, puis chaque appli qui a du
  * son (Windows ; le Mac n'a pas de volume par appli). Relue 4 fois par seconde tant qu'elle est à l'écran, pour les
  * vumètres.
@@ -74,10 +71,9 @@ class MixerView @JvmOverloads constructor(
     /** Console basse (widget d'un profil) : rangée des scènes et tranches resserrées. */
     private var tight = false
 
-    // Plaque de métal brossé, dessinée derrière tout.
-    private val plate = Paint()
+    // Plaque unie (c_mx_plate), dessinée derrière tout.
+    private val plate = Paint().apply { color = themeColor(context, R.attr.c_mx_plate) }
     private val brush = Paint()
-    private val brushLines = Random(7).let { r -> FloatArray(400) { r.nextFloat() } }
     private val cShadow = themeColor(context, R.attr.c_mx_shadow)
     private val cHighlight = themeColor(context, R.attr.c_mx_highlight)
 
@@ -384,23 +380,12 @@ class MixerView @JvmOverloads constructor(
             renderScenes()
         }
         post { fitStrips() }
-        plate.shader = LinearGradient(0f, 0f, 0f, h.toFloat(), themeColor(context, R.attr.c_mx_plate_top), themeColor(context, R.attr.c_mx_plate_bottom), Shader.TileMode.CLAMP)
     }
 
     override fun onDraw(canvas: Canvas) {
         val w = width.toFloat()
         val h = height.toFloat()
         canvas.drawRect(0f, 0f, w, h, plate)
-        // Brossage discret : fines lignes horizontales à peine plus claires ou plus sombres.
-        var i = 0
-        var y = 0f
-        while (y < h) {
-            val v = brushLines[i++ % brushLines.size]
-            brush.color = if (v > 0.5f) cHighlight else cShadow
-            brush.alpha = ((if (v > 0.5f) v - 0.5f else 0.5f - v) * 40).toInt()
-            canvas.drawRect(0f, y, w, y + 1, brush)
-            y += 2f
-        }
         // Rainure sous les scènes.
         brush.alpha = 255
         brush.color = cShadow
