@@ -42,7 +42,7 @@ class PerfChoiceTest {
 
     @Test
     fun `une cle inconnue ou a venir est ignoree`() {
-        val config = JSONObject("""{"perf":{"a":["cpu","nimporte","cpu_temp","fps"]}}""")
+        val config = JSONObject("""{"perf":{"a":["cpu","nimporte","fps"]}}""")
         assertEquals(setOf(PerfOption.CPU), PerfChoice.read(config, "a"))
     }
 
@@ -53,13 +53,16 @@ class PerfChoiceTest {
         assertFalse(PerfOption.CPU_FREQ.readable(base))
         assertFalse(PerfOption.DISK_FREE.readable(base))
         assertFalse(PerfOption.NET_UP.readable(base))
+        assertFalse(PerfOption.CPU_TEMP.readable(base))
         val full = base.copy(
             cpuMhz = 3800,
+            cpuTempC = 64,
             gpu = GpuPerf("RTX", 90, true, 70, null, 6000, 8192),
             disk = DiskPerf(100.0, 500.0, null),
             net = NetPerf(1, 2),
         )
         assertTrue(PerfOption.CPU_FREQ.readable(full))
+        assertTrue(PerfOption.CPU_TEMP.readable(full))
         assertTrue(PerfOption.GPU_TEMP.readable(full))
         assertFalse(PerfOption.GPU_FAN.readable(full))
         assertTrue(PerfOption.GPU_VRAM.readable(full))
@@ -72,7 +75,7 @@ class PerfChoiceTest {
     fun `les options a venir ne sont jamais lisibles`() {
         val full = base.copy(cpuMhz = 1)
         for (o in PerfOption.entries.filter { it.soon }) assertFalse(o.readable(full))
-        assertEquals(setOf("cpu_temp", "fps"), PerfOption.entries.filter { it.soon }.map { it.key }.toSet())
+        assertEquals(setOf("fps"), PerfOption.entries.filter { it.soon }.map { it.key }.toSet())
     }
 
     @Test

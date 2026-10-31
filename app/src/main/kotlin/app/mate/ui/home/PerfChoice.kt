@@ -18,13 +18,12 @@ enum class PerfGroup(@StringRes val title: Int) {
 }
 
 /**
- * Infos que le widget Performances peut montrer. `soon` : lue par une autre issue (température du processeur, images par
- * seconde), la place est prévue mais grisée tant qu'elle n'est pas lue ; une option ne se coche jamais avant.
+ * Infos que le widget Performances peut montrer. `soon` : lue par une autre issue (images par seconde), la place est prévue mais grisée tant qu'elle n'est pas lue ; une option ne se coche jamais avant.
  */
 enum class PerfOption(val key: String, val group: PerfGroup, @StringRes val label: Int, val soon: Boolean = false) {
     CPU("cpu", PerfGroup.CPU, R.string.perf_opt_cpu),
     CPU_FREQ("cpu_freq", PerfGroup.CPU, R.string.perf_opt_cpu_freq),
-    CPU_TEMP("cpu_temp", PerfGroup.CPU, R.string.perf_opt_cpu_temp, soon = true),
+    CPU_TEMP("cpu_temp", PerfGroup.CPU, R.string.perf_opt_cpu_temp),
     GPU("gpu", PerfGroup.GPU, R.string.perf_opt_gpu),
     GPU_TEMP("gpu_temp", PerfGroup.GPU, R.string.perf_opt_gpu_temp),
     GPU_FAN("gpu_fan", PerfGroup.GPU, R.string.perf_opt_gpu_fan),
@@ -47,7 +46,8 @@ enum class PerfOption(val key: String, val group: PerfGroup, @StringRes val labe
         DISK_FREE -> perf.disk != null
         DISK_ACTIVITY -> perf.disk?.activity != null
         NET_UP, NET_DOWN -> perf.net != null
-        CPU_TEMP, FPS -> false
+        CPU_TEMP -> perf.cpuTempC != null
+        FPS -> false
     }
 
     companion object {
