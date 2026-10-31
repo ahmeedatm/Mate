@@ -174,6 +174,41 @@ class ProfilesTest {
         assertFalse(layout.nameMissing("Bureau", "Profil %d"))
     }
 
+    // Écran de jeu : un profil choisi par l'utilisateur et sa liste d'applis de jeu.
+
+    @Test
+    fun `l'ecran de jeu suit son profil quand on le deplace ou qu'on en retire un avant lui`() {
+        val layout = layoutOf(3)
+        layout.gameProfile = 2
+        layout.moveProfile(2, 0)
+        assertEquals(0, layout.gameProfile)
+        layout.moveProfile(0, 2)
+        assertEquals(2, layout.gameProfile)
+        assertTrue(layout.removeProfile(1))
+        assertEquals(1, layout.gameProfile)
+    }
+
+    @Test
+    fun `supprimer l'ecran de jeu retire le role, la liste reste`() {
+        val layout = layoutOf(3)
+        layout.gameProfile = 2
+        layout.gameApps += "Steam"
+        assertTrue(layout.removeProfile(2))
+        assertEquals(-1, layout.gameProfile)
+        assertEquals(listOf("Steam"), layout.gameApps)
+    }
+
+    @Test
+    fun `l'ecran de jeu et sa liste sont copies`() {
+        val layout = layoutOf(2)
+        layout.gameProfile = 1
+        layout.gameApps += "Steam"
+        val copy = layout.copy()
+        copy.gameApps += "Minecraft"
+        assertEquals(1, copy.gameProfile)
+        assertEquals(listOf("Steam"), layout.gameApps)
+    }
+
     // Rôles des profils : Accueil et Réunion. Un seul écran de base ; d'autres seulement si on en ajoute.
 
     @Test

@@ -35,6 +35,8 @@ function fakeTablet(server: TestServer) {
     deck: -1,
     call: 1,
     roles: true,
+    gameScreen: 0,
+    gameApps: ["Steam"],
     widgets: [{ t: "clock", s: "L", p: 0, c: 0, r: 0, cfg: {} }],
   };
   let top = ["clock"];
@@ -83,8 +85,9 @@ function fakeTablet(server: TestServer) {
       try {
         const res = await server.call("POST", "/tablet/poll", { state: STATE });
         for (const order of res.json.commands ?? []) {
-          if (order.command.type === "layout")
-            await server.call("POST", "/tablet/result", { id: order.id, ...apply(order.command), state: STATE });
+          // Les autres ordres de l'ordinateur (appli au premier plan) reçoivent un simple accusé.
+          const result = order.command.type === "layout" ? apply(order.command) : { ok: true };
+          await server.call("POST", "/tablet/result", { id: order.id, ...result, state: STATE });
         }
       } catch {
         await new Promise((r) => setTimeout(r, 200));
@@ -468,7 +471,7 @@ test.describe("page locale : profils et barres", () => {
       await expect(page.locator("#pf-msg")).toHaveText("Envoyé à la tablette.");
       let sent = tablet.sets.at(-1).layout;
       expect(sent.names).toEqual(["Accueil", "Profil 2", "Réunion"]);
-      expect([sent.home, sent.call]).toEqual([0, 2]);
+      expect([sent.home, sent.call, sent.gameScreen]).toEqual([0, 2, 0]);
 
       // Accueil, avec son widget, passe en dernier : home et call suivent.
       await centered(page, "#pf-chips .cx >> nth=1");
@@ -484,7 +487,8 @@ test.describe("page locale : profils et barres", () => {
       await expect(page.locator("#pf-msg")).toHaveText("Envoyé à la tablette.");
       sent = tablet.sets.at(-1).layout;
       expect(sent.names).toEqual(["Profil 2", "Réunion", "Accueil"]);
-      expect([sent.home, sent.call]).toEqual([2, 1]);
+      expect([sent.home, sent.call, sent.gameScreen]).toEqual([2, 1, 2]);
+      expect(sent.gameApps).toEqual(["Steam"]);
       expect(sent.widgets.filter((w: any) => w.p === 2).length).toBeGreaterThan(0);
       expect(sent.widgets.filter((w: any) => w.p === 0)).toHaveLength(0);
 

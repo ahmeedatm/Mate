@@ -438,6 +438,7 @@ export const PROFILES_JS = `
       l.home = map(l.home);
       if (l.deck >= 0) l.deck = map(l.deck);
       if (l.call >= 0) l.call = map(l.call);
+      if (l.gameScreen >= 0) l.gameScreen = map(l.gameScreen);
       S.page = to;
     }
     function removeProfile(index) {
@@ -452,6 +453,7 @@ export const PROFILES_JS = `
       l.home = after(l.home);
       l.deck = after(l.deck);
       l.call = after(l.call);
+      if (l.gameScreen >= 0) l.gameScreen = after(l.gameScreen);
       S.page = Math.min(index, l.names.length - 1);
       S.sel = -1;
     }

@@ -460,7 +460,7 @@ export async function systemCommand(command: SystemCommand) {
 }
 
 /** Appli au premier plan de l'ordinateur (sert aux alertes des agents Claude) ; Windows : `bundleId` = nom de l'exe en minuscules. */
-export async function frontApp(): Promise<{ name: string; bundleId: string }> {
+export async function frontApp(): Promise<{ name: string; bundleId: string; file?: string }> {
   if (isMac) return macSystem.frontApp();
   if (isWindows) return win.frontApp();
   unsupported();

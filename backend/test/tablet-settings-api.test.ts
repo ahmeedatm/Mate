@@ -23,6 +23,18 @@ const STATE = {
   settings: SETTINGS,
 };
 
+/**
+ * Prochain ordre du type demandé. La veille du premier plan pousse son ordre `foreground` à chaque (re)connexion de la
+ * tablette : il peut arriver avant celui qu'on attend, dans un poll à part.
+ */
+async function nextOrder(type: string) {
+  for (;;) {
+    const { json } = await server.call("POST", "/tablet/poll", { state: STATE });
+    const order = json.commands.find((c: { command: { type: string } }) => c.command.type === type);
+    if (order) return order;
+  }
+}
+
 describe("panneau Tablette", () => {
   // En premier : tant qu'aucune tablette n'a interrogé ce serveur, elle est déconnectée.
   it("sans tablette, la carte est masquée et un réglage est refusé", async () => {
@@ -78,10 +90,10 @@ describe("panneau Tablette", () => {
   }
 
   it("rend l'erreur de la tablette", async () => {
-    const polling = server.call("POST", "/tablet/poll", { state: STATE });
+    const polling = nextOrder("settings");
     await new Promise((r) => setTimeout(r, 300));
     const put = server.call("PUT", "/local/tablet/settings", { volume: 0 }, false);
-    const [order] = (await polling).json.commands;
+    const order = await polling;
     await server.call("POST", "/tablet/result", { id: order.id, ok: false, error: "Volume indisponible" });
     const done = await put;
     assert.equal(done.status, 502);
@@ -101,10 +113,10 @@ describe("panneau Tablette", () => {
   });
 
   it("demande à la tablette de chercher une mise à jour et rend son état", async () => {
-    const polling = server.call("POST", "/tablet/poll", { state: STATE });
+    const polling = nextOrder("update");
     await new Promise((r) => setTimeout(r, 300));
     const post = server.call("POST", "/local/tablet/update", { action: "check" }, false);
-    const [order] = (await polling).json.commands;
+    const order = await polling;
     assert.deepEqual(order.command, { type: "update", action: "check" });
 
     const update = { checked: true, available: "0.2.12", installing: false, error: null, kiosk: true };

@@ -168,6 +168,27 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "écran de jeu (appli au premier plan)",
+      run: async () => {
+        // La veille (src/foreground-watch.ts) pousse l'appli devant ; la tablette la compare à sa liste de jeux, choisie
+        // parmi les applis du catalogue. L'ordre foreground est refusé s'il vient de l'extérieur.
+        expectStatus(
+          await call("POST", "/tablet/command", { type: "foreground", app: "Sanity", bundleId: "sanity" }),
+          400,
+          "ordre foreground de l'extérieur",
+        );
+        const catalog = await call("GET", "/deck/catalog");
+        // Hors Mac et Windows, le pilotage répond 501 : pas de veille ni de liste d'applis.
+        if (!controlled()) {
+          expectStatus(catalog, 501, "/deck/catalog hors Mac et Windows");
+          return "pas de pilotage ici (501)";
+        }
+        expectStatus(catalog, 200, "/deck/catalog");
+        expect(Array.isArray(catalog.json.apps), "/deck/catalog sans liste d'applis");
+        return `${catalog.json.apps.length} applis à choisir`;
+      },
+    },
+    {
       name: "ordinateur verrouillé (écran bloquant de la tablette)",
       run: async () => {
         // L'ordre lock n'est poussé que par la veille du verrouillage (src/screen-lock.ts) : refusé de l'extérieur.

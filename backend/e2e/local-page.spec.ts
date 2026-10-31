@@ -213,6 +213,11 @@ test.describe("page locale GET /", () => {
       while (running) {
         const { json } = await server.call("POST", "/tablet/poll", { state: state() });
         for (const { id, command } of json.commands ?? []) {
+          // Les ordres venus de l'ordinateur (disposition, appli au premier plan) ne sont pas des réglages.
+          if (command.type !== "settings") {
+            await server.call("POST", "/tablet/result", { id, ok: true, state: state() });
+            continue;
+          }
           const { type, ...change } = command;
           received.push(change);
           settings = { ...settings, ...change };

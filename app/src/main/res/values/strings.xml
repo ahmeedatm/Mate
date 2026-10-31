@@ -977,6 +977,12 @@
     <string name="profile_blank_desc">Une grille vide, à remplir de widgets.</string>
     <string name="profile_edit">Modifier cet écran</string>
     <string name="profile_rename">Nom et icône</string>
+    <string name="profile_game">Réglage de jeu</string>
+    <string name="profile_game_tag">Jeu</string>
+    <string name="game_title">Jeu : %1$s</string>
+    <string name="game_show">Afficher quand je joue</string>
+    <string name="game_hint">Active, puis coche les applis. Quand une des applis cochées est devant sur l\'ordinateur, la tablette passe sur cet écran, puis revient à l\'écran d\'avant quand tu la quittes.</string>
+    <string name="game_none">Aucune appli trouvée sur l\'ordinateur.</string>
     <string name="profile_rename_hint">Nom de l\'écran</string>
     <string name="profile_delete">Supprimer</string>
     <string name="profile_delete_confirm">Supprimer l\'écran « %s » et ses widgets ?</string>
