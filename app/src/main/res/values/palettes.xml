@@ -56,8 +56,7 @@
         <item name="c_hue_pink">#FFFF8FB8</item>
         <item name="c_hue_yellow">#FFFFD45B</item>
         <item name="c_hue_blue">#FF6FA8FF</item>
-        <item name="c_mx_plate_top">?attr/c_surface_raised</item>
-        <item name="c_mx_plate_bottom">?attr/c_surface</item>
+        <item name="c_mx_plate">#FF000000</item>
         <item name="c_mx_lcd_bg">#FF0E0F11</item>
         <item name="c_mx_lcd_text">#FFB8F34A</item>
         <item name="c_mx_text">?attr/c_text</item>
@@ -127,8 +126,7 @@
         <item name="c_hue_pink">#FFB8305F</item>
         <item name="c_hue_yellow">#FF7A5B00</item>
         <item name="c_hue_blue">#FF1F5FBF</item>
-        <item name="c_mx_plate_top">?attr/c_surface</item>
-        <item name="c_mx_plate_bottom">?attr/c_bg</item>
+        <item name="c_mx_plate">?attr/c_bg</item>
         <item name="c_mx_lcd_bg">#FF0E0F11</item>
         <item name="c_mx_lcd_text">#FFB8F34A</item>
         <item name="c_mx_text">?attr/c_text</item>
@@ -204,8 +202,7 @@
         <item name="c_hue_blue">#FF25272C</item>
         <item name="c_hue_red">#FF8A0000</item>
         <item name="c_hue_green">#FF12502E</item>
-        <item name="c_mx_plate_top">?attr/c_surface</item>
-        <item name="c_mx_plate_bottom">?attr/c_bg</item>
+        <item name="c_mx_plate">?attr/c_bg</item>
         <item name="c_mx_lcd_bg">#FF0E0F11</item>
         <item name="c_mx_lcd_text">#FFB8F34A</item>
         <item name="c_mx_text">?attr/c_text</item>
@@ -281,8 +278,7 @@
         <item name="c_hue_pink">#FFFF8FC7</item>
         <item name="c_hue_yellow">#FFFFD45B</item>
         <item name="c_hue_blue">#FF6FA8FF</item>
-        <item name="c_mx_plate_top">?attr/c_surface_raised</item>
-        <item name="c_mx_plate_bottom">?attr/c_surface</item>
+        <item name="c_mx_plate">#FF000000</item>
         <item name="c_mx_lcd_bg">#FF0B0710</item>
         <item name="c_mx_lcd_text">#FFFF6EB4</item>
         <item name="c_mx_text">?attr/c_text</item>
