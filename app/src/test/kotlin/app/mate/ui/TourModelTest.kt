@@ -25,6 +25,12 @@ class TourModelTest {
     }
 
     @Test
+    fun `visite sans l'etape Parler quand le bouton est cache`() {
+        assertEquals(TourModel.STEPS, TourModel.steps(talkShown = true))
+        assertEquals(TourModel.STEPS - TourModel.Step.TALK, TourModel.steps(talkShown = false))
+    }
+
+    @Test
     fun `visite montree une fois, apres l'appairage`() {
         val context = FakeContext()
         assertFalse("pas d'ordinateur : pas de visite", TourModel.shouldShow(context, hasComputer = false))

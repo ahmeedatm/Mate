@@ -1076,7 +1076,6 @@
     <string name="agenda_link_now">Relier mon agenda</string>
     <string name="settings_rail">Barre de gauche</string>
     <string name="settings_rail_labels">Noms sous les icônes</string>
-    <string name="settings_rail_talk">Parler</string>
     <string name="settings_rail_tools">Outils affichés dans la barre</string>
     <string name="call_profile_preview">Aperçu : cet écran s\'affiche pendant un appel.</string>
     <string name="widget_size_s">Petit</string>

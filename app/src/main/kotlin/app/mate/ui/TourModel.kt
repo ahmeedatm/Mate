@@ -12,6 +12,9 @@ object TourModel {
 
     val STEPS = Step.entries.toList()
 
+    /** Étapes à montrer : sans Parler quand son bouton est caché dans les Réglages. */
+    fun steps(talkShown: Boolean): List<Step> = if (talkShown) STEPS else STEPS - Step.TALK
+
     /** Une fois, et seulement quand un ordinateur est appairé : avant, la bienvenue s'en charge. */
     fun shouldShow(context: Context, hasComputer: Boolean): Boolean = hasComputer && !Prefs.tourDone(context)
 

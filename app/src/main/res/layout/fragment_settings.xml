@@ -541,7 +541,7 @@
                         android:orientation="vertical" />
                 </LinearLayout>
 
-                <!-- Barre de gauche : noms sous les icônes, outils affichés (Prefs.railLabels, railTools). -->
+                <!-- Barre de gauche : noms sous les icônes, bouton Parler, outils affichés (Prefs.railLabels, railTalk, railTools). -->
                 <LinearLayout
                     style="@style/Card"
                     android:layout_width="match_parent"
@@ -563,6 +563,14 @@
                         android:text="@string/settings_rail_labels"
                         android:textSize="16sp" />
 
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/settings_rail_talk"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="48dp"
+                        android:text="@string/voice_button"
+                        android:textSize="16sp" />
+
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -570,14 +578,6 @@
                         android:text="@string/settings_rail_tools"
                         android:textColor="?attr/c_text_dim"
                         android:textSize="14sp" />
-
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/settings_rail_talk"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="48dp"
-                        android:text="@string/settings_rail_talk"
-                        android:textSize="16sp" />
 
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/settings_rail_focus"
