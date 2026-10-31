@@ -48,11 +48,10 @@ class RollingText @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        // Ombre du thème (Hush : 0 1px 6px, comme Widget.Hush.Text) ; transparente ailleurs, donc rien à dessiner de plus.
+        // Ombre du thème (Hush : 0 1px 6px en pixels, comme Widget.Hush.Text) ; transparente ailleurs, donc rien à dessiner de plus.
         val shadow = themeColor(context, R.attr.c_text_shadow)
         if (Color.alpha(shadow) != 0) {
-            val dp = context.resources.displayMetrics.density
-            setShadowLayer(SHADOW_RADIUS_DP * dp, 0f, dp, shadow)
+            setShadowLayer(SHADOW_RADIUS_PX, 0f, 1f, shadow)
         }
     }
     private var cells = ArrayList<Cell>()
@@ -214,7 +213,7 @@ class RollingText @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
     private companion object {
         const val NONE = '\u0000'
-        const val SHADOW_RADIUS_DP = 6f
+        const val SHADOW_RADIUS_PX = 6f
         const val SEPARATOR = ':'
         const val SHIFT = 0.62f
         const val STAGGER_MS = 30L
