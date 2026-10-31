@@ -76,6 +76,8 @@
     <attr name="c_text_shadow" format="color" />
     <!-- Console de l'onglet Son du deck (plaque unie, afficheurs, curseurs, LED) : ui/mixer/. -->
     <attr name="c_mx_plate" format="color" />
+    <!-- Hush : table de mixage nue (plaque transparente), ni vis ni filet après la dernière tranche (ui/mixer). Absent = faux. -->
+    <attr name="c_mx_bare" format="boolean" />
     <attr name="c_mx_lcd_bg" format="color" />
     <attr name="c_mx_lcd_text" format="color" />
     <attr name="c_mx_text" format="color" />

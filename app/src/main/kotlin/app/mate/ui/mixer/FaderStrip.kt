@@ -24,6 +24,7 @@ import androidx.core.graphics.drawable.DrawableCompat
 import app.mate.R
 import app.mate.ui.Look
 import app.mate.ui.dp
+import app.mate.ui.themeBool
 import app.mate.ui.themeColor
 import app.mate.ui.themeFont
 import kotlin.math.abs
@@ -54,6 +55,17 @@ class FaderStrip(context: Context) : View(context) {
             describe()
             invalidate()
         }
+
+    /** Dernière tranche de la rangée (posé par MixerView) : sur une table nue, pas de filet après elle. */
+    var last = false
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
+    /** Table nue (`c_mx_bare`, Hush) : ni vis ni filet après la dernière tranche. */
+    private val bare = themeBool(context, R.attr.c_mx_bare)
 
     /** Icône de l'appli (bitmap de l'ordinateur) ou d'une tranche fixe (sortie, micro). */
     var icon: Bitmap? = null
@@ -105,7 +117,11 @@ class FaderStrip(context: Context) : View(context) {
     private var lastFrame = 0L
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val text = TextPaint(Paint.ANTI_ALIAS_FLAG)
+    private val text = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        // Hush : sans plaque, les chiffres passent devant les reflets ; même ombre que ses textes (Widget.Hush.Text).
+        val shadow = themeColor(context, R.attr.c_text_shadow)
+        if (Color.alpha(shadow) != 0) setShadowLayer(SHADOW_RADIUS_PX, 0f, 1f, shadow)
+    }
     private val rect = RectF()
     private val medium = themeFont(context, R.attr.c_font_medium)
     private val light = themeFont(context, R.attr.c_font_light)
@@ -241,15 +257,20 @@ class FaderStrip(context: Context) : View(context) {
         val w = width.toFloat()
         val h = height.toFloat()
 
-        // Filet entre deux tranches (ton plus sombre puis plus clair : une rainure) et vis du module.
+        // Filet entre deux tranches (ton plus sombre puis plus clair : une rainure) et vis du module. Table nue (Hush) :
+        // ni vis ni filet après la dernière tranche, le trait ne sert qu'à séparer deux voies.
         val groove = dp(if (tight) 8 else 16).toFloat()
-        paint.color = cShadow
-        canvas.drawRect(w - dp(2), groove, w - dp(1), h - groove, paint)
-        paint.color = cHighlight
-        canvas.drawRect(w - dp(1), groove, w, h - groove, paint)
+        if (!bare || !last) {
+            paint.color = cShadow
+            canvas.drawRect(w - dp(2), groove, w - dp(1), h - groove, paint)
+            paint.color = cHighlight
+            canvas.drawRect(w - dp(1), groove, w, h - groove, paint)
+        }
         if (!tight) {
-            screw(canvas, pad + dp(2), pad + dp(2))
-            screw(canvas, w - pad - dp(4), pad + dp(2))
+            if (!bare) {
+                screw(canvas, pad + dp(2), pad + dp(2))
+                screw(canvas, w - pad - dp(4), pad + dp(2))
+            }
             drawIcon(canvas)
         }
 
@@ -469,6 +490,7 @@ class FaderStrip(context: Context) : View(context) {
 
     companion object {
         private const val LEDS = 24
+        private const val SHADOW_RADIUS_PX = 6f
 
         /** Opacité du vumètre sans niveau lu (35 %). */
         private const val UNMETERED_ALPHA = 0x59

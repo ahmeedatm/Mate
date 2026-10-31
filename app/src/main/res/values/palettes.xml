@@ -296,8 +296,9 @@
         <item name="c_hue_pink">#FFFF8FC7</item>
         <item name="c_hue_yellow">#FFFFD45B</item>
         <item name="c_hue_blue">#FF6FA8FF</item>
-        <item name="c_mx_plate">#FF000000</item>
-        <item name="c_mx_lcd_bg">#FF0B0710</item>
+        <item name="c_mx_plate">#00000000</item>
+        <item name="c_mx_bare">true</item>
+        <item name="c_mx_lcd_bg">?attr/c_surface</item>
         <item name="c_mx_lcd_text">#FFFF6EB4</item>
         <item name="c_mx_text">?attr/c_text</item>
         <item name="c_mx_slot">?attr/c_surface_raised</item>
