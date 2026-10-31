@@ -1280,7 +1280,7 @@
     <string name="a11y_size_larger">Très grande</string>
     <string name="a11y_size_largest">Maximale</string>
     <string name="about_licences">Licences des composants</string>
-    <string name="about_sources">Météo : données de MET Norway (Institut météorologique norvégien), licence CC BY 4.0, mises en forme pour l\'affichage. api.met.no\nVilles : GeoNames, licence CC BY 4.0. geonames.org\nPolices : Outfit, Nunito et Abril Fatface, licence SIL Open Font License 1.1.\nSons d\'ambiance : Freesound, OpenGameArt et Wikimedia Commons, domaine public (CC0).\nLicence CC BY 4.0 : creativecommons.org/licenses/by/4.0</string>
+    <string name="about_sources">Météo : données de MET Norway (Institut météorologique norvégien), licence CC BY 4.0, mises en forme pour l\'affichage. api.met.no\nVilles : GeoNames, licence CC BY 4.0. geonames.org\nPolices : Figtree, Atkinson Hyperlegible, Chakra Petch et Share Tech Mono, licence SIL Open Font License 1.1.\nSons d\'ambiance : Freesound, OpenGameArt et Wikimedia Commons, domaine public (CC0).\nLicence CC BY 4.0 : creativecommons.org/licenses/by/4.0</string>
     <string name="widget_weather_none">Aucune ville trouvée.</string>
     <string name="sky_clear">Ciel dégagé</string>
     <string name="sky_partly">Quelques nuages</string>

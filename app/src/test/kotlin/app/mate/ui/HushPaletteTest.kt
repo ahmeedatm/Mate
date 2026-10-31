@@ -7,7 +7,7 @@ import java.io.File
 
 /**
  * Palette.Hush (res/values/palettes.xml) : attributs complets et contrastes WCAG lus sur le pire point du fond animé
- * (HushGlow rejoué sans appareil), puis sur le verre des tuiles et la barre fixe posés par-dessus.
+ * (HushGlow rejoué sans appareil), avec l'ombre sous les textes, la barre fixe et le halo d'appui posés par-dessus.
  */
 class HushPaletteTest {
     private val xml = File("src/main/res/values/palettes.xml").readText()
@@ -69,9 +69,14 @@ class HushPaletteTest {
         brightest(brightest(best, fill), over(parse(argb("c_bg")), parse(argb("c_accent")), HushGlow.SHARD_EDGE.toDouble()))
     }
 
-    /** Fond, tuile en verre, barre fixe (transparente) et relief (opaque) au pire point du fond. */
+    /** Textes sans tuile : l'ombre `0 1px 6px #000c` de Widget.Hush.Text assombrit au moins de moitié le fond sous les lettres. */
+    private val shadowed = over(worst, parse("#FF000000"), 0.5)
+
+    private val pressAlpha = "0.22"
+
+    /** Fond nu, fond sous l'ombre, barre fixe (transparente) et relief (opaque) au pire point du fond. */
     private fun backgrounds() = listOf(
-        "fond" to worst, "verre" to over(worst, parse(argb("c_surface"))), "barre" to over(worst, parse(argb("c_rail"))),
+        "fond" to worst, "ombre" to shadowed, "barre" to over(worst, parse(argb("c_rail"))),
         "relief" to parse(argb("c_surface_raised")),
     )
 
@@ -88,17 +93,66 @@ class HushPaletteTest {
     }
 
     @Test
-    fun `fond anime, fond opaque, tuiles en verre, barre fixe transparente`() {
+    fun `fond anime, fond opaque, barre fixe transparente`() {
         assertEquals("true", hush["c_backdrop"])
         assertEquals(1.0, parse(argb("c_bg"))[0], 0.0)
-        assertTrue(parse(argb("c_surface"))[0] < 1.0)
         assertEquals(0.0, parse(argb("c_rail"))[0], 0.0)
     }
 
     @Test
-    fun `une tuile en verre se detache du fond au moins autant que la tuile de Console`() {
-        val glass = over(parse(argb("c_bg")), parse(argb("c_surface")))
-        assertTrue(ratio(glass, parse(argb("c_bg"))) >= 1.15)
+    fun `widgets sans fond ni bordure, halo rose a l'appui`() {
+        for (attr in listOf("c_tile_bg", "c_home_card_bg")) assertEquals(attr, "@drawable/hush_tile_bg", hush[attr])
+        // Fenêtres, incrustations et cartes de Réglages gardent le verre : sans fond elles se perdraient dans le fond animé.
+        assertEquals("@drawable/console_tile_bg", hush["c_card_bg"])
+        val tile = File("src/main/res/drawable/hush_tile_bg.xml").readText()
+        assertTrue(!tile.contains("<stroke"))
+        val rest = tile.substringAfter("</item>")
+        assertTrue("au repos : rien", !rest.contains("<solid") && !rest.contains("<gradient"))
+        assertTrue(tile.substringBefore("</item>").contains("@color/hush_press"))
+        assertEquals("@drawable/hush_key_plate", hush["c_key_plate"])
+        val plate = File("src/main/res/drawable/hush_key_plate.xml").readText()
+        assertTrue(plate.contains("@color/hush_press") && !plate.substringAfter("</item>").contains("<solid"))
+        for (name in listOf("Console", "ConsoleJour", "Contraste")) assertEquals(name, "@drawable/round_bg", values(name)["c_key_plate"])
+        val press = File("src/main/res/color/hush_press.xml").readText()
+        assertTrue(press.contains("?attr/c_accent") && press.contains("android:alpha=\"$pressAlpha\""))
+    }
+
+    @Test
+    fun `texte lisible sur le halo d'appui`() {
+        val halo = over(shadowed, parse(argb("c_accent")), pressAlpha.toDouble())
+        for (fg in listOf("c_text", "c_text_dim")) assertTrue("$fg sur le halo", ratio(parse(argb(fg)), halo) >= 4.5)
+    }
+
+    @Test
+    fun `ombre legere sous tous les textes, par la couleur de c_text_shadow`() {
+        assertEquals("#CC000000", hush["c_text_shadow"])
+        assertEquals("@style/Widget.Hush.Text", hush["android:textViewStyle"])
+        val style = xml.substringAfter("<style name=\"Widget.Hush.Text\"").substringBefore("</style>")
+        assertTrue(style.contains("<item name=\"android:shadowColor\">?attr/c_text_shadow</item>"))
+        assertTrue(style.contains("<item name=\"android:shadowDy\">1</item>"))
+        assertTrue(style.contains("<item name=\"android:shadowRadius\">6</item>"))
+    }
+
+    @Test
+    fun `Chakra Petch pour les textes et l'heure, Share Tech Mono pour les etiquettes`() {
+        assertEquals("@font/chakra_petch_400", hush["c_font_regular"])
+        assertEquals("@font/chakra_petch_400", hush["c_font_light"])
+        assertEquals("@font/chakra_petch_400", hush["android:fontFamily"])
+        assertEquals("@font/chakra_petch_500", hush["c_font_medium"])
+        assertEquals("@font/chakra_petch_500", hush["c_font_title"])
+        assertEquals("@font/chakra_petch_700", hush["c_font_display"])
+        assertEquals("@font/share_tech_mono_400", hush["c_font_label"])
+        assertEquals("true", hush["c_label_caps"])
+    }
+
+    @Test
+    fun `les autres themes gardent leur police d'etiquette et leurs minuscules`() {
+        for (name in listOf("Console", "ConsoleJour", "Contraste")) {
+            val p = values(name)
+            assertEquals(name, p["c_font_title"], p["c_font_label"])
+            assertEquals(name, "false", p["c_label_caps"])
+            assertEquals(name, "#00000000", p["c_text_shadow"])
+        }
     }
 
     @Test

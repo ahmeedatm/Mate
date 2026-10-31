@@ -9,12 +9,16 @@
         <item name="c_card_bg">@drawable/console_tile_bg</item>
         <item name="c_tile_bg">@drawable/console_tile_bg</item>
         <item name="c_home_card_bg">@drawable/console_tile_bg</item>
+        <item name="c_key_plate">@drawable/round_bg</item>
         <item name="c_card_pad">24dp</item>
         <item name="c_font_medium">@font/figtree_500</item>
         <item name="c_font_light">@font/figtree_300</item>
         <item name="c_font_regular">@font/figtree_400</item>
         <item name="c_font_title">@font/figtree_500</item>
         <item name="c_font_display">@font/figtree_300</item>
+        <item name="c_font_label">@font/figtree_500</item>
+        <item name="c_label_caps">false</item>
+        <item name="c_text_shadow">#00000000</item>
         <item name="android:fontFamily">@font/figtree_400</item>
         <item name="c_primary">?attr/c_accent</item>
         <item name="c_on_primary">?attr/c_on_accent</item>
@@ -79,12 +83,16 @@
         <item name="c_card_bg">@drawable/console_tile_bg</item>
         <item name="c_tile_bg">@drawable/console_tile_bg</item>
         <item name="c_home_card_bg">@drawable/console_tile_bg</item>
+        <item name="c_key_plate">@drawable/round_bg</item>
         <item name="c_card_pad">24dp</item>
         <item name="c_font_medium">@font/figtree_500</item>
         <item name="c_font_light">@font/figtree_300</item>
         <item name="c_font_regular">@font/figtree_400</item>
         <item name="c_font_title">@font/figtree_500</item>
         <item name="c_font_display">@font/figtree_300</item>
+        <item name="c_font_label">@font/figtree_500</item>
+        <item name="c_label_caps">false</item>
+        <item name="c_text_shadow">#00000000</item>
         <item name="android:fontFamily">@font/figtree_400</item>
         <item name="c_primary">?attr/c_accent</item>
         <item name="c_on_primary">?attr/c_on_accent</item>
@@ -153,12 +161,16 @@
         <item name="c_card_bg">@drawable/contraste_tile_bg</item>
         <item name="c_tile_bg">@drawable/contraste_tile_bg</item>
         <item name="c_home_card_bg">@drawable/contraste_tile_bg</item>
+        <item name="c_key_plate">@drawable/round_bg</item>
         <item name="c_card_pad">24dp</item>
         <item name="c_font_medium">@font/figtree_500</item>
         <item name="c_font_light">@font/figtree_400</item>
         <item name="c_font_regular">@font/figtree_400</item>
         <item name="c_font_title">@font/figtree_500</item>
         <item name="c_font_display">@font/figtree_500</item>
+        <item name="c_font_label">@font/figtree_500</item>
+        <item name="c_label_caps">false</item>
+        <item name="c_text_shadow">#00000000</item>
         <item name="android:fontFamily">@font/figtree_400</item>
         <item name="c_big_keys">true</item>
         <item name="c_title_size">18sp</item>
@@ -223,20 +235,26 @@
 
     <!-- Hush : nuit noire, reflets rose et violet qui bougent derrière tous les écrans (c_backdrop, ui/HushBackdrop),
          d'après les visuels de l'agente (néons sous la pluie, cristaux violets, yeux roses) ; rien de Riot, tout est
-         dessiné. Un seul accent, le rose vif ; le violet reste dans les reflets (c_hue_violet). Tuiles en verre
-         (c_surface translucide) ; barre fixe transparente, le fond passe dessous sans coupure. Textes au moins 4,5:1 sur le pire point du fond, verre compris
-         (HushPaletteTest). Posée sur Theme.Companion (base sombre), comme Contraste sur la sienne. -->
+         dessiné. Un seul accent, le rose vif ; le violet reste dans les reflets (c_hue_violet). Widgets sans fond ni
+         bordure (hush_tile_bg : seul l'appui allume un halo rose) ; barre fixe transparente, le fond passe dessous sans coupure. Textes au moins 4,5:1
+         sur le pire point du fond, ombre légère comprise (Widget.Hush.Text, HushPaletteTest). Police Chakra Petch, étiquettes en Share Tech Mono
+         majuscules. c_card_bg garde le verre (c_surface translucide) : fenêtres, incrustations et cartes de Réglages. Posée sur Theme.Companion (base sombre), comme Contraste sur la sienne. -->
     <style name="Palette.Hush" parent="">
         <item name="c_card_bg">@drawable/console_tile_bg</item>
-        <item name="c_tile_bg">@drawable/console_tile_bg</item>
-        <item name="c_home_card_bg">@drawable/console_tile_bg</item>
+        <item name="c_tile_bg">@drawable/hush_tile_bg</item>
+        <item name="c_home_card_bg">@drawable/hush_tile_bg</item>
+        <item name="c_key_plate">@drawable/hush_key_plate</item>
         <item name="c_card_pad">24dp</item>
-        <item name="c_font_medium">@font/figtree_500</item>
-        <item name="c_font_light">@font/figtree_300</item>
-        <item name="c_font_regular">@font/figtree_400</item>
-        <item name="c_font_title">@font/figtree_500</item>
-        <item name="c_font_display">@font/figtree_300</item>
-        <item name="android:fontFamily">@font/figtree_400</item>
+        <item name="c_font_medium">@font/chakra_petch_500</item>
+        <item name="c_font_light">@font/chakra_petch_400</item>
+        <item name="c_font_regular">@font/chakra_petch_400</item>
+        <item name="c_font_title">@font/chakra_petch_500</item>
+        <item name="c_font_display">@font/chakra_petch_700</item>
+        <item name="android:fontFamily">@font/chakra_petch_400</item>
+        <item name="c_font_label">@font/share_tech_mono_400</item>
+        <item name="c_label_caps">true</item>
+        <item name="c_text_shadow">#CC000000</item>
+        <item name="android:textViewStyle">@style/Widget.Hush.Text</item>
         <item name="c_backdrop">true</item>
         <item name="c_primary">?attr/c_accent</item>
         <item name="c_on_primary">?attr/c_on_accent</item>
@@ -295,5 +313,13 @@
         <item name="c_mx_highlight">#14FFFFFF</item>
         <item name="c_mx_key_top">?attr/c_stroke</item>
         <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
+    </style>
+
+    <!-- Ombre légère sous les textes de Hush (0 1px 6px #000c), puisque sans tuile ils passent devant les reflets. -->
+    <style name="Widget.Hush.Text" parent="Widget.AppCompat.TextView">
+        <item name="android:shadowColor">?attr/c_text_shadow</item>
+        <item name="android:shadowDx">0</item>
+        <item name="android:shadowDy">1</item>
+        <item name="android:shadowRadius">6</item>
     </style>
 </resources>

@@ -25,6 +25,7 @@ import app.mate.ui.Look
 import app.mate.ui.dp
 import app.mate.ui.themeBool
 import app.mate.ui.themeColor
+import app.mate.ui.themeRes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -217,7 +218,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
                     else -> Look.readableOn(context, tint!!)
                 }
                 icon.imageTintList = android.content.res.ColorStateList.valueOf(ink)
-                if (plain) icon.setBackgroundResource(R.drawable.round_bg)
+                if (plain) icon.setBackgroundResource(themeRes(context, R.attr.c_key_plate))
                 // Même marge sur plaque couleur que sans : l'icône garde plus de la moitié de la plaque.
                 val pad = TileMetrics.symbolPadFor(plate.layoutParams.width)
                 icon.setPadding(pad, pad, pad, pad)
