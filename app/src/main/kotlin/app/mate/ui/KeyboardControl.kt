@@ -30,7 +30,8 @@ class KeyboardControl(private val activity: Activity) {
         ViewCompat.setOnApplyWindowInsetsListener(content) { view, insets ->
             // Seulement pour un champ de l'écran : une boîte de saisie s'affiche au-dessus, sans tasser l'écran derrière.
             val resizing = window.attributes.softInputMode and WindowManager.LayoutParams.SOFT_INPUT_MASK_ADJUST == WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
-            view.setPadding(0, 0, 0, if (resizing) keyboardHeight(insets) else 0)
+            val bottom = if (resizing) keyboardHeight(insets) else 0
+            if (view.paddingBottom != bottom) view.setPadding(0, 0, 0, bottom)
             insets
         }
         window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener { _, focused ->
@@ -46,14 +47,13 @@ class KeyboardControl(private val activity: Activity) {
         }
     }
 
-    /** Avant API 30 le clavier n'est qu'un inset de fenêtre, mêlé à la barre de navigation (inset stable) : on le lit au-delà d'elle. */
     @Suppress("DEPRECATION")
-    private fun keyboardHeight(insets: WindowInsetsCompat): Int =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-        } else {
-            insets.systemWindowInsetBottom.takeIf { it > insets.stableInsetBottom } ?: 0
-        }
+    private fun keyboardHeight(insets: WindowInsetsCompat): Int = keyboardInset(
+        Build.VERSION.SDK_INT,
+        insets.getInsets(WindowInsetsCompat.Type.ime()).bottom,
+        insets.systemWindowInsetBottom,
+        insets.stableInsetBottom,
+    )
 
     /**
      * Boîte de saisie fermée clavier ouvert (code d'appairage…) : Android le laisse sur l'écran, sans champ, et
@@ -87,3 +87,10 @@ class KeyboardControl(private val activity: Activity) {
         activity.findViewById<View>(R.id.mode_container).requestFocus()
     }
 }
+
+/**
+ * Hauteur du clavier à réserver en bas. Dès API 30 il a son propre inset. Avant, il n'est qu'un inset de fenêtre mêlé à la
+ * barre de navigation (inset stable) : il ne compte qu'au-delà d'elle.
+ */
+internal fun keyboardInset(sdk: Int, imeBottom: Int, systemBottom: Int, stableBottom: Int): Int =
+    if (sdk >= Build.VERSION_CODES.R) imeBottom else systemBottom.takeIf { it > stableBottom } ?: 0
