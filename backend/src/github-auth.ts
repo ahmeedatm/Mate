@@ -55,29 +55,36 @@ export async function githubAccount(): Promise<{ username: string; expired: bool
   return stored.accessToken ? { username: stored.username ?? "", expired: !!stored.expired } : undefined;
 }
 
-/** Jeton du compte connecté ; `undefined` sans compte ou compte à reconnecter. */
-export async function githubAccessToken(): Promise<string | undefined> {
-  const stored = await load();
-  return stored.accessToken && !stored.expired ? stored.accessToken : undefined;
-}
-
 /** Portées qui permettent d'écrire dans un dépôt, donc de fusionner (GitHub les sépare par des virgules). */
 export const scopeCanWrite = (scope: string) => scope.split(/[\s,]+/).some((s) => s === "repo" || s === "public_repo");
 
-export async function githubAccountCanWrite(): Promise<boolean> {
-  return scopeCanWrite((await load()).scope ?? "");
+/**
+ * Accès du compte connecté, en une lecture du fichier : `token` absent sans compte ou compte à reconnecter ; `canWrite` :
+ * portée qui permet de fusionner.
+ */
+export async function githubAccountAccess(): Promise<{ token?: string; canWrite: boolean }> {
+  const stored = await load();
+  const token = stored.accessToken && !stored.expired ? stored.accessToken : undefined;
+  return { token, canWrite: !!token && scopeCanWrite(stored.scope ?? "") };
 }
+
+/** Appelés quand le compte change (relié, à reconnecter, déconnecté) : src/github.ts y vide son cache, lié à l'identité. */
+const accountListeners = new Set<() => void>();
+export const onGithubAccountChange = (listener: () => void) => accountListeners.add(listener);
+const accountChanged = () => accountListeners.forEach((listener) => listener());
 
 /** GitHub a refusé `token` (401) : le compte passe à « à reconnecter », sauf s'il a changé entre-temps. */
 export async function expireGithubToken(token: string) {
   await edit((s) => {
     if (s.accessToken === token) s.expired = true;
   });
+  accountChanged();
 }
 
 export async function disconnectGithub() {
   login = undefined;
   await edit(clear);
+  accountChanged();
 }
 
 // --- Connexion (device flow)
@@ -150,20 +157,33 @@ async function waitForToken(id: number, clientId: string, deviceCode: string, in
       login!.state = "expired";
       return;
     }
-    const { json } = await post<TokenAnswer>(`${githubWebUrl()}/login/oauth/access_token`, {
-      client_id: clientId,
-      device_code: deviceCode,
-      grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-    });
+    let json: TokenAnswer;
+    let status: number;
+    try {
+      ({ status, json } = await post<TokenAnswer>(`${githubWebUrl()}/login/oauth/access_token`, {
+        client_id: clientId,
+        device_code: deviceCode,
+        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+      }));
+    } catch (e) {
+      // Coupure ou délai dépassé : on continue jusqu'à l'expiration du code (RFC 8628), l'utilisateur est peut-être en train d'autoriser.
+      logFailure("Sondage de la connexion GitHub", e);
+      continue;
+    }
     if (!current()) return;
+    // GitHub en panne (5xx) ou réponse illisible : passager aussi.
+    if (status >= 500 || (!json.access_token && !json.error)) continue;
     if (json.access_token) {
       const token = json.access_token;
       const username = await userName(token);
+      // Déconnecté ou nouvelle connexion pendant la lecture du nom : ce jeton ne doit pas revenir.
+      if (!current()) return;
       await edit((s) => {
         clear(s);
         Object.assign(s, { accessToken: token, username, scope: json.scope ?? "" });
       });
-      if (login?.id === id) login.state = "ok";
+      login!.state = "ok";
+      accountChanged();
       return;
     }
     if (json.error === "authorization_pending") continue;

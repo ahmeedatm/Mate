@@ -7,6 +7,7 @@ import {
   gitlabClientId,
 } from "./gitlab-auth.ts";
 import { logFailure } from "./log.ts";
+import { singleFlight } from "./single-flight.ts";
 
 /**
  * MR GitLab de l'utilisateur connecté : les siennes et celles à relire, avec pipeline, approbations et état de fusion ;
@@ -205,14 +206,12 @@ async function readMrs(auth: Auth): Promise<{ mine: Mr[]; review: Mr[] }> {
   return { mine: newestFirst(user.assignedMergeRequests), review: newestFirst(user.reviewRequestedMergeRequests) };
 }
 
-let cache: { at: number; value: MrLists } | undefined;
-let inflight: Promise<MrLists> | undefined;
+const mrsFlight = singleFlight<MrLists>(CACHE_MS);
+const pipelinesFlight = singleFlight<PipelineRow[]>(CACHE_MS);
 
 export const clearGitlabCache = () => {
-  cache = undefined;
-  inflight = undefined;
-  pipelinesCache = undefined;
-  pipelinesInflight = undefined;
+  mrsFlight.clear();
+  pipelinesFlight.clear();
 };
 
 export type MrLists = { mine: Mr[]; review: Mr[] };
@@ -230,21 +229,8 @@ export async function listMrs(): Promise<MrsAnswer> {
   return { connected: true, canMerge: !!write, ...(await read(auth)) };
 }
 
-function read(auth: Auth): Promise<MrLists> {
-  if (cache && Date.now() - cache.at < CACHE_MS) return Promise.resolve(cache.value);
-  if (inflight) return inflight;
-  // Une fusion vide `inflight` : la lecture déjà partie ne remplit plus le cache (elle date d'avant la fusion).
-  const run: Promise<MrLists> = readMrs(auth)
-    .then((value) => {
-      if (inflight === run) cache = { at: Date.now(), value };
-      return value;
-    })
-    .finally(() => {
-      if (inflight === run) inflight = undefined;
-    });
-  inflight = run;
-  return run;
-}
+// Une fusion vide le cache : la lecture déjà partie ne le remplit plus (elle date d'avant la fusion).
+const read = (auth: Auth) => mrsFlight.get(() => readMrs(auth));
 
 const MERGE_ERRORS: Record<number, GitLabError> = {
   405: new GitLabError(409, "Cette MR ne peut pas être fusionnée pour l'instant"),
@@ -365,25 +351,9 @@ async function readPipelines(auth: Auth, lists: MrLists): Promise<PipelineRow[]>
   return sortPipelines(rows.filter((r): r is PipelineRow => r !== null));
 }
 
-let pipelinesCache: { at: number; value: PipelineRow[] } | undefined;
-let pipelinesInflight: Promise<PipelineRow[]> | undefined;
-
 /** Les pipelines qui comptent pour l'utilisateur. Même cache (20 s) et mêmes erreurs que les MR ; pas connecté : réponse normale. */
 export async function listPipelines(): Promise<PipelinesAnswer> {
   const { read: auth } = await authHeaders();
   if (!auth) return { connected: false, expired: !!(await gitlabAccount())?.expired, pipelines: [] };
-  if (pipelinesCache && Date.now() - pipelinesCache.at < CACHE_MS) return { connected: true, pipelines: pipelinesCache.value };
-  if (!pipelinesInflight) {
-    const run: Promise<PipelineRow[]> = read(auth)
-      .then((lists) => readPipelines(auth, lists))
-      .then((value) => {
-        if (pipelinesInflight === run) pipelinesCache = { at: Date.now(), value };
-        return value;
-      })
-      .finally(() => {
-        if (pipelinesInflight === run) pipelinesInflight = undefined;
-      });
-    pipelinesInflight = run;
-  }
-  return { connected: true, pipelines: await pipelinesInflight };
+  return { connected: true, pipelines: await pipelinesFlight.get(async () => readPipelines(auth, await read(auth))) };
 }

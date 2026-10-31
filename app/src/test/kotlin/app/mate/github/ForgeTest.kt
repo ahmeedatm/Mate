@@ -18,12 +18,6 @@ class ForgeTest {
     }
 
     @Test
-    fun `la carte Connecter ouvre la section de sa forge sur l'ordinateur`() {
-        assertEquals("gitlab", connectSection(Forge.GITLAB))
-        assertEquals("github", connectSection(Forge.GITHUB))
-    }
-
-    @Test
     fun `un run GitHub Actions garde son identifiant au-delà d'un Int`() {
         val answer = parseGitLabPipelines(
             """{"connected":true,"pipelines":[{"project":"org/app","ref":"main","id":12345678901,"pipeline":"failed",

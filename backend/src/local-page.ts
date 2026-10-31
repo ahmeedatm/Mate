@@ -395,7 +395,7 @@ ${FAVICON}
       <div class="dim" id="githubstate"></div>
       <!-- Connexion en attente (device flow) : le code à saisir sur GitHub. -->
       <div id="githubcode" hidden>
-        <div>Saisis ce code sur GitHub, puis autorise UnoMate :</div>
+        <div>Saisis ce code sur GitHub, puis autorise Mate :</div>
         <p><code id="githubusercode"></code></p>
         <div class="actions"><a class="button" id="githubopen" target="_blank" rel="noopener">Ouvrir GitHub</a><button class="ghost" id="githubcopy">Copier le code</button></div>
       </div>
@@ -949,7 +949,7 @@ ${FAVICON}
     github: {
       title: "Relier GitHub",
       steps: ["Touche « Se connecter avec GitHub » : un code s'affiche ici.", "Touche « Ouvrir GitHub » et connecte-toi à ton compte si besoin.",
-        "Saisis le code, puis touche « Authorize » : UnoMate lit tes PR et tes runs GitHub Actions.", "Les widgets GitHub de la tablette se remplissent seuls."],
+        "Saisis le code, puis touche « Authorize » : Mate lit tes PR et tes runs GitHub Actions.", "Les widgets GitHub de la tablette se remplissent seuls."],
       action: "Se connecter avec GitHub",
     },
     jira: {

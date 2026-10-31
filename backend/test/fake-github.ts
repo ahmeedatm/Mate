@@ -62,6 +62,14 @@ export type FakeGithub = {
   runs: Record<string, unknown>;
   /** Jobs du run, par id. */
   jobs: Record<number, { name: string; conclusion: string }[]>;
+  /** Prochains sondages du jeton qui échouent (502, corps HTML) : GitHub en panne passagère. */
+  tokenFailures: number;
+  /** Délai de `GET /user` (ms) : laisse le temps de se déconnecter pendant la fin de la connexion. */
+  userDelayMs: number;
+  /** Réponse GraphQL partielle : `errors` (FORBIDDEN) en plus des données, et un nœud null dans `review`. */
+  graphqlPartial: boolean;
+  /** Réponse forcée des runs, par dépôt (limite de débit, refus SSO…). */
+  runsAnswer: Record<string, { status: number; headers?: Record<string, string>; body: unknown }>;
   stop: () => Promise<void>;
 };
 
@@ -103,6 +111,10 @@ export async function startFakeGithub(): Promise<FakeGithub> {
     },
     runs: {},
     jobs: {},
+    tokenFailures: 0,
+    userDelayMs: 0,
+    graphqlPartial: false,
+    runsAnswer: {},
     stop: () => new Promise((r) => server.close(() => r())),
   };
 
@@ -142,6 +154,12 @@ export async function startFakeGithub(): Promise<FakeGithub> {
         if (form.get("client_id") !== FAKE_GITHUB_CLIENT_ID || form.has("client_secret"))
           return json(200, { error: "incorrect_client_credentials" });
         if (form.get("device_code") !== deviceCode) return json(200, { error: "bad_verification_code" });
+        if (fake.tokenFailures > 0) {
+          fake.tokenFailures--;
+          res.statusCode = 502;
+          res.setHeader("content-type", "text/html");
+          return res.end("<html>Bad gateway</html>");
+        }
         if (decision === "pending") return json(200, { error: "authorization_pending" });
         if (decision === "denied") return json(200, { error: "access_denied" });
         deviceCode = "";
@@ -152,11 +170,24 @@ export async function startFakeGithub(): Promise<FakeGithub> {
       }
       const bearer = /^Bearer (.+)$/.exec(String(req.headers.authorization ?? ""))?.[1] ?? "";
       if (!tokens.has(bearer) && !(fake.personalToken && bearer === fake.personalToken)) return json(401, { message: "Bad credentials" });
-      if (url.pathname === "/user") return json(200, { login: "camille" });
+      if (url.pathname === "/user") {
+        setTimeout(() => json(200, { login: "camille" }), fake.userDelayMs);
+        return;
+      }
       if (url.pathname === "/graphql" && req.method === "POST") {
         const nodes = (list: unknown[]) => ({ nodes: list });
+        const review = fake.graphqlPartial ? [...fake.prs.review, null] : fake.prs.review;
         return json(200, {
-          data: { authored: nodes(fake.prs.authored), assigned: nodes(fake.prs.assigned), review: nodes(fake.prs.review) },
+          data: { authored: nodes(fake.prs.authored), assigned: nodes(fake.prs.assigned), review: nodes(review) },
+          ...(fake.graphqlPartial && {
+            errors: [
+              {
+                type: "FORBIDDEN",
+                message:
+                  "Although you appear to have the correct authorization credentials, the organization has enabled OAuth App access restrictions",
+              },
+            ],
+          }),
         });
       }
       if (/^\/repos\/[^/]+\/[^/]+\/pulls\/\d+\/merge$/.test(url.pathname) && req.method === "PUT") {
@@ -164,6 +195,11 @@ export async function startFakeGithub(): Promise<FakeGithub> {
       }
       const runs = /^\/repos\/([^/]+\/[^/]+)\/actions\/runs$/.exec(url.pathname);
       if (runs && req.method === "GET") {
+        const forced = fake.runsAnswer[runs[1]];
+        if (forced) {
+          for (const [k, v] of Object.entries(forced.headers ?? {})) res.setHeader(k, v);
+          return json(forced.status, forced.body);
+        }
         const run = fake.runs[runs[1]];
         return json(200, { total_count: run ? 1 : 0, workflow_runs: run ? [run] : [] });
       }

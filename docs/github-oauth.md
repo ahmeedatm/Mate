@@ -53,13 +53,20 @@ appeler GitHub. Le compagnon garde la portée réellement accordée (champ `scop
   s'il a `repo` (ou `public_repo`), sinon `GITHUB_TOKEN`.
 - **Pas connecté** : `GET /github/prs` répond 200 `{ "connected": false, "expired": false, "canMerge": false, "mine": [], "review": [] }`,
   `GET /github/actions` 200 `{ "connected": false, "expired": false, "pipelines": [] }` (jamais 401 : accès refusé = 502).
-- Lecture : une requête GraphQL (`author:@me`, `assignee:@me`, `review-requested:@me`), gardée 20 s ; runs : `GET
-  /repos/:dépôt/actions/runs?branch=<branche par défaut>&per_page=1`, jobs en échec (3 au plus) d'un run échoué.
+- **Attente de l'autorisation** : une coupure, un délai dépassé ou un 5xx pendant le sondage ne l'arrête pas (RFC 8628) ; seule
+  l'expiration du code, un refus ou une erreur de GitHub y met fin. Déconnecté ou reconnecté pendant la fin de la connexion : le
+  jeton arrivé n'est pas gardé. Un compte relié, déconnecté ou à reconnecter vide le cache (lié à l'identité).
+- Lecture : une requête GraphQL (`author:@me`, `assignee:@me`, `review-requested:@me`), gardée 20 s (`src/single-flight.ts`,
+  partagé avec GitLab) ; réponse partielle (`errors` avec des données : organisation qui restreint les applis OAuth, SSO SAML)
+  = les PR lisibles s'affichent, nœuds null ignorés. Runs : `GET /repos/:dépôt/actions/runs?branch=<branche par
+  défaut>&per_page=1`, jobs en échec (3 au plus) d'un run échoué ; 404 ou 403 d'accès = pas de ligne, limite de débit = 502
+  « GitHub limite les appels pour l'instant ».
 - Fusion : `POST /github/prs/merge { project, iid, sha }` → `PUT /repos/:dépôt/pulls/:n/merge { sha }` : GitHub refuse (409) si la
   tête a bougé. Ouverture : `POST /github/prs/open`, `POST /github/actions/open` (adresses reconstruites par le compagnon).
-- `/deck/features` : `github` vrai si `GITHUB_TOKEN`, compte connecté ou ID d'appli réglé (jamais en démo).
+- `/deck/features` : `github` vrai si `GITHUB_TOKEN`, compte connecté ou ID d'appli réglé.
 - Routes de la page locale (sans jeton d'appairage, 127.0.0.1 seulement) : `GET /oauth/github/start` (demande un code, revient sur
-  `/?section=github`), `DELETE /local/accounts/github` ; état dans `github` de `GET /local/status` (`login` : code en attente ou
+  `/?section=github` ; refusée en 403 si `Sec-Fetch-Site` n'est ni `none` ni `same-origin` : une autre page web, même sur un
+  autre port de 127.0.0.1, ne peut pas la déclencher), `DELETE /local/accounts/github` ; état dans `github` de `GET /local/status` (`login` : code en attente ou
   dernier résultat). La tablette ouvre la connexion par `POST /local/open { "section": "github" }`.
 - Code : `backend/src/github-auth.ts` (connexion), `backend/src/github.ts` (PR, fusion, Actions), `routes/github.ts` ; tablette :
   `net/GitHubApi`, `github/Forge` ; vues partagées avec GitLab (`GitLabView`, `PipelinesView`, `GitLabConnectCard`, paramètre `forge`).

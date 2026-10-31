@@ -213,8 +213,15 @@ export default async function localRoutes(app: FastifyInstance) {
   });
 
   // Connexion GitHub (src/github-auth.ts, device flow) : demande un code à GitHub, puis la page montre ce code et le lien de
-  // GitHub (`login` de /local/status) ; le compagnon attend l'autorisation seul. GET : ouverte aussi depuis la tablette.
+  // GitHub (`login` de /local/status) ; le compagnon attend l'autorisation seul. GET : ouverte aussi depuis la tablette
+  // (`POST /local/open` : navigation lancée par le système, `Sec-Fetch-Site: none`). Refusée depuis une autre page web
+  // (`<img src=…>` sur un site visité, ou un autre port de 127.0.0.1, « same-site ») : elle remplacerait la connexion en
+  // cours et consommerait des codes chez GitHub. Sans l'en-tête (navigateur ancien, outil) : acceptée.
   app.get("/oauth/github/start", async (req, reply) => {
+    const site = req.headers["sec-fetch-site"];
+    if (site && site !== "none" && site !== "same-origin") {
+      return reply.code(403).send({ error: "Connexion GitHub à lancer depuis la page du compagnon" });
+    }
     if (!(await githubClientId())) return reply.code(404).send({ error: "Connexion non disponible pour ce compte" });
     try {
       await startGithubLogin();

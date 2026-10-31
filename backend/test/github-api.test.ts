@@ -167,6 +167,46 @@ describe("GitHub par GITHUB_TOKEN", () => {
     assert.deepEqual([failed.project, failed.pipeline, failed.durationSec, failed.failedJobs], ["org/app", "failed", 290, ["tests"]]);
     assert.ok(github.seen.some((s) => s.url.startsWith("/repos/org/lib/actions/runs?branch=trunk&")));
   });
+
+  it("Actions : limite de débit = erreur visible ; dépôt refusé (403 SSO) = pas de ligne", async () => {
+    github.runs = { "org/app": fakeRun(), "org/lib": fakeRun({ id: 888, head_branch: "trunk" }) };
+    try {
+      github.runsAnswer = { "org/lib": { status: 403, body: { message: "Resource protected by organization SAML enforcement" } } };
+      await server.call("POST", "/github/prs/merge", MERGE_BODY); // vide le cache
+      const sso = await server.call("GET", "/github/actions");
+      assert.equal(sso.status, 200);
+      assert.deepEqual(
+        sso.json.pipelines.map((p: { project: string }) => p.project),
+        ["org/app"],
+      );
+      for (const limit of [
+        { status: 403, headers: { "x-ratelimit-remaining": "0" }, body: { message: "API rate limit exceeded" } },
+        { status: 403, body: { message: "You have exceeded a secondary rate limit" } },
+      ]) {
+        github.runsAnswer = { "org/lib": limit };
+        await server.call("POST", "/github/prs/merge", MERGE_BODY);
+        const res = await server.call("GET", "/github/actions");
+        assert.deepEqual(
+          [res.status, res.json.error],
+          [502, "GitHub limite les appels pour l'instant : la liste revient dans quelques minutes"],
+        );
+      }
+    } finally {
+      github.runsAnswer = {};
+    }
+  });
+
+  it("réponse GraphQL partielle (organisation à accès restreint) : les PR lisibles s'affichent", async () => {
+    github.graphqlPartial = true;
+    try {
+      await server.call("POST", "/github/prs/merge", MERGE_BODY); // vide le cache
+      const res = await server.call("GET", "/github/prs");
+      assert.equal(res.status, 200);
+      assert.deepEqual([res.json.mine.length, res.json.review.length], [2, 1]);
+    } finally {
+      github.graphqlPartial = false;
+    }
+  });
 });
 
 describe("connexion GitHub (device flow)", () => {
@@ -265,5 +305,64 @@ describe("connexion GitHub (device flow)", () => {
     server.clearOsCalls();
     assert.equal((await server.call("POST", "/local/open", { section: "github" })).status, 200);
     assert.deepEqual(server.osCalls(), [{ fn: "openTarget", args: [`http://127.0.0.1:${new URL(server.url).port}/oauth/github/start`] }]);
+  });
+
+  it("démarrage refusé depuis une autre page web ; accepté depuis la page du compagnon ou une navigation directe", async () => {
+    const start = (site?: string) =>
+      fetch(server.url + "/oauth/github/start", { redirect: "manual", headers: site ? { "sec-fetch-site": site } : {} });
+    for (const site of ["cross-site", "same-site"]) assert.equal((await start(site)).status, 403, site);
+    for (const site of ["none", "same-origin", undefined]) assert.equal((await start(site)).status, 302, String(site));
+  });
+
+  it("GitHub en panne pendant l'attente : on continue d'interroger, le jeton arrive", async () => {
+    await server.call("DELETE", "/local/accounts/github", undefined, false);
+    await fetch(server.url + "/oauth/github/start", { redirect: "manual" });
+    github.tokenFailures = 3;
+    github.approve();
+    const g = await until(
+      () => status(server),
+      (x) => x.login?.state !== "waiting",
+    );
+    assert.deepEqual([g.login, g.account?.username], [{ state: "ok" }, "camille"]);
+    assert.equal(github.tokenFailures, 0);
+  });
+
+  it("déconnecté pendant la fin de la connexion : le jeton ne revient pas", async () => {
+    await server.call("DELETE", "/local/accounts/github", undefined, false);
+    await fetch(server.url + "/oauth/github/start", { redirect: "manual" });
+    github.userDelayMs = 1500;
+    const from = github.seen.length;
+    try {
+      github.approve();
+      // Le compagnon a reçu le jeton et lit le nom (lent) : la déconnexion arrive à ce moment-là.
+      await until(
+        async () => github.seen.slice(from).some((s) => s.url === "/user"),
+        (seen) => seen,
+      );
+      await server.call("DELETE", "/local/accounts/github", undefined, false);
+      await new Promise((r) => setTimeout(r, 2000));
+      assert.equal((await status(server)).account, null);
+      assert.equal((await server.call("GET", "/github/prs")).json.connected, false);
+    } finally {
+      github.userDelayMs = 0;
+    }
+  });
+});
+
+describe("GitHub : changement de compte", () => {
+  it("relier un compte alors que GITHUB_TOKEN sert : la liste suivante est lue avec le compte, pas le cache", async () => {
+    const server = await boot({ GITHUB_TOKEN: PERSONAL, GITHUB_CLIENT_ID: FAKE_GITHUB_CLIENT_ID });
+    await server.call("GET", "/github/prs");
+    await fetch(server.url + "/oauth/github/start", { redirect: "manual" });
+    github.approve();
+    await until(
+      () => status(server),
+      (g) => g.account !== null,
+    );
+    const before = github.seen.length;
+    await server.call("GET", "/github/prs");
+    const read = github.seen.slice(before).find((s) => s.url === "/graphql");
+    assert.ok(read, "pas de nouvelle lecture : le cache de l'ancienne identité a servi");
+    assert.equal(read.authorization, `Bearer ${github.issued.at(-1)}`);
   });
 });

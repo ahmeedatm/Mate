@@ -15,6 +15,3 @@ enum class Forge(val key: String) {
 
 /** Référence courte d'une demande de fusion : `app!12` pour une MR GitLab, `app#12` pour une PR GitHub. */
 fun changeRef(forge: Forge, project: String, number: Int) = shortProject(project) + (if (forge == Forge.GITHUB) "#" else "!") + number
-
-/** Adresse du compte sur la page locale de l'ordinateur, ouverte par la carte « Connecter » : la section de la forge. */
-fun connectSection(forge: Forge) = forge.key

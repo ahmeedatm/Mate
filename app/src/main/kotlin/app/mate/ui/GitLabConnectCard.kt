@@ -8,7 +8,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import app.mate.R
 import app.mate.github.Forge
-import app.mate.github.connectSection
 import app.mate.net.BackendClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -75,7 +74,7 @@ class GitLabConnectCard(
     private fun connect() {
         scope().launch {
             try {
-                BackendClient(context).system.openLocalPage(connectSection(forge))
+                BackendClient(context).system.openLocalPage(forge.key)
                 waiting = true
                 text.setText(texts.connectWaiting)
             } catch (e: Exception) {

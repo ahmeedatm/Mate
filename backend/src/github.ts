@@ -1,14 +1,15 @@
 import { sortPipelines, type MrsAnswer, type Pipeline, type PipelineRow, type PipelinesAnswer, type Mr } from "./gitlab.ts";
 import {
   expireGithubToken,
-  githubAccessToken,
   githubAccount,
-  githubAccountCanWrite,
+  githubAccountAccess,
   githubApiUrl,
   githubClientId,
   githubWebUrl,
+  onGithubAccountChange,
 } from "./github-auth.ts";
 import { logFailure } from "./log.ts";
+import { singleFlight } from "./single-flight.ts";
 
 /**
  * Pull requests GitHub de l'utilisateur connecté (les siennes : écrites ou assignées, et celles à relire), avec contrôles,
@@ -110,7 +111,7 @@ type PrNode = {
   latestReviews?: { nodes: { state: string; author?: { login: string } | null }[] } | null;
   commits?: { nodes: { commit: { statusCheckRollup?: { state: string } | null } }[] } | null;
 };
-type Search = { nodes: (PrNode | Record<string, never>)[] };
+type Search = { nodes: (PrNode | Record<string, never> | null)[] };
 
 export function toPr(n: PrNode): Mr {
   const checks = checksOf(n.commits?.nodes[0]?.commit.statusCheckRollup?.state);
@@ -137,15 +138,16 @@ const NOT_CONNECTED = new GitHubError(503, "GitHub n'est pas connecté sur l'ord
 const UNREACHABLE = new GitHubError(502, "GitHub ne répond pas");
 const TOKEN_REFUSED = new GitHubError(502, "GitHub refuse l'accès de l'ordinateur : reconnecte-le depuis la page du compagnon");
 const READ_ONLY = new GitHubError(409, "La connexion GitHub est en lecture seule : fusionne sur l'ordinateur");
+const RATE_LIMITED = new GitHubError(502, "GitHub limite les appels pour l'instant : la liste revient dans quelques minutes");
 
 /** Jeton choisi et d'où il vient : un refus du compte le passe à « à reconnecter », pas celui du .env. */
 type Auth = { token: string; account: boolean };
 
 async function auth(): Promise<{ read?: Auth; write?: Auth }> {
-  const bearer = await githubAccessToken();
-  const account = bearer ? { token: bearer, account: true } : undefined;
+  const { token, canWrite } = await githubAccountAccess();
+  const account = token ? { token, account: true } : undefined;
   const personal = envToken() ? { token: envToken(), account: false } : undefined;
-  return { read: account ?? personal, write: account && (await githubAccountCanWrite()) ? account : personal };
+  return { read: account ?? personal, write: account && canWrite ? account : personal };
 }
 
 async function call(path: string, method: "GET" | "POST" | "PUT", body: object | undefined, a: Auth): Promise<Response> {
@@ -180,18 +182,21 @@ async function readPrs(a: Auth): Promise<PrLists> {
   const res = await call("/graphql", "POST", { query: QUERY }, a);
   await refuseIfDenied(res, a);
   if (!res.ok) throw UNREACHABLE;
-  let data: { errors?: unknown; data?: { authored: Search; assigned: Search; review: Search } | null };
+  let data: { errors?: unknown; data?: { authored: Search | null; assigned: Search | null; review: Search | null } | null };
   try {
     data = await res.json();
   } catch {
     throw UNREACHABLE;
   }
-  if (data.errors || !data.data) throw UNREACHABLE;
+  // `errors` avec des `data` : réponse partielle (organisation qui restreint les applis OAuth, SSO SAML : nœuds null pour
+  // ses dépôts). On garde le reste ; seule une réponse sans données est une panne.
+  if (!data.data) throw UNREACHABLE;
+  if (data.errors) logFailure("Lecture partielle des PR GitHub", new Error(`${(data.errors as unknown[]).length ?? 0} erreur(s) GraphQL`));
   const branches: Record<string, string> = {};
-  const prs = (s: Search) =>
-    // Les résultats de recherche peuvent être autre chose qu'une PR (objet vide dans le fragment) : ignorés.
-    s.nodes.flatMap((n) => {
-      if (!("number" in n) || typeof n.number !== "number") return [];
+  const prs = (s: Search | null) =>
+    // Nœuds null (accès refusé) ou autre chose qu'une PR (objet vide dans le fragment) : ignorés.
+    (s?.nodes ?? []).flatMap((n) => {
+      if (!n || !("number" in n) || typeof n.number !== "number") return [];
       const branch = n.repository.defaultBranchRef?.name;
       if (branch) branches[n.repository.nameWithOwner] = branch;
       return [toPr(n as PrNode)];
@@ -202,32 +207,17 @@ async function readPrs(a: Auth): Promise<PrLists> {
   return { mine: newest([...mine.values()]), review: newest(prs(data.data.review)), branches };
 }
 
-let cache: { at: number; value: PrLists } | undefined;
-let inflight: Promise<PrLists> | undefined;
-let runsCache: { at: number; value: PipelineRow[] } | undefined;
-let runsInflight: Promise<PipelineRow[]> | undefined;
+const prsFlight = singleFlight<PrLists>(CACHE_MS);
+const runsFlight = singleFlight<PipelineRow[]>(CACHE_MS);
 
 export const clearGithubCache = () => {
-  cache = undefined;
-  inflight = undefined;
-  runsCache = undefined;
-  runsInflight = undefined;
+  prsFlight.clear();
+  runsFlight.clear();
 };
+// Le cache est celui d'une identité : un compte relié, déconnecté ou à reconnecter le vide.
+onGithubAccountChange(clearGithubCache);
 
-function read(a: Auth): Promise<PrLists> {
-  if (cache && Date.now() - cache.at < CACHE_MS) return Promise.resolve(cache.value);
-  if (inflight) return inflight;
-  const run: Promise<PrLists> = readPrs(a)
-    .then((value) => {
-      if (inflight === run) cache = { at: Date.now(), value };
-      return value;
-    })
-    .finally(() => {
-      if (inflight === run) inflight = undefined;
-    });
-  inflight = run;
-  return run;
-}
+const read = (a: Auth) => prsFlight.get(() => readPrs(a));
 
 /** Mes PR et celles à relire. Gardées 20 s, une lecture à la fois ; pas connecté : réponse normale, GitHub n'est pas appelé. */
 export async function listPrs(): Promise<MrsAnswer> {
@@ -293,7 +283,17 @@ async function failedJobs(repo: string, id: number, a: Auth): Promise<string[]> 
   }
 }
 
-/** Dernier run de la branche ; null si le dépôt n'en a aucun (ou pas d'Actions : 404). */
+/** Limite de débit de GitHub (primaire : plus d'appels restants ; secondaire : 403 ou 429 avec un message de limite). */
+async function rateLimited(res: Response): Promise<boolean> {
+  if (res.status === 429 || res.headers.get("x-ratelimit-remaining") === "0") return true;
+  if (res.status !== 403) return false;
+  return /rate limit/i.test(await res.text().catch(() => ""));
+}
+
+/**
+ * Dernier run de la branche ; null si le dépôt n'en a aucun, pas d'Actions (404) ou pas d'accès (403 hors limite). Limite de
+ * débit : une erreur, pas une ligne qui disparaît (on croirait que rien ne tourne ni n'échoue).
+ */
 async function latestRun(repo: string, branch: string, a: Auth): Promise<PipelineRow | null> {
   const res = await call(
     `/repos/${repo}/actions/runs?branch=${encodeURIComponent(branch)}&per_page=1&exclude_pull_requests=true`,
@@ -302,6 +302,7 @@ async function latestRun(repo: string, branch: string, a: Auth): Promise<Pipelin
     a,
   );
   await refuseIfDenied(res, a);
+  if (await rateLimited(res)) throw RATE_LIMITED;
   if (res.status === 404 || res.status === 403) return null;
   if (!res.ok) throw UNREACHABLE;
   let run: RunJson | undefined;
@@ -338,18 +339,5 @@ async function readRuns(a: Auth, lists: PrLists): Promise<PipelineRow[]> {
 export async function listRuns(): Promise<PipelinesAnswer> {
   const { read: a } = await auth();
   if (!a) return { connected: false, expired: !!(await githubAccount())?.expired, pipelines: [] };
-  if (runsCache && Date.now() - runsCache.at < CACHE_MS) return { connected: true, pipelines: runsCache.value };
-  if (!runsInflight) {
-    const run: Promise<PipelineRow[]> = read(a)
-      .then((lists) => readRuns(a, lists))
-      .then((value) => {
-        if (runsInflight === run) runsCache = { at: Date.now(), value };
-        return value;
-      })
-      .finally(() => {
-        if (runsInflight === run) runsInflight = undefined;
-      });
-    runsInflight = run;
-  }
-  return { connected: true, pipelines: await runsInflight };
+  return { connected: true, pipelines: await runsFlight.get(async () => readRuns(a, await read(a))) };
 }
