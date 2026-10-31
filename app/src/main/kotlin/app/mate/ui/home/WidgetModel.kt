@@ -128,7 +128,7 @@ private const val LEGACY_FIRST = "Bureau"
  * Disposition complète : widgets et profils. Un profil = une page ; `names[i]` null = pas encore de nom ([nameMissing]
  * lui en donne un, l'interface passe les textes : le modèle ne touche à aucune ressource).
  * Rôles (Deck V2) : `homeProfile` (Accueil, jamais supprimé), `deckProfile` (Deck, -1 s'il a été supprimé), `callProfile`
- * (Réunion : jamais supprimé, absent de la barre et du balayage hors appel). `rolesSet` : rôles déjà posés une fois
+ * (Réunion : -1 s'il a été supprimé, absent de la barre et du balayage hors appel). `rolesSet` : rôles déjà posés une fois
  * ([ensureRoles] ne recrée pas un Deck supprimé).
  */
 class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String?>) {
