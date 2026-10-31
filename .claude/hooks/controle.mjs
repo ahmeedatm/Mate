@@ -18,6 +18,8 @@ import { relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PERMIS = "controle: permis";
+const OPTIONS_GIT = ["-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff", "--src-prefix=a/", "--dst-prefix=b/", "--unified=0"];
+const SAUT_LIGNE = /\r?\n/;
 const MAX_LIGNE = 100;
 const FIN_MESSAGE =
   "Le contrôle ne regarde que les lignes ajoutées. Faux positif : ajouter « controle: permis <raison> » sur la ligne et le dire dans la PR.";
@@ -37,6 +39,7 @@ const KOTLIN = /\.kt$/;
 
 const ATTR_VECTORIEL = /android:(?:fillColor|strokeColor)="[^"]*"/g;
 const COULEUR_XML = /"#[0-9A-Fa-f]{3,8}"/;
+const COULEUR_VALEUR = />\s*#[0-9A-Fa-f]{3,8}\s*</;
 const COULEUR_KT = new RegExp(
   [
     String.raw`Color\.parseColor\("`,
@@ -55,7 +58,7 @@ const TEXTE_KT = [
 ];
 
 const aUneLettre = (s) => /\p{L}/u.test(s);
-const sansGabarit = (s) => s.replace(/\$\{[^}]*\}/g, "").replace(/\$[A-Za-z_]\w*/g, "");
+const sansGabarit = (s) => s.replace(/\\./g, "").replace(/\$\{[^}]*\}/g, "").replace(/\$[A-Za-z_]\w*/g, "");
 const captures = (re, ligne) => [...ligne.matchAll(re)].map((m) => m[1]);
 
 // Règles : `applique` choisit les fichiers (chemin relatif à app/src/main/),
@@ -65,7 +68,9 @@ const REGLES = [
     rule: "couleur-en-dur",
     fix: FIX_COULEUR_XML,
     applique: (rel) => XML_VALEUR.test(rel),
-    viole: (ligne, rel) => COULEUR_XML.test(XML_DRAWABLE.test(rel) ? ligne.replace(ATTR_VECTORIEL, "") : ligne),
+    viole: (ligne, rel) =>
+      COULEUR_XML.test(XML_DRAWABLE.test(rel) ? ligne.replace(ATTR_VECTORIEL, "") : ligne) ||
+      (rel.startsWith("res/values") && COULEUR_VALEUR.test(ligne)),
   },
   {
     rule: "couleur-en-dur",
@@ -109,10 +114,10 @@ const cheminSource = (filePath) => {
 // une fois avant et deux fois après compte une fois).
 export const addedLines = (before, after) => {
   const restant = new Map();
-  for (const l of before.split("\n")) restant.set(l, (restant.get(l) ?? 0) + 1);
-  return after.split("\n").filter((l) => {
-    const n = restant.get(l) ?? 0;
-    restant.set(l, Math.max(n - 1, 0));
+  for (const l of before.split(SAUT_LIGNE)) restant.set(l.trim(), (restant.get(l.trim()) ?? 0) + 1);
+  return after.split(SAUT_LIGNE).filter((l) => {
+    const n = restant.get(l.trim()) ?? 0;
+    restant.set(l.trim(), Math.max(n - 1, 0));
     return n === 0;
   });
 };
@@ -129,9 +134,7 @@ export const findProblems = (filePath, lines) => {
 };
 
 const message = (relPath, problems) =>
-  problems.map(
-    (p) => `Contrôle Mate : ${p.rule} dans ${relPath} : « ${p.line.trim().slice(0, MAX_LIGNE)} ». ${p.fix}.`,
-  );
+  problems.map((p) => `Contrôle Mate : ${p.rule} dans ${relPath} : « ${p.line.trim().slice(0, MAX_LIGNE)} ». ${p.fix}.`);
 
 const lignesDuHook = ({ tool_name: outil, tool_input: entree }) => {
   if (!entree || typeof entree.file_path !== "string") return [];
@@ -172,7 +175,7 @@ const ajoutsDuDiff = (diff) => {
 
 const modeDiff = (base) => {
   const git = (...args) =>
-    execFileSync("git", ["diff", "--no-color", "--no-ext-diff", "--unified=0", ...args], {
+    execFileSync("git", [...OPTIONS_GIT, ...args], {
       encoding: "utf8", maxBuffer: 256 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"],
     });
   let ajouts;

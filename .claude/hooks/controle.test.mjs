@@ -1,8 +1,8 @@
 // Tests du contrôle bloquant : node --test .claude/hooks/
-import { test } from "node:test";
+import { after, test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync, execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,6 +30,11 @@ test("laisse passer une ligne déjà présente", () => {
   assert.deepEqual(addedLines("a\nval white = 0xFFFFFFFF.toInt()", "a\nb\nval white = 0xFFFFFFFF.toInt()"), ["b"]);
 });
 
+test("addedLines ignore CRLF et indentation", () => {
+  assert.deepEqual(addedLines("a\r\nColor.BLACK\r\n", "a\nColor.BLACK\nb\n"), ["b"]);
+  assert.deepEqual(addedLines("  val c = Color.BLACK", "    val c = Color.BLACK"), []);
+});
+
 test("addedLines compte les doublons", () => {
   assert.deepEqual(addedLines("x", "x\nx"), ["x"]);
 });
@@ -48,6 +53,17 @@ test("icône vectorielle", () => {
 
 test("palettes.xml permis", () => {
   assert.deepEqual(rules("app/src/main/res/values/palettes.xml", ['<item name="c_primary">#FF0000</item>', 'x="#FF0000"']), []);
+});
+
+test("couleur sans guillemets dans values", () => {
+  const v = "app/src/main/res/values/styles.xml";
+  assert.deepEqual(rules(v, ['<item name="android:background">#FF0000</item>']), ["couleur-en-dur"]);
+  assert.deepEqual(rules(v, ['<color name="x"> #F00 </color>']), ["couleur-en-dur"]);
+  assert.deepEqual(rules("app/src/main/res/values/colors.xml", ['<color name="x">#FF0000</color>']), []);
+});
+
+test("échappements Kotlin", () => {
+  assert.deepEqual(rules(KT, ['text = "•"', 'label.setText("\\n")']), []);
 });
 
 test("bloque un texte en dur dans un layout", () => {
@@ -96,6 +112,14 @@ test("controle: permis", () => {
   assert.deepEqual(rules(KT, ["val c = Color.BLACK // controle: permis fond d'un cadre photo"]), []);
 });
 
+const TEMP = [];
+const dirTemp = () => {
+  const d = mkdtempSync(join(tmpdir(), "controle-"));
+  TEMP.push(d);
+  return d;
+};
+after(() => TEMP.forEach((d) => rmSync(d, { recursive: true, force: true })));
+
 const lancer = (args, input, opts = {}) =>
   spawnSync("node", [SCRIPT, ...args], { input, encoding: "utf8", ...opts });
 
@@ -136,16 +160,14 @@ test("entrée illisible", () => {
 });
 
 test("--diff : lignes ajoutées seulement, sortie 1 puis 0", () => {
-  const dir = mkdtempSync(join(tmpdir(), "controle-"));
+  const dir = dirTemp();
   const git = (...a) => execFileSync("git", a, { cwd: dir, encoding: "utf8" });
   git("init", "-q", "-b", "master");
-  git("config", "user.email", "t@t");
-  git("config", "user.name", "t");
   const f = join(dir, LAYOUT);
   mkdirSync(dirname(f), { recursive: true });
   writeFileSync(f, '<View android:background="#FF0000"/>\n');
   git("add", ".");
-  git("commit", "-qm", "base");
+  git("-c", "commit.gpgsign=false", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "base");
   const ok = lancer(["--diff", "master"], "", { cwd: dir });
   assert.equal(ok.status, 0, ok.stdout);
   writeFileSync(f, '<View android:background="#FF0000"/>\n<View android:background="#00FF00"/>\n');
@@ -153,10 +175,12 @@ test("--diff : lignes ajoutées seulement, sortie 1 puis 0", () => {
   assert.equal(ko.status, 1);
   assert.match(ko.stdout, /couleur-en-dur dans app\/src\/main\/res\/layout\/x\.xml : « <View android:background="#00FF00"\/> »/);
   assert.doesNotMatch(ko.stdout, /FF0000/);
+  const env = { ...process.env, GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: "diff.noprefix", GIT_CONFIG_VALUE_0: "true" };
+  assert.equal(lancer(["--diff", "master"], "", { cwd: dir, env }).status, 1);
 });
 
 test("--diff : base introuvable sort en 2", () => {
-  const dir = mkdtempSync(join(tmpdir(), "controle-"));
+  const dir = dirTemp();
   execFileSync("git", ["init", "-q"], { cwd: dir });
   const r = lancer(["--diff", "origin/inexistante"], "", { cwd: dir });
   assert.equal(r.status, 2);
