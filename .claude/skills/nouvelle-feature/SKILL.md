@@ -45,6 +45,11 @@ l'utilisateur, sans préfixe technique. Vérifier les deux :
 
 `bash .github/nommage.sh "<branche>" "<titre>"` (sortie 0 attendue, sinon corriger).
 
+Le contrôle de la branche est fiable partout ; celui du titre demande bash 4 ou plus (Git Bash sous
+Windows convient ; avec le bash 3.2 du Mac, une ligne « bad substitution » veut dire que le titre
+n'a pas été contrôlé). Dans ce cas, vérifier le titre à la main : en français, sans préfixe
+`feat:` / `fix(x):` ni `[balise]` ; le contrôle `nommage` de la CI le confirmera.
+
 ## 4. Commit d'ouverture et PR brouillon
 
 ```
@@ -87,7 +92,8 @@ cela sort de la demande validée.
 
 Compléter le corps de la PR : « Comment tester » (gestes et résultat attendu), « Testé sur »
 (cocher ce qui a vraiment été essayé, laisser le reste décoché), captures par thème pour un écran
-(images jointes à la PR, jamais commitées). Mettre à jour avec `gh pr edit <n> --body-file <fichier>`,
+(jamais commitées). `gh` ne sait pas joindre d'images : les glisser dans la description de la PR
+sur github.com, ou le demander à l'humain, et le dire dans la ligne `⚠️` si ce n'est pas fait. Mettre à jour avec `gh pr edit <n> --body-file <fichier>`,
 puis `gh pr ready <n>`. Terminer par une ligne `⚠️` sur ce qui n'a pas été fait ou vérifié.
 La fusion reste à la CI verte et à l'équipe (`CLAUDE.md`, § Règles de travail).
 

@@ -10,25 +10,17 @@ Conventions et règles de travail : `CLAUDE.md`, § Conventions du code (bloc «
 Sécurité du jeton et de l'appairage : `docs/securite-appairage.md`, à lire avant toute route.
 Ne rien recopier d'ici dans la PR : renvoyer à ces documents.
 
-## Structure
+## À vérifier
 
-- Un plugin Fastify par domaine dans `backend/src/routes/`, enregistré par `src/server.ts`
-  (démarrage, jeton, erreurs, enregistrement des plugins : pas de logique métier dedans).
-- Tout accès au système (lancer une appli, touches, fenêtres, son) passe par `src/os.ts`, seul point
-  d'entrée ; `src/mac/` et `src/win/` ne sont jamais appelés depuis une route. Toute fonction
-  ajoutée ou changée dans `os.ts` est reportée dans le faux `backend/test/fake-os.ts`.
-- Une fonction qui n'existe que sur un système répond clairement sur l'autre (501 ou `null`).
-- Types d'écrans et de fenêtres partagés : `src/screens.ts`.
+Règles et raisons : `CLAUDE.md` § Conventions du code (bloc « Backend »), `docs/securite-appairage.md`
+et `docs/architecture.md` § Détail par fonction. Ce qu'on contrôle :
 
-## Sécurité
-
-- Toute route exige le jeton d'appairage, sauf `/health`, `/pair/*` et les routes locales qui
-  n'écoutent que 127.0.0.1. Ne jamais ouvrir au WiFi une route sans jeton.
-- Entrées validées par un schéma (corps, paramètres, requête). Jamais d'URL ni de commande construite
-  depuis une donnée de la tablette sans contrôle (la tablette envoie un identifiant, le backend
-  reconstruit l'URL).
-- Aucun secret, jeton ni contenu sensible en journal. Erreur technique = une phrase en français
-  (`setErrorHandler`) ; un refus d'un service tiers ne devient pas un 401 (réservé au jeton).
+- un plugin Fastify par domaine dans `backend/src/routes/`, enregistré par `src/server.ts` ;
+- tout accès au système par `src/os.ts` seulement, et son faux `backend/test/fake-os.ts` mis à jour ;
+- une fonction propre à un système répond clairement sur l'autre (501 ou `null`) ;
+- jeton exigé sur chaque route (exceptions et routes locales : `docs/securite-appairage.md`) ;
+- entrées validées par un schéma, aucune URL ni commande construite depuis une donnée de la tablette ;
+- aucun secret en journal, erreurs techniques remplacées par une phrase.
 
 ## Tests (rouge d'abord, vu échouer)
 

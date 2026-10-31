@@ -13,20 +13,20 @@ ses helpers, ses styles et ses motifs plutôt que d'en créer.
 ## Avant d'écrire
 
 - Matériel cible : `docs/tablette-4.2.md` (Android 10, 2 Go de RAM, tas de 128 Mo, écran 55 Hz,
-  WebView 81). Toute décision se juge contre lui : rien de lourd, pas d'allocation dans `onDraw`.
+  WebView 81). Toute décision se juge contre lui : rien de lourd.
 - Chercher si le helper, la vue, la chaîne ou le client réseau existe déjà.
 - Écran créé ou changé : charger `ecran-design`.
 
-## Ce que le projet impose (détail dans `CLAUDE.md`)
+## À vérifier avant de rendre la main
 
-- Vues XML, pas de Compose ; une Activity, un Fragment par mode.
-- Textes affichés dans `res/values/strings.xml`, en français avec les accents ; jamais en dur.
-- Erreurs affichées par `errorText(e)`, jamais `e.message` brut.
-- Pas de dépendance nouvelle sans l'accord de l'équipe : le demander avec la raison, l'écrire dans la
-  PR. Si elle est accordée, régénérer `assets/licences.txt` (voir `CLAUDE.md`).
-- Réseau : un client par domaine dans `net/`, jeton jamais en clair hors 127.0.0.1.
-- Couleurs et polices par attributs du thème (le contrôle `.claude/hooks/controle.mjs` bloque le reste).
-- Un nouvel ordre venu de l'ordinateur : maillons listés dans `CLAUDE.md` (charger aussi `feature-backend`).
+Les règles sont dans `CLAUDE.md`, § Conventions du code, et dans `docs/securite-appairage.md` pour le
+réseau ; ne pas les recopier, les appliquer. Liste de ce qu'on contrôle :
+
+- vues XML et un Fragment par mode ; textes dans `strings.xml` ; erreurs par `errorText` ;
+- couleurs et polices par attributs du thème (le contrôle `.claude/hooks/controle.mjs` bloque le reste) ;
+- aucune dépendance nouvelle sans l'accord de l'équipe (si accordée, `assets/licences.txt` régénéré) ;
+- réseau par le client de son domaine dans `net/` ;
+- nouvel ordre venu de l'ordinateur : tous les maillons de `CLAUDE.md` (charger aussi `feature-backend`).
 
 ## Tests
 

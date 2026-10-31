@@ -15,7 +15,8 @@ git fetch origin
 node .claude/hooks/controle.mjs --diff origin/master
 ```
 
-Sortie 0 : rien à signaler. Sortie 1 : chaque ligne est une couleur, un texte ou une police en dur
+Sortie 0 : rien à signaler. Sortie 2 : diff illisible (base introuvable) : `git fetch origin` puis
+relancer. Sortie 1 : chaque ligne est une couleur, un texte ou une police en dur
 dans une ligne ajoutée. Les corriger (c'est du `bloquant`) puis relancer, avant d'appeler les agents.
 
 ## 2. Les agents, dans un seul message
