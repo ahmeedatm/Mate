@@ -361,6 +361,31 @@ describe("Word, Excel, PowerPoint et Outlook retirés du deck", () => {
     }
   });
 
+  it("page Office au milieu du deck : les identifiants des pages suivantes ne bougent pas", async () => {
+    const own = path.join(dir, "deck-milieu.json");
+    const tile = (label: string) => ({ label, action: { type: "app", name: label } });
+    await fs.writeFile(
+      own,
+      JSON.stringify({
+        pages: [
+          { title: "Apps", apps: true, tiles: [] },
+          { title: "Excel", app: "Microsoft Excel", tiles: [tile("Excel")] },
+          { title: "Discord", app: "Discord", tiles: [tile("Discord")] },
+        ],
+      }),
+    );
+    const cfg = config as { deckFile: string };
+    const before = cfg.deckFile;
+    cfg.deckFile = own;
+    try {
+      reset({ installed: ["Discord"] });
+      const discord = (await deck.loadDeck()).find((p) => p.title === "Discord")!;
+      assert.equal((discord.tiles[0] as Tile).id, "2-0");
+    } finally {
+      cfg.deckFile = before;
+    }
+  });
+
   it("liste d'applis déjà enregistrée : Office en sort une fois, et on peut le rajouter ensuite", async () => {
     await fs.writeFile(
       path.join(dir, "apps.json"),
@@ -373,8 +398,17 @@ describe("Word, Excel, PowerPoint et Outlook retirés du deck", () => {
       }),
     );
     const labels = async () => ((await deck.loadDeck()).find((p) => p.apps)!.tiles as Tile[]).map((t) => t.label);
+    await Promise.all([deck.loadDeck(), deck.loadDeck(), deck.homeFeatures()]);
     assert.deepEqual(await labels(), ["Notes"]);
     await deck.addDeckApp("Microsoft Word");
     assert.deepEqual(await labels(), ["Notes", "Word"], "choix refait par l'utilisateur : gardé");
+  });
+
+  it("sans liste enregistrée : le profil de base reste sans Office, aussi après un retour au profil", async () => {
+    await deck.loadDeck();
+    await deck.resetDeckApps();
+    reset({ installed: baseApps });
+    const labels = ((await deck.loadDeck()).find((p) => p.apps)!.tiles as Tile[]).map((t) => t.label);
+    assert.ok(labels.length > 0 && !labels.some((l) => /word|excel|powerpoint|outlook/i.test(l)));
   });
 });

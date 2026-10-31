@@ -95,7 +95,7 @@ type TileConfig = {
  * montrée seulement si l'appli est dans la page Apps ; sur la tablette ce n'est pas un onglet : toucher l'appli
  * ouvre sa page (sans la lancer), qui affiche son volume (Windows) ; `media` : lecture en cours au-dessus des touches,
  * et pour touches les sites ajoutés depuis la tablette (.data/links.json, vide au départ ; `tiles` est ignoré) ;
- * `sound: false` : pas de barre « Son de l'ordinateur » sur la page (Word, Excel : des raccourcis, pas de son). */
+ * `sound: false` : pas de barre « Son de l'ordinateur » sur la page (une page de raccourcis sans son). */
 type DeckConfig = {
   pages: {
     title: string;
@@ -128,16 +128,17 @@ export type DeckPage = {
 export const PERSO_PREFIX = "k-";
 
 /** Word, Excel, PowerPoint et Outlook ne sont plus au deck (#18), même chez un ordinateur qui a son propre deck.json. */
-const isOfficeApp = (name?: string) => /^(microsoft )?(word|excel|powerpoint|outlook)$/i.test(name ?? "");
+const isOfficeApp = (name?: string) => /^(microsoft )?(word|excel|powerpoint|outlook)\b/i.test(name ?? "");
 
 async function loadConfig(): Promise<DeckConfig> {
   const file = existsSync(config.deckFile) ? config.deckFile : config.deckExampleFile;
   const deck = JSON.parse(await fs.readFile(file, "utf8")) as DeckConfig;
   return {
     ...deck,
-    pages: deck.pages
-      .filter((p) => !isOfficeApp(p.app))
-      .map((p) => (p.apps ? { ...p, tiles: p.tiles.filter((t) => t.action.type !== "app" || !isOfficeApp(t.action.name)) } : p)),
+    // Les pages Office restent dans la liste (masquées par loadDeck) : les identifiants `page-tuile` des suivantes ne bougent pas.
+    pages: deck.pages.map((p) =>
+      p.apps ? { ...p, tiles: p.tiles.filter((t) => t.action.type !== "app" || !isOfficeApp(t.action.name)) } : p,
+    ),
   };
 }
 
@@ -257,7 +258,7 @@ export async function loadDeck(): Promise<DeckPage[]> {
   // Pages des plugins coupés sur la tablette (Discord, Teams, Média) : masquées de la même façon.
   const mediaOn = canMedia && (await pluginOn("media"));
   const appOff = await Promise.all(deck.pages.map((page) => (page.app ? appPluginOff(page.app) : false)));
-  const present = deck.pages.map((page, p) => (!page.media || mediaOn) && !appOff[p]);
+  const present = deck.pages.map((page, p) => (!page.media || mediaOn) && !appOff[p] && !isOfficeApp(page.app));
   const links = await deckLinks();
   const pages = deck.pages
     .map((page, p): DeckPage =>
