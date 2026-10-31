@@ -43,6 +43,7 @@ function reset(next: FakeState = {}) {
 beforeEach(async () => {
   reset();
   await fs.rm(path.join(dir, "apps.json"), { force: true });
+  await fs.rm(path.join(dir, "apps-office-retire.json"), { force: true });
   await fs.rm(path.join(dir, "links.json"), { force: true });
   await fs.rm(path.join(dir, "keys.json"), { force: true });
 });
@@ -306,83 +307,108 @@ describe("homeFeatures", () => {
   });
 });
 
-describe("suite Microsoft dans les decks de départ", () => {
-  const OFFICE = ["Word", "Excel", "PowerPoint", "Outlook"];
+describe("Word, Excel, PowerPoint et Outlook retirés du deck", () => {
+  const isOffice = (name?: string) => /^(microsoft )?(word|excel|powerpoint|outlook)$/i.test(name ?? "");
   const examples = ["deck.example.json", "deck.example.windows.json"].map((name) => ({
     name,
     deck: JSON.parse(readFileSync(path.join(path.dirname(config.deckExampleFile), name), "utf8")) as typeof deckConfig,
   }));
 
   for (const { name, deck: example } of examples) {
-    it(`${name} : une page par appli, ouverte depuis sa tuile de la page Apps, après les pages d'avant`, () => {
-      const appNames = example.pages.find((p) => p.apps)!.tiles.map((t) => t.action.name);
-      const titles = example.pages.map((p) => p.title);
-      // Ajoutées à la fin : les identifiants des tuiles déjà placées sur la tablette (`page-tuile`) ne bougent pas.
-      assert.deepEqual(titles.slice(-OFFICE.length), OFFICE);
-      for (const title of OFFICE) {
-        const page = example.pages.find((p) => p.title === title)!;
-        assert.ok(appNames.includes(page.app), `${title} : ${page.app} dans la page Apps`);
-        assert.ok(page.tiles.length > 0);
-      }
+    it(`${name} : ni page ni tuile de la suite Office`, () => {
+      assert.deepEqual(
+        example.pages.filter((p) => isOffice(p.title) || isOffice(p.app)).map((p) => p.title),
+        [],
+      );
+      const appTiles = example.pages.find((p) => p.apps)!.tiles;
+      assert.deepEqual(
+        appTiles.filter((t) => isOffice(t.action.name)).map((t) => t.label),
+        [],
+      );
     });
   }
 
-  for (const { name, deck: example } of examples) {
-    it(`${name} : pas de barre Son sur les pages Office`, () => {
-      for (const title of OFFICE) {
-        const page = example.pages.find((p) => p.title === title)!;
-        assert.equal(page.sound, false, `${title} : sound`);
-      }
-    });
-
-    it(`${name} : raccourcis écrits avec des touches connues, sans doublon d'étiquette par page`, () => {
-      const modifiers = new Set(["cmd", "ctrl", "alt", "shift"]);
-      const named = new Set([
-        "return",
-        "space",
-        "delete",
-        "del",
-        "insert",
-        "home",
-        "pageup",
-        "pagedown",
-        "end",
-        "left",
-        "right",
-        "escape",
-        "f2",
-        "f5",
-        "f7",
-        "f9",
-        "f11",
-        "f12",
-      ]);
-      for (const title of OFFICE) {
-        const page = example.pages.find((p) => p.title === title)!;
-        const labels = page.tiles.map((t) => t.label);
-        assert.equal(new Set(labels).size, labels.length, `${title} : étiquettes en double`);
-        const steps = page.tiles.flatMap((t) => (t.action.type === "macro" ? t.action.steps! : [t.action]));
-        for (const step of steps.filter((s) => s.type === "keys")) {
-          const parts = step.keys!.split("+");
-          const key = parts.pop()!;
-          assert.ok(
-            parts.every((m) => modifiers.has(m)),
-            `${title} : ${step.keys}`,
-          );
-          assert.ok(key.length === 1 || named.has(key), `${title} : touche ${key} de ${step.keys}`);
-        }
-      }
-    });
-  }
-
-  it("pages ordinaires (pas seulement en appel) quand les applis sont installées", async () => {
-    reset({ installed: baseApps });
-    const pages = await deck.loadDeck();
-    for (const title of OFFICE) {
-      const page = pages.find((p) => p.title === title)!;
-      assert.equal(page.callOnly, undefined, title);
-      // `sound` de la config arrive jusqu'à la page, pour la route /deck.
-      assert.equal(page.sound, false, title);
+  it("deck propre à l'ordinateur : ses pages et tuiles Office disparaissent, le reste ne bouge pas", async () => {
+    const own = path.join(dir, "deck-ancien.json");
+    const tile = (label: string, name: string) => ({ label, action: { type: "app", name } });
+    await fs.writeFile(
+      own,
+      JSON.stringify({
+        pages: [
+          { title: "Apps", apps: true, tiles: [tile("Word", "Microsoft Word"), tile("Notes", "Notes"), tile("Outlook", "Outlook")] },
+          { title: "Discord", app: "Discord", tiles: [tile("Discord", "Discord")] },
+          { title: "Word", app: "Microsoft Word", tiles: [tile("Word", "Microsoft Word")] },
+          { title: "PowerPoint", app: "PowerPoint", tiles: [tile("PowerPoint", "PowerPoint")] },
+        ],
+      }),
+    );
+    const cfg = config as { deckFile: string };
+    const before = cfg.deckFile;
+    cfg.deckFile = own;
+    try {
+      reset({ installed: ["Microsoft Word", "Notes", "Outlook", "Discord"] });
+      const pages = await deck.loadDeck();
+      assert.deepEqual(
+        pages.map((p) => p.title),
+        ["Apps", "Discord", "Perso"],
+      );
+      assert.deepEqual(
+        (pages[0].tiles as Tile[]).map((t) => t.label),
+        ["Notes"],
+      );
+    } finally {
+      cfg.deckFile = before;
     }
+  });
+
+  it("page Office au milieu du deck : les identifiants des pages suivantes ne bougent pas", async () => {
+    const own = path.join(dir, "deck-milieu.json");
+    const tile = (label: string) => ({ label, action: { type: "app", name: label } });
+    await fs.writeFile(
+      own,
+      JSON.stringify({
+        pages: [
+          { title: "Apps", apps: true, tiles: [] },
+          { title: "Excel", app: "Microsoft Excel", tiles: [tile("Excel")] },
+          { title: "Discord", app: "Discord", tiles: [tile("Discord")] },
+        ],
+      }),
+    );
+    const cfg = config as { deckFile: string };
+    const before = cfg.deckFile;
+    cfg.deckFile = own;
+    try {
+      reset({ installed: ["Discord"] });
+      const discord = (await deck.loadDeck()).find((p) => p.title === "Discord")!;
+      assert.equal((discord.tiles[0] as Tile).id, "2-0");
+    } finally {
+      cfg.deckFile = before;
+    }
+  });
+
+  it("liste d'applis déjà enregistrée : Office en sort une fois, et on peut le rajouter ensuite", async () => {
+    await fs.writeFile(
+      path.join(dir, "apps.json"),
+      JSON.stringify({
+        apps: [
+          { label: "Word", name: "Microsoft Word" },
+          { label: "Notes", name: "Notes" },
+          { label: "Outlook", name: "Microsoft Outlook" },
+        ],
+      }),
+    );
+    const labels = async () => ((await deck.loadDeck()).find((p) => p.apps)!.tiles as Tile[]).map((t) => t.label);
+    await Promise.all([deck.loadDeck(), deck.loadDeck(), deck.homeFeatures()]);
+    assert.deepEqual(await labels(), ["Notes"]);
+    await deck.addDeckApp("Microsoft Word");
+    assert.deepEqual(await labels(), ["Notes", "Word"], "choix refait par l'utilisateur : gardé");
+  });
+
+  it("sans liste enregistrée : le profil de base reste sans Office, aussi après un retour au profil", async () => {
+    await deck.loadDeck();
+    await deck.resetDeckApps();
+    reset({ installed: baseApps });
+    const labels = ((await deck.loadDeck()).find((p) => p.apps)!.tiles as Tile[]).map((t) => t.label);
+    assert.ok(labels.length > 0 && !labels.some((l) => /word|excel|powerpoint|outlook/i.test(l)));
   });
 });
