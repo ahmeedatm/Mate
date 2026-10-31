@@ -29,13 +29,38 @@ data class MixerState(val master: MixerChannel, val mic: MixerChannel, val apps:
 /** Scène du mélangeur : volumes de la sortie et des applis rappelés en un toucher. */
 data class MixerScene(val id: String, val name: String)
 /**
- * Carte graphique de l'ordinateur : `usage` 0-100, `dedicated` faux pour une puce intégrée. `tempC` et `fanRpm` sont
- * absents quand l'ordinateur ne sait pas les lire ; `fanRpm` à 0 veut dire ventilateur arrêté.
+ * Carte graphique de l'ordinateur : `usage` 0-100, `dedicated` faux pour une puce intégrée. `tempC`, `fanRpm` et la
+ * mémoire vidéo (Mo) sont absents quand l'ordinateur ne sait pas les lire ; `fanRpm` à 0 veut dire ventilateur arrêté.
  */
-data class GpuPerf(val name: String, val usage: Int, val dedicated: Boolean, val tempC: Int?, val fanRpm: Int?)
+data class GpuPerf(
+    val name: String,
+    val usage: Int,
+    val dedicated: Boolean,
+    val tempC: Int?,
+    val fanRpm: Int?,
+    val vramUsedMb: Int? = null,
+    val vramTotalMb: Int? = null,
+)
 
-/** Performances de l'ordinateur ; `gpu` absent sur Mac ou sans carte lisible. */
-data class PcPerf(val cpu: Int, val ramPercent: Int, val ramUsedGb: Double, val ramTotalGb: Double, val gpu: GpuPerf?)
+/** Disque du système : espace libre et total (Go), activité 0-100 si l'ordinateur la lit. */
+data class DiskPerf(val freeGb: Double, val totalGb: Double, val activity: Int?)
+
+/** Débits du réseau en Ko/s : envoi (`up`) et réception (`down`). */
+data class NetPerf(val upKBps: Int, val downKBps: Int)
+
+/** Performances de l'ordinateur ; `gpu`, `cpuMhz`, `disk` et `net` absents quand l'ordinateur ne sait pas les lire. */
+data class PcPerf(
+    val cpu: Int,
+    val ramPercent: Int,
+    val ramUsedGb: Double,
+    val ramTotalGb: Double,
+    val gpu: GpuPerf?,
+    val cpuMhz: Int? = null,
+    val disk: DiskPerf? = null,
+    val net: NetPerf? = null,
+)
+
+private fun JSONObject.intOrNull(key: String): Int? = if (isNull(key)) null else getInt(key)
 
 fun parsePerf(json: String): PcPerf {
     val j = JSONObject(json)
@@ -43,11 +68,12 @@ fun parsePerf(json: String): PcPerf {
     val gpu = j.optJSONObject("gpu")?.let { g ->
         GpuPerf(
             g.getString("name"), g.getInt("usage"), g.optBoolean("dedicated"),
-            if (g.isNull("tempC")) null else g.getInt("tempC"),
-            if (g.isNull("fanRpm")) null else g.getInt("fanRpm"),
+            g.intOrNull("tempC"), g.intOrNull("fanRpm"), g.intOrNull("vramUsedMb"), g.intOrNull("vramTotalMb"),
         )
     }
-    return PcPerf(j.getInt("cpu"), ram.getInt("percent"), ram.getDouble("used"), ram.getDouble("total"), gpu)
+    val disk = j.optJSONObject("disk")?.let { d -> DiskPerf(d.getDouble("freeGb"), d.getDouble("totalGb"), d.intOrNull("activity")) }
+    val net = j.optJSONObject("net")?.let { n -> NetPerf(n.getInt("upKBps"), n.getInt("downKBps")) }
+    return PcPerf(j.getInt("cpu"), ram.getInt("percent"), ram.getDouble("used"), ram.getDouble("total"), gpu, j.intOrNull("cpuMhz"), disk, net)
 }
 
 /**

@@ -372,6 +372,21 @@ namespace Mate
             var card = cards.Where(IsDedicated).OrderByDescending(a => a.DedicatedMb).FirstOrDefault() ?? cards.FirstOrDefault();
             if (card == null || usage == null) return null;
             var res = new Dictionary<string, object> { { "name", card.Name }, { "usage", CardUsage(usage, card) }, { "dedicated", IsDedicated(card) } };
+            if (IsDedicated(card))
+            {
+                // Mémoire vidéo : total DXGI, utilisée par le compteur PDH de la carte ; sans compteur lisible, pas de vramUsedMb.
+                res["vramTotalMb"] = card.DedicatedMb;
+                // DXGI peut lister deux fois la même carte (deux LUID, un seul avec une instance PDH) : on interroge tous les
+                // adaptateurs non logiciels de même nom et même mémoire dédiée, et on garde le plus grand résultat (max, pas
+                // somme : ce sont des doublons de la même mémoire, une somme la compterait deux fois).
+                double? vram = null;
+                foreach (var twin in cards.Where(a => a.Name == card.Name && a.DedicatedMb == card.DedicatedMb))
+                {
+                    var used = CounterValues(new[] { VramPath }, twin.Luid)[VramPath];
+                    if (used != null && (vram == null || used > vram)) vram = used;
+                }
+                if (vram != null) res["vramUsedMb"] = (long)(vram.Value / (1024 * 1024));
+            }
             uint? temp, fan;
             if (AdapterPerfData(card, out temp, out fan) == null)
             {
@@ -429,6 +444,116 @@ namespace Mate
             if (PdhGetFormattedCounterValue(cpuCounter, PDH_FMT_DOUBLE, IntPtr.Zero, out value) != 0) return null;
             if (value.CStatus != 0 && value.CStatus != 1) return null; // PDH_CSTATUS_VALID_DATA, PDH_CSTATUS_NEW_DATA
             return double.IsNaN(value.DoubleValue) || double.IsInfinity(value.DoubleValue) ? (double?)null : value.DoubleValue;
+        }
+
+        // --- Compteurs PDH génériques (opération `counters`) : fréquence du processeur, disque, réseau, mémoire vidéo.
+        // Une requête gardée ouverte par liste de chemins, mêmes délais que ci-dessus (MinSampleMs, StaleMs, BaselineMs).
+
+        const string VramPath = @"\GPU Adapter Memory(*)\Dedicated Usage";
+
+        class CounterSet
+        {
+            public IntPtr Query;
+            public IntPtr[] Counters;
+            public long SampledAt = -1;
+            /** Par chemin : instances valides (nom, valeur) ; null si le compteur est illisible. */
+            public List<KeyValuePair<string, double>>[] Last;
+        }
+
+        static readonly Dictionary<string, CounterSet> counterSets = new Dictionary<string, CounterSet>();
+        static readonly object counterLock = new object();
+
+        /** Instances écartées : boucle locale et tunnels, qui doubleraient le débit réseau. */
+        static readonly Regex IgnoredInstance = new Regex("loopback|isatap", RegexOptions.IgnoreCase);
+
+        /** Somme des instances valides de chaque chemin (filtrées par `luid` si donné) ; null pour un chemin illisible. */
+        static Dictionary<string, double?> CounterValues(string[] paths, string luid)
+        {
+            CounterSet set;
+            var key = string.Join("|", paths);
+            lock (counterLock)
+            {
+                if (!counterSets.TryGetValue(key, out set)) counterSets[key] = set = OpenCounterSet(paths);
+                if (set.SampledAt < 0 || gpuClock.ElapsedMilliseconds - set.SampledAt >= MinSampleMs) SampleCounterSet(set);
+            }
+            var res = new Dictionary<string, double?>();
+            for (int i = 0; i < paths.Length; i++)
+            {
+                var items = set.Last == null ? null : set.Last[i];
+                double? sum = null;
+                if (items != null)
+                    foreach (var item in items)
+                        if (luid == null || item.Key.IndexOf("luid_" + luid, StringComparison.OrdinalIgnoreCase) >= 0) sum = (sum ?? 0) + item.Value;
+                res[paths[i]] = sum;
+            }
+            return res;
+        }
+
+        static CounterSet OpenCounterSet(string[] paths)
+        {
+            var set = new CounterSet { Counters = new IntPtr[paths.Length] };
+            if (PdhOpenQuery(null, IntPtr.Zero, out set.Query) != 0) { set.Query = IntPtr.Zero; return set; }
+            for (int i = 0; i < paths.Length; i++)
+                if (PdhAddEnglishCounter(set.Query, paths[i], IntPtr.Zero, out set.Counters[i]) != 0) set.Counters[i] = IntPtr.Zero;
+            return set;
+        }
+
+        static void SampleCounterSet(CounterSet set)
+        {
+            set.Last = null;
+            if (set.Query == IntPtr.Zero) return;
+            var now = gpuClock.ElapsedMilliseconds;
+            if (PdhCollectQueryData(set.Query) != 0) return;
+            var baseline = set.SampledAt < 0 || now - set.SampledAt > StaleMs;
+            set.SampledAt = now;
+            if (baseline)
+            {
+                // Simple point de départ : les taux se mesurent sur le relevé suivant, pris peu après.
+                Thread.Sleep(BaselineMs);
+                now = gpuClock.ElapsedMilliseconds;
+                if (PdhCollectQueryData(set.Query) != 0) return;
+                set.SampledAt = now;
+            }
+            var last = new List<KeyValuePair<string, double>>[set.Counters.Length];
+            for (int i = 0; i < last.Length; i++)
+                if (set.Counters[i] != IntPtr.Zero) last[i] = CounterInstances(set.Counters[i]);
+            set.Last = last;
+        }
+
+        /** Instances valides d'un compteur avec leur nom ; null si illisible. */
+        static List<KeyValuePair<string, double>> CounterInstances(IntPtr counter)
+        {
+            uint size = 0, count;
+            var list = new List<KeyValuePair<string, double>>();
+            int status = PdhGetFormattedCounterArray(counter, PDH_FMT_DOUBLE, ref size, out count, IntPtr.Zero);
+            if (status == 0) return list;
+            if (status != PDH_MORE_DATA) return null;
+            var buffer = Marshal.AllocHGlobal((int)size);
+            try
+            {
+                if (PdhGetFormattedCounterArray(counter, PDH_FMT_DOUBLE, ref size, out count, buffer) != 0) return null;
+                for (int i = 0; i < count; i++)
+                {
+                    var item = buffer + i * PdhItemSize;
+                    int itemStatus = Marshal.ReadInt32(item, 8);
+                    if (itemStatus != 0 && itemStatus != 1) continue; // PDH_CSTATUS_VALID_DATA, PDH_CSTATUS_NEW_DATA
+                    var name = Marshal.PtrToStringUni(Marshal.ReadIntPtr(item)) ?? "";
+                    var value = BitConverter.Int64BitsToDouble(Marshal.ReadInt64(item, 16));
+                    if (IgnoredInstance.IsMatch(name) || double.IsNaN(value) || double.IsInfinity(value)) continue;
+                    list.Add(new KeyValuePair<string, double>(name, value));
+                }
+                return list;
+            }
+            finally { Marshal.FreeHGlobal(buffer); }
+        }
+
+        /** Opération `counters` : { "paths": [chemins PDH anglais] } → { chemin: somme des instances | null }. */
+        static object Counters(Dictionary<string, object> req)
+        {
+            var paths = StrList(req, "paths").ToArray();
+            var res = new Dictionary<string, object>();
+            foreach (var kv in CounterValues(paths, null)) res[kv.Key] = kv.Value;
+            return res;
         }
     }
 }

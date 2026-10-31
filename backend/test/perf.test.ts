@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import type os from "node:os";
 import { test } from "node:test";
-import { parseVmStat } from "../src/mac/system.ts";
+import { kbps, parseNetstat, parseVmStat } from "../src/mac/system.ts";
 import {
   CPU_WAIT_MS,
   FanMemory,
   GPU_WAIT_MS,
   cpuPercent,
   cpuTimes,
+  EXTRA_WAIT_MS,
   normalizeGpu,
   perfSampler,
   ramUsage,
@@ -243,6 +244,120 @@ test("cpu lu par le système qui ne répond jamais : repli sur les temps des cœ
   advance(2000);
   assert.equal((await get()).cpu, 75);
   assert.equal(asked, 1);
+});
+
+const perfOf = (over: Partial<PerfSources>) => perfSampler(fakeSources(over).sources)();
+
+test("cpuMhz : entier ; absent sans source, en NaN, nul, négatif ou en échec", async () => {
+  assert.equal((await perfOf({ cpuMhz: async () => 2994.6 })).cpuMhz, 2995);
+  assert.equal((await perfOf({})).cpuMhz, undefined);
+  for (const value of [NaN, Infinity, 0, -5, null]) {
+    assert.equal((await perfOf({ cpuMhz: async () => value })).cpuMhz, undefined, String(value));
+  }
+  const failing = await perfOf({
+    cpuMhz: async () => {
+      throw new Error("pilote");
+    },
+  });
+  assert.equal(failing.cpuMhz, undefined);
+  assert.equal(failing.cpu, 75);
+});
+
+test("disque : Go à une décimale, activité entière bornée 0-100", async () => {
+  const disk = (activity?: number | null) => async () => ({ freeBytes: 120.26 * g, totalBytes: 476.94 * g, activity });
+  assert.deepEqual((await perfOf({ disk: disk(41.6) })).disk, { freeGb: 120.3, totalGb: 476.9, activity: 42 });
+  assert.equal((await perfOf({ disk: disk(240) })).disk?.activity, 100);
+  assert.equal((await perfOf({ disk: disk(-3) })).disk?.activity, 0);
+  for (const value of [undefined, null, NaN]) {
+    assert.deepEqual((await perfOf({ disk: disk(value) })).disk, { freeGb: 120.3, totalGb: 476.9 }, String(value));
+  }
+  assert.equal((await perfOf({})).disk, undefined);
+});
+
+test("disque : tailles illisibles, négatives ou libre > total, ou lecture en échec : pas de disque", async () => {
+  for (const [freeBytes, totalBytes] of [
+    [NaN, 10 * g],
+    [-1, 10 * g],
+    [1 * g, 0],
+    [1 * g, NaN],
+    [20 * g, 10 * g],
+  ] as const) {
+    assert.equal((await perfOf({ disk: async () => ({ freeBytes, totalBytes }) })).disk, undefined, `${freeBytes}/${totalBytes}`);
+  }
+  assert.equal((await perfOf({ disk: async () => null })).disk, undefined);
+  assert.equal(
+    (
+      await perfOf({
+        disk: async () => {
+          throw new Error("statfs");
+        },
+      })
+    ).disk,
+    undefined,
+  );
+});
+
+test("réseau : Ko/s entiers ; absent en NaN, négatif, null ou en échec", async () => {
+  assert.deepEqual((await perfOf({ net: async () => ({ upKBps: 12.4, downKBps: 1500.6 }) })).net, { upKBps: 12, downKBps: 1501 });
+  assert.deepEqual((await perfOf({ net: async () => ({ upKBps: 0, downKBps: 0 }) })).net, { upKBps: 0, downKBps: 0 });
+  assert.equal((await perfOf({})).net, undefined);
+  for (const raw of [{ upKBps: NaN, downKBps: 1 }, { upKBps: 1, downKBps: Infinity }, { upKBps: -1, downKBps: 1 }, null]) {
+    assert.equal((await perfOf({ net: async () => raw })).net, undefined);
+  }
+  assert.equal(
+    (
+      await perfOf({
+        net: async () => {
+          throw new Error("netstat");
+        },
+      })
+    ).net,
+    undefined,
+  );
+});
+
+test("gpu : mémoire vidéo en Mo entiers ; illisible, négative ou utilisée > totale, elle est omise sans perdre le gpu", async () => {
+  const gpu = (extra: Partial<GpuPerf>) => async () => ({ name: "RTX", usage: 10, dedicated: true, ...extra });
+  const both = (await perfOf({ gpu: gpu({ vramUsedMb: 3072.4, vramTotalMb: 8191.6 }) })).gpu;
+  assert.equal(both?.vramUsedMb, 3072);
+  assert.equal(both?.vramTotalMb, 8192);
+  const bad = await perfOf({ gpu: gpu({ vramUsedMb: NaN, vramTotalMb: -1 }) });
+  assert.deepEqual(bad.gpu, { name: "RTX", usage: 10, dedicated: true });
+  const over = (await perfOf({ gpu: gpu({ vramUsedMb: 9000, vramTotalMb: 8192 }) })).gpu;
+  assert.equal(over?.vramUsedMb, undefined);
+  assert.equal(over?.vramTotalMb, 8192);
+  const onlyTotal = (await perfOf({ gpu: gpu({ vramTotalMb: 4096 }) })).gpu;
+  assert.equal(onlyTotal?.vramTotalMb, 4096);
+});
+
+test("lecture optionnelle (fréquence, disque, réseau) qui ne répond jamais : champs absents, cpu et ram arrivent", async () => {
+  const never = () => new Promise<never>(() => {});
+  const started = performance.now();
+  const perf = await perfOf({ cpuMhz: never, disk: never, net: never });
+  const waited = performance.now() - started;
+  assert.equal(perf.cpu, 75);
+  assert.deepEqual([perf.cpuMhz, perf.disk, perf.net], [undefined, undefined, undefined]);
+  assert.ok(waited >= EXTRA_WAIT_MS - 50 && waited < EXTRA_WAIT_MS + 1000, `attente ${waited} ms`);
+});
+
+test("parseNetstat : somme des octets des lignes <Link#> des interfaces en*", () => {
+  const out = [
+    "Name       Mtu   Network       Address            Ipkts Ierrs     Ibytes    Opkts Oerrs     Obytes  Coll",
+    "lo0        16384 <Link#1>                          1000     0     500000     1000     0     500000     0",
+    "lo0        16384 127           127.0.0.1           1000     -     500000     1000     -     500000     -",
+    "en0        1500  <Link#14>     aa:bb:cc:dd:ee:ff  2000     0    1000000     900     0     200000     0",
+    "en0        1500  192.168.1     192.168.1.20        2000     -    1000000     900     -     200000     -",
+    "en5        1500  <Link#15>                          10     0        300      20     0        400     0",
+    "utun3      1380  <Link#16>                           5     0       9999       5     0       9999     0",
+  ].join("\n");
+  assert.deepEqual(parseNetstat(out), { rx: 1000300, tx: 200400 });
+  assert.equal(parseNetstat("rien"), null);
+});
+
+test("kbps : octets par seconde en Ko/s ; compteur remis à zéro ou sans écart, absent", () => {
+  assert.deepEqual(kbps({ rx: 0, tx: 0, at: 0 }, { rx: 2048000, tx: 10240, at: 2000 }), { upKBps: 5, downKBps: 1000 });
+  assert.equal(kbps({ rx: 10, tx: 10, at: 0 }, { rx: 5, tx: 20, at: 1000 }), null);
+  assert.equal(kbps({ rx: 0, tx: 0, at: 5 }, { rx: 5, tx: 5, at: 5 }), null);
 });
 
 test("parseVmStat : libre + inactive + spéculative + purgeable, à la taille de page annoncée", () => {

@@ -51,3 +51,30 @@ class SystemApiPerfTest {
         assertEquals(40, gpu.tempC)
     }
 }
+
+class SystemApiPerfMoreTest {
+
+    @Test
+    fun `parsePerf lit frequence, memoire video, disque et reseau`() {
+        val p = parsePerf(
+            """{"cpu":42,"cpuMhz":3800,"ram":{"used":20.1,"total":32,"percent":63},
+            "gpu":{"name":"RTX","usage":97,"dedicated":true,"vramUsedMb":6200,"vramTotalMb":8192},
+            "disk":{"freeGb":120.5,"totalGb":931.5,"activity":12},"net":{"upKBps":120,"downKBps":3400}}""",
+        )
+        assertEquals(3800, p.cpuMhz)
+        assertEquals(6200, p.gpu!!.vramUsedMb)
+        assertEquals(8192, p.gpu!!.vramTotalMb)
+        assertEquals(120.5, p.disk!!.freeGb, 0.0001)
+        assertEquals(12, p.disk!!.activity)
+        assertEquals(120, p.net!!.upKBps)
+        assertEquals(3400, p.net!!.downKBps)
+    }
+
+    @Test
+    fun `parsePerf sans les nouveaux champs les laisse absents`() {
+        val p = parsePerf("""{"cpu":5,"ram":{"used":8,"total":16,"percent":50},"disk":{"freeGb":10,"totalGb":100}}""")
+        assertNull(p.cpuMhz)
+        assertNull(p.net)
+        assertNull(p.disk!!.activity)
+    }
+}
