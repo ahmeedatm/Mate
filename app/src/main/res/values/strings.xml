@@ -305,10 +305,11 @@
     <string name="mixer_scene_delete">Supprimer la scène « %1$s » ?</string>
     <string name="mixer_scenes_edit">Modifier les scènes</string>
     <string name="mixer_scenes_done">Terminé</string>
-    <string name="mixer_scenes_edit_hint">Glisse une scène pour la déplacer · ⟳ la met aux volumes actuels · ✕ la supprime</string>
-    <string name="mixer_scene_drag">Déplacer %1$s</string>
+    <string name="mixer_scenes_edit_hint">Glisse une scène par ses points pour la déplacer.</string>
+    <string name="mixer_scene_before">Déplacer avant</string>
+    <string name="mixer_scene_after">Déplacer après</string>
     <string name="mixer_scene_update">Mettre %1$s aux volumes actuels</string>
-    <string name="mixer_scene_update_confirm">Remplacer les volumes de « %1$s » par les volumes actuels ?</string>
+    <string name="mixer_scene_update_confirm">Remplacer les volumes de « %1$s » par les volumes actuels ? Les anciens seront perdus.</string>
     <string name="mixer_scene_update_ok">Remplacer</string>
     <string name="mixer_scene_remove">Supprimer %1$s</string>
     <string name="mixer_scene_missing">Scène « %1$s » : sans son en ce moment, pas réglé : %2$s</string>

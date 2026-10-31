@@ -24,6 +24,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.ViewCompat
 import androidx.core.widget.ImageViewCompat
 import app.mate.R
 import app.mate.net.BackendClient
@@ -76,8 +77,9 @@ class MixerView @JvmOverloads constructor(
     private var litScene: String? = null
     private var state: MixerState? = null
 
-    /** Mode édition des scènes ouvert par le crayon. */
+    /** Mode édition des scènes ouvert par le crayon ; `dragging` : une pilule est tenue. */
     private var editing = false
+    private var dragging = false
 
     /** Console basse (widget d'un profil) : rangée des scènes et tranches resserrées. */
     private var tight = false
@@ -143,7 +145,11 @@ class MixerView @JvmOverloads constructor(
         if (this.active == active) return
         this.active = active
         poll?.cancel()
-        if (!active) return
+        if (!active) {
+            // Onglet quitté : on revient sur la rangée normale (pas d'édition restée ouverte en douce).
+            if (editing) leaveEditing()
+            return
+        }
         stopped = false
         poll = scope.launch {
             loadScenes()
@@ -243,7 +249,8 @@ class MixerView @JvmOverloads constructor(
         onVolume = { volume, final ->
             hold(c.id)
             litScene = null
-            renderScenes()
+            // En édition, la rangée ne montre pas la scène rappelée : ne pas recréer les pilules (une peut être en glisser).
+            if (!editing) renderScenes()
             senderFor(c.id).offer(volume)
             if (final) hold(c.id)
         }
@@ -299,6 +306,7 @@ class MixerView @JvmOverloads constructor(
         if (scenes.isNotEmpty()) {
             sceneRow.addView(iconButton(R.drawable.ic_edit, R.attr.c_text_dim, context.getString(R.string.mixer_scenes_edit)) {
                 editing = true
+                showStatus(context.getString(R.string.mixer_scenes_edit_hint), EDIT_HINT)
                 renderScenes()
             })
         }
@@ -307,16 +315,21 @@ class MixerView @JvmOverloads constructor(
 
     // --- Mode édition des scènes (crayon) : glisser pour déplacer, ⟳ mettre à jour, ✕ supprimer, « Terminé ».
 
+    /** « Terminé » d'abord : la sortie reste visible même quand les pilules débordent ; l'aide est sous la rangée. */
     private fun renderEditing() {
-        scenes.forEach { sceneRow.addView(editChip(it), keyParams()) }
         sceneRow.addView(Button(context, null, 0, R.style.PrimaryButton).apply {
             setText(R.string.mixer_scenes_done)
-            setOnClickListener {
-                editing = false
-                renderScenes()
-            }
-        }, keyParams())
-        sceneRow.addView(engraved(R.string.mixer_scenes_edit_hint).apply { setPadding(dp(6), 0, 0, dp(3)) })
+            minHeight = 0
+            minimumHeight = 0
+            setOnClickListener { leaveEditing() }
+        }, keyParams().apply { height -= dp(4) })
+        scenes.forEach { sceneRow.addView(editChip(it), keyParams()) }
+    }
+
+    private fun leaveEditing() {
+        editing = false
+        if (status.tag == EDIT_HINT) hideStatus()
+        renderScenes()
     }
 
     /** Pilule d'une scène en édition : poignée (on la tient pour glisser), nom, ⟳ et ✕. `tag` = id, lu à la fin du glisser. */
@@ -327,12 +340,18 @@ class MixerView @JvmOverloads constructor(
         setBackgroundResource(R.drawable.chip_bg)
         setPadding(dp(4), 0, dp(2), 0)
         tag = scene.id
+        contentDescription = scene.name
         val chip = this
+        // TalkBack : déplacer sans glisser.
+        ViewCompat.addAccessibilityAction(this, context.getString(R.string.mixer_scene_before)) { _, _ -> nudge(chip, -1) }
+        ViewCompat.addAccessibilityAction(this, context.getString(R.string.mixer_scene_after)) { _, _ -> nudge(chip, 1) }
+        val icon = dp(if (tight) 36 else 44)
         addView(ImageView(context).apply {
             setImageResource(R.drawable.ic_drag)
-            ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(themeColor(context, R.attr.c_text_faint)))
-            contentDescription = context.getString(R.string.mixer_scene_drag, scene.name)
-            setPadding(dp(8), dp(12), dp(4), dp(12))
+            ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(themeColor(context, R.attr.c_text_dim)))
+            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+            val v = dp(if (tight) 8 else 12)
+            setPadding(dp(8), v, dp(4), v)
             setOnTouchListener { _, e ->
                 if (e.actionMasked != MotionEvent.ACTION_DOWN) return@setOnTouchListener false
                 chip.startDragAndDrop(null, View.DragShadowBuilder(chip), chip, 0)
@@ -346,16 +365,45 @@ class MixerView @JvmOverloads constructor(
             setTextColor(themeColor(context, R.attr.c_mx_text))
             setPadding(dp(2), 0, dp(4), 0)
         })
-        addView(iconButton(R.drawable.ic_refresh, R.attr.c_accent, context.getString(R.string.mixer_scene_update, scene.name)) { confirmUpdate(scene) })
-        addView(iconButton(R.drawable.ic_close, R.attr.c_ko, context.getString(R.string.mixer_scene_remove, scene.name)) { confirmDelete(scene) })
+        addView(iconButton(R.drawable.ic_refresh, R.attr.c_accent, context.getString(R.string.mixer_scene_update, scene.name), icon) { confirmUpdate(scene) })
+        // ✕ (destructif) écarté de ⟳ : deux cibles qui ne se touchent pas.
+        addView(iconButton(R.drawable.ic_close, R.attr.c_ko, context.getString(R.string.mixer_scene_remove, scene.name), icon) { confirmDelete(scene) }.apply {
+            (layoutParams as LinearLayout.LayoutParams).marginStart = dp(6)
+        })
         setOnDragListener(sceneDrag)
+    }
+
+    /** Action TalkBack : la pilule passe d'une place avant ou après, puis l'ordre part à l'ordinateur. */
+    private fun nudge(chip: View, by: Int): Boolean {
+        val chips = (0 until sceneRow.childCount).map { sceneRow.getChildAt(it) }.filter { it.tag is String }
+        val from = chips.indexOf(chip)
+        val to = from + by
+        if (from < 0 || to !in chips.indices) return false
+        val index = sceneRow.indexOfChild(chips[to])
+        sceneRow.removeView(chip)
+        sceneRow.addView(chip, index)
+        saveOrder()
+        return true
     }
 
     /** Glisser une pilule sur une autre la met à sa place ; à la fin, l'ordre lu sur l'écran part à l'ordinateur. */
     private val sceneDrag = View.OnDragListener { target, event ->
         val dragged = event.localState as? View ?: return@OnDragListener false
+        if (dragged.parent !== sceneRow) return@OnDragListener false
         when (event.action) {
-            DragEvent.ACTION_DRAG_STARTED -> if (target === dragged) dragged.alpha = DRAGGED_ALPHA
+            DragEvent.ACTION_DRAG_STARTED -> if (target === dragged) {
+                dragged.alpha = DRAGGED_ALPHA
+                dragging = true
+            }
+            // Près d'un bord, la rangée défile : les pilules hors écran restent atteignables.
+            DragEvent.ACTION_DRAG_LOCATION -> {
+                val x = target.left - sceneScroll.scrollX + event.x
+                val edge = dp(EDGE_DP)
+                when {
+                    x < edge -> sceneScroll.scrollBy(-dp(SCROLL_STEP_DP), 0)
+                    x > sceneScroll.width - edge -> sceneScroll.scrollBy(dp(SCROLL_STEP_DP), 0)
+                }
+            }
             DragEvent.ACTION_DRAG_ENTERED -> if (target !== dragged) {
                 val to = sceneRow.indexOfChild(target)
                 sceneRow.removeView(dragged)
@@ -363,6 +411,7 @@ class MixerView @JvmOverloads constructor(
             }
             DragEvent.ACTION_DRAG_ENDED -> if (target === dragged) {
                 dragged.alpha = 1f
+                dragging = false
                 saveOrder()
             }
         }
@@ -372,7 +421,9 @@ class MixerView @JvmOverloads constructor(
     private fun saveOrder() {
         val ids = (0 until sceneRow.childCount).mapNotNull { sceneRow.getChildAt(it).tag as? String }
         if (ids == scenes.map { it.id }) return
-        scope.launch {
+        // Un seul envoi à la fois : une réponse plus ancienne ne doit pas remettre un ordre dépassé.
+        ordering?.cancel()
+        ordering = scope.launch {
             try {
                 scenes = BackendClient(context).system.orderMixerScenes(ids)
                 renderScenes()
@@ -398,13 +449,15 @@ class MixerView @JvmOverloads constructor(
             .showImmersive()
     }
 
-    private fun iconButton(icon: Int, tint: Int, label: String, onClick: () -> Unit) = ImageButton(context, null, 0, R.style.IconButton_Flat).apply {
+    private var ordering: Job? = null
+
+    private fun iconButton(icon: Int, tint: Int, label: String, size: Int = dp(44), onClick: () -> Unit) = ImageButton(context, null, 0, R.style.IconButton_Flat).apply {
         setImageResource(icon)
         // `tint` du style n'est lu que par les vues AppCompat gonflées depuis le XML.
         ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(themeColor(context, tint)))
         contentDescription = label
         setOnClickListener { onClick() }
-        layoutParams = LinearLayout.LayoutParams(dp(44), dp(44))
+        layoutParams = LinearLayout.LayoutParams(size, size)
     }
 
     private fun keyParams() = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(if (tight) 40 else 48)).apply { marginEnd = dp(10) }
@@ -500,7 +553,7 @@ class MixerView @JvmOverloads constructor(
             tight = low
             sceneScroll.layoutParams = sceneScroll.layoutParams.apply { height = sceneHeight() }
             strips.setPadding(dp(16), 0, dp(16), if (tight) 0 else dp(10))
-            renderScenes()
+            if (!dragging) renderScenes()
         }
         post { fitStrips() }
     }
@@ -521,6 +574,9 @@ class MixerView @JvmOverloads constructor(
     private companion object {
         const val SCENES_DP = 66
         const val DRAGGED_ALPHA = 0.35f
+        const val EDGE_DP = 48
+        const val SCROLL_STEP_DP = 16
+        const val EDIT_HINT = "edit-hint"
         const val SCENES_TIGHT_DP = 52
         const val MIN_STRIP_DP = 140
         const val MAX_STRIP_DP = 280
