@@ -108,7 +108,7 @@
     <string name="media_previous">Morceau précédent</string>
     <string name="system_sleep">Veille de l\'écran</string>
     <string name="system_dark">Mode sombre</string>
-    <string name="system_screenshot">Capture → presse-papiers</string>
+    <string name="system_screenshot">Capture d\'écran</string>
     <string name="system_lock">Verrouiller la session</string>
     <string name="sum_app">Ouvrir %1$s</string>
     <string name="sum_text">Taper « %1$s »</string>
