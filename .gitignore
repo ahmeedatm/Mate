@@ -44,3 +44,9 @@ shared/*
 # Captures et mesures des skills de design (design-taste-frontend)
 .taste-skill/
 .impeccable/
+
+# Fichiers partagés de Claude : un gitignore global peut les ignorer
+!/.claude/
+!/docs/claude.md
+# Réglages personnels de Claude, jamais commités
+/.claude/settings.local.json
