@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="136dp"
-    android:background="@drawable/console_tile_bg"
+    android:background="?attr/c_tile_bg"
     android:stateListAnimator="@animator/press"
     android:gravity="top|center_horizontal"
     android:orientation="vertical"

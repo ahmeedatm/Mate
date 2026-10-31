@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget de Hush : ni fond ni bordure ; seul l'appui allume un halo rose (@color/hush_press), même rayon que la tuile Console. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="@color/hush_press" /><corners android:radius="28dp" /></shape></item>
+    <item><shape android:shape="rectangle" /></item>
+</selector>

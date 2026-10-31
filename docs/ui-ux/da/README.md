@@ -12,7 +12,7 @@ Mate est un accessoire gamer et domotique casual posé sur le bureau : lisible d
 
 ## Principes
 
-- Nuit par défaut (Console), jour au choix (Console jour), Contraste élevé pour l'accessibilité, Hush pour le style (nuit noire, accent rose, halos rose et violet animés derrière les écrans, tuiles en verre ; `Palette.Hush`, `HushPaletteTest`).
+- Nuit par défaut (Console), jour au choix (Console jour), Contraste élevé pour l'accessibilité, Hush pour le style (nuit noire, accent rose, halos rose et violet animés derrière les écrans, widgets transparents ; `Palette.Hush`, `HushPaletteTest`).
 - Une seule couleur vivante : le vert acide `c_accent`. Il marque l'élément choisi de la barre fixe, l'action principale, les curseurs et interrupteurs actifs.
 - Teintes de fonction `c_hue_*` colorées mais douces, réservées aux pastilles d'icônes et aux tuiles d'applis.
 - Tuiles et cartes à 28 dp de rayon, en aplat : ni filet ni ombre. Appui = `c_surface_pressed` (`console_tile_bg`). Contraste élevé ajoute un filet de 2 dp.
@@ -46,7 +46,7 @@ Source : `app/src/main/res/values/palettes.xml`. Page web du compagnon : `backen
 
 Les textes, l'accent et les teintes font au moins 4,5:1 sur le fond, la tuile et le relief (`ConsolePaletteTest`). Contraste élevé (Console jour, Figtree, mêmes formes) : textes et couleurs de sens au moins 7:1 (`ContrastPaletteTest`). Les signaux des agents (`c_agent_*`) gardent les couleurs d'Orca ; le jaune de surveillance en jour reste sous 3:1.
 
-Hush, exception assumée (choix d'Ahmed, 31/10) : accent rose au lieu du vert, lueur rose et violette animée derrière les écrans, tuiles en verre, barre fixe transparente, quatre éclats décoratifs. Le reste de la DA s'applique (formes, Figtree, un seul accent). Jetons : `c_bg` #070509, `c_rail` transparent, `c_surface` #B82C2238 (verre, #221A2B posé sur le fond), `c_surface_raised` #251C2E, `c_accent` / `c_on_accent` #FF6EB4 / #22030F, `c_text` / `c_text_dim` / `c_text_faint` #F6F0F8 / #CBC0D3 / #B3A6BD, `c_graphic` #9A8CA6, `c_hue_violet` #B98CFF (couleur des reflets). La lumière des halos est plafonnée pour que l'accent garde 4,5:1 sur le point le plus clair du fond (`HushPaletteTest`).
+Hush, exception assumée (choix d'Ahmed, 31/10) : accent rose au lieu du vert, lueur rose et violette animée derrière les écrans, widgets sans fond ni bordure (halo rose à l'appui, `hush_tile_bg`), ombre légère sous les textes (`Widget.Hush.Text`, `c_text_shadow`), barre fixe transparente, quatre éclats décoratifs. Polices : Chakra Petch (textes, heure en 700) et Share Tech Mono en majuscules espacées pour les étiquettes (`c_font_label`, `c_label_caps`) ; fenêtres et cartes de Réglages gardent le verre (`c_card_bg`). Le reste de la DA s'applique (formes, un seul accent). Jetons : `c_bg` #070509, `c_rail` transparent, `c_surface` #B82C2238 (verre, #221A2B posé sur le fond), `c_surface_raised` #251C2E, `c_accent` / `c_on_accent` #FF6EB4 / #22030F, `c_text` / `c_text_dim` / `c_text_faint` #F6F0F8 / #CBC0D3 / #B3A6BD, `c_graphic` #9A8CA6, `c_hue_violet` #B98CFF (couleur des reflets). La lumière des halos est plafonnée pour que l'accent garde 4,5:1 sur le point le plus clair du fond (`HushPaletteTest`).
 
 Console de mixage (onglet Son) : afficheur #0E0F11 à chiffres vert acide, LED vert / jaune #FFD45B / corail #FF7A70.
 

@@ -555,9 +555,15 @@ class TitleView @JvmOverloads constructor(
         // TalkBack : titre de section, atteint par la navigation de titre en titre.
         ViewCompat.setAccessibilityHeading(this, true)
         setCompoundDrawablesRelative(null, null, null, null)
-        isAllCaps = false
-        letterSpacing = ReadingAids.letterSpacing(context)
+        // Étiquettes du thème (Hush : Share Tech Mono, majuscules, un peu espacées) ; ailleurs, la police des titres telle quelle.
+        val caps = themeBool(context, R.attr.c_label_caps)
+        isAllCaps = caps
+        typeface = themeFont(context, R.attr.c_font_label)
+        letterSpacing = maxOf(ReadingAids.letterSpacing(context), if (caps) CAPS_SPACING else 0f)
         setTextSize(TypedValue.COMPLEX_UNIT_PX, themePx(context, R.attr.c_title_size).toFloat())
         setTextColor(themeColor(context, R.attr.c_text_dim))
     }
 }
+
+/** Espacement des lettres d'une étiquette en majuscules (em). */
+private const val CAPS_SPACING = 0.08f

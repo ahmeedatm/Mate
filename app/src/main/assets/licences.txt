@@ -72,6 +72,8 @@ Icônes Material Symbols et Material Icons, Copyright Google LLC, licence Apache
 
 POLICES (SIL Open Font License 1.1, texte plus bas)
 - Figtree : Copyright 2022 The Figtree Project Authors (https://github.com/erikdkennedy/figtree)
+- Chakra Petch : Copyright 2018 The Chakra Petch Project Authors (https://github.com/m4rc1e/Chakra-Petch.git)
+- Share Tech Mono : Copyright 2012 Carrois Type Design, Ralph du Carrois (https://github.com/google/fonts/tree/main/ofl/sharetechmono)
 - Atkinson Hyperlegible : Copyright 2020 Braille Institute of America, Inc. (https://github.com/googlefonts/atkinson-hyperlegible)
 
 DONNÉES
