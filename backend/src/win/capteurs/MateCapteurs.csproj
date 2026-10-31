@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Capteur de température du processeur (voir Program.cs). Seul programme du compagnon qui demande les droits
+    administrateur, et seulement par la tâche planifiée de scripts/capteurs-windows.ps1. .NET Framework 4.8, x64
+    (LibreHardwareMonitorLib charge sa DLL native depuis runtimes/win-x64). Compilé avec le pilote : npm run build:helper.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <AssemblyName>MateCapteurs</AssemblyName>
+    <RootNamespace>Mate.Capteurs</RootNamespace>
+    <Product>Mate</Product>
+    <Company>Mate</Company>
+    <Description>Capteur de température du Mate</Description>
+    <Copyright>Mate</Copyright>
+    <Version>1.0.0</Version>
+    <DebugType>none</DebugType>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <SatelliteResourceLanguages>fr</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
+  </ItemGroup>
+</Project>

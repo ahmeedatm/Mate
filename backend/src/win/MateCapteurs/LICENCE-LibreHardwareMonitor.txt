@@ -1,0 +1,4 @@
+MateCapteurs.exe utilise LibreHardwareMonitorLib (https://github.com/LibreHardwareMonitor/LibreHardwareMonitor),
+sous licence Mozilla Public License 2.0 (https://www.mozilla.org/MPL/2.0/). Les DLL de ce dossier sont les binaires
+publiés tels quels sur nuget.org (paquet LibreHardwareMonitorLib 0.9.6) ; leur code source est dans le dépôt ci-dessus.
+Le pilote noyau PawnIO (https://github.com/namazso/PawnIO.Setup) est installé à part, par son installateur officiel.
