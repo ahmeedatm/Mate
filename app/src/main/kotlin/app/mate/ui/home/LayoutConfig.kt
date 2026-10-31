@@ -48,7 +48,6 @@ object LayoutConfig {
         layout.rolesSet = json.optBoolean("roles", false)
         if (current.rolesSet) {
             if (!layout.rolesSet) fail("Les rôles de l'Accueil et de Réunion doivent rester posés.")
-            if (current.callProfile >= 0 && layout.callProfile < 0) fail("Le profil Réunion ne peut pas être supprimé.")
         }
         val roleIndexes = listOf(layout.homeProfile, layout.deckProfile, layout.callProfile).filter { it >= 0 }
         if (roleIndexes.size != roleIndexes.toSet().size) fail("L'Accueil, le Deck et Réunion doivent être trois profils différents.")

@@ -38,6 +38,25 @@ describe("GET /system/perf", () => {
     }
   });
 
+  it("garde les champs facultatifs fournis (fréquence, mémoire vidéo, disque, réseau)", async () => {
+    const perf = {
+      cpu: 40,
+      cpuMhz: 3200,
+      ram: { used: 8, total: 16, percent: 50 },
+      gpu: { name: "Carte de test", usage: 70, dedicated: true, vramUsedMb: 2048, vramTotalMb: 8192 },
+      disk: { freeGb: 120.5, totalGb: 476.9, activity: 12 },
+      net: { upKBps: 30, downKBps: 1200 },
+    };
+    server.setOs({ perf });
+    try {
+      const { status, json } = await server.call("GET", "/system/perf");
+      assert.equal(status, 200);
+      assert.deepEqual(json, perf);
+    } finally {
+      server.setOs({});
+    }
+  });
+
   it("répond 501 hors Mac et Windows", async () => {
     const linux = await startServer({ os: "other" });
     try {

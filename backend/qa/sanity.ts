@@ -306,10 +306,37 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const perf = await call("GET", "/system/perf");
         if (!controlled()) return expectStatus(perf, 501, "/system/perf");
         expectStatus(perf, 200, "/system/perf");
-        const { cpu, ram, gpu } = perf.json;
+        const { cpu, ram, gpu, cpuMhz, disk, net } = perf.json;
         expect(typeof cpu === "number" && cpu >= 0 && cpu <= 100, `processeur hors 0-100 : ${cpu}`);
         expect(ram?.total > 0, "mémoire totale absente");
-        return `cpu ${cpu} %, ram ${ram.percent} %${gpu ? `, gpu ${gpu.usage} %` : ""}`;
+        // Champs facultatifs : absents si illisibles, mais bien typés et bornés quand ils sont là.
+        const count = (n: unknown) => Number.isInteger(n) && (n as number) >= 0;
+        expect(cpuMhz === undefined || (count(cpuMhz) && cpuMhz > 0), `fréquence invalide : ${cpuMhz}`);
+        expect(
+          gpu?.vramUsedMb === undefined || (count(gpu.vramUsedMb) && gpu.vramUsedMb <= (gpu.vramTotalMb ?? Infinity)),
+          `mémoire vidéo utilisée invalide : ${gpu?.vramUsedMb}`,
+        );
+        expect(
+          gpu?.vramTotalMb === undefined || (count(gpu.vramTotalMb) && gpu.vramTotalMb > 0),
+          `mémoire vidéo totale invalide : ${gpu?.vramTotalMb}`,
+        );
+        expect(
+          disk === undefined ||
+            (typeof disk.freeGb === "number" &&
+              disk.totalGb > 0 &&
+              disk.freeGb >= 0 &&
+              disk.freeGb <= disk.totalGb &&
+              (disk.activity === undefined || (count(disk.activity) && disk.activity <= 100))),
+          `disque invalide : ${JSON.stringify(disk)}`,
+        );
+        expect(net === undefined || (count(net.upKBps) && count(net.downKBps)), `réseau invalide : ${JSON.stringify(net)}`);
+        const extras = [
+          cpuMhz && `${cpuMhz} MHz`,
+          disk && `disque ${disk.freeGb}/${disk.totalGb} Go`,
+          net && `réseau ${net.downKBps}/${net.upKBps} Ko/s`,
+          gpu?.vramTotalMb && `vram ${gpu.vramUsedMb ?? "?"}/${gpu.vramTotalMb} Mo`,
+        ].filter(Boolean);
+        return `cpu ${cpu} %, ram ${ram.percent} %${gpu ? `, gpu ${gpu.usage} %` : ""}${extras.length ? ` (${extras.join(", ")})` : ""}`;
       },
     },
     {

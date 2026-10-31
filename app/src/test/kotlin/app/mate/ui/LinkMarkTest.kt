@@ -35,4 +35,17 @@ class LinkMarkTest {
         assertEquals(R.string.unauthorized, linkMark(Link.State.UNAUTHORIZED).spoken)
         assertEquals(R.string.offline, linkMark(Link.State.OFFLINE).spoken)
     }
+
+    @Test
+    fun `ordinateur verrouille, anneau et mot verrouille`() {
+        val mark = linkMark(Link.State.ONLINE, locked = true)
+        assertEquals(LinkShape.RING, mark.shape)
+        assertEquals(R.string.link_state_locked, mark.label)
+        assertEquals(R.string.computer_locked_spoken, mark.spoken)
+    }
+
+    @Test
+    fun `injoignable prime sur verrouille`() {
+        assertEquals(linkMark(Link.State.OFFLINE), linkMark(Link.State.OFFLINE, locked = true))
+    }
 }

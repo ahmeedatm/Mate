@@ -250,6 +250,11 @@ export function cpuUtility(): Promise<number | null> {
   return call<number | null>("cpu");
 }
 
+/** Somme des instances de chaque compteur PDH (noms anglais) ; `null` pour un compteur illisible. */
+export function counters(paths: string[]): Promise<Record<string, number | null>> {
+  return call<Record<string, number | null>>("counters", { paths });
+}
+
 /** Lecture brute du pilote (toutes les cartes, tous les compteurs), pour diagnostiquer un PC à carte dédiée. */
 export function gpuPerfDetail(): Promise<unknown> {
   return call("perf", { detail: true });

@@ -6,6 +6,7 @@ import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import app.mate.Mode
+import app.mate.Prefs
 import app.mate.R
 import app.mate.focus.FocusTimer
 import app.mate.net.Link
@@ -63,7 +64,7 @@ internal enum class LinkShape(@DrawableRes val drawable: Int) {
     /** Pleine : l'ordinateur répond. */
     FILLED(R.drawable.dot),
 
-    /** Anneau : il répond mais refuse le jeton. */
+    /** Anneau : il répond mais refuse le jeton, ou sa session est verrouillée. */
     RING(R.drawable.dot_ring),
 
     /** Croix : injoignable, ou aucun ordinateur. */
@@ -76,8 +77,9 @@ internal enum class LinkShape(@DrawableRes val drawable: Int) {
  */
 internal data class LinkMark(val shape: LinkShape, @StringRes val label: Int?, @StringRes val spoken: Int)
 
-internal fun linkMark(state: Link.State): LinkMark = when (state) {
-    Link.State.ONLINE -> LinkMark(LinkShape.FILLED, R.string.link_state_online, R.string.online)
+internal fun linkMark(state: Link.State, locked: Boolean = false): LinkMark = when (state) {
+    // Il répond mais sa session est verrouillée (Prefs.computerLocked) : anneau, comme un refus.
+    Link.State.ONLINE -> if (locked) LinkMark(LinkShape.RING, R.string.link_state_locked, R.string.computer_locked_spoken) else LinkMark(LinkShape.FILLED, R.string.link_state_online, R.string.online)
     Link.State.UNAUTHORIZED -> LinkMark(LinkShape.RING, R.string.link_state_unauthorized, R.string.unauthorized)
     Link.State.OFFLINE -> LinkMark(LinkShape.CROSS, R.string.link_state_offline, R.string.offline)
     Link.State.NONE -> LinkMark(LinkShape.CROSS, null, R.string.no_computer)
@@ -85,15 +87,16 @@ internal fun linkMark(state: Link.State): LinkMark = when (state) {
 
 /**
  * Pastille de connexion : forme et couleur selon l'état (`offline` : couleur de l'injoignable), nom de l'ordinateur
- * actif et, dans `stateText`, l'état écrit.
+ * actif et, dans `stateText`, l'état écrit (« verrouillé » quand sa session l'est).
  */
 internal fun renderLink(activity: Activity, dot: View, name: TextView, stateText: TextView, status: View, link: Link, offline: Int = R.attr.c_ko) {
+    val locked = Prefs.computerLocked(activity)
     val color = when (link.state) {
-        Link.State.ONLINE -> R.attr.c_ok
+        Link.State.ONLINE -> if (locked) R.attr.c_warn else R.attr.c_ok
         Link.State.UNAUTHORIZED -> R.attr.c_warn
         else -> offline
     }
-    val mark = linkMark(link.state)
+    val mark = linkMark(link.state, locked)
     dot.setBackgroundResource(mark.shape.drawable)
     dot.background.mutate().setTint(themeColor(activity, color))
     name.text = link.computer?.name ?: activity.getString(R.string.no_computer_short)

@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { statfs } from "node:fs/promises";
 import os from "node:os";
 import { run } from "./mac/run.ts";
 import * as macAccess from "./mac/access.ts";
@@ -19,7 +20,7 @@ import * as macSystem from "./mac/system.ts";
 import * as macWindows from "./mac/windows.ts";
 import * as win from "./win/index.ts";
 import { checkOpenTarget } from "./open-guard.ts";
-import { perfSampler, type Perf } from "./perf.ts";
+import { perfSampler, type DiskRaw, type NetPerf, type Perf } from "./perf.ts";
 import type { PointerAction, PointerButton, PointerGesture } from "./pointer.ts";
 import type {
   AudioChange,
@@ -177,7 +178,32 @@ export function getAudio() {
 /** Un seul échantillonneur par processus : il porte le cache d'une seconde, le point de départ du CPU et la mémoire du ventilateur. */
 let perfSample: (() => Promise<Perf>) | undefined;
 
-/** Processeur, mémoire et carte graphique de l'ordinateur ; sans carte lisible, pas de `gpu`. */
+/** Disque système : espace libre et total (`fs.statfs`), activité par le compteur PDH sous Windows. */
+async function diskPerf(): Promise<DiskRaw> {
+  const { bavail, blocks, bsize } = await statfs(isWindows ? "C:\\" : "/");
+  const raw: DiskRaw = { freeBytes: bavail * bsize, totalBytes: blocks * bsize };
+  if (isWindows) raw.activity = await winCounter(DISK_ACTIVITY).catch(() => null);
+  return raw;
+}
+
+const CPU_FREQUENCY = "\\Processor Information(_Total)\\Processor Frequency";
+const DISK_ACTIVITY = "\\PhysicalDisk(_Total)\\% Disk Time";
+const NET_RECEIVED = "\\Network Interface(*)\\Bytes Received/sec";
+const NET_SENT = "\\Network Interface(*)\\Bytes Sent/sec";
+
+async function winCounter(path: string): Promise<number | null> {
+  return (await win.counters([path]))[path] ?? null;
+}
+
+// shortcut: somme toutes les interfaces (hors boucle locale et isatap) : une carte virtuelle (Hyper-V, VPN, WSL) peut compter le trafic deux fois, à revoir si un PC affiche un débit trop haut.
+async function winNet(): Promise<NetPerf | null> {
+  const values = await win.counters([NET_RECEIVED, NET_SENT]);
+  const received = values[NET_RECEIVED];
+  const sent = values[NET_SENT];
+  return received == null || sent == null ? null : { downKBps: received / 1024, upKBps: sent / 1024 };
+}
+
+/** Processeur, mémoire, carte graphique, disque et réseau de l'ordinateur ; ce qui n'est pas lisible est absent. */
 export function getPerf(): Promise<Perf> {
   if (!canControl) unsupported();
   perfSample ??= perfSampler({
@@ -187,6 +213,9 @@ export function getPerf(): Promise<Perf> {
       : async () => ({ total: os.totalmem(), available: os.freemem() }),
     cpuPercent: isWindows ? win.cpuUtility : null,
     gpu: isWindows ? win.gpuPerf : null,
+    cpuMhz: isWindows ? () => winCounter(CPU_FREQUENCY) : undefined,
+    disk: diskPerf,
+    net: isWindows ? winNet : macSystem.netThroughput,
     // Horloge monotone : un changement d'heure du PC ne fige pas le cache ni le point de départ du processeur.
     now: () => performance.now(),
   });

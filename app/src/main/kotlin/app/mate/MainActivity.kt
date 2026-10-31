@@ -60,6 +60,7 @@ import app.mate.ui.DocumentPanel
 import app.mate.ui.FocusFragment
 import app.mate.ui.FromComputerFragment
 import app.mate.ui.HomeFragment
+import app.mate.ui.HushBackdrop
 import app.mate.ui.IconCache
 import app.mate.ui.KeyboardControl
 import app.mate.ui.LockScreen
@@ -282,6 +283,8 @@ class MainActivity : AppCompatActivity() {
             maybeTour()
         }
         plugins = findViewById(R.id.plugins)
+        // Fond de Hush : en pause sous Bienvenue et Plugins, qui le cachent.
+        findViewById<HushBackdrop>(R.id.backdrop).coveredBy = { welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE }
         plugins.attach(
             this,
             onLater = {

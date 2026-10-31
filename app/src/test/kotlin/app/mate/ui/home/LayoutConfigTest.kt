@@ -87,8 +87,9 @@ class LayoutConfigTest {
     }
 
     @Test
-    fun `l'Accueil et Reunion sont conserves`() {
-        assertTrue(refused(json(extra = """"home":0,"roles":true""")).contains("Réunion"))
+    fun `l'Accueil et les roles sont conserves, Reunion supprime est accepte`() {
+        val layout = LayoutConfig.parseLayout(json(extra = """"home":0,"roles":true"""), HomeLayout(mutableListOf(), 1).apply { ensureRoles("Réunion") })
+        assertEquals(-1, layout.callProfile)
         assertTrue(refused(json(extra = """"home":0,"call":1,"roles":false""")).contains("rôles"))
         assertTrue(refused(json(extra = """"call":1,"roles":true""")).contains("home"))
         assertTrue(refused(json(extra = """"home":1,"call":1,"roles":true""")).contains("différents"))

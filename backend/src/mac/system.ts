@@ -47,6 +47,60 @@ export async function availableMemory(): Promise<number> {
   }
 }
 
+export type NetCounters = { rx: number; tx: number; at: number };
+
+/**
+ * Octets reçus et émis d'après `netstat -ib` : lignes `<Link#>` des interfaces `en*` (Wi-Fi, Ethernet). Les colonnes
+ * sont lues depuis la fin (Ibytes, Opkts, Oerrs, Obytes, Coll) car l'adresse peut manquer. `null` : rien de lisible.
+ */
+export function parseNetstat(output: string): { rx: number; tx: number } | null {
+  let rx = 0;
+  let tx = 0;
+  let found = false;
+  for (const line of output.split("\n")) {
+    const f = line.trim().split(/\s+/);
+    if (!/^en\d+\*?$/.test(f[0] ?? "") || !f[2]?.startsWith("<Link#") || f.length < 8) continue;
+    const ibytes = Number(f[f.length - 5]);
+    const obytes = Number(f[f.length - 2]);
+    if (!Number.isFinite(ibytes) || !Number.isFinite(obytes)) continue;
+    rx += ibytes;
+    tx += obytes;
+    found = true;
+  }
+  return found ? { rx, tx } : null;
+}
+
+/** Débit entre deux relevés en Ko/s ; `null` sans écart de temps ou si un compteur a reculé (interface relancée). */
+export function kbps(prev: NetCounters, next: NetCounters): { upKBps: number; downKBps: number } | null {
+  const seconds = (next.at - prev.at) / 1000;
+  if (seconds <= 0 || next.rx < prev.rx || next.tx < prev.tx) return null;
+  return { upKBps: (next.tx - prev.tx) / 1024 / seconds, downKBps: (next.rx - prev.rx) / 1024 / seconds };
+}
+
+let lastNet: NetCounters | undefined;
+/** Au-delà, le dernier relevé réseau ne sert plus de point de départ (widget fermé un moment). */
+const NET_STALE_MS = 5000;
+/** Écart des deux relevés du tout premier appel (ou après une pause). */
+const NET_BASELINE_MS = 250;
+
+async function readNet(): Promise<NetCounters | null> {
+  const counters = parseNetstat(await run("netstat", ["-ib"]));
+  return counters && { ...counters, at: performance.now() };
+}
+
+/** Débit réseau du Mac (deltas de `netstat -ib`) ; premier relevé : un second suit 250 ms plus tard. */
+export async function netThroughput(): Promise<{ upKBps: number; downKBps: number } | null> {
+  let prev = lastNet && performance.now() - lastNet.at <= NET_STALE_MS ? lastNet : null;
+  if (!prev) {
+    prev = await readNet();
+    if (!prev) return null;
+    await new Promise((resolve) => setTimeout(resolve, NET_BASELINE_MS));
+  }
+  const next = await readNet();
+  lastNet = next ?? undefined;
+  return next && kbps(prev, next);
+}
+
 /** L'appli tourne, même sans fenêtre. */
 export async function isAppRunning(app: string): Promise<boolean> {
   return (await run("ps", ["-axo", "comm="])).split("\n").some((c) => c.includes(`/${app}.app/`));

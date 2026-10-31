@@ -26,6 +26,7 @@ import app.mate.R
 @SuppressLint("ViewConstructor")
 class TourOverlay(context: Context, private val anchor: (TourModel.Step) -> View?) : FrameLayout(context) {
 
+    private val steps = TourModel.steps(Prefs.railTalk(context))
     private val scrim = themeColor(context, R.attr.c_scrim)
     private val clear = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
     private var hole: RectF? = null
@@ -101,12 +102,12 @@ class TourOverlay(context: Context, private val anchor: (TourModel.Step) -> View
             post { show() }
             return
         }
-        val step = TourModel.STEPS[index]
+        val step = steps[index]
         val (titleRes, bodyRes) = TEXTS.getValue(step)
         title.setText(titleRes)
         body.setText(bodyRes)
-        counter.text = context.getString(R.string.tour_counter, index + 1, TourModel.STEPS.size)
-        next.setText(if (index == TourModel.STEPS.lastIndex) R.string.tour_done else R.string.tour_next)
+        counter.text = context.getString(R.string.tour_counter, index + 1, steps.size)
+        next.setText(if (index == steps.lastIndex) R.string.tour_done else R.string.tour_next)
         val target = anchor(step)?.takeIf { it.isShown && it.width > 0 }
         val here = IntArray(2).also { getLocationOnScreen(it) }
         hole = target?.let {
@@ -130,7 +131,7 @@ class TourOverlay(context: Context, private val anchor: (TourModel.Step) -> View
     }
 
     private fun advance() {
-        if (index == TourModel.STEPS.lastIndex) return finish()
+        if (index == steps.lastIndex) return finish()
         index++
         show()
     }

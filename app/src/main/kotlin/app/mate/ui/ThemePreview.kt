@@ -4,15 +4,19 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.RadialGradient
 import android.graphics.RectF
+import android.graphics.Shader
 import android.view.ContextThemeWrapper
 import android.view.View
+import androidx.core.graphics.ColorUtils
 import app.mate.R
 
 /**
  * Vignette d'un thème dans Réglages > Personnalisation : un petit écran peint avec ses propres couleurs (fond, barre de
  * gauche, carte avec « Aa » dans sa police de titres, pastille d'accent). Choisi : cadre de l'accent du thème
- * affiché. Dessinée une fois, rien ne bouge.
+ * affiché. Thème à fond animé (Hush, c_backdrop) : un reflet violet et un rose sous la carte en verre. Dessinée une
+ * fois, rien ne bouge.
  */
 class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolean) : View(context) {
     // Depuis le contexte de l'appli, pas celui de l'écran : un thème part de zéro, sans hériter du thème affiché.
@@ -25,6 +29,9 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
     private val accent = color(R.attr.c_accent)
     private val text = color(R.attr.c_text)
     private val dim = color(R.attr.c_text_dim)
+    private val backdrop = themeBool(themed, R.attr.c_backdrop)
+    private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val glow2 = Paint(Paint.ANTI_ALIAS_FLAG)
 
     /** Cadre du thème choisi : accent du thème affiché (celui des Réglages), pas celui de la vignette. */
     private val frame = themeColor(context, R.attr.c_accent)
@@ -46,6 +53,15 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
     }
 
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        if (!backdrop) return
+        fun halo(color: Int, x: Float, y: Float) = RadialGradient(
+            x, y, w * 0.6f, ColorUtils.setAlphaComponent(color, 0x60), ColorUtils.setAlphaComponent(color, 0), Shader.TileMode.CLAMP,
+        )
+        glow.shader = halo(color(R.attr.c_hue_violet), w * 0.15f, h * 0.95f)
+        glow2.shader = halo(accent, w * 0.9f, h * 0.05f)
+    }
+
     override fun onDraw(canvas: Canvas) {
         val d = resources.displayMetrics.density
         val pad = 4 * d
@@ -59,6 +75,10 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
         canvas.clipPath(clip)
         fill.color = bg
         canvas.drawRect(rect, fill)
+        if (backdrop) {
+            canvas.drawRect(rect, glow)
+            canvas.drawRect(rect, glow2)
+        }
         // Barre de gauche, un peu à part du fond comme dans l'appli.
         fill.color = rail
         canvas.drawRect(pad, pad, pad + w * 0.12f, pad + h, fill)

@@ -18,7 +18,8 @@ const val ROWS = 4
 
 /**
  * Tailles en cases (largeur × hauteur). `L3` (3 × 2), `T3` (3 × 4) et `FULL` (4 × 4, tout l'écran) ne sont proposées qu'aux
- * tableaux (Agents, Jira, GitLab, Pipelines, GitHub, Actions, Ouvertes, Son) : ceux-là ont de quoi remplir la place.
+ * tableaux (Agents, Jira, GitLab, Pipelines, GitHub, Actions, Ouvertes, Son) : ceux-là ont de quoi remplir la place. `XL3`
+ * (4 × 3, le bas de la page sous une rangée si on la pose en bas) n'est proposée qu'au mixeur.
  */
 enum class WidgetSize(val w: Int, val h: Int, @StringRes val label: Int) {
     S(1, 1, R.string.widget_size_s),
@@ -30,6 +31,7 @@ enum class WidgetSize(val w: Int, val h: Int, @StringRes val label: Int) {
     V(1, 2, R.string.widget_size_v),
     L3(3, 2, R.string.widget_size_l3),
     T3(3, 4, R.string.widget_size_t3),
+    XL3(4, 3, R.string.widget_size_xl3),
     FULL(4, 4, R.string.widget_size_full),
 }
 
@@ -61,7 +63,7 @@ enum class WidgetType(
     DAY("day", R.string.widget_day, R.string.widget_day_desc, R.drawable.ic_event, listOf(WidgetSize.W), false),
     DAYLINE("dayline", R.string.widget_dayline, R.string.widget_dayline_desc, R.drawable.ic_alarm, listOf(WidgetSize.W), false),
     AGENTS("agents", R.string.widget_agents, R.string.widget_agents_desc, R.drawable.ic_agents, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.V, WidgetSize.XL, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
-    MIXER("mixer", R.string.widget_mixer, R.string.widget_mixer_desc, R.drawable.ic_wave, listOf(WidgetSize.XL, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
+    MIXER("mixer", R.string.widget_mixer, R.string.widget_mixer_desc, R.drawable.ic_wave, listOf(WidgetSize.XL, WidgetSize.L3, WidgetSize.XL3, WidgetSize.T3, WidgetSize.FULL), true),
     OPEN("open", R.string.widget_open, R.string.widget_open_desc, R.drawable.ic_display, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
     APPS("apps", R.string.widget_apps, R.string.widget_apps_desc, R.drawable.ic_tabs, listOf(WidgetSize.L, WidgetSize.M, WidgetSize.XL, WidgetSize.W, WidgetSize.V), true),
     DISCORD("discord", R.string.widget_discord, R.string.widget_discord_desc, R.drawable.ic_call, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
@@ -131,7 +133,7 @@ private const val LEGACY_FIRST = "Bureau"
  * Disposition complète : widgets et profils. Un profil = une page ; `names[i]` null = pas encore de nom ([nameMissing]
  * lui en donne un, l'interface passe les textes : le modèle ne touche à aucune ressource).
  * Rôles (Deck V2) : `homeProfile` (Accueil, jamais supprimé), `deckProfile` (Deck, -1 s'il a été supprimé), `callProfile`
- * (Réunion : jamais supprimé, absent de la barre et du balayage hors appel). `rolesSet` : rôles déjà posés une fois
+ * (Réunion : -1 s'il a été supprimé, absent de la barre et du balayage hors appel). `rolesSet` : rôles déjà posés une fois
  * ([ensureRoles] ne recrée pas un Deck supprimé).
  */
 class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String?>) {
@@ -173,7 +175,8 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
 
     /**
      * Pose une fois les rôles : Réunion en dernier, depuis son modèle (affiché seulement pendant un appel). De base, un
-     * seul écran : l'Accueil ; d'autres seulement si l'utilisateur en ajoute. Vrai si la disposition a changé.
+     * seul écran : l'Accueil ; d'autres seulement si l'utilisateur en ajoute. Réunion supprimé ne revient pas ici : il
+     * se recrée par [addFromTemplate]. Vrai si la disposition a changé.
      */
     fun ensureRoles(callName: String): Boolean {
         if (rolesSet) return false
@@ -196,9 +199,19 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         return true
     }
 
-    /** Le dernier profil reste ; une fois les rôles posés, l'Accueil et Réunion aussi. */
+    /** Le dernier profil reste ; une fois les rôles posés, l'Accueil aussi. Réunion se supprime (plus d'écran d'appel). */
     fun canRemove(index: Int) =
-        names.size > 1 && index in names.indices && !(rolesSet && (index == homeProfile || index == callProfile))
+        names.size > 1 && index in names.indices && !(rolesSet && index == homeProfile)
+
+    /** Modèles proposés à la création : Réunion seulement tant qu'il n'y a pas d'écran d'appel. */
+    fun offered(): List<Template> = Template.entries.filter { it.listed || (it == Template.CALL_CADRAN && callProfile < 0) }
+
+    /** Ajoute un profil depuis un modèle, au nom libre ; Réunion recréé reprend le rôle d'appel s'il n'y en a plus. */
+    fun addFromTemplate(template: Template, name: String): Int {
+        val index = addProfile(uniqueName(name), template.widgets(pages))
+        if (template == Template.CALL_CADRAN && callProfile < 0) callProfile = index
+        return index
+    }
 
     /** Profils dans l'ordre de la barre et du balayage : Réunion n'y est que pendant un appel, en dernier. */
     fun profilesInOrder(inCall: Boolean): List<Int> =
@@ -408,7 +421,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
 
 /**
  * Modèles prêts à l'emploi : le défaut est Travail. `listed` : proposé à la création d'un
- * profil (Réunion ne l'est pas : il n'existe qu'une fois, posé par [HomeLayout.ensureRoles]).
+ * profil (Réunion ne l'est que s'il n'existe plus : [HomeLayout.offered]).
  */
 enum class Template(
     @StringRes val title: Int,

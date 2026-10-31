@@ -1,15 +1,31 @@
 import os from "node:os";
 
 /**
- * Mesure des performances de l'ordinateur pour le widget de la tablette : processeur, mémoire, carte graphique.
- * Module pur, indépendant du système : les lectures (cœurs, activité du processeur, mémoire, GPU, horloge) sont
+ * Mesure des performances de l'ordinateur pour le widget de la tablette : processeur, mémoire, carte graphique,
+ * disque, réseau. Module pur, indépendant du système : les lectures (cœurs, activité du processeur, mémoire, GPU,
+ * fréquence, disque, réseau, horloge) sont
  * injectées par `PerfSources`, ce qui permet de le tester sans matériel. Les mesures sont mises en cache 1 s : la
  * tablette peut interroger plus souvent sans multiplier les lectures sur le PC.
  */
-export type GpuPerf = { name: string; usage: number; dedicated: boolean; tempC?: number; fanRpm?: number };
+export type GpuPerf = {
+  name: string;
+  usage: number;
+  dedicated: boolean;
+  tempC?: number;
+  fanRpm?: number;
+  /** Mémoire vidéo en Mo entiers (carte dédiée seulement). */
+  vramUsedMb?: number;
+  vramTotalMb?: number;
+};
 /** `used` et `total` en Go (une décimale), `percent` entier. */
 export type RamUsage = { used: number; total: number; percent: number };
-export type Perf = { cpu: number; ram: RamUsage; gpu?: GpuPerf };
+/** Go à une décimale ; `activity` : temps d'activité du disque, entier de 0 à 100 (Windows seulement). */
+export type DiskPerf = { freeGb: number; totalGb: number; activity?: number };
+/** Débit du réseau en Ko/s entiers. */
+export type NetPerf = { upKBps: number; downKBps: number };
+/** Les champs facultatifs sont absents quand la lecture est impossible, jamais inventés. */
+export type Perf = { cpu: number; cpuMhz?: number; ram: RamUsage; gpu?: GpuPerf; disk?: DiskPerf; net?: NetPerf };
+export type DiskRaw = { freeBytes: number; totalBytes: number; activity?: number | null };
 export type CpuTimes = { idle: number; total: number };
 
 export type PerfSources = {
@@ -22,6 +38,10 @@ export type PerfSources = {
   memory: () => Promise<{ total: number; available: number }>;
   /** `null` : pas de lecteur GPU sur cette machine. */
   gpu: (() => Promise<GpuPerf | null>) | null;
+  /** Fréquence courante du processeur en MHz ; absente ou `null` : illisible. */
+  cpuMhz?: () => Promise<number | null>;
+  disk?: () => Promise<DiskRaw | null>;
+  net?: () => Promise<NetPerf | null>;
   now: () => number;
 };
 
@@ -35,6 +55,8 @@ const STALE_MS = 5 * CACHE_MS;
 export const GPU_WAIT_MS = 1500;
 /** Même attente pour l'activité du processeur lue par le pilote : au-delà, l'écart des temps des cœurs la remplace. */
 export const CPU_WAIT_MS = 1500;
+/** Même attente pour la fréquence, le disque et le réseau : au-delà, le champ est omis pour ce relevé. */
+export const EXTRA_WAIT_MS = 1500;
 
 /** Temps cumulés de tous les cœurs (inactif / total). */
 export function cpuTimes(cpus: os.CpuInfo[] = os.cpus()): CpuTimes {
@@ -56,6 +78,23 @@ export function cpuPercent(prev: CpuTimes, next: CpuTimes): number {
 }
 
 const oneDecimal = (n: number) => Math.round(n * 10) / 10;
+const isCount = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n) && n >= 0;
+
+function normalizeCpuMhz(mhz: number): number | undefined {
+  return Number.isFinite(mhz) && mhz > 0 ? Math.round(mhz) : undefined;
+}
+
+function normalizeDisk(raw: DiskRaw): DiskPerf | undefined {
+  if (!isCount(raw.freeBytes) || !isCount(raw.totalBytes) || raw.totalBytes <= 0 || raw.freeBytes > raw.totalBytes) return undefined;
+  const disk: DiskPerf = { freeGb: oneDecimal(raw.freeBytes / GIB), totalGb: oneDecimal(raw.totalBytes / GIB) };
+  if (typeof raw.activity === "number" && Number.isFinite(raw.activity))
+    disk.activity = Math.min(100, Math.max(0, Math.round(raw.activity)));
+  return disk;
+}
+
+function normalizeNet(raw: NetPerf): NetPerf | undefined {
+  return isCount(raw.upKBps) && isCount(raw.downKBps) ? { upKBps: Math.round(raw.upKBps), downKBps: Math.round(raw.downKBps) } : undefined;
+}
 
 export function ramUsage(totalBytes: number, availableBytes: number): RamUsage {
   const usedBytes = Math.max(0, totalBytes - availableBytes);
@@ -75,6 +114,10 @@ export function normalizeGpu(raw: GpuPerf): GpuPerf {
   };
   if (raw.tempC !== undefined && Number.isFinite(raw.tempC) && raw.tempC >= 10 && raw.tempC <= 150) gpu.tempC = raw.tempC;
   if (raw.fanRpm !== undefined && Number.isFinite(raw.fanRpm) && raw.fanRpm >= 0) gpu.fanRpm = raw.fanRpm;
+  const total = isCount(raw.vramTotalMb) && raw.vramTotalMb > 0 ? Math.round(raw.vramTotalMb) : undefined;
+  if (total !== undefined) gpu.vramTotalMb = total;
+  // Utilisée > totale : lecture incohérente (autre carte, mémoire partagée), omise plutôt que corrigée.
+  if (isCount(raw.vramUsedMb) && (total === undefined || Math.round(raw.vramUsedMb) <= total)) gpu.vramUsedMb = Math.round(raw.vramUsedMb);
   return gpu;
 }
 
@@ -124,6 +167,20 @@ function bounded<T>(read: () => Promise<T>, ms: number): () => Promise<T | null>
   };
 }
 
+/** Lecture facultative bornée : `undefined` sans lecteur, en échec, trop lente ou illisible (après `normalize`). */
+function optional<T, R>(read: (() => Promise<T | null>) | undefined, normalize: (raw: T) => R | undefined): () => Promise<R | undefined> {
+  const slow = read && bounded(read, EXTRA_WAIT_MS);
+  return async () => {
+    if (!slow) return undefined;
+    try {
+      const raw = await slow();
+      return raw === null || raw === undefined ? undefined : normalize(raw);
+    } catch {
+      return undefined;
+    }
+  };
+}
+
 /** Renvoie la lecture à demander à chaque requête : mesure au plus une fois par seconde, appels simultanés fusionnés. */
 export function perfSampler(sources: PerfSources): () => Promise<Perf> {
   const fans = new FanMemory();
@@ -132,6 +189,9 @@ export function perfSampler(sources: PerfSources): () => Promise<Perf> {
   let inflight: Promise<Perf> | undefined;
   const systemCpuRead = sources.cpuPercent && bounded(sources.cpuPercent, CPU_WAIT_MS);
   const gpuRead = sources.gpu && bounded(sources.gpu, GPU_WAIT_MS);
+  const readMhz = optional(sources.cpuMhz, normalizeCpuMhz);
+  const readDisk = optional(sources.disk, normalizeDisk);
+  const readNet = optional(sources.net, normalizeNet);
 
   async function cpuFromTimes(): Promise<number> {
     // Une lecture ancienne donnerait la moyenne de toute la pause, pas l'activité actuelle : on repart d'une fenêtre courte.
@@ -175,9 +235,19 @@ export function perfSampler(sources: PerfSources): () => Promise<Perf> {
   }
 
   async function measure(): Promise<Perf> {
-    const [cpu, memory, gpu] = await Promise.all([readCpu(), sources.memory(), readGpu()]);
+    const [cpu, memory, gpu, cpuMhz, disk, net] = await Promise.all([
+      readCpu(),
+      sources.memory(),
+      readGpu(),
+      readMhz(),
+      readDisk(),
+      readNet(),
+    ]);
     const perf: Perf = { cpu, ram: ramUsage(memory.total, memory.available) };
+    if (cpuMhz !== undefined) perf.cpuMhz = cpuMhz;
     if (gpu) perf.gpu = gpu;
+    if (disk) perf.disk = disk;
+    if (net) perf.net = net;
     cached = { at: sources.now(), perf };
     return perf;
   }

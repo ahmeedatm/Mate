@@ -38,6 +38,7 @@ object Prefs {
     private const val KEY_THEME = "theme"
     private const val KEY_RAIL_LABELS = "rail_labels"
     private const val KEY_TOUR_DONE = "tour_done"
+    private const val KEY_RAIL_TALK = "rail_talk"
     private const val KEY_RAIL_HIDDEN = "rail_hidden_tools"
     private const val KEY_FOCUS_DND = "focus_dnd"
     private const val KEY_FOCUS_MINUTES = "focus_minutes"
@@ -50,6 +51,7 @@ object Prefs {
     private const val KEY_MEETING_ALERT = "meeting_alert"
     private const val KEY_COMPUTER_LOCKED = "computer_locked"
     private const val KEY_TABLET_LOCKED = "tablet_locked"
+    private const val KEY_BLOCK_ON_COMPUTER_LOCK = "block_on_computer_lock"
     private const val KEY_LOCK_CODE = "lock_code"
     private const val KEY_LOCK_SALT = "lock_salt"
     private const val KEY_MEETING_ALERT_SEEN = "meeting_alert_seen"
@@ -181,6 +183,13 @@ object Prefs {
         prefs(context).edit().putBoolean(KEY_RAIL_LABELS, value).apply()
     }
 
+    /** Bouton Parler en tête de la barre de gauche (Réglages > Barre de gauche). Affiché par défaut. */
+    fun railTalk(context: Context): Boolean = prefs(context).getBoolean(KEY_RAIL_TALK, true)
+
+    fun setRailTalk(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_RAIL_TALK, value).apply()
+    }
+
     /** Outils de la barre de gauche, dans leur ordre : tous sauf ceux masqués dans Réglages. */
     fun railTools(context: Context): List<Mode> {
         val hidden = prefs(context).getStringSet(KEY_RAIL_HIDDEN, emptySet()).orEmpty()
@@ -211,7 +220,17 @@ object Prefs {
         prefs(context).edit().putBoolean(KEY_NOTIFICATIONS_DISCREET, value).apply()
     }
 
-    /** Ordinateur actif verrouillé : écran bloquant (ui/ComputerLockScreen), gardé hors ligne et après une relance. */
+    /**
+     * Ordinateur verrouillé : la tablette se bloque (écran plein de ui/LockScreen). Coupé (Réglages > Tablette), elle reste
+     * utilisable et la pastille de la barre dit « verrouillé ». Activé par défaut.
+     */
+    fun blockOnComputerLock(context: Context): Boolean = prefs(context).getBoolean(KEY_BLOCK_ON_COMPUTER_LOCK, true)
+
+    fun setBlockOnComputerLock(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_BLOCK_ON_COMPUTER_LOCK, value).apply()
+    }
+
+    /** Ordinateur actif verrouillé (ui/LockScreen), gardé hors ligne et après une relance. */
     fun computerLocked(context: Context): Boolean = prefs(context).getBoolean(KEY_COMPUTER_LOCKED, false)
 
     fun setComputerLocked(context: Context, value: Boolean) {

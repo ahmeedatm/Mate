@@ -22,6 +22,13 @@ class PrefsTest {
         assertFalse(Prefs.powerMenu(context))
         assertFalse(Prefs.landscapeLocked(context))
         assertNull(Prefs.theme(context))
+        assertTrue(Prefs.blockOnComputerLock(context))
+    }
+
+    @Test
+    fun `blocage par l'ordinateur verrouille, coupe puis retenu`() {
+        Prefs.setBlockOnComputerLock(context, false)
+        assertFalse(Prefs.blockOnComputerLock(context))
     }
 
     @Test
@@ -45,6 +52,15 @@ class PrefsTest {
         assertEquals(listOf(Mode.COMPUTER), Prefs.railTools(context))
         Prefs.setRailTool(context, Mode.FOCUS, true)
         assertEquals(listOf(Mode.FOCUS, Mode.COMPUTER), Prefs.railTools(context))
+    }
+
+    @Test
+    fun `bouton Parler affiche par defaut, puis retenu`() {
+        assertTrue(Prefs.railTalk(context))
+        Prefs.setRailTalk(context, false)
+        assertFalse(Prefs.railTalk(context))
+        Prefs.setRailTalk(context, true)
+        assertTrue(Prefs.railTalk(context))
     }
 
     @Test

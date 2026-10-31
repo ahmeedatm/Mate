@@ -13,6 +13,7 @@
     <!-- Commun -->
     <string name="error_no_computer">Aucun ordinateur connecté : Réglages › Ordinateurs › Ajouter.</string>
     <string name="error_unreachable">%1$s ne répond pas : vérifie qu\'il est allumé, pas en veille, et sur le même WiFi que la tablette.</string>
+    <string name="error_computer_locked">%1$s est verrouillé : déverrouille-le pour faire ça.</string>
     <string name="error_reauth">%1$s ne reconnaît plus la tablette : Réglages › Ordinateurs, puis l\'ajouter à nouveau.</string>
     <string name="error_computer">L\'ordinateur n\'a pas pu le faire.</string>
     <string name="error_insecure">%1$s doit être appairé à nouveau (connexion sécurisée) : Réglages › Ordinateurs › Ajouter.</string>
@@ -23,6 +24,7 @@
     <string name="close">Fermer</string>
     <string name="offline">Ordinateur injoignable</string>
     <string name="online">Connecté</string>
+    <string name="computer_locked_spoken">Session de l\'ordinateur verrouillée</string>
     <string name="unauthorized">Jeton refusé : refaire l\'appairage dans Réglages</string>
     <string name="no_computer">Aucun ordinateur : Réglages, Ajouter</string>
     <string name="no_computer_short">Aucun</string>
@@ -106,7 +108,7 @@
     <string name="media_previous">Morceau précédent</string>
     <string name="system_sleep">Veille de l\'écran</string>
     <string name="system_dark">Mode sombre</string>
-    <string name="system_screenshot">Capture → presse-papiers</string>
+    <string name="system_screenshot">Capture d\'écran</string>
     <string name="system_lock">Verrouiller la session</string>
     <string name="sum_app">Ouvrir %1$s</string>
     <string name="sum_text">Taper « %1$s »</string>
@@ -883,6 +885,7 @@
     <string name="theme_tile">Thème %s</string>
     <string name="theme_tile_chosen">Thème %s, choisi</string>
     <string name="theme_contraste">Contraste élevé</string>
+    <string name="theme_hush">Hush</string>
     <!-- Accessibilité (lot 2) : aides à la lecture, dans la carte Accessibilité de COMP-50 (ui/ReadingAids.kt) -->
     <string name="a11y_legible_font">Police lisible</string>
     <string name="a11y_legible_font_hint">Atkinson Hyperlegible, lettres faciles à distinguer, un peu plus espacées</string>
@@ -940,6 +943,8 @@
     <string name="lock_code_mismatch">Les deux codes ne sont pas les mêmes</string>
     <string name="lock_code_choose">Choisir le code de verrouillage</string>
     <string name="lock_code_change">Changer le code de verrouillage</string>
+    <string name="block_on_computer_lock">Bloquer la tablette quand l\'ordinateur est verrouillé</string>
+    <string name="block_on_computer_lock_hint">Activé : écran bloqué tant que l\'ordinateur l\'est. Coupé : la tablette reste utilisable ; ce qui touche l\'ordinateur répond qu\'il est verrouillé.</string>
     <string name="lock_code_settings_hint">Le cadenas de la barre de gauche verrouille la tablette ; ce code la déverrouille.</string>
     <string name="rail_lock">Verrouiller la tablette</string>
     <string name="kiosk_on">Actif : l\'appli est verrouillée à l\'écran et sert d\'écran d\'accueil.</string>
@@ -1092,6 +1097,7 @@
     <string name="widget_size_v">Vertical</string>
     <string name="widget_size_l3">3 × 2</string>
     <string name="widget_size_t3">3 × 4</string>
+    <string name="widget_size_xl3">4 × 3</string>
     <string name="widget_size_full">Plein écran</string>
     <string name="widget_resize_cd">Redimensionner %1$s, taille actuelle %2$s. Active pour passer à la taille suivante.</string>
     <string name="widget_needs_computer">%1$s : connecte ton ordinateur</string>
@@ -1202,6 +1208,42 @@
     <string name="perf_fan_rpm">%1$s tr/min</string>
     <string name="perf_fan_stopped">Arrêté</string>
     <string name="perf_unavailable">Non disponible sur cet ordinateur</string>
+    <string name="perf_settings_hint">Coche ce que le widget montre.</string>
+    <string name="perf_option_note">%1$s (%2$s)</string>
+    <string name="perf_option_unreadable">indisponible</string>
+    <string name="perf_option_soon">arrive bientôt</string>
+    <string name="perf_gpu_temp_alert">GPU °C</string>
+    <string name="perf_extras_separator">"  ·  "</string>
+    <string name="perf_gpu_temp_line">GPU %1$d °C</string>
+    <string name="perf_fan_line">Ventilateur %1$s</string>
+    <string name="perf_cpu_freq_line">CPU %1$s GHz</string>
+    <string name="perf_group_cpu">Processeur</string>
+    <string name="perf_group_gpu">Carte graphique</string>
+    <string name="perf_group_ram">Mémoire</string>
+    <string name="perf_group_disk">Disque</string>
+    <string name="perf_group_net">Réseau</string>
+    <string name="perf_group_game">Jeu</string>
+    <string name="perf_opt_cpu">Utilisation</string>
+    <string name="perf_opt_cpu_freq">Fréquence</string>
+    <string name="perf_opt_cpu_temp">Température</string>
+    <string name="perf_opt_gpu">Utilisation</string>
+    <string name="perf_opt_gpu_temp">Température</string>
+    <string name="perf_opt_gpu_fan">Ventilateur</string>
+    <string name="perf_opt_gpu_vram">Mémoire vidéo</string>
+    <string name="perf_opt_ram">Utilisation</string>
+    <string name="perf_opt_disk_free">Espace libre</string>
+    <string name="perf_opt_disk_activity">Activité</string>
+    <string name="perf_opt_net_up">Envoi</string>
+    <string name="perf_opt_net_down">Réception</string>
+    <string name="perf_opt_fps">Images par seconde</string>
+    <string name="perf_vram">Vidéo %1$s / %2$s Go</string>
+    <string name="perf_disk_free">Disque %1$s Go libres</string>
+    <string name="perf_disk_activity">Disque %1$d %%</string>
+    <string name="perf_net_up">Envoi %1$s</string>
+    <string name="perf_net_down">Réception %1$s</string>
+    <string name="perf_rate_kb">%1$s Ko/s</string>
+    <string name="perf_rate_mb">%1$s Mo/s</string>
+    <string name="perf_none_checked">Aucune info cochée</string>
     <string name="widget_keys">Touches du deck</string>
     <string name="widget_keys_title">Touches</string>
     <string name="widget_keys_desc">Tes touches, à créer et à modifier sur place</string>
@@ -1214,7 +1256,8 @@
     <string name="widget_keys_no_perso">Ce deck n\'a pas de page de touches perso.</string>
     <string name="widget_keys_full">Les emplacements des touches perso sont tous pris.</string>
     <string name="widget_keys_remove">Retirer « %1$s » de ce widget ?</string>
-    <string name="widget_keys_remove_yes">Retirer</string>
+    <string name="widget_keys_remove_yes">Retirer du widget</string>
+    <string name="widget_keys_edit">Modifier</string>
     <string name="widget_weather">Météo</string>
     <string name="widget_weather_desc">Le temps qu\'il fait dans ta ville</string>
     <string name="widget_weather_choose">Choisir ma ville</string>
@@ -1383,6 +1426,7 @@
     <string name="link_state_online">en ligne</string>
     <string name="link_state_unauthorized">non autorisé</string>
     <string name="link_state_offline">hors ligne</string>
+    <string name="link_state_locked">verrouillé</string>
     <string name="color_default">Couleur par défaut</string>
     <string name="color_red">Rouge</string>
     <string name="color_orange">Orange</string>

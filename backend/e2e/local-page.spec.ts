@@ -218,12 +218,19 @@ test.describe("page locale GET /", () => {
     await expect(page.getByRole("button", { name: "Contraste élevé" })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("button", { name: "Console jour" })).toHaveAttribute("aria-pressed", "false");
 
+    // Hush : aperçu à ses couleurs (accent rose).
+    await page.getByRole("button", { name: "Hush" }).click();
+    await expect(page.getByRole("button", { name: "Hush" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "Contraste élevé" })).toHaveAttribute("aria-pressed", "false");
+    await expect(page.locator("#twintheme")).toHaveText("Hush");
+    expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-now"))).toBe("#FF6EB4");
+
     await page.locator("#nightdim").uncheck();
     await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");
     await page.locator("#volume").fill("75");
     await expect(page.locator("#volumevalue")).toHaveText("75 %");
-    await expect.poll(() => received.length).toBe(4);
-    expect(received).toEqual([{ theme: "CONSOLE_JOUR" }, { theme: "CONTRASTE" }, { nightDim: false }, { volume: 0.75 }]);
+    await expect.poll(() => received.length).toBe(5);
+    expect(received).toEqual([{ theme: "CONSOLE_JOUR" }, { theme: "CONTRASTE" }, { theme: "HUSH" }, { nightDim: false }, { volume: 0.75 }]);
     await expect(page.locator("#nightdim")).not.toBeChecked();
 
     // Ouverte depuis « Régler depuis l'ordi » : la carte est mise en avant.

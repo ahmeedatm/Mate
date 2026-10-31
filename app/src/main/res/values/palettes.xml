@@ -56,8 +56,7 @@
         <item name="c_hue_pink">#FFFF8FB8</item>
         <item name="c_hue_yellow">#FFFFD45B</item>
         <item name="c_hue_blue">#FF6FA8FF</item>
-        <item name="c_mx_plate_top">?attr/c_surface_raised</item>
-        <item name="c_mx_plate_bottom">?attr/c_surface</item>
+        <item name="c_mx_plate">#FF000000</item>
         <item name="c_mx_lcd_bg">#FF0E0F11</item>
         <item name="c_mx_lcd_text">#FFB8F34A</item>
         <item name="c_mx_text">?attr/c_text</item>
@@ -127,8 +126,7 @@
         <item name="c_hue_pink">#FFB8305F</item>
         <item name="c_hue_yellow">#FF7A5B00</item>
         <item name="c_hue_blue">#FF1F5FBF</item>
-        <item name="c_mx_plate_top">?attr/c_surface</item>
-        <item name="c_mx_plate_bottom">?attr/c_bg</item>
+        <item name="c_mx_plate">?attr/c_bg</item>
         <item name="c_mx_lcd_bg">#FF0E0F11</item>
         <item name="c_mx_lcd_text">#FFB8F34A</item>
         <item name="c_mx_text">?attr/c_text</item>
@@ -204,8 +202,7 @@
         <item name="c_hue_blue">#FF25272C</item>
         <item name="c_hue_red">#FF8A0000</item>
         <item name="c_hue_green">#FF12502E</item>
-        <item name="c_mx_plate_top">?attr/c_surface</item>
-        <item name="c_mx_plate_bottom">?attr/c_bg</item>
+        <item name="c_mx_plate">?attr/c_bg</item>
         <item name="c_mx_lcd_bg">#FF0E0F11</item>
         <item name="c_mx_lcd_text">#FFB8F34A</item>
         <item name="c_mx_text">?attr/c_text</item>
@@ -221,6 +218,82 @@
         <item name="c_mx_shadow">#33000000</item>
         <item name="c_mx_highlight">#FFFFFFFF</item>
         <item name="c_mx_key_top">?attr/c_surface</item>
+        <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
+    </style>
+
+    <!-- Hush : nuit noire, reflets rose et violet qui bougent derrière tous les écrans (c_backdrop, ui/HushBackdrop),
+         d'après les visuels de l'agente (néons sous la pluie, cristaux violets, yeux roses) ; rien de Riot, tout est
+         dessiné. Un seul accent, le rose vif ; le violet reste dans les reflets (c_hue_violet). Tuiles en verre
+         (c_surface translucide) ; barre fixe transparente, le fond passe dessous sans coupure. Textes au moins 4,5:1 sur le pire point du fond, verre compris
+         (HushPaletteTest). Posée sur Theme.Companion (base sombre), comme Contraste sur la sienne. -->
+    <style name="Palette.Hush" parent="">
+        <item name="c_card_bg">@drawable/console_tile_bg</item>
+        <item name="c_tile_bg">@drawable/console_tile_bg</item>
+        <item name="c_home_card_bg">@drawable/console_tile_bg</item>
+        <item name="c_card_pad">24dp</item>
+        <item name="c_font_medium">@font/figtree_500</item>
+        <item name="c_font_light">@font/figtree_300</item>
+        <item name="c_font_regular">@font/figtree_400</item>
+        <item name="c_font_title">@font/figtree_500</item>
+        <item name="c_font_display">@font/figtree_300</item>
+        <item name="android:fontFamily">@font/figtree_400</item>
+        <item name="c_backdrop">true</item>
+        <item name="c_primary">?attr/c_accent</item>
+        <item name="c_on_primary">?attr/c_on_accent</item>
+        <item name="c_primary_pressed">?attr/c_text</item>
+        <item name="c_bg">#FF070509</item>
+        <item name="c_rail">#00070509</item>
+        <item name="c_surface">#B82C2238</item>
+        <item name="c_surface_raised">#FF251C2E</item>
+        <item name="c_surface_pressed">#FF30253B</item>
+        <item name="c_stroke">#FF46384F</item>
+        <item name="c_accent">#FFFF6EB4</item>
+        <item name="c_accent_soft">#FF3D1428</item>
+        <item name="c_on_accent">#FF22030F</item>
+        <item name="c_text">#FFF6F0F8</item>
+        <item name="c_frame_bg">#FF000000</item>
+        <item name="c_frame_text">#FFFFFFFF</item>
+        <item name="c_frame_shadow">#99000000</item>
+        <item name="c_text_dim">#FFCBC0D3</item>
+        <item name="c_text_faint">#FFB3A6BD</item>
+        <item name="c_graphic">#FF9A8CA6</item>
+        <item name="c_ok">#FF7FD8A6</item>
+        <item name="c_ok_soft">#FF1C3A2B</item>
+        <item name="c_ko">#FFFF7A70</item>
+        <item name="c_ko_soft">#33FF7A70</item>
+        <item name="c_on_ko">#FF2A0707</item>
+        <item name="c_warn">#FFFFC24B</item>
+        <item name="c_agent_wait">#FFF87171</item>
+        <item name="c_agent_done">#FF5DD39E</item>
+        <item name="c_agent_limit">#FF6CB4FF</item>
+        <item name="c_agent_work">#FFFB923C</item>
+        <item name="c_agent_monitor">#FFFACC15</item>
+        <item name="c_paper">#FFFFFFFF</item>
+        <item name="c_scrim">#B3000000</item>
+        <item name="c_hue_orange">#FFFFA45B</item>
+        <item name="c_hue_green">#FFB8F34A</item>
+        <item name="c_hue_cyan">#FF5FD4E8</item>
+        <item name="c_hue_violet">#FFB98CFF</item>
+        <item name="c_hue_red">#FFFF7A70</item>
+        <item name="c_hue_pink">#FFFF8FC7</item>
+        <item name="c_hue_yellow">#FFFFD45B</item>
+        <item name="c_hue_blue">#FF6FA8FF</item>
+        <item name="c_mx_plate">#FF000000</item>
+        <item name="c_mx_lcd_bg">#FF0B0710</item>
+        <item name="c_mx_lcd_text">#FFFF6EB4</item>
+        <item name="c_mx_text">?attr/c_text</item>
+        <item name="c_mx_slot">?attr/c_surface_raised</item>
+        <item name="c_mx_cap_top">?attr/c_text</item>
+        <item name="c_mx_cap_bottom">?attr/c_text_faint</item>
+        <item name="c_mx_cap_line">?attr/c_bg</item>
+        <item name="c_mx_led_off">?attr/c_stroke</item>
+        <item name="c_mx_led_low">#FFB8F34A</item>
+        <item name="c_mx_led_mid">#FFFFD45B</item>
+        <item name="c_mx_led_high">#FFFF7A70</item>
+        <item name="c_mx_engrave">?attr/c_text_faint</item>
+        <item name="c_mx_shadow">#66000000</item>
+        <item name="c_mx_highlight">#14FFFFFF</item>
+        <item name="c_mx_key_top">?attr/c_stroke</item>
         <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
     </style>
 </resources>

@@ -275,6 +275,18 @@ class WidgetModelTest {
     }
 
     @Test
+    fun `le mixeur a une taille 4 x 3 posee en bas, les autres tableaux non`() {
+        assertEquals(4 to 3, WidgetSize.XL3.w to WidgetSize.XL3.h)
+        assertEquals(WidgetSize.XL3, WidgetType.MIXER.sizes.single { it.w == 4 && it.h == 3 })
+        for (type in boards - WidgetType.MIXER) assertFalse("$type", WidgetSize.XL3 in type.sizes)
+        val mixer = Placed(WidgetType.MIXER, WidgetSize.XL, 0, 0, 1)
+        val layout = HomeLayout(mutableListOf(mixer), 1)
+        assertEquals(WidgetSize.XL3, layout.pick(mixer, 4f, 3f))
+        // En bas : une rangée reste libre au-dessus, la taille tient jusqu'à la dernière rangée.
+        assertEquals(ROWS, mixer.row + WidgetSize.XL3.h)
+    }
+
+    @Test
     fun `une taille inconnue relue retombe sur la premiere taille du widget`() {
         val context = app.mate.FakeContext()
         val json = """{"v":2,"pages":1,"widgets":[{"t":"jira","s":"GEANT","p":0,"c":0,"r":0,"cfg":{}},{"t":"clock","s":"FULL","p":0,"c":0,"r":2,"cfg":{}}]}"""

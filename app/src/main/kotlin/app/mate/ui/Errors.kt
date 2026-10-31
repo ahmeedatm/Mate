@@ -27,6 +27,8 @@ fun Context.errorText(e: Throwable?): String {
     return when (e) {
         is HttpException -> when {
             e.code == 401 -> getString(R.string.error_reauth, computer?.name ?: getString(R.string.computer_generic))
+            // Session verrouillée (backend/src/screen-lock.ts) : vue seulement si le blocage est coupé (Prefs.blockOnComputerLock).
+            e.code == 423 -> getString(R.string.error_computer_locked, computer?.name ?: getString(R.string.computer_generic))
             // Route inconnue : le compagnon de l'ordinateur est plus ancien que l'appli.
             e.code == 404 && e.reason.startsWith("Route ") -> getString(R.string.error_bad_reply)
             e.reason.isNotBlank() -> e.reason

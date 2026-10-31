@@ -33,7 +33,10 @@ describe("verrouillage du Mac : lecture d'ioreg", () => {
 
 describe("verrouillage : la tablette est prévenue", () => {
   it("un ordre par changement, et l'état courant à une tablette qui arrive", async () => {
-    const seq = [false, true, true, false, false];
+    // Verrouillé tant qu'aucune tablette n'écoute ; la suite n'avance qu'une fois branchée (sinon elle peut finir
+    // avant le branchement, selon la vitesse de la machine, et rien n'est envoyé).
+    const seq = [true, true, false, false];
+    let before = 0;
     let reads = 0;
     let connected = false;
     const sent: boolean[] = [];
@@ -41,9 +44,9 @@ describe("verrouillage : la tablette est prévenue", () => {
       intervalMs: 1,
       connected: () => connected,
       tabletLocked: () => undefined,
-      read: async () => seq[Math.min(reads++, seq.length - 1)],
+      read: async () => (connected ? seq[Math.min(reads++, seq.length - 1)] : (before++, true)),
     });
-    await until(() => reads >= 2);
+    await until(() => before >= 2);
     assert.deepEqual(sent, [], "aucune tablette : rien d'envoyé");
     assert.equal(isScreenLocked(), true, "l'API se ferme même sans tablette");
     connected = true;
