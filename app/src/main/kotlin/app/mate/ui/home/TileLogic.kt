@@ -70,6 +70,9 @@ data class KeyRef(val id: String, val label: String, val glyph: String? = null, 
             return page.tiles.filter { it.type != "empty" }.sortedBy(rank).take(SEED_MAX).map(::of).takeIf { it.isNotEmpty() }
         }
 
+        /** Les touches sans celle d'id [id] (retrait du widget : le deck, lui, ne change pas). */
+        fun without(keys: List<KeyRef>, id: String): List<KeyRef> = keys.filterNot { it.id == id }
+
         fun list(config: JSONObject): List<KeyRef> {
             val array = config.optJSONArray("keys") ?: return emptyList()
             return (0 until array.length()).mapNotNull { array.optJSONObject(it)?.let(::of) }

@@ -164,15 +164,25 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
     }
 
-    /** Appui long : l'éditeur pour une touche perso ou d'une page de touches nommée, sinon la retirer du widget. */
+    /** Appui long : « Modifier » (touche perso ou d'une page nommée) ou « Retirer du widget » ; les autres touches se retirent seulement. */
     private fun hold(key: KeyRef) {
-        val slot = slotOf(key.id)
-        if (slot != null) return host.overlays.editKey(slot) { reload() }
-        pageSlotOf(key.id)?.let { (page, pageSlot) -> return host.overlays.editKey(pageSlot, page) { reload() } }
+        val edit: (() -> Unit)? = slotOf(key.id)?.let { slot -> { host.overlays.editKey(slot) { reload() } } }
+            ?: pageSlotOf(key.id)?.let { (page, pageSlot) -> { host.overlays.editKey(pageSlot, page) { reload() } } }
+        if (edit == null) return confirmRemove(key)
+        AlertDialog.Builder(context)
+            .setTitle(key.label)
+            .setItems(arrayOf(context.getString(R.string.widget_keys_edit), context.getString(R.string.widget_keys_remove_yes))) { _, which ->
+                if (which == 0) edit() else confirmRemove(key)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .showImmersive()
+    }
+
+    private fun confirmRemove(key: KeyRef) {
         AlertDialog.Builder(context)
             .setMessage(context.getString(R.string.widget_keys_remove, key.label))
             .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.widget_keys_remove_yes) { _, _ -> store(keys().filterNot { it.id == key.id }) }
+            .setPositiveButton(R.string.widget_keys_remove_yes) { _, _ -> store(KeyRef.without(keys(), key.id)) }
             .showImmersive()
     }
 
