@@ -50,6 +50,7 @@ object Prefs {
     private const val KEY_MEETING_ALERT = "meeting_alert"
     private const val KEY_COMPUTER_LOCKED = "computer_locked"
     private const val KEY_TABLET_LOCKED = "tablet_locked"
+    private const val KEY_BLOCK_ON_COMPUTER_LOCK = "block_on_computer_lock"
     private const val KEY_LOCK_CODE = "lock_code"
     private const val KEY_LOCK_SALT = "lock_salt"
     private const val KEY_MEETING_ALERT_SEEN = "meeting_alert_seen"
@@ -211,7 +212,17 @@ object Prefs {
         prefs(context).edit().putBoolean(KEY_NOTIFICATIONS_DISCREET, value).apply()
     }
 
-    /** Ordinateur actif verrouillé : écran bloquant (ui/ComputerLockScreen), gardé hors ligne et après une relance. */
+    /**
+     * Ordinateur verrouillé : la tablette se bloque (écran plein de ui/LockScreen). Coupé (Réglages > Tablette), elle reste
+     * utilisable et la pastille de la barre dit « verrouillé ». Activé par défaut.
+     */
+    fun blockOnComputerLock(context: Context): Boolean = prefs(context).getBoolean(KEY_BLOCK_ON_COMPUTER_LOCK, true)
+
+    fun setBlockOnComputerLock(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_BLOCK_ON_COMPUTER_LOCK, value).apply()
+    }
+
+    /** Ordinateur actif verrouillé (ui/LockScreen), gardé hors ligne et après une relance. */
     fun computerLocked(context: Context): Boolean = prefs(context).getBoolean(KEY_COMPUTER_LOCKED, false)
 
     fun setComputerLocked(context: Context, value: Boolean) {

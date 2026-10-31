@@ -22,6 +22,13 @@ class PrefsTest {
         assertFalse(Prefs.powerMenu(context))
         assertFalse(Prefs.landscapeLocked(context))
         assertNull(Prefs.theme(context))
+        assertTrue(Prefs.blockOnComputerLock(context))
+    }
+
+    @Test
+    fun `blocage par l'ordinateur verrouille, coupe puis retenu`() {
+        Prefs.setBlockOnComputerLock(context, false)
+        assertFalse(Prefs.blockOnComputerLock(context))
     }
 
     @Test

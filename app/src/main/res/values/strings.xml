@@ -13,6 +13,7 @@
     <!-- Commun -->
     <string name="error_no_computer">Aucun ordinateur connecté : Réglages › Ordinateurs › Ajouter.</string>
     <string name="error_unreachable">%1$s ne répond pas : vérifie qu\'il est allumé, pas en veille, et sur le même WiFi que la tablette.</string>
+    <string name="error_computer_locked">%1$s est verrouillé : déverrouille-le pour faire ça.</string>
     <string name="error_reauth">%1$s ne reconnaît plus la tablette : Réglages › Ordinateurs, puis l\'ajouter à nouveau.</string>
     <string name="error_computer">L\'ordinateur n\'a pas pu le faire.</string>
     <string name="error_insecure">%1$s doit être appairé à nouveau (connexion sécurisée) : Réglages › Ordinateurs › Ajouter.</string>
@@ -23,6 +24,7 @@
     <string name="close">Fermer</string>
     <string name="offline">Ordinateur injoignable</string>
     <string name="online">Connecté</string>
+    <string name="computer_locked_spoken">Session de l\'ordinateur verrouillée</string>
     <string name="unauthorized">Jeton refusé : refaire l\'appairage dans Réglages</string>
     <string name="no_computer">Aucun ordinateur : Réglages, Ajouter</string>
     <string name="no_computer_short">Aucun</string>
@@ -931,6 +933,8 @@
     <string name="lock_code_mismatch">Les deux codes ne sont pas les mêmes</string>
     <string name="lock_code_choose">Choisir le code de verrouillage</string>
     <string name="lock_code_change">Changer le code de verrouillage</string>
+    <string name="block_on_computer_lock">Bloquer la tablette quand l\'ordinateur est verrouillé</string>
+    <string name="block_on_computer_lock_hint">Activé : écran bloqué tant que l\'ordinateur l\'est. Coupé : la tablette reste utilisable ; ce qui touche l\'ordinateur répond qu\'il est verrouillé.</string>
     <string name="lock_code_settings_hint">Le cadenas de la barre de gauche verrouille la tablette ; ce code la déverrouille.</string>
     <string name="rail_lock">Verrouiller la tablette</string>
     <string name="kiosk_on">Actif : l\'appli est verrouillée à l\'écran et sert d\'écran d\'accueil.</string>
@@ -1369,6 +1373,7 @@
     <string name="link_state_online">en ligne</string>
     <string name="link_state_unauthorized">non autorisé</string>
     <string name="link_state_offline">hors ligne</string>
+    <string name="link_state_locked">verrouillé</string>
     <string name="color_default">Couleur par défaut</string>
     <string name="color_red">Rouge</string>
     <string name="color_orange">Orange</string>
