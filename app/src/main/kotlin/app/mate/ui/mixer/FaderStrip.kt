@@ -21,6 +21,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.DrawableCompat
+import androidx.core.view.ViewCompat
 import app.mate.R
 import app.mate.ui.Look
 import app.mate.ui.dp
@@ -84,9 +85,8 @@ class FaderStrip(context: Context) : View(context) {
         set(value) {
             if (field == value) return
             field = value
-            iconDrawable = if (value == 0) null else ContextCompat.getDrawable(context, value)?.mutate()?.also {
-                DrawableCompat.setTint(it, cLcdText)
-            }
+            iconDrawable = if (value == 0) null else ContextCompat.getDrawable(context, value)?.mutate()
+            tintIcon()
             invalidate()
         }
     private var iconDrawable: Drawable? = null
@@ -108,8 +108,15 @@ class FaderStrip(context: Context) : View(context) {
             if (field == value) return
             field = value
             describe()
+            tintIcon()
             invalidate()
         }
+
+    /** Teinte de l'icône, posée au changement (pas à chaque image) : afficheur, ou table nue (rouge en sourdine). */
+    private fun tintIcon() {
+        val drawable = iconDrawable ?: return
+        DrawableCompat.setTint(drawable, if (!bare) cLcdText else if (muted) cMuted else cText)
+    }
 
     /** Le curseur est tenu : l'état relu de l'ordinateur ne doit pas le faire sauter. */
     var dragging = false
@@ -239,10 +246,11 @@ class FaderStrip(context: Context) : View(context) {
         if (tight) {
             val icon = dp(22)
             iconBox.set(dp(14).toFloat(), dp(10).toFloat(), (dp(14) + icon).toFloat(), (dp(10) + icon).toFloat())
-            muteBox.set(0f, 0f, iconBox.right + dp(10), iconBox.bottom + dp(10))
+            // Zone Muet d'au moins 48 × 48 dp autour de l'icône.
+            muteBox.set(0f, 0f, iconBox.right + dp(12), iconBox.bottom + dp(16))
             text.textSize = sp(VALUE_TIGHT_SP)
             valueY = h - dp(10).toFloat()
-            faderArea.set(0f, muteBox.bottom + dp(6), w.toFloat(), valueY - dp(30))
+            faderArea.set(0f, muteBox.bottom + dp(2), w.toFloat(), valueY - dp(30))
         } else {
             val icon = dp(28)
             iconBox.set(w / 2f - icon / 2f, pad + dp(14), w / 2f + icon / 2f, pad + dp(14) + icon)
@@ -344,7 +352,7 @@ class FaderStrip(context: Context) : View(context) {
         val y = capY(v ?: 0)
         paint.color = cShadow
         canvas.drawRoundRect(cx - capW / 2 + dp(1), y - capH / 2 + dp(4), cx + capW / 2 + dp(1), y + capH / 2 + dp(4), dp(8).toFloat(), dp(8).toFloat(), paint)
-        paint.alpha = if (v == null) 90 else 255
+        paint.alpha = if (v == null) DISABLED_ALPHA else 255
         cap?.let { canvas.drawBitmap(it, cx - capW / 2, y - capH / 2, paint) }
         paint.alpha = 255
 
@@ -403,7 +411,8 @@ class FaderStrip(context: Context) : View(context) {
             val span = travelBottom - travelTop
             for (s in MixerMath.meterSpans(shownLeds, LEDS)) {
                 paint.color = cLeds[s.zone]
-                canvas.drawRoundRect(meterX, travelBottom - s.to * span, meterX + meterW, travelBottom - s.from * span, meterW / 2, meterW / 2, paint)
+                // Rectangles droits : pas d'encoche à la jonction de deux couleurs.
+                canvas.drawRect(meterX, travelBottom - s.to * span, meterX + meterW, travelBottom - s.from * span, paint)
             }
         }
 
@@ -414,7 +423,7 @@ class FaderStrip(context: Context) : View(context) {
         paint.color = cShadow
         canvas.drawCircle(cx, y + dp(2), thumbR, paint)
         paint.color = cThumb
-        if (v == null) paint.alpha = 90
+        if (v == null) paint.alpha = DISABLED_ALPHA
         canvas.drawCircle(cx, y, thumbR, paint)
         paint.alpha = 255
 
@@ -434,12 +443,11 @@ class FaderStrip(context: Context) : View(context) {
         val drawable = iconDrawable
         when {
             bitmap != null -> {
-                paint.alpha = if (muted) 110 else 255
+                paint.alpha = if (muted) MUTED_ICON_ALPHA else 255
                 canvas.drawBitmap(bitmap, null, iconBox, paint)
                 paint.alpha = 255
             }
             drawable != null -> {
-                DrawableCompat.setTint(drawable, if (muted) cMuted else cText)
                 drawable.setBounds(iconBox.left.toInt(), iconBox.top.toInt(), iconBox.right.toInt(), iconBox.bottom.toInt())
                 drawable.draw(canvas)
             }
@@ -516,7 +524,15 @@ class FaderStrip(context: Context) : View(context) {
     /** TalkBack : le nom de la tranche, et « son coupé » en sourdine. */
     private fun describe() {
         contentDescription = if (muted) context.getString(R.string.mixer_strip_muted, title) else title
+        // TalkBack : couper ou rendre le son sans viser la touche (ou l'icône, dans Hush).
+        muteAction?.let { ViewCompat.removeAccessibilityAction(this, it) }
+        val label = context.getString(if (muted) R.string.mixer_unmute_action else R.string.mixer_mute_action, title)
+        muteAction = ViewCompat.addAccessibilityAction(this, label) { _, _ ->
+            onMute?.invoke()
+            true
+        }
     }
+    private var muteAction: Int? = null
 
     /** Touche Muet (pilule) : relief au repos, enfoncée au toucher, éclairée quand le son est coupé. */
     private fun drawMute(canvas: Canvas) {
@@ -631,6 +647,10 @@ class FaderStrip(context: Context) : View(context) {
         private const val HALO_ALPHA = 46
         private const val PRESS_ALPHA = 56
         private const val MUTED_ALPHA = 36
+
+        /** Curseur d'une tranche qui ne se pilote pas (35 %), icône d'appli en sourdine (43 %). */
+        private const val DISABLED_ALPHA = 90
+        private const val MUTED_ICON_ALPHA = 110
 
         /** Opacité du vumètre sans niveau lu (35 %). */
         private const val UNMETERED_ALPHA = 0x59

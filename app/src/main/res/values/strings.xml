@@ -1448,6 +1448,8 @@
     <string name="tablet_battery_state_charging">Batterie de la tablette : %1$d %%, en charge</string>
     <string name="tablet_battery_state_low">Batterie de la tablette faible : %1$d %%</string>
     <string name="mixer_strip_muted">%1$s, son coupé</string>
+    <string name="mixer_mute_action">Couper le son de %1$s</string>
+    <string name="mixer_unmute_action">Rétablir le son de %1$s</string>
     <string name="perf_level_warn">en alerte</string>
     <string name="perf_level_critical">critique</string>
 
