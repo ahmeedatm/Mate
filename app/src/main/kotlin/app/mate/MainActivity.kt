@@ -59,6 +59,7 @@ import app.mate.ui.ComputersDialog
 import app.mate.ui.DocumentPanel
 import app.mate.ui.FocusFragment
 import app.mate.ui.FromComputerFragment
+import app.mate.ui.GameSession
 import app.mate.ui.HomeFragment
 import app.mate.ui.HushBackdrop
 import app.mate.ui.IconCache
@@ -367,8 +368,9 @@ class MainActivity : AppCompatActivity() {
     /** Chaque écran est recréé : il relit le deck, l'agenda, les tâches et les documents de l'ordinateur actif. */
     private fun recreateScreens() {
         IconCache.clear()
-        // L'appel suivi était celui de l'ordinateur quitté.
+        // L'appel et le jeu suivis étaient ceux de l'ordinateur quitté.
         endCall()
+        dropGame()
         documentPanel.close()
         val fm = supportFragmentManager
         val tx = fm.beginTransaction()
@@ -698,6 +700,55 @@ class MainActivity : AppCompatActivity() {
             page == layout.callProfile -> showProfile(layout.homeProfile)
         }
         refreshRail(layout)
+    }
+
+    private val game = GameSession()
+
+    /** Écran et profil d'avant la bascule sur l'écran de jeu, pour y revenir quand le jeu finit. */
+    private var beforeGame: Pair<Mode, Int>? = null
+
+    private val gameLeft = Runnable { if (game.endIfLeft()) afterGame() }
+
+    /**
+     * Ordre `foreground` de l'ordinateur : l'appli au premier plan. Une appli de la liste de jeu bascule sur l'écran de
+     * jeu choisi (sauf saisie, écran plein ou appel) ; la quitter plus de [GAME_GRACE_MS] revient à l'écran d'avant.
+     */
+    fun onForeground(app: String, bundleId: String) {
+        val layout = shownLayout()
+        val games = if (layout.gameProfile < 0 || layout.gameProfile == layout.callProfile) emptyList() else layout.gameApps
+        when (game.onForeground(app, bundleId, games)) {
+            GameSession.Step.START -> startGame(layout)
+            GameSession.Step.LEAVE -> window.decorView.postDelayed(gameLeft, GAME_GRACE_MS)
+            GameSession.Step.RETURN -> window.decorView.removeCallbacks(gameLeft)
+            GameSession.Step.NONE -> Unit
+        }
+    }
+
+    private fun startGame(layout: HomeLayout) {
+        val fullScreen = current == Mode.CAMERA || homeFragment()?.editing == true
+        val typing = Typing.active(focusIsEditText = currentFocus is android.widget.EditText)
+        // État sauvegardé (appli en arrière-plan) : pas de changement d'écran.
+        if (supportFragmentManager.isStateSaved || !game.shouldSwitch(typing, fullScreen, inCall = call.active)) return
+        val page = homeFragment()?.shownPage?.takeIf { current == Mode.HOME }
+        if (page == layout.gameProfile) return
+        beforeGame = current to (homeFragment()?.shownPage ?: layout.homeProfile)
+        showProfile(layout.gameProfile)
+    }
+
+    /** Fin de jeu : retour à l'écran d'avant si l'écran de jeu est encore affiché. */
+    private fun afterGame() {
+        val before = beforeGame
+        beforeGame = null
+        if (before == null || supportFragmentManager.isStateSaved) return
+        val page = homeFragment()?.shownPage?.takeIf { current == Mode.HOME }
+        val back = game.returnTo(page, shownLayout().gameProfile, before.second) ?: return
+        if (before.first == Mode.HOME) showProfile(back) else show(before.first)
+    }
+
+    private fun dropGame() {
+        window.decorView.removeCallbacks(gameLeft)
+        game.reset()
+        beforeGame = null
     }
 
     /** La disposition que l'Accueil affiche (celle que la barre doit suivre), sinon celle enregistrée. */
@@ -1117,6 +1168,9 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val STATE_MODE = "mode"
         private const val STATE_PLUGINS_LATER = "plugins_later"
+
+        /** Quitter l'appli de jeu moins longtemps que ça (changer de fenêtre un instant) ne finit pas le jeu. */
+        private const val GAME_GRACE_MS = 8_000L
 
         /** Écran de démarrage : tenue du logo après le premier affichage, et filet de sécurité qui le retire dans tous les cas. */
         private const val SPLASH_HOLD_MS = 600L

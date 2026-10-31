@@ -181,6 +181,12 @@ class ProfilesDialog(
                 null
             },
         )
+        // Réunion, caché hors appel, ne peut pas être l'écran de jeu.
+        if (i != layout.callProfile) addView(
+            iconButton(R.drawable.ic_gamepad, R.string.profile_game, if (layout.gameProfile == i) R.attr.c_accent else R.attr.c_text_dim) {
+                GameScreenDialog(context, layout, i, name(i)) { changed(structure = false) }.show()
+            }.also { TooltipCompat.setTooltipText(it, context.getString(R.string.profile_game)) },
+        )
         addView(iconButton(R.drawable.ic_edit, R.string.profile_rename, R.attr.c_text_dim) { editNameAndIcon(i) })
         slot(if (layout.canRemove(i)) iconButton(R.drawable.ic_delete, R.string.profile_delete, R.attr.c_text_dim) { confirmDelete(i) } else null)
     }

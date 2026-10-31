@@ -103,6 +103,30 @@ class LayoutConfigTest {
     }
 
     @Test
+    fun `l'ecran de jeu et sa liste sont relus, ils peuvent etre l'Accueil`() {
+        val raw = json(extra = """"home":0,"call":1,"roles":true,"gameScreen":0,"gameApps":["Steam"," Minecraft "]""")
+        val layout = LayoutConfig.parseLayout(raw, current())
+        assertEquals(0, layout.gameProfile)
+        assertEquals(listOf("Steam", "Minecraft"), layout.gameApps)
+        val sent = JSONObject(layout.toJson())
+        assertEquals(0, sent.getInt("gameScreen"))
+        assertEquals("Minecraft", sent.getJSONArray("gameApps").getString(1))
+    }
+
+    @Test
+    fun `sans ecran de jeu dans la disposition, il n'y en a pas`() {
+        val layout = LayoutConfig.parseLayout(json(), current())
+        assertEquals(-1, layout.gameProfile)
+        assertTrue(layout.gameApps.isEmpty())
+    }
+
+    @Test
+    fun `un ecran de jeu inexistant ou une liste mal formee est refuse`() {
+        assertTrue(refused(json(extra = """"home":0,"call":1,"roles":true,"gameScreen":5""")).contains("jeu"))
+        assertTrue(refused(json(extra = """"home":0,"call":1,"roles":true,"gameApps":[3]""")).contains("jeu"))
+    }
+
+    @Test
     fun `bandeau du haut, cles connues et sans doublon`() {
         assertEquals(listOf(TopItem.CLOCK, TopItem.MUSIC), LayoutConfig.parseTopBar(JSONArray("""["clock","music"]""")))
         assertEquals(emptyList<TopItem>(), LayoutConfig.parseTopBar(JSONArray()))

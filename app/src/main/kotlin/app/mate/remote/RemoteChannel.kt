@@ -181,6 +181,10 @@ class RemoteChannel(private val activity: MainActivity) {
             activity.onMeeting(command.getString("state"), command.getString("app"))
             null
         }
+        "foreground" -> {
+            activity.onForeground(command.getString("app"), command.optString("bundleId"))
+            null
+        }
         "lock" -> activity.lockScreen.setComputerLocked(command.getBoolean("locked")).let { null }
         "agent" -> {
             activity.onAgent(command.getString("kind"), command.optString("askId").takeIf { command.has("askId") && !command.isNull("askId") }, command.optInt("waiting"))
