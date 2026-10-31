@@ -1,0 +1,51 @@
+# Approbation selon l'impact : contrôle exigé par la règle de master, qui ne demande plus d'approbation par
+# elle-même. Une PR qui change les habitudes des autres (réglage par défaut, bouton déplacé, fonction retirée)
+# porte l'étiquette impact-equipe et reste rouge tant qu'une autre personne ne l'a pas approuvée. Sans
+# l'étiquette, vert. Tourne sur toutes les PR, sans filtre de chemins, pour que le contrôle requis arrive toujours.
+
+name: Impact équipe
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions:
+  pull-requests: read
+
+# Un seul passage à la fois par PR, le plus récent gagne : il relit l'état courant (étiquettes, avis).
+concurrency:
+  group: impact-equipe-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  impact-equipe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Étiquettes et avis relus par l'API au moment du passage, pas dans la charge de l'événement, qui peut
+      # dater d'avant une étiquette ou un avis plus récents.
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          DEPOT: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          pr=$(gh api "repos/$DEPOT/pulls/$PR")
+          if ! jq -e '[.labels[].name] | index("impact-equipe")' <<<"$pr" >/dev/null; then
+            echo "Pas d'étiquette impact-equipe : pas d'approbation requise."
+            exit 0
+          fi
+          auteur=$(jq -r '.user.login' <<<"$pr")
+          # Dernier avis de chaque personne, auteur exclu ; un simple commentaire ne remplace pas un avis.
+          approbations=$(gh api --paginate "repos/$DEPOT/pulls/$PR/reviews" \
+            --jq '.[] | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED" or .state == "DISMISSED")
+                  | {u: .user.login, s: .state}' |
+            jq -s --arg auteur "$auteur" \
+              'reduce .[] as $a ({}; .[$a.u] = $a.s) | del(.[$auteur]) | [.[] | select(. == "APPROVED")] | length')
+          if [ "$approbations" -lt 1 ]; then
+            echo "::error::Étiquette impact-equipe : cette PR change les habitudes de l'équipe, il faut l'approbation d'une autre personne."
+            exit 1
+          fi
+          echo "Étiquette impact-equipe : $approbations approbation(s), c'est bon."

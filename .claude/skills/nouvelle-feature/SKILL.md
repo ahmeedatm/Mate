@@ -94,7 +94,15 @@ Compléter le corps de la PR : « Comment tester » (gestes et résultat attendu
 (cocher ce qui a vraiment été essayé, laisser le reste décoché), captures par thème pour un écran
 (jamais commitées). `gh` ne sait pas joindre d'images : les glisser dans la description de la PR
 sur github.com, ou le demander à l'humain, et le dire dans la ligne `⚠️` si ce n'est pas fait. Mettre à jour avec `gh pr edit <n> --body-file <fichier>`,
-puis `gh pr ready <n>`. Terminer par une ligne `⚠️` sur ce qui n'a pas été fait ou vérifié.
+puis `gh pr ready <n>`.
+
+Impact équipe : juger si la PR change un comportement par défaut ou une habitude des autres
+(réglage par défaut changé, bouton déplacé, fonction retirée). Si oui : `gh pr edit <n> --add-label
+impact-equipe`, « Impact équipe : oui » dans le corps avec la raison en une phrase ; le contrôle
+`impact-equipe` reste rouge jusqu'à l'approbation d'une autre personne. Un bug corrigé, un widget ou
+une option que chacun active s'il veut : « non », pas d'étiquette.
+
+Terminer par une ligne `⚠️` sur ce qui n'a pas été fait ou vérifié.
 La fusion reste à la CI verte et à l'équipe (`CLAUDE.md`, § Règles de travail).
 
 ## Un 2e sujet en cours de route
