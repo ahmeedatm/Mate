@@ -170,7 +170,8 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
 
     /**
      * Pose une fois les rôles : Réunion en dernier, depuis son modèle (affiché seulement pendant un appel). De base, un
-     * seul écran : l'Accueil ; d'autres seulement si l'utilisateur en ajoute. Vrai si la disposition a changé.
+     * seul écran : l'Accueil ; d'autres seulement si l'utilisateur en ajoute. Réunion supprimé ne revient pas ici : il
+     * se recrée par [addFromTemplate]. Vrai si la disposition a changé.
      */
     fun ensureRoles(callName: String): Boolean {
         if (rolesSet) return false
@@ -193,9 +194,19 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         return true
     }
 
-    /** Le dernier profil reste ; une fois les rôles posés, l'Accueil et Réunion aussi. */
+    /** Le dernier profil reste ; une fois les rôles posés, l'Accueil aussi. Réunion se supprime (plus d'écran d'appel). */
     fun canRemove(index: Int) =
-        names.size > 1 && index in names.indices && !(rolesSet && (index == homeProfile || index == callProfile))
+        names.size > 1 && index in names.indices && !(rolesSet && index == homeProfile)
+
+    /** Modèles proposés à la création : Réunion seulement tant qu'il n'y a pas d'écran d'appel. */
+    fun offered(): List<Template> = Template.entries.filter { it.listed || (it == Template.CALL_CADRAN && callProfile < 0) }
+
+    /** Ajoute un profil depuis un modèle, au nom libre ; Réunion recréé reprend le rôle d'appel s'il n'y en a plus. */
+    fun addFromTemplate(template: Template, name: String): Int {
+        val index = addProfile(uniqueName(name), template.widgets(pages))
+        if (template == Template.CALL_CADRAN && callProfile < 0) callProfile = index
+        return index
+    }
 
     /** Profils dans l'ordre de la barre et du balayage : Réunion n'y est que pendant un appel, en dernier. */
     fun profilesInOrder(inCall: Boolean): List<Int> =
@@ -405,7 +416,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
 
 /**
  * Modèles prêts à l'emploi : le défaut est Travail. `listed` : proposé à la création d'un
- * profil (Réunion ne l'est pas : il n'existe qu'une fois, posé par [HomeLayout.ensureRoles]).
+ * profil (Réunion ne l'est que s'il n'existe plus : [HomeLayout.offered]).
  */
 enum class Template(
     @StringRes val title: Int,

@@ -206,12 +206,12 @@ class ProfilesDialog(
     private fun templates() = LinearLayout(context).apply {
         val choices = listOf<Triple<Int, Int, () -> Unit>>(
             Triple(R.string.profile_blank, R.string.profile_blank_desc) { added(layout.addProfile(null)) },
-        ) + Template.entries.filter { it.listed }.map { template ->
+        ) + layout.offered().map { template ->
             Triple(template.title, template.description) {
-                added(layout.addProfile(layout.uniqueName(context.getString(template.title)), template.widgets(layout.pages)))
+                added(layout.addFromTemplate(template, context.getString(template.title)))
             }
         }
-        val icons = listOf(R.drawable.ic_add to R.attr.c_hue_green) + Template.entries.filter { it.listed }.map(::templateIcon)
+        val icons = listOf(R.drawable.ic_add to R.attr.c_hue_green) + layout.offered().map(::templateIcon)
         choices.forEachIndexed { n, (title, description, create) ->
             addView(tile(icons[n].first, icons[n].second, title, description, create), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
                 if (n > 0) marginStart = context.dp(10)
