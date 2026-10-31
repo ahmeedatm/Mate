@@ -28,7 +28,17 @@ import {
   type SystemCommand,
 } from "./os.ts";
 import type { Layout } from "./screens.ts";
-import { loadKeyPages, loadKeys, loadLinks, loadSavedApps, saveApps, saveLinks, type DeckApp, type DeckLink } from "./perso.ts";
+import {
+  loadKeyPages,
+  loadKeys,
+  loadLinks,
+  loadSavedApps,
+  retireSavedApps,
+  saveApps,
+  saveLinks,
+  type DeckApp,
+  type DeckLink,
+} from "./perso.ts";
 import { agentsAvailable } from "./agents-sources.ts";
 import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
@@ -117,9 +127,18 @@ export type DeckPage = {
 
 export const PERSO_PREFIX = "k-";
 
+/** Word, Excel, PowerPoint et Outlook ne sont plus au deck (#18), même chez un ordinateur qui a son propre deck.json. */
+const isOfficeApp = (name?: string) => /^(microsoft )?(word|excel|powerpoint|outlook)$/i.test(name ?? "");
+
 async function loadConfig(): Promise<DeckConfig> {
   const file = existsSync(config.deckFile) ? config.deckFile : config.deckExampleFile;
-  return JSON.parse(await fs.readFile(file, "utf8")) as DeckConfig;
+  const deck = JSON.parse(await fs.readFile(file, "utf8")) as DeckConfig;
+  return {
+    ...deck,
+    pages: deck.pages
+      .filter((p) => !isOfficeApp(p.app))
+      .map((p) => (p.apps ? { ...p, tiles: p.tiles.filter((t) => t.action.type !== "app" || !isOfficeApp(t.action.name)) } : p)),
+  };
 }
 
 /** Identifiant tiré du nom de l'appli : stable quand on en retire une autre (cache d'icônes de la tablette). */
@@ -127,6 +146,7 @@ const appTileId = (name: string) => "a-" + createHash("sha1").update(name).diges
 
 /** Applis de la page Apps : la liste enregistrée, sinon celles du profil de base installées sur cet ordinateur. */
 async function deckApps(deck: DeckConfig): Promise<DeckApp[]> {
+  await retireSavedApps(isOfficeApp);
   const saved = await loadSavedApps();
   if (saved) return saved;
   const base = (deck.pages.find((p) => p.apps)?.tiles ?? []).flatMap((t) =>

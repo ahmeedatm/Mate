@@ -40,14 +40,9 @@ describe("GET /deck", () => {
     assert.equal((await tileByLabel("Ne pas déranger")).symbol, "dnd");
   });
 
-  it("`sound` : barre Son voulue par défaut, coupée sur les pages Office", async () => {
-    server.setOs({ installed: ["Microsoft Word", "Microsoft Outlook", "Notes"] });
+  it("`sound` : barre Son voulue par défaut sur la page Discord", async () => {
     const list = await pages();
     assert.equal(list.find((p) => p.title === "Discord")!.sound, true);
-    for (const title of ["Word", "Excel", "PowerPoint", "Outlook"]) {
-      const page = list.find((p) => p.title === title)!;
-      assert.equal(page.sound, false, title);
-    }
   });
 
   it("page Apps : applis installées, avec leur nom", async () => {
@@ -55,10 +50,7 @@ describe("GET /deck", () => {
     const apps = (await pages()).find((p) => p.apps)!;
     assert.deepEqual(
       apps.tiles.map((t) => [t.label, t.type, t.app]),
-      [
-        ["Word", "app", "Microsoft Word"],
-        ["Notes", "app", "Notes"],
-      ],
+      [["Notes", "app", "Notes"]],
     );
   });
 });
