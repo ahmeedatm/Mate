@@ -172,7 +172,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         AlertDialog.Builder(context)
             .setTitle(key.label)
             .setItems(arrayOf(context.getString(R.string.widget_keys_edit), context.getString(R.string.widget_keys_remove_yes))) { _, which ->
-                if (which == 0) edit() else confirmRemove(key)
+                if (which == 0) edit() else store(KeyRef.without(keys(), key.id))
             }
             .setNegativeButton(R.string.cancel, null)
             .showImmersive()
