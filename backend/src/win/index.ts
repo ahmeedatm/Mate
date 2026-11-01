@@ -13,7 +13,16 @@ import {
 import { parseCombo, planAudio, sortedNames, whenClipboardAvailable } from "../driver-common.ts";
 import { appNameFromId, type NotificationBatch } from "../notifications.ts";
 import { readWindowsNotifications } from "./notifications.ts";
-import type { AudioChange, AudioState, ClipboardContent, MediaCommand, MixerChange, MixerState, SystemCommand } from "../screens.ts";
+import type {
+  AudioChange,
+  AudioOutput,
+  AudioState,
+  ClipboardContent,
+  MediaCommand,
+  MixerChange,
+  MixerState,
+  SystemCommand,
+} from "../screens.ts";
 import type { GpuPerf } from "../perf.ts";
 import type { PointerAction, PointerButton } from "../pointer.ts";
 
@@ -279,6 +288,16 @@ export async function appAudio(app: string, change: { volume?: number; muted?: b
 /** Mélangeur de volume : sortie, micro et une tranche par appli ; `change` appliqué avant la lecture. */
 export async function mixer(change?: MixerChange): Promise<MixerState> {
   return call<MixerState>("mixer", change ?? {});
+}
+
+/** Sorties audio actives (enceinte, casque, carte son) ; `current` : la sortie par défaut. */
+export async function audioOutputs(): Promise<AudioOutput[]> {
+  return call<AudioOutput[]>("outputs", {});
+}
+
+/** Fait de la sortie `id` la sortie par défaut (sons et multimédia) ; rend la liste à jour. */
+export async function setAudioOutput(id: string): Promise<AudioOutput[]> {
+  return call<AudioOutput[]>("setoutput", { id });
 }
 
 // --- Lecture en cours (contrôles multimédias de Windows)

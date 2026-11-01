@@ -99,6 +99,8 @@ export type MixerChannel = { id: string; name: string; volume: number | null; mu
  */
 export type MixerState = { master: MixerChannel; mic: MixerChannel; apps: MixerChannel[] | null; front?: string | null };
 export type MixerChange = { id: string; volume?: number; muted?: boolean };
+/** Une sortie audio de l'ordinateur (enceinte, casque, carte son) ; `id` : identifiant du système, `current` : celle qui sert. */
+export type AudioOutput = { id: string; name: string; current: boolean };
 /**
  * Presse-papiers de l'ordinateur, tel que la tablette le lit : `protected` = contenu sensible (mot de passe d'un
  * gestionnaire), jamais lu ; `other` = ni texte ni image (liste de fichiers…).
