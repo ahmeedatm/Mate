@@ -5,7 +5,9 @@
  */
 export const MENU_CSS = `
   .pf-menu-day { flex: 0 0 96px; font-weight: 500; }
-  .pf-menu-day + input { flex: 1 1 160px; }
+  .pf-menu-meal { flex: 1 1 160px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .pf-menu-meal span { flex: none; font-size: 14px; color: var(--ink-2); }
+  .pf-menu-meal input { flex: 1 1 auto; min-width: 0; }
   @media (max-width: 820px) { .pf-menu-day { flex-basis: 100%; } }
 `;
 
@@ -38,11 +40,15 @@ export const MENU_JS = `
       input.type = "text";
       input.maxLength = 80;
       input.autocomplete = "off";
-      input.placeholder = meal[1];
       input.setAttribute("aria-label", name + ", " + meal[1].toLowerCase());
       input.dataset.day = String(index);
       input.dataset.meal = meal[0];
-      row.append(input);
+      const cell = document.createElement("label");
+      cell.className = "pf-menu-meal";
+      const tag = document.createElement("span");
+      tag.textContent = meal[1];
+      cell.append(tag, input);
+      row.append(cell);
     });
     return row;
   }
@@ -52,12 +58,12 @@ export const MENU_JS = `
     const msg = document.getElementById("pf-menu-msg");
     try {
       const res = await fetch("/local/config/menu");
-      if (!res.ok) throw new Error("Erreur " + res.status);
+      if (!res.ok) throw new Error("menu illisible");
       const days = (await res.json()).days;
       box.replaceChildren(...pfMenuDays.map(pfMenuRow));
       box.querySelectorAll("input").forEach((input) => { input.value = days[Number(input.dataset.day)][input.dataset.meal]; });
     } catch (e) {
-      pfSay(msg, "Le menu ne s'est pas chargé.", "ko");
+      pfSay(msg, "Le menu ne s'est pas chargé : recharge la page.", "ko");
     }
   }
 
@@ -68,7 +74,7 @@ export const MENU_JS = `
     try {
       const res = await fetch("/local/config/menu", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ days: days }) });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) return pfSay(msg, json.error || "Erreur " + res.status, "ko");
+      if (!res.ok) return pfSay(msg, json.error || "Le menu ne s'est pas enregistré : réessaie.", "ko");
       document.querySelectorAll("#pf-menu-days input").forEach((input) => { input.value = json.days[Number(input.dataset.day)][input.dataset.meal]; });
       pfSay(msg, "Menu enregistré.", "ok");
     } catch (e) {
