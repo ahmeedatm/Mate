@@ -1405,6 +1405,11 @@
     <string name="widget_news_none">Le flux ne contient encore aucun article</string>
     <string name="widget_news_loading">Lecture du flux en cours, réessaie dans un instant</string>
     <string name="widget_news_hint">Adresse du flux (RSS ou Atom)</string>
+    <string name="widget_metrics">Valeurs</string>
+    <string name="widget_metrics_desc">Des chiffres calculés par l\'ordinateur (dossier, build, compteur), remis à jour chaque minute</string>
+    <string name="widget_metrics_empty">Écris tes commandes dans metrics.json, dans le dossier Mate de l\'ordinateur</string>
+    <string name="widget_metrics_none">—</string>
+    <string name="widget_metrics_unavailable">%1$s : indisponible</string>
     <string name="widget_pipelines">Pipelines</string>
     <string name="widget_pipelines_desc">Le dernier pipeline de tes projets GitLab : en cours, échecs, durée</string>
     <string name="pipelines_empty">Aucun pipeline</string>

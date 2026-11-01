@@ -722,6 +722,16 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "valeurs de l'ordinateur",
+      run: async () => {
+        // Lecture seule : lance les commandes déjà écrites dans metrics.json par l'utilisateur, jamais une autre.
+        const res = await call("GET", "/metrics");
+        expectStatus(res, 200, "GET /metrics");
+        expect(Array.isArray(res.json.items) && res.json.items.length <= 4, "liste de valeurs mal formée");
+        return res.json.items.length ? `${res.json.items.length} valeur(s)` : "aucune commande écrite";
+      },
+    },
+    {
       name: "Jira : tickets",
       run: async () => {
         // Lecture seule : jamais de transition, ce sont les vrais tickets de l'utilisateur.

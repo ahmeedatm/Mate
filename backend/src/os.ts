@@ -1,3 +1,4 @@
+import { runShell } from "./run-command.ts";
 import { execFileSync } from "node:child_process";
 import { statfs } from "node:fs/promises";
 import os from "node:os";
@@ -94,6 +95,15 @@ export async function listApps(): Promise<string[]> {
   if (isMac) return macApps.listApps();
   if (isWindows) return win.listApps();
   return [];
+}
+
+/**
+ * Lance une commande écrite sur l'ordinateur (metrics.json) dans le shell du système et rend sa sortie. Jamais une
+ * chaîne venue de la tablette ; délai de 10 s, sortie limitée, pas de fenêtre sous Windows.
+ */
+export function runCommand(command: string): Promise<string> {
+  if (!canControl) unsupported();
+  return runShell(command, { timeoutMs: 10_000, maxBytes: 64 * 1024 });
 }
 
 /** Applis installées : le profil de base du deck ne montre que celles-là. */

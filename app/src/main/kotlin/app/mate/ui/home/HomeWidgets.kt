@@ -172,6 +172,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.ACTIONS -> pipelinesWidget(context, host, placed, Forge.GITHUB)
                 WidgetType.WEB -> WebWidget(context, host, placed)
                 WidgetType.NEWS -> NewsWidget(context, host, placed)
+                WidgetType.METRICS -> MetricsWidget(context, host, placed)
             }
     }
 }
