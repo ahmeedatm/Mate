@@ -47,7 +47,8 @@ describe("panneau Tablette", () => {
   });
 
   it("envoie le réglage à la tablette, sans jeton depuis l'ordinateur", async () => {
-    const polling = server.call("POST", "/tablet/poll", { state: STATE });
+    // Ordre « settings » attendu, pas le premier venu : sur un vrai Mac, la veille du premier plan pousse aussi un ordre « foreground ».
+    const polling = nextOrder("settings");
     await new Promise((r) => setTimeout(r, 300));
 
     const status = await server.call("GET", "/local/status", undefined, false);
@@ -62,7 +63,7 @@ describe("panneau Tablette", () => {
     });
 
     const put = server.call("PUT", "/local/tablet/settings", { theme: "CONSOLE_JOUR", brightness: 0.3 }, false);
-    const [order] = (await polling).json.commands;
+    const order = await polling;
     assert.deepEqual(order.command, { type: "settings", theme: "CONSOLE_JOUR", brightness: 0.3 });
 
     const state = { ...STATE, settings: { ...SETTINGS, theme: "CONSOLE_JOUR", brightness: 0.3 } };
@@ -75,10 +76,10 @@ describe("panneau Tablette", () => {
 
   for (const theme of ["CONTRASTE", "CONSOLE_JOUR", "HUSH", "SPIDERMAN"]) {
     it(`accepte le thème ${theme}`, async () => {
-      const polling = server.call("POST", "/tablet/poll", { state: STATE });
+      const polling = nextOrder("settings");
       await new Promise((r) => setTimeout(r, 300));
       const put = server.call("PUT", "/local/tablet/settings", { theme }, false);
-      const [order] = (await polling).json.commands;
+      const order = await polling;
       assert.deepEqual(order.command, { type: "settings", theme });
       await server.call("POST", "/tablet/result", {
         id: order.id,
