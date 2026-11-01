@@ -269,7 +269,8 @@ export function summaryLines(message: string | null): string[] {
 /** Commandes qui demandent un appui maintenu pour autoriser (la tablette ne s'y fie pas à un simple toucher). */
 const RISKY_BASH = [
   /\brm\s/,
-  /\bgit\s+(push|reset\s+--hard|clean|checkout\s+--|branch\s+-D)\b/,
+  // `checkout --` : le `\b` ne tient pas après `--` (deux non-lettres), d'où l'espace ou la fin.
+  /\bgit\s+((push|reset\s+--hard|clean|branch\s+-D)\b|checkout\s+--(\s|$))/,
   /\bsudo\b/,
   /\b(curl|wget)\b[^|]*\|\s*(sudo\s+)?(ba|z|da)?sh\b/,
   /\b(chmod|chown|dd|mkfs|kill|killall|pkill|launchctl)\b/,
@@ -300,8 +301,8 @@ const RISKY_WINDOWS = [
 const WRITE_CMD = /\b(cp|mv|tee|mkdir|touch|ln|rsync|install|dd|chmod|chown|sed\s+-i)\b/;
 const WRITE_CMD_WINDOWS =
   /\b(Copy-Item|Move-Item|Rename-Item|Set-Content|Add-Content|Out-File|New-Item|Tee-Object|copy|xcopy|robocopy|move|ren|md|mklink)\b/i;
-/** Redirection vers un chemin absolu : `> /x`, `> ~/x`, `> C:\x`, `> \\serveur\x`, `> %APPDATA%\x`, `> $env:APPDATA\x`. */
-const REDIRECT_ABS = />\s*["']?([~/]|[A-Za-z]:[\\/]|\\\\|%[A-Za-z_]+%|\$env:|\$HOME\b)/i;
+/** Redirection vers un chemin absolu ou parent : `> /x`, `> ~/x`, `> ../x`, `> C:\x`, `> \\serveur\x`, `> %APPDATA%\x`, `> $env:APPDATA\x`. */
+const REDIRECT_ABS = />\s*["']?([~/]|\.\.[\\/]|[A-Za-z]:[\\/]|\\\\|%[A-Za-z_]+%|\$env:|\$HOME\b)/i;
 /** Dossiers où écrire reste sans conséquence. */
 const SCRATCH = ["/tmp/", "/private/tmp/", "/var/folders/", "/dev/null"];
 /** Windows : dossier temporaire (par sa variable ou son chemin) et `NUL`. */
@@ -320,17 +321,20 @@ function outsideWindows(target: string, cwd: string, scratch = true): boolean {
   return rel.startsWith("..") || path.win32.isAbsolute(rel);
 }
 
-/** Chemin absolu, `~` ou variable de dossier cités dans la commande, hors du dossier du projet et des dossiers temporaires. */
+/**
+ * Chemin absolu, `~`, `../` ou variable de dossier cités dans la commande (même entre guillemets ou collés à `>`), hors du
+ * dossier du projet et des dossiers temporaires.
+ */
 function writesOutside(command: string, cwd: string): boolean {
   const windowsCmd = WRITE_CMD_WINDOWS.test(command);
-  const targets = command.match(/(?:^|[\s=])(~[^\s'";|&<>]*|\/[^\s'";|&<>]*)/g) ?? [];
+  const targets = command.match(/(?:^|[\s=>"'])(~[^\s'";|&<>]*|\/[^\s'";|&<>]*|\.\.(?:[\\/][^\s'";|&<>]*)?)/g) ?? [];
   const posix = targets.some((raw) => {
-    const target = raw.trim().replace(/^=/, "");
+    const target = raw.replace(/^[\s=>"']/, "");
     if (target.startsWith("~")) return true;
     // Options de cmd (`xcopy a b /E /I`, `robocopy … /MIR`) : pas des chemins.
     if (windowsCmd && /^\/[A-Za-z?]{1,4}(:\S*)?$/.test(target)) return false;
     if (SCRATCH.some((dir) => target === dir.replace(/\/$/, "") || target.startsWith(dir))) return false;
-    const rel = path.relative(cwd, target);
+    const rel = path.relative(cwd, path.resolve(cwd, target.startsWith("..") ? target.replace(/\\/g, "/") : target));
     return rel.startsWith("..") || path.isAbsolute(rel);
   });
   const windows = [

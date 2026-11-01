@@ -1104,6 +1104,35 @@ describe("outils", () => {
     assert.equal(isRisky("Edit", { file_path: "src/f.ts" }, "/work/projet"), false);
   });
 
+  it("isRisky : chemins entre guillemets, collés à >, en ../, et git checkout -- .", () => {
+    for (const c of [
+      "git checkout -- .",
+      "git checkout -- src/a.ts",
+      'cp a.txt "/etc/hosts"',
+      "mv a '/Users/x/autre/f'",
+      "echo x >~/f",
+      "echo x >/etc/hosts",
+      'echo x > "~/f"',
+      "cp a.txt ../autre/b.txt",
+      "mv src ../../ailleurs",
+      'touch "../f"',
+      "echo x > ../f",
+      "copy a.txt ..\\autre\\b.txt",
+    ]) {
+      assert.equal(isRisky("Bash", { command: c }, "/work/projet"), true, c);
+    }
+    for (const c of [
+      "git checkout main",
+      "git checkout -b fix/x",
+      "cp a.txt sous/../b.txt",
+      'cp a "/tmp/x"',
+      "echo x >/dev/null",
+      "cat ../autre/f",
+    ]) {
+      assert.equal(isRisky("Bash", { command: c }, "/work/projet"), false, c);
+    }
+  });
+
   it("isRisky sous Windows : PowerShell, cmd, chemins C:\\ hors du projet", () => {
     const cwd = "C:\\work\\projet";
     for (const c of [
