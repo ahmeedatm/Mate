@@ -79,7 +79,8 @@ enum class WidgetType(
     AWAY("away", R.string.widget_away, R.string.widget_away_desc, R.drawable.ic_cafe, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     PIPELINES("pipelines", R.string.widget_pipelines, R.string.widget_pipelines_desc, R.drawable.ic_tile_rocket_launch, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
     GITHUB("github", R.string.widget_github, R.string.widget_github_desc, R.drawable.ic_code, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
-    ACTIONS("actions", R.string.widget_actions, R.string.widget_actions_desc, R.drawable.ic_tile_deployed_code, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true);
+    ACTIONS("actions", R.string.widget_actions, R.string.widget_actions_desc, R.drawable.ic_tile_deployed_code, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
+    WEB("web", R.string.widget_web, R.string.widget_web_desc, R.drawable.ic_dashboard, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.M, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), false);
 
     /** Taille de l'exemplaire agrandi (widget maintenu, [WidgetZoom]) : la plus grande, la plus large à surface égale. */
     val zoomSize get() = sizes.maxWith(compareBy<WidgetSize>({ it.w * it.h }, { it.w }))
@@ -87,8 +88,8 @@ enum class WidgetType(
     /** Sans fond de carte, posé à même l'écran. */
     val bare get() = this == HERO || this == DAY || this == DAYLINE
 
-    /** Maintenir le widget l'agrandit : pas ceux sans carte (héros, journée, ligne du jour), rien de plus à y voir. */
-    val zoomable get() = !bare
+    /** Maintenir le widget l'agrandit : pas ceux sans carte (héros, journée, ligne du jour), rien de plus à y voir, ni la page web (un seul WebView à la fois). */
+    val zoomable get() = !bare && this != WEB
 
     /**
      * Proposé dans le catalogue de l'ordinateur actif : Agents, Jira, Home Assistant, GitLab, Pipelines, GitHub et Actions seulement s'il les offre (Agents :
