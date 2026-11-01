@@ -317,7 +317,7 @@ test.describe("page locale GET /", () => {
     void tablet.catch(() => {});
   });
 
-  test("le bouton « Faire sonner » lance puis arrête la sonnerie de la tablette", async ({ page, server }) => {
+  test("le bouton « Faire sonner » lance la sonnerie de la tablette", async ({ page, server }) => {
     const rings: boolean[] = [];
     const settings = { theme: "CONSOLE", brightness: 0.6, volume: 0.4, nightDim: true, focusDnd: true };
     const state = { mode: "home", app: "0.2.12", model: "Tab 4.2", battery: null, settings, update: null };
@@ -335,10 +335,9 @@ test.describe("page locale GET /", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Faire sonner" }).click();
     await expect(page.locator("#tabletmsg")).toHaveText("La tablette sonne : touche son écran pour l'arrêter.");
-    await page.getByRole("button", { name: "Arrêter la sonnerie" }).click();
-    await expect(page.locator("#tabletmsg")).toHaveText("Sonnerie arrêtée.");
-    await expect(page.getByRole("button", { name: "Faire sonner" })).toBeVisible();
-    expect(rings).toEqual([true, false]);
+    // Le bouton reste « Faire sonner » : la tablette s'arrête sous un toucher, la page ne le sait pas.
+    await expect(page.getByRole("button", { name: "Faire sonner" })).toBeEnabled();
+    expect(rings).toEqual([true]);
 
     running = false;
     void tablet.catch(() => {});

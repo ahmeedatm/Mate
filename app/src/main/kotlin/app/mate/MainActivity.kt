@@ -526,7 +526,10 @@ class MainActivity : AppCompatActivity() {
         // Activité recréée (thème, mise à jour) pendant le cadre : sa luminosité réduite ne reste pas à l'écran suivant.
         if (::frame.isInitialized && frame.isShowing) Screen.frameCharging = null
         documentPanel.close()
-        if (isFinishing) NoisePlayer.stop()
+        if (isFinishing) {
+            NoisePlayer.stop()
+            Ringer.stop()
+        }
         voice.release()
         wake.release()
         lockScreen.dismiss()

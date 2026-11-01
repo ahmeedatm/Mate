@@ -38,16 +38,19 @@ object Ringer {
             .setTransferMode(AudioTrack.MODE_STATIC)
             .setBufferSizeInBytes(data.size * 2)
             .build()
+        val previous = manager.getStreamVolume(AudioManager.STREAM_ALARM)
         try {
             built.write(data, 0, data.size)
             built.setLoopPoints(0, data.size, -1)
-            savedVolume = manager.getStreamVolume(AudioManager.STREAM_ALARM)
             manager.setStreamVolume(AudioManager.STREAM_ALARM, manager.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0)
             built.play()
-        } catch (e: IllegalStateException) {
+        } catch (e: RuntimeException) {
+            // Piste, volume ou lecture refusés (IllegalStateException, SecurityException) : rien ne reste en place.
             built.release()
+            runCatching { manager.setStreamVolume(AudioManager.STREAM_ALARM, previous, 0) }
             throw e
         }
+        savedVolume = previous
         audio = manager
         track = built
         handler.postDelayed(autoStop, RingTone.AUTO_STOP_MS)
