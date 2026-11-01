@@ -32,7 +32,18 @@ import {
   placeWindow,
   voiceState,
 } from "../os.ts";
-import { keySchema, loadKeyPages, loadKeys, saveKey, saveKeyPage, MAX_SLOTS, type PersoKey } from "../perso.ts";
+import {
+  duplicateKey,
+  duplicateKeyPage,
+  keySchema,
+  loadKeyPages,
+  loadKeys,
+  saveKey,
+  saveKeyPage,
+  MAX_PAGES,
+  MAX_SLOTS,
+  type PersoKey,
+} from "../perso.ts";
 import type { Layout, WindowTarget } from "../screens.ts";
 import { windowTarget } from "./windows.ts";
 
@@ -57,9 +68,20 @@ export const slotParam = {
 export const pageSlotParams = {
   type: "object",
   required: ["page", "slot"],
-  properties: { page: { type: "integer", minimum: 0, maximum: 49 }, slot: slotParam.properties.slot },
+  properties: { page: { type: "integer", minimum: 0, maximum: MAX_PAGES - 1 }, slot: slotParam.properties.slot },
 };
 export type PageSlot = { page: number; slot: number };
+
+const pageRank = { type: "integer", minimum: 0, maximum: MAX_PAGES - 1 };
+export const pageParam = { type: "object", required: ["page"], properties: { page: pageRank } };
+/** `page` et `to` absents : Perso. */
+export const duplicateKeyBody = {
+  type: "object",
+  additionalProperties: false,
+  required: ["slot"],
+  properties: { page: pageRank, slot: slotParam.properties.slot, to: pageRank },
+};
+export type DuplicateKeyBody = { page?: number; slot: number; to?: number };
 
 /** De quoi remplir l'éditeur de touche : applis installées, raccourcis Apple (Mac), écrans. */
 export async function deckCatalog() {
@@ -277,6 +299,16 @@ export default async function deckRoutes(app: FastifyInstance) {
     if (!(await saveKeyPage(req.params.page, req.params.slot, null))) return reply.code(404).send({ error: "Page inconnue" });
     return { ok: true };
   });
+
+  // Dupliquer : une touche vers une page (la première place libre), ou une page entière (copie en fin de liste)
+
+  app.post<{ Body: DuplicateKeyBody }>("/deck/keys/duplicate", { schema: { body: duplicateKeyBody } }, async (req) =>
+    duplicateKey({ page: req.body.page, slot: req.body.slot }, req.body.to),
+  );
+
+  app.post<{ Params: { page: number } }>("/deck/pages/:page/duplicate", { schema: { params: pageParam } }, async (req) => ({
+    page: await duplicateKeyPage(req.params.page),
+  }));
 
   /** Fenêtres de l'appli d'une tuile, et écrans de l'ordinateur. */
   function tileApp(tile: Awaited<ReturnType<typeof findTile>>) {

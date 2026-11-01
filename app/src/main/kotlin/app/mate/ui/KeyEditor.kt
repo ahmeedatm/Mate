@@ -28,6 +28,7 @@ import app.mate.Computers
 import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.DeckCatalog
+import app.mate.ui.home.duplicateTargets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -51,6 +52,7 @@ class KeyEditor @JvmOverloads constructor(
     private val types: LinearLayout
     private val form: LinearLayout
     private val clearButton: Button
+    private val duplicateButton: Button
     private val cycleChip: Button
     private val holdChip: Button
 
@@ -90,6 +92,8 @@ class KeyEditor @JvmOverloads constructor(
         findViewById<Button>(R.id.editor_save).setOnClickListener { save() }
         clearButton = findViewById(R.id.editor_clear)
         clearButton.setOnClickListener { clear() }
+        duplicateButton = findViewById(R.id.editor_duplicate)
+        duplicateButton.setOnClickListener { chooseDuplicateTarget() }
         closeOnDone(label)
         closeOnDone(glyph)
         cycleChip = chip(context.getString(R.string.key_cycle), selected = false) { it.isSelected = !it.isSelected }
@@ -134,6 +138,7 @@ class KeyEditor @JvmOverloads constructor(
         holdChip.isSelected = false
         status.visibility = GONE
         clearButton.visibility = GONE
+        duplicateButton.visibility = GONE
         renderColors()
         renderSteps()
         selectType("app")
@@ -148,6 +153,7 @@ class KeyEditor @JvmOverloads constructor(
                 val key = client.deck.persoKey(slot, page) ?: return@launch
                 if (this@KeyEditor.slot != slot) return@launch
                 clearButton.visibility = VISIBLE
+                duplicateButton.visibility = VISIBLE
                 label.setText(key.optString("label"))
                 glyph.setText(key.optString("glyph"))
                 color = key.optString("color").ifEmpty { null }
@@ -187,6 +193,42 @@ class KeyEditor @JvmOverloads constructor(
                 IconCache.forget(tileId(target, targetPage))
                 hide()
                 onChanged()
+            } catch (e: Exception) {
+                showError(e)
+            }
+        }
+    }
+
+    /** Remplace le formulaire d'ajout par les pages où copier la touche enregistrée ; un choix la copie et ferme l'éditeur. */
+    private fun chooseDuplicateTarget() {
+        val source = slot
+        val sourcePage = page
+        scope.launch {
+            try {
+                val targets = duplicateTargets(BackendClient(context).deck.pages())
+                if (slot != source || page != sourcePage) return@launch
+                for (i in 0 until types.childCount) types.getChildAt(i).isSelected = false
+                form.removeAllViews()
+                note(R.string.key_duplicate_to)
+                var sent = false
+                targets.forEach { (title, to) ->
+                    form.addView(row(title, selected = false) {
+                        // Un second appui pendant la requête copierait la touche deux fois.
+                        if (sent) return@row
+                        sent = true
+                        scope.launch {
+                            try {
+                                BackendClient(context).deck.duplicateKey(source, sourcePage, to)
+                                hide()
+                                onChanged()
+                            } catch (e: Exception) {
+                                sent = false
+                                showError(e)
+                            }
+                        }
+                    })
+                }
+                form.addView(row(context.getString(R.string.key_duplicate_cancel), selected = false) { selectType(type) })
             } catch (e: Exception) {
                 showError(e)
             }

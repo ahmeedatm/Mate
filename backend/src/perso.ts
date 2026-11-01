@@ -85,6 +85,68 @@ export async function saveKeyPage(page: number, slot: number, key: PersoKey | nu
   );
 }
 
+/** Plafond de pages nommées : validation des routes (`pageSlotParams`, routes/deck.ts). */
+export const MAX_PAGES = 50;
+const refuse = (statusCode: number, message: string) => Object.assign(new Error(message), { statusCode });
+
+/** Où est (ou va) une touche : `page` absent pour Perso. */
+export type KeyPlace = { page?: number; slot: number };
+
+/**
+ * Copie la touche `from` dans le premier emplacement libre de `to` (rang d'une page nommée, absent : Perso). La copie est
+ * indépendante de l'original. 404 : page inconnue ou touche vide ; 409 : plus d'emplacement libre.
+ */
+export async function duplicateKey(from: KeyPlace, to?: number): Promise<KeyPlace> {
+  const pages = await loadKeyPages();
+  const source = (from.page === undefined ? await loadKeys() : pages[from.page]?.keys)?.[from.slot];
+  if (!source) throw refuse(404, "Touche vide ou page inconnue");
+  const copy = structuredClone(source);
+  // Choix de la place et écriture dans le même `updateJson` : deux copies à la fois ne visent pas la même place.
+  const place = (saved: Slots | undefined) => {
+    const slot = fit(saved).indexOf(null);
+    if (slot < 0) throw refuse(409, "Plus d'emplacement libre sur cette page");
+    return { slots: put(saved, slot, copy), slot };
+  };
+  if (to === undefined) {
+    const slot = await updateJson<{ slots?: Slots }, number>(
+      keysFile,
+      () => ({}),
+      (data) => {
+        const placed = place(data.slots);
+        data.slots = placed.slots;
+        return placed.slot;
+      },
+    );
+    return { slot };
+  }
+  const slot = await updateJson<{ pages?: KeyPage[] }, number>(
+    pagesFile,
+    () => ({}),
+    (data) => {
+      const target = data.pages?.[to];
+      if (!target) throw refuse(404, "Page inconnue");
+      const placed = place(target.slots);
+      target.slots = placed.slots;
+      return placed.slot;
+    },
+  );
+  return { page: to, slot };
+}
+
+/** Ajoute à la fin une copie de la page `page`, titrée « … (copie) », et rend son rang. 404 : page inconnue ; 409 : trop de pages. */
+export async function duplicateKeyPage(page: number): Promise<number> {
+  return updateJson<{ pages?: KeyPage[] }, number>(
+    pagesFile,
+    () => ({}),
+    (data) => {
+      const source = data.pages?.[page];
+      if (!source) throw refuse(404, "Page inconnue");
+      if (data.pages!.length >= MAX_PAGES) throw refuse(409, "Trop de pages");
+      return data.pages!.push({ title: `${source.title} (copie)`, slots: structuredClone(source.slots) }) - 1;
+    },
+  );
+}
+
 // Schéma JSON (validation Fastify) d'une touche : chaque type d'étape avec ses seuls champs.
 // if/then plutôt que oneOf : Fastify retire les champs en trop (removeAdditional), et avec oneOf
 // il les retire en essayant chaque branche, y compris celles qui ne correspondent pas.

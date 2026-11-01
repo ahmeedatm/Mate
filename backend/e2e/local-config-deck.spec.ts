@@ -64,6 +64,19 @@ test.describe("page locale : touches", () => {
     expect((await server.call("GET", "/deck/keys/0")).json.key).toBeNull();
   });
 
+  test("duplique une page nommée et ouvre la copie ; Perso n'a pas de bouton", async ({ page, server }) => {
+    await page.goto("/");
+    const touches = page.locator("#pf-touches");
+    await expect(touches.getByRole("button", { name: "Dupliquer la page" })).toBeHidden();
+    await touches.getByRole("button", { name: "Réunions" }).click();
+    await touches.getByRole("button", { name: "Dupliquer la page" }).click();
+    await expect(page.locator("#pf-deck-keys-msg")).toHaveText("Page dupliquée.");
+    await expect(touches.getByRole("button", { name: "Réunions (copie)" })).toHaveAttribute("aria-pressed", "true");
+    await expect(touches.getByRole("button", { name: "Touche 1 : Micro" })).toBeVisible();
+    const pages = (await server.call("GET", "/deck")).json.pages;
+    expect(pages.map((p: { title: string }) => p.title)).toContain("Réunions (copie)");
+  });
+
   test("une touche à cycle garde son cycle quand on la rouvre et l'enregistre", async ({ page, server }) => {
     fs.writeFileSync(
       path.join(server.dataDir, "keys.json"),

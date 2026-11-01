@@ -25,6 +25,12 @@
                 android:textSize="20sp" />
 
             <Button
+                android:id="@+id/editor_duplicate"
+                style="@style/ActionButton"
+                android:layout_marginEnd="10dp"
+                android:text="@string/key_duplicate" />
+
+            <Button
                 android:id="@+id/editor_clear"
                 style="@style/ActionButton"
                 android:drawableStart="@drawable/ic_delete"

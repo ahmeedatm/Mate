@@ -187,10 +187,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
-      name: "écran de jeu (appli au premier plan)",
+      name: "page par appli (appli au premier plan)",
       run: async () => {
-        // La veille (src/foreground-watch.ts) pousse l'appli devant ; la tablette la compare à sa liste de jeux, choisie
-        // parmi les applis du catalogue. L'ordre foreground est refusé s'il vient de l'extérieur.
+        // La veille (src/foreground-watch.ts) pousse l'appli devant ; la tablette la compare aux applis de chaque page,
+        // choisies parmi les applis du catalogue. L'ordre foreground est refusé s'il vient de l'extérieur.
         expectStatus(
           await call("POST", "/tablet/command", { type: "foreground", app: "Sanity", bundleId: "sanity" }),
           400,
@@ -291,6 +291,29 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const gone = await call("GET", `/deck/keys/${slot}`);
         expectStatus(gone, 200, "GET /deck/keys/14");
         expect(gone.json.key === null, "la touche 14 n'est pas vidée");
+      },
+    },
+    {
+      name: "dupliquer une touche",
+      run: async () => {
+        const slot = 18;
+        let copy: number | undefined;
+        try {
+          expectStatus(
+            await call("PUT", `/deck/keys/${slot}`, { label: "Sanity copie", steps: [{ type: "text", text: "sanity" }] }),
+            200,
+            "PUT /deck/keys/18",
+          );
+          const res = await call("POST", "/deck/keys/duplicate", { slot });
+          expectStatus(res, 200, "POST /deck/keys/duplicate");
+          copy = res.json.slot as number;
+          expect(copy !== slot, "la copie écrase l'original");
+          const got = await call("GET", `/deck/keys/${copy}`);
+          expect(got.json.key?.label === "Sanity copie", "la copie n'a pas la touche d'origine");
+        } finally {
+          expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE /deck/keys/18");
+          if (copy !== undefined) expectStatus(await call("DELETE", `/deck/keys/${copy}`), 200, "DELETE de la copie");
+        }
       },
     },
     {
@@ -651,6 +674,27 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "partager vers Mate : dépose un fichier dans le dossier partagé",
+      run: async () => {
+        const name = `sanity-partage-${Date.now()}.txt`;
+        const form = new FormData();
+        form.append("file", new Blob(["sanity"]), name);
+        const res = await fetch(`${base}/docs/share`, {
+          method: "POST",
+          headers: { authorization: `Bearer ${opts.token}` },
+          body: form,
+          signal: AbortSignal.timeout(45_000),
+        });
+        expectStatus({ status: res.status, json: await res.json() }, 200, "POST /docs/share");
+        const list = await call("GET", "/docs");
+        expect(
+          list.json.entries?.some((e: { name: string }) => e.name === name),
+          `${name} absent de /docs`,
+        );
+        return name;
+      },
+    },
+    {
       name: "cadre photo : liste du dossier",
       run: async () => {
         const res = await call("GET", "/frame");
@@ -676,6 +720,29 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           expect(after.json.tasks.find((t: { id: string }) => t.id === taskId)?.done === true, "tâche cochée mais pas faite");
         } finally {
           await call("DELETE", `/tasks/${taskId}`);
+        }
+      },
+    },
+    {
+      name: "programmations : créer sur une touche du deck, lister, supprimer",
+      run: async () => {
+        const deck = await call("GET", "/deck");
+        expectStatus(deck, 200, "GET /deck");
+        const tile = deck.json.pages
+          .flatMap((p: { tiles: { id: string; label?: string; push?: boolean }[] }) => p.tiles)
+          .find((t: { label?: string; push?: boolean }) => t.label && !t.push);
+        if (!tile) return "aucune touche au deck, ignoré";
+        const added = await call("POST", "/schedule", { tileId: tile.id, everyMinutes: 1440 });
+        if (added.status === 501) return "501 hors Mac et Windows";
+        expectStatus(added, 200, "POST /schedule");
+        try {
+          const listed = await call("GET", "/schedule");
+          expect(
+            listed.json.items.some((i: { id: string }) => i.id === added.json.id),
+            "programmation créée absente de la liste",
+          );
+        } finally {
+          expectStatus(await call("DELETE", `/schedule/${added.json.id}`), 200, "DELETE /schedule");
         }
       },
     },
@@ -719,6 +786,30 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expectStatus(res, 200, "GET /news");
         expect(Array.isArray(res.json.items) && res.json.items.length <= 5, "liste d'actualités mal formée");
         return res.json.feed ? `${res.json.items.length} titre(s)` : "aucun flux réglé";
+      },
+    },
+    {
+      name: "valeurs de l'ordinateur",
+      run: async () => {
+        // Lecture seule : lance les commandes déjà écrites dans metrics.json par l'utilisateur, jamais une autre.
+        const res = await call("GET", "/metrics");
+        expectStatus(res, 200, "GET /metrics");
+        expect(Array.isArray(res.json.items) && res.json.items.length <= 4, "liste de valeurs mal formée");
+        return res.json.items.length ? `${res.json.items.length} valeur(s)` : "aucune commande écrite";
+      },
+    },
+    {
+      name: "menu de la semaine",
+      run: async () => {
+        // Lecture seule : le menu réglé par l'utilisateur n'est jamais changé. Toujours sept jours, du lundi au dimanche.
+        const res = await call("GET", "/menu");
+        expectStatus(res, 200, "GET /menu");
+        const days = res.json.days;
+        expect(
+          Array.isArray(days) && days.length === 7 && days.every((d: any) => typeof d.lunch === "string" && typeof d.dinner === "string"),
+          "menu mal formé (sept jours attendus)",
+        );
+        return `${days.filter((d: any) => d.lunch || d.dinner).length} jour(s) réglé(s)`;
       },
     },
     {

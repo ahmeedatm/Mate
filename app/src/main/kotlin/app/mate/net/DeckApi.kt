@@ -157,6 +157,13 @@ class DeckApi(private val http: Http) {
 
     suspend fun clearPersoKey(slot: Int, page: Int? = null) = http.io { http.delete(keyPath(slot, page)); Unit }
 
+    /** Copie la touche (`page` null : Perso) dans la première place libre de la page `to` (null : Perso). */
+    suspend fun duplicateKey(slot: Int, page: Int?, to: Int?) = http.io {
+        val body = JSONObject().put("slot", slot).apply { if (page != null) put("page", page); if (to != null) put("to", to) }
+        http.postJson("/deck/keys/duplicate", body)
+        Unit
+    }
+
     /** Lance l'action d'une tuile ; renvoie les fenêtres si l'appli en a plusieurs (rien n'est alors activé). */
     /** `windows` : appli à plusieurs fenêtres, à choisir ; `openedApp` : lien de la page Média ouvert dans son appli. */
     /** `hold` : la seconde action de la touche (appui long). */

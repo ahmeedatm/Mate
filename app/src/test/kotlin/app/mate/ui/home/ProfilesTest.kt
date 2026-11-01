@@ -174,39 +174,54 @@ class ProfilesTest {
         assertFalse(layout.nameMissing("Bureau", "Profil %d"))
     }
 
-    // Écran de jeu : un profil choisi par l'utilisateur et sa liste d'applis de jeu.
+    // Applis d'une page : quand l'une d'elles passe devant sur l'ordinateur, la tablette affiche cette page.
 
     @Test
-    fun `l'ecran de jeu suit son profil quand on le deplace ou qu'on en retire un avant lui`() {
+    fun `les applis suivent leur page quand on la deplace ou qu'on en retire une avant elle`() {
         val layout = layoutOf(3)
-        layout.gameProfile = 2
+        layout.setApps(2, listOf("Figma"))
         layout.moveProfile(2, 0)
-        assertEquals(0, layout.gameProfile)
+        assertEquals(listOf("Figma"), layout.appsOf(0))
         layout.moveProfile(0, 2)
-        assertEquals(2, layout.gameProfile)
+        assertEquals(listOf("Figma"), layout.appsOf(2))
         assertTrue(layout.removeProfile(1))
-        assertEquals(1, layout.gameProfile)
+        assertEquals(listOf("Figma"), layout.appsOf(1))
     }
 
     @Test
-    fun `supprimer l'ecran de jeu retire le role, la liste reste`() {
+    fun `supprimer une page emporte ses applis`() {
         val layout = layoutOf(3)
-        layout.gameProfile = 2
-        layout.gameApps += "Steam"
+        layout.setApps(2, listOf("Steam"))
         assertTrue(layout.removeProfile(2))
-        assertEquals(-1, layout.gameProfile)
-        assertEquals(listOf("Steam"), layout.gameApps)
+        assertEquals(2, layout.names.size)
+        assertTrue(layout.names.indices.all { layout.appsOf(it).isEmpty() })
     }
 
     @Test
-    fun `l'ecran de jeu et sa liste sont copies`() {
+    fun `un profil ajoute n'a pas d'applis`() {
         val layout = layoutOf(2)
-        layout.gameProfile = 1
-        layout.gameApps += "Steam"
+        layout.setApps(1, listOf("Steam"))
+        val added = layout.addProfile("Nouveau")
+        assertTrue(layout.appsOf(added).isEmpty())
+        assertEquals(listOf("Steam"), layout.appsOf(1))
+    }
+
+    @Test
+    fun `les applis sont copiees avec la disposition`() {
+        val layout = layoutOf(2)
+        layout.setApps(1, listOf("Steam"))
         val copy = layout.copy()
-        copy.gameApps += "Minecraft"
-        assertEquals(1, copy.gameProfile)
-        assertEquals(listOf("Steam"), layout.gameApps)
+        copy.setApps(1, listOf("Steam", "Minecraft"))
+        assertEquals(listOf("Steam"), layout.appsOf(1))
+    }
+
+    @Test
+    fun `une appli ne mene qu'a une page, la derniere choisie l'emporte`() {
+        val layout = layoutOf(3)
+        layout.setApps(0, listOf("Figma"))
+        layout.setApps(1, listOf("figma", "Blender"))
+        assertTrue(layout.appsOf(0).isEmpty())
+        assertEquals(listOf("figma", "Blender"), layout.appsOf(1))
     }
 
     // Rôles des profils : Accueil et Réunion. Un seul écran de base ; d'autres seulement si on en ajoute.
