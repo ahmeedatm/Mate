@@ -20,6 +20,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import app.mate.agents.AgentAlerts
 import app.mate.audio.Speaker
+import app.mate.audio.VolumeKeys
 import app.mate.device.Accessibility
 import app.mate.device.Screen
 import app.mate.device.Tablet
@@ -98,6 +99,7 @@ import app.mate.voice.WakeWord
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -111,6 +113,7 @@ interface VolumeKeyHandler {
 class MainActivity : AppCompatActivity() {
 
     private val rehide = Runnable { hideSystemBars() }
+    private var volumeNudge: Job? = null
     private var current = Mode.HOME
     /** Barre fixe à gauche : Parler, profils, outils, ordinateur, Réglages. */
     private lateinit var nav: Navigation
@@ -570,9 +573,22 @@ class MainActivity : AppCompatActivity() {
             else -> return super.dispatchKeyEvent(event)
         }
         val handler = supportFragmentManager.findFragmentByTag(current.tag) as? VolumeKeyHandler
-            ?: return super.dispatchKeyEvent(event)
+        val onComputer = handler == null && Prefs.volumeKeysOnComputer(this)
+        val route = VolumeKeys.route(onComputer, handler != null, onComputer && Computers.active(this) != null)
+        if (route == VolumeKeys.Route.TABLET) return super.dispatchKeyEvent(event)
         // On consomme aussi le relâchement pour que la tablette ne change pas son propre volume.
-        return if (event.action == KeyEvent.ACTION_DOWN) handler.onVolumeKey(up) else true
+        if (event.action != KeyEvent.ACTION_DOWN) return true
+        return handler?.onVolumeKey(up) ?: nudgeComputerVolume(up, event.repeatCount > 0)
+    }
+
+    /** Un appui à la fois : un appui maintenu n'empile pas de requêtes sur l'ordinateur. */
+    private fun nudgeComputerVolume(up: Boolean, repeated: Boolean): Boolean {
+        if (volumeNudge?.isActive == true) return true
+        volumeNudge = lifecycleScope.launch {
+            runCatchingCancellable { BackendClient(this@MainActivity).system.setAudio(outputDelta = VolumeKeys.delta(up)) }
+                .onFailure { if (!repeated) showBanner(errorText(it), 6) }
+        }
+        return true
     }
 
     /** Nombre de tâches non faites, en pastille sur l'icône Accueil (mis à jour par la carte Tâches). */
