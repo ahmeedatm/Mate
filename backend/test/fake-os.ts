@@ -231,6 +231,10 @@ export async function setDnd(on: boolean): Promise<boolean | null> {
   return on;
 }
 
+export async function keepAwake(on: boolean): Promise<void> {
+  record("keepAwake", on);
+}
+
 export async function pointerMove(dx: number, dy: number) {
   record("pointerMove", dx, dy);
 }

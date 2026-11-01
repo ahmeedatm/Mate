@@ -213,6 +213,14 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "écran de l'ordinateur éveillé pendant le Focus",
+      run: async () => {
+        // Lecture seule : un ordre valide garderait l'écran allumé, seul le refus d'un corps invalide est essayé.
+        expectStatus(await call("POST", "/system/awake", { on: "oui" }), 400, "POST /system/awake invalide");
+        return "corps invalide refusé";
+      },
+    },
+    {
       name: "Ne pas déranger à la main (pastille de l'Accueil)",
       run: async () => {
         expectStatus(await call("PUT", "/system/dnd", { on: "oui" }), 400, "PUT /system/dnd invalide");

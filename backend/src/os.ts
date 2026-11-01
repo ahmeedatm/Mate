@@ -10,6 +10,7 @@ import * as macClipboard from "./mac/clipboard.ts";
 import { readMacNotifications } from "./mac/notifications.ts";
 import type { NotificationBatch } from "./notifications.ts";
 import * as macCalls from "./mac/calls.ts";
+import * as macAwake from "./mac/awake.ts";
 import * as macDnd from "./mac/dnd.ts";
 import { extensionFrontPage, extensionTabs } from "./browser-extension.ts";
 import * as macKeys from "./mac/keys.ts";
@@ -258,6 +259,13 @@ export async function getDnd(): Promise<boolean | null> {
 export async function setDnd(on: boolean): Promise<boolean | null> {
   if (isWindows) return win.setDnd(on);
   if (isMac) return macDnd.setDnd(on);
+  unsupported();
+}
+
+/** Garde l'écran de l'ordinateur allumé (true) ou rend la veille normale (false) : src/awake.ts. */
+export async function keepAwake(on: boolean): Promise<void> {
+  if (isWindows) return win.keepAwake(on);
+  if (isMac) return macAwake.keepAwake(on);
   unsupported();
 }
 
