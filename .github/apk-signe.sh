@@ -57,7 +57,11 @@ signer() {
   local certs
   certs=$("$BT/apksigner" verify --print-certs "$out")
   echo "$certs"
-  grep -qx "Signer #1 certificate SHA-256 digest: $SIGNING_CERT_SHA256" <<< "$certs" || die "Certificat inattendu"
+  # Une ligne par signataire et par schéma (« Signer #1 certificate… » ou « V3.0 Signer: certificate… » selon la
+  # version d'apksigner) : au moins une, et toutes à l'empreinte attendue.
+  local digests
+  digests=$(sed -n 's/^.*[Cc]ertificate SHA-256 digest: //p' <<< "$certs" | sort -u)
+  [ "$digests" = "$SIGNING_CERT_SHA256" ] || die "Certificat inattendu : $digests"
 }
 
 case "${1:-}" in
