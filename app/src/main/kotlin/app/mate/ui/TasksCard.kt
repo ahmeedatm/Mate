@@ -184,11 +184,12 @@ class TasksCard @JvmOverloads constructor(
             toggle(task, row, done)
         }
         val detail = row.findViewById<TextView>(R.id.task_detail).apply {
-            text = task.detail ?: task.schedule
+            text = task.subtitle(context.getString(R.string.task_turn))
             visibility = if (text.isNullOrEmpty()) View.GONE else View.VISIBLE
         }
         // Carte étroite (Vertical, une colonne) : le libellé d'abord ; le détail (« Lun-ven · 17:30 ») ne le réduit pas à « R… ».
-        if (!detail.text.isNullOrEmpty()) {
+        // Sauf « Tour de X » : c'est l'information d'une corvée, elle reste visible.
+        if (!detail.text.isNullOrEmpty() && task.assignee == null) {
             row.addOnLayoutChangeListener { _, left, _, right, _, _, _, _, _ ->
                 val shown = right - left >= context.dp(NARROW_ROW_DP)
                 if (detail.isVisible != shown) row.post { detail.isVisible = shown }
