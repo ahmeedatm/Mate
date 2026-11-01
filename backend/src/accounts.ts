@@ -11,17 +11,22 @@ import { readJson, updateJson } from "./store.ts";
  * Connexion OAuth « appli de bureau » : code d'autorisation + PKCE, retour sur http://localhost:<port>/oauth/…/callback
  * (page ouverte dans le navigateur de l'ordinateur). Aucun secret côté client : l'identifiant de l'appli (enregistrée
  * une fois chez Microsoft et Google) est public, dans config/accounts.json. Le jeton de renouvellement
- * reste dans .data/accounts.json, sur l'ordinateur ; la tablette ne voit que les événements.
+ * reste dans .data/accounts.json, sur l'ordinateur ; la tablette ne voit que les événements et le nombre de mails non lus.
+ * Les droits mails se demandent dans une connexion à part (`mail`) : se connecter pour l'agenda ne les donne jamais.
  */
 
 export type Provider = "microsoft" | "google";
 
-const PROVIDERS: Record<Provider, { label: string; authUrl: string; tokenUrl: string; scope: string; extra: Record<string, string> }> = {
+const PROVIDERS: Record<
+  Provider,
+  { label: string; authUrl: string; tokenUrl: string; scope: string; mailScope: string; extra: Record<string, string> }
+> = {
   microsoft: {
     label: "Microsoft",
     authUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
     tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
     scope: "openid email offline_access https://graph.microsoft.com/Calendars.Read",
+    mailScope: "https://graph.microsoft.com/Mail.ReadBasic",
     extra: { prompt: "select_account" },
   },
   google: {
@@ -29,10 +34,15 @@ const PROVIDERS: Record<Provider, { label: string; authUrl: string; tokenUrl: st
     authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenUrl: "https://oauth2.googleapis.com/token",
     scope: "openid email https://www.googleapis.com/auth/calendar.readonly",
+    mailScope: "https://www.googleapis.com/auth/gmail.metadata",
     // offline + consent : Google ne donne le jeton de renouvellement qu'à ces conditions.
     extra: { access_type: "offline", prompt: "consent" },
   },
 };
+
+/** Droits demandés : ceux de l'agenda, plus la lecture des mails pour la connexion « mails ». */
+const scopeOf = (provider: Provider, mail: boolean) =>
+  mail ? `${PROVIDERS[provider].scope} ${PROVIDERS[provider].mailScope}` : PROVIDERS[provider].scope;
 
 export const isProvider = (p: string): p is Provider => p === "microsoft" || p === "google";
 
@@ -62,7 +72,8 @@ export async function availableProviders(): Promise<{ provider: Provider; label:
 
 // --- Comptes connectés (.data/accounts.json)
 
-type Stored = { email: string; refreshToken: string; expired?: boolean };
+/** `mail` : le compte a été connecté avec les droits de lecture des mails (connexion à part de celle de l'agenda). */
+type Stored = { email: string; refreshToken: string; expired?: boolean; mail?: boolean };
 const storeFile = path.join(config.dataDir, "accounts.json");
 
 async function load(): Promise<Partial<Record<Provider, Stored>>> {
@@ -75,41 +86,45 @@ function edit<R = void>(change: (accounts: Partial<Record<Provider, Stored>>) =>
 }
 
 /** `expired` : le compte a refusé le renouvellement (mot de passe changé, accès retiré) : se reconnecter. */
-export async function connectedAccounts(): Promise<{ provider: Provider; label: string; email: string; expired: boolean }[]> {
+export async function connectedAccounts(): Promise<
+  { provider: Provider; label: string; email: string; expired: boolean; mail: boolean }[]
+> {
   const accounts = await load();
   return (Object.keys(accounts) as Provider[]).map((p) => ({
     provider: p,
     label: PROVIDERS[p].label,
     email: accounts[p]!.email,
     expired: !!accounts[p]!.expired,
+    mail: !!accounts[p]!.mail,
   }));
 }
 
 export async function disconnect(provider: Provider) {
   accessTokens.delete(provider);
+  clearMailCache();
   await edit((accounts) => void delete accounts[provider]);
 }
 
 // --- Connexion
 
-const pending = new Map<string, { provider: Provider; verifier: string; redirectUri: string; expires: number }>();
+const pending = new Map<string, { provider: Provider; mail: boolean; verifier: string; redirectUri: string; expires: number }>();
 const base64url = (b: Buffer) => b.toString("base64url");
 
 /** Adresse de la page de connexion du fournisseur ; le retour arrive sur `redirectUri` avec `state`. */
-export async function loginUrl(provider: Provider, redirectUri: string): Promise<string> {
+export async function loginUrl(provider: Provider, redirectUri: string, mail = false): Promise<string> {
   const app = await client(provider);
   if (!app) throw new Error(`Connexion ${PROVIDERS[provider].label} non configurée`);
   const now = Date.now();
   for (const [k, v] of pending) if (v.expires < now) pending.delete(k);
   const state = base64url(randomBytes(24));
   const verifier = base64url(randomBytes(48));
-  pending.set(state, { provider, verifier, redirectUri, expires: now + 10 * 60_000 });
+  pending.set(state, { provider, mail, verifier, redirectUri, expires: now + 10 * 60_000 });
   const p = PROVIDERS[provider];
   const params = new URLSearchParams({
     client_id: app.clientId,
     response_type: "code",
     redirect_uri: redirectUri,
-    scope: p.scope,
+    scope: scopeOf(provider, mail),
     state,
     code_challenge: base64url(createHash("sha256").update(verifier).digest()),
     code_challenge_method: "S256",
@@ -119,7 +134,7 @@ export async function loginUrl(provider: Provider, redirectUri: string): Promise
 }
 
 /** Retour du fournisseur : échange le code contre les jetons et garde le compte. */
-export async function finishLogin(state: string, code: string): Promise<{ provider: Provider; email: string }> {
+export async function finishLogin(state: string, code: string): Promise<{ provider: Provider; email: string; mail: boolean }> {
   const login = pending.get(state);
   pending.delete(state);
   if (!login || login.expires < Date.now()) throw new Error("Connexion expirée : recommence depuis la page du compagnon");
@@ -129,12 +144,17 @@ export async function finishLogin(state: string, code: string): Promise<{ provid
     code,
     redirect_uri: login.redirectUri,
     code_verifier: login.verifier,
+    // Microsoft : les droits demandés à la connexion, pas ceux d'une autre (le renouvellement n'en redemande aucun).
+    ...(login.provider === "microsoft" ? { scope: scopeOf(login.provider, login.mail) } : {}),
   });
   if (!tokens.refresh_token) throw new Error("Le compte n'a pas donné d'accès durable : recommence");
   const email = emailFromIdToken(tokens.id_token) ?? PROVIDERS[login.provider].label;
-  await edit((accounts) => void (accounts[login.provider] = { email, refreshToken: tokens.refresh_token! }));
+  await edit(
+    (accounts) => void (accounts[login.provider] = { email, refreshToken: tokens.refresh_token!, ...(login.mail ? { mail: true } : {}) }),
+  );
+  clearMailCache();
   accessTokens.set(login.provider, { token: tokens.access_token, expires: Date.now() + (tokens.expires_in - 60) * 1000 });
-  return { provider: login.provider, email };
+  return { provider: login.provider, email, mail: login.mail };
 }
 
 type TokenResponse = { access_token: string; refresh_token?: string; id_token?: string; expires_in: number };
@@ -142,7 +162,6 @@ type TokenResponse = { access_token: string; refresh_token?: string; id_token?: 
 async function tokenRequest(provider: Provider, app: ClientConfig, params: Record<string, string>): Promise<TokenResponse> {
   const body = new URLSearchParams({ client_id: app.clientId, ...params });
   if (app.clientSecret) body.set("client_secret", app.clientSecret);
-  if (provider === "microsoft") body.set("scope", PROVIDERS[provider].scope);
   const res = await fetch(PROVIDERS[provider].tokenUrl, { method: "POST", body, signal: AbortSignal.timeout(15_000) });
   const json = (await res.json().catch(() => ({}))) as TokenResponse & { error?: string; error_description?: string };
   if (!res.ok) throw Object.assign(new Error(json.error_description || json.error || `HTTP ${res.status}`), { oauthError: json.error });
@@ -310,4 +329,86 @@ async function googleEvents(token: string, from: Date, to: Date): Promise<Calend
           meetingLink(e.description, e.location),
       };
     });
+}
+
+// --- Mails non lus
+
+export type MailUnread = { provider: Provider; label: string; unread: number | null; error?: string };
+
+/** Nombre de non lus dans la réponse du fournisseur (dossier Boîte de réception / libellé INBOX). */
+export function unreadFrom(provider: Provider, json: Record<string, unknown>): number {
+  const n = provider === "microsoft" ? json.unreadItemCount : json.messagesUnread;
+  if (typeof n !== "number" || !Number.isInteger(n) || n < 0) throw new Error("Réponse du compte illisible");
+  return n;
+}
+
+const UNREAD_URL: Record<Provider, string> = {
+  microsoft: "https://graph.microsoft.com/v1.0/me/mailFolders/inbox?$select=unreadItemCount",
+  google: "https://www.googleapis.com/gmail/v1/users/me/labels/INBOX",
+};
+
+const RECONNECT = "Reconnecte les mails du compte sur la page de l'ordinateur";
+const FAILED = "Les mails du compte ne répondent pas";
+
+async function unreadOf(provider: Provider, stored: Stored): Promise<number> {
+  const token = await accessToken(provider, stored);
+  const res = await fetch(UNREAD_URL[provider], { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15_000) });
+  // Droits retirés par le fournisseur : il refuse (401/403) tant que les mails ne sont pas reconnectés.
+  if (res.status === 401 || res.status === 403) throw Object.assign(new Error(RECONNECT), { status: res.status });
+  if (!res.ok) throw Object.assign(new Error(FAILED), { status: res.status });
+  return unreadFrom(provider, (await res.json()) as Record<string, unknown>);
+}
+
+const MAIL_CACHE_MS = 30_000;
+let mailCache: { at: number; rows: Promise<MailUnread[]> } | undefined;
+
+/** Oublie la réponse gardée (connexion ou déconnexion d'un compte, tests). */
+export function clearMailCache() {
+  mailCache = undefined;
+}
+
+/**
+ * Non lus de chaque compte qui a les droits mails ; un compte en panne reste dans la liste avec une phrase, sans cacher les autres.
+ * Réponse gardée 30 s, une lecture en cours est partagée entre les demandes. `log` reçoit l'échec d'un compte (statut HTTP seulement).
+ */
+export function accountUnread(log: (line: string) => void = () => {}): Promise<MailUnread[]> {
+  if (!mailCache || Date.now() - mailCache.at > MAIL_CACHE_MS) {
+    const rows = readUnread(log);
+    const entry = { at: Date.now(), rows };
+    mailCache = entry;
+    rows.catch(() => void (mailCache === entry && (mailCache = undefined)));
+  }
+  return mailCache.rows;
+}
+
+async function readUnread(log: (line: string) => void): Promise<MailUnread[]> {
+  const accounts = await load();
+  const rows: MailUnread[] = [];
+  for (const provider of Object.keys(accounts) as Provider[]) {
+    const stored = accounts[provider]!;
+    if (!stored.mail) continue;
+    const row = { provider, label: PROVIDERS[provider].label };
+    if (stored.expired) {
+      rows.push({ ...row, unread: null, error: RECONNECT });
+      continue;
+    }
+    try {
+      rows.push({ ...row, unread: await unreadOf(provider, stored) });
+    } catch (e) {
+      const known = e instanceof Error && (e.message === RECONNECT || e.message === FAILED || e.message.startsWith("Réponse"));
+      const status = (e as { status?: number }).status;
+      log(`Mails ${provider} : ${status ? `HTTP ${status}` : known ? (e as Error).message : "pas de réponse"}`);
+      rows.push({ ...row, unread: null, error: known ? (e as Error).message : FAILED });
+    }
+  }
+  return rows;
+}
+
+/** Page de la boîte de réception, ouverte sur l'ordinateur : adresse fixe par fournisseur, jamais une donnée de la tablette. */
+export async function inboxUrl(provider: Provider): Promise<string | undefined> {
+  const stored = (await load())[provider];
+  if (!stored?.mail) return undefined;
+  return provider === "google"
+    ? `https://mail.google.com/mail/?authuser=${encodeURIComponent(stored.email)}`
+    : "https://outlook.office.com/mail/";
 }

@@ -523,13 +523,15 @@ ${FAVICON}
         row.className = "account";
         const label = document.createElement("span");
         label.className = "grow";
-        label.append(stateDot(!a.expired), a.label + " · " + a.email + (a.expired ? " (à reconnecter)" : ""));
+        label.append(stateDot(!a.expired), a.label + " · " + a.email + (a.mail ? " · mails" : "") + (a.expired ? " (à reconnecter)" : ""));
         const off = document.createElement("button");
         off.className = "ghost";
         off.textContent = "Déconnecter";
         off.onclick = async () => { await fetch("/local/accounts/" + a.provider, { method: "DELETE" }); refresh(); };
         row.append(label);
-        if (a.expired) row.append(connectLink(a.provider, "Reconnecter"));
+        if (a.expired) row.append(connectLink(a.provider, "Reconnecter", a.mail));
+        // Les droits mails se donnent à part de l'agenda : expéditeur et objet des mails, jamais leur contenu.
+        else if (!a.mail) row.append(connectLink(a.provider, "Connecter les mails", true));
         row.append(off);
         box.append(row);
       }
@@ -769,15 +771,16 @@ ${FAVICON}
   }
   document.getElementById("nightdim").onchange = (e) => saveTablet({ nightDim: e.target.checked });
   document.getElementById("focusdnd").onchange = (e) => saveTablet({ focusDnd: e.target.checked });
-  function connectLink(provider, text) {
+  function connectLink(provider, text, mail) {
     const link = document.createElement("a");
     link.className = "button";
-    link.href = "/oauth/" + provider + "/start";
+    link.href = "/oauth/" + provider + "/start" + (mail ? "?mail=1" : "");
     link.textContent = text;
     return link;
   }
   const ACCOUNT_MSG = {
     ok: "✓ Compte connecté : l'agenda arrive sur la tablette dans la minute.",
+    mail: "✓ Mails connectés : le widget Mails de la tablette affiche le nombre de non lus.",
     refused: "Connexion annulée.",
     error: "La connexion a échoué. Réessaie ; sinon colle un lien ICS ci-dessous.",
   };
