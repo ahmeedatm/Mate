@@ -81,6 +81,7 @@
             android:name=".share.ShareActivity"
             android:exported="true"
             android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|keyboard"
             android:theme="@style/Theme.Companion.Share">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

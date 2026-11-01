@@ -9,12 +9,15 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import app.mate.Computers
 import app.mate.R
+import app.mate.UserFacingException
 import app.mate.net.BackendClient
 import app.mate.ui.errorText
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileNotFoundException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -31,6 +34,8 @@ class ShareActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Recréée par le système (processus tué) : l'envoi d'avant est perdu, pas de relance à l'aveugle.
+        if (savedInstanceState != null) return finish()
         val computer = Computers.active(this)
         if (computer == null) return finishWith(getString(R.string.error_no_computer))
         val uris = streams(intent)
@@ -39,13 +44,19 @@ class ShareActivity : AppCompatActivity() {
 
         Toast.makeText(this, getString(R.string.share_sending, computer.name), Toast.LENGTH_SHORT).show()
         lifecycleScope.launch {
+            var sent = 0
             val message = try {
-                val sent = withContext(Dispatchers.IO) { collect(uris, text) }.map { send(it) }
-                if (sent.size == 1) getString(R.string.share_sent, sent[0]) else getString(R.string.share_sent_many, sent.size)
+                val items = withContext(Dispatchers.IO) { collect(uris, text) }
+                val names = items.map { send(it).also { sent++ } }
+                if (names.size == 1) getString(R.string.share_sent, names[0]) else getString(R.string.share_sent_many, names.size)
             } catch (e: TooBig) {
                 getString(R.string.share_too_big, e.name)
             } catch (e: Exception) {
-                errorText(e)
+                val reason = errorText(e)
+                // Un envoi en plusieurs fichiers a pu partir en partie : le dire, pour ne pas les renvoyer en double.
+                if (sent > 0) getString(R.string.share_partial, sent, uris.size, reason) else reason
+            } finally {
+                withContext(NonCancellable + Dispatchers.IO) { File(cacheDir, "partage").deleteRecursively() }
             }
             finishWith(message)
         }
@@ -88,8 +99,15 @@ class ShareActivity : AppCompatActivity() {
             if (size >= 0 && !ShareLogic.fits(size)) throw TooBig(fileName)
             // Un dossier par fichier : deux fichiers de même nom ne s'écrasent pas dans le cache.
             val file = File(File(dir, i.toString()).apply { mkdirs() }, fileName)
-            val input = contentResolver.openInputStream(uri) ?: throw java.io.IOException("Lecture impossible : $fileName")
-            input.use { src -> file.outputStream().use { src.copyTo(it) } }
+            // L'autre appli a pu retirer le droit de lecture, ou le fichier : message à part, pas « ordinateur injoignable ».
+            try {
+                val input = contentResolver.openInputStream(uri) ?: throw UserFacingException(R.string.share_unreadable, fileName)
+                input.use { src -> file.outputStream().use { src.copyTo(it) } }
+            } catch (e: SecurityException) {
+                throw UserFacingException(R.string.share_unreadable, fileName)
+            } catch (e: FileNotFoundException) {
+                throw UserFacingException(R.string.share_unreadable, fileName)
+            }
             if (!ShareLogic.fits(file.length())) throw TooBig(fileName)
             Item(file, mime)
         }

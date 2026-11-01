@@ -62,6 +62,29 @@ describe("partager vers Mate", () => {
     assert.equal((await res.json()).path, "Reçu d'été.pdf");
   });
 
+  it("remplace les caractères interdits sous Windows (titre de page : « a: b? »)", async () => {
+    const res = await share("Titre: page? <1>.txt", "x");
+    assert.equal((await res.json()).path, "Titre_ page_ _1_.txt");
+  });
+
+  it("évite les noms réservés de Windows (CON, NUL…) et les points ou espaces finaux", async () => {
+    assert.equal((await (await share("CON.txt", "x")).json()).path, "_CON.txt");
+    assert.equal((await (await share("nul", "x")).json()).path, "_nul");
+    assert.equal((await (await share("fin. . ", "x")).json()).path, "fin");
+  });
+
+  it("ne dépose pas de fichier caché : les points de tête sont retirés", async () => {
+    assert.equal((await (await share(".bashrc", "x")).json()).path, "bashrc");
+    assert.equal((await (await share("..txt", "x")).json()).path, "txt");
+  });
+
+  it("raccourcit un nom trop long en gardant l'extension", async () => {
+    const res = await share("a".repeat(300) + ".pdf", "x");
+    assert.equal(res.status, 200);
+    const name = (await res.json()).path as string;
+    assert.ok(name.length <= 130 && name.endsWith(".pdf"), name);
+  });
+
   it("refuse sans jeton (401) et sans fichier (400)", async () => {
     assert.equal((await share("a.pdf", "x", false)).status, 401);
     const empty = await fetch(`${server.url}/docs/share`, {

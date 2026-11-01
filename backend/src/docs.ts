@@ -85,24 +85,49 @@ export async function savePhoto(data: Buffer, extension = ".jpg") {
   return path.join(PHOTOS_DIR, name);
 }
 
+const RESERVED_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+/** Assez court pour qu'un « (n) » de plus tienne dans les 255 octets d'un nom de fichier. */
+const NAME_MAX = 120;
+
+/**
+ * Nom sûr sur Mac comme sur Windows : sans dossier, sans caractère interdit ou de contrôle (un « : » ouvrirait un
+ * flux NTFS), sans point de tête (le fichier serait caché de la liste) ni point ou espace final, sans nom réservé
+ * (CON, NUL…), au plus [NAME_MAX] caractères, extension gardée. Rien d'exploitable : `Reçu <date>`.
+ */
+function shareName(filename: string) {
+  const base = path.basename(filename.replace(/\\/g, "/"));
+  const clean = base
+    .replace(/[<>:"|?*\x00-\x1f]/g, "_")
+    .replace(/^\.+/, "")
+    .replace(/[. ]+$/, "")
+    .trim();
+  if (clean === "") return `Reçu ${stamp()}`;
+  const ext = path.extname(clean).slice(0, 20);
+  const stem = clean.slice(0, clean.length - path.extname(clean).length).slice(0, NAME_MAX - ext.length);
+  return RESERVED_NAME.test(stem) ? `_${stem}${ext}` : stem + ext;
+}
+
 /**
  * Fichier partagé depuis une autre appli de la tablette (« Partager » > Mate) : déposé à la racine du dossier
- * partagé sous son nom (dossiers du chemin retirés), jamais par-dessus un fichier déjà là : « nom (2).ext ».
+ * partagé sous le nom de [shareName], jamais par-dessus un fichier déjà là : « nom (2).ext ».
  */
 export async function saveShared(data: Buffer, filename: string) {
   await fs.mkdir(config.docsDir, { recursive: true });
-  const base = path.basename(filename.replace(/\\/g, "/")).trim();
-  const safe = base === "" || base === "." || base === ".." ? `Reçu ${stamp()}` : base;
+  const safe = shareName(filename);
   const ext = path.extname(safe);
   const stem = safe.slice(0, safe.length - ext.length);
   for (let n = 1; ; n++) {
     const name = n === 1 ? safe : `${stem} (${n})${ext}`;
+    const full = path.join(config.docsDir, name);
     try {
       // "wx" : échoue si le fichier existe, donc deux envois simultanés ne s'écrasent pas.
-      await fs.writeFile(path.join(config.docsDir, name), data, { flag: "wx" });
+      await fs.writeFile(full, data, { flag: "wx" });
       return name;
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+      if ((e as NodeJS.ErrnoException).code === "EEXIST") continue;
+      // Disque plein, coupure : pas de fichier partiel listé comme un fichier valide.
+      await fs.rm(full, { force: true });
+      throw e;
     }
   }
 }
