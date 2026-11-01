@@ -68,7 +68,7 @@ export const slotParam = {
 export const pageSlotParams = {
   type: "object",
   required: ["page", "slot"],
-  properties: { page: { type: "integer", minimum: 0, maximum: 49 }, slot: slotParam.properties.slot },
+  properties: { page: { type: "integer", minimum: 0, maximum: MAX_PAGES - 1 }, slot: slotParam.properties.slot },
 };
 export type PageSlot = { page: number; slot: number };
 

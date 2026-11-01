@@ -206,24 +206,29 @@ class KeyEditor @JvmOverloads constructor(
         scope.launch {
             try {
                 val targets = duplicateTargets(BackendClient(context).deck.pages())
-                if (slot != source) return@launch
+                if (slot != source || page != sourcePage) return@launch
                 for (i in 0 until types.childCount) types.getChildAt(i).isSelected = false
                 form.removeAllViews()
                 note(R.string.key_duplicate_to)
-                chipRow(targets.map { (title, to) ->
-                    title to {
+                var sent = false
+                targets.forEach { (title, to) ->
+                    form.addView(row(title, selected = false) {
+                        // Un second appui pendant la requête copierait la touche deux fois.
+                        if (sent) return@row
+                        sent = true
                         scope.launch {
                             try {
                                 BackendClient(context).deck.duplicateKey(source, sourcePage, to)
                                 hide()
                                 onChanged()
                             } catch (e: Exception) {
+                                sent = false
                                 showError(e)
                             }
                         }
-                        Unit
-                    }
-                })
+                    })
+                }
+                form.addView(row(context.getString(R.string.key_duplicate_cancel), selected = false) { selectType(type) })
             } catch (e: Exception) {
                 showError(e)
             }

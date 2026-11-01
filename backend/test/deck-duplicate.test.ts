@@ -71,6 +71,16 @@ describe("dupliquer une touche", () => {
     assert.equal((await keyOf(0, 0)).label, "Micro");
   });
 
+  it("deux copies à la fois prennent deux places différentes", async () => {
+    const [a, b] = await Promise.all([
+      server.call("POST", "/deck/keys/duplicate", { page: 0, slot: 0, to: 1 }),
+      server.call("POST", "/deck/keys/duplicate", { page: 0, slot: 0, to: 1 }),
+    ]);
+    assert.deepEqual([a.json.slot, b.json.slot].sort(), [0, 1]);
+    assert.equal((await keyOf(1, 0)).label, "Micro");
+    assert.equal((await keyOf(1, 1)).label, "Micro");
+  });
+
   it("refuse une touche vide ou une page inconnue", async () => {
     assert.equal((await server.call("POST", "/deck/keys/duplicate", { page: 1, slot: 5 })).status, 404);
     assert.equal((await server.call("POST", "/deck/keys/duplicate", { page: 9, slot: 0 })).status, 404);

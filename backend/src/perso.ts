@@ -85,7 +85,7 @@ export async function saveKeyPage(page: number, slot: number, key: PersoKey | nu
   );
 }
 
-/** Plafond de pages nommées : celui de `pageSlotParams` (routes/deck.ts). */
+/** Plafond de pages nommées : validation des routes (`pageSlotParams`, routes/deck.ts). */
 export const MAX_PAGES = 50;
 const refuse = (statusCode: number, message: string) => Object.assign(new Error(message), { statusCode });
 
@@ -98,17 +98,39 @@ export type KeyPlace = { page?: number; slot: number };
  */
 export async function duplicateKey(from: KeyPlace, to?: number): Promise<KeyPlace> {
   const pages = await loadKeyPages();
-  const read = (page: number | undefined) => (page === undefined ? loadKeys() : Promise.resolve(pages[page]?.keys));
-  const source = (await read(from.page))?.[from.slot];
+  const source = (from.page === undefined ? await loadKeys() : pages[from.page]?.keys)?.[from.slot];
   if (!source) throw refuse(404, "Touche vide ou page inconnue");
-  const target = await read(to);
-  if (!target) throw refuse(404, "Page inconnue");
-  const slot = target.indexOf(null);
-  if (slot < 0) throw refuse(409, "Plus d'emplacement libre sur cette page");
   const copy = structuredClone(source);
-  if (to === undefined) await saveKey(slot, copy);
-  else await saveKeyPage(to, slot, copy);
-  return to === undefined ? { slot } : { page: to, slot };
+  // Choix de la place et écriture dans le même `updateJson` : deux copies à la fois ne visent pas la même place.
+  const place = (saved: Slots | undefined) => {
+    const slot = fit(saved).indexOf(null);
+    if (slot < 0) throw refuse(409, "Plus d'emplacement libre sur cette page");
+    return { slots: put(saved, slot, copy), slot };
+  };
+  if (to === undefined) {
+    const slot = await updateJson<{ slots?: Slots }, number>(
+      storeFile,
+      () => ({}),
+      (data) => {
+        const placed = place(data.slots);
+        data.slots = placed.slots;
+        return placed.slot;
+      },
+    );
+    return { slot };
+  }
+  const slot = await updateJson<{ pages?: KeyPage[] }, number>(
+    pagesFile,
+    () => ({}),
+    (data) => {
+      const target = data.pages?.[to];
+      if (!target) throw refuse(404, "Page inconnue");
+      const placed = place(target.slots);
+      target.slots = placed.slots;
+      return placed.slot;
+    },
+  );
+  return { page: to, slot };
 }
 
 /** Ajoute à la fin une copie de la page `page`, titrée « … (copie) », et rend son rang. 404 : page inconnue ; 409 : trop de pages. */
