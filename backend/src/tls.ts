@@ -1,6 +1,6 @@
-import { createHash, generateKeyPairSync, randomBytes, sign, X509Certificate } from "node:crypto";
-import fs from "node:fs";
+import { createHash, createPrivateKey, generateKeyPairSync, randomBytes, sign, X509Certificate } from "node:crypto";
 import path from "node:path";
+import { loadOrCreate } from "./data-files.ts";
 
 /**
  * Certificat TLS de cet ordinateur, pour le WiFi (le HTTP en clair ne sert plus qu'en local : page, extension, USB).
@@ -51,20 +51,20 @@ export function createCertificate(name = "Mate", now = new Date()): Omit<Tls, "f
 
 export const fingerprintOf = (certPem: string) => createHash("sha256").update(new X509Certificate(certPem).raw).digest("hex");
 
-/** Certificat de .data/tls.json, créé s'il manque (droits 600 : la clé ne doit pas être lisible par les autres comptes). */
-export function loadTls(dataDir: string): Tls {
-  const file = path.join(dataDir, "tls.json");
-  let stored: Omit<Tls, "fingerprint">;
+const isStored = (v: unknown): v is Omit<Tls, "fingerprint"> => {
+  const s = v as Omit<Tls, "fingerprint">;
+  if (typeof s?.key !== "string" || typeof s.cert !== "string") return false;
   try {
-    stored = JSON.parse(fs.readFileSync(file, "utf8"));
+    createPrivateKey(s.key);
+    fingerprintOf(s.cert);
+    return true;
   } catch {
-    stored = createCertificate();
-    fs.mkdirSync(dataDir, { recursive: true });
-    try {
-      fs.writeFileSync(file, JSON.stringify(stored, null, 2) + "\n", { flag: "wx", mode: 0o600 });
-    } catch {
-      stored = JSON.parse(fs.readFileSync(file, "utf8"));
-    }
+    return false;
   }
+};
+
+/** Certificat de .data/tls.json, créé s'il manque ou s'il est abîmé (droits 600 : la clé ne doit pas être lisible par les autres comptes). */
+export function loadTls(dataDir: string): Tls {
+  const stored = loadOrCreate(path.join(dataDir, "tls.json"), () => createCertificate(), isStored);
   return { ...stored, fingerprint: fingerprintOf(stored.cert) };
 }
