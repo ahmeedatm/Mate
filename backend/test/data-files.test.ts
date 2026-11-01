@@ -36,7 +36,7 @@ describe("identity.json", () => {
   }
   it(
     "dossier en lecture seule : l'erreur remonte au lieu d'un jeton jamais enregistré",
-    { skip: process.platform === "win32" && "droits POSIX" },
+    { skip: (process.platform === "win32" && "droits POSIX") || (process.getuid?.() === 0 && "root écrit partout") },
     () => {
       const dir = tmp();
       fs.chmodSync(dir, 0o500);
