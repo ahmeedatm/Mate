@@ -179,6 +179,18 @@ class TileLogicTest {
         assertNull(pageSlotOf("k2-"))
     }
 
+    @Test
+    fun `duplicateTargets propose Perso et chaque page de touches nommee, pas les pages fixes`() {
+        val pages = listOf(
+            DeckPage("Apps", emptyList(), apps = true),
+            DeckPage("Perso", emptyList(), editable = true),
+            DeckPage("Reunions", emptyList(), editable = true, keyPage = 0),
+            DeckPage("Jeux", emptyList(), editable = true, keyPage = 1),
+        )
+        assertEquals(listOf("Perso" to null, "Reunions" to 0, "Jeux" to 1), duplicateTargets(pages))
+        assertEquals(emptyList<Pair<String, Int?>>(), duplicateTargets(listOf(DeckPage("Apps", emptyList(), apps = true))))
+    }
+
     private fun slot(n: Int, label: String? = null) =
         if (label == null) DeckTile("k-$n", "", "empty", null, null) else DeckTile("k-$n", label, "keys", null, null)
 

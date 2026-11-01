@@ -71,6 +71,8 @@
     <!-- Touches perso (page Perso du deck) -->
     <string name="key_title">Touche %1$d</string>
     <string name="key_clear">Vider</string>
+    <string name="key_duplicate">Dupliquer</string>
+    <string name="key_duplicate_to">Copier cette touche vers la page :</string>
     <string name="key_label_hint">Nom de la touche</string>
     <string name="key_glyph_hint">Emoji</string>
     <string name="key_steps">Étapes, dans l\'ordre</string>

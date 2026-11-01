@@ -39,6 +39,7 @@ export const DECK_HTML = `
   <section id="pf-touches" data-title="Touches" data-icon="keys">
     <div class="sechead"><h2>Touches</h2><span class="dim">Les touches de la page Perso et des pages du Deck. Une touche à plusieurs étapes est une macro.</span></div>
     <div class="pf-choices pf-pages" id="pf-deck-tabs" role="group" aria-label="Pages de touches"></div>
+    <div class="row"><button type="button" class="ghost" id="pf-deck-page-dup" hidden>Dupliquer la page</button></div>
     <div class="pf-slots" id="pf-deck-grid"></div>
     <p class="pf-msg" id="pf-deck-keys-msg" role="status"></p>
     <dialog class="cxdialog pf-keydialog" id="pf-key-dialog" aria-labelledby="pf-key-title">
@@ -163,8 +164,21 @@ export const DECK_JS = `
     }
   }
 
+  // Une page nommée seulement : Perso n'a pas de titre à copier.
+  async function pfDeckDuplicatePage() {
+    const r = await pfDeckApi("POST", "pages/" + (pfDeckPage - 1) + "/duplicate");
+    if (!r.ok) return pfDeckSay("pf-deck-keys-msg", r.error, "ko");
+    await pfDeckLoadKeys();
+    pfDeckPage = r.json.page + 1;
+    pfDeckSlot = null;
+    pfDeckRenderTabs();
+    pfDeckRenderGrid();
+    pfDeckSay("pf-deck-keys-msg", "Page dupliquée.", "ok");
+  }
+
   function pfDeckRenderTabs() {
     const tabs = document.getElementById("pf-deck-tabs");
+    document.getElementById("pf-deck-page-dup").hidden = pfDeckPage === 0;
     tabs.replaceChildren();
     pfDeckPages().forEach((page, i) => {
       tabs.append(pfDeckEl("button", {
@@ -436,6 +450,7 @@ export const DECK_JS = `
 
   document.getElementById("pf-deck-app-add").onclick = pfDeckAddApp;
   document.getElementById("pf-deck-app-reset").onclick = pfDeckResetApps;
+  document.getElementById("pf-deck-page-dup").onclick = pfDeckDuplicatePage;
   document.getElementById("pf-deck-link-add").onclick = async () => {
     const pick = document.getElementById("pf-deck-link-pick").value;
     if (!pick) return pfDeckSay("pf-deck-links-msg", "Choisis un site dans la liste.", "ko");
