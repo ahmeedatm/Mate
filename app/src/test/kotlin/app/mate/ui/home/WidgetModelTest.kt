@@ -275,7 +275,7 @@ class WidgetModelTest {
         assertEquals(Checklist.read(config), Checklist.read(back.config))
     }
 
-    private val boards = listOf(WidgetType.AGENTS, WidgetType.JIRA, WidgetType.GITLAB, WidgetType.PIPELINES, WidgetType.GITHUB, WidgetType.ACTIONS, WidgetType.OPEN, WidgetType.MIXER)
+    private val boards = listOf(WidgetType.AGENTS, WidgetType.JIRA, WidgetType.GITLAB, WidgetType.PIPELINES, WidgetType.GITHUB, WidgetType.ACTIONS, WidgetType.OPEN, WidgetType.MIXER, WidgetType.WEB)
 
     @Test
     fun `les tailles 3 x 2, 3 x 4 et plein ecran sont reservees aux tableaux`() {

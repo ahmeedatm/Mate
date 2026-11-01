@@ -1371,6 +1371,12 @@
     <string name="widget_note_desc">Un mot à garder sous les yeux</string>
     <string name="widget_note_empty">Touche pour écrire une note</string>
     <string name="widget_note_hint">Ta note</string>
+    <string name="widget_web">Page web</string>
+    <string name="widget_web_desc">Un tableau de bord ou un graphique, rechargé tout seul</string>
+    <string name="widget_web_empty">Touche pour choisir une page</string>
+    <string name="widget_web_hint">Adresse de la page</string>
+    <string name="widget_web_every_hint">Minutes entre deux rechargements</string>
+    <string name="widget_web_invalid">Adresse refusée : une page http ou https, sans identifiant ni mot de passe</string>
     <string name="widget_pipelines">Pipelines</string>
     <string name="widget_pipelines_desc">Le dernier pipeline de tes projets GitLab : en cours, échecs, durée</string>
     <string name="pipelines_empty">Aucun pipeline</string>
