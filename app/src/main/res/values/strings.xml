@@ -297,6 +297,7 @@
     <string name="mixer_mic">Micro</string>
     <string name="mixer_system">Système</string>
     <string name="mixer_mute">Muet</string>
+    <string name="mixer_strip_choose">%1$s, choisir la sortie audio</string>
     <string name="mixer_output_action">Choisir la sortie audio</string>
     <string name="mixer_output_title">Sortie audio de l\'ordinateur</string>
     <string name="mixer_output_none">Aucune sortie audio trouvée sur l\'ordinateur</string>

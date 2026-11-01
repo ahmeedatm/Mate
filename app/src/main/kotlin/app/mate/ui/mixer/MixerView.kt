@@ -293,7 +293,9 @@ class MixerView @JvmOverloads constructor(
 
     /** Liste les sorties audio de l'ordinateur (enceinte, casque, carte son) et passe sur celle qu'on touche. */
     private fun chooseOutput() {
-        scope.launch {
+        // Un seul choix à la fois : un second toucher pendant la lecture de la liste ne doit pas empiler une 2e boîte.
+        if (choosing?.isActive == true) return
+        choosing = scope.launch {
             val outputs = try {
                 BackendClient(context).system.audioOutputs()
             } catch (e: Exception) {
@@ -310,6 +312,8 @@ class MixerView @JvmOverloads constructor(
                 .showImmersive()
         }
     }
+
+    private var choosing: Job? = null
 
     private fun switchOutput(output: AudioOutput) {
         scope.launch {

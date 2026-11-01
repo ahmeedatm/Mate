@@ -72,7 +72,9 @@ namespace Mate
                 output["name"] = DeviceName(device, id);
                 output["current"] = id == currentId;
                 list.Add(output);
+                Marshal.ReleaseComObject(device);
             }
+            Marshal.ReleaseComObject(devices);
             return list;
         }
 
@@ -82,6 +84,7 @@ namespace Mate
             var policy = (IPolicyConfig)new PolicyConfigClient();
             int hr = policy.SetDefaultEndpoint(id, 0); // eConsole
             if (hr == 0) hr = policy.SetDefaultEndpoint(id, 1); // eMultimedia
+            Marshal.ReleaseComObject(policy);
             if (hr != 0) throw new InvalidOperationException("Windows a refusé de changer la sortie audio (0x" + hr.ToString("X8") + ")");
             return AudioOutputs();
         }

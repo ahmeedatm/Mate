@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.drawable.Drawable
@@ -340,9 +341,7 @@ class FaderStrip(context: Context) : View(context) {
         text.typeface = medium
         text.color = cLcdText
         text.textSize = sp(16f)
-        text.textAlign = Paint.Align.CENTER
-        val name = TextUtils.ellipsize(shownTitle, text, lcd.width() - dp(12), TextUtils.TruncateAt.END).toString()
-        canvas.drawText(name, lcd.centerX(), lcd.centerY() - (text.ascent() + text.descent()) / 2, text)
+        drawName(canvas, lcd.width() - dp(12), lcd.centerX(), lcd.centerY(), centered = true)
 
         // Graduations à gauche de la fente : un trait tous les 12,5 %, chiffrées tous les 25 %.
         text.typeface = medium
@@ -405,14 +404,9 @@ class FaderStrip(context: Context) : View(context) {
         text.color = cLcdText
         text.textSize = sp(if (tight) 13f else 15f)
         if (tight) {
-            text.textAlign = Paint.Align.LEFT
-            val room = width - iconBox.right - dp(20)
-            val name = TextUtils.ellipsize(shownTitle, text, room, TextUtils.TruncateAt.END).toString()
-            canvas.drawText(name, iconBox.right + dp(10), iconBox.centerY() - (text.ascent() + text.descent()) / 2, text)
+            drawName(canvas, width - iconBox.right - dp(20), iconBox.right + dp(10), iconBox.centerY(), centered = false)
         } else {
-            text.textAlign = Paint.Align.CENTER
-            val name = TextUtils.ellipsize(shownTitle, text, width - dp(16).toFloat(), TextUtils.TruncateAt.END).toString()
-            canvas.drawText(name, lcd.centerX(), lcd.centerY() - (text.ascent() + text.descent()) / 2, text)
+            drawName(canvas, width - dp(16).toFloat(), lcd.centerX(), lcd.centerY(), centered = true)
         }
 
         // Rail : fin, rempli d'accent sous la pastille (gris en sourdine).
@@ -545,14 +539,39 @@ class FaderStrip(context: Context) : View(context) {
     /** Sans niveau lu (Mac) : le vumètre est estompé, pour ne pas passer pour un silence. */
     private fun grayed(color: Int) = if (metered) color else ColorUtils.setAlphaComponent(color, Color.alpha(color) * UNMETERED_ALPHA / 255)
 
-    /** Nom affiché : suivi d'une flèche quand le toucher ouvre un choix. */
-    private val shownTitle get() = if (onTitle != null) "$title \u25BE" else title
+    private val caretPath = Path()
 
-    /** Zone du nom qui répond au toucher (le nom ne se dessine pas au même endroit selon le style). */
-    private fun titleHit(x: Float, y: Float) = onTitle != null && if (bare && tight) {
-        x >= iconBox.right && y <= muteBox.bottom
-    } else {
-        lcd.contains(x, y)
+    /**
+     * Nom de la tranche, centré sur `x` ou commençant à `x`. Quand le toucher ouvre un choix, un petit chevron dessiné
+     * le suit : le nom est raccourci avant lui, la flèche reste donc visible, et elle ne dépend d'aucune police.
+     */
+    private fun drawName(canvas: Canvas, room: Float, x: Float, centerY: Float, centered: Boolean) {
+        val caret = if (onTitle != null) dp(CARET_DP + CARET_GAP_DP).toFloat() else 0f
+        val name = TextUtils.ellipsize(title, text, room - caret, TextUtils.TruncateAt.END).toString()
+        val width = text.measureText(name)
+        val left = if (centered) x - (width + caret) / 2 else x
+        text.textAlign = Paint.Align.LEFT
+        canvas.drawText(name, left, centerY - (text.ascent() + text.descent()) / 2, text)
+        if (caret == 0f) return
+        val half = dp(CARET_DP) / 2f
+        val cx = left + width + dp(CARET_GAP_DP) + half
+        caretPath.rewind()
+        caretPath.moveTo(cx - half, centerY - half / 2)
+        caretPath.lineTo(cx + half, centerY - half / 2)
+        caretPath.lineTo(cx, centerY + half / 2)
+        caretPath.close()
+        paint.color = text.color
+        canvas.drawPath(caretPath, paint)
+    }
+
+    /**
+     * Zone du nom qui répond au toucher (le nom ne se dessine pas au même endroit selon le style), agrandie en hauteur
+     * pour un doigt (48 dp). Muet et le curseur gardent la priorité : testés avant à l'appui.
+     */
+    private fun titleHit(x: Float, y: Float): Boolean {
+        if (onTitle == null) return false
+        val pad = dp(TITLE_PAD_DP)
+        return if (bare && tight) x >= muteBox.right && y <= muteBox.bottom else x >= lcd.left && x <= lcd.right && y >= lcd.top - pad && y <= lcd.bottom + pad
     }
 
     /** TalkBack : le nom de la tranche, et « son coupé » en sourdine. */
@@ -560,6 +579,7 @@ class FaderStrip(context: Context) : View(context) {
         contentDescription = when {
             silent -> context.getString(R.string.mixer_strip_silent, title)
             muted -> context.getString(R.string.mixer_strip_muted, title)
+            onTitle != null -> context.getString(R.string.mixer_strip_choose, title)
             else -> title
         }
         // TalkBack : couper ou rendre le son sans viser la touche (ou l'icône, dans Hush) ; rien à couper sans son.
@@ -713,6 +733,9 @@ class FaderStrip(context: Context) : View(context) {
         private const val UNMETERED_ALPHA = 0x59
         /** Sous cette hauteur (dp), tranche resserrée : la console d'un profil de l'Accueil. */
         const val TIGHT_DP = 380
+        const val CARET_DP = 10
+        const val CARET_GAP_DP = 6
+        const val TITLE_PAD_DP = 12
         private const val VALUE_TIGHT_SP = 22f
         private const val HOLD_MS = 500L
         private const val FALL_PER_MS = 0.012f

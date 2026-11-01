@@ -1,7 +1,6 @@
 package app.mate.net
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 
 class AudioOutputsTest {
@@ -20,10 +19,20 @@ class AudioOutputsTest {
     }
 
     @Test
+    fun `parseAudioOutputs ignore une entree sans id et nomme par l'id une sortie sans nom`() {
+        val outputs = parseAudioOutputs("""{"outputs":[{"name":"x"},{"id":"{c}"}]}""")
+        assertEquals(listOf(AudioOutput("{c}", "{c}", false)), outputs)
+    }
+
+    @Test
+    fun `parseAudioOutputs sans la cle outputs donne une liste vide`() {
+        assertEquals(emptyList<AudioOutput>(), parseAudioOutputs("{}"))
+    }
+
+    @Test
     fun `currentIndex donne la place de la sortie qui sert, -1 si aucune`() {
         val list = listOf(AudioOutput("a", "A", false), AudioOutput("b", "B", true))
         assertEquals(1, currentOutputIndex(list))
         assertEquals(-1, currentOutputIndex(list.map { it.copy(current = false) }))
-        assertNull(list.firstOrNull { it.id == "zzz" })
     }
 }
