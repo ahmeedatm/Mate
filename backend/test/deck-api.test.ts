@@ -106,7 +106,7 @@ describe("POST /deck/run avec hold (appui long)", () => {
 
   it("refuse (409) une touche sans seconde action, et rien ne part", async () => {
     const tile = await tileByLabel("Verrouiller");
-    assert.equal(tile.hold, false);
+    assert.ok(!tile.hold);
     assert.equal((await server.call("POST", "/deck/run", { id: tile.id, hold: true })).status, 409);
     assert.deepEqual(server.osCalls(), []);
   });

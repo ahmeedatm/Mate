@@ -97,7 +97,7 @@ export default async function deckRoutes(app: FastifyInstance) {
                 when: t.when ?? null,
                 lit: t.lit ?? null,
                 state: t.state ?? null,
-                hold: Boolean(t.hold),
+                ...(t.hold ? { hold: true } : {}),
                 // Nom de l'appli (page Apps : liste des applis déjà ajoutées).
                 app: t.action.type === "app" ? t.action.name : null,
               },
