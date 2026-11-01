@@ -183,6 +183,9 @@ class MixerView @JvmOverloads constructor(
     /** Applis qui ont du son en ce moment, d'après le dernier état lu ; null : inconnu ou pas de volume par appli. */
     val liveApps: List<MixerChannel>? get() = state?.apps
 
+    /** Un état a été lu (sinon : pas encore, ou ordinateur injoignable ; `liveApps` null ne veut alors pas dire Mac). */
+    val hasState: Boolean get() = state != null
+
     /** Choix d'applis changé (⚙ du widget) : les voies suivent tout de suite, sans attendre la relecture. */
     fun refreshApps() {
         state?.let(::render)
@@ -210,7 +213,7 @@ class MixerView @JvmOverloads constructor(
             val strip = views[c.id] ?: return@forEach
             strip.title = titleOf(c)
             // Appli choisie qui ne fait pas de son : sa voie garde sa place, grisée.
-            strip.silent = c.id != "master" && c.id != "mic" && next.apps?.none { it.id == c.id } == true
+            strip.silent = MixerApps.isSilent(c.id, next.apps)
             if (now >= (heldUntil[c.id] ?: 0L)) {
                 strip.volume = c.volume
                 strip.muted = c.muted

@@ -40,11 +40,18 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         addView(mixer, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
     }
 
-    override fun setActive(active: Boolean) = mixer.setActive(active)
+    override fun setActive(active: Boolean) {
+        // Relu en arrivant sur l'écran, pas à chaque relecture de la table (4 fois par seconde).
+        if (active) loaded = null
+        mixer.setActive(active)
+    }
 
     private val computerId get() = Computers.active(context)?.id
 
-    private fun chosen() = MixerApps.read(placed.config, computerId)
+    /** Choix lu une fois (ordinateur actif + config) ; oublié à l'arrivée sur l'écran et après un changement. */
+    private var loaded: List<MixerApps.App>? = null
+
+    private fun chosen() = loaded ?: MixerApps.read(placed.config, computerId).also { loaded = it }
 
     // --- Réglages (⚙ du mode Modifier)
 
@@ -66,10 +73,13 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     /** Les choisies d'abord (poignée pour les ordonner), puis celles qui ont du son ; refait après chaque changement. */
     private fun fillSettings(box: LinearLayout) {
         box.removeAllViews()
-        val live = mixer.liveApps
+        // Rien de lu (pas encore, ou injoignable) : les choisies seules, décochables ; lu sans liste : Mac.
+        val live = if (mixer.hasState) mixer.liveApps else emptyList()
+        val candidates = MixerApps.candidates(chosen(), live, mixer::titleOf)
         val hint = when {
+            !mixer.hasState -> R.string.mixer_apps_unknown
             live == null -> R.string.mixer_no_apps
-            MixerApps.candidates(chosen(), live, mixer::titleOf).isEmpty() -> R.string.mixer_apps_none
+            candidates.isEmpty() -> R.string.mixer_apps_none
             else -> R.string.mixer_apps_hint
         }
         box.addView(label(15f, R.attr.c_text_dim).apply {
@@ -78,14 +88,13 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         })
         if (live == null) return
         val chosenIds = chosen().map { it.id }.toSet()
-        MixerApps.candidates(chosen(), live, mixer::titleOf).forEach { app -> box.addView(row(box, app, app.id in chosenIds)) }
+        candidates.forEach { app -> box.addView(row(box, app, app.id in chosenIds)) }
     }
 
     @SuppressLint("ClickableViewAccessibility")
     private fun row(box: LinearLayout, app: MixerApps.App, checked: Boolean) = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
         minimumHeight = dp(52)
-        tag = Row(app, checked)
         val row = this
         addView(ImageView(context).apply {
             setImageResource(R.drawable.ic_drag)
@@ -99,23 +108,27 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
                 row.startDragAndDrop(null, View.DragShadowBuilder(row), row, 0)
                 true
             }
-        }, LinearLayout.LayoutParams(dp(40), dp(48)))
-        addView(CheckBox(context).apply {
+        }, LinearLayout.LayoutParams(dp(48), dp(48)))
+        val check = CheckBox(context).apply {
             text = app.name
             textSize = 17f
             setTextColor(themeColor(context, R.attr.c_text))
             isChecked = checked
-            setOnCheckedChangeListener { _, _ -> commit(box) }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        if (checked) {
-            setOnDragListener { target, event -> onDrag(box, target, event) }
-            // TalkBack : ordonner sans glisser.
-            ViewCompat.addAccessibilityAction(this, context.getString(R.string.mixer_scene_before)) { _, _ -> nudge(box, row, -1) }
-            ViewCompat.addAccessibilityAction(this, context.getString(R.string.mixer_scene_after)) { _, _ -> nudge(box, row, 1) }
+            // Cocher ou décocher change de groupe : la liste se refait (poignées, ordre).
+            setOnCheckedChangeListener { _, _ -> commit(box, rebuild = true) }
+            if (checked) {
+                // TalkBack (la case a le focus) : ordonner sans glisser.
+                ViewCompat.addAccessibilityAction(this, context.getString(R.string.mixer_scene_before)) { _, _ -> nudge(box, row, -1) }
+                ViewCompat.addAccessibilityAction(this, context.getString(R.string.mixer_scene_after)) { _, _ -> nudge(box, row, 1) }
+            }
         }
+        addView(check, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        tag = Row(app, check, checked)
+        if (checked) setOnDragListener { target, event -> onDrag(box, target, event) }
     }
 
-    private data class Row(val app: MixerApps.App, val wasChecked: Boolean)
+    /** Ligne du ⚙ : l'appli, sa case, et si elle était cochée quand la liste a été faite (seules celles-là s'ordonnent). */
+    private data class Row(val app: MixerApps.App, val check: CheckBox, val ordered: Boolean)
 
     /** Une ligne cochée glissée sur une autre cochée prend sa place ; à la fin, l'ordre est enregistré. */
     private fun onDrag(box: LinearLayout, target: View, event: DragEvent): Boolean {
@@ -130,36 +143,35 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             }
             DragEvent.ACTION_DRAG_ENDED -> if (target === dragged) {
                 dragged.alpha = 1f
-                commit(box)
+                commit(box, rebuild = false)
             }
         }
         return true
     }
 
     private fun nudge(box: LinearLayout, row: View, by: Int): Boolean {
-        val checked = (0 until box.childCount).map { box.getChildAt(it) }.filter { (it.tag as? Row)?.wasChecked == true }
+        val checked = (0 until box.childCount).map { box.getChildAt(it) }.filter { (it.tag as? Row)?.ordered == true }
         val from = checked.indexOf(row)
         val to = from + by
         if (from < 0 || to !in checked.indices) return false
         val index = box.indexOfChild(checked[to])
         box.removeView(row)
         box.addView(row, index)
-        commit(box)
+        commit(box, rebuild = false)
         return true
     }
 
-    /** Choix lu à l'écran (lignes cochées, dans leur ordre) : rangé pour cet ordinateur, la table suit tout de suite. */
-    private fun commit(box: LinearLayout) {
-        val apps = (0 until box.childCount).map { box.getChildAt(it) }.mapNotNull { v ->
-            val row = v.tag as? Row ?: return@mapNotNull null
-            val check = (v as ViewGroup).getChildAt(1) as CheckBox
-            row.app.takeIf { check.isChecked }
-        }
+    /**
+     * Choix lu à l'écran (lignes cochées, dans leur ordre) : rangé pour cet ordinateur, la table suit tout de suite.
+     * `rebuild` : une case a changé, la liste se refait ; un déplacement est déjà à l'écran (focus TalkBack gardé).
+     */
+    private fun commit(box: LinearLayout, rebuild: Boolean) {
+        val apps = (0 until box.childCount).mapNotNull { (box.getChildAt(it).tag as? Row)?.takeIf { r -> r.check.isChecked }?.app }
         if (!MixerApps.write(placed.config, computerId, apps)) return
+        loaded = apps
         host.save()
         mixer.refreshApps()
-        // Une appli cochée ou décochée change de groupe : la liste se refait (poignées, ordre).
-        box.post { fillSettings(box) }
+        if (rebuild) box.post { fillSettings(box) }
     }
 
     private companion object {

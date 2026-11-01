@@ -50,4 +50,14 @@ class MixerAppsTest {
         assertEquals(emptyList<MixerApps.App>(), MixerApps.read(config, "pc-2"))
         assertEquals(emptyList<MixerApps.App>(), MixerApps.read(config, null))
     }
+
+    @Test
+    fun `voie sans son - une appli choisie absente, jamais la sortie ni le micro`() {
+        val live = listOf(discord)
+        assertTrue(MixerApps.isSilent("valorant", live))
+        assertFalse(MixerApps.isSilent("discord", live))
+        assertFalse(MixerApps.isSilent("master", live))
+        assertFalse(MixerApps.isSilent("mic", live))
+        assertFalse("Mac : rien n'est muet faute de liste", MixerApps.isSilent("valorant", null))
+    }
 }

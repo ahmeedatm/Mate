@@ -45,4 +45,8 @@ object MixerApps {
      */
     fun candidates(chosen: List<App>, live: List<MixerChannel>?, name: (MixerChannel) -> String = { it.name }): List<App> =
         chosen + live.orEmpty().filter { c -> chosen.none { it.id == c.id } }.map { App(it.id, name(it)) }
+
+    /** Voie d'une appli choisie qui ne fait pas de son en ce moment (grisée, « pas de son ») ; jamais la sortie ni le micro. */
+    fun isSilent(id: String, live: List<MixerChannel>?): Boolean =
+        live != null && id != "master" && id != "mic" && live.none { it.id == id }
 }

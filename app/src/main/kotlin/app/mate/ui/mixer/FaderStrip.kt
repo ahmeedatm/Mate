@@ -66,6 +66,7 @@ class FaderStrip(context: Context) : View(context) {
         set(value) {
             if (field == value) return
             field = value
+            describe()
             invalidate()
         }
 
@@ -537,9 +538,15 @@ class FaderStrip(context: Context) : View(context) {
 
     /** TalkBack : le nom de la tranche, et « son coupé » en sourdine. */
     private fun describe() {
-        contentDescription = if (muted) context.getString(R.string.mixer_strip_muted, title) else title
-        // TalkBack : couper ou rendre le son sans viser la touche (ou l'icône, dans Hush).
+        contentDescription = when {
+            silent -> context.getString(R.string.mixer_strip_silent, title)
+            muted -> context.getString(R.string.mixer_strip_muted, title)
+            else -> title
+        }
+        // TalkBack : couper ou rendre le son sans viser la touche (ou l'icône, dans Hush) ; rien à couper sans son.
         muteAction?.let { ViewCompat.removeAccessibilityAction(this, it) }
+        muteAction = null
+        if (silent) return
         val label = context.getString(if (muted) R.string.mixer_unmute_action else R.string.mixer_mute_action, title)
         muteAction = ViewCompat.addAccessibilityAction(this, label) { _, _ ->
             onMute?.invoke()
@@ -593,7 +600,7 @@ class FaderStrip(context: Context) : View(context) {
             MotionEvent.ACTION_DOWN -> {
                 downX = event.x
                 downY = event.y
-                pressingMute = muteBox.contains(event.x, event.y)
+                pressingMute = !silent && muteBox.contains(event.x, event.y)
                 grabbing = !pressingMute && volume != null && event.y >= faderArea.top - dp(8) && event.y <= faderArea.bottom + dp(8)
                 startVolume = volume ?: 0
                 if (pressingMute) invalidate()
