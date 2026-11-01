@@ -9,13 +9,14 @@ import android.os.Process
 import app.mate.BuildConfig
 import app.mate.MainActivity
 import app.mate.Prefs
+import app.mate.trial.Trial
 import app.mate.voice.WakeModel
 import java.io.File
 
 /**
  * « Remettre à neuf » (carte Kiosque, code technicien) : efface ce que l'appli a gardé, comme pour un nouvel utilisateur
  * (ordinateurs appairés, thème, écrans, réglages, eau, photos du cadre, cache, cookies de la page web), puis la relance
- * sur l'écran d'accueil d'une tablette neuve. Restent le kiosque (device owner, tenu par Android, et les réglages de la
+ * sur l'écran d'accueil d'une tablette neuve ; l'essai d'une PR est désinstallé ([forgetTrial]). Restent le kiosque (device owner, tenu par Android, et les réglages de la
  * carte Kiosque), le WiFi d'Android et ce qui n'est pas à l'utilisateur : installeurs gardés pour les ordinateurs, modèle
  * du mot de réveil. `pm clear` ne convient pas : Android protège les données du device owner.
  */
@@ -33,6 +34,22 @@ object FreshStart {
 
     /** Entrées de `filesDir` à effacer. */
     fun filesToWipe(names: List<String>): List<String> = names.filter { it !in KEPT_FILES }
+
+    /**
+     * Stable : l'essai d'une PR garde ses propres données (ordinateurs appairés et leurs jetons) ; il est désinstallé avant
+     * la remise à neuf, sinon le nouvel utilisateur piloterait l'ordinateur de l'ancien en l'ouvrant. Échec : lève, rien
+     * n'est effacé.
+     */
+    suspend fun forgetTrial(context: Context) {
+        if (BuildConfig.TRIAL || !Trial.isInstalled(context, Trial.TRIAL)) return
+        val app = context.applicationContext
+        Kiosk.lockApps(app, false)
+        try {
+            Updater.uninstall(app, Trial.TRIAL)
+        } finally {
+            Kiosk.lockApps(app, !Prefs.allowInstalls(app))
+        }
+    }
 
     /** Efface tout, puis relance l'appli dans un nouveau processus (aucun état en mémoire ne survit). */
     fun run(activity: Activity) {

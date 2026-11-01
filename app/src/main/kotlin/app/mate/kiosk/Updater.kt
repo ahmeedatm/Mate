@@ -129,9 +129,9 @@ object Updater {
     /**
      * Désinstalle un paquet sans confirmation (device owner) : l'essai d'une PR à la version plus ancienne que l'essai
      * installé, qu'Android refuserait de remplacer. Ses données partent avec ; il reprend les ordinateurs de la stable.
-     * Appelé pendant [install], installations déjà permises ([Kiosk.lockApps]).
+     * Appelé pendant [install] et par [FreshStart.forgetTrial], installations déjà permises ([Kiosk.lockApps]).
      */
-    private suspend fun uninstall(app: Context, pkg: String) {
+    internal suspend fun uninstall(app: Context, pkg: String) {
         val action = "${app.packageName}.UNINSTALL_RESULT_$pkg"
         val result = CompletableDeferred<Intent>()
         val receiver = object : BroadcastReceiver() {
