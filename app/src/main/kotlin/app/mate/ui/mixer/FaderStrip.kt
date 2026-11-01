@@ -53,6 +53,14 @@ class FaderStrip(context: Context) : View(context) {
     var onVolume: ((volume: Int, final: Boolean) -> Unit)? = null
     var onMute: (() -> Unit)? = null
 
+    /** Toucher le nom de la tranche (voie Sortie : choisir la sortie audio) ; null : le nom ne répond pas au toucher. */
+    var onTitle: (() -> Unit)? = null
+        set(value) {
+            field = value
+            describe()
+            invalidate()
+        }
+
     var title = ""
         set(value) {
             if (field == value) return
@@ -195,6 +203,7 @@ class FaderStrip(context: Context) : View(context) {
     private var startVolume = 0
     private var grabbing = false
     private var pressingMute = false
+    private var pressingTitle = false
 
     init {
         isClickable = true
@@ -332,7 +341,7 @@ class FaderStrip(context: Context) : View(context) {
         text.color = cLcdText
         text.textSize = sp(16f)
         text.textAlign = Paint.Align.CENTER
-        val name = TextUtils.ellipsize(title, text, lcd.width() - dp(12), TextUtils.TruncateAt.END).toString()
+        val name = TextUtils.ellipsize(shownTitle, text, lcd.width() - dp(12), TextUtils.TruncateAt.END).toString()
         canvas.drawText(name, lcd.centerX(), lcd.centerY() - (text.ascent() + text.descent()) / 2, text)
 
         // Graduations à gauche de la fente : un trait tous les 12,5 %, chiffrées tous les 25 %.
@@ -398,11 +407,11 @@ class FaderStrip(context: Context) : View(context) {
         if (tight) {
             text.textAlign = Paint.Align.LEFT
             val room = width - iconBox.right - dp(20)
-            val name = TextUtils.ellipsize(title, text, room, TextUtils.TruncateAt.END).toString()
+            val name = TextUtils.ellipsize(shownTitle, text, room, TextUtils.TruncateAt.END).toString()
             canvas.drawText(name, iconBox.right + dp(10), iconBox.centerY() - (text.ascent() + text.descent()) / 2, text)
         } else {
             text.textAlign = Paint.Align.CENTER
-            val name = TextUtils.ellipsize(title, text, width - dp(16).toFloat(), TextUtils.TruncateAt.END).toString()
+            val name = TextUtils.ellipsize(shownTitle, text, width - dp(16).toFloat(), TextUtils.TruncateAt.END).toString()
             canvas.drawText(name, lcd.centerX(), lcd.centerY() - (text.ascent() + text.descent()) / 2, text)
         }
 
@@ -536,6 +545,16 @@ class FaderStrip(context: Context) : View(context) {
     /** Sans niveau lu (Mac) : le vumètre est estompé, pour ne pas passer pour un silence. */
     private fun grayed(color: Int) = if (metered) color else ColorUtils.setAlphaComponent(color, Color.alpha(color) * UNMETERED_ALPHA / 255)
 
+    /** Nom affiché : suivi d'une flèche quand le toucher ouvre un choix. */
+    private val shownTitle get() = if (onTitle != null) "$title \u25BE" else title
+
+    /** Zone du nom qui répond au toucher (le nom ne se dessine pas au même endroit selon le style). */
+    private fun titleHit(x: Float, y: Float) = onTitle != null && if (bare && tight) {
+        x >= iconBox.right && y <= muteBox.bottom
+    } else {
+        lcd.contains(x, y)
+    }
+
     /** TalkBack : le nom de la tranche, et « son coupé » en sourdine. */
     private fun describe() {
         contentDescription = when {
@@ -544,6 +563,14 @@ class FaderStrip(context: Context) : View(context) {
             else -> title
         }
         // TalkBack : couper ou rendre le son sans viser la touche (ou l'icône, dans Hush) ; rien à couper sans son.
+        titleAction?.let { ViewCompat.removeAccessibilityAction(this, it) }
+        titleAction = null
+        onTitle?.let { open ->
+            titleAction = ViewCompat.addAccessibilityAction(this, context.getString(R.string.mixer_output_action)) { _, _ ->
+                open()
+                true
+            }
+        }
         muteAction?.let { ViewCompat.removeAccessibilityAction(this, it) }
         muteAction = null
         if (silent) return
@@ -554,6 +581,7 @@ class FaderStrip(context: Context) : View(context) {
         }
     }
     private var muteAction: Int? = null
+    private var titleAction: Int? = null
 
     /** Touche Muet (pilule) : relief au repos, enfoncée au toucher, éclairée quand le son est coupé. */
     private fun drawMute(canvas: Canvas) {
@@ -601,10 +629,11 @@ class FaderStrip(context: Context) : View(context) {
                 downX = event.x
                 downY = event.y
                 pressingMute = !silent && muteBox.contains(event.x, event.y)
+                pressingTitle = !pressingMute && titleHit(event.x, event.y)
                 grabbing = !pressingMute && volume != null && event.y >= faderArea.top - dp(8) && event.y <= faderArea.bottom + dp(8)
                 startVolume = volume ?: 0
                 if (pressingMute) invalidate()
-                return pressingMute || grabbing
+                return pressingMute || pressingTitle || grabbing
             }
             MotionEvent.ACTION_MOVE -> {
                 val dx = event.x - downX
@@ -639,10 +668,16 @@ class FaderStrip(context: Context) : View(context) {
                     performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                     performClick()
                     onMute?.invoke()
+                } else if (pressingTitle && titleHit(event.x, event.y)) {
+                    performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    performClick()
+                    onTitle?.invoke()
                 }
+                pressingTitle = false
                 grabbing = false
             }
             MotionEvent.ACTION_CANCEL -> {
+                pressingTitle = false
                 dragging = false
                 grabbing = false
                 if (pressingMute) {

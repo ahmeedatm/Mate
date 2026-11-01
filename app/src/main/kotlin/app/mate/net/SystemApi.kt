@@ -130,6 +130,22 @@ fun parseClipHistory(json: String): List<ClipHistoryItem> {
     }
 }
 
+/** Sortie audio de l'ordinateur (enceinte, casque, carte son) ; `id` : identifiant du système, `current` : celle qui sert. */
+data class AudioOutput(val id: String, val name: String, val current: Boolean)
+
+/** Réponse de `GET /system/audio/outputs` et `POST /system/audio/output`. */
+fun parseAudioOutputs(json: String): List<AudioOutput> {
+    val outputs = JSONObject(json).optJSONArray("outputs") ?: return emptyList()
+    return (0 until outputs.length()).mapNotNull { i ->
+        val o = outputs.optJSONObject(i) ?: return@mapNotNull null
+        val id = o.optStringOrNull("id") ?: return@mapNotNull null
+        AudioOutput(id, o.optStringOrNull("name") ?: id, o.optBoolean("current"))
+    }
+}
+
+/** Place de la sortie qui sert dans la liste, -1 si aucune. */
+fun currentOutputIndex(outputs: List<AudioOutput>): Int = outputs.indexOfFirst { it.current }
+
 /** Système de l'ordinateur : son, lecture en cours, Ne pas déranger, appels, applis, saisie, réglages. */
 class SystemApi(private val http: Http) {
 
@@ -157,6 +173,14 @@ class SystemApi(private val http: Http) {
         volume?.let { body.put("volume", it) }
         muted?.let { body.put("muted", it) }
         parseAppAudio(http.postJson("/system/audio/app", body))
+    }
+
+    /** Sorties audio de l'ordinateur ; HTTP 501 si l'ordinateur ne pilote pas le son. */
+    suspend fun audioOutputs(): List<AudioOutput> = http.io { parseAudioOutputs(http.get("/system/audio/outputs", timeoutMs = 5_000)) }
+
+    /** Fait de la sortie `id` la sortie par défaut de l'ordinateur ; rend la liste à jour. */
+    suspend fun setAudioOutput(id: String): List<AudioOutput> = http.io {
+        parseAudioOutputs(http.postJson("/system/audio/output", JSONObject().put("id", id)))
     }
 
     // Mélangeur (onglet Son) ; HTTP 501 si l'ordinateur ne pilote pas le son.
