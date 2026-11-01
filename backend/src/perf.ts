@@ -27,11 +27,16 @@ export type NetPerf = { upKBps: number; downKBps: number };
 /**
  * `cpuTempC` : température du processeur en °C entiers ; absente quand aucun lecteur fiable n'existe. `fps` : images par
  * seconde du jeu au premier plan ; `null` quand le lecteur marche mais qu'aucun jeu n'est mesuré (jamais 0).
+ * `cpuWatts`, `gpuWatts` : puissance consommée en watts (une décimale) ; `cpuFanRpm` : ventilateur du processeur en
+ * tours par minute entiers. Chacun est absent quand aucun lecteur fiable n'existe.
  */
 export type Perf = {
   cpu: number;
   cpuMhz?: number;
   cpuTempC?: number;
+  cpuWatts?: number;
+  cpuFanRpm?: number;
+  gpuWatts?: number;
   fps?: number | null;
   ram: RamUsage;
   gpu?: GpuPerf;
@@ -55,6 +60,9 @@ export type PerfSources = {
   cpuMhz?: () => Promise<number | null>;
   /** Température du processeur en °C ; absente ou `null` : pas de lecteur fiable (jamais de valeur inventée). */
   cpuTemp?: () => Promise<number | null>;
+  cpuWatts?: () => Promise<number | null>;
+  cpuFanRpm?: () => Promise<number | null>;
+  gpuWatts?: () => Promise<number | null>;
   /** Images par seconde du jeu en cours (`fps` nul : aucun jeu mesuré) ; `null` ou absente : pas de lecteur sur cette machine. */
   fps?: () => Promise<{ fps: number | null } | null>;
   disk?: () => Promise<DiskRaw | null>;
@@ -104,6 +112,16 @@ function normalizeCpuMhz(mhz: number): number | undefined {
 /** Une température hors 10–150 °C est une lecture ratée (0 = capteur illisible). */
 function normalizeTemp(c: number): number | undefined {
   return Number.isFinite(c) && c >= 10 && c <= 150 ? Math.round(c) : undefined;
+}
+
+/** Une puissance nulle, négative ou au-delà de 1000 W est une lecture ratée ; une décimale. */
+function normalizeWatts(w: number): number | undefined {
+  return Number.isFinite(w) && w > 0 && w <= 1000 ? oneDecimal(w) : undefined;
+}
+
+// shortcut: 0 tr/min est écarté (un capteur de carte mère sans ventilateur branché lit 0), donc un ventilateur à l'arrêt n'est pas montré ; à revoir si on veut distinguer.
+function normalizeCpuFan(rpm: number): number | undefined {
+  return Number.isFinite(rpm) && rpm > 0 ? Math.round(rpm) : undefined;
 }
 
 /** Entier d'images par seconde ; 0, négatif ou illisible : aucun jeu mesuré (`null`), jamais un 0 affiché. */
@@ -218,6 +236,9 @@ export function perfSampler(sources: PerfSources): () => Promise<Perf> {
   const gpuRead = sources.gpu && bounded(sources.gpu, GPU_WAIT_MS);
   const readMhz = optional(sources.cpuMhz, normalizeCpuMhz);
   const readTemp = optional(sources.cpuTemp, normalizeTemp);
+  const readCpuWatts = optional(sources.cpuWatts, normalizeWatts);
+  const readCpuFan = optional(sources.cpuFanRpm, normalizeCpuFan);
+  const readGpuWatts = optional(sources.gpuWatts, normalizeWatts);
   const readFps = optional(sources.fps, normalizeFps);
   const readDisk = optional(sources.disk, normalizeDisk);
   const readNet = optional(sources.net, normalizeNet);
@@ -264,12 +285,15 @@ export function perfSampler(sources: PerfSources): () => Promise<Perf> {
   }
 
   async function measure(): Promise<Perf> {
-    const [cpu, memory, gpu, cpuMhz, cpuTempC, fps, disk, net] = await Promise.all([
+    const [cpu, memory, gpu, cpuMhz, cpuTempC, cpuWatts, cpuFanRpm, gpuWatts, fps, disk, net] = await Promise.all([
       readCpu(),
       sources.memory(),
       readGpu(),
       readMhz(),
       readTemp(),
+      readCpuWatts(),
+      readCpuFan(),
+      readGpuWatts(),
       readFps(),
       readDisk(),
       readNet(),
@@ -277,6 +301,9 @@ export function perfSampler(sources: PerfSources): () => Promise<Perf> {
     const perf: Perf = { cpu, ram: ramUsage(memory.total, memory.available) };
     if (cpuMhz !== undefined) perf.cpuMhz = cpuMhz;
     if (cpuTempC !== undefined) perf.cpuTempC = cpuTempC;
+    if (cpuWatts !== undefined) perf.cpuWatts = cpuWatts;
+    if (cpuFanRpm !== undefined) perf.cpuFanRpm = cpuFanRpm;
+    if (gpuWatts !== undefined) perf.gpuWatts = gpuWatts;
     if (fps !== undefined) perf.fps = fps;
     if (gpu) perf.gpu = gpu;
     if (disk) perf.disk = disk;
