@@ -177,9 +177,21 @@ class MixerView @JvmOverloads constructor(
         false
     }
 
+    /** Applis à montrer (table d'un profil : son choix, `MixerApps`) ; null : toutes. Rend null sans volume par appli (Mac). */
+    var appFilter: ((List<MixerChannel>?) -> List<MixerChannel>?)? = null
+
+    /** Applis qui ont du son en ce moment, d'après le dernier état lu ; null : inconnu ou pas de volume par appli. */
+    val liveApps: List<MixerChannel>? get() = state?.apps
+
+    /** Choix d'applis changé (⚙ du widget) : les voies suivent tout de suite, sans attendre la relecture. */
+    fun refreshApps() {
+        state?.let(::render)
+    }
+
     private fun render(next: MixerState) {
         state = next
-        val channels = listOf(next.master, next.mic) + next.apps.orEmpty()
+        val apps = appFilter?.invoke(next.apps) ?: next.apps
+        val channels = listOf(next.master, next.mic) + apps.orEmpty()
         val ids = channels.map { it.id }
         if (ids != views.keys.toList()) {
             val reuse = HashMap(views)
@@ -197,6 +209,8 @@ class MixerView @JvmOverloads constructor(
         channels.forEach { c ->
             val strip = views[c.id] ?: return@forEach
             strip.title = titleOf(c)
+            // Appli choisie qui ne fait pas de son : sa voie garde sa place, grisée.
+            strip.silent = c.id != "master" && c.id != "mic" && next.apps?.none { it.id == c.id } == true
             if (now >= (heldUntil[c.id] ?: 0L)) {
                 strip.volume = c.volume
                 strip.muted = c.muted
@@ -225,7 +239,8 @@ class MixerView @JvmOverloads constructor(
         }
     }
 
-    private fun titleOf(c: MixerChannel) = when (c.id) {
+    /** Nom affiché d'une voie (« Système » pour les sons de Windows, qui n'ont pas de nom) ; repris par le ⚙ du widget. */
+    fun titleOf(c: MixerChannel) = when (c.id) {
         "master" -> context.getString(R.string.mixer_master)
         "mic" -> context.getString(R.string.mixer_mic)
         "system" -> context.getString(R.string.mixer_system)
@@ -254,7 +269,8 @@ class MixerView @JvmOverloads constructor(
             senderFor(c.id).offer(volume)
             if (final) hold(c.id)
         }
-        onMute = {
+        onMute = onMute@{
+            if (silent) return@onMute
             val mute = !muted
             muted = mute
             hold(c.id)
