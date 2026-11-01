@@ -2,8 +2,11 @@
  * Home Assistant de la maison, via un jeton d'accès longue durée (profil de l'utilisateur dans Home Assistant).
  * Optionnel : actif seulement si HA_URL, HA_TOKEN et HA_ENTITIES sont définis dans .env. Le jeton reste sur l'ordinateur :
  * la tablette ne reçoit que l'état des entités de HA_ENTITIES (liste blanche) et ne peut agir que sur elles.
- * Home Assistant tourne presque toujours en http sur le réseau de la maison : http est accepté ici, contrairement à Jira.
+ * Le jeton a tous les droits du compte : comme pour Jira, https seulement, sauf http sur cet ordinateur (127.0.0.1,
+ * localhost) ou avec HA_ALLOW_HTTP=1, que l'on pose en sachant que le jeton passe alors en clair sur le WiFi.
  */
+
+import { readCapped } from "./net-guard.ts";
 
 const rawUrl = process.env.HA_URL?.trim().replace(/\/+$/, "");
 const token = process.env.HA_TOKEN?.trim();
@@ -17,7 +20,20 @@ const SERVICES = {
 
 export const HA_ENTITY_ID = /^(light|switch|scene)\.[a-z0-9_]+$/;
 
-const base = rawUrl && /^https?:\/\/[^/\s]+$/i.test(rawUrl) ? rawUrl : undefined;
+/** Réponse lue au plus : `/api/states` d'une grosse maison fait quelques centaines de Ko. */
+const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
+
+const LOCAL_HTTP = /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i;
+const allowHttp = process.env.HA_ALLOW_HTTP?.trim() === "1";
+
+function safeBase(url: string | undefined): string | undefined {
+  if (!url || !/^https?:\/\/[^/\s]+$/i.test(url)) return undefined;
+  if (/^https:/i.test(url) || LOCAL_HTTP.test(url) || allowHttp) return url;
+  console.warn("Home Assistant ignoré : HA_URL en http enverrait le jeton en clair sur le réseau (https, ou HA_ALLOW_HTTP=1).");
+  return undefined;
+}
+
+const base = safeBase(rawUrl);
 
 /** Liste blanche, dans l'ordre du .env, sans doublon ; un identifiant mal écrit ou d'un domaine non géré est ignoré. */
 export const haEntityIds = [
@@ -41,13 +57,23 @@ async function ha<T>(path: string, init?: { body: object }): Promise<T> {
     headers: { authorization: `Bearer ${token}`, ...(init ? { "content-type": "application/json" } : {}) },
     body: init && JSON.stringify(init.body),
     signal: AbortSignal.timeout(10_000),
+    // Une redirection enverrait la requête ailleurs que vers l'instance configurée.
+    redirect: "error",
   }).catch(() => {
     // Réseau coupé, DNS, délai dépassé : « fetch failed » ne dit rien à l'écran de la tablette.
     throw new Error("Home Assistant ne répond pas : vérifie la connexion de l'ordinateur.");
   });
   if (res.status === 401 || res.status === 403) throw new Error("Home Assistant refuse le jeton du fichier .env de l'ordinateur.");
   if (!res.ok) throw new Error("Home Assistant n'a pas pu faire cela.");
-  return (await res.json()) as T;
+  const { data, truncated } = await readCapped(res, MAX_RESPONSE_BYTES);
+  try {
+    if (truncated) throw new Error("réponse trop grosse");
+    return JSON.parse(data.toString("utf8")) as T;
+  } catch (err) {
+    // Portail captif, proxy : le corps reçu n'a rien à faire sur l'écran de la tablette.
+    console.warn(`Home Assistant : réponse illisible (${(err as Error).message.slice(0, 120)})`);
+    throw new Error("Home Assistant a répondu quelque chose d'illisible.");
+  }
 }
 
 type RawState = { entity_id: string; state: string; attributes?: { friendly_name?: string } };

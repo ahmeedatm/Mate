@@ -9,6 +9,7 @@ const HA_TOKEN = "jeton-ha";
 type Seen = { method: string; url: string; body: any };
 const seen: Seen[] = [];
 let authFails = false;
+let htmlStates = false;
 const STATES = [
   { entity_id: "light.salon", state: "on", attributes: { friendly_name: "Lampe du salon" } },
   { entity_id: "switch.cafetiere", state: "off", attributes: { friendly_name: "Cafetière" } },
@@ -28,7 +29,15 @@ const haServer = http.createServer((req, res) => {
     if (authFails || req.headers.authorization !== `Bearer ${HA_TOKEN}`) return send(401, {});
     const url = req.url ?? "";
     seen.push({ method: req.method ?? "", url, body: raw ? JSON.parse(raw) : undefined });
+    if (req.method === "GET" && url === "/api/states" && htmlStates) {
+      res.writeHead(200, { "content-type": "text/html" });
+      return res.end("<!DOCTYPE html><p>Portail captif</p>");
+    }
     if (req.method === "GET" && url === "/api/states") return send(200, STATES);
+    if (url === "/rebond") {
+      res.writeHead(302, { location: "/api/states" });
+      return res.end();
+    }
     if (req.method === "POST" && /^\/api\/services\/[a-z_]+\/[a-z_]+$/.test(url)) return send(200, []);
     send(404, {});
   });
@@ -123,6 +132,33 @@ describe("home assistant : API", () => {
       assert.equal(res.json.message, "Home Assistant ne répond pas : vérifie la connexion de l'ordinateur.");
     } finally {
       await offline.stop();
+    }
+  });
+
+  it("http hors de cet ordinateur : refusé sauf HA_ALLOW_HTTP=1 (le jeton passerait en clair sur le WiFi)", async () => {
+    const lan = { HA_URL: "http://homeassistant.local:8123", HA_TOKEN, HA_ENTITIES: "light.salon" };
+    const refused = await startServer({ env: { ...lan, HA_ALLOW_HTTP: "" } });
+    const allowed = await startServer({ env: { ...lan, HA_ALLOW_HTTP: "1" } });
+    const tls = await startServer({ env: { ...lan, HA_URL: "https://homeassistant.local:8123", HA_ALLOW_HTTP: "" } });
+    try {
+      assert.equal((await refused.call("GET", "/deck/features")).json.ha, false);
+      assert.equal((await allowed.call("GET", "/deck/features")).json.ha, true);
+      assert.equal((await tls.call("GET", "/deck/features")).json.ha, true);
+    } finally {
+      await refused.stop();
+      await allowed.stop();
+      await tls.stop();
+    }
+  });
+
+  it("réponse qui n'est pas du JSON (portail captif) : message en français, sans le corps reçu", async () => {
+    htmlStates = true;
+    try {
+      const res = await server.call("GET", "/ha/entities");
+      assert.equal(res.status, 500);
+      assert.equal(res.json.message, "Home Assistant a répondu quelque chose d'illisible.");
+    } finally {
+      htmlStates = false;
     }
   });
 });
