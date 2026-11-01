@@ -10,7 +10,7 @@ import java.util.Locale
  * Qualité de l'air de la ville du widget Météo, lue chez Open-Meteo (gratuit, sans clé ni compte, données CAMS du
  * programme Copernicus, licence CC BY 4.0 citée dans Réglages > À propos) : l'indice européen (EAQI, de 0 à 100 et plus).
  * Même rythme que la météo ([Weather.REFRESH_MS]).
- * shortcut: Open-Meteo interdit l'usage commercial en gratuit, à remplacer si Mate devient commercial.
+ * shortcut: offre gratuite d'Open-Meteo aux conditions d'usage limitées, à remplacer par une source à clé si elles ne conviennent plus.
  */
 object AirQuality {
     /** Les tranches de l'indice européen, avec la couleur du thème et le libellé de chacune. */

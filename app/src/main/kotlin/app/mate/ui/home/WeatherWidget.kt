@@ -89,7 +89,9 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         if (current != null && SystemClock.elapsedRealtime() - fetchedAt < Weather.REFRESH_MS) return
         current = runCatching { Weather.forecast(placed.config.getDouble("lat"), placed.config.getDouble("lon")) }.getOrNull() ?: current
         if (current != null) fetchedAt = SystemClock.elapsedRealtime()
-        // L'air est un plus : sans mesure ou sans réponse, la météo s'affiche seule (dernier indice gardé).
+        render()
+        // L'air est un plus, lu après l'affichage de la météo (sa réponse peut traîner) et seulement si elle est à jour.
+        if (current == null) return
         airIndex = runCatching { AirQuality.index(placed.config.getDouble("lat"), placed.config.getDouble("lon")) }.getOrNull() ?: airIndex
         render()
     }
