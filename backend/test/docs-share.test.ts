@@ -51,10 +51,8 @@ describe("partager vers Mate", () => {
     assert.ok(fs.existsSync(path.join(docsDir, "evil.txt")));
   });
 
-  it("donne un nom à un fichier sans nom exploitable", async () => {
-    const res = await share("..", "x");
-    assert.equal(res.status, 200);
-    assert.match((await res.json()).path, /^Reçu /);
+  it("refuse un fichier sans nom exploitable (415)", async () => {
+    assert.equal((await share("..", "x")).status, 415);
   });
 
   it("garde les accents du nom (UTF-8, comme l'envoie la tablette)", async () => {
@@ -69,13 +67,26 @@ describe("partager vers Mate", () => {
 
   it("évite les noms réservés de Windows (CON, NUL…) et les points ou espaces finaux", async () => {
     assert.equal((await (await share("CON.txt", "x")).json()).path, "_CON.txt");
-    assert.equal((await (await share("nul", "x")).json()).path, "_nul");
-    assert.equal((await (await share("fin. . ", "x")).json()).path, "fin");
+    assert.equal((await (await share("nul.txt", "x")).json()).path, "_nul.txt");
+    assert.equal((await (await share("fin.txt. . ", "x")).json()).path, "fin.txt");
+  });
+
+  it("teste le nom réservé sur la partie avant le premier point (con.x.txt, nul.tar.gz)", async () => {
+    assert.equal((await (await share("con.x.txt", "x")).json()).path, "_con.x.txt");
+    assert.equal((await (await share("LPT1.backup.csv", "x")).json()).path, "_LPT1.backup.csv");
+    assert.equal((await share("nul.tar.gz", "x")).status, 415);
+  });
+
+  it("retire les caractères de direction et invisibles du nom", async () => {
+    assert.equal((await (await share("devis\u200B-ok\u202E.pdf", "x")).json()).path, "devis-ok.pdf");
+    assert.equal((await (await share("a\u2066b\u2069\u200Fc\u202A.txt", "x")).json()).path, "abc.txt");
+    // Le piège classique : « photo<RLO>gpj.exe » s'afficherait « photoexe.jpg ».
+    assert.equal((await share("photo\u202Egpj.exe", "x")).status, 415);
   });
 
   it("ne dépose pas de fichier caché : les points de tête sont retirés", async () => {
-    assert.equal((await (await share(".bashrc", "x")).json()).path, "bashrc");
-    assert.equal((await (await share("..txt", "x")).json()).path, "txt");
+    assert.equal((await (await share(".notes.txt", "x")).json()).path, "notes.txt");
+    assert.equal((await (await share("..a.md", "x")).json()).path, "a.md");
   });
 
   it("raccourcit un nom trop long en gardant l'extension", async () => {
@@ -83,6 +94,31 @@ describe("partager vers Mate", () => {
     assert.equal(res.status, 200);
     const name = (await res.json()).path as string;
     assert.ok(name.length <= 130 && name.endsWith(".pdf"), name);
+  });
+
+  it("refuse tout type hors liste blanche (415) et ne dépose rien", async () => {
+    for (const name of [
+      "virus.exe",
+      "acces.rdp",
+      "macro.docm",
+      "page.html",
+      "script.ps1",
+      "lien.lnk",
+      "sans-extension",
+      ".bashrc",
+      "double.pdf.exe",
+    ]) {
+      const res = await share(name, "x");
+      assert.equal(res.status, 415, name);
+      assert.equal((await res.json()).message, "Type de fichier non accepté");
+    }
+    assert.equal(fs.existsSync(path.join(docsDir, "virus.exe")), false);
+  });
+
+  it("accepte chaque type de la liste blanche, majuscules comprises", async () => {
+    const exts = "pdf jpg jpeg png gif webp heic txt md csv json log docx xlsx pptx odt ods odp zip mp3 m4a mp4 mov".split(" ");
+    for (const ext of exts) assert.equal((await share(`liste.${ext}`, "x")).status, 200, ext);
+    assert.equal((await share("MAJ.PDF", "x")).status, 200);
   });
 
   it("refuse sans jeton (401) et sans fichier (400)", async () => {
@@ -96,9 +132,9 @@ describe("partager vers Mate", () => {
   });
 
   it("refuse plus de 20 Mo (413) et ne dépose rien", async () => {
-    const res = await share("gros.bin", new Uint8Array(21 * 1024 * 1024));
+    const res = await share("gros.pdf", new Uint8Array(21 * 1024 * 1024));
     assert.equal(res.status, 413);
-    assert.equal(fs.existsSync(path.join(docsDir, "gros.bin")), false);
+    assert.equal(fs.existsSync(path.join(docsDir, "gros.pdf")), false);
   });
 
   it("le fichier déposé apparaît dans la liste du dossier partagé", async () => {
