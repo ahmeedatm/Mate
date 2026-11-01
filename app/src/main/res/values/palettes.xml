@@ -344,7 +344,7 @@
         <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
     </style>
 
-    <!-- Spider-Man (direction A3, 2026-11-01) : le logo araignée de Spider-Verse en fond fixe (c_wallpaper, voile cuit
+    <!-- Spider-Verse (Palette.SpiderMan, AppTheme.SPIDERMAN ; direction A3, 2026-11-01) : le logo araignée de Spider-Verse en fond fixe (c_wallpaper, voile cuit
          dans l'image : noir 85 % sur les bords, 70 % au bord de la colonne vide, rien sur l'araignée), le contenu rangé
          autour (c_spine). Comme Hush : ni fond ni bordure de widget, ombre sous les textes. Couleurs du logo : magenta
          en accent, cyan pour les libellés de zone ; rouge et violet éclaircis pour tenir 4,5:1 sur les pattes du logo

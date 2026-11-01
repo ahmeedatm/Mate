@@ -4,7 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** Colonnes de la grille de l'Accueil, avec ou sans colonne vide au milieu (thème Spider-Man : c_spine). */
+/** Colonnes de la grille de l'Accueil, avec ou sans colonne vide au milieu (thème Spider-Verse : c_spine). */
 class GridColumnsTest {
     // Écran de la tablette : grille de 1148 dp (1280 - barre de 84 - 2 × 24 de marge), gouttière de 20.
     private val plain = GridColumns(start = 108, width = 1148, gap = 20, spine = 0, cols = 4)
@@ -45,9 +45,10 @@ class GridColumnsTest {
     fun `position en cases continue, la colonne vide compte pour rien`() {
         assertEquals(0f, spider.cellsAt(108f), 0.001f)
         assertEquals(2f, spider.cellsAt(spider.left(2).toFloat()), 0.001f)
-        // Dans la colonne vide, on reste au bord droit de la colonne de gauche.
-        val edge = spider.cellsAt((spider.left(1) + spider.cellW).toFloat())
-        assertEquals(edge, spider.cellsAt((spider.left(2) - 100).toFloat()), 0.001f)
+        // Bord droit de la colonne de gauche + gouttière : 2 cases pile, comme sans colonne vide (redimensionner).
+        assertEquals(2f, spider.cellsAt((spider.left(1) + spider.cellW + 20).toFloat()), 0.001f)
+        // Dans la colonne vide, on reste à 2 cases.
+        assertEquals(2f, spider.cellsAt((spider.left(2) - 100).toFloat()), 0.001f)
         assertEquals(plain.cellsAt(700f), (700f - 108) / 292, 0.001f)
     }
 

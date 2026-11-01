@@ -287,8 +287,9 @@ class MainActivity : AppCompatActivity() {
             maybeTour()
         }
         plugins = findViewById(R.id.plugins)
-        // Fond de Hush : en pause sous Bienvenue et Plugins, qui le cachent.
+        // Fond fixe de Spider-Verse : net ou en filigrane selon l'écran (showWallpaper).
         wallpaper = findViewById(R.id.wallpaper)
+        // Fond de Hush : en pause sous Bienvenue et Plugins, qui le cachent.
         findViewById<HushBackdrop>(R.id.backdrop).coveredBy = { welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE }
         plugins.attach(
             this,

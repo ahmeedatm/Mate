@@ -10,7 +10,7 @@ class AppThemeTest {
     private val context = FakeContext()
 
     @Test
-    fun `Console d'abord, puis Console jour, Contraste eleve, Hush et Spider-Man`() {
+    fun `Console d'abord, puis Console jour, Contraste eleve, Hush et Spider-Verse`() {
         assertEquals(listOf(AppTheme.CONSOLE, AppTheme.CONSOLE_JOUR, AppTheme.CONTRASTE, AppTheme.HUSH, AppTheme.SPIDERMAN), AppTheme.entries)
     }
 
@@ -61,7 +61,7 @@ class AppThemeTest {
     }
 
     @Test
-    fun `Spider-Man enregistre est garde`() {
+    fun `Spider-Verse enregistre est garde`() {
         Prefs.setTheme(context, "SPIDERMAN")
         assertEquals(AppTheme.SPIDERMAN, AppTheme.current(context))
     }

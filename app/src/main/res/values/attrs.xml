@@ -58,11 +58,11 @@
     <attr name="c_big_keys" format="boolean" />
     <!-- Hush : fond animé derrière tous les écrans (ui/HushBackdrop), tuiles en verre (c_surface translucide). -->
     <attr name="c_backdrop" format="boolean" />
-    <!-- Image fixe derrière tous les écrans (Spider-Man : le logo, voile compris), @null ailleurs. -->
+    <!-- Image fixe derrière tous les écrans (Spider-Verse : le logo, voile compris), @null ailleurs. -->
     <attr name="c_wallpaper" format="reference" />
-    <!-- Colonne vide au milieu de la grille de l'Accueil, où le logo du fond reste net (Spider-Man), 0dp ailleurs. -->
+    <!-- Colonne vide au milieu de la grille de l'Accueil, où le logo du fond reste net (Spider-Verse), 0dp ailleurs. -->
     <attr name="c_spine" format="dimension" />
-    <!-- Libellés de zone (titres de widgets et de cartes) : c_text_dim, cyan dans Spider-Man. -->
+    <!-- Libellés de zone (titres de widgets et de cartes) : c_text_dim, cyan dans Spider-Verse. -->
     <attr name="c_label" format="color" />
     <!-- Curseurs (style Slider) : bouton et piste. -->
     <attr name="c_slider_thumb" format="color" />

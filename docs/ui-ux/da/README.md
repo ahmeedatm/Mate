@@ -12,7 +12,7 @@ Mate est un accessoire gamer et domotique casual posé sur le bureau : lisible d
 
 ## Principes
 
-- Nuit par défaut (Console), jour au choix (Console jour), Contraste élevé pour l'accessibilité, Hush pour le style (nuit noire, accent rose, halos rose et violet animés derrière les écrans, widgets transparents ; `Palette.Hush`, `HushPaletteTest`).
+- Nuit par défaut (Console), jour au choix (Console jour), Contraste élevé pour l'accessibilité, Hush pour le style (nuit noire, accent rose, halos rose et violet animés derrière les écrans, widgets transparents ; `Palette.Hush`, `HushPaletteTest`), Spider-Verse pour le style (le logo araignée en fond fixe, accent magenta, libellés cyan, widgets sans cadre rangés en deux colonnes autour d'une colonne vide où le logo reste net, filigrane quand le milieu est occupé ; `Palette.SpiderMan`, `SpiderManPaletteTest`).
 - Une seule couleur vivante : le vert acide `c_accent`. Il marque l'élément choisi de la barre fixe, l'action principale, les curseurs et interrupteurs actifs.
 - Teintes de fonction `c_hue_*` colorées mais douces, réservées aux pastilles d'icônes et aux tuiles d'applis.
 - Tuiles et cartes à 28 dp de rayon, en aplat : ni filet ni ombre. Appui = `c_surface_pressed` (`console_tile_bg`). Contraste élevé ajoute un filet de 2 dp.

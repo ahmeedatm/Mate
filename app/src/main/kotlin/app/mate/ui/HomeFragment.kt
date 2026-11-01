@@ -480,10 +480,6 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
      * Balayage vertical : entrée voisine de la barre, profil puis outils (Focus, Ordi, Caméra), comme en la touchant. Sans
      * barre (ou profil caché derrière « Plus ») : profil voisin dans l'ordre des profils.
      */
-    override fun onCenterFree(free: Boolean) {
-        main?.setHomeCenterFree(free)
-    }
-
     override fun onPageSwipe(delta: Int) {
         val root = view ?: return
         if (!canPage(delta)) return SwipeFollow.release(root)
@@ -491,6 +487,11 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         SwipeFollow.reset(root)
         if (main?.railStep(delta) == true) return
         neighborProfile(delta)?.let(::showProfile)
+    }
+
+    /** Fond de Spider-Verse : logo net seulement si la colonne vide de la page est libre (MainActivity). */
+    override fun onCenterFree(free: Boolean) {
+        main?.setHomeCenterFree(free)
     }
 
     override fun onPageDrag(dy: Float) {

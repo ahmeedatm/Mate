@@ -18,7 +18,7 @@ import app.mate.R
  * Vignette d'un thème dans Réglages > Personnalisation : un petit écran peint avec ses propres couleurs (fond, barre de
  * gauche, carte avec « Aa » dans sa police de titres, pastille d'accent). Choisi : cadre de l'accent du thème
  * affiché. Thème à fond animé (Hush, c_backdrop) : un reflet violet et un rose sous la carte en verre. Thème à image
- * de fond (Spider-Man, c_wallpaper) : l'image réduite (1/8, 160 × 100 px), sans carte, comme ses widgets sans tuile.
+ * de fond (Spider-Verse, c_wallpaper) : l'image réduite (1/8, 160 × 100 px), sans carte, comme ses widgets sans tuile.
  * Dessinée une fois, rien ne bouge.
  */
 class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolean) : View(context) {

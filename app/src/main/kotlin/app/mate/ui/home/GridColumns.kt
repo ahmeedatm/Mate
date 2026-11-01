@@ -2,7 +2,7 @@ package app.mate.ui.home
 
 /**
  * Colonnes de la grille de l'Accueil (WidgetGrid), en px : `cols` cases de [cellW] séparées par `gap`, à partir de
- * `start`, sur `width`. `spine` > 0 (thème Spider-Man, c_spine) : la gouttière du milieu devient une colonne vide de
+ * `start`, sur `width`. `spine` > 0 (thème Spider-Verse, c_spine) : la gouttière du milieu devient une colonne vide de
  * cette largeur, centrée sur la grille, où le logo du fond reste net ; un widget à cheval sur le milieu la traverse.
  */
 class GridColumns(private val start: Int, width: Int, private val gap: Int, spine: Int, private val cols: Int) {
@@ -17,12 +17,15 @@ class GridColumns(private val start: Int, width: Int, private val gap: Int, spin
     /** Largeur de `span` cases à partir de `col`, gouttières (et colonne vide) comprises. */
     fun width(col: Int, span: Int) = left(col + span - 1) + cellW - left(col)
 
-    /** Position de `x` en cases depuis le bord gauche, fractions comprises ; la colonne vide compte pour rien. */
+    /**
+     * Position de `x` en cases depuis le bord gauche, fractions comprises. La colonne vide compte comme la gouttière du
+     * milieu suivie d'une zone qui vaut `cols / 2` cases pile.
+     */
     fun cellsAt(x: Float): Float {
-        val spineStart = start + half * step - gap
+        val extraStart = start + half * step
         val inside = when {
-            extra == 0 || x <= spineStart -> x - start
-            x < spineStart + extra -> (spineStart - start).toFloat()
+            extra == 0 || x <= extraStart -> x - start
+            x < extraStart + extra -> (extraStart - start).toFloat()
             else -> x - start - extra
         }
         return inside / step

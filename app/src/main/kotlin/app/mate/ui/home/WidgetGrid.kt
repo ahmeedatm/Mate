@@ -98,7 +98,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     var rowWeights: IntArray? = null
         set(value) { field = value; requestLayout() }
     private val narrowRowHeight = dp(176)
-    /** Colonne vide au milieu (thème Spider-Man : le logo du fond), 0 ailleurs ; sans effet en mode étroit. */
+    /** Colonne vide au milieu (thème Spider-Verse : le logo du fond), 0 ailleurs ; sans effet en mode étroit. */
     private val spine = themePx(context, R.attr.c_spine)
     private var columns = GridColumns(0, 0, gap, 0, COLS)
     private val cellW get() = columns.cellW
@@ -227,15 +227,15 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             child.layout(left, top, left + child.measuredWidth, top + child.measuredHeight)
         }
         val free = spine > 0 && !narrow && !crossed
+        // Toujours signalé au premier placement : une grille neuve (Accueil recréé) remplace l'état de l'ancienne.
         if (free != centerFree) {
             centerFree = free
             listener?.onCenterFree(free)
         }
     }
 
-    /** Dernier état signalé par [Listener.onCenterFree]. */
-    var centerFree = false
-        private set
+    /** Dernier état signalé par [Listener.onCenterFree] ; null avant le premier placement. */
+    private var centerFree: Boolean? = null
 
     /** Seuls les widgets de la page affichée sont visibles (à rappeler après un ajout). */
     fun showPage() {

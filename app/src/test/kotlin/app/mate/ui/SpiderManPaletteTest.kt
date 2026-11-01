@@ -85,7 +85,7 @@ class SpiderManPaletteTest {
     }
 
     @Test
-    fun `Spider-Man definit tous les attributs de Console`() {
+    fun `Spider-Verse definit tous les attributs de Console`() {
         assertEquals(emptySet<String>(), values("Console").keys - spider.keys)
     }
 

@@ -351,7 +351,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         for (kind in NoisePlayer.Kind.entries) {
             val chip = Button(context, null, 0, R.style.Chip).apply {
                 setText(kind.label)
-                // Largeurs égales imposées par la rangée : peu de marge, une ligne (colonnes étroites de Spider-Man).
+                // Largeurs égales imposées par la rangée : peu de marge, une ligne (colonnes étroites de Spider-Verse).
                 setPaddingRelative(dp(4), 0, dp(4), 0)
                 maxLines = 1
                 setOnClickListener { if (NoisePlayer.kind == kind) NoisePlayer.stop() else NoisePlayer.play(kind) }

@@ -8,7 +8,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-<!-- Fond fixe de Spider-Man (c_wallpaper, @null ailleurs) : image de 1280 × 800, logo centré sur la grille de
+<!-- Fond fixe de Spider-Verse (c_wallpaper, @null ailleurs) : image de 1280 × 800, logo centré sur la grille de
      l'Accueil (à droite de la barre de 84 dp), voile cuit dedans ; en filigrane si le milieu est occupé. -->
 <app.mate.ui.Wallpaper
     android:id="@+id/wallpaper"

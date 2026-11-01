@@ -875,7 +875,7 @@ ${FAVICON}
     CONTRASTE: ["#FFFFFF", "#EDEDE8", "#111214", "#25272C", "#2A4A00", "#45474D", "#FFFFFF"],
     // Tuile de Hush : son verre (#B82C2238) posé sur le fond noir.
     HUSH: ["#070509", "#221A2B", "#F6F0F8", "#CBC0D3", "#FF6EB4", "#46384F", "#22030F"],
-    // Spider-Man : widgets sans tuile, posés sur le noir du fond ; accent magenta du logo.
+    // Spider-Verse : widgets sans tuile, posés sur le noir du fond ; accent magenta du logo.
     SPIDERMAN: ["#000000", "#000000", "#F7F2FA", "#CFC6D8", "#FF2BD6", "#4A3550", "#1A0014"],
   };
   const VARS = ["bg", "tile", "ink", "ink2", "now", "line", "on"];

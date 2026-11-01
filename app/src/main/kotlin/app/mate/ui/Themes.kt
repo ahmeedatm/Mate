@@ -12,7 +12,7 @@ import app.mate.R
 /**
  * Thèmes de la DA Console douce (docs/ui-ux/da), choisis dans Réglages : Console (nuit, par défaut), Console jour,
  * Contraste élevé (Console jour en lisibilité maximale, grandes touches) et Hush (nuit noire, reflets rose et violet
- * animés derrière les écrans, tuiles en verre : ui/HushBackdrop) et Spider-Man (le logo de Spider-Verse en fond fixe,
+ * animés derrière les écrans, tuiles en verre : ui/HushBackdrop) et Spider-Verse (son logo en fond fixe,
  * c_wallpaper, contenu rangé autour : c_spine). Un thème s'applique aussi par code :
  * `Prefs.setTheme(context, AppTheme.CONTRASTE.name)` puis `recreate()` (ou l'ordre `settings` de la page de
  * l'ordinateur, `{"theme": "CONTRASTE"}`). Les couleurs et polices sont des attributs (`?attr/c_…`,
