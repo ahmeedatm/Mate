@@ -107,6 +107,17 @@ class WidgetModelTest {
     }
 
     @Test
+    fun `Courses, widget de l'ordinateur toujours propose, relu tel quel`() {
+        assertEquals(WidgetType.SHOPPING, WidgetType.of("shopping"))
+        assertEquals(WidgetSize.L, WidgetType.SHOPPING.sizes.first())
+        assertTrue(WidgetType.SHOPPING.computer)
+        assertTrue(WidgetType.SHOPPING.offered(HomeFeatures(off = setOf("open", "mixer", "pad"))))
+        val context = app.mate.FakeContext()
+        HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.SHOPPING, WidgetSize.T, 0, 1, 0)), 1))
+        assertEquals(listOf(WidgetType.SHOPPING to WidgetSize.T), HomeLayout.load(context).widgets.map { it.type to it.size })
+    }
+
+    @Test
     fun `Je m'absente, widget de l'ordinateur en M, L ou S, toujours propose, relu tel quel`() {
         assertEquals(WidgetType.AWAY, WidgetType.of("away"))
         assertEquals(listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), WidgetType.AWAY.sizes)

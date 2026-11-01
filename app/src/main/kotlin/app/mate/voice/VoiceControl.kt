@@ -253,6 +253,10 @@ class VoiceControl(
                 Answer(text(if (command.kind == null) R.string.voice_noise_off else R.string.voice_noise_on))
             }
             is VoiceCommand.AddTask -> { client.tasks.add(command.label); Answer(text(R.string.voice_task_added, command.label)) }
+            is VoiceCommand.AddShopping -> {
+                client.shopping.add(command.items)
+                Answer(text(R.string.voice_shopping_added, command.items.joinToString(", ")))
+            }
             is VoiceCommand.Tile -> { client.deck.runTile(command.tile.id); Answer(command.tile.label) }
             VoiceCommand.Time -> Answer(text(R.string.voice_time, time.format(Date())), speak = true)
             VoiceCommand.NextEvent -> {

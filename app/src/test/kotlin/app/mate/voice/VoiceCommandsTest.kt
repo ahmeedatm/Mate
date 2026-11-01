@@ -104,6 +104,22 @@ class VoiceCommandsTest {
     }
 
     @Test
+    fun `ajoute des articles a la liste de courses`() {
+        assertEquals(VoiceCommand.AddShopping(listOf("Lait")), parse("ajoute du lait à la liste de courses"))
+        assertEquals(VoiceCommand.AddShopping(listOf("Pain", "Œufs")), parse("Ajoute du pain et des œufs sur la liste de courses"))
+        assertEquals(VoiceCommand.AddShopping(listOf("Pommes de terre")), parse("mets des pommes de terre dans les courses"))
+        assertEquals(VoiceCommand.AddShopping(listOf("Farine")), parse("rajoute de la farine à la liste de course"))
+        assertEquals(VoiceCommand.AddShopping(listOf("Citrons")), parse("note des citrons aux courses"))
+    }
+
+    @Test
+    fun `la liste de courses ne prend pas les taches ni les autres phrases`() {
+        assertEquals(VoiceCommand.AddTask("Appeler le médecin"), parse("ajoute une tâche appeler le médecin"))
+        assertFalse(parse("ajoute du lait") is VoiceCommand.AddShopping)
+        assertFalse(parse("ajoute à la liste de courses") is VoiceCommand.AddShopping)
+    }
+
+    @Test
     fun `rappel a une heure ou dans un delai`() {
         assertEquals(VoiceCommand.Remind("Appeler Paul", "15:30"), parse("rappelle-moi d'appeler Paul à 15 h 30"))
         val now = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 10); set(Calendar.MINUTE, 0) }

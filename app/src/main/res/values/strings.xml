@@ -575,6 +575,22 @@
     </plurals>
     <string name="tasks_empty">Rien à faire pour l\'instant</string>
     <string name="tasks_unavailable">Tâches indisponibles</string>
+    <!-- Courses (widget de l'Accueil) -->
+    <string name="shopping_all_done">Tout est pris</string>
+    <plurals name="shopping_remaining">
+        <item quantity="one">%1$d à prendre</item>
+        <item quantity="other">%1$d à prendre</item>
+    </plurals>
+    <string name="shopping_empty">La liste est vide. Dis « ajoute du lait à la liste de courses ».</string>
+    <string name="shopping_unavailable">Courses indisponibles</string>
+    <string name="shopping_add">Ajouter un article</string>
+    <string name="shopping_add_confirm">Ajouter</string>
+    <string name="shopping_hint">Lait, pain…</string>
+    <plurals name="shopping_clear_title">
+        <item quantity="one">Retirer l\'article coché ?</item>
+        <item quantity="other">Retirer les %1$d articles cochés ?</item>
+    </plurals>
+    <string name="shopping_clear">Retirer</string>
     <string name="task_hint">Nouvelle tâche…</string>
     <string name="add">Ajouter</string>
     <string name="delete">Supprimer</string>
@@ -1180,6 +1196,8 @@
     <string name="widget_agenda_desc">Aujourd\'hui et les 7 jours suivants</string>
     <string name="widget_tasks">Tâches</string>
     <string name="widget_tasks_desc">Les tâches du jour et leurs rappels</string>
+    <string name="widget_shopping">Courses</string>
+    <string name="widget_shopping_desc">La liste de courses : se coche d\'un toucher, se remplit à la voix</string>
     <string name="widget_focus">Focus</string>
     <string name="widget_focus_desc">Le minuteur Pomodoro</string>
     <string name="widget_water">Eau</string>
@@ -1411,6 +1429,7 @@
     <string name="voice_noise_on">Ambiance lancée</string>
     <string name="voice_noise_off">Ambiance arrêtée</string>
     <string name="voice_task_added">Tâche ajoutée : %1$s</string>
+    <string name="voice_shopping_added">Ajouté aux courses : %1$s</string>
     <string name="voice_time">Il est %1$s.</string>
     <string name="voice_no_event">Aucun rendez-vous dans les 7 jours.</string>
     <string name="voice_no_meeting">Pas de réunion à rejoindre maintenant.</string>
@@ -1420,7 +1439,7 @@
     <string name="voice_tomorrow_at">demain à %1$s</string>
     <string name="voice_day_at">%1$s à %2$s</string>
     <string name="voice_water">Un verre de plus : %1$d sur %2$d</string>
-    <string name="voice_help">Exemples : « réponds », « ignore », « raccroche », « écris : je serai en retard », « copie sur l\'ordi : 06 12 34 56 78 », « ouvre Discord », « réduis Chrome », « mets Discord à gauche », « mets Teams sur l\'autre écran », « ferme la fenêtre », « quelles tâches aujourd\'hui », « qu\'est-ce que j\'ai demain », « rappelle-moi d\'appeler Paul à 15 h », « coche worklog », « cherche météo Paris », « volume 30 », « coupe le micro », « pause », « lance un focus de 25 minutes », « rejoins la réunion », et pour les agents Claude « autorise », « refuse la commande », « option deux », « valide », « continue ». Toutes tes touches se lancent par leur nom.</string>
+    <string name="voice_help">Exemples : « réponds », « ignore », « raccroche », « écris : je serai en retard », « copie sur l\'ordi : 06 12 34 56 78 », « ouvre Discord », « réduis Chrome », « mets Discord à gauche », « mets Teams sur l\'autre écran », « ferme la fenêtre », « ajoute du lait à la liste de courses », « quelles tâches aujourd\'hui », « qu\'est-ce que j\'ai demain », « rappelle-moi d\'appeler Paul à 15 h », « coche worklog », « cherche météo Paris », « volume 30 », « coupe le micro », « pause », « lance un focus de 25 minutes », « rejoins la réunion », et pour les agents Claude « autorise », « refuse la commande », « option deux », « valide », « continue ». Toutes tes touches se lancent par leur nom.</string>
     <string name="voice_typed">Écrit sur l\'ordinateur</string>
     <string name="voice_copy_what">Dis ce que je dois copier</string>
     <string name="voice_copied">Copié sur l\'ordi</string>

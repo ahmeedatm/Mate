@@ -41,6 +41,7 @@ import app.mate.ui.FocusDial
 import app.mate.ui.IconCache
 import app.mate.ui.Look
 import app.mate.ui.NowPlayingView
+import app.mate.ui.ShoppingCard
 import app.mate.ui.TasksCard
 import app.mate.ui.TitleView
 import app.mate.ui.WaterCard
@@ -138,6 +139,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.NEXT -> NextWidget(context, host, placed)
                 WidgetType.AGENDA -> AgendaWidget(context, host, placed)
                 WidgetType.TASKS -> TasksWidget(context, host, placed)
+                WidgetType.SHOPPING -> ShoppingWidget(context, host, placed)
                 WidgetType.FOCUS -> FocusWidget(context, host, placed)
                 WidgetType.WATER -> WaterWidget(context, host, placed)
                 WidgetType.AUDIO -> AudioWidget(context, host, placed)
@@ -576,6 +578,19 @@ class TasksWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
     override fun setUnavailable(on: Boolean) {
         tasks.quiet = on
+        super.setUnavailable(on)
+    }
+}
+
+/** Liste de courses, stockée sur l'ordinateur ; l'ajout à la voix la remplit (« ajoute du lait à la liste de courses »). */
+class ShoppingWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
+    private val shopping = ShoppingCard(context).apply { attach(host.scope) }
+    override val view: View = shopping.asCard()
+
+    override suspend fun load() = shopping.load()
+
+    override fun setUnavailable(on: Boolean) {
+        shopping.quiet = on
         super.setUnavailable(on)
     }
 }
