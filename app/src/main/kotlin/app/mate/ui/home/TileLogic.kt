@@ -34,10 +34,23 @@ fun tileLit(tile: DeckTile, voice: VoiceState?) = voice?.connected == true && wh
     else -> false
 }
 
-/** Touche choisie dans un widget : assez pour la dessiner sans relire le deck. Le JSON garde l'ancien format de KeysWidget. */
-data class KeyRef(val id: String, val label: String, val glyph: String? = null, val color: String? = null, val symbol: String? = null) {
+/**
+ * Touche choisie dans un widget : assez pour la dessiner sans relire le deck. Le JSON garde l'ancien format de KeysWidget.
+ * `span` : cases de large dans la grille, 2 pour une touche large (le JSON ne l'écrit que dans ce cas).
+ */
+data class KeyRef(
+    val id: String,
+    val label: String,
+    val glyph: String? = null,
+    val color: String? = null,
+    val symbol: String? = null,
+    val span: Int = 1,
+) {
     fun toJson(): JSONObject = JSONObject().put("id", id).put("label", label).put("glyph", glyph ?: "").put("color", color ?: "")
-        .apply { symbol?.let { put("symbol", it) } }
+        .apply {
+            symbol?.let { put("symbol", it) }
+            if (span > 1) put("span", span)
+        }
 
     companion object {
         /** Null pour un élément sans id : une config abîmée ne doit pas faire planter le rendu. */
@@ -49,10 +62,11 @@ data class KeyRef(val id: String, val label: String, val glyph: String? = null, 
                 json.optString("glyph").takeIf { it.isNotEmpty() },
                 json.optString("color").takeIf { it.isNotEmpty() },
                 json.optString("symbol").takeIf { it.isNotEmpty() },
+                json.optInt("span", 1).coerceIn(1, MAX_SPAN),
             )
         }
 
-        fun of(tile: DeckTile) = KeyRef(tile.id, tile.label, tile.glyph, tile.color, tile.symbol)
+        fun of(tile: DeckTile) = KeyRef(tile.id, tile.label, tile.glyph, tile.color, tile.symbol, tile.span.coerceIn(1, MAX_SPAN))
 
         /** Config d'un widget Touches : titre de la page du deck dont il prend ses touches de départ (profil Deck). */
         const val DEFAULT_PAGE = "defaultPage"
@@ -118,6 +132,39 @@ data class KeyRef(val id: String, val label: String, val glyph: String? = null, 
 
         private const val BY_COMPUTER = "byComputer"
     }
+}
+
+/** Colonnes d'une grille `AUTO_FIT` : autant de colonnes de [columnWidth] et d'espaces [spacing] que la place [usable] en tient, une au moins. */
+fun autoFitColumns(usable: Int, columnWidth: Int, spacing: Int): Int = maxOf(1, (usable + spacing) / (columnWidth + spacing))
+
+/** Largeur maximale d'une touche, en cases. */
+const val MAX_SPAN = 2
+
+/** Place `cell` (-1 : case vide, voir [PAD]) ; `filler` : la seconde case d'une touche large, couverte par elle. */
+data class SpanSlot(val cell: Int, val filler: Boolean = false)
+
+/** Case vide posée devant une touche large qui tomberait sur la dernière colonne. */
+const val PAD = -1
+
+/**
+ * Cases de la grille pour des touches de largeurs [spans] sur [columns] colonnes, dans l'ordre. Une touche large prend sa
+ * case et la suivante ([SpanSlot.filler]) ; en dernière colonne elle passerait à cheval sur deux rangées : une case vide
+ * ([PAD]) la repousse au début de la rangée suivante. Sur une seule colonne, tout est simple.
+ */
+fun spanSlots(spans: List<Int>, columns: Int): List<SpanSlot> {
+    val slots = mutableListOf<SpanSlot>()
+    var column = 0
+    spans.forEachIndexed { cell, span ->
+        val wide = span > 1 && columns > 1
+        if (wide && column == columns - 1) {
+            slots += SpanSlot(PAD)
+            column = 0
+        }
+        slots += SpanSlot(cell)
+        if (wide) slots += SpanSlot(cell, filler = true)
+        column = (column + if (wide) 2 else 1) % columns
+    }
+    return slots
 }
 
 /** Numéro d'emplacement d'une touche perso (tuile "k-<slot>"), null pour toute autre tuile. */

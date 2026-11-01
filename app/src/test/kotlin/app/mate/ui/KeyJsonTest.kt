@@ -43,6 +43,12 @@ class KeyJsonTest {
         assertFalse(keyJson("T", listOf(step("Jour")), glyph = null, color = null, cycle = false, hold = emptyList()).has("hold"))
     }
 
+    @Test
+    fun `une touche large envoie span 2, la simple rien`() {
+        assertEquals(2, keyJson("T", listOf(step("a")), glyph = null, color = null, cycle = false, span = 2).getInt("span"))
+        assertFalse(keyJson("T", listOf(step("a")), glyph = null, color = null, cycle = false).has("span"))
+    }
+
     private fun pushStep() = JSONObject().put("type", "keys").put("keys", "f13").put("push", true)
 
     @Test

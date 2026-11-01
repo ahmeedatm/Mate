@@ -28,6 +28,7 @@ import app.mate.Computers
 import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.DeckCatalog
+import app.mate.ui.home.MAX_SPAN
 import app.mate.ui.home.duplicateTargets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -55,6 +56,7 @@ class KeyEditor @JvmOverloads constructor(
     private val duplicateButton: Button
     private val cycleChip: Button
     private val holdChip: Button
+    private val wideChip: Button
 
     private lateinit var scope: CoroutineScope
     private var onChanged: () -> Unit = {}
@@ -98,7 +100,8 @@ class KeyEditor @JvmOverloads constructor(
         closeOnDone(glyph)
         cycleChip = chip(context.getString(R.string.key_cycle), selected = false) { it.isSelected = !it.isSelected }
         holdChip = chip(context.getString(R.string.key_hold), selected = false) { it.isSelected = !it.isSelected; renderSteps() }
-        findViewById<LinearLayout>(R.id.editor_options).apply { addView(cycleChip); addView(holdChip) }
+        wideChip = chip(context.getString(R.string.key_wide), selected = false) { it.isSelected = !it.isSelected }
+        findViewById<LinearLayout>(R.id.editor_options).apply { addView(cycleChip); addView(holdChip); addView(wideChip) }
 
         COLORS.forEachIndexed { i, hex ->
             colors.addView(View(context).apply {
@@ -136,6 +139,7 @@ class KeyEditor @JvmOverloads constructor(
         holdSteps.clear()
         cycleChip.isSelected = false
         holdChip.isSelected = false
+        wideChip.isSelected = false
         status.visibility = GONE
         clearButton.visibility = GONE
         duplicateButton.visibility = GONE
@@ -158,6 +162,7 @@ class KeyEditor @JvmOverloads constructor(
                 glyph.setText(key.optString("glyph"))
                 color = key.optString("color").ifEmpty { null }
                 cycleChip.isSelected = key.optBoolean("cycle")
+                wideChip.isSelected = key.optInt("span", 1) > 1
                 val saved = key.getJSONArray("steps")
                 // Rien d'ajouté pendant le chargement ne doit s'empiler sur ce qui est enregistré.
                 pressSteps.clear()
@@ -184,7 +189,7 @@ class KeyEditor @JvmOverloads constructor(
     private fun save() {
         if (pressSteps.isEmpty()) return showError(context.getString(R.string.key_no_steps))
         val name = label.text.toString().trim().ifEmpty { summary(pressSteps.first()) }.take(40)
-        val key = keyJson(name, pressSteps, glyph.text.toString(), color, cycleChip.isSelected, holdSteps)
+        val key = keyJson(name, pressSteps, glyph.text.toString(), color, cycleChip.isSelected, holdSteps, span = if (wideChip.isSelected) MAX_SPAN else 1)
         val target = slot
         val targetPage = page
         scope.launch {

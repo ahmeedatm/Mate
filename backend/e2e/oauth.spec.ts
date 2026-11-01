@@ -64,6 +64,36 @@ test.describe("compte Microsoft", () => {
     }
   });
 
+  test("compte relié pour l'agenda seul : propose de connecter les mails à part", async ({ page, server }) => {
+    link(server, {});
+    try {
+      await page.goto("/");
+      await page.locator(".cx", { hasText: "Microsoft" }).click();
+      const row = page.locator("#accounts .account");
+      await expect(row).not.toContainText("· mails");
+      await expect(row.getByRole("link", { name: "Connecter les mails" })).toHaveAttribute("href", "/oauth/microsoft/start?mail=1");
+    } finally {
+      fs.rmSync(path.join(server.dataDir, "accounts.json"), { force: true });
+    }
+  });
+
+  test("mails connectés : plus rien à proposer, et une reconnexion redemande les mails", async ({ page, server }) => {
+    link(server, { mail: true });
+    try {
+      await page.goto("/");
+      await page.locator(".cx", { hasText: "Microsoft" }).click();
+      const row = page.locator("#accounts .account");
+      await expect(row).toContainText("Microsoft · moi@exemple.fr · mails");
+      await expect(row.getByRole("link", { name: "Connecter les mails" })).toHaveCount(0);
+      link(server, { mail: true, expired: true });
+      await page.reload();
+      await page.locator(".cx", { hasText: "Microsoft" }).click();
+      await expect(row.getByRole("link", { name: "Reconnecter" })).toHaveAttribute("href", "/oauth/microsoft/start?mail=1");
+    } finally {
+      fs.rmSync(path.join(server.dataDir, "accounts.json"), { force: true });
+    }
+  });
+
   test("compte relié : rien à reconnecter", async ({ page, server }) => {
     link(server, {});
     try {

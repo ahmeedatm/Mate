@@ -80,6 +80,7 @@
     <string name="key_steps_empty">Aucune étape. Choisis-en une à droite : une seule = raccourci, plusieurs = macro.</string>
     <string name="key_hold">Seconde action (appui long)</string>
     <string name="key_hold_empty">Aucune seconde action. Choisis une étape à droite : l\'appui long sur la touche la lancera.</string>
+    <string name="key_wide">Touche large</string>
     <string name="key_cycle">Une étape à chaque appui</string>
     <string name="key_step_line">%1$d. %2$s</string>
     <string name="key_step_up">Monter l\'étape</string>
@@ -1438,6 +1439,14 @@
     <string name="widget_news_none">Le flux ne contient encore aucun article</string>
     <string name="widget_news_loading">Lecture du flux en cours, réessaie dans un instant</string>
     <string name="widget_news_hint">Adresse du flux (RSS ou Atom)</string>
+    <string name="widget_mail">Mails</string>
+    <string name="widget_mail_desc">Le nombre de mails non lus de la boîte de réception ; un toucher ouvre la boîte sur l\'ordinateur</string>
+    <string name="widget_mail_empty">Connecte tes mails sur la page de l\'ordinateur</string>
+    <string name="widget_mail_a11y">Mails : %1$d non lus. Toucher pour ouvrir la boîte sur l\'ordinateur</string>
+    <plurals name="widget_mail_unread">
+        <item quantity="one">non lu</item>
+        <item quantity="other">non lus</item>
+    </plurals>
     <string name="widget_meals">Repas du jour</string>
     <string name="widget_meals_desc">Le menu d\'aujourd\'hui et de demain, midi et soir ; le repas en cours est mis en avant</string>
     <string name="meals_unset">Règle le menu de la semaine sur la page de l\'ordinateur</string>
