@@ -29,7 +29,8 @@ import kotlinx.coroutines.launch
  * Touches du deck choisies : lancer Discord, une macro, couper le micro… sans passer par le Deck. S, M et V gardent
  * leurs rangées de grandes touches (1, 2 ou 6) ; L et XL montrent toutes les touches choisies dans une grille qui
  * défile, avec une case « + ». Appui long : la seconde action de la touche si elle en a une, sinon la retirer du
- * widget. L'éditeur d'une touche perso s'ouvre seulement en mode Modifier (réglages du widget, bouton « Modifier »). Les touches sont gardées avec leur nom et leur emoji : elles s'affichent même ordinateur éteint.
+ * widget. L'éditeur d'une touche perso s'ouvre seulement en mode Modifier (réglages du widget, bouton « Modifier »).
+ * Les touches sont gardées avec leur nom et leur emoji : elles s'affichent même ordinateur éteint.
  */
 class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     // Ni la racine ni l'état vide ne gardent l'appui long (mode Modifier) : seules les touches le font.
@@ -288,6 +289,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                             addView(check, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                             addView(Button(context, null, 0, R.style.ActionButton).apply {
                                 setText(R.string.widget_keys_edit)
+                                contentDescription = context.getString(R.string.widget_keys_edit_named, tile.label)
                                 setOnClickListener { save(); dialog.dismiss(); edit() }
                             })
                         })

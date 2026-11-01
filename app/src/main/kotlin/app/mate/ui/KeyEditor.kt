@@ -153,6 +153,9 @@ class KeyEditor @JvmOverloads constructor(
                 color = key.optString("color").ifEmpty { null }
                 cycleChip.isSelected = key.optBoolean("cycle")
                 val saved = key.getJSONArray("steps")
+                // Rien d'ajouté pendant le chargement ne doit s'empiler sur ce qui est enregistré.
+                pressSteps.clear()
+                holdSteps.clear()
                 for (i in 0 until saved.length()) pressSteps += saved.getJSONObject(i)
                 val savedHold = key.optJSONArray("hold")
                 if (savedHold != null) for (i in 0 until savedHold.length()) holdSteps += savedHold.getJSONObject(i)
