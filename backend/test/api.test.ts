@@ -211,6 +211,24 @@ describe("pages locales", () => {
     });
     assert.equal(status, 401);
   });
+
+  it("refuse l'appairage demandé en local sous un autre nom d'hôte (DNS rebinding), garde 127.0.0.1 et l'émulateur", async () => {
+    const { port } = new URL(server.url);
+    const post = (host: string) =>
+      new Promise<number>((resolve, reject) => {
+        const req = http.request(
+          { host: "127.0.0.1", port, method: "POST", path: "/pair/request", headers: { host, "content-type": "application/json" } },
+          (res) => {
+            res.resume();
+            resolve(res.statusCode ?? 0);
+          },
+        );
+        req.on("error", reject);
+        req.end(JSON.stringify({ tablet: "x", commit: "a".repeat(43) }));
+      });
+    assert.equal(await post(`exemple.com:${port}`), 403);
+    for (const host of [`127.0.0.1:${port}`, `localhost:${port}`, `10.0.2.2:${port}`]) assert.equal(await post(host), 200, host);
+  });
 });
 
 describe("mises à jour de la tablette", () => {

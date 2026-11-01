@@ -107,6 +107,11 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     (method === "DELETE" && /^\/local\/accounts\/(microsoft|google|gitlab|github)$/.test(url)));
 /** Sans jeton : identité (la tablette reconnaît l'ordinateur) et appairage par code. */
 const PUBLIC = /^\/(health|pair\/request|pair\/reveal|pair\/confirm)(\?|$)/;
+/**
+ * Routes sans jeton reçues en local : nom local, ou 10.0.2.2 (émulateur). Un site qui ferait pointer son domaine vers
+ * 127.0.0.1 (DNS rebinding) ne peut pas s'appairer en faisant taper son code.
+ */
+const PUBLIC_LOCAL_HOST = /^(127\.0\.0\.1|localhost|\[::1\]|10\.0\.2\.2)(:\d+)?$/i;
 const authorized = (header: string | undefined) => {
   if (!expectedAuth) return true;
   const given = Buffer.from(header ?? "");
@@ -115,7 +120,11 @@ const authorized = (header: string | undefined) => {
 /** Ordinateur verrouillé : seul le canal /tablet reste ouvert (la tablette y apprend le déverrouillage). */
 const WHILE_LOCKED = /^\/tablet\/(poll|result)(\?|$)/;
 app.addHook("onRequest", async (req, reply) => {
-  if (PUBLIC.test(req.url) || isLocalPage(req.method, req.url, req.ip, req.headers.host)) return;
+  if (PUBLIC.test(req.url)) {
+    if (LOOPBACK.has(req.ip) && !PUBLIC_LOCAL_HOST.test(req.headers.host ?? "")) return reply.code(403).send({ error: "Hôte refusé" });
+    return;
+  }
+  if (isLocalPage(req.method, req.url, req.ip, req.headers.host)) return;
   if (!authorized(req.headers.authorization)) return reply.code(401).send({ error: "Jeton invalide : appairer à nouveau la tablette" });
   if (isScreenLocked() && !WHILE_LOCKED.test(req.url)) {
     return reply.code(423).send({ error: "Ordinateur verrouillé : déverrouille-le pour continuer", locked: true });
