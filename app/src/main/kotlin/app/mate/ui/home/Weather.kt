@@ -118,7 +118,7 @@ object Weather {
     }
 
     /** Limite globale : sans Internet, la résolution du nom peut traîner bien au-delà des délais de connexion. */
-    private suspend fun get(url: String): JSONObject = withTimeout(12_000) { fetch(url) }
+    suspend fun get(url: String): JSONObject = withTimeout(12_000) { fetch(url) }
 
     private suspend fun fetch(url: String): JSONObject = withContext(Dispatchers.IO) {
         val conn = URL(url).openConnection() as HttpURLConnection
