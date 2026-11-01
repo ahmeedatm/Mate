@@ -311,4 +311,14 @@ class TileLogicTest {
         val seeded = KeyRef.seed(JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis"), "mac", pages)!!
         assertEquals(listOf("r-2", "r-3", "r-4", "r-1", "r-0"), seeded.map { it.id })
     }
+
+    @Test
+    fun `une touche a une seconde action seulement si le deck le dit`() {
+        val pages = listOf(
+            DeckPage("A", listOf(DeckTile("a-0", "Capture zone", "keys", null, null, hold = true), DeckTile("a-1", "Verrouiller", "system", null, null))),
+        )
+        assertTrue(tileHasHold(pages, "a-0"))
+        assertFalse(tileHasHold(pages, "a-1"))
+        assertFalse(tileHasHold(pages, "inconnue"))
+    }
 }

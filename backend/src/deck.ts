@@ -86,6 +86,8 @@ export type Action = Step | { type: "macro"; steps: Step[] } | { type: "cycle"; 
 type TileConfig = {
   label: string;
   action: Action;
+  /** Seconde action, lancée par l'appui long (`hold` dans `POST /deck/run`) ; sans elle, l'appui long ne lance rien. */
+  hold?: Action;
   icon?: string;
   /** Symbole de la tablette (TILE_SYMBOLS de screens.ts) ; un nom inconnu est ignoré. */
   symbol?: string;

@@ -16,6 +16,8 @@ data class DeckTile(
     val lit: String? = null,
     /** Symbole de la tablette (`TileIcons`) à la place de l'emoji ; null : emoji, sinon initiale ou icône d'appli. */
     val symbol: String? = null,
+    /** La touche a une seconde action, lancée par l'appui long. */
+    val hold: Boolean = false,
 )
 /** Appel en cours dans une appli (Discord) : salon, participants vus, micro et sourdine (null : inconnu). */
 /** `lobby` : écran d'avant-réunion de Teams (« Rejoindre maintenant »), pas encore dans la réunion. */
@@ -80,7 +82,7 @@ class DeckApi(private val http: Http) {
             val tiles = p.getJSONArray("tiles")
             DeckPage(p.getString("title"), (0 until tiles.length()).map { j ->
                 val t = tiles.getJSONObject(j)
-                DeckTile(t.getString("id"), t.getString("label"), t.getString("type"), t.optStringOrNull("glyph"), t.optStringOrNull("color"), t.optStringOrNull("app"), t.optStringOrNull("when"), t.optStringOrNull("lit"), t.optStringOrNull("symbol"))
+                DeckTile(t.getString("id"), t.getString("label"), t.getString("type"), t.optStringOrNull("glyph"), t.optStringOrNull("color"), t.optStringOrNull("app"), t.optStringOrNull("when"), t.optStringOrNull("lit"), t.optStringOrNull("symbol"), t.optBoolean("hold"))
             }, p.optBoolean("editable"), p.optBoolean("apps"), p.optBoolean("meeting"), p.optStringOrNull("app"), p.optBoolean("media"),
                 // Ordinateur pas encore à jour (sans `sound`) : barre Son comme avant.
                 p.optBoolean("sound", true), p.optInt("keyPage", -1).takeIf { it >= 0 })
@@ -155,8 +157,9 @@ class DeckApi(private val http: Http) {
 
     /** Lance l'action d'une tuile ; renvoie les fenêtres si l'appli en a plusieurs (rien n'est alors activé). */
     /** `windows` : appli à plusieurs fenêtres, à choisir ; `openedApp` : lien de la page Média ouvert dans son appli. */
-    suspend fun runTile(id: String): TileResult = http.io {
-        val json = JSONObject(http.postJson("/deck/run", JSONObject().put("id", id)))
+    /** `hold` : la seconde action de la touche (appui long). */
+    suspend fun runTile(id: String, hold: Boolean = false): TileResult = http.io {
+        val json = JSONObject(http.postJson("/deck/run", JSONObject().put("id", id).apply { if (hold) put("hold", true) }))
         TileResult(json.optJSONObject("windows")?.let(::parseWindows), json.optStringOrNull("app")?.takeIf { json.optString("opened") == "app" })
     }
 

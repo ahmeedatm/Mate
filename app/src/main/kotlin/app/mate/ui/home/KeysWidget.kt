@@ -41,7 +41,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val grid by lazy {
         TileGridView(context, host.scope).apply {
             onTap = { cell, _ -> if (cell.add) showAddChoice() else run(cell.key) }
-            onHold = { cell, _ -> hold(cell.key) }
+            onHold = { cell, _ -> holdOrMenu(cell.key) }
             ownsLongPress = true
         }
     }
@@ -163,7 +163,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
         tile.setOnLongClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-            hold(key)
+            holdOrMenu(key)
             true
         }
         return OwnerFrameLayout(context, ownsLongPress = true).apply {
@@ -182,6 +182,16 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             val windows = result.getOrNull()?.windows ?: return@launch
             val tile = runCatchingCancellable { host.deckPages() }.getOrNull()?.flatMap { it.tiles }?.firstOrNull { it.id == key.id } ?: return@launch
             host.overlays.windows(tile, windows)
+        }
+    }
+
+    /** Appui long : la seconde action de la touche si le deck lui en donne une, sinon le menu de [hold]. */
+    private fun holdOrMenu(key: KeyRef) {
+        host.scope.launch {
+            val pages = runCatchingCancellable { host.deckPages() }.getOrNull()
+            if (pages == null || !tileHasHold(pages, key.id)) return@launch hold(key)
+            runTileSpoken(context, key.id, key.label, hold = true)
+                .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
         }
     }
 

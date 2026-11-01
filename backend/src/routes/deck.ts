@@ -97,6 +97,7 @@ export default async function deckRoutes(app: FastifyInstance) {
                 when: t.when ?? null,
                 lit: t.lit ?? null,
                 state: t.state ?? null,
+                hold: Boolean(t.hold),
                 // Nom de l'appli (page Apps : liste des applis déjà ajoutées).
                 app: t.action.type === "app" ? t.action.name : null,
               },
@@ -113,12 +114,23 @@ export default async function deckRoutes(app: FastifyInstance) {
     return reply.type("image/png").send(createReadStream(icon));
   });
 
-  app.post<{ Body: { id: string } }>(
+  app.post<{ Body: { id: string; hold?: boolean } }>(
     "/deck/run",
-    { schema: { body: { type: "object", required: ["id"], properties: { id: { type: "string", maxLength: 20 } } } } },
+    {
+      schema: {
+        body: { type: "object", required: ["id"], properties: { id: { type: "string", maxLength: 20 }, hold: { type: "boolean" } } },
+      },
+    },
     async (req, reply) => {
       const tile = await findTile(req.body.id);
       if (!tile) return reply.code(404).send({ error: "Tuile inconnue" });
+      // Appui long : la seconde action de la touche, sans le détour des fenêtres ni de la page Média.
+      if (req.body.hold) {
+        if (!tile.hold) return reply.code(409).send({ error: "Cette touche n'a pas de seconde action" });
+        req.log.info({ tile: tile.id, action: tile.hold.type }, "Appui long sur une touche du deck");
+        await runAction(tile.hold);
+        return { ok: true };
+      }
       req.log.info({ tile: tile.id, action: tile.action.type }, "Touche du deck");
       // Appli déjà ouverte avec plusieurs fenêtres : la tablette propose de choisir au lieu d'activer.
       if (tile.action.type === "app") {

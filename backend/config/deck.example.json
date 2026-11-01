@@ -127,7 +127,7 @@
         { "label": "Play / Pause", "symbol": "play_pause", "glyph": "⏯", "action": { "type": "media", "command": "play-pause" } },
         { "label": "Précédent", "symbol": "skip_previous", "glyph": "⏮", "action": { "type": "media", "command": "previous" } },
         { "label": "Suivant", "symbol": "skip_next", "glyph": "⏭", "action": { "type": "media", "command": "next" } },
-        { "label": "Capture zone", "symbol": "screenshot", "glyph": "✂️", "action": { "type": "keys", "keys": "cmd+shift+4" } },
+        { "label": "Capture zone", "symbol": "screenshot", "glyph": "✂️", "action": { "type": "keys", "keys": "cmd+shift+4" }, "hold": { "type": "system", "command": "screenshot-clipboard" } },
         { "label": "Capture d'écran", "symbol": "clipboard", "glyph": "📋", "action": { "type": "system", "command": "screenshot-clipboard" } },
         { "label": "Mission Control", "symbol": "windows", "glyph": "🗂", "action": { "type": "keys", "keys": "ctrl+up" } },
         { "label": "Spotlight", "symbol": "search", "glyph": "🔍", "action": { "type": "keys", "keys": "cmd+space" } },

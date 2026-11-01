@@ -10,6 +10,7 @@ type TileView = {
   symbol?: string | null;
   glyph?: string | null;
   state?: string | null;
+  hold?: boolean;
 };
 type PageView = { title: string; apps: boolean; editable: boolean; app: string | null; sound: boolean; tiles: TileView[] };
 
@@ -91,6 +92,23 @@ describe("POST /deck/run", () => {
     server.setOs({ installed: ["Notes"], windows: { Notes: [{ title: "Courses" }] } });
     await server.call("POST", "/deck/run", { id: (await tileByLabel("Notes")).id });
     assert.deepEqual(server.osCalls(), [{ fn: "launchApp", args: ["Notes"] }]);
+  });
+});
+
+describe("POST /deck/run avec hold (appui long)", () => {
+  it("lance la seconde action de la touche, pas la principale", async () => {
+    const tile = await tileByLabel("Capture zone");
+    assert.equal(tile.hold, true);
+    assert.equal((await server.call("POST", "/deck/run", { id: tile.id, hold: true })).status, 200);
+    const calls = server.osCalls();
+    assert.ok(calls.length > 0 && !calls.some((c) => c.fn === "sendKeys"), "la touche principale ne part pas");
+  });
+
+  it("refuse (409) une touche sans seconde action, et rien ne part", async () => {
+    const tile = await tileByLabel("Verrouiller");
+    assert.equal(tile.hold, false);
+    assert.equal((await server.call("POST", "/deck/run", { id: tile.id, hold: true })).status, 409);
+    assert.deepEqual(server.osCalls(), []);
   });
 });
 
