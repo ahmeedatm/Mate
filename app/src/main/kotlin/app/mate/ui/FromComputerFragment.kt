@@ -102,7 +102,8 @@ class FromComputerFragment :
             val entry = adapter.getItem(position) ?: return@setOnItemClickListener
             if (entry.kind == "dir") load(entry.path) else (activity as? MainActivity)?.openDocument(entry)
         }
-        up.setOnClickListener { load(dir.substringBeforeLast('/', "")) }
+        // Chemins de l'ordinateur : `\` sous Windows (path.relative du backend), `/` sur Mac.
+        up.setOnClickListener { load(dir.substring(0, maxOf(dir.lastIndexOf('/'), dir.lastIndexOf('\\'), 0))) }
         refresh.setOnClickListener { load(dir) }
         back.setOnClickListener { show(Screen.CHOICE) }
         view.findViewById<View>(R.id.docs_choose_files).setOnClickListener { show(Screen.FILES) }
