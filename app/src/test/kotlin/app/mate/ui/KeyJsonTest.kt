@@ -34,4 +34,12 @@ class KeyJsonTest {
         assertEquals("#112233", key.getString("color"))
         assertEquals(JSONArray(listOf(step("a"))).toString(), key.getJSONArray("steps").toString())
     }
+
+    @Test
+    fun `la seconde action est envoyee seulement si elle a des etapes`() {
+        val hold = listOf(step("Nuit"))
+        val key = keyJson("T", listOf(step("Jour")), glyph = null, color = null, cycle = false, hold = hold)
+        assertEquals(JSONArray(hold).toString(), key.getJSONArray("hold").toString())
+        assertFalse(keyJson("T", listOf(step("Jour")), glyph = null, color = null, cycle = false, hold = emptyList()).has("hold"))
+    }
 }

@@ -74,7 +74,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private var pageChosen = false
 
     /** Mode Modifier en cours : un appel qui commence ne fait pas changer d'écran. */
-    val editing: Boolean get() = ::grid.isInitialized && grid.editing
+    override val editing: Boolean get() = ::grid.isInitialized && grid.editing
     /** Aucun ordinateur appairé : les widgets qui en ont besoin proposent de le connecter. */
     private var noComputer = false
     private var loop: Job? = null

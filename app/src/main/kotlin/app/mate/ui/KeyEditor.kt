@@ -34,7 +34,8 @@ import org.json.JSONObject
 
 /**
  * Éditeur d'une touche perso du deck, par-dessus le deck : libellé, symbole, couleur et étapes
- * (une étape = raccourci simple, plusieurs = macro). Types d'étapes : voir backend/src/perso.ts.
+ * (une étape = raccourci simple, plusieurs = macro) et seconde action, lancée par l'appui long (la pastille la fait
+ * éditer à la place des étapes). Types d'étapes : voir backend/src/perso.ts.
  */
 class KeyEditor @JvmOverloads constructor(
     context: Context,
@@ -51,13 +52,17 @@ class KeyEditor @JvmOverloads constructor(
     private val form: LinearLayout
     private val clearButton: Button
     private val cycleChip: Button
+    private val holdChip: Button
 
     private lateinit var scope: CoroutineScope
     private var onChanged: () -> Unit = {}
     private var slot = -1
     /** Rang de la page de touches nommée éditée, null : Perso. */
     private var page: Int? = null
-    private val steps = mutableListOf<JSONObject>()
+    private val pressSteps = mutableListOf<JSONObject>()
+    private val holdSteps = mutableListOf<JSONObject>()
+    /** Liste en cours d'édition : les étapes de la touche, ou celles de sa seconde action. */
+    private val steps get() = if (holdChip.isSelected) holdSteps else pressSteps
     private var color: String? = null
     private var catalog: DeckCatalog? = null
     /** Ordinateur sous Windows : modificateurs Ctrl/Alt/Win, pas de raccourcis Apple. */
@@ -88,7 +93,8 @@ class KeyEditor @JvmOverloads constructor(
         closeOnDone(label)
         closeOnDone(glyph)
         cycleChip = chip(context.getString(R.string.key_cycle), selected = false) { it.isSelected = !it.isSelected }
-        findViewById<LinearLayout>(R.id.editor_options).addView(cycleChip)
+        holdChip = chip(context.getString(R.string.key_hold), selected = false) { it.isSelected = !it.isSelected; renderSteps() }
+        findViewById<LinearLayout>(R.id.editor_options).apply { addView(cycleChip); addView(holdChip) }
 
         COLORS.forEachIndexed { i, hex ->
             colors.addView(View(context).apply {
@@ -122,8 +128,10 @@ class KeyEditor @JvmOverloads constructor(
         label.setText("")
         glyph.setText("")
         color = null
-        steps.clear()
+        pressSteps.clear()
+        holdSteps.clear()
         cycleChip.isSelected = false
+        holdChip.isSelected = false
         status.visibility = GONE
         clearButton.visibility = GONE
         renderColors()
@@ -145,7 +153,9 @@ class KeyEditor @JvmOverloads constructor(
                 color = key.optString("color").ifEmpty { null }
                 cycleChip.isSelected = key.optBoolean("cycle")
                 val saved = key.getJSONArray("steps")
-                for (i in 0 until saved.length()) steps += saved.getJSONObject(i)
+                for (i in 0 until saved.length()) pressSteps += saved.getJSONObject(i)
+                val savedHold = key.optJSONArray("hold")
+                if (savedHold != null) for (i in 0 until savedHold.length()) holdSteps += savedHold.getJSONObject(i)
                 renderColors()
                 renderSteps()
             } catch (e: Exception) {
@@ -163,9 +173,9 @@ class KeyEditor @JvmOverloads constructor(
     }
 
     private fun save() {
-        if (steps.isEmpty()) return showError(context.getString(R.string.key_no_steps))
-        val name = label.text.toString().trim().ifEmpty { summary(steps.first()) }.take(40)
-        val key = keyJson(name, steps, glyph.text.toString(), color, cycleChip.isSelected)
+        if (pressSteps.isEmpty()) return showError(context.getString(R.string.key_no_steps))
+        val name = label.text.toString().trim().ifEmpty { summary(pressSteps.first()) }.take(40)
+        val key = keyJson(name, pressSteps, glyph.text.toString(), color, cycleChip.isSelected, holdSteps)
         val target = slot
         val targetPage = page
         scope.launch {
@@ -218,11 +228,12 @@ class KeyEditor @JvmOverloads constructor(
     private fun renderSteps() {
         stepList.removeAllViews()
         // Un cycle demande au moins deux étapes : sinon la pastille est grisée (keyJson l'ignorerait).
-        cycleChip.isEnabled = steps.size > 1
+        // Il porte sur les étapes de la touche, pas sur sa seconde action.
+        cycleChip.isEnabled = pressSteps.size > 1 && !holdChip.isSelected
         cycleChip.alpha = if (cycleChip.isEnabled) 1f else 0.4f
         if (steps.isEmpty()) {
             stepList.addView(TextView(context).apply {
-                setText(R.string.key_steps_empty)
+                setText(if (holdChip.isSelected) R.string.key_hold_empty else R.string.key_steps_empty)
                 setTextColor(themeColor(context, R.attr.c_text_dim))
                 textSize = 15f
             })

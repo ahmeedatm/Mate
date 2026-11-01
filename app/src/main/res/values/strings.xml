@@ -75,6 +75,8 @@
     <string name="key_glyph_hint">Emoji</string>
     <string name="key_steps">Étapes, dans l\'ordre</string>
     <string name="key_steps_empty">Aucune étape. Choisis-en une à droite : une seule = raccourci, plusieurs = macro.</string>
+    <string name="key_hold">Seconde action (appui long)</string>
+    <string name="key_hold_empty">Aucune seconde action. Choisis une étape à droite : l\'appui long sur la touche la lancera.</string>
     <string name="key_cycle">Une étape à chaque appui</string>
     <string name="key_step_line">%1$d. %2$s</string>
     <string name="key_step_up">Monter l\'étape</string>

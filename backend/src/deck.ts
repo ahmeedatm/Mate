@@ -297,7 +297,16 @@ export async function loadDeck(): Promise<DeckPage[]> {
       const id = `${prefix}${slot}`;
       if (!key) return { id, empty: true as const };
       const action: Action = key.steps.length === 1 ? key.steps[0] : { type: key.cycle ? "cycle" : "macro", steps: key.steps };
-      return { id, label: key.label, ...(key.symbol ? { symbol: key.symbol } : {}), glyph: key.glyph, color: key.color, action };
+      const hold: Action | undefined = key.hold && (key.hold.length === 1 ? key.hold[0] : { type: "macro", steps: key.hold });
+      return {
+        id,
+        label: key.label,
+        ...(key.symbol ? { symbol: key.symbol } : {}),
+        glyph: key.glyph,
+        color: key.color,
+        action,
+        ...(hold ? { hold } : {}),
+      };
     });
   pages.push({ title: "Perso", editable: true, tiles: keyTiles(await loadKeys(), PERSO_PREFIX) });
   (await loadKeyPages()).forEach((page, n) => {
