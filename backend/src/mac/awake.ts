@@ -14,12 +14,16 @@ export async function keepAwake(on: boolean): Promise<void> {
   }
   if (child) return;
   const started = spawn("caffeinate", ["-d", "-w", String(process.pid)], { stdio: "ignore" });
-  await new Promise<void>((resolve, reject) => {
-    started.once("spawn", resolve);
-    started.once("error", reject);
-  });
+  // Posé avant d'attendre le lancement : un deuxième « on » ne double pas le processus, un « off » le tue.
+  child = started;
   started.once("exit", () => {
     if (child === started) child = undefined;
   });
-  child = started;
+  await new Promise<void>((resolve, reject) => {
+    started.once("spawn", resolve);
+    started.once("error", (e) => {
+      if (child === started) child = undefined;
+      reject(e);
+    });
+  });
 }

@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
  */
 class FocusAwake(private val activity: AppCompatActivity) {
 
+    // shortcut: un ordre perdu (WiFi) n'est pas renvoyé et un changement d'ordinateur en plein Focus n'est pas suivi (comme FocusDnd), le minuteur de secours de l'ordinateur rend la veille ; à revoir si ça gêne.
     private var on: Boolean? = null
 
     fun follow(state: FocusTimer.State) {
