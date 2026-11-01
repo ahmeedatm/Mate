@@ -2,7 +2,15 @@ import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { startServer, type TestServer } from "./server.ts";
 
-type TileView = { id: string; label: string; type: string; app: string | null; symbol?: string | null; glyph?: string | null };
+type TileView = {
+  id: string;
+  label: string;
+  type: string;
+  app: string | null;
+  symbol?: string | null;
+  glyph?: string | null;
+  state?: string | null;
+};
 type PageView = { title: string; apps: boolean; editable: boolean; app: string | null; sound: boolean; tiles: TileView[] };
 
 let server: TestServer;
@@ -38,6 +46,12 @@ describe("GET /deck", () => {
     assert.ok(lock.glyph, "emoji gardé pour les tablettes d'avant les symboles");
     assert.equal((await tileByLabel("Couper le micro")).symbol, "mic_off");
     assert.equal((await tileByLabel("Ne pas déranger")).symbol, "dnd");
+  });
+
+  it("les touches Micro et Ne pas déranger du deck de départ montrent leur état réel", async () => {
+    assert.equal((await tileByLabel("Couper le micro")).state, "mic-muted");
+    assert.equal((await tileByLabel("Ne pas déranger")).state, "dnd");
+    assert.equal((await tileByLabel("Verrouiller")).state, null, "une touche sans état n'en reçoit pas");
   });
 
   it("`sound` : barre Son voulue par défaut sur la page Discord", async () => {

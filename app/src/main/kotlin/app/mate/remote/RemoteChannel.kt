@@ -25,6 +25,7 @@ import app.mate.net.DocEntry
 import app.mate.net.HttpException
 import app.mate.net.Link
 import app.mate.net.parseNotification
+import app.mate.ui.home.TileStates
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -80,6 +81,8 @@ class RemoteChannel(private val activity: MainActivity) {
                 throw e
             } catch (e: Exception) {
                 online = false
+                // Plus de nouvelles de l'ordinateur (coupure, autre ordinateur) : ses touches allumées ne disent plus rien de vrai.
+                TileStates.update(emptyList())
                 if (e is HttpException && e.code == 401) {
                     // Jeton refusé (ordinateur réinstallé ?) : il faut refaire l'appairage, chercher ailleurs ne sert à rien.
                     onStatus(Link(computer, Link.State.UNAUTHORIZED))
@@ -193,6 +196,11 @@ class RemoteChannel(private val activity: MainActivity) {
         }
         "foreground" -> {
             activity.onForeground(command.getString("app"), command.optString("bundleId"), command.optString("file"))
+            null
+        }
+        "tilestate" -> {
+            val ids = command.optJSONArray("lit")
+            TileStates.update(if (ids == null) emptyList() else (0 until ids.length()).map { ids.getString(it) })
             null
         }
         "lock" -> activity.lockScreen.setComputerLocked(command.getBoolean("locked")).let { null }

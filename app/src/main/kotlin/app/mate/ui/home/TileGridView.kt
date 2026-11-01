@@ -121,6 +121,20 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
         pressed.clear()
     }
 
+    private var stopListening: (() -> Unit)? = null
+
+    /** Une touche s'allume ou s'éteint côté ordinateur : les cases visibles se redessinent. */
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        stopListening = TileStates.listen { post { if (isAttachedToWindow) adapter.notifyDataSetChanged() } }
+    }
+
+    override fun onDetachedFromWindow() {
+        stopListening?.invoke()
+        stopListening = null
+        super.onDetachedFromWindow()
+    }
+
     /** Dessine [cell] dans une vue de [newCell] (neuve ou recyclée). */
     fun bind(view: View, cell: Cell) = bind(view, cell, scope)
 
@@ -194,8 +208,9 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             label.text = key.label
             label.setTextColor(themeColor(context, R.attr.c_text))
             // Plaque pleine derrière la touche : rouge de Muet quand elle est allumée, sinon la couleur de la touche.
+            val lit = cell.lit || TileStates.isLit(key.id)
             val custom = key.color?.let { runCatching { Color.parseColor(it) }.getOrNull() }
-            val tint = if (cell.lit) themeColor(context, R.attr.c_ko) else custom
+            val tint = if (lit) themeColor(context, R.attr.c_ko) else custom
             val plain = tint == null
             plate.background = tint?.let {
                 GradientDrawable().apply { setColor(it); cornerRadius = TileMetrics.radiusFor(plate.layoutParams.width).toFloat() }
@@ -206,14 +221,14 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
                 Look.tintInitial(initial, key.label)
             } else {
                 initial.background = null
-                initial.setTextColor(if (cell.lit) themeColor(context, R.attr.c_on_accent) else Look.readableOn(context, tint!!))
+                initial.setTextColor(if (lit) themeColor(context, R.attr.c_on_accent) else Look.readableOn(context, tint!!))
             }
 
             // Symbole de la tablette (Deck V2), ou icône d'un emoji connu : icône monochrome, prioritaire sur l'emoji.
             TileIcons.of(key.symbol, key.glyph)?.let { symbol ->
                 icon.setImageResource(symbol)
                 val ink = when {
-                    cell.lit -> themeColor(context, R.attr.c_on_accent)
+                    lit -> themeColor(context, R.attr.c_on_accent)
                     plain -> themeColor(context, R.attr.c_text)
                     else -> Look.readableOn(context, tint!!)
                 }
