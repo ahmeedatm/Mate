@@ -2,7 +2,7 @@ package app.mate.audio
 
 /** Où vont les boutons de volume de la tablette : à l'écran affiché, au son de l'ordinateur, ou au volume de la tablette. */
 object VolumeKeys {
-    /** Points de volume par appui, comme les boutons + et − de la carte Son de l'ordinateur. */
+    /** Points de volume par appui, même pas que les boutons + et − de la carte Son de l'ordinateur. */
     const val STEP = 6
 
     enum class Route { SCREEN, COMPUTER, TABLET }

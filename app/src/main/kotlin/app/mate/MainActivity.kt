@@ -573,19 +573,20 @@ class MainActivity : AppCompatActivity() {
             else -> return super.dispatchKeyEvent(event)
         }
         val handler = supportFragmentManager.findFragmentByTag(current.tag) as? VolumeKeyHandler
-        val route = VolumeKeys.route(Prefs.volumeKeysOnComputer(this), handler != null, Computers.active(this) != null)
+        val onComputer = handler == null && Prefs.volumeKeysOnComputer(this)
+        val route = VolumeKeys.route(onComputer, handler != null, onComputer && Computers.active(this) != null)
         if (route == VolumeKeys.Route.TABLET) return super.dispatchKeyEvent(event)
         // On consomme aussi le relâchement pour que la tablette ne change pas son propre volume.
         if (event.action != KeyEvent.ACTION_DOWN) return true
-        return if (route == VolumeKeys.Route.SCREEN) handler!!.onVolumeKey(up) else nudgeComputerVolume(up)
+        return handler?.onVolumeKey(up) ?: nudgeComputerVolume(up, event.repeatCount > 0)
     }
 
     /** Un appui à la fois : un appui maintenu n'empile pas de requêtes sur l'ordinateur. */
-    private fun nudgeComputerVolume(up: Boolean): Boolean {
+    private fun nudgeComputerVolume(up: Boolean, repeated: Boolean): Boolean {
         if (volumeNudge?.isActive == true) return true
         volumeNudge = lifecycleScope.launch {
             runCatchingCancellable { BackendClient(this@MainActivity).system.setAudio(outputDelta = VolumeKeys.delta(up)) }
-                .onFailure { showBanner(errorText(it), 6) }
+                .onFailure { if (!repeated) showBanner(errorText(it), 6) }
         }
         return true
     }

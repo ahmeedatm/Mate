@@ -874,7 +874,7 @@
     <string name="tablet_brightness">Luminosité de l\'écran</string>
     <string name="tablet_volume">Volume de la tablette (voix, sons d\'ambiance)</string>
     <string name="tablet_volume_keys_computer">Boutons de volume : son de l\'ordinateur</string>
-    <string name="tablet_volume_keys_computer_hint">Les boutons de la tablette règlent la sortie de l\'ordinateur actif au lieu de la tablette.</string>
+    <string name="tablet_volume_keys_computer_hint">Les boutons de la tablette règlent la sortie de l\'ordinateur actif au lieu de la tablette. Ordinateur injoignable : les boutons ne font rien.</string>
     <string name="tablet_night_dim">Atténuer l\'écran la nuit (22 h – 7 h)</string>
     <string name="tablet_night_dim_hint">L\'écran reste allumé en permanence ; la nuit il baisse au minimum, un toucher le rallume.</string>
     <string name="frame_title">Cadre photo</string>
