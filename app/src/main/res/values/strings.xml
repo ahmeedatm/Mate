@@ -1385,6 +1385,11 @@
     <string name="widget_web_hint">Adresse de la page</string>
     <string name="widget_web_every_hint">Minutes entre deux rechargements</string>
     <string name="widget_web_invalid">Adresse refusée : une page http ou https, sans identifiant ni mot de passe</string>
+    <string name="widget_news">Actualités</string>
+    <string name="widget_news_desc">Les cinq derniers titres d\'un flux RSS ; un toucher ouvre l\'article sur l\'ordinateur</string>
+    <string name="widget_news_empty">Touche pour régler l\'adresse d\'un flux RSS</string>
+    <string name="widget_news_none">Le flux ne contient encore aucun article</string>
+    <string name="widget_news_hint">Adresse du flux (RSS ou Atom)</string>
     <string name="widget_pipelines">Pipelines</string>
     <string name="widget_pipelines_desc">Le dernier pipeline de tes projets GitLab : en cours, échecs, durée</string>
     <string name="pipelines_empty">Aucun pipeline</string>
