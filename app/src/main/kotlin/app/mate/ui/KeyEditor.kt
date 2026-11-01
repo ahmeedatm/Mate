@@ -30,7 +30,6 @@ import app.mate.net.BackendClient
 import app.mate.net.DeckCatalog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -51,6 +50,7 @@ class KeyEditor @JvmOverloads constructor(
     private val types: LinearLayout
     private val form: LinearLayout
     private val clearButton: Button
+    private val cycleChip: Button
 
     private lateinit var scope: CoroutineScope
     private var onChanged: () -> Unit = {}
@@ -87,6 +87,8 @@ class KeyEditor @JvmOverloads constructor(
         clearButton.setOnClickListener { clear() }
         closeOnDone(label)
         closeOnDone(glyph)
+        cycleChip = chip(context.getString(R.string.key_cycle), selected = false) { it.isSelected = !it.isSelected }
+        findViewById<LinearLayout>(R.id.editor_options).addView(cycleChip)
 
         COLORS.forEachIndexed { i, hex ->
             colors.addView(View(context).apply {
@@ -121,6 +123,7 @@ class KeyEditor @JvmOverloads constructor(
         glyph.setText("")
         color = null
         steps.clear()
+        cycleChip.isSelected = false
         status.visibility = GONE
         clearButton.visibility = GONE
         renderColors()
@@ -140,6 +143,7 @@ class KeyEditor @JvmOverloads constructor(
                 label.setText(key.optString("label"))
                 glyph.setText(key.optString("glyph"))
                 color = key.optString("color").ifEmpty { null }
+                cycleChip.isSelected = key.optBoolean("cycle")
                 val saved = key.getJSONArray("steps")
                 for (i in 0 until saved.length()) steps += saved.getJSONObject(i)
                 renderColors()
@@ -161,9 +165,7 @@ class KeyEditor @JvmOverloads constructor(
     private fun save() {
         if (steps.isEmpty()) return showError(context.getString(R.string.key_no_steps))
         val name = label.text.toString().trim().ifEmpty { summary(steps.first()) }.take(40)
-        val key = JSONObject().put("label", name).put("steps", JSONArray(steps))
-        glyph.text.toString().trim().takeIf { it.isNotEmpty() }?.let { key.put("glyph", it) }
-        color?.let { key.put("color", it) }
+        val key = keyJson(name, steps, glyph.text.toString(), color, cycleChip.isSelected)
         val target = slot
         val targetPage = page
         scope.launch {
