@@ -153,6 +153,13 @@ describe("corvées à tour de rôle", () => {
     assert.equal(await assignee(task.id), "Léa");
   });
 
+  it("supprimer la corvée efface son tour", async () => {
+    const task = await addTask("Éphémère", { days: [1, 2, 3, 4, 5, 6, 7], people: ["Léa", "Tom"] });
+    await setTaskDone(task.id, true);
+    await deleteTask(task.id);
+    assert.equal(JSON.parse(await fs.readFile(file, "utf8")).turns?.[task.id], undefined);
+  });
+
   it("une tâche sans personnes n'a pas de responsable", async () => {
     const task = await addTask("Seul", { days: [1, 2, 3, 4, 5, 6, 7] });
     assert.equal(task.assignee, null);

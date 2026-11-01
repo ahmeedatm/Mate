@@ -227,12 +227,12 @@ export async function setTaskDone(id: string, done: boolean): Promise<boolean> {
       item.doneMs = done ? Date.now() : undefined;
       return true;
     }
-    if (!(await loadDaily(store)).some((t) => t.id === id)) return false;
+    const task = (await loadDaily(store)).find((t) => t.id === id);
+    if (!task) return false;
     const day = isoDay(new Date());
     const ids = new Set(store.done[day] ?? []);
     // Corvée à tour de rôle : cocher (une fois par jour) passe à la personne suivante, décocher revient en arrière.
-    const task = (await loadDaily(store)).find((t) => t.id === id);
-    if (task?.people?.length && ids.has(id) !== done) {
+    if (task.people?.length && ids.has(id) !== done) {
       store.turns ??= {};
       store.turns[id] = Math.max(0, (store.turns[id] ?? 0) + (done ? 1 : -1));
     }
