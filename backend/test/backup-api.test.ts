@@ -22,6 +22,7 @@ write("accounts.json", { accounts: [{ token: "secret-de-compte" }] });
 let server: TestServer;
 before(async () => {
   server = await startServer({ dataDir });
+  server.setOs({ installed: ["Notes"] });
 });
 after(async () => {
   await server.stop();
@@ -64,6 +65,18 @@ describe("sauvegarde de la configuration", () => {
     assert.match(res.json.skipped.layout, /Tablette/);
     assert.equal(read("plugins.json").choices.teams, false);
     assert.equal(read("apps.json").apps[0].name, "Notes");
+  });
+
+  it("laisse de côté les applis absentes de cet ordinateur, et les champs en trop", async () => {
+    const backup = (await local("GET", "/local/config/backup")).json;
+    backup.parts.apps.apps.push({ label: "Fantôme", name: "Fantôme" });
+    const res = await local("POST", "/local/config/backup", { backup, parts: ["apps"] });
+    assert.equal(res.status, 200);
+    assert.match(res.json.notes.apps, /1 appli/);
+    assert.deepEqual(read("apps.json"), { apps: [{ label: "Notes", name: "Notes" }] });
+    backup.parts.keys.extra = "pirate";
+    await local("POST", "/local/config/backup", { backup, parts: ["keys"] });
+    assert.deepEqual(Object.keys(read("keys.json")), ["slots"]);
   });
 
   it("refuse un fichier d'un autre format ou une touche invalide", async () => {

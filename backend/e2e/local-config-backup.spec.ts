@@ -18,7 +18,7 @@ test.describe("page locale : sauvegarde", () => {
     await expect(section.getByRole("heading", { name: "Sauvegarde" })).toBeVisible();
 
     const download = page.waitForEvent("download");
-    await section.getByRole("button", { name: "Enregistrer", exact: true }).click();
+    await section.getByRole("button", { name: "Créer le fichier" }).click();
     const file = await download;
     expect(file.suggestedFilename()).toMatch(/^mate-config-\d{4}-\d{2}-\d{2}\.json$/);
     const saved = path.join(server.dataDir, "sauvegarde-essai.json");

@@ -5,17 +5,16 @@
  */
 export const BACKUP_CSS = `
   .pf-bk-parts { padding: 4px 0; }
-  .pf-bk-parts label.row { cursor: pointer; }
 `;
 
 export const BACKUP_HTML = `
   <section id="pf-sauvegarde" data-title="Sauvegarde" data-icon="backup">
-    <div class="sechead"><h2>Sauvegarde</h2><span class="dim">Touches, pages, applis, sites, plugins, profils et widgets, dans un fichier. Aucun jeton n'y entre.</span></div>
+    <div class="sechead"><h2>Sauvegarde</h2><span class="dim">Touches, pages, applis, sites, plugins, profils et widgets, dans un fichier. Aucun jeton n'y entre, mais le texte et les adresses de tes touches y sont tels quels : garde le fichier pour toi.</span></div>
     <div class="card group">
-      <div class="row"><span class="grow">Enregistrer la configuration<span class="pf-hint">Un fichier à garder, pour réinstaller ou changer d'ordinateur.</span></span><button type="button" class="ghost" id="pf-bk-save">Enregistrer</button></div>
+      <div class="row"><span class="grow">Enregistrer la configuration<span class="pf-hint">Un fichier à garder, pour réinstaller ou changer d'ordinateur.</span></span><button type="button" class="ghost" id="pf-bk-save">Créer le fichier</button></div>
       <div class="row"><span class="grow">Reprendre un fichier<span class="pf-hint">Tu choisis ensuite ce qui est repris.</span></span><button type="button" class="ghost" id="pf-bk-pick">Choisir un fichier</button><input type="file" id="pf-bk-file" accept=".json,application/json" aria-label="Fichier de sauvegarde" hidden></div>
       <div class="pf-bk-parts" id="pf-bk-parts" hidden></div>
-      <div class="row" id="pf-bk-go-row" hidden><span class="grow"></span><button type="button" class="ghost" id="pf-bk-restore">Reprendre ce qui est coché</button></div>
+      <div class="row" id="pf-bk-go-row" hidden><span class="grow"></span><button type="button" id="pf-bk-restore">Reprendre ce qui est coché</button></div>
       <div class="dim note pf-msg" id="pf-bk-msg" role="status"></div>
     </div>
   </section>
@@ -39,8 +38,10 @@ export const BACKUP_JS = `
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = "mate-config-" + new Date().toISOString().slice(0, 10) + ".json";
+      document.body.append(link);
       link.click();
-      URL.revokeObjectURL(link.href);
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 10000);
       pfBkSay("Fichier enregistré.", "ok");
     } catch (e) {
       pfBkSay("Impossible de lire la configuration : le compagnon ne répond pas.", "ko");
@@ -78,12 +79,14 @@ export const BACKUP_JS = `
     });
     box.hidden = false;
     document.getElementById("pf-bk-go-row").hidden = false;
-    pfBkSay("Coche ce que tu veux reprendre : cela remplace ce qui existe ici.");
+    pfBkSay("Cela remplace ce qui existe ici pour chaque partie cochée.");
   }
 
   async function pfBkRestore() {
     const parts = [...document.querySelectorAll("#pf-bk-parts input:checked")].map((i) => i.dataset.part);
     if (!pfBkBackup || !parts.length) { pfBkSay("Coche au moins une partie.", "ko"); return; }
+    const go = document.getElementById("pf-bk-restore");
+    go.disabled = true;
     try {
       const res = await fetch("/local/config/backup", {
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ backup: pfBkBackup, parts: parts }),
@@ -92,10 +95,13 @@ export const BACKUP_JS = `
       if (!res.ok) { pfBkSay(json.error || json.message || "Erreur " + res.status, "ko"); return; }
       const skipped = Object.keys(json.skipped);
       const done = json.imported.map((p) => pfBkNames[p]).join(", ");
-      const wait = skipped.map((p) => pfBkNames[p] + " : " + json.skipped[p]).join(" ; ");
-      pfBkSay((done ? "Repris : " + done + ". " : "") + wait, skipped.length ? "ko" : "ok");
+      const notes = Object.keys(json.notes).map((p) => pfBkNames[p] + " : " + json.notes[p]).join(" ; ");
+      const wait = skipped.length ? "Pas repris : " + skipped.map((p) => pfBkNames[p] + " : " + json.skipped[p]).join(" ; ") : "";
+      pfBkSay((done ? "Repris : " + done + ". " : "") + wait + (notes ? " " + notes + "." : ""), skipped.length ? "ko" : "ok");
     } catch (e) {
       pfBkSay("Le compagnon ne répond pas.", "ko");
+    } finally {
+      go.disabled = false;
     }
   }
 

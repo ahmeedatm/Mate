@@ -46,6 +46,6 @@ describe("sauvegarde de la disposition de la tablette", () => {
     const post = server.call("POST", "/local/config/backup", { backup, parts: ["layout"] }, false);
     const { order, done } = await tabletAnswers(post, () => ({ ok: true, data: DATA }));
     assert.deepEqual(order, { type: "layout", action: "set", ...backup.parts.layout });
-    assert.deepEqual(done.json, { imported: ["layout"], skipped: {} });
+    assert.deepEqual(done.json, { imported: ["layout"], skipped: {}, notes: {} });
   });
 });

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { BACKUP_FORMAT, BACKUP_PARTS, exportBackup, layoutFrom, type BackupParts, type BackupPart } from "../backup.ts";
 import { appsFile, assertPushAlone, keySchema, keysFile, linksFile, MAX_SLOTS, pagesFile, type PersoKey } from "../perso.ts";
+import { listApps } from "../os.ts";
 import { sendToTablet, tabletStatus } from "../tablet.ts";
 import { writeJson } from "../store.ts";
 import { applyPluginChoices, pluginChoicesBody } from "./plugins.ts";
@@ -17,9 +18,10 @@ const partsSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    keys: { type: "object", required: ["slots"], properties: { slots: slotsSchema } },
+    keys: { type: "object", additionalProperties: false, required: ["slots"], properties: { slots: slotsSchema } },
     pages: {
       type: "object",
+      additionalProperties: false,
       required: ["pages"],
       properties: {
         pages: {
@@ -27,6 +29,7 @@ const partsSchema = {
           maxItems: 50,
           items: {
             type: "object",
+            additionalProperties: false,
             required: ["title", "slots"],
             properties: { title: { type: "string", minLength: 1, maxLength: 40 }, slots: slotsSchema },
           },
@@ -35,6 +38,7 @@ const partsSchema = {
     },
     apps: {
       type: "object",
+      additionalProperties: false,
       required: ["apps"],
       properties: {
         apps: {
@@ -42,6 +46,7 @@ const partsSchema = {
           maxItems: 200,
           items: {
             type: "object",
+            additionalProperties: false,
             required: ["label", "name"],
             properties: { label: { type: "string", maxLength: 200 }, name: { type: "string", minLength: 1, maxLength: 200 } },
           },
@@ -50,6 +55,7 @@ const partsSchema = {
     },
     links: {
       type: "object",
+      additionalProperties: false,
       required: ["links"],
       properties: {
         links: {
@@ -57,15 +63,22 @@ const partsSchema = {
           maxItems: 200,
           items: {
             type: "object",
+            additionalProperties: false,
             required: ["label", "url"],
             properties: { label: { type: "string", maxLength: 40 }, url: { type: "string", pattern: "^https?://", maxLength: 2000 } },
           },
         },
       },
     },
-    plugins: { type: "object", required: ["choices"], properties: { choices: pluginChoicesBody.properties.choices } },
+    plugins: {
+      type: "object",
+      additionalProperties: false,
+      required: ["choices"],
+      properties: { choices: pluginChoicesBody.properties.choices },
+    },
     layout: {
       type: "object",
+      additionalProperties: false,
       required: ["layout", "topBar", "rail"],
       properties: {
         layout: {
@@ -77,7 +90,11 @@ const partsSchema = {
           },
         },
         topBar: { type: "array", items: { type: "string" } },
-        rail: { type: "object", properties: { labels: { type: "boolean" }, tools: { type: "array", items: { type: "string" } } } },
+        rail: {
+          type: "object",
+          additionalProperties: false,
+          properties: { labels: { type: "boolean" }, tools: { type: "array", items: { type: "string" } } },
+        },
       },
     },
   },
@@ -105,40 +122,52 @@ export default async function localBackupRoutes(app: FastifyInstance) {
     async (req) => {
       const { backup, parts } = req.body;
       const missing = parts.filter((p) => !backup.parts[p]);
-      if (missing.length) throw badRequest(`Le fichier ne contient pas : ${missing.join(", ")}`);
+      if (missing.length) throw badRequest("Le fichier ne contient pas une des parties choisies");
       const imported: BackupPart[] = [];
       const skipped: Partial<Record<BackupPart, string>> = {};
+      const notes: Partial<Record<BackupPart, string>> = {};
       for (const part of parts) {
-        const reason = await restore(part, backup.parts);
-        if (reason) skipped[part] = reason;
+        const { skip, note } = await restore(part, backup.parts);
+        if (skip) skipped[part] = skip;
         else imported.push(part);
+        if (note) notes[part] = note;
       }
-      return { imported, skipped };
+      return { imported, skipped, notes };
     },
   );
 }
 
 const checked = (slots: (PersoKey | null)[]) => slots.forEach((k) => assertPushAlone(k));
 
-/** Reprend une partie ; rend la raison si elle n'a pas pu l'être (tablette éteinte), `undefined` sinon. */
-async function restore(part: BackupPart, parts: BackupParts): Promise<string | undefined> {
+/** Reprend une partie : `skip` si elle n'a pas pu l'être (tablette éteinte), `note` pour ce qui a été laissé de côté. */
+async function restore(part: BackupPart, parts: BackupParts): Promise<{ skip?: string; note?: string }> {
   switch (part) {
     case "keys":
       checked(parts.keys!.slots);
-      return void (await writeJson(keysFile, parts.keys));
+      await writeJson(keysFile, parts.keys);
+      return {};
     case "pages":
       parts.pages!.pages.forEach((p) => checked(p.slots));
-      return void (await writeJson(pagesFile, parts.pages));
-    case "apps":
-      return void (await writeJson(appsFile, parts.apps));
+      await writeJson(pagesFile, parts.pages);
+      return {};
+    case "apps": {
+      // Seules les applis installées ici : le Deck n'a rien à lancer pour les autres.
+      const installed = new Set(await listApps());
+      const apps = parts.apps!.apps.filter((a) => installed.has(a.name));
+      await writeJson(appsFile, { apps });
+      const absent = parts.apps!.apps.length - apps.length;
+      return absent ? { note: `${absent} appli(s) absente(s) de cet ordinateur laissée(s) de côté` } : {};
+    }
     case "links":
-      return void (await writeJson(linksFile, parts.links));
+      await writeJson(linksFile, parts.links);
+      return {};
     case "plugins":
-      return void (await applyPluginChoices(parts.plugins!.choices));
+      await applyPluginChoices(parts.plugins!.choices);
+      return {};
     case "layout": {
-      if (!tabletStatus().connected) return "Tablette non connectée : rallume-la puis reprends les profils";
+      if (!tabletStatus().connected) return { skip: "Tablette non connectée : rallume-la puis reprends les profils" };
       const result = await sendToTablet({ type: "layout", action: "set", ...parts.layout! });
-      return result.ok ? undefined : (result.error ?? "La tablette n'a rien rendu");
+      return result.ok ? {} : { skip: result.error ?? "La tablette n'a rien rendu" };
     }
   }
 }
