@@ -25,7 +25,7 @@ data class AppAudio(val running: Boolean, val volume: Int?, val muted: Boolean, 
 data class MixerChannel(val id: String, val name: String, val volume: Int?, val muted: Boolean, val level: Int?)
 
 /** `apps` null : pas de volume par appli sur cet ordinateur (Mac). */
-data class MixerState(val master: MixerChannel, val mic: MixerChannel, val apps: List<MixerChannel>?)
+data class MixerState(val master: MixerChannel, val mic: MixerChannel, val apps: List<MixerChannel>?, val front: String? = null)
 
 /** Scène du mélangeur : volumes de la sortie et des applis rappelés en un toucher. */
 data class MixerScene(val id: String, val name: String)
@@ -290,6 +290,7 @@ class SystemApi(private val http: Http) {
         return MixerState(
             parseChannel(j.getJSONObject("master")), parseChannel(j.getJSONObject("mic")),
             apps?.let { a -> (0 until a.length()).map { parseChannel(a.getJSONObject(it)) } },
+            if (j.isNull("front")) null else j.optString("front").ifEmpty { null },
         )
     }
 

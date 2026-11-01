@@ -41,6 +41,13 @@ describe("Mélangeur de l'onglet Son", () => {
     assert.equal(res.json.master.volume, 50);
   });
 
+  it("donne l'appli au premier plan, ou null quand aucune ne joue", async () => {
+    server.setOs({ mixer: { ...mixer([channel("discord", 100), channel("spotify", 40)]), front: "spotify" } });
+    assert.equal((await server.call("GET", "/system/mixer")).json.front, "spotify");
+    server.setOs({ mixer: { ...mixer([channel("discord", 100)]), front: null } });
+    assert.equal((await server.call("GET", "/system/mixer")).json.front, null);
+  });
+
   it("change le volume d'une appli et renvoie le nouvel état", async () => {
     const res = await server.call("POST", "/system/mixer", { id: "spotify", volume: 25 });
     assert.equal(res.json.apps[1].volume, 25);

@@ -40,8 +40,8 @@ import java.util.UUID
 class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val mixer = MixerView(context).apply {
         attach(host.scope)
-        appFilter = { live -> MixerApps.channels(chosen(), live) }
-        groupMembers = { id -> MixerApps.membersOf(chosen(), id) }
+        appFilter = { state -> MixerApps.channels(chosen(), state.apps, state.front) }
+        groupMembers = { id -> MixerApps.membersOf(chosen(), id, liveApps, frontApp) }
     }
 
     override val view = OwnerFrameLayout(context, ownsLongPress = true, ownsSwipe = true).apply {
@@ -60,6 +60,12 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private var loaded: List<MixerApps.App>? = null
 
     private fun chosen() = loaded ?: MixerApps.read(placed.config, computerId).also { loaded = it }
+
+    /** Voies proposées en plus des applis : celle de l'appli devant, celle des applis sans voie. */
+    private fun specials() = listOf(
+        MixerApps.front(context.getString(R.string.mixer_front)),
+        MixerApps.others(context.getString(R.string.mixer_others)),
+    )
 
     // --- Réglages (⚙ du mode Modifier)
 
@@ -83,7 +89,7 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         box.removeAllViews()
         // Rien de lu (pas encore, ou injoignable) : les choisies seules, décochables ; lu sans liste : Mac.
         val live = if (mixer.hasState) mixer.liveApps else emptyList()
-        val candidates = MixerApps.candidates(chosen(), live, mixer::titleOf)
+        val candidates = MixerApps.candidates(chosen(), live, mixer::titleOf, specials())
         val hint = when {
             !mixer.hasState -> R.string.mixer_apps_unknown
             live == null -> R.string.mixer_no_apps
@@ -98,7 +104,7 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         val chosenIds = chosen().map { it.id }.toSet()
         candidates.forEach { app -> box.addView(row(box, app, app.id in chosenIds)) }
         // Toujours là : sous deux applis qui jouent, grisé (le texte d'aide dit pourquoi).
-        val loose = candidates.filter { !it.isGroup }
+        val loose = candidates.filter { !it.isVirtual }
         box.addView(Button(context, null, 0, R.style.ActionButton).apply {
             setText(R.string.mixer_group_new)
             isEnabled = loose.size >= 2

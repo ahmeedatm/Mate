@@ -331,6 +331,11 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         if (!controlled()) return expectStatus(res, 501, "/system/mixer");
         expectStatus(res, 200, "/system/mixer");
         expect(res.json.master?.id === "master" && res.json.mic?.id === "mic", "sortie ou micro absent");
+        // Voie « premier plan » : Windows donne l'appli devant (ou null), le Mac n'en donne pas.
+        expect(
+          res.json.apps ? res.json.front === null || typeof res.json.front === "string" : res.json.front === undefined,
+          "appli au premier plan invalide",
+        );
         const scenes = await call("GET", "/system/mixer/scenes");
         expectStatus(scenes, 200, "/system/mixer/scenes");
         // Ordre des scènes : renvoyer l'ordre actuel ne change rien (lecture seule en pratique).
