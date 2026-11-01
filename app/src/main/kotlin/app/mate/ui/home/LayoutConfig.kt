@@ -48,8 +48,10 @@ object LayoutConfig {
         if (!json.has("gameScreen")) return
         val page = json.opt("gameScreen") as? Int ?: -2
         if (page !in -1 until layout.names.size) fail("Disposition invalide : l'écran de jeu n'existe pas.")
-        if (page == layout.callProfile && page >= 0) fail("Disposition invalide : Réunion ne peut pas s'afficher à cause d'une appli.")
-        if (page >= 0) layout.setApps(page, appList(json.opt("gameApps")))
+        if (page < 0) return
+        val apps = appList(json.opt("gameApps"))
+        if (apps.isNotEmpty() && page == layout.callProfile) fail("Disposition invalide : Réunion ne peut pas s'afficher à cause d'une appli.")
+        layout.setApps(page, apps)
     }
 
     /** Lecture d'enregistrement (laisse tomber ce qu'elle ne comprend pas) : `pageApps`, ou l'ancien `gameScreen` + `gameApps`. */

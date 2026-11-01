@@ -98,6 +98,16 @@ class GameSessionTest {
     }
 
     @Test
+    fun `une bascule refusee garde la page deja affichee, quitter les applis y fait revenir`() {
+        session.onForeground("Figma", "figma", "", pages)
+        session.onForeground("Blender", "blender", "", pages)
+        session.resumeOn(1)
+        assertEquals(1, session.target)
+        assertEquals(GameSession.Step.LEAVE, session.onForeground("Finder", "finder", "", pages))
+        assertTrue(session.endIfLeft())
+    }
+
+    @Test
     fun `pas de bascule pendant une saisie, en plein ecran ni en appel`() {
         assertTrue(session.shouldSwitch(typing = false, fullScreen = false, inCall = false))
         assertFalse(session.shouldSwitch(typing = true, fullScreen = false, inCall = false))

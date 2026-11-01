@@ -227,7 +227,7 @@ if (canControl) {
     connected: () => tabletStatus().connected,
     liveApps: callingDeckApps,
   });
-  // Appli au premier plan : la tablette passe sur son écran de jeu quand c'en est une de sa liste (et en revient).
+  // Appli au premier plan : la tablette affiche la page d'une appli de sa liste (et en revient).
   startForegroundWatch((event) => void sendToTablet({ type: "foreground", ...event }), {
     connected: () => tabletStatus().connected,
     front: frontApp,

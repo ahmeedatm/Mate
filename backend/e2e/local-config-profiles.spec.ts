@@ -234,6 +234,8 @@ test.describe("page locale : profils et barres", () => {
       await page.locator("#pf-send").click();
       await expect(page.locator("#pf-msg")).toHaveText("Envoyé à la tablette.");
       expect(tablet.sets.at(-1).layout.widgets.every((w: any) => w.p < 2)).toBe(true);
+      // Les applis de chaque page suivent : une liste par profil restant, Steam toujours sur Accueil.
+      expect(tablet.sets.at(-1).layout.pageApps).toEqual([["Steam"], []]);
     }
   });
 

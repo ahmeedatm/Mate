@@ -43,6 +43,13 @@ class GameSession {
         return true
     }
 
+    /** Bascule refusée vers une autre page alors que [page] est déjà affichée pour une appli : la session reste sur [page]. */
+    fun resumeOn(page: Int) {
+        active = true
+        leaving = false
+        target = page
+    }
+
     fun reset() {
         active = false
         leaving = false
@@ -52,7 +59,7 @@ class GameSession {
     /** Passer sur la page de l'appli ? Jamais pendant une saisie, dans un écran plein (Caméra, mode Modifier) ni en appel. */
     fun shouldSwitch(typing: Boolean, fullScreen: Boolean, inCall: Boolean): Boolean = !typing && !fullScreen && !inCall
 
-    /** Fin de session : page où revenir (celle d'avant) si l'écran montre encore l'écran de jeu, null s'il est parti ailleurs. */
+    /** Fin de session : page où revenir (celle d'avant) si l'écran montre encore la page de l'appli, null s'il est parti ailleurs. */
     fun returnTo(currentPage: Int?, gamePage: Int, previousPage: Int): Int? = previousPage.takeIf { currentPage == gamePage }
 
     private fun pageOf(name: String, bundleId: String, file: String, pages: Map<Int, List<String>>): Int? {
