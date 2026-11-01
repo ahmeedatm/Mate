@@ -254,10 +254,10 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#twintheme")).toHaveText("Hush");
     expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-now"))).toBe("#FF6EB4");
 
-    // Spider-Man : accent magenta du logo, widgets sans tuile (tuile = fond noir).
-    await page.getByRole("button", { name: "Spider-Man" }).click();
-    await expect(page.getByRole("button", { name: "Spider-Man" })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.locator("#twintheme")).toHaveText("Spider-Man");
+    // Spider-Verse (SPIDERMAN) : accent magenta du logo, widgets sans tuile (tuile = fond noir).
+    await page.getByRole("button", { name: "Spider-Verse" }).click();
+    await expect(page.getByRole("button", { name: "Spider-Verse" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#twintheme")).toHaveText("Spider-Verse");
     expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-now"))).toBe("#FF2BD6");
     expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-tile"))).toBe("#000000");
 
