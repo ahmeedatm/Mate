@@ -41,7 +41,9 @@ export default async function mcpRoutes(app: FastifyInstance) {
     } catch {
       // Réponse sans JSON : seul le statut compte.
     }
-    if (res.statusCode >= 400) throw new Error(json.error ?? json.message ?? `HTTP ${res.statusCode}`);
+    // Erreur levée par une route (forme de Fastify) : `error` n'est que le nom du statut (« Bad Request »), le texte est dans `message`.
+    const reason = json.statusCode ? (json.message ?? json.error) : (json.error ?? json.message);
+    if (res.statusCode >= 400) throw new Error(reason ?? `HTTP ${res.statusCode}`);
     return json;
   };
 

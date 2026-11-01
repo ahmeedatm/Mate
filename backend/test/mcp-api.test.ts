@@ -111,6 +111,12 @@ describe("réglages", () => {
     assert.equal(res.content[0].text, "Page inconnue");
   });
 
+  it("une erreur du compagnon garde son message, pas « Bad Request »", async () => {
+    const res = await call("docs_lister", { dossier: "../.." });
+    assert.equal(res.isError, true);
+    assert.equal(res.content[0].text, "Chemin hors du dossier partagé");
+  });
+
   it("ajoute puis retire une appli et un site du deck", async () => {
     const add = await call("deck_appli_ajouter", { nom: "Discord" });
     assert.ok(!add.isError, add.content[0].text);
