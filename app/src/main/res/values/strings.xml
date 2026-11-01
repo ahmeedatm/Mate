@@ -1408,9 +1408,10 @@
     <string name="widget_mail">Mails</string>
     <string name="widget_mail_desc">Le nombre de mails non lus de la boîte de réception ; un toucher ouvre la boîte sur l\'ordinateur</string>
     <string name="widget_mail_empty">Connecte un compte Microsoft ou Google sur la page de l\'ordinateur</string>
+    <string name="widget_mail_a11y">Mails : %1$d non lus. Toucher pour ouvrir la boîte sur l\'ordinateur</string>
     <plurals name="widget_mail_unread">
-        <item quantity="one">mail non lu</item>
-        <item quantity="other">mails non lus</item>
+        <item quantity="one">non lu</item>
+        <item quantity="other">non lus</item>
     </plurals>
     <string name="widget_metrics">Valeurs</string>
     <string name="widget_metrics_desc">Des chiffres calculés par l\'ordinateur (dossier, build, compteur), remis à jour chaque minute</string>

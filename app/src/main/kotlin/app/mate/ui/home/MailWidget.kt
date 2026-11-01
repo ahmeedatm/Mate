@@ -1,6 +1,7 @@
 package app.mate.ui.home
 
 import android.content.Context
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -19,8 +20,15 @@ import kotlinx.coroutines.launch
  * Relu chaque minute.
  */
 class MailWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val count = label(48f, R.attr.c_text, light = true).apply { gravity = Gravity.CENTER }
-    private val status = label(14f, R.attr.c_text_dim).apply { gravity = Gravity.CENTER }
+    private val count = label(if (placed.size == WidgetSize.S) 36f else 52f, R.attr.c_text, light = true).apply {
+        gravity = Gravity.CENTER
+        maxLines = 1
+    }
+    private val status = label(14f, R.attr.c_text_dim).apply {
+        gravity = Gravity.CENTER
+        maxLines = 2
+        ellipsize = TextUtils.TruncateAt.END
+    }
 
     override val view = LinearLayout(context).asCard(16).apply {
         orientation = LinearLayout.VERTICAL
@@ -28,9 +36,11 @@ class MailWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         addView(count, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         addView(status, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         setOnClickListener { open() }
+        isClickable = false // rien à ouvrir tant qu'aucun compte n'a répondu
     }
 
     private var mail: Mail? = null
+    private var opening = false
 
     override fun setActive(active: Boolean) {
         if (active) host.scope.launch { load() }
@@ -51,16 +61,25 @@ class MailWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             MailNote.ACCOUNT_ERROR -> current?.accounts?.firstNotNullOfOrNull { it.error }
             null -> context.resources.getQuantityString(R.plurals.widget_mail_unread, current?.total ?: 0)
         }
-        count.text = if (current == null || current.accounts.all { it.unread == null }) "–" else current.total.toString()
+        val shown = current?.takeIf { it.hasCount }?.total
+        count.text = shown?.toString() ?: "–"
         status.text = note
         status.visibility = if (note == null) View.GONE else View.VISIBLE
+        val target = current?.target
+        view.isClickable = target != null
+        // Lu à voix haute : le nombre, puis le geste (le tiret seul ne dit rien).
+        view.contentDescription =
+            if (target != null && shown != null) context.getString(R.string.widget_mail_a11y, shown) else note
     }
 
     private fun open() {
         val target = mail?.target ?: return
+        if (opening) return
+        opening = true
         host.scope.launch {
             runCatchingCancellable { BackendClient(context).mail.open(target.provider) }
                 .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
+            opening = false
         }
     }
 }

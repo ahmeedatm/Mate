@@ -9,6 +9,6 @@ enum class MailNote { ERROR, NO_ACCOUNT, ACCOUNT_ERROR }
 fun mailNote(mail: Mail?, hasError: Boolean): MailNote? = when {
     hasError -> MailNote.ERROR
     mail == null || mail.accounts.isEmpty() -> MailNote.NO_ACCOUNT
-    mail.accounts.all { it.unread == null } -> MailNote.ACCOUNT_ERROR
+    !mail.hasCount -> MailNote.ACCOUNT_ERROR
     else -> null
 }

@@ -8,6 +8,9 @@ data class MailAccount(val provider: String, val label: String, val email: Strin
 data class Mail(val accounts: List<MailAccount>) {
     val total get() = accounts.sumOf { it.unread ?: 0 }
 
+    /** Au moins un compte a donné son nombre : sinon la tuile montre un tiret, pas 0. */
+    val hasCount get() = accounts.any { it.unread != null }
+
     /** Compte dont la boîte s'ouvre au toucher : le premier qui a du courrier à lire, sinon le premier. */
     val target get() = accounts.firstOrNull { (it.unread ?: 0) > 0 } ?: accounts.firstOrNull()
 }

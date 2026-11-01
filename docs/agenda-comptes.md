@@ -22,7 +22,9 @@ jetons de renouvellement dans `backend/.data/accounts.json` (sur l'ordinateur, j
      `http://localhost:3000/oauth/microsoft/callback`
 3. **Inscrire**, puis copier l'**ID d'application (client)** (un identifiant `xxxxxxxx-xxxx-…`).
 4. **Autorisations d'API** › **Ajouter une autorisation** › **Microsoft Graph** › **Autorisations déléguées** ›
-   cocher **Calendars.Read** › Ajouter. (`User.Read`, déjà présent, peut rester.)
+   cocher **Calendars.Read** et **Mail.ReadBasic** (nombre de mails non lus, jamais leur contenu) › Ajouter.
+   (`User.Read`, déjà présent, peut rester.) Un compte connecté avant l'ajout de `Mail.ReadBasic` garde son agenda ;
+   la tuile Mails lui demande de se reconnecter une fois.
 5. Coller l'identifiant dans `backend/config/accounts.json` :
    ```json
    "microsoft": { "clientId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" }
@@ -42,10 +44,10 @@ Si ça bloque :
 ## Google (Google Agenda) : facultatif, environ 15 minutes
 
 1. **https://console.cloud.google.com** › nouveau projet `Mate`.
-2. **API et services** › **Bibliothèque** › activer **Google Calendar API**.
+2. **API et services** › **Bibliothèque** › activer **Google Calendar API** et **Gmail API**.
 3. **Écran de consentement OAuth** : type **Externe**, nom de l'appli, e-mail ; champ d'application
-   `.../auth/calendar.readonly` ; tant que l'appli est « En test », ajouter les comptes autorisés dans **Utilisateurs test**
-   (100 au plus ; la publication pour tous demande une vérification par Google).
+   `.../auth/calendar.readonly` et `.../auth/gmail.metadata` ; tant que l'appli est « En test », ajouter les comptes autorisés dans **Utilisateurs test**
+   (100 au plus ; `gmail.metadata` est un scope restreint : la publication pour tous demande une vérification par Google).
 4. **Identifiants** › **Créer des identifiants** › **ID client OAuth** › type **Application de bureau**.
 5. Copier l'ID client et le code secret (pour une appli de bureau, Google le considère comme public) dans
    `backend/config/accounts.json` :
