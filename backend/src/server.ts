@@ -19,6 +19,8 @@ import { startForegroundWatch } from "./foreground-watch.ts";
 import { litTiles, startTileStateWatch, stateTiles } from "./tile-state.ts";
 import { startMeetingWatch } from "./meeting-watch.ts";
 import { isScreenLocked, startScreenLockWatch } from "./screen-lock.ts";
+import { parseAlertSpecs, startAlertWatch } from "./alerts.ts";
+import { haReachable, haSensorStates } from "./ha.ts";
 import { callingDeckApps } from "./deck.ts";
 import { startMenuBar } from "./mac/menubar.ts";
 import { loadTls } from "./tls.ts";
@@ -242,6 +244,15 @@ startScreenLockWatch(async (locked) => (await sendToTablet({ type: "lock", locke
   },
   intervalMs: Number(process.env.SCREEN_LOCK_POLL_MS) || undefined,
 });
+// Alerte maison : capteurs de HA_ALERTS relus toutes les 5 s, la tablette reçoit une bannière qui reste jusqu'à un toucher.
+const alertSpecs = haReachable ? parseAlertSpecs(process.env.HA_ALERTS) : [];
+if (alertSpecs.length > 0) {
+  startAlertWatch(async (text) => (await sendToTablet({ type: "alert", text })).received === true, {
+    specs: alertSpecs,
+    read: () => haSensorStates(alertSpecs.map((s) => s.id)),
+    intervalMs: Number(process.env.HA_ALERTS_POLL_MS) || undefined,
+  });
+}
 // Notifications de l'ordinateur : base du système relue toutes les 2 s, chaque nouvelle envoyée à la tablette sans attendre.
 if (canControl) {
   // Les supprimées (empreintes seulement) tiennent après un redémarrage : sinon le 1er passage les remonterait du système.

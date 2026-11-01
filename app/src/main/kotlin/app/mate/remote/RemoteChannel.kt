@@ -26,6 +26,8 @@ import app.mate.net.DocEntry
 import app.mate.net.HttpException
 import app.mate.net.Link
 import app.mate.net.parseNotification
+import app.mate.ui.Banner
+import app.mate.ui.BannerIcon
 import app.mate.ui.home.TileStates
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -139,6 +141,12 @@ class RemoteChannel(private val activity: MainActivity) {
                 // Réglages > Accessibilité > Lire les bandeaux : lu aussi sans `speak` (une seule fois avec).
                 activity.readAloud(text)
             }
+            null
+        }
+        "alert" -> {
+            val text = command.getString("text")
+            activity.showBanner(text, Banner.UNTIL_TAPPED, BannerIcon.HOME_ALERT)
+            if (!Speaker.speak(text)) error("Alerte affichée, mais la synthèse vocale est indisponible (pas de voix française ?)")
             null
         }
         "document" -> {

@@ -101,3 +101,15 @@ export async function haActivate(id: string): Promise<boolean> {
   await ha(`/api/services/${domain}/${SERVICES[domain].service}`, { body: { entity_id: id } });
   return true;
 }
+
+/** Capteurs demandés (alertes, src/alerts.ts) : lecture seule, hors de la liste blanche du widget. Lève si Home Assistant ne répond pas. */
+export async function haSensorStates(ids: string[]): Promise<Record<string, { state: string; name?: string }>> {
+  const wanted = new Set(ids);
+  const states = await ha<RawState[]>("/api/states");
+  return Object.fromEntries(
+    states.filter((s) => wanted.has(s.entity_id)).map((s) => [s.entity_id, { state: s.state, name: s.attributes?.friendly_name }]),
+  );
+}
+
+/** Home Assistant joignable par l'ordinateur (URL sûre et jeton), sans exiger de liste blanche pour le widget. */
+export const haReachable = Boolean(base && token);

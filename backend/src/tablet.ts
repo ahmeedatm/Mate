@@ -51,6 +51,8 @@ export type TabletCommand =
   | { type: "screenshot" }
   /** Retrouver la tablette : sonnerie forte en boucle (`on`), arrêtée par un toucher, l'ordre inverse ou au bout de 2 minutes. */
   | { type: "ring"; on: boolean }
+  /** Alerte maison (src/alerts.ts) : bannière qui reste jusqu'à un toucher, lue à voix haute. */
+  | { type: "alert"; text: string }
   /** Panneau Tablette de la page locale (routes/local.ts). */
   | ({ type: "settings" } & TabletSettings)
   /** Profils et barres de la page locale : lire l'état de la tablette, ou lui envoyer une configuration. */
