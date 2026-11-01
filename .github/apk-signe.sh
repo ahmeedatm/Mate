@@ -51,6 +51,7 @@ signer() {
   KEYSTORE=$(mktemp)
   trap 'rm -f "$KEYSTORE"' EXIT
   printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$KEYSTORE"
+  unset KEYSTORE_BASE64
   "$BT/apksigner" sign --ks "$KEYSTORE" --ks-key-alias companion --ks-pass env:KS_PASS --key-pass env:KS_PASS \
     --out "$out" "$aligned"
   local certs

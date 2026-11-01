@@ -32,6 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
+      contents: read
       pull-requests: read
     outputs:
       number: ${{ steps.pr.outputs.number }}
@@ -117,7 +118,7 @@ jobs:
           PR: ${{ needs.verifier.outputs.number }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          .github/essai-pr.sh "$PR" "$HEAD_SHA" || exit 0
+          .github/essai-pr.sh "$PR" "$HEAD_SHA" || { echo "::notice::PR #$PR changée pendant la signature : rien publié"; exit 0; }
           PR_TITLE=$(gh pr view "$PR" -R "$UPDATES_REPO" --json title -q .title)
           export PR_TITLE
           node scripts/updates-publish.mjs --essai "$PR" dist updates
