@@ -102,6 +102,13 @@ impact-equipe`, « Impact équipe : oui » dans le corps avec la raison en une p
 `impact-equipe` reste rouge jusqu'à l'approbation d'une autre personne. Un bug corrigé, un widget ou
 une option que chacun active s'il veut : « non », pas d'étiquette.
 
+Essai sur tablette : si la PR change ce qui tourne sur la tablette ou l'ordinateur (`app/`, `backend/`)
+et qu'il faut l'essayer sur une vraie tablette, `gh pr edit <n> --add-label essai` au passage en
+prête. La CI construit l'appli d'essai, la signe et la publie dans la release `essais` à chaque commit
+tant que l'étiquette est là ; à essayer dans Réglages > Mises à jour, retirée à la fermeture de la PR
+(`docs/developpement.md`, § Déployer un essai depuis une PR). Pas d'étiquette pour une PR de docs, de
+CI ou de `.claude/` seuls, ni pour un brouillon (rien n'est publié).
+
 Terminer par une ligne `⚠️` sur ce qui n'a pas été fait ou vérifié.
 La fusion reste à la CI verte, et à l'approbation d'une autre personne si la PR porte `impact-equipe`
 (`CLAUDE.md`, § Règles de travail).

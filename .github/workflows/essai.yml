@@ -1,0 +1,104 @@
+# Essai d'une PR, première moitié : construit l'appli d'essai de la PR, SANS la clé de signature (APK release non
+# signé), et l'archive de son backend si backend/ change. Seulement les PR qui portent l'étiquette « essai », hors
+# brouillon, à chaque nouveau commit. La signature et la publication sont dans essai-publication.yml, qui n'exécute que
+# le code de master : le code de la PR ne voit jamais la clé (docs/developpement.md, section Déployer un essai).
+
+name: Essai (construction)
+
+on:
+  pull_request:
+    types: [labeled, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  # Version X.Y.Z-essai.N : X.Y.Z = dernier tag de la branche, N = numéro d'exécution de ce workflow
+  # (app/build.gradle.kts). Le jeton de lecture des releases (UPDATE_TOKEN) est en lecture seule : il peut aller dans
+  # le code de la PR ; la clé, elle, est dans l'environnement « signature », réservé à master et aux tags v*.
+  android:
+    if: >-
+      !github.event.pull_request.draft && contains(github.event.pull_request.labels.*.name, 'essai')
+      && (github.event.action != 'labeled' || github.event.label.name == 'essai')
+    # Par job, sous le même `if` : un événement sans rapport (autre étiquette) n'annule pas une construction en cours.
+    # Un nouveau commit, lui, annule celle de la même PR.
+    concurrency:
+      group: essai-android-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container: ghcr.io/cirruslabs/android-sdk:36@sha256:f9b3ea9ed2b5fc9522adae82c7b4622ab7aa54207ef532c8e615a347dca08f31
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: echo "GRADLE_USER_HOME=$GITHUB_WORKSPACE/.gradle-home" >> "$GITHUB_ENV"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .gradle-home/caches/
+            .gradle-home/wrapper/
+          key: gradle-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'app/build.gradle.kts') }}
+      - name: APK d'essai non signé
+        env:
+          UPDATE_TOKEN: ${{ secrets.UPDATE_TOKEN }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          TAG=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*') \
+            || { echo "::error::Aucun tag vX.Y.Z dans l'historique de la branche"; exit 1; }
+          VERSION=${TAG#v}-essai.$GITHUB_RUN_NUMBER
+          test -n "$UPDATE_TOKEN" || echo "::warning::UPDATE_TOKEN absent : l'essai lira les releases sans jeton"
+          ./gradlew --no-daemon --console=plain assembleRelease -PappVersion="$VERSION" -PupdateToken="$UPDATE_TOKEN"
+          mkdir -p essai
+          cp app/build/outputs/apk/release/app-release-unsigned.apk "essai/companion-$VERSION-unsigned.apk"
+          cd essai && sha256sum -- * > SHA256SUMS-android
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: essai-android
+          path: essai/
+          retention-days: 1
+          if-no-files-found: error
+
+  # Archives du backend de la PR (sans node ni lanceur Windows), seulement si backend/ diffère de master. Le commit de
+  # fusion de la PR a pour premier parent la tête de master : le diff entre les deux = ce que la PR change.
+  backend:
+    if: >-
+      !github.event.pull_request.draft && contains(github.event.pull_request.labels.*.name, 'essai')
+      && (github.event.action != 'labeled' || github.event.label.name == 'essai')
+    concurrency:
+      group: essai-backend-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: node:22.22-bookworm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - id: diff
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          if git diff --quiet HEAD^1 HEAD -- backend/; then
+            echo "backend/ identique à master : pas d'archive backend."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.diff.outputs.changed == 'true'
+        working-directory: backend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run package -- essai
+          cd ../dist && sha256sum -- backend-mac.tar.gz backend-windows.tar.gz > SHA256SUMS-backend
+      - if: steps.diff.outputs.changed == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: essai-backend
+          path: |
+            dist/backend-mac.tar.gz
+            dist/backend-windows.tar.gz
+            dist/SHA256SUMS-backend
+          retention-days: 1
+          if-no-files-found: error
