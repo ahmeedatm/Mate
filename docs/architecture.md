@@ -54,7 +54,7 @@ Pas de serveur dans le cloud : chaque ordinateur a son compagnon, la tablette pa
 
 ### 3. Les ordres de l'ordinateur vers la tablette (canal `/tablet`)
 
-La tablette n'ouvre aucun port. `remote/RemoteChannel.kt` garde une requête `POST /tablet/poll` ouverte (long-polling) ; le compagnon y dépose les ordres (`tablet.ts`) : rappel parlé d'une tâche ou d'un événement, message, changement de mode, capture d'écran… Livraison « au moins une fois », dédoublonnée par la tablette. C'est aussi par là que passe **l'extension Claude** (`mcp.ts`, serveur MCP qui relaie vers `POST /tablet/command`). Si l'écran de la tablette est éteint, l'appli est en pause et les ordres attendent.
+La tablette n'ouvre aucun port. `remote/RemoteChannel.kt` garde une requête `POST /tablet/poll` ouverte (long-polling) ; le compagnon y dépose les ordres (`tablet.ts`) : rappel parlé d'une tâche ou d'un événement, message, changement de mode, capture d'écran, sonnerie pour retrouver la tablette (ordre `ring`, `audio/Ringer.kt` : son d'alarme au maximum en boucle, volume remis ensuite ; un toucher, l'ordre inverse ou 2 minutes l'arrêtent ; bouton « Faire sonner » du panneau Tablette et outil `tablette_sonner`)… Livraison « au moins une fois », dédoublonnée par la tablette. C'est aussi par là que passe **l'extension Claude** (`mcp.ts`, serveur MCP qui relaie vers `POST /tablet/command`). Si l'écran de la tablette est éteint, l'appli est en pause et les ordres attendent.
 
 ### 4. Le Deck
 

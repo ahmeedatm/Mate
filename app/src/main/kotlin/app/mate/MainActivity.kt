@@ -19,6 +19,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import app.mate.agents.AgentAlerts
+import app.mate.audio.Ringer
 import app.mate.audio.Speaker
 import app.mate.audio.VolumeKeys
 import app.mate.device.Accessibility
@@ -551,7 +552,11 @@ class MainActivity : AppCompatActivity() {
             Screen.touched(this)
             lastTouch = SystemClock.elapsedRealtime()
             wakeRail()
-            if (frame.isShowing) {
+            if (Ringer.isRinging) {
+                // Retrouvée : le toucher arrête la sonnerie, il ne clique pas ce qu'il y a dessous.
+                Ringer.stop()
+                swallowTouch = true
+            } else if (frame.isShowing) {
                 closeFrame()
                 swallowTouch = true
             }

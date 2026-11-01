@@ -305,6 +305,7 @@ ${FAVICON}
           <div class="row"><label for="volume">Volume du haut-parleur</label><input type="range" id="volume" min="0" max="100"><span class="value" id="volumevalue"></span></div>
           <div class="row"><label for="nightdim">Atténuer l'écran la nuit, de 22 h à 7 h</label><input type="checkbox" id="nightdim"></div>
           <div class="row"><label for="focusdnd">Ne pas déranger sur l'ordinateur pendant la concentration</label><input type="checkbox" id="focusdnd"></div>
+          <div class="row"><span class="grow">Tablette introuvable ?</span><button class="ghost" id="ringbtn">Faire sonner</button></div>
           <div class="dim note" id="tabletmsg"></div>
         </div>
       </div>
@@ -719,6 +720,22 @@ ${FAVICON}
       state.textContent = updateNote;
     }
   }
+  async function ring(on) {
+    const msg = document.getElementById("tabletmsg"), btn = document.getElementById("ringbtn");
+    msg.textContent = "Envoi à la tablette…";
+    try {
+      const res = await fetch("/local/tablet/ring", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ on }) });
+      const r = await res.json();
+      msg.textContent = res.ok ? (on ? "La tablette sonne : touche son écran pour l'arrêter." : "Sonnerie arrêtée.") : "Pas fait : " + (r.error || r.message);
+      if (res.ok) {
+        btn.textContent = on ? "Arrêter la sonnerie" : "Faire sonner";
+        btn.dataset.on = String(on);
+      }
+    } catch (e) {
+      msg.textContent = "Compagnon injoignable";
+    }
+  }
+  document.getElementById("ringbtn").onclick = (e) => ring(e.target.dataset.on !== "true");
   document.getElementById("updatebtn").onclick = (e) => sendUpdate(e.target.dataset.action);
   async function saveTablet(change) {
     const msg = document.getElementById("tabletmsg");

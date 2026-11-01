@@ -74,6 +74,18 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
   );
 
   server.registerTool(
+    "tablette_sonner",
+    {
+      title: "Faire sonner la tablette",
+      description:
+        "Fait sonner la tablette très fort, en boucle, pour la retrouver. Un toucher sur son écran l'arrête ; elle s'arrête seule au bout de 2 minutes.",
+      inputSchema: { sonner: z.boolean().default(true).describe("false : arrêter la sonnerie") },
+    },
+    ({ sonner }) =>
+      attempt(async () => (await command({ type: "ring", on: sonner }), text(sonner ? "La tablette sonne." : "Sonnerie arrêtée."))),
+  );
+
+  server.registerTool(
     "tablette_afficher_mode",
     {
       title: "Changer d'écran",
