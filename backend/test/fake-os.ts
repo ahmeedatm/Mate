@@ -257,6 +257,7 @@ export async function mediaSessions(): Promise<MediaSession[]> {
 
 export async function mediaControl(action: string, app?: string, positionMs?: number) {
   record("mediaControl", action, app, positionMs);
+  return true;
 }
 
 export async function mediaThumb(_app: string, _out: string) {
