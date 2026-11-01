@@ -95,6 +95,8 @@
     <string name="step_system">Système</string>
     <string name="step_wait">Pause</string>
     <string name="step_app_filter">Chercher une appli</string>
+    <string name="step_key_push">Maintenir pour parler</string>
+    <string name="sum_push">Maintenu : </string>
     <string name="step_key_hint">Touche : a, 5, return, f5…</string>
     <string name="step_text_hint">Texte collé dans l\'appli au premier plan</string>
     <string name="step_url_hint">https://…, msteams:…, vscode:…</string>

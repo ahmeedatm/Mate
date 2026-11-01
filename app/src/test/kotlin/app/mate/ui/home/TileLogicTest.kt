@@ -321,4 +321,12 @@ class TileLogicTest {
         assertFalse(tileHasHold(pages, "a-1"))
         assertFalse(tileHasHold(pages, "inconnue"))
     }
+
+    @Test
+    fun `les touches a maintenir sont celles que le deck annonce en push`() {
+        val pages = listOf(
+            DeckPage("Perso", listOf(DeckTile("k-0", "Parler", "keys", null, null, push = true), DeckTile("k-1", "Autre", "keys", null, null))),
+        )
+        assertEquals(setOf("k-0"), tilePushIds(pages))
+    }
 }

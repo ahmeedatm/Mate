@@ -17,6 +17,7 @@ import {
   openTarget,
   placeWindow,
   pressButton,
+  holdKeys,
   runShortcut,
   sendKeys,
   sendMediaKey,
@@ -55,7 +56,8 @@ import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
 export type Step =
   | { type: "app"; name: string }
   | { type: "url"; url: string }
-  | { type: "keys"; keys: string; app?: string }
+  /** `push` : touches tenues tant que le doigt reste sur la touche (parler en maintenant), voir `holdTile`. */
+  | { type: "keys"; keys: string; app?: string; push?: boolean }
   | { type: "shortcut"; name: string }
   | { type: "media"; command: MediaCommand }
   | { type: "system"; command: SystemCommand }
@@ -376,6 +378,8 @@ export async function runAction(action: Action, tileId?: string): Promise<unknow
       }
       return openTarget(action.url);
     case "keys":
+      // Une touche à maintenir ne part pas d'un appui simple : le micro resterait ouvert sans relâchement.
+      if (action.push) throw Object.assign(new Error("Cette touche se maintient : appui et relâchement"), { statusCode: 409 });
       return sendKeys(action.keys, action.app);
     case "shortcut":
       return runShortcut(action.name);
@@ -402,6 +406,52 @@ export async function runAction(action: Action, tileId?: string): Promise<unknow
       return systemCommand(action.command);
   }
   throw new Error(`Action inconnue : ${JSON.stringify(action)}`);
+}
+
+/** Touche à maintenir : ses touches tiennent jusqu'au relâchement, ou jusqu'à ce délai si le « relâché » ne vient pas. */
+export const PUSH_MAX_MS = 60_000;
+/** Touches tenues en ce moment : la combinaison réellement enfoncée (la config peut changer entre l'appui et le relâchement). */
+const pushing = new Map<string, { combo: string; timer: NodeJS.Timeout }>();
+/** Appels d'une même touche mis en file : un relâchement ne double jamais son appui. */
+const pushQueue = new Map<string, Promise<void>>();
+
+export const isPush = (tile: Tile) => tile.action.type === "keys" && tile.action.push === true;
+
+/** `down` : tient les touches de la touche à maintenir `tile` ; sinon les lâche (sans effet si elles n'étaient pas tenues). */
+export function holdTile(tile: Tile, down: boolean): Promise<void> {
+  if (tile.action.type !== "keys") throw new Error("Touche sans raccourci à maintenir");
+  const combo = tile.action.keys;
+  const next = (pushQueue.get(tile.id) ?? Promise.resolve()).catch(() => undefined).then(() => pushStep(tile.id, combo, down));
+  pushQueue.set(tile.id, next);
+  const forget = () => {
+    if (pushQueue.get(tile.id) === next) pushQueue.delete(tile.id);
+  };
+  next.then(forget, forget);
+  return next;
+}
+
+async function pushStep(id: string, combo: string, down: boolean) {
+  const held = pushing.get(id);
+  if (held) {
+    clearTimeout(held.timer);
+    pushing.delete(id);
+    await holdKeys(held.combo, false);
+  }
+  if (!down) return;
+  await holdKeys(combo, true);
+  const timer = setTimeout(() => {
+    pushing.delete(id);
+    holdKeys(combo, false).catch(() => undefined);
+  }, PUSH_MAX_MS);
+  timer.unref();
+  pushing.set(id, { combo, timer });
+}
+
+/** Arrêt du compagnon : rien ne reste enfoncé sur l'ordinateur. */
+export async function releaseAllPushed() {
+  const all = [...pushing.entries()];
+  pushing.clear();
+  await Promise.all(all.map(([, held]) => (clearTimeout(held.timer), holdKeys(held.combo, false).catch(() => undefined))));
 }
 
 /** Lance l'appli si besoin, attend sa première fenêtre (6 s max), puis la place. */

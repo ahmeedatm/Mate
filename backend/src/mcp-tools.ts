@@ -258,6 +258,10 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
       type: z.literal("keys"),
       keys: z.string().describe("Raccourci, ex. cmd+shift+m, ctrl+up, f5, return (sur Windows cmd = Ctrl, win = touche Windows)"),
       app: z.string().optional().describe("Appli à mettre devant avant"),
+      push: z
+        .boolean()
+        .optional()
+        .describe("Touches tenues tant que le doigt reste sur la touche (parler en maintenant) ; seule étape de la touche"),
     }),
     z.object({ type: z.literal("text"), text: z.string().max(4000).describe("Texte collé dans l'appli au premier plan") }),
     z.object({ type: z.literal("url"), url: z.string().describe("http(s), mailto, msteams, slack, vscode, x-apple…") }),

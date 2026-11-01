@@ -9,10 +9,13 @@ import org.json.JSONObject
  * (appui long), absente si elle est vide.
  */
 fun keyJson(label: String, steps: List<JSONObject>, glyph: String?, color: String?, cycle: Boolean, hold: List<JSONObject> = emptyList()): JSONObject {
-    val key = JSONObject().put("label", label).put("steps", JSONArray(steps))
+    // Touche à maintenir : une étape seule, sans cycle ni seconde action (l'ordinateur refuse sinon).
+    val push = steps.firstOrNull { it.optBoolean("push") }
+    val kept = if (push != null) listOf(push) else steps
+    val key = JSONObject().put("label", label).put("steps", JSONArray(kept))
     glyph?.trim()?.takeIf { it.isNotEmpty() }?.let { key.put("glyph", it) }
     color?.let { key.put("color", it) }
-    if (cycle && steps.size > 1) key.put("cycle", true)
-    if (hold.isNotEmpty()) key.put("hold", JSONArray(hold))
+    if (push == null && cycle && steps.size > 1) key.put("cycle", true)
+    if (push == null && hold.isNotEmpty()) key.put("hold", JSONArray(hold))
     return key
 }

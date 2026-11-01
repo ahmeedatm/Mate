@@ -3,6 +3,7 @@ package app.mate.ui.home
 import android.content.Context
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -14,6 +15,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import app.mate.Computers
 import app.mate.R
+import app.mate.net.BackendClient
 import app.mate.net.DeckPage
 import app.mate.net.DeckTile
 import app.mate.net.runCatchingCancellable
@@ -23,7 +25,13 @@ import app.mate.ui.errorText
 import app.mate.ui.showImmersive
 import app.mate.ui.themeBool
 import app.mate.ui.themeRes
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Touches du deck choisies : lancer Discord, une macro, couper le micro… sans passer par le Deck. S, M et V gardent
@@ -44,9 +52,22 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         TileGridView(context, host.scope).apply {
             onTap = { cell, _ -> if (cell.add) showAddChoice() else run(cell.key) }
             onHold = { cell, _ -> holdOrRemove(cell.key) }
+            isPush = { pushIdsOf == computerId && it.key.id in pushIds }
+            onPush = { cell, down -> push(cell.key, down) }
             ownsLongPress = true
         }
     }
+
+    /** Touches à maintenir du deck, lues à l'ouverture ; les appuis arrivent dans l'ordre, jamais un relâchement avant son appui. */
+    private var pushIds = emptySet<String>()
+    private var pushIdsOf: String? = null
+    private val pushOrder = Mutex()
+
+    /** Touches tenues en ce moment ; relâchées si leur vue disparaît pendant l'appui. */
+    private val held = mutableSetOf<String>()
+
+    /** Hors du scope de la vue : un relâchement ne doit jamais être annulé avec elle. */
+    private val pushScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val inGrid get() = placed.size == WidgetSize.L || placed.size == WidgetSize.XL
 
@@ -57,6 +78,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val pages = runCatchingCancellable { host.deckPages() }.getOrNull() ?: return
         // Sans ordinateur actif, rien n'est lu ni écrit : le deck lu ne serait celui de personne.
         val id = computerId ?: return
+        tilePushIds(pages).let { if (it != pushIds || pushIdsOf != id) { pushIds = it; pushIdsOf = id; render() } }
         if (KeyRef.adopt(placed.config, id)) host.save()
         // Profil Deck : ses touches de départ arrivent avec l'ordinateur (page Raccourcis de son deck).
         KeyRef.seed(placed.config, id, pages)?.let {
@@ -158,6 +180,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                 stopListening = null
             }
         })
+        if (pushIdsOf == computerId && key.id in pushIds) return pushTile(tile, key)
         Look.pressSpring(tile)
         tile.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -172,6 +195,52 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             addView(tile, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
     }
+
+    /** Touche à maintenir seule : appui = touches tenues, relâchement ou annulation = touches lâchées. */
+    private fun pushTile(tile: View, key: KeyRef): View {
+        tile.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) = Unit
+
+            override fun onViewDetachedFromWindow(v: View) = releaseHeld(listOf(key))
+        })
+        tile.setOnTouchListener { v, ev ->
+            when (ev.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    Look.pressTo(v, true)
+                    v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    push(key, true)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    Look.pressTo(v, false)
+                    push(key, false)
+                }
+            }
+            true
+        }
+        return OwnerFrameLayout(context, ownsLongPress = true).apply {
+            addView(tile, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        }
+    }
+
+    private fun push(key: KeyRef, down: Boolean) {
+        if (down) held += key.id else if (!held.remove(key.id)) return
+        pushScope.launch {
+            pushOrder.withLock {
+                // Un relâchement raté laisserait le micro ouvert : on réessaie avant de le dire.
+                var result = runCatchingCancellable { BackendClient(context).deck.pushTile(key.id, down) }
+                repeat(if (down) 0 else PUSH_RETRIES) {
+                    if (result.isFailure) {
+                        delay(PUSH_RETRY_MS)
+                        result = runCatchingCancellable { BackendClient(context).deck.pushTile(key.id, down) }
+                    }
+                }
+                result.onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
+            }
+        }
+    }
+
+    /** Les touches tenues sont lâchées quand le widget se redessine ou disparaît. */
+    private fun releaseHeld(keys: List<KeyRef>) = keys.filter { it.id in held }.forEach { push(it, false) }
 
     /** Lance la touche. Une appli à plusieurs fenêtres ne se lance pas : l'ordinateur rend ses fenêtres, on les propose. */
     private fun run(key: KeyRef) {
@@ -308,6 +377,10 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
 
     private companion object {
+        /** Relâchement raté : nouveaux essais, et délai entre deux. */
+        const val PUSH_RETRIES = 2
+        const val PUSH_RETRY_MS = 300L
+
         const val MAX_KEYS = 30
         const val ADD_ID = "+"
 

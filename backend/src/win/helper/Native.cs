@@ -53,6 +53,7 @@ namespace Mate
                 case "windows": return WindowsOp(req);
                 case "allwindows": return AllWindows(req);
                 case "keys": PressKeys(IntList(req, "mods"), Int(req, "vk", 0), Str(req, "ch")); return true;
+                case "holdkeys": HoldKeys(IntList(req, "mods"), Int(req, "vk", 0), Str(req, "ch"), Program.Bool(req, "down")); return true;
                 case "text": TypeText(Str(req, "text")); return true;
                 case "audio": return Audio(req);
                 case "appaudio": return AppAudio(req);

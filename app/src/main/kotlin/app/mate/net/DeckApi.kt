@@ -18,6 +18,8 @@ data class DeckTile(
     val symbol: String? = null,
     /** La touche a une seconde action, lancée par l'appui long. */
     val hold: Boolean = false,
+    /** La touche se maintient : appui = touches tenues sur l'ordinateur, relâchement = touches lâchées (parler en maintenant). */
+    val push: Boolean = false,
 )
 /** Appel en cours dans une appli (Discord) : salon, participants vus, micro et sourdine (null : inconnu). */
 /** `lobby` : écran d'avant-réunion de Teams (« Rejoindre maintenant »), pas encore dans la réunion. */
@@ -82,7 +84,7 @@ class DeckApi(private val http: Http) {
             val tiles = p.getJSONArray("tiles")
             DeckPage(p.getString("title"), (0 until tiles.length()).map { j ->
                 val t = tiles.getJSONObject(j)
-                DeckTile(t.getString("id"), t.getString("label"), t.getString("type"), t.optStringOrNull("glyph"), t.optStringOrNull("color"), t.optStringOrNull("app"), t.optStringOrNull("when"), t.optStringOrNull("lit"), t.optStringOrNull("symbol"), t.optBoolean("hold"))
+                DeckTile(t.getString("id"), t.getString("label"), t.getString("type"), t.optStringOrNull("glyph"), t.optStringOrNull("color"), t.optStringOrNull("app"), t.optStringOrNull("when"), t.optStringOrNull("lit"), t.optStringOrNull("symbol"), t.optBoolean("hold"), t.optBoolean("push"))
             }, p.optBoolean("editable"), p.optBoolean("apps"), p.optBoolean("meeting"), p.optStringOrNull("app"), p.optBoolean("media"),
                 // Ordinateur pas encore à jour (sans `sound`) : barre Son comme avant.
                 p.optBoolean("sound", true), p.optInt("keyPage", -1).takeIf { it >= 0 })
@@ -161,6 +163,12 @@ class DeckApi(private val http: Http) {
     suspend fun runTile(id: String, hold: Boolean = false): TileResult = http.io {
         val json = JSONObject(http.postJson("/deck/run", JSONObject().put("id", id).apply { if (hold) put("hold", true) }))
         TileResult(json.optJSONObject("windows")?.let(::parseWindows), json.optStringOrNull("app")?.takeIf { json.optString("opened") == "app" })
+    }
+
+    /** Touche à maintenir : [down] tient ses touches sur l'ordinateur, sinon les lâche. */
+    suspend fun pushTile(id: String, down: Boolean) = http.io {
+        http.postJson("/deck/run", JSONObject().put("id", id).put("phase", if (down) "down" else "up"))
+        Unit
     }
 
     /** Icône PNG d'une tuile, ou null si l'appli n'en a pas. */
