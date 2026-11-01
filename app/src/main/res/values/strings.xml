@@ -1261,6 +1261,9 @@
     <string name="perf_fps_none">— FPS</string>
     <string name="perf_cpu_temp_line">CPU %1$d °C</string>
     <string name="perf_gpu_temp_line">GPU %1$d °C</string>
+    <string name="perf_cpu_watts_line">CPU %1$s W</string>
+    <string name="perf_gpu_watts_line">GPU %1$s W</string>
+    <string name="perf_cpu_fan_line">Vent. CPU %1$s</string>
     <string name="perf_fan_line">Ventilateur %1$s</string>
     <string name="perf_cpu_freq_line">CPU %1$s GHz</string>
     <string name="perf_group_cpu">Processeur</string>
@@ -1272,6 +1275,8 @@
     <string name="perf_opt_cpu">Utilisation</string>
     <string name="perf_opt_cpu_freq">Fréquence</string>
     <string name="perf_opt_cpu_temp">Température</string>
+    <string name="perf_opt_watts">Consommation</string>
+    <string name="perf_opt_cpu_fan">Ventilateur</string>
     <string name="perf_opt_gpu">Utilisation</string>
     <string name="perf_opt_gpu_temp">Température</string>
     <string name="perf_opt_gpu_fan">Ventilateur</string>

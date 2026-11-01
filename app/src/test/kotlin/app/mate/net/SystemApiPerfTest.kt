@@ -98,4 +98,17 @@ class SystemApiPerfMoreTest {
         assertEquals(64, parsePerf("""{"cpu":10,"cpuTempC":64,$ram}""").cpuTempC)
         assertNull(parsePerf("""{"cpu":10,$ram}""").cpuTempC)
     }
+
+    @Test
+    fun `parsePerf lit les watts et le ventilateur du processeur, absents sinon`() {
+        val ram = """"ram":{"used":8,"total":16,"percent":50}"""
+        val perf = parsePerf("""{"cpu":10,"cpuWatts":42.5,"cpuFanRpm":1180,"gpuWatts":95.2,$ram}""")
+        assertEquals(42.5, perf.cpuWatts!!, 0.0)
+        assertEquals(1180, perf.cpuFanRpm)
+        assertEquals(95.2, perf.gpuWatts!!, 0.0)
+        val none = parsePerf("""{"cpu":10,$ram}""")
+        assertNull(none.cpuWatts)
+        assertNull(none.cpuFanRpm)
+        assertNull(none.gpuWatts)
+    }
 }

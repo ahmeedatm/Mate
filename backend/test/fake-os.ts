@@ -272,6 +272,8 @@ export async function mixer(change?: MixerChange): Promise<MixerState> {
     master: { id: "master", name: "master", volume: 50, muted: false, level: 0 },
     mic: { id: "mic", name: "mic", volume: 80, muted: false, level: 0 },
     apps: [],
+    // Comme le vrai helper Windows : l'appli au premier plan est toujours annoncée (null : aucune).
+    ...(isWindows ? { front: null } : {}),
   };
   if (!change) return current;
   record("mixer", change);
