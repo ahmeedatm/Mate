@@ -212,7 +212,7 @@ export const DECK_JS = `
     const key = pfDeckPages()[pfDeckPage].keys[slot];
     pfDeckSlot = slot;
     pfDeckDraft = key
-      ? { label: key.label, symbol: key.symbol || "", glyph: key.glyph || "", color: key.color || "", cycle: key.cycle === true, hold: key.hold, steps: key.steps.map((s) => Object.assign(pfDeckNewStep(s.type), s)) }
+      ? { label: key.label, symbol: key.symbol || "", glyph: key.glyph || "", color: key.color || "", cycle: key.cycle === true, span: key.span, hold: key.hold, steps: key.steps.map((s) => Object.assign(pfDeckNewStep(s.type), s)) }
       : { label: "", symbol: "", glyph: "", color: "", cycle: false, steps: [] };
     pfDeckSay("pf-deck-keys-msg", "");
     pfDeckRenderGrid();
@@ -351,6 +351,8 @@ export const DECK_JS = `
     if (d.cycle) body.cycle = true;
     // Pareil pour la seconde action (appui long) : elle se règle sur la tablette.
     if (d.hold) body.hold = d.hold;
+    // La largeur aussi se règle sur la tablette.
+    if (d.span) body.span = d.span;
     const r = await pfDeckApi("PUT", pfDeckPages()[pfDeckPage].path(pfDeckSlot), body);
     if (!r.ok) return say(r.error);
     pfDeckDialog.close();

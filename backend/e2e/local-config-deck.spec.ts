@@ -102,6 +102,19 @@ test.describe("page locale : touches", () => {
     expect((await server.call("GET", "/deck/keys/0")).json.key.cycle).toBe(true);
   });
 
+  test("une touche large garde sa largeur quand on la rouvre et l'enregistre", async ({ page, server }) => {
+    fs.writeFileSync(
+      path.join(server.dataDir, "keys.json"),
+      JSON.stringify({ slots: [{ label: "Thème", span: 2, steps: [{ type: "text", text: "Jour" }] }] }),
+    );
+    await page.goto("/");
+    const touches = page.locator("#pf-touches");
+    await touches.getByRole("button", { name: "Touche 1 : Thème" }).click();
+    await touches.locator("#pf-deck-save").click();
+    await expect(page.locator("#pf-deck-keys-msg")).toHaveText("Touche enregistrée.");
+    expect((await server.call("GET", "/deck/keys/0")).json.key.span).toBe(2);
+  });
+
   test("une touche à seconde action garde son appui long quand on la rouvre et l'enregistre", async ({ page, server }) => {
     const hold = [{ type: "text", text: "Nuit" }];
     fs.writeFileSync(

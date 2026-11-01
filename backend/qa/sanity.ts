@@ -317,6 +317,24 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "touche large : deux cases de large dans le deck",
+      run: async () => {
+        const slot = 19;
+        try {
+          expectStatus(
+            await call("PUT", `/deck/keys/${slot}`, { label: "Sanity large", span: 2, steps: [{ type: "wait", ms: 0 }] }),
+            200,
+            "PUT /deck/keys/19",
+          );
+          const deck = await call("GET", "/deck");
+          const perso = (deck.json.pages as { editable: boolean; tiles: { id: string; span?: number }[] }[]).find((p) => p.editable);
+          expect(perso?.tiles.find((t) => t.id === `k-${slot}`)?.span === 2, "touche k-19 sans span 2");
+        } finally {
+          expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE /deck/keys/19");
+        }
+      },
+    },
+    {
       name: "touche à cycle : une étape par appui",
       run: async () => {
         const slot = 15;
