@@ -241,6 +241,11 @@ class SystemApi(private val http: Http) {
         http.postJson("/system/dnd", JSONObject().put("on", on).put("minutes", minutes.coerceIn(1, 240))); Unit
     }
 
+    /** Écran de l'ordinateur gardé allumé pendant le Focus (src/awake.ts) ; `minutes` : temps restant, pour le minuteur de secours. */
+    suspend fun focusAwake(on: Boolean, minutes: Int) = http.io {
+        http.postJson("/system/awake", JSONObject().put("on", on).put("minutes", minutes.coerceIn(1, 240))); Unit
+    }
+
     /** Ne pas déranger de l'ordinateur : null si illisible (pastille de Ma journée). */
     suspend fun dnd(): Boolean? = http.io { JSONObject(http.get("/system/dnd")).opt("on") as? Boolean }
 

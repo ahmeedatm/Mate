@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { clipboardHistory } from "../clipboard-history.ts";
 import { config } from "../config.ts";
+import { focusAwake } from "../awake.ts";
 import { focusDnd, manualDnd } from "../dnd.ts";
 import { resolveDoc } from "../docs.ts";
 import { applyScene, deleteScene, listScenes, MAX_SCENES, orderScenes, saveScene, setGroup } from "../mixer.ts";
@@ -148,6 +149,22 @@ export default async function systemRoutes(app: FastifyInstance) {
       },
     },
     async (req) => focusDnd(req.body.on, req.body.minutes),
+  );
+
+  // Écran de l'ordinateur gardé allumé pendant la concentration du Focus (voir src/awake.ts).
+  app.post<{ Body: { on: boolean; minutes?: number } }>(
+    "/system/awake",
+    {
+      schema: {
+        body: {
+          type: "object",
+          additionalProperties: false,
+          required: ["on"],
+          properties: { on: { type: "boolean" }, minutes: { type: "integer", minimum: 1, maximum: 240 } },
+        },
+      },
+    },
+    async (req) => focusAwake(req.body.on, req.body.minutes),
   );
 
   // Pastille de l'Accueil : posé à la main, sans minuteur (voir manualDnd).

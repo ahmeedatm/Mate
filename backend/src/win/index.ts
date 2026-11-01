@@ -470,6 +470,11 @@ export async function setDnd(on: boolean): Promise<boolean | null> {
   return (await call<{ on: boolean | null }>("dnd", { on }, 10_000)).on;
 }
 
+/** Écran gardé allumé (true) ou veille normale (false) : état du fil du helper, rendu à sa fermeture (op `awake`). */
+export async function keepAwake(on: boolean): Promise<void> {
+  await call("awake", { on });
+}
+
 /** Message au premier plan (code d'appairage), sans attendre qu'il soit fermé. */
 export async function alert(title: string, text: string) {
   await call("alert", { title, text });

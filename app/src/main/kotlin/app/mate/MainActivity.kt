@@ -27,6 +27,7 @@ import app.mate.device.Screen
 import app.mate.device.Tablet
 import app.mate.device.TabletSignals
 import app.mate.focus.Breathing
+import app.mate.focus.FocusAwake
 import app.mate.focus.FocusDnd
 import app.mate.focus.FocusTimer
 import app.mate.focus.NoisePlayer
@@ -131,6 +132,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var noComputer: View
     private val keyboard = KeyboardControl(this)
     private val focusDnd = FocusDnd(this)
+    private val focusAwake = FocusAwake(this)
     private val remote = RemoteLink(this, ::showLink) { computer -> onComputerChanged(computer, automatic = true) }
     private val computerDialogs by lazy { ComputerAdder(this, lifecycleScope) { onComputerChanged(it) } }
     /** Dernier état de la liaison, repris par les Réglages et le sélecteur d'ordinateur. */
@@ -464,6 +466,7 @@ class MainActivity : AppCompatActivity() {
     private val focusListener: (FocusTimer.State) -> Unit = { state ->
         nav.showFocus(state)
         followFocusDnd(state)
+        focusAwake.follow(state)
     }
 
     /** Ne pas déranger sur l'ordinateur pendant la concentration ; aussi rappelé quand le réglage change. */
