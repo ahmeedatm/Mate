@@ -711,6 +711,18 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "mails : non lus des comptes connectés",
+      run: async () => {
+        // Lecture seule. Sans compte connecté, la liste est vide ; un compte en panne reste listé avec une phrase.
+        const res = await call("GET", "/mail/unread");
+        expectStatus(res, 200, "GET /mail/unread");
+        expect(Array.isArray(res.json.accounts), "liste de comptes mal formée");
+        const bad = res.json.accounts.filter((a: { unread: unknown; error?: string }) => a.unread === null && !a.error);
+        expect(bad.length === 0, "compte sans nombre ni phrase d'erreur");
+        return `${res.json.accounts.length} compte(s)`;
+      },
+    },
+    {
       name: "actualités : flux réglé",
       run: async () => {
         // Lecture seule : le flux réglé par l'utilisateur n'est jamais changé. Sans flux, la liste est vide.

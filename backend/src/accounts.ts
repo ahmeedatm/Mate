@@ -11,7 +11,7 @@ import { readJson, updateJson } from "./store.ts";
  * Connexion OAuth « appli de bureau » : code d'autorisation + PKCE, retour sur http://localhost:<port>/oauth/…/callback
  * (page ouverte dans le navigateur de l'ordinateur). Aucun secret côté client : l'identifiant de l'appli (enregistrée
  * une fois chez Microsoft et Google) est public, dans config/accounts.json. Le jeton de renouvellement
- * reste dans .data/accounts.json, sur l'ordinateur ; la tablette ne voit que les événements.
+ * reste dans .data/accounts.json, sur l'ordinateur ; la tablette ne voit que les événements et le nombre de mails non lus.
  */
 
 export type Provider = "microsoft" | "google";
@@ -21,14 +21,14 @@ const PROVIDERS: Record<Provider, { label: string; authUrl: string; tokenUrl: st
     label: "Microsoft",
     authUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
     tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
-    scope: "openid email offline_access https://graph.microsoft.com/Calendars.Read",
+    scope: "openid email offline_access https://graph.microsoft.com/Calendars.Read https://graph.microsoft.com/Mail.ReadBasic",
     extra: { prompt: "select_account" },
   },
   google: {
     label: "Google",
     authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenUrl: "https://oauth2.googleapis.com/token",
-    scope: "openid email https://www.googleapis.com/auth/calendar.readonly",
+    scope: "openid email https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/gmail.metadata",
     // offline + consent : Google ne donne le jeton de renouvellement qu'à ces conditions.
     extra: { access_type: "offline", prompt: "consent" },
   },
@@ -142,7 +142,8 @@ type TokenResponse = { access_token: string; refresh_token?: string; id_token?: 
 async function tokenRequest(provider: Provider, app: ClientConfig, params: Record<string, string>): Promise<TokenResponse> {
   const body = new URLSearchParams({ client_id: app.clientId, ...params });
   if (app.clientSecret) body.set("client_secret", app.clientSecret);
-  if (provider === "microsoft") body.set("scope", PROVIDERS[provider].scope);
+  // Au renouvellement, pas de scope : un compte connecté avant l'ajout des mails garde son agenda (sinon Microsoft refuse en bloc).
+  if (provider === "microsoft" && params.grant_type === "authorization_code") body.set("scope", PROVIDERS[provider].scope);
   const res = await fetch(PROVIDERS[provider].tokenUrl, { method: "POST", body, signal: AbortSignal.timeout(15_000) });
   const json = (await res.json().catch(() => ({}))) as TokenResponse & { error?: string; error_description?: string };
   if (!res.ok) throw Object.assign(new Error(json.error_description || json.error || `HTTP ${res.status}`), { oauthError: json.error });
@@ -310,4 +311,61 @@ async function googleEvents(token: string, from: Date, to: Date): Promise<Calend
           meetingLink(e.description, e.location),
       };
     });
+}
+
+// --- Mails non lus
+
+export type MailUnread = { provider: Provider; label: string; email: string; unread: number | null; error?: string };
+
+/** Nombre de non lus dans la réponse du fournisseur (dossier Boîte de réception / libellé INBOX). */
+export function unreadFrom(provider: Provider, json: Record<string, unknown>): number {
+  const n = provider === "microsoft" ? json.unreadItemCount : json.messagesUnread;
+  if (typeof n !== "number" || !Number.isInteger(n) || n < 0) throw new Error("Réponse du compte illisible");
+  return n;
+}
+
+const UNREAD_URL: Record<Provider, string> = {
+  microsoft: "https://graph.microsoft.com/v1.0/me/mailFolders/inbox?$select=unreadItemCount",
+  google: "https://www.googleapis.com/gmail/v1/users/me/labels/INBOX",
+};
+
+const RECONNECT = "Reconnecte le compte pour autoriser la lecture des mails";
+
+async function unreadOf(provider: Provider, stored: Stored): Promise<number> {
+  const token = await accessToken(provider, stored);
+  const res = await fetch(UNREAD_URL[provider], { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15_000) });
+  // Compte connecté avant l'ajout des mails : le fournisseur refuse (401/403) tant qu'il n'a pas re-consenti.
+  if (res.status === 401 || res.status === 403) throw new Error(RECONNECT);
+  if (!res.ok) throw new Error("Les mails du compte ne répondent pas");
+  return unreadFrom(provider, (await res.json()) as Record<string, unknown>);
+}
+
+/** Non lus de chaque compte connecté ; un compte en panne reste dans la liste avec une phrase, sans cacher les autres. */
+export async function accountUnread(): Promise<MailUnread[]> {
+  const accounts = await load();
+  const rows: MailUnread[] = [];
+  for (const provider of Object.keys(accounts) as Provider[]) {
+    const stored = accounts[provider]!;
+    const row = { provider, label: PROVIDERS[provider].label, email: stored.email };
+    if (stored.expired) {
+      rows.push({ ...row, unread: null, error: RECONNECT });
+      continue;
+    }
+    try {
+      rows.push({ ...row, unread: await unreadOf(provider, stored) });
+    } catch (e) {
+      const known = e instanceof Error && (e.message === RECONNECT || e.message.startsWith("Les mails") || e.message.startsWith("Réponse"));
+      rows.push({ ...row, unread: null, error: known ? e.message : "Les mails du compte ne répondent pas" });
+    }
+  }
+  return rows;
+}
+
+/** Page de la boîte de réception, ouverte sur l'ordinateur : adresse fixe par fournisseur, jamais une donnée de la tablette. */
+export async function inboxUrl(provider: Provider): Promise<string | undefined> {
+  const stored = (await load())[provider];
+  if (!stored) return undefined;
+  return provider === "google"
+    ? `https://mail.google.com/mail/?authuser=${encodeURIComponent(stored.email)}`
+    : "https://outlook.office.com/mail/";
 }
