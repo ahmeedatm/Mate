@@ -3,25 +3,32 @@ package app.mate.ui.home
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.ColorStateList
+import android.text.InputType
 import android.view.DragEvent
 import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.core.widget.ImageViewCompat
+import androidx.core.widget.doAfterTextChanged
 import app.mate.Computers
 import app.mate.R
 import app.mate.ui.dp
+import app.mate.ui.inputField
 import app.mate.ui.mixer.MixerApps
 import app.mate.ui.mixer.MixerView
 import app.mate.ui.showImmersive
 import app.mate.ui.themeColor
+import java.util.UUID
 
 /**
  * Console de mixage du Deck sur un profil : sortie, micro, une tranche par appli et les scènes. La console dessine sa
@@ -34,6 +41,7 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private val mixer = MixerView(context).apply {
         attach(host.scope)
         appFilter = { live -> MixerApps.channels(chosen(), live) }
+        groupMembers = { id -> MixerApps.membersOf(chosen(), id) }
     }
 
     override val view = OwnerFrameLayout(context, ownsLongPress = true, ownsSwipe = true).apply {
@@ -89,6 +97,54 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         if (live == null) return
         val chosenIds = chosen().map { it.id }.toSet()
         candidates.forEach { app -> box.addView(row(box, app, app.id in chosenIds)) }
+        // Toujours là : sous deux applis qui jouent, grisé (le texte d'aide dit pourquoi).
+        val loose = candidates.filter { !it.isGroup }
+        box.addView(Button(context, null, 0, R.style.ActionButton).apply {
+            setText(R.string.mixer_group_new)
+            isEnabled = loose.size >= 2
+            setOnClickListener { askGroup(box, loose) }
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { topMargin = dp(12) })
+    }
+
+    /** Nouveau groupe : un nom et au moins deux applis ; il rejoint la table à la suite des choisies. */
+    private fun askGroup(box: LinearLayout, apps: List<MixerApps.App>) {
+        val form = LayoutInflater.from(context).inflate(R.layout.view_dialog_form, null)
+        form.findViewById<TextView>(R.id.dialog_message).setText(R.string.mixer_group_hint)
+        val body = form.findViewById<LinearLayout>(R.id.dialog_body)
+        val input = context.inputField(body, R.string.mixer_group_name, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)
+        val checks = apps.map { app ->
+            CheckBox(context).apply {
+                text = app.name
+                textSize = 17f
+                minHeight = dp(52)
+                setTextColor(themeColor(context, R.attr.c_text))
+                body.addView(this)
+            }
+        }
+        val dialog = AlertDialog.Builder(context)
+            .setTitle(R.string.mixer_group_title)
+            .setView(ScrollView(context).apply { addView(form) })
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.save, null)
+            .create()
+        val picked = { apps.filterIndexed { i, _ -> checks[i].isChecked } }
+        val validate = {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.isEnabled = input.text.isNotBlank() && picked().size >= 2
+        }
+        input.doAfterTextChanged { validate() }
+        checks.forEach { it.setOnCheckedChangeListener { _, _ -> validate() } }
+        dialog.showImmersive()
+        validate()
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val group = MixerApps.group(UUID.randomUUID().toString().take(GROUP_KEY_LENGTH), input.text.toString().trim().take(GROUP_NAME_MAX), picked())
+            if (MixerApps.write(placed.config, computerId, chosen() + group)) {
+                loaded = chosen() + group
+                host.save()
+                mixer.refreshApps()
+                box.post { fillSettings(box) }
+            }
+            dialog.dismiss()
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -110,7 +166,7 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             }
         }, LinearLayout.LayoutParams(dp(48), dp(48)))
         val check = CheckBox(context).apply {
-            text = app.name
+            text = if (app.isGroup) context.getString(R.string.mixer_group_row, app.name, app.members.joinToString { it.name }) else app.name
             textSize = 17f
             setTextColor(themeColor(context, R.attr.c_text))
             isChecked = checked
@@ -176,5 +232,7 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
     private companion object {
         const val DRAGGED_ALPHA = 0.35f
+        const val GROUP_KEY_LENGTH = 8
+        const val GROUP_NAME_MAX = 30
     }
 }

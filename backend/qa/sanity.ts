@@ -323,6 +323,9 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const ids = scenes.json.scenes.map((s: { id: string }) => s.id);
         const order = await call("PUT", "/system/mixer/scenes/order", { ids });
         expectStatus(order, 200, "/system/mixer/scenes/order");
+        // Voie de groupe : une appli absente n'est pas touchée (aucun effet), Mac sans volume par appli : 501.
+        const group = await call("POST", "/system/mixer/group", { ids: ["mate-sanity-absente"], volume: 50 });
+        expectStatus(group, res.json.apps ? 200 : 501, "/system/mixer/group");
         return res.json.apps ? `${res.json.apps.length} applis avec du son` : "sortie et micro (pas de volume par appli)";
       },
     },
