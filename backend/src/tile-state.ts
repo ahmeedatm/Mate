@@ -16,19 +16,42 @@ export type StateReaders = {
 
 const systemReaders: StateReaders = { micMuted: async () => (await getAudio()).micMuted, dnd: getDnd, running: isAppRunning };
 
-/** Identifiants des touches allumées, parmi `tiles` ; une lecture qui échoue laisse sa touche éteinte. */
+/** Une lecture par type d'état et par appli pour tout le tour, quel que soit le nombre de touches qui la partagent. */
+function sharedReaders(read: StateReaders): StateReaders {
+  const once = <T>(fn: () => Promise<T>) => {
+    let value: Promise<T> | undefined;
+    return () => (value ??= fn());
+  };
+  const running = new Map<string, Promise<boolean>>();
+  return {
+    micMuted: once(read.micMuted),
+    dnd: once(read.dnd),
+    running: (app) => {
+      const key = app.toLowerCase();
+      if (!running.has(key)) running.set(key, read.running(app));
+      return running.get(key)!;
+    },
+  };
+}
+
+/**
+ * Identifiants des touches allumées, parmi `tiles` ; une lecture qui échoue laisse sa touche éteinte.
+ * shortcut: Mac, la première lecture de Ne pas déranger ouvre un instant le Centre de contrôle (src/mac/dnd.ts), puis
+ * l'état est gardé en mémoire et ne suit que les bascules faites avec Mate ; à revoir si une lecture sans panneau existe.
+ */
 export async function litTiles(tiles: Tile[], read: StateReaders = systemReaders): Promise<string[]> {
+  const shared = sharedReaders(read);
   const lit = await Promise.all(
     tiles.map(async (tile) => {
       try {
         switch (tile.state) {
           case "mic-muted":
-            return await read.micMuted();
+            return await shared.micMuted();
           case "dnd":
-            return (await read.dnd()) === true;
+            return (await shared.dnd()) === true;
           case "running": {
             const app = appOf(tile.action);
-            return app ? await read.running(app) : false;
+            return app ? await shared.running(app) : false;
           }
         }
       } catch {
@@ -45,12 +68,17 @@ export async function stateTiles(): Promise<Tile[]> {
   return (await loadDeck()).flatMap((p) => p.tiles).filter((t): t is Tile => !("empty" in t) && t.state !== undefined);
 }
 
+/** Une lecture bloquée (osascript, helper Windows) ne doit pas arrêter la veille. */
+const READ_TIMEOUT_MS = 5000;
+
 export type TileStateWatchDeps = {
   /** Une tablette écoute le canal en ce moment. */
   connected: () => boolean;
   /** Identifiants des touches allumées (`litTiles` sur `stateTiles`). */
   read: () => Promise<string[]>;
   intervalMs?: number;
+  /** Délai maximal d'une lecture (5 s par défaut). */
+  readTimeoutMs?: number;
 };
 
 /** Démarre la veille ; renvoie la fonction qui l'arrête. */
@@ -67,14 +95,19 @@ export function startTileStateWatch(notify: (lit: string[]) => void, deps: TileS
     wasConnected = connected;
     if (connected) {
       try {
-        const lit = await deps.read();
+        const lit = await Promise.race([
+          deps.read(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("lecture trop longue")), deps.readTimeoutMs ?? READ_TIMEOUT_MS).unref(),
+          ),
+        ]);
         const key = lit.join("|");
         if (key !== current && !stopped) {
           current = key;
           notify(lit);
         }
       } catch {
-        // Lecture ratée : on garde l'état et on relit au tour suivant.
+        // Lecture ratée ou trop longue : on garde l'état et on relit au tour suivant.
       }
     }
     if (!stopped) timer = setTimeout(() => void tick(), intervalMs);

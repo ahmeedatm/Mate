@@ -23,8 +23,10 @@ const STATE = {
   settings: SETTINGS,
 };
 
+const ofType = (commands: { id: string; command: { type: string } }[], type: string) => commands.find((c) => c.command.type === type)!;
+
 /**
- * Prochain ordre du type demandé. La veille du premier plan pousse son ordre `foreground` à chaque (re)connexion de la
+ * Prochain ordre du type demandé. Les veilles du premier plan (`foreground`) et des touches (`tilestate`) poussent leur ordre à chaque (re)connexion de la
  * tablette : il peut arriver avant celui qu'on attend, dans un poll à part.
  */
 async function nextOrder(type: string) {
@@ -62,7 +64,7 @@ describe("panneau Tablette", () => {
     });
 
     const put = server.call("PUT", "/local/tablet/settings", { theme: "CONSOLE_JOUR", brightness: 0.3 }, false);
-    const [order] = (await polling).json.commands;
+    const order = ofType((await polling).json.commands, "settings");
     assert.deepEqual(order.command, { type: "settings", theme: "CONSOLE_JOUR", brightness: 0.3 });
 
     const state = { ...STATE, settings: { ...SETTINGS, theme: "CONSOLE_JOUR", brightness: 0.3 } };
@@ -78,7 +80,7 @@ describe("panneau Tablette", () => {
       const polling = server.call("POST", "/tablet/poll", { state: STATE });
       await new Promise((r) => setTimeout(r, 300));
       const put = server.call("PUT", "/local/tablet/settings", { theme }, false);
-      const [order] = (await polling).json.commands;
+      const order = ofType((await polling).json.commands, "settings");
       assert.deepEqual(order.command, { type: "settings", theme });
       await server.call("POST", "/tablet/result", {
         id: order.id,

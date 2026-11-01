@@ -126,7 +126,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
     /** Une touche s'allume ou s'éteint côté ordinateur : les cases visibles se redessinent. */
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        stopListening = TileStates.listen { post { adapter.notifyDataSetChanged() } }
+        stopListening = TileStates.listen { post { if (isAttachedToWindow) adapter.notifyDataSetChanged() } }
     }
 
     override fun onDetachedFromWindow() {

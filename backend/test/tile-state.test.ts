@@ -42,6 +42,18 @@ describe("touches qui montrent l'état réel", () => {
     assert.deepEqual(await litTiles(tiles, broken), ["mic"]);
   });
 
+  it("lit une seule fois le micro, Ne pas déranger et chaque appli, même avec plusieurs touches", async () => {
+    const reads: string[] = [];
+    const counted = {
+      micMuted: async () => (reads.push("mic"), true),
+      dnd: async () => (reads.push("dnd"), true),
+      running: async (app: string) => (reads.push(app), true),
+    };
+    const twice = [...tiles, tile("mic2", { state: "mic-muted" }), tile("dnd2", { state: "dnd" }), tile("notes2", { state: "running" })];
+    assert.equal((await litTiles(twice, counted)).length, 6);
+    assert.deepEqual(reads.sort(), ["Notes", "dnd", "mic"]);
+  });
+
   it("l'état `running` sans appli dans l'action reste éteint", async () => {
     const sans = tile("k", { state: "running", action: { type: "keys", keys: "cmd+c" } });
     assert.deepEqual(await litTiles([sans], readers(false, false, ["Notes"])), []);
@@ -61,6 +73,20 @@ describe("veille des états : l'ordinateur prévient la tablette", () => {
     await until(() => reads >= seq.length);
     stop();
     assert.deepEqual(events, [[], ["a"], []]);
+  });
+
+  it("une lecture bloquée n'arrête pas la veille : elle reprend au tour suivant", async () => {
+    let reads = 0;
+    const events: string[][] = [];
+    const stop = startTileStateWatch((lit) => events.push(lit), {
+      intervalMs: 1,
+      readTimeoutMs: 20,
+      connected: () => true,
+      read: () => (++reads === 1 ? new Promise<string[]>(() => undefined) : Promise.resolve(["a"])),
+    });
+    await until(() => events.length === 1);
+    stop();
+    assert.deepEqual(events, [["a"]]);
   });
 
   it("ne lit rien sans tablette connectée", async () => {
