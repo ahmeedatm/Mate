@@ -111,8 +111,9 @@ function run(argv) {
     }
     saved.push(copy);
   }
+  var text = $.NSProcessInfo.processInfo.environment.objectForKey('MATE_TYPE_TEXT');
   var temp = $.NSPasteboardItem.alloc.init;
-  temp.setStringForType($(argv[0]), $.NSPasteboardTypeString);
+  temp.setStringForType(text, $.NSPasteboardTypeString);
   temp.setStringForType($(''), $('org.nspasteboard.TransientType'));
   pb.clearContents;
   if (!pb.writeObjects($([temp]))) throw new Error('Presse-papiers inaccessible');
@@ -158,9 +159,12 @@ export async function sendMediaKey(command: MediaCommand) {
   await osascript(MEDIA_SCRIPT, [String(MEDIA_KEYS[command])], "JavaScript");
 }
 
-/** Colle un texte dans l'appli au premier plan, puis remet le presse-papiers d'avant, tous types compris. */
+/**
+ * Colle un texte dans l'appli au premier plan, puis remet le presse-papiers d'avant, tous types compris. Le texte passe
+ * par l'environnement d'osascript, pas sa ligne de commande (visible par `ps`, comme l'était l'entrée de pbcopy : non).
+ */
 export async function typeText(text: string) {
-  await osascript(TYPE_SCRIPT, [text], "JavaScript");
+  await osascript(TYPE_SCRIPT, [], "JavaScript", { ...UTF8_ENV, MATE_TYPE_TEXT: text });
 }
 
 export function pbcopy(text: string) {

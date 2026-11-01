@@ -18,9 +18,17 @@ export function run(cmd: string, args: string[], timeoutMs = 10_000, env?: NodeJ
   });
 }
 
-/** AppleScript avec arguments passés via `on run argv`, jamais concaténés dans le script. */
-export function osascript(script: string, args: string[] = [], language: "AppleScript" | "JavaScript" = "AppleScript") {
-  return run("osascript", ["-l", language, "-e", script, ...args]).catch((err: Error) => {
+/**
+ * AppleScript avec arguments passés via `on run argv`, jamais concaténés dans le script. `--` : un argument qui commence
+ * par `-` (texte tapé, `-e…`) n'est jamais lu comme une option d'osascript, donc jamais comme un script de plus.
+ */
+export function osascript(
+  script: string,
+  args: string[] = [],
+  language: "AppleScript" | "JavaScript" = "AppleScript",
+  env?: NodeJS.ProcessEnv,
+) {
+  return run("osascript", ["-l", language, "-e", script, "--", ...args], 10_000, env).catch((err: Error) => {
     // -25211 / -1719 / 1002 : l'appli qui a lancé le backend (node pour le service, sinon Terminal, VS Code…)
     // n'a pas l'accès Accessibilité.
     if (/-25211|-1719|\(1002\)/.test(err.message)) {
