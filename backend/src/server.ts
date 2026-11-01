@@ -1,3 +1,4 @@
+// Essai jetable de la chaîne de publication des essais (PR à fermer sans fusion).
 import { timingSafeEqual } from "node:crypto";
 import http from "node:http";
 import https from "node:https";
