@@ -68,3 +68,18 @@ test("désactivée : ne part pas ; supprimée : disparaît ; échec : noté, pas
   assert.equal(await deleteSchedule(id), true);
   assert.equal(await deleteSchedule(id), false);
 });
+
+test("réactivée : repart de maintenant, pas d'un vieux dernier lancement", async () => {
+  const { id } = await addSchedule({ tileId: "t-old", everyMinutes: 5 }, at("09:00"));
+  await setScheduleEnabled(id, false);
+  await setScheduleEnabled(id, true);
+  const ran: string[] = [];
+  await scheduleTick(async (t) => void ran.push(t), new Date(Date.now() + 60_000));
+  assert.deepEqual(ran, [], "pas de lancement immédiat");
+  await deleteSchedule(id);
+});
+
+test("runTile : touche supprimée du deck ou changée de place, refus clair", async () => {
+  const { runTile } = await import("../src/schedule.ts");
+  await assert.rejects(() => runTile("n-existe-pas"), /introuvable/);
+});

@@ -64,9 +64,18 @@ class ScheduleDialog(private val context: Context, private val scope: CoroutineS
         AlertDialog.Builder(context)
             .setTitle(item.label ?: context.getString(R.string.schedule_tile_gone))
             .setItems(arrayOf(toggle, context.getString(R.string.delete))) { _, which ->
-                change(closeList) { if (which == 0) api.setEnabled(item.id, !item.enabled) else api.delete(item.id) }
+                if (which == 0) change(closeList) { api.setEnabled(item.id, !item.enabled) } else confirmDelete(item, closeList)
             }
             .setNegativeButton(R.string.cancel, null)
+            .showImmersive()
+    }
+
+    private fun confirmDelete(item: ScheduleItem, closeList: () -> Unit) {
+        AlertDialog.Builder(context)
+            .setTitle(R.string.schedule_delete_title)
+            .setMessage(item.schedule)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.delete) { _, _ -> change(closeList) { api.delete(item.id) } }
             .showImmersive()
     }
 
@@ -88,6 +97,10 @@ class ScheduleDialog(private val context: Context, private val scope: CoroutineS
                 // Les touches à maintenir ne se programment pas (le compagnon les refuse).
                 val tiles = BackendClient(context).deck.pages().flatMap { page -> page.tiles.filter { it.label.isNotBlank() && !it.push }.map { page.title to it } }
                     .distinctBy { it.second.id }
+                if (tiles.isEmpty()) {
+                    AlertDialog.Builder(context).setMessage(R.string.schedule_no_tile).setPositiveButton(R.string.close, null).showImmersive()
+                    return@launch
+                }
                 AlertDialog.Builder(context)
                     .setTitle(R.string.schedule_pick_tile)
                     .setItems(tiles.map { (page, tile) -> "$page · ${tile.label}" }.toTypedArray()) { _, i -> chooseKind(tiles[i].second) }
@@ -129,11 +142,17 @@ class ScheduleDialog(private val context: Context, private val scope: CoroutineS
     private fun chooseInterval(tile: DeckTile) {
         AlertDialog.Builder(context)
             .setTitle(R.string.schedule_interval_title)
-            .setItems(ScheduleApi.INTERVALS.map { context.getString(R.string.schedule_every, it) }.toTypedArray()) { _, i ->
+            .setItems(ScheduleApi.INTERVALS.map { intervalLabel(it) }.toTypedArray()) { _, i ->
                 save { api.add(tile.id, everyMinutes = ScheduleApi.INTERVALS[i]) }
             }
             .setNegativeButton(R.string.cancel, null)
             .showImmersive()
+    }
+
+    private fun intervalLabel(minutes: Int) = when {
+        minutes % 60 == 0 -> context.getString(R.string.schedule_every_hours, minutes / 60)
+        minutes > 60 -> context.getString(R.string.schedule_every_hours_minutes, minutes / 60, minutes % 60)
+        else -> context.getString(R.string.schedule_every, minutes)
     }
 
     private fun save(action: suspend () -> Unit) = change({}, action)

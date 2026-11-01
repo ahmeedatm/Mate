@@ -1,8 +1,10 @@
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { config } from "./config.ts";
-import { findTile, isPush, runAction } from "./deck.ts";
+import { findTile, isPush, runAction, type Tile } from "./deck.ts";
 import { logFailure } from "./log.ts";
+import { canControl } from "./os.ts";
+import { isScreenLocked } from "./screen-lock.ts";
 import { readJson, updateJson } from "./store.ts";
 
 /**
@@ -14,6 +16,8 @@ import { readJson, updateJson } from "./store.ts";
 export type Schedule = {
   id: string;
   tileId: string;
+  /** Empreinte de la touche à la création : les identifiants des pages Perso sont positionnels, un deck réordonné ne doit pas lancer une autre touche. */
+  tileSig?: string;
   enabled: boolean;
   createdMs: number;
   /** Heure fixe "HH:MM", les jours `days` (1 = lundi … 7 = dimanche ; défaut : tous). */
@@ -24,7 +28,7 @@ export type Schedule = {
   lastMs?: number;
 };
 
-export type ScheduleInput = { tileId: string; at?: string; days?: number[]; everyMinutes?: number };
+export type ScheduleInput = { tileId: string; tileSig?: string; at?: string; days?: number[]; everyMinutes?: number };
 
 type Store = { items: Schedule[] };
 
@@ -55,6 +59,7 @@ export async function addSchedule(input: ScheduleInput, now = new Date()): Promi
   const item: Schedule = {
     id: randomUUID().slice(0, 8),
     tileId: input.tileId,
+    tileSig: input.tileSig,
     enabled: true,
     createdMs: now.getTime(),
     ...(input.at ? { at: input.at, days: days && days.length < 7 ? days : undefined } : { everyMinutes: input.everyMinutes }),
@@ -70,7 +75,11 @@ export async function addSchedule(input: ScheduleInput, now = new Date()): Promi
 export const setScheduleEnabled = (id: string, enabled: boolean) =>
   edit((store) => {
     const item = store.items.find((i) => i.id === id);
-    if (item) item.enabled = enabled;
+    if (item) {
+      item.enabled = enabled;
+      // Réactivée, elle repart de maintenant : un intervalle ne se lance pas aussitôt à cause d'un vieux dernier lancement.
+      if (enabled) item.lastMs = Date.now();
+    }
     return Boolean(item);
   });
 
@@ -98,7 +107,7 @@ export function isDue(item: Schedule, now: Date): boolean {
  * Chaque minute : lance les touches dues. Le lancement est noté avant l'exécution : une touche qui échoue ou qui traîne
  * n'est pas rejouée à la minute suivante (échec : journal, prochaine occasion normale).
  */
-export async function scheduleTick(run: (tileId: string) => Promise<void>, now = new Date()) {
+export async function scheduleTick(run: (tileId: string, tileSig?: string) => Promise<void>, now = new Date()) {
   const due = (await listSchedule()).filter((i) => isDue(i, now));
   if (!due.length) return;
   await edit((store) => {
@@ -106,21 +115,32 @@ export async function scheduleTick(run: (tileId: string) => Promise<void>, now =
   });
   for (const item of due) {
     try {
-      await run(item.tileId);
+      await run(item.tileId, item.tileSig);
     } catch (e) {
       logFailure(`Programmation de la touche ${item.tileId}`, e);
     }
   }
 }
 
-/** Lance la touche du deck : relue à chaque fois (elle a pu être supprimée ou devenir une touche à maintenir). */
-export async function runTile(tileId: string) {
+export const tileSignature = (tile: Tile) =>
+  createHash("sha256")
+    .update(JSON.stringify([tile.label, tile.action]))
+    .digest("hex")
+    .slice(0, 16);
+
+/** Lance la touche du deck : relue à chaque fois (elle a pu être supprimée, changée de place ou devenir une touche à maintenir). */
+export async function runTile(tileId: string, tileSig?: string) {
   const tile = await findTile(tileId);
   if (!tile) throw new Error("touche introuvable dans le deck");
+  if (tileSig && tileSignature(tile) !== tileSig) throw new Error("la touche n'est plus la même dans le deck : programmation à refaire");
   if (isPush(tile)) throw new Error("touche à maintenir : pas programmable");
   await runAction(tile.action, tile.id);
 }
 
+/** Écran verrouillé : rien ne part (une touche de raccourci ou de texte irait dans l'écran de verrouillage) ; un intervalle repart au déverrouillage, une heure fixe manquée saute. */
 export function startSchedule() {
-  setInterval(() => void scheduleTick(runTile).catch((e) => logFailure("Programmations", e)), 60_000);
+  if (!canControl) return;
+  setInterval(() => {
+    if (!isScreenLocked()) void scheduleTick(runTile).catch((e) => logFailure("Programmations", e));
+  }, 60_000);
 }

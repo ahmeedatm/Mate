@@ -1,6 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { findTile, isPush } from "../deck.ts";
-import { addSchedule, deleteSchedule, listSchedule, setScheduleEnabled, type Schedule, type ScheduleInput } from "../schedule.ts";
+import {
+  addSchedule,
+  deleteSchedule,
+  listSchedule,
+  setScheduleEnabled,
+  tileSignature,
+  type Schedule,
+  type ScheduleInput,
+} from "../schedule.ts";
 
 const DAY_NAMES = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"];
 
@@ -57,7 +65,7 @@ export default async function scheduleRoutes(app: FastifyInstance) {
       const tile = await findTile(tileId);
       if (!tile) return reply.code(404).send({ error: "Touche inconnue" });
       if (isPush(tile)) return reply.code(409).send({ error: "Cette touche se maintient : elle ne se programme pas" });
-      return view(await addSchedule({ tileId, at, everyMinutes, days }));
+      return view(await addSchedule({ tileId, tileSig: tileSignature(tile), at, everyMinutes, days }));
     },
   );
 

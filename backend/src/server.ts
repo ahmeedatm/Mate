@@ -165,6 +165,7 @@ app.addHook("preHandler", async (req, reply) => {
     !canControl &&
     ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) ||
       req.url.startsWith("/system") ||
+      req.url.startsWith("/schedule") ||
       req.url.startsWith("/pointer") ||
       req.url.startsWith("/present") ||
       req.url.startsWith("/gitlab") ||

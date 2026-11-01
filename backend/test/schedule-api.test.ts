@@ -51,4 +51,23 @@ describe("Programmations d'une touche du Deck", () => {
     assert.equal((await server.call("POST", "/schedule", { tileId: tile.id, everyMinutes: 1 })).status, 400);
     assert.equal((await server.call("GET", "/schedule", undefined, false)).status, 401);
   });
+  it("refuse : jours sans heure (400), corps d'activation invalide (400), touche à maintenir (409)", async () => {
+    const tile = await firstTile();
+    assert.equal((await server.call("POST", "/schedule", { tileId: tile.id, everyMinutes: 30, days: [1] })).status, 400);
+    const added = await server.call("POST", "/schedule", { tileId: tile.id, everyMinutes: 30 });
+    assert.equal((await server.call("POST", `/schedule/${added.json.id}/enabled`, { enabled: "oui" })).status, 400);
+    await server.call("DELETE", `/schedule/${added.json.id}`);
+    const put = await server.call("PUT", "/deck/keys/17", { label: "Parler", steps: [{ type: "keys", keys: "f13", push: true }] });
+    assert.equal(put.status, 200);
+    assert.equal((await server.call("POST", "/schedule", { tileId: "k-17", at: "18:00" })).status, 409);
+    await server.call("DELETE", "/deck/keys/17");
+  });
+
+  it("20 programmations au plus : la 21e est refusée (409)", async () => {
+    const tile = await firstTile();
+    const ids: string[] = [];
+    for (let i = 0; i < 20; i++) ids.push((await server.call("POST", "/schedule", { tileId: tile.id, everyMinutes: 60 })).json.id);
+    assert.equal((await server.call("POST", "/schedule", { tileId: tile.id, everyMinutes: 60 })).status, 409);
+    for (const id of ids) await server.call("DELETE", `/schedule/${id}`);
+  });
 });
