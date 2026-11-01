@@ -689,6 +689,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           .find((t: { label?: string; push?: boolean }) => t.label && !t.push);
         if (!tile) return "aucune touche au deck, ignoré";
         const added = await call("POST", "/schedule", { tileId: tile.id, everyMinutes: 1440 });
+        if (added.status === 501) return "501 hors Mac et Windows";
         expectStatus(added, 200, "POST /schedule");
         try {
           const listed = await call("GET", "/schedule");
