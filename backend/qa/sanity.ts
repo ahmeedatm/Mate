@@ -187,10 +187,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
-      name: "écran de jeu (appli au premier plan)",
+      name: "page par appli (appli au premier plan)",
       run: async () => {
-        // La veille (src/foreground-watch.ts) pousse l'appli devant ; la tablette la compare à sa liste de jeux, choisie
-        // parmi les applis du catalogue. L'ordre foreground est refusé s'il vient de l'extérieur.
+        // La veille (src/foreground-watch.ts) pousse l'appli devant ; la tablette la compare aux applis de chaque page,
+        // choisies parmi les applis du catalogue. L'ordre foreground est refusé s'il vient de l'extérieur.
         expectStatus(
           await call("POST", "/tablet/command", { type: "foreground", app: "Sanity", bundleId: "sanity" }),
           400,
