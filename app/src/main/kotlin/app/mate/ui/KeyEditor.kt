@@ -217,6 +217,9 @@ class KeyEditor @JvmOverloads constructor(
 
     private fun renderSteps() {
         stepList.removeAllViews()
+        // Un cycle demande au moins deux étapes : sinon la pastille est grisée (keyJson l'ignorerait).
+        cycleChip.isEnabled = steps.size > 1
+        cycleChip.alpha = if (cycleChip.isEnabled) 1f else 0.4f
         if (steps.isEmpty()) {
             stepList.addView(TextView(context).apply {
                 setText(R.string.key_steps_empty)

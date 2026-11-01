@@ -337,7 +337,7 @@ export async function findTile(id: string): Promise<Tile | undefined> {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Prochaine étape de chaque touche à cycle, par identifiant de tuile. shortcut: perdu au redémarrage du compagnon, à garder si l'état visible de la touche le demande. */
+/** Prochaine étape de chaque touche à cycle, par identifiant de tuile. shortcut: perdu au redémarrage du compagnon, et gardé si la touche est redéfinie sous le même identifiant ; à reprendre si l'état visible de la touche le demande. */
 const cycleNext = new Map<string, number>();
 
 /** `tileId` : la touche dont on suit le cycle ; sans lui, un cycle lance toujours sa première étape. */
