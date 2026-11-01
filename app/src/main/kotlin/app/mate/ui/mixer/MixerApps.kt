@@ -21,12 +21,14 @@ object MixerApps {
         val isGroup get() = members.isNotEmpty()
 
         /** Voie qui se calcule (groupe, premier plan, autres) : elle n'est pas une appli de l'ordinateur. */
-        val isVirtual get() = isGroupId(id) || id == FRONT_ID || id == OTHERS_ID
+        val isVirtual get() = isVirtualId(id)
     }
 
     const val FRONT_ID = "special:front"
     const val OTHERS_ID = "special:others"
     private const val SYSTEM_ID = "system"
+
+    fun isVirtualId(id: String) = isGroupId(id) || id == FRONT_ID || id == OTHERS_ID
 
     fun front(name: String) = App(FRONT_ID, name)
 
@@ -148,5 +150,5 @@ object MixerApps {
 
     /** Comme [isSilent] pour une voie affichée : une voie calculée est grisée quand rien ne joue dessus (volume null). */
     fun isSilent(channel: MixerChannel, live: List<MixerChannel>?): Boolean =
-        if (App(channel.id, "").isVirtual) live != null && channel.volume == null else isSilent(channel.id, live)
+        if (isVirtualId(channel.id)) live != null && channel.volume == null else isSilent(channel.id, live)
 }

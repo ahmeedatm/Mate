@@ -277,7 +277,7 @@ export async function mixer(change?: MixerChange): Promise<MixerState> {
   record("mixer", change);
   const { id, ...values } = change;
   const apply = (c: MixerState["master"]) => (c.id === id ? { ...c, ...values } : c);
-  const next = { master: apply(current.master), mic: apply(current.mic), apps: current.apps?.map(apply) ?? null };
+  const next = { ...current, master: apply(current.master), mic: apply(current.mic), apps: current.apps?.map(apply) ?? null };
   write({ ...read(), mixer: next });
   return next;
 }
