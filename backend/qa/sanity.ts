@@ -680,6 +680,28 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "programmations : créer sur une touche du deck, lister, supprimer",
+      run: async () => {
+        const deck = await call("GET", "/deck");
+        expectStatus(deck, 200, "GET /deck");
+        const tile = deck.json.pages
+          .flatMap((p: { tiles: { id: string; label?: string; push?: boolean }[] }) => p.tiles)
+          .find((t: { label?: string; push?: boolean }) => t.label && !t.push);
+        if (!tile) return "aucune touche au deck, ignoré";
+        const added = await call("POST", "/schedule", { tileId: tile.id, everyMinutes: 1440 });
+        expectStatus(added, 200, "POST /schedule");
+        try {
+          const listed = await call("GET", "/schedule");
+          expect(
+            listed.json.items.some((i: { id: string }) => i.id === added.json.id),
+            "programmation créée absente de la liste",
+          );
+        } finally {
+          expectStatus(await call("DELETE", `/schedule/${added.json.id}`), 200, "DELETE /schedule");
+        }
+      },
+    },
+    {
       name: "corvées : cocher passe la tâche à la personne suivante",
       run: async () => {
         const added = await call("POST", "/tasks", { label: stamp, days: [1, 2, 3, 4, 5, 6, 7], people: ["Léa", "Tom"] });

@@ -158,6 +158,9 @@ class SettingsFragment :
         wifiStatus = view.findViewById(R.id.settings_wifi_status)
         view.findViewById<Button>(R.id.settings_wifi).setOnClickListener { wifi.show() }
         view.findViewById<Button>(R.id.settings_tablet_remote).setOnClickListener { openOnComputer() }
+        view.findViewById<Button>(R.id.settings_schedule).setOnClickListener {
+            ScheduleDialog(requireContext(), viewLifecycleOwner.lifecycleScope).show()
+        }
         view.findViewById<ImageView>(R.id.settings_remote_icon)
             .setImageDrawable(Look.badge(requireContext(), R.drawable.ic_laptop, themeColor(requireContext(), R.attr.c_hue_violet), sizeDp = 48, iconDp = 26))
         renderRemote()
@@ -730,8 +733,9 @@ class SettingsFragment :
     /** Ouvre sur l'ordinateur la page du compagnon, carte Réglages de la tablette en avant. */
     /** « Régler depuis l'ordi » en tête de Personnalisation, seulement avec un ordinateur appairé. */
     private fun renderRemote() {
-        view?.findViewById<View>(R.id.settings_remote_card)?.visibility =
-            if (Computers.active(requireContext()) != null) View.VISIBLE else View.GONE
+        val visibility = if (Computers.active(requireContext()) != null) View.VISIBLE else View.GONE
+        view?.findViewById<View>(R.id.settings_remote_card)?.visibility = visibility
+        view?.findViewById<View>(R.id.settings_schedule_card)?.visibility = visibility
     }
 
     private fun freshStart() {

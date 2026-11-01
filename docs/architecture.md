@@ -274,6 +274,10 @@ Les puces ci-dessous sont reprises mot pour mot de l'ancien `CLAUDE.md` (« Conv
 
 - Carte Réunions Teams des Réglages seulement si `/deck/features` → `meetings`.
 
+### Programmations
+
+- **Programmer une touche du Deck** (Réglages > Personnalisation, carte Programmations, `ui/ScheduleDialog` + `net/ScheduleApi`, masquée sans ordinateur appairé) : une touche existante du deck se lance à une heure fixe (jours au choix : tous, lun–ven, week-end) ou toutes les 15 à 120 min. Tout tourne sur l'ordinateur (`backend/src/schedule.ts`, `.data/schedule.json`, tick chaque minute), même tablette éteinte ; rien n'est programmé au départ, 20 programmations au plus. Routes `GET/POST /schedule`, `POST /schedule/:id/enabled`, `DELETE /schedule/:id` (`routes/schedule.ts`) : la tablette n'envoie qu'un identifiant de touche, jamais une action libre ; les touches à maintenir (`push`) sont refusées (409). Le lancement est noté avant l'exécution (une touche qui échoue n'est pas rejouée à la minute suivante, l'échec va au journal). Une heure fixe manquée de plus de 5 min (ordinateur en veille) saute ; un intervalle après une longue veille part une seule fois. La touche est relue à chaque lancement : supprimée du deck, la programmation reste listée (« Touche supprimée du Deck ») pour être supprimée.
+
 ### Alerte réunion
 
 - **Alerte réunion** (`ui/MeetingAlertOverlay` + `MeetingAlertModel`, `Prefs.meetingAlert`, coupée par défaut, Réglages > Tablette) : 5 min avant un événement horaire de l'agenda (`GET /calendar?days=2`, relu au plus toutes les 5 min, vérifié chaque minute par `MainActivity.onMinute`), plein écran sous les calques d'appel / agents, compte à rebours en `c_font_display` rouge (`c_ko`) sous 1 min, un toucher ferme ; une alerte par réunion (`Prefs.meetingAlertSeen`) ; jamais pendant un appel, la Caméra ou une saisie.
