@@ -132,6 +132,22 @@ describe("POST /deck/run avec phase (touche à maintenir pour parler)", () => {
     ]);
   });
 
+  it("un relâchement sans appui ne touche à rien, et appui + relâchement partis ensemble restent dans l'ordre", async () => {
+    await makePush();
+    const tile = await pushTile();
+    server.clearOsCalls();
+    assert.equal((await server.call("POST", "/deck/run", { id: tile.id, phase: "up" })).status, 200);
+    assert.deepEqual(server.osCalls(), []);
+    await Promise.all([
+      server.call("POST", "/deck/run", { id: tile.id, phase: "down" }),
+      server.call("POST", "/deck/run", { id: tile.id, phase: "up" }),
+    ]);
+    assert.deepEqual(
+      server.osCalls().map((c) => c.args[1]),
+      [true, false],
+    );
+  });
+
   it("un appui simple sur cette touche ne tape rien : le micro ne reste pas ouvert", async () => {
     await makePush();
     server.clearOsCalls();

@@ -12,6 +12,7 @@ import {
   LINK_SUGGESTIONS,
   liveDeckApps,
   loadDeck,
+  releaseAllPushed,
   removeDeckApp,
   removeDeckLink,
   resetDeckApps,
@@ -116,6 +117,8 @@ export default async function deckRoutes(app: FastifyInstance) {
     reply.header("Cache-Control", "max-age=86400");
     return reply.type("image/png").send(createReadStream(icon));
   });
+
+  app.addHook("onClose", () => releaseAllPushed());
 
   app.post<{ Body: { id: string; hold?: boolean; phase?: "down" | "up" } }>(
     "/deck/run",

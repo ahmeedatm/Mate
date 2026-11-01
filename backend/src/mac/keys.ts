@@ -76,7 +76,7 @@ function post(code, down, flags) {
 // ignore ses propres raccourcis (Ctrl + flèche de Mission Control).
 function keyFlags(code) {
   if (code >= 123 && code <= 126) return 0x800000 | 0x200000;
-  return [122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111].indexOf(code) >= 0 ? 0x800000 : 0;
+  return [122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111, 105, 107, 113, 106, 64, 79, 80, 90].indexOf(code) >= 0 ? 0x800000 : 0;
 }
 function codeOf(key) {
   var code = /^#\\d+$/.test(key) ? parseInt(key.slice(1), 10) : -1;
