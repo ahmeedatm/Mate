@@ -247,6 +247,52 @@ describe("touches perso : routes", () => {
     await server.call("DELETE", "/deck/keys/99");
   });
 
+  it("une macro de gestes du Pavé s'enregistre et rejoue ses gestes dans l'ordre", async () => {
+    const macro = {
+      label: "Bureau puis recherche",
+      steps: [
+        { type: "gesture", name: "desktop-next" },
+        { type: "wait", ms: 1500 },
+        { type: "gesture", name: "search" },
+      ],
+    };
+    assert.equal((await put(6, macro)).status, 200);
+    assert.deepEqual((await server.call("GET", "/deck/keys/6")).json.key, macro);
+    assert.equal((await put(7, { label: "X", steps: [{ type: "gesture", name: "teleporter" }] })).status, 400);
+    assert.equal((await put(7, { label: "X", steps: [{ type: "gesture" }] })).status, 400);
+    assert.equal((await server.call("POST", "/deck/run", { id: "k-6" })).status, 200);
+    assert.deepEqual(server.osCalls(), [
+      { fn: "pointerGesture", args: ["desktop-next"] },
+      { fn: "pointerGesture", args: ["search"] },
+    ]);
+  });
+
+  it("POST /deck/keys range la touche dans le premier emplacement libre et rend son rang", async () => {
+    let free = 0;
+    while ((await server.call("GET", `/deck/keys/${free}`)).json.key) free++;
+    const key = { label: "Macro enregistrée", steps: [{ type: "gesture", name: "back" }] };
+    const res = await server.call("POST", "/deck/keys", key);
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.json, { slot: free });
+    assert.deepEqual((await server.call("GET", `/deck/keys/${free}`)).json.key, key);
+    assert.equal((await server.call("POST", "/deck/keys", { label: "", steps: [] })).status, 400);
+  });
+
+  it("deux POST /deck/keys en même temps prennent deux places différentes", async () => {
+    const key = { label: "Parallèle", steps: [{ type: "gesture", name: "back" }] };
+    const [a, b] = await Promise.all([server.call("POST", "/deck/keys", key), server.call("POST", "/deck/keys", key)]);
+    assert.notEqual(a.json.slot, b.json.slot);
+    for (const r of [a, b]) await server.call("DELETE", `/deck/keys/${r.json.slot}`);
+  });
+
+  it("POST /deck/keys répond 409 quand les 100 emplacements sont pris", async () => {
+    const slots = Array.from({ length: MAX_SLOTS }, (_, i) => i);
+    await Promise.all(slots.map((i) => put(i, { label: `P${i}`, steps: [{ type: "keys", keys: "a" }] })));
+    const res = await server.call("POST", "/deck/keys", { label: "Trop", steps: [{ type: "keys", keys: "a" }] });
+    assert.equal(res.status, 409);
+    await Promise.all(slots.map((i) => server.call("DELETE", `/deck/keys/${i}`)));
+  });
+
   it("vide un emplacement", async () => {
     await put(4, { label: "Temp", steps: [{ type: "keys", keys: "a" }] });
     assert.equal((await server.call("DELETE", "/deck/keys/4")).status, 200);

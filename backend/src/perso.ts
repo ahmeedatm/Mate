@@ -1,4 +1,5 @@
 import { SYSTEM_COMMANDS, TILE_SYMBOLS } from "./screens.ts";
+import { POINTER_GESTURES } from "./pointer.ts";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { config } from "./config.ts";
@@ -64,6 +65,21 @@ export async function saveKey(slot: number, key: PersoKey | null) {
     () => ({}),
     (data) => {
       data.slots = put(data.slots, slot, key);
+    },
+  );
+}
+
+/** Range la touche dans le premier emplacement libre de Perso et rend son rang. 409 : plus d'emplacement libre. */
+export async function addKey(key: PersoKey): Promise<number> {
+  assertPushAlone(key);
+  return updateJson<{ slots?: Slots }, number>(
+    keysFile,
+    () => ({}),
+    (data) => {
+      const slot = fit(data.slots).indexOf(null);
+      if (slot < 0) throw refuse(409, "Plus d'emplacement libre sur cette page");
+      data.slots = put(data.slots, slot, key);
+      return slot;
     },
   );
 }
@@ -168,7 +184,7 @@ const name = { type: "string", minLength: 1, maxLength: 200 };
 export const stepSchema = {
   type: "object",
   required: ["type"],
-  properties: { type: { enum: ["app", "url", "keys", "shortcut", "media", "system", "text", "wait", "http", "window"] } },
+  properties: { type: { enum: ["app", "url", "keys", "shortcut", "media", "system", "text", "wait", "http", "window", "gesture"] } },
   allOf: [
     step("app", ["name"], { name }),
     step("url", ["url"], { url: { type: "string", maxLength: 2000 } }),
@@ -178,6 +194,7 @@ export const stepSchema = {
     step("system", ["command"], { command: { enum: SYSTEM_COMMANDS } }),
     step("text", ["text"], { text: { type: "string", minLength: 1, maxLength: 4000 } }),
     step("wait", ["ms"], { ms: { type: "integer", minimum: 0, maximum: 10_000 } }),
+    step("gesture", ["name"], { name: { enum: [...POINTER_GESTURES] } }),
     step("http", ["name"], { name }),
     step("window", ["app"], { app: name, display: { type: "string", maxLength: 100 }, layout: { enum: ["keep", "left", "right", "max"] } }),
   ],

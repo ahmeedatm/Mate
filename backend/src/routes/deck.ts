@@ -33,6 +33,7 @@ import {
   voiceState,
 } from "../os.ts";
 import {
+  addKey,
   duplicateKey,
   duplicateKeyPage,
   keySchema,
@@ -264,6 +265,9 @@ export default async function deckRoutes(app: FastifyInstance) {
   app.get<{ Params: { slot: number } }>("/deck/keys/:slot", { schema: { params: slotParam } }, async (req) => ({
     key: (await loadKeys())[req.params.slot] ?? null,
   }));
+
+  // Touche enregistrée depuis le Pavé de la tablette : premier emplacement libre de Perso.
+  app.post<{ Body: PersoKey }>("/deck/keys", { schema: { body: keySchema } }, async (req) => ({ slot: await addKey(req.body) }));
 
   app.put<{ Params: { slot: number }; Body: PersoKey }>(
     "/deck/keys/:slot",

@@ -16,6 +16,7 @@ import {
   listWindows,
   openTarget,
   placeWindow,
+  pointerGesture,
   pressButton,
   holdKeys,
   runShortcut,
@@ -28,6 +29,7 @@ import {
   type MediaCommand,
   type SystemCommand,
 } from "./os.ts";
+import type { PointerGesture } from "./pointer.ts";
 import type { Layout } from "./screens.ts";
 import {
   loadKeyPages,
@@ -65,6 +67,8 @@ export type Step =
   /** Colle un texte dans l'appli au premier plan. */
   | { type: "text"; text: string }
   | { type: "wait"; ms: number }
+  /** Geste du Pavé (retour, bureau suivant, zoom…), traduit en raccourci selon le système ; enregistré depuis le Pavé de la tablette. */
+  | { type: "gesture"; name: PointerGesture }
   /** Appelle une cible du réseau local déclarée sur l'ordinateur (`LAN_TARGETS`, voir lan-call.ts) ; la tablette n'envoie que son nom. */
   | { type: "http"; name: string }
   /**
@@ -397,6 +401,8 @@ export async function runAction(action: Action, tileId?: string): Promise<unknow
       return sendMediaKey(action.command);
     case "text":
       return typeText(action.text);
+    case "gesture":
+      return pointerGesture(action.name);
     case "wait":
       return sleep(Math.min(action.ms, 10_000));
     case "http":
