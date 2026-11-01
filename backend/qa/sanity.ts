@@ -392,6 +392,20 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "minuteur de pause musique",
+      run: async () => {
+        const media = await call("GET", "/system/media");
+        if (!controlled()) return expectStatus(media, 501, "/system/media");
+        expectStatus(media, 200, "/system/media");
+        // Une lecture en cours ne se touche pas : la pause n'est essayée que quand rien ne joue (réponse : 0 pause).
+        if (media.json.sessions.some((s: { status: string }) => s.status === "playing")) return "lecture en cours, pause non essayée";
+        const res = await call("POST", "/system/media/pause", {});
+        expectStatus(res, 200, "/system/media/pause");
+        expect(res.json.paused === 0, "rien ne jouait : aucune pause attendue");
+        return "rien ne joue, rien mis en pause";
+      },
+    },
+    {
       name: "mélangeur",
       run: async () => {
         const res = await call("GET", "/system/mixer");

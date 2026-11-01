@@ -340,6 +340,15 @@ export default async function systemRoutes(app: FastifyInstance) {
     async (req) => ({ ok: await mediaControl(req.body.action, req.body.app, req.body.positionMs) }),
   );
 
+  // Minuteur de la tablette : met en pause ce qui joue, rien d'autre. Une lecture déjà en pause n'est pas touchée
+  // (play-pause la relancerait).
+  app.post("/system/media/pause", async () => {
+    const playing = ((await mediaSessions()) ?? []).filter((s) => s.status === "playing" && s.canPlayPause);
+    // allSettled : une lecture qui résiste ne doit pas empêcher la pause des autres.
+    const results = await Promise.allSettled(playing.map((s) => mediaControl("play-pause", s.app)));
+    return { ok: true, paused: results.filter((r) => r.status === "fulfilled" && r.value).length };
+  });
+
   app.get<{ Querystring: { app: string; key: string } }>(
     "/system/media/thumb",
     {

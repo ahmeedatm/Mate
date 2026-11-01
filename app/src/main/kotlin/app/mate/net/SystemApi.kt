@@ -253,6 +253,9 @@ class SystemApi(private val http: Http) {
         Unit
     }
 
+    /** Minuteur de pause musique : met en pause ce qui joue, rien d'autre ; rend le nombre de lectures mises en pause. */
+    suspend fun pauseMedia(): Int = http.io { JSONObject(http.postJson("/system/media/pause", JSONObject())).getInt("paused") }
+
     suspend fun mediaThumb(app: String, key: String): ByteArray? = http.io {
         http.bytesOrNull("/system/media/thumb?app=${http.encode(app)}&key=${http.encode(key)}", timeoutMs = 10_000)
     }

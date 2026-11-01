@@ -9,6 +9,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -19,6 +20,12 @@ import app.mate.focus.FocusPresets
 import app.mate.focus.FocusTimer
 import app.mate.focus.Moods
 import app.mate.focus.NoisePlayer
+import app.mate.focus.SleepTimer
+import app.mate.net.BackendClient
+import app.mate.net.runCatchingCancellable
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /** Nom court d'un son d'ambiance (pastilles Focus, carte de l'Accueil). */
 @get:StringRes
@@ -42,11 +49,14 @@ class FocusFragment : Fragment() {
     private val presetButtons = mutableListOf<Pair<FocusPresets.Preset, Button>>()
     private lateinit var custom: Button
     private val noiseButtons = mutableMapOf<NoisePlayer.Kind, Button>()
+    private val sleepButtons = mutableMapOf<Int, Button>()
+    private lateinit var sleepLabel: TextView
     private lateinit var mute: ImageButton
     private lateinit var breathing: BreathingPanel
 
     private val listener: (FocusTimer.State) -> Unit = { render(it) }
     private val noiseListener: () -> Unit = { renderNoise() }
+    private val sleepListener: (SleepTimer.State) -> Unit = { renderSleep(it) }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, state: Bundle?): View =
         inflater.inflate(R.layout.fragment_focus, container, false)
@@ -102,6 +112,14 @@ class FocusFragment : Fragment() {
             noises.addView(button, chipParams())
             noiseButtons[kind] = button
         }
+        // Toucher la durée choisie annule le minuteur. Il vit hors de l'écran : l'échéance joue même si on est parti ailleurs.
+        sleepLabel = view.findViewById(R.id.focus_sleep_label)
+        val sleep = view.findViewById<LinearLayout>(R.id.focus_sleep)
+        for (minutes in SleepTimer.CHOICES) {
+            val button = chip(getString(R.string.focus_minutes, minutes)) { toggleSleep(minutes) }
+            sleep.addView(button, chipParams())
+            sleepButtons[minutes] = button
+        }
         mute = view.findViewById(R.id.focus_mute)
         mute.setOnClickListener { NoisePlayer.setMuted(!NoisePlayer.muted) }
         volume = view.findViewById(R.id.focus_volume)
@@ -118,6 +136,21 @@ class FocusFragment : Fragment() {
     private fun choose(preset: FocusPresets.Preset) {
         Prefs.setFocusPreset(requireContext(), preset)
         FocusTimer.setPreset(preset.focus, preset.pause)
+    }
+
+    private fun toggleSleep(minutes: Int) {
+        if (SleepTimer.state.minutes == minutes) return SleepTimer.cancel()
+        val app = requireContext().applicationContext
+        SleepTimer.start(minutes) {
+            CoroutineScope(Dispatchers.Main).launch {
+                val result = runCatchingCancellable { BackendClient(app).system.pauseMedia() }
+                val message = result.fold(
+                    { app.getString(if (it > 0) R.string.sleep_done else R.string.sleep_nothing) },
+                    { app.getString(R.string.sleep_failed, app.errorText(it)) },
+                )
+                Toast.makeText(app, message, Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     /** Pomodoro ou Respiration à la même place ; revenir au Pomodoro arrête l'exercice (le chrono, lui, continue). */
@@ -157,6 +190,7 @@ class FocusFragment : Fragment() {
         super.onStart()
         FocusTimer.observe(listener)
         NoisePlayer.observe(noiseListener)
+        SleepTimer.observe(sleepListener)
         renderNoise()
     }
 
@@ -165,6 +199,7 @@ class FocusFragment : Fragment() {
         breathing.stop()
         FocusTimer.unobserve(listener)
         NoisePlayer.unobserve(noiseListener)
+        SleepTimer.unobserve(sleepListener)
         super.onStop()
     }
 
@@ -192,6 +227,11 @@ class FocusFragment : Fragment() {
         presetButtons.forEach { (preset, button) -> button.isSelected = preset == current }
         custom.isSelected = !FocusPresets.isFixed(current)
         custom.text = if (custom.isSelected) getString(R.string.focus_custom_value, current.focus, current.pause) else getString(R.string.focus_custom)
+    }
+
+    private fun renderSleep(state: SleepTimer.State) {
+        sleepButtons.forEach { (minutes, button) -> button.isSelected = minutes == state.minutes }
+        sleepLabel.text = if (state.minutes == null) getString(R.string.sleep_label) else getString(R.string.sleep_label_running, FocusTimer.format(state.remainingMs))
     }
 
     private fun renderNoise() {
