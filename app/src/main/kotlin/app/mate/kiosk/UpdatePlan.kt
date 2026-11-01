@@ -9,11 +9,24 @@ object UpdatePlan {
     const val INTERVAL_MS = 6 * 3_600_000L
 
     /**
-     * Par paquet, dans l'ordre d'arrivée : la plus haute versionCode. À égalité, celle de la première liste (l'ordinateur,
-     * sur le réseau local, télécharge plus vite). Les essais de PR n'en font pas partie (release à part, voir `trial/`).
+     * Par paquet : la plus haute versionCode. L'ordinateur n'annonce que des mises à jour de paquets déjà sur la tablette
+     * (`installed`) : Android ne vérifie l'éditeur que d'une mise à jour, pas d'une première installation. Paquet aussi sur
+     * GitHub : celui de GitHub, ou celui de l'ordinateur s'il est identique (même versionCode et même SHA-256, il télécharge
+     * plus vite sur le réseau local) ; une autre version de l'ordinateur ne masque pas celle de GitHub. Les essais de PR
+     * n'en font pas partie (release à part, voir `trial/`).
      */
-    fun merge(vararg sources: List<AppUpdate>): List<AppUpdate> =
-        sources.flatMap { it }.groupBy { it.pkg }.values.map { same -> same.maxBy { it.versionCode } }
+    fun merge(computer: List<AppUpdate>, server: List<AppUpdate>, installed: Set<String>): List<AppUpdate> {
+        val fromComputer = computer.filter { it.pkg in installed }
+        return (fromComputer + server).map { it.pkg }.distinct().map { pkg ->
+            val local = fromComputer.filter { it.pkg == pkg }.maxByOrNull { it.versionCode }
+            val remote = server.filter { it.pkg == pkg }.maxByOrNull { it.versionCode }
+            when {
+                remote == null -> local!!
+                local != null && local.versionCode == remote.versionCode && local.sha256.equals(remote.sha256, ignoreCase = true) -> local
+                else -> remote
+            }
+        }
+    }
 
     /** Mise à jour installée sans personne : la release de main du Mate (`pkg`) plus récente que l'installée. */
     fun auto(updates: List<AppUpdate>, pkg: String, installedCode: Long): AppUpdate? =

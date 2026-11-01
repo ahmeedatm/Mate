@@ -63,7 +63,9 @@ object Updater {
         val computer = if (Computers.all(context).isEmpty()) null else async { fetch { BackendClient(context).updates.list() } }
         val server = UpdatesApi.server()?.let { api -> async { fetch { serverList(api) } } }
         val results = mapOf(UpdateSource.COMPUTER to computer?.await(), UpdateSource.SERVER to server?.await())
-        val merged = UpdatePlan.merge(*results.values.map { it?.getOrNull().orEmpty() }.toTypedArray())
+        val fromComputer = results[UpdateSource.COMPUTER]?.getOrNull().orEmpty()
+        val installedPkgs = fromComputer.map { it.pkg }.filter { installed(context, it) != null }.toSet()
+        val merged = UpdatePlan.merge(fromComputer, results[UpdateSource.SERVER]?.getOrNull().orEmpty(), installedPkgs)
         Check(
             merged.map { it to installed(context, it.pkg) },
             results.mapNotNull { (source, r) -> if (r != null) source else null }.toSet(),
