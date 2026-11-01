@@ -6,7 +6,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { beforeEach, describe, it } from "node:test";
-import type { Tile } from "../src/deck.ts";
+import type { Action, Tile } from "../src/deck.ts";
 import { calls, state, type FakeState } from "./fake-os.ts";
 
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), "companion-deck-"));
@@ -121,6 +121,45 @@ describe("runAction", () => {
       calls.map((c) => c.args[0]),
       ["msteams://teams.microsoft.com/l/meetup-join/x"],
     );
+  });
+
+  it("un cycle lance une étape par appui de la même touche, chaque touche a son rang", async () => {
+    const cycle: Action = {
+      type: "cycle",
+      steps: [
+        { type: "text", text: "Jour" },
+        { type: "text", text: "Nuit" },
+      ],
+    };
+    await deck.runAction(cycle, "a");
+    await deck.runAction(cycle, "a");
+    await deck.runAction(cycle, "a");
+    await deck.runAction(cycle, "b");
+    assert.deepEqual(
+      calls.map((c) => c.args[0]),
+      ["Jour", "Nuit", "Jour", "Jour"],
+    );
+  });
+
+  it("un cycle dont l'étape échoue reste sur cette étape", async () => {
+    const cycle: Action = {
+      type: "cycle",
+      steps: [
+        { type: "press", app: "Discord", names: ["Muet"] },
+        { type: "text", text: "Suite" },
+      ],
+    };
+    reset({ buttons: { Discord: [] } });
+    await assert.rejects(deck.runAction(cycle, "c"), /Bouton introuvable/);
+    state.buttons = { Discord: ["Muet"] };
+    await deck.runAction(cycle, "c");
+    assert.equal(
+      calls.some((c) => c.fn === "typeText"),
+      false,
+      "l'étape suivante n'a pas été lancée",
+    );
+    await deck.runAction(cycle, "c");
+    assert.deepEqual(calls.at(-1), { fn: "typeText", args: ["Suite"] });
   });
 
   it("appuie sur le premier bouton trouvé, erreur si aucun", async () => {
