@@ -45,7 +45,7 @@
     {
       "title": "Raccourcis",
       "tiles": [
-        { "label": "Capture zone", "symbol": "screenshot", "glyph": "✂️", "action": { "type": "keys", "keys": "win+shift+s" } },
+        { "label": "Capture zone", "symbol": "screenshot", "glyph": "✂️", "action": { "type": "keys", "keys": "win+shift+s" }, "hold": { "type": "system", "command": "screenshot-clipboard" } },
         { "label": "Capture d'écran", "symbol": "clipboard", "glyph": "📋", "action": { "type": "system", "command": "screenshot-clipboard" } },
         { "label": "Vue des tâches", "symbol": "windows", "glyph": "🗂", "action": { "type": "keys", "keys": "win+tab" } },
         { "label": "Bureau", "glyph": "🖼", "action": { "type": "keys", "keys": "win+d" } },

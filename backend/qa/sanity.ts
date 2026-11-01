@@ -134,6 +134,11 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           "page Perso absente",
         );
         expect(!pages.some((p) => /^(word|excel|powerpoint|outlook)$/i.test(p.title)), "page Office encore au deck");
+        // Appui long : une touche sans seconde action refuse (409) sans rien lancer.
+        const plain = (deck.json.pages as { tiles: { id: string; type: string; hold?: boolean }[] }[])
+          .flatMap((p) => p.tiles)
+          .find((t) => t.type !== "empty" && !t.hold);
+        if (plain) expectStatus(await call("POST", "/deck/run", { id: plain.id, hold: true }), 409, "/deck/run hold sans seconde action");
         // Sans pilotage, le deck se lit mais ce qui touche à l'ordinateur répond 501.
         if (!controlled()) return expectStatus(await call("GET", "/deck/catalog"), 501, "/deck/catalog");
         const catalog = await call("GET", "/deck/catalog");
