@@ -122,6 +122,7 @@
     <string name="sum_text">Taper « %1$s »</string>
     <string name="sum_shortcut">Raccourci « %1$s »</string>
     <string name="sum_wait">Attendre %1$s</string>
+    <string name="sum_gesture">Geste du Pavé : %1$s</string>
     <string name="sum_window">%1$s → %2$s, %3$s</string>
     <string name="apps_all_title">Toutes les applis</string>
     <string name="apps_all">Toutes les applis de l\'ordinateur</string>
@@ -167,6 +168,24 @@
     <string name="pad_hint">Un doigt pour bouger, deux pour défiler · pince pour zoomer · 3 doigts : fenêtres · touche pour cliquer</string>
     <string name="pad_left_click">Clic gauche</string>
     <string name="pad_right_click">Clic droit</string>
+    <string name="pad_record">Enregistrer</string>
+    <string name="pad_record_stop">Terminer (%1$d)</string>
+    <string name="pad_record_label">Macro du Pavé</string>
+    <string name="pad_record_saved">Touche enregistrée dans Perso, place %1$d</string>
+    <string name="pad_record_empty">Aucun geste enregistré</string>
+    <string name="pad_record_full">20 étapes atteintes : ce geste n\'est pas gardé</string>
+    <string name="gesture_zoom_in">Zoom avant</string>
+    <string name="gesture_zoom_out">Zoom arrière</string>
+    <string name="gesture_back">Retour</string>
+    <string name="gesture_forward">Avancer</string>
+    <string name="gesture_task_view">Vue des tâches</string>
+    <string name="gesture_desktop">Afficher le bureau</string>
+    <string name="gesture_app_previous">Appli précédente</string>
+    <string name="gesture_app_next">Appli suivante</string>
+    <string name="gesture_search">Recherche</string>
+    <string name="gesture_desktop_previous">Bureau précédent</string>
+    <string name="gesture_desktop_next">Bureau suivant</string>
+    <string name="gesture_notifications">Notifications</string>
     <!-- Agents Claude Code (onglet Agents du Deck, widget, lumière de bord). -->
     <string name="agents_title">Agents Claude</string>
     <string name="agent_state_working">Travaille</string>

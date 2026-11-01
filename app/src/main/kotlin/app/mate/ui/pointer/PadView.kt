@@ -1,6 +1,7 @@
 package app.mate.ui.pointer
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.MotionEvent
@@ -10,18 +11,26 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import app.mate.R
+import app.mate.net.BackendClient
 import app.mate.net.PointerButton
 import app.mate.net.PointerChannel
+import app.mate.net.PointerGesture
+import app.mate.net.runCatchingCancellable
 import app.mate.ui.dp
+import app.mate.ui.errorText
 import app.mate.ui.themeColor
 import app.mate.ui.themeRes
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlin.math.hypot
 
 /**
  * Onglet « Pavé » du deck : une grande surface où les doigts pilotent le pointeur de l'ordinateur (un doigt bouge,
  * deux défilent, une tape clique), et deux boutons Clic gauche / Clic droit dessous. Le canal vers l'ordinateur
- * n'existe que tant que la vue est active ; l'écran reste allumé pendant ce temps.
+ * n'existe que tant que la vue est active ; l'écran reste allumé pendant ce temps. Sur un profil, un bouton Enregistrer
+ * note les gestes faits (avec leurs pauses) jusqu'à Terminer, et les range dans une touche Perso (`MacroRecorder`).
  */
 class PadView @JvmOverloads constructor(
     context: Context,
@@ -31,6 +40,10 @@ class PadView @JvmOverloads constructor(
     private val surface = FrameLayout(context)
     private var channel: PointerChannel? = null
     private var gestures: PadGestures? = null
+    private val buttons = LinearLayout(context).apply { orientation = HORIZONTAL }
+    private var recordButton: Button? = null
+    private var recorder: MacroRecorder? = null
+    private var scope: CoroutineScope? = null
 
     init {
         orientation = VERTICAL
@@ -50,20 +63,60 @@ class PadView @JvmOverloads constructor(
         surface.setOnTouchListener { v, e -> touch(v, e) }
         addView(surface, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
 
-        val buttons = LinearLayout(context).apply { orientation = HORIZONTAL }
         buttons.addView(pill(R.string.pad_left_click, PointerButton.LEFT), LayoutParams(0, dp(BUTTON_DP), 1f))
         buttons.addView(pill(R.string.pad_right_click, PointerButton.RIGHT), LayoutParams(0, dp(BUTTON_DP), 1f).apply { marginStart = dp(12) })
         addView(buttons, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
     }
 
-    private fun pill(label: Int, button: PointerButton) = Button(context).apply {
+    private fun pill(label: Int, button: PointerButton?) = Button(context).apply {
         setText(label)
         isAllCaps = false
         textSize = 16f
         setTextColor(themeColor(context, R.attr.c_text))
         setBackgroundResource(R.drawable.pill_bg)
-        setOnClickListener { channel?.click(button) }
+        if (button != null) setOnClickListener { channel?.click(button) }
     }
+
+    /** Ajoute le bouton Enregistrer ; [scope] enregistre la touche sur l'ordinateur sans bloquer l'écran. */
+    fun enableRecording(scope: CoroutineScope) {
+        if (recordButton != null) return
+        this.scope = scope
+        recordButton = pill(R.string.pad_record, null).also {
+            it.setOnClickListener { toggleRecording() }
+            buttons.addView(it, LayoutParams(0, dp(BUTTON_DP), 1f).apply { marginStart = dp(12) })
+        }
+    }
+
+    private fun toggleRecording() {
+        val done = recorder
+        if (done == null) {
+            recorder = MacroRecorder()
+            showRecording()
+            return
+        }
+        recorder = null
+        showRecording()
+        if (done.isEmpty) return toast(context.getString(R.string.pad_record_empty))
+        scope?.launch {
+            runCatchingCancellable { BackendClient(context).deck.addPersoKey(done.toKey(context.getString(R.string.pad_record_label))) }
+                .onSuccess { toast(context.getString(R.string.pad_record_saved, it + 1)) }
+                .onFailure { toast(context.errorText(it)) }
+        }
+    }
+
+    private fun showRecording() {
+        val current = recorder
+        recordButton?.text = if (current == null) context.getString(R.string.pad_record) else context.getString(R.string.pad_record_stop, current.gestures)
+    }
+
+    /** Un geste fait sur le Pavé : noté s'il y a un enregistrement en cours. */
+    private fun noteGesture(gesture: PointerGesture) {
+        val current = recorder ?: return
+        if (!current.add(gesture, SystemClock.elapsedRealtime())) toast(context.getString(R.string.pad_record_full))
+        showRecording()
+    }
+
+    private fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_LONG).show()
 
     /** Sur un profil, la surface prend le fond des cartes de l'Accueil, comme les autres widgets (translucide en Rétro). */
     fun useHomeCard() = surface.setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
@@ -78,10 +131,13 @@ class PadView @JvmOverloads constructor(
             channel = opened
             // Les seuils sont en pixels : on les adapte à la densité de l'écran.
             val density = resources.displayMetrics.density
-            gestures = PadGestures({ opened.send(it) }, TAP_SLOP_PX * density, PX_PER_NOTCH * density, { surface.width.toFloat() })
+            gestures = PadGestures({ opened.send(it); if (it is PadCommand.Gesture) noteGesture(it.gesture) }, TAP_SLOP_PX * density, PX_PER_NOTCH * density, { surface.width.toFloat() })
         } else {
             gestures?.onTouch(TouchAction.CANCEL, 0, 0f, 0f, 0L)
             gestures = null
+            // Un enregistrement ne survit pas à un changement d'écran.
+            recorder = null
+            showRecording()
             channel?.close()
             channel = null
         }
