@@ -44,6 +44,8 @@ class PadView @JvmOverloads constructor(
     private var recordButton: Button? = null
     private var recorder: MacroRecorder? = null
     private var scope: CoroutineScope? = null
+    private var saving = false
+    private var fullWarned = false
 
     init {
         orientation = VERTICAL
@@ -88,19 +90,28 @@ class PadView @JvmOverloads constructor(
     }
 
     private fun toggleRecording() {
+        if (saving) return
         val done = recorder
         if (done == null) {
             recorder = MacroRecorder()
+            fullWarned = false
             showRecording()
             return
         }
         recorder = null
         showRecording()
         if (done.isEmpty) return toast(context.getString(R.string.pad_record_empty))
+        saving = true
         scope?.launch {
             runCatchingCancellable { BackendClient(context).deck.addPersoKey(done.toKey(context.getString(R.string.pad_record_label))) }
                 .onSuccess { toast(context.getString(R.string.pad_record_saved, it + 1)) }
-                .onFailure { toast(context.errorText(it)) }
+                .onFailure {
+                    // L'envoi a échoué : l'enregistrement reste, Terminer réessaie.
+                    recorder = done
+                    showRecording()
+                    toast(context.errorText(it))
+                }
+            saving = false
         }
     }
 
@@ -112,7 +123,10 @@ class PadView @JvmOverloads constructor(
     /** Un geste fait sur le Pavé : noté s'il y a un enregistrement en cours. */
     private fun noteGesture(gesture: PointerGesture) {
         val current = recorder ?: return
-        if (!current.add(gesture, SystemClock.elapsedRealtime())) toast(context.getString(R.string.pad_record_full))
+        if (!current.add(gesture, SystemClock.elapsedRealtime()) && !fullWarned) {
+            fullWarned = true
+            toast(context.getString(R.string.pad_record_full))
+        }
         showRecording()
     }
 
@@ -135,7 +149,8 @@ class PadView @JvmOverloads constructor(
         } else {
             gestures?.onTouch(TouchAction.CANCEL, 0, 0f, 0f, 0L)
             gestures = null
-            // Un enregistrement ne survit pas à un changement d'écran.
+            // Un enregistrement ne survit pas à un changement d'écran : on le dit.
+            if (recorder?.isEmpty == false) toast(context.getString(R.string.pad_record_cancelled))
             recorder = null
             showRecording()
             channel?.close()

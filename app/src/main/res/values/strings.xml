@@ -172,7 +172,8 @@
     <string name="pad_record_stop">Terminer (%1$d)</string>
     <string name="pad_record_label">Macro du Pavé</string>
     <string name="pad_record_saved">Touche enregistrée dans Perso, place %1$d</string>
-    <string name="pad_record_empty">Aucun geste enregistré</string>
+    <string name="pad_record_empty">Aucun geste enregistré : fais des gestes sur le Pavé, puis touche Terminer</string>
+    <string name="pad_record_cancelled">Enregistrement annulé : tu as quitté le Pavé</string>
     <string name="pad_record_full">20 étapes atteintes : ce geste n\'est pas gardé</string>
     <string name="gesture_zoom_in">Zoom avant</string>
     <string name="gesture_zoom_out">Zoom arrière</string>

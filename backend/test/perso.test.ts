@@ -263,6 +263,13 @@ describe("touches perso : routes", () => {
     assert.equal((await server.call("POST", "/deck/keys", { label: "", steps: [] })).status, 400);
   });
 
+  it("deux POST /deck/keys en même temps prennent deux places différentes", async () => {
+    const key = { label: "Parallèle", steps: [{ type: "gesture", name: "back" }] };
+    const [a, b] = await Promise.all([server.call("POST", "/deck/keys", key), server.call("POST", "/deck/keys", key)]);
+    assert.notEqual(a.json.slot, b.json.slot);
+    for (const r of [a, b]) await server.call("DELETE", `/deck/keys/${r.json.slot}`);
+  });
+
   it("POST /deck/keys répond 409 quand les 100 emplacements sont pris", async () => {
     const slots = Array.from({ length: MAX_SLOTS }, (_, i) => i);
     await Promise.all(slots.map((i) => put(i, { label: `P${i}`, steps: [{ type: "keys", keys: "a" }] })));

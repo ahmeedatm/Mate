@@ -28,6 +28,7 @@ import app.mate.Computers
 import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.DeckCatalog
+import app.mate.net.PointerGesture
 import app.mate.ui.home.duplicateTargets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -535,7 +536,7 @@ class KeyEditor @JvmOverloads constructor(
         "media" -> MEDIA.firstOrNull { it.first == step.optString("command") }?.let { context.getString(it.second) } ?: step.optString("command")
         "system" -> SYSTEM.firstOrNull { it.first == step.optString("command") }?.let { context.getString(it.second) } ?: step.optString("command")
         "wait" -> context.getString(R.string.sum_wait, seconds(step.optInt("ms")))
-        "gesture" -> context.getString(R.string.sum_gesture, GESTURES.firstOrNull { it.first == step.optString("name") }?.let { context.getString(it.second) } ?: step.optString("name"))
+        "gesture" -> context.getString(R.string.sum_gesture, PointerGesture.entries.firstOrNull { it.wire == step.optString("name") }?.let { context.getString(it.label) } ?: step.optString("name"))
         "window" -> {
             val layout = LAYOUTS.firstOrNull { it.first == step.optString("layout", "keep") }?.let { context.getString(it.second) }.orEmpty()
             val display = step.optString("display").ifEmpty { context.getString(R.string.step_window_current) }
@@ -561,13 +562,6 @@ class KeyEditor @JvmOverloads constructor(
         val SYSTEM = listOf(
             "sleep-display" to R.string.system_sleep, "toggle-dark-mode" to R.string.system_dark,
             "screenshot-clipboard" to R.string.system_screenshot, "lock" to R.string.system_lock,
-        )
-        val GESTURES = listOf(
-            "zoom-in" to R.string.gesture_zoom_in, "zoom-out" to R.string.gesture_zoom_out, "back" to R.string.gesture_back,
-            "forward" to R.string.gesture_forward, "task-view" to R.string.gesture_task_view, "desktop" to R.string.gesture_desktop,
-            "app-previous" to R.string.gesture_app_previous, "app-next" to R.string.gesture_app_next, "search" to R.string.gesture_search,
-            "desktop-previous" to R.string.gesture_desktop_previous, "desktop-next" to R.string.gesture_desktop_next,
-            "notifications" to R.string.gesture_notifications,
         )
         val LAYOUTS = listOf("keep" to R.string.layout_keep, "left" to R.string.windows_left, "right" to R.string.windows_right, "max" to R.string.windows_max)
         val WAITS = listOf(500, 1000, 2000, 5000)
