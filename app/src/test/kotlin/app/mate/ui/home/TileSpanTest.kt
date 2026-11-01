@@ -35,6 +35,13 @@ class TileSpanTest {
     }
 
     @Test
+    fun `les colonnes se comptent comme AUTO_FIT, une au moins`() {
+        assertEquals(4, autoFitColumns(usable = 1000, columnWidth = 230, spacing = 20))
+        assertEquals(1, autoFitColumns(usable = 100, columnWidth = 230, spacing = 20))
+        assertEquals(1, autoFitColumns(usable = 0, columnWidth = 230, spacing = 20))
+    }
+
+    @Test
     fun `la touche large survit au JSON du widget, la simple n'ecrit rien`() {
         val wide = KeyRef("k-1", "Large", span = 2)
         assertEquals(2, KeyRef.of(wide.toJson())?.span)

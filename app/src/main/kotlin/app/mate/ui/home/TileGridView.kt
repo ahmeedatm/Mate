@@ -49,6 +49,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
 
     /** Colonnes de la grille, comptées comme `AUTO_FIT` : la grille ne les donne qu'une fois mesurée. */
     private var columns = 1
+    private var usableWidth = 0
     private var slots: List<SpanSlot> = emptyList()
 
     private fun reslot() {
@@ -58,9 +59,11 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val usable = MeasureSpec.getSize(widthMeasureSpec) - paddingLeft - paddingRight
-        val next = maxOf(1, (usable + horizontalSpacing) / (requestedColumnWidth + horizontalSpacing))
-        if (next != columns) {
+        val next = autoFitColumns(usable, requestedColumnWidth, horizontalSpacing)
+        // Même nombre de colonnes mais largeur changée : la colonne s'étire, la touche large doit reprendre sa largeur.
+        if (next != columns || usable != usableWidth) {
             columns = next
+            usableWidth = usable
             reslot()
         }
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
@@ -108,7 +111,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             val type = getItemViewType(position)
-            if (type == TYPE_BLANK) return convertView ?: View(context).apply { layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1) }
+            if (type == TYPE_BLANK) return convertView ?: View(context).apply { layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, cellHeight(context, metrics(context))) }
             val view = convertView ?: newCell(context, metrics(context), wide = type == TYPE_WIDE)
             // Deux colonnes et l'espace entre elles : la largeur change avec les colonnes, la vue recyclée la reprend.
             if (type == TYPE_WIDE) {
@@ -236,6 +239,10 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
         /** Cotes du thème : grandes en Contraste élevé (`c_big_keys`). */
         fun metrics(context: Context) = TileMetrics.of(themeBool(context, R.attr.c_big_keys))
 
+        /** Hauteur d'une case : la plaque, [TileMetrics.LABEL_GAP_DP] et deux lignes de libellé, au moins `cellDp`. Les cases vides la prennent aussi. */
+        private fun cellHeight(context: Context, metrics: TileMetrics, lineHeight: Int = TextView(context).apply { textSize = metrics.labelSp }.lineHeight) =
+            maxOf(context.dp(metrics.cellDp), context.dp(metrics.plateDp + TileMetrics.LABEL_GAP_DP) + 2 * lineHeight)
+
         /**
          * Vue d'une case, au style Console de `KeysWidget.tile` : sans cadre, icône de 52 dp à coins arrondis, libellé
          * de 13 sp, appui sur ressort. `item_tile` fait 136 dp : ici 100 dp, assez pour deux lignes de libellé. [metrics]
@@ -255,8 +262,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
                 textSize = metrics.labelSp
                 (layoutParams as LinearLayout.LayoutParams).topMargin = context.dp(TileMetrics.LABEL_GAP_DP)
             }
-            val twoLines = context.dp(metrics.plateDp + TileMetrics.LABEL_GAP_DP) + 2 * label.lineHeight
-            view.layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, maxOf(context.dp(metrics.cellDp), twoLines))
+            view.layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, cellHeight(context, metrics, label.lineHeight))
             view.findViewById<TextView>(R.id.tile_initial).textSize = metrics.initialSp
             val radius = context.dp(TileMetrics.radiusFor(metrics.plateDp)).toFloat()
             view.findViewById<ImageView>(R.id.tile_icon).apply {

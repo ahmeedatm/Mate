@@ -134,6 +134,9 @@ data class KeyRef(
     }
 }
 
+/** Colonnes d'une grille `AUTO_FIT` : autant de colonnes de [columnWidth] et d'espaces [spacing] que la place [usable] en tient, une au moins. */
+fun autoFitColumns(usable: Int, columnWidth: Int, spacing: Int): Int = maxOf(1, (usable + spacing) / (columnWidth + spacing))
+
 /** Largeur maximale d'une touche, en cases. */
 const val MAX_SPAN = 2
 
