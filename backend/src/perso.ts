@@ -85,6 +85,46 @@ export async function saveKeyPage(page: number, slot: number, key: PersoKey | nu
   );
 }
 
+/** Plafond de pages nommées : celui de `pageSlotParams` (routes/deck.ts). */
+export const MAX_PAGES = 50;
+const refuse = (statusCode: number, message: string) => Object.assign(new Error(message), { statusCode });
+
+/** Où est (ou va) une touche : `page` absent pour Perso. */
+export type KeyPlace = { page?: number; slot: number };
+
+/**
+ * Copie la touche `from` dans le premier emplacement libre de `to` (rang d'une page nommée, absent : Perso). La copie est
+ * indépendante de l'original. 404 : page inconnue ou touche vide ; 409 : plus d'emplacement libre.
+ */
+export async function duplicateKey(from: KeyPlace, to?: number): Promise<KeyPlace> {
+  const pages = await loadKeyPages();
+  const read = (page: number | undefined) => (page === undefined ? loadKeys() : Promise.resolve(pages[page]?.keys));
+  const source = (await read(from.page))?.[from.slot];
+  if (!source) throw refuse(404, "Touche vide ou page inconnue");
+  const target = await read(to);
+  if (!target) throw refuse(404, "Page inconnue");
+  const slot = target.indexOf(null);
+  if (slot < 0) throw refuse(409, "Plus d'emplacement libre sur cette page");
+  const copy = structuredClone(source);
+  if (to === undefined) await saveKey(slot, copy);
+  else await saveKeyPage(to, slot, copy);
+  return to === undefined ? { slot } : { page: to, slot };
+}
+
+/** Ajoute à la fin une copie de la page `page`, titrée « … (copie) », et rend son rang. 404 : page inconnue ; 409 : trop de pages. */
+export async function duplicateKeyPage(page: number): Promise<number> {
+  return updateJson<{ pages?: KeyPage[] }, number>(
+    pagesFile,
+    () => ({}),
+    (data) => {
+      const source = data.pages?.[page];
+      if (!source) throw refuse(404, "Page inconnue");
+      if (data.pages!.length >= MAX_PAGES) throw refuse(409, "Trop de pages");
+      return data.pages!.push({ title: `${source.title} (copie)`, slots: structuredClone(source.slots) }) - 1;
+    },
+  );
+}
+
 // Schéma JSON (validation Fastify) d'une touche : chaque type d'étape avec ses seuls champs.
 // if/then plutôt que oneOf : Fastify retire les champs en trop (removeAdditional), et avec oneOf
 // il les retire en essayant chaque branche, y compris celles qui ne correspondent pas.
