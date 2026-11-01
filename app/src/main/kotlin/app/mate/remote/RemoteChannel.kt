@@ -17,6 +17,8 @@ import app.mate.audio.Speaker
 import app.mate.device.Screen
 import app.mate.focus.FocusTimer
 import app.mate.focus.NoisePlayer
+import app.mate.installers.InstallerPlan
+import app.mate.installers.InstallerService
 import app.mate.net.BackendClient
 import app.mate.net.Connection
 import app.mate.net.DocEntry
@@ -234,6 +236,7 @@ class RemoteChannel(private val activity: MainActivity) {
             .put("battery", activity.battery?.let { JSONObject().put("level", it.level).put("charging", it.charging) } ?: JSONObject.NULL)
             .put("settings", TabletSettings.read(activity, systemBrightness, volume))
             .put("update", RemoteUpdate.state(activity))
+            .put("installers", InstallerPlan.toJsonArray(InstallerService.served(activity)))
     }
 
     private companion object {

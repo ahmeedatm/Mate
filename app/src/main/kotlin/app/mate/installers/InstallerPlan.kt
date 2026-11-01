@@ -23,10 +23,10 @@ object InstallerPlan {
         }
     }
 
-    fun toJson(installers: List<Installer>): String = JSONObject().put(
-        "installers",
-        JSONArray(installers.map { JSONObject().put("os", it.os.key).put("file", it.file).put("size", it.size).put("sha256", it.sha256).put("version", it.version) }),
-    ).toString()
+    fun toJson(installers: List<Installer>): String = JSONObject().put("installers", toJsonArray(installers)).toString()
+
+    fun toJsonArray(installers: List<Installer>): JSONArray =
+        JSONArray(installers.map { JSONObject().put("os", it.os.key).put("file", it.file).put("size", it.size).put("sha256", it.sha256).put("version", it.version) })
 
     /** Nom de fichier sans dossier : il devient un chemin local et une adresse du serveur. */
     private fun isPlainName(name: String) = name.isNotEmpty() && !name.startsWith(".") && name.none { it == '/' || it == '\\' || it.isISOControl() }
