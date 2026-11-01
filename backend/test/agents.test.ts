@@ -1108,6 +1108,9 @@ describe("outils", () => {
     for (const c of [
       "git checkout -- .",
       "git checkout -- src/a.ts",
+      "git checkout --force main",
+      "git checkout --theirs src/a.ts",
+      "git checkout --ours src/a.ts",
       'cp a.txt "/etc/hosts"',
       "mv a '/Users/x/autre/f'",
       "echo x >~/f",

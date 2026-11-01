@@ -269,8 +269,9 @@ export function summaryLines(message: string | null): string[] {
 /** Commandes qui demandent un appui maintenu pour autoriser (la tablette ne s'y fie pas à un simple toucher). */
 const RISKY_BASH = [
   /\brm\s/,
-  // `checkout --` : le `\b` ne tient pas après `--` (deux non-lettres), d'où l'espace ou la fin.
-  /\bgit\s+((push|reset\s+--hard|clean|branch\s+-D)\b|checkout\s+--(\s|$))/,
+  // `checkout --` : le `\b` ne tient pas après `--` (deux non-lettres), d'où l'espace ou la fin ; `--force`, `--theirs`,
+  // `--ours` écrasent aussi les modifications locales.
+  /\bgit\s+((push|reset\s+--hard|clean|branch\s+-D)\b|checkout\s+--(\s|$|(force|theirs|ours)\b))/,
   /\bsudo\b/,
   /\b(curl|wget)\b[^|]*\|\s*(sudo\s+)?(ba|z|da)?sh\b/,
   /\b(chmod|chown|dd|mkfs|kill|killall|pkill|launchctl)\b/,
