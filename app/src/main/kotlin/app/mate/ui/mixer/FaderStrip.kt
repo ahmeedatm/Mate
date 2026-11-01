@@ -61,6 +61,15 @@ class FaderStrip(context: Context) : View(context) {
             invalidate()
         }
 
+    /** Appli choisie sans son en ce moment (MixerApps) : « pas de son » à la place du volume, rien à piloter. */
+    var silent = false
+        set(value) {
+            if (field == value) return
+            field = value
+            describe()
+            invalidate()
+        }
+
     /** Dernière tranche de la rangée (posé par MixerView) : sur une table nue, pas de filet après elle. */
     var last = false
         set(value) {
@@ -369,7 +378,13 @@ class FaderStrip(context: Context) : View(context) {
         // En sourdine, le volume est barré : pas seulement rouge (la touche Muet, elle, s'allume en plein).
         text.isStrikeThruText = muted
         if (Color.alpha(cTextShadow) != 0) text.setShadowLayer(SHADOW_RADIUS_PX, 0f, 1f, cTextShadow)
-        canvas.drawText(if (v == null) "—" else "$v %", valueX, valueY, text)
+        if (silent) text.textSize = sp(SILENT_SP)
+        val shown = when {
+            v != null -> "$v %"
+            silent -> context.getString(R.string.mixer_no_sound)
+            else -> "—"
+        }
+        canvas.drawText(shown, valueX, valueY, text)
         text.clearShadowLayer()
         text.isStrikeThruText = false
     }
@@ -523,9 +538,15 @@ class FaderStrip(context: Context) : View(context) {
 
     /** TalkBack : le nom de la tranche, et « son coupé » en sourdine. */
     private fun describe() {
-        contentDescription = if (muted) context.getString(R.string.mixer_strip_muted, title) else title
-        // TalkBack : couper ou rendre le son sans viser la touche (ou l'icône, dans Hush).
+        contentDescription = when {
+            silent -> context.getString(R.string.mixer_strip_silent, title)
+            muted -> context.getString(R.string.mixer_strip_muted, title)
+            else -> title
+        }
+        // TalkBack : couper ou rendre le son sans viser la touche (ou l'icône, dans Hush) ; rien à couper sans son.
         muteAction?.let { ViewCompat.removeAccessibilityAction(this, it) }
+        muteAction = null
+        if (silent) return
         val label = context.getString(if (muted) R.string.mixer_unmute_action else R.string.mixer_mute_action, title)
         muteAction = ViewCompat.addAccessibilityAction(this, label) { _, _ ->
             onMute?.invoke()
@@ -579,7 +600,7 @@ class FaderStrip(context: Context) : View(context) {
             MotionEvent.ACTION_DOWN -> {
                 downX = event.x
                 downY = event.y
-                pressingMute = muteBox.contains(event.x, event.y)
+                pressingMute = !silent && muteBox.contains(event.x, event.y)
                 grabbing = !pressingMute && volume != null && event.y >= faderArea.top - dp(8) && event.y <= faderArea.bottom + dp(8)
                 startVolume = volume ?: 0
                 if (pressingMute) invalidate()
@@ -642,6 +663,7 @@ class FaderStrip(context: Context) : View(context) {
     companion object {
         private const val LEDS = 24
         private const val SHADOW_RADIUS_PX = 6f
+        private const val SILENT_SP = 16f
 
         /** Table nue : halo de la pastille (18 %), fond de l'icône à l'appui (22 %, comme hush_press) et en sourdine (14 %). */
         private const val HALO_ALPHA = 46
