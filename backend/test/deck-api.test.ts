@@ -2,7 +2,17 @@ import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { startServer, type TestServer } from "./server.ts";
 
-type TileView = { id: string; label: string; type: string; app: string | null; symbol?: string | null; glyph?: string | null };
+type TileView = {
+  id: string;
+  label: string;
+  type: string;
+  app: string | null;
+  symbol?: string | null;
+  glyph?: string | null;
+  state?: string | null;
+  hold?: boolean;
+  push?: boolean;
+};
 type PageView = { title: string; apps: boolean; editable: boolean; app: string | null; sound: boolean; tiles: TileView[] };
 
 let server: TestServer;
@@ -38,6 +48,12 @@ describe("GET /deck", () => {
     assert.ok(lock.glyph, "emoji gardé pour les tablettes d'avant les symboles");
     assert.equal((await tileByLabel("Couper le micro")).symbol, "mic_off");
     assert.equal((await tileByLabel("Ne pas déranger")).symbol, "dnd");
+  });
+
+  it("les touches Micro et Ne pas déranger du deck de départ montrent leur état réel", async () => {
+    assert.equal((await tileByLabel("Couper le micro")).state, "mic-muted");
+    assert.equal((await tileByLabel("Ne pas déranger")).state, "dnd");
+    assert.equal((await tileByLabel("Verrouiller")).state, null, "une touche sans état n'en reçoit pas");
   });
 
   it("`sound` : barre Son voulue par défaut sur la page Discord", async () => {
@@ -77,6 +93,85 @@ describe("POST /deck/run", () => {
     server.setOs({ installed: ["Notes"], windows: { Notes: [{ title: "Courses" }] } });
     await server.call("POST", "/deck/run", { id: (await tileByLabel("Notes")).id });
     assert.deepEqual(server.osCalls(), [{ fn: "launchApp", args: ["Notes"] }]);
+  });
+});
+
+describe("POST /deck/run avec hold (appui long)", () => {
+  it("lance la seconde action de la touche, pas la principale", async () => {
+    const tile = await tileByLabel("Capture zone");
+    assert.equal(tile.hold, true);
+    assert.equal((await server.call("POST", "/deck/run", { id: tile.id, hold: true })).status, 200);
+    const calls = server.osCalls();
+    assert.ok(calls.length > 0 && !calls.some((c) => c.fn === "sendKeys"), "la touche principale ne part pas");
+  });
+
+  it("refuse (409) une touche sans seconde action, et rien ne part", async () => {
+    const tile = await tileByLabel("Verrouiller");
+    assert.ok(!tile.hold);
+    assert.equal((await server.call("POST", "/deck/run", { id: tile.id, hold: true })).status, 409);
+    assert.deepEqual(server.osCalls(), []);
+  });
+});
+
+describe("POST /deck/run avec phase (touche à maintenir pour parler)", () => {
+  const PUSH_SLOT = 3;
+  const makePush = () =>
+    server.call("PUT", `/deck/keys/${PUSH_SLOT}`, { label: "Parler", steps: [{ type: "keys", keys: "ctrl+shift+f13", push: true }] });
+  const pushTile = async () => (await pages()).flatMap((p) => p.tiles).find((t) => t.id === `k-${PUSH_SLOT}`)!;
+
+  it("l'appui tient les touches, le relâchement les lâche, sans appui simple", async () => {
+    assert.equal((await makePush()).status, 200);
+    const tile = await pushTile();
+    assert.equal(tile.push, true);
+    server.clearOsCalls();
+    assert.equal((await server.call("POST", "/deck/run", { id: tile.id, phase: "down" })).status, 200);
+    assert.equal((await server.call("POST", "/deck/run", { id: tile.id, phase: "up" })).status, 200);
+    assert.deepEqual(server.osCalls(), [
+      { fn: "holdKeys", args: ["ctrl+shift+f13", true] },
+      { fn: "holdKeys", args: ["ctrl+shift+f13", false] },
+    ]);
+  });
+
+  it("un relâchement sans appui ne touche à rien, et appui + relâchement partis ensemble restent dans l'ordre", async () => {
+    await makePush();
+    const tile = await pushTile();
+    server.clearOsCalls();
+    assert.equal((await server.call("POST", "/deck/run", { id: tile.id, phase: "up" })).status, 200);
+    assert.deepEqual(server.osCalls(), []);
+    await Promise.all([
+      server.call("POST", "/deck/run", { id: tile.id, phase: "down" }),
+      server.call("POST", "/deck/run", { id: tile.id, phase: "up" }),
+    ]);
+    assert.deepEqual(
+      server.osCalls().map((c) => c.args[1]),
+      [true, false],
+    );
+  });
+
+  it("un appui simple sur cette touche ne tape rien : le micro ne reste pas ouvert", async () => {
+    await makePush();
+    server.clearOsCalls();
+    assert.equal((await server.call("POST", "/deck/run", { id: `k-${PUSH_SLOT}` })).status, 409);
+    assert.deepEqual(server.osCalls(), []);
+  });
+
+  it("refuse (409) une phase sur une touche qui ne se maintient pas, et rien ne part", async () => {
+    const tile = await tileByLabel("Capture zone");
+    assert.ok(!tile.push);
+    server.clearOsCalls();
+    assert.equal((await server.call("POST", "/deck/run", { id: tile.id, phase: "down" })).status, 409);
+    assert.deepEqual(server.osCalls(), []);
+  });
+
+  it("une touche à maintenir ne peut pas être une macro : refus à l'enregistrement", async () => {
+    const put = await server.call("PUT", `/deck/keys/${PUSH_SLOT}`, {
+      label: "Mal",
+      steps: [
+        { type: "keys", keys: "f13", push: true },
+        { type: "wait", ms: 0 },
+      ],
+    });
+    assert.equal(put.status, 400);
   });
 });
 
@@ -149,6 +244,7 @@ describe("cartes de l'Accueil et onglets d'appli", () => {
       gitlab: false,
       github: false,
       jira: false,
+      ha: false,
       off: [],
     });
     server.setOs({ installed: ["Microsoft Teams"] });

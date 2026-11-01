@@ -85,6 +85,14 @@ class WidgetModelTest {
     }
 
     @Test
+    fun `Home Assistant, widget propose seulement si l'ordinateur le configure`() {
+        assertEquals(WidgetType.HA, WidgetType.of("ha"))
+        assertTrue(WidgetType.HA.computer)
+        assertFalse(WidgetType.HA.offered(HomeFeatures()))
+        assertTrue(WidgetType.HA.offered(HomeFeatures(ha = true)))
+    }
+
+    @Test
     fun `Jira et GitLab, widgets du Deck en XL, L, 3 x 2, 3 x 4 ou plein ecran, seulement si l'ordinateur les offre`() {
         assertEquals(WidgetType.JIRA, WidgetType.of("jira"))
         assertEquals(WidgetType.GITLAB, WidgetType.of("gitlab"))
@@ -96,6 +104,17 @@ class WidgetModelTest {
         assertFalse(WidgetType.GITLAB.offered(HomeFeatures()))
         assertTrue(WidgetType.JIRA.offered(HomeFeatures(jira = true)))
         assertTrue(WidgetType.GITLAB.offered(HomeFeatures(gitlab = true)))
+    }
+
+    @Test
+    fun `Courses, widget de l'ordinateur toujours propose, relu tel quel`() {
+        assertEquals(WidgetType.SHOPPING, WidgetType.of("shopping"))
+        assertEquals(WidgetSize.L, WidgetType.SHOPPING.sizes.first())
+        assertTrue(WidgetType.SHOPPING.computer)
+        assertTrue(WidgetType.SHOPPING.offered(HomeFeatures(off = setOf("open", "mixer", "pad"))))
+        val context = app.mate.FakeContext()
+        HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.SHOPPING, WidgetSize.T, 0, 1, 0)), 1))
+        assertEquals(listOf(WidgetType.SHOPPING to WidgetSize.T), HomeLayout.load(context).widgets.map { it.type to it.size })
     }
 
     @Test
@@ -256,7 +275,7 @@ class WidgetModelTest {
         assertEquals(Checklist.read(config), Checklist.read(back.config))
     }
 
-    private val boards = listOf(WidgetType.AGENTS, WidgetType.JIRA, WidgetType.GITLAB, WidgetType.PIPELINES, WidgetType.GITHUB, WidgetType.ACTIONS, WidgetType.OPEN, WidgetType.MIXER)
+    private val boards = listOf(WidgetType.AGENTS, WidgetType.JIRA, WidgetType.GITLAB, WidgetType.PIPELINES, WidgetType.GITHUB, WidgetType.ACTIONS, WidgetType.OPEN, WidgetType.MIXER, WidgetType.WEB)
 
     @Test
     fun `les tailles 3 x 2, 3 x 4 et plein ecran sont reservees aux tableaux`() {

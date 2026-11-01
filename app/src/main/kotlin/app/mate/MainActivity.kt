@@ -19,12 +19,15 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import app.mate.agents.AgentAlerts
+import app.mate.audio.Ringer
 import app.mate.audio.Speaker
+import app.mate.audio.VolumeKeys
 import app.mate.device.Accessibility
 import app.mate.device.Screen
 import app.mate.device.Tablet
 import app.mate.device.TabletSignals
 import app.mate.focus.Breathing
+import app.mate.focus.FocusAwake
 import app.mate.focus.FocusDnd
 import app.mate.focus.FocusTimer
 import app.mate.focus.NoisePlayer
@@ -98,6 +101,7 @@ import app.mate.voice.WakeWord
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -111,6 +115,7 @@ interface VolumeKeyHandler {
 class MainActivity : AppCompatActivity() {
 
     private val rehide = Runnable { hideSystemBars() }
+    private var volumeNudge: Job? = null
     private var current = Mode.HOME
     /** Barre fixe à gauche : Parler, profils, outils, ordinateur, Réglages. */
     private lateinit var nav: Navigation
@@ -127,6 +132,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var noComputer: View
     private val keyboard = KeyboardControl(this)
     private val focusDnd = FocusDnd(this)
+    private val focusAwake = FocusAwake(this)
     private val remote = RemoteLink(this, ::showLink) { computer -> onComputerChanged(computer, automatic = true) }
     private val computerDialogs by lazy { ComputerAdder(this, lifecycleScope) { onComputerChanged(it) } }
     /** Dernier état de la liaison, repris par les Réglages et le sélecteur d'ordinateur. */
@@ -460,6 +466,7 @@ class MainActivity : AppCompatActivity() {
     private val focusListener: (FocusTimer.State) -> Unit = { state ->
         nav.showFocus(state)
         followFocusDnd(state)
+        focusAwake.follow(state)
     }
 
     /** Ne pas déranger sur l'ordinateur pendant la concentration ; aussi rappelé quand le réglage change. */
@@ -485,6 +492,7 @@ class MainActivity : AppCompatActivity() {
         Kiosk.enter(this)
         Accessibility.applyAnimationScale(this, Prefs.reduceMotion(this))
         Screen.apply(this)
+        Screen.startAmbient(this)
         Screen.applyOrientation(this)
         // Retour de l'essai : si l'ordinateur est resté sur le backend d'une MR (essai planté), on remet le sien.
         if (!BuildConfig.TRIAL && Prefs.trialOpened(this)) {
@@ -497,6 +505,7 @@ class MainActivity : AppCompatActivity() {
     /** Mate quitte l'écran (écran éteint, autre appli) : le mot de réveil n'écoute plus. */
     override fun onPause() {
         wake.pause()
+        Screen.stopAmbient(this)
         super.onPause()
     }
 
@@ -522,7 +531,10 @@ class MainActivity : AppCompatActivity() {
         // Activité recréée (thème, mise à jour) pendant le cadre : sa luminosité réduite ne reste pas à l'écran suivant.
         if (::frame.isInitialized && frame.isShowing) Screen.frameCharging = null
         documentPanel.close()
-        if (isFinishing) NoisePlayer.stop()
+        if (isFinishing) {
+            NoisePlayer.stop()
+            Ringer.stop()
+        }
         voice.release()
         wake.release()
         lockScreen.dismiss()
@@ -548,7 +560,11 @@ class MainActivity : AppCompatActivity() {
             Screen.touched(this)
             lastTouch = SystemClock.elapsedRealtime()
             wakeRail()
-            if (frame.isShowing) {
+            if (Ringer.isRinging) {
+                // Retrouvée : le toucher arrête la sonnerie, il ne clique pas ce qu'il y a dessous.
+                Ringer.stop()
+                swallowTouch = true
+            } else if (frame.isShowing) {
                 closeFrame()
                 swallowTouch = true
             }
@@ -570,9 +586,22 @@ class MainActivity : AppCompatActivity() {
             else -> return super.dispatchKeyEvent(event)
         }
         val handler = supportFragmentManager.findFragmentByTag(current.tag) as? VolumeKeyHandler
-            ?: return super.dispatchKeyEvent(event)
+        val onComputer = handler == null && Prefs.volumeKeysOnComputer(this)
+        val route = VolumeKeys.route(onComputer, handler != null, onComputer && Computers.active(this) != null)
+        if (route == VolumeKeys.Route.TABLET) return super.dispatchKeyEvent(event)
         // On consomme aussi le relâchement pour que la tablette ne change pas son propre volume.
-        return if (event.action == KeyEvent.ACTION_DOWN) handler.onVolumeKey(up) else true
+        if (event.action != KeyEvent.ACTION_DOWN) return true
+        return handler?.onVolumeKey(up) ?: nudgeComputerVolume(up, event.repeatCount > 0)
+    }
+
+    /** Un appui à la fois : un appui maintenu n'empile pas de requêtes sur l'ordinateur. */
+    private fun nudgeComputerVolume(up: Boolean, repeated: Boolean): Boolean {
+        if (volumeNudge?.isActive == true) return true
+        volumeNudge = lifecycleScope.launch {
+            runCatchingCancellable { BackendClient(this@MainActivity).system.setAudio(outputDelta = VolumeKeys.delta(up)) }
+                .onFailure { if (!repeated) showBanner(errorText(it), 6) }
+        }
+        return true
     }
 
     /** Nombre de tâches non faites, en pastille sur l'icône Accueil (mis à jour par la carte Tâches). */

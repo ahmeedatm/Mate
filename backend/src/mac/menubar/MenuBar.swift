@@ -2,12 +2,91 @@
 // montre l'état de la tablette (lu sur GET /local/status) et « Ouvrir les réglages de la tablette ».
 // Lancé par le compagnon (src/mac/menubar.ts) avec `--port <port>` ; s'arrête dès que le compagnon qui l'a lancé
 // disparaît. Compilé par `npm run build:menubar` en src/mac/MateMenu, gardé dans le dépôt.
+//
+// Même binaire, autre rôle : `--audio-outputs` écrit en JSON les sorties audio du Mac, `--audio-set <uid>` fait d'une
+// sortie la sortie par défaut puis écrit la liste à jour ; aucun menu, il s'arrête aussitôt (src/mac/audio.ts).
 import AppKit
+import CoreAudio
 
 let args = CommandLine.arguments
 let port = args.firstIndex(of: "--port").flatMap { $0 + 1 < args.count ? Int(args[$0 + 1]) : nil } ?? 3000
 let base = "http://127.0.0.1:\(port)/"
 let parent = getppid()
+
+// --- Sorties audio (Core Audio)
+
+func audioAddress(_ selector: AudioObjectPropertySelector, _ scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal) -> AudioObjectPropertyAddress {
+  AudioObjectPropertyAddress(mSelector: selector, mScope: scope, mElement: kAudioObjectPropertyElementMaster)
+}
+
+func audioDeviceIDs() -> [AudioDeviceID] {
+  var address = audioAddress(kAudioHardwarePropertyDevices)
+  var size: UInt32 = 0
+  guard AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size) == noErr else { return [] }
+  var ids = [AudioDeviceID](repeating: 0, count: Int(size) / MemoryLayout<AudioDeviceID>.size)
+  guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &ids) == noErr else { return [] }
+  return ids
+}
+
+func audioHasOutput(_ id: AudioDeviceID) -> Bool {
+  var address = audioAddress(kAudioDevicePropertyStreams, kAudioObjectPropertyScopeOutput)
+  var size: UInt32 = 0
+  return AudioObjectGetPropertyDataSize(id, &address, 0, nil, &size) == noErr && size > 0
+}
+
+func audioString(_ id: AudioDeviceID, _ selector: AudioObjectPropertySelector) -> String? {
+  var address = audioAddress(selector)
+  var value: Unmanaged<CFString>?
+  var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+  guard AudioObjectGetPropertyData(id, &address, 0, nil, &size, &value) == noErr, let text = value?.takeRetainedValue() else { return nil }
+  return text as String
+}
+
+func audioDefaultOutput() -> AudioDeviceID {
+  var address = audioAddress(kAudioHardwarePropertyDefaultOutputDevice)
+  var id = AudioDeviceID(0)
+  var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+  _ = AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &id)
+  return id
+}
+
+/// Les sorties (id = UID du périphérique, stable d'un redémarrage à l'autre) ; `current` : la sortie par défaut.
+func audioOutputs() -> [[String: Any]] {
+  let current = audioDefaultOutput()
+  return audioDeviceIDs().filter(audioHasOutput).compactMap { id in
+    guard let uid = audioString(id, kAudioDevicePropertyDeviceUID) else { return nil }
+    return ["id": uid, "name": audioString(id, kAudioObjectPropertyName) ?? uid, "current": id == current]
+  }
+}
+
+/// Sortie par défaut et sortie des alertes, comme le fait Réglages Système > Son.
+func audioSetOutput(uid: String) -> Bool {
+  guard var id = audioDeviceIDs().first(where: { audioHasOutput($0) && audioString($0, kAudioDevicePropertyDeviceUID) == uid }) else { return false }
+  var ok = true
+  for selector in [kAudioHardwarePropertyDefaultOutputDevice, kAudioHardwarePropertyDefaultSystemOutputDevice] {
+    var address = audioAddress(selector)
+    ok = AudioObjectSetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, UInt32(MemoryLayout<AudioDeviceID>.size), &id) == noErr && ok
+  }
+  return ok
+}
+
+func printOutputs() {
+  let data = (try? JSONSerialization.data(withJSONObject: audioOutputs())) ?? Data("[]".utf8)
+  print(String(decoding: data, as: UTF8.self))
+}
+
+if args.contains("--audio-outputs") {
+  printOutputs()
+  exit(0)
+}
+if let i = args.firstIndex(of: "--audio-set") {
+  guard i + 1 < args.count, audioSetOutput(uid: args[i + 1]) else {
+    FileHandle.standardError.write(Data("Sortie audio introuvable ou refusée par le Mac\n".utf8))
+    exit(1)
+  }
+  printOutputs()
+  exit(0)
+}
 
 struct Status {
   var tablet = false

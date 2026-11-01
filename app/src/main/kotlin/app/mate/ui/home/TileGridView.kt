@@ -50,6 +50,14 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
     /** Appui long sur une touche ; null : rien à faire, l'appui long n'est ni consommé ni signalé. */
     var onHold: ((Cell, View) -> Unit)? = null
 
+    /**
+     * Touche à maintenir (parler en maintenant) : [isPush] la reconnaît, [onPush] reçoit l'appui (vrai) puis le
+     * relâchement (faux). Sa touche ne répond ni au clic ni à l'appui long, le doigt tient la touche.
+     */
+    var onPush: ((Cell, Boolean) -> Unit)? = null
+    var isPush: (Cell) -> Boolean = { false }
+    private var pushed: Cell? = null
+
     override var ownsLongPress = false
     override val ownsSwipe = false
 
@@ -101,6 +109,24 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
      * case qui garde un `OnTouchListener` ne reçoit que le DOWN et resterait enfoncée.
      */
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        pushed?.let {
+            if (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL) releasePush()
+            return true
+        }
+        if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
+            val position = pointToPosition(ev.x.toInt(), ev.y.toInt())
+            val cell = cells.getOrNull(position)?.takeUnless { it.add }
+            if (cell != null && isPush(cell)) {
+                pushed = cell
+                getChildAt(position - firstVisiblePosition)?.let {
+                    pressed += it
+                    Look.pressTo(it, true)
+                }
+                performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                onPush?.invoke(cell, true)
+                return true
+            }
+        }
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val position = pointToPosition(ev.x.toInt(), ev.y.toInt())
@@ -116,9 +142,31 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
         return super.dispatchTouchEvent(ev)
     }
 
+    private fun releasePush() {
+        val cell = pushed ?: return
+        pushed = null
+        releaseAll()
+        onPush?.invoke(cell, false)
+    }
+
     private fun releaseAll() {
         pressed.forEach { Look.pressTo(it, false) }
         pressed.clear()
+    }
+
+    private var stopListening: (() -> Unit)? = null
+
+    /** Une touche s'allume ou s'éteint côté ordinateur : les cases visibles se redessinent. */
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        stopListening = TileStates.listen { post { if (isAttachedToWindow) adapter.notifyDataSetChanged() } }
+    }
+
+    override fun onDetachedFromWindow() {
+        releasePush()
+        stopListening?.invoke()
+        stopListening = null
+        super.onDetachedFromWindow()
     }
 
     /** Dessine [cell] dans une vue de [newCell] (neuve ou recyclée). */
@@ -194,8 +242,9 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             label.text = key.label
             label.setTextColor(themeColor(context, R.attr.c_text))
             // Plaque pleine derrière la touche : rouge de Muet quand elle est allumée, sinon la couleur de la touche.
+            val lit = cell.lit || TileStates.isLit(key.id)
             val custom = key.color?.let { runCatching { Color.parseColor(it) }.getOrNull() }
-            val tint = if (cell.lit) themeColor(context, R.attr.c_ko) else custom
+            val tint = if (lit) themeColor(context, R.attr.c_ko) else custom
             val plain = tint == null
             plate.background = tint?.let {
                 GradientDrawable().apply { setColor(it); cornerRadius = TileMetrics.radiusFor(plate.layoutParams.width).toFloat() }
@@ -206,14 +255,14 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
                 Look.tintInitial(initial, key.label)
             } else {
                 initial.background = null
-                initial.setTextColor(if (cell.lit) themeColor(context, R.attr.c_on_accent) else Look.readableOn(context, tint!!))
+                initial.setTextColor(if (lit) themeColor(context, R.attr.c_on_accent) else Look.readableOn(context, tint!!))
             }
 
             // Symbole de la tablette (Deck V2), ou icône d'un emoji connu : icône monochrome, prioritaire sur l'emoji.
             TileIcons.of(key.symbol, key.glyph)?.let { symbol ->
                 icon.setImageResource(symbol)
                 val ink = when {
-                    cell.lit -> themeColor(context, R.attr.c_on_accent)
+                    lit -> themeColor(context, R.attr.c_on_accent)
                     plain -> themeColor(context, R.attr.c_text)
                     else -> Look.readableOn(context, tint!!)
                 }

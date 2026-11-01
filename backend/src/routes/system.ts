@@ -5,11 +5,13 @@ import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { clipboardHistory } from "../clipboard-history.ts";
 import { config } from "../config.ts";
+import { focusAwake } from "../awake.ts";
 import { focusDnd, manualDnd } from "../dnd.ts";
 import { resolveDoc } from "../docs.ts";
-import { applyScene, deleteScene, listScenes, MAX_SCENES, orderScenes, saveScene } from "../mixer.ts";
+import { applyScene, deleteScene, listScenes, MAX_SCENES, orderScenes, saveScene, setGroup } from "../mixer.ts";
 import {
   appAudio,
+  audioOutputs,
   getAudio,
   getClipboard,
   getDnd,
@@ -21,6 +23,7 @@ import {
   mixer,
   openAccessibility,
   setAudio,
+  setAudioOutput,
   setClipboardImage,
   setClipboardText,
   typeText,
@@ -126,6 +129,29 @@ export default async function systemRoutes(app: FastifyInstance) {
     async (req) => setAudio(req.body),
   );
 
+  // Sortie audio de l'ordinateur (enceinte, casque, carte son) : lue à l'ouverture du choix, pas en boucle.
+  app.get("/system/audio/outputs", async () => ({ outputs: await audioOutputs() }));
+
+  app.post<{ Body: { id: string } }>(
+    "/system/audio/output",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["id"],
+          additionalProperties: false,
+          properties: { id: { type: "string", minLength: 1, maxLength: 200 } },
+        },
+      },
+    },
+    async (req, reply) => {
+      // Seul un id donné par l'ordinateur lui-même arrive jusqu'au pilote.
+      if (!(await audioOutputs()).some((o) => o.id === req.body.id))
+        return reply.code(404).send({ error: "Cette sortie audio n'existe plus" });
+      return { outputs: await setAudioOutput(req.body.id) };
+    },
+  );
+
   // Processeur, mémoire et carte graphique : relus toutes les 2 s par la tablette tant que le widget est affiché.
   app.get("/system/perf", { logLevel: "warn" }, async () => getPerf());
 
@@ -148,6 +174,22 @@ export default async function systemRoutes(app: FastifyInstance) {
       },
     },
     async (req) => focusDnd(req.body.on, req.body.minutes),
+  );
+
+  // Écran de l'ordinateur gardé allumé pendant la concentration du Focus (voir src/awake.ts).
+  app.post<{ Body: { on: boolean; minutes?: number } }>(
+    "/system/awake",
+    {
+      schema: {
+        body: {
+          type: "object",
+          additionalProperties: false,
+          required: ["on"],
+          properties: { on: { type: "boolean" }, minutes: { type: "integer", minimum: 1, maximum: 240 } },
+        },
+      },
+    },
+    async (req) => focusAwake(req.body.on, req.body.minutes),
   );
 
   // Pastille de l'Accueil : posé à la main, sans minuteur (voir manualDnd).
@@ -202,6 +244,28 @@ export default async function systemRoutes(app: FastifyInstance) {
       },
     },
     async (req) => mixer(req.body),
+  );
+
+  // Voie de groupe : plusieurs applis réglées ensemble (même volume, même Muet).
+  app.post<{ Body: { ids: string[]; volume?: number; muted?: boolean } }>(
+    "/system/mixer/group",
+    {
+      logLevel: "warn",
+      schema: {
+        body: {
+          type: "object",
+          required: ["ids"],
+          minProperties: 2,
+          additionalProperties: false,
+          properties: {
+            ids: { type: "array", minItems: 1, maxItems: 16, items: appName },
+            volume: { type: "integer", minimum: 0, maximum: 100 },
+            muted: { type: "boolean" },
+          },
+        },
+      },
+    },
+    async (req) => setGroup(req.body.ids, { volume: req.body.volume, muted: req.body.muted }),
   );
 
   app.get("/system/mixer/scenes", async () => ({ scenes: await listScenes() }));
@@ -275,6 +339,15 @@ export default async function systemRoutes(app: FastifyInstance) {
     },
     async (req) => ({ ok: await mediaControl(req.body.action, req.body.app, req.body.positionMs) }),
   );
+
+  // Minuteur de la tablette : met en pause ce qui joue, rien d'autre. Une lecture déjà en pause n'est pas touchée
+  // (play-pause la relancerait).
+  app.post("/system/media/pause", async () => {
+    const playing = ((await mediaSessions()) ?? []).filter((s) => s.status === "playing" && s.canPlayPause);
+    // allSettled : une lecture qui résiste ne doit pas empêcher la pause des autres.
+    const results = await Promise.allSettled(playing.map((s) => mediaControl("play-pause", s.app)));
+    return { ok: true, paused: results.filter((r) => r.status === "fulfilled" && r.value).length };
+  });
 
   app.get<{ Querystring: { app: string; key: string } }>(
     "/system/media/thumb",

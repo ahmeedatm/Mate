@@ -134,6 +134,11 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           "page Perso absente",
         );
         expect(!pages.some((p) => /^(word|excel|powerpoint|outlook)$/i.test(p.title)), "page Office encore au deck");
+        // Appui long : une touche sans seconde action refuse (409) sans rien lancer.
+        const plain = (deck.json.pages as { tiles: { id: string; type: string; hold?: boolean }[] }[])
+          .flatMap((p) => p.tiles)
+          .find((t) => t.type !== "empty" && !t.hold);
+        if (plain) expectStatus(await call("POST", "/deck/run", { id: plain.id, hold: true }), 409, "/deck/run hold sans seconde action");
         // Sans pilotage, le deck se lit mais ce qui touche à l'ordinateur répond 501.
         if (!controlled()) return expectStatus(await call("GET", "/deck/catalog"), 501, "/deck/catalog");
         const catalog = await call("GET", "/deck/catalog");
@@ -168,6 +173,20 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "touches qui montrent l'état réel",
+      run: async () => {
+        // La veille (src/tile-state.ts) pousse les touches allumées ; l'ordre tilestate est refusé s'il vient de l'extérieur.
+        expectStatus(await call("POST", "/tablet/command", { type: "tilestate", lit: [] }), 400, "ordre tilestate de l'extérieur");
+        const deck = await call("GET", "/deck");
+        expectStatus(deck, 200, "/deck");
+        const withState = deck.json.pages
+          .flatMap((p: { tiles: { state?: string | null }[] }) => p.tiles)
+          .filter((t: { state?: string | null }) => t.state);
+        expect(withState.length > 0, "/deck sans touche portant un état");
+        return `${withState.length} touches montrent leur état`;
+      },
+    },
+    {
       name: "écran de jeu (appli au premier plan)",
       run: async () => {
         // La veille (src/foreground-watch.ts) pousse l'appli devant ; la tablette la compare à sa liste de jeux, choisie
@@ -189,6 +208,14 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "faire sonner la tablette (ordre ring)",
+      run: async () => {
+        // Corps invalide refusé avant tout envoi : sans `on`, la sonnerie ne part pas (la vraie tablette ne sonne pas pendant le contrôle).
+        expectStatus(await call("POST", "/tablet/command", { type: "ring" }), 400, "ordre ring sans on");
+        return "ordre ring sans `on` refusé";
+      },
+    },
+    {
       name: "ordinateur verrouillé (écran bloquant de la tablette)",
       run: async () => {
         // L'ordre lock n'est poussé que par la veille du verrouillage (src/screen-lock.ts) : refusé de l'extérieur.
@@ -196,6 +223,14 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         // Instance de test : jamais verrouillée, l'API reste ouverte (423 sinon).
         expectStatus(await call("GET", "/deck"), 200, "GET /deck (ordinateur vu verrouillé ?)");
         return "API ouverte";
+      },
+    },
+    {
+      name: "écran de l'ordinateur éveillé pendant le Focus",
+      run: async () => {
+        // Lecture seule : un ordre valide garderait l'écran allumé, seul le refus d'un corps invalide est essayé.
+        expectStatus(await call("POST", "/system/awake", { on: "oui" }), 400, "POST /system/awake invalide");
+        return "corps invalide refusé";
       },
     },
     {
@@ -259,6 +294,74 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "touche à cycle : une étape par appui",
+      run: async () => {
+        const slot = 15;
+        try {
+          expectStatus(
+            await call("PUT", `/deck/keys/${slot}`, {
+              label: "Sanity cycle",
+              cycle: true,
+              steps: [
+                { type: "wait", ms: 0 },
+                { type: "wait", ms: 0 },
+              ],
+            }),
+            200,
+            "PUT /deck/keys/15",
+          );
+          const deck = await call("GET", "/deck");
+          const perso = (deck.json.pages as { editable: boolean; tiles: { id: string; type: string }[] }[]).find((p) => p.editable);
+          expect(perso?.tiles.find((t) => t.id === `k-${slot}`)?.type === "cycle", "touche k-15 sans type cycle");
+          for (let i = 0; i < 3; i++) expectStatus(await call("POST", "/deck/run", { id: `k-${slot}` }), 200, "appui sur k-15");
+        } finally {
+          expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE /deck/keys/15");
+        }
+      },
+    },
+    {
+      name: "touche à maintenir : appui puis relâchement",
+      run: async () => {
+        if (!controlled()) return "ignoré hors Mac et Windows";
+        const slot = 17;
+        try {
+          expectStatus(
+            await call("PUT", `/deck/keys/${slot}`, { label: "Sanity parler", steps: [{ type: "keys", keys: "f13", push: true }] }),
+            200,
+            "PUT /deck/keys/17",
+          );
+          const deck = await call("GET", "/deck");
+          const perso = (deck.json.pages as { editable: boolean; tiles: { id: string; push?: boolean }[] }[]).find((p) => p.editable);
+          expect(perso?.tiles.find((t) => t.id === `k-${slot}`)?.push === true, "touche k-17 sans `push`");
+          expectStatus(await call("POST", "/deck/run", { id: `k-${slot}`, phase: "down" }), 200, "appui sur k-17");
+          expectStatus(await call("POST", "/deck/run", { id: `k-${slot}`, phase: "up" }), 200, "relâchement de k-17");
+          expectStatus(await call("POST", "/deck/run", { id: `k-${slot}` }), 409, "appui simple sur k-17");
+        } finally {
+          expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE /deck/keys/17");
+        }
+      },
+    },
+    {
+      name: "touche à seconde action : l'appui long la lance",
+      run: async () => {
+        const slot = 16;
+        try {
+          expectStatus(
+            await call("PUT", `/deck/keys/${slot}`, {
+              label: "Sanity appui long",
+              steps: [{ type: "wait", ms: 0 }],
+              hold: [{ type: "wait", ms: 0 }],
+            }),
+            200,
+            "PUT /deck/keys/16",
+          );
+          expectStatus(await call("POST", "/deck/run", { id: `k-${slot}`, hold: true }), 200, "appui long sur k-16");
+        } finally {
+          expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE /deck/keys/16");
+        }
+      },
+    },
+    {
       name: "agents Claude : hooks et état",
       run: async () => {
         const agents = await call("GET", "/agents");
@@ -311,19 +414,58 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "minuteur de pause musique",
+      run: async () => {
+        const media = await call("GET", "/system/media");
+        if (!controlled()) return expectStatus(media, 501, "/system/media");
+        expectStatus(media, 200, "/system/media");
+        // Une lecture en cours ne se touche pas : la pause n'est essayée que quand rien ne joue (réponse : 0 pause).
+        if (media.json.sessions.some((s: { status: string }) => s.status === "playing")) return "lecture en cours, pause non essayée";
+        const res = await call("POST", "/system/media/pause", {});
+        expectStatus(res, 200, "/system/media/pause");
+        expect(res.json.paused === 0, "rien ne jouait : aucune pause attendue");
+        return "rien ne joue, rien mis en pause";
+      },
+    },
+    {
       name: "mélangeur",
       run: async () => {
         const res = await call("GET", "/system/mixer");
         if (!controlled()) return expectStatus(res, 501, "/system/mixer");
         expectStatus(res, 200, "/system/mixer");
         expect(res.json.master?.id === "master" && res.json.mic?.id === "mic", "sortie ou micro absent");
+        // Voie « premier plan » : Windows donne l'appli devant (ou null), le Mac n'en donne pas.
+        expect(
+          os === "windows" ? res.json.front === null || typeof res.json.front === "string" : res.json.front === undefined,
+          "appli au premier plan invalide",
+        );
         const scenes = await call("GET", "/system/mixer/scenes");
         expectStatus(scenes, 200, "/system/mixer/scenes");
         // Ordre des scènes : renvoyer l'ordre actuel ne change rien (lecture seule en pratique).
         const ids = scenes.json.scenes.map((s: { id: string }) => s.id);
         const order = await call("PUT", "/system/mixer/scenes/order", { ids });
         expectStatus(order, 200, "/system/mixer/scenes/order");
+        // Voie de groupe : une appli absente n'est pas touchée (aucun effet), Mac sans volume par appli : 501.
+        const group = await call("POST", "/system/mixer/group", { ids: ["mate-sanity-absente"], volume: 50 });
+        expectStatus(group, res.json.apps ? 200 : 501, "/system/mixer/group");
         return res.json.apps ? `${res.json.apps.length} applis avec du son` : "sortie et micro (pas de volume par appli)";
+      },
+    },
+    {
+      name: "sortie audio",
+      run: async () => {
+        const res = await call("GET", "/system/audio/outputs");
+        if (!controlled()) return expectStatus(res, 501, "/system/audio/outputs");
+        expectStatus(res, 200, "/system/audio/outputs");
+        const outputs: { id: string; name: string; current: boolean }[] = res.json.outputs;
+        expect(
+          Array.isArray(outputs) && outputs.every((o) => o.id && o.name && typeof o.current === "boolean"),
+          "liste des sorties invalide",
+        );
+        expect(outputs.filter((o) => o.current).length <= 1, "plusieurs sorties par défaut");
+        // Une sortie inconnue est refusée sans rien changer (la vraie bascule changerait le son de l'ordinateur).
+        expectStatus(await call("POST", "/system/audio/output", { id: "mate-sanity-absente" }), 404, "/system/audio/output");
+        return `${outputs.length} sortie(s), en cours : ${outputs.find((o) => o.current)?.name ?? "aucune"}`;
       },
     },
     {
@@ -332,7 +474,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const perf = await call("GET", "/system/perf");
         if (!controlled()) return expectStatus(perf, 501, "/system/perf");
         expectStatus(perf, 200, "/system/perf");
-        const { cpu, ram, gpu, cpuMhz, cpuTempC, fps, disk, net } = perf.json;
+        const { cpu, ram, gpu, cpuMhz, cpuTempC, cpuWatts, cpuFanRpm, gpuWatts, fps, disk, net } = perf.json;
         expect(typeof cpu === "number" && cpu >= 0 && cpu <= 100, `processeur hors 0-100 : ${cpu}`);
         expect(ram?.total > 0, "mémoire totale absente");
         // Champs facultatifs : absents si illisibles, mais bien typés et bornés quand ils sont là.
@@ -343,6 +485,11 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           cpuTempC === undefined || (count(cpuTempC) && cpuTempC >= 10 && cpuTempC <= 150),
           `température du processeur invalide : ${cpuTempC}`,
         );
+        // Watts et ventilateur du processeur : absents sans lecteur, jamais nuls ni inventés.
+        const watts = (w: unknown) => w === undefined || (typeof w === "number" && w > 0 && w <= 1000);
+        expect(watts(cpuWatts), `puissance du processeur invalide : ${cpuWatts}`);
+        expect(watts(gpuWatts), `puissance de la carte graphique invalide : ${gpuWatts}`);
+        expect(cpuFanRpm === undefined || (count(cpuFanRpm) && cpuFanRpm > 0), `ventilateur du processeur invalide : ${cpuFanRpm}`);
         // Images par seconde : absentes sans lecteur (Mac, carte non AMD), null sans jeu mesuré, jamais 0.
         expect(fps === undefined || fps === null || (count(fps) && fps > 0), `images par seconde invalides : ${fps}`);
         expect(
@@ -366,6 +513,9 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const extras = [
           cpuMhz && `${cpuMhz} MHz`,
           cpuTempC && `processeur ${cpuTempC} °C`,
+          cpuWatts && `processeur ${cpuWatts} W`,
+          gpuWatts && `carte graphique ${gpuWatts} W`,
+          cpuFanRpm && `ventilateur ${cpuFanRpm} tr/min`,
           fps !== undefined && (fps === null ? "fps : aucun jeu" : `${fps} fps`),
           disk && `disque ${disk.freeGb}/${disk.totalGb} Go`,
           net && `réseau ${net.downKBps}/${net.upKBps} Ko/s`,
@@ -530,6 +680,48 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "corvées : cocher passe la tâche à la personne suivante",
+      run: async () => {
+        const added = await call("POST", "/tasks", { label: stamp, days: [1, 2, 3, 4, 5, 6, 7], people: ["Léa", "Tom"] });
+        expectStatus(added, 200, "POST /tasks avec personnes");
+        const taskId: string = added.json.id;
+        try {
+          expect(added.json.assignee === "Léa", "la première personne devrait avoir le tour");
+          expectStatus(await call("POST", `/tasks/${taskId}/done`, { done: true }), 200, "cocher la corvée");
+          const after = await call("GET", "/tasks");
+          expect(after.json.tasks.find((t: { id: string }) => t.id === taskId)?.assignee === "Tom", "le tour n'est pas passé à Tom");
+        } finally {
+          await call("DELETE", `/tasks/${taskId}`);
+        }
+      },
+    },
+    {
+      name: "courses : ajouter, cocher, retirer",
+      run: async () => {
+        const added = await call("POST", "/shopping", { labels: [stamp] });
+        expectStatus(added, 200, "POST /shopping");
+        const itemId: string = added.json.items[0].id;
+        try {
+          expectStatus(await call("POST", `/shopping/${itemId}/done`, { done: true }), 200, "cocher l'article");
+          const listed = await call("GET", "/shopping");
+          expect(listed.json.items.find((i: { id: string }) => i.id === itemId)?.done === true, "article coché mais pas fait");
+        } finally {
+          await call("DELETE", `/shopping/${itemId}`);
+        }
+      },
+    },
+    {
+      name: "actualités : flux réglé",
+      run: async () => {
+        // Lecture seule : le flux réglé par l'utilisateur n'est jamais changé. Sans flux, la liste est vide.
+        const res = await call("GET", "/news");
+        if (res.status === 502) return "flux réglé mais injoignable (502)";
+        expectStatus(res, 200, "GET /news");
+        expect(Array.isArray(res.json.items) && res.json.items.length <= 5, "liste d'actualités mal formée");
+        return res.json.feed ? `${res.json.items.length} titre(s)` : "aucun flux réglé";
+      },
+    },
+    {
       name: "Jira : tickets",
       run: async () => {
         // Lecture seule : jamais de transition, ce sont les vrais tickets de l'utilisateur.
@@ -546,6 +738,27 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const boards = await call("GET", "/jira/boards");
         expectStatus(boards, 200, "/jira/boards");
         expect(Array.isArray(boards.json.boards) && Array.isArray(boards.json.selected), "forme de /jira/boards inattendue");
+      },
+    },
+    {
+      name: "Home Assistant : entités",
+      run: async () => {
+        // Lecture seule : jamais de bascule, ce sont les vraies lampes de la maison.
+        const features = await call("GET", "/deck/features");
+        const configured = features.status === 200 ? features.json.ha : undefined;
+        const entities = await call("GET", "/ha/entities");
+        if (configured === false || (configured === undefined && entities.status === 501)) {
+          return expectStatus(entities, 501, "/ha/entities sans Home Assistant configuré");
+        }
+        expectStatus(entities, 200, "/ha/entities");
+        expect(Array.isArray(entities.json.entities), "forme de /ha/entities inattendue");
+      },
+    },
+    {
+      name: "Alerte maison : ordre réservé à l'ordinateur",
+      run: async () => {
+        // Lecture seule : l'ordre est refusé avant d'atteindre la tablette, rien ne s'affiche.
+        expectStatus(await call("POST", "/tablet/command", { type: "alert", text: stamp }), 400, "ordre alert refusé par l'API");
       },
     },
     {

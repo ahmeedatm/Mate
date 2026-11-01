@@ -64,6 +64,45 @@ test.describe("page locale : touches", () => {
     expect((await server.call("GET", "/deck/keys/0")).json.key).toBeNull();
   });
 
+  test("une touche à cycle garde son cycle quand on la rouvre et l'enregistre", async ({ page, server }) => {
+    fs.writeFileSync(
+      path.join(server.dataDir, "keys.json"),
+      JSON.stringify({
+        slots: [
+          {
+            label: "Thème",
+            cycle: true,
+            steps: [
+              { type: "text", text: "Jour" },
+              { type: "text", text: "Nuit" },
+            ],
+          },
+        ],
+      }),
+    );
+    await page.goto("/");
+    const touches = page.locator("#pf-touches");
+    await expect(touches.getByRole("button", { name: "Touche 1 : Thème" })).toContainText("Cycle, 2 étapes");
+    await touches.getByRole("button", { name: "Touche 1 : Thème" }).click();
+    await touches.locator("#pf-deck-save").click();
+    await expect(page.locator("#pf-deck-keys-msg")).toHaveText("Touche enregistrée.");
+    expect((await server.call("GET", "/deck/keys/0")).json.key.cycle).toBe(true);
+  });
+
+  test("une touche à seconde action garde son appui long quand on la rouvre et l'enregistre", async ({ page, server }) => {
+    const hold = [{ type: "text", text: "Nuit" }];
+    fs.writeFileSync(
+      path.join(server.dataDir, "keys.json"),
+      JSON.stringify({ slots: [{ label: "Thème", steps: [{ type: "text", text: "Jour" }], hold }] }),
+    );
+    await page.goto("/");
+    const touches = page.locator("#pf-touches");
+    await touches.getByRole("button", { name: "Touche 1 : Thème" }).click();
+    await touches.locator("#pf-deck-save").click();
+    await expect(page.locator("#pf-deck-keys-msg")).toHaveText("Touche enregistrée.");
+    expect((await server.call("GET", "/deck/keys/0")).json.key.hold).toEqual(hold);
+  });
+
   test("signale une touche sans libellé, sans étape ou refusée par le compagnon", async ({ page, server }) => {
     await page.goto("/");
     const touches = page.locator("#pf-touches");

@@ -9,8 +9,8 @@ export default async function taskRoutes(app: FastifyInstance) {
 
   app.get("/tasks/recurring", async () => ({ tasks: await listRecurring() }));
 
-  /** `days` : récurrente ces jours-là (1 = lundi) ; `remindAt` : rappel parlé à cette heure ("HH:MM"). */
-  app.post<{ Body: { label: string; remindAt?: string; days?: number[] } }>(
+  /** `days` : récurrente ces jours-là (1 = lundi) ; `remindAt` : rappel parlé à cette heure ("HH:MM") ; `people` : corvée à tour de rôle (récurrente). */
+  app.post<{ Body: { label: string; remindAt?: string; days?: number[]; people?: string[] } }>(
     "/tasks",
     {
       schema: {
@@ -21,11 +21,12 @@ export default async function taskRoutes(app: FastifyInstance) {
             label: { type: "string", minLength: 1, maxLength: 200 },
             remindAt: { type: "string", pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$" },
             days: { type: "array", maxItems: 7, items: { type: "integer", minimum: 1, maximum: 7 } },
+            people: { type: "array", maxItems: 10, items: { type: "string", minLength: 1, maxLength: 40 } },
           },
         },
       },
     },
-    async (req) => addTask(req.body.label, { remindAt: req.body.remindAt, days: req.body.days }),
+    async (req) => addTask(req.body.label, { remindAt: req.body.remindAt, days: req.body.days, people: req.body.people }),
   );
 
   app.post<{ Params: { id: string }; Body: { done: boolean } }>(

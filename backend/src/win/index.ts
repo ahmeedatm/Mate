@@ -13,7 +13,16 @@ import {
 import { parseCombo, planAudio, sortedNames, whenClipboardAvailable } from "../driver-common.ts";
 import { appNameFromId, type NotificationBatch } from "../notifications.ts";
 import { readWindowsNotifications } from "./notifications.ts";
-import type { AudioChange, AudioState, ClipboardContent, MediaCommand, MixerChange, MixerState, SystemCommand } from "../screens.ts";
+import type {
+  AudioChange,
+  AudioOutput,
+  AudioState,
+  ClipboardContent,
+  MediaCommand,
+  MixerChange,
+  MixerState,
+  SystemCommand,
+} from "../screens.ts";
 import type { GpuPerf } from "../perf.ts";
 import type { PointerAction, PointerButton } from "../pointer.ts";
 
@@ -154,20 +163,31 @@ const KEY_CODES: Record<string, number> = {
   pagedown: 0x22,
   insert: 0x2d,
   printscreen: 0x2c,
-  ...Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`f${i + 1}`, 0x70 + i])),
+  ...Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`f${i + 1}`, 0x70 + i])),
 };
 
-export async function sendKeys(combo: string, app?: string) {
+/** Modificateurs et touche d'un raccourci pour le pilote : code VK, ou caractère s'il n'en a pas. */
+function keyRequest(combo: string) {
   const { key, mods } = parseCombo(combo, MODIFIERS);
   let vk = KEY_CODES[key];
   // Lettres et chiffres : touche du même nom quelle que soit la disposition (chiffres de la rangée du haut).
   if (vk === undefined && /^[a-z0-9]$/.test(key)) vk = key.toUpperCase().charCodeAt(0);
   if (vk === undefined && key.length !== 1) throw new Error(`Touche inconnue : ${key}`);
+  return { mods: [...new Set(mods)], ...(vk !== undefined ? { vk } : { ch: key }) };
+}
+
+export async function sendKeys(combo: string, app?: string) {
+  const request = keyRequest(combo);
   if (app) {
     await launchApp(app);
     await new Promise((resolve) => setTimeout(resolve, 400));
   }
-  await call("keys", { mods: [...new Set(mods)], ...(vk !== undefined ? { vk } : { ch: key }) });
+  await call("keys", request);
+}
+
+/** Tient (`down`) ou lâche les touches de `combo` : parler en maintenant une touche. */
+export async function holdKeys(combo: string, down: boolean) {
+  await call("holdkeys", { ...keyRequest(combo), down });
 }
 
 const MEDIA_KEYS: Record<MediaCommand, number> = { "play-pause": 0xb3, next: 0xb0, previous: 0xb1 };
@@ -279,6 +299,16 @@ export async function appAudio(app: string, change: { volume?: number; muted?: b
 /** Mélangeur de volume : sortie, micro et une tranche par appli ; `change` appliqué avant la lecture. */
 export async function mixer(change?: MixerChange): Promise<MixerState> {
   return call<MixerState>("mixer", change ?? {});
+}
+
+/** Sorties audio actives (enceinte, casque, carte son) ; `current` : la sortie par défaut. */
+export async function audioOutputs(): Promise<AudioOutput[]> {
+  return call<AudioOutput[]>("outputs", {});
+}
+
+/** Fait de la sortie `id` la sortie par défaut (sons et multimédia) ; rend la liste à jour. */
+export async function setAudioOutput(id: string): Promise<AudioOutput[]> {
+  return call<AudioOutput[]>("setoutput", { id });
 }
 
 // --- Lecture en cours (contrôles multimédias de Windows)
@@ -468,6 +498,11 @@ export async function getDnd(): Promise<boolean | null> {
 /** Bascule l'interrupteur du centre de notifications (affiché ~0,5 s), seulement si l'état doit changer. */
 export async function setDnd(on: boolean): Promise<boolean | null> {
   return (await call<{ on: boolean | null }>("dnd", { on }, 10_000)).on;
+}
+
+/** Écran gardé allumé (true) ou veille normale (false) : état du fil du helper, rendu à sa fermeture (op `awake`). */
+export async function keepAwake(on: boolean): Promise<void> {
+  await call("awake", { on });
 }
 
 /** Message au premier plan (code d'appairage), sans attendre qu'il soit fermé. */

@@ -49,6 +49,10 @@ export type TabletCommand =
   | { type: "focus"; action: (typeof FOCUS_ACTIONS)[number]; focusMinutes?: number; breakMinutes?: number }
   | { type: "noise"; kind: (typeof NOISES)[number]; volume?: number }
   | { type: "screenshot" }
+  /** Retrouver la tablette : sonnerie forte en boucle (`on`), arrêtée par un toucher, l'ordre inverse ou au bout de 2 minutes. */
+  | { type: "ring"; on: boolean }
+  /** Alerte maison (src/alerts.ts) : bannière qui reste jusqu'à un toucher, lue à voix haute. */
+  | { type: "alert"; text: string }
   /** Panneau Tablette de la page locale (routes/local.ts). */
   | ({ type: "settings" } & TabletSettings)
   /** Profils et barres de la page locale : lire l'état de la tablette, ou lui envoyer une configuration. */
@@ -62,6 +66,8 @@ export type TabletCommand =
   | { type: "meeting"; state: "start" | "end"; app: string }
   /** Appli au premier plan de l'ordinateur (src/foreground-watch.ts) : la tablette la compare à sa liste d'applis de jeu. */
   | { type: "foreground"; app: string; bundleId: string; file?: string }
+  /** Touches allumées (src/tile-state.ts) : identifiants des touches du deck dont l'état réel est actif, la liste complète à chaque ordre. */
+  | { type: "tilestate"; lit: string[] }
   /** Ordinateur verrouillé ou non (src/screen-lock.ts) : la tablette se couvre d'un écran bloquant, l'enlève au déverrouillage. */
   | { type: "lock"; locked: boolean }
   /** Notification de l'ordinateur (src/notifications.ts), affichée en bandeau et gardée dans l'historique. */

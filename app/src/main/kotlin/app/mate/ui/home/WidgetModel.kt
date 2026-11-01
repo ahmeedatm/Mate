@@ -51,6 +51,7 @@ enum class WidgetType(
     NEXT("next", R.string.widget_next, R.string.widget_next_desc, R.drawable.ic_event, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.V, WidgetSize.S), true),
     AGENDA("agenda", R.string.widget_agenda, R.string.widget_agenda_desc, R.drawable.ic_event, listOf(WidgetSize.L, WidgetSize.T, WidgetSize.M, WidgetSize.V), true),
     TASKS("tasks", R.string.widget_tasks, R.string.widget_tasks_desc, R.drawable.ic_tasks, listOf(WidgetSize.L, WidgetSize.T, WidgetSize.V, WidgetSize.M), true),
+    SHOPPING("shopping", R.string.widget_shopping, R.string.widget_shopping_desc, R.drawable.ic_cart, listOf(WidgetSize.L, WidgetSize.T, WidgetSize.V, WidgetSize.M), true),
     FOCUS("focus", R.string.widget_focus, R.string.widget_focus_desc, R.drawable.ic_timer, listOf(WidgetSize.S, WidgetSize.V, WidgetSize.L), false),
     WATER("water", R.string.widget_water, R.string.widget_water_desc, R.drawable.ic_water, listOf(WidgetSize.S, WidgetSize.M), false),
     AUDIO("audio", R.string.widget_audio, R.string.widget_audio_desc, R.drawable.ic_volume, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S, WidgetSize.W), true),
@@ -73,11 +74,14 @@ enum class WidgetType(
     PRESENT("present", R.string.widget_present, R.string.widget_present_desc, R.drawable.ic_tile_slideshow, listOf(WidgetSize.XL, WidgetSize.L), true),
     JIRA("jira", R.string.widget_jira, R.string.widget_jira_desc, R.drawable.ic_dashboard, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
     GITLAB("gitlab", R.string.widget_gitlab, R.string.widget_gitlab_desc, R.drawable.ic_merge, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
+    HA("ha", R.string.widget_ha, R.string.widget_ha_desc, R.drawable.ic_lightbulb, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.M), true),
     CHECKLIST("checklist", R.string.widget_checklist, R.string.widget_checklist_desc, R.drawable.ic_tile_check_circle, listOf(WidgetSize.L, WidgetSize.T), false),
     AWAY("away", R.string.widget_away, R.string.widget_away_desc, R.drawable.ic_cafe, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     PIPELINES("pipelines", R.string.widget_pipelines, R.string.widget_pipelines_desc, R.drawable.ic_tile_rocket_launch, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
     GITHUB("github", R.string.widget_github, R.string.widget_github_desc, R.drawable.ic_code, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
-    ACTIONS("actions", R.string.widget_actions, R.string.widget_actions_desc, R.drawable.ic_tile_deployed_code, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true);
+    ACTIONS("actions", R.string.widget_actions, R.string.widget_actions_desc, R.drawable.ic_tile_deployed_code, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
+    WEB("web", R.string.widget_web, R.string.widget_web_desc, R.drawable.ic_dashboard, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.M, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), false),
+    NEWS("news", R.string.widget_news, R.string.widget_news_desc, R.drawable.ic_tile_description, listOf(WidgetSize.L, WidgetSize.XL), true);
 
     /** Taille de l'exemplaire agrandi (widget maintenu, [WidgetZoom]) : la plus grande, la plus large à surface égale. */
     val zoomSize get() = sizes.maxWith(compareBy<WidgetSize>({ it.w * it.h }, { it.w }))
@@ -85,16 +89,17 @@ enum class WidgetType(
     /** Sans fond de carte, posé à même l'écran. */
     val bare get() = this == HERO || this == DAY || this == DAYLINE
 
-    /** Maintenir le widget l'agrandit : pas ceux sans carte (héros, journée, ligne du jour), rien de plus à y voir. */
-    val zoomable get() = !bare
+    /** Maintenir le widget l'agrandit : pas ceux sans carte (héros, journée, ligne du jour), rien de plus à y voir, ni la page web (un seul WebView à la fois). */
+    val zoomable get() = !bare && this != WEB
 
     /**
-     * Proposé dans le catalogue de l'ordinateur actif : Agents, Jira, GitLab, Pipelines, GitHub et Actions seulement s'il les offre (Agents :
+     * Proposé dans le catalogue de l'ordinateur actif : Agents, Jira, Home Assistant, GitLab, Pipelines, GitHub et Actions seulement s'il les offre (Agents :
      * Mac avec Claude Code), Ouvertes, Son et Pavé seulement si leur plugin n'est pas coupé (écran des plugins).
      */
     fun offered(features: HomeFeatures) = when (this) {
         AGENTS -> features.agents
         JIRA -> features.jira
+        HA -> features.ha
         GITLAB, PIPELINES -> features.gitlab
         GITHUB, ACTIONS -> features.github
         OPEN -> "open" !in features.off

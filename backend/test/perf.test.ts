@@ -414,3 +414,37 @@ test("fps : entier du jeu en cours ; null quand aucun jeu n'est mesuré ; absent
   assert.ok(!("fps" in failing));
   assert.equal(failing.cpu, 75);
 });
+
+test("cpuWatts, gpuWatts : une décimale ; absents sans source, nuls, négatifs, au-delà de 1000 W, en NaN ou en échec", async () => {
+  const perf = await perfOf({ cpuWatts: async () => 42.46, gpuWatts: async () => 180.04 });
+  assert.equal(perf.cpuWatts, 42.5);
+  assert.equal(perf.gpuWatts, 180);
+  const none = await perfOf({});
+  assert.ok(!("cpuWatts" in none) && !("gpuWatts" in none));
+  for (const value of [NaN, Infinity, 0, -5, 1001, null]) {
+    const perfBad = await perfOf({ cpuWatts: async () => value, gpuWatts: async () => value });
+    assert.ok(!("cpuWatts" in perfBad) && !("gpuWatts" in perfBad), String(value));
+  }
+  const failing = await perfOf({
+    cpuWatts: async () => {
+      throw new Error("lecteur");
+    },
+  });
+  assert.ok(!("cpuWatts" in failing));
+  assert.equal(failing.cpu, 75);
+});
+
+test("cpuFanRpm : entier ; absent sans source, à 0 (capteur sans ventilateur), négatif, en NaN ou en échec", async () => {
+  assert.equal((await perfOf({ cpuFanRpm: async () => 1204.6 })).cpuFanRpm, 1205);
+  assert.ok(!("cpuFanRpm" in (await perfOf({}))));
+  for (const value of [NaN, Infinity, 0, -5, null]) {
+    assert.ok(!("cpuFanRpm" in (await perfOf({ cpuFanRpm: async () => value }))), String(value));
+  }
+  const failing = await perfOf({
+    cpuFanRpm: async () => {
+      throw new Error("lecteur");
+    },
+  });
+  assert.ok(!("cpuFanRpm" in failing));
+  assert.equal(failing.cpu, 75);
+});

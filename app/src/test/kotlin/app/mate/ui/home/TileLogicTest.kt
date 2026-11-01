@@ -311,4 +311,22 @@ class TileLogicTest {
         val seeded = KeyRef.seed(JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis"), "mac", pages)!!
         assertEquals(listOf("r-2", "r-3", "r-4", "r-1", "r-0"), seeded.map { it.id })
     }
+
+    @Test
+    fun `une touche a une seconde action seulement si le deck le dit`() {
+        val pages = listOf(
+            DeckPage("A", listOf(DeckTile("a-0", "Capture zone", "keys", null, null, hold = true), DeckTile("a-1", "Verrouiller", "system", null, null))),
+        )
+        assertTrue(tileHasHold(pages, "a-0"))
+        assertFalse(tileHasHold(pages, "a-1"))
+        assertFalse(tileHasHold(pages, "inconnue"))
+    }
+
+    @Test
+    fun `les touches a maintenir sont celles que le deck annonce en push`() {
+        val pages = listOf(
+            DeckPage("Perso", listOf(DeckTile("k-0", "Parler", "keys", null, null, push = true), DeckTile("k-1", "Autre", "keys", null, null))),
+        )
+        assertEquals(setOf("k-0"), tilePushIds(pages))
+    }
 }

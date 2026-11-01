@@ -1,6 +1,8 @@
+import fs from "node:fs";
 import { planAudio } from "../driver-common.ts";
-import type { AudioChange, AudioState, MixerChange, MixerState } from "../screens.ts";
-import { osascript } from "./run.ts";
+import type { AudioChange, AudioOutput, AudioState, MixerChange, MixerState } from "../screens.ts";
+import { PROGRAM } from "./menubar.ts";
+import { osascript, run } from "./run.ts";
 
 // Volume micro mémorisé pour pouvoir le rétablir après un "couper le micro".
 let micRestoreLevel = 75;
@@ -65,3 +67,24 @@ String(used)`,
   );
   return raw.trim() === "true";
 }
+
+/** Lecture de la liste écrite par `MateMenu --audio-outputs` : une entrée sans id ou sans nom est écartée. */
+export function parseAudioOutputs(text: string): AudioOutput[] {
+  const list: unknown = JSON.parse(text);
+  if (!Array.isArray(list)) throw new Error("Liste des sorties audio illisible");
+  return list.flatMap((o) =>
+    typeof o?.id === "string" && o.id && typeof o?.name === "string" ? [{ id: o.id, name: o.name, current: o.current === true }] : [],
+  );
+}
+
+/** Core Audio n'est pas joignable depuis AppleScript : c'est le binaire de la barre des menus qui lit et change la sortie. */
+async function menuTool(args: string[]): Promise<AudioOutput[]> {
+  if (!fs.existsSync(PROGRAM)) throw Object.assign(new Error("Outil audio du Mac absent (MateMenu)"), { statusCode: 501 });
+  return parseAudioOutputs(await run(PROGRAM, args, 5_000));
+}
+
+/** Sorties audio du Mac (haut-parleurs, casque, écran, carte son) ; `current` : la sortie par défaut. */
+export const audioOutputs = () => menuTool(["--audio-outputs"]);
+
+/** Fait de la sortie `id` (UID Core Audio) la sortie par défaut ; rend la liste à jour. */
+export const setAudioOutput = (id: string) => menuTool(["--audio-set", id]);

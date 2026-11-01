@@ -6,6 +6,12 @@ import app.mate.net.VoiceState
 import org.json.JSONArray
 import org.json.JSONObject
 
+/** La touche [id] a une seconde action (appui long) d'après le deck lu sur l'ordinateur. */
+fun tileHasHold(pages: List<DeckPage>, id: String) = pages.any { page -> page.tiles.any { it.id == id && it.hold } }
+
+/** Touches à maintenir (parler en maintenant) d'après le deck lu sur l'ordinateur. */
+fun tilePushIds(pages: List<DeckPage>): Set<String> = pages.flatMap { it.tiles }.filter { it.push }.map { it.id }.toSet()
+
 /**
  * Touche à montrer selon l'appel : `call` seulement en appel, `idle` hors appel, `streaming` pendant un partage
  * d'écran, `share` en appel sans partage (« Partager », remplacé par « Arrêter le partage »), `lobby` sur l'écran

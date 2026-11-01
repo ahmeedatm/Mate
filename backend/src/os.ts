@@ -10,6 +10,7 @@ import * as macClipboard from "./mac/clipboard.ts";
 import { readMacNotifications } from "./mac/notifications.ts";
 import type { NotificationBatch } from "./notifications.ts";
 import * as macCalls from "./mac/calls.ts";
+import * as macAwake from "./mac/awake.ts";
 import * as macDnd from "./mac/dnd.ts";
 import { extensionFrontPage, extensionTabs } from "./browser-extension.ts";
 import * as macKeys from "./mac/keys.ts";
@@ -26,6 +27,7 @@ import { perfSampler, type DiskRaw, type NetPerf, type Perf } from "./perf.ts";
 import type { PointerAction, PointerButton, PointerGesture } from "./pointer.ts";
 import type {
   AudioChange,
+  AudioOutput,
   ClipboardContent,
   Layout,
   MediaCommand,
@@ -124,6 +126,13 @@ export async function sendKeys(combo: string, app?: string) {
   unsupported();
 }
 
+/** Tient (`down`) ou lâche les touches d'un raccourci, pour parler en maintenant une touche. */
+export async function holdKeys(combo: string, down: boolean) {
+  if (isMac) return macKeys.holdKeys(combo, down);
+  if (isWindows) return win.holdKeys(combo, down);
+  unsupported();
+}
+
 export async function sendMediaKey(command: MediaCommand) {
   if (isMac) return macKeys.sendMediaKey(command);
   if (isWindows) return win.sendMediaKey(command);
@@ -216,6 +225,9 @@ export function getPerf(): Promise<Perf> {
     cpuPercent: isWindows ? win.cpuUtility : null,
     gpu: isWindows ? win.gpuPerf : null,
     cpuTemp: isWindows ? winCapteurs.cpuTemperature : macTemperature.cpuTemperature,
+    cpuWatts: isWindows ? winCapteurs.cpuWatts : macTemperature.cpuWatts,
+    cpuFanRpm: isWindows ? winCapteurs.cpuFanRpm : undefined,
+    gpuWatts: isWindows ? winCapteurs.gpuWatts : macTemperature.gpuWatts,
     fps: isWindows ? win.gameFps : undefined,
     cpuMhz: isWindows ? () => winCounter(CPU_FREQUENCY) : undefined,
     disk: diskPerf,
@@ -255,6 +267,13 @@ export async function getDnd(): Promise<boolean | null> {
 export async function setDnd(on: boolean): Promise<boolean | null> {
   if (isWindows) return win.setDnd(on);
   if (isMac) return macDnd.setDnd(on);
+  unsupported();
+}
+
+/** Garde l'écran de l'ordinateur allumé (true) ou rend la veille normale (false) : src/awake.ts. */
+export async function keepAwake(on: boolean): Promise<void> {
+  if (isWindows) return win.keepAwake(on);
+  if (isMac) return macAwake.keepAwake(on);
   unsupported();
 }
 
@@ -343,6 +362,20 @@ export function browserTabs() {
 export function mixer(change?: MixerChange) {
   if (isWindows) return win.mixer(change);
   if (isMac) return macAudio.mixer(change);
+  unsupported();
+}
+
+/** Sorties audio de l'ordinateur (enceinte, casque, carte son), dont celle par défaut. */
+export function audioOutputs(): Promise<AudioOutput[]> {
+  if (isWindows) return win.audioOutputs();
+  if (isMac) return macAudio.audioOutputs();
+  unsupported();
+}
+
+/** Fait de cette sortie (un `id` de `audioOutputs`) la sortie par défaut ; rend la liste à jour. */
+export function setAudioOutput(id: string): Promise<AudioOutput[]> {
+  if (isWindows) return win.setAudioOutput(id);
+  if (isMac) return macAudio.setAudioOutput(id);
   unsupported();
 }
 

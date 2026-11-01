@@ -9,7 +9,8 @@ import type { Step } from "./deck.ts";
  * Touches perso : page "Perso" du deck, emplacements vides que l'on remplit depuis la tablette
  * ou depuis Claude (outil MCP deck_touche). Une étape = raccourci simple, plusieurs = macro.
  */
-export type PersoKey = { label: string; symbol?: string; glyph?: string; color?: string; steps: Step[] };
+/** `cycle` : chaque appui lance l'étape suivante (puis recommence) au lieu de toutes les étapes. `hold` : seconde action, lancée par l'appui long (une étape = raccourci simple, plusieurs = macro). */
+export type PersoKey = { label: string; symbol?: string; glyph?: string; color?: string; cycle?: boolean; steps: Step[]; hold?: Step[] };
 
 /** Emplacements montrés au minimum. */
 export const MIN_SLOTS = 14;
@@ -37,7 +38,18 @@ export async function loadKeys(): Promise<Slots> {
   return fit((await readJson<{ slots?: Slots }>(storeFile, () => ({}))).slots);
 }
 
+/** Une étape `push` (touches tenues pendant l'appui) est la seule de sa touche, sans cycle ni seconde action. */
+function assertPushAlone(key: PersoKey | null) {
+  if (!key) return;
+  const pushes = (steps: Step[] = []) => steps.some((s) => s.type === "keys" && s.push);
+  if (!pushes(key.steps) && !pushes(key.hold)) return;
+  if (key.steps.length !== 1 || key.cycle || key.hold || !pushes(key.steps)) {
+    throw Object.assign(new Error("Une touche à maintenir est une étape seule, sans cycle ni seconde action"), { statusCode: 400 });
+  }
+}
+
 export async function saveKey(slot: number, key: PersoKey | null) {
+  assertPushAlone(key);
   await updateJson<{ slots?: Slots }>(
     storeFile,
     () => ({}),
@@ -61,6 +73,7 @@ export async function loadKeyPages(): Promise<{ title: string; keys: Slots }[]> 
 
 /** Faux si la page n'existe pas. */
 export async function saveKeyPage(page: number, slot: number, key: PersoKey | null): Promise<boolean> {
+  assertPushAlone(key);
   return updateJson<{ pages?: KeyPage[] }, boolean>(
     pagesFile,
     () => ({}),
@@ -88,7 +101,7 @@ export const stepSchema = {
   allOf: [
     step("app", ["name"], { name }),
     step("url", ["url"], { url: { type: "string", maxLength: 2000 } }),
-    step("keys", ["keys"], { keys: { type: "string", minLength: 1, maxLength: 60 }, app: name }),
+    step("keys", ["keys"], { keys: { type: "string", minLength: 1, maxLength: 60 }, app: name, push: { type: "boolean" } }),
     step("shortcut", ["name"], { name }),
     step("media", ["command"], { command: { enum: ["play-pause", "next", "previous"] } }),
     step("system", ["command"], { command: { enum: SYSTEM_COMMANDS } }),
@@ -107,7 +120,9 @@ export const keySchema = {
     symbol: { enum: TILE_SYMBOLS },
     glyph: { type: "string", maxLength: 8 },
     color: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
+    cycle: { type: "boolean" },
     steps: { type: "array", minItems: 1, maxItems: 20, items: stepSchema },
+    hold: { type: "array", minItems: 1, maxItems: 20, items: stepSchema },
   },
 };
 

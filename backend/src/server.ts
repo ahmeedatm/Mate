@@ -16,8 +16,11 @@ import { canControl, clipboardStamp, frontApp, getClipboard, isMac, osName, read
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
 import { sendToTablet, tabletStatus } from "./tablet.ts";
 import { startForegroundWatch } from "./foreground-watch.ts";
+import { litTiles, startTileStateWatch, stateTiles } from "./tile-state.ts";
 import { startMeetingWatch } from "./meeting-watch.ts";
 import { isScreenLocked, startScreenLockWatch } from "./screen-lock.ts";
+import { parseAlertSpecs, startAlertWatch } from "./alerts.ts";
+import { haReachable, haSensorStates } from "./ha.ts";
 import { callingDeckApps } from "./deck.ts";
 import { startMenuBar } from "./mac/menubar.ts";
 import { loadTls } from "./tls.ts";
@@ -32,6 +35,7 @@ import deckRoutes from "./routes/deck.ts";
 import docRoutes from "./routes/docs.ts";
 import githubRoutes from "./routes/github.ts";
 import gitlabRoutes from "./routes/gitlab.ts";
+import haRoutes from "./routes/ha.ts";
 import jiraRoutes from "./routes/jira.ts";
 import localRoutes from "./routes/local.ts";
 import localConfigRoutes from "./routes/local-config.ts";
@@ -45,6 +49,8 @@ import presentRoutes from "./routes/present.ts";
 import portableRoutes from "./routes/portable.ts";
 import systemRoutes from "./routes/system.ts";
 import tabletRoutes from "./routes/tablet.ts";
+import newsRoutes from "./routes/news.ts";
+import shoppingRoutes from "./routes/shopping.ts";
 import taskRoutes from "./routes/tasks.ts";
 import updateRoutes from "./routes/updates.ts";
 import windowRoutes from "./routes/windows.ts";
@@ -95,7 +101,8 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     (method === "GET" && /^\/local\/(tablet\/layout|config\/[a-z0-9/-]+)(\?|$)/.test(url)) ||
     (method === "PUT" && url === "/local/tablet/layout") ||
     (/^(POST|PUT|DELETE)$/.test(method) && /^\/local\/config\/[a-z0-9/-]+$/.test(url)) ||
-    (method === "POST" && (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update")) ||
+    (method === "POST" &&
+      (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update" || url === "/local/tablet/ring")) ||
     // Panneau de l'appli portable (routes/portable.ts) : corps JSON exigé, pas envoyable par un autre site.
     (method === "POST" && /^\/local\/(autostart|firewall|capteurs|forget|quit|update)$/.test(url)) ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
@@ -194,6 +201,9 @@ app.register(browserRoutes);
 app.register(cameraRoutes);
 app.register(calendarRoutes);
 app.register(taskRoutes);
+app.register(shoppingRoutes);
+app.register(newsRoutes);
+app.register(haRoutes);
 app.register(jiraRoutes);
 app.register(callRoutes);
 app.register(agentRoutes);
@@ -220,6 +230,11 @@ if (canControl) {
     connected: () => tabletStatus().connected,
     front: frontApp,
   });
+  // États des touches (micro coupé, Ne pas déranger, appli lancée) : la tablette allume les touches concernées.
+  startTileStateWatch((lit) => void sendToTablet({ type: "tilestate", lit }), {
+    connected: () => tabletStatus().connected,
+    read: async () => litTiles(await stateTiles()),
+  });
 }
 // Ordinateur verrouillé : la tablette se bloque, l'API se ferme (hook ci-dessus). Relu même sans tablette.
 startScreenLockWatch(async (locked) => (await sendToTablet({ type: "lock", locked })).received === true, {
@@ -231,6 +246,15 @@ startScreenLockWatch(async (locked) => (await sendToTablet({ type: "lock", locke
   },
   intervalMs: Number(process.env.SCREEN_LOCK_POLL_MS) || undefined,
 });
+// Alerte maison : capteurs de HA_ALERTS relus toutes les 5 s, la tablette reçoit une bannière qui reste jusqu'à un toucher.
+const alertSpecs = haReachable ? parseAlertSpecs(process.env.HA_ALERTS) : [];
+if (alertSpecs.length > 0) {
+  startAlertWatch(async (text) => (await sendToTablet({ type: "alert", text })).received === true, {
+    specs: alertSpecs,
+    read: () => haSensorStates(alertSpecs.map((s) => s.id)),
+    intervalMs: Number(process.env.HA_ALERTS_POLL_MS) || undefined,
+  });
+}
 // Notifications de l'ordinateur : base du système relue toutes les 2 s, chaque nouvelle envoyée à la tablette sans attendre.
 if (canControl) {
   // Les supprimées (empreintes seulement) tiennent après un redémarrage : sinon le 1er passage les remonterait du système.

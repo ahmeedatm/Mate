@@ -148,6 +148,21 @@ export default async function localRoutes(app: FastifyInstance) {
     },
   );
 
+  /** Bouton « Faire sonner » du panneau Tablette (ordre `ring`) : retrouver la tablette. */
+  app.post<{ Body: { on: boolean } }>(
+    "/local/tablet/ring",
+    {
+      schema: {
+        body: { type: "object", required: ["on"], additionalProperties: false, properties: { on: { type: "boolean" } } },
+      },
+    },
+    async (req, reply) => {
+      if (!tabletStatus().connected) return reply.code(409).send({ error: "Tablette non connectée" });
+      const result = await sendToTablet({ type: "ring", on: req.body.on });
+      return result.ok ? { ok: true } : reply.code(502).send({ error: result.error });
+    },
+  );
+
   // Connexion d'un compte d'agenda (src/accounts.ts), depuis la page locale : le navigateur de l'ordinateur part chez
   // Microsoft ou Google et revient sur /oauth/…/callback (adresse déclarée telle quelle dans l'appli enregistrée).
   app.get<{ Params: { provider: string } }>("/oauth/:provider/start", async (req, reply) => {

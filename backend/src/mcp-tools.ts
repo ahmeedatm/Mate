@@ -74,6 +74,18 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
   );
 
   server.registerTool(
+    "tablette_sonner",
+    {
+      title: "Faire sonner la tablette",
+      description:
+        "Fait sonner la tablette très fort, en boucle, pour la retrouver. Un toucher sur son écran l'arrête ; elle s'arrête seule au bout de 2 minutes.",
+      inputSchema: { sonner: z.boolean().default(true).describe("false : arrêter la sonnerie") },
+    },
+    ({ sonner }) =>
+      attempt(async () => (await command({ type: "ring", on: sonner }), text(sonner ? "La tablette sonne." : "Sonnerie arrêtée."))),
+  );
+
+  server.registerTool(
     "tablette_afficher_mode",
     {
       title: "Changer d'écran",
@@ -246,6 +258,10 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
       type: z.literal("keys"),
       keys: z.string().describe("Raccourci, ex. cmd+shift+m, ctrl+up, f5, return (sur Windows cmd = Ctrl, win = touche Windows)"),
       app: z.string().optional().describe("Appli à mettre devant avant"),
+      push: z
+        .boolean()
+        .optional()
+        .describe("Touches tenues tant que le doigt reste sur la touche (parler en maintenant) ; seule étape de la touche"),
     }),
     z.object({ type: z.literal("text"), text: z.string().max(4000).describe("Texte collé dans l'appli au premier plan") }),
     z.object({ type: z.literal("url"), url: z.string().describe("http(s), mailto, msteams, slack, vscode, x-apple…") }),

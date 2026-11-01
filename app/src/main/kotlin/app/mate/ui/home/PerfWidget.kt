@@ -42,7 +42,7 @@ import kotlin.math.sqrt
 /**
  * Performances de l'ordinateur en direct : processeur, mémoire et carte graphique (avec sa température et son
  * ventilateur quand elle les donne), relevés toutes les 2 s tant que la page est à l'écran.
- * Moyen : quatre chiffres et la courbe de la dernière minute ; grand : trois anneaux ; bandeau : trois barres.
+ * Moyen : quatre chiffres et la courbe des 5 dernières minutes ; grand : trois anneaux ; bandeau : trois barres.
  * DA Console douce : chiffres fins et graphiques neutres, le rouge d'alerte seulement pour une alerte ; un relevé remplace les
  * valeurs sans animation (comme le chrono du Focus). Les tailles suivent la hauteur de la ligne de l'Accueil (lignes
  * inégales) : sur une ligne basse, le titre et la courbe laissent la place aux chiffres, rangés sur une seule ligne.
@@ -88,7 +88,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private var extras: TextView? = null
     private var extrasKey = ""
 
-    /** Vrai si la courbe a quelque chose à tracer (processeur ou carte graphique coché). */
+    /** Vrai si la courbe a quelque chose à tracer (processeur, carte graphique ou mémoire coché). */
     private var curve = true
     private var spark: PerfSparkline? = null
 
@@ -160,7 +160,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private suspend fun refresh() {
         try {
             val perf = BackendClient(context).system.perf()
-            history.add(perf.cpu, perf.gpu?.usage)
+            history.add(perf.cpu, perf.gpu?.usage, perf.ramPercent)
             last = perf
             error = null
             fresh = true
@@ -192,10 +192,10 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             row.addView(box, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             return Column(box, caption, value, legend).also { columns += it }
         }
-        // Libellés CPU et GPU du ton de leur trait : ils servent de légende à la courbe.
+        // Libellés du ton de leur trait : ils servent de légende à la courbe.
         val cpuColumn = column(context.getString(R.string.perf_cpu), perfColorAttr(PerfSeries.CPU, PerfMark.LINE, PerfLevel.NORMAL))
         val gpuColumn = column(context.getString(R.string.perf_gpu), perfColorAttr(PerfSeries.GPU, PerfMark.LINE, PerfLevel.NORMAL))
-        val ramColumn = column(context.getString(R.string.perf_ram), R.attr.c_text_dim)
+        val ramColumn = column(context.getString(R.string.perf_ram), perfColorAttr(PerfSeries.RAM, PerfMark.LINE, PerfLevel.NORMAL))
         cpu = Reading(cpuColumn.box, cpuColumn.value, PerfSeries.CPU)
         gpu = Reading(gpuColumn.box, gpuColumn.value, PerfSeries.GPU)
         ram = Reading(ramColumn.box, ramColumn.value, PerfSeries.RAM)
@@ -439,13 +439,15 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             if (key != extrasKey) line.text = extrasText(list)
             extrasKey = key
         }
-        curve = cpuOn || gpuOn
+        curve = cpuOn || gpuOn || ramOn
         val gpuLevel = perf.gpu?.usage?.let { usageLevel(it) } ?: PerfLevel.NORMAL
         spark?.set(
             if (cpuOn) history.cpu else emptyList(),
             if (gpuOn) history.gpu else emptyList(),
+            if (ramOn) history.ram else emptyList(),
             color(perfColorAttr(PerfSeries.CPU, PerfMark.LINE, usageLevel(perf.cpu), stale)),
             color(perfColorAttr(PerfSeries.GPU, PerfMark.LINE, gpuLevel, stale)),
+            color(perfColorAttr(PerfSeries.RAM, PerfMark.LINE, usageLevel(perf.ramPercent), stale)),
         )
     }
 
@@ -477,6 +479,9 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         when (option) {
             PerfOption.CPU_FREQ -> Extra(context.getString(R.string.perf_cpu_freq_line, perfNumber(perf.cpuMhz!! / 1000.0)), calm)
             PerfOption.CPU_TEMP -> perf.cpuTempC!!.let { Extra(context.getString(R.string.perf_cpu_temp_line, it), perfColorAttr(PerfSeries.CPU, PerfMark.VALUE, tempLevel(it), stale)) }
+            PerfOption.CPU_WATTS -> Extra(context.getString(R.string.perf_cpu_watts_line, perfNumber(perf.cpuWatts!!)), calm)
+            PerfOption.GPU_WATTS -> Extra(context.getString(R.string.perf_gpu_watts_line, perfNumber(perf.gpuWatts!!)), calm)
+            PerfOption.CPU_FAN -> Extra(context.getString(R.string.perf_cpu_fan_line, context.getString(R.string.perf_fan_rpm, RPM_FORMAT.format(perf.cpuFanRpm!!))), if (stale) R.attr.c_text_faint else R.attr.c_text)
             // Aucun jeu mesuré : « — », jamais 0.
             PerfOption.FPS -> Extra(perf.fps?.let { context.getString(R.string.perf_fps_line, it.toString()) } ?: context.getString(R.string.perf_fps_none), if (perf.fps == null) R.attr.c_text_faint else calm)
             PerfOption.GPU_TEMP -> perf.gpu!!.tempC!!.let { Extra(context.getString(R.string.perf_gpu_temp_line, it), perfColorAttr(PerfSeries.GPU, PerfMark.VALUE, tempLevel(it), stale)) }
@@ -658,15 +663,17 @@ private class FittingCard(context: Context, private val fit: (Int, Int) -> Unit)
     }
 }
 
-/** Courbes de la dernière minute (processeur et carte graphique), de 0 à 100 %, la plus récente à droite. */
+/** Courbes des dernières minutes (processeur, carte graphique et mémoire), de 0 à 100 %, la plus récente à droite. */
 @SuppressLint("ViewConstructor")
 private class PerfSparkline(context: Context, private val capacity: Int) : View(context) {
     private val pad = 2 * resources.displayMetrics.density
     private val path = Path()
     private val cpuPaint = linePaint()
     private val gpuPaint = linePaint()
+    private val ramPaint = linePaint()
     private var cpu: List<Int?> = emptyList()
     private var gpu: List<Int?> = emptyList()
+    private var ram: List<Int?> = emptyList()
 
     private fun linePaint() = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -675,16 +682,19 @@ private class PerfSparkline(context: Context, private val capacity: Int) : View(
         strokeCap = Paint.Cap.ROUND
     }
 
-    /** Nouvelles mesures et tons des deux traits ; un seul redessin, sans animation. */
-    fun set(cpu: List<Int>, gpu: List<Int?>, cpuColor: Int, gpuColor: Int) {
+    /** Nouvelles mesures et tons des trois traits ; un seul redessin, sans animation. */
+    fun set(cpu: List<Int>, gpu: List<Int?>, ram: List<Int>, cpuColor: Int, gpuColor: Int, ramColor: Int) {
         this.cpu = cpu
         this.gpu = gpu
+        this.ram = ram
         cpuPaint.color = cpuColor
         gpuPaint.color = gpuColor
+        ramPaint.color = ramColor
         invalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
+        line(canvas, ram, ramPaint)
         line(canvas, gpu, gpuPaint)
         line(canvas, cpu, cpuPaint)
     }

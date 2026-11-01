@@ -6,10 +6,13 @@ import {
   addDeckLink,
   deckLinks,
   findTile,
+  holdTile,
   homeFeatures,
+  isPush,
   LINK_SUGGESTIONS,
   liveDeckApps,
   loadDeck,
+  releaseAllPushed,
   removeDeckApp,
   removeDeckLink,
   resetDeckApps,
@@ -96,6 +99,9 @@ export default async function deckRoutes(app: FastifyInstance) {
                 color: t.color ?? null,
                 when: t.when ?? null,
                 lit: t.lit ?? null,
+                state: t.state ?? null,
+                ...(t.hold ? { hold: true } : {}),
+                ...(isPush(t) ? { push: true } : {}),
                 // Nom de l'appli (page Apps : liste des applis déjà ajoutées).
                 app: t.action.type === "app" ? t.action.name : null,
               },
@@ -112,12 +118,35 @@ export default async function deckRoutes(app: FastifyInstance) {
     return reply.type("image/png").send(createReadStream(icon));
   });
 
-  app.post<{ Body: { id: string } }>(
+  app.addHook("onClose", () => releaseAllPushed());
+
+  app.post<{ Body: { id: string; hold?: boolean; phase?: "down" | "up" } }>(
     "/deck/run",
-    { schema: { body: { type: "object", required: ["id"], properties: { id: { type: "string", maxLength: 20 } } } } },
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "string", maxLength: 20 }, hold: { type: "boolean" }, phase: { enum: ["down", "up"] } },
+        },
+      },
+    },
     async (req, reply) => {
       const tile = await findTile(req.body.id);
       if (!tile) return reply.code(404).send({ error: "Tuile inconnue" });
+      // Touche à maintenir : appui (`down`) et relâchement (`up`) arrivent séparément.
+      if (req.body.phase) {
+        if (!isPush(tile)) return reply.code(409).send({ error: "Cette touche ne se maintient pas" });
+        await holdTile(tile, req.body.phase === "down");
+        return { ok: true };
+      }
+      // Appui long : la seconde action de la touche, sans le détour des fenêtres ni de la page Média.
+      if (req.body.hold) {
+        if (!tile.hold) return reply.code(409).send({ error: "Cette touche n'a pas de seconde action" });
+        req.log.info({ tile: tile.id, action: tile.hold.type }, "Appui long sur une touche du deck");
+        await runAction(tile.hold);
+        return { ok: true };
+      }
       req.log.info({ tile: tile.id, action: tile.action.type }, "Touche du deck");
       // Appli déjà ouverte avec plusieurs fenêtres : la tablette propose de choisir au lieu d'activer.
       if (tile.action.type === "app") {
@@ -126,7 +155,7 @@ export default async function deckRoutes(app: FastifyInstance) {
       }
       // Page Média : l'appli du site si elle est installée, et la musique démarre seule.
       if (tile.id.startsWith("l-") && tile.action.type === "url") return { ok: true, ...(await openMediaLink(tile.action.url)) };
-      await runAction(tile.action);
+      await runAction(tile.action, tile.id);
       return { ok: true };
     },
   );

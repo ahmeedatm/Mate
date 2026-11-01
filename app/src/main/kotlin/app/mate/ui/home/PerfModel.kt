@@ -15,7 +15,7 @@ enum class PerfMark { VALUE, FILL, LINE }
  * Couleur (attribut de thème) d'un élément du widget, dans l'esprit Console : tout reste neutre et le rouge d'alerte
  * (`c_accent`, seule couleur vivante) signale l'alerte, critique comprise (pas d'orange). Neutre : chiffre en `c_text`,
  * remplissage en `c_text_dim` (comme la suite de la ligne du jour : le chiffre mène, la jauge l'accompagne), trait du
- * processeur en `c_text` et de la carte graphique en `c_text_faint` pour les distinguer. Mesure ancienne (`stale`) :
+ * processeur en `c_text`, de la carte graphique en `c_text_faint` et de la mémoire en `c_text_dim` pour les distinguer. Mesure ancienne (`stale`) :
  * chiffre en `c_text_faint`, remplissage et traits en `c_graphic` (le ton des graduations éteintes), même en alerte.
  */
 fun perfColorAttr(series: PerfSeries, mark: PerfMark, level: PerfLevel, stale: Boolean = false): Int = when {
@@ -24,7 +24,11 @@ fun perfColorAttr(series: PerfSeries, mark: PerfMark, level: PerfLevel, stale: B
     else -> when (mark) {
         PerfMark.VALUE -> R.attr.c_text
         PerfMark.FILL -> R.attr.c_text_dim
-        PerfMark.LINE -> if (series == PerfSeries.GPU) R.attr.c_text_faint else R.attr.c_text
+        PerfMark.LINE -> when (series) {
+            PerfSeries.CPU -> R.attr.c_text
+            PerfSeries.GPU -> R.attr.c_text_faint
+            PerfSeries.RAM -> R.attr.c_text_dim
+        }
     }
 }
 
@@ -56,24 +60,29 @@ fun perfLevelWord(level: PerfLevel): Int? = when (level) {
 fun perfAlertText(readings: List<Pair<String, PerfLevel>>, word: (Int) -> String): String =
     readings.mapNotNull { (name, level) -> perfLevelWord(level)?.let { "$name ${word(it)}" } }.joinToString(" · ")
 
-/** Dernières mesures pour les courbes ; les plus anciennes sortent au-delà de `capacity`. `gpu` null : pas de carte lisible. */
-class PerfHistory(val capacity: Int = 30) {
+/** Dernières mesures pour les courbes (150 relevés de 2 s : 5 minutes) ; les plus anciennes sortent au-delà de `capacity`. `gpu` null : pas de carte lisible. */
+class PerfHistory(val capacity: Int = 150) {
     private val cpuValues = ArrayDeque<Int>()
     private val gpuValues = ArrayDeque<Int?>()
+    private val ramValues = ArrayDeque<Int>()
 
     val cpu: List<Int> get() = cpuValues.toList()
     val gpu: List<Int?> get() = gpuValues.toList()
+    val ram: List<Int> get() = ramValues.toList()
 
-    fun add(cpu: Int, gpu: Int?) {
+    fun add(cpu: Int, gpu: Int?, ram: Int) {
         cpuValues.addLast(cpu)
         gpuValues.addLast(gpu)
+        ramValues.addLast(ram)
         while (cpuValues.size > capacity) cpuValues.removeFirst()
         while (gpuValues.size > capacity) gpuValues.removeFirst()
+        while (ramValues.size > capacity) ramValues.removeFirst()
     }
 
     /** Oublie toutes les mesures (page quittée : la courbe repart de zéro au retour). */
     fun clear() {
         cpuValues.clear()
         gpuValues.clear()
+        ramValues.clear()
     }
 }

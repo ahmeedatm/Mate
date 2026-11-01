@@ -129,3 +129,39 @@ describe("rappels des tâches récurrentes", () => {
     assert.deepEqual(await tick(last), ["À faire : Réessai"]);
   });
 });
+
+describe("corvées à tour de rôle", () => {
+  const assignee = async (id: string) => (await listTasks()).find((t) => t.id === id)?.assignee;
+
+  it("affiche la première personne, et cocher passe la corvée à la suivante", async () => {
+    const task = await addTask("Sortir les poubelles", { days: [1, 2, 3, 4, 5, 6, 7], people: ["Léa", "Tom", "Sam"] });
+    assert.equal(task.assignee, "Léa");
+    await setTaskDone(task.id, true);
+    assert.equal(await assignee(task.id), "Tom");
+    await setTaskDone(task.id, false);
+    assert.equal(await assignee(task.id), "Léa");
+  });
+
+  it("cocher deux fois la même journée n'avance qu'une fois, et la liste reboucle", async () => {
+    const task = await addTask("Vaisselle", { days: [1, 2, 3, 4, 5, 6, 7], people: ["Léa", "Tom"] });
+    await setTaskDone(task.id, true);
+    await setTaskDone(task.id, true);
+    assert.equal(await assignee(task.id), "Tom");
+    await setTaskDone(task.id, false);
+    await setTaskDone(task.id, true);
+    await setTaskDone(task.id, false);
+    assert.equal(await assignee(task.id), "Léa");
+  });
+
+  it("supprimer la corvée efface son tour", async () => {
+    const task = await addTask("Éphémère", { days: [1, 2, 3, 4, 5, 6, 7], people: ["Léa", "Tom"] });
+    await setTaskDone(task.id, true);
+    await deleteTask(task.id);
+    assert.equal(JSON.parse(await fs.readFile(file, "utf8")).turns?.[task.id], undefined);
+  });
+
+  it("une tâche sans personnes n'a pas de responsable", async () => {
+    const task = await addTask("Seul", { days: [1, 2, 3, 4, 5, 6, 7] });
+    assert.equal(task.assignee, null);
+  });
+});
