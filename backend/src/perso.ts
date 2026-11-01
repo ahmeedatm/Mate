@@ -10,14 +10,23 @@ import type { Step } from "./deck.ts";
  * Touches perso : page "Perso" du deck, emplacements vides que l'on remplit depuis la tablette
  * ou depuis Claude (outil MCP deck_touche). Une étape = raccourci simple, plusieurs = macro.
  */
-/** `cycle` : chaque appui lance l'étape suivante (puis recommence) au lieu de toutes les étapes. `hold` : seconde action, lancée par l'appui long (une étape = raccourci simple, plusieurs = macro). */
-export type PersoKey = { label: string; symbol?: string; glyph?: string; color?: string; cycle?: boolean; steps: Step[]; hold?: Step[] };
+/** `cycle` : chaque appui lance l'étape suivante (puis recommence) au lieu de toutes les étapes. `span` : 2 pour une touche large (deux cases de large dans la grille de la tablette). `hold` : seconde action, lancée par l'appui long (une étape = raccourci simple, plusieurs = macro). */
+export type PersoKey = {
+  label: string;
+  symbol?: string;
+  glyph?: string;
+  color?: string;
+  cycle?: boolean;
+  span?: 1 | 2;
+  steps: Step[];
+  hold?: Step[];
+};
 
 /** Emplacements montrés au minimum. */
 export const MIN_SLOTS = 14;
 /** Plafond : validation de la route et de l'outil MCP (mcp.ts en recopie la valeur). */
 export const MAX_SLOTS = 100;
-const storeFile = path.join(config.dataDir, "keys.json");
+export const keysFile = path.join(config.dataDir, "keys.json");
 
 type Slots = (PersoKey | null)[];
 
@@ -36,11 +45,11 @@ const put = (saved: Slots | undefined, slot: number, key: PersoKey | null): Slot
 };
 
 export async function loadKeys(): Promise<Slots> {
-  return fit((await readJson<{ slots?: Slots }>(storeFile, () => ({}))).slots);
+  return fit((await readJson<{ slots?: Slots }>(keysFile, () => ({}))).slots);
 }
 
 /** Une étape `push` (touches tenues pendant l'appui) est la seule de sa touche, sans cycle ni seconde action. */
-function assertPushAlone(key: PersoKey | null) {
+export function assertPushAlone(key: PersoKey | null) {
   if (!key) return;
   const pushes = (steps: Step[] = []) => steps.some((s) => s.type === "keys" && s.push);
   if (!pushes(key.steps) && !pushes(key.hold)) return;
@@ -52,7 +61,7 @@ function assertPushAlone(key: PersoKey | null) {
 export async function saveKey(slot: number, key: PersoKey | null) {
   assertPushAlone(key);
   await updateJson<{ slots?: Slots }>(
-    storeFile,
+    keysFile,
     () => ({}),
     (data) => {
       data.slots = put(data.slots, slot, key);
@@ -64,7 +73,7 @@ export async function saveKey(slot: number, key: PersoKey | null) {
 export async function addKey(key: PersoKey): Promise<number> {
   assertPushAlone(key);
   return updateJson<{ slots?: Slots }, number>(
-    storeFile,
+    keysFile,
     () => ({}),
     (data) => {
       const slot = fit(data.slots).indexOf(null);
@@ -125,7 +134,7 @@ export async function duplicateKey(from: KeyPlace, to?: number): Promise<KeyPlac
   };
   if (to === undefined) {
     const slot = await updateJson<{ slots?: Slots }, number>(
-      storeFile,
+      keysFile,
       () => ({}),
       (data) => {
         const placed = place(data.slots);
@@ -175,7 +184,7 @@ const name = { type: "string", minLength: 1, maxLength: 200 };
 export const stepSchema = {
   type: "object",
   required: ["type"],
-  properties: { type: { enum: ["app", "url", "keys", "shortcut", "media", "system", "text", "wait", "window", "gesture"] } },
+  properties: { type: { enum: ["app", "url", "keys", "shortcut", "media", "system", "text", "wait", "http", "window", "gesture"] } },
   allOf: [
     step("app", ["name"], { name }),
     step("url", ["url"], { url: { type: "string", maxLength: 2000 } }),
@@ -186,6 +195,7 @@ export const stepSchema = {
     step("text", ["text"], { text: { type: "string", minLength: 1, maxLength: 4000 } }),
     step("wait", ["ms"], { ms: { type: "integer", minimum: 0, maximum: 10_000 } }),
     step("gesture", ["name"], { name: { enum: [...POINTER_GESTURES] } }),
+    step("http", ["name"], { name }),
     step("window", ["app"], { app: name, display: { type: "string", maxLength: 100 }, layout: { enum: ["keep", "left", "right", "max"] } }),
   ],
 };
@@ -200,6 +210,7 @@ export const keySchema = {
     glyph: { type: "string", maxLength: 8 },
     color: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
     cycle: { type: "boolean" },
+    span: { enum: [1, 2] },
     steps: { type: "array", minItems: 1, maxItems: 20, items: stepSchema },
     hold: { type: "array", minItems: 1, maxItems: 20, items: stepSchema },
   },
@@ -210,7 +221,7 @@ export const keySchema = {
  * n'est enregistré ; dès qu'on ajoute ou retire une appli, la liste complète va dans .data/apps.json.
  */
 export type DeckApp = { label: string; name: string };
-const appsFile = path.join(config.dataDir, "apps.json");
+export const appsFile = path.join(config.dataDir, "apps.json");
 
 /** `undefined` : profil de base. */
 export async function loadSavedApps(): Promise<DeckApp[] | undefined> {
@@ -244,7 +255,7 @@ async function retireOnce(retired: (name: string) => boolean) {
 
 /** Page Média : sites ajoutés depuis la tablette (YouTube, Netflix…), vide au départ, dans .data/links.json. */
 export type DeckLink = { label: string; url: string };
-const linksFile = path.join(config.dataDir, "links.json");
+export const linksFile = path.join(config.dataDir, "links.json");
 
 export async function loadLinks(): Promise<DeckLink[]> {
   return (await readJson<{ links?: DeckLink[] }>(linksFile, () => ({}))).links ?? [];

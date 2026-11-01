@@ -64,7 +64,8 @@ describe("panneau Tablette", () => {
     });
 
     const put = server.call("PUT", "/local/tablet/settings", { theme: "CONSOLE_JOUR", brightness: 0.3 }, false);
-    const order = ofType((await polling).json.commands, "settings");
+    // Ce premier poll connecte la tablette : l'ordre des touches (tilestate) peut le prendre, le réglage vient alors au suivant.
+    const order = ofType((await polling).json.commands, "settings") ?? (await nextOrder("settings"));
     assert.deepEqual(order.command, { type: "settings", theme: "CONSOLE_JOUR", brightness: 0.3 });
 
     const state = { ...STATE, settings: { ...SETTINGS, theme: "CONSOLE_JOUR", brightness: 0.3 } };
@@ -77,10 +78,11 @@ describe("panneau Tablette", () => {
 
   for (const theme of ["CONTRASTE", "CONSOLE_JOUR", "HUSH"]) {
     it(`accepte le thème ${theme}`, async () => {
-      const polling = server.call("POST", "/tablet/poll", { state: STATE });
+      // nextOrder : l'ordre des touches (tilestate) peut arriver avant, dans un poll à part.
+      const polling = nextOrder("settings");
       await new Promise((r) => setTimeout(r, 300));
       const put = server.call("PUT", "/local/tablet/settings", { theme }, false);
-      const order = ofType((await polling).json.commands, "settings");
+      const order = await polling;
       assert.deepEqual(order.command, { type: "settings", theme });
       await server.call("POST", "/tablet/result", {
         id: order.id,

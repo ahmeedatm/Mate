@@ -20,6 +20,8 @@ data class DeckTile(
     val hold: Boolean = false,
     /** La touche se maintient : appui = touches tenues sur l'ordinateur, relâchement = touches lâchées (parler en maintenant). */
     val push: Boolean = false,
+    /** Cases de large dans la grille : 2 pour une touche large. */
+    val span: Int = 1,
 )
 /** Appel en cours dans une appli (Discord) : salon, participants vus, micro et sourdine (null : inconnu). */
 /** `lobby` : écran d'avant-réunion de Teams (« Rejoindre maintenant »), pas encore dans la réunion. */
@@ -84,7 +86,7 @@ class DeckApi(private val http: Http) {
             val tiles = p.getJSONArray("tiles")
             DeckPage(p.getString("title"), (0 until tiles.length()).map { j ->
                 val t = tiles.getJSONObject(j)
-                DeckTile(t.getString("id"), t.getString("label"), t.getString("type"), t.optStringOrNull("glyph"), t.optStringOrNull("color"), t.optStringOrNull("app"), t.optStringOrNull("when"), t.optStringOrNull("lit"), t.optStringOrNull("symbol"), t.optBoolean("hold"), t.optBoolean("push"))
+                DeckTile(t.getString("id"), t.getString("label"), t.getString("type"), t.optStringOrNull("glyph"), t.optStringOrNull("color"), t.optStringOrNull("app"), t.optStringOrNull("when"), t.optStringOrNull("lit"), t.optStringOrNull("symbol"), t.optBoolean("hold"), t.optBoolean("push"), t.optInt("span", 1))
             }, p.optBoolean("editable"), p.optBoolean("apps"), p.optBoolean("meeting"), p.optStringOrNull("app"), p.optBoolean("media"),
                 // Ordinateur pas encore à jour (sans `sound`) : barre Son comme avant.
                 p.optBoolean("sound", true), p.optInt("keyPage", -1).takeIf { it >= 0 })

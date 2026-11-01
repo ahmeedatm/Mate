@@ -8,6 +8,19 @@ L'utilisateur n'a rien à configurer. **Le projet** enregistre l'appli **une foi
 les identifiants (publics, pas des secrets) dans `backend/config/accounts.json`. Identifiant vide : bouton masqué.
 Le fichier est relu à chaque connexion : pas besoin de redémarrer le compagnon.
 
+## Les mails : une connexion à part
+
+Se connecter pour l'agenda ne donne **aucun droit sur les mails** : la connexion demande `Calendars.Read` (Microsoft) ou
+`calendar.readonly` (Google), rien d'autre. Pour le widget **Mails** de la tablette, la page de l'ordinateur propose, sur
+chaque compte connecté, **Connecter les mails** (`/oauth/<fournisseur>/start?mail=1`) : une seconde connexion, avec le
+même compte, qui ajoute `Mail.ReadBasic` (Microsoft) ou `gmail.metadata` (Google). Le compte garde la trace de ce qu'il a
+accordé (`mail: true` dans `.data/accounts.json`, affiché « · mails » sur la page) ; sans elle, `GET /mail/unread` ne le
+liste pas et ne l'appelle jamais chez le fournisseur. Reconnecter l'agenda seul retire les droits mails (le nouveau jeton
+ne les a pas) ; « Reconnecter » sur un compte aux mails les redemande.
+
+Ces droits permettent de lire l'**expéditeur et l'objet** des mails, **jamais leur contenu** ; le compagnon n'en lit qu'un
+nombre (non lus de la boîte de réception) et ne l'envoie à la tablette qu'avec le fournisseur, sans adresse e-mail.
+
 Code : `backend/src/accounts.ts` (connexion OAuth « appli de bureau » : code + PKCE, retour sur localhost),
 jetons de renouvellement dans `backend/.data/accounts.json` (sur l'ordinateur, jamais sur la tablette).
 
@@ -22,7 +35,8 @@ jetons de renouvellement dans `backend/.data/accounts.json` (sur l'ordinateur, j
      `http://localhost:3000/oauth/microsoft/callback`
 3. **Inscrire**, puis copier l'**ID d'application (client)** (un identifiant `xxxxxxxx-xxxx-…`).
 4. **Autorisations d'API** › **Ajouter une autorisation** › **Microsoft Graph** › **Autorisations déléguées** ›
-   cocher **Calendars.Read** › Ajouter. (`User.Read`, déjà présent, peut rester.)
+   cocher **Calendars.Read** et **Mail.ReadBasic** (celle-ci n'est demandée qu'à la connexion « mails », voir plus haut) › Ajouter.
+   (`User.Read`, déjà présent, peut rester.) Un compte connecté pour l'agenda seul n'a aucun droit sur ses mails.
 5. Coller l'identifiant dans `backend/config/accounts.json` :
    ```json
    "microsoft": { "clientId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" }
@@ -42,10 +56,11 @@ Si ça bloque :
 ## Google (Google Agenda) : facultatif, environ 15 minutes
 
 1. **https://console.cloud.google.com** › nouveau projet `Mate`.
-2. **API et services** › **Bibliothèque** › activer **Google Calendar API**.
+2. **API et services** › **Bibliothèque** › activer **Google Calendar API** et **Gmail API**.
 3. **Écran de consentement OAuth** : type **Externe**, nom de l'appli, e-mail ; champ d'application
-   `.../auth/calendar.readonly` ; tant que l'appli est « En test », ajouter les comptes autorisés dans **Utilisateurs test**
-   (100 au plus ; la publication pour tous demande une vérification par Google).
+   `.../auth/calendar.readonly` et `.../auth/gmail.metadata` (celui-ci n'est demandé qu'à la connexion « mails ») ; tant que l'appli est « En test »,
+   ajouter les comptes autorisés dans **Utilisateurs test**
+   (100 au plus ; `gmail.metadata` est un scope restreint : la publication pour tous demande une vérification par Google).
 4. **Identifiants** › **Créer des identifiants** › **ID client OAuth** › type **Application de bureau**.
 5. Copier l'ID client et le code secret (pour une appli de bureau, Google le considère comme public) dans
    `backend/config/accounts.json` :

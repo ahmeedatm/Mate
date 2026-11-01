@@ -81,7 +81,7 @@ export const DECK_HTML = `
 export const DECK_JS = `
   const pfDeckStepTypes = [
     ["app", "Ouvrir une appli"], ["url", "Ouvrir une adresse"], ["keys", "Raccourci clavier"], ["shortcut", "Raccourci Apple"],
-    ["media", "Lecture multimédia"], ["system", "Commande système"], ["text", "Coller un texte"], ["wait", "Attendre"],
+    ["media", "Lecture multimédia"], ["system", "Commande système"], ["text", "Coller un texte"], ["wait", "Attendre"], ["http", "Appeler le réseau local"],
     ["gesture", "Geste du Pavé"], ["window", "Placer une fenêtre"],
   ];
   const pfDeckGestures = [
@@ -150,6 +150,7 @@ export const DECK_JS = `
       case "system": return { type: type, command: pfDeckData.systemCommands[0] };
       case "text": return { type: type, text: "" };
       case "wait": return { type: type, ms: 500 };
+      case "http": return { type: type, name: "" };
       case "gesture": return { type: type, name: pfDeckGestures[0][0] };
       default: return { type: "window", app: "", display: "", layout: "keep" };
     }
@@ -157,7 +158,7 @@ export const DECK_JS = `
 
   function pfDeckCleanStep(s) {
     switch (s.type) {
-      case "app": case "shortcut": return { type: s.type, name: s.name.trim() };
+      case "app": case "shortcut": case "http": return { type: s.type, name: s.name.trim() };
       case "url": return { type: s.type, url: s.url.trim() };
       case "keys": return s.app.trim() ? { type: s.type, keys: s.keys.trim(), app: s.app.trim() } : { type: s.type, keys: s.keys.trim() };
       case "media": case "system": return { type: s.type, command: s.command };
@@ -220,7 +221,7 @@ export const DECK_JS = `
     const key = pfDeckPages()[pfDeckPage].keys[slot];
     pfDeckSlot = slot;
     pfDeckDraft = key
-      ? { label: key.label, symbol: key.symbol || "", glyph: key.glyph || "", color: key.color || "", cycle: key.cycle === true, hold: key.hold, steps: key.steps.map((s) => Object.assign(pfDeckNewStep(s.type), s)) }
+      ? { label: key.label, symbol: key.symbol || "", glyph: key.glyph || "", color: key.color || "", cycle: key.cycle === true, span: key.span, hold: key.hold, steps: key.steps.map((s) => Object.assign(pfDeckNewStep(s.type), s)) }
       : { label: "", symbol: "", glyph: "", color: "", cycle: false, steps: [] };
     pfDeckSay("pf-deck-keys-msg", "");
     pfDeckRenderGrid();
@@ -277,6 +278,8 @@ export const DECK_JS = `
         return [pfDeckField("Geste", pfDeckWrapSel(pfDeckSelect(pfDeckGestures, step.name, (v) => { step.name = v; })))];
       case "wait":
         return [pfDeckField("Durée en millisecondes (0 à 10000)", pfDeckText(String(step.ms), (v) => { step.ms = v; }, { inputmode: "numeric" }))];
+      case "http":
+        return [pfDeckField("Nom de la cible (LAN_TARGETS du .env)", pfDeckText(step.name, (v) => { step.name = v; }, { maxlength: 200 }))];
       default:
         return [
           pfDeckField("Appli", pfDeckText(step.app, (v) => { step.app = v; }, { list: "pf-deck-catalog-apps", maxlength: 200 })),
@@ -361,6 +364,8 @@ export const DECK_JS = `
     if (d.cycle) body.cycle = true;
     // Pareil pour la seconde action (appui long) : elle se règle sur la tablette.
     if (d.hold) body.hold = d.hold;
+    // La largeur aussi se règle sur la tablette.
+    if (d.span) body.span = d.span;
     const r = await pfDeckApi("PUT", pfDeckPages()[pfDeckPage].path(pfDeckSlot), body);
     if (!r.ok) return say(r.error);
     pfDeckDialog.close();

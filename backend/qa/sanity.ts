@@ -152,6 +152,23 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "touche http : une cible inconnue est refusée",
+      run: async () => {
+        // L'étape ne porte qu'un nom : une cible absente de LAN_TARGETS répond 404 sans rien appeler.
+        const slot = 19;
+        try {
+          expectStatus(
+            await call("PUT", `/deck/keys/${slot}`, { label: "Sanity http", steps: [{ type: "http", name: "sanity-inexistante" }] }),
+            200,
+            "PUT /deck/keys/19",
+          );
+          expectStatus(await call("POST", "/deck/run", { id: `k-${slot}` }), 404, "/deck/run cible inconnue");
+        } finally {
+          expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE /deck/keys/19");
+        }
+      },
+    },
+    {
       name: "réunion en cours (profil Réunion de la tablette)",
       run: async () => {
         // Deck V2 : la veille des réunions (src/meeting-watch.ts) lit les applis en appel comme /deck/live.
@@ -187,10 +204,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
-      name: "écran de jeu (appli au premier plan)",
+      name: "page par appli (appli au premier plan)",
       run: async () => {
-        // La veille (src/foreground-watch.ts) pousse l'appli devant ; la tablette la compare à sa liste de jeux, choisie
-        // parmi les applis du catalogue. L'ordre foreground est refusé s'il vient de l'extérieur.
+        // La veille (src/foreground-watch.ts) pousse l'appli devant ; la tablette la compare aux applis de chaque page,
+        // choisies parmi les applis du catalogue. L'ordre foreground est refusé s'il vient de l'extérieur.
         expectStatus(
           await call("POST", "/tablet/command", { type: "foreground", app: "Sanity", bundleId: "sanity" }),
           400,
@@ -335,6 +352,24 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           expect(got.json.key?.steps?.[0]?.type === "gesture", "l'étape geste n'est pas gardée");
         } finally {
           if (slot !== undefined) expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE de la touche de gestes");
+        }
+      },
+    },
+    {
+      name: "touche large : deux cases de large dans le deck",
+      run: async () => {
+        const slot = 19;
+        try {
+          expectStatus(
+            await call("PUT", `/deck/keys/${slot}`, { label: "Sanity large", span: 2, steps: [{ type: "wait", ms: 0 }] }),
+            200,
+            "PUT /deck/keys/19",
+          );
+          const deck = await call("GET", "/deck");
+          const perso = (deck.json.pages as { editable: boolean; tiles: { id: string; span?: number }[] }[]).find((p) => p.editable);
+          expect(perso?.tiles.find((t) => t.id === `k-${slot}`)?.span === 2, "touche k-19 sans span 2");
+        } finally {
+          expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE /deck/keys/19");
         }
       },
     },
@@ -746,6 +781,29 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "programmations : créer sur une touche du deck, lister, supprimer",
+      run: async () => {
+        const deck = await call("GET", "/deck");
+        expectStatus(deck, 200, "GET /deck");
+        const tile = deck.json.pages
+          .flatMap((p: { tiles: { id: string; label?: string; push?: boolean }[] }) => p.tiles)
+          .find((t: { label?: string; push?: boolean }) => t.label && !t.push);
+        if (!tile) return "aucune touche au deck, ignoré";
+        const added = await call("POST", "/schedule", { tileId: tile.id, everyMinutes: 1440 });
+        if (added.status === 501) return "501 hors Mac et Windows";
+        expectStatus(added, 200, "POST /schedule");
+        try {
+          const listed = await call("GET", "/schedule");
+          expect(
+            listed.json.items.some((i: { id: string }) => i.id === added.json.id),
+            "programmation créée absente de la liste",
+          );
+        } finally {
+          expectStatus(await call("DELETE", `/schedule/${added.json.id}`), 200, "DELETE /schedule");
+        }
+      },
+    },
+    {
       name: "corvées : cocher passe la tâche à la personne suivante",
       run: async () => {
         const added = await call("POST", "/tasks", { label: stamp, days: [1, 2, 3, 4, 5, 6, 7], people: ["Léa", "Tom"] });
@@ -777,6 +835,18 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "mails : non lus des comptes connectés",
+      run: async () => {
+        // Lecture seule. Sans compte connecté, la liste est vide ; un compte en panne reste listé avec une phrase.
+        const res = await call("GET", "/mail/unread");
+        expectStatus(res, 200, "GET /mail/unread");
+        expect(Array.isArray(res.json.accounts), "liste de comptes mal formée");
+        const bad = res.json.accounts.filter((a: { unread: unknown; error?: string }) => a.unread === null && !a.error);
+        expect(bad.length === 0, "compte sans nombre ni phrase d'erreur");
+        return `${res.json.accounts.length} compte(s)`;
+      },
+    },
+    {
       name: "actualités : flux réglé",
       run: async () => {
         // Lecture seule : le flux réglé par l'utilisateur n'est jamais changé. Sans flux, la liste est vide.
@@ -795,6 +865,20 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expectStatus(res, 200, "GET /metrics");
         expect(Array.isArray(res.json.items) && res.json.items.length <= 4, "liste de valeurs mal formée");
         return res.json.items.length ? `${res.json.items.length} valeur(s)` : "aucune commande écrite";
+      },
+    },
+    {
+      name: "menu de la semaine",
+      run: async () => {
+        // Lecture seule : le menu réglé par l'utilisateur n'est jamais changé. Toujours sept jours, du lundi au dimanche.
+        const res = await call("GET", "/menu");
+        expectStatus(res, 200, "GET /menu");
+        const days = res.json.days;
+        expect(
+          Array.isArray(days) && days.length === 7 && days.every((d: any) => typeof d.lunch === "string" && typeof d.dinner === "string"),
+          "menu mal formé (sept jours attendus)",
+        );
+        return `${days.filter((d: any) => d.lunch || d.dinner).length} jour(s) réglé(s)`;
       },
     },
     {
@@ -931,6 +1015,19 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         // Réglage vide : refusé avant d'atteindre une tablette peut-être réelle.
         expectStatus(await call("PUT", "/local/tablet/settings", {}), 400, "PUT /local/tablet/settings vide");
         expectStatus(await call("POST", "/local/tablet/update", { action: "rollback" }), 400, "POST /local/tablet/update inconnue");
+      },
+    },
+    {
+      name: "sauvegarde de la configuration (lecture seule, sans jeton)",
+      run: async () => {
+        if (!local) throw new Skip("routes locales, en local seulement");
+        const res = await call("GET", "/local/config/backup", undefined, false);
+        expectStatus(res, 200, "/local/config/backup");
+        expect(res.json.format === "mate-config-1" && typeof res.json.parts === "object", "fichier de sauvegarde inattendu");
+        expect(!JSON.stringify(res.json).includes(opts.token), "le jeton de l'ordinateur est dans la sauvegarde");
+        // Fichier d'un autre format : refusé avant d'écrire quoi que ce soit.
+        const bad = await call("POST", "/local/config/backup", { backup: { format: "autre", parts: {} }, parts: ["keys"] }, false);
+        expectStatus(bad, 400, "POST /local/config/backup d'un autre format");
       },
     },
     {

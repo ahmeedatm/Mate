@@ -275,6 +275,10 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
     z.object({ type: z.literal("wait"), ms: z.number().int().min(0).max(10_000) }),
     z.object({ type: z.literal("gesture"), name: z.enum(POINTER_GESTURES).describe("Geste du Pavé (retour, bureau suivant, zoom…)") }),
     z.object({
+      type: z.literal("http"),
+      name: z.string().describe("Nom d'une cible du réseau local déclarée dans LAN_TARGETS du .env de l'ordinateur (jamais une adresse)"),
+    }),
+    z.object({
       type: z.literal("window"),
       app: z.string(),
       display: z.string().optional().describe("Libellé d'écran (voir deck_touches_lister), sinon l'écran actuel"),

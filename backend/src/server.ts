@@ -24,6 +24,7 @@ import { haReachable, haSensorStates } from "./ha.ts";
 import { callingDeckApps } from "./deck.ts";
 import { startMenuBar } from "./mac/menubar.ts";
 import { loadTls } from "./tls.ts";
+import { startSchedule } from "./schedule.ts";
 import { startReminders } from "./tasks.ts";
 import agentRoutes from "./routes/agents.ts";
 import awayRoutes from "./routes/away.ts";
@@ -38,6 +39,7 @@ import gitlabRoutes from "./routes/gitlab.ts";
 import haRoutes from "./routes/ha.ts";
 import jiraRoutes from "./routes/jira.ts";
 import localRoutes from "./routes/local.ts";
+import localBackupRoutes from "./routes/local-backup.ts";
 import localConfigRoutes from "./routes/local-config.ts";
 import localProfileRoutes from "./routes/local-profiles.ts";
 import mcpRoutes from "./routes/mcp.ts";
@@ -50,8 +52,11 @@ import portableRoutes from "./routes/portable.ts";
 import systemRoutes from "./routes/system.ts";
 import tabletRoutes from "./routes/tablet.ts";
 import metricsRoutes from "./routes/metrics.ts";
+import mailRoutes from "./routes/mail.ts";
+import menuRoutes from "./routes/menu.ts";
 import newsRoutes from "./routes/news.ts";
 import shoppingRoutes from "./routes/shopping.ts";
+import scheduleRoutes from "./routes/schedule.ts";
 import taskRoutes from "./routes/tasks.ts";
 import updateRoutes from "./routes/updates.ts";
 import windowRoutes from "./routes/windows.ts";
@@ -163,6 +168,7 @@ app.addHook("preHandler", async (req, reply) => {
     !canControl &&
     ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) ||
       req.url.startsWith("/system") ||
+      req.url.startsWith("/schedule") ||
       req.url.startsWith("/pointer") ||
       req.url.startsWith("/present") ||
       req.url.startsWith("/gitlab") ||
@@ -186,6 +192,7 @@ app.register(pairingRoutes, { authorized, fingerprint: tls?.fingerprint ?? null 
 app.register(localRoutes);
 app.register(localProfileRoutes);
 app.register(localConfigRoutes);
+app.register(localBackupRoutes);
 app.register(mcpRoutes);
 app.register(portableRoutes);
 app.register(deckRoutes);
@@ -202,9 +209,12 @@ app.register(browserRoutes);
 app.register(cameraRoutes);
 app.register(calendarRoutes);
 app.register(taskRoutes);
+app.register(scheduleRoutes);
 app.register(shoppingRoutes);
 app.register(metricsRoutes);
+app.register(mailRoutes);
 app.register(newsRoutes);
+app.register(menuRoutes);
 app.register(haRoutes);
 app.register(jiraRoutes);
 app.register(callRoutes);
@@ -219,6 +229,7 @@ app.register(tabletRoutes);
 const remind = async (text: string) => (await sendToTablet({ type: "message", text, speak: true, seconds: 120 })).received === true;
 startReminders(remind);
 startEventReminders(remind);
+startSchedule();
 // Appel entrant : prévenir la tablette sans attendre sa réponse (la sonnerie ne doit pas bloquer la surveillance).
 void startCallWatch((event) => void sendToTablet({ type: "call", ...event }, 30_000));
 // Réunion en cours : la tablette passe sur son profil Réunion (et en revient), seulement tant qu'elle est connectée.
@@ -227,7 +238,7 @@ if (canControl) {
     connected: () => tabletStatus().connected,
     liveApps: callingDeckApps,
   });
-  // Appli au premier plan : la tablette passe sur son écran de jeu quand c'en est une de sa liste (et en revient).
+  // Appli au premier plan : la tablette affiche la page d'une appli de sa liste (et en revient).
   startForegroundWatch((event) => void sendToTablet({ type: "foreground", ...event }), {
     connected: () => tabletStatus().connected,
     front: frontApp,

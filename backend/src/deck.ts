@@ -50,6 +50,7 @@ import { haConfigured } from "./ha.ts";
 import { jiraConfigured } from "./jira.ts";
 import { appPluginOff, pluginOn, pluginsOff } from "./plugins.ts";
 import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
+import { callLanTarget } from "./lan-call.ts";
 
 /**
  * Étapes possibles d'une tuile. La tablette n'envoie qu'un identifiant de tuile : seules les actions
@@ -68,6 +69,8 @@ export type Step =
   | { type: "wait"; ms: number }
   /** Geste du Pavé (retour, bureau suivant, zoom…), traduit en raccourci selon le système ; enregistré depuis le Pavé de la tablette. */
   | { type: "gesture"; name: PointerGesture }
+  /** Appelle une cible du réseau local déclarée sur l'ordinateur (`LAN_TARGETS`, voir lan-call.ts) ; la tablette n'envoie que son nom. */
+  | { type: "http"; name: string }
   /**
    * Appuie sur un bouton de la fenêtre de l'appli (UI Automation, Accessibilité sur Mac), le premier trouvé parmi
    * `names` ; `waitMs` : le bouton peut mettre ce temps à apparaître (panneau ouvert par l'étape d'avant).
@@ -99,6 +102,8 @@ type TileConfig = {
   symbol?: string;
   glyph?: string;
   color?: string;
+  /** Cases de large dans la grille de la tablette : 2 pour une touche large, absent pour une touche simple. */
+  span?: 2;
   when?: "call" | "idle" | "streaming" | "share" | "lobby";
   lit?: "muted" | "deafened" | "camera";
   state?: "mic-muted" | "dnd" | "running";
@@ -213,17 +218,21 @@ export async function deckLinks() {
 }
 
 /** `url` tapée sur la tablette : « netflix.com » devient https://netflix.com ; nom par défaut tiré de l'adresse. */
-export async function addDeckLink(url: string, label?: string) {
+export function normalizeLink(url: string, label?: string): DeckLink {
   const parsed = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(url.trim()) ? url.trim() : "https://" + url.trim());
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("Adresse web attendue (https://…)");
   const href = parsed.pathname === "/" && !parsed.search && !parsed.hash ? parsed.origin : parsed.href;
-  const name = label?.trim() || parsed.hostname.replace(/^www\./, "");
+  return { label: label?.trim() || parsed.hostname.replace(/^www\./, ""), url: href };
+}
+
+export async function addDeckLink(url: string, label?: string) {
+  const link = normalizeLink(url, label);
   const links = await loadLinks();
-  if (!links.some((l) => l.url === href)) {
-    links.push({ label: name, url: href });
+  if (!links.some((l) => l.url === link.url)) {
+    links.push(link);
     await saveLinks(links);
   }
-  return linkTileId(href);
+  return linkTileId(link.url);
 }
 
 export async function removeDeckLink(id: string) {
@@ -310,6 +319,7 @@ export async function loadDeck(): Promise<DeckPage[]> {
         ...(key.symbol ? { symbol: key.symbol } : {}),
         glyph: key.glyph,
         color: key.color,
+        ...(key.span === 2 ? { span: 2 as const } : {}),
         action,
         ...(hold ? { hold } : {}),
       };
@@ -395,6 +405,8 @@ export async function runAction(action: Action, tileId?: string): Promise<unknow
       return pointerGesture(action.name);
     case "wait":
       return sleep(Math.min(action.ms, 10_000));
+    case "http":
+      return callLanTarget(action.name);
     case "press": {
       const until = Date.now() + Math.min(action.waitMs ?? 0, 10_000);
       while (!(await pressButton(action.app, action.names))) {
