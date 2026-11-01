@@ -438,7 +438,9 @@ export const PROFILES_JS = `
       l.home = map(l.home);
       if (l.deck >= 0) l.deck = map(l.deck);
       if (l.call >= 0) l.call = map(l.call);
-      if (l.gameScreen >= 0) l.gameScreen = map(l.gameScreen);
+      l.pageApps = l.pageApps || [];
+      while (l.pageApps.length < l.names.length) l.pageApps.push([]);
+      l.pageApps.splice(to, 0, l.pageApps.splice(from, 1)[0]);
       S.page = to;
     }
     function removeProfile(index) {
@@ -453,7 +455,8 @@ export const PROFILES_JS = `
       l.home = after(l.home);
       l.deck = after(l.deck);
       l.call = after(l.call);
-      if (l.gameScreen >= 0) l.gameScreen = after(l.gameScreen);
+      l.pageApps = l.pageApps || [];
+      l.pageApps.splice(index, 1);
       S.page = Math.min(index, l.names.length - 1);
       S.sel = -1;
     }
@@ -465,6 +468,8 @@ export const PROFILES_JS = `
       l.names.push("Profil " + n);
       l.icons = l.icons || [];
       while (l.icons.length < l.names.length) l.icons.push(null);
+      l.pageApps = l.pageApps || [];
+      while (l.pageApps.length < l.names.length) l.pageApps.push([]);
       S.page = l.names.length - 1;
       S.sel = -1;
     }

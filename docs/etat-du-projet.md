@@ -140,7 +140,7 @@ Tablette 4.2 : MT8167, 4 cœurs à 1,3 GHz, 2 Go de RAM, écran 1280×800, **And
 
 ## À faire, dans l'ordre
 
-**Écran de jeu automatique** (31/10, #23) : la tablette passe sur l'écran choisi quand une appli de la liste est au premier plan de l'ordinateur (ordre `foreground`), et revient 8 s après. Vérifié sur l'émulateur avec le Mac (aller-retour). Non testé : tablette réelle, Windows (`frontApp` par l'exe), une appli de jeu en plein écran.
+**Page par appli** (#23 puis #61) : la tablette passe sur la page dont une appli est au premier plan de l'ordinateur (ordre `foreground`), change de page d'une appli à l'autre, et revient 8 s après. Vérifié par tests JVM, tests backend et e2e. Non testé : émulateur, tablette réelle, Windows (`frontApp` par l'exe), une appli en plein écran.
 
 **Deck V2** : lot 1 (Profils) fait ; le 29/10, branche `feat/deck-v2-barre` (Momo, pas encore fusionnée) : barre fixe à gauche à la place du menu caché, profils Accueil / Deck / Réunion, Réunion automatique pendant un appel (ordre `meeting`), widget d'appel générique, symboles des touches, touches de départ bureau, réglage de la barre, lecture en cours dans le header, mode Deck retiré (le lot 2 d'Ahmed). Vérifié sur la tablette (barre, profils, alignement) et sur l'émulateur (installation neuve, appel Teams simulé). À vérifier : vrai appel Teams et Discord, fluidité du profil Deck (P90 ~30 ms, ses widgets redessinent en continu, ce n'est pas la transition), kiosque.
 
