@@ -85,6 +85,14 @@ class WidgetModelTest {
     }
 
     @Test
+    fun `Home Assistant, widget propose seulement si l'ordinateur le configure`() {
+        assertEquals(WidgetType.HA, WidgetType.of("ha"))
+        assertTrue(WidgetType.HA.computer)
+        assertFalse(WidgetType.HA.offered(HomeFeatures()))
+        assertTrue(WidgetType.HA.offered(HomeFeatures(ha = true)))
+    }
+
+    @Test
     fun `Jira et GitLab, widgets du Deck en XL, L, 3 x 2, 3 x 4 ou plein ecran, seulement si l'ordinateur les offre`() {
         assertEquals(WidgetType.JIRA, WidgetType.of("jira"))
         assertEquals(WidgetType.GITLAB, WidgetType.of("gitlab"))
