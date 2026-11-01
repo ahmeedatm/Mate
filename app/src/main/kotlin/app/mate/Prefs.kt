@@ -35,6 +35,7 @@ object Prefs {
     private const val KEY_LANDSCAPE_LOCKED = "landscape_locked"
     private const val KEY_BRIGHTNESS = "brightness"
     private const val KEY_NIGHT_DIM = "night_dim"
+    private const val KEY_VOLUME_KEYS_COMPUTER = "volume_keys_computer"
     private const val KEY_THEME = "theme"
     private const val KEY_RAIL_LABELS = "rail_labels"
     private const val KEY_TOUR_DONE = "tour_done"
@@ -99,6 +100,13 @@ object Prefs {
 
     fun setNightDim(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_NIGHT_DIM, value).apply()
+    }
+
+    /** Les boutons de volume de la tablette règlent le son de l'ordinateur au lieu du sien. Désactivé par défaut. */
+    fun volumeKeysOnComputer(context: Context): Boolean = prefs(context).getBoolean(KEY_VOLUME_KEYS_COMPUTER, false)
+
+    fun setVolumeKeysOnComputer(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_VOLUME_KEYS_COMPUTER, value).apply()
     }
 
     /** Ne pas déranger sur l'ordinateur pendant la concentration du Focus. Activé par défaut. */
