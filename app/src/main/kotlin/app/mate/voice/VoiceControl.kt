@@ -191,8 +191,9 @@ class VoiceControl(
             val deck = tiles?.await().orEmpty()
             val (said, command) = candidates.firstNotNullOfOrNull { c -> VoiceCommands.parse(c, deck)?.let { c to it } }
                 ?: (heard to null)
-            // Texte à copier sur l'ordinateur : jamais dans le journal (ni la phrase entendue, qui le contient).
+            // Texte dicté (à copier ou à taper sur l'ordinateur) : jamais dans le journal (ni la phrase entendue, qui le contient).
             if (command is VoiceCommand.CopyToComputer) android.util.Log.i("Voice", "copie sur l'ordi (${command.text.length} caractères)")
+            else if (command is VoiceCommand.Type) android.util.Log.i("Voice", "saisie sur l'ordi (${command.text.length} caractères)")
             else android.util.Log.i("Voice", "heard $candidates → $command")
             var failed = false
             val answer = if (command == null) {
