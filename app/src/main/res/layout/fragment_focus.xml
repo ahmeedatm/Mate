@@ -199,6 +199,24 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:orientation="horizontal" />
+
+            <!-- Minuteur de pause musique : 15, 30 ou 60 min, puis la musique de l'ordinateur se met en pause. -->
+            <TextView
+                android:id="@+id/focus_sleep_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="?attr/c_font_medium"
+                android:text="@string/sleep_label"
+                android:textColor="?attr/c_text"
+                android:textSize="16sp" />
+
+            <LinearLayout
+                android:id="@+id/focus_sleep"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal" />
         </LinearLayout>
     </LinearLayout>
 
