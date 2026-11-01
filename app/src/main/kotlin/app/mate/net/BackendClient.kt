@@ -39,6 +39,7 @@ class BackendClient(
     val gitlab = GitLabApi(http)
     val github = GitHubApi(http)
     val jira = JiraApi(http)
+    val ha = HaApi(http)
     val plugins = PluginsApi(http)
     val present = PresentApi(http)
     val notifications = NotificationsApi(http)

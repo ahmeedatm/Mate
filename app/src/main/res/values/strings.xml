@@ -1213,6 +1213,14 @@
     <string name="present_start_desc">Revenir à la première diapo</string>
     <string name="present_end_desc">Quitter le diaporama</string>
     <string name="present_key_state">%1$s : %2$s</string>
+    <string name="widget_ha">Maison</string>
+    <string name="widget_ha_desc">Lumières, prises et scènes de Home Assistant : l\'état de chacune, et un toucher pour la basculer</string>
+    <string name="ha_on">Allumé</string>
+    <string name="ha_off">Éteint</string>
+    <string name="ha_scene">Scène</string>
+    <string name="ha_unavailable">Injoignable</string>
+    <string name="ha_unavailable_hint">%1$s : Home Assistant ne la joint pas pour le moment</string>
+    <string name="ha_empty">Aucune lumière, prise ou scène à afficher : ajoute-les dans HA_ENTITIES, dans le fichier .env de l\'ordinateur</string>
     <string name="widget_away">Je m\'absente</string>
     <string name="widget_away_desc">Un geste pour partir : micro coupé, Focus en pause, fenêtres gardées, puis tout est remis</string>
     <string name="away_leave">Je m\'absente</string>

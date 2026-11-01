@@ -43,6 +43,7 @@ import { agentsAvailable } from "./agents-sources.ts";
 import { githubAvailable } from "./github.ts";
 import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
+import { haConfigured } from "./ha.ts";
 import { jiraConfigured } from "./jira.ts";
 import { appPluginOff, pluginOn, pluginsOff } from "./plugins.ts";
 import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
@@ -239,6 +240,7 @@ export async function homeFeatures() {
   const agents = agentsAvailable() && (await pluginOn("claude"));
   // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
   const jira = jiraConfigured && (await pluginOn("jira"));
+  // `ha` : widget Home Assistant (HA_URL, HA_TOKEN et HA_ENTITIES dans .env).
   return {
     agenda: true,
     linked: await hasCalendar(),
@@ -248,6 +250,7 @@ export async function homeFeatures() {
     gitlab: canControl && (await gitlabAvailable()),
     github: canControl && (await githubAvailable()),
     jira,
+    ha: haConfigured,
     off: await pluginsOff(),
   };
 }

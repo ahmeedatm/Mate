@@ -566,6 +566,20 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "Home Assistant : entités",
+      run: async () => {
+        // Lecture seule : jamais de bascule, ce sont les vraies lampes de la maison.
+        const features = await call("GET", "/deck/features");
+        const configured = features.status === 200 ? features.json.ha : undefined;
+        const entities = await call("GET", "/ha/entities");
+        if (configured === false || (configured === undefined && entities.status === 501)) {
+          return expectStatus(entities, 501, "/ha/entities sans Home Assistant configuré");
+        }
+        expectStatus(entities, 200, "/ha/entities");
+        expect(Array.isArray(entities.json.entities), "forme de /ha/entities inattendue");
+      },
+    },
+    {
       name: "agenda personnel",
       run: async () => {
         const startMs = Date.now() + 5 * 60_000;
