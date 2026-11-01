@@ -689,6 +689,17 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "actualités : flux réglé",
+      run: async () => {
+        // Lecture seule : le flux réglé par l'utilisateur n'est jamais changé. Sans flux, la liste est vide.
+        const res = await call("GET", "/news");
+        if (res.status === 502) return "flux réglé mais injoignable (502)";
+        expectStatus(res, 200, "GET /news");
+        expect(Array.isArray(res.json.items) && res.json.items.length <= 5, "liste d'actualités mal formée");
+        return res.json.feed ? `${res.json.items.length} titre(s)` : "aucun flux réglé";
+      },
+    },
+    {
       name: "Jira : tickets",
       run: async () => {
         // Lecture seule : jamais de transition, ce sont les vrais tickets de l'utilisateur.

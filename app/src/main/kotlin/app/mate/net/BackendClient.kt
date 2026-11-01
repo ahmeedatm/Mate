@@ -45,6 +45,7 @@ class BackendClient(
     val present = PresentApi(http)
     val notifications = NotificationsApi(http)
     val away = AwayApi(http)
+    val news = NewsApi(http)
 
     /** Client des widgets de forge : MR GitLab ou PR GitHub, mêmes réponses. */
     fun forge(forge: Forge): ForgeApi = if (forge == Forge.GITHUB) github else gitlab
