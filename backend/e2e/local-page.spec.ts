@@ -317,6 +317,32 @@ test.describe("page locale GET /", () => {
     void tablet.catch(() => {});
   });
 
+  test("le bouton « Faire sonner » lance la sonnerie de la tablette", async ({ page, server }) => {
+    const rings: boolean[] = [];
+    const settings = { theme: "CONSOLE", brightness: 0.6, volume: 0.4, nightDim: true, focusDnd: true };
+    const state = { mode: "home", app: "0.2.12", model: "Tab 4.2", battery: null, settings, update: null };
+    let running = true;
+    const tablet = (async () => {
+      while (running) {
+        const { json } = await server.call("POST", "/tablet/poll", { state });
+        for (const { id, command } of json.commands ?? []) {
+          if (command.type === "ring") rings.push(command.on);
+          await server.call("POST", "/tablet/result", { id, ok: true, state });
+        }
+      }
+    })();
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Faire sonner" }).click();
+    await expect(page.locator("#tabletmsg")).toHaveText("La tablette sonne : touche son écran pour l'arrêter.");
+    // Le bouton reste « Faire sonner » : la tablette s'arrête sous un toucher, la page ne le sait pas.
+    await expect(page.getByRole("button", { name: "Faire sonner" })).toBeEnabled();
+    expect(rings).toEqual([true]);
+
+    running = false;
+    void tablet.catch(() => {});
+  });
+
   test("?section=agenda met la carte Agenda en avant", async ({ page }) => {
     await page.goto("/?section=agenda");
     await expect(page.locator("#agenda")).toHaveClass(/focus/);

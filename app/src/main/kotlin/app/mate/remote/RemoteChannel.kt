@@ -13,6 +13,7 @@ import app.mate.Computers
 import app.mate.MainActivity
 import app.mate.Prefs
 import app.mate.R
+import app.mate.audio.Ringer
 import app.mate.audio.Speaker
 import app.mate.device.Screen
 import app.mate.focus.FocusTimer
@@ -158,6 +159,7 @@ class RemoteChannel(private val activity: MainActivity) {
             null
         }
         "screenshot" -> screenshot()
+        "ring" -> (if (command.getBoolean("on")) Ringer.start(activity) else Ringer.stop()).let { null }
         "settings" -> {
             if (command.has("volume")) {
                 val audio = activity.getSystemService(AudioManager::class.java)

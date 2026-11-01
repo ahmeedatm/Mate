@@ -203,6 +203,14 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "faire sonner la tablette (ordre ring)",
+      run: async () => {
+        // Corps invalide refusé avant tout envoi : sans `on`, la sonnerie ne part pas (la vraie tablette ne sonne pas pendant le contrôle).
+        expectStatus(await call("POST", "/tablet/command", { type: "ring" }), 400, "ordre ring sans on");
+        return "ordre ring sans `on` refusé";
+      },
+    },
+    {
       name: "ordinateur verrouillé (écran bloquant de la tablette)",
       run: async () => {
         // L'ordre lock n'est poussé que par la veille du verrouillage (src/screen-lock.ts) : refusé de l'extérieur.

@@ -19,6 +19,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import app.mate.agents.AgentAlerts
+import app.mate.audio.Ringer
 import app.mate.audio.Speaker
 import app.mate.audio.VolumeKeys
 import app.mate.device.Accessibility
@@ -527,7 +528,10 @@ class MainActivity : AppCompatActivity() {
         // Activité recréée (thème, mise à jour) pendant le cadre : sa luminosité réduite ne reste pas à l'écran suivant.
         if (::frame.isInitialized && frame.isShowing) Screen.frameCharging = null
         documentPanel.close()
-        if (isFinishing) NoisePlayer.stop()
+        if (isFinishing) {
+            NoisePlayer.stop()
+            Ringer.stop()
+        }
         voice.release()
         wake.release()
         lockScreen.dismiss()
@@ -553,7 +557,11 @@ class MainActivity : AppCompatActivity() {
             Screen.touched(this)
             lastTouch = SystemClock.elapsedRealtime()
             wakeRail()
-            if (frame.isShowing) {
+            if (Ringer.isRinging) {
+                // Retrouvée : le toucher arrête la sonnerie, il ne clique pas ce qu'il y a dessous.
+                Ringer.stop()
+                swallowTouch = true
+            } else if (frame.isShowing) {
                 closeFrame()
                 swallowTouch = true
             }

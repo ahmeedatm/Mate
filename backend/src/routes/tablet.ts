@@ -66,6 +66,7 @@ export default async function tabletRoutes(app: FastifyInstance) {
     breakMinutes?: number;
     kind?: (typeof NOISES)[number];
     volume?: number;
+    on?: boolean;
   };
 
   app.post<{ Body: CommandBody }>(
@@ -77,7 +78,7 @@ export default async function tabletRoutes(app: FastifyInstance) {
           required: ["type"],
           additionalProperties: false,
           properties: {
-            type: { enum: ["mode", "message", "document", "focus", "noise", "screenshot"] },
+            type: { enum: ["mode", "message", "document", "focus", "noise", "screenshot", "ring"] },
             mode: { enum: MODES },
             text: { type: "string", minLength: 1, maxLength: 1000 },
             speak: { type: "boolean" },
@@ -88,6 +89,7 @@ export default async function tabletRoutes(app: FastifyInstance) {
             breakMinutes: { type: "integer", minimum: 1, maximum: 60 },
             kind: { enum: NOISES },
             volume: { type: "number", minimum: 0, maximum: 1 },
+            on: { type: "boolean" },
           },
         },
       },
@@ -122,6 +124,10 @@ export default async function tabletRoutes(app: FastifyInstance) {
           break;
         case "screenshot":
           command = { type: "screenshot" };
+          break;
+        case "ring":
+          if (b.on === undefined) return missing("on");
+          command = { type: "ring", on: b.on };
           break;
         case "call":
         case "agent":
