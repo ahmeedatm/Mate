@@ -247,7 +247,7 @@ class LockScreen(private val activity: MainActivity) {
     private fun wrap(top: Int) =
         LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { topMargin = activity.dp(top) }
 
-    /** Code technicien (celui de la carte Kiosque) : lève les deux verrous. */
+    /** Code technicien (celui de la carte Kiosque) : lève les deux verrous. Mêmes essais limités que le code du verrou. */
     private fun askTechCode() {
         val input = (activity.layoutInflater.inflate(R.layout.item_input, null, false) as EditText).apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
@@ -261,11 +261,19 @@ class LockScreen(private val activity: MainActivity) {
             .create()
         ask.showForTyping(input)
         ask.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val wait = attempts.waitLeft(SystemClock.elapsedRealtime())
+            if (wait > 0) {
+                input.setText("")
+                input.error = activity.getString(R.string.lock_wait, ((wait + 999) / 1000).toInt())
+                return@setOnClickListener
+            }
             if (input.text.toString() == BuildConfig.TECH_CODE) {
+                attempts.reset()
                 ask.dismiss()
                 Prefs.setTabletLocked(activity, false)
                 setComputerLocked(false)
             } else {
+                attempts.fail(SystemClock.elapsedRealtime())
                 input.setText("")
                 input.error = activity.getString(R.string.tech_code_wrong)
             }
