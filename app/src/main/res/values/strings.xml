@@ -1405,6 +1405,13 @@
     <string name="widget_news_none">Le flux ne contient encore aucun article</string>
     <string name="widget_news_loading">Lecture du flux en cours, réessaie dans un instant</string>
     <string name="widget_news_hint">Adresse du flux (RSS ou Atom)</string>
+    <string name="widget_mail">Mails</string>
+    <string name="widget_mail_desc">Le nombre de mails non lus de la boîte de réception ; un toucher ouvre la boîte sur l\'ordinateur</string>
+    <string name="widget_mail_empty">Connecte un compte Microsoft ou Google sur la page de l\'ordinateur</string>
+    <plurals name="widget_mail_unread">
+        <item quantity="one">mail non lu</item>
+        <item quantity="other">mails non lus</item>
+    </plurals>
     <string name="widget_metrics">Valeurs</string>
     <string name="widget_metrics_desc">Des chiffres calculés par l\'ordinateur (dossier, build, compteur), remis à jour chaque minute</string>
     <string name="widget_metrics_empty">Écris tes commandes dans metrics.json, dans le dossier Mate de l\'ordinateur</string>

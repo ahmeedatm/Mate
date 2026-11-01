@@ -82,6 +82,7 @@ enum class WidgetType(
     ACTIONS("actions", R.string.widget_actions, R.string.widget_actions_desc, R.drawable.ic_tile_deployed_code, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
     WEB("web", R.string.widget_web, R.string.widget_web_desc, R.drawable.ic_dashboard, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.M, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), false),
     NEWS("news", R.string.widget_news, R.string.widget_news_desc, R.drawable.ic_tile_description, listOf(WidgetSize.L, WidgetSize.XL), true),
+    MAIL("mail", R.string.widget_mail, R.string.widget_mail_desc, R.drawable.ic_mail, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L), true),
     METRICS("metrics", R.string.widget_metrics, R.string.widget_metrics_desc, R.drawable.ic_tile_bar_chart, listOf(WidgetSize.L, WidgetSize.XL), true);
 
     /** Taille de l'exemplaire agrandi (widget maintenu, [WidgetZoom]) : la plus grande, la plus large à surface égale. */
