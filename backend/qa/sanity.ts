@@ -642,6 +642,13 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "Alerte maison : ordre réservé à l'ordinateur",
+      run: async () => {
+        // Lecture seule : l'ordre est refusé avant d'atteindre la tablette, rien ne s'affiche.
+        expectStatus(await call("POST", "/tablet/command", { type: "alert", text: stamp }), 400, "ordre alert refusé par l'API");
+      },
+    },
+    {
       name: "agenda personnel",
       run: async () => {
         const startMs = Date.now() + 5 * 60_000;

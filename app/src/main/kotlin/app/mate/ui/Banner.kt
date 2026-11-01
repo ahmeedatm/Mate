@@ -24,6 +24,9 @@ sealed class BannerIcon {
     companion object {
         /** Message de l'ordinateur ou de l'appli, sans icône plus précise. */
         val MESSAGE = Symbol(R.drawable.ic_info, R.attr.c_hue_blue)
+
+        /** Alerte de la maison (porte ouverte, fuite, lessive finie). */
+        val HOME_ALERT = Symbol(R.drawable.ic_home, R.attr.c_hue_red)
     }
 }
 
@@ -36,6 +39,14 @@ data class BannerContent(val title: String, val body: String? = null, val label:
  * et « à l'instant » pour une notification, l'objet, et le corps en dessous (masqué si vide, coupé s'il dépasse).
  */
 class Banner(private val view: View, private val scope: LifecycleCoroutineScope) {
+
+    companion object {
+        /** Durée pour une alerte qui reste affichée jusqu'à un toucher. */
+        const val UNTIL_TAPPED = 0
+
+        /** Délai avant que le bandeau reparte ; null : il ne repart pas tout seul. */
+        fun hideDelayMs(seconds: Int): Long? = if (seconds == UNTIL_TAPPED) null else seconds * 1_000L
+    }
 
     private val image: ImageView = view.findViewById(R.id.banner_icon)
     private val initial: TextView = view.findViewById(R.id.banner_initial)
@@ -70,7 +81,7 @@ class Banner(private val view: View, private val scope: LifecycleCoroutineScope)
         }
     }
 
-    /** `onTap` : action en plus de fermer. */
+    /** `seconds` : durée d'affichage, ou [UNTIL_TAPPED] pour rester jusqu'à un toucher. `onTap` : action en plus de fermer. */
     fun show(content: BannerContent, seconds: Int, onTap: (() -> Unit)? = null) {
         this.onTap = onTap
         objet.text = content.title
@@ -83,7 +94,7 @@ class Banner(private val view: View, private val scope: LifecycleCoroutineScope)
         view.visibility = View.VISIBLE
         if (arriving) Look.slideBanner(view, show = true)
         view.removeCallbacks(hide)
-        view.postDelayed(hide, seconds * 1_000L)
+        hideDelayMs(seconds)?.let { view.postDelayed(hide, it) }
     }
 
     /** Fait disparaître le bandeau tout de suite, sans animation : un écran modal (onboarding) s'ouvre par-dessus. */
