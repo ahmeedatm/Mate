@@ -19,7 +19,7 @@
         android:fontFamily="?attr/c_font_label"
         android:text="@string/widget_focus"
         android:textAllCaps="?attr/c_label_caps"
-        android:textColor="?attr/c_text_dim"
+        android:textColor="?attr/c_label"
         android:textSize="?attr/c_title_size" />
 
     <FrameLayout

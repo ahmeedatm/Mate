@@ -16,7 +16,7 @@ export const MODES = ["home", "deck", "docs", "focus", "camera", "tasks", "setti
 export const NOISES = ["storm", "forest", "japan", "sea", "lofi", "off"] as const;
 export const FOCUS_ACTIONS = ["start", "pause", "reset", "skip"] as const;
 /** Thèmes de la tablette (AppTheme dans ui/Themes.kt), dans son ordre : Console (par défaut, nuit), Console jour, Contraste élevé, Hush. */
-export const THEMES = ["CONSOLE", "CONSOLE_JOUR", "CONTRASTE", "HUSH"] as const;
+export const THEMES = ["CONSOLE", "CONSOLE_JOUR", "CONTRASTE", "HUSH", "SPIDERMAN"] as const;
 
 /** Réglages de la tablette changés depuis la page de l'ordinateur ; un champ absent reste tel quel. */
 export type TabletSettings = {

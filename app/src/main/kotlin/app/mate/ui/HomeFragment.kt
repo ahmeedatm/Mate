@@ -480,6 +480,10 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
      * Balayage vertical : entrée voisine de la barre, profil puis outils (Focus, Ordi, Caméra), comme en la touchant. Sans
      * barre (ou profil caché derrière « Plus ») : profil voisin dans l'ordre des profils.
      */
+    override fun onCenterFree(free: Boolean) {
+        main?.setHomeCenterFree(free)
+    }
+
     override fun onPageSwipe(delta: Int) {
         val root = view ?: return
         if (!canPage(delta)) return SwipeFollow.release(root)

@@ -79,6 +79,7 @@ import app.mate.ui.TabletAlerts
 import app.mate.ui.TourModel
 import app.mate.ui.TourOverlay
 import app.mate.ui.Typing
+import app.mate.ui.Wallpaper
 import app.mate.ui.WelcomeView
 import app.mate.ui.dp
 import app.mate.ui.errorText
@@ -287,6 +288,7 @@ class MainActivity : AppCompatActivity() {
         }
         plugins = findViewById(R.id.plugins)
         // Fond de Hush : en pause sous Bienvenue et Plugins, qui le cachent.
+        wallpaper = findViewById(R.id.wallpaper)
         findViewById<HushBackdrop>(R.id.backdrop).coveredBy = { welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE }
         plugins.attach(
             this,
@@ -983,6 +985,20 @@ class MainActivity : AppCompatActivity() {
     /** Une entrée de la barre attend dans ce sens (l'écran suit alors le doigt, sinon il résiste). */
     fun railCanStep(delta: Int): Boolean = nav.canStep(delta)
 
+    private lateinit var wallpaper: Wallpaper
+    private var homeCenterFree = false
+
+    /** Accueil : la grille dit si sa colonne vide est libre (WidgetGrid). */
+    fun setHomeCenterFree(free: Boolean) {
+        homeCenterFree = free
+        showWallpaper()
+    }
+
+    /** Logo net seulement sur l'Accueil au milieu libre ; ailleurs, en filigrane. */
+    private fun showWallpaper() {
+        if (::wallpaper.isInitialized) wallpaper.centerFree = current == Mode.HOME && homeCenterFree
+    }
+
     private fun show(mode: Mode) {
         if (::frame.isInitialized) closeFrame()
         // Le champ d'un écran masqué garderait sinon le clavier (et la saisie) par-dessus le nouvel écran.
@@ -1007,6 +1023,7 @@ class MainActivity : AppCompatActivity() {
         tx.commit()
 
         nav.select(mode, changed)
+        showWallpaper()
         renderEditButton()
         if (::topBar.isInitialized) topBar.notificationsChanged()
         // L'Accueil a son propre balayage (WidgetGrid) ; Réglages n'est pas dans la barre.

@@ -6,6 +6,13 @@
          4,5:1 sur le fond, la tuile et le relief (ConsolePaletteTest). Palette.Console et Palette.ConsoleJour sont
          aussi les parents de Theme.Companion et Theme.CompanionLight (dialogues et champs d'AppCompat). -->
     <style name="Palette.Console" parent="Theme.AppCompat.NoActionBar">
+        <item name="c_talk">?attr/c_text</item>
+        <item name="c_talk_live">?attr/c_accent</item>
+        <item name="c_wallpaper">@null</item>
+        <item name="c_spine">0dp</item>
+        <item name="c_label">?attr/c_text_dim</item>
+        <item name="c_slider_thumb">?attr/c_accent</item>
+        <item name="c_slider_track">?attr/c_text_faint</item>
         <item name="c_card_bg">@drawable/console_tile_bg</item>
         <item name="c_tile_bg">@drawable/console_tile_bg</item>
         <item name="c_home_card_bg">@drawable/console_tile_bg</item>
@@ -80,6 +87,13 @@
     </style>
 
     <style name="Palette.ConsoleJour" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="c_talk">?attr/c_text</item>
+        <item name="c_talk_live">?attr/c_accent</item>
+        <item name="c_wallpaper">@null</item>
+        <item name="c_spine">0dp</item>
+        <item name="c_label">?attr/c_text_dim</item>
+        <item name="c_slider_thumb">?attr/c_accent</item>
+        <item name="c_slider_track">?attr/c_text_faint</item>
         <item name="c_card_bg">@drawable/console_tile_bg</item>
         <item name="c_tile_bg">@drawable/console_tile_bg</item>
         <item name="c_home_card_bg">@drawable/console_tile_bg</item>
@@ -158,6 +172,13 @@
          secondaires et tertiaires aussi ; signaux des agents et traits qui portent un sens au moins 4,5:1 sur les quatre
          fonds (ContrastPaletteTest). Tuiles à filet de 2 dp (contraste_tile_bg), grandes touches (c_big_keys). -->
     <style name="Palette.Contraste" parent="">
+        <item name="c_talk">?attr/c_text</item>
+        <item name="c_talk_live">?attr/c_accent</item>
+        <item name="c_wallpaper">@null</item>
+        <item name="c_spine">0dp</item>
+        <item name="c_label">?attr/c_text_dim</item>
+        <item name="c_slider_thumb">?attr/c_accent</item>
+        <item name="c_slider_track">?attr/c_text_faint</item>
         <item name="c_card_bg">@drawable/contraste_tile_bg</item>
         <item name="c_tile_bg">@drawable/contraste_tile_bg</item>
         <item name="c_home_card_bg">@drawable/contraste_tile_bg</item>
@@ -240,6 +261,13 @@
          sur le pire point du fond, ombre légère comprise (Widget.Hush.Text, HushPaletteTest). Police Chakra Petch, étiquettes en Share Tech Mono
          majuscules. c_card_bg garde le verre (c_surface translucide) : fenêtres, incrustations et cartes de Réglages. Posée sur Theme.Companion (base sombre), comme Contraste sur la sienne. -->
     <style name="Palette.Hush" parent="">
+        <item name="c_talk">?attr/c_text</item>
+        <item name="c_talk_live">?attr/c_accent</item>
+        <item name="c_wallpaper">@null</item>
+        <item name="c_spine">0dp</item>
+        <item name="c_label">?attr/c_text_dim</item>
+        <item name="c_slider_thumb">?attr/c_accent</item>
+        <item name="c_slider_track">?attr/c_text_faint</item>
         <item name="c_card_bg">@drawable/console_tile_bg</item>
         <item name="c_tile_bg">@drawable/hush_tile_bg</item>
         <item name="c_home_card_bg">@drawable/hush_tile_bg</item>
@@ -309,6 +337,95 @@
         <item name="c_mx_led_low">#FFB8F34A</item>
         <item name="c_mx_led_mid">#FFFFD45B</item>
         <item name="c_mx_led_high">#FFFF7A70</item>
+        <item name="c_mx_engrave">?attr/c_text_faint</item>
+        <item name="c_mx_shadow">#66000000</item>
+        <item name="c_mx_highlight">#14FFFFFF</item>
+        <item name="c_mx_key_top">?attr/c_stroke</item>
+        <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
+    </style>
+
+    <!-- Spider-Man (direction A3, 2026-11-01) : le logo araignée de Spider-Verse en fond fixe (c_wallpaper, voile cuit
+         dans l'image : noir 85 % sur les bords, 70 % au bord de la colonne vide, rien sur l'araignée), le contenu rangé
+         autour (c_spine). Comme Hush : ni fond ni bordure de widget, ombre sous les textes. Couleurs du logo : magenta
+         en accent, cyan pour les libellés de zone ; rouge et violet éclaircis pour tenir 4,5:1 sur les pattes du logo
+         (SpiderManPaletteTest, mesuré sur l'image). -->
+    <style name="Palette.SpiderMan" parent="">
+        <item name="c_talk">?attr/c_accent</item>
+        <item name="c_talk_live">?attr/c_text</item>
+        <item name="c_wallpaper">@drawable/spiderman_wall</item>
+        <item name="c_spine">260dp</item>
+        <item name="c_label">#FF19E3FF</item>
+        <item name="c_slider_thumb">?attr/c_text</item>
+        <item name="c_slider_track">#99FFFFFF</item>
+        <item name="c_card_bg">@drawable/console_tile_bg</item>
+        <item name="c_tile_bg">@drawable/hush_tile_bg</item>
+        <item name="c_home_card_bg">@drawable/hush_tile_bg</item>
+        <item name="c_key_plate">@drawable/hush_key_plate</item>
+        <item name="c_card_pad">24dp</item>
+        <item name="c_font_medium">@font/chakra_petch_500</item>
+        <item name="c_font_light">@font/chakra_petch_400</item>
+        <item name="c_font_regular">@font/chakra_petch_400</item>
+        <item name="c_font_title">@font/chakra_petch_500</item>
+        <item name="c_font_display">@font/chakra_petch_700</item>
+        <item name="android:fontFamily">@font/chakra_petch_400</item>
+        <item name="c_font_label">@font/chakra_petch_500</item>
+        <item name="c_label_caps">true</item>
+        <item name="c_text_shadow">#CC000000</item>
+        <item name="android:textViewStyle">@style/Widget.Hush.Text</item>
+        <item name="c_backdrop">false</item>
+        <item name="c_primary">?attr/c_accent</item>
+        <item name="c_on_primary">?attr/c_on_accent</item>
+        <item name="c_primary_pressed">?attr/c_text</item>
+        <item name="c_bg">#FF000000</item>
+        <item name="c_rail">#00000000</item>
+        <item name="c_surface">#CC160A18</item>
+        <item name="c_surface_raised">#FF1E1222</item>
+        <item name="c_surface_pressed">#FF2A1830</item>
+        <item name="c_stroke">#FF4A3550</item>
+        <item name="c_accent">#FFFF2BD6</item>
+        <item name="c_accent_soft">#FF3A0A30</item>
+        <item name="c_on_accent">#FF1A0014</item>
+        <item name="c_text">#FFF7F2FA</item>
+        <item name="c_frame_bg">#FF000000</item>
+        <item name="c_frame_text">#FFFFFFFF</item>
+        <item name="c_frame_shadow">#99000000</item>
+        <item name="c_text_dim">#FFCFC6D8</item>
+        <item name="c_text_faint">#FFB3A9BF</item>
+        <item name="c_graphic">#FF9A8CA6</item>
+        <item name="c_ok">#FF7CFF3B</item>
+        <item name="c_ok_soft">#FF13300A</item>
+        <item name="c_ko">#FFFF5A5A</item>
+        <item name="c_ko_soft">#33FF5A5A</item>
+        <item name="c_on_ko">#FF2A0707</item>
+        <item name="c_warn">#FFFFE14D</item>
+        <item name="c_agent_wait">#FFF87171</item>
+        <item name="c_agent_done">#FF5DD39E</item>
+        <item name="c_agent_limit">#FF6CB4FF</item>
+        <item name="c_agent_work">#FFFB923C</item>
+        <item name="c_agent_monitor">#FFFACC15</item>
+        <item name="c_paper">#FFFFFFFF</item>
+        <item name="c_scrim">#B3000000</item>
+        <item name="c_hue_orange">#FFFF9A3D</item>
+        <item name="c_hue_green">#FF7CFF3B</item>
+        <item name="c_hue_cyan">#FF19E3FF</item>
+        <item name="c_hue_violet">#FFA985FF</item>
+        <item name="c_hue_red">#FFFF5A5A</item>
+        <item name="c_hue_pink">#FFFF2BD6</item>
+        <item name="c_hue_yellow">#FFFFE14D</item>
+        <item name="c_hue_blue">#FF5C9DFF</item>
+        <item name="c_mx_plate">#00000000</item>
+        <item name="c_mx_bare">true</item>
+        <item name="c_mx_lcd_bg">?attr/c_surface</item>
+        <item name="c_mx_lcd_text">#FFFF2BD6</item>
+        <item name="c_mx_text">?attr/c_text</item>
+        <item name="c_mx_slot">?attr/c_graphic</item>
+        <item name="c_mx_cap_top">?attr/c_text</item>
+        <item name="c_mx_cap_bottom">?attr/c_text_faint</item>
+        <item name="c_mx_cap_line">?attr/c_bg</item>
+        <item name="c_mx_led_off">#2EF7F2FA</item>
+        <item name="c_mx_led_low">#FF7CFF3B</item>
+        <item name="c_mx_led_mid">#FFFFE14D</item>
+        <item name="c_mx_led_high">#FFFF5A5A</item>
         <item name="c_mx_engrave">?attr/c_text_faint</item>
         <item name="c_mx_shadow">#66000000</item>
         <item name="c_mx_highlight">#14FFFFFF</item>

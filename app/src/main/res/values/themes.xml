@@ -165,7 +165,7 @@
         <item name="android:gravity">center_vertical</item>
         <item name="android:drawablePadding">12dp</item>
         <item name="android:fontFamily">?attr/c_font_label</item>
-        <item name="android:textColor">?attr/c_text_dim</item>
+        <item name="android:textColor">?attr/c_label</item>
         <item name="android:textSize">13sp</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:letterSpacing">0.1</item>
@@ -223,7 +223,7 @@
     <style name="Slider">
         <item name="android:layout_height">48dp</item>
         <item name="android:progressTint">?attr/c_accent</item>
-        <item name="android:thumbTint">?attr/c_accent</item>
-        <item name="android:progressBackgroundTint">?attr/c_text_faint</item>
+        <item name="android:thumbTint">?attr/c_slider_thumb</item>
+        <item name="android:progressBackgroundTint">?attr/c_slider_track</item>
     </style>
 </resources>

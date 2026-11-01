@@ -426,8 +426,8 @@ class VolumeElement(host: TopBarHost) : TopElement(TopItem.VOLUME, host) {
     private val bar = SeekBar(context).apply {
         max = 100
         progressTintList = ColorStateList.valueOf(themeColor(context, R.attr.c_accent))
-        thumbTintList = ColorStateList.valueOf(themeColor(context, R.attr.c_accent))
-        progressBackgroundTintList = ColorStateList.valueOf(themeColor(context, R.attr.c_text_faint))
+        thumbTintList = ColorStateList.valueOf(themeColor(context, R.attr.c_slider_thumb))
+        progressBackgroundTintList = ColorStateList.valueOf(themeColor(context, R.attr.c_slider_track))
         contentDescription = context.getString(R.string.top_volume)
         layoutParams = LinearLayout.LayoutParams(context.dp(BAR_DP), context.dp(36))
     }
