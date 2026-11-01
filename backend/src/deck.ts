@@ -95,6 +95,8 @@ type TileConfig = {
   symbol?: string;
   glyph?: string;
   color?: string;
+  /** Cases de large dans la grille de la tablette : 2 pour une touche large, absent pour une touche simple. */
+  span?: 2;
   when?: "call" | "idle" | "streaming" | "share" | "lobby";
   lit?: "muted" | "deafened" | "camera";
   state?: "mic-muted" | "dnd" | "running";
@@ -306,6 +308,7 @@ export async function loadDeck(): Promise<DeckPage[]> {
         ...(key.symbol ? { symbol: key.symbol } : {}),
         glyph: key.glyph,
         color: key.color,
+        ...(key.span === 2 ? { span: 2 as const } : {}),
         action,
         ...(hold ? { hold } : {}),
       };

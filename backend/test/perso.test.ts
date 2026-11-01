@@ -174,6 +174,21 @@ describe("touches perso : routes", () => {
     await server.call("DELETE", "/deck/keys/12");
   });
 
+  it("une touche large (span 2) garde sa largeur, la touche simple n'en porte pas", async () => {
+    const large = { label: "Large", span: 2, steps: [{ type: "text", text: "a" }] };
+    assert.equal((await put(13, large)).status, 200);
+    assert.equal((await server.call("GET", "/deck/keys/13")).json.key.span, 2);
+    const tiles = (await server.call("GET", "/deck")).json.pages.at(-1).tiles;
+    assert.equal(tiles[13].span, 2);
+    await put(13, { label: "Simple", steps: [{ type: "text", text: "a" }] });
+    assert.equal("span" in (await server.call("GET", "/deck")).json.pages.at(-1).tiles[13], false);
+    await server.call("DELETE", "/deck/keys/13");
+  });
+
+  it("une largeur autre que 1 ou 2 est refusée", async () => {
+    assert.equal((await put(13, { label: "Trop", span: 3, steps: [{ type: "text", text: "a" }] })).status, 400);
+  });
+
   it("une touche d'une seule étape garde son type", async () => {
     await put(1, { label: "Capture", steps: [{ type: "system", command: "screenshot-clipboard" }] });
     const perso = (await server.call("GET", "/deck")).json.pages.at(-1);
