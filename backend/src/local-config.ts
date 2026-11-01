@@ -1,3 +1,4 @@
+import { BACKUP_CSS, BACKUP_HTML, BACKUP_JS } from "./local-config-backup.ts";
 import { DECK_CSS, DECK_HTML, DECK_JS } from "./local-config-deck.ts";
 import { MENU_CSS, MENU_HTML, MENU_JS } from "./local-config-menu.ts";
 import { PROFILES_CSS, PROFILES_HTML, PROFILES_JS } from "./local-config-profiles.ts";
@@ -88,6 +89,6 @@ const COMMON_JS = `
   }
 `;
 
-export const CONFIG_CSS = COMMON_CSS + PROFILES_CSS + DECK_CSS + MENU_CSS;
-export const CONFIG_HTML = PROFILES_HTML + DECK_HTML + MENU_HTML;
-export const CONFIG_JS = COMMON_JS + PROFILES_JS + DECK_JS + MENU_JS;
+export const CONFIG_CSS = COMMON_CSS + PROFILES_CSS + DECK_CSS + MENU_CSS + BACKUP_CSS;
+export const CONFIG_HTML = PROFILES_HTML + DECK_HTML + MENU_HTML + BACKUP_HTML;
+export const CONFIG_JS = COMMON_JS + PROFILES_JS + DECK_JS + MENU_JS + BACKUP_JS;

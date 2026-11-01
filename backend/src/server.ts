@@ -39,6 +39,7 @@ import gitlabRoutes from "./routes/gitlab.ts";
 import haRoutes from "./routes/ha.ts";
 import jiraRoutes from "./routes/jira.ts";
 import localRoutes from "./routes/local.ts";
+import localBackupRoutes from "./routes/local-backup.ts";
 import localConfigRoutes from "./routes/local-config.ts";
 import localProfileRoutes from "./routes/local-profiles.ts";
 import mcpRoutes from "./routes/mcp.ts";
@@ -191,6 +192,7 @@ app.register(pairingRoutes, { authorized, fingerprint: tls?.fingerprint ?? null 
 app.register(localRoutes);
 app.register(localProfileRoutes);
 app.register(localConfigRoutes);
+app.register(localBackupRoutes);
 app.register(mcpRoutes);
 app.register(portableRoutes);
 app.register(deckRoutes);
