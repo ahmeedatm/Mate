@@ -48,4 +48,17 @@ describe("sauvegarde de la disposition de la tablette", () => {
     assert.deepEqual(order, { type: "layout", action: "set", ...backup.parts.layout });
     assert.deepEqual(done.json, { imported: ["layout"], skipped: {}, notes: {} });
   });
+
+  it("n'envoie à la tablette que les champs connus d'un widget", async () => {
+    const widget = { t: "clock", s: "L", p: 0, c: 0, r: 0, cfg: { a: 1 } };
+    const backup = {
+      format: "mate-config-1",
+      parts: {
+        layout: { layout: { names: ["Accueil"], widgets: [{ ...widget, extra: "x" }] }, topBar: [], rail: { labels: true, tools: [] } },
+      },
+    };
+    const post = server.call("POST", "/local/config/backup", { backup, parts: ["layout"] }, false);
+    const { order } = await tabletAnswers(post, () => ({ ok: true, data: DATA }));
+    assert.deepEqual(order.layout.widgets, [widget]);
+  });
 });

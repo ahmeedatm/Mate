@@ -209,17 +209,21 @@ export async function deckLinks() {
 }
 
 /** `url` tapée sur la tablette : « netflix.com » devient https://netflix.com ; nom par défaut tiré de l'adresse. */
-export async function addDeckLink(url: string, label?: string) {
+export function normalizeLink(url: string, label?: string): DeckLink {
   const parsed = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(url.trim()) ? url.trim() : "https://" + url.trim());
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("Adresse web attendue (https://…)");
   const href = parsed.pathname === "/" && !parsed.search && !parsed.hash ? parsed.origin : parsed.href;
-  const name = label?.trim() || parsed.hostname.replace(/^www\./, "");
+  return { label: label?.trim() || parsed.hostname.replace(/^www\./, ""), url: href };
+}
+
+export async function addDeckLink(url: string, label?: string) {
+  const link = normalizeLink(url, label);
   const links = await loadLinks();
-  if (!links.some((l) => l.url === href)) {
-    links.push({ label: name, url: href });
+  if (!links.some((l) => l.url === link.url)) {
+    links.push(link);
     await saveLinks(links);
   }
-  return linkTileId(href);
+  return linkTileId(link.url);
 }
 
 export async function removeDeckLink(id: string) {
