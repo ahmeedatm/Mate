@@ -1374,6 +1374,7 @@
     <string name="widget_web">Page web</string>
     <string name="widget_web_desc">Un tableau de bord ou un graphique, rechargé tout seul</string>
     <string name="widget_web_empty">Touche pour choisir une page</string>
+    <string name="widget_web_settings">Régler la page web</string>
     <string name="widget_web_hint">Adresse de la page</string>
     <string name="widget_web_every_hint">Minutes entre deux rechargements</string>
     <string name="widget_web_invalid">Adresse refusée : une page http ou https, sans identifiant ni mot de passe</string>

@@ -88,8 +88,8 @@ enum class WidgetType(
     /** Sans fond de carte, posé à même l'écran. */
     val bare get() = this == HERO || this == DAY || this == DAYLINE
 
-    /** Maintenir le widget l'agrandit : pas ceux sans carte (héros, journée, ligne du jour), rien de plus à y voir. */
-    val zoomable get() = !bare
+    /** Maintenir le widget l'agrandit : pas ceux sans carte (héros, journée, ligne du jour), rien de plus à y voir, ni la page web (un seul WebView à la fois). */
+    val zoomable get() = !bare && this != WEB
 
     /**
      * Proposé dans le catalogue de l'ordinateur actif : Agents, Jira, Home Assistant, GitLab, Pipelines, GitHub et Actions seulement s'il les offre (Agents :

@@ -214,7 +214,7 @@ Les puces ci-dessous sont reprises mot pour mot de l'ancien `CLAUDE.md` (« Conv
 
 ### Tuile Page web
 
-`WidgetType.WEB` (`ui/home/WebWidget.kt`, logique pure dans `WebTile.kt`) : une page http(s) choisie dans les réglages de la tuile (toucher), rechargée toute seule (1 à 60 minutes, 5 par défaut). Affichage seulement : une couche transparente reçoit les touchers, le WebView ne prend pas les gestes de l'Accueil. WebView créé quand la page est à l'écran, détruit quand elle n'y est plus (un seul à la fois, tas de 128 Mo). Refusées : autre schéma que http/https, identifiant ou mot de passe dans l'adresse, adresse sans hôte (`WebTile.normalize`). Pas de dépendance à l'ordinateur (`computer = false`) : la page est chargée par la tablette. Tailles : L, XL, M, 3 × 2, 3 × 4, plein écran. Test : `WebTileTest`.
+`WidgetType.WEB` (`ui/home/WebWidget.kt`, logique pure dans `WebTile.kt`) : une page http(s) choisie dans les réglages de la tuile (toucher), rechargée toute seule (1 à 60 minutes, 5 par défaut). Affichage seulement : une couche transparente reçoit les touchers, le WebView ne prend pas les gestes de l'Accueil. WebView créé quand la page est à l'écran, détruit quand elle n'y est plus (un seul à la fois, tas de 128 Mo). Refusées : autre schéma que http/https, identifiant ou mot de passe dans l'adresse, adresse sans hôte (`WebTile.normalize`). Pas de dépendance à l'ordinateur (`computer = false`) : la page est chargée par la tablette. Rechargement par horodatage (`WebTile.dueForReload`), pas par compte d'appels. Pas d'agrandissement par appui long (un seul WebView à la fois). Tailles : L, XL, M, 3 × 2, 3 × 4, plein écran. Test : `WebTileTest`.
 
 ### Widgets GitHub et Actions
 

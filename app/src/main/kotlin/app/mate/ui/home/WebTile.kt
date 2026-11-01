@@ -30,3 +30,6 @@ object WebTile {
     /** Minutes entre deux rechargements, bornées ; null : valeur par défaut. */
     fun refreshMinutes(chosen: Int?) = (chosen ?: DEFAULT_REFRESH_MIN).coerceIn(MIN_REFRESH_MIN, MAX_REFRESH_MIN)
 }
+
+/** Le rechargement est dû quand l'écart avec le dernier chargement atteint le délai choisi (horodatage : `load()` est aussi appelé hors du battement d'une minute). */
+fun WebTile.dueForReload(lastLoadMs: Long, nowMs: Long, minutes: Int) = nowMs - lastLoadMs >= minutes * 60_000L

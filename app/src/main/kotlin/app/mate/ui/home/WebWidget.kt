@@ -2,6 +2,7 @@ package app.mate.ui.home
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.SystemClock
 import android.text.InputType
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -31,7 +32,7 @@ class WebWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     }
     private var web: WebView? = null
     private var active = false
-    private var minutesSinceLoad = 0
+    private var lastLoadMs = 0L
 
     override val view = LinearLayout(context).asCard(8).apply {
         orientation = LinearLayout.VERTICAL
@@ -45,7 +46,10 @@ class WebWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     init {
         // Couche au-dessus du WebView : il ne prend pas les gestes de l'Accueil (balayage, appui long).
         frame.addView(empty, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        frame.addView(View(context).apply { setOnClickListener { showSettings() } }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        frame.addView(View(context).apply {
+            contentDescription = context.getString(R.string.widget_web_settings)
+            setOnClickListener { showSettings() }
+        }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
     }
 
     override fun setActive(active: Boolean) {
@@ -56,9 +60,9 @@ class WebWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     /** Chaque minute : recharge quand le délai choisi est écoulé. */
     override suspend fun load() {
         if (web == null) return
-        minutesSinceLoad++
-        if (minutesSinceLoad >= WebTile.refreshMinutes(placed.config.optInt("every", -1).takeIf { it > 0 })) {
-            minutesSinceLoad = 0
+        val now = SystemClock.elapsedRealtime()
+        if (WebTile.dueForReload(lastLoadMs, now, WebTile.refreshMinutes(placed.config.optInt("every", -1).takeIf { it > 0 }))) {
+            lastLoadMs = now
             web?.reload()
         }
     }
@@ -85,7 +89,7 @@ class WebWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         }
         frame.addView(created, 0, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         web = created
-        minutesSinceLoad = 0
+        lastLoadMs = SystemClock.elapsedRealtime()
         created.loadUrl(address)
     }
 

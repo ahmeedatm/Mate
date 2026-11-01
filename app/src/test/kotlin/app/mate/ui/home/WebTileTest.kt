@@ -1,7 +1,9 @@
 package app.mate.ui.home
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WebTileTest {
@@ -15,6 +17,17 @@ class WebTileTest {
     fun `sans schema, https est ajoute et le schema est mis en minuscules`() {
         assertEquals("https://exemple.fr/tableau", WebTile.normalize("  exemple.fr/tableau "))
         assertEquals("http://192.168.1.20:3000/", WebTile.normalize("HTTP://192.168.1.20:3000/"))
+    }
+
+    @Test
+    fun `hote et port sans schema recoivent https`() {
+        assertEquals("https://hote:3000", WebTile.normalize("hote:3000"))
+    }
+
+    @Test
+    fun `le rechargement attend le delai choisi`() {
+        assertFalse(WebTile.dueForReload(0L, 4 * 60_000L, 5))
+        assertTrue(WebTile.dueForReload(0L, 5 * 60_000L, 5))
     }
 
     @Test
