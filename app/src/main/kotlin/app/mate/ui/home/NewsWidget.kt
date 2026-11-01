@@ -41,12 +41,8 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     private var news: News? = null
 
-    override fun onMinute() {
-        host.scope.launch { load() }
-    }
-
     override fun setActive(active: Boolean) {
-        if (active) onMinute()
+        if (active) host.scope.launch { load() }
     }
 
     override suspend fun load() {
@@ -59,11 +55,12 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun render(error: String?) {
         val current = news
         rows.removeAllViews()
-        val note = when {
-            error != null -> error
-            current?.feed == null -> context.getString(R.string.widget_news_empty)
-            current.items.isEmpty() -> context.getString(R.string.widget_news_none)
-            else -> null
+        title.text = current?.title ?: context.getString(R.string.widget_news)
+        val note = when (newsNote(current, error != null)) {
+            NewsNote.ERROR -> error
+            NewsNote.NO_FEED -> context.getString(R.string.widget_news_empty)
+            NewsNote.EMPTY -> context.getString(R.string.widget_news_none)
+            null -> null
         }
         status.text = note
         status.visibility = if (note == null) View.GONE else View.VISIBLE
@@ -76,10 +73,9 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         this.text = text
         textSize = if (placed.size == WidgetSize.M) 15f else 18f
         setTextColor(color(R.attr.c_text))
-        maxLines = 2
+        maxLines = if (placed.size == WidgetSize.XL) 2 else 1
         ellipsize = TextUtils.TruncateAt.END
         gravity = Gravity.CENTER_VERTICAL
-        minHeight = dp(48)
         setOnClickListener { open(index) }
     }
 
@@ -91,6 +87,8 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
 
     override fun showSettings() {
+        // Lecture pas encore faite : un champ vide effacerait le flux réglé.
+        if (news == null) return Toast.makeText(context, R.string.widget_news_loading, Toast.LENGTH_SHORT).show()
         val input = (LayoutInflater.from(context).inflate(R.layout.item_input, null) as EditText).apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             setHint(R.string.widget_news_hint)

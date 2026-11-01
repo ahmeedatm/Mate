@@ -30,4 +30,10 @@ class NewsApiTest {
         val items = (1..8).joinToString(",") { """{"title":"T$it","link":"https://exemple.fr/$it"}""" }
         assertEquals(5, NewsApi.parse("""{"feed":"https://exemple.fr/rss","title":null,"items":[$items]}""").titles.size)
     }
+
+    @Test
+    fun skipsAnItemWithoutTitle() {
+        val news = NewsApi.parse("""{"feed":"https://exemple.fr/rss","title":null,"items":[{"link":"https://exemple.fr/a"},{"title":"Bon","link":"https://exemple.fr/b"}]}""")
+        assertEquals(listOf("Bon"), news.titles)
+    }
 }

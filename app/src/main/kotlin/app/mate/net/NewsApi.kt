@@ -33,7 +33,9 @@ class NewsApi(private val http: Http) {
             return News(
                 root.optString("feed").takeIf { it.isNotEmpty() && !root.isNull("feed") },
                 root.optString("title").takeIf { it.isNotEmpty() && !root.isNull("title") },
-                if (items == null) emptyList() else (0 until minOf(items.length(), MAX_ITEMS)).map { NewsItem(items.getJSONObject(it).getString("title")) },
+                (0 until (items?.length() ?: 0))
+                    .mapNotNull { items?.getJSONObject(it)?.optString("title")?.takeIf(String::isNotEmpty)?.let(::NewsItem) }
+                    .take(MAX_ITEMS),
             )
         }
     }

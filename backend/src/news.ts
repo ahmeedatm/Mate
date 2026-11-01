@@ -30,8 +30,9 @@ export const getNewsFeed = async () => (await readJson<{ feed?: string }>(storeF
 
 /** Règle le flux ; `null` le retire. Erreur si l'adresse n'est pas acceptable. */
 export async function setNewsFeed(input: string | null) {
-  if (input === null) return removeJson(storeFile);
-  await writeJson(storeFile, { feed: cleanFeedUrl(input) });
+  const feed = input === null ? null : cleanFeedUrl(input);
+  shown = [];
+  await (feed === null ? removeJson(storeFile) : writeJson(storeFile, { feed }));
 }
 
 const ENTITIES: Record<string, string> = {
@@ -54,22 +55,56 @@ const decode = (text: string) =>
 
 const safeChar = (code: number, fallback: string) => (code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : fallback);
 
+const MAX_ENTRIES_SCANNED = 50;
+const MAX_ENTRY_CHARS = 20_000;
+const SPACE_OR_END = " \t\r\n>/";
+
+/** Balises retirées d'un coup de balayage (pas de regex : un flux piégé de « < » sans « > » ne doit pas ralentir le compagnon). */
+function stripTags(text: string) {
+  let out = "";
+  let at = 0;
+  for (;;) {
+    const open = text.indexOf("<", at);
+    if (open < 0) return out + text.slice(at);
+    out += text.slice(at, open);
+    const close = text.indexOf(">", open);
+    if (close < 0) return out;
+    at = close + 1;
+  }
+}
+
 /** Texte d'un élément : CDATA ouvert, balises HTML retirées, entités décodées, espaces repliés. */
 function plain(raw: string) {
   // CDATA : texte brut, éventuellement du HTML ; ses « & » ne sont pas des entités.
-  const text = raw.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, (_m, inner) => inner.replace(/<[^>]*>/g, "").replace(/&/g, "&amp;"));
-  return decode(text.replace(/<[^>]*>/g, ""))
-    .replace(/\s+/g, " ")
-    .trim();
+  const text = raw.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, (_m, inner) => stripTags(inner).replace(/&/g, "&amp;"));
+  return decode(stripTags(text)).replace(/\s+/g, " ").trim();
 }
 
-const element = (xml: string, tag: string) => xml.match(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, "i"))?.[1];
+/** Position de la prochaine balise ouvrante `<tag` (et non `<tagada`) à partir de `from` dans `low` (minuscules), ou -1. */
+function findOpen(low: string, tag: string, from = 0): number {
+  for (let at = low.indexOf(`<${tag}`, from); at >= 0; at = low.indexOf(`<${tag}`, at + 1))
+    if (SPACE_OR_END.includes(low[at + tag.length + 1] ?? ">")) return at;
+  return -1;
+}
+
+/** Contenu du premier `<tag>…</tag>` ; rien si la balise est auto-fermante ou jamais refermée. */
+function element(xml: string, tag: string, low = xml.toLowerCase()) {
+  const open = findOpen(low, tag);
+  const gt = open < 0 ? -1 : low.indexOf(">", open);
+  if (gt < 0 || low[gt - 1] === "/") return undefined;
+  const close = low.indexOf(`</${tag}>`, gt);
+  return close < 0 ? undefined : xml.slice(gt + 1, close);
+}
 
 /** Lien d'une entrée : `<link>…</link>` (RSS) ou `<link href>` (Atom, `alternate` ou sans `rel`). */
 function linkOf(entry: string): string | null {
-  const text = element(entry, "link");
+  const low = entry.toLowerCase();
+  const text = element(entry, "link", low);
   if (text !== undefined && plain(text)) return plain(text);
-  for (const tag of entry.match(/<link\s[^>]*>/gi) ?? []) {
+  for (let at = findOpen(low, "link"); at >= 0; at = findOpen(low, "link", at + 1)) {
+    const end = low.indexOf(">", at);
+    if (end < 0) break;
+    const tag = entry.slice(at, end);
     const rel = tag.match(/\srel=["']([^"']*)["']/i)?.[1];
     const href = tag.match(/\shref=["']([^"']*)["']/i)?.[1];
     if (href && (!rel || rel === "alternate")) return decode(href).trim();
@@ -79,17 +114,28 @@ function linkOf(entry: string): string | null {
 
 const isWebLink = (link: string) => /^https?:\/\//i.test(link);
 
-/** Les premiers articles d'un flux RSS ou Atom ; ceux sans titre ou sans lien http(s) sont ignorés. */
+/** Début de la prochaine entrée (`<item` RSS ou `<entry` Atom) à partir de `from`, ou -1. */
+function nextEntry(low: string, from: number) {
+  const starts = [findOpen(low, "item", from), findOpen(low, "entry", from)].filter((at) => at >= 0);
+  return starts.length ? Math.min(...starts) : -1;
+}
+
+/** Les premiers articles d'un flux RSS ou Atom ; ceux sans titre ou sans lien http(s) sont ignorés. Un seul balayage, sans regex à retour arrière. */
 export function parseFeed(xml: string): { title: string | null; items: NewsItem[] } {
   if (!/<(rss|feed|rdf:RDF)[\s>]/i.test(xml)) throw new Error("Ce n'est pas un flux RSS ou Atom");
-  const body = xml.replace(/<(item|entry)[\s>][\s\S]*$/i, "");
-  const title = element(body, "title");
+  const low = xml.toLowerCase();
+  let at = nextEntry(low, 0);
+  const title = element(at < 0 ? xml : xml.slice(0, at), "title");
   const items: NewsItem[] = [];
-  for (const m of xml.matchAll(/<(item|entry)(?:\s[^>]*)?>([\s\S]*?)<\/\1>/gi)) {
-    const entryTitle = plain(element(m[2], "title") ?? "").slice(0, MAX_TITLE);
-    const link = linkOf(m[2]);
+  for (let scanned = 0; at >= 0 && scanned < MAX_ENTRIES_SCANNED && items.length < MAX_ITEMS; scanned++) {
+    const name = low.startsWith("<item", at) ? "item" : "entry";
+    const close = low.indexOf(`</${name}>`, at);
+    if (close < 0) break;
+    const entry = xml.slice(at, Math.min(close, at + MAX_ENTRY_CHARS));
+    const entryTitle = plain(element(entry, "title") ?? "").slice(0, MAX_TITLE);
+    const link = linkOf(entry);
     if (entryTitle && link && isWebLink(link)) items.push({ title: entryTitle, link });
-    if (items.length === MAX_ITEMS) break;
+    at = nextEntry(low, close);
   }
   return { title: title ? plain(title) || null : null, items };
 }
@@ -107,7 +153,9 @@ let shown: NewsItem[] = [];
 
 export async function loadNews(get: Fetcher = download): Promise<News> {
   const feed = await getNewsFeed();
-  if (!feed) return ((shown = []), { feed: null, title: null, items: [] });
+  // Un échec ou l'absence de flux ne laisse pas ouvrir les liens de la liste d'avant.
+  shown = [];
+  if (!feed) return { feed: null, title: null, items: [] };
   const parsed = parseFeed((await get(feed)).toString("utf8"));
   shown = parsed.items;
   return { feed, ...parsed };

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { loadNews, parseFeed, setNewsFeed } from "../src/news.ts";
+import { loadNews, parseFeed, setNewsFeed, shownLink } from "../src/news.ts";
 
 const rss = `<?xml version="1.0"?><rss version="2.0"><channel><title>Le Blog</title>
 <item><title><![CDATA[Premier & <b>gras</b>]]></title><link>https://exemple.fr/a</link></item>
@@ -38,6 +38,14 @@ describe("parseFeed", () => {
     ]);
   });
 
+  it("reste rapide sur un flux piégé de 1 Mo", () => {
+    const start = Date.now();
+    parseFeed(`<rss><channel>${"<".repeat(1_000_000)}`);
+    parseFeed(`<rss><channel>${"<item>".repeat(170_000)}`);
+    parseFeed(`<rss><channel><item><title>${"<link ".repeat(160_000)}`);
+    assert.ok(Date.now() - start < 2000, `trop lent : ${Date.now() - start} ms`);
+  });
+
   it("refuse ce qui n'est pas un flux", () => {
     assert.throws(() => parseFeed("<html><body>Bonjour</body></html>"), /flux/);
   });
@@ -65,5 +73,17 @@ describe("loadNews", () => {
   it("refuse une adresse qui n'est pas http(s) ou qui porte un mot de passe", async () => {
     await assert.rejects(setNewsFeed("file:///etc/passwd"), /adresse/i);
     await assert.rejects(setNewsFeed("https://moi:mdp@exemple.fr/rss"), /adresse/i);
+  });
+
+  it("ne laisse ouvrir que les liens de la dernière liste montrée", async () => {
+    await setNewsFeed("https://exemple.fr/rss");
+    await loadNews(async () => Buffer.from(atom));
+    assert.equal(shownLink(0), "https://exemple.fr/v1.2");
+    assert.equal(shownLink(2), null);
+    await assert.rejects(loadNews(async () => Buffer.from("<html></html>")));
+    assert.equal(shownLink(0), null);
+    await loadNews(async () => Buffer.from(atom));
+    await setNewsFeed(null);
+    assert.equal(shownLink(0), null);
   });
 });
