@@ -9,6 +9,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -21,6 +22,7 @@ import app.mate.focus.Moods
 import app.mate.focus.NoisePlayer
 import app.mate.focus.SleepTimer
 import app.mate.net.BackendClient
+import app.mate.net.runCatchingCancellable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -114,7 +116,7 @@ class FocusFragment : Fragment() {
         sleepLabel = view.findViewById(R.id.focus_sleep_label)
         val sleep = view.findViewById<LinearLayout>(R.id.focus_sleep)
         for (minutes in SleepTimer.CHOICES) {
-            val button = chip(getString(R.string.sleep_choice, minutes)) { toggleSleep(minutes) }
+            val button = chip(getString(R.string.focus_minutes, minutes)) { toggleSleep(minutes) }
             sleep.addView(button, chipParams())
             sleepButtons[minutes] = button
         }
@@ -140,7 +142,14 @@ class FocusFragment : Fragment() {
         if (SleepTimer.state.minutes == minutes) return SleepTimer.cancel()
         val app = requireContext().applicationContext
         SleepTimer.start(minutes) {
-            CoroutineScope(Dispatchers.IO).launch { runCatching { BackendClient(app).system.pauseMedia() } }
+            CoroutineScope(Dispatchers.Main).launch {
+                val result = runCatchingCancellable { BackendClient(app).system.pauseMedia() }
+                val message = result.fold(
+                    { app.getString(if (it > 0) R.string.sleep_done else R.string.sleep_nothing) },
+                    { app.getString(R.string.sleep_failed, app.errorText(it)) },
+                )
+                Toast.makeText(app, message, Toast.LENGTH_LONG).show()
+            }
         }
     }
 

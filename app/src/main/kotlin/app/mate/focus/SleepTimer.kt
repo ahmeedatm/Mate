@@ -20,6 +20,8 @@ object SleepTimer {
 
     internal var clock: () -> Long = SystemClock::elapsedRealtime
 
+    // shortcut: Handler compte en uptimeMillis (arrêté pendant la veille) alors que l'échéance est en elapsedRealtime,
+    // et le minuteur meurt avec le processus ; la tablette reste branchée et allumée, revenir ici si ça arrive.
     private var minutes: Int? = null
     private var endAt = 0L
     private var onDue: () -> Unit = {}
@@ -30,6 +32,11 @@ object SleepTimer {
     fun observe(listener: (State) -> Unit) {
         listeners += listener
         listener(state)
+        // Un écran revient : le décompte reprend à la seconde (sans écran, tick dort jusqu'à l'échéance).
+        if (minutes != null) {
+            handler.removeCallbacks(tick)
+            handler.post(tick)
+        }
     }
 
     fun unobserve(listener: (State) -> Unit) {
@@ -57,14 +64,16 @@ object SleepTimer {
         if (minutes == null) return
         if (state.remainingMs > 0) {
             notifyListeners()
-            // Réveil aligné sur la seconde suivante : une mise à jour par seconde, pas plus.
-            handler.postDelayed(tick, state.remainingMs % 1_000 + 1)
+            handler.postDelayed(tick, nextDelay(state.remainingMs, listeners.isNotEmpty()))
             return
         }
         val due = onDue
         cancel()
         due()
     }
+
+    /** Réveil aligné sur la seconde suivante quand un écran affiche le décompte ; sinon un seul, à l'échéance. */
+    internal fun nextDelay(remainingMs: Long, watched: Boolean) = if (watched) remainingMs % 1_000 + 1 else remainingMs
 
     private fun notifyListeners() {
         val s = state

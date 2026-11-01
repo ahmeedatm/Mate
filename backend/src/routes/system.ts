@@ -319,8 +319,9 @@ export default async function systemRoutes(app: FastifyInstance) {
   // (play-pause la relancerait).
   app.post("/system/media/pause", async () => {
     const playing = ((await mediaSessions()) ?? []).filter((s) => s.status === "playing" && s.canPlayPause);
-    const results = await Promise.all(playing.map((s) => mediaControl("play-pause", s.app)));
-    return { ok: true, paused: results.filter(Boolean).length };
+    // allSettled : une lecture qui résiste ne doit pas empêcher la pause des autres.
+    const results = await Promise.allSettled(playing.map((s) => mediaControl("play-pause", s.app)));
+    return { ok: true, paused: results.filter((r) => r.status === "fulfilled" && r.value).length };
   });
 
   app.get<{ Querystring: { app: string; key: string } }>(

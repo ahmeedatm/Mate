@@ -524,9 +524,11 @@
     <string name="focus_minutes">%1$d min</string>
     <string name="focus_less">Moins</string>
     <string name="focus_more">Plus</string>
-    <string name="sleep_label">Pause de la musique de l\'ordi</string>
-    <string name="sleep_label_running">Pause de la musique de l\'ordi dans %1$s</string>
-    <string name="sleep_choice">%1$d min</string>
+    <string name="sleep_label">Musique de l\'ordi</string>
+    <string name="sleep_label_running">Pause dans %1$s</string>
+    <string name="sleep_done">Musique de l\'ordi mise en pause</string>
+    <string name="sleep_nothing">Rien ne jouait sur l\'ordi</string>
+    <string name="sleep_failed">La musique n\'a pas pu être mise en pause : %1$s</string>
     <string name="focus_dnd">Ne pas déranger sur l\'ordi</string>
     <string name="focus_phase_work">Concentration</string>
     <string name="focus_phase_break">Pause</string>

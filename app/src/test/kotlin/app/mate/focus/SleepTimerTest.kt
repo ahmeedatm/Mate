@@ -86,4 +86,10 @@ class SleepTimerTest {
         SleepTimer.start(15) { }
         assertEquals(listOf(null, 30, null), seen)
     }
+
+    @Test
+    fun `sans ecran le reveil attend l'echeance, avec un ecran il suit la seconde`() {
+        assertEquals(900_000L, SleepTimer.nextDelay(900_000L, watched = false))
+        assertEquals(501L, SleepTimer.nextDelay(900_500L, watched = true))
+    }
 }
