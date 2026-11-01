@@ -43,6 +43,9 @@ if (group === "release" && action === "view") {
 } else if (group === "release" && action === "upload") {
   needRelease(first);
   if (!args.includes("--clobber")) fail("asset already exists");
+  // Coupure réseau simulée : --clobber a déjà supprimé l'ancien fichier, le nouveau n'arrive pas.
+  const cut = args.find((a) => path.basename(a) === process.env.FAKE_GH_CUT);
+  if (cut) { fs.rmSync(path.join(dir(first), path.basename(cut)), { force: true }); fail("connection reset"); }
   for (const f of args.slice(3).filter((a, i, all) => !a.startsWith("-") && all[i - 1] !== "-R" && a !== process.env.FAKE_GH_REPO))
     fs.copyFileSync(f, path.join(dir(first), path.basename(f)));
 } else if (group === "release" && action === "delete-asset") {
@@ -63,7 +66,7 @@ if (group === "release" && action === "view") {
 const names = (tag: string) =>
   fs
     .readdirSync(path.join(releases, tag))
-    .filter((f) => f !== ".meta")
+    .filter((f) => f !== ".meta" && f !== "manifest.bak.json")
     .sort();
 const manifest = (tag: string) => JSON.parse(fs.readFileSync(path.join(releases, tag, "manifest.json"), "utf8"));
 const meta = (tag: string): string[] => JSON.parse(fs.readFileSync(path.join(releases, tag, ".meta"), "utf8"));
@@ -198,6 +201,20 @@ describe("publication des essais par PR", () => {
       manifest("essais").essais.map((e: any) => e.mr),
       [109, 123],
     );
+  });
+
+  it("une coupure pendant l'envoi du manifest ne fait perdre aucun essai à la publication suivante", async () => {
+    await assert.rejects(
+      publish(["--essai", "130", dist("0.2.2-essai.16", { code: 202_016 }), out()], { FAKE_GH_CUT: "manifest.json" }),
+      /connection reset/,
+    );
+    assert.ok(!names("essais").includes("manifest.json"));
+    await publish(["--essai", "131", dist("0.2.2-essai.17", { code: 202_017 }), out()]);
+    assert.deepEqual(
+      manifest("essais").essais.map((e: any) => e.mr),
+      [109, 123, 130, 131],
+    );
+    assert.ok(names("essais").includes("companion-0.2.2-essai.12.apk"));
   });
 
   it("l'essai est publié en pré-release, la release latest ne l'est pas", async () => {

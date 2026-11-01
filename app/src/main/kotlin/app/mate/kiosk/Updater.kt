@@ -26,6 +26,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -63,7 +64,9 @@ object Updater {
         val computer = if (Computers.all(context).isEmpty()) null else async { fetch { BackendClient(context).updates.list() } }
         val server = UpdatesApi.server()?.let { api -> async { fetch { serverList(api) } } }
         val results = mapOf(UpdateSource.COMPUTER to computer?.await(), UpdateSource.SERVER to server?.await())
-        val merged = UpdatePlan.merge(*results.values.map { it?.getOrNull().orEmpty() }.toTypedArray())
+        val fromComputer = results[UpdateSource.COMPUTER]?.getOrNull().orEmpty()
+        val installedPkgs = fromComputer.map { it.pkg }.filter { installed(context, it) != null }.toSet()
+        val merged = UpdatePlan.merge(fromComputer, results[UpdateSource.SERVER]?.getOrNull().orEmpty(), installedPkgs)
         Check(
             merged.map { it to installed(context, it.pkg) },
             results.mapNotNull { (source, r) -> if (r != null) source else null }.toSet(),
@@ -112,7 +115,8 @@ object Updater {
 
     /**
      * Télécharge, vérifie et installe. `progress` : 0 à 100 pendant le téléchargement (hors du fil principal) ;
-     * `committed` : le fichier est confié à Android, on ne peut plus annuler. Annulable (coroutine) jusque-là.
+     * `committed` : le fichier est confié à Android (ou l'ancien essai désinstallé), on ne peut plus annuler. Annulable
+     * (coroutine) jusque-là.
      */
     suspend fun install(context: Context, update: AppUpdate, progress: (Int) -> Unit, committed: () -> Unit = {}) {
         if (!Kiosk.isDeviceOwner(context)) throw UserFacingException(R.string.update_needs_kiosk)
@@ -127,9 +131,9 @@ object Updater {
     /**
      * Désinstalle un paquet sans confirmation (device owner) : l'essai d'une PR à la version plus ancienne que l'essai
      * installé, qu'Android refuserait de remplacer. Ses données partent avec ; il reprend les ordinateurs de la stable.
-     * Appelé pendant [install], installations déjà permises ([Kiosk.lockApps]).
+     * Appelé pendant [install] et par [FreshStart.forgetTrial], installations déjà permises ([Kiosk.lockApps]).
      */
-    private suspend fun uninstall(app: Context, pkg: String) {
+    internal suspend fun uninstall(app: Context, pkg: String) {
         val action = "${app.packageName}.UNINSTALL_RESULT_$pkg"
         val result = CompletableDeferred<Intent>()
         val receiver = object : BroadcastReceiver() {
@@ -174,9 +178,15 @@ object Updater {
                 // Après le téléchargement vérifié : un échec avant ne coûte pas l'essai installé.
                 val installedCode = installed(app, update.pkg)?.let { versionCode(it) }
                 if (update.source == UpdateSource.TRIALS && EssaiPlan.install(update.versionCode, installedCode) == EssaiPlan.Install.UNINSTALL_FIRST) {
-                    uninstall(app, update.pkg)
+                    // Plus d'annulation une fois l'ancien essai parti : « Annuler » laisserait la tablette sans essai.
+                    committed()
+                    withContext(NonCancellable) {
+                        uninstall(app, update.pkg)
+                        installApk(app, file, update, committed)
+                    }
+                } else {
+                    installApk(app, file, update, committed)
                 }
-                installApk(app, file, update, committed)
             } finally {
                 Kiosk.lockApps(app, !Prefs.allowInstalls(app))
             }

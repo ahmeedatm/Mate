@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
@@ -51,23 +52,60 @@ namespace Mate
         }
 
         /** Colle un texte dans l'appli au premier plan, puis remet l'ancien contenu du presse-papiers. */
+        /**
+         * Colle un texte puis remet le presse-papiers d'avant, tous formats compris (image, marques des gestionnaires de
+         * mots de passe). Le texte collé est exclu des historiques (Win+V, celui du compagnon) ; une copie faite pendant le
+         * collage n'est pas écrasée.
+         */
         static void TypeText(string text)
         {
-            string previous = null;
-            try { if (Clipboard.ContainsText()) previous = Clipboard.GetText(); } catch (Exception) { }
-            SetClipboard(text);
+            DataObject previous = null;
+            try { previous = Snapshot(Clipboard.GetDataObject()); } catch (Exception) { }
+            var temp = new DataObject();
+            temp.SetText(text);
+            temp.SetData("ExcludeClipboardContentFromMonitorProcessing", new MemoryStream(new byte[0]));
+            SetClipboard(temp);
+            uint ours = GetClipboardSequenceNumber();
             Thread.Sleep(50);
             PressKeys(new List<int> { 0x11 }, 0x56, null); // Ctrl+V
             Thread.Sleep(400);
-            try { if (string.IsNullOrEmpty(previous)) Clipboard.Clear(); else SetClipboard(previous); } catch (Exception) { }
+            if (GetClipboardSequenceNumber() != ours) return;
+            try { if (previous == null) Clipboard.Clear(); else SetClipboard(previous); } catch (Exception) { }
+        }
+
+        /** Copie de chaque format lisible ; null si rien n'a pu être lu (presse-papiers vide). */
+        static DataObject Snapshot(IDataObject data)
+        {
+            if (data == null) return null;
+            var copy = new DataObject();
+            bool any = false;
+            foreach (var format in data.GetFormats(false))
+            {
+                try
+                {
+                    var value = data.GetData(format, false);
+                    if (value == null) continue;
+                    copy.SetData(format, false, value);
+                    any = true;
+                }
+                catch (Exception) { }
+            }
+            return any ? copy : null;
         }
 
         static void SetClipboard(string text)
         {
+            var data = new DataObject();
+            data.SetText(text);
+            SetClipboard(data);
+        }
+
+        static void SetClipboard(IDataObject data)
+        {
             // Le presse-papiers peut être tenu un instant par une autre appli.
             for (int i = 0; ; i++)
             {
-                try { Clipboard.SetText(text); return; }
+                try { Clipboard.SetDataObject(data, true); return; }
                 catch (ExternalException) { if (i >= 5) throw; Thread.Sleep(60); }
             }
         }

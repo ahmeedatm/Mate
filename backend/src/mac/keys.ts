@@ -55,7 +55,7 @@ const KEY_CODES: Record<string, number> = {
 // Événements clavier postés directement (CGEventPost) : System Events refuse les saisies
 // (erreur 1002) même quand l'appli du backend a l'accès Accessibilité. Un caractère est
 // cherché dans la disposition active (AZERTY : "a" n'est pas sur la même touche qu'en QWERTY).
-const KEY_SCRIPT = `ObjC.import('AppKit');
+const KEY_FUNCTIONS = `ObjC.import('AppKit');
 var MODS = { cmd: [55, 0x100000], shift: [56, 0x20000], alt: [58, 0x80000], ctrl: [59, 0x40000] };
 function post(code, down, flags) {
   var ev = $.CGEventCreateKeyboardEvent(null, code, down);
@@ -69,8 +69,7 @@ function keyFlags(code) {
   if (code >= 123 && code <= 126) return 0x800000 | 0x200000;
   return [122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111].indexOf(code) >= 0 ? 0x800000 : 0;
 }
-function run(argv) {
-  var key = argv[0];
+function press(key, modNames) {
   var code = /^#\\d+$/.test(key) ? parseInt(key.slice(1), 10) : -1;
   for (var k = 0; k < 128 && code < 0; k++) {
     // Les touches de modification (54 à 63) n'ont pas de caractère : NSEvent lève une exception.
@@ -80,12 +79,51 @@ function run(argv) {
     } catch (e) {}
   }
   if (code < 0) throw new Error('Touche absente du clavier du Mac : ' + key);
-  var mods = argv.slice(1).map(function (m) { return MODS[m]; });
+  var mods = modNames.map(function (m) { return MODS[m]; });
   var flags = 0;
   mods.forEach(function (m) { flags |= m[1]; post(m[0], true, flags); });
   post(code, true, flags | keyFlags(code));
   post(code, false, flags | keyFlags(code));
   mods.reverse().forEach(function (m) { flags &= ~m[1]; post(m[0], false, flags); });
+}`;
+
+const KEY_SCRIPT = `${KEY_FUNCTIONS}
+function run(argv) {
+  press(argv[0], argv.slice(1));
+}`;
+
+// Collage d'un texte : le presse-papiers entier (tous ses types : image, marque des gestionnaires de mots de passe) est
+// gardé puis remis tel quel, dans le même processus. Le texte collé porte TransientType (nspasteboard.org) : les
+// historiques, dont celui du compagnon (clipboard.ts), l'ignorent. Une copie faite pendant le collage n'est pas écrasée.
+const TYPE_SCRIPT = `${KEY_FUNCTIONS}
+function run(argv) {
+  var pb = $.NSPasteboard.generalPasteboard;
+  var saved = [];
+  var items = pb.pasteboardItems;
+  for (var i = 0; i < items.count; i++) {
+    var item = items.objectAtIndex(i);
+    var copy = $.NSPasteboardItem.alloc.init;
+    var types = item.types;
+    for (var j = 0; j < types.count; j++) {
+      var type = types.objectAtIndex(j);
+      var data = item.dataForType(type);
+      if (!data.isNil()) copy.setDataForType(data, type);
+    }
+    saved.push(copy);
+  }
+  var text = $.NSProcessInfo.processInfo.environment.objectForKey('MATE_TYPE_TEXT');
+  var temp = $.NSPasteboardItem.alloc.init;
+  temp.setStringForType(text, $.NSPasteboardTypeString);
+  temp.setStringForType($(''), $('org.nspasteboard.TransientType'));
+  pb.clearContents;
+  if (!pb.writeObjects($([temp]))) throw new Error('Presse-papiers inaccessible');
+  var ours = pb.changeCount;
+  press('v', ['cmd']);
+  // Laisser l'appli lire le presse-papiers avant de le restaurer.
+  delay(0.4);
+  if (pb.changeCount !== ours) return;
+  pb.clearContents;
+  if (saved.length > 0) pb.writeObjects($(saved));
 }`;
 
 /** Raccourci au format "cmd+shift+m", envoyé à `app` (mise au premier plan avant) ou à l'appli active. */
@@ -121,14 +159,12 @@ export async function sendMediaKey(command: MediaCommand) {
   await osascript(MEDIA_SCRIPT, [String(MEDIA_KEYS[command])], "JavaScript");
 }
 
-/** Colle un texte dans l'appli au premier plan, puis remet l'ancien texte du presse-papiers. */
+/**
+ * Colle un texte dans l'appli au premier plan, puis remet le presse-papiers d'avant, tous types compris. Le texte passe
+ * par l'environnement d'osascript, pas sa ligne de commande (visible par `ps`, comme l'était l'entrée de pbcopy : non).
+ */
 export async function typeText(text: string) {
-  const previous = await run("pbpaste", [], 10_000, UTF8_ENV).catch(() => "");
-  await pbcopy(text);
-  await sendKeys("cmd+v");
-  // Laisser l'appli lire le presse-papiers avant de le restaurer.
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  await pbcopy(previous);
+  await osascript(TYPE_SCRIPT, [], "JavaScript", { ...UTF8_ENV, MATE_TYPE_TEXT: text });
 }
 
 export function pbcopy(text: string) {

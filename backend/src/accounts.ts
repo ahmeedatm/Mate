@@ -186,17 +186,25 @@ async function accessToken(provider: Provider, stored: Stored): Promise<string> 
 
 // --- Événements
 
-/** Événements de tous les comptes connectés entre `from` et `to` (récurrences dépliées par le fournisseur). */
-export async function accountEvents(from: Date, to: Date): Promise<CalendarEvent[]> {
+/**
+ * Événements de tous les comptes connectés entre `from` et `to` (récurrences dépliées par le fournisseur) ; un compte en panne
+ * n'empêche pas les autres, son erreur est rendue à part.
+ */
+export async function accountEvents(from: Date, to: Date): Promise<{ events: CalendarEvent[]; errors: Error[] }> {
   const accounts = await load();
   const events: CalendarEvent[] = [];
+  const errors: Error[] = [];
   for (const provider of Object.keys(accounts) as Provider[]) {
     const stored = accounts[provider]!;
     if (stored.expired) continue;
-    const token = await accessToken(provider, stored);
-    events.push(...(provider === "microsoft" ? await microsoftEvents(token, from, to) : await googleEvents(token, from, to)));
+    try {
+      const token = await accessToken(provider, stored);
+      events.push(...(provider === "microsoft" ? await microsoftEvents(token, from, to) : await googleEvents(token, from, to)));
+    } catch (e) {
+      errors.push(e as Error);
+    }
   }
-  return events;
+  return { events, errors };
 }
 
 async function getJson(url: string, token: string, headers: Record<string, string> = {}) {

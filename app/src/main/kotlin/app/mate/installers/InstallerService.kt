@@ -37,6 +37,12 @@ object InstallerService {
         server = InstallerHttpServer(PORT, store.dir, store::onDisk).also { it.start() }
     }
 
+    /**
+     * Installeurs servis sur le port 8080, envoyés dans l'état du poll (HTTPS, jeton) : l'ordinateur y lit l'empreinte
+     * attendue au lieu de la croire du port 8080 en clair (backend/src/app-update.ts). Appli d'essai : aucun.
+     */
+    fun served(context: Context): List<Installer> = if (BuildConfig.TRIAL) emptyList() else store(context).onDisk()
+
     /** `http://<ip de la tablette>:8080`, null sans réseau. Affiché sur Bienvenue et dans Réglages. */
     fun address(): String? = Tablet.ipAddress()?.let { "http://$it:$PORT" }
 

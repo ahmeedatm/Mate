@@ -1,7 +1,6 @@
-import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { randomBytes, randomUUID } from "node:crypto";
+import { loadIdentity } from "./data-files.ts";
 import { backendRoot, dataDir, sharedDir } from "./paths.ts";
 
 export { backendRoot };
@@ -10,28 +9,7 @@ function expandHome(p: string) {
   return p.startsWith("~/") || p.startsWith("~\\") ? path.join(os.homedir(), p.slice(2)) : p;
 }
 
-/**
- * Identité de cet ordinateur, créée au premier lancement : `id` permet à la tablette de le reconnaître
- * même si son adresse IP change, `token` est le jeton donné à la tablette à l'appairage.
- */
-function loadIdentity(): { id: string; token: string } {
-  const file = path.join(dataDir, "identity.json");
-  try {
-    return JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch {
-    const identity = { id: randomUUID(), token: randomBytes(24).toString("hex") };
-    fs.mkdirSync(dataDir, { recursive: true });
-    try {
-      // "wx" : si le serveur MCP l'a créé en même temps, on relit le sien.
-      fs.writeFileSync(file, JSON.stringify(identity, null, 2) + "\n", { flag: "wx", mode: 0o600 });
-      return identity;
-    } catch {
-      return JSON.parse(fs.readFileSync(file, "utf8"));
-    }
-  }
-}
-
-const identity = loadIdentity();
+const identity = loadIdentity(dataDir);
 // WiFi par défaut ; HOST=127.0.0.1 pour n'accepter que la tablette branchée en USB (adb reverse).
 const host = process.env.HOST?.trim() || "0.0.0.0";
 const loopbackOnly = host === "127.0.0.1" || host === "localhost" || host === "::1";

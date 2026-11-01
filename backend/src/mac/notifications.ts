@@ -58,12 +58,11 @@ export function plistString(xml: string, key: string): string {
 /** Les noms d'applis du Mac (« Microsoft Outlook ») viennent de leur bundle id faute de mieux : com.microsoft.Outlook → Outlook. */
 export async function readMacNotifications(cursor?: string): Promise<NotificationBatch> {
   let db: DatabaseSync;
-  let snapshot: string;
+  // Instantané : la vraie base n'est jamais ouverte en écriture. La copie est ouverte sans `readOnly` pour que SQLite
+  // y rejoue le -wal (les notifications récentes), ce qu'une connexion en lecture seule ne ferait pas.
+  const snapshot = fs.mkdtempSync(path.join(os.tmpdir(), "mate-notif-"));
   try {
     Database ??= (await import("node:sqlite")).DatabaseSync;
-    // Instantané : la vraie base n'est jamais ouverte en écriture. La copie est ouverte sans `readOnly` pour que SQLite
-    // y rejoue le -wal (les notifications récentes), ce qu'une connexion en lecture seule ne ferait pas.
-    snapshot = fs.mkdtempSync(path.join(os.tmpdir(), "mate-notif-"));
     fs.copyFileSync(DB_FILE, path.join(snapshot, "db"));
     for (const suffix of ["-wal", "-shm"]) {
       try {
@@ -74,6 +73,8 @@ export async function readMacNotifications(cursor?: string): Promise<Notificatio
     }
     db = new Database(path.join(snapshot, "db"));
   } catch {
+    // Relu toutes les 2 s : sans accès au disque, un dossier vide resterait à chaque fois.
+    fs.rmSync(snapshot, { recursive: true, force: true });
     throw Object.assign(new Error("Notifications du Mac illisibles : donner l'accès complet au disque au compagnon (node)"), {
       statusCode: 503,
     });

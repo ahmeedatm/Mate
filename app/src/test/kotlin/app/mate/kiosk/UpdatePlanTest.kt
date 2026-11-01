@@ -14,6 +14,8 @@ class UpdatePlanTest {
     private val companion = "app.mate"
     private val webview = "com.google.android.webview"
 
+    private val installed = setOf(companion, webview)
+
     private fun update(pkg: String, code: Long, source: UpdateSource) =
         AppUpdate(pkg, pkg, code, "v$code", "$pkg-$code.apk", 10, "ab", source)
 
@@ -23,20 +25,34 @@ class UpdatePlanTest {
         val server = listOf(update(companion, 10300, UpdateSource.SERVER))
         assertEquals(
             listOf(update(companion, 10300, UpdateSource.SERVER), update(webview, 81, UpdateSource.COMPUTER)),
-            UpdatePlan.merge(computer, server),
+            UpdatePlan.merge(computer, server, installed),
         )
     }
 
     @Test
     fun `merge a egalite garde la premiere source`() {
-        val merged = UpdatePlan.merge(listOf(update(companion, 10200, UpdateSource.COMPUTER)), listOf(update(companion, 10200, UpdateSource.SERVER)))
+        val merged = UpdatePlan.merge(listOf(update(companion, 10200, UpdateSource.COMPUTER)), listOf(update(companion, 10200, UpdateSource.SERVER)), installed)
         assertEquals(listOf(update(companion, 10200, UpdateSource.COMPUTER)), merged)
     }
 
     @Test
     fun `merge avec une source vide`() {
         val server = listOf(update(companion, 10300, UpdateSource.SERVER))
-        assertEquals(server, UpdatePlan.merge(emptyList(), server))
+        assertEquals(server, UpdatePlan.merge(emptyList(), server, installed))
+    }
+
+    @Test
+    fun `merge ignore un paquet absent de la tablette annonce par l'ordinateur`() {
+        val computer = listOf(update("com.exemple.autre", 1, UpdateSource.COMPUTER), update(webview, 120, UpdateSource.COMPUTER))
+        assertEquals(listOf(update(webview, 120, UpdateSource.COMPUTER)), UpdatePlan.merge(computer, emptyList(), installed))
+    }
+
+    @Test
+    fun `merge garde GitHub quand l'ordinateur annonce une autre version du meme paquet`() {
+        val server = listOf(update(companion, 10300, UpdateSource.SERVER))
+        assertEquals(server, UpdatePlan.merge(listOf(update(companion, 99999, UpdateSource.COMPUTER)), server, installed))
+        val otherFile = update(companion, 10300, UpdateSource.COMPUTER).copy(sha256 = "cd")
+        assertEquals(server, UpdatePlan.merge(listOf(otherFile), server, installed))
     }
 
     @Test

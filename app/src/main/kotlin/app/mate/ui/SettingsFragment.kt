@@ -60,6 +60,7 @@ import app.mate.trial.EssaiPlan
 import app.mate.trial.Trial
 import app.mate.ui.topbar.TopHeader
 import app.mate.voice.WakeModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -219,7 +220,7 @@ class SettingsFragment :
                 .setTitle(R.string.fresh_start)
                 .setMessage(R.string.fresh_start_confirm)
                 .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.fresh_start) { _, _ -> FreshStart.run(requireActivity()) }
+                .setPositiveButton(R.string.fresh_start) { _, _ -> freshStart() }
                 .showImmersive()
         }
         renderKiosk()
@@ -711,6 +712,21 @@ class SettingsFragment :
     private fun renderRemote() {
         view?.findViewById<View>(R.id.settings_remote_card)?.visibility =
             if (Computers.active(requireContext()) != null) View.VISIBLE else View.GONE
+    }
+
+    private fun freshStart() {
+        val activity = requireActivity()
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                FreshStart.forgetTrial(activity)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                main.showBanner(errorText(e), 6)
+                return@launch
+            }
+            FreshStart.run(activity)
+        }
     }
 
     private fun openOnComputer() {

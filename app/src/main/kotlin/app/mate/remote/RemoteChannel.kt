@@ -17,6 +17,8 @@ import app.mate.audio.Speaker
 import app.mate.device.Screen
 import app.mate.focus.FocusTimer
 import app.mate.focus.NoisePlayer
+import app.mate.installers.InstallerPlan
+import app.mate.installers.InstallerService
 import app.mate.net.BackendClient
 import app.mate.net.Connection
 import app.mate.net.DocEntry
@@ -109,7 +111,15 @@ class RemoteChannel(private val activity: MainActivity) {
                     JSONObject().put("ok", false).put("error", e.message ?: e.javaClass.simpleName)
                 }
                 recent[c.id] = result
-                runCatching { client.tablet.sendResult(c.id, result, state()) }
+                // Pas de runCatching : il avalerait l'annulation (changement d'ordinateur), et le reste du lot de l'ancien
+                // s'exécuterait quand même.
+                try {
+                    client.tablet.sendResult(c.id, result, state())
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    // Résultat perdu : l'ordinateur redonne l'ordre au poll suivant, `recent` évite de le refaire.
+                }
             }
         }
     }
@@ -234,6 +244,7 @@ class RemoteChannel(private val activity: MainActivity) {
             .put("battery", activity.battery?.let { JSONObject().put("level", it.level).put("charging", it.charging) } ?: JSONObject.NULL)
             .put("settings", TabletSettings.read(activity, systemBrightness, volume))
             .put("update", RemoteUpdate.state(activity))
+            .put("installers", InstallerPlan.toJsonArray(InstallerService.served(activity)))
     }
 
     private companion object {

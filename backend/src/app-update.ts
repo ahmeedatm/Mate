@@ -1,17 +1,17 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
-import { once } from "node:events";
 import path from "node:path";
+import { pipeline } from "node:stream/promises";
 import { appPath, sh } from "./portable.ts";
-import { tabletAddress } from "./tablet.ts";
+import { tabletAddress, tabletStatus } from "./tablet.ts";
 
 /**
- * Mise à jour de l'appli portable depuis la tablette : elle sert sur le WiFi (port 8080) les installeurs qu'elle a
- * téléchargés de GitHub, avec leur version et leur SHA-256 (`/installers.json`). Le panneau télécharge celui de
- * ce système, vérifie taille et empreinte, remplace l'exe ou l'appli sur place et la relance : le nouveau lanceur
- * demande à l'ancien de quitter (POST /local/quit) puis extrait son runtime.
- * L'empreinte vient de la tablette elle-même, sur le réseau local : elle protège d'un fichier abîmé, pas d'un réseau hostile.
+ * Mise à jour de l'appli portable depuis la tablette : elle sert sur le WiFi (port 8080, HTTP en clair) les installeurs
+ * qu'elle a téléchargés de GitHub. Leur version, taille et SHA-256 arrivent par le canal appairé (état du poll, HTTPS et
+ * jeton : clé `installers`), jamais par le port 8080 : un réseau hostile peut changer les octets, pas l'empreinte attendue.
+ * Le panneau télécharge celui de ce système, vérifie taille et empreinte, remplace l'exe ou l'appli sur place et la
+ * relance : le nouveau lanceur demande à l'ancien de quitter (POST /local/quit) puis extrait son runtime.
  */
 
 export type Installer = { file: string; size: number; sha256: string; version: string };
@@ -51,14 +51,9 @@ function fail(message: string, statusCode = 409): never {
 async function announced(): Promise<{ base: string; installer: Installer | undefined }> {
   const ip = tabletAddress();
   if (!ip) fail("La tablette n'est pas connectée en WiFi : ouvre le compagnon sur la tablette, puis réessaie.");
-  const base = `http://${ip}:${PORT}`;
-  try {
-    const res = await fetch(`${base}/installers.json`, { signal: AbortSignal.timeout(5_000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return { base, installer: pickInstaller(await res.json(), platform) };
-  } catch {
-    return fail("La tablette ne répond pas sur le port 8080 : mets à jour son appli, puis réessaie.", 502);
-  }
+  const state = tabletStatus().state as { installers?: unknown } | null;
+  if (!Array.isArray(state?.installers)) fail("La tablette n'annonce pas ses installeurs : mets à jour son appli, puis réessaie.");
+  return { base: `http://${ip}:${PORT}`, installer: pickInstaller(state, platform) };
 }
 
 /** Version proposée par la tablette si elle est plus récente que celle-ci ; null sinon. */
@@ -72,21 +67,24 @@ export async function download(url: string, file: string, expected: { size: numb
   const res = await fetch(url, { signal: AbortSignal.timeout(10 * 60_000) });
   if (!res.ok || !res.body) fail(`Téléchargement impossible (HTTP ${res.status})`, 502);
   const hash = createHash("sha256");
-  const out = fs.createWriteStream(file);
   let size = 0;
   try {
-    for await (const chunk of res.body as unknown as AsyncIterable<Uint8Array>) {
-      size += chunk.length;
-      if (size > expected.size) fail("Fichier plus gros qu'annoncé : abandon.", 502);
-      hash.update(chunk);
-      if (!out.write(chunk)) await once(out, "drain");
-    }
-    out.end();
-    await once(out, "finish");
+    // pipeline écoute les erreurs du fichier (disque plein) même pendant l'attente du réseau.
+    await pipeline(
+      res.body as unknown as AsyncIterable<Uint8Array>,
+      async function* (chunks: AsyncIterable<Uint8Array>) {
+        for await (const chunk of chunks) {
+          size += chunk.length;
+          if (size > expected.size) fail("Fichier plus gros qu'annoncé : abandon.", 502);
+          hash.update(chunk);
+          yield chunk;
+        }
+      },
+      fs.createWriteStream(file),
+    );
     if (size !== expected.size || hash.digest("hex") !== expected.sha256)
       fail("Fichier abîmé (taille ou SHA-256 différents) : rien n'est changé.", 502);
   } catch (e) {
-    out.destroy();
     fs.rmSync(file, { force: true });
     throw e;
   }

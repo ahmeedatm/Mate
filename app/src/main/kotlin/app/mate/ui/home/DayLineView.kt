@@ -97,8 +97,10 @@ class DayLineView(context: Context) : View(context) {
         markerAlpha = 0f
         invalidate()
         run(0) { track(Look.spring(context, Look.SPATIAL_SLOW, 0f, 1f, { passScale = it; invalidate() })) }
-        for (i in barAlpha.indices) {
-            run(120L + i * 60L) { track(Look.spring(context, Look.EFFECTS_DEFAULT, 0f, 1f, { barAlpha[i] = it; invalidate() })) }
+        // Le tableau de départ : un agenda qui rétrécit pendant l'animation en pose un plus petit (rebuild).
+        val alphas = barAlpha
+        for (i in alphas.indices) {
+            run(120L + i * 60L) { track(Look.spring(context, Look.EFFECTS_DEFAULT, 0f, 1f, { alphas[i] = it; invalidate() })) }
         }
         run(520) {
             track(Look.spring(context, Look.EFFECTS_DEFAULT, 0f, 1f, { markerAlpha = it; invalidate() }))
