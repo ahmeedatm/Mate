@@ -117,4 +117,92 @@ class MixerAppsTest {
             MixerApps.candidates(listOf(jeu), listOf(discord, firefox)),
         )
     }
+
+    // --- Voies « premier plan » et « autres »
+
+    private val front = MixerApps.front("Premier plan")
+    private val others = MixerApps.others("Autres applis")
+
+    @Test
+    fun `la voie du premier plan suit l'appli devant, avec son nom`() {
+        val live = listOf(discord, firefox)
+        val onDiscord = MixerApps.channels(listOf(front), live, "discord")!!.single()
+        assertEquals(MixerApps.FRONT_ID, onDiscord.id)
+        assertEquals("Discord", onDiscord.name)
+        assertEquals(80, onDiscord.volume)
+        assertEquals(30, onDiscord.level)
+        assertEquals("Firefox", MixerApps.channels(listOf(front), live, "firefox")!!.single().name)
+    }
+
+    @Test
+    fun `premier plan sans son ou inconnu - grise, garde son nom par defaut`() {
+        val live = listOf(discord)
+        listOf("explorer", null).forEach { devant ->
+            val channel = MixerApps.channels(listOf(front), live, devant)!!.single()
+            assertNull(channel.volume)
+            assertEquals("Premier plan", channel.name)
+            assertTrue(MixerApps.isSilent(channel, live))
+        }
+    }
+
+    @Test
+    fun `la voie autres regroupe les applis sans voie, ni la sortie, ni le systeme`() {
+        val system = MixerChannel("system", "", 100, false, 0)
+        val live = listOf(discord, firefox, spotify, system)
+        val shown = MixerApps.channels(listOf(valorant, others), live, null)!!
+        val rest = shown[1]
+        assertEquals(MixerApps.OTHERS_ID, rest.id)
+        assertEquals("Autres applis", rest.name)
+        assertEquals("le plus fort volume de Discord, Firefox, Spotify", 100, rest.volume)
+        assertEquals(30, rest.level)
+        assertFalse("Firefox n'est pas coupé", rest.muted)
+        assertEquals(listOf("discord", "firefox", "spotify"), MixerApps.membersOf(listOf(valorant, others), MixerApps.OTHERS_ID, live, null))
+    }
+
+    @Test
+    fun `autres laisse de cote les applis choisies, celles d'un groupe et celle du premier plan`() {
+        val live = listOf(discord, firefox, spotify)
+        val chosen = listOf(MixerApps.App("spotify", "Spotify"), front, others)
+        assertEquals(listOf("discord"), MixerApps.membersOf(chosen, MixerApps.OTHERS_ID, live, "firefox"))
+        assertEquals("sans voie premier plan, Firefox reste dans autres", listOf("discord", "firefox"), MixerApps.membersOf(listOf(MixerApps.App("spotify", "Spotify"), others), MixerApps.OTHERS_ID, live, "firefox"))
+        assertEquals("discord est dans le groupe", listOf("firefox", "spotify"), MixerApps.membersOf(listOf(jeu, others), MixerApps.OTHERS_ID, live, null))
+    }
+
+    @Test
+    fun `autres sans aucune appli a regrouper - grisee`() {
+        val channel = MixerApps.channels(listOf(MixerApps.App("discord", "Discord"), others), listOf(discord), null)!![1]
+        assertNull(channel.volume)
+        assertTrue(MixerApps.isSilent(channel, listOf(discord)))
+    }
+
+    @Test
+    fun `autres coupee seulement si toutes ses applis le sont`() {
+        val live = listOf(discord.copy(muted = true), spotify.copy(muted = false))
+        assertFalse(MixerApps.channels(listOf(others), live, null)!!.single().muted)
+        assertTrue(MixerApps.channels(listOf(others), listOf(discord.copy(muted = true), spotify.copy(muted = true)), null)!!.single().muted)
+    }
+
+    @Test
+    fun `toucher la voie du premier plan regle l'appli devant, rien si aucune`() {
+        val live = listOf(discord, firefox)
+        assertEquals(listOf("discord"), MixerApps.membersOf(listOf(front), MixerApps.FRONT_ID, live, "discord"))
+        assertEquals(emptyList<String>(), MixerApps.membersOf(listOf(front), MixerApps.FRONT_ID, live, "explorer"))
+        assertEquals(emptyList<String>(), MixerApps.membersOf(listOf(front), MixerApps.FRONT_ID, live, null))
+    }
+
+    @Test
+    fun `les deux voies se rangent et se relisent, sans membres`() {
+        val config = JSONObject()
+        assertTrue(MixerApps.write(config, "pc-1", listOf(front, valorant, others)))
+        assertEquals(listOf(front, valorant, others), MixerApps.read(config, "pc-1"))
+        assertFalse(MixerApps.read(config, "pc-1")[0].isGroup)
+        assertTrue(MixerApps.read(config, "pc-1")[0].isVirtual)
+    }
+
+    @Test
+    fun `propositions - les deux voies viennent apres les choisies, une fois chacune`() {
+        val specials = listOf(front, others)
+        assertEquals(listOf(valorant, front, others, MixerApps.App("discord", "Discord")), MixerApps.candidates(listOf(valorant), listOf(discord), { it.name }, specials))
+        assertEquals(listOf(others, front), MixerApps.candidates(listOf(others, front), emptyList(), { it.name }, specials))
+    }
 }

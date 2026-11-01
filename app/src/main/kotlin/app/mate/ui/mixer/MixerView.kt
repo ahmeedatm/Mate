@@ -178,13 +178,16 @@ class MixerView @JvmOverloads constructor(
     }
 
     /** Applis à montrer (table d'un profil : son choix, `MixerApps`) ; null : toutes. Rend null sans volume par appli (Mac). */
-    var appFilter: ((List<MixerChannel>?) -> List<MixerChannel>?)? = null
+    var appFilter: ((MixerState) -> List<MixerChannel>?)? = null
 
     /** Applis à régler ensemble quand on touche la voie `id` (groupe de la table) ; null : une voie simple. */
     var groupMembers: (String) -> List<String>? = { null }
 
     /** Applis qui ont du son en ce moment, d'après le dernier état lu ; null : inconnu ou pas de volume par appli. */
     val liveApps: List<MixerChannel>? get() = state?.apps
+
+    /** Appli au premier plan de l'ordinateur d'après le dernier état lu (id de voie) ; null : aucune, inconnue ou Mac. */
+    val frontApp: String? get() = state?.front
 
     /** Un état a été lu (sinon : pas encore, ou ordinateur injoignable ; `liveApps` null ne veut alors pas dire Mac). */
     val hasState: Boolean get() = state != null
@@ -196,7 +199,7 @@ class MixerView @JvmOverloads constructor(
 
     private fun render(next: MixerState) {
         state = next
-        val apps = appFilter?.invoke(next.apps) ?: next.apps
+        val apps = appFilter?.invoke(next) ?: next.apps
         val channels = listOf(next.master, next.mic) + apps.orEmpty()
         val ids = channels.map { it.id }
         if (ids != views.keys.toList()) {
@@ -259,7 +262,8 @@ class MixerView @JvmOverloads constructor(
             "master" -> R.drawable.ic_volume
             "mic" -> R.drawable.ic_mic
             "system" -> R.drawable.ic_laptop
-            else -> if (MixerApps.isGroupId(c.id)) R.drawable.ic_apps else 0
+            MixerApps.FRONT_ID -> R.drawable.ic_display
+            else -> if (MixerApps.isGroupId(c.id) || c.id == MixerApps.OTHERS_ID) R.drawable.ic_apps else 0
         }
         if (iconRes == 0) {
             IconCache.peekApp(c.name)?.let { icon = it }
@@ -288,9 +292,9 @@ class MixerView @JvmOverloads constructor(
         heldUntil[id] = SystemClock.uptimeMillis() + HOLD_MS
     }
 
-    /** Un réglage de la voie `id` : ses applis d'un coup si c'est un groupe, sinon l'appli, la sortie ou le micro. */
+    /** Un réglage de la voie `id` : ses applis d'un coup si c'est un groupe (aucune : relit seulement), sinon l'appli, la sortie ou le micro. */
     private suspend fun app.mate.net.SystemApi.send(id: String, volume: Int? = null, muted: Boolean? = null): MixerState =
-        groupMembers(id)?.let { setMixerGroup(it, volume, muted) } ?: setMixer(id, volume, muted)
+        groupMembers(id)?.let { if (it.isEmpty()) mixer() else setMixerGroup(it, volume, muted) } ?: setMixer(id, volume, muted)
 
     private fun senderFor(id: String) = senders.getOrPut(id) {
         LatestSender(scope) { volume ->
