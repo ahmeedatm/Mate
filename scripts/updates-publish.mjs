@@ -15,8 +15,8 @@
 // backend de la PR a changé. Le manifest {"essais":[…]} a une entrée par PR (clé `mr` = numéro de la PR, titre PR_TITLE,
 // version, APK, backends) : une PR ne remplace que la sienne.
 // Avec UPDATES_REPO (« propriétaire/dépôt »), publie par la CLI `gh` (GH_TOKEN en CI, ou `gh auth login` en local) : crée
-// la release du tag si elle manque, envoie les fichiers (--clobber) puis manifest.json, et supprime les assets que le
-// manifest ne nomme plus. Essai : le manifest de la release est lu puis réécrit ; les publications doivent se suivre
+// la release du tag si elle manque, envoie les fichiers (--clobber), une copie manifest.bak.json puis manifest.json (relue
+// si une coupure a emporté manifest.json), et supprime les assets que le manifest ne nomme plus. Essai : le manifest de la release est lu puis réécrit ; les publications doivent se suivre
 // (`concurrency` du workflow), --retire aussi. Sans UPDATES_REPO, une release n'écrit que <sortie> (essai local).
 // --purge-fermees retire d'un coup les entrées dont la PR n'est plus ouverte (`gh pr view`, fusionnée ou fermée).
 import fs from "node:fs";
@@ -82,6 +82,9 @@ function readEntry(distDir, essai) {
   return { package: pkg, label, versionCode, versionName, file };
 }
 
+/** Copie du manifest, envoyée juste avant lui (voir `publish`). */
+const BACKUP = "manifest.bak.json";
+
 const TAGS = {
   latest: { title: "Mate : dernière version", prerelease: false },
   essais: { title: "Mate : essais de PR", prerelease: true },
@@ -112,23 +115,26 @@ function release(repo, tag) {
     }
   }
 
+  const download = (name) =>
+    JSON.parse(
+      gh(["release", "download", tag, "--pattern", name, "--output", "-"]),
+    );
+
   return {
-    /** Manifest déjà publié, null s'il n'y en a pas. */
+    /**
+     * Manifest déjà publié, null s'il n'y en a pas. Absent mais copie présente (coupure pendant son envoi : --clobber
+     * l'a déjà effacé) : la copie, sinon la publication suivante repartirait de rien et `prune` effacerait tous les essais.
+     */
     manifest() {
-      if (!assets()?.includes("manifest.json")) return null;
-      return JSON.parse(
-        gh([
-          "release",
-          "download",
-          tag,
-          "--pattern",
-          "manifest.json",
-          "--output",
-          "-",
-        ]),
-      );
+      const names = assets();
+      if (names?.includes("manifest.json")) return download("manifest.json");
+      if (names?.includes(BACKUP)) return download(BACKUP);
+      return null;
     },
-    /** Envoie `files` (chemins) puis `manifestPath` : le manifest ne désigne jamais un fichier absent. */
+    /**
+     * Envoie `files` (chemins), une copie du manifest puis `manifestPath` : le manifest ne désigne jamais un fichier
+     * absent, et l'un des deux existe toujours (`--clobber` efface avant d'envoyer).
+     */
     publish(files, manifestPath) {
       if (assets() === null)
         gh([
@@ -143,12 +149,15 @@ function release(repo, tag) {
           "--latest=false",
         ]);
       if (files.length) gh(["release", "upload", tag, ...files, "--clobber"]);
+      const backup = path.join(path.dirname(manifestPath), BACKUP);
+      fs.copyFileSync(manifestPath, backup);
+      gh(["release", "upload", tag, backup, "--clobber"]);
       gh(["release", "upload", tag, manifestPath, "--clobber"]);
     },
-    /** Supprime les assets que `keep` ne nomme pas. */
+    /** Supprime les assets que `keep` ne nomme pas (la copie du manifest reste). */
     prune(keep) {
       for (const name of assets() ?? []) {
-        if (keep.has(name)) continue;
+        if (keep.has(name) || name === BACKUP) continue;
         gh(["release", "delete-asset", tag, name, "--yes"]);
         console.log(`supprimé : ${name}`);
       }
