@@ -858,6 +858,19 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "sauvegarde de la configuration (lecture seule, sans jeton)",
+      run: async () => {
+        if (!local) throw new Skip("routes locales, en local seulement");
+        const res = await call("GET", "/local/config/backup", undefined, false);
+        expectStatus(res, 200, "/local/config/backup");
+        expect(res.json.format === "mate-config-1" && typeof res.json.parts === "object", "fichier de sauvegarde inattendu");
+        expect(!JSON.stringify(res.json).includes(opts.token), "le jeton de l'ordinateur est dans la sauvegarde");
+        // Fichier d'un autre format : refusé avant d'écrire quoi que ce soit.
+        const bad = await call("POST", "/local/config/backup", { backup: { format: "autre", parts: {} }, parts: ["keys"] }, false);
+        expectStatus(bad, 400, "POST /local/config/backup d'un autre format");
+      },
+    },
+    {
       name: "porte MCP (IA de bureau, lecture seule)",
       run: async () => {
         if (!local) throw new Skip("porte MCP en local seulement");

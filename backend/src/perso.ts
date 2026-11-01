@@ -16,7 +16,7 @@ export type PersoKey = { label: string; symbol?: string; glyph?: string; color?:
 export const MIN_SLOTS = 14;
 /** Plafond : validation de la route et de l'outil MCP (mcp.ts en recopie la valeur). */
 export const MAX_SLOTS = 100;
-const storeFile = path.join(config.dataDir, "keys.json");
+export const keysFile = path.join(config.dataDir, "keys.json");
 
 type Slots = (PersoKey | null)[];
 
@@ -35,11 +35,11 @@ const put = (saved: Slots | undefined, slot: number, key: PersoKey | null): Slot
 };
 
 export async function loadKeys(): Promise<Slots> {
-  return fit((await readJson<{ slots?: Slots }>(storeFile, () => ({}))).slots);
+  return fit((await readJson<{ slots?: Slots }>(keysFile, () => ({}))).slots);
 }
 
 /** Une étape `push` (touches tenues pendant l'appui) est la seule de sa touche, sans cycle ni seconde action. */
-function assertPushAlone(key: PersoKey | null) {
+export function assertPushAlone(key: PersoKey | null) {
   if (!key) return;
   const pushes = (steps: Step[] = []) => steps.some((s) => s.type === "keys" && s.push);
   if (!pushes(key.steps) && !pushes(key.hold)) return;
@@ -51,7 +51,7 @@ function assertPushAlone(key: PersoKey | null) {
 export async function saveKey(slot: number, key: PersoKey | null) {
   assertPushAlone(key);
   await updateJson<{ slots?: Slots }>(
-    storeFile,
+    keysFile,
     () => ({}),
     (data) => {
       data.slots = put(data.slots, slot, key);
@@ -131,7 +131,7 @@ export const keySchema = {
  * n'est enregistré ; dès qu'on ajoute ou retire une appli, la liste complète va dans .data/apps.json.
  */
 export type DeckApp = { label: string; name: string };
-const appsFile = path.join(config.dataDir, "apps.json");
+export const appsFile = path.join(config.dataDir, "apps.json");
 
 /** `undefined` : profil de base. */
 export async function loadSavedApps(): Promise<DeckApp[] | undefined> {
@@ -165,7 +165,7 @@ async function retireOnce(retired: (name: string) => boolean) {
 
 /** Page Média : sites ajoutés depuis la tablette (YouTube, Netflix…), vide au départ, dans .data/links.json. */
 export type DeckLink = { label: string; url: string };
-const linksFile = path.join(config.dataDir, "links.json");
+export const linksFile = path.join(config.dataDir, "links.json");
 
 export async function loadLinks(): Promise<DeckLink[]> {
   return (await readJson<{ links?: DeckLink[] }>(linksFile, () => ({}))).links ?? [];
