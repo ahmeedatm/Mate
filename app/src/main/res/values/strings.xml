@@ -313,6 +313,11 @@
     <string name="mixer_apps_hint">Coche les applis à montrer, glisse-les par leurs points pour les ordonner. Rien de coché : toutes les applis.</string>
     <string name="mixer_apps_none">Aucune appli ne fait de son en ce moment : lances-en une, puis reviens ici.</string>
     <string name="mixer_apps_unknown">Ordinateur injoignable : les applis qui jouent apparaîtront quand il répondra. Tu peux déjà décocher celles choisies.</string>
+    <string name="mixer_group_new">Regrouper des applis…</string>
+    <string name="mixer_group_title">Nouveau groupe</string>
+    <string name="mixer_group_hint">Une seule voie pour plusieurs applis : son curseur et Muet les règlent toutes, au même volume. Coche-en au moins deux.</string>
+    <string name="mixer_group_name">Nom (Jeu, Musique…)</string>
+    <string name="mixer_group_row">%1$s (%2$s)</string>
     <string name="mixer_strip_silent">%1$s, pas de son</string>
     <string name="mixer_scene_update">Mettre %1$s aux volumes actuels</string>
     <string name="mixer_scene_update_confirm">Remplacer les volumes de « %1$s » par les volumes actuels ? Les anciens seront perdus.</string>

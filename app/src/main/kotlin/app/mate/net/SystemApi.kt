@@ -162,6 +162,14 @@ class SystemApi(private val http: Http) {
         parseMixer(JSONObject(http.postJson("/system/mixer", body)))
     }
 
+    /** Règle d'un coup les applis d'un groupe (voie qui en réunit plusieurs) ; 501 sur un ordinateur sans volume par appli (Mac). */
+    suspend fun setMixerGroup(ids: List<String>, volume: Int? = null, muted: Boolean? = null): MixerState = http.io {
+        val body = JSONObject().put("ids", JSONArray(ids))
+        volume?.let { body.put("volume", it) }
+        muted?.let { body.put("muted", it) }
+        parseMixer(JSONObject(http.postJson("/system/mixer/group", body)))
+    }
+
     suspend fun mixerScenes(): List<MixerScene> = http.io {
         val scenes = JSONObject(http.get("/system/mixer/scenes")).getJSONArray("scenes")
         (0 until scenes.length()).map { i -> scenes.getJSONObject(i).let { MixerScene(it.getString("id"), it.getString("name")) } }

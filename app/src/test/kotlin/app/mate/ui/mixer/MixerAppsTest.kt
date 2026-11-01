@@ -60,4 +60,61 @@ class MixerAppsTest {
         assertFalse(MixerApps.isSilent("mic", live))
         assertFalse("Mac : rien n'est muet faute de liste", MixerApps.isSilent("valorant", null))
     }
+
+    // --- Groupes : plusieurs applis sur une voie
+
+    private val spotify = MixerChannel("spotify", "Spotify", 40, true, 10)
+    private val jeu = MixerApps.group("g1", "Jeu", listOf(MixerApps.App("valorant", "Valorant"), MixerApps.App("discord", "Discord")))
+
+    @Test
+    fun `un groupe se range et se relit avec ses membres`() {
+        val config = JSONObject()
+        assertTrue(MixerApps.write(config, "pc-1", listOf(valorant, jeu)))
+        assertEquals(listOf(valorant, jeu), MixerApps.read(config, "pc-1"))
+        assertTrue(MixerApps.read(config, "pc-1")[1].isGroup)
+        assertFalse(MixerApps.read(config, "pc-1")[0].isGroup)
+    }
+
+    @Test
+    fun `la voie d'un groupe prend le plus fort volume, le plus fort niveau, et coupe si tous sont coupes`() {
+        val group = MixerApps.channels(listOf(jeu), listOf(discord, firefox))!!.single()
+        assertEquals("group:g1", group.id)
+        assertEquals("Jeu", group.name)
+        assertEquals("seul Discord joue", 80, group.volume)
+        assertEquals(30, group.level)
+        assertFalse(group.muted)
+
+        val both = MixerApps.channels(listOf(jeu), listOf(discord.copy(muted = true), MixerChannel("valorant", "Valorant", 100, true, 5)))!!.single()
+        assertEquals(100, both.volume)
+        assertTrue("tous coupés : le groupe est coupé", both.muted)
+        assertFalse("un seul coupé : le groupe sonne encore", MixerApps.channels(listOf(jeu), listOf(discord.copy(muted = true), MixerChannel("valorant", "Valorant", 100, false, 5)))!!.single().muted)
+    }
+
+    @Test
+    fun `groupe dont aucun membre ne joue - grise, ne se pilote pas`() {
+        val group = MixerApps.channels(listOf(jeu), listOf(firefox))!!.single()
+        assertNull(group.volume)
+        assertTrue(MixerApps.isSilent(group, listOf(firefox)))
+        assertFalse(MixerApps.isSilent(MixerApps.channels(listOf(jeu), listOf(discord))!!.single(), listOf(discord)))
+    }
+
+    @Test
+    fun `membres a regler pour une voie - ceux du groupe, rien pour une simple appli`() {
+        assertEquals(listOf("valorant", "discord"), MixerApps.membersOf(listOf(valorant, jeu), "group:g1"))
+        assertNull(MixerApps.membersOf(listOf(valorant, jeu), "valorant"))
+        assertNull(MixerApps.membersOf(emptyList(), "group:g1"))
+    }
+
+    @Test
+    fun `mac - un groupe n'a pas de voie non plus`() {
+        assertNull(MixerApps.channels(listOf(jeu), null))
+    }
+
+    @Test
+    fun `le groupe est propose dans la liste avec les choisies, ses membres restent proposes`() {
+        assertEquals(
+            listOf(jeu, MixerApps.App("discord", "Discord"), MixerApps.App("firefox", "Firefox")),
+            MixerApps.candidates(listOf(jeu), listOf(discord, firefox)),
+        )
+    }
 }
