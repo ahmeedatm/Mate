@@ -26,6 +26,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -114,7 +115,8 @@ object Updater {
 
     /**
      * Télécharge, vérifie et installe. `progress` : 0 à 100 pendant le téléchargement (hors du fil principal) ;
-     * `committed` : le fichier est confié à Android, on ne peut plus annuler. Annulable (coroutine) jusque-là.
+     * `committed` : le fichier est confié à Android (ou l'ancien essai désinstallé), on ne peut plus annuler. Annulable
+     * (coroutine) jusque-là.
      */
     suspend fun install(context: Context, update: AppUpdate, progress: (Int) -> Unit, committed: () -> Unit = {}) {
         if (!Kiosk.isDeviceOwner(context)) throw UserFacingException(R.string.update_needs_kiosk)
@@ -176,9 +178,15 @@ object Updater {
                 // Après le téléchargement vérifié : un échec avant ne coûte pas l'essai installé.
                 val installedCode = installed(app, update.pkg)?.let { versionCode(it) }
                 if (update.source == UpdateSource.TRIALS && EssaiPlan.install(update.versionCode, installedCode) == EssaiPlan.Install.UNINSTALL_FIRST) {
-                    uninstall(app, update.pkg)
+                    // Plus d'annulation une fois l'ancien essai parti : « Annuler » laisserait la tablette sans essai.
+                    committed()
+                    withContext(NonCancellable) {
+                        uninstall(app, update.pkg)
+                        installApk(app, file, update, committed)
+                    }
+                } else {
+                    installApk(app, file, update, committed)
                 }
-                installApk(app, file, update, committed)
             } finally {
                 Kiosk.lockApps(app, !Prefs.allowInstalls(app))
             }
