@@ -2,8 +2,8 @@ package app.mate.net
 
 import org.json.JSONObject
 
-/** `unread` : null quand le compte ne répond pas (alors `error` dit pourquoi, en une phrase). */
-data class MailAccount(val provider: String, val label: String, val email: String, val unread: Int?, val error: String?)
+/** Pas d'adresse e-mail : la tuile ne l'affiche pas, elle reste sur l'ordinateur. `unread` : null quand le compte ne répond pas (alors `error` dit pourquoi, en une phrase). */
+data class MailAccount(val provider: String, val label: String, val unread: Int?, val error: String?)
 
 data class Mail(val accounts: List<MailAccount>) {
     val total get() = accounts.sumOf { it.unread ?: 0 }
@@ -32,7 +32,6 @@ class MailApi(private val http: Http) {
                     MailAccount(
                         row.getString("provider"),
                         row.optString("label"),
-                        row.optString("email"),
                         if (row.isNull("unread")) null else row.optInt("unread"),
                         row.optString("error").takeIf { e -> e.isNotEmpty() },
                     )

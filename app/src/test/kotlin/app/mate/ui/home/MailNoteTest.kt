@@ -7,7 +7,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class MailNoteTest {
-    private fun account(unread: Int?, error: String? = null) = MailAccount("google", "Google", "a@exemple.fr", unread, error)
+    private fun account(unread: Int?, error: String? = null) = MailAccount("google", "Google", unread, error)
 
     @Test
     fun failedReadWinsOverEverything() {

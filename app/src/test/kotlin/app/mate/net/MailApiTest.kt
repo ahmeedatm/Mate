@@ -9,11 +9,19 @@ class MailApiTest {
     @Test
     fun readsEachAccountWithItsUnreadCount() {
         val mail = MailApi.parse(
-            """{"accounts":[{"provider":"google","label":"Google","email":"a@exemple.fr","unread":3},
-                {"provider":"microsoft","label":"Microsoft","email":"b@exemple.fr","unread":4}]}""",
+            """{"accounts":[{"provider":"google","label":"Google","unread":3},
+                {"provider":"microsoft","label":"Microsoft","unread":4}]}""",
         )
         assertEquals(listOf("google", "microsoft"), mail.accounts.map { it.provider })
         assertEquals(7, mail.total)
+    }
+
+    @Test
+    fun theTabletKeepsNoEmailAddress() {
+        assertEquals(
+            listOf("provider", "label", "unread", "error"),
+            MailAccount::class.java.declaredFields.map { it.name },
+        )
     }
 
     @Test
@@ -26,8 +34,8 @@ class MailApiTest {
     @Test
     fun anAccountInErrorKeepsItsPhraseAndCountsForNothing() {
         val mail = MailApi.parse(
-            """{"accounts":[{"provider":"google","label":"Google","email":"a@exemple.fr","unread":null,"error":"Reconnecte le compte"},
-                {"provider":"microsoft","label":"Microsoft","email":"b@exemple.fr","unread":2}]}""",
+            """{"accounts":[{"provider":"google","label":"Google","unread":null,"error":"Reconnecte le compte"},
+                {"provider":"microsoft","label":"Microsoft","unread":2}]}""",
         )
         assertNull(mail.accounts[0].unread)
         assertEquals("Reconnecte le compte", mail.accounts[0].error)
@@ -37,11 +45,11 @@ class MailApiTest {
     @Test
     fun opensTheFirstAccountWithUnreadMailElseTheFirstOne() {
         val mail = MailApi.parse(
-            """{"accounts":[{"provider":"google","label":"G","email":"a@x.fr","unread":0},
-                {"provider":"microsoft","label":"M","email":"b@x.fr","unread":5}]}""",
+            """{"accounts":[{"provider":"google","label":"G","unread":0},
+                {"provider":"microsoft","label":"M","unread":5}]}""",
         )
         assertEquals("microsoft", mail.target?.provider)
-        val none = MailApi.parse("""{"accounts":[{"provider":"google","label":"G","email":"a@x.fr","unread":0}]}""")
+        val none = MailApi.parse("""{"accounts":[{"provider":"google","label":"G","unread":0}]}""")
         assertEquals("google", none.target?.provider)
         assertNull(MailApi.parse("""{"accounts":[]}""").target)
     }
