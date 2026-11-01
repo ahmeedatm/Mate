@@ -40,13 +40,27 @@ async function valueOf(run: (command: string) => Promise<string>, command: strin
 }
 
 let cache: { key: string; at: number; items: Metric[] } | null = null;
+/** Calcul en cours, partagé par les lectures qui arrivent pendant ce temps (plusieurs tuiles, commande lente). */
+let inflight: { key: string; result: Promise<Metric[]> } | null = null;
 
 /** Lance les commandes du fichier (en parallèle) ; la réponse reste en cache `CACHE_MS` tant que le fichier ne change pas. */
 export async function loadMetrics(run: (command: string) => Promise<string> = runCommand, now = Date.now()) {
   const defs = await readDefs();
   const key = JSON.stringify(defs);
   if (cache && cache.key === key && now - cache.at >= 0 && now - cache.at < CACHE_MS) return { items: cache.items };
-  const items = await Promise.all(defs.map(async (d) => ({ label: d.label, value: await valueOf(run, d.command) })));
-  cache = { key, at: now, items };
-  return { items };
+  if (inflight?.key !== key) {
+    const result = Promise.all(defs.map(async (d) => ({ label: d.label, value: await valueOf(run, d.command) })));
+    const mine = (inflight = { key, result });
+    // La promesse en cours se retire d'elle-même, que le calcul réussisse ou non.
+    void result.then(
+      (items) => {
+        cache = { key, at: now, items };
+        if (inflight === mine) inflight = null;
+      },
+      () => {
+        if (inflight === mine) inflight = null;
+      },
+    );
+  }
+  return { items: await inflight!.result };
 }

@@ -103,8 +103,11 @@ export async function listApps(): Promise<string[]> {
 export function runCommand(command: string): Promise<string> {
   if (!canControl) unsupported();
   return new Promise((resolve, reject) => {
-    const shell = isWindows ? ["cmd.exe", ["/d", "/s", "/c", command]] : ["/bin/sh", ["-c", command]];
-    execFile(shell[0] as string, shell[1] as string[], { timeout: 10_000, maxBuffer: 64 * 1024, windowsHide: true }, (err, stdout) =>
+    // Windows : la commande entre guillemets et passée telle quelle (`/s` retire la paire), sinon Node échappe les `"` en `\"` que cmd ne comprend pas.
+    const [file, args] = isWindows ? ["cmd.exe", ["/d", "/s", "/c", `"${command}"`]] : ["/bin/sh", ["-c", command]];
+    // shortcut: au délai, seul le shell est arrêté, pas les processus qu'il a lancés ; à revoir si une commande qui bloque pose problème.
+    const options = { timeout: 10_000, maxBuffer: 64 * 1024, windowsHide: true, windowsVerbatimArguments: isWindows };
+    execFile(file as string, args as string[], options, (err, stdout) =>
       err ? reject(Object.assign(new Error("La commande a échoué"), { technical: true })) : resolve(stdout),
     );
   });

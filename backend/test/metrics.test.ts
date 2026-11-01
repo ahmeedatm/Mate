@@ -75,6 +75,15 @@ describe("loadMetrics", () => {
     assert.equal((await loadMetrics(run, 7_000_000 + CACHE_MS)).items[0].value, "2");
   });
 
+  it("deux lectures en même temps ne lancent les commandes qu'une fois", async () => {
+    await write([{ label: "Lente", command: "lente" }]);
+    let runs = 0;
+    const run = async () => (runs++, await new Promise((r) => setTimeout(r, 30)), "ok");
+    const [a, b] = await Promise.all([loadMetrics(run, 9_000_000), loadMetrics(run, 9_000_000)]);
+    assert.equal(runs, 1);
+    assert.deepEqual(a, b);
+  });
+
   it("un fichier changé ne ressert pas l'ancien cache", async () => {
     await write([{ label: "A", command: "a" }]);
     await loadMetrics(async () => "1", 8_000_000);

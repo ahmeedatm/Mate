@@ -43,7 +43,8 @@ class MetricsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     private fun render(error: String?) {
         val current = metrics
         rows.removeAllViews()
-        val note = error ?: if (current.isNullOrEmpty()) context.getString(R.string.widget_metrics_empty) else null
+        // Pas de phrase « écris tes commandes » tant que la première lecture n'est pas revenue.
+        val note = error ?: if (current?.isEmpty() == true) context.getString(R.string.widget_metrics_empty) else null
         status.text = note
         status.visibility = if (note == null) View.GONE else View.VISIBLE
         current?.forEach { rows.addView(row(it), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)) }
@@ -52,7 +53,8 @@ class MetricsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     private fun row(metric: Metric) = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         gravity = android.view.Gravity.CENTER_VERTICAL
-        addView(label(if (placed.size == WidgetSize.M) 22f else 30f).apply {
+        if (metric.value == null) contentDescription = context.getString(R.string.widget_metrics_unavailable, metric.label)
+        addView(label(if (placed.size == WidgetSize.XL) 30f else 22f).apply {
             text = metric.value ?: context.getString(R.string.widget_metrics_none)
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
