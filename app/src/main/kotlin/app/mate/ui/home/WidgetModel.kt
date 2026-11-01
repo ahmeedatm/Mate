@@ -152,9 +152,23 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
     var callProfile = -1
     var rolesSet = false
 
-    /** Écran de jeu choisi par l'utilisateur (n'importe quel profil, -1 : aucun) et ses applis de jeu (noms du catalogue). */
-    var gameProfile = -1
-    val gameApps: MutableList<String> = mutableListOf()
+    /** Applis de chaque profil (noms du catalogue), dans l'ordre des noms : l'une d'elles devant sur l'ordinateur affiche la page. */
+    private val pageApps: MutableList<MutableList<String>> = MutableList(names.size) { mutableListOf() }
+
+    fun appsOf(index: Int): List<String> = pageApps.getOrNull(index).orEmpty()
+
+    /** Pose les applis de la page ; une appli ne mène qu'à une page, elle est retirée des autres (sans casse). */
+    fun setApps(index: Int, apps: List<String>) {
+        syncIcons()
+        if (index !in pageApps.indices) return
+        val taken = apps.map { it.lowercase() }.toSet()
+        pageApps.forEachIndexed { i, list -> if (i != index) list.removeAll { it.lowercase() in taken } }
+        pageApps[index] = apps.toMutableList()
+    }
+
+    /** Applis par page pour [app.mate.ui.GameSession] : Réunion (cachée hors appel) et les pages sans applis n'y sont pas. */
+    fun appPages(): Map<Int, List<String>> =
+        pageApps.indices.filter { it != callProfile && pageApps[it].isNotEmpty() }.associateWith { pageApps[it].toList() }
 
     val pages get() = names.size
 
@@ -172,6 +186,8 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
     private fun syncIcons() {
         while (icons.size < names.size) icons += null
         while (icons.size > names.size) icons.removeAt(icons.lastIndex)
+        while (pageApps.size < names.size) pageApps += mutableListOf<String>()
+        while (pageApps.size > names.size) pageApps.removeAt(pageApps.lastIndex)
     }
 
     fun copy() = HomeLayout(widgets.map { it.copy() }.toMutableList(), names.toMutableList()).also {
@@ -179,10 +195,9 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         it.deckProfile = deckProfile
         it.callProfile = callProfile
         it.rolesSet = rolesSet
-        it.gameProfile = gameProfile
-        it.gameApps += gameApps
         it.icons.clear()
         it.icons += icons
+        pageApps.forEachIndexed { i, apps -> it.pageApps[i] += apps }
     }
 
     /**
@@ -237,6 +252,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         syncIcons()
         names += name
         icons += null
+        pageApps += mutableListOf<String>()
         val index = names.size - 1
         widgets += items.map { it.copy().also { c -> c.page = index } }
         return index
@@ -285,12 +301,13 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         return named
     }
 
-    /** Remet le profil `from` à la place `to` ; ses widgets et le marquage de jeu le suivent. */
+    /** Remet le profil `from` à la place `to` ; ses widgets et ses applis le suivent. */
     fun moveProfile(from: Int, to: Int) {
         if (from == to || from !in names.indices || to !in names.indices) return
         syncIcons()
         names.add(to, names.removeAt(from))
         icons.add(to, icons.removeAt(from))
+        pageApps.add(to, pageApps.removeAt(from))
         fun moved(p: Int) = when {
             p == from -> to
             from < to && p in from + 1..to -> p - 1
@@ -301,7 +318,6 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         homeProfile = moved(homeProfile)
         if (deckProfile >= 0) deckProfile = moved(deckProfile)
         if (callProfile >= 0) callProfile = moved(callProfile)
-        if (gameProfile >= 0) gameProfile = moved(gameProfile)
     }
 
     /** Retire le profil et ses widgets, les suivants reculent d'une page. Faux (rien ne change) si [canRemove] le refuse. */
@@ -310,6 +326,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         syncIcons()
         names.removeAt(index)
         icons.removeAt(index)
+        pageApps.removeAt(index)
         widgets.removeAll { it.page == index }
         widgets.filter { it.page > index }.forEach { it.page-- }
         fun after(p: Int) = when {
@@ -320,7 +337,6 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         homeProfile = after(homeProfile)
         deckProfile = after(deckProfile)
         callProfile = after(callProfile)
-        gameProfile = after(gameProfile)
         return true
     }
 
@@ -376,8 +392,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         .put("deck", deckProfile)
         .put("call", callProfile)
         .put("roles", rolesSet)
-        .put("gameScreen", gameProfile)
-        .put("gameApps", JSONArray(gameApps))
+        .put("pageApps", JSONArray().apply { names.indices.forEach { put(JSONArray(appsOf(it))) } })
         .put("widgets", JSONArray().apply {
             widgets.forEach {
                 put(JSONObject().put("t", it.type.key).put("s", it.size.name).put("p", it.page).put("c", it.col).put("r", it.row).put("cfg", it.config))
@@ -421,8 +436,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
             layout.deckProfile = json.optInt("deck", -1).takeIf { it in names.indices } ?: -1
             layout.callProfile = json.optInt("call", -1).takeIf { it in names.indices } ?: -1
             layout.rolesSet = json.optBoolean("roles", false)
-            layout.gameProfile = json.optInt("gameScreen", -1).takeIf { it in names.indices } ?: -1
-            json.optJSONArray("gameApps")?.let { apps -> for (i in 0 until apps.length()) layout.gameApps += apps.optString(i) }
+            LayoutConfig.readPageApps(json, layout)
             val list = json.getJSONArray("widgets")
             for (i in 0 until list.length()) {
                 val w = list.getJSONObject(i)

@@ -7,7 +7,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import app.mate.R
@@ -18,10 +17,10 @@ import app.mate.ui.themeColor
 import kotlinx.coroutines.launch
 
 /**
- * Réglage « Afficher quand je joue » d'un écran : la tablette passe sur cet écran quand une des applis cochées est au
- * premier plan de l'ordinateur ([app.mate.ui.GameSession]). Les applis viennent du catalogue de l'ordinateur, comme la
- * carte Applis ; celles déjà cochées restent listées même si l'ordinateur ne répond pas. Un seul écran de jeu : en
- * activer un autre déplace le réglage. `onSaved` : la disposition est modifiée, à enregistrer.
+ * Applis d'une page : la tablette affiche cette page quand une des applis cochées est au premier plan de l'ordinateur
+ * ([app.mate.ui.GameSession]). Les applis viennent du catalogue de l'ordinateur, comme la carte Applis ; celles déjà
+ * cochées restent listées même si l'ordinateur ne répond pas. Une appli ne mène qu'à une page : la cocher ici la
+ * retire de l'autre. `onSaved` : la disposition est modifiée, à enregistrer.
  */
 class GameScreenDialog(
     private val context: Context,
@@ -31,29 +30,22 @@ class GameScreenDialog(
     private val onSaved: () -> Unit,
 ) {
 
-    private val checked = layout.gameApps.toMutableSet()
+    private val checked = layout.appsOf(index).toMutableSet()
     private val rows = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
 
     fun show() {
-        val isGameScreen = layout.gameProfile == index
-        val enabled = SwitchCompat(context).apply {
-            setText(R.string.game_show)
-            textSize = 16f
-            isChecked = isGameScreen
-        }
         val hint = TextView(context).apply {
-            setText(R.string.game_hint)
+            setText(R.string.apps_hint)
             textSize = 13f
             setTextColor(themeColor(context, R.attr.c_text_dim))
         }
         val form = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(context.dp(24), context.dp(8), context.dp(24), context.dp(8))
-            addView(enabled)
             addView(hint, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = context.dp(6); bottomMargin = context.dp(12) })
             addView(ScrollView(context).apply { addView(rows) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(280)))
         }
-        render(layout.gameApps.sortedBy { it.lowercase() }, loading = true)
+        render(layout.appsOf(index).sortedBy { it.lowercase() }, loading = true)
         val loader = (context as? LifecycleOwner)?.lifecycleScope?.launch {
             try {
                 render((BackendClient(context).deck.catalog().apps + checked).distinct().sortedBy { it.lowercase() }, loading = false)
@@ -63,13 +55,11 @@ class GameScreenDialog(
         }
         AlertDialog.Builder(context)
             .setOnDismissListener { loader?.cancel() }
-            .setTitle(context.getString(R.string.game_title, name))
+            .setTitle(context.getString(R.string.apps_title, name))
             .setView(form)
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.save) { _, _ ->
-                if (enabled.isChecked) layout.gameProfile = index else if (layout.gameProfile == index) layout.gameProfile = -1
-                layout.gameApps.clear()
-                layout.gameApps += checked.sortedBy { it.lowercase() }
+                layout.setApps(index, checked.sortedBy { it.lowercase() })
                 onSaved()
             }
             .show()

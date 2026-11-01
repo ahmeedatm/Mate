@@ -735,47 +735,56 @@ class MainActivity : AppCompatActivity() {
 
     private val game = GameSession()
 
-    /** Écran et profil d'avant la bascule sur l'écran de jeu, pour y revenir quand le jeu finit. */
+    /** Écran et profil d'avant la bascule sur la page d'une appli, pour y revenir quand on la quitte. */
     private var beforeGame: Pair<Mode, Int>? = null
+
+    /** Page affichée à cause de l'appli : à quitter seulement si l'écran la montre encore. */
+    private var gamePage = -1
 
     private val gameLeft = Runnable { if (game.endIfLeft()) afterGame() }
 
     /**
-     * Ordre `foreground` de l'ordinateur : l'appli au premier plan. Une appli de la liste de jeu bascule sur l'écran de
-     * jeu choisi (sauf saisie, écran plein ou appel) ; la quitter plus de [GAME_GRACE_MS] revient à l'écran d'avant.
+     * Ordre `foreground` de l'ordinateur : l'appli au premier plan. Une appli listée sur une page (Réglages > Profils)
+     * affiche cette page (sauf saisie, écran plein ou appel) ; la quitter plus de [GAME_GRACE_MS] revient à l'écran d'avant.
      */
     fun onForeground(app: String, bundleId: String, file: String = "") {
         val layout = shownLayout()
-        val games = if (layout.gameProfile < 0 || layout.gameProfile == layout.callProfile) emptyList() else layout.gameApps
-        when (game.onForeground(app, bundleId, file, games)) {
-            GameSession.Step.START -> startGame(layout)
+        when (game.onForeground(app, bundleId, file, layout.appPages())) {
+            GameSession.Step.START -> {
+                window.decorView.removeCallbacks(gameLeft)
+                startGame(game.target)
+            }
             GameSession.Step.LEAVE -> window.decorView.postDelayed(gameLeft, GAME_GRACE_MS)
             GameSession.Step.RETURN -> window.decorView.removeCallbacks(gameLeft)
             GameSession.Step.NONE -> Unit
         }
     }
 
-    private fun startGame(layout: HomeLayout) {
+    private fun startGame(target: Int) {
         val fullScreen = current == Mode.CAMERA || homeFragment()?.editing == true
         val typing = Typing.active(focusIsEditText = currentFocus is android.widget.EditText)
         // État sauvegardé (appli en arrière-plan) : pas de changement d'écran.
         val page = homeFragment()?.shownPage?.takeIf { current == Mode.HOME }
-        // Bascule refusée (ou déjà sur l'écran de jeu) : pas de jeu en cours, la prochaine appli devant retentera.
-        if (supportFragmentManager.isStateSaved || !game.shouldSwitch(typing, fullScreen, inCall = call.active) || page == layout.gameProfile) {
+        // Bascule refusée (ou déjà sur cette page) : pas de session, la prochaine appli devant retentera.
+        if (supportFragmentManager.isStateSaved || !game.shouldSwitch(typing, fullScreen, inCall = call.active) || page == target) {
             game.reset()
             return
         }
-        beforeGame = current to (homeFragment()?.shownPage ?: layout.homeProfile)
-        showProfile(layout.gameProfile)
+        // D'une appli à une autre, l'écran d'avant reste celui d'avant la première.
+        if (beforeGame == null || gamePage < 0) beforeGame = current to (homeFragment()?.shownPage ?: shownLayout().homeProfile)
+        gamePage = target
+        showProfile(target)
     }
 
-    /** Fin de jeu : retour à l'écran d'avant si l'écran de jeu est encore affiché. */
+    /** Fin de session : retour à l'écran d'avant si la page de l'appli est encore affichée. */
     private fun afterGame() {
         val before = beforeGame
+        val shown = gamePage
         beforeGame = null
+        gamePage = -1
         if (before == null || supportFragmentManager.isStateSaved) return
         val page = homeFragment()?.shownPage?.takeIf { current == Mode.HOME }
-        val back = game.returnTo(page, shownLayout().gameProfile, before.second) ?: return
+        val back = game.returnTo(page, shown, before.second) ?: return
         if (before.first == Mode.HOME) showProfile(back) else show(before.first)
     }
 
@@ -783,6 +792,7 @@ class MainActivity : AppCompatActivity() {
         window.decorView.removeCallbacks(gameLeft)
         game.reset()
         beforeGame = null
+        gamePage = -1
     }
 
     /** La disposition que l'Accueil affiche (celle que la barre doit suivre), sinon celle enregistrée. */

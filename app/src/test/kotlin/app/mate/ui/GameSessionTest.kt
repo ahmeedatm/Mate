@@ -8,7 +8,7 @@ import org.junit.Test
 class GameSessionTest {
 
     private val session = GameSession()
-    private val games = listOf("Steam", "Minecraft")
+    private val games = mapOf(1 to listOf("Steam", "Minecraft"))
 
     @Test
     fun `une appli de la liste au premier plan lance le jeu, une seule fois`() {
@@ -25,19 +25,19 @@ class GameSessionTest {
 
     @Test
     fun `la liste vide ne lance rien`() {
-        assertEquals(GameSession.Step.NONE, session.onForeground("Steam", "steam", "", emptyList()))
+        assertEquals(GameSession.Step.NONE, session.onForeground("Steam", "steam", "", emptyMap<Int, List<String>>()))
     }
 
     @Test
     fun `le nom se compare sans casse, et Windows par le nom de l'exe`() {
-        assertEquals(GameSession.Step.START, session.onForeground("steam", "steam.exe", "", listOf("STEAM")))
+        assertEquals(GameSession.Step.START, session.onForeground("steam", "steam.exe", "", mapOf(1 to listOf("STEAM"))))
         session.reset()
-        assertEquals(GameSession.Step.START, session.onForeground("Autre", "minecraft.exe", "", listOf("Minecraft.exe")))
+        assertEquals(GameSession.Step.START, session.onForeground("Autre", "minecraft.exe", "", mapOf(1 to listOf("Minecraft.exe"))))
     }
 
     @Test
     fun `un Mac en francais, le nom du fichier du catalogue reconnait l appli`() {
-        val step = session.onForeground("Moniteur d'activité", "com.apple.ActivityMonitor", "Activity Monitor", listOf("Activity Monitor"))
+        val step = session.onForeground("Moniteur d'activité", "com.apple.ActivityMonitor", "Activity Monitor", mapOf(1 to listOf("Activity Monitor")))
         assertEquals(GameSession.Step.START, step)
     }
 
@@ -58,6 +58,43 @@ class GameSessionTest {
         assertTrue(session.endIfLeft())
         assertFalse(session.active)
         assertFalse(session.endIfLeft())
+    }
+
+    private val pages = mapOf(1 to listOf("Figma"), 2 to listOf("Blender", "Cinema 4D"))
+
+    @Test
+    fun `chaque appli mene a sa page`() {
+        assertEquals(GameSession.Step.START, session.onForeground("Figma", "com.figma.Desktop", "", pages))
+        assertEquals(1, session.target)
+        session.reset()
+        assertEquals(GameSession.Step.START, session.onForeground("Blender", "org.blenderfoundation.blender", "", pages))
+        assertEquals(2, session.target)
+    }
+
+    @Test
+    fun `passer de Figma a Blender change de page sans finir la session`() {
+        session.onForeground("Figma", "figma", "", pages)
+        assertEquals(GameSession.Step.START, session.onForeground("Blender", "blender", "", pages))
+        assertEquals(2, session.target)
+        assertTrue(session.active)
+        assertEquals(GameSession.Step.NONE, session.onForeground("Blender", "blender", "", pages))
+    }
+
+    @Test
+    fun `quitter Figma pour Blender pendant le delai passe sur la page de Blender`() {
+        session.onForeground("Figma", "figma", "", pages)
+        session.onForeground("Finder", "finder", "", pages)
+        assertEquals(GameSession.Step.START, session.onForeground("Blender", "blender", "", pages))
+        assertFalse(session.endIfLeft())
+        assertEquals(2, session.target)
+    }
+
+    @Test
+    fun `revenir dans la meme appli pendant le delai garde sa page`() {
+        session.onForeground("Figma", "figma", "", pages)
+        session.onForeground("Finder", "finder", "", pages)
+        assertEquals(GameSession.Step.RETURN, session.onForeground("Figma", "figma", "", pages))
+        assertEquals(1, session.target)
     }
 
     @Test
