@@ -294,6 +294,29 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "dupliquer une touche",
+      run: async () => {
+        const slot = 18;
+        let copy: number | undefined;
+        try {
+          expectStatus(
+            await call("PUT", `/deck/keys/${slot}`, { label: "Sanity copie", steps: [{ type: "text", text: "sanity" }] }),
+            200,
+            "PUT /deck/keys/18",
+          );
+          const res = await call("POST", "/deck/keys/duplicate", { slot });
+          expectStatus(res, 200, "POST /deck/keys/duplicate");
+          copy = res.json.slot as number;
+          expect(copy !== slot, "la copie écrase l'original");
+          const got = await call("GET", `/deck/keys/${copy}`);
+          expect(got.json.key?.label === "Sanity copie", "la copie n'a pas la touche d'origine");
+        } finally {
+          expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE /deck/keys/18");
+          if (copy !== undefined) expectStatus(await call("DELETE", `/deck/keys/${copy}`), 200, "DELETE de la copie");
+        }
+      },
+    },
+    {
       name: "touche à cycle : une étape par appui",
       run: async () => {
         const slot = 15;
