@@ -508,6 +508,14 @@
     <string name="camera_resume">Reprendre</string>
     <string name="camera_frozen_hint">Image figée sur l\'ordinateur</string>
     <string name="camera_photo">Photo → ordi</string>
+    <string name="share_sending">Envoi vers %1$s…</string>
+    <string name="share_sent">Envoyé dans le dossier partagé : %1$s</string>
+    <string name="share_sent_many">%1$d fichiers envoyés dans le dossier partagé</string>
+    <string name="share_too_big">%1$s est trop gros : 20 Mo au plus.</string>
+    <string name="share_unreadable">Impossible de lire %1$s dans l\'autre appli.</string>
+    <string name="share_partial">%1$d fichier(s) envoyé(s) sur %2$d, puis : %3$s</string>
+    <string name="share_refused">%1$d fichier(s) refusé(s) : seuls %2$d fichiers d\'une autre appli passent par envoi.</string>
+    <string name="share_nothing">Rien à envoyer : l\'autre appli n\'a donné ni fichier ni lien.</string>
     <string name="camera_photo_sent">Photo enregistrée : %1$s</string>
     <string name="camera_photo_failed">Photo impossible, réessaie</string>
     <string name="camera_copy">Copier sur l\'ordi</string>
