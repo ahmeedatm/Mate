@@ -97,6 +97,7 @@ class SettingsFragment :
     private lateinit var brightness: SeekBar
     private lateinit var volume: SeekBar
     private lateinit var nightDim: SwitchCompat
+    private lateinit var autoBrightness: SwitchCompat
     private lateinit var volumeKeysComputer: SwitchCompat
     private lateinit var notifDiscreet: SwitchCompat
     private lateinit var meetingAlert: SwitchCompat
@@ -175,6 +176,7 @@ class SettingsFragment :
         brightness = view.findViewById(R.id.settings_brightness)
         volume = view.findViewById(R.id.settings_volume)
         nightDim = view.findViewById(R.id.settings_night_dim)
+        autoBrightness = view.findViewById(R.id.settings_auto_brightness)
         volumeKeysComputer = view.findViewById(R.id.settings_volume_keys_computer)
         notifDiscreet = view.findViewById(R.id.settings_notif_discreet)
         meetingAlert = view.findViewById(R.id.settings_meeting_alert)
@@ -653,6 +655,12 @@ class SettingsFragment :
         })
         // Lu à chaque appui sur un bouton de volume (MainActivity), rien d'autre à prévenir.
         volumeKeysComputer.setOnCheckedChangeListener { _, checked -> Prefs.setVolumeKeysOnComputer(ctx, checked) }
+        autoBrightness.setOnCheckedChangeListener { _, checked ->
+            Prefs.setAutoBrightness(ctx, checked)
+            brightness.isEnabled = !checked
+            if (checked) Screen.startAmbient(requireActivity()) else Screen.stopAmbient(requireActivity())
+            Screen.apply(requireActivity())
+        }
         nightDim.setOnCheckedChangeListener { _, checked ->
             Prefs.setNightDim(ctx, checked)
             Screen.apply(requireActivity())
@@ -691,6 +699,8 @@ class SettingsFragment :
         brightness.progress = if (chosen >= 0) (chosen * 100).toInt()
         else Settings.System.getInt(ctx.contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128) * 100 / 255
         volume.progress = ctx.getSystemService(AudioManager::class.java).getStreamVolume(AudioManager.STREAM_MUSIC)
+        autoBrightness.isChecked = Prefs.autoBrightness(ctx)
+        brightness.isEnabled = !autoBrightness.isChecked
         nightDim.isChecked = Prefs.nightDim(ctx)
         volumeKeysComputer.isChecked = Prefs.volumeKeysOnComputer(ctx)
         notifDiscreet.isChecked = Prefs.notificationsDiscreet(ctx)

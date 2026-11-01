@@ -877,6 +877,8 @@
     <string name="tablet_health_other">anomalie</string>
     <string name="tablet_battery_low">Batterie faible (%1$d %%) : branche la tablette.</string>
     <string name="tablet_brightness">Luminosité de l\'écran</string>
+    <string name="tablet_auto_brightness">Luminosité automatique</string>
+    <string name="tablet_auto_brightness_hint">L\'écran s\'éclaircit le jour et s\'adoucit le soir selon la lumière de la pièce. Le curseur est désactivé tant que c\'est activé.</string>
     <string name="tablet_volume">Volume de la tablette (voix, sons d\'ambiance)</string>
     <string name="tablet_volume_keys_computer">Boutons de volume : son de l\'ordinateur</string>
     <string name="tablet_volume_keys_computer_hint">Les boutons de la tablette règlent la sortie de l\'ordinateur actif au lieu de la tablette. Ordinateur injoignable : les boutons ne font rien.</string>

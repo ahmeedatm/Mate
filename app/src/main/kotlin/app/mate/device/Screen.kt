@@ -2,6 +2,10 @@ package app.mate.device
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.SystemClock
 import android.provider.Settings
 import android.view.WindowManager
@@ -12,7 +16,8 @@ import java.util.Calendar
 /**
  * Luminosité de l'écran, réglée par la fenêtre de l'appli (toujours au premier plan en kiosque) : pas de permission,
  * pas de réglage système à modifier. La nuit (22 h – 7 h), l'écran toujours allumé est atténué ; un toucher le
- * rallume pour [WAKE_MS]. Pendant le cadre photo, la luminosité est plafonnée (voir FrameLogic.level).
+ * rallume pour [WAKE_MS]. En mode automatique, le capteur de lumière de la pièce règle le niveau (voir
+ * AutoBrightness) ; la veille de nuit reste prioritaire. Pendant le cadre photo, la luminosité est plafonnée (voir FrameLogic.level).
  */
 object Screen {
 
@@ -21,6 +26,10 @@ object Screen {
     const val MIN_LEVEL = 0.05f
 
     private var lastTouch = 0L
+
+    /** Dernier niveau déduit du capteur de lumière ; null tant qu'il n'a rien mesuré. */
+    private var ambientLevel: Float? = null
+    private var ambientListener: SensorEventListener? = null
 
     /** Cadre photo affiché : null sinon ; sa valeur dit si la tablette est branchée (plafond plus bas sur batterie). */
     var frameCharging: Boolean? = null
@@ -34,7 +43,7 @@ object Screen {
     fun apply(activity: Activity) {
         val window = activity.window
         val params = window.attributes
-        val chosen = Prefs.brightness(activity)
+        val chosen = if (Prefs.autoBrightness(activity)) ambientLevel ?: Prefs.brightness(activity) else Prefs.brightness(activity)
         val charging = frameCharging
         val target = when {
             dimmed(activity) -> NIGHT_LEVEL
@@ -46,6 +55,33 @@ object Screen {
             params.screenBrightness = target
             window.attributes = params
         }
+    }
+
+    /** Écoute la lumière de la pièce tant que l'écran est au premier plan (à appeler dans onResume) ; sans effet si le mode est coupé. */
+    fun startAmbient(activity: Activity) {
+        stopAmbient(activity)
+        if (!Prefs.autoBrightness(activity)) return
+        val manager = activity.getSystemService(SensorManager::class.java)
+        val sensor = manager?.getDefaultSensor(Sensor.TYPE_LIGHT) ?: return
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                val target = AutoBrightness.level(event.values[0])
+                if (ambientLevel?.let { AutoBrightness.worthChange(it, target) } == false) return
+                ambientLevel = target
+                apply(activity)
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) = Unit
+        }
+        ambientListener = listener
+        manager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+    }
+
+    /** À appeler dans onPause et quand le mode est coupé. */
+    fun stopAmbient(activity: Activity) {
+        ambientListener?.let { activity.getSystemService(SensorManager::class.java)?.unregisterListener(it) }
+        ambientListener = null
+        ambientLevel = null
     }
 
     /** Sens de l'écran : paysage fixe, ou les deux sens de paysage selon le capteur (le choix du manifeste). */
