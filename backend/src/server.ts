@@ -24,6 +24,7 @@ import { haReachable, haSensorStates } from "./ha.ts";
 import { callingDeckApps } from "./deck.ts";
 import { startMenuBar } from "./mac/menubar.ts";
 import { loadTls } from "./tls.ts";
+import { startSchedule } from "./schedule.ts";
 import { startReminders } from "./tasks.ts";
 import agentRoutes from "./routes/agents.ts";
 import awayRoutes from "./routes/away.ts";
@@ -52,6 +53,7 @@ import tabletRoutes from "./routes/tablet.ts";
 import metricsRoutes from "./routes/metrics.ts";
 import newsRoutes from "./routes/news.ts";
 import shoppingRoutes from "./routes/shopping.ts";
+import scheduleRoutes from "./routes/schedule.ts";
 import taskRoutes from "./routes/tasks.ts";
 import updateRoutes from "./routes/updates.ts";
 import windowRoutes from "./routes/windows.ts";
@@ -163,6 +165,7 @@ app.addHook("preHandler", async (req, reply) => {
     !canControl &&
     ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) ||
       req.url.startsWith("/system") ||
+      req.url.startsWith("/schedule") ||
       req.url.startsWith("/pointer") ||
       req.url.startsWith("/present") ||
       req.url.startsWith("/gitlab") ||
@@ -202,6 +205,7 @@ app.register(browserRoutes);
 app.register(cameraRoutes);
 app.register(calendarRoutes);
 app.register(taskRoutes);
+app.register(scheduleRoutes);
 app.register(shoppingRoutes);
 app.register(metricsRoutes);
 app.register(newsRoutes);
@@ -219,6 +223,7 @@ app.register(tabletRoutes);
 const remind = async (text: string) => (await sendToTablet({ type: "message", text, speak: true, seconds: 120 })).received === true;
 startReminders(remind);
 startEventReminders(remind);
+startSchedule();
 // Appel entrant : prévenir la tablette sans attendre sa réponse (la sonnerie ne doit pas bloquer la surveillance).
 void startCallWatch((event) => void sendToTablet({ type: "call", ...event }, 30_000));
 // Réunion en cours : la tablette passe sur son profil Réunion (et en revient), seulement tant qu'elle est connectée.
