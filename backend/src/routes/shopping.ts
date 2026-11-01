@@ -1,6 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { addShopping, clearDoneShopping, deleteShopping, listShopping, setShoppingDone } from "../shopping.ts";
 
+const idParams = { type: "object", properties: { id: { type: "string", maxLength: 64 } } };
+
 export default async function shoppingRoutes(app: FastifyInstance) {
   app.get("/shopping", async () => ({ items: await listShopping() }));
 
@@ -27,12 +29,12 @@ export default async function shoppingRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string }; Body: { done: boolean } }>(
     "/shopping/:id/done",
-    { schema: { body: { type: "object", required: ["done"], properties: { done: { type: "boolean" } } } } },
+    { schema: { params: idParams, body: { type: "object", required: ["done"], properties: { done: { type: "boolean" } } } } },
     async (req, reply) =>
       (await setShoppingDone(req.params.id, req.body.done)) ? { ok: true } : reply.code(404).send({ error: "Article inconnu" }),
   );
 
-  app.delete<{ Params: { id: string } }>("/shopping/:id", async (req, reply) =>
+  app.delete<{ Params: { id: string } }>("/shopping/:id", { schema: { params: idParams } }, async (req, reply) =>
     (await deleteShopping(req.params.id)) ? { ok: true } : reply.code(404).send({ error: "Article inconnu" }),
   );
 

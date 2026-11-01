@@ -26,23 +26,20 @@ const edit = <R>(change: (items: ShoppingItem[]) => R) =>
 
 /**
  * Ajoute les articles (texte nettoyé, vides ignorés). Un article déjà à acheter n'est pas doublé ; déjà coché, il
- * repasse à acheter. Rend les articles concernés, dans l'ordre demandé. Liste pleine : les derniers sont refusés (`null`).
+ * repasse à acheter. Rend les articles concernés, dans l'ordre demandé. Pas la place pour tous (liste pleine) : rien n'est ajouté, `null`.
  */
 export function addShopping(labels: string[]): Promise<ShoppingItem[] | null> {
   const clean = labels.map((l) => l.trim().slice(0, MAX_LABEL)).filter(Boolean);
   return edit((items) => {
-    const touched: ShoppingItem[] = [];
-    for (const label of clean) {
+    const fresh = new Set(clean.filter((label) => !items.some((i) => sameLabel(i.label, label))).map((l) => l.toLocaleLowerCase("fr")));
+    // Pas la place pour tous : rien n'est ajouté, la tablette sait que rien n'a changé.
+    if (items.length + fresh.size > MAX_ITEMS) return null;
+    return clean.map((label) => {
       let item = items.find((i) => sameLabel(i.label, label));
       if (item) item.done = false;
-      else {
-        if (items.length >= MAX_ITEMS) return null;
-        item = { id: randomUUID(), label, done: false };
-        items.push(item);
-      }
-      touched.push(item);
-    }
-    return touched;
+      else items.push((item = { id: randomUUID(), label, done: false }));
+      return item;
+    });
   });
 }
 

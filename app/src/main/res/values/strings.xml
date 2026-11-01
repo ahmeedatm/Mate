@@ -587,10 +587,11 @@
     <string name="shopping_add_confirm">Ajouter</string>
     <string name="shopping_hint">Lait, pain…</string>
     <plurals name="shopping_clear_title">
-        <item quantity="one">Retirer l\'article coché ?</item>
-        <item quantity="other">Retirer les %1$d articles cochés ?</item>
+        <item quantity="one">Supprimer l\'article coché ?</item>
+        <item quantity="other">Supprimer les %1$d articles cochés ?</item>
     </plurals>
-    <string name="shopping_clear">Retirer</string>
+    <string name="shopping_clear_row">Supprimer les cochés</string>
+    <string name="shopping_reload">Relire la liste</string>
     <string name="task_hint">Nouvelle tâche…</string>
     <string name="add">Ajouter</string>
     <string name="delete">Supprimer</string>

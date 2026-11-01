@@ -86,6 +86,19 @@ describe("liste de courses", () => {
     assert.equal((await server.call("POST", "/shopping", { labels: ["   "] })).status, 400);
   });
 
+  it("refuse tout, sans rien écrire, quand la liste n'a pas la place", async () => {
+    for (let start = 0; start < 100; start += 10) {
+      const labels = Array.from({ length: 10 }, (_, i) => `Article ${start + i}`);
+      assert.equal((await server.call("POST", "/shopping", { labels })).status, 200);
+    }
+    const full = await server.call("POST", "/shopping", { labels: ["Article 3", "Nouveau"] });
+    assert.equal(full.status, 409);
+    assert.equal((await items()).length, 100);
+    assert.ok(!(await items()).some((i) => i.label === "Nouveau"));
+    // Un article déjà présent ne prend pas de place : il passe.
+    assert.equal((await server.call("POST", "/shopping", { labels: ["article 3"] })).status, 200);
+  });
+
   it("garde la liste après un redémarrage de la lecture du fichier", async () => {
     await server.call("POST", "/shopping", { labels: ["Lait"] });
     const raw = JSON.parse(await fs.readFile(path.join(server.dataDir, "shopping.json"), "utf8"));

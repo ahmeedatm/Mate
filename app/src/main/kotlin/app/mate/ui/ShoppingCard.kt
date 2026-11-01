@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Widget « Courses » : la liste d'articles de l'ordinateur, cochée d'un toucher (les cochés descendent sous les autres).
- * Même gabarit que la carte Tâches. Toucher le compteur vide les articles cochés (après confirmation), toucher un
+ * Même gabarit que la carte Tâches. Toucher le compteur relit la liste, la dernière ligne supprime les articles cochés (après confirmation), toucher un
  * article ouvre sa suppression, « + Ajouter un article » ouvre le champ. L'ajout à la voix passe par `VoiceCommand.AddShopping`.
  */
 class ShoppingCard @JvmOverloads constructor(
@@ -45,7 +45,8 @@ class ShoppingCard @JvmOverloads constructor(
         findViewById<TextView>(R.id.tasks_title).setText(R.string.widget_shopping)
         findViewById<TextView>(R.id.tasks_add_row).setText(R.string.shopping_add)
         findViewById<View>(R.id.tasks_add_row).setOnClickListener { askNewItem() }
-        count.setOnClickListener { if (doneCount > 0) confirmClear() else launch { load() } }
+        count.contentDescription = context.getString(R.string.shopping_reload)
+        count.setOnClickListener { launch { load() } }
     }
 
     fun attach(scope: CoroutineScope) {
@@ -112,13 +113,18 @@ class ShoppingCard @JvmOverloads constructor(
         AlertDialog.Builder(context)
             .setTitle(context.resources.getQuantityString(R.plurals.shopping_clear_title, doneCount, doneCount))
             .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.shopping_clear) { _, _ -> launch { client().shopping.clearDone(); load() } }
+            .setPositiveButton(R.string.delete) { _, _ -> launch { client().shopping.clearDone(); load() } }
             .create()
             .showImmersive()
     }
 
+    /** Liste affichée : une relecture identique ne reconstruit pas les lignes (ni l'animation d'apparition). */
+    private var shown: List<ShoppingItem>? = null
+
     private fun render(items: List<ShoppingItem>) {
         hasRead = true
+        if (items == shown) return
+        shown = items
         doneCount = items.count { it.done }
         count.text = when {
             items.isEmpty() -> ""
@@ -129,6 +135,17 @@ class ShoppingCard @JvmOverloads constructor(
         list.removeAllViews()
         if (items.isNotEmpty()) Look.revealOnce(list)
         items.sortedBy { it.done }.forEach { list.addView(itemRow(it)) }
+        if (doneCount > 0) list.addView(clearRow())
+    }
+
+    /** Dernière ligne quand des articles sont cochés : les supprime après confirmation. */
+    private fun clearRow() = TextView(context).apply {
+        setText(R.string.shopping_clear_row)
+        textSize = 16f
+        setTextColor(themeColor(context, R.attr.c_text_faint))
+        gravity = android.view.Gravity.CENTER_VERTICAL
+        minimumHeight = dp(48)
+        setOnClickListener { confirmClear() }
     }
 
     private fun itemRow(item: ShoppingItem): View {
@@ -137,6 +154,7 @@ class ShoppingCard @JvmOverloads constructor(
         val label = row.findViewById<StrikeText>(R.id.task_label)
         row.findViewById<ImageButton>(R.id.task_open).visibility = View.GONE
         label.text = item.label
+        check.contentDescription = item.label
         fun paint(done: Boolean, animate: Boolean) {
             check.setDone(done, animate)
             label.setStruck(done, animate)

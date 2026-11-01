@@ -11,7 +11,10 @@ class ShoppingApi(private val http: Http) {
     suspend fun list(): List<ShoppingItem> = http.io { parse(JSONObject(http.get("/shopping")).getJSONArray("items")) }
 
     /** Ajoute des articles ; un article déjà à acheter n'est pas doublé, un article coché repasse à acheter. */
-    suspend fun add(labels: List<String>) = http.io { http.postJson("/shopping", JSONObject().put("labels", JSONArray(labels))); Unit }
+    suspend fun add(labels: List<String>) = http.io {
+        // Le compagnon accepte 10 articles par envoi.
+        labels.chunked(MAX_PER_REQUEST).forEach { http.postJson("/shopping", JSONObject().put("labels", JSONArray(it))) }
+    }
 
     suspend fun setDone(id: String, done: Boolean) = http.io { http.postJson("/shopping/${http.encode(id)}/done", JSONObject().put("done", done)); Unit }
 
@@ -23,5 +26,9 @@ class ShoppingApi(private val http: Http) {
     private fun parse(items: JSONArray) = (0 until items.length()).map { i ->
         val item = items.getJSONObject(i)
         ShoppingItem(item.getString("id"), item.getString("label"), item.getBoolean("done"))
+    }
+
+    private companion object {
+        const val MAX_PER_REQUEST = 10
     }
 }

@@ -110,12 +110,15 @@ class VoiceCommandsTest {
         assertEquals(VoiceCommand.AddShopping(listOf("Pommes de terre")), parse("mets des pommes de terre dans les courses"))
         assertEquals(VoiceCommand.AddShopping(listOf("Farine")), parse("rajoute de la farine à la liste de course"))
         assertEquals(VoiceCommand.AddShopping(listOf("Citrons")), parse("note des citrons aux courses"))
+        assertEquals(VoiceCommand.AddShopping(listOf("Ail", "Lentilles")), parse("ajoute de l'ail et des lentilles à la liste de courses"))
+        assertEquals(VoiceCommand.AddShopping(listOf("Lait", "Pain", "Beurre")), parse("ajoute du lait, du pain et du beurre à la liste de courses"))
     }
 
     @Test
     fun `la liste de courses ne prend pas les taches ni les autres phrases`() {
         assertEquals(VoiceCommand.AddTask("Appeler le médecin"), parse("ajoute une tâche appeler le médecin"))
         assertFalse(parse("ajoute du lait") is VoiceCommand.AddShopping)
+        assertFalse(parse("mets le volume à 30") is VoiceCommand.AddShopping)
         assertFalse(parse("ajoute à la liste de courses") is VoiceCommand.AddShopping)
     }
 
