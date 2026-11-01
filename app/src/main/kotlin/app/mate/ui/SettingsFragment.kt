@@ -98,6 +98,7 @@ class SettingsFragment :
     private lateinit var volume: SeekBar
     private lateinit var nightDim: SwitchCompat
     private lateinit var autoBrightness: SwitchCompat
+    private lateinit var autoBrightnessHint: TextView
     private lateinit var volumeKeysComputer: SwitchCompat
     private lateinit var notifDiscreet: SwitchCompat
     private lateinit var meetingAlert: SwitchCompat
@@ -177,6 +178,7 @@ class SettingsFragment :
         volume = view.findViewById(R.id.settings_volume)
         nightDim = view.findViewById(R.id.settings_night_dim)
         autoBrightness = view.findViewById(R.id.settings_auto_brightness)
+        autoBrightnessHint = view.findViewById(R.id.settings_auto_brightness_hint)
         volumeKeysComputer = view.findViewById(R.id.settings_volume_keys_computer)
         notifDiscreet = view.findViewById(R.id.settings_notif_discreet)
         meetingAlert = view.findViewById(R.id.settings_meeting_alert)
@@ -699,7 +701,10 @@ class SettingsFragment :
         brightness.progress = if (chosen >= 0) (chosen * 100).toInt()
         else Settings.System.getInt(ctx.contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128) * 100 / 255
         volume.progress = ctx.getSystemService(AudioManager::class.java).getStreamVolume(AudioManager.STREAM_MUSIC)
-        autoBrightness.isChecked = Prefs.autoBrightness(ctx)
+        val hasLight = Screen.hasLightSensor(requireActivity())
+        autoBrightness.isEnabled = hasLight
+        autoBrightness.isChecked = hasLight && Prefs.autoBrightness(ctx)
+        autoBrightnessHint.setText(if (hasLight) R.string.tablet_auto_brightness_hint else R.string.tablet_auto_brightness_none)
         brightness.isEnabled = !autoBrightness.isChecked
         nightDim.isChecked = Prefs.nightDim(ctx)
         volumeKeysComputer.isChecked = Prefs.volumeKeysOnComputer(ctx)

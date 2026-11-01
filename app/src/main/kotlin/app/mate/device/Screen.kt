@@ -77,12 +77,15 @@ object Screen {
         manager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
     }
 
-    /** À appeler dans onPause et quand le mode est coupé. */
+    /** À appeler dans onPause et quand le mode est coupé ; le dernier niveau mesuré est gardé pour éviter un clignotement au retour. */
     fun stopAmbient(activity: Activity) {
         ambientListener?.let { activity.getSystemService(SensorManager::class.java)?.unregisterListener(it) }
         ambientListener = null
-        ambientLevel = null
     }
+
+    /** Vrai si la tablette a un capteur de lumière. */
+    fun hasLightSensor(activity: Activity): Boolean =
+        activity.getSystemService(SensorManager::class.java)?.getDefaultSensor(Sensor.TYPE_LIGHT) != null
 
     /** Sens de l'écran : paysage fixe, ou les deux sens de paysage selon le capteur (le choix du manifeste). */
     fun orientation(locked: Boolean): Int =
