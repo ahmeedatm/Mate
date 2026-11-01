@@ -173,6 +173,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.WEB -> WebWidget(context, host, placed)
                 WidgetType.NEWS -> NewsWidget(context, host, placed)
                 WidgetType.MAIL -> MailWidget(context, host, placed)
+                WidgetType.MEALS -> MealsWidget(context, host, placed)
                 WidgetType.METRICS -> MetricsWidget(context, host, placed)
             }
     }

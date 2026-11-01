@@ -24,6 +24,7 @@ import { haReachable, haSensorStates } from "./ha.ts";
 import { callingDeckApps } from "./deck.ts";
 import { startMenuBar } from "./mac/menubar.ts";
 import { loadTls } from "./tls.ts";
+import { startSchedule } from "./schedule.ts";
 import { startReminders } from "./tasks.ts";
 import agentRoutes from "./routes/agents.ts";
 import awayRoutes from "./routes/away.ts";
@@ -51,8 +52,10 @@ import systemRoutes from "./routes/system.ts";
 import tabletRoutes from "./routes/tablet.ts";
 import metricsRoutes from "./routes/metrics.ts";
 import mailRoutes from "./routes/mail.ts";
+import menuRoutes from "./routes/menu.ts";
 import newsRoutes from "./routes/news.ts";
 import shoppingRoutes from "./routes/shopping.ts";
+import scheduleRoutes from "./routes/schedule.ts";
 import taskRoutes from "./routes/tasks.ts";
 import updateRoutes from "./routes/updates.ts";
 import windowRoutes from "./routes/windows.ts";
@@ -158,12 +161,13 @@ app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validat
 
 // Pilotage de l'ordinateur (deck d'applis et de raccourcis, son, micro) : macOS et Windows seulement.
 // Ailleurs, le deck se lit et ses touches perso se modifient ; toucher une touche répond 501 (os.ts : unsupported).
-const DECK_ANYWHERE = /^\/deck(\/keys\/\d+|\/run)?(\?|$)/;
+const DECK_ANYWHERE = /^\/deck(\/keys\/(\d+|duplicate)|\/pages\/\d+\/duplicate|\/run)?(\?|$)/;
 app.addHook("preHandler", async (req, reply) => {
   if (
     !canControl &&
     ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) ||
       req.url.startsWith("/system") ||
+      req.url.startsWith("/schedule") ||
       req.url.startsWith("/pointer") ||
       req.url.startsWith("/present") ||
       req.url.startsWith("/gitlab") ||
@@ -203,10 +207,12 @@ app.register(browserRoutes);
 app.register(cameraRoutes);
 app.register(calendarRoutes);
 app.register(taskRoutes);
+app.register(scheduleRoutes);
 app.register(shoppingRoutes);
 app.register(metricsRoutes);
 app.register(mailRoutes);
 app.register(newsRoutes);
+app.register(menuRoutes);
 app.register(haRoutes);
 app.register(jiraRoutes);
 app.register(callRoutes);
@@ -221,6 +227,7 @@ app.register(tabletRoutes);
 const remind = async (text: string) => (await sendToTablet({ type: "message", text, speak: true, seconds: 120 })).received === true;
 startReminders(remind);
 startEventReminders(remind);
+startSchedule();
 // Appel entrant : prévenir la tablette sans attendre sa réponse (la sonnerie ne doit pas bloquer la surveillance).
 void startCallWatch((event) => void sendToTablet({ type: "call", ...event }, 30_000));
 // Réunion en cours : la tablette passe sur son profil Réunion (et en revient), seulement tant qu'elle est connectée.
@@ -229,7 +236,7 @@ if (canControl) {
     connected: () => tabletStatus().connected,
     liveApps: callingDeckApps,
   });
-  // Appli au premier plan : la tablette passe sur son écran de jeu quand c'en est une de sa liste (et en revient).
+  // Appli au premier plan : la tablette affiche la page d'une appli de sa liste (et en revient).
   startForegroundWatch((event) => void sendToTablet({ type: "foreground", ...event }), {
     connected: () => tabletStatus().connected,
     front: frontApp,

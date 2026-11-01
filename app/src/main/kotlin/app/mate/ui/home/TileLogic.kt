@@ -133,6 +133,10 @@ fun pageSlotOf(id: String): Pair<Int, Int>? {
 fun nextFreeSlot(pages: List<DeckPage>): Int? =
     pages.firstOrNull { it.editable }?.tiles?.firstOrNull { it.type == "empty" }?.let { slotOf(it.id) }
 
+/** Pages où copier une touche : Perso (rang null) et chaque page de touches nommée, dans l'ordre du deck. */
+fun duplicateTargets(pages: List<DeckPage>): List<Pair<String, Int?>> =
+    pages.filter { it.editable }.map { it.title to it.keyPage }
+
 /**
  * Remet les touches choisies à jour d'après le deck : une touche retrouvée prend ses données à jour, une touche perso
  * vidée ou disparue est retirée, une touche d'une page fixe absente (page pas encore lue) est gardée.

@@ -1,7 +1,7 @@
 import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
-import { framePhotos, kindOf, listDocs, resolveDoc, savePhoto } from "../docs.ts";
+import { framePhotos, kindOf, listDocs, resolveDoc, savePhoto, saveShared } from "../docs.ts";
 import { openTarget } from "../os.ts";
 
 export default async function docRoutes(app: FastifyInstance) {
@@ -36,5 +36,15 @@ export default async function docRoutes(app: FastifyInstance) {
     if (!file) return reply.code(400).send({ error: "Champ multipart 'photo' manquant" });
     const ext = file.mimetype === "image/png" ? ".png" : ".jpg";
     return { path: await savePhoto(await file.toBuffer(), ext) };
+  });
+
+  // « Partager » > Mate sur la tablette : un fichier quelconque (PDF, image, lien enregistré en .txt), 20 Mo au plus.
+  app.post("/docs/share", async (req, reply) => {
+    const file = req.isMultipart() ? await req.file() : undefined;
+    if (!file) return reply.code(400).send({ error: "Fichier manquant" });
+    const data = await file.toBuffer();
+    // Au-delà de la limite, multipart coupe le fichier sans erreur : refuser plutôt que déposer un fichier tronqué.
+    if (file.file.truncated) return reply.code(413).send({ error: "Fichier trop gros (20 Mo au plus)" });
+    return { path: await saveShared(data, file.filename) };
   });
 }
