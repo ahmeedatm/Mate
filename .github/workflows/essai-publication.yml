@@ -1,0 +1,183 @@
+# Essais de PR, seconde moitié, avec le code de master seulement (jamais celui de la PR) :
+# - après « Essai (construction) » réussi : vérifie l'APK de la PR (paquet app.mate.essai, libellé, version), l'aligne,
+#   le signe avec la clé de release (environnement « signature ») et le publie avec ses archives backend dans la
+#   release `essais` (scripts/updates-publish.mjs --essai) ;
+# - à la fermeture d'une PR étiquetée « essai » (fusion ou abandon) : retire son essai (--retire) ;
+# - à chaque push sur master : retire les essais des PR qui ne sont plus ouvertes (--purge-fermees).
+# Les fichiers venus de la PR sont des données : rien n'en est exécuté. Voir docs/developpement.md, section Déployer un
+# essai depuis une PR.
+
+name: Essai (signature et publication)
+
+on:
+  workflow_run:
+    workflows: ["Essai (construction)"]
+    types: [completed]
+  pull_request_target:
+    types: [closed]
+  push:
+    branches: [master]
+
+permissions: {}
+
+env:
+  # Empreinte SHA-256 du certificat de la clé de release (alias companion) : un APK signé autrement est refusé.
+  SIGNING_CERT_SHA256: 2c9cd9872f2ee1875b55f16e2da1f38c439480b10ef8389143d644f76b6b18f1
+  UPDATES_REPO: ${{ github.repository }}
+
+jobs:
+  # La PR doit être ouverte, hors brouillon, étiquetée « essai », du dépôt même (pas d'une fourche), et sa tête doit
+  # être le commit construit : sinon une construction plus récente arrive et publiera. Sans l'environnement
+  # « signature » : la clé ne sort que pour une PR à publier.
+  verifier:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      number: ${{ steps.pr.outputs.number }}
+    steps:
+      - id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.workflow_run.pull_requests[0].number }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          case "$PR" in '' | *[!0-9]*) echo "Pas de PR de ce dépôt pour cette construction : rien à publier."; exit 0 ;; esac
+          gh pr view "$PR" -R "$UPDATES_REPO" --json state,isDraft,isCrossRepository,headRefOid,labels > "$RUNNER_TEMP/pr.json"
+          if jq -e --arg sha "$HEAD_SHA" '.state == "OPEN" and (.isDraft | not) and (.isCrossRepository | not)
+              and .headRefOid == $sha and any(.labels[]; .name == "essai")' "$RUNNER_TEMP/pr.json" > /dev/null; then
+            echo "number=$PR" >> "$GITHUB_OUTPUT"
+          else
+            echo "PR #$PR : pas (ou plus) à publier (fermée, brouillon, sans étiquette essai, fourche ou commit dépassé)."
+          fi
+
+  publier:
+    needs: verifier
+    if: needs.verifier.outputs.number
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: signature
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: read
+    # La publication lit le manifest de la release `essais` puis le réécrit : une à la fois.
+    concurrency:
+      group: essais
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          pattern: essai-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/recu
+      - name: Vérifier et signer l'APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          IN="$RUNNER_TEMP/recu"
+          BT=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          # Somme de contrôle de chaque fichier reçu, pour les seuls noms attendus (la liste vient de la PR).
+          sum_ok() { test "$(sha256sum < "$IN/$1" | cut -d' ' -f1)" = "$(awk -v f="$1" '$2 == f { print $1 }' "$IN/$2")"; }
+          APKS=$(find "$IN" -maxdepth 1 -name 'companion-*-unsigned.apk' -printf '%f\n')
+          test -n "$APKS" || { echo "::error::Aucun APK reçu"; exit 1; }
+          test "$(printf '%s\n' "$APKS" | wc -l)" -eq 1 || { echo "::error::Un seul APK attendu"; exit 1; }
+          VERSION=$(printf '%s' "$APKS" | sed -nE 's/^companion-([0-9]+\.[0-9]+\.[0-9]+-essai\.[0-9]+)-unsigned\.apk$/\1/p')
+          test -n "$VERSION" || { echo "::error::Nom d'APK inattendu : $APKS"; exit 1; }
+          sum_ok "$APKS" SHA256SUMS-android || { echo "::error::SHA-256 de l'APK différent de la construction"; exit 1; }
+          # Paquet, libellé et version lus dans l'APK. Un essai au paquet de la stable la remplacerait sur la tablette.
+          "$BT/aapt2" dump badging "$IN/$APKS" > "$RUNNER_TEMP/badging.txt"
+          PKG=$(sed -n "1s/^package: name='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/badging.txt")
+          CODE=$(sed -n "1s/.*versionCode='\([0-9]*\)'.*/\1/p" "$RUNNER_TEMP/badging.txt")
+          NAME=$(sed -n "1s/.*versionName='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/badging.txt")
+          LABEL=$(sed -n "s/^application-label:'\(.*\)'$/\1/p" "$RUNNER_TEMP/badging.txt")
+          test "$PKG" = app.mate.essai || { echo "::error::Paquet « $PKG », attendu app.mate.essai"; exit 1; }
+          test "$LABEL" = "Mate essai" || { echo "::error::Libellé « $LABEL », attendu « Mate essai »"; exit 1; }
+          test "$NAME" = "$VERSION" -a -n "$CODE" || { echo "::error::Version « $NAME » ($CODE), attendu $VERSION"; exit 1; }
+          mkdir -p dist
+          OUT="dist/companion-$VERSION.apk"
+          "$BT/zipalign" -f 4 "$IN/$APKS" "$RUNNER_TEMP/aligne.apk"
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.p12"
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/release.p12" --ks-key-alias companion \
+            --ks-pass env:KS_PASS --key-pass env:KS_PASS --out "$OUT" "$RUNNER_TEMP/aligne.apk"
+          rm -f "$RUNNER_TEMP/release.p12"
+          "$BT/apksigner" verify --print-certs "$OUT" | tee "$RUNNER_TEMP/certs.txt"
+          grep -qx "Signer #1 certificate SHA-256 digest: $SIGNING_CERT_SHA256" "$RUNNER_TEMP/certs.txt" \
+            || { echo "::error::Certificat inattendu"; exit 1; }
+          printf '{"package":"%s","label":"%s","versionCode":%s,"versionName":"%s","file":"companion-%s.apk"}\n' \
+            "$PKG" "$LABEL" "$CODE" "$VERSION" "$VERSION" > "dist/companion-$VERSION.json"
+          cat "dist/companion-$VERSION.json"
+          # Archives du backend : les deux ou aucune (updates-publish.mjs le revérifie).
+          for os in mac windows; do
+            f="backend-$os.tar.gz"
+            test -f "$IN/$f" || continue
+            sum_ok "$f" SHA256SUMS-backend || { echo "::error::SHA-256 de $f différent de la construction"; exit 1; }
+            cp "$IN/$f" dist/
+          done
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      # PR_TITLE : texte libre de la PR, passé par l'environnement, jamais dans une commande.
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ needs.verifier.outputs.number }}
+        run: |
+          PR_TITLE=$(gh pr view "$PR" -R "$UPDATES_REPO" --json title -q .title)
+          export PR_TITLE
+          node scripts/updates-publish.mjs --essai "$PR" dist updates
+          echo "Essai publié. Sur la tablette, Réglages > Mises à jour > Rechercher, puis choisir la PR #$PR."
+
+  # PR étiquetée « essai » fermée (fusionnée ou abandonnée) : son essai quitte la release `essais`.
+  retirer:
+    if: github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'essai')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    concurrency:
+      group: essais
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: node scripts/updates-publish.mjs --retire "$PR" updates
+
+  # Filet : essais des PR qui ne sont plus ouvertes (fermeture manquée, étiquette retirée avant la fermeture).
+  purger:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+    concurrency:
+      group: essais
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/updates-publish.mjs --purge-fermees updates

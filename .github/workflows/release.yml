@@ -1,0 +1,128 @@
+# Release : un tag vX.Y.Z sur master (seuls les admins posent un tag v*, règle « tags de version ») publie l'APK signé,
+# les applis portables de l'ordinateur et les archives du backend dans la release `latest`, lue par les tablettes
+# (scripts/updates-publish.mjs, docs/developpement.md, section Release). Le helper Windows n'est pas recompilé ici.
+
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]*.[0-9]*.[0-9]*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  # Empreinte SHA-256 du certificat de la clé de release (alias companion), la même que pour les essais.
+  SIGNING_CERT_SHA256: 2c9cd9872f2ee1875b55f16e2da1f38c439480b10ef8389143d644f76b6b18f1
+
+jobs:
+  # APK release signé, version = le tag. Paquet app.mate « Mate » lu dans l'APK : jamais l'appli d'essai en stable.
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: signature
+    container: ghcr.io/cirruslabs/android-sdk:36@sha256:f9b3ea9ed2b5fc9522adae82c7b4622ab7aa54207ef532c8e615a347dca08f31
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: APK signé
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          UPDATE_TOKEN: ${{ secrets.UPDATE_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          VERSION=${GITHUB_REF_NAME#v}
+          git merge-base --is-ancestor HEAD origin/master || { echo "::error::Le tag n'est pas sur master"; exit 1; }
+          test -n "$UPDATE_TOKEN" || echo "::warning::UPDATE_TOKEN absent : les tablettes liront les releases sans jeton"
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.p12"
+          RELEASE_KEYSTORE="$RUNNER_TEMP/release.p12" ./gradlew --no-daemon --console=plain assembleRelease \
+            -PappVersion="$VERSION" -PupdateToken="$UPDATE_TOKEN"
+          rm -f "$RUNNER_TEMP/release.p12"
+          BT=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          mkdir -p dist
+          APK="dist/companion-$VERSION.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$APK"
+          "$BT/apksigner" verify --print-certs "$APK" | tee "$RUNNER_TEMP/certs.txt"
+          grep -qx "Signer #1 certificate SHA-256 digest: $SIGNING_CERT_SHA256" "$RUNNER_TEMP/certs.txt" \
+            || { echo "::error::Certificat inattendu"; exit 1; }
+          "$BT/aapt2" dump badging "$APK" > "$RUNNER_TEMP/badging.txt"
+          PKG=$(sed -n "1s/^package: name='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/badging.txt")
+          CODE=$(sed -n "1s/.*versionCode='\([0-9]*\)'.*/\1/p" "$RUNNER_TEMP/badging.txt")
+          NAME=$(sed -n "1s/.*versionName='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/badging.txt")
+          LABEL=$(sed -n "s/^application-label:'\(.*\)'$/\1/p" "$RUNNER_TEMP/badging.txt")
+          test "$PKG" = app.mate || { echo "::error::Paquet « $PKG », attendu app.mate"; exit 1; }
+          test "$LABEL" = Mate || { echo "::error::Libellé « $LABEL », attendu « Mate »"; exit 1; }
+          test "$NAME" = "$VERSION" -a -n "$CODE" || { echo "::error::Version « $NAME » ($CODE), attendu $VERSION"; exit 1; }
+          printf '{"package":"%s","label":"%s","versionCode":%s,"versionName":"%s","file":"companion-%s.apk"}\n' \
+            "$PKG" "$LABEL" "$CODE" "$VERSION" "$VERSION" > "dist/companion-$VERSION.json"
+          cat "dist/companion-$VERSION.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-android
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error
+
+  # Applis portables (Mate-Windows.exe, Mate-Mac.zip, node embarqué) et archives du backend (sans node), version = le
+  # tag (backend/scripts/package.ts). zip et unzip : runtime Windows zippé puis ajouté à l'exe, appli Mac zippée.
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: node:22.22-bookworm
+    strategy:
+      matrix:
+        target: [windows, mac, essai]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: apt-get update -qq && apt-get install -y -qq --no-install-recommends zip unzip > /dev/null
+      - working-directory: backend
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          npm ci --no-audit --no-fund
+          npm run package -- "$TARGET"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-${{ matrix.target }}
+          path: |
+            dist/*.zip
+            dist/*.exe
+            dist/backend-*.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+
+  # Release `latest` : manifest.json, l'APK et les fichiers de l'ordinateur ; les anciens assets sont supprimés.
+  publier:
+    needs: [android, backend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          UPDATES_REPO: ${{ github.repository }}
+        run: |
+          ls -l dist
+          node scripts/updates-publish.mjs dist updates
