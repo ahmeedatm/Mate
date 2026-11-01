@@ -73,6 +73,7 @@ enum class WidgetType(
     PRESENT("present", R.string.widget_present, R.string.widget_present_desc, R.drawable.ic_tile_slideshow, listOf(WidgetSize.XL, WidgetSize.L), true),
     JIRA("jira", R.string.widget_jira, R.string.widget_jira_desc, R.drawable.ic_dashboard, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
     GITLAB("gitlab", R.string.widget_gitlab, R.string.widget_gitlab_desc, R.drawable.ic_merge, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
+    HA("ha", R.string.widget_ha, R.string.widget_ha_desc, R.drawable.ic_lightbulb, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.M), true),
     CHECKLIST("checklist", R.string.widget_checklist, R.string.widget_checklist_desc, R.drawable.ic_tile_check_circle, listOf(WidgetSize.L, WidgetSize.T), false),
     AWAY("away", R.string.widget_away, R.string.widget_away_desc, R.drawable.ic_cafe, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     PIPELINES("pipelines", R.string.widget_pipelines, R.string.widget_pipelines_desc, R.drawable.ic_tile_rocket_launch, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
@@ -89,12 +90,13 @@ enum class WidgetType(
     val zoomable get() = !bare
 
     /**
-     * Proposé dans le catalogue de l'ordinateur actif : Agents, Jira, GitLab, Pipelines, GitHub et Actions seulement s'il les offre (Agents :
+     * Proposé dans le catalogue de l'ordinateur actif : Agents, Jira, Home Assistant, GitLab, Pipelines, GitHub et Actions seulement s'il les offre (Agents :
      * Mac avec Claude Code), Ouvertes, Son et Pavé seulement si leur plugin n'est pas coupé (écran des plugins).
      */
     fun offered(features: HomeFeatures) = when (this) {
         AGENTS -> features.agents
         JIRA -> features.jira
+        HA -> features.ha
         GITLAB, PIPELINES -> features.gitlab
         GITHUB, ACTIONS -> features.github
         OPEN -> "open" !in features.off

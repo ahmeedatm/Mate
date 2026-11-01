@@ -96,6 +96,7 @@ export default async function deckRoutes(app: FastifyInstance) {
                 color: t.color ?? null,
                 when: t.when ?? null,
                 lit: t.lit ?? null,
+                state: t.state ?? null,
                 // Nom de l'appli (page Apps : liste des applis déjà ajoutées).
                 app: t.action.type === "app" ? t.action.name : null,
               },
@@ -126,7 +127,7 @@ export default async function deckRoutes(app: FastifyInstance) {
       }
       // Page Média : l'appli du site si elle est installée, et la musique démarre seule.
       if (tile.id.startsWith("l-") && tile.action.type === "url") return { ok: true, ...(await openMediaLink(tile.action.url)) };
-      await runAction(tile.action);
+      await runAction(tile.action, tile.id);
       return { ok: true };
     },
   );

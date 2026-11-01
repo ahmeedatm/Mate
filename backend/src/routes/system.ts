@@ -7,7 +7,7 @@ import { clipboardHistory } from "../clipboard-history.ts";
 import { config } from "../config.ts";
 import { focusDnd, manualDnd } from "../dnd.ts";
 import { resolveDoc } from "../docs.ts";
-import { applyScene, deleteScene, listScenes, MAX_SCENES, orderScenes, saveScene } from "../mixer.ts";
+import { applyScene, deleteScene, listScenes, MAX_SCENES, orderScenes, saveScene, setGroup } from "../mixer.ts";
 import {
   appAudio,
   getAudio,
@@ -202,6 +202,28 @@ export default async function systemRoutes(app: FastifyInstance) {
       },
     },
     async (req) => mixer(req.body),
+  );
+
+  // Voie de groupe : plusieurs applis réglées ensemble (même volume, même Muet).
+  app.post<{ Body: { ids: string[]; volume?: number; muted?: boolean } }>(
+    "/system/mixer/group",
+    {
+      logLevel: "warn",
+      schema: {
+        body: {
+          type: "object",
+          required: ["ids"],
+          minProperties: 2,
+          additionalProperties: false,
+          properties: {
+            ids: { type: "array", minItems: 1, maxItems: 16, items: appName },
+            volume: { type: "integer", minimum: 0, maximum: 100 },
+            muted: { type: "boolean" },
+          },
+        },
+      },
+    },
+    async (req) => setGroup(req.body.ids, { volume: req.body.volume, muted: req.body.muted }),
   );
 
   app.get("/system/mixer/scenes", async () => ({ scenes: await listScenes() }));

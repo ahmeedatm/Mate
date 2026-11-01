@@ -16,6 +16,7 @@ import { canControl, clipboardStamp, frontApp, getClipboard, isMac, osName, read
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
 import { sendToTablet, tabletStatus } from "./tablet.ts";
 import { startForegroundWatch } from "./foreground-watch.ts";
+import { litTiles, startTileStateWatch, stateTiles } from "./tile-state.ts";
 import { startMeetingWatch } from "./meeting-watch.ts";
 import { isScreenLocked, startScreenLockWatch } from "./screen-lock.ts";
 import { callingDeckApps } from "./deck.ts";
@@ -32,6 +33,7 @@ import deckRoutes from "./routes/deck.ts";
 import docRoutes from "./routes/docs.ts";
 import githubRoutes from "./routes/github.ts";
 import gitlabRoutes from "./routes/gitlab.ts";
+import haRoutes from "./routes/ha.ts";
 import jiraRoutes from "./routes/jira.ts";
 import localRoutes from "./routes/local.ts";
 import localConfigRoutes from "./routes/local-config.ts";
@@ -195,6 +197,7 @@ app.register(browserRoutes);
 app.register(cameraRoutes);
 app.register(calendarRoutes);
 app.register(taskRoutes);
+app.register(haRoutes);
 app.register(jiraRoutes);
 app.register(callRoutes);
 app.register(agentRoutes);
@@ -220,6 +223,11 @@ if (canControl) {
   startForegroundWatch((event) => void sendToTablet({ type: "foreground", ...event }), {
     connected: () => tabletStatus().connected,
     front: frontApp,
+  });
+  // États des touches (micro coupé, Ne pas déranger, appli lancée) : la tablette allume les touches concernées.
+  startTileStateWatch((lit) => void sendToTablet({ type: "tilestate", lit }), {
+    connected: () => tabletStatus().connected,
+    read: async () => litTiles(await stateTiles()),
   });
 }
 // Ordinateur verrouillé : la tablette se bloque, l'API se ferme (hook ci-dessus). Relu même sans tablette.

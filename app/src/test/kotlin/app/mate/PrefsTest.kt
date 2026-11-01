@@ -26,6 +26,13 @@ class PrefsTest {
     }
 
     @Test
+    fun `luminosite automatique desactivee par defaut, puis retenue`() {
+        assertFalse(Prefs.autoBrightness(context))
+        Prefs.setAutoBrightness(context, true)
+        assertTrue(Prefs.autoBrightness(context))
+    }
+
+    @Test
     fun `boutons de volume sur la tablette par defaut, puis retenus`() {
         assertFalse(Prefs.volumeKeysOnComputer(context))
         Prefs.setVolumeKeysOnComputer(context, true)

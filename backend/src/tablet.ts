@@ -64,6 +64,8 @@ export type TabletCommand =
   | { type: "meeting"; state: "start" | "end"; app: string }
   /** Appli au premier plan de l'ordinateur (src/foreground-watch.ts) : la tablette la compare à sa liste d'applis de jeu. */
   | { type: "foreground"; app: string; bundleId: string; file?: string }
+  /** Touches allumées (src/tile-state.ts) : identifiants des touches du deck dont l'état réel est actif, la liste complète à chaque ordre. */
+  | { type: "tilestate"; lit: string[] }
   /** Ordinateur verrouillé ou non (src/screen-lock.ts) : la tablette se couvre d'un écran bloquant, l'enlève au déverrouillage. */
   | { type: "lock"; locked: boolean }
   /** Notification de l'ordinateur (src/notifications.ts), affichée en bandeau et gardée dans l'historique. */

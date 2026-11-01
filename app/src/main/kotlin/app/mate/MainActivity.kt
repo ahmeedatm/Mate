@@ -489,6 +489,7 @@ class MainActivity : AppCompatActivity() {
         Kiosk.enter(this)
         Accessibility.applyAnimationScale(this, Prefs.reduceMotion(this))
         Screen.apply(this)
+        Screen.startAmbient(this)
         Screen.applyOrientation(this)
         // Retour de l'essai : si l'ordinateur est resté sur le backend d'une MR (essai planté), on remet le sien.
         if (!BuildConfig.TRIAL && Prefs.trialOpened(this)) {
@@ -501,6 +502,7 @@ class MainActivity : AppCompatActivity() {
     /** Mate quitte l'écran (écran éteint, autre appli) : le mot de réveil n'écoute plus. */
     override fun onPause() {
         wake.pause()
+        Screen.stopAmbient(this)
         super.onPause()
     }
 

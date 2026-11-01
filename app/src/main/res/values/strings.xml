@@ -75,6 +75,7 @@
     <string name="key_glyph_hint">Emoji</string>
     <string name="key_steps">Étapes, dans l\'ordre</string>
     <string name="key_steps_empty">Aucune étape. Choisis-en une à droite : une seule = raccourci, plusieurs = macro.</string>
+    <string name="key_cycle">Une étape à chaque appui</string>
     <string name="key_step_line">%1$d. %2$s</string>
     <string name="key_step_up">Monter l\'étape</string>
     <string name="key_step_delete">Supprimer l\'étape</string>
@@ -310,9 +311,16 @@
     <string name="mixer_scene_after">Déplacer après</string>
     <string name="mixer_no_sound">pas de son</string>
     <string name="mixer_apps_title">Applis de la table</string>
-    <string name="mixer_apps_hint">Coche les applis à montrer, glisse-les par leurs points pour les ordonner. Rien de coché : toutes les applis.</string>
+    <string name="mixer_apps_hint">Coche les applis à montrer, glisse-les par leurs points pour les ordonner. Rien de coché : toutes les applis. Pour les regrouper sur une voie, il en faut deux qui jouent. « Appli au premier plan » suit celle que tu regardes sur l\'ordinateur ; « Autres applis » réunit celles qui n\'ont pas de voie.</string>
     <string name="mixer_apps_none">Aucune appli ne fait de son en ce moment : lances-en une, puis reviens ici.</string>
     <string name="mixer_apps_unknown">Ordinateur injoignable : les applis qui jouent apparaîtront quand il répondra. Tu peux déjà décocher celles choisies.</string>
+    <string name="mixer_front">Appli au premier plan</string>
+    <string name="mixer_others">Autres applis</string>
+    <string name="mixer_group_new">Regrouper des applis…</string>
+    <string name="mixer_group_title">Nouveau groupe</string>
+    <string name="mixer_group_hint">Une seule voie pour plusieurs applis : son curseur et Muet les règlent toutes, au même volume. Coche-en au moins deux.</string>
+    <string name="mixer_group_name">Nom (Jeu, Musique…)</string>
+    <string name="mixer_group_row">%1$s (%2$s)</string>
     <string name="mixer_strip_silent">%1$s, pas de son</string>
     <string name="mixer_scene_update">Mettre %1$s aux volumes actuels</string>
     <string name="mixer_scene_update_confirm">Remplacer les volumes de « %1$s » par les volumes actuels ? Les anciens seront perdus.</string>
@@ -872,6 +880,9 @@
     <string name="tablet_health_other">anomalie</string>
     <string name="tablet_battery_low">Batterie faible (%1$d %%) : branche la tablette.</string>
     <string name="tablet_brightness">Luminosité de l\'écran</string>
+    <string name="tablet_auto_brightness">Luminosité automatique</string>
+    <string name="tablet_auto_brightness_hint">L\'écran s\'éclaircit le jour et s\'adoucit le soir selon la lumière de la pièce. Le curseur est grisé tant que c\'est activé ; la nuit, l\'atténuation ci-dessous reste prioritaire.</string>
+    <string name="tablet_auto_brightness_none">Cette tablette n\'a pas de capteur de lumière : règle la luminosité avec le curseur.</string>
     <string name="tablet_volume">Volume de la tablette (voix, sons d\'ambiance)</string>
     <string name="tablet_volume_keys_computer">Boutons de volume : son de l\'ordinateur</string>
     <string name="tablet_volume_keys_computer_hint">Les boutons de la tablette règlent la sortie de l\'ordinateur actif au lieu de la tablette. Ordinateur injoignable : les boutons ne font rien.</string>
@@ -1208,6 +1219,14 @@
     <string name="present_start_desc">Revenir à la première diapo</string>
     <string name="present_end_desc">Quitter le diaporama</string>
     <string name="present_key_state">%1$s : %2$s</string>
+    <string name="widget_ha">Maison</string>
+    <string name="widget_ha_desc">Lumières, prises et scènes de Home Assistant : l\'état de chacune, et un toucher pour la basculer</string>
+    <string name="ha_on">Allumé</string>
+    <string name="ha_off">Éteint</string>
+    <string name="ha_scene">Scène</string>
+    <string name="ha_unavailable">Injoignable</string>
+    <string name="ha_unavailable_hint">%1$s : Home Assistant ne la joint pas pour le moment</string>
+    <string name="ha_empty">Aucune lumière, prise ou scène à afficher : ajoute-les dans HA_ENTITIES, dans le fichier .env de l\'ordinateur</string>
     <string name="widget_away">Je m\'absente</string>
     <string name="widget_away_desc">Un geste pour partir : micro coupé, Focus en pause, fenêtres gardées, puis tout est remis</string>
     <string name="away_leave">Je m\'absente</string>
@@ -1242,6 +1261,9 @@
     <string name="perf_fps_none">— FPS</string>
     <string name="perf_cpu_temp_line">CPU %1$d °C</string>
     <string name="perf_gpu_temp_line">GPU %1$d °C</string>
+    <string name="perf_cpu_watts_line">CPU %1$s W</string>
+    <string name="perf_gpu_watts_line">GPU %1$s W</string>
+    <string name="perf_cpu_fan_line">Vent. CPU %1$s</string>
     <string name="perf_fan_line">Ventilateur %1$s</string>
     <string name="perf_cpu_freq_line">CPU %1$s GHz</string>
     <string name="perf_group_cpu">Processeur</string>
@@ -1253,6 +1275,8 @@
     <string name="perf_opt_cpu">Utilisation</string>
     <string name="perf_opt_cpu_freq">Fréquence</string>
     <string name="perf_opt_cpu_temp">Température</string>
+    <string name="perf_opt_watts">Consommation</string>
+    <string name="perf_opt_cpu_fan">Ventilateur</string>
     <string name="perf_opt_gpu">Utilisation</string>
     <string name="perf_opt_gpu_temp">Température</string>
     <string name="perf_opt_gpu_fan">Ventilateur</string>

@@ -35,6 +35,7 @@ object Prefs {
     private const val KEY_LANDSCAPE_LOCKED = "landscape_locked"
     private const val KEY_BRIGHTNESS = "brightness"
     private const val KEY_NIGHT_DIM = "night_dim"
+    private const val KEY_AUTO_BRIGHTNESS = "auto_brightness"
     private const val KEY_VOLUME_KEYS_COMPUTER = "volume_keys_computer"
     private const val KEY_THEME = "theme"
     private const val KEY_RAIL_LABELS = "rail_labels"
@@ -93,6 +94,13 @@ object Prefs {
 
     fun setBrightness(context: Context, value: Float) {
         prefs(context).edit().putFloat(KEY_BRIGHTNESS, value).apply()
+    }
+
+    /** Luminosité réglée par la lumière de la pièce au lieu du curseur. Désactivée par défaut. */
+    fun autoBrightness(context: Context): Boolean = prefs(context).getBoolean(KEY_AUTO_BRIGHTNESS, false)
+
+    fun setAutoBrightness(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_AUTO_BRIGHTNESS, value).apply()
     }
 
     /** Écran atténué la nuit (il reste allumé en permanence). Activé par défaut. */

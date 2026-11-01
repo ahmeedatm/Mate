@@ -168,6 +168,20 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "touches qui montrent l'état réel",
+      run: async () => {
+        // La veille (src/tile-state.ts) pousse les touches allumées ; l'ordre tilestate est refusé s'il vient de l'extérieur.
+        expectStatus(await call("POST", "/tablet/command", { type: "tilestate", lit: [] }), 400, "ordre tilestate de l'extérieur");
+        const deck = await call("GET", "/deck");
+        expectStatus(deck, 200, "/deck");
+        const withState = deck.json.pages
+          .flatMap((p: { tiles: { state?: string | null }[] }) => p.tiles)
+          .filter((t: { state?: string | null }) => t.state);
+        expect(withState.length > 0, "/deck sans touche portant un état");
+        return `${withState.length} touches montrent leur état`;
+      },
+    },
+    {
       name: "écran de jeu (appli au premier plan)",
       run: async () => {
         // La veille (src/foreground-watch.ts) pousse l'appli devant ; la tablette la compare à sa liste de jeux, choisie
@@ -267,6 +281,32 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "touche à cycle : une étape par appui",
+      run: async () => {
+        const slot = 15;
+        try {
+          expectStatus(
+            await call("PUT", `/deck/keys/${slot}`, {
+              label: "Sanity cycle",
+              cycle: true,
+              steps: [
+                { type: "wait", ms: 0 },
+                { type: "wait", ms: 0 },
+              ],
+            }),
+            200,
+            "PUT /deck/keys/15",
+          );
+          const deck = await call("GET", "/deck");
+          const perso = (deck.json.pages as { editable: boolean; tiles: { id: string; type: string }[] }[]).find((p) => p.editable);
+          expect(perso?.tiles.find((t) => t.id === `k-${slot}`)?.type === "cycle", "touche k-15 sans type cycle");
+          for (let i = 0; i < 3; i++) expectStatus(await call("POST", "/deck/run", { id: `k-${slot}` }), 200, "appui sur k-15");
+        } finally {
+          expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE /deck/keys/15");
+        }
+      },
+    },
+    {
       name: "agents Claude : hooks et état",
       run: async () => {
         const agents = await call("GET", "/agents");
@@ -325,12 +365,20 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         if (!controlled()) return expectStatus(res, 501, "/system/mixer");
         expectStatus(res, 200, "/system/mixer");
         expect(res.json.master?.id === "master" && res.json.mic?.id === "mic", "sortie ou micro absent");
+        // Voie « premier plan » : Windows donne l'appli devant (ou null), le Mac n'en donne pas.
+        expect(
+          res.json.apps ? res.json.front === null || typeof res.json.front === "string" : res.json.front === undefined,
+          "appli au premier plan invalide",
+        );
         const scenes = await call("GET", "/system/mixer/scenes");
         expectStatus(scenes, 200, "/system/mixer/scenes");
         // Ordre des scènes : renvoyer l'ordre actuel ne change rien (lecture seule en pratique).
         const ids = scenes.json.scenes.map((s: { id: string }) => s.id);
         const order = await call("PUT", "/system/mixer/scenes/order", { ids });
         expectStatus(order, 200, "/system/mixer/scenes/order");
+        // Voie de groupe : une appli absente n'est pas touchée (aucun effet), Mac sans volume par appli : 501.
+        const group = await call("POST", "/system/mixer/group", { ids: ["mate-sanity-absente"], volume: 50 });
+        expectStatus(group, res.json.apps ? 200 : 501, "/system/mixer/group");
         return res.json.apps ? `${res.json.apps.length} applis avec du son` : "sortie et micro (pas de volume par appli)";
       },
     },
@@ -340,7 +388,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const perf = await call("GET", "/system/perf");
         if (!controlled()) return expectStatus(perf, 501, "/system/perf");
         expectStatus(perf, 200, "/system/perf");
-        const { cpu, ram, gpu, cpuMhz, cpuTempC, fps, disk, net } = perf.json;
+        const { cpu, ram, gpu, cpuMhz, cpuTempC, cpuWatts, cpuFanRpm, gpuWatts, fps, disk, net } = perf.json;
         expect(typeof cpu === "number" && cpu >= 0 && cpu <= 100, `processeur hors 0-100 : ${cpu}`);
         expect(ram?.total > 0, "mémoire totale absente");
         // Champs facultatifs : absents si illisibles, mais bien typés et bornés quand ils sont là.
@@ -351,6 +399,11 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           cpuTempC === undefined || (count(cpuTempC) && cpuTempC >= 10 && cpuTempC <= 150),
           `température du processeur invalide : ${cpuTempC}`,
         );
+        // Watts et ventilateur du processeur : absents sans lecteur, jamais nuls ni inventés.
+        const watts = (w: unknown) => w === undefined || (typeof w === "number" && w > 0 && w <= 1000);
+        expect(watts(cpuWatts), `puissance du processeur invalide : ${cpuWatts}`);
+        expect(watts(gpuWatts), `puissance de la carte graphique invalide : ${gpuWatts}`);
+        expect(cpuFanRpm === undefined || (count(cpuFanRpm) && cpuFanRpm > 0), `ventilateur du processeur invalide : ${cpuFanRpm}`);
         // Images par seconde : absentes sans lecteur (Mac, carte non AMD), null sans jeu mesuré, jamais 0.
         expect(fps === undefined || fps === null || (count(fps) && fps > 0), `images par seconde invalides : ${fps}`);
         expect(
@@ -374,6 +427,9 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const extras = [
           cpuMhz && `${cpuMhz} MHz`,
           cpuTempC && `processeur ${cpuTempC} °C`,
+          cpuWatts && `processeur ${cpuWatts} W`,
+          gpuWatts && `carte graphique ${gpuWatts} W`,
+          cpuFanRpm && `ventilateur ${cpuFanRpm} tr/min`,
           fps !== undefined && (fps === null ? "fps : aucun jeu" : `${fps} fps`),
           disk && `disque ${disk.freeGb}/${disk.totalGb} Go`,
           net && `réseau ${net.downKBps}/${net.upKBps} Ko/s`,
@@ -554,6 +610,20 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const boards = await call("GET", "/jira/boards");
         expectStatus(boards, 200, "/jira/boards");
         expect(Array.isArray(boards.json.boards) && Array.isArray(boards.json.selected), "forme de /jira/boards inattendue");
+      },
+    },
+    {
+      name: "Home Assistant : entités",
+      run: async () => {
+        // Lecture seule : jamais de bascule, ce sont les vraies lampes de la maison.
+        const features = await call("GET", "/deck/features");
+        const configured = features.status === 200 ? features.json.ha : undefined;
+        const entities = await call("GET", "/ha/entities");
+        if (configured === false || (configured === undefined && entities.status === 501)) {
+          return expectStatus(entities, 501, "/ha/entities sans Home Assistant configuré");
+        }
+        expectStatus(entities, 200, "/ha/entities");
+        expect(Array.isArray(entities.json.entities), "forme de /ha/entities inattendue");
       },
     },
     {

@@ -25,7 +25,7 @@ data class AppAudio(val running: Boolean, val volume: Int?, val muted: Boolean, 
 data class MixerChannel(val id: String, val name: String, val volume: Int?, val muted: Boolean, val level: Int?)
 
 /** `apps` null : pas de volume par appli sur cet ordinateur (Mac). */
-data class MixerState(val master: MixerChannel, val mic: MixerChannel, val apps: List<MixerChannel>?)
+data class MixerState(val master: MixerChannel, val mic: MixerChannel, val apps: List<MixerChannel>?, val front: String? = null)
 
 /** Scène du mélangeur : volumes de la sortie et des applis rappelés en un toucher. */
 data class MixerScene(val id: String, val name: String)
@@ -50,7 +50,8 @@ data class DiskPerf(val freeGb: Double, val totalGb: Double, val activity: Int?)
 data class NetPerf(val upKBps: Int, val downKBps: Int)
 
 /**
- * Performances de l'ordinateur ; `gpu`, `cpuMhz`, `cpuTempC` (°C), `disk` et `net` absents quand l'ordinateur ne sait pas les lire.
+ * Performances de l'ordinateur ; `gpu`, `cpuMhz`, `cpuTempC` (°C), `cpuWatts` et `gpuWatts` (W), `cpuFanRpm` (tr/min), `disk` et
+ * `net` absents quand l'ordinateur ne sait pas les lire.
  * `fpsReadable` : l'ordinateur sait lire les images par seconde ; `fps` est alors nul tant qu'aucun jeu n'est mesuré.
  */
 data class PcPerf(
@@ -65,9 +66,14 @@ data class PcPerf(
     val cpuTempC: Int? = null,
     val fps: Int? = null,
     val fpsReadable: Boolean = false,
+    val cpuWatts: Double? = null,
+    val cpuFanRpm: Int? = null,
+    val gpuWatts: Double? = null,
 )
 
 private fun JSONObject.intOrNull(key: String): Int? = if (isNull(key)) null else getInt(key)
+
+private fun JSONObject.doubleOrNull(key: String): Double? = if (isNull(key)) null else getDouble(key)
 
 fun parsePerf(json: String): PcPerf {
     val j = JSONObject(json)
@@ -80,7 +86,9 @@ fun parsePerf(json: String): PcPerf {
     }
     val disk = j.optJSONObject("disk")?.let { d -> DiskPerf(d.getDouble("freeGb"), d.getDouble("totalGb"), d.intOrNull("activity")) }
     val net = j.optJSONObject("net")?.let { n -> NetPerf(n.getInt("upKBps"), n.getInt("downKBps")) }
-    return PcPerf(j.getInt("cpu"), ram.getInt("percent"), ram.getDouble("used"), ram.getDouble("total"), gpu, j.intOrNull("cpuMhz"), disk, net, j.intOrNull("cpuTempC"), j.intOrNull("fps"), j.has("fps"))
+    return PcPerf(j.getInt("cpu"), ram.getInt("percent"), ram.getDouble("used"), ram.getDouble("total"), gpu, j.intOrNull("cpuMhz"), disk, net, j.intOrNull("cpuTempC"), j.intOrNull("fps"), j.has("fps"),
+        cpuWatts = j.doubleOrNull("cpuWatts"), cpuFanRpm = j.intOrNull("cpuFanRpm"), gpuWatts = j.doubleOrNull("gpuWatts"),
+    )
 }
 
 /**
@@ -160,6 +168,14 @@ class SystemApi(private val http: Http) {
         volume?.let { body.put("volume", it) }
         muted?.let { body.put("muted", it) }
         parseMixer(JSONObject(http.postJson("/system/mixer", body)))
+    }
+
+    /** Règle d'un coup les applis d'un groupe (voie qui en réunit plusieurs) ; 501 sur un ordinateur sans volume par appli (Mac). */
+    suspend fun setMixerGroup(ids: List<String>, volume: Int? = null, muted: Boolean? = null): MixerState = http.io {
+        val body = JSONObject().put("ids", JSONArray(ids))
+        volume?.let { body.put("volume", it) }
+        muted?.let { body.put("muted", it) }
+        parseMixer(JSONObject(http.postJson("/system/mixer/group", body)))
     }
 
     suspend fun mixerScenes(): List<MixerScene> = http.io {
@@ -282,6 +298,7 @@ class SystemApi(private val http: Http) {
         return MixerState(
             parseChannel(j.getJSONObject("master")), parseChannel(j.getJSONObject("mic")),
             apps?.let { a -> (0 until a.length()).map { parseChannel(a.getJSONObject(it)) } },
+            if (j.isNull("front")) null else j.optString("front").ifEmpty { null },
         )
     }
 

@@ -181,7 +181,7 @@ export const DECK_JS = `
     pfDeckPages()[pfDeckPage].keys.forEach((key, slot) => {
       const dot = pfDeckEl("span", { className: key ? "dot on" : "dot" });
       if (key && key.color) dot.style.background = key.color;
-      const state = key ? (key.steps.length > 1 ? "Macro, " + key.steps.length + " étapes" : "1 étape") : "Libre";
+      const state = key ? (key.steps.length > 1 ? (key.cycle ? "Cycle, " : "Macro, ") + key.steps.length + " étapes" : "1 étape") : "Libre";
       grid.append(pfDeckEl("button", {
         type: "button", className: key ? "cx" : "cx pf-free", "aria-pressed": String(slot === pfDeckSlot),
         "aria-label": "Touche " + (slot + 1) + (key ? " : " + key.label : " : libre"),
@@ -198,8 +198,8 @@ export const DECK_JS = `
     const key = pfDeckPages()[pfDeckPage].keys[slot];
     pfDeckSlot = slot;
     pfDeckDraft = key
-      ? { label: key.label, symbol: key.symbol || "", glyph: key.glyph || "", color: key.color || "", steps: key.steps.map((s) => Object.assign(pfDeckNewStep(s.type), s)) }
-      : { label: "", symbol: "", glyph: "", color: "", steps: [] };
+      ? { label: key.label, symbol: key.symbol || "", glyph: key.glyph || "", color: key.color || "", cycle: key.cycle === true, steps: key.steps.map((s) => Object.assign(pfDeckNewStep(s.type), s)) }
+      : { label: "", symbol: "", glyph: "", color: "", cycle: false, steps: [] };
     pfDeckSay("pf-deck-keys-msg", "");
     pfDeckRenderGrid();
     pfDeckRenderEditor();
@@ -333,6 +333,8 @@ export const DECK_JS = `
     if (d.symbol) body.symbol = d.symbol;
     if (d.glyph) body.glyph = d.glyph;
     if (d.color) body.color = d.color;
+    // Le cycle se règle sur la tablette ; ici on le garde tel quel pour ne pas transformer la touche en macro.
+    if (d.cycle) body.cycle = true;
     const r = await pfDeckApi("PUT", pfDeckPages()[pfDeckPage].path(pfDeckSlot), body);
     if (!r.ok) return say(r.error);
     pfDeckDialog.close();

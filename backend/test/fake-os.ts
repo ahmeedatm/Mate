@@ -33,6 +33,8 @@ export type FakeState = {
   running?: string[];
   inCall?: string[];
   dnd?: boolean | null;
+  /** Micro de l'ordinateur coupé (getAudio) ; absent : actif. */
+  micMuted?: boolean;
   /** Session de l'ordinateur verrouillée (screenLocked) ; absente : déverrouillée. */
   locked?: boolean | null;
   /** Autorisation Accessibilité du Mac (accessibility) ; absente : accordée. */
@@ -198,7 +200,7 @@ export async function setClipboardImage(fullPath: string) {
 }
 
 export async function getAudio() {
-  return { output: 50, muted: false, input: 80, micMuted: false };
+  return { output: 50, muted: false, input: 80, micMuted: read().micMuted ?? false };
 }
 
 export async function setAudio(change: AudioChange) {
@@ -275,7 +277,7 @@ export async function mixer(change?: MixerChange): Promise<MixerState> {
   record("mixer", change);
   const { id, ...values } = change;
   const apply = (c: MixerState["master"]) => (c.id === id ? { ...c, ...values } : c);
-  const next = { master: apply(current.master), mic: apply(current.mic), apps: current.apps?.map(apply) ?? null };
+  const next = { ...current, master: apply(current.master), mic: apply(current.mic), apps: current.apps?.map(apply) ?? null };
   write({ ...read(), mixer: next });
   return next;
 }

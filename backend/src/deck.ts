@@ -43,6 +43,7 @@ import { agentsAvailable } from "./agents-sources.ts";
 import { githubAvailable } from "./github.ts";
 import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
+import { haConfigured } from "./ha.ts";
 import { jiraConfigured } from "./jira.ts";
 import { appPluginOff, pluginOn, pluginsOff } from "./plugins.ts";
 import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
@@ -70,7 +71,7 @@ export type Step =
   | { type: "window"; app: string; display?: string; layout?: Layout };
 
 /** Une macro enchaîne des étapes. */
-export type Action = Step | { type: "macro"; steps: Step[] };
+export type Action = Step | { type: "macro"; steps: Step[] } | { type: "cycle"; steps: Step[] };
 
 /** glyph : symbole affiché à la place de l'icône (emoji), utile pour les raccourcis. */
 /**
@@ -79,6 +80,8 @@ export type Action = Step | { type: "macro"; steps: Step[] };
  * l'écran d'avant-réunion de Teams (`lobby` : « Rejoindre maintenant »).
  * lit : touche allumée (rouge, comme Muet dans l'onglet Son) quand le micro est coupé (`muted`) ou le casque en
  * sourdine (`deafened`), ou la caméra coupée (`camera`, Teams sur Mac), d'après l'appel lu dans l'appli.
+ * state : touche allumée tant que ce qu'elle pilote est actif, lu sur l'ordinateur (src/tile-state.ts) : micro coupé
+ * (`mic-muted`), Ne pas déranger (`dnd`) ou appli de l'action lancée (`running`).
  */
 type TileConfig = {
   label: string;
@@ -90,6 +93,7 @@ type TileConfig = {
   color?: string;
   when?: "call" | "idle" | "streaming" | "share" | "lobby";
   lit?: "muted" | "deafened" | "camera";
+  state?: "mic-muted" | "dnd" | "running";
 };
 /** `apps` : page d'applis que l'on complète depuis la tablette (voir saveApps) ; `meeting` : page affichée
  * par la tablette après « Rejoindre » (micro, caméra, raccrocher) ; `app` : page d'une appli (Discord, Teams…),
@@ -236,6 +240,7 @@ export async function homeFeatures() {
   const agents = agentsAvailable() && (await pluginOn("claude"));
   // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
   const jira = jiraConfigured && (await pluginOn("jira"));
+  // `ha` : widget Home Assistant (HA_URL, HA_TOKEN et HA_ENTITIES dans .env).
   return {
     agenda: true,
     linked: await hasCalendar(),
@@ -245,6 +250,7 @@ export async function homeFeatures() {
     gitlab: canControl && (await gitlabAvailable()),
     github: canControl && (await githubAvailable()),
     jira,
+    ha: haConfigured,
     off: await pluginsOff(),
   };
 }
@@ -288,7 +294,7 @@ export async function loadDeck(): Promise<DeckPage[]> {
     keys.map((key, slot) => {
       const id = `${prefix}${slot}`;
       if (!key) return { id, empty: true as const };
-      const action: Action = key.steps.length === 1 ? key.steps[0] : { type: "macro", steps: key.steps };
+      const action: Action = key.steps.length === 1 ? key.steps[0] : { type: key.cycle ? "cycle" : "macro", steps: key.steps };
       return { id, label: key.label, ...(key.symbol ? { symbol: key.symbol } : {}), glyph: key.glyph, color: key.color, action };
     });
   pages.push({ title: "Perso", editable: true, tiles: keyTiles(await loadKeys(), PERSO_PREFIX) });
@@ -331,8 +337,19 @@ export async function findTile(id: string): Promise<Tile | undefined> {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function runAction(action: Action): Promise<unknown> {
+/** Prochaine étape de chaque touche à cycle, par identifiant de tuile. shortcut: perdu au redémarrage du compagnon, et gardé si la touche est redéfinie sous le même identifiant ; à reprendre si l'état visible de la touche le demande. */
+const cycleNext = new Map<string, number>();
+
+/** `tileId` : la touche dont on suit le cycle ; sans lui, un cycle lance toujours sa première étape. */
+export async function runAction(action: Action, tileId?: string): Promise<unknown> {
   switch (action.type) {
+    case "cycle": {
+      const next = (tileId && cycleNext.get(tileId)) || 0;
+      const index = next % action.steps.length;
+      await runAction(action.steps[index]);
+      if (tileId) cycleNext.set(tileId, index + 1);
+      return;
+    }
     case "macro":
       for (const [i, step] of action.steps.entries()) {
         await runAction(step);
@@ -396,7 +413,7 @@ async function placeAppWindows(app: string, displayLabel: string | undefined, la
 // --- Icônes : celle de l'appli (.icns sur Mac, menu Démarrer sur Windows), en PNG 96 px mis en cache.
 
 /** Appli dont l'icône représente l'action (la première appli citée, pour une macro). */
-function appOf(action: Action): string | undefined {
+export function appOf(action: Action): string | undefined {
   switch (action.type) {
     case "app":
       return action.name;
@@ -405,6 +422,7 @@ function appOf(action: Action): string | undefined {
     case "window":
       return action.app;
     case "macro":
+    case "cycle":
       return action.steps.map(appOf).find(Boolean);
     default:
       return undefined;
@@ -439,7 +457,12 @@ async function cachedIcon(key: string, make: (out: string) => Promise<boolean>):
 
 /** Site ouvert par l'action (le premier lien d'une macro), pour une tuile sans appli. */
 function urlOf(action: Action): URL | undefined {
-  const url = action.type === "url" ? action.url : action.type === "macro" ? action.steps.find((s) => s.type === "url")?.url : undefined;
+  const url =
+    action.type === "url"
+      ? action.url
+      : action.type === "macro" || action.type === "cycle"
+        ? action.steps.find((s) => s.type === "url")?.url
+        : undefined;
   if (!url) return undefined;
   try {
     const parsed = new URL(url);
