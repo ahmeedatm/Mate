@@ -36,11 +36,16 @@ async function fetchIcs(source: string) {
   return /^https?:\/\//i.test(source) ? ical.async.fromURL(source) : ical.sync.parseFile(source);
 }
 
-/** Du début du jour à la fin du `days`-ième jour (même plage pour la tablette et l'ordinateur : un seul cache). */
-export function dayRange(days: number): [Date, Date] {
-  const from = new Date();
+/**
+ * Du début du jour à la fin du `days`-ième jour (même plage pour la tablette et l'ordinateur : un seul cache). Par jours
+ * du calendrier : un jour de changement d'heure dure 23 ou 25 h.
+ */
+export function dayRange(days: number, now = new Date()): [Date, Date] {
+  const from = new Date(now);
   from.setHours(0, 0, 0, 0);
-  return [from, new Date(from.getTime() + days * 86_400_000 - 1)];
+  const end = new Date(from);
+  end.setDate(end.getDate() + days);
+  return [from, new Date(end.getTime() - 1)];
 }
 
 // Liens d'agenda collés dans la page locale de l'ordinateur (http://127.0.0.1:3000/), en plus de CALENDAR_ICS_URLS.
