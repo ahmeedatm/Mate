@@ -416,6 +416,23 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "sortie audio",
+      run: async () => {
+        const res = await call("GET", "/system/audio/outputs");
+        if (!controlled()) return expectStatus(res, 501, "/system/audio/outputs");
+        expectStatus(res, 200, "/system/audio/outputs");
+        const outputs: { id: string; name: string; current: boolean }[] = res.json.outputs;
+        expect(
+          Array.isArray(outputs) && outputs.every((o) => o.id && o.name && typeof o.current === "boolean"),
+          "liste des sorties invalide",
+        );
+        expect(outputs.filter((o) => o.current).length <= 1, "plusieurs sorties par défaut");
+        // Une sortie inconnue est refusée sans rien changer (la vraie bascule changerait le son de l'ordinateur).
+        expectStatus(await call("POST", "/system/audio/output", { id: "mate-sanity-absente" }), 404, "/system/audio/output");
+        return `${outputs.length} sortie(s), en cours : ${outputs.find((o) => o.current)?.name ?? "aucune"}`;
+      },
+    },
+    {
       name: "performances",
       run: async () => {
         const perf = await call("GET", "/system/perf");

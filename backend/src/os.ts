@@ -27,6 +27,7 @@ import { perfSampler, type DiskRaw, type NetPerf, type Perf } from "./perf.ts";
 import type { PointerAction, PointerButton, PointerGesture } from "./pointer.ts";
 import type {
   AudioChange,
+  AudioOutput,
   ClipboardContent,
   Layout,
   MediaCommand,
@@ -354,6 +355,20 @@ export function browserTabs() {
 export function mixer(change?: MixerChange) {
   if (isWindows) return win.mixer(change);
   if (isMac) return macAudio.mixer(change);
+  unsupported();
+}
+
+/** Sorties audio de l'ordinateur (enceinte, casque, carte son), dont celle par défaut. */
+export function audioOutputs(): Promise<AudioOutput[]> {
+  if (isWindows) return win.audioOutputs();
+  if (isMac) return macAudio.audioOutputs();
+  unsupported();
+}
+
+/** Fait de cette sortie (un `id` de `audioOutputs`) la sortie par défaut ; rend la liste à jour. */
+export function setAudioOutput(id: string): Promise<AudioOutput[]> {
+  if (isWindows) return win.setAudioOutput(id);
+  if (isMac) return macAudio.setAudioOutput(id);
   unsupported();
 }
 

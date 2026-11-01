@@ -57,6 +57,8 @@ namespace Mate
                 case "audio": return Audio(req);
                 case "appaudio": return AppAudio(req);
                 case "mixer": return Mixer(req);
+                case "outputs": return AudioOutputs();
+                case "setoutput": return SetAudioOutput(Str(req, "id"));
                 case "perf": return Perf(req);
                 case "cpu": return Cpu();
                 case "fps": return Fps();

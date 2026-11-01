@@ -27,11 +27,13 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.core.widget.ImageViewCompat
 import app.mate.R
+import app.mate.net.AudioOutput
 import app.mate.net.BackendClient
 import app.mate.net.HttpException
 import app.mate.net.MixerChannel
 import app.mate.net.MixerScene
 import app.mate.net.MixerState
+import app.mate.net.currentOutputIndex
 import app.mate.ui.IconCache
 import app.mate.ui.LatestSender
 import app.mate.ui.dp
@@ -271,6 +273,7 @@ class MixerView @JvmOverloads constructor(
                 scope.launch { runCatching { IconCache.loadApp(BackendClient(context), c.name) }.getOrNull()?.let { icon = it } }
             }
         }
+        if (c.id == "master") onTitle = { chooseOutput() }
         onVolume = { volume, final ->
             hold(c.id)
             litScene = null
@@ -285,6 +288,42 @@ class MixerView @JvmOverloads constructor(
             muted = mute
             hold(c.id)
             scope.launch { refresh { send(c.id, muted = mute) } }
+        }
+    }
+
+    /** Liste les sorties audio de l'ordinateur (enceinte, casque, carte son) et passe sur celle qu'on touche. */
+    private fun chooseOutput() {
+        // Un seul choix à la fois : un second toucher pendant la lecture de la liste ne doit pas empiler une 2e boîte.
+        if (choosing?.isActive == true) return
+        choosing = scope.launch {
+            val outputs = try {
+                BackendClient(context).system.audioOutputs()
+            } catch (e: Exception) {
+                return@launch showStatus(context.errorText(e), ERROR)
+            }
+            if (outputs.isEmpty()) return@launch showStatus(context.getString(R.string.mixer_output_none), ERROR)
+            AlertDialog.Builder(context)
+                .setTitle(R.string.mixer_output_title)
+                .setSingleChoiceItems(outputs.map { it.name }.toTypedArray(), currentOutputIndex(outputs)) { dialog, which ->
+                    dialog.dismiss()
+                    if (!outputs[which].current) switchOutput(outputs[which])
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .showImmersive()
+        }
+    }
+
+    private var choosing: Job? = null
+
+    private fun switchOutput(output: AudioOutput) {
+        scope.launch {
+            try {
+                BackendClient(context).system.setAudioOutput(output.id)
+                // Le volume et le Muet sont ceux de la nouvelle sortie : relire tout de suite.
+                refresh { mixer() }
+            } catch (e: Exception) {
+                showStatus(context.errorText(e), ERROR)
+            }
         }
     }
 

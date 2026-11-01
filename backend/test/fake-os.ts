@@ -10,6 +10,7 @@ import type {
   Display,
   Layout,
   MediaCommand,
+  AudioOutput,
   MixerChange,
   MixerState,
   OpenAction,
@@ -63,6 +64,8 @@ export type FakeState = {
   media?: MediaSession[];
   /** Mélangeur de l'onglet Son (mixer) : modifié par les changements reçus. */
   mixer?: MixerState;
+  /** Sorties audio (audioOutputs) ; absentes : une seule, « Haut-parleurs ». setAudioOutput change celle qui sert. */
+  audioOutputs?: AudioOutput[];
   /** Appli au premier plan (frontApp) ; absente : Safari. */
   front?: { name: string; bundleId: string };
   /** Windows : fenêtre au premier plan (frontWindow, frontApp) ; absente : Chrome. */
@@ -285,6 +288,17 @@ export async function mixer(change?: MixerChange): Promise<MixerState> {
   const apply = (c: MixerState["master"]) => (c.id === id ? { ...c, ...values } : c);
   const next = { ...current, master: apply(current.master), mic: apply(current.mic), apps: current.apps?.map(apply) ?? null };
   write({ ...read(), mixer: next });
+  return next;
+}
+
+export async function audioOutputs(): Promise<AudioOutput[]> {
+  return read().audioOutputs ?? [{ id: "defaut", name: "Haut-parleurs", current: true }];
+}
+
+export async function setAudioOutput(id: string): Promise<AudioOutput[]> {
+  record("setAudioOutput", id);
+  const next = (await audioOutputs()).map((o) => ({ ...o, current: o.id === id }));
+  write({ ...read(), audioOutputs: next });
   return next;
 }
 

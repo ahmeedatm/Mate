@@ -11,6 +11,7 @@ import { resolveDoc } from "../docs.ts";
 import { applyScene, deleteScene, listScenes, MAX_SCENES, orderScenes, saveScene, setGroup } from "../mixer.ts";
 import {
   appAudio,
+  audioOutputs,
   getAudio,
   getClipboard,
   getDnd,
@@ -22,6 +23,7 @@ import {
   mixer,
   openAccessibility,
   setAudio,
+  setAudioOutput,
   setClipboardImage,
   setClipboardText,
   typeText,
@@ -125,6 +127,29 @@ export default async function systemRoutes(app: FastifyInstance) {
       },
     },
     async (req) => setAudio(req.body),
+  );
+
+  // Sortie audio de l'ordinateur (enceinte, casque, carte son) : lue à l'ouverture du choix, pas en boucle.
+  app.get("/system/audio/outputs", async () => ({ outputs: await audioOutputs() }));
+
+  app.post<{ Body: { id: string } }>(
+    "/system/audio/output",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["id"],
+          additionalProperties: false,
+          properties: { id: { type: "string", minLength: 1, maxLength: 200 } },
+        },
+      },
+    },
+    async (req, reply) => {
+      // Seul un id donné par l'ordinateur lui-même arrive jusqu'au pilote.
+      if (!(await audioOutputs()).some((o) => o.id === req.body.id))
+        return reply.code(404).send({ error: "Cette sortie audio n'existe plus" });
+      return { outputs: await setAudioOutput(req.body.id) };
+    },
   );
 
   // Processeur, mémoire et carte graphique : relus toutes les 2 s par la tablette tant que le widget est affiché.
