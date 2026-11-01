@@ -607,6 +607,22 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "corvées : cocher passe la tâche à la personne suivante",
+      run: async () => {
+        const added = await call("POST", "/tasks", { label: stamp, days: [1, 2, 3, 4, 5, 6, 7], people: ["Léa", "Tom"] });
+        expectStatus(added, 200, "POST /tasks avec personnes");
+        const taskId: string = added.json.id;
+        try {
+          expect(added.json.assignee === "Léa", "la première personne devrait avoir le tour");
+          expectStatus(await call("POST", `/tasks/${taskId}/done`, { done: true }), 200, "cocher la corvée");
+          const after = await call("GET", "/tasks");
+          expect(after.json.tasks.find((t: { id: string }) => t.id === taskId)?.assignee === "Tom", "le tour n'est pas passé à Tom");
+        } finally {
+          await call("DELETE", `/tasks/${taskId}`);
+        }
+      },
+    },
+    {
       name: "courses : ajouter, cocher, retirer",
       run: async () => {
         const added = await call("POST", "/shopping", { labels: [stamp] });

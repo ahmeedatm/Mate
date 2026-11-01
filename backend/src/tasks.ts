@@ -24,12 +24,14 @@ export type DailyTask = {
   url?: string;
   /** Cochée automatiquement quand ce nombre d'heures est saisi dans Jira (si Jira est configuré). */
   jiraWorklogHours?: number;
+  /** Corvée à tour de rôle : la personne suivante prend la tâche quand elle est cochée. */
+  people?: string[];
 };
 
 /** `remindAtMs` : rappel unique (date et heure) ; `remindedMs` : rappel déjà fait. */
 export type OneOffTask = { id: string; label: string; createdMs: number; doneMs?: number; remindAtMs?: number; remindedMs?: number };
 /** `recurring` : tâches récurrentes créées depuis la tablette (mêmes champs que config/tasks.json). */
-type Store = { done: Record<string, string[]>; items: OneOffTask[]; recurring?: DailyTask[] };
+type Store = { done: Record<string, string[]>; items: OneOffTask[]; recurring?: DailyTask[]; turns?: Record<string, number> };
 
 export type TaskView = {
   id: string;
@@ -45,6 +47,8 @@ export type TaskView = {
   schedule: string | null;
   /** Supprimable depuis la tablette (pas une tâche de config/tasks.json). */
   deletable: boolean;
+  /** Corvée à tour de rôle : la personne dont c'est le tour (sinon null). */
+  assignee: string | null;
 };
 
 const tasksFile = path.join(backendRoot, "config", "tasks.json");
@@ -120,6 +124,9 @@ function formatHours(seconds: number) {
   return m ? `${h} h ${String(m).padStart(2, "0")}` : `${h} h`;
 }
 
+/** Personne dont c'est le tour : `turns[id]` corvées déjà faites, la liste reboucle. */
+const assigneeOf = (t: DailyTask, store: Store) => (t.people?.length ? t.people[(store.turns?.[t.id] ?? 0) % t.people.length] : null);
+
 async function viewDaily(t: DailyTask, store: Store, now: Date, refresh: boolean): Promise<TaskView> {
   const deletable = store.recurring?.some((r) => r.id === t.id) ?? false;
   let done = store.done[isoDay(now)]?.includes(t.id) ?? false;
@@ -145,6 +152,7 @@ async function viewDaily(t: DailyTask, store: Store, now: Date, refresh: boolean
     remindAt: t.remindAt ?? null,
     schedule: describeDays(t),
     deletable,
+    assignee: assigneeOf(t, store),
   };
 }
 
@@ -174,6 +182,7 @@ function viewOneOff(item: OneOffTask, now: Date): TaskView {
     remindAt: item.remindAtMs ? hhmm(new Date(item.remindAtMs)) : null,
     schedule: describeReminder(item, now),
     deletable: true,
+    assignee: null,
   };
 }
 
@@ -182,12 +191,14 @@ function viewOneOff(item: OneOffTask, now: Date): TaskView {
  * rappel parlé sur la tablette à cette heure (récurrente : puis toutes les 30 min pendant 2 h tant qu'elle n'est pas
  * faite ; ponctuelle : une fois, aujourd'hui, ou demain si l'heure est passée).
  */
-export async function addTask(label: string, options: { remindAt?: string; days?: number[] } = {}): Promise<TaskView> {
+export async function addTask(label: string, options: { remindAt?: string; days?: number[]; people?: string[] } = {}): Promise<TaskView> {
   const now = new Date();
-  const { remindAt, days } = options;
+  const { remindAt, days, people } = options;
   if (days?.length) {
     const unique = [...new Set(days)].sort();
     const task: DailyTask = { id: `r-${randomUUID().slice(0, 8)}`, label: label.trim(), days: unique.length === 7 ? undefined : unique };
+    const turn = people?.map((p) => p.trim()).filter(Boolean);
+    if (turn?.length) task.people = turn;
     if (remindAt) {
       task.remindAt = remindAt;
       task.repeatMinutes = 30;
@@ -219,6 +230,12 @@ export async function setTaskDone(id: string, done: boolean): Promise<boolean> {
     if (!(await loadDaily(store)).some((t) => t.id === id)) return false;
     const day = isoDay(new Date());
     const ids = new Set(store.done[day] ?? []);
+    // Corvée à tour de rôle : cocher (une fois par jour) passe à la personne suivante, décocher revient en arrière.
+    const task = (await loadDaily(store)).find((t) => t.id === id);
+    if (task?.people?.length && ids.has(id) !== done) {
+      store.turns ??= {};
+      store.turns[id] = Math.max(0, (store.turns[id] ?? 0) + (done ? 1 : -1));
+    }
     if (done) ids.add(id);
     else ids.delete(id);
     // On ne garde que la semaine en cours : l'historique n'intéresse pas la tablette.
@@ -234,6 +251,7 @@ export async function deleteTask(id: string): Promise<boolean> {
     const before = store.items.length + (store.recurring?.length ?? 0);
     store.items = store.items.filter((i) => i.id !== id);
     store.recurring = store.recurring?.filter((t) => t.id !== id);
+    if (store.turns) delete store.turns[id];
     return store.items.length + (store.recurring?.length ?? 0) !== before;
   });
 }

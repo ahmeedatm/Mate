@@ -127,7 +127,7 @@ class TasksCard @JvmOverloads constructor(
         for (task in tasks) {
             val row = LayoutInflater.from(context).inflate(R.layout.item_task, box, false)
             row.findViewById<TextView>(R.id.task_label).text = task.label
-            row.findViewById<TextView>(R.id.task_detail).text = task.schedule
+            row.findViewById<TextView>(R.id.task_detail).text = task.subtitle(context.getString(R.string.task_turn))
             row.findViewById<CheckBox>(R.id.task_check).visibility = View.GONE
             row.findViewById<ImageButton>(R.id.task_open).visibility = View.GONE
             row.findViewById<ImageButton>(R.id.task_delete).apply {
@@ -184,7 +184,7 @@ class TasksCard @JvmOverloads constructor(
             toggle(task, row, done)
         }
         val detail = row.findViewById<TextView>(R.id.task_detail).apply {
-            text = task.detail ?: task.schedule
+            text = task.subtitle(context.getString(R.string.task_turn))
             visibility = if (text.isNullOrEmpty()) View.GONE else View.VISIBLE
         }
         // Carte étroite (Vertical, une colonne) : le libellé d'abord ; le détail (« Lun-ven · 17:30 ») ne le réduit pas à « R… ».

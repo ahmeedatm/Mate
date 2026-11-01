@@ -618,6 +618,7 @@
     <string name="task_reminder_repeat">La tablette le dit à cette heure, puis toutes les 30 min pendant 2 h tant que ce n\'est pas coché.</string>
     <string name="task_label_missing">Écris la tâche</string>
     <string name="task_days_missing">Choisis au moins un jour.</string>
+    <string name="task_turn">Tour de %1$s</string>
     <string name="task_added">Ajoutée : %1$s</string>
     <string name="tasks_recurring">Tâches récurrentes</string>
     <string name="tasks_recurring_empty">Aucune tâche récurrente. Pour en créer une : bouton ⏰ à côté de « Nouvelle tâche ».</string>
