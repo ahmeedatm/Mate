@@ -13,6 +13,7 @@ before(async () => {
   lan = http.createServer((req, res) => {
     seen.push({ method: req.method, url: req.url, auth: req.headers.authorization });
     if (req.url === "/relay/0?turn=on") return void res.end("ok");
+    if (req.url === "/lent") return void setTimeout(() => res.end("ok"), 300);
     if (req.url === "/panne") return void res.writeHead(500).end("secret-interne");
     if (req.url === "/ailleurs") return void res.writeHead(302, { location: "/relay/0?turn=on" }).end();
     res.writeHead(404).end();
@@ -25,6 +26,7 @@ before(async () => {
         prise: { url: `${base}/relay/0?turn=on` },
         nas: { url: `${base}/relay/0?turn=on`, method: "POST", token: "jeton-nas" },
         panne: { url: `${base}/panne` },
+        lent: { url: `${base}/lent` },
         detour: { url: `${base}/ailleurs` },
         dehors: { url: "http://8.8.8.8/relay" },
         // Écartées au démarrage : un jeton en http clair hors de cet ordinateur, une méthode inconnue.
@@ -66,6 +68,20 @@ describe("étape http d'une touche du Deck", () => {
     assert.equal(res.status, 502);
     assert.match(res.json.message, /panne.*500/);
     assert.ok(!JSON.stringify(res.json).includes("secret-interne"));
+  });
+
+  it("un second appui pendant l'appel en cours ne renvoie rien", async () => {
+    seen = [];
+    assert.equal((await server.call("PUT", `/deck/keys/${SLOT}`, { label: "Lent", steps: [{ type: "http", name: "lent" }] })).status, 200);
+    const [a, b] = await Promise.all([
+      server.call("POST", "/deck/run", { id: `k-${SLOT}` }),
+      server.call("POST", "/deck/run", { id: `k-${SLOT}` }),
+    ]);
+    assert.deepEqual([a.status, b.status], [200, 200]);
+    assert.equal(seen.length, 1);
+    seen = [];
+    assert.equal((await server.call("POST", "/deck/run", { id: `k-${SLOT}` })).status, 200);
+    assert.equal(seen.length, 1, "l'appel terminé, un nouvel appui renvoie");
   });
 
   it("ne suit pas une redirection", async () => {
