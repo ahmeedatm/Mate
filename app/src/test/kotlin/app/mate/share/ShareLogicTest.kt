@@ -2,8 +2,12 @@ package app.mate.share
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 
 class ShareLogicTest {
 
@@ -45,5 +49,67 @@ class ShareLogicTest {
     fun `20 Mo au plus, comme l'ordinateur`() {
         assertTrue(ShareLogic.fits(20L * 1024 * 1024))
         assertFalse(ShareLogic.fits(20L * 1024 * 1024 + 1))
+    }
+
+    @Test
+    fun `n'accepte que les URI content d'une autre appli`() {
+        assertTrue(ShareLogic.acceptsUri("content", "com.android.providers.media.documents"))
+        assertTrue(ShareLogic.acceptsUri("CONTENT", "media"))
+        assertFalse(ShareLogic.acceptsUri("file", ""))
+        assertFalse(ShareLogic.acceptsUri("http", "exemple.fr"))
+        assertFalse(ShareLogic.acceptsUri("android.resource", "app.mate"))
+        assertFalse(ShareLogic.acceptsUri(null, "media"))
+        assertFalse(ShareLogic.acceptsUri("content", null))
+    }
+
+    @Test
+    fun `refuse les URI des fournisseurs de Mate, avec ou sans identifiant d'utilisateur`() {
+        assertFalse(ShareLogic.acceptsUri("content", "app.mate.fileprovider"))
+        assertFalse(ShareLogic.acceptsUri("content", "app.mate.essai.provider"))
+        assertFalse(ShareLogic.acceptsUri("content", "APP.MATE.computers"))
+        assertFalse(ShareLogic.acceptsUri("content", "10@app.mate.fileprovider"))
+        assertTrue(ShareLogic.acceptsUri("content", "com.exemple.app.mate"))
+    }
+
+    @Test
+    fun `10 fichiers au plus par envoi, le surplus est compté à part`() {
+        val (kept, surplus) = ShareLogic.limitCount((1..13).toList())
+        assertEquals((1..10).toList(), kept)
+        assertEquals(3, surplus)
+        assertEquals(0, ShareLogic.limitCount((1..10).toList()).second)
+    }
+
+    @Test
+    fun `la copie bornée copie tout ce qui tient`() {
+        val data = ByteArray(1000) { it.toByte() }
+        val out = ByteArrayOutputStream()
+        assertEquals(1000L, ShareLogic.copyBounded(ByteArrayInputStream(data), out, 1000))
+        assertTrue(data.contentEquals(out.toByteArray()))
+    }
+
+    @Test
+    fun `la copie bornée s'arrête à la limite plus un octet, sans lire la fin du flux`() {
+        var read = 0L
+        val endless = object : InputStream() {
+            override fun read(): Int {
+                read++
+                return 1
+            }
+
+            override fun read(b: ByteArray, off: Int, len: Int): Int {
+                read += len
+                return len
+            }
+        }
+        assertThrows(ShareLogic.TooLarge::class.java) { ShareLogic.copyBounded(endless, ByteArrayOutputStream(), 100_000) }
+        assertEquals(100_001L, read)
+    }
+
+    @Test
+    fun `un fichier d'exactement la limite passe, un octet de plus non`() {
+        assertEquals(50L, ShareLogic.copyBounded(ByteArrayInputStream(ByteArray(50)), ByteArrayOutputStream(), 50))
+        assertThrows(ShareLogic.TooLarge::class.java) {
+            ShareLogic.copyBounded(ByteArrayInputStream(ByteArray(51)), ByteArrayOutputStream(), 50)
+        }
     }
 }

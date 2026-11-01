@@ -21,6 +21,7 @@ import java.io.FileNotFoundException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 /**
  * « Partager » > Mate : dépose les fichiers (PDF, image…) ou le lien reçus dans le dossier partagé de l'ordinateur
@@ -38,15 +39,22 @@ class ShareActivity : AppCompatActivity() {
         if (savedInstanceState != null) return finish()
         val computer = Computers.active(this)
         if (computer == null) return finishWith(getString(R.string.error_no_computer))
-        val uris = streams(intent)
-        val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { uris.isEmpty() && ShareLogic.isLink(it) }
-        if (uris.isEmpty() && text == null) return finishWith(getString(R.string.share_nothing))
+        val received = streams(intent)
+        // Seulement des fichiers d'une autre appli (content://, jamais ceux de Mate), 10 au plus.
+        val uris = ShareLogic.limitCount(received.filter { ShareLogic.acceptsUri(it.scheme, it.authority) }).first
+        val refused = received.size - uris.size
+        val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { received.isEmpty() && ShareLogic.isLink(it) }
+        if (uris.isEmpty() && text == null) {
+            return finishWith(getString(if (refused > 0) R.string.share_refused else R.string.share_nothing, refused, ShareLogic.MAX_FILES))
+        }
+        // Un sous-dossier par lancement : deux partages en même temps ne se mêlent ni ne s'effacent.
+        val dir = File(cacheDir, "partage/${UUID.randomUUID()}")
 
         Toast.makeText(this, getString(R.string.share_sending, computer.name), Toast.LENGTH_SHORT).show()
         lifecycleScope.launch {
             var sent = 0
             val message = try {
-                val items = withContext(Dispatchers.IO) { collect(uris, text) }
+                val items = withContext(Dispatchers.IO) { collect(dir, uris, text) }
                 val names = items.map { send(it).also { sent++ } }
                 if (names.size == 1) getString(R.string.share_sent, names[0]) else getString(R.string.share_sent_many, names.size)
             } catch (e: TooBig) {
@@ -56,9 +64,9 @@ class ShareActivity : AppCompatActivity() {
                 // Un envoi en plusieurs fichiers a pu partir en partie : le dire, pour ne pas les renvoyer en double.
                 if (sent > 0) getString(R.string.share_partial, sent, uris.size, reason) else reason
             } finally {
-                withContext(NonCancellable + Dispatchers.IO) { File(cacheDir, "partage").deleteRecursively() }
+                withContext(NonCancellable + Dispatchers.IO) { dir.deleteRecursively() }
             }
-            finishWith(message)
+            finishWith(if (refused > 0) "$message ${getString(R.string.share_refused, refused, ShareLogic.MAX_FILES)}" else message)
         }
     }
 
@@ -78,9 +86,9 @@ class ShareActivity : AppCompatActivity() {
         }
     }
 
-    /** Copie chaque fichier reçu (ou le lien) dans le cache, sous son nom, en refusant ceux qui dépassent 20 Mo. */
-    private fun collect(uris: List<Uri>, link: String?): List<Item> {
-        val dir = File(cacheDir, "partage").apply { deleteRecursively(); mkdirs() }
+    /** Copie chaque fichier reçu (ou le lien) dans [dir], sous son nom, en refusant ceux qui dépassent 20 Mo. */
+    private fun collect(dir: File, uris: List<Uri>, link: String?): List<Item> {
+        dir.mkdirs()
         val stamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.ROOT).format(Date())
         if (link != null) {
             return listOf(Item(File(dir, ShareLogic.linkFileName(stamp)).apply { writeText(link) }, "text/plain"))
@@ -102,13 +110,15 @@ class ShareActivity : AppCompatActivity() {
             // L'autre appli a pu retirer le droit de lecture, ou le fichier : message à part, pas « ordinateur injoignable ».
             try {
                 val input = contentResolver.openInputStream(uri) ?: throw UserFacingException(R.string.share_unreadable, fileName)
-                input.use { src -> file.outputStream().use { src.copyTo(it) } }
+                // Copie bornée : s'arrête dès que le fichier dépasse 20 Mo, sans lire la fin d'un flux sans fin.
+                input.use { src -> file.outputStream().use { ShareLogic.copyBounded(src, it) } }
+            } catch (e: ShareLogic.TooLarge) {
+                throw TooBig(fileName)
             } catch (e: SecurityException) {
                 throw UserFacingException(R.string.share_unreadable, fileName)
             } catch (e: FileNotFoundException) {
                 throw UserFacingException(R.string.share_unreadable, fileName)
             }
-            if (!ShareLogic.fits(file.length())) throw TooBig(fileName)
             Item(file, mime)
         }
     }
