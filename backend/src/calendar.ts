@@ -173,11 +173,14 @@ async function remoteEvents(from: Date, to: Date): Promise<{ source: Source; eve
   const errors: Error[] = accounts
     .filter((a) => a.expired)
     .map((a) => new Error(`Compte ${a.label} à reconnecter (page du compagnon sur l'ordinateur)`));
+  const expired = errors.length;
   let read = 0;
   if (accounts.some((a) => !a.expired)) {
     try {
-      events.push(...(await accountEvents(from, to)));
-      read++;
+      const fromAccounts = await accountEvents(from, to);
+      events.push(...fromAccounts.events);
+      errors.push(...fromAccounts.errors);
+      if (fromAccounts.events.length || fromAccounts.errors.length < accounts.filter((a) => !a.expired).length) read++;
     } catch (e) {
       errors.push(e as Error);
     }
@@ -214,7 +217,9 @@ async function remoteEvents(from: Date, to: Date): Promise<{ source: Source; eve
   if (read === 0 && errors.length) throw errors[0];
   events.sort((a, b) => a.startMs - b.startMs);
   for (const [k, entry] of cache) if (Date.now() - entry.at >= CACHE_MS) cache.delete(k);
-  cache.set(key, { at: Date.now(), events });
+  // Une source en échec (réseau, panne passagère) : pas de cache, sinon ses événements manqueraient 5 min.
+  // Un compte à reconnecter ne compte pas : il le reste jusqu'à ce qu'on le reconnecte (le cache est alors vidé).
+  if (errors.length === expired) cache.set(key, { at: Date.now(), events });
   return { source: "ics", events };
 }
 
