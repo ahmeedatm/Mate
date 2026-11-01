@@ -152,6 +152,23 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "touche http : une cible inconnue est refusée",
+      run: async () => {
+        // L'étape ne porte qu'un nom : une cible absente de LAN_TARGETS répond 404 sans rien appeler.
+        const slot = 19;
+        try {
+          expectStatus(
+            await call("PUT", `/deck/keys/${slot}`, { label: "Sanity http", steps: [{ type: "http", name: "sanity-inexistante" }] }),
+            200,
+            "PUT /deck/keys/19",
+          );
+          expectStatus(await call("POST", "/deck/run", { id: `k-${slot}` }), 404, "/deck/run cible inconnue");
+        } finally {
+          expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE /deck/keys/19");
+        }
+      },
+    },
+    {
       name: "réunion en cours (profil Réunion de la tablette)",
       run: async () => {
         // Deck V2 : la veille des réunions (src/meeting-watch.ts) lit les applis en appel comme /deck/live.

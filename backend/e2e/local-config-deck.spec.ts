@@ -64,6 +64,19 @@ test.describe("page locale : touches", () => {
     expect((await server.call("GET", "/deck/keys/0")).json.key).toBeNull();
   });
 
+  test("une étape « Appeler le réseau local » ne garde que le nom de la cible", async ({ page, server }) => {
+    await page.goto("/");
+    const touches = page.locator("#pf-touches");
+    await touches.getByRole("button", { name: "Touche 1 : libre" }).click();
+    await touches.locator("#pf-deck-label").fill("Prise");
+    await touches.locator("#pf-deck-add-type").selectOption("http");
+    await touches.locator("#pf-deck-add-step").click();
+    await touches.locator('[data-step="0"]').getByLabel("Nom de la cible (LAN_TARGETS du .env)").fill(" prise ");
+    await touches.locator("#pf-deck-save").click();
+    await expect(page.locator("#pf-deck-keys-msg")).toHaveText("Touche enregistrée.");
+    expect((await server.call("GET", "/deck/keys/0")).json.key.steps).toEqual([{ type: "http", name: "prise" }]);
+  });
+
   test("duplique une page nommée et ouvre la copie ; Perso n'a pas de bouton", async ({ page, server }) => {
     await page.goto("/");
     const touches = page.locator("#pf-touches");

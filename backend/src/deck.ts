@@ -48,6 +48,7 @@ import { haConfigured } from "./ha.ts";
 import { jiraConfigured } from "./jira.ts";
 import { appPluginOff, pluginOn, pluginsOff } from "./plugins.ts";
 import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
+import { callLanTarget } from "./lan-call.ts";
 
 /**
  * Étapes possibles d'une tuile. La tablette n'envoie qu'un identifiant de tuile : seules les actions
@@ -64,6 +65,8 @@ export type Step =
   /** Colle un texte dans l'appli au premier plan. */
   | { type: "text"; text: string }
   | { type: "wait"; ms: number }
+  /** Appelle une cible du réseau local déclarée sur l'ordinateur (`LAN_TARGETS`, voir lan-call.ts) ; la tablette n'envoie que son nom. */
+  | { type: "http"; name: string }
   /**
    * Appuie sur un bouton de la fenêtre de l'appli (UI Automation, Accessibilité sur Mac), le premier trouvé parmi
    * `names` ; `waitMs` : le bouton peut mettre ce temps à apparaître (panneau ouvert par l'étape d'avant).
@@ -392,6 +395,8 @@ export async function runAction(action: Action, tileId?: string): Promise<unknow
       return typeText(action.text);
     case "wait":
       return sleep(Math.min(action.ms, 10_000));
+    case "http":
+      return callLanTarget(action.name);
     case "press": {
       const until = Date.now() + Math.min(action.waitMs ?? 0, 10_000);
       while (!(await pressButton(action.app, action.names))) {
