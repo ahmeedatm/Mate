@@ -1,7 +1,10 @@
 package app.mate.ui.home
 
 import android.content.Context
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.TextUtils
+import android.text.style.RelativeSizeSpan
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -19,7 +22,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Lumières, prises et scènes de Home Assistant (liste blanche réglée sur l'ordinateur, qui garde le jeton). Une case par
- * entité : son nom et son état ; un toucher la bascule (une scène se lance). Allumée = bouton plein. L'état se relit à
+ * entité : son nom et son état ; un toucher la bascule (une scène se lance). Allumé = bouton plein. L'état se relit à
  * chaque minute et après chaque toucher. M : deux colonnes, une rangée ; L : deux colonnes ; XL : quatre colonnes.
  */
 class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
@@ -38,19 +41,30 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
     }
 
     private var entities: List<HaEntity> = emptyList()
-    private var busy = false
+    /** Entités dont l'ordre est parti : seule leur case est bloquée, les autres restent touchables. */
+    private var pending: Set<String> = emptySet()
+
+    /** Dernière liste dessinée : rien n'est refait tant qu'elle ne change pas (toutes les minutes, rien n'a bougé). */
+    private var drawn: Pair<List<HaEntity>, Set<String>>? = null
+
+    /** Numéro de la dernière lecture demandée : une lecture plus ancienne que le dernier toucher est jetée. */
+    private var reads = 0
 
     override fun applySize() {
         grid.columnCount = if (placed.size == WidgetSize.XL) 4 else 2
+        drawn = null
         render()
     }
 
     override fun onMinute() {
-        if (!busy) host.scope.launch { load() }
+        host.scope.launch { load() }
     }
 
     override suspend fun load() {
-        runCatchingCancellable { BackendClient(context).ha.entities() }
+        val mine = ++reads
+        val result = runCatchingCancellable { BackendClient(context).ha.entities() }
+        if (mine != reads) return
+        result
             .onSuccess { entities = it; status.visibility = View.GONE }
             .onFailure { status.text = context.errorText(it); status.visibility = View.VISIBLE }
         render()
@@ -61,6 +75,8 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
     }
 
     private fun render() {
+        if (drawn == entities to pending) return
+        drawn = entities to pending
         grid.removeAllViews()
         if (entities.isEmpty() && status.visibility != View.VISIBLE) {
             status.setText(R.string.ha_empty)
@@ -76,14 +92,18 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
     }
 
     private fun tile(entity: HaEntity) = Button(context, null, 0, if (entity.on) R.style.PrimaryButton else R.style.ActionButton).apply {
-        text = "${entity.name}\n${stateText(entity)}"
+        // Le nom d'abord, l'état en dessous plus petit ; le nom perd sa place avant l'état.
+        val name = entity.name
+        text = SpannableString("$name\n${stateText(entity)}").apply {
+            setSpan(RelativeSizeSpan(0.8f), name.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
         textSize = if (placed.size == WidgetSize.M) 14f else 16f
         maxLines = 3
         ellipsize = TextUtils.TruncateAt.END
         gravity = Gravity.CENTER
         minHeight = dp(64)
-        isEnabled = entity.available && !busy
-        alpha = if (entity.available) 1f else 0.5f
+        isEnabled = entity.id !in pending
+        alpha = if (entity.available) 1f else 0.7f
         setOnClickListener { toggle(entity) }
     }
 
@@ -97,18 +117,22 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
     )
 
     private fun toggle(entity: HaEntity) {
-        if (busy) return
-        busy = true
+        if (!entity.available) return toast(context.getString(R.string.ha_unavailable_hint, entity.name))
+        if (entity.id in pending) return
+        pending = pending + entity.id
+        reads++
         render()
         host.scope.launch {
             try {
                 runCatchingCancellable { BackendClient(context).ha.toggle(entity.id) }
-                    .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
+                    .onFailure { toast(context.errorText(it)) }
                 load()
             } finally {
-                busy = false
+                pending = pending - entity.id
                 render()
             }
         }
     }
+
+    private fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_LONG).show()
 }

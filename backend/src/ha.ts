@@ -8,17 +8,14 @@
 const rawUrl = process.env.HA_URL?.trim().replace(/\/+$/, "");
 const token = process.env.HA_TOKEN?.trim();
 
-/** Ce que la tablette peut piloter : `toggle` bascule (lumière, prise…), `run` lance (scène, script). */
+/** Ce que la tablette peut piloter : `toggle` bascule (lumière, prise), `run` lance (scène). */
 const SERVICES = {
   light: { kind: "toggle", service: "toggle" },
   switch: { kind: "toggle", service: "toggle" },
-  input_boolean: { kind: "toggle", service: "toggle" },
-  fan: { kind: "toggle", service: "toggle" },
   scene: { kind: "run", service: "turn_on" },
-  script: { kind: "run", service: "turn_on" },
 } as const;
 
-export const HA_ENTITY_ID = /^(light|switch|input_boolean|fan|scene|script)\.[a-z0-9_]+$/;
+export const HA_ENTITY_ID = /^(light|switch|scene)\.[a-z0-9_]+$/;
 
 const base = rawUrl && /^https?:\/\/[^/\s]+$/i.test(rawUrl) ? rawUrl : undefined;
 
@@ -49,7 +46,7 @@ async function ha<T>(path: string, init?: { body: object }): Promise<T> {
     throw new Error("Home Assistant ne répond pas : vérifie la connexion de l'ordinateur.");
   });
   if (res.status === 401 || res.status === 403) throw new Error("Home Assistant refuse le jeton du fichier .env de l'ordinateur.");
-  if (!res.ok) throw new Error(`Home Assistant HTTP ${res.status}`);
+  if (!res.ok) throw new Error("Home Assistant n'a pas pu faire cela.");
   return (await res.json()) as T;
 }
 
