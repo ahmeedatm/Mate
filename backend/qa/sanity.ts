@@ -317,6 +317,28 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "touche de gestes du Pavé enregistrée (jamais jouée)",
+      run: async () => {
+        let slot: number | undefined;
+        try {
+          const res = await call("POST", "/deck/keys", {
+            label: "Sanity gestes",
+            steps: [
+              { type: "gesture", name: "back" },
+              { type: "wait", ms: 500 },
+              { type: "gesture", name: "forward" },
+            ],
+          });
+          expectStatus(res, 200, "POST /deck/keys");
+          slot = res.json.slot as number;
+          const got = await call("GET", `/deck/keys/${slot}`);
+          expect(got.json.key?.steps?.[0]?.type === "gesture", "l'étape geste n'est pas gardée");
+        } finally {
+          if (slot !== undefined) expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE de la touche de gestes");
+        }
+      },
+    },
+    {
       name: "touche à cycle : une étape par appui",
       run: async () => {
         const slot = 15;

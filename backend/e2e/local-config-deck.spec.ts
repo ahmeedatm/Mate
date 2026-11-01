@@ -77,6 +77,27 @@ test.describe("page locale : touches", () => {
     expect(pages.map((p: { title: string }) => p.title)).toContain("Réunions (copie)");
   });
 
+  test("une touche de gestes du Pavé se rouvre avec son geste et le garde à l'enregistrement", async ({ page, server }) => {
+    const steps = [
+      { type: "gesture", name: "desktop-next" },
+      { type: "wait", ms: 1500 },
+      { type: "gesture", name: "search" },
+    ];
+    fs.writeFileSync(path.join(server.dataDir, "keys.json"), JSON.stringify({ slots: [{ label: "Gestes", steps }] }));
+    await page.goto("/");
+    const touches = page.locator("#pf-touches");
+    await touches.getByRole("button", { name: "Touche 1 : Gestes" }).click();
+    await expect(touches.locator('[data-step="0"]').getByLabel("Geste")).toHaveValue("desktop-next");
+    await touches.locator('[data-step="2"]').getByLabel("Geste").selectOption("back");
+    await touches.locator("#pf-deck-save").click();
+    await expect(page.locator("#pf-deck-keys-msg")).toHaveText("Touche enregistrée.");
+    expect((await server.call("GET", "/deck/keys/0")).json.key.steps).toEqual([
+      { type: "gesture", name: "desktop-next" },
+      { type: "wait", ms: 1500 },
+      { type: "gesture", name: "back" },
+    ]);
+  });
+
   test("une touche à cycle garde son cycle quand on la rouvre et l'enregistre", async ({ page, server }) => {
     fs.writeFileSync(
       path.join(server.dataDir, "keys.json"),

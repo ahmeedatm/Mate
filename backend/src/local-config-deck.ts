@@ -82,7 +82,13 @@ export const DECK_JS = `
   const pfDeckStepTypes = [
     ["app", "Ouvrir une appli"], ["url", "Ouvrir une adresse"], ["keys", "Raccourci clavier"], ["shortcut", "Raccourci Apple"],
     ["media", "Lecture multimédia"], ["system", "Commande système"], ["text", "Coller un texte"], ["wait", "Attendre"],
-    ["window", "Placer une fenêtre"],
+    ["gesture", "Geste du Pavé"], ["window", "Placer une fenêtre"],
+  ];
+  const pfDeckGestures = [
+    ["zoom-in", "Zoom avant"], ["zoom-out", "Zoom arrière"], ["back", "Retour"], ["forward", "Avancer"],
+    ["task-view", "Vue des tâches"], ["desktop", "Afficher le bureau"], ["app-previous", "Appli précédente"],
+    ["app-next", "Appli suivante"], ["search", "Recherche"], ["desktop-previous", "Bureau précédent"],
+    ["desktop-next", "Bureau suivant"], ["notifications", "Notifications"],
   ];
   const pfDeckMedia = [["play-pause", "Lecture ou pause"], ["next", "Suivant"], ["previous", "Précédent"]];
   const pfDeckSystemNames = {
@@ -144,6 +150,7 @@ export const DECK_JS = `
       case "system": return { type: type, command: pfDeckData.systemCommands[0] };
       case "text": return { type: type, text: "" };
       case "wait": return { type: type, ms: 500 };
+      case "gesture": return { type: type, name: pfDeckGestures[0][0] };
       default: return { type: "window", app: "", display: "", layout: "keep" };
     }
   }
@@ -154,6 +161,7 @@ export const DECK_JS = `
       case "url": return { type: s.type, url: s.url.trim() };
       case "keys": return s.app.trim() ? { type: s.type, keys: s.keys.trim(), app: s.app.trim() } : { type: s.type, keys: s.keys.trim() };
       case "media": case "system": return { type: s.type, command: s.command };
+      case "gesture": return { type: s.type, name: s.name };
       case "text": return { type: s.type, text: s.text };
       case "wait": return { type: s.type, ms: Math.min(10000, Math.max(0, parseInt(s.ms, 10) || 0)) };
       default: {
@@ -265,6 +273,8 @@ export const DECK_JS = `
         area.oninput = () => { step.text = area.value; };
         return [pfDeckField("Texte collé dans l'appli au premier plan", area)];
       }
+      case "gesture":
+        return [pfDeckField("Geste", pfDeckWrapSel(pfDeckSelect(pfDeckGestures, step.name, (v) => { step.name = v; })))];
       case "wait":
         return [pfDeckField("Durée en millisecondes (0 à 10000)", pfDeckText(String(step.ms), (v) => { step.ms = v; }, { inputmode: "numeric" }))];
       default:

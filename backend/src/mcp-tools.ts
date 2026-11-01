@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import { POINTER_GESTURES } from "./pointer.ts";
 import { SYSTEM_COMMANDS, TILE_SYMBOLS } from "./screens.ts";
 import { THEMES } from "./tablet.ts";
 
@@ -272,6 +273,7 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
       command: z.enum(SYSTEM_COMMANDS),
     }),
     z.object({ type: z.literal("wait"), ms: z.number().int().min(0).max(10_000) }),
+    z.object({ type: z.literal("gesture"), name: z.enum(POINTER_GESTURES).describe("Geste du Pavé (retour, bureau suivant, zoom…)") }),
     z.object({
       type: z.literal("window"),
       app: z.string(),

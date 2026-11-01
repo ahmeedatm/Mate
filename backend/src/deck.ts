@@ -16,6 +16,7 @@ import {
   listWindows,
   openTarget,
   placeWindow,
+  pointerGesture,
   pressButton,
   holdKeys,
   runShortcut,
@@ -28,6 +29,7 @@ import {
   type MediaCommand,
   type SystemCommand,
 } from "./os.ts";
+import type { PointerGesture } from "./pointer.ts";
 import type { Layout } from "./screens.ts";
 import {
   loadKeyPages,
@@ -64,6 +66,8 @@ export type Step =
   /** Colle un texte dans l'appli au premier plan. */
   | { type: "text"; text: string }
   | { type: "wait"; ms: number }
+  /** Geste du Pavé (retour, bureau suivant, zoom…), traduit en raccourci selon le système ; enregistré depuis le Pavé de la tablette. */
+  | { type: "gesture"; name: PointerGesture }
   /**
    * Appuie sur un bouton de la fenêtre de l'appli (UI Automation, Accessibilité sur Mac), le premier trouvé parmi
    * `names` ; `waitMs` : le bouton peut mettre ce temps à apparaître (panneau ouvert par l'étape d'avant).
@@ -387,6 +391,8 @@ export async function runAction(action: Action, tileId?: string): Promise<unknow
       return sendMediaKey(action.command);
     case "text":
       return typeText(action.text);
+    case "gesture":
+      return pointerGesture(action.name);
     case "wait":
       return sleep(Math.min(action.ms, 10_000));
     case "press": {
