@@ -42,4 +42,15 @@ class KeyJsonTest {
         assertEquals(JSONArray(hold).toString(), key.getJSONArray("hold").toString())
         assertFalse(keyJson("T", listOf(step("Jour")), glyph = null, color = null, cycle = false, hold = emptyList()).has("hold"))
     }
+
+    private fun pushStep() = JSONObject().put("type", "keys").put("keys", "f13").put("push", true)
+
+    @Test
+    fun `une touche a maintenir reste seule, sans cycle ni seconde action`() {
+        val key = keyJson("Parler", listOf(step("a"), pushStep()), glyph = null, color = null, cycle = true, hold = listOf(step("Nuit")))
+        assertEquals(1, key.getJSONArray("steps").length())
+        assertTrue(key.getJSONArray("steps").getJSONObject(0).getBoolean("push"))
+        assertFalse(key.has("cycle"))
+        assertFalse(key.has("hold"))
+    }
 }

@@ -154,20 +154,31 @@ const KEY_CODES: Record<string, number> = {
   pagedown: 0x22,
   insert: 0x2d,
   printscreen: 0x2c,
-  ...Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`f${i + 1}`, 0x70 + i])),
+  ...Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`f${i + 1}`, 0x70 + i])),
 };
 
-export async function sendKeys(combo: string, app?: string) {
+/** Modificateurs et touche d'un raccourci pour le pilote : code VK, ou caractère s'il n'en a pas. */
+function keyRequest(combo: string) {
   const { key, mods } = parseCombo(combo, MODIFIERS);
   let vk = KEY_CODES[key];
   // Lettres et chiffres : touche du même nom quelle que soit la disposition (chiffres de la rangée du haut).
   if (vk === undefined && /^[a-z0-9]$/.test(key)) vk = key.toUpperCase().charCodeAt(0);
   if (vk === undefined && key.length !== 1) throw new Error(`Touche inconnue : ${key}`);
+  return { mods: [...new Set(mods)], ...(vk !== undefined ? { vk } : { ch: key }) };
+}
+
+export async function sendKeys(combo: string, app?: string) {
+  const request = keyRequest(combo);
   if (app) {
     await launchApp(app);
     await new Promise((resolve) => setTimeout(resolve, 400));
   }
-  await call("keys", { mods: [...new Set(mods)], ...(vk !== undefined ? { vk } : { ch: key }) });
+  await call("keys", request);
+}
+
+/** Tient (`down`) ou lâche les touches de `combo` : parler en maintenant une touche. */
+export async function holdKeys(combo: string, down: boolean) {
+  await call("holdkeys", { ...keyRequest(combo), down });
 }
 
 const MEDIA_KEYS: Record<MediaCommand, number> = { "play-pause": 0xb3, next: 0xb0, previous: 0xb1 };

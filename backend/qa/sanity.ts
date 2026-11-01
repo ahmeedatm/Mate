@@ -320,6 +320,28 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "touche à maintenir : appui puis relâchement",
+      run: async () => {
+        if (!controlled()) return "ignoré hors Mac et Windows";
+        const slot = 17;
+        try {
+          expectStatus(
+            await call("PUT", `/deck/keys/${slot}`, { label: "Sanity parler", steps: [{ type: "keys", keys: "f13", push: true }] }),
+            200,
+            "PUT /deck/keys/17",
+          );
+          const deck = await call("GET", "/deck");
+          const perso = (deck.json.pages as { editable: boolean; tiles: { id: string; push?: boolean }[] }[]).find((p) => p.editable);
+          expect(perso?.tiles.find((t) => t.id === `k-${slot}`)?.push === true, "touche k-17 sans `push`");
+          expectStatus(await call("POST", "/deck/run", { id: `k-${slot}`, phase: "down" }), 200, "appui sur k-17");
+          expectStatus(await call("POST", "/deck/run", { id: `k-${slot}`, phase: "up" }), 200, "relâchement de k-17");
+          expectStatus(await call("POST", "/deck/run", { id: `k-${slot}` }), 409, "appui simple sur k-17");
+        } finally {
+          expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE /deck/keys/17");
+        }
+      },
+    },
+    {
       name: "touche à seconde action : l'appui long la lance",
       run: async () => {
         const slot = 16;

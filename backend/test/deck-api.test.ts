@@ -11,6 +11,7 @@ type TileView = {
   glyph?: string | null;
   state?: string | null;
   hold?: boolean;
+  push?: boolean;
 };
 type PageView = { title: string; apps: boolean; editable: boolean; app: string | null; sound: boolean; tiles: TileView[] };
 
@@ -109,6 +110,52 @@ describe("POST /deck/run avec hold (appui long)", () => {
     assert.ok(!tile.hold);
     assert.equal((await server.call("POST", "/deck/run", { id: tile.id, hold: true })).status, 409);
     assert.deepEqual(server.osCalls(), []);
+  });
+});
+
+describe("POST /deck/run avec phase (touche à maintenir pour parler)", () => {
+  const PUSH_SLOT = 3;
+  const makePush = () =>
+    server.call("PUT", `/deck/keys/${PUSH_SLOT}`, { label: "Parler", steps: [{ type: "keys", keys: "ctrl+shift+f13", push: true }] });
+  const pushTile = async () => (await pages()).flatMap((p) => p.tiles).find((t) => t.id === `k-${PUSH_SLOT}`)!;
+
+  it("l'appui tient les touches, le relâchement les lâche, sans appui simple", async () => {
+    assert.equal((await makePush()).status, 200);
+    const tile = await pushTile();
+    assert.equal(tile.push, true);
+    server.clearOsCalls();
+    assert.equal((await server.call("POST", "/deck/run", { id: tile.id, phase: "down" })).status, 200);
+    assert.equal((await server.call("POST", "/deck/run", { id: tile.id, phase: "up" })).status, 200);
+    assert.deepEqual(server.osCalls(), [
+      { fn: "holdKeys", args: ["ctrl+shift+f13", true] },
+      { fn: "holdKeys", args: ["ctrl+shift+f13", false] },
+    ]);
+  });
+
+  it("un appui simple sur cette touche ne tape rien : le micro ne reste pas ouvert", async () => {
+    await makePush();
+    server.clearOsCalls();
+    assert.equal((await server.call("POST", "/deck/run", { id: `k-${PUSH_SLOT}` })).status, 409);
+    assert.deepEqual(server.osCalls(), []);
+  });
+
+  it("refuse (409) une phase sur une touche qui ne se maintient pas, et rien ne part", async () => {
+    const tile = await tileByLabel("Capture zone");
+    assert.ok(!tile.push);
+    server.clearOsCalls();
+    assert.equal((await server.call("POST", "/deck/run", { id: tile.id, phase: "down" })).status, 409);
+    assert.deepEqual(server.osCalls(), []);
+  });
+
+  it("une touche à maintenir ne peut pas être une macro : refus à l'enregistrement", async () => {
+    const put = await server.call("PUT", `/deck/keys/${PUSH_SLOT}`, {
+      label: "Mal",
+      steps: [
+        { type: "keys", keys: "f13", push: true },
+        { type: "wait", ms: 0 },
+      ],
+    });
+    assert.equal(put.status, 400);
   });
 });
 

@@ -318,13 +318,21 @@ class KeyEditor @JvmOverloads constructor(
         val chosen = mutableSetOf<String>()
         chipRow(mods.map { (mod, text) -> text to { if (!chosen.add(mod)) chosen.remove(mod) } }, toggle = true)
         lateinit var key: EditText
+        var push = false
         val add = {
             val k = key.text.toString().trim().lowercase()
-            if (k.isNotEmpty()) addStep(JSONObject().put("type", "keys").put("keys", (mods.keys.filter { it in chosen } + k).joinToString("+")))
+            if (k.isNotEmpty()) {
+                val step = JSONObject().put("type", "keys").put("keys", (mods.keys.filter { it in chosen } + k).joinToString("+"))
+                // Maintenir pour parler : l'étape est seule dans sa touche, elle remplace les autres.
+                if (push) { step.put("push", true); steps.clear() }
+                addStep(step)
+            }
         }
         key = input(R.string.step_key_hint, multiline = false, onDone = add)
         form.addView(key, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
         chipRow(SPECIAL_KEYS.map { (name, text) -> text to { key.setText(name) } })
+        // Seulement pour la touche elle-même : la seconde action (appui long) ne se maintient pas.
+        if (!holdChip.isSelected) chipRow(listOf(context.getString(R.string.step_key_push) to { push = !push }), toggle = true)
         addButton(add)
     }
 
@@ -473,7 +481,7 @@ class KeyEditor @JvmOverloads constructor(
     /** Description courte d'une étape, en français. */
     private fun summary(step: JSONObject): String = when (step.optString("type")) {
         "app" -> context.getString(R.string.sum_app, step.optString("name"))
-        "keys" -> step.optString("keys").split("+").let { parts ->
+        "keys" -> (if (step.optBoolean("push")) context.getString(R.string.sum_push) else "") + step.optString("keys").split("+").let { parts ->
             // Windows : "Ctrl+Maj+M" ; Mac : "⌘⇧M".
             if (onWindows) parts.joinToString("+") { WINDOWS_NAMES[it] ?: SYMBOLS[it] ?: it.uppercase() }
             else parts.joinToString("") { SYMBOLS[it] ?: it.uppercase() }

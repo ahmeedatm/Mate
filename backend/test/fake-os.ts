@@ -159,6 +159,10 @@ export async function sendKeys(combo: string, app?: string) {
   record("sendKeys", combo, app);
 }
 
+export async function holdKeys(combo: string, down: boolean) {
+  record("holdKeys", combo, down);
+}
+
 export async function sendMediaKey(command: MediaCommand) {
   record("sendMediaKey", command);
 }

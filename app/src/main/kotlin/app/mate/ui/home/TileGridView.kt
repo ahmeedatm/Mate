@@ -50,6 +50,14 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
     /** Appui long sur une touche ; null : rien à faire, l'appui long n'est ni consommé ni signalé. */
     var onHold: ((Cell, View) -> Unit)? = null
 
+    /**
+     * Touche à maintenir (parler en maintenant) : [isPush] la reconnaît, [onPush] reçoit l'appui (vrai) puis le
+     * relâchement (faux). Sa touche ne répond ni au clic ni à l'appui long, le doigt tient la touche.
+     */
+    var onPush: ((Cell, Boolean) -> Unit)? = null
+    var isPush: (Cell) -> Boolean = { false }
+    private var pushed: Cell? = null
+
     override var ownsLongPress = false
     override val ownsSwipe = false
 
@@ -101,6 +109,24 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
      * case qui garde un `OnTouchListener` ne reçoit que le DOWN et resterait enfoncée.
      */
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        pushed?.let {
+            if (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL) releasePush()
+            return true
+        }
+        if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
+            val position = pointToPosition(ev.x.toInt(), ev.y.toInt())
+            val cell = cells.getOrNull(position)?.takeUnless { it.add }
+            if (cell != null && isPush(cell)) {
+                pushed = cell
+                getChildAt(position - firstVisiblePosition)?.let {
+                    pressed += it
+                    Look.pressTo(it, true)
+                }
+                performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                onPush?.invoke(cell, true)
+                return true
+            }
+        }
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val position = pointToPosition(ev.x.toInt(), ev.y.toInt())
@@ -114,6 +140,13 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> releaseAll()
         }
         return super.dispatchTouchEvent(ev)
+    }
+
+    private fun releasePush() {
+        val cell = pushed ?: return
+        pushed = null
+        releaseAll()
+        onPush?.invoke(cell, false)
     }
 
     private fun releaseAll() {
@@ -130,6 +163,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
     }
 
     override fun onDetachedFromWindow() {
+        releasePush()
         stopListening?.invoke()
         stopListening = null
         super.onDetachedFromWindow()

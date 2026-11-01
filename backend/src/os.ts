@@ -125,6 +125,13 @@ export async function sendKeys(combo: string, app?: string) {
   unsupported();
 }
 
+/** Tient (`down`) ou lâche les touches d'un raccourci, pour parler en maintenant une touche. */
+export async function holdKeys(combo: string, down: boolean) {
+  if (isMac) return macKeys.holdKeys(combo, down);
+  if (isWindows) return win.holdKeys(combo, down);
+  unsupported();
+}
+
 export async function sendMediaKey(command: MediaCommand) {
   if (isMac) return macKeys.sendMediaKey(command);
   if (isWindows) return win.sendMediaKey(command);

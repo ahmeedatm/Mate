@@ -39,6 +39,15 @@ const KEY_CODES: Record<string, number> = {
   f10: 109,
   f11: 103,
   f12: 111,
+  // F13 à F20 : touches de parler en maintenant, que rien d'autre n'utilise.
+  f13: 105,
+  f14: 107,
+  f15: 113,
+  f16: 106,
+  f17: 64,
+  f18: 79,
+  f19: 80,
+  f20: 90,
   // Chiffres : position sur la rangée du haut, comme les raccourcis du Mac (⌘⇧4 en AZERTY aussi).
   "1": 18,
   "2": 19,
@@ -69,7 +78,7 @@ function keyFlags(code) {
   if (code >= 123 && code <= 126) return 0x800000 | 0x200000;
   return [122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111].indexOf(code) >= 0 ? 0x800000 : 0;
 }
-function press(key, modNames) {
+function codeOf(key) {
   var code = /^#\\d+$/.test(key) ? parseInt(key.slice(1), 10) : -1;
   for (var k = 0; k < 128 && code < 0; k++) {
     // Les touches de modification (54 à 63) n'ont pas de caractère : NSEvent lève une exception.
@@ -79,17 +88,43 @@ function press(key, modNames) {
     } catch (e) {}
   }
   if (code < 0) throw new Error('Touche absente du clavier du Mac : ' + key);
+  return code;
+}
+function press(key, modNames) {
+  var code = codeOf(key);
   var mods = modNames.map(function (m) { return MODS[m]; });
   var flags = 0;
   mods.forEach(function (m) { flags |= m[1]; post(m[0], true, flags); });
   post(code, true, flags | keyFlags(code));
   post(code, false, flags | keyFlags(code));
   mods.reverse().forEach(function (m) { flags &= ~m[1]; post(m[0], false, flags); });
+}
+// Appui tenu : modificateurs puis touche s'enfoncent (down), ou se relèvent dans l'ordre inverse (up).
+function hold(key, down, modNames) {
+  var code = codeOf(key);
+  var mods = modNames.map(function (m) { return MODS[m]; });
+  var all = 0;
+  mods.forEach(function (m) { all |= m[1]; });
+  if (down) {
+    var flags = 0;
+    mods.forEach(function (m) { flags |= m[1]; post(m[0], true, flags); });
+    post(code, true, flags | keyFlags(code));
+  } else {
+    post(code, false, all | keyFlags(code));
+    var left = all;
+    mods.slice().reverse().forEach(function (m) { left &= ~m[1]; post(m[0], false, left); });
+  }
 }`;
 
 const KEY_SCRIPT = `${KEY_FUNCTIONS}
 function run(argv) {
   press(argv[0], argv.slice(1));
+}`;
+
+// Touches tenues : la touche et ses modificateurs s'enfoncent (down) ou se relèvent (up) en deux appels séparés.
+const HOLD_SCRIPT = `${KEY_FUNCTIONS}
+function run(argv) {
+  hold(argv[0], argv[1] === 'down', argv.slice(2));
 }`;
 
 // Collage d'un texte : le presse-papiers entier (tous ses types : image, marque des gestionnaires de mots de passe) est
@@ -125,6 +160,14 @@ function run(argv) {
   pb.clearContents;
   if (saved.length > 0) pb.writeObjects($(saved));
 }`;
+
+/** Tient (`down`) ou lâche les touches de `combo` (ex. "ctrl+shift+f13") sur l'appli active ; voir `HOLD_SCRIPT`. */
+export async function holdKeys(combo: string, down: boolean) {
+  const { key, mods } = parseCombo(combo, MODIFIERS);
+  const code = KEY_CODES[key];
+  if (code === undefined && key.length !== 1) throw new Error(`Touche inconnue : ${key}`);
+  await osascript(HOLD_SCRIPT, [code !== undefined ? `#${code}` : key, down ? "down" : "up", ...new Set(mods)], "JavaScript");
+}
 
 /** Raccourci au format "cmd+shift+m", envoyé à `app` (mise au premier plan avant) ou à l'appli active. */
 export async function sendKeys(combo: string, app?: string) {

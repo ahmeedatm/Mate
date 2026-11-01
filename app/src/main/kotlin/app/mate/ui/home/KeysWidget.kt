@@ -3,6 +3,7 @@ package app.mate.ui.home
 import android.content.Context
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -14,6 +15,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import app.mate.Computers
 import app.mate.R
+import app.mate.net.BackendClient
 import app.mate.net.DeckPage
 import app.mate.net.DeckTile
 import app.mate.net.runCatchingCancellable
@@ -24,6 +26,8 @@ import app.mate.ui.showImmersive
 import app.mate.ui.themeBool
 import app.mate.ui.themeRes
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Touches du deck choisies : lancer Discord, une macro, couper le micro… sans passer par le Deck. S, M et V gardent
@@ -44,9 +48,15 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         TileGridView(context, host.scope).apply {
             onTap = { cell, _ -> if (cell.add) showAddChoice() else run(cell.key) }
             onHold = { cell, _ -> holdOrRemove(cell.key) }
+            isPush = { it.key.id in pushIds }
+            onPush = { cell, down -> push(cell.key, down) }
             ownsLongPress = true
         }
     }
+
+    /** Touches à maintenir du deck, lues à l'ouverture ; les appuis arrivent dans l'ordre, jamais un relâchement avant son appui. */
+    private var pushIds = emptySet<String>()
+    private val pushOrder = Mutex()
 
     private val inGrid get() = placed.size == WidgetSize.L || placed.size == WidgetSize.XL
 
@@ -55,6 +65,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** Relit le deck : une touche modifiée ou vidée dans l'éditeur se met à jour ici. */
     override suspend fun load() {
         val pages = runCatchingCancellable { host.deckPages() }.getOrNull() ?: return
+        tilePushIds(pages).let { if (it != pushIds) { pushIds = it; render() } }
         // Sans ordinateur actif, rien n'est lu ni écrit : le deck lu ne serait celui de personne.
         val id = computerId ?: return
         if (KeyRef.adopt(placed.config, id)) host.save()
@@ -158,6 +169,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                 stopListening = null
             }
         })
+        if (key.id in pushIds) return pushTile(tile, key)
         Look.pressSpring(tile)
         tile.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -170,6 +182,36 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
         return OwnerFrameLayout(context, ownsLongPress = true).apply {
             addView(tile, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        }
+    }
+
+    /** Touche à maintenir seule : appui = touches tenues, relâchement ou annulation = touches lâchées. */
+    private fun pushTile(tile: View, key: KeyRef): View {
+        tile.setOnTouchListener { v, ev ->
+            when (ev.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    Look.pressTo(v, true)
+                    v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    push(key, true)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    Look.pressTo(v, false)
+                    push(key, false)
+                }
+            }
+            true
+        }
+        return OwnerFrameLayout(context, ownsLongPress = true).apply {
+            addView(tile, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        }
+    }
+
+    private fun push(key: KeyRef, down: Boolean) {
+        host.scope.launch {
+            pushOrder.withLock {
+                runCatchingCancellable { BackendClient(context).deck.pushTile(key.id, down) }
+                    .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
+            }
         }
     }
 

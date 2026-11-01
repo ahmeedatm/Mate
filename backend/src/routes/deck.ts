@@ -6,7 +6,9 @@ import {
   addDeckLink,
   deckLinks,
   findTile,
+  holdTile,
   homeFeatures,
+  isPush,
   LINK_SUGGESTIONS,
   liveDeckApps,
   loadDeck,
@@ -98,6 +100,7 @@ export default async function deckRoutes(app: FastifyInstance) {
                 lit: t.lit ?? null,
                 state: t.state ?? null,
                 ...(t.hold ? { hold: true } : {}),
+                ...(isPush(t) ? { push: true } : {}),
                 // Nom de l'appli (page Apps : liste des applis déjà ajoutées).
                 app: t.action.type === "app" ? t.action.name : null,
               },
@@ -114,16 +117,26 @@ export default async function deckRoutes(app: FastifyInstance) {
     return reply.type("image/png").send(createReadStream(icon));
   });
 
-  app.post<{ Body: { id: string; hold?: boolean } }>(
+  app.post<{ Body: { id: string; hold?: boolean; phase?: "down" | "up" } }>(
     "/deck/run",
     {
       schema: {
-        body: { type: "object", required: ["id"], properties: { id: { type: "string", maxLength: 20 }, hold: { type: "boolean" } } },
+        body: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "string", maxLength: 20 }, hold: { type: "boolean" }, phase: { enum: ["down", "up"] } },
+        },
       },
     },
     async (req, reply) => {
       const tile = await findTile(req.body.id);
       if (!tile) return reply.code(404).send({ error: "Tuile inconnue" });
+      // Touche à maintenir : appui (`down`) et relâchement (`up`) arrivent séparément.
+      if (req.body.phase) {
+        if (!isPush(tile)) return reply.code(409).send({ error: "Cette touche ne se maintient pas" });
+        await holdTile(tile, req.body.phase === "down");
+        return { ok: true };
+      }
       // Appui long : la seconde action de la touche, sans le détour des fenêtres ni de la page Média.
       if (req.body.hold) {
         if (!tile.hold) return reply.code(409).send({ error: "Cette touche n'a pas de seconde action" });

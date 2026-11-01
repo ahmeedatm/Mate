@@ -17,6 +17,7 @@ import {
   openTarget,
   placeWindow,
   pressButton,
+  holdKeys,
   runShortcut,
   sendKeys,
   sendMediaKey,
@@ -55,7 +56,8 @@ import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
 export type Step =
   | { type: "app"; name: string }
   | { type: "url"; url: string }
-  | { type: "keys"; keys: string; app?: string }
+  /** `push` : touches tenues tant que le doigt reste sur la touche (parler en maintenant), voir `holdTile`. */
+  | { type: "keys"; keys: string; app?: string; push?: boolean }
   | { type: "shortcut"; name: string }
   | { type: "media"; command: MediaCommand }
   | { type: "system"; command: SystemCommand }
@@ -376,6 +378,8 @@ export async function runAction(action: Action, tileId?: string): Promise<unknow
       }
       return openTarget(action.url);
     case "keys":
+      // Une touche à maintenir ne part pas d'un appui simple : le micro resterait ouvert sans relâchement.
+      if (action.push) throw Object.assign(new Error("Cette touche se maintient : appui et relâchement"), { statusCode: 409 });
       return sendKeys(action.keys, action.app);
     case "shortcut":
       return runShortcut(action.name);
@@ -402,6 +406,28 @@ export async function runAction(action: Action, tileId?: string): Promise<unknow
       return systemCommand(action.command);
   }
   throw new Error(`Action inconnue : ${JSON.stringify(action)}`);
+}
+
+/** Touche à maintenir : ses touches tiennent jusqu'au relâchement, ou jusqu'à ce délai si le « relâché » ne vient pas. */
+export const PUSH_MAX_MS = 60_000;
+const pushing = new Map<string, NodeJS.Timeout>();
+
+export const isPush = (tile: Tile) => tile.action.type === "keys" && tile.action.push === true;
+
+/** `down` : tient les touches de la touche à maintenir `tile` ; sinon les lâche. Sans relâchement, elles se lâchent seules. */
+export async function holdTile(tile: Tile, down: boolean) {
+  if (tile.action.type !== "keys") throw new Error("Touche sans raccourci à maintenir");
+  const combo = tile.action.keys;
+  clearTimeout(pushing.get(tile.id));
+  pushing.delete(tile.id);
+  if (!down) return holdKeys(combo, false);
+  await holdKeys(combo, true);
+  const timer = setTimeout(() => {
+    pushing.delete(tile.id);
+    holdKeys(combo, false).catch(() => undefined);
+  }, PUSH_MAX_MS);
+  timer.unref();
+  pushing.set(tile.id, timer);
 }
 
 /** Lance l'appli si besoin, attend sa première fenêtre (6 s max), puis la place. */
