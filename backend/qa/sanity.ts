@@ -320,6 +320,26 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "touche à seconde action : l'appui long la lance",
+      run: async () => {
+        const slot = 16;
+        try {
+          expectStatus(
+            await call("PUT", `/deck/keys/${slot}`, {
+              label: "Sanity appui long",
+              steps: [{ type: "wait", ms: 0 }],
+              hold: [{ type: "wait", ms: 0 }],
+            }),
+            200,
+            "PUT /deck/keys/16",
+          );
+          expectStatus(await call("POST", "/deck/run", { id: `k-${slot}`, hold: true }), 200, "appui long sur k-16");
+        } finally {
+          expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE /deck/keys/16");
+        }
+      },
+    },
+    {
       name: "agents Claude : hooks et état",
       run: async () => {
         const agents = await call("GET", "/agents");

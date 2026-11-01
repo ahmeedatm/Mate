@@ -135,6 +135,33 @@ describe("touches perso : routes", () => {
     await server.call("DELETE", "/deck/keys/9");
   });
 
+  it("l'appui long d'une touche perso lance sa seconde action, une étape seule ou une macro", async () => {
+    const key = {
+      label: "Notes",
+      steps: [{ type: "app", name: "Notes" }],
+      hold: [
+        { type: "keys", keys: "cmd+n", app: "Notes" },
+        { type: "text", text: "Idée" },
+      ],
+    };
+    assert.equal((await put(10, key)).status, 200);
+    assert.deepEqual((await server.call("GET", "/deck/keys/10")).json.key, key);
+    assert.equal((await server.call("GET", "/deck")).json.pages.at(-1).tiles[10].hold, true);
+
+    assert.equal((await server.call("POST", "/deck/run", { id: "k-10", hold: true })).status, 200);
+    assert.deepEqual(
+      server.osCalls().map((c) => c.fn),
+      ["sendKeys", "typeText"],
+    );
+    await server.call("DELETE", "/deck/keys/10");
+  });
+
+  it("une touche perso sans seconde action refuse l'appui long", async () => {
+    await put(11, { label: "Simple", steps: [{ type: "text", text: "a" }] });
+    assert.equal((await server.call("POST", "/deck/run", { id: "k-11", hold: true })).status, 409);
+    await server.call("DELETE", "/deck/keys/11");
+  });
+
   it("une touche sans cycle garde son enregistrement tel quel", async () => {
     await put(12, {
       label: "Deux",

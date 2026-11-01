@@ -72,6 +72,8 @@ interface HomeHost {
     val calendarNote: String
     /** Console : l'ordinateur ne répond plus ; l'Accueil le dit une fois, dans le héros. Null : il répond. */
     val unreachable: Down?
+    /** Mode Modifier en cours : l'éditeur d'une touche ne s'ouvre que là. */
+    val editing: Boolean
     /** Réunion touchée dans l'agenda, montrée par « Prochain rendez-vous » jusqu'à sa fin. */
     var chosenId: String?
     fun renderCalendar()

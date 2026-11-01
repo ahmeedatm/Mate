@@ -9,8 +9,8 @@ import type { Step } from "./deck.ts";
  * Touches perso : page "Perso" du deck, emplacements vides que l'on remplit depuis la tablette
  * ou depuis Claude (outil MCP deck_touche). Une étape = raccourci simple, plusieurs = macro.
  */
-/** `cycle` : chaque appui lance l'étape suivante (puis recommence) au lieu de toutes les étapes. */
-export type PersoKey = { label: string; symbol?: string; glyph?: string; color?: string; cycle?: boolean; steps: Step[] };
+/** `cycle` : chaque appui lance l'étape suivante (puis recommence) au lieu de toutes les étapes. `hold` : seconde action, lancée par l'appui long (une étape = raccourci simple, plusieurs = macro). */
+export type PersoKey = { label: string; symbol?: string; glyph?: string; color?: string; cycle?: boolean; steps: Step[]; hold?: Step[] };
 
 /** Emplacements montrés au minimum. */
 export const MIN_SLOTS = 14;
@@ -110,6 +110,7 @@ export const keySchema = {
     color: { type: "string", pattern: "^#[0-9A-Fa-f]{6}$" },
     cycle: { type: "boolean" },
     steps: { type: "array", minItems: 1, maxItems: 20, items: stepSchema },
+    hold: { type: "array", minItems: 1, maxItems: 20, items: stepSchema },
   },
 };
 
