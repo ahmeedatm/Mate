@@ -97,12 +97,13 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         if (live == null) return
         val chosenIds = chosen().map { it.id }.toSet()
         candidates.forEach { app -> box.addView(row(box, app, app.id in chosenIds)) }
-        if (candidates.count { !it.isGroup } >= 2) {
-            box.addView(Button(context, null, 0, R.style.ActionButton).apply {
-                setText(R.string.mixer_group_new)
-                setOnClickListener { askGroup(box, candidates.filter { !it.isGroup }) }
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { topMargin = dp(12) })
-        }
+        // Toujours là : sous deux applis qui jouent, grisé (le texte d'aide dit pourquoi).
+        val loose = candidates.filter { !it.isGroup }
+        box.addView(Button(context, null, 0, R.style.ActionButton).apply {
+            setText(R.string.mixer_group_new)
+            isEnabled = loose.size >= 2
+            setOnClickListener { askGroup(box, loose) }
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { topMargin = dp(12) })
     }
 
     /** Nouveau groupe : un nom et au moins deux applis ; il rejoint la table à la suite des choisies. */
@@ -115,6 +116,7 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             CheckBox(context).apply {
                 text = app.name
                 textSize = 17f
+                minHeight = dp(52)
                 setTextColor(themeColor(context, R.attr.c_text))
                 body.addView(this)
             }
