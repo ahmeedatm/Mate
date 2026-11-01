@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { after, before, beforeEach, describe, it } from "node:test";
+import { after, afterEach, before, beforeEach, describe, it } from "node:test";
 import { unreadFrom } from "../src/accounts.ts";
 import { startServer, type TestServer } from "./server.ts";
 
@@ -19,15 +19,13 @@ describe("mails non lus : lecture de la réponse du fournisseur", () => {
   });
 });
 
+// Un serveur par test : la réponse est gardée 30 s, un compte changé entre deux tests y resterait.
 let server: TestServer;
-before(async () => {
+beforeEach(async () => {
   server = await startServer();
 });
-after(async () => {
+afterEach(async () => {
   await server?.stop();
-});
-beforeEach(async () => {
-  await fs.rm(path.join(server.dataDir, "accounts.json"), { force: true });
 });
 
 describe("mails non lus : routes", () => {
@@ -45,15 +43,16 @@ describe("mails non lus : routes", () => {
   it("garde le compte en panne dans la liste, sans détail technique ni jeton", async () => {
     await fs.writeFile(
       path.join(server.dataDir, "accounts.json"),
-      JSON.stringify({ google: { email: "moi@exemple.fr", refreshToken: "SECRET-TOKEN" } }),
+      JSON.stringify({ google: { email: "moi@exemple.fr", refreshToken: "SECRET-TOKEN", mail: true } }),
     );
     const res = await server.call("GET", "/mail/unread");
     assert.equal(res.status, 200);
     assert.equal(res.json.accounts.length, 1);
     assert.deepEqual(
-      { provider: res.json.accounts[0].provider, email: res.json.accounts[0].email, unread: res.json.accounts[0].unread },
-      { provider: "google", email: "moi@exemple.fr", unread: null },
+      { provider: res.json.accounts[0].provider, unread: res.json.accounts[0].unread },
+      { provider: "google", unread: null },
     );
+    assert.doesNotMatch(JSON.stringify(res.json), /moi@exemple/, "l'adresse reste sur l'ordinateur");
     assert.ok(res.json.accounts[0].error);
     assert.doesNotMatch(JSON.stringify(res.json), /SECRET-TOKEN/);
   });
@@ -61,14 +60,43 @@ describe("mails non lus : routes", () => {
   it("dit de se reconnecter quand le compte a perdu son accès", async () => {
     await fs.writeFile(
       path.join(server.dataDir, "accounts.json"),
-      JSON.stringify({ microsoft: { email: "moi@exemple.fr", refreshToken: "x", expired: true } }),
+      JSON.stringify({ microsoft: { email: "moi@exemple.fr", refreshToken: "x", expired: true, mail: true } }),
     );
     const res = await server.call("GET", "/mail/unread");
     assert.match(res.json.accounts[0].error, /reconnect/i);
   });
 
+  it("ne liste pas un compte connecté pour l'agenda seulement", async () => {
+    await fs.writeFile(
+      path.join(server.dataDir, "accounts.json"),
+      JSON.stringify({ google: { email: "moi@exemple.fr", refreshToken: "x" } }),
+    );
+    assert.deepEqual((await server.call("GET", "/mail/unread")).json, { accounts: [] });
+    assert.equal((await server.call("POST", "/mail/open", { provider: "google" })).status, 404);
+  });
+
   it("n'ouvre pas la boîte d'un fournisseur non connecté ni inconnu", async () => {
     assert.equal((await server.call("POST", "/mail/open", { provider: "google" })).status, 404);
     assert.equal((await server.call("POST", "/mail/open", { provider: "yahoo" })).status, 400);
+  });
+});
+
+describe("connexion des mails : /oauth/:provider/start", () => {
+  let configured: TestServer;
+  before(async () => {
+    configured = await startServer({ env: { GOOGLE_CLIENT_ID: "g" } });
+  });
+  after(async () => {
+    await configured?.stop();
+  });
+  const scope = async (query: string) => {
+    const res = await fetch(`${configured.url}/oauth/google/start${query}`, { redirect: "manual" });
+    assert.equal(res.status, 302);
+    return new URL(res.headers.get("location")!).searchParams.get("scope")!;
+  };
+
+  it("demande les droits mails seulement avec ?mail=1", async () => {
+    assert.doesNotMatch(await scope(""), /gmail/);
+    assert.match(await scope("?mail=1"), /gmail\.metadata/);
   });
 });
