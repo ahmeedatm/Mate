@@ -673,6 +673,23 @@
                             android:max="100" />
                     </LinearLayout>
 
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/settings_auto_brightness"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:minHeight="48dp"
+                        android:text="@string/tablet_auto_brightness"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/settings_auto_brightness_hint"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tablet_auto_brightness_hint"
+                        android:textColor="?attr/c_text_dim"
+                        android:textSize="14sp" />
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
