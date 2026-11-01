@@ -7,6 +7,10 @@
 
 export const ALERT_ENTITY_ID = /^binary_sensor\.[a-z0-9_]+$/;
 
+/** Texte d'une alerte au plus, et alertes gardées au plus pendant une coupure (les plus récentes). */
+const MAX_TEXT = 200;
+const MAX_WAITING = 10;
+
 export type AlertSpec = { id: string; when: "on" | "off"; text?: string };
 
 /** Entrées valides de HA_ALERTS, dans l'ordre, sans doublon ; un identifiant mal écrit est ignoré. */
@@ -49,7 +53,8 @@ export function startAlertWatch(notify: (text: string) => Promise<boolean>, deps
         const now = states[spec.id];
         if (!now || now.state === "unavailable" || now.state === "unknown") continue;
         if (last.get(spec.id) !== undefined && last.get(spec.id) !== spec.when && now.state === spec.when) {
-          waiting.push(spec.text ?? (now.name || spec.id));
+          waiting.push((spec.text ?? (now.name || spec.id)).slice(0, MAX_TEXT));
+          if (waiting.length > MAX_WAITING) waiting.shift();
         }
         last.set(spec.id, now.state);
       }

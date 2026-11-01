@@ -104,4 +104,25 @@ describe("alerte maison : l'ordinateur prévient la tablette", () => {
     stop();
     assert.deepEqual(sent, ["Porte"]);
   });
+
+  it("borne le texte et garde les 10 dernières alertes pendant une coupure", async () => {
+    const long: AlertSpec[] = [{ id: "binary_sensor.porte", when: "on" }];
+    const flip = (n: number) => ({ "binary_sensor.porte": { state: n % 2 ? "on" : "off", name: `${n}`.padEnd(300, "x") } });
+    let reads = 0;
+    const sent: string[] = [];
+    let online = false;
+    const stop = startAlertWatch(
+      async (text) => {
+        if (online) sent.push(text);
+        return online;
+      },
+      { specs: long, intervalMs: 1, read: async () => flip(reads++) },
+    );
+    await until(() => reads >= 40);
+    online = true;
+    await until(() => sent.length >= 10);
+    stop();
+    assert.ok(sent.every((t) => t.length === 200));
+    assert.ok(sent.length <= 11, "au plus la file gardée");
+  });
 });
