@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { statfs } from "node:fs/promises";
 import os from "node:os";
 import { run } from "./mac/run.ts";
@@ -94,6 +94,20 @@ export async function listApps(): Promise<string[]> {
   if (isMac) return macApps.listApps();
   if (isWindows) return win.listApps();
   return [];
+}
+
+/**
+ * Lance une commande écrite sur l'ordinateur (metrics.json) dans le shell du système et rend sa sortie. Jamais une
+ * chaîne venue de la tablette ; délai de 10 s, sortie limitée, pas de fenêtre sous Windows.
+ */
+export function runCommand(command: string): Promise<string> {
+  if (!canControl) unsupported();
+  return new Promise((resolve, reject) => {
+    const shell = isWindows ? ["cmd.exe", ["/d", "/s", "/c", command]] : ["/bin/sh", ["-c", command]];
+    execFile(shell[0] as string, shell[1] as string[], { timeout: 10_000, maxBuffer: 64 * 1024, windowsHide: true }, (err, stdout) =>
+      err ? reject(Object.assign(new Error("La commande a échoué"), { technical: true })) : resolve(stdout),
+    );
+  });
 }
 
 /** Applis installées : le profil de base du deck ne montre que celles-là. */

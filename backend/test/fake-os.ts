@@ -74,6 +74,8 @@ export type FakeState = {
   processWindows?: Record<string, ProcessWindows>;
   /** Windows : raiseWindow ne change pas la fenêtre de devant (premier plan refusé). */
   frontStuck?: boolean;
+  /** Sortie de chaque commande lancée par runCommand ; absente : la commande échoue. */
+  commands?: Record<string, string>;
   /** Fonctions qui échouent (« Appli absente ») : `"sendKeys"`, ou `"openTarget msteams:"` pour un début de premier argument. */
   fail?: string[];
 };
@@ -222,6 +224,13 @@ export async function getPerfDetail(): Promise<unknown> {
 
 export async function screenLocked(): Promise<boolean | null> {
   return read().locked ?? false;
+}
+
+export async function runCommand(command: string): Promise<string> {
+  record("runCommand", command);
+  const out = read().commands?.[command];
+  if (out === undefined) throw new Error("La commande a échoué");
+  return out;
 }
 
 export async function getDnd(): Promise<boolean | null> {
