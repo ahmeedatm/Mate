@@ -629,6 +629,27 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "partager vers Mate : dépose un fichier dans le dossier partagé",
+      run: async () => {
+        const name = `sanity-partage-${Date.now()}.txt`;
+        const form = new FormData();
+        form.append("file", new Blob(["sanity"]), name);
+        const res = await fetch(`${base}/docs/share`, {
+          method: "POST",
+          headers: { authorization: `Bearer ${opts.token}` },
+          body: form,
+          signal: AbortSignal.timeout(45_000),
+        });
+        expectStatus({ status: res.status, json: await res.json() }, 200, "POST /docs/share");
+        const list = await call("GET", "/docs");
+        expect(
+          list.json.entries?.some((e: { name: string }) => e.name === name),
+          `${name} absent de /docs`,
+        );
+        return name;
+      },
+    },
+    {
       name: "cadre photo : liste du dossier",
       run: async () => {
         const res = await call("GET", "/frame");

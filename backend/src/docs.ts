@@ -71,15 +71,40 @@ export async function docEntry(relative: string) {
   };
 }
 
+function stamp() {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
+}
+
 export async function savePhoto(data: Buffer, extension = ".jpg") {
   const dir = path.join(config.docsDir, PHOTOS_DIR);
   await fs.mkdir(dir, { recursive: true });
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const stamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
-  const name = `photo-${stamp}${extension}`;
+  const name = `photo-${stamp()}${extension}`;
   await fs.writeFile(path.join(dir, name), data);
   return path.join(PHOTOS_DIR, name);
+}
+
+/**
+ * Fichier partagé depuis une autre appli de la tablette (« Partager » > Mate) : déposé à la racine du dossier
+ * partagé sous son nom (dossiers du chemin retirés), jamais par-dessus un fichier déjà là : « nom (2).ext ».
+ */
+export async function saveShared(data: Buffer, filename: string) {
+  await fs.mkdir(config.docsDir, { recursive: true });
+  const base = path.basename(filename.replace(/\\/g, "/")).trim();
+  const safe = base === "" || base === "." || base === ".." ? `Reçu ${stamp()}` : base;
+  const ext = path.extname(safe);
+  const stem = safe.slice(0, safe.length - ext.length);
+  for (let n = 1; ; n++) {
+    const name = n === 1 ? safe : `${stem} (${n})${ext}`;
+    try {
+      // "wx" : échoue si le fichier existe, donc deux envois simultanés ne s'écrasent pas.
+      await fs.writeFile(path.join(config.docsDir, name), data, { flag: "wx" });
+      return name;
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+    }
+  }
 }
 
 export const FRAME_DIR = "Cadre photo";
