@@ -144,7 +144,7 @@ class DocumentPanel @JvmOverloads constructor(
                 when (doc.kind) {
                     "pdf" -> openPdf(file)
                     "image" -> showImage(withContext(Dispatchers.IO) { decodeSampled(file, maxWidth()) })
-                    "text" -> showText(withContext(Dispatchers.IO) { file.readText().take(200_000) })
+                    "text" -> showText(withContext(Dispatchers.IO) { DocReading.readStart(file, 200_000) })
                     else -> showStatus(context.getString(R.string.unsupported_doc))
                 }
             } catch (e: Exception) {
@@ -309,8 +309,7 @@ class DocumentPanel @JvmOverloads constructor(
     private fun decodeSampled(file: File, targetWidth: Int): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.absolutePath, bounds)
-        var sample = 1
-        while (bounds.outWidth / (sample * 2) >= targetWidth) sample *= 2
+        val sample = DocReading.sampleSize(bounds.outWidth, bounds.outHeight, targetWidth)
         return BitmapFactory.decodeFile(file.absolutePath, BitmapFactory.Options().apply { inSampleSize = sample })
     }
 
