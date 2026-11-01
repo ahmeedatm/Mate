@@ -18,20 +18,21 @@ export function loadOrCreate<T>(file: string, create: () => T, valid: (value: un
   };
   const existing = read();
   if (existing) return existing;
-  if (fs.existsSync(file)) {
-    try {
-      fs.renameSync(file, `${file}.abime-${new Date().toISOString().replace(/[:.]/g, "-")}`);
-      console.warn(`${path.basename(file)} abîmé : mis de côté et recréé (la tablette devra être appairée à nouveau)`);
-    } catch {
-      // Déjà mis de côté par l'autre processus.
-    }
+  try {
+    fs.renameSync(file, `${file}.abime-${new Date().toISOString().replace(/[:.]/g, "-")}`);
+    console.warn(`${path.basename(file)} abîmé : mis de côté et recréé (la tablette devra être appairée à nouveau)`);
+  } catch (e) {
+    // Absent, ou déjà mis de côté par l'autre processus.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
   }
   const fresh = create();
   fs.mkdirSync(path.dirname(file), { recursive: true });
   try {
     fs.writeFileSync(file, JSON.stringify(fresh, null, 2) + "\n", { flag: "wx", mode: 0o600 });
     return fresh;
-  } catch {
+  } catch (e) {
+    // Créé entre-temps par l'autre processus : le sien. Toute autre erreur (droits, disque plein) remonte.
+    if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
     return read() ?? fresh;
   }
 }

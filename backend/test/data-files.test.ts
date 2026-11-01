@@ -34,6 +34,19 @@ describe("identity.json", () => {
       assert.equal(setAside(dir, "identity.json").length, 1);
     });
   }
+  it(
+    "dossier en lecture seule : l'erreur remonte au lieu d'un jeton jamais enregistré",
+    { skip: process.platform === "win32" && "droits POSIX" },
+    () => {
+      const dir = tmp();
+      fs.chmodSync(dir, 0o500);
+      try {
+        assert.throws(() => loadIdentity(dir), /EACCES|EPERM/);
+      } finally {
+        fs.chmodSync(dir, 0o700);
+      }
+    },
+  );
 });
 
 describe("tls.json", () => {
