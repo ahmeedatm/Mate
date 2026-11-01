@@ -43,4 +43,56 @@ test.describe("page locale : sauvegarde", () => {
     await expect(page.locator("#pf-bk-msg")).toHaveText("Ce fichier n'est pas une sauvegarde Mate.");
     await expect(page.locator("#pf-bk-parts")).toBeHidden();
   });
+
+  test("montre les touches du fichier avant de les reprendre, et exige de les avoir relues", async ({ page, server }) => {
+    await page.goto("/");
+    const risky = {
+      format: "mate-config-1",
+      exportedAt: "2026-11-01T10:00:00.000Z",
+      parts: {
+        keys: {
+          slots: [
+            { label: "Micro", steps: [{ type: "system", command: "mute-mic" }] },
+            null,
+            {
+              label: "Piège",
+              steps: [
+                { type: "app", name: "Notes" },
+                { type: "text", text: "<img src=x onerror=alert(1)>" },
+                { type: "keys", keys: "cmd+q" },
+              ],
+            },
+          ],
+        },
+        pages: { pages: [{ title: "Réunions", slots: [{ label: "Ouvrir", steps: [{ type: "url", url: "https://exemple.com/a" }] }] }] },
+      },
+    };
+    const file = path.join(server.dataDir, "sauvegarde-risquee.json");
+    fs.writeFileSync(file, JSON.stringify(risky));
+    fs.writeFileSync(path.join(server.dataDir, "keys.json"), JSON.stringify({ slots: [] }));
+    const section = page.locator("#pf-sauvegarde");
+    await section.locator("#pf-bk-file").setInputFiles(file);
+
+    const preview = section.locator("#pf-bk-preview");
+    await expect(preview).toContainText("Piège");
+    await expect(preview).toContainText("app : Notes");
+    await expect(preview).toContainText("text : <img src=x onerror=alert(1)>");
+    await expect(preview).toContainText("keys : cmd+q");
+    await expect(preview).toContainText("Réunions");
+    await expect(preview).toContainText("url : https://exemple.com/a");
+    await expect(preview.locator("img")).toHaveCount(0);
+
+    const go = section.getByRole("button", { name: "Reprendre ce qui est coché" });
+    await expect(go).toBeDisabled();
+    // Sans les touches à risque (page Perso décochée), seule l'URL reste : rien à relire.
+    await section.getByLabel("Touches de la page Perso").uncheck();
+    await expect(go).toBeEnabled();
+    await section.getByLabel("Touches de la page Perso").check();
+    await expect(go).toBeDisabled();
+    await section.getByLabel("J'ai relu ces touches").check();
+    await expect(go).toBeEnabled();
+    await go.click();
+    await expect(section.locator("#pf-bk-msg")).toContainText("Repris");
+    expect(JSON.parse(fs.readFileSync(path.join(server.dataDir, "keys.json"), "utf8")).slots[2].label).toBe("Piège");
+  });
 });
