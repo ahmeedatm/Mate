@@ -135,6 +135,18 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun rowTile(key: KeyRef): View {
         val tile = TileGridView.newCell(context)
         TileGridView.bind(tile, TileGridView.Cell(key), host.scope)
+        // Allumée ou éteinte côté ordinateur : la touche se redessine, tant qu'elle est à l'écran.
+        var stopListening: (() -> Unit)? = null
+        tile.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) {
+                stopListening = TileStates.listen { v.post { TileGridView.bind(v, TileGridView.Cell(key), host.scope) } }
+            }
+
+            override fun onViewDetachedFromWindow(v: View) {
+                stopListening?.invoke()
+                stopListening = null
+            }
+        })
         Look.pressSpring(tile)
         tile.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)

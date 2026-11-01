@@ -25,6 +25,7 @@ import app.mate.net.DocEntry
 import app.mate.net.HttpException
 import app.mate.net.Link
 import app.mate.net.parseNotification
+import app.mate.ui.home.TileStates
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -193,6 +194,11 @@ class RemoteChannel(private val activity: MainActivity) {
         }
         "foreground" -> {
             activity.onForeground(command.getString("app"), command.optString("bundleId"), command.optString("file"))
+            null
+        }
+        "tilestate" -> {
+            val ids = command.getJSONArray("lit")
+            TileStates.update((0 until ids.length()).map { ids.getString(it) })
             null
         }
         "lock" -> activity.lockScreen.setComputerLocked(command.getBoolean("locked")).let { null }

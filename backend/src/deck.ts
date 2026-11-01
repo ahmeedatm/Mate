@@ -79,6 +79,8 @@ export type Action = Step | { type: "macro"; steps: Step[] };
  * l'écran d'avant-réunion de Teams (`lobby` : « Rejoindre maintenant »).
  * lit : touche allumée (rouge, comme Muet dans l'onglet Son) quand le micro est coupé (`muted`) ou le casque en
  * sourdine (`deafened`), ou la caméra coupée (`camera`, Teams sur Mac), d'après l'appel lu dans l'appli.
+ * state : touche allumée tant que ce qu'elle pilote est actif, lu sur l'ordinateur (src/tile-state.ts) : micro coupé
+ * (`mic-muted`), Ne pas déranger (`dnd`) ou appli de l'action lancée (`running`).
  */
 type TileConfig = {
   label: string;
@@ -90,6 +92,7 @@ type TileConfig = {
   color?: string;
   when?: "call" | "idle" | "streaming" | "share" | "lobby";
   lit?: "muted" | "deafened" | "camera";
+  state?: "mic-muted" | "dnd" | "running";
 };
 /** `apps` : page d'applis que l'on complète depuis la tablette (voir saveApps) ; `meeting` : page affichée
  * par la tablette après « Rejoindre » (micro, caméra, raccrocher) ; `app` : page d'une appli (Discord, Teams…),
@@ -396,7 +399,7 @@ async function placeAppWindows(app: string, displayLabel: string | undefined, la
 // --- Icônes : celle de l'appli (.icns sur Mac, menu Démarrer sur Windows), en PNG 96 px mis en cache.
 
 /** Appli dont l'icône représente l'action (la première appli citée, pour une macro). */
-function appOf(action: Action): string | undefined {
+export function appOf(action: Action): string | undefined {
   switch (action.type) {
     case "app":
       return action.name;

@@ -101,6 +101,7 @@ describe("touches perso : routes", () => {
       color: "#3366CC",
       when: null,
       lit: null,
+      state: null,
       app: null,
     });
 

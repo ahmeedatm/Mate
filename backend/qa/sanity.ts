@@ -168,6 +168,20 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "touches qui montrent l'état réel",
+      run: async () => {
+        // La veille (src/tile-state.ts) pousse les touches allumées ; l'ordre tilestate est refusé s'il vient de l'extérieur.
+        expectStatus(await call("POST", "/tablet/command", { type: "tilestate", lit: [] }), 400, "ordre tilestate de l'extérieur");
+        const deck = await call("GET", "/deck");
+        expectStatus(deck, 200, "/deck");
+        const withState = deck.json.pages
+          .flatMap((p: { tiles: { state?: string | null }[] }) => p.tiles)
+          .filter((t: { state?: string | null }) => t.state);
+        expect(withState.length > 0, "/deck sans touche portant un état");
+        return `${withState.length} touches montrent leur état`;
+      },
+    },
+    {
       name: "écran de jeu (appli au premier plan)",
       run: async () => {
         // La veille (src/foreground-watch.ts) pousse l'appli devant ; la tablette la compare à sa liste de jeux, choisie
