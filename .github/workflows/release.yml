@@ -15,55 +15,56 @@ concurrency:
   group: release
   cancel-in-progress: false
 
-env:
-  # Empreinte SHA-256 du certificat de la clé de release (alias companion), la même que pour les essais.
-  SIGNING_CERT_SHA256: 2c9cd9872f2ee1875b55f16e2da1f38c439480b10ef8389143d644f76b6b18f1
-
 jobs:
-  # APK release signé, version = le tag. Paquet app.mate « Mate » lu dans l'APK : jamais l'appli d'essai en stable.
+  # APK release NON signé, version = le tag : le code du dépôt (Gradle) ne voit jamais la clé. Signé à part par `signer`.
   android:
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    environment: signature
     container: ghcr.io/cirruslabs/android-sdk:36@sha256:f9b3ea9ed2b5fc9522adae82c7b4622ab7aa54207ef532c8e615a347dca08f31
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: APK signé
+      - name: APK non signé
         env:
-          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
-          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           UPDATE_TOKEN: ${{ secrets.UPDATE_TOKEN }}
         run: |
           set -euo pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          VERSION=${GITHUB_REF_NAME#v}
           git merge-base --is-ancestor HEAD origin/master || { echo "::error::Le tag n'est pas sur master"; exit 1; }
           test -n "$UPDATE_TOKEN" || echo "::warning::UPDATE_TOKEN absent : les tablettes liront les releases sans jeton"
-          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.p12"
-          RELEASE_KEYSTORE="$RUNNER_TEMP/release.p12" ./gradlew --no-daemon --console=plain assembleRelease \
-            -PappVersion="$VERSION" -PupdateToken="$UPDATE_TOKEN"
-          rm -f "$RUNNER_TEMP/release.p12"
-          BT=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          ./gradlew --no-daemon --console=plain assembleRelease -PappVersion="${GITHUB_REF_NAME#v}" -PupdateToken="$UPDATE_TOKEN"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apk-non-signe
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          retention-days: 1
+          if-no-files-found: error
+
+  # Paquet app.mate « Mate » lu dans l'APK (jamais l'appli d'essai en stable), puis signature : seule étape qui voit la
+  # clé (.github/apk-signe.sh, comme pour les essais).
+  signer:
+    needs: android
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: signature
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: apk-non-signe
+          path: ${{ runner.temp }}/recu
+      - run: |
           mkdir -p dist
-          APK="dist/companion-$VERSION.apk"
-          cp app/build/outputs/apk/release/app-release.apk "$APK"
-          "$BT/apksigner" verify --print-certs "$APK" | tee "$RUNNER_TEMP/certs.txt"
-          grep -qx "Signer #1 certificate SHA-256 digest: $SIGNING_CERT_SHA256" "$RUNNER_TEMP/certs.txt" \
-            || { echo "::error::Certificat inattendu"; exit 1; }
-          "$BT/aapt2" dump badging "$APK" > "$RUNNER_TEMP/badging.txt"
-          PKG=$(sed -n "1s/^package: name='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/badging.txt")
-          CODE=$(sed -n "1s/.*versionCode='\([0-9]*\)'.*/\1/p" "$RUNNER_TEMP/badging.txt")
-          NAME=$(sed -n "1s/.*versionName='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/badging.txt")
-          LABEL=$(sed -n "s/^application-label:'\(.*\)'$/\1/p" "$RUNNER_TEMP/badging.txt")
-          test "$PKG" = app.mate || { echo "::error::Paquet « $PKG », attendu app.mate"; exit 1; }
-          test "$LABEL" = Mate || { echo "::error::Libellé « $LABEL », attendu « Mate »"; exit 1; }
-          test "$NAME" = "$VERSION" -a -n "$CODE" || { echo "::error::Version « $NAME » ($CODE), attendu $VERSION"; exit 1; }
-          printf '{"package":"%s","label":"%s","versionCode":%s,"versionName":"%s","file":"companion-%s.apk"}\n' \
-            "$PKG" "$LABEL" "$CODE" "$VERSION" "$VERSION" > "dist/companion-$VERSION.json"
-          cat "dist/companion-$VERSION.json"
+          .github/apk-signe.sh verifier "$RUNNER_TEMP/recu/app-release-unsigned.apk" "${GITHUB_REF_NAME#v}" app.mate Mate \
+            "$RUNNER_TEMP/aligne.apk" "dist/companion-${GITHUB_REF_NAME#v}.json"
+      - env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+        run: .github/apk-signe.sh signer "$RUNNER_TEMP/aligne.apk" "dist/companion-${GITHUB_REF_NAME#v}.apk"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-android
@@ -88,6 +89,8 @@ jobs:
       - working-directory: backend
         env:
           TARGET: ${{ matrix.target }}
+          # Version des paquets : backend/scripts/package.ts la lit dans CI_COMMIT_TAG (nom hérité de GitLab).
+          CI_COMMIT_TAG: ${{ github.ref_name }}
         run: |
           npm ci --no-audit --no-fund
           npm run package -- "$TARGET"
@@ -103,7 +106,7 @@ jobs:
 
   # Release `latest` : manifest.json, l'APK et les fichiers de l'ordinateur ; les anciens assets sont supprimés.
   publier:
-    needs: [android, backend]
+    needs: [signer, backend]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

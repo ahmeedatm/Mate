@@ -12,11 +12,6 @@ on:
 permissions:
   contents: read
 
-# Un nouveau commit annule la construction en cours de la même PR.
-concurrency:
-  group: essai-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
 jobs:
   # Version X.Y.Z-essai.N : X.Y.Z = dernier tag de la branche, N = numéro d'exécution de ce workflow
   # (app/build.gradle.kts). Le jeton de lecture des releases (UPDATE_TOKEN) est en lecture seule : il peut aller dans
@@ -25,6 +20,11 @@ jobs:
     if: >-
       !github.event.pull_request.draft && contains(github.event.pull_request.labels.*.name, 'essai')
       && (github.event.action != 'labeled' || github.event.label.name == 'essai')
+    # Par job, sous le même `if` : un événement sans rapport (autre étiquette) n'annule pas une construction en cours.
+    # Un nouveau commit, lui, annule celle de la même PR.
+    concurrency:
+      group: essai-android-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container: ghcr.io/cirruslabs/android-sdk:36@sha256:f9b3ea9ed2b5fc9522adae82c7b4622ab7aa54207ef532c8e615a347dca08f31
@@ -66,6 +66,9 @@ jobs:
     if: >-
       !github.event.pull_request.draft && contains(github.event.pull_request.labels.*.name, 'essai')
       && (github.event.action != 'labeled' || github.event.label.name == 'essai')
+    concurrency:
+      group: essai-backend-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     container: node:22.22-bookworm
