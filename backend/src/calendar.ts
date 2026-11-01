@@ -3,6 +3,7 @@ import ical, { type ParameterValue, type VEvent } from "node-ical";
 import { config } from "./config.ts";
 import { accountEvents, connectedAccounts, disconnect } from "./accounts.ts";
 import { localEvents } from "./events.ts";
+import { logFailure } from "./log.ts";
 import { meetingLink } from "./meeting-links.ts";
 import { readJson, writeJson } from "./store.ts";
 
@@ -24,8 +25,10 @@ export type CalendarEvent = {
 };
 
 const CACHE_MS = 5 * 60_000;
+/** Une source en échec passager : relue bientôt, sans refaire toutes les lectures à chaque appel (tick de 15 s des réunions). */
+const PARTIAL_CACHE_MS = 30_000;
 /** Une entrée par plage demandée (la tablette alterne 1, 2 et 7 jours, l'ouverture automatique 1 jour toutes les 15 s). */
-const cache = new Map<string, { at: number; events: CalendarEvent[] }>();
+const cache = new Map<string, { at: number; events: CalendarEvent[]; ttl: number }>();
 
 function text(value: ParameterValue | undefined): string {
   if (value === undefined || value === null) return "";
@@ -172,7 +175,7 @@ async function remoteEvents(from: Date, to: Date): Promise<{ source: Source; eve
 
   const key = `${sources.join(",")}|${accounts.map((a) => a.email + a.expired).join(",")}|${from.getTime()}-${to.getTime()}`;
   const cached = cache.get(key);
-  if (cached && Date.now() - cached.at < CACHE_MS) return { source: "ics", events: cached.events };
+  if (cached && Date.now() - cached.at < cached.ttl) return { source: "ics", events: cached.events };
 
   const events: CalendarEvent[] = [];
   const errors: Error[] = accounts
@@ -222,9 +225,10 @@ async function remoteEvents(from: Date, to: Date): Promise<{ source: Source; eve
   if (read === 0 && errors.length) throw errors[0];
   events.sort((a, b) => a.startMs - b.startMs);
   for (const [k, entry] of cache) if (Date.now() - entry.at >= CACHE_MS) cache.delete(k);
-  // Une source en échec (réseau, panne passagère) : pas de cache, sinon ses événements manqueraient 5 min.
-  // Un compte à reconnecter ne compte pas : il le reste jusqu'à ce qu'on le reconnecte (le cache est alors vidé).
-  if (errors.length === expired) cache.set(key, { at: Date.now(), events });
+  // Une source en échec (réseau, panne passagère) : cache court, sinon ses événements manqueraient 5 min. Un compte à
+  // reconnecter ne compte pas : il le reste jusqu'à ce qu'on le reconnecte (le cache est alors vidé).
+  for (const e of errors.slice(expired)) logFailure("Agenda partiel", e);
+  cache.set(key, { at: Date.now(), events, ttl: errors.length === expired ? CACHE_MS : PARTIAL_CACHE_MS });
   return { source: "ics", events };
 }
 

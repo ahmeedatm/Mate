@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { test } from "node:test";
+import { mock, test } from "node:test";
 
-// Deux agendas, dont un illisible : le résultat partiel n'est pas gardé en cache, l'agenda revenu se relit tout de suite.
+// Deux agendas, dont un illisible : le résultat partiel n'est gardé que 30 s, l'agenda revenu se relit bientôt.
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), "companion-calendar-partiel-"));
 const first = path.join(dir, "a.ics");
 const second = path.join(dir, "b.ics");
@@ -20,9 +20,17 @@ const calendar = (uid: string, title: string) => {
 };
 const titles = async () => (await getEvents(...dayRange(1))).events.map((e) => e.title).sort();
 
-test("un agenda en échec : le résultat partiel n'est pas mis en cache", async () => {
-  await fs.writeFile(first, calendar("a", "Agenda A"));
-  assert.deepEqual(await titles(), ["Agenda A"]);
-  await fs.writeFile(second, calendar("b", "Agenda B"));
-  assert.deepEqual(await titles(), ["Agenda A", "Agenda B"]);
+test("un agenda en échec : le résultat partiel n'est gardé que 30 s", async () => {
+  mock.timers.enable({ apis: ["Date"], now: Date.now() });
+  try {
+    await fs.writeFile(first, calendar("a", "Agenda A"));
+    assert.deepEqual(await titles(), ["Agenda A"]);
+    await fs.writeFile(second, calendar("b", "Agenda B"));
+    mock.timers.tick(10_000);
+    assert.deepEqual(await titles(), ["Agenda A"], "encore en cache");
+    mock.timers.tick(25_000);
+    assert.deepEqual(await titles(), ["Agenda A", "Agenda B"]);
+  } finally {
+    mock.timers.reset();
+  }
 });

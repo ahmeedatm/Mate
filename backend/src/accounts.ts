@@ -186,8 +186,10 @@ async function accessToken(provider: Provider, stored: Stored): Promise<string> 
 
 // --- Événements
 
-/** Événements de tous les comptes connectés entre `from` et `to` (récurrences dépliées par le fournisseur). */
-/** Événements des comptes connectés ; un compte en panne n'empêche pas les autres, son erreur est rendue à part. */
+/**
+ * Événements de tous les comptes connectés entre `from` et `to` (récurrences dépliées par le fournisseur) ; un compte en panne
+ * n'empêche pas les autres, son erreur est rendue à part.
+ */
 export async function accountEvents(from: Date, to: Date): Promise<{ events: CalendarEvent[]; errors: Error[] }> {
   const accounts = await load();
   const events: CalendarEvent[] = [];
