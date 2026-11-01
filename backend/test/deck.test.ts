@@ -285,6 +285,7 @@ describe("homeFeatures", () => {
       gitlab: false,
       github: false,
       jira: false,
+      ha: false,
       off: [],
     });
     await deck.addDeckApp("Microsoft Teams");
