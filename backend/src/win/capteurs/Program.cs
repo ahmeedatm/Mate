@@ -74,12 +74,12 @@ namespace Mate.Capteurs
             return temps.Count > 0 ? temps.Max(s => s.Value) : null;
         }
 
-        // « CPU Package » est la puissance totale du processeur (Intel et AMD).
+        // Puissance totale du processeur : « CPU Package » (Intel) ou « Package » (AMD Ryzen, nom à vérifier sur un vrai PC).
         static double? CpuPackagePower(Computer computer)
         {
             foreach (var hardware in computer.Hardware.Where(h => h.HardwareType == HardwareType.Cpu))
             {
-                var sensor = hardware.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Power && s.Name == "CPU Package" && s.Value.HasValue && s.Value.Value > 0);
+                var sensor = hardware.Sensors.FirstOrDefault(s => s.SensorType == SensorType.Power && (s.Name == "CPU Package" || s.Name == "Package") && s.Value.HasValue && s.Value.Value > 0);
                 if (sensor != null) return sensor.Value;
             }
             return null;

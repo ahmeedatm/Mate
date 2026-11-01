@@ -36,11 +36,6 @@ export function parseCapteursReading(text: string, nowMs: number): CapteursReadi
   }
 }
 
-/** `cpuTempC` du fichier du capteur s'il est récent ; sinon `null`. */
-export function parseCapteursFile(text: string, nowMs: number): number | null {
-  return parseCapteursReading(text, nowMs)?.cpuTempC ?? null;
-}
-
 let lastStart = 0;
 
 /** Relance la tâche (sans droits : une tâche « droits maximum » se démarre sans accord) au plus une fois par minute. */

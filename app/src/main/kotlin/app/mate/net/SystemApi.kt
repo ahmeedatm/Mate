@@ -87,7 +87,7 @@ fun parsePerf(json: String): PcPerf {
     val disk = j.optJSONObject("disk")?.let { d -> DiskPerf(d.getDouble("freeGb"), d.getDouble("totalGb"), d.intOrNull("activity")) }
     val net = j.optJSONObject("net")?.let { n -> NetPerf(n.getInt("upKBps"), n.getInt("downKBps")) }
     return PcPerf(j.getInt("cpu"), ram.getInt("percent"), ram.getDouble("used"), ram.getDouble("total"), gpu, j.intOrNull("cpuMhz"), disk, net, j.intOrNull("cpuTempC"), j.intOrNull("fps"), j.has("fps"),
-        j.doubleOrNull("cpuWatts"), j.intOrNull("cpuFanRpm"), j.doubleOrNull("gpuWatts"),
+        cpuWatts = j.doubleOrNull("cpuWatts"), cpuFanRpm = j.intOrNull("cpuFanRpm"), gpuWatts = j.doubleOrNull("gpuWatts"),
     )
 }
 

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
-    Capteur de température du processeur (voir Program.cs). Seul programme du compagnon qui demande les droits
+    Capteur du processeur et de la carte graphique : température, watts, ventilateur (voir Program.cs). Seul programme du compagnon qui demande les droits
     administrateur, et seulement par la tâche planifiée de scripts/capteurs-windows.ps1. .NET Framework 4.8, x64
     (LibreHardwareMonitorLib charge sa DLL native depuis runtimes/win-x64). Compilé avec le pilote : npm run build:helper.
   -->
@@ -14,7 +14,7 @@
     <RootNamespace>Mate.Capteurs</RootNamespace>
     <Product>Mate</Product>
     <Company>Mate</Company>
-    <Description>Capteur de température du Mate</Description>
+    <Description>Capteur de température, de puissance et de ventilateur du Mate</Description>
     <Copyright>Mate</Copyright>
     <Version>1.0.0</Version>
     <DebugType>none</DebugType>

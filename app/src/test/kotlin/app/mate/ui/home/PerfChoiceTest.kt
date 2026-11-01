@@ -63,6 +63,7 @@ class PerfChoiceTest {
             cpuTempC = 64,
             cpuWatts = 42.5,
             gpuWatts = 95.2,
+            cpuFanRpm = 1180,
             fpsReadable = true,
             gpu = GpuPerf("RTX", 90, true, 70, null, 6000, 8192),
             disk = DiskPerf(100.0, 500.0, null),
@@ -73,7 +74,7 @@ class PerfChoiceTest {
         assertTrue(PerfOption.FPS.readable(full))
         assertTrue(PerfOption.CPU_WATTS.readable(full))
         assertTrue(PerfOption.GPU_WATTS.readable(full))
-        assertFalse(PerfOption.CPU_FAN.readable(full))
+        assertTrue(PerfOption.CPU_FAN.readable(full))
         assertTrue(PerfOption.GPU_TEMP.readable(full))
         assertFalse(PerfOption.GPU_FAN.readable(full))
         assertTrue(PerfOption.GPU_VRAM.readable(full))

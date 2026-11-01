@@ -1249,7 +1249,7 @@
     <string name="perf_gpu_temp_line">GPU %1$d °C</string>
     <string name="perf_cpu_watts_line">CPU %1$s W</string>
     <string name="perf_gpu_watts_line">GPU %1$s W</string>
-    <string name="perf_cpu_fan_line">Ventilateur CPU %1$s</string>
+    <string name="perf_cpu_fan_line">Vent. CPU %1$s</string>
     <string name="perf_fan_line">Ventilateur %1$s</string>
     <string name="perf_cpu_freq_line">CPU %1$s GHz</string>
     <string name="perf_group_cpu">Processeur</string>
