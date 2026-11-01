@@ -12,7 +12,8 @@ import app.mate.R
 /**
  * Thèmes de la DA Console douce (docs/ui-ux/da), choisis dans Réglages : Console (nuit, par défaut), Console jour,
  * Contraste élevé (Console jour en lisibilité maximale, grandes touches) et Hush (nuit noire, reflets rose et violet
- * animés derrière les écrans, tuiles en verre : ui/HushBackdrop). Un thème s'applique aussi par code :
+ * animés derrière les écrans, tuiles en verre : ui/HushBackdrop) et Spider-Verse (son logo en fond fixe,
+ * c_wallpaper, contenu rangé autour : c_spine). Un thème s'applique aussi par code :
  * `Prefs.setTheme(context, AppTheme.CONTRASTE.name)` puis `recreate()` (ou l'ordre `settings` de la page de
  * l'ordinateur, `{"theme": "CONTRASTE"}`). Les couleurs et polices sont des attributs (`?attr/c_…`,
  * res/values/palettes.xml) : changer de thème recrée l'activité. Les thèmes clairs ont leur propre base AppCompat
@@ -26,6 +27,7 @@ enum class AppTheme(val label: Int, val base: Int, val palette: Int? = null) {
     CONSOLE_JOUR(R.string.theme_console_jour, R.style.Theme_CompanionLight),
     CONTRASTE(R.string.theme_contraste, R.style.Theme_CompanionLight, R.style.Palette_Contraste),
     HUSH(R.string.theme_hush, R.style.Theme_Companion, R.style.Palette_Hush),
+    SPIDERMAN(R.string.theme_spiderman, R.style.Theme_Companion, R.style.Palette_SpiderMan),
     ;
 
     companion object {

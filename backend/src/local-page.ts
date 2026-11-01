@@ -299,7 +299,7 @@ ${FAVICON}
         <div id="tabletsettings">
           <div class="label">Thème</div>
           <div class="themes">
-            <button data-theme="CONSOLE"><span></span>Console</button><button data-theme="CONSOLE_JOUR"><span></span>Console jour</button><button data-theme="CONTRASTE"><span></span>Contraste élevé</button><button data-theme="HUSH"><span></span>Hush</button>
+            <button data-theme="CONSOLE"><span></span>Console</button><button data-theme="CONSOLE_JOUR"><span></span>Console jour</button><button data-theme="CONTRASTE"><span></span>Contraste élevé</button><button data-theme="HUSH"><span></span>Hush</button><button data-theme="SPIDERMAN"><span></span>Spider-Verse</button>
           </div>
           <div class="row"><label for="brightness">Luminosité de l'écran</label><input type="range" id="brightness" min="5" max="100"><span class="value" id="brightnessvalue"></span></div>
           <div class="row"><label for="volume">Volume du haut-parleur</label><input type="range" id="volume" min="0" max="100"><span class="value" id="volumevalue"></span></div>
@@ -875,6 +875,8 @@ ${FAVICON}
     CONTRASTE: ["#FFFFFF", "#EDEDE8", "#111214", "#25272C", "#2A4A00", "#45474D", "#FFFFFF"],
     // Tuile de Hush : son verre (#B82C2238) posé sur le fond noir.
     HUSH: ["#070509", "#221A2B", "#F6F0F8", "#CBC0D3", "#FF6EB4", "#46384F", "#22030F"],
+    // Spider-Verse : widgets sans tuile, posés sur le noir du fond ; accent magenta du logo.
+    SPIDERMAN: ["#000000", "#000000", "#F7F2FA", "#CFC6D8", "#FF2BD6", "#4A3550", "#1A0014"],
   };
   const VARS = ["bg", "tile", "ink", "ink2", "now", "line", "on"];
   for (const btn of document.querySelectorAll(".themes button")) {

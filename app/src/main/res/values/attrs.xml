@@ -58,6 +58,18 @@
     <attr name="c_big_keys" format="boolean" />
     <!-- Hush : fond animé derrière tous les écrans (ui/HushBackdrop), tuiles en verre (c_surface translucide). -->
     <attr name="c_backdrop" format="boolean" />
+    <!-- Image fixe derrière tous les écrans (Spider-Verse : le logo, voile compris), @null ailleurs. -->
+    <attr name="c_wallpaper" format="reference" />
+    <!-- Colonne vide au milieu de la grille de l'Accueil, où le logo du fond reste net (Spider-Verse), 0dp ailleurs. -->
+    <attr name="c_spine" format="dimension" />
+    <!-- Libellés de zone (titres de widgets et de cartes) : c_text_dim, cyan dans Spider-Verse. -->
+    <attr name="c_label" format="color" />
+    <!-- Curseurs (style Slider) : bouton et piste. -->
+    <attr name="c_slider_thumb" format="color" />
+    <attr name="c_slider_track" format="color" />
+    <!-- Bouton Parler de la barre fixe (rail_talk_bg) : au repos, pendant l'écoute. -->
+    <attr name="c_talk" format="color" />
+    <attr name="c_talk_live" format="color" />
     <attr name="c_primary" format="color" />
     <attr name="c_on_primary" format="color" />
     <attr name="c_primary_pressed" format="color" />

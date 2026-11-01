@@ -1,6 +1,8 @@
 package app.mate.ui
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
@@ -15,8 +17,9 @@ import app.mate.R
 /**
  * Vignette d'un thème dans Réglages > Personnalisation : un petit écran peint avec ses propres couleurs (fond, barre de
  * gauche, carte avec « Aa » dans sa police de titres, pastille d'accent). Choisi : cadre de l'accent du thème
- * affiché. Thème à fond animé (Hush, c_backdrop) : un reflet violet et un rose sous la carte en verre. Dessinée une
- * fois, rien ne bouge.
+ * affiché. Thème à fond animé (Hush, c_backdrop) : un reflet violet et un rose sous la carte en verre. Thème à image
+ * de fond (Spider-Verse, c_wallpaper) : l'image réduite (1/8, 160 × 100 px), sans carte, comme ses widgets sans tuile.
+ * Dessinée une fois, rien ne bouge.
  */
 class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolean) : View(context) {
     // Depuis le contexte de l'appli, pas celui de l'écran : un thème part de zéro, sans hériter du thème affiché.
@@ -30,6 +33,8 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
     private val text = color(R.attr.c_text)
     private val dim = color(R.attr.c_text_dim)
     private val backdrop = themeBool(themed, R.attr.c_backdrop)
+    private val wallpaper: Bitmap? = themeRes(themed, R.attr.c_wallpaper).takeIf { it != 0 }
+        ?.let { BitmapFactory.decodeResource(resources, it, BitmapFactory.Options().apply { inSampleSize = WALLPAPER_SAMPLE }) }
     private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
     private val glow2 = Paint(Paint.ANTI_ALIAS_FLAG)
 
@@ -49,8 +54,18 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
     private val rect = RectF()
     private val clip = Path()
 
+    private val image = Paint(Paint.FILTER_BITMAP_FLAG)
+
     init {
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+    }
+
+    /** Image calée sur la hauteur de la vignette et centrée (centerCrop), comme derrière les écrans. */
+    private fun wallpaperFrame(bitmap: Bitmap): RectF {
+        val scale = maxOf(rect.width() / bitmap.width, rect.height() / bitmap.height)
+        val w = bitmap.width * scale
+        val h = bitmap.height * scale
+        return RectF(rect.centerX() - w / 2, rect.centerY() - h / 2, rect.centerX() + w / 2, rect.centerY() + h / 2)
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -79,15 +94,16 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
             canvas.drawRect(rect, glow)
             canvas.drawRect(rect, glow2)
         }
+        wallpaper?.let { canvas.drawBitmap(it, null, wallpaperFrame(it), image) }
         // Barre de gauche, un peu à part du fond comme dans l'appli.
         fill.color = rail
         canvas.drawRect(pad, pad, pad + w * 0.12f, pad + h, fill)
         fill.color = accent
         canvas.drawRoundRect(pad + w * 0.04f, pad + h * 0.2f, pad + w * 0.08f, pad + h * 0.38f, 2 * d, 2 * d, fill)
         // Carte : « Aa » en couleur de texte, pastille d'accent, ligne de texte secondaire.
-        fill.color = surface
         rect.set(pad + w * 0.18f, pad + h * 0.16f, pad + w * 0.76f, pad + h * 0.84f)
-        canvas.drawRoundRect(rect, 10 * d, 10 * d, fill)
+        fill.color = surface
+        if (wallpaper == null) canvas.drawRoundRect(rect, 10 * d, 10 * d, fill)
         letters.color = text
         canvas.drawText("Aa", rect.left + 10 * d, rect.top + rect.height() * 0.55f, letters)
         fill.color = accent
@@ -110,3 +126,6 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
         }
     }
 }
+
+/** Réduction de l'image de fond dans la vignette : 1280 × 800 / 8 = 160 × 100 px, 64 Ko en mémoire. */
+private const val WALLPAPER_SAMPLE = 8

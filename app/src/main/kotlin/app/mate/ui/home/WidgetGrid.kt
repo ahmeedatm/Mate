@@ -24,6 +24,7 @@ import app.mate.ui.dp
 import app.mate.ui.themeBool
 import app.mate.ui.themeColor
 import app.mate.ui.themeFont
+import app.mate.ui.themePx
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -51,6 +52,9 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
         /** Balayage lâché trop court ou annulé : l'écran revient en place. */
         fun onPageDragEnd() {}
+
+        /** Milieu de la page affichée libre (colonne vide sans widget dessus) ou non : le fond y montre le logo net. */
+        fun onCenterFree(free: Boolean) {}
         fun onAddAt(col: Int, row: Int)
         fun onRemove(placed: Placed)
 
@@ -94,7 +98,10 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     var rowWeights: IntArray? = null
         set(value) { field = value; requestLayout() }
     private val narrowRowHeight = dp(176)
-    private var cellW = 0
+    /** Colonne vide au milieu (thème Spider-Verse : le logo du fond), 0 ailleurs ; sans effet en mode étroit. */
+    private val spine = themePx(context, R.attr.c_spine)
+    private var columns = GridColumns(0, 0, gap, 0, COLS)
+    private val cellW get() = columns.cellW
     /** Hauteur de chaque ligne en mode normal (en mode étroit, toutes valent [narrowRowHeight]). */
     private var rowH = IntArray(ROWS)
     /** Cases occupées en mode étroit (le flux remplace la position enregistrée). */
@@ -184,7 +191,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val cols = if (narrow) 2 else COLS
-        cellW = (width - paddingLeft - paddingRight - gap * (cols - 1)) / cols
+        columns = GridColumns(paddingLeft, width - paddingLeft - paddingRight, gap, if (narrow) 0 else spine, cols)
         val height: Int
         if (narrow) {
             computeFlow()
@@ -198,9 +205,9 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             val child = getChildAt(i)
             val placed = placedOf(child) ?: continue
             if (child.visibility == View.GONE) continue
-            val (_, row, w, h) = cells(placed)
+            val (col, row, w, h) = cells(placed)
             child.measure(
-                MeasureSpec.makeMeasureSpec(w * cellW + (w - 1) * gap, MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(columns.width(col, w), MeasureSpec.EXACTLY),
                 MeasureSpec.makeMeasureSpec(spanHeight(row, h), MeasureSpec.EXACTLY),
             )
         }
@@ -208,16 +215,27 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+        var crossed = false
         for (i in 0 until childCount) {
             val child = getChildAt(i)
             val placed = placedOf(child) ?: continue
             if (child.visibility == View.GONE) continue
-            val (c, row) = cells(placed)
-            val left = paddingLeft + c * (cellW + gap)
+            val (c, row, w) = cells(placed)
+            crossed = crossed || columns.crossesMiddle(c, w)
+            val left = columns.left(c)
             val top = paddingTop + rowTop(row)
             child.layout(left, top, left + child.measuredWidth, top + child.measuredHeight)
         }
+        val free = spine > 0 && !narrow && !crossed
+        // Toujours signalé au premier placement : une grille neuve (Accueil recréé) remplace l'état de l'ancienne.
+        if (free != centerFree) {
+            centerFree = free
+            listener?.onCenterFree(free)
+        }
     }
+
+    /** Dernier état signalé par [Listener.onCenterFree] ; null avant le premier placement. */
+    private var centerFree: Boolean? = null
 
     /** Seuls les widgets de la page affichée sont visibles (à rappeler après un ajout). */
     fun showPage() {
@@ -491,7 +509,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
                     view.translationX = dx
                     view.translationY = dy
                     val placed = placedOf(view) ?: return
-                    dropCol = ((view.left + dx - paddingLeft) / (cellW + gap)).roundToInt().coerceIn(0, COLS - placed.size.w)
+                    dropCol = columns.cellsAt(view.left + dx).roundToInt().coerceIn(0, COLS - placed.size.w)
                     val y = view.top + dy - paddingTop
                     dropRow = (0..ROWS - placed.size.h).minBy { abs(rowTop(it) - y) }
                     dropOk = listener?.canMove(placed, dropCol, dropRow) == true
@@ -542,7 +560,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         val y = view.bottom + dy
         val origin = cellFrame(placed.col, placed.row, WidgetSize.S)
         resizeZone.set(min(origin.left, x), min(origin.top, y), max(origin.right, x), max(origin.bottom, y))
-        val fx = (x - paddingLeft + gap) / (cellW + gap)
+        val fx = columns.cellsAt(x + gap)
         val fy = cellsSpanned(0, y - paddingTop)
         resizePick = listener?.pickSize(
             placed,
@@ -586,9 +604,9 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             val placed = placedOf(child) ?: continue
             if (child.visibility == View.VISIBLE && x >= child.left && x < child.right && y >= child.top && y < child.bottom) return Hit.Body(child, placed)
         }
-        val col = ((x - paddingLeft) / (cellW + gap)).toInt()
+        val col = columns.colAt(x) ?: return null
         val row = rowAt((y - paddingTop).coerceAtLeast(0f))
-        return if (col in 0 until COLS && row in 0 until ROWS) Hit.Empty(col, row) else null
+        return if (row in 0 until ROWS) Hit.Empty(col, row) else null
     }
 
     // Boutons du mode Modifier, posés sur les coins du widget (grandes cibles : la tablette se touche de loin).
@@ -612,9 +630,9 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     /** Cadre des cases de `size` à partir de (`col`, `row`) : la taille calée sur la grille, pour le dépôt et le redimensionnement. */
     private fun cellFrame(col: Int, row: Int, size: WidgetSize): RectF {
-        val left = paddingLeft + col * (cellW + gap)
+        val left = columns.left(col)
         val top = paddingTop + rowTop(row)
-        return RectF(left.toFloat(), top.toFloat(), (left + size.w * cellW + (size.w - 1) * gap).toFloat(), (top + spanHeight(row, size.h)).toFloat())
+        return RectF(left.toFloat(), top.toFloat(), (left + columns.width(col, size.w)).toFloat(), (top + spanHeight(row, size.h)).toFloat())
     }
 
     override fun dispatchDraw(canvas: Canvas) {
@@ -686,7 +704,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         text.textSize = 34 * density
         for (r in 0 until ROWS) for (c in 0 until COLS) {
             if (taken.any { it.covers(c, r) }) continue
-            val left = (paddingLeft + c * (cellW + gap)).toFloat()
+            val left = columns.left(c).toFloat()
             val top = (paddingTop + rowTop(r)).toFloat()
             val rect = RectF(left + dp(2), top + dp(2), left + cellW - dp(2), top + rowHeight(r) - dp(2))
             canvas.drawRoundRect(rect, 20 * density, 20 * density, dashed)

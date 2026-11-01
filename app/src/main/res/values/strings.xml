@@ -901,6 +901,7 @@
     <string name="theme_tile_chosen">Thème %s, choisi</string>
     <string name="theme_contraste">Contraste élevé</string>
     <string name="theme_hush">Hush</string>
+    <string name="theme_spiderman">Spider-Verse</string>
     <!-- Accessibilité (lot 2) : aides à la lecture, dans la carte Accessibilité de COMP-50 (ui/ReadingAids.kt) -->
     <string name="a11y_legible_font">Police lisible</string>
     <string name="a11y_legible_font_hint">Atkinson Hyperlegible, lettres faciles à distinguer, un peu plus espacées</string>
