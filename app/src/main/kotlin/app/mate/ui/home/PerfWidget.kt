@@ -477,6 +477,9 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         when (option) {
             PerfOption.CPU_FREQ -> Extra(context.getString(R.string.perf_cpu_freq_line, perfNumber(perf.cpuMhz!! / 1000.0)), calm)
             PerfOption.CPU_TEMP -> perf.cpuTempC!!.let { Extra(context.getString(R.string.perf_cpu_temp_line, it), perfColorAttr(PerfSeries.CPU, PerfMark.VALUE, tempLevel(it), stale)) }
+            PerfOption.CPU_WATTS -> Extra(context.getString(R.string.perf_cpu_watts_line, perfNumber(perf.cpuWatts!!)), calm)
+            PerfOption.GPU_WATTS -> Extra(context.getString(R.string.perf_gpu_watts_line, perfNumber(perf.gpuWatts!!)), calm)
+            PerfOption.CPU_FAN -> Extra(context.getString(R.string.perf_cpu_fan_line, context.getString(R.string.perf_fan_rpm, RPM_FORMAT.format(perf.cpuFanRpm!!))), if (stale) R.attr.c_text_faint else R.attr.c_text)
             // Aucun jeu mesuré : « — », jamais 0.
             PerfOption.FPS -> Extra(perf.fps?.let { context.getString(R.string.perf_fps_line, it.toString()) } ?: context.getString(R.string.perf_fps_none), if (perf.fps == null) R.attr.c_text_faint else calm)
             PerfOption.GPU_TEMP -> perf.gpu!!.tempC!!.let { Extra(context.getString(R.string.perf_gpu_temp_line, it), perfColorAttr(PerfSeries.GPU, PerfMark.VALUE, tempLevel(it), stale)) }

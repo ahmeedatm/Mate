@@ -349,7 +349,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const perf = await call("GET", "/system/perf");
         if (!controlled()) return expectStatus(perf, 501, "/system/perf");
         expectStatus(perf, 200, "/system/perf");
-        const { cpu, ram, gpu, cpuMhz, cpuTempC, fps, disk, net } = perf.json;
+        const { cpu, ram, gpu, cpuMhz, cpuTempC, cpuWatts, cpuFanRpm, gpuWatts, fps, disk, net } = perf.json;
         expect(typeof cpu === "number" && cpu >= 0 && cpu <= 100, `processeur hors 0-100 : ${cpu}`);
         expect(ram?.total > 0, "mémoire totale absente");
         // Champs facultatifs : absents si illisibles, mais bien typés et bornés quand ils sont là.
@@ -360,6 +360,11 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           cpuTempC === undefined || (count(cpuTempC) && cpuTempC >= 10 && cpuTempC <= 150),
           `température du processeur invalide : ${cpuTempC}`,
         );
+        // Watts et ventilateur du processeur : absents sans lecteur, jamais nuls ni inventés.
+        const watts = (w: unknown) => w === undefined || (typeof w === "number" && w > 0 && w <= 1000);
+        expect(watts(cpuWatts), `puissance du processeur invalide : ${cpuWatts}`);
+        expect(watts(gpuWatts), `puissance de la carte graphique invalide : ${gpuWatts}`);
+        expect(cpuFanRpm === undefined || (count(cpuFanRpm) && cpuFanRpm > 0), `ventilateur du processeur invalide : ${cpuFanRpm}`);
         // Images par seconde : absentes sans lecteur (Mac, carte non AMD), null sans jeu mesuré, jamais 0.
         expect(fps === undefined || fps === null || (count(fps) && fps > 0), `images par seconde invalides : ${fps}`);
         expect(
@@ -383,6 +388,9 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const extras = [
           cpuMhz && `${cpuMhz} MHz`,
           cpuTempC && `processeur ${cpuTempC} °C`,
+          cpuWatts && `processeur ${cpuWatts} W`,
+          gpuWatts && `carte graphique ${gpuWatts} W`,
+          cpuFanRpm && `ventilateur ${cpuFanRpm} tr/min`,
           fps !== undefined && (fps === null ? "fps : aucun jeu" : `${fps} fps`),
           disk && `disque ${disk.freeGb}/${disk.totalGb} Go`,
           net && `réseau ${net.downKBps}/${net.upKBps} Ko/s`,

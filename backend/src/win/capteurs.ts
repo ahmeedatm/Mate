@@ -15,16 +15,30 @@ export const CAPTEURS_MAX_AGE_MS = 6000;
 const RESTART_EVERY_MS = 60_000;
 const FILE = path.join(process.env.LOCALAPPDATA ?? os.tmpdir(), "Mate", "capteurs", "cpu-temp.json");
 
-/** `cpuTempC` du fichier du capteur s'il date de moins de `CAPTEURS_MAX_AGE_MS` (et pas du futur) ; sinon `null`. */
-export function parseCapteursFile(text: string, nowMs: number): number | null {
+export type CapteursReading = { cpuTempC?: number; cpuWatts?: number; cpuFanRpm?: number; gpuWatts?: number };
+const FIELDS = ["cpuTempC", "cpuWatts", "cpuFanRpm", "gpuWatts"] as const;
+
+/** Valeurs du fichier du capteur s'il date de moins de `CAPTEURS_MAX_AGE_MS` (et pas du futur) ; sinon `null`. Un champ nul ou absent est omis. */
+export function parseCapteursReading(text: string, nowMs: number): CapteursReading | null {
   try {
-    const j = JSON.parse(text) as { cpuTempC?: unknown; at?: unknown } | null;
-    if (typeof j?.cpuTempC !== "number" || typeof j.at !== "number" || j.cpuTempC <= 0) return null;
+    const j = JSON.parse(text) as (Record<string, unknown> & { at?: unknown }) | null;
+    if (typeof j?.at !== "number") return null;
     const age = nowMs - j.at;
-    return age >= 0 && age <= CAPTEURS_MAX_AGE_MS ? j.cpuTempC : null;
+    if (age < 0 || age > CAPTEURS_MAX_AGE_MS) return null;
+    const reading: CapteursReading = {};
+    for (const field of FIELDS) {
+      const value = j[field];
+      if (typeof value === "number" && value > 0) reading[field] = value;
+    }
+    return Object.keys(reading).length > 0 ? reading : null;
   } catch {
     return null;
   }
+}
+
+/** `cpuTempC` du fichier du capteur s'il est récent ; sinon `null`. */
+export function parseCapteursFile(text: string, nowMs: number): number | null {
+  return parseCapteursReading(text, nowMs)?.cpuTempC ?? null;
 }
 
 let lastStart = 0;
@@ -37,13 +51,29 @@ function startTask() {
   execFile("schtasks", ["/run", "/tn", CAPTEURS_TASK], { windowsHide: true }, () => {});
 }
 
-export async function cpuTemperature(): Promise<number | null> {
+async function readCapteurs(): Promise<CapteursReading | null> {
   try {
-    const value = parseCapteursFile(await fs.readFile(FILE, "utf8"), Date.now());
-    if (value === null) startTask();
-    return value;
+    const reading = parseCapteursReading(await fs.readFile(FILE, "utf8"), Date.now());
+    if (reading === null) startTask();
+    return reading;
   } catch {
     startTask();
     return null;
   }
+}
+
+export async function cpuTemperature(): Promise<number | null> {
+  return (await readCapteurs())?.cpuTempC ?? null;
+}
+
+export async function cpuWatts(): Promise<number | null> {
+  return (await readCapteurs())?.cpuWatts ?? null;
+}
+
+export async function cpuFanRpm(): Promise<number | null> {
+  return (await readCapteurs())?.cpuFanRpm ?? null;
+}
+
+export async function gpuWatts(): Promise<number | null> {
+  return (await readCapteurs())?.gpuWatts ?? null;
 }
