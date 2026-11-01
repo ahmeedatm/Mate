@@ -273,6 +273,32 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "touche à cycle : une étape par appui",
+      run: async () => {
+        const slot = 15;
+        try {
+          expectStatus(
+            await call("PUT", `/deck/keys/${slot}`, {
+              label: "Sanity cycle",
+              cycle: true,
+              steps: [
+                { type: "wait", ms: 0 },
+                { type: "wait", ms: 0 },
+              ],
+            }),
+            200,
+            "PUT /deck/keys/15",
+          );
+          const deck = await call("GET", "/deck");
+          const perso = (deck.json.pages as { editable: boolean; tiles: { id: string; type: string }[] }[]).find((p) => p.editable);
+          expect(perso?.tiles.find((t) => t.id === `k-${slot}`)?.type === "cycle", "touche k-15 sans type cycle");
+          for (let i = 0; i < 3; i++) expectStatus(await call("POST", "/deck/run", { id: `k-${slot}` }), 200, "appui sur k-15");
+        } finally {
+          expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE /deck/keys/15");
+        }
+      },
+    },
+    {
       name: "agents Claude : hooks et état",
       run: async () => {
         const agents = await call("GET", "/agents");

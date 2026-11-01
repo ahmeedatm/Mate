@@ -113,6 +113,40 @@ describe("touches perso : routes", () => {
     ]);
   });
 
+  it("une touche à cycle fait une étape par appui, puis recommence", async () => {
+    const cycle = {
+      label: "Thème",
+      cycle: true,
+      steps: [
+        { type: "text", text: "Jour" },
+        { type: "text", text: "Nuit" },
+        { type: "text", text: "Auto" },
+      ],
+    };
+    assert.equal((await put(9, cycle)).status, 200);
+    assert.deepEqual((await server.call("GET", "/deck/keys/9")).json.key, cycle);
+    assert.equal((await server.call("GET", "/deck")).json.pages.at(-1).tiles[9].type, "cycle");
+
+    for (let i = 0; i < 4; i++) assert.equal((await server.call("POST", "/deck/run", { id: "k-9" })).status, 200);
+    assert.deepEqual(
+      server.osCalls().map((c) => c.args[0]),
+      ["Jour", "Nuit", "Auto", "Jour"],
+    );
+    await server.call("DELETE", "/deck/keys/9");
+  });
+
+  it("une touche sans cycle garde son enregistrement tel quel", async () => {
+    await put(12, {
+      label: "Deux",
+      steps: [
+        { type: "text", text: "a" },
+        { type: "text", text: "b" },
+      ],
+    });
+    assert.equal("cycle" in (await server.call("GET", "/deck/keys/12")).json.key, false);
+    await server.call("DELETE", "/deck/keys/12");
+  });
+
   it("une touche d'une seule étape garde son type", async () => {
     await put(1, { label: "Capture", steps: [{ type: "system", command: "screenshot-clipboard" }] });
     const perso = (await server.call("GET", "/deck")).json.pages.at(-1);

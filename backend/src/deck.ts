@@ -71,7 +71,7 @@ export type Step =
   | { type: "window"; app: string; display?: string; layout?: Layout };
 
 /** Une macro enchaîne des étapes. */
-export type Action = Step | { type: "macro"; steps: Step[] };
+export type Action = Step | { type: "macro"; steps: Step[] } | { type: "cycle"; steps: Step[] };
 
 /** glyph : symbole affiché à la place de l'icône (emoji), utile pour les raccourcis. */
 /**
@@ -294,7 +294,7 @@ export async function loadDeck(): Promise<DeckPage[]> {
     keys.map((key, slot) => {
       const id = `${prefix}${slot}`;
       if (!key) return { id, empty: true as const };
-      const action: Action = key.steps.length === 1 ? key.steps[0] : { type: "macro", steps: key.steps };
+      const action: Action = key.steps.length === 1 ? key.steps[0] : { type: key.cycle ? "cycle" : "macro", steps: key.steps };
       return { id, label: key.label, ...(key.symbol ? { symbol: key.symbol } : {}), glyph: key.glyph, color: key.color, action };
     });
   pages.push({ title: "Perso", editable: true, tiles: keyTiles(await loadKeys(), PERSO_PREFIX) });
@@ -337,8 +337,19 @@ export async function findTile(id: string): Promise<Tile | undefined> {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function runAction(action: Action): Promise<unknown> {
+/** Prochaine étape de chaque touche à cycle, par identifiant de tuile. shortcut: perdu au redémarrage du compagnon, à garder si l'état visible de la touche le demande. */
+const cycleNext = new Map<string, number>();
+
+/** `tileId` : la touche dont on suit le cycle ; sans lui, un cycle lance toujours sa première étape. */
+export async function runAction(action: Action, tileId?: string): Promise<unknown> {
   switch (action.type) {
+    case "cycle": {
+      const next = (tileId && cycleNext.get(tileId)) || 0;
+      const index = next % action.steps.length;
+      await runAction(action.steps[index]);
+      if (tileId) cycleNext.set(tileId, index + 1);
+      return;
+    }
     case "macro":
       for (const [i, step] of action.steps.entries()) {
         await runAction(step);
@@ -411,6 +422,7 @@ export function appOf(action: Action): string | undefined {
     case "window":
       return action.app;
     case "macro":
+    case "cycle":
       return action.steps.map(appOf).find(Boolean);
     default:
       return undefined;
@@ -445,7 +457,12 @@ async function cachedIcon(key: string, make: (out: string) => Promise<boolean>):
 
 /** Site ouvert par l'action (le premier lien d'une macro), pour une tuile sans appli. */
 function urlOf(action: Action): URL | undefined {
-  const url = action.type === "url" ? action.url : action.type === "macro" ? action.steps.find((s) => s.type === "url")?.url : undefined;
+  const url =
+    action.type === "url"
+      ? action.url
+      : action.type === "macro" || action.type === "cycle"
+        ? action.steps.find((s) => s.type === "url")?.url
+        : undefined;
   if (!url) return undefined;
   try {
     const parsed = new URL(url);
