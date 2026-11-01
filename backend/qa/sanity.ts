@@ -594,6 +594,21 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "courses : ajouter, cocher, retirer",
+      run: async () => {
+        const added = await call("POST", "/shopping", { labels: [stamp] });
+        expectStatus(added, 200, "POST /shopping");
+        const itemId: string = added.json.items[0].id;
+        try {
+          expectStatus(await call("POST", `/shopping/${itemId}/done`, { done: true }), 200, "cocher l'article");
+          const listed = await call("GET", "/shopping");
+          expect(listed.json.items.find((i: { id: string }) => i.id === itemId)?.done === true, "article coché mais pas fait");
+        } finally {
+          await call("DELETE", `/shopping/${itemId}`);
+        }
+      },
+    },
+    {
       name: "Jira : tickets",
       run: async () => {
         // Lecture seule : jamais de transition, ce sont les vrais tickets de l'utilisateur.

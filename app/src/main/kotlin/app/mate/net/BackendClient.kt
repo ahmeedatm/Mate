@@ -32,6 +32,7 @@ class BackendClient(
     val docs = DocsApi(http)
     val calendar = CalendarApi(http)
     val tasks = TasksApi(http)
+    val shopping = ShoppingApi(http)
     val camera = CameraApi(http)
     val updates = UpdatesApi(http)
     val tablet = TabletApi(http)
