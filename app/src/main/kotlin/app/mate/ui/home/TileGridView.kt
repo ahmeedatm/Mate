@@ -33,7 +33,9 @@ import kotlinx.coroutines.launch
  * Grille de touches d'un widget (Touches, Apps, Discord, Réunion, sites de Média) : colonnes de 96 dp qui se
  * répartissent la largeur, défilement vertical s'il y a plus de touches que de place. Le balayage reste à la grille
  * des profils. L'appui long reste à la grille des profils (mode Modifier) tant que [ownsLongPress] est faux : un widget
- * dont les touches ont un [onHold] le met à vrai.
+ * dont les touches ont un [onHold] le met à vrai. Une touche large (`span` 2) prend sa case et la suivante : la grille
+ * ne sait pas faire, donc la touche reçoit la largeur de deux colonnes et une case vide (« filler ») couvre la seconde
+ * ([spanSlots] fixe où chacune tombe).
  */
 class TileGridView(context: Context, private val scope: CoroutineScope) : GridView(context), GestureOwner {
     /** Une case : la touche, allumée (micro coupé…), « + » d'ajout, ou emplacement libre (`type == EMPTY`). */
@@ -42,8 +44,34 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
     var cells: List<Cell> = emptyList()
         set(value) {
             field = value
-            adapter.notifyDataSetChanged()
+            reslot()
         }
+
+    /** Colonnes de la grille, comptées comme `AUTO_FIT` : la grille ne les donne qu'une fois mesurée. */
+    private var columns = 1
+    private var slots: List<SpanSlot> = emptyList()
+
+    private fun reslot() {
+        slots = spanSlots(cells.map { it.key.span }, columns)
+        adapter.notifyDataSetChanged()
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val usable = MeasureSpec.getSize(widthMeasureSpec) - paddingLeft - paddingRight
+        val next = maxOf(1, (usable + horizontalSpacing) / (requestedColumnWidth + horizontalSpacing))
+        if (next != columns) {
+            columns = next
+            reslot()
+        }
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    }
+
+    /** Position de la vue qui porte la case [position] : la touche large, même touchée par sa seconde case. */
+    private fun ownerOf(position: Int) = if (slots.getOrNull(position)?.filler == true) position - 1 else position
+
+    private fun cellAt(position: Int): Cell? = slots.getOrNull(ownerOf(position))?.cell?.let { cells.getOrNull(it) }
+
+    private fun viewAt(position: Int): View? = getChildAt(ownerOf(position) - firstVisiblePosition)
 
     var onTap: (Cell, View) -> Unit = { _, _ -> }
 
@@ -65,11 +93,33 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
     private val pressed = mutableListOf<View>()
 
     private val adapter = object : BaseAdapter() {
-        override fun getCount() = cells.size
-        override fun getItem(position: Int) = cells[position]
+        override fun getCount() = slots.size
+        override fun getItem(position: Int) = cellAt(position)
         override fun getItemId(position: Int) = position.toLong()
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
-            (convertView ?: newCell(context, metrics(context))).also { bind(it, cells[position]) }
+        override fun getViewTypeCount() = 3
+        override fun getItemViewType(position: Int): Int {
+            val slot = slots[position]
+            return when {
+                slot.cell == PAD || slot.filler -> TYPE_BLANK
+                slot.cell < cells.size && cells[slot.cell].key.span > 1 && columns > 1 -> TYPE_WIDE
+                else -> TYPE_TILE
+            }
+        }
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val type = getItemViewType(position)
+            if (type == TYPE_BLANK) return convertView ?: View(context).apply { layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1) }
+            val view = convertView ?: newCell(context, metrics(context), wide = type == TYPE_WIDE)
+            // Deux colonnes et l'espace entre elles : la largeur change avec les colonnes, la vue recyclée la reprend.
+            if (type == TYPE_WIDE) {
+                val width = 2 * columnWidth + horizontalSpacing
+                if (view.layoutParams.width != width) {
+                    view.layoutParams.width = width
+                    view.requestLayout()
+                }
+            }
+            return view.also { bind(it, cellAt(position)!!) }
+        }
     }
 
     init {
@@ -84,14 +134,17 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
         overScrollMode = OVER_SCROLL_NEVER
         setAdapter(adapter)
         setOnItemClickListener { _, view, position, _ ->
-            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-            cells.getOrNull(position)?.let { onTap(it, view) }
+            val cell = cellAt(position) ?: return@setOnItemClickListener
+            val target = viewAt(position) ?: view
+            target.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            onTap(cell, target)
         }
         setOnItemLongClickListener { _, view, position, _ ->
             val hold = onHold ?: return@setOnItemLongClickListener false
-            val cell = cells.getOrNull(position)?.takeUnless { it.add } ?: return@setOnItemLongClickListener false
-            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-            hold(cell, view)
+            val cell = cellAt(position)?.takeUnless { it.add } ?: return@setOnItemLongClickListener false
+            val target = viewAt(position) ?: view
+            target.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            hold(cell, target)
             true
         }
         // Le défilement reprend la main sur le doigt : plus d'appui.
@@ -115,10 +168,10 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
         }
         if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
             val position = pointToPosition(ev.x.toInt(), ev.y.toInt())
-            val cell = cells.getOrNull(position)?.takeUnless { it.add }
+            val cell = cellAt(position)?.takeUnless { it.add }
             if (cell != null && isPush(cell)) {
                 pushed = cell
-                getChildAt(position - firstVisiblePosition)?.let {
+                viewAt(position)?.let {
                     pressed += it
                     Look.pressTo(it, true)
                 }
@@ -130,8 +183,8 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val position = pointToPosition(ev.x.toInt(), ev.y.toInt())
-                if (position != INVALID_POSITION) {
-                    getChildAt(position - firstVisiblePosition)?.let {
+                if (cellAt(position) != null) {
+                    viewAt(position)?.let {
                         pressed += it
                         Look.pressTo(it, true)
                     }
@@ -175,6 +228,11 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
     companion object {
         const val EMPTY = "empty"
 
+        // Types de vue de la grille : touche, touche large, case vide (pad ou seconde case d'une touche large).
+        private const val TYPE_TILE = 0
+        private const val TYPE_WIDE = 1
+        private const val TYPE_BLANK = 2
+
         /** Cotes du thème : grandes en Contraste élevé (`c_big_keys`). */
         fun metrics(context: Context) = TileMetrics.of(themeBool(context, R.attr.c_big_keys))
 
@@ -184,14 +242,15 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
          * donne les grandes cotes aux grilles du thème Contraste élevé ; les rangées du widget gardent les normales.
          * Plaque en haut de la case, libellé dessous : toutes les plaques d'une rangée sont alignées, quel que soit le nombre
          * de lignes du libellé. La case grandit si la taille du texte (Réglages > Accessibilité) lui prend plus de place.
+         * [wide] (touche large) : la plaque prend toute la largeur de la case, en pastille.
          */
-        fun newCell(context: Context, metrics: TileMetrics = TileMetrics.NORMAL): View {
+        fun newCell(context: Context, metrics: TileMetrics = TileMetrics.NORMAL, wide: Boolean = false): View {
             val view = LayoutInflater.from(context).inflate(R.layout.item_tile, null)
             view.background = null
             view.stateListAnimator = null
             view.setPadding(0, 0, 0, 0)
             val plate = view.findViewById<ImageView>(R.id.tile_icon).parent as View
-            plate.layoutParams = LinearLayout.LayoutParams(context.dp(metrics.plateDp), context.dp(metrics.plateDp))
+            plate.layoutParams = LinearLayout.LayoutParams(if (wide) ViewGroup.LayoutParams.MATCH_PARENT else context.dp(metrics.plateDp), context.dp(metrics.plateDp))
             val label = view.findViewById<TextView>(R.id.tile_label).apply {
                 textSize = metrics.labelSp
                 (layoutParams as LinearLayout.LayoutParams).topMargin = context.dp(TileMetrics.LABEL_GAP_DP)
@@ -247,7 +306,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             val tint = if (lit) themeColor(context, R.attr.c_ko) else custom
             val plain = tint == null
             plate.background = tint?.let {
-                GradientDrawable().apply { setColor(it); cornerRadius = TileMetrics.radiusFor(plate.layoutParams.width).toFloat() }
+                GradientDrawable().apply { setColor(it); cornerRadius = TileMetrics.radiusFor(plate.layoutParams.height).toFloat() }
             }
             val inset = if (plain) 0 else context.dp(8)
             icon.setPadding(inset, inset, inset, inset)
@@ -269,7 +328,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
                 icon.imageTintList = android.content.res.ColorStateList.valueOf(ink)
                 if (plain) icon.setBackgroundResource(themeRes(context, R.attr.c_key_plate))
                 // Même marge sur plaque couleur que sans : l'icône garde plus de la moitié de la plaque.
-                val pad = TileMetrics.symbolPadFor(plate.layoutParams.width)
+                val pad = TileMetrics.symbolPadFor(plate.layoutParams.height)
                 icon.setPadding(pad, pad, pad, pad)
                 initial.visibility = View.GONE
                 return
