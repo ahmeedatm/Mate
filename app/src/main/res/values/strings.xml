@@ -1439,6 +1439,14 @@
     <string name="widget_news_none">Le flux ne contient encore aucun article</string>
     <string name="widget_news_loading">Lecture du flux en cours, réessaie dans un instant</string>
     <string name="widget_news_hint">Adresse du flux (RSS ou Atom)</string>
+    <string name="widget_meals">Repas du jour</string>
+    <string name="widget_meals_desc">Le menu d\'aujourd\'hui et de demain, midi et soir ; le repas en cours est mis en avant</string>
+    <string name="meals_unset">Règle le menu de la semaine sur la page de l\'ordinateur</string>
+    <string name="meals_none">Rien de prévu</string>
+    <string name="meals_today_lunch">Aujourd\'hui, midi</string>
+    <string name="meals_today_dinner">Aujourd\'hui, soir</string>
+    <string name="meals_tomorrow_lunch">Demain, midi</string>
+    <string name="meals_tomorrow_dinner">Demain, soir</string>
     <string name="widget_metrics">Valeurs</string>
     <string name="widget_metrics_desc">Des chiffres calculés par l\'ordinateur (dossier, build, compteur), remis à jour chaque minute</string>
     <string name="widget_metrics_empty">Écris tes commandes dans metrics.json, dans le dossier Mate de l\'ordinateur</string>

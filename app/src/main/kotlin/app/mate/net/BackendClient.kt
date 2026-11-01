@@ -47,6 +47,7 @@ class BackendClient(
     val notifications = NotificationsApi(http)
     val away = AwayApi(http)
     val news = NewsApi(http)
+    val menu = MenuApi(http)
     val metrics = MetricsApi(http)
 
     /** Client des widgets de forge : MR GitLab ou PR GitHub, mêmes réponses. */

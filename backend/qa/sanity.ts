@@ -799,6 +799,20 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "menu de la semaine",
+      run: async () => {
+        // Lecture seule : le menu réglé par l'utilisateur n'est jamais changé. Toujours sept jours, du lundi au dimanche.
+        const res = await call("GET", "/menu");
+        expectStatus(res, 200, "GET /menu");
+        const days = res.json.days;
+        expect(
+          Array.isArray(days) && days.length === 7 && days.every((d: any) => typeof d.lunch === "string" && typeof d.dinner === "string"),
+          "menu mal formé (sept jours attendus)",
+        );
+        return `${days.filter((d: any) => d.lunch || d.dinner).length} jour(s) réglé(s)`;
+      },
+    },
+    {
       name: "Jira : tickets",
       run: async () => {
         // Lecture seule : jamais de transition, ce sont les vrais tickets de l'utilisateur.
