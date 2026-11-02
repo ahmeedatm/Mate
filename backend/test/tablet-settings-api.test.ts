@@ -24,7 +24,7 @@ const STATE = {
 };
 
 /**
- * Prochain ordre du type demandé. La veille du premier plan pousse son ordre `foreground` à chaque (re)connexion de la
+ * Prochain ordre du type demandé. Les veilles du premier plan (`foreground`) et des touches (`tilestate`) poussent leur ordre à chaque (re)connexion de la
  * tablette : il peut arriver avant celui qu'on attend, dans un poll à part.
  */
 async function nextOrder(type: string) {

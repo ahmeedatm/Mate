@@ -9,7 +9,13 @@ data class TaskItem(
     val auto: Boolean, val detail: String?, val hasUrl: Boolean,
     /** « Lun–ven · 17:30 », « Rappel à 15:00 » ; `deletable` : pas une tâche du fichier de l'ordinateur. */
     val schedule: String? = null, val deletable: Boolean = !daily,
-)
+    /** Corvée à tour de rôle : la personne dont c'est le tour. */
+    val assignee: String? = null,
+) {
+    /** Ligne sous le libellé : « Tour de Léa · Lun–ven » ; [turnFormat] contient un `%1$s` pour le prénom. */
+    fun subtitle(turnFormat: String): String? =
+        listOfNotNull(assignee?.let { turnFormat.format(it) }, detail ?: schedule).joinToString(" · ").ifEmpty { null }
+}
 
 /** Tâches du jour, récurrentes et ponctuelles (src/tasks.ts). */
 class TasksApi(private val http: Http) {
@@ -47,7 +53,7 @@ class TasksApi(private val http: Http) {
         TaskItem(
             t.getString("id"), t.getString("label"), daily, t.getBoolean("done"),
             t.getBoolean("auto"), t.optStringOrNull("detail"), t.getBoolean("hasUrl"),
-            t.optStringOrNull("schedule"), t.optBoolean("deletable", !daily),
+            t.optStringOrNull("schedule"), t.optBoolean("deletable", !daily), t.optStringOrNull("assignee"),
         )
     }
 }

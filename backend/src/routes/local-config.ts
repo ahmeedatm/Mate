@@ -1,10 +1,20 @@
 import type { FastifyInstance } from "fastify";
 import { addDeckApp, addDeckLink, deckLinks, LINK_SUGGESTIONS, loadDeck, removeDeckApp, removeDeckLink, resetDeckApps } from "../deck.ts";
 import { listApps } from "../os.ts";
-import { keySchema, loadKeyPages, loadKeys, saveKey, saveKeyPage, type PersoKey } from "../perso.ts";
+import { duplicateKey, duplicateKeyPage, keySchema, loadKeyPages, loadKeys, saveKey, saveKeyPage, type PersoKey } from "../perso.ts";
 import { listPlugins } from "../plugins.ts";
 import { SYSTEM_COMMANDS, TILE_SYMBOLS } from "../screens.ts";
-import { deckCatalog, appNameBody, linkBody, pageSlotParams, slotParam, type PageSlot } from "./deck.ts";
+import {
+  deckCatalog,
+  appNameBody,
+  duplicateKeyBody,
+  linkBody,
+  pageParam,
+  pageSlotParams,
+  slotParam,
+  type DuplicateKeyBody,
+  type PageSlot,
+} from "./deck.ts";
 import { applyPluginChoices, pluginChoicesBody } from "./plugins.ts";
 
 /**
@@ -51,6 +61,14 @@ export default async function localConfigRoutes(app: FastifyInstance) {
     if (!(await saveKeyPage(req.params.page, req.params.slot, null))) return reply.code(404).send({ error: "Page inconnue" });
     return { ok: true };
   });
+
+  app.post<{ Body: DuplicateKeyBody }>("/local/config/keys/duplicate", { schema: { body: duplicateKeyBody } }, async (req) =>
+    duplicateKey({ page: req.body.page, slot: req.body.slot }, req.body.to),
+  );
+
+  app.post<{ Params: { page: number } }>("/local/config/pages/:page/duplicate", { schema: { params: pageParam } }, async (req) => ({
+    page: await duplicateKeyPage(req.params.page),
+  }));
 
   // --- Plugins : aussi ceux dont l'appli est absente (`present: false`), pour les tuiles de la section Connecteurs
 

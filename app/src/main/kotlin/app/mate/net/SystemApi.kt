@@ -25,7 +25,7 @@ data class AppAudio(val running: Boolean, val volume: Int?, val muted: Boolean, 
 data class MixerChannel(val id: String, val name: String, val volume: Int?, val muted: Boolean, val level: Int?)
 
 /** `apps` null : pas de volume par appli sur cet ordinateur (Mac). */
-data class MixerState(val master: MixerChannel, val mic: MixerChannel, val apps: List<MixerChannel>?)
+data class MixerState(val master: MixerChannel, val mic: MixerChannel, val apps: List<MixerChannel>?, val front: String? = null)
 
 /** Scène du mélangeur : volumes de la sortie et des applis rappelés en un toucher. */
 data class MixerScene(val id: String, val name: String)
@@ -50,7 +50,8 @@ data class DiskPerf(val freeGb: Double, val totalGb: Double, val activity: Int?)
 data class NetPerf(val upKBps: Int, val downKBps: Int)
 
 /**
- * Performances de l'ordinateur ; `gpu`, `cpuMhz`, `cpuTempC` (°C), `disk` et `net` absents quand l'ordinateur ne sait pas les lire.
+ * Performances de l'ordinateur ; `gpu`, `cpuMhz`, `cpuTempC` (°C), `cpuWatts` et `gpuWatts` (W), `cpuFanRpm` (tr/min), `disk` et
+ * `net` absents quand l'ordinateur ne sait pas les lire.
  * `fpsReadable` : l'ordinateur sait lire les images par seconde ; `fps` est alors nul tant qu'aucun jeu n'est mesuré.
  */
 data class PcPerf(
@@ -65,9 +66,14 @@ data class PcPerf(
     val cpuTempC: Int? = null,
     val fps: Int? = null,
     val fpsReadable: Boolean = false,
+    val cpuWatts: Double? = null,
+    val cpuFanRpm: Int? = null,
+    val gpuWatts: Double? = null,
 )
 
 private fun JSONObject.intOrNull(key: String): Int? = if (isNull(key)) null else getInt(key)
+
+private fun JSONObject.doubleOrNull(key: String): Double? = if (isNull(key)) null else getDouble(key)
 
 fun parsePerf(json: String): PcPerf {
     val j = JSONObject(json)
@@ -80,7 +86,9 @@ fun parsePerf(json: String): PcPerf {
     }
     val disk = j.optJSONObject("disk")?.let { d -> DiskPerf(d.getDouble("freeGb"), d.getDouble("totalGb"), d.intOrNull("activity")) }
     val net = j.optJSONObject("net")?.let { n -> NetPerf(n.getInt("upKBps"), n.getInt("downKBps")) }
-    return PcPerf(j.getInt("cpu"), ram.getInt("percent"), ram.getDouble("used"), ram.getDouble("total"), gpu, j.intOrNull("cpuMhz"), disk, net, j.intOrNull("cpuTempC"), j.intOrNull("fps"), j.has("fps"))
+    return PcPerf(j.getInt("cpu"), ram.getInt("percent"), ram.getDouble("used"), ram.getDouble("total"), gpu, j.intOrNull("cpuMhz"), disk, net, j.intOrNull("cpuTempC"), j.intOrNull("fps"), j.has("fps"),
+        cpuWatts = j.doubleOrNull("cpuWatts"), cpuFanRpm = j.intOrNull("cpuFanRpm"), gpuWatts = j.doubleOrNull("gpuWatts"),
+    )
 }
 
 /**
@@ -122,6 +130,22 @@ fun parseClipHistory(json: String): List<ClipHistoryItem> {
     }
 }
 
+/** Sortie audio de l'ordinateur (enceinte, casque, carte son) ; `id` : identifiant du système, `current` : celle qui sert. */
+data class AudioOutput(val id: String, val name: String, val current: Boolean)
+
+/** Réponse de `GET /system/audio/outputs` et `POST /system/audio/output`. */
+fun parseAudioOutputs(json: String): List<AudioOutput> {
+    val outputs = JSONObject(json).optJSONArray("outputs") ?: return emptyList()
+    return (0 until outputs.length()).mapNotNull { i ->
+        val o = outputs.optJSONObject(i) ?: return@mapNotNull null
+        val id = o.optStringOrNull("id") ?: return@mapNotNull null
+        AudioOutput(id, o.optStringOrNull("name") ?: id, o.optBoolean("current"))
+    }
+}
+
+/** Place de la sortie qui sert dans la liste, -1 si aucune. */
+fun currentOutputIndex(outputs: List<AudioOutput>): Int = outputs.indexOfFirst { it.current }
+
 /** Système de l'ordinateur : son, lecture en cours, Ne pas déranger, appels, applis, saisie, réglages. */
 class SystemApi(private val http: Http) {
 
@@ -151,6 +175,14 @@ class SystemApi(private val http: Http) {
         parseAppAudio(http.postJson("/system/audio/app", body))
     }
 
+    /** Sorties audio de l'ordinateur ; HTTP 501 si l'ordinateur ne pilote pas le son. */
+    suspend fun audioOutputs(): List<AudioOutput> = http.io { parseAudioOutputs(http.get("/system/audio/outputs", timeoutMs = 5_000)) }
+
+    /** Fait de la sortie `id` la sortie par défaut de l'ordinateur ; rend la liste à jour. */
+    suspend fun setAudioOutput(id: String): List<AudioOutput> = http.io {
+        parseAudioOutputs(http.postJson("/system/audio/output", JSONObject().put("id", id)))
+    }
+
     // Mélangeur (onglet Son) ; HTTP 501 si l'ordinateur ne pilote pas le son.
 
     suspend fun mixer(): MixerState = http.io { parseMixer(JSONObject(http.get("/system/mixer", timeoutMs = 5_000))) }
@@ -160,6 +192,14 @@ class SystemApi(private val http: Http) {
         volume?.let { body.put("volume", it) }
         muted?.let { body.put("muted", it) }
         parseMixer(JSONObject(http.postJson("/system/mixer", body)))
+    }
+
+    /** Règle d'un coup les applis d'un groupe (voie qui en réunit plusieurs) ; 501 sur un ordinateur sans volume par appli (Mac). */
+    suspend fun setMixerGroup(ids: List<String>, volume: Int? = null, muted: Boolean? = null): MixerState = http.io {
+        val body = JSONObject().put("ids", JSONArray(ids))
+        volume?.let { body.put("volume", it) }
+        muted?.let { body.put("muted", it) }
+        parseMixer(JSONObject(http.postJson("/system/mixer/group", body)))
     }
 
     suspend fun mixerScenes(): List<MixerScene> = http.io {
@@ -213,6 +253,9 @@ class SystemApi(private val http: Http) {
         Unit
     }
 
+    /** Minuteur de pause musique : met en pause ce qui joue, rien d'autre ; rend le nombre de lectures mises en pause. */
+    suspend fun pauseMedia(): Int = http.io { JSONObject(http.postJson("/system/media/pause", JSONObject())).getInt("paused") }
+
     suspend fun mediaThumb(app: String, key: String): ByteArray? = http.io {
         http.bytesOrNull("/system/media/thumb?app=${http.encode(app)}&key=${http.encode(key)}", timeoutMs = 10_000)
     }
@@ -223,6 +266,11 @@ class SystemApi(private val http: Http) {
     /** Ne pas déranger de l'ordinateur pendant le Focus (src/dnd.ts) ; `minutes` : temps restant, pour le minuteur de secours. */
     suspend fun focusDnd(on: Boolean, minutes: Int) = http.io {
         http.postJson("/system/dnd", JSONObject().put("on", on).put("minutes", minutes.coerceIn(1, 240))); Unit
+    }
+
+    /** Écran de l'ordinateur gardé allumé pendant le Focus (src/awake.ts) ; `minutes` : temps restant, pour le minuteur de secours. */
+    suspend fun focusAwake(on: Boolean, minutes: Int) = http.io {
+        http.postJson("/system/awake", JSONObject().put("on", on).put("minutes", minutes.coerceIn(1, 240))); Unit
     }
 
     /** Ne pas déranger de l'ordinateur : null si illisible (pastille de Ma journée). */
@@ -282,6 +330,7 @@ class SystemApi(private val http: Http) {
         return MixerState(
             parseChannel(j.getJSONObject("master")), parseChannel(j.getJSONObject("mic")),
             apps?.let { a -> (0 until a.length()).map { parseChannel(a.getJSONObject(it)) } },
+            if (j.isNull("front")) null else j.optString("front").ifEmpty { null },
         )
     }
 

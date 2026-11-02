@@ -53,10 +53,13 @@ namespace Mate
                 case "windows": return WindowsOp(req);
                 case "allwindows": return AllWindows(req);
                 case "keys": PressKeys(IntList(req, "mods"), Int(req, "vk", 0), Str(req, "ch")); return true;
+                case "holdkeys": HoldKeys(IntList(req, "mods"), Int(req, "vk", 0), Str(req, "ch"), Program.Bool(req, "down")); return true;
                 case "text": TypeText(Str(req, "text")); return true;
                 case "audio": return Audio(req);
                 case "appaudio": return AppAudio(req);
                 case "mixer": return Mixer(req);
+                case "outputs": return AudioOutputs();
+                case "setoutput": return SetAudioOutput(Str(req, "id"));
                 case "perf": return Perf(req);
                 case "cpu": return Cpu();
                 case "fps": return Fps();

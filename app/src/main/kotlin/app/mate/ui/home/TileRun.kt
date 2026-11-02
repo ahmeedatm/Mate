@@ -9,10 +9,10 @@ import app.mate.ui.ActionSpeech
 /**
  * Lance la touche [id] sur l'ordinateur ; point commun des touches des widgets (Touches, Apps, Discord, Réunion, sites).
  * Annonce le résultat à voix haute si le réglage est allumé ([ActionSpeech]). Une appli à plusieurs fenêtres ne se lance
- * pas encore (l'ordinateur rend ses fenêtres à choisir) : rien n'est annoncé.
+ * pas encore (l'ordinateur rend ses fenêtres à choisir) : rien n'est annoncé. [hold] : sa seconde action (appui long).
  */
-suspend fun runTileSpoken(context: Context, id: String, label: String): Result<TileResult> {
-    val result = runCatchingCancellable { BackendClient(context).deck.runTile(id) }
+suspend fun runTileSpoken(context: Context, id: String, label: String, hold: Boolean = false): Result<TileResult> {
+    val result = runCatchingCancellable { BackendClient(context).deck.runTile(id, hold) }
     if (result.isFailure || result.getOrNull()?.windows == null) ActionSpeech.announce(context, label, ok = result.isSuccess)
     return result
 }

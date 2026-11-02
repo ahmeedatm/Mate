@@ -66,6 +66,7 @@ export default async function tabletRoutes(app: FastifyInstance) {
     breakMinutes?: number;
     kind?: (typeof NOISES)[number];
     volume?: number;
+    on?: boolean;
   };
 
   app.post<{ Body: CommandBody }>(
@@ -77,7 +78,7 @@ export default async function tabletRoutes(app: FastifyInstance) {
           required: ["type"],
           additionalProperties: false,
           properties: {
-            type: { enum: ["mode", "message", "document", "focus", "noise", "screenshot"] },
+            type: { enum: ["mode", "message", "document", "focus", "noise", "screenshot", "ring"] },
             mode: { enum: MODES },
             text: { type: "string", minLength: 1, maxLength: 1000 },
             speak: { type: "boolean" },
@@ -88,6 +89,7 @@ export default async function tabletRoutes(app: FastifyInstance) {
             breakMinutes: { type: "integer", minimum: 1, maximum: 60 },
             kind: { enum: NOISES },
             volume: { type: "number", minimum: 0, maximum: 1 },
+            on: { type: "boolean" },
           },
         },
       },
@@ -123,18 +125,24 @@ export default async function tabletRoutes(app: FastifyInstance) {
         case "screenshot":
           command = { type: "screenshot" };
           break;
+        case "ring":
+          if (b.on === undefined) return missing("on");
+          command = { type: "ring", on: b.on };
+          break;
         case "call":
+        case "alert":
         case "agent":
         case "notification":
         case "meeting":
         case "foreground":
+        case "tilestate":
         case "lock":
         case "settings":
         case "layout":
         case "update":
           // Envoyés seulement par la surveillance des appels (src/calls.ts), les agents Claude (src/agents.ts), celle
           // des notifications (src/notifications.ts), celle des réunions (src/meeting-watch.ts), celle du premier plan
-          // (src/foreground-watch.ts), celle du verrouillage (src/screen-lock.ts) et la page locale.
+          // (src/foreground-watch.ts), celle des états de touches (src/tile-state.ts), celle du verrouillage (src/screen-lock.ts), celle des alertes maison (src/alerts.ts) et la page locale.
           return reply.code(400).send({ error: "Ordre réservé à l'ordinateur" });
       }
       const result = await sendToTablet(command, b.type === "screenshot" ? 30_000 : 15_000);

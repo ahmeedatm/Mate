@@ -108,6 +108,10 @@ async function startOnce(options: ServerOptions, port: number): Promise<TestServ
       GITHUB_TOKEN: "",
       GITHUB_URL: "",
       GITHUB_CLIENT_ID: "",
+      // Pas de vrai Home Assistant : les tests donnent leur faux serveur.
+      HA_URL: "",
+      HA_TOKEN: "",
+      HA_ENTITIES: "",
       ACCOUNTS_FILE: path.join(backendDir, "test", "accounts-vide.json"),
       FAKE_OS: options.os ?? "mac",
       FAKE_OS_STATE: osState,

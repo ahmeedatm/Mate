@@ -45,7 +45,7 @@
     {
       "title": "Raccourcis",
       "tiles": [
-        { "label": "Capture zone", "symbol": "screenshot", "glyph": "✂️", "action": { "type": "keys", "keys": "win+shift+s" } },
+        { "label": "Capture zone", "symbol": "screenshot", "glyph": "✂️", "action": { "type": "keys", "keys": "win+shift+s" }, "hold": { "type": "system", "command": "screenshot-clipboard" } },
         { "label": "Capture d'écran", "symbol": "clipboard", "glyph": "📋", "action": { "type": "system", "command": "screenshot-clipboard" } },
         { "label": "Vue des tâches", "symbol": "windows", "glyph": "🗂", "action": { "type": "keys", "keys": "win+tab" } },
         { "label": "Bureau", "glyph": "🖼", "action": { "type": "keys", "keys": "win+d" } },
@@ -53,8 +53,8 @@
         { "label": "Mode sombre", "symbol": "dark_mode", "glyph": "🌙", "action": { "type": "system", "command": "toggle-dark-mode" } },
         { "label": "Veille écran", "symbol": "bedtime", "glyph": "💤", "action": { "type": "system", "command": "sleep-display" } },
         { "label": "Verrouiller", "symbol": "lock", "glyph": "🔒", "action": { "type": "system", "command": "lock" } },
-        { "label": "Couper le micro", "symbol": "mic_off", "glyph": "🎙", "action": { "type": "system", "command": "mute-mic" } },
-        { "label": "Ne pas déranger", "symbol": "dnd", "glyph": "⛔", "action": { "type": "system", "command": "dnd" } }
+        { "label": "Couper le micro", "symbol": "mic_off", "glyph": "🎙", "state": "mic-muted", "action": { "type": "system", "command": "mute-mic" } },
+        { "label": "Ne pas déranger", "symbol": "dnd", "glyph": "⛔", "state": "dnd", "action": { "type": "system", "command": "dnd" } }
       ]
     }
   ]

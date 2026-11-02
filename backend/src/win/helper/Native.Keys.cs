@@ -28,10 +28,10 @@ namespace Mate
             Thread.Sleep(8);
         }
 
-        /** Combinaison : modificateurs (codes VK) + touche, par code VK ou par caractère (cherché dans la disposition active, AZERTY compris). */
-        static void PressKeys(List<int> mods, int vk, string ch)
+        /** Modificateurs (codes VK) et touche d'une combinaison, par code VK ou par caractère (disposition active, AZERTY compris). */
+        static int ResolveKeys(List<int> mods, int vk, string ch, out List<int> all)
         {
-            var all = new List<int>(mods);
+            all = new List<int>(mods);
             if (!string.IsNullOrEmpty(ch))
             {
                 uint ignored;
@@ -45,8 +45,31 @@ namespace Mate
                 if ((state & 4) != 0 && !all.Contains(0x12)) all.Add(0x12);
             }
             if (vk <= 0) throw new Exception("Touche manquante");
+            return vk;
+        }
+
+        /** Combinaison : modificateurs (codes VK) + touche, enfoncés puis relâchés. */
+        static void PressKeys(List<int> mods, int vk, string ch)
+        {
+            List<int> all;
+            vk = ResolveKeys(mods, vk, ch, out all);
             foreach (int m in all) Key(m, false);
             Key(vk, false);
+            Key(vk, true);
+            for (int i = all.Count - 1; i >= 0; i--) Key(all[i], true);
+        }
+
+        /** Tient (down) ou lâche une combinaison : modificateurs puis touche, relâchés dans l'ordre inverse. */
+        static void HoldKeys(List<int> mods, int vk, string ch, bool down)
+        {
+            List<int> all;
+            vk = ResolveKeys(mods, vk, ch, out all);
+            if (down)
+            {
+                foreach (int m in all) Key(m, false);
+                Key(vk, false);
+                return;
+            }
             Key(vk, true);
             for (int i = all.Count - 1; i >= 0; i--) Key(all[i], true);
         }

@@ -199,6 +199,34 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:orientation="horizontal" />
+
+            <!-- Minuteur de pause musique : 15, 30 ou 60 min, puis la musique de l'ordinateur se met en pause. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <!-- Largeur libre (poids) : le décompte qui change ne fait pas bouger la carte. -->
+                <TextView
+                    android:id="@+id/focus_sleep_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:fontFamily="?attr/c_font_medium"
+                    android:singleLine="true"
+                    android:text="@string/sleep_label"
+                    android:textColor="?attr/c_text"
+                    android:textSize="16sp" />
+
+                <LinearLayout
+                    android:id="@+id/focus_sleep"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 

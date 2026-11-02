@@ -71,15 +71,74 @@ export async function docEntry(relative: string) {
   };
 }
 
+function stamp() {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
+}
+
 export async function savePhoto(data: Buffer, extension = ".jpg") {
   const dir = path.join(config.docsDir, PHOTOS_DIR);
   await fs.mkdir(dir, { recursive: true });
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const stamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
-  const name = `photo-${stamp}${extension}`;
+  const name = `photo-${stamp()}${extension}`;
   await fs.writeFile(path.join(dir, name), data);
   return path.join(PHOTOS_DIR, name);
+}
+
+const RESERVED_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+/** Assez court pour qu'un « (n) » de plus tienne dans les 255 octets d'un nom de fichier. */
+const NAME_MAX = 120;
+/** Caractères de direction (U+202A–U+202E, U+2066–U+2069) et invisibles (U+200B–U+200F) : un RLO ferait lire le nom à l'envers (« exe » déguisé en « jpg »). */
+const INVISIBLE = /[\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g;
+/** Seuls types qu'on dépose : rien qui s'exécute ou s'ouvre en lançant du code (exe, rdp, docm, html, lnk…). */
+const SHARE_EXTENSIONS = new Set(
+  ".pdf .jpg .jpeg .png .gif .webp .heic .txt .md .csv .json .log .docx .xlsx .pptx .odt .ods .odp .zip .mp3 .m4a .mp4 .mov".split(" "),
+);
+
+/**
+ * Nom sûr sur Mac comme sur Windows : sans dossier, sans caractère interdit, de contrôle, de direction ou invisible
+ * (un « : » ouvrirait un flux NTFS), sans point de tête (le fichier serait caché de la liste) ni point ou espace
+ * final, sans nom réservé (CON, NUL…) avant le premier point (`con.x.txt` l'est aussi), au plus [NAME_MAX]
+ * caractères, extension gardée. Refusé (415) si l'extension n'est pas dans [SHARE_EXTENSIONS].
+ */
+function shareName(filename: string) {
+  const base = path.basename(filename.replace(INVISIBLE, "").replace(/\\/g, "/"));
+  const clean = base
+    .replace(/[<>:"|?*\x00-\x1f]/g, "_")
+    .replace(/^\.+/, "")
+    .replace(/[. ]+$/, "")
+    .trim();
+  const ext = path.extname(clean).slice(0, 20);
+  if (!SHARE_EXTENSIONS.has(ext.toLowerCase())) {
+    throw Object.assign(new Error("Type de fichier non accepté"), { statusCode: 415 });
+  }
+  const name = clean.slice(0, clean.length - ext.length).slice(0, NAME_MAX - ext.length) + ext;
+  return RESERVED_NAME.test(name.split(".")[0].trimEnd()) ? `_${name}` : name;
+}
+
+/**
+ * Fichier partagé depuis une autre appli de la tablette (« Partager » > Mate) : déposé à la racine du dossier
+ * partagé sous le nom de [shareName], jamais par-dessus un fichier déjà là : « nom (2).ext ».
+ */
+export async function saveShared(data: Buffer, filename: string) {
+  await fs.mkdir(config.docsDir, { recursive: true });
+  const safe = shareName(filename);
+  const ext = path.extname(safe);
+  const stem = safe.slice(0, safe.length - ext.length);
+  for (let n = 1; ; n++) {
+    const name = n === 1 ? safe : `${stem} (${n})${ext}`;
+    const full = path.join(config.docsDir, name);
+    try {
+      // "wx" : échoue si le fichier existe, donc deux envois simultanés ne s'écrasent pas.
+      await fs.writeFile(full, data, { flag: "wx" });
+      return name;
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "EEXIST") continue;
+      // Disque plein, coupure : pas de fichier partiel listé comme un fichier valide.
+      await fs.rm(full, { force: true });
+      throw e;
+    }
+  }
 }
 
 export const FRAME_DIR = "Cadre photo";

@@ -154,7 +154,7 @@ class ProfilesDialog(
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0f).apply {
                 marginStart = context.dp(14)
             })
-            if (layout.gameProfile == i) addView(gameTag(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            if (layout.appsOf(i).isNotEmpty()) addView(appsTag(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 marginStart = context.dp(10)
             })
             if (shown) addView(shownTag(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
@@ -184,12 +184,12 @@ class ProfilesDialog(
                 null
             },
         )
-        // Réunion, caché hors appel, ne peut pas être l'écran de jeu : sa place reste vide, les boutons restent alignés.
+        // Réunion, caché hors appel, ne peut pas s'afficher à cause d'une appli : sa place reste vide, les boutons restent alignés.
         slot(
             if (i != layout.callProfile) {
-                iconButton(R.drawable.ic_gamepad, R.string.profile_game, if (layout.gameProfile == i) R.attr.c_accent else R.attr.c_text_dim) {
+                iconButton(R.drawable.ic_gamepad, R.string.profile_apps, if (layout.appsOf(i).isNotEmpty()) R.attr.c_accent else R.attr.c_text_dim) {
                     GameScreenDialog(context, layout, i, name(i)) { changed(structure = false) }.show()
-                }.also { TooltipCompat.setTooltipText(it, context.getString(R.string.profile_game)) }
+                }.also { TooltipCompat.setTooltipText(it, context.getString(R.string.profile_apps)) }
             } else {
                 null
             },
@@ -201,8 +201,8 @@ class ProfilesDialog(
     /** Le bouton, ou une place vide de même taille. */
     private fun LinearLayout.slot(button: ImageButton?) = addView(button ?: Space(context).apply { layoutParams = LinearLayout.LayoutParams(context.dp(48), context.dp(48)) })
 
-    /** Étiquette « Jeu » de l'écran qui s'affiche tout seul quand on joue : l'état se lit sans la couleur de la manette. */
-    private fun gameTag() = shownTag().apply { setText(R.string.profile_game_tag) }
+    /** Étiquette « Applis » de la page qui s'affiche toute seule quand une appli passe devant : l'état se lit sans la couleur de la manette. */
+    private fun appsTag() = shownTag().apply { setText(R.string.profile_apps_tag) }
 
     /** Étiquette « Affiché » du profil à l'écran : texte de l'accent sur une pilule de l'accent atténué. */
     private fun shownTag() = TextView(context).apply {

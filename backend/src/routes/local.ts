@@ -148,15 +148,32 @@ export default async function localRoutes(app: FastifyInstance) {
     },
   );
 
+  /** Bouton « Faire sonner » du panneau Tablette (ordre `ring`) : retrouver la tablette. */
+  app.post<{ Body: { on: boolean } }>(
+    "/local/tablet/ring",
+    {
+      schema: {
+        body: { type: "object", required: ["on"], additionalProperties: false, properties: { on: { type: "boolean" } } },
+      },
+    },
+    async (req, reply) => {
+      if (!tabletStatus().connected) return reply.code(409).send({ error: "Tablette non connectée" });
+      const result = await sendToTablet({ type: "ring", on: req.body.on });
+      return result.ok ? { ok: true } : reply.code(502).send({ error: result.error });
+    },
+  );
+
   // Connexion d'un compte d'agenda (src/accounts.ts), depuis la page locale : le navigateur de l'ordinateur part chez
   // Microsoft ou Google et revient sur /oauth/…/callback (adresse déclarée telle quelle dans l'appli enregistrée).
-  app.get<{ Params: { provider: string } }>("/oauth/:provider/start", async (req, reply) => {
+  // `?mail=1` : connexion à part qui ajoute la lecture des mails (nombre de non lus) ; sans elle, l'agenda seul.
+  app.get<{ Params: { provider: string }; Querystring: { mail?: string } }>("/oauth/:provider/start", async (req, reply) => {
     if (!isProvider(req.params.provider) || !(await availableProviders()).some((p) => p.provider === req.params.provider)) {
       return reply.code(404).send({ error: "Connexion non disponible pour ce compte" });
     }
     // Microsoft : localhost (seule adresse de retour http acceptée) ; Google : 127.0.0.1 (recommandé pour les applis de bureau).
     const host = req.params.provider === "microsoft" ? "localhost" : "127.0.0.1";
-    return reply.redirect(await loginUrl(req.params.provider, `http://${host}:${config.port}/oauth/${req.params.provider}/callback`));
+    const redirectUri = `http://${host}:${config.port}/oauth/${req.params.provider}/callback`;
+    return reply.redirect(await loginUrl(req.params.provider, redirectUri, req.query.mail === "1"));
   });
 
   app.get<{ Params: { provider: string }; Querystring: { code?: string; state?: string; error?: string; error_description?: string } }>(
@@ -169,9 +186,9 @@ export default async function localRoutes(app: FastifyInstance) {
         return back(req.query.error === "access_denied" ? "refused" : "error");
       }
       try {
-        await finishLogin(req.query.state, req.query.code);
+        const { mail } = await finishLogin(req.query.state, req.query.code);
         invalidateCalendar();
-        return back("ok");
+        return back(mail ? "mail" : "ok");
       } catch (e) {
         req.log.error(e);
         return back("error");

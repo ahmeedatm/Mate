@@ -32,6 +32,7 @@ describe("porte MCP", () => {
     const names = (await client.listTools()).tools.map((t) => t.name);
     for (const name of [
       "tablette_etat",
+      "tablette_sonner",
       "deck_touche_affecter",
       "tablette_reglages",
       "tablette_regler",

@@ -16,7 +16,9 @@ import {
   listWindows,
   openTarget,
   placeWindow,
+  pointerGesture,
   pressButton,
+  holdKeys,
   runShortcut,
   sendKeys,
   sendMediaKey,
@@ -27,6 +29,7 @@ import {
   type MediaCommand,
   type SystemCommand,
 } from "./os.ts";
+import type { PointerGesture } from "./pointer.ts";
 import type { Layout } from "./screens.ts";
 import {
   loadKeyPages,
@@ -43,9 +46,11 @@ import { agentsAvailable } from "./agents-sources.ts";
 import { githubAvailable } from "./github.ts";
 import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
+import { haConfigured } from "./ha.ts";
 import { jiraConfigured } from "./jira.ts";
 import { appPluginOff, pluginOn, pluginsOff } from "./plugins.ts";
 import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
+import { callLanTarget } from "./lan-call.ts";
 
 /**
  * Étapes possibles d'une tuile. La tablette n'envoie qu'un identifiant de tuile : seules les actions
@@ -54,13 +59,18 @@ import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
 export type Step =
   | { type: "app"; name: string }
   | { type: "url"; url: string }
-  | { type: "keys"; keys: string; app?: string }
+  /** `push` : touches tenues tant que le doigt reste sur la touche (parler en maintenant), voir `holdTile`. */
+  | { type: "keys"; keys: string; app?: string; push?: boolean }
   | { type: "shortcut"; name: string }
   | { type: "media"; command: MediaCommand }
   | { type: "system"; command: SystemCommand }
   /** Colle un texte dans l'appli au premier plan. */
   | { type: "text"; text: string }
   | { type: "wait"; ms: number }
+  /** Geste du Pavé (retour, bureau suivant, zoom…), traduit en raccourci selon le système ; enregistré depuis le Pavé de la tablette. */
+  | { type: "gesture"; name: PointerGesture }
+  /** Appelle une cible du réseau local déclarée sur l'ordinateur (`LAN_TARGETS`, voir lan-call.ts) ; la tablette n'envoie que son nom. */
+  | { type: "http"; name: string }
   /**
    * Appuie sur un bouton de la fenêtre de l'appli (UI Automation, Accessibilité sur Mac), le premier trouvé parmi
    * `names` ; `waitMs` : le bouton peut mettre ce temps à apparaître (panneau ouvert par l'étape d'avant).
@@ -70,7 +80,7 @@ export type Step =
   | { type: "window"; app: string; display?: string; layout?: Layout };
 
 /** Une macro enchaîne des étapes. */
-export type Action = Step | { type: "macro"; steps: Step[] };
+export type Action = Step | { type: "macro"; steps: Step[] } | { type: "cycle"; steps: Step[] };
 
 /** glyph : symbole affiché à la place de l'icône (emoji), utile pour les raccourcis. */
 /**
@@ -79,17 +89,24 @@ export type Action = Step | { type: "macro"; steps: Step[] };
  * l'écran d'avant-réunion de Teams (`lobby` : « Rejoindre maintenant »).
  * lit : touche allumée (rouge, comme Muet dans l'onglet Son) quand le micro est coupé (`muted`) ou le casque en
  * sourdine (`deafened`), ou la caméra coupée (`camera`, Teams sur Mac), d'après l'appel lu dans l'appli.
+ * state : touche allumée tant que ce qu'elle pilote est actif, lu sur l'ordinateur (src/tile-state.ts) : micro coupé
+ * (`mic-muted`), Ne pas déranger (`dnd`) ou appli de l'action lancée (`running`).
  */
 type TileConfig = {
   label: string;
   action: Action;
+  /** Seconde action, lancée par l'appui long (`hold` dans `POST /deck/run`) ; sans elle, l'appui long ne lance rien. */
+  hold?: Action;
   icon?: string;
   /** Symbole de la tablette (TILE_SYMBOLS de screens.ts) ; un nom inconnu est ignoré. */
   symbol?: string;
   glyph?: string;
   color?: string;
+  /** Cases de large dans la grille de la tablette : 2 pour une touche large, absent pour une touche simple. */
+  span?: 2;
   when?: "call" | "idle" | "streaming" | "share" | "lobby";
   lit?: "muted" | "deafened" | "camera";
+  state?: "mic-muted" | "dnd" | "running";
 };
 /** `apps` : page d'applis que l'on complète depuis la tablette (voir saveApps) ; `meeting` : page affichée
  * par la tablette après « Rejoindre » (micro, caméra, raccrocher) ; `app` : page d'une appli (Discord, Teams…),
@@ -201,17 +218,21 @@ export async function deckLinks() {
 }
 
 /** `url` tapée sur la tablette : « netflix.com » devient https://netflix.com ; nom par défaut tiré de l'adresse. */
-export async function addDeckLink(url: string, label?: string) {
+export function normalizeLink(url: string, label?: string): DeckLink {
   const parsed = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(url.trim()) ? url.trim() : "https://" + url.trim());
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("Adresse web attendue (https://…)");
   const href = parsed.pathname === "/" && !parsed.search && !parsed.hash ? parsed.origin : parsed.href;
-  const name = label?.trim() || parsed.hostname.replace(/^www\./, "");
+  return { label: label?.trim() || parsed.hostname.replace(/^www\./, ""), url: href };
+}
+
+export async function addDeckLink(url: string, label?: string) {
+  const link = normalizeLink(url, label);
   const links = await loadLinks();
-  if (!links.some((l) => l.url === href)) {
-    links.push({ label: name, url: href });
+  if (!links.some((l) => l.url === link.url)) {
+    links.push(link);
     await saveLinks(links);
   }
-  return linkTileId(href);
+  return linkTileId(link.url);
 }
 
 export async function removeDeckLink(id: string) {
@@ -236,6 +257,7 @@ export async function homeFeatures() {
   const agents = agentsAvailable() && (await pluginOn("claude"));
   // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
   const jira = jiraConfigured && (await pluginOn("jira"));
+  // `ha` : widget Home Assistant (HA_URL, HA_TOKEN et HA_ENTITIES dans .env).
   return {
     agenda: true,
     linked: await hasCalendar(),
@@ -245,6 +267,7 @@ export async function homeFeatures() {
     gitlab: canControl && (await gitlabAvailable()),
     github: canControl && (await githubAvailable()),
     jira,
+    ha: haConfigured,
     off: await pluginsOff(),
   };
 }
@@ -288,8 +311,18 @@ export async function loadDeck(): Promise<DeckPage[]> {
     keys.map((key, slot) => {
       const id = `${prefix}${slot}`;
       if (!key) return { id, empty: true as const };
-      const action: Action = key.steps.length === 1 ? key.steps[0] : { type: "macro", steps: key.steps };
-      return { id, label: key.label, ...(key.symbol ? { symbol: key.symbol } : {}), glyph: key.glyph, color: key.color, action };
+      const action: Action = key.steps.length === 1 ? key.steps[0] : { type: key.cycle ? "cycle" : "macro", steps: key.steps };
+      const hold: Action | undefined = key.hold && (key.hold.length === 1 ? key.hold[0] : { type: "macro", steps: key.hold });
+      return {
+        id,
+        label: key.label,
+        ...(key.symbol ? { symbol: key.symbol } : {}),
+        glyph: key.glyph,
+        color: key.color,
+        ...(key.span === 2 ? { span: 2 as const } : {}),
+        action,
+        ...(hold ? { hold } : {}),
+      };
     });
   pages.push({ title: "Perso", editable: true, tiles: keyTiles(await loadKeys(), PERSO_PREFIX) });
   (await loadKeyPages()).forEach((page, n) => {
@@ -331,8 +364,19 @@ export async function findTile(id: string): Promise<Tile | undefined> {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function runAction(action: Action): Promise<unknown> {
+/** Prochaine étape de chaque touche à cycle, par identifiant de tuile. shortcut: perdu au redémarrage du compagnon, et gardé si la touche est redéfinie sous le même identifiant ; à reprendre si l'état visible de la touche le demande. */
+const cycleNext = new Map<string, number>();
+
+/** `tileId` : la touche dont on suit le cycle ; sans lui, un cycle lance toujours sa première étape. */
+export async function runAction(action: Action, tileId?: string): Promise<unknown> {
   switch (action.type) {
+    case "cycle": {
+      const next = (tileId && cycleNext.get(tileId)) || 0;
+      const index = next % action.steps.length;
+      await runAction(action.steps[index]);
+      if (tileId) cycleNext.set(tileId, index + 1);
+      return;
+    }
     case "macro":
       for (const [i, step] of action.steps.entries()) {
         await runAction(step);
@@ -348,6 +392,8 @@ export async function runAction(action: Action): Promise<unknown> {
       }
       return openTarget(action.url);
     case "keys":
+      // Une touche à maintenir ne part pas d'un appui simple : le micro resterait ouvert sans relâchement.
+      if (action.push) throw Object.assign(new Error("Cette touche se maintient : appui et relâchement"), { statusCode: 409 });
       return sendKeys(action.keys, action.app);
     case "shortcut":
       return runShortcut(action.name);
@@ -355,8 +401,12 @@ export async function runAction(action: Action): Promise<unknown> {
       return sendMediaKey(action.command);
     case "text":
       return typeText(action.text);
+    case "gesture":
+      return pointerGesture(action.name);
     case "wait":
       return sleep(Math.min(action.ms, 10_000));
+    case "http":
+      return callLanTarget(action.name);
     case "press": {
       const until = Date.now() + Math.min(action.waitMs ?? 0, 10_000);
       while (!(await pressButton(action.app, action.names))) {
@@ -374,6 +424,52 @@ export async function runAction(action: Action): Promise<unknown> {
       return systemCommand(action.command);
   }
   throw new Error(`Action inconnue : ${JSON.stringify(action)}`);
+}
+
+/** Touche à maintenir : ses touches tiennent jusqu'au relâchement, ou jusqu'à ce délai si le « relâché » ne vient pas. */
+export const PUSH_MAX_MS = 60_000;
+/** Touches tenues en ce moment : la combinaison réellement enfoncée (la config peut changer entre l'appui et le relâchement). */
+const pushing = new Map<string, { combo: string; timer: NodeJS.Timeout }>();
+/** Appels d'une même touche mis en file : un relâchement ne double jamais son appui. */
+const pushQueue = new Map<string, Promise<void>>();
+
+export const isPush = (tile: Tile) => tile.action.type === "keys" && tile.action.push === true;
+
+/** `down` : tient les touches de la touche à maintenir `tile` ; sinon les lâche (sans effet si elles n'étaient pas tenues). */
+export function holdTile(tile: Tile, down: boolean): Promise<void> {
+  if (tile.action.type !== "keys") throw new Error("Touche sans raccourci à maintenir");
+  const combo = tile.action.keys;
+  const next = (pushQueue.get(tile.id) ?? Promise.resolve()).catch(() => undefined).then(() => pushStep(tile.id, combo, down));
+  pushQueue.set(tile.id, next);
+  const forget = () => {
+    if (pushQueue.get(tile.id) === next) pushQueue.delete(tile.id);
+  };
+  next.then(forget, forget);
+  return next;
+}
+
+async function pushStep(id: string, combo: string, down: boolean) {
+  const held = pushing.get(id);
+  if (held) {
+    clearTimeout(held.timer);
+    pushing.delete(id);
+    await holdKeys(held.combo, false);
+  }
+  if (!down) return;
+  await holdKeys(combo, true);
+  const timer = setTimeout(() => {
+    pushing.delete(id);
+    holdKeys(combo, false).catch(() => undefined);
+  }, PUSH_MAX_MS);
+  timer.unref();
+  pushing.set(id, { combo, timer });
+}
+
+/** Arrêt du compagnon : rien ne reste enfoncé sur l'ordinateur. */
+export async function releaseAllPushed() {
+  const all = [...pushing.entries()];
+  pushing.clear();
+  await Promise.all(all.map(([, held]) => (clearTimeout(held.timer), holdKeys(held.combo, false).catch(() => undefined))));
 }
 
 /** Lance l'appli si besoin, attend sa première fenêtre (6 s max), puis la place. */
@@ -396,7 +492,7 @@ async function placeAppWindows(app: string, displayLabel: string | undefined, la
 // --- Icônes : celle de l'appli (.icns sur Mac, menu Démarrer sur Windows), en PNG 96 px mis en cache.
 
 /** Appli dont l'icône représente l'action (la première appli citée, pour une macro). */
-function appOf(action: Action): string | undefined {
+export function appOf(action: Action): string | undefined {
   switch (action.type) {
     case "app":
       return action.name;
@@ -405,6 +501,7 @@ function appOf(action: Action): string | undefined {
     case "window":
       return action.app;
     case "macro":
+    case "cycle":
       return action.steps.map(appOf).find(Boolean);
     default:
       return undefined;
@@ -439,7 +536,12 @@ async function cachedIcon(key: string, make: (out: string) => Promise<boolean>):
 
 /** Site ouvert par l'action (le premier lien d'une macro), pour une tuile sans appli. */
 function urlOf(action: Action): URL | undefined {
-  const url = action.type === "url" ? action.url : action.type === "macro" ? action.steps.find((s) => s.type === "url")?.url : undefined;
+  const url =
+    action.type === "url"
+      ? action.url
+      : action.type === "macro" || action.type === "cycle"
+        ? action.steps.find((s) => s.type === "url")?.url
+        : undefined;
   if (!url) return undefined;
   try {
     const parsed = new URL(url);

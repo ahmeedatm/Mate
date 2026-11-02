@@ -64,6 +64,105 @@ test.describe("page locale : touches", () => {
     expect((await server.call("GET", "/deck/keys/0")).json.key).toBeNull();
   });
 
+  test("une étape « Appeler le réseau local » ne garde que le nom de la cible", async ({ page, server }) => {
+    await page.goto("/");
+    const touches = page.locator("#pf-touches");
+    await touches.getByRole("button", { name: "Touche 1 : libre" }).click();
+    await touches.locator("#pf-deck-label").fill("Prise");
+    await touches.locator("#pf-deck-add-type").selectOption("http");
+    await touches.locator("#pf-deck-add-step").click();
+    await touches.locator('[data-step="0"]').getByLabel("Nom de la cible (LAN_TARGETS du .env)").fill(" prise ");
+    await touches.locator("#pf-deck-save").click();
+    await expect(page.locator("#pf-deck-keys-msg")).toHaveText("Touche enregistrée.");
+    expect((await server.call("GET", "/deck/keys/0")).json.key.steps).toEqual([{ type: "http", name: "prise" }]);
+  });
+
+  test("duplique une page nommée et ouvre la copie ; Perso n'a pas de bouton", async ({ page, server }) => {
+    await page.goto("/");
+    const touches = page.locator("#pf-touches");
+    await expect(touches.getByRole("button", { name: "Dupliquer la page" })).toBeHidden();
+    await touches.getByRole("button", { name: "Réunions" }).click();
+    await touches.getByRole("button", { name: "Dupliquer la page" }).click();
+    await expect(page.locator("#pf-deck-keys-msg")).toHaveText("Page dupliquée.");
+    await expect(touches.getByRole("button", { name: "Réunions (copie)" })).toHaveAttribute("aria-pressed", "true");
+    await expect(touches.getByRole("button", { name: "Touche 1 : Micro" })).toBeVisible();
+    const pages = (await server.call("GET", "/deck")).json.pages;
+    expect(pages.map((p: { title: string }) => p.title)).toContain("Réunions (copie)");
+  });
+
+  test("une touche de gestes du Pavé se rouvre avec son geste et le garde à l'enregistrement", async ({ page, server }) => {
+    const steps = [
+      { type: "gesture", name: "desktop-next" },
+      { type: "wait", ms: 1500 },
+      { type: "gesture", name: "search" },
+    ];
+    fs.writeFileSync(path.join(server.dataDir, "keys.json"), JSON.stringify({ slots: [{ label: "Gestes", steps }] }));
+    await page.goto("/");
+    const touches = page.locator("#pf-touches");
+    await touches.getByRole("button", { name: "Touche 1 : Gestes" }).click();
+    await expect(touches.locator('[data-step="0"]').getByLabel("Geste")).toHaveValue("desktop-next");
+    await touches.locator('[data-step="2"]').getByLabel("Geste").selectOption("back");
+    await touches.locator("#pf-deck-save").click();
+    await expect(page.locator("#pf-deck-keys-msg")).toHaveText("Touche enregistrée.");
+    expect((await server.call("GET", "/deck/keys/0")).json.key.steps).toEqual([
+      { type: "gesture", name: "desktop-next" },
+      { type: "wait", ms: 1500 },
+      { type: "gesture", name: "back" },
+    ]);
+  });
+
+  test("une touche à cycle garde son cycle quand on la rouvre et l'enregistre", async ({ page, server }) => {
+    fs.writeFileSync(
+      path.join(server.dataDir, "keys.json"),
+      JSON.stringify({
+        slots: [
+          {
+            label: "Thème",
+            cycle: true,
+            steps: [
+              { type: "text", text: "Jour" },
+              { type: "text", text: "Nuit" },
+            ],
+          },
+        ],
+      }),
+    );
+    await page.goto("/");
+    const touches = page.locator("#pf-touches");
+    await expect(touches.getByRole("button", { name: "Touche 1 : Thème" })).toContainText("Cycle, 2 étapes");
+    await touches.getByRole("button", { name: "Touche 1 : Thème" }).click();
+    await touches.locator("#pf-deck-save").click();
+    await expect(page.locator("#pf-deck-keys-msg")).toHaveText("Touche enregistrée.");
+    expect((await server.call("GET", "/deck/keys/0")).json.key.cycle).toBe(true);
+  });
+
+  test("une touche large garde sa largeur quand on la rouvre et l'enregistre", async ({ page, server }) => {
+    fs.writeFileSync(
+      path.join(server.dataDir, "keys.json"),
+      JSON.stringify({ slots: [{ label: "Thème", span: 2, steps: [{ type: "text", text: "Jour" }] }] }),
+    );
+    await page.goto("/");
+    const touches = page.locator("#pf-touches");
+    await touches.getByRole("button", { name: "Touche 1 : Thème" }).click();
+    await touches.locator("#pf-deck-save").click();
+    await expect(page.locator("#pf-deck-keys-msg")).toHaveText("Touche enregistrée.");
+    expect((await server.call("GET", "/deck/keys/0")).json.key.span).toBe(2);
+  });
+
+  test("une touche à seconde action garde son appui long quand on la rouvre et l'enregistre", async ({ page, server }) => {
+    const hold = [{ type: "text", text: "Nuit" }];
+    fs.writeFileSync(
+      path.join(server.dataDir, "keys.json"),
+      JSON.stringify({ slots: [{ label: "Thème", steps: [{ type: "text", text: "Jour" }], hold }] }),
+    );
+    await page.goto("/");
+    const touches = page.locator("#pf-touches");
+    await touches.getByRole("button", { name: "Touche 1 : Thème" }).click();
+    await touches.locator("#pf-deck-save").click();
+    await expect(page.locator("#pf-deck-keys-msg")).toHaveText("Touche enregistrée.");
+    expect((await server.call("GET", "/deck/keys/0")).json.key.hold).toEqual(hold);
+  });
+
   test("signale une touche sans libellé, sans étape ou refusée par le compagnon", async ({ page, server }) => {
     await page.goto("/");
     const touches = page.locator("#pf-touches");

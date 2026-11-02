@@ -101,6 +101,7 @@ describe("touches perso : routes", () => {
       color: "#3366CC",
       when: null,
       lit: null,
+      state: null,
       app: null,
     });
 
@@ -110,6 +111,82 @@ describe("touches perso : routes", () => {
       { fn: "sendKeys", args: ["cmd+n", "Notes"] },
       { fn: "typeText", args: ["Ordre du jour"] },
     ]);
+  });
+
+  it("une touche à cycle fait une étape par appui, puis recommence", async () => {
+    const cycle = {
+      label: "Thème",
+      cycle: true,
+      steps: [
+        { type: "text", text: "Jour" },
+        { type: "text", text: "Nuit" },
+        { type: "text", text: "Auto" },
+      ],
+    };
+    assert.equal((await put(9, cycle)).status, 200);
+    assert.deepEqual((await server.call("GET", "/deck/keys/9")).json.key, cycle);
+    assert.equal((await server.call("GET", "/deck")).json.pages.at(-1).tiles[9].type, "cycle");
+
+    for (let i = 0; i < 4; i++) assert.equal((await server.call("POST", "/deck/run", { id: "k-9" })).status, 200);
+    assert.deepEqual(
+      server.osCalls().map((c) => c.args[0]),
+      ["Jour", "Nuit", "Auto", "Jour"],
+    );
+    await server.call("DELETE", "/deck/keys/9");
+  });
+
+  it("l'appui long d'une touche perso lance sa seconde action, une étape seule ou une macro", async () => {
+    const key = {
+      label: "Notes",
+      steps: [{ type: "app", name: "Notes" }],
+      hold: [
+        { type: "keys", keys: "cmd+n", app: "Notes" },
+        { type: "text", text: "Idée" },
+      ],
+    };
+    assert.equal((await put(10, key)).status, 200);
+    assert.deepEqual((await server.call("GET", "/deck/keys/10")).json.key, key);
+    assert.equal((await server.call("GET", "/deck")).json.pages.at(-1).tiles[10].hold, true);
+
+    assert.equal((await server.call("POST", "/deck/run", { id: "k-10", hold: true })).status, 200);
+    assert.deepEqual(
+      server.osCalls().map((c) => c.fn),
+      ["sendKeys", "typeText"],
+    );
+    await server.call("DELETE", "/deck/keys/10");
+  });
+
+  it("une touche perso sans seconde action refuse l'appui long", async () => {
+    await put(11, { label: "Simple", steps: [{ type: "text", text: "a" }] });
+    assert.equal((await server.call("POST", "/deck/run", { id: "k-11", hold: true })).status, 409);
+    await server.call("DELETE", "/deck/keys/11");
+  });
+
+  it("une touche sans cycle garde son enregistrement tel quel", async () => {
+    await put(12, {
+      label: "Deux",
+      steps: [
+        { type: "text", text: "a" },
+        { type: "text", text: "b" },
+      ],
+    });
+    assert.equal("cycle" in (await server.call("GET", "/deck/keys/12")).json.key, false);
+    await server.call("DELETE", "/deck/keys/12");
+  });
+
+  it("une touche large (span 2) garde sa largeur, la touche simple n'en porte pas", async () => {
+    const large = { label: "Large", span: 2, steps: [{ type: "text", text: "a" }] };
+    assert.equal((await put(13, large)).status, 200);
+    assert.equal((await server.call("GET", "/deck/keys/13")).json.key.span, 2);
+    const tiles = (await server.call("GET", "/deck")).json.pages.at(-1).tiles;
+    assert.equal(tiles[13].span, 2);
+    await put(13, { label: "Simple", steps: [{ type: "text", text: "a" }] });
+    assert.equal("span" in (await server.call("GET", "/deck")).json.pages.at(-1).tiles[13], false);
+    await server.call("DELETE", "/deck/keys/13");
+  });
+
+  it("une largeur autre que 1 ou 2 est refusée", async () => {
+    assert.equal((await put(13, { label: "Trop", span: 3, steps: [{ type: "text", text: "a" }] })).status, 400);
   });
 
   it("une touche d'une seule étape garde son type", async () => {
@@ -168,6 +245,52 @@ describe("touches perso : routes", () => {
     assert.equal((await put(99, key)).status, 200);
     assert.equal((await put(100, key)).status, 400);
     await server.call("DELETE", "/deck/keys/99");
+  });
+
+  it("une macro de gestes du Pavé s'enregistre et rejoue ses gestes dans l'ordre", async () => {
+    const macro = {
+      label: "Bureau puis recherche",
+      steps: [
+        { type: "gesture", name: "desktop-next" },
+        { type: "wait", ms: 1500 },
+        { type: "gesture", name: "search" },
+      ],
+    };
+    assert.equal((await put(6, macro)).status, 200);
+    assert.deepEqual((await server.call("GET", "/deck/keys/6")).json.key, macro);
+    assert.equal((await put(7, { label: "X", steps: [{ type: "gesture", name: "teleporter" }] })).status, 400);
+    assert.equal((await put(7, { label: "X", steps: [{ type: "gesture" }] })).status, 400);
+    assert.equal((await server.call("POST", "/deck/run", { id: "k-6" })).status, 200);
+    assert.deepEqual(server.osCalls(), [
+      { fn: "pointerGesture", args: ["desktop-next"] },
+      { fn: "pointerGesture", args: ["search"] },
+    ]);
+  });
+
+  it("POST /deck/keys range la touche dans le premier emplacement libre et rend son rang", async () => {
+    let free = 0;
+    while ((await server.call("GET", `/deck/keys/${free}`)).json.key) free++;
+    const key = { label: "Macro enregistrée", steps: [{ type: "gesture", name: "back" }] };
+    const res = await server.call("POST", "/deck/keys", key);
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.json, { slot: free });
+    assert.deepEqual((await server.call("GET", `/deck/keys/${free}`)).json.key, key);
+    assert.equal((await server.call("POST", "/deck/keys", { label: "", steps: [] })).status, 400);
+  });
+
+  it("deux POST /deck/keys en même temps prennent deux places différentes", async () => {
+    const key = { label: "Parallèle", steps: [{ type: "gesture", name: "back" }] };
+    const [a, b] = await Promise.all([server.call("POST", "/deck/keys", key), server.call("POST", "/deck/keys", key)]);
+    assert.notEqual(a.json.slot, b.json.slot);
+    for (const r of [a, b]) await server.call("DELETE", `/deck/keys/${r.json.slot}`);
+  });
+
+  it("POST /deck/keys répond 409 quand les 100 emplacements sont pris", async () => {
+    const slots = Array.from({ length: MAX_SLOTS }, (_, i) => i);
+    await Promise.all(slots.map((i) => put(i, { label: `P${i}`, steps: [{ type: "keys", keys: "a" }] })));
+    const res = await server.call("POST", "/deck/keys", { label: "Trop", steps: [{ type: "keys", keys: "a" }] });
+    assert.equal(res.status, 409);
+    await Promise.all(slots.map((i) => server.call("DELETE", `/deck/keys/${i}`)));
   });
 
   it("vide un emplacement", async () => {

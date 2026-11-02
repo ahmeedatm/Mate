@@ -1,5 +1,5 @@
 /**
- * Appli au premier plan de l'ordinateur (écran de jeu) : l'ordinateur dit à la tablette quelle appli est devant (ordre
+ * Appli au premier plan de l'ordinateur (page par appli) : l'ordinateur dit à la tablette quelle appli est devant (ordre
  * `foreground` du canal /tablet), elle compare à sa liste d'applis de jeu et passe sur l'écran choisi. La liste vit sur
  * la tablette : rien à synchroniser. Suivi toutes les `intervalMs` (2 s), seulement tant qu'une tablette est connectée ;
  * un ordre par changement d'appli, et un ordre de plus quand la tablette (re)vient, pour qu'elle sache où on en est.

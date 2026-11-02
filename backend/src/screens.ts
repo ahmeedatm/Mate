@@ -93,9 +93,14 @@ export type AudioChange = { output?: number; outputDelta?: number; muted?: boole
  * pilote pas ; `level` : niveau sonore instantané 0-100, null si l'ordinateur ne le donne pas (Mac).
  */
 export type MixerChannel = { id: string; name: string; volume: number | null; muted: boolean; level: number | null };
-/** `apps` null : pas de volume par appli sur cet ordinateur (Mac). */
-export type MixerState = { master: MixerChannel; mic: MixerChannel; apps: MixerChannel[] | null };
+/**
+ * `apps` null : pas de volume par appli sur cet ordinateur (Mac). `front` : id de la voie de l'appli au premier plan
+ * (même id que dans `apps`), null si aucune ; absent hors Windows.
+ */
+export type MixerState = { master: MixerChannel; mic: MixerChannel; apps: MixerChannel[] | null; front?: string | null };
 export type MixerChange = { id: string; volume?: number; muted?: boolean };
+/** Une sortie audio de l'ordinateur (enceinte, casque, carte son) ; `id` : identifiant du système, `current` : celle qui sert. */
+export type AudioOutput = { id: string; name: string; current: boolean };
 /**
  * Presse-papiers de l'ordinateur, tel que la tablette le lit : `protected` = contenu sensible (mot de passe d'un
  * gestionnaire), jamais lu ; `other` = ni texte ni image (liste de fichiers…).

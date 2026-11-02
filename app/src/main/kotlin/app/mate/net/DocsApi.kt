@@ -46,6 +46,11 @@ class DocsApi(private val http: Http) {
         JSONObject(http.postFile("/docs/upload", "photo", photo, "image/jpeg")).getString("path")
     }
 
+    /** Dépose un fichier partagé depuis une autre appli à la racine du dossier partagé ; renvoie le nom retenu (« nom (2).pdf » s'il existait). */
+    suspend fun share(file: File, mimeType: String): String = http.io {
+        JSONObject(http.postFile("/docs/share", "file", file, mimeType)).getString("path")
+    }
+
     /** Page ouverte dans le navigateur de l'ordinateur ; erreur 404 (message lisible) s'il n'y en a pas. */
     suspend fun browserPage(): WebPage = http.io {
         JSONObject(http.get("/browser/page")).let { WebPage(it.getString("url"), it.getString("title")) }

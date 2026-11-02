@@ -32,6 +32,8 @@ class BackendClient(
     val docs = DocsApi(http)
     val calendar = CalendarApi(http)
     val tasks = TasksApi(http)
+    val schedule = ScheduleApi(http)
+    val shopping = ShoppingApi(http)
     val camera = CameraApi(http)
     val updates = UpdatesApi(http)
     val tablet = TabletApi(http)
@@ -39,10 +41,15 @@ class BackendClient(
     val gitlab = GitLabApi(http)
     val github = GitHubApi(http)
     val jira = JiraApi(http)
+    val ha = HaApi(http)
     val plugins = PluginsApi(http)
     val present = PresentApi(http)
     val notifications = NotificationsApi(http)
     val away = AwayApi(http)
+    val news = NewsApi(http)
+    val mail = MailApi(http)
+    val menu = MenuApi(http)
+    val metrics = MetricsApi(http)
 
     /** Client des widgets de forge : MR GitLab ou PR GitHub, mêmes réponses. */
     fun forge(forge: Forge): ForgeApi = if (forge == Forge.GITHUB) github else gitlab

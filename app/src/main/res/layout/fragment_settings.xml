@@ -520,6 +520,35 @@
                         android:text="@string/tablet_remote" />
                 </LinearLayout>
 
+                <!-- Programmations : une touche du Deck lancée par l'ordinateur à heure fixe ou à intervalle (ScheduleDialog). Masqué sans ordinateur appairé. -->
+                <LinearLayout
+                    android:id="@+id/settings_schedule_card"
+                    style="@style/Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="vertical">
+
+                    <app.mate.ui.TitleView
+                        style="@style/CardTitle"
+                        android:drawableStart="@drawable/ic_clock"
+                        android:text="@string/schedule_title" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/schedule_card_hint"
+                        android:textColor="?attr/c_text_dim"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/settings_schedule"
+                        style="@style/ActionButton"
+                        android:layout_marginTop="16dp"
+                        android:text="@string/schedule_open" />
+                </LinearLayout>
+
                 <!-- Thème : ambiances prédéfinies (ui/Themes.kt), pastilles ajoutées par SettingsFragment. -->
                 <LinearLayout
                     style="@style/Card"
@@ -673,6 +702,23 @@
                             android:max="100" />
                     </LinearLayout>
 
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/settings_auto_brightness"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:minHeight="48dp"
+                        android:text="@string/tablet_auto_brightness"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/settings_auto_brightness_hint"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tablet_auto_brightness_hint"
+                        android:textColor="?attr/c_text_dim"
+                        android:textSize="14sp" />
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -694,6 +740,22 @@
                             android:layout_weight="1"
                             android:contentDescription="@string/tablet_volume" />
                     </LinearLayout>
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/settings_volume_keys_computer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:minHeight="48dp"
+                        android:text="@string/tablet_volume_keys_computer"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tablet_volume_keys_computer_hint"
+                        android:textColor="?attr/c_text_dim"
+                        android:textSize="14sp" />
 
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/settings_night_dim"

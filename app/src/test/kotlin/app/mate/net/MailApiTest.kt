@@ -1,0 +1,56 @@
+package app.mate.net
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class MailApiTest {
+    @Test
+    fun readsEachAccountWithItsUnreadCount() {
+        val mail = MailApi.parse(
+            """{"accounts":[{"provider":"google","label":"Google","unread":3},
+                {"provider":"microsoft","label":"Microsoft","unread":4}]}""",
+        )
+        assertEquals(listOf("google", "microsoft"), mail.accounts.map { it.provider })
+        assertEquals(7, mail.total)
+    }
+
+    @Test
+    fun theTabletKeepsNoEmailAddress() {
+        assertEquals(
+            listOf("provider", "label", "unread", "error"),
+            MailAccount::class.java.declaredFields.map { it.name },
+        )
+    }
+
+    @Test
+    fun noAccountMeansEmptyList() {
+        val mail = MailApi.parse("""{"accounts":[]}""")
+        assertTrue(mail.accounts.isEmpty())
+        assertEquals(0, mail.total)
+    }
+
+    @Test
+    fun anAccountInErrorKeepsItsPhraseAndCountsForNothing() {
+        val mail = MailApi.parse(
+            """{"accounts":[{"provider":"google","label":"Google","unread":null,"error":"Reconnecte le compte"},
+                {"provider":"microsoft","label":"Microsoft","unread":2}]}""",
+        )
+        assertNull(mail.accounts[0].unread)
+        assertEquals("Reconnecte le compte", mail.accounts[0].error)
+        assertEquals(2, mail.total)
+    }
+
+    @Test
+    fun opensTheFirstAccountWithUnreadMailElseTheFirstOne() {
+        val mail = MailApi.parse(
+            """{"accounts":[{"provider":"google","label":"G","unread":0},
+                {"provider":"microsoft","label":"M","unread":5}]}""",
+        )
+        assertEquals("microsoft", mail.target?.provider)
+        val none = MailApi.parse("""{"accounts":[{"provider":"google","label":"G","unread":0}]}""")
+        assertEquals("google", none.target?.provider)
+        assertNull(MailApi.parse("""{"accounts":[]}""").target)
+    }
+}
