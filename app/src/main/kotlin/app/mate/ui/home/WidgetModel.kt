@@ -84,7 +84,8 @@ enum class WidgetType(
     NEWS("news", R.string.widget_news, R.string.widget_news_desc, R.drawable.ic_tile_description, listOf(WidgetSize.L, WidgetSize.XL), true),
     MAIL("mail", R.string.widget_mail, R.string.widget_mail_desc, R.drawable.ic_mail, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L), true),
     METRICS("metrics", R.string.widget_metrics, R.string.widget_metrics_desc, R.drawable.ic_tile_bar_chart, listOf(WidgetSize.L, WidgetSize.XL), true),
-    MEALS("meals", R.string.widget_meals, R.string.widget_meals_desc, R.drawable.ic_tile_restaurant, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.T), true);
+    MEALS("meals", R.string.widget_meals, R.string.widget_meals_desc, R.drawable.ic_tile_restaurant, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.T), true),
+    VALORANT("valorant", R.string.widget_valorant, R.string.widget_valorant_desc, R.drawable.ic_gamepad, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.T), true);
 
     /** Taille de l'exemplaire agrandi (widget maintenu, [WidgetZoom]) : la plus grande, la plus large à surface égale. */
     val zoomSize get() = sizes.maxWith(compareBy<WidgetSize>({ it.w * it.h }, { it.w }))
@@ -96,13 +97,14 @@ enum class WidgetType(
     val zoomable get() = !bare && this != WEB
 
     /**
-     * Proposé dans le catalogue de l'ordinateur actif : Agents, Jira, Home Assistant, GitLab, Pipelines, GitHub et Actions seulement s'il les offre (Agents :
-     * Mac avec Claude Code), Ouvertes, Son et Pavé seulement si leur plugin n'est pas coupé (écran des plugins).
+     * Proposé dans le catalogue de l'ordinateur actif : Agents, Jira, Home Assistant, GitLab, Pipelines, GitHub, Actions et Valorant seulement s'il les offre (Agents :
+     * Mac avec Claude Code ; Valorant : Windows), Ouvertes, Son et Pavé seulement si leur plugin n'est pas coupé (écran des plugins).
      */
     fun offered(features: HomeFeatures) = when (this) {
         AGENTS -> features.agents
         JIRA -> features.jira
         HA -> features.ha
+        VALORANT -> features.valorant
         GITLAB, PIPELINES -> features.gitlab
         GITHUB, ACTIONS -> features.github
         OPEN -> "open" !in features.off
