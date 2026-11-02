@@ -21,6 +21,8 @@ Page Média. Sur Mac, pour afficher la pochette du morceau en cours, l'ordinateu
 
 Comptes que vous reliez. Si vous reliez un compte Microsoft ou Google, l'ordinateur lit votre agenda directement chez ce fournisseur, et, pour Microsoft, l'expéditeur, l'objet et la date de vos derniers courriels (jamais leur contenu). Si vous reliez un compte GitHub (ou indiquez un jeton GitHub sur l'ordinateur), l'ordinateur lit chez GitHub, avec ce compte, vos pull requests, leurs vérifications et les exécutions GitHub Actions de leurs dépôts, et fusionne une pull request quand vous le demandez depuis la tablette ; l'autorisation reste sur l'ordinateur. Vous pouvez délier le compte à tout moment.
 
+Valorant. Sur un PC Windows, si vous affichez le widget Valorant pendant que le jeu est lancé, l'ordinateur interroge les serveurs de Riot Games avec la session du client Riot déjà ouverte, pour lire les agents, rangs et pseudos des joueurs de votre partie. Rien ne part de la tablette, et la session Riot reste sur l'ordinateur.
+
 Mises à jour. La tablette interroge GitHub (releases du projet). Pour cela, GitHub ne reçoit aucune information sur vous, seulement l'adresse IP nécessaire à la connexion.
 
 Ce que vous ouvrez. Les pages web, liens d'agenda, réunions et services que vous choisissez (par exemple une recherche faite à la voix, ouverte dans le navigateur de l'ordinateur) sont contactés directement depuis vos appareils.

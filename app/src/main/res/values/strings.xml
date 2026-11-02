@@ -1496,7 +1496,7 @@
     <string name="widget_mail_a11y">Mails : %1$d non lus. Toucher pour ouvrir la boîte sur l\'ordinateur</string>
     <string name="widget_valorant">Valorant</string>
     <string name="widget_valorant_desc">Pendant une partie, le rang et l\'agent de chaque joueur, ton équipe et en face ; hors partie, ton rang</string>
-    <string name="valorant_off">Valorant fermé</string>
+    <string name="valorant_off">Fermé</string>
     <string name="valorant_off_hint">Lance Valorant sur l\'ordinateur</string>
     <string name="valorant_menu">Au menu</string>
     <string name="valorant_queue">En file</string>
@@ -1506,6 +1506,7 @@
     <string name="valorant_enemies">En face</string>
     <string name="valorant_enemies_later">Visible au début de la partie</string>
     <string name="valorant_hidden">Joueur masqué</string>
+    <string name="valorant_you">toi</string>
     <string name="valorant_no_agent">Pas encore choisi</string>
     <string name="valorant_rr">%1$d RR</string>
     <string name="valorant_level">niveau %1$d</string>
