@@ -1155,6 +1155,7 @@
     <string name="ytmusic_repeat_one">Répéter ce titre</string>
     <string name="ytmusic_position">Position dans le titre</string>
     <string name="ytmusic_open">Ouvrir YouTube Music sur l\'ordi</string>
+    <string name="ytmusic_open_button">Ouvrir YouTube Music</string>
     <string name="ytmusic_lyrics">Paroles</string>
     <string name="ytmusic_lyrics_loading">Recherche des paroles…</string>
     <string name="ytmusic_lyrics_none">Pas de paroles trouvées pour ce titre.</string>

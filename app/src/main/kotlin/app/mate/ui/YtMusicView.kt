@@ -61,6 +61,7 @@ class YtMusicView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private val emptyTitle: TextView
     private val emptyHint: TextView
     private val emptyAction: Button
+    private val emptyOpen: Button
     private val tabQueue: Button
     private val tabLyrics: Button
     private val lyricsScroll: ScrollView
@@ -116,6 +117,7 @@ class YtMusicView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         emptyTitle = findViewById(R.id.yt_empty_title)
         emptyHint = findViewById(R.id.yt_empty_hint)
         emptyAction = findViewById(R.id.yt_empty_action)
+        emptyOpen = findViewById(R.id.yt_empty_open)
         tabQueue = findViewById(R.id.yt_tab_queue)
         tabLyrics = findViewById(R.id.yt_tab_lyrics)
         lyricsScroll = findViewById(R.id.yt_lyrics_scroll)
@@ -154,6 +156,7 @@ class YtMusicView @JvmOverloads constructor(context: Context, attrs: AttributeSe
             }
         })
         emptyAction.setOnClickListener { connectDesktop() }
+        emptyOpen.setOnClickListener { openOnComputer() }
     }
 
     fun attach(scope: CoroutineScope) {
@@ -319,10 +322,15 @@ class YtMusicView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         row.setTypeface(Typeface.create(row.typeface, if (current) Typeface.BOLD else Typeface.NORMAL))
     }
 
+    /** Un seul envoi à la fois : YTMDesktop met quelques secondes à démarrer, un second appui le relancerait. */
     private fun openOnComputer() {
+        if (!emptyOpen.isEnabled) return
+        emptyOpen.isEnabled = false
         scope.launch {
             runCatchingCancellable { BackendClient(context).ytmusic.open() }
                 .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
+            delay(OPEN_SETTLE_MS)
+            emptyOpen.isEnabled = true
         }
     }
 
@@ -330,22 +338,26 @@ class YtMusicView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private fun renderEmpty(s: YtMusicState) {
         val d = s.desktop
         when {
-            s.open -> showEmpty(R.string.ytmusic_idle, null)
-            d.status == "connecting" -> showEmpty(context.getString(R.string.ytmusic_connecting, d.code.orEmpty()), null)
-            d.status == "error" -> showEmpty(d.error ?: context.getString(R.string.ytmusic_empty_hint), R.string.ytmusic_retry)
-            d.status == "connected" -> showEmpty(R.string.ytmusic_desktop_closed, null)
-            else -> showEmpty(R.string.ytmusic_empty_hint, R.string.ytmusic_connect)
+            s.open -> showEmpty(R.string.ytmusic_idle, null, open = true)
+            // Le code s'affiche aussi dans YTMDesktop : rien d'autre à proposer pendant qu'on l'accepte.
+            d.status == "connecting" -> showEmpty(context.getString(R.string.ytmusic_connecting, d.code.orEmpty()), null, open = false)
+            d.status == "error" -> showEmpty(d.error ?: context.getString(R.string.ytmusic_empty_hint), R.string.ytmusic_retry, open = true)
+            d.status == "connected" -> showEmpty(R.string.ytmusic_desktop_closed, null, open = true)
+            else -> showEmpty(R.string.ytmusic_empty_hint, R.string.ytmusic_connect, open = true)
         }
     }
 
-    private fun showEmpty(hint: Int, action: Int?) = showEmpty(context.getString(hint), action)
+    private fun showEmpty(hint: Int, action: Int?, open: Boolean = false) = showEmpty(context.getString(hint), action, open)
 
-    private fun showEmpty(hint: String, action: Int?) {
+    /** [open] : bouton « Ouvrir YouTube Music » (YTMDesktop lancé sur l'ordinateur, sinon le site). */
+    private fun showEmpty(hint: String, action: Int?, open: Boolean = false) {
         player.visibility = GONE
         queueColumn.visibility = GONE
         empty.visibility = VISIBLE
         emptyTitle.setText(R.string.ytmusic_empty)
         emptyHint.text = hint
+        emptyOpen.visibility = if (open) VISIBLE else GONE
+        (emptyAction.layoutParams as MarginLayoutParams).marginStart = if (open) dp(12) else 0
         emptyAction.visibility = if (action == null) GONE else VISIBLE
         action?.let { emptyAction.setText(it) }
         coverUrl = null
@@ -519,6 +531,7 @@ class YtMusicView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         const val ACTION_SETTLE_MS = 350L
         const val COVER_RETRY_MS = 10_000L
         const val LYRICS_TICK_MS = 250L
+        const val OPEN_SETTLE_MS = 5_000L
         const val LYRICS_RETRY_MS = 15_000L
 
         /** Pochettes déjà décodées (titre en cours et file), partagées entre les widgets. */
