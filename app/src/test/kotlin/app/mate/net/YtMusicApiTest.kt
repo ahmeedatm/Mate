@@ -38,6 +38,28 @@ class YtMusicApiTest {
     }
 
     @Test
+    fun `paroles synchronisees et non synchronisees`() {
+        val synced = parseYtLyrics("""{"found":true,"title":"Ailleurs","synced":true,"instrumental":false,
+            "lines":[{"t":8.2,"text":"Si vous me cherchez"},{"t":10.78,"text":"J'suis loin"},{"t":12.0,"text":""}]}""")
+        assertTrue(synced.synced)
+        assertEquals(listOf(YtLyricLine(8.2, "Si vous me cherchez"), YtLyricLine(10.78, "J'suis loin"), YtLyricLine(12.0, "")), synced.lines)
+        val plain = parseYtLyrics("""{"found":true,"synced":false,"lines":[{"t":null,"text":"Faut qu'j'vous raconte"}]}""")
+        assertEquals(listOf(YtLyricLine(null, "Faut qu'j'vous raconte")), plain.lines)
+        assertFalse(parseYtLyrics("""{"found":false,"title":"Boss"}""").found)
+    }
+
+    @Test
+    fun `ligne chantee - avant la premiere, pendant, avec un peu d avance, apres la derniere`() {
+        val lines = listOf(YtLyricLine(8.2, "a"), YtLyricLine(10.78, "b"), YtLyricLine(20.0, "c"))
+        assertEquals(-1, currentLyricIndex(lines, 3.0))
+        assertEquals(0, currentLyricIndex(lines, 9.0))
+        // 10,5 + 0,3 d'avance dépasse 10,78 : la ligne suivante s'allume déjà.
+        assertEquals(1, currentLyricIndex(lines, 10.5))
+        assertEquals(2, currentLyricIndex(lines, 300.0))
+        assertEquals(-1, currentLyricIndex(listOf(YtLyricLine(null, "non synchronisée")), 50.0))
+    }
+
+    @Test
     fun `titre vide ou null traite comme rien en lecture, repetition null gardee null`() {
         val s = parseYtMusic("""{"open":true,"source":"browser","playing":false,"track":{"title":"","like":"none"},"repeat":null,"queue":[]}""")
         assertNull(s.track)

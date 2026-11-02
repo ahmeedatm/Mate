@@ -34,6 +34,34 @@ data class YtMusicState(
     val desktop: YtDesktop,
 )
 
+/** Une ligne de paroles ; `t` : heure dans le titre (s), null pour des paroles non synchronisées. */
+data class YtLyricLine(val t: Double?, val text: String)
+
+/** Paroles du titre en cours (LRCLIB) ; `found` faux si LRCLIB ne les a pas. */
+data class YtLyrics(val found: Boolean, val title: String, val synced: Boolean, val instrumental: Boolean, val lines: List<YtLyricLine>)
+
+/** Réponse de `GET /ytmusic/lyrics`. */
+fun parseYtLyrics(json: String): YtLyrics {
+    val j = JSONObject(json)
+    val lines = j.optJSONArray("lines") ?: JSONArray()
+    return YtLyrics(
+        found = j.optBoolean("found"),
+        title = j.optStringOrNull("title").orEmpty(),
+        synced = j.optBoolean("synced"),
+        instrumental = j.optBoolean("instrumental"),
+        lines = (0 until lines.length()).mapNotNull { i ->
+            lines.optJSONObject(i)?.let { l -> YtLyricLine(if (l.isNull("t")) null else l.optDouble("t"), l.optStringOrNull("text").orEmpty()) }
+        },
+    )
+}
+
+/**
+ * Ligne chantée à la position [seconds] : la dernière dont l'heure est passée, avec un peu d'avance pour que la
+ * ligne s'allume quand elle commence (la position relue a jusqu'à une seconde de retard). -1 avant la première.
+ */
+fun currentLyricIndex(lines: List<YtLyricLine>, seconds: Double, leadSeconds: Double = 0.3): Int =
+    lines.indexOfLast { it.t != null && it.t <= seconds + leadSeconds }
+
 /** Réponse de `GET /ytmusic`. */
 fun parseYtMusic(json: String): YtMusicState {
     val j = JSONObject(json)
@@ -86,6 +114,15 @@ class YtMusicApi(private val http: Http) {
     suspend fun connectDesktop(): YtDesktop = http.io {
         val d = JSONObject(http.postJson("/ytmusic/desktop/connect", JSONObject())).optJSONObject("desktop")
         YtDesktop(d?.optStringOrNull("status") ?: "error", d?.optStringOrNull("code"), d?.optStringOrNull("error"))
+    }
+
+    /** Paroles du titre en cours, cherchées par l'ordinateur ; 502 si LRCLIB ne répond pas. */
+    suspend fun lyrics(): YtLyrics = http.io { parseYtLyrics(http.get("/ytmusic/lyrics", timeoutMs = 20_000)) }
+
+    /** Ouvre YouTube Music sur l'ordinateur (YTMDesktop mis devant, sinon le site). */
+    suspend fun open() = http.io {
+        http.postJson("/ytmusic/open", JSONObject())
+        Unit
     }
 
     /** Pochette relayée par l'ordinateur (seulement une adresse de l'état en cours) ; null si elle ne vient pas. */

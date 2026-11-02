@@ -10,16 +10,31 @@
         android:layout_weight="1"
         android:orientation="vertical">
 
-        <app.mate.ui.TitleView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/widget_ytmusic" />
+        <!-- Titre, et au bout le bouton qui met YouTube Music devant sur l'ordinateur. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <app.mate.ui.TitleView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/widget_ytmusic" />
+
+            <ImageButton
+                android:id="@+id/yt_open"
+                style="@style/IconButton.Flat"
+                android:contentDescription="@string/ytmusic_open"
+                android:src="@drawable/ic_open" />
+        </LinearLayout>
 
         <!-- Pochette et textes ; j'aime et je n'aime pas au bout de la ligne, près du titre qu'ils notent. -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="4dp"
             android:layout_weight="1"
             android:gravity="center_vertical"
             android:orientation="horizontal">
@@ -144,7 +159,8 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- File d'attente : toucher un titre le joue sur l'ordinateur ; celui en cours porte l'icône et le gras. -->
+    <!-- File d'attente ou paroles, au choix par les pastilles : toucher un titre le joue sur l'ordinateur (celui en cours
+         porte l'icône et le gras) ; les paroles synchronisées suivent la musique, toucher une ligne y va. -->
     <LinearLayout
         android:id="@+id/yt_queue_column"
         android:layout_width="0dp"
@@ -153,10 +169,48 @@
         android:layout_weight="1"
         android:orientation="vertical">
 
-        <app.mate.ui.TitleView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/ytmusic_queue" />
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/yt_tab_queue"
+                style="@style/Chip"
+                android:text="@string/ytmusic_queue" />
+
+            <Button
+                android:id="@+id/yt_tab_lyrics"
+                style="@style/Chip"
+                android:layout_marginStart="8dp"
+                android:text="@string/ytmusic_lyrics" />
+        </LinearLayout>
+
+        <ScrollView
+            android:id="@+id/yt_lyrics_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_weight="1"
+            android:overScrollMode="never"
+            android:scrollbars="none"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/yt_lyrics"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
+
+        <TextView
+            android:id="@+id/yt_lyrics_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="?attr/c_text_dim"
+            android:textSize="13sp"
+            android:visibility="gone" />
 
         <ScrollView
             android:id="@+id/yt_queue_scroll"

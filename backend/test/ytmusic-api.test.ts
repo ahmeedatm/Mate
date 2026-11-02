@@ -1,13 +1,56 @@
 import assert from "node:assert/strict";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 import { after, before, describe, it } from "node:test";
+import { mainArtist, parseLrc } from "../src/lyrics.ts";
 import { startServer, type TestServer } from "./server.ts";
 
 let server: TestServer;
+/** Faux LRCLIB : « One More Time » seulement par la recherche libre (durée proche), synchronisée. */
+let lrclib: http.Server;
+const lrclibCalls: string[] = [];
 before(async () => {
-  server = await startServer({ os: "windows" });
+  lrclib = http.createServer((req, res) => {
+    lrclibCalls.push(req.url ?? "");
+    res.setHeader("content-type", "application/json");
+    if (req.url?.startsWith("/api/search"))
+      return res.end(
+        JSON.stringify([
+          { duration: 200, syncedLyrics: "[00:01.00]Mauvais titre" },
+          { duration: 321, syncedLyrics: "[00:12.50]One more time\n[00:15.00][00:30.00]We're gonna celebrate\n[00:20.00]" },
+        ]),
+      );
+    res.statusCode = 404;
+    res.end(JSON.stringify({ code: 404, name: "TrackNotFound" }));
+  });
+  await new Promise<void>((resolve) => lrclib.listen(0, "127.0.0.1", resolve));
+  server = await startServer({
+    os: "windows",
+    env: { LYRICS_URL: `http://127.0.0.1:${(lrclib.address() as AddressInfo).port}/api` },
+  });
+  server.setOs({ installed: ["YouTube Music Desktop App"] });
 });
 after(async () => {
   await server?.stop();
+  lrclib?.close();
+});
+
+describe("paroles au format LRC", () => {
+  it("une ligne par heure (plusieurs heures sur une ligne), triées ; ligne sans heure ignorée", () => {
+    assert.deepEqual(parseLrc("[ti:Titre]\n[00:15.00][00:30.00]Refrain\n[00:12.50]Début\nsans heure\n[01:02.5]Fin"), [
+      { t: 12.5, text: "Début" },
+      { t: 15, text: "Refrain" },
+      { t: 30, text: "Refrain" },
+      { t: 62.5, text: "Fin" },
+    ]);
+  });
+
+  it("artiste principal d'un titre à plusieurs", () => {
+    assert.equal(mainArtist("Orelsan & Yamê"), "Orelsan");
+    assert.equal(mainArtist("Daft Punk feat. Pharrell Williams"), "Daft Punk");
+    assert.equal(mainArtist("Stromae, Pomme"), "Stromae");
+    assert.equal(mainArtist("Lomepal"), "Lomepal");
+  });
 });
 
 const EXTENSION = "chrome-extension://abcdefghijklmnop";
@@ -101,6 +144,37 @@ describe("YouTube Music piloté depuis la tablette", () => {
     ]) {
       assert.equal((await server.call("POST", "/ytmusic/action", body)).status, 400, JSON.stringify(body));
     }
+  });
+
+  it("paroles du titre en cours : exacte, sans album, puis recherche libre à durée proche ; gardées en cache", async () => {
+    const res = await server.call("GET", "/ytmusic/lyrics");
+    assert.equal(res.status, 200);
+    assert.equal(res.json.found, true);
+    assert.equal(res.json.synced, true);
+    assert.deepEqual(res.json.lines.slice(0, 2), [
+      { t: 12.5, text: "One more time" },
+      { t: 15, text: "We're gonna celebrate" },
+    ]);
+    assert.deepEqual(
+      lrclibCalls.map((u) => u.split("?")[0]),
+      ["/api/get", "/api/get", "/api/search"],
+    );
+    assert.match(lrclibCalls[0], /album_name=Discovery/);
+    await server.call("GET", "/ytmusic/lyrics");
+    assert.equal(lrclibCalls.length, 3);
+  });
+
+  it("ouvrir YouTube Music sur l'ordinateur : l'appli installée, sinon le site", async () => {
+    server.clearOsCalls();
+    // Onglet du navigateur actif, YTMDesktop pas relié : le site.
+    assert.deepEqual((await server.call("POST", "/ytmusic/open")).json, { opened: "site" });
+    assert.deepEqual(
+      server
+        .osCalls()
+        .filter((c) => c.fn === "openTarget")
+        .map((c) => c.args[0]),
+      ["https://music.youtube.com/"],
+    );
   });
 
   it("pochette : seulement une adresse de l'état en cours (pas de relais vers une adresse quelconque)", async () => {

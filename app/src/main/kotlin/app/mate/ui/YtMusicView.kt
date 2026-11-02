@@ -3,6 +3,7 @@ package app.mate.ui
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Typeface
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.util.LruCache
@@ -20,8 +21,11 @@ import android.widget.Toast
 import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.HttpException
+import app.mate.net.YtLyricLine
+import app.mate.net.YtLyrics
 import app.mate.net.YtMusicState
 import app.mate.net.YtQueueItem
+import app.mate.net.currentLyricIndex
 import app.mate.net.runCatchingCancellable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -57,9 +61,26 @@ class YtMusicView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private val emptyTitle: TextView
     private val emptyHint: TextView
     private val emptyAction: Button
+    private val tabQueue: Button
+    private val tabLyrics: Button
+    private val lyricsScroll: ScrollView
+    private val lyricsList: LinearLayout
+    private val lyricsNote: TextView
 
     private lateinit var scope: CoroutineScope
     private var poll: Job? = null
+    private var ticker: Job? = null
+
+    // Paroles : chargées par titre ; la ligne chantée suit la position, avancée entre deux relectures.
+    private var showLyrics = false
+    private var lyrics: YtLyrics? = null
+    private var lyricsKey: String? = null
+    private var lyricsFailedKey: String? = null
+    private var lyricsFailedAt = 0L
+    private var lyricRows: List<TextView> = emptyList()
+    private var currentLine = -1
+    private var lastPosition = 0.0
+    private var lastPositionAt = 0L
     private var active = false
     private var state: YtMusicState? = null
     private var seeking = false
@@ -95,6 +116,15 @@ class YtMusicView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         emptyTitle = findViewById(R.id.yt_empty_title)
         emptyHint = findViewById(R.id.yt_empty_hint)
         emptyAction = findViewById(R.id.yt_empty_action)
+        tabQueue = findViewById(R.id.yt_tab_queue)
+        tabLyrics = findViewById(R.id.yt_tab_lyrics)
+        lyricsScroll = findViewById(R.id.yt_lyrics_scroll)
+        lyricsList = findViewById(R.id.yt_lyrics)
+        lyricsNote = findViewById(R.id.yt_lyrics_note)
+        tabQueue.setOnClickListener { setTab(lyrics = false) }
+        tabLyrics.setOnClickListener { setTab(lyrics = true) }
+        findViewById<View>(R.id.yt_open).setOnClickListener { openOnComputer() }
+        setTab(lyrics = false)
 
         play.setOnClickListener {
             // Icône changée tout de suite : la relecture suit.
@@ -135,11 +165,19 @@ class YtMusicView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         if (this.active == active) return
         this.active = active
         poll?.cancel()
+        ticker?.cancel()
         if (!active) return
         poll = scope.launch {
             while (isActive) {
                 refresh()
                 delay(POLL_MS)
+            }
+        }
+        // Ligne chantée : 4 fois par seconde, seulement quand les paroles synchronisées sont affichées.
+        ticker = scope.launch {
+            while (isActive) {
+                if (showLyrics && lyrics?.synced == true) followLyrics()
+                delay(LYRICS_TICK_MS)
             }
         }
     }
@@ -181,7 +219,111 @@ class YtMusicView @JvmOverloads constructor(context: Context, attrs: AttributeSe
             timeline.visibility = INVISIBLE
         }
         showCover(track.cover)
-        if (showQueue) renderQueue(s.queue)
+        lastPosition = track.position
+        lastPositionAt = SystemClock.elapsedRealtime()
+        if (!showQueue) return
+        if (showLyrics) renderLyrics("${track.title}|${track.artist}") else renderQueue(s.queue)
+    }
+
+    // --- File d'attente ou paroles
+
+    private fun setTab(lyrics: Boolean) {
+        showLyrics = lyrics
+        tabQueue.isSelected = !lyrics
+        tabLyrics.isSelected = lyrics
+        queueScroll.visibility = if (lyrics) GONE else VISIBLE
+        lyricsScroll.visibility = if (lyrics) VISIBLE else GONE
+        lyricsNote.visibility = if (lyrics) VISIBLE else GONE
+        if (lyrics) queueEmpty.visibility = GONE
+        // La file est reconstruite au retour (elle a pu changer pendant les paroles), la ligne chantée remise en vue.
+        queueSign = emptyList()
+        lyricRows.forEach { styleLine(it, current = false) }
+        currentLine = -1
+        render()
+    }
+
+    /** Paroles chargées une fois par titre ; un échec (LRCLIB occupé) est réessayé au bout de 15 s. */
+    private fun renderLyrics(key: String) {
+        if (key == lyricsKey) return
+        if (key == lyricsFailedKey && SystemClock.elapsedRealtime() - lyricsFailedAt < LYRICS_RETRY_MS) return
+        lyricsKey = key
+        lyrics = null
+        lyricRows = emptyList()
+        currentLine = -1
+        lyricsList.removeAllViews()
+        lyricsNote.setText(R.string.ytmusic_lyrics_loading)
+        scope.launch {
+            val result = runCatchingCancellable { BackendClient(context).ytmusic.lyrics() }
+            if (lyricsKey != key) return@launch
+            result.onSuccess(::showLyrics).onFailure {
+                lyricsKey = null
+                lyricsFailedKey = key
+                lyricsFailedAt = SystemClock.elapsedRealtime()
+                lyricsNote.text = context.errorText(it)
+            }
+        }
+    }
+
+    private fun showLyrics(found: YtLyrics) {
+        lyrics = found
+        lyricsNote.setText(
+            when {
+                !found.found -> R.string.ytmusic_lyrics_none
+                found.instrumental -> R.string.ytmusic_lyrics_instrumental
+                found.synced -> R.string.ytmusic_lyrics_credit
+                else -> R.string.ytmusic_lyrics_credit_unsynced
+            },
+        )
+        lyricRows = found.lines.map { line -> lyricRow(line) }
+        lyricRows.forEach { lyricsList.addView(it) }
+        lyricsScroll.scrollTo(0, 0)
+        if (found.synced) followLyrics()
+    }
+
+    private fun lyricRow(line: YtLyricLine) = TextView(context).apply {
+        text = line.text
+        textSize = 17f
+        setTextColor(themeColor(context, R.attr.c_text_dim))
+        // Ligne vide entre deux couplets : un blanc, pas une cible.
+        if (line.text.isEmpty()) {
+            height = dp(12)
+            return@apply
+        }
+        setPadding(dp(8), dp(6), dp(8), dp(6))
+        val at = line.t
+        if (at != null) {
+            minHeight = dp(48)
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundResource(R.drawable.flat_bg)
+            contentDescription = context.getString(R.string.ytmusic_lyrics_seek, line.text)
+            setOnClickListener { send("seek", seconds = at) }
+        }
+    }
+
+    /** Allume la ligne chantée (gras et couleur pleine, les autres atténuées) et la garde au tiers de la hauteur. */
+    private fun followLyrics() {
+        val lines = lyrics?.lines ?: return
+        val playing = state?.playing == true
+        val elapsed = if (playing) (SystemClock.elapsedRealtime() - lastPositionAt) / 1000.0 else 0.0
+        val index = currentLyricIndex(lines, lastPosition + elapsed)
+        if (index == currentLine) return
+        lyricRows.getOrNull(currentLine)?.let { styleLine(it, current = false) }
+        currentLine = index
+        val row = lyricRows.getOrNull(index) ?: return
+        styleLine(row, current = true)
+        lyricsScroll.smoothScrollTo(0, (row.top - lyricsScroll.height / 3).coerceAtLeast(0))
+    }
+
+    private fun styleLine(row: TextView, current: Boolean) {
+        row.setTextColor(themeColor(context, if (current) R.attr.c_text else R.attr.c_text_dim))
+        row.setTypeface(Typeface.create(row.typeface, if (current) Typeface.BOLD else Typeface.NORMAL))
+    }
+
+    private fun openOnComputer() {
+        scope.launch {
+            runCatchingCancellable { BackendClient(context).ytmusic.open() }
+                .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
+        }
     }
 
     /** Rien à piloter : pourquoi, et quoi faire selon l'état de la connexion à YTMDesktop. */
@@ -376,6 +518,8 @@ class YtMusicView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         const val POLL_MS = 1_000L
         const val ACTION_SETTLE_MS = 350L
         const val COVER_RETRY_MS = 10_000L
+        const val LYRICS_TICK_MS = 250L
+        const val LYRICS_RETRY_MS = 15_000L
 
         /** Pochettes déjà décodées (titre en cours et file), partagées entre les widgets. */
         val images = object : LruCache<String, Bitmap>(8 * 1024 * 1024) {

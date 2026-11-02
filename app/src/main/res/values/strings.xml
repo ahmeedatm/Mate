@@ -1154,6 +1154,14 @@
     <string name="ytmusic_repeat_all">Répéter la file d\'attente</string>
     <string name="ytmusic_repeat_one">Répéter ce titre</string>
     <string name="ytmusic_position">Position dans le titre</string>
+    <string name="ytmusic_open">Ouvrir YouTube Music sur l\'ordi</string>
+    <string name="ytmusic_lyrics">Paroles</string>
+    <string name="ytmusic_lyrics_loading">Recherche des paroles…</string>
+    <string name="ytmusic_lyrics_none">Pas de paroles trouvées pour ce titre.</string>
+    <string name="ytmusic_lyrics_instrumental">Titre instrumental : pas de paroles.</string>
+    <string name="ytmusic_lyrics_credit">Paroles : LRCLIB</string>
+    <string name="ytmusic_lyrics_credit_unsynced">Paroles : LRCLIB, non synchronisées</string>
+    <string name="ytmusic_lyrics_seek">%1$s. Toucher pour aller à ce passage</string>
     <string name="actions_empty">Aucun run</string>
     <string name="widget_day">Ma journée</string>
     <string name="widget_day_desc">Bonjour, la date, la prochaine réunion en grand avec Rejoindre, la météo et l\'eau</string>

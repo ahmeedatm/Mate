@@ -155,6 +155,13 @@ describe("YTMDesktop piloté depuis la tablette", () => {
     assert.equal((await server.call("POST", "/ytmusic/action", { op: "play-queue", index: 9 })).status, 400);
   });
 
+  it("ouvrir sur l'ordinateur : YTMDesktop relié et installé est lancé (ou mis devant)", async () => {
+    server.setOs({ installed: ["YouTube Music Desktop App"] });
+    server.clearOsCalls();
+    assert.deepEqual((await server.call("POST", "/ytmusic/open")).json, { opened: "app", app: "YouTube Music Desktop App" });
+    assert.ok(server.osCalls().some((c) => c.fn === "launchApp" && c.args[0] === "YouTube Music Desktop App"));
+  });
+
   it("oublier YTMDesktop : jeton effacé", async () => {
     assert.equal((await server.call("DELETE", "/ytmusic/desktop")).status, 200);
     assert.deepEqual((await server.call("GET", "/ytmusic")).json.desktop, { status: "off" });
