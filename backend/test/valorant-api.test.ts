@@ -5,6 +5,7 @@ import type { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { after, before, beforeEach, describe, it } from "node:test";
+import { riotServer } from "../src/valorant.ts";
 import { startServer, type TestServer } from "./server.ts";
 
 const ME = "puuid-moi";
@@ -35,6 +36,10 @@ const presence = (loop: string, over: Record<string, unknown> = {}) => ({
 /** Faux client Riot (local) et faux serveurs Riot (glz, pd) : `loop` fixe l'état de la partie. */
 let loop = "MENUS";
 let partyState = "DEFAULT";
+/** Client lancé mais pas connecté à un compte : pas de jeton. */
+let signedIn = true;
+/** Un joueur de plus dans la partie, dont le mmr répond 503 (pd qui limite les appels). */
+let withNewcomer = false;
 let remoteSeen: { url: string; auth?: string; entitlements?: string; version?: string }[] = [];
 let localAuth: string[] = [];
 const send = (res: http.ServerResponse, body: unknown, status = 200) => {
@@ -52,7 +57,7 @@ const riotClient = http.createServer((req, res) => {
         presence(loop, { partyPresenceData: { partyState, partyClientVersion: "release-13.09-shipping-18-5804228" } }),
       ],
     });
-  if (req.url === "/entitlements/v1/token") return send(res, { accessToken: ACCESS, token: ENTITLEMENT, subject: ME });
+  if (req.url === "/entitlements/v1/token") return send(res, signedIn ? { accessToken: ACCESS, token: ENTITLEMENT, subject: ME } : {});
   if (req.url === "/product-session/v1/external-sessions")
     return send(res, { x: { productId: "valorant", launchConfiguration: { arguments: ["-ares-deployment=eu", "-config-endpoint=x"] } } });
   send(res, { message: "inconnu" }, 404);
@@ -101,6 +106,7 @@ const riotServers = http.createServer((req, res) => {
           { Subject: ME, TeamID: "Blue", CharacterID: SOVA, PlayerIdentity: { Incognito: false } },
           { Subject: "cache", TeamID: "Red", CharacterID: "inconnu", PlayerIdentity: { Incognito: true } },
           { Subject: "ami", TeamID: "Blue", CharacterID: SAGE, PlayerIdentity: { Incognito: false } },
+          ...(withNewcomer ? [{ Subject: "nouveau", TeamID: "Red", CharacterID: JETT, PlayerIdentity: { Incognito: false } }] : []),
         ],
       });
     if (url === "/name-service/v2/players" && req.method === "PUT") {
@@ -117,6 +123,7 @@ const riotServers = http.createServer((req, res) => {
     }
     const mmr = url.match(/^\/mmr\/v1\/players\/(.+)$/);
     if (mmr) {
+      if (mmr[1] === "nouveau") return send(res, { message: "trop d'appels" }, 503);
       const [tier, rr] = tierOf[mmr[1]] ?? [0, 0];
       return send(res, { LatestCompetitiveUpdate: { TierAfterUpdate: tier, RankedRatingAfterUpdate: rr } });
     }
@@ -144,6 +151,8 @@ after(async () => {
 beforeEach(() => {
   loop = "MENUS";
   partyState = "DEFAULT";
+  signedIn = true;
+  withNewcomer = false;
   remoteSeen = [];
   localAuth = [];
   server.setOs({ riotLockfile: lockfile });
@@ -229,6 +238,24 @@ describe("Valorant : rang et joueurs de la partie, lus dans le client Riot", () 
     assert.equal(remoteSeen.filter((s) => s.url.startsWith("/mmr/")).length, 0);
   });
 
+  it("mmr en échec : pas redemandé à chaque lecture", async () => {
+    loop = "INGAME";
+    withNewcomer = true;
+    const first = await server.call("GET", "/valorant");
+    assert.equal(first.json.players.length, 5);
+    await server.call("GET", "/valorant");
+    assert.equal(remoteSeen.filter((s) => s.url === "/mmr/v1/players/nouveau").length, 1);
+  });
+
+  it("client lancé sans compte connecté : aucun appel aux serveurs Riot sans jeton", async () => {
+    signedIn = false;
+    loop = "INGAME";
+    const res = await server.call("GET", "/valorant");
+    assert.equal(res.json.state, "ingame");
+    assert.deepEqual(res.json.players, []);
+    assert.equal(remoteSeen.length, 0);
+  });
+
   it("sans jeton de la tablette : 401", async () => {
     assert.equal((await server.call("GET", "/valorant", undefined, false)).status, 401);
   });
@@ -246,5 +273,16 @@ describe("Valorant hors Windows", () => {
   it("pas annoncé, et /valorant répond off", async () => {
     assert.equal((await mac.call("GET", "/deck/features")).json.valorant, false);
     assert.equal((await mac.call("GET", "/valorant")).json.state, "off");
+  });
+});
+
+describe("Valorant : serveurs de test", () => {
+  it("une adresse de remplacement n'est suivie que vers la boucle locale (le jeton Riot ne part pas ailleurs)", () => {
+    assert.equal(riotServer("http://127.0.0.1:4000", "https://pd.eu.a.pvp.net"), "http://127.0.0.1:4000");
+    assert.equal(riotServer("http://localhost:4000", "https://pd.eu.a.pvp.net"), "http://localhost:4000");
+    assert.equal(riotServer("https://exemple.fr", "https://pd.eu.a.pvp.net"), "https://pd.eu.a.pvp.net");
+    assert.equal(riotServer("http://127.0.0.1.exemple.fr", "https://pd.eu.a.pvp.net"), "https://pd.eu.a.pvp.net");
+    assert.equal(riotServer("pas une adresse", "https://pd.eu.a.pvp.net"), "https://pd.eu.a.pvp.net");
+    assert.equal(riotServer(undefined, "https://pd.eu.a.pvp.net"), "https://pd.eu.a.pvp.net");
   });
 });

@@ -188,22 +188,30 @@ async function remote(r: Remote, url: string, init: RequestInit = {}): Promise<a
   return res.json();
 }
 
-/** Rang et RR de chaque joueur, gardés 10 min (rien ne change pendant une partie, et pd limite les appels). */
-const ranks = new Map<string, { at: number; tier: number; rr: number }>();
+/**
+ * Rang et RR de chaque joueur, gardés 10 min (rien ne change pendant une partie, et pd limite les appels) ; un échec est
+ * gardé 30 s (`rank` null), pour ne pas relancer dix appels refusés à chaque relecture.
+ */
+const ranks = new Map<string, { until: number; rank: { tier: number; rr: number } | null }>();
 const RANK_TTL = 10 * 60_000;
-/** Noms « Nom#TAG », gardés le temps du compagnon (un joueur change rarement de nom). */
+const RANK_FAIL_TTL = 30_000;
+/** Noms « Nom#TAG », gardés le temps du compagnon (un joueur change rarement de nom), 500 au plus. */
 const names = new Map<string, string>();
+const NAMES_MAX = 500;
 
 async function rankOf(r: Remote, puuid: string): Promise<{ tier: number; rr: number } | null> {
+  const now = Date.now();
   const known = ranks.get(puuid);
-  if (known && Date.now() - known.at < RANK_TTL) return known;
+  if (known && now < known.until) return known.rank;
+  for (const [id, entry] of ranks) if (now >= entry.until) ranks.delete(id);
   try {
     const mmr = await remote(r, `${r.pd}/mmr/v1/players/${puuid}`);
     const latest = mmr?.LatestCompetitiveUpdate ?? {};
-    const value = { at: Date.now(), tier: Number(latest.TierAfterUpdate) || 0, rr: Number(latest.RankedRatingAfterUpdate) || 0 };
-    ranks.set(puuid, value);
-    return value;
+    const rank = { tier: Number(latest.TierAfterUpdate) || 0, rr: Number(latest.RankedRatingAfterUpdate) || 0 };
+    ranks.set(puuid, { until: Date.now() + RANK_TTL, rank });
+    return rank;
   } catch {
+    ranks.set(puuid, { until: Date.now() + RANK_FAIL_TTL, rank: null });
     return null;
   }
 }
@@ -211,6 +219,7 @@ async function rankOf(r: Remote, puuid: string): Promise<{ tier: number; rr: num
 async function loadNames(r: Remote, puuids: string[]) {
   const missing = puuids.filter((p) => !names.has(p));
   if (missing.length === 0) return;
+  if (names.size + missing.length > NAMES_MAX) names.clear();
   try {
     const list = await remote(r, `${r.pd}/name-service/v2/players`, {
       method: "PUT",
@@ -324,18 +333,34 @@ async function read(): Promise<ValorantState> {
   return result;
 }
 
+/**
+ * Serveur Riot : `VALORANT_GLZ_URL` / `VALORANT_PD_URL` remplacent les serveurs de Riot pour les tests (faux serveurs),
+ * mais seulement vers la boucle locale : le jeton Riot ne part jamais vers une autre machine.
+ */
+export function riotServer(override: string | undefined, riot: string): string {
+  if (!override) return riot;
+  try {
+    const host = new URL(override).hostname;
+    return host === "127.0.0.1" || host === "localhost" ? override : riot;
+  } catch {
+    return riot;
+  }
+}
+
 /** Jeton du client et serveurs de sa région ; null si le client ne les donne pas (pas connecté). */
 async function remoteFor(lock: Lock, version: string): Promise<Remote | null> {
   try {
     const token = await local(lock, "/entitlements/v1/token");
+    // Client lancé sans compte connecté : pas de jeton, rien ne part vers Riot.
+    if (!token?.accessToken || !token.token) return null;
     const sessions = await local(lock, "/product-session/v1/external-sessions");
     const args: string[] =
       (Object.values(sessions ?? {}) as any[]).find((s) => s?.productId === "valorant")?.launchConfiguration?.arguments ?? [];
     const deployment = args.find((a) => a.startsWith("-ares-deployment="))?.split("=")[1] ?? "eu";
     const { region, shard } = SHARDS[deployment] ?? SHARDS.eu;
     return {
-      glz: process.env.VALORANT_GLZ_URL || `https://glz-${region}-1.${shard}.a.pvp.net`,
-      pd: process.env.VALORANT_PD_URL || `https://pd.${shard}.a.pvp.net`,
+      glz: riotServer(process.env.VALORANT_GLZ_URL, `https://glz-${region}-1.${shard}.a.pvp.net`),
+      pd: riotServer(process.env.VALORANT_PD_URL, `https://pd.${shard}.a.pvp.net`),
       headers: {
         authorization: `Bearer ${token.accessToken}`,
         "x-riot-entitlements-jwt": token.token,

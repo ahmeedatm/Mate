@@ -48,7 +48,6 @@ import pairingRoutes from "./routes/pairing.ts";
 import pluginRoutes from "./routes/plugins.ts";
 import pointerRoutes from "./routes/pointer.ts";
 import presentRoutes from "./routes/present.ts";
-import valorantRoutes from "./routes/valorant.ts";
 import portableRoutes from "./routes/portable.ts";
 import systemRoutes from "./routes/system.ts";
 import tabletRoutes from "./routes/tablet.ts";
@@ -60,6 +59,7 @@ import shoppingRoutes from "./routes/shopping.ts";
 import scheduleRoutes from "./routes/schedule.ts";
 import taskRoutes from "./routes/tasks.ts";
 import updateRoutes from "./routes/updates.ts";
+import valorantRoutes from "./routes/valorant.ts";
 import windowRoutes from "./routes/windows.ts";
 
 // Ce serveur pilote l'ordinateur : hors loopback (USB + adb reverse), un jeton est obligatoire.
