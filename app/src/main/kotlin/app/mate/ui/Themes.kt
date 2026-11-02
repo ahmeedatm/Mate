@@ -19,8 +19,8 @@ import app.mate.R
  * res/values/palettes.xml) : changer de thème recrée l'activité. Les thèmes clairs ont leur propre base AppCompat
  * (dialogues et champs clairs) ; la palette de Console et de Console jour est celle de leur base, Contraste élevé et
  * Hush en posent une par-dessus (une palette à parent AppCompat écraserait colorAccent et colorControlActivated de la base).
- * Console est le thème par défaut : sans choix, ou avec un thème enregistré qui n'existe plus (Clair, Sombre,
- * Cadran, Rétro, Nuit…).
+ * Console est le thème par défaut : sans choix, ou avec un thème enregistré qui n'existe plus (Clair, Sombre, Nuit…).
+ * Cadran, Cadran nuit et Rétro (palettes rétro, grain et tubes) sont revenus sur la branche Gen2.
  */
 enum class AppTheme(val label: Int, val base: Int, val palette: Int? = null) {
     CONSOLE(R.string.theme_console, R.style.Theme_Companion),
@@ -28,6 +28,11 @@ enum class AppTheme(val label: Int, val base: Int, val palette: Int? = null) {
     CONTRASTE(R.string.theme_contraste, R.style.Theme_CompanionLight, R.style.Palette_Contraste),
     HUSH(R.string.theme_hush, R.style.Theme_Companion, R.style.Palette_Hush),
     SPIDERMAN(R.string.theme_spiderman, R.style.Theme_Companion, R.style.Palette_SpiderMan),
+
+    // Rétro (repris le 03/11 sur la branche Gen2) : grain par-dessus l'écran (Grain), tubes qui coulent derrière (FlowBandView).
+    CADRAN(R.string.theme_cadran, R.style.Theme_CompanionLight, R.style.Palette_Cadran),
+    CADRAN_NUIT(R.string.theme_cadran_nuit, R.style.Theme_Companion, R.style.Palette_CadranNuit),
+    RETRO(R.string.theme_retro, R.style.Theme_CompanionLight, R.style.Palette_Retro),
     ;
 
     companion object {

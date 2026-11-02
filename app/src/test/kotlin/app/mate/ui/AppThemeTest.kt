@@ -10,8 +10,28 @@ class AppThemeTest {
     private val context = FakeContext()
 
     @Test
-    fun `Console d'abord, puis Console jour, Contraste eleve, Hush et Spider-Verse`() {
-        assertEquals(listOf(AppTheme.CONSOLE, AppTheme.CONSOLE_JOUR, AppTheme.CONTRASTE, AppTheme.HUSH, AppTheme.SPIDERMAN), AppTheme.entries)
+    fun `Console d'abord, puis Console jour, Contraste eleve, Hush, Spider-Verse et les retro`() {
+        assertEquals(
+            listOf(
+                AppTheme.CONSOLE, AppTheme.CONSOLE_JOUR, AppTheme.CONTRASTE, AppTheme.HUSH, AppTheme.SPIDERMAN,
+                AppTheme.CADRAN, AppTheme.CADRAN_NUIT, AppTheme.RETRO,
+            ),
+            AppTheme.entries,
+        )
+    }
+
+    @Test
+    fun `Cadran et Retro sont clairs, Cadran nuit sombre, et enregistres sont gardes`() {
+        assertEquals(R.style.Theme_CompanionLight, AppTheme.CADRAN.base)
+        assertEquals(R.style.Palette_Cadran, AppTheme.CADRAN.palette)
+        assertEquals(R.style.Theme_Companion, AppTheme.CADRAN_NUIT.base)
+        assertEquals(R.style.Palette_CadranNuit, AppTheme.CADRAN_NUIT.palette)
+        assertEquals(R.style.Theme_CompanionLight, AppTheme.RETRO.base)
+        assertEquals(R.style.Palette_Retro, AppTheme.RETRO.palette)
+        for (theme in listOf(AppTheme.CADRAN, AppTheme.CADRAN_NUIT, AppTheme.RETRO)) {
+            Prefs.setTheme(context, theme.name)
+            assertEquals(theme, AppTheme.current(context))
+        }
     }
 
     @Test
@@ -36,7 +56,7 @@ class AppThemeTest {
 
     @Test
     fun `un theme enregistre qui n'existe plus retombe sur Console`() {
-        for (old in listOf("CLAIR", "SOMBRE", "CADRAN", "CADRAN_NUIT", "RETRO", "REGISTRE", "STUDIO", "MAISON", "TABLEAU", "TERMINAL", "NUIT", "NEON", "CHAUD")) {
+        for (old in listOf("CLAIR", "SOMBRE", "REGISTRE", "STUDIO", "MAISON", "TABLEAU", "TERMINAL", "NUIT", "NEON", "CHAUD")) {
             Prefs.setTheme(context, old)
             assertEquals(old, AppTheme.CONSOLE, AppTheme.current(context))
         }

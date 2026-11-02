@@ -203,6 +203,8 @@ class MainActivity : AppCompatActivity() {
         // Plein écran : sans cela la fenêtre garde vide la place des barres système cachées (bandes noires).
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_main)
+        // Thèmes rétro : grain par-dessus tout l'écran (rien dans les autres thèmes).
+        app.mate.ui.Grain.applyTo(findViewById(android.R.id.content))
         Speaker.init(this)
         Prefs.focusPreset(this).let { FocusTimer.restore(it.focus, it.pause) }
         NoisePlayer.init(this)
@@ -217,6 +219,8 @@ class MainActivity : AppCompatActivity() {
         wakeRail()
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
         topBar = findViewById(R.id.top_bar)
+        // Tubes des thèmes rétro : voilés derrière le bandeau du haut et les widgets sans carte, pour garder leurs textes lisibles.
+        findViewById<app.mate.ui.home.FlowBandView>(R.id.flow).hidden = { listOf<View>(topBar) + homeFragment()?.bareWidgets().orEmpty() }
         topBar.attach(topHost)
         topBar.onEditDone = { if (current == Mode.HOME && homeFragment()?.isEditing() == true) homeFragment()?.toggleEdit() }
         // Tablette verrouillée : le mot de réveil ne lance rien.
@@ -1021,7 +1025,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Balayage vertical (Accueil ou autre mode) : entrée voisine de la barre ; faux au bout. */
-    fun railStep(delta: Int): Boolean = nav.step(delta)
+    /** Entrée voisine de la barre ; dans les thèmes rétro, les tubes défilent d'un écran dans le même sens. */
+    fun railStep(delta: Int): Boolean = nav.step(delta).also { moved ->
+        if (moved) findViewById<app.mate.ui.home.FlowBandView>(R.id.flow).travel(delta)
+    }
 
     /** Une entrée de la barre attend dans ce sens (l'écran suit alors le doigt, sinon il résiste). */
     fun railCanStep(delta: Int): Boolean = nav.canStep(delta)

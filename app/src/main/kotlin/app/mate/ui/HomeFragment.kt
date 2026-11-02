@@ -275,6 +275,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     /** Les widgets du profil affiché : les autres ne relisent pas l'ordinateur (tablette lente). */
     private fun shownWidgets() = widgets.filterKeys { it.page == page }.values.toList()
 
+    /** Widgets sans carte du profil affiché (héros, ligne du jour) : les tubes des thèmes rétro passent voilés derrière. */
+    fun bareWidgets(): List<View> = if (!isVisible) emptyList() else shownWidgets().map { it.view }.filter { it.background == null }
+
     private fun showsCalendar() = widgets.keys.any {
         it.type == WidgetType.AGENDA || it.type == WidgetType.NEXT || it.type == WidgetType.HERO || it.type == WidgetType.DAY || it.type == WidgetType.DAYLINE
     }

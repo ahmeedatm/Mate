@@ -74,6 +74,9 @@ POLICES (SIL Open Font License 1.1, texte plus bas)
 - Figtree : Copyright 2022 The Figtree Project Authors (https://github.com/erikdkennedy/figtree)
 - Chakra Petch : Copyright 2018 The Chakra Petch Project Authors (https://github.com/m4rc1e/Chakra-Petch.git)
 - Share Tech Mono : Copyright 2012 Carrois Type Design, Ralph du Carrois (https://github.com/google/fonts/tree/main/ofl/sharetechmono)
+- Outfit : Copyright 2021 The Outfit Project Authors (https://github.com/Outfitio/Outfit-Fonts)
+- Nunito : Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
+- Abril Fatface : Copyright (c) 2011, TypeTogether (www.type-together.com), noms de police réservés « Abril » et « Abril Fatface »
 - Atkinson Hyperlegible : Copyright 2020 Braille Institute of America, Inc. (https://github.com/googlefonts/atkinson-hyperlegible)
 
 DONNÉES

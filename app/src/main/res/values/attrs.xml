@@ -106,4 +106,12 @@
     <attr name="c_mx_highlight" format="color" />
     <attr name="c_mx_key_top" format="color" />
     <attr name="c_mx_key_bottom" format="color" />
+    <!-- Thèmes rétro : tubes qui coulent derrière les écrans (ui/home/FlowBandView) et grain par-dessus (ui/Grain). -->
+    <attr name="c_flow" format="boolean" />
+    <attr name="c_flow_dark" format="color" />
+    <attr name="c_flow_red" format="color" />
+    <attr name="c_flow_orange" format="color" />
+    <attr name="c_flow_cream" format="color" />
+    <attr name="c_grain_light" format="color" />
+    <attr name="c_grain_dark" format="color" />
 </resources>

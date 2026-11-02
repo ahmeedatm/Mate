@@ -24,6 +24,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent" />
 
+<!-- Tubes des thèmes rétro (c_flow), calés à droite derrière les écrans ; ils défilent d'un écran quand on passe à
+     l'entrée voisine de la barre (ui/home/FlowBandView). Masqués dans les autres thèmes. -->
+<app.mate.ui.home.FlowBandView
+    android:id="@+id/flow"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:layout_gravity="end"
+    android:importantForAccessibility="no" />
+
 <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="match_parent"
