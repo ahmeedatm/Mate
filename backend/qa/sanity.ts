@@ -498,6 +498,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       run: async () => {
         const media = await call("GET", "/system/media");
         if (!controlled()) return expectStatus(media, 501, "/system/media");
+        // Sans session de bureau (compagnon lancé par SSH ou en service), Windows n'a pas de lecteur de médias : comme le
+        // presse-papiers, on passe son tour. Sur un vrai bureau, une erreur fait toujours échouer le contrôle.
+        if (media.status !== 200 && (await call("GET", "/system/clipboard")).status === 503)
+          throw new Skip("lecture en cours indisponible : aucune session de bureau ouverte sur l'ordinateur");
         expectStatus(media, 200, "/system/media");
         // Une lecture en cours ne se touche pas : la pause n'est essayée que quand rien ne joue (réponse : 0 pause).
         if (media.json.sessions.some((s: { status: string }) => s.status === "playing")) return "lecture en cours, pause non essayée";
