@@ -11,6 +11,8 @@ import type { YtMusicAction, YtMusicItem, YtMusicState } from "./ytmusic.ts";
  */
 
 const BASE = (process.env.YTMD_URL ?? "http://127.0.0.1:9863").replace(/\/$/, "") + "/api/v1";
+/** Un état plus vieux n'est plus servi (YTMDesktop ne répond plus) ; `YTMD_FRESH_MS` raccourcit l'attente dans les tests. */
+const FRESH_MS = Number(process.env.YTMD_FRESH_MS ?? 30_000);
 const APP = { appId: "mate", appName: "Mate", appVersion: "1.0.0" };
 const storeFile = () => path.join(config.dataDir, "ytmdesktop.json");
 
@@ -20,7 +22,12 @@ export type DesktopStatus =
 let status: DesktopStatus = { status: "off" };
 let token: string | undefined;
 let state: YtMusicState | undefined;
+/** Dernier état réellement reçu de YTMDesktop (évènement ou /state) : seul juge de la fraîcheur. */
 let stateAt = 0;
+/** Dernière relecture de /state tentée, réussie ou non (YTMDesktop en accepte une par 5 s). */
+let polledAt = 0;
+/** Canal temps réel ouvert et accepté : sa fermeture veut dire YTMDesktop quitté ou relancé. */
+let realtime = false;
 
 // --- Traduction de l'état de YTMDesktop (transformPlayerState de son api/v1) vers celui de la tablette.
 
@@ -165,6 +172,8 @@ function connectRealtime() {
       // Jeton retiré dans YTMDesktop : on l'oublie, la tablette repropose de connecter.
       void forgetYtmd();
       status = { status: "error", error: "YTMDesktop a retiré l'accès de Mate : reconnecte-le" };
+    } else if (frame.type === "connected") {
+      realtime = true;
     } else if (frame.type === "event" && frame.event === "state-update") {
       state = fromYtmd(frame.data as YtmdState);
       stateAt = Date.now();
@@ -172,6 +181,11 @@ function connectRealtime() {
   };
   ws.onclose = () => {
     if (socket === ws) socket = undefined;
+    // YTMDesktop parti : son dernier état n'est plus vrai (la tablette ne doit plus montrer « en lecture »).
+    if (realtime) {
+      realtime = false;
+      stateAt = 0;
+    }
     // YTMDesktop fermé ou relancé : nouvel essai dans 5 s tant que le jeton est là.
     if (token) retry = setTimeout(connectRealtime, 5_000);
   };
@@ -192,13 +206,15 @@ async function load() {
 /** État en temps réel de YTMDesktop, s'il est connecté et a parlé dans les 30 dernières secondes. */
 export async function ytmdState(): Promise<{ status: DesktopStatus; state?: YtMusicState }> {
   await load();
-  const fresh = state && Date.now() - stateAt < 30_000 ? state : undefined;
+  const fresh = state && Date.now() - stateAt < FRESH_MS ? state : undefined;
   // Pas d'évènement depuis un moment (rien ne joue) : l'état complet, au plus une fois par 5 s (limite de YTMDesktop).
-  if (token && !fresh && Date.now() - stateAt > 5_000) {
-    stateAt = Date.now();
+  if (token && !fresh && Date.now() - polledAt > 5_000) {
+    polledAt = Date.now();
     const res = await call("/state").catch(() => undefined);
-    if (res?.status === 200) state = fromYtmd(res.json as unknown as YtmdState);
-    return { status, state: res?.status === 200 ? state : undefined };
+    if (res?.status !== 200) return { status };
+    state = fromYtmd(res.json as unknown as YtmdState);
+    stateAt = Date.now();
+    return { status, state };
   }
   return { status, state: fresh };
 }

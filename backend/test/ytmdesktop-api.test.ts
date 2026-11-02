@@ -89,9 +89,12 @@ describe("YTMDesktop : traduction", () => {
 let fake: http.Server;
 const commands: unknown[] = [];
 let server: TestServer;
+/** YTMDesktop quitté (ou remplacé par une version sans serveur de contrôle) : connexion coupée net. */
+let down = false;
 
 before(async () => {
   fake = http.createServer((req, res) => {
+    if (down) return req.socket.destroy();
     let body = "";
     req.on("data", (c) => (body += c));
     req.on("end", () => {
@@ -111,7 +114,11 @@ before(async () => {
     });
   });
   await new Promise<void>((resolve) => fake.listen(0, "127.0.0.1", resolve));
-  server = await startServer({ os: "windows", env: { YTMD_URL: `http://127.0.0.1:${(fake.address() as AddressInfo).port}` } });
+  // Fraîcheur ramenée à 6 s (au-dessus des 5 s entre deux relectures) pour voir en quelques secondes un YTMDesktop parti.
+  server = await startServer({
+    os: "windows",
+    env: { YTMD_URL: `http://127.0.0.1:${(fake.address() as AddressInfo).port}`, YTMD_FRESH_MS: "6000" },
+  });
 });
 after(async () => {
   await server?.stop();
@@ -160,6 +167,24 @@ describe("YTMDesktop piloté depuis la tablette", () => {
     server.clearOsCalls();
     assert.deepEqual((await server.call("POST", "/ytmusic/open")).json, { opened: "app", app: "YouTube Music Desktop App" });
     assert.ok(server.osCalls().some((c) => c.fn === "launchApp" && c.args[0] === "YouTube Music Desktop App"));
+  });
+
+  it("YTMDesktop qui ne répond plus : son dernier état n'est plus servi, les commandes disent pourquoi", async () => {
+    down = true;
+    try {
+      let state = await server.call("GET", "/ytmusic");
+      for (let i = 0; i < 90 && state.json.source === "desktop"; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+        state = await server.call("GET", "/ytmusic");
+      }
+      assert.notEqual(state.json.source, "desktop");
+      assert.equal(state.json.open, false);
+      // Toujours relié (le jeton reste) : la tablette dit d'ouvrir YTMDesktop, pas de le reconnecter.
+      assert.equal(state.json.desktop.status, "connected");
+      assert.equal((await server.call("POST", "/ytmusic/action", { op: "play-pause" })).status, 409);
+    } finally {
+      down = false;
+    }
   });
 
   it("oublier YTMDesktop : jeton effacé", async () => {

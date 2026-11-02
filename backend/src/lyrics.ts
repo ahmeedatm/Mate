@@ -15,7 +15,7 @@ const HEADERS = { "user-agent": "Mate (github.com/ahmeedatm/Mate)" };
 /** Écart de durée accepté entre le titre joué et une réponse de la recherche libre (s). */
 const DURATION_SLACK = 3;
 const CACHE_MAX = 200;
-const RETRY_MS = Number(process.env.LYRICS_RETRY_MS ?? 1_000);
+const RETRY_MS = 1_000;
 const cache = new Map<string, Lyrics | null>();
 
 /** « [01:02.50]Texte » → une ligne par heure (une ligne LRC peut en porter plusieurs), triées. */
