@@ -489,6 +489,11 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         neighborProfile(delta)?.let(::showProfile)
     }
 
+    /** Fond de Spider-Verse : logo net seulement si la colonne vide de la page est libre (MainActivity). */
+    override fun onCenterFree(free: Boolean) {
+        main?.setHomeCenterFree(free)
+    }
+
     override fun onPageDrag(dy: Float) {
         view?.let { SwipeFollow.drag(it, dy, canPage(if (dy < 0) 1 else -1)) }
     }

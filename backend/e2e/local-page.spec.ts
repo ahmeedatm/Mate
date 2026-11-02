@@ -254,12 +254,26 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#twintheme")).toHaveText("Hush");
     expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-now"))).toBe("#FF6EB4");
 
+    // Spider-Verse (SPIDERMAN) : accent magenta du logo, widgets sans tuile (tuile = fond noir).
+    await page.getByRole("button", { name: "Spider-Verse" }).click();
+    await expect(page.getByRole("button", { name: "Spider-Verse" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#twintheme")).toHaveText("Spider-Verse");
+    expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-now"))).toBe("#FF2BD6");
+    expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-tile"))).toBe("#000000");
+
     await page.locator("#nightdim").uncheck();
     await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");
     await page.locator("#volume").fill("75");
     await expect(page.locator("#volumevalue")).toHaveText("75 %");
-    await expect.poll(() => received.length).toBe(5);
-    expect(received).toEqual([{ theme: "CONSOLE_JOUR" }, { theme: "CONTRASTE" }, { theme: "HUSH" }, { nightDim: false }, { volume: 0.75 }]);
+    await expect.poll(() => received.length).toBe(6);
+    expect(received).toEqual([
+      { theme: "CONSOLE_JOUR" },
+      { theme: "CONTRASTE" },
+      { theme: "HUSH" },
+      { theme: "SPIDERMAN" },
+      { nightDim: false },
+      { volume: 0.75 },
+    ]);
     await expect(page.locator("#nightdim")).not.toBeChecked();
 
     // Ouverte depuis « Régler depuis l'ordi » : la carte est mise en avant.

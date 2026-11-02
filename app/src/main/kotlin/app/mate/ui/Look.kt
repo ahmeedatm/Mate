@@ -561,7 +561,7 @@ class TitleView @JvmOverloads constructor(
         typeface = themeFont(context, R.attr.c_font_label)
         letterSpacing = maxOf(ReadingAids.letterSpacing(context), if (caps) CAPS_SPACING else 0f)
         setTextSize(TypedValue.COMPLEX_UNIT_PX, themePx(context, R.attr.c_title_size).toFloat())
-        setTextColor(themeColor(context, R.attr.c_text_dim))
+        setTextColor(themeColor(context, R.attr.c_label))
     }
 }
 

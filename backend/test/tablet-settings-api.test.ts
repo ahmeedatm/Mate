@@ -23,8 +23,6 @@ const STATE = {
   settings: SETTINGS,
 };
 
-const ofType = (commands: { id: string; command: { type: string } }[], type: string) => commands.find((c) => c.command.type === type)!;
-
 /**
  * Prochain ordre du type demandé. Les veilles du premier plan (`foreground`) et des touches (`tilestate`) poussent leur ordre à chaque (re)connexion de la
  * tablette : il peut arriver avant celui qu'on attend, dans un poll à part.
@@ -49,7 +47,8 @@ describe("panneau Tablette", () => {
   });
 
   it("envoie le réglage à la tablette, sans jeton depuis l'ordinateur", async () => {
-    const polling = server.call("POST", "/tablet/poll", { state: STATE });
+    // Ordre « settings » attendu, pas le premier venu : sur un vrai Mac, la veille du premier plan pousse aussi un ordre « foreground ».
+    const polling = nextOrder("settings");
     await new Promise((r) => setTimeout(r, 300));
 
     const status = await server.call("GET", "/local/status", undefined, false);
@@ -64,8 +63,7 @@ describe("panneau Tablette", () => {
     });
 
     const put = server.call("PUT", "/local/tablet/settings", { theme: "CONSOLE_JOUR", brightness: 0.3 }, false);
-    // Ce premier poll connecte la tablette : l'ordre des touches (tilestate) peut le prendre, le réglage vient alors au suivant.
-    const order = ofType((await polling).json.commands, "settings") ?? (await nextOrder("settings"));
+    const order = await polling;
     assert.deepEqual(order.command, { type: "settings", theme: "CONSOLE_JOUR", brightness: 0.3 });
 
     const state = { ...STATE, settings: { ...SETTINGS, theme: "CONSOLE_JOUR", brightness: 0.3 } };
@@ -76,9 +74,8 @@ describe("panneau Tablette", () => {
     assert.equal(done.json.tablet.settings.theme, "CONSOLE_JOUR");
   });
 
-  for (const theme of ["CONTRASTE", "CONSOLE_JOUR", "HUSH"]) {
+  for (const theme of ["CONTRASTE", "CONSOLE_JOUR", "HUSH", "SPIDERMAN"]) {
     it(`accepte le thème ${theme}`, async () => {
-      // nextOrder : l'ordre des touches (tilestate) peut arriver avant, dans un poll à part.
       const polling = nextOrder("settings");
       await new Promise((r) => setTimeout(r, 300));
       const put = server.call("PUT", "/local/tablet/settings", { theme }, false);

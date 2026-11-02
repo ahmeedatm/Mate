@@ -64,3 +64,5 @@ une ligne et lister seulement les `⚠️`.
 - `important` et `mineur` : l'humain tranche. Corriger ce qu'il accepte, laisser le reste, et le dire
   dans la PR. Une remarque qui demande de sortir de la demande validée devient une note « à faire dans
   une autre branche », pas une modification de cette PR.
+- Zéro `bloquant` et le diff touche `app/` ou `backend/` : rappeler l'étiquette `essai` si la PR doit
+  être essayée sur une vraie tablette (`nouvelle-feature`, § 9).
