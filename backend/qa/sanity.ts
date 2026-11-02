@@ -413,6 +413,17 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "YouTube Music (lecture seule, action hors liste refusée)",
+      run: async () => {
+        // Jamais d'action réelle ici : elle jouerait dans le navigateur de l'ordinateur.
+        const res = await call("GET", "/ytmusic");
+        expectStatus(res, 200, "GET /ytmusic");
+        expect(typeof res.json.open === "boolean", "réponse sans open");
+        expectStatus(await call("POST", "/ytmusic/action", { op: "eval" }), 400, "action hors liste");
+        return res.json.open ? `onglet ouvert dans ${res.json.browser}` : "aucun onglet";
+      },
+    },
+    {
       name: "absence : état gardé (lecture seule)",
       run: async () => {
         // Jamais de start ni de resume ici : ils pilotent les fenêtres réelles.

@@ -48,6 +48,7 @@ import tabletRoutes from "./routes/tablet.ts";
 import taskRoutes from "./routes/tasks.ts";
 import updateRoutes from "./routes/updates.ts";
 import windowRoutes from "./routes/windows.ts";
+import ytMusicRoutes from "./routes/ytmusic.ts";
 
 // Ce serveur pilote l'ordinateur : hors loopback (USB + adb reverse), un jeton est obligatoire.
 if (!config.loopbackOnly && !config.token) {
@@ -99,7 +100,8 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     // Panneau de l'appli portable (routes/portable.ts) : corps JSON exigé, pas envoyable par un autre site.
     (method === "POST" && /^\/local\/(autostart|firewall|capteurs|forget|quit|update)$/.test(url)) ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
-    (method === "POST" && (url === "/browser/extension" || url === "/browser/extension/commands")) ||
+    (method === "POST" &&
+      (url === "/browser/extension" || url === "/browser/extension/commands" || url === "/browser/extension/ytmusic")) ||
     // Porte MCP des IA de bureau (routes/mcp.ts) : corps JSON exigé par le SDK, pas envoyable par un autre site.
     (/^(GET|POST|DELETE)$/.test(method) && url === "/mcp") ||
     // Hooks de Claude Code : pas de jeton d'appairage, un secret propre vérifié par la route (src/agents-sources.ts).
@@ -191,6 +193,7 @@ app.register(notificationRoutes);
 app.register(docRoutes);
 app.register(updateRoutes);
 app.register(browserRoutes);
+app.register(ytMusicRoutes);
 app.register(cameraRoutes);
 app.register(calendarRoutes);
 app.register(taskRoutes);
