@@ -724,6 +724,19 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "Valorant (état de la partie)",
+      run: async () => {
+        // Lecture seule : client Riot fermé ou hors Windows, « off ».
+        const res = await call("GET", "/valorant");
+        expectStatus(res, 200, "/valorant");
+        const states = ["off", "menu", "queue", "pregame", "ingame"];
+        expect(states.includes(res.json.state), `état inattendu : ${res.json.state}`);
+        expect(Array.isArray(res.json.players), "liste des joueurs absente");
+        if (os !== "windows") expect(res.json.state === "off", "Valorant annoncé hors Windows");
+        return res.json.state === "off" ? "client Riot fermé" : `${res.json.state}, ${res.json.players.length} joueur(s)`;
+      },
+    },
+    {
       name: "garde de /docs/open (refuse un .exe)",
       run: async () => {
         const res = await call("POST", "/docs/open", { path: "sanity.exe" });
