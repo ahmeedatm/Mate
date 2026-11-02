@@ -19,12 +19,15 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import app.mate.agents.AgentAlerts
+import app.mate.audio.Ringer
 import app.mate.audio.Speaker
+import app.mate.audio.VolumeKeys
 import app.mate.device.Accessibility
 import app.mate.device.Screen
 import app.mate.device.Tablet
 import app.mate.device.TabletSignals
 import app.mate.focus.Breathing
+import app.mate.focus.FocusAwake
 import app.mate.focus.FocusDnd
 import app.mate.focus.FocusTimer
 import app.mate.focus.NoisePlayer
@@ -99,6 +102,7 @@ import app.mate.voice.WakeWord
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -112,6 +116,7 @@ interface VolumeKeyHandler {
 class MainActivity : AppCompatActivity() {
 
     private val rehide = Runnable { hideSystemBars() }
+    private var volumeNudge: Job? = null
     private var current = Mode.HOME
     /** Barre fixe à gauche : Parler, profils, outils, ordinateur, Réglages. */
     private lateinit var nav: Navigation
@@ -128,6 +133,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var noComputer: View
     private val keyboard = KeyboardControl(this)
     private val focusDnd = FocusDnd(this)
+    private val focusAwake = FocusAwake(this)
     private val remote = RemoteLink(this, ::showLink) { computer -> onComputerChanged(computer, automatic = true) }
     private val computerDialogs by lazy { ComputerAdder(this, lifecycleScope) { onComputerChanged(it) } }
     /** Dernier état de la liaison, repris par les Réglages et le sélecteur d'ordinateur. */
@@ -463,6 +469,7 @@ class MainActivity : AppCompatActivity() {
     private val focusListener: (FocusTimer.State) -> Unit = { state ->
         nav.showFocus(state)
         followFocusDnd(state)
+        focusAwake.follow(state)
     }
 
     /** Ne pas déranger sur l'ordinateur pendant la concentration ; aussi rappelé quand le réglage change. */
@@ -488,6 +495,7 @@ class MainActivity : AppCompatActivity() {
         Kiosk.enter(this)
         Accessibility.applyAnimationScale(this, Prefs.reduceMotion(this))
         Screen.apply(this)
+        Screen.startAmbient(this)
         Screen.applyOrientation(this)
         // Retour de l'essai : si l'ordinateur est resté sur le backend d'une MR (essai planté), on remet le sien.
         if (!BuildConfig.TRIAL && Prefs.trialOpened(this)) {
@@ -500,6 +508,7 @@ class MainActivity : AppCompatActivity() {
     /** Mate quitte l'écran (écran éteint, autre appli) : le mot de réveil n'écoute plus. */
     override fun onPause() {
         wake.pause()
+        Screen.stopAmbient(this)
         super.onPause()
     }
 
@@ -525,7 +534,10 @@ class MainActivity : AppCompatActivity() {
         // Activité recréée (thème, mise à jour) pendant le cadre : sa luminosité réduite ne reste pas à l'écran suivant.
         if (::frame.isInitialized && frame.isShowing) Screen.frameCharging = null
         documentPanel.close()
-        if (isFinishing) NoisePlayer.stop()
+        if (isFinishing) {
+            NoisePlayer.stop()
+            Ringer.stop()
+        }
         voice.release()
         wake.release()
         lockScreen.dismiss()
@@ -551,7 +563,11 @@ class MainActivity : AppCompatActivity() {
             Screen.touched(this)
             lastTouch = SystemClock.elapsedRealtime()
             wakeRail()
-            if (frame.isShowing) {
+            if (Ringer.isRinging) {
+                // Retrouvée : le toucher arrête la sonnerie, il ne clique pas ce qu'il y a dessous.
+                Ringer.stop()
+                swallowTouch = true
+            } else if (frame.isShowing) {
                 closeFrame()
                 swallowTouch = true
             }
@@ -573,9 +589,22 @@ class MainActivity : AppCompatActivity() {
             else -> return super.dispatchKeyEvent(event)
         }
         val handler = supportFragmentManager.findFragmentByTag(current.tag) as? VolumeKeyHandler
-            ?: return super.dispatchKeyEvent(event)
+        val onComputer = handler == null && Prefs.volumeKeysOnComputer(this)
+        val route = VolumeKeys.route(onComputer, handler != null, onComputer && Computers.active(this) != null)
+        if (route == VolumeKeys.Route.TABLET) return super.dispatchKeyEvent(event)
         // On consomme aussi le relâchement pour que la tablette ne change pas son propre volume.
-        return if (event.action == KeyEvent.ACTION_DOWN) handler.onVolumeKey(up) else true
+        if (event.action != KeyEvent.ACTION_DOWN) return true
+        return handler?.onVolumeKey(up) ?: nudgeComputerVolume(up, event.repeatCount > 0)
+    }
+
+    /** Un appui à la fois : un appui maintenu n'empile pas de requêtes sur l'ordinateur. */
+    private fun nudgeComputerVolume(up: Boolean, repeated: Boolean): Boolean {
+        if (volumeNudge?.isActive == true) return true
+        volumeNudge = lifecycleScope.launch {
+            runCatchingCancellable { BackendClient(this@MainActivity).system.setAudio(outputDelta = VolumeKeys.delta(up)) }
+                .onFailure { if (!repeated) showBanner(errorText(it), 6) }
+        }
+        return true
     }
 
     /** Nombre de tâches non faites, en pastille sur l'icône Accueil (mis à jour par la carte Tâches). */
@@ -709,47 +738,57 @@ class MainActivity : AppCompatActivity() {
 
     private val game = GameSession()
 
-    /** Écran et profil d'avant la bascule sur l'écran de jeu, pour y revenir quand le jeu finit. */
+    /** Écran et profil d'avant la bascule sur la page d'une appli, pour y revenir quand on la quitte. */
     private var beforeGame: Pair<Mode, Int>? = null
+
+    /** Page affichée à cause de l'appli : à quitter seulement si l'écran la montre encore. */
+    private var gamePage = -1
 
     private val gameLeft = Runnable { if (game.endIfLeft()) afterGame() }
 
     /**
-     * Ordre `foreground` de l'ordinateur : l'appli au premier plan. Une appli de la liste de jeu bascule sur l'écran de
-     * jeu choisi (sauf saisie, écran plein ou appel) ; la quitter plus de [GAME_GRACE_MS] revient à l'écran d'avant.
+     * Ordre `foreground` de l'ordinateur : l'appli au premier plan. Une appli listée sur une page (Réglages > Profils)
+     * affiche cette page (sauf saisie, écran plein ou appel) ; la quitter plus de [GAME_GRACE_MS] revient à l'écran d'avant.
      */
     fun onForeground(app: String, bundleId: String, file: String = "") {
         val layout = shownLayout()
-        val games = if (layout.gameProfile < 0 || layout.gameProfile == layout.callProfile) emptyList() else layout.gameApps
-        when (game.onForeground(app, bundleId, file, games)) {
-            GameSession.Step.START -> startGame(layout)
+        when (game.onForeground(app, bundleId, file, layout.appPages())) {
+            GameSession.Step.START -> {
+                window.decorView.removeCallbacks(gameLeft)
+                startGame(game.target)
+            }
             GameSession.Step.LEAVE -> window.decorView.postDelayed(gameLeft, GAME_GRACE_MS)
             GameSession.Step.RETURN -> window.decorView.removeCallbacks(gameLeft)
             GameSession.Step.NONE -> Unit
         }
     }
 
-    private fun startGame(layout: HomeLayout) {
+    private fun startGame(target: Int) {
         val fullScreen = current == Mode.CAMERA || homeFragment()?.editing == true
         val typing = Typing.active(focusIsEditText = currentFocus is android.widget.EditText)
         // État sauvegardé (appli en arrière-plan) : pas de changement d'écran.
         val page = homeFragment()?.shownPage?.takeIf { current == Mode.HOME }
-        // Bascule refusée (ou déjà sur l'écran de jeu) : pas de jeu en cours, la prochaine appli devant retentera.
-        if (supportFragmentManager.isStateSaved || !game.shouldSwitch(typing, fullScreen, inCall = call.active) || page == layout.gameProfile) {
-            game.reset()
+        // Bascule refusée (ou déjà sur cette page) : la prochaine appli devant retentera. Une page d'appli déjà affichée
+        // reste la session en cours (quitter les applis y fera revenir) ; sinon pas de session.
+        if (supportFragmentManager.isStateSaved || !game.shouldSwitch(typing, fullScreen, inCall = call.active) || page == target) {
+            if (gamePage >= 0 && page == gamePage) game.resumeOn(gamePage) else dropGame()
             return
         }
-        beforeGame = current to (homeFragment()?.shownPage ?: layout.homeProfile)
-        showProfile(layout.gameProfile)
+        // D'une appli à une autre, l'écran d'avant reste celui d'avant la première.
+        if (beforeGame == null || gamePage < 0) beforeGame = current to (homeFragment()?.shownPage ?: shownLayout().homeProfile)
+        gamePage = target
+        showProfile(target)
     }
 
-    /** Fin de jeu : retour à l'écran d'avant si l'écran de jeu est encore affiché. */
+    /** Fin de session : retour à l'écran d'avant si la page de l'appli est encore affichée. */
     private fun afterGame() {
         val before = beforeGame
+        val shown = gamePage
         beforeGame = null
+        gamePage = -1
         if (before == null || supportFragmentManager.isStateSaved) return
         val page = homeFragment()?.shownPage?.takeIf { current == Mode.HOME }
-        val back = game.returnTo(page, shownLayout().gameProfile, before.second) ?: return
+        val back = game.returnTo(page, shown, before.second) ?: return
         if (before.first == Mode.HOME) showProfile(back) else show(before.first)
     }
 
@@ -757,6 +796,7 @@ class MainActivity : AppCompatActivity() {
         window.decorView.removeCallbacks(gameLeft)
         game.reset()
         beforeGame = null
+        gamePage = -1
     }
 
     /** La disposition que l'Accueil affiche (celle que la barre doit suivre), sinon celle enregistrée. */

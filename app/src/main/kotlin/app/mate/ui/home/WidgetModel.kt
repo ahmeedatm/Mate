@@ -51,6 +51,7 @@ enum class WidgetType(
     NEXT("next", R.string.widget_next, R.string.widget_next_desc, R.drawable.ic_event, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.V, WidgetSize.S), true),
     AGENDA("agenda", R.string.widget_agenda, R.string.widget_agenda_desc, R.drawable.ic_event, listOf(WidgetSize.L, WidgetSize.T, WidgetSize.M, WidgetSize.V), true),
     TASKS("tasks", R.string.widget_tasks, R.string.widget_tasks_desc, R.drawable.ic_tasks, listOf(WidgetSize.L, WidgetSize.T, WidgetSize.V, WidgetSize.M), true),
+    SHOPPING("shopping", R.string.widget_shopping, R.string.widget_shopping_desc, R.drawable.ic_cart, listOf(WidgetSize.L, WidgetSize.T, WidgetSize.V, WidgetSize.M), true),
     FOCUS("focus", R.string.widget_focus, R.string.widget_focus_desc, R.drawable.ic_timer, listOf(WidgetSize.S, WidgetSize.V, WidgetSize.L), false),
     WATER("water", R.string.widget_water, R.string.widget_water_desc, R.drawable.ic_water, listOf(WidgetSize.S, WidgetSize.M), false),
     AUDIO("audio", R.string.widget_audio, R.string.widget_audio_desc, R.drawable.ic_volume, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S, WidgetSize.W), true),
@@ -73,12 +74,19 @@ enum class WidgetType(
     PRESENT("present", R.string.widget_present, R.string.widget_present_desc, R.drawable.ic_tile_slideshow, listOf(WidgetSize.XL, WidgetSize.L), true),
     JIRA("jira", R.string.widget_jira, R.string.widget_jira_desc, R.drawable.ic_dashboard, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
     GITLAB("gitlab", R.string.widget_gitlab, R.string.widget_gitlab_desc, R.drawable.ic_merge, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
+    HA("ha", R.string.widget_ha, R.string.widget_ha_desc, R.drawable.ic_lightbulb, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.M), true),
     CHECKLIST("checklist", R.string.widget_checklist, R.string.widget_checklist_desc, R.drawable.ic_tile_check_circle, listOf(WidgetSize.L, WidgetSize.T), false),
     AWAY("away", R.string.widget_away, R.string.widget_away_desc, R.drawable.ic_cafe, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     PIPELINES("pipelines", R.string.widget_pipelines, R.string.widget_pipelines_desc, R.drawable.ic_tile_rocket_launch, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
     GITHUB("github", R.string.widget_github, R.string.widget_github_desc, R.drawable.ic_code, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
     ACTIONS("actions", R.string.widget_actions, R.string.widget_actions_desc, R.drawable.ic_tile_deployed_code, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
-    YTMUSIC("ytmusic", R.string.widget_ytmusic, R.string.widget_ytmusic_desc, R.drawable.ic_queue_music, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3), true);
+    YTMUSIC("ytmusic", R.string.widget_ytmusic, R.string.widget_ytmusic_desc, R.drawable.ic_queue_music, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3), true),
+    WEB("web", R.string.widget_web, R.string.widget_web_desc, R.drawable.ic_dashboard, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.M, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), false),
+    NEWS("news", R.string.widget_news, R.string.widget_news_desc, R.drawable.ic_tile_description, listOf(WidgetSize.L, WidgetSize.XL), true),
+    MAIL("mail", R.string.widget_mail, R.string.widget_mail_desc, R.drawable.ic_mail, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L), true),
+    METRICS("metrics", R.string.widget_metrics, R.string.widget_metrics_desc, R.drawable.ic_tile_bar_chart, listOf(WidgetSize.L, WidgetSize.XL), true),
+    MEALS("meals", R.string.widget_meals, R.string.widget_meals_desc, R.drawable.ic_tile_restaurant, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.T), true),
+    VALORANT("valorant", R.string.widget_valorant, R.string.widget_valorant_desc, R.drawable.ic_gamepad, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.T), true);
 
     /** Taille de l'exemplaire agrandi (widget maintenu, [WidgetZoom]) : la plus grande, la plus large à surface égale. */
     val zoomSize get() = sizes.maxWith(compareBy<WidgetSize>({ it.w * it.h }, { it.w }))
@@ -86,16 +94,18 @@ enum class WidgetType(
     /** Sans fond de carte, posé à même l'écran. */
     val bare get() = this == HERO || this == DAY || this == DAYLINE
 
-    /** Maintenir le widget l'agrandit : pas ceux sans carte (héros, journée, ligne du jour), rien de plus à y voir. */
-    val zoomable get() = !bare
+    /** Maintenir le widget l'agrandit : pas ceux sans carte (héros, journée, ligne du jour), rien de plus à y voir, ni la page web (un seul WebView à la fois). */
+    val zoomable get() = !bare && this != WEB
 
     /**
-     * Proposé dans le catalogue de l'ordinateur actif : Agents, Jira, GitLab, Pipelines, GitHub et Actions seulement s'il les offre (Agents :
-     * Mac avec Claude Code), Ouvertes, Son et Pavé seulement si leur plugin n'est pas coupé (écran des plugins).
+     * Proposé dans le catalogue de l'ordinateur actif : Agents, Jira, Home Assistant, GitLab, Pipelines, GitHub, Actions et Valorant seulement s'il les offre (Agents :
+     * Mac avec Claude Code ; Valorant : Windows), Ouvertes, Son et Pavé seulement si leur plugin n'est pas coupé (écran des plugins).
      */
     fun offered(features: HomeFeatures) = when (this) {
         AGENTS -> features.agents
         JIRA -> features.jira
+        HA -> features.ha
+        VALORANT -> features.valorant
         GITLAB, PIPELINES -> features.gitlab
         GITHUB, ACTIONS -> features.github
         OPEN -> "open" !in features.off
@@ -147,9 +157,23 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
     var callProfile = -1
     var rolesSet = false
 
-    /** Écran de jeu choisi par l'utilisateur (n'importe quel profil, -1 : aucun) et ses applis de jeu (noms du catalogue). */
-    var gameProfile = -1
-    val gameApps: MutableList<String> = mutableListOf()
+    /** Applis de chaque profil (noms du catalogue), dans l'ordre des noms : l'une d'elles devant sur l'ordinateur affiche la page. */
+    private val pageApps: MutableList<MutableList<String>> = MutableList(names.size) { mutableListOf() }
+
+    fun appsOf(index: Int): List<String> = pageApps.getOrNull(index).orEmpty()
+
+    /** Pose les applis de la page ; une appli ne mène qu'à une page, elle est retirée des autres (sans casse). */
+    fun setApps(index: Int, apps: List<String>) {
+        syncIcons()
+        if (index !in pageApps.indices) return
+        val taken = apps.map { it.lowercase() }.toSet()
+        pageApps.forEachIndexed { i, list -> if (i != index) list.removeAll { it.lowercase() in taken } }
+        pageApps[index] = apps.toMutableList()
+    }
+
+    /** Applis par page pour [app.mate.ui.GameSession] : Réunion (cachée hors appel) et les pages sans applis n'y sont pas. */
+    fun appPages(): Map<Int, List<String>> =
+        pageApps.indices.filter { it != callProfile && pageApps[it].isNotEmpty() }.associateWith { pageApps[it].toList() }
 
     val pages get() = names.size
 
@@ -167,6 +191,8 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
     private fun syncIcons() {
         while (icons.size < names.size) icons += null
         while (icons.size > names.size) icons.removeAt(icons.lastIndex)
+        while (pageApps.size < names.size) pageApps += mutableListOf<String>()
+        while (pageApps.size > names.size) pageApps.removeAt(pageApps.lastIndex)
     }
 
     fun copy() = HomeLayout(widgets.map { it.copy() }.toMutableList(), names.toMutableList()).also {
@@ -174,10 +200,9 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         it.deckProfile = deckProfile
         it.callProfile = callProfile
         it.rolesSet = rolesSet
-        it.gameProfile = gameProfile
-        it.gameApps += gameApps
         it.icons.clear()
         it.icons += icons
+        pageApps.forEachIndexed { i, apps -> it.pageApps[i] += apps }
     }
 
     /**
@@ -232,6 +257,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         syncIcons()
         names += name
         icons += null
+        pageApps += mutableListOf<String>()
         val index = names.size - 1
         widgets += items.map { it.copy().also { c -> c.page = index } }
         return index
@@ -280,12 +306,13 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         return named
     }
 
-    /** Remet le profil `from` à la place `to` ; ses widgets et le marquage de jeu le suivent. */
+    /** Remet le profil `from` à la place `to` ; ses widgets et ses applis le suivent. */
     fun moveProfile(from: Int, to: Int) {
         if (from == to || from !in names.indices || to !in names.indices) return
         syncIcons()
         names.add(to, names.removeAt(from))
         icons.add(to, icons.removeAt(from))
+        pageApps.add(to, pageApps.removeAt(from))
         fun moved(p: Int) = when {
             p == from -> to
             from < to && p in from + 1..to -> p - 1
@@ -296,7 +323,6 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         homeProfile = moved(homeProfile)
         if (deckProfile >= 0) deckProfile = moved(deckProfile)
         if (callProfile >= 0) callProfile = moved(callProfile)
-        if (gameProfile >= 0) gameProfile = moved(gameProfile)
     }
 
     /** Retire le profil et ses widgets, les suivants reculent d'une page. Faux (rien ne change) si [canRemove] le refuse. */
@@ -305,6 +331,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         syncIcons()
         names.removeAt(index)
         icons.removeAt(index)
+        pageApps.removeAt(index)
         widgets.removeAll { it.page == index }
         widgets.filter { it.page > index }.forEach { it.page-- }
         fun after(p: Int) = when {
@@ -315,7 +342,6 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         homeProfile = after(homeProfile)
         deckProfile = after(deckProfile)
         callProfile = after(callProfile)
-        gameProfile = after(gameProfile)
         return true
     }
 
@@ -371,8 +397,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         .put("deck", deckProfile)
         .put("call", callProfile)
         .put("roles", rolesSet)
-        .put("gameScreen", gameProfile)
-        .put("gameApps", JSONArray(gameApps))
+        .put("pageApps", JSONArray().apply { names.indices.forEach { put(JSONArray(appsOf(it))) } })
         .put("widgets", JSONArray().apply {
             widgets.forEach {
                 put(JSONObject().put("t", it.type.key).put("s", it.size.name).put("p", it.page).put("c", it.col).put("r", it.row).put("cfg", it.config))
@@ -416,8 +441,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
             layout.deckProfile = json.optInt("deck", -1).takeIf { it in names.indices } ?: -1
             layout.callProfile = json.optInt("call", -1).takeIf { it in names.indices } ?: -1
             layout.rolesSet = json.optBoolean("roles", false)
-            layout.gameProfile = json.optInt("gameScreen", -1).takeIf { it in names.indices } ?: -1
-            json.optJSONArray("gameApps")?.let { apps -> for (i in 0 until apps.length()) layout.gameApps += apps.optString(i) }
+            LayoutConfig.readPageApps(json, layout)
             val list = json.getJSONArray("widgets")
             for (i in 0 until list.length()) {
                 val w = list.getJSONObject(i)

@@ -30,6 +30,8 @@ namespace Mate
         interface IMMDevice
         {
             [PreserveSig] int Activate(ref Guid iid, int clsCtx, IntPtr activationParams, [MarshalAs(UnmanagedType.IUnknown)] out object iface);
+            [PreserveSig] int OpenPropertyStore(int access, [MarshalAs(UnmanagedType.Interface)] out IPropertyStore store);
+            [PreserveSig] int GetId([MarshalAs(UnmanagedType.LPWStr)] out string id);
         }
 
         [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

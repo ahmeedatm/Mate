@@ -39,6 +39,7 @@ export const DECK_HTML = `
   <section id="pf-touches" data-title="Touches" data-icon="keys">
     <div class="sechead"><h2>Touches</h2><span class="dim">Les touches de la page Perso et des pages du Deck. Une touche à plusieurs étapes est une macro.</span></div>
     <div class="pf-choices pf-pages" id="pf-deck-tabs" role="group" aria-label="Pages de touches"></div>
+    <div class="row"><button type="button" class="ghost" id="pf-deck-page-dup" hidden>Dupliquer la page</button></div>
     <div class="pf-slots" id="pf-deck-grid"></div>
     <p class="pf-msg" id="pf-deck-keys-msg" role="status"></p>
     <dialog class="cxdialog pf-keydialog" id="pf-key-dialog" aria-labelledby="pf-key-title">
@@ -80,8 +81,14 @@ export const DECK_HTML = `
 export const DECK_JS = `
   const pfDeckStepTypes = [
     ["app", "Ouvrir une appli"], ["url", "Ouvrir une adresse"], ["keys", "Raccourci clavier"], ["shortcut", "Raccourci Apple"],
-    ["media", "Lecture multimédia"], ["system", "Commande système"], ["text", "Coller un texte"], ["wait", "Attendre"],
-    ["window", "Placer une fenêtre"],
+    ["media", "Lecture multimédia"], ["system", "Commande système"], ["text", "Coller un texte"], ["wait", "Attendre"], ["http", "Appeler le réseau local"],
+    ["gesture", "Geste du Pavé"], ["window", "Placer une fenêtre"],
+  ];
+  const pfDeckGestures = [
+    ["zoom-in", "Zoom avant"], ["zoom-out", "Zoom arrière"], ["back", "Retour"], ["forward", "Avancer"],
+    ["task-view", "Vue des tâches"], ["desktop", "Afficher le bureau"], ["app-previous", "Appli précédente"],
+    ["app-next", "Appli suivante"], ["search", "Recherche"], ["desktop-previous", "Bureau précédent"],
+    ["desktop-next", "Bureau suivant"], ["notifications", "Notifications"],
   ];
   const pfDeckMedia = [["play-pause", "Lecture ou pause"], ["next", "Suivant"], ["previous", "Précédent"]];
   const pfDeckSystemNames = {
@@ -143,16 +150,19 @@ export const DECK_JS = `
       case "system": return { type: type, command: pfDeckData.systemCommands[0] };
       case "text": return { type: type, text: "" };
       case "wait": return { type: type, ms: 500 };
+      case "http": return { type: type, name: "" };
+      case "gesture": return { type: type, name: pfDeckGestures[0][0] };
       default: return { type: "window", app: "", display: "", layout: "keep" };
     }
   }
 
   function pfDeckCleanStep(s) {
     switch (s.type) {
-      case "app": case "shortcut": return { type: s.type, name: s.name.trim() };
+      case "app": case "shortcut": case "http": return { type: s.type, name: s.name.trim() };
       case "url": return { type: s.type, url: s.url.trim() };
       case "keys": return s.app.trim() ? { type: s.type, keys: s.keys.trim(), app: s.app.trim() } : { type: s.type, keys: s.keys.trim() };
       case "media": case "system": return { type: s.type, command: s.command };
+      case "gesture": return { type: s.type, name: s.name };
       case "text": return { type: s.type, text: s.text };
       case "wait": return { type: s.type, ms: Math.min(10000, Math.max(0, parseInt(s.ms, 10) || 0)) };
       default: {
@@ -163,8 +173,21 @@ export const DECK_JS = `
     }
   }
 
+  // Une page nommée seulement : Perso n'a pas de titre à copier.
+  async function pfDeckDuplicatePage() {
+    const r = await pfDeckApi("POST", "pages/" + (pfDeckPage - 1) + "/duplicate");
+    if (!r.ok) return pfDeckSay("pf-deck-keys-msg", r.error, "ko");
+    await pfDeckLoadKeys();
+    pfDeckPage = r.json.page + 1;
+    pfDeckSlot = null;
+    pfDeckRenderTabs();
+    pfDeckRenderGrid();
+    pfDeckSay("pf-deck-keys-msg", "Page dupliquée.", "ok");
+  }
+
   function pfDeckRenderTabs() {
     const tabs = document.getElementById("pf-deck-tabs");
+    document.getElementById("pf-deck-page-dup").hidden = pfDeckPage === 0;
     tabs.replaceChildren();
     pfDeckPages().forEach((page, i) => {
       tabs.append(pfDeckEl("button", {
@@ -181,7 +204,7 @@ export const DECK_JS = `
     pfDeckPages()[pfDeckPage].keys.forEach((key, slot) => {
       const dot = pfDeckEl("span", { className: key ? "dot on" : "dot" });
       if (key && key.color) dot.style.background = key.color;
-      const state = key ? (key.steps.length > 1 ? "Macro, " + key.steps.length + " étapes" : "1 étape") : "Libre";
+      const state = key ? (key.steps.length > 1 ? (key.cycle ? "Cycle, " : "Macro, ") + key.steps.length + " étapes" : "1 étape") : "Libre";
       grid.append(pfDeckEl("button", {
         type: "button", className: key ? "cx" : "cx pf-free", "aria-pressed": String(slot === pfDeckSlot),
         "aria-label": "Touche " + (slot + 1) + (key ? " : " + key.label : " : libre"),
@@ -198,8 +221,8 @@ export const DECK_JS = `
     const key = pfDeckPages()[pfDeckPage].keys[slot];
     pfDeckSlot = slot;
     pfDeckDraft = key
-      ? { label: key.label, symbol: key.symbol || "", glyph: key.glyph || "", color: key.color || "", steps: key.steps.map((s) => Object.assign(pfDeckNewStep(s.type), s)) }
-      : { label: "", symbol: "", glyph: "", color: "", steps: [] };
+      ? { label: key.label, symbol: key.symbol || "", glyph: key.glyph || "", color: key.color || "", cycle: key.cycle === true, span: key.span, hold: key.hold, steps: key.steps.map((s) => Object.assign(pfDeckNewStep(s.type), s)) }
+      : { label: "", symbol: "", glyph: "", color: "", cycle: false, steps: [] };
     pfDeckSay("pf-deck-keys-msg", "");
     pfDeckRenderGrid();
     pfDeckRenderEditor();
@@ -251,8 +274,12 @@ export const DECK_JS = `
         area.oninput = () => { step.text = area.value; };
         return [pfDeckField("Texte collé dans l'appli au premier plan", area)];
       }
+      case "gesture":
+        return [pfDeckField("Geste", pfDeckWrapSel(pfDeckSelect(pfDeckGestures, step.name, (v) => { step.name = v; })))];
       case "wait":
         return [pfDeckField("Durée en millisecondes (0 à 10000)", pfDeckText(String(step.ms), (v) => { step.ms = v; }, { inputmode: "numeric" }))];
+      case "http":
+        return [pfDeckField("Nom de la cible (LAN_TARGETS du .env)", pfDeckText(step.name, (v) => { step.name = v; }, { maxlength: 200 }))];
       default:
         return [
           pfDeckField("Appli", pfDeckText(step.app, (v) => { step.app = v; }, { list: "pf-deck-catalog-apps", maxlength: 200 })),
@@ -333,6 +360,12 @@ export const DECK_JS = `
     if (d.symbol) body.symbol = d.symbol;
     if (d.glyph) body.glyph = d.glyph;
     if (d.color) body.color = d.color;
+    // Le cycle se règle sur la tablette ; ici on le garde tel quel pour ne pas transformer la touche en macro.
+    if (d.cycle) body.cycle = true;
+    // Pareil pour la seconde action (appui long) : elle se règle sur la tablette.
+    if (d.hold) body.hold = d.hold;
+    // La largeur aussi se règle sur la tablette.
+    if (d.span) body.span = d.span;
     const r = await pfDeckApi("PUT", pfDeckPages()[pfDeckPage].path(pfDeckSlot), body);
     if (!r.ok) return say(r.error);
     pfDeckDialog.close();
@@ -432,6 +465,7 @@ export const DECK_JS = `
 
   document.getElementById("pf-deck-app-add").onclick = pfDeckAddApp;
   document.getElementById("pf-deck-app-reset").onclick = pfDeckResetApps;
+  document.getElementById("pf-deck-page-dup").onclick = pfDeckDuplicatePage;
   document.getElementById("pf-deck-link-add").onclick = async () => {
     const pick = document.getElementById("pf-deck-link-pick").value;
     if (!pick) return pfDeckSay("pf-deck-links-msg", "Choisis un site dans la liste.", "ko");

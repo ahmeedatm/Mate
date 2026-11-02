@@ -55,6 +55,7 @@ namespace Mate
                 case "press": return Press(req);
                 case "voice": return Voice(req);
                 case "dnd": return SetDnd(req);
+                case "awake": return Native.KeepAwake(Bool(req, "on"));
                 case "media": return Media.Invoke(req);
                 default: throw new ArgumentException("Opération inconnue : " + op);
             }

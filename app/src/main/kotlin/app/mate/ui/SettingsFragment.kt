@@ -97,6 +97,9 @@ class SettingsFragment :
     private lateinit var brightness: SeekBar
     private lateinit var volume: SeekBar
     private lateinit var nightDim: SwitchCompat
+    private lateinit var autoBrightness: SwitchCompat
+    private lateinit var autoBrightnessHint: TextView
+    private lateinit var volumeKeysComputer: SwitchCompat
     private lateinit var notifDiscreet: SwitchCompat
     private lateinit var meetingAlert: SwitchCompat
     private lateinit var blockOnComputerLock: SwitchCompat
@@ -155,6 +158,9 @@ class SettingsFragment :
         wifiStatus = view.findViewById(R.id.settings_wifi_status)
         view.findViewById<Button>(R.id.settings_wifi).setOnClickListener { wifi.show() }
         view.findViewById<Button>(R.id.settings_tablet_remote).setOnClickListener { openOnComputer() }
+        view.findViewById<Button>(R.id.settings_schedule).setOnClickListener {
+            ScheduleDialog(requireContext(), viewLifecycleOwner.lifecycleScope).show()
+        }
         view.findViewById<ImageView>(R.id.settings_remote_icon)
             .setImageDrawable(Look.badge(requireContext(), R.drawable.ic_laptop, themeColor(requireContext(), R.attr.c_hue_violet), sizeDp = 48, iconDp = 26))
         renderRemote()
@@ -174,6 +180,9 @@ class SettingsFragment :
         brightness = view.findViewById(R.id.settings_brightness)
         volume = view.findViewById(R.id.settings_volume)
         nightDim = view.findViewById(R.id.settings_night_dim)
+        autoBrightness = view.findViewById(R.id.settings_auto_brightness)
+        autoBrightnessHint = view.findViewById(R.id.settings_auto_brightness_hint)
+        volumeKeysComputer = view.findViewById(R.id.settings_volume_keys_computer)
         notifDiscreet = view.findViewById(R.id.settings_notif_discreet)
         meetingAlert = view.findViewById(R.id.settings_meeting_alert)
         blockOnComputerLock = view.findViewById(R.id.settings_block_on_computer_lock)
@@ -649,6 +658,14 @@ class SettingsFragment :
             // Petit son de contrôle au lâcher : on entend le niveau choisi.
             override fun onStopTrackingTouch(bar: SeekBar) = audio.playSoundEffect(AudioManager.FX_KEY_CLICK, 1f)
         })
+        // Lu à chaque appui sur un bouton de volume (MainActivity), rien d'autre à prévenir.
+        volumeKeysComputer.setOnCheckedChangeListener { _, checked -> Prefs.setVolumeKeysOnComputer(ctx, checked) }
+        autoBrightness.setOnCheckedChangeListener { _, checked ->
+            Prefs.setAutoBrightness(ctx, checked)
+            brightness.isEnabled = !checked
+            if (checked) Screen.startAmbient(requireActivity()) else Screen.stopAmbient(requireActivity())
+            Screen.apply(requireActivity())
+        }
         nightDim.setOnCheckedChangeListener { _, checked ->
             Prefs.setNightDim(ctx, checked)
             Screen.apply(requireActivity())
@@ -687,7 +704,13 @@ class SettingsFragment :
         brightness.progress = if (chosen >= 0) (chosen * 100).toInt()
         else Settings.System.getInt(ctx.contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128) * 100 / 255
         volume.progress = ctx.getSystemService(AudioManager::class.java).getStreamVolume(AudioManager.STREAM_MUSIC)
+        val hasLight = Screen.hasLightSensor(requireActivity())
+        autoBrightness.isEnabled = hasLight
+        autoBrightness.isChecked = hasLight && Prefs.autoBrightness(ctx)
+        autoBrightnessHint.setText(if (hasLight) R.string.tablet_auto_brightness_hint else R.string.tablet_auto_brightness_none)
+        brightness.isEnabled = !autoBrightness.isChecked
         nightDim.isChecked = Prefs.nightDim(ctx)
+        volumeKeysComputer.isChecked = Prefs.volumeKeysOnComputer(ctx)
         notifDiscreet.isChecked = Prefs.notificationsDiscreet(ctx)
         meetingAlert.isChecked = Prefs.meetingAlert(ctx)
         blockOnComputerLock.isChecked = Prefs.blockOnComputerLock(ctx)
@@ -710,8 +733,9 @@ class SettingsFragment :
     /** Ouvre sur l'ordinateur la page du compagnon, carte Réglages de la tablette en avant. */
     /** « Régler depuis l'ordi » en tête de Personnalisation, seulement avec un ordinateur appairé. */
     private fun renderRemote() {
-        view?.findViewById<View>(R.id.settings_remote_card)?.visibility =
-            if (Computers.active(requireContext()) != null) View.VISIBLE else View.GONE
+        val visibility = if (Computers.active(requireContext()) != null) View.VISIBLE else View.GONE
+        view?.findViewById<View>(R.id.settings_remote_card)?.visibility = visibility
+        view?.findViewById<View>(R.id.settings_schedule_card)?.visibility = visibility
     }
 
     private fun freshStart() {

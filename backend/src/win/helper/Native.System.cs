@@ -22,6 +22,15 @@ namespace Mate
         static extern bool WTSQuerySessionInformation(IntPtr server, int sessionId, int infoClass, out IntPtr buffer, out int bytes);
         [DllImport("wtsapi32.dll")] static extern void WTSFreeMemory(IntPtr memory);
 
+        [DllImport("kernel32.dll")] static extern uint SetThreadExecutionState(uint flags);
+
+        /** Écran gardé allumé tant que le helper vit (ES_CONTINUOUS | ES_DISPLAY_REQUIRED), sur le fil unique qui traite les requêtes. */
+        internal static object KeepAwake(bool on)
+        {
+            SetThreadExecutionState(on ? 0x80000002u : 0x80000000u);
+            return new Dictionary<string, object> { { "on", on } };
+        }
+
         static void SystemCommand(string command)
         {
             switch (command)

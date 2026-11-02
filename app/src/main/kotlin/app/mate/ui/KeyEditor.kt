@@ -28,14 +28,17 @@ import app.mate.Computers
 import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.DeckCatalog
+import app.mate.net.PointerGesture
+import app.mate.ui.home.MAX_SPAN
+import app.mate.ui.home.duplicateTargets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import org.json.JSONArray
 import org.json.JSONObject
 
 /**
  * Éditeur d'une touche perso du deck, par-dessus le deck : libellé, symbole, couleur et étapes
- * (une étape = raccourci simple, plusieurs = macro). Types d'étapes : voir backend/src/perso.ts.
+ * (une étape = raccourci simple, plusieurs = macro) et seconde action, lancée par l'appui long (la pastille la fait
+ * éditer à la place des étapes). Types d'étapes : voir backend/src/perso.ts.
  */
 class KeyEditor @JvmOverloads constructor(
     context: Context,
@@ -51,13 +54,20 @@ class KeyEditor @JvmOverloads constructor(
     private val types: LinearLayout
     private val form: LinearLayout
     private val clearButton: Button
+    private val duplicateButton: Button
+    private val cycleChip: Button
+    private val holdChip: Button
+    private val wideChip: Button
 
     private lateinit var scope: CoroutineScope
     private var onChanged: () -> Unit = {}
     private var slot = -1
     /** Rang de la page de touches nommée éditée, null : Perso. */
     private var page: Int? = null
-    private val steps = mutableListOf<JSONObject>()
+    private val pressSteps = mutableListOf<JSONObject>()
+    private val holdSteps = mutableListOf<JSONObject>()
+    /** Liste en cours d'édition : les étapes de la touche, ou celles de sa seconde action. */
+    private val steps get() = if (holdChip.isSelected) holdSteps else pressSteps
     private var color: String? = null
     private var catalog: DeckCatalog? = null
     /** Ordinateur sous Windows : modificateurs Ctrl/Alt/Win, pas de raccourcis Apple. */
@@ -85,8 +95,14 @@ class KeyEditor @JvmOverloads constructor(
         findViewById<Button>(R.id.editor_save).setOnClickListener { save() }
         clearButton = findViewById(R.id.editor_clear)
         clearButton.setOnClickListener { clear() }
+        duplicateButton = findViewById(R.id.editor_duplicate)
+        duplicateButton.setOnClickListener { chooseDuplicateTarget() }
         closeOnDone(label)
         closeOnDone(glyph)
+        cycleChip = chip(context.getString(R.string.key_cycle), selected = false) { it.isSelected = !it.isSelected }
+        holdChip = chip(context.getString(R.string.key_hold), selected = false) { it.isSelected = !it.isSelected; renderSteps() }
+        wideChip = chip(context.getString(R.string.key_wide), selected = false) { it.isSelected = !it.isSelected }
+        findViewById<LinearLayout>(R.id.editor_options).apply { addView(cycleChip); addView(holdChip); addView(wideChip) }
 
         COLORS.forEachIndexed { i, hex ->
             colors.addView(View(context).apply {
@@ -120,9 +136,14 @@ class KeyEditor @JvmOverloads constructor(
         label.setText("")
         glyph.setText("")
         color = null
-        steps.clear()
+        pressSteps.clear()
+        holdSteps.clear()
+        cycleChip.isSelected = false
+        holdChip.isSelected = false
+        wideChip.isSelected = false
         status.visibility = GONE
         clearButton.visibility = GONE
+        duplicateButton.visibility = GONE
         renderColors()
         renderSteps()
         selectType("app")
@@ -137,11 +158,19 @@ class KeyEditor @JvmOverloads constructor(
                 val key = client.deck.persoKey(slot, page) ?: return@launch
                 if (this@KeyEditor.slot != slot) return@launch
                 clearButton.visibility = VISIBLE
+                duplicateButton.visibility = VISIBLE
                 label.setText(key.optString("label"))
                 glyph.setText(key.optString("glyph"))
                 color = key.optString("color").ifEmpty { null }
+                cycleChip.isSelected = key.optBoolean("cycle")
+                wideChip.isSelected = key.optInt("span", 1) > 1
                 val saved = key.getJSONArray("steps")
-                for (i in 0 until saved.length()) steps += saved.getJSONObject(i)
+                // Rien d'ajouté pendant le chargement ne doit s'empiler sur ce qui est enregistré.
+                pressSteps.clear()
+                holdSteps.clear()
+                for (i in 0 until saved.length()) pressSteps += saved.getJSONObject(i)
+                val savedHold = key.optJSONArray("hold")
+                if (savedHold != null) for (i in 0 until savedHold.length()) holdSteps += savedHold.getJSONObject(i)
                 renderColors()
                 renderSteps()
             } catch (e: Exception) {
@@ -159,11 +188,9 @@ class KeyEditor @JvmOverloads constructor(
     }
 
     private fun save() {
-        if (steps.isEmpty()) return showError(context.getString(R.string.key_no_steps))
-        val name = label.text.toString().trim().ifEmpty { summary(steps.first()) }.take(40)
-        val key = JSONObject().put("label", name).put("steps", JSONArray(steps))
-        glyph.text.toString().trim().takeIf { it.isNotEmpty() }?.let { key.put("glyph", it) }
-        color?.let { key.put("color", it) }
+        if (pressSteps.isEmpty()) return showError(context.getString(R.string.key_no_steps))
+        val name = label.text.toString().trim().ifEmpty { summary(pressSteps.first()) }.take(40)
+        val key = keyJson(name, pressSteps, glyph.text.toString(), color, cycleChip.isSelected, holdSteps, span = if (wideChip.isSelected) MAX_SPAN else 1)
         val target = slot
         val targetPage = page
         scope.launch {
@@ -172,6 +199,42 @@ class KeyEditor @JvmOverloads constructor(
                 IconCache.forget(tileId(target, targetPage))
                 hide()
                 onChanged()
+            } catch (e: Exception) {
+                showError(e)
+            }
+        }
+    }
+
+    /** Remplace le formulaire d'ajout par les pages où copier la touche enregistrée ; un choix la copie et ferme l'éditeur. */
+    private fun chooseDuplicateTarget() {
+        val source = slot
+        val sourcePage = page
+        scope.launch {
+            try {
+                val targets = duplicateTargets(BackendClient(context).deck.pages())
+                if (slot != source || page != sourcePage) return@launch
+                for (i in 0 until types.childCount) types.getChildAt(i).isSelected = false
+                form.removeAllViews()
+                note(R.string.key_duplicate_to)
+                var sent = false
+                targets.forEach { (title, to) ->
+                    form.addView(row(title, selected = false) {
+                        // Un second appui pendant la requête copierait la touche deux fois.
+                        if (sent) return@row
+                        sent = true
+                        scope.launch {
+                            try {
+                                BackendClient(context).deck.duplicateKey(source, sourcePage, to)
+                                hide()
+                                onChanged()
+                            } catch (e: Exception) {
+                                sent = false
+                                showError(e)
+                            }
+                        }
+                    })
+                }
+                form.addView(row(context.getString(R.string.key_duplicate_cancel), selected = false) { selectType(type) })
             } catch (e: Exception) {
                 showError(e)
             }
@@ -215,9 +278,13 @@ class KeyEditor @JvmOverloads constructor(
 
     private fun renderSteps() {
         stepList.removeAllViews()
+        // Un cycle demande au moins deux étapes : sinon la pastille est grisée (keyJson l'ignorerait).
+        // Il porte sur les étapes de la touche, pas sur sa seconde action.
+        cycleChip.isEnabled = pressSteps.size > 1 && !holdChip.isSelected
+        cycleChip.alpha = if (cycleChip.isEnabled) 1f else 0.4f
         if (steps.isEmpty()) {
             stepList.addView(TextView(context).apply {
-                setText(R.string.key_steps_empty)
+                setText(if (holdChip.isSelected) R.string.key_hold_empty else R.string.key_steps_empty)
                 setTextColor(themeColor(context, R.attr.c_text_dim))
                 textSize = 15f
             })
@@ -299,13 +366,21 @@ class KeyEditor @JvmOverloads constructor(
         val chosen = mutableSetOf<String>()
         chipRow(mods.map { (mod, text) -> text to { if (!chosen.add(mod)) chosen.remove(mod) } }, toggle = true)
         lateinit var key: EditText
+        var push = false
         val add = {
             val k = key.text.toString().trim().lowercase()
-            if (k.isNotEmpty()) addStep(JSONObject().put("type", "keys").put("keys", (mods.keys.filter { it in chosen } + k).joinToString("+")))
+            if (k.isNotEmpty()) {
+                val step = JSONObject().put("type", "keys").put("keys", (mods.keys.filter { it in chosen } + k).joinToString("+"))
+                // Maintenir pour parler : l'étape est seule dans sa touche, elle remplace les autres.
+                if (push) { step.put("push", true); steps.clear() }
+                addStep(step)
+            }
         }
         key = input(R.string.step_key_hint, multiline = false, onDone = add)
         form.addView(key, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
         chipRow(SPECIAL_KEYS.map { (name, text) -> text to { key.setText(name) } })
+        // Seulement pour la touche elle-même : la seconde action (appui long) ne se maintient pas.
+        if (!holdChip.isSelected) chipRow(listOf(context.getString(R.string.step_key_push) to { push = !push }), toggle = true)
         addButton(add)
     }
 
@@ -454,7 +529,7 @@ class KeyEditor @JvmOverloads constructor(
     /** Description courte d'une étape, en français. */
     private fun summary(step: JSONObject): String = when (step.optString("type")) {
         "app" -> context.getString(R.string.sum_app, step.optString("name"))
-        "keys" -> step.optString("keys").split("+").let { parts ->
+        "keys" -> (if (step.optBoolean("push")) context.getString(R.string.sum_push) else "") + step.optString("keys").split("+").let { parts ->
             // Windows : "Ctrl+Maj+M" ; Mac : "⌘⇧M".
             if (onWindows) parts.joinToString("+") { WINDOWS_NAMES[it] ?: SYMBOLS[it] ?: it.uppercase() }
             else parts.joinToString("") { SYMBOLS[it] ?: it.uppercase() }
@@ -466,6 +541,7 @@ class KeyEditor @JvmOverloads constructor(
         "media" -> MEDIA.firstOrNull { it.first == step.optString("command") }?.let { context.getString(it.second) } ?: step.optString("command")
         "system" -> SYSTEM.firstOrNull { it.first == step.optString("command") }?.let { context.getString(it.second) } ?: step.optString("command")
         "wait" -> context.getString(R.string.sum_wait, seconds(step.optInt("ms")))
+        "gesture" -> context.getString(R.string.sum_gesture, PointerGesture.entries.firstOrNull { it.wire == step.optString("name") }?.let { context.getString(it.label) } ?: step.optString("name"))
         "window" -> {
             val layout = LAYOUTS.firstOrNull { it.first == step.optString("layout", "keep") }?.let { context.getString(it.second) }.orEmpty()
             val display = step.optString("display").ifEmpty { context.getString(R.string.step_window_current) }

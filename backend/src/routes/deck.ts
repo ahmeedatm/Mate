@@ -6,10 +6,13 @@ import {
   addDeckLink,
   deckLinks,
   findTile,
+  holdTile,
   homeFeatures,
+  isPush,
   LINK_SUGGESTIONS,
   liveDeckApps,
   loadDeck,
+  releaseAllPushed,
   removeDeckApp,
   removeDeckLink,
   resetDeckApps,
@@ -29,7 +32,19 @@ import {
   placeWindow,
   voiceState,
 } from "../os.ts";
-import { keySchema, loadKeyPages, loadKeys, saveKey, saveKeyPage, MAX_SLOTS, type PersoKey } from "../perso.ts";
+import {
+  addKey,
+  duplicateKey,
+  duplicateKeyPage,
+  keySchema,
+  loadKeyPages,
+  loadKeys,
+  saveKey,
+  saveKeyPage,
+  MAX_PAGES,
+  MAX_SLOTS,
+  type PersoKey,
+} from "../perso.ts";
 import type { Layout, WindowTarget } from "../screens.ts";
 import { windowTarget } from "./windows.ts";
 
@@ -54,9 +69,20 @@ export const slotParam = {
 export const pageSlotParams = {
   type: "object",
   required: ["page", "slot"],
-  properties: { page: { type: "integer", minimum: 0, maximum: 49 }, slot: slotParam.properties.slot },
+  properties: { page: { type: "integer", minimum: 0, maximum: MAX_PAGES - 1 }, slot: slotParam.properties.slot },
 };
 export type PageSlot = { page: number; slot: number };
+
+const pageRank = { type: "integer", minimum: 0, maximum: MAX_PAGES - 1 };
+export const pageParam = { type: "object", required: ["page"], properties: { page: pageRank } };
+/** `page` et `to` absents : Perso. */
+export const duplicateKeyBody = {
+  type: "object",
+  additionalProperties: false,
+  required: ["slot"],
+  properties: { page: pageRank, slot: slotParam.properties.slot, to: pageRank },
+};
+export type DuplicateKeyBody = { page?: number; slot: number; to?: number };
 
 /** De quoi remplir l'éditeur de touche : applis installées, raccourcis Apple (Mac), écrans. */
 export async function deckCatalog() {
@@ -96,6 +122,10 @@ export default async function deckRoutes(app: FastifyInstance) {
                 color: t.color ?? null,
                 when: t.when ?? null,
                 lit: t.lit ?? null,
+                state: t.state ?? null,
+                ...(t.span === 2 ? { span: 2 } : {}),
+                ...(t.hold ? { hold: true } : {}),
+                ...(isPush(t) ? { push: true } : {}),
                 // Nom de l'appli (page Apps : liste des applis déjà ajoutées).
                 app: t.action.type === "app" ? t.action.name : null,
               },
@@ -112,12 +142,35 @@ export default async function deckRoutes(app: FastifyInstance) {
     return reply.type("image/png").send(createReadStream(icon));
   });
 
-  app.post<{ Body: { id: string } }>(
+  app.addHook("onClose", () => releaseAllPushed());
+
+  app.post<{ Body: { id: string; hold?: boolean; phase?: "down" | "up" } }>(
     "/deck/run",
-    { schema: { body: { type: "object", required: ["id"], properties: { id: { type: "string", maxLength: 20 } } } } },
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "string", maxLength: 20 }, hold: { type: "boolean" }, phase: { enum: ["down", "up"] } },
+        },
+      },
+    },
     async (req, reply) => {
       const tile = await findTile(req.body.id);
       if (!tile) return reply.code(404).send({ error: "Tuile inconnue" });
+      // Touche à maintenir : appui (`down`) et relâchement (`up`) arrivent séparément.
+      if (req.body.phase) {
+        if (!isPush(tile)) return reply.code(409).send({ error: "Cette touche ne se maintient pas" });
+        await holdTile(tile, req.body.phase === "down");
+        return { ok: true };
+      }
+      // Appui long : la seconde action de la touche, sans le détour des fenêtres ni de la page Média.
+      if (req.body.hold) {
+        if (!tile.hold) return reply.code(409).send({ error: "Cette touche n'a pas de seconde action" });
+        req.log.info({ tile: tile.id, action: tile.hold.type }, "Appui long sur une touche du deck");
+        await runAction(tile.hold);
+        return { ok: true };
+      }
       req.log.info({ tile: tile.id, action: tile.action.type }, "Touche du deck");
       // Appli déjà ouverte avec plusieurs fenêtres : la tablette propose de choisir au lieu d'activer.
       if (tile.action.type === "app") {
@@ -126,8 +179,8 @@ export default async function deckRoutes(app: FastifyInstance) {
       }
       // Page Média : l'appli du site si elle est installée, et la musique démarre seule.
       if (tile.id.startsWith("l-") && tile.action.type === "url") return { ok: true, ...(await openMediaLink(tile.action.url)) };
-      await runAction(tile.action);
-      return { ok: true };
+      const result = await runAction(tile.action, tile.id);
+      return tile.action.type === "http" ? { ok: true, http: result } : { ok: true };
     },
   );
 
@@ -213,6 +266,9 @@ export default async function deckRoutes(app: FastifyInstance) {
     key: (await loadKeys())[req.params.slot] ?? null,
   }));
 
+  // Touche enregistrée depuis le Pavé de la tablette : premier emplacement libre de Perso.
+  app.post<{ Body: PersoKey }>("/deck/keys", { schema: { body: keySchema } }, async (req) => ({ slot: await addKey(req.body) }));
+
   app.put<{ Params: { slot: number }; Body: PersoKey }>(
     "/deck/keys/:slot",
     { schema: { params: slotParam, body: keySchema } },
@@ -248,6 +304,16 @@ export default async function deckRoutes(app: FastifyInstance) {
     if (!(await saveKeyPage(req.params.page, req.params.slot, null))) return reply.code(404).send({ error: "Page inconnue" });
     return { ok: true };
   });
+
+  // Dupliquer : une touche vers une page (la première place libre), ou une page entière (copie en fin de liste)
+
+  app.post<{ Body: DuplicateKeyBody }>("/deck/keys/duplicate", { schema: { body: duplicateKeyBody } }, async (req) =>
+    duplicateKey({ page: req.body.page, slot: req.body.slot }, req.body.to),
+  );
+
+  app.post<{ Params: { page: number } }>("/deck/pages/:page/duplicate", { schema: { params: pageParam } }, async (req) => ({
+    page: await duplicateKeyPage(req.params.page),
+  }));
 
   /** Fenêtres de l'appli d'une tuile, et écrans de l'ordinateur. */
   function tileApp(tile: Awaited<ReturnType<typeof findTile>>) {

@@ -19,6 +19,8 @@ sealed class VoiceCommand {
     /** Nom de NoisePlayer.Kind, ou null pour arrêter l'ambiance. */
     data class Noise(val kind: String?) : VoiceCommand()
     data class AddTask(val label: String) : VoiceCommand()
+    /** Articles à mettre sur la liste de courses, sans article ni « et » : « du pain et des œufs » → Pain, Œufs. */
+    data class AddShopping(val items: List<String>) : VoiceCommand()
     data class Tile(val tile: DeckTile) : VoiceCommand()
     /**
      * Fenêtre de l'ordinateur : `focus` (devant), `minimize`, `max`, `close`, `place` (`layout` left/right, ou
@@ -66,6 +68,12 @@ object VoiceCommands {
     /** « l'écran 2 » est souvent entendu « l'écran de ». */
     private val SCREEN_NUMBERS = mapOf("un" to 1, "une" to 1, "deux" to 2, "de" to 2, "trois" to 3, "quatre" to 4)
     private val TASK = Regex("^(?:ajoute|ajouter|note|noter|nouvelle|cree|creer)(?: une)? (?:tache|a faire)(?: :)? (.+)$")
+    private val SHOPPING = Regex(
+        "^\\s*(?:ajoute|ajouter|rajoute|rajouter|mets|mettre|note|noter)\\s+(.+?)\\s+(?:à|a|sur|dans|aux?)\\s+(?:la\\s+|les\\s+|ma\\s+|mes\\s+)?(?:liste\\s+(?:de|des)\\s+)?courses?\\s*$",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
+    )
+    private val SHOPPING_SPLIT = Regex("\\s+et\\s+|\\s*,\\s*", RegexOption.IGNORE_CASE)
+    private val SHOPPING_ARTICLE = Regex("^(?:(?:du|de la|des|un|une|le|la|les)\\s+|(?:de l|d|l)['’]\\s*)", RegexOption.IGNORE_CASE)
     private val TASK_ORIGINAL = Regex("^\\s*\\S+(?:\\s+une)?\\s+(?:t[âa]che|[àa] faire)\\s*:?\\s*", RegexOption.IGNORE_CASE)
 
     private val ORDINALS = mapOf(
@@ -121,6 +129,12 @@ object VoiceCommands {
         if (Regex("^(raccroche|raccrocher|termine l appel|coupe l appel)$").matches(t)) return VoiceCommand.HangUp
         if (has("prochain rendez vous", "prochaine reunion", "prochain rdv", "c est quoi ma prochaine reunion")) return VoiceCommand.NextEvent
         if (Regex("^(rejoins|rejoindre|rejoint|lance|ouvre) (la |ma )?(reunion|visio|call)").containsMatchIn(t)) return VoiceCommand.Join
+        SHOPPING.find(text)?.let { m ->
+            val items = m.groupValues[1].split(SHOPPING_SPLIT)
+                .map { it.replace(SHOPPING_ARTICLE, "").trim().replaceFirstChar { c -> c.uppercase(Locale.FRENCH) } }
+                .filter { it.isNotEmpty() }
+            if (items.isNotEmpty()) return VoiceCommand.AddShopping(items)
+        }
         TASK.find(t)?.let {
             // Libellé repris du texte reconnu, avec ses accents et majuscules.
             val label = text.replace(TASK_ORIGINAL, "").trim().ifEmpty { it.groupValues[1] }

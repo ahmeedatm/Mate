@@ -80,3 +80,16 @@ export async function applyScene(id: string) {
   }
   return { mixer: now, missing };
 }
+
+/**
+ * Règle d'un coup les applis d'un groupe (une voie de la table de mixage qui en réunit plusieurs). Seules celles qui
+ * ont du son en ce moment sont touchées : la sortie et le micro n'en font jamais partie, une appli fermée garde son
+ * volume. Sans volume par appli (Mac) : 501.
+ */
+export async function setGroup(ids: string[], change: { volume?: number; muted?: boolean }) {
+  let now = await mixer();
+  if (!now.apps) throw Object.assign(new Error("Cet ordinateur n'a pas de volume par appli"), { statusCode: 501 });
+  const live = new Set(now.apps.map((c) => c.id));
+  for (const id of new Set(ids)) if (live.has(id)) now = await mixer({ id, ...change });
+  return now;
+}

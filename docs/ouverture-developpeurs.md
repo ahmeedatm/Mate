@@ -129,7 +129,7 @@ Une IA de bureau (Claude Desktop, Claude Code, Cursor, VS Code) pilote et **règ
 
 ChatGPT n'est pas branché : ses connecteurs MCP ne joignent qu'une adresse publique en HTTPS.
 
-Outils de pilotage : `tablette_etat`, `tablette_capture`, `tablette_afficher_mode`, `tablette_message`, `tablette_document`,
+Outils de pilotage : `tablette_etat`, `tablette_capture`, `tablette_afficher_mode`, `tablette_message`, `tablette_sonner`, `tablette_document`,
 `tablette_focus`, `tablette_ambiance`, `tablette_demander`, `docs_lister`, `taches_lister`, `tache_ajouter`, `tache_cocher`,
 `agenda_ajouter`, `agents_lister`.
 

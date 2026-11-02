@@ -52,6 +52,23 @@ namespace Mate
             return c;
         }
 
+        /** Id de voie de l'appli au premier plan (nom de son processus, comme `SessionProcess`), null si aucune. */
+        static string ForegroundSession(Dictionary<uint, string> cache)
+        {
+            IntPtr h = GetForegroundWindow();
+            uint pid = 0;
+            if (h != IntPtr.Zero) GetWindowThreadProcessId(h, out pid);
+            if (pid == 0) return null;
+            string name;
+            if (!cache.TryGetValue(pid, out name))
+            {
+                try { name = Simple(Process.GetProcessById((int)pid).ProcessName); }
+                catch (Exception) { name = ""; }
+                cache[pid] = name;
+            }
+            return name.Length == 0 ? null : name;
+        }
+
         /**
          * Lit le mélangeur ; avec `id` ("master", "mic", ou le nom simplifié du processus d'une appli, "system" pour les
          * sons de Windows), applique d'abord `volume` (0-100) et `muted` à cette tranche (à toutes les sessions de l'appli).
@@ -123,6 +140,7 @@ namespace Mate
                 string name = system ? "" : session.GetProcessId(out pid) == 0 ? MixerName(pid, process) : process;
                 apps[id] = Channel(id, name, volume != null ? (float?)level : null, muted, peak);
             }
+            res["front"] = ForegroundSession(processNames);
             res["apps"] = apps.Values.OrderBy(c => (string)c["id"] == "system" ? 1 : 0).ThenBy(c => (string)c["name"], StringComparer.OrdinalIgnoreCase).ToList();
             return res;
         }

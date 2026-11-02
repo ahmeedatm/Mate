@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import { POINTER_GESTURES } from "./pointer.ts";
 import { SYSTEM_COMMANDS, TILE_SYMBOLS } from "./screens.ts";
 import { THEMES } from "./tablet.ts";
 
@@ -71,6 +72,18 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
         const { data } = await command({ type: "screenshot" });
         return { content: [{ type: "image", data: data.jpeg, mimeType: "image/jpeg" }] };
       }),
+  );
+
+  server.registerTool(
+    "tablette_sonner",
+    {
+      title: "Faire sonner la tablette",
+      description:
+        "Fait sonner la tablette très fort, en boucle, pour la retrouver. Un toucher sur son écran l'arrête ; elle s'arrête seule au bout de 2 minutes.",
+      inputSchema: { sonner: z.boolean().default(true).describe("false : arrêter la sonnerie") },
+    },
+    ({ sonner }) =>
+      attempt(async () => (await command({ type: "ring", on: sonner }), text(sonner ? "La tablette sonne." : "Sonnerie arrêtée."))),
   );
 
   server.registerTool(
@@ -246,6 +259,10 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
       type: z.literal("keys"),
       keys: z.string().describe("Raccourci, ex. cmd+shift+m, ctrl+up, f5, return (sur Windows cmd = Ctrl, win = touche Windows)"),
       app: z.string().optional().describe("Appli à mettre devant avant"),
+      push: z
+        .boolean()
+        .optional()
+        .describe("Touches tenues tant que le doigt reste sur la touche (parler en maintenant) ; seule étape de la touche"),
     }),
     z.object({ type: z.literal("text"), text: z.string().max(4000).describe("Texte collé dans l'appli au premier plan") }),
     z.object({ type: z.literal("url"), url: z.string().describe("http(s), mailto, msteams, slack, vscode, x-apple…") }),
@@ -256,6 +273,11 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
       command: z.enum(SYSTEM_COMMANDS),
     }),
     z.object({ type: z.literal("wait"), ms: z.number().int().min(0).max(10_000) }),
+    z.object({ type: z.literal("gesture"), name: z.enum(POINTER_GESTURES).describe("Geste du Pavé (retour, bureau suivant, zoom…)") }),
+    z.object({
+      type: z.literal("http"),
+      name: z.string().describe("Nom d'une cible du réseau local déclarée dans LAN_TARGETS du .env de l'ordinateur (jamais une adresse)"),
+    }),
     z.object({
       type: z.literal("window"),
       app: z.string(),

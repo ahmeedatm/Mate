@@ -75,7 +75,7 @@ type Choices = { choices: Record<string, boolean> };
 const file = () => path.join(config.dataDir, "plugins.json");
 let cache: Record<string, boolean> | undefined;
 
-async function choices(): Promise<Record<string, boolean>> {
+export async function choices(): Promise<Record<string, boolean>> {
   cache ??= (await readJson<Choices>(file(), () => ({ choices: {} }))).choices ?? {};
   return cache;
 }

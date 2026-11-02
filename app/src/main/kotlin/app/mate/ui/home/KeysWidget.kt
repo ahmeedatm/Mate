@@ -3,8 +3,10 @@ package app.mate.ui.home
 import android.content.Context
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.CheckBox
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -13,6 +15,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import app.mate.Computers
 import app.mate.R
+import app.mate.net.BackendClient
 import app.mate.net.DeckPage
 import app.mate.net.DeckTile
 import app.mate.net.runCatchingCancellable
@@ -22,13 +25,20 @@ import app.mate.ui.errorText
 import app.mate.ui.showImmersive
 import app.mate.ui.themeBool
 import app.mate.ui.themeRes
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Touches du deck choisies : lancer Discord, une macro, couper le micro… sans passer par le Deck. S, M et V gardent
  * leurs rangées de grandes touches (1, 2 ou 6) ; L et XL montrent toutes les touches choisies dans une grille qui
- * défile, avec une case « + ». Appui long sur une touche perso : son éditeur ; sur une touche d'une page fixe : la
- * retirer du widget. Les touches sont gardées avec leur nom et leur emoji : elles s'affichent même ordinateur éteint.
+ * défile, avec une case « + ». Appui long : la seconde action de la touche si elle en a une, sinon la retirer du
+ * widget. L'éditeur d'une touche perso s'ouvre seulement en mode Modifier (réglages du widget, bouton « Modifier »).
+ * Les touches sont gardées avec leur nom et leur emoji : elles s'affichent même ordinateur éteint.
  */
 class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     // Ni la racine ni l'état vide ne gardent l'appui long (mode Modifier) : seules les touches le font.
@@ -41,10 +51,23 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val grid by lazy {
         TileGridView(context, host.scope).apply {
             onTap = { cell, _ -> if (cell.add) showAddChoice() else run(cell.key) }
-            onHold = { cell, _ -> hold(cell.key) }
+            onHold = { cell, _ -> holdOrRemove(cell.key) }
+            isPush = { pushIdsOf == computerId && it.key.id in pushIds }
+            onPush = { cell, down -> push(cell.key, down) }
             ownsLongPress = true
         }
     }
+
+    /** Touches à maintenir du deck, lues à l'ouverture ; les appuis arrivent dans l'ordre, jamais un relâchement avant son appui. */
+    private var pushIds = emptySet<String>()
+    private var pushIdsOf: String? = null
+    private val pushOrder = Mutex()
+
+    /** Touches tenues en ce moment ; relâchées si leur vue disparaît pendant l'appui. */
+    private val held = mutableSetOf<String>()
+
+    /** Hors du scope de la vue : un relâchement ne doit jamais être annulé avec elle. */
+    private val pushScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val inGrid get() = placed.size == WidgetSize.L || placed.size == WidgetSize.XL
 
@@ -55,6 +78,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val pages = runCatchingCancellable { host.deckPages() }.getOrNull() ?: return
         // Sans ordinateur actif, rien n'est lu ni écrit : le deck lu ne serait celui de personne.
         val id = computerId ?: return
+        tilePushIds(pages).let { if (it != pushIds || pushIdsOf != id) { pushIds = it; pushIdsOf = id; render() } }
         if (KeyRef.adopt(placed.config, id)) host.save()
         // Profil Deck : ses touches de départ arrivent avec l'ordinateur (page Raccourcis de son deck).
         KeyRef.seed(placed.config, id, pages)?.let {
@@ -135,6 +159,28 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun rowTile(key: KeyRef): View {
         val tile = TileGridView.newCell(context)
         TileGridView.bind(tile, TileGridView.Cell(key), host.scope)
+        // Allumée ou éteinte côté ordinateur : la touche se redessine si son état a changé, tant qu'elle est à l'écran.
+        var stopListening: (() -> Unit)? = null
+        var drawnLit = TileStates.isLit(key.id)
+        tile.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) {
+                stopListening = TileStates.listen {
+                    v.post {
+                        val lit = TileStates.isLit(key.id)
+                        if (v.isAttachedToWindow && lit != drawnLit) {
+                            drawnLit = lit
+                            TileGridView.bind(v, TileGridView.Cell(key), host.scope)
+                        }
+                    }
+                }
+            }
+
+            override fun onViewDetachedFromWindow(v: View) {
+                stopListening?.invoke()
+                stopListening = null
+            }
+        })
+        if (pushIdsOf == computerId && key.id in pushIds) return pushTile(tile, key)
         Look.pressSpring(tile)
         tile.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -142,13 +188,59 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
         tile.setOnLongClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-            hold(key)
+            holdOrRemove(key)
             true
         }
         return OwnerFrameLayout(context, ownsLongPress = true).apply {
             addView(tile, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
     }
+
+    /** Touche à maintenir seule : appui = touches tenues, relâchement ou annulation = touches lâchées. */
+    private fun pushTile(tile: View, key: KeyRef): View {
+        tile.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) = Unit
+
+            override fun onViewDetachedFromWindow(v: View) = releaseHeld(listOf(key))
+        })
+        tile.setOnTouchListener { v, ev ->
+            when (ev.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    Look.pressTo(v, true)
+                    v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    push(key, true)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    Look.pressTo(v, false)
+                    push(key, false)
+                }
+            }
+            true
+        }
+        return OwnerFrameLayout(context, ownsLongPress = true).apply {
+            addView(tile, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        }
+    }
+
+    private fun push(key: KeyRef, down: Boolean) {
+        if (down) held += key.id else if (!held.remove(key.id)) return
+        pushScope.launch {
+            pushOrder.withLock {
+                // Un relâchement raté laisserait le micro ouvert : on réessaie avant de le dire.
+                var result = runCatchingCancellable { BackendClient(context).deck.pushTile(key.id, down) }
+                repeat(if (down) 0 else PUSH_RETRIES) {
+                    if (result.isFailure) {
+                        delay(PUSH_RETRY_MS)
+                        result = runCatchingCancellable { BackendClient(context).deck.pushTile(key.id, down) }
+                    }
+                }
+                result.onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
+            }
+        }
+    }
+
+    /** Les touches tenues sont lâchées quand le widget se redessine ou disparaît. */
+    private fun releaseHeld(keys: List<KeyRef>) = keys.filter { it.id in held }.forEach { push(it, false) }
 
     /** Lance la touche. Une appli à plusieurs fenêtres ne se lance pas : l'ordinateur rend ses fenêtres, on les propose. */
     private fun run(key: KeyRef) {
@@ -164,19 +256,19 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
     }
 
-    /** Appui long : « Modifier » (touche perso ou d'une page nommée) ou « Retirer du widget » ; les autres touches se retirent seulement. */
-    private fun hold(key: KeyRef) {
-        val edit: (() -> Unit)? = slotOf(key.id)?.let { slot -> { host.overlays.editKey(slot) { reload() } } }
-            ?: pageSlotOf(key.id)?.let { (page, pageSlot) -> { host.overlays.editKey(pageSlot, page) { reload() } } }
-        if (edit == null) return confirmRemove(key)
-        AlertDialog.Builder(context)
-            .setTitle(key.label)
-            .setItems(arrayOf(context.getString(R.string.widget_keys_edit), context.getString(R.string.widget_keys_remove_yes))) { _, which ->
-                if (which == 0) edit() else store(KeyRef.without(keys(), key.id))
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .showImmersive()
+    /** Appui long : la seconde action de la touche si le deck lui en donne une, sinon la retirer du widget. */
+    private fun holdOrRemove(key: KeyRef) {
+        host.scope.launch {
+            val pages = runCatchingCancellable { host.deckPages() }.getOrNull()
+            if (pages == null || !tileHasHold(pages, key.id)) return@launch confirmRemove(key)
+            runTileSpoken(context, key.id, key.label, hold = true)
+                .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
+        }
     }
+
+    /** Éditeur de la touche perso ou d'une page nommée `id`, null pour toute autre touche. */
+    private fun editorOf(id: String): (() -> Unit)? = slotOf(id)?.let { slot -> { host.overlays.editKey(slot) { reload() } } }
+        ?: pageSlotOf(id)?.let { (page, pageSlot) -> { host.overlays.editKey(pageSlot, page) { reload() } } }
 
     private fun confirmRemove(key: KeyRef) {
         AlertDialog.Builder(context)
@@ -228,6 +320,12 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             val selected = current.map { it.id }.toMutableList()
             val box = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(24), dp(4), dp(24), dp(8)) }
             val boxes = mutableListOf<Pair<CheckBox, DeckTile>>()
+            lateinit var dialog: AlertDialog
+            // Une touche choisie mais absente du deck pour l'instant (page d'appel) reste telle qu'elle est enregistrée.
+            fun save() {
+                val all = pages.flatMap { it.tiles }
+                store(selected.mapNotNull { id -> all.firstOrNull { it.id == id }?.let(KeyRef::of) ?: current.firstOrNull { it.id == id } })
+            }
             val hint = label(15f, R.attr.c_text_dim).apply { setPadding(0, 0, 0, dp(8)) }
             box.addView(hint)
             fun update() {
@@ -250,16 +348,25 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                         }
                     }
                     boxes += check to tile
-                    box.addView(check)
+                    // Seul le mode Modifier ouvre l'éditeur d'une touche.
+                    val edit = editorOf(tile.id)?.takeIf { host.editing }
+                    if (edit == null) {
+                        box.addView(check)
+                    } else {
+                        box.addView(LinearLayout(context).apply {
+                            gravity = Gravity.CENTER_VERTICAL
+                            addView(check, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                            addView(Button(context, null, 0, R.style.ActionButton).apply {
+                                setText(R.string.widget_keys_edit)
+                                contentDescription = context.getString(R.string.widget_keys_edit_named, tile.label)
+                                setOnClickListener { save(); dialog.dismiss(); edit() }
+                            })
+                        })
+                    }
                 }
             }
             update()
-            // Une touche choisie mais absente du deck pour l'instant (page d'appel) reste telle qu'elle est enregistrée.
-            fun save() {
-                val all = pages.flatMap { it.tiles }
-                store(selected.mapNotNull { id -> all.firstOrNull { it.id == id }?.let(KeyRef::of) ?: current.firstOrNull { it.id == id } })
-            }
-            AlertDialog.Builder(context)
+            dialog = AlertDialog.Builder(context)
                 .setTitle(R.string.widget_keys)
                 .setView(ScrollView(context).apply { addView(box) })
                 .setNegativeButton(R.string.cancel, null)
@@ -270,6 +377,10 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
 
     private companion object {
+        /** Relâchement raté : nouveaux essais, et délai entre deux. */
+        const val PUSH_RETRIES = 2
+        const val PUSH_RETRY_MS = 300L
+
         const val MAX_KEYS = 30
         const val ADD_ID = "+"
 

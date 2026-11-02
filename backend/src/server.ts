@@ -16,11 +16,15 @@ import { canControl, clipboardStamp, frontApp, getClipboard, isMac, osName, read
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
 import { sendToTablet, tabletStatus } from "./tablet.ts";
 import { startForegroundWatch } from "./foreground-watch.ts";
+import { litTiles, startTileStateWatch, stateTiles } from "./tile-state.ts";
 import { startMeetingWatch } from "./meeting-watch.ts";
 import { isScreenLocked, startScreenLockWatch } from "./screen-lock.ts";
+import { parseAlertSpecs, startAlertWatch } from "./alerts.ts";
+import { haReachable, haSensorStates } from "./ha.ts";
 import { callingDeckApps } from "./deck.ts";
 import { startMenuBar } from "./mac/menubar.ts";
 import { loadTls } from "./tls.ts";
+import { startSchedule } from "./schedule.ts";
 import { startReminders } from "./tasks.ts";
 import agentRoutes from "./routes/agents.ts";
 import awayRoutes from "./routes/away.ts";
@@ -32,8 +36,10 @@ import deckRoutes from "./routes/deck.ts";
 import docRoutes from "./routes/docs.ts";
 import githubRoutes from "./routes/github.ts";
 import gitlabRoutes from "./routes/gitlab.ts";
+import haRoutes from "./routes/ha.ts";
 import jiraRoutes from "./routes/jira.ts";
 import localRoutes from "./routes/local.ts";
+import localBackupRoutes from "./routes/local-backup.ts";
 import localConfigRoutes from "./routes/local-config.ts";
 import localProfileRoutes from "./routes/local-profiles.ts";
 import mcpRoutes from "./routes/mcp.ts";
@@ -42,9 +48,16 @@ import pairingRoutes from "./routes/pairing.ts";
 import pluginRoutes from "./routes/plugins.ts";
 import pointerRoutes from "./routes/pointer.ts";
 import presentRoutes from "./routes/present.ts";
+import valorantRoutes from "./routes/valorant.ts";
 import portableRoutes from "./routes/portable.ts";
 import systemRoutes from "./routes/system.ts";
 import tabletRoutes from "./routes/tablet.ts";
+import metricsRoutes from "./routes/metrics.ts";
+import mailRoutes from "./routes/mail.ts";
+import menuRoutes from "./routes/menu.ts";
+import newsRoutes from "./routes/news.ts";
+import shoppingRoutes from "./routes/shopping.ts";
+import scheduleRoutes from "./routes/schedule.ts";
 import taskRoutes from "./routes/tasks.ts";
 import updateRoutes from "./routes/updates.ts";
 import windowRoutes from "./routes/windows.ts";
@@ -96,7 +109,8 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     (method === "GET" && /^\/local\/(tablet\/layout|config\/[a-z0-9/-]+)(\?|$)/.test(url)) ||
     (method === "PUT" && url === "/local/tablet/layout") ||
     (/^(POST|PUT|DELETE)$/.test(method) && /^\/local\/config\/[a-z0-9/-]+$/.test(url)) ||
-    (method === "POST" && (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update")) ||
+    (method === "POST" &&
+      (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update" || url === "/local/tablet/ring")) ||
     // Panneau de l'appli portable (routes/portable.ts) : corps JSON exigé, pas envoyable par un autre site.
     (method === "POST" && /^\/local\/(autostart|firewall|capteurs|forget|quit|update)$/.test(url)) ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
@@ -151,12 +165,13 @@ app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validat
 
 // Pilotage de l'ordinateur (deck d'applis et de raccourcis, son, micro) : macOS et Windows seulement.
 // Ailleurs, le deck se lit et ses touches perso se modifient ; toucher une touche répond 501 (os.ts : unsupported).
-const DECK_ANYWHERE = /^\/deck(\/keys\/\d+|\/run)?(\?|$)/;
+const DECK_ANYWHERE = /^\/deck(\/keys(\/(\d+|duplicate))?|\/pages\/\d+\/duplicate|\/run)?(\?|$)/;
 app.addHook("preHandler", async (req, reply) => {
   if (
     !canControl &&
     ((req.url.startsWith("/deck") && !DECK_ANYWHERE.test(req.url)) ||
       req.url.startsWith("/system") ||
+      req.url.startsWith("/schedule") ||
       req.url.startsWith("/pointer") ||
       req.url.startsWith("/present") ||
       req.url.startsWith("/gitlab") ||
@@ -180,6 +195,7 @@ app.register(pairingRoutes, { authorized, fingerprint: tls?.fingerprint ?? null 
 app.register(localRoutes);
 app.register(localProfileRoutes);
 app.register(localConfigRoutes);
+app.register(localBackupRoutes);
 app.register(mcpRoutes);
 app.register(portableRoutes);
 app.register(deckRoutes);
@@ -189,6 +205,7 @@ app.register(awayRoutes);
 app.register(systemRoutes);
 app.register(pointerRoutes);
 app.register(presentRoutes);
+app.register(valorantRoutes);
 app.register(notificationRoutes);
 app.register(docRoutes);
 app.register(updateRoutes);
@@ -197,6 +214,13 @@ app.register(ytMusicRoutes);
 app.register(cameraRoutes);
 app.register(calendarRoutes);
 app.register(taskRoutes);
+app.register(scheduleRoutes);
+app.register(shoppingRoutes);
+app.register(metricsRoutes);
+app.register(mailRoutes);
+app.register(newsRoutes);
+app.register(menuRoutes);
+app.register(haRoutes);
 app.register(jiraRoutes);
 app.register(callRoutes);
 app.register(agentRoutes);
@@ -210,6 +234,7 @@ app.register(tabletRoutes);
 const remind = async (text: string) => (await sendToTablet({ type: "message", text, speak: true, seconds: 120 })).received === true;
 startReminders(remind);
 startEventReminders(remind);
+startSchedule();
 // Appel entrant : prévenir la tablette sans attendre sa réponse (la sonnerie ne doit pas bloquer la surveillance).
 void startCallWatch((event) => void sendToTablet({ type: "call", ...event }, 30_000));
 // Réunion en cours : la tablette passe sur son profil Réunion (et en revient), seulement tant qu'elle est connectée.
@@ -218,10 +243,15 @@ if (canControl) {
     connected: () => tabletStatus().connected,
     liveApps: callingDeckApps,
   });
-  // Appli au premier plan : la tablette passe sur son écran de jeu quand c'en est une de sa liste (et en revient).
+  // Appli au premier plan : la tablette affiche la page d'une appli de sa liste (et en revient).
   startForegroundWatch((event) => void sendToTablet({ type: "foreground", ...event }), {
     connected: () => tabletStatus().connected,
     front: frontApp,
+  });
+  // États des touches (micro coupé, Ne pas déranger, appli lancée) : la tablette allume les touches concernées.
+  startTileStateWatch((lit) => void sendToTablet({ type: "tilestate", lit }), {
+    connected: () => tabletStatus().connected,
+    read: async () => litTiles(await stateTiles()),
   });
 }
 // Ordinateur verrouillé : la tablette se bloque, l'API se ferme (hook ci-dessus). Relu même sans tablette.
@@ -234,6 +264,15 @@ startScreenLockWatch(async (locked) => (await sendToTablet({ type: "lock", locke
   },
   intervalMs: Number(process.env.SCREEN_LOCK_POLL_MS) || undefined,
 });
+// Alerte maison : capteurs de HA_ALERTS relus toutes les 5 s, la tablette reçoit une bannière qui reste jusqu'à un toucher.
+const alertSpecs = haReachable ? parseAlertSpecs(process.env.HA_ALERTS) : [];
+if (alertSpecs.length > 0) {
+  startAlertWatch(async (text) => (await sendToTablet({ type: "alert", text })).received === true, {
+    specs: alertSpecs,
+    read: () => haSensorStates(alertSpecs.map((s) => s.id)),
+    intervalMs: Number(process.env.HA_ALERTS_POLL_MS) || undefined,
+  });
+}
 // Notifications de l'ordinateur : base du système relue toutes les 2 s, chaque nouvelle envoyée à la tablette sans attendre.
 if (canControl) {
   // Les supprimées (empreintes seulement) tiennent après un redémarrage : sinon le 1er passage les remonterait du système.

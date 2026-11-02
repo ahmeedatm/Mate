@@ -16,7 +16,7 @@ type Cached = { data: Record<string, unknown>; at: number };
 const CACHE_FILE = path.join(config.dataDir, "tablet-layout.json");
 let cache: Cached | null | undefined;
 
-function readCache(): Cached | null {
+export function readCache(): Cached | null {
   if (cache !== undefined) return cache;
   try {
     const saved = JSON.parse(fs.readFileSync(CACHE_FILE, "utf8"));

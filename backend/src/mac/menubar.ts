@@ -8,7 +8,7 @@ import { backendRoot, config } from "../config.ts";
  * un clic ouvre la page locale, le clic droit montre l'état de la tablette. Lancée avec le compagnon, elle lit
  * GET /local/status et s'arrête seule quand le compagnon disparaît. Sous Windows, c'est le lanceur qui porte l'icône.
  */
-const PROGRAM = path.join(backendRoot, "src", "mac", "MateMenu");
+export const PROGRAM = path.join(backendRoot, "src", "mac", "MateMenu");
 const RESTART_MS = 10_000;
 
 /** Instance de test ou sans écran (COMPANION_HEADLESS, NO_ALERT) : aucune icône. */

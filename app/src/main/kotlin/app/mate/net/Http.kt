@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
+import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -52,8 +53,19 @@ class Http(
         val head = "--$boundary\r\n" +
             "Content-Disposition: form-data; name=\"$field\"; filename=\"${file.name}\"\r\n" +
             "Content-Type: $mimeType\r\n\r\n"
-        val body = head.toByteArray() + file.readBytes() + "\r\n--$boundary--\r\n".toByteArray()
-        return text(request("POST", path, body, "multipart/form-data; boundary=$boundary"))
+        val tail = "\r\n--$boundary--\r\n".toByteArray()
+        val headBytes = head.toByteArray()
+        // En flux : le fichier (20 Mo au plus) ne passe jamais en entier dans le tas de la tablette (128 Mo).
+        return text(
+            request(
+                "POST", path, null, "multipart/form-data; boundary=$boundary",
+                bodyLength = headBytes.size + file.length() + tail.size,
+            ) { out ->
+                out.write(headBytes)
+                file.inputStream().use { it.copyTo(out) }
+                out.write(tail)
+            },
+        )
     }
 
     /** Image ou fichier ; null sur 404 (l'ordinateur n'en a pas). */
@@ -67,7 +79,10 @@ class Http(
         try { conn.inputStream.use { it.readBytes() } } finally { conn.disconnect() }
 
     /** Ouvre la connexion et vérifie le code HTTP ; l'appelant lit puis déconnecte. */
-    fun request(method: String, path: String, body: ByteArray? = null, contentType: String? = null, timeoutMs: Int = 60_000): HttpURLConnection {
+    fun request(
+        method: String, path: String, body: ByteArray? = null, contentType: String? = null, timeoutMs: Int = 60_000,
+        bodyLength: Long = body?.size?.toLong() ?: -1L, writeBody: ((OutputStream) -> Unit)? = null,
+    ): HttpURLConnection {
         // DELETE sans corps : Android y met quand même un type de contenu, que Fastify refuse (415).
         if (method == "DELETE" && body == null) return request(method, path, "{}".toByteArray(), "application/json", timeoutMs)
         if (cleartextRefused) throw InsecureComputerException()
@@ -78,11 +93,11 @@ class Http(
         conn.readTimeout = timeoutMs
         if (token.isNotEmpty()) conn.setRequestProperty("Authorization", "Bearer $token")
         headers.forEach { (name, value) -> conn.setRequestProperty(name, value) }
-        if (body != null) {
+        if (body != null || writeBody != null) {
             conn.doOutput = true
             conn.setRequestProperty("Content-Type", contentType)
-            conn.setFixedLengthStreamingMode(body.size)
-            conn.outputStream.use { it.write(body) }
+            conn.setFixedLengthStreamingMode(bodyLength)
+            conn.outputStream.use { if (writeBody != null) writeBody(it) else it.write(body!!) }
         }
         val code = conn.responseCode
         if (code !in 200..299) {

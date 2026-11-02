@@ -24,8 +24,11 @@ enum class PerfOption(val key: String, val group: PerfGroup, @StringRes val labe
     CPU("cpu", PerfGroup.CPU, R.string.perf_opt_cpu),
     CPU_FREQ("cpu_freq", PerfGroup.CPU, R.string.perf_opt_cpu_freq),
     CPU_TEMP("cpu_temp", PerfGroup.CPU, R.string.perf_opt_cpu_temp),
+    CPU_WATTS("cpu_watts", PerfGroup.CPU, R.string.perf_opt_watts),
+    CPU_FAN("cpu_fan", PerfGroup.CPU, R.string.perf_opt_cpu_fan),
     GPU("gpu", PerfGroup.GPU, R.string.perf_opt_gpu),
     GPU_TEMP("gpu_temp", PerfGroup.GPU, R.string.perf_opt_gpu_temp),
+    GPU_WATTS("gpu_watts", PerfGroup.GPU, R.string.perf_opt_watts),
     GPU_FAN("gpu_fan", PerfGroup.GPU, R.string.perf_opt_gpu_fan),
     GPU_VRAM("gpu_vram", PerfGroup.GPU, R.string.perf_opt_gpu_vram),
     RAM("ram", PerfGroup.RAM, R.string.perf_opt_ram),
@@ -47,6 +50,9 @@ enum class PerfOption(val key: String, val group: PerfGroup, @StringRes val labe
         DISK_ACTIVITY -> perf.disk?.activity != null
         NET_UP, NET_DOWN -> perf.net != null
         CPU_TEMP -> perf.cpuTempC != null
+        CPU_WATTS -> perf.cpuWatts != null
+        CPU_FAN -> perf.cpuFanRpm != null
+        GPU_WATTS -> perf.gpuWatts != null
         FPS -> perf.fpsReadable
     }
 

@@ -23,6 +23,48 @@ object LayoutConfig {
         val tool: (Mode) -> String,
     )
 
+    /** Applis de chaque page, relues strictement (`pageApps`, une liste par profil ; `gameScreen` + `gameApps` d'avant en sont la forme ancienne). */
+    private fun parsePageApps(json: JSONObject, layout: HomeLayout) {
+        val saved = json.opt("pageApps")
+        if (saved != null && saved !is JSONArray) fail("Disposition invalide : les applis des pages ne sont pas une liste.")
+        if (saved is JSONArray && saved.length() > layout.names.size) fail("Disposition invalide : trop de listes d'applis.")
+        val lists = (0 until layout.names.size).map { i -> if (saved is JSONArray) appList(saved.opt(i)) else emptyList() }
+        lists.forEachIndexed { i, apps ->
+            if (apps.isNotEmpty() && i == layout.callProfile) fail("Disposition invalide : Réunion ne peut pas s'afficher à cause d'une appli.")
+            layout.setApps(i, apps)
+        }
+        if (saved == null) readLegacyGame(json, layout)
+    }
+
+    private fun appList(value: Any?): List<String> {
+        if (value == null || value == JSONObject.NULL) return emptyList()
+        val list = value as? JSONArray ?: fail("Disposition invalide : une liste d'applis est illisible.")
+        return (0 until list.length()).map { i ->
+            (list.opt(i) as? String)?.trim()?.takeIf { it.isNotEmpty() } ?: fail("Disposition invalide : une appli n'est pas un nom.")
+        }
+    }
+
+    private fun readLegacyGame(json: JSONObject, layout: HomeLayout) {
+        if (!json.has("gameScreen")) return
+        val page = json.opt("gameScreen") as? Int ?: -2
+        if (page !in -1 until layout.names.size) fail("Disposition invalide : l'écran de jeu n'existe pas.")
+        if (page < 0) return
+        val apps = appList(json.opt("gameApps"))
+        if (apps.isNotEmpty() && page == layout.callProfile) fail("Disposition invalide : Réunion ne peut pas s'afficher à cause d'une appli.")
+        layout.setApps(page, apps)
+    }
+
+    /** Lecture d'enregistrement (laisse tomber ce qu'elle ne comprend pas) : `pageApps`, ou l'ancien `gameScreen` + `gameApps`. */
+    fun readPageApps(json: JSONObject, layout: HomeLayout) {
+        val saved = json.optJSONArray("pageApps")
+        if (saved != null) {
+            for (i in layout.names.indices) layout.setApps(i, runCatching { appList(saved.opt(i)) }.getOrDefault(emptyList()))
+            return
+        }
+        val page = json.optInt("gameScreen", -1)
+        if (page in layout.names.indices) layout.setApps(page, runCatching { appList(json.opt("gameApps")) }.getOrDefault(emptyList()))
+    }
+
     /**
      * Disposition envoyée par la page, relue strictement (la lecture d'enregistrement, elle, laisse tomber ce qu'elle ne
      * comprend pas). `current` : disposition en place, dont les rôles (Accueil, Réunion) doivent rester.
@@ -46,17 +88,7 @@ object LayoutConfig {
         layout.deckProfile = role(json, "deck", names.size, required = false)
         layout.callProfile = role(json, "call", names.size, required = false)
         layout.rolesSet = json.optBoolean("roles", false)
-        layout.gameProfile = if (json.has("gameScreen")) (json.opt("gameScreen") as? Int ?: -2) else -1
-        if (layout.gameProfile !in -1 until names.size || (layout.gameProfile >= 0 && layout.gameProfile == layout.callProfile)) {
-            fail("Disposition invalide : l'écran de jeu n'existe pas ou est Réunion.")
-        }
-        json.optJSONArray("gameApps")?.let { apps ->
-            for (i in 0 until apps.length()) {
-                val app = (apps.opt(i) as? String)?.trim()
-                if (app.isNullOrEmpty()) fail("Disposition invalide : une appli de jeu n'est pas un nom.")
-                layout.gameApps += app
-            }
-        }
+        parsePageApps(json, layout)
         if (current.rolesSet) {
             if (!layout.rolesSet) fail("Les rôles de l'Accueil et de Réunion doivent rester posés.")
         }

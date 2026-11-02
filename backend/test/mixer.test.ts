@@ -41,6 +41,14 @@ describe("Mélangeur de l'onglet Son", () => {
     assert.equal(res.json.master.volume, 50);
   });
 
+  it("donne l'appli au premier plan, ou null quand aucune ne joue", async () => {
+    server.setOs({ mixer: { ...mixer([channel("discord", 100), channel("spotify", 40)]), front: "spotify" } });
+    assert.equal((await server.call("GET", "/system/mixer")).json.front, "spotify");
+    assert.equal((await server.call("POST", "/system/mixer", { id: "spotify", volume: 10 })).json.front, "spotify");
+    server.setOs({ mixer: { ...mixer([channel("discord", 100)]), front: null } });
+    assert.equal((await server.call("GET", "/system/mixer")).json.front, null);
+  });
+
   it("change le volume d'une appli et renvoie le nouvel état", async () => {
     const res = await server.call("POST", "/system/mixer", { id: "spotify", volume: 25 });
     assert.equal(res.json.apps[1].volume, 25);
@@ -49,6 +57,54 @@ describe("Mélangeur de l'onglet Son", () => {
 
   it("refuse un volume hors de 0-100", async () => {
     assert.equal((await server.call("POST", "/system/mixer", { id: "master", volume: 140 })).status, 400);
+  });
+});
+
+describe("Groupe d'applis", () => {
+  it("règle toutes les applis du groupe d'un coup et renvoie le nouvel état", async () => {
+    const res = await server.call("POST", "/system/mixer/group", { ids: ["discord", "spotify"], volume: 30 });
+    assert.equal(res.status, 200);
+    assert.deepEqual(
+      res.json.apps.map((a: MixerChannel) => [a.id, a.volume]),
+      [
+        ["discord", 30],
+        ["spotify", 30],
+      ],
+    );
+    assert.deepEqual(mixerCalls(), [
+      { id: "discord", volume: 30 },
+      { id: "spotify", volume: 30 },
+    ]);
+  });
+
+  it("coupe le groupe", async () => {
+    const res = await server.call("POST", "/system/mixer/group", { ids: ["discord", "spotify"], muted: true });
+    assert.deepEqual(
+      res.json.apps.map((a: MixerChannel) => a.muted),
+      [true, true],
+    );
+  });
+
+  it("ignore une appli du groupe qui ne joue pas", async () => {
+    const res = await server.call("POST", "/system/mixer/group", { ids: ["discord", "jeu-ferme"], volume: 10 });
+    assert.equal(res.status, 200);
+    assert.deepEqual(mixerCalls(), [{ id: "discord", volume: 10 }]);
+  });
+
+  it("ne touche ni la sortie ni le micro", async () => {
+    await server.call("POST", "/system/mixer/group", { ids: ["master", "mic", "discord"], volume: 5 });
+    assert.deepEqual(mixerCalls(), [{ id: "discord", volume: 5 }]);
+  });
+
+  it("refuse un groupe vide, sans réglage ou hors de 0-100", async () => {
+    assert.equal((await server.call("POST", "/system/mixer/group", { ids: [], volume: 10 })).status, 400);
+    assert.equal((await server.call("POST", "/system/mixer/group", { ids: ["discord"] })).status, 400);
+    assert.equal((await server.call("POST", "/system/mixer/group", { ids: ["discord"], volume: 101 })).status, 400);
+  });
+
+  it("répond 501 quand l'ordinateur n'a pas de volume par appli (Mac)", async () => {
+    server.setOs({ mixer: { master: channel("master", 50), mic: channel("mic", 80), apps: null } });
+    assert.equal((await server.call("POST", "/system/mixer/group", { ids: ["discord"], volume: 10 })).status, 501);
   });
 });
 
