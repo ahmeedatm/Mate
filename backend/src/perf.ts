@@ -116,7 +116,9 @@ function normalizeTemp(c: number): number | undefined {
 
 /** Une puissance nulle, négative ou au-delà de 1000 W est une lecture ratée ; une décimale. */
 function normalizeWatts(w: number): number | undefined {
-  return Number.isFinite(w) && w > 0 && w <= 1000 ? oneDecimal(w) : undefined;
+  // Arrondi d'abord : une carte graphique au repos (0,04 W) donnerait sinon « 0 W ».
+  const rounded = oneDecimal(w);
+  return Number.isFinite(rounded) && rounded > 0 && rounded <= 1000 ? rounded : undefined;
 }
 
 // shortcut: 0 tr/min est écarté (un capteur de carte mère sans ventilateur branché lit 0), donc un ventilateur à l'arrêt n'est pas montré ; à revoir si on veut distinguer.
