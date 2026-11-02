@@ -175,6 +175,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.MAIL -> MailWidget(context, host, placed)
                 WidgetType.MEALS -> MealsWidget(context, host, placed)
                 WidgetType.METRICS -> MetricsWidget(context, host, placed)
+                WidgetType.VALORANT -> ValorantWidget(context, host, placed)
             }
     }
 }

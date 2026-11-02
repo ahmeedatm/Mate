@@ -59,6 +59,7 @@ import shoppingRoutes from "./routes/shopping.ts";
 import scheduleRoutes from "./routes/schedule.ts";
 import taskRoutes from "./routes/tasks.ts";
 import updateRoutes from "./routes/updates.ts";
+import valorantRoutes from "./routes/valorant.ts";
 import windowRoutes from "./routes/windows.ts";
 
 // Ce serveur pilote l'ordinateur : hors loopback (USB + adb reverse), un jeton est obligatoire.
@@ -202,6 +203,7 @@ app.register(awayRoutes);
 app.register(systemRoutes);
 app.register(pointerRoutes);
 app.register(presentRoutes);
+app.register(valorantRoutes);
 app.register(notificationRoutes);
 app.register(docRoutes);
 app.register(updateRoutes);

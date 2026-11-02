@@ -12,6 +12,7 @@ import {
   isAppInCall,
   isAppRunning,
   isInstalled,
+  isWindows,
   launchApp,
   listWindows,
   openTarget,
@@ -258,6 +259,7 @@ export async function homeFeatures() {
   // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
   const jira = jiraConfigured && (await pluginOn("jira"));
   // `ha` : widget Home Assistant (HA_URL, HA_TOKEN et HA_ENTITIES dans .env).
+  // `valorant` : widget Valorant (client Riot, Windows seulement : src/valorant.ts).
   return {
     agenda: true,
     linked: await hasCalendar(),
@@ -268,6 +270,7 @@ export async function homeFeatures() {
     github: canControl && (await githubAvailable()),
     jira,
     ha: haConfigured,
+    valorant: isWindows,
     off: await pluginsOff(),
   };
 }

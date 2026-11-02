@@ -2,6 +2,7 @@ import { runShell } from "./run-command.ts";
 import { execFileSync } from "node:child_process";
 import { statfs } from "node:fs/promises";
 import os from "node:os";
+import path from "node:path";
 import { run } from "./mac/run.ts";
 import * as macAccess from "./mac/access.ts";
 import * as macApps from "./mac/apps.ts";
@@ -526,6 +527,12 @@ export async function processWindows(pid: number, hosts: string[]): Promise<win.
 export async function raiseWindow(hwnd: number): Promise<win.WinWindow> {
   if (isWindows) return win.raiseWindow(hwnd);
   unsupported();
+}
+
+/** Windows : fichier « lockfile » du client Riot (port et mot de passe de son API locale) ; ailleurs, null (pas de Valorant). */
+export function riotLockfile(): string | null {
+  const local = process.env.LOCALAPPDATA;
+  return isWindows && local ? path.join(local, "Riot Games", "Riot Client", "Config", "lockfile") : null;
 }
 
 /** Message bien visible sur l'ordinateur (code d'appairage), sans attendre qu'il soit fermé. */
