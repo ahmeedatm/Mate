@@ -165,6 +165,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.PIPELINES -> pipelinesWidget(context, host, placed)
                 WidgetType.GITHUB -> gitLabWidget(context, host, placed, Forge.GITHUB)
                 WidgetType.ACTIONS -> pipelinesWidget(context, host, placed, Forge.GITHUB)
+                WidgetType.YTMUSIC -> YtMusicWidget(context, host, placed)
             }
     }
 }

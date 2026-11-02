@@ -77,7 +77,8 @@ enum class WidgetType(
     AWAY("away", R.string.widget_away, R.string.widget_away_desc, R.drawable.ic_cafe, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     PIPELINES("pipelines", R.string.widget_pipelines, R.string.widget_pipelines_desc, R.drawable.ic_tile_rocket_launch, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
     GITHUB("github", R.string.widget_github, R.string.widget_github_desc, R.drawable.ic_code, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
-    ACTIONS("actions", R.string.widget_actions, R.string.widget_actions_desc, R.drawable.ic_tile_deployed_code, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true);
+    ACTIONS("actions", R.string.widget_actions, R.string.widget_actions_desc, R.drawable.ic_tile_deployed_code, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
+    YTMUSIC("ytmusic", R.string.widget_ytmusic, R.string.widget_ytmusic_desc, R.drawable.ic_queue_music, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3), true);
 
     /** Taille de l'exemplaire agrandi (widget maintenu, [WidgetZoom]) : la plus grande, la plus large à surface égale. */
     val zoomSize get() = sizes.maxWith(compareBy<WidgetSize>({ it.w * it.h }, { it.w }))

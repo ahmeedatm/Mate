@@ -103,6 +103,14 @@ describe("YouTube Music piloté depuis la tablette", () => {
     }
   });
 
+  it("pochette : seulement une adresse de l'état en cours (pas de relais vers une adresse quelconque)", async () => {
+    const res = await server.call("GET", "/ytmusic/cover?url=" + encodeURIComponent("https://lh3.googleusercontent.com/autre=w544-h544"));
+    assert.equal(res.status, 404);
+    const local = await server.call("GET", "/ytmusic/cover?url=" + encodeURIComponent("http://127.0.0.1:3000/health"));
+    assert.equal(local.status, 404);
+    assert.equal((await server.call("GET", "/ytmusic/cover")).status, 400);
+  });
+
   it("route de la tablette protégée par le jeton", async () => {
     assert.equal((await server.call("GET", "/ytmusic", undefined, false)).status, 401);
     assert.equal((await server.call("POST", "/ytmusic/action", { op: "next" }, false)).status, 401);
