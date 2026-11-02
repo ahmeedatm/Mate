@@ -419,6 +419,9 @@ test("cpuWatts, gpuWatts : une décimale ; absents sans source, nuls, négatifs,
   const perf = await perfOf({ cpuWatts: async () => 42.46, gpuWatts: async () => 180.04 });
   assert.equal(perf.cpuWatts, 42.5);
   assert.equal(perf.gpuWatts, 180);
+  // Carte graphique au repos (Mac) : 0,04 W s'arrondit à 0, qui n'est pas une mesure à montrer.
+  const idle = await perfOf({ gpuWatts: async () => 0.04 });
+  assert.ok(!("gpuWatts" in idle), "0,04 W arrondi à 0 ne doit pas sortir");
   const none = await perfOf({});
   assert.ok(!("cpuWatts" in none) && !("gpuWatts" in none));
   for (const value of [NaN, Infinity, 0, -5, 1001, null]) {
