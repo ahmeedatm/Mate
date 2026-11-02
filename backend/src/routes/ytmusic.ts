@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { connectYtmd, forgetYtmd, sendYtmd, ytmdState } from "../ytmdesktop.ts";
 import { MAX_ITEMS, receiveYtMusic, sendYtMusic, YT_MUSIC_OPS, ytMusic, type YtMusicAction, type YtMusicReport } from "../ytmusic.ts";
 
 const itemSchema = {
@@ -64,10 +65,25 @@ export default async function ytMusicRoutes(app: FastifyInstance) {
     },
   );
 
-  /** Ce que joue YouTube Music sur l'ordinateur ; `open: false` = aucun onglet (ou extension absente). */
+  /**
+   * Ce que joue YouTube Music sur l'ordinateur : l'appli YTMDesktop si elle est connectée et répond, sinon l'onglet du
+   * navigateur. `open: false` = ni l'un ni l'autre ; `desktop` = où en est la connexion à YTMDesktop.
+   */
   app.get("/ytmusic", async () => {
+    const desktop = await ytmdState();
+    if (desktop.state) return { open: true, source: "desktop", desktop: desktop.status, ...desktop.state };
     const tab = ytMusic();
-    return tab ? { open: true, browser: tab.browser, ...tab.state } : { open: false };
+    return tab
+      ? { open: true, source: "browser", browser: tab.browser, desktop: desktop.status, ...tab.state }
+      : { open: false, desktop: desktop.status };
+  });
+
+  /** Connexion à YTMDesktop : renvoie le code à comparer, l'accord se donne dans YTMDesktop (suivi par GET /ytmusic). */
+  app.post("/ytmusic/desktop/connect", async () => ({ desktop: await connectYtmd() }));
+
+  app.delete("/ytmusic/desktop", async () => {
+    await forgetYtmd();
+    return { ok: true };
   });
 
   /** Une action de la liste fermée, exécutée par l'extension dans l'onglet. */
@@ -90,6 +106,14 @@ export default async function ytMusicRoutes(app: FastifyInstance) {
     },
     async (req, reply) => {
       const action = req.body;
+      const desktop = await ytmdState();
+      if (desktop.state) {
+        if (action.op === "play-queue" && (action.index === undefined || action.index >= desktop.state.queue.length))
+          return reply.code(400).send({ error: "Ce titre n'est plus dans la liste : actualise" });
+        if (action.op === "seek" && action.seconds === undefined) return reply.code(400).send({ error: "Position manquante" });
+        const error = await sendYtmd(action);
+        return error ? reply.code(409).send({ error }) : { ok: true };
+      }
       const tab = ytMusic();
       const list = action.op === "play-queue" ? tab?.state.queue : action.op === "play-result" ? tab?.state.results : undefined;
       if (list && (action.index === undefined || action.index >= list.length))

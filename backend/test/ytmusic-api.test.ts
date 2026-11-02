@@ -49,7 +49,7 @@ async function listen(browser: string) {
 
 describe("YouTube Music piloté depuis la tablette", () => {
   it("sans onglet : open false, action refusée (409) sauf la recherche vers un navigateur connu", async () => {
-    assert.deepEqual((await server.call("GET", "/ytmusic")).json, { open: false });
+    assert.deepEqual((await server.call("GET", "/ytmusic")).json, { open: false, desktop: { status: "off" } });
     const res = await server.call("POST", "/ytmusic/action", { op: "next" });
     assert.equal(res.status, 409);
     assert.match(res.json.error, /Ouvre YouTube Music/);

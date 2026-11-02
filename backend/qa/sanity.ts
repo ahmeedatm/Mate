@@ -419,8 +419,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const res = await call("GET", "/ytmusic");
         expectStatus(res, 200, "GET /ytmusic");
         expect(typeof res.json.open === "boolean", "réponse sans open");
+        expect(typeof res.json.desktop?.status === "string", "réponse sans état de YTMDesktop");
         expectStatus(await call("POST", "/ytmusic/action", { op: "eval" }), 400, "action hors liste");
-        return res.json.open ? `onglet ouvert dans ${res.json.browser}` : "aucun onglet";
+        const source = res.json.source === "desktop" ? "YTMDesktop" : `onglet dans ${res.json.browser}`;
+        return `${res.json.open ? source : "rien d'ouvert"}, YTMDesktop ${res.json.desktop.status}`;
       },
     },
     {
