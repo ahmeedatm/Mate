@@ -28,6 +28,7 @@ import app.mate.Computers
 import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.DeckCatalog
+import app.mate.net.PointerGesture
 import app.mate.ui.home.MAX_SPAN
 import app.mate.ui.home.duplicateTargets
 import kotlinx.coroutines.CoroutineScope
@@ -540,6 +541,7 @@ class KeyEditor @JvmOverloads constructor(
         "media" -> MEDIA.firstOrNull { it.first == step.optString("command") }?.let { context.getString(it.second) } ?: step.optString("command")
         "system" -> SYSTEM.firstOrNull { it.first == step.optString("command") }?.let { context.getString(it.second) } ?: step.optString("command")
         "wait" -> context.getString(R.string.sum_wait, seconds(step.optInt("ms")))
+        "gesture" -> context.getString(R.string.sum_gesture, PointerGesture.entries.firstOrNull { it.wire == step.optString("name") }?.let { context.getString(it.label) } ?: step.optString("name"))
         "window" -> {
             val layout = LAYOUTS.firstOrNull { it.first == step.optString("layout", "keep") }?.let { context.getString(it.second) }.orEmpty()
             val display = step.optString("display").ifEmpty { context.getString(R.string.step_window_current) }

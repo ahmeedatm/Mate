@@ -14,7 +14,10 @@ import app.mate.ui.pointer.PadView
  * Le canal vers l'ordinateur n'existe que tant que le profil est à l'écran. Hors Mac et Windows : une phrase.
  */
 class PadWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val pad = if (Computers.active(context)?.os in SUPPORTED) PadView(context).apply { useHomeCard() } else null
+    private val pad = if (Computers.active(context)?.os in SUPPORTED) PadView(context).apply {
+        useHomeCard()
+        enableRecording(host.scope)
+    } else null
 
     override val view = OwnerFrameLayout(context, ownsLongPress = pad != null, ownsSwipe = pad != null).apply {
         if (pad != null) {

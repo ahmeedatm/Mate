@@ -157,6 +157,9 @@ class DeckApi(private val http: Http) {
 
     suspend fun savePersoKey(slot: Int, key: JSONObject, page: Int? = null) = http.io { http.putJson(keyPath(slot, page), key); Unit }
 
+    /** Range la touche dans la première place libre de Perso (macro enregistrée sur le Pavé) et rend son rang. */
+    suspend fun addPersoKey(key: JSONObject): Int = http.io { JSONObject(http.postJson("/deck/keys", key)).getInt("slot") }
+
     suspend fun clearPersoKey(slot: Int, page: Int? = null) = http.io { http.delete(keyPath(slot, page)); Unit }
 
     /** Copie la touche (`page` null : Perso) dans la première place libre de la page `to` (null : Perso). */
