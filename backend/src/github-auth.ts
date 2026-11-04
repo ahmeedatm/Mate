@@ -104,6 +104,18 @@ export function githubLogin(): { state: GithubLoginState; userCode?: string; ver
     : { state: login.state };
 }
 
+/**
+ * Compte et connexion en un instantané cohérent : la connexion passe à « ok » après l'écriture du compte, mais le compte se lit
+ * dans un fichier (asynchrone) et la connexion en mémoire. Lus l'un après l'autre, un « ok » pouvait arriver avec un compte
+ * lu avant l'écriture : on relit le compte quand la connexion est « ok ».
+ */
+export async function githubAccountAndLogin() {
+  let account = await githubAccount();
+  const login = githubLogin();
+  if (login?.state === "ok" && !account) account = await githubAccount();
+  return { account: account ?? null, login };
+}
+
 type DeviceCode = { device_code: string; user_code: string; verification_uri: string; expires_in?: number; interval?: number };
 type TokenAnswer = { access_token?: string; scope?: string; error?: string; interval?: number };
 
