@@ -428,7 +428,7 @@ export async function mediaControl(action: MediaAction, app?: string, positionMs
   const target = known.find((s) => s.app === app) ?? known.find((s) => s.current);
   const script = target && playerScript(target.app, action, positionMs);
   // Spotify ou Musique sans Automation accordée : ni ordre AppleScript (fenêtre de macOS), ni autre voie qui l'ignorerait.
-  if (script && !(await automation.names([PLAYERS[target.app]])).length) return false;
+  if (script) await automation.requireApp(PLAYERS[target.app]);
   if (script)
     return osascript(script).then(
       () => true,
