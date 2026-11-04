@@ -235,7 +235,7 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
     private fun outdatedText(name: String) = context.getString(
         R.string.computer_outdated_detail,
         name,
-        InstallerService.address() ?: context.getString(R.string.install_address_no_wifi),
+        InstallerService.link() ?: context.getString(R.string.install_address_no_wifi),
     )
 
     private fun reason(e: Exception): String = when (e) {

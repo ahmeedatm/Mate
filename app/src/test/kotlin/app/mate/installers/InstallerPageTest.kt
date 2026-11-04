@@ -27,6 +27,14 @@ class InstallerPageTest {
     }
 
     @Test
+    fun `les liens portent le code quand la page est servie sous un code`() {
+        val html = InstallerPage.render(Os.MAC, listOf(mac, windows), "/K7M2Q")
+        assertTrue(html.contains("href=\"/K7M2Q/Mate-Mac.zip\""))
+        assertTrue(html.contains("<a href=\"/K7M2Q/Mate-Windows.exe\">PC Windows"))
+        assertFalse(html.contains("href=\"/Mate"))
+    }
+
+    @Test
     fun `Windows voit SmartScreen`() {
         val html = InstallerPage.render(Os.WINDOWS, listOf(mac, windows))
         assertTrue(html.contains("Télécharger Mate-Windows.exe (23 Mo)"))

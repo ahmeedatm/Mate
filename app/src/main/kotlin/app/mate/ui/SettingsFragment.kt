@@ -291,7 +291,7 @@ class SettingsFragment :
         val all = Computers.all(ctx)
         if (all.isEmpty()) {
             computers.addView(TextView(ctx).apply {
-                text = getString(R.string.computers_empty, InstallerService.address() ?: getString(R.string.install_address_no_wifi))
+                text = getString(R.string.computers_empty, InstallerService.link() ?: getString(R.string.install_address_no_wifi))
                 textSize = 16f
                 setPadding(0, dp(8), 0, 0)
             })

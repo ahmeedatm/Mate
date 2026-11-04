@@ -815,6 +815,8 @@
     <string name="welcome_wifi_text">Connecte la tablette au WiFi de la maison ou du bureau, le même que celui de l\'ordinateur.</string>
     <string name="welcome_install_title">Sur l\'ordinateur</string>
     <string name="welcome_install_text">Dans le navigateur de l\'ordinateur, ouvre cette adresse et télécharge Mate :</string>
+    <string name="welcome_install_preparing">Préparation de l\'installeur…</string>
+    <string name="welcome_install_preparing_percent">Préparation de l\'installeur… %1$d %%</string>
     <string name="install_address_no_wifi">connecte d\'abord le WiFi</string>
     <string name="companion_update_available">Nouvelle version du compagnon pour %1$s (%2$s) : touche pour la mettre à jour</string>
     <string name="companion_update_title">Mettre à jour le compagnon de %1$s</string>

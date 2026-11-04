@@ -18,12 +18,14 @@ class InstallerHttpServerTest {
     private lateinit var store: InstallerStore
     private lateinit var server: InstallerHttpServer
     private val zip = ByteArray(300_000) { (it % 251).toByte() }
+    private val code = "K7M2Q"
+    private val token = "jeton-d-un-ordinateur-appaire"
 
     @Before
     fun start() {
         dir = Files.createTempDirectory("installers").toFile()
         store = InstallerStore(dir)
-        server = InstallerHttpServer(0, dir, store::onDisk)
+        server = InstallerHttpServer(0, dir, store::onDisk, { code }, { listOf(token) })
         assertTrue(server.start())
     }
 
@@ -42,10 +44,18 @@ class InstallerHttpServerTest {
         store.commit(i)
     }
 
-    private fun get(path: String, agent: String? = null, method: String = "GET"): Pair<Int, ByteArray> {
-        val conn = URL("http://127.0.0.1:${server.boundPort}$path").openConnection() as HttpURLConnection
+    /** Sous le code de Bienvenue, sauf `raw` : le chemin tel quel. `bearer` : jeton d'appairage. */
+    private fun get(
+        path: String,
+        agent: String? = null,
+        method: String = "GET",
+        raw: Boolean = false,
+        bearer: String? = null,
+    ): Pair<Int, ByteArray> {
+        val conn = URL("http://127.0.0.1:${server.boundPort}${if (raw) path else "/$code$path"}").openConnection() as HttpURLConnection
         conn.requestMethod = method
         agent?.let { conn.setRequestProperty("User-Agent", it) }
+        bearer?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
         val code = conn.responseCode
         val body = (if (code in 200..299) conn.inputStream else conn.errorStream).use { it.readBytes() }
         return code to body
@@ -103,6 +113,56 @@ class InstallerHttpServerTest {
     }
 
     @Test
+    fun `sans code ou avec un mauvais code tout est 404 et rien ne fuit`() {
+        publish(installer("Mate-Mac.zip", Os.MAC, zip), zip)
+        for (path in listOf("/", "/index.html", "/installers.json", "/Mate-Mac.zip", "/AAAAA/", "/AAAAA/installers.json", "/AAAAA/Mate-Mac.zip", "/K7M2/", "/K7M2QQ/")) {
+            val (status, body) = get(path, raw = true)
+            assertEquals(path, 404, status)
+            assertFalse(path, String(body).contains("Mate-Mac"))
+        }
+        assertEquals(404, get("/", method = "POST", raw = true).first)
+    }
+
+    @Test
+    fun `le code ouvre la page et les fichiers, avec ou sans barre finale, en majuscules ou non`() {
+        publish(installer("Mate-Mac.zip", Os.MAC, zip), zip)
+        assertEquals(200, get("", raw = false).first)
+        assertEquals(200, get("/k7m2q", raw = true).first)
+        assertTrue(zip.contentEquals(get("/Mate-Mac.zip").second))
+        val page = String(get("/", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)").second)
+        assertTrue(page.contains("href=\"/K7M2Q/Mate-Mac.zip\""))
+    }
+
+    @Test
+    fun `pas de code tire encore, seuls les ordinateurs appaires passent`() {
+        server.stop()
+        server = InstallerHttpServer(0, dir, store::onDisk, { null }, { listOf(token) })
+        assertTrue(server.start())
+        assertEquals(404, get("/", raw = true).first)
+        assertEquals(404, get("//", raw = true).first)
+        assertEquals(200, get("/installers.json", raw = true, bearer = token).first)
+    }
+
+    @Test
+    fun `un ordinateur appaire lit la liste et les fichiers avec son jeton`() {
+        val exe = installer("Mate-Windows.exe", Os.WINDOWS, zip)
+        publish(exe, zip)
+        val (code, body) = get("/installers.json", raw = true, bearer = token)
+        assertEquals(200, code)
+        assertEquals(listOf(exe), InstallerPlan.parse(String(body)))
+        assertTrue(zip.contentEquals(get("/Mate-Windows.exe", raw = true, bearer = token).second))
+        assertEquals(405, get("/installers.json", method = "POST", raw = true, bearer = token).first)
+    }
+
+    @Test
+    fun `un mauvais jeton ou un schema autre que Bearer est refuse`() {
+        publish(installer("Mate-Mac.zip", Os.MAC, zip), zip)
+        assertEquals(404, get("/installers.json", raw = true, bearer = "autre").first)
+        assertEquals(404, get("/installers.json", raw = true, bearer = "").first)
+        assertEquals(404, get("/Mate-Mac.zip", raw = true, bearer = "$token-").first)
+    }
+
+    @Test
     fun `un telechargement en cours n'est pas servi`() {
         val i = installer("Mate-Mac.zip", Os.MAC, zip)
         store.part(i).writeBytes(zip.copyOf(100))
@@ -126,8 +186,8 @@ class InstallerHttpServerTest {
 
     @Test
     fun `parse lit la requete et ignore une requete mal formee`() {
-        val r = InstallerHttpServer.parse(listOf("GET /a.zip?x=1 HTTP/1.1", "Host: t", "user-agent: Test/1"))!!
-        assertEquals(Triple("GET", "/a.zip", "Test/1"), Triple(r.method, r.path, r.userAgent))
+        val r = InstallerHttpServer.parse(listOf("GET /a.zip?x=1 HTTP/1.1", "Host: t", "user-agent: Test/1", "Authorization: Bearer abc"))!!
+        assertEquals(listOf("GET", "/a.zip", "Test/1", "Bearer abc"), listOf(r.method, r.path, r.userAgent, r.authorization))
         assertEquals(null, InstallerHttpServer.parse(listOf("n'importe quoi")))
         assertEquals(null, InstallerHttpServer.parse(emptyList()))
         assertEquals(null, InstallerHttpServer.parse(null))

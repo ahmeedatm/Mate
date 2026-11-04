@@ -15,9 +15,16 @@ import java.util.concurrent.TimeUnit
  * Petit serveur HTTP sans dépendance : `GET /` (page d'accueil, voir [InstallerPage]), `GET /installers.json` (liste lue
  * par le panneau de l'appli de l'ordinateur pour se mettre à jour) et `GET /<fichier>` pour les installeurs de
  * `available()`, rien d'autre. Chemins comparés aux noms annoncés : jamais de nom venu du client
- * ouvert tel quel. Pas de jeton : le contenu est public, la tablette ne garde aucun secret.
+ * ouvert tel quel. Tout est derrière [InstallerAccess] : sous `/<code>/…` (`code()`, celui de Bienvenue) ou avec le jeton
+ * d'un ordinateur appairé (`tokens()`) ; sinon 404, identique pour tout chemin.
  */
-class InstallerHttpServer(private val port: Int, private val dir: File, private val available: () -> List<Installer>) {
+class InstallerHttpServer(
+    private val port: Int,
+    private val dir: File,
+    private val available: () -> List<Installer>,
+    private val code: () -> String?,
+    private val tokens: () -> List<String>,
+) {
 
     @Volatile private var socket: ServerSocket? = null
     private val pool = ThreadPoolExecutor(0, MAX_CLIENTS, 30, TimeUnit.SECONDS, SynchronousQueue()) { r ->
@@ -63,13 +70,16 @@ class InstallerHttpServer(private val port: Int, private val dir: File, private 
 
     private fun respond(out: OutputStream, request: Request?) {
         if (request == null) return reply(out, 400, "Bad Request", "Requête illisible.")
+        val access = InstallerAccess.resolve(request.path, request.authorization, code(), tokens())
+            ?: return reply(out, 404, "Not Found", "Introuvable.")
         if (request.method != "GET" && request.method != "HEAD") return reply(out, 405, "Method Not Allowed", "Méthode refusée.")
         val installers = available()
-        val file = installers.firstOrNull { "/" + it.file == request.path }
+        val path = access.path
+        val file = installers.firstOrNull { "/" + it.file == path }
         when {
-            request.path == "/" || request.path == "/index.html" ->
-                reply(out, 200, "OK", InstallerPage.render(InstallerPlan.osOf(request.userAgent), installers), head = request.method == "HEAD")
-            request.path == "/installers.json" ->
+            path == "/" || path == "/index.html" ->
+                reply(out, 200, "OK", InstallerPage.render(InstallerPlan.osOf(request.userAgent), installers, access.prefix), head = request.method == "HEAD")
+            path == "/installers.json" ->
                 reply(out, 200, "OK", InstallerPlan.toJson(installers), head = request.method == "HEAD", type = "application/json")
             file != null -> sendFile(out, file, head = request.method == "HEAD")
             else -> reply(out, 404, "Not Found", "Introuvable.")
@@ -101,7 +111,7 @@ class InstallerHttpServer(private val port: Int, private val dir: File, private 
     private fun header(code: Int, reason: String, type: String, length: Long, extra: String) =
         "HTTP/1.1 $code $reason\r\n$type\r\nContent-Length: $length\r\n$extra\r\nConnection: close\r\n\r\n"
 
-    class Request(val method: String, val path: String, val userAgent: String?)
+    class Request(val method: String, val path: String, val userAgent: String?, val authorization: String?)
 
     internal companion object {
         const val TAG = "InstallerServer"
@@ -121,12 +131,12 @@ class InstallerHttpServer(private val port: Int, private val dir: File, private 
             return null
         }
 
-        /** « GET /chemin?x HTTP/1.1 » + en-têtes → méthode, chemin sans paramètres, `User-Agent`. */
+        /** « GET /chemin?x HTTP/1.1 » + en-têtes → méthode, chemin sans paramètres, `User-Agent`, `Authorization`. */
         fun parse(head: List<String>?): Request? {
             val parts = head?.firstOrNull()?.split(" ") ?: return null
             if (parts.size != 3 || !parts[2].startsWith("HTTP/") || !parts[1].startsWith("/")) return null
-            val agent = head.drop(1).firstOrNull { it.startsWith("user-agent:", ignoreCase = true) }?.substringAfter(':')?.trim()
-            return Request(parts[0], parts[1].substringBefore('?'), agent)
+            fun header(name: String) = head.drop(1).firstOrNull { it.startsWith("$name:", ignoreCase = true) }?.substringAfter(':')?.trim()
+            return Request(parts[0], parts[1].substringBefore('?'), header("user-agent"), header("authorization"))
         }
     }
 }

@@ -30,8 +30,8 @@ object InstallerPage {
         "a.dl{display:block;margin:16px 0;padding:18px;border-radius:14px;background:#3b5bdb;color:#fff;text-align:center;text-decoration:none;font-weight:600}" +
         ".card{margin:24px 0;padding:4px 20px 12px;border:1px solid #ddd;border-radius:14px}.wait{padding:16px;border-radius:14px;background:#fff4d6}"
 
-    /** `visitor` : OS détecté (null = inconnu, tout est présenté à égalité). `available` : applis téléchargées. */
-    fun render(visitor: Os?, available: List<Installer>): String {
+    /** `visitor` : OS détecté (null = inconnu, tout est présenté à égalité). `available` : applis téléchargées. `prefix` : `/<code>` devant les liens. */
+    fun render(visitor: Os?, available: List<Installer>, prefix: String = ""): String {
         val body = StringBuilder("<h1>Mate</h1><p>Lance le compagnon sur ton ordinateur : la tablette le pilote.</p>")
         if (available.isEmpty()) {
             body.append("<p class=\"wait\">Les applis ne sont pas encore sur la tablette : elle les télécharge sur le WiFi. Reviens dans quelques minutes.</p>")
@@ -41,11 +41,11 @@ object InstallerPage {
             if (visitor != null && first == null) {
                 body.append("<p class=\"wait\">L'appli ${NAMES.getValue(visitor)} n'est pas encore sur la tablette.</p>")
             }
-            shown.forEach { body.append(card(it)) }
+            shown.forEach { body.append(card(it, prefix)) }
             val others = available - shown.toSet()
             if (others.isNotEmpty()) {
                 body.append("<p>Autre ordinateur : ")
-                body.append(others.joinToString(" · ") { "<a href=\"/${esc(it.file)}\">${NAMES.getValue(it.os)} (${esc(it.file)})</a>" })
+                body.append(others.joinToString(" · ") { "<a href=\"${esc(prefix)}/${esc(it.file)}\">${NAMES.getValue(it.os)} (${esc(it.file)})</a>" })
                 body.append("</p>")
             }
         }
@@ -54,10 +54,10 @@ object InstallerPage {
             "<style>$STYLE</style></head><body>$body</body></html>"
     }
 
-    private fun card(i: Installer): String {
+    private fun card(i: Installer, prefix: String): String {
         val steps = STEPS.getValue(i.os).joinToString("") { "<li>${esc(it)}</li>" }
         return "<div class=\"card\"><h2>Pour ton ${NAMES.getValue(i.os)}</h2>" +
-            "<a class=\"dl\" href=\"/${esc(i.file)}\">Télécharger ${esc(i.file)} (${megabytes(i.size)} Mo)</a><ol>$steps</ol>" +
+            "<a class=\"dl\" href=\"${esc(prefix)}/${esc(i.file)}\">Télécharger ${esc(i.file)} (${megabytes(i.size)} Mo)</a><ol>$steps</ol>" +
             "<p><b>Déjà lancé ?</b> ${esc(UPDATE.getValue(i.os))}</p></div>"
     }
 

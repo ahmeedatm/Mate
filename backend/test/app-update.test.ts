@@ -3,7 +3,10 @@ import { afterEach, describe, it } from "node:test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { checkUpdate, download } from "../src/app-update.ts";
+import { createHash } from "node:crypto";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
+import { checkUpdate, download, tabletHeaders } from "../src/app-update.ts";
 import { noteTabletAddress, pollCommands } from "../src/tablet.ts";
 
 // Mise à jour de l'appli portable : la liste (taille, SHA-256) vient du canal appairé, jamais du port 8080 en clair.
@@ -65,5 +68,35 @@ describe("téléchargement (installeur, modèle Whisper)", () => {
     const file = path.join(os.tmpdir(), "dossier-absent-mate", "x.bin");
     await assert.rejects(download("http://192.0.2.10/x", file, { size: 1000, sha256: "d".repeat(64) }), /ENOENT/);
     assert.equal(fs.existsSync(file), false);
+  });
+});
+
+describe("jeton envoyé à la tablette", () => {
+  it("en-tête Bearer avec le jeton d'appairage, rien sans jeton", () => {
+    assert.deepEqual(tabletHeaders("abc"), { Authorization: "Bearer abc" });
+    assert.deepEqual(tabletHeaders(""), {});
+  });
+
+  it("le téléchargement envoie les en-têtes donnés, et aucun par défaut (ex. modèle Whisper chez un tiers)", async () => {
+    const body = Buffer.from("contenu de l'installeur");
+    const seen: (string | undefined)[] = [];
+    const server = http.createServer((req, res) => {
+      seen.push(req.headers.authorization);
+      res.end(body);
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/Mate-Mac.zip`;
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "app-update-"));
+    const expected = { size: body.length, sha256: createHash("sha256").update(body).digest("hex") };
+    globalThis.fetch = realFetch;
+    try {
+      await download(url, path.join(dir, "a"), expected, tabletHeaders("abc"));
+      await download(url, path.join(dir, "b"), expected);
+      assert.deepEqual(seen, ["Bearer abc", undefined]);
+      assert.deepEqual(fs.readFileSync(path.join(dir, "a")), body);
+    } finally {
+      server.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

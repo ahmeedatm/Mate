@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
+import { config } from "./config.ts";
 import { appPath, sh } from "./portable.ts";
 import { tabletAddress, tabletStatus } from "./tablet.ts";
 
@@ -12,6 +13,7 @@ import { tabletAddress, tabletStatus } from "./tablet.ts";
  * jeton : clé `installers`), jamais par le port 8080 : un réseau hostile peut changer les octets, pas l'empreinte attendue.
  * Le panneau télécharge celui de ce système, vérifie taille et empreinte, remplace l'exe ou l'appli sur place et la
  * relance : le nouveau lanceur demande à l'ancien de quitter (POST /local/quit) puis extrait son runtime.
+ * Le port 8080 ne répond qu'aux ordinateurs appairés : le téléchargement porte le jeton d'appairage (en-tête Authorization).
  */
 
 export type Installer = { file: string; size: number; sha256: string; version: string };
@@ -44,6 +46,11 @@ export function isNewer(candidate: string, current: string): boolean {
   return false;
 }
 
+/** Jeton d'appairage de cet ordinateur : la tablette le reconnaît et sert alors ses installeurs sans code. Pour la tablette seulement. */
+export function tabletHeaders(token: string | undefined = config.token): Record<string, string> {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 function fail(message: string, statusCode = 409): never {
   throw Object.assign(new Error(message), { statusCode });
 }
@@ -63,8 +70,13 @@ export async function checkUpdate(current: string): Promise<{ current: string; a
 }
 
 /** Télécharge dans `file`, taille et SHA-256 vérifiés ; le fichier est supprimé s'ils ne correspondent pas. */
-export async function download(url: string, file: string, expected: { size: number; sha256: string }) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(10 * 60_000) });
+export async function download(
+  url: string,
+  file: string,
+  expected: { size: number; sha256: string },
+  headers: Record<string, string> = {},
+) {
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(10 * 60_000) });
   if (!res.ok || !res.body) fail(`Téléchargement impossible (HTTP ${res.status})`, 502);
   const hash = createHash("sha256");
   let size = 0;
@@ -102,7 +114,7 @@ export async function installUpdate(current: string): Promise<{ version: string;
   const old = `${appPath}.old`;
   if (platform === "windows") {
     const fresh = `${appPath}.new`;
-    await download(`${base}/${encodeURIComponent(installer.file)}`, fresh, installer);
+    await download(`${base}/${encodeURIComponent(installer.file)}`, fresh, installer, tabletHeaders());
     try {
       fs.rmSync(old, { force: true });
       fs.renameSync(appPath, old);
@@ -122,7 +134,7 @@ export async function installUpdate(current: string): Promise<{ version: string;
   fs.mkdirSync(work, { recursive: true });
   try {
     const zip = path.join(work, installer.file);
-    await download(`${base}/${encodeURIComponent(installer.file)}`, zip, installer);
+    await download(`${base}/${encodeURIComponent(installer.file)}`, zip, installer, tabletHeaders());
     const unzipped = path.join(work, "app");
     const r = await sh("ditto", ["-x", "-k", zip, unzipped], 120_000);
     const fresh = fs.existsSync(unzipped) ? findApp(unzipped) : undefined;
