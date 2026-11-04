@@ -7,7 +7,8 @@ plugins {
 // Surchargeable : ./gradlew installDebug -PbackendUrl=http://192.168.1.42:3000
 val backendUrl = (findProperty("backendUrl") as String?) ?: "http://127.0.0.1:3000"
 
-// Code technicien (appui long sur le titre de Réglages) : montre la carte Kiosque. -PtechCode=… pour le changer.
+// Code technicien (appui long sur le titre de Réglages) : montre la carte Kiosque. -PtechCode=… pour le changer ; la CI
+// release passe le secret TECH_CODE, 4242 ne vaut que pour les builds locales et les essais de PR.
 val techCode = (findProperty("techCode") as String?) ?: "4242"
 
 // Mises à jour : assets des releases GitHub du dépôt `updateRepo` (tag `latest` : stables, tag `essais` : essais de PR),

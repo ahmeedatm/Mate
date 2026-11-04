@@ -91,6 +91,7 @@ class SettingsFragment :
     private lateinit var kioskSecurity: View
     private lateinit var exitLock: SwitchCompat
     private lateinit var powerMenu: SwitchCompat
+    private lateinit var allowDebugging: SwitchCompat
     private lateinit var meetingsCard: View
     private lateinit var autoJoin: SwitchCompat
     private lateinit var autoJoinHint: TextView
@@ -157,6 +158,7 @@ class SettingsFragment :
         kioskSecurity = view.findViewById(R.id.settings_kiosk_security)
         exitLock = view.findViewById(R.id.settings_exit_lock)
         powerMenu = view.findViewById(R.id.settings_power_menu)
+        allowDebugging = view.findViewById(R.id.settings_allow_debugging)
         meetingsCard = view.findViewById(R.id.settings_meetings_card)
         autoJoin = view.findViewById(R.id.settings_autojoin)
         autoJoinHint = view.findViewById(R.id.settings_autojoin_hint)
@@ -1240,6 +1242,12 @@ class SettingsFragment :
         powerMenu.setOnCheckedChangeListener { _, checked ->
             Prefs.setPowerMenu(ctx, checked)
             Kiosk.applyLockTaskFeatures(ctx)
+        }
+        allowDebugging.setOnCheckedChangeListener(null)
+        allowDebugging.isChecked = Prefs.allowDebugging(ctx)
+        allowDebugging.setOnCheckedChangeListener { _, checked ->
+            Prefs.setAllowDebugging(ctx, checked)
+            Kiosk.lockDebugging(ctx, !checked)
         }
     }
 

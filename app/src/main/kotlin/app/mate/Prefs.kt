@@ -29,9 +29,10 @@ object Prefs {
     private const val KEY_ALLOW_INSTALLS = "allow_installs"
     private const val KEY_EXIT_LOCK = "exit_lock"
     private const val KEY_POWER_MENU = "power_menu"
+    private const val KEY_ALLOW_DEBUGGING = "allow_debugging"
 
     /** Réglages du technicien (carte Kiosque) : gardés par la remise à neuf ([app.mate.kiosk.FreshStart]). */
-    val KIOSK_KEYS = setOf(KEY_ALLOW_INSTALLS, KEY_EXIT_LOCK, KEY_POWER_MENU)
+    val KIOSK_KEYS = setOf(KEY_ALLOW_INSTALLS, KEY_EXIT_LOCK, KEY_POWER_MENU, KEY_ALLOW_DEBUGGING)
     private const val KEY_LANDSCAPE_LOCKED = "landscape_locked"
     private const val KEY_BRIGHTNESS = "brightness"
     private const val KEY_NIGHT_DIM = "night_dim"
@@ -165,6 +166,13 @@ object Prefs {
 
     fun setAllowInstalls(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_ALLOW_INSTALLS, value).apply()
+    }
+
+    /** Kiosque : débogage USB (adb) permis. Bloqué par défaut : sans lui, personne ne lit l'appli ni ne lève le kiosque par adb. */
+    fun allowDebugging(context: Context): Boolean = prefs(context).getBoolean(KEY_ALLOW_DEBUGGING, false)
+
+    fun setAllowDebugging(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_ALLOW_DEBUGGING, value).apply()
     }
 
     /** Kiosque : réinitialisation d'usine et mode sans échec interdits (anti-sortie). Permis par défaut. */
