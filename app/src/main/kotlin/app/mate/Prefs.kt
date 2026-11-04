@@ -42,6 +42,7 @@ object Prefs {
     private const val KEY_THEME = "theme"
     private const val KEY_RAIL_LABELS = "rail_labels"
     private const val KEY_TOUR_DONE = "tour_done"
+    private const val KEY_TEMPLATES_OFFERED = "templates_offered"
     private const val KEY_RAIL_TALK = "rail_talk"
     private const val KEY_RAIL_HIDDEN = "rail_hidden_tools"
     private const val KEY_FOCUS_DND = "focus_dnd"
@@ -206,6 +207,13 @@ object Prefs {
 
     /** Visite guidée du premier lancement déjà vue (ou passée). */
     fun tourDone(context: Context): Boolean = prefs(context).getBoolean(KEY_TOUR_DONE, false)
+
+    /** Choix du template proposé une fois, au premier appairage (effacé par la remise à neuf, comme une tablette neuve). */
+    fun templatesOffered(context: Context): Boolean = prefs(context).getBoolean(KEY_TEMPLATES_OFFERED, false)
+
+    fun setTemplatesOffered(context: Context) {
+        prefs(context).edit().putBoolean(KEY_TEMPLATES_OFFERED, true).apply()
+    }
 
     fun setTourDone(context: Context) {
         prefs(context).edit().putBoolean(KEY_TOUR_DONE, true).apply()

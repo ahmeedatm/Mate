@@ -3,7 +3,7 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { POINTER_GESTURES } from "./pointer.ts";
 import { SYSTEM_COMMANDS, TILE_SYMBOLS } from "./screens.ts";
-import { THEMES } from "./tablet.ts";
+import { TEMPLATE_IDS, TEMPLATES, THEMES, type TemplateId } from "./tablet.ts";
 
 /**
  * Outils MCP du compagnon, communs aux deux portes d'entrée : `mcp.ts` (stdio, lancé par le client depuis le dépôt) et
@@ -39,7 +39,7 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
         "modes : accueil (tableau de bord : heure, prochain rendez-vous, agenda, tâches dont le worklog Jira, Focus, son de l'ordinateur), " +
         "deck (profil Deck de l'Accueil : applis, son, raccourcis de l'ordinateur, touches perso à affecter : deck_touche_*), docs (dossier partagé de l'ordinateur), focus (Pomodoro, sons d'ambiance), camera (visualiseur : la caméra filme une feuille, image projetée depuis l'ordinateur sur /camera), réglages. Commencer par tablette_etat ; tablette_capture montre l'écran. " +
         "Tout se règle aussi d'ici, comme sur la page de l'ordinateur : thème, luminosité, volume (tablette_regler), profils, widgets, bandeau du haut et barre de gauche " +
-        "(profils_lire puis profils_ecrire), touches et macros (deck_touche_*), plugins, applis et sites du deck. Lire l'état avant de le changer ; " +
+        "(profils_lire puis profils_ecrire, ou un template d'un coup : tablette_template), touches et macros (deck_touche_*), plugins, applis et sites du deck. Lire l'état avant de le changer ; " +
         "montrer le résultat avec tablette_capture. " +
         "Textes affichés en français, courts : la tablette est lue de loin.",
     },
@@ -466,6 +466,21 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
         if (!layout && !bandeau && !barre) throw new Error("Rien à changer : donner layout, bandeau ou barre.");
         return text(await api("PUT", "/local/tablet/layout", { layout, topBar: bandeau, rail }));
       }),
+  );
+
+  server.registerTool(
+    "tablette_template",
+    {
+      title: "Poser un template sur la tablette",
+      description:
+        "Remplace les profils et leurs widgets, le bandeau du haut, la barre de gauche et le thème par ceux d'un template : " +
+        TEMPLATES.map((t) => `${t.id} (${t.description})`).join(" ; ") +
+        ". Remplace TOUTE la configuration actuelle (profils, widgets, barres, thème), sans retour arrière : à ne faire que sur demande de l'utilisateur. " +
+        "Refusé pendant un appel. Écrans GitLab, Pipelines, Jira ou Agents sautés si l'ordinateur ne les propose pas. Renvoie le nouvel état, comme profils_lire.",
+      inputSchema: { template: z.enum(TEMPLATE_IDS as [TemplateId, ...TemplateId[]]) },
+      annotations: { destructiveHint: true },
+    },
+    ({ template }) => attempt(async () => text(await api("POST", "/local/tablet/template", { template }))),
   );
 
   server.registerTool(

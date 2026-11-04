@@ -5,8 +5,9 @@ import path from "node:path";
 import { after, before, describe, it } from "node:test";
 import { startServer, type TestServer } from "./server.ts";
 
-// Page locale, section Profils : GET/PUT /local/tablet/layout relaient l'ordre `layout` (get / set) à la tablette et
-// gardent son dernier état (tablet-layout.json) pour l'afficher en lecture seule quand elle est éteinte.
+// Page locale, section Profils : GET/PUT /local/tablet/layout relaient l'ordre `layout` (get / set) à la tablette,
+// POST /local/tablet/template l'ordre `template`, et gardent son dernier état (tablet-layout.json) pour l'afficher en
+// lecture seule quand elle est éteinte.
 
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "companion-layout-"));
 let server: TestServer;
@@ -68,6 +69,9 @@ describe("profils et barres de la page locale", () => {
     const put = await server.call("PUT", "/local/tablet/layout", { topBar: ["clock"] }, false);
     assert.equal(put.status, 409);
     assert.equal(put.json.error, "Tablette non connectée");
+    const template = await server.call("POST", "/local/tablet/template", { template: "dev" }, false);
+    assert.equal(template.status, 409);
+    assert.equal(template.json.error, "Tablette non connectée");
   });
 
   it("lit la disposition de la tablette, avec les pages de touches du Deck, et la garde", async () => {
@@ -107,6 +111,34 @@ describe("profils et barres de la page locale", () => {
     const { done } = await tabletAnswers(put, () => ({ ok: false, error: "Widget inconnu : x (mettre à jour l'appli ?)." }));
     assert.equal(done.status, 502);
     assert.equal(done.json.error, "Widget inconnu : x (mettre à jour l'appli ?).");
+  });
+
+  it("pose un template sur la tablette et garde son nouvel état", async () => {
+    const post = server.call("POST", "/local/tablet/template", { template: "dev" }, false);
+    // Mêmes noms que LAYOUT : le dernier test relit ce cache après un redémarrage.
+    const widgets = [{ t: "agents", s: "FULL", p: 0, c: 0, r: 0, cfg: {} }];
+    const next = { ...DATA, layout: { ...LAYOUT, widgets } };
+    const { order, done } = await tabletAnswers(post, () => ({ ok: true, data: next }));
+    assert.deepEqual(order, { type: "template", id: "dev" });
+    assert.equal(done.status, 200);
+    assert.deepEqual(done.json.layout.widgets, widgets);
+    assert.equal(done.json.readOnly, false);
+    const saved = JSON.parse(fs.readFileSync(path.join(dataDir, "tablet-layout.json"), "utf8"));
+    assert.deepEqual(saved.data.layout.widgets, widgets);
+  });
+
+  it("rend le refus de la tablette pour un template", async () => {
+    const post = server.call("POST", "/local/tablet/template", { template: "bureau" }, false);
+    const { done } = await tabletAnswers(post, () => ({ ok: false, error: "Template inconnu : bureau (mettre à jour l'appli ?)" }));
+    assert.equal(done.status, 502);
+    assert.equal(done.json.error, "Template inconnu : bureau (mettre à jour l'appli ?)");
+  });
+
+  it("refuse un template inconnu ou absent", async () => {
+    for (const body of [{}, { template: "gamer" }, { template: 3 }, []]) {
+      const post = await server.call("POST", "/local/tablet/template", body, false);
+      assert.equal(post.status, 400, JSON.stringify(body));
+    }
   });
 
   it("refuse un corps hors schéma : vide, inconnu, mal typé", async () => {
