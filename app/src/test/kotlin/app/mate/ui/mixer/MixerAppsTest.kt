@@ -205,4 +205,66 @@ class MixerAppsTest {
         assertEquals(listOf(valorant, front, others, MixerApps.App("discord", "Discord")), MixerApps.candidates(listOf(valorant), listOf(discord), { it.name }, specials))
         assertEquals(listOf(others, front), MixerApps.candidates(listOf(others, front), emptyList(), { it.name }, specials))
     }
+
+    // --- Applis masquées (« Ne plus afficher », #166)
+
+    @Test
+    fun `une appli masquee n'a pas de voie, meme choisie`() {
+        val live = listOf(discord, firefox)
+        assertEquals(listOf(discord), MixerApps.channels(emptyList(), live, hidden = setOf("firefox")))
+        assertEquals(listOf("valorant"), MixerApps.channels(listOf(valorant, MixerApps.App("firefox", "Firefox")), live, hidden = setOf("firefox"))!!.map { it.id })
+    }
+
+    @Test
+    fun `une appli masquee ne compte pas dans autres ni dans un groupe`() {
+        val live = listOf(discord, firefox)
+        assertEquals(listOf("discord"), MixerApps.membersOf(listOf(others), MixerApps.OTHERS_ID, live, null, hidden = setOf("firefox")))
+        val group = MixerApps.group("g2", "Tout", listOf(MixerApps.App("discord", "Discord"), MixerApps.App("firefox", "Firefox")))
+        assertEquals(80, MixerApps.channels(listOf(group), listOf(discord, firefox), hidden = setOf("firefox"))!!.single().volume)
+        assertEquals(listOf("discord"), MixerApps.membersOf(listOf(group), group.id, live, null, hidden = setOf("firefox")))
+    }
+
+    @Test
+    fun `l'appli au premier plan reste suivie meme masquee`() {
+        val channel = MixerApps.channels(listOf(front), listOf(discord, firefox), "firefox", hidden = setOf("firefox"))!!.single()
+        assertEquals("Firefox", channel.name)
+        assertEquals(listOf("firefox"), MixerApps.membersOf(listOf(front), MixerApps.FRONT_ID, listOf(discord, firefox), "firefox", hidden = setOf("firefox")))
+    }
+
+    @Test
+    fun `une appli masquee n'est pas proposee dans le reglage des applis`() {
+        assertEquals(listOf(MixerApps.App("discord", "Discord")), MixerApps.candidates(emptyList(), listOf(discord, firefox), hidden = setOf("firefox")))
+    }
+
+    @Test
+    fun `seule une appli de l'ordinateur se masque`() {
+        assertTrue(MixerApps.canHide("discord"))
+        assertTrue(MixerApps.canHide("system"))
+        listOf("master", "mic", MixerApps.FRONT_ID, MixerApps.OTHERS_ID, "group:g1").forEach { assertFalse(it, MixerApps.canHide(it)) }
+    }
+
+    @Test
+    fun `la liste des masquees est rangee par ordinateur`() {
+        val store = JSONObject()
+        val firefoxApp = MixerApps.App("firefox", "Firefox")
+        assertEquals(listOf(firefoxApp), MixerApps.hide(store, "pc-1", firefoxApp))
+        assertEquals("deja masquee : rien ne change", listOf(firefoxApp), MixerApps.hide(store, "pc-1", firefoxApp))
+        assertEquals(emptyList<MixerApps.App>(), MixerApps.read(store, "pc-2", MixerApps.HIDDEN_KEY))
+        assertEquals(listOf(firefoxApp), MixerApps.read(store, "pc-1", MixerApps.HIDDEN_KEY))
+        assertEquals(emptyList<MixerApps.App>(), MixerApps.unhide(store, "pc-1", "firefox"))
+        assertEquals(emptyList<MixerApps.App>(), MixerApps.read(store, "pc-1", MixerApps.HIDDEN_KEY))
+        assertEquals("sans ordinateur : rien", emptyList<MixerApps.App>(), MixerApps.hide(store, null, firefoxApp))
+    }
+
+    @Test
+    fun `le reglage des applis garde une appli choisie puis masquee a sa place`() {
+        val discordApp = MixerApps.App("discord", "Discord")
+        val firefoxApp = MixerApps.App("firefox", "Firefox")
+        val spotify = MixerApps.App("spotify", "Spotify")
+        // Choix : Discord, Firefox (masquée), Spotify ; le ⚙ ne montre que Discord et Spotify, réordonnés.
+        val edited = listOf(spotify, discordApp)
+        assertEquals(listOf(spotify, firefoxApp, discordApp), MixerApps.keepHidden(listOf(discordApp, firefoxApp, spotify), edited, setOf("firefox")))
+        assertEquals("rien de masque : le choix du reglage", edited, MixerApps.keepHidden(listOf(discordApp, spotify), edited, emptySet()))
+        assertEquals("masquee en dernier", listOf(discordApp, firefoxApp), MixerApps.keepHidden(listOf(discordApp, firefoxApp), listOf(discordApp), setOf("firefox")))
+    }
 }

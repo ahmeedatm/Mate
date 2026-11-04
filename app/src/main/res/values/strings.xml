@@ -338,7 +338,6 @@
     <string name="mixer_master">Sortie</string>
     <string name="mixer_mic">Micro</string>
     <string name="mixer_system">Système</string>
-    <string name="mixer_mute">Muet</string>
     <string name="mixer_strip_choose">%1$s, choisir la sortie audio</string>
     <string name="mixer_output_action">Choisir la sortie audio</string>
     <string name="mixer_output_title">Sortie audio de l\'ordinateur</string>
@@ -1749,6 +1748,17 @@
     <string name="tablet_battery_state_charging">Batterie de la tablette : %1$d %%, en charge</string>
     <string name="tablet_battery_state_low">Batterie de la tablette faible : %1$d %%</string>
     <string name="mixer_strip_muted">%1$s, son coupé</string>
+    <string name="mixer_volume_title">Volume de %1$s</string>
+    <string name="mixer_volume_hint">De 0 à 100</string>
+    <string name="mixer_volume_ok">Régler</string>
+    <string name="mixer_volume_action">Taper le volume de %1$s</string>
+    <string name="mixer_hide_action">Ne plus afficher %1$s</string>
+    <string name="mixer_hide_ok">Ne plus afficher</string>
+    <string name="mixer_hide_message">Cette appli n\'aura plus de voie sur les tables de cet ordinateur. Pour la faire revenir : Modifier, puis la roue dentée de la table, Applis masquées.</string>
+    <string name="mixer_hidden_title">Applis masquées</string>
+    <string name="mixer_hidden_none">Aucune. Pour masquer une appli, appui long sur sa voie.</string>
+    <string name="mixer_unhide">Afficher</string>
+    <string name="mixer_unhide_desc">Afficher %1$s de nouveau</string>
     <string name="mixer_mute_action">Couper le son de %1$s</string>
     <string name="mixer_unmute_action">Rétablir le son de %1$s</string>
     <string name="perf_level_warn">en alerte</string>
