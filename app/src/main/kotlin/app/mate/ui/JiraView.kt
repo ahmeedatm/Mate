@@ -30,7 +30,8 @@ import kotlinx.coroutines.launch
  * Onglet Jira du Deck : les tickets assignés à l'utilisateur, rangés dans les colonnes des tableaux Jira choisis (vides
  * comprises, rangées par l'ordinateur), en défilement horizontal si elles ne tiennent pas. Les terminés récents sont
  * atténués. Toucher un ticket ouvre un tiroir en bas : ses transitions possibles et « Ouvrir sur l'ordi ». Le bouton
- * « Tableaux » choisit les tableaux (la boîte s'ouvre seule tant qu'aucun n'est choisi, une fois par affichage).
+ * « Tableaux » choisit les tableaux (la boîte s'ouvre seule tant qu'aucun n'est choisi, une fois par affichage) ; le ⚙ du
+ * widget règle les colonnes (affichées ou non, « tous les tickets »).
  * Relu à l'ouverture puis chaque minute ; les colonnes ne sont recréées que si la liste a changé.
  */
 class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : FrameLayout(context, attrs) {
@@ -40,6 +41,7 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private val boardScroll = HorizontalScrollView(context)
     private val boardsButton = Button(context, null, 0, R.style.Chip)
     private var boardsDialog: JiraBoardsDialog? = null
+    private var columnsDialog: JiraColumnsDialog? = null
     private var prompted = false
     private val scrim = View(context)
     private val drawer = LinearLayout(context)
@@ -158,6 +160,7 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         if (!active) {
             prompted = false
             boardsDialog?.dismiss()
+            columnsDialog?.dismiss()
             return closeDrawer()
         }
         if (shown == null) showStatus(context.getString(R.string.loading))
@@ -191,6 +194,12 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private fun openBoards() {
         if (boardsDialog?.isShowing == true) return
         boardsDialog = JiraBoardsDialog(context, owner.lifecycleScope) { owner.lifecycleScope.launch { refresh() } }.also { it.show() }
+    }
+
+    /** ⚙ du widget : colonnes affichées et « tous les tickets » ; la liste est relue dès l'enregistrement. */
+    fun openColumns() {
+        if (columnsDialog?.isShowing == true) return
+        columnsDialog = JiraColumnsDialog(context, owner.lifecycleScope, { owner.lifecycleScope.launch { refresh() } }, ::openBoards).also { it.show() }
     }
 
     private fun render(issues: JiraIssues) {
@@ -285,6 +294,19 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             },
             LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(2) },
         )
+        // Ticket d'un autre (colonne « tous les tickets ») : son assigné.
+        issue.assignee?.let { name ->
+            addView(
+                TextView(context).apply {
+                    text = name
+                    textSize = 12f
+                    setTextColor(themeColor(context, R.attr.c_text_dim))
+                    maxLines = 1
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                },
+                LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) },
+            )
+        }
         // Terminé récemment : atténué mais touchable comme les autres.
         if (issue.done) alpha = DONE_ALPHA
         setOnClickListener { openDrawer(issue) }

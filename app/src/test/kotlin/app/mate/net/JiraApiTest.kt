@@ -112,4 +112,58 @@ class JiraApiTest {
         assertEquals(false, parseJiraTransitions("""{"transitions":[{"id":"1","name":"A","to":"B"}]}""")[0].needsJira)
         assertTrue(parseJiraTransitions("""{"transitions":[]}""").isEmpty())
     }
+
+    @Test
+    fun `assigne lu seulement quand l'ordinateur le donne`() {
+        val issues = parseJiraIssues(
+            """{"boardsChosen":true,"columns":[{"title":"Go Validate","issues":[
+                {"key":"QA-1","summary":"a","type":"Bug","priority":"Low","done":false,"assignee":"Léa"},
+                {"key":"QA-2","summary":"b","type":"Bug","priority":"Low","done":false},
+                {"key":"QA-3","summary":"c","type":"Bug","priority":"Low","done":false,"assignee":null}]}]}""",
+        ).columns[0].issues
+        assertEquals("Léa", issues[0].assignee)
+        assertNull(issues[1].assignee)
+        assertNull(issues[2].assignee)
+    }
+
+    @Test
+    fun `reglages de colonnes, affichee par defaut et sans tous les tickets`() {
+        val result = parseJiraColumnChoices(
+            """{"boardsChosen":true,"columns":[
+                {"key":"todo","title":"TO DO","shown":true,"everyone":false},
+                {"key":"goqa","title":"Go Validate","shown":true,"everyone":true},
+                {"key":"backlog","title":"Backlog","shown":false,"everyone":false},
+                {"key":"done","title":"DONE"}]}""",
+        )
+        assertTrue(result.boardsChosen)
+        assertEquals(
+            listOf(
+                JiraColumnChoice("todo", "TO DO", true, false),
+                JiraColumnChoice("goqa", "Go Validate", true, true),
+                JiraColumnChoice("backlog", "Backlog", false, false),
+                JiraColumnChoice("done", "DONE", true, false),
+            ),
+            result.columns,
+        )
+    }
+
+    @Test
+    fun `aucun tableau choisi, aucune colonne a regler`() {
+        assertFalse(parseJiraColumnChoices("""{"boardsChosen":false,"columns":[]}""").boardsChosen)
+        assertTrue(parseJiraColumnChoices("{}").columns.isEmpty())
+    }
+
+    @Test
+    fun `cles envoyees a l'enregistrement, masquees puis tous les tickets`() {
+        val columns = listOf(
+            JiraColumnChoice("todo", "TO DO", true, false),
+            JiraColumnChoice("backlog", "Backlog", false, false),
+            JiraColumnChoice("goqa", "Go Validate", true, true),
+            JiraColumnChoice("rejected", "REJECTED", false, true),
+        )
+        val (hidden, everyone) = jiraColumnChoiceKeys(columns)
+        assertEquals(listOf("backlog", "rejected"), hidden)
+        assertEquals(listOf("goqa", "rejected"), everyone)
+        assertEquals(emptyList<String>() to emptyList<String>(), jiraColumnChoiceKeys(emptyList()))
+    }
 }

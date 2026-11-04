@@ -11,7 +11,7 @@
  * Faux pilotage (test/fake-os.ts, Mac) : rien ne s'ouvre ni ne se fusionne pour de vrai ; données dans un dossier temporaire.
  */
 import http from "node:http";
-import { FAKE_CLIENT_ID, startFakeGitlab } from "./fake-gitlab.ts";
+import { FAKE_CLIENT_ID, fakeDiscussion, fakeMr, fakePipeline, fakeSchedule, fakeStages, startFakeGitlab } from "./fake-gitlab.ts";
 import { startServer, TOKEN } from "./server.ts";
 
 const PORT = Number(process.env.GITLAB_DEMO_PORT || 3930);
@@ -19,6 +19,59 @@ const FAKE_PORT = Number(process.env.GITLAB_DEMO_FAKE_PORT || 3931);
 const CONTROL_PORT = Number(process.env.GITLAB_DEMO_CONTROL_PORT || 3932);
 
 const gitlab = await startFakeGitlab(FAKE_PORT);
+
+// Une MR par colonne du widget GitLab, un relecteur à relire, deux planifications dont une en échec : le faux compte est « camille ».
+const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
+const mine = (iid: number, title: string, over: Record<string, unknown> = {}) =>
+  fakeMr({
+    iid: String(iid),
+    title,
+    updatedAt: minutesAgo(iid),
+    approved: false,
+    approvedBy: { nodes: [] },
+    headPipeline: fakePipeline({ id: `gid://gitlab/Ci::Pipeline/${iid}` }),
+    commitsWithoutMergeCommits: { nodes: [{ committedDate: minutesAgo(60), author: { username: "camille" } }] },
+    ...over,
+  });
+gitlab.mrs = {
+  assigned: [
+    mine(1, "Brouillon : export CSV", { draft: true, detailedMergeStatus: "DRAFT_STATUS" }),
+    mine(2, "Corriger l'arrondi de la TVA", {
+      detailedMergeStatus: "DISCUSSIONS_NOT_RESOLVED",
+      discussions: { nodes: [fakeDiscussion(false, [{ at: minutesAgo(10), by: "eugenie" }])] },
+      headPipeline: fakePipeline({
+        id: "gid://gitlab/Ci::Pipeline/2",
+        status: "FAILED",
+        stages: fakeStages(["build", "success"], ["test", "failed"]),
+      }),
+    }),
+    mine(3, "Relances automatiques", { approved: true, approvedBy: { nodes: [{ name: "Eugénie", username: "eugenie" }] } }),
+    mine(4, "Pagination des clients", {
+      detailedMergeStatus: "CI_STILL_RUNNING",
+      headPipeline: fakePipeline({
+        id: "gid://gitlab/Ci::Pipeline/4",
+        status: "RUNNING",
+        finishedAt: null,
+        duration: null,
+        stages: fakeStages(["build", "success"], ["test", "running"], ["deploy", "created"]),
+      }),
+    }),
+    mine(5, "Mettre à jour le client PDF", { detailedMergeStatus: "NOT_APPROVED" }),
+  ],
+  review: [fakeMr({ iid: "40", title: "Page de connexion", approvedBy: { nodes: [] }, project: { fullPath: "grp/autre" } })],
+};
+gitlab.memberProjects = ["grp/proj", "grp/autre"];
+gitlab.schedules = {
+  "grp/proj": [
+    fakeSchedule({ id: "gid://gitlab/Ci::PipelineSchedule/1", description: "Nightly" }),
+    fakeSchedule({
+      id: "gid://gitlab/Ci::PipelineSchedule/2",
+      description: "Smoke tests",
+      lastPipeline: fakePipeline({ id: "gid://gitlab/Ci::Pipeline/90", status: "FAILED", stages: fakeStages(["tests", "failed"]) }),
+    }),
+  ],
+};
+gitlab.failedJobs = { 2: ["tests-unitaires"], 90: ["smoke-login"] };
 const server = await startServer({
   port: PORT,
   env: { GITLAB_URL: gitlab.url, GITLAB_CLIENT_ID: FAKE_CLIENT_ID, COMPUTER_NAME: "Ordi de démo" },
