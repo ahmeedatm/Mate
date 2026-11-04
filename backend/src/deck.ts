@@ -254,8 +254,9 @@ export async function homeFeatures() {
   // `gitlab` : widgets GitLab, toujours proposés : sans jeton, ils montrent la carte « Connecter GitLab » qui ouvre la page de l'ordinateur.
   // `github` : widgets GitHub et Actions (GITHUB_TOKEN dans .env, compte connecté, ou appli OAuth réglée).
   const agents = agentsAvailable() && (await pluginOn("claude"));
-  // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
-  const jira = jiraConfigured && (await pluginOn("jira"));
+  // `jira` : widget Jira, proposé sur un ordinateur piloté même sans compte relié (carte « Connecter Jira » : son bouton ouvre la
+  // page de l'ordinateur, ce que seul un Mac ou un Windows sait faire), et dès que Jira est relié, quel que soit le système.
+  const jira = (canControl || jiraConfigured()) && (await pluginOn("jira"));
   // `ha` : widget Home Assistant (HA_URL, HA_TOKEN et HA_ENTITIES dans .env).
   return {
     agenda: true,

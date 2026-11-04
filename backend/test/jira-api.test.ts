@@ -328,23 +328,24 @@ after(async () => {
 });
 
 describe("jira : API", () => {
-  it("/local/status dit si Jira est relié, avec l'hôte seulement (ni e-mail ni jeton)", async () => {
+  it("/local/status dit si Jira est relié, avec l'hôte et la source seulement (ni e-mail ni jeton)", async () => {
     const on = await server.call("GET", "/local/status", undefined, false);
-    assert.deepEqual(on.json.jira, { configured: true, site: new URL(site).host });
+    assert.deepEqual(on.json.jira, { configured: true, site: new URL(site).host, source: "env" });
     assert.ok(!JSON.stringify(on.json).includes(API_TOKEN));
     const off = await bare.call("GET", "/local/status", undefined, false);
     assert.deepEqual(off.json.jira, { configured: false, site: null });
   });
 
-  it("/deck/features annonce jira seulement si configuré", async () => {
+  it("/deck/features annonce jira même sans compte relié (la tablette montre « Connecter Jira »)", async () => {
     assert.equal((await server.call("GET", "/deck/features")).json.jira, true);
-    assert.equal((await bare.call("GET", "/deck/features")).json.jira, false);
+    assert.equal((await bare.call("GET", "/deck/features")).json.jira, true);
   });
 
   it("GET /jira/issues : colonnes groupées et triées, requête JQL attendue", async () => {
     seen.length = 0;
     const { status, json } = await server.call("GET", "/jira/issues");
     assert.equal(status, 200);
+    assert.equal(json.connected, true);
     assert.equal(json.boardsChosen, false);
     assert.deepEqual(
       json.columns.map((c: any) => [c.title, c.issues.map((i: any) => i.key)]),
@@ -638,7 +639,7 @@ describe("jira : API", () => {
     const res = await server.call("GET", "/jira/issues");
     authFails = false;
     assert.equal(res.status, 500);
-    assert.equal(res.json.message, "Jira refuse les identifiants du fichier .env de l'ordinateur.");
+    assert.equal(res.json.message, "Jira refuse les identifiants de l'ordinateur : reconnecte Jira dans la page de Mate.");
   });
 
   it("Jira injoignable : message en français, pas l'erreur réseau brute", async () => {
@@ -669,10 +670,11 @@ describe("jira : API", () => {
     assert.deepEqual(server.osCalls(), [{ fn: "openTarget", args: [`${site}/browse/TECH-1`] }]);
   });
 
-  it("Jira non configuré : 501 sur toutes les routes", async () => {
-    const message = { error: "Jira n'est pas configuré sur l'ordinateur." };
+  it("Jira non relié : tickets en « pas connecté », 501 sur les autres routes", async () => {
+    const issues = await bare.call("GET", "/jira/issues");
+    assert.deepEqual([issues.status, issues.json], [200, { connected: false, boardsChosen: false, columns: [] }]);
+    const message = { error: "Jira n'est pas relié sur l'ordinateur." };
     for (const [method, route, body] of [
-      ["GET", "/jira/issues"],
       ["GET", "/jira/boards"],
       ["POST", "/jira/boards", { ids: [1] }],
       ["GET", "/jira/columns"],

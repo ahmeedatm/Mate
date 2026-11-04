@@ -21,8 +21,11 @@ data class JiraColumn(val title: String, val issues: List<JiraIssue>)
 /** Tableau Jira proposé au choix. */
 data class JiraBoard(val id: Int, val name: String, val project: String)
 
-/** `boardsChosen` faux : aucun tableau choisi, les colonnes sont alors des statuts. */
-data class JiraIssues(val boardsChosen: Boolean, val columns: List<JiraColumn>)
+/**
+ * `boardsChosen` faux : aucun tableau choisi, les colonnes sont alors des statuts. `connected` faux : l'ordinateur n'a pas
+ * de compte Jira relié (réponse normale, pas une erreur) ; absent : relié (ordinateur plus ancien).
+ */
+data class JiraIssues(val boardsChosen: Boolean, val columns: List<JiraColumn>, val connected: Boolean = true)
 
 /** Tableaux proposés par l'ordinateur et ids cochés, dans l'ordre des colonnes. */
 data class JiraBoards(val boards: List<JiraBoard>, val selected: List<Int>)
@@ -45,6 +48,7 @@ fun parseJiraIssues(json: String): JiraIssues {
                 },
             )
         },
+        root.optBoolean("connected", true),
     )
 }
 

@@ -1,14 +1,15 @@
 import fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvider, loginUrl } from "../accounts.ts";
 import { calendarSources, dayRange, getEvents, invalidateCalendar, saveCalendarUrls, savedCalendarUrls } from "../calendar.ts";
 import { backendRoot, config } from "../config.ts";
 import { clearGithubCache } from "../github.ts";
 import { disconnectGithub, githubAccountAndLogin, githubClientId, startGithubLogin } from "../github-auth.ts";
 import { clearGitlabCache } from "../gitlab.ts";
-import { jiraConfigured, jiraSite } from "../jira.ts";
+import { forgetJiraAccount } from "../jira.ts";
+import { connectJira, disconnectJira, JiraAuthError, jiraStatus } from "../jira-auth.ts";
 import { connectGitlab, disconnectGitlab, gitlabAccount, gitlabBaseUrl, GitlabTokenError, gitlabUrlProblem } from "../gitlab-auth.ts";
 import { isLocalRequest } from "../net-guard.ts";
 import { LOCAL_PAGE } from "../local-page.ts";
@@ -91,8 +92,8 @@ export default async function localRoutes(app: FastifyInstance) {
       token: !!process.env.GITHUB_TOKEN?.trim(),
       ...(await githubAccountAndLogin()),
     },
-    // Jira se règle dans le .env de l'ordinateur : la page dit seulement s'il est relié, et à quel site.
-    jira: { configured: jiraConfigured, site: jiraSite },
+    // Jira : la page dit seulement s'il est relié, à quel site et d'où viennent les identifiants (jamais l'e-mail ni le jeton).
+    jira: jiraStatus(),
   }));
 
   /** Lien(s) d'agenda collé(s) dans la page locale ; webcal:// devient https://. Liste vide : retire l'agenda. */
@@ -274,6 +275,46 @@ export default async function localRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
+  // Réservées à la page locale : le jeton d'appairage de la tablette ne suffit pas à changer le compte Jira de l'ordinateur.
+  const jiraPageOnly = async (req: FastifyRequest, reply: FastifyReply) => {
+    if (!isLocalRequest(req.ip, req.headers.host)) return reply.code(403).send({ error: "Réservé à la page de l'ordinateur" });
+  };
+  // Connexion Jira (src/jira-auth.ts) : site, e-mail et jeton d'API collés dans la page, vérifiés auprès de Jira puis gardés sur l'ordinateur.
+  app.put<{ Body: { site: string; email: string; token: string } }>(
+    "/local/accounts/jira",
+    {
+      onRequest: jiraPageOnly,
+      schema: {
+        body: {
+          type: "object",
+          required: ["site", "email", "token"],
+          additionalProperties: false,
+          properties: {
+            site: { type: "string", maxLength: 300 },
+            email: { type: "string", maxLength: 200 },
+            token: { type: "string", maxLength: 500 },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      try {
+        const { site, changed } = await connectJira(req.body);
+        await forgetJiraAccount(changed);
+        return { ok: true, site };
+      } catch (e) {
+        if (e instanceof JiraAuthError) return reply.code(e.statusCode).send({ error: e.message });
+        throw e;
+      }
+    },
+  );
+
+  app.delete("/local/accounts/jira", { onRequest: jiraPageOnly }, async () => {
+    await disconnectJira();
+    await forgetJiraAccount(true);
+    return { ok: true };
+  });
+
   app.delete<{ Params: { provider: string } }>("/local/accounts/:provider", async (req, reply) => {
     if (!isProvider(req.params.provider)) return reply.code(404).send({ error: "Compte inconnu" });
     await disconnect(req.params.provider);
@@ -284,16 +325,16 @@ export default async function localRoutes(app: FastifyInstance) {
   /**
    * Ouvre le compagnon sur l'ordinateur, depuis la tablette : sa page (« Relier mon agenda » de l'Accueil, « Régler depuis
    * l'ordi » des Réglages), ou sa carte GitLab (`gitlab`, carte « Connecter GitLab » des widgets GitLab : jeton à coller),
-   * ou la connexion GitHub (`github` : code à saisir sur GitHub, montré par la page).
+   * ou la connexion GitHub (`github` : code à saisir sur GitHub, montré par la page), ou la carte Jira (`jira` : jeton d'API à coller).
    */
-  app.post<{ Body: { section?: "agenda" | "gitlab" | "github" | "tablette" } }>(
+  app.post<{ Body: { section?: "agenda" | "gitlab" | "github" | "jira" | "tablette" } }>(
     "/local/open",
     {
       schema: {
         body: {
           type: "object",
           additionalProperties: false,
-          properties: { section: { enum: ["agenda", "gitlab", "github", "tablette"] } },
+          properties: { section: { enum: ["agenda", "gitlab", "github", "jira", "tablette"] } },
         },
       },
     },

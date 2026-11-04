@@ -152,7 +152,7 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#pairing")).toBeHidden();
   });
 
-  test("connecteurs : Microsoft pas encore disponible, Figma bientôt, Jira à régler sur l'ordinateur", async ({ page }) => {
+  test("connecteurs : Microsoft pas encore disponible, Figma bientôt, Jira à relier par un jeton", async ({ page }) => {
     await page.goto("/");
     const tile = (name: string) => page.locator(".cx", { hasText: name });
     await expect(tile("Microsoft")).toContainText("Non connecté");
@@ -180,7 +180,7 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#cxdialog")).toBeVisible();
     await expect(page.locator("#agenda")).toBeHidden();
     await expect(page.locator("#cxtitle")).toHaveText("Relier Jira");
-    await expect(page.locator("#jira #cxlist li")).toHaveCount(3);
+    await expect(page.locator("#jira #cxlist li")).toHaveCount(4);
     await expect(page.locator("#jirastate")).toBeHidden();
     await expect(page.locator("#plugon")).toBeDisabled();
     await expect(page.locator("#plugmsg")).toContainText("Jira n'est pas relié");

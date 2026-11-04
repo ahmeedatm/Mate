@@ -57,7 +57,7 @@ class PipelinesView @JvmOverloads constructor(
     private var sideBySide = false
     private val scroll = ScrollView(context)
     private val empty = TextView(context)
-    private val connectCard = GitLabConnectCard(context, { scope }, ::showError, compact = true, forge = forge)
+    private val connectCard = ConnectCard(context, forgeConnect(forge), { scope }, ::showError, compact = true)
 
     private lateinit var scope: CoroutineScope
     private var poll: Job? = null

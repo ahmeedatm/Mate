@@ -105,6 +105,12 @@ async function startOnce(options: ServerOptions, port: number): Promise<TestServ
       // Pas de vrai GitLab : un GITLAB_TOKEN du poste ne doit pas ouvrir l'onglet GitLab ; les tests donnent leur faux serveur.
       GITLAB_TOKEN: "",
       GITLAB_URL: "",
+      // Idem pour Jira : un JIRA_* du poste ne doit pas relier Jira ; les tests donnent leur faux serveur.
+      JIRA_SITE: "",
+      JIRA_EMAIL: "",
+      JIRA_API_TOKEN: "",
+      // Faux Jira des tests : seul cet indicateur admet un site en http://127.0.0.1 (src/jira-auth.ts).
+      JIRA_TEST_HTTP: "1",
       // Pas de vrai GitHub non plus.
       GITHUB_TOKEN: "",
       GITHUB_URL: "",

@@ -25,6 +25,15 @@ class JiraApiTest {
     }
 
     @Test
+    fun `connected faux quand l'ordinateur n'a pas de Jira relie, vrai sinon ou si absent`() {
+        val off = parseJiraIssues("""{"connected":false,"boardsChosen":false,"columns":[]}""")
+        assertFalse(off.connected)
+        assertTrue(off.columns.isEmpty())
+        assertTrue(parseJiraIssues("""{"connected":true,"boardsChosen":true,"columns":[]}""").connected)
+        assertTrue(parseJiraIssues("""{"boardsChosen":true,"columns":[]}""").connected)
+    }
+
+    @Test
     fun `ticket termine marque done, absent vaut faux`() {
         val issues = parseJiraIssues(
             """{"boardsChosen":true,"columns":[{"title":"Done","issues":[

@@ -134,7 +134,7 @@ Copier `backend/config/tasks.example.json` en `backend/config/tasks.json` (non v
 | `days` | jours (1 = lundi … 7 = dimanche), défaut : tous |
 | `remindAt`, `repeatMinutes`, `remindUntil` | rappel parlé sur la tablette à partir de `remindAt`, répété jusqu'à ce que ce soit fait (au plus tard `remindUntil`, défaut 19:00) |
 | `url` | page ouverte sur l'ordinateur par le bouton « Ouvrir sur l'ordi » |
-| `jiraWorklogHours` | cochée toute seule quand ce temps est saisi dans Jira (nécessite `JIRA_SITE`, `JIRA_EMAIL`, `JIRA_API_TOKEN` dans `.env`) |
+| `jiraWorklogHours` | cochée toute seule quand ce temps est saisi dans Jira (nécessite Jira relié : carte Jira de la page de l'ordinateur, ou `JIRA_SITE`, `JIRA_EMAIL`, `JIRA_API_TOKEN` dans `.env`) |
 
 Les tâches ponctuelles s'ajoutent depuis la tablette ou par Claude ; cochées, elles disparaissent le lendemain. L'état est stocké dans `backend/.data/` (non versionné). Un rappel n'est perdu que si la tablette reste injoignable jusqu'à `remindUntil` (écran éteint = appli en pause).
 
