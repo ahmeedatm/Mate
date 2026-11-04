@@ -666,7 +666,13 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         if (!controlled()) return expectStatus(mrs, 501, "/gitlab/mrs");
         const features = await call("GET", "/deck/features");
         expectStatus(features, 200, "/deck/features");
-        expect(typeof features.json.gitlab === "boolean", "/deck/features sans booléen gitlab");
+        expect(features.json.gitlab === true, "gitlab absent de /deck/features sur un ordinateur piloté (la carte de connexion en dépend)");
+        // Jeton collé : un jeton mal formé est refusé avant tout appel à GitLab, rien n'est enregistré.
+        expectStatus(
+          await call("PUT", "/local/accounts/gitlab", { token: "pas un jeton" }),
+          400,
+          "PUT /local/accounts/gitlab d'un jeton mal formé",
+        );
         // Jeton refusé ou GitLab injoignable depuis cet ordinateur : pas une panne du compagnon.
         if (mrs.status === 502) throw new Skip(`GitLab inaccessible depuis l'ordinateur (${mrs.json?.error})`);
         expectStatus(mrs, 200, "/gitlab/mrs");
@@ -880,6 +886,29 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "aperçu de l'écran",
+      run: async () => {
+        // Lecture seule : une capture réduite de l'écran principal, en mémoire ; rien n'est gardé.
+        const res = await fetch(`${base}/screen/preview`, {
+          headers: { authorization: `Bearer ${opts.token}` },
+          signal: AbortSignal.timeout(45_000),
+        });
+        const body = Buffer.from(await res.arrayBuffer());
+        if (!controlled()) {
+          expect(res.status === 501, `/screen/preview hors Mac et Windows : ${res.status} au lieu de 501`);
+          return "501 hors Mac et Windows";
+        }
+        // Mac sans « Enregistrement de l'écran » : 403 ; session sans bureau ouverte : 503. On passe son tour.
+        if (res.status === 403) throw new Skip("Enregistrement de l'écran non autorisé");
+        if (res.status === 503) throw new Skip("écran illisible : aucune session de bureau ouverte");
+        expect(res.status === 200, `/screen/preview : ${res.status} au lieu de 200`);
+        expect(res.headers.get("content-type") === "image/jpeg", `type d'image inattendu : ${res.headers.get("content-type")}`);
+        expect(body[0] === 0xff && body[1] === 0xd8, "la réponse n'est pas un JPEG");
+        expect(body.length <= 300 * 1024, `image trop lourde pour la tablette : ${body.length} octets`);
+        return `JPEG de ${Math.round(body.length / 1024)} Ko`;
+      },
+    },
+    {
       name: "menu de la semaine",
       run: async () => {
         // Lecture seule : le menu réglé par l'utilisateur n'est jamais changé. Toujours sept jours, du lundi au dimanche.
@@ -1026,6 +1055,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         // Réglage vide : refusé avant d'atteindre une tablette peut-être réelle.
         expectStatus(await call("PUT", "/local/tablet/settings", {}), 400, "PUT /local/tablet/settings vide");
         expectStatus(await call("POST", "/local/tablet/update", { action: "rollback" }), 400, "POST /local/tablet/update inconnue");
+        expectStatus(await call("POST", "/local/tablet/template", { template: "inconnu" }), 400, "POST /local/tablet/template inconnu");
       },
     },
     {

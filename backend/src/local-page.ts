@@ -94,7 +94,7 @@ ${FAVICON}
   input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--line); }
   input[type=range]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--ink); }
   input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 9px; background: var(--now); }
-  input[type=text], input:not([type]) { width: 100%; font: 400 15px Figtree, sans-serif; height: 46px; padding: 0 20px; border-radius: 23px; border: 0;
+  input[type=text], input[type=password], input:not([type]) { width: 100%; font: 400 15px Figtree, sans-serif; height: 46px; padding: 0 20px; border-radius: 23px; border: 0;
     box-shadow: inset 0 0 0 1px var(--line); background: var(--bg); color: var(--ink); }
   input::placeholder { color: var(--ink-3); }
   input:not([type=checkbox]):not([type=range]):focus { outline: 0; box-shadow: inset 0 0 0 2px var(--ink); }
@@ -412,7 +412,12 @@ ${FAVICON}
     <div class="card cxpanel" id="gitlab" hidden>
       <div class="dim" id="gitlabstate"></div>
       <div id="gitlabaccount"></div>
-      <div id="gitlabmsg" class="dim" style="margin-top:8px"></div>
+      <!-- Jeton personnel collé : vérifié auprès de GitLab, gardé sur l'ordinateur (PUT /local/accounts/gitlab). -->
+      <form id="gitlabform" autocomplete="off">
+        <input id="gitlabtoken" type="password" placeholder="Coller le jeton GitLab" autocomplete="off" spellcheck="false" autocapitalize="off" aria-label="Jeton GitLab">
+        <div class="actions"><button id="gitlabsave" type="submit">Enregistrer</button></div>
+      </form>
+      <div id="gitlabmsg" class="dim" style="margin-top:8px" role="status"></div>
     </div>
     <div class="card cxpanel" id="github" hidden>
       <div class="dim" id="githubstate"></div>
@@ -532,6 +537,7 @@ ${FAVICON}
       document.getElementById("calstate").textContent = n === 0 ? "Aucun agenda : la tablette propose de le relier."
         : c.saved.length ? "Lien enregistré : " + c.saved.join(", ") : "Connecté.";
       renderAccounts(c);
+      gitlabUrl = s.gitlab.url;
       renderGitlab(s.gitlab);
       renderGithub(s.github);
       renderJira(s.jira || { configured: false });
@@ -606,24 +612,29 @@ ${FAVICON}
     const box = document.getElementById("gitlabaccount");
     box.replaceChildren();
     const state = document.getElementById("gitlabstate");
+    // Le champ du jeton sert tant qu'aucun jeton valable n'est enregistré, pour remplacer un jeton refusé, ou pour en coller
+    // un avec la portée api quand le jeton enregistré ne lit que (le .env, s'il y en a un, fusionne à sa place).
+    const readOnly = !!g.account && !g.account.expired && !g.account.canWrite && !g.token;
+    document.getElementById("gitlabform").hidden = !!g.account && !g.account.expired && !readOnly;
     if (g.account) {
-      state.textContent = "La tablette lit et fusionne tes MR avec ce compte.";
+      state.textContent = g.account.expired ? "GitLab refuse ce jeton : colle-en un nouveau."
+        : readOnly ? "Lecture seule : la fusion se fait sur l'ordinateur. Colle un jeton avec la portée api pour fusionner depuis la tablette."
+        : "La tablette lit et fusionne tes MR avec ce compte.";
       const row = document.createElement("div");
       row.className = "account";
       const label = document.createElement("span");
       label.className = "grow";
       label.append(stateDot(!g.account.expired),
-        "GitLab" + (g.account.username ? " · " + g.account.username : "") + (g.account.expired ? " (à reconnecter)" : ""));
+        "GitLab" + (g.account.username ? " · " + g.account.username : "") + (g.account.expired ? " (jeton refusé)" : ""));
       const off = document.createElement("button");
       off.className = "ghost";
       off.textContent = "Déconnecter GitLab";
       off.onclick = async () => { await fetch("/local/accounts/gitlab", { method: "DELETE" }); refresh(); };
-      row.append(label);
-      if (g.account.expired) row.append(connectLink("gitlab", "Reconnecter"));
-      row.append(off);
+      row.append(label, off);
       box.append(row);
     } else {
-      state.textContent = g.token ? "Connecté." : "Non connecté.";
+      // Sans compte, les étapes de la carte disent déjà quoi faire : pas de « Non connecté. » en plus.
+      state.textContent = g.token ? "Connecté." : g.urlError || "";
     }
   }
   // GitHub : même carte que GitLab, plus le code à saisir sur GitHub tant que la connexion attend (device flow).
@@ -857,6 +868,18 @@ ${FAVICON}
     link.textContent = text;
     return link;
   }
+  // Page de création de jeton personnel de GitLab, nom et portée déjà remplis ; gitlabUrl vient de /local/status.
+  let gitlabUrl = "";
+  function tokenLink(text) {
+    const link = document.createElement("a");
+    link.className = "button";
+    // GITLAB_URL refusée (urlError) : pas d'adresse, le lien reste inerte.
+    if (gitlabUrl) link.href = gitlabUrl + "/-/user_settings/personal_access_tokens?name=Mate&scopes=api";
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = text;
+    return link;
+  }
   // Page de création de jeton d'API d'Atlassian.
   function jiraTokenLink(text) {
     const link = document.createElement("a");
@@ -924,13 +947,25 @@ ${FAVICON}
     if (url) saveCalendar([url]);
   };
   document.getElementById("calclear").onclick = () => saveCalendar([]);
-  const GITLAB_MSG = {
-    ok: "✓ GitLab connecté : l'onglet GitLab de la tablette se remplit dans quelques secondes.",
-    refused: "Connexion annulée.",
-    error: "La connexion à GitLab a échoué. Réessaie.",
+  document.getElementById("gitlabform").onsubmit = async (e) => {
+    e.preventDefault();
+    const input = document.getElementById("gitlabtoken"), msg = document.getElementById("gitlabmsg");
+    const say = (text, ok) => { msg.textContent = text; msg.className = "dim" + (ok === undefined ? "" : ok ? " ok" : " ko"); };
+    if (!input.value.trim()) { say("Colle d'abord le jeton.", false); return; }
+    if (input.value.length > 500) { say("Ce jeton est trop long : colle seulement le jeton GitLab, rien d'autre.", false); return; }
+    say("Vérification…");
+    try {
+      const res = await fetch("/local/accounts/gitlab", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: input.value }) });
+      const r = await res.json().catch(() => ({}));
+      if (res.ok) {
+        say("GitLab connecté : les widgets GitLab de la tablette se remplissent dans quelques secondes.", true);
+        input.value = "";
+      } else say(typeof r.error === "string" && r.error ? r.error : "Le compagnon n'a pas pu enregistrer ce jeton. Réessaie.", false);
+      refresh();
+    } catch (err) {
+      say("Compagnon injoignable", false);
+    }
   };
-  const gitlabResult = new URLSearchParams(location.search).get("gitlab");
-  if (GITLAB_MSG[gitlabResult]) document.getElementById("gitlabmsg").textContent = GITLAB_MSG[gitlabResult];
 
   // Carte « Cette appli » : lue au chargement et après chaque action, pas à chaque rafraîchissement.
   const $ = (id) => document.getElementById(id);
@@ -1054,7 +1089,7 @@ ${FAVICON}
     }
     setTile("ics", c.saved.length + c.env ? "on" : "off", c.saved.length + c.env ? "Connecté" : "Non connecté");
     if ((g.account && !g.account.expired) || (!g.account && g.token)) setTile("gitlab", "on", "Connecté");
-    else setTile("gitlab", g.available ? "off" : "na", "Non connecté", !!g.account);
+    else setTile("gitlab", "off", "Non connecté", !!g.account);
     const h = s.github;
     if ((h.account && !h.account.expired) || (!h.account && h.token)) setTile("github", "on", "Connecté");
     else setTile("github", h.available ? "off" : "na", "Non connecté", !!h.account);
@@ -1083,9 +1118,9 @@ ${FAVICON}
     },
     gitlab: {
       title: "Relier GitLab",
-      steps: ["Touche « Se connecter avec GitLab » : GitLab s'ouvre dans le navigateur.", "Connecte-toi à ton compte GitLab si besoin.",
-        "Touche « Autoriser » : Mate lit tes MR et tes pipelines.", "Tu reviens ici : les widgets GitLab de la tablette se remplissent."],
-      action: "Se connecter avec GitLab",
+      steps: ["Touche « Créer un jeton » : la page de création de jeton de GitLab s'ouvre, déjà remplie.", "Connecte-toi à ton compte GitLab si besoin, puis crée le jeton.",
+        "Copie le jeton (GitLab ne l'affiche qu'une fois) et colle-le dans le champ ci-dessous.", "Touche « Enregistrer » : les widgets GitLab de la tablette se remplissent."],
+      action: "Créer un jeton",
     },
     github: {
       title: "Relier GitHub",
@@ -1141,7 +1176,7 @@ ${FAVICON}
     document.getElementById("cxnote").textContent = na ? "Cette connexion n'est pas encore disponible sur cet ordinateur." : "";
     list.hidden = na;
     if (!na) for (const text of st.steps) list.append(Object.assign(document.createElement("li"), { textContent: text }));
-    if (st.action && !na) action.append(openCx === "jira" ? jiraTokenLink(st.action) : connectLink(openCx, st.action));
+    if (st.action && !na) action.append(openCx === "gitlab" ? tokenLink(st.action) : openCx === "jira" ? jiraTokenLink(st.action) : connectLink(openCx, st.action));
     // Agenda sans connexion possible : le lien ICS reste la voie.
     if (na && PANEL[openCx] === "agenda") {
       const alt = document.createElement("button");
@@ -1336,7 +1371,6 @@ ${FAVICON}
   // Ouverte depuis la tablette ou au retour d'une connexion : le panneau concerné est ouvert et mis en avant.
   const section = new URLSearchParams(location.search).get("section");
   if (accountResult) openPanel("agenda", null);
-  if (gitlabResult) openPanel("gitlab", "gitlab");
   if (new URLSearchParams(location.search).get("github")) openPanel("github", "github");
   if (section === "agenda" || section === "gitlab" || section === "github" || section === "jira") {
     openPanel(section, section === "agenda" ? "ics" : section);

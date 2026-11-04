@@ -321,7 +321,7 @@ describe("homeFeatures", () => {
       meetings: true,
       teams: false,
       agents: false,
-      gitlab: false,
+      gitlab: true,
       github: false,
       jira: true,
       ha: false,
@@ -338,15 +338,11 @@ describe("homeFeatures", () => {
     assert.equal((await deck.homeFeatures()).agents, false);
   });
 
-  it("gitlab : jeton GITLAB_TOKEN ou appli OAuth réglée (GITLAB_CLIENT_ID), sinon non", async () => {
-    delete process.env.GITLAB_CLIENT_ID;
+  it("gitlab : toujours proposé, jeton ou non (la carte de connexion doit être trouvable)", async () => {
     process.env.GITLAB_TOKEN = "glpat-de-test";
     assert.equal((await deck.homeFeatures()).gitlab, true);
     process.env.GITLAB_TOKEN = " ";
-    assert.equal((await deck.homeFeatures()).gitlab, false);
-    process.env.GITLAB_CLIENT_ID = "app-id-de-test";
     assert.equal((await deck.homeFeatures()).gitlab, true);
-    delete process.env.GITLAB_CLIENT_ID;
   });
 });
 

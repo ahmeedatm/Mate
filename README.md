@@ -18,14 +18,14 @@ scripts/  Sauvegarde (bundle git + données perso)
 [la tablette 4.2](docs/tablette-4.2.md) ·
 [kiosque](docs/kiosque.md) ·
 [agenda par compte Microsoft/Google](docs/agenda-comptes.md) ·
-[GitLab par connexion au compte](docs/gitlab-oauth.md) ·
+[GitLab par jeton personnel collé](docs/gitlab-jeton.md) ·
 [ouverture aux développeurs : deck.json, touches perso, API, MCP](docs/ouverture-developpeurs.md)
 
 ## Installation (Mac ou Windows)
 
 Sur chaque ordinateur à piloter (une fois) :
 
-1. Télécharger l'appli : le plus simple est la tablette, qui les sert sur le WiFi (`http://<ip de la tablette>:8080`, affichée sur l'écran Bienvenue ; la page propose celle de l'ordinateur qui la visite). Sinon, celle de la dernière release (`npm run package` pour la fabriquer, voir [développement](docs/developpement.md)). Node y est embarqué, rien d'autre à installer, et rien ne s'installe : l'appli reste où on la met.
+1. Télécharger l'appli : le plus simple est la tablette, qui les sert sur le WiFi (`http://<ip de la tablette>:8080/<code>`, affichée sur l'écran Bienvenue avec son code de 5 caractères ; la page propose celle de l'ordinateur qui la visite). Sinon, celle de la dernière release (`npm run package` pour la fabriquer, voir [développement](docs/developpement.md)). Node y est embarqué, rien d'autre à installer, et rien ne s'installe : l'appli reste où on la met.
    - **Windows** : lancer **`Mate-Windows.exe`** (un seul fichier, sans droits d'administrateur ; non signé : SmartScreen > « Informations complémentaires » > « Exécuter quand même »).
    - **Mac** : extraire `Mate-Mac.zip`, ouvrir **Mate** (non notarisée : la première fois, Réglages Système > Confidentialité et sécurité > « Ouvrir quand même »).
 2. Le compagnon tourne tant qu'on ne le quitte pas ; relancer l'appli rouvre la page. Pour qu'il démarre à l'ouverture de session, cocher « Lancer au démarrage » dans la page (rien n'est inscrit avant). Mettre à jour : bouton « Chercher une mise à jour » de la page (l'appli vient de la tablette). Depuis ce dépôt, sans l'appli : Node.js 22 ou plus, puis `npm install && npm run service:install` dans `backend/`.
@@ -34,7 +34,7 @@ Sur chaque ordinateur à piloter (une fois) :
    - **Mac** : Réglages Système > Confidentialité et sécurité > **Accessibilité** > ajouter `node` (bouton « Ouvrir le réglage » du panneau ; `node` est dans `~/Library/Application Support/Mate/runtime`) pour les raccourcis, macros et fenêtres.
    - **Windows** : « Ouvrir le pare-feu » dans le panneau (demande d'administrateur) pour les réseaux **privés** ; le WiFi doit être en profil « Privé ».
 
-Sur la tablette : au premier lancement, l'écran **Bienvenue** guide en trois étapes (WiFi, adresse de la tablette à ouvrir sur l'ordinateur pour y télécharger le logiciel, `http://<ip>:8080`, ordinateurs trouvés sur le WiFi). Ensuite : **Réglages > Ordinateurs > Ajouter un ordinateur**, toucher l'ordinateur trouvé sur le WiFi, puis saisir sur l'ordinateur (page du compagnon, qui s'ouvre seule) le code à 6 chiffres affiché par la tablette. C'est tout : le jeton arrive une fois le code accepté. Ordinateur introuvable (autre réseau, diffusion bloquée) : « Saisir l'adresse » avec celle de la page.
+Sur la tablette : au premier lancement, l'écran **Bienvenue** guide en trois étapes (WiFi, adresse de la tablette à ouvrir sur l'ordinateur pour y télécharger le logiciel, `http://<ip>:8080/<code>`, ordinateurs trouvés sur le WiFi). Ensuite : **Réglages > Ordinateurs > Ajouter un ordinateur**, toucher l'ordinateur trouvé sur le WiFi, puis saisir sur l'ordinateur (page du compagnon, qui s'ouvre seule) le code à 6 chiffres affiché par la tablette. C'est tout : le jeton arrive une fois le code accepté. Ordinateur introuvable (autre réseau, diffusion bloquée) : « Saisir l'adresse » avec celle de la page.
 
 **Plusieurs ordinateurs** (bureau le jour, maison le soir) : appairer chacun une fois. La tablette pilote l'ordinateur en gras ; quand il ne répond plus, elle cherche les autres ordinateurs enregistrés et bascule sur celui qui répond (bandeau « Connecté à … »), et retrouve un ordinateur dont l'adresse IP a changé. Changer à la main : toucher le nom de l'ordinateur en bas de la barre de gauche, ou Réglages. ✎ pour renommer (« Mac du bureau », « PC maison »). Chaque ordinateur garde ses propres données : agenda, tâches, deck, touches perso, applis et écrans (lus en direct). Le deck de départ ne montre que les applis installées sur cet ordinateur.
 

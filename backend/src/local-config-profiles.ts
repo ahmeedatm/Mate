@@ -6,6 +6,8 @@
  * Le JS client tient dans un template literal : pas de backtick, de `${` ni d'antislash. Aucun innerHTML : les textes
  * viennent de la tablette et du deck.
  */
+import { TEMPLATES } from "./tablet.ts";
+
 const CLOSE =
   '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
 
@@ -31,6 +33,8 @@ export const PROFILES_CSS = `
   .pf-cells button.pf-free:hover { background: var(--t-tile); }
   .pf-board .card .row .grow b { font-weight: 500; }
   #pf-profiles .row:has(> .pf-msg:not(:empty)), #pf-bars .row:has(> .pf-msg:not(:empty)) { flex-wrap: wrap; }
+  .pf-templates { margin-bottom: 20px; }
+  #pf-templates .row:has(> .pf-msg:not(:empty)) { flex-wrap: wrap; }
   .row > .pf-msg:not(:empty) { flex-basis: 100%; }
 
   /* Glisser-déposer (Pointer Events) : poignée, ombre de la place visée, repère d'insertion. */
@@ -71,6 +75,11 @@ export const PROFILES_CSS = `
 export const PROFILES_HTML = `
   <section id="pf-profiles" data-title="Profils" data-icon="grid" data-drag="off" hidden>
     <div class="sechead"><h2>Profils de la tablette</h2><span class="dim">Chaque profil est une page de widgets de l'Accueil. Prépare tes changements, puis envoie-les.</span></div>
+    <div class="card group pf-templates" id="pf-templates">
+      <div class="row"><span class="grow">Partir d'un template<span class="pf-hint">Remplace les profils, les barres et le thème de la tablette, sur les vraies données de cet ordinateur.</span></span>${TEMPLATES.map(
+        (t) => `<button type="button" class="ghost" data-template="${t.id}" title="${t.description}">${t.title}</button>`,
+      ).join("")}<span class="pf-msg" id="pf-tpl-msg" role="status"></span></div>
+    </div>
     <div class="pf-tiles" role="group" aria-label="Profils de la tablette">
       <div class="pf-contents" id="pf-chips"></div>
       <button type="button" class="cx pf-new" id="pf-new"><svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg><b>Nouveau profil</b><small>Une page de plus</small></button>
@@ -852,6 +861,7 @@ export const PROFILES_JS = `
         $(id + "-text").textContent = text;
         $(id).hidden = !text;
       }
+      document.querySelectorAll("[data-template]").forEach(function (b) { b.disabled = S.ro || S.busy; });
       S.page = Math.min(S.page, L().names.length - 1);
       renderProfiles();
       renderBars();
@@ -890,6 +900,19 @@ export const PROFILES_JS = `
         .then(function (data) { S.busy = false; adopt(data, parts); say(msgId, "Envoyé à la tablette.", "ok"); render(); })
         .catch(function (e) { S.busy = false; say(msgId, fail(e), "ko"); render(); });
     }
+
+    // Template : remplace tout sur la tablette (ordre template), après confirmation ; les brouillons sont perdus.
+    function template(button) {
+      if (!confirm("Passer au template « " + button.textContent + " » ? Les profils, leurs widgets, les barres et le thème de la tablette sont remplacés.")) return;
+      S.busy = true;
+      say("pf-tpl-msg", "Envoi à la tablette…", "");
+      render();
+      fetch("/local/tablet/template", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ template: button.dataset.template }) })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || j.message || "Erreur " + r.status); return j; }); })
+        .then(function (data) { S.busy = false; adopt(data, ["layout", "bars"]); say("pf-tpl-msg", "Template posé sur la tablette.", "ok"); render(); })
+        .catch(function (e) { S.busy = false; say("pf-tpl-msg", fail(e), "ko"); render(); });
+    }
+    document.querySelectorAll("[data-template]").forEach(function (b) { b.onclick = function () { template(b); }; });
 
     pfWire(dlgWidget);
     pfWire(dlgRename);

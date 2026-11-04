@@ -37,10 +37,12 @@ object Prefs {
     private const val KEY_BRIGHTNESS = "brightness"
     private const val KEY_NIGHT_DIM = "night_dim"
     private const val KEY_AUTO_BRIGHTNESS = "auto_brightness"
+    private const val KEY_PRESENCE_SLEEP = "presence_sleep"
     private const val KEY_VOLUME_KEYS_COMPUTER = "volume_keys_computer"
     private const val KEY_THEME = "theme"
     private const val KEY_RAIL_LABELS = "rail_labels"
     private const val KEY_TOUR_DONE = "tour_done"
+    private const val KEY_TEMPLATES_OFFERED = "templates_offered"
     private const val KEY_RAIL_TALK = "rail_talk"
     private const val KEY_RAIL_HIDDEN = "rail_hidden_tools"
     private const val KEY_FOCUS_DND = "focus_dnd"
@@ -112,6 +114,13 @@ object Prefs {
 
     fun setNightDim(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_NIGHT_DIM, value).apply()
+    }
+
+    /** Caméra avant qui endort l'écran quand personne n'est là et le réveille à l'arrivée. Coupée par défaut. */
+    fun presenceSleep(context: Context): Boolean = prefs(context).getBoolean(KEY_PRESENCE_SLEEP, false)
+
+    fun setPresenceSleep(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_PRESENCE_SLEEP, value).apply()
     }
 
     /** Les boutons de volume de la tablette règlent le son de l'ordinateur au lieu du sien. Désactivé par défaut. */
@@ -198,6 +207,13 @@ object Prefs {
 
     /** Visite guidée du premier lancement déjà vue (ou passée). */
     fun tourDone(context: Context): Boolean = prefs(context).getBoolean(KEY_TOUR_DONE, false)
+
+    /** Choix du template proposé une fois, au premier appairage (effacé par la remise à neuf, comme une tablette neuve). */
+    fun templatesOffered(context: Context): Boolean = prefs(context).getBoolean(KEY_TEMPLATES_OFFERED, false)
+
+    fun setTemplatesOffered(context: Context) {
+        prefs(context).edit().putBoolean(KEY_TEMPLATES_OFFERED, true).apply()
+    }
 
     fun setTourDone(context: Context) {
         prefs(context).edit().putBoolean(KEY_TOUR_DONE, true).apply()

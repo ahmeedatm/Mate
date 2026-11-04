@@ -29,9 +29,9 @@ val JIRA_CONNECT = ConnectTexts("jira", R.string.jira_connect, R.string.jira_con
 
 /**
  * Carte « Connecter GitLab », « Connecter GitHub » ou « Connecter Jira » (GitLab, Pipelines, GitHub, Actions et Jira, quand
- * l'ordinateur n'a pas de compte connecté) : le bouton ouvre la section du service dans la page ou le navigateur de
- * l'ordinateur, le texte dit alors quoi y faire. La vue qui l'affiche relit toutes les 3 s en attendant et la cache une
- * fois reliée. `compact` : prend toute la largeur (widget L), sinon 460 dp.
+ * l'ordinateur n'a pas de compte connecté) : le bouton ouvre la connexion sur l'ordinateur (GitLab et Jira : carte de la
+ * page où coller un jeton), le texte dit alors quoi y faire. La vue qui l'affiche relit toutes les 3 s en attendant et la
+ * cache une fois reliée. `compact` : prend toute la largeur (widget L), sinon 460 dp.
  */
 class ConnectCard(
     context: Context,
@@ -44,7 +44,7 @@ class ConnectCard(
     private val text = TextView(context)
     private val button = Button(context, null, 0, R.style.PrimaryButton)
 
-    /** Bouton touché : le texte dit quoi faire sur l'ordinateur. */
+    /** Bouton touché : le texte dit quoi faire sur l'ordinateur (GitLab, Jira : coller un jeton dans sa page). */
     private var waiting = false
 
     init {
@@ -70,7 +70,7 @@ class ConnectCard(
         addView(box, LayoutParams(if (compact) LayoutParams.MATCH_PARENT else dp(460), LayoutParams.WRAP_CONTENT))
     }
 
-    /** Affiche la carte : `expired` = le compte a été connecté mais le service refuse de le renouveler. */
+    /** Affiche la carte : `expired` = un jeton a été collé mais le service le refuse. */
     fun show(expired: Boolean) {
         text.setText(
             when {

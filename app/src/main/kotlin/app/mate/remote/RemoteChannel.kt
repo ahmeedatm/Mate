@@ -211,6 +211,7 @@ class RemoteChannel(private val activity: MainActivity) {
             "set" -> TabletLayout.set(activity, command)
             else -> error("Action inconnue pour l'ordre layout (mettre à jour l'appli ?)")
         }
+        "template" -> TabletLayout.template(activity, command)
         "notification" -> {
             // Envoyé sans attendre par le compagnon : une entrée incomplète est ignorée, pas une erreur.
             parseNotification(command)?.let(activity::onNotification)
@@ -283,6 +284,7 @@ class RemoteChannel(private val activity: MainActivity) {
             .put("settings", TabletSettings.read(activity, systemBrightness, volume))
             .put("update", RemoteUpdate.state(activity))
             .put("installers", InstallerPlan.toJsonArray(InstallerService.served(activity)))
+            .put("installerCode", InstallerService.servedCode())
     }
 
     private companion object {

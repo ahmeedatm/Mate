@@ -49,6 +49,7 @@ import { permissionRoutes } from "./routes/permissions.ts";
 import pluginRoutes from "./routes/plugins.ts";
 import pointerRoutes from "./routes/pointer.ts";
 import presentRoutes from "./routes/present.ts";
+import screenRoutes from "./routes/screen.ts";
 import portableRoutes from "./routes/portable.ts";
 import systemRoutes from "./routes/system.ts";
 import tabletRoutes from "./routes/tablet.ts";
@@ -61,6 +62,7 @@ import scheduleRoutes from "./routes/schedule.ts";
 import taskRoutes from "./routes/tasks.ts";
 import updateRoutes from "./routes/updates.ts";
 import windowRoutes from "./routes/windows.ts";
+import { LOCAL_HOST, LOOPBACK } from "./net-guard.ts";
 
 // Ce serveur pilote l'ordinateur : hors loopback (USB + adb reverse), un jeton est obligatoire.
 if (!config.loopbackOnly && !config.token) {
@@ -88,9 +90,6 @@ setLogger({ warn: (msg) => app.log.warn(msg) });
 await app.register(multipart, { limits: { fileSize: 20 * 1024 * 1024, files: 1 } });
 
 const expectedAuth = config.token ? Buffer.from(`Bearer ${config.token}`) : undefined;
-const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
-/** Nom demandé par le navigateur : un site qui ferait pointer son domaine vers 127.0.0.1 (DNS rebinding) est refusé. */
-const LOCAL_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
 /**
  * Pages ouvertes dans le navigateur de l'ordinateur (visualiseur, page d'accueil avec le code d'appairage) :
  * pas de jeton possible, lecture seule et en local.
@@ -99,17 +98,25 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
   LOOPBACK.has(ip) &&
   LOCAL_HOST.test(host ?? "") &&
   ((method === "GET" &&
-    /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite|panel|update|permissions)|web\/figtree-[345]00\.ttf|oauth\/(microsoft|google|gitlab)\/(start|callback)|oauth\/github\/start)?(\?|$)/.test(
+    /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite|panel|update|permissions)|web\/figtree-[345]00\.ttf|oauth\/(microsoft|google)\/(start|callback)|oauth\/github\/start)?(\?|$)/.test(
       url,
     )) ||
-    (method === "PUT" && (url === "/local/calendar" || url === "/local/tablet/settings" || url === "/local/accounts/jira")) ||
+    (method === "PUT" &&
+      (url === "/local/calendar" ||
+        url === "/local/tablet/settings" ||
+        url === "/local/accounts/gitlab" ||
+        url === "/local/accounts/jira")) ||
     // Panneau de configuration (routes/local-profiles.ts, routes/local-config.ts) : écritures en JSON seulement (PUT,
     // DELETE et POST à corps objet), pas envoyables par un autre site sans pré-vérification CORS.
     (method === "GET" && /^\/local\/(tablet\/layout|config\/[a-z0-9/-]+)(\?|$)/.test(url)) ||
     (method === "PUT" && url === "/local/tablet/layout") ||
     (/^(POST|PUT|DELETE)$/.test(method) && /^\/local\/config\/[a-z0-9/-]+$/.test(url)) ||
     (method === "POST" &&
-      (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update" || url === "/local/tablet/ring")) ||
+      (url === "/system/accessibility" ||
+        url === "/local/pair" ||
+        url === "/local/tablet/update" ||
+        url === "/local/tablet/ring" ||
+        url === "/local/tablet/template")) ||
     // Panneau de l'appli portable (routes/portable.ts) : corps JSON exigé, pas envoyable par un autre site.
     (method === "POST" && /^\/local\/(autostart|firewall|capteurs|forget|quit|update)$/.test(url)) ||
     // Autorisations du Mac (routes/permissions.ts) : corps JSON exigé, identifiant pris dans la liste du compagnon.
@@ -222,6 +229,7 @@ app.register(docRoutes);
 app.register(updateRoutes);
 app.register(browserRoutes);
 app.register(cameraRoutes);
+app.register(screenRoutes);
 app.register(calendarRoutes);
 app.register(taskRoutes);
 app.register(scheduleRoutes);

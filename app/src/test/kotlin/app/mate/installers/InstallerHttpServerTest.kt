@@ -18,12 +18,13 @@ class InstallerHttpServerTest {
     private lateinit var store: InstallerStore
     private lateinit var server: InstallerHttpServer
     private val zip = ByteArray(300_000) { (it % 251).toByte() }
+    private val code = "K7M2Q"
 
     @Before
     fun start() {
         dir = Files.createTempDirectory("installers").toFile()
         store = InstallerStore(dir)
-        server = InstallerHttpServer(0, dir, store::onDisk)
+        server = InstallerHttpServer(0, dir, store::onDisk, { code })
         assertTrue(server.start())
     }
 
@@ -42,8 +43,14 @@ class InstallerHttpServerTest {
         store.commit(i)
     }
 
-    private fun get(path: String, agent: String? = null, method: String = "GET"): Pair<Int, ByteArray> {
-        val conn = URL("http://127.0.0.1:${server.boundPort}$path").openConnection() as HttpURLConnection
+    /** Sous le code de Bienvenue, sauf `raw` : le chemin tel quel. */
+    private fun get(
+        path: String,
+        agent: String? = null,
+        method: String = "GET",
+        raw: Boolean = false,
+    ): Pair<Int, ByteArray> {
+        val conn = URL("http://127.0.0.1:${server.boundPort}${if (raw) path else "/$code$path"}").openConnection() as HttpURLConnection
         conn.requestMethod = method
         agent?.let { conn.setRequestProperty("User-Agent", it) }
         val code = conn.responseCode
@@ -100,6 +107,64 @@ class InstallerHttpServerTest {
         assertEquals(404, get("/..%2F..%2Fetc%2Fpasswd").first)
         assertEquals(404, get("/Mate-Mac.zip.part").first)
         assertEquals(405, get("/", method = "POST").first)
+    }
+
+    @Test
+    fun `sans code ou avec un mauvais code tout est 404 et rien ne fuit`() {
+        publish(installer("Mate-Mac.zip", Os.MAC, zip), zip)
+        for (path in listOf("/", "/index.html", "/installers.json", "/Mate-Mac.zip", "/AAAAA/", "/AAAAA/installers.json", "/AAAAA/Mate-Mac.zip", "/K7M2/", "/K7M2QQ/")) {
+            val (status, body) = get(path, raw = true)
+            assertEquals(path, 404, status)
+            assertFalse(path, String(body).contains("Mate-Mac"))
+        }
+        assertEquals(404, get("/", method = "POST", raw = true).first)
+    }
+
+    @Test
+    fun `le code ouvre la page et les fichiers, avec ou sans barre finale, en majuscules ou non`() {
+        publish(installer("Mate-Mac.zip", Os.MAC, zip), zip)
+        assertEquals(200, get("", raw = false).first)
+        assertEquals(200, get("/k7m2q", raw = true).first)
+        assertTrue(zip.contentEquals(get("/Mate-Mac.zip").second))
+        val page = String(get("/", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)").second)
+        assertTrue(page.contains("href=\"/K7M2Q/Mate-Mac.zip\""))
+    }
+
+    @Test
+    fun `pas de code tire encore, tout est refuse`() {
+        server.stop()
+        server = InstallerHttpServer(0, dir, store::onDisk, { null })
+        assertTrue(server.start())
+        assertEquals(404, get("/", raw = true).first)
+        assertEquals(404, get("//", raw = true).first)
+        assertEquals(404, get("/installers.json", raw = true).first)
+    }
+
+    @Test
+    fun `l'en-tete Authorization n'ouvre rien`() {
+        publish(installer("Mate-Mac.zip", Os.MAC, zip), zip)
+        val conn = URL("http://127.0.0.1:${server.boundPort}/installers.json").openConnection() as HttpURLConnection
+        conn.setRequestProperty("Authorization", "Bearer n-importe-quoi")
+        assertEquals(404, conn.responseCode)
+    }
+
+    @Test
+    fun `apres trop d'echecs depuis une adresse, tout est refuse meme avec le bon code`() {
+        server.stop()
+        server = InstallerHttpServer(0, dir, store::onDisk, { code }, FailureLimiter(max = 3, windowMs = 60_000))
+        assertTrue(server.start())
+        repeat(3) { assertEquals(404, get("/AAAAA/", raw = true).first) }
+        assertEquals(429, get("/AAAAA/", raw = true).first)
+        assertEquals(429, get("/").first)
+    }
+
+    @Test
+    fun `les requetes qui reussissent ne comptent pas dans le plafond`() {
+        server.stop()
+        server = InstallerHttpServer(0, dir, store::onDisk, { code }, FailureLimiter(max = 2, windowMs = 60_000))
+        assertTrue(server.start())
+        repeat(10) { assertEquals(200, get("/").first) }
+        assertEquals(404, get("/AAAAA/", raw = true).first)
     }
 
     @Test
