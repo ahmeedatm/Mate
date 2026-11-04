@@ -1088,6 +1088,9 @@
     <string name="block_on_computer_lock_hint">Activé : écran bloqué tant que l\'ordinateur l\'est. Coupé : la tablette reste utilisable ; ce qui touche l\'ordinateur répond qu\'il est verrouillé.</string>
     <string name="lock_code_settings_hint">Le cadenas de la barre de gauche verrouille la tablette ; ce code la déverrouille.</string>
     <string name="rail_lock">Verrouiller la tablette</string>
+    <string name="lock_away">Verrou renforcé</string>
+    <string name="lock_away_hint">Si l\'ordinateur verrouillé n\'est plus joignable pendant 30 s (emporté, capot fermé), le déverrouiller ailleurs ne rouvre pas la tablette : il faut son code.</string>
+    <string name="lock_away_body">%1$s ne répond plus. Tape ton code pour utiliser la tablette.</string>
     <string name="kiosk_on">Actif : l\'appli est verrouillée à l\'écran et sert d\'écran d\'accueil.</string>
     <string name="kiosk_paused">Suspendu jusqu\'au prochain redémarrage de l\'appli.</string>
     <string name="kiosk_allow_installs">Autoriser les installations</string>
@@ -1103,6 +1106,8 @@
     <string name="kiosk_exit_lock_hint">Interdit la réinitialisation d\'usine et le mode sans échec depuis Android. La réinitialisation hors ligne passe alors par le mode recovery de la tablette.</string>
     <string name="kiosk_power_menu">Menu du bouton marche/arrêt</string>
     <string name="kiosk_power_menu_hint">Permet d\'éteindre ou de redémarrer par le bouton physique, kiosque verrouillé.</string>
+    <string name="kiosk_allow_debugging">Débogage USB</string>
+    <string name="kiosk_allow_debugging_hint">Ouvre adb, pour mettre à jour ou dépanner la tablette. Désactivé, personne ne peut lire l\'appli ni sortir du kiosque par le câble.</string>
     <string name="kiosk_reboot">Redémarrer</string>
     <string name="kiosk_reboot_confirm">La tablette va redémarrer. Le kiosque reviendra tout seul. Continuer ?</string>
     <string name="kiosk_reboot_failed">Android a refusé de redémarrer.</string>
@@ -1648,6 +1653,13 @@
     <string name="link_state_unauthorized">non autorisé</string>
     <string name="link_state_offline">hors ligne</string>
     <string name="link_state_locked">verrouillé</string>
+    <!-- Pastille de connexion du bandeau du haut (ui/topbar/LinkBadge). -->
+    <string name="link_badge_online">Ordi en ligne</string>
+    <string name="link_badge_wait">Connexion…</string>
+    <string name="link_badge_down">Ordi hors ligne</string>
+    <string name="link_badge_down_since">Ordi hors ligne depuis %1$s</string>
+    <string name="link_badge_refused">Ordi non autorisé</string>
+    <string name="link_badge_spoken">%1$s. Toucher pour changer d\'ordinateur</string>
     <string name="color_default">Couleur par défaut</string>
     <string name="color_red">Rouge</string>
     <string name="color_orange">Orange</string>

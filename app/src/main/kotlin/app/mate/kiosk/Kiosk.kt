@@ -79,6 +79,7 @@ object Kiosk {
         // Le blocage des installations reste actif même kiosque suspendu.
         lockApps(activity, !Prefs.allowInstalls(activity))
         lockExit(activity, Prefs.exitLock(activity))
+        lockDebugging(activity, !Prefs.allowDebugging(activity))
         hideVendorAgents(activity, true)
         grantPermissions(activity, activity.packageName)
         grantPermissions(activity, Trial.TRIAL)
@@ -110,6 +111,7 @@ object Kiosk {
         setHome(activity, false)
         lockApps(activity, false)
         lockExit(activity, false)
+        lockDebugging(activity, false)
         hideVendorAgents(activity, false)
         runCatching { dpm(activity).setKeyguardDisabled(admin(activity), false) }
         dpm(activity).clearDeviceOwnerApp(activity.packageName)
@@ -132,6 +134,22 @@ object Kiosk {
         for (restriction in EXIT_RESTRICTIONS) {
             if (locked) dpm.addUserRestriction(admin(context), restriction)
             else dpm.clearUserRestriction(admin(context), restriction)
+        }
+    }
+
+    /**
+     * Interdit (ou permet) le débogage USB : avec lui, adb lirait l'appli et lèverait le kiosque. Android coupe adb en
+     * posant la restriction ; en la levant, on le rallume (le technicien n'a pas accès à Paramètres). Sans effet si
+     * l'appli n'est pas device owner.
+     */
+    fun lockDebugging(context: Context, locked: Boolean) {
+        if (!isDeviceOwner(context)) return
+        val dpm = dpm(context)
+        if (locked) {
+            dpm.addUserRestriction(admin(context), UserManager.DISALLOW_DEBUGGING_FEATURES)
+        } else {
+            dpm.clearUserRestriction(admin(context), UserManager.DISALLOW_DEBUGGING_FEATURES)
+            runCatching { dpm.setGlobalSetting(admin(context), Settings.Global.ADB_ENABLED, "1") }
         }
     }
 

@@ -16,7 +16,9 @@ import { WEB_FILES } from "../src/web-style.ts";
  * vérifié par sa somme SHA-256. Au premier lancement, le runtime est extrait dans le dossier de l'utilisateur.
  *
  *   ../dist/Mate-Windows.exe   le lanceur (src/win/Mate.exe) suivi du zip du runtime, node.exe x64
- *   ../dist/Mate-Mac.zip       « Mate.app » (portable/mac/), node Apple Silicon et Intel
+ *   ../dist/Mate-Mac.zip       « Mate.app » (lanceur portable/mac/launcher/Mate) et, dans son runtime, l'agent figé
+ *                                 portable/mac/agent/Mate.app qui lance node (autorisations du Mac au nom de Mate) ;
+ *                                 node Apple Silicon et Intel (node/darwin-<arch>/Mate)
  * `npm run package -- windows` ou `-- mac` : un seul des deux. Version : tag de la CI (CI_COMMIT_TAG), sinon 0.0.0.
  *
  * `npm run package -- essai` : seulement le backend de chaque plateforme, sans node ni lanceur Windows, en
@@ -88,6 +90,19 @@ function copy(from: string, to: string) {
 
 const xml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+const AGENT = path.join(backend, "portable", "mac", "agent", "Mate.app");
+
+/**
+ * Textes de la fenêtre d'autorisation de macOS (NSxxxUsageDescription), lus dans l'Info.plist de l'agent : l'appli
+ * externe affiche les mêmes. Texte déjà échappé pour le XML.
+ */
+function usageDescriptions(): string {
+  const plist = fs.readFileSync(path.join(AGENT, "Contents", "Info.plist"), "utf8");
+  const found = [...plist.matchAll(/<key>(NS\w+UsageDescription)<\/key>\s*<string>([^<]*)<\/string>/g)];
+  if (found.length === 0) throw new Error("Aucun texte d'autorisation (NS…UsageDescription) dans l'Info.plist de l'agent");
+  return found.map(([, key, text]) => `  <key>${key}</key>\n  <string>${text}</string>`).join("\n");
+}
+
 /** Info.plist de l'appli Mac. */
 function infoPlist(): string {
   const keys: [string, string | boolean][] = [
@@ -111,6 +126,7 @@ function infoPlist(): string {
 <plist version="1.0">
 <dict>
 ${body}
+${usageDescriptions()}
 </dict>
 </plist>
 `;
@@ -134,6 +150,9 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
     format: "esm",
     target: "node22",
     legalComments: "none",
+    // Code moins lisible pour qui ouvre le dossier installé ; noms de fonctions gardés (plugins Fastify, erreurs).
+    minify: true,
+    keepNames: true,
     // Version renvoyée par /health : la tablette propose l'appli plus récente qu'elle garde ; le panneau la compare aussi.
     define: { "process.env.COMPANION_VERSION": JSON.stringify(VERSION) },
     logLevel: "warning",
@@ -165,13 +184,17 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
   } else {
     copy(path.join(backend, "src", "mac", "NowPlaying.dylib"), path.join(dest, "src", "mac", "NowPlaying.dylib"));
     copy(path.join(backend, "src", "mac", "MateMenu"), path.join(dest, "src", "mac", "MateMenu"));
+    copy(path.join(backend, "src", "mac", "MatePermissions"), path.join(dest, "src", "mac", "MatePermissions"));
     if (!essai) {
       fs.mkdirSync(path.join(bundle, "MacOS"), { recursive: true });
       fs.writeFileSync(path.join(bundle, "Info.plist"), infoPlist());
-      copy(path.join(backend, "portable", "mac", "launcher.sh"), path.join(bundle, "MacOS", FOLDER));
+      copy(path.join(backend, "portable", "mac", "launcher", "Mate"), path.join(bundle, "MacOS", FOLDER));
+      // Agent figé, copié tel quel (octets, dates et signature) : recopié par le lanceur dans le runtime, il garde la même
+      // empreinte d'une version à l'autre, donc les autorisations du Mac accordées à Mate.
+      fs.cpSync(AGENT, path.join(dest, "Mate.app"), { recursive: true, preserveTimestamps: true });
       copy(path.join(backend, "assets", "compagnon.icns"), path.join(bundle, "Resources", "compagnon.icns"));
       for (const arch of ["arm64", "x64"]) {
-        extract(await nodeArchive(sums, `-darwin-${arch}.tar.gz`), "bin/node", path.join(dest, "node", `darwin-${arch}`, "node"));
+        extract(await nodeArchive(sums, `-darwin-${arch}.tar.gz`), "bin/node", path.join(dest, "node", `darwin-${arch}`, FOLDER));
       }
     }
   }

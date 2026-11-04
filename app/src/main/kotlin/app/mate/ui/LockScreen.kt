@@ -33,6 +33,8 @@ import app.mate.lock.LockLogic
  * - ordinateur actif verrouillé : ordre `lock` (backend/src/screen-lock.ts) ou réponse 423, levé quand l'ordinateur se
  *   dit déverrouillé. Ce blocage se coupe dans Réglages > Tablette (Prefs.blockOnComputerLock) : la tablette reste
  *   utilisable, la pastille de la barre dit « verrouillé ».
+ *   Verrou renforcé (option, Prefs.lockAway) : ordinateur verrouillé injoignable plus de 30 s, la tablette passe au
+ *   verrou à code ([lockAway]) ; son déverrouillage ailleurs ne la rouvre plus.
  * Sortie de secours (code oublié, ordinateur disparu) : appui long, puis code technicien, qui lève les deux.
  */
 class LockScreen(private val activity: MainActivity) {
@@ -66,6 +68,15 @@ class LockScreen(private val activity: MainActivity) {
     /** Cadenas de la barre : verrouille, après avoir fait choisir le code s'il n'y en a pas encore. */
     fun lockTablet() {
         if (Prefs.lockCodeHash(activity) == null) return chooseCode { lockTablet() }
+        Prefs.setLockedAway(activity, false)
+        Prefs.setTabletLocked(activity, true)
+        render()
+    }
+
+    /** Verrou renforcé (remote/RemoteChannel) : l'ordinateur verrouillé a peut-être été emporté, seul le code rouvre. */
+    fun lockAway() {
+        if (Prefs.tabletLocked(activity) || Prefs.lockCodeHash(activity) == null) return
+        Prefs.setLockedAway(activity, true)
         Prefs.setTabletLocked(activity, true)
         render()
     }
@@ -125,11 +136,15 @@ class LockScreen(private val activity: MainActivity) {
     /** Vues construites avec le contexte de l'activité : ses attributs de thème (`c_…`), pas ceux de la fenêtre. */
     private fun content(kind: LockKind): View {
         val ctx = activity
+        val away = kind == LockKind.TABLET && Prefs.lockedAway(ctx)
+        fun computerName() = Computers.active(ctx)?.name ?: ctx.getString(R.string.lock_computer_fallback)
         val title = ctx.getString(if (kind == LockKind.TABLET) R.string.lock_tablet_title else R.string.lock_computer_title)
-        val body = if (kind == LockKind.TABLET) {
+        val body = if (away) {
+            ctx.getString(R.string.lock_away_body, computerName())
+        } else if (kind == LockKind.TABLET) {
             ctx.getString(R.string.lock_tablet_body)
         } else {
-            ctx.getString(R.string.lock_computer_body, Computers.active(ctx)?.name ?: ctx.getString(R.string.lock_computer_fallback))
+            ctx.getString(R.string.lock_computer_body, computerName())
         }
         val info = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -215,6 +230,7 @@ class LockScreen(private val activity: MainActivity) {
         typed = ""
         if (ok) {
             attempts.reset()
+            Prefs.setLockedAway(activity, false)
             Prefs.setTabletLocked(activity, false)
             return render()
         }
@@ -270,6 +286,7 @@ class LockScreen(private val activity: MainActivity) {
             if (input.text.toString() == BuildConfig.TECH_CODE) {
                 attempts.reset()
                 ask.dismiss()
+                Prefs.setLockedAway(activity, false)
                 Prefs.setTabletLocked(activity, false)
                 setComputerLocked(false)
             } else {

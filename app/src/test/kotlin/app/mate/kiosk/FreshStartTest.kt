@@ -11,11 +11,15 @@ class FreshStartTest {
             "allow_installs" to true,
             "exit_lock" to true,
             "power_menu" to false,
+            "allow_debugging" to true,
             "theme" to "SOMBRE",
             "computers" to "[...]",
             "home_layout_cadran" to "{}",
         )
-        assertEquals(mapOf("allow_installs" to true, "exit_lock" to true, "power_menu" to false), FreshStart.kept("companion", values))
+        assertEquals(
+            mapOf("allow_installs" to true, "exit_lock" to true, "power_menu" to false, "allow_debugging" to true),
+            FreshStart.kept("companion", values),
+        )
         // Autre fichier (eau…) : rien ne reste, même une clé du même nom.
         assertEquals(emptyMap<String, Any?>(), FreshStart.kept("water", mapOf("exit_lock" to true, "glasses" to 3)))
     }

@@ -3,6 +3,7 @@
 # Instance de test à part : port, données, runtime, journal et dossier de l'appli propres au test, rien d'affiché à
 # l'écran (COMPANION_HEADLESS). Le vrai compagnon (agent app.mate, port 3000, données) est relevé avant et
 # après : la moindre différence fait échouer le test. Rien ne doit être inscrit dans LaunchAgents.
+# L'appli lance l'agent figé du runtime (Mate.app, lancé par `open`), qui lance node : le serveur doit en être l'enfant.
 # Jamais de lecture dans ~/Desktop, ~/Documents… : macOS (TCC) y bloque le runner en attendant une autorisation.
 #
 #   backend/qa/install-mac.sh run dist/Mate-Mac.zip [sanity.xml]
@@ -12,13 +13,16 @@ set -euo pipefail
 
 REAL_LABEL=app.mate
 REAL_PORT=3000
-ID=${CI_JOB_ID:-local}
+# Sans CI_JOB_ID : un nom assez précis pour ne se confondre avec aucun agent de LaunchAgents (le contrôle plus bas y cherche $ID ;
+# « local » trouvait les agents local.*). Sans chiffre : le port reste 41000.
+ID=${CI_JOB_ID:-mate-essai-install-mac}
 WORK=/tmp/companion-ci-$ID
 PORT=$((41000 + ${ID//[!0-9]/0} % 1000))
 SANITY="$(cd "$(dirname "$0")" && pwd)/sanity.ts"
 APP="$WORK/install/Mate/Mate.app"
 RUNTIME=$WORK/runtime
-NODE="$RUNTIME/node/darwin-$([[ $(uname -m) == arm64 ]] && echo arm64 || echo x64)/node"
+NODE="$RUNTIME/node/darwin-$([[ $(uname -m) == arm64 ]] && echo arm64 || echo x64)/Mate"
+AGENT_EXE="$RUNTIME/Mate.app/Contents/MacOS/Mate"
 
 export PORT HOST=127.0.0.1 DATA_DIR=$WORK/data DOCS_DIR=$WORK/shared \
   COMPANION_LOG_DIR=$WORK/logs COMPANION_RUNTIME_DIR=$RUNTIME COMPANION_HEADLESS=1
@@ -50,14 +54,15 @@ check_real() {
   echo "Vrai compagnon intact :"; cat "$WORK/real-after.txt"
 }
 
-# Aucune autorisation macOS (TCC) demandée par le node du job : TCC suit un programme en ligne de commande par son
-# chemin, propre à chaque job, et chaque demande ajoute un « node » de plus dans Réglages Système (ou une invite).
-# Seules les entrées créées pendant ce test comptent (les restes d'anciens essais portent le même préfixe).
-# Base illisible sans accès complet au disque : contrôle sauté.
+# Aucune autorisation macOS (TCC) demandée par l'instance de test. Les demandes du serveur sont attribuées à l'agent
+# (identifiant app.mate.agent), le même que celui du vrai compagnon : une autorisation déjà accordée ne crée
+# aucune ligne, une nouvelle demande en crée une. Les anciens `node` en ligne de commande sont suivis par leur chemin
+# (propre à chaque job). Seules les entrées créées pendant ce test comptent. Base illisible sans accès complet au disque :
+# contrôle sauté.
 check_tcc() {
   local db rows read=0
   for db in "/Library/Application Support/com.apple.TCC/TCC.db" ~/"Library/Application Support/com.apple.TCC/TCC.db"; do
-    rows=$(sqlite3 "$db" "select service from access where (client like '$WORK/%' or client like '/private$WORK/%') and last_modified >= $START" 2>/dev/null) ||
+    rows=$(sqlite3 "$db" "select service from access where (client like '$WORK/%' or client like '/private$WORK/%' or client = 'app.mate.agent') and last_modified >= $START" 2>/dev/null) ||
       { echo "Base TCC illisible ($db) : contrôle sauté"; continue; }
     [[ -z $rows ]] || fail "autorisations macOS demandées par l'instance de test : $(tr '\n' ' ' <<< "$rows")"
     read=$((read + 1))
@@ -85,9 +90,12 @@ run() {
   # Exécutable de l'appli, comme au double-clic : runtime recopié, serveur lancé, rend la main quand il répond.
   "$APP/Contents/MacOS/Mate" < /dev/null || { cat "$WORK/logs/backend.log" 2>/dev/null; fail "lancement"; }
   [[ -x $NODE ]] || fail "runtime absent : $NODE"
+  [[ -x $AGENT_EXE ]] || fail "agent absent : $AGENT_EXE"
   [[ ! -e $RUNTIME/node/darwin-$([[ $(uname -m) == arm64 ]] && echo x64 || echo arm64) ]] || fail "node de l'autre architecture recopié"
   local pid; pid=$(listener "$PORT")
   ps -o command= -p "$pid" | grep -qF "$RUNTIME/" || fail "le port $PORT n'est pas servi par le runtime du test"
+  # Principe des autorisations : macOS les attribue au processus responsable, ici l'agent, parent direct de node.
+  ps -o command= -p "$(ps -o ppid= -p "$pid" | tr -d ' ')" | grep -qF "$AGENT_EXE" || fail "le serveur n'est pas l'enfant de l'agent Mate"
   local h; h=$(health "$PORT"); echo "$h"
   grep -q '"os":"mac"' <<< "$h" || fail "/health : os"
   # Accessibilité non accordée au node du test : attendu.

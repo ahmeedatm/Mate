@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>
+  <string>Mate</string>
+  <key>CFBundleDisplayName</key>
+  <string>Mate</string>
+  <key>CFBundleIdentifier</key>
+  <string>app.mate.agent</string>
+  <key>CFBundleExecutable</key>
+  <string>Mate</string>
+  <key>CFBundleIconFile</key>
+  <string>compagnon</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>1</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>fr</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>11.0</string>
+  <key>LSUIElement</key>
+  <true/>
+  <key>NSAppleEventsUsageDescription</key>
+  <string>Mate pilote des applis de ce Mac depuis la tablette : fenêtres, navigateur, musique…</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Mate règle le micro de ce Mac et voit quand une réunion l'utilise, à ta demande depuis la tablette.</string>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>Mate joint la tablette sur le WiFi de cette maison ou de ce bureau.</string>
+</dict>
+</plist>
