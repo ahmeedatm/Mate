@@ -292,11 +292,24 @@ type PipelineJson = {
   duration?: number | null;
 };
 
-/** Accès refusé : le jeton d'accès est oublié (le prochain appel en renouvelle un), la tablette ne reçoit jamais de 401. */
+/** Jeton refusé : il est oublié (le prochain appel en renouvelle un), la tablette ne reçoit jamais de 401. */
 function refuseIfDenied(res: Response) {
-  if (res.status === 401 || res.status === 403) {
+  if (res.status === 401) {
     forgetGitlabAccessToken();
     throw TOKEN_REFUSED;
+  }
+}
+
+/** Lecture JSON d'un appel GitLab ; null si le projet est introuvable (404) ou sa CI interdite au compte (403). */
+async function readJson<T>(path: string, auth: Auth): Promise<T | null> {
+  const res = await call(path, "GET", undefined, auth);
+  refuseIfDenied(res);
+  if (res.status === 404 || res.status === 403) return null;
+  if (!res.ok) throw UNREACHABLE;
+  try {
+    return (await res.json()) as T;
+  } catch {
+    throw UNREACHABLE;
   }
 }
 
@@ -318,18 +331,18 @@ async function failedJobs(project: string, id: number, auth: Auth): Promise<stri
   }
 }
 
-/** Dernier pipeline de la branche par défaut du projet ; null si le projet n'en a aucun (404). */
+/**
+ * Dernier pipeline de la branche par défaut du projet ; null s'il n'en a aucun ou si sa CI est interdite au compte.
+ * Pas `pipelines/latest` : GitLab y répond 403 quand le dernier commit de la branche n'a pas de pipeline.
+ */
 async function latestPipeline(project: string, auth: Auth): Promise<PipelineRow | null> {
-  const res = await call(`/api/v4/projects/${encodeURIComponent(project)}/pipelines/latest`, "GET", undefined, auth);
-  refuseIfDenied(res);
-  if (res.status === 404) return null;
-  if (!res.ok) throw UNREACHABLE;
-  let p: PipelineJson;
-  try {
-    p = await res.json();
-  } catch {
-    throw UNREACHABLE;
-  }
+  const base = `/api/v4/projects/${encodeURIComponent(project)}`;
+  const branch = (await readJson<{ default_branch?: string | null }>(base, auth))?.default_branch;
+  if (!branch) return null;
+  const last = (await readJson<{ id: number }[]>(`${base}/pipelines?ref=${encodeURIComponent(branch)}&per_page=1`, auth))?.[0];
+  // La liste ne donne ni durée ni heures de début et de fin : le détail les a.
+  const p = last && (await readJson<PipelineJson>(`${base}/pipelines/${last.id}`, auth));
+  if (!p) return null;
   const status = pipelineOf(p.status.toUpperCase());
   const finished = Date.parse(p.finished_at ?? "");
   const since = Date.parse(p.finished_at ?? p.started_at ?? p.created_at ?? "");
