@@ -486,10 +486,13 @@ export async function systemCommand(command: SystemCommand) {
   await call("system", { command });
 }
 
+/** Une capture bloquée ne gèle pas le pilote plus longtemps : toutes ses requêtes attendent derrière (30 s par défaut). */
+const SCREEN_TIMEOUT_MS = 4_000;
+
 /** Aperçu de l'écran principal : JPEG réduit en base64 par l'op `screen` (helper/Native.System.cs), jamais écrit sur le disque. */
 export async function screenPreview(maxWidth: number): Promise<Buffer> {
   try {
-    return Buffer.from(await call<string>("screen", { width: maxWidth }), "base64");
+    return Buffer.from(await call<string>("screen", { width: maxWidth }, SCREEN_TIMEOUT_MS), "base64");
   } catch (e) {
     // Écran illisible (session sans bureau, bureau sécurisé) : 503 comme le presse-papiers, texte de Windows gardé dans le journal.
     throw Object.assign(e as Error, { technical: true, statusCode: 503 });

@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
  * L'écran de l'ordinateur en petit (suivre un export sans se lever). Une image JPEG de 640 px au plus toutes les 1,5 s
  * ([ScreenPreview]), une seule requête à la fois, et seulement page à l'écran : quitter la page ou éteindre l'écran de la
  * tablette arrête tout et libère les images. Les images ne sont jamais écrites sur le disque. Décodage réduit
- * (`inSampleSize`, RGB 565) dans deux bitmaps qui alternent : celui qu'on décode n'est jamais celui qu'on voit.
+ * (`inSampleSize`, ARGB 8888 : le RGB 565 rayait les dégradés) dans deux bitmaps qui alternent : celui qu'on décode n'est jamais celui qu'on voit.
  * Absent des modèles : l'utilisateur l'ajoute lui-même (la mémoire de la 4.2 n'est pas mesurée).
  */
 class ScreenWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
@@ -58,11 +58,13 @@ class ScreenWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
     /** Actif : une seule boucle d'images ; inactif (autre page, écran éteint) : plus aucune requête, images oubliées. */
     override fun setActive(active: Boolean) {
         if (!active) {
+            // `job` reste là : annuler n'interrompt pas une requête déjà partie, la boucle suivante l'attend.
             job?.cancel()
-            job = null
             release()
         } else if (job?.isActive != true) {
+            val previous = job
             job = host.scope.launch {
+                previous?.join()
                 while (isActive) {
                     refresh()
                     delay(ScreenPreview.nextDelayMs(failures))
@@ -73,24 +75,26 @@ class ScreenWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
     }
 
     private suspend fun refresh() {
-        // Le bitmap à réutiliser est lu ici (fil principal) : il n'est pas celui qu'on voit.
+        // Lus ici (fil principal) : le bitmap à réutiliser, qui n'est pas celui qu'on voit, et la taille de la vue.
         val reuse = spare
+        val viewWidth = image.width
+        val viewHeight = image.height
         runCatchingCancellable {
             val bytes = BackendClient(context).screen.preview()
-            withContext(Dispatchers.Default) { decode(bytes, reuse) }
+            withContext(Dispatchers.Default) { decode(bytes, reuse, viewWidth, viewHeight) }
         }
             .onSuccess { bitmap -> if (bitmap != null) show(bitmap) else fail(context.getString(R.string.error_bad_reply)) }
             .onFailure { fail(context.errorText(it)) }
     }
 
     /** JPEG réduit au plus près de la vue ; `reuse` reprend la mémoire d'une image précédente quand les tailles le permettent. */
-    private fun decode(bytes: ByteArray, reuse: Bitmap?): Bitmap? {
+    private fun decode(bytes: ByteArray, reuse: Bitmap?, viewWidth: Int, viewHeight: Int): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
         val options = BitmapFactory.Options().apply {
-            inSampleSize = ScreenPreview.sampleSize(bounds.outWidth, bounds.outHeight, image.width, image.height)
-            inPreferredConfig = Bitmap.Config.RGB_565
+            inSampleSize = ScreenPreview.sampleSize(bounds.outWidth, bounds.outHeight, viewWidth, viewHeight)
+            inPreferredConfig = Bitmap.Config.ARGB_8888
             inMutable = true
             inBitmap = reuse
         }

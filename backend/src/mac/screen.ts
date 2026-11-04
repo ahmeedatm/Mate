@@ -1,12 +1,12 @@
 import { screenDenied } from "../driver-common.ts";
+import { automation } from "./permissions.ts";
 import { osascript } from "./run.ts";
-import { defaultDeps } from "./permissions.ts";
 
 /**
  * Aperçu de l'écran principal du Mac : un JPEG réduit, calculé en mémoire par un script JXA (CoreGraphics) qui rend
  * l'image en base64 sur sa sortie. Rien n'est écrit sur le disque. Sans l'autorisation « Enregistrement de l'écran »,
- * macOS ne donne que le fond d'écran : elle est lue avant chaque capture (utilitaire MatePermissions, 30 ms) et son absence
- * est une erreur claire. Utilitaire absent : la capture se fait, sans pouvoir détecter ce cas.
+ * macOS ne donne que le fond d'écran, voire ouvre une fenêtre d'autorisation : la capture n'est lancée que si elle est
+ * accordée, lue par le filtre de permissions.ts (état gardé 10 s). Fausse ou illisible : erreur dite sur la tablette.
  */
 const SCRIPT = `ObjC.import('CoreGraphics');
 ObjC.import('AppKit');
@@ -26,16 +26,27 @@ function run(argv) {
   return ObjC.unwrap(jpeg.base64EncodedStringWithOptions(0));
 }`;
 
-/** Faux : l'autorisation est absente. Null : illisible (utilitaire absent), on tente la capture. */
-export async function screenAllowed(): Promise<boolean | null> {
-  const status = await defaultDeps().status([]);
-  return status ? status.screen === true : null;
-}
+/** Ce dont la capture dépend, remplaçable dans les tests. */
+export type ScreenDeps = {
+  /** Enregistrement de l'écran accordé ; null : illisible. */
+  allowed: () => Promise<boolean | null>;
+  /** Lance le script ; rend le JPEG en base64. */
+  capture: (maxWidth: number) => Promise<string>;
+};
 
-export async function screenPreview(maxWidth: number): Promise<Buffer> {
-  if ((await screenAllowed()) === false) screenDenied();
+const defaultDeps: ScreenDeps = {
+  allowed: () => automation.screenAllowed(),
+  capture: (maxWidth) => osascript(SCRIPT, [String(maxWidth)], "JavaScript"),
+};
+
+export async function screenPreview(maxWidth: number, deps: ScreenDeps = defaultDeps): Promise<Buffer> {
+  const allowed = await deps.allowed();
+  if (allowed === false) screenDenied();
+  if (allowed === null) {
+    throw Object.assign(new Error("Les autorisations du Mac sont illisibles : relance Mate, ou mets-le à jour"), { statusCode: 503 });
+  }
   try {
-    return Buffer.from(await osascript(SCRIPT, [String(maxWidth)], "JavaScript"), "base64");
+    return Buffer.from(await deps.capture(maxWidth), "base64");
   } catch (e) {
     // Aucun écran lisible (session sans bureau) : 503 comme le presse-papiers, texte d'osascript gardé dans le journal.
     throw Object.assign(e as Error, { technical: true, statusCode: 503 });
