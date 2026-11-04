@@ -18,6 +18,7 @@ write("apps.json", { apps: [{ label: "Notes", name: "Notes" }] });
 write("links.json", { links: [{ label: "Deezer", url: "https://www.deezer.com" }] });
 write("plugins.json", { choices: { teams: false } });
 write("github.json", { token: "ghp_secret-de-test" });
+write("discord.json", { accessToken: "secret-discord-de-test" });
 write("accounts.json", { accounts: [{ token: "secret-de-compte" }] });
 
 let server: TestServer;
@@ -42,7 +43,7 @@ describe("sauvegarde de la configuration", () => {
     assert.equal(res.json.parts.keys.slots[0].label, "Micro");
     assert.equal(res.json.parts.pages.pages[0].title, "Réunions");
     const text = JSON.stringify(res.json);
-    assert.ok(!text.includes("ghp_secret-de-test") && !text.includes("secret-de-compte"));
+    assert.ok(!text.includes("ghp_secret-de-test") && !text.includes("secret-de-compte") && !text.includes("secret-discord-de-test"));
   });
 
   it("ne reprend que les parties choisies", async () => {

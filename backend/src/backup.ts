@@ -5,7 +5,7 @@ import { readJson } from "./store.ts";
 /**
  * Fichier de sauvegarde de la configuration (page locale, section Sauvegarde) : pages et touches du Deck, applis et sites,
  * plugins, et disposition de la tablette (profils, widgets, barres). Rien qui ouvre un accès : ni jeton d'appairage, ni
- * comptes, ni clés (identity.json, agents-hook.json, accounts.json, github.json, gitlab.json restent hors du fichier).
+ * comptes, ni clés (identity.json, agents-hook.json, accounts.json, github.json, gitlab.json, discord.json restent hors du fichier).
  */
 export const BACKUP_FORMAT = "mate-config-1";
 export const BACKUP_PARTS = ["keys", "pages", "apps", "links", "plugins", "layout"] as const;

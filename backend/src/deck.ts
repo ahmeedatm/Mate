@@ -529,7 +529,8 @@ export function appIconFile(name: string) {
   return cachedIcon(name, (out) => appIcon(name, out));
 }
 
-async function cachedIcon(key: string, make: (out: string) => Promise<boolean>): Promise<string | undefined> {
+/** Icône gardée dans .cache/icons sous une clé ; `make` l'écrit au premier appel. */
+export async function cachedIcon(key: string, make: (out: string) => Promise<boolean>): Promise<string | undefined> {
   const cached = path.join(config.cacheDir, "icons", createHash("sha1").update(key).digest("hex") + ".png");
   if (existsSync(cached)) return cached;
   await fs.mkdir(path.dirname(cached), { recursive: true });

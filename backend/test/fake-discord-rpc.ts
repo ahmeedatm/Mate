@@ -11,6 +11,11 @@ import type { AddressInfo, Socket } from "node:net";
 export const FAKE_CODE = "code-du-faux-discord";
 export const FAKE_TOKEN = "jeton-du-faux-discord-0123456789";
 export const SELF_ID = "100000000000000001";
+/** PNG de 1 × 1 px servi par le faux CDN. */
+export const PNG = Buffer.from(
+  "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000154a24f5f0000000049454e44ae426082",
+  "hex",
+);
 
 type Frame = { cmd: string; args?: Record<string, unknown>; evt?: string; nonce?: string };
 
@@ -31,6 +36,8 @@ export type FakeDiscord = {
   origins: (string | undefined)[];
   /** Corps reçus par l'échange du code. */
   exchanged: unknown[];
+  /** Photos demandées au faux CDN. */
+  avatarHits: string[];
   connections: () => number;
   dispatch: (evt: string, data: unknown) => void;
   /** Coupe les connexions ouvertes (Discord qui redémarre), le port reste à l'écoute. */
@@ -70,6 +77,11 @@ export async function startFakeDiscord(): Promise<FakeDiscord> {
   const send = (socket: Socket, message: unknown) => socket.write(encode(JSON.stringify(message)));
 
   const server = http.createServer((req, res) => {
+    // Faux CDN des photos (cdn.discordapp.com/avatars/<id>/<hash>.png).
+    if (req.method === "GET" && req.url?.startsWith("/avatars/")) {
+      fake.avatarHits.push(req.url);
+      return res.writeHead(200, { "content-type": "image/png" }).end(PNG);
+    }
     if (req.method !== "POST" || req.url !== "/overlay/token") return res.writeHead(404).end();
     let body = "";
     req.on("data", (d) => (body += d));
@@ -151,6 +163,7 @@ export async function startFakeDiscord(): Promise<FakeDiscord> {
     received: [],
     origins: [],
     exchanged: [],
+    avatarHits: [],
     connections: () => sockets.size,
     dispatch: (evt, data) => sockets.forEach((s) => send(s, { cmd: "DISPATCH", evt, data, nonce: null })),
     drop: () => sockets.forEach((s) => s.destroy()),
