@@ -10,7 +10,7 @@ import {
   type WindowsInfo,
   type WindowTarget,
 } from "../screens.ts";
-import { parseCombo, planAudio, sortedNames, whenClipboardAvailable } from "../driver-common.ts";
+import { parseCombo, planAudio, sortedNames, whenClipboardAvailable, whenMediaAvailable } from "../driver-common.ts";
 import { appNameFromId, type NotificationBatch } from "../notifications.ts";
 import { readWindowsNotifications } from "./notifications.ts";
 import type {
@@ -362,7 +362,8 @@ const letters = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
  * ni durée) : Windows la met parfois en avant, et Play visait alors une appli qui ne joue rien.
  */
 export async function mediaSessions(): Promise<MediaSession[]> {
-  const raw = await call<Omit<MediaSession, "name">[]>("media", { action: "list" });
+  // Sans session de bureau, Windows n'a pas de lecteur de médias : le pilote le dit, l'API répond 503 (phrase fixe).
+  const raw = await whenMediaAvailable(call<Omit<MediaSession, "name">[]>("media", { action: "list" }));
   return raw
     .map((s) => ({ ...s, name: mediaAppName(s.app) }))
     .filter((s) => s.artist || s.durationMs !== null || (s.title && letters(s.title) !== letters(s.name)));

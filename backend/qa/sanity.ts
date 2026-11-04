@@ -253,6 +253,8 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
     {
       name: "Ne pas déranger à la main (pastille de l'Accueil)",
       run: async () => {
+        // Mac sans Accessibilité (install-mac.sh) : le réglage passe par System Events, comme les fenêtres et le pointeur.
+        if (os === "mac" && accessibility === false) throw new Skip("Accessibilité non accordée");
         expectStatus(await call("PUT", "/system/dnd", { on: "oui" }), 400, "PUT /system/dnd invalide");
         const read = await call("GET", "/system/dnd");
         if (!controlled()) {
@@ -498,10 +500,9 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       run: async () => {
         const media = await call("GET", "/system/media");
         if (!controlled()) return expectStatus(media, 501, "/system/media");
-        // Sans session de bureau (compagnon lancé par SSH ou en service), Windows n'a pas de lecteur de médias : comme le
-        // presse-papiers, on passe son tour. Sur un vrai bureau, une erreur fait toujours échouer le contrôle.
-        if (media.status !== 200 && (await call("GET", "/system/clipboard")).status === 503)
-          throw new Skip("lecture en cours indisponible : aucune session de bureau ouverte sur l'ordinateur");
+        // Sans session de bureau (compagnon lancé par SSH ou en service), Windows n'a pas de lecteur de médias : le
+        // compagnon répond 503, comme pour le presse-papiers, et on passe son tour. Toute autre erreur fait échouer le contrôle.
+        if (media.status === 503) throw new Skip(media.json?.message ?? "lecture en cours indisponible");
         expectStatus(media, 200, "/system/media");
         // Une lecture en cours ne se touche pas : la pause n'est essayée que quand rien ne joue (réponse : 0 pause).
         if (media.json.sessions.some((s: { status: string }) => s.status === "playing")) return "lecture en cours, pause non essayée";
@@ -731,7 +732,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expectStatus(res, 400, "/docs/open d'un .exe");
         // Message en français dans `message` (erreur 400 de Fastify), lu en premier par la tablette.
         const message = res.json.message ?? res.json.error;
-        expect(/programme ou un script/.test(message ?? ""), `refus inattendu : ${message}`);
+        expect(/type de fichier/.test(message ?? ""), `refus inattendu : ${message}`);
       },
     },
     {

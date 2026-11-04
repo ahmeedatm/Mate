@@ -96,6 +96,19 @@ const SHARE_EXTENSIONS = new Set(
 );
 
 /**
+ * Garde de `/docs/open` : un dossier, ou un fichier d'un type de [SHARE_EXTENSIONS] (liste blanche, comme le partage).
+ * Une liste noire laisserait passer `.rdp`, `.docm`, `.html`, `.iso`, `.webloc`… ; un dossier `.app` et un fichier sans
+ * extension (un exécutable que `open` lancerait) sont refusés aussi.
+ */
+export async function checkOpenableDoc(full: string) {
+  const ext = path.extname(full).toLowerCase();
+  const isDir = (ext === "" || full === config.docsDir) && (await fs.stat(full).catch(() => undefined))?.isDirectory();
+  if (!isDir && !SHARE_EXTENSIONS.has(ext)) {
+    throw Object.assign(new Error("Ouverture refusée : ce type de fichier n'est pas pris en charge"), { statusCode: 400 });
+  }
+}
+
+/**
  * Nom sûr sur Mac comme sur Windows : sans dossier, sans caractère interdit, de contrôle, de direction ou invisible
  * (un « : » ouvrirait un flux NTFS), sans point de tête (le fichier serait caché de la liste) ni point ou espace
  * final, sans nom réservé (CON, NUL…) avant le premier point (`con.x.txt` l'est aussi), au plus [NAME_MAX]
