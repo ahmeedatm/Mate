@@ -25,6 +25,7 @@ import app.mate.R
 import app.mate.ui.dp
 import app.mate.ui.inputField
 import app.mate.ui.mixer.MixerApps
+import app.mate.ui.mixer.MixerHidden
 import app.mate.ui.mixer.MixerView
 import app.mate.ui.showImmersive
 import app.mate.ui.themeColor
@@ -35,13 +36,19 @@ import java.util.UUID
  * plaque et ses coins (pas de carte). Les curseurs se tirent à la verticale et la rangée de tranches défile de côté :
  * le widget garde l'appui long et le balayage, sinon la grille entrerait en mode Modifier ou changerait de profil.
  *
- * ⚙ du mode Modifier : les applis à montrer, dans l'ordre voulu (`MixerApps`, rangées par ordinateur).
+ * ⚙ du mode Modifier : les applis à montrer, dans l'ordre voulu (`MixerApps`, rangées par ordinateur), et les applis
+ * masquées par un appui long sur leur voie (`MixerHidden`, communes à toutes les tables de l'ordinateur).
  */
 class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val mixer = MixerView(context).apply {
         attach(host.scope)
-        appFilter = { state -> MixerApps.channels(chosen(), state.apps, state.front) }
-        groupMembers = { id -> MixerApps.membersOf(chosen(), id, liveApps, frontApp) }
+        appFilter = { state -> MixerApps.channels(chosen(), state.apps, state.front, hiddenIds()) }
+        groupMembers = { id -> MixerApps.membersOf(chosen(), id, liveApps, frontApp, hiddenIds()) }
+        onHide = { app ->
+            MixerHidden.hide(context, computerId, app)
+            hidden = null
+            refreshApps()
+        }
     }
 
     override val view = OwnerFrameLayout(context, ownsLongPress = true, ownsSwipe = true).apply {
@@ -50,7 +57,10 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
     override fun setActive(active: Boolean) {
         // Relu en arrivant sur l'écran, pas à chaque relecture de la table (4 fois par seconde).
-        if (active) loaded = null
+        if (active) {
+            loaded = null
+            hidden = null
+        }
         mixer.setActive(active)
     }
 
@@ -60,6 +70,13 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private var loaded: List<MixerApps.App>? = null
 
     private fun chosen() = loaded ?: MixerApps.read(placed.config, computerId).also { loaded = it }
+
+    /** Applis masquées, lues comme le choix (la table se relit 4 fois par seconde) ; une autre table a pu les changer. */
+    private var hidden: List<MixerApps.App>? = null
+
+    private fun hiddenApps() = hidden ?: MixerHidden.read(context, computerId).also { hidden = it }
+
+    private fun hiddenIds() = hiddenApps().mapTo(HashSet()) { it.id }
 
     /** Voies proposées en plus des applis : celle de l'appli devant, celle des applis sans voie. */
     private fun specials() = listOf(
@@ -89,7 +106,7 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         box.removeAllViews()
         // Rien de lu (pas encore, ou injoignable) : les choisies seules, décochables ; lu sans liste : Mac.
         val live = if (mixer.hasState) mixer.liveApps else emptyList()
-        val candidates = MixerApps.candidates(chosen(), live, mixer::titleOf, specials())
+        val candidates = MixerApps.candidates(chosen(), live, mixer::titleOf, specials(), hiddenIds())
         val hint = when {
             !mixer.hasState -> R.string.mixer_apps_unknown
             live == null -> R.string.mixer_no_apps
@@ -110,6 +127,40 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             isEnabled = loose.size >= 2
             setOnClickListener { askGroup(box, loose) }
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { topMargin = dp(12) })
+        fillHidden(box)
+    }
+
+    /** Applis masquées, chacune avec « Afficher » ; sinon comment en masquer une. */
+    private fun fillHidden(box: LinearLayout) {
+        box.addView(label(17f, R.attr.c_text).apply {
+            setText(R.string.mixer_hidden_title)
+            setPadding(0, dp(24), 0, 0)
+        })
+        val apps = hiddenApps()
+        if (apps.isEmpty()) {
+            box.addView(label(15f, R.attr.c_text_dim).apply {
+                setText(R.string.mixer_hidden_none)
+                setPadding(0, dp(4), 0, 0)
+            })
+            return
+        }
+        apps.forEach { app ->
+            box.addView(LinearLayout(context).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = dp(52)
+                addView(label(17f, R.attr.c_text).apply { text = app.name }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                addView(Button(context, null, 0, R.style.ActionButton).apply {
+                    setText(R.string.mixer_unhide)
+                    contentDescription = context.getString(R.string.mixer_unhide_desc, app.name)
+                    setOnClickListener {
+                        MixerHidden.unhide(context, computerId, app.id)
+                        hidden = null
+                        mixer.refreshApps()
+                        box.post { fillSettings(box) }
+                    }
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)))
+            })
+        }
     }
 
     /** Nouveau groupe : un nom et au moins deux applis ; il rejoint la table à la suite des choisies. */

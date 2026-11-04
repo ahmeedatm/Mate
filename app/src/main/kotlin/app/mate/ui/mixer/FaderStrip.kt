@@ -33,8 +33,8 @@ import kotlin.math.abs
 import kotlin.math.max
 
 /**
- * Tranche de console de l'onglet Son : vis, icône, nom sur un afficheur, graduations, curseur à saisir, vumètre à
- * LED, volume en gros et touche Muet éclairée. Objets de console, mais aux tons, à la police (Figtree) et aux formes
+ * Tranche de console de l'onglet Son : vis, icône, nom sur un afficheur, graduations, curseur en galet à saisir,
+ * vumètre à LED, volume en gros et touche Muet ronde au pictogramme du haut-parleur (barré et rouge en sourdine). Objets de console, mais aux tons, à la police (Figtree) et aux formes
  * de Console (docs/ui-ux/da). Dessinée à la main (une seule vue par tranche, rien à gonfler : la tablette est lente) ;
  * la plaque est celle de [MixerView], derrière.
  *
@@ -46,13 +46,28 @@ import kotlin.math.max
  * touche Muet : toucher l'icône coupe ou rend le son (pictogramme barré en rouge).
  *
  * Le curseur se saisit sans sauter : glisser n'importe où dans sa colonne le déplace d'autant (pas de saut de
- * volume en touchant la piste). Un glisser de côté laisse défiler la console.
+ * volume en touchant la piste). Un glisser de côté laisse défiler la console. Toucher le volume (« 35 % ») ouvre le pavé
+ * numérique ([onValue]) ; un appui long hors du curseur et de Muet ouvre [onLongPress] (« Ne plus afficher »).
  */
 class FaderStrip(context: Context) : View(context) {
 
     /** Volume choisi en glissant ; `final` au lâcher. */
     var onVolume: ((volume: Int, final: Boolean) -> Unit)? = null
     var onMute: (() -> Unit)? = null
+
+    /** Toucher le volume : le taper au pavé numérique ; null : le volume ne répond pas au toucher. */
+    var onValue: (() -> Unit)? = null
+        set(value) {
+            field = value
+            describe()
+        }
+
+    /** Appui long hors du curseur et de Muet (voie d'appli : « Ne plus afficher ») ; null : rien. */
+    var onLongPress: (() -> Unit)? = null
+        set(value) {
+            field = value
+            describe()
+        }
 
     /** Toucher le nom de la tranche (voie Sortie : choisir la sortie audio) ; null : le nom ne répond pas au toucher. */
     var onTitle: (() -> Unit)? = null
@@ -159,8 +174,10 @@ class FaderStrip(context: Context) : View(context) {
 
     // Géométrie, calculée à la taille.
     private val pad = dp(12).toFloat()
-    private val capW = dp(46).toFloat()
-    private var capH = dp(60).toFloat()
+    private val capW = dp(58).toFloat()
+    private var capH = dp(34).toFloat()
+    private val speaker = ContextCompat.getDrawable(context, R.drawable.ic_volume)?.mutate()
+    private val speakerOff = ContextCompat.getDrawable(context, R.drawable.ic_volume_off)?.mutate()
     private var tight = false
     private val ledW = dp(10).toFloat()
     private val ledGap = dp(2).toFloat()
@@ -176,7 +193,6 @@ class FaderStrip(context: Context) : View(context) {
     private var travelBottom = 0f
     private var meterX = 0f
     private var cap: Bitmap? = null
-    private var muteFace: LinearGradient? = null
 
     // Couleurs du thème (palettes.xml, tirées des tons de Console).
     private val cText = themeColor(context, R.attr.c_mx_text)
@@ -205,6 +221,15 @@ class FaderStrip(context: Context) : View(context) {
     private var grabbing = false
     private var pressingMute = false
     private var pressingTitle = false
+    private var pressingValue = false
+    private var longPressed = false
+    private val longPress = Runnable {
+        longPressed = true
+        pressingTitle = false
+        pressingValue = false
+        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        onLongPress?.invoke()
+    }
 
     init {
         isClickable = true
@@ -228,7 +253,7 @@ class FaderStrip(context: Context) : View(context) {
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         tight = h < dp(TIGHT_DP)
         if (bare) return layoutBare(w, h)
-        capH = dp(if (tight) 28 else 60).toFloat()
+        capH = dp(if (tight) 24 else 34).toFloat()
         valueX = w / 2f
         if (tight) {
             val side = dp(8).toFloat()
@@ -255,7 +280,6 @@ class FaderStrip(context: Context) : View(context) {
         travelBottom = faderArea.bottom - capH / 2
         ledH = (faderArea.height() + ledGap) / LEDS - ledGap
         cap = buildCap()
-        muteFace = LinearGradient(0f, muteBox.top, 0f, muteBox.bottom, cKeyTop, cKeyBottom, Shader.TileMode.CLAMP)
     }
 
     /** Table nue : icône (et sa zone Muet) puis nom en haut, rail et vumètre au milieu, volume en bas. */
@@ -284,29 +308,17 @@ class FaderStrip(context: Context) : View(context) {
         travelBottom = faderArea.bottom - thumbR
     }
 
-    /** Capuchon du curseur, dessiné une fois : léger dégradé, stries de prise, trait d'index au milieu. */
+    /** Capuchon du curseur, dessiné une fois : galet en pilule, léger dégradé, index court au milieu (accent : Sortie). */
     private fun buildCap(): Bitmap {
         val b = createBitmap(capW.toInt(), capH.toInt())
         val c = Canvas(b)
         val p = Paint(Paint.ANTI_ALIAS_FLAG)
-        val r = dp(8).toFloat()
-        p.shader = LinearGradient(0f, 0f, 0f, capH, themeColor(context, R.attr.c_mx_cap_top), themeColor(context, R.attr.c_mx_cap_bottom), Shader.TileMode.CLAMP)
-        c.drawRoundRect(0f, 0f, capW, capH, r, r, p)
+        p.shader = LinearGradient(0f, 0f, 0f, capH, themeColor(context, R.attr.c_mx_cap_top), ColorUtils.blendARGB(themeColor(context, R.attr.c_mx_cap_top), themeColor(context, R.attr.c_mx_cap_bottom), CAP_SHADE), Shader.TileMode.CLAMP)
+        c.drawRoundRect(0f, 0f, capW, capH, capH / 2, capH / 2, p)
         p.shader = null
-        p.color = cHighlight
-        c.drawRect(r, 1f, capW - r, dp(2).toFloat(), p)
-        val step = dp(if (tight) 5 else 6).toFloat()
-        val edge = dp(if (tight) 4 else 10)
-        var y = edge.toFloat()
-        while (y < capH - edge + 1) {
-            if (abs(y - capH / 2) > dp(if (tight) 3 else 6)) {
-                p.color = cShadow
-                c.drawRect(dp(8).toFloat(), y, capW - dp(8), y + dp(1), p)
-            }
-            y += step
-        }
-        p.color = if (master) themeColor(context, R.attr.c_accent) else themeColor(context, R.attr.c_mx_cap_line)
-        c.drawRoundRect(dp(3).toFloat(), capH / 2 - dpf(1.5f), capW - dp(3), capH / 2 + dpf(1.5f), dpf(1.5f), dpf(1.5f), p)
+        p.color = if (master) cAccent else themeColor(context, R.attr.c_mx_cap_line)
+        val half = dp(11).toFloat()
+        c.drawRoundRect(capW / 2 - half, capH / 2 - dpf(1.5f), capW / 2 + half, capH / 2 + dpf(1.5f), dpf(1.5f), dpf(1.5f), p)
         return b
     }
 
@@ -368,7 +380,7 @@ class FaderStrip(context: Context) : View(context) {
         val v = volume
         val y = capY(v ?: 0)
         paint.color = cShadow
-        canvas.drawRoundRect(cx - capW / 2 + dp(1), y - capH / 2 + dp(4), cx + capW / 2 + dp(1), y + capH / 2 + dp(4), dp(8).toFloat(), dp(8).toFloat(), paint)
+        canvas.drawRoundRect(cx - capW / 2 + dp(1), y - capH / 2 + dp(3), cx + capW / 2 + dp(1), y + capH / 2 + dp(3), capH / 2, capH / 2, paint)
         paint.alpha = if (v == null) DISABLED_ALPHA else 255
         cap?.let { canvas.drawBitmap(it, cx - capW / 2, y - capH / 2, paint) }
         paint.alpha = 255
@@ -574,6 +586,17 @@ class FaderStrip(context: Context) : View(context) {
         return if (bare && tight) x >= muteBox.right && y <= muteBox.bottom else x >= lcd.left && x <= lcd.right && y >= lcd.top - pad && y <= lcd.bottom + pad
     }
 
+    /** Zone du volume en gros, entre le curseur et Muet (ou en bas), qui ouvre le pavé numérique. */
+    private fun valueHit(x: Float, y: Float): Boolean {
+        if (onValue == null || volume == null || silent) return false
+        val below = y > faderArea.bottom + dp(8)
+        return when {
+            bare -> below
+            tight -> below && x < muteBox.left
+            else -> below && y < muteBox.top
+        }
+    }
+
     /** TalkBack : le nom de la tranche, et « son coupé » en sourdine. */
     private fun describe() {
         contentDescription = when {
@@ -591,9 +614,23 @@ class FaderStrip(context: Context) : View(context) {
                 true
             }
         }
+        extraActions.forEach { ViewCompat.removeAccessibilityAction(this, it) }
+        extraActions.clear()
+        onLongPress?.let { hide ->
+            extraActions += ViewCompat.addAccessibilityAction(this, context.getString(R.string.mixer_hide_action, title)) { _, _ ->
+                hide()
+                true
+            }
+        }
         muteAction?.let { ViewCompat.removeAccessibilityAction(this, it) }
         muteAction = null
         if (silent) return
+        onValue?.let { type ->
+            extraActions += ViewCompat.addAccessibilityAction(this, context.getString(R.string.mixer_volume_action, title)) { _, _ ->
+                type()
+                true
+            }
+        }
         val label = context.getString(if (muted) R.string.mixer_unmute_action else R.string.mixer_mute_action, title)
         muteAction = ViewCompat.addAccessibilityAction(this, label) { _, _ ->
             onMute?.invoke()
@@ -602,32 +639,35 @@ class FaderStrip(context: Context) : View(context) {
     }
     private var muteAction: Int? = null
     private var titleAction: Int? = null
+    private val extraActions = mutableListOf<Int>()
 
     /** Touche Muet (pilule) : relief au repos, enfoncée au toucher, éclairée quand le son est coupé. */
+    /** Pictogramme du haut-parleur, barré en sourdine, centré sur (`cxi`, `cyi`). */
+    private fun drawSpeaker(canvas: Canvas, cxi: Float, cyi: Float, size: Float, color: Int) {
+        val d = (if (muted) speakerOff else speaker) ?: return
+        DrawableCompat.setTint(d, color)
+        d.setBounds((cxi - size / 2).toInt(), (cyi - size / 2).toInt(), (cxi + size / 2).toInt(), (cyi + size / 2).toInt())
+        d.draw(canvas)
+    }
+
+    /**
+     * Touche Muet : bouton rond au pictogramme du haut-parleur ; en sourdine, haut-parleur barré, anneau et fond rouges
+     * (la barre se lit sans la couleur). La zone touchée reste toute la largeur de la tranche.
+     */
     private fun drawMute(canvas: Canvas) {
-        val r = muteBox.height() / 2
-        val sink = if (pressingMute) dp(2).toFloat() else 0f
-        rect.set(muteBox.left, muteBox.top + sink, muteBox.right, muteBox.bottom + sink)
+        val radius = minOf(dp(MUTE_RADIUS_DP).toFloat(), muteBox.height() / 2)
+        val x = muteBox.centerX()
+        val y = muteBox.centerY() + if (pressingMute) dp(1) else 0
         paint.color = cShadow
-        canvas.drawRoundRect(rect.left, muteBox.top + dp(3), rect.right, muteBox.bottom + dp(3), r, r, paint)
-        if (muted) {
-            paint.color = cMuted
-            paint.alpha = 60
-            canvas.drawRoundRect(rect.left - dp(4), rect.top - dp(4), rect.right + dp(4), rect.bottom + dp(4), r + dp(4), r + dp(4), paint)
-            paint.alpha = 255
-            canvas.drawRoundRect(rect, r, r, paint)
-        } else {
-            paint.shader = muteFace
-            canvas.drawRoundRect(rect, r, r, paint)
-            paint.shader = null
-            paint.color = cHighlight
-            canvas.drawRect(rect.left + r, rect.top + 1, rect.right - r, rect.top + dp(2), paint)
-        }
-        text.typeface = medium
-        text.color = if (muted) cOnMuted else cText
-        text.textSize = sp(16f)
-        text.textAlign = Paint.Align.CENTER
-        canvas.drawText(context.getString(R.string.mixer_mute), rect.centerX(), rect.centerY() - (text.ascent() + text.descent()) / 2, text)
+        canvas.drawCircle(x, muteBox.centerY() + dp(3), radius, paint)
+        paint.color = if (muted) ColorUtils.blendARGB(cKeyBottom, cMuted, MUTED_FILL) else cKeyBottom
+        canvas.drawCircle(x, y, radius, paint)
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = dpf(1.5f)
+        paint.color = if (muted) cMuted else cKeyTop
+        canvas.drawCircle(x, y, radius - dpf(0.75f), paint)
+        paint.style = Paint.Style.FILL
+        drawSpeaker(canvas, x, y, minOf(dp(26).toFloat(), radius * 1.1f), if (muted) cMuted else cText)
     }
 
     private fun screw(canvas: Canvas, x: Float, y: Float) {
@@ -651,9 +691,14 @@ class FaderStrip(context: Context) : View(context) {
                 pressingMute = !silent && muteBox.contains(event.x, event.y)
                 pressingTitle = !pressingMute && titleHit(event.x, event.y)
                 grabbing = !pressingMute && volume != null && event.y >= faderArea.top - dp(8) && event.y <= faderArea.bottom + dp(8)
+                pressingValue = !pressingMute && !grabbing && valueHit(event.x, event.y)
                 startVolume = volume ?: 0
+                longPressed = false
+                // Appui long hors du curseur (le tenir sans bouger avant de glisser est courant) et de Muet.
+                val holdable = onLongPress != null && !pressingMute && !grabbing
+                if (holdable) postDelayed(longPress, ViewConfiguration.getLongPressTimeout().toLong())
                 if (pressingMute) invalidate()
-                return pressingMute || pressingTitle || grabbing
+                return pressingMute || pressingTitle || grabbing || pressingValue || holdable
             }
             MotionEvent.ACTION_MOVE -> {
                 val dx = event.x - downX
@@ -677,9 +722,16 @@ class FaderStrip(context: Context) : View(context) {
                     pressingMute = false
                     invalidate()
                 }
+                if (abs(dx) > slop || abs(dy) > slop) {
+                    removeCallbacks(longPress)
+                    pressingValue = false
+                }
             }
             MotionEvent.ACTION_UP -> {
-                if (dragging) {
+                removeCallbacks(longPress)
+                if (longPressed) {
+                    longPressed = false
+                } else if (dragging) {
                     dragging = false
                     volume?.let { onVolume?.invoke(it, true) }
                 } else if (pressingMute) {
@@ -692,11 +744,19 @@ class FaderStrip(context: Context) : View(context) {
                     performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                     performClick()
                     onTitle?.invoke()
+                } else if (pressingValue && valueHit(event.x, event.y)) {
+                    performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    performClick()
+                    onValue?.invoke()
                 }
+                pressingValue = false
                 pressingTitle = false
                 grabbing = false
             }
             MotionEvent.ACTION_CANCEL -> {
+                removeCallbacks(longPress)
+                longPressed = false
+                pressingValue = false
                 pressingTitle = false
                 dragging = false
                 grabbing = false
@@ -724,6 +784,13 @@ class FaderStrip(context: Context) : View(context) {
         private const val HALO_ALPHA = 46
         private const val PRESS_ALPHA = 56
         private const val MUTED_ALPHA = 36
+
+        /** Touche Muet ronde : rayon, et part de rouge dans son fond en sourdine. */
+        private const val MUTE_RADIUS_DP = 25
+        private const val MUTED_FILL = 0.22f
+
+        /** Bas du capuchon : un tiers vers c_mx_cap_bottom, un relief doux. */
+        private const val CAP_SHADE = 0.35f
 
         /** Curseur d'une tranche qui ne se pilote pas (35 %), icône d'appli en sourdine (43 %). */
         private const val DISABLED_ALPHA = 90
