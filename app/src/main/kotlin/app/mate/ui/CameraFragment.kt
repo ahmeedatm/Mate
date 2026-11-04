@@ -278,6 +278,8 @@ class CameraFragment :
         val cam = camera ?: return
         camera = null
         cam.close()
+        // Fermeture asynchrone : la caméra avant de la veille ne repart pas avant qu'elle soit finie.
+        (activity as? MainActivity)?.onDocCameraClosing()
         sender?.shutdown()
         sender = null
         main.removeCallbacks(ticker)

@@ -114,6 +114,38 @@ class PresenceLogicTest {
     }
 
     @Test
+    fun `le demarrage de la camera est permis au depart`() {
+        assertTrue(logic.canStart(0))
+    }
+
+    @Test
+    fun `camera tombee, pas de nouvel essai avant une minute`() {
+        logic.onCameraFailed(1_000)
+        assertFalse(logic.canStart(1_000))
+        assertFalse(logic.canStart(1_000 + PresenceLogic.RETRY_MS - 1))
+        assertTrue(logic.canStart(1_000 + PresenceLogic.RETRY_MS))
+    }
+
+    @Test
+    fun `la panne n'est signalee qu'une fois tant qu'aucune image n'arrive`() {
+        assertTrue(logic.onCameraFailed(0))
+        assertFalse(logic.onCameraFailed(PresenceLogic.RETRY_MS))
+        logic.onFrame(false, false, PresenceLogic.RETRY_MS + 500)
+        assertTrue(logic.onCameraFailed(2 * PresenceLogic.RETRY_MS))
+    }
+
+    @Test
+    fun `attente avant demarrage, jamais raccourcie`() {
+        logic.holdOff(0, 2_500)
+        assertFalse(logic.canStart(2_499))
+        assertTrue(logic.canStart(2_500))
+        logic.onCameraFailed(0)
+        logic.holdOff(10, 2_500)
+        assertFalse(logic.canStart(PresenceLogic.RETRY_MS - 1))
+        assertTrue(logic.canStart(PresenceLogic.RETRY_MS))
+    }
+
+    @Test
     fun `delai par defaut`() {
         assertEquals(5 * 60_000L, PresenceLogic.SLEEP_DELAY_MS)
     }

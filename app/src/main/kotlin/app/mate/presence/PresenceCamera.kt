@@ -45,6 +45,9 @@ class PresenceCamera(
 
     /** `openCamera` lancé et sans réponse : la caméra peut encore s'ouvrir après la demande de fermeture. */
     private var opening = false
+
+    /** Caméras reçues du système (ouvertes, déconnectées ou en erreur) et pas encore signalées fermées par `onClosed`. */
+    private val live = HashSet<CameraDevice>()
     private var whenClosed: (() -> Unit)? = null
 
     /** Ouvre la caméra avant ; la permission CAMERA doit être accordée. */
@@ -64,6 +67,7 @@ class PresenceCamera(
                 manager.openCamera(id, object : CameraDevice.StateCallback() {
                     override fun onOpened(camera: CameraDevice) {
                         opening = false
+                        live.add(camera)
                         // Fermeture demandée pendant l'ouverture : la caméra se referme aussitôt, onClosed arrête le fil.
                         if (closed) return camera.close()
                         device = camera
@@ -72,6 +76,7 @@ class PresenceCamera(
 
                     override fun onDisconnected(camera: CameraDevice) {
                         opening = false
+                        live.add(camera)
                         camera.close()
                         device = null
                         lost(null)
@@ -79,25 +84,29 @@ class PresenceCamera(
 
                     override fun onError(camera: CameraDevice, error: Int) {
                         opening = false
+                        live.add(camera)
                         camera.close()
                         device = null
                         lost(null)
                     }
 
                     override fun onClosed(camera: CameraDevice) {
-                        if (closed) finish()
+                        live.remove(camera)
+                        if (closed) settle()
                     }
                 }, handler)
             } catch (e: Exception) {
                 opening = false
                 lost(e)
+                if (closed) settle()
             }
         }
     }
 
     /**
-     * Ferme la caméra ; [done] est appelé (depuis le fil de la caméra, une seule fois) quand elle est vraiment fermée
-     * et le fil arrêté : une autre caméra peut alors s'ouvrir. L'objet ne sert plus ensuite.
+     * Ferme la caméra ; [done] est appelé (depuis le fil de la caméra, une seule fois) quand elle est vraiment fermée,
+     * ou après [CLOSE_TIMEOUT_MS] si le système tarde : une autre caméra peut alors s'ouvrir. Le fil s'arrête à la
+     * fermeture réelle. L'objet ne sert plus ensuite.
      */
     fun close(done: () -> Unit = {}) {
         handler.post {
@@ -106,27 +115,30 @@ class PresenceCamera(
             whenClosed = done
             runCatching { session?.close() }
             session = null
-            val camera = device
+            runCatching { device?.close() }
             device = null
-            if (camera != null) {
-                runCatching { camera.close() }
-                // onClosed fait la suite ; sans réponse du système, on ne bloque pas l'appelant.
-                handler.postDelayed({ finish() }, CLOSE_TIMEOUT_MS)
-            } else if (opening) {
-                handler.postDelayed({ finish() }, CLOSE_TIMEOUT_MS)
-            } else {
-                finish()
+            if (!settle()) {
+                // Pas de réponse du système à temps : on rend la main à l'appelant, mais le fil reste pour recevoir
+                // onOpened ou onClosed (une caméra qui s'ouvre sur un fil mort resterait ouverte sans voyant).
+                handler.postDelayed({ handBack() }, CLOSE_TIMEOUT_MS)
             }
         }
     }
 
-    /** Fin de la fermeture : image, fil, puis l'appelant (une seule fois, même si le délai de secours arrive après). */
-    private fun finish() {
-        val done = whenClosed ?: return
-        whenClosed = null
+    /** Tout est fermé (plus de caméra reçue, plus d'ouverture en cours) : image et fil rendus, puis l'appelant. */
+    private fun settle(): Boolean {
+        if (live.isNotEmpty() || opening) return false
         reader?.close()
         reader = null
         thread.quitSafely()
+        handBack()
+        return true
+    }
+
+    /** Rend la main à l'appelant, une seule fois. */
+    private fun handBack() {
+        val done = whenClosed ?: return
+        whenClosed = null
         done()
     }
 
@@ -191,7 +203,7 @@ class PresenceCamera(
         const val INTERVAL_MS = 500L
 
         /** Attente maximale de la fermeture réelle de la caméra avant de rendre la main. */
-        private const val CLOSE_TIMEOUT_MS = 2_000L
+        const val CLOSE_TIMEOUT_MS = 2_000L
 
         private fun yuvSizes(characteristics: CameraCharacteristics): List<Pair<Int, Int>> =
             characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)?.getOutputSizes(ImageFormat.YUV_420_888)

@@ -28,7 +28,8 @@ import app.mate.presence.PresenceLogic.Change
  * et le cadre photo. [busy] : l'écran sert (appel, Focus…), pas de veille. [frameShowing] : le cadre photo est affiché.
  *
  * La fermeture de la caméra est asynchrone : une nouvelle ne s'ouvre, et le mode Caméra n'ouvre la sienne
- * ([whenCameraFree]), qu'une fois la précédente vraiment fermée.
+ * ([whenCameraFree]), qu'une fois la précédente vraiment fermée ; les voyants restent jusque-là. Une caméra tombée n'est
+ * pas relancée tout de suite (une minute, [PresenceLogic.RETRY_MS]), sinon elle bouclerait.
  */
 class Presence(
     private val activity: MainActivity,
@@ -76,12 +77,17 @@ class Presence(
         // Permission retirée dans les réglages d'Android : la veille se coupe, l'interrupteur aussi.
         if (resumed && Prefs.presenceSleep(activity) && !granted) activity.dropPresence(message = false)
         val wanted = resumed && Prefs.presenceSleep(activity) && granted && !blocked()
-        if (wanted && camera == null && !closing) start() else if (!wanted && camera != null) stop()
+        if (wanted && camera == null && !closing && logic.canStart(SystemClock.elapsedRealtime())) {
+            start()
+        } else if (!wanted && camera != null) {
+            stop(restart = true)
+        }
     }
 
     /** Cadre photo ouvert ou fermé : le voyant du dessus suit. */
     fun render() {
-        val on = camera != null
+        // Les voyants restent tant que la caméra n'est pas vraiment fermée.
+        val on = camera != null || closing
         topEye.visibility = if (on) View.VISIBLE else View.GONE
         overEye.visibility = if (on && (logic.asleep || frameShowing())) View.VISIBLE else View.GONE
     }
@@ -96,6 +102,12 @@ class Presence(
 
     val isClosing get() = closing
 
+    /** Le mode Caméra finit de fermer la sienne : pas de caméra de veille avant [ms], puis on regarde si elle doit repartir. */
+    fun holdOff(ms: Long) {
+        logic.holdOff(SystemClock.elapsedRealtime(), ms)
+        veil.postDelayed({ sync() }, ms)
+    }
+
     private fun start() {
         logic.start(SystemClock.elapsedRealtime())
         val mine = ++generation
@@ -107,7 +119,8 @@ class Presence(
         render()
     }
 
-    private fun stop() {
+    /** [restart] : arrêt voulu, la caméra repart à la fermeture si elle est de nouveau demandée ; faux après une panne. */
+    private fun stop(restart: Boolean) {
         val old = camera ?: return
         camera = null
         generation++
@@ -118,23 +131,23 @@ class Presence(
                 val blocks = waiting.toList()
                 waiting.clear()
                 blocks.forEach { it() }
-                sync()
+                render()
+                if (restart) sync()
             }
         }
         handle(logic.onLost(SystemClock.elapsedRealtime()))
-        render()
     }
 
     private fun onFrame(moved: Boolean) {
         if (camera == null) return
         // Un voyant caché (verrou, mode Caméra) : la caméra ne tourne pas sans lui.
-        if (blocked()) return stop()
+        if (blocked()) return stop(restart = true)
         handle(logic.onFrame(moved, busy(), SystemClock.elapsedRealtime()))
     }
 
     private fun onLost() {
-        stop()
-        activity.showBanner(activity.getString(R.string.presence_camera_lost), 6)
+        stop(restart = false)
+        if (logic.onCameraFailed(SystemClock.elapsedRealtime())) activity.showBanner(activity.getString(R.string.presence_camera_lost), 6)
     }
 
     /** Applique le changement ; vrai si l'écran vient de se réveiller. */

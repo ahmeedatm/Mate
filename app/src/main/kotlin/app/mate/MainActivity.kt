@@ -934,6 +934,9 @@ class MainActivity : AppCompatActivity() {
 
     val presenceCameraClosing get() = presence.isClosing
 
+    /** Le mode Caméra ferme sa caméra (fermeture asynchrone) : celle de la veille attend [DOC_CAMERA_CLOSE_MS]. */
+    fun onDocCameraClosing() = presence.holdOff(DOC_CAMERA_CLOSE_MS)
+
     /** Le mode Caméra ouvre la sienne seulement quand la caméra avant de la veille est vraiment fermée. */
     fun whenPresenceCameraFree(block: () -> Unit) = presence.whenCameraFree(block)
 
@@ -1296,6 +1299,9 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val STATE_MODE = "mode"
         private const val STATE_PLUGINS_LATER = "plugins_later"
+
+        /** Fermeture de la caméra du mode Caméra (asynchrone, sans rappel) : la veille attend un peu plus que le délai de secours de la sienne. */
+        private const val DOC_CAMERA_CLOSE_MS = 2_500L
 
         /** Quitter l'appli de jeu moins longtemps que ça (changer de fenêtre un instant) ne finit pas le jeu. */
         private const val GAME_GRACE_MS = 8_000L
