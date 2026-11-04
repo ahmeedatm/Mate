@@ -950,13 +950,14 @@
     <string name="tablet_volume_keys_computer">Boutons de volume : son de l\'ordinateur</string>
     <string name="tablet_volume_keys_computer_hint">Les boutons de la tablette règlent la sortie de l\'ordinateur actif au lieu de la tablette. Ordinateur injoignable : les boutons ne font rien.</string>
     <string name="tablet_night_dim">Atténuer l\'écran la nuit (22 h – 7 h)</string>
+    <string name="tablet_night_dim_hint">L\'écran reste allumé en permanence ; la nuit il baisse au minimum, un toucher le rallume.</string>
     <string name="tablet_presence">Veille quand personne n\'est là</string>
-    <string name="tablet_presence_hint">La caméra avant repère un mouvement : sans personne pendant 5 minutes, l\'écran s\'éteint ; il se rallume dès que quelqu\'un arrive ou touche l\'écran. Tout est calculé sur la tablette, aucune image n\'est envoyée ni gardée. Un voyant caméra reste affiché en haut tant que c\'est actif.</string>
+    <string name="tablet_presence_hint">La caméra avant repère un mouvement : sans personne pendant 5 minutes, l\'écran passe au noir ; il se rallume dès que quelqu\'un arrive ou touche l\'écran. Tout est calculé sur la tablette, aucune image n\'est envoyée ni gardée. Un voyant caméra reste affiché tant que c\'est actif.</string>
     <string name="tablet_presence_none">Cette tablette n\'a pas de caméra avant.</string>
     <string name="presence_watching">La caméra avant guette les mouvements, rien n\'est enregistré</string>
     <string name="presence_camera_lost">La caméra avant n\'est pas disponible : la veille à la présence est en pause.</string>
     <string name="presence_no_camera">Caméra refusée : la veille à la présence reste coupée.</string>
-    <string name="tablet_night_dim_hint">L\'écran reste allumé en permanence ; la nuit il baisse au minimum, un toucher le rallume.</string>
+    <string name="presence_veil">Écran en veille, toucher pour réveiller</string>
     <string name="frame_title">Cadre photo</string>
     <string name="frame_hint">Un toucher revient à l\'écran. Pour économiser l\'écran : luminosité réduite, rien ne bouge entre deux photos, arrêt la nuit et sous 20 % de batterie débranchée.</string>
     <string name="frame_choose_hint">Tes photos de l\'ordi qui défilent quand la tablette ne sert pas.</string>

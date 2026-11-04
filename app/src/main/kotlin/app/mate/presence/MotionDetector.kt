@@ -35,11 +35,6 @@ class MotionDetector(
         return changed >= maxOf(1f, luma.size * minChangedRatio)
     }
 
-    /** Oublie l'image précédente (caméra relancée : la prochaine ne se compare à rien). */
-    fun reset() {
-        previous = null
-    }
-
     companion object {
         /** Écart de luminance (0 à 255), moyenne de la scène retirée, à partir duquel un pixel a changé. */
         const val PIXEL_DELTA = 24

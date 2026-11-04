@@ -243,6 +243,9 @@ class CameraFragment :
 
     private fun startCamera() {
         if (camera != null) return
+        // Caméra avant de la veille encore en train de se fermer : une seule caméra à la fois, on repart à sa fermeture.
+        val activity = requireActivity() as MainActivity
+        if (activity.presenceCameraClosing) return activity.whenPresenceCameraFree { sync() }
         val texture = preview.surfaceTexture ?: return
         val backend = BackendClient(requireContext())
         val cam = DocCamera(requireContext(), ::wantFrame, ::sendFrame) { error -> main.post { if (camera != null) showMessage(error) } }

@@ -63,14 +63,6 @@ class MotionDetectorTest {
     }
 
     @Test
-    fun `reset oublie l'image precedente`() {
-        val detector = MotionDetector()
-        detector.moved(flat(100))
-        detector.reset()
-        assertFalse(detector.moved(withBlock(100, 200, size / 10)))
-    }
-
-    @Test
     fun `l'image comparee est celle d'avant, pas la premiere`() {
         val detector = MotionDetector()
         detector.moved(flat(100))

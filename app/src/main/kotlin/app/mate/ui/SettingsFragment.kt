@@ -821,12 +821,12 @@ class SettingsFragment :
         }
     }
 
-    /** Batterie changée (MainActivity, barre latérale) : détail à jour si les Réglages sont affichés. */
-    /** Caméra refusée : l'interrupteur revient sur coupé. */
+    /** Caméra refusée ou permission retirée : l'interrupteur revient sur coupé. */
     fun onPresenceRefused() {
         if (view != null) presence.isChecked = false
     }
 
+    /** Batterie changée (MainActivity, barre latérale) : détail à jour si les Réglages sont affichés. */
     fun onBattery(state: Tablet.Battery) {
         if (view == null) return
         val plug = when (state.plug) {

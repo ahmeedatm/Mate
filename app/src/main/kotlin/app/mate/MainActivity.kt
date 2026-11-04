@@ -180,11 +180,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Caméra refusée hors kiosque (accordée d'office en kiosque) : la veille à la présence reste coupée. */
     private val cameraPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (!granted) {
-            Prefs.setPresenceSleep(this, false)
-            settings()?.onPresenceRefused()
-            showBanner(getString(R.string.presence_no_camera), 6)
-        }
+        if (!granted) dropPresence(message = true)
         presence.sync()
     }
 
@@ -243,8 +239,13 @@ class MainActivity : AppCompatActivity() {
         topBar.onEditDone = { if (current == Mode.HOME && homeFragment()?.isEditing() == true) homeFragment()?.toggleEdit() }
         // Tablette verrouillée : le mot de réveil ne lance rien.
         wake = WakeWord(this, topBar.wakeMic) { if (!lockScreen.isShown) voice.start() }
-        val veil = findViewById<View>(R.id.presence_veil)
-        presence = Presence(this, veil, listOf(topBar.presenceEye, veil.findViewById(R.id.presence_veil_eye)), ::frameBusy) { current == Mode.CAMERA }
+        presence = Presence(
+            this,
+            topBar.presenceEye,
+            busy = ::frameBusy,
+            blocked = { current == Mode.CAMERA || (::lockScreen.isInitialized && lockScreen.isShown) },
+            frameShowing = { ::frame.isInitialized && frame.isShowing },
+        )
         // Lumière des agents Claude sous la carte d'appel : un appel prime sur tout.
         // L'alerte de réunion est tout en bas des calques : lumière des agents, question et appel passent devant.
         meetingAlert = MeetingAlertOverlay(this)
@@ -297,6 +298,8 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.rail_lock).setOnClickListener { lockScreen.lockTablet() }
         signals.onMinute {
             Screen.apply(this@MainActivity)
+            // Verrou levé, modification finie : la caméra de la veille repart.
+            presence.sync()
             alerts.remindWater()
             meetingAlert.onMinute()
             followFrame()
@@ -922,6 +925,18 @@ class MainActivity : AppCompatActivity() {
     /** Réglage du mot de réveil changé : écoute ou non tout de suite. */
     fun onWakeWordChanged() = wake.sync()
 
+    /** Caméra refusée ou permission retirée : le réglage revient sur coupé, l'interrupteur aussi. */
+    fun dropPresence(message: Boolean) {
+        Prefs.setPresenceSleep(this, false)
+        settings()?.onPresenceRefused()
+        if (message) showBanner(getString(R.string.presence_no_camera), 6)
+    }
+
+    val presenceCameraClosing get() = presence.isClosing
+
+    /** Le mode Caméra ouvre la sienne seulement quand la caméra avant de la veille est vraiment fermée. */
+    fun whenPresenceCameraFree(block: () -> Unit) = presence.whenCameraFree(block)
+
     /** Réglage de la veille à la présence changé : permission caméra demandée si elle manque, puis caméra suivie. */
     fun onPresenceChanged() {
         if (Prefs.presenceSleep(this) && checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -1041,6 +1056,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0).visibility = View.INVISIBLE
         Screen.frameCharging = battery?.charging ?: true
         Screen.apply(this)
+        presence.render()
     }
 
     fun closeFrame() {
@@ -1049,6 +1065,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0).visibility = View.VISIBLE
         Screen.frameCharging = null
         Screen.apply(this)
+        presence.render()
     }
 
     private fun settings() = supportFragmentManager.findFragmentByTag(Mode.SETTINGS.tag) as? SettingsFragment

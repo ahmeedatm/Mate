@@ -254,7 +254,6 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
         // En-tête de l'écran et voyant cachés : toute la largeur pour les pastilles.
         header.visibility = if (on) GONE else VISIBLE
         wakeMic.alpha = if (on) 0f else 1f
-        presenceEye.alpha = if (on) 0f else 1f
         row.visibility = if (on) GONE else VISIBLE
         editRow.visibility = if (on) VISIBLE else GONE
         if (on) fillEditRow() else chips.removeAllViews()
