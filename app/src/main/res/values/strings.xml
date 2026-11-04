@@ -342,8 +342,7 @@
     <string name="mixer_output_action">Choisir la sortie audio</string>
     <string name="mixer_output_title">Sortie audio de l\'ordinateur</string>
     <string name="mixer_output_none">Aucune sortie audio trouvée sur l\'ordinateur</string>
-    <string name="mixer_scenes">Scènes</string>
-    <string name="mixer_scene_save">＋ Enregistrer</string>
+    <string name="mixer_scene_save">Enregistrer une scène</string>
     <string name="mixer_scene_save_title">Nouvelle scène</string>
     <string name="mixer_scene_save_hint">Les volumes actuels de la sortie et des applis (pas le micro) seront rappelés en un toucher. Même nom : la scène est remplacée.</string>
     <string name="mixer_scene_name">Nom (Jeu, Travail, Film…)</string>
@@ -371,7 +370,6 @@
     <string name="mixer_scene_update_confirm">Remplacer les volumes de « %1$s » par les volumes actuels ? Les anciens seront perdus.</string>
     <string name="mixer_scene_update_ok">Remplacer</string>
     <string name="mixer_scene_remove">Supprimer %1$s</string>
-    <string name="mixer_scene_missing">Scène « %1$s » : sans son en ce moment, pas réglé : %2$s</string>
     <string name="mixer_no_apps">Volume par appli : seulement sur un PC Windows.\nIci, la sortie et le micro.</string>
     <string name="mixer_unsupported">Pas de console de son pour cet ordinateur.</string>
     <string name="deck_open_hint">Toucher : afficher ou réduire · deux fois : agrandir ou rendre sa taille · glisser de côté : changer d\'écran (bords : moitié, haut : agrandir) ou la fermer dans la corbeille</string>
