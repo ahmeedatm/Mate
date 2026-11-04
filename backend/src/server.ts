@@ -61,7 +61,9 @@ import shoppingRoutes from "./routes/shopping.ts";
 import scheduleRoutes from "./routes/schedule.ts";
 import taskRoutes from "./routes/tasks.ts";
 import updateRoutes from "./routes/updates.ts";
+import valorantRoutes from "./routes/valorant.ts";
 import windowRoutes from "./routes/windows.ts";
+import ytMusicRoutes from "./routes/ytmusic.ts";
 import { LOCAL_HOST, LOOPBACK } from "./net-guard.ts";
 
 // Ce serveur pilote l'ordinateur : hors loopback (USB + adb reverse), un jeton est obligatoire.
@@ -123,7 +125,8 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     // Autorisations du Mac (routes/permissions.ts) : corps JSON exigé, identifiant pris dans la liste du compagnon.
     (method === "POST" && /^\/local\/permissions\/[A-Za-z0-9.-]+\/request$/.test(url)) ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
-    (method === "POST" && (url === "/browser/extension" || url === "/browser/extension/commands")) ||
+    (method === "POST" &&
+      (url === "/browser/extension" || url === "/browser/extension/commands" || url === "/browser/extension/ytmusic")) ||
     // Porte MCP des IA de bureau (routes/mcp.ts) : corps JSON exigé par le SDK, pas envoyable par un autre site.
     (/^(GET|POST|DELETE)$/.test(method) && url === "/mcp") ||
     // Hooks de Claude Code : pas de jeton d'appairage, un secret propre vérifié par la route (src/agents-sources.ts).
@@ -225,10 +228,12 @@ app.register(awayRoutes);
 app.register(systemRoutes);
 app.register(pointerRoutes);
 app.register(presentRoutes);
+app.register(valorantRoutes);
 app.register(notificationRoutes);
 app.register(docRoutes);
 app.register(updateRoutes);
 app.register(browserRoutes);
+app.register(ytMusicRoutes);
 app.register(cameraRoutes);
 app.register(screenRoutes);
 app.register(calendarRoutes);

@@ -107,7 +107,39 @@ async function mediaTab(title) {
   return tabs.some((t) => t.id === lastAudible) ? lastAudible : undefined;
 }
 
+// --- YouTube Music (ytmusic.js) : état de l'onglet relayé au compagnon, actions de la tablette exécutées dans l'onglet.
+
+chrome.runtime.onMessage.addListener((message, sender) => {
+  if (message?.type !== "ytmusic-state" || !sender.tab) return;
+  fetch(COMPANION + "/ytmusic", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ browser: browserName(), state: message.state }),
+  }).catch(() => {
+    // Compagnon arrêté : le prochain relevé (5 s au plus) réessaie.
+  });
+});
+
+async function runYtMusic(command) {
+  const tabs = await chrome.tabs.query({ url: "*://music.youtube.com/*" });
+  const tab = tabs.find((t) => t.audible) ?? tabs.find((t) => t.active) ?? tabs[0];
+  if (!tab) {
+    if (command.op !== "search") return "ytmusic : aucun onglet";
+    await chrome.tabs.create({ url: "https://music.youtube.com/search?q=" + encodeURIComponent(command.query ?? "") });
+    return "ytmusic : onglet ouvert";
+  }
+  const message = { type: "ytmusic-action", op: command.op, index: command.index, query: command.query, seconds: command.seconds };
+  try {
+    return `ytmusic ${command.op} : ${await chrome.tabs.sendMessage(tab.id, message)}`;
+  } catch {
+    // Onglet ouvert avant l'installation ou le rechargement de l'extension : pas encore de script, on l'injecte.
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["ytmusic.js"] });
+    return `ytmusic ${command.op} : ${await chrome.tabs.sendMessage(tab.id, message)}`;
+  }
+}
+
 async function runMedia(command) {
+  if (command.action === "ytmusic") return runYtMusic(command);
   const tabId = await mediaTab(command.title);
   if (tabId === undefined) return `${command.action} : aucun onglet`;
   const [done] = await chrome.scripting.executeScript({

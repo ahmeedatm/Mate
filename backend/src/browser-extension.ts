@@ -47,7 +47,10 @@ export function extensionFrontPage() {
 // --- Ordres de lecture (page Média de la tablette) : l'extension les attend en long-polling, puis agit dans la page.
 // Sur Mac, le seul moyen de relancer Opera GX en pause : ni MediaRemote ni la touche multimédia simulée n'y arrivent.
 
-export type ExtensionCommand = { action: "play-pause" | "next" | "previous" | "seek"; seconds?: number; title?: string };
+export type ExtensionCommand =
+  | { action: "play-pause" | "next" | "previous" | "seek"; seconds?: number; title?: string }
+  // Connecteur YouTube Music (src/ytmusic.ts) : exécuté par extension/ytmusic.js dans l'onglet de YouTube Music.
+  | { action: "ytmusic"; op: string; index?: number; query?: string; seconds?: number };
 
 /** Demande gardée ouverte au plus 20 s : l'extension en refait une aussitôt. */
 const HOLD_MS = 20_000;

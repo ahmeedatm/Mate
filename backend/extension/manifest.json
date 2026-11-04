@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Mate",
-  "version": "1.2.1",
-  "description": "Montre sur la tablette les onglets ouverts dans ce navigateur (Page de l'ordi) et pilote la vidéo ou la musique (page Média). Rien ne quitte l'ordinateur.",
+  "version": "1.3.0",
+  "description": "Montre sur la tablette les onglets ouverts dans ce navigateur (Page de l'ordi) et pilote la vidéo ou la musique (page Média, YouTube Music). Rien ne quitte l'ordinateur.",
   "permissions": ["tabs", "alarms", "storage", "scripting"],
   "host_permissions": [
     "http://127.0.0.1/*",
@@ -44,6 +44,11 @@
       "js": ["media-session.js"],
       "run_at": "document_start",
       "world": "MAIN"
+    },
+    {
+      "matches": ["*://music.youtube.com/*"],
+      "js": ["ytmusic.js"],
+      "run_at": "document_idle"
     }
   ]
 }

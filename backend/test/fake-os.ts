@@ -84,6 +84,8 @@ export type FakeState = {
   commands?: Record<string, string>;
   /** Fonctions qui échouent (« Appli absente ») : `"sendKeys"`, ou `"openTarget msteams:"` pour un début de premier argument. */
   fail?: string[];
+  /** Fichier « lockfile » du client Riot (riotLockfile) ; absent : null, pas de Valorant. */
+  riotLockfile?: string;
 };
 
 export type FakeCall = { fn: string; args: unknown[] };
@@ -464,4 +466,8 @@ export async function systemCommand(command: SystemCommand) {
 
 export async function notify(title: string, text: string) {
   record("notify", title, text);
+}
+
+export function riotLockfile(): string | null {
+  return isWindows ? (read().riotLockfile ?? null) : null;
 }

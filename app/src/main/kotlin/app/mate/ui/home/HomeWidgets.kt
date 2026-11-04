@@ -170,11 +170,13 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.PIPELINES -> pipelinesWidget(context, host, placed)
                 WidgetType.GITHUB -> gitLabWidget(context, host, placed, Forge.GITHUB)
                 WidgetType.ACTIONS -> pipelinesWidget(context, host, placed, Forge.GITHUB)
+                WidgetType.YTMUSIC -> YtMusicWidget(context, host, placed)
                 WidgetType.WEB -> WebWidget(context, host, placed)
                 WidgetType.NEWS -> NewsWidget(context, host, placed)
                 WidgetType.MAIL -> MailWidget(context, host, placed)
                 WidgetType.MEALS -> MealsWidget(context, host, placed)
                 WidgetType.METRICS -> MetricsWidget(context, host, placed)
+                WidgetType.VALORANT -> ValorantWidget(context, host, placed)
                 WidgetType.SCREEN -> ScreenWidget(context, host, placed)
             }
     }

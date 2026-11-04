@@ -1207,9 +1207,10 @@ class MainActivity : AppCompatActivity() {
         override val signals get() = this@MainActivity.signals
         override fun hasComputer() = Computers.all(this@MainActivity).isNotEmpty()
 
-        // Rien à relire sous le cadre photo ni sans ordinateur ; cachée en mode Modifier (COMP-63).
+        // Rien à relire sous le cadre photo ni sans ordinateur ; cachée en mode Modifier (COMP-63). Le bandeau est
+        // construit avant le cadre : après un recreate() (thème), son lecteur s'attache et demande ceci avant la création du cadre.
         override fun musicSuppressed() =
-            frame.isShowing || !hasComputer() || (current == Mode.HOME && homeFragment()?.isEditing() == true)
+            (::frame.isInitialized && frame.isShowing) || !hasComputer() || (current == Mode.HOME && homeFragment()?.isEditing() == true)
 
         override fun callActive() = call.active
         override fun agentsOffered() = homeFragment()?.features?.agents == true

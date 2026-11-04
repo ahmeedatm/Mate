@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bouton rond qui reste allumé (aléatoire, répétition) : allumé = fond d'accent doux et anneau d'accent, pas la seule teinte. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false"><shape android:shape="oval"><solid android:color="?attr/c_surface" /></shape></item>
+    <item android:state_pressed="true"><shape android:shape="oval"><solid android:color="?attr/c_surface_pressed" /><stroke android:width="2dp" android:color="?attr/c_accent" /></shape></item>
+    <item android:state_selected="true"><shape android:shape="oval"><solid android:color="?attr/c_accent_soft" /><stroke android:width="2dp" android:color="?attr/c_accent" /></shape></item>
+    <item><shape android:shape="oval"><solid android:color="?attr/c_surface_raised" /></shape></item>
+</selector>

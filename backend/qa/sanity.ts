@@ -651,6 +651,19 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "YouTube Music (lecture seule, action hors liste refusée)",
+      run: async () => {
+        // Jamais d'action réelle ici : elle jouerait dans le navigateur de l'ordinateur.
+        const res = await call("GET", "/ytmusic");
+        expectStatus(res, 200, "GET /ytmusic");
+        expect(typeof res.json.open === "boolean", "réponse sans open");
+        expect(typeof res.json.desktop?.status === "string", "réponse sans état de YTMDesktop");
+        expectStatus(await call("POST", "/ytmusic/action", { op: "eval" }), 400, "action hors liste");
+        const source = res.json.source === "desktop" ? "YTMDesktop" : `onglet dans ${res.json.browser}`;
+        return `${res.json.open ? source : "rien d'ouvert"}, YTMDesktop ${res.json.desktop.status}`;
+      },
+    },
+    {
       name: "absence : état gardé (lecture seule)",
       run: async () => {
         // Jamais de start ni de resume ici : ils pilotent les fenêtres réelles.
@@ -736,6 +749,19 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         // Jamais une vraie action : une appli de diapos ouverte sur l'ordinateur recevrait des touches.
         // Refusée par la validation avant tout pilotage : 400 aussi sur un ordinateur non pilotable.
         expectStatus(await call("POST", "/present/inconnue"), 400, "/present/inconnue");
+      },
+    },
+    {
+      name: "Valorant (état de la partie)",
+      run: async () => {
+        // Lecture seule : client Riot fermé ou hors Windows, « off ».
+        const res = await call("GET", "/valorant");
+        expectStatus(res, 200, "/valorant");
+        const states = ["off", "menu", "queue", "pregame", "ingame"];
+        expect(states.includes(res.json.state), `état inattendu : ${res.json.state}`);
+        expect(Array.isArray(res.json.players), "liste des joueurs absente");
+        if (os !== "windows") expect(res.json.state === "off", "Valorant annoncé hors Windows");
+        return res.json.state === "off" ? "client Riot fermé" : `${res.json.state}, ${res.json.players.length} joueur(s)`;
       },
     },
     {

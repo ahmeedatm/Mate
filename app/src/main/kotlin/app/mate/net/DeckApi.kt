@@ -66,6 +66,8 @@ data class HomeFeatures(
     val jira: Boolean = false,
     /** Home Assistant réglé sur l'ordinateur (HA_* dans .env) : widget Home Assistant. */
     val ha: Boolean = false,
+    /** Windows : widget Valorant (client Riot de l'ordinateur). */
+    val valorant: Boolean = false,
     /** Plugins coupés sur cet ordinateur (`open`, `mixer`, `pad`…) : leurs onglets ne sont pas affichés. */
     val off: Set<String> = emptySet(),
 )
@@ -191,7 +193,7 @@ internal fun parseHomeFeatures(text: String): HomeFeatures = JSONObject(text).le
     // Ordinateur pas encore à jour (sans `teams`) : `meetings` y voulait dire « Teams dans le deck ».
     HomeFeatures(
         it.optBoolean("agenda", true), it.optBoolean("meetings", true), it.optBoolean("linked", true),
-        it.optBoolean("teams", it.optBoolean("meetings", true)), it.optBoolean("agents"), it.optBoolean("gitlab"), it.optBoolean("github"), it.optBoolean("jira"), it.optBoolean("ha"),
+        it.optBoolean("teams", it.optBoolean("meetings", true)), it.optBoolean("agents"), it.optBoolean("gitlab"), it.optBoolean("github"), it.optBoolean("jira"), it.optBoolean("ha"), it.optBoolean("valorant"),
         it.optJSONArray("off")?.let { a -> (0 until a.length()).map { i -> a.getString(i) }.toSet() }.orEmpty(),
     )
 }
