@@ -145,6 +145,7 @@ class SettingsFragment :
         computers = view.findViewById(R.id.settings_computers)
         view.findViewById<Button>(R.id.settings_add_computer).setOnClickListener { adder.search() }
         view.findViewById<Button>(R.id.settings_plugins).setOnClickListener { main.showPlugins() }
+        view.findViewById<Button>(R.id.settings_templates).setOnClickListener { TemplatesDialog(requireActivity()).show() }
         view.findViewById<Button>(R.id.settings_add_manual).setOnClickListener { adder.manual() }
         kioskCard = view.findViewById(R.id.settings_kiosk_card)
         topHeader = view.findViewById<View>(R.id.settings_title).apply { setOnLongClickListener { askTechCode(); true } }

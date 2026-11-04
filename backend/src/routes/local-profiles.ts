@@ -3,7 +3,7 @@ import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { config } from "../config.ts";
 import { loadDeck } from "../deck.ts";
-import { sendToTablet, tabletStatus, type TabletLayoutChange } from "../tablet.ts";
+import { sendToTablet, tabletStatus, TEMPLATE_IDS, type TabletLayoutChange, type TemplateId } from "../tablet.ts";
 
 /**
  * Profils et barres de la tablette, réglés depuis la page locale (section Profils, local-config-profiles.ts). La tablette
@@ -104,6 +104,28 @@ export default async function (app: FastifyInstance) {
     async (req, res) => {
       if (!tabletStatus().connected) return res.code(409).send({ error: "Tablette non connectée" });
       const result = await sendToTablet({ type: "layout", action: "set", ...req.body });
+      if (!result.ok || !result.data) return res.code(502).send({ error: result.error ?? "La tablette n'a rien rendu" });
+      writeCache(result.data);
+      return reply(result.data, cache!.at);
+    },
+  );
+
+  // Template (TEMPLATES de tablet.ts) : remplace profils, barres et thème ; la tablette rend son nouvel état.
+  app.post<{ Body: { template: TemplateId } }>(
+    "/local/tablet/template",
+    {
+      schema: {
+        body: {
+          type: "object",
+          additionalProperties: false,
+          required: ["template"],
+          properties: { template: { enum: TEMPLATE_IDS } },
+        },
+      },
+    },
+    async (req, res) => {
+      if (!tabletStatus().connected) return res.code(409).send({ error: "Tablette non connectée" });
+      const result = await sendToTablet({ type: "template", id: req.body.template });
       if (!result.ok || !result.data) return res.code(502).send({ error: result.error ?? "La tablette n'a rien rendu" });
       writeCache(result.data);
       return reply(result.data, cache!.at);

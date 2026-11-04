@@ -67,7 +67,15 @@ function fakeTablet(server: TestServer) {
       ),
     },
   });
+  const templates: string[] = [];
   const apply = (c: any) => {
+    if (c.type === "template") {
+      templates.push(c.id);
+      layout = { ...layout, pages: 3, names: ["Accueil", "Agents", "Réunion"], icons: [null, "agents", null], call: 2, widgets: [] };
+      top = ["music", "clock", "wifi"];
+      rail = { labels: true, tools: ["focus", "docs"] };
+      return { ok: true, data: data() };
+    }
     if (c.action === "get") return { ok: true, data: data() };
     sets.push(c);
     for (const w of c.layout?.widgets ?? []) {
@@ -85,7 +93,7 @@ function fakeTablet(server: TestServer) {
         const res = await server.call("POST", "/tablet/poll", { state: STATE });
         for (const order of res.json.commands ?? []) {
           // Les autres ordres de l'ordinateur (appli au premier plan) reçoivent un simple accusé.
-          const result = order.command.type === "layout" ? apply(order.command) : { ok: true };
+          const result = order.command.type === "layout" || order.command.type === "template" ? apply(order.command) : { ok: true };
           await server.call("POST", "/tablet/result", { id: order.id, ...result, state: STATE });
         }
       } catch {
@@ -93,7 +101,7 @@ function fakeTablet(server: TestServer) {
       }
     }
   })();
-  return { sets, stop: () => (running = false) };
+  return { sets, templates, stop: () => (running = false) };
 }
 
 test.describe.configure({ mode: "serial" });
@@ -497,6 +505,32 @@ test.describe("page locale : profils et barres", () => {
       // Un simple clic sur une tuile la choisit toujours.
       await chips.nth(0).click();
       await expect(chips.nth(0)).toHaveAttribute("aria-pressed", "true");
+    }
+  });
+
+  // En dernier : le template remplace la disposition de la fausse tablette.
+  test("pose un template après confirmation : profils et barres relus", async ({ page, server }) => {
+    const tablet = connected(server);
+    {
+      await page.goto("/");
+      await expect(page.locator("#pf-templates")).toBeVisible();
+      const dev = page.locator("[data-template=dev]");
+      await expect(dev).toHaveText("Dev");
+      await expect(page.locator("[data-template=bureau]")).toHaveText("Bureau");
+      // Refuser la confirmation n'envoie rien.
+      page.once("dialog", (d) => d.dismiss());
+      await dev.click();
+      expect(tablet.templates).toEqual([]);
+      page.once("dialog", (d) => {
+        expect(d.message()).toContain("« Dev »");
+        void d.accept();
+      });
+      await dev.click();
+      await expect(page.locator("#pf-tpl-msg")).toHaveText("Template posé sur la tablette.");
+      expect(tablet.templates).toEqual(["dev"]);
+      await expect(page.locator("#pf-chips .cx")).toHaveText([/Accueil/, /Agents/, /Réunion/]);
+      await expect(page.locator("#pf-send")).toBeDisabled();
+      await expect(page.locator("#pf-bars-send")).toBeDisabled();
     }
   });
 });

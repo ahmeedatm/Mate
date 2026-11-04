@@ -9,6 +9,8 @@ import app.mate.net.BackendClient
 import app.mate.net.HomeFeatures
 import app.mate.ui.home.HomeLayout
 import app.mate.ui.home.LayoutConfig
+import app.mate.ui.home.TabletTemplate
+import app.mate.ui.home.TabletTemplates
 import app.mate.ui.themeBool
 import app.mate.ui.topbar.TopBarModel
 import app.mate.ui.topbar.TopItems
@@ -40,16 +42,34 @@ internal object TabletLayout {
         return read(activity)
     }
 
+    /**
+     * Ordre `template` : pose le template `id` (ui/home/TabletTemplates.kt) et rend le nouvel état, comme `get`. L'activité
+     * est recréée juste après la réponse (thème).
+     */
+    suspend fun template(activity: MainActivity, command: JSONObject): JSONObject {
+        val id = command.getString("id")
+        val template = TabletTemplate.of(id) ?: error("Template inconnu : $id (mettre à jour l'appli ?)")
+        val features = if (Computers.active(activity) == null) null else features(activity)
+        val layout = template.layout({ activity.getString(it) }, activity.getString(R.string.profile_call), features)
+        TabletTemplates.apply(activity, template, layout)
+        val state = read(activity)
+        activity.onRemoteSettings(themeChanged = true)
+        return state
+    }
+
     private suspend fun read(activity: MainActivity): JSONObject {
         val computer = Computers.active(activity)
-        val features = try {
-            if (computer == null) HomeFeatures() else BackendClient(activity).deck.homeFeatures()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            HomeFeatures()
-        }
+        val features = if (computer == null) HomeFeatures() else features(activity) ?: HomeFeatures()
         return describe(activity, HomeLayout.load(activity), computer?.id, features)
+    }
+
+    /** Ce que l'ordinateur actif propose ; null s'il ne répond pas. */
+    private suspend fun features(activity: MainActivity): HomeFeatures? = try {
+        BackendClient(activity).deck.homeFeatures()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null
     }
 
     private fun describe(context: Context, layout: HomeLayout, computerId: String?, features: HomeFeatures) =

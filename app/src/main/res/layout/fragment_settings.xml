@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Réglages en deux onglets (SettingsFragment.showTab) : Personnalisation, ouvert d'abord (thème, barre, animations,
-     tablette, réunions, accessibilité) et Configuration (mises à jour, ordinateurs, WiFi, plugins, démo, kiosque, à propos). -->
+     tablette, réunions, accessibilité) et Configuration (mises à jour, ordinateurs, WiFi, plugins, templates, kiosque, à propos). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -265,6 +265,34 @@
                         style="@style/ActionButton"
                         android:layout_marginTop="16dp"
                         android:text="@string/plugins_choose" />
+                </LinearLayout>
+
+                <!-- Templates : une config complète (profils, barres, thème) sur les vraies données (ui/TemplatesDialog.kt). -->
+                <LinearLayout
+                    style="@style/Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="vertical">
+
+                    <app.mate.ui.TitleView
+                        style="@style/CardTitle"
+                        android:drawableStart="@drawable/ic_widgets"
+                        android:text="@string/template_card" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/template_hint"
+                        android:textColor="?attr/c_text_dim"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/settings_templates"
+                        style="@style/ActionButton"
+                        android:layout_marginTop="16dp"
+                        android:text="@string/template_choose" />
                 </LinearLayout>
 
                 <!-- Kiosque : réservé au technicien (code), un client ne doit pas pouvoir en sortir ni le retirer. -->

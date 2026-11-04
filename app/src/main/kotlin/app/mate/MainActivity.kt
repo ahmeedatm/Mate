@@ -80,6 +80,7 @@ import app.mate.ui.RailSwipeLayout
 import app.mate.ui.ReadingAids
 import app.mate.ui.SettingsFragment
 import app.mate.ui.TabletAlerts
+import app.mate.ui.TemplatesDialog
 import app.mate.ui.ThemePattern
 import app.mate.ui.TourModel
 import app.mate.ui.TourOverlay
@@ -92,6 +93,7 @@ import app.mate.ui.home.Down
 import app.mate.ui.home.FlowBandView
 import app.mate.ui.home.HomeLayout
 import app.mate.ui.home.LinkWatch
+import app.mate.ui.home.TabletTemplates
 import app.mate.ui.notificationBanner
 import app.mate.ui.notificationBannerText
 import app.mate.ui.notificationBody
@@ -299,7 +301,8 @@ class MainActivity : AppCompatActivity() {
             onComputerChanged(computer)
             show(Mode.HOME)
             showBanner(getString(R.string.welcome_done, computer.name), 6)
-            maybeTour()
+            // Premier ordinateur : choix du template, puis la visite (après la recréation si un template est posé).
+            TemplatesDialog(this).showFirstUse { maybeTour() }
         }
         plugins = findViewById(R.id.plugins)
         // Fond fixe de Spider-Verse : net ou en filigrane selon l'écran (showWallpaper).
@@ -334,11 +337,19 @@ class MainActivity : AppCompatActivity() {
         // l'écran « Tes plugins » reviendrait à chaque changement de thème.
         savedInstanceState?.getStringArrayList(STATE_PLUGINS_LATER)?.let { pluginsLater += it }
         val restored = savedInstanceState?.getString(STATE_MODE)?.let(Mode::of)
-        show(restored ?: Mode.HOME)
+        // Un template vient d'être posé (Réglages, page de l'ordinateur, premier appairage) : on arrive sur l'Accueil. Les
+        // écrans restaurés n'ont pas encore leur vue : les cacher ou les montrer ici les ferait planter, ils sont recréés.
+        val template = TabletTemplates.takeArrival(this)
+        if (template && restored != Mode.HOME) {
+            val tx = supportFragmentManager.beginTransaction()
+            supportFragmentManager.fragments.forEach { tx.remove(it) }
+            tx.commitNow()
+        }
+        show(if (template) Mode.HOME else restored ?: Mode.HOME)
         // Premier lancement (ou plus aucun ordinateur) : écran de bienvenue.
         if (savedInstanceState == null && Computers.all(this).isEmpty()) welcome.show()
         // Tablette déjà appairée qui n'a jamais vu la visite (mise à jour) : elle la voit une fois.
-        if (savedInstanceState == null) maybeTour()
+        if (savedInstanceState == null || template) maybeTour()
         // Écran de démarrage : logo + nom de l'appli sur le fond du thème, seulement à l'ouverture (cold start), pas à la
         // recréation (changement de thème). Retiré une fois l'appli dessinée (onWindowFocusChanged) ou par filet de sécurité.
         findViewById<android.widget.TextView>(R.id.splash_name).text = packageManager.getApplicationLabel(applicationInfo)

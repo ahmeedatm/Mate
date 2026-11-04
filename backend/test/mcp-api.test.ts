@@ -38,6 +38,7 @@ describe("porte MCP", () => {
       "tablette_regler",
       "profils_lire",
       "profils_ecrire",
+      "tablette_template",
       "plugins_choisir",
       "deck_appli_ajouter",
       "deck_site_ajouter",
@@ -51,6 +52,7 @@ describe("porte MCP", () => {
     const destructive = tools.filter((t) => t.annotations?.destructiveHint).map((t) => t.name);
     assert.ok(destructive.includes("deck_applis_reinitialiser"));
     assert.ok(destructive.includes("deck_touche_effacer"));
+    assert.ok(destructive.includes("tablette_template"));
   });
 
   it("refuse un hôte qui n'est pas local (DNS rebinding)", async () => {
@@ -164,6 +166,28 @@ describe("réglages", () => {
       state: { ...state, settings: { ...settings, theme: "CONSOLE_JOUR" } },
     });
     assert.equal(json(await result).reglages.theme, "CONSOLE_JOUR");
+  });
+
+  it("pose un template sur la tablette connectée", async () => {
+    const state = { mode: "home", app: "1.4.0", name: "Tablette", model: "Tab 4.2", settings: {} };
+    const polling = server.call("POST", "/tablet/poll", { state });
+    await new Promise((r) => setTimeout(r, 300));
+
+    const result = call("tablette_template", { template: "dev" });
+    const [order] = (await polling).json.commands;
+    assert.deepEqual(order.command, { type: "template", id: "dev" });
+    const data = {
+      layout: { names: ["Accueil", "Agents", "Réunion"], widgets: [] },
+      topBar: { items: [] },
+      rail: { labels: true, tools: [] },
+    };
+    await server.call("POST", "/tablet/result", { id: order.id, ok: true, data, state });
+    assert.deepEqual(json(await result).layout.names, ["Accueil", "Agents", "Réunion"]);
+  });
+
+  it("refuse un template inconnu", async () => {
+    const res = await call("tablette_template", { template: "gamer" });
+    assert.equal(res.isError, true);
   });
 
   it("refuse un changement de profils vide", async () => {
