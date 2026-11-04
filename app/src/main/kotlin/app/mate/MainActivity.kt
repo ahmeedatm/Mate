@@ -1109,8 +1109,13 @@ class MainActivity : AppCompatActivity() {
             documentPanel.setExpanded(mode == Mode.COMPUTER, splittable = mode != Mode.COMPUTER)
         }
         val changed = current != mode
+        val leavingCamera = current == Mode.CAMERA && mode != Mode.CAMERA
         current = mode
-        if (::presence.isInitialized) presence.sync()
+        if (::presence.isInitialized) {
+            // La caméra du mode Caméra se ferme un peu plus bas (fragment masqué) : la veille attend avant de rouvrir.
+            if (leavingCamera) onDocCameraClosing()
+            presence.sync()
+        }
         val fm = supportFragmentManager
         // Un écran ajouté juste avant (ex. recréé par onComputerChanged) doit exister pour être masqué.
         fm.executePendingTransactions()

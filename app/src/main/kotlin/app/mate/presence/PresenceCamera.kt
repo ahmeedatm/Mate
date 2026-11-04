@@ -98,7 +98,6 @@ class PresenceCamera(
             } catch (e: Exception) {
                 opening = false
                 lost(e)
-                if (closed) settle()
             }
         }
     }
@@ -121,13 +120,15 @@ class PresenceCamera(
                 // Pas de réponse du système à temps : on rend la main à l'appelant, mais le fil reste pour recevoir
                 // onOpened ou onClosed (une caméra qui s'ouvre sur un fil mort resterait ouverte sans voyant).
                 handler.postDelayed({ handBack() }, CLOSE_TIMEOUT_MS)
+                // Ni onOpened ni onClosed : le fil ne reste pas indéfiniment.
+                handler.postDelayed({ settle(force = true) }, GIVE_UP_MS)
             }
         }
     }
 
-    /** Tout est fermé (plus de caméra reçue, plus d'ouverture en cours) : image et fil rendus, puis l'appelant. */
-    private fun settle(): Boolean {
-        if (live.isNotEmpty() || opening) return false
+    /** Tout est fermé (plus de caméra reçue, plus d'ouverture en cours), ou [force] : image et fil rendus, puis l'appelant. */
+    private fun settle(force: Boolean = false): Boolean {
+        if (!force && (live.isNotEmpty() || opening)) return false
         reader?.close()
         reader = null
         thread.quitSafely()
@@ -204,6 +205,9 @@ class PresenceCamera(
 
         /** Attente maximale de la fermeture réelle de la caméra avant de rendre la main. */
         const val CLOSE_TIMEOUT_MS = 2_000L
+
+        /** Au bout de ce délai sans réponse du système, le fil s'arrête quand même. */
+        private const val GIVE_UP_MS = 10_000L
 
         private fun yuvSizes(characteristics: CameraCharacteristics): List<Pair<Int, Int>> =
             characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)?.getOutputSizes(ImageFormat.YUV_420_888)
