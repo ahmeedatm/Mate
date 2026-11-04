@@ -29,9 +29,10 @@ object Prefs {
     private const val KEY_ALLOW_INSTALLS = "allow_installs"
     private const val KEY_EXIT_LOCK = "exit_lock"
     private const val KEY_POWER_MENU = "power_menu"
+    private const val KEY_ALLOW_DEBUGGING = "allow_debugging"
 
     /** Réglages du technicien (carte Kiosque) : gardés par la remise à neuf ([app.mate.kiosk.FreshStart]). */
-    val KIOSK_KEYS = setOf(KEY_ALLOW_INSTALLS, KEY_EXIT_LOCK, KEY_POWER_MENU)
+    val KIOSK_KEYS = setOf(KEY_ALLOW_INSTALLS, KEY_EXIT_LOCK, KEY_POWER_MENU, KEY_ALLOW_DEBUGGING)
     private const val KEY_LANDSCAPE_LOCKED = "landscape_locked"
     private const val KEY_BRIGHTNESS = "brightness"
     private const val KEY_NIGHT_DIM = "night_dim"
@@ -53,6 +54,9 @@ object Prefs {
     private const val KEY_MEETING_ALERT = "meeting_alert"
     private const val KEY_COMPUTER_LOCKED = "computer_locked"
     private const val KEY_TABLET_LOCKED = "tablet_locked"
+    private const val KEY_LAST_CONTACT = "last_contact"
+    private const val KEY_LOCK_AWAY = "lock_away"
+    private const val KEY_LOCKED_AWAY = "locked_away"
     private const val KEY_BLOCK_ON_COMPUTER_LOCK = "block_on_computer_lock"
     private const val KEY_LOCK_CODE = "lock_code"
     private const val KEY_LOCK_SALT = "lock_salt"
@@ -164,6 +168,13 @@ object Prefs {
         prefs(context).edit().putBoolean(KEY_ALLOW_INSTALLS, value).apply()
     }
 
+    /** Kiosque : débogage USB (adb) permis. Bloqué par défaut : sans lui, personne ne lit l'appli ni ne lève le kiosque par adb. */
+    fun allowDebugging(context: Context): Boolean = prefs(context).getBoolean(KEY_ALLOW_DEBUGGING, false)
+
+    fun setAllowDebugging(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_ALLOW_DEBUGGING, value).apply()
+    }
+
     /** Kiosque : réinitialisation d'usine et mode sans échec interdits (anti-sortie). Permis par défaut. */
     fun exitLock(context: Context): Boolean = prefs(context).getBoolean(KEY_EXIT_LOCK, false)
 
@@ -258,6 +269,27 @@ object Prefs {
 
     fun setTabletLocked(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_TABLET_LOCKED, value).apply()
+    }
+
+    /** Dernière réponse de l'ordinateur actif, en `elapsedRealtime` : survit aux relances de la boucle et de l'appli (lock/LockLogic.contactSince). */
+    fun lastContact(context: Context): Long = prefs(context).getLong(KEY_LAST_CONTACT, 0L)
+
+    fun setLastContact(context: Context, value: Long) {
+        prefs(context).edit().putLong(KEY_LAST_CONTACT, value).apply()
+    }
+
+    /** Verrou renforcé : ordinateur verrouillé injoignable plus de 30 s = verrou à code (lock/LockLogic.lockAway). Coupé par défaut. */
+    fun lockAway(context: Context): Boolean = prefs(context).getBoolean(KEY_LOCK_AWAY, false)
+
+    fun setLockAway(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_LOCK_AWAY, value).apply()
+    }
+
+    /** Verrou à code posé par le verrou renforcé (texte propre sur l'écran de verrou) ; effacé avec le verrou à la main. */
+    fun lockedAway(context: Context): Boolean = prefs(context).getBoolean(KEY_LOCKED_AWAY, false)
+
+    fun setLockedAway(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_LOCKED_AWAY, value).apply()
     }
 
     /** Empreinte salée du code de verrouillage (lock/LockLogic.hash) ; null : aucun code choisi. */

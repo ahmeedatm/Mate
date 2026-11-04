@@ -5,6 +5,8 @@ import java.security.MessageDigest
 /**
  * Deux verrous indépendants (ui/LockScreen) : la tablette verrouillée à la main (code à 4 chiffres) et l'ordinateur
  * actif verrouillé (backend/src/screen-lock.ts). Le déverrouillage de l'un ne lève jamais l'autre.
+ * Verrou renforcé (option) : liaison perdue avec l'ordinateur verrouillé = il a peut-être été emporté, son déverrouillage
+ * ailleurs ne doit pas rouvrir la tablette ; elle passe au verrou à code.
  */
 enum class LockKind { NONE, TABLET, COMPUTER }
 
@@ -20,6 +22,19 @@ object LockLogic {
         computer && blockOnComputer -> LockKind.COMPUTER
         else -> LockKind.NONE
     }
+
+    /** Coupure au-delà de laquelle l'ordinateur verrouillé est tenu pour emporté (capot fermé, autre réseau). */
+    const val AWAY_AFTER_MS = 30_000L
+
+    /** Passer au verrou à code : option active, code choisi, ordinateur verrouillé et injoignable depuis [AWAY_AFTER_MS]. */
+    fun lockAway(enabled: Boolean, hasCode: Boolean, computerLocked: Boolean, offlineMs: Long): Boolean =
+        enabled && hasCode && computerLocked && offlineMs >= AWAY_AFTER_MS
+
+    /**
+     * Dernier contact avec l'ordinateur (horloge `elapsedRealtime`, gardée dans Prefs.lastContact). Inconnu (0) ou
+     * postérieur à `now` (redémarrage de la tablette) : on compte depuis maintenant.
+     */
+    fun contactSince(now: Long, stored: Long): Long = if (stored in 1..now) stored else now
 
     fun validCode(code: String): Boolean = code.length == CODE_LENGTH && code.all { it in '0'..'9' }
 

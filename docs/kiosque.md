@@ -47,7 +47,6 @@ adb shell dumpsys account | grep Accounts            # Accounts: 0
 adb shell dpm set-device-owner app.mate/.kiosk.KioskAdminReceiver
 # Accessibilité malgré le kiosque : TalkBack et son raccourci des touches de volume.
 adb shell pm grant app.mate android.permission.WRITE_SECURE_SETTINGS
-adb shell am start -n app.mate/app.mate.MainActivity
 ```
 
    **Accessibilité** : en kiosque, Paramètres est inaccessible, donc ni TalkBack ni la taille du texte ne se règlent dans Android. La permission accordée ci-dessus (seulement par adb : un device owner ne peut pas se la donner) permet à Mate de régler au démarrage le raccourci d'Android sur TalkBack (maintenir les deux touches de volume 3 secondes : utilisable sans voir l'écran, kiosque compris, sans la boîte de première utilisation) et d'activer TalkBack depuis Réglages > Accessibilité. La taille du texte se règle au même endroit (propre à l'appli, sans permission). Sans la permission, la carte le dit et le raccourci reste à régler à la main. Garder TalkBack (`com.google.android.marvin.talkback`, Android Accessibility Suite) : ne jamais le désactiver à l'étape suivante.
@@ -69,7 +68,13 @@ done
 
    Garder : Launcher3 (secours hors kiosque), Google TTS, Play Services, WebView, TalkBack.
 
-6. Brancher le WiFi seulement maintenant.
+6. Lancer Mate. Au premier lancement, Mate coupe adb (voir plus bas) : tout `adb` de l'installation doit donc passer avant.
+
+```bash
+adb shell am start -n app.mate/app.mate.MainActivity
+```
+
+7. Brancher le WiFi seulement maintenant.
 
 Une fois device owner, Mate **masque l'agent de provisionnement et le MDM du constructeur** (`setApplicationHidden` : invisibles,
 inactifs, insensibles à « Réinitialiser les préférences des applis ») et **bloque toute installation et désinstallation d'appli**, adb
@@ -77,19 +82,20 @@ compris (restrictions `no_install_apps`, `no_install_unknown_sources`, `no_unins
 même si quelque chose tentait de réinstaller le MDM, Android refuse. Android ajoute aussi
 `no_add_managed_profile` (pas de profil professionnel, donc pas de MDM par ce biais).
 La carte **Kiosque** de Réglages est cachée à l'utilisateur : appui long sur le titre « Réglages », puis le
-**code technicien** (`4242` par défaut, `-PtechCode=…` à la compilation). Elle disparaît en quittant Réglages.
+**code technicien** (`4242` dans les builds locales et les essais de PR, `-PtechCode=…` à la compilation ; APK release : secret GitHub Actions
+`TECH_CODE`, la release s'arrête sans lui). Elle disparaît en quittant Réglages.
 Micro et caméra sont accordés d'office (`setPermissionGrantState`) : en kiosque, un refus serait sans retour.
 Heure et fuseau automatiques imposés à chaque passage en kiosque (`setGlobalSetting` AUTO_TIME / AUTO_TIME_ZONE) : une tablette sortie du stock a souvent une heure fausse.
-Autres réglages d'Android de la carte Kiosque (code technicien), car Paramètres est inaccessible : **Bluetooth** (éteint d'usine ; `device/Bluetooth`, permissions `BLUETOOTH`, `BLUETOOTH_ADMIN`, `BLUETOOTH_CONNECT`, l'appairage d'une enceinte se fait dans le réglage Bluetooth d'Android), **Paysage fixe** (`Prefs.landscapeLocked`, `Screen.applyOrientation` : un seul sens de paysage au lieu des deux du capteur), **Anti-sortie du kiosque** (`Kiosk.lockExit` : `no_factory_reset` et `no_safe_boot`, coupé par défaut, rétabli à chaque passage en kiosque, levé par « Retirer le mode kiosque » ; avec lui, la réinitialisation d'usine de la section 2 passe par le mode recovery matériel), **Menu du bouton marche/arrêt** (`Kiosk.applyLockTaskFeatures` : `LOCK_TASK_FEATURE_GLOBAL_ACTIONS`, coupé par défaut) et le bouton **Redémarrer** (`Kiosk.reboot`, avec confirmation ; le kiosque revient seul au démarrage).
+Autres réglages d'Android de la carte Kiosque (code technicien), car Paramètres est inaccessible : **Bluetooth** (éteint d'usine ; `device/Bluetooth`, permissions `BLUETOOTH`, `BLUETOOTH_ADMIN`, `BLUETOOTH_CONNECT`, l'appairage d'une enceinte se fait dans le réglage Bluetooth d'Android), **Paysage fixe** (`Prefs.landscapeLocked`, `Screen.applyOrientation` : un seul sens de paysage au lieu des deux du capteur), **Anti-sortie du kiosque** (`Kiosk.lockExit` : `no_factory_reset` et `no_safe_boot`, coupé par défaut, rétabli à chaque passage en kiosque, levé par « Retirer le mode kiosque » ; avec lui, la réinitialisation d'usine de la section 2 passe par le mode recovery matériel), **Menu du bouton marche/arrêt** (`Kiosk.applyLockTaskFeatures` : `LOCK_TASK_FEATURE_GLOBAL_ACTIONS`, coupé par défaut), **Débogage USB** (`Kiosk.lockDebugging` : `no_debugging_features`, posé à chaque passage en kiosque, debug comme release, donc adb se coupe au premier lancement après `am start` : les commandes `adb` de la procédure d'installation (section 4, étapes 4 et 5) passent avant, ensuite il faut l'interrupteur ; l'interrupteur lève la restriction et rallume adb, `setGlobalSetting` ADB_ENABLED ; levé aussi par « Retirer le mode kiosque ») et le bouton **Redémarrer** (`Kiosk.reboot`, avec confirmation ; le kiosque revient seul au démarrage).
 Après une mise à jour de l'appli (adb ou Réglages > Mises à jour), Android l'arrête et le verrouillage avec elle : `kiosk/UpdatedReceiver` (`MY_PACKAGE_REPLACED`) la relance aussitôt (kiosque revenu en ~4 s). Pendant ces secondes, Android affichait son propre accueil (Launcher3), utilisable : en kiosque, Mate masque les accueils du système (`Kiosk.hideLaunchers`, sauf l'accueil de secours de `com.android.settings`, qui attend sur un écran vide) et les rend visibles quand le kiosque est suspendu ou retiré.
 Pas d'écran de verrouillage après une mise en veille (`setKeyguardDisabled`, rétabli par « Retirer le mode kiosque »).
 
-**Remettre à neuf** (carte Kiosque, `kiosk/FreshStart`, avec confirmation) : repart comme une tablette neuve, pour tester le premier lancement ou préparer une tablette pour un autre utilisateur. Efface les préférences (ordinateurs appairés, thème, écrans, réglages, eau), les photos du cadre, le cache et les données du WebView, désinstalle l'essai d'une PR (il garde ses propres ordinateurs appairés), puis relance l'appli dans un nouveau processus (une dizaine de secondes d'écran noir, puis l'écran Bienvenue). Restent : le kiosque (device owner et verrouillage, tenus par Android ; réglages Autoriser les installations, Anti-sortie, Menu marche/arrêt), le WiFi d'Android, les installeurs gardés pour les ordinateurs et le modèle du mot de réveil. `adb shell pm clear` ne marche pas ici : Android protège les données du device owner. L'ordinateur garde l'ancien appairage dans sa liste, sans effet : on réappaire avec un nouveau code.
+**Remettre à neuf** (carte Kiosque, `kiosk/FreshStart`, avec confirmation) : repart comme une tablette neuve, pour tester le premier lancement ou préparer une tablette pour un autre utilisateur. Efface les préférences (ordinateurs appairés, thème, écrans, réglages, eau), les photos du cadre, le cache et les données du WebView, désinstalle l'essai d'une PR (il garde ses propres ordinateurs appairés), puis relance l'appli dans un nouveau processus (une dizaine de secondes d'écran noir, puis l'écran Bienvenue). Restent : le kiosque (device owner et verrouillage, tenus par Android ; réglages Autoriser les installations, Anti-sortie, Menu marche/arrêt, Débogage USB), le WiFi d'Android, les installeurs gardés pour les ordinateurs et le modèle du mot de réveil. `adb shell pm clear` ne marche pas ici : Android protège les données du device owner. L'ordinateur garde l'ancien appairage dans sa liste, sans effet : on réappaire avec un nouveau code.
 Essai d'une PR : l'appli d'essai `app.mate.essai` (même clé) est autorisée en lock task avec Mate (`setLockTaskPackages`) et reçoit micro et caméra ; Mate l'installe (choix d'une PR dans la liste des essais de Réglages > Mises à jour, désinstallé d'abord sans confirmation si sa version est plus basse) et l'ouvre, elle se verrouille à son tour et rend la main par « Revenir à la stable ». Mate reste device owner : rien à refaire ici (voir [developpement.md](developpement.md), « Déployer un essai depuis une PR »). « Quitter le kiosque » retire aussi l'essai de la liste : il s'ouvre alors sans verrouillage.
 La barre d'état étant masquée, heure, WiFi et batterie sont dans la barre latérale ; luminosité et volume dans Réglages > Tablette.
 
-Pour mettre l'appli à jour : **Réglages > (code technicien) > Autoriser les installations**, `./gradlew installDebug`,
-puis désactiver l'interrupteur (le réglage survit au redémarrage de l'appli).
+Pour mettre l'appli à jour : **Réglages > (code technicien) > Débogage USB** et **Autoriser les installations**, `./gradlew installDebug`,
+puis désactiver les deux interrupteurs (le réglage survit au redémarrage de l'appli).
 
 Au prochain lancement, l'appli se verrouille à l'écran (lock task) et devient l'écran d'accueil.
 Rien ne se passe tant que la commande `dpm set-device-owner` n'a pas été lancée.
@@ -99,6 +105,6 @@ Rien ne se passe tant que la commande `dpm set-device-owner` n'a pas été lanc�
 Carte Kiosque (code technicien, voir plus haut) :
 
 - **Réglages > Quitter le kiosque** : déverrouille jusqu'au prochain démarrage de l'appli.
-- **Réglages > Retirer le mode kiosque** : lève le blocage des installations et retire le statut device owner (à refaire via adb ensuite).
+- **Réglages > Retirer le mode kiosque** : lève le blocage des installations et d'adb, et retire le statut device owner (à refaire via adb ensuite).
   ⚠️ Sur une tablette 4.2, l'agent de provisionnement du constructeur reprend la main à la seconde où Mate perd le device owner : il devient profile owner, même WiFi coupé, puis réinstalle le MDM du constructeur dès qu'il a du réseau. `dpm set-device-owner` devient impossible : seule une réinitialisation d'usine hors ligne en sort (constaté le 27/10/2026). Pour installer un APK signé avec une autre clé, ne pas passer par ici : réinitialiser hors ligne et reprendre la section 2. Vérifier d'abord la signature : `apksigner verify --print-certs` sur l'APK installé (`adb shell pm path app.mate`, puis `adb pull`) et sur le nouveau.
 - En dernier recours : réinitialisation d'usine.

@@ -22,7 +22,18 @@ namespace Mate
 
         static GlobalSystemMediaTransportControlsSessionManager Manager()
         {
-            if (manager == null) manager = Await(GlobalSystemMediaTransportControlsSessionManager.RequestAsync());
+            if (manager == null)
+            {
+                try { manager = Await(GlobalSystemMediaTransportControlsSessionManager.RequestAsync()); }
+                catch (Exception e)
+                {
+                    // Service sans session de bureau : Windows répond « Le service spécifié n'existe pas » (0x80070424).
+                    // Mot repéré par src/win/index.ts (MEDIA_UNAVAILABLE de driver-common.ts) : à garder tel quel.
+                    var inner = e is AggregateException && e.InnerException != null ? e.InnerException : e;
+                    if (inner.HResult == unchecked((int)0x80070424)) throw new Exception("Lecture en cours indisponible : aucune session de bureau (MEDIA_UNAVAILABLE)");
+                    throw;
+                }
+            }
             return manager;
         }
 

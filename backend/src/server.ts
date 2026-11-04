@@ -130,9 +130,20 @@ const authorized = (header: string | undefined) => {
   const given = Buffer.from(header ?? "");
   return given.length === expectedAuth.length && timingSafeEqual(given, expectedAuth);
 };
+/**
+ * Sans jeton (mode émulateur), une page web ouverte sur l'ordinateur peut poster vers le compagnon par une requête
+ * « simple » (multipart, texte), sans pré-vérification CORS. Le navigateur y met toujours `Origin` : une écriture dont
+ * l'origine n'est ni locale ni une extension du navigateur est refusée. Pas d'`Origin` (tablette, outils) : acceptée.
+ */
+const LOCAL_ORIGIN = /^(https?:\/\/(127\.0\.0\.1|localhost|\[::1\]|10\.0\.2\.2)(:\d+)?|(chrome|moz)-extension:\/\/.+)$/i;
+const READ_ONLY_METHOD = /^(GET|HEAD|OPTIONS)$/;
 /** Ordinateur verrouillé : seul le canal /tablet reste ouvert (la tablette y apprend le déverrouillage). */
 const WHILE_LOCKED = /^\/tablet\/(poll|result)(\?|$)/;
 app.addHook("onRequest", async (req, reply) => {
+  const origin = req.headers.origin;
+  if (!expectedAuth && origin !== undefined && !READ_ONLY_METHOD.test(req.method) && !LOCAL_ORIGIN.test(origin)) {
+    return reply.code(403).send({ error: "Origine refusée : écriture sans jeton depuis un autre site" });
+  }
   if (PUBLIC.test(req.url)) {
     if (LOOPBACK.has(req.ip) && !PUBLIC_LOCAL_HOST.test(req.headers.host ?? "")) return reply.code(403).send({ error: "Hôte refusé" });
     return;

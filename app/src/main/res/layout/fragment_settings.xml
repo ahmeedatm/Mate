@@ -385,6 +385,22 @@
                             android:text="@string/kiosk_power_menu_hint"
                             android:textColor="?attr/c_text_dim"
                             android:textSize="14sp" />
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/settings_allow_debugging"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:minHeight="48dp"
+                            android:text="@string/kiosk_allow_debugging"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/kiosk_allow_debugging_hint"
+                            android:textColor="?attr/c_text_dim"
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -833,6 +849,22 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/lock_code_settings_hint"
+                        android:textColor="?attr/c_text_dim"
+                        android:textSize="14sp" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/settings_lock_away"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:minHeight="48dp"
+                        android:text="@string/lock_away"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/lock_away_hint"
                         android:textColor="?attr/c_text_dim"
                         android:textSize="14sp" />
 

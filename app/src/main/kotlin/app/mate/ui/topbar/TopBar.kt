@@ -20,8 +20,10 @@ import app.mate.Prefs
 import app.mate.R
 import app.mate.device.TabletSignals
 import app.mate.net.CalendarEvent
+import app.mate.net.Link
 import app.mate.ui.MusicChip
 import app.mate.ui.dp
+import app.mate.ui.home.Down
 import app.mate.ui.showImmersive
 import app.mate.ui.themeColor
 import app.mate.ui.themeFont
@@ -86,6 +88,8 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
         visibility = GONE
         setColorFilter(themeColor(context, R.attr.c_text_faint))
     }
+    /** Pastille de connexion, juste avant les éléments : hors de leur liste, jamais sautée faute de place. */
+    private val link = LinkBadge(context)
     private val row = TopItemsLayout(context)
     /** Mode Modifier : consigne, « Ajouter », les pastilles (qui défilent si elles débordent), « OK ». */
     private val editRow = LinearLayout(context).apply {
@@ -117,6 +121,7 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
         header.addView(title, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER_VERTICAL or Gravity.START))
         addView(header, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         addView(wakeMic, LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(12) })
+        addView(link, LayoutParams(LayoutParams.WRAP_CONTENT, dp(48)).apply { marginEnd = dp(16) })
         addView(row, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
         addView(editRow, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         editRow.addView(hint, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(16) })
@@ -154,12 +159,25 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
             true
         }
         contentDescription = context.getString(R.string.top_edit_open)
+        link.setOnClickListener { onLinkTap() }
     }
 
     fun attach(host: TopBarHost) {
         this.host = host
         rebuild()
     }
+
+    /** Toucher la pastille de connexion : changer d'ordinateur. */
+    var onLinkTap: () -> Unit = {}
+
+    /** Liaison changée ; `down` : coupure à dire (après le délai de grâce de LinkWatch), null sinon. */
+    fun showLink(link: Link, down: Down?) {
+        shownLink = link to down
+        if (!editing) this.link.show(link, down)
+    }
+
+    /** Dernière liaison reçue : redite à la sortie du mode Modifier, qui cache la pastille. */
+    private var shownLink: Pair<Link, Down?>? = null
 
     /** Cloche des notifications, si elle est dans le bandeau (visite guidée). */
     val notifications: View? get() = (elements[TopItem.NOTIFICATIONS] as? NotificationsElement)?.view
@@ -245,6 +263,7 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
         // En-tête de l'écran et voyant cachés : toute la largeur pour les pastilles.
         header.visibility = if (on) GONE else VISIBLE
         wakeMic.alpha = if (on) 0f else 1f
+        if (on) link.visibility = GONE else shownLink?.let { (l, down) -> link.show(l, down) }
         row.visibility = if (on) GONE else VISIBLE
         editRow.visibility = if (on) VISIBLE else GONE
         if (on) fillEditRow() else chips.removeAllViews()

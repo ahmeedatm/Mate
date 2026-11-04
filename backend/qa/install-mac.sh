@@ -12,7 +12,9 @@ set -euo pipefail
 
 REAL_LABEL=app.mate
 REAL_PORT=3000
-ID=${CI_JOB_ID:-local}
+# Sans CI_JOB_ID : un nom assez précis pour ne se confondre avec aucun agent de LaunchAgents (le contrôle plus bas y cherche $ID ;
+# « local » trouvait les agents local.*). Sans chiffre : le port reste 41000.
+ID=${CI_JOB_ID:-mate-essai-install-mac}
 WORK=/tmp/companion-ci-$ID
 PORT=$((41000 + ${ID//[!0-9]/0} % 1000))
 SANITY="$(cd "$(dirname "$0")" && pwd)/sanity.ts"
