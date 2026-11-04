@@ -2,7 +2,7 @@
 
 Sur la tablette, le widget **GitHub** montre les pull requests de l'utilisateur (« Mes PR » : écrites ou assignées ; « À relire » :
 relecture demandée) et fusionne celles qui sont prêtes ; le widget **Actions** montre le dernier run GitHub Actions de la branche
-par défaut des dépôts de ces PR (8 au plus). Calqués sur GitLab ([gitlab-oauth.md](gitlab-oauth.md)) : mêmes vues sur la tablette,
+par défaut des dépôts de ces PR (8 au plus). Calqués sur GitLab ([gitlab-jeton.md](gitlab-jeton.md)) : mêmes vues sur la tablette,
 mêmes réponses du compagnon (`project` = `propriétaire/dépôt`, `iid` = numéro de la PR, pipeline = contrôles du dernier commit).
 
 ## Connexion : « device flow »

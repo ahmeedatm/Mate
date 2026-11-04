@@ -5,12 +5,10 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import { fakeDiscussion, fakeStages } from "./fake-gitlab.ts";
 
-// Dossier de données vide (aucun compte connecté) et pas d'appli OAuth : seul GITLAB_TOKEN ouvre GitLab ici.
+// Dossier de données vide (aucun jeton collé) : seul GITLAB_TOKEN ouvre GitLab ici.
 process.env.DATA_DIR = await fs.mkdtemp(path.join(os.tmpdir(), "companion-gitlab-"));
-delete process.env.GITLAB_CLIENT_ID;
 process.env.ACCOUNTS_FILE = new URL("./accounts-vide.json", import.meta.url).pathname;
-const { clearGitlabCache, gitlabAvailable, GitLabError, listMrs, mergeMr, mrUrl, pipelineOf, statusLabel } =
-  await import("../src/gitlab.ts");
+const { clearGitlabCache, GitLabError, listMrs, mergeMr, mrUrl, pipelineOf, statusLabel } = await import("../src/gitlab.ts");
 
 const TOKEN = "glpat-secret-de-test";
 const SHA = "0123456789abcdef0123456789abcdef01234567";
@@ -63,7 +61,7 @@ afterEach(() => {
   if (env.GITLAB_URL === undefined) delete process.env.GITLAB_URL;
 });
 
-const REFUSED = "GitLab refuse l'accès de l'ordinateur : reconnecte-le depuis la page du compagnon";
+const REFUSED = "GitLab refuse l'accès de l'ordinateur : colle un nouveau jeton dans la page de Mate sur l'ordinateur";
 const rejectsWith = (p: Promise<unknown>, statusCode: number, message: string) =>
   assert.rejects(p, (e: unknown) => {
     assert.ok(e instanceof GitLabError, `GitLabError attendue, reçu ${String(e)}`);
@@ -539,16 +537,11 @@ describe("gitlab : jeton absent", () => {
       if (value === undefined) delete process.env.GITLAB_TOKEN;
       else process.env.GITLAB_TOKEN = value;
       fakeFetch(() => json({}));
-      assert.equal(await gitlabAvailable(), false);
       assert.deepEqual(await listMrs(), { connected: false, expired: false, canMerge: false, mine: [], review: [] });
       await rejectsWith(mergeMr("a/b", 1, SHA), 503, "GitLab n'est pas connecté sur l'ordinateur");
       assert.equal(calls.length, 0);
     });
   }
-
-  it("jeton réglé", async () => {
-    assert.equal(await gitlabAvailable(), true);
-  });
 });
 
 describe("gitlab : mrUrl", () => {
