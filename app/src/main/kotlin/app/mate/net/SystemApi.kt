@@ -220,11 +220,9 @@ class SystemApi(private val http: Http) {
         (0 until scenes.length()).map { i -> scenes.getJSONObject(i).let { MixerScene(it.getString("id"), it.getString("name")) } }
     }
 
-    /** Rappelle une scène ; `second` : applis de la scène sans son en ce moment (laissées telles quelles). */
-    suspend fun applyMixerScene(id: String): Pair<MixerState, List<String>> = http.io {
-        val j = JSONObject(http.postJson("/system/mixer/scenes/" + http.encode(id) + "/apply", JSONObject()))
-        val missing = j.getJSONArray("missing")
-        parseMixer(j.getJSONObject("mixer")) to (0 until missing.length()).map { missing.getString(it) }
+    /** Rappelle une scène ; les applis de la scène sans son en ce moment (`missing`) restent telles quelles. */
+    suspend fun applyMixerScene(id: String): MixerState = http.io {
+        parseMixer(JSONObject(http.postJson("/system/mixer/scenes/" + http.encode(id) + "/apply", JSONObject())).getJSONObject("mixer"))
     }
 
     // Lecture en cours (Windows ; HTTP 501 sur Mac).
