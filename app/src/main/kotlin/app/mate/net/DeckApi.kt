@@ -25,7 +25,14 @@ data class DeckTile(
 )
 /** Appel en cours dans une appli (Discord) : salon, participants vus, micro et sourdine (null : inconnu). */
 /** `lobby` : écran d'avant-réunion de Teams (« Rejoindre maintenant »), pas encore dans la réunion. */
-data class VoiceState(val connected: Boolean, val channel: String?, val people: List<String>, val muted: Boolean?, val deafened: Boolean?, val streaming: Boolean = false, val lobby: Boolean = false, val cameraOff: Boolean? = null)
+/**
+ * `photos` : RPC Discord de l'ordinateur (`off`, `waiting`, `on`), null pour une autre appli ou un ordinateur d'avant ;
+ * `members` : participants lus par le RPC (photos, qui parle), null sans RPC (repli sur `people`).
+ */
+data class VoiceState(val connected: Boolean, val channel: String?, val people: List<String>, val muted: Boolean?, val deafened: Boolean?, val streaming: Boolean = false, val lobby: Boolean = false, val cameraOff: Boolean? = null, val photos: String? = null, val members: List<VoiceMember>? = null)
+
+/** Participant d'un appel Discord (sans soi) ; `avatar` : une photo est servie par /discord/avatar. */
+data class VoiceMember(val id: String, val name: String, val avatar: Boolean, val speaking: Boolean)
 /**
  * `editable` : page Perso ou page de touches nommée (touches à programmer) ; `keyPage` : rang de la page nommée (null :
  * Perso) ; `apps` : page d'applis que l'on complète ;
@@ -122,7 +129,12 @@ class DeckApi(private val http: Http) {
         if (v == null || !v.optBoolean("found")) return@io null
         fun flag(key: String) = if (v.isNull(key)) null else v.optBoolean(key)
         val people = v.optJSONArray("people")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty()
-        VoiceState(v.optBoolean("connected"), v.optStringOrNull("channel"), people, flag("muted"), flag("deafened"), v.optBoolean("streaming"), v.optBoolean("lobby"), flag("cameraOff"))
+        val members = v.optJSONArray("members")?.let { a ->
+            (0 until a.length()).map { a.getJSONObject(it) }.map { m ->
+                VoiceMember(m.getString("id"), m.optString("name"), m.optBoolean("avatar"), m.optBoolean("speaking"))
+            }
+        }
+        VoiceState(v.optBoolean("connected"), v.optStringOrNull("channel"), people, flag("muted"), flag("deafened"), v.optBoolean("streaming"), v.optBoolean("lobby"), flag("cameraOff"), v.optStringOrNull("photos"), members)
     }
 
     // Page Média : sites ajoutés (vide au départ) et sites proposés.

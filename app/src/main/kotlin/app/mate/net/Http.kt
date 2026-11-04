@@ -42,8 +42,8 @@ class Http(
 
     fun delete(path: String): String = text(request("DELETE", path))
 
-    fun postJson(path: String, body: JSONObject): String =
-        text(request("POST", path, body.toString().toByteArray(), JSON))
+    fun postJson(path: String, body: JSONObject, timeoutMs: Int = 60_000): String =
+        text(request("POST", path, body.toString().toByteArray(), JSON, timeoutMs))
 
     fun putJson(path: String, body: JSONObject): String =
         text(request("PUT", path, body.toString().toByteArray(), JSON))
