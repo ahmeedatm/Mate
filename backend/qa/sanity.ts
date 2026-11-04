@@ -112,6 +112,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expectStatus(await call("POST", "/pair/reveal", { request: req.json.request, nonce: secret }, false), 200, "/pair/reveal");
         const status = await call("GET", "/local/status");
         expectStatus(status, 200, "/local/status");
+        expect(typeof status.json.waiting === "boolean", "/local/status ne dit pas si l'ordinateur attend une tablette (waiting)");
         expect(status.json.pairing?.tablet === "Sanity CI", "la page locale n'annonce pas la tablette qui attend");
         expect(!/\d{6}/.test(JSON.stringify(status.json.pairing)), "la page locale ne doit jamais montrer le code");
         const n = createHash("sha256").update(`mate-pair-1\n\n${secret}\n${req.json.nonce}`).digest().readUInt32BE(0) % 1_000_000;

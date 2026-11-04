@@ -503,8 +503,17 @@ ${FAVICON}
 <script>
   const OS = { mac: "macOS", windows: "Windows", other: "Linux (pilotage indisponible)" };
   let version = null, statusAccessibility = null;
+  // Page au premier plan = cet ordinateur attend une tablette (src/pairing.ts) ; cachée, une seule annonce : l'expiration fait le reste.
+  function noteVisible() {
+    fetch("/local/visible", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ visible: document.visibilityState === "visible" }),
+    }).catch(() => {});
+  }
   async function refresh() {
     try {
+      if (document.visibilityState === "visible") noteVisible();
       const s = await (await fetch("/local/status")).json();
       // Mise à jour posée : le nouveau compagnon répond avec une autre version, la page se recharge.
       if (version !== null && s.version !== version) return location.reload();
@@ -1448,6 +1457,7 @@ ${FAVICON}
   refresh();
   loadPanel();
   setInterval(refresh, 1500);
+  document.addEventListener("visibilitychange", () => (document.visibilityState === "visible" ? refresh() : noteVisible()));
 </script>
 </body>
 </html>

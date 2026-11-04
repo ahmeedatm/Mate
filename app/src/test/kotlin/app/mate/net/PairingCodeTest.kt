@@ -21,6 +21,11 @@ class PairingCodeTest {
     }
 
     @Test
+    fun `code lu chiffre par chiffre`() {
+        assertEquals("1 2 3 4 5 6", PairingCode.spoken(PairingCode.spaced("123456")))
+    }
+
+    @Test
     fun `un autre certificat donne un autre code`() {
         assertNotEquals(PairingCode.code("aa".repeat(32), "t", "o"), PairingCode.code("bb".repeat(32), "t", "o"))
     }

@@ -68,7 +68,7 @@ namespace Mate
                 case "locked": return SessionLocked();
                 case "screen": return ScreenPreview(Int(req, "width", 640));
                 case "pointer": return Pointer(req);
-                case "alert": Alert(Str(req, "title"), Str(req, "text")); return true;
+                case "notify": Notify(Str(req, "title"), Str(req, "text")); return true;
                 case "clipget": return ClipboardGet();
                 case "clipseq": return ClipboardSequence();
                 case "clipset": ClipboardSetText(Str(req, "text")); return true;

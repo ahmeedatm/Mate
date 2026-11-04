@@ -110,6 +110,7 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     (method === "POST" &&
       (url === "/system/accessibility" ||
         url === "/local/pair" ||
+        url === "/local/visible" ||
         url === "/local/tablet/update" ||
         url === "/local/tablet/ring" ||
         url === "/local/tablet/template")) ||

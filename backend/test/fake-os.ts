@@ -102,8 +102,8 @@ function write(next: FakeState) {
 }
 
 function record(fn: string, ...args: unknown[]) {
-  // Comme src/os.ts : hors Mac et Windows, toute action répond 501 (sauf alert, sans effet, et runShortcut, propre au Mac).
-  if (!canControl && fn !== "alert" && fn !== "runShortcut") unsupported();
+  // Comme src/os.ts : hors Mac et Windows, toute action répond 501 (sauf notify, sans effet, et runShortcut, propre au Mac).
+  if (!canControl && fn !== "notify" && fn !== "runShortcut") unsupported();
   const call = `${fn} ${args[0] ?? ""}`;
   if (read().fail?.some((f) => f === fn || (f.includes(" ") && call.startsWith(f)))) throw new Error(`${fn} a échoué (test)`);
   // Arguments facultatifs absents : retirés, comme ils le seraient une fois passés en JSON.
@@ -462,6 +462,6 @@ export async function systemCommand(command: SystemCommand) {
   record("systemCommand", command);
 }
 
-export async function alert(title: string, text: string) {
-  record("alert", title, text);
+export async function notify(title: string, text: string) {
+  record("notify", title, text);
 }

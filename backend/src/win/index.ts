@@ -519,9 +519,9 @@ export async function keepAwake(on: boolean): Promise<void> {
   await call("awake", { on });
 }
 
-/** Message au premier plan (code d'appairage), sans attendre qu'il soit fermé. */
-export async function alert(title: string, text: string) {
-  await call("alert", { title, text });
+/** Notification Windows (demande d'appairage), sans attendre qu'elle disparaisse. */
+export async function notify(title: string, text: string) {
+  await call("notify", { title, text });
 }
 
 /** Pavé tactile : opération `pointer` du pilote (SendInput). */

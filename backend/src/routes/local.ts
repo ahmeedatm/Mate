@@ -14,7 +14,7 @@ import { isLocalRequest } from "../net-guard.ts";
 import { LOCAL_PAGE } from "../local-page.ts";
 import { WEB_FILES } from "../web-style.ts";
 import { accessibility, openTarget } from "../os.ts";
-import { identity, lanAddresses, pendingCode } from "../pairing.ts";
+import { identity, lanAddresses, notePageVisible, pendingCode, waiting } from "../pairing.ts";
 import { mcpInfo } from "./mcp.ts";
 import { sendToTablet, tabletStatus, THEMES, type TabletSettings } from "../tablet.ts";
 
@@ -43,8 +43,26 @@ export default async function localRoutes(app: FastifyInstance) {
     return reply.type("text/plain; charset=utf-8").send(fs.createReadStream(LICENCES_FILE));
   });
 
+  /**
+   * Page affichée au premier plan = cet ordinateur « attend une tablette » (la tablette le choisit, src/pairing.ts).
+   * Page locale seulement (voir `isLocalPage` dans server.ts), corps JSON : pas envoyable par un autre site.
+   */
+  app.post<{ Body: { visible: boolean } }>(
+    "/local/visible",
+    {
+      schema: {
+        body: { type: "object", required: ["visible"], additionalProperties: false, properties: { visible: { type: "boolean" } } },
+      },
+    },
+    async (req) => {
+      notePageVisible(req.body.visible);
+      return { waiting: waiting().waiting };
+    },
+  );
+
   app.get("/local/status", async () => ({
     ...identity(),
+    waiting: waiting().waiting,
     accessibility: await accessibility().catch(() => null),
     addresses: config.loopbackOnly ? ["127.0.0.1"] : lanAddresses(),
     tablet: tabletStatus().connected,

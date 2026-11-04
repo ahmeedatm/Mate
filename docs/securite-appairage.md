@@ -28,7 +28,7 @@ tablette                                   ordinateur
   nombre secret t, engagement H(t)
   ── POST /pair/request {commit: H(t)} ──▶  nombre o (après l'engagement)
   ◀────────── {request, nonce: o} ───────
-  ── POST /pair/reveal {nonce: t} ───────▶  vérifie H(t) ; ouvre la page locale
+  ── POST /pair/reveal {nonce: t} ───────▶  vérifie H(t) ; notification système
   affiche code(F_vu, t, o)                  attend code(F, t, o) sur http://127.0.0.1:3000/
                                             l'utilisateur saisit le code → POST /local/pair
   ── POST /pair/confirm (chaque seconde) ▶  {waiting} puis {token, fingerprint, …}
@@ -39,6 +39,12 @@ tablette                                   ordinateur
 
 Un intercepteur montre son propre certificat à la tablette : les deux codes diffèrent, l'ordinateur refuse, le jeton n'est jamais donné. L'engagement l'empêche d'essayer des nombres jusqu'à tomber sur le même code : une chance sur un million par appairage, trois essais par code, deux minutes, cinq demandes par adresse et par cinq minutes. La saisie (`/local/pair`) n'est acceptée que depuis la page locale (127.0.0.1, nom d'hôte local, corps JSON).
 
+## Quel ordinateur la tablette prend
+
+La tablette ne montre pas de liste. Elle prend l'ordinateur qui « attend une tablette » : sa page locale est au premier plan (la page envoie `POST /local/visible {visible}`, réservé à la page locale comme `/local/pair` : corps JSON, hôte local, pas envoyable par un autre site ; l'état vaut 5 s, `waiting` dans `src/pairing.ts`). La réponse à la recherche UDP porte `waiting` et `waitingMs`, et la tablette garde celui dont la page est ouverte depuis le moins longtemps. Une notification système (`os.notify`) prévient l'ordinateur à la demande. Ce choix ne donne aucune confiance : un faux « j'attends » sur le réseau fait seulement demander un code à une mauvaise adresse, et son certificat ne produit pas le code que l'utilisateur saisit sur le vrai ordinateur (aucune demande en attente là-bas, saisie refusée). Le protocole ci-dessus ne change pas.
+
+Blocage possible : un appareil du réseau qui répond « j'attends » en permanence (`waitingMs` à 0) est pris en premier et peut répondre « en attente » à `/pair/confirm` sans fin. Bornes : la tablette n'attend jamais plus que `expiresInMs` de `/pair/reveal` (au plus 2 minutes, borné de son côté), puis affiche « Code expiré » ; l'ordinateur en cause est écarté jusqu'à un toucher sur le message ou un changement de sa page (le faux, qui ne change jamais, reste écarté), et la recherche prend alors un autre ordinateur qui attend. Même règle après trois codes faux ou une connexion perdue : jamais de relance seule, donc pas de notification répétée sur l'ordinateur.
+
 ## Limites connues
 
 - Le WiFi transporte toujours des données lisibles par l'ordinateur lui-même : la protection vaut contre les autres appareils du réseau, pas contre un logiciel malveillant installé sur l'ordinateur.
@@ -48,4 +54,4 @@ Un intercepteur montre son propre certificat à la tablette : les deux codes dif
 
 ## Tests
 
-Backend : `test/pairing.test.ts` (protocole, intercepteur simulé), `test/tls.test.ts` (certificat, HTTPS, HTTP fermé sur le réseau, appairage en HTTPS), `test/api.test.ts` (appairage en local), `test/pointer*.test.ts`, `e2e/local-page.spec.ts` (saisie du code), contrôle « appairage par code » de `qa/sanity.ts`. Tablette : `PairingCodeTest`, `PinningTest`, `PointerChannelTest`, `ConnectionTest`, `ComputersTest`. Vérifié le 29/10/2026 sur la tablette 4.2 et un Mac : appairage en HTTPS par l'adresse saisie, ancien appairage en clair signalé « à réappairer », Accueil chargé par le canal épinglé.
+Backend : `test/pairing.test.ts` (protocole, intercepteur simulé, « attend une tablette »), `test/local-waiting.test.ts` (`/local/status?visible`), `test/tls.test.ts` (certificat, HTTPS, HTTP fermé sur le réseau, appairage en HTTPS), `test/api.test.ts` (appairage en local), `test/pointer*.test.ts`, `e2e/local-page.spec.ts` (saisie du code), contrôle « appairage par code » de `qa/sanity.ts`. Tablette : `DiscoveryTest` (`pickWaiting`), `PairingCodeTest`, `PinningTest`, `PointerChannelTest`, `ConnectionTest`, `ComputersTest`. Vérifié le 29/10/2026 sur la tablette 4.2 et un Mac : appairage en HTTPS par l'adresse saisie, ancien appairage en clair signalé « à réappairer », Accueil chargé par le canal épinglé.
