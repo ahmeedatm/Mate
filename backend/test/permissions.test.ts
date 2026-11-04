@@ -353,6 +353,30 @@ describe("filtre des ordres AppleScript", () => {
     assert.equal(reads.length, 2);
   });
 
+  it("enregistrement de l'écran : lu avec le même état, relu au plus toutes les 10 s, tout de suite après refresh", async () => {
+    let screen = false;
+    let clock = 0;
+    const g = createAutomationGate(fake({ status: async () => ({ accessibility: true, screen, automation: {} }) }).deps, () => clock);
+    assert.equal(await g.screenAllowed(), false);
+    screen = true;
+    clock += 9_000;
+    assert.equal(await g.screenAllowed(), false);
+    clock += 2_000;
+    assert.equal(await g.screenAllowed(), true);
+    screen = false;
+    g.refresh();
+    assert.equal(await g.screenAllowed(), false);
+  });
+
+  it("enregistrement de l'écran : inconnu (null) tant que l'utilitaire n'a rien dit, même hors appli portable", async () => {
+    const { gate: g } = gate(null);
+    assert.equal(await g.screenAllowed(), null);
+    const off = gate({ [SE]: "granted" }, { supported: false });
+    assert.equal(await off.gate.screenAllowed(), true);
+    const missing = gate(null, { available: () => false });
+    assert.equal(await missing.gate.screenAllowed(), null);
+  });
+
   it("applis refusées : erreur 409 qui nomme l'appli", async () => {
     const { gate: g } = gate({ [SE]: "denied", "com.spotify.client": "not-asked", "com.apple.Music": "denied" });
     const status = (e: unknown) => (e as { statusCode?: number }).statusCode;

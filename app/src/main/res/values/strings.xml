@@ -1543,6 +1543,10 @@
     <string name="widget_metrics_empty">Écris tes commandes dans metrics.json, dans le dossier Mate de l\'ordinateur</string>
     <string name="widget_metrics_none">—</string>
     <string name="widget_metrics_unavailable">%1$s : indisponible</string>
+    <string name="widget_screen">Écran de l\'ordinateur</string>
+    <string name="widget_screen_desc">L\'écran de l\'ordinateur en petit, remis à jour toutes les 1,5 s ; chaque image est lue puis oubliée</string>
+    <string name="widget_screen_loading">Lecture de l\'écran…</string>
+    <string name="widget_screen_image">Aperçu de l\'écran de l\'ordinateur</string>
     <string name="widget_pipelines">Pipelines</string>
     <string name="widget_pipelines_desc">Les pipelines planifiés que tu suis et ceux de tes MR, avec leurs stages</string>
     <string name="pipelines_empty">Aucun pipeline</string>

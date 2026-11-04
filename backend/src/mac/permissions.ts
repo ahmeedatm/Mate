@@ -280,7 +280,7 @@ export function createPermissions(deps: Deps, onRequested: () => void = () => au
       }),
       mac("screen", status ? (status.screen ? "granted" : falseState("screen")) : unknown, {
         title: "Enregistrement de l'écran",
-        why: "Pour lire le titre des fenêtres ouvertes et les montrer sur la tablette. Aucune image de l'écran n'est enregistrée.",
+        why: "Pour lire le titre des fenêtres ouvertes et montrer l'écran en petit sur la tablette. Aucune image de l'écran n'est enregistrée.",
         essential: false,
         appear:
           "macOS affiche une fenêtre : « Mate » souhaite enregistrer l'écran. Clique sur Ouvrir les Réglages Système, puis active « Mate ».",
@@ -345,6 +345,8 @@ export function createAutomationGate(deps: Pick<Deps, "supported" | "status" | "
   const bundles = [SYSTEM_EVENTS, ...OPTIONAL_APPS.map((a) => a.bundle)];
   const known = new Map<string, string>();
   let unfiltered = false;
+  /** Enregistrement de l'écran, dernier état lu ; null tant que l'utilitaire n'a rien dit. */
+  let screen: boolean | null = null;
   let readAt = -Infinity;
   let pending: Promise<void> | undefined;
 
@@ -355,6 +357,7 @@ export function createAutomationGate(deps: Pick<Deps, "supported" | "status" | "
       status = (await deps.status(bundles)) ?? status;
     }
     unfiltered = !status && !deps.available();
+    if (status) screen = status.screen === true;
     for (const [bundle, value] of Object.entries(status?.automation ?? {})) if (value !== "closed") known.set(bundle, value);
     readAt = now();
   }
@@ -369,6 +372,15 @@ export function createAutomationGate(deps: Pick<Deps, "supported" | "status" | "
       if (!deps.supported) return true;
       if (now() - readAt > 10_000) await (pending ??= read().finally(() => (pending = undefined)));
       return unfiltered || known.get(bundle) === "granted";
+    },
+
+    /**
+     * « Enregistrement de l'écran » (aperçu de l'écran) : sans elle, macOS ne rend que le fond d'écran. Même état, mêmes
+     * 10 s. Jamais de filtre ouvert : null (utilitaire absent ou en panne, rien de lu) = on ne sait pas, l'appelant refuse.
+     */
+    async screenAllowed(): Promise<boolean | null> {
+      if (now() - readAt > 10_000) await (pending ??= read().finally(() => (pending = undefined)));
+      return screen;
     },
 
     /** Noms AppleScript (« Spotify », « Google Chrome ») parmi `names` qui peuvent être pilotés. Nom inconnu : écarté. */
