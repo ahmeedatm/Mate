@@ -47,7 +47,6 @@ adb shell dumpsys account | grep Accounts            # Accounts: 0
 adb shell dpm set-device-owner app.mate/.kiosk.KioskAdminReceiver
 # Accessibilité malgré le kiosque : TalkBack et son raccourci des touches de volume.
 adb shell pm grant app.mate android.permission.WRITE_SECURE_SETTINGS
-adb shell am start -n app.mate/app.mate.MainActivity
 ```
 
    **Accessibilité** : en kiosque, Paramètres est inaccessible, donc ni TalkBack ni la taille du texte ne se règlent dans Android. La permission accordée ci-dessus (seulement par adb : un device owner ne peut pas se la donner) permet à Mate de régler au démarrage le raccourci d'Android sur TalkBack (maintenir les deux touches de volume 3 secondes : utilisable sans voir l'écran, kiosque compris, sans la boîte de première utilisation) et d'activer TalkBack depuis Réglages > Accessibilité. La taille du texte se règle au même endroit (propre à l'appli, sans permission). Sans la permission, la carte le dit et le raccourci reste à régler à la main. Garder TalkBack (`com.google.android.marvin.talkback`, Android Accessibility Suite) : ne jamais le désactiver à l'étape suivante.
@@ -69,7 +68,13 @@ done
 
    Garder : Launcher3 (secours hors kiosque), Google TTS, Play Services, WebView, TalkBack.
 
-6. Brancher le WiFi seulement maintenant.
+6. Lancer Mate. Au premier lancement, Mate coupe adb (voir plus bas) : tout `adb` de l'installation doit donc passer avant.
+
+```bash
+adb shell am start -n app.mate/app.mate.MainActivity
+```
+
+7. Brancher le WiFi seulement maintenant.
 
 Une fois device owner, Mate **masque l'agent de provisionnement et le MDM du constructeur** (`setApplicationHidden` : invisibles,
 inactifs, insensibles à « Réinitialiser les préférences des applis ») et **bloque toute installation et désinstallation d'appli**, adb
@@ -81,7 +86,7 @@ La carte **Kiosque** de Réglages est cachée à l'utilisateur : appui long sur 
 `TECH_CODE`, la release s'arrête sans lui). Elle disparaît en quittant Réglages.
 Micro et caméra sont accordés d'office (`setPermissionGrantState`) : en kiosque, un refus serait sans retour.
 Heure et fuseau automatiques imposés à chaque passage en kiosque (`setGlobalSetting` AUTO_TIME / AUTO_TIME_ZONE) : une tablette sortie du stock a souvent une heure fausse.
-Autres réglages d'Android de la carte Kiosque (code technicien), car Paramètres est inaccessible : **Bluetooth** (éteint d'usine ; `device/Bluetooth`, permissions `BLUETOOTH`, `BLUETOOTH_ADMIN`, `BLUETOOTH_CONNECT`, l'appairage d'une enceinte se fait dans le réglage Bluetooth d'Android), **Paysage fixe** (`Prefs.landscapeLocked`, `Screen.applyOrientation` : un seul sens de paysage au lieu des deux du capteur), **Anti-sortie du kiosque** (`Kiosk.lockExit` : `no_factory_reset` et `no_safe_boot`, coupé par défaut, rétabli à chaque passage en kiosque, levé par « Retirer le mode kiosque » ; avec lui, la réinitialisation d'usine de la section 2 passe par le mode recovery matériel), **Menu du bouton marche/arrêt** (`Kiosk.applyLockTaskFeatures` : `LOCK_TASK_FEATURE_GLOBAL_ACTIONS`, coupé par défaut), **Débogage USB** (`Kiosk.lockDebugging` : `no_debugging_features`, posé à chaque passage en kiosque, debug comme release, donc adb se coupe au premier lancement après `am start` ; l'interrupteur lève la restriction et rallume adb, `setGlobalSetting` ADB_ENABLED ; levé aussi par « Retirer le mode kiosque ») et le bouton **Redémarrer** (`Kiosk.reboot`, avec confirmation ; le kiosque revient seul au démarrage).
+Autres réglages d'Android de la carte Kiosque (code technicien), car Paramètres est inaccessible : **Bluetooth** (éteint d'usine ; `device/Bluetooth`, permissions `BLUETOOTH`, `BLUETOOTH_ADMIN`, `BLUETOOTH_CONNECT`, l'appairage d'une enceinte se fait dans le réglage Bluetooth d'Android), **Paysage fixe** (`Prefs.landscapeLocked`, `Screen.applyOrientation` : un seul sens de paysage au lieu des deux du capteur), **Anti-sortie du kiosque** (`Kiosk.lockExit` : `no_factory_reset` et `no_safe_boot`, coupé par défaut, rétabli à chaque passage en kiosque, levé par « Retirer le mode kiosque » ; avec lui, la réinitialisation d'usine de la section 2 passe par le mode recovery matériel), **Menu du bouton marche/arrêt** (`Kiosk.applyLockTaskFeatures` : `LOCK_TASK_FEATURE_GLOBAL_ACTIONS`, coupé par défaut), **Débogage USB** (`Kiosk.lockDebugging` : `no_debugging_features`, posé à chaque passage en kiosque, debug comme release, donc adb se coupe au premier lancement après `am start` : les commandes `adb` de la procédure d'installation (section 4, étapes 4 et 5) passent avant, ensuite il faut l'interrupteur ; l'interrupteur lève la restriction et rallume adb, `setGlobalSetting` ADB_ENABLED ; levé aussi par « Retirer le mode kiosque ») et le bouton **Redémarrer** (`Kiosk.reboot`, avec confirmation ; le kiosque revient seul au démarrage).
 Après une mise à jour de l'appli (adb ou Réglages > Mises à jour), Android l'arrête et le verrouillage avec elle : `kiosk/UpdatedReceiver` (`MY_PACKAGE_REPLACED`) la relance aussitôt (kiosque revenu en ~4 s). Pendant ces secondes, Android affichait son propre accueil (Launcher3), utilisable : en kiosque, Mate masque les accueils du système (`Kiosk.hideLaunchers`, sauf l'accueil de secours de `com.android.settings`, qui attend sur un écran vide) et les rend visibles quand le kiosque est suspendu ou retiré.
 Pas d'écran de verrouillage après une mise en veille (`setKeyguardDisabled`, rétabli par « Retirer le mode kiosque »).
 

@@ -172,6 +172,8 @@ adb reverse tcp:3000 tcp:3000            # la tablette joint le backend de l'ord
 adb shell am start -n app.mate/app.mate.MainActivity
 ```
 
+Tablette en kiosque : adb y est coupé, activer « Débogage USB » d'abord (Réglages > appui long sur le titre > code technicien, voir `docs/kiosque.md`).
+
 `adb reverse` est à relancer après chaque rebranchement du câble. En USB, ajouter l'ordinateur avec « Saisir l'adresse » : `127.0.0.1` (appairage par code comme en WiFi).
 
 En WiFi, rien à configurer au build : Réglages > Ordinateurs > Ajouter (voir Installation). Depuis l'**émulateur**, comme en USB : `adb reverse tcp:3000 tcp:3000` puis « Saisir l'adresse » `127.0.0.1` (la recherche WiFi ne traverse pas l'émulateur ; l'appli n'envoie pas son jeton en clair à `10.0.2.2`).
