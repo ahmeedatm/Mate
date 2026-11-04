@@ -127,11 +127,22 @@ export function openAppExe(windows: { app: string; exe: string }[], name: string
   return windows.find((w) => w.app === name && /^[a-z]:\\.+\.exe$/i.test(w.exe))?.exe;
 }
 
+/** Fenêtres lues pour les icônes : une lecture partagée, gardée 10 s (une tuile sans appli ouverte ne la relance pas à chaque affichage). */
+const OPEN_FOR_ICONS_MS = 10_000;
+let openForIcons: { at: number; list: Promise<RawOpen | undefined> } | undefined;
+
+function openWindowsForIcons() {
+  if (!openForIcons || Date.now() - openForIcons.at > OPEN_FOR_ICONS_MS) {
+    openForIcons = { at: Date.now(), list: call<RawOpen>("allwindows", { action: "list" }).catch(() => undefined) };
+  }
+  return openForIcons.list;
+}
+
 /** Icône de l'appli du menu Démarrer, sinon celle du programme de sa fenêtre ouverte. */
 export async function appIcon(name: string, out: string): Promise<boolean> {
   const app = await findApp(name);
   if (app) return call<boolean>("icon", { id: app.id, out, size: 96 }).catch(() => false);
-  const open = await call<RawOpen>("allwindows", { action: "list" }).catch(() => undefined);
+  const open = await openWindowsForIcons();
   const exe = open && openAppExe(open.windows, name);
   if (!exe) return false;
   return call<boolean>("icon", { path: exe, out, size: 96 }).catch(() => false);

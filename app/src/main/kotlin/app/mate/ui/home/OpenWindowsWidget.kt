@@ -6,7 +6,7 @@ import app.mate.ui.OpenWindowsView
 
 /**
  * Les fenêtres de l'ordinateur sur un profil, comme l'onglet Ouvertes du Deck. Glisser une fenêtre sur un autre écran
- * la déplace, la garder dans la bande du bas la ferme : le widget garde l'appui long et le balayage, sinon la grille
+ * la déplace, la garder sur la corbeille, en bas des écrans, la ferme : le widget garde l'appui long et le balayage, sinon la grille
  * entrerait en mode Modifier ou changerait de profil.
  */
 class OpenWindowsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {

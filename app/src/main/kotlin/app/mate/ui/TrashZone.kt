@@ -55,7 +55,8 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
         bin.apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            background = LayerDrawable(arrayOf(frame, fill))
+            // Fond opaque d'abord : posée sur les cartes, une surface en verre (Hush, Spider-Man) les laisserait transparaître.
+            background = LayerDrawable(arrayOf(rounded(R.attr.c_bg), frame, fill))
             alpha = 0f
         }
         icon.setImageResource(R.drawable.ic_delete)

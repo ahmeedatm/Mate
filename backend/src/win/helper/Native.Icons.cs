@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 
 namespace Mate
 {
@@ -29,8 +30,9 @@ namespace Mate
         /** Appli du menu Démarrer (`id`), ou programme (`exePath`, .exe local) pour un jeu ou un lanceur qui n'y est pas. */
         static bool AppIcon(string id, string exePath, string outPath, int size)
         {
-            if (exePath != null && !(Path.IsPathRooted(exePath) && !exePath.StartsWith("\\\\")
-                && exePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && File.Exists(exePath))) return false;
+            // Même règle que openAppExe (win/index.ts) : C:\…\x.exe sur un disque fixe, fichier présent.
+            if (exePath != null && !(Regex.IsMatch(exePath, @"^[A-Za-z]:\\.+\.exe$", RegexOptions.IgnoreCase)
+                && new DriveInfo(exePath.Substring(0, 1)).DriveType == DriveType.Fixed && File.Exists(exePath))) return false;
             IShellItemImageFactory factory;
             SHCreateItemFromParsingName(exePath ?? "shell:AppsFolder\\" + id, IntPtr.Zero, typeof(IShellItemImageFactory).GUID, out factory);
             IntPtr hbmp;

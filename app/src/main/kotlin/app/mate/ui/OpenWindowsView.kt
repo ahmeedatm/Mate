@@ -424,7 +424,7 @@ class OpenWindowsView @JvmOverloads constructor(
         const val POLL_MS = 5_000L
         const val TRASH_DP = 84
         const val TRASH_TIGHT_DP = 56
-        /** Sous cette hauteur (dp), la bande du bas est resserrée. */
+        /** Sous cette hauteur (dp), la corbeille est resserrée. */
         const val TIGHT_DP = 360
         /** Le plein écran et la sortie du plein écran sont animés par macOS (~1 s) : relire après. */
         const val SETTLE_MS = 1_500L
