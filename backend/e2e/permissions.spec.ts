@@ -66,6 +66,10 @@ test.describe("autorisations du Mac", () => {
     await expect(dialog.locator('[data-id="full-disk"] button')).toHaveText("Ouvrir les Réglages");
     await expect(dialog.locator('[data-id="automation-com.google.Chrome"] button')).toHaveText("Ouvrir les Réglages");
     await expect(dialog.locator('[data-id="accessibility"] button')).toHaveText("Autoriser");
+    // Un nom accessible propre à chaque ligne : les boutons sont identiques à l'écran.
+    await expect(dialog.getByRole("button", { name: "Autoriser Accessibilité" })).toHaveCount(1);
+    await expect(dialog.getByRole("button", { name: "Ouvrir les Réglages pour Accès complet au disque" })).toHaveCount(1);
+    await expect(dialog.getByRole("button", { name: "Ouvrir les Réglages pour Automatisation de Google Chrome" })).toHaveCount(1);
   });
 
   test("Autoriser explique d'abord ce qui va apparaître, puis déclenche la fenêtre de macOS", async ({ page }) => {
@@ -105,9 +109,12 @@ test.describe("autorisations du Mac", () => {
     // Rappel en tête et ligne dans la barre de gauche.
     await expect(page.locator("#access")).toBeVisible();
     await expect(page.locator("#accessline")).toBeVisible();
+    // Le rappel nomme ce qui manque, au pluriel quand il en manque plusieurs.
+    await expect(page.locator("#accesstitle")).toHaveText("Des autorisations manquent sur ce Mac");
+    await expect(page.locator("#accesstext")).toContainText("Accessibilité, Automatisation de System Events");
     await expect(page.locator("#permsummary")).toContainText("1 autorisation sur 5 accordée");
     await expect(page.locator("#menu a", { hasText: "Autorisations du Mac" })).toHaveAttribute("href", "#autorisations");
-    await page.getByRole("button", { name: "Voir les autorisations" }).first().click();
+    await page.locator("#accessopen").click();
     await expect(page.locator("#permdlg")).toBeVisible();
   });
 
@@ -116,9 +123,12 @@ test.describe("autorisations du Mac", () => {
       page,
       FRESH.map((i) => ({ ...i, state: "granted", action: null })),
     );
+    await page.addInitScript(() => localStorage.setItem("mate-perm-later", "1"));
     await page.goto("/");
     await expect(page.locator("#autorisations")).toBeVisible();
     await expect(page.locator("#permdlg")).toBeHidden();
+    // « Plus tard » d'avant effacé : un futur manque rouvrira l'écran.
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("mate-perm-later"))).toBeNull();
     await expect(page.locator("#access")).toBeHidden();
     await expect(page.locator("#accessline")).toBeHidden();
     await page.locator("#permopen").click();
@@ -133,5 +143,19 @@ test.describe("autorisations du Mac", () => {
     await expect(page.locator("#autorisations")).toBeHidden();
     await expect(page.locator("#permdlg")).toBeHidden();
     await expect(page.locator("#access")).toBeHidden();
+  });
+
+  test("un seul indispensable manque : le rappel est au singulier et le nomme", async ({ page }) => {
+    await simulate(
+      page,
+      FRESH.map((i) => ({
+        ...i,
+        state: i.id === "accessibility" ? "denied" : "granted",
+        action: i.id === "accessibility" ? "request" : null,
+      })),
+    );
+    await page.goto("/");
+    await expect(page.locator("#accesstitle")).toHaveText("Une autorisation manque sur ce Mac");
+    await expect(page.locator("#accesstext")).toContainText("Accessibilité.");
   });
 });

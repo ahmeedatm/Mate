@@ -1,4 +1,4 @@
-// Lanceur et agent d'Mate sur Mac : un seul binaire universel, deux rôles. Compilé par `npm run build:launcher`
+// Lanceur et agent de Mate sur Mac : un seul binaire universel, deux rôles. Compilé par `npm run build:launcher`
 // (swiftc, signature ad hoc), gardé dans le dépôt : le job CI package-mac tourne sous Linux.
 //
 // ATTENTION : toute modification de ce fichier, de l'Info.plist ou de l'icône de l'agent (portable/mac/agent) change son

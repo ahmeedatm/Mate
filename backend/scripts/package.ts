@@ -17,7 +17,7 @@ import { WEB_FILES } from "../src/web-style.ts";
  *
  *   ../dist/Mate-Windows.exe   le lanceur (src/win/Mate.exe) suivi du zip du runtime, node.exe x64
  *   ../dist/Mate-Mac.zip       « Mate.app » (lanceur portable/mac/launcher/Mate) et, dans son runtime, l'agent figé
- *                                 portable/mac/agent/Mate.app qui lance node (autorisations du Mac au nom d'Mate) ;
+ *                                 portable/mac/agent/Mate.app qui lance node (autorisations du Mac au nom de Mate) ;
  *                                 node Apple Silicon et Intel (node/darwin-<arch>/Mate)
  * `npm run package -- windows` ou `-- mac` : un seul des deux. Version : tag de la CI (CI_COMMIT_TAG), sinon 0.0.0.
  *

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Compile le lanceur d'Mate sur Mac (portable/mac/launcher/Launcher.swift, binaire universel arm64 + x86_64) :
+# Compile le lanceur de Mate sur Mac (portable/mac/launcher/Launcher.swift, binaire universel arm64 + x86_64) :
 #   portable/mac/launcher/Mate           exécutable de Mate.app (package.ts), sans signature de bundle : une signature de
 #                                           bundle serait invalide dans l'appli, dont l'Info.plist change à chaque version
 #   portable/mac/agent/Mate.app          le même binaire dans l'agent figé, signé ad hoc en bundle

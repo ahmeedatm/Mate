@@ -119,14 +119,17 @@ ${FAVICON}
   /* Autorisations du Mac : une ligne par autorisation dans la modale, état en pastille. */
   #permdlg .card { background: none; }
   #permdlg .intro { margin: 0 0 8px; }
-  .perm { align-items: flex-start; padding-left: 0; padding-right: 0; }
+  .perm { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 16px; padding-left: 0; padding-right: 0; }
+  .perm .head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+  .perm .head b { font-weight: 500; }
+  .perm > button { grid-column: 2; grid-row: 1; }
+  .perm .why, .perm .appear { grid-column: 1 / -1; }
   .group .perm::before { left: 0; }
   .label + .perm::before { display: none; }
-  .perm .grow b { display: block; font-weight: 500; }
   .perm .state { flex: none; font-size: 13px; line-height: 1; padding: 6px 10px; border-radius: 12px; background: var(--tile-high); color: var(--ink-2); white-space: nowrap; }
   .perm .state.granted { background: var(--ok-soft); color: var(--ok); }
-  .perm .state.denied { background: var(--now-soft); color: var(--ko); }
-  .perm .appear { margin-top: 10px; padding: 12px 14px; border-radius: 14px; background: var(--tile-high); }
+  .perm .state.denied { background: var(--ko-soft); color: var(--ko); }
+  .perm .appear { margin-top: 4px; padding: 2px 0 2px 14px; border-left: 2px solid var(--line); }
   .perm .appear .acts { display: flex; gap: 8px; margin-top: 10px; }
   .permfoot { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
   .permfoot .dim { flex: 1; }
@@ -287,8 +290,8 @@ ${FAVICON}
   <!-- Mac avec une autorisation indispensable qui manque (Accessibilité, System Events) : rappel en tête, même après « Plus tard ». -->
   <div class="card" id="access" hidden>
     <div class="grow">
-      <h2 style="font-size:18px">Une autorisation manque sur ce Mac</h2>
-      <p class="dim">Pour placer les fenêtres et envoyer les raccourcis du deck, macOS doit d'abord donner son accord à Mate.</p>
+      <h2 style="font-size:18px" id="accesstitle">Une autorisation manque sur ce Mac</h2>
+      <p class="dim" id="accesstext">Pour placer les fenêtres et envoyer les raccourcis du deck, macOS doit d'abord donner son accord à Mate.</p>
     </div>
     <button id="accessopen">Voir les autorisations</button>
   </div>
@@ -455,7 +458,7 @@ ${FAVICON}
 
   <!-- Mac seulement (src/mac/permissions.ts) : ce que macOS doit autoriser, état par état. La liste est dans la modale #permdlg. -->
   <section id="autorisations" data-title="Autorisations du Mac" data-icon="lock" data-group="Cet ordinateur" hidden>
-    <div class="sechead"><h2>Autorisations du Mac</h2><span class="dim">macOS demande ton accord pour qu'Mate pilote ce Mac. Les fenêtres affichent « Mate ».</span></div>
+    <div class="sechead"><h2>Autorisations du Mac</h2><span class="dim">macOS demande ton accord pour que Mate pilote ce Mac. Les fenêtres affichent « Mate ».</span></div>
     <div class="card group">
       <div class="row"><span class="grow" id="permsummary"></span><button class="ghost" id="permopen">Voir les autorisations</button></div>
     </div>
@@ -487,7 +490,7 @@ ${FAVICON}
     <header class="cxhead"><h2 id="permtitle">Autorisations du Mac</h2>
       <button class="close" id="permx" aria-label="Fermer"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
     </header>
-    <p class="dim intro">macOS veut ton accord avant qu'Mate pilote ce Mac. Donne les autorisations une par une : chaque fenêtre de macOS affichera « Mate ». Les indispensables d'abord.</p>
+    <p class="dim intro">macOS veut ton accord avant que Mate pilote ce Mac. Donne les autorisations une par une : chaque fenêtre de macOS affichera « Mate ». Les indispensables d'abord.</p>
     <div class="card group" id="permlist"></div>
     <div class="permfoot"><span class="dim" id="permmsg" role="status"></span><button id="permlater">Plus tard</button></div>
   </div>
@@ -1284,6 +1287,12 @@ ${FAVICON}
     const need = permMissing() || statusAccessibility === false;
     $("access").hidden = !need;
     $("accessline").hidden = !need;
+    if (!need) return;
+    // Dit ce qui manque : les indispensables non accordées, sinon l'Accessibilité seule.
+    const names = permItems.filter((p) => p.essential && (p.state === "denied" || p.state === "not-asked")).map((p) => p.title);
+    if (!names.length) names.push("Accessibilité");
+    $("accesstitle").textContent = names.length > 1 ? "Des autorisations manquent sur ce Mac" : "Une autorisation manque sur ce Mac";
+    $("accesstext").textContent = "Pour placer les fenêtres et envoyer les raccourcis du deck, macOS doit d'abord donner son accord à Mate : " + names.join(", ") + ".";
   }
   function permSay(text) { $("permmsg").textContent = text; }
   async function permAsk(id) {
@@ -1301,14 +1310,30 @@ ${FAVICON}
     const row = document.createElement("div");
     row.className = "row perm";
     row.dataset.id = p.id;
-    const grow = document.createElement("div");
-    grow.className = "grow";
+    const head = document.createElement("div");
+    head.className = "head";
     const title = document.createElement("b");
     title.textContent = p.title;
+    const state = document.createElement("span");
+    state.className = "state " + p.state;
+    state.textContent = PERM_STATE[p.state] || p.state;
+    head.append(title, state);
+    row.append(head);
+    if (p.action && permExplain !== p.id) {
+      const button = document.createElement("button");
+      const settings = p.action === "settings";
+      button.className = settings ? "ghost" : "";
+      button.textContent = settings ? "Ouvrir les Réglages" : "Autoriser";
+      // Nom accessible complet : plusieurs lignes ont le même bouton.
+      button.setAttribute("aria-label", (settings ? "Ouvrir les Réglages pour " : "Autoriser ") + p.title);
+      // Autoriser : dit d'abord ce qui va apparaître. Réglages : pas de fenêtre à annoncer, on ouvre.
+      button.onclick = () => (settings ? permAsk(p.id) : ((permExplain = p.id), renderPerms(true)));
+      row.append(button);
+    }
     const why = document.createElement("span");
-    why.className = "dim";
+    why.className = "why dim";
     why.textContent = p.why;
-    grow.append(title, why);
+    row.append(why);
     if (permExplain === p.id) {
       const box = document.createElement("div");
       box.className = "appear";
@@ -1325,19 +1350,7 @@ ${FAVICON}
       cancel.onclick = () => { permExplain = null; renderPerms(true); };
       acts.append(go, cancel);
       box.append(text, acts);
-      grow.append(box);
-    }
-    const state = document.createElement("span");
-    state.className = "state " + p.state;
-    state.textContent = PERM_STATE[p.state] || p.state;
-    row.append(grow, state);
-    if (p.action && permExplain !== p.id) {
-      const button = document.createElement("button");
-      button.className = p.action === "settings" ? "ghost" : "";
-      button.textContent = p.action === "settings" ? "Ouvrir les Réglages" : "Autoriser";
-      // Autoriser : dit d'abord ce qui va apparaître. Réglages : pas de fenêtre à annoncer, on ouvre.
-      button.onclick = () => (p.action === "settings" ? permAsk(p.id) : ((permExplain = p.id), renderPerms(true)));
-      row.append(button);
+      row.append(box);
     }
     return row;
   }
@@ -1367,6 +1380,8 @@ ${FAVICON}
       return;
     }
     $("autorisations").hidden = permItems.length === 0;
+    // Tout est accordé : le « Plus tard » d'avant ne vaut plus, il ne doit pas faire taire un futur manque.
+    if (permItems.length && !permMissing()) { try { localStorage.removeItem("mate-perm-later"); } catch (e) { /* sans stockage : rien à effacer */ } }
     renderPerms(false);
     showAccessBanner();
     if (!permOpened) {
