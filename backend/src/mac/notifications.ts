@@ -16,7 +16,7 @@ import { appNameFromId, type NotificationBatch, type RawNotification } from "../
  * ouvrir ni modifier la base du système. Pas de Mac ici : écrit, non vérifié.
  */
 
-const DB_FILE = path.join(os.homedir(), "Library", "Group Containers", "group.com.apple.usernoted", "db2", "db");
+export const DB_FILE = path.join(os.homedir(), "Library", "Group Containers", "group.com.apple.usernoted", "db2", "db");
 const COCOA_EPOCH_MS = 978_307_200_000;
 const SINCE_FIRST_MS = 24 * 60 * 60 * 1000;
 

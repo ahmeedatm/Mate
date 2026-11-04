@@ -45,6 +45,7 @@ import localProfileRoutes from "./routes/local-profiles.ts";
 import mcpRoutes from "./routes/mcp.ts";
 import notificationRoutes from "./routes/notifications.ts";
 import pairingRoutes from "./routes/pairing.ts";
+import { permissionRoutes } from "./routes/permissions.ts";
 import pluginRoutes from "./routes/plugins.ts";
 import pointerRoutes from "./routes/pointer.ts";
 import presentRoutes from "./routes/present.ts";
@@ -98,7 +99,7 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
   LOOPBACK.has(ip) &&
   LOCAL_HOST.test(host ?? "") &&
   ((method === "GET" &&
-    /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite|panel|update)|web\/figtree-[345]00\.ttf|oauth\/(microsoft|google|gitlab)\/(start|callback)|oauth\/github\/start)?(\?|$)/.test(
+    /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite|panel|update|permissions)|web\/figtree-[345]00\.ttf|oauth\/(microsoft|google|gitlab)\/(start|callback)|oauth\/github\/start)?(\?|$)/.test(
       url,
     )) ||
     (method === "PUT" && (url === "/local/calendar" || url === "/local/tablet/settings")) ||
@@ -111,6 +112,8 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
       (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update" || url === "/local/tablet/ring")) ||
     // Panneau de l'appli portable (routes/portable.ts) : corps JSON exigé, pas envoyable par un autre site.
     (method === "POST" && /^\/local\/(autostart|firewall|capteurs|forget|quit|update)$/.test(url)) ||
+    // Autorisations du Mac (routes/permissions.ts) : corps JSON exigé, identifiant pris dans la liste du compagnon.
+    (method === "POST" && /^\/local\/permissions\/[A-Za-z0-9.-]+\/request$/.test(url)) ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
     (method === "POST" && (url === "/browser/extension" || url === "/browser/extension/commands")) ||
     // Porte MCP des IA de bureau (routes/mcp.ts) : corps JSON exigé par le SDK, pas envoyable par un autre site.
@@ -206,6 +209,7 @@ app.register(localConfigRoutes);
 app.register(localBackupRoutes);
 app.register(mcpRoutes);
 app.register(portableRoutes);
+app.register(permissionRoutes());
 app.register(deckRoutes);
 app.register(pluginRoutes);
 app.register(windowRoutes);
