@@ -1,3 +1,4 @@
+import { automation } from "./permissions.ts";
 import { run, osascript } from "./run.ts";
 import { findAppBundle } from "./apps.ts";
 import {
@@ -497,6 +498,8 @@ async function bundleId(app: string): Promise<string> {
 /** `id` : identifiant de l'appli déjà connu (vue « Ouvertes »), sinon tiré du nom. */
 async function call(app: string, req: Record<string, unknown>, id?: string): Promise<WindowsInfo> {
   id ??= app ? await bundleId(app) : "";
+  // Une appli visée : System Events est interrogé (écrans seuls : non).
+  if (id) await automation.requireSystemEvents();
   const pid = id.startsWith("pid:") ? Number(id.slice(4)) : undefined;
   const raw = await osascript(SCRIPT, [JSON.stringify({ ...req, ...(pid ? { pid } : { bundleId: id }) })], "JavaScript");
   const parsed = JSON.parse(raw) as { running: boolean; windows: AppWindow[]; displays: RawScreen[] };
@@ -531,6 +534,8 @@ const SLOW_APP_SKIP_MS = 60_000;
 
 /** Toutes les applis qui ont une fenêtre affichée (vue « Ouvertes »), la plus en avant d'abord ; `key` : identifiant de bundle. */
 export async function listOpenWindows(): Promise<OpenWindows> {
+  // Sans System Events accordé : les écrans seuls, aucune fenêtre de macOS.
+  if (!(await automation.systemEvents())) return { apps: [], displays: await listDisplays() };
   const now = Date.now();
   for (const [pid, until] of slowApps) if (until < now) slowApps.delete(pid);
   const raw = await osascript(SCRIPT, [JSON.stringify({ op: "all", skip: [...slowApps.keys()] })], "JavaScript");
@@ -679,6 +684,7 @@ export async function movePage(id: number, to: number) {
   if (new Set(pages.map((p) => p.display)).size > 1) throw new Error("Pages de plusieurs écrans : à ranger sur le Mac");
   if (to < 0 || to >= pages.length) throw new Error("Place introuvable sur le Mac");
   if (to === pages.indexOf(target)) return;
+  await automation.requireSystemEvents();
   const shown = pages.find((p) => p.current);
   // Depuis le Bureau, la barre de Mission Control est repliée et le glisser n'est pas fiable (une page lâchée sur une
   // autre les a fusionnées) : on part d'une page plein écran, puis on revient.
