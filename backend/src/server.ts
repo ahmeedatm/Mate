@@ -261,7 +261,7 @@ if (canControl) {
   });
   // NO_TABLET_STATE_WATCH : tests de l'API. Ces deux veilles poussent un ordre à chaque connexion de la tablette, qui
   // arriverait avant celui qu'un test attend.
-  if (!process.env.NO_TABLET_STATE_WATCH) {
+  if (process.env.NO_TABLET_STATE_WATCH !== "1") {
     // Appli au premier plan : la tablette affiche la page d'une appli de sa liste (et en revient).
     startForegroundWatch((event) => void sendToTablet({ type: "foreground", ...event }), {
       connected: () => tabletStatus().connected,
