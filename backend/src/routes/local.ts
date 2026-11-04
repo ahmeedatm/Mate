@@ -6,7 +6,7 @@ import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvi
 import { calendarSources, dayRange, getEvents, invalidateCalendar, saveCalendarUrls, savedCalendarUrls } from "../calendar.ts";
 import { backendRoot, config } from "../config.ts";
 import { clearGithubCache } from "../github.ts";
-import { disconnectGithub, githubAccount, githubClientId, githubLogin, startGithubLogin } from "../github-auth.ts";
+import { disconnectGithub, githubAccountAndLogin, githubClientId, startGithubLogin } from "../github-auth.ts";
 import { clearGitlabCache } from "../gitlab.ts";
 import { jiraConfigured, jiraSite } from "../jira.ts";
 import { disconnectGitlab, finishGitlabLogin, gitlabAccount, gitlabClientId, gitlabLoginUrl } from "../gitlab-auth.ts";
@@ -69,8 +69,7 @@ export default async function localRoutes(app: FastifyInstance) {
     github: {
       available: !!(await githubClientId()),
       token: !!process.env.GITHUB_TOKEN?.trim(),
-      account: (await githubAccount()) ?? null,
-      login: githubLogin(),
+      ...(await githubAccountAndLogin()),
     },
     // Jira se règle dans le .env de l'ordinateur : la page dit seulement s'il est relié, et à quel site.
     jira: { configured: jiraConfigured, site: jiraSite },

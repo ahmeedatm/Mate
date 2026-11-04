@@ -320,7 +320,12 @@ describe("connexion GitHub (device flow)", () => {
     github.tokenFailures = 3;
     github.approve();
     const g = await until(
-      () => status(server),
+      async () => {
+        const x = await status(server);
+        // Un instantané ne montre jamais une connexion « ok » sans son compte.
+        if (x.login?.state === "ok") assert.ok(x.account, "connexion ok sans compte");
+        return x;
+      },
       (x) => x.login?.state !== "waiting",
     );
     assert.deepEqual([g.login, g.account?.username], [{ state: "ok" }, "camille"]);
