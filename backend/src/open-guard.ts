@@ -13,7 +13,7 @@ const SCHEMES: Record<string, RegExp> = {
 };
 
 /** Fichiers qui s'exécutent à l'ouverture (Windows : ShellExecute ; Mac : `open`), dossier Partage compris. */
-const EXECUTABLE = new Set([
+export const EXECUTABLE = new Set([
   ".exe",
   ".com",
   ".scr",

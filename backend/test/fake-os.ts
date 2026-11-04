@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { clipboardUnavailable } from "../src/driver-common.ts";
+import { clipboardUnavailable, mediaUnavailable } from "../src/driver-common.ts";
 import { checkOpenTarget } from "../src/open-guard.ts";
 import type { NotificationBatch, RawNotification } from "../src/notifications.ts";
 import type { Perf } from "../src/perf.ts";
@@ -48,6 +48,8 @@ export type FakeState = {
   notificationsUnavailable?: boolean;
   /** Pas de presse-papiers (session sans bureau) : getClipboard répond 503. */
   clipboardUnavailable?: boolean;
+  /** Pas de lecture en cours (session sans bureau) : mediaSessions répond 503. */
+  mediaUnavailable?: boolean;
   /** Mesure renvoyée par getPerf (sinon une mesure fixe). */
   perf?: Perf;
   /** Fenêtres par appli ; `elsewhere` : sur un autre bureau. */
@@ -268,6 +270,7 @@ export async function pointerGesture(name: string) {
 }
 
 export async function mediaSessions(): Promise<MediaSession[]> {
+  if (read().mediaUnavailable) mediaUnavailable();
   return read().media ?? [];
 }
 
