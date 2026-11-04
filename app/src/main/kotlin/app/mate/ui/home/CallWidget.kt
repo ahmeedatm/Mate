@@ -187,8 +187,8 @@ abstract class CallWidget(
             page == null -> if (read) context.getString(R.string.call_no_page) else ""
             inCall -> listOfNotNull(
                 context.getString(R.string.deck_voice_channel, v?.channel ?: page.app.orEmpty()),
-                // L montre les participants sur leur propre ligne.
-                v?.people?.takeIf { it.isNotEmpty() && placed.size != WidgetSize.L }?.joinToString(", "),
+                // L et XL montrent les participants sur leur propre ligne (noms ou photos).
+                v?.people?.takeIf { it.isNotEmpty() && placed.size != WidgetSize.L && placed.size != WidgetSize.XL }?.joinToString(", "),
             ).joinToString(" · ")
             v?.lobby == true -> context.getString(R.string.call_lobby)
             else -> context.getString(R.string.call_idle)
