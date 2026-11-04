@@ -427,6 +427,8 @@
     <string name="media_session_count">\u0020· %1$d/%2$d</string>
     <string name="media_session_next">%1$s. Toucher pour passer à la lecture suivante</string>
     <string name="media_time">%1$s / %2$s</string>
+    <string name="media_island_open">%1$s. Toucher pour ouvrir le lecteur</string>
+    <string name="media_seek">Avancement du morceau</string>
 
     <!-- Depuis l'ordi (ancien Partage) -->
     <string name="docs_root">Dossier partagé</string>

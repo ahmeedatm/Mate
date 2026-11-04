@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pastille de lecture dessinée sur 32 dp, dans une zone de toucher de 48 dp de haut. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/music_chip_bg"
+    android:insetTop="8dp"
+    android:insetBottom="8dp" />

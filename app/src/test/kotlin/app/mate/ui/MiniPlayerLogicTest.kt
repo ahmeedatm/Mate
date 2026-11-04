@@ -30,4 +30,45 @@ class MiniPlayerLogicTest {
         assertFalse(MiniPlayerLogic.visible(paused, null, 0))
         assertFalse(MiniPlayerLogic.visible(null, 0, 0))
     }
+
+    @Test
+    fun `l'ilot se referme apres cinq secondes sans toucher`() {
+        assertEquals(5_000L, MiniPlayerLogic.AUTO_CLOSE_MS)
+    }
+
+    @Test
+    fun `le temps s'ecrit en minutes, et en heures au-dela`() {
+        assertEquals("0:00", MiniPlayerLogic.clock(0))
+        assertEquals("1:33", MiniPlayerLogic.clock(93_999))
+        assertEquals("1:02:05", MiniPlayerLogic.clock(3_725_000))
+    }
+
+    @Test
+    fun `on avance seulement dans un morceau qui a une duree et le permet`() {
+        val seekable = session("Spotify", playing = true).copy(canSeek = true, durationMs = 255_000)
+        assertTrue(MiniPlayerLogic.seekable(seekable))
+        assertFalse(MiniPlayerLogic.seekable(seekable.copy(canSeek = false)))
+        // Direct (Twitch) : pas de durée.
+        assertFalse(MiniPlayerLogic.seekable(seekable.copy(durationMs = null)))
+        assertFalse(MiniPlayerLogic.seekable(seekable.copy(durationMs = 0)))
+    }
+
+    @Test
+    fun `l'ilot se centre sous la pastille sans sortir de l'ecran`() {
+        // Pastille au centre : l'îlot centré sur elle.
+        assertEquals(400, MiniPlayerLogic.islandLeft(chipCenterX = 630, width = 460, parentWidth = 1280, margin = 16))
+        // Pastille collée à droite : l'îlot s'arrête à la marge.
+        assertEquals(1280 - 16 - 460, MiniPlayerLogic.islandLeft(chipCenterX = 1200, width = 460, parentWidth = 1280, margin = 16))
+        assertEquals(16, MiniPlayerLogic.islandLeft(chipCenterX = 50, width = 460, parentWidth = 1280, margin = 16))
+    }
+
+    @Test
+    fun `le contenu apparait dans la seconde moitie de l'ouverture`() {
+        assertEquals(0f, MiniPlayerLogic.contentAlpha(0f), 0f)
+        assertEquals(0f, MiniPlayerLogic.contentAlpha(0.4f), 0f)
+        assertEquals(1f, MiniPlayerLogic.contentAlpha(1f), 0f)
+        // Ressort qui dépasse un peu : on reste à 1.
+        assertEquals(1f, MiniPlayerLogic.contentAlpha(1.05f), 0f)
+        assertTrue(MiniPlayerLogic.contentAlpha(0.7f) in 0.4f..0.6f)
+    }
 }

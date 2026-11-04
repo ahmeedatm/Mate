@@ -103,15 +103,23 @@ abstract class TopElement(val item: TopItem, protected val host: TopBarHost) {
     }
 }
 
-/** Lecture en cours : la pastille d'avant ([MusicChip]), qui se relit et se cache seule. */
+/** Lecture en cours : la pastille ([MusicChip]), qui se relit et se cache seule ; un toucher ouvre l'îlot. */
 class MusicElement(host: TopBarHost) : TopElement(TopItem.MUSIC, host) {
     val chip = MusicChip(context).apply {
-        setBackgroundResource(R.drawable.music_chip_bg)
-        setPadding(context.dp(5), 0, context.dp(5), 0)
-        layoutParams = LinearLayout.LayoutParams(context.dp(320), context.dp(32))
+        setBackgroundResource(R.drawable.music_chip_hit_bg)
+        setPadding(context.dp(4), 0, context.dp(14), 0)
+        layoutParams = LinearLayout.LayoutParams(context.dp(CHIP_WIDTH_DP), context.dp(CHIP_HEIGHT_DP))
         suppressed = host::musicSuppressed
     }
     override val view: View = chip
+
+    private companion object {
+        /** Plus étroite que l'ancienne (320) : pochette et titre seulement. */
+        const val CHIP_WIDTH_DP = 200
+
+        /** Zone de toucher ; la pastille dessinée fait 32 dp (music_chip_hit_bg). */
+        const val CHIP_HEIGHT_DP = 48
+    }
 }
 
 class ClockElement(host: TopBarHost) : TopElement(TopItem.CLOCK, host) {
