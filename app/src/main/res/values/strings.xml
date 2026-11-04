@@ -1162,6 +1162,8 @@
     <string name="template_confirm_title">Passer au template « %1$s » ?</string>
     <string name="template_confirm">Tes profils, leurs widgets, le bandeau du haut, la barre de gauche et le thème sont remplacés. Tu pourras tout modifier ensuite.</string>
     <string name="template_apply">Remplacer</string>
+    <string name="template_in_call">Appel en cours : choisis le template après l\'appel.</string>
+    <string name="template_busy">Un template est déjà en cours de pose.</string>
     <string name="template_bureau">Bureau</string>
     <string name="template_bureau_desc">La configuration de base : l\'Accueil du jour avec agenda, Focus, applis et raccourcis. Thème Console.</string>
     <string name="template_dev">Dev</string>

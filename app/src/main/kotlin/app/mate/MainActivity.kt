@@ -298,11 +298,12 @@ class MainActivity : AppCompatActivity() {
         welcome = findViewById(R.id.welcome)
         welcome.attach(this) { computer ->
             welcome.hide()
+            // Levé avant onComputerChanged : les plugins (offerPlugins) attendent le choix du template.
+            templatePending = !Prefs.templatesOffered(this)
             onComputerChanged(computer)
             show(Mode.HOME)
             showBanner(getString(R.string.welcome_done, computer.name), 6)
-            // Premier ordinateur : choix du template, puis la visite (après la recréation si un template est posé).
-            TemplatesDialog(this).showFirstUse { maybeTour() }
+            if (templatePending) offerTemplates() else maybeTour()
         }
         plugins = findViewById(R.id.plugins)
         // Fond fixe de Spider-Verse : net ou en filigrane selon l'écran (showWallpaper).
@@ -336,6 +337,13 @@ class MainActivity : AppCompatActivity() {
         // Recréation (changement de thème…) : on garde les ordinateurs dont les plugins ont été repoussés, sinon
         // l'écran « Tes plugins » reviendrait à chaque changement de thème.
         savedInstanceState?.getStringArrayList(STATE_PLUGINS_LATER)?.let { pluginsLater += it }
+        // Tablette déjà appairée avant les templates : pas de choix à lui proposer plus tard, sur une config à elle.
+        if (Computers.all(this).isNotEmpty()) Prefs.setTemplatesOffered(this)
+        // Le choix était ouvert pendant une recréation (rotation, thème) : il revient.
+        if (savedInstanceState?.getBoolean(STATE_TEMPLATE_PENDING) == true) {
+            templatePending = true
+            offerTemplates()
+        }
         val restored = savedInstanceState?.getString(STATE_MODE)?.let(Mode::of)
         // Un template vient d'être posé (Réglages, page de l'ordinateur, premier appairage) : on arrive sur l'Accueil. Les
         // écrans restaurés n'ont pas encore leur vue : les cacher ou les montrer ici les ferait planter, ils sont recréés.
@@ -418,12 +426,31 @@ class MainActivity : AppCompatActivity() {
     private fun offerPlugins() {
         val computer = Computers.active(this) ?: return
         // Jamais par-dessus la visite guidée : proposé à sa fin (tour.onDone).
-        if (computer.id in pluginsLater || welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE || tour.visibility == View.VISIBLE) return
+        if (templatePending || computer.id in pluginsLater || welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE || tour.visibility == View.VISIBLE) return
         lifecycleScope.launch {
             val list = runCatchingCancellable { BackendClient(this@MainActivity).plugins.list() }.getOrNull() ?: return@launch
             if (list.any { it.fresh } && Computers.active(this@MainActivity)?.id == computer.id && welcome.visibility != View.VISIBLE && tour.visibility != View.VISIBLE) {
                 banner.hideNow()
                 plugins.show(computer.name, list, offered = true)
+            }
+        }
+    }
+
+    /** Un choix de template est affiché ou attendu : ni plugins ni visite par-dessus ; gardé à travers une recréation. */
+    private var templatePending = false
+
+    /**
+     * Premier appairage : choix du template, une seule fois ([Prefs.templatesOffered]), `templatePending` levé par
+     * l'appelant. Ensuite les plugins et la visite ; si un template est posé, l'activité est recréée et les reprend
+     * (arrivée sur l'Accueil, [TabletTemplates.takeArrival]).
+     */
+    private fun offerTemplates() {
+        Prefs.setTemplatesOffered(this)
+        TemplatesDialog(this).showFirstUse { applied ->
+            templatePending = false
+            if (!applied) {
+                offerPlugins()
+                maybeTour()
             }
         }
     }
@@ -549,6 +576,7 @@ class MainActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
         outState.putString(STATE_MODE, current.tag)
         outState.putStringArrayList(STATE_PLUGINS_LATER, ArrayList(pluginsLater))
+        outState.putBoolean(STATE_TEMPLATE_PENDING, templatePending)
     }
 
     override fun onDestroy() {
@@ -1223,7 +1251,7 @@ class MainActivity : AppCompatActivity() {
      * plugins : relancée à sa fermeture.
      */
     private fun maybeTour() {
-        if (welcome.visibility == View.VISIBLE || tour.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE) return
+        if (templatePending || welcome.visibility == View.VISIBLE || tour.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE) return
         if (!TourModel.shouldShow(this, Computers.all(this).isNotEmpty())) return
         window.decorView.postDelayed({
             if (welcome.visibility != View.VISIBLE && plugins.visibility != View.VISIBLE && tour.visibility != View.VISIBLE) tour.start()
@@ -1259,6 +1287,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val STATE_MODE = "mode"
+        private const val STATE_TEMPLATE_PENDING = "template_pending"
         private const val STATE_PLUGINS_LATER = "plugins_later"
 
         /** Quitter l'appli de jeu moins longtemps que ça (changer de fenêtre un instant) ne finit pas le jeu. */

@@ -27,9 +27,15 @@ class TemplatesDialog(private val activity: FragmentActivity) {
         list(R.string.template_title, cancelable = true) { confirm(it) }
     }
 
-    /** Après le premier appairage : un choix sans confirmation, Bureau en premier. `onSkip` si l'on garde la config telle quelle. */
-    fun showFirstUse(onSkip: () -> Unit) {
-        list(R.string.template_first_title, cancelable = false, onSkip = onSkip) { apply(it) }
+    /**
+     * Après le premier appairage : un choix sans confirmation, Bureau en premier. `onResolved(applied)` dès que l'on a
+     * choisi (`true`, l'activité va être recréée) ou gardé la config telle quelle (`false`, « Plus tard »).
+     */
+    fun showFirstUse(onResolved: (applied: Boolean) -> Unit) {
+        list(R.string.template_first_title, cancelable = false, onSkip = { onResolved(false) }) {
+            onResolved(true)
+            apply(it)
+        }
     }
 
     private fun list(title: Int, cancelable: Boolean, onSkip: (() -> Unit)? = null, onChoose: (TabletTemplate) -> Unit) {
@@ -83,11 +89,18 @@ class TemplatesDialog(private val activity: FragmentActivity) {
 
     /** Écrans optionnels (GitLab, Jira, Agents) selon ce que l'ordinateur propose ; injoignable : tous posés. */
     private fun apply(template: TabletTemplate) {
+        // Une pose à la fois (ordre distant compris) : la lecture de l'ordinateur peut durer.
+        if (TabletTemplates.busy) return
+        TabletTemplates.busy = true
         activity.lifecycleScope.launch {
-            val features = if (Computers.active(activity) == null) null else runCatchingCancellable { BackendClient(activity).deck.homeFeatures() }.getOrNull()
-            val layout = template.layout({ activity.getString(it) }, activity.getString(R.string.profile_call), features)
-            TabletTemplates.apply(activity, template, layout)
-            activity.recreate()
+            try {
+                val features = if (Computers.active(activity) == null) null else runCatchingCancellable { BackendClient(activity).deck.homeFeatures() }.getOrNull()
+                val layout = template.layout({ activity.getString(it) }, activity.getString(R.string.profile_call), features)
+                TabletTemplates.apply(activity, template, layout)
+                activity.recreate()
+            } finally {
+                TabletTemplates.busy = false
+            }
         }
     }
 }

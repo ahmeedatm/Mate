@@ -23,9 +23,10 @@ class TemplateScreen(
 
 /**
  * Templates de la tablette : une configuration complète prête à l'emploi (profils et widgets, bandeau du haut, barre de
- * gauche, thème), sur les vraies données de l'ordinateur. Contrairement aux personas de la démo, rien n'est gardé : le
- * template remplace la config, on la modifie ensuite. Choisi dans Réglages, depuis la page de l'ordinateur (ordre
- * `template`) ou après le premier appairage. `id` : celui de `TEMPLATES` dans backend/src/tablet.ts.
+ * gauche, thème), sur les vraies données de l'ordinateur. Rien n'est gardé : le template remplace la config, on la
+ * modifie ensuite. Choisi dans Réglages, depuis la page de l'ordinateur (ordre
+ * `template`) ou après le premier appairage. `id`, ordre, titre et description : ceux de
+ * `TEMPLATES` dans backend/src/tablet.ts (vérifié par backend/test/templates-concordance.test.ts).
  */
 enum class TabletTemplate(
     val id: String,
@@ -82,21 +83,28 @@ object TabletTemplates {
     private const val FILE = "companion"
     private const val KEY_ARRIVAL = "template_arrival"
 
+    /** Au-delà, la recréation attendue n'a pas eu lieu : l'arrivée sur l'Accueil est périmée. */
+    const val ARRIVAL_MAX_MS = 60_000L
+
+    /** Vrai pendant la pose d'un template (lecture de ce que l'ordinateur propose comprise) : pas de seconde pose en même temps. Fil principal. */
+    var busy = false
+
     /** Enregistre `layout` (de [TabletTemplate.layout]), le thème, le bandeau et la barre du template. */
-    fun apply(context: Context, template: TabletTemplate, layout: HomeLayout) {
+    fun apply(context: Context, template: TabletTemplate, layout: HomeLayout, now: Long = System.currentTimeMillis()) {
         HomeLayout.save(context, layout)
         Prefs.setTheme(context, template.theme)
         Prefs.setTopBar(context, TopBarModel.serialize(template.topBar))
         Prefs.setRailLabels(context, template.railLabels)
         Prefs.RAIL_TOOLS.forEach { Prefs.setRailTool(context, it, it in template.railTools) }
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean(KEY_ARRIVAL, true).apply()
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putLong(KEY_ARRIVAL, now).apply()
     }
 
-    /** Vrai une seule fois après [apply] : l'activité recréée arrive sur l'Accueil. */
-    fun takeArrival(context: Context): Boolean {
+    /** Vrai une seule fois après [apply], dans la minute : l'activité recréée arrive sur l'Accueil. */
+    fun takeArrival(context: Context, now: Long = System.currentTimeMillis()): Boolean {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        if (!prefs.getBoolean(KEY_ARRIVAL, false)) return false
+        val at = prefs.getLong(KEY_ARRIVAL, -1)
+        if (at < 0) return false
         prefs.edit().remove(KEY_ARRIVAL).apply()
-        return true
+        return now - at <= ARRIVAL_MAX_MS
     }
 }

@@ -102,4 +102,24 @@ class TabletTemplatesTest {
         TabletTemplates.apply(context, TabletTemplate.BUREAU, layout(TabletTemplate.BUREAU, all))
         assertNull(Prefs.theme(context))
     }
+
+    @Test
+    fun `l'arrivee d'un template jamais recree est purgee au bout d'une minute`() {
+        val context = FakeContext()
+        TabletTemplates.apply(context, TabletTemplate.DEV, layout(TabletTemplate.DEV, all), now = 1_000)
+        // Recréation tardive : le drapeau est périmé, jeté et ne sert plus.
+        assertFalse(TabletTemplates.takeArrival(context, now = 1_000 + TabletTemplates.ARRIVAL_MAX_MS + 1))
+        assertFalse(TabletTemplates.takeArrival(context, now = 1_001))
+
+        TabletTemplates.apply(context, TabletTemplate.DEV, layout(TabletTemplate.DEV, all), now = 5_000)
+        assertTrue(TabletTemplates.takeArrival(context, now = 5_000 + TabletTemplates.ARRIVAL_MAX_MS))
+    }
+
+    @Test
+    fun `le choix du premier appairage n'est propose qu'une fois`() {
+        val context = FakeContext()
+        assertFalse(Prefs.templatesOffered(context))
+        Prefs.setTemplatesOffered(context)
+        assertTrue(Prefs.templatesOffered(context))
+    }
 }

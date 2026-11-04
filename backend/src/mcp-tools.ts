@@ -475,7 +475,8 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
       description:
         "Remplace les profils et leurs widgets, le bandeau du haut, la barre de gauche et le thème par ceux d'un template : " +
         TEMPLATES.map((t) => `${t.id} (${t.description})`).join(" ; ") +
-        ". Écrans GitLab, Pipelines, Jira ou Agents sautés si l'ordinateur ne les propose pas. Renvoie le nouvel état, comme profils_lire.",
+        ". Remplace TOUTE la configuration actuelle (profils, widgets, barres, thème), sans retour arrière : à ne faire que sur demande de l'utilisateur. " +
+        "Refusé pendant un appel. Écrans GitLab, Pipelines, Jira ou Agents sautés si l'ordinateur ne les propose pas. Renvoie le nouvel état, comme profils_lire.",
       inputSchema: { template: z.enum(TEMPLATE_IDS as [TemplateId, ...TemplateId[]]) },
       annotations: { destructiveHint: true },
     },

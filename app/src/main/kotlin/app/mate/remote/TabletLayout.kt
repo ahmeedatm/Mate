@@ -49,12 +49,20 @@ internal object TabletLayout {
     suspend fun template(activity: MainActivity, command: JSONObject): JSONObject {
         val id = command.getString("id")
         val template = TabletTemplate.of(id) ?: error("Template inconnu : $id (mettre à jour l'appli ?)")
-        val features = if (Computers.active(activity) == null) null else features(activity)
-        val layout = template.layout({ activity.getString(it) }, activity.getString(R.string.profile_call), features)
-        TabletTemplates.apply(activity, template, layout)
-        val state = read(activity)
-        activity.onRemoteSettings(themeChanged = true)
-        return state
+        if (activity.inCall) error(activity.getString(R.string.template_in_call))
+        if (TabletTemplates.busy) error(activity.getString(R.string.template_busy))
+        TabletTemplates.busy = true
+        try {
+            // Lu une seule fois : une seconde lecture sur un ordinateur lent dépasserait le délai de l'ordre.
+            val features = if (Computers.active(activity) == null) null else features(activity)
+            val layout = template.layout({ activity.getString(it) }, activity.getString(R.string.profile_call), features)
+            TabletTemplates.apply(activity, template, layout)
+            val state = describe(activity, HomeLayout.load(activity), Computers.active(activity)?.id, features ?: HomeFeatures())
+            activity.onRemoteSettings(themeChanged = true)
+            return state
+        } finally {
+            TabletTemplates.busy = false
+        }
     }
 
     private suspend fun read(activity: MainActivity): JSONObject {
