@@ -7,6 +7,7 @@ import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -44,7 +45,7 @@ class OpenWindowsView @JvmOverloads constructor(
     private class Drag(val app: OpenApp, val window: ComputerWindow)
 
     private val map = ScreenMap(context).apply { stretch = true }
-    /** Bande du bas : instructions, ou corbeille pendant un glisser (y garder une fenêtre la ferme). */
+    /** Corbeille sur le bas des écrans pendant un glisser (y garder une fenêtre la ferme). */
     private val trash = TrashZone(context) { payload -> (payload as? Drag)?.let(::close) }
     private val pagesBar = HorizontalScrollView(context)
     private val pagesList = LinearLayout(context)
@@ -77,7 +78,11 @@ class OpenWindowsView @JvmOverloads constructor(
             visibility = GONE
         }
         addView(status, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        addView(map, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+        // Corbeille par-dessus le bas des écrans : ils gardent toute la hauteur, sans bande vide au repos.
+        val screens = FrameLayout(context)
+        screens.addView(map, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        screens.addView(trash, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(TRASH_DP), Gravity.BOTTOM))
+        addView(screens, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         pagesList.orientation = HORIZONTAL
         pagesBar.isHorizontalScrollBarEnabled = false
         pagesBar.addView(pagesList)
@@ -89,7 +94,6 @@ class OpenWindowsView @JvmOverloads constructor(
         elsewhere.addView(elsewhereList)
         elsewhere.visibility = GONE
         addView(elsewhere, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
-        addView(trash, LayoutParams(LayoutParams.MATCH_PARENT, dp(TRASH_DP)).apply { topMargin = dp(12) })
 
         map.onDrop = { payload, display, layout -> (payload as? Drag)?.let { drop(it, display, layout) } }
         map.onDragEnded = {
@@ -102,7 +106,7 @@ class OpenWindowsView @JvmOverloads constructor(
         this.scope = scope
     }
 
-    // Widget de 2 lignes : la bande du bas se resserre, les écrans gardent la place.
+    // Widget de 2 lignes : la corbeille se resserre, elle cache moins les écrans.
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         val wanted = dp(if (h < dp(TIGHT_DP)) TRASH_TIGHT_DP else TRASH_DP)
@@ -420,7 +424,7 @@ class OpenWindowsView @JvmOverloads constructor(
         const val POLL_MS = 5_000L
         const val TRASH_DP = 84
         const val TRASH_TIGHT_DP = 56
-        /** Sous cette hauteur (dp), la bande du bas est resserrée. */
+        /** Sous cette hauteur (dp), la corbeille est resserrée. */
         const val TIGHT_DP = 360
         /** Le plein écran et la sortie du plein écran sont animés par macOS (~1 s) : relire après. */
         const val SETTLE_MS = 1_500L
