@@ -45,6 +45,9 @@ async function downloadAvatar(url: string, out: string): Promise<boolean> {
   if (!res.ok) return false;
   const { data, truncated } = await readCapped(res, AVATAR_MAX_BYTES);
   if (truncated || !data.subarray(0, 4).equals(PNG_SIGNATURE)) return false;
-  await fs.writeFile(out, data);
+  // Écrit à côté puis renommé : une lecture en même temps ne sert jamais une photo à moitié écrite.
+  const tmp = `${out}.${process.pid}.tmp`;
+  await fs.writeFile(tmp, data);
+  await fs.rename(tmp, out);
   return true;
 }

@@ -9,6 +9,7 @@ import { FAKE_TOKEN, SELF_ID, startFakeDiscord, voiceStateOf, type FakeDiscord }
 process.env.DATA_DIR = await fs.mkdtemp(path.join(os.tmpdir(), "companion-discord-"));
 process.env.DISCORD_RPC_RETRY_MS = "50";
 process.env.DISCORD_AUTHORIZE_TIMEOUT_MS = "400";
+process.env.DISCORD_RPC_REQUEST_TIMEOUT_MS = "300";
 const rpc = await import("../src/discord-rpc.ts");
 const { setLogger } = await import("../src/log.ts");
 const storeFile = path.join(process.env.DATA_DIR, "discord.json");
@@ -90,13 +91,26 @@ describe("Discord RPC : autorisation", () => {
     await assert.rejects(fs.access(storeFile));
   });
 
-  it("pas de clic dans le délai : message, la connexion reste ouverte (pas d'erreur affichée dans Discord)", async () => {
+  it("pas de clic dans le délai : message, demande refermée (un clic tardif n'autorise rien)", async () => {
     fake.authorize = "never";
     const pending = rpc.authorizeDiscord();
     await until(() => rpc.discordPhotos() === "waiting");
     await assert.rejects(pending, /Pas de réponse/);
     assert.equal(rpc.discordPhotos(), "off");
-    assert.equal(fake.connections(), 1);
+    await until(() => fake.connections() === 0);
+    await new Promise((r) => setTimeout(r, 200));
+    assert.equal(fake.origins.length, 1);
+  });
+
+  it("un autre programme sur le port (pas Discord) : rien ne lui est envoyé", async () => {
+    await fs.writeFile(storeFile, JSON.stringify({ accessToken: FAKE_TOKEN }));
+    // Faux service qui répond READY sans être Discord.
+    fake.readyData = { v: 1, config: { api_endpoint: "//evil.example/api" } };
+    await rpc.startDiscordRpc();
+    await until(() => fake.origins.length >= 1);
+    await new Promise((r) => setTimeout(r, 150));
+    assert.equal(sent("AUTHENTICATE").length, 0);
+    assert.equal(rpc.discordPhotos(), "off");
   });
 
   it("Discord fermé : message clair", async () => {
@@ -131,6 +145,26 @@ describe("Discord RPC : jeton", () => {
     await new Promise((r) => setTimeout(r, 200));
     assert.equal(fake.origins.length, 1);
     assert.equal(rpc.discordPhotos(), "off");
+  });
+
+  it("Discord lent (pas de réponse à AUTHENTICATE) : jeton gardé, nouvel essai", async () => {
+    fake.silentAuthenticate = true;
+    await fs.writeFile(storeFile, JSON.stringify({ accessToken: FAKE_TOKEN }));
+    await rpc.startDiscordRpc();
+    await until(() => fake.origins.length >= 2);
+    assert.equal(sent("AUTHORIZE").length, 0);
+    assert.equal(JSON.parse(await fs.readFile(storeFile, "utf8")).accessToken, FAKE_TOKEN);
+    fake.silentAuthenticate = false;
+    await until(() => rpc.discordPhotos() === "on");
+  });
+
+  it("jeton rendu mais refusé pendant une autorisation : connexion fermée, rien de gardé", async () => {
+    fake.validTokens.clear();
+    await assert.rejects(rpc.authorizeDiscord(), /accès/);
+    await until(() => fake.connections() === 0);
+    await assert.rejects(fs.access(storeFile));
+    await new Promise((r) => setTimeout(r, 200));
+    assert.equal(fake.origins.length, 1);
   });
 
   it("jeton qui expire dans moins d'un jour : renouvelé en silence", async () => {
@@ -207,6 +241,30 @@ describe("Discord RPC : appel en cours", () => {
     assert.equal(rpc.discordMembers(), undefined);
     await until(() => rpc.discordPhotos() === "on" && rpc.discordMembers() !== undefined);
     assert.equal(sent("AUTHENTICATE").length, 2);
+  });
+
+  it("trames inattendues (faux service sur le port) : ignorées, rien ne plante", async () => {
+    inCall();
+    await authorized();
+    await until(() => rpc.discordMembers() !== undefined);
+    for (const text of ["null", "1", '"x"', "[]", "{", '{"cmd":"DISPATCH","evt":"SPEAKING_START","data":null}']) fake.raw(text);
+    fake.dispatch("SPEAKING_START", { channel_id: "900", user_id: A });
+    await until(() => rpc.discordSpeaking().includes(A));
+  });
+
+  it("salon immense : 50 participants au plus, noms sans caractères de contrôle", async () => {
+    fake.channel = {
+      id: "900",
+      voice_states: Array.from({ length: 80 }, (_, i) => voiceStateOf(`5${String(i).padStart(17, "0")}`, `p\u202e${i}\u0007`)),
+    };
+    await authorized();
+    await until(() => rpc.discordMembers() !== undefined);
+    const members = rpc.discordMembers()!;
+    assert.equal(members.length, 50);
+    assert.equal(members[0].name, "p0");
+    fake.dispatch("VOICE_STATE_CREATE", { channel_id: "900", ...voiceStateOf(C, "carole") });
+    await new Promise((r) => setTimeout(r, 100));
+    assert.equal(rpc.discordMembers()!.length, 50);
   });
 
   it("photo : adresse 64 px sur le CDN, rien pour un inconnu ou sans photo", async () => {

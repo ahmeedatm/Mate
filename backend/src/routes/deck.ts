@@ -1,4 +1,3 @@
-import { withDiscordMembers } from "../discord-rpc.ts";
 import { TILE_SYMBOLS } from "../screens.ts";
 import { createReadStream } from "node:fs";
 import type { FastifyInstance } from "fastify";
@@ -47,6 +46,7 @@ import {
   type PersoKey,
 } from "../perso.ts";
 import type { Layout, WindowTarget } from "../screens.ts";
+import { withDiscordMembers } from "../discord-rpc.ts";
 import { windowTarget } from "./windows.ts";
 
 export const appNameBody = {

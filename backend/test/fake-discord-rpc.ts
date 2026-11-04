@@ -26,6 +26,10 @@ export type FakeDiscord = {
   authorize: "accept" | "refuse" | "never";
   /** Jetons que AUTHENTICATE accepte. */
   validTokens: Set<string>;
+  /** Données de la trame READY (un autre programme sur le port les imiterait mal). */
+  readyData: unknown;
+  /** AUTHENTICATE sans réponse (Discord lent au démarrage). */
+  silentAuthenticate: boolean;
   /** Échéance du jeton rendue par AUTHENTICATE. */
   expires: string;
   /** Appel choisi (`GET_SELECTED_VOICE_CHANNEL`), null hors appel. */
@@ -40,6 +44,8 @@ export type FakeDiscord = {
   avatarHits: string[];
   connections: () => number;
   dispatch: (evt: string, data: unknown) => void;
+  /** Trame texte brute, telle quelle (faux service qui envoie n'importe quoi). */
+  raw: (text: string) => void;
   /** Coupe les connexions ouvertes (Discord qui redémarre), le port reste à l'écoute. */
   drop: () => void;
   close: () => Promise<void>;
@@ -101,6 +107,7 @@ export async function startFakeDiscord(): Promise<FakeDiscord> {
         else if (fake.authorize === "refuse") answer({ code: 5000, message: "OAuth2 Error: access_denied" }, "ERROR");
         return;
       case "AUTHENTICATE":
+        if (fake.silentAuthenticate) return;
         if (fake.validTokens.has(String(frame.args?.access_token)))
           answer({ user: { id: SELF_ID, username: "moi" }, scopes: ["rpc"], expires: fake.expires });
         else answer({ code: 4009, message: "Invalid access token" }, "ERROR");
@@ -133,7 +140,7 @@ export async function startFakeDiscord(): Promise<FakeDiscord> {
       socket.end(Buffer.concat([Buffer.from([0x88, reason.length + 2, 4001 >> 8, 4001 & 0xff]), reason]));
       return;
     }
-    send(socket, { cmd: "DISPATCH", evt: "READY", data: { v: 1, config: { cdn_host: "cdn.discordapp.com" } }, nonce: null });
+    send(socket, { cmd: "DISPATCH", evt: "READY", data: fake.readyData, nonce: null });
     let pending = Buffer.alloc(0);
     socket.on("data", (chunk: Buffer) => {
       pending = Buffer.concat([pending, chunk]);
@@ -158,6 +165,8 @@ export async function startFakeDiscord(): Promise<FakeDiscord> {
     url: `http://127.0.0.1:${port}`,
     authorize: "accept",
     validTokens: new Set([FAKE_TOKEN]),
+    silentAuthenticate: false,
+    readyData: { v: 1, config: { cdn_host: "cdn.discordapp.com", api_endpoint: "//discord.com/api", environment: "production" } },
     expires: new Date(Date.now() + 7 * 86_400_000).toISOString(),
     channel: null,
     received: [],
@@ -166,6 +175,7 @@ export async function startFakeDiscord(): Promise<FakeDiscord> {
     avatarHits: [],
     connections: () => sockets.size,
     dispatch: (evt, data) => sockets.forEach((s) => send(s, { cmd: "DISPATCH", evt, data, nonce: null })),
+    raw: (text) => sockets.forEach((s) => s.write(encode(text))),
     drop: () => sockets.forEach((s) => s.destroy()),
     close: async () => {
       sockets.forEach((s) => s.destroy());
