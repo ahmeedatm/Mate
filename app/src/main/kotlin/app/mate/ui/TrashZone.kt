@@ -19,12 +19,11 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import app.mate.Computers
 import app.mate.R
 import app.mate.audio.Crunch
 
 /**
- * Bande du bas de la vue « Ouvertes » : les instructions au repos, une grande corbeille pendant un glisser.
+ * Corbeille de la vue « Ouvertes », posée sur le bas des écrans : invisible au repos, grande pendant un glisser.
  * Contre les accidents, lâcher dessus ne suffit pas : il faut y garder la fenêtre [ARM_MS] (la corbeille se remplit
  * de rouge, puis tremble, vibre et dit « Lâche pour fermer ») ; ressortir avant remet tout à zéro, et un lâcher trop
  * tôt ne fait rien. Fenêtre avalée : petit croc (son généré, [Crunch]) et « Miam ! ».
@@ -32,7 +31,6 @@ import app.mate.audio.Crunch
  */
 class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) : FrameLayout(context) {
 
-    private val hint = TextView(context)
     private val bin = LinearLayout(context)
     private val icon = ImageView(context)
     private val label = TextView(context)
@@ -40,8 +38,8 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
     private val frame = rounded(R.attr.c_surface)
     private var armed = false
     private var wobble: Animator? = null
-    /** Retour aux instructions après un glisser ; annulé si un autre glisser commence avant. */
-    private val backToHint = Runnable { show(dragging = false) }
+    /** Retour au repos après un glisser ; annulé si un autre glisser commence avant. */
+    private val backToRest = Runnable { show(dragging = false) }
     private val arming = ValueAnimator.ofInt(0, MAX_LEVEL).apply {
         duration = ARM_MS
         addUpdateListener { fill.level = it.animatedValue as Int }
@@ -54,15 +52,6 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
     }
 
     init {
-        hint.apply {
-            setText(if (Computers.active(context)?.os == "mac") R.string.deck_open_hint_mac else R.string.deck_open_hint)
-            textSize = 15f
-            setTextColor(color(R.attr.c_text_dim))
-            gravity = Gravity.CENTER
-            setPadding(dp(16), 0, dp(16), 0)
-        }
-        addView(hint, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-
         bin.apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -83,7 +72,7 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
 
     private fun onDrag(event: DragEvent): Boolean {
         when (event.action) {
-            DragEvent.ACTION_DRAG_STARTED -> { removeCallbacks(backToHint); reset(); show(dragging = true) }
+            DragEvent.ACTION_DRAG_STARTED -> { removeCallbacks(backToRest); reset(); show(dragging = true) }
             DragEvent.ACTION_DRAG_ENTERED -> {
                 label.setText(R.string.trash_hold)
                 tint(R.attr.c_ko)
@@ -94,9 +83,9 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
             DragEvent.ACTION_DROP -> {
                 if (armed) swallow(event.localState) else reset()
             }
-            // Après « Miam ! », on laisse voir la corbeille un instant avant de remettre les instructions.
+            // Après « Miam ! », on laisse voir la corbeille un instant avant de revenir au repos.
             // (Toujours : un glisser annulé pendant que la corbeille tremble la laissait affichée.)
-            DragEvent.ACTION_DRAG_ENDED -> postDelayed(backToHint, if (label.text == context.getString(R.string.trash_done)) DONE_MS else 0)
+            DragEvent.ACTION_DRAG_ENDED -> postDelayed(backToRest, if (label.text == context.getString(R.string.trash_done)) DONE_MS else 0)
         }
         return true
     }
@@ -126,7 +115,6 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
     }
 
     private fun show(dragging: Boolean) {
-        hint.animate().alpha(if (dragging) 0f else 1f).setDuration(FADE_MS).start()
         bin.animate().alpha(if (dragging) 1f else 0f).setDuration(FADE_MS).start()
         if (!dragging) reset()
     }
