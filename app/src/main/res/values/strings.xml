@@ -1001,6 +1001,21 @@
     <string name="theme_contraste">Contraste élevé</string>
     <string name="theme_hush">Hush</string>
     <string name="theme_spiderman">Spider-Verse</string>
+    <string name="theme_clair">Clair</string>
+    <string name="theme_sombre">Sombre</string>
+    <string name="theme_cadran">Cadran</string>
+    <string name="theme_cadran_nuit">Cadran nuit</string>
+    <string name="theme_retro">Rétro</string>
+    <string name="theme_registre">Registre</string>
+    <string name="theme_studio">Studio</string>
+    <string name="theme_maison">Maison</string>
+    <string name="theme_tableau">Tableau</string>
+    <string name="theme_terminal">Terminal</string>
+    <string name="theme_group_console">Console</string>
+    <string name="theme_group_sober">Sobres</string>
+    <string name="theme_group_retro">Rétro</string>
+    <string name="theme_group_ambiances">Ambiances</string>
+    <string name="theme_group_a11y">Accessibilité</string>
     <!-- Accessibilité (lot 2) : aides à la lecture, dans la carte Accessibilité de COMP-50 (ui/ReadingAids.kt) -->
     <string name="a11y_legible_font">Police lisible</string>
     <string name="a11y_legible_font_hint">Atkinson Hyperlegible, lettres faciles à distinguer, un peu plus espacées</string>
