@@ -31,6 +31,7 @@ beforeEach(() => {
   gitlab.pipelines = {};
   gitlab.failedJobs = {};
   gitlab.pipelinesStatus = 200;
+  gitlab.deniedProjects = [];
   gitlab.mrs = { assigned: [project("grp/proj")], review: [] };
   server.clearOsCalls();
 });
@@ -105,6 +106,34 @@ describe("GET /gitlab/pipelines", () => {
     );
   });
 
+  it("dernier pipeline de la branche par défaut, même si son dernier commit n'en a pas (GitLab répond 403 à pipelines/latest)", async () => {
+    gitlab.mrs = { assigned: [project("grp/proj", 1), project("grp/branche", 2)], review: [] };
+    gitlab.pipelines = {
+      "grp/proj": fakePipeline({ id: 7, status: "success" }),
+      "grp/branche": fakePipeline({ id: 8, ref: "feat/x" }),
+    };
+    const { status, json } = await fresh();
+    assert.equal(status, 200);
+    assert.deepEqual(
+      json.pipelines.map((p: any) => [p.project, p.id, p.durationSec]),
+      [["grp/proj", 7, 290]],
+    );
+    assert.ok(rest().some((s) => s.url === "/api/v4/projects/grp%2Fproj/pipelines?ref=main&per_page=1"));
+    assert.ok(!rest().some((s) => s.url.includes("/pipelines/latest")));
+  });
+
+  it("un projet dont la CI est interdite au compte (403) n'a pas de ligne, les autres restent", async () => {
+    gitlab.mrs = { assigned: [project("grp/interdit", 1), project("grp/proj", 2)], review: [] };
+    gitlab.pipelines = { "grp/interdit": fakePipeline({ id: 1 }), "grp/proj": fakePipeline({ id: 2 }) };
+    gitlab.deniedProjects = ["grp/interdit"];
+    const { status, json } = await fresh();
+    assert.equal(status, 200);
+    assert.deepEqual(
+      json.pipelines.map((p: any) => p.project),
+      ["grp/proj"],
+    );
+  });
+
   it("au plus 8 lignes, les projets des MR les plus récentes d'abord", async () => {
     const names = Array.from({ length: 10 }, (_, i) => `grp/p${i}`);
     gitlab.mrs = { assigned: names.map((n, i) => project(n, i)), review: [] };
@@ -138,14 +167,12 @@ describe("GET /gitlab/pipelines", () => {
     assert.equal(gitlab.seen.length, 0);
   });
 
-  it("GitLab refuse l'accès ou répond mal : 502 avec une phrase, jamais 401 ni le jeton", async () => {
+  it("GitLab refuse le jeton ou répond mal : 502 avec une phrase, jamais 401 ni le jeton", async () => {
     gitlab.pipelines = { "grp/proj": fakePipeline() };
-    for (const code of [401, 403]) {
-      gitlab.pipelinesStatus = code;
-      const denied = await fresh();
-      assert.equal(denied.status, 502, String(code));
-      assert.match(denied.json.error, /GitLab refuse l'accès de l'ordinateur/);
-    }
+    gitlab.pipelinesStatus = 401;
+    const denied = await fresh();
+    assert.equal(denied.status, 502);
+    assert.match(denied.json.error, /GitLab refuse l'accès de l'ordinateur/);
     gitlab.pipelinesStatus = 500;
     const broken = await fresh();
     assert.equal(broken.status, 502);
