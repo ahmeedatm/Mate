@@ -1,3 +1,4 @@
+import { automation } from "./permissions.ts";
 import { osascript } from "./run.ts";
 
 /**
@@ -52,6 +53,7 @@ let known: boolean | undefined;
 function controlCenter(want: "get" | "on" | "off"): Promise<boolean> {
   const run = queue.then(async () => {
     if (want === "get" && known !== undefined) return known;
+    await automation.requireSystemEvents();
     known = JSON.parse(await osascript(SCRIPT, [want], "JavaScript")).on as boolean;
     return known;
   });

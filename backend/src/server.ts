@@ -49,6 +49,7 @@ import { permissionRoutes } from "./routes/permissions.ts";
 import pluginRoutes from "./routes/plugins.ts";
 import pointerRoutes from "./routes/pointer.ts";
 import presentRoutes from "./routes/present.ts";
+import screenRoutes from "./routes/screen.ts";
 import portableRoutes from "./routes/portable.ts";
 import systemRoutes from "./routes/system.ts";
 import tabletRoutes from "./routes/tablet.ts";
@@ -107,7 +108,11 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     (method === "PUT" && url === "/local/tablet/layout") ||
     (/^(POST|PUT|DELETE)$/.test(method) && /^\/local\/config\/[a-z0-9/-]+$/.test(url)) ||
     (method === "POST" &&
-      (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update" || url === "/local/tablet/ring")) ||
+      (url === "/system/accessibility" ||
+        url === "/local/pair" ||
+        url === "/local/tablet/update" ||
+        url === "/local/tablet/ring" ||
+        url === "/local/tablet/template")) ||
     // Panneau de l'appli portable (routes/portable.ts) : corps JSON exigé, pas envoyable par un autre site.
     (method === "POST" && /^\/local\/(autostart|firewall|capteurs|forget|quit|update)$/.test(url)) ||
     // Autorisations du Mac (routes/permissions.ts) : corps JSON exigé, identifiant pris dans la liste du compagnon.
@@ -220,6 +225,7 @@ app.register(docRoutes);
 app.register(updateRoutes);
 app.register(browserRoutes);
 app.register(cameraRoutes);
+app.register(screenRoutes);
 app.register(calendarRoutes);
 app.register(taskRoutes);
 app.register(scheduleRoutes);

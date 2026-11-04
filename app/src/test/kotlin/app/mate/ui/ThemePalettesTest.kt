@@ -80,6 +80,14 @@ class ThemePalettesTest {
     }
 
     @Test
+    fun `voile de la veille a la presence et cadre photo, blanc sur noir dans chaque theme, au moins 4,5`() {
+        for (name in all) {
+            assertEquals("$name c_frame_bg", "#FF000000", color(name, "c_frame_bg"))
+            assertTrue("$name c_frame_text sur c_frame_bg : ${ratio(name, "c_frame_text", "c_frame_bg")}", ratio(name, "c_frame_text", "c_frame_bg") >= 4.5)
+        }
+    }
+
+    @Test
     fun `texte sur les aplats et les fonds teintes au moins 4,5`() {
         for (name in imported) {
             for ((fg, bg) in listOf(

@@ -104,7 +104,7 @@ class CompanionUpdate(private val activity: MainActivity) {
     /** Étapes de l'installeur ; faux si la tablette ne sert pas les installeurs (pas de WiFi, appli d'essai). */
     fun showInstallSteps(identity: Identity): Boolean {
         if (app.mate.BuildConfig.TRIAL) return false
-        val address = InstallerService.address() ?: return false
+        val address = InstallerService.link() ?: return false
         val steps = if (identity.os == "windows") R.string.companion_update_steps_windows else R.string.companion_update_steps_mac
         AlertDialog.Builder(activity)
             .setTitle(activity.getString(R.string.companion_update_title, identity.name))

@@ -15,9 +15,16 @@ import java.util.concurrent.TimeUnit
  * Petit serveur HTTP sans dépendance : `GET /` (page d'accueil, voir [InstallerPage]), `GET /installers.json` (liste lue
  * par le panneau de l'appli de l'ordinateur pour se mettre à jour) et `GET /<fichier>` pour les installeurs de
  * `available()`, rien d'autre. Chemins comparés aux noms annoncés : jamais de nom venu du client
- * ouvert tel quel. Pas de jeton : le contenu est public, la tablette ne garde aucun secret.
+ * ouvert tel quel. Tout est derrière [InstallerAccess] : sous `/<code>/…` (`code()`, celui de Bienvenue) ; sinon 404,
+ * identique pour tout chemin, et [FailureLimiter] bloque (429) l'adresse qui multiplie les refus.
  */
-class InstallerHttpServer(private val port: Int, private val dir: File, private val available: () -> List<Installer>) {
+class InstallerHttpServer(
+    private val port: Int,
+    private val dir: File,
+    private val available: () -> List<Installer>,
+    private val code: () -> String?,
+    private val limiter: FailureLimiter = FailureLimiter(),
+) {
 
     @Volatile private var socket: ServerSocket? = null
     private val pool = ThreadPoolExecutor(0, MAX_CLIENTS, 30, TimeUnit.SECONDS, SynchronousQueue()) { r ->
@@ -54,22 +61,29 @@ class InstallerHttpServer(private val port: Int, private val dir: File, private 
             it.soTimeout = READ_TIMEOUT_MS
             it.keepAlive = true
             try {
-                respond(it.getOutputStream(), parse(readHead(it.getInputStream())))
+                respond(it.getOutputStream(), parse(readHead(it.getInputStream())), it.inetAddress.hostAddress.orEmpty())
             } catch (e: java.io.IOException) {
                 Log.i(TAG, "Client parti : ${e.message}")
             }
         }
     }
 
-    private fun respond(out: OutputStream, request: Request?) {
+    private fun respond(out: OutputStream, request: Request?, remote: String) {
         if (request == null) return reply(out, 400, "Bad Request", "Requête illisible.")
+        if (limiter.blocked(remote)) return reply(out, 429, "Too Many Requests", "Trop d'essais, réessaie dans une minute.")
+        val access = InstallerAccess.resolve(request.path, code())
+        if (access == null) {
+            limiter.fail(remote)
+            return reply(out, 404, "Not Found", "Introuvable.")
+        }
         if (request.method != "GET" && request.method != "HEAD") return reply(out, 405, "Method Not Allowed", "Méthode refusée.")
         val installers = available()
-        val file = installers.firstOrNull { "/" + it.file == request.path }
+        val path = access.path
+        val file = installers.firstOrNull { "/" + it.file == path }
         when {
-            request.path == "/" || request.path == "/index.html" ->
-                reply(out, 200, "OK", InstallerPage.render(InstallerPlan.osOf(request.userAgent), installers), head = request.method == "HEAD")
-            request.path == "/installers.json" ->
+            path == "/" || path == "/index.html" ->
+                reply(out, 200, "OK", InstallerPage.render(InstallerPlan.osOf(request.userAgent), installers, access.prefix), head = request.method == "HEAD")
+            path == "/installers.json" ->
                 reply(out, 200, "OK", InstallerPlan.toJson(installers), head = request.method == "HEAD", type = "application/json")
             file != null -> sendFile(out, file, head = request.method == "HEAD")
             else -> reply(out, 404, "Not Found", "Introuvable.")

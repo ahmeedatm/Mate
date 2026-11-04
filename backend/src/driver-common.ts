@@ -37,6 +37,14 @@ export function whenMediaAvailable<T>(result: Promise<T>): Promise<T> {
   });
 }
 
+/** Mac sans l'autorisation « Enregistrement de l'écran » : sans elle, la capture ne montrerait que le fond d'écran. 403, avec la marche à suivre. */
+export function screenDenied(): never {
+  throw Object.assign(
+    new Error("Autorise « Enregistrement de l'écran » pour Mate, dans l'écran « Autorisations du Mac » de l'ordinateur"),
+    { statusCode: 403 },
+  );
+}
+
 /** Volume (0-100) et sourdine à appliquer pour `change` ; monter le volume réactive le son, comme les touches du clavier. */
 export function planAudio(change: AudioChange, current: AudioState): { output?: number; muted?: boolean } {
   const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
