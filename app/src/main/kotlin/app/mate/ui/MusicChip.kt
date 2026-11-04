@@ -24,9 +24,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Lecture en cours de l'ordinateur, dans le header en haut à droite : pochette et titre seulement. Largeur fixe (le
- * header ne bouge pas d'un morceau à l'autre) ; titre trop long : il défile [MARQUEE_REPEAT] fois à chaque morceau, puis
- * s'arrête sur le début, pour ne pas redessiner sans fin sur la tablette. Un toucher ouvre l'îlot ([MusicIsland]) :
+ * Lecture en cours de l'ordinateur, dans le header en haut à droite : pochette et titre seulement, estompés en pause.
+ * Largeur fixe (le header ne bouge pas d'un morceau à l'autre) ; titre trop long : il défile [MARQUEE_REPEAT] fois à
+ * chaque morceau, puis s'arrête sur le début, pour ne pas redessiner sans fin sur la tablette. Un toucher ouvre l'îlot ([MusicIsland]) :
  * titre et artiste en entier, avancement, boutons.
  * Règles du petit lecteur de COMP-56 ([MiniPlayerLogic]) : ce qui joue d'abord, visible pendant une lecture et dix
  * minutes de pause. Relue toutes les [POLL_MS] (sur Mac, chaque lecture lance un programme), chaque seconde tant que
@@ -119,7 +119,11 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         shown ?: return
         // Même morceau : on ne touche pas au texte, le défilement en cours continue (et ne repart pas à chaque relecture).
         if (shown.title != title.text.toString()) title.text = shown.title
-        contentDescription = context.getString(R.string.media_island_open, listOfNotNull(shown.title, subtitle(shown)).joinToString(", "))
+        val label = listOfNotNull(shown.title, subtitle(shown)).joinToString(", ")
+        contentDescription = context.getString(if (shown.playing) R.string.media_island_open else R.string.media_island_open_paused, label)
+        // En pause : pochette et titre estompés, la pastille dit son état sans bouton.
+        title.setTextColor(themeColor(context, if (shown.playing) R.attr.c_text else R.attr.c_text_dim))
+        thumb.alpha = if (shown.playing) 1f else PAUSED_THUMB_ALPHA
         if (shown.thumb != thumbKey) {
             thumbKey = shown.thumb
             val bytes = shown.thumb?.let { runCatching { BackendClient(context).system.mediaThumb(shown.app, it) }.getOrNull() }
@@ -145,6 +149,9 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         /** Îlot ouvert, ou juste après un appui ([FAST_FOR_MS]) : relue chaque seconde (avancement, nouveau morceau). */
         private const val FAST_MS = 1_000L
         private const val FAST_FOR_MS = 8_000L
+
+        /** Pochette d'une lecture en pause, estompée comme le titre (passé en c_text_dim). */
+        private const val PAUSED_THUMB_ALPHA = 0.5f
 
         /** Passages du titre trop long à chaque nouveau morceau. */
         private const val MARQUEE_REPEAT = 3
