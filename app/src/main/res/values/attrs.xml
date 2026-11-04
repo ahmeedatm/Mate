@@ -86,6 +86,25 @@
     <attr name="c_label_caps" format="boolean" />
     <!-- Ombre sous les textes (Hush : Widget.Hush.Text, RollingText) ; transparente ailleurs. -->
     <attr name="c_text_shadow" format="color" />
+    <!-- Cadran, Cadran nuit et Rétro : tubes qui coulent à droite, derrière tous les écrans (c_flow, ses quatre couleurs), et grain de deux
+         couleurs par-dessus tout l'écran (c_grain_*, Maison aussi). Faux ou transparent = ni tubes ni grain : les autres thèmes. -->
+    <attr name="c_flow" format="boolean" />
+    <attr name="c_flow_dark" format="color" />
+    <attr name="c_flow_red" format="color" />
+    <attr name="c_flow_orange" format="color" />
+    <attr name="c_flow_cream" format="color" />
+    <attr name="c_grain_light" format="color" />
+    <attr name="c_grain_dark" format="color" />
+    <!-- Registre, Studio, Tableau et Terminal : motif dessiné une fois par-dessus l'écran, de la couleur c_pattern_color (alpha compris) :
+         filets de registre, forme d'accent, trame de tableau, lignes de scan. none = aucun. -->
+    <attr name="c_pattern" format="enum">
+        <enum name="none" value="0" />
+        <enum name="ledger" value="1" />
+        <enum name="accent" value="2" />
+        <enum name="grid" value="3" />
+        <enum name="scan" value="4" />
+    </attr>
+    <attr name="c_pattern_color" format="color" />
     <!-- Console de l'onglet Son du deck (plaque unie, afficheurs, curseurs, LED) : ui/mixer/. -->
     <attr name="c_mx_plate" format="color" />
     <!-- Hush : table de mixage nue (plaque transparente), ni vis ni filet après la dernière tranche (ui/mixer). Absent = faux. -->

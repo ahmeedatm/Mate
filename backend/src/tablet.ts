@@ -15,8 +15,24 @@ import { isScreenLocked } from "./screen-lock.ts";
 export const MODES = ["home", "deck", "docs", "focus", "camera", "tasks", "settings"] as const;
 export const NOISES = ["storm", "forest", "japan", "sea", "lofi", "off"] as const;
 export const FOCUS_ACTIONS = ["start", "pause", "reset", "skip"] as const;
-/** Thèmes de la tablette (AppTheme dans ui/Themes.kt), dans son ordre : Console (par défaut, nuit), Console jour, Contraste élevé, Hush, Spider-Verse (SPIDERMAN). */
-export const THEMES = ["CONSOLE", "CONSOLE_JOUR", "CONTRASTE", "HUSH", "SPIDERMAN"] as const;
+/** Thèmes de la tablette (AppTheme dans ui/Themes.kt), dans son ordre : Console (par défaut, nuit), Console jour, Clair, Sombre, Cadran, Cadran nuit, Rétro, Hush, Spider-Verse (SPIDERMAN), Registre, Studio, Maison, Tableau, Terminal, Contraste élevé. */
+export const THEMES = [
+  "CONSOLE",
+  "CONSOLE_JOUR",
+  "CLAIR",
+  "SOMBRE",
+  "CADRAN",
+  "CADRAN_NUIT",
+  "RETRO",
+  "HUSH",
+  "SPIDERMAN",
+  "REGISTRE",
+  "STUDIO",
+  "MAISON",
+  "TABLEAU",
+  "TERMINAL",
+  "CONTRASTE",
+] as const;
 
 /** Réglages de la tablette changés depuis la page de l'ordinateur ; un champ absent reste tel quel. */
 export type TabletSettings = {

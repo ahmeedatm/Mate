@@ -30,7 +30,8 @@ class TalkButtonContrastTest {
 
     @Test
     fun `le micro fait au moins 3 pour 1 sur le fond du bouton dans chaque theme`() {
-        for (palette in listOf("Palette.Console", "Palette.ConsoleJour", "Palette.Contraste", "Palette.Hush")) {
+        val imported = listOf("CadranClair", "CadranSombre", "Cadran", "CadranNuit", "Retro", "Registre", "Studio", "Maison", "Tableau", "Terminal")
+        for (palette in listOf("Palette.Console", "Palette.ConsoleJour", "Palette.Contraste", "Palette.Hush") + imported.map { "Palette.$it" }) {
             val mic = color(palette, micTint)
             for (bg in listOf("c_text", "c_accent")) {
                 val r = ratio(mic, color(palette, bg))

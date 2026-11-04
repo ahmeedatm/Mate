@@ -17,8 +17,20 @@ Mate est un accessoire gamer et domotique casual posé sur le bureau : lisible d
 - Teintes de fonction `c_hue_*` colorées mais douces, réservées aux pastilles d'icônes et aux tuiles d'applis.
 - Tuiles et cartes à 28 dp de rayon, en aplat : ni filet ni ombre. Appui = `c_surface_pressed` (`console_tile_bg`). Contraste élevé ajoute un filet de 2 dp.
 - Figtree pour tous les rôles : `c_font_regular` 400, `c_font_medium` 500, `c_font_light` 300, `c_font_title` 500, `c_font_display` 300 (heure, chrono).
-- Pas de dégradé violet-bleu, d'emoji, de carte dans une carte, ni de texture : le grain et les tubes de l'ancienne DA sont retirés.
+- Pas de dégradé violet-bleu, d'emoji, de carte dans une carte, ni de texture dans Console, Console jour et Contraste élevé. Grain, tubes et motifs n'existent que dans les thèmes repris d'UnoMate (plus bas).
 - Couleurs toujours par attribut (`?attr/c_…`, `themeColor(context, R.attr.c_…)`), polices par rôle (`c_font_*`), jamais en dur.
+
+## Thèmes repris d'UnoMate
+
+Clair, Sombre, Cadran, Cadran nuit, Rétro, Registre, Studio, Maison, Tableau et Terminal (04/11, PR #145) gardent la DA d'UnoMate, pas celle de Console douce. Choix de Réglages en groupes (`ThemeGroup`) : Console, Sobres, Rétro, Ambiances, Accessibilité. Exceptions assumées, comme pour Hush :
+
+- grain par-dessus l'écran (Cadran, Cadran nuit, Rétro, Maison : `c_grain_*`, `ui/Grain`) ;
+- tubes qui coulent à droite de la zone des modes, sous la barre du haut (Cadran, Cadran nuit, Rétro : `c_flow*`, `ui/home/FlowBandView`), textes de l'Accueil avec un halo pour rester lisibles ;
+- motif statique (Registre, Studio, Tableau, Terminal : `c_pattern`, `ui/ThemePattern`) ; jamais grain et motif dans la même palette ;
+- polices propres à chaque thème, à empattement (Abril Fatface, Young Serif, Instrument Serif) ou monospace (Terminal en JetBrains Mono partout, chiffres de Registre en IBM Plex Mono) ;
+- plusieurs teintes vives dans les tubes.
+
+Contrastes : `ThemePalettesTest` (textes et couleurs de sens 4,5:1, teintes et `c_graphic` 3:1, sans exception).
 
 ## Jetons
 

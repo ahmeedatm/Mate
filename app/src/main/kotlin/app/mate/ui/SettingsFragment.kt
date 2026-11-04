@@ -23,6 +23,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
 import androidx.core.widget.ImageViewCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -479,17 +480,36 @@ class SettingsFragment :
     }
 
     /**
-     * Thèmes en vignettes (ui/ThemePreview : chacune peinte de ses couleurs), sur une rangée. Toucher une vignette
-     * applique le thème (l'activité est recréée).
+     * Thèmes en vignettes (ui/ThemePreview : chacune peinte de ses couleurs), par groupe (ThemeGroup) : le titre du groupe,
+     * puis ses thèmes sur des rangées de [THEME_COLUMNS]. Toucher une vignette applique le thème (l'activité est recréée).
      */
     private fun setUpThemes(rows: LinearLayout) {
         val ctx = requireContext()
         val current = AppTheme.current(ctx)
-        val row = LinearLayout(ctx)
-        for (theme in AppTheme.entries) row.addView(themeTile(theme, theme == current), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        rows.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(8)
-        })
+        for ((index, entry) in AppTheme.entries.groupBy { it.group }.entries.withIndex()) {
+            val (group, themes) = entry
+            rows.addView(
+                TextView(ctx).apply {
+                    setText(group.label)
+                    setTextColor(themeColor(ctx, R.attr.c_text))
+                    typeface = themeFont(ctx, R.attr.c_font_medium)
+                    textSize = 14f
+                    ViewCompat.setAccessibilityHeading(this, true)
+                },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    if (index > 0) topMargin = dp(18)
+                },
+            )
+            for (line in themes.chunked(THEME_COLUMNS)) {
+                val row = LinearLayout(ctx)
+                for (theme in line) row.addView(themeTile(theme, theme == current), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                // Même largeur de vignette partout : la dernière rangée d'un groupe est complétée de places vides.
+                repeat(THEME_COLUMNS - line.size) { row.addView(View(ctx), LinearLayout.LayoutParams(0, 0, 1f)) }
+                rows.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    topMargin = dp(8)
+                })
+            }
+        }
     }
 
     private fun themeTile(theme: AppTheme, chosen: Boolean): View {
@@ -1218,6 +1238,9 @@ class SettingsFragment :
 
     private companion object {
         const val KEY_OPTIONS_TAB = "settings_options_tab"
+
+        /** Vignettes de thème par rangée. */
+        const val THEME_COLUMNS = 5
 
         /** Facteurs de la taille du texte, en plus de celle d'Android : jusqu'à une fois et demie. */
         val TEXT_SIZES = listOf(

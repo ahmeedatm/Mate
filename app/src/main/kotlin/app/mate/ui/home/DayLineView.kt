@@ -71,6 +71,7 @@ class DayLineView(context: Context) : View(context) {
     private fun textPaint(sp: Float) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = themeFont(context, R.attr.c_font_medium)
         textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, resources.displayMetrics)
+        Look.halo(context, this)
     }
 
     /** Agenda et heure : les barres sont recalculées. `animate` : le point avance sur son ressort et émet l'onde. */

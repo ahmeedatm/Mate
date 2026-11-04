@@ -28,11 +28,13 @@ const STATE = {
  * tablette : il peut arriver avant celui qu'on attend, dans un poll à part.
  */
 async function nextOrder(type: string) {
-  for (;;) {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
     const { json } = await server.call("POST", "/tablet/poll", { state: STATE });
     const order = json.commands.find((c: { command: { type: string } }) => c.command.type === type);
     if (order) return order;
   }
+  throw new Error(`Aucun ordre « ${type} » reçu en 10 s`);
 }
 
 describe("panneau Tablette", () => {
@@ -74,7 +76,24 @@ describe("panneau Tablette", () => {
     assert.equal(done.json.tablet.settings.theme, "CONSOLE_JOUR");
   });
 
-  for (const theme of ["CONTRASTE", "CONSOLE_JOUR", "HUSH", "SPIDERMAN"]) {
+  const THEMES = [
+    "CONSOLE",
+    "CONSOLE_JOUR",
+    "CLAIR",
+    "SOMBRE",
+    "CADRAN",
+    "CADRAN_NUIT",
+    "RETRO",
+    "HUSH",
+    "SPIDERMAN",
+    "REGISTRE",
+    "STUDIO",
+    "MAISON",
+    "TABLEAU",
+    "TERMINAL",
+    "CONTRASTE",
+  ];
+  for (const theme of THEMES) {
     it(`accepte le thème ${theme}`, async () => {
       const polling = nextOrder("settings");
       await new Promise((r) => setTimeout(r, 300));
