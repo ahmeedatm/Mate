@@ -233,6 +233,10 @@
     <string name="agent_worked_short">Travaillé moins d\'1 min</string>
     <string name="agent_tool">Outil : %1$s</string>
     <string name="agents_empty">Aucune session Claude Code ouverte sur l\'ordinateur.</string>
+    <string name="jira_connect">Connecter Jira</string>
+    <string name="jira_connect_text">Jira n\'est pas connecté sur l\'ordinateur. Connecte-le pour voir tes tickets et les faire avancer depuis la tablette : sur l\'ordinateur, crée un jeton d\'API Atlassian et colle-le dans la page de Mate.</string>
+    <string name="jira_reconnect_text">Jira refuse les identifiants de l\'ordinateur. Colle un nouveau jeton d\'API dans la page de Mate sur l\'ordinateur.</string>
+    <string name="jira_connect_waiting">Page ouverte sur l\'ordinateur : crée un jeton d\'API Atlassian et colle-le dans la carte Jira, avec le site et ton e-mail. Les tickets s\'affichent ici ensuite.</string>
     <string name="jira_empty">Aucun ticket ouvert</string>
     <string name="jira_col_header">%1$s · %2$d</string>
     <string name="jira_transitions_loading">Lecture des transitions…</string>

@@ -69,6 +69,6 @@ appeler GitHub. Le compagnon garde la portée réellement accordée (champ `scop
   autre port de 127.0.0.1, ne peut pas la déclencher), `DELETE /local/accounts/github` ; état dans `github` de `GET /local/status` (`login` : code en attente ou
   dernier résultat). La tablette ouvre la connexion par `POST /local/open { "section": "github" }`.
 - Code : `backend/src/github-auth.ts` (connexion), `backend/src/github.ts` (PR, fusion, Actions), `routes/github.ts` ; tablette :
-  `net/GitHubApi`, `github/Forge` ; vues partagées avec GitLab (`GitLabView`, `PipelinesView`, `GitLabConnectCard`, paramètre `forge`).
+  `net/GitHubApi`, `github/Forge` ; vues partagées avec GitLab (`GitLabView`, `PipelinesView`, `ConnectCard`, paramètre `forge`).
 - Tests : `backend/test/github-api.test.ts` (faux GitHub `test/fake-github.ts` : device flow, GraphQL, fusion, Actions),
   `backend/test/github.test.ts`, `backend/e2e/github.spec.ts` (page locale).

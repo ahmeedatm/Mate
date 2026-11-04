@@ -67,7 +67,7 @@ class GitLabView @JvmOverloads constructor(
     /** Colonnes montrées (GitLab cache les vides) et largeur du widget : de quoi dimensionner les colonnes. */
     private var visibleColumns: List<MrColumn> = columns
     private var boardWidth = 0
-    private val connectCard = GitLabConnectCard(context, { scope }, ::showError, forge = forge)
+    private val connectCard = ConnectCard(context, forgeConnect(forge), { scope }, ::showError)
 
     private lateinit var scope: CoroutineScope
     private var poll: Job? = null

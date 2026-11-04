@@ -102,7 +102,7 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite|panel|update|permissions)|web\/figtree-[345]00\.ttf|oauth\/(microsoft|google|gitlab)\/(start|callback)|oauth\/github\/start)?(\?|$)/.test(
       url,
     )) ||
-    (method === "PUT" && (url === "/local/calendar" || url === "/local/tablet/settings")) ||
+    (method === "PUT" && (url === "/local/calendar" || url === "/local/tablet/settings" || url === "/local/accounts/jira")) ||
     // Panneau de configuration (routes/local-profiles.ts, routes/local-config.ts) : écritures en JSON seulement (PUT,
     // DELETE et POST à corps objet), pas envoyables par un autre site sans pré-vérification CORS.
     (method === "GET" && /^\/local\/(tablet\/layout|config\/[a-z0-9/-]+)(\?|$)/.test(url)) ||
@@ -120,7 +120,7 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     (/^(GET|POST|DELETE)$/.test(method) && url === "/mcp") ||
     // Hooks de Claude Code : pas de jeton d'appairage, un secret propre vérifié par la route (src/agents-sources.ts).
     (method === "POST" && (url === "/agents/hook" || url === "/agents/statusline")) ||
-    (method === "DELETE" && /^\/local\/accounts\/(microsoft|google|gitlab|github)$/.test(url)));
+    (method === "DELETE" && /^\/local\/accounts\/(microsoft|google|gitlab|github|jira)$/.test(url)));
 /** Sans jeton : identité (la tablette reconnaît l'ordinateur) et appairage par code. */
 const PUBLIC = /^\/(health|pair\/request|pair\/reveal|pair\/confirm)(\?|$)/;
 /**

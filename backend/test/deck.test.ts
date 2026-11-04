@@ -323,7 +323,7 @@ describe("homeFeatures", () => {
       agents: false,
       gitlab: false,
       github: false,
-      jira: false,
+      jira: true,
       ha: false,
       off: [],
     });

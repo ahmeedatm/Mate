@@ -1,27 +1,24 @@
 /**
  * Jira de l'utilisateur, via le jeton API du compte (Basic).
- * Optionnel : actif seulement si JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN sont définis dans .env.
+ * Optionnel : site, e-mail et jeton d'API sont collés dans la carte Jira de la page du compagnon (src/jira-auth.ts,
+ * .data/jira-auth.json), sinon lus dans JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN du .env (secours). Pris en compte tout de suite.
  * Jeton : https://id.atlassian.com/manage-profile/security/api-tokens (droits du compte).
  * Usages : temps saisi dans la journée (worklogs), tickets assignés et leurs transitions (onglet Jira).
  */
 
 import path from "node:path";
 import { config } from "./config.ts";
+import { jiraAccount } from "./jira-auth.ts";
 import { singleFlight } from "./single-flight.ts";
 import { readJson, updateJson } from "./store.ts";
 
-const rawSite = process.env.JIRA_SITE?.trim().replace(/\/+$/, "");
-const email = process.env.JIRA_EMAIL?.trim();
-const token = process.env.JIRA_API_TOKEN?.trim();
+export const jiraConfigured = () => jiraAccount() !== undefined;
 
-// Toujours en https (jamais d'identifiants en clair sur le réseau) ; seul un faux Jira local, donné explicitement
-// en `http://127.0.0.1:<port>` ou `http://localhost:<port>` (tests), reste en http.
-const LOCAL_HTTP = /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i;
-const base = rawSite && (LOCAL_HTTP.test(rawSite) ? rawSite : `https://${rawSite.replace(/^https?:\/\//i, "")}`);
-
-export const jiraConfigured = Boolean(base && email && token);
-/** Hôte du site Jira relié (page locale) : jamais l'e-mail ni le jeton. */
-export const jiraSite = jiraConfigured && base ? new URL(base).host : null;
+const requireAccount = () => {
+  const account = jiraAccount();
+  if (!account) throw new Error("Jira n'est pas relié : connecte-le dans la page de Mate sur l'ordinateur.");
+  return account;
+};
 
 /** Jira refuse la transition : un champ obligatoire reste à remplir (le drapeau `required` peut être incomplet). */
 export class JiraFieldsError extends Error {
@@ -35,7 +32,7 @@ class JiraHttpError extends Error {
   constructor(readonly jiraStatus: number) {
     super(
       jiraStatus === 401 || jiraStatus === 403
-        ? "Jira refuse les identifiants du fichier .env de l'ordinateur."
+        ? "Jira refuse les identifiants de l'ordinateur : reconnecte Jira dans la page de Mate."
         : jiraStatus === 404
           ? "Ticket introuvable dans Jira."
           : `Jira HTTP ${jiraStatus}`,
@@ -47,7 +44,15 @@ const CACHE_MS = 5 * 60_000;
 let accountId: string | undefined;
 let cache: { day: string; at: number; seconds: number } | undefined;
 
+/** Compte changé ou déconnecté : plus rien de ce qui a été lu avec l'ancien ne vaut. */
+export function forgetJiraAccount() {
+  accountId = undefined;
+  cache = undefined;
+  configs.clear();
+}
+
 async function jira<T>(path: string, init?: { method: "POST"; body: object }): Promise<T> {
+  const { base, email, token } = requireAccount();
   const res = await fetch(`${base}${path}`, {
     method: init?.method ?? "GET",
     headers: {
@@ -436,4 +441,4 @@ export async function transitionIssue(key: string, id: string): Promise<void> {
   }
 }
 
-export const issueUrl = (key: string) => `${base}/browse/${key}`;
+export const issueUrl = (key: string) => `${requireAccount().base}/browse/${key}`;

@@ -243,7 +243,7 @@ describe("cartes de l'Accueil et onglets d'appli", () => {
       agents: false,
       gitlab: false,
       github: false,
-      jira: false,
+      jira: true,
       ha: false,
       off: [],
     });

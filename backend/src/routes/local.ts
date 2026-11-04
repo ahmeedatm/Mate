@@ -8,7 +8,8 @@ import { backendRoot, config } from "../config.ts";
 import { clearGithubCache } from "../github.ts";
 import { disconnectGithub, githubAccount, githubClientId, githubLogin, startGithubLogin } from "../github-auth.ts";
 import { clearGitlabCache } from "../gitlab.ts";
-import { jiraConfigured, jiraSite } from "../jira.ts";
+import { forgetJiraAccount } from "../jira.ts";
+import { connectJira, disconnectJira, JiraAuthError, jiraStatus } from "../jira-auth.ts";
 import { disconnectGitlab, finishGitlabLogin, gitlabAccount, gitlabClientId, gitlabLoginUrl } from "../gitlab-auth.ts";
 import { LOCAL_PAGE } from "../local-page.ts";
 import { WEB_FILES } from "../web-style.ts";
@@ -72,8 +73,8 @@ export default async function localRoutes(app: FastifyInstance) {
       account: (await githubAccount()) ?? null,
       login: githubLogin(),
     },
-    // Jira se règle dans le .env de l'ordinateur : la page dit seulement s'il est relié, et à quel site.
-    jira: { configured: jiraConfigured, site: jiraSite },
+    // Jira : la page dit seulement s'il est relié, à quel site et d'où viennent les identifiants (jamais l'e-mail ni le jeton).
+    jira: jiraStatus(),
   }));
 
   /** Lien(s) d'agenda collé(s) dans la page locale ; webcal:// devient https://. Liste vide : retire l'agenda. */
@@ -255,6 +256,41 @@ export default async function localRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
+  // Connexion Jira (src/jira-auth.ts) : site, e-mail et jeton d'API collés dans la page, vérifiés auprès de Jira puis gardés sur l'ordinateur.
+  app.put<{ Body: { site: string; email: string; token: string } }>(
+    "/local/accounts/jira",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["site", "email", "token"],
+          additionalProperties: false,
+          properties: {
+            site: { type: "string", maxLength: 300 },
+            email: { type: "string", maxLength: 200 },
+            token: { type: "string", maxLength: 500 },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      try {
+        const { site } = await connectJira(req.body);
+        forgetJiraAccount();
+        return { ok: true, site };
+      } catch (e) {
+        if (e instanceof JiraAuthError) return reply.code(e.statusCode).send({ error: e.message });
+        throw e;
+      }
+    },
+  );
+
+  app.delete("/local/accounts/jira", async () => {
+    await disconnectJira();
+    forgetJiraAccount();
+    return { ok: true };
+  });
+
   app.delete<{ Params: { provider: string } }>("/local/accounts/:provider", async (req, reply) => {
     if (!isProvider(req.params.provider)) return reply.code(404).send({ error: "Compte inconnu" });
     await disconnect(req.params.provider);
@@ -265,16 +301,16 @@ export default async function localRoutes(app: FastifyInstance) {
   /**
    * Ouvre le compagnon sur l'ordinateur, depuis la tablette : sa page (« Relier mon agenda » de l'Accueil, « Régler depuis
    * l'ordi » des Réglages), ou la page d'autorisation de GitLab (`gitlab`, carte « Connecter GitLab » de l'onglet GitLab),
-   * ou la connexion GitHub (`github` : code à saisir sur GitHub, montré par la page).
+   * ou la connexion GitHub (`github` : code à saisir sur GitHub, montré par la page), ou la carte Jira (`jira` : jeton d'API à coller).
    */
-  app.post<{ Body: { section?: "agenda" | "gitlab" | "github" | "tablette" } }>(
+  app.post<{ Body: { section?: "agenda" | "gitlab" | "github" | "jira" | "tablette" } }>(
     "/local/open",
     {
       schema: {
         body: {
           type: "object",
           additionalProperties: false,
-          properties: { section: { enum: ["agenda", "gitlab", "github", "tablette"] } },
+          properties: { section: { enum: ["agenda", "gitlab", "github", "jira", "tablette"] } },
         },
       },
     },

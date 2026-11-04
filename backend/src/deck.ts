@@ -47,7 +47,6 @@ import { githubAvailable } from "./github.ts";
 import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
 import { haConfigured } from "./ha.ts";
-import { jiraConfigured } from "./jira.ts";
 import { appPluginOff, pluginOn, pluginsOff } from "./plugins.ts";
 import { assertPublicUrl, fetchPublic } from "./net-guard.ts";
 import { callLanTarget } from "./lan-call.ts";
@@ -255,8 +254,8 @@ export async function homeFeatures() {
   // `gitlab` : onglet des MR GitLab (jeton GITLAB_TOKEN dans .env, compte connecté par OAuth, ou appli OAuth réglée : la tablette propose de se connecter).
   // `github` : widgets GitHub et Actions (GITHUB_TOKEN dans .env, compte connecté, ou appli OAuth réglée).
   const agents = agentsAvailable() && (await pluginOn("claude"));
-  // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
-  const jira = jiraConfigured && (await pluginOn("jira"));
+  // `jira` : widget Jira, toujours proposé (plugin coupé excepté) : sans compte relié, il montre la carte « Connecter Jira ».
+  const jira = canControl && (await pluginOn("jira"));
   // `ha` : widget Home Assistant (HA_URL, HA_TOKEN et HA_ENTITIES dans .env).
   return {
     agenda: true,

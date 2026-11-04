@@ -5,7 +5,7 @@ import { CONSOLE_CSS, FAVICON, ICON_SVG } from "./web-style.ts";
  * Page http://127.0.0.1:3000/ ouverte sur l'ordinateur (le panneau de l'appli : relancer « Mate » la rouvre) :
  * barre de gauche (état du compagnon et de la tablette, sections), puis les sections l'une sous l'autre : réglages de la
  * tablette connectée avec son aperçu dessiné, connexion d'une tablette (code d'appairage affiché par la tablette),
- * agenda, GitLab, GitHub et la carte « Cette appli » (lancement au démarrage, pare-feu, mise à jour,
+ * agenda, GitLab, GitHub, Jira et la carte « Cette appli » (lancement au démarrage, pare-feu, mise à jour,
  * quitter, tout oublier). La barre liste les `main > section[data-title]` dans l'ordre de la page.
  * Lue sans jeton, en local seulement (voir isLocalPage dans server.ts).
  */
@@ -183,6 +183,10 @@ ${FAVICON}
   .account .grow { display: flex; align-items: center; gap: 10px; }
   #accounts, #gitlabaccount, #githubaccount { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 14px; }
   #accounts:empty, #gitlabaccount:empty, #githubaccount:empty { display: none; }
+  #jiraaccount { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 14px; }
+  #jiraaccount:empty { display: none; }
+  #jiraform { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  #jiraform[hidden] { display: none; }
   #githubcode { margin-top: 14px; }
   #githubcode code { font-size: 28px; letter-spacing: .08em; padding: 6px 14px; }
   #githubcode .actions { margin-top: 12px; }
@@ -429,6 +433,15 @@ ${FAVICON}
     </div>
     <div class="card cxpanel" id="jira" hidden>
       <div class="dim" id="jirastate"></div>
+      <div id="jiraaccount"></div>
+      <!-- Site, e-mail et jeton d'API collés : vérifiés auprès de Jira, gardés sur l'ordinateur (PUT /local/accounts/jira). -->
+      <form id="jiraform" autocomplete="off">
+        <input id="jirasite" type="text" placeholder="Site Jira (unowhy ou unowhy.atlassian.net)" autocomplete="off" aria-label="Site Jira">
+        <input id="jiraemail" type="text" inputmode="email" placeholder="E-mail de ton compte Atlassian" autocomplete="off" aria-label="E-mail Jira">
+        <input id="jiratoken" type="password" placeholder="Coller le jeton d'API Jira" autocomplete="off" aria-label="Jeton Jira">
+        <div class="actions"><button id="jirasave" type="submit">Enregistrer</button></div>
+      </form>
+      <div id="jiramsg" class="dim" style="margin-top:8px" role="status"></div>
     </div>
     <div class="card cxpanel" id="plugin" hidden>
       <div class="dim" id="plugindesc"></div>
@@ -521,6 +534,7 @@ ${FAVICON}
       renderAccounts(c);
       renderGitlab(s.gitlab);
       renderGithub(s.github);
+      renderJira(s.jira || { configured: false });
       renderConnectors(s);
       renderMcp(s.mcp);
       renderSteps();
@@ -655,6 +669,35 @@ ${FAVICON}
     } else {
       state.textContent = waiting ? "" : g.token ? "Connecté." : "Non connecté.";
     }
+  }
+  // Jira : même principe. Identifiants du .env de l'ordinateur : dits, mais pas déconnectables d'ici.
+  let jiraKey = "";
+  function renderJira(j) {
+    const key = JSON.stringify(j);
+    if (key === jiraKey) return;
+    jiraKey = key;
+    const box = document.getElementById("jiraaccount");
+    box.replaceChildren();
+    // Les champs servent tant que Jira n'est pas relié.
+    document.getElementById("jiraform").hidden = !!j.configured;
+    // Pas relié : les étapes suffisent, l'état est déjà sur l'icône.
+    document.getElementById("jirastate").textContent = !j.configured ? ""
+      : j.source === "env" ? "Connecté à " + j.site + " avec le fichier .env de l'ordinateur." : "La tablette lit tes tickets et change leur statut avec ce compte.";
+    if (!j.configured) return;
+    const row = document.createElement("div");
+    row.className = "account";
+    const label = document.createElement("span");
+    label.className = "grow";
+    label.append(stateDot(true), "Connecté à " + j.site);
+    row.append(label);
+    if (j.source !== "env") {
+      const off = document.createElement("button");
+      off.className = "ghost";
+      off.textContent = "Déconnecter Jira";
+      off.onclick = async () => { await fetch("/local/accounts/jira", { method: "DELETE" }); refresh(); };
+      row.append(off);
+    }
+    box.append(row);
   }
   document.getElementById("githubcopy").onclick = async () => {
     try {
@@ -814,6 +857,32 @@ ${FAVICON}
     link.textContent = text;
     return link;
   }
+  // Page de création de jeton d'API d'Atlassian.
+  function jiraTokenLink(text) {
+    const link = document.createElement("a");
+    link.className = "button";
+    link.href = "https://id.atlassian.com/manage-profile/security/api-tokens";
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = text;
+    return link;
+  }
+  document.getElementById("jiraform").onsubmit = async (e) => {
+    e.preventDefault();
+    const site = document.getElementById("jirasite"), email = document.getElementById("jiraemail"), token = document.getElementById("jiratoken");
+    const msg = document.getElementById("jiramsg");
+    if (!site.value.trim() || !email.value.trim() || !token.value.trim()) { msg.textContent = "Remplis le site, l'e-mail et le jeton."; return; }
+    msg.textContent = "Vérification…";
+    try {
+      const res = await fetch("/local/accounts/jira", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ site: site.value, email: email.value, token: token.value }) });
+      const r = await res.json();
+      msg.textContent = res.ok ? "✓ Jira connecté : le widget Jira de la tablette se remplit dans quelques secondes." : r.error || r.message;
+      if (res.ok) token.value = "";
+      refresh();
+    } catch (err) {
+      msg.textContent = "Compagnon injoignable";
+    }
+  };
   const ACCOUNT_MSG = {
     ok: "✓ Compte connecté : l'agenda arrive sur la tablette dans la minute.",
     mail: "✓ Mails connectés : le widget Mails de la tablette affiche le nombre de non lus.",
@@ -991,8 +1060,6 @@ ${FAVICON}
     else setTile("github", h.available ? "off" : "na", "Non connecté", !!h.account);
     const j = s.jira || { configured: false };
     setTile("jira", j.configured ? "on" : "off", j.configured ? "Connecté" : "Non connecté");
-    // Pas relié : les étapes suffisent, l'état est déjà sur l'icône.
-    document.getElementById("jirastate").textContent = j.configured ? "Connecté à " + j.site + "." : "";
   }
   // Étapes pour relier chaque connecteur ; action : bouton qui ouvre la connexion dans le navigateur.
   // Un seul panneau ouvert sous les icônes, l'icône correspondante est marquée.
@@ -1028,9 +1095,10 @@ ${FAVICON}
     },
     jira: {
       title: "Relier Jira",
-      steps: ["Crée un jeton d'API sur id.atlassian.com › Sécurité › Jetons d'API.",
-        "Ouvre le fichier .env du compagnon et renseigne JIRA_SITE (ton site Atlassian), JIRA_EMAIL et JIRA_API_TOKEN.",
-        "Relance Mate : tes tickets arrivent dans le widget Jira de la tablette."],
+      steps: ["Touche « Créer un jeton » : la page des jetons d'API d'Atlassian s'ouvre.", "Connecte-toi à ton compte Atlassian si besoin, puis crée un jeton d'API.",
+        "Copie le jeton (Atlassian ne l'affiche qu'une fois) et colle-le ci-dessous, avec le site (par exemple « unowhy ») et l'e-mail de ton compte.",
+        "Touche « Enregistrer » : le widget Jira de la tablette se remplit."],
+      action: "Créer un jeton",
     },
   };
   const PANEL = { microsoft: "agenda", google: "agenda", ics: "agenda", gitlab: "gitlab", github: "github", jira: "jira", discord: "plugin", claude: "plugin" };
@@ -1073,7 +1141,7 @@ ${FAVICON}
     document.getElementById("cxnote").textContent = na ? "Cette connexion n'est pas encore disponible sur cet ordinateur." : "";
     list.hidden = na;
     if (!na) for (const text of st.steps) list.append(Object.assign(document.createElement("li"), { textContent: text }));
-    if (st.action && !na) action.append(connectLink(openCx, st.action));
+    if (st.action && !na) action.append(openCx === "jira" ? jiraTokenLink(st.action) : connectLink(openCx, st.action));
     // Agenda sans connexion possible : le lien ICS reste la voie.
     if (na && PANEL[openCx] === "agenda") {
       const alt = document.createElement("button");
@@ -1270,7 +1338,7 @@ ${FAVICON}
   if (accountResult) openPanel("agenda", null);
   if (gitlabResult) openPanel("gitlab", "gitlab");
   if (new URLSearchParams(location.search).get("github")) openPanel("github", "github");
-  if (section === "agenda" || section === "gitlab" || section === "github") {
+  if (section === "agenda" || section === "gitlab" || section === "github" || section === "jira") {
     openPanel(section, section === "agenda" ? "ics" : section);
     document.getElementById(section).classList.add("focus");
   }
