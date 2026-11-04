@@ -15,6 +15,10 @@ import org.json.JSONObject
  * Deux voies spéciales se choisissent comme une appli, sans membres rangés (Windows) : « premier plan » suit l'appli qu'on
  * regarde sur l'ordinateur ; « autres » réunit les applis qui n'ont pas de voie (ni choisie, ni dans un groupe, ni au
  * premier plan quand sa voie est là), le son du système exclu.
+ *
+ * Applis masquées (« Ne plus afficher », appui long sur une voie) : rangées par ordinateur comme le choix, mais pour
+ * toutes les tables (`mixerHidden[<id de l'ordinateur>]`, préférences de la tablette, [MixerHidden]). Elles n'ont plus
+ * de voie, même choisies, et ne comptent ni dans un groupe ni dans « autres » ; la voie « premier plan » les suit encore.
  */
 object MixerApps {
     data class App(val id: String, val name: String, val members: List<App> = emptyList()) {
@@ -42,9 +46,10 @@ object MixerApps {
     fun group(key: String, name: String, members: List<App>) = App(GROUP_PREFIX + key, name, members)
 
     private const val KEY = "mixerApps"
+    const val HIDDEN_KEY = "mixerHidden"
 
-    fun read(config: JSONObject, computerId: String?): List<App> {
-        val list = computerId?.let { config.optJSONObject(KEY)?.optJSONArray(it) } ?: return emptyList()
+    fun read(config: JSONObject, computerId: String?, key: String = KEY): List<App> {
+        val list = computerId?.let { config.optJSONObject(key)?.optJSONArray(it) } ?: return emptyList()
         return parse(list)
     }
 
@@ -61,27 +66,48 @@ object MixerApps {
     )
 
     /** Range le choix ; faux si rien n'a changé (pas d'écriture inutile). */
-    fun write(config: JSONObject, computerId: String?, apps: List<App>): Boolean {
-        if (computerId == null || read(config, computerId) == apps) return false
-        val byComputer = config.optJSONObject(KEY) ?: JSONObject().also { config.put(KEY, it) }
+    fun write(config: JSONObject, computerId: String?, apps: List<App>, key: String = KEY): Boolean {
+        if (computerId == null || read(config, computerId, key) == apps) return false
+        val byComputer = config.optJSONObject(key) ?: JSONObject().also { config.put(key, it) }
         byComputer.put(computerId, json(apps))
         return true
+    }
+
+    /** Seule une appli de l'ordinateur se masque : ni la sortie, ni le micro, ni une voie calculée. */
+    fun canHide(id: String) = id != "master" && id != "mic" && !isVirtualId(id)
+
+    /** Masque `app` pour cet ordinateur ; rend la liste des masquées (vide sans ordinateur). */
+    fun hide(store: JSONObject, computerId: String?, app: App): List<App> {
+        val hidden = read(store, computerId, HIDDEN_KEY)
+        val next = if (hidden.any { it.id == app.id }) hidden else hidden + app
+        write(store, computerId, next, HIDDEN_KEY)
+        return if (computerId == null) emptyList() else next
+    }
+
+    /** Fait revenir l'appli `id` ; rend la liste des masquées. */
+    fun unhide(store: JSONObject, computerId: String?, id: String): List<App> {
+        val next = read(store, computerId, HIDDEN_KEY).filterNot { it.id == id }
+        write(store, computerId, next, HIDDEN_KEY)
+        return next
     }
 
     /**
      * Voies d'applis à montrer : sans choix, toutes celles qui ont du son ; sinon le choix dans son ordre, une appli
      * sans son gardant sa place (volume null : grisée, ne se pilote pas). `live` null : pas de volume par appli (Mac).
-     * `front` : appli au premier plan de l'ordinateur (id de session), pour la voie « premier plan ».
+     * `front` : appli au premier plan de l'ordinateur (id de session), pour la voie « premier plan ». `hidden` : ids
+     * des applis masquées.
      */
-    fun channels(chosen: List<App>, live: List<MixerChannel>?, front: String? = null): List<MixerChannel>? {
+    fun channels(chosen: List<App>, live: List<MixerChannel>?, front: String? = null, hidden: Set<String> = emptySet()): List<MixerChannel>? {
         if (live == null) return null
-        if (chosen.isEmpty()) return live
-        return chosen.map { app ->
+        val shown = live.filter { it.id !in hidden }
+        if (chosen.isEmpty()) return shown
+        val picked = chosen.filter { it.id !in hidden }
+        return picked.map { app ->
             when {
-                app.isGroup -> combine(app, live.filter { c -> app.members.any { it.id == c.id } })
+                app.isGroup -> combine(app, shown.filter { c -> app.members.any { it.id == c.id } })
                 app.id == FRONT_ID -> frontChannel(app, live, front)
-                app.id == OTHERS_ID -> combine(app, live.filter { it.id in othersIds(chosen, live, front) })
-                else -> live.firstOrNull { it.id == app.id } ?: MixerChannel(app.id, app.name, null, false, null)
+                app.id == OTHERS_ID -> combine(app, shown.filter { it.id in othersIds(picked, shown, front) })
+                else -> shown.firstOrNull { it.id == app.id } ?: MixerChannel(app.id, app.name, null, false, null)
             }
         }
     }
@@ -118,13 +144,13 @@ object MixerApps {
      * Applis à régler ensemble quand on touche la voie `id` ; null si c'est une voie simple. Premier plan : l'appli
      * devant (liste vide si elle ne fait pas de son). `live` et `front` : le dernier état lu de l'ordinateur.
      */
-    fun membersOf(chosen: List<App>, id: String, live: List<MixerChannel>? = null, front: String? = null): List<String>? {
+    fun membersOf(chosen: List<App>, id: String, live: List<MixerChannel>? = null, front: String? = null, hidden: Set<String> = emptySet()): List<String>? {
         val app = chosen.firstOrNull { it.id == id } ?: return null
         val sound = live.orEmpty()
         return when {
-            app.isGroup -> app.members.map { it.id }
+            app.isGroup -> app.members.map { it.id }.filter { it !in hidden }
             id == FRONT_ID -> listOfNotNull(front).filter { f -> sound.any { it.id == f } }
-            id == OTHERS_ID -> othersIds(chosen, sound, front)
+            id == OTHERS_ID -> othersIds(chosen.filter { it.id !in hidden }, sound.filter { it.id !in hidden }, front)
             else -> null
         }
     }
@@ -132,17 +158,18 @@ object MixerApps {
     /**
      * Applis proposées dans le ⚙ : les choisies d'abord (dans leur ordre), puis les voies spéciales pas encore
      * choisies (`specials`, Windows seulement : `live` non null), puis celles qui ont du son en ce moment, sous leur
-     * nom affiché (`name`, celui de la table).
+     * nom affiché (`name`, celui de la table). Les masquées (`hidden`) n'y sont pas : elles reviennent par leur liste.
      */
     fun candidates(
         chosen: List<App>,
         live: List<MixerChannel>?,
         name: (MixerChannel) -> String = { it.name },
         specials: List<App> = emptyList(),
+        hidden: Set<String> = emptySet(),
     ): List<App> =
-        chosen +
+        chosen.filter { it.id !in hidden } +
             (if (live == null) emptyList() else specials.filter { s -> chosen.none { it.id == s.id } }) +
-            live.orEmpty().filter { c -> chosen.none { it.id == c.id } }.map { App(it.id, name(it)) }
+            live.orEmpty().filter { c -> c.id !in hidden && chosen.none { it.id == c.id } }.map { App(it.id, name(it)) }
 
     /** Voie d'une appli choisie qui ne fait pas de son en ce moment (grisée, « pas de son ») ; jamais la sortie ni le micro. */
     fun isSilent(id: String, live: List<MixerChannel>?): Boolean =
