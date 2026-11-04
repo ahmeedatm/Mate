@@ -6,6 +6,13 @@ import { BlockList, isIP } from "node:net";
  * elle-même (intranet, services locaux), et jamais plus de `maxBytes` lus.
  */
 
+/** Adresses de la machine elle-même (IPv4, IPv6, IPv6 « mappée »). */
+export const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+/** Nom demandé par le navigateur : un site qui ferait pointer son domaine vers 127.0.0.1 (DNS rebinding) est refusé. */
+export const LOCAL_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
+/** Requête venue de la machine elle-même, par un nom local : la page ouverte dans le navigateur de l'ordinateur. */
+export const isLocalRequest = (ip: string, host: string | undefined) => LOOPBACK.has(ip) && LOCAL_HOST.test(host ?? "");
+
 const PRIVATE = new BlockList();
 for (const [net, bits] of [
   ["0.0.0.0", 8],

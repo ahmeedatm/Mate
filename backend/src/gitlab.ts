@@ -1,4 +1,4 @@
-import { gitlabAccess, gitlabAccount, gitlabBaseUrl, gitlabTokenRefused } from "./gitlab-auth.ts";
+import { gitlabAccess, gitlabAccount, gitlabApiUrl, gitlabTokenRefused } from "./gitlab-auth.ts";
 import { join } from "node:path";
 import { config } from "./config.ts";
 import { logFailure } from "./log.ts";
@@ -57,7 +57,9 @@ const TIMEOUT_MS = 15_000;
 
 const envToken = () => process.env.GITLAB_TOKEN?.trim() ?? "";
 
-export const mrUrl = (project: string, iid: number) => `${gitlabBaseUrl()}/${project}/-/merge_requests/${iid}`;
+const refusedUrl = (message: string) => new GitLabError(502, message);
+
+export const mrUrl = (project: string, iid: number) => `${gitlabApiUrl(refusedUrl)}/${project}/-/merge_requests/${iid}`;
 
 // Valeurs de DetailedMergeStatus relevées par introspection sur gitlab.com (18.10.8-ee), le 29/10/2026.
 const LABELS: Record<string, string> = {
@@ -217,7 +219,10 @@ const newestFirst = <T extends { updatedAt: string }>(list: T[]) => list.sort((a
 
 const NOT_CONNECTED = new GitLabError(503, "GitLab n'est pas connecté sur l'ordinateur");
 const UNREACHABLE = new GitLabError(502, "GitLab ne répond pas");
-const TOKEN_REFUSED = new GitLabError(502, "GitLab refuse l'accès de l'ordinateur : colle un nouveau jeton dans la page du compagnon");
+const TOKEN_REFUSED = new GitLabError(
+  502,
+  "GitLab refuse l'accès de l'ordinateur : colle un nouveau jeton dans la page de Mate sur l'ordinateur",
+);
 
 const READ_ONLY = new GitLabError(409, "La connexion GitLab est en lecture seule : fusionne sur l'ordinateur");
 
@@ -234,13 +239,15 @@ async function authHeaders(): Promise<{ read?: Auth; write?: Auth }> {
   return { read: account ?? personal, write: account && access?.canWrite ? account : personal };
 }
 
-/** Appel GitLab : tout échec réseau ou délai devient « ne répond pas ». */
+/** Appel GitLab : tout échec réseau, redirection ou délai devient « ne répond pas ». */
 async function call(path: string, method: "GET" | "POST" | "PUT", body: object | undefined, auth: Auth): Promise<Response> {
+  const base = gitlabApiUrl(refusedUrl);
   try {
-    return await fetch(gitlabBaseUrl() + path, {
+    return await fetch(base + path, {
       method,
       headers: { ...auth, "content-type": "application/json", accept: "application/json" },
       body: body && JSON.stringify(body),
+      redirect: "error",
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch {
@@ -255,8 +262,8 @@ type MrPipeline = { project: string; iid: number; title: string; updatedAt: stri
 async function readMrs(auth: Auth): Promise<MrRead> {
   const res = await call("/api/graphql", "POST", { query: QUERY }, auth);
   if (res.status === 401 || res.status === 403) {
-    // Jeton révoqué ou expiré : le compte passe à « à remplacer ».
-    if (res.status === 401) await gitlabTokenRefused();
+    // Jeton révoqué, expiré ou sans droit de lecture : le compte passe à « à remplacer ».
+    await gitlabTokenRefused(auth["PRIVATE-TOKEN"]);
     throw TOKEN_REFUSED;
   }
   if (!res.ok) throw UNREACHABLE;
@@ -272,7 +279,7 @@ async function readMrs(auth: Auth): Promise<MrRead> {
   if (data.errors) throw UNREACHABLE;
   const user = data.data?.currentUser;
   if (!user) {
-    await gitlabTokenRefused();
+    await gitlabTokenRefused(auth["PRIVATE-TOKEN"]);
     throw TOKEN_REFUSED;
   }
   const me = user.username ?? "";
@@ -337,7 +344,7 @@ export async function mergeMr(project: string, iid: number, sha: string): Promis
   const res = await call(`/api/v4/projects/${encodeURIComponent(project)}/merge_requests/${iid}/merge`, "PUT", { sha }, auth);
   // Fusionnée ou refusée (elle a bougé, n'est plus fusionnable…) : la liste suivante relit GitLab.
   clearGitlabCache();
-  if (res.status === 401) await gitlabTokenRefused();
+  if (res.status === 401) await gitlabTokenRefused(auth["PRIVATE-TOKEN"]);
   if (!res.ok) throw MERGE_ERRORS[res.status] ?? UNREACHABLE;
 }
 
@@ -368,7 +375,7 @@ const MAX_MR_PIPELINES = 12;
 const MAX_FAILED_JOBS = 3;
 const MAX_SCHEDULES = 20;
 
-export const pipelineUrl = (project: string, id: number) => `${gitlabBaseUrl()}/${project}/-/pipelines/${id}`;
+export const pipelineUrl = (project: string, id: number) => `${gitlabApiUrl(refusedUrl)}/${project}/-/pipelines/${id}`;
 
 /** En cours d'abord, puis les échecs, puis le reste ; du plus récent au plus ancien dans chaque groupe. */
 export function sortPipelines<T extends { pipeline: Pipeline; ageSec: number }>(rows: T[]): T[] {
@@ -377,9 +384,9 @@ export function sortPipelines<T extends { pipeline: Pipeline; ageSec: number }>(
 }
 
 /** Jeton refusé : le compte passe à « à remplacer », la tablette ne reçoit jamais de 401. */
-async function refuseIfDenied(res: Response) {
+async function refuseIfDenied(res: Response, auth: Auth) {
   if (res.status === 401) {
-    await gitlabTokenRefused();
+    await gitlabTokenRefused(auth["PRIVATE-TOKEN"]);
     throw TOKEN_REFUSED;
   }
 }
@@ -387,7 +394,7 @@ async function refuseIfDenied(res: Response) {
 /** Lecture JSON d'un appel GitLab ; null si la ressource est introuvable (404) ou interdite au compte (403). */
 async function readJson<T>(path: string, auth: Auth): Promise<T | null> {
   const res = await call(path, "GET", undefined, auth);
-  await refuseIfDenied(res);
+  await refuseIfDenied(res, auth);
   if (res.status === 404 || res.status === 403) return null;
   if (!res.ok) throw UNREACHABLE;
   try {
@@ -466,7 +473,7 @@ const SCHEDULES_QUERY = `query($path: ID!) { project(fullPath: $path) { pipeline
 /** Planifications d'un projet ; liste vide si le projet est introuvable ou sa CI interdite au compte. */
 async function projectSchedules(project: string, auth: Auth): Promise<ScheduleNode[]> {
   const res = await call("/api/graphql", "POST", { query: SCHEDULES_QUERY, variables: { path: project } }, auth);
-  await refuseIfDenied(res);
+  await refuseIfDenied(res, auth);
   if (res.status === 403) return [];
   if (!res.ok) throw UNREACHABLE;
   let data: { errors?: unknown; data?: { project?: { pipelineSchedules?: { nodes: ScheduleNode[] } | null } | null } };

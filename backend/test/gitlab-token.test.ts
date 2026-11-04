@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -64,7 +65,7 @@ describe("jeton GitLab : sans jeton", () => {
   });
 
   it("la page voit l'adresse de GitLab, pas de compte", async () => {
-    assert.deepEqual(await status(server), { url: gitlab.url, token: false, account: null });
+    assert.deepEqual(await status(server), { url: gitlab.url, urlError: null, token: false, account: null });
   });
 
   it("la tablette ouvre la carte GitLab de la page de l'ordinateur (/local/open)", async () => {
@@ -147,7 +148,12 @@ describe("jeton GitLab : coller un jeton", () => {
     const user = gitlab.seen.find((s) => s.url === "/api/v4/user")!;
     assert.equal(user.privateToken, TOKEN);
     assert.equal(user.authorization, undefined);
-    assert.deepEqual(await status(server), { url: gitlab.url, token: false, account: { username: "camille", expired: false } });
+    assert.deepEqual(await status(server), {
+      url: gitlab.url,
+      urlError: null,
+      token: false,
+      account: { username: "camille", expired: false, canWrite: true },
+    });
   });
 
   it("pris en compte tout de suite, sans redémarrage : les MR sont lues avec le jeton collé (jamais en Bearer)", async () => {
@@ -219,6 +225,8 @@ describe("jeton GitLab : ancien compte OAuth", () => {
     const server = await boot({}, dataDir);
     gitlab.seen.length = 0;
     assert.equal((await status(server)).account, null);
+    // L'ancien compte est effacé du disque dès la première lecture : aucun jeton de renouvellement ne traîne.
+    assert.equal(fs.readFileSync(path.join(dataDir, "gitlab.json"), "utf8").includes("rt-ancien"), false);
     assert.deepEqual((await server.call("GET", "/gitlab/mrs")).json, {
       connected: false,
       expired: false,
@@ -250,11 +258,11 @@ describe("jeton GitLab : refusé par GitLab après coup", () => {
       mine: [],
       review: [],
     });
-    assert.deepEqual((await status(server)).account, { username: "camille", expired: true });
+    assert.deepEqual((await status(server)).account, { username: "camille", expired: true, canWrite: true });
     assert.equal((await server.call("GET", "/deck/features")).json.gitlab, true);
     assert.equal((await paste(server, TOKEN)).status, 200);
     assert.equal((await server.call("GET", "/gitlab/mrs")).json.connected, true);
-    assert.deepEqual((await status(server)).account, { username: "camille", expired: false });
+    assert.deepEqual((await status(server)).account, { username: "camille", expired: false, canWrite: true });
   });
 
   it("refus constaté à la fusion : même état", async () => {
@@ -320,6 +328,7 @@ describe("jeton GitLab : portées et droit de fusion", () => {
     const server = await boot();
     assert.equal((await paste(server, READ_ONLY_TOKEN)).status, 200);
     assert.equal(stored(server).canWrite, false);
+    assert.equal((await status(server)).account.canWrite, false);
     const list = await server.call("GET", "/gitlab/mrs");
     assert.equal(list.json.connected, true);
     assert.equal(list.json.canMerge, false);
@@ -364,5 +373,100 @@ describe("jeton GitLab : portées et droit de fusion", () => {
     await disconnect(server);
     assert.equal((await server.call("GET", "/gitlab/mrs")).json.canMerge, false);
     assert.equal((await server.call("POST", "/gitlab/mrs/merge", MERGE_BODY)).status, 503);
+  });
+});
+
+describe("jeton GitLab : seul le jeton enregistré passe à « refusé »", () => {
+  it("refus du jeton .env à la fusion (jeton collé en lecture seule) : le jeton collé reste valable", async () => {
+    const readOnly = "glpat-lecture-seule-refus-env";
+    gitlab.tokens[readOnly] = ["read_api"];
+    const server = await boot({ GITLAB_TOKEN: "glpat-env-revoque-de-test" });
+    assert.equal((await paste(server, readOnly)).status, 200);
+    assert.equal((await mergeToClearCache(server)).status, 502);
+    assert.equal((await status(server)).account.expired, false);
+    assert.equal((await server.call("GET", "/gitlab/mrs")).json.connected, true);
+  });
+
+  it("GraphQL répond 403 : le compte passe aussi à « jeton refusé »", async () => {
+    const server = await boot();
+    const mine = "glpat-jeton-403-de-test";
+    gitlab.tokens[mine] = ["api"];
+    await paste(server, mine);
+    gitlab.graphqlStatus = 403;
+    try {
+      assert.equal((await server.call("GET", "/gitlab/mrs")).status, 502);
+    } finally {
+      gitlab.graphqlStatus = 200;
+    }
+    assert.equal((await status(server)).account.expired, true);
+  });
+});
+
+describe("jeton GitLab : adresse GITLAB_URL", () => {
+  it("http:// hors boucle locale, autre schéma ou identifiants dans l'adresse : refusé avec une phrase, GitLab n'est pas appelé", async () => {
+    for (const url of [
+      "http://gitlab.exemple.com",
+      "ftp://gitlab.exemple.com",
+      "https://camille:secret@gitlab.exemple.com",
+      "gitlab.exemple.com",
+    ]) {
+      const server = await boot({ GITLAB_URL: url, GITLAB_TOKEN: ENV_TOKEN });
+      gitlab.seen.length = 0;
+      const res = await paste(server, TOKEN);
+      assert.equal(res.status, 400, url);
+      assert.match((await res.json()).error, /GITLAB_URL/, url);
+      assert.equal(fs.existsSync(storedFile(server)), false, url);
+      assert.equal(gitlab.seen.length, 0, url);
+      // La lecture avec le jeton .env est refusée aussi : le jeton ne part pas vers cette adresse.
+      const mrs = await server.call("GET", "/gitlab/mrs");
+      assert.equal(mrs.status, 502, url);
+      assert.match(mrs.json.error, /GITLAB_URL/, url);
+      assert.equal(gitlab.seen.length, 0, url);
+      const shown = await status(server);
+      assert.equal(shown.url, "", url);
+      assert.match(shown.urlError, /GITLAB_URL/, url);
+    }
+  });
+
+  it("http:// sur 127.0.0.1, localhost ou [::1] : accepté (l'URL du faux GitLab est en 127.0.0.1)", async () => {
+    const server = await boot();
+    assert.equal((await paste(server, TOKEN)).status, 200);
+    assert.equal((await status(server)).url, gitlab.url);
+  });
+});
+
+describe("jeton GitLab : redirections", () => {
+  it("une redirection de GitLab n'est pas suivie : le jeton ne part pas ailleurs", async () => {
+    let hits = 0;
+    let seenToken: string | undefined;
+    const target = http.createServer((req, res) => {
+      hits++;
+      seenToken = req.headers["private-token"] as string | undefined;
+      res.end("{}");
+    });
+    await new Promise<void>((r) => target.listen(0, "127.0.0.1", r));
+    const targetUrl = `http://127.0.0.1:${(target.address() as { port: number }).port}/vole`;
+    const redirector = http.createServer((_req, res) => {
+      res.statusCode = 302;
+      res.setHeader("location", targetUrl);
+      res.end();
+    });
+    await new Promise<void>((r) => redirector.listen(0, "127.0.0.1", r));
+    try {
+      const server = await boot({ GITLAB_URL: `http://127.0.0.1:${(redirector.address() as { port: number }).port}` });
+      assert.equal((await paste(server, TOKEN)).status, 502);
+      assert.equal(hits, 0);
+      assert.equal(seenToken, undefined);
+      // Même garde pour la lecture des MR avec le jeton .env.
+      const env = await boot({
+        GITLAB_URL: `http://127.0.0.1:${(redirector.address() as { port: number }).port}`,
+        GITLAB_TOKEN: ENV_TOKEN,
+      });
+      assert.equal((await env.call("GET", "/gitlab/mrs")).status, 502);
+      assert.equal(hits, 0);
+    } finally {
+      await new Promise((r) => target.close(r));
+      await new Promise((r) => redirector.close(r));
+    }
   });
 });

@@ -61,6 +61,7 @@ import scheduleRoutes from "./routes/schedule.ts";
 import taskRoutes from "./routes/tasks.ts";
 import updateRoutes from "./routes/updates.ts";
 import windowRoutes from "./routes/windows.ts";
+import { LOCAL_HOST, LOOPBACK } from "./net-guard.ts";
 
 // Ce serveur pilote l'ordinateur : hors loopback (USB + adb reverse), un jeton est obligatoire.
 if (!config.loopbackOnly && !config.token) {
@@ -88,9 +89,6 @@ setLogger({ warn: (msg) => app.log.warn(msg) });
 await app.register(multipart, { limits: { fileSize: 20 * 1024 * 1024, files: 1 } });
 
 const expectedAuth = config.token ? Buffer.from(`Bearer ${config.token}`) : undefined;
-const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
-/** Nom demandé par le navigateur : un site qui ferait pointer son domaine vers 127.0.0.1 (DNS rebinding) est refusé. */
-const LOCAL_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
 /**
  * Pages ouvertes dans le navigateur de l'ordinateur (visualiseur, page d'accueil avec le code d'appairage) :
  * pas de jeton possible, lecture seule et en local.

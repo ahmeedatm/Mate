@@ -33,16 +33,18 @@ Le lien « Créer un jeton » est `<GITLAB_URL>/-/user_settings/personal_access_
   « GitLab refuse ce jeton : vérifie qu'il est complet et qu'il n'a pas expiré », rien d'enregistré. GitLab injoignable : « GitLab ne répond pas ».
 - **Stockage** : `.data/gitlab.json` (droits 0600) de l'ordinateur, pris en compte tout de suite, sans redémarrage. Rien ne va sur la
   tablette, ni dans une réponse, ni dans un journal, ni dans la page (le champ se vide après l'envoi).
-- **Jeton refusé plus tard** (révoqué, expiré) : la lecture répond 502 (jamais 401), puis `expired: true` ; la page affiche « jeton refusé »
-  et réclame un nouveau jeton, la tablette renvoie vers elle.
+- **Jeton refusé plus tard** (révoqué, expiré : 401, ou 403 sur la lecture des MR) : la lecture répond 502 (jamais 401), puis `expired: true` ; la page affiche « jeton refusé »
+  et réclame un nouveau jeton, la tablette renvoie vers elle. Seul le jeton enregistré est marqué : un refus de `GITLAB_TOKEN` ne touche pas le jeton collé.
+- **Lecture seule** : la page dit « Lecture seule : la fusion se fait sur l'ordinateur… » et garde le champ pour coller un jeton avec `api` (`account.canWrite` de `GET /local/status`, un booléen, jamais le jeton).
+- **Adresse** : `GITLAB_URL` en `https://`, ou `http://` sur 127.0.0.1, `localhost` ou `[::1]`, sans identifiant dans l'adresse. Sinon aucun appel ne part (le jeton ne sort pas en clair ni vers un autre hôte), la page et `PUT` disent « GITLAB_URL doit commencer par https:// … », la lecture répond 502. Les redirections de GitLab ne sont pas suivies.
 - **`GITLAB_TOKEN` du `.env`** reste en secours (portée `api`). Le jeton collé prime pour lire ; pour fusionner, il faut qu'il ait `api`, sinon
   `GITLAB_TOKEN` sert.
-- **Ancien compte OAuth** (`refreshToken` dans `.data/gitlab.json`) : ignoré. La carte demande de coller un jeton.
+- **Ancien compte OAuth** (`refreshToken` dans `.data/gitlab.json`, sans jeton collé) : effacé du disque à la première lecture. La carte demande de coller un jeton.
 - **Pas connecté** : `GET /gitlab/mrs` répond 200 `{ "connected": false, "expired": false, "canMerge": false, "mine": [], "review": [] }`
   (jamais 401, qui voudrait dire « tablette à réappairer »).
 - **Widgets toujours proposés** : `/deck/features` → `gitlab` vrai sur tout ordinateur piloté (hors démo), pour que la carte « Connecter
   GitLab » soit trouvable.
-- Routes (page locale, sans jeton d'appairage, depuis 127.0.0.1 seulement) : `PUT /local/accounts/gitlab { token }` (200 `{ ok, username }`,
+- Routes (page locale, sans jeton d'appairage, depuis 127.0.0.1 seulement ; `PUT` refuse aussi (403) un jeton d'appairage valide venu d'un autre hôte ou d'une autre adresse, et un corps qui n'est pas du JSON) : `PUT /local/accounts/gitlab { token }` (200 `{ ok, username }`,
   400 refusé, 502 injoignable), `DELETE /local/accounts/gitlab`. La tablette ouvre la carte par `POST /local/open { "section": "gitlab" }`
   (`/?section=gitlab`).
 - Code : `backend/src/gitlab-auth.ts` (jeton), `backend/src/gitlab.ts` (MR et fusion), carte dans `backend/src/local-page.ts`.

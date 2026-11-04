@@ -78,6 +78,8 @@ export type FakeGitlab = {
   selfStatus: number;
   /** Code HTTP de la fusion (200 : fusionnée). */
   mergeStatus: number;
+  /** Code HTTP forcé pour la requête GraphQL des MR (200 : normal ; 403 : accès interdit). */
+  graphqlStatus: number;
   /** Tous les jetons personnels déclarés sont révoqués : l'API répond 401. */
   revokeAll: () => void;
   mrs: { assigned: unknown[]; review: unknown[] };
@@ -104,6 +106,7 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
     tokens: {},
     selfStatus: 200,
     mergeStatus: 200,
+    graphqlStatus: 200,
     schedules: {},
     memberProjects: [],
     deniedProjects: [],
@@ -165,6 +168,7 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
           const nodes = fake.schedules[path];
           return json(200, { data: { project: nodes ? { pipelineSchedules: { nodes } } : null } });
         }
+        if (fake.graphqlStatus !== 200) return json(fake.graphqlStatus, { message: "refus" });
         return json(200, {
           data: {
             currentUser: {

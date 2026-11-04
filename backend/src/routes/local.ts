@@ -9,7 +9,8 @@ import { clearGithubCache } from "../github.ts";
 import { disconnectGithub, githubAccount, githubClientId, githubLogin, startGithubLogin } from "../github-auth.ts";
 import { clearGitlabCache } from "../gitlab.ts";
 import { jiraConfigured, jiraSite } from "../jira.ts";
-import { connectGitlab, disconnectGitlab, gitlabAccount, gitlabBaseUrl, GitlabTokenError } from "../gitlab-auth.ts";
+import { connectGitlab, disconnectGitlab, gitlabAccount, gitlabBaseUrl, GitlabTokenError, gitlabUrlProblem } from "../gitlab-auth.ts";
+import { isLocalRequest } from "../net-guard.ts";
 import { LOCAL_PAGE } from "../local-page.ts";
 import { WEB_FILES } from "../web-style.ts";
 import { accessibility, openTarget } from "../os.ts";
@@ -59,9 +60,10 @@ export default async function localRoutes(app: FastifyInstance) {
       accounts: await connectedAccounts(),
       providers: await availableProviders(),
     },
-    // `account` : jeton collé dans la page ; `token` : GITLAB_TOKEN dans .env (secours).
+    // `account` : jeton collé dans la page (`canWrite` : portée api) ; `urlError` : GITLAB_URL refusée ; `token` : GITLAB_TOKEN dans .env (secours).
     gitlab: {
-      url: gitlabBaseUrl(),
+      url: gitlabUrlProblem() ? "" : gitlabBaseUrl(),
+      urlError: gitlabUrlProblem() ?? null,
       token: !!process.env.GITLAB_TOKEN?.trim(),
       account: (await gitlabAccount()) ?? null,
     },
@@ -210,6 +212,8 @@ export default async function localRoutes(app: FastifyInstance) {
       },
     },
     async (req, reply) => {
+      // Le jeton d'appairage ne suffit pas : un secret ne se colle que depuis la page ouverte sur l'ordinateur.
+      if (!isLocalRequest(req.ip, req.headers.host)) return reply.code(403).send({ error: "Réservé à la page de l'ordinateur" });
       try {
         const { username } = await connectGitlab(req.body.token);
         clearGitlabCache();

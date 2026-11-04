@@ -410,7 +410,7 @@ ${FAVICON}
       <div id="gitlabaccount"></div>
       <!-- Jeton personnel collé : vérifié auprès de GitLab, gardé sur l'ordinateur (PUT /local/accounts/gitlab). -->
       <form id="gitlabform" autocomplete="off">
-        <input id="gitlabtoken" type="password" placeholder="Coller le jeton GitLab" autocomplete="off" aria-label="Jeton GitLab">
+        <input id="gitlabtoken" type="password" placeholder="Coller le jeton GitLab" autocomplete="off" spellcheck="false" autocapitalize="off" aria-label="Jeton GitLab">
         <div class="actions"><button id="gitlabsave" type="submit">Enregistrer</button></div>
       </form>
       <div id="gitlabmsg" class="dim" style="margin-top:8px" role="status"></div>
@@ -598,10 +598,14 @@ ${FAVICON}
     const box = document.getElementById("gitlabaccount");
     box.replaceChildren();
     const state = document.getElementById("gitlabstate");
-    // Le champ du jeton sert tant qu'aucun jeton valable n'est enregistré (ou pour remplacer un jeton refusé).
-    document.getElementById("gitlabform").hidden = !!g.account && !g.account.expired;
+    // Le champ du jeton sert tant qu'aucun jeton valable n'est enregistré, pour remplacer un jeton refusé, ou pour en coller
+    // un avec la portée api quand le jeton enregistré ne lit que (le .env, s'il y en a un, fusionne à sa place).
+    const readOnly = !!g.account && !g.account.expired && !g.account.canWrite && !g.token;
+    document.getElementById("gitlabform").hidden = !!g.account && !g.account.expired && !readOnly;
     if (g.account) {
-      state.textContent = g.account.expired ? "GitLab refuse ce jeton : colle-en un nouveau." : "La tablette lit et fusionne tes MR avec ce compte.";
+      state.textContent = g.account.expired ? "GitLab refuse ce jeton : colle-en un nouveau."
+        : readOnly ? "Lecture seule : la fusion se fait sur l'ordinateur. Colle un jeton avec la portée api pour fusionner depuis la tablette."
+        : "La tablette lit et fusionne tes MR avec ce compte.";
       const row = document.createElement("div");
       row.className = "account";
       const label = document.createElement("span");
@@ -615,7 +619,8 @@ ${FAVICON}
       row.append(label, off);
       box.append(row);
     } else {
-      state.textContent = g.token ? "Connecté." : "Non connecté.";
+      // Sans compte, les étapes de la carte disent déjà quoi faire : pas de « Non connecté. » en plus.
+      state.textContent = g.token ? "Connecté." : g.urlError || "";
     }
   }
   // GitHub : même carte que GitLab, plus le code à saisir sur GitHub tant que la connexion attend (device flow).
@@ -825,7 +830,8 @@ ${FAVICON}
   function tokenLink(text) {
     const link = document.createElement("a");
     link.className = "button";
-    link.href = gitlabUrl + "/-/user_settings/personal_access_tokens?name=Mate&scopes=api";
+    // GITLAB_URL refusée (urlError) : pas d'adresse, le lien reste inerte.
+    if (gitlabUrl) link.href = gitlabUrl + "/-/user_settings/personal_access_tokens?name=Mate&scopes=api";
     link.target = "_blank";
     link.rel = "noopener";
     link.textContent = text;
@@ -875,16 +881,20 @@ ${FAVICON}
   document.getElementById("gitlabform").onsubmit = async (e) => {
     e.preventDefault();
     const input = document.getElementById("gitlabtoken"), msg = document.getElementById("gitlabmsg");
-    if (!input.value.trim()) { msg.textContent = "Colle d'abord le jeton."; return; }
-    msg.textContent = "Vérification…";
+    const say = (text, ok) => { msg.textContent = text; msg.className = "dim" + (ok === undefined ? "" : ok ? " ok" : " ko"); };
+    if (!input.value.trim()) { say("Colle d'abord le jeton.", false); return; }
+    if (input.value.length > 500) { say("Ce jeton est trop long : colle seulement le jeton GitLab, rien d'autre.", false); return; }
+    say("Vérification…");
     try {
       const res = await fetch("/local/accounts/gitlab", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: input.value }) });
-      const r = await res.json();
-      msg.textContent = res.ok ? "✓ GitLab connecté : les widgets GitLab de la tablette se remplissent dans quelques secondes." : r.error || r.message;
-      if (res.ok) input.value = "";
+      const r = await res.json().catch(() => ({}));
+      if (res.ok) {
+        say("GitLab connecté : les widgets GitLab de la tablette se remplissent dans quelques secondes.", true);
+        input.value = "";
+      } else say(typeof r.error === "string" && r.error ? r.error : "Le compagnon n'a pas pu enregistrer ce jeton. Réessaie.", false);
       refresh();
     } catch (err) {
-      msg.textContent = "Compagnon injoignable";
+      say("Compagnon injoignable", false);
     }
   };
 

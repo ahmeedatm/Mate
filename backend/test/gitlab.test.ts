@@ -61,7 +61,7 @@ afterEach(() => {
   if (env.GITLAB_URL === undefined) delete process.env.GITLAB_URL;
 });
 
-const REFUSED = "GitLab refuse l'accès de l'ordinateur : colle un nouveau jeton dans la page du compagnon";
+const REFUSED = "GitLab refuse l'accès de l'ordinateur : colle un nouveau jeton dans la page de Mate sur l'ordinateur";
 const rejectsWith = (p: Promise<unknown>, statusCode: number, message: string) =>
   assert.rejects(p, (e: unknown) => {
     assert.ok(e instanceof GitLabError, `GitLabError attendue, reçu ${String(e)}`);
