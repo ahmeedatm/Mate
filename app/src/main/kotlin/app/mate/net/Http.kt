@@ -68,6 +68,9 @@ class Http(
         )
     }
 
+    /** Image ou fichier ; toute erreur HTTP (404 compris) est levée. */
+    fun bytes(path: String, timeoutMs: Int = 60_000): ByteArray = bytes(request("GET", path, timeoutMs = timeoutMs))
+
     /** Image ou fichier ; null sur 404 (l'ordinateur n'en a pas). */
     fun bytesOrNull(path: String, timeoutMs: Int = 60_000): ByteArray? =
         try { bytes(request("GET", path, timeoutMs = timeoutMs)) } catch (e: HttpException) { if (e.code == 404) null else throw e }
