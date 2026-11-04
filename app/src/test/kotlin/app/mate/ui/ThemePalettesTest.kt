@@ -73,10 +73,8 @@ class ThemePalettesTest {
     }
 
     @Test
-    fun `couleurs de sens et couleur des ambiances au moins 4,5 sur fond, tuile et relief`() {
-        // Comme à UnoMate, les ambiances seules : le rouge de Cadran nuit sur le relief (4,498) et l'ambre de Rétro (3,9 sur le fond)
-        // restent à leur valeur d'origine.
-        for (name in ambiances) for (fg in listOf("c_accent", "c_ok", "c_ko", "c_warn", "c_primary")) for (bg in backgrounds) {
+    fun `couleurs de sens et couleur d'accent au moins 4,5 sur fond, tuile et relief`() {
+        for (name in imported) for (fg in listOf("c_accent", "c_ok", "c_ko", "c_warn", "c_primary")) for (bg in backgrounds) {
             assertTrue("$name $fg sur $bg : ${ratio(name, fg, bg)}", ratio(name, fg, bg) >= 4.5)
         }
     }
@@ -92,14 +90,14 @@ class ThemePalettesTest {
     }
 
     @Test
-    fun `signaux, teintes de fonction et traits des ambiances au moins 3 sur les fonds`() {
-        for (name in ambiances) {
+    fun `signaux, teintes de fonction et traits au moins 3 sur les fonds`() {
+        for (name in imported) {
             val signals = values(name).keys.filter { it.startsWith("c_agent_") || it.startsWith("c_hue_") }
             assertTrue(signals.size >= 13)
             for (fg in signals) for (bg in backgrounds + "c_surface_pressed") {
                 assertTrue("$name $fg sur $bg : ${ratio(name, fg, bg)}", ratio(name, fg, bg) >= 3.0)
             }
-            for (bg in backgrounds) assertTrue("$name c_graphic sur $bg", ratio(name, "c_graphic", bg) >= 3.0)
+            for (bg in backgrounds) assertTrue("$name c_graphic sur $bg : ${ratio(name, "c_graphic", bg)}", ratio(name, "c_graphic", bg) >= 3.0)
         }
     }
 
@@ -136,6 +134,17 @@ class ThemePalettesTest {
             assertEquals("$name c_pattern", "none", v["c_pattern"])
             assertEquals("$name c_grain_light", "#00000000", v["c_grain_light"])
             assertEquals("$name c_grain_dark", "#00000000", v["c_grain_dark"])
+        }
+    }
+
+    @Test
+    fun `le grain et le motif ne se cumulent pas dans une palette`() {
+        // Grain et ThemePattern posent tous deux le `foreground` de android.R.id.content : le second effacerait le premier.
+        for (name in all) {
+            val v = values(name)
+            val pattern = v["c_pattern"] != null && v["c_pattern"] != "none"
+            val grain = listOf("c_grain_light", "c_grain_dark").any { v[it] != null && v[it] != "#00000000" }
+            assertTrue("$name : c_pattern et grain visible ensemble", !(pattern && grain))
         }
     }
 

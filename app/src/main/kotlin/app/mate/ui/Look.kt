@@ -7,6 +7,7 @@ import android.content.Context
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
@@ -43,27 +44,41 @@ object Look {
      * pour le lire sur les tubes qui coulent derrière.
      */
     fun halo(context: Context, paint: Paint) {
-        if (themeBool(context, R.attr.c_flow)) paint.setShadowLayer(HALO_RADIUS, 0f, 0f, themeColor(context, R.attr.c_surface))
+        if (themeBool(context, R.attr.c_flow)) paint.setShadowLayer(haloRadius(context), 0f, 0f, themeColor(context, R.attr.c_surface))
     }
 
     /**
      * Thèmes à tubes : halo de la couleur des cartes autour des textes sous [root] (Accueil, tubes derrière) qui
-     * tranchent sur elle (foncés en thème clair, clairs la nuit) ; jamais autour d'un texte posé sur un fond coloré
-     * (tuile, bouton plein), qu'il brouillerait.
+     * tranchent sur elle (foncés en thème clair, clairs la nuit, voir [wantsHalo]) ; jamais autour d'un texte dont la vue
+     * porte son propre fond plein (rond d'initiale, bouton plein), que le halo brouillerait. La couleur des cartes est
+     * lue une fois pour tout l'arbre.
      */
     fun haloTexts(root: View) {
-        if (root is TextView) {
-            val surface = themeColor(root.context, R.attr.c_surface)
-            val dark = ColorUtils.calculateLuminance(root.currentTextColor) < DARK_TEXT
-            val onCard = dark != ColorUtils.calculateLuminance(surface) < DARK_TEXT
-            val halo = if (onCard) surface else 0
-            if (root.shadowColor != halo) root.setShadowLayer(if (onCard) HALO_RADIUS else 0f, 0f, 0f, halo)
-        }
-        if (root is ViewGroup) for (i in 0 until root.childCount) haloTexts(root.getChildAt(i))
+        val surface = themeColor(root.context, R.attr.c_surface)
+        haloTexts(root, surface, ColorUtils.calculateLuminance(surface), haloRadius(root.context))
     }
 
-    private const val HALO_RADIUS = 8f
-    private const val DARK_TEXT = 0.3
+    private fun haloTexts(view: View, surface: Int, surfaceLuminance: Double, radius: Float) {
+        if (view is TextView) {
+            val ownFill = view.background.let { it is ColorDrawable || it is GradientDrawable }
+            val on = wantsHalo(ColorUtils.calculateLuminance(view.currentTextColor), surfaceLuminance, ownFill)
+            val halo = if (on) surface else 0
+            if (view.shadowColor != halo) view.setShadowLayer(if (on) radius else 0f, 0f, 0f, halo)
+        }
+        if (view is ViewGroup) for (i in 0 until view.childCount) haloTexts(view.getChildAt(i), surface, surfaceLuminance, radius)
+    }
+
+    /**
+     * Un texte (luminance [textLuminance]) reçoit le halo des cartes (luminance [surfaceLuminance]) s'il tranche sur elles
+     * (foncé sur cartes claires, clair sur cartes sombres) et n'a pas son propre fond ([ownFill]).
+     */
+    fun wantsHalo(textLuminance: Double, surfaceLuminance: Double, ownFill: Boolean): Boolean =
+        !ownFill && (textLuminance < DARK_LUMINANCE) != (surfaceLuminance < DARK_LUMINANCE)
+
+    private fun haloRadius(context: Context) = HALO_DP * context.resources.displayMetrics.density
+
+    private const val HALO_DP = 8f
+    private const val DARK_LUMINANCE = 0.3
 
     private val HUES = intArrayOf(
         R.attr.c_hue_orange, R.attr.c_hue_green, R.attr.c_hue_cyan, R.attr.c_hue_violet,

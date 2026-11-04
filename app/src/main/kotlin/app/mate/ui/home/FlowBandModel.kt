@@ -50,4 +50,14 @@ object FlowBandModel {
             (if (top < join) 0f else top - join / 4) to (if (bottom > height - join) height else bottom + join / 4)
         }
     }
+
+    /** Fin (uptime) du liquide qui coule à partir de [now], [tail] plus tard ; 0 en Réduire les animations : il ne coule pas. */
+    fun flowEnd(now: Long, still: Boolean, tail: Long) = if (still) 0L else now + tail
+
+    /**
+     * Le voile est recalculé avant une image seulement si les tubes tournent (le liquide coule encore à [now], ressort
+     * compris) ou juste après un changement de mise en page (jusqu'à [layoutUntil] : les widgets qui arrivent bougent
+     * encore) : une bande à l'arrêt ne coûte rien à chaque image des autres animations.
+     */
+    fun follows(now: Long, flowUntil: Long, layoutUntil: Long) = now < flowUntil || now < layoutUntil
 }

@@ -1,6 +1,8 @@
 package app.mate.ui.home
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FlowBandModelTest {
@@ -66,5 +68,20 @@ class FlowBandModelTest {
     fun `les zones sont triees avant d'etre rejointes`() {
         val bands = FlowBandModel.veils(listOf(500f to 600f, 200f to 300f), 48f, 800f)
         assertEquals(listOf(188f to 312f, 488f to 612f), bands)
+    }
+
+    @Test
+    fun `le liquide coule jusqu'a la fin de la queue, jamais en animations reduites`() {
+        assertEquals(5000L, FlowBandModel.flowEnd(now = 1000L, still = false, tail = 4000L))
+        assertEquals(0L, FlowBandModel.flowEnd(now = 1000L, still = true, tail = 4000L))
+    }
+
+    @Test
+    fun `le voile suit les widgets seulement si les tubes tournent ou juste apres un changement de mise en page`() {
+        assertFalse(FlowBandModel.follows(now = 100L, flowUntil = 0L, layoutUntil = 0L))
+        assertFalse(FlowBandModel.follows(now = 100L, flowUntil = 100L, layoutUntil = 100L))
+        assertTrue(FlowBandModel.follows(now = 99L, flowUntil = 100L, layoutUntil = 0L))
+        assertTrue(FlowBandModel.follows(now = 99L, flowUntil = 0L, layoutUntil = 100L))
+        assertTrue(FlowBandModel.follows(now = 100L, flowUntil = Long.MAX_VALUE, layoutUntil = 0L))
     }
 }

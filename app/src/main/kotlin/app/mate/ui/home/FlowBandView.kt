@@ -3,7 +3,6 @@ package app.mate.ui.home
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.LinearGradient
-import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Shader
 import android.graphics.SweepGradient
@@ -34,7 +33,8 @@ import app.mate.ui.themeColor
  * phase avec la tige au point où ils se touchent). Rien que des rectangles et des disques, 30 images/s. Masquée dans
  * les autres thèmes (`c_flow`) : GONE, ni mesurée ni dessinée.
  * Les images ne tournent que pendant un passage d'écran et [FLOW_TAIL_MS] après (le liquide coule alors), jamais à
- * l'arrêt ; le voile est recalculé avant chaque image de la fenêtre, et la bande ne se redessine que s'il a bougé.
+ * l'arrêt, ni en Réduire les animations ; le voile n'est recalculé avant une image que tant que les tubes tournent ou juste
+ * après une mise en page, et la bande ne se redessine que s'il a bougé.
  * Voilée derrière les widgets sans fond ([hidden]) comme à travers une carte. Les écrans sont comme empilés le long des
  * tubes : passer à l'écran ou au profil suivant de la barre fait défiler les tubes d'un écran entier ([travel]).
  */
@@ -73,7 +73,6 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
         ),
     )
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val matrix = Matrix()
     private var running = false
     private val origin = IntArray(2)
     private val at = IntArray(2)
@@ -99,12 +98,20 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
     /** Vues sans carte (héros, ligne du jour) derrière lesquelles les tubes passent voilés de la couleur du fond. */
     var hidden: () -> List<View> = { emptyList() }
 
+    /** Jusqu'à quand (uptime) le voile suit encore les widgets après une mise en page : ils arrivent en glissant. */
+    private var layoutUntil = 0L
+
+    private val relayout = ViewTreeObserver.OnGlobalLayoutListener { layoutUntil = SystemClock.uptimeMillis() + LAYOUT_SETTLE_MS }
+
+    /** Avant chaque image de la fenêtre, mais ne calcule (listes, dégradés) que si les tubes tournent ou si la mise en page vient de changer. */
     private val follow = ViewTreeObserver.OnPreDrawListener {
-        val now = hiddenBands()
-        if (now != bands) {
-            bands = now
-            veils = now.map { (top, bottom) -> veil(top, bottom) }
-            invalidate()
+        if (FlowBandModel.follows(SystemClock.uptimeMillis(), flowUntil, layoutUntil)) {
+            val now = hiddenBands()
+            if (now != bands) {
+                bands = now
+                veils = now.map { (top, bottom) -> veil(top, bottom) }
+                invalidate()
+            }
         }
         true
     }
@@ -121,7 +128,7 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
         if (direction == 0 || visibility != VISIBLE) return
         travelling?.cancel()
         target = FlowBandModel.scrolled(target, direction)
-        flowUntil = Long.MAX_VALUE
+        flowUntil = if (Look.still(context)) 0L else Long.MAX_VALUE
         travelling = Look.spring(context, Look.SPATIAL_DEFAULT, offset, target, {
             offset = it
             invalidate()
@@ -129,7 +136,7 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
             target = FlowBandModel.settled(target)
             offset = target
             travelling = null
-            flowUntil = SystemClock.uptimeMillis() + FLOW_TAIL_MS
+            flowUntil = flowEnd()
             invalidate()
         }, always = true)
         invalidate()
@@ -142,12 +149,19 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        if (flowOn) viewTreeObserver.addOnPreDrawListener(follow)
+        if (flowOn) {
+            layoutUntil = SystemClock.uptimeMillis() + LAYOUT_SETTLE_MS
+            viewTreeObserver.addOnGlobalLayoutListener(relayout)
+            viewTreeObserver.addOnPreDrawListener(follow)
+        }
     }
 
     override fun onDetachedFromWindow() {
         viewTreeObserver.removeOnPreDrawListener(follow)
+        viewTreeObserver.removeOnGlobalLayoutListener(relayout)
         travelling?.cancel()
+        travelling = null
+        flowUntil = 0L
         super.onDetachedFromWindow()
     }
 
@@ -155,6 +169,7 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
         // Dégradés du voile à la largeur de la vue : recalculés à la prochaine image.
         bands = emptyList()
         veils = emptyList()
+        layoutUntil = SystemClock.uptimeMillis() + LAYOUT_SETTLE_MS
     }
 
     override fun onVisibilityAggregated(isVisible: Boolean) {
@@ -162,10 +177,12 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
         running = isVisible
         if (isVisible) {
             // Le liquide coule un moment à l'apparition, puis la bande reste fixe.
-            flowUntil = maxOf(flowUntil, SystemClock.uptimeMillis() + FLOW_TAIL_MS)
+            flowUntil = maxOf(flowUntil, flowEnd())
             invalidate()
         }
     }
+
+    private fun flowEnd() = FlowBandModel.flowEnd(SystemClock.uptimeMillis(), Look.still(context), FLOW_TAIL_MS)
 
     private fun hiddenBands(): List<Pair<Float, Float>> {
         getLocationInWindow(origin)
@@ -188,8 +205,9 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
 
     override fun onDraw(canvas: Canvas) {
         val now = SystemClock.uptimeMillis()
-        // Réduire les animations : le liquide ne coule plus (vague figée).
-        if (now < flowUntil && !Look.still(context)) {
+        // Réduire les animations : le liquide ne coule plus (vague figée), aucune image relancée.
+        val flowing = now < flowUntil && !Look.still(context)
+        if (flowing) {
             flowed = (flowed + SPEED * minOf(now - lastFrame, MAX_STEP_MS) / 1000f) % WAVE
         }
         lastFrame = now
@@ -203,7 +221,7 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
         for (i in veils.indices) drawVeil(canvas, veils[i])
         paint.shader = null
         // Le ressort relance les images lui-même ; ensuite seulement la queue du liquide, puis plus rien.
-        if (running && travelling == null && now < flowUntil) postInvalidateDelayed(FRAME_MS)
+        if (running && travelling == null && flowing) postInvalidateDelayed(FRAME_MS)
     }
 
     private fun drawVeil(canvas: Canvas, veil: Veil) {
@@ -241,21 +259,26 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
         }
     }
 
-    /** Tige entre la boucle [n] et la suivante : trois bandes droites où la vague descend. */
+    /**
+     * Tige entre la boucle [n] et la suivante : trois bandes droites où la vague descend. Le dégradé est posé une fois pour
+     * toutes ; c'est le canevas qui le décale de [flowed] (un `setLocalMatrix` par image recréerait l'instance native, Android 10).
+     */
     private fun drawStem(canvas: Canvas, tube: Tube, n: Int, flowed: Float) {
-        val top = tube.firstLoop + n * PERIOD
-        matrix.setTranslate(0f, flowed)
+        val top = tube.firstLoop + n * PERIOD - flowed
+        canvas.save()
+        canvas.translate(0f, flowed)
         for (k in 0 until 3) {
             val x = tube.cx + tube.side * RADII[k]
-            tube.stems[k].setLocalMatrix(matrix)
             paint.shader = tube.stems[k]
             canvas.drawRect(x - BAND / 2, top, x + BAND / 2, top + PERIOD, paint)
         }
+        canvas.restore()
     }
 
     /**
      * Boucle [n] : liseré du fond qui coupe la tige passant dessous, puis disques concentriques dont la vague tourne
-     * dans le sens du tube. Au point de jonction (angle de départ), la phase est celle de la tige à la même hauteur.
+     * dans le sens du tube (le canevas tourne, le dégradé circulaire reste tel qu'il a été créé). Au point de jonction
+     * (angle de départ), la phase est celle de la tige à la même hauteur.
      */
     private fun drawLoop(canvas: Canvas, tube: Tube, n: Int, flowed: Float) {
         val cy = tube.firstLoop + n * PERIOD
@@ -264,17 +287,20 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
         canvas.drawCircle(tube.cx, cy, OUTLINE, paint)
         val start = if (tube.side > 0) 0f else 180f
         val phase = (cy - flowed) / WAVE
+        canvas.save()
+        canvas.translate(tube.cx, cy)
         for (k in 2 downTo 0) {
-            matrix.setRotate(start - tube.side * 360f * phase / waves(RADII[k]))
-            matrix.postTranslate(tube.cx, cy)
-            tube.loops[k].setLocalMatrix(matrix)
+            canvas.save()
+            canvas.rotate(start - tube.side * 360f * phase / waves(RADII[k]))
             paint.shader = tube.loops[k]
-            canvas.drawCircle(tube.cx, cy, RADII[k] + BAND / 2, paint)
+            canvas.drawCircle(0f, 0f, RADII[k] + BAND / 2, paint)
+            canvas.restore()
         }
         // Le centre du disque intérieur, où le dégradé circulaire se resserre en moulinet : couleur pleine.
         paint.shader = null
         paint.color = tube.colors[0]
-        canvas.drawCircle(tube.cx, cy, RADII[0] - BAND / 2, paint)
+        canvas.drawCircle(0f, 0f, RADII[0] - BAND / 2, paint)
+        canvas.restore()
     }
 
     companion object {
@@ -288,6 +314,9 @@ class FlowBandView @JvmOverloads constructor(context: Context, attrs: AttributeS
 
         /** Le liquide coule encore ce temps après la fin d'un passage d'écran (et à l'apparition de la bande). */
         private const val FLOW_TAIL_MS = 4000L
+
+        /** Après une mise en page, le voile suit les widgets (qui arrivent en glissant) ce temps de plus. */
+        private const val LAYOUT_SETTLE_MS = 1500L
 
         /** Pas de vague maximal entre deux images : une image tardive ne fait pas sauter le liquide. */
         private const val MAX_STEP_MS = 100L

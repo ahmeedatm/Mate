@@ -1143,7 +1143,10 @@ class MainActivity : AppCompatActivity() {
         supportFragmentManager.executePendingTransactions()
         val into = supportFragmentManager.findFragmentByTag(mode.tag)?.view ?: return
         // Kiosque : l'Accueil arrive par ses widgets (Look.enterSpring), pas en glissant tout entier par-dessus.
-        if (mode == Mode.HOME && Look.cascadeOnly(this)) return
+        if (mode == Mode.HOME && Look.cascadeOnly(this)) {
+            flowTravel(nav.lastMove)
+            return
+        }
         Look.sharedAxis(into, fromBelow = nav.lastMove >= 0)
         flowTravel(nav.lastMove)
     }

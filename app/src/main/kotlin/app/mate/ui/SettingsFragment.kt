@@ -491,7 +491,8 @@ class SettingsFragment :
             rows.addView(
                 TextView(ctx).apply {
                     setText(group.label)
-                    setTextColor(themeColor(ctx, R.attr.c_text_dim))
+                    setTextColor(themeColor(ctx, R.attr.c_text))
+                    typeface = themeFont(ctx, R.attr.c_font_medium)
                     textSize = 14f
                     ViewCompat.setAccessibilityHeading(this, true)
                 },
