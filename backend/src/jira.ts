@@ -10,7 +10,7 @@ import path from "node:path";
 import { config } from "./config.ts";
 import { jiraAccount } from "./jira-auth.ts";
 import { singleFlight } from "./single-flight.ts";
-import { readJson, updateJson } from "./store.ts";
+import { readJson, removeJson, updateJson } from "./store.ts";
 
 export const jiraConfigured = () => jiraAccount() !== undefined;
 
@@ -44,11 +44,19 @@ const CACHE_MS = 5 * 60_000;
 let accountId: string | undefined;
 let cache: { day: string; at: number; seconds: number } | undefined;
 
-/** Compte changé ou déconnecté : plus rien de ce qui a été lu avec l'ancien ne vaut. */
-export function forgetJiraAccount() {
+/** Change à chaque oubli : une lecture d'`accountId` partie avant ne doit pas écrire son résultat après. */
+let generation = 0;
+
+/**
+ * Compte changé ou déconnecté : plus rien de ce qui a été lu avec l'ancien ne vaut. `wipeChoices` : site ou e-mail
+ * différent, ou déconnexion : les tableaux et colonnes choisis (.data/jira.json) sont ceux de l'ancien compte, effacés.
+ */
+export async function forgetJiraAccount(wipeChoices: boolean) {
+  generation++;
   accountId = undefined;
   cache = undefined;
   configs.clear();
+  if (wipeChoices) await removeJson(boardsFile);
 }
 
 async function jira<T>(path: string, init?: { method: "POST"; body: object }): Promise<T> {
@@ -61,6 +69,8 @@ async function jira<T>(path: string, init?: { method: "POST"; body: object }): P
       ...(init ? { "content-type": "application/json" } : {}),
     },
     body: init && JSON.stringify(init.body),
+    // Le jeton ne suit aucune redirection.
+    redirect: "error",
     signal: AbortSignal.timeout(15_000),
   }).catch(() => {
     // Réseau coupé, DNS, délai dépassé : « fetch failed » ne dit rien à l'écran de la tablette.
@@ -71,7 +81,11 @@ async function jira<T>(path: string, init?: { method: "POST"; body: object }): P
 }
 
 async function myAccountId(): Promise<string> {
-  return (accountId ??= (await jira<{ accountId: string }>("/rest/api/3/myself")).accountId);
+  if (accountId) return accountId;
+  const gen = generation;
+  const id = (await jira<{ accountId: string }>("/rest/api/3/myself")).accountId;
+  if (gen === generation) accountId = id;
+  return id;
 }
 
 const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -81,6 +95,7 @@ export async function worklogSecondsOn(day: Date, force = false): Promise<number
   const key = isoDay(day);
   if (!force && cache?.day === key && Date.now() - cache.at < CACHE_MS) return cache.seconds;
 
+  const gen = generation;
   const me = await myAccountId();
   const start = new Date(day);
   start.setHours(0, 0, 0, 0);
@@ -97,7 +112,7 @@ export async function worklogSecondsOn(day: Date, force = false): Promise<number
     );
     for (const w of worklogs) if (w.author.accountId === me) seconds += w.timeSpentSeconds;
   }
-  cache = { day: key, at: Date.now(), seconds };
+  if (gen === generation) cache = { day: key, at: Date.now(), seconds };
   return seconds;
 }
 

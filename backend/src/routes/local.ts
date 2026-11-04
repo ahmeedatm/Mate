@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvider, loginUrl } from "../accounts.ts";
 import { calendarSources, dayRange, getEvents, invalidateCalendar, saveCalendarUrls, savedCalendarUrls } from "../calendar.ts";
 import { backendRoot, config } from "../config.ts";
@@ -11,6 +11,7 @@ import { clearGitlabCache } from "../gitlab.ts";
 import { forgetJiraAccount } from "../jira.ts";
 import { connectJira, disconnectJira, JiraAuthError, jiraStatus } from "../jira-auth.ts";
 import { disconnectGitlab, finishGitlabLogin, gitlabAccount, gitlabClientId, gitlabLoginUrl } from "../gitlab-auth.ts";
+import { localPageOnly } from "../local-guard.ts";
 import { LOCAL_PAGE } from "../local-page.ts";
 import { WEB_FILES } from "../web-style.ts";
 import { accessibility, openTarget } from "../os.ts";
@@ -256,10 +257,14 @@ export default async function localRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
+  // Réservées à la page locale : le jeton d'appairage de la tablette ne suffit pas à changer le compte Jira de l'ordinateur.
+  const jiraPageOnly = (req: FastifyRequest, reply: FastifyReply) =>
+    localPageOnly(req, reply, "Connexion Jira depuis la page locale de l'ordinateur seulement");
   // Connexion Jira (src/jira-auth.ts) : site, e-mail et jeton d'API collés dans la page, vérifiés auprès de Jira puis gardés sur l'ordinateur.
   app.put<{ Body: { site: string; email: string; token: string } }>(
     "/local/accounts/jira",
     {
+      onRequest: jiraPageOnly,
       schema: {
         body: {
           type: "object",
@@ -275,8 +280,8 @@ export default async function localRoutes(app: FastifyInstance) {
     },
     async (req, reply) => {
       try {
-        const { site } = await connectJira(req.body);
-        forgetJiraAccount();
+        const { site, changed } = await connectJira(req.body);
+        await forgetJiraAccount(changed);
         return { ok: true, site };
       } catch (e) {
         if (e instanceof JiraAuthError) return reply.code(e.statusCode).send({ error: e.message });
@@ -285,9 +290,9 @@ export default async function localRoutes(app: FastifyInstance) {
     },
   );
 
-  app.delete("/local/accounts/jira", async () => {
+  app.delete("/local/accounts/jira", { onRequest: jiraPageOnly }, async () => {
     await disconnectJira();
-    forgetJiraAccount();
+    await forgetJiraAccount(true);
     return { ok: true };
   });
 

@@ -12,9 +12,10 @@ import { removeJson, updateJson } from "./store.ts";
 
 const TIMEOUT_MS = 15_000;
 
-// Toujours en https (jamais d'identifiants en clair sur le réseau) ; seul un faux Jira local, donné explicitement
-// en `http://127.0.0.1:<port>` ou `http://localhost:<port>` (tests), reste en http.
+// Toujours en https (jamais d'identifiants en clair sur le réseau). Seuls les tests, qui posent JIRA_TEST_HTTP=1
+// (test/server.ts), admettent un faux Jira local en `http://127.0.0.1:<port>` ou `http://localhost:<port>`.
 const LOCAL_HTTP = /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i;
+const testHttp = (text: string) => process.env.JIRA_TEST_HTTP === "1" && LOCAL_HTTP.test(text);
 
 /** Message en français montré dans la page locale : jamais le jeton ni le corps de la réponse de Jira. */
 export class JiraAuthError extends Error {
@@ -49,24 +50,26 @@ function readStored(): Stored {
 
 /** Identifiants utilisés : ceux collés dans la page, sinon ceux du .env. `undefined` : Jira n'est pas relié. */
 export function jiraAccount(): JiraAccount | undefined {
-  if (pasted.site && pasted.email && pasted.token) return { base: pasted.site, email: pasted.email, token: pasted.token, source: "page" };
-  const rawSite = process.env.JIRA_SITE?.trim().replace(/\/+$/, "");
+  const pastedBase = pasted.site && normalizeJiraSite(pasted.site);
+  if (pastedBase && pasted.email && pasted.token) return { base: pastedBase, email: pasted.email, token: pasted.token, source: "page" };
+  // Même règle que la page : un .env mal rempli (autre hôte que Atlassian, adresse cassée) ne relie pas Jira.
+  const base = normalizeJiraSite(process.env.JIRA_SITE ?? "");
   const email = process.env.JIRA_EMAIL?.trim();
   const token = process.env.JIRA_API_TOKEN?.trim();
-  const base = rawSite && (LOCAL_HTTP.test(rawSite) ? rawSite : `https://${rawSite.replace(/^https?:\/\//i, "")}`);
   return base && email && token ? { base, email, token, source: "env" } : undefined;
 }
 
 /** Ce que la page locale voit : l'hôte du site relié et d'où viennent les identifiants, jamais l'e-mail ni le jeton. */
 export function jiraStatus() {
   const account = jiraAccount();
-  return account ? { configured: true, site: new URL(account.base).host, source: account.source } : { configured: false, site: null };
+  const host = account && URL.parse(account.base)?.host;
+  return account && host ? { configured: true, site: host, source: account.source } : { configured: false, site: null };
 }
 
 /** « unowhy », « unowhy.atlassian.net » ou une adresse entière → `https://unowhy.atlassian.net`. `undefined` : pas un site Atlassian. */
 export function normalizeJiraSite(input: string): string | undefined {
   const text = input.trim().replace(/\/+$/, "");
-  if (LOCAL_HTTP.test(text)) return text.toLowerCase();
+  if (testHttp(text)) return text.toLowerCase();
   const host = text
     .replace(/^https?:\/\//i, "")
     .split(/[/?#]/)[0]
@@ -76,7 +79,7 @@ export function normalizeJiraSite(input: string): string | undefined {
 }
 
 /** Vérifie les identifiants auprès de Jira puis les garde. Refusés ou injoignable : lève, rien n'est enregistré. */
-export async function connectJira(input: { site: string; email: string; token: string }): Promise<{ site: string }> {
+export async function connectJira(input: { site: string; email: string; token: string }): Promise<{ site: string; changed: boolean }> {
   const base = normalizeJiraSite(input.site);
   if (!base) throw BAD_SITE;
   const email = input.email.trim();
@@ -88,8 +91,8 @@ export async function connectJira(input: { site: string; email: string; token: s
   try {
     res = await fetch(`${base}/rest/api/3/myself`, {
       headers: { authorization: "Basic " + Buffer.from(`${email}:${token}`).toString("base64"), accept: "application/json" },
-      // Pas de redirection suivie : un site inexistant renvoie vers une page de connexion, pas un Jira.
-      redirect: "manual",
+      // Pas de redirection suivie : un site inexistant renvoie vers une page de connexion, pas un Jira, et le jeton ne part jamais ailleurs.
+      redirect: "error",
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch {
@@ -99,6 +102,7 @@ export async function connectJira(input: { site: string; email: string; token: s
   const me = (await res.json().catch(() => ({}))) as { accountId?: unknown };
   if (!res.ok || typeof me.accountId !== "string") throw UNREACHABLE;
 
+  const before = jiraAccount();
   await updateJson<Stored>(
     storeFile,
     () => ({}),
@@ -109,7 +113,8 @@ export async function connectJira(input: { site: string; email: string; token: s
     { mode: 0o600 },
   );
   pasted = { site: base, email, token };
-  return { site: new URL(base).host };
+  // `changed` : autre site ou autre e-mail (ou aucun compte avant) : les tableaux et colonnes choisis ne valent plus.
+  return { site: new URL(base).host, changed: before?.base !== base || before.email !== email };
 }
 
 export async function disconnectJira() {

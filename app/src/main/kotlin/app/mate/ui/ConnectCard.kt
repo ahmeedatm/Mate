@@ -12,12 +12,12 @@ import app.mate.net.BackendClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-/** Service à relier depuis la page de l'ordinateur : sa section (`POST /local/open`) et les textes de la carte. */
+/** Service à relier depuis la page de l'ordinateur : sa section (`POST /local/open`) et les textes de la carte. `reconnectText` : absent, le texte de départ sert aussi. */
 class ConnectTexts(
     val section: String,
     @param:StringRes val button: Int,
     @param:StringRes val text: Int,
-    @param:StringRes val reconnectText: Int,
+    @param:StringRes val reconnectText: Int?,
     @param:StringRes val waiting: Int,
 )
 
@@ -25,7 +25,7 @@ class ConnectTexts(
 fun forgeConnect(forge: Forge) = forgeTexts(forge).let { ConnectTexts(forge.key, it.connect, it.connectText, it.reconnectText, it.connectWaiting) }
 
 /** Carte de Jira : jeton d'API à coller dans la page de l'ordinateur. */
-val JIRA_CONNECT = ConnectTexts("jira", R.string.jira_connect, R.string.jira_connect_text, R.string.jira_reconnect_text, R.string.jira_connect_waiting)
+val JIRA_CONNECT = ConnectTexts("jira", R.string.jira_connect, R.string.jira_connect_text, null, R.string.jira_connect_waiting)
 
 /**
  * Carte « Connecter GitLab », « Connecter GitHub » ou « Connecter Jira » (GitLab, Pipelines, GitHub, Actions et Jira, quand
@@ -75,7 +75,7 @@ class ConnectCard(
         text.setText(
             when {
                 waiting -> texts.waiting
-                expired -> texts.reconnectText
+                expired -> texts.reconnectText ?: texts.text
                 else -> texts.text
             },
         )

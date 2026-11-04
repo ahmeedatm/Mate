@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import http from "node:http";
+import https from "node:https";
 import type { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
 import { normalizeJiraSite } from "../src/jira-auth.ts";
-import { startServer, type TestServer } from "./server.ts";
+import { freePort, startServer, TOKEN as PAIRING_TOKEN, type TestServer } from "./server.ts";
 
 const EMAIL = "camille@exemple.test";
 const TOKEN = "ATATT3xFfGF0-jeton-colle-de-test";
@@ -17,7 +18,7 @@ const ENV_TOKEN = "jeton-jira-du-env";
 type Seen = { method: string; url: string; authorization?: string };
 const seen: Seen[] = [];
 const accounts: Record<string, string> = { [EMAIL]: TOKEN, [ENV_EMAIL]: ENV_TOKEN };
-let answer: "jira" | "forbidden" | "page" = "jira";
+let answer: "jira" | "forbidden" | "page" | "redirect" = "jira";
 const jiraServer = http.createServer((req, res) => {
   req.resume();
   req.on("end", () => {
@@ -27,12 +28,18 @@ const jiraServer = http.createServer((req, res) => {
       res.end(typeof body === "string" ? body : body === undefined ? undefined : JSON.stringify(body));
     };
     if (answer === "page") return send(200, "<html>Connexion Atlassian</html>", "text/html");
+    if (answer === "redirect" && req.url !== "/redirected") {
+      res.writeHead(302, { location: "/redirected" });
+      return res.end();
+    }
     if (answer === "forbidden") return send(403, {});
     const [email, token] = Buffer.from((req.headers.authorization ?? "").replace(/^Basic /, ""), "base64")
       .toString()
       .split(/:(.*)/s);
     if (accounts[email] !== token) return send(401, {});
-    if (req.url === "/rest/api/3/myself") return send(200, { accountId: `acc-${email}` });
+    if (req.url === "/rest/api/3/myself") {
+      return send(200, { accountId: `acc-${email}` });
+    }
     if (req.url === "/rest/api/3/search/jql") {
       const fields = {
         summary: "Titre",
@@ -95,11 +102,18 @@ describe("jira : site saisi", () => {
     }
   });
 
-  it("seul un faux Jira local est admis en http", () => {
-    assert.equal(normalizeJiraSite("http://127.0.0.1:4010/"), "http://127.0.0.1:4010");
-    assert.equal(normalizeJiraSite("http://localhost:4010"), "http://localhost:4010");
-    for (const input of ["http://unowhy.atlassian.net.evil.test", "http://127.0.0.1:4010/x", "http://127.0.0.1.evil.test:80"]) {
-      assert.equal(normalizeJiraSite(input) === input, false, input);
+  it("un faux Jira local n'est admis en http que sous l'indicateur de test", () => {
+    for (const input of ["http://127.0.0.1:4010/", "http://localhost:4010"]) {
+      assert.equal(normalizeJiraSite(input), undefined, input);
+      process.env.JIRA_TEST_HTTP = "1";
+      try {
+        assert.equal(normalizeJiraSite(input), input.replace(/\/$/, ""));
+        for (const bad of ["http://unowhy.atlassian.net.evil.test", "http://127.0.0.1:4010/x", "http://127.0.0.1.evil.test:80"]) {
+          assert.equal(normalizeJiraSite(bad) === bad, false, bad);
+        }
+      } finally {
+        delete process.env.JIRA_TEST_HTTP;
+      }
     }
   });
 
@@ -321,6 +335,55 @@ describe("jira : route réservée à la page locale", () => {
     assert.equal(await viaHost("DELETE"), 401);
     assert.deepEqual(await status(server), { configured: false, site: null });
   });
+
+  it("même avec le jeton d'appairage : refusé (403) hors de la page locale, rien d'enregistré", async () => {
+    const server = await boot();
+    const withToken = (route: string, method: string, host: string, body?: string) =>
+      new Promise<number>((resolve, reject) => {
+        const req = http.request(
+          server.url + route,
+          { method, headers: { host, "content-type": "application/json", authorization: `Bearer ${PAIRING_TOKEN}` } },
+          (res) => {
+            res.resume();
+            resolve(res.statusCode ?? 0);
+          },
+        );
+        req.on("error", reject);
+        req.end(body);
+      });
+    assert.equal(await withToken("/local/accounts/jira", "PUT", "evil.test", JSON.stringify(good())), 403);
+    assert.equal(await withToken("/local/accounts/jira", "DELETE", "evil.test"), 403);
+    assert.deepEqual(await status(server), { configured: false, site: null });
+    // Le jeton ne passe pas non plus par le WiFi : la requête arrive en HTTPS d'une adresse de l'ordinateur autre que le bouclage.
+    const lan = Object.values(os.networkInterfaces())
+      .flat()
+      .find((i) => i && i.family === "IPv4" && !i.internal)?.address;
+    if (!lan) return;
+    const tlsPort = await freePort();
+    const wifi = await startServer({ host: "0.0.0.0", env: { TLS_PORT: String(tlsPort) } });
+    servers.push(wifi);
+    const code = await new Promise<number>((resolve, reject) => {
+      const req = https.request(
+        {
+          host: lan,
+          port: tlsPort,
+          method: "PUT",
+          path: "/local/accounts/jira",
+          rejectUnauthorized: false,
+          agent: false,
+          headers: { "content-type": "application/json", authorization: `Bearer ${PAIRING_TOKEN}` },
+        },
+        (res) => {
+          res.resume();
+          resolve(res.statusCode ?? 0);
+        },
+      );
+      req.on("error", reject);
+      req.end(JSON.stringify(good()));
+    });
+    assert.equal(code, 403);
+    assert.deepEqual(await status(wifi), { configured: false, site: null });
+  });
 });
 
 describe("jira : compte gardé et .env de secours", () => {
@@ -360,5 +423,61 @@ describe("jira : compte gardé et .env de secours", () => {
     assert.equal((await disconnect(server)).status, 200);
     assert.equal((await status(server)).source, "env");
     assert.ok(!JSON.stringify(await status(server)).includes(ENV_TOKEN));
+  });
+});
+
+describe("jira : redirection, .env mal rempli, choix de tableaux", () => {
+  it("une redirection de Jira n'est jamais suivie avec le jeton (lecture des tickets)", async () => {
+    const server = await boot();
+    assert.equal((await paste(server, good())).status, 200);
+    seen.length = 0;
+    answer = "redirect";
+    const res = await server.call("GET", "/jira/issues");
+    answer = "jira";
+    assert.equal(res.status, 500);
+    assert.deepEqual(
+      seen.map((s) => s.url),
+      ["/rest/api/3/search/jql"],
+    );
+  });
+
+  it(".env mal rempli : la page locale répond, Jira n'est pas relié", async () => {
+    for (const JIRA_SITE of ["pas un site", "jira.exemple.test", "https://"]) {
+      const server = await boot({ JIRA_SITE, JIRA_EMAIL: ENV_EMAIL, JIRA_API_TOKEN: ENV_TOKEN });
+      const res = await server.call("GET", "/local/status", undefined, false);
+      assert.equal(res.status, 200, JIRA_SITE);
+      assert.deepEqual(res.json.jira, { configured: false, site: null }, JIRA_SITE);
+    }
+  });
+
+  it(".env : le site est ramené comme celui de la page (« unowhy » vaut unowhy.atlassian.net)", async () => {
+    const server = await boot({ JIRA_SITE: "Unowhy/", JIRA_EMAIL: ENV_EMAIL, JIRA_API_TOKEN: ENV_TOKEN });
+    assert.deepEqual(await status(server), { configured: true, site: "unowhy.atlassian.net", source: "env" });
+  });
+
+  it("tableaux et colonnes choisis : gardés pour le même compte, effacés si le site ou l'e-mail change, et à la déconnexion", async () => {
+    const server = await boot();
+    const choices = path.join(server.dataDir, "jira.json");
+    const put = () => fs.writeFileSync(choices, JSON.stringify({ boards: [1] }));
+    assert.equal((await paste(server, good())).status, 200);
+    put();
+    assert.equal((await paste(server, good())).status, 200);
+    assert.equal(fs.existsSync(choices), true, "même compte : gardé");
+    assert.equal((await paste(server, { site, email: ENV_EMAIL, token: ENV_TOKEN })).status, 200);
+    assert.equal(fs.existsSync(choices), false, "autre e-mail : effacé");
+    put();
+    assert.equal((await paste(server, { site, email: ENV_EMAIL, token: ENV_TOKEN })).status, 200);
+    assert.equal(fs.existsSync(choices), true, "même compte, jeton renouvelé : gardé");
+    assert.equal((await disconnect(server)).status, 200);
+    assert.equal(fs.existsSync(choices), false, "déconnexion : effacé");
+  });
+
+  it("identifiants refusés : les choix de tableaux restent", async () => {
+    const server = await boot();
+    const choices = path.join(server.dataDir, "jira.json");
+    assert.equal((await paste(server, good())).status, 200);
+    fs.writeFileSync(choices, JSON.stringify({ boards: [1] }));
+    assert.equal((await paste(server, { ...good(), token: "jeton-inconnu-123456" })).status, 400);
+    assert.equal(fs.existsSync(choices), true);
   });
 });

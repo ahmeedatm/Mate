@@ -108,6 +108,8 @@ async function startOnce(options: ServerOptions, port: number): Promise<TestServ
       JIRA_SITE: "",
       JIRA_EMAIL: "",
       JIRA_API_TOKEN: "",
+      // Faux Jira des tests : seul cet indicateur admet un site en http://127.0.0.1 (src/jira-auth.ts).
+      JIRA_TEST_HTTP: "1",
       // Pas de vrai GitHub non plus.
       GITHUB_TOKEN: "",
       GITHUB_URL: "",
