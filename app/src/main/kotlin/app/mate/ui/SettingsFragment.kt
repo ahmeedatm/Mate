@@ -935,6 +935,7 @@ class SettingsFragment :
             val installed = Updater.installed(requireContext(), Trial.TRIAL)
             for (essai in list) essais.addView(updateRow(essai.update, installed, essai))
         } catch (e: Exception) {
+            if (view == null) return
             updatesStatus.text = listOf(updatesStatus.text, getString(R.string.updates_source_error, getString(R.string.updates_source_trials), errorText(e))).joinToString("\n")
         }
     }
