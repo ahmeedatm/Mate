@@ -352,10 +352,6 @@ class MixerView @JvmOverloads constructor(
     private fun renderScenes() {
         sceneRow.removeAllViews()
         sceneRow.setPadding(dp(24), dp(if (tight) 6 else 10), dp(24), dp(6))
-        sceneRow.addView(engraved(R.string.mixer_scenes).apply {
-            setTextColor(themeColor(context, R.attr.c_mx_text))
-            setPadding(0, 0, dp(16), dp(3))
-        })
         if (editing && scenes.isEmpty()) editing = false
         if (editing) return renderEditing()
         scenes.forEach { scene ->
@@ -366,12 +362,11 @@ class MixerView @JvmOverloads constructor(
                 setOnLongClickListener { confirmDelete(scene); true }
             }, keyParams())
         }
-        sceneRow.addView(ConsoleKey(context).apply {
-            setText(R.string.mixer_scene_save)
-            led = false
-            setPadding(dp(18), 0, dp(18), dp(3))
-            setOnClickListener { askSceneName() }
-        }, keyParams())
+        sceneRow.addView(
+            iconButton(R.drawable.ic_add, R.attr.c_text_dim, context.getString(R.string.mixer_scene_save)) { askSceneName() }.apply {
+                (layoutParams as LinearLayout.LayoutParams).marginEnd = dp(8)
+            },
+        )
         if (scenes.isNotEmpty()) {
             sceneRow.addView(iconButton(R.drawable.ic_edit, R.attr.c_text_dim, context.getString(R.string.mixer_scenes_edit)) {
                 editing = true
@@ -538,11 +533,10 @@ class MixerView @JvmOverloads constructor(
         renderScenes()
         scope.launch {
             try {
-                val (mixer, missing) = BackendClient(context).system.applyMixerScene(scene.id)
+                val mixer = BackendClient(context).system.applyMixerScene(scene.id)
                 heldUntil.clear()
                 render(mixer)
-                if (missing.isEmpty()) hideStatus()
-                else showStatus(context.getString(R.string.mixer_scene_missing, scene.name, missing.joinToString(", ") { it.replaceFirstChar(Char::titlecase) }))
+                hideStatus()
             } catch (e: Exception) {
                 litScene = null
                 renderScenes()
