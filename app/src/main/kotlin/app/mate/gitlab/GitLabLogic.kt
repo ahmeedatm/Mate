@@ -30,13 +30,13 @@ fun approvalsText(given: Int, required: Int): String? = if (required == 0) null 
 /** Dernier segment du chemin (`softwares/products/uem` → `uem`) : lisible dans un titre de carte. */
 fun shortProject(fullPath: String) = fullPath.substringAfterLast('/')
 
-/** Colonnes du tableau : toutes celles de GitLab ; GitHub n'en a que deux, ses PR (`READY`) et celles à relire. */
+/** Colonnes du tableau, dans l'ordre d'affichage : toutes celles de GitLab ; GitHub n'en a que deux, ses PR (`READY`) et celles à relire. */
 fun boardColumns(forge: Forge): List<MrColumn> =
     if (forge == Forge.GITHUB) listOf(MrColumn.READY, MrColumn.REVIEW) else MrColumn.entries
 
 /**
- * Les colonnes du tableau, toujours toutes (vides comprises), dans l'ordre de priorité : une MR à moi est dans la colonne
- * que le compagnon lui a donnée, « à review » reprend la liste des MR à relire. GitHub : mes PR dans une seule colonne.
+ * Les colonnes du tableau, toutes (vides comprises), dans l'ordre d'affichage : une MR à moi est dans la colonne que le
+ * compagnon lui a donnée, « à relire » reprend la liste des MR à relire. GitHub : mes PR dans une seule colonne.
  */
 fun columnsOf(mrs: GitLabMrs, forge: Forge = Forge.GITLAB): List<Pair<MrColumn, List<GitLabMr>>> =
     boardColumns(forge).map { column ->
@@ -46,3 +46,21 @@ fun columnsOf(mrs: GitLabMrs, forge: Forge = Forge.GITLAB): List<Pair<MrColumn, 
             else -> mrs.mine.filter { it.column == column }
         }
     }
+
+/** Colonnes montrées : GitLab cache celles qui sont vides ; GitHub garde ses deux colonnes. */
+fun shownColumns(mrs: GitLabMrs, forge: Forge): List<MrColumn> =
+    columnsOf(mrs, forge).filter { (_, list) -> forge == Forge.GITHUB || list.isNotEmpty() }.map { it.first }
+
+/** Part de la colonne suivante qui dépasse du bord quand les colonnes ne tiennent pas : le signe qu'on peut défiler. */
+private const val PEEK = 0.4
+
+/**
+ * Largeur d'une colonne en pixels. Elles se partagent la largeur `total` si chacune garde `min` ; sinon la largeur est
+ * choisie pour que la colonne suivante dépasse du bord (jamais sous `min`).
+ */
+fun columnWidth(total: Int, count: Int, min: Int, gap: Int): Int {
+    if (count <= 0) return min
+    if (count * min + (count - 1) * gap <= total) return (total - gap * (count - 1)) / count
+    val whole = ((total + gap) / (min + gap)).coerceAtLeast(1)
+    return ((total - whole * gap) / (whole + PEEK)).toInt().coerceAtLeast(min)
+}

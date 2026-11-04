@@ -61,11 +61,12 @@ class ScheduleChoicesDialog(
                     list.addView(TitleView(context).apply { text = project.project; setPadding(0, context.dp(12), 0, context.dp(4)) })
                     for (schedule in project.schedules) {
                         val ref = ScheduleRef(project.project, schedule.id)
-                        val label = "${schedule.description.ifEmpty { schedule.ref }} · ${schedule.ref}"
+                        // La branche suit la description ; sans description, elle est le libellé (pas « main · main »).
+                        val label = if (schedule.description.isEmpty()) schedule.ref else "${schedule.description} · ${schedule.ref}"
                         val box = CheckBox(context).apply {
                             text = if (schedule.active) label else context.getString(R.string.schedules_inactive, label)
                             textSize = 17f
-                            minHeight = context.dp(44)
+                            minHeight = context.dp(48)
                             isChecked = ref in checked
                             setOnCheckedChangeListener { _, on ->
                                 if (on) checked += ref else checked -= ref

@@ -21,16 +21,17 @@ enum class Pipeline(val key: String) {
 data class GitLabStage(val name: String, val status: Pipeline)
 
 /**
- * Colonne du tableau des MR (le compagnon décide, backend/src/gitlab.ts) : mes MR, une colonne chacune par priorité
- * (brouillon, à fixer, prête à merger, en cours, prête pour review), et `REVIEW` : MR que je dois relire.
+ * Colonne du tableau des MR (le compagnon décide, backend/src/gitlab.ts) : mes MR, une colonne chacune (brouillon, à fixer,
+ * prête à merger, en cours, prête pour relecture), et `REVIEW` : MR que je dois relire. L'ordre est celui de l'affichage :
+ * prête à merger, à fixer, à relire, prête pour relecture, puis le reste.
  */
 enum class MrColumn(val key: String) {
-    DRAFT("draft"),
-    FIX("fix"),
     MERGE("merge"),
-    RUNNING("running"),
-    READY("ready"),
+    FIX("fix"),
     REVIEW("review"),
+    READY("ready"),
+    RUNNING("running"),
+    DRAFT("draft"),
     ;
 
     companion object {

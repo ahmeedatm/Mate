@@ -59,6 +59,7 @@ export class GitLabError extends Error {
 }
 
 const CACHE_MS = 20_000;
+const CHOICES_MS = 5 * 60_000;
 const TIMEOUT_MS = 15_000;
 
 const envToken = () => process.env.GITLAB_TOKEN?.trim() ?? "";
@@ -308,12 +309,12 @@ async function readMrs(auth: Auth): Promise<MrRead> {
 
 const mrsFlight = singleFlight<MrRead>(CACHE_MS);
 const pipelinesFlight = singleFlight<PipelinesRead>(CACHE_MS);
-let choicesCache: { at: number; value: ScheduleProject[] } | undefined;
+const choicesFlight = singleFlight<ScheduleProject[]>(CHOICES_MS);
 
 export const clearGitlabCache = () => {
   mrsFlight.clear();
   pipelinesFlight.clear();
-  choicesCache = undefined;
+  choicesFlight.clear();
 };
 
 export type MrLists = { mine: Mr[]; review: Mr[] };
@@ -500,13 +501,24 @@ async function projectSchedules(project: string, auth: Auth): Promise<ScheduleNo
   return data.data?.project?.pipelineSchedules?.nodes ?? [];
 }
 
+/** Un projet qui répond mal (5xx, réseau, réponse illisible) n'empêche pas les autres : il n'a pas de ligne, l'échec est journalisé. */
+async function safeProjectSchedules(project: string, auth: Auth): Promise<ScheduleNode[]> {
+  try {
+    return await projectSchedules(project, auth);
+  } catch (e) {
+    if (e === TOKEN_REFUSED) throw e;
+    logFailure("Planifications d'un projet GitLab", e);
+    return [];
+  }
+}
+
 /** Dernier run de chaque planification choisie ; sans run (jamais lancée), pas de ligne. */
 async function readScheduleRows(auth: Auth, selected: ScheduleRef[]): Promise<GitlabPipelineRow[]> {
   const byProject = new Map<string, Set<number>>();
   for (const s of selected) byProject.set(s.project, (byProject.get(s.project) ?? new Set()).add(s.id));
   const rows = await Promise.all(
     [...byProject].map(async ([project, ids]) => {
-      const nodes = (await projectSchedules(project, auth)).filter((n) => ids.has(numericId(n.id)));
+      const nodes = (await safeProjectSchedules(project, auth)).filter((n) => ids.has(numericId(n.id)));
       return Promise.all(
         nodes.flatMap((n) => (n.lastPipeline ? [rowOf(project, n.description || n.ref || "", null, n.lastPipeline, auth)] : [])),
       );
@@ -543,12 +555,12 @@ export type ScheduleChoicesAnswer =
   | { connected: true; projects: ScheduleProject[]; selected: ScheduleRef[] }
   | { connected: false; expired: boolean; projects: []; selected: [] };
 
-const CHOICES_MS = 5 * 60_000;
 const PROJECT_PAGES = 3;
 const PROJECTS_PER_PAGE = 100;
 const SCHEDULE_READS_AT_ONCE = 8;
 
-async function readScheduleProjects(auth: Auth): Promise<ScheduleProject[]> {
+/** `failed` : projets dont la lecture a échoué (la liste est alors incomplète). */
+async function readScheduleProjects(auth: Auth): Promise<{ projects: ScheduleProject[]; failed: number }> {
   const paths: string[] = [];
   for (let page = 1; page <= PROJECT_PAGES; page++) {
     const projects = await readJson<{ path_with_namespace: string }[]>(
@@ -559,6 +571,7 @@ async function readScheduleProjects(auth: Auth): Promise<ScheduleProject[]> {
     if ((projects?.length ?? 0) < PROJECTS_PER_PAGE) break;
   }
   const found: ScheduleProject[] = [];
+  let failed = 0;
   let next = 0;
   // Quelques lectures à la fois : un compte membre de centaines de projets ne doit pas inonder GitLab.
   const worker = async () => {
@@ -579,19 +592,24 @@ async function readScheduleProjects(auth: Auth): Promise<ScheduleProject[]> {
       } catch (e) {
         if (e === TOKEN_REFUSED) throw e;
         // Un projet qui ne répond pas n'empêche pas de choisir dans les autres.
+        failed++;
         logFailure("Planifications d'un projet GitLab", e);
       }
     }
   };
   await Promise.all(Array.from({ length: SCHEDULE_READS_AT_ONCE }, worker));
-  return found.sort((a, b) => a.project.localeCompare(b.project));
+  return { projects: found.sort((a, b) => a.project.localeCompare(b.project)), failed };
 }
 
 /** Planifications de pipelines des projets dont le compte est membre (300 projets les plus actifs au plus), gardées 5 min ; avec le choix en cours. */
 export async function listScheduleChoices(): Promise<ScheduleChoicesAnswer> {
   const { read: auth } = await authHeaders();
   if (!auth) return { connected: false, expired: !!(await gitlabAccount())?.expired, projects: [], selected: [] };
-  if (!choicesCache || Date.now() - choicesCache.at >= CHOICES_MS)
-    choicesCache = { at: Date.now(), value: await readScheduleProjects(auth) };
-  return { connected: true, projects: choicesCache.value, selected: await selectedSchedules() };
+  const projects = await choicesFlight.get(async () => {
+    const read = await readScheduleProjects(auth);
+    // Une liste où des projets ont échoué n'est pas gardée : la prochaine ouverture relit.
+    if (read.failed > 0) choicesFlight.clear();
+    return read.projects;
+  });
+  return { connected: true, projects: projects, selected: await selectedSchedules() };
 }

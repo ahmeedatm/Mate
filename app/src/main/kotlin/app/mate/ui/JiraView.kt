@@ -199,7 +199,7 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     /** ⚙ du widget : colonnes affichées et « tous les tickets » ; la liste est relue dès l'enregistrement. */
     fun openColumns() {
         if (columnsDialog?.isShowing == true) return
-        columnsDialog = JiraColumnsDialog(context, owner.lifecycleScope) { owner.lifecycleScope.launch { refresh() } }.also { it.show() }
+        columnsDialog = JiraColumnsDialog(context, owner.lifecycleScope, { owner.lifecycleScope.launch { refresh() } }, ::openBoards).also { it.show() }
     }
 
     private fun render(issues: JiraIssues) {

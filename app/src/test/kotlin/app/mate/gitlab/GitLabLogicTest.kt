@@ -66,9 +66,9 @@ class GitLabLogicTest {
     }
 
     @Test
-    fun `les colonnes sont toutes la, dans l'ordre de priorite, vides comprises`() {
+    fun `les colonnes sont toutes la, prete a merger puis a fixer puis a relire puis prete pour relecture, vides comprises`() {
         val columns = columnsOf(GitLabMrs(emptyList(), emptyList()))
-        assertEquals(listOf(MrColumn.DRAFT, MrColumn.FIX, MrColumn.MERGE, MrColumn.RUNNING, MrColumn.READY, MrColumn.REVIEW), columns.map { it.first })
+        assertEquals(listOf(MrColumn.MERGE, MrColumn.FIX, MrColumn.REVIEW, MrColumn.READY, MrColumn.RUNNING, MrColumn.DRAFT), columns.map { it.first })
         assertTrue(columns.all { it.second.isEmpty() })
     }
 
@@ -107,5 +107,28 @@ class GitLabLogicTest {
         )
         val byColumn = columnsOf(mrs, Forge.GITHUB).map { (column, list) -> column to list.map { it.iid } }
         assertEquals(listOf(MrColumn.READY to listOf(1, 2), MrColumn.REVIEW to listOf(3)), byColumn)
+    }
+
+    @Test
+    fun `GitLab cache les colonnes vides, GitHub garde les deux siennes`() {
+        val mrs = GitLabMrs(mine = listOf(ready.copy(iid = 1, column = MrColumn.FIX)), review = emptyList())
+        assertEquals(listOf(MrColumn.FIX), shownColumns(mrs, Forge.GITLAB))
+        assertEquals(emptyList<MrColumn>(), shownColumns(GitLabMrs(emptyList(), emptyList()), Forge.GITLAB))
+        assertEquals(listOf(MrColumn.READY, MrColumn.REVIEW), shownColumns(GitLabMrs(emptyList(), emptyList()), Forge.GITHUB))
+    }
+
+    @Test
+    fun `les colonnes se partagent la largeur quand elles tiennent`() {
+        assertEquals(494, columnWidth(1000, 2, 250, 12))
+        assertEquals(1000, columnWidth(1000, 1, 250, 12))
+    }
+
+    @Test
+    fun `trop de colonnes pour la largeur, la suivante depasse du bord`() {
+        val width = columnWidth(1000, 5, 250, 12)
+        // Trois colonnes entieres et une part de la quatrieme : elles ne tiennent donc pas toutes.
+        assertTrue(width >= 250 && 3 * width + 3 * 12 < 1000 && 4 * width + 3 * 12 > 1000)
+        // Fenetre etroite : jamais sous le minimum.
+        assertEquals(250, columnWidth(200, 3, 250, 12))
     }
 }

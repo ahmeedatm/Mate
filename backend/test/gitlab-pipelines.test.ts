@@ -237,18 +237,27 @@ describe("GET /gitlab/pipelines : planifications choisies", () => {
     assert.equal((await server.call("GET", "/gitlab/pipelines")).json.schedules.length, 2);
   });
 
-  it("GitLab refuse le jeton ou répond mal : 502 avec une phrase, jamais 401 ni le jeton", async () => {
+  it("un projet qui répond en 500 n'a pas de ligne, les autres restent", async () => {
+    gitlab.schedules = project();
+    gitlab.brokenProjects = ["grp/autre"];
+    await choose(["grp/proj", 7], ["grp/autre", 3]);
+    const { status, json } = await fresh();
+    assert.equal(status, 200);
+    assert.deepEqual(
+      json.schedules.map((p: any) => p.title),
+      ["Nightly"],
+    );
+    gitlab.brokenProjects = [];
+  });
+
+  it("GitLab refuse le jeton : 502 avec une phrase, jamais 401 ni le jeton", async () => {
     gitlab.schedules = project();
     await choose(["grp/proj", 7]);
     gitlab.schedulesStatus = 401;
     const denied = await fresh();
     assert.equal(denied.status, 502);
     assert.match(denied.json.error, /GitLab refuse l'accès de l'ordinateur/);
-    gitlab.schedulesStatus = 500;
-    const broken = await fresh();
-    assert.equal(broken.status, 502);
-    assert.equal(broken.json.error, "GitLab ne répond pas");
-    assert.ok(!JSON.stringify(broken.json).includes(PERSONAL));
+    assert.ok(!JSON.stringify(denied.json).includes(PERSONAL));
     // Une erreur n'est pas gardée : GitLab revenu, la lecture suivante marche.
     gitlab.schedulesStatus = 200;
     assert.equal((await server.call("GET", "/gitlab/pipelines")).status, 200);
@@ -338,6 +347,26 @@ describe("planifications : choix", () => {
       ["grp/p120"],
     );
     assert.ok(rest().some((s) => s.url.includes("/api/v4/projects?") && s.url.includes("page=2")));
+  });
+
+  it("GET /gitlab/schedules : un projet en 500 n'empêche pas de choisir dans les autres, et la liste incomplète n'est pas gardée", async () => {
+    gitlab.memberProjects = ["grp/proj", "grp/autre"];
+    gitlab.schedules = { "grp/proj": [schedule(7, "Nightly", null)], "grp/autre": [schedule(3, "Autre projet", null)] };
+    gitlab.brokenProjects = ["grp/autre"];
+    await clear();
+    const partial = await server.call("GET", "/gitlab/schedules");
+    assert.equal(partial.status, 200);
+    assert.deepEqual(
+      partial.json.projects.map((p: any) => p.project),
+      ["grp/proj"],
+    );
+    // GitLab revenu : la lecture suivante repart de GitLab et rend la liste complète.
+    gitlab.brokenProjects = [];
+    const complete = await server.call("GET", "/gitlab/schedules");
+    assert.deepEqual(
+      complete.json.projects.map((p: any) => p.project),
+      ["grp/autre", "grp/proj"],
+    );
   });
 
   it("GET /gitlab/schedules : gardé 5 min, la lecture suivante n'appelle pas GitLab", async () => {

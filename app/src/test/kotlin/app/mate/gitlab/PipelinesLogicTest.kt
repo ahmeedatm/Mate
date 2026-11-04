@@ -1,11 +1,13 @@
 package app.mate.gitlab
 
 import app.mate.net.GitLabPipeline
+import app.mate.net.GitLabPipelines
 import app.mate.net.Pipeline
 import app.mate.net.ScheduleChoice
 import app.mate.net.ScheduleProject
 import app.mate.net.ScheduleRef
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -89,6 +91,14 @@ class PipelinesLogicTest {
         val rows = (1..10).map { pipeline(id = it) }
         assertEquals((1L..8L).toList(), visiblePipelines(rows).map { it.id })
         assertEquals(emptyList<GitLabPipeline>(), visiblePipelines(emptyList()))
+    }
+
+    @Test
+    fun `une nouvelle lecture ne change que les temps, les lignes restent les memes`() {
+        fun read(age: Int, duration: Int?, status: Pipeline = Pipeline.RUNNING) =
+            GitLabPipelines(schedules = listOf(pipeline(status, age = age, duration = duration)), mrs = listOf(pipeline(id = 2, age = age)))
+        assertEquals(withoutTimes(read(10, null)), withoutTimes(read(40, 5)))
+        assertNotEquals(withoutTimes(read(10, null)), withoutTimes(read(10, null, Pipeline.FAILED)))
     }
 
     private val projects = listOf(

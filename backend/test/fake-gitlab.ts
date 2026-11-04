@@ -95,6 +95,8 @@ export type FakeGitlab = {
   memberProjects: string[];
   /** Projets dont les planifications sont interdites au compte (GraphQL : 403, REST : 403, comme un rôle sans accès à la CI). */
   deniedProjects: string[];
+  /** Projets dont les planifications répondent 500 (GraphQL et REST) : un projet en panne, pas GitLab entier. */
+  brokenProjects: string[];
   /** Noms des jobs en échec, par id de pipeline. */
   failedJobs: Record<number, string[]>;
   /** Code HTTP forcé pour les requêtes de planifications, GraphQL et REST (200 : normal). */
@@ -120,6 +122,7 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
     schedules: {},
     memberProjects: [],
     deniedProjects: [],
+    brokenProjects: [],
     failedJobs: {},
     schedulesStatus: 200,
     revokeAll: () => {
@@ -250,6 +253,7 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
           const path = variables?.path ?? "";
           if (fake.schedulesStatus !== 200) return json(fake.schedulesStatus, { message: "refus" });
           if (fake.deniedProjects.includes(path)) return json(403, { message: "403 Forbidden" });
+          if (fake.brokenProjects.includes(path)) return json(500, { message: "panne" });
           const nodes = fake.schedules[path];
           return json(200, { data: { project: nodes ? { pipelineSchedules: { nodes } } : null } });
         }
@@ -277,6 +281,7 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
         const path = decodeURIComponent(scheduleList[1]);
         if (fake.schedulesStatus !== 200) return json(fake.schedulesStatus, { message: "refus" });
         if (fake.deniedProjects.includes(path)) return json(403, { message: "403 Forbidden" });
+        if (fake.brokenProjects.includes(path)) return json(500, { message: "panne" });
         const nodes = (fake.schedules[path] ?? []) as { id: string; description: string; ref: string; active: boolean }[];
         // Comme le vrai : id numérique, branche en `refs/heads/…`, pas de dernier pipeline.
         return json(

@@ -18,10 +18,12 @@ import app.mate.github.changeRef
 import app.mate.gitlab.MergeAction
 import app.mate.gitlab.approvalsText
 import app.mate.gitlab.boardColumns
+import app.mate.gitlab.columnWidth
 import app.mate.gitlab.columnsOf
 import app.mate.gitlab.mergeAction
 import app.mate.gitlab.mergeEnabled
 import app.mate.gitlab.mrKey
+import app.mate.gitlab.shownColumns
 import app.mate.net.BackendClient
 import app.mate.net.GitLabMr
 import app.mate.net.GitLabMrs
@@ -60,6 +62,11 @@ class GitLabView @JvmOverloads constructor(
     private val columnViews = columns.map { LinearLayout(context) }
     private val columnsRow = LinearLayout(context)
     private val board = HorizontalScrollView(context)
+    private val empty = TextView(context)
+
+    /** Colonnes montrées (GitLab cache les vides) et largeur du widget : de quoi dimensionner les colonnes. */
+    private var visibleColumns: List<MrColumn> = columns
+    private var boardWidth = 0
     private val connectCard = GitLabConnectCard(context, { scope }, ::showError, forge = forge)
 
     private lateinit var scope: CoroutineScope
@@ -112,7 +119,7 @@ class GitLabView @JvmOverloads constructor(
                     LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(6) },
                 )
             }
-            columnsRow.addView(columnViews[i], LayoutParams(dp(MIN_COLUMN_DP), LayoutParams.MATCH_PARENT).apply { if (i > 0) marginStart = dp(COLUMN_GAP_DP) })
+            columnsRow.addView(columnViews[i], LayoutParams(dp(MIN_COLUMN_DP), LayoutParams.MATCH_PARENT))
         }
         board.apply {
             isHorizontalScrollBarEnabled = false
@@ -120,6 +127,14 @@ class GitLabView @JvmOverloads constructor(
             addView(columnsRow, ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
         addView(board, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(4) })
+        empty.apply {
+            setText(texts.empty)
+            textSize = 15f
+            gravity = Gravity.CENTER
+            setTextColor(themeColor(context, R.attr.c_text_dim))
+            visibility = GONE
+        }
+        addView(empty, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         showHeaders(columns.map { it to 0 })
         // Carte affichée à la place des colonnes tant que l'ordinateur n'a pas de compte GitLab connecté.
         addView(connectCard, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
@@ -130,16 +145,29 @@ class GitLabView @JvmOverloads constructor(
         status.visibility = VISIBLE
     }
 
-    // Les colonnes se partagent la largeur ; trop étroites (moins de MIN_COLUMN_DP), elles défilent de côté.
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        val gaps = dp(COLUMN_GAP_DP) * (columns.size - 1)
-        val width = ((w - gaps) / columns.size).coerceAtLeast(dp(MIN_COLUMN_DP))
-        for (view in columnViews) {
-            val params = view.layoutParams
-            if (params.width == width) continue
-            params.width = width
-            view.layoutParams = params
+        boardWidth = w
+        layoutColumns()
+    }
+
+    /**
+     * Seules les colonnes non vides sont montrées. Elles se partagent la largeur ; trop étroites (moins de MIN_COLUMN_DP),
+     * elles défilent de côté et la suivante dépasse du bord pour le laisser voir.
+     */
+    private fun layoutColumns() {
+        val width = columnWidth(boardWidth, visibleColumns.size, dp(MIN_COLUMN_DP), dp(COLUMN_GAP_DP))
+        val last = columns.indexOfLast { it in visibleColumns }
+        for ((i, view) in columnViews.withIndex()) {
+            val shown = columns[i] in visibleColumns
+            val params = view.layoutParams as LayoutParams
+            val end = if (i == last) 0 else dp(COLUMN_GAP_DP)
+            if (params.width != width || params.marginEnd != end) {
+                params.width = width
+                params.marginEnd = end
+                view.layoutParams = params
+            }
+            view.visibility = if (shown) VISIBLE else GONE
         }
     }
 
@@ -180,6 +208,7 @@ class GitLabView @JvmOverloads constructor(
     private fun showConnected(connected: Boolean) {
         this.connected = connected
         board.visibility = if (connected) VISIBLE else GONE
+        if (!connected) empty.visibility = GONE
         connectCard.visibility = if (connected) GONE else VISIBLE
         if (connected) {
             connectCard.reset()
@@ -197,6 +226,10 @@ class GitLabView @JvmOverloads constructor(
         messages.keys.retainAll(keys)
         val byColumn = columnsOf(mrs, forge)
         showHeaders(byColumn.map { (column, list) -> column to list.size })
+        visibleColumns = shownColumns(mrs, forge)
+        layoutColumns()
+        board.visibility = if (visibleColumns.isEmpty()) GONE else VISIBLE
+        empty.visibility = if (visibleColumns.isEmpty()) VISIBLE else GONE
         // Tablette de 2 Go : les cartes ne sont reconstruites que si quelque chose d'affiché a changé.
         val sig = listOf(mrs, busy.toSet(), messages.toMap())
         if (sig == signature) return

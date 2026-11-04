@@ -53,5 +53,13 @@ fun pipelinesWidget(context: Context, host: HomeHost, placed: Placed, forge: For
     if (forge == Forge.GITHUB) return BoardWidget(context, host, placed, board, board::setActive)
     // ⚙ : choix des planifications ; la vue les relit dès qu'il est enregistré.
     val choices = ScheduleChoicesDialog(context, host.scope, board::reload)
-    return BoardWidget(context, host, placed, board, board::setActive, choices::show)
+    // Cachée, le widget ferme aussi son choix de planifications (comme JiraView ses fenêtres).
+    return BoardWidget(
+        context, host, placed, board,
+        { active ->
+            board.setActive(active)
+            if (!active) choices.dismiss()
+        },
+        choices::show,
+    )
 }

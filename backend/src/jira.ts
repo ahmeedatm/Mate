@@ -7,6 +7,7 @@
 
 import path from "node:path";
 import { config } from "./config.ts";
+import { singleFlight } from "./single-flight.ts";
 import { readJson, updateJson } from "./store.ts";
 
 const rawSite = process.env.JIRA_SITE?.trim().replace(/\/+$/, "");
@@ -286,17 +287,49 @@ async function boardColumns(id: number): Promise<BoardColumn[]> {
 }
 
 const EVERYONE_MAX = 50;
+const EVERYONE_MS = 20_000;
+const EVERYONE_AT_ONCE = 4;
+
+/** Au plus EVERYONE_AT_ONCE lectures de tableau à la fois (colonnes × tableaux ne doivent pas inonder Jira). */
+let running = 0;
+const waiting: (() => void)[] = [];
+async function limited<T>(task: () => Promise<T>): Promise<T> {
+  if (running >= EVERYONE_AT_ONCE) await new Promise<void>((resolve) => waiting.push(resolve));
+  else running++;
+  try {
+    return await task();
+  } finally {
+    // La place libérée passe directement à la lecture suivante en attente.
+    const next = waiting.shift();
+    if (next) next();
+    else running--;
+  }
+}
+
+// Une lecture gardée 20 s par jeu (tableaux, statuts) : la vue relit chaque minute, et chaque colonne a sa lecture.
+const everyoneFlights = new Map<string, ReturnType<typeof singleFlight<JiraIssue[]>>>();
+
+const everyoneIssues = (boardIds: number[], statusIds: string[]): Promise<JiraIssue[]> => {
+  const ids = statusIds.filter((id) => /^\d+$/.test(id));
+  if (ids.length === 0) return Promise.resolve([]);
+  const key = `${boardIds.join(",")}|${ids.join(",")}`;
+  if (!everyoneFlights.has(key)) {
+    if (everyoneFlights.size >= 50) everyoneFlights.clear();
+    everyoneFlights.set(key, singleFlight<JiraIssue[]>(EVERYONE_MS));
+  }
+  return everyoneFlights.get(key)!.get(() => readEveryoneIssues(boardIds, ids));
+};
 
 /** Tickets de tout le monde dans ces statuts, vus par les tableaux choisis (leur filtre s'applique), les plus récents d'abord. */
-async function everyoneIssues(boardIds: number[], statusIds: string[]): Promise<JiraIssue[]> {
-  const ids = statusIds.filter((id) => /^\d+$/.test(id));
-  if (ids.length === 0) return [];
+async function readEveryoneIssues(boardIds: number[], ids: string[]): Promise<JiraIssue[]> {
   const me = await myAccountId();
   const jql = encodeURIComponent(`status in (${ids.join(",")}) ORDER BY updated DESC`);
   const fields = [...SEARCH_FIELDS, "assignee", "updated"].join(",");
   const pages = await Promise.all(
     boardIds.map((id) =>
-      jira<{ issues: RawIssue[] }>(`/rest/agile/1.0/board/${id}/issue?jql=${jql}&fields=${fields}&maxResults=${EVERYONE_MAX}`),
+      limited(() =>
+        jira<{ issues: RawIssue[] }>(`/rest/agile/1.0/board/${id}/issue?jql=${jql}&fields=${fields}&maxResults=${EVERYONE_MAX}`),
+      ),
     ),
   );
   const byKey = new Map<string, RawIssue>();

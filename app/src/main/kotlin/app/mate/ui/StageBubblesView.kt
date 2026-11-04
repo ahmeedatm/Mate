@@ -2,12 +2,16 @@ package app.mate.ui
 
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
+import android.text.TextUtils
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.drawable.DrawableCompat
 import app.mate.R
+import app.mate.gitlab.PipelineMark
+import app.mate.gitlab.markOf
 import app.mate.net.GitLabStage
 import app.mate.net.Pipeline
 
@@ -19,6 +23,15 @@ internal fun pipelineColorAttr(p: Pipeline) = when (p) {
     Pipeline.CANCELED, Pipeline.NONE -> R.attr.c_text_faint
 }
 
+/** Icône de chaque état (la même que celle des lignes de pipeline) : la couleur seule ne dit rien. */
+internal fun pipelineMarkIcon(m: PipelineMark) = when (m) {
+    PipelineMark.CHECK -> R.drawable.ic_tile_check_circle
+    PipelineMark.CROSS -> R.drawable.ic_close
+    PipelineMark.SYNC -> R.drawable.ic_refresh
+    PipelineMark.CANCELED -> R.drawable.ic_tile_block
+    PipelineMark.NONE -> R.drawable.ic_remove
+}
+
 private fun stateLabel(p: Pipeline) = when (p) {
     Pipeline.SUCCESS -> R.string.stage_success
     Pipeline.RUNNING -> R.string.stage_running
@@ -28,9 +41,9 @@ private fun stateLabel(p: Pipeline) = when (p) {
 }
 
 /**
- * Les stages d'un pipeline en petites bulles, à la suite et passant à la ligne : le nom du stage, un point et un filet de la
- * couleur de son état. TalkBack lit « nom : état » (la couleur seule ne dit rien). Cachée sans stage. Statique : pas
- * d'animation (tablette lente).
+ * Les stages d'un pipeline en petites bulles, à la suite et passant à la ligne : une icône d'état (de la couleur de l'état),
+ * puis le nom du stage, sur un fond teinté. TalkBack lit « nom : état ». Cachée sans stage. Statique : pas d'animation
+ * (tablette lente) ; redessinée seulement si les stages changent.
  */
 class StageBubblesView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : ViewGroup(context, attrs) {
     private val gap = dp(GAP_DP)
@@ -39,7 +52,11 @@ class StageBubblesView @JvmOverloads constructor(context: Context, attrs: Attrib
         visibility = GONE
     }
 
+    private var shown: List<GitLabStage>? = null
+
     fun show(stages: List<GitLabStage>) {
+        if (stages == shown) return
+        shown = stages
         removeAllViews()
         visibility = if (stages.isEmpty()) GONE else VISIBLE
         for (stage in stages) addView(bubble(stage))
@@ -48,26 +65,20 @@ class StageBubblesView @JvmOverloads constructor(context: Context, attrs: Attrib
     private fun bubble(stage: GitLabStage) = TextView(context).apply {
         val color = themeColor(context, pipelineColorAttr(stage.status))
         text = stage.name
-        textSize = 12f
+        textSize = 13f
         maxLines = 1
+        ellipsize = TextUtils.TruncateAt.END
         gravity = Gravity.CENTER_VERTICAL
         setTextColor(themeColor(context, R.attr.c_text))
-        setPadding(dp(8), dp(3), dp(10), dp(3))
+        setPadding(dp(8), dp(4), dp(10), dp(4))
         compoundDrawablePadding = dp(5)
-        setCompoundDrawablesRelativeWithIntrinsicBounds(
-            GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(color)
-                setSize(dp(8), dp(8))
-            },
-            null,
-            null,
-            null,
-        )
+        val icon = DrawableCompat.wrap(context.getDrawable(pipelineMarkIcon(markOf(stage.status)))!!.mutate())
+        DrawableCompat.setTint(icon, color)
+        icon.setBounds(0, 0, dp(14), dp(14))
+        setCompoundDrawablesRelative(icon, null, null, null)
         background = GradientDrawable().apply {
             cornerRadius = dp(12).toFloat()
             setColor(ColorUtils.setAlphaComponent(color, FILL_ALPHA))
-            setStroke(dp(1), color)
         }
         contentDescription = context.getString(R.string.stage_cd, stage.name, context.getString(stateLabel(stage.status)))
     }

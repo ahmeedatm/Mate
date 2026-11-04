@@ -551,7 +551,23 @@ describe("jira : API", () => {
     assert.ok(!columns.some((c: any) => c.key === "colonne-disparue"));
   });
 
+  it("« tous les tickets » : une relecture dans les 20 s ne rappelle pas Jira", async () => {
+    await server.call("POST", "/jira/boards", { ids: [1] });
+    await server.call("POST", "/jira/columns", { hidden: [], everyone: ["todo"] });
+    seen.length = 0;
+    await server.call("GET", "/jira/issues");
+    const first = seen.filter((r) => r.url.includes("/issue?jql=")).length;
+    assert.ok(first > 0);
+    seen.length = 0;
+    await server.call("GET", "/jira/issues");
+    assert.equal(seen.filter((r) => r.url.includes("/issue?jql=")).length, 0);
+    await server.call("POST", "/jira/columns", { hidden: [], everyone: [] });
+    await server.call("POST", "/jira/boards", { ids: [1, 3] });
+  });
+
   it("plafond : 50 tickets au plus par colonne « tous les tickets »", async () => {
+    // Autre ordre de tableaux : la lecture n'est pas celle gardée par un test précédent.
+    await server.call("POST", "/jira/boards", { ids: [3, 1] });
     BOARD_ISSUES[1] = Array.from({ length: 60 }, (_, i) =>
       colleague(`TECH-${100 + i}`, "READY / GO QA", "indeterminate", "Léa", `2026-11-01T10:${String(i).padStart(2, "0")}:00.000+0100`),
     );
@@ -561,6 +577,7 @@ describe("jira : API", () => {
     assert.equal(goqa.issues.length, 50);
     assert.equal(goqa.issues[0].key, "TECH-31", "le plus récent d'abord");
     await server.call("POST", "/jira/columns", { hidden: [], everyone: [] });
+    await server.call("POST", "/jira/boards", { ids: [1, 3] });
   });
 
   it("POST /jira/columns : 400 sur un corps invalide", async () => {

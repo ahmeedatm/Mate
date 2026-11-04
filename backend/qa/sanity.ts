@@ -685,6 +685,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         if (res.json.connected === false) return "pas connecté à GitLab";
         // Lecture seule : jamais d'enregistrement du choix. La première lecture parcourt les projets du compte (45 s au plus).
         const schedules = await call("GET", "/gitlab/schedules");
+        if (schedules.status === 502) throw new Skip(`GitLab inaccessible depuis l'ordinateur (${schedules.json?.error})`);
         expectStatus(schedules, 200, "/gitlab/schedules");
         expect(Array.isArray(schedules.json.projects) && Array.isArray(schedules.json.selected), "forme de /gitlab/schedules inattendue");
         return `${res.json.schedules.length} planifiées, ${res.json.mrs.length} de mes MR`;

@@ -1,6 +1,7 @@
 package app.mate.gitlab
 
 import app.mate.net.GitLabPipeline
+import app.mate.net.GitLabPipelines
 import app.mate.net.Pipeline
 import app.mate.net.ScheduleProject
 import app.mate.net.ScheduleRef
@@ -63,6 +64,12 @@ fun pipelineTitle(p: GitLabPipeline): String {
         p.title.isNotEmpty() -> "$project · ${p.title}"
         else -> "$project · ${p.ref}"
     }
+}
+
+/** La lecture sans les temps (`ageSec`, `durationSec`), qui changent à chaque lecture : de quoi voir si les lignes elles-mêmes ont changé. */
+fun withoutTimes(a: GitLabPipelines): GitLabPipelines {
+    fun GitLabPipeline.stable() = copy(ageSec = 0, durationSec = null)
+    return a.copy(schedules = a.schedules.map { it.stable() }, mrs = a.mrs.map { it.stable() }, pipelines = a.pipelines.map { it.stable() })
 }
 
 /** Jobs en échec sur une ligne : « tests-unitaires, tests-e2e » ; null hors échec ou sans nom. */
