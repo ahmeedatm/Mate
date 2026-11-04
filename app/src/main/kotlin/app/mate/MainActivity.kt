@@ -63,6 +63,7 @@ import app.mate.ui.DocumentPanel
 import app.mate.ui.FocusFragment
 import app.mate.ui.FromComputerFragment
 import app.mate.ui.GameSession
+import app.mate.ui.Grain
 import app.mate.ui.HomeFragment
 import app.mate.ui.HushBackdrop
 import app.mate.ui.IconCache
@@ -79,6 +80,7 @@ import app.mate.ui.RailSwipeLayout
 import app.mate.ui.ReadingAids
 import app.mate.ui.SettingsFragment
 import app.mate.ui.TabletAlerts
+import app.mate.ui.ThemePattern
 import app.mate.ui.TourModel
 import app.mate.ui.TourOverlay
 import app.mate.ui.Typing
@@ -87,6 +89,7 @@ import app.mate.ui.WelcomeView
 import app.mate.ui.dp
 import app.mate.ui.errorText
 import app.mate.ui.home.Down
+import app.mate.ui.home.FlowBandView
 import app.mate.ui.home.HomeLayout
 import app.mate.ui.home.LinkWatch
 import app.mate.ui.notificationBanner
@@ -203,6 +206,8 @@ class MainActivity : AppCompatActivity() {
         // Plein écran : sans cela la fenêtre garde vide la place des barres système cachées (bandes noires).
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_main)
+        Grain.applyTo(findViewById(android.R.id.content))
+        ThemePattern.applyTo(findViewById(android.R.id.content))
         Speaker.init(this)
         Prefs.focusPreset(this).let { FocusTimer.restore(it.focus, it.pause) }
         NoisePlayer.init(this)
@@ -214,6 +219,9 @@ class MainActivity : AppCompatActivity() {
             onSwipe = { delta -> railStep(delta) }
             canSwipe = { delta -> railCanStep(delta) }
         }
+        // Tubes des thèmes Rétro : voilés derrière les widgets sans fond de l'Accueil affiché.
+        flow = findViewById(R.id.flow)
+        flow.hidden = { homeFragment()?.bareWidgets().orEmpty() }
         wakeRail()
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
         topBar = findViewById(R.id.top_bar)
@@ -1027,6 +1035,7 @@ class MainActivity : AppCompatActivity() {
     fun railCanStep(delta: Int): Boolean = nav.canStep(delta)
 
     private lateinit var wallpaper: Wallpaper
+    private lateinit var flow: FlowBandView
     private var homeCenterFree = false
 
     /** Accueil : la grille dit si sa colonne vide est libre (WidgetGrid). */
@@ -1136,7 +1145,11 @@ class MainActivity : AppCompatActivity() {
         // Kiosque : l'Accueil arrive par ses widgets (Look.enterSpring), pas en glissant tout entier par-dessus.
         if (mode == Mode.HOME && Look.cascadeOnly(this)) return
         Look.sharedAxis(into, fromBelow = nav.lastMove >= 0)
+        flowTravel(nav.lastMove)
     }
+
+    /** Écran ou profil voisin dans la barre ([move] > 0 : plus bas) : les tubes des thèmes Rétro défilent avec lui. */
+    fun flowTravel(move: Int) = flow.travel(move)
 
     /** Entrée de profil de la barre : l'Accueil, sur ce profil (créé au besoin : sa vue doit exister avant). */
     private fun showProfile(page: Int) {

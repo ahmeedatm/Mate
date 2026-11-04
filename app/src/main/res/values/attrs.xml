@@ -86,7 +86,7 @@
     <attr name="c_label_caps" format="boolean" />
     <!-- Ombre sous les textes (Hush : Widget.Hush.Text, RollingText) ; transparente ailleurs. -->
     <attr name="c_text_shadow" format="color" />
-    <!-- Cadran, Cadran nuit et Rétro : tube qui coule en L à droite et en bas de l'Accueil (c_flow, ses quatre couleurs), et grain de deux
+    <!-- Cadran, Cadran nuit et Rétro : tubes qui coulent à droite, derrière tous les écrans (c_flow, ses quatre couleurs), et grain de deux
          couleurs par-dessus tout l'écran (c_grain_*, Maison aussi). Faux ou transparent = ni tubes ni grain : les autres thèmes. -->
     <attr name="c_flow" format="boolean" />
     <attr name="c_flow_dark" format="color" />
