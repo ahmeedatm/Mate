@@ -261,16 +261,41 @@ test.describe("page locale GET /", () => {
     expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-now"))).toBe("#FF2BD6");
     expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-tile"))).toBe("#000000");
 
+    // Les 15 thèmes de la tablette ont leur bouton, dans l'ordre de l'appli.
+    await expect(page.locator(".themes button")).toHaveText([
+      "Console",
+      "Console jour",
+      "Clair",
+      "Sombre",
+      "Cadran",
+      "Cadran nuit",
+      "Rétro",
+      "Hush",
+      "Spider-Verse",
+      "Registre",
+      "Studio",
+      "Maison",
+      "Tableau",
+      "Terminal",
+      "Contraste élevé",
+    ]);
+    // Cadran nuit : aperçu à ses couleurs (accent rouge clair).
+    await page.getByRole("button", { name: "Cadran nuit" }).click();
+    await expect(page.getByRole("button", { name: "Cadran nuit" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#twintheme")).toHaveText("Cadran nuit");
+    expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-now"))).toBe("#FF5165");
+
     await page.locator("#nightdim").uncheck();
     await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");
     await page.locator("#volume").fill("75");
     await expect(page.locator("#volumevalue")).toHaveText("75 %");
-    await expect.poll(() => received.length).toBe(6);
+    await expect.poll(() => received.length).toBe(7);
     expect(received).toEqual([
       { theme: "CONSOLE_JOUR" },
       { theme: "CONTRASTE" },
       { theme: "HUSH" },
       { theme: "SPIDERMAN" },
+      { theme: "CADRAN_NUIT" },
       { nightDim: false },
       { volume: 0.75 },
     ]);

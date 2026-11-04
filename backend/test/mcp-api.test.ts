@@ -184,7 +184,23 @@ describe("pont stdio (Claude Desktop)", () => {
       const names = (await desktop.listTools()).tools.map((t) => t.name);
       assert.ok(names.includes("profils_ecrire"));
       const res = (await desktop.callTool({ name: "tablette_reglages", arguments: {} })) as Result;
-      assert.ok(json(res).themes.includes("CONSOLE_JOUR"));
+      assert.deepEqual(json(res).themes, [
+        "CONSOLE",
+        "CONSOLE_JOUR",
+        "CLAIR",
+        "SOMBRE",
+        "CADRAN",
+        "CADRAN_NUIT",
+        "RETRO",
+        "HUSH",
+        "SPIDERMAN",
+        "REGISTRE",
+        "STUDIO",
+        "MAISON",
+        "TABLEAU",
+        "TERMINAL",
+        "CONTRASTE",
+      ]);
     } finally {
       await desktop.close();
     }

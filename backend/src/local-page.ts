@@ -299,7 +299,7 @@ ${FAVICON}
         <div id="tabletsettings">
           <div class="label">Thème</div>
           <div class="themes">
-            <button data-theme="CONSOLE"><span></span>Console</button><button data-theme="CONSOLE_JOUR"><span></span>Console jour</button><button data-theme="CONTRASTE"><span></span>Contraste élevé</button><button data-theme="HUSH"><span></span>Hush</button><button data-theme="SPIDERMAN"><span></span>Spider-Verse</button>
+            <button data-theme="CONSOLE"><span></span>Console</button><button data-theme="CONSOLE_JOUR"><span></span>Console jour</button><button data-theme="CLAIR"><span></span>Clair</button><button data-theme="SOMBRE"><span></span>Sombre</button><button data-theme="CADRAN"><span></span>Cadran</button><button data-theme="CADRAN_NUIT"><span></span>Cadran nuit</button><button data-theme="RETRO"><span></span>Rétro</button><button data-theme="HUSH"><span></span>Hush</button><button data-theme="SPIDERMAN"><span></span>Spider-Verse</button><button data-theme="REGISTRE"><span></span>Registre</button><button data-theme="STUDIO"><span></span>Studio</button><button data-theme="MAISON"><span></span>Maison</button><button data-theme="TABLEAU"><span></span>Tableau</button><button data-theme="TERMINAL"><span></span>Terminal</button><button data-theme="CONTRASTE"><span></span>Contraste élevé</button>
           </div>
           <div class="row"><label for="brightness">Luminosité de l'écran</label><input type="range" id="brightness" min="5" max="100"><span class="value" id="brightnessvalue"></span></div>
           <div class="row"><label for="volume">Volume du haut-parleur</label><input type="range" id="volume" min="0" max="100"><span class="value" id="volumevalue"></span></div>
@@ -891,6 +891,16 @@ ${FAVICON}
   const THEMES = {
     CONSOLE: ["#17181B", "#23252A", "#ECEDEF", "#B4B8C0", "#B8F34A", "#3A3D44", "#16210A"],
     CONSOLE_JOUR: ["#F4F2EE", "#FFFFFF", "#1B1C1F", "#474B54", "#3F6B00", "#D8D3CA", "#FFFFFF"],
+    CLAIR: ["#FAF2F1", "#FFFFFF", "#1E1B1B", "#4D4545", "#CA0538", "#D0C4C3", "#FFFFFF"],
+    SOMBRE: ["#100D0D", "#221F1F", "#E9E1E0", "#D0C4C3", "#FF5165", "#4D4545", "#40000B"],
+    CADRAN: ["#EEE0DA", "#FCF5F1", "#2B1E1F", "#5A4746", "#CA0538", "#D6C1B9", "#FFFFFF"],
+    CADRAN_NUIT: ["#1D1617", "#2A2122", "#EBDDD9", "#CFC0BC", "#FF5165", "#574849", "#40000B"],
+    RETRO: ["#F3DECB", "#FBEFE3", "#552805", "#7A4A25", "#B82800", "#D9B99A", "#FBF2B7"],
+    REGISTRE: ["#F8F3E5", "#FFFDF6", "#1D1C14", "#4A4838", "#B3261E", "#D6CFB8", "#FFFFFF"],
+    STUDIO: ["#F6F3F6", "#FFFFFF", "#1B1B1E", "#4A4850", "#C0153A", "#D4D0D8", "#FFFFFF"],
+    MAISON: ["#FFF1E7", "#FFFAF5", "#211A14", "#5A4A3E", "#B3412F", "#E3CDBD", "#FFFFFF"],
+    TABLEAU: ["#F4F3F5", "#FFFFFF", "#1A1C1D", "#44484C", "#C62828", "#C9CDD2", "#FFFFFF"],
+    TERMINAL: ["#0C0F0C", "#171B17", "#E2E3DD", "#A9AFA3", "#FFB000", "#2E352E", "#281800"],
     CONTRASTE: ["#FFFFFF", "#EDEDE8", "#111214", "#25272C", "#2A4A00", "#45474D", "#FFFFFF"],
     // Tuile de Hush : son verre (#B82C2238) posé sur le fond noir.
     HUSH: ["#070509", "#221A2B", "#F6F0F8", "#CBC0D3", "#FF6EB4", "#46384F", "#22030F"],
