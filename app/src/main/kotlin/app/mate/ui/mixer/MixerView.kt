@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.Outline
 import android.graphics.Paint
 import android.os.SystemClock
+import android.text.InputFilter
 import android.text.InputType
 import android.util.AttributeSet
 import android.view.DragEvent
@@ -301,8 +302,9 @@ class MixerView @JvmOverloads constructor(
     private fun askVolume(strip: FaderStrip) {
         val current = strip.volume ?: return
         val form = LayoutInflater.from(context).inflate(R.layout.view_dialog_form, null)
-        form.findViewById<TextView>(R.id.dialog_message).visibility = GONE
+        form.findViewById<TextView>(R.id.dialog_message).setText(R.string.mixer_volume_hint)
         val input: EditText = context.inputField(form.findViewById(R.id.dialog_body), R.string.mixer_volume_hint, InputType.TYPE_CLASS_NUMBER)
+        input.filters = arrayOf(InputFilter.LengthFilter(VOLUME_DIGITS))
         input.setText(current.toString())
         input.setSelectAllOnFocus(true)
         val dialog = AlertDialog.Builder(context)
@@ -697,5 +699,6 @@ class MixerView @JvmOverloads constructor(
         const val ERROR_POLL_MS = 2_000L
         const val HOLD_MS = 1_200L
         const val ERROR = "error"
+        const val VOLUME_DIGITS = 3
     }
 }

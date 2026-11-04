@@ -211,7 +211,6 @@ class FaderStrip(context: Context) : View(context) {
     private val cKeyTop = themeColor(context, R.attr.c_mx_key_top)
     private val cKeyBottom = themeColor(context, R.attr.c_mx_key_bottom)
     private val cMuted = themeColor(context, R.attr.c_ko)
-    private val cOnMuted = themeColor(context, R.attr.c_on_accent)
 
     // Toucher.
     private val slop = ViewConfiguration.get(context).scaledTouchSlop
@@ -316,7 +315,10 @@ class FaderStrip(context: Context) : View(context) {
         p.shader = LinearGradient(0f, 0f, 0f, capH, themeColor(context, R.attr.c_mx_cap_top), ColorUtils.blendARGB(themeColor(context, R.attr.c_mx_cap_top), themeColor(context, R.attr.c_mx_cap_bottom), CAP_SHADE), Shader.TileMode.CLAMP)
         c.drawRoundRect(0f, 0f, capW, capH, capH / 2, capH / 2, p)
         p.shader = null
-        p.color = if (master) cAccent else themeColor(context, R.attr.c_mx_cap_line)
+        // Index de la Sortie en accent, sauf s'il se perd sur le galet (accent sombre des thèmes clairs).
+        val line = themeColor(context, R.attr.c_mx_cap_line)
+        val top = themeColor(context, R.attr.c_mx_cap_top)
+        p.color = if (master && ColorUtils.calculateContrast(cAccent, ColorUtils.setAlphaComponent(top, 255)) >= MIN_INDEX_CONTRAST) cAccent else line
         val half = dp(11).toFloat()
         c.drawRoundRect(capW / 2 - half, capH / 2 - dpf(1.5f), capW / 2 + half, capH / 2 + dpf(1.5f), dpf(1.5f), dpf(1.5f), p)
         return b
@@ -641,7 +643,6 @@ class FaderStrip(context: Context) : View(context) {
     private var titleAction: Int? = null
     private val extraActions = mutableListOf<Int>()
 
-    /** Touche Muet (pilule) : relief au repos, enfoncée au toucher, éclairée quand le son est coupé. */
     /** Pictogramme du haut-parleur, barré en sourdine, centré sur (`cxi`, `cyi`). */
     private fun drawSpeaker(canvas: Canvas, cxi: Float, cyi: Float, size: Float, color: Int) {
         val d = (if (muted) speakerOff else speaker) ?: return
@@ -771,6 +772,11 @@ class FaderStrip(context: Context) : View(context) {
 
     override fun performClick(): Boolean = super.performClick()
 
+    override fun onDetachedFromWindow() {
+        removeCallbacks(longPress)
+        super.onDetachedFromWindow()
+    }
+
     private fun sp(value: Float) = value * resources.displayMetrics.scaledDensity
 
     private fun dpf(value: Float) = value * resources.displayMetrics.density
@@ -791,6 +797,9 @@ class FaderStrip(context: Context) : View(context) {
 
         /** Bas du capuchon : un tiers vers c_mx_cap_bottom, un relief doux. */
         private const val CAP_SHADE = 0.35f
+
+        /** Contraste minimal de l'index d'accent sur le galet (élément graphique). */
+        private const val MIN_INDEX_CONTRAST = 3.0
 
         /** Curseur d'une tranche qui ne se pilote pas (35 %), icône d'appli en sourdine (43 %). */
         private const val DISABLED_ALPHA = 90

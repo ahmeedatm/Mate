@@ -255,4 +255,16 @@ class MixerAppsTest {
         assertEquals(emptyList<MixerApps.App>(), MixerApps.read(store, "pc-1", MixerApps.HIDDEN_KEY))
         assertEquals("sans ordinateur : rien", emptyList<MixerApps.App>(), MixerApps.hide(store, null, firefoxApp))
     }
+
+    @Test
+    fun `le reglage des applis garde une appli choisie puis masquee a sa place`() {
+        val discordApp = MixerApps.App("discord", "Discord")
+        val firefoxApp = MixerApps.App("firefox", "Firefox")
+        val spotify = MixerApps.App("spotify", "Spotify")
+        // Choix : Discord, Firefox (masquée), Spotify ; le ⚙ ne montre que Discord et Spotify, réordonnés.
+        val edited = listOf(spotify, discordApp)
+        assertEquals(listOf(spotify, firefoxApp, discordApp), MixerApps.keepHidden(listOf(discordApp, firefoxApp, spotify), edited, setOf("firefox")))
+        assertEquals("rien de masque : le choix du reglage", edited, MixerApps.keepHidden(listOf(discordApp, spotify), edited, emptySet()))
+        assertEquals("masquee en dernier", listOf(discordApp, firefoxApp), MixerApps.keepHidden(listOf(discordApp, firefoxApp), listOf(discordApp), setOf("firefox")))
+    }
 }

@@ -84,6 +84,16 @@ object MixerApps {
         return if (computerId == null) emptyList() else next
     }
 
+    /**
+     * Choix refait dans le ⚙ (`edited`, sans les masquées qu'il ne montre pas) : les applis de `previous` masquées y
+     * gardent leur place, pour revenir sur la table quand on les affiche de nouveau.
+     */
+    fun keepHidden(previous: List<App>, edited: List<App>, hidden: Set<String>): List<App> {
+        val result = edited.toMutableList()
+        previous.forEachIndexed { i, app -> if (app.id in hidden) result.add(i.coerceAtMost(result.size), app) }
+        return result.toList()
+    }
+
     /** Fait revenir l'appli `id` ; rend la liste des masquées. */
     fun unhide(store: JSONObject, computerId: String?, id: String): List<App> {
         val next = read(store, computerId, HIDDEN_KEY).filterNot { it.id == id }

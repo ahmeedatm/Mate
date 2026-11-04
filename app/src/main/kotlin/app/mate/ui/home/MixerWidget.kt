@@ -29,6 +29,7 @@ import app.mate.ui.mixer.MixerHidden
 import app.mate.ui.mixer.MixerView
 import app.mate.ui.showImmersive
 import app.mate.ui.themeColor
+import app.mate.ui.themeFont
 import java.util.UUID
 
 /**
@@ -134,6 +135,7 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private fun fillHidden(box: LinearLayout) {
         box.addView(label(17f, R.attr.c_text).apply {
             setText(R.string.mixer_hidden_title)
+            typeface = themeFont(context, R.attr.c_font_medium)
             setPadding(0, dp(24), 0, 0)
         })
         val apps = hiddenApps()
@@ -279,7 +281,8 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
      * `rebuild` : une case a changé, la liste se refait ; un déplacement est déjà à l'écran (focus TalkBack gardé).
      */
     private fun commit(box: LinearLayout, rebuild: Boolean) {
-        val apps = (0 until box.childCount).mapNotNull { (box.getChildAt(it).tag as? Row)?.takeIf { r -> r.check.isChecked }?.app }
+        val shown = (0 until box.childCount).mapNotNull { (box.getChildAt(it).tag as? Row)?.takeIf { r -> r.check.isChecked }?.app }
+        val apps = MixerApps.keepHidden(chosen(), shown, hiddenIds())
         if (!MixerApps.write(placed.config, computerId, apps)) return
         loaded = apps
         host.save()

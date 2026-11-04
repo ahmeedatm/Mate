@@ -1758,7 +1758,7 @@
     <string name="mixer_volume_action">Taper le volume de %1$s</string>
     <string name="mixer_hide_action">Ne plus afficher %1$s</string>
     <string name="mixer_hide_ok">Ne plus afficher</string>
-    <string name="mixer_hide_message">Cette appli n\'aura plus de voie sur les tables de cet ordinateur. Pour la faire revenir : ⚙ de la table, Applis masquées.</string>
+    <string name="mixer_hide_message">Cette appli n\'aura plus de voie sur les tables de cet ordinateur. Pour la faire revenir : Modifier, puis la roue dentée de la table, Applis masquées.</string>
     <string name="mixer_hidden_title">Applis masquées</string>
     <string name="mixer_hidden_none">Aucune. Pour masquer une appli, appui long sur sa voie.</string>
     <string name="mixer_unhide">Afficher</string>
