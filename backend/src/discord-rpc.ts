@@ -157,7 +157,7 @@ function expireAuthorize() {
   if (authed) return;
   // Sans jeton, plus de connexion ; avec un jeton (reconnexion en cours), la reconnexion reprend sans la demande.
   running = hasToken;
-  socket?.close();
+  closeSocket(socket);
 }
 
 function finishAuthorize(error?: Error) {
@@ -207,7 +207,7 @@ async function connect() {
   ws.onclose = () => onClosed(ws);
   // Un port qui accepte puis se tait (pas Discord) ne doit pas bloquer la reconnexion au vrai.
   setTimeout(() => {
-    if (socket === ws && !ready) ws.close();
+    if (socket === ws && !ready) closeSocket(ws);
   }, requestTimeoutMs()).unref();
 }
 
@@ -240,7 +240,17 @@ async function openSocket(): Promise<WebSocket | undefined> {
 /** Échec inattendu (disque plein en gardant le jeton…) : journal, puis connexion refermée pour repartir proprement. */
 function failed(ws: WebSocket | undefined, e: unknown) {
   logFailure("Discord RPC", e);
-  ws?.close();
+  closeSocket(ws);
+}
+
+/**
+ * Fermeture voulue par le compagnon : l'état est remis à zéro tout de suite, sans attendre l'évènement `close` ; un
+ * nouveau geste juste après part donc sur une connexion neuve, jamais sur celle qui se ferme.
+ */
+function closeSocket(ws: WebSocket | undefined) {
+  if (!ws) return;
+  onClosed(ws);
+  ws.close();
 }
 
 function onClosed(ws: WebSocket) {
@@ -299,7 +309,7 @@ async function onReady(ws: WebSocket, data: any) {
     !/^\/\/(\w+\.)?discord\.com\/api$/.test(data.config.api_endpoint)
   ) {
     logFailure("Discord RPC", new Error("le port local ne répond pas comme Discord"));
-    return ws.close();
+    return closeSocket(ws);
   }
   ready = true;
   if (authorizing) return runAuthorize(ws).catch((e) => failed(ws, e));
@@ -307,7 +317,7 @@ async function onReady(ws: WebSocket, data: any) {
   if (!token) {
     hasToken = false;
     running = false;
-    return ws.close();
+    return closeSocket(ws);
   }
   await authenticate(ws, token, true);
 }
@@ -323,7 +333,7 @@ async function runAuthorize(ws: WebSocket) {
     finishAuthorize(new DiscordError(typeof code === "string" ? NO_TOKEN : REFUSED));
     if (!hasToken) {
       running = false;
-      ws.close();
+      closeSocket(ws);
     }
     return;
   }
@@ -334,7 +344,7 @@ async function runAuthorize(ws: WebSocket) {
   // Jeton rendu mais refusé : aucune connexion sans jeton.
   if (!authed && !hasToken) {
     running = false;
-    ws.close();
+    closeSocket(ws);
   }
 }
 
@@ -355,16 +365,16 @@ async function authenticate(ws: WebSocket, token: string, mayRenew: boolean) {
   const res = await request(ws, "AUTHENTICATE", { access_token: token });
   if (socket !== ws) return;
   // Discord lent ou parti : on garde le jeton, la reconnexion réessaiera.
-  if (res.local) return ws.close();
+  if (res.local) return closeSocket(ws);
   if (res.evt === "ERROR") {
     const renewed = mayRenew ? await renew(ws) : {};
-    if (renewed.local) return ws.close();
+    if (renewed.local) return closeSocket(ws);
     if (renewed.token) return authenticate(ws, renewed.token, false);
     // Jeton expiré ou accès retiré dans Discord : on l'oublie, la tablette repropose « Montrer les photos ».
     await forgetDiscordToken();
     hasToken = false;
     running = !!authorizing;
-    if (!authorizing) ws.close();
+    if (!authorizing) closeSocket(ws);
     return;
   }
   authed = true;

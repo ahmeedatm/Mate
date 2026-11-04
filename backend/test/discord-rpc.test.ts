@@ -113,6 +113,14 @@ describe("Discord RPC : autorisation", () => {
     assert.equal(rpc.discordPhotos(), "off");
   });
 
+  it("refus puis nouveau toucher tout de suite : la nouvelle demande part sur une connexion neuve", async () => {
+    fake.authorize = "refuse";
+    await assert.rejects(rpc.authorizeDiscord(), /refusé/);
+    fake.authorize = "accept";
+    await rpc.authorizeDiscord();
+    assert.equal(rpc.discordPhotos(), "on");
+  });
+
   it("Discord fermé : message clair", async () => {
     process.env.DISCORD_RPC_PORTS = String(await closedPort());
     await assert.rejects(rpc.authorizeDiscord(), /Discord ne répond pas/);
