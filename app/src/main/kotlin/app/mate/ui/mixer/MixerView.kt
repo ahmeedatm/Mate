@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.Outline
 import android.graphics.Paint
 import android.os.SystemClock
+import android.text.InputFilter
 import android.text.InputType
 import android.util.AttributeSet
 import android.view.DragEvent
@@ -26,6 +27,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.core.widget.ImageViewCompat
+import androidx.core.widget.doAfterTextChanged
 import app.mate.R
 import app.mate.net.AudioOutput
 import app.mate.net.BackendClient
@@ -185,6 +187,9 @@ class MixerView @JvmOverloads constructor(
     /** Applis à régler ensemble quand on touche la voie `id` (groupe de la table) ; null : une voie simple. */
     var groupMembers: (String) -> List<String>? = { null }
 
+    /** Appui long sur la voie d'une appli, « Ne plus afficher » confirmé (table d'un profil) ; null : pas d'appui long. */
+    var onHide: ((MixerApps.App) -> Unit)? = null
+
     /** Applis qui ont du son en ce moment, d'après le dernier état lu ; null : inconnu ou pas de volume par appli. */
     val liveApps: List<MixerChannel>? get() = state?.apps
 
@@ -274,6 +279,8 @@ class MixerView @JvmOverloads constructor(
             }
         }
         if (c.id == "master") onTitle = { chooseOutput() }
+        onValue = { askVolume(this) }
+        if (onHide != null && MixerApps.canHide(c.id)) onLongPress = { confirmHide(MixerApps.App(c.id, titleOf(c))) }
         onVolume = { volume, final ->
             hold(c.id)
             litScene = null
@@ -289,6 +296,44 @@ class MixerView @JvmOverloads constructor(
             hold(c.id)
             scope.launch { refresh { send(c.id, muted = mute) } }
         }
+    }
+
+    /** Pavé numérique : le volume exact de la voie, de 0 à 100 ; part comme un curseur lâché. */
+    private fun askVolume(strip: FaderStrip) {
+        val current = strip.volume ?: return
+        val form = LayoutInflater.from(context).inflate(R.layout.view_dialog_form, null)
+        form.findViewById<TextView>(R.id.dialog_message).setText(R.string.mixer_volume_hint)
+        val input: EditText = context.inputField(form.findViewById(R.id.dialog_body), R.string.mixer_volume_hint, InputType.TYPE_CLASS_NUMBER)
+        input.filters = arrayOf(InputFilter.LengthFilter(VOLUME_DIGITS))
+        input.setText(current.toString())
+        input.setSelectAllOnFocus(true)
+        val dialog = AlertDialog.Builder(context)
+            .setTitle(context.getString(R.string.mixer_volume_title, strip.title))
+            .setView(form)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.mixer_volume_ok, null)
+            .create()
+        val apply = {
+            MixerMath.typedVolume(input.text.toString())?.let { volume ->
+                dialog.dismiss()
+                strip.volume = volume
+                strip.onVolume?.invoke(volume, true)
+            }
+        }
+        input.doAfterTextChanged { dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.isEnabled = MixerMath.typedVolume(it.toString()) != null }
+        input.setOnEditorActionListener { _, _, _ -> apply(); true }
+        dialog.setOnShowListener { dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener { apply() } }
+        dialog.showForTyping(input)
+    }
+
+    /** « Ne plus afficher » : la voie quitte toutes les tables de cet ordinateur, elle revient par le ⚙. */
+    private fun confirmHide(app: MixerApps.App) {
+        AlertDialog.Builder(context)
+            .setTitle(app.name)
+            .setMessage(R.string.mixer_hide_message)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.mixer_hide_ok) { _, _ -> onHide?.invoke(app) }
+            .showImmersive()
     }
 
     /** Liste les sorties audio de l'ordinateur (enceinte, casque, carte son) et passe sur celle qu'on touche. */
@@ -648,5 +693,6 @@ class MixerView @JvmOverloads constructor(
         const val ERROR_POLL_MS = 2_000L
         const val HOLD_MS = 1_200L
         const val ERROR = "error"
+        const val VOLUME_DIGITS = 3
     }
 }

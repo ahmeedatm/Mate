@@ -22,6 +22,9 @@ object MixerMath {
     fun dragVolume(start: Int, dy: Float, travel: Float): Int =
         if (travel <= 0f) start else (start - dy / travel * 100).roundToInt().coerceIn(0, 100)
 
+    /** Volume tapé au pavé numérique (toucher le « 35 % ») : un entier de 0 à 100, sinon null. */
+    fun typedVolume(text: String): Int? = text.trim().toIntOrNull()?.takeIf { it in 0..100 }
+
     /** Couleur d'une LED selon sa place (0 = en bas) : 3 rouges en haut, 4 jaunes, le reste vert. */
     fun ledZone(index: Int, leds: Int): Int = when {
         index >= leds - 3 -> 2
