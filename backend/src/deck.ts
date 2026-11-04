@@ -45,7 +45,6 @@ import {
 } from "./perso.ts";
 import { agentsAvailable } from "./agents-sources.ts";
 import { githubAvailable } from "./github.ts";
-import { gitlabAvailable } from "./gitlab.ts";
 import { hasCalendar } from "./calendar.ts";
 import { haConfigured } from "./ha.ts";
 import { jiraConfigured } from "./jira.ts";
@@ -253,11 +252,12 @@ export async function homeFeatures() {
   // (appli ou navigateur) ; `teams` : l'appli Teams est dans le deck (page Réunion et ses raccourcis).
   const teams = names.some((n) => MEETING_APPS.test(n)) && (await pluginOn("teams"));
   // `agents` : onglet et widget des agents Claude (Mac avec Claude Code installé). `off` : plugins coupés (plugins.ts).
-  // `gitlab` : onglet des MR GitLab (jeton GITLAB_TOKEN dans .env, compte connecté par OAuth, ou appli OAuth réglée : la tablette propose de se connecter).
+  // `gitlab` : widgets GitLab, toujours proposés : sans jeton, ils montrent la carte « Connecter GitLab » qui ouvre la page de l'ordinateur.
   // `github` : widgets GitHub et Actions (GITHUB_TOKEN dans .env, compte connecté, ou appli OAuth réglée).
   const agents = agentsAvailable() && (await pluginOn("claude"));
-  // `jira` : onglet Jira (JIRA_SITE, JIRA_EMAIL et JIRA_API_TOKEN dans .env).
-  const jira = jiraConfigured && (await pluginOn("jira"));
+  // `jira` : widget Jira, proposé sur un ordinateur piloté même sans compte relié (carte « Connecter Jira » : son bouton ouvre la
+  // page de l'ordinateur, ce que seul un Mac ou un Windows sait faire), et dès que Jira est relié, quel que soit le système.
+  const jira = (canControl || jiraConfigured()) && (await pluginOn("jira"));
   // `ha` : widget Home Assistant (HA_URL, HA_TOKEN et HA_ENTITIES dans .env).
   // `valorant` : widget Valorant (client Riot, Windows seulement : src/valorant.ts).
   return {
@@ -266,7 +266,7 @@ export async function homeFeatures() {
     meetings: canControl,
     teams,
     agents,
-    gitlab: canControl && (await gitlabAvailable()),
+    gitlab: canControl,
     github: canControl && (await githubAvailable()),
     jira,
     ha: haConfigured,

@@ -3,7 +3,7 @@ import { afterEach, describe, it } from "node:test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { checkUpdate, download } from "../src/app-update.ts";
+import { checkUpdate, download, installerBase } from "../src/app-update.ts";
 import { noteTabletAddress, pollCommands } from "../src/tablet.ts";
 
 // Mise à jour de l'appli portable : la liste (taille, SHA-256) vient du canal appairé, jamais du port 8080 en clair.
@@ -65,5 +65,41 @@ describe("téléchargement (installeur, modèle Whisper)", () => {
     const file = path.join(os.tmpdir(), "dossier-absent-mate", "x.bin");
     await assert.rejects(download("http://192.0.2.10/x", file, { size: 1000, sha256: "d".repeat(64) }), /ENOENT/);
     assert.equal(fs.existsSync(file), false);
+  });
+});
+
+describe("adresse des fichiers sur la tablette", () => {
+  it("le code lu dans l'état du poll se met entre le port et le fichier", () => {
+    assert.equal(installerBase("192.0.2.10", { installerCode: "K7M2Q" }), "http://192.0.2.10:8080/K7M2Q");
+  });
+
+  it("sans code (ancienne tablette), code vide ou qui sort du chemin : refus clair", () => {
+    for (const state of [
+      null,
+      {},
+      { installerCode: "" },
+      { installerCode: 12345 },
+      { installerCode: "../x" },
+      { installerCode: "K7M2Q/../.." },
+    ]) {
+      assert.throws(
+        () => installerBase("192.0.2.10", state),
+        (e: Error & { statusCode?: number }) => e.statusCode === 409 && /mets à jour/.test(e.message),
+        JSON.stringify(state),
+      );
+    }
+  });
+});
+
+describe("code périmé", () => {
+  it("un 404 de la tablette dit de réessayer, un 404 ailleurs reste générique", async () => {
+    globalThis.fetch = (async () => new Response("Introuvable.", { status: 404 })) as typeof fetch;
+    const file = path.join(os.tmpdir(), "x-mate-test.bin");
+    const expected = { size: 10, sha256: "d".repeat(64) };
+    await assert.rejects(
+      download("http://192.0.2.10:8080/K7M2Q/a.zip", file, expected, "Code périmé"),
+      (e: Error & { statusCode?: number }) => e.statusCode === 502 && /Code périmé/.test(e.message),
+    );
+    await assert.rejects(download("http://192.0.2.10/a", file, expected), /HTTP 404/);
   });
 });

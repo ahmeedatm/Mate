@@ -4,6 +4,7 @@ import type { SystemCommand } from "../screens.ts";
 import * as audio from "./audio.ts";
 import * as calls from "./calls.ts";
 import * as keys from "./keys.ts";
+import { automation } from "./permissions.ts";
 import { osascript, run } from "./run.ts";
 
 export async function systemCommand(command: SystemCommand) {
@@ -11,6 +12,7 @@ export async function systemCommand(command: SystemCommand) {
     case "sleep-display":
       return void (await run("pmset", ["displaysleepnow"]));
     case "toggle-dark-mode":
+      await automation.requireSystemEvents();
       return void (await osascript('tell application "System Events" to tell appearance preferences to set dark mode to not dark mode'));
     case "screenshot-clipboard":
       // Raccourci système plutôt que `screencapture` : ce dernier exige l'autorisation
@@ -21,12 +23,11 @@ export async function systemCommand(command: SystemCommand) {
   }
 }
 
-/** Message bien visible sur l'ordinateur (code d'appairage), sans attendre qu'il soit fermé. */
-export function alert(title: string, text: string) {
-  // Processus détaché : la boîte reste affichée sans bloquer le serveur, et se ferme seule après 2 min.
+/** Notification du centre de notifications (demande d'appairage), sans bloquer le serveur. */
+export function notify(title: string, text: string) {
+  // Texte et titre en argv : jamais d'interpolation dans le script. S'affiche au nom d'« Éditeur de script » (docs/architecture.md).
   const script = `on run argv
-activate
-display dialog (item 2 of argv) with title (item 1 of argv) buttons {"OK"} default button 1 giving up after 120
+display notification (item 2 of argv) with title (item 1 of argv)
 end run`;
   spawn("osascript", ["-e", script, title, text], { detached: true, stdio: "ignore" }).unref();
 }

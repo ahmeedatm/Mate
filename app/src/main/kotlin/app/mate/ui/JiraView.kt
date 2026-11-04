@@ -30,16 +30,21 @@ import kotlinx.coroutines.launch
  * Onglet Jira du Deck : les tickets assignés à l'utilisateur, rangés dans les colonnes des tableaux Jira choisis (vides
  * comprises, rangées par l'ordinateur), en défilement horizontal si elles ne tiennent pas. Les terminés récents sont
  * atténués. Toucher un ticket ouvre un tiroir en bas : ses transitions possibles et « Ouvrir sur l'ordi ». Le bouton
- * « Tableaux » choisit les tableaux (la boîte s'ouvre seule tant qu'aucun n'est choisi, une fois par affichage).
- * Relu à l'ouverture puis chaque minute ; les colonnes ne sont recréées que si la liste a changé.
+ * « Tableaux » choisit les tableaux (la boîte s'ouvre seule tant qu'aucun n'est choisi, une fois par affichage) ; le ⚙ du
+ * widget règle les colonnes (affichées ou non, « tous les tickets »).
+ * Relu à l'ouverture puis chaque minute ; les colonnes ne sont recréées que si la liste a changé. Sans compte Jira relié sur
+ * l'ordinateur, la carte « Connecter Jira » prend la place (relue toutes les 3 s, remplacée par les colonnes une fois reliée).
  */
 class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : FrameLayout(context, attrs) {
 
     private val status = TextView(context)
+    private val content = LinearLayout(context)
+    private val connectCard = ConnectCard(context, JIRA_CONNECT, { owner.lifecycleScope }, ::showCardError)
     private val board = LinearLayout(context)
     private val boardScroll = HorizontalScrollView(context)
     private val boardsButton = Button(context, null, 0, R.style.Chip)
     private var boardsDialog: JiraBoardsDialog? = null
+    private var columnsDialog: JiraColumnsDialog? = null
     private var prompted = false
     private val scrim = View(context)
     private val drawer = LinearLayout(context)
@@ -55,9 +60,12 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private var current: JiraIssue? = null
     private var busy = false
 
+    /** Faux : l'ordinateur n'a pas de compte Jira relié (la carte de connexion remplace les colonnes). */
+    private var connected = true
+
     init {
         visibility = GONE
-        val content = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        content.orientation = LinearLayout.VERTICAL
         status.apply {
             textSize = 14f
             setTextColor(themeColor(context, R.attr.c_text_dim))
@@ -86,6 +94,7 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         }
         content.addView(boardScroll, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(4) })
         addView(content, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(connectCard, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
         scrim.apply {
             setBackgroundResource(R.drawable.scrim)
@@ -158,13 +167,14 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         if (!active) {
             prompted = false
             boardsDialog?.dismiss()
+            columnsDialog?.dismiss()
             return closeDrawer()
         }
         if (shown == null) showStatus(context.getString(R.string.loading))
         poll = owner.lifecycleScope.launch {
             while (isActive) {
                 refresh()
-                delay(POLL_MS)
+                delay(if (connected) POLL_MS else CONNECT_POLL_MS)
             }
         }
     }
@@ -177,6 +187,8 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private suspend fun refresh() {
         try {
             val issues = BackendClient(context).jira.issues()
+            showConnected(issues.connected)
+            if (!issues.connected) return connectCard.show(false)
             render(issues)
             if (!issues.boardsChosen && !prompted) {
                 prompted = true
@@ -188,9 +200,32 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         }
     }
 
+    private fun showConnected(connected: Boolean) {
+        this.connected = connected
+        content.visibility = if (connected) VISIBLE else GONE
+        connectCard.visibility = if (connected) GONE else VISIBLE
+        if (connected) return connectCard.reset()
+        // Déconnecté puis reconnecté : les colonnes se redessinent à la prochaine lecture.
+        shown = null
+        prompted = false
+        boardsDialog?.dismiss()
+        columnsDialog?.dismiss()
+        closeDrawer()
+    }
+
+    private fun showCardError(e: Exception) {
+        (context as? MainActivity)?.showBanner(context.errorText(e), 6)
+    }
+
     private fun openBoards() {
         if (boardsDialog?.isShowing == true) return
         boardsDialog = JiraBoardsDialog(context, owner.lifecycleScope) { owner.lifecycleScope.launch { refresh() } }.also { it.show() }
+    }
+
+    /** ⚙ du widget : colonnes affichées et « tous les tickets » ; la liste est relue dès l'enregistrement. */
+    fun openColumns() {
+        if (!connected || columnsDialog?.isShowing == true) return
+        columnsDialog = JiraColumnsDialog(context, owner.lifecycleScope, { owner.lifecycleScope.launch { refresh() } }, ::openBoards).also { it.show() }
     }
 
     private fun render(issues: JiraIssues) {
@@ -285,6 +320,19 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             },
             LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(2) },
         )
+        // Ticket d'un autre (colonne « tous les tickets ») : son assigné.
+        issue.assignee?.let { name ->
+            addView(
+                TextView(context).apply {
+                    text = name
+                    textSize = 12f
+                    setTextColor(themeColor(context, R.attr.c_text_dim))
+                    maxLines = 1
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                },
+                LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) },
+            )
+        }
         // Terminé récemment : atténué mais touchable comme les autres.
         if (issue.done) alpha = DONE_ALPHA
         setOnClickListener { openDrawer(issue) }
@@ -381,6 +429,7 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     private companion object {
         const val POLL_MS = 60_000L
+        const val CONNECT_POLL_MS = 3_000L
         const val COLUMN_DP = 280
         const val COLUMN_GAP_DP = 12
         const val DONE_ALPHA = 0.5f

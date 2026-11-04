@@ -29,11 +29,11 @@ export function osascript(
   env?: NodeJS.ProcessEnv,
 ) {
   return run("osascript", ["-l", language, "-e", script, "--", ...args], 10_000, env).catch((err: Error) => {
-    // -25211 / -1719 / 1002 : l'appli qui a lancé le backend (node pour le service, sinon Terminal, VS Code…)
-    // n'a pas l'accès Accessibilité.
+    // -25211 / -1719 / 1002 : l'appli qui a lancé le backend (l'agent Mate de l'appli portable,
+    // sinon Terminal, VS Code… depuis le dépôt) n'a pas l'accès Accessibilité.
     if (/-25211|-1719|\(1002\)/.test(err.message)) {
       throw new Error(
-        "Accès Accessibilité refusé : autorise « node » (service automatique) ou le terminal du backend dans Réglages Système > Confidentialité > Accessibilité",
+        "Accès Accessibilité refusé : autorise « Mate » (ou le terminal du backend lancé depuis le dépôt) dans Réglages Système > Confidentialité > Accessibilité",
       );
     }
     throw err;

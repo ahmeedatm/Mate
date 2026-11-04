@@ -46,6 +46,37 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("body")).toHaveClass(/down/);
   });
 
+  test("page au premier plan : annonce visible=true, puis visible=false quand l'onglet se cache, et rien à chaque rafraîchissement", async ({
+    page,
+    server,
+  }) => {
+    const sent: boolean[] = [];
+    page.on("request", (req) => {
+      if (req.method() === "POST" && req.url().endsWith("/local/visible")) sent.push(req.postDataJSON().visible);
+    });
+    const waiting = async () => (await server.call("GET", "/local/status", undefined, false)).json.waiting;
+    await page.goto("/");
+    await expect.poll(waiting).toBe(true);
+    expect(sent[0]).toBe(true);
+    const hide = () =>
+      page.evaluate(() => {
+        Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+    await hide();
+    await expect.poll(waiting).toBe(false);
+    expect(sent.at(-1)).toBe(false);
+    // Cachée, la page continue de se rafraîchir (1,5 s) sans rien annoncer : l'expiration de 5 s suffit.
+    const count = sent.length;
+    await page.waitForTimeout(3500);
+    expect(sent.length).toBe(count);
+    await page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await expect.poll(waiting).toBe(true);
+  });
+
   test("Connecter une IA : adresse de la porte MCP et configurations à copier", async ({ page, server, context }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.goto("/");
@@ -121,7 +152,7 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#pairing")).toBeHidden();
   });
 
-  test("connecteurs : Microsoft pas encore disponible, Figma bientôt, Jira à régler sur l'ordinateur", async ({ page }) => {
+  test("connecteurs : Microsoft pas encore disponible, Figma bientôt, Jira à relier par un jeton", async ({ page }) => {
     await page.goto("/");
     const tile = (name: string) => page.locator(".cx", { hasText: name });
     await expect(tile("Microsoft")).toContainText("Non connecté");
@@ -149,7 +180,7 @@ test.describe("page locale GET /", () => {
     await expect(page.locator("#cxdialog")).toBeVisible();
     await expect(page.locator("#agenda")).toBeHidden();
     await expect(page.locator("#cxtitle")).toHaveText("Relier Jira");
-    await expect(page.locator("#jira #cxlist li")).toHaveCount(3);
+    await expect(page.locator("#jira #cxlist li")).toHaveCount(4);
     await expect(page.locator("#jirastate")).toBeHidden();
     await expect(page.locator("#plugon")).toBeDisabled();
     await expect(page.locator("#plugmsg")).toContainText("Jira n'est pas relié");
@@ -261,16 +292,69 @@ test.describe("page locale GET /", () => {
     expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-now"))).toBe("#FF2BD6");
     expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-tile"))).toBe("#000000");
 
+    // Les 15 thèmes de la tablette ont leur bouton, dans l'ordre de l'appli.
+    await expect(page.locator(".themes button")).toHaveText([
+      "Console",
+      "Console jour",
+      "Clair",
+      "Sombre",
+      "Cadran",
+      "Cadran nuit",
+      "Rétro",
+      "Hush",
+      "Spider-Verse",
+      "Registre",
+      "Studio",
+      "Maison",
+      "Tableau",
+      "Terminal",
+      "Contraste élevé",
+    ]);
+    // Cadran nuit : aperçu à ses couleurs (accent rouge clair).
+    await page.getByRole("button", { name: "Cadran nuit" }).click();
+    await expect(page.getByRole("button", { name: "Cadran nuit" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#twintheme")).toHaveText("Cadran nuit");
+    expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-now"))).toBe("#FF5266");
+
+    // Accent de l'aperçu de chaque thème = c_accent de palettes.xml (valeurs relevées à la main). showTwin direct : un clic enverrait un ordre à la tablette.
+    const accents = {
+      CONSOLE: "#B8F34A",
+      CONSOLE_JOUR: "#3F6B00",
+      CLAIR: "#CA0538",
+      SOMBRE: "#FF5165",
+      CADRAN: "#CA0538",
+      CADRAN_NUIT: "#FF5266",
+      RETRO: "#B82800",
+      HUSH: "#FF6EB4",
+      SPIDERMAN: "#FF2BD6",
+      REGISTRE: "#B3261E",
+      STUDIO: "#C0153A",
+      MAISON: "#B3412F",
+      TABLEAU: "#C62828",
+      TERMINAL: "#FFB000",
+      CONTRASTE: "#2A4A00",
+    };
+    const shown = await page.evaluate(() =>
+      Object.fromEntries(
+        [...document.querySelectorAll<HTMLElement>(".themes button")].map((btn) => {
+          (window as unknown as { showTwin: (t: string) => void }).showTwin(btn.dataset.theme!);
+          return [btn.dataset.theme, document.getElementById("twin")!.style.getPropertyValue("--t-now")];
+        }),
+      ),
+    );
+    expect(shown).toEqual(accents);
+
     await page.locator("#nightdim").uncheck();
     await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");
     await page.locator("#volume").fill("75");
     await expect(page.locator("#volumevalue")).toHaveText("75 %");
-    await expect.poll(() => received.length).toBe(6);
+    await expect.poll(() => received.length).toBe(7);
     expect(received).toEqual([
       { theme: "CONSOLE_JOUR" },
       { theme: "CONTRASTE" },
       { theme: "HUSH" },
       { theme: "SPIDERMAN" },
+      { theme: "CADRAN_NUIT" },
       { nightDim: false },
       { volume: 0.75 },
     ]);

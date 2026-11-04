@@ -97,13 +97,20 @@ async function startOnce(options: ServerOptions, port: number): Promise<TestServ
       COMPUTER_NAME: "Ordi de test",
       CALENDAR_ICS_URLS: "",
       NO_ALERT: "1",
+      // Pas d'ordre « foreground » ni « tilestate » poussé à la connexion de la tablette : il passerait devant celui qu'un test attend.
+      NO_TABLET_STATE_WATCH: "1",
       // Pas de vrai Claude Code ni de vrai Orca dans les tests (src/agents-sources.ts) ; les tests des agents donnent leurs faux.
       CLAUDE_BIN: "/inexistant",
       ORCA_BIN: "/inexistant",
       // Pas de vrai GitLab : un GITLAB_TOKEN du poste ne doit pas ouvrir l'onglet GitLab ; les tests donnent leur faux serveur.
       GITLAB_TOKEN: "",
       GITLAB_URL: "",
-      GITLAB_CLIENT_ID: "",
+      // Idem pour Jira : un JIRA_* du poste ne doit pas relier Jira ; les tests donnent leur faux serveur.
+      JIRA_SITE: "",
+      JIRA_EMAIL: "",
+      JIRA_API_TOKEN: "",
+      // Faux Jira des tests : seul cet indicateur admet un site en http://127.0.0.1 (src/jira-auth.ts).
+      JIRA_TEST_HTTP: "1",
       // Pas de vrai GitHub non plus.
       GITHUB_TOKEN: "",
       GITHUB_URL: "",

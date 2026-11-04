@@ -1,6 +1,5 @@
 {
   "microsoft": { "clientId": "" },
   "google": { "clientId": "", "clientSecret": "" },
-  "gitlab": { "clientId": "" },
   "github": { "clientId": "" }
 }

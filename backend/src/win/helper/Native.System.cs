@@ -2,6 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
@@ -17,7 +21,6 @@ namespace Mate
         [DllImport("user32.dll")] static extern bool LockWorkStation();
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         static extern IntPtr SendMessageTimeout(IntPtr h, uint msg, IntPtr w, string l, uint flags, uint timeout, out IntPtr result);
-        [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "MessageBoxW")] static extern int ShowMessage(IntPtr h, string text, string caption, uint type);
         [DllImport("wtsapi32.dll", SetLastError = true)]
         static extern bool WTSQuerySessionInformation(IntPtr server, int sessionId, int infoClass, out IntPtr buffer, out int bytes);
         [DllImport("wtsapi32.dll")] static extern void WTSFreeMemory(IntPtr memory);
@@ -53,15 +56,56 @@ namespace Mate
                     SendMessageTimeout(new IntPtr(0xFFFF), 0x001A, IntPtr.Zero, "ImmersiveColorSet", 0x2, 200, out ignored); // WM_SETTINGCHANGE
                     return;
                 case "screenshot-clipboard":
-                    Rectangle area = SystemInformation.VirtualScreen;
-                    using (var bmp = new Bitmap(area.Width, area.Height))
-                    {
-                        using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(area.Left, area.Top, 0, 0, area.Size);
-                        Clipboard.SetImage(bmp);
-                    }
+                    using (var bmp = CaptureScreen(SystemInformation.VirtualScreen)) Clipboard.SetImage(bmp);
                     return;
                 default:
                     throw new ArgumentException("Commande système inconnue : " + command);
+            }
+        }
+
+        static Bitmap CaptureScreen(Rectangle area)
+        {
+            var bmp = new Bitmap(area.Width, area.Height);
+            try
+            {
+                using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(area.Left, area.Top, 0, 0, area.Size);
+                return bmp;
+            }
+            catch
+            {
+                bmp.Dispose();
+                throw;
+            }
+        }
+
+        /**
+         * Aperçu de l'écran principal pour la tablette : JPEG (qualité 60) d'au plus `width` px de large, rendu en base64,
+         * tout en mémoire, rien n'est écrit sur le disque.
+         */
+        static object ScreenPreview(int width)
+        {
+            var primary = Screen.PrimaryScreen;
+            if (primary == null) throw new InvalidOperationException("Aucun écran à lire");
+            using (var full = CaptureScreen(primary.Bounds))
+            {
+                double scale = Math.Min(1.0, (double)Math.Max(1, width) / full.Width);
+                int w = Math.Max(1, (int)Math.Round(full.Width * scale)), h = Math.Max(1, (int)Math.Round(full.Height * scale));
+                using (var small = new Bitmap(w, h))
+                using (var jpeg = new MemoryStream())
+                {
+                    using (var g = Graphics.FromImage(small))
+                    {
+                        g.InterpolationMode = InterpolationMode.HighQualityBilinear;
+                        g.DrawImage(full, 0, 0, w, h);
+                    }
+                    var codec = ImageCodecInfo.GetImageEncoders().First(c => c.FormatID == ImageFormat.Jpeg.Guid);
+                    using (var options = new EncoderParameters(1))
+                    {
+                        options.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 60L);
+                        small.Save(jpeg, codec, options);
+                    }
+                    return Convert.ToBase64String(jpeg.ToArray());
+                }
             }
         }
 
@@ -90,10 +134,44 @@ namespace Mate
             }
         }
 
-        /** Boîte de message au premier plan, sans bloquer les requêtes suivantes. */
-        static void Alert(string title, string text)
+        /** Notification Windows (bulle de la zone de notification), sans bloquer les requêtes suivantes. */
+        static void Notify(string title, string text)
         {
-            var t = new Thread(delegate () { ShowMessage(IntPtr.Zero, text, title, 0x40 | 0x10000 | 0x40000); }); // INFORMATION | SETFOREGROUND | TOPMOST
+            var t = new Thread(delegate ()
+            {
+                NotifyIcon icon = null;
+                System.Windows.Forms.Timer timer = null;
+                Icon own = null;
+                try
+                {
+                    icon = new NotifyIcon();
+                    timer = new System.Windows.Forms.Timer();
+                    try { own = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
+                    icon.Icon = own ?? SystemIcons.Information;
+                    icon.Visible = true;
+                    icon.ShowBalloonTip(10000, title, text, ToolTipIcon.Info);
+                    // L'icône est retirée après 10 s : la boucle de messages la garde vivante jusque-là.
+                    timer.Interval = 10000;
+                    timer.Tick += delegate { Application.ExitThread(); };
+                    timer.Start();
+                    Application.Run();
+                }
+                catch (Exception e)
+                {
+                    // Une exception non rattrapée d'un fil arrêterait tout le pilote : la notification échoue seule, dans stderr.
+                    Console.Error.WriteLine("notify : " + e.Message);
+                }
+                finally
+                {
+                    if (timer != null) timer.Dispose();
+                    if (icon != null)
+                    {
+                        icon.Visible = false;
+                        icon.Dispose();
+                    }
+                    if (own != null) own.Dispose();
+                }
+            });
             t.IsBackground = true;
             t.SetApartmentState(ApartmentState.STA);
             t.Start();

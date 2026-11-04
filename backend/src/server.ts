@@ -45,9 +45,11 @@ import localProfileRoutes from "./routes/local-profiles.ts";
 import mcpRoutes from "./routes/mcp.ts";
 import notificationRoutes from "./routes/notifications.ts";
 import pairingRoutes from "./routes/pairing.ts";
+import { permissionRoutes } from "./routes/permissions.ts";
 import pluginRoutes from "./routes/plugins.ts";
 import pointerRoutes from "./routes/pointer.ts";
 import presentRoutes from "./routes/present.ts";
+import screenRoutes from "./routes/screen.ts";
 import portableRoutes from "./routes/portable.ts";
 import systemRoutes from "./routes/system.ts";
 import tabletRoutes from "./routes/tablet.ts";
@@ -62,6 +64,7 @@ import updateRoutes from "./routes/updates.ts";
 import valorantRoutes from "./routes/valorant.ts";
 import windowRoutes from "./routes/windows.ts";
 import ytMusicRoutes from "./routes/ytmusic.ts";
+import { LOCAL_HOST, LOOPBACK } from "./net-guard.ts";
 
 // Ce serveur pilote l'ordinateur : hors loopback (USB + adb reverse), un jeton est obligatoire.
 if (!config.loopbackOnly && !config.token) {
@@ -89,9 +92,6 @@ setLogger({ warn: (msg) => app.log.warn(msg) });
 await app.register(multipart, { limits: { fileSize: 20 * 1024 * 1024, files: 1 } });
 
 const expectedAuth = config.token ? Buffer.from(`Bearer ${config.token}`) : undefined;
-const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
-/** Nom demandé par le navigateur : un site qui ferait pointer son domaine vers 127.0.0.1 (DNS rebinding) est refusé. */
-const LOCAL_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
 /**
  * Pages ouvertes dans le navigateur de l'ordinateur (visualiseur, page d'accueil avec le code d'appairage) :
  * pas de jeton possible, lecture seule et en local.
@@ -100,19 +100,30 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
   LOOPBACK.has(ip) &&
   LOCAL_HOST.test(host ?? "") &&
   ((method === "GET" &&
-    /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite|panel|update)|web\/figtree-[345]00\.ttf|oauth\/(microsoft|google|gitlab)\/(start|callback)|oauth\/github\/start)?(\?|$)/.test(
+    /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite|panel|update|permissions)|web\/figtree-[345]00\.ttf|oauth\/(microsoft|google)\/(start|callback)|oauth\/github\/start)?(\?|$)/.test(
       url,
     )) ||
-    (method === "PUT" && (url === "/local/calendar" || url === "/local/tablet/settings")) ||
+    (method === "PUT" &&
+      (url === "/local/calendar" ||
+        url === "/local/tablet/settings" ||
+        url === "/local/accounts/gitlab" ||
+        url === "/local/accounts/jira")) ||
     // Panneau de configuration (routes/local-profiles.ts, routes/local-config.ts) : écritures en JSON seulement (PUT,
     // DELETE et POST à corps objet), pas envoyables par un autre site sans pré-vérification CORS.
     (method === "GET" && /^\/local\/(tablet\/layout|config\/[a-z0-9/-]+)(\?|$)/.test(url)) ||
     (method === "PUT" && url === "/local/tablet/layout") ||
     (/^(POST|PUT|DELETE)$/.test(method) && /^\/local\/config\/[a-z0-9/-]+$/.test(url)) ||
     (method === "POST" &&
-      (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update" || url === "/local/tablet/ring")) ||
+      (url === "/system/accessibility" ||
+        url === "/local/pair" ||
+        url === "/local/visible" ||
+        url === "/local/tablet/update" ||
+        url === "/local/tablet/ring" ||
+        url === "/local/tablet/template")) ||
     // Panneau de l'appli portable (routes/portable.ts) : corps JSON exigé, pas envoyable par un autre site.
     (method === "POST" && /^\/local\/(autostart|firewall|capteurs|forget|quit|update)$/.test(url)) ||
+    // Autorisations du Mac (routes/permissions.ts) : corps JSON exigé, identifiant pris dans la liste du compagnon.
+    (method === "POST" && /^\/local\/permissions\/[A-Za-z0-9.-]+\/request$/.test(url)) ||
     // Extension du navigateur (backend/extension) : elle n'a pas le jeton ; origine vérifiée par la route.
     (method === "POST" &&
       (url === "/browser/extension" || url === "/browser/extension/commands" || url === "/browser/extension/ytmusic")) ||
@@ -120,7 +131,7 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     (/^(GET|POST|DELETE)$/.test(method) && url === "/mcp") ||
     // Hooks de Claude Code : pas de jeton d'appairage, un secret propre vérifié par la route (src/agents-sources.ts).
     (method === "POST" && (url === "/agents/hook" || url === "/agents/statusline")) ||
-    (method === "DELETE" && /^\/local\/accounts\/(microsoft|google|gitlab|github)$/.test(url)));
+    (method === "DELETE" && /^\/local\/accounts\/(microsoft|google|gitlab|github|jira)$/.test(url)));
 /** Sans jeton : identité (la tablette reconnaît l'ordinateur) et appairage par code. */
 const PUBLIC = /^\/(health|pair\/request|pair\/reveal|pair\/confirm)(\?|$)/;
 /**
@@ -133,9 +144,20 @@ const authorized = (header: string | undefined) => {
   const given = Buffer.from(header ?? "");
   return given.length === expectedAuth.length && timingSafeEqual(given, expectedAuth);
 };
+/**
+ * Sans jeton (mode émulateur), une page web ouverte sur l'ordinateur peut poster vers le compagnon par une requête
+ * « simple » (multipart, texte), sans pré-vérification CORS. Le navigateur y met toujours `Origin` : une écriture dont
+ * l'origine n'est ni locale ni une extension du navigateur est refusée. Pas d'`Origin` (tablette, outils) : acceptée.
+ */
+const LOCAL_ORIGIN = /^(https?:\/\/(127\.0\.0\.1|localhost|\[::1\]|10\.0\.2\.2)(:\d+)?|(chrome|moz)-extension:\/\/.+)$/i;
+const READ_ONLY_METHOD = /^(GET|HEAD|OPTIONS)$/;
 /** Ordinateur verrouillé : seul le canal /tablet reste ouvert (la tablette y apprend le déverrouillage). */
 const WHILE_LOCKED = /^\/tablet\/(poll|result)(\?|$)/;
 app.addHook("onRequest", async (req, reply) => {
+  const origin = req.headers.origin;
+  if (!expectedAuth && origin !== undefined && !READ_ONLY_METHOD.test(req.method) && !LOCAL_ORIGIN.test(origin)) {
+    return reply.code(403).send({ error: "Origine refusée : écriture sans jeton depuis un autre site" });
+  }
   if (PUBLIC.test(req.url)) {
     if (LOOPBACK.has(req.ip) && !PUBLIC_LOCAL_HOST.test(req.headers.host ?? "")) return reply.code(403).send({ error: "Hôte refusé" });
     return;
@@ -198,6 +220,7 @@ app.register(localConfigRoutes);
 app.register(localBackupRoutes);
 app.register(mcpRoutes);
 app.register(portableRoutes);
+app.register(permissionRoutes());
 app.register(deckRoutes);
 app.register(pluginRoutes);
 app.register(windowRoutes);
@@ -212,6 +235,7 @@ app.register(updateRoutes);
 app.register(browserRoutes);
 app.register(ytMusicRoutes);
 app.register(cameraRoutes);
+app.register(screenRoutes);
 app.register(calendarRoutes);
 app.register(taskRoutes);
 app.register(scheduleRoutes);
@@ -243,16 +267,20 @@ if (canControl) {
     connected: () => tabletStatus().connected,
     liveApps: callingDeckApps,
   });
-  // Appli au premier plan : la tablette affiche la page d'une appli de sa liste (et en revient).
-  startForegroundWatch((event) => void sendToTablet({ type: "foreground", ...event }), {
-    connected: () => tabletStatus().connected,
-    front: frontApp,
-  });
-  // États des touches (micro coupé, Ne pas déranger, appli lancée) : la tablette allume les touches concernées.
-  startTileStateWatch((lit) => void sendToTablet({ type: "tilestate", lit }), {
-    connected: () => tabletStatus().connected,
-    read: async () => litTiles(await stateTiles()),
-  });
+  // NO_TABLET_STATE_WATCH : tests de l'API. Ces deux veilles poussent un ordre à chaque connexion de la tablette, qui
+  // arriverait avant celui qu'un test attend.
+  if (process.env.NO_TABLET_STATE_WATCH !== "1") {
+    // Appli au premier plan : la tablette affiche la page d'une appli de sa liste (et en revient).
+    startForegroundWatch((event) => void sendToTablet({ type: "foreground", ...event }), {
+      connected: () => tabletStatus().connected,
+      front: frontApp,
+    });
+    // États des touches (micro coupé, Ne pas déranger, appli lancée) : la tablette allume les touches concernées.
+    startTileStateWatch((lit) => void sendToTablet({ type: "tilestate", lit }), {
+      connected: () => tabletStatus().connected,
+      read: async () => litTiles(await stateTiles()),
+    });
+  }
 }
 // Ordinateur verrouillé : la tablette se bloque, l'API se ferme (hook ci-dessus). Relu même sans tablette.
 startScreenLockWatch(async (locked) => (await sendToTablet({ type: "lock", locked })).received === true, {

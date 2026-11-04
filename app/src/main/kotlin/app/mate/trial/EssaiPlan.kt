@@ -5,6 +5,12 @@ import app.mate.net.BackendState
 /** Choix à faire pour l'essai d'une PR, sans Android (testé dans app/src/test). */
 object EssaiPlan {
 
+    /** Liste des essais : seulement dans la stable (device owner, qui les installe) et en mode technicien. */
+    fun showList(trial: Boolean, technician: Boolean) = !trial && technician
+
+    /** « Ouvrir l'essai » en mode technicien ; « Revenir à la stable » reste toujours visible dans l'essai. */
+    fun showSwitch(trial: Boolean, technician: Boolean) = trial || technician
+
     enum class Install { NONE, INSTALL, UNINSTALL_FIRST }
 
     /**

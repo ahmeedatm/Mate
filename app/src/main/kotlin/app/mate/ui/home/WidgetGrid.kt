@@ -97,6 +97,8 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     /** Poids des [ROWS] lignes (voir [RowProfile]) ; null : lignes égales, comme avant le profil à lignes inégales. */
     var rowWeights: IntArray? = null
         set(value) { field = value; requestLayout() }
+    /** Après chaque mise en page (un widget a changé de contenu ou de place) : halo des textes sur les tubes. */
+    var afterLayout: (() -> Unit)? = null
     private val narrowRowHeight = dp(176)
     /** Colonne vide au milieu (thème Spider-Verse : le logo du fond), 0 ailleurs ; sans effet en mode étroit. */
     private val spine = themePx(context, R.attr.c_spine)
@@ -232,6 +234,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             centerFree = free
             listener?.onCenterFree(free)
         }
+        afterLayout?.invoke()
     }
 
     /** Dernier état signalé par [Listener.onCenterFree] ; null avant le premier placement. */

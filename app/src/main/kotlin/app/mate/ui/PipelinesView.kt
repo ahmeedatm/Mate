@@ -13,7 +13,6 @@ import android.widget.TextView
 import androidx.core.widget.ImageViewCompat
 import app.mate.R
 import app.mate.github.Forge
-import app.mate.gitlab.PipelineMark
 import app.mate.gitlab.PipelineTime
 import app.mate.gitlab.Span
 import app.mate.gitlab.SpanUnit
@@ -22,10 +21,10 @@ import app.mate.gitlab.markOf
 import app.mate.gitlab.pipelineTitle
 import app.mate.gitlab.timeOf
 import app.mate.gitlab.visiblePipelines
+import app.mate.gitlab.withoutTimes
 import app.mate.net.BackendClient
 import app.mate.net.GitLabPipeline
 import app.mate.net.GitLabPipelines
-import app.mate.net.Pipeline
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -33,11 +32,14 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
- * Console de déploiement (widget Pipelines) : une ligne par projet des MR de l'utilisateur, avec le dernier pipeline de sa
- * branche par défaut (en cours, échecs, le reste), état en icône et en couleur. Toucher une ligne ouvre le pipeline sur
- * l'ordinateur. Lecture seule. Relue à l'ouverture puis toutes les 30 s tant que la vue est affichée. Ordinateur sans
- * compte GitLab : la carte « Connecter GitLab » (relue toutes les 3 s en attendant). Autonome, comme [GitLabView]. Sert aussi
- * au widget Actions (`forge` GitHub) : dernier run GitHub Actions de la branche par défaut des dépôts de mes PR.
+ * Console de déploiement (widget Pipelines), deux sections : « Planifiées » (dernier run des planifications que l'utilisateur
+ * a choisies par le ⚙ du widget) et « Mes MR » (pipelines des MR ouvertes qui lui sont assignées). Chaque ligne : état en
+ * icône et en couleur (vert réussi, jaune en cours, rouge échec), titre, durée ou âge, et les stages en petites bulles.
+ * Toucher une ligne ouvre le pipeline sur l'ordinateur. Lecture seule. Côte à côte quand la place le permet, l'une sous
+ * l'autre sinon. Relue à l'ouverture puis toutes les 30 s tant que la vue est affichée ([reload] la relit tout de suite).
+ * Ordinateur sans compte GitLab : la carte « Connecter GitLab » (relue toutes les 3 s en attendant). Autonome, comme [GitLabView].
+ * Sert aussi au widget Actions (`forge` GitHub) : une seule liste, le dernier run GitHub Actions de la branche par défaut des
+ * dépôts de mes PR.
  */
 class PipelinesView @JvmOverloads constructor(
     context: Context,
@@ -52,17 +54,21 @@ class PipelinesView @JvmOverloads constructor(
     /** Les lignes, rangées dans [columns] colonnes côte à côte quand la place le permet (widget de 3 cases ou plus). */
     private val list = LinearLayout(context)
     private var columns = 1
+    private var sideBySide = false
     private val scroll = ScrollView(context)
     private val empty = TextView(context)
-    private val connectCard = GitLabConnectCard(context, { scope }, ::showError, compact = true, forge = forge)
+    private val connectCard = ConnectCard(context, forgeConnect(forge), { scope }, ::showError, compact = true)
 
     private lateinit var scope: CoroutineScope
     private var poll: Job? = null
     private var active = false
     private var connected = true
 
-    /** Dernière lecture affichée : les lignes ne sont reconstruites que si elle change (tablette de 2 Go). */
+    /** Dernière lecture affichée : les lignes ne sont reconstruites que si elles changent (tablette de 2 Go). */
     private var shown: GitLabPipelines? = null
+
+    /** Lignes affichées, dans l'ordre de la lecture : seul leur texte de temps est mis à jour quand rien d'autre ne change. */
+    private val rowViews = ArrayList<View>()
 
     /** Numéro de la dernière lecture lancée : la réponse d'une lecture dépassée est ignorée. */
     private var lastRead = 0
@@ -118,6 +124,12 @@ class PipelinesView @JvmOverloads constructor(
         }
     }
 
+    /** Relit tout de suite (le choix des planifications vient de changer). */
+    fun reload() {
+        if (!active) return
+        scope.launch { refresh() }
+    }
+
     private suspend fun refresh() {
         val id = ++lastRead
         try {
@@ -151,12 +163,33 @@ class PipelinesView @JvmOverloads constructor(
     }
 
     private fun render(answer: GitLabPipelines) {
+        if (forge == Forge.GITHUB) renderFlat(answer) else renderSections(answer)
+    }
+
+    /**
+     * Même lecture que l'affichée, aux temps près : les lignes restent, seuls leur âge et leur durée sont réécrits. Sinon
+     * la lecture devient celle affichée et les lignes sont à refaire.
+     */
+    private fun keepRows(answer: GitLabPipelines): Boolean {
+        val before = shown
+        shown = answer
+        if (before == null || withoutTimes(before) != withoutTimes(answer)) {
+            rowViews.clear()
+            return false
+        }
+        val pipelines = if (forge == Forge.GITHUB) visiblePipelines(answer.pipelines) else answer.schedules + answer.mrs
+        for ((row, p) in rowViews.zip(pipelines)) showTime(row, p)
+        return true
+    }
+
+    /** GitHub : une liste de runs, en [columns] colonnes quand la place le permet. */
+    private fun renderFlat(answer: GitLabPipelines) {
         val rows = visiblePipelines(answer.pipelines)
         empty.visibility = if (rows.isEmpty()) VISIBLE else GONE
         scroll.visibility = if (rows.isEmpty()) GONE else VISIBLE
-        if (answer == shown) return
-        shown = answer
+        if (keepRows(answer)) return
         list.removeAllViews()
+        list.orientation = HORIZONTAL
         val stacks = List(columns) { LinearLayout(context).apply { orientation = VERTICAL } }
         for ((i, stack) in stacks.withIndex()) list.addView(stack, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply { if (i > 0) marginStart = dp(COLUMN_GAP_DP) })
         // Les plus récentes en haut de chaque colonne : une ligne sur deux dans la seconde.
@@ -170,12 +203,68 @@ class PipelinesView @JvmOverloads constructor(
         Look.revealOnce(list)
     }
 
-    // Une colonne de plus tous les COLUMN_DP : une ligne seule dans 1 000 dp de large serait vide à droite.
+    /** GitLab : « Planifiées » et « Mes MR », côte à côte ([sideBySide]) ou l'une sous l'autre. */
+    private fun renderSections(answer: GitLabPipelines) {
+        scroll.visibility = VISIBLE
+        if (keepRows(answer)) return
+        list.removeAllViews()
+        list.orientation = if (sideBySide) HORIZONTAL else VERTICAL
+        val sections = listOf(
+            Triple(R.string.pipelines_section_schedules, answer.schedules, R.string.pipelines_schedules_empty),
+            Triple(R.string.pipelines_section_mrs, answer.mrs, R.string.pipelines_mrs_empty),
+        )
+        for ((i, entry) in sections.withIndex()) {
+            val (name, rows, emptyText) = entry
+            val view = sectionView(name, rows, emptyText)
+            val params = if (sideBySide) LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f) else LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+            if (i > 0) {
+                if (sideBySide) params.marginStart = dp(SECTION_GAP_DP) else params.topMargin = dp(SECTION_GAP_DP)
+            }
+            list.addView(view, params)
+        }
+        Look.revealOnce(list)
+    }
+
+    /** Un titre avec le nombre de lignes, puis les lignes ou, sans ligne, la phrase qui dit quoi faire. */
+    private fun sectionView(name: Int, rows: List<GitLabPipeline>, emptyText: Int): View {
+        val box = LinearLayout(context).apply { orientation = VERTICAL }
+        box.addView(
+            TextView(context).apply {
+                text = context.getString(R.string.gitlab_col_header, context.getString(name), rows.size)
+                textSize = 16f
+                typeface = themeFont(context, R.attr.c_font_medium)
+                setTextColor(themeColor(context, if (rows.isEmpty()) R.attr.c_text_faint else R.attr.c_text))
+            },
+            LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT),
+        )
+        if (rows.isEmpty()) {
+            box.addView(
+                TextView(context).apply {
+                    text = context.getString(emptyText, context.getString(R.string.home_edit_open))
+                    textSize = 14f
+                    setTextColor(themeColor(context, R.attr.c_text_dim))
+                },
+                LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) },
+            )
+        }
+        for (p in rows) {
+            val row = LayoutInflater.from(context).inflate(R.layout.item_pipeline, box, false)
+            bind(row, p)
+            row.setOnClickListener { open(p) }
+            box.addView(row, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
+        }
+        return box
+    }
+
+    // GitHub : une colonne de plus tous les COLUMN_DP. GitLab : les deux sections côte à côte dès que chacune a de quoi respirer.
+    // Une ligne ou une section seule dans 1 000 dp de large serait vide à droite.
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        val wanted = (w / dp(COLUMN_DP)).coerceIn(1, MAX_COLUMNS)
-        if (wanted == columns) return
-        columns = wanted
+        val wantedColumns = (w / dp(COLUMN_DP)).coerceIn(1, MAX_COLUMNS)
+        val wide = w >= dp(SIDE_BY_SIDE_DP)
+        if (wantedColumns == columns && wide == sideBySide) return
+        columns = wantedColumns
+        sideBySide = wide
         // Même lecture, autre rangement : la dernière est redessinée.
         shown?.let { answer ->
             shown = null
@@ -184,16 +273,22 @@ class PipelinesView @JvmOverloads constructor(
     }
 
     private fun bind(row: View, p: GitLabPipeline) {
-        val color = ColorStateList.valueOf(themeColor(context, colorOf(p.status)))
+        val color = ColorStateList.valueOf(themeColor(context, pipelineColorAttr(p.status)))
         row.findViewById<ImageView>(R.id.pipeline_mark).apply {
-            setImageResource(iconOf(markOf(p.status)))
+            setImageResource(pipelineMarkIcon(markOf(p.status)))
             ImageViewCompat.setImageTintList(this, color)
         }
         row.findViewById<TextView>(R.id.pipeline_title).text = pipelineTitle(p)
+        row.findViewById<StageBubblesView>(R.id.pipeline_stages).show(p.stages)
         row.findViewById<TextView>(R.id.pipeline_jobs).apply {
             text = failedJobsText(p)
             visibility = if (text.isNullOrEmpty()) GONE else VISIBLE
         }
+        showTime(row, p)
+        rowViews += row
+    }
+
+    private fun showTime(row: View, p: GitLabPipeline) {
         val time = timeText(timeOf(p))
         row.findViewById<TextView>(R.id.pipeline_time).text = time
         // TalkBack lit l'état (l'icône n'est pas lue) puis la ligne.
@@ -224,27 +319,13 @@ class PipelinesView @JvmOverloads constructor(
         SpanUnit.DAYS -> context.getString(R.string.pipelines_d, s.value)
     }
 
-    private fun colorOf(p: Pipeline) = when (p) {
-        Pipeline.SUCCESS -> R.attr.c_ok
-        Pipeline.RUNNING -> R.attr.c_warn
-        Pipeline.FAILED -> R.attr.c_ko
-        Pipeline.CANCELED, Pipeline.NONE -> R.attr.c_text_faint
-    }
-
-    // En cours : icône fixe, pas d'animation (tablette lente, le kiosque coupe les animateurs).
-    private fun iconOf(m: PipelineMark) = when (m) {
-        PipelineMark.CHECK -> R.drawable.ic_tile_check_circle
-        PipelineMark.CROSS -> R.drawable.ic_close
-        PipelineMark.SYNC -> R.drawable.ic_refresh
-        PipelineMark.CANCELED -> R.drawable.ic_tile_block
-        PipelineMark.NONE -> R.drawable.ic_remove
-    }
-
     private companion object {
         const val POLL_MS = 30_000L
         const val CONNECT_POLL_MS = 3_000L
         const val COLUMN_DP = 440
         const val COLUMN_GAP_DP = 12
         const val MAX_COLUMNS = 2
+        const val SIDE_BY_SIDE_DP = 880
+        const val SECTION_GAP_DP = 16
     }
 }

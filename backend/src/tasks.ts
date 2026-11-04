@@ -132,7 +132,7 @@ async function viewDaily(t: DailyTask, store: Store, now: Date, refresh: boolean
   let done = store.done[isoDay(now)]?.includes(t.id) ?? false;
   let auto = false;
   let detail: string | null = null;
-  if (t.jiraWorklogHours && jiraConfigured) {
+  if (t.jiraWorklogHours && jiraConfigured()) {
     try {
       const seconds = await worklogSecondsOn(now, refresh);
       detail = `${formatHours(seconds)} / ${t.jiraWorklogHours} h saisies dans Jira`;

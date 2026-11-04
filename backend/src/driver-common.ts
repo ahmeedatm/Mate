@@ -21,6 +21,30 @@ export function whenClipboardAvailable<T>(result: Promise<T>): Promise<T> {
   });
 }
 
+/** Mot que le pilote Windows met dans son erreur quand la lecture en cours n'existe pas (aucune session de bureau). */
+export const MEDIA_UNAVAILABLE = "MEDIA_UNAVAILABLE";
+
+/** Pas de lecteur de médias sur cet ordinateur (service sans session de bureau ouverte) : 503, comme le presse-papiers, sans le texte de Windows. */
+export function mediaUnavailable(): never {
+  throw Object.assign(new Error("Lecture en cours indisponible : aucune session de bureau ouverte sur l'ordinateur"), { statusCode: 503 });
+}
+
+/** Le pilote Windows signale l'absence de bureau par `MEDIA_UNAVAILABLE` : en 503 ; les autres erreurs restent telles quelles. */
+export function whenMediaAvailable<T>(result: Promise<T>): Promise<T> {
+  return result.catch((e: Error) => {
+    if (e.message.includes(MEDIA_UNAVAILABLE)) mediaUnavailable();
+    throw e;
+  });
+}
+
+/** Mac sans l'autorisation « Enregistrement de l'écran » : sans elle, la capture ne montrerait que le fond d'écran. 403, avec la marche à suivre. */
+export function screenDenied(): never {
+  throw Object.assign(
+    new Error("Autorise « Enregistrement de l'écran » pour Mate, dans l'écran « Autorisations du Mac » de l'ordinateur"),
+    { statusCode: 403 },
+  );
+}
+
 /** Volume (0-100) et sourdine à appliquer pour `change` ; monter le volume réactive le son, comme les touches du clavier. */
 export function planAudio(change: AudioChange, current: AudioState): { output?: number; muted?: boolean } {
   const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));

@@ -1,19 +1,21 @@
 import fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { availableProviders, connectedAccounts, disconnect, finishLogin, isProvider, loginUrl } from "../accounts.ts";
 import { calendarSources, dayRange, getEvents, invalidateCalendar, saveCalendarUrls, savedCalendarUrls } from "../calendar.ts";
 import { backendRoot, config } from "../config.ts";
 import { clearGithubCache } from "../github.ts";
-import { disconnectGithub, githubAccount, githubClientId, githubLogin, startGithubLogin } from "../github-auth.ts";
+import { disconnectGithub, githubAccountAndLogin, githubClientId, startGithubLogin } from "../github-auth.ts";
 import { clearGitlabCache } from "../gitlab.ts";
-import { jiraConfigured, jiraSite } from "../jira.ts";
-import { disconnectGitlab, finishGitlabLogin, gitlabAccount, gitlabClientId, gitlabLoginUrl } from "../gitlab-auth.ts";
+import { forgetJiraAccount } from "../jira.ts";
+import { connectJira, disconnectJira, JiraAuthError, jiraStatus } from "../jira-auth.ts";
+import { connectGitlab, disconnectGitlab, gitlabAccount, gitlabBaseUrl, GitlabTokenError, gitlabUrlProblem } from "../gitlab-auth.ts";
+import { isLocalRequest } from "../net-guard.ts";
 import { LOCAL_PAGE } from "../local-page.ts";
 import { WEB_FILES } from "../web-style.ts";
 import { accessibility, openTarget } from "../os.ts";
-import { identity, lanAddresses, pendingCode } from "../pairing.ts";
+import { identity, lanAddresses, notePageVisible, pendingCode, waiting } from "../pairing.ts";
 import { mcpInfo } from "./mcp.ts";
 import { sendToTablet, tabletStatus, THEMES, type TabletSettings } from "../tablet.ts";
 
@@ -42,8 +44,26 @@ export default async function localRoutes(app: FastifyInstance) {
     return reply.type("text/plain; charset=utf-8").send(fs.createReadStream(LICENCES_FILE));
   });
 
+  /**
+   * Page affichée au premier plan = cet ordinateur « attend une tablette » (la tablette le choisit, src/pairing.ts).
+   * Page locale seulement (voir `isLocalPage` dans server.ts), corps JSON : pas envoyable par un autre site.
+   */
+  app.post<{ Body: { visible: boolean } }>(
+    "/local/visible",
+    {
+      schema: {
+        body: { type: "object", required: ["visible"], additionalProperties: false, properties: { visible: { type: "boolean" } } },
+      },
+    },
+    async (req) => {
+      notePageVisible(req.body.visible);
+      return { waiting: waiting().waiting };
+    },
+  );
+
   app.get("/local/status", async () => ({
     ...identity(),
+    waiting: waiting().waiting,
     accessibility: await accessibility().catch(() => null),
     addresses: config.loopbackOnly ? ["127.0.0.1"] : lanAddresses(),
     tablet: tabletStatus().connected,
@@ -59,9 +79,10 @@ export default async function localRoutes(app: FastifyInstance) {
       accounts: await connectedAccounts(),
       providers: await availableProviders(),
     },
-    // `available` : l'appli OAuth est réglée (bouton de connexion) ; `token` : GITLAB_TOKEN dans .env (secours).
+    // `account` : jeton collé dans la page (`canWrite` : portée api) ; `urlError` : GITLAB_URL refusée ; `token` : GITLAB_TOKEN dans .env (secours).
     gitlab: {
-      available: !!(await gitlabClientId()),
+      url: gitlabUrlProblem() ? "" : gitlabBaseUrl(),
+      urlError: gitlabUrlProblem() ?? null,
       token: !!process.env.GITLAB_TOKEN?.trim(),
       account: (await gitlabAccount()) ?? null,
     },
@@ -69,11 +90,10 @@ export default async function localRoutes(app: FastifyInstance) {
     github: {
       available: !!(await githubClientId()),
       token: !!process.env.GITHUB_TOKEN?.trim(),
-      account: (await githubAccount()) ?? null,
-      login: githubLogin(),
+      ...(await githubAccountAndLogin()),
     },
-    // Jira se règle dans le .env de l'ordinateur : la page dit seulement s'il est relié, et à quel site.
-    jira: { configured: jiraConfigured, site: jiraSite },
+    // Jira : la page dit seulement s'il est relié, à quel site et d'où viennent les identifiants (jamais l'e-mail ni le jeton).
+    jira: jiraStatus(),
   }));
 
   /** Lien(s) d'agenda collé(s) dans la page locale ; webcal:// devient https://. Liste vide : retire l'agenda. */
@@ -196,29 +216,29 @@ export default async function localRoutes(app: FastifyInstance) {
     },
   );
 
-  // Connexion GitLab (src/gitlab-auth.ts) : même parcours, retour sur la section GitLab de la page. Routes à part : GitLab
-  // n'est pas un fournisseur d'agenda. 127.0.0.1 : adresse déclarée dans l'appli (la variante localhost l'est aussi).
-  app.get("/oauth/gitlab/start", async (_req, reply) => {
-    if (!(await gitlabClientId())) return reply.code(404).send({ error: "Connexion non disponible pour ce compte" });
-    return reply.redirect(await gitlabLoginUrl(`http://127.0.0.1:${config.port}/oauth/gitlab/callback`));
-  });
-
-  app.get<{ Querystring: { code?: string; state?: string; error?: string; error_description?: string } }>(
-    "/oauth/gitlab/callback",
+  // Connexion GitLab (src/gitlab-auth.ts) : jeton personnel collé dans la page, vérifié auprès de GitLab puis gardé sur l'ordinateur.
+  app.put<{ Body: { token: string } }>(
+    "/local/accounts/gitlab",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["token"],
+          additionalProperties: false,
+          properties: { token: { type: "string", maxLength: 500 } },
+        },
+      },
+    },
     async (req, reply) => {
-      const back = (result: string) =>
-        reply.redirect(`http://127.0.0.1:${config.port}/?section=gitlab&gitlab=${encodeURIComponent(result)}`);
-      if (req.query.error || !req.query.code || !req.query.state) {
-        req.log.warn(`Connexion GitLab refusée : ${req.query.error}`);
-        return back(req.query.error === "access_denied" ? "refused" : "error");
-      }
+      // Le jeton d'appairage ne suffit pas : un secret ne se colle que depuis la page ouverte sur l'ordinateur.
+      if (!isLocalRequest(req.ip, req.headers.host)) return reply.code(403).send({ error: "Réservé à la page de l'ordinateur" });
       try {
-        await finishGitlabLogin(req.query.state, req.query.code);
+        const { username } = await connectGitlab(req.body.token);
         clearGitlabCache();
-        return back("ok");
+        return { ok: true, username };
       } catch (e) {
-        req.log.error(e);
-        return back("error");
+        if (e instanceof GitlabTokenError) return reply.code(e.statusCode).send({ error: e.message });
+        throw e;
       }
     },
   );
@@ -255,6 +275,46 @@ export default async function localRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
+  // Réservées à la page locale : le jeton d'appairage de la tablette ne suffit pas à changer le compte Jira de l'ordinateur.
+  const jiraPageOnly = async (req: FastifyRequest, reply: FastifyReply) => {
+    if (!isLocalRequest(req.ip, req.headers.host)) return reply.code(403).send({ error: "Réservé à la page de l'ordinateur" });
+  };
+  // Connexion Jira (src/jira-auth.ts) : site, e-mail et jeton d'API collés dans la page, vérifiés auprès de Jira puis gardés sur l'ordinateur.
+  app.put<{ Body: { site: string; email: string; token: string } }>(
+    "/local/accounts/jira",
+    {
+      onRequest: jiraPageOnly,
+      schema: {
+        body: {
+          type: "object",
+          required: ["site", "email", "token"],
+          additionalProperties: false,
+          properties: {
+            site: { type: "string", maxLength: 300 },
+            email: { type: "string", maxLength: 200 },
+            token: { type: "string", maxLength: 500 },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      try {
+        const { site, changed } = await connectJira(req.body);
+        await forgetJiraAccount(changed);
+        return { ok: true, site };
+      } catch (e) {
+        if (e instanceof JiraAuthError) return reply.code(e.statusCode).send({ error: e.message });
+        throw e;
+      }
+    },
+  );
+
+  app.delete("/local/accounts/jira", { onRequest: jiraPageOnly }, async () => {
+    await disconnectJira();
+    await forgetJiraAccount(true);
+    return { ok: true };
+  });
+
   app.delete<{ Params: { provider: string } }>("/local/accounts/:provider", async (req, reply) => {
     if (!isProvider(req.params.provider)) return reply.code(404).send({ error: "Compte inconnu" });
     await disconnect(req.params.provider);
@@ -264,23 +324,23 @@ export default async function localRoutes(app: FastifyInstance) {
 
   /**
    * Ouvre le compagnon sur l'ordinateur, depuis la tablette : sa page (« Relier mon agenda » de l'Accueil, « Régler depuis
-   * l'ordi » des Réglages), ou la page d'autorisation de GitLab (`gitlab`, carte « Connecter GitLab » de l'onglet GitLab),
-   * ou la connexion GitHub (`github` : code à saisir sur GitHub, montré par la page).
+   * l'ordi » des Réglages), ou sa carte GitLab (`gitlab`, carte « Connecter GitLab » des widgets GitLab : jeton à coller),
+   * ou la connexion GitHub (`github` : code à saisir sur GitHub, montré par la page), ou la carte Jira (`jira` : jeton d'API à coller).
    */
-  app.post<{ Body: { section?: "agenda" | "gitlab" | "github" | "tablette" } }>(
+  app.post<{ Body: { section?: "agenda" | "gitlab" | "github" | "jira" | "tablette" } }>(
     "/local/open",
     {
       schema: {
         body: {
           type: "object",
           additionalProperties: false,
-          properties: { section: { enum: ["agenda", "gitlab", "github", "tablette"] } },
+          properties: { section: { enum: ["agenda", "gitlab", "github", "jira", "tablette"] } },
         },
       },
     },
     async (req) => {
       const section = req.body?.section;
-      const path = section === "gitlab" || section === "github" ? `oauth/${section}/start` : section ? `?section=${section}` : "";
+      const path = section === "github" ? "oauth/github/start" : section ? `?section=${section}` : "";
       await openTarget(`http://127.0.0.1:${config.port}/${path}`);
       return { ok: true };
     },

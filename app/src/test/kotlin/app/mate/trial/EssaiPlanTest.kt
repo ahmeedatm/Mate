@@ -94,4 +94,20 @@ class EssaiPlanTest {
         val update = AppUpdate("p", "l", 1, "v", "f", 1, "s", UpdateSource.TRIALS)
         assertFalse(Essai(1, "t", update, emptyMap()).hasBackend)
     }
+
+    @Test
+    fun `liste des essais seulement dans la stable en mode technicien`() {
+        assertFalse(EssaiPlan.showList(trial = false, technician = false))
+        assertTrue(EssaiPlan.showList(trial = false, technician = true))
+        assertFalse(EssaiPlan.showList(trial = true, technician = false))
+        assertFalse(EssaiPlan.showList(trial = true, technician = true))
+    }
+
+    @Test
+    fun `bouton vers l'autre appli - Ouvrir l'essai en mode technicien, Revenir a la stable toujours`() {
+        assertFalse(EssaiPlan.showSwitch(trial = false, technician = false))
+        assertTrue(EssaiPlan.showSwitch(trial = false, technician = true))
+        assertTrue(EssaiPlan.showSwitch(trial = true, technician = false))
+        assertTrue(EssaiPlan.showSwitch(trial = true, technician = true))
+    }
 }

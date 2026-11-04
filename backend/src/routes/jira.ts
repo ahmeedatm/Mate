@@ -1,12 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { runAction } from "../deck.ts";
 import {
+  columnList,
   issueTransitions,
   issueUrl,
   JiraFieldsError,
   jiraConfigured,
   myBoards,
   myIssues,
+  saveColumnChoices,
   selectBoards,
   selectedBoards,
   transitionIssue,
@@ -19,8 +21,10 @@ const keyParams = {
 };
 
 export default async function jiraRoutes(app: FastifyInstance) {
-  app.addHook("preHandler", async (_req, reply) => {
-    if (!jiraConfigured) return reply.code(501).send({ error: "Jira n'est pas configuré sur l'ordinateur." });
+  // Seule la lecture des tickets répond sans Jira relié (`connected: false` : la tablette montre sa carte « Connecter Jira »).
+  app.addHook("preHandler", async (req, reply) => {
+    if (jiraConfigured() || (req.method === "GET" && req.routeOptions.url === "/jira/issues")) return;
+    return reply.code(501).send({ error: "Jira n'est pas relié sur l'ordinateur." });
   });
 
   app.get("/jira/boards", async () => ({ boards: await myBoards(), selected: await selectedBoards() }));
@@ -42,7 +46,21 @@ export default async function jiraRoutes(app: FastifyInstance) {
     },
   );
 
-  app.get("/jira/issues", async () => myIssues());
+  app.get("/jira/columns", async () => columnList());
+
+  const keys = { type: "array", maxItems: 50, items: { type: "string", minLength: 1, maxLength: 100 } };
+  app.post<{ Body: { hidden: string[]; everyone: string[] } }>(
+    "/jira/columns",
+    { schema: { body: { type: "object", required: ["hidden", "everyone"], properties: { hidden: keys, everyone: keys } } } },
+    async (req) => {
+      await saveColumnChoices(req.body);
+      return { ok: true };
+    },
+  );
+
+  app.get("/jira/issues", async () =>
+    jiraConfigured() ? { connected: true, ...(await myIssues()) } : { connected: false, boardsChosen: false, columns: [] },
+  );
 
   app.get<{ Params: { key: string } }>("/jira/issues/:key/transitions", { schema: { params: keyParams } }, async (req) => ({
     transitions: await issueTransitions(req.params.key),

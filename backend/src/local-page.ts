@@ -5,7 +5,7 @@ import { CONSOLE_CSS, FAVICON, ICON_SVG } from "./web-style.ts";
  * Page http://127.0.0.1:3000/ ouverte sur l'ordinateur (le panneau de l'appli : relancer « Mate » la rouvre) :
  * barre de gauche (état du compagnon et de la tablette, sections), puis les sections l'une sous l'autre : réglages de la
  * tablette connectée avec son aperçu dessiné, connexion d'une tablette (code d'appairage affiché par la tablette),
- * agenda, GitLab, GitHub et la carte « Cette appli » (lancement au démarrage, pare-feu, mise à jour,
+ * agenda, GitLab, GitHub, Jira et la carte « Cette appli » (lancement au démarrage, pare-feu, mise à jour,
  * quitter, tout oublier). La barre liste les `main > section[data-title]` dans l'ordre de la page.
  * Lue sans jeton, en local seulement (voir isLocalPage dans server.ts).
  */
@@ -94,7 +94,7 @@ ${FAVICON}
   input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--line); }
   input[type=range]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--ink); }
   input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 9px; background: var(--now); }
-  input[type=text], input:not([type]) { width: 100%; font: 400 15px Figtree, sans-serif; height: 46px; padding: 0 20px; border-radius: 23px; border: 0;
+  input[type=text], input[type=password], input:not([type]) { width: 100%; font: 400 15px Figtree, sans-serif; height: 46px; padding: 0 20px; border-radius: 23px; border: 0;
     box-shadow: inset 0 0 0 1px var(--line); background: var(--bg); color: var(--ink); }
   input::placeholder { color: var(--ink-3); }
   input:not([type=checkbox]):not([type=range]):focus { outline: 0; box-shadow: inset 0 0 0 2px var(--ink); }
@@ -111,10 +111,29 @@ ${FAVICON}
   .minuteur b { position: absolute; left: calc(var(--p) * 100%); top: -5px; width: 12px; height: 12px; margin-left: -6px; border-radius: 6px;
     background: var(--now); box-shadow: 0 0 0 3px var(--tile); transition: left 1.5s linear; }
 
-  /* Autorisation qui manque (Mac) : seul bloc teinté du rouge « maintenant », en tête. */
+  /* Autorisation indispensable qui manque (Mac) : seul bloc teinté du rouge « maintenant », en tête. */
   #access { background: var(--now-soft); margin-bottom: 48px; display: flex; gap: 24px; align-items: center; }
   #access .grow { flex: 1; }
   #access p { margin: 6px 0 0; }
+
+  /* Autorisations du Mac : une ligne par autorisation dans la modale, état en pastille. */
+  #permdlg .card { background: none; }
+  #permdlg .intro { margin: 0 0 8px; }
+  .perm { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 16px; padding-left: 0; padding-right: 0; }
+  .perm .head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+  .perm .head b { font-weight: 500; }
+  .perm > button { grid-column: 2; grid-row: 1; }
+  .perm .why, .perm .appear { grid-column: 1 / -1; }
+  .group .perm::before { left: 0; }
+  .label + .perm::before { display: none; }
+  .perm .state { flex: none; font-size: 13px; line-height: 1; padding: 6px 10px; border-radius: 12px; background: var(--tile-high); color: var(--ink-2); white-space: nowrap; }
+  .perm .state.granted { background: var(--ok-soft); color: var(--ok); }
+  .perm .state.denied { background: var(--ko-soft); color: var(--ko); }
+  .perm .appear { margin-top: 4px; padding: 2px 0 2px 14px; border-left: 2px solid var(--line); }
+  .perm .appear .acts { display: flex; gap: 8px; margin-top: 10px; }
+  .permfoot { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+  .permfoot .dim { flex: 1; }
+  #permdlg .label { padding-left: 0; }
 
   /* Tablette : son aperçu dessiné à gauche (thème et luminosité suivis en direct), ses réglages à droite. */
   .twin-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 28px; align-items: start; }
@@ -164,6 +183,10 @@ ${FAVICON}
   .account .grow { display: flex; align-items: center; gap: 10px; }
   #accounts, #gitlabaccount, #githubaccount { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 14px; }
   #accounts:empty, #gitlabaccount:empty, #githubaccount:empty { display: none; }
+  #jiraaccount { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 14px; }
+  #jiraaccount:empty { display: none; }
+  #jiraform { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  #jiraform[hidden] { display: none; }
   #githubcode { margin-top: 14px; }
   #githubcode code { font-size: 28px; letter-spacing: .08em; padding: 6px 14px; }
   #githubcode .actions { margin-top: 12px; }
@@ -246,7 +269,7 @@ ${FAVICON}
   </div>
   <div class="health">
     <div><span class="dot" id="dot"></span><span id="state">Tablette non connectée</span></div>
-    <div id="accessline" hidden><span class="dot ko"></span><a href="#access">Accessibilité à autoriser</a></div>
+    <div id="accessline" hidden><span class="dot ko"></span><a href="#autorisations" id="accesslink">Autorisations à donner</a></div>
   </div>
   <div class="menu" id="menu"><span class="trait" id="trait" hidden></span></div>
   <!-- Politique de confidentialité (config/confidentialite.txt) ; compagnon installé : licences des composants tiers (LICENCES-TIERS.txt, scripts/package.ts). -->
@@ -268,14 +291,13 @@ ${FAVICON}
     <div class="dim" id="pairmsg" style="margin-top:12px">Valable 2 minutes. Ne saisis ici qu'un code affiché par ta tablette.</div>
   </div>
 
-  <!-- Mac sans l'autorisation Accessibilité : fenêtres et raccourcis du deck ne marchent pas encore. -->
+  <!-- Mac avec une autorisation indispensable qui manque (Accessibilité, System Events) : rappel en tête, même après « Plus tard ». -->
   <div class="card" id="access" hidden>
     <div class="grow">
-      <h2 style="font-size:18px">Une autorisation manque sur ce Mac</h2>
-      <p class="dim">Pour placer les fenêtres et envoyer les raccourcis du deck, autorise le compagnon dans
-        Réglages Système › Confidentialité et sécurité › <b>Accessibilité</b>, puis active l'interrupteur.</p>
+      <h2 style="font-size:18px" id="accesstitle">Une autorisation manque sur ce Mac</h2>
+      <p class="dim" id="accesstext">Pour placer les fenêtres et envoyer les raccourcis du deck, macOS doit d'abord donner son accord à Mate.</p>
     </div>
-    <button id="accessopen">Ouvrir le réglage</button>
+    <button id="accessopen">Voir les autorisations</button>
   </div>
 
   <!-- Tablette connectée : sa section passe en premier. Son état et ses réglages, changés d'ici (ordre « settings », voir routes/local.ts). -->
@@ -299,7 +321,7 @@ ${FAVICON}
         <div id="tabletsettings">
           <div class="label">Thème</div>
           <div class="themes">
-            <button data-theme="CONSOLE"><span></span>Console</button><button data-theme="CONSOLE_JOUR"><span></span>Console jour</button><button data-theme="CONTRASTE"><span></span>Contraste élevé</button><button data-theme="HUSH"><span></span>Hush</button><button data-theme="SPIDERMAN"><span></span>Spider-Verse</button>
+            <button data-theme="CONSOLE"><span></span>Console</button><button data-theme="CONSOLE_JOUR"><span></span>Console jour</button><button data-theme="CLAIR"><span></span>Clair</button><button data-theme="SOMBRE"><span></span>Sombre</button><button data-theme="CADRAN"><span></span>Cadran</button><button data-theme="CADRAN_NUIT"><span></span>Cadran nuit</button><button data-theme="RETRO"><span></span>Rétro</button><button data-theme="HUSH"><span></span>Hush</button><button data-theme="SPIDERMAN"><span></span>Spider-Verse</button><button data-theme="REGISTRE"><span></span>Registre</button><button data-theme="STUDIO"><span></span>Studio</button><button data-theme="MAISON"><span></span>Maison</button><button data-theme="TABLEAU"><span></span>Tableau</button><button data-theme="TERMINAL"><span></span>Terminal</button><button data-theme="CONTRASTE"><span></span>Contraste élevé</button>
           </div>
           <div class="row"><label for="brightness">Luminosité de l'écran</label><input type="range" id="brightness" min="5" max="100"><span class="value" id="brightnessvalue"></span></div>
           <div class="row"><label for="volume">Volume du haut-parleur</label><input type="range" id="volume" min="0" max="100"><span class="value" id="volumevalue"></span></div>
@@ -390,7 +412,12 @@ ${FAVICON}
     <div class="card cxpanel" id="gitlab" hidden>
       <div class="dim" id="gitlabstate"></div>
       <div id="gitlabaccount"></div>
-      <div id="gitlabmsg" class="dim" style="margin-top:8px"></div>
+      <!-- Jeton personnel collé : vérifié auprès de GitLab, gardé sur l'ordinateur (PUT /local/accounts/gitlab). -->
+      <form id="gitlabform" autocomplete="off">
+        <input id="gitlabtoken" type="password" placeholder="Coller le jeton GitLab" autocomplete="off" spellcheck="false" autocapitalize="off" aria-label="Jeton GitLab">
+        <div class="actions"><button id="gitlabsave" type="submit">Enregistrer</button></div>
+      </form>
+      <div id="gitlabmsg" class="dim" style="margin-top:8px" role="status"></div>
     </div>
     <div class="card cxpanel" id="github" hidden>
       <div class="dim" id="githubstate"></div>
@@ -411,6 +438,15 @@ ${FAVICON}
     </div>
     <div class="card cxpanel" id="jira" hidden>
       <div class="dim" id="jirastate"></div>
+      <div id="jiraaccount"></div>
+      <!-- Site, e-mail et jeton d'API collés : vérifiés auprès de Jira, gardés sur l'ordinateur (PUT /local/accounts/jira). -->
+      <form id="jiraform" autocomplete="off">
+        <input id="jirasite" type="text" placeholder="Site Jira (unowhy ou unowhy.atlassian.net)" autocomplete="off" aria-label="Site Jira">
+        <input id="jiraemail" type="text" inputmode="email" placeholder="E-mail de ton compte Atlassian" autocomplete="off" aria-label="E-mail Jira">
+        <input id="jiratoken" type="password" placeholder="Coller le jeton d'API Jira" autocomplete="off" aria-label="Jeton Jira">
+        <div class="actions"><button id="jirasave" type="submit">Enregistrer</button></div>
+      </form>
+      <div id="jiramsg" class="dim" style="margin-top:8px" role="status"></div>
     </div>
     <div class="card cxpanel" id="plugin" hidden>
       <div class="dim" id="plugindesc"></div>
@@ -438,6 +474,14 @@ ${FAVICON}
     </div>
   </section>
 
+  <!-- Mac seulement (src/mac/permissions.ts) : ce que macOS doit autoriser, état par état. La liste est dans la modale #permdlg. -->
+  <section id="autorisations" data-title="Autorisations du Mac" data-icon="lock" data-group="Cet ordinateur" hidden>
+    <div class="sechead"><h2>Autorisations du Mac</h2><span class="dim">macOS demande ton accord pour que Mate pilote ce Mac. Les fenêtres affichent « Mate ».</span></div>
+    <div class="card group">
+      <div class="row"><span class="grow" id="permsummary"></span><button class="ghost" id="permopen">Voir les autorisations</button></div>
+    </div>
+  </section>
+
   <!-- Appli portable seulement (voir src/routes/portable.ts) : rien n'est installé, ces réglages sont ceux de l'utilisateur. -->
   <section id="panel" data-title="Cette appli" data-icon="power" data-group="Cet ordinateur" hidden>
     <div class="sechead"><h2>Cette appli</h2><span class="dim" id="appinfo"></span></div>
@@ -459,11 +503,30 @@ ${FAVICON}
     </div>
   </section>
 </main>
+<dialog class="cxdialog" id="permdlg" aria-labelledby="permtitle">
+  <div class="cxbody">
+    <header class="cxhead"><h2 id="permtitle">Autorisations du Mac</h2>
+      <button class="close" id="permx" aria-label="Fermer"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+    </header>
+    <p class="dim intro">macOS veut ton accord avant que Mate pilote ce Mac. Donne les autorisations une par une : chaque fenêtre de macOS affichera « Mate ». Les indispensables d'abord.</p>
+    <div class="card group" id="permlist"></div>
+    <div class="permfoot"><span class="dim" id="permmsg" role="status"></span><button id="permlater">Plus tard</button></div>
+  </div>
+</dialog>
 <script>
   const OS = { mac: "macOS", windows: "Windows", other: "Linux (pilotage indisponible)" };
-  let version = null;
+  let version = null, statusAccessibility = null;
+  // Page au premier plan = cet ordinateur attend une tablette (src/pairing.ts) ; cachée, une seule annonce : l'expiration fait le reste.
+  function noteVisible() {
+    fetch("/local/visible", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ visible: document.visibilityState === "visible" }),
+    }).catch(() => {});
+  }
   async function refresh() {
     try {
+      if (document.visibilityState === "visible") noteVisible();
       const s = await (await fetch("/local/status")).json();
       // Mise à jour posée : le nouveau compagnon répond avec une autre version, la page se recharge.
       if (version !== null && s.version !== version) return location.reload();
@@ -473,8 +536,8 @@ ${FAVICON}
       document.getElementById("licences").hidden = !s.licences;
       document.body.classList.remove("down");
       document.getElementById("srvdot").className = "dot on";
-      document.getElementById("access").hidden = s.accessibility !== false;
-      document.getElementById("accessline").hidden = s.accessibility !== false;
+      statusAccessibility = s.accessibility;
+      showAccessBanner();
       document.getElementById("os").textContent = "Compagnon prêt · " + (OS[s.os] || s.os);
       document.getElementById("addr").textContent = s.addresses.map((a) => a + ":" + (s.tlsPort || s.port)).join("  ·  ") || "aucune (pas de réseau)";
       document.getElementById("dot").className = "dot" + (s.tablet ? " on" : "");
@@ -483,8 +546,10 @@ ${FAVICON}
       document.getElementById("calstate").textContent = n === 0 ? "Aucun agenda : la tablette propose de le relier."
         : c.saved.length ? "Lien enregistré : " + c.saved.join(", ") : "Connecté.";
       renderAccounts(c);
+      gitlabUrl = s.gitlab.url;
       renderGitlab(s.gitlab);
       renderGithub(s.github);
+      renderJira(s.jira || { configured: false });
       renderConnectors(s);
       renderMcp(s.mcp);
       renderSteps();
@@ -556,24 +621,29 @@ ${FAVICON}
     const box = document.getElementById("gitlabaccount");
     box.replaceChildren();
     const state = document.getElementById("gitlabstate");
+    // Le champ du jeton sert tant qu'aucun jeton valable n'est enregistré, pour remplacer un jeton refusé, ou pour en coller
+    // un avec la portée api quand le jeton enregistré ne lit que (le .env, s'il y en a un, fusionne à sa place).
+    const readOnly = !!g.account && !g.account.expired && !g.account.canWrite && !g.token;
+    document.getElementById("gitlabform").hidden = !!g.account && !g.account.expired && !readOnly;
     if (g.account) {
-      state.textContent = "La tablette lit et fusionne tes MR avec ce compte.";
+      state.textContent = g.account.expired ? "GitLab refuse ce jeton : colle-en un nouveau."
+        : readOnly ? "Lecture seule : la fusion se fait sur l'ordinateur. Colle un jeton avec la portée api pour fusionner depuis la tablette."
+        : "La tablette lit et fusionne tes MR avec ce compte.";
       const row = document.createElement("div");
       row.className = "account";
       const label = document.createElement("span");
       label.className = "grow";
       label.append(stateDot(!g.account.expired),
-        "GitLab" + (g.account.username ? " · " + g.account.username : "") + (g.account.expired ? " (à reconnecter)" : ""));
+        "GitLab" + (g.account.username ? " · " + g.account.username : "") + (g.account.expired ? " (jeton refusé)" : ""));
       const off = document.createElement("button");
       off.className = "ghost";
       off.textContent = "Déconnecter GitLab";
       off.onclick = async () => { await fetch("/local/accounts/gitlab", { method: "DELETE" }); refresh(); };
-      row.append(label);
-      if (g.account.expired) row.append(connectLink("gitlab", "Reconnecter"));
-      row.append(off);
+      row.append(label, off);
       box.append(row);
     } else {
-      state.textContent = g.token ? "Connecté." : "Non connecté.";
+      // Sans compte, les étapes de la carte disent déjà quoi faire : pas de « Non connecté. » en plus.
+      state.textContent = g.token ? "Connecté." : g.urlError || "";
     }
   }
   // GitHub : même carte que GitLab, plus le code à saisir sur GitHub tant que la connexion attend (device flow).
@@ -619,6 +689,35 @@ ${FAVICON}
     } else {
       state.textContent = waiting ? "" : g.token ? "Connecté." : "Non connecté.";
     }
+  }
+  // Jira : même principe. Identifiants du .env de l'ordinateur : dits, mais pas déconnectables d'ici.
+  let jiraKey = "";
+  function renderJira(j) {
+    const key = JSON.stringify(j);
+    if (key === jiraKey) return;
+    jiraKey = key;
+    const box = document.getElementById("jiraaccount");
+    box.replaceChildren();
+    // Les champs servent tant que Jira n'est pas relié.
+    document.getElementById("jiraform").hidden = !!j.configured;
+    // Pas relié : les étapes suffisent, l'état est déjà sur l'icône.
+    document.getElementById("jirastate").textContent = !j.configured ? ""
+      : j.source === "env" ? "Connecté à " + j.site + " avec le fichier .env de l'ordinateur." : "La tablette lit tes tickets et change leur statut avec ce compte.";
+    if (!j.configured) return;
+    const row = document.createElement("div");
+    row.className = "account";
+    const label = document.createElement("span");
+    label.className = "grow";
+    label.append(stateDot(true), "Connecté à " + j.site);
+    row.append(label);
+    if (j.source !== "env") {
+      const off = document.createElement("button");
+      off.className = "ghost";
+      off.textContent = "Déconnecter Jira";
+      off.onclick = async () => { await fetch("/local/accounts/jira", { method: "DELETE" }); refresh(); };
+      row.append(off);
+    }
+    box.append(row);
   }
   document.getElementById("githubcopy").onclick = async () => {
     try {
@@ -778,6 +877,44 @@ ${FAVICON}
     link.textContent = text;
     return link;
   }
+  // Page de création de jeton personnel de GitLab, nom et portée déjà remplis ; gitlabUrl vient de /local/status.
+  let gitlabUrl = "";
+  function tokenLink(text) {
+    const link = document.createElement("a");
+    link.className = "button";
+    // GITLAB_URL refusée (urlError) : pas d'adresse, le lien reste inerte.
+    if (gitlabUrl) link.href = gitlabUrl + "/-/user_settings/personal_access_tokens?name=Mate&scopes=api";
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = text;
+    return link;
+  }
+  // Page de création de jeton d'API d'Atlassian.
+  function jiraTokenLink(text) {
+    const link = document.createElement("a");
+    link.className = "button";
+    link.href = "https://id.atlassian.com/manage-profile/security/api-tokens";
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = text;
+    return link;
+  }
+  document.getElementById("jiraform").onsubmit = async (e) => {
+    e.preventDefault();
+    const site = document.getElementById("jirasite"), email = document.getElementById("jiraemail"), token = document.getElementById("jiratoken");
+    const msg = document.getElementById("jiramsg");
+    if (!site.value.trim() || !email.value.trim() || !token.value.trim()) { msg.textContent = "Remplis le site, l'e-mail et le jeton."; return; }
+    msg.textContent = "Vérification…";
+    try {
+      const res = await fetch("/local/accounts/jira", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ site: site.value, email: email.value, token: token.value }) });
+      const r = await res.json();
+      msg.textContent = res.ok ? "✓ Jira connecté : le widget Jira de la tablette se remplit dans quelques secondes." : r.error || r.message;
+      if (res.ok) token.value = "";
+      refresh();
+    } catch (err) {
+      msg.textContent = "Compagnon injoignable";
+    }
+  };
   const ACCOUNT_MSG = {
     ok: "✓ Compte connecté : l'agenda arrive sur la tablette dans la minute.",
     mail: "✓ Mails connectés : le widget Mails de la tablette affiche le nombre de non lus.",
@@ -814,21 +951,30 @@ ${FAVICON}
       msg.textContent = "Compagnon injoignable";
     }
   };
-  document.getElementById("accessopen").onclick = async () => {
-    await fetch("/system/accessibility", { method: "POST" });
-  };
   document.getElementById("calsave").onclick = () => {
     const url = document.getElementById("calurl").value.trim();
     if (url) saveCalendar([url]);
   };
   document.getElementById("calclear").onclick = () => saveCalendar([]);
-  const GITLAB_MSG = {
-    ok: "✓ GitLab connecté : l'onglet GitLab de la tablette se remplit dans quelques secondes.",
-    refused: "Connexion annulée.",
-    error: "La connexion à GitLab a échoué. Réessaie.",
+  document.getElementById("gitlabform").onsubmit = async (e) => {
+    e.preventDefault();
+    const input = document.getElementById("gitlabtoken"), msg = document.getElementById("gitlabmsg");
+    const say = (text, ok) => { msg.textContent = text; msg.className = "dim" + (ok === undefined ? "" : ok ? " ok" : " ko"); };
+    if (!input.value.trim()) { say("Colle d'abord le jeton.", false); return; }
+    if (input.value.length > 500) { say("Ce jeton est trop long : colle seulement le jeton GitLab, rien d'autre.", false); return; }
+    say("Vérification…");
+    try {
+      const res = await fetch("/local/accounts/gitlab", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: input.value }) });
+      const r = await res.json().catch(() => ({}));
+      if (res.ok) {
+        say("GitLab connecté : les widgets GitLab de la tablette se remplissent dans quelques secondes.", true);
+        input.value = "";
+      } else say(typeof r.error === "string" && r.error ? r.error : "Le compagnon n'a pas pu enregistrer ce jeton. Réessaie.", false);
+      refresh();
+    } catch (err) {
+      say("Compagnon injoignable", false);
+    }
   };
-  const gitlabResult = new URLSearchParams(location.search).get("gitlab");
-  if (GITLAB_MSG[gitlabResult]) document.getElementById("gitlabmsg").textContent = GITLAB_MSG[gitlabResult];
 
   // Carte « Cette appli » : lue au chargement et après chaque action, pas à chaque rafraîchissement.
   const $ = (id) => document.getElementById(id);
@@ -891,6 +1037,16 @@ ${FAVICON}
   const THEMES = {
     CONSOLE: ["#17181B", "#23252A", "#ECEDEF", "#B4B8C0", "#B8F34A", "#3A3D44", "#16210A"],
     CONSOLE_JOUR: ["#F4F2EE", "#FFFFFF", "#1B1C1F", "#474B54", "#3F6B00", "#D8D3CA", "#FFFFFF"],
+    CLAIR: ["#FAF2F1", "#FFFFFF", "#1E1B1B", "#4D4545", "#CA0538", "#D0C4C3", "#FFFFFF"],
+    SOMBRE: ["#100D0D", "#221F1F", "#E9E1E0", "#D0C4C3", "#FF5165", "#4D4545", "#40000B"],
+    CADRAN: ["#EEE0DA", "#FCF5F1", "#2B1E1F", "#5A4746", "#CA0538", "#D6C1B9", "#FFFFFF"],
+    CADRAN_NUIT: ["#1D1617", "#2A2122", "#EBDDD9", "#CFC0BC", "#FF5266", "#574849", "#40000B"],
+    RETRO: ["#F3DECB", "#FBF2B7", "#552805", "#66380F", "#B82800", "#DDB98F", "#FBF2B7"],
+    REGISTRE: ["#F8F3E5", "#FFFFFF", "#1D1C14", "#4A4733", "#B3261E", "#CCC7AC", "#FFFFFF"],
+    STUDIO: ["#F6F3F6", "#FFFFFF", "#1B1B1E", "#46464C", "#C0153A", "#C7C6CD", "#FFFFFF"],
+    MAISON: ["#FFF1E7", "#FFFBF6", "#211A14", "#554433", "#B3412F", "#DBC2AD", "#FFFFFF"],
+    TABLEAU: ["#F4F3F5", "#FFFFFF", "#1A1C1D", "#44474C", "#C62828", "#C4C6CC", "#FFFFFF"],
+    TERMINAL: ["#0C0F0C", "#1E201D", "#E2E3DD", "#C1C9BE", "#FFB000", "#424940", "#281800"],
     CONTRASTE: ["#FFFFFF", "#EDEDE8", "#111214", "#25272C", "#2A4A00", "#45474D", "#FFFFFF"],
     // Tuile de Hush : son verre (#B82C2238) posé sur le fond noir.
     HUSH: ["#070509", "#221A2B", "#F6F0F8", "#CBC0D3", "#FF6EB4", "#46384F", "#22030F"],
@@ -942,14 +1098,12 @@ ${FAVICON}
     }
     setTile("ics", c.saved.length + c.env ? "on" : "off", c.saved.length + c.env ? "Connecté" : "Non connecté");
     if ((g.account && !g.account.expired) || (!g.account && g.token)) setTile("gitlab", "on", "Connecté");
-    else setTile("gitlab", g.available ? "off" : "na", "Non connecté", !!g.account);
+    else setTile("gitlab", "off", "Non connecté", !!g.account);
     const h = s.github;
     if ((h.account && !h.account.expired) || (!h.account && h.token)) setTile("github", "on", "Connecté");
     else setTile("github", h.available ? "off" : "na", "Non connecté", !!h.account);
     const j = s.jira || { configured: false };
     setTile("jira", j.configured ? "on" : "off", j.configured ? "Connecté" : "Non connecté");
-    // Pas relié : les étapes suffisent, l'état est déjà sur l'icône.
-    document.getElementById("jirastate").textContent = j.configured ? "Connecté à " + j.site + "." : "";
   }
   // Étapes pour relier chaque connecteur ; action : bouton qui ouvre la connexion dans le navigateur.
   // Un seul panneau ouvert sous les icônes, l'icône correspondante est marquée.
@@ -973,9 +1127,9 @@ ${FAVICON}
     },
     gitlab: {
       title: "Relier GitLab",
-      steps: ["Touche « Se connecter avec GitLab » : GitLab s'ouvre dans le navigateur.", "Connecte-toi à ton compte GitLab si besoin.",
-        "Touche « Autoriser » : Mate lit tes MR et tes pipelines.", "Tu reviens ici : les widgets GitLab de la tablette se remplissent."],
-      action: "Se connecter avec GitLab",
+      steps: ["Touche « Créer un jeton » : la page de création de jeton de GitLab s'ouvre, déjà remplie.", "Connecte-toi à ton compte GitLab si besoin, puis crée le jeton.",
+        "Copie le jeton (GitLab ne l'affiche qu'une fois) et colle-le dans le champ ci-dessous.", "Touche « Enregistrer » : les widgets GitLab de la tablette se remplissent."],
+      action: "Créer un jeton",
     },
     github: {
       title: "Relier GitHub",
@@ -985,9 +1139,10 @@ ${FAVICON}
     },
     jira: {
       title: "Relier Jira",
-      steps: ["Crée un jeton d'API sur id.atlassian.com › Sécurité › Jetons d'API.",
-        "Ouvre le fichier .env du compagnon et renseigne JIRA_SITE (ton site Atlassian), JIRA_EMAIL et JIRA_API_TOKEN.",
-        "Relance Mate : tes tickets arrivent dans le widget Jira de la tablette."],
+      steps: ["Touche « Créer un jeton » : la page des jetons d'API d'Atlassian s'ouvre.", "Connecte-toi à ton compte Atlassian si besoin, puis crée un jeton d'API.",
+        "Copie le jeton (Atlassian ne l'affiche qu'une fois) et colle-le ci-dessous, avec le site (par exemple « unowhy ») et l'e-mail de ton compte.",
+        "Touche « Enregistrer » : le widget Jira de la tablette se remplit."],
+      action: "Créer un jeton",
     },
   };
   const PANEL = { microsoft: "agenda", google: "agenda", ics: "agenda", gitlab: "gitlab", github: "github", jira: "jira", discord: "plugin", claude: "plugin" };
@@ -1030,7 +1185,7 @@ ${FAVICON}
     document.getElementById("cxnote").textContent = na ? "Cette connexion n'est pas encore disponible sur cet ordinateur." : "";
     list.hidden = na;
     if (!na) for (const text of st.steps) list.append(Object.assign(document.createElement("li"), { textContent: text }));
-    if (st.action && !na) action.append(connectLink(openCx, st.action));
+    if (st.action && !na) action.append(openCx === "gitlab" ? tokenLink(st.action) : openCx === "jira" ? jiraTokenLink(st.action) : connectLink(openCx, st.action));
     // Agenda sans connexion possible : le lien ICS reste la voie.
     if (na && PANEL[openCx] === "agenda") {
       const alt = document.createElement("button");
@@ -1172,6 +1327,7 @@ ${FAVICON}
     merge: "M17 20.41L18.41 19 15 15.59 13.59 17 17 20.41zM7.5 8H11v5.59L5.59 19 7 20.41l6-6V8h3.5L12 3.5 7.5 8z",
     extension: "M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z",
     restaurant: "M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z",
+    lock: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z",
     power: "M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z",
   };
   const SVG_NS = "http://www.w3.org/2000/svg";
@@ -1224,18 +1380,152 @@ ${FAVICON}
   // Ouverte depuis la tablette ou au retour d'une connexion : le panneau concerné est ouvert et mis en avant.
   const section = new URLSearchParams(location.search).get("section");
   if (accountResult) openPanel("agenda", null);
-  if (gitlabResult) openPanel("gitlab", "gitlab");
   if (new URLSearchParams(location.search).get("github")) openPanel("github", "github");
-  if (section === "agenda" || section === "gitlab" || section === "github") {
+  if (section === "agenda" || section === "gitlab" || section === "github" || section === "jira") {
     openPanel(section, section === "agenda" ? "ics" : section);
     document.getElementById(section).classList.add("focus");
   }
+  // Autorisations du Mac (src/mac/permissions.ts). L'écran s'ouvre seul tant qu'une autorisation indispensable manque,
+  // sauf « Plus tard » (gardé dans ce navigateur) ; le rappel en tête reste. Relu toutes les 2 s tant qu'il est affiché,
+  // toutes les 10 s sinon. Textes venus du compagnon, posés avec textContent.
+  const permDlg = $("permdlg");
+  const PERM_STATE = { granted: "Accordée", denied: "Refusée", "not-asked": "Pas encore demandée", unknown: "À vérifier" };
+  let permItems = [], permKey = "", permExplain = null, permOpened = false, permTick = 0;
+  const permLater = () => { try { return localStorage.getItem("mate-perm-later") === "1"; } catch (e) { return false; } };
+  const permMissing = () => permItems.some((p) => p.essential && (p.state === "denied" || p.state === "not-asked"));
+  function showAccessBanner() {
+    // Utilitaire absent : états inconnus, l'Accessibilité lue par le compagnon fait foi.
+    const need = permMissing() || statusAccessibility === false;
+    $("access").hidden = !need;
+    $("accessline").hidden = !need;
+    if (!need) return;
+    // Dit ce qui manque : les indispensables non accordées, sinon l'Accessibilité seule.
+    const names = permItems.filter((p) => p.essential && (p.state === "denied" || p.state === "not-asked")).map((p) => p.title);
+    if (!names.length) names.push("Accessibilité");
+    $("accesstitle").textContent = names.length > 1 ? "Des autorisations manquent sur ce Mac" : "Une autorisation manque sur ce Mac";
+    $("accesstext").textContent = "Pour placer les fenêtres et envoyer les raccourcis du deck, macOS doit d'abord donner son accord à Mate : " + names.join(", ") + ".";
+  }
+  function permSay(text) { $("permmsg").textContent = text; }
+  async function permAsk(id) {
+    permExplain = null;
+    try {
+      const r = await post("/local/permissions/" + encodeURIComponent(id) + "/request", {});
+      permSay(r.action === "settings" ? "Réglages Système est ouvert : active « Mate » dans la liste." : "Réponds à la fenêtre de macOS, puis reviens ici.");
+    } catch (e) {
+      permSay(e.message);
+    }
+    renderPerms(true);
+    setTimeout(loadPerms, 1500);
+  }
+  function permRow(p) {
+    const row = document.createElement("div");
+    row.className = "row perm";
+    row.dataset.id = p.id;
+    const head = document.createElement("div");
+    head.className = "head";
+    const title = document.createElement("b");
+    title.textContent = p.title;
+    const state = document.createElement("span");
+    state.className = "state " + p.state;
+    state.textContent = PERM_STATE[p.state] || p.state;
+    head.append(title, state);
+    row.append(head);
+    if (p.action && permExplain !== p.id) {
+      const button = document.createElement("button");
+      const settings = p.action === "settings";
+      button.className = settings ? "ghost" : "";
+      button.textContent = settings ? "Ouvrir les Réglages" : "Autoriser";
+      // Nom accessible complet : plusieurs lignes ont le même bouton.
+      button.setAttribute("aria-label", (settings ? "Ouvrir les Réglages pour " : "Autoriser ") + p.title);
+      // Autoriser : dit d'abord ce qui va apparaître. Réglages : pas de fenêtre à annoncer, on ouvre.
+      button.onclick = () => (settings ? permAsk(p.id) : ((permExplain = p.id), renderPerms(true)));
+      row.append(button);
+    }
+    const why = document.createElement("span");
+    why.className = "why dim";
+    why.textContent = p.why;
+    row.append(why);
+    if (permExplain === p.id) {
+      const box = document.createElement("div");
+      box.className = "appear";
+      const text = document.createElement("div");
+      text.textContent = p.appear;
+      const acts = document.createElement("div");
+      acts.className = "acts";
+      const go = document.createElement("button");
+      go.textContent = "Continuer";
+      go.onclick = () => permAsk(p.id);
+      const cancel = document.createElement("button");
+      cancel.className = "ghost";
+      cancel.textContent = "Annuler";
+      cancel.onclick = () => { permExplain = null; renderPerms(true); };
+      acts.append(go, cancel);
+      box.append(text, acts);
+      row.append(box);
+    }
+    return row;
+  }
+  function renderPerms(force) {
+    const key = JSON.stringify(permItems) + permExplain;
+    if (!force && key === permKey) return;
+    permKey = key;
+    const list = $("permlist");
+    list.replaceChildren();
+    for (const [label, essential] of [["Indispensables", true], ["Facultatives", false]]) {
+      const rows = permItems.filter((p) => p.essential === essential);
+      if (!rows.length) continue;
+      const head = document.createElement("div");
+      head.className = "label";
+      head.textContent = label;
+      list.append(head, ...rows.map(permRow));
+    }
+    $("permlater").textContent = permMissing() ? "Plus tard" : "Terminé";
+    const done = permItems.filter((p) => p.state === "granted").length;
+    $("permsummary").textContent = done + " autorisation" + (done > 1 ? "s" : "") + " sur " + permItems.length + " accordée" + (done > 1 ? "s" : "") + (permMissing() ? " : il manque des indispensables." : ".");
+  }
+  async function loadPerms() {
+    try {
+      const r = await (await fetch("/local/permissions")).json();
+      permItems = r.items || [];
+    } catch (e) {
+      return;
+    }
+    $("autorisations").hidden = permItems.length === 0;
+    // Tout est accordé : le « Plus tard » d'avant ne vaut plus, il ne doit pas faire taire un futur manque.
+    if (permItems.length && !permMissing()) { try { localStorage.removeItem("mate-perm-later"); } catch (e) { /* sans stockage : rien à effacer */ } }
+    renderPerms(false);
+    showAccessBanner();
+    if (!permOpened) {
+      permOpened = true;
+      if (permMissing() && !permLater()) permDlg.showModal();
+    }
+    buildRail();
+  }
+  function openPerms() {
+    permSay("");
+    renderPerms(true);
+    if (!permDlg.open) permDlg.showModal();
+    loadPerms();
+  }
+  $("accessopen").onclick = openPerms;
+  $("permopen").onclick = openPerms;
+  $("accesslink").onclick = (e) => { e.preventDefault(); openPerms(); };
+  $("permx").onclick = () => permDlg.close();
+  $("permlater").onclick = () => {
+    if (permMissing()) { try { localStorage.setItem("mate-perm-later", "1"); } catch (e) { /* navigateur sans stockage : l'écran se rouvrira */ } }
+    permDlg.close();
+  };
+  permDlg.addEventListener("click", (e) => { if (e.target === permDlg) permDlg.close(); });
+  permDlg.addEventListener("close", () => { permExplain = null; });
+  loadPerms();
+  setInterval(() => { if (permDlg.open || ++permTick % 5 === 0) loadPerms(); }, 2000);
   ${CONFIG_JS}
   tickTwin();
   setInterval(tickTwin, 15000);
   refresh();
   loadPanel();
   setInterval(refresh, 1500);
+  document.addEventListener("visibilitychange", () => (document.visibilityState === "visible" ? refresh() : noteVisible()));
 </script>
 </body>
 </html>

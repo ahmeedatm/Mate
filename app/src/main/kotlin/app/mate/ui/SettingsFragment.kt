@@ -23,6 +23,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
 import androidx.core.widget.ImageViewCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -43,6 +44,7 @@ import app.mate.device.Tablet
 import app.mate.installers.BackendPlan
 import app.mate.installers.BackendRelease
 import app.mate.installers.CompanionUpdater
+import app.mate.installers.InstallerHint
 import app.mate.installers.InstallerService
 import app.mate.kiosk.FreshStart
 import app.mate.kiosk.Kiosk
@@ -55,6 +57,7 @@ import app.mate.net.Identity
 import app.mate.net.Link
 import app.mate.net.UpdateSource
 import app.mate.net.Wifi
+import app.mate.presence.PresenceCamera
 import app.mate.trial.EssaiBackend
 import app.mate.trial.EssaiPlan
 import app.mate.trial.Trial
@@ -72,6 +75,9 @@ class SettingsFragment :
     override var topHeader: View? = null
         private set
 
+    /** Mode technicien : carte Kiosque, essais de PR et « Ouvrir l'essai », jusqu'à la sortie des Réglages. */
+    private var technician = false
+
     private lateinit var kioskCard: View
     private lateinit var tabs: List<Pair<View, View>>
 
@@ -87,6 +93,7 @@ class SettingsFragment :
     private lateinit var kioskSecurity: View
     private lateinit var exitLock: SwitchCompat
     private lateinit var powerMenu: SwitchCompat
+    private lateinit var allowDebugging: SwitchCompat
     private lateinit var meetingsCard: View
     private lateinit var autoJoin: SwitchCompat
     private lateinit var autoJoinHint: TextView
@@ -99,11 +106,14 @@ class SettingsFragment :
     private lateinit var nightDim: SwitchCompat
     private lateinit var autoBrightness: SwitchCompat
     private lateinit var autoBrightnessHint: TextView
+    private lateinit var presence: SwitchCompat
+    private lateinit var presenceHint: TextView
     private lateinit var volumeKeysComputer: SwitchCompat
     private lateinit var notifDiscreet: SwitchCompat
     private lateinit var meetingAlert: SwitchCompat
     private lateinit var blockOnComputerLock: SwitchCompat
     private lateinit var lockCode: Button
+    private lateinit var lockAway: SwitchCompat
     private lateinit var wakeWord: SwitchCompat
     private lateinit var wakeStatus: TextView
     private lateinit var weatherLocation: SwitchCompat
@@ -139,6 +149,7 @@ class SettingsFragment :
         computers = view.findViewById(R.id.settings_computers)
         view.findViewById<Button>(R.id.settings_add_computer).setOnClickListener { adder.search() }
         view.findViewById<Button>(R.id.settings_plugins).setOnClickListener { main.showPlugins() }
+        view.findViewById<Button>(R.id.settings_templates).setOnClickListener { TemplatesDialog(requireActivity()).show() }
         view.findViewById<Button>(R.id.settings_add_manual).setOnClickListener { adder.manual() }
         kioskCard = view.findViewById(R.id.settings_kiosk_card)
         topHeader = view.findViewById<View>(R.id.settings_title).apply { setOnLongClickListener { askTechCode(); true } }
@@ -152,6 +163,7 @@ class SettingsFragment :
         kioskSecurity = view.findViewById(R.id.settings_kiosk_security)
         exitLock = view.findViewById(R.id.settings_exit_lock)
         powerMenu = view.findViewById(R.id.settings_power_menu)
+        allowDebugging = view.findViewById(R.id.settings_allow_debugging)
         meetingsCard = view.findViewById(R.id.settings_meetings_card)
         autoJoin = view.findViewById(R.id.settings_autojoin)
         autoJoinHint = view.findViewById(R.id.settings_autojoin_hint)
@@ -182,11 +194,14 @@ class SettingsFragment :
         nightDim = view.findViewById(R.id.settings_night_dim)
         autoBrightness = view.findViewById(R.id.settings_auto_brightness)
         autoBrightnessHint = view.findViewById(R.id.settings_auto_brightness_hint)
+        presence = view.findViewById(R.id.settings_presence)
+        presenceHint = view.findViewById(R.id.settings_presence_hint)
         volumeKeysComputer = view.findViewById(R.id.settings_volume_keys_computer)
         notifDiscreet = view.findViewById(R.id.settings_notif_discreet)
         meetingAlert = view.findViewById(R.id.settings_meeting_alert)
         blockOnComputerLock = view.findViewById(R.id.settings_block_on_computer_lock)
         lockCode = view.findViewById(R.id.settings_lock_code)
+        lockAway = view.findViewById(R.id.settings_lock_away)
         wakeWord = view.findViewById(R.id.settings_wake_word)
         wakeStatus = view.findViewById(R.id.settings_wake_word_status)
         weatherLocation = view.findViewById(R.id.settings_weather_location)
@@ -253,8 +268,8 @@ class SettingsFragment :
     }
 
     override fun onHiddenChanged(hidden: Boolean) {
-        // Carte Kiosque : seulement le temps de la visite du technicien.
-        if (hidden) kioskCard.visibility = View.GONE
+        // Mode technicien : seulement le temps de la visite.
+        if (hidden) endTechnician()
         if (!hidden) {
             renderComputers()
             renderWifi()
@@ -287,7 +302,11 @@ class SettingsFragment :
         val all = Computers.all(ctx)
         if (all.isEmpty()) {
             computers.addView(TextView(ctx).apply {
-                text = getString(R.string.computers_empty, InstallerService.address() ?: getString(R.string.install_address_no_wifi))
+                text = when (val hint = InstallerHint.of(BuildConfig.TRIAL, InstallerService.link())) {
+                    is InstallerHint.Trial -> getString(R.string.computers_empty_trial)
+                    is InstallerHint.NoWifi -> getString(R.string.computers_empty, getString(R.string.install_address_no_wifi))
+                    is InstallerHint.Address -> getString(R.string.computers_empty, hint.link)
+                }
                 textSize = 16f
                 setPadding(0, dp(8), 0, 0)
             })
@@ -479,17 +498,36 @@ class SettingsFragment :
     }
 
     /**
-     * Thèmes en vignettes (ui/ThemePreview : chacune peinte de ses couleurs), sur une rangée. Toucher une vignette
-     * applique le thème (l'activité est recréée).
+     * Thèmes en vignettes (ui/ThemePreview : chacune peinte de ses couleurs), par groupe (ThemeGroup) : le titre du groupe,
+     * puis ses thèmes sur des rangées de [THEME_COLUMNS]. Toucher une vignette applique le thème (l'activité est recréée).
      */
     private fun setUpThemes(rows: LinearLayout) {
         val ctx = requireContext()
         val current = AppTheme.current(ctx)
-        val row = LinearLayout(ctx)
-        for (theme in AppTheme.entries) row.addView(themeTile(theme, theme == current), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        rows.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(8)
-        })
+        for ((index, entry) in AppTheme.entries.groupBy { it.group }.entries.withIndex()) {
+            val (group, themes) = entry
+            rows.addView(
+                TextView(ctx).apply {
+                    setText(group.label)
+                    setTextColor(themeColor(ctx, R.attr.c_text))
+                    typeface = themeFont(ctx, R.attr.c_font_medium)
+                    textSize = 14f
+                    ViewCompat.setAccessibilityHeading(this, true)
+                },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    if (index > 0) topMargin = dp(18)
+                },
+            )
+            for (line in themes.chunked(THEME_COLUMNS)) {
+                val row = LinearLayout(ctx)
+                for (theme in line) row.addView(themeTile(theme, theme == current), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                // Même largeur de vignette partout : la dernière rangée d'un groupe est complétée de places vides.
+                repeat(THEME_COLUMNS - line.size) { row.addView(View(ctx), LinearLayout.LayoutParams(0, 0, 1f)) }
+                rows.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    topMargin = dp(8)
+                })
+            }
+        }
     }
 
     private fun themeTile(theme: AppTheme, chosen: Boolean): View {
@@ -670,6 +708,12 @@ class SettingsFragment :
             Prefs.setNightDim(ctx, checked)
             Screen.apply(requireActivity())
         }
+        // Caméra avant : la permission est demandée ici si elle manque (en kiosque, elle est accordée d'office).
+        presence.setOnCheckedChangeListener { _, checked ->
+            if (checked == Prefs.presenceSleep(ctx)) return@setOnCheckedChangeListener
+            Prefs.setPresenceSleep(ctx, checked)
+            main.onPresenceChanged()
+        }
         // Mode discret : lu à chaque bandeau et à chaque affichage de l'historique, rien d'autre à prévenir.
         notifDiscreet.setOnCheckedChangeListener { _, checked -> Prefs.setNotificationsDiscreet(ctx, checked) }
         // Alerte de réunion : lue à la vérification de chaque minute, rien d'autre à prévenir.
@@ -679,6 +723,16 @@ class SettingsFragment :
             if (checked != Prefs.blockOnComputerLock(ctx)) main.lockScreen.setBlockOnComputerLock(checked)
         }
         lockCode.setOnClickListener { main.lockScreen.chooseCode { renderLockCode() } }
+        // Verrou renforcé : il lui faut un code ; sans code, on le fait choisir, annuler laisse l'option coupée.
+        lockAway.setOnCheckedChangeListener { _, checked ->
+            if (!checked) return@setOnCheckedChangeListener Prefs.setLockAway(ctx, false)
+            if (Prefs.lockCodeHash(ctx) != null) return@setOnCheckedChangeListener Prefs.setLockAway(ctx, true)
+            lockAway.isChecked = false
+            main.lockScreen.chooseCode {
+                Prefs.setLockAway(ctx, true)
+                renderLockCode()
+            }
+        }
         // Mot de réveil : l'activer télécharge le modèle s'il manque ; l'écoute suit tout de suite.
         wakeWord.setOnCheckedChangeListener { _, checked ->
             Prefs.setWakeWord(ctx, checked)
@@ -710,6 +764,10 @@ class SettingsFragment :
         autoBrightnessHint.setText(if (hasLight) R.string.tablet_auto_brightness_hint else R.string.tablet_auto_brightness_none)
         brightness.isEnabled = !autoBrightness.isChecked
         nightDim.isChecked = Prefs.nightDim(ctx)
+        val hasFrontCamera = PresenceCamera.available(ctx)
+        presence.isEnabled = hasFrontCamera
+        presence.isChecked = hasFrontCamera && Prefs.presenceSleep(ctx)
+        presenceHint.setText(if (hasFrontCamera) R.string.tablet_presence_hint else R.string.tablet_presence_none)
         volumeKeysComputer.isChecked = Prefs.volumeKeysOnComputer(ctx)
         notifDiscreet.isChecked = Prefs.notificationsDiscreet(ctx)
         meetingAlert.isChecked = Prefs.meetingAlert(ctx)
@@ -786,6 +844,11 @@ class SettingsFragment :
         }
     }
 
+    /** Caméra refusée ou permission retirée : l'interrupteur revient sur coupé. */
+    fun onPresenceRefused() {
+        if (view != null) presence.isChecked = false
+    }
+
     /** Batterie changée (MainActivity, barre latérale) : détail à jour si les Réglages sont affichés. */
     fun onBattery(state: Tablet.Battery) {
         if (view == null) return
@@ -817,7 +880,8 @@ class SettingsFragment :
 
     /** Bouton vers l'autre appli (essai ou stable), seulement si elle est installée. */
     private fun renderSwitchApp() {
-        switchApp.visibility = if (Trial.isInstalled(requireContext(), Trial.other)) View.VISIBLE else View.GONE
+        val allowed = EssaiPlan.showSwitch(BuildConfig.TRIAL, technician)
+        switchApp.visibility = if (allowed && Trial.isInstalled(requireContext(), Trial.other)) View.VISIBLE else View.GONE
     }
 
     private fun checkUpdates() {
@@ -837,8 +901,7 @@ class SettingsFragment :
             } catch (e: Exception) {
                 updatesStatus.text = errorText(e)
             }
-            // Essais de MR : seulement dans la stable (device owner, qui les installe).
-            if (!BuildConfig.TRIAL) showEssais()
+            showEssais()
         }
         checkCompanion()
     }
@@ -902,14 +965,17 @@ class SettingsFragment :
 
     /** Une ligne par essai publié, sous les mises à jour. Une erreur s'ajoute à la phrase d'état, sans masquer le reste. */
     private suspend fun showEssais() {
+        if (!EssaiPlan.showList(BuildConfig.TRIAL, technician)) return
         try {
             val list = Updater.essais(requireContext())
+            if (view == null || !technician) return
             essais.removeAllViews()
             essaisTitle.visibility = View.VISIBLE
             essaisTitle.setText(if (list.isEmpty()) R.string.essais_none else R.string.essais_title)
             val installed = Updater.installed(requireContext(), Trial.TRIAL)
             for (essai in list) essais.addView(updateRow(essai.update, installed, essai))
         } catch (e: Exception) {
+            if (view == null) return
             updatesStatus.text = listOf(updatesStatus.text, getString(R.string.updates_source_error, getString(R.string.updates_source_trials), errorText(e))).joinToString("\n")
         }
     }
@@ -1106,7 +1172,15 @@ class SettingsFragment :
         if (ok && view != null) renderSwitchApp()
     }
 
-    /** Code technicien : montre la carte Kiosque (quitter, retirer, autoriser les installations). */
+    private fun endTechnician() {
+        technician = false
+        kioskCard.visibility = View.GONE
+        essais.removeAllViews()
+        essaisTitle.visibility = View.GONE
+        renderSwitchApp()
+    }
+
+    /** Code technicien : mode technicien (carte Kiosque, essais de PR, « Ouvrir l'essai »). */
     private fun askTechCode() {
         val ctx = requireContext()
         val input = (layoutInflater.inflate(R.layout.item_input, null, false) as EditText).apply {
@@ -1123,9 +1197,12 @@ class SettingsFragment :
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
             if (input.text.toString() == BuildConfig.TECH_CODE) {
                 dialog.dismiss()
+                technician = true
                 showTab(options = false)
                 kioskCard.visibility = View.VISIBLE
                 renderKiosk()
+                renderSwitchApp()
+                viewLifecycleOwner.lifecycleScope.launch { showEssais() }
             } else {
                 input.setText("")
                 input.error = getString(R.string.tech_code_wrong)
@@ -1135,6 +1212,7 @@ class SettingsFragment :
 
     private fun renderLockCode() {
         lockCode.setText(if (Prefs.lockCodeHash(requireContext()) == null) R.string.lock_code_choose else R.string.lock_code_change)
+        lockAway.isChecked = Prefs.lockAway(requireContext())
     }
 
     private fun renderKiosk() {
@@ -1191,6 +1269,12 @@ class SettingsFragment :
             Prefs.setPowerMenu(ctx, checked)
             Kiosk.applyLockTaskFeatures(ctx)
         }
+        allowDebugging.setOnCheckedChangeListener(null)
+        allowDebugging.isChecked = Prefs.allowDebugging(ctx)
+        allowDebugging.setOnCheckedChangeListener { _, checked ->
+            Prefs.setAllowDebugging(ctx, checked)
+            Kiosk.lockDebugging(ctx, !checked)
+        }
     }
 
     /**
@@ -1218,6 +1302,9 @@ class SettingsFragment :
 
     private companion object {
         const val KEY_OPTIONS_TAB = "settings_options_tab"
+
+        /** Vignettes de thème par rangée. */
+        const val THEME_COLUMNS = 5
 
         /** Facteurs de la taille du texte, en plus de celle d'Android : jusqu'à une fois et demie. */
         val TEXT_SIZES = listOf(

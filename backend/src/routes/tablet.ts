@@ -140,6 +140,7 @@ export default async function tabletRoutes(app: FastifyInstance) {
         case "settings":
         case "layout":
         case "update":
+        case "template":
           // Envoyés seulement par la surveillance des appels (src/calls.ts), les agents Claude (src/agents.ts), celle
           // des notifications (src/notifications.ts), celle des réunions (src/meeting-watch.ts), celle du premier plan
           // (src/foreground-watch.ts), celle des états de touches (src/tile-state.ts), celle du verrouillage (src/screen-lock.ts), celle des alertes maison (src/alerts.ts) et la page locale.

@@ -6,7 +6,9 @@ import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -15,13 +17,17 @@ import app.mate.github.Forge
 import app.mate.github.changeRef
 import app.mate.gitlab.MergeAction
 import app.mate.gitlab.approvalsText
+import app.mate.gitlab.boardColumns
+import app.mate.gitlab.columnWidth
+import app.mate.gitlab.columnsOf
 import app.mate.gitlab.mergeAction
 import app.mate.gitlab.mergeEnabled
 import app.mate.gitlab.mrKey
+import app.mate.gitlab.shownColumns
 import app.mate.net.BackendClient
 import app.mate.net.GitLabMr
 import app.mate.net.GitLabMrs
-import app.mate.net.Pipeline
+import app.mate.net.MrColumn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -29,14 +35,17 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
- * Onglet GitLab du Deck : deux colonnes, « Mes MR » et « À relire », une carte par MR ouverte (pipeline, approbations,
- * état de fusion). Toucher une carte ouvre la MR sur l'ordinateur ; « Fusionner » (appui maintenu) n'est proposé que si
- * GitLab dit la MR prête, et renvoie le commit affiché : GitLab refuse si la MR a bougé depuis. Quand la connexion de
- * l'ordinateur est en lecture seule (`canMerge` faux), une MR prête a « Fusionner sur l'ordi » (simple toucher) à la place :
- * il ouvre la MR sur l'ordinateur, comme le toucher de la carte. Relue toutes les 30 s
- * tant que la vue est affichée. Ordinateur sans compte GitLab connecté : une carte « Connecter GitLab » ouvre la connexion
- * dans le navigateur de l'ordinateur, la vue se remplit seule une fois reliée (relue toutes les 3 s en attendant).
- * Autonome : aucun accès au Deck, posable ailleurs. Sert aussi au widget GitHub (`forge`) : PR, contrôles du dernier commit.
+ * Widget GitLab : un tableau en colonnes, défilant de côté si elles ne tiennent pas. Mes MR, une seule colonne chacune,
+ * par priorité : Draft, À fixer (retour de review plus récent que mon dernier commit), Prête à merger (approuvée), En cours
+ * (pipeline qui tourne), Prête pour review ; puis À review (MR que je dois relire). Une carte par MR : pipeline et ses stages
+ * en bulles, approbations, état de fusion. Toucher une carte ouvre la MR sur l'ordinateur ; « Fusionner » (appui maintenu)
+ * n'est proposé que si GitLab dit la MR prête, et renvoie le commit affiché : GitLab refuse si la MR a bougé depuis. Quand la
+ * connexion de l'ordinateur est en lecture seule (`canMerge` faux), une MR prête a « Fusionner sur l'ordi » (simple toucher)
+ * à la place : il ouvre la MR sur l'ordinateur, comme le toucher de la carte. Relue toutes les 30 s tant que la vue est
+ * affichée. Ordinateur sans compte GitLab connecté : une carte « Connecter GitLab » ouvre la connexion dans le navigateur de
+ * l'ordinateur, la vue se remplit seule une fois reliée (relue toutes les 3 s en attendant).
+ * Autonome : aucun accès au Deck, posable ailleurs. Sert aussi au widget GitHub (`forge`) : PR, contrôles du dernier commit,
+ * en deux colonnes (mes PR, à relire).
  */
 class GitLabView @JvmOverloads constructor(
     context: Context,
@@ -47,10 +56,18 @@ class GitLabView @JvmOverloads constructor(
     private val texts = forgeTexts(forge)
 
     private val status = TextView(context)
-    private val headers = listOf(TextView(context), TextView(context))
-    private val lists = listOf(LinearLayout(context), LinearLayout(context))
-    private val board = LinearLayout(context)
-    private val connectCard = GitLabConnectCard(context, { scope }, ::showError, forge = forge)
+    private val columns = boardColumns(forge)
+    private val headers = columns.map { TextView(context) }
+    private val lists = columns.map { LinearLayout(context) }
+    private val columnViews = columns.map { LinearLayout(context) }
+    private val columnsRow = LinearLayout(context)
+    private val board = HorizontalScrollView(context)
+    private val empty = TextView(context)
+
+    /** Colonnes montrées (GitLab cache les vides) et largeur du widget : de quoi dimensionner les colonnes. */
+    private var visibleColumns: List<MrColumn> = columns
+    private var boardWidth = 0
+    private val connectCard = ConnectCard(context, forgeConnect(forge), { scope }, ::showError)
 
     private lateinit var scope: CoroutineScope
     private var poll: Job? = null
@@ -89,24 +106,36 @@ class GitLabView @JvmOverloads constructor(
                 textSize = 16f
                 typeface = themeFont(context, R.attr.c_font_medium)
                 gravity = Gravity.CENTER_VERTICAL
+                maxLines = 1
             }
-            board.addView(
-                LinearLayout(context).apply {
-                    orientation = VERTICAL
-                    addView(headers[i], LayoutParams(LayoutParams.MATCH_PARENT, dp(36)))
-                    addView(
-                        ScrollView(context).apply {
-                            isVerticalScrollBarEnabled = false
-                            addView(lists[i])
-                        },
-                        LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(6) },
-                    )
-                },
-                LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { if (i > 0) marginStart = dp(12) },
-            )
+            columnViews[i].apply {
+                orientation = VERTICAL
+                addView(headers[i], LayoutParams(LayoutParams.MATCH_PARENT, dp(36)))
+                addView(
+                    ScrollView(context).apply {
+                        isVerticalScrollBarEnabled = false
+                        addView(lists[i])
+                    },
+                    LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(6) },
+                )
+            }
+            columnsRow.addView(columnViews[i], LayoutParams(dp(MIN_COLUMN_DP), LayoutParams.MATCH_PARENT))
+        }
+        board.apply {
+            isHorizontalScrollBarEnabled = false
+            isFillViewport = true
+            addView(columnsRow, ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
         addView(board, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(4) })
-        showHeaders(0, 0)
+        empty.apply {
+            setText(texts.empty)
+            textSize = 15f
+            gravity = Gravity.CENTER
+            setTextColor(themeColor(context, R.attr.c_text_dim))
+            visibility = GONE
+        }
+        addView(empty, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+        showHeaders(columns.map { it to 0 })
         // Carte affichée à la place des colonnes tant que l'ordinateur n'a pas de compte GitLab connecté.
         addView(connectCard, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
     }
@@ -114,6 +143,32 @@ class GitLabView @JvmOverloads constructor(
     private fun showError(e: Exception) {
         status.text = context.errorText(e)
         status.visibility = VISIBLE
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        boardWidth = w
+        layoutColumns()
+    }
+
+    /**
+     * Seules les colonnes non vides sont montrées. Elles se partagent la largeur ; trop étroites (moins de MIN_COLUMN_DP),
+     * elles défilent de côté et la suivante dépasse du bord pour le laisser voir.
+     */
+    private fun layoutColumns() {
+        val width = columnWidth(boardWidth, visibleColumns.size, dp(MIN_COLUMN_DP), dp(COLUMN_GAP_DP))
+        val last = columns.indexOfLast { it in visibleColumns }
+        for ((i, view) in columnViews.withIndex()) {
+            val shown = columns[i] in visibleColumns
+            val params = view.layoutParams as LayoutParams
+            val end = if (i == last) 0 else dp(COLUMN_GAP_DP)
+            if (params.width != width || params.marginEnd != end) {
+                params.width = width
+                params.marginEnd = end
+                view.layoutParams = params
+            }
+            view.visibility = if (shown) VISIBLE else GONE
+        }
     }
 
     fun attach(scope: CoroutineScope) {
@@ -153,6 +208,7 @@ class GitLabView @JvmOverloads constructor(
     private fun showConnected(connected: Boolean) {
         this.connected = connected
         board.visibility = if (connected) VISIBLE else GONE
+        if (!connected) empty.visibility = GONE
         connectCard.visibility = if (connected) GONE else VISIBLE
         if (connected) {
             connectCard.reset()
@@ -168,20 +224,37 @@ class GitLabView @JvmOverloads constructor(
         canMerge = mrs.canMerge
         val keys = (mrs.mine + mrs.review).mapTo(HashSet()) { mrKey(it) }
         messages.keys.retainAll(keys)
-        showHeaders(mrs.mine.size, mrs.review.size)
+        val byColumn = columnsOf(mrs, forge)
+        showHeaders(byColumn.map { (column, list) -> column to list.size })
+        visibleColumns = shownColumns(mrs, forge)
+        layoutColumns()
+        board.visibility = if (visibleColumns.isEmpty()) GONE else VISIBLE
+        empty.visibility = if (visibleColumns.isEmpty()) VISIBLE else GONE
         // Tablette de 2 Go : les cartes ne sont reconstruites que si quelque chose d'affiché a changé.
         val sig = listOf(mrs, busy.toSet(), messages.toMap())
         if (sig == signature) return
         signature = sig
-        fill(lists[0], mrs.mine)
-        fill(lists[1], mrs.review)
+        for ((i, pair) in byColumn.withIndex()) fill(lists[i], pair.second)
         lists.forEach(Look::revealOnce)
     }
 
-    private fun showHeaders(mine: Int, review: Int) {
-        for ((header, pair) in headers.zip(listOf(texts.mine to mine, R.string.gitlab_review to review))) {
-            header.text = context.getString(R.string.gitlab_col_header, context.getString(pair.first), pair.second)
-            header.setTextColor(themeColor(context, if (pair.second == 0) R.attr.c_text_faint else R.attr.c_text))
+    private fun showHeaders(counts: List<Pair<MrColumn, Int>>) {
+        for ((header, pair) in headers.zip(counts)) {
+            val (column, count) = pair
+            header.text = context.getString(R.string.gitlab_col_header, context.getString(columnTitle(column)), count)
+            header.setTextColor(themeColor(context, if (count == 0) R.attr.c_text_faint else R.attr.c_text))
+        }
+    }
+
+    private fun columnTitle(c: MrColumn) = when {
+        forge == Forge.GITHUB -> if (c == MrColumn.REVIEW) R.string.gitlab_review else texts.mine
+        else -> when (c) {
+            MrColumn.DRAFT -> R.string.gitlab_col_draft
+            MrColumn.FIX -> R.string.gitlab_col_fix
+            MrColumn.MERGE -> R.string.gitlab_col_merge
+            MrColumn.RUNNING -> R.string.gitlab_col_running
+            MrColumn.READY -> R.string.gitlab_col_ready
+            MrColumn.REVIEW -> R.string.gitlab_col_review
         }
     }
 
@@ -214,9 +287,10 @@ class GitLabView @JvmOverloads constructor(
         card.findViewById<TextView>(R.id.gitlab_author).text = context.getString(R.string.gitlab_author, mr.author)
         card.findViewById<View>(R.id.gitlab_pipeline_dot).background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
-            setColor(themeColor(context, pipelineColor(mr.pipeline)))
+            setColor(themeColor(context, pipelineColorAttr(mr.pipeline)))
         }
         card.findViewById<TextView>(R.id.gitlab_pipeline).setText(texts.pipeline(mr.pipeline))
+        card.findViewById<StageBubblesView>(R.id.gitlab_stages).show(mr.stages)
         card.findViewById<TextView>(R.id.gitlab_approvals).apply {
             val approvals = approvalsText(mr.approvalsGiven, mr.approvalsRequired)
             text = when {
@@ -271,13 +345,6 @@ class GitLabView @JvmOverloads constructor(
         }
     }
 
-    private fun pipelineColor(p: Pipeline) = when (p) {
-        Pipeline.SUCCESS -> R.attr.c_ok
-        Pipeline.RUNNING -> R.attr.c_warn
-        Pipeline.FAILED -> R.attr.c_ko
-        Pipeline.CANCELED, Pipeline.NONE -> R.attr.c_text_faint
-    }
-
     /** Redessine les cartes avec l'état courant (fusion en cours, message) sans attendre la lecture suivante. */
     private fun redraw() {
         shown?.let(::render)
@@ -315,6 +382,8 @@ class GitLabView @JvmOverloads constructor(
     }
 
     private companion object {
+        const val MIN_COLUMN_DP = 250
+        const val COLUMN_GAP_DP = 12
         const val POLL_MS = 30_000L
         const val CONNECT_POLL_MS = 3_000L
         const val DISABLED_ALPHA = 0.4f

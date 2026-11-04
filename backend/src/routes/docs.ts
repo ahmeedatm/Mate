@@ -1,8 +1,8 @@
 import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
-import { framePhotos, kindOf, listDocs, resolveDoc, savePhoto, saveShared } from "../docs.ts";
-import { openTarget } from "../os.ts";
+import { checkOpenableDoc, framePhotos, kindOf, listDocs, resolveDoc, savePhoto, saveShared } from "../docs.ts";
+import { canControl, openTarget } from "../os.ts";
 
 export default async function docRoutes(app: FastifyInstance) {
   // --- Documents partagés (dossier DOCS_DIR sur l'ordinateur)
@@ -26,7 +26,10 @@ export default async function docRoutes(app: FastifyInstance) {
     "/docs/open",
     { schema: { body: { type: "object", required: ["path"], properties: { path: { type: "string" } } } } },
     async (req) => {
-      await openTarget(resolveDoc(req.body.path));
+      const full = resolveDoc(req.body.path);
+      // Hors Mac et Windows, openTarget répond 501 : la garde n'a rien à protéger.
+      if (canControl) await checkOpenableDoc(full);
+      await openTarget(full);
       return { ok: true };
     },
   );

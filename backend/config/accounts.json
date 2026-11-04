@@ -1,7 +1,6 @@
 {
-  "_comment": "Identifiants PUBLICS des applis enregistrées par le projet (agenda : docs/agenda-comptes.md ; GitLab : docs/gitlab-oauth.md ; GitHub : docs/github-oauth.md). Vide : bouton masqué (agenda : lien ICS seulement ; GitLab, GitHub : GITLAB_TOKEN, GITHUB_TOKEN du .env en secours).",
+  "_comment": "Identifiants PUBLICS des applis enregistrées par le projet (agenda : docs/agenda-comptes.md ; GitHub : docs/github-oauth.md). Vide : bouton masqué (agenda : lien ICS seulement ; GitHub : GITHUB_TOKEN du .env en secours). GitLab n'est plus ici : jeton collé dans la page du compagnon (docs/gitlab-jeton.md).",
   "microsoft": { "clientId": "" },
   "google": { "clientId": "", "clientSecret": "" },
-  "gitlab": { "clientId": "", "scope": "read_api" },
   "github": { "clientId": "", "scope": "repo" }
 }

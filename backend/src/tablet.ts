@@ -15,8 +15,24 @@ import { isScreenLocked } from "./screen-lock.ts";
 export const MODES = ["home", "deck", "docs", "focus", "camera", "tasks", "settings"] as const;
 export const NOISES = ["storm", "forest", "japan", "sea", "lofi", "off"] as const;
 export const FOCUS_ACTIONS = ["start", "pause", "reset", "skip"] as const;
-/** Thèmes de la tablette (AppTheme dans ui/Themes.kt), dans son ordre : Console (par défaut, nuit), Console jour, Contraste élevé, Hush, Spider-Verse (SPIDERMAN). */
-export const THEMES = ["CONSOLE", "CONSOLE_JOUR", "CONTRASTE", "HUSH", "SPIDERMAN", "CADRAN", "CADRAN_NUIT", "RETRO"] as const;
+/** Thèmes de la tablette (AppTheme dans ui/Themes.kt), dans son ordre : Console (par défaut, nuit), Console jour, Clair, Sombre, Cadran, Cadran nuit, Rétro, Hush, Spider-Verse (SPIDERMAN), Registre, Studio, Maison, Tableau, Terminal, Contraste élevé. */
+export const THEMES = [
+  "CONSOLE",
+  "CONSOLE_JOUR",
+  "CLAIR",
+  "SOMBRE",
+  "CADRAN",
+  "CADRAN_NUIT",
+  "RETRO",
+  "HUSH",
+  "SPIDERMAN",
+  "REGISTRE",
+  "STUDIO",
+  "MAISON",
+  "TABLEAU",
+  "TERMINAL",
+  "CONTRASTE",
+] as const;
 
 /** Réglages de la tablette changés depuis la page de l'ordinateur ; un champ absent reste tel quel. */
 export type TabletSettings = {
@@ -40,6 +56,27 @@ export type TabletLayoutChange = {
   rail?: { labels?: boolean; tools?: string[] };
 };
 
+/**
+ * Templates de la tablette (ui/home/TabletTemplates.kt) : une config complète (profils et widgets, barres, thème) sur les
+ * vraies données de l'ordinateur, posée par l'ordre `template` (page de l'ordinateur, outil MCP). Même ordre et mêmes ids
+ * que l'appli.
+ */
+export const TEMPLATES = [
+  {
+    id: "bureau",
+    title: "Bureau",
+    description: "La configuration de base : l'Accueil du jour avec agenda, Focus, applis et raccourcis. Thème Console.",
+  },
+  {
+    id: "dev",
+    title: "Dev",
+    description:
+      "Pour développer : l'Accueil du jour, puis un écran pour les agents Claude, les MR GitLab, les pipelines et les tickets Jira. Thème Cadran nuit.",
+  },
+] as const;
+export const TEMPLATE_IDS = TEMPLATES.map((t) => t.id);
+export type TemplateId = (typeof TEMPLATES)[number]["id"];
+
 export type TabletDoc = { name: string; path: string; kind: string; size: number; mtimeMs: number };
 
 export type TabletCommand =
@@ -58,6 +95,8 @@ export type TabletCommand =
   /** Profils et barres de la page locale : lire l'état de la tablette, ou lui envoyer une configuration. */
   | { type: "layout"; action: "get" }
   | ({ type: "layout"; action: "set" } & TabletLayoutChange)
+  /** Template posé depuis la page locale : la tablette rend son nouvel état comme `layout` `get`, puis se recrée. */
+  | { type: "template"; id: TemplateId }
   /** Mise à jour du Mate depuis la page locale : chercher, ou installer la version trouvée. */
   | { type: "update"; action: "check" | "install" }
   /** Appel entrant (src/calls.ts) : carte Répondre / Ignorer sur la tablette, retirée à `ended`. */

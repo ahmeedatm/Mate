@@ -5,6 +5,7 @@ import type { MediaCommand } from "../screens.ts";
 import { sendToExtension } from "../browser-extension.ts";
 import { fetchPublic } from "../net-guard.ts";
 import { sendMediaKey } from "./keys.ts";
+import { automation } from "./permissions.ts";
 import { osascript, run } from "./run.ts";
 
 /**
@@ -154,11 +155,16 @@ export function tabTitle(title: string, site: string): string {
   return cleaned.toLowerCase() === site.toLowerCase() ? "" : cleaned;
 }
 
-/** Spotify, Musique, puis les onglets des navigateurs ; `running()` ne lance pas l'appli. Firefox ne répond pas. */
+/**
+ * Spotify, Musique, puis les onglets des navigateurs ; `running()` ne lance pas l'appli. Firefox ne répond pas.
+ * `argv[0]` : applis dont l'Automation est accordée (`automation.names`), les autres ne sont pas interrogées.
+ */
+const FALLBACK_APPS = ["Spotify", "Music", "Google Chrome", "Safari", "Arc", "Microsoft Edge", "Brave Browser", "Vivaldi", "Opera"];
 const FALLBACK_SCRIPT = `
-function run() {
+function run(argv) {
   const out = [];
-  function app(name) { try { const a = Application(name); return a.running() ? a : null; } catch (e) { return null; } }
+  const allowed = JSON.parse(argv[0]);
+  function app(name) { if (!allowed.includes(name)) return null; try { const a = Application(name); return a.running() ? a : null; } catch (e) { return null; } }
   for (const name of ["Spotify", "Music"]) {
     const p = app(name);
     if (p) try {
@@ -304,7 +310,9 @@ export function mergeSessions(
 }
 
 async function readPlayersAndTabs(): Promise<(RawPlayer | RawTab)[]> {
-  return JSON.parse(await osascript(FALLBACK_SCRIPT, [], "JavaScript").catch(() => "[]"));
+  const allowed = await automation.names(FALLBACK_APPS);
+  if (!allowed.length) return [];
+  return JSON.parse(await osascript(FALLBACK_SCRIPT, [JSON.stringify(allowed)], "JavaScript").catch(() => "[]"));
 }
 
 /** Titre que le navigateur donne à macOS quand la page ne décrit pas ce qu'elle joue (Chrome, en français ou en anglais). */
@@ -419,6 +427,8 @@ export async function mediaControl(action: MediaAction, app?: string, positionMs
   setTimeout(() => void refreshOthers(), 700);
   const target = known.find((s) => s.app === app) ?? known.find((s) => s.current);
   const script = target && playerScript(target.app, action, positionMs);
+  // Spotify ou Musique sans Automation accordée : ni ordre AppleScript (fenêtre de macOS), ni autre voie qui l'ignorerait.
+  if (script) await automation.requireApp(PLAYERS[target.app]);
   if (script)
     return osascript(script).then(
       () => true,

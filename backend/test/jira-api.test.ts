@@ -120,6 +120,40 @@ describe("jira : clé de fusion et union des colonnes", () => {
     );
   });
 
+  it("mergeBoardColumns : trois tableaux, une colonne présente deux fois n'apparaît qu'une fois, chaque colonne propre à un tableau est ajoutée", () => {
+    const merged = mergeBoardColumns([
+      cols("Backlog", "To Do", "In Progress", "Ready for Dev", "In Review", "Done"),
+      cols("To Do", "In Progress", "Code Review", "Ready for QA", "Done"),
+      cols("Backlog", "Selected for Development", "In Progress", "QA Review", "Done"),
+    ]);
+    assert.deepEqual(
+      merged.map((c) => c.title),
+      [
+        "Backlog",
+        "Selected for Development",
+        "To Do",
+        "In Progress",
+        "QA Review",
+        "Code Review",
+        "Ready for QA",
+        "Ready for Dev",
+        "In Review",
+        "Done",
+      ],
+    );
+  });
+
+  it("mergeBoardColumns : aucune colonne d'un tableau ne disparaît, quels que soient les noms voisins", () => {
+    const boards = [
+      cols("Ready for Dev", "Ready for QA", "Code Review"),
+      cols("Ready for QA", "Design Review", "QA Review"),
+      cols("In Review", "Ready", "Test Review"),
+    ];
+    const titles = mergeBoardColumns(boards).map((c) => columnKey(c.title));
+    for (const board of boards) for (const c of board) assert.ok(titles.includes(columnKey(c.name)), c.name);
+    assert.equal(new Set(titles).size, titles.length, "une colonne n'apparaît qu'une fois");
+  });
+
   it("mergeBoardColumns : un seul tableau, aucun, et deux colonnes d'un même tableau ne fusionnent pas", () => {
     assert.deepEqual(mergeBoardColumns([]), []);
     assert.deepEqual(
@@ -136,6 +170,26 @@ let authFails = false;
 let transitionStatus = 204;
 let issueStatus = 404;
 let withOutsider = false;
+const MY_ACCOUNT = "acc-moi";
+const colleague = (key: string, status: string, category: string, assignee: string | null, updated: string) => ({
+  ...issue(key, status, category),
+  fields: {
+    ...issue(key, status, category).fields,
+    assignee: assignee && { accountId: assignee === "Moi" ? MY_ACCOUNT : `acc-${assignee}`, displayName: assignee },
+    updated,
+  },
+});
+// Tickets de tout le monde vus par chaque tableau (statut 40 = « Done » du tableau 3, 23 = « READY / GO QA » du 1).
+const BOARD_ISSUES: Record<string, ReturnType<typeof colleague>[]> = {
+  1: [
+    colleague("TECH-30", "READY / GO QA", "indeterminate", "Léa", "2026-11-02T09:00:00.000+0100"),
+    colleague("TECH-31", "READY / GO QA", "indeterminate", "Moi", "2026-11-02T11:00:00.000+0100"),
+  ],
+  3: [
+    colleague("TECH-31", "READY / GO QA", "indeterminate", "Moi", "2026-11-02T11:00:00.000+0100"),
+    colleague("QA-30", "READY / GO QA", "indeterminate", null, "2026-11-02T10:00:00.000+0100"),
+  ],
+};
 const BOARD_PAGES: Record<string, { id: number; name: string }[]> = {
   TECH: [
     { id: 1, name: "TECH Kanban" },
@@ -145,6 +199,13 @@ const BOARD_PAGES: Record<string, { id: number; name: string }[]> = {
   QA: [
     { id: 3, name: "QA" },
     { id: 4, name: "QA bis" },
+  ],
+};
+// Tableaux rangés dans le projet : Jira en omet par projectKeyOrId quand leur filtre ne nomme pas le projet.
+const BOARD_LOCATIONS: Record<string, { id: number; name: string }[]> = {
+  TECH: [
+    { id: 1, name: "TECH Kanban" },
+    { id: 5, name: "Équipe" },
   ],
 };
 const col = (name: string, ...ids: number[]) => ({ name, statuses: ids.map((id) => ({ id: String(id), self: "x" })) });
@@ -201,16 +262,27 @@ const jiraServer = http.createServer((req, res) => {
         ],
       });
     }
-    const boardList = url.match(/^\/rest\/agile\/1\.0\/board\?projectKeyOrId=([A-Z]+)&startAt=(\d+)&maxResults=50$/);
+    const boardList = url.match(/^\/rest\/agile\/1\.0\/board\?(projectKeyOrId|projectLocation)=([A-Z]+)&startAt=(\d+)&maxResults=50$/);
     if (boardList) {
-      const all = BOARD_PAGES[boardList[1]] ?? [];
-      const startAt = Number(boardList[2]);
+      const all = (boardList[1] === "projectKeyOrId" ? BOARD_PAGES : BOARD_LOCATIONS)[boardList[2]] ?? [];
+      const startAt = Number(boardList[3]);
       return send(200, { values: all.slice(startAt, startAt + 2), startAt, isLast: startAt + 2 >= all.length });
     }
     const boardConfig = url.match(/^\/rest\/agile\/1\.0\/board\/(\d+)\/configuration$/);
     if (boardConfig) {
       const columns = BOARD_CONFIGS[boardConfig[1]];
       return columns ? send(200, { columnConfig: { columns } }) : send(404, {});
+    }
+    if (url === "/rest/api/3/myself") return send(200, { accountId: MY_ACCOUNT });
+    const boardIssues = url.match(/^\/rest\/agile\/1\.0\/board\/(\d+)\/issue\?(.*)$/);
+    if (boardIssues) {
+      const params = new URLSearchParams(boardIssues[2]);
+      return send(200, {
+        issues: BOARD_ISSUES[boardIssues[1]] ?? [],
+        jql: params.get("jql"),
+        fields: params.get("fields"),
+        max: params.get("maxResults"),
+      });
     }
     if (url.startsWith("/rest/api/3/issue/TECH-1?")) return send(200, { fields: { status: { id: "10", name: "À faire" } } });
     if (url.startsWith("/rest/api/3/issue/TECH-404")) return send(issueStatus, {});
@@ -256,23 +328,24 @@ after(async () => {
 });
 
 describe("jira : API", () => {
-  it("/local/status dit si Jira est relié, avec l'hôte seulement (ni e-mail ni jeton)", async () => {
+  it("/local/status dit si Jira est relié, avec l'hôte et la source seulement (ni e-mail ni jeton)", async () => {
     const on = await server.call("GET", "/local/status", undefined, false);
-    assert.deepEqual(on.json.jira, { configured: true, site: new URL(site).host });
+    assert.deepEqual(on.json.jira, { configured: true, site: new URL(site).host, source: "env" });
     assert.ok(!JSON.stringify(on.json).includes(API_TOKEN));
     const off = await bare.call("GET", "/local/status", undefined, false);
     assert.deepEqual(off.json.jira, { configured: false, site: null });
   });
 
-  it("/deck/features annonce jira seulement si configuré", async () => {
+  it("/deck/features annonce jira même sans compte relié (la tablette montre « Connecter Jira »)", async () => {
     assert.equal((await server.call("GET", "/deck/features")).json.jira, true);
-    assert.equal((await bare.call("GET", "/deck/features")).json.jira, false);
+    assert.equal((await bare.call("GET", "/deck/features")).json.jira, true);
   });
 
   it("GET /jira/issues : colonnes groupées et triées, requête JQL attendue", async () => {
     seen.length = 0;
     const { status, json } = await server.call("GET", "/jira/issues");
     assert.equal(status, 200);
+    assert.equal(json.connected, true);
     assert.equal(json.boardsChosen, false);
     assert.deepEqual(
       json.columns.map((c: any) => [c.title, c.issues.map((i: any) => i.key)]),
@@ -290,7 +363,7 @@ describe("jira : API", () => {
     });
   });
 
-  it("GET /jira/boards : tableaux des projets de mes tickets, paginés et dédoublonnés, aucune sélection au départ", async () => {
+  it("GET /jira/boards : tableaux des projets de mes tickets et ceux rangés dedans, paginés et dédoublonnés, aucune sélection au départ", async () => {
     const { status, json } = await server.call("GET", "/jira/boards");
     assert.equal(status, 200);
     assert.deepEqual(json, {
@@ -298,6 +371,7 @@ describe("jira : API", () => {
         { id: 1, name: "TECH Kanban", project: "TECH" },
         { id: 2, name: "TECH Scrum", project: "TECH" },
         { id: 3, name: "QA", project: "TECH" },
+        { id: 5, name: "Équipe", project: "TECH" },
         { id: 4, name: "QA bis", project: "QA" },
       ],
       selected: [],
@@ -388,6 +462,131 @@ describe("jira : API", () => {
     );
   });
 
+  it("GET /jira/columns : colonnes de l'union des tableaux, toutes affichées et sans « tous les tickets » au départ", async () => {
+    await server.call("POST", "/jira/boards", { ids: [] });
+    assert.deepEqual((await server.call("GET", "/jira/columns")).json, { boardsChosen: false, columns: [] });
+    await server.call("POST", "/jira/boards", { ids: [1, 3] });
+    const { status, json } = await server.call("GET", "/jira/columns");
+    assert.equal(status, 200);
+    assert.equal(json.boardsChosen, true);
+    assert.deepEqual(
+      json.columns.map((c: any) => [c.key, c.title, c.shown, c.everyone]),
+      [
+        ["backlog", "Backlog", true, false],
+        ["todo", "TO DO", true, false],
+        ["progress", "IN PROGRESS", true, false],
+        ["blocked", "BLOCKED / Standing by", true, false],
+        ["review", "IN REVIEW", true, false],
+        ["goqa", "READY / GO QA", true, false],
+        ["inqa", "IN QA", true, false],
+        ["done", "DONE", true, false],
+        ["rejected", "REJECTED", true, false],
+        ["en attente de reponse", "En attente de réponse", true, false],
+      ],
+    );
+  });
+
+  it("POST /jira/columns : choix gardés dans .data/jira.json à côté des tableaux, relus par GET", async () => {
+    const res = await server.call("POST", "/jira/columns", { hidden: ["backlog", "rejected", "backlog"], everyone: ["goqa"] });
+    assert.deepEqual([res.status, res.json], [200, { ok: true }]);
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(server.dataDir, "jira.json"), "utf8")), {
+      boards: [1, 3],
+      hidden: ["backlog", "rejected"],
+      everyone: ["goqa"],
+    });
+    const { columns } = (await server.call("GET", "/jira/columns")).json;
+    assert.deepEqual(
+      columns.filter((c: any) => !c.shown || c.everyone).map((c: any) => [c.key, c.shown, c.everyone]),
+      [
+        ["backlog", false, false],
+        ["goqa", true, true],
+        ["rejected", false, false],
+      ],
+    );
+  });
+
+  it("choisir des tableaux garde les choix de colonnes", async () => {
+    await server.call("POST", "/jira/boards", { ids: [3, 1] });
+    const stored = JSON.parse(fs.readFileSync(path.join(server.dataDir, "jira.json"), "utf8"));
+    assert.deepEqual(stored, { boards: [3, 1], hidden: ["backlog", "rejected"], everyone: ["goqa"] });
+    await server.call("POST", "/jira/boards", { ids: [1, 3] });
+  });
+
+  it("GET /jira/issues : colonne masquée absente, colonne « tous les tickets » = ceux de tout le monde avec l'assigné, sans doublon, récents d'abord", async () => {
+    seen.length = 0;
+    const { json } = await server.call("GET", "/jira/issues");
+    const titles = json.columns.map((c: any) => c.title);
+    assert.ok(!titles.includes("Backlog") && !titles.includes("REJECTED"));
+    assert.equal(titles.length, 8);
+    const goqa = json.columns.find((c: any) => c.title === "READY / GO QA");
+    assert.deepEqual(goqa.issues, [
+      { key: "TECH-31", summary: "Titre TECH-31", type: "Tâche", priority: "High", done: false },
+      { key: "QA-30", summary: "Titre QA-30", type: "Tâche", priority: "High", done: false },
+      { key: "TECH-30", summary: "Titre TECH-30", type: "Tâche", priority: "High", done: false, assignee: "Léa" },
+    ]);
+    // Les autres colonnes ne montrent que mes tickets.
+    assert.deepEqual(
+      json.columns.find((c: any) => c.title === "TO DO").issues.map((i: any) => i.key),
+      ["TECH-1"],
+    );
+    // Le JQL vise les statuts de la colonne sur chaque tableau choisi, au plus 50 tickets.
+    const asked = seen.filter((r) => r.url.includes("/issue?"));
+    assert.deepEqual(asked.map((r) => r.url.match(/board\/(\d+)\//)?.[1]).sort(), ["1", "3"]);
+    const params = new URLSearchParams(asked[0].url.split("?")[1]);
+    assert.equal(params.get("jql"), "status in (23) ORDER BY updated DESC");
+    assert.equal(params.get("maxResults"), "50");
+    assert.ok(params.get("fields")?.split(",").includes("assignee"));
+  });
+
+  it("colonne « tous les tickets » masquée : aucune requête, et un choix sur une colonne disparue des tableaux est ignoré", async () => {
+    await server.call("POST", "/jira/columns", { hidden: ["goqa"], everyone: ["goqa", "colonne-disparue"] });
+    seen.length = 0;
+    const { json } = await server.call("GET", "/jira/issues");
+    assert.ok(!json.columns.some((c: any) => c.title === "READY / GO QA"));
+    assert.deepEqual(
+      seen.filter((r) => r.url.includes("/issue?")),
+      [],
+    );
+    const { columns } = (await server.call("GET", "/jira/columns")).json;
+    assert.equal(columns.length, 10);
+    assert.ok(!columns.some((c: any) => c.key === "colonne-disparue"));
+  });
+
+  it("« tous les tickets » : une relecture dans les 20 s ne rappelle pas Jira", async () => {
+    await server.call("POST", "/jira/boards", { ids: [1] });
+    await server.call("POST", "/jira/columns", { hidden: [], everyone: ["todo"] });
+    seen.length = 0;
+    await server.call("GET", "/jira/issues");
+    const first = seen.filter((r) => r.url.includes("/issue?jql=")).length;
+    assert.ok(first > 0);
+    seen.length = 0;
+    await server.call("GET", "/jira/issues");
+    assert.equal(seen.filter((r) => r.url.includes("/issue?jql=")).length, 0);
+    await server.call("POST", "/jira/columns", { hidden: [], everyone: [] });
+    await server.call("POST", "/jira/boards", { ids: [1, 3] });
+  });
+
+  it("plafond : 50 tickets au plus par colonne « tous les tickets »", async () => {
+    // Autre ordre de tableaux : la lecture n'est pas celle gardée par un test précédent.
+    await server.call("POST", "/jira/boards", { ids: [3, 1] });
+    BOARD_ISSUES[1] = Array.from({ length: 60 }, (_, i) =>
+      colleague(`TECH-${100 + i}`, "READY / GO QA", "indeterminate", "Léa", `2026-11-01T10:${String(i).padStart(2, "0")}:00.000+0100`),
+    );
+    await server.call("POST", "/jira/columns", { hidden: [], everyone: ["goqa"] });
+    const { json } = await server.call("GET", "/jira/issues");
+    const goqa = json.columns.find((c: any) => c.title === "READY / GO QA");
+    assert.equal(goqa.issues.length, 50);
+    assert.equal(goqa.issues[0].key, "TECH-31", "le plus récent d'abord");
+    await server.call("POST", "/jira/columns", { hidden: [], everyone: [] });
+    await server.call("POST", "/jira/boards", { ids: [1, 3] });
+  });
+
+  it("POST /jira/columns : 400 sur un corps invalide", async () => {
+    for (const body of [{}, { hidden: [] }, { hidden: [], everyone: [""] }]) {
+      assert.equal((await server.call("POST", "/jira/columns", body)).status, 400, JSON.stringify(body));
+    }
+  });
+
   it("tableau choisi disparu de Jira : message en français", async () => {
     await server.call("POST", "/jira/boards", { ids: [404] });
     const res = await server.call("GET", "/jira/issues");
@@ -440,7 +639,7 @@ describe("jira : API", () => {
     const res = await server.call("GET", "/jira/issues");
     authFails = false;
     assert.equal(res.status, 500);
-    assert.equal(res.json.message, "Jira refuse les identifiants du fichier .env de l'ordinateur.");
+    assert.equal(res.json.message, "Jira refuse les identifiants de l'ordinateur : reconnecte Jira dans la page de Mate.");
   });
 
   it("Jira injoignable : message en français, pas l'erreur réseau brute", async () => {
@@ -471,12 +670,15 @@ describe("jira : API", () => {
     assert.deepEqual(server.osCalls(), [{ fn: "openTarget", args: [`${site}/browse/TECH-1`] }]);
   });
 
-  it("Jira non configuré : 501 sur toutes les routes", async () => {
-    const message = { error: "Jira n'est pas configuré sur l'ordinateur." };
+  it("Jira non relié : tickets en « pas connecté », 501 sur les autres routes", async () => {
+    const issues = await bare.call("GET", "/jira/issues");
+    assert.deepEqual([issues.status, issues.json], [200, { connected: false, boardsChosen: false, columns: [] }]);
+    const message = { error: "Jira n'est pas relié sur l'ordinateur." };
     for (const [method, route, body] of [
-      ["GET", "/jira/issues"],
       ["GET", "/jira/boards"],
       ["POST", "/jira/boards", { ids: [1] }],
+      ["GET", "/jira/columns"],
+      ["POST", "/jira/columns", { hidden: [], everyone: [] }],
       ["GET", "/jira/issues/TECH-1/transitions"],
       ["POST", "/jira/issues/TECH-1/transitions", { id: "11" }],
       ["POST", "/jira/issues/TECH-1/open"],
@@ -490,5 +692,7 @@ describe("jira : API", () => {
     assert.equal((await server.call("GET", "/jira/issues", undefined, false)).status, 401);
     assert.equal((await server.call("GET", "/jira/boards", undefined, false)).status, 401);
     assert.equal((await server.call("POST", "/jira/boards", { ids: [1] }, false)).status, 401);
+    assert.equal((await server.call("GET", "/jira/columns", undefined, false)).status, 401);
+    assert.equal((await server.call("POST", "/jira/columns", { hidden: [], everyone: [] }, false)).status, 401);
   });
 });

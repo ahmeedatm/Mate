@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { clipboardUnavailable } from "../src/driver-common.ts";
+import { clipboardUnavailable, mediaUnavailable, screenDenied } from "../src/driver-common.ts";
 import { checkOpenTarget } from "../src/open-guard.ts";
 import type { NotificationBatch, RawNotification } from "../src/notifications.ts";
 import type { Perf } from "../src/perf.ts";
@@ -48,6 +48,12 @@ export type FakeState = {
   notificationsUnavailable?: boolean;
   /** Pas de presse-papiers (session sans bureau) : getClipboard répond 503. */
   clipboardUnavailable?: boolean;
+  /** Pas de lecture en cours (session sans bureau) : mediaSessions répond 503. */
+  mediaUnavailable?: boolean;
+  /** Mac sans l'autorisation « Enregistrement de l'écran » : screenPreview répond 403. */
+  screenDenied?: boolean;
+  /** Durée d'une capture (screenPreview), pour qu'elle recouvre une autre requête. */
+  screenDelayMs?: number;
   /** Mesure renvoyée par getPerf (sinon une mesure fixe). */
   perf?: Perf;
   /** Fenêtres par appli ; `elsewhere` : sur un autre bureau. */
@@ -98,8 +104,8 @@ function write(next: FakeState) {
 }
 
 function record(fn: string, ...args: unknown[]) {
-  // Comme src/os.ts : hors Mac et Windows, toute action répond 501 (sauf alert, sans effet, et runShortcut, propre au Mac).
-  if (!canControl && fn !== "alert" && fn !== "runShortcut") unsupported();
+  // Comme src/os.ts : hors Mac et Windows, toute action répond 501 (sauf notify, sans effet, et runShortcut, propre au Mac).
+  if (!canControl && fn !== "notify" && fn !== "runShortcut") unsupported();
   const call = `${fn} ${args[0] ?? ""}`;
   if (read().fail?.some((f) => f === fn || (f.includes(" ") && call.startsWith(f)))) throw new Error(`${fn} a échoué (test)`);
   // Arguments facultatifs absents : retirés, comme ils le seraient une fois passés en JSON.
@@ -182,6 +188,15 @@ export async function getClipboard(): Promise<ClipboardContent> {
   if (read().clipboardUnavailable) clipboardUnavailable();
   if (read().fail?.includes("getClipboard")) throw new Error("getClipboard a échoué (test)");
   return read().clipboard ?? { kind: "empty" };
+}
+
+/** Un JPEG réduit, ici seulement son début et sa fin : les tests regardent l'en-tête, pas l'image. */
+export async function screenPreview(maxWidth: number): Promise<Buffer> {
+  record("screenPreview", maxWidth);
+  if (read().screenDenied) screenDenied();
+  const delay = read().screenDelayMs;
+  if (delay) await new Promise((r) => setTimeout(r, delay));
+  return Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
 }
 
 export async function readNotifications(cursor?: string): Promise<NotificationBatch> {
@@ -270,6 +285,7 @@ export async function pointerGesture(name: string) {
 }
 
 export async function mediaSessions(): Promise<MediaSession[]> {
+  if (read().mediaUnavailable) mediaUnavailable();
   return read().media ?? [];
 }
 
@@ -448,8 +464,8 @@ export async function systemCommand(command: SystemCommand) {
   record("systemCommand", command);
 }
 
-export async function alert(title: string, text: string) {
-  record("alert", title, text);
+export async function notify(title: string, text: string) {
+  record("notify", title, text);
 }
 
 export function riotLockfile(): string | null {

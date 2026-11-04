@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Veille à la présence (presence/Presence), ajouté par-dessus tout l'écran de l'appli : voile noir (couleurs du cadre
+     photo : noir et blanc dans chaque thème) et voyant de la caméra, visible aussi par-dessus le cadre photo. -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <FrameLayout
+        android:id="@+id/presence_veil"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/c_frame_bg"
+        android:clickable="true"
+        android:contentDescription="@string/presence_veil"
+        android:elevation="32dp"
+        android:focusable="true"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/presence_eye"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:background="@drawable/scrim"
+        android:contentDescription="@string/presence_watching"
+        android:elevation="34dp"
+        android:padding="8dp"
+        android:src="@drawable/ic_videocam"
+        android:visibility="gone"
+        app:tint="?attr/c_frame_text" />
+</merge>

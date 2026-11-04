@@ -112,6 +112,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expectStatus(await call("POST", "/pair/reveal", { request: req.json.request, nonce: secret }, false), 200, "/pair/reveal");
         const status = await call("GET", "/local/status");
         expectStatus(status, 200, "/local/status");
+        expect(typeof status.json.waiting === "boolean", "/local/status ne dit pas si l'ordinateur attend une tablette (waiting)");
         expect(status.json.pairing?.tablet === "Sanity CI", "la page locale n'annonce pas la tablette qui attend");
         expect(!/\d{6}/.test(JSON.stringify(status.json.pairing)), "la page locale ne doit jamais montrer le code");
         const n = createHash("sha256").update(`mate-pair-1\n\n${secret}\n${req.json.nonce}`).digest().readUInt32BE(0) % 1_000_000;
@@ -254,11 +255,15 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       name: "Ne pas déranger à la main (pastille de l'Accueil)",
       run: async () => {
         expectStatus(await call("PUT", "/system/dnd", { on: "oui" }), 400, "PUT /system/dnd invalide");
+        // Mac sans Accessibilité (install-mac.sh) : le réglage passe par System Events, comme les fenêtres et le pointeur.
+        if (os === "mac" && accessibility === false) throw new Skip("Accessibilité non accordée");
         const read = await call("GET", "/system/dnd");
         if (!controlled()) {
           expectStatus(read, 501, "/system/dnd hors Mac et Windows");
           return "pas de pilotage ici (501)";
         }
+        // Mac : Centre de contrôle lu par l'Accessibilité.
+        if (os === "mac" && accessibility === false) throw new Skip("Accessibilité non accordée");
         expectStatus(read, 200, "GET /system/dnd");
         if (typeof read.json.on !== "boolean") return "état illisible sur cet ordinateur";
         // L'état actuel reposé tel quel : la route marche sans rien changer pour l'utilisateur.
@@ -498,10 +503,9 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       run: async () => {
         const media = await call("GET", "/system/media");
         if (!controlled()) return expectStatus(media, 501, "/system/media");
-        // Sans session de bureau (compagnon lancé par SSH ou en service), Windows n'a pas de lecteur de médias : comme le
-        // presse-papiers, on passe son tour. Sur un vrai bureau, une erreur fait toujours échouer le contrôle.
-        if (media.status !== 200 && (await call("GET", "/system/clipboard")).status === 503)
-          throw new Skip("lecture en cours indisponible : aucune session de bureau ouverte sur l'ordinateur");
+        // Sans session de bureau (compagnon lancé par SSH ou en service), Windows n'a pas de lecteur de médias : le
+        // compagnon répond 503, comme pour le presse-papiers, et on passe son tour. Toute autre erreur fait échouer le contrôle.
+        if (media.status === 503) throw new Skip(media.json?.message ?? "lecture en cours indisponible");
         expectStatus(media, 200, "/system/media");
         // Une lecture en cours ne se touche pas : la pause n'est essayée que quand rien ne joue (réponse : 0 pause).
         if (media.json.sessions.some((s: { status: string }) => s.status === "playing")) return "lecture en cours, pause non essayée";
@@ -676,7 +680,13 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         if (!controlled()) return expectStatus(mrs, 501, "/gitlab/mrs");
         const features = await call("GET", "/deck/features");
         expectStatus(features, 200, "/deck/features");
-        expect(typeof features.json.gitlab === "boolean", "/deck/features sans booléen gitlab");
+        expect(features.json.gitlab === true, "gitlab absent de /deck/features sur un ordinateur piloté (la carte de connexion en dépend)");
+        // Jeton collé : un jeton mal formé est refusé avant tout appel à GitLab, rien n'est enregistré.
+        expectStatus(
+          await call("PUT", "/local/accounts/gitlab", { token: "pas un jeton" }),
+          400,
+          "PUT /local/accounts/gitlab d'un jeton mal formé",
+        );
         // Jeton refusé ou GitLab injoignable depuis cet ordinateur : pas une panne du compagnon.
         if (mrs.status === 502) throw new Skip(`GitLab inaccessible depuis l'ordinateur (${mrs.json?.error})`);
         expectStatus(mrs, 200, "/gitlab/mrs");
@@ -694,9 +704,14 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         if (!controlled()) return expectStatus(res, 501, "/gitlab/pipelines");
         if (res.status === 502) throw new Skip(`GitLab inaccessible depuis l'ordinateur (${res.json?.error})`);
         expectStatus(res, 200, "/gitlab/pipelines");
-        expect(Array.isArray(res.json.pipelines), "forme de /gitlab/pipelines inattendue");
+        expect(Array.isArray(res.json.schedules) && Array.isArray(res.json.mrs), "forme de /gitlab/pipelines inattendue");
         if (res.json.connected === false) return "pas connecté à GitLab";
-        return `${res.json.pipelines.length} pipelines`;
+        // Lecture seule : jamais d'enregistrement du choix. La première lecture parcourt les projets du compte (45 s au plus).
+        const schedules = await call("GET", "/gitlab/schedules");
+        if (schedules.status === 502) throw new Skip(`GitLab inaccessible depuis l'ordinateur (${schedules.json?.error})`);
+        expectStatus(schedules, 200, "/gitlab/schedules");
+        expect(Array.isArray(schedules.json.projects) && Array.isArray(schedules.json.selected), "forme de /gitlab/schedules inattendue");
+        return `${res.json.schedules.length} planifiées, ${res.json.mrs.length} de mes MR`;
       },
     },
     {
@@ -757,7 +772,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expectStatus(res, 400, "/docs/open d'un .exe");
         // Message en français dans `message` (erreur 400 de Fastify), lu en premier par la tablette.
         const message = res.json.message ?? res.json.error;
-        expect(/programme ou un script/.test(message ?? ""), `refus inattendu : ${message}`);
+        expect(/type de fichier/.test(message ?? ""), `refus inattendu : ${message}`);
       },
     },
     {
@@ -898,6 +913,29 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "aperçu de l'écran",
+      run: async () => {
+        // Lecture seule : une capture réduite de l'écran principal, en mémoire ; rien n'est gardé.
+        const res = await fetch(`${base}/screen/preview`, {
+          headers: { authorization: `Bearer ${opts.token}` },
+          signal: AbortSignal.timeout(45_000),
+        });
+        const body = Buffer.from(await res.arrayBuffer());
+        if (!controlled()) {
+          expect(res.status === 501, `/screen/preview hors Mac et Windows : ${res.status} au lieu de 501`);
+          return "501 hors Mac et Windows";
+        }
+        // Mac sans « Enregistrement de l'écran » : 403 ; session sans bureau ouverte : 503. On passe son tour.
+        if (res.status === 403) throw new Skip("Enregistrement de l'écran non autorisé");
+        if (res.status === 503) throw new Skip("écran illisible : aucune session de bureau ouverte");
+        expect(res.status === 200, `/screen/preview : ${res.status} au lieu de 200`);
+        expect(res.headers.get("content-type") === "image/jpeg", `type d'image inattendu : ${res.headers.get("content-type")}`);
+        expect(body[0] === 0xff && body[1] === 0xd8, "la réponse n'est pas un JPEG");
+        expect(body.length <= 300 * 1024, `image trop lourde pour la tablette : ${body.length} octets`);
+        return `JPEG de ${Math.round(body.length / 1024)} Ko`;
+      },
+    },
+    {
       name: "menu de la semaine",
       run: async () => {
         // Lecture seule : le menu réglé par l'utilisateur n'est jamais changé. Toujours sept jours, du lundi au dimanche.
@@ -915,19 +953,18 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       name: "Jira : tickets",
       run: async () => {
         // Lecture seule : jamais de transition, ce sont les vrais tickets de l'utilisateur.
-        // Hors Mac et Windows, /deck/features répond 501 : on ne sait plus si Jira est configuré.
-        const features = await call("GET", "/deck/features");
-        const configured = features.status === 200 ? features.json.jira : undefined;
         const issues = await call("GET", "/jira/issues");
-        if (configured === false || (configured === undefined && issues.status === 501)) {
-          return expectStatus(issues, 501, "/jira/issues sans Jira configuré");
-        }
         expectStatus(issues, 200, "/jira/issues");
         expect(Array.isArray(issues.json.columns), "forme de /jira/issues inattendue");
+        // Jira pas relié : la réponse le dit, et les tableaux ne sont pas lisibles (501).
+        if (issues.json.connected === false) return expectStatus(await call("GET", "/jira/boards"), 501, "/jira/boards sans Jira relié");
         expect(typeof issues.json.boardsChosen === "boolean", "boardsChosen absent de /jira/issues");
         const boards = await call("GET", "/jira/boards");
         expectStatus(boards, 200, "/jira/boards");
         expect(Array.isArray(boards.json.boards) && Array.isArray(boards.json.selected), "forme de /jira/boards inattendue");
+        const columns = await call("GET", "/jira/columns");
+        expectStatus(columns, 200, "/jira/columns");
+        expect(Array.isArray(columns.json.columns), "forme de /jira/columns inattendue");
       },
     },
     {
@@ -1045,6 +1082,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         // Réglage vide : refusé avant d'atteindre une tablette peut-être réelle.
         expectStatus(await call("PUT", "/local/tablet/settings", {}), 400, "PUT /local/tablet/settings vide");
         expectStatus(await call("POST", "/local/tablet/update", { action: "rollback" }), 400, "POST /local/tablet/update inconnue");
+        expectStatus(await call("POST", "/local/tablet/template", { template: "inconnu" }), 400, "POST /local/tablet/template inconnu");
       },
     },
     {
@@ -1085,6 +1123,22 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const res = await call("GET", "/local/confidentialite", undefined, local ? false : true);
         expectStatus(res, 200, "/local/confidentialite");
         expect(String(res.json).startsWith("Mate : politique de confidentialité"), "politique de confidentialité inattendue");
+      },
+    },
+    {
+      name: "autorisations du Mac",
+      run: async () => {
+        // Appli portable sur Mac seulement : la liste vient de l'utilitaire natif. Ailleurs, liste vide.
+        const res = await call("GET", "/local/permissions", undefined, local ? false : true);
+        expectStatus(res, 200, "/local/permissions");
+        const items: { id?: string; state?: string }[] = res.json.items ?? [];
+        if (items.length === 0) throw new Skip("liste vide : appli portable sur Mac seulement");
+        expect(items[0].id === "accessibility", "Accessibilité absente de la liste des autorisations");
+        expect(
+          items.every((p) => typeof p.state === "string"),
+          "état manquant dans la liste des autorisations",
+        );
+        return `${items.length} autorisations, ${items.filter((p) => p.state === "granted").length} accordées`;
       },
     },
     {

@@ -54,7 +54,7 @@ const CATALOG: PluginDef[] = [
     kind: "app",
     name: "Jira",
     description: "Voir ses tickets en colonnes et changer leur statut",
-    present: () => jiraConfigured,
+    present: jiraConfigured,
   },
   {
     id: "open",

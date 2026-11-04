@@ -10,13 +10,16 @@ import app.mate.net.UpdatesApi
 import app.mate.net.Wifi
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
  * Installeurs de l'ordinateur (Mac, Windows) : téléchargés d'avance depuis GitHub quand une release en
  * publie de nouveaux (empreinte SHA-256 vérifiée, seule la dernière version gardée), puis servis sur le WiFi par
- * [InstallerHttpServer]. Sur le WiFi seulement (aucun forfait n'est entamé) ; jamais d'erreur à l'écran.
+ * [InstallerHttpServer], sous le code affiché sur Bienvenue. Sur le WiFi seulement (aucun forfait n'est entamé) ; jamais d'erreur à l'écran.
  */
 object InstallerService {
 
@@ -27,6 +30,15 @@ object InstallerService {
     private const val FREE_MARGIN = 200L * 1_000_000
 
     private var server: InstallerHttpServer? = null
+    private val syncing = Mutex()
+
+    /** Code d'accès à la page : en mémoire seulement, tiré à chaque affichage de Bienvenue ([newCode]). */
+    @Volatile private var code: String? = null
+
+    private val _progress = MutableStateFlow<Int?>(null)
+
+    /** Pourcentage du téléchargement en cours, null quand aucun ne tourne. */
+    val progress: StateFlow<Int?> = _progress
 
     private fun store(context: Context) = InstallerStore(File(context.applicationContext.filesDir, "installers"))
 
@@ -34,7 +46,7 @@ object InstallerService {
     fun start(context: Context) {
         if (server != null || BuildConfig.TRIAL) return
         val store = store(context)
-        server = InstallerHttpServer(PORT, store.dir, store::onDisk).also { it.start() }
+        server = InstallerHttpServer(PORT, store.dir, store::onDisk, { code }).also { it.start() }
     }
 
     /**
@@ -43,7 +55,34 @@ object InstallerService {
      */
     fun served(context: Context): List<Installer> = if (BuildConfig.TRIAL) emptyList() else store(context).onDisk()
 
-    /** `http://<ip de la tablette>:8080`, null sans réseau. Affiché sur Bienvenue et dans Réglages. */
+    /** Nouveau code, l'ancien ne marche plus. */
+    @Synchronized
+    fun newCode(): String = InstallerAccess.newCode().also { code = it }
+
+    @Synchronized
+    private fun code(): String = code ?: newCode()
+
+    /**
+     * Code courant, envoyé dans l'état du poll (HTTPS, jeton) : l'ordinateur appairé le lit là pour télécharger sous
+     * `/<code>/…` sans jamais envoyer son jeton sur le port 8080. Appli d'essai : aucun.
+     */
+    fun servedCode(): String? = if (BuildConfig.TRIAL) null else code()
+
+    /**
+     * Bienvenue fermé : le code lu sur cet écran ne marche plus (un autre est tiré, le poll en a besoin). Seul Bienvenue
+     * expire : le code lu dans Réglages ou dans « trop ancien » vit jusqu'au prochain tirage ou au redémarrage de l'appli.
+     */
+    fun retireCode() {
+        if (!BuildConfig.TRIAL) newCode()
+    }
+
+    /** Adresse à ouvrir sur l'ordinateur : `http://<ip>:8080/<code>` ; null sans réseau et dans l'appli d'essai (elle ne sert pas le port). */
+    fun link(): String? = if (BuildConfig.TRIAL) null else address()?.let { "$it/${code()}" }
+
+    /** Au moins un installeur est complet sur la tablette. */
+    suspend fun ready(context: Context): Boolean = withContext(Dispatchers.IO) { store(context).onDisk().isNotEmpty() }
+
+    /** `http://<ip de la tablette>:8080`, null sans réseau. */
     fun address(): String? = Tablet.ipAddress()?.let { "http://$it:$PORT" }
 
     /** Identité de l'ordinateur actif et installeur plus récent que son compagnon (null : à jour) ; null s'il est injoignable. */
@@ -58,8 +97,9 @@ object InstallerService {
     suspend fun sync(context: Context) {
         if (BuildConfig.TRIAL || Wifi.current(context) == null) return
         val api = UpdatesApi.server() ?: return
-        val store = store(context)
+        if (!syncing.tryLock()) return
         try {
+            val store = store(context)
             val announced = api.installers()
             val onDisk = withContext(Dispatchers.IO) { store.onDisk() }
             for (installer in InstallerPlan.toDownload(announced, onDisk)) download(api, store, installer)
@@ -69,6 +109,9 @@ object InstallerService {
         } catch (e: Exception) {
             // Manifeste absent (404), réseau coupé, disque plein : réessai à la prochaine vérification.
             Log.i(TAG, "Installeurs non mis à jour", e)
+        } finally {
+            _progress.value = null
+            syncing.unlock()
         }
     }
 
@@ -79,7 +122,7 @@ object InstallerService {
                 Log.w(TAG, "Pas assez de place pour ${installer.file}")
                 return
             }
-            val sha256 = api.downloadInstaller(installer, part)
+            val sha256 = api.downloadInstaller(installer, part) { _progress.value = it }
             if (!sha256.equals(installer.sha256, ignoreCase = true)) {
                 Log.w(TAG, "Empreinte de ${installer.file} fausse, fichier jeté")
                 return

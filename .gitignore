@@ -50,3 +50,4 @@ shared/*
 !/docs/claude.md
 # Réglages personnels de Claude, jamais commités
 /.claude/settings.local.json
+/sanity-mac.xml

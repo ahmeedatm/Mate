@@ -17,8 +17,9 @@ import app.mate.R
 /**
  * Vignette d'un thème dans Réglages > Personnalisation : un petit écran peint avec ses propres couleurs (fond, barre de
  * gauche, carte avec « Aa » dans sa police de titres, pastille d'accent). Choisi : cadre de l'accent du thème
- * affiché. Thème à fond animé (Hush, c_backdrop) : un reflet violet et un rose sous la carte en verre. Thème à image
- * de fond (Spider-Verse, c_wallpaper) : l'image réduite (1/8, 160 × 100 px), sans carte, comme ses widgets sans tuile.
+ * affiché. Thème à tubes (Cadran, Cadran nuit, Rétro, c_flow) : trois bandes de leurs couleurs à droite. Thème à fond
+ * animé (Hush, c_backdrop) : un reflet violet et un rose sous la carte en verre. Thème à image de fond (Spider-Verse,
+ * c_wallpaper) : l'image réduite (1/8, 160 × 100 px), sans carte, comme ses widgets sans tuile.
  * Dessinée une fois, rien ne bouge.
  */
 class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolean) : View(context) {
@@ -35,6 +36,11 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
     private val backdrop = themeBool(themed, R.attr.c_backdrop)
     private val wallpaper: Bitmap? = themeRes(themed, R.attr.c_wallpaper).takeIf { it != 0 }
         ?.let { BitmapFactory.decodeResource(resources, it, BitmapFactory.Options().apply { inSampleSize = WALLPAPER_SAMPLE }) }
+    private val flow = if (themeBool(themed, R.attr.c_flow)) {
+        listOf(R.attr.c_flow_dark, R.attr.c_flow_red, R.attr.c_flow_orange).map(::color)
+    } else {
+        emptyList()
+    }
     private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
     private val glow2 = Paint(Paint.ANTI_ALIAS_FLAG)
 
@@ -100,6 +106,12 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
         canvas.drawRect(pad, pad, pad + w * 0.12f, pad + h, fill)
         fill.color = accent
         canvas.drawRoundRect(pad + w * 0.04f, pad + h * 0.2f, pad + w * 0.08f, pad + h * 0.38f, 2 * d, 2 * d, fill)
+        // Tubes à droite : trois bandes de leurs couleurs.
+        flow.forEachIndexed { i, c ->
+            fill.color = c
+            val band = w * 0.06f
+            canvas.drawRect(pad + w * 0.8f + i * band, pad, pad + w * 0.8f + (i + 1) * band, pad + h, fill)
+        }
         // Carte : « Aa » en couleur de texte, pastille d'accent, ligne de texte secondaire.
         rect.set(pad + w * 0.18f, pad + h * 0.16f, pad + w * 0.76f, pad + h * 0.84f)
         fill.color = surface

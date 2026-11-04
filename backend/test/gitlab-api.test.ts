@@ -109,6 +109,8 @@ describe("GET /gitlab/mrs", () => {
     assert.equal(json.mine[0].mergeable, false);
     assert.equal(json.review[0].iid, 99);
     assert.equal(json.review[0].pipeline, "none");
+    assert.equal(json.review[0].column, "review");
+    assert.deepEqual(json.mine[1].stages, []);
     assert.equal(seen.length, 1);
     assert.equal(seen[0].url, "/api/graphql");
     assert.equal(seen[0].token, GITLAB_TOKEN);
@@ -240,9 +242,9 @@ describe("POST /gitlab/mrs/open", () => {
 });
 
 describe("/deck/features et système sans pilotage", () => {
-  it("gitlab vrai avec jeton, faux sans", async () => {
+  it("gitlab vrai avec ou sans jeton (la carte de connexion doit rester trouvable)", async () => {
     assert.equal((await server.call("GET", "/deck/features")).json.gitlab, true);
-    assert.equal((await noToken.call("GET", "/deck/features")).json.gitlab, false);
+    assert.equal((await noToken.call("GET", "/deck/features")).json.gitlab, true);
   });
 
   it("système other : 501 partout, pas de features.gitlab", async () => {

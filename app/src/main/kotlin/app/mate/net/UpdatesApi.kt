@@ -107,7 +107,8 @@ class UpdatesApi internal constructor(
     suspend fun installers(): List<Installer> = io { InstallerPlan.parse(store.manifest()) }
 
     /** Télécharge un installeur de l'ordinateur dans `dest`. Renvoie l'empreinte SHA-256 reçue. */
-    suspend fun downloadInstaller(installer: Installer, dest: File): String = download(installer.file, installer.size, dest) {}
+    suspend fun downloadInstaller(installer: Installer, dest: File, progress: (Int) -> Unit = {}): String =
+        download(installer.file, installer.size, dest, progress)
 
     /** Idem pour un fichier de la source (APK, archive du backend d'un essai) ; `size` sert au pourcentage. */
     suspend fun download(file: String, size: Long, dest: File, progress: (Int) -> Unit): String = io {

@@ -2,7 +2,7 @@
 
 Sur la tablette, le widget **GitHub** montre les pull requests de l'utilisateur (« Mes PR » : écrites ou assignées ; « À relire » :
 relecture demandée) et fusionne celles qui sont prêtes ; le widget **Actions** montre le dernier run GitHub Actions de la branche
-par défaut des dépôts de ces PR (8 au plus). Calqués sur GitLab ([gitlab-oauth.md](gitlab-oauth.md)) : mêmes vues sur la tablette,
+par défaut des dépôts de ces PR (8 au plus). Calqués sur GitLab ([gitlab-jeton.md](gitlab-jeton.md)) : mêmes vues sur la tablette,
 mêmes réponses du compagnon (`project` = `propriétaire/dépôt`, `iid` = numéro de la PR, pipeline = contrôles du dernier commit).
 
 ## Connexion : « device flow »
@@ -69,6 +69,6 @@ appeler GitHub. Le compagnon garde la portée réellement accordée (champ `scop
   autre port de 127.0.0.1, ne peut pas la déclencher), `DELETE /local/accounts/github` ; état dans `github` de `GET /local/status` (`login` : code en attente ou
   dernier résultat). La tablette ouvre la connexion par `POST /local/open { "section": "github" }`.
 - Code : `backend/src/github-auth.ts` (connexion), `backend/src/github.ts` (PR, fusion, Actions), `routes/github.ts` ; tablette :
-  `net/GitHubApi`, `github/Forge` ; vues partagées avec GitLab (`GitLabView`, `PipelinesView`, `GitLabConnectCard`, paramètre `forge`).
+  `net/GitHubApi`, `github/Forge` ; vues partagées avec GitLab (`GitLabView`, `PipelinesView`, `ConnectCard`, paramètre `forge`).
 - Tests : `backend/test/github-api.test.ts` (faux GitHub `test/fake-github.ts` : device flow, GraphQL, fusion, Actions),
   `backend/test/github.test.ts`, `backend/e2e/github.spec.ts` (page locale).

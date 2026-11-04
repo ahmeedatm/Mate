@@ -3,8 +3,17 @@ package app.mate.net
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Ticket Jira de l'utilisateur. `priority` : null si Jira n'en donne pas ; `done` : terminé récemment (atténué, touchable). */
-data class JiraIssue(val key: String, val summary: String, val type: String, val priority: String?, val done: Boolean)
+/**
+ * Ticket Jira. `priority` : null si Jira n'en donne pas ; `done` : terminé récemment (atténué, touchable) ;
+ * `assignee` : nom de l'assigné, seulement pour un ticket qui n'est pas à l'utilisateur (colonne « tous les tickets »).
+ */
+data class JiraIssue(val key: String, val summary: String, val type: String, val priority: String?, val done: Boolean, val assignee: String? = null)
+
+/** Réglage d'une colonne : affichée ou non, et « tous les tickets » (ceux de tout le monde, pas seulement les siens). `key` : clé de l'ordinateur. */
+data class JiraColumnChoice(val key: String, val title: String, val shown: Boolean, val everyone: Boolean)
+
+/** `boardsChosen` faux : aucun tableau choisi, donc aucune colonne à régler. */
+data class JiraColumnChoices(val boardsChosen: Boolean, val columns: List<JiraColumnChoice>)
 
 /** Colonne d'un tableau Jira choisi (vide possible), déjà rangée par l'ordinateur. */
 data class JiraColumn(val title: String, val issues: List<JiraIssue>)
@@ -12,8 +21,11 @@ data class JiraColumn(val title: String, val issues: List<JiraIssue>)
 /** Tableau Jira proposé au choix. */
 data class JiraBoard(val id: Int, val name: String, val project: String)
 
-/** `boardsChosen` faux : aucun tableau choisi, les colonnes sont alors des statuts. */
-data class JiraIssues(val boardsChosen: Boolean, val columns: List<JiraColumn>)
+/**
+ * `boardsChosen` faux : aucun tableau choisi, les colonnes sont alors des statuts. `connected` faux : l'ordinateur n'a pas
+ * de compte Jira relié (réponse normale, pas une erreur) ; absent : relié (ordinateur plus ancien).
+ */
+data class JiraIssues(val boardsChosen: Boolean, val columns: List<JiraColumn>, val connected: Boolean = true)
 
 /** Tableaux proposés par l'ordinateur et ids cochés, dans l'ordre des colonnes. */
 data class JiraBoards(val boards: List<JiraBoard>, val selected: List<Int>)
@@ -32,10 +44,11 @@ fun parseJiraIssues(json: String): JiraIssues {
             JiraColumn(
                 c.getString("title"),
                 c.optJSONArray("issues").mapObjects {
-                    JiraIssue(it.getString("key"), it.optString("summary"), it.optString("type"), it.optStringOrNull("priority"), it.optBoolean("done"))
+                    JiraIssue(it.getString("key"), it.optString("summary"), it.optString("type"), it.optStringOrNull("priority"), it.optBoolean("done"), it.optStringOrNull("assignee"))
                 },
             )
         },
+        root.optBoolean("connected", true),
     )
 }
 
@@ -55,6 +68,20 @@ fun groupBoardsByProject(boards: List<JiraBoard>): List<Pair<String, List<JiraBo
 fun checkedBoardIds(boards: List<JiraBoard>, checked: Set<Int>): List<Int> =
     groupBoardsByProject(boards).flatMap { it.second }.map { it.id }.filter { it in checked }
 
+fun parseJiraColumnChoices(json: String): JiraColumnChoices {
+    val root = JSONObject(json)
+    return JiraColumnChoices(
+        root.optBoolean("boardsChosen"),
+        root.optJSONArray("columns").mapObjects {
+            JiraColumnChoice(it.getString("key"), it.optString("title"), it.optBoolean("shown", true), it.optBoolean("everyone"))
+        },
+    )
+}
+
+/** Clés envoyées à l'enregistrement : colonnes masquées, puis colonnes « tous les tickets ». */
+fun jiraColumnChoiceKeys(columns: List<JiraColumnChoice>): Pair<List<String>, List<String>> =
+    columns.filter { !it.shown }.map { it.key } to columns.filter { it.everyone }.map { it.key }
+
 fun parseJiraTransitions(json: String): List<JiraTransition> =
     JSONObject(json).optJSONArray("transitions").mapObjects {
         JiraTransition(it.getString("id"), it.getString("name"), it.optString("to"), it.optBoolean("needsJira"))
@@ -69,6 +96,14 @@ class JiraApi(private val http: Http) {
 
     suspend fun saveBoards(ids: List<Int>) = http.io {
         http.postJson("/jira/boards", JSONObject().put("ids", JSONArray(ids)))
+        Unit
+    }
+
+    suspend fun columnChoices(): JiraColumnChoices = http.io { parseJiraColumnChoices(http.get("/jira/columns", timeoutMs = 30_000)) }
+
+    suspend fun saveColumnChoices(columns: List<JiraColumnChoice>) = http.io {
+        val (hidden, everyone) = jiraColumnChoiceKeys(columns)
+        http.postJson("/jira/columns", JSONObject().put("hidden", JSONArray(hidden)).put("everyone", JSONArray(everyone)))
         Unit
     }
 

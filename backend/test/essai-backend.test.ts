@@ -50,6 +50,9 @@ function install(platform: Layout["platform"]): Layout {
       "config/deck.json": "deck de l'ordinateur",
       "config/tasks.json": "tâches de l'ordinateur",
       "node/node.exe": "node verrouillé",
+      // Mac : node renommé et agent figé du runtime (portable/mac/agent), hors de ce que gère un essai.
+      "node/darwin-arm64/Mate": "node du Mac",
+      "Mate.app/Contents/MacOS/Mate": "agent figé",
       ...(platform === "windows" ? { "src/win/Mate.exe": "lanceur verrouillé" } : {}),
       ".env": "COMPANION_TOKEN=secret",
     }),
@@ -73,6 +76,9 @@ describe("essai du backend d'une MR", () => {
       assert.equal(read(layout.root, "config/deck.json"), "deck de l'ordinateur");
       assert.equal(read(layout.root, "config/tasks.json"), "tâches de l'ordinateur");
       assert.equal(read(layout.root, "node/node.exe"), "node verrouillé");
+      // L'agent figé garde ses octets : un essai ne change jamais l'empreinte qui porte les autorisations du Mac.
+      assert.equal(read(layout.root, "Mate.app/Contents/MacOS/Mate"), "agent figé");
+      assert.equal(read(layout.root, "node/darwin-arm64/Mate"), "node du Mac");
       if (platform === "windows") assert.equal(read(layout.root, "src/win/Mate.exe"), "lanceur verrouillé");
       assert.equal(read(layout.root, ".env"), "COMPANION_TOKEN=secret");
       // Copie d'origine : le backend installé, sans les données de l'ordinateur.
@@ -80,6 +86,7 @@ describe("essai du backend d'une MR", () => {
       assert.equal(read(copy, "dist/server.mjs"), "serveur origine");
       assert.equal(exists(copy, "config/deck.json"), false);
       assert.equal(exists(copy, "node"), false);
+      assert.equal(exists(copy, "Mate.app"), false);
 
       assert.equal(restoreOrigin(layout), true);
       assert.deepEqual(backendState(layout), { packaged: true, mode: "origin", mr: null, sha256: null });
@@ -88,6 +95,7 @@ describe("essai du backend d'une MR", () => {
       assert.equal(read(layout.root, "config/calls.json"), "calls origine");
       assert.equal(read(layout.root, "config/deck.json"), "deck de l'ordinateur");
       assert.equal(read(layout.root, "node/node.exe"), "node verrouillé");
+      assert.equal(read(layout.root, "Mate.app/Contents/MacOS/Mate"), "agent figé");
       assert.equal(exists(layout.dataDir, "backend-origin"), false, "copie supprimée avec le retour");
     });
   }
@@ -200,6 +208,8 @@ describe("mise à jour stable du backend", () => {
       assert.equal(read(layout.root, "config/deck.json"), "deck de l'ordinateur");
       assert.equal(read(layout.root, "config/tasks.json"), "tâches de l'ordinateur");
       assert.equal(read(layout.root, "node/node.exe"), "node verrouillé");
+      assert.equal(read(layout.root, "Mate.app/Contents/MacOS/Mate"), "agent figé");
+      assert.equal(read(layout.root, "node/darwin-arm64/Mate"), "node du Mac");
       if (platform === "windows") assert.equal(read(layout.root, "src/win/Mate.exe"), "lanceur verrouillé");
       assert.equal(read(layout.root, ".env"), "COMPANION_TOKEN=secret");
       assert.equal(exists(layout.dataDir, "backend-origin"), false, "pas de copie d'origine");

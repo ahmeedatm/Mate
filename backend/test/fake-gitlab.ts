@@ -1,15 +1,13 @@
-import { createHash, randomBytes } from "node:crypto";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 
 /**
- * Faux GitLab pour les tests et l'émulateur : page d'autorisation (OAuth, code + PKCE, appli non confidentielle),
- * `/oauth/token` (code et renouvellement, jeton de renouvellement tournant, portée accordée dans `scope`), `/api/v4/user`,
- * `/api/graphql` et la fusion. Comme le vrai, la page d'autorisation refuse une portée que l'appli n'a pas (`allowedScopes`).
- * Un jeton d'accès (Bearer) ou le jeton personnel `personalToken` (PRIVATE-TOKEN) ouvre l'API ; le reste : 401.
+ * Faux GitLab pour les tests et l'émulateur : `/api/v4/user`, `/api/v4/personal_access_tokens/self` (portées du jeton),
+ * `/api/graphql` (mes MR, et les planifications d'un projet), la liste REST des projets et de leurs planifications, la fusion.
+ * Un jeton personnel (PRIVATE-TOKEN) déclaré dans `tokens` (avec ses portées) ou `personalToken` (secours .env) ouvre l'API ;
+ * le reste : 401.
  */
 
-export const FAKE_CLIENT_ID = "app-id-de-test";
 export const FAKE_SHA = "0123456789abcdef0123456789abcdef01234567";
 
 export const fakeMr = (over: Record<string, unknown> = {}) => ({
@@ -19,25 +17,51 @@ export const fakeMr = (over: Record<string, unknown> = {}) => ({
   detailedMergeStatus: "MERGEABLE",
   diffHeadSha: FAKE_SHA,
   updatedAt: "2026-10-28T10:00:00Z",
+  approved: true,
   approvalsRequired: 1,
   approvalsLeft: 0,
   approvedBy: { nodes: [{ name: "Camille" }] },
   author: { name: "Ahmed" },
   project: { fullPath: "grp/proj" },
   headPipeline: { status: "SUCCESS" },
+  commitsWithoutMergeCommits: { nodes: [] },
+  discussions: { nodes: [] },
   ...over,
 });
 
-/** Pipeline tel que le rend `GET /projects/:id/pipelines/latest`. */
+/** Stages d'un pipeline comme GraphQL les rend (statut en minuscules). */
+export const fakeStages = (...stages: [name: string, status: string][]) => ({
+  nodes: stages.map(([name, status]) => ({ name, status })),
+});
+
+/** Pipeline tel que GraphQL le rend (`headPipeline` d'une MR, `lastPipeline` d'une planification). */
 export const fakePipeline = (over: Record<string, unknown> = {}) => ({
-  id: 500,
+  id: "gid://gitlab/Ci::Pipeline/500",
+  status: "SUCCESS",
   ref: "main",
-  status: "success",
-  created_at: "2026-10-29T09:00:00Z",
-  started_at: "2026-10-29T09:00:10Z",
-  finished_at: "2026-10-29T09:05:00Z",
+  createdAt: "2026-10-29T09:00:00Z",
+  startedAt: "2026-10-29T09:00:10Z",
+  finishedAt: "2026-10-29T09:05:00Z",
   duration: 290,
+  stages: fakeStages(["build", "success"], ["test", "success"]),
   ...over,
+});
+
+/** Planification de pipelines comme GraphQL la rend (`id` global, dernier pipeline). */
+export const fakeSchedule = (over: Record<string, unknown> = {}) => ({
+  id: "gid://gitlab/Ci::PipelineSchedule/7",
+  description: "Nightly",
+  ref: "main",
+  active: true,
+  lastPipeline: fakePipeline(),
+  ...over,
+});
+
+/** Discussion de review : résolue ou non, ses messages (date, auteur, système ou non). */
+export const fakeDiscussion = (resolved: boolean, notes: { at: string; by: string; system?: boolean }[], resolvable = true) => ({
+  resolvable,
+  resolved,
+  notes: { nodes: notes.map((n) => ({ createdAt: n.at, system: n.system ?? false, author: { username: n.by } })) },
 });
 
 export type Seen = { method: string; url: string; authorization?: string; privateToken?: string; body: any };
@@ -46,61 +70,52 @@ export type FakeGitlab = {
   url: string;
   /** Requêtes reçues, dans l'ordre. */
   seen: Seen[];
-  /** Jetons émis (accès et renouvellement) : pour vérifier qu'ils ne fuient pas. */
-  issued: string[];
-  /** Durée annoncée des jetons d'accès, en secondes (7200 comme GitLab ; ≤ 60 : à renouveler à chaque appel). */
-  expiresIn: number;
-  /** Jeton personnel accepté en PRIVATE-TOKEN (secours .env). */
+  /** Jeton personnel accepté en PRIVATE-TOKEN (secours .env), portée `api`. */
   personalToken: string;
-  /** Portées de l'appli OAuth : l'autorisation en demandant une autre est refusée (réglage de l'admin GitLab). */
-  allowedScopes: string[];
-  /** Portée annoncée dans la réponse du jeton à la place de celle demandée (GitLab peut en accorder moins). */
-  grantScope?: string;
+  /** Jetons personnels valides (collés dans la page du compagnon) et leurs portées. */
+  tokens: Record<string, string[]>;
+  /** Code HTTP de `/personal_access_tokens/self` (200 : normal ; 404 : GitLab d'avant la 15.5, portées inconnues). */
+  selfStatus: number;
   /** Code HTTP de la fusion (200 : fusionnée). */
   mergeStatus: number;
-  /** Jetons d'accès et de renouvellement tous révoqués : l'API répond 401, le renouvellement `invalid_grant`. */
+  /** Code HTTP forcé pour la requête GraphQL des MR (200 : normal ; 403 : accès interdit). */
+  graphqlStatus: number;
+  /** Tous les jetons personnels déclarés sont révoqués : l'API répond 401. */
   revokeAll: () => void;
-  /** Page d'autorisation, étape « Autoriser » : adresse de retour de l'appli avec le code (ou l'erreur si `deny`). */
-  authorize: (authorizeUrl: string, deny?: boolean) => Promise<string>;
   mrs: { assigned: unknown[]; review: unknown[] };
-  /** Dernier pipeline de la branche par défaut, par chemin de projet (absent : 404, projet sans pipeline). */
-  pipelines: Record<string, unknown>;
+  /** Planifications de pipelines (nœuds GraphQL, voir `fakeSchedule`), par chemin de projet. */
+  schedules: Record<string, unknown[]>;
+  /** Projets dont le compte est membre (`GET /projects?membership=true`), dans l'ordre rendu. */
+  memberProjects: string[];
+  /** Projets dont les planifications sont interdites au compte (GraphQL : 403, REST : 403, comme un rôle sans accès à la CI). */
+  deniedProjects: string[];
+  /** Projets dont les planifications répondent 500 (GraphQL et REST) : un projet en panne, pas GitLab entier. */
+  brokenProjects: string[];
   /** Noms des jobs en échec, par id de pipeline. */
   failedJobs: Record<number, string[]>;
-  /** Code HTTP forcé pour `pipelines/latest` (200 : normal). */
-  pipelinesStatus: number;
+  /** Code HTTP forcé pour les requêtes de planifications, GraphQL et REST (200 : normal). */
+  schedulesStatus: number;
   stop: () => Promise<void>;
 };
 
-const sha256url = (s: string) => createHash("sha256").update(s).digest("base64url");
-
 export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
-  let counter = 0;
-  const codes = new Map<string, { challenge: string; redirectUri: string; scope: string }>();
-  const access = new Set<string>();
-  const refresh = new Map<string, string>();
   const fake: FakeGitlab = {
     url: "",
     seen: [],
-    issued: [],
-    expiresIn: 7200,
     personalToken: "",
-    allowedScopes: ["read_api", "openid", "profile", "email"],
+    tokens: {},
+    selfStatus: 200,
     mergeStatus: 200,
-    pipelines: {},
+    graphqlStatus: 200,
+    schedules: {},
+    memberProjects: [],
+    deniedProjects: [],
+    brokenProjects: [],
     failedJobs: {},
-    pipelinesStatus: 200,
+    schedulesStatus: 200,
     revokeAll: () => {
-      access.clear();
-      refresh.clear();
-    },
-    authorize: async (authorizeUrl, deny = false) => {
-      const res = await fetch(authorizeUrl, { redirect: "manual" });
-      const page = await res.text();
-      const link = new RegExp(`href="([^"]+)">${deny ? "Refuser" : "Autoriser"}<`).exec(page)?.[1];
-      if (!link) throw new Error(`Page d'autorisation inattendue (${res.status}) : ${page.slice(0, 200)}`);
-      const done = await fetch(fake.url + link, { redirect: "manual" });
-      return done.headers.get("location") ?? "";
+      fake.tokens = {};
+      fake.personalToken = "";
     },
     mrs: {
       assigned: [fakeMr(), fakeMr({ iid: "3", updatedAt: "2026-10-29T10:00:00Z", detailedMergeStatus: "NOT_APPROVED" })],
@@ -109,26 +124,10 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
     stop: () => new Promise((r) => server.close(() => r())),
   };
 
-  const issue = (scope: string) => {
-    const token = {
-      access_token: `at-${counter}-${randomBytes(8).toString("hex")}`,
-      refresh_token: `rt-${counter++}-${randomBytes(8).toString("hex")}`,
-    };
-    access.add(token.access_token);
-    refresh.set(token.refresh_token, scope);
-    fake.issued.push(token.access_token, token.refresh_token);
-    return {
-      ...token,
-      token_type: "bearer",
-      scope: fake.grantScope ?? scope,
-      expires_in: fake.expiresIn,
-      created_at: Math.floor(Date.now() / 1000),
-    };
-  };
   const authorized = (req: http.IncomingMessage) => {
-    const bearer = /^Bearer (.+)$/.exec(String(req.headers.authorization ?? ""))?.[1];
-    const personal = req.headers["private-token"];
-    return (bearer !== undefined && access.has(bearer)) || (fake.personalToken !== "" && personal === fake.personalToken);
+    const given = req.headers["private-token"];
+    if (typeof given !== "string" || given === "") return false;
+    return given === fake.personalToken || Object.hasOwn(fake.tokens, given);
   };
 
   const server = http.createServer((req, res) => {
@@ -136,13 +135,12 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
     req.on("data", (c) => (raw += c));
     req.on("end", () => {
       const url = new URL(req.url ?? "/", "http://fake");
-      const isForm = String(req.headers["content-type"] ?? "").includes("x-www-form-urlencoded");
       fake.seen.push({
         method: req.method ?? "",
         url: req.url ?? "",
         authorization: req.headers.authorization,
         privateToken: req.headers["private-token"] as string | undefined,
-        body: raw ? (isForm ? Object.fromEntries(new URLSearchParams(raw)) : JSON.parse(raw)) : undefined,
+        body: raw ? JSON.parse(raw) : undefined,
       });
       const json = (status: number, body: unknown) => {
         res.statusCode = status;
@@ -150,77 +148,63 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
         res.end(JSON.stringify(body));
       };
 
-      if (url.pathname === "/oauth/authorize") {
-        const q = url.searchParams;
-        const redirectUri = q.get("redirect_uri") ?? "";
-        if (
-          q.get("client_id") !== FAKE_CLIENT_ID ||
-          q.get("response_type") !== "code" ||
-          !redirectUri ||
-          !q.get("code_challenge") ||
-          q.get("code_challenge_method") !== "S256"
-        ) {
-          res.statusCode = 400;
-          return res.end("Demande d'autorisation invalide");
-        }
-        const scope = q.get("scope") ?? "";
-        const asked = scope.split(" ").filter(Boolean);
-        if (asked.length === 0 || asked.some((s) => !fake.allowedScopes.includes(s))) {
-          res.statusCode = 400;
-          return res.end("The requested scope is invalid, unknown, or malformed.");
-        }
-        const code = `code-${counter++}-${randomBytes(8).toString("hex")}`;
-        codes.set(code, { challenge: q.get("code_challenge")!, redirectUri, scope });
-        const back = (extra: Record<string, string>) => `${redirectUri}?${new URLSearchParams({ ...extra, state: q.get("state") ?? "" })}`;
-        const link = (href: string, text: string) => `<a href="${`/oauth/decision?to=${encodeURIComponent(href)}`}">${text}</a>`;
-        res.setHeader("content-type", "text/html; charset=utf-8");
-        return res.end(
-          `<!doctype html><title>Faux GitLab</title><h1>Autoriser Mate ?</h1><p>Accès à ton compte (${scope}).</p>` +
-            `${link(back({ code }), "Autoriser")} ${link(back({ error: "access_denied" }), "Refuser")}`,
-        );
-      }
-      if (url.pathname === "/oauth/decision") {
-        res.statusCode = 302;
-        res.setHeader("location", url.searchParams.get("to") ?? "/");
-        return res.end();
-      }
-      if (url.pathname === "/oauth/token" && req.method === "POST") {
-        const p = new URLSearchParams(raw);
-        if (p.get("client_id") !== FAKE_CLIENT_ID || p.has("client_secret")) return json(401, { error: "invalid_client" });
-        if (p.get("grant_type") === "authorization_code") {
-          const entry = codes.get(p.get("code") ?? "");
-          codes.delete(p.get("code") ?? "");
-          const verifier = p.get("code_verifier") ?? "";
-          if (!entry || entry.redirectUri !== p.get("redirect_uri") || sha256url(verifier) !== entry.challenge) {
-            return json(400, { error: "invalid_grant", error_description: "Code ou vérificateur PKCE invalide" });
-          }
-          return json(200, issue(entry.scope));
-        }
-        if (p.get("grant_type") === "refresh_token") {
-          const old = p.get("refresh_token") ?? "";
-          const scope = refresh.get(old);
-          if (scope === undefined) return json(400, { error: "invalid_grant", error_description: "Jeton de renouvellement invalide" });
-          refresh.delete(old);
-          // Tournant : le renouvellement invalide aussi les jetons d'accès émis avant.
-          access.clear();
-          return json(200, issue(scope));
-        }
-        return json(400, { error: "unsupported_grant_type" });
-      }
       if (!authorized(req)) return json(401, { message: "401 Unauthorized" });
       if (url.pathname === "/api/v4/user") return json(200, { username: "camille", name: "Camille" });
+      if (url.pathname === "/api/v4/personal_access_tokens/self") {
+        const given = String(req.headers["private-token"]);
+        if (fake.selfStatus !== 200) return json(fake.selfStatus, { message: "refus" });
+        return json(200, { scopes: Object.hasOwn(fake.tokens, given) ? fake.tokens[given] : ["api"] });
+      }
       if (url.pathname === "/api/graphql") {
+        const { query = "", variables } = (req.method === "POST" && raw ? JSON.parse(raw) : {}) as {
+          query?: string;
+          variables?: { path?: string };
+        };
+        if (query.includes("pipelineSchedules")) {
+          const path = variables?.path ?? "";
+          if (fake.schedulesStatus !== 200) return json(fake.schedulesStatus, { message: "refus" });
+          if (fake.deniedProjects.includes(path)) return json(403, { message: "403 Forbidden" });
+          if (fake.brokenProjects.includes(path)) return json(500, { message: "panne" });
+          const nodes = fake.schedules[path];
+          return json(200, { data: { project: nodes ? { pipelineSchedules: { nodes } } : null } });
+        }
+        if (fake.graphqlStatus !== 200) return json(fake.graphqlStatus, { message: "refus" });
         return json(200, {
           data: {
-            currentUser: { assignedMergeRequests: { nodes: fake.mrs.assigned }, reviewRequestedMergeRequests: { nodes: fake.mrs.review } },
+            currentUser: {
+              username: "camille",
+              assignedMergeRequests: { nodes: fake.mrs.assigned },
+              reviewRequestedMergeRequests: { nodes: fake.mrs.review },
+            },
           },
         });
       }
-      const latest = /^\/api\/v4\/projects\/([^/]+)\/pipelines\/latest$/.exec(url.pathname);
-      if (latest && req.method === "GET") {
-        if (fake.pipelinesStatus !== 200) return json(fake.pipelinesStatus, { message: "refus" });
-        const pipeline = fake.pipelines[decodeURIComponent(latest[1])];
-        return pipeline ? json(200, pipeline) : json(404, { message: "404 Not found" });
+      if (url.pathname === "/api/v4/projects" && req.method === "GET") {
+        if (fake.schedulesStatus !== 200) return json(fake.schedulesStatus, { message: "refus" });
+        const perPage = Number(url.searchParams.get("per_page") ?? 20);
+        const page = Number(url.searchParams.get("page") ?? 1);
+        return json(
+          200,
+          fake.memberProjects.slice((page - 1) * perPage, page * perPage).map((path_with_namespace) => ({ path_with_namespace })),
+        );
+      }
+      const scheduleList = /^\/api\/v4\/projects\/([^/]+)\/pipeline_schedules$/.exec(url.pathname);
+      if (scheduleList && req.method === "GET") {
+        const path = decodeURIComponent(scheduleList[1]);
+        if (fake.schedulesStatus !== 200) return json(fake.schedulesStatus, { message: "refus" });
+        if (fake.deniedProjects.includes(path)) return json(403, { message: "403 Forbidden" });
+        if (fake.brokenProjects.includes(path)) return json(500, { message: "panne" });
+        const nodes = (fake.schedules[path] ?? []) as { id: string; description: string; ref: string; active: boolean }[];
+        // Comme le vrai : id numérique, branche en `refs/heads/…`, pas de dernier pipeline.
+        return json(
+          200,
+          nodes.map((n) => ({
+            id: Number(/(\d+)$/.exec(n.id)?.[1]),
+            description: n.description,
+            ref: `refs/heads/${n.ref}`,
+            active: n.active,
+          })),
+        );
       }
       const jobs = /^\/api\/v4\/projects\/[^/]+\/pipelines\/(\d+)\/jobs$/.exec(url.pathname);
       if (jobs && req.method === "GET")

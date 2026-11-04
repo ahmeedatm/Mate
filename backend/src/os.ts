@@ -19,6 +19,7 @@ import * as macKeys from "./mac/keys.ts";
 import * as macLock from "./mac/lock.ts";
 import * as macMedia from "./mac/media.ts";
 import * as macPointer from "./mac/pointer.ts";
+import * as macScreen from "./mac/screen.ts";
 import * as macSystem from "./mac/system.ts";
 import * as macTemperature from "./mac/temperature.ts";
 import * as macWindows from "./mac/windows.ts";
@@ -267,6 +268,16 @@ export function setAudio(change: AudioChange) {
 export async function screenLocked(): Promise<boolean | null> {
   if (headless || !canControl) return false;
   return isMac ? macLock.screenLocked() : win.screenLocked();
+}
+
+/**
+ * Aperçu de l'écran principal : un JPEG d'au plus `maxWidth` px de large, en mémoire (jamais écrit sur le disque).
+ * Mac : 403 sans l'autorisation « Enregistrement de l'écran ».
+ */
+export async function screenPreview(maxWidth: number): Promise<Buffer> {
+  if (isMac) return macScreen.screenPreview(maxWidth);
+  if (isWindows) return win.screenPreview(maxWidth);
+  unsupported();
 }
 
 export async function getDnd(): Promise<boolean | null> {
@@ -535,10 +546,10 @@ export function riotLockfile(): string | null {
   return isWindows && local ? path.join(local, "Riot Games", "Riot Client", "Config", "lockfile") : null;
 }
 
-/** Message bien visible sur l'ordinateur (code d'appairage), sans attendre qu'il soit fermé. */
-export async function alert(title: string, text: string) {
-  // Tests d'intégration et instance de test : pas de boîte réelle à chaque appairage.
+/** Notification système (demande d'appairage), sans attendre qu'elle disparaisse. */
+export async function notify(title: string, text: string) {
+  // Tests d'intégration et instance de test : pas de notification réelle à chaque appairage.
   if (process.env.NO_ALERT || headless) return;
-  if (isWindows) return win.alert(title, text);
-  if (isMac) macSystem.alert(title, text);
+  if (isWindows) return win.notify(title, text);
+  if (isMac) macSystem.notify(title, text);
 }

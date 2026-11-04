@@ -15,9 +15,9 @@ const FONTS = [300, 400, 500]
   .join("\n  ");
 
 const DAY =
-  "--bg: #F4F2EE; --tile: #FFFFFF; --tile-high: #EFECE6; --ink: #1B1C1F; --ink-2: #474B54; --ink-3: #5E626C; --line: #D8D3CA; --now: #3F6B00; --on-now: #FFFFFF; --now-soft: #DFF5B8; --ok: #1F7A4D; --ok-soft: #DFF3E8; --ko: #C62828; --rail: #ECE9E3;";
+  "--bg: #F4F2EE; --tile: #FFFFFF; --tile-high: #EFECE6; --ink: #1B1C1F; --ink-2: #474B54; --ink-3: #5E626C; --line: #D8D3CA; --now: #3F6B00; --on-now: #FFFFFF; --now-soft: #DFF5B8; --ok: #1F7A4D; --ok-soft: #DFF3E8; --ko: #C62828; --ko-soft: #FBE4E2; --rail: #ECE9E3;";
 const NIGHT =
-  "--bg: #17181B; --tile: #23252A; --tile-high: #2A2D33; --ink: #ECEDEF; --ink-2: #B4B8C0; --ink-3: #9095A0; --line: #3A3D44; --now: #B8F34A; --on-now: #16210A; --now-soft: #2C3A12; --ok: #7FD8A6; --ok-soft: #1C3A2B; --ko: #FF7A70; --rail: #17181B;";
+  "--bg: #17181B; --tile: #23252A; --tile-high: #2A2D33; --ink: #ECEDEF; --ink-2: #B4B8C0; --ink-3: #9095A0; --line: #3A3D44; --now: #B8F34A; --on-now: #16210A; --now-soft: #2C3A12; --ok: #7FD8A6; --ok-soft: #1C3A2B; --ko: #FF7A70; --ko-soft: #3F1F1D; --rail: #17181B;";
 
 /** Jour ou nuit selon le mode clair ou sombre de l'ordinateur. */
 export const CONSOLE_CSS = `${FONTS}
