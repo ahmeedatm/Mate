@@ -44,6 +44,7 @@ import app.mate.net.DocEntry
 import app.mate.net.Link
 import app.mate.net.PcNotification
 import app.mate.net.runCatchingCancellable
+import app.mate.presence.Presence
 import app.mate.remote.RemoteLink
 import app.mate.trial.EssaiBackend
 import app.mate.trial.Trial
@@ -147,6 +148,9 @@ class MainActivity : AppCompatActivity() {
     /** Mot de réveil « Mate » : lance la même commande vocale que « Parler », sans toucher l'écran. */
     private lateinit var wake: WakeWord
 
+    /** Veille à la présence : la caméra avant endort l'écran quand personne n'est là (presence/Presence). */
+    private lateinit var presence: Presence
+
     /** Bandeau du haut : en-tête de l'écran, lecture en cours, heure, batterie… (ui/topbar). */
     lateinit var topBar: TopBar
         private set
@@ -172,6 +176,12 @@ class MainActivity : AppCompatActivity() {
     /** Micro refusé hors kiosque (en kiosque, il est accordé d'office) : la commande repart une fois accepté. */
     private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) voice.start() else showBanner(getString(R.string.voice_no_mic), 6)
+    }
+
+    /** Caméra refusée hors kiosque (accordée d'office en kiosque) : la veille à la présence reste coupée. */
+    private val cameraPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (!granted) dropPresence(message = true)
+        presence.sync()
     }
 
     /** Localisation hors kiosque (en kiosque, accordée d'office) : demandée seulement par « Ma position » de la météo. */
@@ -230,6 +240,13 @@ class MainActivity : AppCompatActivity() {
         topBar.onEditDone = { if (current == Mode.HOME && homeFragment()?.isEditing() == true) homeFragment()?.toggleEdit() }
         // Tablette verrouillée : le mot de réveil ne lance rien.
         wake = WakeWord(this, topBar.wakeMic) { if (!lockScreen.isShown) voice.start() }
+        presence = Presence(
+            this,
+            topBar.presenceEye,
+            busy = ::frameBusy,
+            blocked = { current == Mode.CAMERA || (::lockScreen.isInitialized && lockScreen.isShown) },
+            frameShowing = { ::frame.isInitialized && frame.isShowing },
+        )
         // Lumière des agents Claude sous la carte d'appel : un appel prime sur tout.
         // L'alerte de réunion est tout en bas des calques : lumière des agents, question et appel passent devant.
         meetingAlert = MeetingAlertOverlay(this)
@@ -282,6 +299,8 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.rail_lock).setOnClickListener { lockScreen.lockTablet() }
         signals.onMinute {
             Screen.apply(this@MainActivity)
+            // Verrou levé, modification finie : la caméra de la veille repart.
+            presence.sync()
             alerts.remindWater()
             meetingAlert.onMinute()
             followFrame()
@@ -513,11 +532,13 @@ class MainActivity : AppCompatActivity() {
             lifecycleScope.launch { EssaiBackend.restoreOrigin(applicationContext) }
         }
         wake.resume()
+        presence.resume()
     }
 
     /** Mate quitte l'écran (écran éteint, autre appli) : le mot de réveil n'écoute plus. */
     override fun onPause() {
         wake.pause()
+        presence.pause()
         Screen.stopAmbient(this)
         super.onPause()
     }
@@ -573,7 +594,10 @@ class MainActivity : AppCompatActivity() {
             Screen.touched(this)
             lastTouch = SystemClock.elapsedRealtime()
             wakeRail()
-            if (Ringer.isRinging) {
+            if (presence.touched()) {
+                // Écran endormi : le toucher le réveille, il ne clique pas ce qu'il y a dessous.
+                swallowTouch = true
+            } else if (Ringer.isRinging) {
                 // Retrouvée : le toucher arrête la sonnerie, il ne clique pas ce qu'il y a dessous.
                 Ringer.stop()
                 swallowTouch = true
@@ -592,6 +616,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         lastTouch = SystemClock.elapsedRealtime()
+        presence.touched()
         if (frame.isShowing) closeFrame()
         val up = when (event.keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> true
@@ -902,6 +927,30 @@ class MainActivity : AppCompatActivity() {
     /** Réglage du mot de réveil changé : écoute ou non tout de suite. */
     fun onWakeWordChanged() = wake.sync()
 
+    /** Caméra refusée ou permission retirée : le réglage revient sur coupé, l'interrupteur aussi. */
+    fun dropPresence(message: Boolean) {
+        Prefs.setPresenceSleep(this, false)
+        settings()?.onPresenceRefused()
+        if (message) showBanner(getString(R.string.presence_no_camera), 6)
+    }
+
+    val presenceCameraClosing get() = presence.isClosing
+
+    /** Le mode Caméra ferme sa caméra (fermeture asynchrone) : celle de la veille attend [DOC_CAMERA_CLOSE_MS]. */
+    fun onDocCameraClosing() = presence.holdOff(DOC_CAMERA_CLOSE_MS)
+
+    /** Le mode Caméra ouvre la sienne seulement quand la caméra avant de la veille est vraiment fermée. */
+    fun whenPresenceCameraFree(block: () -> Unit) = presence.whenCameraFree(block)
+
+    /** Réglage de la veille à la présence changé : permission caméra demandée si elle manque, puis caméra suivie. */
+    fun onPresenceChanged() {
+        if (Prefs.presenceSleep(this) && checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            cameraPermission.launch(android.Manifest.permission.CAMERA)
+        } else {
+            presence.sync()
+        }
+    }
+
     /**
      * Commande vocale pour les agents Claude ; rend la phrase à afficher. Elle n'agit que sur la carte ouverte (on voit ce
      * qu'on autorise) : sinon, elle ouvre la demande en attente. « continue » relance la dernière session finie qui le permet.
@@ -1012,6 +1061,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0).visibility = View.INVISIBLE
         Screen.frameCharging = battery?.charging ?: true
         Screen.apply(this)
+        presence.render()
     }
 
     fun closeFrame() {
@@ -1020,6 +1070,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0).visibility = View.VISIBLE
         Screen.frameCharging = null
         Screen.apply(this)
+        presence.render()
     }
 
     private fun settings() = supportFragmentManager.findFragmentByTag(Mode.SETTINGS.tag) as? SettingsFragment
@@ -1060,7 +1111,13 @@ class MainActivity : AppCompatActivity() {
             documentPanel.setExpanded(mode == Mode.COMPUTER, splittable = mode != Mode.COMPUTER)
         }
         val changed = current != mode
+        val leavingCamera = current == Mode.CAMERA && mode != Mode.CAMERA
         current = mode
+        if (::presence.isInitialized) {
+            // La caméra du mode Caméra se ferme un peu plus bas (fragment masqué) : la veille attend avant de rouvrir.
+            if (leavingCamera) onDocCameraClosing()
+            presence.sync()
+        }
         val fm = supportFragmentManager
         // Un écran ajouté juste avant (ex. recréé par onComputerChanged) doit exister pour être masqué.
         fm.executePendingTransactions()
@@ -1249,6 +1306,9 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val STATE_MODE = "mode"
         private const val STATE_PLUGINS_LATER = "plugins_later"
+
+        /** Fermeture de la caméra du mode Caméra (asynchrone, sans rappel) : la veille attend un peu plus que le délai de secours de la sienne. */
+        private const val DOC_CAMERA_CLOSE_MS = 2_500L
 
         /** Quitter l'appli de jeu moins longtemps que ça (changer de fenêtre un instant) ne finit pas le jeu. */
         private const val GAME_GRACE_MS = 8_000L
