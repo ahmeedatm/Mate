@@ -26,7 +26,7 @@ Pas de serveur dans le cloud : chaque ordinateur a son compagnon, la tablette pa
 
 - **Une seule Activity** (`MainActivity`) plein écran, barre fixe à gauche (Parler, profils Accueil / Deck / Réunion pendant un appel, outils, ordinateur, Réglages ; heure, WiFi, batterie et lecture en cours en haut à droite), un **Fragment par mode** : Profils (ex-Accueil), Deck, Depuis l'ordi, Focus, Caméra, Réglages. Les fragments sont créés une fois et cachés/montrés ; ils sont recréés quand on change d'ordinateur (`onComputerChanged`).
 - **Panneau document** (`DocumentPanel`) à droite : document du dossier partagé ou page web de l'ordinateur, à côté de n'importe quel mode ou en grand.
-- **Kiosque** : l'appli est *device owner* (installée sur une tablette réinitialisée, voir [kiosque.md](kiosque.md)). Elle verrouille l'écran sur elle-même (lock task), masque l'agent de provisionnement du constructeur, bloque les installations, s'installe elle-même ses mises à jour et règle le WiFi.
+- **Kiosque** : l'appli est *device owner* (installée sur une tablette réinitialisée, voir [kiosque.md](kiosque.md)). Elle verrouille l'écran sur elle-même (lock task), masque l'agent de provisionnement du constructeur, bloque les installations et adb (réouvrables par le technicien), s'installe elle-même ses mises à jour et règle le WiFi.
 - Vues XML, pas de Compose ; dépendances : appcompat, lifecycle, coroutines. HTTP par `HttpURLConnection` + `org.json`. Tout doit rester léger (MT8167, 2 Go de RAM).
 
 ### Le compagnon de l'ordinateur (`backend/`)

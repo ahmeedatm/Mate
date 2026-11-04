@@ -1092,6 +1092,8 @@
     <string name="kiosk_exit_lock_hint">Interdit la réinitialisation d\'usine et le mode sans échec depuis Android. La réinitialisation hors ligne passe alors par le mode recovery de la tablette.</string>
     <string name="kiosk_power_menu">Menu du bouton marche/arrêt</string>
     <string name="kiosk_power_menu_hint">Permet d\'éteindre ou de redémarrer par le bouton physique, kiosque verrouillé.</string>
+    <string name="kiosk_allow_debugging">Débogage USB</string>
+    <string name="kiosk_allow_debugging_hint">Ouvre adb, pour mettre à jour ou dépanner la tablette. Désactivé, personne ne peut lire l\'appli ni sortir du kiosque par le câble.</string>
     <string name="kiosk_reboot">Redémarrer</string>
     <string name="kiosk_reboot_confirm">La tablette va redémarrer. Le kiosque reviendra tout seul. Continuer ?</string>
     <string name="kiosk_reboot_failed">Android a refusé de redémarrer.</string>
