@@ -109,6 +109,8 @@ describe("GET /gitlab/mrs", () => {
     assert.equal(json.mine[0].mergeable, false);
     assert.equal(json.review[0].iid, 99);
     assert.equal(json.review[0].pipeline, "none");
+    assert.equal(json.review[0].column, "review");
+    assert.deepEqual(json.mine[1].stages, []);
     assert.equal(seen.length, 1);
     assert.equal(seen[0].url, "/api/graphql");
     assert.equal(seen[0].token, GITLAB_TOKEN);

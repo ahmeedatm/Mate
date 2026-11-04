@@ -2,6 +2,8 @@ package app.mate.gitlab
 
 import app.mate.net.GitLabPipeline
 import app.mate.net.Pipeline
+import app.mate.net.ScheduleProject
+import app.mate.net.ScheduleRef
 
 /** Pastille d'état d'un pipeline : une icône par état, la couleur seule ne dit rien (daltonisme, thème Contraste élevé). */
 enum class PipelineMark { CHECK, CROSS, SYNC, CANCELED, NONE }
@@ -53,14 +55,32 @@ fun timeOf(p: GitLabPipeline): PipelineTime = when {
     else -> PipelineTime.Ago(ageSpan(p.ageSec))
 }
 
-/** « projet · ref » ; une ref longue (`fix/FACT-236-arrondi-tva`) est coupée par l'affichage. */
-fun pipelineTitle(p: GitLabPipeline) = "${shortProject(p.project)} · ${p.ref}"
+/** Planification : « projet · description » (la branche si elle n'a pas de description) ; pipeline de MR : « projet!numéro · titre ». Le texte long est coupé par l'affichage. */
+fun pipelineTitle(p: GitLabPipeline): String {
+    val project = shortProject(p.project)
+    return when {
+        p.mrIid != null -> "$project!${p.mrIid} · ${p.title}"
+        p.title.isNotEmpty() -> "$project · ${p.title}"
+        else -> "$project · ${p.ref}"
+    }
+}
 
 /** Jobs en échec sur une ligne : « tests-unitaires, tests-e2e » ; null hors échec ou sans nom. */
 fun failedJobsText(p: GitLabPipeline): String? =
     if (p.status == Pipeline.FAILED && p.failedJobs.isNotEmpty()) p.failedJobs.joinToString(", ") else null
 
-/** Lignes montrées : le compagnon trie déjà (en cours, échecs, le reste) ; la tablette n'en garde que 8. */
+/** Lignes montrées d'une liste à plat (runs GitHub Actions) : le compagnon trie déjà (en cours, échecs, le reste) ; la tablette n'en garde que 8. */
 fun visiblePipelines(list: List<GitLabPipeline>) = list.take(MAX_PIPELINES)
 
 const val MAX_PIPELINES = 8
+
+/** Le compagnon garde 20 planifications au plus. */
+const val MAX_SCHEDULES = 20
+
+/** Choix à envoyer : les cochées dans l'ordre de la liste affichée (projets puis planifications), sans celles qui n'existent plus. */
+fun scheduleRefsInOrder(projects: List<ScheduleProject>, checked: Set<ScheduleRef>): List<ScheduleRef> =
+    projects.flatMap { p -> p.schedules.map { ScheduleRef(p.project, it.id) } }.filter { it in checked }
+
+/** Choix gardés qui n'existent plus dans la liste (planification supprimée) : ils sont retirés à l'enregistrement. */
+fun checkedStillListed(projects: List<ScheduleProject>, selected: List<ScheduleRef>): Set<ScheduleRef> =
+    scheduleRefsInOrder(projects, selected.toSet()).toSet()

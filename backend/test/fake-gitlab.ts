@@ -5,7 +5,7 @@ import type { AddressInfo } from "node:net";
 /**
  * Faux GitLab pour les tests et l'émulateur : page d'autorisation (OAuth, code + PKCE, appli non confidentielle),
  * `/oauth/token` (code et renouvellement, jeton de renouvellement tournant, portée accordée dans `scope`), `/api/v4/user`,
- * `/api/graphql` et la fusion. Comme le vrai, la page d'autorisation refuse une portée que l'appli n'a pas (`allowedScopes`).
+ * `/api/graphql` (mes MR, et les planifications d'un projet), la liste REST des projets et de leurs planifications, la fusion. Comme le vrai, la page d'autorisation refuse une portée que l'appli n'a pas (`allowedScopes`).
  * Un jeton d'accès (Bearer) ou le jeton personnel `personalToken` (PRIVATE-TOKEN) ouvre l'API ; le reste : 401.
  */
 
@@ -19,25 +19,51 @@ export const fakeMr = (over: Record<string, unknown> = {}) => ({
   detailedMergeStatus: "MERGEABLE",
   diffHeadSha: FAKE_SHA,
   updatedAt: "2026-10-28T10:00:00Z",
+  approved: true,
   approvalsRequired: 1,
   approvalsLeft: 0,
   approvedBy: { nodes: [{ name: "Camille" }] },
   author: { name: "Ahmed" },
   project: { fullPath: "grp/proj" },
   headPipeline: { status: "SUCCESS" },
+  commitsWithoutMergeCommits: { nodes: [] },
+  discussions: { nodes: [] },
   ...over,
 });
 
-/** Pipeline tel que le rend `GET /projects/:id/pipelines/:pipeline_id`. */
+/** Stages d'un pipeline comme GraphQL les rend (statut en minuscules). */
+export const fakeStages = (...stages: [name: string, status: string][]) => ({
+  nodes: stages.map(([name, status]) => ({ name, status })),
+});
+
+/** Pipeline tel que GraphQL le rend (`headPipeline` d'une MR, `lastPipeline` d'une planification). */
 export const fakePipeline = (over: Record<string, unknown> = {}) => ({
-  id: 500,
+  id: "gid://gitlab/Ci::Pipeline/500",
+  status: "SUCCESS",
   ref: "main",
-  status: "success",
-  created_at: "2026-10-29T09:00:00Z",
-  started_at: "2026-10-29T09:00:10Z",
-  finished_at: "2026-10-29T09:05:00Z",
+  createdAt: "2026-10-29T09:00:00Z",
+  startedAt: "2026-10-29T09:00:10Z",
+  finishedAt: "2026-10-29T09:05:00Z",
   duration: 290,
+  stages: fakeStages(["build", "success"], ["test", "success"]),
   ...over,
+});
+
+/** Planification de pipelines comme GraphQL la rend (`id` global, dernier pipeline). */
+export const fakeSchedule = (over: Record<string, unknown> = {}) => ({
+  id: "gid://gitlab/Ci::PipelineSchedule/7",
+  description: "Nightly",
+  ref: "main",
+  active: true,
+  lastPipeline: fakePipeline(),
+  ...over,
+});
+
+/** Discussion de review : résolue ou non, ses messages (date, auteur, système ou non). */
+export const fakeDiscussion = (resolved: boolean, notes: { at: string; by: string; system?: boolean }[], resolvable = true) => ({
+  resolvable,
+  resolved,
+  notes: { nodes: notes.map((n) => ({ createdAt: n.at, system: n.system ?? false, author: { username: n.by } })) },
 });
 
 export type Seen = { method: string; url: string; authorization?: string; privateToken?: string; body: any };
@@ -63,16 +89,16 @@ export type FakeGitlab = {
   /** Page d'autorisation, étape « Autoriser » : adresse de retour de l'appli avec le code (ou l'erreur si `deny`). */
   authorize: (authorizeUrl: string, deny?: boolean) => Promise<string>;
   mrs: { assigned: unknown[]; review: unknown[] };
-  /** Dernier pipeline, par chemin de projet (absent : projet sans pipeline). Listé seulement si son `ref` est `defaultBranch`. */
-  pipelines: Record<string, unknown>;
-  /** Branche par défaut de tous les projets (`GET /projects/:id`). */
-  defaultBranch: string;
-  /** Projets dont les pipelines sont interdits au compte (403, comme un rôle sans accès à la CI). */
+  /** Planifications de pipelines (nœuds GraphQL, voir `fakeSchedule`), par chemin de projet. */
+  schedules: Record<string, unknown[]>;
+  /** Projets dont le compte est membre (`GET /projects?membership=true`), dans l'ordre rendu. */
+  memberProjects: string[];
+  /** Projets dont les planifications sont interdites au compte (GraphQL : 403, REST : 403, comme un rôle sans accès à la CI). */
   deniedProjects: string[];
   /** Noms des jobs en échec, par id de pipeline. */
   failedJobs: Record<number, string[]>;
-  /** Code HTTP forcé pour la liste des pipelines de tous les projets (200 : normal). */
-  pipelinesStatus: number;
+  /** Code HTTP forcé pour les requêtes de planifications, GraphQL et REST (200 : normal). */
+  schedulesStatus: number;
   stop: () => Promise<void>;
 };
 
@@ -91,11 +117,11 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
     personalToken: "",
     allowedScopes: ["read_api", "openid", "profile", "email"],
     mergeStatus: 200,
-    pipelines: {},
-    defaultBranch: "main",
+    schedules: {},
+    memberProjects: [],
     deniedProjects: [],
     failedJobs: {},
-    pipelinesStatus: 200,
+    schedulesStatus: 200,
     revokeAll: () => {
       access.clear();
       refresh.clear();
@@ -216,29 +242,52 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
       if (!authorized(req)) return json(401, { message: "401 Unauthorized" });
       if (url.pathname === "/api/v4/user") return json(200, { username: "camille", name: "Camille" });
       if (url.pathname === "/api/graphql") {
+        const { query = "", variables } = (req.method === "POST" && raw ? JSON.parse(raw) : {}) as {
+          query?: string;
+          variables?: { path?: string };
+        };
+        if (query.includes("pipelineSchedules")) {
+          const path = variables?.path ?? "";
+          if (fake.schedulesStatus !== 200) return json(fake.schedulesStatus, { message: "refus" });
+          if (fake.deniedProjects.includes(path)) return json(403, { message: "403 Forbidden" });
+          const nodes = fake.schedules[path];
+          return json(200, { data: { project: nodes ? { pipelineSchedules: { nodes } } : null } });
+        }
         return json(200, {
           data: {
-            currentUser: { assignedMergeRequests: { nodes: fake.mrs.assigned }, reviewRequestedMergeRequests: { nodes: fake.mrs.review } },
+            currentUser: {
+              username: "camille",
+              assignedMergeRequests: { nodes: fake.mrs.assigned },
+              reviewRequestedMergeRequests: { nodes: fake.mrs.review },
+            },
           },
         });
       }
-      const project = /^\/api\/v4\/projects\/([^/]+)$/.exec(url.pathname);
-      if (project && req.method === "GET") return json(200, { default_branch: fake.defaultBranch });
-      const list = /^\/api\/v4\/projects\/([^/]+)\/pipelines$/.exec(url.pathname);
-      if (list && req.method === "GET") {
-        const path = decodeURIComponent(list[1]);
-        if (fake.pipelinesStatus !== 200) return json(fake.pipelinesStatus, { message: "refus" });
-        if (fake.deniedProjects.includes(path)) return json(403, { message: "403 Forbidden" });
-        const p = fake.pipelines[path] as Record<string, unknown> | undefined;
-        const ref = url.searchParams.get("ref");
-        // Comme le vrai : la liste ne donne ni durée ni heures de début et de fin.
-        const summary = p && { id: p.id, ref: p.ref, status: p.status, created_at: p.created_at };
-        return json(200, summary && (!ref || ref === p.ref) ? [summary] : []);
+      if (url.pathname === "/api/v4/projects" && req.method === "GET") {
+        if (fake.schedulesStatus !== 200) return json(fake.schedulesStatus, { message: "refus" });
+        const perPage = Number(url.searchParams.get("per_page") ?? 20);
+        const page = Number(url.searchParams.get("page") ?? 1);
+        return json(
+          200,
+          fake.memberProjects.slice((page - 1) * perPage, page * perPage).map((path_with_namespace) => ({ path_with_namespace })),
+        );
       }
-      const one = /^\/api\/v4\/projects\/([^/]+)\/pipelines\/(\d+)$/.exec(url.pathname);
-      if (one && req.method === "GET") {
-        const p = fake.pipelines[decodeURIComponent(one[1])] as { id?: number } | undefined;
-        return p && p.id === Number(one[2]) ? json(200, p) : json(404, { message: "404 Not found" });
+      const scheduleList = /^\/api\/v4\/projects\/([^/]+)\/pipeline_schedules$/.exec(url.pathname);
+      if (scheduleList && req.method === "GET") {
+        const path = decodeURIComponent(scheduleList[1]);
+        if (fake.schedulesStatus !== 200) return json(fake.schedulesStatus, { message: "refus" });
+        if (fake.deniedProjects.includes(path)) return json(403, { message: "403 Forbidden" });
+        const nodes = (fake.schedules[path] ?? []) as { id: string; description: string; ref: string; active: boolean }[];
+        // Comme le vrai : id numérique, branche en `refs/heads/…`, pas de dernier pipeline.
+        return json(
+          200,
+          nodes.map((n) => ({
+            id: Number(/(\d+)$/.exec(n.id)?.[1]),
+            description: n.description,
+            ref: `refs/heads/${n.ref}`,
+            active: n.active,
+          })),
+        );
       }
       const jobs = /^\/api\/v4\/projects\/[^/]+\/pipelines\/(\d+)\/jobs$/.exec(url.pathname);
       if (jobs && req.method === "GET")

@@ -1,12 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { runAction } from "../deck.ts";
 import {
+  columnList,
   issueTransitions,
   issueUrl,
   JiraFieldsError,
   jiraConfigured,
   myBoards,
   myIssues,
+  saveColumnChoices,
   selectBoards,
   selectedBoards,
   transitionIssue,
@@ -38,6 +40,18 @@ export default async function jiraRoutes(app: FastifyInstance) {
     },
     async (req) => {
       await selectBoards(req.body.ids);
+      return { ok: true };
+    },
+  );
+
+  app.get("/jira/columns", async () => columnList());
+
+  const keys = { type: "array", maxItems: 50, items: { type: "string", minLength: 1, maxLength: 100 } };
+  app.post<{ Body: { hidden: string[]; everyone: string[] } }>(
+    "/jira/columns",
+    { schema: { body: { type: "object", required: ["hidden", "everyone"], properties: { hidden: keys, everyone: keys } } } },
+    async (req) => {
+      await saveColumnChoices(req.body);
       return { ok: true };
     },
   );

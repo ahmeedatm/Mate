@@ -1,6 +1,9 @@
 package app.mate.gitlab
 
+import app.mate.github.Forge
 import app.mate.net.GitLabMr
+import app.mate.net.GitLabMrs
+import app.mate.net.MrColumn
 import app.mate.net.Pipeline
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -60,5 +63,49 @@ class GitLabLogicTest {
         assertEquals("uem", shortProject("softwares/products/uem"))
         assertEquals("a", shortProject("a"))
         assertEquals("b", shortProject("a/b"))
+    }
+
+    @Test
+    fun `les colonnes sont toutes la, dans l'ordre de priorite, vides comprises`() {
+        val columns = columnsOf(GitLabMrs(emptyList(), emptyList()))
+        assertEquals(listOf(MrColumn.DRAFT, MrColumn.FIX, MrColumn.MERGE, MrColumn.RUNNING, MrColumn.READY, MrColumn.REVIEW), columns.map { it.first })
+        assertTrue(columns.all { it.second.isEmpty() })
+    }
+
+    @Test
+    fun `une MR est dans la colonne que le compagnon lui a donnee, a review reprend la liste a relire`() {
+        val mrs = GitLabMrs(
+            mine = listOf(ready.copy(iid = 1, column = MrColumn.DRAFT), ready.copy(iid = 2, column = MrColumn.FIX), ready.copy(iid = 3, column = MrColumn.MERGE), ready.copy(iid = 4, column = MrColumn.MERGE)),
+            review = listOf(ready.copy(iid = 5, column = MrColumn.REVIEW)),
+        )
+        val byColumn = columnsOf(mrs).associate { (column, list) -> column to list.map { it.iid } }
+        assertEquals(
+            mapOf(
+                MrColumn.DRAFT to listOf(1),
+                MrColumn.FIX to listOf(2),
+                MrColumn.MERGE to listOf(3, 4),
+                MrColumn.RUNNING to emptyList(),
+                MrColumn.READY to emptyList(),
+                MrColumn.REVIEW to listOf(5),
+            ),
+            byColumn,
+        )
+    }
+
+    @Test
+    fun `une MR a moi n'apparait jamais dans deux colonnes`() {
+        val mine = MrColumn.entries.filter { it != MrColumn.REVIEW }.mapIndexed { i, c -> ready.copy(iid = i + 1, column = c) }
+        val shown = columnsOf(GitLabMrs(mine, emptyList())).flatMap { it.second }
+        assertEquals(mine.map { it.iid }.sorted(), shown.map { it.iid }.sorted())
+    }
+
+    @Test
+    fun `GitHub garde deux colonnes, toutes ses PR dans la premiere`() {
+        val mrs = GitLabMrs(
+            mine = listOf(ready.copy(iid = 1, draft = true), ready.copy(iid = 2)),
+            review = listOf(ready.copy(iid = 3)),
+        )
+        val byColumn = columnsOf(mrs, Forge.GITHUB).map { (column, list) -> column to list.map { it.iid } }
+        assertEquals(listOf(MrColumn.READY to listOf(1, 2), MrColumn.REVIEW to listOf(3)), byColumn)
     }
 }

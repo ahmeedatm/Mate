@@ -1,6 +1,9 @@
 package app.mate.gitlab
 
+import app.mate.github.Forge
 import app.mate.net.GitLabMr
+import app.mate.net.GitLabMrs
+import app.mate.net.MrColumn
 
 /** Clé d'une carte : le chemin complet du projet, pas son nom court (deux projets peuvent avoir le même). */
 fun mrKey(mr: GitLabMr) = "${mr.project}!${mr.iid}"
@@ -26,3 +29,20 @@ fun approvalsText(given: Int, required: Int): String? = if (required == 0) null 
 
 /** Dernier segment du chemin (`softwares/products/uem` → `uem`) : lisible dans un titre de carte. */
 fun shortProject(fullPath: String) = fullPath.substringAfterLast('/')
+
+/** Colonnes du tableau : toutes celles de GitLab ; GitHub n'en a que deux, ses PR (`READY`) et celles à relire. */
+fun boardColumns(forge: Forge): List<MrColumn> =
+    if (forge == Forge.GITHUB) listOf(MrColumn.READY, MrColumn.REVIEW) else MrColumn.entries
+
+/**
+ * Les colonnes du tableau, toujours toutes (vides comprises), dans l'ordre de priorité : une MR à moi est dans la colonne
+ * que le compagnon lui a donnée, « à review » reprend la liste des MR à relire. GitHub : mes PR dans une seule colonne.
+ */
+fun columnsOf(mrs: GitLabMrs, forge: Forge = Forge.GITLAB): List<Pair<MrColumn, List<GitLabMr>>> =
+    boardColumns(forge).map { column ->
+        column to when {
+            column == MrColumn.REVIEW -> mrs.review
+            forge == Forge.GITHUB -> mrs.mine
+            else -> mrs.mine.filter { it.column == column }
+        }
+    }

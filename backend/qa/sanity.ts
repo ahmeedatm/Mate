@@ -681,9 +681,13 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         if (!controlled()) return expectStatus(res, 501, "/gitlab/pipelines");
         if (res.status === 502) throw new Skip(`GitLab inaccessible depuis l'ordinateur (${res.json?.error})`);
         expectStatus(res, 200, "/gitlab/pipelines");
-        expect(Array.isArray(res.json.pipelines), "forme de /gitlab/pipelines inattendue");
+        expect(Array.isArray(res.json.schedules) && Array.isArray(res.json.mrs), "forme de /gitlab/pipelines inattendue");
         if (res.json.connected === false) return "pas connecté à GitLab";
-        return `${res.json.pipelines.length} pipelines`;
+        // Lecture seule : jamais d'enregistrement du choix. La première lecture parcourt les projets du compte (45 s au plus).
+        const schedules = await call("GET", "/gitlab/schedules");
+        expectStatus(schedules, 200, "/gitlab/schedules");
+        expect(Array.isArray(schedules.json.projects) && Array.isArray(schedules.json.selected), "forme de /gitlab/schedules inattendue");
+        return `${res.json.schedules.length} planifiées, ${res.json.mrs.length} de mes MR`;
       },
     },
     {
@@ -902,6 +906,9 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const boards = await call("GET", "/jira/boards");
         expectStatus(boards, 200, "/jira/boards");
         expect(Array.isArray(boards.json.boards) && Array.isArray(boards.json.selected), "forme de /jira/boards inattendue");
+        const columns = await call("GET", "/jira/columns");
+        expectStatus(columns, 200, "/jira/columns");
+        expect(Array.isArray(columns.json.columns), "forme de /jira/columns inattendue");
       },
     },
     {
