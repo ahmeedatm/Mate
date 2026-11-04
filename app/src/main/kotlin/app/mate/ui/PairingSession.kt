@@ -58,13 +58,16 @@ class PairingSession(
             try {
                 val secret = PairingCode.newSecret()
                 val (request, computerNonce) = client.pairing.request(context.getString(R.string.tablet_name, Build.MODEL), secret.commit)
-                client.pairing.reveal(request, secret.nonce)
+                val validMs = client.pairing.reveal(request, secret.nonce)
                 // En HTTP local (USB), pas de certificat : "" comme sur l'ordinateur.
                 val channel = if (url.startsWith("https://")) trust.seen.orEmpty() else ""
                 onCode(PairingCode.spaced(PairingCode.code(channel, secret.nonce, computerNonce)))
+                // Attente bornée par la durée du code : un autre appareil du réseau qui répond « j'attends » ne la prolonge pas.
+                val deadline = SystemClock.elapsedRealtime() + validMs
                 var pairing: Pairing? = null
                 while (pairing == null) {
                     delay(1_000)
+                    if (SystemClock.elapsedRealtime() >= deadline) throw CodeExpiredException()
                     pairing = client.pairing.confirm(request)
                 }
                 // En WiFi, l'ordinateur annonce le certificat que la tablette a vu ; en USB, elle le découvre ici.
@@ -90,6 +93,8 @@ class PairingSession(
         job?.cancel()
     }
 
+    private class CodeExpiredException : Exception()
+
     companion object {
         /** HTTP en clair sur le WiFi : compagnon d'avant le HTTPS, aucune demande (elle échouerait et s'afficherait sur l'ordinateur). */
         fun isOutdated(url: String) = !url.startsWith("https://") && !isLocalUrl(url)
@@ -103,6 +108,7 @@ class PairingSession(
         private fun reason(context: Context, e: Exception): String = when (e) {
             is HttpException -> e.reason
             is InsecureComputerException, is SSLException -> context.getString(R.string.computer_insecure)
+            is CodeExpiredException -> context.getString(R.string.computer_code_expired)
             else -> context.getString(R.string.computer_lost)
         }
     }
@@ -110,10 +116,11 @@ class PairingSession(
 
 /**
  * Appairage sans rien choisir : la tablette cherche sur le WiFi et prend l'ordinateur qui attend une tablette (sa page
- * de Mate est affichée, `Discovery.pickWaiting`), puis lance l'appairage ; le code s'affiche, à saisir sur l'ordinateur.
- * L'appelant répète `round()` (toutes les 4 s). Une session en cours n'est jamais doublée ; après un échec, le même
- * ordinateur n'est pas redemandé avant `RETRY_MS` (chaque demande prévient l'utilisateur et le backend les limite).
- * `onFound` : au moins un ordinateur a répondu (même sans attendre).
+ * de Mate est affichée, `Discovery.pickToPair`), puis lance l'appairage ; le code s'affiche, à saisir dans cette page.
+ * L'appelant répète `round()` (toutes les 4 s). Une session en cours n'est jamais doublée. Après un échec (code expiré,
+ * trois codes faux, connexion perdue) la recherche s'arrête pour cet ordinateur (chaque demande le notifie) : elle ne
+ * repart que par un geste (`retry()`) ou quand sa page a changé (`Discovery.stillBlocked`).
+ * `onFound` : au moins un ordinateur a répondu (même sans attendre) ; `onIdle` : rien à dire, la recherche continue.
  */
 class AutoPairing(
     private val context: Context,
@@ -123,9 +130,10 @@ class AutoPairing(
     private val onCode: (code: String, name: String) -> Unit,
     private val onMessage: (String) -> Unit,
     private val onFailed: (String) -> Unit,
+    private val onIdle: () -> Unit = {},
 ) {
     private var session: PairingSession? = null
-    private val failedAt = HashMap<String, Long>()
+    private var blocked: Map<String, Long> = emptyMap()
     private var pausedUntil = 0L
 
     val busy: Boolean get() = session?.running == true
@@ -135,9 +143,22 @@ class AutoPairing(
         val found = runCatching { Discovery.find(timeoutMs) }.getOrDefault(emptyList())
         onFound(found.isNotEmpty())
         val now = SystemClock.elapsedRealtime()
-        if (busy || now < pausedUntil) return
-        val ready = found.filter { c -> failedAt[c.id]?.let { now - it < RETRY_MS } != true }
-        Discovery.pickWaiting(ready)?.let { start(it) }
+        if (busy) return
+        blocked = Discovery.stillBlocked(blocked, found)
+        if (now < pausedUntil) return
+        val next = Discovery.pickToPair(found, blocked)
+        when {
+            next != null -> start(next)
+            blocked.isNotEmpty() -> Unit
+            else -> Discovery.outdatedAmong(found)?.let { onFailed(PairingSession.outdatedText(context, it.name)) } ?: onIdle()
+        }
+    }
+
+    /** Geste de l'utilisateur : les ordinateurs écartés après un échec sont de nouveau pris. */
+    fun retry() {
+        blocked = emptyMap()
+        pausedUntil = 0L
+        onIdle()
     }
 
     /** Aucune nouvelle demande pendant `ms` (une saisie d'adresse à la main a pris la main). */
@@ -151,20 +172,17 @@ class AutoPairing(
     }
 
     private fun start(computer: FoundComputer) {
+        val startedAt = SystemClock.elapsedRealtime()
         session = PairingSession(
             context, scope, computer.url, computer.name,
             onCode = { onCode(it, computer.name) },
             onMessage = onMessage,
             onFailed = { text, _ ->
-                failedAt[computer.id] = SystemClock.elapsedRealtime()
-                onFailed(text)
+                // Sa page serait au même point si elle était restée affichée : seule une page changée la libère.
+                blocked = blocked + (computer.id to computer.waitingMs + SystemClock.elapsedRealtime() - startedAt)
+                onFailed(text + "\n" + context.getString(R.string.computer_tap_retry))
             },
             onAdded = onAdded,
         ).also { it.start() }
-        failedAt.remove(computer.id)
-    }
-
-    private companion object {
-        const val RETRY_MS = 15_000L
     }
 }

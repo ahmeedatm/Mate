@@ -4,7 +4,7 @@ import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypt
 import { config } from "./config.ts";
 import { logFailure } from "./log.ts";
 import { packaged } from "./paths.ts";
-import { computerName, notify, osName, pointerMove, pointerScroll } from "./os.ts";
+import { computerName, notify, openTarget, osName, pointerMove, pointerScroll } from "./os.ts";
 import { handlePointerDatagram, POINTER_HEADER, PointerGate } from "./pointer.ts";
 import { isScreenLocked } from "./screen-lock.ts";
 
@@ -149,10 +149,15 @@ export class PairingError extends Error {
   }
 }
 
-/** Prévient l'utilisateur par une notification : le code se saisit dans la page de Mate. */
+/**
+ * Prévient l'utilisateur par une notification : le code se saisit dans la page de Mate. Page pas au premier plan (appairage
+ * par adresse : la tablette n'a pas choisi cet ordinateur parce qu'il attendait) : elle s'ouvre aussi.
+ */
 const askCode = async (text: string) => {
   if (process.env.NO_ALERT || process.env.COMPANION_HEADLESS === "1") return;
   await notify("Mate", text);
+  if (!waiting().waiting)
+    await openTarget(`http://127.0.0.1:${config.port}/?section=pairing`).catch((e) => logFailure("Page d'appairage", e));
 };
 
 /**

@@ -30,6 +30,11 @@ data class Pairing(val token: String, val fingerprint: String, val id: String, v
  */
 class PairingApi(private val http: Http) {
 
+    companion object {
+        /** Validité d'un code côté ordinateur (`CODE_TTL_MS`, backend/src/pairing.ts). */
+        const val MAX_CODE_MS = 120_000L
+    }
+
     /** Identité de l'ordinateur ; un ancien backend ne renvoie pas d'`id` (et refuse sans jeton : 401). */
     suspend fun identity(): Identity = http.io {
         val j = JSONObject(http.get("/health", timeoutMs = 5_000))
@@ -47,14 +52,15 @@ class PairingApi(private val http: Http) {
         j.getString("request") to j.getString("nonce")
     }
 
-    /** Dévoile le nombre de la tablette : l'ordinateur ouvre la page où saisir le code. */
-    suspend fun reveal(request: String, nonce: String) = http.io {
-        try {
+    /** Dévoile le nombre de la tablette : l'ordinateur prévient son utilisateur. Rend la durée de validité du code (au plus `MAX_CODE_MS`). */
+    suspend fun reveal(request: String, nonce: String): Long = http.io {
+        val reply = try {
             http.postJson("/pair/reveal", JSONObject().put("request", request).put("nonce", nonce))
         } catch (e: HttpException) {
             throw if (e.code == 401 || e.code == 404) OutdatedCompanionException() else e
         }
-        Unit
+        // Borné : une réponse d'un autre appareil du réseau ne doit pas pouvoir faire attendre plus longtemps que l'ordinateur ne le ferait.
+        JSONObject(reply).optLong("expiresInMs", MAX_CODE_MS).coerceIn(0L, MAX_CODE_MS)
     }
 
     /** null tant que le code n'a pas été saisi sur l'ordinateur. */

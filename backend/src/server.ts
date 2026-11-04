@@ -109,7 +109,11 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
     (method === "PUT" && url === "/local/tablet/layout") ||
     (/^(POST|PUT|DELETE)$/.test(method) && /^\/local\/config\/[a-z0-9/-]+$/.test(url)) ||
     (method === "POST" &&
-      (url === "/system/accessibility" || url === "/local/pair" || url === "/local/tablet/update" || url === "/local/tablet/ring")) ||
+      (url === "/system/accessibility" ||
+        url === "/local/pair" ||
+        url === "/local/visible" ||
+        url === "/local/tablet/update" ||
+        url === "/local/tablet/ring")) ||
     // Panneau de l'appli portable (routes/portable.ts) : corps JSON exigé, pas envoyable par un autre site.
     (method === "POST" && /^\/local\/(autostart|firewall|capteurs|forget|quit|update)$/.test(url)) ||
     // Autorisations du Mac (routes/permissions.ts) : corps JSON exigé, identifiant pris dans la liste du compagnon.

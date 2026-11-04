@@ -39,11 +39,42 @@ test.describe("page locale GET /", () => {
   test("compagnon arrêté : la page le dit et cache le code et les réglages", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#os")).toContainText("Compagnon prêt");
-    await page.route("**/local/status*", (route) => route.abort());
+    await page.route("**/local/status", (route) => route.abort());
     await expect(page.locator("#os")).toHaveText("Compagnon arrêté : rouvre « Mate »");
     await expect(page.locator("#srvdot")).toHaveClass(/ko/);
     await expect(page.locator("#state")).toHaveText("Tablette : état inconnu");
     await expect(page.locator("body")).toHaveClass(/down/);
+  });
+
+  test("page au premier plan : annonce visible=true, puis visible=false quand l'onglet se cache, et rien à chaque rafraîchissement", async ({
+    page,
+    server,
+  }) => {
+    const sent: boolean[] = [];
+    page.on("request", (req) => {
+      if (req.method() === "POST" && req.url().endsWith("/local/visible")) sent.push(req.postDataJSON().visible);
+    });
+    const waiting = async () => (await server.call("GET", "/local/status", undefined, false)).json.waiting;
+    await page.goto("/");
+    await expect.poll(waiting).toBe(true);
+    expect(sent[0]).toBe(true);
+    const hide = () =>
+      page.evaluate(() => {
+        Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+    await hide();
+    await expect.poll(waiting).toBe(false);
+    expect(sent.at(-1)).toBe(false);
+    // Cachée, la page continue de se rafraîchir (1,5 s) sans rien annoncer : l'expiration de 5 s suffit.
+    const count = sent.length;
+    await page.waitForTimeout(3500);
+    expect(sent.length).toBe(count);
+    await page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await expect.poll(waiting).toBe(true);
   });
 
   test("Connecter une IA : adresse de la porte MCP et configurations à copier", async ({ page, server, context }) => {

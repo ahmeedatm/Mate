@@ -73,7 +73,10 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
             onCode = { digits, name -> showCode(digits, name) },
             onMessage = { searchStatus.text = it },
             onFailed = { clearCode(); searchStatus.text = it },
+            onIdle = { searchStatus.setText(R.string.welcome_searching) },
         )
+        // Après un échec : toucher le message relance la recherche.
+        searchStatus.setOnClickListener { auto.retry() }
         wifiPicker = WifiPicker(activity, activity.lifecycleScope) {
             renderWifi()
             renderInstaller()
@@ -111,6 +114,7 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     /** Recherche toutes les 4 s tant que l'écran est affiché : l'installation sur l'ordinateur peut prendre du temps. */
     private fun startSearch() {
         search?.cancel()
+        if (!auto.busy) searchStatus.setText(R.string.welcome_searching)
         search = activity.lifecycleScope.launch {
             var round = 0
             while (true) {
@@ -128,7 +132,6 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
                     markFound(false)
                     searchStatus.setText(R.string.welcome_need_wifi)
                 } else {
-                    if (!auto.busy) searchStatus.setText(R.string.welcome_searching)
                     auto.round()
                 }
                 delay(4_000)

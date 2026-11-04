@@ -94,12 +94,15 @@ namespace Mate
         {
             var t = new Thread(delegate ()
             {
-                var icon = new NotifyIcon();
-                var timer = new System.Windows.Forms.Timer();
+                NotifyIcon icon = null;
+                System.Windows.Forms.Timer timer = null;
+                Icon own = null;
                 try
                 {
-                    try { icon.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
-                    if (icon.Icon == null) icon.Icon = SystemIcons.Information;
+                    icon = new NotifyIcon();
+                    timer = new System.Windows.Forms.Timer();
+                    try { own = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
+                    icon.Icon = own ?? SystemIcons.Information;
                     icon.Visible = true;
                     icon.ShowBalloonTip(10000, title, text, ToolTipIcon.Info);
                     // L'icône est retirée après 10 s : la boucle de messages la garde vivante jusque-là.
@@ -108,11 +111,20 @@ namespace Mate
                     timer.Start();
                     Application.Run();
                 }
+                catch (Exception e)
+                {
+                    // Une exception non rattrapée d'un fil arrêterait tout le pilote : la notification échoue seule, dans stderr.
+                    Console.Error.WriteLine("notify : " + e.Message);
+                }
                 finally
                 {
-                    timer.Dispose();
-                    icon.Visible = false;
-                    icon.Dispose();
+                    if (timer != null) timer.Dispose();
+                    if (icon != null)
+                    {
+                        icon.Visible = false;
+                        icon.Dispose();
+                    }
+                    if (own != null) own.Dispose();
                 }
             });
             t.IsBackground = true;

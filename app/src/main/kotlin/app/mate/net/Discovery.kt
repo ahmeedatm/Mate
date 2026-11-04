@@ -82,6 +82,28 @@ object Discovery {
     fun pickWaiting(computers: List<FoundComputer>): FoundComputer? =
         computers.filter { it.waiting && !it.outdated }.minByOrNull { it.waitingMs }
 
+    /** Marge sur `waitingMs` : une page rouverte repart de zéro, une page restée affichée ne recule jamais d'autant. */
+    private const val RELEASE_SLACK_MS = 2_000L
+
+    /**
+     * Ordinateurs écartés après un échec d'appairage (`blocked` : id → dernier `waitingMs` vu, ou celui attendu à la fin
+     * de la tentative). Un ordinateur sort de la liste seulement si sa page a changé : plus au premier plan, rouverte
+     * (`waitingMs` reparti de zéro) ou plus de réponse. Un voisin qui répète « j'attends » sans jamais changer reste écarté.
+     */
+    fun stillBlocked(blocked: Map<String, Long>, found: List<FoundComputer>): Map<String, Long> =
+        blocked.mapNotNull { (id, last) ->
+            found.firstOrNull { it.id == id }
+                ?.takeIf { it.waiting && it.waitingMs + RELEASE_SLACK_MS >= last }
+                ?.let { id to maxOf(last, it.waitingMs) }
+        }.toMap()
+
+    /** L'ordinateur à appairer : `pickWaiting` hors ceux écartés. */
+    fun pickToPair(computers: List<FoundComputer>, blocked: Map<String, Long>): FoundComputer? =
+        pickWaiting(computers.filter { it.id !in blocked })
+
+    /** Un ordinateur qui répond sans HTTPS : son compagnon est trop ancien, la tablette doit le dire au lieu de chercher. */
+    fun outdatedAmong(computers: List<FoundComputer>): FoundComputer? = computers.firstOrNull { it.outdated }
+
     /** Adresses de diffusion des réseaux de la tablette (ex. 192.168.1.255) : certaines box ignorent 255.255.255.255. */
     private fun broadcastAddresses(): List<InetAddress> = runCatching {
         NetworkInterface.getNetworkInterfaces()?.toList().orEmpty()

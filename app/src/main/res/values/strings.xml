@@ -710,6 +710,8 @@
     <string name="computer_unreachable">Pas de compagnon à %1$s : vérifie l\'adresse, et qu\'il tourne sur l\'ordinateur.</string>
     <string name="computer_pair_title">Appairer %1$s</string>
     <string name="computer_requesting">Demande d\'un code à %1$s…</string>
+    <string name="computer_code_expired">Code expiré.</string>
+    <string name="computer_tap_retry">Toucher ici pour recommencer.</string>
     <string name="computer_new_code">Nouveau code</string>
     <string name="computer_code_show">Saisis ce code dans la page de Mate sur %1$s.</string>
     <string name="computer_insecure">Connexion non sécurisée refusée : mets à jour le compagnon de l\'ordinateur, puis recommence.</string>

@@ -23,7 +23,7 @@ export async function systemCommand(command: SystemCommand) {
 
 /** Notification du centre de notifications (demande d'appairage), sans bloquer le serveur. */
 export function notify(title: string, text: string) {
-  // Texte et titre en argv : jamais d'interpolation dans le script.
+  // Texte et titre en argv : jamais d'interpolation dans le script. S'affiche au nom d'« Éditeur de script » (docs/architecture.md).
   const script = `on run argv
 display notification (item 2 of argv) with title (item 1 of argv)
 end run`;

@@ -72,7 +72,10 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
                 code.visibility = View.GONE
                 form.message.text = it
             },
+            onIdle = { form.message.setText(R.string.computer_search_hint) },
         )
+        // Après un échec : toucher le message relance la recherche.
+        form.message.setOnClickListener { auto.retry() }
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener { dialog.dismiss(); manual() }
             scope.launch {

@@ -42,9 +42,24 @@ export default async function localRoutes(app: FastifyInstance) {
     return reply.type("text/plain; charset=utf-8").send(fs.createReadStream(LICENCES_FILE));
   });
 
-  app.get<{ Querystring: { visible?: string } }>("/local/status", async (req) => {
-    // Page affichée au premier plan = cet ordinateur « attend une tablette » (la tablette le choisit, src/pairing.ts).
-    if (req.query.visible !== undefined) notePageVisible(req.query.visible === "1");
+  /**
+   * Page affichée au premier plan = cet ordinateur « attend une tablette » (la tablette le choisit, src/pairing.ts).
+   * Page locale seulement (voir `isLocalPage` dans server.ts), corps JSON : pas envoyable par un autre site.
+   */
+  app.post<{ Body: { visible: boolean } }>(
+    "/local/visible",
+    {
+      schema: {
+        body: { type: "object", required: ["visible"], additionalProperties: false, properties: { visible: { type: "boolean" } } },
+      },
+    },
+    async (req) => {
+      notePageVisible(req.body.visible);
+      return { waiting: waiting().waiting };
+    },
+  );
+
+  app.get("/local/status", async () => {
     return {
       ...identity(),
       waiting: waiting().waiting,
