@@ -99,10 +99,10 @@ const isLocalPage = (method: string, url: string, ip: string, host: string | und
   LOOPBACK.has(ip) &&
   LOCAL_HOST.test(host ?? "") &&
   ((method === "GET" &&
-    /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite|panel|update|permissions)|web\/figtree-[345]00\.ttf|oauth\/(microsoft|google|gitlab)\/(start|callback)|oauth\/github\/start)?(\?|$)/.test(
+    /^\/(camera(\/stream|\/status)?|local\/(status|licences|confidentialite|panel|update|permissions)|web\/figtree-[345]00\.ttf|oauth\/(microsoft|google)\/(start|callback)|oauth\/github\/start)?(\?|$)/.test(
       url,
     )) ||
-    (method === "PUT" && (url === "/local/calendar" || url === "/local/tablet/settings")) ||
+    (method === "PUT" && (url === "/local/calendar" || url === "/local/tablet/settings" || url === "/local/accounts/gitlab")) ||
     // Panneau de configuration (routes/local-profiles.ts, routes/local-config.ts) : écritures en JSON seulement (PUT,
     // DELETE et POST à corps objet), pas envoyables par un autre site sans pré-vérification CORS.
     (method === "GET" && /^\/local\/(tablet\/layout|config\/[a-z0-9/-]+)(\?|$)/.test(url)) ||

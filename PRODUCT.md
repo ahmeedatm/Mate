@@ -47,7 +47,7 @@ d'un nouveau matériel. Pas de positionnement commercial.
 
 - Sections actuelles : état du compagnon et de la tablette, adresse, appairage, réglages de la
   tablette connectée (thème, luminosité, volume, nuit, Ne pas déranger, mise à jour), agenda
-  (comptes Microsoft / Google, lien ICS), GitLab (connexion OAuth), « Cette appli » (lancement au
+  (comptes Microsoft / Google, lien ICS), GitLab (jeton personnel collé), « Cette appli » (lancement au
   démarrage, pare-feu, mise à jour, extension, quitter, tout oublier),
   Accessibilité Mac.
 - Visée (30/10/2026) : devenir un panneau de configuration complet, dont la configuration des

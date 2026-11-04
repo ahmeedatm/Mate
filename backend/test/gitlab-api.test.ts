@@ -242,9 +242,9 @@ describe("POST /gitlab/mrs/open", () => {
 });
 
 describe("/deck/features et système sans pilotage", () => {
-  it("gitlab vrai avec jeton, faux sans", async () => {
+  it("gitlab vrai avec ou sans jeton (la carte de connexion doit rester trouvable)", async () => {
     assert.equal((await server.call("GET", "/deck/features")).json.gitlab, true);
-    assert.equal((await noToken.call("GET", "/deck/features")).json.gitlab, false);
+    assert.equal((await noToken.call("GET", "/deck/features")).json.gitlab, true);
   });
 
   it("système other : 501 partout, pas de features.gitlab", async () => {

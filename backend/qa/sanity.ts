@@ -666,7 +666,13 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         if (!controlled()) return expectStatus(mrs, 501, "/gitlab/mrs");
         const features = await call("GET", "/deck/features");
         expectStatus(features, 200, "/deck/features");
-        expect(typeof features.json.gitlab === "boolean", "/deck/features sans booléen gitlab");
+        expect(features.json.gitlab === true, "gitlab absent de /deck/features sur un ordinateur piloté (la carte de connexion en dépend)");
+        // Jeton collé : un jeton mal formé est refusé avant tout appel à GitLab, rien n'est enregistré.
+        expectStatus(
+          await call("PUT", "/local/accounts/gitlab", { token: "pas un jeton" }),
+          400,
+          "PUT /local/accounts/gitlab d'un jeton mal formé",
+        );
         // Jeton refusé ou GitLab injoignable depuis cet ordinateur : pas une panne du compagnon.
         if (mrs.status === 502) throw new Skip(`GitLab inaccessible depuis l'ordinateur (${mrs.json?.error})`);
         expectStatus(mrs, 200, "/gitlab/mrs");

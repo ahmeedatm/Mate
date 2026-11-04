@@ -54,7 +54,7 @@ data class LiveApps(val open: List<String>, val live: List<String>)
 /** `linked` : l'ordinateur a un agenda relié (lien ICS, compte) en plus de l'agenda personnel. */
 /** `meetings` : Rejoindre (tout lien de visio) ; `teams` : Teams dans le deck, sa page Réunion après Rejoindre. */
 /** `agents` : agents Claude Code (Mac avec Claude Code installé) : onglet Agents du Deck. `jira` : Jira configuré sur l'ordinateur : onglet Jira. */
-/** `gitlab` : GitLab réglé sur l'ordinateur (jeton, compte connecté ou appli OAuth) : onglet GitLab du Deck. `github` : pareil pour GitHub. */
+/** `gitlab` : widgets GitLab proposés (l'ordinateur est piloté ; sans jeton, ils montrent la carte « Connecter GitLab »). `github` : pareil pour GitHub. */
 data class HomeFeatures(
     val agenda: Boolean = true,
     val meetings: Boolean = true,

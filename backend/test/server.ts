@@ -103,7 +103,6 @@ async function startOnce(options: ServerOptions, port: number): Promise<TestServ
       // Pas de vrai GitLab : un GITLAB_TOKEN du poste ne doit pas ouvrir l'onglet GitLab ; les tests donnent leur faux serveur.
       GITLAB_TOKEN: "",
       GITLAB_URL: "",
-      GITLAB_CLIENT_ID: "",
       // Pas de vrai GitHub non plus.
       GITHUB_TOKEN: "",
       GITHUB_URL: "",
