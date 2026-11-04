@@ -60,6 +60,9 @@ describe("YTMDesktop : traduction", () => {
       ],
     );
     assert.equal(fromYtmd({ player: { ...ytmdState.player, trackState: 0, queue: null }, video: null }).track, null);
+    // Forme inattendue (version de YTMDesktop qui change) : un état vide, jamais d'exception qui tue le compagnon.
+    assert.equal(fromYtmd({} as never).track, null);
+    assert.equal(fromYtmd(null as never).playing, false);
   });
 
   it("commandes : liste fermée traduite, répétition suivante, pas de recherche", () => {
@@ -81,6 +84,8 @@ describe("YTMDesktop : traduction", () => {
       data: { a: 1 },
     });
     assert.equal(parseSocketFrame('42/autre,["state-update",{}]').type, "other");
+    assert.equal(parseSocketFrame("42/api/v1/realtime,[pas du json").type, "other");
+    assert.equal(parseSocketFrame("44/api/v1/realtime,{coupé").type, "other");
   });
 });
 

@@ -388,19 +388,22 @@ class YtMusicView @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
     private var queueRetryAt = 0L
 
+    /** Une seule nouvelle tentative par file : une pochette perdue pour de bon ne recrée pas la file toutes les 10 s. */
+    private var queueRetried = false
+
     private fun queueCoverFailed() {
-        if (queueRetryAt == 0L) queueRetryAt = SystemClock.elapsedRealtime() + COVER_RETRY_MS
+        if (queueRetryAt == 0L && !queueRetried) queueRetryAt = SystemClock.elapsedRealtime() + COVER_RETRY_MS
     }
 
     /** Lignes recréées seulement quand la file change (pas à chaque seconde), puis le titre en cours mis en vue. */
     private fun renderQueue(queue: List<YtQueueItem>) {
         queueEmpty.visibility = if (queue.isEmpty()) VISIBLE else GONE
         val sign = queue.map { "${it.title}|${it.subtitle}|${it.current}" }
-        if (queueRetryAt != 0L && SystemClock.elapsedRealtime() >= queueRetryAt) {
-            queueRetryAt = 0L
-            queueSign = emptyList()
-        }
-        if (sign == queueSign) return
+        val retry = sign == queueSign && queueRetryAt != 0L && SystemClock.elapsedRealtime() >= queueRetryAt
+        if (sign == queueSign && !retry) return
+        // Nouvelle file : un essai de plus permis. Nouvel essai des pochettes : le dernier, sans déplacer la vue.
+        queueRetried = retry
+        queueRetryAt = 0L
         queueSign = sign
         queueList.removeAllViews()
         var currentRow: View? = null
@@ -409,6 +412,7 @@ class YtMusicView @JvmOverloads constructor(context: Context, attrs: AttributeSe
             queueList.addView(row)
             if (item.current) currentRow = row
         }
+        if (retry) return
         currentRow?.let { row -> queueScroll.post { queueScroll.smoothScrollTo(0, (row.top - dp(56)).coerceAtLeast(0)) } }
     }
 

@@ -48,17 +48,19 @@ const REPEAT = ["none", "all", "one"] as const;
 const LIKE: Record<number, "like" | "dislike" | "none"> = { 0: "dislike", 2: "like" };
 
 export function fromYtmd(s: YtmdState): YtMusicState {
-  const v = s.video;
-  const q = s.player.queue;
+  // Forme inattendue (autre version de YTMDesktop) : état vide plutôt qu'une exception qui tue le compagnon.
+  const v = s?.video ?? null;
+  const player = s?.player;
+  const q = player?.queue;
   return {
     // 1 = lecture, 2 = chargement (le son reprend aussitôt) ; 0 = pause, -1 = inconnu.
-    playing: s.player.trackState === 1 || s.player.trackState === 2,
+    playing: player?.trackState === 1 || player?.trackState === 2,
     track: v && {
       title: v.title,
       artist: v.author,
       album: v.album ?? "",
       cover: biggest(v.thumbnails),
-      position: s.player.videoProgress,
+      position: player?.videoProgress ?? 0,
       duration: v.durationSeconds,
       like: LIKE[v.likeStatus] ?? "none",
     },
@@ -148,10 +150,15 @@ export function parseSocketFrame(frame: string): {
   const m = /^4([0-4])(?:(\/[^,]*),)?(.*)$/s.exec(frame);
   if (!m || (m[2] ?? "/") !== NAMESPACE) return { type: "other" };
   if (m[1] === "0") return { type: "connected" };
-  if (m[1] === "4") return { type: "refused", data: m[3] ? JSON.parse(m[3]) : undefined };
-  if (m[1] === "2") {
-    const [event, data] = JSON.parse(m[3]) as [string, unknown];
-    return { type: "event", event, data };
+  // Trame illisible : ignorée, jamais d'exception dans le gestionnaire du WebSocket.
+  try {
+    if (m[1] === "4") return { type: "refused", data: m[3] ? JSON.parse(m[3]) : undefined };
+    if (m[1] === "2") {
+      const [event, data] = JSON.parse(m[3]) as [string, unknown];
+      return { type: "event", event, data };
+    }
+  } catch {
+    return { type: "other" };
   }
   return { type: "other" };
 }
@@ -189,7 +196,8 @@ function connectRealtime() {
     // YTMDesktop fermé ou relancé : nouvel essai dans 5 s tant que le jeton est là.
     if (token) retry = setTimeout(connectRealtime, 5_000);
   };
-  ws.onerror = () => ws.close();
+  // Pas de ws.close() dans onerror : le WebSocket se ferme seul (onclose suit), et sous Node 22 close() pendant
+  // la connexion relance onerror sans fin jusqu'au dépassement de pile.
 }
 
 let loaded = false;
