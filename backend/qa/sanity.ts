@@ -651,6 +651,28 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "icône de chaque appli ouverte",
+      run: async () => {
+        if (os === "mac" && accessibility === false) throw new Skip("Accessibilité non accordée");
+        if (!controlled()) throw new Skip("pas de pilotage sur ce système");
+        const open = await call("GET", "/windows/open");
+        expectStatus(open, 200, "/windows/open");
+        // Programme sans bundle sur Mac (qemu de l'émulateur : clé pid:…) ou sans exe lisible : pas d'icône à trouver.
+        const apps = (open.json.apps as { key: string; name: string }[]).filter((a) => a.key && !a.key.startsWith("pid:"));
+        if (!apps.length) throw new Skip("aucune fenêtre ouverte");
+        const missing: string[] = [];
+        for (const a of apps) {
+          const icon = await call("GET", `/windows/icon?name=${encodeURIComponent(a.name)}`);
+          if (icon.status !== 200) missing.push(a.name);
+        }
+        // Une appli atypique sans icône lisible ne fait pas tomber l'installation ; aucune icône du tout, si.
+        expect(missing.length < apps.length, `aucune icône sur ${apps.length} applis`);
+        return missing.length
+          ? `${apps.length - missing.length}/${apps.length} avec icône, sans : ${missing.join(", ")}`
+          : `${apps.length} applis, toutes avec leur icône`;
+      },
+    },
+    {
       name: "YouTube Music (lecture seule, action hors liste refusée)",
       run: async () => {
         // Jamais d'action réelle ici : elle jouerait dans le navigateur de l'ordinateur.
@@ -731,6 +753,24 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expectStatus(runs, 200, "/github/actions");
         expect(Array.isArray(runs.json.pipelines), "forme de /github/actions inattendue");
         return `${prs.json.mine.length} PR à moi, ${prs.json.review.length} à relire, ${runs.json.pipelines.length} runs`;
+      },
+    },
+    {
+      name: "Discord : photos et qui parle (lecture seule)",
+      run: async () => {
+        // Jamais de POST /discord/authorize ici : il ouvrirait la fenêtre « Autoriser » de Discord sur l'ordinateur.
+        const speaking = await call("GET", "/discord/speaking");
+        if (!controlled()) return expectStatus(speaking, 501, "/discord/speaking");
+        expectStatus(speaking, 200, "/discord/speaking");
+        expect(Array.isArray(speaking.json.speaking), "forme de /discord/speaking inattendue");
+        const voice = await call("GET", "/deck/voice?app=Discord");
+        expectStatus(voice, 200, "/deck/voice?app=Discord");
+        if (!voice.json.voice) return "Discord fermé ou illisible";
+        const photos = voice.json.voice.photos;
+        expect(["off", "waiting", "on"].includes(photos), "/deck/voice sans état photos");
+        expect(!("accessToken" in voice.json.voice), "jeton Discord dans /deck/voice");
+        const members = voice.json.voice.members;
+        return photos === "on" ? `RPC relié, ${Array.isArray(members) ? members.length : 0} participant(s)` : `photos : ${photos}`;
       },
     },
     {

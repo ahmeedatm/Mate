@@ -19,6 +19,13 @@ object IconCache {
 
     fun peekApp(name: String): Bitmap? = peek(appKey(name))
 
+    /** Photo d'un participant d'un appel Discord (64 px, servie par l'ordinateur). */
+    suspend fun loadDiscord(client: BackendClient, id: String): Bitmap? = load(discordKey(id)) { client.discord.avatar(id) }
+
+    fun peekDiscord(id: String): Bitmap? = peek(discordKey(id))
+
+    private fun discordKey(id: String) = "discord:$id"
+
     private fun appKey(name: String) = "app:$name"
 
     private suspend fun load(id: String, fetch: suspend () -> ByteArray?): Bitmap? {

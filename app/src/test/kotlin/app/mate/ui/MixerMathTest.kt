@@ -49,4 +49,15 @@ class MixerMathTest {
             MixerMath.meterSpans(24f, 24),
         )
     }
+
+    @Test
+    fun `volume tape au pave numerique`() {
+        assertEquals(35, MixerMath.typedVolume("35"))
+        assertEquals(0, MixerMath.typedVolume("0"))
+        assertEquals(100, MixerMath.typedVolume(" 100 "))
+        assertEquals(null, MixerMath.typedVolume("101"))
+        assertEquals(null, MixerMath.typedVolume("-3"))
+        assertEquals(null, MixerMath.typedVolume(""))
+        assertEquals(null, MixerMath.typedVolume("3,5"))
+    }
 }

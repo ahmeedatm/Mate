@@ -7,6 +7,7 @@ import { config } from "./config.ts";
 import { startCallWatch } from "./calls.ts";
 import { clipboardHistory, watchClipboard } from "./clipboard-history.ts";
 import { startEventReminders } from "./events.ts";
+import { DiscordError, startDiscordRpc, stopDiscordRpc } from "./discord-rpc.ts";
 import { GitHubError } from "./github.ts";
 import { GitLabError } from "./gitlab.ts";
 import { setLogger } from "./log.ts";
@@ -34,6 +35,7 @@ import callRoutes from "./routes/calls.ts";
 import cameraRoutes from "./routes/camera.ts";
 import deckRoutes from "./routes/deck.ts";
 import docRoutes from "./routes/docs.ts";
+import discordRoutes from "./routes/discord.ts";
 import githubRoutes from "./routes/github.ts";
 import gitlabRoutes from "./routes/gitlab.ts";
 import haRoutes from "./routes/ha.ts";
@@ -174,7 +176,7 @@ app.addHook("onRequest", async (req, reply) => {
  * (sortie d'osascript, erreur système de Node, requête mal formée) reste dans le journal de l'ordinateur.
  */
 app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validation?: unknown; technical?: boolean }, req, reply) => {
-  if (err instanceof PairingError || err instanceof GitLabError || err instanceof GitHubError)
+  if (err instanceof PairingError || err instanceof GitLabError || err instanceof GitHubError || err instanceof DiscordError)
     return reply.code(err.statusCode).send({ error: err.message });
   if (err.validation) return reply.code(400).send({ error: "Demande invalide : mets à jour l'appli de la tablette" });
   const status = err.statusCode && err.statusCode >= 400 ? err.statusCode : 500;
@@ -198,6 +200,7 @@ app.addHook("preHandler", async (req, reply) => {
       req.url.startsWith("/present") ||
       req.url.startsWith("/gitlab") ||
       req.url.startsWith("/github") ||
+      req.url.startsWith("/discord") ||
       req.url.startsWith("/notifications"))
   ) {
     return reply.code(501).send({ error: "Pilotage disponible sur macOS et Windows seulement" });
@@ -250,6 +253,7 @@ app.register(callRoutes);
 app.register(agentRoutes);
 app.register(gitlabRoutes);
 app.register(githubRoutes);
+app.register(discordRoutes);
 app.register(tabletRoutes);
 
 // --- Tâches de fond
@@ -318,6 +322,11 @@ if (canControl) {
 if (canControl) {
   const pollMs = Number(process.env.CLIPBOARD_POLL_MS) || (isMac ? 2000 : 1000);
   watchClipboard({ stamp: clipboardStamp, read: getClipboard }, clipboardHistory, pollMs);
+}
+// Photos des participants d'un appel Discord : connexion au RPC local seulement si Discord a déjà été autorisé.
+if (canControl) {
+  void startDiscordRpc();
+  app.addHook("onClose", async () => stopDiscordRpc());
 }
 if (canControl) startAutoJoin((text) => sendToTablet({ type: "message", text, seconds: 60 }));
 
