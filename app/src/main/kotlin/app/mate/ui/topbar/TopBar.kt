@@ -81,6 +81,14 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
     }
     private var headerView: View? = null
 
+    /** Voyant de la caméra avant (veille à la présence, presence/Presence), juste avant celui du mot de réveil. */
+    val presenceEye = ImageView(context).apply {
+        setImageResource(R.drawable.ic_videocam)
+        contentDescription = context.getString(R.string.presence_watching)
+        visibility = GONE
+        setColorFilter(themeColor(context, R.attr.c_accent))
+    }
+
     /** Voyant du mot de réveil « Mate » (voice/WakeWord), toujours juste avant les éléments. */
     val wakeMic = ImageView(context).apply {
         setImageResource(R.drawable.ic_mic)
@@ -120,6 +128,7 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
         setPadding(dp(24), 0, dp(24), 0)
         header.addView(title, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER_VERTICAL or Gravity.START))
         addView(header, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        addView(presenceEye, LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(12) })
         addView(wakeMic, LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(12) })
         addView(link, LayoutParams(LayoutParams.WRAP_CONTENT, dp(48)).apply { marginEnd = dp(16) })
         addView(row, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))

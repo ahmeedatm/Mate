@@ -1,13 +1,14 @@
 import type { BrowserTab } from "../screens.ts";
+import { automation } from "./permissions.ts";
 import { osascript, run, UTF8_ENV } from "./run.ts";
 
 /**
  * Page ouverte dans le navigateur du Mac (bouton « Page de l'ordi » de la tablette). Le navigateur choisi est celui
  * dont une fenêtre est la plus en avant à l'écran (CoreGraphics, de l'avant vers l'arrière), sinon le premier
  * navigateur lancé. Safari et les navigateurs Chromium répondent en AppleScript ; Firefox ne donne pas son adresse.
- * La première fois, macOS demande d'autoriser le backend à piloter le navigateur.
+ * Seuls les navigateurs dont l'Automation est accordée (écran des autorisations) sont interrogés.
  */
-/** Navigateurs lancés, du plus en avant à l'écran au plus en arrière (variables BROWSERS et order). */
+/** Navigateurs lancés et pilotables, du plus en avant à l'écran au plus en arrière (variables BROWSERS et order). */
 const BROWSER_ORDER = `
 ObjC.import("CoreGraphics");
 const BROWSERS = { "Safari": "Safari", "Google Chrome": "Chrome", "Arc": "Arc", "Microsoft Edge": "Edge",
@@ -21,7 +22,15 @@ for (let i = 0; i < windows.count; i++) {
   if (BROWSERS[owner] && !order.includes(owner)) order.push(owner);
 }
 for (const name of Object.keys(BROWSERS)) if (!order.includes(name)) order.push(name);
+for (let i = order.length - 1; i >= 0; i--) if (!ALLOWED.includes(order[i])) order.splice(i, 1);
 `;
+const BROWSER_NAMES = ["Safari", "Google Chrome", "Arc", "Microsoft Edge", "Brave Browser", "Opera", "Vivaldi"];
+
+/** Script précédé des navigateurs dont l'Automation est accordée (`ALLOWED`) : les autres ne sont pas interrogés. */
+async function withAllowed(script: string): Promise<string | null> {
+  const allowed = await automation.names(BROWSER_NAMES);
+  return allowed.length ? `const ALLOWED = ${JSON.stringify(allowed)};\n` + script : null;
+}
 
 const SCRIPT =
   BROWSER_ORDER +
@@ -44,7 +53,8 @@ JSON.stringify(page);
 `;
 
 export async function browserPage(): Promise<{ found: boolean; url?: string; title?: string; browser?: string }> {
-  const page = JSON.parse(await osascript(SCRIPT, [], "JavaScript"));
+  const script = await withAllowed(SCRIPT);
+  const page = script ? JSON.parse(await osascript(script, [], "JavaScript")) : { found: false };
   if (page.found) return page;
   // Secours (Firefox, autorisation refusée) : lien copié dans le navigateur (⌘L puis ⌘C).
   const copied = (await run("pbpaste", [], 10_000, UTF8_ENV).catch(() => "")).trim();
@@ -81,5 +91,6 @@ JSON.stringify(tabs);
 `;
 
 export async function browserTabs(): Promise<BrowserTab[]> {
-  return JSON.parse(await osascript(TABS_SCRIPT, [], "JavaScript"));
+  const script = await withAllowed(TABS_SCRIPT);
+  return script ? JSON.parse(await osascript(script, [], "JavaScript")) : [];
 }

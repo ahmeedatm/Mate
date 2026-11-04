@@ -4,6 +4,7 @@ import type { SystemCommand } from "../screens.ts";
 import * as audio from "./audio.ts";
 import * as calls from "./calls.ts";
 import * as keys from "./keys.ts";
+import { automation } from "./permissions.ts";
 import { osascript, run } from "./run.ts";
 
 export async function systemCommand(command: SystemCommand) {
@@ -11,6 +12,7 @@ export async function systemCommand(command: SystemCommand) {
     case "sleep-display":
       return void (await run("pmset", ["displaysleepnow"]));
     case "toggle-dark-mode":
+      await automation.requireSystemEvents();
       return void (await osascript('tell application "System Events" to tell appearance preferences to set dark mode to not dark mode'));
     case "screenshot-clipboard":
       // Raccourci système plutôt que `screencapture` : ce dernier exige l'autorisation

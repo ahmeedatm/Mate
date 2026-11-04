@@ -84,7 +84,8 @@ enum class WidgetType(
     NEWS("news", R.string.widget_news, R.string.widget_news_desc, R.drawable.ic_tile_description, listOf(WidgetSize.L, WidgetSize.XL), true),
     MAIL("mail", R.string.widget_mail, R.string.widget_mail_desc, R.drawable.ic_mail, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L), true),
     METRICS("metrics", R.string.widget_metrics, R.string.widget_metrics_desc, R.drawable.ic_tile_bar_chart, listOf(WidgetSize.L, WidgetSize.XL), true),
-    MEALS("meals", R.string.widget_meals, R.string.widget_meals_desc, R.drawable.ic_tile_restaurant, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.T), true);
+    MEALS("meals", R.string.widget_meals, R.string.widget_meals_desc, R.drawable.ic_tile_restaurant, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.T), true),
+    SCREEN("screen", R.string.widget_screen, R.string.widget_screen_desc, R.drawable.ic_display, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.M), true);
 
     /** Taille de l'exemplaire agrandi (widget maintenu, [WidgetZoom]) : la plus grande, la plus large à surface égale. */
     val zoomSize get() = sizes.maxWith(compareBy<WidgetSize>({ it.w * it.h }, { it.w }))
@@ -92,8 +93,11 @@ enum class WidgetType(
     /** Sans fond de carte, posé à même l'écran. */
     val bare get() = this == HERO || this == DAY || this == DAYLINE
 
-    /** Maintenir le widget l'agrandit : pas ceux sans carte (héros, journée, ligne du jour), rien de plus à y voir, ni la page web (un seul WebView à la fois). */
-    val zoomable get() = !bare && this != WEB
+    /**
+     * Maintenir le widget l'agrandit : pas ceux sans carte (héros, journée, ligne du jour), rien de plus à y voir, ni la page
+     * web (un seul WebView à la fois), ni l'écran de l'ordinateur (une seule image en vol, 640 px de large au plus).
+     */
+    val zoomable get() = !bare && this != WEB && this != SCREEN
 
     /**
      * Proposé dans le catalogue de l'ordinateur actif : Agents, Jira, Home Assistant, GitLab, Pipelines, GitHub et Actions seulement s'il les offre (Agents :

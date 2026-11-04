@@ -23,6 +23,13 @@ const SINCE_FIRST_MS = 24 * 60 * 60 * 1000;
 let Database: typeof DatabaseSync | undefined;
 
 /**
+ * Accès au disque tel que la dernière lecture l'a vu : « granted » après une copie réussie, « denied » sur EPERM ou
+ * EACCES, sinon « unknown » (aucune lecture encore, base absente). L'écran des autorisations le lit sans ouvrir la base.
+ */
+let diskAccess: "granted" | "denied" | "unknown" = "unknown";
+export const notificationsDiskAccess = () => diskAccess;
+
+/**
  * Plist binaire → XML, par plutil (fourni avec macOS). Pas en JSON : une notification contient une date (et parfois des
  * données), que « plutil -convert json » refuse (« Invalid object in plist for JSON format ») ; en XML tout passe.
  */
@@ -64,6 +71,7 @@ export async function readMacNotifications(cursor?: string): Promise<Notificatio
   try {
     Database ??= (await import("node:sqlite")).DatabaseSync;
     fs.copyFileSync(DB_FILE, path.join(snapshot, "db"));
+    diskAccess = "granted";
     for (const suffix of ["-wal", "-shm"]) {
       try {
         fs.copyFileSync(DB_FILE + suffix, path.join(snapshot, "db" + suffix));
@@ -72,7 +80,9 @@ export async function readMacNotifications(cursor?: string): Promise<Notificatio
       }
     }
     db = new Database(path.join(snapshot, "db"));
-  } catch {
+  } catch (e) {
+    const code = (e as NodeJS.ErrnoException).code;
+    diskAccess = code === "EPERM" || code === "EACCES" ? "denied" : "unknown";
     // Relu toutes les 2 s : sans accès au disque, un dossier vide resterait à chaque fois.
     fs.rmSync(snapshot, { recursive: true, force: true });
     throw Object.assign(new Error("Notifications du Mac illisibles : donner l'accès complet au disque au compagnon (node)"), {

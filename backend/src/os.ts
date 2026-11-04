@@ -18,6 +18,7 @@ import * as macKeys from "./mac/keys.ts";
 import * as macLock from "./mac/lock.ts";
 import * as macMedia from "./mac/media.ts";
 import * as macPointer from "./mac/pointer.ts";
+import * as macScreen from "./mac/screen.ts";
 import * as macSystem from "./mac/system.ts";
 import * as macTemperature from "./mac/temperature.ts";
 import * as macWindows from "./mac/windows.ts";
@@ -266,6 +267,16 @@ export function setAudio(change: AudioChange) {
 export async function screenLocked(): Promise<boolean | null> {
   if (headless || !canControl) return false;
   return isMac ? macLock.screenLocked() : win.screenLocked();
+}
+
+/**
+ * Aperçu de l'écran principal : un JPEG d'au plus `maxWidth` px de large, en mémoire (jamais écrit sur le disque).
+ * Mac : 403 sans l'autorisation « Enregistrement de l'écran ».
+ */
+export async function screenPreview(maxWidth: number): Promise<Buffer> {
+  if (isMac) return macScreen.screenPreview(maxWidth);
+  if (isWindows) return win.screenPreview(maxWidth);
+  unsupported();
 }
 
 export async function getDnd(): Promise<boolean | null> {

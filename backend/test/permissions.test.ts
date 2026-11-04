@@ -4,7 +4,15 @@ import path from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import Fastify from "fastify";
-import { broadcastOf, classifyConnectError, createPermissions, OPTIONAL_APPS, type Deps } from "../src/mac/permissions.ts";
+import {
+  broadcastOf,
+  classifyConnectError,
+  createAutomationGate,
+  createPermissions,
+  defaultDeps,
+  OPTIONAL_APPS,
+  type Deps,
+} from "../src/mac/permissions.ts";
 import { permissionRoutes } from "../src/routes/permissions.ts";
 
 // Autorisations du Mac : l'utilitaire natif (MatePermissions) et les ouvertures de Réglages sont remplacés par des
@@ -24,6 +32,8 @@ function fake({ status, ...over }: Partial<Omit<Deps, "status">> & { status?: St
     probeLocalNetwork: async () => (calls.push("probe"), "granted"),
     openAccessibility: async () => void calls.push("accessibility"),
     openSettings: async (pane) => void calls.push(`settings ${pane}`),
+    wake: async (bundle) => void calls.push(`wake ${bundle}`),
+    available: () => true,
     ...over,
   };
   return { deps, calls };
@@ -188,6 +198,20 @@ describe("test du réseau local", () => {
   });
 });
 
+describe("demande d'autorisation", () => {
+  it("relit l'état des ordres AppleScript quand la demande aboutit, pas sinon", async () => {
+    let refreshed = 0;
+    const permissions = createPermissions(
+      fake({ status: { accessibility: true, screen: false, automation: {} } }).deps,
+      () => void refreshed++,
+    );
+    assert.equal((await permissions.request("inconnue")).ok, false);
+    assert.equal(refreshed, 0);
+    assert.equal((await permissions.request("screen")).ok, true);
+    assert.equal(refreshed, 1);
+  });
+});
+
 describe("routes /local/permissions", () => {
   async function app(deps: Deps) {
     const server = Fastify();
@@ -231,5 +255,151 @@ describe("routes /local/permissions", () => {
       payload: "{}",
     });
     assert.ok([400, 415].includes(res.statusCode), String(res.statusCode));
+  });
+});
+
+describe("filtre des ordres AppleScript", () => {
+  const SE = "com.apple.systemevents";
+  const gate = (
+    automation: Record<string, string> | null | (() => Record<string, string> | null),
+    over: Partial<Omit<Deps, "status">> = {},
+  ) => {
+    let clock = 0;
+    const reads: number[] = [];
+    const { deps, calls } = fake({
+      status: async () => {
+        reads.push(clock);
+        const a = typeof automation === "function" ? automation() : automation;
+        return a && { accessibility: true, screen: true, automation: a };
+      },
+      ...over,
+    });
+    return { gate: createAutomationGate(deps, () => clock), reads, calls, tick: (ms: number) => (clock += ms) };
+  };
+
+  it("seules les applis accordées passent ; refusée, pas demandée, inconnue : écartées", async () => {
+    const { gate: g } = gate({
+      [SE]: "granted",
+      "com.spotify.client": "granted",
+      "com.google.Chrome": "denied",
+      "com.apple.Safari": "not-asked",
+    });
+    assert.equal(await g.systemEvents(), true);
+    assert.deepEqual(await g.names(["Spotify", "Google Chrome", "Safari", "Arc", "Firefox"]), ["Spotify"]);
+  });
+
+  it("System Events non accordé : erreur en français, sans demande", async () => {
+    const { gate: g, calls } = gate({ [SE]: "not-asked" });
+    await assert.rejects(g.requireSystemEvents(), /Autorise Mate à piloter System Events/);
+    assert.ok(!calls.some((c) => c.startsWith("request")));
+  });
+
+  it("appli fermée : dernier état connu gardé, jamais connu = écartée", async () => {
+    let spotify = "granted";
+    const { gate: g, tick } = gate(() => ({ [SE]: "granted", "com.spotify.client": spotify, "com.apple.Music": "closed" }));
+    assert.deepEqual(await g.names(["Spotify", "Music"]), ["Spotify"]);
+    spotify = "closed";
+    tick(11_000);
+    assert.deepEqual(await g.names(["Spotify", "Music"]), ["Spotify"]);
+    spotify = "denied";
+    tick(11_000);
+    assert.deepEqual(await g.names(["Spotify"]), []);
+  });
+
+  it("System Events fermé et jamais lu : lancé en arrière-plan puis relu", async () => {
+    let woken = false;
+    const { gate: g, calls } = gate(() => ({ [SE]: woken ? "granted" : "closed" }), {
+      wake: async (bundle) => void ((woken = true), calls.push(`wake ${bundle}`)),
+    });
+    assert.equal(await g.systemEvents(), true);
+    assert.deepEqual(calls, [`wake ${SE}`]);
+  });
+
+  it("état relu au plus toutes les 10 s", async () => {
+    const { gate: g, reads, tick } = gate({ [SE]: "granted" });
+    await Promise.all([g.systemEvents(), g.systemEvents()]);
+    tick(9_000);
+    await g.systemEvents();
+    assert.equal(reads.length, 1);
+    tick(2_000);
+    await g.systemEvents();
+    assert.equal(reads.length, 2);
+  });
+
+  it("lecture en échec (utilitaire présent) : dernier état connu gardé, jamais connu = écartée", async () => {
+    let answer: Record<string, string> | null = { "com.spotify.client": "granted" };
+    const { gate: g, tick } = gate(() => answer);
+    assert.deepEqual(await g.names(["Spotify", "Safari"]), ["Spotify"]);
+    answer = null;
+    tick(11_000);
+    assert.deepEqual(await g.names(["Spotify", "Safari"]), ["Spotify"]);
+  });
+
+  it("jamais lu et lecture en échec : rien n'est accordé", async () => {
+    const { gate: g } = gate(null);
+    assert.deepEqual(await g.names(["Spotify"]), []);
+    assert.equal(await g.systemEvents(), false);
+  });
+
+  it("refresh : l'état est relu à l'appel suivant, sans attendre 10 s", async () => {
+    let value = "not-asked";
+    const { gate: g, reads, tick } = gate(() => ({ [SE]: value }));
+    assert.equal(await g.systemEvents(), false);
+    value = "granted";
+    tick(1_000);
+    assert.equal(await g.systemEvents(), false);
+    g.refresh();
+    assert.equal(await g.systemEvents(), true);
+    assert.equal(reads.length, 2);
+  });
+
+  it("enregistrement de l'écran : lu avec le même état, relu au plus toutes les 10 s, tout de suite après refresh", async () => {
+    let screen = false;
+    let clock = 0;
+    const g = createAutomationGate(fake({ status: async () => ({ accessibility: true, screen, automation: {} }) }).deps, () => clock);
+    assert.equal(await g.screenAllowed(), false);
+    screen = true;
+    clock += 9_000;
+    assert.equal(await g.screenAllowed(), false);
+    clock += 2_000;
+    assert.equal(await g.screenAllowed(), true);
+    screen = false;
+    g.refresh();
+    assert.equal(await g.screenAllowed(), false);
+  });
+
+  it("enregistrement de l'écran : inconnu (null) tant que l'utilitaire n'a rien dit, même hors appli portable", async () => {
+    const { gate: g } = gate(null);
+    assert.equal(await g.screenAllowed(), null);
+    const off = gate({ [SE]: "granted" }, { supported: false });
+    assert.equal(await off.gate.screenAllowed(), true);
+    const missing = gate(null, { available: () => false });
+    assert.equal(await missing.gate.screenAllowed(), null);
+  });
+
+  it("applis refusées : erreur 409 qui nomme l'appli", async () => {
+    const { gate: g } = gate({ [SE]: "denied", "com.spotify.client": "not-asked", "com.apple.Music": "denied" });
+    const status = (e: unknown) => (e as { statusCode?: number }).statusCode;
+    await assert.rejects(g.requireSystemEvents(), (e) => status(e) === 409 && /Autorise Mate à piloter System Events/.test(String(e)));
+    await assert.rejects(
+      g.requireApp("Spotify"),
+      (e) => status(e) === 409 && /Autorise Mate à piloter Spotify : page de l'ordinateur/.test(String(e)),
+    );
+    await assert.rejects(g.requireApp("Music"), /Autorise Mate à piloter Musique/);
+  });
+
+  it("hors appli portable ou utilitaire absent : pas de filtre", async () => {
+    const off = gate({ [SE]: "denied" }, { supported: false });
+    assert.equal(await off.gate.systemEvents(), true);
+    assert.deepEqual(await off.gate.names(["Spotify", "Firefox"]), ["Spotify", "Firefox"]);
+    assert.equal(off.reads.length, 0);
+    const missing = gate(null, { available: () => false });
+    assert.deepEqual(await missing.gate.names(["Spotify"]), ["Spotify"]);
+  });
+});
+
+describe("accès complet au disque", () => {
+  it("l'état ne lit rien : inconnu tant que les notifications n'ont pas été lues", () => {
+    assert.equal(defaultDeps().fullDisk(), "unknown");
   });
 });

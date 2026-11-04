@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { clipboardUnavailable, mediaUnavailable } from "../src/driver-common.ts";
+import { clipboardUnavailable, mediaUnavailable, screenDenied } from "../src/driver-common.ts";
 import { checkOpenTarget } from "../src/open-guard.ts";
 import type { NotificationBatch, RawNotification } from "../src/notifications.ts";
 import type { Perf } from "../src/perf.ts";
@@ -50,6 +50,10 @@ export type FakeState = {
   clipboardUnavailable?: boolean;
   /** Pas de lecture en cours (session sans bureau) : mediaSessions répond 503. */
   mediaUnavailable?: boolean;
+  /** Mac sans l'autorisation « Enregistrement de l'écran » : screenPreview répond 403. */
+  screenDenied?: boolean;
+  /** Durée d'une capture (screenPreview), pour qu'elle recouvre une autre requête. */
+  screenDelayMs?: number;
   /** Mesure renvoyée par getPerf (sinon une mesure fixe). */
   perf?: Perf;
   /** Fenêtres par appli ; `elsewhere` : sur un autre bureau. */
@@ -182,6 +186,15 @@ export async function getClipboard(): Promise<ClipboardContent> {
   if (read().clipboardUnavailable) clipboardUnavailable();
   if (read().fail?.includes("getClipboard")) throw new Error("getClipboard a échoué (test)");
   return read().clipboard ?? { kind: "empty" };
+}
+
+/** Un JPEG réduit, ici seulement son début et sa fin : les tests regardent l'en-tête, pas l'image. */
+export async function screenPreview(maxWidth: number): Promise<Buffer> {
+  record("screenPreview", maxWidth);
+  if (read().screenDenied) screenDenied();
+  const delay = read().screenDelayMs;
+  if (delay) await new Promise((r) => setTimeout(r, delay));
+  return Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
 }
 
 export async function readNotifications(cursor?: string): Promise<NotificationBatch> {
