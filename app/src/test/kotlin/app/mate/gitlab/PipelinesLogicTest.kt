@@ -1,8 +1,13 @@
 package app.mate.gitlab
 
 import app.mate.net.GitLabPipeline
+import app.mate.net.GitLabPipelines
 import app.mate.net.Pipeline
+import app.mate.net.ScheduleChoice
+import app.mate.net.ScheduleProject
+import app.mate.net.ScheduleRef
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -16,7 +21,9 @@ class PipelinesLogicTest {
         duration: Int? = null,
         age: Int = 0,
         jobs: List<String> = emptyList(),
-    ) = GitLabPipeline(project, ref, id.toLong(), status, duration, age, jobs)
+        title: String = "",
+        mrIid: Int? = null,
+    ) = GitLabPipeline(project, ref, id.toLong(), status, duration, age, jobs, title, mrIid)
 
     @Test
     fun `chaque statut a sa propre icone`() {
@@ -61,9 +68,15 @@ class PipelinesLogicTest {
     }
 
     @Test
-    fun `le titre dit le projet puis la ref, le projet est le dernier segment du chemin`() {
+    fun `le titre d'une planification dit le projet puis sa description, ou la ref sans description`() {
+        assertEquals("facturation · Nightly", pipelineTitle(pipeline(title = "Nightly")))
         assertEquals("facturation · main", pipelineTitle(pipeline()))
-        assertEquals("uem · fix/FACT-236-arrondi-tva", pipelineTitle(pipeline(project = "softwares/products/uem", ref = "fix/FACT-236-arrondi-tva")))
+        assertEquals("uem · Smoke test", pipelineTitle(pipeline(project = "softwares/products/uem", title = "Smoke test")))
+    }
+
+    @Test
+    fun `le titre d'un pipeline de MR dit le projet, le numero puis le titre de la MR`() {
+        assertEquals("uem!92 · Corriger le jeton", pipelineTitle(pipeline(project = "softwares/products/uem", title = "Corriger le jeton", mrIid = 92)))
     }
 
     @Test
@@ -78,5 +91,36 @@ class PipelinesLogicTest {
         val rows = (1..10).map { pipeline(id = it) }
         assertEquals((1L..8L).toList(), visiblePipelines(rows).map { it.id })
         assertEquals(emptyList<GitLabPipeline>(), visiblePipelines(emptyList()))
+    }
+
+    @Test
+    fun `une nouvelle lecture ne change que les temps, les lignes restent les memes`() {
+        fun read(age: Int, duration: Int?, status: Pipeline = Pipeline.RUNNING) =
+            GitLabPipelines(schedules = listOf(pipeline(status, age = age, duration = duration)), mrs = listOf(pipeline(id = 2, age = age)))
+        assertEquals(withoutTimes(read(10, null)), withoutTimes(read(40, 5)))
+        assertNotEquals(withoutTimes(read(10, null)), withoutTimes(read(10, null, Pipeline.FAILED)))
+    }
+
+    private val projects = listOf(
+        ScheduleProject("a/b", listOf(ScheduleChoice(1, "Nightly", "main", true), ScheduleChoice(2, "Weekly", "main", true))),
+        ScheduleProject("c/d", listOf(ScheduleChoice(3, "Smoke", "master", false))),
+    )
+
+    @Test
+    fun `le choix envoye suit l'ordre de la liste affichee, pas celui des clics`() {
+        val checked = setOf(ScheduleRef("c/d", 3), ScheduleRef("a/b", 2), ScheduleRef("a/b", 1))
+        assertEquals(listOf(ScheduleRef("a/b", 1), ScheduleRef("a/b", 2), ScheduleRef("c/d", 3)), scheduleRefsInOrder(projects, checked))
+    }
+
+    @Test
+    fun `une planification choisie puis supprimee dans GitLab n'est pas renvoyee`() {
+        val selected = listOf(ScheduleRef("a/b", 2), ScheduleRef("a/b", 404), ScheduleRef("x/y", 1))
+        assertEquals(setOf(ScheduleRef("a/b", 2)), checkedStillListed(projects, selected))
+        assertEquals(emptyList<ScheduleRef>(), scheduleRefsInOrder(projects, emptySet()))
+    }
+
+    @Test
+    fun `au plus 20 planifications, comme le compagnon`() {
+        assertEquals(20, MAX_SCHEDULES)
     }
 }

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { listMrs, listPipelines, mergeMr, mrUrl, pipelineUrl } from "../gitlab.ts";
+import { listMrs, listPipelines, listScheduleChoices, mergeMr, mrUrl, pipelineUrl, selectSchedules } from "../gitlab.ts";
 import { openTarget } from "../os.ts";
 
 // Chemin complet d'un projet GitLab (`groupe/sous-groupe/projet`) : jamais de `..`, ni de segment vide ou commençant par `.` ou `-`.
@@ -44,8 +44,40 @@ export default async function gitlabRoutes(app: FastifyInstance) {
     },
   );
 
-  // Derniers pipelines des projets de mes MR (lecture seule).
+  // Dernier run des planifications choisies et pipelines de mes MR (lecture seule).
   app.get("/gitlab/pipelines", async () => listPipelines());
+
+  // Planifications proposées au choix (projets dont le compte est membre) et choix gardé sur l'ordinateur.
+  app.get("/gitlab/schedules", async () => listScheduleChoices());
+
+  app.post<{ Body: { schedules: { project: string; id: number }[] } }>(
+    "/gitlab/schedules",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["schedules"],
+          additionalProperties: false,
+          properties: {
+            schedules: {
+              type: "array",
+              maxItems: 20,
+              items: {
+                type: "object",
+                required: ["project", "id"],
+                additionalProperties: false,
+                properties: { project: PROJECT, id: IID },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (req) => {
+      await selectSchedules(req.body.schedules);
+      return { ok: true };
+    },
+  );
 
   app.post<{ Body: { project: string; id: number } }>(
     "/gitlab/pipelines/open",

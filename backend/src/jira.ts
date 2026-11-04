@@ -7,6 +7,7 @@
 
 import path from "node:path";
 import { config } from "./config.ts";
+import { singleFlight } from "./single-flight.ts";
 import { readJson, updateJson } from "./store.ts";
 
 const rawSite = process.env.JIRA_SITE?.trim().replace(/\/+$/, "");
@@ -64,6 +65,10 @@ async function jira<T>(path: string, init?: { method: "POST"; body: object }): P
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
+async function myAccountId(): Promise<string> {
+  return (accountId ??= (await jira<{ accountId: string }>("/rest/api/3/myself")).accountId);
+}
+
 const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 /** Secondes saisies le jour donné (heure locale de l'ordinateur). Résultat gardé 5 min sauf `force`. */
@@ -71,7 +76,7 @@ export async function worklogSecondsOn(day: Date, force = false): Promise<number
   const key = isoDay(day);
   if (!force && cache?.day === key && Date.now() - cache.at < CACHE_MS) return cache.seconds;
 
-  accountId ??= (await jira<{ accountId: string }>("/rest/api/3/myself")).accountId;
+  const me = await myAccountId();
   const start = new Date(day);
   start.setHours(0, 0, 0, 0);
   const end = start.getTime() + 86_400_000;
@@ -85,7 +90,7 @@ export async function worklogSecondsOn(day: Date, force = false): Promise<number
     const { worklogs } = await jira<{ worklogs: { author: { accountId: string }; timeSpentSeconds: number }[] }>(
       `/rest/api/3/issue/${issue.id}/worklog?startedAfter=${start.getTime()}&startedBefore=${end}&maxResults=1000`,
     );
-    for (const w of worklogs) if (w.author.accountId === accountId) seconds += w.timeSpentSeconds;
+    for (const w of worklogs) if (w.author.accountId === me) seconds += w.timeSpentSeconds;
   }
   cache = { day: key, at: Date.now(), seconds };
   return seconds;
@@ -100,10 +105,13 @@ type RawIssue = {
     status: { id?: string; name: string; statusCategory: { key: string } };
     issuetype?: { name: string } | null;
     priority?: { name: string } | null;
+    assignee?: { accountId: string; displayName: string } | null;
+    updated?: string;
   };
 };
 
-export type JiraIssue = { key: string; summary: string; type: string | null; priority: string | null; done: boolean };
+/** `assignee` : nom de l'assigné, seulement pour un ticket qui n'est pas à moi (colonne « tous les tickets »). */
+export type JiraIssue = { key: string; summary: string; type: string | null; priority: string | null; done: boolean; assignee?: string };
 export type JiraColumn = { title: string; issues: JiraIssue[] };
 export type BoardColumn = { name: string; statusIds: string[] };
 export type MergedColumn = { title: string; statusIds: string[] };
@@ -111,12 +119,13 @@ export type MergedColumn = { title: string; statusIds: string[] };
 const CATEGORY_ORDER = ["new", "indeterminate"];
 const categoryRank = (c: string) => (CATEGORY_ORDER.includes(c) ? CATEGORY_ORDER.indexOf(c) : CATEGORY_ORDER.length);
 
-const toIssue = ({ key, fields }: RawIssue, done: boolean): JiraIssue => ({
+const toIssue = ({ key, fields }: RawIssue, done: boolean, me?: string): JiraIssue => ({
   key,
   summary: fields.summary,
   type: fields.issuetype?.name ?? null,
   priority: fields.priority?.name ?? null,
   done,
+  ...(me !== undefined && fields.assignee && fields.assignee.accountId !== me ? { assignee: fields.assignee.displayName } : {}),
 });
 
 /** Une colonne par statut : catégorie « à faire » d'abord, puis « en cours », puis le reste ; alphabétique dans une catégorie ; tickets dans l'ordre de Jira. */
@@ -133,18 +142,20 @@ export function groupIssues(issues: RawIssue[]): JiraColumn[] {
     .map(({ title, issues }) => ({ title, issues }));
 }
 
-const KEYWORDS: [string, string[]][] = [
-  ["blocked", ["blocked", "bloque", "stand by", "standing by"]],
+// Noms entiers (normalisés) tenus pour la même colonne d'un tableau à l'autre. Pas de recherche dans le nom :
+// « Ready for Dev » et « Ready for QA », ou « Code Review » et « QA Review », sont des colonnes distinctes.
+const SYNONYMS: [string, string[]][] = [
+  ["blocked", ["blocked", "bloque", "blocked stand by", "blocked standing by", "stand by", "standing by"]],
   ["todo", ["to do", "todo", "a faire"]],
   ["progress", ["in progress", "en cours"]],
-  ["review", ["review", "revue"]],
-  ["goqa", ["go qa", "ready"]],
+  ["review", ["review", "in review", "revue", "en revue"]],
+  ["goqa", ["ready", "go qa", "ready go qa", "ready for qa"]],
   ["inqa", ["in qa"]],
-  ["done", ["done", "termine"]],
+  ["done", ["done", "termine", "terminee"]],
   ["backlog", ["backlog"]],
 ];
 
-/** Clé de fusion d'un nom de colonne : son mot-clé s'il en contient un, sinon le nom normalisé (minuscules, sans accents, mots alphanumériques). */
+/** Clé de fusion d'un nom de colonne : celle de son groupe de synonymes s'il en fait partie, sinon le nom normalisé (minuscules, sans accents, mots alphanumériques). */
 export function columnKey(name: string): string {
   const words = name
     .normalize("NFD")
@@ -153,8 +164,7 @@ export function columnKey(name: string): string {
     .split(/[^a-z0-9]+/)
     .filter(Boolean)
     .join(" ");
-  const padded = ` ${words} `;
-  for (const [key, phrases] of KEYWORDS) if (phrases.some((p) => padded.includes(` ${p} `))) return key;
+  for (const [key, names] of SYNONYMS) if (names.includes(words)) return key;
   return words;
 }
 
@@ -199,7 +209,8 @@ const search = async (jql: string) =>
 export type JiraBoard = { id: number; name: string; project: string };
 
 const boardsFile = path.join(config.dataDir, "jira.json");
-const emptyStore = (): { boards: number[] } => ({ boards: [] });
+type JiraStore = { boards: number[]; hidden?: string[]; everyone?: string[] };
+const emptyStore = (): JiraStore => ({ boards: [] });
 
 export async function selectedBoards(): Promise<number[]> {
   const { boards } = await readJson(boardsFile, emptyStore);
@@ -209,6 +220,23 @@ export async function selectedBoards(): Promise<number[]> {
 export async function selectBoards(ids: number[]): Promise<void> {
   await updateJson(boardsFile, emptyStore, (store) => {
     store.boards = [...new Set(ids)];
+  });
+}
+
+const strings = (list: unknown): string[] => (Array.isArray(list) ? list.filter((k): k is string => typeof k === "string") : []);
+
+/** Choix par colonne, repérées par leur clé de fusion : masquées, et « tous les tickets » (pas seulement les miens). */
+export type ColumnChoices = { hidden: string[]; everyone: string[] };
+
+export async function columnChoices(): Promise<ColumnChoices> {
+  const store = await readJson(boardsFile, emptyStore);
+  return { hidden: strings(store.hidden), everyone: strings(store.everyone) };
+}
+
+export async function saveColumnChoices({ hidden, everyone }: ColumnChoices): Promise<void> {
+  await updateJson(boardsFile, emptyStore, (store) => {
+    store.hidden = [...new Set(hidden)];
+    store.everyone = [...new Set(everyone)];
   });
 }
 
@@ -258,17 +286,96 @@ async function boardColumns(id: number): Promise<BoardColumn[]> {
   return columns;
 }
 
+const EVERYONE_MAX = 50;
+const EVERYONE_MS = 20_000;
+const EVERYONE_AT_ONCE = 4;
+
+/** Au plus EVERYONE_AT_ONCE lectures de tableau à la fois (colonnes × tableaux ne doivent pas inonder Jira). */
+let running = 0;
+const waiting: (() => void)[] = [];
+async function limited<T>(task: () => Promise<T>): Promise<T> {
+  if (running >= EVERYONE_AT_ONCE) await new Promise<void>((resolve) => waiting.push(resolve));
+  else running++;
+  try {
+    return await task();
+  } finally {
+    // La place libérée passe directement à la lecture suivante en attente.
+    const next = waiting.shift();
+    if (next) next();
+    else running--;
+  }
+}
+
+// Une lecture gardée 20 s par jeu (tableaux, statuts) : la vue relit chaque minute, et chaque colonne a sa lecture.
+const everyoneFlights = new Map<string, ReturnType<typeof singleFlight<JiraIssue[]>>>();
+
+const everyoneIssues = (boardIds: number[], statusIds: string[]): Promise<JiraIssue[]> => {
+  const ids = statusIds.filter((id) => /^\d+$/.test(id));
+  if (ids.length === 0) return Promise.resolve([]);
+  const key = `${boardIds.join(",")}|${ids.join(",")}`;
+  if (!everyoneFlights.has(key)) {
+    if (everyoneFlights.size >= 50) everyoneFlights.clear();
+    everyoneFlights.set(key, singleFlight<JiraIssue[]>(EVERYONE_MS));
+  }
+  return everyoneFlights.get(key)!.get(() => readEveryoneIssues(boardIds, ids));
+};
+
+/** Tickets de tout le monde dans ces statuts, vus par les tableaux choisis (leur filtre s'applique), les plus récents d'abord. */
+async function readEveryoneIssues(boardIds: number[], ids: string[]): Promise<JiraIssue[]> {
+  const me = await myAccountId();
+  const jql = encodeURIComponent(`status in (${ids.join(",")}) ORDER BY updated DESC`);
+  const fields = [...SEARCH_FIELDS, "assignee", "updated"].join(",");
+  const pages = await Promise.all(
+    boardIds.map((id) =>
+      limited(() =>
+        jira<{ issues: RawIssue[] }>(`/rest/agile/1.0/board/${id}/issue?jql=${jql}&fields=${fields}&maxResults=${EVERYONE_MAX}`),
+      ),
+    ),
+  );
+  const byKey = new Map<string, RawIssue>();
+  for (const raw of pages.flatMap((p) => p.issues)) if (!byKey.has(raw.key)) byKey.set(raw.key, raw);
+  const time = (r: RawIssue) => Date.parse(r.fields.updated ?? "") || 0;
+  return [...byKey.values()]
+    .sort((a, b) => time(b) - time(a))
+    .slice(0, EVERYONE_MAX)
+    .map((raw) => toIssue(raw, raw.fields.status.statusCategory.key === "done", me));
+}
+
+/** Colonnes des tableaux choisis, réunies. */
+const mergedColumns = async (ids: number[]) => mergeBoardColumns(await Promise.all(ids.map(boardColumns)));
+
+export type ColumnChoice = { key: string; title: string; shown: boolean; everyone: boolean };
+
+/** Colonnes de l'union des tableaux choisis avec leurs choix ; un choix sur une colonne qui n'existe plus est ignoré. */
+export async function columnList(): Promise<{ boardsChosen: boolean; columns: ColumnChoice[] }> {
+  const ids = await selectedBoards();
+  if (ids.length === 0) return { boardsChosen: false, columns: [] };
+  const [merged, { hidden, everyone }] = await Promise.all([mergedColumns(ids), columnChoices()]);
+  return {
+    boardsChosen: true,
+    columns: merged.map(({ title }) => {
+      const key = columnKey(title);
+      return { key, title, shown: !hidden.includes(key), everyone: everyone.includes(key) };
+    }),
+  };
+}
+
 /**
  * Tickets assignés au propriétaire du jeton. Sans tableau choisi : une colonne par statut, sans les terminés.
  * Sinon : les colonnes des tableaux choisis (vides comprises) avec les tickets terminés des 7 derniers jours ;
- * un statut absent des tableaux passe en colonne de fin.
+ * un statut absent des tableaux passe en colonne de fin. Une colonne masquée disparaît ; une colonne « tous les
+ * tickets » montre ceux de tout le monde (50 au plus) à la place des miens.
  */
 export async function myIssues(): Promise<{ boardsChosen: boolean; columns: JiraColumn[] }> {
   const ids = await selectedBoards();
   if (ids.length === 0) return { boardsChosen: false, columns: groupIssues(await search(OPEN_JQL)) };
 
-  const [open, done, boards] = await Promise.all([search(OPEN_JQL), search(DONE_JQL), Promise.all(ids.map(boardColumns))]);
-  const merged = mergeBoardColumns(boards);
+  const [open, done, merged, { hidden, everyone }] = await Promise.all([
+    search(OPEN_JQL),
+    search(DONE_JQL),
+    mergedColumns(ids),
+    columnChoices(),
+  ]);
   const columns: JiraColumn[] = merged.map((m) => ({ title: m.title, issues: [] }));
   const columnOfStatus = new Map<string, JiraColumn>();
   merged.forEach((m, i) => {
@@ -284,7 +391,13 @@ export async function myIssues(): Promise<{ boardsChosen: boolean; columns: Jira
     }
     column.issues.push(toIssue(raw, isDone));
   }
-  return { boardsChosen: true, columns: [...columns, ...extra.values()] };
+  const keys = merged.map((m) => columnKey(m.title));
+  await Promise.all(
+    merged.map(async (m, i) => {
+      if (everyone.includes(keys[i]) && !hidden.includes(keys[i])) columns[i].issues = await everyoneIssues(ids, m.statusIds);
+    }),
+  );
+  return { boardsChosen: true, columns: [...columns.filter((_, i) => !hidden.includes(keys[i])), ...extra.values()] };
 }
 
 export type JiraTransition = { id: string; name: string; to: string; needsJira: boolean };

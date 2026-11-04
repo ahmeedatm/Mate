@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, it, mock } from "node:test";
+import { fakeDiscussion, fakeStages } from "./fake-gitlab.ts";
 
 // Dossier de données vide (aucun compte connecté) et pas d'appli OAuth : seul GITLAB_TOKEN ouvre GitLab ici.
 process.env.DATA_DIR = await fs.mkdtemp(path.join(os.tmpdir(), "companion-gitlab-"));
@@ -100,6 +101,8 @@ describe("gitlab : lecture des MR", () => {
         mergeable: false,
         sha: SHA,
         updatedAt: "2026-10-28T10:00:00Z",
+        column: "draft",
+        stages: [],
       },
     ]);
     assert.equal(review.length, 1);
@@ -165,6 +168,109 @@ describe("gitlab : lecture des MR", () => {
   it("listes vides", async () => {
     fakeFetch(() => json(graphql([], [])));
     assert.deepEqual(await listMrs(), { connected: true, canMerge: true, mine: [], review: [] });
+  });
+});
+
+describe("gitlab : colonne de chaque MR", () => {
+  const ME = "ahmed";
+  const asMe = (assigned: unknown[], review: unknown[] = []) => ({
+    data: {
+      currentUser: { username: ME, assignedMergeRequests: { nodes: assigned }, reviewRequestedMergeRequests: { nodes: review } },
+    },
+  });
+  const commit = (committedDate: string, by = ME) => ({ committedDate, author: { username: by } });
+  const approved = { approved: true, approvedBy: { nodes: [{ name: "Camille", username: "camille" }] } };
+  const unapproved = { approved: false, approvedBy: { nodes: [] } };
+  const T9 = "2026-10-28T09:00:00Z";
+  const T10 = "2026-10-28T10:00:00Z";
+  const T11 = "2026-10-28T11:00:00Z";
+  const own = (iid: number, over: Record<string, unknown>) =>
+    node({ iid: String(iid), ...unapproved, commitsWithoutMergeCommits: { nodes: [commit(T10)] }, ...over });
+
+  it("une seule colonne par MR, par priorité : draft, à fixer, prête à merger, en cours, prête pour review", async () => {
+    const open = fakeDiscussion(false, [{ at: T11, by: "camille" }]);
+    fakeFetch(() =>
+      json(
+        asMe([
+          own(1, { draft: true, discussions: { nodes: [open] } }),
+          own(2, { ...approved, discussions: { nodes: [open] } }),
+          own(3, { ...approved, discussions: { nodes: [fakeDiscussion(false, [{ at: T9, by: "camille" }])] } }),
+          own(4, { approved: true, approvedBy: { nodes: [] }, headPipeline: { status: "RUNNING" } }),
+          own(5, { headPipeline: { status: "SUCCESS" } }),
+          own(6, { discussions: { nodes: [fakeDiscussion(false, [{ at: T11, by: "camille" }], false)] } }),
+          own(7, { discussions: { nodes: [fakeDiscussion(false, [{ at: T11, by: ME }])] }, headPipeline: { status: "FAILED" } }),
+          own(8, { discussions: { nodes: [fakeDiscussion(false, [{ at: T11, by: "camille", system: true }])] } }),
+          own(9, {
+            commitsWithoutMergeCommits: { nodes: [commit(T11, "camille")] },
+            discussions: { nodes: [fakeDiscussion(false, [{ at: T9, by: "camille" }])] },
+          }),
+          own(10, { ...approved, headPipeline: { status: "RUNNING" } }),
+          own(11, { headPipeline: null }),
+          own(12, { discussions: { nodes: [fakeDiscussion(true, [{ at: T11, by: "camille" }])] } }),
+        ]),
+      ),
+    );
+    const { mine } = await listMrs();
+    assert.deepEqual(Object.fromEntries(mine.map((m) => [m.iid, m.column])), {
+      1: "draft",
+      2: "fix",
+      3: "merge",
+      4: "running",
+      5: "ready",
+      6: "ready",
+      7: "ready",
+      8: "ready",
+      9: "fix",
+      10: "merge",
+      11: "ready",
+      12: "ready",
+    });
+  });
+
+  it("à review : MR à relire que je n'ai ni approuvée ni commentée (un message système de moi ne compte pas)", async () => {
+    fakeFetch(() =>
+      json(
+        asMe(
+          [],
+          [
+            node({ iid: "20" }),
+            node({ iid: "21", approvedBy: { nodes: [{ name: "Ahmed", username: ME }] } }),
+            node({ iid: "22", discussions: { nodes: [fakeDiscussion(false, [{ at: T10, by: ME }])] } }),
+            node({ iid: "23", discussions: { nodes: [fakeDiscussion(false, [{ at: T10, by: ME, system: true }], false)] } }),
+            node({ iid: "24", approvedBy: { nodes: [{ name: "Camille", username: "camille" }] } }),
+          ],
+        ),
+      ),
+    );
+    const { review } = await listMrs();
+    assert.deepEqual(
+      review.map((m) => m.iid).sort((a, b) => a - b),
+      [20, 23, 24],
+    );
+    assert.ok(review.every((m) => m.column === "review"));
+  });
+
+  it("stages du pipeline : nom et état réduit, dans l'ordre de GitLab", async () => {
+    fakeFetch(() =>
+      json(
+        asMe([
+          own(1, {
+            headPipeline: { status: "RUNNING", stages: fakeStages(["build", "success"], ["test", "running"], ["deploy", "manual"]) },
+          }),
+        ]),
+      ),
+    );
+    assert.deepEqual((await listMrs()).mine[0].stages, [
+      { name: "build", status: "success" },
+      { name: "test", status: "running" },
+      { name: "deploy", status: "none" },
+    ]);
+  });
+
+  it("la réponse de la tablette ne porte ni les discussions ni les commits", async () => {
+    fakeFetch(() => json(asMe([own(1, { discussions: { nodes: [fakeDiscussion(false, [{ at: T11, by: "camille" }])] } })])));
+    const body = JSON.stringify(await listMrs());
+    assert.ok(!body.includes("discussions") && !body.includes("commitsWithoutMergeCommits") && !body.includes('camille"'));
   });
 });
 
@@ -266,7 +372,17 @@ describe("gitlab : requête GraphQL", () => {
     const { query } = JSON.parse(String(init.body));
     assert.match(query, /assignedMergeRequests\(state: opened, first: 50\)/);
     assert.match(query, /reviewRequestedMergeRequests\(state: opened, first: 50\)/);
-    for (const field of ["diffHeadSha", "updatedAt", "detailedMergeStatus", "approvalsLeft", "headPipeline", "fullPath"]) {
+    for (const field of [
+      "diffHeadSha",
+      "updatedAt",
+      "detailedMergeStatus",
+      "approvalsLeft",
+      "headPipeline",
+      "fullPath",
+      "stages",
+      "discussions",
+      "commitsWithoutMergeCommits",
+    ]) {
       assert.ok(query.includes(field), field);
     }
   });
