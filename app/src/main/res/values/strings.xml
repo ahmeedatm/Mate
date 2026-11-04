@@ -1624,11 +1624,11 @@
     <string name="link_state_offline">hors ligne</string>
     <string name="link_state_locked">verrouillé</string>
     <!-- Pastille de connexion du bandeau du haut (ui/topbar/LinkBadge). -->
-    <string name="link_badge_online">Ordi connecté</string>
+    <string name="link_badge_online">Ordi en ligne</string>
     <string name="link_badge_wait">Connexion…</string>
-    <string name="link_badge_down">Ordi injoignable</string>
-    <string name="link_badge_down_since">Ordi injoignable depuis %1$s</string>
-    <string name="link_badge_refused">Ordi : jeton refusé</string>
+    <string name="link_badge_down">Ordi hors ligne</string>
+    <string name="link_badge_down_since">Ordi hors ligne depuis %1$s</string>
+    <string name="link_badge_refused">Ordi non autorisé</string>
     <string name="link_badge_spoken">%1$s. Toucher pour changer d\'ordinateur</string>
     <string name="color_default">Couleur par défaut</string>
     <string name="color_red">Rouge</string>

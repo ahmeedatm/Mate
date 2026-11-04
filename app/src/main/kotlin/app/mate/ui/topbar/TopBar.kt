@@ -121,7 +121,7 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
         header.addView(title, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER_VERTICAL or Gravity.START))
         addView(header, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         addView(wakeMic, LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(12) })
-        addView(link, LayoutParams(LayoutParams.WRAP_CONTENT, dp(36)).apply { marginEnd = dp(16) })
+        addView(link, LayoutParams(LayoutParams.WRAP_CONTENT, dp(48)).apply { marginEnd = dp(16) })
         addView(row, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
         addView(editRow, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         editRow.addView(hint, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(16) })

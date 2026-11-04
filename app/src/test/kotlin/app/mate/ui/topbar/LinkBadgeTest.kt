@@ -2,6 +2,7 @@ package app.mate.ui.topbar
 
 import app.mate.R
 import app.mate.net.Link
+import app.mate.ui.AppTheme
 import app.mate.ui.home.Down
 import app.mate.ui.home.LinkWatch
 import org.junit.Assert.assertEquals
@@ -44,6 +45,11 @@ class LinkBadgeTest {
     }
 
     @Test
+    fun `chaque ton a sa propre forme`() {
+        assertEquals(LinkTone.entries.size, LinkTone.entries.map { it.shape }.toSet().size)
+    }
+
+    @Test
     fun `seules la coupure et le refus ont un fond`() {
         assertEquals(listOf(LinkTone.DOWN, LinkTone.REFUSED), LinkTone.entries.filter { it.fill != null })
     }
@@ -66,10 +72,12 @@ class LinkBadgeTest {
     // --- Lisibilité dans chaque thème (res/values/palettes.xml)
 
     private val palettes = File("src/main/res/values/palettes.xml").readText()
-    private val all = listOf(
-        "Console", "ConsoleJour", "Contraste", "Hush", "SpiderMan", "CadranClair", "CadranSombre", "Cadran", "CadranNuit", "Retro",
-        "Registre", "Studio", "Maison", "Tableau", "Terminal",
-    )
+    private val all = Regex("""<style name="Palette\.(\w+)"""").findAll(palettes).map { it.groupValues[1] }.toList()
+
+    @Test
+    fun `chaque theme de l appli est verifie`() {
+        assertEquals(AppTheme.entries.size, all.size)
+    }
 
     private val names = mapOf(
         R.attr.c_ok to "c_ok", R.attr.c_ko to "c_ko", R.attr.c_ko_soft to "c_ko_soft", R.attr.c_warn to "c_warn",
@@ -125,6 +133,17 @@ class LinkBadgeTest {
                 val fill = tone.fill?.let { over(argb(p, attrName(it)), bg) } ?: bg
                 val r = ratio(argb(p, attrName(tone.dot)), fill)
                 assertTrue("$p $tone : point sur fond = $r", r >= 3.0)
+            }
+        }
+    }
+
+    @Test
+    fun `le filet de la pastille fait au moins 3 pour 1 sur le fond de l ecran dans chaque theme`() {
+        for (p in all) {
+            val bg = argb(p, "c_bg")
+            for (tone in LinkTone.entries.filter { it.stroke != null }) {
+                val r = ratio(argb(p, attrName(tone.stroke!!)), bg)
+                assertTrue("$p $tone : filet sur fond = $r", r >= 3.0)
             }
         }
     }
