@@ -1077,6 +1077,9 @@
     <string name="block_on_computer_lock_hint">Activé : écran bloqué tant que l\'ordinateur l\'est. Coupé : la tablette reste utilisable ; ce qui touche l\'ordinateur répond qu\'il est verrouillé.</string>
     <string name="lock_code_settings_hint">Le cadenas de la barre de gauche verrouille la tablette ; ce code la déverrouille.</string>
     <string name="rail_lock">Verrouiller la tablette</string>
+    <string name="lock_away">Verrou renforcé</string>
+    <string name="lock_away_hint">Si l\'ordinateur verrouillé n\'est plus joignable pendant 30 s (emporté, capot fermé), le déverrouiller ailleurs ne rouvre pas la tablette : il faut son code.</string>
+    <string name="lock_away_body">%1$s a été déverrouillé loin de la tablette. Tape ton code pour l\'utiliser.</string>
     <string name="kiosk_on">Actif : l\'appli est verrouillée à l\'écran et sert d\'écran d\'accueil.</string>
     <string name="kiosk_paused">Suspendu jusqu\'au prochain redémarrage de l\'appli.</string>
     <string name="kiosk_allow_installs">Autoriser les installations</string>

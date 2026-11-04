@@ -105,6 +105,7 @@ class SettingsFragment :
     private lateinit var meetingAlert: SwitchCompat
     private lateinit var blockOnComputerLock: SwitchCompat
     private lateinit var lockCode: Button
+    private lateinit var lockAway: SwitchCompat
     private lateinit var wakeWord: SwitchCompat
     private lateinit var wakeStatus: TextView
     private lateinit var weatherLocation: SwitchCompat
@@ -188,6 +189,7 @@ class SettingsFragment :
         meetingAlert = view.findViewById(R.id.settings_meeting_alert)
         blockOnComputerLock = view.findViewById(R.id.settings_block_on_computer_lock)
         lockCode = view.findViewById(R.id.settings_lock_code)
+        lockAway = view.findViewById(R.id.settings_lock_away)
         wakeWord = view.findViewById(R.id.settings_wake_word)
         wakeStatus = view.findViewById(R.id.settings_wake_word_status)
         weatherLocation = view.findViewById(R.id.settings_weather_location)
@@ -699,6 +701,16 @@ class SettingsFragment :
             if (checked != Prefs.blockOnComputerLock(ctx)) main.lockScreen.setBlockOnComputerLock(checked)
         }
         lockCode.setOnClickListener { main.lockScreen.chooseCode { renderLockCode() } }
+        // Verrou renforcé : il lui faut un code ; sans code, on le fait choisir, annuler laisse l'option coupée.
+        lockAway.setOnCheckedChangeListener { _, checked ->
+            if (!checked) return@setOnCheckedChangeListener Prefs.setLockAway(ctx, false)
+            if (Prefs.lockCodeHash(ctx) != null) return@setOnCheckedChangeListener Prefs.setLockAway(ctx, true)
+            lockAway.isChecked = false
+            main.lockScreen.chooseCode {
+                Prefs.setLockAway(ctx, true)
+                renderLockCode()
+            }
+        }
         // Mot de réveil : l'activer télécharge le modèle s'il manque ; l'écoute suit tout de suite.
         wakeWord.setOnCheckedChangeListener { _, checked ->
             Prefs.setWakeWord(ctx, checked)
@@ -1155,6 +1167,7 @@ class SettingsFragment :
 
     private fun renderLockCode() {
         lockCode.setText(if (Prefs.lockCodeHash(requireContext()) == null) R.string.lock_code_choose else R.string.lock_code_change)
+        lockAway.isChecked = Prefs.lockAway(requireContext())
     }
 
     private fun renderKiosk() {
