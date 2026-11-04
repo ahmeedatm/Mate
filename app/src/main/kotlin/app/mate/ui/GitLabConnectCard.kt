@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Carte « Connecter GitLab » ou « Connecter GitHub » (`forge` ; GitLab, Pipelines, GitHub et Actions, quand l'ordinateur n'a pas de compte connecté) : le bouton ouvre la
- * connexion dans le navigateur de l'ordinateur, le texte dit alors d'autoriser l'accès. La vue qui l'affiche relit
+ * connexion sur l'ordinateur (GitLab : carte de la page où coller un jeton), le texte dit alors quoi y faire. La vue qui l'affiche relit
  * toutes les 3 s en attendant et la cache une fois reliée. `compact` : prend toute la largeur (widget L), sinon 460 dp.
  */
 class GitLabConnectCard(
@@ -29,7 +29,7 @@ class GitLabConnectCard(
     private val text = TextView(context)
     private val button = Button(context, null, 0, R.style.PrimaryButton)
 
-    /** « Connecter GitLab » touché : le texte dit d'autoriser l'accès dans le navigateur de l'ordinateur. */
+    /** « Connecter GitLab » touché : le texte dit quoi faire sur l'ordinateur (GitLab : coller un jeton dans sa page). */
     private var waiting = false
 
     init {
@@ -55,7 +55,7 @@ class GitLabConnectCard(
         addView(box, LayoutParams(if (compact) LayoutParams.MATCH_PARENT else dp(460), LayoutParams.WRAP_CONTENT))
     }
 
-    /** Affiche la carte : `expired` = le compte a été connecté mais GitLab refuse de le renouveler. */
+    /** Affiche la carte : `expired` = un jeton a été collé mais GitLab le refuse. */
     fun show(expired: Boolean) {
         text.setText(
             when {

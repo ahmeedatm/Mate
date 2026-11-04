@@ -9,7 +9,8 @@ import { clearGithubCache } from "../github.ts";
 import { disconnectGithub, githubAccount, githubClientId, githubLogin, startGithubLogin } from "../github-auth.ts";
 import { clearGitlabCache } from "../gitlab.ts";
 import { jiraConfigured, jiraSite } from "../jira.ts";
-import { disconnectGitlab, finishGitlabLogin, gitlabAccount, gitlabClientId, gitlabLoginUrl } from "../gitlab-auth.ts";
+import { connectGitlab, disconnectGitlab, gitlabAccount, gitlabBaseUrl, GitlabTokenError, gitlabUrlProblem } from "../gitlab-auth.ts";
+import { isLocalRequest } from "../net-guard.ts";
 import { LOCAL_PAGE } from "../local-page.ts";
 import { WEB_FILES } from "../web-style.ts";
 import { accessibility, openTarget } from "../os.ts";
@@ -59,42 +60,41 @@ export default async function localRoutes(app: FastifyInstance) {
     },
   );
 
-  app.get("/local/status", async () => {
-    return {
-      ...identity(),
-      waiting: waiting().waiting,
-      accessibility: await accessibility().catch(() => null),
-      addresses: config.loopbackOnly ? ["127.0.0.1"] : lanAddresses(),
-      tablet: tabletStatus().connected,
-      tabletInfo: tabletInfo(),
-      pairing: pendingCode(),
-      licences: fs.existsSync(LICENCES_FILE),
-      // Brancher une IA de bureau sur la porte MCP (carte « Connecter une IA »).
-      mcp: mcpInfo(),
-      // Hôtes seulement : un lien ICS publié donne accès à l'agenda, il ne s'affiche pas en entier.
-      calendar: {
-        env: config.icsUrls.length,
-        saved: (await savedCalendarUrls()).map((u) => (u === "demo" ? "agenda d'exemple" : (URL.parse(u)?.host ?? "lien invalide"))),
-        accounts: await connectedAccounts(),
-        providers: await availableProviders(),
-      },
-      // `available` : l'appli OAuth est réglée (bouton de connexion) ; `token` : GITLAB_TOKEN dans .env (secours).
-      gitlab: {
-        available: !!(await gitlabClientId()),
-        token: !!process.env.GITLAB_TOKEN?.trim(),
-        account: (await gitlabAccount()) ?? null,
-      },
-      // Même chose pour GitHub ; `login` : code à saisir sur GitHub tant qu'une connexion attend, sinon son dernier résultat.
-      github: {
-        available: !!(await githubClientId()),
-        token: !!process.env.GITHUB_TOKEN?.trim(),
-        account: (await githubAccount()) ?? null,
-        login: githubLogin(),
-      },
-      // Jira se règle dans le .env de l'ordinateur : la page dit seulement s'il est relié, et à quel site.
-      jira: { configured: jiraConfigured, site: jiraSite },
-    };
-  });
+  app.get("/local/status", async () => ({
+    ...identity(),
+    waiting: waiting().waiting,
+    accessibility: await accessibility().catch(() => null),
+    addresses: config.loopbackOnly ? ["127.0.0.1"] : lanAddresses(),
+    tablet: tabletStatus().connected,
+    tabletInfo: tabletInfo(),
+    pairing: pendingCode(),
+    licences: fs.existsSync(LICENCES_FILE),
+    // Brancher une IA de bureau sur la porte MCP (carte « Connecter une IA »).
+    mcp: mcpInfo(),
+    // Hôtes seulement : un lien ICS publié donne accès à l'agenda, il ne s'affiche pas en entier.
+    calendar: {
+      env: config.icsUrls.length,
+      saved: (await savedCalendarUrls()).map((u) => (u === "demo" ? "agenda d'exemple" : (URL.parse(u)?.host ?? "lien invalide"))),
+      accounts: await connectedAccounts(),
+      providers: await availableProviders(),
+    },
+    // `account` : jeton collé dans la page (`canWrite` : portée api) ; `urlError` : GITLAB_URL refusée ; `token` : GITLAB_TOKEN dans .env (secours).
+    gitlab: {
+      url: gitlabUrlProblem() ? "" : gitlabBaseUrl(),
+      urlError: gitlabUrlProblem() ?? null,
+      token: !!process.env.GITLAB_TOKEN?.trim(),
+      account: (await gitlabAccount()) ?? null,
+    },
+    // Même chose pour GitHub ; `login` : code à saisir sur GitHub tant qu'une connexion attend, sinon son dernier résultat.
+    github: {
+      available: !!(await githubClientId()),
+      token: !!process.env.GITHUB_TOKEN?.trim(),
+      account: (await githubAccount()) ?? null,
+      login: githubLogin(),
+    },
+    // Jira se règle dans le .env de l'ordinateur : la page dit seulement s'il est relié, et à quel site.
+    jira: { configured: jiraConfigured, site: jiraSite },
+  }));
 
   /** Lien(s) d'agenda collé(s) dans la page locale ; webcal:// devient https://. Liste vide : retire l'agenda. */
   app.put<{ Body: { urls: string[] } }>(
@@ -216,29 +216,29 @@ export default async function localRoutes(app: FastifyInstance) {
     },
   );
 
-  // Connexion GitLab (src/gitlab-auth.ts) : même parcours, retour sur la section GitLab de la page. Routes à part : GitLab
-  // n'est pas un fournisseur d'agenda. 127.0.0.1 : adresse déclarée dans l'appli (la variante localhost l'est aussi).
-  app.get("/oauth/gitlab/start", async (_req, reply) => {
-    if (!(await gitlabClientId())) return reply.code(404).send({ error: "Connexion non disponible pour ce compte" });
-    return reply.redirect(await gitlabLoginUrl(`http://127.0.0.1:${config.port}/oauth/gitlab/callback`));
-  });
-
-  app.get<{ Querystring: { code?: string; state?: string; error?: string; error_description?: string } }>(
-    "/oauth/gitlab/callback",
+  // Connexion GitLab (src/gitlab-auth.ts) : jeton personnel collé dans la page, vérifié auprès de GitLab puis gardé sur l'ordinateur.
+  app.put<{ Body: { token: string } }>(
+    "/local/accounts/gitlab",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["token"],
+          additionalProperties: false,
+          properties: { token: { type: "string", maxLength: 500 } },
+        },
+      },
+    },
     async (req, reply) => {
-      const back = (result: string) =>
-        reply.redirect(`http://127.0.0.1:${config.port}/?section=gitlab&gitlab=${encodeURIComponent(result)}`);
-      if (req.query.error || !req.query.code || !req.query.state) {
-        req.log.warn(`Connexion GitLab refusée : ${req.query.error}`);
-        return back(req.query.error === "access_denied" ? "refused" : "error");
-      }
+      // Le jeton d'appairage ne suffit pas : un secret ne se colle que depuis la page ouverte sur l'ordinateur.
+      if (!isLocalRequest(req.ip, req.headers.host)) return reply.code(403).send({ error: "Réservé à la page de l'ordinateur" });
       try {
-        await finishGitlabLogin(req.query.state, req.query.code);
+        const { username } = await connectGitlab(req.body.token);
         clearGitlabCache();
-        return back("ok");
+        return { ok: true, username };
       } catch (e) {
-        req.log.error(e);
-        return back("error");
+        if (e instanceof GitlabTokenError) return reply.code(e.statusCode).send({ error: e.message });
+        throw e;
       }
     },
   );
@@ -284,7 +284,7 @@ export default async function localRoutes(app: FastifyInstance) {
 
   /**
    * Ouvre le compagnon sur l'ordinateur, depuis la tablette : sa page (« Relier mon agenda » de l'Accueil, « Régler depuis
-   * l'ordi » des Réglages), ou la page d'autorisation de GitLab (`gitlab`, carte « Connecter GitLab » de l'onglet GitLab),
+   * l'ordi » des Réglages), ou sa carte GitLab (`gitlab`, carte « Connecter GitLab » des widgets GitLab : jeton à coller),
    * ou la connexion GitHub (`github` : code à saisir sur GitHub, montré par la page).
    */
   app.post<{ Body: { section?: "agenda" | "gitlab" | "github" | "tablette" } }>(
@@ -300,7 +300,7 @@ export default async function localRoutes(app: FastifyInstance) {
     },
     async (req) => {
       const section = req.body?.section;
-      const path = section === "gitlab" || section === "github" ? `oauth/${section}/start` : section ? `?section=${section}` : "";
+      const path = section === "github" ? "oauth/github/start" : section ? `?section=${section}` : "";
       await openTarget(`http://127.0.0.1:${config.port}/${path}`);
       return { ok: true };
     },

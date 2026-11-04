@@ -241,7 +241,7 @@ describe("cartes de l'Accueil et onglets d'appli", () => {
       meetings: true,
       teams: false,
       agents: false,
-      gitlab: false,
+      gitlab: true,
       github: false,
       jira: false,
       ha: false,

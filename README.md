@@ -18,7 +18,7 @@ scripts/  Sauvegarde (bundle git + données perso)
 [la tablette 4.2](docs/tablette-4.2.md) ·
 [kiosque](docs/kiosque.md) ·
 [agenda par compte Microsoft/Google](docs/agenda-comptes.md) ·
-[GitLab par connexion au compte](docs/gitlab-oauth.md) ·
+[GitLab par jeton personnel collé](docs/gitlab-jeton.md) ·
 [ouverture aux développeurs : deck.json, touches perso, API, MCP](docs/ouverture-developpeurs.md)
 
 ## Installation (Mac ou Windows)

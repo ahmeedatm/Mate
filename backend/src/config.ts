@@ -19,7 +19,7 @@ const token = envToken !== undefined && envToken.trim() === "" && loopbackOnly ?
 const platform = process.platform === "win32" ? "windows" : "mac";
 
 /**
- * Identifiants publics des applis OAuth (agenda, GitLab), livrés avec le logiciel ; ACCOUNTS_FILE pour un autre fichier
+ * Identifiants publics des applis OAuth (agenda), livrés avec le logiciel ; ACCOUNTS_FILE pour un autre fichier
  * (tests : identifiants vides). Lu à chaque appel, pas au chargement.
  */
 export const accountsFile = () =>
