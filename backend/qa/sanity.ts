@@ -259,6 +259,8 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
           expectStatus(read, 501, "/system/dnd hors Mac et Windows");
           return "pas de pilotage ici (501)";
         }
+        // Mac : Centre de contrôle lu par l'Accessibilité.
+        if (os === "mac" && accessibility === false) throw new Skip("Accessibilité non accordée");
         expectStatus(read, 200, "GET /system/dnd");
         if (typeof read.json.on !== "boolean") return "état illisible sur cet ordinateur";
         // L'état actuel reposé tel quel : la route marche sans rien changer pour l'utilisateur.
@@ -1059,6 +1061,22 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const res = await call("GET", "/local/confidentialite", undefined, local ? false : true);
         expectStatus(res, 200, "/local/confidentialite");
         expect(String(res.json).startsWith("Mate : politique de confidentialité"), "politique de confidentialité inattendue");
+      },
+    },
+    {
+      name: "autorisations du Mac",
+      run: async () => {
+        // Appli portable sur Mac seulement : la liste vient de l'utilitaire natif. Ailleurs, liste vide.
+        const res = await call("GET", "/local/permissions", undefined, local ? false : true);
+        expectStatus(res, 200, "/local/permissions");
+        const items: { id?: string; state?: string }[] = res.json.items ?? [];
+        if (items.length === 0) throw new Skip("liste vide : appli portable sur Mac seulement");
+        expect(items[0].id === "accessibility", "Accessibilité absente de la liste des autorisations");
+        expect(
+          items.every((p) => typeof p.state === "string"),
+          "état manquant dans la liste des autorisations",
+        );
+        return `${items.length} autorisations, ${items.filter((p) => p.state === "granted").length} accordées`;
       },
     },
     {

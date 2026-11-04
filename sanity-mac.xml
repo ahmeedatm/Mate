@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="sanity-mac" tests="58" failures="0" skipped="5" time="35.456">
+  <testcase classname="sanity-mac" name="santé et identité" time="0.027"/>
+  <testcase classname="sanity-mac" name="appairage par code" time="0.036"/>
+  <testcase classname="sanity-mac" name="deck et deck de départ filtré" time="0.221"/>
+  <testcase classname="sanity-mac" name="touche http : une cible inconnue est refusée" time="0.007"/>
+  <testcase classname="sanity-mac" name="réunion en cours (profil Réunion de la tablette)" time="4.929"/>
+  <testcase classname="sanity-mac" name="touches qui montrent l'état réel" time="0.003"/>
+  <testcase classname="sanity-mac" name="page par appli (appli au premier plan)" time="0.253"/>
+  <testcase classname="sanity-mac" name="faire sonner la tablette (ordre ring)" time="0.006"/>
+  <testcase classname="sanity-mac" name="ordinateur verrouillé (écran bloquant de la tablette)" time="0.014"/>
+  <testcase classname="sanity-mac" name="écran de l'ordinateur éveillé pendant le Focus" time="0.004"/>
+  <testcase classname="sanity-mac" name="Ne pas déranger à la main (pastille de l'Accueil)" time="10.009"><skipped message="Accessibilité non accordée"/></testcase>
+  <testcase classname="sanity-mac" name="plugins de première utilisation" time="0.003"/>
+  <testcase classname="sanity-mac" name="touches perso au-delà de 14" time="0.005"/>
+  <testcase classname="sanity-mac" name="dupliquer une touche" time="0.005"/>
+  <testcase classname="sanity-mac" name="touche de gestes du Pavé enregistrée (jamais jouée)" time="0.002"/>
+  <testcase classname="sanity-mac" name="touche large : deux cases de large dans le deck" time="0.005"/>
+  <testcase classname="sanity-mac" name="touche à cycle : une étape par appui" time="0.01"/>
+  <testcase classname="sanity-mac" name="touche à maintenir : appui puis relâchement" time="0.218"/>
+  <testcase classname="sanity-mac" name="touche à seconde action : l'appui long la lance" time="0.005"/>
+  <testcase classname="sanity-mac" name="agents Claude : hooks et état" time="0.005"/>
+  <testcase classname="sanity-mac" name="son" time="0.145"/>
+  <testcase classname="sanity-mac" name="minuteur de pause musique" time="10.048"/>
+  <testcase classname="sanity-mac" name="mélangeur" time="0.267"/>
+  <testcase classname="sanity-mac" name="sortie audio" time="0.286"/>
+  <testcase classname="sanity-mac" name="performances" time="0.341"/>
+  <testcase classname="sanity-mac" name="presse-papiers" time="0.08"/>
+  <testcase classname="sanity-mac" name="fenêtres ouvertes" time="0"><skipped message="Accessibilité non accordée"/></testcase>
+  <testcase classname="sanity-mac" name="absence : état gardé (lecture seule)" time="0.001"/>
+  <testcase classname="sanity-mac" name="GitLab : MR (lecture seule)" time="0.227"><skipped message="GitLab inaccessible depuis l'ordinateur (GitLab refuse l'accès de l'ordinateur : reconnecte-le depuis la page du compagnon)"/></testcase>
+  <testcase classname="sanity-mac" name="GitLab : pipelines (lecture seule)" time="0.185"><skipped message="GitLab inaccessible depuis l'ordinateur (GitLab refuse l'accès de l'ordinateur : reconnecte-le depuis la page du compagnon)"/></testcase>
+  <testcase classname="sanity-mac" name="GitHub : PR et Actions (lecture seule)" time="0.004"/>
+  <testcase classname="sanity-mac" name="pointeur" time="0"><skipped message="Accessibilité non accordée"/></testcase>
+  <testcase classname="sanity-mac" name="présentation (action inconnue refusée)" time="0.001"/>
+  <testcase classname="sanity-mac" name="garde de /docs/open (refuse un .exe)" time="0.001"/>
+  <testcase classname="sanity-mac" name="partager vers Mate : dépose un fichier dans le dossier partagé" time="0.01"/>
+  <testcase classname="sanity-mac" name="cadre photo : liste du dossier" time="0.002"/>
+  <testcase classname="sanity-mac" name="tâches : créer, lister, cocher" time="0.009"/>
+  <testcase classname="sanity-mac" name="programmations : créer sur une touche du deck, lister, supprimer" time="0.006"/>
+  <testcase classname="sanity-mac" name="corvées : cocher passe la tâche à la personne suivante" time="0.004"/>
+  <testcase classname="sanity-mac" name="courses : ajouter, cocher, retirer" time="0.004"/>
+  <testcase classname="sanity-mac" name="mails : non lus des comptes connectés" time="0"/>
+  <testcase classname="sanity-mac" name="actualités : flux réglé" time="0.001"/>
+  <testcase classname="sanity-mac" name="valeurs de l'ordinateur" time="0"/>
+  <testcase classname="sanity-mac" name="menu de la semaine" time="0.001"/>
+  <testcase classname="sanity-mac" name="Jira : tickets" time="0.001"/>
+  <testcase classname="sanity-mac" name="Home Assistant : entités" time="0.003"/>
+  <testcase classname="sanity-mac" name="Alerte maison : ordre réservé à l'ordinateur" time="0.001"/>
+  <testcase classname="sanity-mac" name="agenda personnel" time="0.003"/>
+  <testcase classname="sanity-mac" name="agenda ICS (fichier de test local)" time="0.015"/>
+  <testcase classname="sanity-mac" name="essai du backend" time="0.003"/>
+  <testcase classname="sanity-mac" name="mise à jour du backend depuis la tablette" time="0.002"/>
+  <testcase classname="sanity-mac" name="visualiseur /camera" time="0.001"/>
+  <testcase classname="sanity-mac" name="page locale" time="0.004"/>
+  <testcase classname="sanity-mac" name="sauvegarde de la configuration (lecture seule, sans jeton)" time="0.006"/>
+  <testcase classname="sanity-mac" name="porte MCP (IA de bureau, lecture seule)" time="0.017"/>
+  <testcase classname="sanity-mac" name="politique de confidentialité" time="0.001"/>
+  <testcase classname="sanity-mac" name="autorisations du Mac" time="8.005"/>
+  <testcase classname="sanity-mac" name="mentions de licences" time="0.004"/>
+</testsuite>

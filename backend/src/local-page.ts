@@ -111,10 +111,26 @@ ${FAVICON}
   .minuteur b { position: absolute; left: calc(var(--p) * 100%); top: -5px; width: 12px; height: 12px; margin-left: -6px; border-radius: 6px;
     background: var(--now); box-shadow: 0 0 0 3px var(--tile); transition: left 1.5s linear; }
 
-  /* Autorisation qui manque (Mac) : seul bloc teinté du rouge « maintenant », en tête. */
+  /* Autorisation indispensable qui manque (Mac) : seul bloc teinté du rouge « maintenant », en tête. */
   #access { background: var(--now-soft); margin-bottom: 48px; display: flex; gap: 24px; align-items: center; }
   #access .grow { flex: 1; }
   #access p { margin: 6px 0 0; }
+
+  /* Autorisations du Mac : une ligne par autorisation dans la modale, état en pastille. */
+  #permdlg .card { background: none; }
+  #permdlg .intro { margin: 0 0 8px; }
+  .perm { align-items: flex-start; padding-left: 0; padding-right: 0; }
+  .group .perm::before { left: 0; }
+  .label + .perm::before { display: none; }
+  .perm .grow b { display: block; font-weight: 500; }
+  .perm .state { flex: none; font-size: 13px; line-height: 1; padding: 6px 10px; border-radius: 12px; background: var(--tile-high); color: var(--ink-2); white-space: nowrap; }
+  .perm .state.granted { background: var(--ok-soft); color: var(--ok); }
+  .perm .state.denied { background: var(--now-soft); color: var(--ko); }
+  .perm .appear { margin-top: 10px; padding: 12px 14px; border-radius: 14px; background: var(--tile-high); }
+  .perm .appear .acts { display: flex; gap: 8px; margin-top: 10px; }
+  .permfoot { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+  .permfoot .dim { flex: 1; }
+  #permdlg .label { padding-left: 0; }
 
   /* Tablette : son aperçu dessiné à gauche (thème et luminosité suivis en direct), ses réglages à droite. */
   .twin-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 28px; align-items: start; }
@@ -246,7 +262,7 @@ ${FAVICON}
   </div>
   <div class="health">
     <div><span class="dot" id="dot"></span><span id="state">Tablette non connectée</span></div>
-    <div id="accessline" hidden><span class="dot ko"></span><a href="#access">Accessibilité à autoriser</a></div>
+    <div id="accessline" hidden><span class="dot ko"></span><a href="#autorisations" id="accesslink">Autorisations à donner</a></div>
   </div>
   <div class="menu" id="menu"><span class="trait" id="trait" hidden></span></div>
   <!-- Politique de confidentialité (config/confidentialite.txt) ; compagnon installé : licences des composants tiers (LICENCES-TIERS.txt, scripts/package.ts). -->
@@ -268,14 +284,13 @@ ${FAVICON}
     <div class="dim" id="pairmsg" style="margin-top:12px">Valable 2 minutes. Ne saisis ici qu'un code affiché par ta tablette.</div>
   </div>
 
-  <!-- Mac sans l'autorisation Accessibilité : fenêtres et raccourcis du deck ne marchent pas encore. -->
+  <!-- Mac avec une autorisation indispensable qui manque (Accessibilité, System Events) : rappel en tête, même après « Plus tard ». -->
   <div class="card" id="access" hidden>
     <div class="grow">
       <h2 style="font-size:18px">Une autorisation manque sur ce Mac</h2>
-      <p class="dim">Pour placer les fenêtres et envoyer les raccourcis du deck, autorise le compagnon dans
-        Réglages Système › Confidentialité et sécurité › <b>Accessibilité</b>, puis active l'interrupteur.</p>
+      <p class="dim">Pour placer les fenêtres et envoyer les raccourcis du deck, macOS doit d'abord donner son accord à Mate.</p>
     </div>
-    <button id="accessopen">Ouvrir le réglage</button>
+    <button id="accessopen">Voir les autorisations</button>
   </div>
 
   <!-- Tablette connectée : sa section passe en premier. Son état et ses réglages, changés d'ici (ordre « settings », voir routes/local.ts). -->
@@ -438,6 +453,14 @@ ${FAVICON}
     </div>
   </section>
 
+  <!-- Mac seulement (src/mac/permissions.ts) : ce que macOS doit autoriser, état par état. La liste est dans la modale #permdlg. -->
+  <section id="autorisations" data-title="Autorisations du Mac" data-icon="lock" data-group="Cet ordinateur" hidden>
+    <div class="sechead"><h2>Autorisations du Mac</h2><span class="dim">macOS demande ton accord pour qu'Mate pilote ce Mac. Les fenêtres affichent « Mate ».</span></div>
+    <div class="card group">
+      <div class="row"><span class="grow" id="permsummary"></span><button class="ghost" id="permopen">Voir les autorisations</button></div>
+    </div>
+  </section>
+
   <!-- Appli portable seulement (voir src/routes/portable.ts) : rien n'est installé, ces réglages sont ceux de l'utilisateur. -->
   <section id="panel" data-title="Cette appli" data-icon="power" data-group="Cet ordinateur" hidden>
     <div class="sechead"><h2>Cette appli</h2><span class="dim" id="appinfo"></span></div>
@@ -459,9 +482,19 @@ ${FAVICON}
     </div>
   </section>
 </main>
+<dialog class="cxdialog" id="permdlg" aria-labelledby="permtitle">
+  <div class="cxbody">
+    <header class="cxhead"><h2 id="permtitle">Autorisations du Mac</h2>
+      <button class="close" id="permx" aria-label="Fermer"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+    </header>
+    <p class="dim intro">macOS veut ton accord avant qu'Mate pilote ce Mac. Donne les autorisations une par une : chaque fenêtre de macOS affichera « Mate ». Les indispensables d'abord.</p>
+    <div class="card group" id="permlist"></div>
+    <div class="permfoot"><span class="dim" id="permmsg" role="status"></span><button id="permlater">Plus tard</button></div>
+  </div>
+</dialog>
 <script>
   const OS = { mac: "macOS", windows: "Windows", other: "Linux (pilotage indisponible)" };
-  let version = null;
+  let version = null, statusAccessibility = null;
   async function refresh() {
     try {
       const s = await (await fetch("/local/status")).json();
@@ -473,8 +506,8 @@ ${FAVICON}
       document.getElementById("licences").hidden = !s.licences;
       document.body.classList.remove("down");
       document.getElementById("srvdot").className = "dot on";
-      document.getElementById("access").hidden = s.accessibility !== false;
-      document.getElementById("accessline").hidden = s.accessibility !== false;
+      statusAccessibility = s.accessibility;
+      showAccessBanner();
       document.getElementById("os").textContent = "Compagnon prêt · " + (OS[s.os] || s.os);
       document.getElementById("addr").textContent = s.addresses.map((a) => a + ":" + (s.tlsPort || s.port)).join("  ·  ") || "aucune (pas de réseau)";
       document.getElementById("dot").className = "dot" + (s.tablet ? " on" : "");
@@ -813,9 +846,6 @@ ${FAVICON}
     } catch (err) {
       msg.textContent = "Compagnon injoignable";
     }
-  };
-  document.getElementById("accessopen").onclick = async () => {
-    await fetch("/system/accessibility", { method: "POST" });
   };
   document.getElementById("calsave").onclick = () => {
     const url = document.getElementById("calurl").value.trim();
@@ -1182,6 +1212,7 @@ ${FAVICON}
     merge: "M17 20.41L18.41 19 15 15.59 13.59 17 17 20.41zM7.5 8H11v5.59L5.59 19 7 20.41l6-6V8h3.5L12 3.5 7.5 8z",
     extension: "M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z",
     restaurant: "M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z",
+    lock: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z",
     power: "M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z",
   };
   const SVG_NS = "http://www.w3.org/2000/svg";
@@ -1240,6 +1271,128 @@ ${FAVICON}
     openPanel(section, section === "agenda" ? "ics" : section);
     document.getElementById(section).classList.add("focus");
   }
+  // Autorisations du Mac (src/mac/permissions.ts). L'écran s'ouvre seul tant qu'une autorisation indispensable manque,
+  // sauf « Plus tard » (gardé dans ce navigateur) ; le rappel en tête reste. Relu toutes les 2 s tant qu'il est affiché,
+  // toutes les 10 s sinon. Textes venus du compagnon, posés avec textContent.
+  const permDlg = $("permdlg");
+  const PERM_STATE = { granted: "Accordée", denied: "Refusée", "not-asked": "Pas encore demandée", unknown: "À vérifier" };
+  let permItems = [], permKey = "", permExplain = null, permOpened = false, permTick = 0;
+  const permLater = () => { try { return localStorage.getItem("mate-perm-later") === "1"; } catch (e) { return false; } };
+  const permMissing = () => permItems.some((p) => p.essential && (p.state === "denied" || p.state === "not-asked"));
+  function showAccessBanner() {
+    // Utilitaire absent : états inconnus, l'Accessibilité lue par le compagnon fait foi.
+    const need = permMissing() || statusAccessibility === false;
+    $("access").hidden = !need;
+    $("accessline").hidden = !need;
+  }
+  function permSay(text) { $("permmsg").textContent = text; }
+  async function permAsk(id) {
+    permExplain = null;
+    try {
+      const r = await post("/local/permissions/" + encodeURIComponent(id) + "/request", {});
+      permSay(r.action === "settings" ? "Réglages Système est ouvert : active « Mate » dans la liste." : "Réponds à la fenêtre de macOS, puis reviens ici.");
+    } catch (e) {
+      permSay(e.message);
+    }
+    renderPerms(true);
+    setTimeout(loadPerms, 1500);
+  }
+  function permRow(p) {
+    const row = document.createElement("div");
+    row.className = "row perm";
+    row.dataset.id = p.id;
+    const grow = document.createElement("div");
+    grow.className = "grow";
+    const title = document.createElement("b");
+    title.textContent = p.title;
+    const why = document.createElement("span");
+    why.className = "dim";
+    why.textContent = p.why;
+    grow.append(title, why);
+    if (permExplain === p.id) {
+      const box = document.createElement("div");
+      box.className = "appear";
+      const text = document.createElement("div");
+      text.textContent = p.appear;
+      const acts = document.createElement("div");
+      acts.className = "acts";
+      const go = document.createElement("button");
+      go.textContent = "Continuer";
+      go.onclick = () => permAsk(p.id);
+      const cancel = document.createElement("button");
+      cancel.className = "ghost";
+      cancel.textContent = "Annuler";
+      cancel.onclick = () => { permExplain = null; renderPerms(true); };
+      acts.append(go, cancel);
+      box.append(text, acts);
+      grow.append(box);
+    }
+    const state = document.createElement("span");
+    state.className = "state " + p.state;
+    state.textContent = PERM_STATE[p.state] || p.state;
+    row.append(grow, state);
+    if (p.action && permExplain !== p.id) {
+      const button = document.createElement("button");
+      button.className = p.action === "settings" ? "ghost" : "";
+      button.textContent = p.action === "settings" ? "Ouvrir les Réglages" : "Autoriser";
+      // Autoriser : dit d'abord ce qui va apparaître. Réglages : pas de fenêtre à annoncer, on ouvre.
+      button.onclick = () => (p.action === "settings" ? permAsk(p.id) : ((permExplain = p.id), renderPerms(true)));
+      row.append(button);
+    }
+    return row;
+  }
+  function renderPerms(force) {
+    const key = JSON.stringify(permItems) + permExplain;
+    if (!force && key === permKey) return;
+    permKey = key;
+    const list = $("permlist");
+    list.replaceChildren();
+    for (const [label, essential] of [["Indispensables", true], ["Facultatives", false]]) {
+      const rows = permItems.filter((p) => p.essential === essential);
+      if (!rows.length) continue;
+      const head = document.createElement("div");
+      head.className = "label";
+      head.textContent = label;
+      list.append(head, ...rows.map(permRow));
+    }
+    $("permlater").textContent = permMissing() ? "Plus tard" : "Terminé";
+    const done = permItems.filter((p) => p.state === "granted").length;
+    $("permsummary").textContent = done + " autorisation" + (done > 1 ? "s" : "") + " sur " + permItems.length + " accordée" + (done > 1 ? "s" : "") + (permMissing() ? " : il manque des indispensables." : ".");
+  }
+  async function loadPerms() {
+    try {
+      const r = await (await fetch("/local/permissions")).json();
+      permItems = r.items || [];
+    } catch (e) {
+      return;
+    }
+    $("autorisations").hidden = permItems.length === 0;
+    renderPerms(false);
+    showAccessBanner();
+    if (!permOpened) {
+      permOpened = true;
+      if (permMissing() && !permLater()) permDlg.showModal();
+    }
+    buildRail();
+  }
+  function openPerms() {
+    permSay("");
+    renderPerms(true);
+    if (!permDlg.open) permDlg.showModal();
+    loadPerms();
+  }
+  $("accessopen").onclick = openPerms;
+  $("permopen").onclick = openPerms;
+  $("accesslink").onclick = (e) => { e.preventDefault(); openPerms(); };
+  $("permx").onclick = () => permDlg.close();
+  $("permlater").onclick = () => {
+    if (permMissing()) { try { localStorage.setItem("mate-perm-later", "1"); } catch (e) { /* navigateur sans stockage : l'écran se rouvrira */ } }
+    permDlg.close();
+  };
+  permDlg.addEventListener("click", (e) => { if (e.target === permDlg) permDlg.close(); });
+  permDlg.addEventListener("close", () => { permExplain = null; });
+  loadPerms();
+  setInterval(() => { if (permDlg.open || ++permTick % 5 === 0) loadPerms(); }, 2000);
   ${CONFIG_JS}
   tickTwin();
   setInterval(tickTwin, 15000);
