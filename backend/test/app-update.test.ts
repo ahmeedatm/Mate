@@ -90,3 +90,16 @@ describe("adresse des fichiers sur la tablette", () => {
     }
   });
 });
+
+describe("code périmé", () => {
+  it("un 404 de la tablette dit de réessayer, un 404 ailleurs reste générique", async () => {
+    globalThis.fetch = (async () => new Response("Introuvable.", { status: 404 })) as typeof fetch;
+    const file = path.join(os.tmpdir(), "x-mate-test.bin");
+    const expected = { size: 10, sha256: "d".repeat(64) };
+    await assert.rejects(
+      download("http://192.0.2.10:8080/K7M2Q/a.zip", file, expected, "Code périmé"),
+      (e: Error & { statusCode?: number }) => e.statusCode === 502 && /Code périmé/.test(e.message),
+    );
+    await assert.rejects(download("http://192.0.2.10/a", file, expected), /HTTP 404/);
+  });
+});

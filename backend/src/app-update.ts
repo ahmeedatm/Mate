@@ -19,6 +19,7 @@ import { tabletAddress, tabletStatus } from "./tablet.ts";
 export type Installer = { file: string; size: number; sha256: string; version: string };
 const PORT = 8080;
 const MAX_SIZE = 500 * 1024 * 1024;
+const STALE_CODE = "Code d'accès périmé : la tablette en a changé, réessaie dans quelques secondes.";
 const platform = process.platform === "win32" ? "windows" : "mac";
 
 /** Installeur de `os` dans la réponse de `/installers.json` ; entrée incomplète ou nom de fichier suspect : ignorée. */
@@ -72,9 +73,13 @@ export async function checkUpdate(current: string): Promise<{ current: string; a
   return { current, available: installer && isNewer(installer.version, current) ? installer.version : null };
 }
 
-/** Télécharge dans `file`, taille et SHA-256 vérifiés ; le fichier est supprimé s'ils ne correspondent pas. */
-export async function download(url: string, file: string, expected: { size: number; sha256: string }) {
+/**
+ * Télécharge dans `file`, taille et SHA-256 vérifiés ; le fichier est supprimé s'ils ne correspondent pas.
+ * `notFound` : message d'un 404 (la tablette change son code à chaque affichage de Bienvenue).
+ */
+export async function download(url: string, file: string, expected: { size: number; sha256: string }, notFound?: string) {
   const res = await fetch(url, { signal: AbortSignal.timeout(10 * 60_000) });
+  if (res.status === 404 && notFound) fail(notFound, 502);
   if (!res.ok || !res.body) fail(`Téléchargement impossible (HTTP ${res.status})`, 502);
   const hash = createHash("sha256");
   let size = 0;
@@ -113,7 +118,7 @@ export async function installUpdate(current: string): Promise<{ version: string;
   const old = `${appPath}.old`;
   if (platform === "windows") {
     const fresh = `${appPath}.new`;
-    await download(`${base}/${encodeURIComponent(installer.file)}`, fresh, installer);
+    await download(`${base}/${encodeURIComponent(installer.file)}`, fresh, installer, STALE_CODE);
     try {
       fs.rmSync(old, { force: true });
       fs.renameSync(appPath, old);
@@ -133,7 +138,7 @@ export async function installUpdate(current: string): Promise<{ version: string;
   fs.mkdirSync(work, { recursive: true });
   try {
     const zip = path.join(work, installer.file);
-    await download(`${base}/${encodeURIComponent(installer.file)}`, zip, installer);
+    await download(`${base}/${encodeURIComponent(installer.file)}`, zip, installer, STALE_CODE);
     const unzipped = path.join(work, "app");
     const r = await sh("ditto", ["-x", "-k", zip, unzipped], 120_000);
     const fresh = fs.existsSync(unzipped) ? findApp(unzipped) : undefined;

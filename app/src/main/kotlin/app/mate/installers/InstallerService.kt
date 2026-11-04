@@ -56,8 +56,10 @@ object InstallerService {
     fun served(context: Context): List<Installer> = if (BuildConfig.TRIAL) emptyList() else store(context).onDisk()
 
     /** Nouveau code, l'ancien ne marche plus. */
+    @Synchronized
     fun newCode(): String = InstallerAccess.newCode().also { code = it }
 
+    @Synchronized
     private fun code(): String = code ?: newCode()
 
     /**
@@ -66,7 +68,10 @@ object InstallerService {
      */
     fun servedCode(): String? = if (BuildConfig.TRIAL) null else code()
 
-    /** Bienvenue fermé : le code lu à l'écran ne marche plus (un autre est tiré pour le poll). */
+    /**
+     * Bienvenue fermé : le code lu sur cet écran ne marche plus (un autre est tiré, le poll en a besoin). Seul Bienvenue
+     * expire : le code lu dans Réglages ou dans « trop ancien » vit jusqu'au prochain tirage ou au redémarrage de l'appli.
+     */
     fun retireCode() {
         if (!BuildConfig.TRIAL) newCode()
     }

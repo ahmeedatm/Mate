@@ -67,7 +67,10 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     fun attach(activity: MainActivity, onAdded: (Computer) -> Unit) {
         this.activity = activity
         adder = ComputerAdder(activity, activity.lifecycleScope, onAdded)
-        wifiPicker = WifiPicker(activity, activity.lifecycleScope) { renderWifi() }
+        wifiPicker = WifiPicker(activity, activity.lifecycleScope) {
+            renderWifi()
+            renderInstaller()
+        }
         findViewById<Button>(R.id.welcome_wifi).setOnClickListener { wifiPicker.show() }
         findViewById<Button>(R.id.welcome_manual).setOnClickListener { adder.manual() }
         findViewById<Button>(R.id.welcome_later).setOnClickListener { hide() }
@@ -86,7 +89,7 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         visibility = View.GONE
         search?.cancel()
         progressWatch?.cancel()
-        // Le code lu à l'écran ne vaut plus rien : un ordinateur est appairé, ou « Plus tard ».
+        // Le code lu sur cet écran ne vaut plus rien : un ordinateur est appairé, ou « Plus tard ».
         InstallerService.retireCode()
     }
 
@@ -186,7 +189,6 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         wifiStatus.setTextColor(color)
         wifiStatus.compoundDrawablesRelative[0]?.mutate()?.setTint(color)
         markStep(wifiStep, "1", done = name != null)
-        renderInstaller()
     }
 
     /** Étape faite : pastille verte avec ✓ à la place du numéro. */
