@@ -7,7 +7,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
-import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -17,8 +16,7 @@ import app.mate.MainActivity
 import app.mate.R
 import app.mate.installers.InstallerCard
 import app.mate.installers.InstallerService
-import app.mate.net.Discovery
-import app.mate.net.FoundComputer
+import app.mate.net.PairingCode
 import app.mate.net.Wifi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -26,14 +24,15 @@ import kotlinx.coroutines.launch
 
 /**
  * Premier lancement, par-dessus tout l'écran tant qu'aucun ordinateur n'est appairé : 1. WiFi, 2. adresse de la tablette
- * (avec son code) où télécharger Mate sur l'ordinateur (lancé, il ouvre sa page locale), 3. ordinateurs trouvés sur le WiFi (recherche répétée),
- * touchés pour afficher le code à saisir dans cette page.
+ * (avec son code) où télécharger Mate sur l'ordinateur (lancé, il ouvre sa page locale), 3. recherche répétée sur le WiFi de
+ * l'ordinateur dont la page de Mate est affichée (aucune liste) : la tablette montre le code à saisir dans cette page.
  * « Plus tard » laisse l'heure et le Focus utilisables ; les autres modes proposent d'y revenir.
  */
 class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : FrameLayout(context, attrs) {
 
     private lateinit var activity: MainActivity
     private lateinit var adder: ComputerAdder
+    private lateinit var auto: AutoPairing
     private lateinit var wifiPicker: WifiPicker
     private val wifiStep: TextView
     private val wifiStatus: TextView
@@ -41,12 +40,12 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private val installText: TextView
     private val installUrl: TextView
     private val connectStep: TextView
-    private val found: LinearLayout
+    private val code: TextView
+    private val codeFor: TextView
     private val searchStatus: TextView
     private var search: Job? = null
     private var progressWatch: Job? = null
     private var installerReady = false
-    private var shown: List<FoundComputer> = emptyList()
 
     init {
         LayoutInflater.from(context).inflate(R.layout.view_welcome, this, true)
@@ -59,7 +58,8 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         installText = findViewById(R.id.welcome_install_text)
         installUrl = findViewById(R.id.welcome_install_url)
         connectStep = findViewById(R.id.welcome_step_connect)
-        found = findViewById(R.id.welcome_found)
+        code = findViewById(R.id.welcome_code)
+        codeFor = findViewById(R.id.welcome_code_for)
         searchStatus = findViewById(R.id.welcome_search_status)
     }
 
@@ -67,12 +67,25 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     fun attach(activity: MainActivity, onAdded: (Computer) -> Unit) {
         this.activity = activity
         adder = ComputerAdder(activity, activity.lifecycleScope, onAdded)
+        auto = AutoPairing(
+            activity, activity.lifecycleScope, onAdded,
+            onFound = { markFound(it) },
+            onCode = { digits, name -> showCode(digits, name) },
+            onMessage = { searchStatus.text = it },
+            onFailed = { clearCode(); searchStatus.text = it },
+        )
         wifiPicker = WifiPicker(activity, activity.lifecycleScope) {
             renderWifi()
             renderInstaller()
         }
         findViewById<Button>(R.id.welcome_wifi).setOnClickListener { wifiPicker.show() }
-        findViewById<Button>(R.id.welcome_manual).setOnClickListener { adder.manual() }
+        findViewById<Button>(R.id.welcome_manual).setOnClickListener {
+            // L'adresse saisie fait sa propre demande : pas de demande automatique en même temps (même ordinateur).
+            auto.cancel()
+            auto.pause(MANUAL_PAUSE_MS)
+            clearCode()
+            adder.manual()
+        }
         findViewById<Button>(R.id.welcome_later).setOnClickListener { hide() }
     }
 
@@ -88,6 +101,8 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     fun hide() {
         visibility = View.GONE
         search?.cancel()
+        auto.cancel()
+        clearCode()
         progressWatch?.cancel()
         // Le code lu sur cet écran ne vaut plus rien : un ordinateur est appairé, ou « Plus tard ».
         InstallerService.retireCode()
@@ -108,38 +123,37 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
                     renderInstaller()
                 }
                 if (Wifi.current(context) == null) {
-                    showFound(emptyList())
+                    auto.cancel()
+                    clearCode()
+                    markFound(false)
                     searchStatus.setText(R.string.welcome_need_wifi)
                 } else {
-                    if (shown.isEmpty()) searchStatus.setText(R.string.welcome_searching)
-                    showFound(runCatching { Discovery.find(timeoutMs = 2_000) }.getOrDefault(emptyList()))
-                    searchStatus.text = if (shown.isEmpty()) context.getString(R.string.welcome_searching) else ""
+                    if (!auto.busy) searchStatus.setText(R.string.welcome_searching)
+                    auto.round()
                 }
                 delay(4_000)
             }
         }
     }
 
-    private fun showFound(computers: List<FoundComputer>) {
-        // Liste inchangée : on ne reconstruit pas (un toucher en cours serait perdu).
-        if (computers.map { it.id to it.url } == shown.map { it.id to it.url }) return
-        shown = computers
-        found.removeAllViews()
-        for (c in computers) {
-            val row = LayoutInflater.from(context).inflate(R.layout.item_window, found, false)
-            row.findViewById<TextView>(R.id.window_title).text = c.name
-            row.findViewById<TextView>(R.id.window_meta).text =
-                listOfNotNull(
-                    ComputerAdder.osLabel(context, c.os),
-                    context.getString(if (c.outdated) R.string.computer_outdated else R.string.welcome_tap),
-                ).joinToString(" · ")
-            row.setOnClickListener { adder.pair(c.url, c.name) }
-            (row.layoutParams as? LinearLayout.LayoutParams)?.topMargin = dp(8)
-            found.addView(row)
-        }
-        // Un ordinateur répond : le logiciel y est installé.
-        markStep(installStep, "2", done = computers.isNotEmpty())
-        markStep(connectStep, "3", done = computers.isNotEmpty())
+    /** Un ordinateur répond : le logiciel y est installé. */
+    private fun markFound(found: Boolean) {
+        markStep(installStep, "2", done = found)
+        markStep(connectStep, "3", done = found)
+    }
+
+    private fun showCode(digits: String, name: String) {
+        code.text = digits
+        code.contentDescription = PairingCode.spoken(digits)
+        code.visibility = View.VISIBLE
+        codeFor.text = context.getString(R.string.welcome_code_for, name)
+        codeFor.visibility = View.VISIBLE
+        searchStatus.text = ""
+    }
+
+    private fun clearCode() {
+        code.visibility = View.GONE
+        codeFor.visibility = View.GONE
     }
 
     /** Téléchargement de l'installeur lancé tout de suite, avancement suivi à l'écran ; l'appli d'essai ne sert pas le port : elle renvoie à la stable. */
@@ -197,5 +211,9 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         val color = themeColor(context, if (done) R.attr.c_ok else R.attr.c_accent)
         step.setTextColor(color)
         step.backgroundTintList = ColorStateList.valueOf(themeColor(context, if (done) R.attr.c_ok_soft else R.attr.c_accent_soft))
+    }
+
+    private companion object {
+        const val MANUAL_PAUSE_MS = 3 * 60_000L
     }
 }

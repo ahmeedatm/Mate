@@ -21,12 +21,11 @@ export async function systemCommand(command: SystemCommand) {
   }
 }
 
-/** Message bien visible sur l'ordinateur (code d'appairage), sans attendre qu'il soit fermé. */
-export function alert(title: string, text: string) {
-  // Processus détaché : la boîte reste affichée sans bloquer le serveur, et se ferme seule après 2 min.
+/** Notification du centre de notifications (demande d'appairage), sans bloquer le serveur. */
+export function notify(title: string, text: string) {
+  // Texte et titre en argv : jamais d'interpolation dans le script.
   const script = `on run argv
-activate
-display dialog (item 2 of argv) with title (item 1 of argv) buttons {"OK"} default button 1 giving up after 120
+display notification (item 2 of argv) with title (item 1 of argv)
 end run`;
   spawn("osascript", ["-e", script, title, text], { detached: true, stdio: "ignore" }).unref();
 }

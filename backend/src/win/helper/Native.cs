@@ -67,7 +67,7 @@ namespace Mate
                 case "system": SystemCommand(Str(req, "command")); return true;
                 case "locked": return SessionLocked();
                 case "pointer": return Pointer(req);
-                case "alert": Alert(Str(req, "title"), Str(req, "text")); return true;
+                case "notify": Notify(Str(req, "title"), Str(req, "text")); return true;
                 case "clipget": return ClipboardGet();
                 case "clipseq": return ClipboardSequence();
                 case "clipset": ClipboardSetText(Str(req, "text")); return true;

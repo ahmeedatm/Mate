@@ -17,7 +17,6 @@ namespace Mate
         [DllImport("user32.dll")] static extern bool LockWorkStation();
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         static extern IntPtr SendMessageTimeout(IntPtr h, uint msg, IntPtr w, string l, uint flags, uint timeout, out IntPtr result);
-        [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "MessageBoxW")] static extern int ShowMessage(IntPtr h, string text, string caption, uint type);
         [DllImport("wtsapi32.dll", SetLastError = true)]
         static extern bool WTSQuerySessionInformation(IntPtr server, int sessionId, int infoClass, out IntPtr buffer, out int bytes);
         [DllImport("wtsapi32.dll")] static extern void WTSFreeMemory(IntPtr memory);
@@ -90,10 +89,32 @@ namespace Mate
             }
         }
 
-        /** Boîte de message au premier plan, sans bloquer les requêtes suivantes. */
-        static void Alert(string title, string text)
+        /** Notification Windows (bulle de la zone de notification), sans bloquer les requêtes suivantes. */
+        static void Notify(string title, string text)
         {
-            var t = new Thread(delegate () { ShowMessage(IntPtr.Zero, text, title, 0x40 | 0x10000 | 0x40000); }); // INFORMATION | SETFOREGROUND | TOPMOST
+            var t = new Thread(delegate ()
+            {
+                var icon = new NotifyIcon();
+                var timer = new System.Windows.Forms.Timer();
+                try
+                {
+                    try { icon.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
+                    if (icon.Icon == null) icon.Icon = SystemIcons.Information;
+                    icon.Visible = true;
+                    icon.ShowBalloonTip(10000, title, text, ToolTipIcon.Info);
+                    // L'icône est retirée après 10 s : la boucle de messages la garde vivante jusque-là.
+                    timer.Interval = 10000;
+                    timer.Tick += delegate { Application.ExitThread(); };
+                    timer.Start();
+                    Application.Run();
+                }
+                finally
+                {
+                    timer.Dispose();
+                    icon.Visible = false;
+                    icon.Dispose();
+                }
+            });
             t.IsBackground = true;
             t.SetApartmentState(ApartmentState.STA);
             t.Start();

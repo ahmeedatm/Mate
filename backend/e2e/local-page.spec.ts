@@ -39,7 +39,7 @@ test.describe("page locale GET /", () => {
   test("compagnon arrêté : la page le dit et cache le code et les réglages", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#os")).toContainText("Compagnon prêt");
-    await page.route("**/local/status", (route) => route.abort());
+    await page.route("**/local/status*", (route) => route.abort());
     await expect(page.locator("#os")).toHaveText("Compagnon arrêté : rouvre « Mate »");
     await expect(page.locator("#srvdot")).toHaveClass(/ko/);
     await expect(page.locator("#state")).toHaveText("Tablette : état inconnu");

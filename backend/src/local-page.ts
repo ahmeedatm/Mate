@@ -500,7 +500,7 @@ ${FAVICON}
   let version = null, statusAccessibility = null;
   async function refresh() {
     try {
-      const s = await (await fetch("/local/status")).json();
+      const s = await (await fetch("/local/status?visible=" + (document.visibilityState === "visible" ? 1 : 0))).json();
       // Mise à jour posée : le nouveau compagnon répond avec une autre version, la page se recharge.
       if (version !== null && s.version !== version) return location.reload();
       version = s.version;
@@ -1414,6 +1414,7 @@ ${FAVICON}
   refresh();
   loadPanel();
   setInterval(refresh, 1500);
+  document.addEventListener("visibilitychange", refresh);
 </script>
 </body>
 </html>

@@ -11,8 +11,19 @@ import java.net.InetAddress
 import java.net.NetworkInterface
 import java.net.SocketTimeoutException
 
-/** Ordinateur qui a répondu à la recherche sur le WiFi ; `outdated` : compagnon d'avant le HTTPS, à mettre à jour. */
-data class FoundComputer(val id: String, val name: String, val os: String, val url: String, val outdated: Boolean = false)
+/**
+ * Ordinateur qui a répondu à la recherche sur le WiFi ; `outdated` : compagnon d'avant le HTTPS, à mettre à jour ;
+ * `waiting` : sa page de Mate est affichée, il attend une tablette depuis `waitingMs`.
+ */
+data class FoundComputer(
+    val id: String,
+    val name: String,
+    val os: String,
+    val url: String,
+    val outdated: Boolean = false,
+    val waiting: Boolean = false,
+    val waitingMs: Long = Long.MAX_VALUE,
+)
 
 /**
  * Recherche des ordinateurs du compagnon sur le réseau local : diffusion UDP "MATE?" sur le port
@@ -61,8 +72,15 @@ object Discovery {
         if (j.optString("service") != "mate" || !j.has("id")) return null
         val tlsPort = j.optInt("tlsPort")
         val url = if (tlsPort > 0) "https://$host:$tlsPort" else "http://$host:${j.optInt("port", port)}"
-        return FoundComputer(j.getString("id"), j.optString("name", host), j.optString("os"), url, outdated = tlsPort <= 0)
+        return FoundComputer(
+            j.getString("id"), j.optString("name", host), j.optString("os"), url, outdated = tlsPort <= 0,
+            waiting = j.optBoolean("waiting"), waitingMs = j.optLong("waitingMs", Long.MAX_VALUE),
+        )
     }
+
+    /** L'ordinateur à appairer sans rien toucher : parmi ceux qui attendent une tablette, celui dont la page est ouverte depuis le moins longtemps. */
+    fun pickWaiting(computers: List<FoundComputer>): FoundComputer? =
+        computers.filter { it.waiting && !it.outdated }.minByOrNull { it.waitingMs }
 
     /** Adresses de diffusion des réseaux de la tablette (ex. 192.168.1.255) : certaines box ignorent 255.255.255.255. */
     private fun broadcastAddresses(): List<InetAddress> = runCatching {

@@ -13,7 +13,7 @@ import { disconnectGitlab, finishGitlabLogin, gitlabAccount, gitlabClientId, git
 import { LOCAL_PAGE } from "../local-page.ts";
 import { WEB_FILES } from "../web-style.ts";
 import { accessibility, openTarget } from "../os.ts";
-import { identity, lanAddresses, pendingCode } from "../pairing.ts";
+import { identity, lanAddresses, notePageVisible, pendingCode, waiting } from "../pairing.ts";
 import { mcpInfo } from "./mcp.ts";
 import { sendToTablet, tabletStatus, THEMES, type TabletSettings } from "../tablet.ts";
 
@@ -42,39 +42,44 @@ export default async function localRoutes(app: FastifyInstance) {
     return reply.type("text/plain; charset=utf-8").send(fs.createReadStream(LICENCES_FILE));
   });
 
-  app.get("/local/status", async () => ({
-    ...identity(),
-    accessibility: await accessibility().catch(() => null),
-    addresses: config.loopbackOnly ? ["127.0.0.1"] : lanAddresses(),
-    tablet: tabletStatus().connected,
-    tabletInfo: tabletInfo(),
-    pairing: pendingCode(),
-    licences: fs.existsSync(LICENCES_FILE),
-    // Brancher une IA de bureau sur la porte MCP (carte « Connecter une IA »).
-    mcp: mcpInfo(),
-    // Hôtes seulement : un lien ICS publié donne accès à l'agenda, il ne s'affiche pas en entier.
-    calendar: {
-      env: config.icsUrls.length,
-      saved: (await savedCalendarUrls()).map((u) => (u === "demo" ? "agenda d'exemple" : (URL.parse(u)?.host ?? "lien invalide"))),
-      accounts: await connectedAccounts(),
-      providers: await availableProviders(),
-    },
-    // `available` : l'appli OAuth est réglée (bouton de connexion) ; `token` : GITLAB_TOKEN dans .env (secours).
-    gitlab: {
-      available: !!(await gitlabClientId()),
-      token: !!process.env.GITLAB_TOKEN?.trim(),
-      account: (await gitlabAccount()) ?? null,
-    },
-    // Même chose pour GitHub ; `login` : code à saisir sur GitHub tant qu'une connexion attend, sinon son dernier résultat.
-    github: {
-      available: !!(await githubClientId()),
-      token: !!process.env.GITHUB_TOKEN?.trim(),
-      account: (await githubAccount()) ?? null,
-      login: githubLogin(),
-    },
-    // Jira se règle dans le .env de l'ordinateur : la page dit seulement s'il est relié, et à quel site.
-    jira: { configured: jiraConfigured, site: jiraSite },
-  }));
+  app.get<{ Querystring: { visible?: string } }>("/local/status", async (req) => {
+    // Page affichée au premier plan = cet ordinateur « attend une tablette » (la tablette le choisit, src/pairing.ts).
+    if (req.query.visible !== undefined) notePageVisible(req.query.visible === "1");
+    return {
+      ...identity(),
+      waiting: waiting().waiting,
+      accessibility: await accessibility().catch(() => null),
+      addresses: config.loopbackOnly ? ["127.0.0.1"] : lanAddresses(),
+      tablet: tabletStatus().connected,
+      tabletInfo: tabletInfo(),
+      pairing: pendingCode(),
+      licences: fs.existsSync(LICENCES_FILE),
+      // Brancher une IA de bureau sur la porte MCP (carte « Connecter une IA »).
+      mcp: mcpInfo(),
+      // Hôtes seulement : un lien ICS publié donne accès à l'agenda, il ne s'affiche pas en entier.
+      calendar: {
+        env: config.icsUrls.length,
+        saved: (await savedCalendarUrls()).map((u) => (u === "demo" ? "agenda d'exemple" : (URL.parse(u)?.host ?? "lien invalide"))),
+        accounts: await connectedAccounts(),
+        providers: await availableProviders(),
+      },
+      // `available` : l'appli OAuth est réglée (bouton de connexion) ; `token` : GITLAB_TOKEN dans .env (secours).
+      gitlab: {
+        available: !!(await gitlabClientId()),
+        token: !!process.env.GITLAB_TOKEN?.trim(),
+        account: (await gitlabAccount()) ?? null,
+      },
+      // Même chose pour GitHub ; `login` : code à saisir sur GitHub tant qu'une connexion attend, sinon son dernier résultat.
+      github: {
+        available: !!(await githubClientId()),
+        token: !!process.env.GITHUB_TOKEN?.trim(),
+        account: (await githubAccount()) ?? null,
+        login: githubLogin(),
+      },
+      // Jira se règle dans le .env de l'ordinateur : la page dit seulement s'il est relié, et à quel site.
+      jira: { configured: jiraConfigured, site: jiraSite },
+    };
+  });
 
   /** Lien(s) d'agenda collé(s) dans la page locale ; webcal:// devient https://. Liste vide : retire l'agenda. */
   app.put<{ Body: { urls: string[] } }>(
