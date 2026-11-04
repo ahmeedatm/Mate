@@ -53,6 +53,9 @@ object Prefs {
     private const val KEY_MEETING_ALERT = "meeting_alert"
     private const val KEY_COMPUTER_LOCKED = "computer_locked"
     private const val KEY_TABLET_LOCKED = "tablet_locked"
+    private const val KEY_LAST_CONTACT = "last_contact"
+    private const val KEY_LOCK_AWAY = "lock_away"
+    private const val KEY_LOCKED_AWAY = "locked_away"
     private const val KEY_BLOCK_ON_COMPUTER_LOCK = "block_on_computer_lock"
     private const val KEY_LOCK_CODE = "lock_code"
     private const val KEY_LOCK_SALT = "lock_salt"
@@ -258,6 +261,27 @@ object Prefs {
 
     fun setTabletLocked(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_TABLET_LOCKED, value).apply()
+    }
+
+    /** Dernière réponse de l'ordinateur actif, en `elapsedRealtime` : survit aux relances de la boucle et de l'appli (lock/LockLogic.contactSince). */
+    fun lastContact(context: Context): Long = prefs(context).getLong(KEY_LAST_CONTACT, 0L)
+
+    fun setLastContact(context: Context, value: Long) {
+        prefs(context).edit().putLong(KEY_LAST_CONTACT, value).apply()
+    }
+
+    /** Verrou renforcé : ordinateur verrouillé injoignable plus de 30 s = verrou à code (lock/LockLogic.lockAway). Coupé par défaut. */
+    fun lockAway(context: Context): Boolean = prefs(context).getBoolean(KEY_LOCK_AWAY, false)
+
+    fun setLockAway(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_LOCK_AWAY, value).apply()
+    }
+
+    /** Verrou à code posé par le verrou renforcé (texte propre sur l'écran de verrou) ; effacé avec le verrou à la main. */
+    fun lockedAway(context: Context): Boolean = prefs(context).getBoolean(KEY_LOCKED_AWAY, false)
+
+    fun setLockedAway(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_LOCKED_AWAY, value).apply()
     }
 
     /** Empreinte salée du code de verrouillage (lock/LockLogic.hash) ; null : aucun code choisi. */
