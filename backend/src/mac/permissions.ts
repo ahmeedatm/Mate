@@ -280,7 +280,7 @@ export function createPermissions(deps: Deps, onRequested: () => void = () => au
       }),
       mac("screen", status ? (status.screen ? "granted" : falseState("screen")) : unknown, {
         title: "Enregistrement de l'écran",
-        why: "Pour lire le titre des fenêtres ouvertes et les montrer sur la tablette. Aucune image de l'écran n'est enregistrée.",
+        why: "Pour lire le titre des fenêtres ouvertes et montrer l'écran en petit sur la tablette. Aucune image de l'écran n'est enregistrée.",
         essential: false,
         appear:
           "macOS affiche une fenêtre : « Mate » souhaite enregistrer l'écran. Clique sur Ouvrir les Réglages Système, puis active « Mate ».",

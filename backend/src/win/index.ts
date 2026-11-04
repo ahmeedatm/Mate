@@ -486,6 +486,16 @@ export async function systemCommand(command: SystemCommand) {
   await call("system", { command });
 }
 
+/** Aperçu de l'écran principal : JPEG réduit en base64 par l'op `screen` (helper/Native.System.cs), jamais écrit sur le disque. */
+export async function screenPreview(maxWidth: number): Promise<Buffer> {
+  try {
+    return Buffer.from(await call<string>("screen", { width: maxWidth }), "base64");
+  } catch (e) {
+    // Écran illisible (session sans bureau, bureau sécurisé) : 503 comme le presse-papiers, texte de Windows gardé dans le journal.
+    throw Object.assign(e as Error, { technical: true, statusCode: 503 });
+  }
+}
+
 /** Ne pas déranger : lu dans les réglages, sans rien ouvrir (null : inconnu). */
 /** Session verrouillée ou prise par un autre utilisateur (op `locked` de helper/Native.System.cs) ; null : illisible. */
 export async function screenLocked(): Promise<boolean | null> {
