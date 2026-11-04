@@ -417,8 +417,7 @@
     <string name="deck_voice_channel">En appel · %1$s</string>
     <string name="deck_voice_with">Avec %1$s</string>
     <string name="call_photos_show">Montrer les photos</string>
-    <string name="call_photos_waiting">Autorise sur l\'ordinateur</string>
-    <string name="call_members_speaking">%1$s. %2$s parle</string>
+    <string name="call_photos_waiting">Autorise dans Discord sur l\'ordinateur</string>
     <string name="deck_voice_mic_off">Ton micro est coupé</string>
     <string name="deck_voice_deafened">Sourdine</string>
     <string name="app_audio_closed">Fermé sur l\'ordi</string>

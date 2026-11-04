@@ -75,6 +75,13 @@ class Http(
     fun bytesOrNull(path: String, timeoutMs: Int = 60_000): ByteArray? =
         try { bytes(request("GET", path, timeoutMs = timeoutMs)) } catch (e: HttpException) { if (e.code == 404) null else throw e }
 
+    /**
+     * Texte d'une requête relue très souvent (« qui parle », toutes les 500 ms) : corps lu en entier sans `disconnect()`,
+     * la connexion reste ouverte et resservie (keep-alive), sans nouvelle poignée de main TLS à chaque relecture.
+     */
+    fun getKeepAlive(path: String, timeoutMs: Int): String =
+        request("GET", path, timeoutMs = timeoutMs).inputStream.bufferedReader().use { it.readText() }
+
     fun text(conn: HttpURLConnection): String =
         try { conn.inputStream.bufferedReader().use { it.readText() } } finally { conn.disconnect() }
 

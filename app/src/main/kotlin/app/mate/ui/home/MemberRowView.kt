@@ -29,6 +29,11 @@ class MemberRowView(context: Context) : View(context) {
     private var lastSpoke: Map<String, Long> = emptyMap()
     private var plan = MemberRowPlan(emptyList(), 0)
 
+    /** Préparé dans `replan`, pas dans `onDraw` (qui tourne à chaque image pendant l'anneau) : initiales, « +N », shaders. */
+    private var labels: Map<String, String> = emptyMap()
+    private var moreLabel = ""
+    private val shaders = HashMap<String, BitmapShader>()
+
     /** Anneau par participant : opacité affichée (0 : éteint, 1 : allumé), valeur visée, animation en cours. */
     private val halo = HashMap<String, Float>()
     private val haloTarget = HashMap<String, Float>()
@@ -53,6 +58,13 @@ class MemberRowView(context: Context) : View(context) {
         typeface = themeFont(context, R.attr.c_font_medium)
     }
     private val dimText = Paint(text).apply { color = themeColor(context, R.attr.c_text_dim) }
+
+    /** « +N » : rond en contour seul, pour ne pas ressembler à une personne. */
+    private val moreStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = dp(1).toFloat()
+        color = themeColor(context, R.attr.c_stroke)
+    }
     private val photo = Paint(Paint.ANTI_ALIAS_FLAG)
     private val shaderMatrix = Matrix()
 
@@ -68,7 +80,10 @@ class MemberRowView(context: Context) : View(context) {
     }
 
     /** Une photo vient d'arriver. */
-    fun photosChanged() = invalidate()
+    fun photosChanged() {
+        shaders.clear()
+        invalidate()
+    }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), resolveSize(cell.toInt(), heightMeasureSpec))
@@ -79,13 +94,18 @@ class MemberRowView(context: Context) : View(context) {
     private fun replan() {
         val fits = if (width == 0) 0 else ((width + spacing) / (cell + spacing)).toInt()
         plan = planMembers(members, lastSpoke, fits)
+        labels = plan.shown.associate { it.id to initials(it.name) }
+        moreLabel = if (plan.more > 0) "+${plan.more}" else ""
         val speaking = members.filter { it.speaking }.map { it.id }.toSet()
         plan.shown.forEach { animateHalo(it.id, if (it.id in speaking) 1f else 0f) }
         val shownIds = plan.shown.map { it.id }.toSet()
         (haloAnim.keys - shownIds).forEach { haloAnim.remove(it)?.cancel() }
         halo.keys.retainAll(shownIds)
         haloTarget.keys.retainAll(shownIds)
-        contentDescription = describe()
+        shaders.keys.retainAll(shownIds)
+        // Noms seulement : « qui parle » change deux fois par seconde, TalkBack relirait la rangée en boucle.
+        val description = members.takeIf { it.isNotEmpty() }?.let { m -> context.getString(R.string.deck_voice_with, m.joinToString(", ") { it.name }) }
+        if (description != contentDescription) contentDescription = description
         invalidate()
     }
 
@@ -116,41 +136,44 @@ class MemberRowView(context: Context) : View(context) {
                 ring.alpha = (alpha * 255).toInt()
                 canvas.drawCircle(cx, cy, radius + ringGap + ringWidth / 2, ring)
             }
-            val bitmap = if (member.avatar) photoOf(member.id) else null
-            if (bitmap != null) drawPhoto(canvas, bitmap, cx, cy, radius) else drawLabel(canvas, initials(member.name), cx, cy, radius, text)
+            // Fond sous la photo : une photo transparente garde son rond.
+            canvas.drawCircle(cx, cy, radius, fill)
+            val shader = if (member.avatar) shaderOf(member.id) else null
+            if (shader != null) {
+                shaderMatrix.setTranslate(cx - radius, cy - radius)
+                shader.setLocalMatrix(shaderMatrix)
+                photo.shader = shader
+                canvas.drawCircle(cx, cy, radius, photo)
+            } else {
+                drawLabel(canvas, labels[member.id].orEmpty(), cx, cy, text)
+            }
             left += cell + spacing
         }
-        if (plan.more > 0) drawLabel(canvas, "+${plan.more}", left + cell / 2, cy, radius, dimText)
+        if (moreLabel.isNotEmpty()) {
+            canvas.drawCircle(left + cell / 2, cy, radius - moreStroke.strokeWidth / 2, moreStroke)
+            drawLabel(canvas, moreLabel, left + cell / 2, cy, dimText)
+        }
     }
 
-    private fun drawPhoto(canvas: Canvas, bitmap: Bitmap, cx: Float, cy: Float, radius: Float) {
-        val shader = BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
-        val scale = photoSize / minOf(bitmap.width, bitmap.height)
-        shaderMatrix.setScale(scale, scale)
-        shaderMatrix.postTranslate(cx - radius, cy - radius)
-        shader.setLocalMatrix(shaderMatrix)
-        photo.shader = shader
-        canvas.drawCircle(cx, cy, radius, photo)
+    /** Shader de la photo, mise à la taille du rond une fois pour toutes. */
+    private fun shaderOf(id: String): BitmapShader? {
+        shaders[id]?.let { return it }
+        val bitmap = photoOf(id) ?: return null
+        val side = photoSize.toInt().coerceAtLeast(1)
+        val scaled = if (bitmap.width == side && bitmap.height == side) bitmap else Bitmap.createScaledBitmap(bitmap, side, side, true)
+        return BitmapShader(scaled, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).also { shaders[id] = it }
     }
 
-    private fun drawLabel(canvas: Canvas, label: String, cx: Float, cy: Float, radius: Float, paint: Paint) {
-        canvas.drawCircle(cx, cy, radius, fill)
+    private fun drawLabel(canvas: Canvas, label: String, cx: Float, cy: Float, paint: Paint) {
         canvas.drawText(label, cx, cy - (paint.descent() + paint.ascent()) / 2, paint)
-    }
-
-    /** Lecteur d'écran : les noms, qui parle, et combien ne sont pas montrés. */
-    private fun describe(): String {
-        if (members.isEmpty()) return ""
-        val names = members.joinToString(", ") { it.name }
-        val talking = members.filter { it.speaking }.joinToString(", ") { it.name }
-        val base = context.getString(R.string.deck_voice_with, names)
-        return if (talking.isEmpty()) base else context.getString(R.string.call_members_speaking, base, talking)
     }
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
+        // Animation coupée en route (changement de taille) : l'anneau prend sa valeur visée, sinon il resterait à mi-chemin.
         haloAnim.values.forEach { it.cancel() }
         haloAnim.clear()
+        halo.putAll(haloTarget)
     }
 
     private fun dp(value: Int) = context.dp(value)

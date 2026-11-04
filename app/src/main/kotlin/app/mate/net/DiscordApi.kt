@@ -12,10 +12,7 @@ class DiscordApi(private val http: Http) {
     suspend fun authorize(): Unit = http.io { http.postJson("/discord/authorize", JSONObject(), timeoutMs = AUTHORIZE_TIMEOUT_MS); Unit }
 
     /** Identifiants des participants qui parlent en ce moment ; relu toutes les 500 ms pendant un appel. */
-    suspend fun speaking(): Set<String> = http.io {
-        val a = JSONObject(http.get("/discord/speaking", timeoutMs = 3_000)).optJSONArray("speaking")
-        (0 until (a?.length() ?: 0)).map { a!!.getString(it) }.toSet()
-    }
+    suspend fun speaking(): Set<String> = http.io { parseSpeaking(http.getKeepAlive("/discord/speaking", timeoutMs = 3_000)) }
 
     /** Photo de 64 px d'un participant ; null s'il n'en a pas. */
     suspend fun avatar(id: String): ByteArray? = http.io { http.bytesOrNull("/discord/avatar?id=" + http.encode(id), timeoutMs = 15_000) }
@@ -24,3 +21,7 @@ class DiscordApi(private val http: Http) {
         const val AUTHORIZE_TIMEOUT_MS = 75_000
     }
 }
+
+/** Réponse de /discord/speaking : identifiants des participants qui parlent. */
+internal fun parseSpeaking(json: String): Set<String> =
+    JSONObject(json).optJSONArray("speaking")?.let { a -> (0 until a.length()).map(a::getString).toSet() }.orEmpty()

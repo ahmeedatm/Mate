@@ -70,6 +70,9 @@ abstract class CallWidget(
     private var speakPoll: Job? = null
     private var speaking: Set<String> = emptySet()
 
+    /** Relectures de « qui parle » ratées de suite : au-delà de 3, plus personne n'est montré parlant (pas d'anneau figé). */
+    private var speakingFailures = 0
+
     /** Dernier instant où chacun a été vu parler (ordre d'un salon plein), oublié à la fin de l'appel. */
     private val lastSpoke = HashMap<String, Long>()
     private val loadingPhotos = HashSet<String>()
@@ -103,7 +106,7 @@ abstract class CallWidget(
         view.addView(header, LinearLayout.LayoutParams(match, wrap))
         if (large) {
             view.addView(people, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(4) })
-            view.addView(memberRow, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(6) })
+            view.addView(memberRow, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(6); bottomMargin = dp(6) })
             view.addView(photosButton, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = dp(6) })
         }
         (grid.parent as? ViewGroup)?.removeView(grid)
@@ -187,8 +190,8 @@ abstract class CallWidget(
             page == null -> if (read) context.getString(R.string.call_no_page) else ""
             inCall -> listOfNotNull(
                 context.getString(R.string.deck_voice_channel, v?.channel ?: page.app.orEmpty()),
-                // L et XL montrent les participants sur leur propre ligne (noms ou photos).
-                v?.people?.takeIf { it.isNotEmpty() && placed.size != WidgetSize.L && placed.size != WidgetSize.XL }?.joinToString(", "),
+                // L montre les participants sur leur propre ligne ; XL aussi quand c'est la rangée de photos.
+                v?.people?.takeIf { it.isNotEmpty() && placed.size != WidgetSize.L && !(placed.size == WidgetSize.XL && !v.members.isNullOrEmpty()) }?.joinToString(", "),
             ).joinToString(" · ")
             v?.lobby == true -> context.getString(R.string.call_lobby)
             else -> context.getString(R.string.call_idle)
@@ -214,6 +217,8 @@ abstract class CallWidget(
         if (!inCall) {
             lastSpoke.clear()
             speaking = emptySet()
+            // Le prochain appel repart d'une rangée vide (aucun anneau resté allumé).
+            memberRow.show(emptyList(), emptyMap())
         }
         memberRow.visibility = if (members != null) View.VISIBLE else View.GONE
         people.visibility = if (members != null) View.GONE else View.VISIBLE
@@ -223,8 +228,8 @@ abstract class CallWidget(
         }
         val photos = v?.photos
         photosButton.visibility = if (large && inCall && photos != null && photos != "on") View.VISIBLE else View.GONE
+        // Le bouton garde sa forme pendant l'attente : son texte dit quoi faire, un nouveau toucher ne relance rien.
         val waiting = authorizing || photos == "waiting"
-        photosButton.isEnabled = !waiting
         photosButton.setText(if (waiting) R.string.call_photos_waiting else R.string.call_photos_show)
         followSpeaking(members != null)
     }
@@ -250,7 +255,12 @@ abstract class CallWidget(
             val client = BackendClient(context)
             while (isActive) {
                 delay(SPEAK_POLL_MS)
-                val ids = runCatchingCancellable { client.discord.speaking() }.getOrNull() ?: continue
+                val read = runCatchingCancellable { client.discord.speaking() }.getOrNull()
+                val ids = when {
+                    read != null -> read.also { speakingFailures = 0 }
+                    ++speakingFailures >= MAX_SPEAKING_FAILURES -> emptySet()
+                    else -> continue
+                }
                 if (ids == speaking) continue
                 noteSpeaking(ids)
                 voice?.members?.let(::renderMembers)
@@ -259,9 +269,11 @@ abstract class CallWidget(
     }
 
     private fun loadPhotos(members: List<VoiceMember>) {
+        val missing = members.filter { it.avatar && IconCache.peekDiscord(it.id) == null && it.id !in loadingPhotos }
+        if (missing.isEmpty()) return
         val client = BackendClient(context)
-        for (m in members) {
-            if (!m.avatar || IconCache.peekDiscord(m.id) != null || !loadingPhotos.add(m.id)) continue
+        for (m in missing) {
+            loadingPhotos += m.id
             host.scope.launch {
                 IconCache.loadDiscord(client, m.id)
                 loadingPhotos.remove(m.id)
@@ -277,6 +289,8 @@ abstract class CallWidget(
         host.scope.launch {
             val result = runCatchingCancellable { BackendClient(context).discord.authorize() }
             authorizing = false
+            // Widget plus à l'écran (profil changé pendant l'attente) : ni message, ni relecture.
+            if (!active) return@launch
             result.onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
             readVoice()
         }
@@ -299,6 +313,7 @@ abstract class CallWidget(
     private companion object {
         const val POLL_MS = 4_000L
         const val SPEAK_POLL_MS = 500L
+        const val MAX_SPEAKING_FAILURES = 3
         const val VOICE_AFTER_MS = 700L
     }
 }

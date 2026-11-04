@@ -124,18 +124,7 @@ class DeckApi(private val http: Http) {
     }
 
     /** État de l'appel dans l'appli ; null si l'ordinateur ne sait pas le lire (Mac, appli fermée, ancienne version). */
-    suspend fun voice(app: String): VoiceState? = http.io {
-        val v = JSONObject(http.get("/deck/voice?app=" + http.encode(app), timeoutMs = 10_000)).optJSONObject("voice")
-        if (v == null || !v.optBoolean("found")) return@io null
-        fun flag(key: String) = if (v.isNull(key)) null else v.optBoolean(key)
-        val people = v.optJSONArray("people")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty()
-        val members = v.optJSONArray("members")?.let { a ->
-            (0 until a.length()).map { a.getJSONObject(it) }.map { m ->
-                VoiceMember(m.getString("id"), m.optString("name"), m.optBoolean("avatar"), m.optBoolean("speaking"))
-            }
-        }
-        VoiceState(v.optBoolean("connected"), v.optStringOrNull("channel"), people, flag("muted"), flag("deafened"), v.optBoolean("streaming"), v.optBoolean("lobby"), flag("cameraOff"), v.optStringOrNull("photos"), members)
-    }
+    suspend fun voice(app: String): VoiceState? = http.io { parseVoice(http.get("/deck/voice?app=" + http.encode(app), timeoutMs = 10_000)) }
 
     // Page Média : sites ajoutés (vide au départ) et sites proposés.
 
@@ -208,4 +197,18 @@ internal fun parseHomeFeatures(text: String): HomeFeatures = JSONObject(text).le
         it.optBoolean("teams", it.optBoolean("meetings", true)), it.optBoolean("agents"), it.optBoolean("gitlab"), it.optBoolean("github"), it.optBoolean("jira"), it.optBoolean("ha"), it.optBoolean("valorant"),
         it.optJSONArray("off")?.let { a -> (0 until a.length()).map { i -> a.getString(i) }.toSet() }.orEmpty(),
     )
+}
+
+/** Réponse de /deck/voice ; null si l'ordinateur ne lit pas l'appel. `members` : null sans RPC Discord (repli sur `people`). */
+internal fun parseVoice(json: String): VoiceState? {
+    val v = JSONObject(json).optJSONObject("voice")
+    if (v == null || !v.optBoolean("found")) return null
+    fun flag(key: String) = if (v.isNull(key)) null else v.optBoolean(key)
+    val people = v.optJSONArray("people")?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty()
+    val members = v.optJSONArray("members")?.let { a ->
+        (0 until a.length()).map { a.getJSONObject(it) }.map { m ->
+            VoiceMember(m.getString("id"), m.optString("name"), m.optBoolean("avatar"), m.optBoolean("speaking"))
+        }
+    }
+    return VoiceState(v.optBoolean("connected"), v.optStringOrNull("channel"), people, flag("muted"), flag("deafened"), v.optBoolean("streaming"), v.optBoolean("lobby"), flag("cameraOff"), v.optStringOrNull("photos"), members)
 }
