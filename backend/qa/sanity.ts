@@ -756,6 +756,24 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "Discord : photos et qui parle (lecture seule)",
+      run: async () => {
+        // Jamais de POST /discord/authorize ici : il ouvrirait la fenêtre « Autoriser » de Discord sur l'ordinateur.
+        const speaking = await call("GET", "/discord/speaking");
+        if (!controlled()) return expectStatus(speaking, 501, "/discord/speaking");
+        expectStatus(speaking, 200, "/discord/speaking");
+        expect(Array.isArray(speaking.json.speaking), "forme de /discord/speaking inattendue");
+        const voice = await call("GET", "/deck/voice?app=Discord");
+        expectStatus(voice, 200, "/deck/voice?app=Discord");
+        if (!voice.json.voice) return "Discord fermé ou illisible";
+        const photos = voice.json.voice.photos;
+        expect(["off", "waiting", "on"].includes(photos), "/deck/voice sans état photos");
+        expect(!("accessToken" in voice.json.voice), "jeton Discord dans /deck/voice");
+        const members = voice.json.voice.members;
+        return photos === "on" ? `RPC relié, ${Array.isArray(members) ? members.length : 0} participant(s)` : `photos : ${photos}`;
+      },
+    },
+    {
       name: "pointeur",
       run: async () => {
         // Déplacement nul seulement : jamais de clic sur un ordinateur qui sert à autre chose.

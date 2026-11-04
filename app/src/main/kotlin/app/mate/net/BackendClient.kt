@@ -48,6 +48,7 @@ class BackendClient(
     val notifications = NotificationsApi(http)
     val away = AwayApi(http)
     val ytmusic = YtMusicApi(http)
+    val discord = DiscordApi(http)
     val news = NewsApi(http)
     val mail = MailApi(http)
     val menu = MenuApi(http)

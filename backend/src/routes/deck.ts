@@ -46,6 +46,7 @@ import {
   type PersoKey,
 } from "../perso.ts";
 import type { Layout, WindowTarget } from "../screens.ts";
+import { withDiscordMembers } from "../discord-rpc.ts";
 import { windowTarget } from "./windows.ts";
 
 export const appNameBody = {
@@ -249,7 +250,11 @@ export default async function deckRoutes(app: FastifyInstance) {
       logLevel: "warn",
       schema: { querystring: { type: "object", required: ["app"], properties: { app: { type: "string", minLength: 1, maxLength: 100 } } } },
     },
-    async (req) => ({ voice: (await voiceState(req.query.app).catch(() => null)) ?? null }),
+    async (req) => {
+      const voice = (await voiceState(req.query.app).catch(() => null)) ?? null;
+      // Discord : participants, photos et qui parle par le RPC local quand il est autorisé (src/discord-rpc.ts).
+      return { voice: req.query.app.toLowerCase() === "discord" ? withDiscordMembers(voice) : voice };
+    },
   );
 
   /** Retour au profil de base. */

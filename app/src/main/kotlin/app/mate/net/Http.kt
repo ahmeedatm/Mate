@@ -42,8 +42,8 @@ class Http(
 
     fun delete(path: String): String = text(request("DELETE", path))
 
-    fun postJson(path: String, body: JSONObject): String =
-        text(request("POST", path, body.toString().toByteArray(), JSON))
+    fun postJson(path: String, body: JSONObject, timeoutMs: Int = 60_000): String =
+        text(request("POST", path, body.toString().toByteArray(), JSON, timeoutMs))
 
     fun putJson(path: String, body: JSONObject): String =
         text(request("PUT", path, body.toString().toByteArray(), JSON))
@@ -74,6 +74,13 @@ class Http(
     /** Image ou fichier ; null sur 404 (l'ordinateur n'en a pas). */
     fun bytesOrNull(path: String, timeoutMs: Int = 60_000): ByteArray? =
         try { bytes(request("GET", path, timeoutMs = timeoutMs)) } catch (e: HttpException) { if (e.code == 404) null else throw e }
+
+    /**
+     * Texte d'une requête relue très souvent (« qui parle », toutes les 500 ms) : corps lu en entier sans `disconnect()`,
+     * la connexion reste ouverte et resservie (keep-alive), sans nouvelle poignée de main TLS à chaque relecture.
+     */
+    fun getKeepAlive(path: String, timeoutMs: Int): String =
+        request("GET", path, timeoutMs = timeoutMs).inputStream.bufferedReader().use { it.readText() }
 
     fun text(conn: HttpURLConnection): String =
         try { conn.inputStream.bufferedReader().use { it.readText() } } finally { conn.disconnect() }

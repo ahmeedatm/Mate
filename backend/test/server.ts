@@ -115,6 +115,10 @@ async function startOnce(options: ServerOptions, port: number): Promise<TestServ
       GITHUB_TOKEN: "",
       GITHUB_URL: "",
       GITHUB_CLIENT_ID: "",
+      // Pas de vrai Discord : la porte RPC du poste (6463…) ne doit pas répondre aux tests ; les tests donnent leur faux.
+      DISCORD_RPC_PORTS: "1",
+      DISCORD_STREAMKIT_URL: "http://127.0.0.1:1",
+      DISCORD_CDN_URL: "http://127.0.0.1:1",
       // Pas de vrai Home Assistant : les tests donnent leur faux serveur.
       HA_URL: "",
       HA_TOKEN: "",

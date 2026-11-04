@@ -1,10 +1,12 @@
 package app.mate.ui.home
 
 import android.content.Context
+import android.os.SystemClock
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.Toast
@@ -12,10 +14,12 @@ import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.DeckPage
 import app.mate.net.DeckTile
+import app.mate.net.VoiceMember
 import app.mate.net.VoiceState
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.AppAudioView
 import app.mate.ui.CallSession
+import app.mate.ui.IconCache
 import app.mate.ui.errorText
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -27,7 +31,9 @@ import kotlinx.coroutines.launch
  * celles de la page, montrées selon l'appel (`tileShown`) et allumées quand le micro est coupé (`tileLit`). L'appel est
  * relu toutes les 4 s tant que le profil est affiché, et 700 ms après un toucher. Pas de bouton Décrocher : la carte
  * d'appel plein écran s'en charge. S : titre et une seule touche ; M : titre, état et touches ; L : en plus les
- * participants et le son propre à l'appli.
+ * participants et le son propre à l'appli. Discord avec le RPC de l'ordinateur autorisé : les participants sont une
+ * rangée de photos, avec un anneau autour de qui parle (relu toutes les 500 ms pendant l'appel) ; pas encore autorisé :
+ * un bouton « Montrer les photos » ouvre « Autoriser » dans Discord sur l'ordinateur.
  */
 abstract class CallWidget(
     context: Context,
@@ -53,6 +59,23 @@ abstract class CallWidget(
     private val flag = label(14f, R.attr.c_ko).apply { isSingleLine = true }
     private val people = label(14f, R.attr.c_text_dim).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END }
     private val appAudio = AppAudioView(context).apply { attach(host.scope) }
+    private val memberRow = MemberRowView(context).apply { photoOf = IconCache::peekDiscord }
+    private val photosButton = Button(context, null, 0, R.style.ActionButton).apply {
+        setText(R.string.call_photos_show)
+        setOnClickListener { authorizePhotos() }
+    }
+
+    /** « Montrer les photos » touché : on attend le clic sur « Autoriser » dans Discord. */
+    private var authorizing = false
+    private var speakPoll: Job? = null
+    private var speaking: Set<String> = emptySet()
+
+    /** Relectures de « qui parle » ratées de suite : au-delà de 3, plus personne n'est montré parlant (pas d'anneau figé). */
+    private var speakingFailures = 0
+
+    /** Dernier instant où chacun a été vu parler (ordre d'un salon plein), oublié à la fin de l'appel. */
+    private val lastSpoke = HashMap<String, Long>()
+    private val loadingPhotos = HashSet<String>()
 
     private val grid = TileGridView(context, host.scope).apply {
         onTap = { cell, _ -> page?.tiles?.firstOrNull { it.id == cell.key.id }?.let(::run) }
@@ -81,7 +104,11 @@ abstract class CallWidget(
         val match = ViewGroup.LayoutParams.MATCH_PARENT
         val large = placed.size == WidgetSize.L || placed.size == WidgetSize.XL
         view.addView(header, LinearLayout.LayoutParams(match, wrap))
-        if (large) view.addView(people, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(4) })
+        if (large) {
+            view.addView(people, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(4) })
+            view.addView(memberRow, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(6); bottomMargin = dp(6) })
+            view.addView(photosButton, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = dp(6) })
+        }
         (grid.parent as? ViewGroup)?.removeView(grid)
         keys.addView(grid, FrameLayout.LayoutParams(match, wrap, Gravity.CENTER_VERTICAL))
         view.addView(keys, LinearLayout.LayoutParams(match, 0, 1f))
@@ -102,6 +129,8 @@ abstract class CallWidget(
         if (!active) {
             poll?.cancel()
             poll = null
+            speakPoll?.cancel()
+            speakPoll = null
             return
         }
         if (poll?.isActive == true) return
@@ -131,7 +160,12 @@ abstract class CallWidget(
     /** Appel relu ; une erreur réseau garde l'état d'avant (pas de clignotement), l'appli fermée donne `null`. */
     private suspend fun readVoice() {
         val app = page?.app
-        if (app != null) runCatchingCancellable { BackendClient(context).deck.voice(app) }.onSuccess { voice = it }
+        if (app != null) {
+            runCatchingCancellable { BackendClient(context).deck.voice(app) }.onSuccess {
+                voice = it
+                it?.members?.let { members -> noteSpeaking(members.filter(VoiceMember::speaking).map(VoiceMember::id).toSet()) }
+            }
+        }
         render()
     }
 
@@ -156,8 +190,8 @@ abstract class CallWidget(
             page == null -> if (read) context.getString(R.string.call_no_page) else ""
             inCall -> listOfNotNull(
                 context.getString(R.string.deck_voice_channel, v?.channel ?: page.app.orEmpty()),
-                // L montre les participants sur leur propre ligne.
-                v?.people?.takeIf { it.isNotEmpty() && placed.size != WidgetSize.L }?.joinToString(", "),
+                // L montre les participants sur leur propre ligne ; XL aussi quand c'est la rangée de photos.
+                v?.people?.takeIf { it.isNotEmpty() && placed.size != WidgetSize.L && !(placed.size == WidgetSize.XL && !v.members.isNullOrEmpty()) }?.joinToString(", "),
             ).joinToString(" · ")
             v?.lobby == true -> context.getString(R.string.call_lobby)
             else -> context.getString(R.string.call_idle)
@@ -173,6 +207,93 @@ abstract class CallWidget(
         flag.visibility = if (alert == null) View.GONE else View.VISIBLE
         val names = v?.people?.takeIf { inCall && it.isNotEmpty() }
         people.text = names?.let { context.getString(R.string.deck_voice_with, it.joinToString(", ")) }.orEmpty()
+        renderPhotos(v, inCall)
+    }
+
+    /** Rangée de photos (L, RPC Discord en appel) à la place de « Avec … », et bouton « Montrer les photos ». */
+    private fun renderPhotos(v: VoiceState?, inCall: Boolean) {
+        val large = placed.size == WidgetSize.L || placed.size == WidgetSize.XL
+        val members = v?.members?.takeIf { inCall && large && it.isNotEmpty() }
+        if (!inCall) {
+            lastSpoke.clear()
+            speaking = emptySet()
+            // Le prochain appel repart d'une rangée vide (aucun anneau resté allumé).
+            memberRow.show(emptyList(), emptyMap())
+        }
+        memberRow.visibility = if (members != null) View.VISIBLE else View.GONE
+        people.visibility = if (members != null) View.GONE else View.VISIBLE
+        if (members != null) {
+            renderMembers(members)
+            loadPhotos(members)
+        }
+        val photos = v?.photos
+        photosButton.visibility = if (large && inCall && photos != null && photos != "on") View.VISIBLE else View.GONE
+        // Le bouton garde sa forme pendant l'attente : son texte dit quoi faire, un nouveau toucher ne relance rien.
+        val waiting = authorizing || photos == "waiting"
+        photosButton.setText(if (waiting) R.string.call_photos_waiting else R.string.call_photos_show)
+        followSpeaking(members != null)
+    }
+
+    private fun renderMembers(members: List<VoiceMember>) =
+        memberRow.show(members.map { it.copy(speaking = it.id in speaking) }, lastSpoke.toMap())
+
+    private fun noteSpeaking(ids: Set<String>) {
+        val now = SystemClock.elapsedRealtime()
+        ids.forEach { lastSpoke[it] = now }
+        speaking = ids
+    }
+
+    /** Qui parle, relu toutes les 500 ms tant que la rangée est montrée (la carte ne relit l'appel que toutes les 4 s). */
+    private fun followSpeaking(on: Boolean) {
+        if (!on || !active) {
+            speakPoll?.cancel()
+            speakPoll = null
+            return
+        }
+        if (speakPoll?.isActive == true) return
+        speakPoll = host.scope.launch {
+            val client = BackendClient(context)
+            while (isActive) {
+                delay(SPEAK_POLL_MS)
+                val read = runCatchingCancellable { client.discord.speaking() }.getOrNull()
+                val ids = when {
+                    read != null -> read.also { speakingFailures = 0 }
+                    ++speakingFailures >= MAX_SPEAKING_FAILURES -> emptySet()
+                    else -> continue
+                }
+                if (ids == speaking) continue
+                noteSpeaking(ids)
+                voice?.members?.let(::renderMembers)
+            }
+        }
+    }
+
+    private fun loadPhotos(members: List<VoiceMember>) {
+        val missing = members.filter { it.avatar && IconCache.peekDiscord(it.id) == null && it.id !in loadingPhotos }
+        if (missing.isEmpty()) return
+        val client = BackendClient(context)
+        for (m in missing) {
+            loadingPhotos += m.id
+            host.scope.launch {
+                IconCache.loadDiscord(client, m.id)
+                loadingPhotos.remove(m.id)
+                memberRow.photosChanged()
+            }
+        }
+    }
+
+    private fun authorizePhotos() {
+        if (authorizing) return
+        authorizing = true
+        renderState()
+        host.scope.launch {
+            val result = runCatchingCancellable { BackendClient(context).discord.authorize() }
+            authorizing = false
+            // Widget plus à l'écran (profil changé pendant l'attente) : ni message, ni relecture.
+            if (!active) return@launch
+            result.onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
+            readVoice()
+        }
     }
 
     private fun run(tile: DeckTile) {
@@ -191,6 +312,8 @@ abstract class CallWidget(
 
     private companion object {
         const val POLL_MS = 4_000L
+        const val SPEAK_POLL_MS = 500L
+        const val MAX_SPEAKING_FAILURES = 3
         const val VOICE_AFTER_MS = 700L
     }
 }
