@@ -257,16 +257,20 @@ if (canControl) {
     connected: () => tabletStatus().connected,
     liveApps: callingDeckApps,
   });
-  // Appli au premier plan : la tablette affiche la page d'une appli de sa liste (et en revient).
-  startForegroundWatch((event) => void sendToTablet({ type: "foreground", ...event }), {
-    connected: () => tabletStatus().connected,
-    front: frontApp,
-  });
-  // États des touches (micro coupé, Ne pas déranger, appli lancée) : la tablette allume les touches concernées.
-  startTileStateWatch((lit) => void sendToTablet({ type: "tilestate", lit }), {
-    connected: () => tabletStatus().connected,
-    read: async () => litTiles(await stateTiles()),
-  });
+  // NO_TABLET_STATE_WATCH : tests de l'API. Ces deux veilles poussent un ordre à chaque connexion de la tablette, qui
+  // arriverait avant celui qu'un test attend.
+  if (process.env.NO_TABLET_STATE_WATCH !== "1") {
+    // Appli au premier plan : la tablette affiche la page d'une appli de sa liste (et en revient).
+    startForegroundWatch((event) => void sendToTablet({ type: "foreground", ...event }), {
+      connected: () => tabletStatus().connected,
+      front: frontApp,
+    });
+    // États des touches (micro coupé, Ne pas déranger, appli lancée) : la tablette allume les touches concernées.
+    startTileStateWatch((lit) => void sendToTablet({ type: "tilestate", lit }), {
+      connected: () => tabletStatus().connected,
+      read: async () => litTiles(await stateTiles()),
+    });
+  }
 }
 // Ordinateur verrouillé : la tablette se bloque, l'API se ferme (hook ci-dessus). Relu même sans tablette.
 startScreenLockWatch(async (locked) => (await sendToTablet({ type: "lock", locked })).received === true, {
