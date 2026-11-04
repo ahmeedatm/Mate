@@ -95,6 +95,7 @@
                     android:text="@string/welcome_install_title" />
 
                 <TextView
+                    android:id="@+id/welcome_install_text"
                     style="@style/WelcomeStepText"
                     android:text="@string/welcome_install_text" />
 

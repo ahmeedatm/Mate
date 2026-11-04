@@ -283,6 +283,7 @@ class RemoteChannel(private val activity: MainActivity) {
             .put("settings", TabletSettings.read(activity, systemBrightness, volume))
             .put("update", RemoteUpdate.state(activity))
             .put("installers", InstallerPlan.toJsonArray(InstallerService.served(activity)))
+            .put("installerCode", InstallerService.servedCode())
     }
 
     private companion object {
