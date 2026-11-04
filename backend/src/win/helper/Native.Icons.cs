@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace Mate
@@ -25,10 +26,13 @@ namespace Mate
         [DllImport("gdi32.dll")]
         static extern bool DeleteObject(IntPtr h);
 
-        static bool AppIcon(string id, string outPath, int size)
+        /** Appli du menu Démarrer (`id`), ou programme (`exePath`, .exe local) pour un jeu ou un lanceur qui n'y est pas. */
+        static bool AppIcon(string id, string exePath, string outPath, int size)
         {
+            if (exePath != null && !(Path.IsPathRooted(exePath) && !exePath.StartsWith("\\\\")
+                && exePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && File.Exists(exePath))) return false;
             IShellItemImageFactory factory;
-            SHCreateItemFromParsingName("shell:AppsFolder\\" + id, IntPtr.Zero, typeof(IShellItemImageFactory).GUID, out factory);
+            SHCreateItemFromParsingName(exePath ?? "shell:AppsFolder\\" + id, IntPtr.Zero, typeof(IShellItemImageFactory).GUID, out factory);
             IntPtr hbmp;
             var sz = new SIZE();
             sz.cx = size;

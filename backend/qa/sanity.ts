@@ -651,6 +651,25 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "icône de chaque appli ouverte",
+      run: async () => {
+        if (os === "mac" && accessibility === false) throw new Skip("Accessibilité non accordée");
+        if (!controlled()) throw new Skip("pas de pilotage sur ce système");
+        const open = await call("GET", "/windows/open");
+        expectStatus(open, 200, "/windows/open");
+        // Programme sans bundle sur Mac (qemu de l'émulateur : clé pid:…) ou sans exe lisible : pas d'icône à trouver.
+        const apps = (open.json.apps as { key: string; name: string }[]).filter((a) => a.key && !a.key.startsWith("pid:"));
+        if (!apps.length) throw new Skip("aucune fenêtre ouverte");
+        const missing: string[] = [];
+        for (const a of apps) {
+          const icon = await call("GET", `/windows/icon?name=${encodeURIComponent(a.name)}`);
+          if (icon.status !== 200) missing.push(a.name);
+        }
+        expect(!missing.length, `sans icône : ${missing.join(", ")}`);
+        return `${apps.length} applis, toutes avec leur icône`;
+      },
+    },
+    {
       name: "YouTube Music (lecture seule, action hors liste refusée)",
       run: async () => {
         // Jamais d'action réelle ici : elle jouerait dans le navigateur de l'ordinateur.

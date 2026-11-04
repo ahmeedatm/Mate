@@ -119,10 +119,22 @@ export async function openTarget(target: string) {
   await call("open", { target });
 }
 
+/**
+ * Programme (chemin complet d'un .exe sur un disque local) d'une appli ouverte d'après son nom dans la vue « Ouvertes » :
+ * jeux et lanceurs (VALORANT, Riot Client) n'ont pas d'entrée dans le menu Démarrer.
+ */
+export function openAppExe(windows: { app: string; exe: string }[], name: string): string | undefined {
+  return windows.find((w) => w.app === name && /^[a-z]:\\.+\.exe$/i.test(w.exe))?.exe;
+}
+
+/** Icône de l'appli du menu Démarrer, sinon celle du programme de sa fenêtre ouverte. */
 export async function appIcon(name: string, out: string): Promise<boolean> {
   const app = await findApp(name);
-  if (!app) return false;
-  return call<boolean>("icon", { id: app.id, out, size: 96 }).catch(() => false);
+  if (app) return call<boolean>("icon", { id: app.id, out, size: 96 }).catch(() => false);
+  const open = await call<RawOpen>("allwindows", { action: "list" }).catch(() => undefined);
+  const exe = open && openAppExe(open.windows, name);
+  if (!exe) return false;
+  return call<boolean>("icon", { path: exe, out, size: 96 }).catch(() => false);
 }
 
 // --- Clavier
