@@ -61,12 +61,13 @@ class RemoteChannel(private val activity: MainActivity) {
         var lastResolve = 0L
         /** Début de la coupure en cours (0 : en ligne) : on ne change d'ordinateur qu'après [SWITCH_AFTER_MS]. */
         var offlineSince = 0L
-        /** Dernière réponse de l'ordinateur : le verrou renforcé compte depuis elle, pas depuis l'échec d'un long poll. */
-        var lastContact = SystemClock.elapsedRealtime()
+        // Dernier contact (Prefs.lastContact) : le verrou renforcé compte depuis lui, même après une relance de la boucle.
+        touch(LockLogic.contactSince(SystemClock.elapsedRealtime(), Prefs.lastContact(activity)))
         while (true) {
             val computer = Computers.active(activity)
             if (computer == null) {
                 onStatus(Link(null, Link.State.NONE))
+                touch()
                 delay(5_000)
                 continue
             }
@@ -81,9 +82,9 @@ class RemoteChannel(private val activity: MainActivity) {
                     }
                     online = true
                     offlineSince = 0L
-                    lastContact = SystemClock.elapsedRealtime()
+                    touch()
                 }
-                client.tablet.poll(state()).also { lastContact = SystemClock.elapsedRealtime() }
+                client.tablet.poll(state()).also { touch() }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -98,7 +99,7 @@ class RemoteChannel(private val activity: MainActivity) {
                 }
                 onStatus(Link(computer, Link.State.OFFLINE))
                 if (offlineSince == 0L) offlineSince = SystemClock.elapsedRealtime()
-                lockIfAway(SystemClock.elapsedRealtime() - lastContact)
+                lockIfAway()
                 if (SystemClock.elapsedRealtime() - lastResolve > RESOLVE_EVERY_MS || lastResolve == 0L) {
                     lastResolve = SystemClock.elapsedRealtime()
                     // Coupure courte (ordinateur qui redémarre, WiFi qui décroche) : on attend l'actif, peut-être à une nouvelle adresse.
@@ -135,13 +136,16 @@ class RemoteChannel(private val activity: MainActivity) {
         }
     }
 
+    private fun touch(at: Long = SystemClock.elapsedRealtime()) = Prefs.setLastContact(activity, at)
+
     /** Verrou renforcé : ordinateur verrouillé injoignable trop longtemps, peut-être déverrouillé ailleurs. */
-    private fun lockIfAway(offlineMs: Long) {
+    private fun lockIfAway() {
+        val now = SystemClock.elapsedRealtime()
         val away = LockLogic.lockAway(
             enabled = Prefs.lockAway(activity),
             hasCode = Prefs.lockCodeHash(activity) != null,
             computerLocked = Prefs.computerLocked(activity),
-            offlineMs = offlineMs,
+            offlineMs = now - LockLogic.contactSince(now, Prefs.lastContact(activity)),
         )
         if (away) activity.lockScreen.lockAway()
     }

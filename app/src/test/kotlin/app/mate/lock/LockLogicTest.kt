@@ -33,6 +33,14 @@ class LockLogicTest {
     }
 
     @Test
+    fun `dernier contact garde, remis a maintenant s'il est inconnu ou d'avant un redemarrage`() {
+        assertEquals(5_000L, LockLogic.contactSince(now = 9_000, stored = 5_000))
+        assertEquals(9_000L, LockLogic.contactSince(now = 9_000, stored = 9_000))
+        assertEquals(9_000L, LockLogic.contactSince(now = 9_000, stored = 0))
+        assertEquals(9_000L, LockLogic.contactSince(now = 9_000, stored = 20_000))
+    }
+
+    @Test
     fun `code a 4 chiffres seulement`() {
         assertTrue(LockLogic.validCode("0042"))
         assertFalse(LockLogic.validCode("042"))

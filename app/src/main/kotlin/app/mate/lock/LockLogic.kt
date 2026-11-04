@@ -30,6 +30,12 @@ object LockLogic {
     fun lockAway(enabled: Boolean, hasCode: Boolean, computerLocked: Boolean, offlineMs: Long): Boolean =
         enabled && hasCode && computerLocked && offlineMs >= AWAY_AFTER_MS
 
+    /**
+     * Dernier contact avec l'ordinateur (horloge `elapsedRealtime`, gardée dans Prefs.lastContact). Inconnu (0) ou
+     * postérieur à `now` (redémarrage de la tablette) : on compte depuis maintenant.
+     */
+    fun contactSince(now: Long, stored: Long): Long = if (stored in 1..now) stored else now
+
     fun validCode(code: String): Boolean = code.length == CODE_LENGTH && code.all { it in '0'..'9' }
 
     /** Code jamais gardé en clair : empreinte salée (sel tiré une fois par tablette). */

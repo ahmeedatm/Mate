@@ -137,14 +137,14 @@ class LockScreen(private val activity: MainActivity) {
     private fun content(kind: LockKind): View {
         val ctx = activity
         val away = kind == LockKind.TABLET && Prefs.lockedAway(ctx)
-        val computerName = Computers.active(ctx)?.name ?: ctx.getString(R.string.lock_computer_fallback)
+        fun computerName() = Computers.active(ctx)?.name ?: ctx.getString(R.string.lock_computer_fallback)
         val title = ctx.getString(if (kind == LockKind.TABLET) R.string.lock_tablet_title else R.string.lock_computer_title)
         val body = if (away) {
-            ctx.getString(R.string.lock_away_body, computerName)
+            ctx.getString(R.string.lock_away_body, computerName())
         } else if (kind == LockKind.TABLET) {
             ctx.getString(R.string.lock_tablet_body)
         } else {
-            ctx.getString(R.string.lock_computer_body, computerName)
+            ctx.getString(R.string.lock_computer_body, computerName())
         }
         val info = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL

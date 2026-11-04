@@ -53,6 +53,7 @@ object Prefs {
     private const val KEY_MEETING_ALERT = "meeting_alert"
     private const val KEY_COMPUTER_LOCKED = "computer_locked"
     private const val KEY_TABLET_LOCKED = "tablet_locked"
+    private const val KEY_LAST_CONTACT = "last_contact"
     private const val KEY_LOCK_AWAY = "lock_away"
     private const val KEY_LOCKED_AWAY = "locked_away"
     private const val KEY_BLOCK_ON_COMPUTER_LOCK = "block_on_computer_lock"
@@ -260,6 +261,13 @@ object Prefs {
 
     fun setTabletLocked(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_TABLET_LOCKED, value).apply()
+    }
+
+    /** Dernière réponse de l'ordinateur actif, en `elapsedRealtime` : survit aux relances de la boucle et de l'appli (lock/LockLogic.contactSince). */
+    fun lastContact(context: Context): Long = prefs(context).getLong(KEY_LAST_CONTACT, 0L)
+
+    fun setLastContact(context: Context, value: Long) {
+        prefs(context).edit().putLong(KEY_LAST_CONTACT, value).apply()
     }
 
     /** Verrou renforcé : ordinateur verrouillé injoignable plus de 30 s = verrou à code (lock/LockLogic.lockAway). Coupé par défaut. */
