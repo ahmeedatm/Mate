@@ -147,6 +147,13 @@ const BOARD_PAGES: Record<string, { id: number; name: string }[]> = {
     { id: 4, name: "QA bis" },
   ],
 };
+// Tableaux rangés dans le projet : Jira en omet par projectKeyOrId quand leur filtre ne nomme pas le projet.
+const BOARD_LOCATIONS: Record<string, { id: number; name: string }[]> = {
+  TECH: [
+    { id: 1, name: "TECH Kanban" },
+    { id: 5, name: "Équipe" },
+  ],
+};
 const col = (name: string, ...ids: number[]) => ({ name, statuses: ids.map((id) => ({ id: String(id), self: "x" })) });
 const BOARD_CONFIGS: Record<string, unknown[]> = {
   1: [
@@ -201,10 +208,10 @@ const jiraServer = http.createServer((req, res) => {
         ],
       });
     }
-    const boardList = url.match(/^\/rest\/agile\/1\.0\/board\?projectKeyOrId=([A-Z]+)&startAt=(\d+)&maxResults=50$/);
+    const boardList = url.match(/^\/rest\/agile\/1\.0\/board\?(projectKeyOrId|projectLocation)=([A-Z]+)&startAt=(\d+)&maxResults=50$/);
     if (boardList) {
-      const all = BOARD_PAGES[boardList[1]] ?? [];
-      const startAt = Number(boardList[2]);
+      const all = (boardList[1] === "projectKeyOrId" ? BOARD_PAGES : BOARD_LOCATIONS)[boardList[2]] ?? [];
+      const startAt = Number(boardList[3]);
       return send(200, { values: all.slice(startAt, startAt + 2), startAt, isLast: startAt + 2 >= all.length });
     }
     const boardConfig = url.match(/^\/rest\/agile\/1\.0\/board\/(\d+)\/configuration$/);
@@ -290,7 +297,7 @@ describe("jira : API", () => {
     });
   });
 
-  it("GET /jira/boards : tableaux des projets de mes tickets, paginés et dédoublonnés, aucune sélection au départ", async () => {
+  it("GET /jira/boards : tableaux des projets de mes tickets et ceux rangés dedans, paginés et dédoublonnés, aucune sélection au départ", async () => {
     const { status, json } = await server.call("GET", "/jira/boards");
     assert.equal(status, 200);
     assert.deepEqual(json, {
@@ -298,6 +305,7 @@ describe("jira : API", () => {
         { id: 1, name: "TECH Kanban", project: "TECH" },
         { id: 2, name: "TECH Scrum", project: "TECH" },
         { id: 3, name: "QA", project: "TECH" },
+        { id: 5, name: "Équipe", project: "TECH" },
         { id: 4, name: "QA bis", project: "QA" },
       ],
       selected: [],

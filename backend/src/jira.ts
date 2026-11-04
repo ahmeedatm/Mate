@@ -212,21 +212,27 @@ export async function selectBoards(ids: number[]): Promise<void> {
   });
 }
 
-/** Tableaux des projets de mes tickets (ouverts et terminés depuis 7 jours), sans doublon. */
+/**
+ * Tableaux des projets de mes tickets (ouverts et terminés depuis 7 jours), sans doublon : ceux dont le filtre
+ * nomme le projet (projectKeyOrId), puis ceux rangés dans le projet (projectLocation), que le premier omet.
+ */
 export async function myBoards(): Promise<JiraBoard[]> {
   const issues = [...(await search(OPEN_JQL)), ...(await search(DONE_JQL))];
   const projects = [...new Set(issues.map((i) => i.key.replace(/-\d+$/, "")))];
   const perProject = await Promise.all(
     projects.map(async (project) => {
       const found: JiraBoard[] = [];
-      for (let startAt = 0; ;) {
-        const page = await jira<{ values: { id: number; name: string }[]; isLast?: boolean }>(
-          `/rest/agile/1.0/board?projectKeyOrId=${encodeURIComponent(project)}&startAt=${startAt}&maxResults=50`,
-        );
-        for (const { id, name } of page.values) found.push({ id, name, project });
-        startAt += page.values.length;
-        if (page.isLast !== false || page.values.length === 0) return found;
+      for (const param of ["projectKeyOrId", "projectLocation"]) {
+        for (let startAt = 0; ;) {
+          const page = await jira<{ values: { id: number; name: string }[]; isLast?: boolean }>(
+            `/rest/agile/1.0/board?${param}=${encodeURIComponent(project)}&startAt=${startAt}&maxResults=50`,
+          );
+          for (const { id, name } of page.values) found.push({ id, name, project });
+          startAt += page.values.length;
+          if (page.isLast !== false || page.values.length === 0) break;
+        }
       }
+      return found;
     }),
   );
   const byId = new Map<number, JiraBoard>();
