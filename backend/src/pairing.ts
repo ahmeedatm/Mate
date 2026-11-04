@@ -4,7 +4,7 @@ import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypt
 import { config } from "./config.ts";
 import { logFailure } from "./log.ts";
 import { packaged } from "./paths.ts";
-import { alert, computerName, openTarget, osName, pointerMove, pointerScroll } from "./os.ts";
+import { computerName, notify, openTarget, osName, pointerMove, pointerScroll } from "./os.ts";
 import { handlePointerDatagram, POINTER_HEADER, PointerGate } from "./pointer.ts";
 import { isScreenLocked } from "./screen-lock.ts";
 
@@ -18,6 +18,9 @@ import { isScreenLocked } from "./screen-lock.ts";
  *    la tablette l'affiche, l'utilisateur le saisit sur l'ordinateur (page http://127.0.0.1:3000/). Si quelqu'un
  *    s'est glissé entre les deux avec son propre certificat, les codes diffèrent (une chance sur un million de
  *    tomber juste : l'engagement l'empêche d'essayer plusieurs nombres). Le jeton n'est donné qu'après la saisie.
+ * La tablette ne choisit pas l'ordinateur dans une liste : elle prend celui qui « attend une tablette », c'est-à-dire dont
+ * la page locale est affichée au premier plan (`notePageVisible`, annoncé dans la réponse UDP). Une notification
+ * prévient quand une tablette demande à se connecter.
  * Trois essais par code, deux minutes de validité, cinq demandes par adresse et par tranche de cinq minutes.
  * Une demande encore valide n'est jamais remplacée par une autre adresse : elle attend.
  */
@@ -27,6 +30,27 @@ const CODE_TTL_MS = 2 * 60_000;
 const MAX_ATTEMPTS = 3;
 
 export const name = computerName();
+
+/** La page locale doit avoir été vue au premier plan depuis moins de ce délai (elle se rafraîchit toutes les 1,5 s). */
+const WAITING_TTL_MS = 5000;
+let visibleSince = 0;
+let lastVisible = 0;
+
+/** Appelé à chaque rafraîchissement de la page locale : `visible` = l'onglet est au premier plan. */
+export function notePageVisible(visible: boolean, now = Date.now()) {
+  if (!visible) {
+    visibleSince = lastVisible = 0;
+    return;
+  }
+  if (!lastVisible || now - lastVisible >= WAITING_TTL_MS) visibleSince = now;
+  lastVisible = now;
+}
+
+/** Cet ordinateur attend une tablette ; `waitingMs` = depuis combien de temps la page reste affichée (0 sinon). */
+export function waiting(now = Date.now()) {
+  const on = lastVisible > 0 && now - lastVisible < WAITING_TTL_MS;
+  return { waiting: on, waitingMs: on ? now - visibleSince : 0 };
+}
 
 /** `tlsPort` : HTTPS pour le WiFi ; null quand le serveur n'écoute qu'en local (USB). */
 export function identity() {
@@ -72,7 +96,7 @@ function listenUdp(port: number, gate: PointerGate, log: (msg: string) => void) 
       return;
     }
     if (msg.toString("utf8").trim() !== PROBE) return;
-    socket.send(JSON.stringify(identity()), from.port, from.address);
+    socket.send(JSON.stringify({ ...identity(), ...waiting() }), from.port, from.address);
   });
   socket.on("error", (e) => {
     log(`Découverte réseau indisponible (${e.message}) : la tablette devra saisir l'adresse à la main`);
@@ -113,6 +137,7 @@ const recent = new Map<string, number[]>();
 export function resetPairing() {
   pending = undefined;
   recent.clear();
+  visibleSince = lastVisible = 0;
 }
 
 export class PairingError extends Error {
@@ -124,11 +149,15 @@ export class PairingError extends Error {
   }
 }
 
-/** Prévient l'utilisateur et ouvre la page où saisir le code. */
+/**
+ * Prévient l'utilisateur par une notification : le code se saisit dans la page de Mate. Page pas au premier plan (appairage
+ * par adresse : la tablette n'a pas choisi cet ordinateur parce qu'il attendait) : elle s'ouvre aussi.
+ */
 const askCode = async (text: string) => {
   if (process.env.NO_ALERT || process.env.COMPANION_HEADLESS === "1") return;
-  await openTarget(`http://127.0.0.1:${config.port}/?section=pairing`).catch((e) => logFailure("Page d'appairage", e));
-  await alert("Mate", text);
+  await notify("Mate", text);
+  if (!waiting().waiting)
+    await openTarget(`http://127.0.0.1:${config.port}/?section=pairing`).catch((e) => logFailure("Page d'appairage", e));
 };
 
 /**
@@ -184,9 +213,9 @@ export function revealPairing(request: string, tabletNonce: string, show: (text:
   }
   p.code = pairingCode(p.channel, tabletNonce, p.nonce);
   console.log(`\n  Appairage demandé par ${p.tablet} : saisir sur http://127.0.0.1:${config.port}/ le code affiché sur la tablette\n`);
-  void show(
-    `La tablette « ${p.tablet} » demande à se connecter.\n\nSaisis le code affiché sur la tablette dans la page du compagnon qui vient de s'ouvrir.`,
-  ).catch((e) => logFailure("Dialogue d'appairage", e));
+  void show(`La tablette « ${p.tablet} » demande à se connecter : saisis le code affiché sur la tablette dans la page de Mate.`).catch(
+    (e) => logFailure("Notification d'appairage", e),
+  );
   return { expiresInMs: p.expires - Date.now() };
 }
 

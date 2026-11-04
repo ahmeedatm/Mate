@@ -28,6 +28,9 @@ object PairingCode {
     /** "123456" → "123 456", pour l'affichage. */
     fun spaced(code: String): String = code.take(3) + " " + code.drop(3)
 
+    /** "123 456" → "1 2 3 4 5 6", pour TalkBack (qui lirait sinon « cent vingt-trois »). */
+    fun spoken(code: String): String = code.filter { it.isDigit() }.toList().joinToString(" ")
+
     private fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes)
 
     /** java.util.Base64 n'existe qu'à partir d'Android 8 (minSdk 24) : base64url sans remplissage, écrit ici. */

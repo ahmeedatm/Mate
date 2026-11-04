@@ -21,7 +21,6 @@ namespace Mate
         [DllImport("user32.dll")] static extern bool LockWorkStation();
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         static extern IntPtr SendMessageTimeout(IntPtr h, uint msg, IntPtr w, string l, uint flags, uint timeout, out IntPtr result);
-        [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "MessageBoxW")] static extern int ShowMessage(IntPtr h, string text, string caption, uint type);
         [DllImport("wtsapi32.dll", SetLastError = true)]
         static extern bool WTSQuerySessionInformation(IntPtr server, int sessionId, int infoClass, out IntPtr buffer, out int bytes);
         [DllImport("wtsapi32.dll")] static extern void WTSFreeMemory(IntPtr memory);
@@ -135,10 +134,44 @@ namespace Mate
             }
         }
 
-        /** Boîte de message au premier plan, sans bloquer les requêtes suivantes. */
-        static void Alert(string title, string text)
+        /** Notification Windows (bulle de la zone de notification), sans bloquer les requêtes suivantes. */
+        static void Notify(string title, string text)
         {
-            var t = new Thread(delegate () { ShowMessage(IntPtr.Zero, text, title, 0x40 | 0x10000 | 0x40000); }); // INFORMATION | SETFOREGROUND | TOPMOST
+            var t = new Thread(delegate ()
+            {
+                NotifyIcon icon = null;
+                System.Windows.Forms.Timer timer = null;
+                Icon own = null;
+                try
+                {
+                    icon = new NotifyIcon();
+                    timer = new System.Windows.Forms.Timer();
+                    try { own = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
+                    icon.Icon = own ?? SystemIcons.Information;
+                    icon.Visible = true;
+                    icon.ShowBalloonTip(10000, title, text, ToolTipIcon.Info);
+                    // L'icône est retirée après 10 s : la boucle de messages la garde vivante jusque-là.
+                    timer.Interval = 10000;
+                    timer.Tick += delegate { Application.ExitThread(); };
+                    timer.Start();
+                    Application.Run();
+                }
+                catch (Exception e)
+                {
+                    // Une exception non rattrapée d'un fil arrêterait tout le pilote : la notification échoue seule, dans stderr.
+                    Console.Error.WriteLine("notify : " + e.Message);
+                }
+                finally
+                {
+                    if (timer != null) timer.Dispose();
+                    if (icon != null)
+                    {
+                        icon.Visible = false;
+                        icon.Dispose();
+                    }
+                    if (own != null) own.Dispose();
+                }
+            });
             t.IsBackground = true;
             t.SetApartmentState(ApartmentState.STA);
             t.Start();

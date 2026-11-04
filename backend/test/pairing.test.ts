@@ -6,7 +6,7 @@ import path from "node:path";
 import { beforeEach, test } from "node:test";
 
 process.env.DATA_DIR = await fs.mkdtemp(path.join(os.tmpdir(), "companion-pairing-"));
-const { approvePairing, confirmPairing, pairingCode, pendingCode, requestPairing, resetPairing, revealPairing } =
+const { approvePairing, confirmPairing, notePageVisible, pairingCode, pendingCode, requestPairing, resetPairing, revealPairing, waiting } =
   await import("../src/pairing.ts");
 
 let dialogs = 0;
@@ -137,4 +137,19 @@ test("code : 6 chiffres, dépend de chaque entrée", () => {
   assert.notEqual(pairingCode("", "a", "b"), base);
   assert.notEqual(pairingCode(FP, "c", "b"), base);
   assert.notEqual(pairingCode(FP, "a", "c"), base);
+});
+
+test("attend une tablette : page vue au premier plan depuis moins de 5 s, plus tard ou masquée non", () => {
+  assert.deepEqual(waiting(1000), { waiting: false, waitingMs: 0 });
+  notePageVisible(true, 1000);
+  assert.deepEqual(waiting(1000), { waiting: true, waitingMs: 0 });
+  notePageVisible(true, 2500);
+  notePageVisible(true, 4000);
+  assert.deepEqual(waiting(4000), { waiting: true, waitingMs: 3000 });
+  assert.equal(waiting(8999).waiting, true);
+  assert.equal(waiting(9000).waiting, false);
+  notePageVisible(true, 9500);
+  assert.deepEqual(waiting(9500), { waiting: true, waitingMs: 0 }, "après un trou, la série repart de zéro");
+  notePageVisible(false, 9600);
+  assert.equal(waiting(9600).waiting, false);
 });

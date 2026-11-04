@@ -539,10 +539,10 @@ export async function raiseWindow(hwnd: number): Promise<win.WinWindow> {
   unsupported();
 }
 
-/** Message bien visible sur l'ordinateur (code d'appairage), sans attendre qu'il soit fermé. */
-export async function alert(title: string, text: string) {
-  // Tests d'intégration et instance de test : pas de boîte réelle à chaque appairage.
+/** Notification système (demande d'appairage), sans attendre qu'elle disparaisse. */
+export async function notify(title: string, text: string) {
+  // Tests d'intégration et instance de test : pas de notification réelle à chaque appairage.
   if (process.env.NO_ALERT || headless) return;
-  if (isWindows) return win.alert(title, text);
-  if (isMac) macSystem.alert(title, text);
+  if (isWindows) return win.notify(title, text);
+  if (isMac) macSystem.notify(title, text);
 }

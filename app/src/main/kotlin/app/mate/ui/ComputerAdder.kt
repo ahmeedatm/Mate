@@ -35,50 +35,57 @@ import kotlinx.coroutines.launch
 import javax.net.ssl.SSLException
 
 /**
- * Boîtes de dialogue des ordinateurs. Ajout : recherche sur le WiFi (ou adresse saisie), puis code à 6 chiffres affiché par
- * la tablette et saisi sur l'ordinateur. Rien à recopier d'autre : le jeton arrive une fois le code accepté. `onAdded` : enregistré et devenu l'actif.
+ * Boîtes de dialogue des ordinateurs. Ajout : l'ordinateur dont la page de Mate est affichée est pris sur le WiFi (ou adresse
+ * saisie), puis code à 6 chiffres affiché par la tablette et saisi dans cette page. Rien à recopier d'autre : le jeton arrive
+ * une fois le code accepté. `onAdded` : enregistré et devenu l'actif.
  * `scope` : celui de l'activité, pour survivre à la recréation des écrans quand l'ordinateur change.
  */
 class ComputerAdder(private val context: Context, private val scope: CoroutineScope, private val onAdded: (Computer) -> Unit) {
 
     private class Form(val root: View, val body: LinearLayout, val message: TextView)
 
+    /**
+     * Ajout sans liste : la boîte attend qu'un ordinateur « attende une tablette » (sa page de Mate est affichée), puis
+     * montre le code à saisir dans cette page. Recherche répétée toutes les 4 s tant que la boîte est ouverte.
+     */
     fun search() {
         val form = form()
-        val list = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        form.body.addView(list)
+        form.message.setText(R.string.computer_search_hint)
+        val code = codeView()
+        form.body.addView(code)
         val dialog = AlertDialog.Builder(context)
             .setTitle(R.string.computer_add)
             .setView(form.root)
             .setNegativeButton(R.string.cancel, null)
-            .setNeutralButton(R.string.computer_search_again, null)
             .setPositiveButton(R.string.computer_add_manual, null)
             .create()
-        val run = {
-            form.message.setText(R.string.computer_searching)
-            list.removeAllViews()
+        val auto = AutoPairing(
+            context, scope,
+            onAdded = { dialog.dismiss(); onAdded(it) },
+            onFound = {},
+            onCode = { digits, name ->
+                showCode(code, digits)
+                form.message.text = context.getString(R.string.computer_code_show, name)
+            },
+            onMessage = { form.message.text = it },
+            onFailed = {
+                code.visibility = View.GONE
+                form.message.text = it
+            },
+            onIdle = { form.message.setText(R.string.computer_search_hint) },
+        )
+        // Après un échec : toucher le message relance la recherche.
+        form.message.setOnClickListener { auto.retry() }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener { dialog.dismiss(); manual() }
             scope.launch {
-                val found = runCatching { Discovery.find(timeoutMs = 2_000) }.getOrDefault(emptyList())
-                if (!dialog.isShowing) return@launch
-                form.message.setText(if (found.isEmpty()) R.string.computer_none_found else R.string.computer_pick)
-                val known = Computers.all(context).map { it.id }.toSet()
-                for (f in found) {
-                    val meta = listOfNotNull(
-                        osLabel(context, f.os), f.url.substringAfter("://"),
-                        context.getString(R.string.computer_known).takeIf { f.id in known },
-                        context.getString(R.string.computer_outdated).takeIf { f.outdated },
-                    ).joinToString(" · ")
-                    list.addView(row(list, f.name, meta) { dialog.dismiss(); pair(f.url, f.name) })
+                while (dialog.isShowing) {
+                    auto.round()
+                    delay(4_000)
                 }
             }
-            Unit
         }
-        dialog.setOnShowListener {
-            // Boutons qui ne ferment pas la boîte.
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener { run() }
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener { dialog.dismiss(); manual() }
-            run()
-        }
+        dialog.setOnDismissListener { auto.cancel() }
         dialog.showImmersive()
     }
 
@@ -121,21 +128,12 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
     }
 
     /**
-     * Appairage (protocole : backend/src/pairing.ts) : la tablette affiche un code, l'utilisateur le saisit sur
-     * l'ordinateur, la tablette reçoit alors le jeton. Le code mêle l'empreinte du certificat vu par la tablette :
-     * s'il passe par un intercepteur, l'ordinateur refuse le code et le jeton ne part jamais. `trust` : certificat
-     * déjà vu (adresse saisie), sinon retenu à la première requête.
+     * Appairage d'un ordinateur choisi par son adresse (protocole : `PairingSession`) : la tablette affiche un code,
+     * l'utilisateur le saisit dans la page de Mate de l'ordinateur, la tablette reçoit alors le jeton.
      */
     fun pair(url: String, name: String, trust: PinnedTrust = PinnedTrust(null)) {
         val form = form()
-        val code = TextView(context).apply {
-            textSize = 44f
-            letterSpacing = 0.15f
-            gravity = Gravity.CENTER
-            typeface = themeFont(context, R.attr.c_font_display)
-            setTextColor(themeColor(context, R.attr.c_text))
-            visibility = View.GONE
-        }
+        val code = codeView()
         form.body.addView(code)
         val dialog = AlertDialog.Builder(context)
             .setTitle(context.getString(R.string.computer_pair_title, name))
@@ -143,63 +141,46 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
             .setNegativeButton(R.string.cancel, null)
             .setNeutralButton(R.string.computer_new_code, null)
             .create()
-        val client = BackendClient(url, connectTimeoutMs = 4_000, trust = trust)
-        // HTTP en clair sur le WiFi : compagnon d'avant le HTTPS, aucune demande (elle échouerait et s'afficherait sur l'ordinateur).
-        val outdated = !url.startsWith("https://") && !isLocalUrl(url)
-        var job: Job? = null
-        val start = {
-            job?.cancel()
-            code.visibility = View.GONE
-            form.message.text = context.getString(R.string.computer_requesting, name)
-            job = scope.launch {
-                try {
-                    val secret = PairingCode.newSecret()
-                    val (request, computerNonce) = client.pairing.request(context.getString(R.string.tablet_name, Build.MODEL), secret.commit)
-                    client.pairing.reveal(request, secret.nonce)
-                    // En HTTP local (USB), pas de certificat : "" comme sur l'ordinateur.
-                    val channel = if (url.startsWith("https://")) trust.seen.orEmpty() else ""
-                    code.text = PairingCode.spaced(PairingCode.code(channel, secret.nonce, computerNonce))
-                    code.visibility = View.VISIBLE
-                    form.message.text = context.getString(R.string.computer_code_show, name)
-                    var pairing: Pairing? = null
-                    while (pairing == null) {
-                        delay(1_000)
-                        if (!dialog.isShowing) return@launch
-                        pairing = client.pairing.confirm(request)
-                    }
-                    // En WiFi, l'ordinateur annonce le certificat que la tablette a vu ; en USB, elle le découvre ici.
-                    if (channel.isNotEmpty() && pairing.fingerprint != channel) throw InsecureComputerException()
-                    val known = Computers.all(context).firstOrNull { it.id == pairing.id }
-                    val computer = Computer(
-                        pairing.id, known?.name ?: pairing.name, url, pairing.token, pairing.os,
-                        pin = channel.ifEmpty { pairing.fingerprint.ifEmpty { null } },
-                    )
-                    Computers.save(context, computer, makeActive = true)
-                    dialog.dismiss()
-                    onAdded(Computers.active(context) ?: computer)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: OutdatedCompanionException) {
-                    code.visibility = View.GONE
-                    dialog.getButton(AlertDialog.BUTTON_NEUTRAL).visibility = View.GONE
-                    form.message.text = outdatedText(name)
-                } catch (e: Exception) {
-                    code.visibility = View.GONE
-                    form.message.text = reason(e)
-                }
-            }
-        }
+        val session = PairingSession(
+            context, scope, url, name, trust,
+            onCode = {
+                showCode(code, it)
+                form.message.text = context.getString(R.string.computer_code_show, name)
+            },
+            onMessage = { form.message.text = it },
+            onFailed = { text, outdated ->
+                code.visibility = View.GONE
+                if (outdated) dialog.getButton(AlertDialog.BUTTON_NEUTRAL).visibility = View.GONE
+                form.message.text = text
+            },
+            onAdded = { dialog.dismiss(); onAdded(it) },
+        )
         dialog.setOnShowListener {
-            if (outdated) {
+            if (PairingSession.isOutdated(url)) {
                 dialog.getButton(AlertDialog.BUTTON_NEUTRAL).visibility = View.GONE
-                form.message.text = outdatedText(name)
+                form.message.text = PairingSession.outdatedText(context, name)
                 return@setOnShowListener
             }
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener { start() }
-            start()
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener { code.visibility = View.GONE; session.start() }
+            session.start()
         }
-        dialog.setOnDismissListener { job?.cancel() }
+        dialog.setOnDismissListener { session.cancel() }
         dialog.showImmersive()
+    }
+
+    private fun codeView() = TextView(context).apply {
+        textSize = 44f
+        letterSpacing = 0.15f
+        gravity = Gravity.CENTER
+        typeface = themeFont(context, R.attr.c_font_display)
+        setTextColor(themeColor(context, R.attr.c_text))
+        visibility = View.GONE
+    }
+
+    private fun showCode(view: TextView, digits: String) {
+        view.text = digits
+        view.contentDescription = PairingCode.spoken(digits)
+        view.visibility = View.VISIBLE
     }
 
     /** Renommer un ordinateur : nom affiché sur la tablette seulement (barre latérale, liste). */
@@ -234,30 +215,9 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
         }
     }
 
-    private fun outdatedText(name: String) = when (val hint = InstallerHint.of(BuildConfig.TRIAL, InstallerService.link())) {
-        is InstallerHint.Trial -> context.getString(R.string.computer_outdated_detail_trial, name)
-        is InstallerHint.NoWifi -> context.getString(R.string.computer_outdated_detail, name, context.getString(R.string.install_address_no_wifi))
-        is InstallerHint.Address -> context.getString(R.string.computer_outdated_detail, name, hint.link)
-    }
-
-    private fun reason(e: Exception): String = when (e) {
-        is HttpException -> e.reason
-        is InsecureComputerException, is SSLException -> context.getString(R.string.computer_insecure)
-        else -> context.getString(R.string.computer_lost)
-    }
-
     private fun form(): Form {
         val root = LayoutInflater.from(context).inflate(R.layout.view_dialog_form, null)
         return Form(root, root.findViewById(R.id.dialog_body), root.findViewById(R.id.dialog_message))
-    }
-
-    private fun row(parent: LinearLayout, title: String, meta: String, onClick: () -> Unit): View {
-        val row = LayoutInflater.from(context).inflate(R.layout.item_window, parent, false)
-        row.findViewById<TextView>(R.id.window_title).text = title
-        row.findViewById<TextView>(R.id.window_meta).text = meta
-        row.setOnClickListener { onClick() }
-        (row.layoutParams as? LinearLayout.LayoutParams)?.topMargin = context.dp(8)
-        return row
     }
 
     private fun showWithKeyboard(dialog: AlertDialog, input: EditText) = dialog.showForTyping(input)
