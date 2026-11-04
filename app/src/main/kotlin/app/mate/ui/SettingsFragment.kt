@@ -73,6 +73,9 @@ class SettingsFragment :
     override var topHeader: View? = null
         private set
 
+    /** Mode technicien : carte Kiosque, essais de PR et « Ouvrir l'essai », jusqu'à la sortie des Réglages. */
+    private var technician = false
+
     private lateinit var kioskCard: View
     private lateinit var tabs: List<Pair<View, View>>
 
@@ -88,6 +91,7 @@ class SettingsFragment :
     private lateinit var kioskSecurity: View
     private lateinit var exitLock: SwitchCompat
     private lateinit var powerMenu: SwitchCompat
+    private lateinit var allowDebugging: SwitchCompat
     private lateinit var meetingsCard: View
     private lateinit var autoJoin: SwitchCompat
     private lateinit var autoJoinHint: TextView
@@ -105,6 +109,7 @@ class SettingsFragment :
     private lateinit var meetingAlert: SwitchCompat
     private lateinit var blockOnComputerLock: SwitchCompat
     private lateinit var lockCode: Button
+    private lateinit var lockAway: SwitchCompat
     private lateinit var wakeWord: SwitchCompat
     private lateinit var wakeStatus: TextView
     private lateinit var weatherLocation: SwitchCompat
@@ -153,6 +158,7 @@ class SettingsFragment :
         kioskSecurity = view.findViewById(R.id.settings_kiosk_security)
         exitLock = view.findViewById(R.id.settings_exit_lock)
         powerMenu = view.findViewById(R.id.settings_power_menu)
+        allowDebugging = view.findViewById(R.id.settings_allow_debugging)
         meetingsCard = view.findViewById(R.id.settings_meetings_card)
         autoJoin = view.findViewById(R.id.settings_autojoin)
         autoJoinHint = view.findViewById(R.id.settings_autojoin_hint)
@@ -188,6 +194,7 @@ class SettingsFragment :
         meetingAlert = view.findViewById(R.id.settings_meeting_alert)
         blockOnComputerLock = view.findViewById(R.id.settings_block_on_computer_lock)
         lockCode = view.findViewById(R.id.settings_lock_code)
+        lockAway = view.findViewById(R.id.settings_lock_away)
         wakeWord = view.findViewById(R.id.settings_wake_word)
         wakeStatus = view.findViewById(R.id.settings_wake_word_status)
         weatherLocation = view.findViewById(R.id.settings_weather_location)
@@ -254,8 +261,8 @@ class SettingsFragment :
     }
 
     override fun onHiddenChanged(hidden: Boolean) {
-        // Carte Kiosque : seulement le temps de la visite du technicien.
-        if (hidden) kioskCard.visibility = View.GONE
+        // Mode technicien : seulement le temps de la visite.
+        if (hidden) endTechnician()
         if (!hidden) {
             renderComputers()
             renderWifi()
@@ -699,6 +706,16 @@ class SettingsFragment :
             if (checked != Prefs.blockOnComputerLock(ctx)) main.lockScreen.setBlockOnComputerLock(checked)
         }
         lockCode.setOnClickListener { main.lockScreen.chooseCode { renderLockCode() } }
+        // Verrou renforcé : il lui faut un code ; sans code, on le fait choisir, annuler laisse l'option coupée.
+        lockAway.setOnCheckedChangeListener { _, checked ->
+            if (!checked) return@setOnCheckedChangeListener Prefs.setLockAway(ctx, false)
+            if (Prefs.lockCodeHash(ctx) != null) return@setOnCheckedChangeListener Prefs.setLockAway(ctx, true)
+            lockAway.isChecked = false
+            main.lockScreen.chooseCode {
+                Prefs.setLockAway(ctx, true)
+                renderLockCode()
+            }
+        }
         // Mot de réveil : l'activer télécharge le modèle s'il manque ; l'écoute suit tout de suite.
         wakeWord.setOnCheckedChangeListener { _, checked ->
             Prefs.setWakeWord(ctx, checked)
@@ -837,7 +854,8 @@ class SettingsFragment :
 
     /** Bouton vers l'autre appli (essai ou stable), seulement si elle est installée. */
     private fun renderSwitchApp() {
-        switchApp.visibility = if (Trial.isInstalled(requireContext(), Trial.other)) View.VISIBLE else View.GONE
+        val allowed = EssaiPlan.showSwitch(BuildConfig.TRIAL, technician)
+        switchApp.visibility = if (allowed && Trial.isInstalled(requireContext(), Trial.other)) View.VISIBLE else View.GONE
     }
 
     private fun checkUpdates() {
@@ -857,8 +875,7 @@ class SettingsFragment :
             } catch (e: Exception) {
                 updatesStatus.text = errorText(e)
             }
-            // Essais de MR : seulement dans la stable (device owner, qui les installe).
-            if (!BuildConfig.TRIAL) showEssais()
+            showEssais()
         }
         checkCompanion()
     }
@@ -922,14 +939,17 @@ class SettingsFragment :
 
     /** Une ligne par essai publié, sous les mises à jour. Une erreur s'ajoute à la phrase d'état, sans masquer le reste. */
     private suspend fun showEssais() {
+        if (!EssaiPlan.showList(BuildConfig.TRIAL, technician)) return
         try {
             val list = Updater.essais(requireContext())
+            if (view == null || !technician) return
             essais.removeAllViews()
             essaisTitle.visibility = View.VISIBLE
             essaisTitle.setText(if (list.isEmpty()) R.string.essais_none else R.string.essais_title)
             val installed = Updater.installed(requireContext(), Trial.TRIAL)
             for (essai in list) essais.addView(updateRow(essai.update, installed, essai))
         } catch (e: Exception) {
+            if (view == null) return
             updatesStatus.text = listOf(updatesStatus.text, getString(R.string.updates_source_error, getString(R.string.updates_source_trials), errorText(e))).joinToString("\n")
         }
     }
@@ -1126,7 +1146,15 @@ class SettingsFragment :
         if (ok && view != null) renderSwitchApp()
     }
 
-    /** Code technicien : montre la carte Kiosque (quitter, retirer, autoriser les installations). */
+    private fun endTechnician() {
+        technician = false
+        kioskCard.visibility = View.GONE
+        essais.removeAllViews()
+        essaisTitle.visibility = View.GONE
+        renderSwitchApp()
+    }
+
+    /** Code technicien : mode technicien (carte Kiosque, essais de PR, « Ouvrir l'essai »). */
     private fun askTechCode() {
         val ctx = requireContext()
         val input = (layoutInflater.inflate(R.layout.item_input, null, false) as EditText).apply {
@@ -1143,9 +1171,12 @@ class SettingsFragment :
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
             if (input.text.toString() == BuildConfig.TECH_CODE) {
                 dialog.dismiss()
+                technician = true
                 showTab(options = false)
                 kioskCard.visibility = View.VISIBLE
                 renderKiosk()
+                renderSwitchApp()
+                viewLifecycleOwner.lifecycleScope.launch { showEssais() }
             } else {
                 input.setText("")
                 input.error = getString(R.string.tech_code_wrong)
@@ -1155,6 +1186,7 @@ class SettingsFragment :
 
     private fun renderLockCode() {
         lockCode.setText(if (Prefs.lockCodeHash(requireContext()) == null) R.string.lock_code_choose else R.string.lock_code_change)
+        lockAway.isChecked = Prefs.lockAway(requireContext())
     }
 
     private fun renderKiosk() {
@@ -1210,6 +1242,12 @@ class SettingsFragment :
         powerMenu.setOnCheckedChangeListener { _, checked ->
             Prefs.setPowerMenu(ctx, checked)
             Kiosk.applyLockTaskFeatures(ctx)
+        }
+        allowDebugging.setOnCheckedChangeListener(null)
+        allowDebugging.isChecked = Prefs.allowDebugging(ctx)
+        allowDebugging.setOnCheckedChangeListener { _, checked ->
+            Prefs.setAllowDebugging(ctx, checked)
+            Kiosk.lockDebugging(ctx, !checked)
         }
     }
 

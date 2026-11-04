@@ -150,6 +150,9 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
     format: "esm",
     target: "node22",
     legalComments: "none",
+    // Code moins lisible pour qui ouvre le dossier installé ; noms de fonctions gardés (plugins Fastify, erreurs).
+    minify: true,
+    keepNames: true,
     // Version renvoyée par /health : la tablette propose l'appli plus récente qu'elle garde ; le panneau la compare aussi.
     define: { "process.env.COMPANION_VERSION": JSON.stringify(VERSION) },
     logLevel: "warning",

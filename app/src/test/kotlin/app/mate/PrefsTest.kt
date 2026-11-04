@@ -20,6 +20,7 @@ class PrefsTest {
         assertFalse(Prefs.allowInstalls(context))
         assertFalse(Prefs.exitLock(context))
         assertFalse(Prefs.powerMenu(context))
+        assertFalse(Prefs.allowDebugging(context))
         assertFalse(Prefs.landscapeLocked(context))
         assertNull(Prefs.theme(context))
         assertTrue(Prefs.blockOnComputerLock(context))
@@ -49,9 +50,11 @@ class PrefsTest {
     fun `reglages du kiosque retenus`() {
         Prefs.setExitLock(context, true)
         Prefs.setPowerMenu(context, true)
+        Prefs.setAllowDebugging(context, true)
         Prefs.setLandscapeLocked(context, true)
         assertTrue(Prefs.exitLock(context))
         assertTrue(Prefs.powerMenu(context))
+        assertTrue(Prefs.allowDebugging(context))
         assertTrue(Prefs.landscapeLocked(context))
     }
 

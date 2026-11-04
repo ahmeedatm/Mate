@@ -28,7 +28,7 @@ export const fakeMr = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-/** Pipeline tel que le rend `GET /projects/:id/pipelines/latest`. */
+/** Pipeline tel que le rend `GET /projects/:id/pipelines/:pipeline_id`. */
 export const fakePipeline = (over: Record<string, unknown> = {}) => ({
   id: 500,
   ref: "main",
@@ -63,11 +63,15 @@ export type FakeGitlab = {
   /** Page d'autorisation, étape « Autoriser » : adresse de retour de l'appli avec le code (ou l'erreur si `deny`). */
   authorize: (authorizeUrl: string, deny?: boolean) => Promise<string>;
   mrs: { assigned: unknown[]; review: unknown[] };
-  /** Dernier pipeline de la branche par défaut, par chemin de projet (absent : 404, projet sans pipeline). */
+  /** Dernier pipeline, par chemin de projet (absent : projet sans pipeline). Listé seulement si son `ref` est `defaultBranch`. */
   pipelines: Record<string, unknown>;
+  /** Branche par défaut de tous les projets (`GET /projects/:id`). */
+  defaultBranch: string;
+  /** Projets dont les pipelines sont interdits au compte (403, comme un rôle sans accès à la CI). */
+  deniedProjects: string[];
   /** Noms des jobs en échec, par id de pipeline. */
   failedJobs: Record<number, string[]>;
-  /** Code HTTP forcé pour `pipelines/latest` (200 : normal). */
+  /** Code HTTP forcé pour la liste des pipelines de tous les projets (200 : normal). */
   pipelinesStatus: number;
   stop: () => Promise<void>;
 };
@@ -88,6 +92,8 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
     allowedScopes: ["read_api", "openid", "profile", "email"],
     mergeStatus: 200,
     pipelines: {},
+    defaultBranch: "main",
+    deniedProjects: [],
     failedJobs: {},
     pipelinesStatus: 200,
     revokeAll: () => {
@@ -216,11 +222,23 @@ export async function startFakeGitlab(port = 0): Promise<FakeGitlab> {
           },
         });
       }
-      const latest = /^\/api\/v4\/projects\/([^/]+)\/pipelines\/latest$/.exec(url.pathname);
-      if (latest && req.method === "GET") {
+      const project = /^\/api\/v4\/projects\/([^/]+)$/.exec(url.pathname);
+      if (project && req.method === "GET") return json(200, { default_branch: fake.defaultBranch });
+      const list = /^\/api\/v4\/projects\/([^/]+)\/pipelines$/.exec(url.pathname);
+      if (list && req.method === "GET") {
+        const path = decodeURIComponent(list[1]);
         if (fake.pipelinesStatus !== 200) return json(fake.pipelinesStatus, { message: "refus" });
-        const pipeline = fake.pipelines[decodeURIComponent(latest[1])];
-        return pipeline ? json(200, pipeline) : json(404, { message: "404 Not found" });
+        if (fake.deniedProjects.includes(path)) return json(403, { message: "403 Forbidden" });
+        const p = fake.pipelines[path] as Record<string, unknown> | undefined;
+        const ref = url.searchParams.get("ref");
+        // Comme le vrai : la liste ne donne ni durée ni heures de début et de fin.
+        const summary = p && { id: p.id, ref: p.ref, status: p.status, created_at: p.created_at };
+        return json(200, summary && (!ref || ref === p.ref) ? [summary] : []);
+      }
+      const one = /^\/api\/v4\/projects\/([^/]+)\/pipelines\/(\d+)$/.exec(url.pathname);
+      if (one && req.method === "GET") {
+        const p = fake.pipelines[decodeURIComponent(one[1])] as { id?: number } | undefined;
+        return p && p.id === Number(one[2]) ? json(200, p) : json(404, { message: "404 Not found" });
       }
       const jobs = /^\/api\/v4\/projects\/[^/]+\/pipelines\/(\d+)\/jobs$/.exec(url.pathname);
       if (jobs && req.method === "GET")
