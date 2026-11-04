@@ -3,10 +3,7 @@ import { afterEach, describe, it } from "node:test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { createHash } from "node:crypto";
-import http from "node:http";
-import type { AddressInfo } from "node:net";
-import { checkUpdate, download, tabletHeaders } from "../src/app-update.ts";
+import { checkUpdate, download, installerBase } from "../src/app-update.ts";
 import { noteTabletAddress, pollCommands } from "../src/tablet.ts";
 
 // Mise à jour de l'appli portable : la liste (taille, SHA-256) vient du canal appairé, jamais du port 8080 en clair.
@@ -71,32 +68,25 @@ describe("téléchargement (installeur, modèle Whisper)", () => {
   });
 });
 
-describe("jeton envoyé à la tablette", () => {
-  it("en-tête Bearer avec le jeton d'appairage, rien sans jeton", () => {
-    assert.deepEqual(tabletHeaders("abc"), { Authorization: "Bearer abc" });
-    assert.deepEqual(tabletHeaders(""), {});
+describe("adresse des fichiers sur la tablette", () => {
+  it("le code lu dans l'état du poll se met entre le port et le fichier", () => {
+    assert.equal(installerBase("192.0.2.10", { installerCode: "K7M2Q" }), "http://192.0.2.10:8080/K7M2Q");
   });
 
-  it("le téléchargement envoie les en-têtes donnés, et aucun par défaut (ex. modèle Whisper chez un tiers)", async () => {
-    const body = Buffer.from("contenu de l'installeur");
-    const seen: (string | undefined)[] = [];
-    const server = http.createServer((req, res) => {
-      seen.push(req.headers.authorization);
-      res.end(body);
-    });
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-    const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/Mate-Mac.zip`;
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "app-update-"));
-    const expected = { size: body.length, sha256: createHash("sha256").update(body).digest("hex") };
-    globalThis.fetch = realFetch;
-    try {
-      await download(url, path.join(dir, "a"), expected, tabletHeaders("abc"));
-      await download(url, path.join(dir, "b"), expected);
-      assert.deepEqual(seen, ["Bearer abc", undefined]);
-      assert.deepEqual(fs.readFileSync(path.join(dir, "a")), body);
-    } finally {
-      server.close();
-      fs.rmSync(dir, { recursive: true, force: true });
+  it("sans code (ancienne tablette), code vide ou qui sort du chemin : refus clair", () => {
+    for (const state of [
+      null,
+      {},
+      { installerCode: "" },
+      { installerCode: 12345 },
+      { installerCode: "../x" },
+      { installerCode: "K7M2Q/../.." },
+    ]) {
+      assert.throws(
+        () => installerBase("192.0.2.10", state),
+        (e: Error & { statusCode?: number }) => e.statusCode === 409 && /mets à jour/.test(e.message),
+        JSON.stringify(state),
+      );
     }
   });
 });

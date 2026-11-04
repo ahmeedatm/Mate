@@ -44,6 +44,7 @@ import app.mate.device.Tablet
 import app.mate.installers.BackendPlan
 import app.mate.installers.BackendRelease
 import app.mate.installers.CompanionUpdater
+import app.mate.installers.InstallerHint
 import app.mate.installers.InstallerService
 import app.mate.kiosk.FreshStart
 import app.mate.kiosk.Kiosk
@@ -291,7 +292,11 @@ class SettingsFragment :
         val all = Computers.all(ctx)
         if (all.isEmpty()) {
             computers.addView(TextView(ctx).apply {
-                text = getString(R.string.computers_empty, InstallerService.link() ?: getString(R.string.install_address_no_wifi))
+                text = when (val hint = InstallerHint.of(BuildConfig.TRIAL, InstallerService.link())) {
+                    is InstallerHint.Trial -> getString(R.string.computers_empty_trial)
+                    is InstallerHint.NoWifi -> getString(R.string.computers_empty, getString(R.string.install_address_no_wifi))
+                    is InstallerHint.Address -> getString(R.string.computers_empty, hint.link)
+                }
                 textSize = 16f
                 setPadding(0, dp(8), 0, 0)
             })

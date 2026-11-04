@@ -19,3 +19,21 @@ sealed class InstallerCard {
         }
     }
 }
+
+/** Ce que Réglages et le message « trop ancien » disent de l'adresse de l'installeur, sans Android (testé dans app/src/test). */
+sealed class InstallerHint {
+    /** Appli d'essai : elle ne sert pas le port, l'adresse est sur Bienvenue de la stable. */
+    object Trial : InstallerHint()
+
+    object NoWifi : InstallerHint()
+
+    data class Address(val link: String) : InstallerHint()
+
+    companion object {
+        fun of(trial: Boolean, link: String?): InstallerHint = when {
+            trial -> Trial
+            link == null -> NoWifi
+            else -> Address(link)
+        }
+    }
+}

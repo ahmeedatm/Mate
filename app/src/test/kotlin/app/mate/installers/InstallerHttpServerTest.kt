@@ -19,13 +19,12 @@ class InstallerHttpServerTest {
     private lateinit var server: InstallerHttpServer
     private val zip = ByteArray(300_000) { (it % 251).toByte() }
     private val code = "K7M2Q"
-    private val token = "jeton-d-un-ordinateur-appaire"
 
     @Before
     fun start() {
         dir = Files.createTempDirectory("installers").toFile()
         store = InstallerStore(dir)
-        server = InstallerHttpServer(0, dir, store::onDisk, { code }, { listOf(token) })
+        server = InstallerHttpServer(0, dir, store::onDisk, { code })
         assertTrue(server.start())
     }
 
@@ -44,18 +43,16 @@ class InstallerHttpServerTest {
         store.commit(i)
     }
 
-    /** Sous le code de Bienvenue, sauf `raw` : le chemin tel quel. `bearer` : jeton d'appairage. */
+    /** Sous le code de Bienvenue, sauf `raw` : le chemin tel quel. */
     private fun get(
         path: String,
         agent: String? = null,
         method: String = "GET",
         raw: Boolean = false,
-        bearer: String? = null,
     ): Pair<Int, ByteArray> {
         val conn = URL("http://127.0.0.1:${server.boundPort}${if (raw) path else "/$code$path"}").openConnection() as HttpURLConnection
         conn.requestMethod = method
         agent?.let { conn.setRequestProperty("User-Agent", it) }
-        bearer?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
         val code = conn.responseCode
         val body = (if (code in 200..299) conn.inputStream else conn.errorStream).use { it.readBytes() }
         return code to body
@@ -134,32 +131,40 @@ class InstallerHttpServerTest {
     }
 
     @Test
-    fun `pas de code tire encore, seuls les ordinateurs appaires passent`() {
+    fun `pas de code tire encore, tout est refuse`() {
         server.stop()
-        server = InstallerHttpServer(0, dir, store::onDisk, { null }, { listOf(token) })
+        server = InstallerHttpServer(0, dir, store::onDisk, { null })
         assertTrue(server.start())
         assertEquals(404, get("/", raw = true).first)
         assertEquals(404, get("//", raw = true).first)
-        assertEquals(200, get("/installers.json", raw = true, bearer = token).first)
+        assertEquals(404, get("/installers.json", raw = true).first)
     }
 
     @Test
-    fun `un ordinateur appaire lit la liste et les fichiers avec son jeton`() {
-        val exe = installer("Mate-Windows.exe", Os.WINDOWS, zip)
-        publish(exe, zip)
-        val (code, body) = get("/installers.json", raw = true, bearer = token)
-        assertEquals(200, code)
-        assertEquals(listOf(exe), InstallerPlan.parse(String(body)))
-        assertTrue(zip.contentEquals(get("/Mate-Windows.exe", raw = true, bearer = token).second))
-        assertEquals(405, get("/installers.json", method = "POST", raw = true, bearer = token).first)
-    }
-
-    @Test
-    fun `un mauvais jeton ou un schema autre que Bearer est refuse`() {
+    fun `l'en-tete Authorization n'ouvre rien`() {
         publish(installer("Mate-Mac.zip", Os.MAC, zip), zip)
-        assertEquals(404, get("/installers.json", raw = true, bearer = "autre").first)
-        assertEquals(404, get("/installers.json", raw = true, bearer = "").first)
-        assertEquals(404, get("/Mate-Mac.zip", raw = true, bearer = "$token-").first)
+        val conn = URL("http://127.0.0.1:${server.boundPort}/installers.json").openConnection() as HttpURLConnection
+        conn.setRequestProperty("Authorization", "Bearer n-importe-quoi")
+        assertEquals(404, conn.responseCode)
+    }
+
+    @Test
+    fun `apres trop d'echecs depuis une adresse, tout est refuse meme avec le bon code`() {
+        server.stop()
+        server = InstallerHttpServer(0, dir, store::onDisk, { code }, FailureLimiter(max = 3, windowMs = 60_000))
+        assertTrue(server.start())
+        repeat(3) { assertEquals(404, get("/AAAAA/", raw = true).first) }
+        assertEquals(429, get("/AAAAA/", raw = true).first)
+        assertEquals(429, get("/").first)
+    }
+
+    @Test
+    fun `les requetes qui reussissent ne comptent pas dans le plafond`() {
+        server.stop()
+        server = InstallerHttpServer(0, dir, store::onDisk, { code }, FailureLimiter(max = 2, windowMs = 60_000))
+        assertTrue(server.start())
+        repeat(10) { assertEquals(200, get("/").first) }
+        assertEquals(404, get("/AAAAA/", raw = true).first)
     }
 
     @Test
@@ -186,8 +191,8 @@ class InstallerHttpServerTest {
 
     @Test
     fun `parse lit la requete et ignore une requete mal formee`() {
-        val r = InstallerHttpServer.parse(listOf("GET /a.zip?x=1 HTTP/1.1", "Host: t", "user-agent: Test/1", "Authorization: Bearer abc"))!!
-        assertEquals(listOf("GET", "/a.zip", "Test/1", "Bearer abc"), listOf(r.method, r.path, r.userAgent, r.authorization))
+        val r = InstallerHttpServer.parse(listOf("GET /a.zip?x=1 HTTP/1.1", "Host: t", "user-agent: Test/1"))!!
+        assertEquals(Triple("GET", "/a.zip", "Test/1"), Triple(r.method, r.path, r.userAgent))
         assertEquals(null, InstallerHttpServer.parse(listOf("n'importe quoi")))
         assertEquals(null, InstallerHttpServer.parse(emptyList()))
         assertEquals(null, InstallerHttpServer.parse(null))

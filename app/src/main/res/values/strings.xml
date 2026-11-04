@@ -686,6 +686,7 @@
     <string name="computer_add_manual_desc">L\'adresse affichée par le compagnon, si la recherche ne le trouve pas.</string>
     <string name="computers_hint">La tablette pilote l\'ordinateur en gras. S\'il ne répond plus (changement de lieu), elle passe toute seule à un autre ordinateur enregistré qui répond. Chaque ordinateur garde son agenda, ses tâches et son deck. Toucher un ordinateur pour le piloter, ✎ pour le renommer.</string>
     <string name="computers_empty">Aucun ordinateur. Installe le compagnon sur l\'ordinateur (adresse : %1$s), sur le même WiFi que la tablette, puis touche Ajouter.</string>
+    <string name="computers_empty_trial">Aucun ordinateur. Installe le compagnon sur l\'ordinateur : l\'adresse s\'affiche sur l\'écran Bienvenue de la tablette stable (« Revenir à la stable »), sur le même WiFi que la tablette, puis touche Ajouter.</string>
     <string name="computer_add">Ajouter un ordinateur</string>
     <string name="computer_add_manual">Saisir l\'adresse</string>
     <string name="computer_search_again">Rechercher</string>
@@ -695,6 +696,7 @@
     <string name="computer_known">déjà enregistré</string>
     <string name="computer_outdated">compagnon à mettre à jour</string>
     <string name="computer_outdated_detail">Le compagnon de %1$s est trop ancien pour cette tablette. Mets-le à jour : sur l\'ordinateur, ouvre %2$s, télécharge la nouvelle appli et lance-la, puis recommence.</string>
+    <string name="computer_outdated_detail_trial">Le compagnon de %1$s est trop ancien pour cette tablette. Mets-le à jour avec la tablette stable (« Revenir à la stable ») : l\'adresse où télécharger la nouvelle appli s\'affiche sur son écran Bienvenue. Puis recommence.</string>
     <string name="computer_manual_hint">Adresse affichée sur l\'ordinateur, dans la page du compagnon ouverte à l\'installation. Exemple : 192.168.1.20</string>
     <string name="computer_address_hint">192.168.1.20</string>
     <string name="computer_connect">Se connecter</string>
@@ -815,6 +817,7 @@
     <string name="welcome_wifi_text">Connecte la tablette au WiFi de la maison ou du bureau, le même que celui de l\'ordinateur.</string>
     <string name="welcome_install_title">Sur l\'ordinateur</string>
     <string name="welcome_install_text">Dans le navigateur de l\'ordinateur, ouvre cette adresse et télécharge Mate :</string>
+    <string name="welcome_install_trial">Mate essai ne sert pas d\'adresse. Pour télécharger Mate sur l\'ordinateur, ouvre la tablette stable (« Revenir à la stable ») : l\'adresse s\'affiche sur son écran Bienvenue.</string>
     <string name="welcome_install_preparing">Préparation de l\'installeur…</string>
     <string name="welcome_install_preparing_percent">Préparation de l\'installeur… %1$d %%</string>
     <string name="install_address_no_wifi">connecte d\'abord le WiFi</string>

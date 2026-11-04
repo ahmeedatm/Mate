@@ -38,6 +38,7 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private val wifiStep: TextView
     private val wifiStatus: TextView
     private val installStep: TextView
+    private val installText: TextView
     private val installUrl: TextView
     private val connectStep: TextView
     private val found: LinearLayout
@@ -55,6 +56,7 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         wifiStep = findViewById(R.id.welcome_step_wifi)
         wifiStatus = findViewById(R.id.welcome_wifi_status)
         installStep = findViewById(R.id.welcome_step_install)
+        installText = findViewById(R.id.welcome_install_text)
         installUrl = findViewById(R.id.welcome_install_url)
         connectStep = findViewById(R.id.welcome_step_connect)
         found = findViewById(R.id.welcome_found)
@@ -84,6 +86,8 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         visibility = View.GONE
         search?.cancel()
         progressWatch?.cancel()
+        // Le code lu à l'écran ne vaut plus rien : un ordinateur est appairé, ou « Plus tard ».
+        InstallerService.retireCode()
     }
 
     /** Recherche toutes les 4 s tant que l'écran est affiché : l'installation sur l'ordinateur peut prendre du temps. */
@@ -135,10 +139,11 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         markStep(connectStep, "3", done = computers.isNotEmpty())
     }
 
-    /** Téléchargement de l'installeur lancé tout de suite, avancement suivi à l'écran ; l'appli d'essai ne sert pas le port : rien à montrer. */
+    /** Téléchargement de l'installeur lancé tout de suite, avancement suivi à l'écran ; l'appli d'essai ne sert pas le port : elle renvoie à la stable. */
     private fun watchInstaller() {
         progressWatch?.cancel()
         if (BuildConfig.TRIAL) {
+            installText.setText(R.string.welcome_install_trial)
             installUrl.visibility = View.GONE
             return
         }

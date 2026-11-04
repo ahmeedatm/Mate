@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
-import { config } from "./config.ts";
 import { appPath, sh } from "./portable.ts";
 import { tabletAddress, tabletStatus } from "./tablet.ts";
 
@@ -13,7 +12,8 @@ import { tabletAddress, tabletStatus } from "./tablet.ts";
  * jeton : clé `installers`), jamais par le port 8080 : un réseau hostile peut changer les octets, pas l'empreinte attendue.
  * Le panneau télécharge celui de ce système, vérifie taille et empreinte, remplace l'exe ou l'appli sur place et la
  * relance : le nouveau lanceur demande à l'ancien de quitter (POST /local/quit) puis extrait son runtime.
- * Le port 8080 ne répond qu'aux ordinateurs appairés : le téléchargement porte le jeton d'appairage (en-tête Authorization).
+ * Le port 8080 ne sert que sous `/<code>/…` : le code courant arrive lui aussi par l'état du poll (clé `installerCode`).
+ * Le jeton d'appairage ne part jamais sur ce port, en clair sur le WiFi.
  */
 
 export type Installer = { file: string; size: number; sha256: string; version: string };
@@ -46,21 +46,24 @@ export function isNewer(candidate: string, current: string): boolean {
   return false;
 }
 
-/** Jeton d'appairage de cet ordinateur : la tablette le reconnaît et sert alors ses installeurs sans code. Pour la tablette seulement. */
-export function tabletHeaders(token: string | undefined = config.token): Record<string, string> {
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
 function fail(message: string, statusCode = 409): never {
   throw Object.assign(new Error(message), { statusCode });
 }
 
-async function announced(): Promise<{ base: string; installer: Installer | undefined }> {
+/** Racine des fichiers servis par la tablette : `http://<ip>:8080/<code>`, le code lu dans l'état du poll. */
+export function installerBase(ip: string, state: unknown): string {
+  const code = (state as { installerCode?: unknown } | null)?.installerCode;
+  if (typeof code !== "string" || !/^[A-Za-z0-9]{5}$/.test(code))
+    fail("La tablette n'annonce pas de code d'accès à ses installeurs : mets à jour son appli, puis réessaie.");
+  return `http://${ip}:${PORT}/${code}`;
+}
+
+async function announced(): Promise<{ ip: string; state: unknown; installer: Installer | undefined }> {
   const ip = tabletAddress();
   if (!ip) fail("La tablette n'est pas connectée en WiFi : ouvre le compagnon sur la tablette, puis réessaie.");
   const state = tabletStatus().state as { installers?: unknown } | null;
   if (!Array.isArray(state?.installers)) fail("La tablette n'annonce pas ses installeurs : mets à jour son appli, puis réessaie.");
-  return { base: `http://${ip}:${PORT}`, installer: pickInstaller(state, platform) };
+  return { ip, state, installer: pickInstaller(state, platform) };
 }
 
 /** Version proposée par la tablette si elle est plus récente que celle-ci ; null sinon. */
@@ -70,13 +73,8 @@ export async function checkUpdate(current: string): Promise<{ current: string; a
 }
 
 /** Télécharge dans `file`, taille et SHA-256 vérifiés ; le fichier est supprimé s'ils ne correspondent pas. */
-export async function download(
-  url: string,
-  file: string,
-  expected: { size: number; sha256: string },
-  headers: Record<string, string> = {},
-) {
-  const res = await fetch(url, { headers, signal: AbortSignal.timeout(10 * 60_000) });
+export async function download(url: string, file: string, expected: { size: number; sha256: string }) {
+  const res = await fetch(url, { signal: AbortSignal.timeout(10 * 60_000) });
   if (!res.ok || !res.body) fail(`Téléchargement impossible (HTTP ${res.status})`, 502);
   const hash = createHash("sha256");
   let size = 0;
@@ -109,12 +107,13 @@ export async function download(
  */
 export async function installUpdate(current: string): Promise<{ version: string; launch: () => void }> {
   if (!appPath) fail("Disponible dans l'appli portable seulement");
-  const { base, installer } = await announced();
+  const { ip, state, installer } = await announced();
   if (!installer || !isNewer(installer.version, current)) fail("Aucune version plus récente sur la tablette.");
+  const base = installerBase(ip, state);
   const old = `${appPath}.old`;
   if (platform === "windows") {
     const fresh = `${appPath}.new`;
-    await download(`${base}/${encodeURIComponent(installer.file)}`, fresh, installer, tabletHeaders());
+    await download(`${base}/${encodeURIComponent(installer.file)}`, fresh, installer);
     try {
       fs.rmSync(old, { force: true });
       fs.renameSync(appPath, old);
@@ -134,7 +133,7 @@ export async function installUpdate(current: string): Promise<{ version: string;
   fs.mkdirSync(work, { recursive: true });
   try {
     const zip = path.join(work, installer.file);
-    await download(`${base}/${encodeURIComponent(installer.file)}`, zip, installer, tabletHeaders());
+    await download(`${base}/${encodeURIComponent(installer.file)}`, zip, installer);
     const unzipped = path.join(work, "app");
     const r = await sh("ditto", ["-x", "-k", zip, unzipped], 120_000);
     const fresh = fs.existsSync(unzipped) ? findApp(unzipped) : undefined;

@@ -15,15 +15,15 @@ import java.util.concurrent.TimeUnit
  * Petit serveur HTTP sans dépendance : `GET /` (page d'accueil, voir [InstallerPage]), `GET /installers.json` (liste lue
  * par le panneau de l'appli de l'ordinateur pour se mettre à jour) et `GET /<fichier>` pour les installeurs de
  * `available()`, rien d'autre. Chemins comparés aux noms annoncés : jamais de nom venu du client
- * ouvert tel quel. Tout est derrière [InstallerAccess] : sous `/<code>/…` (`code()`, celui de Bienvenue) ou avec le jeton
- * d'un ordinateur appairé (`tokens()`) ; sinon 404, identique pour tout chemin.
+ * ouvert tel quel. Tout est derrière [InstallerAccess] : sous `/<code>/…` (`code()`, celui de Bienvenue) ; sinon 404,
+ * identique pour tout chemin, et [FailureLimiter] bloque (429) l'adresse qui multiplie les refus.
  */
 class InstallerHttpServer(
     private val port: Int,
     private val dir: File,
     private val available: () -> List<Installer>,
     private val code: () -> String?,
-    private val tokens: () -> List<String>,
+    private val limiter: FailureLimiter = FailureLimiter(),
 ) {
 
     @Volatile private var socket: ServerSocket? = null
@@ -61,17 +61,21 @@ class InstallerHttpServer(
             it.soTimeout = READ_TIMEOUT_MS
             it.keepAlive = true
             try {
-                respond(it.getOutputStream(), parse(readHead(it.getInputStream())))
+                respond(it.getOutputStream(), parse(readHead(it.getInputStream())), it.inetAddress.hostAddress.orEmpty())
             } catch (e: java.io.IOException) {
                 Log.i(TAG, "Client parti : ${e.message}")
             }
         }
     }
 
-    private fun respond(out: OutputStream, request: Request?) {
+    private fun respond(out: OutputStream, request: Request?, remote: String) {
         if (request == null) return reply(out, 400, "Bad Request", "Requête illisible.")
-        val access = InstallerAccess.resolve(request.path, request.authorization, code(), tokens())
-            ?: return reply(out, 404, "Not Found", "Introuvable.")
+        if (limiter.blocked(remote)) return reply(out, 429, "Too Many Requests", "Trop d'essais, réessaie dans une minute.")
+        val access = InstallerAccess.resolve(request.path, code())
+        if (access == null) {
+            limiter.fail(remote)
+            return reply(out, 404, "Not Found", "Introuvable.")
+        }
         if (request.method != "GET" && request.method != "HEAD") return reply(out, 405, "Method Not Allowed", "Méthode refusée.")
         val installers = available()
         val path = access.path
@@ -111,7 +115,7 @@ class InstallerHttpServer(
     private fun header(code: Int, reason: String, type: String, length: Long, extra: String) =
         "HTTP/1.1 $code $reason\r\n$type\r\nContent-Length: $length\r\n$extra\r\nConnection: close\r\n\r\n"
 
-    class Request(val method: String, val path: String, val userAgent: String?, val authorization: String?)
+    class Request(val method: String, val path: String, val userAgent: String?)
 
     internal companion object {
         const val TAG = "InstallerServer"
@@ -131,12 +135,12 @@ class InstallerHttpServer(
             return null
         }
 
-        /** « GET /chemin?x HTTP/1.1 » + en-têtes → méthode, chemin sans paramètres, `User-Agent`, `Authorization`. */
+        /** « GET /chemin?x HTTP/1.1 » + en-têtes → méthode, chemin sans paramètres, `User-Agent`. */
         fun parse(head: List<String>?): Request? {
             val parts = head?.firstOrNull()?.split(" ") ?: return null
             if (parts.size != 3 || !parts[2].startsWith("HTTP/") || !parts[1].startsWith("/")) return null
-            fun header(name: String) = head.drop(1).firstOrNull { it.startsWith("$name:", ignoreCase = true) }?.substringAfter(':')?.trim()
-            return Request(parts[0], parts[1].substringBefore('?'), header("user-agent"), header("authorization"))
+            val agent = head.drop(1).firstOrNull { it.startsWith("user-agent:", ignoreCase = true) }?.substringAfter(':')?.trim()
+            return Request(parts[0], parts[1].substringBefore('?'), agent)
         }
     }
 }

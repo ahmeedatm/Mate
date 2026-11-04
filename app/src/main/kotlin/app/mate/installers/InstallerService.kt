@@ -3,7 +3,6 @@ package app.mate.installers
 import android.content.Context
 import android.util.Log
 import app.mate.BuildConfig
-import app.mate.Computers
 import app.mate.device.Tablet
 import app.mate.net.BackendClient
 import app.mate.net.Identity
@@ -20,7 +19,7 @@ import java.io.File
 /**
  * Installeurs de l'ordinateur (Mac, Windows) : téléchargés d'avance depuis GitHub quand une release en
  * publie de nouveaux (empreinte SHA-256 vérifiée, seule la dernière version gardée), puis servis sur le WiFi par
- * [InstallerHttpServer], sous le code affiché sur Bienvenue ou avec le jeton d'un ordinateur appairé. Sur le WiFi seulement (aucun forfait n'est entamé) ; jamais d'erreur à l'écran.
+ * [InstallerHttpServer], sous le code affiché sur Bienvenue. Sur le WiFi seulement (aucun forfait n'est entamé) ; jamais d'erreur à l'écran.
  */
 object InstallerService {
 
@@ -47,9 +46,7 @@ object InstallerService {
     fun start(context: Context) {
         if (server != null || BuildConfig.TRIAL) return
         val store = store(context)
-        val app = context.applicationContext
-        server = InstallerHttpServer(PORT, store.dir, store::onDisk, { code }, { Computers.all(app).map { it.token } })
-            .also { it.start() }
+        server = InstallerHttpServer(PORT, store.dir, store::onDisk, { code }).also { it.start() }
     }
 
     /**
@@ -63,8 +60,19 @@ object InstallerService {
 
     private fun code(): String = code ?: newCode()
 
-    /** Adresse à ouvrir sur l'ordinateur : `http://<ip>:8080/<code>` ; appli d'essai : sans code (elle ne sert pas le port). */
-    fun link(): String? = address()?.let { if (BuildConfig.TRIAL) it else "$it/${code()}" }
+    /**
+     * Code courant, envoyé dans l'état du poll (HTTPS, jeton) : l'ordinateur appairé le lit là pour télécharger sous
+     * `/<code>/…` sans jamais envoyer son jeton sur le port 8080. Appli d'essai : aucun.
+     */
+    fun servedCode(): String? = if (BuildConfig.TRIAL) null else code()
+
+    /** Bienvenue fermé : le code lu à l'écran ne marche plus (un autre est tiré pour le poll). */
+    fun retireCode() {
+        if (!BuildConfig.TRIAL) newCode()
+    }
+
+    /** Adresse à ouvrir sur l'ordinateur : `http://<ip>:8080/<code>` ; null sans réseau et dans l'appli d'essai (elle ne sert pas le port). */
+    fun link(): String? = if (BuildConfig.TRIAL) null else address()?.let { "$it/${code()}" }
 
     /** Au moins un installeur est complet sur la tablette. */
     suspend fun ready(context: Context): Boolean = withContext(Dispatchers.IO) { store(context).onDisk().isNotEmpty() }
@@ -85,8 +93,8 @@ object InstallerService {
         if (BuildConfig.TRIAL || Wifi.current(context) == null) return
         val api = UpdatesApi.server() ?: return
         if (!syncing.tryLock()) return
-        val store = store(context)
         try {
+            val store = store(context)
             val announced = api.installers()
             val onDisk = withContext(Dispatchers.IO) { store.onDisk() }
             for (installer in InstallerPlan.toDownload(announced, onDisk)) download(api, store, installer)

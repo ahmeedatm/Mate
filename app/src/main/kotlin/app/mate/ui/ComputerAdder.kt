@@ -12,9 +12,11 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import app.mate.BuildConfig
 import app.mate.Computer
 import app.mate.Computers
 import app.mate.R
+import app.mate.installers.InstallerHint
 import app.mate.installers.InstallerService
 import app.mate.net.BackendClient
 import app.mate.net.Discovery
@@ -232,11 +234,11 @@ class ComputerAdder(private val context: Context, private val scope: CoroutineSc
         }
     }
 
-    private fun outdatedText(name: String) = context.getString(
-        R.string.computer_outdated_detail,
-        name,
-        InstallerService.link() ?: context.getString(R.string.install_address_no_wifi),
-    )
+    private fun outdatedText(name: String) = when (val hint = InstallerHint.of(BuildConfig.TRIAL, InstallerService.link())) {
+        is InstallerHint.Trial -> context.getString(R.string.computer_outdated_detail_trial, name)
+        is InstallerHint.NoWifi -> context.getString(R.string.computer_outdated_detail, name, context.getString(R.string.install_address_no_wifi))
+        is InstallerHint.Address -> context.getString(R.string.computer_outdated_detail, name, hint.link)
+    }
 
     private fun reason(e: Exception): String = when (e) {
         is HttpException -> e.reason
