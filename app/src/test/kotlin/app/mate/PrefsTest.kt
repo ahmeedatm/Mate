@@ -33,6 +33,13 @@ class PrefsTest {
     }
 
     @Test
+    fun `veille a la presence coupee par defaut, puis retenue`() {
+        assertFalse(Prefs.presenceSleep(context))
+        Prefs.setPresenceSleep(context, true)
+        assertTrue(Prefs.presenceSleep(context))
+    }
+
+    @Test
     fun `boutons de volume sur la tablette par defaut, puis retenus`() {
         assertFalse(Prefs.volumeKeysOnComputer(context))
         Prefs.setVolumeKeysOnComputer(context, true)

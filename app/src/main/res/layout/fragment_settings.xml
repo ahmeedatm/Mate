@@ -774,6 +774,23 @@
                         android:textSize="14sp" />
 
                     <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/settings_presence"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:minHeight="48dp"
+                        android:text="@string/tablet_presence"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/settings_presence_hint"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tablet_presence_hint"
+                        android:textColor="?attr/c_text_dim"
+                        android:textSize="14sp" />
+
+                    <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/settings_notif_discreet"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

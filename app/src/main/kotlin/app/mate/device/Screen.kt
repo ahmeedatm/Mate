@@ -31,6 +31,9 @@ object Screen {
     private var ambientLevel: Float? = null
     private var ambientListener: SensorEventListener? = null
 
+    /** Écran endormi par la veille à la présence (presence/Presence) : luminosité au minimum, sous le voile noir. */
+    var presenceAsleep = false
+
     /** Cadre photo affiché : null sinon ; sa valeur dit si la tablette est branchée (plafond plus bas sur batterie). */
     var frameCharging: Boolean? = null
 
@@ -46,7 +49,7 @@ object Screen {
         val chosen = if (Prefs.autoBrightness(activity)) ambientLevel ?: Prefs.brightness(activity) else Prefs.brightness(activity)
         val charging = frameCharging
         val target = when {
-            dimmed(activity) -> NIGHT_LEVEL
+            presenceAsleep || dimmed(activity) -> NIGHT_LEVEL
             charging != null -> FrameLogic.level(if (chosen < 0) systemLevel(activity) else chosen, charging)
             chosen < 0 -> WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
             else -> chosen.coerceIn(MIN_LEVEL, 1f)

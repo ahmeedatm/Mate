@@ -36,6 +36,7 @@ object Prefs {
     private const val KEY_BRIGHTNESS = "brightness"
     private const val KEY_NIGHT_DIM = "night_dim"
     private const val KEY_AUTO_BRIGHTNESS = "auto_brightness"
+    private const val KEY_PRESENCE_SLEEP = "presence_sleep"
     private const val KEY_VOLUME_KEYS_COMPUTER = "volume_keys_computer"
     private const val KEY_THEME = "theme"
     private const val KEY_RAIL_LABELS = "rail_labels"
@@ -108,6 +109,13 @@ object Prefs {
 
     fun setNightDim(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_NIGHT_DIM, value).apply()
+    }
+
+    /** Caméra avant qui endort l'écran quand personne n'est là et le réveille à l'arrivée. Coupée par défaut. */
+    fun presenceSleep(context: Context): Boolean = prefs(context).getBoolean(KEY_PRESENCE_SLEEP, false)
+
+    fun setPresenceSleep(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_PRESENCE_SLEEP, value).apply()
     }
 
     /** Les boutons de volume de la tablette règlent le son de l'ordinateur au lieu du sien. Désactivé par défaut. */

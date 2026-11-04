@@ -56,6 +56,7 @@ import app.mate.net.Identity
 import app.mate.net.Link
 import app.mate.net.UpdateSource
 import app.mate.net.Wifi
+import app.mate.presence.PresenceCamera
 import app.mate.trial.EssaiBackend
 import app.mate.trial.EssaiPlan
 import app.mate.trial.Trial
@@ -100,6 +101,8 @@ class SettingsFragment :
     private lateinit var nightDim: SwitchCompat
     private lateinit var autoBrightness: SwitchCompat
     private lateinit var autoBrightnessHint: TextView
+    private lateinit var presence: SwitchCompat
+    private lateinit var presenceHint: TextView
     private lateinit var volumeKeysComputer: SwitchCompat
     private lateinit var notifDiscreet: SwitchCompat
     private lateinit var meetingAlert: SwitchCompat
@@ -183,6 +186,8 @@ class SettingsFragment :
         nightDim = view.findViewById(R.id.settings_night_dim)
         autoBrightness = view.findViewById(R.id.settings_auto_brightness)
         autoBrightnessHint = view.findViewById(R.id.settings_auto_brightness_hint)
+        presence = view.findViewById(R.id.settings_presence)
+        presenceHint = view.findViewById(R.id.settings_presence_hint)
         volumeKeysComputer = view.findViewById(R.id.settings_volume_keys_computer)
         notifDiscreet = view.findViewById(R.id.settings_notif_discreet)
         meetingAlert = view.findViewById(R.id.settings_meeting_alert)
@@ -690,6 +695,12 @@ class SettingsFragment :
             Prefs.setNightDim(ctx, checked)
             Screen.apply(requireActivity())
         }
+        // Caméra avant : la permission est demandée ici si elle manque (en kiosque, elle est accordée d'office).
+        presence.setOnCheckedChangeListener { _, checked ->
+            if (checked == Prefs.presenceSleep(ctx)) return@setOnCheckedChangeListener
+            Prefs.setPresenceSleep(ctx, checked)
+            main.onPresenceChanged()
+        }
         // Mode discret : lu à chaque bandeau et à chaque affichage de l'historique, rien d'autre à prévenir.
         notifDiscreet.setOnCheckedChangeListener { _, checked -> Prefs.setNotificationsDiscreet(ctx, checked) }
         // Alerte de réunion : lue à la vérification de chaque minute, rien d'autre à prévenir.
@@ -730,6 +741,10 @@ class SettingsFragment :
         autoBrightnessHint.setText(if (hasLight) R.string.tablet_auto_brightness_hint else R.string.tablet_auto_brightness_none)
         brightness.isEnabled = !autoBrightness.isChecked
         nightDim.isChecked = Prefs.nightDim(ctx)
+        val hasFrontCamera = PresenceCamera.available(ctx)
+        presence.isEnabled = hasFrontCamera
+        presence.isChecked = hasFrontCamera && Prefs.presenceSleep(ctx)
+        presenceHint.setText(if (hasFrontCamera) R.string.tablet_presence_hint else R.string.tablet_presence_none)
         volumeKeysComputer.isChecked = Prefs.volumeKeysOnComputer(ctx)
         notifDiscreet.isChecked = Prefs.notificationsDiscreet(ctx)
         meetingAlert.isChecked = Prefs.meetingAlert(ctx)
@@ -807,6 +822,11 @@ class SettingsFragment :
     }
 
     /** Batterie changée (MainActivity, barre latérale) : détail à jour si les Réglages sont affichés. */
+    /** Caméra refusée : l'interrupteur revient sur coupé. */
+    fun onPresenceRefused() {
+        if (view != null) presence.isChecked = false
+    }
+
     fun onBattery(state: Tablet.Battery) {
         if (view == null) return
         val plug = when (state.plug) {

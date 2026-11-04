@@ -44,6 +44,7 @@ import app.mate.net.DocEntry
 import app.mate.net.Link
 import app.mate.net.PcNotification
 import app.mate.net.runCatchingCancellable
+import app.mate.presence.Presence
 import app.mate.remote.RemoteLink
 import app.mate.trial.EssaiBackend
 import app.mate.trial.Trial
@@ -147,6 +148,9 @@ class MainActivity : AppCompatActivity() {
     /** Mot de réveil « Mate » : lance la même commande vocale que « Parler », sans toucher l'écran. */
     private lateinit var wake: WakeWord
 
+    /** Veille à la présence : la caméra avant endort l'écran quand personne n'est là (presence/Presence). */
+    private lateinit var presence: Presence
+
     /** Bandeau du haut : en-tête de l'écran, lecture en cours, heure, batterie… (ui/topbar). */
     lateinit var topBar: TopBar
         private set
@@ -172,6 +176,16 @@ class MainActivity : AppCompatActivity() {
     /** Micro refusé hors kiosque (en kiosque, il est accordé d'office) : la commande repart une fois accepté. */
     private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) voice.start() else showBanner(getString(R.string.voice_no_mic), 6)
+    }
+
+    /** Caméra refusée hors kiosque (accordée d'office en kiosque) : la veille à la présence reste coupée. */
+    private val cameraPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (!granted) {
+            Prefs.setPresenceSleep(this, false)
+            settings()?.onPresenceRefused()
+            showBanner(getString(R.string.presence_no_camera), 6)
+        }
+        presence.sync()
     }
 
     /** Localisation hors kiosque (en kiosque, accordée d'office) : demandée seulement par « Ma position » de la météo. */
@@ -229,6 +243,8 @@ class MainActivity : AppCompatActivity() {
         topBar.onEditDone = { if (current == Mode.HOME && homeFragment()?.isEditing() == true) homeFragment()?.toggleEdit() }
         // Tablette verrouillée : le mot de réveil ne lance rien.
         wake = WakeWord(this, topBar.wakeMic) { if (!lockScreen.isShown) voice.start() }
+        val veil = findViewById<View>(R.id.presence_veil)
+        presence = Presence(this, veil, listOf(topBar.presenceEye, veil.findViewById(R.id.presence_veil_eye)), ::frameBusy) { current == Mode.CAMERA }
         // Lumière des agents Claude sous la carte d'appel : un appel prime sur tout.
         // L'alerte de réunion est tout en bas des calques : lumière des agents, question et appel passent devant.
         meetingAlert = MeetingAlertOverlay(this)
@@ -511,11 +527,13 @@ class MainActivity : AppCompatActivity() {
             lifecycleScope.launch { EssaiBackend.restoreOrigin(applicationContext) }
         }
         wake.resume()
+        presence.resume()
     }
 
     /** Mate quitte l'écran (écran éteint, autre appli) : le mot de réveil n'écoute plus. */
     override fun onPause() {
         wake.pause()
+        presence.pause()
         Screen.stopAmbient(this)
         super.onPause()
     }
@@ -571,7 +589,10 @@ class MainActivity : AppCompatActivity() {
             Screen.touched(this)
             lastTouch = SystemClock.elapsedRealtime()
             wakeRail()
-            if (Ringer.isRinging) {
+            if (presence.touched()) {
+                // Écran endormi : le toucher le réveille, il ne clique pas ce qu'il y a dessous.
+                swallowTouch = true
+            } else if (Ringer.isRinging) {
                 // Retrouvée : le toucher arrête la sonnerie, il ne clique pas ce qu'il y a dessous.
                 Ringer.stop()
                 swallowTouch = true
@@ -590,6 +611,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         lastTouch = SystemClock.elapsedRealtime()
+        presence.touched()
         if (frame.isShowing) closeFrame()
         val up = when (event.keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> true
@@ -900,6 +922,15 @@ class MainActivity : AppCompatActivity() {
     /** Réglage du mot de réveil changé : écoute ou non tout de suite. */
     fun onWakeWordChanged() = wake.sync()
 
+    /** Réglage de la veille à la présence changé : permission caméra demandée si elle manque, puis caméra suivie. */
+    fun onPresenceChanged() {
+        if (Prefs.presenceSleep(this) && checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            cameraPermission.launch(android.Manifest.permission.CAMERA)
+        } else {
+            presence.sync()
+        }
+    }
+
     /**
      * Commande vocale pour les agents Claude ; rend la phrase à afficher. Elle n'agit que sur la carte ouverte (on voit ce
      * qu'on autorise) : sinon, elle ouvre la demande en attente. « continue » relance la dernière session finie qui le permet.
@@ -1059,6 +1090,7 @@ class MainActivity : AppCompatActivity() {
         }
         val changed = current != mode
         current = mode
+        if (::presence.isInitialized) presence.sync()
         val fm = supportFragmentManager
         // Un écran ajouté juste avant (ex. recréé par onComputerChanged) doit exister pour être masqué.
         fm.executePendingTransactions()

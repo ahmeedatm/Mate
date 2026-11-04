@@ -263,4 +263,29 @@
                 android:textSize="34sp" />
         </LinearLayout>
     </FrameLayout>
+
+    <!-- Veille à la présence (presence/Presence) : écran noir par-dessus tout, la caméra avant continue de guetter. Le petit
+         voyant reste visible (la 4.2 n'a pas de voyant caméra). -->
+    <FrameLayout
+        android:id="@+id/presence_veil"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/black"
+        android:clickable="true"
+        android:elevation="32dp"
+        android:focusable="true"
+        android:importantForAccessibility="no"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/presence_veil_eye"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="16dp"
+            android:contentDescription="@string/presence_watching"
+            android:src="@drawable/ic_videocam"
+            android:visibility="gone"
+            app:tint="?attr/c_text_faint" />
+    </FrameLayout>
 </FrameLayout>
