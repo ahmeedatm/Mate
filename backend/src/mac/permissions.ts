@@ -7,6 +7,7 @@ import path from "node:path";
 import { backendRoot } from "../paths.ts";
 import { portable } from "../portable.ts";
 import { openAccessibilitySettings } from "./access.ts";
+import { notificationsDiskAccess } from "./notifications.ts";
 import { run } from "./run.ts";
 
 /**
@@ -103,11 +104,15 @@ export type Deps = {
   /** Lance une demande (fenêtre de macOS) sans attendre le choix de l'utilisateur. Faux si l'utilitaire est absent. */
   request: (args: string[]) => Promise<boolean>;
   installed: (name: string) => boolean;
-  /** Lecture de la base des notifications : la seule chose du compagnon qui demande l'accès complet au disque. */
+  /** Issue de la dernière lecture de la base des notifications (la seule chose qui demande l'accès complet au disque) : l'état n'ouvre jamais cette base. */
   fullDisk: () => PermissionState;
   probeLocalNetwork: () => Promise<PermissionState>;
   openAccessibility: () => Promise<void>;
   openSettings: (pane: string) => Promise<void>;
+  /** Faux si l'utilitaire est absent (rien à lire, donc aucun filtre) ; vrai s'il est là, même quand une lecture échoue. */
+  available: () => boolean;
+  /** Lance une appli en arrière-plan, sans rien demander : macOS ne dit l'état d'une Automation que si l'appli tourne. */
+  wake: (bundle: string) => Promise<void>;
 };
 
 const UTILITY = path.join(backendRoot, "src", "mac", "MatePermissions");
@@ -141,15 +146,7 @@ export function defaultDeps(): Deps {
         });
       }),
     installed: (name) => APP_FOLDERS.some((dir) => fs.existsSync(path.join(dir, `${name}.app`))),
-    fullDisk: () => {
-      try {
-        fs.closeSync(fs.openSync(usernotedDb(), "r"));
-        return "granted";
-      } catch (e) {
-        const code = (e as NodeJS.ErrnoException).code;
-        return code === "EPERM" || code === "EACCES" ? "denied" : "unknown";
-      }
-    },
+    fullDisk: notificationsDiskAccess,
     probeLocalNetwork: async () => {
       const { tabletAddress } = await import("../tablet.ts");
       const ip = tabletAddress();
@@ -157,10 +154,10 @@ export function defaultDeps(): Deps {
     },
     openAccessibility: openAccessibilitySettings,
     openSettings: async (pane) => void (await run("open", [`x-apple.systempreferences:com.apple.preference.security?${pane}`])),
+    available: () => fs.existsSync(UTILITY),
+    wake: async (bundle) => void (await run("open", ["-g", "-j", "-b", bundle]).catch(() => "")),
   };
 }
-
-const usernotedDb = () => path.join(os.homedir(), "Library", "Group Containers", "group.com.apple.usernoted", "db2", "db");
 
 /**
  * Réseau local refusé : macOS coupe tout de suite la route (« No route to host »). Une machine joignable qui refuse
@@ -210,7 +207,7 @@ function udpProbe(): Promise<PermissionState> {
 }
 
 /** Une instance garde en mémoire ce que l'utilitaire ne sait pas dire : demandes faites, et résultat du test réseau. */
-export function createPermissions(deps: Deps) {
+export function createPermissions(deps: Deps, onRequested: () => void = () => automation.refresh()) {
   const asked = new Set<string>();
   let localNetwork: PermissionState = "not-asked";
 
@@ -293,6 +290,13 @@ export function createPermissions(deps: Deps) {
   }
 
   /** Déclenche la fenêtre de macOS (ou ouvre les Réglages) pour l'autorisation `id`. Rend tout de suite la main. */
+  async function request(id: string) {
+    const result = await requestOne(id);
+    // L'accord se donne dans la fenêtre de macOS : les ordres AppleScript relisent l'état sans attendre les 10 s.
+    if (result.ok) onRequested();
+    return result;
+  }
+
   async function requestOne(id: string): Promise<{ ok: boolean; action?: "request" | "settings"; error?: string; unknownId?: boolean }> {
     const item = (await list()).find((p) => p.id === id);
     if (!item) return { ok: false, error: "Autorisation inconnue", unknownId: true };
@@ -326,5 +330,76 @@ export function createPermissions(deps: Deps) {
     return (await deps.request(["request-automation", bundle])) ? { ok: true, action: "request" } : missing;
   }
 
-  return { list, request: requestOne };
+  return { list, request };
 }
+
+/**
+ * Filtre des ordres AppleScript : un ordre à une appli dont l'Automation n'est pas accordée fait surgir une fenêtre de
+ * macOS. Les lectures de fond (lecture en cours, onglets, fenêtres, toutes les 5 s) en faisaient surgir en rafale, même
+ * l'écran des autorisations passé. Seul « Autoriser » de cet écran demande ; le reste du compagnon passe par ici.
+ * État lu sans rien demander, gardé 10 s (relu tout de suite après une demande : `refresh`). Appli fermée (macOS ne
+ * répond pas) ou lecture en échec : dernier état connu, sinon refusé ; System Events, jamais connu, est lancé en
+ * arrière-plan pour être lu. Hors appli portable (le terminal porte les autorisations) ou utilitaire absent : pas de filtre.
+ */
+export function createAutomationGate(deps: Pick<Deps, "supported" | "status" | "available" | "wake">, now = Date.now) {
+  const bundles = [SYSTEM_EVENTS, ...OPTIONAL_APPS.map((a) => a.bundle)];
+  const known = new Map<string, string>();
+  let unfiltered = false;
+  let readAt = -Infinity;
+  let pending: Promise<void> | undefined;
+
+  async function read() {
+    let status = await deps.status(bundles);
+    if (status && status.automation?.[SYSTEM_EVENTS] === "closed" && !known.has(SYSTEM_EVENTS)) {
+      await deps.wake(SYSTEM_EVENTS);
+      status = (await deps.status(bundles)) ?? status;
+    }
+    unfiltered = !status && !deps.available();
+    for (const [bundle, value] of Object.entries(status?.automation ?? {})) if (value !== "closed") known.set(bundle, value);
+    readAt = now();
+  }
+
+  const denied = (name: string) =>
+    Object.assign(new Error(`Autorise Mate à piloter ${name} : page de l'ordinateur, Autorisations du Mac.`), { statusCode: 409 });
+
+  // Les méthodes passent par `gate.allowed` : un test qui le remplace ferme ou ouvre la porte partout.
+  const gate = {
+    /** Vrai si le compagnon peut envoyer un ordre AppleScript à l'appli `bundle` sans fenêtre de macOS. */
+    async allowed(bundle: string): Promise<boolean> {
+      if (!deps.supported) return true;
+      if (now() - readAt > 10_000) await (pending ??= read().finally(() => (pending = undefined)));
+      return unfiltered || known.get(bundle) === "granted";
+    },
+
+    /** Noms AppleScript (« Spotify », « Google Chrome ») parmi `names` qui peuvent être pilotés. Nom inconnu : écarté. */
+    async names(list: readonly string[]): Promise<string[]> {
+      const out: string[] = [];
+      for (const name of list) {
+        const app = OPTIONAL_APPS.find((a) => a.folder === name);
+        if (app ? await gate.allowed(app.bundle) : !deps.supported) out.push(name);
+      }
+      return out;
+    },
+
+    systemEvents: () => gate.allowed(SYSTEM_EVENTS),
+
+    /** System Events (fenêtres, Ne pas déranger, mode sombre) : refusé = erreur dite sur la tablette, sans fenêtre de macOS. */
+    async requireSystemEvents() {
+      if (!(await gate.allowed(SYSTEM_EVENTS))) throw denied("System Events");
+    },
+
+    /** Spotify ou Musique (nom AppleScript) : refusé = erreur dite sur la tablette, sans fenêtre de macOS. */
+    async requireApp(folder: string) {
+      const app = OPTIONAL_APPS.find((a) => a.folder === folder);
+      if (!app || !(await gate.allowed(app.bundle))) throw denied(app?.name ?? folder);
+    },
+
+    /** Prochain contrôle : l'état est relu, sans attendre les 10 s. */
+    refresh() {
+      readAt = -Infinity;
+    },
+  };
+  return gate;
+}
+
+export const automation = createAutomationGate(defaultDeps());
