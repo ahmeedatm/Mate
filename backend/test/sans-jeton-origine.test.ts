@@ -16,19 +16,34 @@ after(async () => {
   await withToken?.stop();
 });
 
-const post = (s: TestServer, origin?: string) =>
-  fetch(`${s.url}/tasks`, {
-    method: "POST",
+const send = (s: TestServer, method: string, route: string, origin?: string) =>
+  fetch(`${s.url}${route}`, {
+    method,
     headers: { "content-type": "application/json", ...(origin ? { origin } : {}) },
-    body: JSON.stringify({ label: "essai" }),
+    ...(method === "DELETE" ? {} : { body: JSON.stringify({ label: "essai" }) }),
   });
+const post = (s: TestServer, origin?: string) => send(s, "POST", "/tasks", origin);
 
 describe("écritures sans jeton et en-tête Origin", () => {
   it("refuse (403) un Origin d'un autre site", async () => {
-    for (const origin of ["https://exemple.com", "http://evil.test:3000", "null", "http://127.0.0.1.evil.test"]) {
+    for (const origin of [
+      "https://exemple.com",
+      "http://evil.test:3000",
+      "null",
+      "http://127.0.0.1.evil.test",
+      "http://localhost.evil.test",
+      "http://127.0.0.1:80@evil.test",
+      "HTTP://EVIL.COM",
+    ]) {
       const res = await post(server, origin);
       assert.equal(res.status, 403, origin);
     }
+  });
+
+  it("refuse aussi PUT et DELETE", async () => {
+    assert.equal((await send(server, "PUT", "/local/calendar", "https://exemple.com")).status, 403);
+    assert.equal((await send(server, "DELETE", "/tasks/inconnue", "https://exemple.com")).status, 403);
+    assert.notEqual((await send(server, "DELETE", "/tasks/inconnue", "http://localhost:3000")).status, 403);
   });
 
   it("refuse aussi les routes sans jeton (appairage) et les formulaires multipart", async () => {
@@ -45,7 +60,16 @@ describe("écritures sans jeton et en-tête Origin", () => {
   });
 
   it("accepte l'émulateur et les outils (pas d'Origin), la page locale et l'extension du navigateur", async () => {
-    for (const origin of [undefined, "http://127.0.0.1:3000", "http://localhost:3000", "http://[::1]:3000", "chrome-extension://abc"]) {
+    for (const origin of [
+      undefined,
+      "http://127.0.0.1:3000",
+      "http://localhost:3000",
+      "http://[::1]:3000",
+      "chrome-extension://abc",
+      "moz-extension://abc",
+      "HTTP://LOCALHOST:3000",
+      "http://10.0.2.2:3000",
+    ]) {
       const res = await post(server, origin);
       assert.notEqual(res.status, 403, String(origin));
     }

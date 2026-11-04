@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { config } from "./config.ts";
+import { EXECUTABLE } from "./open-guard.ts";
 
 export type DocKind = "dir" | "pdf" | "image" | "text" | "other";
 
@@ -95,17 +96,38 @@ const SHARE_EXTENSIONS = new Set(
   ".pdf .jpg .jpeg .png .gif .webp .heic .txt .md .csv .json .log .docx .xlsx .pptx .odt .ods .odp .zip .mp3 .m4a .mp4 .mov".split(" "),
 );
 
+/** Dossiers que le système lance comme un programme (en plus de [EXECUTABLE] : `.app`, `.workflow`…). */
+const BUNDLE_DIR = new Set([...EXECUTABLE, ".bundle", ".prefpane", ".saver", ".appex", ".xpc", ".kext", ".framework", ".plugin"]);
+
+function refuseOpen(message: string): never {
+  throw Object.assign(new Error(message), { statusCode: 400 });
+}
+
 /**
- * Garde de `/docs/open` : un dossier, ou un fichier d'un type de [SHARE_EXTENSIONS] (liste blanche, comme le partage).
- * Une liste noire laisserait passer `.rdp`, `.docm`, `.html`, `.iso`, `.webloc`… ; un dossier `.app` et un fichier sans
- * extension (un exécutable que `open` lancerait) sont refusés aussi.
+ * Garde de `/docs/open`. `open` suit les liens symboliques : c'est le chemin réel qui est jugé.
+ * - il reste dans le dossier partagé (un lien `sh.pdf` vers `/bin/sh` ou `Apps` vers `/Applications` sort) ;
+ * - un dossier est accepté, sauf un bundle lancé comme un programme (`.app`…) ; un nom à point (`v1.2`) passe ;
+ * - un fichier doit être d'un type de [SHARE_EXTENSIONS] (liste blanche, comme le partage), par son nom comme par sa cible :
+ *   une liste noire laisserait passer `.rdp`, `.docm`, `.html`, `.iso`, `.webloc`… ; un fichier sans extension (un
+ *   exécutable que `open` lancerait) est refusé aussi.
  */
 export async function checkOpenableDoc(full: string) {
+  const notSupported = () => refuseOpen("Ouverture refusée : ce type de fichier n'est pas pris en charge");
   const ext = path.extname(full).toLowerCase();
-  const isDir = (ext === "" || full === config.docsDir) && (await fs.stat(full).catch(() => undefined))?.isDirectory();
-  if (!isDir && !SHARE_EXTENSIONS.has(ext)) {
-    throw Object.assign(new Error("Ouverture refusée : ce type de fichier n'est pas pris en charge"), { statusCode: 400 });
+  const real = await fs.realpath(full).catch(() => undefined);
+  if (!real) {
+    // Introuvable : un type refusé reste refusé (400), sinon la route répond 404 comme /docs/file.
+    if (!SHARE_EXTENSIONS.has(ext)) notSupported();
+    throw Object.assign(new Error("Fichier introuvable"), { statusCode: 404 });
   }
+  const root = await fs.realpath(config.docsDir).catch(() => config.docsDir);
+  if (real !== root && !real.startsWith(root + path.sep)) refuseOpen("Chemin hors du dossier partagé");
+  const realExt = path.extname(real).toLowerCase();
+  if ((await fs.stat(real)).isDirectory()) {
+    if (BUNDLE_DIR.has(ext) || BUNDLE_DIR.has(realExt)) notSupported();
+    return;
+  }
+  if (!SHARE_EXTENSIONS.has(ext) || !SHARE_EXTENSIONS.has(realExt)) notSupported();
 }
 
 /**

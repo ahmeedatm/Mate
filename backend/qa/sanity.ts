@@ -253,9 +253,9 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
     {
       name: "Ne pas déranger à la main (pastille de l'Accueil)",
       run: async () => {
+        expectStatus(await call("PUT", "/system/dnd", { on: "oui" }), 400, "PUT /system/dnd invalide");
         // Mac sans Accessibilité (install-mac.sh) : le réglage passe par System Events, comme les fenêtres et le pointeur.
         if (os === "mac" && accessibility === false) throw new Skip("Accessibilité non accordée");
-        expectStatus(await call("PUT", "/system/dnd", { on: "oui" }), 400, "PUT /system/dnd invalide");
         const read = await call("GET", "/system/dnd");
         if (!controlled()) {
           expectStatus(read, 501, "/system/dnd hors Mac et Windows");

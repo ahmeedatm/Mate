@@ -370,7 +370,7 @@ export async function mediaSessions(): Promise<MediaSession[]> {
 }
 
 export async function mediaControl(action: MediaAction, app?: string, positionMs?: number) {
-  return call<boolean>("media", { action, app, position: positionMs });
+  return whenMediaAvailable(call<boolean>("media", { action, app, position: positionMs }));
 }
 
 /** Page ouverte dans le navigateur au premier plan (le plus en avant des navigateurs) : voir helper/Program.cs. */
@@ -380,7 +380,7 @@ export function browserPage() {
 
 /** Vignette de ce qui joue (pochette, image de la vidéo) écrite dans `out`. */
 export async function mediaThumb(app: string, out: string) {
-  return call<boolean>("media", { action: "thumb", app, out });
+  return whenMediaAvailable(call<boolean>("media", { action: "thumb", app, out }));
 }
 
 // --- Fenêtres et écrans
