@@ -130,7 +130,7 @@ export function stopDiscordRpc() {
 
 /**
  * Geste « Montrer les photos » : ouvre la fenêtre « Autoriser » dans Discord (une seule à la fois) et attend le clic,
- * 60 s au plus. Après ce délai, la demande reste ouverte dans Discord : un clic tardif autorise quand même.
+ * 60 s au plus. Après ce délai, la demande est refermée (expireAuthorize) : un clic tardif n'autorise rien.
  */
 export function authorizeDiscord(): Promise<void> {
   if (authed) return Promise.resolve();
@@ -144,7 +144,7 @@ export function authorizeDiscord(): Promise<void> {
   authorizing = { promise, resolve, reject, timer };
   running = true;
   if (!socket) void connect();
-  else if (ready && !authorizeSent) void runAuthorize(socket).catch((e) => logFailure("Discord RPC", e));
+  else if (ready && !authorizeSent) void runAuthorize(socket).catch((e) => failed(socket, e));
   return promise;
 }
 
@@ -154,10 +154,10 @@ export function authorizeDiscord(): Promise<void> {
  */
 function expireAuthorize() {
   finishAuthorize(new DiscordError(TIMEOUT));
-  if (!hasToken && !authed) {
-    running = false;
-    socket?.close();
-  }
+  if (authed) return;
+  // Sans jeton, plus de connexion ; avec un jeton (reconnexion en cours), la reconnexion reprend sans la demande.
+  running = hasToken;
+  socket?.close();
 }
 
 function finishAuthorize(error?: Error) {
@@ -205,6 +205,10 @@ async function connect() {
   socket = ws;
   ws.onmessage = (e) => onMessage(ws, String(e.data));
   ws.onclose = () => onClosed(ws);
+  // Un port qui accepte puis se tait (pas Discord) ne doit pas bloquer la reconnexion au vrai.
+  setTimeout(() => {
+    if (socket === ws && !ready) ws.close();
+  }, requestTimeoutMs()).unref();
 }
 
 /** Premier port où Discord répond. Origine de StreamKit exigée par Discord (sinon fermeture 4001 « Invalid Origin »). */
@@ -233,6 +237,12 @@ async function openSocket(): Promise<WebSocket | undefined> {
   return undefined;
 }
 
+/** Échec inattendu (disque plein en gardant le jeton…) : journal, puis connexion refermée pour repartir proprement. */
+function failed(ws: WebSocket | undefined, e: unknown) {
+  logFailure("Discord RPC", e);
+  ws?.close();
+}
+
 function onClosed(ws: WebSocket) {
   if (socket !== ws) return;
   reset();
@@ -248,7 +258,7 @@ function onMessage(ws: WebSocket, text: string) {
     const answer = typeof frame.nonce === "string" ? pending.get(frame.nonce) : undefined;
     if (answer) return answer(frame);
     if (frame.cmd !== "DISPATCH") return;
-    if (frame.evt === "READY") void onReady(ws, frame.data).catch((e) => logFailure("Discord RPC", e));
+    if (frame.evt === "READY") void onReady(ws, frame.data).catch((e) => failed(ws, e));
     else if (authed && typeof frame.evt === "string" && frame.data && typeof frame.data === "object") onEvent(ws, frame.evt, frame.data);
   } catch (e) {
     logFailure("Discord RPC", e);
@@ -292,7 +302,7 @@ async function onReady(ws: WebSocket, data: any) {
     return ws.close();
   }
   ready = true;
-  if (authorizing) return runAuthorize(ws).catch((e) => logFailure("Discord RPC", e));
+  if (authorizing) return runAuthorize(ws).catch((e) => failed(ws, e));
   const token = await loadDiscordToken();
   if (!token) {
     hasToken = false;
@@ -399,7 +409,7 @@ function memberOf(state: any): [string, Member] | undefined {
 }
 
 function onEvent(ws: WebSocket, evt: string, data: any) {
-  if (evt === "VOICE_CHANNEL_SELECT") return void refreshChannel(ws);
+  if (evt === "VOICE_CHANNEL_SELECT") return void refreshChannel(ws).catch((e) => failed(ws, e));
   if (data.channel_id !== undefined && data.channel_id !== channelId) return;
   if (evt === "VOICE_STATE_CREATE" || evt === "VOICE_STATE_UPDATE") {
     const parsed = memberOf(data);
