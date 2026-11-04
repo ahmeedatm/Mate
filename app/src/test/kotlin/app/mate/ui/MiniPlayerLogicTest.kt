@@ -32,8 +32,10 @@ class MiniPlayerLogicTest {
     }
 
     @Test
-    fun `l'ilot se referme apres cinq secondes sans toucher`() {
-        assertEquals(5_000L, MiniPlayerLogic.AUTO_CLOSE_MS)
+    fun `l'ilot se referme seul apres cinq secondes, sauf sous TalkBack`() {
+        assertEquals(5_000L, MiniPlayerLogic.autoCloseMs(touchExploration = false))
+        // Exploration au toucher : on lit les boutons un à un, l'îlot ne doit pas partir pendant ce temps.
+        assertNull(MiniPlayerLogic.autoCloseMs(touchExploration = true))
     }
 
     @Test

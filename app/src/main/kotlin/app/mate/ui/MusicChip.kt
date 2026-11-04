@@ -36,7 +36,9 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
 
     private val thumb: ImageView
     private val title: TextView
-    private val island = MusicIsland(this, ::control)
+
+    /** Îlot créé au premier toucher seulement : rien à gonfler au démarrage ni à chaque recreate quand rien ne joue. */
+    private var island: MusicIsland? = null
     private var session: MediaSession? = null
     private var thumbKey: String? = null
     private var poll: Job? = null
@@ -64,7 +66,11 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
             // Le défilement ne part que sur une vue « choisie ».
             isSelected = true
         }
-        setOnClickListener { session?.let { island.open(it, thumb.drawable) } }
+        setOnClickListener {
+            val shown = session ?: return@setOnClickListener
+            val opened = island ?: MusicIsland(this, ::control, ::update).also { island = it }
+            opened.open(shown, thumb.drawable)
+        }
     }
 
     override fun onAttachedToWindow() {
@@ -72,27 +78,32 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         poll = findViewTreeLifecycleOwner()?.lifecycleScope?.launch {
             while (true) {
                 if (suppressed()) {
-                    island.dismiss()
+                    island?.dismiss()
                     visibility = GONE
                 } else {
                     refresh()
                 }
-                delay(if (island.isOpen || System.currentTimeMillis() < fastUntilMs) FAST_MS else POLL_MS)
+                delay(if (islandOpen() || System.currentTimeMillis() < fastUntilMs) FAST_MS else POLL_MS)
             }
         }
     }
 
     override fun onDetachedFromWindow() {
         poll?.cancel()
-        island.dismiss()
+        island?.release()
         super.onDetachedFromWindow()
     }
 
     /** Cachée tout de suite si [suppressed] (mode Modifier, cadre photo), sinon telle qu'à la dernière lecture. */
     fun update() {
         val shown = !suppressed() && session != null
-        if (!shown) island.dismiss()
-        visibility = if (shown) VISIBLE else GONE
+        if (!shown) island?.dismiss()
+        visibility = when {
+            !shown -> GONE
+            // Cachée sous l'îlot ouvert, qui en est sorti.
+            islandOpen() -> INVISIBLE
+            else -> VISIBLE
+        }
     }
 
     /** Relit la lecture en cours ; en erreur (pas de lecture lisible) ou en pause depuis longtemps, la pastille se cache. */
@@ -102,9 +113,9 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         if (picked?.playing == true) lastPlayingMs = now
         val shown = picked?.takeIf { MiniPlayerLogic.visible(it, lastPlayingMs, now) }
         session = shown
-        if (shown == null) island.dismiss()
+        if (shown == null) island?.dismiss()
         // Îlot ouvert : la pastille reste cachée dessous jusqu'à la fermeture.
-        if (!island.isOpen) visibility = if (shown != null) VISIBLE else GONE
+        if (!islandOpen()) visibility = if (shown != null) VISIBLE else GONE
         shown ?: return
         // Même morceau : on ne touche pas au texte, le défilement en cours continue (et ne repart pas à chaque relecture).
         if (shown.title != title.text.toString()) title.text = shown.title
@@ -114,8 +125,10 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
             val bytes = shown.thumb?.let { runCatching { BackendClient(context).system.mediaThumb(shown.app, it) }.getOrNull() }
             thumb.setImageBitmap(bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size, BitmapFactory.Options().apply { inSampleSize = 4 }) })
         }
-        if (island.isOpen) island.render(shown, thumb.drawable)
+        if (islandOpen()) island?.render(shown, thumb.drawable)
     }
+
+    private fun islandOpen() = island?.isOpen == true
 
     private fun control(action: String, positionMs: Long?) {
         val current = session ?: return

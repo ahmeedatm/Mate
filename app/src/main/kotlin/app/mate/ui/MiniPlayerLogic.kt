@@ -11,7 +11,7 @@ object MiniPlayerLogic {
     const val PAUSE_KEEP_MS = 10 * 60_000L
 
     /** L'îlot ouvert se referme seul après ce temps sans toucher. */
-    const val AUTO_CLOSE_MS = 5_000L
+    private const val AUTO_CLOSE_MS = 5_000L
 
     /** Part de l'ouverture où le contenu de l'îlot commence à apparaître : avant, il n'aurait pas la place. */
     private const val CONTENT_FROM = 0.4f
@@ -39,6 +39,9 @@ object MiniPlayerLogic {
     /** Bord gauche de l'îlot : centré sous la pastille, sans passer la marge d'un bord de l'écran. */
     fun islandLeft(chipCenterX: Int, width: Int, parentWidth: Int, margin: Int): Int =
         (chipCenterX - width / 2).coerceAtMost(parentWidth - margin - width).coerceAtLeast(margin)
+
+    /** Délai de fermeture seule de l'îlot ; null sous TalkBack (exploration au toucher) : il se ferme au toucher ailleurs. */
+    fun autoCloseMs(touchExploration: Boolean): Long? = if (touchExploration) null else AUTO_CLOSE_MS
 
     /** Opacité du contenu à l'avancement `t` de l'ouverture (0 : pastille, 1 : îlot ouvert). */
     fun contentAlpha(t: Float): Float = ((t - CONTENT_FROM) / (1f - CONTENT_FROM)).coerceIn(0f, 1f)

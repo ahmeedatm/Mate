@@ -9,6 +9,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
+import android.view.accessibility.AccessibilityManager
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -26,7 +27,12 @@ import app.mate.net.MediaSession
  * [MiniPlayerLogic.AUTO_CLOSE_MS] sans toucher, ou au premier toucher ailleurs (qui ne va pas à l'écran dessous).
  * La découpe et le fondu suivent un seul ressort : seuls le contour et l'opacité changent, rien n'est remis en page.
  */
-class MusicIsland(private val chip: View, private val control: (action: String, positionMs: Long?) -> Unit) {
+class MusicIsland(
+    private val chip: View,
+    private val control: (action: String, positionMs: Long?) -> Unit,
+    /** Îlot retiré : la pastille décide de se remontrer ou non (cadre photo, mode Modifier, plus rien en lecture). */
+    private val onClosed: () -> Unit,
+) {
 
     private val context = chip.context
     private val overlay = Overlay()
@@ -54,6 +60,9 @@ class MusicIsland(private val chip: View, private val control: (action: String, 
     private var seeking = false
     private var session: MediaSession? = null
 
+    /** Icône Lecture / Pause affichée (true : pause) ; changée tout de suite au toucher, puis par la relecture. */
+    private var iconPlaying: Boolean? = null
+
     val isOpen: Boolean get() = overlay.parent != null
 
     init {
@@ -78,12 +87,15 @@ class MusicIsland(private val chip: View, private val control: (action: String, 
         next.setOnClickListener { control("next", null) }
         play.setOnClickListener {
             // Icône changée tout de suite : la relecture suit un instant après.
-            session?.let { play.setImageResource(if (it.playing) R.drawable.ic_play else R.drawable.ic_pause) }
+            iconPlaying?.let { showPlaying(!it) }
             control("play-pause", null)
         }
         progress.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar, value: Int, fromUser: Boolean) {
-                if (fromUser) position.text = MiniPlayerLogic.clock(value * 1000L)
+                if (!fromUser) return
+                position.text = MiniPlayerLogic.clock(value * 1000L)
+                // Sans glisser (TalkBack, touches) : pas de fin de glissé, on avance tout de suite.
+                if (!seeking) control("seek", value * 1000L)
             }
             override fun onStartTrackingTouch(bar: SeekBar) { seeking = true }
             override fun onStopTrackingTouch(bar: SeekBar) {
@@ -101,6 +113,8 @@ class MusicIsland(private val chip: View, private val control: (action: String, 
             }
         }
         panel.clipToOutline = true
+        // Hauteur changée îlot ouvert (barre qui apparaît, titre plus long) : la découpe suit.
+        panel.addOnLayoutChangeListener { view, _, _, _, _, _, _, _, _ -> view.invalidateOutline() }
     }
 
     /** Ouvre l'îlot sous la pastille, avec la lecture `shown` et sa pochette. */
@@ -109,6 +123,7 @@ class MusicIsland(private val chip: View, private val control: (action: String, 
         render(shown, cover)
         if (!isOpen) {
             place(root)
+            step(0f)
             root.addView(overlay, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
         chip.visibility = View.INVISIBLE
@@ -124,26 +139,41 @@ class MusicIsland(private val chip: View, private val control: (action: String, 
         animateTo(0f) { dismiss() }
     }
 
-    /** Retire l'îlot tout de suite, sans animer (mode Modifier, cadre photo, plus rien en lecture, pastille retirée). */
+    /** Retire l'îlot tout de suite, sans animer (mode Modifier, cadre photo, plus rien en lecture). */
     fun dismiss() {
+        val wasOpen = isOpen
+        stop()
+        (overlay.parent as? ViewGroup)?.removeView(overlay)
+        if (wasOpen) onClosed()
+    }
+
+    /**
+     * Pastille détachée de la fenêtre : retrait remis à plus tard. Retirer une vue pendant que la fenêtre détache ses
+     * enfants (recreate au changement de thème) décale le tableau qu'Android parcourt ; fenêtre détruite, rien ne s'exécute.
+     */
+    fun release() {
+        stop()
+        (overlay.parent as? ViewGroup)?.let { parent -> parent.post { parent.removeView(overlay) } }
+    }
+
+    private fun stop() {
         spring?.cancel()
         spring = null
         overlay.removeCallbacks(autoClose)
-        (overlay.parent as? ViewGroup)?.removeView(overlay)
         t = 0f
         seeking = false
-        if (chip.visibility == View.INVISIBLE) chip.visibility = View.VISIBLE
     }
 
     /** Lecture relue par la pastille : titre, avancement, boutons. Rien ne change pendant qu'on glisse la barre. */
     fun render(shown: MediaSession, cover: Drawable?) {
         session = shown
         thumb.setImageDrawable(cover)
-        title.text = shown.title
+        // Relue chaque seconde : on ne réécrit que ce qui change (chaque texte posé redemande une mise en page).
+        setIfChanged(title, shown.title)
         val subtitle = MusicChip.subtitle(shown)
-        artist.text = subtitle
+        setIfChanged(artist, subtitle)
         artist.visibility = if (subtitle == null) View.GONE else View.VISIBLE
-        play.setImageResource(if (shown.playing) R.drawable.ic_pause else R.drawable.ic_play)
+        if (shown.playing != iconPlaying) showPlaying(shown.playing)
         enable(previous, shown.canPrevious)
         enable(play, shown.canPlayPause)
         enable(next, shown.canNext)
@@ -155,7 +185,7 @@ class MusicIsland(private val chip: View, private val control: (action: String, 
         progress.max = (total / 1000).toInt()
         progress.progress = ((shown.positionMs ?: 0) / 1000).toInt()
         position.text = MiniPlayerLogic.clock(shown.positionMs ?: 0)
-        duration.text = MiniPlayerLogic.clock(total)
+        setIfChanged(duration, MiniPlayerLogic.clock(total))
     }
 
     /** Sous la pastille, un peu plus haut qu'elle, centré sur elle ; et les bords de la pastille, d'où part la découpe. */
@@ -206,7 +236,17 @@ class MusicIsland(private val chip: View, private val control: (action: String, 
 
     private fun armAutoClose() {
         overlay.removeCallbacks(autoClose)
-        overlay.postDelayed(autoClose, MiniPlayerLogic.AUTO_CLOSE_MS)
+        val talkBack = context.getSystemService(AccessibilityManager::class.java)?.isTouchExplorationEnabled == true
+        overlay.postDelayed(autoClose, MiniPlayerLogic.autoCloseMs(talkBack) ?: return)
+    }
+
+    private fun showPlaying(playing: Boolean) {
+        iconPlaying = playing
+        play.setImageResource(if (playing) R.drawable.ic_pause else R.drawable.ic_play)
+    }
+
+    private fun setIfChanged(view: TextView, text: String?) {
+        if (view.text.toString() != text.orEmpty()) view.text = text
     }
 
     private fun enable(button: ImageButton, enabled: Boolean) {
