@@ -28,11 +28,13 @@ const STATE = {
  * tablette : il peut arriver avant celui qu'on attend, dans un poll à part.
  */
 async function nextOrder(type: string) {
-  for (;;) {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
     const { json } = await server.call("POST", "/tablet/poll", { state: STATE });
     const order = json.commands.find((c: { command: { type: string } }) => c.command.type === type);
     if (order) return order;
   }
+  throw new Error(`Aucun ordre « ${type} » reçu en 10 s`);
 }
 
 describe("panneau Tablette", () => {

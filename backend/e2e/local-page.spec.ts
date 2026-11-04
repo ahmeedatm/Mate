@@ -283,7 +283,35 @@ test.describe("page locale GET /", () => {
     await page.getByRole("button", { name: "Cadran nuit" }).click();
     await expect(page.getByRole("button", { name: "Cadran nuit" })).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator("#twintheme")).toHaveText("Cadran nuit");
-    expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-now"))).toBe("#FF5165");
+    expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-now"))).toBe("#FF5266");
+
+    // Accent de l'aperçu de chaque thème = c_accent de palettes.xml (valeurs relevées à la main). showTwin direct : un clic enverrait un ordre à la tablette.
+    const accents = {
+      CONSOLE: "#B8F34A",
+      CONSOLE_JOUR: "#3F6B00",
+      CLAIR: "#CA0538",
+      SOMBRE: "#FF5165",
+      CADRAN: "#CA0538",
+      CADRAN_NUIT: "#FF5266",
+      RETRO: "#B82800",
+      HUSH: "#FF6EB4",
+      SPIDERMAN: "#FF2BD6",
+      REGISTRE: "#B3261E",
+      STUDIO: "#C0153A",
+      MAISON: "#B3412F",
+      TABLEAU: "#C62828",
+      TERMINAL: "#FFB000",
+      CONTRASTE: "#2A4A00",
+    };
+    const shown = await page.evaluate(() =>
+      Object.fromEntries(
+        [...document.querySelectorAll<HTMLElement>(".themes button")].map((btn) => {
+          (window as unknown as { showTwin: (t: string) => void }).showTwin(btn.dataset.theme!);
+          return [btn.dataset.theme, document.getElementById("twin")!.style.getPropertyValue("--t-now")];
+        }),
+      ),
+    );
+    expect(shown).toEqual(accents);
 
     await page.locator("#nightdim").uncheck();
     await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");
