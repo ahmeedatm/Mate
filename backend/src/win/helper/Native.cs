@@ -49,7 +49,7 @@ namespace Mate
                 case "apps": return Apps();
                 case "launch": Process.Start("explorer.exe", "\"shell:AppsFolder\\" + Str(req, "id") + "\""); return true;
                 case "open": Open(Str(req, "target")); return true;
-                case "icon": return AppIcon(Str(req, "id"), Str(req, "out"), Int(req, "size", 96));
+                case "icon": return AppIcon(Str(req, "id"), Str(req, "path"), Str(req, "out"), Int(req, "size", 96));
                 case "windows": return WindowsOp(req);
                 case "allwindows": return AllWindows(req);
                 case "keys": PressKeys(IntList(req, "mods"), Int(req, "vk", 0), Str(req, "ch")); return true;
