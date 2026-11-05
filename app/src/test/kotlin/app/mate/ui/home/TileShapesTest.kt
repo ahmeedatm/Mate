@@ -19,16 +19,21 @@ class TileShapesTest {
     }
 
     @Test
-    fun `grandes touches, une par case en ligne`() {
-        assertEquals(1, TileShapes.bigColumns(WidgetSize.S))
-        assertEquals(2, TileShapes.bigColumns(WidgetSize.M))
-        assertEquals(3, TileShapes.bigColumns(WidgetSize.M3))
-        assertEquals(4, TileShapes.bigColumns(WidgetSize.W))
+    fun `hors de la grille, la Ligne compte en largeur et la Colonne en hauteur`() {
+        // 1280 × 800 à 160 dpi : 1 dp = 1 px. Ligne 3 × 1 de 940 × 92 : 13 icônes de 64 + 8. Colonne 1 × 3 de 300 × 500 : 8 lignes de 56 + 4.
+        assertEquals(13, TileShapes.stripFit(ShapeFamily.ROW, 940, 92, 1f))
+        assertEquals(8, TileShapes.stripFit(ShapeFamily.COLUMN, 300, 500, 1f))
+        assertEquals(1, TileShapes.stripFit(ShapeFamily.PILL, 300, 170, 1f))
     }
 
     @Test
-    fun `grandes touches, deux de front en colonne`() {
-        for (size in listOf(WidgetSize.V, WidgetSize.V3, WidgetSize.V4)) assertEquals(size.name, 2, TileShapes.bigColumns(size))
+    fun `hors de la grille, la densite de l'ecran compte`() {
+        assertEquals(4, TileShapes.stripFit(ShapeFamily.COLUMN, 300, 500, 2f))
+    }
+
+    @Test
+    fun `vue pas encore mesuree, une touche, jamais zero (sinon le layout redessinerait sans fin)`() {
+        for (family in ShapeFamily.entries) assertEquals(family.name, 1, TileShapes.stripFit(family, 0, 0, 1f))
     }
 
     @Test

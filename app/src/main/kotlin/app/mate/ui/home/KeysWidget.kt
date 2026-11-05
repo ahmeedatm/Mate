@@ -37,9 +37,9 @@ class KeysSample(val keys: List<Pair<Int, String>>) : WidgetSample
 
 /**
  * Touches du deck choisies : lancer Discord, une macro, couper le micro… sans passer par le Deck. Pastille, Ligne et
- * Colonne montrent les premières touches, autant que la place en tient ([TileShapes]) ; Bloc, Grand et Plein écran
- * montrent toutes les touches choisies dans une grille qui défile, avec une case « + ». Appui long : la seconde action de la touche si elle en a une, sinon la retirer du
- * widget. L'éditeur d'une touche perso s'ouvre seulement en mode Modifier (réglages du widget, bouton « Modifier »).
+ * Colonne montrent les premières touches, autant que la place en tient ([TileStrip]) ; Bloc, Grand et Plein écran
+ * montrent toutes les touches choisies dans une grille qui défile, avec une case « + ». Appui long : la seconde action
+ * de la touche si elle en a une, sinon la retirer du widget. L'éditeur d'une touche perso s'ouvre seulement en mode Modifier (réglages du widget, bouton « Modifier »).
  * Les touches sont gardées avec leur nom et leur emoji : elles s'affichent même ordinateur éteint.
  */
 class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
@@ -129,6 +129,9 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         view.removeAllViews()
         view.background = null
         view.setPadding(0, 0, 0, 0)
+        view.orientation = LinearLayout.VERTICAL
+        // Avant toute sortie, état vide compris : sinon le listener de layout redessinerait à chaque passe.
+        drawnFit = fitFor(view.width, view.height)
         val keys = keys()
         // Grille vide (Bloc, Grand, Plein écran) : la même invitation au milieu que les petites formes, pas un « + » perdu dans un coin.
         if (inGrid && keys.isNotEmpty()) return renderGrid(keys)
@@ -143,7 +146,6 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             return
         }
-        drawnFit = fitFor(view.width, view.height)
         renderStrip(keys)
     }
 

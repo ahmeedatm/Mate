@@ -15,20 +15,9 @@ import app.mate.ui.dp
  * réelle de la vue, qui change avec le profil de rangées.
  */
 object TileStrip {
-    /** Une ligne de la liste en Colonne, et l'écart entre deux. */
-    private const val LIST_ROW_DP = 56
-    private const val LIST_GAP_DP = 4
-
-    /** Une icône seule en Ligne, et l'écart entre deux. */
-    private const val ICON_DP = 64
-    private const val ICON_GAP_DP = 8
-
     /** Touches qui tiennent dans une vue de [width] × [height] px ; 1 tant qu'elle n'est pas mesurée. */
-    fun fit(context: Context, family: ShapeFamily, width: Int, height: Int) = when (family) {
-        ShapeFamily.ROW -> TileShapes.fit(width, context.dp(ICON_DP), context.dp(ICON_GAP_DP))
-        ShapeFamily.COLUMN -> TileShapes.fit(height, context.dp(LIST_ROW_DP), context.dp(LIST_GAP_DP))
-        else -> 1
-    }
+    fun fit(context: Context, family: ShapeFamily, width: Int, height: Int) =
+        TileShapes.stripFit(family, width, height, context.resources.displayMetrics.density)
 
     fun orientation(family: ShapeFamily) = if (family == ShapeFamily.ROW) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
 
@@ -36,8 +25,8 @@ object TileStrip {
 
     /** Place de la touche n° [index] dans la vue de la forme. */
     fun params(context: Context, family: ShapeFamily, index: Int): LinearLayout.LayoutParams = when (family) {
-        ShapeFamily.ROW -> LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { if (index > 0) marginStart = context.dp(ICON_GAP_DP) }
-        ShapeFamily.COLUMN -> LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(LIST_ROW_DP)).apply { if (index > 0) topMargin = context.dp(LIST_GAP_DP) }
+        ShapeFamily.ROW -> LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { if (index > 0) marginStart = context.dp(TileShapes.ICON_GAP_DP) }
+        ShapeFamily.COLUMN -> LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(TileShapes.LIST_ROW_DP)).apply { if (index > 0) topMargin = context.dp(TileShapes.LIST_GAP_DP) }
         else -> LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
     }
 }
