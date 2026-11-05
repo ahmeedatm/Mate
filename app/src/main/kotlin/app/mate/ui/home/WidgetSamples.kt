@@ -12,7 +12,7 @@ interface WidgetSample
 object WidgetSamples {
     fun of(type: WidgetType): WidgetSample? = when (type) {
         // #180 Heure et journée
-        WidgetType.CLOCK -> null
+        WidgetType.CLOCK -> ClockSample
         WidgetType.HERO -> null
         WidgetType.DAY -> null
         WidgetType.DAYLINE -> null
