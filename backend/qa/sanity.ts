@@ -361,6 +361,29 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "touche Sortie son enregistrée avec une sortie de l'ordinateur (jamais jouée)",
+      run: async () => {
+        if (!controlled()) throw new Skip("ordinateur non piloté : pas de sortie son");
+        const outputs = await call("GET", "/system/audio/outputs");
+        expectStatus(outputs, 200, "GET /system/audio/outputs");
+        const output = (outputs.json.outputs as { id: string; name: string }[])[0];
+        if (!output) throw new Skip("aucune sortie son sur l'ordinateur");
+        let slot: number | undefined;
+        try {
+          const res = await call("POST", "/deck/keys", {
+            label: "Sanity sortie",
+            steps: [{ type: "output", id: output.id, name: output.name }],
+          });
+          expectStatus(res, 200, "POST /deck/keys");
+          slot = res.json.slot as number;
+          const got = await call("GET", `/deck/keys/${slot}`);
+          expect(got.json.key?.steps?.[0]?.id === output.id, "l'étape Sortie son ne garde pas l'id de la sortie");
+        } finally {
+          if (slot !== undefined) expectStatus(await call("DELETE", `/deck/keys/${slot}`), 200, "DELETE de la touche Sortie son");
+        }
+      },
+    },
+    {
       name: "touche large : deux cases de large dans le deck",
       run: async () => {
         const slot = 19;

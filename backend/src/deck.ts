@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { config } from "./config.ts";
 import {
   appIcon,
+  audioOutputs,
   canControl,
   canMedia,
   getAudio,
@@ -24,6 +25,7 @@ import {
   sendKeys,
   sendMediaKey,
   setAudio,
+  setAudioOutput,
   setDnd,
   systemCommand,
   typeText,
@@ -64,6 +66,8 @@ export type Step =
   | { type: "shortcut"; name: string }
   | { type: "media"; command: MediaCommand }
   | { type: "system"; command: SystemCommand }
+  /** Passe la sortie son de l'ordinateur sur `id` (un id de `audioOutputs`) ; `name` sert à l'affichage et au message d'erreur. */
+  | { type: "output"; id: string; name: string }
   /** Colle un texte dans l'appli au premier plan. */
   | { type: "text"; text: string }
   | { type: "wait"; ms: number }
@@ -420,6 +424,11 @@ export async function runAction(action: Action, tileId?: string): Promise<unknow
     }
     case "window":
       return placeAppWindows(action.app, action.display, action.layout ?? "keep");
+    case "output":
+      // Seul un id donné par l'ordinateur lui-même arrive jusqu'au pilote (comme POST /system/audio/output).
+      if (!(await audioOutputs()).some((o) => o.id === action.id))
+        throw Object.assign(new Error(`Sortie son introuvable : ${action.name}`), { statusCode: 404 });
+      return setAudioOutput(action.id);
     case "system":
       // Bascules faites ici, pareil sur Mac et Windows : on lit l'état et on pose l'inverse.
       if (action.command === "mute-mic") return setAudio({ micMuted: !(await getAudio()).micMuted });
