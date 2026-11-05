@@ -589,6 +589,10 @@
     <string name="focus_phase_work">Concentration</string>
     <string name="focus_phase_break">Pause</string>
     <string name="focus_ready">Prêt</string>
+    <plurals name="focus_sessions_done">
+        <item quantity="one">%1$d séance finie</item>
+        <item quantity="other">%1$d séances finies</item>
+    </plurals>
     <string name="focus_paused">En pause</string>
     <string name="ambiance">Ambiance</string>
     <string name="focus_mode_pomodoro">Pomodoro</string>
@@ -916,8 +920,10 @@
     <string name="water_title">Eau</string>
     <string name="water_count">%1$d / %2$d verres</string>
     <string name="water_count_short">%1$d / %2$d</string>
-    <string name="water_done_short">%1$d / %2$d ✓</string>
-    <string name="water_done">%1$d / %2$d verres ✓</string>
+    <string name="water_glasses_label">verres</string>
+    <string name="water_glass_full">Verre %1$d sur %2$d, bu</string>
+    <string name="water_glass_empty">Verre %1$d sur %2$d, pas bu</string>
+    <string name="water_next_reminder">Prochain rappel à %1$s</string>
     <string name="water_plus">J\'ai bu un verre</string>
     <string name="water_minus">Enlever un verre</string>
     <string name="water_settings">Eau</string>
